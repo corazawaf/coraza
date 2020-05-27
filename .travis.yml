@@ -18,11 +18,11 @@ addons:
       secure: "caTIJO7VbC1+Bdi9fN2Ogt63hIcmUNjHzr2no0FEr9JG7KFvr5WKowvEKADT1V/t4iuo/EzhZx92jfg5Ll4XvL8poi5NPOW4paibeXBVPrIz8nVufeNVVJw0viOCfhl8g5x9HMV4rMjzy5tWCdHqLgX6ov0+pMCfvpmuSwcB1Jr2545LznlJ6TFlhXLqhzYqjpx3i2KWa7RmK7r7GS6E+PKE8iuqLmO4/cqwOet1wWoAnQA4mwR+AR0v7sAX2zr+3uSo72SfHQO/imJK4gZ4N2L3tpfMc/5MltlnPrhWVU6MSLKq+z8S3K7HxgvYhSrZ0i1d5Ja3d6mi8q++M+a8hct+BO9kUo8ChwdMHOfttvfDoi4WfsiKXQwpS+nG6hyqMSS7vNPz9NavNnWeaEtsK6giP4xDJvaQ/X22kxbeKKf3h2HQWYL/pFCnJvdN1F1/89yzcO23Ev73Qhe8mibM/pBkes7N7I46Oe9ewrgsVscZE7elq0ECGqU5uiRhNezYnDpWcctm85qFs1bXXvBrdryOolnu0uCoGIGWDC9C6aOLCjo/JplheBWVq4sxREVF2JZ7B4vhypE8DBpZt1CWPlk3U3NAqr01HYM8wudDAmjoaccAB3bTNAofGintLf5YQQ2i4DvTf30FJJg88dJgm24FOYcRr8Qws446/IbgUYQ="
 
 before_install:
-  - make libinjection
+  - sudo make libinjection
 
 script:
   # Execute some tests
-  - make test
+  - go test ./...
   # And finally run the SonarQube analysis - read the "sonar-project.properties"
   # file to see the specific configuration
   - sonar-scanner
