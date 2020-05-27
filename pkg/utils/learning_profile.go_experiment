@@ -1,0 +1,96 @@
+package utils
+
+import(
+	"github.com/jptosso/coraza/pkg/models"
+	"regexp"
+	"encoding/json"
+	"encoding/base64"
+)
+
+var isLetter = regexp.MustCompile(`^[a-zA-Z]+$`).MatchString
+var isAlphanumeric = regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString
+var isNumeric = regexp.MustCompile(`^[0-9]+$`).MatchString
+var isHex = regexp.MustCompile(`^[0-9a-fA-F]+$`).MatchString
+
+type dataAnalysis struct {
+	Length int `json:"length"`
+	//letters, alphanumeric, numeric, base64, hex, others
+	Type string `json:"type"`
+	Name string `json:"name"`
+	Charset string `json:"charset"`
+}
+
+type profile struct {
+	Timestamp int64 `json:"timestamp"`
+
+	//Request
+	RequestBasename string `json:"request_basename"`
+	RequestContentType string `json:"request_content_type"`
+	RequestContentLength int64 `json:"request_content_length"`
+	RequestMethod string `json:"request_method"`
+	Cookies []dataAnalysis `json:"cookies"`
+	RequestHeaders []dataAnalysis `json:"request_headers"`
+	PostArgs []dataAnalysis `json:"post_args"`
+	GetArgs []dataAnalysis `json:"get_args"`
+
+	//Response
+	ResponseStatus int `json:"response_status"`
+	ResponseHeaders []dataAnalysis `json:"response_headers"`
+	ResponseContentType string `json:"response_content_type"`
+	ResponseContentLength int `json:"response_content_length"`
+}
+
+func TransactionToLearningProfile(tx *models.Transaction) []byte{
+	p := profile{}
+	p.RequestBasename = tx.RequestBasename
+	p.RequestMethod = tx.RequestMethod
+	p.RequestContentType = tx.RequestContentType
+	p.RequestContentLength = tx.RequestContentLength
+	p.Cookies = mapToDataAnalyse(tx.RequestCookies)
+	p.RequestHeaders = mapToDataAnalyse(tx.RequestHeaders)
+	p.PostArgs = mapToDataAnalyse(tx.ArgsPost)
+	p.GetArgs = mapToDataAnalyse(tx.ArgsGet)
+	p.ResponseStatus = tx.ResponseStatus
+	p.ResponseHeaders = mapToDataAnalyse(tx.ResponseHeaders)
+	p.ResponseContentLength = tx.ResponseContentLength
+
+	data, _ := json.Marshal(p)
+	return data
+}
+
+func analyseString(name string, str string) dataAnalysis{
+	analysis := dataAnalysis{}
+	analysis.Name = name
+	analysis.Length = len(str)
+
+	if isNumeric(str){
+		analysis.Type = "numeric"
+	}else if isLetter(str){
+		analysis.Type = "letters"
+	}else{
+		_, err := base64.StdEncoding.DecodeString(str)
+		if err == nil{
+			analysis.Type = "base64"
+		}else if isHex(str) {
+			analysis.Type = "hex"
+		}else if isAlphanumeric(str){
+			analysis.Type = "alphanumeric"
+		}else{
+			analysis.Type = "others"
+		}
+	}
+
+	return dataAnalysis{}
+}
+
+func mapToDataAnalyse(datamap map[string][]string) []dataAnalysis{
+	res := []dataAnalysis{}
+	for e := range datamap{
+		var data dataAnalysis
+		for n := range datamap[e]{
+			data = analyseString(e, datamap[e][n])
+		}
+		res = append(res, data)
+	}
+	return res
+}

@@ -1,0 +1,14 @@
+*.exe
+*.exe~
+*.dll
+*.so
+*.o
+*.dylib
+.DS_Store
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+test/crs

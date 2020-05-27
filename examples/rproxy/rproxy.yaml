@@ -1,0 +1,21 @@
+rproxy:
+  upstreams:
+    balance_method: roundrobin
+    servers:
+        - server: 64.90.40.65
+          port: 80
+          schema: http
+  debug_level: warn
+  error_cgi: ./custom_error.py
+  geoipdb: /tmp/countries.db
+  icap_proxy_listener: 0.0.0.0:4444
+  icap_server: 10.10.10.1:1234
+  address: 127.0.0.1
+  port: 12345  
+  pid_path: /tmp/test.pid
+  application:
+    id: test-1
+    hostnames:
+      - asdf.com
+    access_log: /tmp/access.log
+    audit_log: /tmp/audit.log

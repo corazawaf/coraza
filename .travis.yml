@@ -1,0 +1,29 @@
+language: go
+dist: trusty
+sudo: true
+go:
+  - 1.13.x
+
+go_import_path: github.com/jptosso/coraza
+
+services: redis
+
+git:
+  submodules: true
+
+addons:
+  sonarcloud:
+    organization: "jptosso"
+    token:
+      secure: "OHpsjo8HghTr3IHwq3ldBcvvt//gxNS47IuUAStqVEuTUzU3MoWnBKu+eXsF7i5DC+O9Sjs+M9OFaMn8zQVHPpU/Zsf2BGC4RE4R/2pfbW3Qslop+OvV6DVBJOHbgBpk3Sdaj15UJJIfXNHKTa7Ukd/E51gCsjQoTICYWhOiWk6bL/hL8J2CZKIEp2gVY/uARVdT29I57Dm2LDWwkav6lD4Hm34LjmccW/uW/YitxHP/wqc7tyB8LNg40JDyKPzY+WJM82icfZbIFu2CQk/VOCW8cXdqZJTXhshgmzX4vnN7sN08nDbyKnI8KEo64NTKFTEmOXssEE5xr151IP8hIoeqieOdBJ1jTPiQo+VRR/FYq33E7H9YD2lmv+6/OSWqoRxjHuH4IfaDVo1QDnTmIBcQxjTcAxvqrdfloSfxyMZkVraOXcExRrmGdgeKhy3U8TFzLDarGmQygHEo4N+28P7EA0JxRmaiJ8ZLJIcjYTjQJG5LeRwWqj8vNXFqaPVajyfu9oCkQRAyDF5R+Ac3BYzw/aC9aokotsG0gLQ9Y7T7iGKAJrqXrkrvTswmsZjPeZE1tyh5wFcTFCvNfBoqMEBx0BwyC0tNhthbad9Eitt+NC4u86xRQG4uO8Cnl6RrKZULeURNHCh6+D/2uE6piVuuf1MPdRfMepMO7npTTCI=" # encrypted value of your token
+
+before_install:
+  - sudo apt install -y libluajit-5.1
+  - make libinjection
+
+script:
+  # Execute some tests
+  - make test
+  # And finally run the SonarQube analysis - read the "sonar-project.properties"
+  # file to see the specific configuration
+  - sonar-scanner

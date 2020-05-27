@@ -1,0 +1,15 @@
+rproxy:
+  address: 127.0.0.1
+  port: 8080
+  upstreams:
+    - address: 64.90.40.65
+      port: 80
+      schema: http
+  application:
+    hostnames:
+      - asdf.com
+    access_log: /tmp/access.log
+    audit_log: /tmp/audit.log
+    upstream: test_upstream
+    policy: /mnt/d/goprojects/src/github.com/jptosso/coraza/test/crs/owasp-crs.conf
+    policy_datapath: /mnt/d/goprojects/src/github.com/jptosso/coraza/test/crs/rules/

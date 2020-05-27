@@ -1,0 +1,99 @@
+package utils
+
+import(
+	"crypto/rand"
+	"strings"
+    "github.com/go-redis/redis"
+    "github.com/oschwald/geoip2-golang"
+)
+
+const randomchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+var GeoDb *geoip2.Reader
+var RedisClient *redis.Client
+
+func RandomString(length int) string{
+	bytes := make([]byte, length)
+    _, err := rand.Read(bytes)
+    if err != nil {
+        //...
+    }    
+	
+    for i, b := range bytes {
+        bytes[i] = randomchars[b%byte(len(randomchars))]
+    }
+	return string(bytes)
+}
+
+func TrimLeftChars(s string, n int) string {
+    m := 0
+    for i := range s {
+        if m >= n {
+            return s[i:]
+        }
+        m++
+    }
+    return s[:0]
+}
+
+func RemoveQuotes(s string) string {
+	s = strings.TrimSuffix(s, `"`)
+	return strings.TrimPrefix(s, `"`)
+}
+
+func StringInSlice(a string, list []string) bool {
+    for _, b := range list {
+        if b == a {
+            return true
+        }
+    }
+    return false
+}
+
+func ArrayContains(arr []string, search string) bool{
+    for _, v := range arr{
+        if v == search{
+            return true
+        }
+    }
+    return false
+}
+
+/*
+func GetValues(m map[string][]string) []string{
+    ret := []string{}
+    for _,v := range m{
+        ret = append(ret, v)
+    }
+    return ret
+}
+
+func GetKeys(m map[string][]string) []string{
+    ret := []string{}
+    for k,_ := range m{
+        ret = append(ret, k)
+    }
+    return ret
+}*/
+
+func InitGeoip(path string) error{
+    var err error
+    GeoDb, err = geoip2.Open("")
+    if err != nil{
+        return err
+    }
+    return nil
+}
+
+func InitRedis(Address string, Password string, Db string) error {
+    RedisClient = redis.NewClient(&redis.Options{
+        Addr:     "localhost:6379",
+        Password: "", // no password set
+        DB:       0,  // use default DB
+    })
+
+    _, err := RedisClient.Ping().Result()
+    if err != nil {
+        return err
+    }
+    return nil
+}
