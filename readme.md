@@ -8,6 +8,7 @@
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza-waf&metric=reliability_rating)](https://sonarcloud.io/dashboard?id=jptosso_coraza-waf)
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza-waf&metric=security_rating)](https://sonarcloud.io/dashboard?id=jptosso_coraza-waf)
 [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza-waf&metric=vulnerabilities)](https://sonarcloud.io/dashboard?id=jptosso_coraza-waf)
+[![GoDoc](https://godoc.org/github.com/jptosso/coraza-waf?status.svg)](https://godoc.org/github.com/jptosso/coraza-waf)
 
 # Coraza Web Application Firewall
 
