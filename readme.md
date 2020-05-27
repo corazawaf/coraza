@@ -30,10 +30,6 @@
   * [License](#license)
 
 
-### What is Coraza WAF
-
-I've been working in this code since 2017, I believe it's almost production ready, most features are working, benchmarks are great and it's easy to extend.
-
 ### Connector's status
 
 | Connector  | status |
@@ -73,10 +69,14 @@ I've been working in this code since 2017, I believe it's almost production read
 - [ ] Optimize multi-threading
 - [x] Reorder file and code structure
 - [x] Optimize rule parser
-- [ ] OWASP CRS Full Support
+- [ ] OWASP CRS Full Support (almost there)
 - [x] Tests and Travis
 - [ ] Benchmarking tools
 - [ ] Plugin system
+- [ ] Add IP Forward support
+- [ ] Add settings reload feature
+- [ ] Windows compatibility
+- [ ] Add lua support (Do not copy modsecurity, we must build something better)
 
 
 ### Low priority TO-DO
@@ -120,17 +120,29 @@ This project respects the original ModSecurity reserved rule IDs but removes tho
 - 20,000,000-21,999,999: reserved for rules from Trustwave's SpiderLabs Research team
 - 22,000,000 and above: unused (available for reservation)
 
-### Additional Operators
 
 ### Use with docker
 
 
-`
+```
 docker build -t coraza-waf .
 docker run -d -it -p 8080:8080 --name=coraza-waf coraza-waf --host=0.0.0.0
-`
+```
+
+If you want to use your own settings, you must set the volume of /etc/coraza/ to your custom virtual path.
 
 ### Usage
+
+### Compile from source
+
+Compilation prerequisites: golang 1.11>, C compiler, libpcre++-dev, libinjection compiled (use `make libinjection`)
+
+You can compile each package individually running: `go build cmd/waf-rproxy/waf-rproxy.go` or using the make scripts.
+
+```
+make
+sudo make install
+```
 
 ### Credits
 
@@ -140,252 +152,253 @@ docker run -d -it -p 8080:8080 --name=coraza-waf coraza-waf --host=0.0.0.0
 
 ## Variables
 
-[X] ARGS
-[X] ARGS_COMBINED_SIZE
-[X] ARGS_GET
-[X] ARGS_GET_NAMES
-[X] ARGS_NAMES
-[X] ARGS_POST
-[X] ARGS_POST_NAMES
-[ ] AUTH_TYPE
-[ ] DURATION
-[ ] ENV
-[X] FILES
-[X] FILES_COMBINED_SIZE
-[X] FILES_NAMES
-[X] FULL_REQUEST
-[X] FULL_REQUEST_LENGTH
-[X] FILES_SIZES
-[X] FILES_TMPNAMES
-[X] FILES_TMP_CONTENT
-[X] GEO
-[ ] HIGHEST_SEVERITY
-[ ] INBOUND_DATA_ERROR
-[ ] MATCHED_VAR
-[ ] MATCHED_VARS
-[ ] MATCHED_VAR_NAME
-[ ] MATCHED_VARS_NAMES
-[ ] MODSEC_BUILD
-[ ] MULTIPART_CRLF_LF_LINES
-[X] MULTIPART_FILENAME
-[X] MULTIPART_NAME
-[ ] MULTIPART_STRICT_ERROR
-[ ] MULTIPART_UNMATCHED_BOUNDARY
-[ ] OUTBOUND_DATA_ERROR
-[ ] PATH_INFO
-[ ] PERF_ALL
-[ ] PERF_COMBINED
-[ ] PERF_GC
-[ ] PERF_LOGGING
-[ ] PERF_PHASE1
-[ ] PERF_PHASE2
-[ ] PERF_PHASE3
-[ ] PERF_PHASE4
-[ ] PERF_PHASE5
-[ ] PERF_RULES
-[ ] PERF_SREAD
-[ ] PERF_SWRITE
-[x] QUERY_STRING
-[x] REMOTE_ADDR
-[X] REMOTE_HOST
-[X] REMOTE_PORT
-[ ] REMOTE_USER
-[ ] REQBODY_ERROR
-[ ] REQBODY_ERROR_MSG
-[ ] REQBODY_PROCESSOR
-[X] REQUEST_BASENAME
-[X] REQUEST_BODY
-[X] REQUEST_BODY_LENGTH
-[X] REQUEST_COOKIES
-[X] REQUEST_COOKIES_NAMES
-[X] REQUEST_FILENAME
-[X] REQUEST_HEADERS
-[X] REQUEST_HEADERS_NAMES
-[X] REQUEST_LINE
-[X] REQUEST_METHOD
-[X] REQUEST_PROTOCOL
-[X] REQUEST_URI
-[ ] REQUEST_URI_RAW
-[X] RESPONSE_BODY
-[X] RESPONSE_CONTENT_LENGTH
-[X] RESPONSE_CONTENT_TYPE
-[X] RESPONSE_HEADERS
-[X] RESPONSE_HEADERS_NAMES
-[ ] RESPONSE_PROTOCOL
-[ ] RESPONSE_STATUS
-[ ] RULE
-[ ] SCRIPT_BASENAME
-[ ] SCRIPT_FILENAME
-[ ] SCRIPT_GID
-[ ] SCRIPT_GROUPNAME
-[ ] SCRIPT_MODE
-[ ] SCRIPT_UID
-[ ] SCRIPT_USERNAME
-[ ] SDBM_DELETE_ERROR
-[ ] SERVER_ADDR
-[ ] SERVER_NAME
-[ ] SERVER_PORT
-[ ] SESSION
-[ ] SESSIONID
-[ ] STATUS_LINE
-[ ] STREAM_INPUT_BODY
-[ ] STREAM_OUTPUT_BODY
-[ ] TIME
-[ ] TIME_DAY
-[ ] TIME_EPOCH
-[ ] TIME_HOUR
-[ ] TIME_MIN
-[ ] TIME_MON
-[ ] TIME_SEC
-[ ] TIME_WDAY
-[ ] TIME_YEAR
-[X] TX
-[ ] UNIQUE_ID
-[ ] URLENCODED_ERROR
-[ ] USERID
-[ ] USERAGENT_IP
-[ ] WEBAPPID
-[ ] WEBSERVER_ERROR_LOG
-[ ] XML
+- [x] ARGS
+- [x] ARGS_COMBINED_SIZE
+- [x] ARGS_GET
+- [x] ARGS_GET_NAMES
+- [x] ARGS_NAMES
+- [x] ARGS_POST
+- [x] ARGS_POST_NAMES
+- [ ] AUTH_TYPE
+- [ ] DURATION
+- [ ] ENV
+- [x] FILES
+- [x] FILES_COMBINED_SIZE
+- [x] FILES_NAMES
+- [x] FULL_REQUEST
+- [x] FULL_REQUEST_LENGTH
+- [x] FILES_SIZES
+- [x] FILES_TMPNAMES
+- [x] FILES_TMP_CONTENT
+- [x] GEO
+- [ ] HIGHEST_SEVERITY
+- [ ] INBOUND_DATA_ERROR
+- [ ] MATCHED_VAR
+- [ ] MATCHED_VARS
+- [ ] MATCHED_VAR_NAME
+- [ ] MATCHED_VARS_NAMES
+- [ ] MODSEC_BUILD
+- [ ] MULTIPART_CRLF_LF_LINES
+- [x] MULTIPART_FILENAME
+- [x] MULTIPART_NAME
+- [ ] MULTIPART_STRICT_ERROR
+- [ ] MULTIPART_UNMATCHED_BOUNDARY
+- [ ] OUTBOUND_DATA_ERROR
+- [ ] PATH_INFO
+- [ ] PERF_ALL
+- [ ] PERF_COMBINED
+- [ ] PERF_GC
+- [ ] PERF_LOGGING
+- [ ] PERF_PHASE1
+- [ ] PERF_PHASE2
+- [ ] PERF_PHASE3
+- [ ] PERF_PHASE4
+- [ ] PERF_PHASE5
+- [ ] PERF_RULES
+- [ ] PERF_SREAD
+- [ ] PERF_SWRITE
+- [x] QUERY_STRING
+- [x] REMOTE_ADDR
+- [x] REMOTE_HOST
+- [x] REMOTE_PORT
+- [ ] REMOTE_USER
+- [ ] REQBODY_ERROR
+- [ ] REQBODY_ERROR_MSG
+- [ ] REQBODY_PROCESSOR
+- [x] REQUEST_BASENAME
+- [x] REQUEST_BODY
+- [x] REQUEST_BODY_LENGTH
+- [x] REQUEST_COOKIES
+- [x] REQUEST_COOKIES_NAMES
+- [x] REQUEST_FILENAME
+- [x] REQUEST_HEADERS
+- [x] REQUEST_HEADERS_NAMES
+- [x] REQUEST_LINE
+- [x] REQUEST_METHOD
+- [x] REQUEST_PROTOCOL
+- [x] REQUEST_URI
+- [ ] REQUEST_URI_RAW
+- [x] RESPONSE_BODY
+- [x] RESPONSE_CONTENT_LENGTH
+- [x] RESPONSE_CONTENT_TYPE
+- [x] RESPONSE_HEADERS
+- [x] RESPONSE_HEADERS_NAMES
+- [ ] RESPONSE_PROTOCOL
+- [ ] RESPONSE_STATUS
+- [ ] RULE
+- [ ] SCRIPT_BASENAME
+- [ ] SCRIPT_FILENAME
+- [ ] SCRIPT_GID
+- [ ] SCRIPT_GROUPNAME
+- [ ] SCRIPT_MODE
+- [ ] SCRIPT_UID
+- [ ] SCRIPT_USERNAME
+- [ ] SDBM_DELETE_ERROR
+- [ ] SERVER_ADDR
+- [ ] SERVER_NAME
+- [ ] SERVER_PORT
+- [ ] SESSION
+- [ ] SESSIONID
+- [ ] STATUS_LINE
+- [ ] STREAM_INPUT_BODY
+- [ ] STREAM_OUTPUT_BODY
+- [ ] TIME
+- [ ] TIME_DAY
+- [ ] TIME_EPOCH
+- [ ] TIME_HOUR
+- [ ] TIME_MIN
+- [ ] TIME_MON
+- [ ] TIME_SEC
+- [ ] TIME_WDAY
+- [ ] TIME_YEAR
+- [x] TX
+- [ ] UNIQUE_ID
+- [ ] URLENCODED_ERROR
+- [ ] USERID
+- [ ] USERAGENT_IP
+- [ ] WEBAPPID
+- [ ] WEBSERVER_ERROR_LOG
+- [ ] XML
 
 ## Operators
 
-[x] beginsWith
-[x] contains
-[X] containsWord
-[x] detectSQLi
-[x] detectXSS
-[x] endsWith
-[ ] fuzzyHash
-[x] eq
-[x] ge
-[X] geoLookup
-[ ] gsbLookup
-[x] gt
-[ ] inspectFile
-[X] ipMatch
-[ ] ipMatchF
-[ ] ipMatchFromFile
-[x] le
-[x] lt
-[ ] noMatch
-[x] pm
-[X] pmf
-[X] pmFromFile
-[X] rbl
-[X] rsub
-[x] rx
-[X] streq
-[ ] strmatch
-[x] unconditionalMatch
-[ ] validateByteRange
-[ ] validateDTD
-[ ] validateHash
-[ ] validateSchema
-[ ] validateUrlEncoding
-[ ] validateUtf8Encoding
-[ ] verifyCC
-[ ] verifyCPF
-[ ] verifySSN
-[X] within
+- [x] beginsWith
+- [x] contains
+- [x] containsWord
+- [x] detectSQLi
+- [x] detectXSS
+- [x] endsWith
+- [ ] fuzzyHash
+- [x] eq
+- [x] ge
+- [x] geoLookup
+- [ ] gsbLookup
+- [x] gt
+- [ ] inspectFile
+- [x] ipMatch
+- [ ] ipMatchF
+- [ ] ipMatchFromFile
+- [x] le
+- [x] lt
+- [ ] noMatch
+- [x] pm
+- [x] pmf
+- [x] pmFromFile
+- [x] rbl
+- [x] rsub
+- [x] rx
+- [x] streq
+- [ ] strmatch
+- [x] unconditionalMatch
+- [ ] validateByteRange
+- [ ] validateDTD
+- [ ] validateHash
+- [ ] validateSchema
+- [ ] validateUrlEncoding
+- [ ] validateUtf8Encoding
+- [ ] verifyCC
+- [ ] verifyCPF
+- [ ] verifySSN
+- [x] within
 
 ## Phases
 
-[x] Phase Request Headers
-[x] Phase Request Body
-[x] Phase Response Headers
-[x] Phase Response Body
-[x] Phase Logging
+- [x] Phase Request Headers
+- [x] Phase Request Body
+- [x] Phase Response Headers
+- [x] Phase Response Body
+- [x] Phase Logging
 
 ## Actions
-[X] accuracy
-[x] allow
-[ ] append
-[X] auditlog
-[x] block
-[X] capture
-[x] chain
-[X] ctl
-[x] deny
-[ ] deprecatevar
-[X] drop
-[ ] exec
-[X] expirevar
-[x] id
-[X] initcol
-[x] log
-[X] logdata
-[X] maturity
-[x] msg
-[X] multiMatch
-[X] noauditlog
-[X] nolog
-[X] pass
-[X] pause
-[x] phase
-[ ] prepend
-[ ] proxy
-[ ] redirect
-[x] rev
-[ ] sanitiseArg
-[ ] sanitiseMatched
-[ ] sanitiseMatchedBytes
-[ ] sanitiseRequestHeader
-[ ] sanitiseResponseHeader
-[x] severity
-[ ] setuid
-[ ] setrsc
-[ ] setsid
-[ ] setenv
-[X] setvar
-[X] skip
-[X] skipAfter
-[X] status
-[x] t
-[X] tag
-[X] ver
-[ ] xmlns
+
+- [x] accuracy
+- [x] allow
+- [ ] append
+- [x] auditlog
+- [x] block
+- [x] capture
+- [x] chain
+- [x] ctl
+- [x] deny
+- [ ] deprecatevar
+- [x] drop
+- [ ] exec
+- [x] expirevar
+- [x] id
+- [x] initcol
+- [x] log
+- [x] logdata
+- [x] maturity
+- [x] msg
+- [x] multiMatch
+- [x] noauditlog
+- [x] nolog
+- [x] pass
+- [x] pause
+- [x] phase
+- [ ] prepend
+- [ ] proxy
+- [ ] redirect
+- [x] rev
+- [ ] sanitiseArg
+- [ ] sanitiseMatched
+- [ ] sanitiseMatchedBytes
+- [ ] sanitiseRequestHeader
+- [ ] sanitiseResponseHeader
+- [x] severity
+- [ ] setuid
+- [ ] setrsc
+- [ ] setsid
+- [ ] setenv
+- [x] setvar
+- [x] skip
+- [x] skipAfter
+- [x] status
+- [x] t
+- [x] tag
+- [x] ver
+- [ ] xmlns
 
 ## Transformations
 
-[X] base64Decode
-[X] sqlHexDecode
-[X] base64DecodeExt
-[X] base64Encode
-[X] cmdLine
-[X] compressWhitespace
-[ ] cssDecode
-[X] escapeSeqDecode
-[X] hexDecode
-[X] hexEncode
-[X] htmlEntityDecode
-[ ] jsDecode
-[X] length
-[X] lowercase
-[X] md5
-[X] none
-[X] normalisePath
-[X] normalizePath
-[X] normalisePathWin
-[X] normalizePathWin
-[X] parityEven7bit
-[X] parityOdd7bit
-[X] parityZero7bit
-[X] removeNulls
-[X] removeWhitespace
-[X] replaceComments
-[X] removeCommentsChar
-[X] removeComments
-[X] replaceNulls
-[X] urlDecode
-[X] uppercase
-[X] urlDecodeUni
-[X] urlEncode
-[X] utf8toUnicode
-[X] sha1
-[X] trimLeft
-[X] trimRight
-[X] trim
+- [x] base64Decode
+- [x] sqlHexDecode
+- [x] base64DecodeExt
+- [x] base64Encode
+- [x] cmdLine
+- [x] compressWhitespace
+- [ ] cssDecode
+- [x] escapeSeqDecode
+- [x] hexDecode
+- [x] hexEncode
+- [x] htmlEntityDecode
+- [ ] jsDecode
+- [x] length
+- [x] lowercase
+- [x] md5
+- [x] none
+- [x] normalisePath
+- [x] normalizePath
+- [x] normalisePathWin
+- [x] normalizePathWin
+- [x] parityEven7bit
+- [x] parityOdd7bit
+- [x] parityZero7bit
+- [x] removeNulls
+- [x] removeWhitespace
+- [x] replaceComments
+- [x] removeCommentsChar
+- [x] removeComments
+- [x] replaceNulls
+- [x] urlDecode
+- [x] uppercase
+- [x] urlDecodeUni
+- [x] urlEncode
+- [x] utf8toUnicode
+- [x] sha1
+- [x] trimLeft
+- [x] trimRight
+- [x] trim
 
 
 ### License

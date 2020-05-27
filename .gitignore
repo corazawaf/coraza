@@ -5,7 +5,7 @@
 *.o
 *.dylib
 .DS_Store
-
+.idea
 # Test binary, built with `go test -c`
 *.test
 
