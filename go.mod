@@ -10,6 +10,7 @@ require (
 	github.com/gijsbers/go-pcre v0.0.0-20161214203829-a84f3096ab3c
 	github.com/go-playground/validator/v10 v10.1.0
 	github.com/go-redis/redis v6.15.6+incompatible
+	github.com/go-redis/redis/v8 v8.0.0-beta.2
 	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/gorilla/mux v1.7.3
 	github.com/jinzhu/gorm v1.9.12
@@ -19,5 +20,5 @@ require (
 	github.com/onsi/gomega v1.7.1 // indirect
 	github.com/oschwald/geoip2-golang v1.3.0
 	github.com/oschwald/maxminddb-golang v1.5.0 // indirect
-	gopkg.in/yaml.v2 v2.2.4
+	gopkg.in/yaml.v2 v2.2.7
 )

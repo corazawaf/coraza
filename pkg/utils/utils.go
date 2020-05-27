@@ -3,13 +3,15 @@ package utils
 import(
 	"crypto/rand"
 	"strings"
-    "github.com/go-redis/redis"
+    "github.com/go-redis/redis/v8"
     "github.com/oschwald/geoip2-golang"
+    "context"
 )
 
 const randomchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 var GeoDb *geoip2.Reader
 var RedisClient *redis.Client
+var Ctx = context.Background()
 
 func RandomString(length int) string{
 	bytes := make([]byte, length)
@@ -91,7 +93,7 @@ func InitRedis(Address string, Password string, Db string) error {
         DB:       0,  // use default DB
     })
 
-    _, err := RedisClient.Ping().Result()
+    _, err := RedisClient.Ping(Ctx).Result()
     if err != nil {
         return err
     }

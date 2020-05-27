@@ -17,7 +17,7 @@ type Transaction struct {
 }
 
 func GetTransaction(waf *Waf, id string) (Transaction, error){
-	val, err := utils.RedisClient.Get(fmt.Sprintf("tx_%s", id)).Result()
+	val, err := utils.RedisClient.Get(utils.Ctx, fmt.Sprintf("tx_%s", id)).Result()
 	if err != nil {
 		waf.Logger.Fatal(fmt.Sprintf("Unable to retrieve Transaction %s from Redis", id), err)
 	}

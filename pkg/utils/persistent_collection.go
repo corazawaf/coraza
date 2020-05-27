@@ -19,11 +19,11 @@ func (c *PersistentCollection) Init(collection string, key string) {
 	c.collection = fmt.Sprintf("col-%s-%s", collection, key)
 	c.key = key
 	c.Vars = map[string]string{}
-	val, _ := RedisClient.Get(key).Result()
+	val, _ := RedisClient.Get(Ctx, key).Result()
 	err := json.Unmarshal([]byte(val), &c.Vars)
 	if err != nil {
 		//fmt.Println("ERROR PROCESSING COLLECTION " + key)
-		RedisClient.Set(key, "{}", 0)
+		RedisClient.Set(Ctx, key, "{}", 0)
 	}
 }
 
@@ -58,11 +58,14 @@ func (c *PersistentCollection) Set(key string, value string) {
 func (c *PersistentCollection) Save() {
 	if c.changed{
 		newcount := "1"
+		//TODO real count
+		timenow := strconv.FormatInt(time.Now().UnixNano(), 10)
 		c.Vars["UPDATE_COUNTER"] = newcount
+		c.Vars["LAST_UPDATE_TIME"] = timenow
 	}
 	js, err := json.Marshal(c.Vars)
 	if err != nil{
 		fmt.Println("Error serializing collection " + c.key)
 	}
-	RedisClient.Set(c.key, js, 0)
+	RedisClient.Set(Ctx, c.key, js, 0)
 }
