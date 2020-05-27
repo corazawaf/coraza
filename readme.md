@@ -1,13 +1,13 @@
 <img src="https://github.com/jptosso/coraza-waf/raw/master/docs/logo.png" width="50%">
 
-[![Build Status](https://travis-ci.org/jptosso/Coraza.svg?branch=master)](https://travis-ci.org/jptosso/Coraza)
+[![Build Status](https://travis-ci.org/jptosso/Coraza.svg?branch=master)](https://travis-ci.org/jptosso/Coraza-waf)
 [![](https://raw.githubusercontent.com/ZenHubIO/support/master/zenhub-badge.png)](https://zenhub.com)
-[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza&metric=bugs)](https://sonarcloud.io/dashboard?id=jptosso_coraza)
-[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza&metric=ncloc)](https://sonarcloud.io/dashboard?id=jptosso_coraza)
-[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza&metric=sqale_rating)](https://sonarcloud.io/dashboard?id=jptosso_coraza)
-[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza&metric=reliability_rating)](https://sonarcloud.io/dashboard?id=jptosso_coraza)
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza&metric=security_rating)](https://sonarcloud.io/dashboard?id=jptosso_coraza)
-[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza&metric=vulnerabilities)](https://sonarcloud.io/dashboard?id=jptosso_coraza)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza&metric=bugs)](https://sonarcloud.io/dashboard?id=jptosso_coraza-waf)
+[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza&metric=ncloc)](https://sonarcloud.io/dashboard?id=jptosso_coraza-waf)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza-waf&metric=sqale_rating)](https://sonarcloud.io/dashboard?id=jptosso_coraza-waf)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza-waf&metric=reliability_rating)](https://sonarcloud.io/dashboard?id=jptosso_coraza-waf)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza-waf&metric=security_rating)](https://sonarcloud.io/dashboard?id=jptosso_coraza-waf)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza-waf&metric=vulnerabilities)](https://sonarcloud.io/dashboard?id=jptosso_coraza-waf)
 
 # Coraza Web Application Firewall
 

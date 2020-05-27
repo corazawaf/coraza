@@ -1,10 +1,10 @@
 package operators
 
 import(
-	"testing"
+	_"testing"
 	_"fmt"
-	"github.com/jptosso/coraza-waf/test/utils"
-	"github.com/jptosso/coraza-waf/pkg/models"
+	_"github.com/jptosso/coraza-waf/test/utils"
+	_"github.com/jptosso/coraza-waf/pkg/models"
 )
 /*
 func TestDetectSqliUnicodeStringCorrect(t *testing.T) {
