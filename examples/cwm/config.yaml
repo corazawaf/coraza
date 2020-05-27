@@ -1,4 +1,4 @@
 cwm:
   applications:
-    - /mnt/d/goprojects/src/github.com/jptosso/coraza/examples/rproxy/rproxy.yaml
+    - /mnt/d/goprojects/src/github.com/jptosso/coraza-waf/examples/rproxy/rproxy.yaml
   log_path: /tmp/cwm.log

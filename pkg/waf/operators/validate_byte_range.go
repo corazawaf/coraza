@@ -5,7 +5,7 @@ import(
 	"fmt"
 	"regexp"
 	"encoding/hex"
-	"github.com/jptosso/coraza/pkg/models"
+	"github.com/jptosso/coraza-waf/pkg/models"
 )
 
 type ValidateByteRange struct{

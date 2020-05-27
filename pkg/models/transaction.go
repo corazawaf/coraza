@@ -2,7 +2,7 @@ package models
 
 import (
     "fmt"
-	"github.com/jptosso/coraza/pkg/utils"	
+	"github.com/jptosso/coraza-waf/pkg/utils"	
     "regexp"
     "strings"
     "mime/multipart"

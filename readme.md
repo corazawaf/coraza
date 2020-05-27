@@ -1,4 +1,4 @@
-<img src="https://github.com/jptosso/coraza/raw/master/docs/logo.png" width="50%">
+<img src="https://github.com/jptosso/coraza-waf/raw/master/docs/logo.png" width="50%">
 
 [![Build Status](https://travis-ci.org/jptosso/Coraza.svg?branch=master)](https://travis-ci.org/jptosso/Coraza)
 [![](https://raw.githubusercontent.com/ZenHubIO/support/master/zenhub-badge.png)](https://zenhub.com)

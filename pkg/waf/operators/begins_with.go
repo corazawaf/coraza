@@ -2,7 +2,7 @@ package operators
 
 import(
 	_"strings"
-	"github.com/jptosso/coraza/pkg/models"
+	"github.com/jptosso/coraza-waf/pkg/models"
 )
 
 type BeginsWith struct{

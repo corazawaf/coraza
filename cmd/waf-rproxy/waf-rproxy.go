@@ -1,7 +1,7 @@
 package main
 
 import(
-    "github.com/jptosso/coraza/pkg/rproxy"
+    "github.com/jptosso/coraza-waf/pkg/rproxy"
 	"fmt"   
     "io/ioutil"
     "flag"

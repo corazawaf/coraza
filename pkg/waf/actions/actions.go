@@ -1,6 +1,6 @@
 package actions
 import(
-	"github.com/jptosso/coraza/pkg/models"
+	"github.com/jptosso/coraza-waf/pkg/models"
 )
 
 func ActionsMap() map[string]models.Action {

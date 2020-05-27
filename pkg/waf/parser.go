@@ -1,10 +1,10 @@
 package waf
 
 import(
-	"github.com/jptosso/coraza/pkg/utils"
-	"github.com/jptosso/coraza/pkg/waf/operators"
-	actionsmod"github.com/jptosso/coraza/pkg/waf/actions"
-	"github.com/jptosso/coraza/pkg/models"
+	"github.com/jptosso/coraza-waf/pkg/utils"
+	"github.com/jptosso/coraza-waf/pkg/waf/operators"
+	actionsmod"github.com/jptosso/coraza-waf/pkg/waf/actions"
+	"github.com/jptosso/coraza-waf/pkg/models"
 	pcre"github.com/gijsbers/go-pcre"
 	"os"
 	"strings"

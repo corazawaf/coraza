@@ -1,8 +1,8 @@
 package actions
 
 import(
-	"github.com/jptosso/coraza/pkg/models"
-	_"github.com/jptosso/coraza/pkg/utils"
+	"github.com/jptosso/coraza-waf/pkg/models"
+	_"github.com/jptosso/coraza-waf/pkg/utils"
 	"strings"
 	"strconv"
 )

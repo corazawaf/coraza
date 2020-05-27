@@ -2,8 +2,8 @@ package actions
 
 import(
 	"strings"
-	"github.com/jptosso/coraza/pkg/models"
-	"github.com/jptosso/coraza/pkg/utils"
+	"github.com/jptosso/coraza-waf/pkg/models"
+	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
 type InitCol struct {

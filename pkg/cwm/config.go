@@ -2,7 +2,7 @@ package cwm
 import(
 	"io/ioutil"
 	"github.com/go-yaml/yaml"
-	"github.com/jptosso/coraza/pkg/rproxy"
+	"github.com/jptosso/coraza-waf/pkg/rproxy"
 )
 
 type Config struct{

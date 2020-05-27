@@ -3,7 +3,7 @@ package actions
 import(
 	_"strconv"
 	"strings"
-	"github.com/jptosso/coraza/pkg/models"
+	"github.com/jptosso/coraza-waf/pkg/models"
 )
 
 type Ctl struct {

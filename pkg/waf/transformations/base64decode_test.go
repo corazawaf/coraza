@@ -3,7 +3,7 @@ package transformations
 import (
 	"testing"
 	"encoding/base64"
-	"github.com/jptosso/coraza/test/utils"
+	"github.com/jptosso/coraza-waf/test/utils"
 )
 
 func TestUnicodeString(t *testing.T) {

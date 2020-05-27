@@ -3,8 +3,8 @@ package operators
 import(
 	"testing"
 	_"fmt"
-	"github.com/jptosso/coraza/test/utils"
-	"github.com/jptosso/coraza/pkg/models"
+	"github.com/jptosso/coraza-waf/test/utils"
+	"github.com/jptosso/coraza-waf/pkg/models"
 )
 
 func TestBeginsWithUnicodeStringCorrect(t *testing.T) {

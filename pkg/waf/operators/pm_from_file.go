@@ -2,7 +2,7 @@ package operators
 import(
 	"strings"
 	ahocorasick"github.com/bobusumisu/aho-corasick"
-	"github.com/jptosso/coraza/pkg/models"
+	"github.com/jptosso/coraza-waf/pkg/models"
 	"io/ioutil"
 	_"path"	
 	"fmt"

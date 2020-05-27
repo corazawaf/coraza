@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
     "reflect"
-    "github.com/jptosso/coraza/pkg/models"
+    "github.com/jptosso/coraza-waf/pkg/models"
 )
 
 

@@ -1,7 +1,7 @@
 package operators
 
 import(
-	"github.com/jptosso/coraza/pkg/models"
+	"github.com/jptosso/coraza-waf/pkg/models"
 )
 
 type Eq struct{

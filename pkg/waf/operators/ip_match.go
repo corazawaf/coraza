@@ -1,7 +1,7 @@
 package operators
 import(
 	"net"
-	"github.com/jptosso/coraza/pkg/models"
+	"github.com/jptosso/coraza-waf/pkg/models"
 	"fmt"
 	"strings"
 )

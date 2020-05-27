@@ -1,6 +1,6 @@
 package operators
 import(
-	"github.com/jptosso/coraza/pkg/models"
+	"github.com/jptosso/coraza-waf/pkg/models"
 )
 func OperatorsMap() map[string]models.Operator {
 	return map[string]models.Operator{

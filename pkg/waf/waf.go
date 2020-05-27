@@ -5,7 +5,7 @@ import (
 	//"utils"
 	_"fmt"
 	"sort"
-	"github.com/jptosso/coraza/pkg/utils"
+	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
 type Waf struct {

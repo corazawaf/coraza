@@ -1,6 +1,6 @@
 package main
 import(
-	"github.com/jptosso/coraza/pkg/cwm"
+	"github.com/jptosso/coraza-waf/pkg/cwm"
 	"flag"
 	"os"
 	"fmt"

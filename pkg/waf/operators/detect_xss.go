@@ -1,8 +1,8 @@
 package operators
 
 import(
-	"github.com/jptosso/coraza/pkg/utils"
-	"github.com/jptosso/coraza/pkg/models"
+	"github.com/jptosso/coraza-waf/pkg/utils"
+	"github.com/jptosso/coraza-waf/pkg/models"
 )
 
 type DetectXSS struct{}

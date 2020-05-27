@@ -1,10 +1,10 @@
 package waf
 
 import(
-	"github.com/jptosso/coraza/pkg/utils"
+	"github.com/jptosso/coraza-waf/pkg/utils"
 	"encoding/json"
 	"fmt"
-    "github.com/jptosso/coraza/pkg/models"
+    "github.com/jptosso/coraza-waf/pkg/models"
     "time"
     "strings"
     _"errors"

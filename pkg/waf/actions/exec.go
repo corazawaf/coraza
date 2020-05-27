@@ -11,7 +11,7 @@ package actions
 import (
 	//"bytes"
 	//"unsafe"
-	"github.com/jptosso/coraza/pkg/models"
+	"github.com/jptosso/coraza-waf/pkg/models"
 )
 
 type Exec struct {

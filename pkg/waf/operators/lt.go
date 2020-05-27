@@ -2,7 +2,7 @@ package operators
 
 import(
 	"strconv"
-	"github.com/jptosso/coraza/pkg/models"
+	"github.com/jptosso/coraza-waf/pkg/models"
 )
 
 type Lt struct{

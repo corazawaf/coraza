@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/jptosso/coraza/pkg/waf"
+	"github.com/jptosso/coraza-waf/pkg/waf"
 	"io"
 	_ "log"
 	"net"

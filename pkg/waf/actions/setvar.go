@@ -4,8 +4,8 @@ import(
 	"strings"
 	"strconv"
     "fmt"
-	"github.com/jptosso/coraza/pkg/models"
-    "github.com/jptosso/coraza/pkg/utils"
+	"github.com/jptosso/coraza-waf/pkg/models"
+    "github.com/jptosso/coraza-waf/pkg/utils"
 )
 
 type Setvar struct {

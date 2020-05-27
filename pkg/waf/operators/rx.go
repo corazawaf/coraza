@@ -2,7 +2,7 @@ package operators
 
 import (
 	pcre"github.com/gijsbers/go-pcre"
-	"github.com/jptosso/coraza/pkg/models"
+	"github.com/jptosso/coraza-waf/pkg/models"
 	"strconv"
 )
 

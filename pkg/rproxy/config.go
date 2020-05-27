@@ -1,7 +1,7 @@
 package rproxy
 
 import (
-    "github.com/jptosso/coraza/pkg/waf"
+    "github.com/jptosso/coraza-waf/pkg/waf"
     "gopkg.in/yaml.v2"
 )
 
