@@ -1,11 +1,11 @@
 # Go parameters
 GOCMD=go
-ENTRYFILE=cmd/waf-rproxy/waf-rproxy.go
+ENTRYFILE=cmd/skipper/main.go
 GOBUILD=$(GOCMD) build $(ENTRYFILE)
 GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
-BINARY_NAME=waf-rproxy
+BINARY_NAME=skipper
 BINARY_UNIX=$(BINARY_NAME)
 
 all: libinjection compile
@@ -38,4 +38,4 @@ install:
 		#cp config/* /etc/coraza-waf/
 		chown -R root:root /etc/coraza
 		chmod -R 644 /etc/coraza
-		chmod 755 /usr/local/bin/waf-rproxy
+		chmod 755 /usr/local/bin/skipper

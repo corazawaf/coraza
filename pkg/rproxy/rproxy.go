@@ -7,6 +7,7 @@ import (
 	"github.com/jptosso/coraza-waf/pkg/waf"
 	"io"
 	_ "log"
+	"sync"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -51,11 +52,14 @@ type Location struct {
 	Listener      *http.ServeMux
 	WafInstance   *waf.Waf
 	LastUpstreamN int //for round robin
+
+	mux *sync.RWMutex
 }
 
 func (l *Location) Init(wafinstance *waf.Waf) {
 	l.Upstreams = make([]*Upstream, 0)
 	l.WafInstance = wafinstance
+	l.mux = &sync.RWMutex{}
 }
 
 type HttpServer struct {
@@ -186,6 +190,8 @@ func (l *Location) DebugErrorHandler(responsewriter http.ResponseWriter, request
 }
 
 func (l *Location) RequestHandler(w http.ResponseWriter, r *http.Request) {
+	l.mux.Lock()
+	defer l.mux.Unlock()
 	tx := &waf.Transaction{}
 
 	tx.Init(l.WafInstance)

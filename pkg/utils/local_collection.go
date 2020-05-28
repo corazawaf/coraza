@@ -2,14 +2,17 @@ package utils
 
 import(
 	pcre"github.com/gijsbers/go-pcre"
-
+	"sync"
 	"strings"
 	"fmt"
 	"strconv"
+
 )
+
 
 type LocalCollection struct {
 	Data map[string][]string `json:"data"`
+	mux *sync.RWMutex
 }
 
 func NewCollection() *LocalCollection{
@@ -21,6 +24,7 @@ func NewCollection() *LocalCollection{
 func (c *LocalCollection) Init() {
 	c.Data = map[string][]string{}
 	c.Data[""] = []string{}
+	c.mux = &sync.RWMutex{}
 }
 
 func (c *LocalCollection) InitCollection(key string) {
@@ -162,11 +166,15 @@ func (c *LocalCollection) Concat() []string{
 }
 
 func (c *LocalCollection) Add(key string, value []string) {
+	c.mux.Lock()
 	c.Data[key] = value
+	c.mux.Unlock()
 }
 
 func (c *LocalCollection) AddToKey(key string, value string) {
+	c.mux.Lock()
 	c.Data[key] = append(c.Data[key], value)
+	c.mux.Unlock()
 }
 
 
@@ -175,8 +183,13 @@ func (c *LocalCollection) Set(key string, value []string) {
 }
 
 func (c *LocalCollection) AddMap(data map[string][]string) {
+	if c == nil{
+		fmt.Println("ADSFASDFASDFASDFASDFASDFASDFASDFASDFD CTM C ES NIL")
+	}
 	for k, v := range data{
-		c.Add(strings.ToLower(k), v)
+		c.mux.RLock()
+		c.Data[strings.ToLower(k)] = v
+		c.mux.RUnlock()
 	}
 }
 

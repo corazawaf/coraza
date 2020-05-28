@@ -33,8 +33,9 @@ type Waf struct {
 }
 
 
-func (w *Waf) Init(logger *Logger) {
-	w.Logger = logger
+func (w *Waf) Init() {
+	w.Logger = &Logger{}
+    w.Logger.Init()
 	w.Logger.Debug("Initializing WAF")
 	w.DefaultAction = "block"
 

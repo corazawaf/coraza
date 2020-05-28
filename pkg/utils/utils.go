@@ -6,6 +6,7 @@ import(
     "github.com/go-redis/redis/v8"
     "github.com/oschwald/geoip2-golang"
     "context"
+    "sync"
 )
 
 const randomchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -15,7 +16,11 @@ var Ctx = context.Background()
 
 func RandomString(length int) string{
 	bytes := make([]byte, length)
+    //There is an entropy bug here with a lot of concurrency
+    var mu sync.Mutex
+    mu.Lock()
     _, err := rand.Read(bytes)
+    mu.Unlock()
     if err != nil {
         //...
     }    

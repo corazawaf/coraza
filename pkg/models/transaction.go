@@ -7,6 +7,7 @@ import (
     "strings"
     "mime/multipart"
     "strconv"
+    "sync"
     "net"
     "net/http"
     "net/url"
@@ -66,6 +67,8 @@ type Transaction struct {
     //Used for the capture action, it will store the last results from RX to add them to TX:0..10
     RxMatch []string `json:"rx_match"`
     DisruptiveRuleId int `json:"disruptive_rule_id"`
+
+    Mux *sync.RWMutex
 }
 
 func (tx *Transaction) MacroExpansion(data string) string{
@@ -101,6 +104,8 @@ func (tx *Transaction) MacroExpansion(data string) string{
 
 //Sets request_headers and request_headers_names
 func (tx *Transaction) SetRequestHeaders(headers map[string][]string) {
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
     tx.Collections["request_headers"].AddMap(headers)
     for k, _ := range headers{
         if k == "" {
@@ -120,6 +125,8 @@ func (tx *Transaction) SetRequestHeaders(headers map[string][]string) {
 
 //Sets args_get, args_get_names. Also adds to args_names and args
 func (tx *Transaction) SetArgsGet(args map[string][]string) {
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
     tx.Collections["args_get"].AddMap(args)
     tx.Collections["args"].AddMap(args)
     for k, _ := range args{
@@ -133,6 +140,8 @@ func (tx *Transaction) SetArgsGet(args map[string][]string) {
 
 //Sets args_post, args_post_names. Also adds to args_names and args
 func (tx *Transaction) SetArgsPost(args map[string][]string) {
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
     tx.Collections["args_post"].AddMap(args)
     tx.Collections["args"].AddMap(args)
     for k, _ := range args{
@@ -145,11 +154,15 @@ func (tx *Transaction) SetArgsPost(args map[string][]string) {
 }
 
 func (tx *Transaction) SetAuthType(auth string) {
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
     tx.Collections["auth_type"].AddToKey("", auth)
 }
 
 //Sets files, files_combined_size, files_names, files_sizes, files_tmpnames, files_tmp_content
 func (tx *Transaction) SetFiles(files map[string][]*multipart.FileHeader) {
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
     total_size := int64(0)
     for field, fheaders := range files{
         tx.Collections["files_names"].AddToKey("", field)
@@ -164,6 +177,8 @@ func (tx *Transaction) SetFiles(files map[string][]*multipart.FileHeader) {
 
 //Will be built from request_line, request_headers and request_body
 func (tx *Transaction) SetFullRequest() {
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
     headers := ""
     for k, v := range tx.Collections["request_headers"].Data{
         if k == "" {
@@ -183,18 +198,24 @@ func (tx *Transaction) SetFullRequest() {
 
 //Sets remote_address and remote_port
 func (tx *Transaction) SetRemoteAddress(address string, port int) {
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
     p := strconv.Itoa(port)
     tx.Collections["remote_addr"].AddToKey("", address)
     tx.Collections["remote_port"].AddToKey("", p)
 }
 
 func (tx *Transaction) SetRemoteUser(user string) {
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
     tx.Collections["remote_user"].AddToKey("", user)
 }
 
 
 //Sets request_body and request_body_length, it won't work if request_body_inspection is off
 func (tx *Transaction) SetRequestBody(body string, length int64) {
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
     if !tx.RequestBodyAccess || length > tx.RequestBodyLimit{
         return
     }
@@ -205,6 +226,8 @@ func (tx *Transaction) SetRequestBody(body string, length int64) {
 
 //Sets request_cookies and request_cookies_names
 func (tx *Transaction) SetRequestCookies(cookies []*http.Cookie) {
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
     for _, c := range cookies{
         tx.Collections["request_cookies"].AddToKey(c.Name, c.Value)
         tx.Collections["request_cookies_names"].AddToKey("", c.Name)
@@ -213,6 +236,8 @@ func (tx *Transaction) SetRequestCookies(cookies []*http.Cookie) {
 
 //sets response_body and response_body_length, it won't work if response_body_inpsection is off
 func (tx *Transaction) SetResponseBody(body string, length int64) {
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
     if !tx.ResponseBodyAccess || length > tx.ResponseBodyLimit{
         return
     }
@@ -223,6 +248,8 @@ func (tx *Transaction) SetResponseBody(body string, length int64) {
 
 //Sets response_headers, response_headers_names, response_content_length and response_content_type
 func (tx *Transaction) SetResponseHeaders(headers map[string][]string) {
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
     tx.Collections["response_headers"].AddMap(headers)
     for k, _ := range headers{
         if k == "" {
@@ -234,6 +261,8 @@ func (tx *Transaction) SetResponseHeaders(headers map[string][]string) {
 
 //Sets response_status
 func (tx *Transaction) SetResponseStatus(status int) {
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
     s := strconv.Itoa(status)
     tx.Collections["response_status"].AddToKey("", s)
 
@@ -241,6 +270,8 @@ func (tx *Transaction) SetResponseStatus(status int) {
 
 //Sets request_uri, request_filename, request_basename, query_string and request_uri_raw
 func (tx *Transaction) SetUrl(u *url.URL){
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
     request_basename := u.EscapedPath()
     a := regexp.MustCompile(`\/|\\`) // \ o /
     spl := a.Split(request_basename, -1)
@@ -257,6 +288,8 @@ func (tx *Transaction) SetUrl(u *url.URL){
 
 //Adds request_line, request_method, request_protocol, request_basename and request_uri
 func (tx *Transaction) SetRequestLine(method string, protocol string, requestUri string) {
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
     tx.Collections["request_method"].AddToKey("", method)
     tx.Collections["request_protocol"].AddToKey("", protocol)
     tx.Collections["request_line"].AddToKey("", fmt.Sprintf("%s %s %s", method, requestUri, protocol))
@@ -265,6 +298,8 @@ func (tx *Transaction) SetRequestLine(method string, protocol string, requestUri
 
 //Resolves remote hostname and sets remote_host variable
 func (tx *Transaction) ResolveRemoteHost() {
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
     addr, err := net.LookupAddr("198.252.206.16")
     if err != nil{
         return

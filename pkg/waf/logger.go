@@ -55,8 +55,6 @@ func (l *Logger) WriteAudit(tx *Transaction) {
 	str := fmt.Sprintf("[%s] block \"GET /apache_pb.gif\" ABABABABABABABABAB [%s] [\"audit message 1\" \"audit message 2\"]", ts, idlist)
 
 	l.auditlogger.Print(str)
-
-
 }
 
 func (l *Logger) WriteAccess(tx *Transaction) {

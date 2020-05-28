@@ -56,6 +56,7 @@
 - [x] LibGeoIp2 integration
 - [x] Implement PCRE to replicate modsecurity regex
 - [x] Add more settings
+- [ ] Replace libinjection for something awesome, maybe AI?
 - [ ] Create Documentation
 - [ ] Audit Logging (syslog, ES and concurrent)
 - [x] Logrotate support
@@ -138,11 +139,19 @@ If you want to use your own settings, you must set the volume of /etc/coraza/ to
 
 Compilation prerequisites: golang 1.11>, C compiler, libpcre++-dev, libinjection compiled (use `make libinjection`)
 
-You can compile each package individually running: `go build cmd/waf-rproxy/waf-rproxy.go` or using the make scripts.
+You can compile each package individually running: `go build cmd/skipper/main.go` or using the make scripts.
 
 ```
 make
 sudo make install
+```
+
+### Compile as a skipper plugin
+
+Change package name of pkg/skipper/filters.go from skipper to main and then:
+```
+GO111MODULE=on go build -buildmode=plugin -o coraza.so pkg/skipper/filters.go
+skipper -filter-plugin coraza
 ```
 
 ### Credits

@@ -10,6 +10,5 @@ rproxy:
       - asdf.com
     access_log: /tmp/access.log
     audit_log: /tmp/audit.log
-    upstream: test_upstream
-    policy: /mnt/d/goprojects/src/github.com/jptosso/coraza-waf/test/crs/owasp-crs.conf
-    policy_datapath: /mnt/d/goprojects/src/github.com/jptosso/coraza-waf/test/crs/rules/
+    policy: /mnt/d/goprojects/src/github.com/jptosso/coraza/test/crs/owasp-crs.conf
+    policy_datapath: /mnt/d/goprojects/src/github.com/jptosso/coraza/test/crs/rules/

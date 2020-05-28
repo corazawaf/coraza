@@ -6,6 +6,7 @@ import(
 	"fmt"
     "github.com/jptosso/coraza-waf/pkg/models"
     "time"
+    "sync"
     "strings"
     _"errors"
     //"net"
@@ -33,7 +34,6 @@ func GetTransaction(waf *Waf, id string) (Transaction, error){
 
 func (tx *Transaction) initVars() {
     tx.Collections = map[string]*utils.LocalCollection{}
-    tx.InitTxCollection()
     
     tx.SetSingleCollection("id", utils.RandomString(19))
     tx.SetSingleCollection("timestamp", fmt.Sprintf("%d", time.Now().Unix()))
@@ -58,6 +58,7 @@ func (tx *Transaction) initVars() {
     tx.HashEnforcement = tx.WafInstance.HashEnforcement
     tx.DefaultAction = tx.WafInstance.DefaultAction
     tx.Skip = 0
+    tx.InitTxCollection()
     
     tx.NewPersistentCollections = map[string]string{}
 }
@@ -65,14 +66,10 @@ func (tx *Transaction) initVars() {
 func (tx *Transaction) Init(waf *Waf) error{
     tx.WafInstance = waf
 	tx.initVars()
+    tx.Mux = &sync.RWMutex{}
 
 	//tx.Save() //redundant
     return nil
-}
-
-func (tx *Transaction) InitSandbox(waf *Waf) {
-    tx.WafInstance = waf
-    tx.initVars()
 }
 
 // Temporalmente no vamos a guardar las transacciones

@@ -43,8 +43,6 @@ func ParseConfig(hs *HttpServer, data []byte) error{
         return err
     }
     proxy := config.Rproxy
-    logger := &waf.Logger{}
-    logger.Init()
     app := proxy.Application
     server := Server{
         Address: proxy.Address,
@@ -53,7 +51,7 @@ func ParseConfig(hs *HttpServer, data []byte) error{
     }
     server.Init()
     wafinstance := waf.Waf{}
-    wafinstance.Init(logger)    
+    wafinstance.Init()    
     wafinstance.Datapath = app.PolicyDatapath
     wafparser := waf.Parser{}
     wafparser.Init(&wafinstance)

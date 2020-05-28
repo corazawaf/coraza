@@ -24,4 +24,4 @@ RUN make install
 
 RUN service redis-server start
 
-CMD ["/usr/local/bin/waf-rproxy", "-f", "/etc/coraza/rproxy.yaml"]
+CMD ["/usr/local/bin/skipper"]
