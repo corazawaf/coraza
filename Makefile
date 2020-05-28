@@ -14,7 +14,7 @@ compile:
 		$(GOBUILD)
 test: 
 		$(GOTEST) ./...
-		$(GOTEST) -v -covermode=count -coverprofile=docs/coverage-waf.out github.com/jptosso/coraza-waf/waf
+		$(GOTEST) -v -covermode=count -coverprofile=docs/coverage-waf.out ./...
 clean: 
 		$(GOCLEAN)
 		rm -f $(BINARY_NAME)
