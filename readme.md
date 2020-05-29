@@ -135,6 +135,22 @@ If you want to use your own settings, you must set the volume of /etc/coraza/ to
 
 ### Usage
 
+Using Skipper filter sample:
+```
+-> corazaWAF("/path/to/rules.conf", "/path/to/datafiles")
+```
+
+Sample:
+```
+baidu:
+        Path("/baidu")
+        -> corazaWAF("/path/to/rules.conf", "/path/to/datafiles")
+        -> setRequestHeader("Host", "www.baidu.com")
+        -> setPath("/s")
+        -> setQuery("wd", "godoc skipper")
+        -> "http://www.baidu.com";
+```
+
 ### Compile from source
 
 Compilation prerequisites: golang 1.11>, C compiler, libpcre++-dev, libinjection compiled (use `make libinjection`)

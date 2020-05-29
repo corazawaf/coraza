@@ -23,6 +23,7 @@ type MatchedRule struct {
 type Transaction struct {
 	//Options
 	Log bool `json:"log"`
+    Id string
 
     MatchedRules []*MatchedRule `json:"matched_rules"`
     Disrupted bool `json:"disrupted"`
@@ -41,6 +42,7 @@ type Transaction struct {
     AuditLog bool
     SkipAfter string
 
+    AuditLogPath1 string
     DefaultAction string
     AuditEngine bool
     AuditLogParts string
@@ -67,6 +69,8 @@ type Transaction struct {
     //Used for the capture action, it will store the last results from RX to add them to TX:0..10
     RxMatch []string `json:"rx_match"`
     DisruptiveRuleId int `json:"disruptive_rule_id"`
+
+    MatchedRulesFull []*Rule
 
     Mux *sync.RWMutex
 }

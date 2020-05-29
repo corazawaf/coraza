@@ -18,6 +18,7 @@ type Waf struct {
 
 	DefaultAction string
     AuditEngine bool
+    AuditLogPath1 string
     AuditLogParts string
     DebugLogLevel int
     ForceRequestBodyVariable bool

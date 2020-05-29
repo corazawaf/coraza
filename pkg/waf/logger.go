@@ -4,14 +4,15 @@ import(
 	"os"
 	"log"
 	"io"
+	"io/ioutil"
 	"fmt"
 	"time"
-	"strings"
+	"path"
+	"github.com/jptosso/coraza-waf/pkg/models"
 )
 
 type Logger struct {
 	auditlogger *log.Logger
-	accesslogger *log.Logger
 	errorlogger *log.Logger
 }
 
@@ -24,13 +25,6 @@ func (l *Logger) Init() error{
 	mw := io.MultiWriter(faudit)
 	l.auditlogger = log.New(mw, "", 0)
 
-	faccess, err := os.OpenFile("/tmp/access.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		return err
-	}	
-	mw = io.MultiWriter(faccess)
-	l.accesslogger = log.New(mw, "", 0)
-
 
 	ferror, err := os.OpenFile("/tmp/error.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
@@ -42,18 +36,34 @@ func (l *Logger) Init() error{
 }
 
 func (l *Logger) WriteAudit(tx *Transaction) {
-	// [Fri Sep 09 10:42:29.902022 2011] block "GET /apache_pb.gif HTTP/1.0" ABABABABABABABABAB [112 1224] ["audit message 1" "audit message 2"]
+	// 192.168.3.130 192.168.3.1 - - [22/Aug/2009:13:24:20 +0100] "GET / HTTP/1.1" 200 56 "-" "-" SojdH8AAQEAAAugAQAAAAAA "-" /20090822/20090822-1324/20090822-132420-SojdH8AAQEAAAugAQAAAAAA 0 1248
 	t := time.Unix(tx.Collections["timestamp"].GetFirstInt64(), 0)
-	ts := t.Format("Mon Jan 02 15:04:05 2006")
-	//OPTIMIZAR:
-	ids := []string{}
-	for _, rule := range tx.MatchedRules {
-		r := fmt.Sprintf("[id \"%d\"]", rule.Id)
-		ids = append(ids, r)
-	}
-	idlist := strings.Join(ids, " ")
-	str := fmt.Sprintf("[%s] block \"GET /apache_pb.gif\" ABABABABABABABABAB [%s] [\"audit message 1\" \"audit message 2\"]", ts, idlist)
+	ts := t.Format("02/Jan/2006:15:04:20 -0700")
 
+	ipsource := tx.Collections["remote_addr"].GetFirstString()
+	ipserver := "127.0.0.1"
+	requestline := tx.Collections["request_line"].GetFirstString()
+	responsecode := tx.Collections["response_status"].GetFirstInt()
+	responselength := tx.Collections["response_content_length"].GetFirstInt64()
+	requestlength := tx.Collections["request_content_length"].GetFirstInt64()
+	p2 := fmt.Sprintf("/%s/%s", t.Format("20060106"), t.Format("20060106-1504"))
+	logdir:= path.Join(tx.AuditLogPath1, p2)
+	filepath := path.Join(logdir, fmt.Sprintf("/%s-%s", t.Format("20060106-150405"), tx.Id))
+	str := fmt.Sprintf("%s %s - - [%s] %q %d %d %q %q %s %q %s %d %d", 
+		ipsource, ipserver,	ts,	requestline, responsecode, responselength, "-", "-", tx.Id, "-", filepath, 0, requestlength)	
+	err := os.MkdirAll(logdir, 0777) //TODO update with settings mode
+	if err != nil{
+		fmt.Println("Cannot create directory " + logdir, err)
+	}
+
+	jslog := &models.AuditLog{}
+	jslog.Parse(&tx.Transaction)
+	jsdata := jslog.ToJson()
+
+	err = ioutil.WriteFile(filepath, jsdata, 0600) //TODO update with settings mode
+	if err != nil{
+		fmt.Println("Error writting logs to " + filepath)
+	}
 	l.auditlogger.Print(str)
 }
 

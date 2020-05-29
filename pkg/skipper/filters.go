@@ -4,8 +4,11 @@ import (
     "strings"
     "strconv"
     "sync"
+    "io"
     "net/http"
+    "fmt"
     "github.com/zalando/skipper/filters"
+    "github.com/zalando/skipper/filters/serve"
     "github.com/jptosso/coraza-waf/pkg/waf"
     _"github.com/jptosso/coraza-waf/pkg/models"
 )
@@ -77,21 +80,23 @@ func (f *CorazaFilter) Request(ctx filters.FilterContext) {
     f.tx.SetRequestLine(r.Method, r.Proto, r.RequestURI)
     f.tx.ExecutePhase(1)
     if f.tx.Disrupted {
-        //l.DebugErrorHandler(w, r, nil)
+        f.ErrorPage(ctx)
         return
     }   
     err := f.loadRequestBody(r)
     if err != nil{
+        f.ErrorPage(ctx)
         return
     }
     f.tx.ExecutePhase(2)
     if f.tx.Disrupted {
-        //
+        f.ErrorPage(ctx)
         return
     }   
     f.tx.SetFullRequest()
     f.tx.ExecutePhase(3)
     if f.tx.Disrupted {
+        f.ErrorPage(ctx)
         //l.DebugErrorHandler(w, r, nil)
         return
     }    
@@ -100,15 +105,25 @@ func (f *CorazaFilter) Request(ctx filters.FilterContext) {
 func (f *CorazaFilter) Response(ctx filters.FilterContext) {
     f.mux.Lock()
     defer f.mux.Unlock()    
+    if f.tx.Disrupted{
+        //Skip response phase
+        return
+    }
     f.tx.SetResponseHeaders(ctx.Response().Header)
     ctx.Response().Header.Set("X-Coraza-Waf", "woo")
     f.tx.ExecutePhase(4)
     f.tx.ExecutePhase(5)
 }
 
+func (f *CorazaFilter) ErrorPage(ctx filters.FilterContext) { 
+    f.tx.ExecutePhase(5)
+    serve.ServeHTTP(ctx, http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request){
+        rw.WriteHeader(http.StatusForbidden)
+        io.WriteString(rw, fmt.Sprintf("WAF Security Error, triggered rule: %d", f.tx.DisruptiveRuleId))
+    }))
+}
+
 func (f *CorazaFilter) loadRequestBody(r *http.Request) error{
-    f.mux.Lock()
-    defer f.mux.Unlock()    
     tx := f.tx
     cl := tx.Collections["request_headers"].Data["content-type"]
     ctype := "text/plain"

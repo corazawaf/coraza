@@ -1,6 +1,7 @@
 package operators
 import(
 	"strings"
+	"sync"
 	ahocorasick"github.com/bobusumisu/aho-corasick"
 	"github.com/jptosso/coraza-waf/pkg/models"
 	"io/ioutil"
@@ -11,6 +12,7 @@ import(
 
 type PmFromFile struct{
 	Data []string
+	mux *sync.RWMutex
 }
 
 func (o *PmFromFile) Init(data string){
@@ -29,9 +31,12 @@ func (o *PmFromFile) Init(data string){
     		o.Data = append(o.Data, l)
     	}
     }
+    o.mux = &sync.RWMutex{}
 }
 
 func (o *PmFromFile) Evaluate(tx *models.Transaction, value string) bool{
+	o.mux.RLock()
+	defer o.mux.RUnlock()
 	trie := ahocorasick.NewTrieBuilder().
 	    AddStrings(o.Data).
 	    Build()

@@ -3,6 +3,7 @@ package waf
 import(
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	"encoding/json"
+    "strconv"
 	"fmt"
     "github.com/jptosso/coraza-waf/pkg/models"
     "time"
@@ -34,10 +35,14 @@ func GetTransaction(waf *Waf, id string) (Transaction, error){
 
 func (tx *Transaction) initVars() {
     tx.Collections = map[string]*utils.LocalCollection{}
+    txid := utils.RandomString(19)
+    tx.Id = txid
+    tx.InitTxCollection()
     
-    tx.SetSingleCollection("id", utils.RandomString(19))
-    tx.SetSingleCollection("timestamp", fmt.Sprintf("%d", time.Now().Unix()))
+    tx.SetSingleCollection("id", txid)
+    tx.SetSingleCollection("timestamp", strconv.FormatInt(time.Now().Unix(), 10))
     tx.Disrupted = false
+    tx.AuditLogPath1 = tx.WafInstance.AuditLogPath1
     tx.AuditEngine = tx.WafInstance.AuditEngine
     tx.AuditLogParts = tx.WafInstance.AuditLogParts
     tx.DebugLogLevel = tx.WafInstance.DebugLogLevel
@@ -58,7 +63,6 @@ func (tx *Transaction) initVars() {
     tx.HashEnforcement = tx.WafInstance.HashEnforcement
     tx.DefaultAction = tx.WafInstance.DefaultAction
     tx.Skip = 0
-    tx.InitTxCollection()
     
     tx.NewPersistentCollections = map[string]string{}
 }

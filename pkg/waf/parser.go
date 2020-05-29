@@ -78,6 +78,67 @@ func (p *Parser) Evaluate(data string) error{
 
 	//Log.Debug(fmt.Sprintf("Directive: %s, Options: %s", directive, opts))
 	switch(directive){
+	//SecAuditEngine
+	case "SecAuditLog":
+		p.waf.AuditLogPath1 = opts
+		break
+
+	//SecAuditLog2
+	//SecAuditLogDirMode
+	//SecAuditLogFileMode
+	//SecAuditLogParts
+	//SecAuditLogRelevantStatus
+	//SecAuditLogStorageDir
+	//SecAuditLogType
+	//SecCollectionTimeout
+	//SecConnEngine
+	//SecContentInjection
+	//SecDebugLog
+	//SecDefaultAction
+	//SecHashEngine
+	//SecHashKey
+	//SecHashParam
+	//SecHashMethodRx
+	//SecHashMethodPm
+	//SecGeoLookupDb
+	//SecGsbLookupDb
+	//SecGuardianLog
+	//SecHttpBlKey
+	//SecInterceptOnError
+	//SecPcreMatchLimit
+	//SecPcreMatchLimitRecursion
+	//SecConnReadStateLimit
+	//SecSensorId
+	//SecConnWriteStateLimit
+	//SecRemoteRules
+	//SecRemoteRulesFailAction
+	//SecRequestBodyInMemoryLimit
+	//SecRequestBodyLimitAction
+	//SecResponseBodyLimit
+	//SecResponseBodyLimitAction
+	//SecResponseBodyMimeType
+	//SecResponseBodyMimeTypesClear
+	//SecRuleInheritance
+	//SecRuleEngine
+	//SecRulePerfTime
+	//SecRuleRemoveById
+	//SecRuleRemoveByMsg
+	//SecRuleRemoveByTag
+	//SecRuleScript
+	//SecRuleUpdateActionById
+	//SecRuleUpdateTargetById
+	//SecRuleUpdateTargetByMsg
+	//SecRuleUpdateTargetByTag
+	//SecServerSignature
+	//SecStreamOutBodyInspection
+	//SecTmpDir
+	//SecUploadDir
+	//SecUploadFileLimit
+	//SecUploadFileMode
+	//SecUploadKeepFiles
+	//SecWebAppId
+	//SecXmlExternalEntit
+
 	case "SecRuleEngine":
 		p.waf.RuleEngine = (opts == "On")
 	case "SecRequestBodyAccess":
