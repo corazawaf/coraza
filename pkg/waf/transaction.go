@@ -38,7 +38,7 @@ func (tx *Transaction) initVars() {
     txid := utils.RandomString(19)
     tx.Id = txid
     tx.InitTxCollection()
-    
+
     tx.SetSingleCollection("id", txid)
     tx.SetSingleCollection("timestamp", strconv.FormatInt(time.Now().Unix(), 10))
     tx.Disrupted = false
@@ -123,6 +123,9 @@ func (tx *Transaction) ExecutePhase(phase int) error{
             tx.Capture = false //we reset the capture flag on every run
             usedRules++
         }
+        if tx.Disrupted{
+            return nil
+        }
     }
     if phase == 5{
         //if tx.Log...
@@ -140,6 +143,7 @@ func (tx *Transaction) MatchRule(rule *Rule, msgs []string, matched []string){
         Action: rule.Action,
         Messages: msgs,
         MatchedData: matched,
+        Rule: &rule.Rule,
     }
     tx.MatchedRules = append(tx.MatchedRules, mr)
 

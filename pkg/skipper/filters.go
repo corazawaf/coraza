@@ -6,11 +6,15 @@ import (
     "sync"
     "io"
     "net/http"
+    "encoding/json"
     "fmt"
+    "os"
+    "os/exec"
+    "bytes"
     "github.com/zalando/skipper/filters"
     "github.com/zalando/skipper/filters/serve"
     "github.com/jptosso/coraza-waf/pkg/waf"
-    _"github.com/jptosso/coraza-waf/pkg/models"
+    "github.com/jptosso/coraza-waf/pkg/models"
 )
 
 type CorazaSpec struct {}
@@ -65,7 +69,8 @@ func (f *CorazaFilter) Request(ctx filters.FilterContext) {
     f.tx = &waf.Transaction{}
     f.tx.Init(f.wafinstance)
 
-    addrspl := strings.SplitN(r.RemoteAddr, ":", 2)
+    //TODO watch out for ipv6, idk why it prints [::1:12345] instead of ::1:12345 like vanilla http requests 
+    addrspl := strings.SplitN(r.RemoteAddr, ":", 2) 
     port := 0
     if len(addrspl) == 2 {
         port, _ = strconv.Atoi(addrspl[1])
@@ -119,7 +124,54 @@ func (f *CorazaFilter) ErrorPage(ctx filters.FilterContext) {
     f.tx.ExecutePhase(5)
     serve.ServeHTTP(ctx, http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request){
         rw.WriteHeader(http.StatusForbidden)
-        io.WriteString(rw, fmt.Sprintf("WAF Security Error, triggered rule: %d", f.tx.DisruptiveRuleId))
+        rw.Header().Set("Content-Type", "text/html")
+        io.WriteString(rw, "<link href=\"https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css\" rel=\"stylesheet\">")
+        io.WriteString(rw, fmt.Sprintf("<h1>Coraza Security Error - Debug Mode</h1>"))
+        io.WriteString(rw, "<h3>Rules Triggered</h3>")
+        io.WriteString(rw, "<table class='table table-striped'><thead><tr><th>ID</th><th>Action</th><th>Msg</th><th>Match</th><th>Raw Rule</th></tr></thead><tbody>")
+
+        for _, mr := range f.tx.MatchedRules{
+            match := strings.Join(mr.MatchedData, "<br>")
+            rule := mr.Rule.Raw
+            for child := mr.Rule.ChildRule; child != nil; child = child.ChildRule{
+                rule += "<br><strong>CHAIN:</strong> " + child.Raw
+            }
+            io.WriteString(rw, fmt.Sprintf("<tr><td>%d</td><td>%s</td><td></td><td>%s</td><td>%s</td></tr>", mr.Id, mr.Action, match, rule))
+        }
+        io.WriteString(rw, "</tbody></table>")
+
+        io.WriteString(rw, "<h3>Transaction Collections</h3>")
+        io.WriteString(rw, "<table class='table table-striped'><thead><tr><th>Collection</th><th>Key</th><th>Values</th></tr></thead><tbody>")
+        for key, col := range f.tx.Collections{
+            for k2, data := range col.Data{
+                d := strings.Join(data, "<br>")
+                io.WriteString(rw, fmt.Sprintf("<tr><td>%s</td><td>%s</td><td>%s</td></tr>", key, k2, d))
+            }
+        }
+        io.WriteString(rw, "</tbody></table>")
+        al := &models.AuditLog{}
+        al.Parse(&f.tx.Transaction)
+        var prettyJSON bytes.Buffer
+        json.Indent(&prettyJSON, al.ToJson(), "", "\t")        
+        io.WriteString(rw, fmt.Sprintf("<h3>Audit Log</h3><pre>%s</pre>", prettyJSON.String()))
+    }))
+}
+
+func (f *CorazaFilter) CustomErrorPage(ctx filters.FilterContext) { 
+    serve.ServeHTTP(ctx, http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request){        
+        rw.WriteHeader(http.StatusForbidden)
+        rw.Header().Set("Content-Type", "text/html")
+        cmd := exec.Command("custom-script.py")
+        cmd.Env = os.Environ()
+        cmd.Env = append(cmd.Env, "waf_txid=" + f.tx.Id)
+        cmd.Env = append(cmd.Env, "waf_timestamp=" + strconv.FormatInt(f.tx.Collections["timestamp"].GetFirstInt64(), 10))
+        stdout, err := cmd.Output()
+        if err != nil {
+            io.WriteString(rw, "<h1>Security Error</h1>")
+            io.WriteString(rw, "<small>There was an error rendering this page, please check the error logs.</small>")
+            return
+        }
+        io.WriteString(rw, string(stdout))
     }))
 }
 

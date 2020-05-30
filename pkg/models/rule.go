@@ -58,4 +58,6 @@ type Rule struct {
 	Version string `json:"version"`
 	Tags []string `json:"tags"`
 	Log bool `json:"log"`
+	Raw string `json:"raw"`
+	ChildRule *Rule `json:"child_rule"`
 }

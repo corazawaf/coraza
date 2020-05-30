@@ -37,12 +37,16 @@ func (r *Rule) Evaluate(tx *Transaction) []string{
 			values = tx.GetField(v.Collection, v.Key, r.NegateVariables)
 		}else{
 			//values = waf.GetField(v.Collection, v.Key)
-			fmt.Println("NO USAR")
-			values = tx.GetField(v.Collection, v.Key, r.NegateVariables)
+			fmt.Println("NOT READY YET, or maybe yes, idk")
 		}
 
 		if v.Count{	
-			arg := strconv.Itoa(len(values))
+			l := len(values)
+			arg := strconv.Itoa(l)
+			//TODO is this the right way count works?
+			if v.Key != "" && l > 0{
+				arg = strconv.Itoa(len(values[0]))
+			}
 			if r.executeOperator(arg, tx) {
 				for _, a := range r.Actions{
 					if a.GetType() == "disruptive"{

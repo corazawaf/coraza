@@ -115,7 +115,8 @@ func (al *AuditLog) Parse(tx *Transaction){
 		Rules: []*AuditMatchedRule{},
 	}
 
-	for _, r := range tx.MatchedRulesFull{
+	for _, mr := range tx.MatchedRules{
+		r := mr.Rule
 		al.MatchedRules.Rules = append(al.MatchedRules.Rules, &AuditMatchedRule{
 			Actionset: &AuditMatchedRuleActionset{
 				Id: r.Id,
@@ -129,7 +130,7 @@ func (al *AuditLog) Parse(tx *Transaction){
 				Filename: "",
 			},
 			IsMatched: false,
-			Unparsed: "",
+			Unparsed: r.Raw,
 			Operator: &AuditMatchedRuleOperator{
 				Operator: "",
 				OperatorParam: "",

@@ -18,6 +18,7 @@ type MatchedRule struct {
 	Action string
 	Messages []string
 	MatchedData []string
+    Rule *Rule
 }
 
 type Transaction struct {
@@ -69,8 +70,6 @@ type Transaction struct {
     //Used for the capture action, it will store the last results from RX to add them to TX:0..10
     RxMatch []string `json:"rx_match"`
     DisruptiveRuleId int `json:"disruptive_rule_id"`
-
-    MatchedRulesFull []*Rule
 
     Mux *sync.RWMutex
 }

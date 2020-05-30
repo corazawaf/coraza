@@ -176,6 +176,7 @@ func (p *Parser) Evaluate(data string) error{
 func (p *Parser) ParseRule(data string) (*Rule, error){
 	var rule = new(Rule)
 	rule.Init()
+	rule.Raw = "SecRule " + data
 
 	spl := strings.SplitN(data, " ", 2)
     rule.Vars = utils.RemoveQuotes(spl[0])
@@ -204,6 +205,7 @@ func (p *Parser) ParseRule(data string) (*Rule, error){
 		}
 
 		lastchain.Chain = rule
+		lastchain.ChildRule = &rule.Rule
 	}else{
 		p.waf.Rules = append(p.waf.Rules, rule)
 	}
