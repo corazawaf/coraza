@@ -42,7 +42,6 @@ func (s *CorazaSpec) CreateFilter(config []interface{}) (filters.Filter, error) 
         return nil, filters.ErrInvalidFilterParameters
     }
 
-    
     wi := &waf.Waf{}
     wi.Init()
 

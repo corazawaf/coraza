@@ -23,6 +23,7 @@ func (o *PmFromFile) Init(data string){
 	var err error
 	var res *http.Response
 	var b []byte
+	o.mux = &sync.RWMutex{}
     if strings.HasPrefix(data, "https://"){
 		client := &http.Client{
 			Timeout: time.Second * 15,
@@ -53,7 +54,6 @@ func (o *PmFromFile) Init(data string){
     		o.Data = append(o.Data, l)
     	}
     }
-    o.mux = &sync.RWMutex{}
 }
 
 func (o *PmFromFile) Evaluate(tx *models.Transaction, value string) bool{
