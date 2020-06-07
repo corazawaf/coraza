@@ -18,19 +18,33 @@ type Logger struct {
 
 
 func (l *Logger) Init() error{
-	faudit, err := os.OpenFile("/tmp/audit.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	err := l.SetAuditLog("/tmp/audit.log")
+	if err != nil{
+		return err
+	}
+	err = l.SetErrorLog("/tmp/error.log")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (l *Logger) SetAuditLog(path string) error{
+	faudit, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		return err
 	}	
 	mw := io.MultiWriter(faudit)
 	l.auditlogger = log.New(mw, "", 0)
+	return nil
+}
 
-
-	ferror, err := os.OpenFile("/tmp/error.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+func (l *Logger) SetErrorLog(path string) error{
+	ferror, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		return err
 	}	
-	mw = io.MultiWriter(ferror)
+	mw := io.MultiWriter(ferror)
 	l.errorlogger = log.New(mw, "", 0)
 	return nil
 }
@@ -96,4 +110,8 @@ func (l *Logger) Error(logdata string, v ...interface{}){
 func (l *Logger) Fatal(logdata string, v ...interface{}){
 	l.WriteError(fmt.Sprintf(logdata, v...))
 	os.Exit(-1)
+}
+
+func (l *Logger) BuildSyslog(tx *Transaction) string{
+	return ""
 }

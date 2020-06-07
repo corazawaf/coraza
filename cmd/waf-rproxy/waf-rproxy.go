@@ -21,6 +21,7 @@ func main() {
 	fmt.Println("Preparing reverse proxy")
 	hs := rproxy.HttpServer{}
 	hs.Init()
+	fmt.Println("Parsing settings")
 	dat, err := ioutil.ReadFile(*configpath)
 	if err != nil{
 		fmt.Print("Error reading config file: ")

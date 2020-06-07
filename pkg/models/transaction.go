@@ -46,7 +46,7 @@ type Transaction struct {
     AuditLogPath1 string
     DefaultAction string
     AuditEngine bool
-    AuditLogParts string
+    AuditLogParts []int
     DebugLogLevel int
     ForceRequestBodyVariable bool
     RequestBodyAccess bool
@@ -85,7 +85,7 @@ func (tx *Transaction) MacroExpansion(data string) string{
         match := v[2:len(v)-1] //removemos caracteres
         matchspl := strings.SplitN(match, ".", 2)
         col := strings.ToLower(matchspl[0])
-        key := strings.ToLower(col)
+        key := ""
         if len(matchspl) == 2{
             key = matchspl[1]            
         }
@@ -95,9 +95,10 @@ func (tx *Transaction) MacroExpansion(data string) string{
         }
         expansion := collection.Get(key) //TODO REVISAR
         if len(expansion) == 0{
-            continue
+            data = strings.ReplaceAll(data, v, "")
+        }else{
+            data = strings.ReplaceAll(data, v, expansion[0])
         }
-        data = strings.ReplaceAll(data, v, expansion[0])
     }
     //fmt.Println("Macro: " + data)
     return data
@@ -206,6 +207,12 @@ func (tx *Transaction) SetRemoteAddress(address string, port int) {
     p := strconv.Itoa(port)
     tx.Collections["remote_addr"].AddToKey("", address)
     tx.Collections["remote_port"].AddToKey("", p)
+}
+
+func (tx *Transaction) SetReqBodyProcessor(processor string){
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
+    tx.Collections["reqbody_processor"].AddToKey("", processor)
 }
 
 func (tx *Transaction) SetRemoteUser(user string) {

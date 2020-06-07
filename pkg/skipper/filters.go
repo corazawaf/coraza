@@ -183,6 +183,7 @@ func (f *CorazaFilter) loadRequestBody(r *http.Request) error{
         spl := strings.SplitN(cl[0], ";", 2)
         ctype = spl[0]
     }
+    f.tx.SetReqBodyProcessor("URLENCODED")
     switch ctype {
     default:
         //url encode
@@ -196,6 +197,7 @@ func (f *CorazaFilter) loadRequestBody(r *http.Request) error{
     case "multipart/form-data":
         //multipart
         //url encode
+        f.tx.SetReqBodyProcessor("MULTIPART")
         err := r.ParseMultipartForm(tx.RequestBodyLimit)
         if err != nil {
             //TODO mostrar el error

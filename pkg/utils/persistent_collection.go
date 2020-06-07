@@ -23,7 +23,7 @@ func (c *PersistentCollection) Init(collection string, key string) {
 	err := json.Unmarshal([]byte(val), &c.Vars)
 	if err != nil {
 		//fmt.Println("ERROR PROCESSING COLLECTION " + key)
-		RedisClient.Set(Ctx, key, "{}", 0)
+		c.New(collection, key, 0)
 	}
 }
 
@@ -53,6 +53,7 @@ func (c *PersistentCollection) SetTtl(key string, ttl int) {
 func (c *PersistentCollection) Set(key string, value string) {
 	c.changed = true
 	c.Vars[key] = value
+	c.Save()
 }
 
 func (c *PersistentCollection) Save() {

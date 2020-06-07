@@ -43,6 +43,9 @@ func TrimLeftChars(s string, n int) string {
 }
 
 func RemoveQuotes(s string) string {
+    if s == ""{
+        return ""
+    }
 	s = strings.TrimSuffix(s, `"`)
 	return strings.TrimPrefix(s, `"`)
 }
@@ -84,7 +87,7 @@ func GetKeys(m map[string][]string) []string{
 
 func InitGeoip(path string) error{
     var err error
-    GeoDb, err = geoip2.Open("")
+    GeoDb, err = geoip2.Open(path)
     if err != nil{
         return err
     }
@@ -103,4 +106,11 @@ func InitRedis(Address string, Password string, Db string) error {
         return err
     }
     return nil
+}
+
+func ArraySlice(arr []interface{}, index int) []interface{}{
+    copy(arr[index:], arr[index+1:])
+    arr[len(arr)-1] = ""
+    arr = arr[:len(arr)-1]
+    return arr
 }
