@@ -22,7 +22,6 @@ type CorazaSpec struct {}
 type CorazaFilter struct {
     //constant values
     policypath string
-    datapath string
     wafinstance *waf.Waf
 
     //context values
@@ -38,18 +37,13 @@ func (s *CorazaSpec) CreateFilter(config []interface{}) (filters.Filter, error) 
         return nil, filters.ErrInvalidFilterParameters
     }
     policypath := config[0].(string)
-    datapath := config[1].(string)
 
     if policypath == "" {
         return nil, filters.ErrInvalidFilterParameters
     }
-    if datapath == "" {
-        return nil, filters.ErrInvalidFilterParameters
-    }    
 
     
     wi := &waf.Waf{}
-    wi.Datapath = datapath
     wi.Init()
 
     wafparser := waf.Parser{}
@@ -59,7 +53,7 @@ func (s *CorazaSpec) CreateFilter(config []interface{}) (filters.Filter, error) 
         return nil, err
     }
     wi.SortRules()    
-    return &CorazaFilter{policypath, datapath, wi, nil, &sync.RWMutex{}}, nil
+    return &CorazaFilter{policypath, wi, nil, &sync.RWMutex{}}, nil
 }
 
 func (f *CorazaFilter) Request(ctx filters.FilterContext) {
