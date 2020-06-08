@@ -58,9 +58,6 @@ type Transaction struct {
     RuleRemoveById []int
     RuleRemoveByMsg []string
     RuleRemoveByTag []string
-    RuleRemoveTargetById map[int]map[string]string // ID[collection][key]
-    RuleRemoveTargetByMsg map[int]map[string]string // ID[collection][key]
-    RuleRemoveTargetByTag map[int]map[string]string // ID[collection][key]
     HashEngine bool
     HashEnforcement bool
 
@@ -74,6 +71,7 @@ type Transaction struct {
     RemoveRuleById []int
     RemoveRuleByTag []string
     RemoveTargetFromTag map[string][]*Collection //rt[rule-tag]
+    RemoveTargetFromId map[int][]*Collection
 
     Mux *sync.RWMutex
 }

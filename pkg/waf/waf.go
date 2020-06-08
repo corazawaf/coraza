@@ -94,7 +94,7 @@ func (w *Waf) Init() {
 
 	err := utils.InitRedis("localhost:6379", "", "")
 	if err != nil {
-		fmt.Println("Cannot connect to Redis: %s, switching to memory collections.")
+		fmt.Println("Cannot connect to Redis, switching to memory collections.")
 	}
 }
 

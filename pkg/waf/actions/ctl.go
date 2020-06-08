@@ -1,8 +1,9 @@
 package actions
 
 import(
-	_"strconv"
+	"strconv"
 	"strings"
+	_"fmt"
 	"github.com/jptosso/coraza-waf/pkg/models"
 )
 
@@ -43,7 +44,12 @@ func (a *Ctl) Evaluate(r *models.Rule, tx *models.Transaction) () {
 	switch a.Action {
 	case "ruleRemoveTargetById":
 		//Exception: disable rule value for collection:key
-		ruleRemoveTargetById(r, tx, a.Value, a.Collection, a.ColKey)
+		id, _ := strconv.Atoi(a.Value)
+		col := &models.Collection{a.Collection, a.ColKey}
+		if tx.RemoveTargetFromId[id] == nil{
+			tx.RemoveTargetFromId[id] = []*models.Collection{}
+		}
+		tx.RemoveTargetFromId[id] = append(tx.RemoveTargetFromId[id], col)
 	case "ruleRemoveTargetByTag":
 		col := &models.Collection{a.Collection, a.ColKey}
 		if tx.RemoveTargetFromTag[a.Value] == nil{
@@ -76,13 +82,4 @@ func parseCtl(data string) (string, string, string, string){
 		}
 	}
 	return action, value, strings.TrimSpace(strings.ToLower(collection)), strings.TrimSpace(strings.ToLower(colkey))
-}
-
-func ruleRemoveTargetById(rule *models.Rule, tx *models.Transaction, value string, collection string, colkey string){
-	//id, _ := strconv.Atoi(value)
-	//tx.RemoveRuleById = append(tx.RemoveRuleById, id)
-}
-
-func ruleRemoveTargetByTag(rule *models.Rule, tx *models.Transaction, value string, collection string, colkey string){
-	tx.RemoveRuleByTag = append(tx.RemoveRuleByTag, value)
 }

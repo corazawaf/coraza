@@ -53,19 +53,15 @@ func (tx *Transaction) initVars() {
     tx.ResponseBodyAccess = tx.WafInstance.ResponseBodyAccess
     tx.ResponseBodyLimit = tx.WafInstance.ResponseBodyLimit
     tx.RuleEngine = tx.WafInstance.RuleEngine
-    tx.RuleRemoveById = []int{}
-    tx.RuleRemoveByMsg = []string{}
-    tx.RuleRemoveByTag = []string{}
-    tx.RuleRemoveTargetById = nil
-    tx.RuleRemoveTargetByMsg = nil
-    tx.RuleRemoveTargetByTag = nil
     tx.HashEngine = tx.WafInstance.HashEngine
     tx.HashEnforcement = tx.WafInstance.HashEnforcement
     tx.DefaultAction = tx.WafInstance.DefaultAction
     tx.Skip = 0
+    
     tx.RemoveRuleById = []int{}
     tx.RemoveRuleByTag = []string{}
     tx.RemoveTargetFromTag = map[string][]*models.Collection{}
+    tx.RemoveTargetFromId = map[int][]*models.Collection{}
 
     tx.NewPersistentCollections = map[string]string{}
 

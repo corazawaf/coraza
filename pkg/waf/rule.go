@@ -37,10 +37,18 @@ func (r *Rule) Evaluate(tx *Transaction) []string{
 			}
 		}
 	}
+	rbi := tx.RemoveTargetFromId[r.Id]
+	if rbi != nil{
+		fmt.Printf("Skipping some cols for rule id %s\n", tx.Id)
+		for _, col := range rbi{			
+			skiptargets = append(skiptargets, col)
+		}
+	}
 
 	for _, v := range r.Variables {
-		matched := false
 		values := []string{}
+
+		//TODO IMPORTANT: The match notification must be switched, we can't log empty keys!!
 
 		//BEGIN CTL OPERATIONS
 		// I believe every transaction should have a copy of the rule list but it is hard to copy
@@ -104,11 +112,7 @@ func (r *Rule) Evaluate(tx *Transaction) []string{
 					args = []string{r.executeTransformations(arg)}
 				}
 				for _, carg := range args{
-					if r.executeOperator(carg, tx) {
-						matched = true
-					}
-					if matched{
-						matched = true
+					if r.executeOperator(carg, tx){
 						col := ""
 						//TODO REVISAR CUALES SE EJECUTAN Y CUANDO:
 						for _, a := range r.Actions{

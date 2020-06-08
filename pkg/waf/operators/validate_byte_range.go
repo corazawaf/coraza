@@ -39,6 +39,7 @@ func (o *ValidateByteRange) Evaluate(tx *models.Transaction, data string) bool{
 	//fmt.Println(rege)
 	re := regexp.MustCompile(rege)
 	data = re.ReplaceAllString(data, "")
+	//fmt.Println("DEBUG: ", data, len(data))
 	//fmt.Printf("%s: %d\n", databack, len(data))
-	return len(data) > 0
+	return len(data) == 0
 }
