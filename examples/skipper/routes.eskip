@@ -1,5 +1,5 @@
 baidu:
-        Path("/baidu")
+        *
         -> corazaWAF("/path/to/rules.conf", "/path/to/data/")
         -> setRequestHeader("Host", "www.baidu.com")
         -> setPath("/s")

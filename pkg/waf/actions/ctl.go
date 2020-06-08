@@ -6,6 +6,27 @@ import(
 	"github.com/jptosso/coraza-waf/pkg/models"
 )
 
+/*
+auditEngine
+auditLogParts
+debugLogLevel
+forceRequestBodyVariable
+requestBodyAccess
+requestBodyLimit
+requestBodyProcessor
+responseBodyAccess
+responseBodyLimit
+ruleEngine
+ruleRemoveById
+ruleRemoveByMsg
+ruleRemoveByTag
+ruleRemoveTargetById
+ruleRemoveTargetByMsg
+ruleRemoveTargetByTag
+hashEngine
+hashEnforcement
+*/
+
 type Ctl struct {
 	Action string
 	Value string
@@ -18,10 +39,17 @@ func (a *Ctl) Init(r *models.Rule, data string, errors []string) () {
 }
 
 func (a *Ctl) Evaluate(r *models.Rule, tx *models.Transaction) () {
+	//TODO change action to int and add proper consts
 	switch a.Action {
 	case "ruleRemoveTargetById":
 		//Exception: disable rule value for collection:key
 		ruleRemoveTargetById(r, tx, a.Value, a.Collection, a.ColKey)
+	case "ruleRemoveTargetByTag":
+		col := &models.Collection{a.Collection, a.ColKey}
+		if tx.RemoveTargetFromTag[a.Value] == nil{
+			tx.RemoveTargetFromTag[a.Value] = []*models.Collection{}
+		}
+		tx.RemoveTargetFromTag[a.Value] = append(tx.RemoveTargetFromTag[a.Value], col)
 	}
 	
 }
@@ -47,10 +75,14 @@ func parseCtl(data string) (string, string, string, string){
 			colkey = spl3[0]
 		}
 	}
-	return action, value, collection, colkey
+	return action, value, strings.TrimSpace(strings.ToLower(collection)), strings.TrimSpace(strings.ToLower(colkey))
 }
 
 func ruleRemoveTargetById(rule *models.Rule, tx *models.Transaction, value string, collection string, colkey string){
 	//id, _ := strconv.Atoi(value)
-	//tx.RemoveRule(id)
+	//tx.RemoveRuleById = append(tx.RemoveRuleById, id)
+}
+
+func ruleRemoveTargetByTag(rule *models.Rule, tx *models.Transaction, value string, collection string, colkey string){
+	tx.RemoveRuleByTag = append(tx.RemoveRuleByTag, value)
 }

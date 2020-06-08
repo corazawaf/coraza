@@ -71,6 +71,10 @@ type Transaction struct {
     RxMatch []string `json:"rx_match"`
     DisruptiveRuleId int `json:"disruptive_rule_id"`
 
+    RemoveRuleById []int
+    RemoveRuleByTag []string
+    RemoveTargetFromTag map[string][]*Collection //rt[rule-tag]
+
     Mux *sync.RWMutex
 }
 

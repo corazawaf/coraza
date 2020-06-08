@@ -71,6 +71,10 @@ func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []s
 		data := []string{}
 		// how does modsecurity solves this?
 		for k := range c.Data{
+			if ArrayContains(exceptions, k){
+				fmt.Println("Skipping parameter " + k)
+				continue
+			}
 			for _, v := range c.Data[k]{
 				//val := k + "=" + n
 				data = append(data, v)
@@ -78,6 +82,7 @@ func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []s
 		}
 		return data
 	}
+
 	if key[0] == '/'{
 		key = TrimLeftChars(key, 1)
 		key = strings.TrimSuffix(key, string('/'))

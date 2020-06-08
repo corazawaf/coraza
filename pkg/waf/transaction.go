@@ -63,8 +63,12 @@ func (tx *Transaction) initVars() {
     tx.HashEnforcement = tx.WafInstance.HashEnforcement
     tx.DefaultAction = tx.WafInstance.DefaultAction
     tx.Skip = 0
-    
+    tx.RemoveRuleById = []int{}
+    tx.RemoveRuleByTag = []string{}
+    tx.RemoveTargetFromTag = map[string][]*models.Collection{}
+
     tx.NewPersistentCollections = map[string]string{}
+
 }
 
 func (tx *Transaction) Init(waf *Waf) error{
@@ -187,14 +191,12 @@ func (tx *Transaction) GetSingleCollection(key string) string{
     return col.GetFirstString()
 }
 
-func (tx *Transaction) GetField(collection string, key string, exceptions map[string][]string) ([]string){
+func (tx *Transaction) GetField(collection string, key string, exceptions []string) ([]string){
     //return tx.GetVariablesWithNegations(collection, tx.RequestHeaders.Data, rule) TODO
     col := tx.Collections[collection]
-    exc := exceptions[collection]
     key = tx.MacroExpansion(key)
     if col == nil{
         return []string{}
     }
-    
-    return col.GetWithExceptions(key, exc)
+    return col.GetWithExceptions(key, exceptions)
 }

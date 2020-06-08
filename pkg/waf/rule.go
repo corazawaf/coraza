@@ -5,6 +5,7 @@ import (
 	"strconv"
     "reflect"
     "github.com/jptosso/coraza-waf/pkg/models"
+    "github.com/jptosso/coraza-waf/pkg/utils"
 )
 
 
@@ -28,13 +29,37 @@ func (r *Rule) Evaluate(tx *Transaction) []string{
 		tx.Capture = true
 	}
 
+	skiptargets := []*models.Collection{}
+	for tag, cols := range tx.RemoveTargetFromTag{
+		if utils.ArrayContains(r.Tags, tag){
+			for _, col := range cols{
+				skiptargets = append(skiptargets, col)
+			}
+		}
+	}
+
 	for _, v := range r.Variables {
 		matched := false
 		values := []string{}
 
+		//BEGIN CTL OPERATIONS
+		// I believe every transaction should have a copy of the rule list but it is hard to copy
+		// So this is the best way to achieve the expected behaviour
+		tmpnv := r.NegateVariables[v.Collection]
+		for _, st := range skiptargets{
+			if st.Name != v.Collection{
+				continue
+			}
+			if tmpnv == nil{
+				tmpnv = []string{}
+			}
+			tmpnv = append(tmpnv, st.Key)
+		}		
+		//END CTL OPERATIONS
+
 
 		if v.Context == "transaction"{
-			values = tx.GetField(v.Collection, v.Key, r.NegateVariables)
+			values = tx.GetField(v.Collection, v.Key, tmpnv)
 		}else{
 			//values = waf.GetField(v.Collection, v.Key)
 			fmt.Println("NOT READY YET, or maybe yes, idk")
