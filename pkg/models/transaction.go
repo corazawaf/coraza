@@ -320,6 +320,12 @@ func (tx *Transaction) ResolveRemoteHost() {
     tx.Collections["remote_host"].AddToKey("", addr[0])
 }
 
+//
+func (tx *Transaction) Capture(index int, value string) {
+    i := strconv.Itoa(index)
+    tx.Collections["tx"].Data[i] = []string{value}
+}
+
 func (tx *Transaction) InitTxCollection(){
     keys := []string{ "args", "args_post", "args_get", "args_names", "args_post_names", "args_get_names", "query_string", "remote_addr", "request_basename", "request_uri", "tx", "remote_port",
                       "request_body", "request_content_type", "request_content_length", "request_cookies", "request_cookies_names",  "request_line", "files_sizes",

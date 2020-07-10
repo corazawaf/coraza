@@ -23,11 +23,12 @@ func (o *Rx) Evaluate(tx *models.Transaction, value string) bool{
 	if tx.Capture{
 		tx.Collections["tx"].ResetCapture()
 	}
-	tx.Collections["tx"].Data["0"] = []string{value}
+	
+	tx.Capture(0, value)
 	for m.Match(subject, 0){
 		index := m.Index()
 		if tx.Capture{
-			tx.Collections["tx"].Data[strconv.Itoa(i)] = []string{string(subject)}
+			tx.Capture(i, string(subject))
 		}
 		subject = subject[index[1]:]
 	    if len(subject) == 0{
