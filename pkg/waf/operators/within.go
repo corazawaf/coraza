@@ -10,6 +10,7 @@ type Within struct{
 }
 
 func (o *Within) Init(data string){
+	//TODO split with regex
 	o.Data = strings.Split(data, " ")
 	if len(o.Data) == 1{
 		o.Data = strings.Split(data, ",")

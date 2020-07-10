@@ -24,11 +24,11 @@ func (o *Rx) Evaluate(tx *models.Transaction, value string) bool{
 		tx.Collections["tx"].ResetCapture()
 	}
 	
-	tx.Capture(0, value)
+	tx.CaptureField(0, value)
 	for m.Match(subject, 0){
 		index := m.Index()
 		if tx.Capture{
-			tx.Capture(i, string(subject))
+			tx.CaptureField(i, string(subject))
 		}
 		subject = subject[index[1]:]
 	    if len(subject) == 0{

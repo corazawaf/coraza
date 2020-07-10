@@ -321,7 +321,7 @@ func (tx *Transaction) ResolveRemoteHost() {
 }
 
 //
-func (tx *Transaction) Capture(index int, value string) {
+func (tx *Transaction) CaptureField(index int, value string) {
     i := strconv.Itoa(index)
     tx.Collections["tx"].Data[i] = []string{value}
 }
