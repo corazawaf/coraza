@@ -319,3 +319,22 @@ func (tx *Transaction) ResolveRemoteHost() {
     //TODO: ADD CACHE
     tx.Collections["remote_host"].AddToKey("", addr[0])
 }
+
+func (tx *Transaction) InitTxCollection(){
+    keys := []string{ "args", "args_post", "args_get", "args_names", "args_post_names", "args_get_names", "query_string", "remote_addr", "request_basename", "request_uri", "tx", "remote_port",
+                      "request_body", "request_content_type", "request_content_length", "request_cookies", "request_cookies_names",  "request_line", "files_sizes",
+                      "request_filename", "request_headers", "request_headers_names", "request_method", "request_protocol", "request_filename", "full_request",
+                      "request_uri", "request_line", "response_body", "response_content_length", "response_content_type", "request_cookies", "request_uri_raw",
+                      "response_headers", "response_headers_names", "response_protocol", "response_status", "appid", "id", "timestamp", "files_names", "files",
+                      "files_combined_size", "reqbody_processor"}
+    
+    for _, k := range keys{
+        tx.Collections[k] = &utils.LocalCollection{}
+        tx.Collections[k].Init()
+    }
+
+    for i := 0; i <= 10; i++ {
+        is := strconv.Itoa(i)
+        tx.Collections["tx"].Data[is] = []string{}
+    }    
+}

@@ -19,10 +19,11 @@ func (o *Rx) Evaluate(tx *models.Transaction, value string) bool{
 	re := pcre.MustCompile(renow, 0)
 	m := re.MatcherString(value, 0)
 	subject := []byte(value)
-	i := 0
+	i := 1
 	if tx.Capture{
 		tx.Collections["tx"].ResetCapture()
 	}
+	tx.Collections["tx"].Data["0"] = []string{value}
 	for m.Match(subject, 0){
 		index := m.Index()
 		if tx.Capture{
@@ -33,7 +34,7 @@ func (o *Rx) Evaluate(tx *models.Transaction, value string) bool{
 	    	break
 	    }
 	    i++
-	    if i >= 9{
+	    if i >= 10{
 	    	//We only collect 10
 	    	break
 	    }

@@ -69,6 +69,8 @@ func (f *CorazaFilter) Request(ctx filters.FilterContext) {
         port, _ = strconv.Atoi(addrspl[1])
     }
     f.tx.SetRequestHeaders(r.Header)
+    //For some reason, skipper hides de Host header, so we have to manually add it:
+    f.tx.Collections["request_headers"].Data["host"] = []string{ctx.OutgoingHost()}
     f.tx.SetArgsGet(r.URL.Query())
     //tx.SetAuthType("") //Not supported
     f.tx.SetUrl(r.URL)

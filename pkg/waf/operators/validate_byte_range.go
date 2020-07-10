@@ -9,15 +9,12 @@ import(
 )
 
 type ValidateByteRange struct{
-	ranges []string
+	re *regexp.Regexp
 }
 
 func (o *ValidateByteRange) Init(data string){
-	o.ranges = strings.Split(data, ",")
-}
-
-func (o *ValidateByteRange) Evaluate(tx *models.Transaction, data string) bool{
-	spl := o.ranges
+	ranges := strings.Split(data, ",")
+	spl := ranges
 	rega := []string{}
 	for _, br := range spl{
 		br = strings.Trim(br, " ")
@@ -37,9 +34,12 @@ func (o *ValidateByteRange) Evaluate(tx *models.Transaction, data string) bool{
 	}
 	rege := strings.Join(rega, "|")
 	//fmt.Println(rege)
-	re := regexp.MustCompile(rege)
-	data = re.ReplaceAllString(data, "")
+	o.re = regexp.MustCompile(rege)	
+}
+
+func (o *ValidateByteRange) Evaluate(tx *models.Transaction, data string) bool{
+	data = o.re.ReplaceAllString(data, "")
 	//fmt.Println("DEBUG: ", data, len(data))
 	//fmt.Printf("%s: %d\n", databack, len(data))
-	return len(data) == 0
+	return len(data) > 0
 }
