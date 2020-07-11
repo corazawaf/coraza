@@ -53,7 +53,7 @@ func TestCRS920270(t *testing.T) {
 
 	for _, gs := range good_strings{
 		str := asciiToString(gs)
-		if !op.Evaluate(tx, str){
+		if op.Evaluate(tx, str){
 			t.Errorf("Invalid null byte: %s", str)
 		}
 	}

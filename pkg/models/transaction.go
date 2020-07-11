@@ -344,3 +344,17 @@ func (tx *Transaction) InitTxCollection(){
         tx.Collections["tx"].Data[is] = []string{}
     }    
 }
+
+func (tx *Transaction) ResetCapture(){
+    //TODO enchular
+    tx.Collections["tx"].Data["0"] = []string{""}
+    tx.Collections["tx"].Data["1"] = []string{""}
+    tx.Collections["tx"].Data["2"] = []string{""}
+    tx.Collections["tx"].Data["3"] = []string{""}
+    tx.Collections["tx"].Data["4"] = []string{""}
+    tx.Collections["tx"].Data["5"] = []string{""}
+    tx.Collections["tx"].Data["6"] = []string{""}
+    tx.Collections["tx"].Data["7"] = []string{""}
+    tx.Collections["tx"].Data["8"] = []string{""}
+    tx.Collections["tx"].Data["9"] = []string{""}    
+}

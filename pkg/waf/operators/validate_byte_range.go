@@ -40,6 +40,6 @@ func (o *ValidateByteRange) Init(data string){
 func (o *ValidateByteRange) Evaluate(tx *models.Transaction, data string) bool{
 	data = o.re.ReplaceAllString(data, "")
 	//fmt.Println("DEBUG: ", data, len(data))
-	//fmt.Printf("%s: %d\n", databack, len(data))
+	//fmt.Printf("%s: %d\n", data, len(data))
 	return len(data) > 0
 }

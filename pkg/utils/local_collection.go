@@ -119,20 +119,6 @@ func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []s
 	}
 }
 
-func (c *LocalCollection) ResetCapture(){
-	//TODO enchular
-	c.Data["0"] = []string{}
-	c.Data["1"] = []string{}
-	c.Data["2"] = []string{}
-	c.Data["3"] = []string{}
-	c.Data["4"] = []string{}
-	c.Data["5"] = []string{}
-	c.Data["6"] = []string{}
-	c.Data["7"] = []string{}
-	c.Data["8"] = []string{}
-	c.Data["9"] = []string{}	
-}
-
 func (c *LocalCollection) GetFirstString() string{
 	a := c.Data[""]
 	if len(a) > 0{
