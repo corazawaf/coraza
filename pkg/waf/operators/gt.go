@@ -6,12 +6,11 @@ import(
 )
 
 type Gt struct{
-	data int
+	data string
 }
 
 func (o *Gt) Init(data string){
-	k, _ := strconv.Atoi(data)
-	o.data = k
+	o.data = data
 }
 
 func (o *Gt) Evaluate(tx *models.Transaction, value string) bool{
@@ -19,5 +18,10 @@ func (o *Gt) Evaluate(tx *models.Transaction, value string) bool{
 	if  err != nil{
 		return false
 	}
-	return o.data < v
+	data := tx.MacroExpansion(o.data)
+	k, err := strconv.Atoi(data)
+	if err != nil{
+		return false
+	}
+	return k < v
 }

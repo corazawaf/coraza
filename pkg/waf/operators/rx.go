@@ -22,18 +22,21 @@ func (o *Rx) Evaluate(tx *models.Transaction, value string) bool{
 	matches := r.FindAllStringSubmatch(value, -1)
 	i := 1
 	if tx.Capture{
-		//TODO is it on capture or always?
 		tx.ResetCapture()
 	}
 	
 	tx.CaptureField(0, value)	
 	for _, v := range matches {
+		if i >= 10{
+			//we only use 10 captures
+			break
+		}
 		if tx.Capture && len(v) > 1{
 			tx.CaptureField(i, v[1])
 		}
 		i += 1
 	}
-	return len(matches) > 0
+	return i > 1
 }
 
 /*
@@ -44,7 +47,6 @@ func (o *Rx) Evaluate(tx *models.Transaction, value string) bool{
 	subject := []byte(value)
 	i := 1
 	if tx.Capture{
-		//TODO move resetcapture to tx
 		tx.Collections["tx"].ResetCapture()
 	}
 	

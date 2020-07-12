@@ -2,13 +2,10 @@ package operators
 import(
 	"strings"
 	"sync"
+	"fmt"
 	ahocorasick"github.com/bobusumisu/aho-corasick"
 	"github.com/jptosso/coraza-waf/pkg/models"
-	"io/ioutil"
-	"net/http"
-	"time"
-	_"path"	
-	"fmt"
+	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
 
@@ -19,31 +16,12 @@ type PmFromFile struct{
 
 func (o *PmFromFile) Init(data string){
 	o.Data = []string{}
-	content := ""
-	var err error
-	var res *http.Response
-	var b []byte
 	o.mux = &sync.RWMutex{}
-    if strings.HasPrefix(data, "https://"){
-		client := &http.Client{
-			Timeout: time.Second * 15,
-		}
-		req, _ := http.NewRequest("GET", data, nil)
-		res, err = client.Do(req)
-		if err != nil {
-			fmt.Println("Unable to download file " + data)
-			return
-		}
-		defer res.Body.Close()
-		bodyBytes, _ := ioutil.ReadAll(res.Body)
-		content = string(bodyBytes)
-    }else{
-	    b, err = ioutil.ReadFile(data)
-	    if err != nil{
-	    	fmt.Println("Error loading file " + data)
-	    	return
-	    }
-	    content = string(b)
+    b, err := utils.OpenFile(data)
+    content := string(b)
+    if err != nil{
+    	fmt.Println("Error parsing path " + data)
+    	return
     }
     sp := strings.Split(string(content), "\n")
     for _, l := range sp {

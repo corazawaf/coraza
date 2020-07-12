@@ -2,6 +2,7 @@ package operators
 import(
 	"net"
 	"github.com/jptosso/coraza-waf/pkg/models"
+	"github.com/jptosso/coraza-waf/pkg/utils"
 	"fmt"
 	"strings"
 )
@@ -14,14 +15,17 @@ func (o *IpMatch) Init(data string){
 	o.subnets = []*net.IPNet{}
 	subnets := strings.Split(data, ",")
 	for _, sb := range subnets{
+		sb = utils.StripSpaces(sb)
+		if sb == ""{
+			continue
+		}
+		if !strings.Contains(sb, "/"){
+			sb = sb + "/32"
+		}		
 		_, subnet, err := net.ParseCIDR(sb)
 		if err != nil{
-			//we add /32 in case of a single ip address
-			_, subnet, err = net.ParseCIDR(sb+ "/32")
-			if err != nil{
-				fmt.Println("Error parsing network " + sb)
-				continue
-			}
+			fmt.Println("Invalid CIDR " + sb)
+			continue
 		}
 		o.subnets = append(o.subnets, subnet)
 	}

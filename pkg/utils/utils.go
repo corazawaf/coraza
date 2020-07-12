@@ -7,6 +7,9 @@ import(
     "github.com/oschwald/geoip2-golang"
     "context"
     "sync"
+    "io/ioutil"
+    "net/http"
+    "time"    
 )
 
 const randomchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -127,4 +130,31 @@ func CopyMap(m map[string]interface{}) map[string]interface{} {
     }
 
     return cp
+}
+
+func OpenFile(path string) ([]byte, error){
+    var ret []byte
+    if strings.HasPrefix(path, "https://"){
+        client := &http.Client{
+            Timeout: time.Second * 15,
+        }
+        req, _ := http.NewRequest("GET", path, nil)
+        res, err := client.Do(req)
+        if err != nil {
+            return nil, err
+        }
+        defer res.Body.Close()
+        ret, _ = ioutil.ReadAll(res.Body)
+    }else{
+        var err error
+        ret, err = ioutil.ReadFile(path)
+        if err != nil{
+            return nil, err
+        }
+    }
+    return ret, nil
+}
+
+func StripSpaces(str string) string{
+    return strings.Replace(str, " ", "", -1)    
 }

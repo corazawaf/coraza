@@ -5,6 +5,7 @@ import(
 	"github.com/jptosso/coraza-waf/pkg/models"
 )
 
+//TODO macro expansion
 type Ge struct{
 	data int
 }
