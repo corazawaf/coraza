@@ -174,12 +174,10 @@ func (r *Rule) Evaluate(tx *Transaction) []string{
 }
 
 func (r *Rule) executeOperator(data string, tx *Transaction) bool {
-	//TODO: FRAGMENTO TEMPORAL!!!!
 	if r.OperatorObj.Operator == nil{
 		fmt.Println("RUNNING INVALID OPERATOR: " + r.Operator)
 		return false
 	}
-	//FIN FRAGMENTO TEMPORAL!!!!
 	
     result := r.OperatorObj.Operator.Evaluate(&tx.Transaction, data)
 

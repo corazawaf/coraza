@@ -68,6 +68,7 @@ func analyseString(name string, str string) dataAnalysis{
 	}else if isLetter(str){
 		analysis.Type = "letters"
 	}else{
+		//potential false positive, AA is hex and a valid base64
 		_, err := base64.StdEncoding.DecodeString(str)
 		if err == nil{
 			analysis.Type = "base64"

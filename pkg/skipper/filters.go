@@ -1,4 +1,4 @@
-package skipper
+ package skipper
 
 import (
     "strings"
@@ -158,6 +158,7 @@ func (f *CorazaFilter) CustomErrorPage(ctx filters.FilterContext) {
         rw.Header().Set("Content-Type", "text/html")
         cmd := exec.Command("custom-script.py")
         cmd.Env = os.Environ()
+        //TODO change to ARGS
         cmd.Env = append(cmd.Env, "waf_txid=" + f.tx.Id)
         cmd.Env = append(cmd.Env, "waf_timestamp=" + strconv.FormatInt(f.tx.Collections["timestamp"].GetFirstInt64(), 10))
         stdout, err := cmd.Output()

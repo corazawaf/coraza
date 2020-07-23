@@ -20,15 +20,14 @@ func (a *Expirevar) Init(r *models.Rule, data string, errors []string) () {
 	if len(spl) != 2{
 		//... error
 	}
-	col := spl[0]
+	a.collection = spl[0]
 	a.key = spl[1]
-	collection := ""
-	col = col
-	collection = collection
 }
 
 func (a *Expirevar) Evaluate(r *models.Rule, tx *models.Transaction) () {
-	//a.collection.SetTtl(a.key, a.ttl)
+	//TODO requires more research
+	//ps := &utils.PersistentCollection{}
+	//ps.Init(a.collection, a.key)
 }
 
 func (a *Expirevar) GetType() string{

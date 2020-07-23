@@ -75,11 +75,12 @@ func (hl *HttpLogger) upload(al *models.AuditLog) error{
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	req, err := http.NewRequest("POST", hl.endpoint, bytes.NewBuffer(al.ToJson()))
-	//TODO add content-type?
+	
 	if err != nil {
 	    return err
 	}
 	req.Header.Set("X-Coraza-Version", "")
+	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req.WithContext(ctx))
 	if err != nil{
