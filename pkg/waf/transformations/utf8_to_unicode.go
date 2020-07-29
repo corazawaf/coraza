@@ -1,7 +1,7 @@
 package transformations
 
 import (
-	"fmt"
+	//"fmt"
 	"net/url"
 	"strconv"
 )
@@ -9,7 +9,7 @@ import (
 func Utf8ToUnicode(str string) string {
 	data, err := url.QueryUnescape(str)
 	if err != nil {
-		fmt.Println("Invalid UTF8 url encoded string ", str, " try to use urlDecodeUni before")
+		//fmt.Println("Invalid UTF8 url encoded string ", str, " try to use urlDecodeUni before")
 		//data = UrlDecodeUni(str)
 		return str
 	}

@@ -362,6 +362,7 @@ func (p *Parser) ParseRule(data string) (*Rule, error){
 	p.compileRuleVariables(rule, rule.Vars)
 	p.compileRuleOperator(rule, operators)
 
+	//TODO ADD DEFAULT ACTIONS FROM SECDEFAULTACTIONS
 	if len(matches) > 1{
     	actions = utils.RemoveQuotes(matches[1])
 		p.compileRuleActions(rule, actions)
@@ -392,7 +393,6 @@ func (p *Parser) compileRuleVariables(r *Rule, vars string) {
 	//TODO: in case on | inside regex, everything will break
 	//escenario bug: ARGS:/^(id_|test_)/
 
-	//escenario normal: ARGS:id
 	spl := strings.Split(vars, "|")
 	for _, x := range spl {
 		negation := false

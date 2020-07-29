@@ -9,6 +9,11 @@ import(
 type T struct {}
 
 func (a *T) Init(r *models.Rule, transformation string, errors []string) () {
+	if transformation == "none" {
+		//remove elements
+		r.Transformations = r.Transformations[:0]
+		return
+	}
 	transformations := transformations.TransformationsMap()
 	tt := transformations[transformation]
 	if tt == nil{

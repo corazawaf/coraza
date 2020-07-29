@@ -24,6 +24,7 @@ func main() {
         log.Fatalf("Error processing config: %s", err)
     }
     opts := cfg.ToOptions()
+    //TODO we should append instead?
     opts.CustomFilters = []filters.Spec{&cskipper.CorazaSpec{}}
     log.Fatal(skipper.Run(opts))
 }

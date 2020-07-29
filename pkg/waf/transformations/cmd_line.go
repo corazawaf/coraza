@@ -47,7 +47,7 @@ func CmdLine(data string) string{
             case '/':
             case '(':
                 if (space != 0) {
-                	ret = ret[0:len(ret)-2] //TODO: REVISAR
+                	ret = ret[0:len(ret)-2] //TODO: CHECK
                     //ret.pop_back();
                 }
                 space = 0;
