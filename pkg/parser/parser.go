@@ -5,6 +5,7 @@ import(
 	"github.com/jptosso/coraza-waf/pkg/operators"
 	actionsmod"github.com/jptosso/coraza-waf/pkg/actions"
 	"github.com/jptosso/coraza-waf/pkg/engine"
+	pcre"github.com/gijsbers/go-pcre"
 	"os"
 	"strings"
 	"net/http"
@@ -388,37 +389,42 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error){
 }
 
 func (p *Parser) compileRuleVariables(r *engine.Rule, vars string) {
-	//TODO: in case on | inside regex, everything will break
-	//escenario bug: ARGS:/^(id_|test_)/
-
-	spl := strings.Split(vars, "|")
-	for _, x := range spl {
+	re := pcre.MustCompile(`((?:&|!)?[\w_]+)((?::)(\w+|\/(.*?)(?<!\\)\/))?`, 0)
+	matcher := re.MatcherString(vars, 0)
+	subject := []byte(vars)	
+	for matcher.Match(subject, 0){
+		vname := matcher.GroupString(1)
+		vvalue := matcher.GroupString(3)
+		index := matcher.Index()
+		counter := false
 		negation := false
-		count := false
-		collection := ""
-		key := ""		
-		if  x[0] == '&'{
-			count = true
-			x = utils.TrimLeftChars(x, 1)
-		}else if x[0] == '!'{
-			negation = true
-			x = utils.TrimLeftChars(x, 1)
-		}		
-		//[0] = ARGS [1] = id
-		spl2 := strings.SplitN(x, ":", 2)
-		collection = spl2[0]
-		if len(spl2) == 2{
-			key = strings.ToLower(spl2[1])
-		}
 
+		if vname[0] == '&'{
+			vname = vname[1:]
+			counter = true
+		}
+		if vname[0] == '!'{
+			vname = vname[1:]
+			negation = true
+		}
+		if len(vvalue) > 0  && vvalue[0] == '/'{
+			//we strip slahes (/)
+			vvalue = vvalue[1:len(vvalue)-1]
+		}
+	    
 		context := "transaction" //TODO WTF?
-		collection = strings.ToLower(collection)
+		collection := strings.ToLower(vname)
 		//key = strings.ToLower(key)
 		if negation{
-			r.AddNegateVariable(collection, key)
+			r.AddNegateVariable(collection, vname)
 		}else{
-			r.AddVariable(count, collection, key, context) 
+			r.AddVariable(counter, collection, vname, context) 
 		}
+
+	    subject = subject[index[1]:]
+	    if len(subject) == 0{
+	    	break
+	    }
 	}
 }
 
@@ -465,17 +471,15 @@ func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error{
 	//REGEX: ((.*?)((?<!\\)(?!\B'[^']*),(?![^']*'\B)|$))
 	//Este regex separa las acciones por coma e ignora backslashs y textos entre comillas
 	//re := pcre.MustCompile(`(((.*?)((?<!\\)(?!\B'[^']*),(?![^']*'\B)|$)))`, 0)
-	re, err := regexp.Compile(`(.*?)((?<!\\)(?!\B'[^']*),(?![^']*'\B)|$)`)
-	if err != nil{
-		fmt.Println(err)
-		return err
-	}
-	matches := re.FindAllStringSubmatch(actions, -1)
+	re := pcre.MustCompile(`(.*?)((?<!\\)(?!\B'[^']*),(?![^']*'\B)|$)`, 0)
+	matcher := re.MatcherString(actions, 0)
+	subject := []byte(actions)
     errorlist := []string{}
     actions = p.waf.DefaultAction + actions //we add the defaultactions
     actionsmap := actionsmod.ActionsMap()
-	for _, marr := range matches {
-		m := marr[1]
+	for matcher.Match(subject, 0){
+		m := matcher.GroupString(1)
+		index := matcher.Index()
 		spl := strings.SplitN(m, ":", 2)
 		value := ""
 		key := strings.Trim(spl[0], " ")
@@ -490,6 +494,10 @@ func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error{
 			action.Init(r, value, errorlist)
 			r.Actions = append(r.Actions, action)
 		}
+	    subject = subject[index[1]:]
+	    if len(subject) == 0{
+	    	break
+	    }
 	}	
 	return nil
 }
