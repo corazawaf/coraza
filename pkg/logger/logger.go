@@ -49,7 +49,7 @@ func (l *Logger) SetErrorLog(path string) error{
 	return nil
 }
 
-func (l *Logger) WriteAudit(tx *Transaction) {
+func (l *Logger) WriteAudit(tx *engine.Transaction) {
 	// 192.168.3.130 192.168.3.1 - - [22/Aug/2009:13:24:20 +0100] "GET / HTTP/1.1" 200 56 "-" "-" SojdH8AAQEAAAugAQAAAAAA "-" /20090822/20090822-1324/20090822-132420-SojdH8AAQEAAAugAQAAAAAA 0 1248
 	t := time.Unix(tx.Collections["timestamp"].GetFirstInt64(), 0)
 	ts := t.Format("02/Jan/2006:15:04:20 -0700")
@@ -70,8 +70,8 @@ func (l *Logger) WriteAudit(tx *Transaction) {
 		fmt.Println("Cannot create directory " + logdir, err)
 	}
 
-	jslog := &models.AuditLog{}
-	jslog.Parse(&tx.Transaction)
+	jslog := &engine.AuditLog{}
+	jslog.Parse(tx)
 	jsdata := jslog.ToJson()
 
 	err = ioutil.WriteFile(filepath, jsdata, 0600) //TODO update with settings mode
@@ -81,7 +81,7 @@ func (l *Logger) WriteAudit(tx *Transaction) {
 	l.auditlogger.Print(str)
 }
 
-func (l *Logger) WriteAccess(tx *Transaction) {
+func (l *Logger) WriteAccess(tx *engine.Transaction) {
 	//127.0.0.1 ABABABABABABABABAB frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326
 	//https://httpd.apache.org/docs/2.4/logs.html	
 }
@@ -112,6 +112,6 @@ func (l *Logger) Fatal(logdata string, v ...interface{}){
 	os.Exit(-1)
 }
 
-func (l *Logger) BuildSyslog(tx *Transaction) string{
+func (l *Logger) BuildSyslog(tx *engine.Transaction) string{
 	return ""
 }

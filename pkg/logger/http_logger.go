@@ -16,7 +16,7 @@ type HttpLogger struct{
 	wg sync.WaitGroup
 	timeout int
 
-	queue []*models.AuditLog
+	queue []*engine.AuditLog
 
 	LastError error
 	UploadCount int64
@@ -50,7 +50,7 @@ func (hl *HttpLogger) Start(){
 	}()
 }
 
-func (hl *HttpLogger) next() *models.AuditLog{
+func (hl *HttpLogger) next() *engine.AuditLog{
 	hl.mux.Lock()
 	defer hl.mux.Unlock()
 	if len(hl.queue) == 0{
@@ -65,13 +65,13 @@ func (hl *HttpLogger) next() *models.AuditLog{
 func (hl *HttpLogger) Stop(){
 }
 
-func (hl *HttpLogger) Add(al *models.AuditLog){
+func (hl *HttpLogger) Add(al *engine.AuditLog){
 	hl.mux.Lock()
 	defer hl.mux.Unlock()
 	hl.queue = append(hl.queue, al)
 }
 
-func (hl *HttpLogger) upload(al *models.AuditLog) error{
+func (hl *HttpLogger) upload(al *engine.AuditLog) error{
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	req, err := http.NewRequest("POST", hl.endpoint, bytes.NewBuffer(al.ToJson()))
