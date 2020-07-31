@@ -127,7 +127,7 @@ func (w *Waf) GetField(collection string, key string) []string{
 
 func (w *Waf) SortRules() {
 	sort.Slice(w.Rules, func(i, j int) bool {
-	  return w.Rules[i].Id < w.Rules[i].Id
+	  return w.Rules[i].Id < w.Rules[j].Id
 	})
 }
 

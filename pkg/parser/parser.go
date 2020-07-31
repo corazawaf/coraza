@@ -434,8 +434,6 @@ func (p *Parser) compileRuleVariables(r *engine.Rule, vars string) {
 
 
 func (p *Parser) compileRuleOperator(r *engine.Rule, operator string) {
-	//Log.Debug(fmt.Sprintf("Loading operator: \"%s\"", operator))
-	//TODO mejorar esto
 	if operator[0] != '@' && operator[1] != '@'{
 		//default operator RX
 		operator = "@rx " + operator
@@ -457,7 +455,7 @@ func (p *Parser) compileRuleOperator(r *engine.Rule, operator string) {
 			r.OperatorObj.Data = spl[1]
 		}
 	}
-	//TODO validar que existe
+
 	r.OperatorObj.Operator = operators.OperatorsMap()[op]
 	if op == "pmFromFile"{
 		r.OperatorObj.Data = path.Join(p.waf.Datapath, r.OperatorObj.Data)
@@ -469,12 +467,9 @@ func (p *Parser) compileRuleOperator(r *engine.Rule, operator string) {
 	}
 }
 
-//ugly code, please fix :C TODO
 func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error{
-	//Log.Debug(fmt.Sprintf("Loading actions: \"%s\"", actions))
 	//REGEX: ((.*?)((?<!\\)(?!\B'[^']*),(?![^']*'\B)|$))
-	//Este regex separa las acciones por coma e ignora backslashs y textos entre comillas
-	//re := pcre.MustCompile(`(((.*?)((?<!\\)(?!\B'[^']*),(?![^']*'\B)|$)))`, 0)
+	//This regex splits actions by comma and assign key:values with supported escaped quotes
 	re := pcre.MustCompile(`(.*?)((?<!\\)(?!\B'[^']*),(?![^']*'\B)|$)`, 0)
 	matcher := re.MatcherString(actions, 0)
 	subject := []byte(actions)

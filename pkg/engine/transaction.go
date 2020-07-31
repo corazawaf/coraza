@@ -391,8 +391,6 @@ func (tx *Transaction) Init(waf *Waf) error{
     tx.WafInstance = waf
     tx.initVars()
     tx.Mux = &sync.RWMutex{}
-
-    //tx.Save() //redundant
     return nil
 }
 
@@ -488,5 +486,6 @@ func (tx *Transaction) GetField(collection string, key string, exceptions []stri
 
 func (tx *Transaction) IsRelevantStatus() bool{
     re := tx.WafInstance.AuditLogRelevantStatus
-    return re.MatchString(tx.Status)
+    status := strconv.Itoa(tx.Status)
+    return re.MatchString(status)
 }
