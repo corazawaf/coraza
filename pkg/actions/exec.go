@@ -19,7 +19,7 @@ type Exec struct {
 }
 
 func (a *Exec) Init(r *engine.Rule, data string, errors []string) () {
-
+	// Does not require initializer
 }
 
 func (a *Exec) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

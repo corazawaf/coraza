@@ -12,7 +12,7 @@ func (a *Rev) Init(r *engine.Rule, data string, errors []string) () {
 }
 
 func (a *Rev) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
-
+	// Not evaluated
 }
 
 func (a *Rev) GetType() string{

@@ -12,6 +12,7 @@ func (a *Pass) Init(r *engine.Rule, data string, errors []string) () {
 }
 
 func (a *Pass) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
+	// Not evaluated
 }
 
 func (a *Pass) GetType() string{

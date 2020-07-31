@@ -12,7 +12,7 @@ func (a *MultiMatch) Init(r *engine.Rule, data string, errors []string) () {
 }
 
 func (a *MultiMatch) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
-
+	// Not evaluated
 }
 
 func (a *MultiMatch) GetType() string{

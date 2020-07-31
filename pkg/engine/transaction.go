@@ -67,7 +67,6 @@ type Transaction struct {
     Capture bool `json:"capture"`
 
     //Used for the capture action, it will store the last results from RX to add them to TX:0..10
-    RxMatch []string `json:"rx_match"`
     DisruptiveRuleId int `json:"disruptive_rule_id"`
 
     RemoveRuleById []int
@@ -87,7 +86,7 @@ func (tx *Transaction) MacroExpansion(data string) string{
     r := regexp.MustCompile(`%\{(.*?)\}`)
     matches := r.FindAllString(data, -1)
     for _, v := range matches {
-        match := v[2:len(v)-1] //removemos caracteres
+        match := v[2:len(v)-1] 
         matchspl := strings.SplitN(match, ".", 2)
         col := strings.ToLower(matchspl[0])
         key := ""
@@ -98,7 +97,7 @@ func (tx *Transaction) MacroExpansion(data string) string{
         if collection == nil{
             return ""
         }
-        expansion := collection.Get(key) //TODO REVISAR
+        expansion := collection.Get(key)
         if len(expansion) == 0{
             data = strings.ReplaceAll(data, v, "")
         }else{
@@ -172,16 +171,16 @@ func (tx *Transaction) SetAuthType(auth string) {
 func (tx *Transaction) SetFiles(files map[string][]*multipart.FileHeader) {
     tx.Mux.Lock()
     defer tx.Mux.Unlock()
-    total_size := int64(0)
+    totalSize := int64(0)
     for field, fheaders := range files{
         tx.Collections["files_names"].AddToKey("", field)
         for _, header := range fheaders{
             tx.Collections["files"].AddToKey("", header.Filename)
-            total_size += header.Size
+            totalSize += header.Size
             tx.Collections["files_sizes"].AddToKey("", fmt.Sprintf("%d", header.Size))
         }
     }
-    tx.Collections["files_combined_size"].AddToKey("", fmt.Sprintf("%d", total_size))
+    tx.Collections["files_combined_size"].AddToKey("", fmt.Sprintf("%d", totalSize))
 }
 
 //Will be built from request_line, request_headers and request_body
@@ -287,18 +286,17 @@ func (tx *Transaction) SetResponseStatus(status int) {
 func (tx *Transaction) SetUrl(u *url.URL){
     tx.Mux.Lock()
     defer tx.Mux.Unlock()
-    request_basename := u.EscapedPath()
+    RequestBasename := u.EscapedPath()
     a := regexp.MustCompile(`\/|\\`) // \ o /
-    spl := a.Split(request_basename, -1)
+    spl := a.Split(RequestBasename, -1)
     if len(spl) > 0{
-        request_basename = spl[len(spl)-1]
+        RequestBasename = spl[len(spl)-1]
     }
     tx.Collections["request_uri"].AddToKey("", u.EscapedPath())
     tx.Collections["request_filename"].AddToKey("", u.Path)
-    tx.Collections["request_basename"].AddToKey("", request_basename)
+    tx.Collections["request_basename"].AddToKey("", RequestBasename)
     tx.Collections["query_string"].AddToKey("", u.RawQuery)
     tx.Collections["request_uri_raw"].AddToKey("", u.String())
-    //TODO shall we add user data? *Userinfo 
 }
 
 //Adds request_line, request_method, request_protocol, request_basename and request_uri
@@ -319,7 +317,6 @@ func (tx *Transaction) ResolveRemoteHost() {
     if err != nil{
         return
     }
-    //TODO: ADD CACHE
     tx.Collections["remote_host"].AddToKey("", addr[0])
 }
 
@@ -348,18 +345,13 @@ func (tx *Transaction) InitTxCollection(){
     }    
 }
 
+//Reset the capture collection for further uses
 func (tx *Transaction) ResetCapture(){
-    //TODO enchular
-    tx.Collections["tx"].Data["0"] = []string{""}
-    tx.Collections["tx"].Data["1"] = []string{""}
-    tx.Collections["tx"].Data["2"] = []string{""}
-    tx.Collections["tx"].Data["3"] = []string{""}
-    tx.Collections["tx"].Data["4"] = []string{""}
-    tx.Collections["tx"].Data["5"] = []string{""}
-    tx.Collections["tx"].Data["6"] = []string{""}
-    tx.Collections["tx"].Data["7"] = []string{""}
-    tx.Collections["tx"].Data["8"] = []string{""}
-    tx.Collections["tx"].Data["9"] = []string{""}    
+    //We reset capture 0-9
+    for i := 0; i < 10; i++{
+        si := strconv.Itoa(i)
+        tx.Collections["tx"].Data[si] = []string{""}
+    }
 }
 
 func (tx *Transaction) initVars() {
@@ -439,12 +431,13 @@ func (tx *Transaction) ExecutePhase(phase int) error{
         }
     }
     if phase == 5{
-        //if tx.Log...
-        //TODO!!!
-        //tx.WafInstance.Logger.WriteAudit(tx)
+        if tx.AuditLog{
+            if tx.IsRelevantStatus(){
+                //TODO implement logger
+                //tx.WafInstance.Logger.WriteAudit(tx)
+            }
+        }
     }
-    //tx.WafInstance.Logger.Debug(fmt.Sprintf("%d rules evaluated for transaction %s", usedRules, tx.Id))
-    //tx.WafInstance.Logger.Debug(fmt.Sprintf("----------------------- End Phase %d ---------------------", phase))
     return nil
 }
 
@@ -462,7 +455,6 @@ func (tx *Transaction) MatchRule(rule *Rule, msgs []string, matched []string){
 }
 
 func (tx *Transaction) InitCollection(key string){
-    //TODO aplicar macro a value
     tx.Collections[key] = &utils.LocalCollection{}
 }
 
@@ -486,11 +478,15 @@ func (tx *Transaction) GetSingleCollection(key string) string{
 }
 
 func (tx *Transaction) GetField(collection string, key string, exceptions []string) ([]string){
-    //return tx.GetVariablesWithNegations(collection, tx.RequestHeaders.Data, rule) TODO
     col := tx.Collections[collection]
     key = tx.MacroExpansion(key)
     if col == nil{
         return []string{}
     }
     return col.GetWithExceptions(key, exceptions)
+}
+
+func (tx *Transaction) IsRelevantStatus() bool{
+    re := tx.WafInstance.AuditLogRelevantStatus
+    return re.MatchString(tx.Status)
 }

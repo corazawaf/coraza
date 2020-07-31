@@ -8,7 +8,7 @@ type Allow struct {
 
 }
 func (a *Allow) Init(r *engine.Rule, b1 string, errors []string) () {
-	
+	// Does not require initializer
 }
 
 func (a *Allow) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

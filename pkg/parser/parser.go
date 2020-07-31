@@ -389,6 +389,8 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error){
 }
 
 func (p *Parser) compileRuleVariables(r *engine.Rule, vars string) {
+	//Splits the values by KEY, KEY:VALUE, &!KEY, KEY:/REGEX/, KEY1|KEY2
+	//GROUP 1 is collection, group 3 is vlue, group 3 can be empty
 	re := pcre.MustCompile(`((?:&|!)?[\w_]+)((?::)(\w+|\/(.*?)(?<!\\)\/))?`, 0)
 	matcher := re.MatcherString(vars, 0)
 	subject := []byte(vars)	
@@ -407,18 +409,20 @@ func (p *Parser) compileRuleVariables(r *engine.Rule, vars string) {
 			vname = vname[1:]
 			negation = true
 		}
+		/*
 		if len(vvalue) > 0  && vvalue[0] == '/'{
 			//we strip slahes (/)
 			vvalue = vvalue[1:len(vvalue)-1]
 		}
+	    */
 	    
 		context := "transaction" //TODO WTF?
 		collection := strings.ToLower(vname)
 		//key = strings.ToLower(key)
 		if negation{
-			r.AddNegateVariable(collection, vname)
+			r.AddNegateVariable(collection, vvalue)
 		}else{
-			r.AddVariable(counter, collection, vname, context) 
+			r.AddVariable(counter, collection, vvalue, context) 
 		}
 
 	    subject = subject[index[1]:]

@@ -25,7 +25,7 @@ func (a *T) Init(r *engine.Rule, transformation string, errors []string) () {
 }
 
 func (a *T) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
-	
+	// Not evaluated
 }
 
 func (a *T) GetType() string{

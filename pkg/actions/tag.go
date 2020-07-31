@@ -12,7 +12,7 @@ func (a *Tag) Init(r *engine.Rule, data string, errors []string) () {
 }
 
 func (a *Tag) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
-
+	// Not evaluated
 }
 
 func (a *Tag) GetType() string{

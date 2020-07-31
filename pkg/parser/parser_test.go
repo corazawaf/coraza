@@ -4,16 +4,8 @@ import(
 	"testing"
 )
 
-func TestParseFile(t *testing.T) {
-
-}
-
 func TestString(t *testing.T) {
-
-}
-
-func TestParseRemote(t *testing.T) {
-
+	
 }
 
 /*

@@ -8,10 +8,11 @@ import (
     "sync"
     "io"
     "net/http"
-    "encoding/json"
+    //"encoding/json"
     "os"
     "os/exec"
-    "bytes"
+    //"bytes"
+    "regexp"
     "github.com/zalando/skipper"
     "github.com/zalando/skipper/filters"
     "github.com/zalando/skipper/config"
@@ -34,8 +35,8 @@ func main() {
         log.Fatalf("Error processing config: %s", err)
     }
     opts := cfg.ToOptions()
-    //TODO we should append instead?
-    opts.CustomFilters = []filters.Spec{&CorazaSpec{}}
+    
+    opts.CustomFilters = append(opts.CustomFilters, &CorazaSpec{})
     log.Fatal(skipper.Run(opts))
 }
 
@@ -84,19 +85,24 @@ func (f *CorazaFilter) Request(ctx filters.FilterContext) {
     f.tx = &engine.Transaction{}
     f.tx.Init(f.wafinstance)
 
-    //TODO watch out for ipv6, idk why it prints [::1:12345] instead of ::1:12345 like vanilla http requests 
-    addrspl := strings.SplitN(r.RemoteAddr, ":", 2) 
+    re := regexp.MustCompile(`^\[(.*?)\]:(\d+)$`)
+    matches := re.FindAllStringSubmatch(r.RemoteAddr, -1)
+    address := ""
     port := 0
-    if len(addrspl) == 2 {
-        port, _ = strconv.Atoi(addrspl[1])
+
+    //no more validations as we don't spake weird ip addresses
+    if len(matches) > 0 {
+        address = string(matches[0][1])
+        port, _ = strconv.Atoi(string(matches[0][2]))
     }
+
     f.tx.SetRequestHeaders(r.Header)
     //For some reason, skipper hides de Host header, so we have to manually add it:
     f.tx.Collections["request_headers"].Data["host"] = []string{ctx.OutgoingHost()}
     f.tx.SetArgsGet(r.URL.Query())
     //tx.SetAuthType("") //Not supported
     f.tx.SetUrl(r.URL)
-    f.tx.SetRemoteAddress(addrspl[0], port)
+    f.tx.SetRemoteAddress(address, port)
     //tx.SetRemoteUser("") //Not supported
     f.tx.SetRequestCookies(r.Cookies())
     f.tx.SetRequestLine(r.Method, r.Proto, r.RequestURI)
@@ -119,7 +125,6 @@ func (f *CorazaFilter) Request(ctx filters.FilterContext) {
     f.tx.ExecutePhase(3)
     if f.tx.Disrupted {
         f.ErrorPage(ctx)
-        //l.DebugErrorHandler(w, r, nil)
         return
     }    
 }
@@ -139,6 +144,12 @@ func (f *CorazaFilter) Response(ctx filters.FilterContext) {
 
 func (f *CorazaFilter) ErrorPage(ctx filters.FilterContext) { 
     f.tx.ExecutePhase(5)
+    serve.ServeHTTP(ctx, http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request){
+        rw.WriteHeader(http.StatusForbidden)
+        rw.Header().Set("Content-Type", "text/html")
+        io.WriteString(rw, "Forbidden")
+        }))
+    /*
     serve.ServeHTTP(ctx, http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request){
         rw.WriteHeader(http.StatusForbidden)
         rw.Header().Set("Content-Type", "text/html")
@@ -172,6 +183,7 @@ func (f *CorazaFilter) ErrorPage(ctx filters.FilterContext) {
         json.Indent(&prettyJSON, al.ToJson(), "", "\t")        
         io.WriteString(rw, fmt.Sprintf("<h3>Audit Log</h3><pre>%s</pre>", prettyJSON.String()))
     }))
+    */
 }
 
 func (f *CorazaFilter) CustomErrorPage(ctx filters.FilterContext) { 
@@ -180,7 +192,7 @@ func (f *CorazaFilter) CustomErrorPage(ctx filters.FilterContext) {
         rw.Header().Set("Content-Type", "text/html")
         cmd := exec.Command("custom-script.py")
         cmd.Env = os.Environ()
-        //TODO change to ARGS
+        //maybe change to ARGS?
         cmd.Env = append(cmd.Env, "waf_txid=" + f.tx.Id)
         cmd.Env = append(cmd.Env, "waf_timestamp=" + strconv.FormatInt(f.tx.Collections["timestamp"].GetFirstInt64(), 10))
         stdout, err := cmd.Output()
@@ -207,7 +219,7 @@ func (f *CorazaFilter) loadRequestBody(r *http.Request) error{
         //url encode
         err := r.ParseForm()
         if err != nil {
-            //TODO mostrar el error
+            //TODO ??
             //l.DebugErrorHandler(w, r, nil)
             return nil
         }
@@ -218,7 +230,7 @@ func (f *CorazaFilter) loadRequestBody(r *http.Request) error{
         f.tx.SetReqBodyProcessor("MULTIPART")
         err := r.ParseMultipartForm(tx.RequestBodyLimit)
         if err != nil {
-            //TODO mostrar el error
+            //TODO ??
             //l.DebugErrorHandler(w, r, nil)
             return nil
         }

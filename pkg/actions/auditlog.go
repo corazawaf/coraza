@@ -8,7 +8,7 @@ type Auditlog struct {
 
 }
 func (a *Auditlog) Init(r *engine.Rule, b1 string, errors []string) () {
-	
+	// Does not require initializer
 }
 
 func (a *Auditlog) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

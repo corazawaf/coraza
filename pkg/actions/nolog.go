@@ -12,7 +12,7 @@ func (a *Nolog) Init(r *engine.Rule, data string, errors []string) () {
 }
 
 func (a *Nolog) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
-	
+	// Not evaluated
 }
 
 func (a *Nolog) GetType() string{

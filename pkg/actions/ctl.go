@@ -40,7 +40,6 @@ func (a *Ctl) Init(r *engine.Rule, data string, errors []string) () {
 }
 
 func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
-	//TODO change action to int and add proper consts
 	switch a.Action {
 	case "ruleRemoveTargetById":
 		//Exception: disable rule value for collection:key
