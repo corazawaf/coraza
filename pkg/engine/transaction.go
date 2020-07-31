@@ -315,7 +315,7 @@ func (tx *Transaction) SetRequestLine(method string, protocol string, requestUri
 func (tx *Transaction) ResolveRemoteHost() {
     tx.Mux.Lock()
     defer tx.Mux.Unlock()
-    addr, err := net.LookupAddr("198.252.206.16")
+    addr, err := net.LookupAddr(tx.Collections["remote_addr"].GetFirstString())
     if err != nil{
         return
     }
