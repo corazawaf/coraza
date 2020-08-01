@@ -7,6 +7,7 @@ import(
 	"strconv"
 	"context"
 	"errors"
+    "github.com/go-redis/redis/v8"
 )
 
 /*
@@ -24,20 +25,23 @@ type PersistentCollection struct {
 	ttl int
 	changed bool
 	Vars map[string]string
+	rc *redis.Client  
 }
 
 var rctx = context.Background()
 
-func (c *PersistentCollection) Init(collection string, key string) {
+func (c *PersistentCollection) Init(rc *redis.Client, collection string, key string) {
+	c.rc = rc
 	c.collection = fmt.Sprintf("col-%s-%s", collection, key)
 	c.key = key
 	err := c.Reload()
 	if err != nil {
-		c.New(collection, key, 0)
+		c.New(rc, collection, key, 0)
 	}
 }
 
-func (c *PersistentCollection) New(collection string, key string, ttl int) {
+func (c *PersistentCollection) New(rc *redis.Client, collection string, key string, ttl int) {
+	c.rc = rc
 	reserved := []string{"SESSION", "IP"}
 	if StringInSlice(collection, reserved){
 		return 
@@ -74,7 +78,7 @@ func (c *PersistentCollection) NewReserved(collection string, key string, ttl in
 
 func (c *PersistentCollection) Reload() error{
 	c.Vars = map[string]string{}
-	val, _ := RedisClient.Get(rctx, c.collection).Result()
+	val, _ := c.rc.Get(rctx, c.collection).Result()
 	err := json.Unmarshal([]byte(val), &c.Vars)
 	if err != nil {
 		return err
@@ -131,6 +135,6 @@ func (c *PersistentCollection) Save() {
 	if err != nil{
 		fmt.Println("Error serializing collection " + c.key)
 	}
-	RedisClient.Set(rctx, c.collection, js, 0)
+	c.rc.Set(rctx, c.collection, js, 0)
 	c.Reload()
 }
