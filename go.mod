@@ -20,6 +20,7 @@ require (
 	github.com/onsi/gomega v1.7.1 // indirect
 	github.com/oschwald/geoip2-golang v1.3.0
 	github.com/oschwald/maxminddb-golang v1.5.0 // indirect
+	github.com/yuin/gopher-lua v0.0.0-20190514113301-1cd887cd7036
 	github.com/zalando/skipper v0.11.101
 	gopkg.in/yaml.v2 v2.2.7
 )

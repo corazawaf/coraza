@@ -13,10 +13,10 @@ func TestString(t *testing.T) {
 	p.Init(waf)
 	p.Evaluate(rule)
 	
-	if len(waf.Rules) != 1{
+	if len(waf.Rules.GetRules()) != 1{
 		t.Error("Rule not created")
 	}
-	r := waf.Rules[0]
+	r := waf.Rules.GetRules()[0]
 	if len(r.Actions) != 3{
 		t.Error("Failed to parse actions")
 	}

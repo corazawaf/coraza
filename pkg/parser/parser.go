@@ -3,8 +3,8 @@ package parser
 import(
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	"github.com/jptosso/coraza-waf/pkg/operators"
-	actionsmod"github.com/jptosso/coraza-waf/pkg/actions"
 	"github.com/jptosso/coraza-waf/pkg/engine"
+	actionsmod"github.com/jptosso/coraza-waf/pkg/actions"
 	pcre"github.com/gijsbers/go-pcre"
 	"os"
 	"strings"
@@ -245,16 +245,16 @@ func (p *Parser) Evaluate(data string) error{
 		break
 	case "SecRuleRemoveById":
 		id, _ := strconv.Atoi(opts)
-		p.waf.DeleteRuleById(id)
+		p.waf.Rules.DeleteById(id)
 		break
 	case "SecRuleRemoveByMsg":
-		for _, r := range p.waf.FindRulesByMsg(opts){
-			p.waf.DeleteRuleById(r.Id)
+		for _, r := range p.waf.Rules.FindByMsg(opts){
+			p.waf.Rules.DeleteById(r.Id)
 		}
 		break
 	case "SecRuleRemoveByTag":
-		for _, r := range p.waf.FindRulesByTag(opts){
-			p.waf.DeleteRuleById(r.Id)
+		for _, r := range p.waf.Rules.FindByTag(opts){
+			p.waf.Rules.DeleteById(r.Id)
 		}
 		break
 	case "SecRuleScript":
@@ -267,7 +267,7 @@ func (p *Parser) Evaluate(data string) error{
 	case "SecRuleUpdateTargetById":
 		spl := strings.SplitN(opts, " ", 2)
 		id, _ := strconv.Atoi(spl[0])
-		p.waf.FindRuleById(id)
+		p.waf.Rules.FindById(id)
 		fmt.Println("SecRuleUpdateTargetById TO BE IMPLEMENTED.")
 		break
 	case "SecRuleUpdateTargetByMsg":
@@ -330,7 +330,13 @@ func (p *Parser) Evaluate(data string) error{
 		p.ParseRule("RULE \"@unconditionalMatch\" " + opts)
 	case "SecMarker":
 		//we create a rule with the next id
-		lastrule := p.waf.Rules[len(p.waf.Rules)-1]
+		rules := p.waf.Rules.GetRules()
+		/*
+		TODO ?
+		if len(rules) <= 1{
+
+		}*/
+		lastrule := rules[len(rules)-1]
 		nid := 1
 		if lastrule != nil{
 			nid = lastrule.Id + 1
@@ -370,7 +376,8 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error){
 
 	if p.nextChain{
 		p.nextChain = false
-		parent := p.waf.Rules[len(p.waf.Rules)-1]
+		rules := p.waf.Rules.GetRules()
+		parent := rules[len(rules)-1]
 		rule.ParentId = parent.Id
 		lastchain := parent
 
@@ -380,7 +387,7 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error){
 
 		lastchain.Chain = rule
 	}else{
-		p.waf.Rules = append(p.waf.Rules, rule)
+		p.waf.Rules.Add(rule)
 	}
 	if rule.HasChain{
 		p.nextChain = true

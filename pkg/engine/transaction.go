@@ -400,7 +400,7 @@ func (tx *Transaction) ExecutePhase(phase int) error{
     }
     usedRules := 0
 
-    for _, r := range tx.WafInstance.Rules {
+    for _, r := range tx.WafInstance.Rules.GetRules() {
         //we always execute secmarkers
         if r.Phase == phase || r.SecMark != ""{
             if tx.SkipAfter != ""{
@@ -431,14 +431,12 @@ func (tx *Transaction) ExecutePhase(phase int) error{
     if phase == 5{
         if tx.AuditLog{
             if tx.IsRelevantStatus(){
-                //TODO implement logger
-                //tx.WafInstance.Logger.WriteAudit(tx)
+                tx.SaveLog()
             }
         }
     }
     return nil
 }
-
 
 func (tx *Transaction) MatchRule(rule *Rule, msgs []string, matched []string){
     mr := &MatchedRule{
@@ -488,4 +486,20 @@ func (tx *Transaction) IsRelevantStatus() bool{
     re := tx.WafInstance.AuditLogRelevantStatus
     status := strconv.Itoa(tx.Status)
     return re.MatchString(status)
+}
+
+func (tx *Transaction) ToAuditJson() []byte{
+    al := tx.ToAuditLog()
+    return al.ToJson()
+}
+
+func (tx *Transaction) ToAuditLog() *AuditLog{
+    al := &AuditLog{}
+    al.Init(tx, tx.AuditLogParts)
+    return al
+}
+
+
+func (tx *Transaction) SaveLog() error{
+    return tx.WafInstance.Logger.WriteAudit(tx)
 }

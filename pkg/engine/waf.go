@@ -1,7 +1,6 @@
 package engine
 import (
 	"context"
-	"sort"
 	"regexp"
 	"fmt"
 	"github.com/jptosso/coraza-waf/pkg/utils"
@@ -16,6 +15,7 @@ const (
 
 	AUDIT_LOG_CONCURRENT                 = 0
 	AUDIT_LOG_HTTPS		                 = 1
+    AUDIT_LOG_SCRIPT                     = 2
 
 	AUDIT_LOG_PART_HEADER                = 0 // PART A - JUST FOR COMPATIBILITY, IT DOES NOTHING
 	AUDIT_LOG_PART_REQUEST_HEADERS       = 1 // PART B
@@ -33,7 +33,8 @@ const (
 )
 
 type Waf struct {
-	Rules []*Rule
+	Rules *RuleGroup
+    Logger *Logger
 	//int timestamp string transaction ID
 	TxAlive map[int]string
 	Collections map[string]*utils.PersistentCollection
@@ -88,16 +89,19 @@ type Waf struct {
 	Ctx context.Context  
 }
 
-
+// Initializes an instance of WAF
 func (w *Waf) Init() {
 	//TODO replace with SecCacheEngine redis://user:password@localhost:6379
 	w.Ctx = context.Background()
+    w.Rules = &RuleGroup{}
+    w.Rules.Init()
 	err := w.InitRedis("localhost:6379", "", "")
 	if err != nil {
 		fmt.Println("Cannot connect to Redis, switching to memory collections.")
 	}
 }
 
+// Initializes Redis connection and assign Redis as the default persistance engine
 func (w *Waf) InitRedis(Address string, Password string, Db string) error {
     w.RedisClient = redis.NewClient(&redis.Options{
         Addr:     "localhost:6379",
@@ -112,6 +116,7 @@ func (w *Waf) InitRedis(Address string, Password string, Db string) error {
     return nil
 }
 
+// Initializes Geoip2 database
 func (w *Waf) InitGeoip(path string) error{
     var err error
     w.GeoDb, err = geoip2.Open(path)
@@ -121,32 +126,7 @@ func (w *Waf) InitGeoip(path string) error{
     return nil
 }
 
-func (w *Waf) GetField(collection string, key string) []string{
-	return []string{}
-}
-
-func (w *Waf) SortRules() {
-	sort.Slice(w.Rules, func(i, j int) bool {
-	  return w.Rules[i].Id < w.Rules[j].Id
-	})
-}
-
-func (w *Waf) FindRuleById(id int) *Rule{
-	return nil
-}
-
-func (w *Waf) DeleteRuleById(id int){
-	
-}
-
-func (w *Waf) FindRulesByMsg(msg string) []*Rule{
-	return nil
-}
-
-func (w *Waf) FindRulesByTag(tag string) []*Rule{
-	return nil
-}
-
+// Returns a new initialized transaction for this WAF instance
 func (w *Waf) NewTransaction() *Transaction{
 	tx := &Transaction{}
 	tx.Init(w)

@@ -1,9 +1,8 @@
-package waf
+package engine
 
 import(
 	_"testing"
 	_"time"
-	_"github.com/jptosso/coraza-waf/pkg/engine"
 	_"fmt"
 )
 /*

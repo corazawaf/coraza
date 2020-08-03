@@ -18,7 +18,7 @@ import (
     "github.com/zalando/skipper/config"
     "github.com/zalando/skipper/filters/serve"
     "github.com/jptosso/coraza-waf/pkg/engine"   
-    "github.com/jptosso/coraza-waf/pkg/parser" 
+    "github.com/jptosso/coraza-waf/pkg/parser"
 )
 
 func main() {
@@ -74,7 +74,7 @@ func (s *CorazaSpec) CreateFilter(config []interface{}) (filters.Filter, error) 
     if err != nil {
         return nil, err
     }
-    wi.SortRules()    
+    wi.Rules.Sort()    
     return &CorazaFilter{policypath, wi, nil, &sync.RWMutex{}}, nil
 }
 

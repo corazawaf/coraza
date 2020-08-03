@@ -7,6 +7,7 @@ import(
 type Allow struct {
 
 }
+
 func (a *Allow) Init(r *engine.Rule, b1 string, errors []string) () {
 	// Does not require initializer
 }

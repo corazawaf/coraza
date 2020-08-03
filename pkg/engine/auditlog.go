@@ -79,7 +79,13 @@ type AuditLog struct{
 	MatchedRules *AuditMatchedRules `json:"matched_rules"`
 }
 
-func (al *AuditLog) Parse(tx *Transaction){
+func (al *AuditLog) Init(tx *Transaction, parts []int){
+	for _, p := range parts{
+		switch p{
+		default:
+			break
+		}
+	}
 	al.Transaction = &AuditTransaction{
 		TransactionId: tx.Id,
 		Time: "",
