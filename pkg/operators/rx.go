@@ -18,6 +18,7 @@ func (o *Rx) Init(data string){
 }
 
 func (o *Rx) Evaluate(tx *engine.Transaction, value string) bool{
+	//renow := tx.MacroExpansion(o.re)
 	r, _ := regexp.Compile(o.re)
 	matches := r.FindAllStringSubmatch(value, -1)
 	i := 1
@@ -36,7 +37,7 @@ func (o *Rx) Evaluate(tx *engine.Transaction, value string) bool{
 		}
 		i += 1
 	}
-	return i > 1
+	return len(matches) > 0
 }
 
 /*

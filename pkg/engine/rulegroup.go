@@ -72,3 +72,7 @@ func (rg *RuleGroup) FindByTag(tag string) []*Rule{
 	}
 	return rules
 }
+
+func (rg *RuleGroup) Count() int{
+	return len(rg.rules)
+}

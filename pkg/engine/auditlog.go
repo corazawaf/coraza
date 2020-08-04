@@ -80,12 +80,13 @@ type AuditLog struct{
 }
 
 func (al *AuditLog) Init(tx *Transaction, parts []int){
+	/*
 	for _, p := range parts{
 		switch p{
 		default:
 			break
 		}
-	}
+	}*/
 	al.Transaction = &AuditTransaction{
 		TransactionId: tx.Id,
 		Time: "",

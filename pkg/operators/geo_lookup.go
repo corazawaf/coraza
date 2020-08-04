@@ -1,7 +1,6 @@
 package operators
 
 import(
-	"github.com/jptosso/coraza-waf/pkg/utils"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"net"
 )
@@ -23,8 +22,6 @@ func (o *GeoLookup) Evaluate(tx *engine.Transaction, value string) bool{
 	if err != nil{
 		return false
 	}
-	tx.Collections["country_code"] = &utils.LocalCollection{}
-	tx.Collections["country_code"].Init()
-	tx.Collections["country_code"].Add("", []string{record.Country.IsoCode})
+	tx.SetSingleCollection("country_code", record.Country.IsoCode)
 	return true
 }

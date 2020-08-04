@@ -22,6 +22,8 @@ type Parser struct {
 	nextChain bool
 	RuleEngine string
 	waf *engine.Waf
+
+	nextSecMark string
 }
 
 func (p *Parser) Init(waf *engine.Waf) {
@@ -325,25 +327,15 @@ func (p *Parser) Evaluate(data string) error{
 	case "SecResponseBodyAccess":
 		p.waf.ResponseBodyAccess = (opts == "On")
 	case "SecRule":
-		p.ParseRule(opts)
+		rule, err := p.ParseRule(opts)
+		if err != nil{
+			return err
+		}
+		p.waf.Rules.Add(rule)
 	case "SecAction":
 		p.ParseRule("RULE \"@unconditionalMatch\" " + opts)
 	case "SecMarker":
-		//we create a rule with the next id
-		rules := p.waf.Rules.GetRules()
-		/*
-		TODO ?
-		if len(rules) <= 1{
-
-		}*/
-		lastrule := rules[len(rules)-1]
-		nid := 1
-		if lastrule != nil{
-			nid = lastrule.Id + 1
-		}
-		nr, _ := p.ParseRule(fmt.Sprintf("\"@unconditionalMatch\" \"id:%d, nolog, noauditlog, pass\"", nid))
-		nr.SecMark = strings.Trim(opts, `"`)
-		nr.Phase = lastrule.Phase //TODO: Is this the right way? or maybe it should have a special phase that always runs
+		p.nextSecMark = opts[1:len(opts)-1]
 	case "SecComponentSignature":
 		p.waf.ComponentSignature = opts
 	default:
@@ -386,12 +378,11 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error){
 		}
 
 		lastchain.Chain = rule
-	}else{
-		p.waf.Rules.Add(rule)
 	}
 	if rule.HasChain{
 		p.nextChain = true
 	}
+	rule.SecMark = p.nextSecMark
 	return rule, nil
 }
 
@@ -441,7 +432,10 @@ func (p *Parser) compileRuleVariables(r *engine.Rule, vars string) {
 
 
 func (p *Parser) compileRuleOperator(r *engine.Rule, operator string) {
-	if operator[0] != '@' && operator[1] != '@'{
+	if operator == "" {
+		operator = "@rx "
+	}
+	if operator[0] != '@' && operator[0] != '!'{
 		//default operator RX
 		operator = "@rx " + operator
 	}
@@ -490,7 +484,7 @@ func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error{
 		value := ""
 		key := strings.Trim(spl[0], " ")
 		if len(spl) == 2{
-			value = spl[1]
+			value = strings.Trim(spl[1], " ")
 		}
 		if actionsmap[key] == nil{
 			fmt.Printf("Error, invalid action: %s\n", key)

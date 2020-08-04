@@ -131,6 +131,14 @@ func (tx *Transaction) SetRequestHeaders(headers map[string][]string) {
     }
 }
 
+//Adds a request header
+func (tx *Transaction) AddRequestHeader(key string, value string) {
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
+    tx.Collections["request_headers_names"].AddToKey("", key)
+    tx.Collections["request_headers"].AddToKey(key, value)
+}
+
 //Sets args_get, args_get_names. Also adds to args_names and args
 func (tx *Transaction) SetArgsGet(args map[string][]string) {
     tx.Mux.Lock()
@@ -299,6 +307,21 @@ func (tx *Transaction) SetUrl(u *url.URL){
     tx.Collections["request_uri_raw"].AddToKey("", u.String())
 }
 
+//Sets args_get and args_get_names
+func (tx *Transaction) AddArgsFromUrl(u *url.URL){
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
+    params := u.Query()
+    for k, v := range params{
+        for _, vv := range v{
+            tx.Collections["args_get"].AddToKey(k, vv)
+            tx.Collections["args"].AddToKey(k, vv)
+        }
+        tx.Collections["args_get_names"].AddToKey("", k)
+        tx.Collections["args_names"].AddToKey("", k)
+    }
+}
+
 //Adds request_line, request_method, request_protocol, request_basename and request_uri
 func (tx *Transaction) SetRequestLine(method string, protocol string, requestUri string) {
     tx.Mux.Lock()
@@ -307,6 +330,13 @@ func (tx *Transaction) SetRequestLine(method string, protocol string, requestUri
     tx.Collections["request_protocol"].AddToKey("", protocol)
     tx.Collections["request_line"].AddToKey("", fmt.Sprintf("%s %s %s", method, requestUri, protocol))
 
+}
+
+//Adds request_line, request_method, request_protocol, request_basename and request_uri
+func (tx *Transaction) SetRequestMethod(method string) {
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
+    tx.Collections["request_method"].AddToKey("", method)
 }
 
 //Resolves remote hostname and sets remote_host variable
