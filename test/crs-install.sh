@@ -1,25 +1,3 @@
-@echo checking requirements..
-if ! [ -x "$(command -v git)" ]; then
-  echo 'Error: git is not installed.' >&2
-  exit 1
-fi
-if ! [ -x "$(command -v pip)" ]; then
-  echo 'Error: pip is not installed.' >&2
-  exit 1
-fi
-if ! [ -x "$(command -v coraza-rproxy)" ]; then
-  echo 'Error: Coraza Reverse Proxy (coraza-rproxy) is not installed.' >&2
-  exit 1
-fi
-if ! [ -x "$(command -v python)" ]; then
-  echo 'Error: python is not installed.' >&2
-  exit 1
-fi
-if ! [ -x "$(command -v py.test)" ]; then
-  echo 'Error: py.test is not installed, try "pip install pytest".' >&2
-  exit 1
-fi
-
 @echo Cloning OWASP CRS project...
 rm -rf crs
 git clone https://github.com/SpiderLabs/owasp-modsecurity-crs crs
@@ -71,21 +49,3 @@ cat crs/rules/RESPONSE-953-DATA-LEAKAGES-PHP.conf >> crs/owasp-crs.conf
 cat crs/rules/RESPONSE-954-DATA-LEAKAGES-IIS.conf >> crs/owasp-crs.conf
 cat crs/rules/RESPONSE-959-BLOCKING-EVALUATION.conf >> crs/owasp-crs.conf
 cat crs/rules/RESPONSE-980-CORRELATION.conf >> crs/owasp-crs.conf
-
-@echo Patching CRS configurations...
-rm crs/tests/regression/config.ini && cp utils/config.ini crs/tests/regression/
-cd crs/tests/regression/
-pip install requirements.txt
-
-@echo Starting Coraza Reverse Proxy
-coraza-rproxy -f ../data/config.yml
-
-@echo Running tests...
-py.test -v CRS_Tests.py --ruledir_recurse=tests/
-
-@echo Cleaning...
-cd ..
-rm -rf crs
-
-
-#TODO kill coraza-rproxy

@@ -9,6 +9,9 @@ import(
 type NidCl struct{}
 
 func (n *NidCl) Evaluate(nid string) bool{
+	if len(nid) < 8{
+		return false
+	}
 	re, err := regexp.Compile(`[^\dk]`)
 	if err != nil {
 		return false

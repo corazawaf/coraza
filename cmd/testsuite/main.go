@@ -25,9 +25,11 @@ func main() {
 	mode := flag.String("mode", "test", "Testing mode: benchmark|test")
 	path := flag.String("path", "./", "Path to find yaml files")
 	rules := flag.String("rules", "/tmp/rules.conf", "Path to rule files for testing.")
-	//duration := flag.Int("duration", 500, "Max tests duration in seconds.")
-	//iterations := flag.Int("iterations", 1, "Max test iterations.")
-	dodebug := flag.Bool("debug", false, "Show debug information.")
+	//proxy := flag.String("p", "", "Tests will be proxied to this url, example: https://10.10.10.10:443")
+	//duration := flag.Int("d", 500, "Max tests duration in seconds.")
+	//iterations := flag.Int("i", 1, "Max test iterations.")
+	//concurrency := flag.Int("c", 1, "How many concurrent routines.")
+	dodebug := flag.Bool("d", false, "Show debug information.")
 	flag.Parse()
 	debug = *dodebug
 
@@ -174,7 +176,7 @@ func runTest(waf *engine.Waf, profile testProfile) (bool, int, error){
 				}
 			}
 			if debug{
-				fmt.Println(log)
+				fmt.Println("LOG:", log)
 			}
 		}
 		result := "\033[31mFailed"
@@ -182,7 +184,7 @@ func runTest(waf *engine.Waf, profile testProfile) (bool, int, error){
 			result = "\033[32mPassed"
 			passed++
 		}
-		fmt.Printf("%s: \t%s\033[0m (0us)\n", test.Title, result)
+		fmt.Printf("%s: %s\033[0m (0us)\n", test.Title, result)
 	}
 	return len(profile.Tests) == passed, 0, nil
 }
