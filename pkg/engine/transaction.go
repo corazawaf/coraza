@@ -308,7 +308,7 @@ func (tx *Transaction) SetUrl(u *url.URL){
 }
 
 //Sets args_get and args_get_names
-func (tx *Transaction) AddArgsFromUrl(u *url.URL){
+func (tx *Transaction) AddGetArgsFromUrl(u *url.URL){
     tx.Mux.Lock()
     defer tx.Mux.Unlock()
     params := u.Query()
@@ -318,6 +318,21 @@ func (tx *Transaction) AddArgsFromUrl(u *url.URL){
             tx.Collections["args"].AddToKey(k, vv)
         }
         tx.Collections["args_get_names"].AddToKey("", k)
+        tx.Collections["args_names"].AddToKey("", k)
+    }
+}
+
+//Sets args_post and args_post_names
+func (tx *Transaction) AddPostArgsFromUrl(u *url.URL){
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
+    params := u.Query()
+    for k, v := range params{
+        for _, vv := range v{
+            tx.Collections["args_post"].AddToKey(k, vv)
+            tx.Collections["args"].AddToKey(k, vv)
+        }
+        tx.Collections["args_post_names"].AddToKey("", k)
         tx.Collections["args_names"].AddToKey("", k)
     }
 }
@@ -362,7 +377,7 @@ func (tx *Transaction) InitTxCollection(){
                       "request_filename", "request_headers", "request_headers_names", "request_method", "request_protocol", "request_filename", "full_request",
                       "request_uri", "request_line", "response_body", "response_content_length", "response_content_type", "request_cookies", "request_uri_raw",
                       "response_headers", "response_headers_names", "response_protocol", "response_status", "appid", "id", "timestamp", "files_names", "files",
-                      "files_combined_size", "reqbody_processor"}
+                      "files_combined_size", "reqbody_processor", "request_body_length"}
     
     for _, k := range keys{
         tx.Collections[k] = &utils.LocalCollection{}

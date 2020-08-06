@@ -3,50 +3,50 @@
     author: jptosso
     description: None
     enabled: true
-    name: general.yaml
+    name: chains.yaml
   tests:
   -
-    test_title: general-1
+    test_title: chains-200
     stages:
     -
       stage:
         input:
           uri: /foo.php?bar=blah&ooo=123&bbb=3
         output:
-          log_contains: id "1"
+          no_log_contains: id "200"
   -
-    test_title: general-10
+    test_title: chains-201
     stages:
     -
       stage:
         input:
           uri: /foo.php?bar=blah&ooo=123&bbb=3
         output:
-          no_log_contains: id "10"
+          log_contains: id "201"
   -
-    test_title: general-11
+    test_title: chains-202
     stages:
     -
       stage:
         input:
           uri: /foo.php?bar=blah&ooo=123&bbb=3
         output:
-          log_contains: id "11"
+          log_contains: id "202"
   -
-    test_title: general-40
+    test_title: chains-203
     stages:
     -
       stage:
         input:
           uri: /foo.php?bar=blah&ooo=123&bbb=3
         output:
-          log_contains: id "40"
+          no_log_contains: id "203"          
   -
-    test_title: general-41
+    test_title: chains-204
     stages:
     -
       stage:
         input:
           uri: /foo.php?bar=blah&ooo=123&bbb=3
         output:
-          log_contains: id "41"
+          no_log_contains: id "204"                    

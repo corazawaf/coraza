@@ -190,6 +190,8 @@ github.com/prometheus/procfs v0.0.2 h1:6LJUbpNm42llc4HRCuvApCSWB/WfhuNo9K98Q9sNG
 github.com/prometheus/procfs v0.0.2/go.mod h1:TjEm7ze935MbeOT/UhFTIMYKhuLP4wbCsTZCD3I8kEA=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a h1:9ZKAASQSHhDYGoxY8uLVpewe1GDZ2vu2Tr/vTdVAkFQ=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
+github.com/rubrikinc/go-pcre v0.0.0-20190614221902-2375a3cf1302 h1:+Qz51m9JmNK/wHWUPWVk7CMO2ambYMmIzD9WWXsNfmE=
+github.com/rubrikinc/go-pcre v0.0.0-20190614221902-2375a3cf1302/go.mod h1:d9KqajSrKZBsOUplfMP16dvaxcRFobAV8qaGlrceqBI=
 github.com/sanity-io/litter v1.1.0/go.mod h1:CJ0VCw2q4qKU7LaQr3n7UOSHzgEMgcGco7N/SkZQPjw=
 github.com/sarslanhan/cronmask v0.0.0-20190709075623-766eca24d011 h1:S5j3KTsiGwmQSEJJBp0iIG87CDBCGCwbYLmVv8L/nuE=
 github.com/sarslanhan/cronmask v0.0.0-20190709075623-766eca24d011/go.mod h1:NmI1tg7wwsf1hF6G5EtyGCrtNKsH2RIdYYoJa7GsnP8=

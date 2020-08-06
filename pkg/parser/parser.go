@@ -471,6 +471,7 @@ func (p *Parser) compileRuleOperator(r *engine.Rule, operator string) {
 func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error{
 	//REGEX: ((.*?)((?<!\\)(?!\B'[^']*),(?![^']*'\B)|$))
 	//This regex splits actions by comma and assign key:values with supported escaped quotes
+	//TODO needs fixing
 	re := pcre.MustCompile(`(.*?)((?<!\\)(?!\B'[^']*),(?![^']*'\B)|$)`, 0)
 	matcher := re.MatcherString(actions, 0)
 	subject := []byte(actions)

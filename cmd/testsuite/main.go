@@ -153,8 +153,23 @@ func runTest(waf *engine.Waf, profile testProfile) (bool, int, error){
 					}
 				}else{
 					tx.SetUrl(u)
-					tx.AddArgsFromUrl(u)
+					tx.AddGetArgsFromUrl(u)
 				}				
+			}
+
+			if stage.Stage.Input.Data != ""{
+				data := ""
+				switch stage.Stage.Input.Data.(type) {
+				case []string:
+					data = strings.Join(stage.Stage.Input.Data.([]string), "\n")
+				case string:
+					data = stage.Stage.Input.Data.(string)
+				}
+				tx.SetRequestBody(data, int64(len(data)))
+				u, err := url.Parse(data)
+				if err == nil{
+					tx.AddPostArgsFromUrl(u)
+				}
 			}
 
 			for i := 1; i <= 5; i++{
