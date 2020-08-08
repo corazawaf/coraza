@@ -1,0 +1,70 @@
+---
+  meta:
+    author: jptosso
+    description: None
+    enabled: true
+    name: general.yaml
+  tests:
+  -
+    test_title: general-1
+    stages:
+    -
+      stage:
+        input:
+          uri: /foo.php?bar=blah&ooo=123&bbb=3
+        output:
+          log_contains: id "1"
+  -
+    test_title: general-10
+    stages:
+    -
+      stage:
+        input:
+          uri: /foo.php?bar=blah&ooo=123&bbb=3
+        output:
+          no_log_contains: id "10"
+  -
+    test_title: general-11
+    stages:
+    -
+      stage:
+        input:
+          uri: /foo.php?bar=blah&ooo=123&bbb=3
+        output:
+          log_contains: id "11"
+  -
+    test_title: general-40
+    stages:
+    -
+      stage:
+        input:
+          uri: /foo.php?bar=blah&ooo=123&bbb=3
+        output:
+          log_contains: id "40"
+  -
+    test_title: general-41
+    stages:
+    -
+      stage:
+        input:
+          uri: /foo.php?bar=blah&ooo=123&bbb=3
+        output:
+          log_contains: id "41"
+  -
+    test_title: general-300
+    stages:
+    -
+      stage:
+        input:
+          uri: /foo.php?bar=asdf&ooo=123&bbb=3
+        output:
+          log_contains: id "300"          
+  -
+    test_title: general-301
+    stages:
+    -
+      stage:
+        input:
+          uri: /foo.php?bar=asdf&ooo=asdf&bbb=3
+        output:
+          no_log_contains: id "301"                    

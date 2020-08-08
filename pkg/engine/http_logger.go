@@ -1,4 +1,4 @@
-package waf
+package engine
 
 import(
 	"errors"
@@ -7,7 +7,6 @@ import(
 	"sync"
 	"time"
 	"net/http"
-	"github.com/jptosso/coraza-waf/pkg/engine"
 )
 type HttpLogger struct{
 	working bool
@@ -16,7 +15,7 @@ type HttpLogger struct{
 	wg sync.WaitGroup
 	timeout int
 
-	queue []*engine.AuditLog
+	queue []*Transaction
 
 	LastError error
 	UploadCount int64
@@ -26,21 +25,23 @@ func (hl *HttpLogger) Init(endpoint string){
 	hl.endpoint = endpoint
 	hl.mux = &sync.RWMutex{}
 	hl.working = true
+	hl.start()
 }
 
-func (hl *HttpLogger) Start(){
+func (hl *HttpLogger) start(){
 	//TODO multithreading
 	hl.wg.Add(1)
 	go func(){
 		for hl.working{
 			next := hl.next()
+			//We could use statistical models to adjust this time
 			if next == nil{
-				time.Sleep(100*time.Millisecond)
+				time.Sleep(10*time.Millisecond)
 				continue
 			}else{
-				time.Sleep(10*time.Millisecond)
+				time.Sleep(1*time.Millisecond)
 			}
-			err := hl.upload(next)
+			err := hl.upload(next.ToAuditLog())
 			if err != nil{
 				hl.LastError = err
 				hl.Add(next)
@@ -50,7 +51,7 @@ func (hl *HttpLogger) Start(){
 	}()
 }
 
-func (hl *HttpLogger) next() *engine.AuditLog{
+func (hl *HttpLogger) next() *Transaction{
 	hl.mux.Lock()
 	defer hl.mux.Unlock()
 	if len(hl.queue) == 0{
@@ -63,15 +64,17 @@ func (hl *HttpLogger) next() *engine.AuditLog{
 }
 
 func (hl *HttpLogger) Stop(){
+	hl.working = false
 }
 
-func (hl *HttpLogger) Add(al *engine.AuditLog){
+func (hl *HttpLogger) Add(tx *Transaction) error{
 	hl.mux.Lock()
 	defer hl.mux.Unlock()
-	hl.queue = append(hl.queue, al)
+	hl.queue = append(hl.queue, tx)
+	return nil
 }
 
-func (hl *HttpLogger) upload(al *engine.AuditLog) error{
+func (hl *HttpLogger) upload(al *AuditLog) error{
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	req, err := http.NewRequest("POST", hl.endpoint, bytes.NewBuffer(al.ToJson()))

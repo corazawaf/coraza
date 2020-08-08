@@ -72,7 +72,6 @@ func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []s
 		// how does modsecurity solves this?
 		for k := range c.Data{
 			if ArrayContains(exceptions, k){
-				fmt.Println("Skipping parameter " + k)
 				continue
 			}
 			for _, v := range c.Data[k]{
@@ -90,7 +89,6 @@ func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []s
 		result := []string{}
 		for k := range c.Data {
 			if ArrayContains(exceptions, k){
-				fmt.Println("Skipping parameter " + k)
 				continue
 			}
 		    m := re.Matcher([]byte(k), 0)
@@ -106,7 +104,6 @@ func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []s
 		//We pass through every record to apply filters
 		for k := range c.Data{
 			if ArrayContains(exceptions, k){
-				fmt.Println("Skipping parameter " + k)
 				continue
 			}
 			if k == key{
@@ -174,9 +171,6 @@ func (c *LocalCollection) Set(key string, value []string) {
 }
 
 func (c *LocalCollection) AddMap(data map[string][]string) {
-	if c == nil{
-		fmt.Println("ADSFASDFASDFASDFASDFASDFASDFASDFASDFD CTM C ES NIL")
-	}
 	for k, v := range data{
 		c.mux.RLock()
 		c.Data[strings.ToLower(k)] = v

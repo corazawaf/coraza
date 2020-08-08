@@ -1,0 +1,52 @@
+---
+  meta:
+    author: jptosso
+    description: None
+    enabled: true
+    name: chains.yaml
+  tests:
+  -
+    test_title: chains-200
+    stages:
+    -
+      stage:
+        input:
+          uri: /foo.php?bar=blah&ooo=123&bbb=3
+        output:
+          no_log_contains: id "200"
+  -
+    test_title: chains-201
+    stages:
+    -
+      stage:
+        input:
+          uri: /foo.php?bar=blah&ooo=123&bbb=3
+        output:
+          log_contains: id "201"
+  -
+    test_title: chains-202
+    stages:
+    -
+      stage:
+        input:
+          uri: /foo.php?bar=blah&ooo=123&bbb=3
+        output:
+          log_contains: id "202"
+  -
+    test_title: chains-203
+    stages:
+    -
+      stage:
+        input:
+          uri: /foo.php?bar=blah&ooo=123&bbb=3
+        output:
+          no_log_contains: id "203"          
+  -
+    test_title: chains-204
+    stages:
+    -
+      stage:
+        input:
+          uri: /foo.php?bar=blah&ooo=123&bbb=3
+        output:
+          no_log_contains: id "204"

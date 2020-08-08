@@ -1,0 +1,43 @@
+---
+  meta:
+    author: jptosso
+    description: None
+    enabled: true
+    name: collections.yaml
+  tests:
+  -
+    test_title: collections-30
+    stages:
+    -
+      stage:
+        input:
+          uri: /foo.php?bar=blah&ooo=123&bbb=3
+        output:
+          log_contains: id "30"
+  -
+    test_title: collections-31
+    stages:
+    -
+      stage:
+        input:
+          uri: /foo.php?bar=blah&ooo=123&bbb=3
+        output:
+          log_contains: id "31"
+  -
+    test_title: collections-32
+    stages:
+    -
+      stage:
+        input:
+          uri: /foo.php?bar=blah&ooo=123&bbb=3
+        output:
+          log_contains: id "32"          
+  -
+    test_title: collections-33
+    stages:
+    -
+      stage:
+        input:
+          uri: /foo.php?bar=blah&ooo=123&bbb=3
+        output:
+          log_contains: id "33"                 

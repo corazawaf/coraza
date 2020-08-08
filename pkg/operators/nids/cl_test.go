@@ -19,4 +19,7 @@ func TestNidCl(t *testing.T){
 			t.Errorf("Valid NID CL for " + o)
 		}
 	}
+	if cl.Evaluate(""){
+		t.Errorf("Valid NID CL for empty string")
+	}
 }

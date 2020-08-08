@@ -12,43 +12,31 @@ func (o *ValidateUrlEncoding) Init(data string){
 }
 
 func (o *ValidateUrlEncoding) Evaluate(tx *engine.Transaction, value string) bool{
-    res := false
-
     if len(value) == 0 {
-        return false
+        return true
     }
 
     rc := validateUrlEncoding(value)
     switch (rc) {
         case 1 :
             /* Encoding is valid */
-            res = false
-            break;
+            return true
         case -2 :
             // Invalid URL Encoding: Non-hexadecimal 
-            res = true /* Invalid match. */
-            break;
+            return false
         case -3 :
         	//Invalid URL Encoding: Not enough characters at the end of input
-            res = true /* Invalid match. */
-            break;
-        case -1 :
+            return false
         default :
             //Invalid URL Encoding: Internal error
-            res = true
-            break;
+            return false
     }
-
-    return res
+    return true
 }
 
 func validateUrlEncoding(input string) int {
     i := 0
     input_length := len(input)
-
-    if input_length == 0 {
-        return -1
-    }
 
     for i < input_length {
         if (input[i] == '%') {

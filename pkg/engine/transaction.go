@@ -119,6 +119,7 @@ func (tx *Transaction) SetRequestHeaders(headers map[string][]string) {
         if k == "" {
             continue
         }
+        k = strings.ToLower(k)
         tx.Collections["request_headers_names"].AddToKey("", k)
     }
     //default cases for compatibility:
@@ -129,6 +130,15 @@ func (tx *Transaction) SetRequestHeaders(headers map[string][]string) {
         //is this the default content-type?
         tx.Collections["request_headers"].Data["content-type"] = []string{"text/plain"}
     }
+}
+
+//Adds a request header
+func (tx *Transaction) AddRequestHeader(key string, value string) {
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
+    key = strings.ToLower(key)
+    tx.Collections["request_headers_names"].AddToKey("", key)
+    tx.Collections["request_headers"].AddToKey(key, value)
 }
 
 //Sets args_get, args_get_names. Also adds to args_names and args
@@ -236,6 +246,14 @@ func (tx *Transaction) SetRequestBody(body string, length int64) {
     l := fmt.Sprintf("%d", length)
     tx.Collections["request_body"].AddToKey("", body)
     tx.Collections["request_body_length"].AddToKey("", l)
+    /*
+    //TODO shall we do this and force the real length?
+    l := strconv.Itoa(length)
+    if tx.Collections["request_headers"].Data["content-length"] == nil{
+        tx.Collections["request_headers"].Data["content-length"] = []string{l}
+    }else{
+        tx.Collections["request_headers"].Data["content-length"][0] = l
+    }*/    
 }
 
 //Sets request_cookies and request_cookies_names
@@ -299,6 +317,36 @@ func (tx *Transaction) SetUrl(u *url.URL){
     tx.Collections["request_uri_raw"].AddToKey("", u.String())
 }
 
+//Sets args_get and args_get_names
+func (tx *Transaction) AddGetArgsFromUrl(u *url.URL){
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
+    params := u.Query()
+    for k, v := range params{
+        for _, vv := range v{
+            tx.Collections["args_get"].AddToKey(k, vv)
+            tx.Collections["args"].AddToKey(k, vv)
+        }
+        tx.Collections["args_get_names"].AddToKey("", k)
+        tx.Collections["args_names"].AddToKey("", k)
+    }
+}
+
+//Sets args_post and args_post_names
+func (tx *Transaction) AddPostArgsFromUrl(u *url.URL){
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
+    params := u.Query()
+    for k, v := range params{
+        for _, vv := range v{
+            tx.Collections["args_post"].AddToKey(k, vv)
+            tx.Collections["args"].AddToKey(k, vv)
+        }
+        tx.Collections["args_post_names"].AddToKey("", k)
+        tx.Collections["args_names"].AddToKey("", k)
+    }
+}
+
 //Adds request_line, request_method, request_protocol, request_basename and request_uri
 func (tx *Transaction) SetRequestLine(method string, protocol string, requestUri string) {
     tx.Mux.Lock()
@@ -307,6 +355,13 @@ func (tx *Transaction) SetRequestLine(method string, protocol string, requestUri
     tx.Collections["request_protocol"].AddToKey("", protocol)
     tx.Collections["request_line"].AddToKey("", fmt.Sprintf("%s %s %s", method, requestUri, protocol))
 
+}
+
+//Adds request_line, request_method, request_protocol, request_basename and request_uri
+func (tx *Transaction) SetRequestMethod(method string) {
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
+    tx.Collections["request_method"].AddToKey("", method)
 }
 
 //Resolves remote hostname and sets remote_host variable
@@ -332,7 +387,7 @@ func (tx *Transaction) InitTxCollection(){
                       "request_filename", "request_headers", "request_headers_names", "request_method", "request_protocol", "request_filename", "full_request",
                       "request_uri", "request_line", "response_body", "response_content_length", "response_content_type", "request_cookies", "request_uri_raw",
                       "response_headers", "response_headers_names", "response_protocol", "response_status", "appid", "id", "timestamp", "files_names", "files",
-                      "files_combined_size", "reqbody_processor"}
+                      "files_combined_size", "reqbody_processor", "request_body_length"}
     
     for _, k := range keys{
         tx.Collections[k] = &utils.LocalCollection{}
@@ -400,45 +455,44 @@ func (tx *Transaction) ExecutePhase(phase int) error{
     }
     usedRules := 0
 
-    for _, r := range tx.WafInstance.Rules {
+    for _, r := range tx.WafInstance.Rules.GetRules() {
         //we always execute secmarkers
-        if r.Phase == phase || r.SecMark != ""{
-            if tx.SkipAfter != ""{
-                if r.SecMark != tx.SkipAfter{
-                    //skip this rule
-                    //fmt.Println("Skipping rule (skipAfter) " + fmt.Sprintf("%d", r.Id) + " to " + tx.SkipAfter + " currently " + r.SecMark)
-                    continue
-                }else{
-                    //fmt.Println("Ending skip")
-                    tx.SkipAfter = ""
-                }
-            }
-            if tx.Skip > 0{
-                tx.Skip -= 1
-                //fmt.Println("Skipping rule (skip) " + fmt.Sprintf("%d", r.Id))
-                //Skipping rule
+        if r.Phase != phase{
+            continue
+        }
+        if tx.SkipAfter != ""{
+            if r.SecMark != tx.SkipAfter{
+                //skip this rule
+                //fmt.Println("Skipping rule (skipAfter) " + fmt.Sprintf("%d", r.Id) + " to " + tx.SkipAfter + " currently " + r.SecMark)
                 continue
+            }else{
+                //fmt.Println("Ending skip")
+                tx.SkipAfter = ""
             }
-            //tx.WafInstance.Logger.Debug(fmt.Sprintf("Evaluating rule %d", r.Id))
-            r.Evaluate(tx)
-            tx.Capture = false //we reset the capture flag on every run
-            usedRules++
         }
-        if tx.Disrupted{
-            return nil
+        if tx.Skip > 0{
+            tx.Skip--
+            //fmt.Println("Skipping rule (skip) " + fmt.Sprintf("%d", r.Id))
+            //Skipping rule
+            continue
         }
+        //tx.WafInstance.Logger.Debug(fmt.Sprintf("Evaluating rule %d", r.Id))
+        r.Evaluate(tx)
+        tx.Capture = false //we reset the capture flag on every run
+        usedRules++
+    }
+    if tx.Disrupted{
+        return nil
     }
     if phase == 5{
         if tx.AuditLog{
             if tx.IsRelevantStatus(){
-                //TODO implement logger
-                //tx.WafInstance.Logger.WriteAudit(tx)
+                tx.SaveLog()
             }
         }
     }
     return nil
 }
-
 
 func (tx *Transaction) MatchRule(rule *Rule, msgs []string, matched []string){
     mr := &MatchedRule{
@@ -488,4 +542,20 @@ func (tx *Transaction) IsRelevantStatus() bool{
     re := tx.WafInstance.AuditLogRelevantStatus
     status := strconv.Itoa(tx.Status)
     return re.MatchString(status)
+}
+
+func (tx *Transaction) ToAuditJson() []byte{
+    al := tx.ToAuditLog()
+    return al.ToJson()
+}
+
+func (tx *Transaction) ToAuditLog() *AuditLog{
+    al := &AuditLog{}
+    al.Init(tx, tx.AuditLogParts)
+    return al
+}
+
+
+func (tx *Transaction) SaveLog() error{
+    return tx.WafInstance.Logger.WriteAudit(tx)
 }

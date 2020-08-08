@@ -3,8 +3,8 @@ package parser
 import(
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	"github.com/jptosso/coraza-waf/pkg/operators"
-	actionsmod"github.com/jptosso/coraza-waf/pkg/actions"
 	"github.com/jptosso/coraza-waf/pkg/engine"
+	actionsmod"github.com/jptosso/coraza-waf/pkg/actions"
 	pcre"github.com/gijsbers/go-pcre"
 	"os"
 	"strings"
@@ -22,6 +22,8 @@ type Parser struct {
 	nextChain bool
 	RuleEngine string
 	waf *engine.Waf
+
+	nextSecMark string
 }
 
 func (p *Parser) Init(waf *engine.Waf) {
@@ -245,16 +247,16 @@ func (p *Parser) Evaluate(data string) error{
 		break
 	case "SecRuleRemoveById":
 		id, _ := strconv.Atoi(opts)
-		p.waf.DeleteRuleById(id)
+		p.waf.Rules.DeleteById(id)
 		break
 	case "SecRuleRemoveByMsg":
-		for _, r := range p.waf.FindRulesByMsg(opts){
-			p.waf.DeleteRuleById(r.Id)
+		for _, r := range p.waf.Rules.FindByMsg(opts){
+			p.waf.Rules.DeleteById(r.Id)
 		}
 		break
 	case "SecRuleRemoveByTag":
-		for _, r := range p.waf.FindRulesByTag(opts){
-			p.waf.DeleteRuleById(r.Id)
+		for _, r := range p.waf.Rules.FindByTag(opts){
+			p.waf.Rules.DeleteById(r.Id)
 		}
 		break
 	case "SecRuleScript":
@@ -267,7 +269,7 @@ func (p *Parser) Evaluate(data string) error{
 	case "SecRuleUpdateTargetById":
 		spl := strings.SplitN(opts, " ", 2)
 		id, _ := strconv.Atoi(spl[0])
-		p.waf.FindRuleById(id)
+		p.waf.Rules.FindById(id)
 		fmt.Println("SecRuleUpdateTargetById TO BE IMPLEMENTED.")
 		break
 	case "SecRuleUpdateTargetByMsg":
@@ -325,21 +327,19 @@ func (p *Parser) Evaluate(data string) error{
 	case "SecResponseBodyAccess":
 		p.waf.ResponseBodyAccess = (opts == "On")
 	case "SecRule":
-		p.ParseRule(opts)
+		rule, err := p.ParseRule(opts)
+		if err != nil{
+			return err
+		}
+		p.waf.Rules.Add(rule)
 	case "SecAction":
 		p.ParseRule("RULE \"@unconditionalMatch\" " + opts)
 	case "SecMarker":
-		//we create a rule with the next id
-		lastrule := p.waf.Rules[len(p.waf.Rules)-1]
-		nid := 1
-		if lastrule != nil{
-			nid = lastrule.Id + 1
-		}
-		nr, _ := p.ParseRule(fmt.Sprintf("\"@unconditionalMatch\" \"id:%d, nolog, noauditlog, pass\"", nid))
-		nr.SecMark = strings.Trim(opts, `"`)
-		nr.Phase = lastrule.Phase //TODO: Is this the right way? or maybe it should have a special phase that always runs
+		p.nextSecMark = opts[1:len(opts)-1]
 	case "SecComponentSignature":
 		p.waf.ComponentSignature = opts
+	case "SecDataPath":
+		p.waf.Datapath = opts
 	default:
 		return errors.New("Unsupported directive " + directive)
 	}
@@ -370,7 +370,8 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error){
 
 	if p.nextChain{
 		p.nextChain = false
-		parent := p.waf.Rules[len(p.waf.Rules)-1]
+		rules := p.waf.Rules.GetRules()
+		parent := rules[len(rules)-1]
 		rule.ParentId = parent.Id
 		lastchain := parent
 
@@ -379,24 +380,23 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error){
 		}
 
 		lastchain.Chain = rule
-	}else{
-		p.waf.Rules = append(p.waf.Rules, rule)
 	}
 	if rule.HasChain{
 		p.nextChain = true
 	}
+	rule.SecMark = p.nextSecMark
 	return rule, nil
 }
 
 func (p *Parser) compileRuleVariables(r *engine.Rule, vars string) {
 	//Splits the values by KEY, KEY:VALUE, &!KEY, KEY:/REGEX/, KEY1|KEY2
 	//GROUP 1 is collection, group 3 is vlue, group 3 can be empty
-	re := pcre.MustCompile(`((?:&|!)?[\w_]+)((?::)(\w+|\/(.*?)(?<!\\)\/))?`, 0)
+	re := pcre.MustCompile(`((?:&|!)?[\w_]+)((?::)([\w-_]+|\/(.*?)(?<!\\)\/))?`, 0)
 	matcher := re.MatcherString(vars, 0)
 	subject := []byte(vars)	
 	for matcher.Match(subject, 0){
 		vname := matcher.GroupString(1)
-		vvalue := matcher.GroupString(3)
+		vvalue := strings.ToLower(matcher.GroupString(3))
 		index := matcher.Index()
 		counter := false
 		negation := false
@@ -418,7 +418,6 @@ func (p *Parser) compileRuleVariables(r *engine.Rule, vars string) {
 	    
 		context := "transaction" //TODO WTF?
 		collection := strings.ToLower(vname)
-		//key = strings.ToLower(key)
 		if negation{
 			r.AddNegateVariable(collection, vvalue)
 		}else{
@@ -434,7 +433,10 @@ func (p *Parser) compileRuleVariables(r *engine.Rule, vars string) {
 
 
 func (p *Parser) compileRuleOperator(r *engine.Rule, operator string) {
-	if operator[0] != '@' && operator[1] != '@'{
+	if operator == "" {
+		operator = "@rx "
+	}
+	if operator[0] != '@' && operator[0] != '!'{
 		//default operator RX
 		operator = "@rx " + operator
 	}
@@ -470,6 +472,7 @@ func (p *Parser) compileRuleOperator(r *engine.Rule, operator string) {
 func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error{
 	//REGEX: ((.*?)((?<!\\)(?!\B'[^']*),(?![^']*'\B)|$))
 	//This regex splits actions by comma and assign key:values with supported escaped quotes
+	//TODO needs fixing
 	re := pcre.MustCompile(`(.*?)((?<!\\)(?!\B'[^']*),(?![^']*'\B)|$)`, 0)
 	matcher := re.MatcherString(actions, 0)
 	subject := []byte(actions)
@@ -483,7 +486,7 @@ func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error{
 		value := ""
 		key := strings.Trim(spl[0], " ")
 		if len(spl) == 2{
-			value = spl[1]
+			value = strings.Trim(spl[1], " ")
 		}
 		if actionsmap[key] == nil{
 			fmt.Printf("Error, invalid action: %s\n", key)

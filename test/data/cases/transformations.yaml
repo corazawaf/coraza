@@ -1,0 +1,25 @@
+---
+  meta:
+    author: jptosso
+    description: None
+    enabled: true
+    name: transformations.yaml
+  tests:
+  -
+    test_title: transformations-50
+    stages:
+    -
+      stage:
+        input:
+          uri: /foo.php?bar=blah&ooo=123&bbb=3
+        output:
+          log_contains: id "50"
+  -
+    test_title: transformations-51
+    stages:
+    -
+      stage:
+        input:
+          uri: /foo.php?bar=blah&ooo=123&bbb=3
+        output:
+          no_log_contains: id "51"

@@ -7,27 +7,6 @@ import(
 	"github.com/jptosso/coraza-waf/pkg/engine"
 )
 
-/*
-auditEngine
-auditLogParts
-debugLogLevel
-forceRequestBodyVariable
-requestBodyAccess
-requestBodyLimit
-requestBodyProcessor
-responseBodyAccess
-responseBodyLimit
-ruleEngine
-ruleRemoveById
-ruleRemoveByMsg
-ruleRemoveByTag
-ruleRemoveTargetById
-ruleRemoveTargetByMsg
-ruleRemoveTargetByTag
-hashEngine
-hashEnforcement
-*/
-
 type Ctl struct {
 	Action string
 	Value string
@@ -49,12 +28,60 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
 			tx.RemoveTargetFromId[id] = []*engine.Collection{}
 		}
 		tx.RemoveTargetFromId[id] = append(tx.RemoveTargetFromId[id], col)
+	break
 	case "ruleRemoveTargetByTag":
 		col := &engine.Collection{a.Collection, a.ColKey}
 		if tx.RemoveTargetFromTag[a.Value] == nil{
 			tx.RemoveTargetFromTag[a.Value] = []*engine.Collection{}
 		}
 		tx.RemoveTargetFromTag[a.Value] = append(tx.RemoveTargetFromTag[a.Value], col)
+	break
+	case "auditEngine":
+		tx.AuditEngine = a.Value == "On"
+		break
+	case "auditLogParts":
+
+		break
+	case "debugLogLevel":
+
+	break
+	case "forceRequestBodyVariable":
+
+		break
+	case "requestBodyAccess":
+
+		break
+	case "requestBodyLimit":
+
+	break
+	case "requestBodyProcessor":
+
+		break
+	case "responseBodyAccess":
+
+	break
+	case "responseBodyLimit":
+
+	break
+	case "ruleEngine":
+
+		break
+	case "ruleRemoveById":
+
+	break
+	case "ruleRemoveByMsg":
+
+	break
+	case "ruleRemoveTargetByMsg":
+
+	break
+	case "hashEngine":
+
+	break
+	case "hashEnforcement":
+
+	break
+	default:
 	}
 	
 }

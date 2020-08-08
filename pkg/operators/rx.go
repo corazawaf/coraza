@@ -1,14 +1,14 @@
 package operators
 
 import (
-	//pcre"github.com/gijsbers/go-pcre"
+	pcre"github.com/gijsbers/go-pcre"
 	"github.com/jptosso/coraza-waf/pkg/engine"
-	"regexp"
 )
 
-/*
-Previously made with go-pcre but falling but to rails stack
-*/
+//It is possible to apply recursion limits but it must be added to the library
+// https://pcre.org/pcre.txt
+//          unsigned long int match_limit;
+//          unsigned long int match_limit_recursion;
 type Rx struct{
 	re string
 }
@@ -18,55 +18,21 @@ func (o *Rx) Init(data string){
 }
 
 func (o *Rx) Evaluate(tx *engine.Transaction, value string) bool{
-	r, _ := regexp.Compile(o.re)
-	matches := r.FindAllStringSubmatch(value, -1)
-	i := 1
+	//renow := tx.MacroExpansion(o.re)
+	re := pcre.MustCompile(o.re, 0)
+	//TODO JIT optimization but test check concurrency first
+	m := re.MatcherString(value, 0)
 	if tx.Capture{
 		tx.ResetCapture()
 	}
-	
-	tx.CaptureField(0, value)	
-	for _, v := range matches {
-		if i >= 10{
-			//we only use 10 captures
-			break
+	//m.Match(subject, 0)
+	for i := 0;i < m.Groups()+1;i++ {
+		if i == 10{
+			return true
 		}
-		if tx.Capture && len(v) > 1{
-			tx.CaptureField(i, v[1])
-		}
-		i += 1
-	}
-	return i > 1
-}
-
-/*
-func (o *Rx) Evaluate(tx *engine.Transaction, value string) bool{
-	renow := tx.MacroExpansion(o.re)
-	re := pcre.MustCompile(renow, 0)
-	m := re.MatcherString(value, 0)
-	subject := []byte(value)
-	i := 1
-	if tx.Capture{
-		tx.Collections["tx"].ResetCapture()
-	}
-	
-	tx.CaptureField(0, value)
-	for m.Match(subject, 0){
-		index := m.Index()
-		subject = subject[index[1]:]
 		if tx.Capture{
-			fmt.Println(string(subject), index)
-			tx.CaptureField(i, string(subject))
+			tx.CaptureField(i, m.GroupString(i))
 		}
-	    if len(subject) == 0{
-	    	break
-	    }
-	    i++
-	    if i >= 10{
-	    	//We only collect 10
-	    	break
-	    }
 	}
 	return m.Matches()
 }
-*/
