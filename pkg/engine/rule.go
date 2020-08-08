@@ -35,6 +35,7 @@ type RuleVariable struct {
 	Collection string
 	Key string
 	Context string
+	Exceptions []string
 }
 
 
@@ -43,7 +44,6 @@ type Rule struct {
 	Phase int `json:"phase"`
 	Vars string `json:"vars"`
 	Variables []RuleVariable `json:"variables"`
-	NegateVariables map[string][]string `json:"negate_variables"`
 	Operator string `json:"operator"`
 	OperatorObj *RuleOp `json:"operator_obj"`
 	Disruptive bool `json:"disruptive"`
@@ -73,7 +73,6 @@ type Rule struct {
 func (r *Rule) Init() {
 	r.Phase = 1
 	r.Tags = []string{}
-	r.NegateVariables = map[string][]string{}
 	r.Action = "pass"
 }
 
@@ -106,24 +105,8 @@ func (r *Rule) Evaluate(tx *Transaction) []string{
 
 		//TODO IMPORTANT: The match notification must be switched, we can't log empty keys!!
 
-		//BEGIN CTL OPERATIONS
-		// I believe every transaction should have a copy of the rule list but it is hard to copy
-		// So this is the best way to achieve the expected behaviour
-		tmpnv := r.NegateVariables[v.Collection]
-		for _, st := range skiptargets{
-			if st.Name != v.Collection{
-				continue
-			}
-			if tmpnv == nil{
-				tmpnv = []string{}
-			}
-			tmpnv = append(tmpnv, st.Key)
-		}		
-		//END CTL OPERATIONS
-
-
 		if v.Context == "transaction"{
-			values = tx.GetField(v.Collection, v.Key, tmpnv)
+			values = tx.GetField(v.Collection, v.Key, v.Exceptions)
 		}else{
 			//values = waf.GetField(v.Collection, v.Key)
 			fmt.Println("NOT READY YET, or maybe yes, idk")
@@ -197,9 +180,9 @@ func (r *Rule) Evaluate(tx *Transaction) []string{
 		return []string{}
 	}
 
-	tx.Capture = false //We have to set it in case of chains
+	tx.Capture = false //TODO shall we remove this?
 
-	if r.ParentId == 0 && r.Chain != nil{
+	if r.Chain != nil{
 		//Log.Debug("Running chain rule...")
 		msgs := []string{}
 		nr := r.Chain
@@ -230,13 +213,7 @@ func (r *Rule) Evaluate(tx *Transaction) []string{
 }
 
 func (r *Rule) executeOperator(data string, tx *Transaction) bool {
-	if r.OperatorObj.Operator == nil{
-		fmt.Println("RUNNING INVALID OPERATOR: " + r.Operator)
-		return false
-	}
-	
     result := r.OperatorObj.Operator.Evaluate(tx, data)
-
     if r.OperatorObj.Negation && result{
     	return false
     }
@@ -261,7 +238,6 @@ func (r *Rule) executeTransformationsMultimatch(value string) []string{
 }
 
 func (r *Rule) executeTransformations(value string) string{
-
 	for _, t := range r.Transformations {
 	    rf := reflect.ValueOf(t.TfFunc)
 	    rargs := make([]reflect.Value, 1)
@@ -269,19 +245,20 @@ func (r *Rule) executeTransformations(value string) string{
 	    call := rf.Call(rargs)
 	    value = call[0].String()
 	}
-
 	return value
 }
 
 func (r *Rule) AddVariable(count bool, collection string, key string, context string) {
-	rv := RuleVariable{count, collection, key, context}
+	rv := RuleVariable{count, collection, key, context, []string{}}
 	r.Variables = append(r.Variables, rv)
 }
 
 func (r *Rule) AddNegateVariable(collection string, key string){
-	if r.NegateVariables[collection] == nil{
-		r.NegateVariables[collection] = []string{key}
-	}else{
-		r.NegateVariables[collection] = append(r.NegateVariables[collection], key)
+	for i, vr := range r.Variables{
+		if vr.Collection == collection{
+			vr.Exceptions = append(vr.Exceptions, key)
+			r.Variables[i] = vr
+			return
+		}
 	}
 }

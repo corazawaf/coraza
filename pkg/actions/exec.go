@@ -22,10 +22,7 @@ func (a *Exec) Init(r *engine.Rule, data string) error {
 func (a *Exec) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
     l := &lua.LuaScript{}
     l.FromString(a.cachedScript)
-    err := l.Evaluate(tx, 1000)
-    if err != nil{
-    	return
-    }
+    l.Evaluate(tx, 1000)
 }
 
 func (a *Exec) Type() string{

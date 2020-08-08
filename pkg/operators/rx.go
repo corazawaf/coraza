@@ -20,6 +20,7 @@ func (o *Rx) Init(data string){
 func (o *Rx) Evaluate(tx *engine.Transaction, value string) bool{
 	//renow := tx.MacroExpansion(o.re)
 	re := pcre.MustCompile(o.re, 0)
+	//TODO JIT optimization but test check concurrency first
 	m := re.MatcherString(value, 0)
 	if tx.Capture{
 		tx.ResetCapture()

@@ -119,6 +119,7 @@ func (tx *Transaction) SetRequestHeaders(headers map[string][]string) {
         if k == "" {
             continue
         }
+        k = strings.ToLower(k)
         tx.Collections["request_headers_names"].AddToKey("", k)
     }
     //default cases for compatibility:
@@ -135,6 +136,7 @@ func (tx *Transaction) SetRequestHeaders(headers map[string][]string) {
 func (tx *Transaction) AddRequestHeader(key string, value string) {
     tx.Mux.Lock()
     defer tx.Mux.Unlock()
+    key = strings.ToLower(key)
     tx.Collections["request_headers_names"].AddToKey("", key)
     tx.Collections["request_headers"].AddToKey(key, value)
 }
@@ -244,6 +246,14 @@ func (tx *Transaction) SetRequestBody(body string, length int64) {
     l := fmt.Sprintf("%d", length)
     tx.Collections["request_body"].AddToKey("", body)
     tx.Collections["request_body_length"].AddToKey("", l)
+    /*
+    //TODO shall we do this and force the real length?
+    l := strconv.Itoa(length)
+    if tx.Collections["request_headers"].Data["content-length"] == nil{
+        tx.Collections["request_headers"].Data["content-length"] = []string{l}
+    }else{
+        tx.Collections["request_headers"].Data["content-length"][0] = l
+    }*/    
 }
 
 //Sets request_cookies and request_cookies_names
@@ -447,31 +457,32 @@ func (tx *Transaction) ExecutePhase(phase int) error{
 
     for _, r := range tx.WafInstance.Rules.GetRules() {
         //we always execute secmarkers
-        if r.Phase == phase || r.SecMark != ""{
-            if tx.SkipAfter != ""{
-                if r.SecMark != tx.SkipAfter{
-                    //skip this rule
-                    //fmt.Println("Skipping rule (skipAfter) " + fmt.Sprintf("%d", r.Id) + " to " + tx.SkipAfter + " currently " + r.SecMark)
-                    continue
-                }else{
-                    //fmt.Println("Ending skip")
-                    tx.SkipAfter = ""
-                }
-            }
-            if tx.Skip > 0{
-                tx.Skip -= 1
-                //fmt.Println("Skipping rule (skip) " + fmt.Sprintf("%d", r.Id))
-                //Skipping rule
+        if r.Phase != phase{
+            continue
+        }
+        if tx.SkipAfter != ""{
+            if r.SecMark != tx.SkipAfter{
+                //skip this rule
+                //fmt.Println("Skipping rule (skipAfter) " + fmt.Sprintf("%d", r.Id) + " to " + tx.SkipAfter + " currently " + r.SecMark)
                 continue
+            }else{
+                //fmt.Println("Ending skip")
+                tx.SkipAfter = ""
             }
-            //tx.WafInstance.Logger.Debug(fmt.Sprintf("Evaluating rule %d", r.Id))
-            r.Evaluate(tx)
-            tx.Capture = false //we reset the capture flag on every run
-            usedRules++
         }
-        if tx.Disrupted{
-            return nil
+        if tx.Skip > 0{
+            tx.Skip--
+            //fmt.Println("Skipping rule (skip) " + fmt.Sprintf("%d", r.Id))
+            //Skipping rule
+            continue
         }
+        //tx.WafInstance.Logger.Debug(fmt.Sprintf("Evaluating rule %d", r.Id))
+        r.Evaluate(tx)
+        tx.Capture = false //we reset the capture flag on every run
+        usedRules++
+    }
+    if tx.Disrupted{
+        return nil
     }
     if phase == 5{
         if tx.AuditLog{

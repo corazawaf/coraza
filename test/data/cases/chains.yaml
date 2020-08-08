@@ -49,4 +49,4 @@
         input:
           uri: /foo.php?bar=blah&ooo=123&bbb=3
         output:
-          no_log_contains: id "204"                    
+          no_log_contains: id "204"

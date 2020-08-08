@@ -28,6 +28,7 @@ func (o *PmFromFile) Init(data string){
     	if len(l) == 0{
     		continue
     	}
+    	l = strings.ReplaceAll(l, "\r", "") //CLF
     	if l[0] != '#'{
     		o.Data = append(o.Data, l)
     	}
@@ -41,8 +42,6 @@ func (o *PmFromFile) Evaluate(tx *engine.Transaction, value string) bool{
 	    AddStrings(o.Data).
 	    Build()
 	matches := trie.MatchString(value)
-
-	//fmt.Printf("Separado en %d para %s con %d matches\n", len(spl), search, len(matches))
 	return len(matches) > 0
 }
 

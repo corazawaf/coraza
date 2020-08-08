@@ -338,6 +338,8 @@ func (p *Parser) Evaluate(data string) error{
 		p.nextSecMark = opts[1:len(opts)-1]
 	case "SecComponentSignature":
 		p.waf.ComponentSignature = opts
+	case "SecDataPath":
+		p.waf.Datapath = opts
 	default:
 		return errors.New("Unsupported directive " + directive)
 	}
@@ -389,12 +391,12 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error){
 func (p *Parser) compileRuleVariables(r *engine.Rule, vars string) {
 	//Splits the values by KEY, KEY:VALUE, &!KEY, KEY:/REGEX/, KEY1|KEY2
 	//GROUP 1 is collection, group 3 is vlue, group 3 can be empty
-	re := pcre.MustCompile(`((?:&|!)?[\w_]+)((?::)(\w+|\/(.*?)(?<!\\)\/))?`, 0)
+	re := pcre.MustCompile(`((?:&|!)?[\w_]+)((?::)([\w-_]+|\/(.*?)(?<!\\)\/))?`, 0)
 	matcher := re.MatcherString(vars, 0)
 	subject := []byte(vars)	
 	for matcher.Match(subject, 0){
 		vname := matcher.GroupString(1)
-		vvalue := matcher.GroupString(3)
+		vvalue := strings.ToLower(matcher.GroupString(3))
 		index := matcher.Index()
 		counter := false
 		negation := false
@@ -416,7 +418,6 @@ func (p *Parser) compileRuleVariables(r *engine.Rule, vars string) {
 	    
 		context := "transaction" //TODO WTF?
 		collection := strings.ToLower(vname)
-		//key = strings.ToLower(key)
 		if negation{
 			r.AddNegateVariable(collection, vvalue)
 		}else{

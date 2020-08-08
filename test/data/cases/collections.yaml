@@ -32,3 +32,12 @@
           uri: /foo.php?bar=blah&ooo=123&bbb=3
         output:
           log_contains: id "32"          
+  -
+    test_title: collections-33
+    stages:
+    -
+      stage:
+        input:
+          uri: /foo.php?bar=blah&ooo=123&bbb=3
+        output:
+          log_contains: id "33"                 
