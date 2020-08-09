@@ -1,11 +1,11 @@
 package engine
 import (
 	"context"
-	"regexp"
 	"fmt"
 	"github.com/jptosso/coraza-waf/pkg/utils"
     "github.com/go-redis/redis/v8"
     "github.com/oschwald/geoip2-golang"
+    pcre"github.com/gijsbers/go-pcre"
 )
 
 const (
@@ -83,7 +83,7 @@ type Waf struct {
     UploadFileMode int
     WebAppId string
     ComponentSignature string
-    AuditLogRelevantStatus *regexp.Regexp
+    AuditLogRelevantStatus pcre.Regexp
 	GeoDb *geoip2.Reader
 	RedisClient *redis.Client  
 	Ctx context.Context  

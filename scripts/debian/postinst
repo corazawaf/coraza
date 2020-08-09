@@ -3,5 +3,6 @@ id -u coraza-waf &>/dev/null || useradd -r -s /bin/false coraza-waf
 chown -R coraza-waf:root /opt/coraza-waf/log
 chown -R root:root /etc/coraza-waf
 find /etc/coraza-waf -type d -exec chmod 755 {} \;
+find /opt/coraza-waf -type d -exec chmod 755 {} \;
 update-rc.d coraza-waf defaults
 #TODO add inittab for autorespawn

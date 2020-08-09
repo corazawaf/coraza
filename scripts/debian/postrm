@@ -1,6 +1,9 @@
 #!/bin/bash
 
 # Remove binary
+rm /bin/coraza-waf
 # Disable service
-# Uninstall Service
+rm /etc/init.d/coraza-waf
+update-rc.d coraza-waf defaults
 # Fix inittab
+# Remove user
