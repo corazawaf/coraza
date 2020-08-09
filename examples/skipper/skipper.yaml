@@ -1,0 +1,10 @@
+address: 127.0.0.1:8080
+enable-tcp-queue: false
+expected-bytes-per-request: 0
+max-tcp-listener-concurrency: 0
+max-tcp-listener-queue: 0
+dev-mode: false
+application-log: /opt/coraza-waf/log/skipper.log
+application-log-level: error
+access-log: /opt/coraza-waf/log/access.log
+routes-file: /etc/coraza-waf/routes.eskip

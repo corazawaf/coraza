@@ -32,46 +32,20 @@ Coraza WAF is a Golang implementation of Modsecurity built from scratch, it supp
 - [ ] Autoconf
 - [ ] Optimize pcre compilation instructions
 - [ ] OWASP CRS Full Support (almost there)
-- [ ] Benchmarking tools
 - [ ] Plugin system
 - [ ] Add settings reload feature
-- [ ] Cache geoip to enhance speed
 - [ ] Add clustering features
 - [ ] Add support for plugins
 - [ ] OpenAPI 3.0 Enforcement
 
 
-## Docker
-
-
-```
-docker build -t coraza-waf .
-docker run -d -it -p 8080:8080 --name=coraza-waf coraza-waf --host=0.0.0.0
-```
-
-If you want to use your own settings, you must set the volume of /etc/coraza/ to your custom virtual path.
-
-## Usage
-
-Using Skipper filter sample:
-```
--> corazaWAF("/path/to/rules.conf", "/path/to/datafiles")
-```
-
-Sample:
-```
-baidu:
-        Path("/baidu")
-        -> corazaWAF("/path/to/rules.conf", "/path/to/datafiles")
-        -> setRequestHeader("Host", "www.baidu.com")
-        -> setPath("/s")
-        -> setQuery("wd", "godoc skipper")
-        -> "http://www.baidu.com";
-```
-
 ## Compile from source
 
-Compilation prerequisites: golang 1.11>, C compiler, libpcre++-dev, libinjection compiled (use `make libinjection`)
+Compilation prerequisites: 
+* golang 1.11+
+* C compiler
+* libpcre++-dev
+* libinjection compiled and linked (use `make libinjection`)
 
 You can compile each package individually running: `go build cmd/skipper/main.go` or using the make scripts.
 
@@ -80,108 +54,87 @@ make
 sudo make install
 ```
 
+
 ## Compile as a skipper plugin
 
-Change package name of pkg/skipper/filters.go from skipper to main and then:
 ```
-GO111MODULE=on go build -buildmode=plugin -o coraza.so pkg/skipper/filters.go
+GO111MODULE=on go build -buildmode=plugin -o coraza.so cmd/skipper/main.go
 skipper -filter-plugin coraza
 ```
 
-## Non implemented features
+## Test
 
-### Variables
+Standard Golang tests:
+```
+git clone https://github.com/jptosso/coraza-waf
+cd coraza-waf/
+go test ./...
+```
 
-- [ ] AUTH_TYPE
-- [ ] DURATION
-- [ ] ENV
-- [ ] HIGHEST_SEVERITY
-- [ ] INBOUND_DATA_ERROR
-- [ ] MATCHED_VAR
-- [ ] MATCHED_VARS
-- [ ] MATCHED_VAR_NAME
-- [ ] MATCHED_VARS_NAMES
-- [ ] MULTIPART_CRLF_LF_LINES
-- [ ] MULTIPART_STRICT_ERROR
-- [ ] MULTIPART_UNMATCHED_BOUNDARY
-- [ ] OUTBOUND_DATA_ERROR
-- [ ] PATH_INFO
-- [ ] PERF_ALL
-- [ ] PERF_COMBINED
-- [ ] PERF_GC
-- [ ] PERF_LOGGING
-- [ ] PERF_PHASE1
-- [ ] PERF_PHASE2
-- [ ] PERF_PHASE3
-- [ ] PERF_PHASE4
-- [ ] PERF_PHASE5
-- [ ] PERF_RULES
-- [ ] PERF_SREAD
-- [ ] PERF_SWRITE
-- [ ] REMOTE_USER
-- [ ] REQBODY_ERROR
-- [ ] REQBODY_ERROR_MSG
-- [ ] RESPONSE_PROTOCOL
-- [ ] RESPONSE_STATUS
-- [ ] RULE
-- [ ] SERVER_ADDR
-- [ ] SERVER_NAME
-- [ ] SERVER_PORT
-- [ ] SESSION
-- [ ] SESSIONID
-- [ ] STATUS_LINE
-- [ ] STREAM_INPUT_BODY
-- [ ] STREAM_OUTPUT_BODY
-- [ ] TIME
-- [ ] TIME_DAY
-- [ ] TIME_EPOCH
-- [ ] TIME_HOUR
-- [ ] TIME_MIN
-- [ ] TIME_MON
-- [ ] TIME_SEC
-- [ ] TIME_WDAY
-- [ ] TIME_YEAR
-- [ ] UNIQUE_ID
-- [ ] URLENCODED_ERROR
-- [ ] USERID
-- [ ] USERAGENT_IP
-- [ ] WEBAPPID
-- [ ] WEBSERVER_ERROR_LOG
-- [ ] XML
+Rule core test:
+```
+git clone https://github.com/jptosso/coraza-waf
+cd coraza-waf/
+go run cmd/testsuite/main.go -path test/ -rules test/data/test-rules.conf
+```
 
-### Operators
+Test against OWASP CRS
+```
+git clone https://github.com/jptosso/coraza-waf
+git clone https://github.com/SpiderLabs/owasp-modsecurity-crs
+# Create your OWASP CRS package owasp-crs.conf
+cd coraza-waf/
+go run cmd/testsuite/main.go -path ../owasp-modsecurity-crs -rules ../owasp-modsecurity-crs/owasp-crs.conf
+```
 
-- [ ] fuzzyHash
-- [ ] gsbLookup
-- [ ] inspectFile
-- [ ] noMatch
-- [ ] validateDTD
-- [ ] validateHash
-- [ ] validateSchema
-- [ ] verifyCC
+## Using Reverse Proxy WAF
 
-### Actions
+**Routes:**
+* */etc/coraza-waf/skipper.yaml*: Contains the options that will be imported by Skipper by default.
+* */etc/coraza-waf/routes.eskip*:  Contains the routes that will be used by Skipper.
+* */etc/coraza-waf/profiles/default/rules.conf*: Placeholder file with default options.
+* */opt/coraza/var/log/coraza-waf/access.log*: Access log for Skipper.
+* */opt/coraza/var/log/coraza-waf/skiper-error.log*: Error log for Skipper
+* */opt/coraza/var/log/coraza-waf/audit.log*: Audit log, contains references for each audit log, [more information here](#).
+* */opt/coraza/var/log/coraza-waf/audit/*: This directory contains the concurrent logs created by the audit engine.
+* */opt/coraza/var/log/coraza-waf/error.log*: Default path for Coraza WAF errors log.
+* */opt/coraza/var/log/coraza-waf/debug.log*:  Default path for Coraza WAF debug logs.
+* */tmp/coraza-waf.sock*:  
+* */tmp/coraza-waf.pid*:  
+* */usr/local/bin/coraza-waf*: Coraza WAF binary location.
 
-- [ ] append
-- [ ] deprecatevar
-- [ ] prepend
-- [ ] proxy
-- [ ] redirect
-- [ ] sanitiseArg
-- [ ] sanitiseMatched
-- [ ] sanitiseMatchedBytes
-- [ ] sanitiseRequestHeader
-- [ ] sanitiseResponseHeader
-- [ ] setuid
-- [ ] setrsc
-- [ ] setsid
-- [ ] setenv
-- [ ] xmlns
+Sample:
+```
+samplesite:
+        Path("/")
+        -> corazaWAF("/etc/coraza-waf/profiles/default/rules.conf")
+        -> setRequestHeader("Host", "www.samplesite.com")
+        -> "https://www.samplesite.com";
+```
 
-### Transformations
+For more configuration options and SSL check [Skipper Documentation](#).
 
-- [ ] cssDecode
-- [ ] jsDecode
+## Using as a library
+
+```
+samplesite:
+        Path("/")
+        -> corazaWAF("/etc/coraza-waf/profiles/default/rules.conf")
+        -> setRequestHeader("Host", "www.samplesite.com")
+        -> "https://www.samplesite.com";
+```
+
+## Deployment options
+
+* [Load Balancer -> Coraza WAF -> Application](#) (Recommended)
+* [Nginx + Coraza WAF -> Application](#)
+* [Coraza WAF -> Application](#)
+* [Kubern8 Ingress Controller](#)
+
+## Missing features and known bugs
+
+* Persistent collections, Lua and remote logging are a experimental feature
+* cssdecode andjsdecode transformations are not implemented	
 
 
 ## License

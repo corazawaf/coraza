@@ -34,6 +34,18 @@ func main() {
     if err := cfg.Parse(); err != nil {
         log.Fatalf("Error processing config: %s", err)
     }
+    if cfg.ConfigFile == ""{
+        cfg.ConfigFile = "/etc/coraza-waf/skipper.yaml"
+    }
+    if cfg.RoutesFile == ""{
+        cfg.RoutesFile = "/etc/coraza-waf/routes.eskip"
+    }
+    err := cfg.Parse()
+    if err != nil{
+        fmt.Println("Error parsing configurations.")
+        fmt.Println(err)
+        return
+    }
     opts := cfg.ToOptions()
     
     opts.CustomFilters = append(opts.CustomFilters, &CorazaSpec{})
