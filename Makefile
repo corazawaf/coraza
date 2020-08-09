@@ -24,14 +24,14 @@ libinjection:
 		gcc -std=c99 -Wall -Werror -fpic -c pkg/utils/libinjection/src/libinjection_html5.c -o libinjection_html5.o
 		gcc -dynamiclib -shared -o libinjection.so libinjection_sqli.o libinjection_xss.o libinjection_html5.o
 		#OS X: update_dyld_shared_cache
-deps-debian:
-		apt install libpcre++-dev build-essential
-install:
 		cp *.so /usr/local/lib
 		cp *.o /usr/local/lib
 		cp pkg/utils/libinjection/src/*.h /usr/local/include/
 		chmod 444 /usr/local/include/libinjection*
-		ldconfig	
+		ldconfig				
+deps-debian:
+		apt install libpcre++-dev build-essential
+install:
 		useradd -r -s /bin/false coraza
 		mv $(BINARY_NAME) /usr/local/bin/
 		mkdir -p /etc/coraza/
