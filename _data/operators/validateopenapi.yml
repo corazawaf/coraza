@@ -1,0 +1,22 @@
+name: validateOpenApi
+description: This operator should only be used against **REQUEST_LINE**, **REQUEST_BODY**.
+version: 1.0
+experimental: true
+example: |
+  # First we initialize the body processor
+  SecRule REQUEST_HEADERS:content-type ^application/json$ "id:1, block, ctl:requestBodyProcessor=JSON, t:lowercase"
+  SecRule REQUEST_HEADERS:content-type ^text/xml$ "id:2, block, ctl:requestBodyProcessor=XML, t:lowercase"
+
+  # REQUEST_LINE contains the Path and HTTP Verb
+  SecRule REQUEST_LINE "@validateOpenApi" "id:3, chain, openapi:'/tmp/api.yml', capture, setvar:'tx.apipath=%{tx.1}'"
+    SecRule REQUEST_BODY "@validateOpenApi %{tx.apipath}" "openapi:'/tmp/api.yml', logdata:'Invalid request for schema.'"
+data: |
+  This operator will work depending on the current execution phase and the parameters:
+
+  **Phase 1, empty parameter:** 
+  @validateOpenApi will validate REQUEST_LINE for PATH and HTTP verb and return true if there is a matching API. Capture 1 will contain METHOD:PATH
+
+  **Phase 2, with parameters:**
+  @validateOpenApi will validate REQUEST_BODY and perform an XML or JSON validation against the specified API.
+
+  RESPONSE_BODY validation is being evaluated.

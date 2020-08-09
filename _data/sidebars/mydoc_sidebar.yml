@@ -1,0 +1,147 @@
+# This is your sidebar TOC. The sidebar code loops through sections here and provides the appropriate formatting.
+
+entries:
+- title: sidebar
+  product: Coraza WAF
+  version: 0.1-pre
+  folders:
+
+  - title:
+    output: pdf
+    type: frontmatter
+    folderitems:
+    - title:
+      url: /titlepage.html
+      output: pdf
+      type: frontmatter
+    - title:
+      url: /tocpage.html
+      output: pdf
+      type: frontmatter
+
+  - title: Overview
+    output: web, pdf
+    folderitems:
+
+    - title: Get started
+      url: /index.html
+      output: web, pdf
+      type: homepage
+
+    - title: Support
+      url: /support.html
+      output: web, pdf
+
+    - title: License
+      url: /license.html
+      output: web, pdf     
+
+    - title: Differences with ModSecurity
+      url: /differences-modsecurity.html
+      output: web, pdf       
+
+  - title: Release Notes
+    output: web, pdf
+    folderitems:
+
+    - title: 0.1-pre Release notes
+      url: /release-0-1-pre.html
+      output: web, pdf
+
+  - title: Installation
+    output: web, pdf
+    folderitems:
+
+    - title: Install Coraza WAF on Linux
+      url: /mydoc_install_jekyll_on_windows.html
+      output: web, pdf
+
+    - title: Coraza WAF Docker Container
+      url: /mydoc_install_jekyll_on_windows.html
+      output: web, pdf      
+
+    - title: Configuration examples
+      url: /mydoc_install_jesd_on_windows.html
+      output: web, pdf
+
+    - title: High Availability
+      url: /mydoc_install_jesd_on_windows.html
+      output: web, pdf
+
+
+  - title: Configuration
+    output: web, pdf
+
+    folderitems:
+    - title: WAF Configuration Syntaxis
+      url: /general-syntaxis.html
+      output: web, pdf
+
+    - title: Reverse Proxy Configuration
+      url: /reverse-proxy.html
+      output: web, pdf
+
+    - title: WAF Directives
+      url: /directives.html
+      output: web, pdf
+
+    - title: WAF Rule Operators
+      url: /operators.html
+      output: web, pdf
+
+    - title: WAF Rule Actions
+      url: /actions.html
+      output: web, pdf
+
+    - title: WAF Rule Transformations
+      url: /transformations.html
+      output: web, pdf
+
+    - title: WAF Rule Variables
+      url: /variables.html
+      output: web, pdf
+
+    - title: WAF Rule Scripting
+      url: /scripting.html
+      output: web, pdf
+
+    - title: WAF Collections
+      url: /collections.html
+      output: web, pdf      
+
+    - title: WAF Macro Expansion
+      url: /macro-expansion.html
+      output: web, pdf            
+
+    - title: Execution Phases
+      url: /phases.html
+      output: web, pdf    
+
+    - title: Deprecated features
+      url: /deprecated-features.html    
+      output: web, pdf      
+
+    - title: WAF Regular Expressions
+      url: /regex.html    
+      output: web, pdf      
+
+    - title: WAF Remote Resources
+      url: /remote-resources.html
+      output: web, pdf
+
+
+  - title: Logging
+    output: web, pdf
+
+    folderitems:
+    - title: Log format
+      url: /direcdtives.html
+      output: web, pdf      
+
+    - title: Remote Logging
+      url: /direcstives.html
+      output: web, pdf
+
+    - title: Processing Logs
+      url: /directaives.html
+      output: web, pdf

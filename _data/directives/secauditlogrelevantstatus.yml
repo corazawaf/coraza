@@ -1,0 +1,7 @@
+name: SecAuditLogRelevantStatus
+syntaxis: SecAuditLogRelevantStatus REGEX
+example: SecAuditLogRelevantStatus "^(?:5|4(?!04))"
+data: |
+  **Dependencies/Notes:** Must have SecAuditEngine set to RelevantOnly. Additionally, the auditlog action is present by default in rules, this will make the engine bypass the 'SecAuditLogRelevantStatus' and send rule matches to the audit log regardless of status. You must specify noauditlog in the rules manually or set it in SecDefaultAction.
+
+  The main purpose of this directive is to allow you to configure audit logging for only the transactions that have the status code that matches the supplied regular expression. The example provided would log all 5xx and 4xx level status codes, except for 404s. Although you could achieve the same effect with a rule in phase 5, SecAuditLogRelevantStatus is sometimes better, because it continues to work even when SecRuleEngine is disabled.

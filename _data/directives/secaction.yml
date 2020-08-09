@@ -1,0 +1,11 @@
+name: SecAction
+description: Unconditionally processes the action list it receives as the first and only parameter. The syntax of the parameter is identical to that of the third parameter of ``SecRule``.
+syntaxis: SecAction "action1,action2,action3,..."
+version: 1.0
+supported: true
+data: |
+  This directive is commonly used to set variables and initialize persistent collections using the initcol action. For example:
+
+  ```
+  SecAction nolog,phase:1,initcol:RESOURCE=%{REQUEST_FILENAME}
+  ```

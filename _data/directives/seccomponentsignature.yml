@@ -1,0 +1,5 @@
+name: SecComponentSignature
+description: Appends component signature to the ModSecurity signature.
+syntaxis: SecComponentSignature "COMPONENT_NAME/X.Y.Z (COMMENT)"
+example: SecComponentSignature "core ruleset/2.1.3"
+data: This directive should be used to make the presence of significant rule sets known. The entire signature will be recorded in the transaction audit log.

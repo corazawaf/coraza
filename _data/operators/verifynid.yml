@@ -1,0 +1,29 @@
+name: verifyNID
+description: |
+  Detect and validate national identification numbers for many countries, it will match the regex and apply the proper validations to find valid IDs.
+example: |
+  # Detect social security numbers in parameters and 
+  # prevent them from being logged to audit log 
+  SecRule ARGS "@verifyNID US \d{3}-?\d{2}-?\d{4}" "phase:2,id:196,nolog,pass,msg:'Potential social security number',sanitiseMatched"
+version: 1.0
+data: |
+  This operator will apply each required validation for a valid ID number, for example a US SSN must:
+
+  * Must have 9 digits
+  * Cannot be a sequence number (ie,, 123456789, 012345678)
+  * Cannot be a repetition sequence number ( ie 11111111 , 222222222)
+  * Cannot have area and/or group and/or serial zeroed sequences
+  * Area code must be less than 740
+  * Area code must be different then 666  
+
+  **Supported Countries:**
+
+  | Country Name | Regex                             | Code |
+  |--------------|-----------------------------------|------|
+  | Brasil       | ([0-9]{3}\.){2}[0-9]{3}-[0-9]{2}  | BR   |
+  | Chile        | \d{1,2}\.\d{3}\.\d{3}[-][0-9kK]{1}| CL   |
+  | United States| \d{3}-?\d{2}-?\d{4}               | US   |
+
+  More countries will be added in the near future.
+
+  This operator supports capture and will return the extracted ID.

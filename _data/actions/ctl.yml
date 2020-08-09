@@ -1,0 +1,37 @@
+name: ctl
+description: |
+  Changes ModSecurity configuration on transient, per-transaction basis. Any changes made using this action will affect only the transaction in which the action is executed. The default configuration, as well as the other transactions running in parallel, will be unaffected.
+actiongroup: Non-disruptive
+example: |
+  # Parse requests with Content-Type "text/xml" as XML 
+  SecRule REQUEST_CONTENT_TYPE ^text/xml "nolog,pass,id:106,ctl:requestBodyProcessor=XML"
+
+  # white-list the user parameter for rule #981260 when the REQUEST_URI is /index.php
+  SecRule REQUEST_URI "@beginsWith /index.php" "phase:1,t:none,pass, \
+    nolog,ctl:ruleRemoveTargetById=981260;ARGS:user
+data: |
+  The following configuration options are supported:
+
+  1. **auditEngine**
+  2. **auditLogParts**
+  3. **debugLogLevel** (Supported on libModSecurity: TBI)
+  4. **forceRequestBodyVariable**
+  5. **requestBodyAccess**
+  6. **requestBodyLimit** (Supported on libModSecurity: TBI)
+  7. **requestBodyProcessor**
+  8. **responseBodyAccess** (Supported on libModSecurity: TBI)
+  9. **responseBodyLimit** (Supported on libModSecurity: TBI)
+  10. **ruleEngine**
+  11. **ruleRemoveById** - since this action us triggered at run time, it should be specified before the rule in which it is disabling.
+  12. **ruleRemoveByMsg** (Supported on libModSecurity: TBI)
+  13. **ruleRemoveByTag** (Supported on libModSecurity: TBI)
+  14. **ruleRemoveTargetById** - since this action is used to just remove targets, users don't need to use the char ! before the target list.
+  15. **ruleRemoveTargetByMsg** - since this action is used to just remove targets, users don't need to use the char ! before the target list. (Supported on libModSecurity: TBI)
+  16. **ruleRemoveTargetByTag** - since this action is used to just remove targets, users don't need to use the char ! before the target list.
+  17. **hashEngine** (Supported on libModSecurity: TBI)
+  18. **hashEnforcement** (Supported on libModSecurity: TBI)
+  With the exception of the requestBodyProcessor and forceRequestBodyVariable settings, each configuration option corresponds to one configuration directive and the usage is identical.
+
+  The requestBodyProcessor option allows you to configure the request body processor. By default, ModSecurity will use the URLENCODED and MULTIPART processors to process an application/x-www-form-urlencoded and a multipart/form-data body, respectively. Other two processors are also supported: JSON and XML, but they are never used implicitly. Instead, you must tell ModSecurity to use it by placing a few rules in the REQUEST_HEADERS processing phase. After the request body is processed as XML, you will be able to use the XML-related features to inspect it.
+
+  Request body processors will not interrupt a transaction if an error occurs during parsing. Instead, they will set the variables REQBODY_PROCESSOR_ERROR and REQBODY_PROCESSOR_ERROR_MSG. These variables should be inspected in the REQUEST_BODY phase and an appropriate action taken. The forceRequestBodyVariable option allows you to configure the REQUEST_BODY variable to be set when there is no request body processor configured. This allows for inspection of request bodies of unknown types.

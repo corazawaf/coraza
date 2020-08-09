@@ -1,0 +1,9 @@
+name: base64Decode
+description: |
+  Decodes a Base64-encoded string.
+  ```
+  SecRule REQUEST_HEADERS:Authorization "^Basic ([a-zA-Z0-9]+=*)$" "phase:1,id:93,capture,chain,logdata:%{TX.1}"
+    SecRule TX:1 ^(\w+): t:base64Decode,capture,chain
+      SecRule TX:1 ^(admin|root|backup)$ 
+  ```
+  **Note:** Be careful when applying base64Decode with other transformations. The order of your transformation matters in this case as certain transformations may change or invalidate the base64 encoded string prior to being decoded (i.e t:lowercase, etc). This of course means that it is also very difficult to write a single rule that checks for a base64decoded value OR an unencoded value with transformations, it is best to write two rules in this situation.

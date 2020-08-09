@@ -1,0 +1,21 @@
+name: SecAuditLog
+description: Defines the path to the main audit log file (serial logging format) or the concurrent logging index file (concurrent logging format). When used in combination with mlogc (only possible with concurrent logging), this directive defines the mlogc location and command line.
+syntaxis: SecAuditLog /path/to/audit.log
+version: 1.0
+data: |
+  This file will be used to store the audit log entries if serial audit logging format is used. 
+
+  If concurrent audit logging format is used this file will be used as an index, and contain a record of all audit log files created. 
+
+  If you are planning to use concurrent audit logging to send your audit log data off to a remote server you will can use an HTTPS url like this:
+  ```
+  SecAuditLog "https://sample.com/logserver"
+  ```
+  **Note:** SSL certificate must be valid or the connection will fail.
+
+  If you want to use a custom script to process each log entry you can do it like this:
+  ```
+  SecAuditLog "|/usr/bin/python /path/to/yourscript.py"
+  ```
+
+  **Important:** Logging to HTTPS and scripts supports parallel and multithread processing, but keep in mind that slow scripts or servers might slow down the whole WAF. You might use a different log processor like FileBeats.

@@ -1,0 +1,11 @@
+name: SecAuditLogDirMode
+description: Configures the mode (permissions) of any directories created for the concurrent audit logs, using an octal mode value as parameter (as used in chmod).
+syntaxis: SecAuditLogDirMode octal_mode|"default"
+data: |
+  The default mode for new audit log directories (0600) only grants read/write access to the owner (typically the account under which Apache is running, for example apache). If access from other accounts is needed (e.g., for use with mpm-itk), then you may use this directive to grant additional read and/or write privileges. You should use this directive with caution to avoid exposing potentially sensitive data to unauthorized users. Using the value default as parameter reverts the configuration back to the default setting. This feature is not available on operating systems not supporting octal file modes.
+
+  Example:
+  ```
+  SecAuditLogDirMode 02750
+  ```
+  **Note:** The process umask may still limit the mode if it is being more restrictive than the mode set using this directive.

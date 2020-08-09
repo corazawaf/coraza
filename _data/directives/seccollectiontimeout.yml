@@ -1,0 +1,3 @@
+name: SecCollectionTimeout
+description: Specifies the collections timeout. Default is 3600 seconds.
+syntaxis: SecCollectionTimeout seconds

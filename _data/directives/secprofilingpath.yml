@@ -1,0 +1,16 @@
+name: SecProfilingPath
+syntaxis: SecProfilingPath /path/to/audit/
+version: 1.0
+experimental: true
+description: |
+  Specifies the path where the audit profiling files will be stored. The same storage method of a concurrent logging will be used.
+
+  This file can be used to create learning profiles and run some statistics.
+
+  You can use a processing software with the following syntax:
+  ```
+  SecProfilingPath "|/usr/bin/python /path/to/yourscript.py"
+
+  ```
+
+  Get more information [here](#).

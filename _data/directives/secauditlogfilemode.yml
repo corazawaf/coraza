@@ -1,0 +1,10 @@
+name: SecAuditLogFileMode
+description: Configures the mode (permissions) of any files created for concurrent audit logs using an octal mode (as used in chmod). See SecAuditLogDirMode for controlling the mode of created audit log directories.
+syntaxis: SecAuditLogFileMode octal_mode|"default"
+default: "0600"
+data: |
+  **Example Usage:** ``SecAuditLogFileMode 00640`` 
+
+  This feature is not available on operating systems not supporting octal file modes. The default mode (0600) only grants read/write access to the account writing the file. If access from another account is needed (using mpm-itk is a good example), then this directive may be required. However, use this directive with caution to avoid exposing potentially sensitive data to unauthorized users. Using the value “default” will revert back to the default setting.
+
+  **Note:** The process umask may still limit the mode if it is being more restrictive than the mode set using this directive.

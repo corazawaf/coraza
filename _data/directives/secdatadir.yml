@@ -1,0 +1,10 @@
+name: SecDataDir
+description: Path where persistent data (e.g., IP address data, session data, and so on) is to be stored.
+syntaxis: SecDataDir /path/to/dir
+example: SecDataDir /usr/local/apache/logs/data
+data: |
+  This directive must be provided before initcol, setsid, and setuid can be used. The directory to which the directive points must be writable by the web server user.
+
+  **Note:** This directive is not allowed inside VirtualHosts. If enabled, it must be placed in a global server-wide configuration file such as your default modsecurity.conf.
+  
+  **Note:** SecDataDir is not currently supported. Collections are kept in memory (in_memory-per_process) for now.

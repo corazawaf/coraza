@@ -1,0 +1,8 @@
+name: SecContentInjection
+description: Enables content injection using actions append and prepend.
+syntaxis: SecContentInjection On|Off
+example: SecContentInjection On
+data: |
+  This directive provides an easy way to control content injection, no matter what the rules want to do. It is not necessary to have response body buffering enabled in order to use content injection.
+
+  **Note:** This directive must ben enabled if you want to use @rsub + the STREAM_ variables to manipulate live transactional data.

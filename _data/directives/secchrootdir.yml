@@ -1,0 +1,22 @@
+name: SecChrootDir
+supported: false
+description: Configures the directory path that will be used to jail the web server process.
+syntaxis: SecChrootDir /path/to/chroot/dir
+example: SecChrootDir /chroot
+data: |
+  This feature is not available on Windows builds. The internal chroot functionality provided by ModSecurity works great for simple setups. One example of a simple setup is Apache serving only static files, or running applications using built-in modules. Some problems you might encounter with more complex setups:
+
+  1. DNS lookups do not work (this is because this feature requires a shared library that is loaded on demand, after chroot takes place).
+  2. You cannot send email from PHP, because it wants to use sendmail and sendmail re- sides outside the jail.
+  3. In some cases, when you separate Apache from its configuration, restarts and graceful reloads no longer work.
+  
+  The best way to use SecChrootDir is the following:
+
+  1. Create /chroot to be your main jail directory.
+  2. Create /chroot/opt/apache inside jail.
+  3. Create a symlink from /opt/apache to /chroot/opt/apache.
+  4. Now install Apache into /chroot/opt/apache.
+  
+  You should be aware that the internal chroot feature might not be 100% reliable. Due to the large number of default and third-party modules available for the Apache web server, it is not possible to verify the internal chroot works reliably with all of them. A module, working from within Apache, can do things that make it easy to break out of the jail. In particular, if you are using any of the modules that fork in the module initialisation phase (e.g., mod_fastcgi, mod_fcgid, mod_cgid), you are advised to examine each Apache process and observe its current working directory, process root, and the list of open files. Consider what your options are and make your own decision.
+
+  **Note:** This directive is not allowed inside VirtualHosts. If enabled, it must be placed in a global server-wide configuration file such as your default modsecurity.conf.

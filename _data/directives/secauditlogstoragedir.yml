@@ -1,0 +1,5 @@
+name: SecAuditLogStorageDir
+description: Configures the directory where concurrent audit log entries are to be stored.
+example: SecAuditLogStorageDir /usr/local/apache/logs/audit
+syntaxis: SecAuditLogStorageDir /path/to/storage/dir
+data: This directive is only needed when concurrent audit logging is used. The directory must already exist and must be writable by the web server user. Audit log entries are created at runtime, after Apache switches to a non-root account. As with all logging mechanisms, ensure that you specify a file system location that has adequate disk space and is not on the main system partition.

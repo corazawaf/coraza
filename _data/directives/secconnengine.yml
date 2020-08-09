@@ -1,0 +1,10 @@
+name: SecConnEngine
+description: "Configures the connections engine. This directive affect the directives: SecConnReadStateLimit and SecConnWriteStateLimit."
+syntaxis: SecConnEngine On|Off|DetectionOnly
+example: SecConnEngine On
+data: |
+  Possible values are (Same as SecRuleEngine):
+
+  * **On:** process SecConnRead/SecConnWrite State limits.
+  * **Off:** Ignores SecConnRead/SecConnWrite State limits
+  * **DetectionOnly:** process SecConnRead/SecConnWrite StateLimit definitions in verbose mode but never executes any disruptive actions
