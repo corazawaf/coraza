@@ -109,7 +109,7 @@ func (p *Parser) Evaluate(data string) error{
 		}
 		break
 	case "SecAuditLogRelevantStatus":
-		p.waf.AuditLogRelevantStatus = regexp.MustCompile(opts)
+		p.waf.AuditLogRelevantStatus = pcre.MustCompile(opts, 0)
 		break
 	case "SecAuditLogStorageDir":
 		p.waf.AuditLogStorageDir = opts

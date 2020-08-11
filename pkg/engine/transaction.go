@@ -541,7 +541,8 @@ func (tx *Transaction) GetField(collection string, key string, exceptions []stri
 func (tx *Transaction) IsRelevantStatus() bool{
     re := tx.WafInstance.AuditLogRelevantStatus
     status := strconv.Itoa(tx.Status)
-    return re.MatchString(status)
+    m := re.NewMatcher()
+    return m.MatchString(status, 0)
 }
 
 func (tx *Transaction) ToAuditJson() []byte{

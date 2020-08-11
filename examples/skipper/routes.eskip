@@ -1,7 +1,6 @@
-baidu:
+demosite:
         *
-        -> corazaWAF("/path/to/rules.conf", "/path/to/data/")
-        -> setRequestHeader("Host", "www.baidu.com")
-        -> setPath("/s")
-        -> setQuery("wd", "godoc skipper")
-        -> "http://www.baidu.com";
+        -> corazaWAF("/etc/coraza-waf/profiles/default/rules.conf")
+        -> setRequestHeader("Host", "jptosso.github.io")
+        -> setPath("/it-worked.html")
+        -> "https://jptosso.github.io";

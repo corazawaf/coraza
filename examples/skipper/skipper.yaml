@@ -1,0 +1,5 @@
+address: 127.0.0.1:8080
+application-log: /opt/coraza-waf/log/skipper.log
+application-log-level: error
+access-log: /opt/coraza-waf/log/access.log
+routes-file: /etc/coraza-waf/routes.eskip
