@@ -14,15 +14,20 @@ import(
 type ConcurrentLogger struct{
 	auditlogger *log.Logger
 	mux *sync.RWMutex
+	file string
+	directory string
 }
 
-func (l *ConcurrentLogger) Init(file string) error{
+func (l *ConcurrentLogger) Init(file string, directory string) error{
+	l.mux = &sync.RWMutex{}
 	faudit, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		return err
 	}	
 	mw := io.MultiWriter(faudit)
 	l.auditlogger = log.New(mw, "", 0)
+	l.file = file
+	l.directory = directory
 	return nil
 }
 
@@ -40,7 +45,7 @@ func (l *ConcurrentLogger) WriteAudit(tx *Transaction) error{
 	responselength := tx.Collections["response_content_length"].GetFirstInt64()
 	requestlength := tx.Collections["request_content_length"].GetFirstInt64()
 	p2 := fmt.Sprintf("/%s/%s", t.Format("20060106"), t.Format("20060106-1504"))
-	logdir:= path.Join(tx.AuditLogPath1, p2)
+	logdir:= path.Join(l.directory, p2)
 	filepath := path.Join(logdir, fmt.Sprintf("/%s-%s", t.Format("20060106-150405"), tx.Id))
 	str := fmt.Sprintf("%s %s - - [%s] %q %d %d %q %q %s %q %s %d %d", 
 		ipsource, ipserver,	ts,	requestline, responsecode, responselength, "-", "-", tx.Id, "-", filepath, 0, requestlength)	

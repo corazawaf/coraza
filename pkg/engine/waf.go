@@ -17,6 +17,10 @@ const (
 	AUDIT_LOG_HTTPS		                 = 1
     AUDIT_LOG_SCRIPT                     = 2
 
+    AUDIT_LOG_ENABLED                    = 0
+    AUDIT_LOG_DISABLED                   = 1
+    AUDIT_LOG_RELEVANT                   = 2
+
 	AUDIT_LOG_PART_HEADER                = 0 // PART A - JUST FOR COMPATIBILITY, IT DOES NOTHING
 	AUDIT_LOG_PART_REQUEST_HEADERS       = 1 // PART B
 	AUDIT_LOG_PART_REQUEST_BODY          = 2 // PART C
@@ -41,8 +45,8 @@ type Waf struct {
 	Datapath string
 
 	DefaultAction string
-    AuditEngine bool
-    AuditLogPath1 string
+    AuditEngine int
+    AuditLogPath string
     AuditLogPath2 string
     AuditLogParts []int
     AuditLogStorageDir string
@@ -95,6 +99,10 @@ func (w *Waf) Init() {
 	w.Ctx = context.Background()
     w.Rules = &RuleGroup{}
     w.Rules.Init()
+    w.AuditEngine = AUDIT_LOG_ENABLED
+    w.AuditLogType = AUDIT_LOG_CONCURRENT
+    w.Logger = &Logger{}
+    w.Logger.InitConcurrent(w.AuditLogPath, w.AuditLogStorageDir)
 	err := w.InitRedis("localhost:6379", "", "")
 	if err != nil {
 		fmt.Println("Cannot connect to Redis, switching to memory collections.")

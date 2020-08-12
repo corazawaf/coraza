@@ -45,9 +45,9 @@ type Transaction struct {
     AuditLog bool
     SkipAfter string
 
-    AuditLogPath1 string
+    AuditLogPath string
     DefaultAction string
-    AuditEngine bool
+    AuditEngine int
     AuditLogParts []int
     DebugLogLevel int
     ForceRequestBodyVariable bool
@@ -62,6 +62,7 @@ type Transaction struct {
     RuleRemoveByTag []string
     HashEngine bool
     HashEnforcement bool
+    AuditLogType int
 
     Skip int `json:"skip"`
     Capture bool `json:"capture"`
@@ -418,7 +419,7 @@ func (tx *Transaction) initVars() {
     tx.SetSingleCollection("id", txid)
     tx.SetSingleCollection("timestamp", strconv.FormatInt(time.Now().Unix(), 10))
     tx.Disrupted = false
-    tx.AuditLogPath1 = tx.WafInstance.AuditLogPath1
+    tx.AuditLogPath = tx.WafInstance.AuditLogPath
     tx.AuditEngine = tx.WafInstance.AuditEngine
     tx.AuditLogParts = tx.WafInstance.AuditLogParts
     tx.DebugLogLevel = tx.WafInstance.DebugLogLevel
@@ -432,6 +433,7 @@ func (tx *Transaction) initVars() {
     tx.HashEngine = tx.WafInstance.HashEngine
     tx.HashEnforcement = tx.WafInstance.HashEnforcement
     tx.DefaultAction = tx.WafInstance.DefaultAction
+    tx.AuditLogType = tx.WafInstance.AuditLogType
     tx.Skip = 0
     
     tx.RemoveRuleById = []int{}
@@ -481,14 +483,11 @@ func (tx *Transaction) ExecutePhase(phase int) error{
         tx.Capture = false //we reset the capture flag on every run
         usedRules++
     }
-    if tx.Disrupted{
-        return nil
-    }
-    if phase == 5{
-        if tx.AuditLog{
-            if tx.IsRelevantStatus(){
-                tx.SaveLog()
-            }
+    if tx.Disrupted || phase == 5{
+        if phase != 5{
+            tx.ExecutePhase(5)
+        }else if tx.IsRelevantStatus(){
+            tx.SaveLog()
         }
     }
     return nil
@@ -539,6 +538,12 @@ func (tx *Transaction) GetField(collection string, key string, exceptions []stri
 }
 
 func (tx *Transaction) IsRelevantStatus() bool{
+    if tx.AuditEngine == AUDIT_LOG_DISABLED{
+        return false
+    }
+    if tx.AuditEngine == AUDIT_LOG_ENABLED {
+        return true
+    }
     re := tx.WafInstance.AuditLogRelevantStatus
     status := strconv.Itoa(tx.Status)
     m := re.NewMatcher()

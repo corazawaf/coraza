@@ -37,7 +37,7 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
 		tx.RemoveTargetFromTag[a.Value] = append(tx.RemoveTargetFromTag[a.Value], col)
 	break
 	case "auditEngine":
-		tx.AuditEngine = a.Value == "On"
+		
 		break
 	case "auditLogParts":
 

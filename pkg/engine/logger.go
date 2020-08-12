@@ -12,6 +12,8 @@ type Logger struct {
 
 func (l *Logger) InitConcurrent(path string, directory string) error{
 	l.logtype = AUDIT_LOG_CONCURRENT
+	l.concurrentlogger = &ConcurrentLogger{}
+	l.concurrentlogger.Init(path, directory)
 	return nil
 }
 

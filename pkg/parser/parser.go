@@ -83,9 +83,17 @@ func (p *Parser) Evaluate(data string) error{
 	//Log.Debug(fmt.Sprintf("Directive: %s, Options: %s", directive, opts))
 	//opts = strings.Trim(opts, `"`)
 	switch(directive){
-	//SecAuditEngine
+	case "SecAuditEngine":
+		switch opts{
+		case "On":
+			p.waf.AuditEngine = engine.AUDIT_LOG_ENABLED
+		case "Off":
+			p.waf.AuditEngine = engine.AUDIT_LOG_DISABLED
+		case "RelevantOnly":
+			p.waf.AuditEngine = engine.AUDIT_LOG_RELEVANT
+		}
 	case "SecAuditLog":
-		p.waf.AuditLogPath1 = opts
+		p.waf.AuditLogPath = opts
 		break
 	case "SecAuditLog2":
 		p.waf.AuditLogPath2 = opts

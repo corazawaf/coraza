@@ -14,6 +14,7 @@ mkdir -p $TMP_PATH/opt/coraza-waf/log/audit
 mkdir -p $TMP_PATH/bin
 
 cp scripts/debian/coraza-waf.service $TMP_PATH/etc/init.d/coraza-waf
+cp examples/skipper/default.conf $TMP_PATH/etc/coraza-waf/profiles/default/
 cp scripts/debian/postinst $TMP_PATH/DEBIAN/
 cp changelog $TMP_PATH/DEBIAN/
 cp LICENSE $TMP_PATH/DEBIAN/license
