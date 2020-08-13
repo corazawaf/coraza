@@ -80,8 +80,9 @@ func (p *Parser) Evaluate(data string) error{
 	directive := spl[0]
 	opts := spl[1]
 
-	//Log.Debug(fmt.Sprintf("Directive: %s, Options: %s", directive, opts))
-	//opts = strings.Trim(opts, `"`)
+	if len(opts) >= 3 && opts[0] == '"' && opts[len(opts)-1] == '"'{
+		opts = strings.Trim(opts, `"`)
+	}
 	switch(directive){
 	case "SecAuditEngine":
 		switch opts{

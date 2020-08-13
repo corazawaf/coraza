@@ -44,6 +44,7 @@ func (s *CorazaSpec) CreateFilter(config []interface{}) (filters.Filter, error) 
 
     wi := &engine.Waf{}
     wi.Init()
+    wi.InitLogger()
 
     wafparser := parser.Parser{}
     wafparser.Init(wi)

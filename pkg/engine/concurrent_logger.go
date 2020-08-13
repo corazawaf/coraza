@@ -44,8 +44,10 @@ func (l *ConcurrentLogger) WriteAudit(tx *Transaction) error{
 	responsecode := tx.Collections["response_status"].GetFirstInt()
 	responselength := tx.Collections["response_content_length"].GetFirstInt64()
 	requestlength := tx.Collections["request_content_length"].GetFirstInt64()
+	// append the two directories
 	p2 := fmt.Sprintf("/%s/%s", t.Format("20060106"), t.Format("20060106-1504"))
-	logdir:= path.Join(l.directory, p2)
+	logdir:= path.Join(tx.WafInstance.AuditLogStorageDir, p2)
+	// Append the filename
 	filepath := path.Join(logdir, fmt.Sprintf("/%s-%s", t.Format("20060106-150405"), tx.Id))
 	str := fmt.Sprintf("%s %s - - [%s] %q %d %d %q %q %s %q %s %d %d", 
 		ipsource, ipserver,	ts,	requestline, responsecode, responselength, "-", "-", tx.Id, "-", filepath, 0, requestlength)	

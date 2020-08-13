@@ -12,6 +12,7 @@ import (
     "net/http"
     "net/url"
     "time"
+    "path"
     "encoding/json"
 )
 
@@ -535,6 +536,18 @@ func (tx *Transaction) GetField(collection string, key string, exceptions []stri
         return []string{}
     }
     return col.GetWithExceptions(key, exceptions)
+}
+
+//Returns directory and filename
+func (tx *Transaction) GetAuditPath() (string, string){
+    t := time.Unix(tx.Collections["timestamp"].GetFirstInt64(), 0)
+
+    // append the two directories
+    p2 := fmt.Sprintf("/%s/%s/", t.Format("20060106"), t.Format("20060106-1504"))
+    logdir:= path.Join(tx.WafInstance.AuditLogStorageDir, p2)
+    // Append the filename
+    filename := fmt.Sprintf("/%s-%s", t.Format("20060106-150405"), tx.Id)
+    return logdir, filename
 }
 
 func (tx *Transaction) IsRelevantStatus() bool{

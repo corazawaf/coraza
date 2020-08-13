@@ -101,12 +101,21 @@ func (w *Waf) Init() {
     w.Rules.Init()
     w.AuditEngine = AUDIT_LOG_ENABLED
     w.AuditLogType = AUDIT_LOG_CONCURRENT
-    w.Logger = &Logger{}
-    w.Logger.InitConcurrent(w.AuditLogPath, w.AuditLogStorageDir)
 	err := w.InitRedis("localhost:6379", "", "")
 	if err != nil {
 		fmt.Println("Cannot connect to Redis, switching to memory collections.")
 	}
+}
+
+func (w *Waf) InitLogger(){
+    l := &Logger{}
+    switch w.AuditLogType{
+    case AUDIT_LOG_CONCURRENT:
+        l.InitConcurrent(w.AuditLogPath, w.AuditLogStorageDir)
+    default:
+        l.InitConcurrent(w.AuditLogPath, w.AuditLogStorageDir)
+    }
+    w.Logger = l    
 }
 
 // Initializes Redis connection and assign Redis as the default persistance engine
