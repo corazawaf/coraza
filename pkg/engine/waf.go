@@ -121,8 +121,6 @@ func (w *Waf) InitLogger(){
     l := &Logger{}
     var err error
     switch w.AuditLogType{
-    case AUDIT_LOG_CONCURRENT:
-        err = l.InitConcurrent(w.AuditLogPath, w.AuditLogStorageDir)
     default:
         err = l.InitConcurrent(w.AuditLogPath, w.AuditLogStorageDir)
     }   
