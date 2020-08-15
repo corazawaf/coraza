@@ -21,22 +21,20 @@ Coraza WAF is a Golang implementation of Modsecurity built from scratch, it supp
 
 - [Coraza Web Application Firewall](#coraza-web-application-firewall)
 
-## TO-DO
 
-- [ ] Normalize API
-- [x] Add more settings
-- [ ] Replace libinjection for something awesome, maybe AI?
-- [x] Create Documentation
-- [ ] Audit Logging (syslog, ES and concurrent)
-- [x] Logrotate support
-- [ ] Autoconf
-- [ ] Optimize pcre compilation instructions
+## About current version (0.1.0-alpha1)
+
+Most features are available for testing, APIs are unstable but close to the final product. The rule engine is stable but requires more tsting. A lot of performance optimization is required. This version might receive daily patching. Check the test engine to learn more about the supported features.
+
+## What is not working
+
+- [ ] Normalized API
+- [ ] Optimized pcre compilation instructions
 - [ ] OWASP CRS Full Support (almost there)
-- [ ] Plugin system
-- [ ] Add settings reload feature
-- [ ] Add clustering features
-- [ ] Add support for plugins
-- [ ] OpenAPI 3.0 Enforcement
+- [ ] cssdecode and jsdecode transformation
+- [ ] ctl, proxy actions
+- [ ] persistent collections
+- [ ] custom error pages
 
 
 ## Compile from source

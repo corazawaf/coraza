@@ -8,6 +8,9 @@ import (
     "mime/multipart"
     "strconv"
     "sync"
+    "os/exec"
+    "os"
+    "bytes"
     "net"
     "net/http"
     "net/url"
@@ -577,4 +580,55 @@ func (tx *Transaction) ToAuditLog() *AuditLog{
 
 func (tx *Transaction) SaveLog() error{
     return tx.WafInstance.Logger.WriteAudit(tx)
+}
+
+func (tx *Transaction) GetErrorPage() string{
+    switch tx.WafInstance.ErrorPageMethod{
+    case ERROR_PAGE_DEBUG:
+        buff := "<link href=\"https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css\" rel=\"stylesheet\">"
+        buff += "<h1>Coraza Security Error - Debug Mode</h1>"
+        buff += "<h3>Rules Triggered</h3>"
+        buff += "<table class='table table-striped'><thead><tr><th>ID</th><th>Action</th><th>Msg</th><th>Match</th><th>Raw Rule</th></tr></thead><tbody>"
+        for _, mr := range tx.MatchedRules{
+            match := strings.Join(mr.MatchedData, "<br>")
+            rule := mr.Rule.Raw
+            for child := mr.Rule.ChildRule; child != nil; child = child.ChildRule{
+                rule += "<br><strong>CHAIN:</strong> " + child.Raw
+            }
+            buff += fmt.Sprintf("<tr><td>%d</td><td>%s</td><td></td><td>%s</td><td>%s</td></tr>", mr.Id, mr.Action, match, rule)
+        }
+        buff += "</tbody></table>"
+
+        buff += "<h3>Transaction Collections</h3>"
+        buff += "<table class='table table-striped'><thead><tr><th>Collection</th><th>Key</th><th>Values</th></tr></thead><tbody>"
+        for key, col := range tx.Collections{
+            for k2, data := range col.Data{
+                d := strings.Join(data, "<br>")
+                buff += fmt.Sprintf("<tr><td>%s</td><td>%s</td><td>%s</td></tr>", key, k2, d)
+            }
+        }
+        buff += "</tbody></table>"
+        var prettyJSON bytes.Buffer
+        json.Indent(&prettyJSON, tx.ToAuditJson(), "", "\t")        
+        buff += fmt.Sprintf("<h3>Audit Log</h3><pre>%s</pre>", prettyJSON.String())
+        return buff
+    case ERROR_PAGE_SCRIPT:
+        cmd := exec.Command(tx.WafInstance.ErrorPageFile)
+        path, file := tx.GetAuditPath()
+        cmd.Env = append(os.Environ(),
+            "TRANSACTION_ID=" + tx.Id, 
+            "AUDIT_FILE=" + path + file,
+            "DISRUPTIVE_RULE_ID=" + strconv.Itoa(tx.DisruptiveRuleId),
+        )
+        stdout, err := cmd.Output()
+        if err != nil {
+            return "Error script failed"
+        }
+        return string(stdout)
+    case ERROR_PAGE_FILE:
+        return tx.WafInstance.ErrorPageFile
+    case ERROR_PAGE_INLINE:
+        return tx.WafInstance.ErrorPageFile        
+    }
+    return fmt.Sprintf("<h1>Error 403</h1><!-- %s -->", tx.Id)
 }

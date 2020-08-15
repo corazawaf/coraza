@@ -349,6 +349,29 @@ func (p *Parser) Evaluate(data string) error{
 		p.waf.ComponentSignature = opts
 	case "SecDataPath":
 		p.waf.Datapath = opts
+	case "SecErrorPage":
+		if len(opts) < 2{
+			//error
+			break
+		}
+		if opts == "debug"{
+			p.waf.ErrorPageMethod = engine.ERROR_PAGE_DEBUG
+		}else if opts[0] == '|'{
+			file := opts[1:]
+			p.waf.ErrorPageMethod = engine.ERROR_PAGE_SCRIPT
+			p.waf.ErrorPageFile = file
+		}else if opts[0] == '/'{
+			file, err := utils.OpenFile(opts)
+			if err != nil{
+				//error...
+				break
+			}
+			p.waf.ErrorPageMethod = engine.ERROR_PAGE_FILE
+			p.waf.ErrorPageFile = string(file)
+		}else{
+			p.waf.ErrorPageMethod = engine.ERROR_PAGE_INLINE
+			p.waf.ErrorPageFile = opts
+		}
 	default:
 		return errors.New("Unsupported directive " + directive)
 	}

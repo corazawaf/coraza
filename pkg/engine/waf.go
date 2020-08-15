@@ -34,6 +34,12 @@ const (
 	AUDIT_LOG_PART_ALL_MATCHED_RULES	 = 10 // PART K
 	AUDIT_LOG_PART_FINAL_BOUNDARY   	 = 11 // PART Z - JUST FOR COMPATIBILITY, IT DOES NOTHING
 
+    ERROR_PAGE_DEFAULT                   = 0
+    ERROR_PAGE_SCRIPT                    = 1
+    ERROR_PAGE_FILE                      = 2
+    ERROR_PAGE_INLINE                    = 3
+    ERROR_PAGE_DEBUG                     = 4
+
 )
 
 type Waf struct {
@@ -87,6 +93,9 @@ type Waf struct {
     UploadFileMode int
     WebAppId string
     ComponentSignature string
+    ErrorPageFile string
+    ErrorPageMethod int
+
     AuditLogRelevantStatus pcre.Regexp
 	GeoDb *geoip2.Reader
 	RedisClient *redis.Client  
@@ -99,8 +108,9 @@ func (w *Waf) Init() {
 	w.Ctx = context.Background()
     w.Rules = &RuleGroup{}
     w.Rules.Init()
-    w.AuditEngine = AUDIT_LOG_ENABLED
+    w.AuditEngine = AUDIT_LOG_DISABLED
     w.AuditLogType = AUDIT_LOG_CONCURRENT
+
 	err := w.InitRedis("localhost:6379", "", "")
 	if err != nil {
 		fmt.Println("Cannot connect to Redis, switching to memory collections.")
@@ -109,13 +119,17 @@ func (w *Waf) Init() {
 
 func (w *Waf) InitLogger(){
     l := &Logger{}
+    var err error
     switch w.AuditLogType{
     case AUDIT_LOG_CONCURRENT:
-        l.InitConcurrent(w.AuditLogPath, w.AuditLogStorageDir)
+        err = l.InitConcurrent(w.AuditLogPath, w.AuditLogStorageDir)
     default:
-        l.InitConcurrent(w.AuditLogPath, w.AuditLogStorageDir)
+        err = l.InitConcurrent(w.AuditLogPath, w.AuditLogStorageDir)
+    }   
+    if err != nil{
+        fmt.Println("Unable to open logs path")
     }
-    w.Logger = l    
+    w.Logger = l 
 }
 
 // Initializes Redis connection and assign Redis as the default persistance engine
