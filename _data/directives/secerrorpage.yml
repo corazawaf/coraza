@@ -1,0 +1,31 @@
+name: SecErrorPage
+description: Configures the default error page.
+syntaxis: SecAuditEngine "Inline string"
+default: "<h1>Error, forbidden.</h1>"
+version: 1.0
+data: |
+  The SecErrorPage directive is used to provide custom error pages in case of connection drop.
+
+  This directive supports four kind of inputs:
+  ```
+  # Error page will display "Error, forbidden."
+  SecErrorPage "<h1>Error, forbidden.</h1>"
+
+  # Error page will display the content from this file
+  SecErrorPage /var/www/error.html
+
+  # Error page will display the result of this script
+  SecErrorPage |/etc/coraza-waf/utils/error.py
+
+  # Error page will display a full debug page with detailed transactions and rule execution
+  SecErrorPage debug
+  ```
+
+  In case of using a custom script enviromental variables are going to be provided:
+
+  - TRANSACTION_ID
+  - AUDIT_FILE (if exists)
+  - DISRUPTIVE_RULE_ID
+
+  **Important:** Scripts must have execution privileges.
+  **Important:** Keep in mind that slow scripts might slow the whole WAF.
