@@ -1,15 +1,10 @@
 package skipper
 import (
-    "fmt"
     "strings"
     "strconv"
     "sync"
     "io"
     "net/http"
-    "encoding/json"
-    "os"
-    "os/exec"
-    "bytes"
     "regexp"
     "github.com/zalando/skipper/filters"
     "github.com/zalando/skipper/filters/serve"
@@ -52,6 +47,7 @@ func (s *CorazaSpec) CreateFilter(config []interface{}) (filters.Filter, error) 
         return nil, err
     }
     wi.Rules.Sort()
+    wi.InitLogger()
     return &CorazaFilter{policypath, wi, nil, &sync.RWMutex{}}, nil
 }
 
@@ -95,13 +91,11 @@ func (f *CorazaFilter) Request(ctx filters.FilterContext) {
     }
     f.tx.ExecutePhase(2)
     if f.tx.Disrupted {
-        f.ErrorPage(ctx)
         return
     }   
     f.tx.SetFullRequest()
     f.tx.ExecutePhase(3)
     if f.tx.Disrupted {
-        f.ErrorPage(ctx)
         return
     }
 }
@@ -111,6 +105,7 @@ func (f *CorazaFilter) Response(ctx filters.FilterContext) {
     //defer f.mux.Unlock()    
     if f.tx.Disrupted{
         //Skip response phase
+        f.ErrorPage(ctx)
         return
     }
     f.tx.SetResponseHeaders(ctx.Response().Header)
@@ -120,62 +115,10 @@ func (f *CorazaFilter) Response(ctx filters.FilterContext) {
 }
 
 func (f *CorazaFilter) ErrorPage(ctx filters.FilterContext) { 
-    f.tx.ExecutePhase(5)
-    /*
     serve.ServeHTTP(ctx, http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request){
         rw.WriteHeader(http.StatusForbidden)
         rw.Header().Set("Content-Type", "text/html")
-        io.WriteString(rw, "Forbidden")
-        }))*/
-    serve.ServeHTTP(ctx, http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request){
-        rw.WriteHeader(http.StatusForbidden)
-        rw.Header().Set("Content-Type", "text/html")
-        io.WriteString(rw, "<link href=\"https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css\" rel=\"stylesheet\">")
-        io.WriteString(rw, fmt.Sprintf("<h1>Coraza Security Error - Debug Mode</h1>"))
-        io.WriteString(rw, "<h3>Rules Triggered</h3>")
-        io.WriteString(rw, "<table class='table table-striped'><thead><tr><th>ID</th><th>Action</th><th>Msg</th><th>Match</th><th>Raw Rule</th></tr></thead><tbody>")
-
-        for _, mr := range f.tx.MatchedRules{
-            match := strings.Join(mr.MatchedData, "<br>")
-            rule := mr.Rule.Raw
-            for child := mr.Rule.ChildRule; child != nil; child = child.ChildRule{
-                rule += "<br><strong>CHAIN:</strong> " + child.Raw
-            }
-            io.WriteString(rw, fmt.Sprintf("<tr><td>%d</td><td>%s</td><td></td><td>%s</td><td>%s</td></tr>", mr.Id, mr.Action, match, rule))
-        }
-        io.WriteString(rw, "</tbody></table>")
-
-        io.WriteString(rw, "<h3>Transaction Collections</h3>")
-        io.WriteString(rw, "<table class='table table-striped'><thead><tr><th>Collection</th><th>Key</th><th>Values</th></tr></thead><tbody>")
-        for key, col := range f.tx.Collections{
-            for k2, data := range col.Data{
-                d := strings.Join(data, "<br>")
-                io.WriteString(rw, fmt.Sprintf("<tr><td>%s</td><td>%s</td><td>%s</td></tr>", key, k2, d))
-            }
-        }
-        io.WriteString(rw, "</tbody></table>")
-        var prettyJSON bytes.Buffer
-        json.Indent(&prettyJSON, f.tx.ToAuditJson(), "", "\t")        
-        io.WriteString(rw, fmt.Sprintf("<h3>Audit Log</h3><pre>%s</pre>", prettyJSON.String()))
-    }))
-}
-
-func (f *CorazaFilter) CustomErrorPage(ctx filters.FilterContext) { 
-    serve.ServeHTTP(ctx, http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request){        
-        rw.WriteHeader(http.StatusForbidden)
-        rw.Header().Set("Content-Type", "text/html")
-        cmd := exec.Command("custom-script.py")
-        cmd.Env = os.Environ()
-        //maybe change to ARGS?
-        cmd.Env = append(cmd.Env, "waf_txid=" + f.tx.Id)
-        cmd.Env = append(cmd.Env, "waf_timestamp=" + strconv.FormatInt(f.tx.Collections["timestamp"].GetFirstInt64(), 10))
-        stdout, err := cmd.Output()
-        if err != nil {
-            io.WriteString(rw, "<h1>Security Error</h1>")
-            io.WriteString(rw, "<small>There was an error rendering this page, please check the error logs.</small>")
-            return
-        }
-        io.WriteString(rw, string(stdout))
+        io.WriteString(rw, f.tx.GetErrorPage())    
     }))
 }
 

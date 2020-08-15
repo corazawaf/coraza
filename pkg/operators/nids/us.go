@@ -13,6 +13,9 @@ func (n *NidUs) Evaluate(nid string) bool{
 		return false
 	}	
 	nid = re.ReplaceAllString(nid, "")
+	if len(nid) < 9{
+		return false
+	}
 	area, _ := strconv.Atoi(nid[0:2])
 	group, _ := strconv.Atoi(nid[3:4])
 	serial, _ := strconv.Atoi(nid[5:8])
@@ -22,8 +25,8 @@ func (n *NidUs) Evaluate(nid string) bool{
 	
 	sequence := true
 	equals := true
+	prev, _ := strconv.Atoi(string(nid[0]))
 	for i := 1;i < len(nid);i++{
-		prev, _ := strconv.Atoi(string(nid[i-1]))
 		curr, _ := strconv.Atoi(string(nid[i]))
 		if prev != curr{
 			equals = false
@@ -31,6 +34,7 @@ func (n *NidUs) Evaluate(nid string) bool{
 		if curr != prev+1{
 			sequence = false
 		}
+		prev = curr
 	}
 
 	return !(sequence || equals)

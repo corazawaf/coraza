@@ -8,10 +8,14 @@ import (
     "mime/multipart"
     "strconv"
     "sync"
+    "os/exec"
+    "os"
+    "bytes"
     "net"
     "net/http"
     "net/url"
     "time"
+    "path"
     "encoding/json"
 )
 
@@ -45,9 +49,9 @@ type Transaction struct {
     AuditLog bool
     SkipAfter string
 
-    AuditLogPath1 string
+    AuditLogPath string
     DefaultAction string
-    AuditEngine bool
+    AuditEngine int
     AuditLogParts []int
     DebugLogLevel int
     ForceRequestBodyVariable bool
@@ -62,6 +66,7 @@ type Transaction struct {
     RuleRemoveByTag []string
     HashEngine bool
     HashEnforcement bool
+    AuditLogType int
 
     Skip int `json:"skip"`
     Capture bool `json:"capture"`
@@ -418,7 +423,7 @@ func (tx *Transaction) initVars() {
     tx.SetSingleCollection("id", txid)
     tx.SetSingleCollection("timestamp", strconv.FormatInt(time.Now().Unix(), 10))
     tx.Disrupted = false
-    tx.AuditLogPath1 = tx.WafInstance.AuditLogPath1
+    tx.AuditLogPath = tx.WafInstance.AuditLogPath
     tx.AuditEngine = tx.WafInstance.AuditEngine
     tx.AuditLogParts = tx.WafInstance.AuditLogParts
     tx.DebugLogLevel = tx.WafInstance.DebugLogLevel
@@ -432,6 +437,7 @@ func (tx *Transaction) initVars() {
     tx.HashEngine = tx.WafInstance.HashEngine
     tx.HashEnforcement = tx.WafInstance.HashEnforcement
     tx.DefaultAction = tx.WafInstance.DefaultAction
+    tx.AuditLogType = tx.WafInstance.AuditLogType
     tx.Skip = 0
     
     tx.RemoveRuleById = []int{}
@@ -481,14 +487,11 @@ func (tx *Transaction) ExecutePhase(phase int) error{
         tx.Capture = false //we reset the capture flag on every run
         usedRules++
     }
-    if tx.Disrupted{
-        return nil
-    }
-    if phase == 5{
-        if tx.AuditLog{
-            if tx.IsRelevantStatus(){
-                tx.SaveLog()
-            }
+    if tx.Disrupted || phase == 5{
+        if phase != 5{
+            tx.ExecutePhase(5)
+        }else if tx.IsRelevantStatus(){
+            tx.SaveLog()
         }
     }
     return nil
@@ -538,7 +541,25 @@ func (tx *Transaction) GetField(collection string, key string, exceptions []stri
     return col.GetWithExceptions(key, exceptions)
 }
 
+//Returns directory and filename
+func (tx *Transaction) GetAuditPath() (string, string){
+    t := time.Unix(tx.Collections["timestamp"].GetFirstInt64(), 0)
+
+    // append the two directories
+    p2 := fmt.Sprintf("/%s/%s/", t.Format("20060106"), t.Format("20060106-1504"))
+    logdir:= path.Join(tx.WafInstance.AuditLogStorageDir, p2)
+    // Append the filename
+    filename := fmt.Sprintf("/%s-%s", t.Format("20060106-150405"), tx.Id)
+    return logdir, filename
+}
+
 func (tx *Transaction) IsRelevantStatus() bool{
+    if tx.AuditEngine == AUDIT_LOG_DISABLED{
+        return false
+    }
+    if tx.AuditEngine == AUDIT_LOG_ENABLED {
+        return true
+    }
     re := tx.WafInstance.AuditLogRelevantStatus
     status := strconv.Itoa(tx.Status)
     m := re.NewMatcher()
@@ -559,4 +580,55 @@ func (tx *Transaction) ToAuditLog() *AuditLog{
 
 func (tx *Transaction) SaveLog() error{
     return tx.WafInstance.Logger.WriteAudit(tx)
+}
+
+func (tx *Transaction) GetErrorPage() string{
+    switch tx.WafInstance.ErrorPageMethod{
+    case ERROR_PAGE_DEBUG:
+        buff := "<link href=\"https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css\" rel=\"stylesheet\">"
+        buff += "<h1>Coraza Security Error - Debug Mode</h1>"
+        buff += "<h3>Rules Triggered</h3>"
+        buff += "<table class='table table-striped'><thead><tr><th>ID</th><th>Action</th><th>Msg</th><th>Match</th><th>Raw Rule</th></tr></thead><tbody>"
+        for _, mr := range tx.MatchedRules{
+            match := strings.Join(mr.MatchedData, "<br>")
+            rule := mr.Rule.Raw
+            for child := mr.Rule.ChildRule; child != nil; child = child.ChildRule{
+                rule += "<br><strong>CHAIN:</strong> " + child.Raw
+            }
+            buff += fmt.Sprintf("<tr><td>%d</td><td>%s</td><td></td><td>%s</td><td>%s</td></tr>", mr.Id, mr.Action, match, rule)
+        }
+        buff += "</tbody></table>"
+
+        buff += "<h3>Transaction Collections</h3>"
+        buff += "<table class='table table-striped'><thead><tr><th>Collection</th><th>Key</th><th>Values</th></tr></thead><tbody>"
+        for key, col := range tx.Collections{
+            for k2, data := range col.Data{
+                d := strings.Join(data, "<br>")
+                buff += fmt.Sprintf("<tr><td>%s</td><td>%s</td><td>%s</td></tr>", key, k2, d)
+            }
+        }
+        buff += "</tbody></table>"
+        var prettyJSON bytes.Buffer
+        json.Indent(&prettyJSON, tx.ToAuditJson(), "", "\t")        
+        buff += fmt.Sprintf("<h3>Audit Log</h3><pre>%s</pre>", prettyJSON.String())
+        return buff
+    case ERROR_PAGE_SCRIPT:
+        cmd := exec.Command(tx.WafInstance.ErrorPageFile)
+        path, file := tx.GetAuditPath()
+        cmd.Env = append(os.Environ(),
+            "TRANSACTION_ID=" + tx.Id, 
+            "AUDIT_FILE=" + path + file,
+            "DISRUPTIVE_RULE_ID=" + strconv.Itoa(tx.DisruptiveRuleId),
+        )
+        stdout, err := cmd.Output()
+        if err != nil {
+            return "Error script failed"
+        }
+        return string(stdout)
+    case ERROR_PAGE_FILE:
+        return tx.WafInstance.ErrorPageFile
+    case ERROR_PAGE_INLINE:
+        return tx.WafInstance.ErrorPageFile        
+    }
+    return fmt.Sprintf("<h1>Error 403</h1><!-- %s -->", tx.Id)
 }
