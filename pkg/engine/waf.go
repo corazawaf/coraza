@@ -1,7 +1,10 @@
 package engine
 import (
 	"fmt"
+    "errors"
+    "strings"
     "github.com/oschwald/geoip2-golang"
+    "github.com/jptosso/coraza-waf/pkg/engine/persistence"
     pcre"github.com/gijsbers/go-pcre"
 )
 
@@ -91,9 +94,6 @@ type Waf struct {
     // Defines if rules are going to be evaluated
     RuleEngine bool
 
-    // If true, rules are going to be evaluated
-    HashEngine bool
-
     // If true, transaction will fail if response size is bigger than the page limit
     RejectOnResponseBodyLimit bool
 
@@ -130,6 +130,12 @@ type Waf struct {
     // This directory will be used to store page files
     TmpDir string
 
+    // Provide acces to the persistence engine
+    PersistenceEngine PersistenceEngine
+
+    // Contains the connection uri for the persistence engine
+    PersistenceUri string
+
     // To be used
     /*
     StreamOutBodyInspection bool
@@ -149,6 +155,7 @@ type Waf struct {
     InterceptOnError bool
     DebugLogLevel int
     HashEnforcement bool
+    HashEngine bool
     */ 	
 }
 
@@ -159,6 +166,7 @@ func (w *Waf) Init() {
     w.Rules.Init()
     w.AuditEngine = AUDIT_LOG_DISABLED
     w.AuditLogType = AUDIT_LOG_CONCURRENT
+    w.PersistenceUri = "inmemory"
 }
 
 func (w *Waf) InitLogger(){
@@ -181,6 +189,27 @@ func (w *Waf) InitGeoip(path string) error{
     if err != nil{
         return err
     }
+    return nil
+}
+
+// Initializes Persistence Engine
+func (w *Waf) InitPersistenceEngine(uri string) error{
+    spl := strings.SplitN(uri, ":", 2)
+    if len(spl) == 0{
+        return errors.New("Invalid persistence Engine")
+    }
+    var pe PersistenceEngine
+    switch(spl[0]){
+    case "redis":
+        pe = &persistence.RedisEngine{}
+    default:
+        pe = &persistence.MemoryEngine{}
+    }
+    err := pe.Init(uri)
+    if err != nil{
+        return err
+    }
+    w.PersistenceEngine = pe
     return nil
 }
 

@@ -160,7 +160,7 @@ func (p *Parser) Evaluate(data string) error{
 		p.defaultActions = opts
 		break
 	case "SecHashEngine":
-		p.waf.HashEngine = (opts == "On")
+		// p.waf.HashEngine = (opts == "On")
 		break
 	case "SecHashKey":
 		//p.waf.HashKey = opts
@@ -394,7 +394,6 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error){
 	p.compileRuleVariables(rule, rule.Vars)
 	p.compileRuleOperator(rule, operators)
 
-	//TODO ADD DEFAULT ACTIONS FROM SECDEFAULTACTIONS
 	if len(matches) > 1{
     	actions = utils.RemoveQuotes(matches[1])
 		p.compileRuleActions(rule, actions)

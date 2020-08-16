@@ -16,9 +16,9 @@ Take care of race conditions between instances?If there are two transactions in 
 */
 
 type PersistenceEngine interface{
-	Init(string) error
-	Get(string) map[string][]string
-	Set(string, map[string][]string) error
+	Init(url string) error
+	Get(key string) map[string][]string
+	Set(key string, data map[string][]string) error
 }
 
 type PersistentCollection struct {
@@ -26,7 +26,7 @@ type PersistentCollection struct {
 	key string
 	ttl int
 	changed bool
-	Vars map[string][]string
+	data map[string][]string
 	engine PersistenceEngine
 	webapp string
 }
@@ -37,7 +37,7 @@ func (c *PersistentCollection) Init(engine PersistenceEngine, webappid string, c
 	c.collection = fmt.Sprintf("c-%s-%s-%s", webappid, collection, key)
 	c.key = key
 	err := c.Reload()
-	if err != nil {
+	if err != nil || c.data == nil{
 		c.New(engine, webappid, collection, key, 0)
 	}
 }
@@ -49,7 +49,7 @@ func (c *PersistentCollection) New(engine PersistenceEngine, webappid string, co
 	c.engine = engine
 	c.webapp = webappid
 	timenow := strconv.FormatInt(time.Now().UnixNano(), 10)
-	c.Vars = map[string][]string{
+	c.data = map[string][]string{
 		"CREATE_TIME": []string{timenow},
 		"IS_NEW": []string{"1"},
 		"LAST_UPDATE_TIME": []string{timenow},
@@ -61,19 +61,27 @@ func (c *PersistentCollection) New(engine PersistenceEngine, webappid string, co
 
 
 func (c *PersistentCollection) Reload() error{
-	c.Vars = c.engine.Get(c.collection)
+	c.data = c.engine.Get(c.collection)
 	return nil
 }
 
 func (c *PersistentCollection) Save() error{
 	if c.changed{
-		count , _:= strconv.Atoi(c.Vars["UPDATE_COUNTER"][0])
+		count , _:= strconv.Atoi(c.data["UPDATE_COUNTER"][0])
 		newcount := strconv.Itoa(count+1)
 		timenow := strconv.FormatInt(time.Now().UnixNano(), 10)
-		c.Vars["UPDATE_COUNTER"] = []string{newcount}
-		c.Vars["LAST_UPDATE_TIME"] = []string{timenow}
+		c.data["UPDATE_COUNTER"] = []string{newcount}
+		c.data["LAST_UPDATE_TIME"] = []string{timenow}
 		//TODO additional vars
 	}
-	c.engine.Set(c.collection, c.Vars)
+	c.engine.Set(c.collection, c.data)
 	return nil
+}
+
+func (c *PersistentCollection) GetData() map[string][]string{
+	return c.data
+}
+
+func (c *PersistentCollection) SetData(data map[string][]string) {
+	c.data = data
 }

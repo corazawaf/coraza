@@ -483,6 +483,7 @@ func (tx *Transaction) ExecutePhase(phase int) error{
             tx.ExecutePhase(5)
         }else if tx.IsRelevantStatus(){
             tx.SaveLog()
+            tx.SavePersistentData()
         }
     }
     return nil
@@ -626,7 +627,7 @@ func (tx *Transaction) GetErrorPage() string{
 
 func (tx *Transaction) SavePersistentData() {
     for col, pc := range tx.PersistentCollections{
-        pc.Vars = tx.Collections[col].Data
+        pc.SetData(tx.Collections[col].Data)
         pc.Save()
     }
 }

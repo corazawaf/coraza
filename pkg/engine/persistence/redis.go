@@ -10,13 +10,22 @@ type RedisEngine struct{
 	ctx context.Context
 }
 
-func (r *RedisEngine) Init() error{
+func (r *RedisEngine) Init(url string) error{
 	r.ctx = context.Background()
 	return nil
 }
 
 func (r *RedisEngine) Get(key string) map[string][]string{
-	return map[string][]string{}
+	var res map[string][]string
+	val, err := r.rc.Get(r.ctx, key).Result()
+	if err != nil {
+		return nil
+	}
+	err = json.Unmarshal([]byte(val), &res)
+	if err != nil {
+		return nil
+	}
+	return res
 }
 
 func (r *RedisEngine) Set(key string, data map[string][]string) error{
