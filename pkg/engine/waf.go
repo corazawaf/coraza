@@ -172,10 +172,13 @@ func (w *Waf) Init() {
 func (w *Waf) InitLogger(){
     l := &Logger{}
     var err error
+    /*
     switch w.AuditLogType{
     default:
         err = l.InitConcurrent(w.AuditLogPath, w.AuditLogStorageDir)
     }   
+    */
+    err = l.InitConcurrent(w.AuditLogPath, w.AuditLogStorageDir)
     if err != nil{
         fmt.Println("Unable to open logs path")
     }
