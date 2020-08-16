@@ -31,9 +31,8 @@ func ActionsMap() map[string]engine.Action {
 		// #### Non Disruptive Actions ####
 		//Can update transaction but cannot affect the flow nor disrupt the request
 		"append": &Append{},
-		"auditlog": &Auditlog{},
 		"capture": &Capture{},
-		"ctl": &Ctl{},
+		//"ctl": &Ctl{},
 		//"exec": &Exec{},
 		"expirevar": &Expirevar{},
 		//"deprecateVar": &DeprecateVar{},
@@ -41,7 +40,6 @@ func ActionsMap() map[string]engine.Action {
 		"log": &Log{},
 		"logdata": &Logdata{},
 		"multiMatch": &MultiMatch{},
-		"noauditlog": &Noauditlog{},
 		"nolog": &Nolog{},
 		//"prepend": &Prepend{},
 		//"sanitiseArg": &SanitiseArg{},

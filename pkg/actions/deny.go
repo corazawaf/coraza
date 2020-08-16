@@ -11,11 +11,9 @@ func (a *Deny) Init(r *engine.Rule, data string, errors []string) () {
 }
 
 func (a *Deny) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
-    if tx.Status == 200 {
-        tx.Status = 403;
-        tx.DisruptiveRuleId = r.Id
-        tx.Disrupted = true
-    }
+    tx.Status = 403;
+    tx.DisruptiveRuleId = r.Id
+    tx.Disrupted = true
 }
 
 func (a *Deny) GetType() string{

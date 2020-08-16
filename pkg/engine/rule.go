@@ -4,7 +4,6 @@ import(
 	"fmt"
 	"strconv"
 	"reflect"
-	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
 type Action interface {
@@ -82,22 +81,6 @@ func (r *Rule) Evaluate(tx *Transaction) []string{
 	matchedValues := []string{}
 	if r.Capture{
 		tx.Capture = true
-	}
-
-	skiptargets := []*Collection{}
-	for tag, cols := range tx.RemoveTargetFromTag{
-		if utils.ArrayContains(r.Tags, tag){
-			for _, col := range cols{
-				skiptargets = append(skiptargets, col)
-			}
-		}
-	}
-	rbi := tx.RemoveTargetFromId[r.Id]
-	if rbi != nil{
-		fmt.Printf("Skipping some cols for rule id %s\n", tx.Id)
-		for _, col := range rbi{			
-			skiptargets = append(skiptargets, col)
-		}
 	}
 
 	for _, v := range r.Variables {

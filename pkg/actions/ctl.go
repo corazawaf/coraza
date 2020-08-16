@@ -1,9 +1,7 @@
 package actions
 
 import(
-	"strconv"
 	"strings"
-	_"fmt"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 )
 
@@ -21,20 +19,8 @@ func (a *Ctl) Init(r *engine.Rule, data string, errors []string) () {
 func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
 	switch a.Action {
 	case "ruleRemoveTargetById":
-		//Exception: disable rule value for collection:key
-		id, _ := strconv.Atoi(a.Value)
-		col := &engine.Collection{a.Collection, a.ColKey}
-		if tx.RemoveTargetFromId[id] == nil{
-			tx.RemoveTargetFromId[id] = []*engine.Collection{}
-		}
-		tx.RemoveTargetFromId[id] = append(tx.RemoveTargetFromId[id], col)
 	break
 	case "ruleRemoveTargetByTag":
-		col := &engine.Collection{a.Collection, a.ColKey}
-		if tx.RemoveTargetFromTag[a.Value] == nil{
-			tx.RemoveTargetFromTag[a.Value] = []*engine.Collection{}
-		}
-		tx.RemoveTargetFromTag[a.Value] = append(tx.RemoveTargetFromTag[a.Value], col)
 	break
 	case "auditEngine":
 		

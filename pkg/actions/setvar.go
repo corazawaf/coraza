@@ -14,7 +14,7 @@ type Setvar struct {
 }
 
 
-//ESTA ACCION SE EJECUTA EN LOS CHAIN AUNQUE NO HAYA MATCH COMPLETO
+//this action win run even if rule is not triggered.!
 func (a *Setvar) Init(r *engine.Rule, data string, errors []string) () {
     //sample: tx.%{rule.id}-WEB_ATTACK/SQL_INJECTION-%{matched_var_name}=%{tx.0}
 	if data[0] == '\''{

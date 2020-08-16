@@ -6,6 +6,7 @@ import(
 	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
+// Initializes a persistent collection and add the data to the standard collections engine.
 type InitCol struct {
 	Collection string
 	Key string
@@ -18,9 +19,13 @@ func (a *InitCol) Init(r *engine.Rule, data string, errors []string) {
 }
 
 func (a *InitCol) Evaluate(r *engine.Rule, tx *engine.Transaction) {
-	pc := &utils.PersistentCollection{}
-    pc.New(tx.WafInstance.RedisClient, a.Collection, a.Key, 300)
-    pc.Save()
+	pc := &engine.PersistentCollection{}
+    pc.New(nil, tx.WafInstance.WebAppId, a.Collection, a.Key, 10000)
+    col := &utils.LocalCollection{}
+    col.Init()
+    col.Data = pc.Vars
+    tx.Collections[a.Collection] = col
+    tx.PersistentCollections[a.Collection] = pc
 }
 
 func (a *InitCol) GetType() string{
