@@ -7,14 +7,15 @@ import(
 type Maturity struct {
 }
 
-func (a *Maturity) Init(r *engine.Rule, data string, errors []string) () {
+func (a *Maturity) Init(r *engine.Rule, data string) []string {
 	r.Maturity = data
+	return []string{}
 }
 
 func (a *Maturity) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
 	// Not evaluated
 }
 
-func (a *Maturity) GetType() string{
-	return "metadata"
+func (a *Maturity) GetType() int{
+	return engine.ACTION_TYPE_METADATA
 }

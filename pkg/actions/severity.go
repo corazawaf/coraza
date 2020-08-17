@@ -7,14 +7,15 @@ import(
 type Severity struct {
 }
 
-func (a *Severity) Init(r *engine.Rule, data string, errors []string) () {
+func (a *Severity) Init(r *engine.Rule, data string) []string {
 	r.Severity = data
+	return []string{}
 }
 
 func (a *Severity) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
 	// Not evaluated
 }
 
-func (a *Severity) GetType() string{
-	return "metadata"
+func (a *Severity) GetType() int{
+	return engine.ACTION_TYPE_METADATA
 }

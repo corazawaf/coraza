@@ -440,19 +440,12 @@ func (p *Parser) compileRuleVariables(r *engine.Rule, vars string) {
 			vname = vname[1:]
 			negation = true
 		}
-		/*
-		if len(vvalue) > 0  && vvalue[0] == '/'{
-			//we strip slahes (/)
-			vvalue = vvalue[1:len(vvalue)-1]
-		}
-	    */
 	    
-		context := "transaction" //TODO WTF?
 		collection := strings.ToLower(vname)
 		if negation{
 			r.AddNegateVariable(collection, vvalue)
 		}else{
-			r.AddVariable(counter, collection, vvalue, context) 
+			r.AddVariable(counter, collection, vvalue) 
 		}
 
 	    subject = subject[index[1]:]
@@ -527,7 +520,7 @@ func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error{
 			//return fmt.Errorf("Invalid action %s", key)
 		}else{
 			action := actionsmap[key]
-			action.Init(r, value, errorlist)
+			errorlist = action.Init(r, value)
 			r.Actions = append(r.Actions, action)
 		}
 	    subject = subject[index[1]:]
@@ -535,5 +528,8 @@ func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error{
 	    	break
 	    }
 	}	
+	for _, e := range errorlist{
+		fmt.Println(e)
+	}
 	return nil
 }

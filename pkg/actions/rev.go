@@ -7,14 +7,15 @@ import(
 type Rev struct {
 }
 
-func (a *Rev) Init(r *engine.Rule, data string, errors []string) () {
+func (a *Rev) Init(r *engine.Rule, data string) []string {
 	r.Rev = data
+	return []string{}
 }
 
 func (a *Rev) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
 	// Not evaluated
 }
 
-func (a *Rev) GetType() string{
-	return "metadata"
+func (a *Rev) GetType() int{
+	return engine.ACTION_TYPE_METADATA
 }

@@ -12,10 +12,11 @@ type InitCol struct {
 	Key string
 }
 
-func (a *InitCol) Init(r *engine.Rule, data string, errors []string) {
+func (a *InitCol) Init(r *engine.Rule, data string) []string {
 	kv := strings.SplitN(data, "=", 2)
 	a.Collection = kv[0]
 	a.Key = kv[1]
+	return []string{}
 }
 
 func (a *InitCol) Evaluate(r *engine.Rule, tx *engine.Transaction) {
@@ -28,6 +29,6 @@ func (a *InitCol) Evaluate(r *engine.Rule, tx *engine.Transaction) {
     tx.PersistentCollections[a.Collection] = pc
 }
 
-func (a *InitCol) GetType() string{
-	return ""
+func (a *InitCol) GetType() int{
+	return engine.ACTION_TYPE_NONDISRUPTIVE
 }

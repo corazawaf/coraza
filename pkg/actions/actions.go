@@ -33,7 +33,7 @@ func ActionsMap() map[string]engine.Action {
 		"append": &Append{},
 		"capture": &Capture{},
 		//"ctl": &Ctl{},
-		//"exec": &Exec{},
+		"exec": &Exec{},
 		"expirevar": &Expirevar{},
 		//"deprecateVar": &DeprecateVar{},
 		"initcol": &InitCol{},

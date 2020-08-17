@@ -13,7 +13,7 @@ type Expirevar struct {
 	key string
 }
 
-func (a *Expirevar) Init(r *engine.Rule, data string, errors []string) () {
+func (a *Expirevar) Init(r *engine.Rule, data string) []string {
 	spl := strings.SplitN(data, "=", 2)
 	a.ttl, _ = strconv.Atoi(spl[1])
 	spl = strings.SplitN(spl[0], ".", 2)
@@ -22,6 +22,7 @@ func (a *Expirevar) Init(r *engine.Rule, data string, errors []string) () {
 	}
 	a.collection = spl[0]
 	a.key = spl[1]
+	return []string{}
 }
 
 func (a *Expirevar) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
@@ -30,6 +31,6 @@ func (a *Expirevar) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
 	//ps.Init(a.collection, a.key)
 }
 
-func (a *Expirevar) GetType() string{
-	return ""
+func (a *Expirevar) GetType() int{
+	return engine.ACTION_TYPE_NONDISRUPTIVE
 }

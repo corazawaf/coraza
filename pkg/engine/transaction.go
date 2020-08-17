@@ -21,7 +21,7 @@ import (
 
 type MatchedRule struct {
 	Id int
-	Action string
+	DisruptiveAction int
 	Messages []string
 	MatchedData []string
     Rule *Rule
@@ -492,7 +492,7 @@ func (tx *Transaction) ExecutePhase(phase int) error{
 func (tx *Transaction) MatchRule(rule *Rule, msgs []string, matched []string){
     mr := &MatchedRule{
         Id: rule.Id,
-        Action: rule.Action,
+        DisruptiveAction: rule.DisruptiveAction,
         Messages: msgs,
         MatchedData: matched,
         Rule: rule,
@@ -584,10 +584,10 @@ func (tx *Transaction) GetErrorPage() string{
         for _, mr := range tx.MatchedRules{
             match := strings.Join(mr.MatchedData, "<br>")
             rule := mr.Rule.Raw
-            for child := mr.Rule.ChildRule; child != nil; child = child.ChildRule{
+            for child := mr.Rule.Chain; child != nil; child = child.Chain{
                 rule += "<br><strong>CHAIN:</strong> " + child.Raw
             }
-            buff += fmt.Sprintf("<tr><td>%d</td><td>%s</td><td></td><td>%s</td><td>%s</td></tr>", mr.Id, mr.Action, match, rule)
+            buff += fmt.Sprintf("<tr><td>%d</td><td>%d</td><td></td><td>%s</td><td>%s</td></tr>", mr.Id, mr.DisruptiveAction, match, rule)
         }
         buff += "</tbody></table>"
 

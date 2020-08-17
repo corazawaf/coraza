@@ -7,14 +7,15 @@ import(
 type Ver struct {
 }
 
-func (a *Ver) Init(r *engine.Rule, data string, errors []string) () {
+func (a *Ver) Init(r *engine.Rule, data string) []string {
 	r.Version = data
+	return []string{}
 }
 
 func (a *Ver) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
 	// Not evaluated
 }
 
-func (a *Ver) GetType() string{
-	return "metadata"
+func (a *Ver) GetType() int{
+	return engine.ACTION_TYPE_METADATA
 }

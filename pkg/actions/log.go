@@ -7,14 +7,15 @@ import(
 type Log struct {
 }
 
-func (a *Log) Init(r *engine.Rule, data string, errors []string) () {
+func (a *Log) Init(r *engine.Rule, data string) []string {
 	r.Log = true
+	return []string{}
 }
 
 func (a *Log) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
 	// Not evaluated
 }
 
-func (a *Log) GetType() string{
-	return ""
+func (a *Log) GetType() int{
+	return engine.ACTION_TYPE_NONDISRUPTIVE
 }
