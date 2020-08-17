@@ -1,0 +1,17 @@
+name: SecPersistenceEngine
+default: inmemory
+experimental: true
+description: |
+  Set the default persistence engine for persistent collections, currently supports redis and inmemory databases.
+
+  Inmemory database is meant for testing, not for production.
+
+  More engines are going to be added in the near future.
+data: |
+  Redis URI structure: ``redis://[[username :] password@] host [: port] [/ database][? [timeout=timeout[d|h|m|s|ms|us|ns]] [&_database=database_]]``
+  ```
+  SecPersistenceEngine redis://127.0.0.1
+  SecPersistenceEngine inmemory
+  ```
+
+  **Important:** Inmemory engine is storing everything in memory and it can be overwhelming.

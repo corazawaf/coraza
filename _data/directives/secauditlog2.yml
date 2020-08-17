@@ -1,5 +1,6 @@
 name: SecAuditLog2
 description: Defines the path to the secondary audit log index file when concurrent logging is enabled. See SecAuditLog for more details.
 syntaxis: SecAuditLog2 /path/to/audit.log
+deprecated: true
 data: |
   The purpose of SecAuditLog2 is to make logging to two remote servers possible, which is typically achieved by running two instances of the mlogc tool, each with a different configuration (in addition, one of the instances will need to be instructed not to delete the files it submits). This directive can be used only if SecAuditLog was previously configured and only if concurrent logging format is used.

@@ -1,7 +1,7 @@
 name: validateOpenApi
 description: This operator should only be used against **REQUEST_LINE**, **REQUEST_BODY**.
 version: 1.0
-experimental: true
+supported: false
 example: |
   # First we initialize the body processor
   SecRule REQUEST_HEADERS:content-type ^application/json$ "id:1, block, ctl:requestBodyProcessor=JSON, t:lowercase"

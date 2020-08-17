@@ -2,6 +2,7 @@ name: SecConnEngine
 description: "Configures the connections engine. This directive affect the directives: SecConnReadStateLimit and SecConnWriteStateLimit."
 syntaxis: SecConnEngine On|Off|DetectionOnly
 example: SecConnEngine On
+supported: false
 data: |
   Possible values are (Same as SecRuleEngine):
 
