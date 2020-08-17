@@ -6,8 +6,9 @@ import(
 
 type Drop struct {}
 
-func (a *Drop) Init(r *engine.Rule, data string, errors []string) () {
-	r.Action = "drop"
+func (a *Drop) Init(r *engine.Rule, data string) []string {
+	r.DisruptiveAction = engine.ACTION_DISRUPTIVE_DROP
+	return []string{}
 }
 
 func (a *Drop) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
@@ -16,6 +17,6 @@ func (a *Drop) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
     tx.DisruptiveRuleId = r.Id
 }
 
-func (a *Drop) GetType() string{
-	return "disruptive"
+func (a *Drop) GetType() int{
+	return engine.ACTION_TYPE_DISRUPTIVE
 }

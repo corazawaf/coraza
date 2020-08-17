@@ -4,13 +4,27 @@ import(
 	"fmt"
 	"strconv"
 	"reflect"
-	"github.com/jptosso/coraza-waf/pkg/utils"
+)
+
+const (
+	ACTION_TYPE_METADATA 		= 1
+	ACTION_TYPE_DISRUPTIVE 		= 2
+	ACTION_TYPE_DATA 			= 3
+	ACTION_TYPE_NONDISRUPTIVE 	= 4
+	ACTION_TYPE_FLOW 			= 5
+
+	ACTION_DISRUPTIVE_PASS		= 0
+	ACTION_DISRUPTIVE_DROP		= 1
+	ACTION_DISRUPTIVE_BLOCK		= 2
+	ACTION_DISRUPTIVE_DENY		= 3
+	ACTION_DISRUPTIVE_PROXY		= 4
+	ACTION_DISRUPTIVE_REDIRECT	= 5
 )
 
 type Action interface {
-	Init(*Rule, string, []string)
+	Init(*Rule, string) []string
 	Evaluate(*Rule, *Transaction)
-	GetType() string
+	GetType() int
 }
 
 type Operator interface {
@@ -34,83 +48,71 @@ type RuleVariable struct {
 	Count bool
 	Collection string
 	Key string
-	Context string
 	Exceptions []string
 }
 
 
 type Rule struct {
-	Id int `json:"id"`
-	Phase int `json:"phase"`
+	// Contains de non-compiled variables part of the rule
 	Vars string `json:"vars"`
+
+
 	Variables []RuleVariable `json:"variables"`
 	Operator string `json:"operator"`
 	OperatorObj *RuleOp `json:"operator_obj"`
 	Disruptive bool `json:"disruptive"`
-	DisablesRules []int `json:"disabled_rules"`
 	Transformations []RuleTransformation `json:"transformations"`
 	HasChain bool `json:"has_chain"`
 	ParentId int `json:"parent_id"`
 	Actions []Action `json:"actions"`
-	Action string `json:"action"`
 	ActionParams string `json:"action_params"`
-	Capture bool `json:"capture"`
-	Msg string `json:"msg"`
-	Rev string `json:"rev"`
 	MultiMatch bool `json:"multimatch"`
 	Severity string `json:"severity"`
 	Skip bool `json:"skip"`
 	SecMark string `json:"secmark"`
-	Maturity string `json:"maturity"`
-	Version string `json:"version"`
-	Tags []string `json:"tags"`
 	Log bool `json:"log"`
 	Raw string `json:"raw"`
-	ChildRule *Rule `json:"child_rule"`
 	Chain *Rule `json:"chain"`
+	DisruptiveAction int `json:"disruptive_action"`
+
+	//METADATA 
+	// Rule unique sorted identifier
+	Id int `json:"id"`
+
+	// Rule tag list
+	Tags []string `json:"tags"`
+
+	// Rule execution phase 1-5
+	Phase int `json:"phase"`
+
+	// Message text to be macro expanded and logged
+	Msg string `json:"msg"`
+
+	// Rule revision value
+	Rev string `json:"rev"`
+
+	// Rule maturity index
+	Maturity string `json:"maturity"`
+
+	// Rule Set Version
+	Version string `json:"version"`
 }
 
 func (r *Rule) Init() {
 	r.Phase = 1
 	r.Tags = []string{}
-	r.Action = "pass"
 }
 
 
 func (r *Rule) Evaluate(tx *Transaction) []string{
-	//Log.Debug(fmt.Sprintf("Evaluating transaction %s with rule ID %d", tx.Id, r.Id))
 	matchedValues := []string{}
-	if r.Capture{
-		tx.Capture = true
-	}
-
-	skiptargets := []*Collection{}
-	for tag, cols := range tx.RemoveTargetFromTag{
-		if utils.ArrayContains(r.Tags, tag){
-			for _, col := range cols{
-				skiptargets = append(skiptargets, col)
-			}
-		}
-	}
-	rbi := tx.RemoveTargetFromId[r.Id]
-	if rbi != nil{
-		fmt.Printf("Skipping some cols for rule id %s\n", tx.Id)
-		for _, col := range rbi{			
-			skiptargets = append(skiptargets, col)
-		}
-	}
 
 	for _, v := range r.Variables {
 		values := []string{}
 
 		//TODO IMPORTANT: The match notification must be switched, we can't log empty keys!!
 
-		if v.Context == "transaction"{
-			values = tx.GetField(v.Collection, v.Key, v.Exceptions)
-		}else{
-			//values = waf.GetField(v.Collection, v.Key)
-			fmt.Println("NOT READY YET, or maybe yes, idk")
-		}
+		values = tx.GetField(v.Collection, v.Key, v.Exceptions)
 
 		if v.Count{	
 			l := len(values)
@@ -121,7 +123,7 @@ func (r *Rule) Evaluate(tx *Transaction) []string{
 			}
 			if r.executeOperator(arg, tx) {
 				for _, a := range r.Actions{
-					if a.GetType() == "disruptive"{
+					if a.GetType() == ACTION_TYPE_DISRUPTIVE{
 						//we skip disruptive by now
 						continue
 					}
@@ -133,7 +135,7 @@ func (r *Rule) Evaluate(tx *Transaction) []string{
 			if len(values) == 0{
 				if r.executeOperator("", tx) {
 					for _, a := range r.Actions{
-						if a.GetType() == "disruptive"{
+						if a.GetType() == ACTION_TYPE_DISRUPTIVE {
 							//we skip disruptive by now
 							continue
 						}						
@@ -155,7 +157,7 @@ func (r *Rule) Evaluate(tx *Transaction) []string{
 						col := ""
 						//TODO REVISAR CUALES SE EJECUTAN Y CUANDO:
 						for _, a := range r.Actions{
-							if a.GetType() == "disruptive"{
+							if a.GetType() == ACTION_TYPE_DISRUPTIVE{
 								//we skip disruptive by now
 								continue
 							}		
@@ -204,7 +206,7 @@ func (r *Rule) Evaluate(tx *Transaction) []string{
 		tx.MatchRule(r, []string{tx.MacroExpansion(r.Msg)}, matchedValues)
 		//we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
 		for _, a := range r.Actions{
-			if a.GetType() == "disruptive"{
+			if a.GetType() == ACTION_TYPE_DISRUPTIVE {
 				a.Evaluate(r, tx)
 			}
 		}
@@ -248,8 +250,8 @@ func (r *Rule) executeTransformations(value string) string{
 	return value
 }
 
-func (r *Rule) AddVariable(count bool, collection string, key string, context string) {
-	rv := RuleVariable{count, collection, key, context, []string{}}
+func (r *Rule) AddVariable(count bool, collection string, key string) {
+	rv := RuleVariable{count, collection, key, []string{}}
 	r.Variables = append(r.Variables, rv)
 }
 

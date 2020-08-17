@@ -7,14 +7,15 @@ import(
 type Tag struct {
 }
 
-func (a *Tag) Init(r *engine.Rule, data string, errors []string) () {
+func (a *Tag) Init(r *engine.Rule, data string) []string {
 	r.Tags = append(r.Tags, data[1:len(data)-1])
+	return []string{}
 }
 
 func (a *Tag) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
 	// Not evaluated
 }
 
-func (a *Tag) GetType() string{
-	return "metadata"
+func (a *Tag) GetType() int{
+	return engine.ACTION_TYPE_METADATA
 }

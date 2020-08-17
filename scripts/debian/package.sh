@@ -25,8 +25,9 @@ cp *.so $TMP_PATH/usr/local/lib
 cp *.o $TMP_PATH/usr/local/lib
 cp pkg/utils/libinjection/src/*.h $TMP_PATH/usr/local/include/
 chmod 444 $TMP_PATH/usr/local/include/libinjection*
-ldconfig	
-make
+
+go get ./...
+go build cmd/skipper/main.go
 
 cp scripts/debian/coraza-waf.service $TMP_PATH/etc/init.d/coraza-waf
 cp examples/skipper/default.conf $TMP_PATH/etc/coraza-waf/profiles/default/

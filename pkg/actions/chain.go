@@ -6,14 +6,15 @@ import(
 
 type Chain struct {}
 
-func (a *Chain) Init(r *engine.Rule, b1 string, errors []string) () {
+func (a *Chain) Init(r *engine.Rule, b1 string) []string {
 	r.HasChain = true
+	return []string{}
 }
 
 func (a *Chain) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
 	// Not evaluated
 }
 
-func (a *Chain) GetType() string{
-	return "flow"
+func (a *Chain) GetType() int{
+	return engine.ACTION_TYPE_FLOW
 }

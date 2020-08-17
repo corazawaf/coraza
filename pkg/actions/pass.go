@@ -7,14 +7,15 @@ import(
 type Pass struct {
 }
 
-func (a *Pass) Init(r *engine.Rule, data string, errors []string) () {
-	r.Action = "pass"
+func (a *Pass) Init(r *engine.Rule, data string) []string {
+	r.DisruptiveAction = engine.ACTION_DISRUPTIVE_PASS
+	return []string{}
 }
 
 func (a *Pass) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
 	// Not evaluated
 }
 
-func (a *Pass) GetType() string{
-	return "disruptive"
+func (a *Pass) GetType() int{
+	return engine.ACTION_TYPE_DISRUPTIVE
 }

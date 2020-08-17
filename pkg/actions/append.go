@@ -8,8 +8,9 @@ type Append struct {
 	Data string
 }
 
-func (a *Append) Init(r *engine.Rule, data string, errors []string) () {
+func (a *Append) Init(r *engine.Rule, data string) []string {
 	a.Data = data
+	return []string{}
 }
 
 func (a *Append) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
@@ -19,6 +20,6 @@ func (a *Append) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
 	}
 }
 
-func (a *Append) GetType() string{
-	return "metadata"
+func (a *Append) GetType() int{
+	return engine.ACTION_TYPE_METADATA
 }

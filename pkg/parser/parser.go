@@ -24,6 +24,7 @@ type Parser struct {
 	waf *engine.Waf
 
 	nextSecMark string
+	defaultActions string
 }
 
 func (p *Parser) Init(waf *engine.Waf) {
@@ -96,9 +97,6 @@ func (p *Parser) Evaluate(data string) error{
 	case "SecAuditLog":
 		p.waf.AuditLogPath = opts
 		break
-	case "SecAuditLog2":
-		p.waf.AuditLogPath2 = opts
-		break
 	case "SecAuditLogDirMode":
 		p.waf.AuditLogDirMode, _ = strconv.Atoi(opts)
 		break
@@ -134,6 +132,7 @@ func (p *Parser) Evaluate(data string) error{
 			break
 		}
 		break
+		/*
 	case "SecCollectionTimeout":
 		p.waf.CollectionTimeout, _ = strconv.Atoi(opts)
 		break
@@ -150,20 +149,21 @@ func (p *Parser) Evaluate(data string) error{
 			break
 		}
 		break
+		*/
 	case "SecContentInjection":
-		p.waf.ContentInjection = (opts == "On")
+		//p.waf.ContentInjection = (opts == "On")
 		break
 	case "SecDebugLog":
 		p.waf.DebugLog = opts
 		break
 	case "SecDefaultAction":
-		p.waf.DefaultAction = opts
+		p.defaultActions = opts
 		break
 	case "SecHashEngine":
-		p.waf.HashEngine = (opts == "On")
+		// p.waf.HashEngine = (opts == "On")
 		break
 	case "SecHashKey":
-		p.waf.HashKey = opts
+		//p.waf.HashKey = opts
 		break
 	case "SecHashParam":
 
@@ -184,26 +184,26 @@ func (p *Parser) Evaluate(data string) error{
 
 		break
 	case "SecHttpBlKey":
-		p.waf.HttpBlKey = opts
+		//p.waf.HttpBlKey = opts
 		break
 	case "SecInterceptOnError":
-		p.waf.InterceptOnError = (opts == "On")
+		//p.waf.InterceptOnError = (opts == "On")
 		break
 	case "SecPcreMatchLimit":
-		p.waf.PcreMatchLimit, _ = strconv.Atoi(opts)
+		// p.waf.PcreMatchLimit, _ = strconv.Atoi(opts)
 		break
 	case "SecPcreMatchLimitRecursion":
 		//TODO PCRE RECURSIONLIMIT is hardcoded inside the binary :( we have to figure out something
 		fmt.Println("SecPcreMatchLimitRecursion TO BE IMPLEMENTED. I'm stil trying to figure it out :(")
 		break
 	case "SecConnReadStateLimit":
-		p.waf.ConnReadStateLimit, _ = strconv.Atoi(opts)
+		// p.waf.ConnReadStateLimit, _ = strconv.Atoi(opts)
 		break
 	case "SecSensorId":
-		p.waf.SensorId = opts
+		// p.waf.SensorId = opts
 		break
 	case "SecConnWriteStateLimit":
-		p.waf.ConnWriteStateLimit, _ = strconv.Atoi(opts)
+		// p.waf.ConnWriteStateLimit, _ = strconv.Atoi(opts)
 		break
 	case "SecRemoteRules":
 		spl := strings.SplitN(opts, " ", 2)
@@ -301,19 +301,19 @@ func (p *Parser) Evaluate(data string) error{
 		p.waf.ServerSignature = opts
 		break
 	case "SecStreamOutBodyInspection":
-		p.waf.StreamOutBodyInspection = (opts == "Abort")
+		//p.waf.StreamOutBodyInspection = (opts == "Abort")
 		break
 	case "SecTmpDir":
 		p.waf.TmpDir = opts
 		break
 	case "SecUploadDir":
-		p.waf.UploadDir = opts
+		//p.waf.UploadDir = opts
 		break
 	case "SecUploadFileLimit":
-		p.waf.UploadFileLimit, _ = strconv.Atoi(opts)
+		//p.waf.UploadFileLimit, _ = strconv.Atoi(opts)
 		break
 	case "SecUploadFileMode":
-		p.waf.UploadFileMode, _ = strconv.Atoi(opts)
+		//p.waf.UploadFileMode, _ = strconv.Atoi(opts)
 		break
 	case "SecUploadKeepFiles":
 		break
@@ -344,7 +344,7 @@ func (p *Parser) Evaluate(data string) error{
 	case "SecAction":
 		p.ParseRule("RULE \"@unconditionalMatch\" " + opts)
 	case "SecMarker":
-		p.nextSecMark = opts[1:len(opts)-1]
+		p.nextSecMark = opts
 	case "SecComponentSignature":
 		p.waf.ComponentSignature = opts
 	case "SecDataPath":
@@ -394,7 +394,6 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error){
 	p.compileRuleVariables(rule, rule.Vars)
 	p.compileRuleOperator(rule, operators)
 
-	//TODO ADD DEFAULT ACTIONS FROM SECDEFAULTACTIONS
 	if len(matches) > 1{
     	actions = utils.RemoveQuotes(matches[1])
 		p.compileRuleActions(rule, actions)
@@ -441,19 +440,12 @@ func (p *Parser) compileRuleVariables(r *engine.Rule, vars string) {
 			vname = vname[1:]
 			negation = true
 		}
-		/*
-		if len(vvalue) > 0  && vvalue[0] == '/'{
-			//we strip slahes (/)
-			vvalue = vvalue[1:len(vvalue)-1]
-		}
-	    */
 	    
-		context := "transaction" //TODO WTF?
 		collection := strings.ToLower(vname)
 		if negation{
 			r.AddNegateVariable(collection, vvalue)
 		}else{
-			r.AddVariable(counter, collection, vvalue, context) 
+			r.AddVariable(counter, collection, vvalue) 
 		}
 
 	    subject = subject[index[1]:]
@@ -509,7 +501,10 @@ func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error{
 	matcher := re.MatcherString(actions, 0)
 	subject := []byte(actions)
     errorlist := []string{}
-    actions = p.waf.DefaultAction + actions //we add the defaultactions
+    if len(p.defaultActions) > 0{
+    	actions = fmt.Sprintf("%s, %s", p.defaultActions, actions)
+    }
+
     actionsmap := actionsmod.ActionsMap()
 	for matcher.Match(subject, 0){
 		m := matcher.GroupString(1)
@@ -525,7 +520,7 @@ func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error{
 			//return fmt.Errorf("Invalid action %s", key)
 		}else{
 			action := actionsmap[key]
-			action.Init(r, value, errorlist)
+			errorlist = action.Init(r, value)
 			r.Actions = append(r.Actions, action)
 		}
 	    subject = subject[index[1]:]
@@ -533,5 +528,8 @@ func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error{
 	    	break
 	    }
 	}	
+	for _, e := range errorlist{
+		fmt.Println(e)
+	}
 	return nil
 }

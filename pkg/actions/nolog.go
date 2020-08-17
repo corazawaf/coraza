@@ -7,14 +7,15 @@ import(
 type Nolog struct {
 }
 
-func (a *Nolog) Init(r *engine.Rule, data string, errors []string) () {
+func (a *Nolog) Init(r *engine.Rule, data string) []string {
 	r.Log = false
+	return []string{}
 }
 
 func (a *Nolog) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
 	// Not evaluated
 }
 
-func (a *Nolog) GetType() string{
-	return ""
+func (a *Nolog) GetType() int{
+	return engine.ACTION_TYPE_NONDISRUPTIVE
 }

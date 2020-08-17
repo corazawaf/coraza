@@ -6,18 +6,15 @@ import(
 
 type Block struct {}
 
-func (a *Block) Init(r *engine.Rule, b1 string, errors []string) () {
-	r.Action = "block"
+func (a *Block) Init(r *engine.Rule, b1 string) []string {
+	r.DisruptiveAction = engine.ACTION_DISRUPTIVE_BLOCK
+	return []string{}
 }
 
 func (a *Block) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
-	if tx.DefaultAction != "pass"{
-		tx.Status = 403
-		tx.Disrupted = true
-		tx.DisruptiveRuleId = r.Id
-	}
+
 }
 
-func (a *Block) GetType() string{
-	return "disruptive"
+func (a *Block) GetType() int{
+	return engine.ACTION_TYPE_DISRUPTIVE
 }

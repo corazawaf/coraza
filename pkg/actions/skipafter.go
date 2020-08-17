@@ -10,14 +10,15 @@ type SkipAfter struct {
 }
 
 //NOT IMPLEMENTED
-func (a *SkipAfter) Init(r *engine.Rule, data string, errors []string) () {
+func (a *SkipAfter) Init(r *engine.Rule, data string) []string {
 	a.data = strings.Trim(data, `"`)
+	return []string{}
 }
 
 func (a *SkipAfter) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
 	tx.SkipAfter = a.data
 }
 
-func (a *SkipAfter) GetType() string{
-	return ""
+func (a *SkipAfter) GetType() int{
+	return engine.ACTION_TYPE_FLOW
 }

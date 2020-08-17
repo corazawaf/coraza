@@ -15,8 +15,8 @@ func TestExec(t *testing.T){
 	tx := waf.NewTransaction()
 	path, _ := os.Getwd()
 	path += "/../../test/data/exec.lua"
-	err := exec.Init(r, path)
-	if err != nil{
+	errors := exec.Init(r, path)
+	if len(errors) > 0{
 		t.Error("Failed to load lua file")
 	}
 	exec.Evaluate(r, tx)

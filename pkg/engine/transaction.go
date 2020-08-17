@@ -21,36 +21,38 @@ import (
 
 type MatchedRule struct {
 	Id int
-	Action string
+	DisruptiveAction int
 	Messages []string
 	MatchedData []string
     Rule *Rule
 }
 
 type Transaction struct {
-	//Options
+	// If true the transaction is going to be logged, it won't log if IsRelevantStatus() fails
 	Log bool `json:"log"`
+
+    //Transaction Id
     Id string
 
+    // Contains the list of matched rules and associated match information
     MatchedRules []*MatchedRule `json:"matched_rules"`
+
+    //True if the transaction has been disrupted by any rule
     Disrupted bool `json:"disrupted"`
-    ActionParams string `json:"action_params"`
 
-    Profiling int64 `json:"profiling"`
-
+    // Contains all collections, including persistent
     Collections map[string]*utils.LocalCollection
+    //This map is used to store persistent collections saves, useful to save them after transaction is finished
+    PersistentCollections map[string]*PersistentCollection
 
     //Response data to be sent
     Status int `json:"status"`
     Logdata []string `json:"logdata"`
-    
-    NewPersistentCollections map[string]string
 
-    AuditLog bool
+    // Rules will be skipped after a rule with this SecMarker is found
     SkipAfter string
 
-    AuditLogPath string
-    DefaultAction string
+    // Copies from the WafInstance
     AuditEngine int
     AuditLogParts []int
     DebugLogLevel int
@@ -61,25 +63,30 @@ type Transaction struct {
     ResponseBodyAccess bool
     ResponseBodyLimit int64
     RuleEngine bool
-    RuleRemoveById []int
-    RuleRemoveByMsg []string
-    RuleRemoveByTag []string
     HashEngine bool
     HashEnforcement bool
     AuditLogType int
 
+    // Rules with this id are going to be skipped
+    RuleRemoveById []int
+    // Rules with this messages are going to be skipped
+    RuleRemoveByMsg []string
+    // Rules with this tags are going to be skipped
+    RuleRemoveByTag []string
+
+    // Will skip this number of rules, this value will be decreased on each skip
     Skip int `json:"skip"`
+
+    // Actions with capture features will read the capture state from this field
     Capture bool `json:"capture"`
 
-    //Used for the capture action, it will store the last results from RX to add them to TX:0..10
+    // Contains the ID of the rule that disrupted the transaction
     DisruptiveRuleId int `json:"disruptive_rule_id"`
 
-    RemoveRuleById []int
-    RemoveRuleByTag []string
-    RemoveTargetFromTag map[string][]*Collection //rt[rule-tag]
-    RemoveTargetFromId map[int][]*Collection
-
+    // Used for paralelism
     Mux *sync.RWMutex
+
+    // Contains de *engine.Waf instance for the current transaction
     WafInstance *Waf
 }
 
@@ -423,29 +430,16 @@ func (tx *Transaction) initVars() {
     tx.SetSingleCollection("id", txid)
     tx.SetSingleCollection("timestamp", strconv.FormatInt(time.Now().Unix(), 10))
     tx.Disrupted = false
-    tx.AuditLogPath = tx.WafInstance.AuditLogPath
     tx.AuditEngine = tx.WafInstance.AuditEngine
     tx.AuditLogParts = tx.WafInstance.AuditLogParts
-    tx.DebugLogLevel = tx.WafInstance.DebugLogLevel
-    tx.ForceRequestBodyVariable = tx.WafInstance.ForceRequestBodyVariable
     tx.RequestBodyAccess = tx.WafInstance.RequestBodyAccess
     tx.RequestBodyLimit = tx.WafInstance.RequestBodyLimit
-    tx.RequestBodyProcessor = tx.WafInstance.RequestBodyProcessor
     tx.ResponseBodyAccess = tx.WafInstance.ResponseBodyAccess
     tx.ResponseBodyLimit = tx.WafInstance.ResponseBodyLimit
     tx.RuleEngine = tx.WafInstance.RuleEngine
-    tx.HashEngine = tx.WafInstance.HashEngine
-    tx.HashEnforcement = tx.WafInstance.HashEnforcement
-    tx.DefaultAction = tx.WafInstance.DefaultAction
     tx.AuditLogType = tx.WafInstance.AuditLogType
     tx.Skip = 0
-    
-    tx.RemoveRuleById = []int{}
-    tx.RemoveRuleByTag = []string{}
-    tx.RemoveTargetFromTag = map[string][]*Collection{}
-    tx.RemoveTargetFromId = map[int][]*Collection{}
-
-    tx.NewPersistentCollections = map[string]string{}
+    tx.PersistentCollections = map[string]*PersistentCollection{}
 }
 
 func (tx *Transaction) Init(waf *Waf) error{
@@ -468,11 +462,8 @@ func (tx *Transaction) ExecutePhase(phase int) error{
         }
         if tx.SkipAfter != ""{
             if r.SecMark != tx.SkipAfter{
-                //skip this rule
-                //fmt.Println("Skipping rule (skipAfter) " + fmt.Sprintf("%d", r.Id) + " to " + tx.SkipAfter + " currently " + r.SecMark)
                 continue
             }else{
-                //fmt.Println("Ending skip")
                 tx.SkipAfter = ""
             }
         }
@@ -492,6 +483,7 @@ func (tx *Transaction) ExecutePhase(phase int) error{
             tx.ExecutePhase(5)
         }else if tx.IsRelevantStatus(){
             tx.SaveLog()
+            tx.SavePersistentData()
         }
     }
     return nil
@@ -500,7 +492,7 @@ func (tx *Transaction) ExecutePhase(phase int) error{
 func (tx *Transaction) MatchRule(rule *Rule, msgs []string, matched []string){
     mr := &MatchedRule{
         Id: rule.Id,
-        Action: rule.Action,
+        DisruptiveAction: rule.DisruptiveAction,
         Messages: msgs,
         MatchedData: matched,
         Rule: rule,
@@ -592,10 +584,10 @@ func (tx *Transaction) GetErrorPage() string{
         for _, mr := range tx.MatchedRules{
             match := strings.Join(mr.MatchedData, "<br>")
             rule := mr.Rule.Raw
-            for child := mr.Rule.ChildRule; child != nil; child = child.ChildRule{
+            for child := mr.Rule.Chain; child != nil; child = child.Chain{
                 rule += "<br><strong>CHAIN:</strong> " + child.Raw
             }
-            buff += fmt.Sprintf("<tr><td>%d</td><td>%s</td><td></td><td>%s</td><td>%s</td></tr>", mr.Id, mr.Action, match, rule)
+            buff += fmt.Sprintf("<tr><td>%d</td><td>%d</td><td></td><td>%s</td><td>%s</td></tr>", mr.Id, mr.DisruptiveAction, match, rule)
         }
         buff += "</tbody></table>"
 
@@ -631,4 +623,11 @@ func (tx *Transaction) GetErrorPage() string{
         return tx.WafInstance.ErrorPageFile        
     }
     return fmt.Sprintf("<h1>Error 403</h1><!-- %s -->", tx.Id)
+}
+
+func (tx *Transaction) SavePersistentData() {
+    for col, pc := range tx.PersistentCollections{
+        pc.SetData(tx.Collections[col].Data)
+        pc.Save()
+    }
 }
