@@ -6,9 +6,9 @@ import(
 
 type Drop struct {}
 
-func (a *Drop) Init(r *engine.Rule, data string) []string {
+func (a *Drop) Init(r *engine.Rule, data string) string {
 	r.DisruptiveAction = engine.ACTION_DISRUPTIVE_DROP
-	return []string{}
+	return ""
 }
 
 func (a *Drop) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

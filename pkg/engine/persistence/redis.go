@@ -1,8 +1,12 @@
 package persistence
 import(
 	"context"
+	"fmt"
+	"strconv"
 	"encoding/json"
+	urllib"net/url"
     "github.com/go-redis/redis/v8"
+    log"github.com/sirupsen/logrus"
 )
 
 type RedisEngine struct{
@@ -12,6 +16,37 @@ type RedisEngine struct{
 
 func (r *RedisEngine) Init(url string) error{
 	r.ctx = context.Background()
+	uri, err := urllib.Parse(url)
+	if err != nil{
+		return err
+	}
+	password, _ := uri.User.Password()
+	path := uri.Path
+	if len(path) > 1{
+		path = path[1:] //we remove leading /
+	}
+	database, err := strconv.Atoi(path)
+	if err != nil{
+		log.Info("No redis database provided, setting to 0")
+	}
+	port := uri.Port()
+	if port == ""{
+		port = "6379"
+	}
+	host := fmt.Sprintf("%s:%s", uri.Hostname(), port)
+
+    rdb := redis.NewClient(&redis.Options{
+        Addr:     host,
+        Password: password,
+        DB:       database,
+    })	
+
+    _, err = rdb.Ping(r.ctx).Result()
+    if err != nil{
+    	log.Error("Failed to connecto to redis server.")
+    	return err
+    }
+    r.rc = rdb
 	return nil
 }
 

@@ -31,11 +31,3 @@ libinjection:
 		ldconfig				
 deps-debian:
 		apt install libpcre++-dev build-essential
-install:
-		useradd -r -s /bin/false coraza
-		mv $(BINARY_NAME) /usr/local/bin/
-		mkdir -p /etc/coraza/
-		#cp config/* /etc/coraza-waf/
-		chown -R root:root /etc/coraza
-		chmod -R 644 /etc/coraza
-		chmod 755 /usr/local/bin/skipper

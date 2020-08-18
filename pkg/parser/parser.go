@@ -4,6 +4,7 @@ import(
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	"github.com/jptosso/coraza-waf/pkg/operators"
 	"github.com/jptosso/coraza-waf/pkg/engine"
+	log"github.com/sirupsen/logrus"
 	actionsmod"github.com/jptosso/coraza-waf/pkg/actions"
 	pcre"github.com/gijsbers/go-pcre"
 	"os"
@@ -13,7 +14,6 @@ import(
 	"bufio"
 	"time"
 	"errors"
-	"path"
 	"strconv"
 	"regexp"
 )
@@ -25,23 +25,25 @@ type Parser struct {
 
 	nextSecMark string
 	defaultActions string
+	currentLine int
 }
 
 func (p *Parser) Init(waf *engine.Waf) {
 	p.waf = waf
 }
 
-
 func (p *Parser) FromFile(profilePath string) error{
 	//Log.Debug("Opening profile " + profilePath)
     file, err := os.Open(profilePath)
     if err != nil {
+    	p.log("Cannot open profile path " + profilePath)
         return err
     }
     defer file.Close()
 
     err = p.FromString(bufio.NewScanner(file))
     if err != nil{
+    	p.log("Cannot parse configurations")
     	return err
     }
     //TODO validar el error de scanner.Err()
@@ -58,7 +60,7 @@ func (p *Parser) FromString(scanner *bufio.Scanner) error{
         if !match {
         	err := p.Evaluate(linebuffer)
         	if err != nil{
-        		return err
+        		return p.log("Error parsing directive")
         	}
         	linebuffer = ""
         }else{
@@ -69,15 +71,15 @@ func (p *Parser) FromString(scanner *bufio.Scanner) error{
 }
 
 func (p *Parser) Evaluate(data string) error{
-	//Log.Debug("Evaluating line " + data)
 	if data == "" || data[0] == '#'{
 		return nil
 	}
 	//first we get the directive
 	spl := strings.SplitN(data, " ", 2)
 	if len(spl) != 2{
-		return errors.New("Invalid syntaxis, expected [directive] [options] for: \n" + data)
+		return p.log("Invalid syntaxis, expected [directive] [options]")
 	}
+	log.Debug("Parsing directive: " + data)
 	directive := spl[0]
 	opts := spl[1]
 
@@ -109,8 +111,7 @@ func (p *Parser) Evaluate(data string) error{
 		for _,c := range data{
 			ascii := int(c) //a = 97 // k = 107
 			if c > 107 || c < 97{
-				fmt.Println("Invalid Audit Log Part " + string(c))
-				continue
+				return p.log("Invalid Audit Log Part " + string(c))
 			}
 			p.waf.AuditLogParts = append(p.waf.AuditLogParts, ascii-97)
 		}
@@ -152,9 +153,6 @@ func (p *Parser) Evaluate(data string) error{
 		*/
 	case "SecContentInjection":
 		//p.waf.ContentInjection = (opts == "On")
-		break
-	case "SecDebugLog":
-		p.waf.DebugLog = opts
 		break
 	case "SecDefaultAction":
 		p.defaultActions = opts
@@ -217,9 +215,7 @@ func (p *Parser) Evaluate(data string) error{
 		res, err := client.Do(req)
 		if err != nil {
 			if p.waf.AbortOnRemoteRulesFail{
-				fmt.Println("Unable to fetch remote rules")
-				os.Exit(255)
-				return err
+				return p.log("Unable to fetch remote rules")
 			}
 			return err
 		}
@@ -347,11 +343,9 @@ func (p *Parser) Evaluate(data string) error{
 		p.nextSecMark = opts
 	case "SecComponentSignature":
 		p.waf.ComponentSignature = opts
-	case "SecDataPath":
-		p.waf.Datapath = opts
 	case "SecErrorPage":
 		if len(opts) < 2{
-			//error
+			return p.log("Invalid SecErrorPage value")
 			break
 		}
 		if opts == "debug"{
@@ -363,7 +357,7 @@ func (p *Parser) Evaluate(data string) error{
 		}else if opts[0] == '/'{
 			file, err := utils.OpenFile(opts)
 			if err != nil{
-				//error...
+				p.log("Cannot open SecErrorPage, keeping default value.")
 				break
 			}
 			p.waf.ErrorPageMethod = engine.ERROR_PAGE_FILE
@@ -373,12 +367,13 @@ func (p *Parser) Evaluate(data string) error{
 			p.waf.ErrorPageFile = opts
 		}
 	default:
-		return errors.New("Unsupported directive " + directive)
+		return p.log("Unsupported directive: " + directive)
 	}
 	return nil
 }
 
 func (p *Parser) ParseRule(data string) (*engine.Rule, error){
+	var err error
 	var rule = new(engine.Rule)
 	rule.Init()
 	rule.Raw = "SecRule " + data
@@ -389,14 +384,22 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error){
     //regex: "(?:[^"\\]|\\.)*"
     r := regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
     matches := r.FindAllString(data, -1)
-    operators := utils.RemoveQuotes(matches[0])
     actions := ""
-	p.compileRuleVariables(rule, rule.Vars)
-	p.compileRuleOperator(rule, operators)
-
+    operators := utils.RemoveQuotes(matches[0])
+	err = p.compileRuleVariables(rule, rule.Vars)
+	if err != nil{
+		return nil, err
+	}
+	err = p.compileRuleOperator(rule, operators)
+	if err != nil{
+		return nil, err
+	}	
 	if len(matches) > 1{
     	actions = utils.RemoveQuotes(matches[1])
-		p.compileRuleActions(rule, actions)
+    	err = p.compileRuleActions(rule, actions) 
+		if err != nil{
+			return nil, err
+		}
 	}
 
 	if p.nextChain{
@@ -419,7 +422,7 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error){
 	return rule, nil
 }
 
-func (p *Parser) compileRuleVariables(r *engine.Rule, vars string) {
+func (p *Parser) compileRuleVariables(r *engine.Rule, vars string) error{
 	//Splits the values by KEY, KEY:VALUE, &!KEY, KEY:/REGEX/, KEY1|KEY2
 	//GROUP 1 is collection, group 3 is vlue, group 3 can be empty
 	re := pcre.MustCompile(`((?:&|!)?[\w_]+)((?::)([\w-_]+|\/(.*?)(?<!\\)\/))?`, 0)
@@ -453,10 +456,11 @@ func (p *Parser) compileRuleVariables(r *engine.Rule, vars string) {
 	    	break
 	    }
 	}
+	return nil
 }
 
 
-func (p *Parser) compileRuleOperator(r *engine.Rule, operator string) {
+func (p *Parser) compileRuleOperator(r *engine.Rule, operator string) error{
 	if operator == "" {
 		operator = "@rx "
 	}
@@ -468,39 +472,34 @@ func (p *Parser) compileRuleOperator(r *engine.Rule, operator string) {
 	op := spl[0]
 	r.Operator = operator
 	r.OperatorObj = new(engine.RuleOp)
-	//optimizar!
+	
 	if op[0] == '!' {
-		//Log.Debug("Negated operator")
 		r.OperatorObj.Negation = true
 		op = utils.TrimLeftChars(op, 1)
 	}
 	if op[0] == '@' {
 		op = utils.TrimLeftChars(op, 1)
-		//Log.Debug("Loaded operator " + op)
 		if len(spl) == 2 {
 			r.OperatorObj.Data = spl[1]
 		}
 	}
 
 	r.OperatorObj.Operator = operators.OperatorsMap()[op]
-	if op == "pmFromFile"{
-		r.OperatorObj.Data = path.Join(p.waf.Datapath, r.OperatorObj.Data)
-	}
 	if r.OperatorObj.Operator == nil{
-		fmt.Println("Invalid operator " + op )
+		return p.log("Invalid operator " + op)
 	}else{
 		r.OperatorObj.Operator.Init(r.OperatorObj.Data)
 	}
+	return nil
 }
 
 func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error{
 	//REGEX: ((.*?)((?<!\\)(?!\B'[^']*),(?![^']*'\B)|$))
 	//This regex splits actions by comma and assign key:values with supported escaped quotes
-	//TODO needs fixing
+	//TODO needs fixing, sometimes we empty strings as key
 	re := pcre.MustCompile(`(.*?)((?<!\\)(?!\B'[^']*),(?![^']*'\B)|$)`, 0)
 	matcher := re.MatcherString(actions, 0)
 	subject := []byte(actions)
-    errorlist := []string{}
     if len(p.defaultActions) > 0{
     	actions = fmt.Sprintf("%s, %s", p.defaultActions, actions)
     }
@@ -516,11 +515,14 @@ func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error{
 			value = strings.Trim(spl[1], " ")
 		}
 		if actionsmap[key] == nil{
-			fmt.Printf("Error, invalid action: %s\n", key)
-			//return fmt.Errorf("Invalid action %s", key)
+			//TODO some fixing here, this is a bug
+			p.log("Invalid action " + key)
 		}else{
 			action := actionsmap[key]
-			errorlist = action.Init(r, value)
+			err := action.Init(r, value)
+			if err != ""{
+				return p.log(err)
+			}
 			r.Actions = append(r.Actions, action)
 		}
 	    subject = subject[index[1]:]
@@ -528,8 +530,12 @@ func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error{
 	    	break
 	    }
 	}	
-	for _, e := range errorlist{
-		fmt.Println(e)
-	}
+
 	return nil
+}
+
+func (p *Parser) log(msg string) error{
+	msg = fmt.Sprintf("[Parser] [Line %d] %s", p.currentLine, msg)
+	log.Error(msg)
+	return errors.New(msg)
 }

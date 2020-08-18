@@ -7,21 +7,19 @@ RUN apt update && apt install -y software-properties-common
 
 RUN add-apt-repository ppa:longsleep/golang-backports
 RUN apt update && apt install -y \
-	redis-server \
 	libpcre++-dev \
 	build-essential \
 	golang-go \
 	git-core
 
 
-RUN mkdir -p /go/src/github.com/jptosso/
+RUN go get -u github.com/jptosso/coraza-waf/...
 
-COPY . /go/src/github.com/jptosso/coraza-waf/
 WORKDIR /go/src/github.com/jptosso/coraza-waf/
-RUN make libinjection
-RUN make compile
-RUN make install
+RUN ./scripts/debian/package.sh
+RUN rm -rf /tmp/coraza-waf-build
+RUN rm -rf /go
 
-RUN service redis-server start
+RUN sudo dpkg -i /tmp/coraza-waf-build/coraza-waf_0.1-1.rpm
 
-CMD ["/usr/local/bin/skipper"]
+CMD ["coraza-waf"]

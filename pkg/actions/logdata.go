@@ -8,9 +8,9 @@ type Logdata struct {
 	data string
 }
 
-func (a *Logdata) Init(r *engine.Rule, data string) []string {
+func (a *Logdata) Init(r *engine.Rule, data string) string {
 	a.data = data
-	return []string{}
+	return ""
 }
 
 func (a *Logdata) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

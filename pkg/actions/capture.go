@@ -7,9 +7,9 @@ import(
 
 type Capture struct {}
 
-func (a *Capture) Init(r *engine.Rule, b1 string) []string {
+func (a *Capture) Init(r *engine.Rule, b1 string) string {
 	//r.Capture = true
-	return []string{}
+	return ""
 }
 
 func (a *Capture) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

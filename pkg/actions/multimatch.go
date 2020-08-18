@@ -7,9 +7,9 @@ import(
 type MultiMatch struct {
 }
 
-func (a *MultiMatch) Init(r *engine.Rule, data string) []string {
+func (a *MultiMatch) Init(r *engine.Rule, data string) string {
 	r.MultiMatch = true
-	return []string{}
+	return ""
 }
 
 func (a *MultiMatch) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

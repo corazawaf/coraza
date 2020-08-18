@@ -12,11 +12,11 @@ type InitCol struct {
 	Key string
 }
 
-func (a *InitCol) Init(r *engine.Rule, data string) []string {
+func (a *InitCol) Init(r *engine.Rule, data string) string {
 	kv := strings.SplitN(data, "=", 2)
 	a.Collection = kv[0]
 	a.Key = kv[1]
-	return []string{}
+	return ""
 }
 
 func (a *InitCol) Evaluate(r *engine.Rule, tx *engine.Transaction) {

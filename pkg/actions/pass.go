@@ -7,9 +7,9 @@ import(
 type Pass struct {
 }
 
-func (a *Pass) Init(r *engine.Rule, data string) []string {
+func (a *Pass) Init(r *engine.Rule, data string) string {
 	r.DisruptiveAction = engine.ACTION_DISRUPTIVE_PASS
-	return []string{}
+	return ""
 }
 
 func (a *Pass) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

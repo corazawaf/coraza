@@ -8,9 +8,9 @@ type Append struct {
 	Data string
 }
 
-func (a *Append) Init(r *engine.Rule, data string) []string {
+func (a *Append) Init(r *engine.Rule, data string) string {
 	a.Data = data
-	return []string{}
+	return ""
 }
 
 func (a *Append) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

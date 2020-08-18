@@ -44,6 +44,8 @@ func main() {
 	debug = *dodebug
 	failonly = *fo
 
+	fmt.Println("Starting Coraza WAF testsuite...")
+
 	if *mode == "test"{
 		waf := &engine.Waf{}
 		waf.Init()
@@ -51,6 +53,7 @@ func main() {
 		parser.Init(waf)
 		err := parser.FromFile(*rules)
 		if err != nil{
+			fmt.Println("Error parsing configurations")
 			fmt.Println(err)
 			return
 		}		

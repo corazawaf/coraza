@@ -10,9 +10,9 @@ type SkipAfter struct {
 }
 
 //NOT IMPLEMENTED
-func (a *SkipAfter) Init(r *engine.Rule, data string) []string {
+func (a *SkipAfter) Init(r *engine.Rule, data string) string {
 	a.data = strings.Trim(data, `"`)
-	return []string{}
+	return ""
 }
 
 func (a *SkipAfter) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

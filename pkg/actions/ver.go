@@ -7,9 +7,9 @@ import(
 type Ver struct {
 }
 
-func (a *Ver) Init(r *engine.Rule, data string) []string {
+func (a *Ver) Init(r *engine.Rule, data string) string {
 	r.Version = data
-	return []string{}
+	return ""
 }
 
 func (a *Ver) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

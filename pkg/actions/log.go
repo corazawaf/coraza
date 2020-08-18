@@ -7,9 +7,9 @@ import(
 type Log struct {
 }
 
-func (a *Log) Init(r *engine.Rule, data string) []string {
+func (a *Log) Init(r *engine.Rule, data string) string {
 	r.Log = true
-	return []string{}
+	return ""
 }
 
 func (a *Log) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

@@ -6,9 +6,9 @@ import(
 
 type Deny struct {}
 
-func (a *Deny) Init(r *engine.Rule, data string) []string {
+func (a *Deny) Init(r *engine.Rule, data string) string {
 	r.DisruptiveAction = engine.ACTION_DISRUPTIVE_DENY
-	return []string{}
+	return ""
 }
 
 func (a *Deny) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

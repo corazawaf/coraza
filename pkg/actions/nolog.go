@@ -7,9 +7,9 @@ import(
 type Nolog struct {
 }
 
-func (a *Nolog) Init(r *engine.Rule, data string) []string {
+func (a *Nolog) Init(r *engine.Rule, data string) string {
 	r.Log = false
-	return []string{}
+	return ""
 }
 
 func (a *Nolog) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

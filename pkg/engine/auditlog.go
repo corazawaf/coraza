@@ -83,7 +83,7 @@ func (al *AuditLog) Init(tx *Transaction, parts []int){
 	/*
 	for _, p := range parts{
 		switch p{
-		default:
+		AUDIT_PARTS:
 			break
 		}
 	}*/
@@ -128,7 +128,7 @@ func (al *AuditLog) Init(tx *Transaction, parts []int){
 			Actionset: &AuditMatchedRuleActionset{
 				Id: r.Id,
 				IsChained: (r.Id == 0),
-				ChainStarter: (r.Id != 0), //TODO check
+				ChainStarter: (r.Id != 0 && r.Chain != nil), 
 				tags: r.Tags,
 				Phase: r.Phase,
 			},

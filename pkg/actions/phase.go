@@ -7,10 +7,10 @@ import(
 
 type Phase struct {}
 
-func (a *Phase) Init(r *engine.Rule, data string) []string {
+func (a *Phase) Init(r *engine.Rule, data string) string {
 	i, _ := strconv.Atoi(data)
 	r.Phase = int(i)
-	return []string{}
+	return ""
 }
 
 func (a *Phase) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
