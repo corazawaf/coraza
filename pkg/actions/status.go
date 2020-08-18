@@ -9,9 +9,9 @@ type Status struct {
 	status int
 }
 
-func (a *Status) Init(r *engine.Rule, b1 string) []string {
+func (a *Status) Init(r *engine.Rule, b1 string) string {
 	a.status, _ = strconv.Atoi(b1)
-	return []string{}
+	return ""
 }
 
 func (a *Status) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

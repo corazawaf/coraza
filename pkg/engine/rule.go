@@ -22,7 +22,7 @@ const (
 )
 
 type Action interface {
-	Init(*Rule, string) []string
+	Init(*Rule, string) string
 	Evaluate(*Rule, *Transaction)
 	GetType() int
 }

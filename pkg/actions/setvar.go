@@ -15,7 +15,7 @@ type Setvar struct {
 
 
 //this action win run even if rule is not triggered.!
-func (a *Setvar) Init(r *engine.Rule, data string) []string {
+func (a *Setvar) Init(r *engine.Rule, data string) string {
     //sample: tx.%{rule.id}-WEB_ATTACK/SQL_INJECTION-%{matched_var_name}=%{tx.0}
 	if data[0] == '\''{
 		data = strings.Trim(data, "'")
@@ -31,7 +31,7 @@ func (a *Setvar) Init(r *engine.Rule, data string) []string {
     a.Collection = spl[0]
     a.Key = spl[1]
     a.Value = kv[1]
-    return []string{}
+    return ""
 }
 
 func (a *Setvar) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

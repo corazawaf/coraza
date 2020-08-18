@@ -7,9 +7,9 @@ import(
 type Tag struct {
 }
 
-func (a *Tag) Init(r *engine.Rule, data string) []string {
+func (a *Tag) Init(r *engine.Rule, data string) string {
 	r.Tags = append(r.Tags, data[1:len(data)-1])
-	return []string{}
+	return ""
 }
 
 func (a *Tag) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

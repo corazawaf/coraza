@@ -7,9 +7,9 @@ import(
 type Rev struct {
 }
 
-func (a *Rev) Init(r *engine.Rule, data string) []string {
+func (a *Rev) Init(r *engine.Rule, data string) string {
 	r.Rev = data
-	return []string{}
+	return ""
 }
 
 func (a *Rev) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

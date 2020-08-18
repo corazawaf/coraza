@@ -8,9 +8,9 @@ type Allow struct {
 
 }
 
-func (a *Allow) Init(r *engine.Rule, b1 string) []string {
+func (a *Allow) Init(r *engine.Rule, b1 string) string {
 	// Does not require initializer
-	return []string{}
+	return ""
 }
 
 func (a *Allow) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

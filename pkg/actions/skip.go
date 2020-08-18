@@ -10,13 +10,13 @@ type Skip struct {
 	data int
 }
 
-func (a *Skip) Init(r *engine.Rule, data string) []string {
+func (a *Skip) Init(r *engine.Rule, data string) string {
 	i, err := strconv.Atoi(data)
 	if err != nil{
-		return []string{"Invalid integer value"}
+		return "Invalid integer value"
 	}
 	a.data = i
-	return []string{}
+	return ""
 }
 
 func (a *Skip) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

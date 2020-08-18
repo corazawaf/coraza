@@ -7,9 +7,9 @@ import(
 type Msg struct {
 }
 
-func (a *Msg) Init(r *engine.Rule, data string) []string {
+func (a *Msg) Init(r *engine.Rule, data string) string {
 	r.Msg = data
-	return []string{}
+	return ""
 }
 
 func (a *Msg) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

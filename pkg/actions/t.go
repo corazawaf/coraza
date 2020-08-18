@@ -7,20 +7,20 @@ import(
 
 type T struct {}
 
-func (a *T) Init(r *engine.Rule, transformation string) []string {
+func (a *T) Init(r *engine.Rule, transformation string) string {
 	if transformation == "none" {
 		//remove elements
 		r.Transformations = r.Transformations[:0]
-		return []string{}
+		return ""
 	}
 	transformations := transformations.TransformationsMap()
 	tt := transformations[transformation]
 	if tt == nil{
-		return []string{"Unsupported transformation " + transformation}
+		return "Unsupported transformation " + transformation
 	}
 	tf := engine.RuleTransformation{transformation, tt}
 	r.Transformations = append(r.Transformations, tf)
-	return []string{}
+	return ""
 }
 
 func (a *T) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

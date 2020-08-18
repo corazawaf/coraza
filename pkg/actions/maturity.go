@@ -7,9 +7,9 @@ import(
 type Maturity struct {
 }
 
-func (a *Maturity) Init(r *engine.Rule, data string) []string {
+func (a *Maturity) Init(r *engine.Rule, data string) string {
 	r.Maturity = data
-	return []string{}
+	return ""
 }
 
 func (a *Maturity) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

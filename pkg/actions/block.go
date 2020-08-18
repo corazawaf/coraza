@@ -6,9 +6,9 @@ import(
 
 type Block struct {}
 
-func (a *Block) Init(r *engine.Rule, b1 string) []string {
+func (a *Block) Init(r *engine.Rule, b1 string) string {
 	r.DisruptiveAction = engine.ACTION_DISRUPTIVE_BLOCK
-	return []string{}
+	return ""
 }
 
 func (a *Block) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

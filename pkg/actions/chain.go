@@ -6,9 +6,9 @@ import(
 
 type Chain struct {}
 
-func (a *Chain) Init(r *engine.Rule, b1 string) []string {
+func (a *Chain) Init(r *engine.Rule, b1 string) string {
 	r.HasChain = true
-	return []string{}
+	return ""
 }
 
 func (a *Chain) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

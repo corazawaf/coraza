@@ -8,13 +8,13 @@ import(
 type Id struct {
 }
 
-func (a *Id) Init(r *engine.Rule, data string) []string {
+func (a *Id) Init(r *engine.Rule, data string) string {
 	i, err := strconv.Atoi(data)
 	if err != nil{
-		return []string{"Invalid rule ID " + data}
+		return "Invalid rule ID " + data
 	}
 	r.Id = int(i)
-	return []string{}
+	return ""
 }
 
 func (a *Id) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

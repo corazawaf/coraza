@@ -29,9 +29,9 @@ const (
 
 )
 
-func (a *Ctl) Init(r *engine.Rule, data string) []string {
+func (a *Ctl) Init(r *engine.Rule, data string) string {
 	a.Action, a.Value, a.Collection, a.ColKey = parseCtl(data)
-	return []string{}
+	return ""
 }
 
 func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) () {

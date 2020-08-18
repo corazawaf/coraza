@@ -7,9 +7,9 @@ import(
 type Severity struct {
 }
 
-func (a *Severity) Init(r *engine.Rule, data string) []string {
+func (a *Severity) Init(r *engine.Rule, data string) string {
 	r.Severity = data
-	return []string{}
+	return ""
 }
 
 func (a *Severity) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
