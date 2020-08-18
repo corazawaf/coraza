@@ -346,7 +346,6 @@ func (p *Parser) Evaluate(data string) error{
 	case "SecErrorPage":
 		if len(opts) < 2{
 			return p.log("Invalid SecErrorPage value")
-			break
 		}
 		if opts == "debug"{
 			p.waf.ErrorPageMethod = engine.ERROR_PAGE_DEBUG
