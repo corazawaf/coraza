@@ -39,18 +39,23 @@ cp examples/skipper/* $TMP_PATH/etc/coraza-waf/
 echo $COMPATIBILITY > $TMP_PATH/DEBIAN/compat
 touch $TMP_PATH/etc/coraza-waf/profiles/default/rules.conf
 
+cd ../
+git clone https://github.com/zalando/skipper
+cd skipper
+make eskip
+mv bin/eskip $TMP_PATH/bin/
 
 cat << EOF > $TMP_PATH/DEBIAN/control
 Package: $PACKAGE
 Version: $VERSION
 Section: base
+Source: https://github.com/jptosso/coraza-waf/releases/download/%{version}/coraza-waf-%VERSION-linux-amd64.tar.gz
 Priority: optional
-Architecture: all
-Depends: libpcre2-dev
+Architecture: amd64
+Homepage: https://jptosso.github.io/coraza-waf/
 Maintainer: Juan Pablo Tosso <jptosso@gmail.com>
 Description: Coraza Web Application Firewall
 EOF
 
 cd $TMP_PATH/..
 dpkg-deb --build $PACKAGE_$VERSION
-mv $VERSION.deb $PACKAGE_$VERSION.deb

@@ -1,7 +1,7 @@
 package engine
 
 import(
-	log"github.com/sirupsen/logrus"
+	
 )
 
 type Logger struct {
@@ -18,7 +18,6 @@ func (l *Logger) InitConcurrent(path string, directory string) error{
 	cl := &ConcurrentLogger{}
 	l.concurrentlogger = cl
 	if err := cl.Init(path, directory); err != nil{
-		log.Error("Failed to initialize concurrent logger, concurrent logging will be disabled.")
 		return err
 	}
 	l.initialized = true

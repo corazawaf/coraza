@@ -19,8 +19,6 @@ func (o *Pm) Evaluate(tx *engine.Transaction, value string) bool{
 	    AddStrings(o.data).
 	    Build()
 	matches := trie.MatchString(value)
-
-	//fmt.Printf("Separado en %d para %s con %d matches\n", len(spl), search, len(matches))
 	return len(matches) > 0
 }
 

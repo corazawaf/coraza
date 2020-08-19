@@ -13,7 +13,7 @@ func TestOpContainsUnicodeStringCorrect(t *testing.T) {
     tx := newTx()
     result := bw.Evaluate(&tx, data)
     if !result {
-    	t.Errorf("Invalid BeginsWith transformation result")
+    	t.Errorf("Invalid BeginsWith operator result")
     }
 }
 

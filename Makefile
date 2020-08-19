@@ -28,6 +28,30 @@ libinjection:
 		cp *.o /usr/local/lib
 		cp pkg/utils/libinjection/src/*.h /usr/local/include/
 		chmod 444 /usr/local/include/libinjection*
-		ldconfig				
-deps-debian:
-		apt install libpcre++-dev build-essential
+		ldconfig
+eskip:
+		git clone https://github.com/zalando/skipper
+		cd skipper
+		make eskip
+		mv bin/eskip ../	
+install:
+		# only for debian by now
+		mkdir -p /etc/coraza-waf/profiles/default
+		mkdir -p /opt/coraza-waf/log/audit
+		id -u coraza-waf &>/dev/null || useradd -r -s /bin/false coraza-waf
+		cp scripts/debian/coraza-waf.service /etc/init.d/coraza-waf
+		cp examples/skipper/default.conf /etc/coraza-waf/profiles/default/
+		mv main /bin/coraza-waf
+		cp examples/skipper/routes.eskip /etc/coraza-waf/
+		cp examples/skipper/skipper.yaml /etc/coraza-waf/
+		cp examples/skipper/default.conf /etc/coraza-waf/profiles/default/rules.conf
+		update-rc.d coraza-waf defaults
+		make eskip
+		mv eskip /bin/
+		chown -R coraza-waf:root /opt/coraza-waf/log
+		chown -R root:root /etc/coraza-waf
+		chown -R root:root /bin/coraza-waf
+		chown -R root:root /bin/eskip
+		find /opt/coraza-waf -type d -exec chmod 755 {} \;
+		find /etc/coraza-waf -type d -exec chmod 755 {} \;
+		find /etc/coraza-waf -type f -exec chmod 655 {} \;

@@ -40,16 +40,19 @@ Most features are available for testing, APIs are unstable but close to the fina
 ## Compile from source
 
 Compilation prerequisites: 
-* golang 1.11+
-* C compiler
-* libpcre++-dev
-* libinjection compiled and linked (use `make libinjection`)
+* golang 1.13+
+* C compiler (gcc)
 
 You can compile each package individually running: `go build cmd/skipper/main.go` or using the make scripts.
 
 ```
+# Get dependencies
+go get ./...
+# make libinjection is required
+make libinjection
 make
 sudo make install
+
 ```
 
 
@@ -58,6 +61,20 @@ sudo make install
 ```
 GO111MODULE=on go build -buildmode=plugin -o coraza.so cmd/skipper/main.go
 skipper -filter-plugin coraza
+```
+
+## Build debian/centos 
+
+Install debian dpkg build tools (dpkg) and run
+
+```
+./scripts/debian/package.sh
+```
+
+If you want to build a CentOS package, you must transform the debian .deb file to rpm using alien:
+```
+$ alien -r coraza-waf0.1.0-alpha1_amd64.deb
+coraza-waf0.1.0-alpha1.amd64.rpm generated
 ```
 
 ## Test
@@ -85,20 +102,38 @@ cd coraza-waf/
 go run cmd/testsuite/main.go -path ../owasp-modsecurity-crs -rules ../owasp-modsecurity-crs/owasp-crs.conf
 ```
 
+## Run with Docker
+
+You can import the image and use volumes to replace the /etc/coraza-waf directory with your own settings.
+
+```
+# Run with default configurations
+$ docker run --name waf -d docker.pkg.github.com/jptosso/coraza-waf/waf -p 9090:9090
+
+# Run with volumes
+$ docker run --name waf -d docker.pkg.github.com/jptosso/coraza-waf/waf -p 9090:9090 \
+	-v custom-settings:/etc/coraza-waf \
+	-v logs:/opt/coraza-waf/log
+
+```
+
+You can also create your own image like this:
+```
+FROM docker.pkg.github.com/jptosso/coraza-waf/waf
+COPY routes.eskip /etc/coraza-waf/routes.eskip
+COPY rules.conf /etc/coraza-waf/profiles/default/rules.conf
+```
+
 ## Using Reverse Proxy WAF
 
-**Routes:**
+**Files and directories:**
 * */etc/coraza-waf/skipper.yaml*: Contains the options that will be imported by Skipper by default.
 * */etc/coraza-waf/routes.eskip*:  Contains the routes that will be used by Skipper.
 * */etc/coraza-waf/profiles/default/rules.conf*: Placeholder file with default options.
 * */opt/coraza/var/log/coraza-waf/access.log*: Access log for Skipper.
-* */opt/coraza/var/log/coraza-waf/skiper-error.log*: Error log for Skipper
+* */opt/coraza/var/log/coraza-waf/system.log*: Skipper + Coraza system logs
 * */opt/coraza/var/log/coraza-waf/audit.log*: Audit log, contains references for each audit log, [more information here](#).
 * */opt/coraza/var/log/coraza-waf/audit/*: This directory contains the concurrent logs created by the audit engine.
-* */opt/coraza/var/log/coraza-waf/error.log*: Default path for Coraza WAF errors log.
-* */opt/coraza/var/log/coraza-waf/debug.log*:  Default path for Coraza WAF debug logs.
-* */tmp/coraza-waf.sock*:  
-* */tmp/coraza-waf.pid*:  
 * */usr/local/bin/coraza-waf*: Coraza WAF binary location.
 
 Sample:
@@ -115,11 +150,32 @@ For more configuration options and SSL check [Skipper Documentation](#).
 ## Using as a library
 
 ```
-samplesite:
-        Path("/")
-        -> corazaWAF("/etc/coraza-waf/profiles/default/rules.conf")
-        -> setRequestHeader("Host", "www.samplesite.com")
-        -> "https://www.samplesite.com";
+package main
+
+import(
+	"github.com/jptosso/coraza-waf/pkg/engine"
+	"github.com/jptosso/coraza-waf/pkg/parser"
+	"fmt"
+)
+
+func main(){
+	// Create waf instance
+	waf := &engine.Waf{}
+	waf.Init()
+
+	// Parse some rules
+	p := parser.Parser{}
+	p.Init(waf)
+	p.FromString(`SecRule REQUEST_HEADERS:test "TestValue" "id:1, drop, log"`)
+
+	// Create Transaction
+	tx := waf.NewTransaction()
+	tx.AddRequestHeader("Test", "TestValue")
+	tx.ExecutePhase(1)
+	if tx.Disrupted{
+		fmt.Println("Transaction disrupted")
+	}
+}
 ```
 
 ## Deployment options
@@ -131,7 +187,6 @@ samplesite:
 
 ## Missing features and known bugs
 
-* Persistent collections, Lua and remote logging are a experimental feature
 * cssdecode andjsdecode transformations are not implemented	
 
 

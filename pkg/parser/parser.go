@@ -7,9 +7,9 @@ import(
 	log"github.com/sirupsen/logrus"
 	actionsmod"github.com/jptosso/coraza-waf/pkg/actions"
 	pcre"github.com/gijsbers/go-pcre"
-	"os"
 	"strings"
 	"net/http"
+	"io/ioutil"
 	"fmt"
 	"bufio"
 	"time"
@@ -33,15 +33,13 @@ func (p *Parser) Init(waf *engine.Waf) {
 }
 
 func (p *Parser) FromFile(profilePath string) error{
-	//Log.Debug("Opening profile " + profilePath)
-    file, err := os.Open(profilePath)
+    file, err := utils.OpenFile(profilePath)
     if err != nil {
     	p.log("Cannot open profile path " + profilePath)
         return err
     }
-    defer file.Close()
 
-    err = p.FromString(bufio.NewScanner(file))
+    err = p.FromString(string(file))
     if err != nil{
     	p.log("Cannot parse configurations")
     	return err
@@ -50,7 +48,8 @@ func (p *Parser) FromFile(profilePath string) error{
 	return nil
 }
 
-func (p *Parser) FromString(scanner *bufio.Scanner) error{
+func (p *Parser) FromString(data string) error{
+	scanner := bufio.NewScanner(strings.NewReader(data))
     var linebuffer = ""
     for scanner.Scan() {
         line := scanner.Text()
@@ -60,7 +59,7 @@ func (p *Parser) FromString(scanner *bufio.Scanner) error{
         if !match {
         	err := p.Evaluate(linebuffer)
         	if err != nil{
-        		return p.log("Error parsing directive")
+        		return err
         	}
         	linebuffer = ""
         }else{
@@ -107,13 +106,50 @@ func (p *Parser) Evaluate(data string) error{
 		break
 	case "SecAuditLogParts":
 		p.waf.AuditLogParts = []int{}
-		data := []rune(opts)
-		for _,c := range data{
-			ascii := int(c) //a = 97 // k = 107
-			if c > 107 || c < 97{
-				return p.log("Invalid Audit Log Part " + string(c))
+		for _, c := range data{
+			var val int
+			switch c{
+				case 'A':
+					val = engine.AUDIT_LOG_PART_HEADER
+					break
+				case 'B':
+					val = engine.AUDIT_LOG_PART_REQUEST_HEADERS
+					break
+				case 'C':
+					val = engine.AUDIT_LOG_PART_REQUEST_BODY
+					break
+				case 'D':
+					val = engine.AUDIT_LOG_PART_RESERVED_1
+					break
+				case 'E':
+					val = engine.AUDIT_LOG_PART_INT_RESPONSE_BODY
+					break
+				case 'F':
+					val = engine.AUDIT_LOG_PART_FIN_RESPONSE_BODY
+					break
+				case 'G':
+					val = engine.AUDIT_LOG_PART_FIN_RESPONSE_HEADERS
+					break
+				case 'H':
+					val = engine.AUDIT_LOG_PART_RESPONSE_BODY
+					break
+				case 'I':
+					val = engine.AUDIT_LOG_PART_AUDIT_LOG_TRAIL
+					break
+				case 'J':
+					val = engine.AUDIT_LOG_PART_FILES_MULTIPART
+					break
+				case 'K':
+					val = engine.AUDIT_LOG_PART_ALL_MATCHED_RULES
+					break
+				case 'Z':
+					val = engine.AUDIT_LOG_PART_FINAL_BOUNDARY
+					break
+				default:
+					return p.log("Invalid log part " + string(val))
 			}
-			p.waf.AuditLogParts = append(p.waf.AuditLogParts, ascii-97)
+			//TODO validate repeated parts
+			p.waf.AuditLogParts = append(p.waf.AuditLogParts, val)
 		}
 		break
 	case "SecAuditLogRelevantStatus":
@@ -220,8 +256,8 @@ func (p *Parser) Evaluate(data string) error{
 			return err
 		}
 		defer res.Body.Close()
-		b := bufio.NewScanner(res.Body)
-		p.FromString(b)
+		b, _ := ioutil.ReadAll(res.Body)
+		p.FromString(string(b))
 		break
 	case "SecRemoteRulesFailAction":
 		p.waf.AbortOnRemoteRulesFail = (opts == "Abort")

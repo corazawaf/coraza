@@ -1,11 +1,11 @@
 package engine
 import (
-	"fmt"
     "errors"
     "strings"
     "github.com/oschwald/geoip2-golang"
     "github.com/jptosso/coraza-waf/pkg/engine/persistence"
     pcre"github.com/gijsbers/go-pcre"
+    log"github.com/sirupsen/logrus"
 )
 
 const (
@@ -180,7 +180,7 @@ func (w *Waf) InitLogger(){
     */
     err = l.InitConcurrent(w.AuditLogPath, w.AuditLogStorageDir)
     if err != nil{
-        fmt.Println("Unable to open logs path")
+        log.Error("Failed to initialize concurrent logger, concurrent logging will be disabled.")
     }
     w.Logger = l 
 }
