@@ -249,15 +249,18 @@ func (tx *Transaction) SetRemoteUser(user string) {
 
 
 //Sets request_body and request_body_length, it won't work if request_body_inspection is off
-func (tx *Transaction) SetRequestBody(body string, length int64) {
+func (tx *Transaction) SetRequestBody(body string, length int64, mime string) {
     tx.Mux.Lock()
     defer tx.Mux.Unlock()
-    if !tx.RequestBodyAccess || length > tx.RequestBodyLimit{
+    if !tx.RequestBodyAccess || (tx.RequestBodyLimit > 0 && length > tx.RequestBodyLimit){
         return
     }
-    l := fmt.Sprintf("%d", length)
+    l := strconv.FormatInt(length, 10)
     tx.Collections["request_body"].AddToKey("", body)
     tx.Collections["request_body_length"].AddToKey("", l)
+    if mime == "application/xml"{
+        tx.Collections["xml"].AddToKey("", body)
+    }
     /*
     //TODO shall we do this and force the real length?
     l := strconv.Itoa(length)

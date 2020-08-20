@@ -5,6 +5,5 @@ import (
 
 func ReplaceComments(data string) string{
 	re := pcre.MustCompile(`\/\*(.*?)\*\/`, 0)
-	data = string(re.ReplaceAll([]byte(data), []byte{' '}, 0))
-	return data
+	return re.ReplaceAllString(data, "", 0)
 }

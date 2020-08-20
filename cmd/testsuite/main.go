@@ -208,8 +208,8 @@ func runTest(waf *engine.Waf, profile testProfile) (bool, int, error){
 				case reflect.String:
 					data = stage.Stage.Input.Data.(string)
 				}
-
-				tx.SetRequestBody(data, int64(len(data)))
+				// TODO add mime
+				tx.SetRequestBody(data, int64(len(data)), "")
 				ct := tx.Collections["request_headers"].Data["content-type"]
 				ctt := ""
 				if len(ct) == 1{
@@ -219,9 +219,9 @@ func runTest(waf *engine.Waf, profile testProfile) (bool, int, error){
 				if strings.HasPrefix(mediaType, "multipart/") {
 					parseMultipart(data, params["boundary"], tx)
 				}else{
-					u, err := url.Parse(data)					
+					u, err := url.ParseQuery(data)
 					if err == nil{
-						tx.AddPostArgsFromUrl(u)
+						tx.SetArgsPost(u)
 					}
 				}
 				length := strconv.Itoa(len(data))

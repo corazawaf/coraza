@@ -10,13 +10,20 @@ func TestOpEq(t *testing.T) {
     waf.Init()
     tx := waf.NewTransaction()
     op := &Eq{}
-    op.Init("test123")
-    result := op.Evaluate(tx, "test123")
+    op.Init("123")
+    result := op.Evaluate(tx, "123")
     if !result {
     	t.Errorf("Invalid Eq operator result")
     }
-    result = op.Evaluate(tx, "test455")
+    result = op.Evaluate(tx, "aaa")
     if result {
         t.Errorf("Invalid Eq operator result")
     }    
+
+    // aaa should be 0
+    op.Init("0")
+    result = op.Evaluate(tx, "aaa")
+    if !result {
+        t.Errorf("Invalid Eq operator result")
+    }        
 }

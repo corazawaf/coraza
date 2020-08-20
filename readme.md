@@ -24,7 +24,7 @@ Coraza WAF is a Golang implementation of Modsecurity built from scratch, it supp
 
 ## About current version (0.1.0-alpha1)
 
-Most features are available for testing, APIs are unstable but close to the final product. The rule engine is stable but requires more tsting. A lot of performance optimization is required. This version might receive daily patching. Check the test engine to learn more about the supported features.
+Most features are available for testing, APIs are unstable but close to the final product. 
 
 ## What is not working
 

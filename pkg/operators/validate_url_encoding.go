@@ -8,7 +8,7 @@ type ValidateUrlEncoding struct{
 }
 
 func (o *ValidateUrlEncoding) Init(data string){
-	
+	// Does not require initialization
 }
 
 func (o *ValidateUrlEncoding) Evaluate(tx *engine.Transaction, value string) bool{

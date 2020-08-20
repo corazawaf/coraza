@@ -21,14 +21,14 @@ func TestString(t *testing.T) {
 		t.Error("Failed to parse actions")
 	}
 	if len(r.Variables) != 2{
-		t.Error("Failed to parse variables")
+		t.Error("Failed to parse variables, got", len(r.Variables))
 	}
 	if len(r.Variables[1].Exceptions) != 1{
 		t.Error("Failed to add exceptions to rule variable")
 		return
 	}
 	if r.Variables[1].Exceptions[0] != `/x-(coraza|\w+)/`{
-		t.Error("Invalid variable key for regex")
+		t.Error("Invalid variable key for regex, got:", r.Variables[1].Exceptions[0])
 	}
 }
 
@@ -67,7 +67,7 @@ func TestString2(t *testing.T){
 		return
 	}
 	r := waf.Rules.GetRules()[0]
-	if len(r.Variables) != 7{
+	if len(r.Variables) != 8{
 		t.Error("Failed to parse variables, got", len(r.Variables))
 		for _, v := range r.Variables{
 			t.Error(v)

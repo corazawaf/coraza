@@ -41,7 +41,7 @@ func (p *Parser) FromFile(profilePath string) error{
 
     err = p.FromString(string(file))
     if err != nil{
-    	p.log("Cannot parse configurations")
+    	log.Error("Cannot parse configurations")
     	return err
     }
     //TODO validar el error de scanner.Err()
@@ -106,7 +106,7 @@ func (p *Parser) Evaluate(data string) error{
 		break
 	case "SecAuditLogParts":
 		p.waf.AuditLogParts = []int{}
-		for _, c := range data{
+		for _, c := range opts{
 			var val int
 			switch c{
 				case 'A':
@@ -146,7 +146,7 @@ func (p *Parser) Evaluate(data string) error{
 					val = engine.AUDIT_LOG_PART_FINAL_BOUNDARY
 					break
 				default:
-					return p.log("Invalid log part " + string(val))
+					return p.log("Invalid log part " + string(c))
 			}
 			//TODO validate repeated parts
 			p.waf.AuditLogParts = append(p.waf.AuditLogParts, val)
@@ -169,11 +169,11 @@ func (p *Parser) Evaluate(data string) error{
 			break
 		}
 		break
-		/*
 	case "SecCollectionTimeout":
-		p.waf.CollectionTimeout, _ = strconv.Atoi(opts)
+		//p.waf.CollectionTimeout, _ = strconv.Atoi(opts)
 		break
 	case "SecConnEngine":
+		/*
 		switch opts{
 		case "On":
 			p.waf.ConnEngine = engine.CONN_ENGINE_ON
@@ -460,16 +460,22 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error){
 func (p *Parser) compileRuleVariables(r *engine.Rule, vars string) error{
 	//Splits the values by KEY, KEY:VALUE, &!KEY, KEY:/REGEX/, KEY1|KEY2
 	//GROUP 1 is collection, group 3 is vlue, group 3 can be empty
-	re := pcre.MustCompile(`((?:&|!)?[\w_]+)((?::)([\w-_]+|\/(.*?)(?<!\\)\/))?`, 0)
+	//TODO this is not an elegant way to parse variables but it works and it won't generate workload
+	re := pcre.MustCompile(`(((?:&|!)?XML):?(.*?)(?:\||$))|((?:&|!)?[\w_]+):?([\w-_]+|\/.*?(?<!\\)\/)?`, 0)
 	matcher := re.MatcherString(vars, 0)
 	subject := []byte(vars)	
 	for matcher.Match(subject, 0){
-		vname := matcher.GroupString(1)
-		vvalue := strings.ToLower(matcher.GroupString(3))
+		vname := matcher.GroupString(4)
+		vvalue := strings.ToLower(matcher.GroupString(5))
+		if vname == ""{
+			//This case is only for XML, sorry for the ugly code :(
+			vname = matcher.GroupString(2)
+			vvalue = strings.ToLower(matcher.GroupString(3))
+		}
 		index := matcher.Index()
 		counter := false
 		negation := false
-
+		log.Error(vname)
 		if vname[0] == '&'{
 			vname = vname[1:]
 			counter = true
@@ -556,7 +562,9 @@ func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error{
 			action := actionsmap[key]
 			err := action.Init(r, value)
 			if err != ""{
-				return p.log(err)
+				p.log(err)
+				// TODO we should return an error later
+				return nil
 			}
 			r.Actions = append(r.Actions, action)
 		}

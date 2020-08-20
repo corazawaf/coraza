@@ -4,6 +4,7 @@ import (
 )
 
 func CompressWhitespace(data string) string{
-	re := pcre.MustCompile(`\s\s+`, 0)
+	re := pcre.MustCompile(`\s+`, 0)
+	//TODO avoid \n, \s includes line break
 	return re.ReplaceAllString(data, " ", 0)
 }

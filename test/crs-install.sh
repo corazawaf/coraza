@@ -1,8 +1,8 @@
-@echo Cloning OWASP CRS project...
+echo Cloning OWASP CRS project...
 rm -rf crs
 git clone https://github.com/SpiderLabs/owasp-modsecurity-crs crs
 
-@echo Installing OWASP CRS
+echo Installing OWASP CRS
 cat <<- EOF > crs/owasp-crs.conf
   SecAction "id:900005,\
     phase:1,\
@@ -16,8 +16,8 @@ cat <<- EOF > crs/owasp-crs.conf
     setvar:tx.arg_length=400,\
     setvar:tx.crs_setup_version=300"
 EOF
-cat crs/csr-setup.conf.example >> crs/owasp-crs.conf
-cat crs/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf >> crs/owasp-crs.conf
+cat crs/crs-setup.conf.example >> crs/owasp-crs.conf
+cat crs/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf.example >> crs/owasp-crs.conf
 cat crs/rules/REQUEST-901-INITIALIZATION.conf >> crs/owasp-crs.conf
 cat crs/rules/REQUEST-903.9001-DRUPAL-EXCLUSION-RULES.conf >> crs/owasp-crs.conf
 cat crs/rules/REQUEST-903.9002-WORDPRESS-EXCLUSION-RULES.conf >> crs/owasp-crs.conf
