@@ -7,9 +7,9 @@ import(
 	log"github.com/sirupsen/logrus"
 	actionsmod"github.com/jptosso/coraza-waf/pkg/actions"
 	pcre"github.com/gijsbers/go-pcre"
-	"os"
 	"strings"
 	"net/http"
+	"io/ioutil"
 	"fmt"
 	"bufio"
 	"time"
@@ -33,24 +33,23 @@ func (p *Parser) Init(waf *engine.Waf) {
 }
 
 func (p *Parser) FromFile(profilePath string) error{
-	//Log.Debug("Opening profile " + profilePath)
-    file, err := os.Open(profilePath)
+    file, err := utils.OpenFile(profilePath)
     if err != nil {
     	p.log("Cannot open profile path " + profilePath)
         return err
     }
-    defer file.Close()
 
-    err = p.FromString(bufio.NewScanner(file))
+    err = p.FromString(string(file))
     if err != nil{
-    	p.log("Cannot parse configurations")
+    	log.Error("Cannot parse configurations")
     	return err
     }
     //TODO validar el error de scanner.Err()
 	return nil
 }
 
-func (p *Parser) FromString(scanner *bufio.Scanner) error{
+func (p *Parser) FromString(data string) error{
+	scanner := bufio.NewScanner(strings.NewReader(data))
     var linebuffer = ""
     for scanner.Scan() {
         line := scanner.Text()
@@ -60,7 +59,7 @@ func (p *Parser) FromString(scanner *bufio.Scanner) error{
         if !match {
         	err := p.Evaluate(linebuffer)
         	if err != nil{
-        		return p.log("Error parsing directive")
+        		return err
         	}
         	linebuffer = ""
         }else{
@@ -86,6 +85,30 @@ func (p *Parser) Evaluate(data string) error{
 	if len(opts) >= 3 && opts[0] == '"' && opts[len(opts)-1] == '"'{
 		opts = strings.Trim(opts, `"`)
 	}
+	validations := map[string]string{
+		"SecAuditEngine": `^(On|Off|RelevantOnly)$`,
+		"SecAuditLog": `^(\|\/|https:\/\/|\/)?.*$`,
+		"SecAuditLogDirMode": `^([0-7]{3,5}|default)$`,
+		"SecAuditLogFileMode": `^([0-7]{3,5}|default)$`,
+		"SecAuditLogParts": `^[A-KZ]{1,12}$`, // Does not validate repetitions
+		"SecAuditLogRelevantStatus": `.*?`,
+		"SecAuditLogStorageDir": `^\/.*?`, // Requires more love
+		"SecAuditLogType": `^(Concurrent|HTTPS)$`,
+		"SecCollectionTimeout": `^[\d]{1,9}$`, // Maybe validate a real int value?
+		"SecConnEngine": `^(On|Off|DetectOnly)$`,
+		"SecContentInjection": `^(On|Off)$`,
+		"SecDefaultAction": `.*?`,
+		"SecHashEngine": `^(On|Off)$`,
+	}
+	for key, regex := range validations{
+		if directive == key {
+			re, _ := regexp.Compile(regex)
+			if !re.MatchString(opts){
+				return p.log("Invalid parameters for directive " + directive)
+			}
+			break
+		}
+	}
 	switch(directive){
 	case "SecAuditEngine":
 		switch opts{
@@ -107,13 +130,48 @@ func (p *Parser) Evaluate(data string) error{
 		break
 	case "SecAuditLogParts":
 		p.waf.AuditLogParts = []int{}
-		data := []rune(opts)
-		for _,c := range data{
-			ascii := int(c) //a = 97 // k = 107
-			if c > 107 || c < 97{
-				return p.log("Invalid Audit Log Part " + string(c))
+		for _, c := range opts{
+			var val int
+			switch c{
+				case 'A':
+					val = engine.AUDIT_LOG_PART_HEADER
+					break
+				case 'B':
+					val = engine.AUDIT_LOG_PART_REQUEST_HEADERS
+					break
+				case 'C':
+					val = engine.AUDIT_LOG_PART_REQUEST_BODY
+					break
+				case 'D':
+					val = engine.AUDIT_LOG_PART_RESERVED_1
+					break
+				case 'E':
+					val = engine.AUDIT_LOG_PART_INT_RESPONSE_BODY
+					break
+				case 'F':
+					val = engine.AUDIT_LOG_PART_FIN_RESPONSE_BODY
+					break
+				case 'G':
+					val = engine.AUDIT_LOG_PART_FIN_RESPONSE_HEADERS
+					break
+				case 'H':
+					val = engine.AUDIT_LOG_PART_RESPONSE_BODY
+					break
+				case 'I':
+					val = engine.AUDIT_LOG_PART_AUDIT_LOG_TRAIL
+					break
+				case 'J':
+					val = engine.AUDIT_LOG_PART_FILES_MULTIPART
+					break
+				case 'K':
+					val = engine.AUDIT_LOG_PART_ALL_MATCHED_RULES
+					break
+				case 'Z':
+					val = engine.AUDIT_LOG_PART_FINAL_BOUNDARY
+					break
 			}
-			p.waf.AuditLogParts = append(p.waf.AuditLogParts, ascii-97)
+			//TODO validate repeated parts
+			p.waf.AuditLogParts = append(p.waf.AuditLogParts, val)
 		}
 		break
 	case "SecAuditLogRelevantStatus":
@@ -133,11 +191,11 @@ func (p *Parser) Evaluate(data string) error{
 			break
 		}
 		break
-		/*
 	case "SecCollectionTimeout":
-		p.waf.CollectionTimeout, _ = strconv.Atoi(opts)
+		//p.waf.CollectionTimeout, _ = strconv.Atoi(opts)
 		break
 	case "SecConnEngine":
+		/*
 		switch opts{
 		case "On":
 			p.waf.ConnEngine = engine.CONN_ENGINE_ON
@@ -192,18 +250,21 @@ func (p *Parser) Evaluate(data string) error{
 		break
 	case "SecPcreMatchLimitRecursion":
 		//TODO PCRE RECURSIONLIMIT is hardcoded inside the binary :( we have to figure out something
-		fmt.Println("SecPcreMatchLimitRecursion TO BE IMPLEMENTED. I'm stil trying to figure it out :(")
+		p.log("SecPcreMatchLimitRecursion is not supported yet.")
 		break
 	case "SecConnReadStateLimit":
 		// p.waf.ConnReadStateLimit, _ = strconv.Atoi(opts)
+		p.log("SecConnReadStateLimit is not supported yet.")
 		break
 	case "SecSensorId":
-		// p.waf.SensorId = opts
+		p.waf.SensorId = opts
 		break
 	case "SecConnWriteStateLimit":
 		// p.waf.ConnWriteStateLimit, _ = strconv.Atoi(opts)
+		p.log("SecConnWriteStateLimit is not supported yet.")
 		break
 	case "SecRemoteRules":
+		log.Warn("SecRemoteRules is experimental, use with caution")
 		spl := strings.SplitN(opts, " ", 2)
 		key := spl[0]
 		url := spl[1]
@@ -220,8 +281,8 @@ func (p *Parser) Evaluate(data string) error{
 			return err
 		}
 		defer res.Body.Close()
-		b := bufio.NewScanner(res.Body)
-		p.FromString(b)
+		b, _ := ioutil.ReadAll(res.Body)
+		p.FromString(string(b))
 		break
 	case "SecRemoteRulesFailAction":
 		p.waf.AbortOnRemoteRulesFail = (opts == "Abort")
@@ -245,10 +306,10 @@ func (p *Parser) Evaluate(data string) error{
 		p.waf.ResponseBodyMimeTypes = []string{}
 		break
 	case "SecRuleInheritance":
-		fmt.Println("SecRuleInheritance TO BE IMPLEMENTED.")
+		p.log("SecRuleInheritance is not supported yet.")
 		break
 	case "SecRulePerfTime":
-		fmt.Println("SecRulePerfTime TO BE IMPLEMENTED.")
+		p.log("SecRulePerfTime is not supported yet.")
 		break
 	case "SecRuleRemoveById":
 		id, _ := strconv.Atoi(opts)
@@ -265,17 +326,17 @@ func (p *Parser) Evaluate(data string) error{
 		}
 		break
 	case "SecRuleScript":
-		fmt.Println("SecRuleScript TO BE IMPLEMENTED, USE ACTION EXEC.")
+		p.log("SecRuleScript is not supported yet.")
 		break
 	case "SecRuleUpdateActionById":
 		//r := p.waf.FindRuleById(0)	
-		fmt.Println("SecRuleUpdateActionById TO BE IMPLEMENTED.")
+		p.log("SecRuleUpdateActionById is not supported yet.")
 		break
 	case "SecRuleUpdateTargetById":
 		spl := strings.SplitN(opts, " ", 2)
 		id, _ := strconv.Atoi(spl[0])
 		p.waf.Rules.FindById(id)
-		fmt.Println("SecRuleUpdateTargetById TO BE IMPLEMENTED.")
+		p.log("SecRuleUpdateTargetById is not supported yet.")
 		break
 	case "SecRuleUpdateTargetByMsg":
 		/*
@@ -284,7 +345,7 @@ func (p *Parser) Evaluate(data string) error{
 			
 		}		
 		*/
-		fmt.Println("SecRuleUpdateTargetByMsg TO BE IMPLEMENTED.")
+		p.log("SecRuleUpdateTargetByMsg is not supported yet.")
 		break
 	case "SecRuleUpdateTargetByTag":
 		/*
@@ -323,30 +384,24 @@ func (p *Parser) Evaluate(data string) error{
 	case "SecRequestBodyAccess":
 		p.waf.RequestBodyAccess = (opts == "On")
 	case "SecRequestBodyLimit":
-		limit, err := strconv.ParseInt(opts, 10, 64)
-		if err != nil{
-			fmt.Println("Invalid SecRequestBodyLimit, setting 0")
-			limit = 0
-		}
+		limit, _ := strconv.ParseInt(opts, 10, 64)
 		p.waf.RequestBodyLimit = limit
 	case "SecResponseBodyAccess":
 		p.waf.ResponseBodyAccess = (opts == "On")
 	case "SecRule":
 		rule, err := p.ParseRule(opts)
 		if err != nil{
+			p.log("Failed to compile rule.")
 			return err
 		}
 		p.waf.Rules.Add(rule)
 	case "SecAction":
-		p.ParseRule("RULE \"@unconditionalMatch\" " + opts)
+		p.ParseRule("\"@unconditionalMatch\" " + opts)
 	case "SecMarker":
 		p.nextSecMark = opts
 	case "SecComponentSignature":
 		p.waf.ComponentSignature = opts
 	case "SecErrorPage":
-		if len(opts) < 2{
-			return p.log("Invalid SecErrorPage value")
-		}
 		if opts == "debug"{
 			p.waf.ErrorPageMethod = engine.ERROR_PAGE_DEBUG
 		}else if opts[0] == '|'{
@@ -424,16 +479,21 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error){
 func (p *Parser) compileRuleVariables(r *engine.Rule, vars string) error{
 	//Splits the values by KEY, KEY:VALUE, &!KEY, KEY:/REGEX/, KEY1|KEY2
 	//GROUP 1 is collection, group 3 is vlue, group 3 can be empty
-	re := pcre.MustCompile(`((?:&|!)?[\w_]+)((?::)([\w-_]+|\/(.*?)(?<!\\)\/))?`, 0)
+	//TODO this is not an elegant way to parse variables but it works and it won't generate workload
+	re := pcre.MustCompile(`(((?:&|!)?XML):?(.*?)(?:\||$))|((?:&|!)?[\w_]+):?([\w-_]+|\/.*?(?<!\\)\/)?`, 0)
 	matcher := re.MatcherString(vars, 0)
 	subject := []byte(vars)	
 	for matcher.Match(subject, 0){
-		vname := matcher.GroupString(1)
-		vvalue := strings.ToLower(matcher.GroupString(3))
+		vname := matcher.GroupString(4)
+		vvalue := strings.ToLower(matcher.GroupString(5))
+		if vname == ""{
+			//This case is only for XML, sorry for the ugly code :(
+			vname = matcher.GroupString(2)
+			vvalue = strings.ToLower(matcher.GroupString(3))
+		}
 		index := matcher.Index()
 		counter := false
 		negation := false
-
 		if vname[0] == '&'{
 			vname = vname[1:]
 			counter = true
@@ -520,7 +580,9 @@ func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error{
 			action := actionsmap[key]
 			err := action.Init(r, value)
 			if err != ""{
-				return p.log(err)
+				p.log(err)
+				// TODO we should return an error later
+				return nil
 			}
 			r.Actions = append(r.Actions, action)
 		}

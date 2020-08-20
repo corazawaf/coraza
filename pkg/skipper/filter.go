@@ -6,6 +6,7 @@ import (
     "io"
     "net/http"
     "regexp"
+    "errors"
     "github.com/zalando/skipper/filters"
     "github.com/zalando/skipper/filters/serve"
     "github.com/jptosso/coraza-waf/pkg/engine"   
@@ -130,7 +131,7 @@ func (f *CorazaFilter) loadRequestBody(r *http.Request) error{
         spl := strings.SplitN(cl[0], ";", 2)
         ctype = spl[0]
     }
-    f.tx.SetReqBodyProcessor("URLENCODED")
+    //f.tx.SetReqBodyProcessor("URLENCODED")
     switch ctype {
     default:
         //url encode
@@ -138,7 +139,7 @@ func (f *CorazaFilter) loadRequestBody(r *http.Request) error{
         if err != nil {
             //TODO ??
             //l.DebugErrorHandler(w, r, nil)
-            return nil
+            return errors.New("Failed to parse POST data")
         }
         tx.SetArgsPost(r.PostForm)
     case "multipart/form-data":

@@ -1,7 +1,0 @@
-swagger:
-  accepts:
-    - systempath
-    - url
-  group: metadata
-  description: |
-    Preloads de swagger file to be used with @apiPath, @apiReqBody or @apiResBody. Swagger file must be json or yaml and valid.

@@ -11,7 +11,8 @@ type Pm struct{
 
 func (o *Pm) Init(data string){
 	o.data = strings.Split(data, " ")
-    
+	// TODO this operator is supposed to support snort data syntax: "@pm A|42|C|44|F"
+	// TODO modsecurity uses mutex to queue ahocorasick, maybe its for a reason...
 }
 
 func (o *Pm) Evaluate(tx *engine.Transaction, value string) bool{
@@ -19,8 +20,6 @@ func (o *Pm) Evaluate(tx *engine.Transaction, value string) bool{
 	    AddStrings(o.data).
 	    Build()
 	matches := trie.MatchString(value)
-
-	//fmt.Printf("Separado en %d para %s con %d matches\n", len(spl), search, len(matches))
 	return len(matches) > 0
 }
 

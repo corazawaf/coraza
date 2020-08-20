@@ -28,5 +28,6 @@ func OperatorsMap() map[string]engine.Operator {
 		"geoLookup": &GeoLookup{},
 		"rbl": &Rbl{},
 		"validateUtf8Encoding": &ValidateUtf8Encoding{},
+		"noMatch": &NoMatch{},
 	}
 }
