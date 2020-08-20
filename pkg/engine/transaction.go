@@ -260,6 +260,14 @@ func (tx *Transaction) SetRequestBody(body string, length int64, mime string) {
     tx.Collections["request_body_length"].AddToKey("", l)
     if mime == "application/xml"{
         tx.Collections["xml"].AddToKey("", body)
+        //AVOID XML vulnerabilities!! LIKE XXE
+        //https://github.com/antchfx/xmlquery
+        //doc, err := xmlquery.Parse(strings.NewReader(s))
+        //tx.Xml = doc
+    }else if mime == "application/json" {
+        // JSON!
+        //doc, err := xmlquery.Parse(strings.NewReader(s))
+        //tx.Json = doc
     }
     /*
     //TODO shall we do this and force the real length?
@@ -406,7 +414,7 @@ func (tx *Transaction) InitTxCollection(){
     
     for _, k := range keys{
         tx.Collections[k] = &utils.LocalCollection{}
-        tx.Collections[k].Init()
+        tx.Collections[k].Init(k)
     }
 
     for i := 0; i <= 10; i++ {
@@ -505,7 +513,10 @@ func (tx *Transaction) MatchRule(rule *Rule, msgs []string, matched []string){
 }
 
 func (tx *Transaction) InitCollection(key string){
-    tx.Collections[key] = &utils.LocalCollection{}
+    col := &utils.LocalCollection{}
+    col.Init(key)
+    tx.Collections[key] = col
+
 }
 
 func (tx *Transaction) ToJSON() ([]byte, error){
@@ -514,7 +525,7 @@ func (tx *Transaction) ToJSON() ([]byte, error){
 
 func (tx *Transaction) SetSingleCollection(key string, value string){
     tx.Collections[key] = &utils.LocalCollection{}
-    tx.Collections[key].Init()
+    tx.Collections[key].Init(key)
     tx.Collections[key].Add("", []string{value})
 }
 
@@ -528,12 +539,23 @@ func (tx *Transaction) GetSingleCollection(key string) string{
 }
 
 func (tx *Transaction) GetField(collection string, key string, exceptions []string) ([]string){
-    col := tx.Collections[collection]
-    key = tx.MacroExpansion(key)
-    if col == nil{
-        return []string{}
+
+    switch collection{
+    case "xml":
+        // TODO, for version 0.1
+        return tx.Collections["request_body"].Data[""]
+    case "json":
+        // TODO, for future versions
+        return tx.Collections["request_body"].Data[""]
+    default:
+        col := tx.Collections[collection]
+        key = tx.MacroExpansion(key)
+        if col == nil{
+            return []string{}
+        }
+        return col.GetWithExceptions(key, exceptions)        
     }
-    return col.GetWithExceptions(key, exceptions)
+
 }
 
 //Returns directory and filename

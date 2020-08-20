@@ -40,6 +40,11 @@ const (
     ERROR_PAGE_INLINE                    = 3
     ERROR_PAGE_DEBUG                     = 4
 
+    REQUEST_BODY_PARSER_DEFAULT          = 0
+    REQUEST_BODY_PARSER_XML              = 1
+    REQUEST_BODY_PARSER_JSON             = 2
+
+
 )
 
 type Waf struct {
@@ -136,6 +141,9 @@ type Waf struct {
     // Contains the connection uri for the persistence engine
     PersistenceUri string
 
+    // Sensor ID tu, must be unique per cluster nodes    
+    SensorId string
+
     // To be used
     /*
     StreamOutBodyInspection bool
@@ -143,7 +151,6 @@ type Waf struct {
     HttpBlKey string
     PcreMatchLimit int
     ConnReadStateLimit int
-    SensorId string
     ConnWriteStateLimit int
     CollectionTimeout int
     ConnEngine int

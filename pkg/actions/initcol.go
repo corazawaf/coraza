@@ -23,7 +23,7 @@ func (a *InitCol) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	pc := &engine.PersistentCollection{}
     pc.New(nil, tx.WafInstance.WebAppId, a.Collection, a.Key, 10000)
     col := &utils.LocalCollection{}
-    col.Init()
+    col.Init(a.Collection)
     col.Data = pc.GetData()
     tx.Collections[a.Collection] = col
     tx.PersistentCollections[a.Collection] = pc

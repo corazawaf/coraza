@@ -13,18 +13,20 @@ import(
 type LocalCollection struct {
 	Data map[string][]string `json:"data"`
 	mux *sync.RWMutex
+	Name string
 }
 
-func NewCollection() *LocalCollection{
+func NewCollection(name string) *LocalCollection{
 	col := &LocalCollection{}
-	col.Init()
+	col.Init(name)
 	return col
 }
 
-func (c *LocalCollection) Init() {
+func (c *LocalCollection) Init(name string) {
 	c.Data = map[string][]string{}
 	c.Data[""] = []string{}
 	c.mux = &sync.RWMutex{}
+	c.Name = name
 }
 
 func (c *LocalCollection) InitCollection(key string) {
@@ -69,7 +71,6 @@ func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []s
 	//we return every value in case there is no key but there is a collection
 	if len(key) == 0{
 		data := []string{}
-		// how does modsecurity solves this?
 		for k := range c.Data{
 			if ArrayContains(exceptions, k){
 				continue
