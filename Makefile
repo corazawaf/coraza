@@ -55,8 +55,8 @@ install:
 		mv eskip /bin/
 		chown -R coraza-waf:root /opt/coraza-waf/log
 		chown -R root:root /etc/coraza-waf
-		chown -R root:root /bin/coraza-waf
-		chown -R root:root /bin/eskip
+		chown root:root /bin/coraza-waf
+		chown root:root /bin/eskip
 		find /opt/coraza-waf -type d -exec chmod 755 {} \;
 		find /etc/coraza-waf -type d -exec chmod 755 {} \;
 		find /etc/coraza-waf -type f -exec chmod 655 {} \;
