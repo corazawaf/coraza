@@ -2,11 +2,13 @@ package actions
 
 import(
 	"strings"
+	"strconv"
 	"github.com/jptosso/coraza-waf/pkg/engine"
+	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
 type Ctl struct {
-	Action string
+	Action int
 	Value string
 	Collection string
 	ColKey string
@@ -15,77 +17,166 @@ type Ctl struct {
 const (
 	CTL_REMOVE_TARGET_BY_ID     	= 0
 	CTL_REMOVE_TARGET_BY_TAG    	= 1
-	CTL_AUDIT_ENGINE 				= 2
-	CTL_AUDIT_LOG_PARTS				= 3
-	CTL_DEBUG_LOG_LEVEL 			= 4
+	CTL_REMOVE_TARGET_BY_MSG		= 2
+	CTL_AUDIT_ENGINE 				= 3
+	CTL_AUDIT_LOG_PARTS				= 4
 	CTL_FORCE_REQUEST_BODY_VAR  	= 5
 	CTL_REQUEST_BODY_ACCESS     	= 6
 	CTL_REQUEST_BODY_LIMIT			= 7
 	CTL_RULE_ENGINE					= 8
 	CTL_RULE_REMOVE_BY_ID			= 9
-	CTL_RULE__REMOVE_TARGET_BY_ID	= 10
-	CTL_HASH_ENGINE					= 11
-	CTL_HASH_ENFORCEMENT			= 12
+	CTL_RULE_REMOVE_BY_MSG			= 10
+	CTL_RULE_REMOVE_BY_TAG			= 11
+	CTL_HASH_ENGINE					= 12
+	CTL_HASH_ENFORCEMENT			= 13
+	CTL_REQUEST_BODY_PROCESSOR		= 14
+	CTL_RESPONSE_BODY_ACCESS		= 15
+	CTL_RESPONSE_BODY_LIMIT			= 16
 
 )
 
 func (a *Ctl) Init(r *engine.Rule, data string) string {
-	a.Action, a.Value, a.Collection, a.ColKey = parseCtl(data)
-	return ""
+	var err string
+	a.Action, a.Value, a.Collection, a.ColKey, err = parseCtl(data)	
+	return err
 }
 
 func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
 	switch a.Action {
-	case "ruleRemoveTargetById":
-	break
-	case "ruleRemoveTargetByTag":
-	break
-	case "auditEngine":
-		
+	case CTL_REMOVE_TARGET_BY_ID:
+		id, _ := strconv.Atoi(a.Value)
+		tx.RemoveRuleTargetById(id, a.Collection, a.ColKey)
+		/*
+		if tx.RemovedTargets[id] == nil{
+			tx.RemovedTargets[id] = map[string][]string{}
+		}
+		if tx.RemovedTargets[id][a.Collection] == nil{
+			tx.RemovedTargets[id][a.Collection] = []string{}
+		}		
+		tx.RemovedTargets[id][a.Collection] = append(tx.RemovedTargets[id][a.Collection], a.ColKey)
+		*/
 		break
-	case "auditLogParts":
-
+	case CTL_REMOVE_TARGET_BY_TAG:
+		rules := tx.WafInstance.Rules.GetRules()
+		for _, r := range rules{
+			if utils.ArrayContains(r.Tags, a.Value){
+				tx.RemoveRuleTargetById(r.Id, a.Collection, a.ColKey)
+			}
+		}
 		break
-	case "debugLogLevel":
-
-	break
-	case "forceRequestBodyVariable":
-
+	case CTL_REMOVE_TARGET_BY_MSG:
+		rules := tx.WafInstance.Rules.GetRules()
+		for _, r := range rules{
+			if r.Msg == a.Value{
+				tx.RemoveRuleTargetById(r.Id, a.Collection, a.ColKey)
+			}
+		}
 		break
-	case "requestBodyAccess":
-
+	case CTL_AUDIT_ENGINE:
+		switch a.Value{
+		case "On":
+			tx.AuditEngine = engine.AUDIT_LOG_ENABLED
+			break
+		case "Off":
+			tx.AuditEngine = engine.AUDIT_LOG_DISABLED
+			break
+		case "RelevantOnly":
+			tx.AuditEngine = engine.AUDIT_LOG_RELEVANT
+			break
+		}
 		break
-	case "requestBodyLimit":
-
-	break
-	case "requestBodyProcessor":
-
+	case CTL_AUDIT_LOG_PARTS:
+		tx.AuditLogParts = []int{}
+		for _, c := range a.Value{
+			var val int
+			switch c{
+				case 'A':
+					val = engine.AUDIT_LOG_PART_HEADER
+					break
+				case 'B':
+					val = engine.AUDIT_LOG_PART_REQUEST_HEADERS
+					break
+				case 'C':
+					val = engine.AUDIT_LOG_PART_REQUEST_BODY
+					break
+				case 'D':
+					val = engine.AUDIT_LOG_PART_RESERVED_1
+					break
+				case 'E':
+					val = engine.AUDIT_LOG_PART_INT_RESPONSE_BODY
+					break
+				case 'F':
+					val = engine.AUDIT_LOG_PART_FIN_RESPONSE_BODY
+					break
+				case 'G':
+					val = engine.AUDIT_LOG_PART_FIN_RESPONSE_HEADERS
+					break
+				case 'H':
+					val = engine.AUDIT_LOG_PART_RESPONSE_BODY
+					break
+				case 'I':
+					val = engine.AUDIT_LOG_PART_AUDIT_LOG_TRAIL
+					break
+				case 'J':
+					val = engine.AUDIT_LOG_PART_FILES_MULTIPART
+					break
+				case 'K':
+					val = engine.AUDIT_LOG_PART_ALL_MATCHED_RULES
+					break
+				case 'Z':
+					val = engine.AUDIT_LOG_PART_FINAL_BOUNDARY
+					break
+			}
+			//TODO validate repeated parts
+			tx.AuditLogParts = append(tx.AuditLogParts, val)
+		}
 		break
-	case "responseBodyAccess":
-
-	break
-	case "responseBodyLimit":
-
-	break
-	case "ruleEngine":
-
+	case CTL_FORCE_REQUEST_BODY_VAR:
+		if a.Value == "on"{
+			tx.ForceRequestBodyVariable = true
+		}else{
+			tx.ForceRequestBodyVariable = false
+		}
 		break
-	case "ruleRemoveById":
-
-	break
-	case "ruleRemoveByMsg":
-
-	break
-	case "ruleRemoveTargetByMsg":
-
-	break
-	case "hashEngine":
-
-	break
-	case "hashEnforcement":
-
-	break
-	default:
+	case CTL_REQUEST_BODY_ACCESS:
+		tx.RequestBodyAccess = a.Value == "on"
+		break
+	case CTL_REQUEST_BODY_LIMIT:
+		limit, err := strconv.ParseInt(a.Value, 10, 64)
+		if err != nil{
+			return //error
+		}
+		tx.RequestBodyLimit = limit
+		break
+	case CTL_RULE_ENGINE:
+		tx.RuleEngine = a.Value == "on"
+		break
+	case CTL_RULE_REMOVE_BY_ID:
+		id, _ := strconv.Atoi(a.Value)
+		tx.RuleRemoveById = append(tx.RuleRemoveById, id)
+		break
+	case CTL_RULE_REMOVE_BY_MSG:
+		rules := tx.WafInstance.Rules.GetRules()
+		for _, r := range rules{	
+			if r.Msg == a.Value{
+				tx.RuleRemoveById = append(tx.RuleRemoveById, r.Id)
+			}			
+		}
+		break
+	case CTL_RULE_REMOVE_BY_TAG:
+		rules := tx.WafInstance.Rules.GetRules()
+		for _, r := range rules{	
+			if utils.ArrayContains(r.Tags, a.Value){
+				tx.RuleRemoveById = append(tx.RuleRemoveById, r.Id)
+			}			
+		}
+		break				
+	case CTL_HASH_ENGINE:
+		// Not supported yet
+		break
+	case CTL_HASH_ENFORCEMENT:
+		// Not supported yet
+		break
 	}
 	
 }
@@ -95,7 +186,7 @@ func (a *Ctl) GetType() int{
 }
 
 
-func parseCtl(data string) (string, string, string, string){
+func parseCtl(data string) (int, string, string, string, string){
 	spl1 := strings.SplitN(data, "=", 2)
 	spl2 := strings.SplitN(spl1[1], ";", 2)
 	action := spl1[0]
@@ -111,5 +202,63 @@ func parseCtl(data string) (string, string, string, string){
 			colkey = spl3[0]
 		}
 	}
-	return action, value, strings.TrimSpace(strings.ToLower(collection)), strings.TrimSpace(strings.ToLower(colkey))
+	collection = strings.ToLower(collection)
+	colkey = strings.ToLower(colkey)
+	act := 0
+	switch action{
+	case "auditEngine":
+		act = CTL_AUDIT_ENGINE
+		break
+	case "auditLogParts":
+		act = CTL_AUDIT_LOG_PARTS
+		break
+	case "forceRequestBodyVariable":
+		act = CTL_FORCE_REQUEST_BODY_VAR
+		break
+	case "requestBodyAccess":
+		act = CTL_REQUEST_BODY_ACCESS
+		break
+	case "requestBodyLimit":
+		act = CTL_REQUEST_BODY_LIMIT
+		break
+	case "requestBodyProcessor":
+		act = CTL_REQUEST_BODY_PROCESSOR
+		break
+	case "responseBodyAccess":
+		act = CTL_RESPONSE_BODY_ACCESS
+		break
+	case "responseBodyLimit":
+		act = CTL_RESPONSE_BODY_LIMIT
+		break
+	case "ruleEngine":
+		act = CTL_RULE_ENGINE
+		break
+	case "ruleRemoveById":
+		act = CTL_RULE_REMOVE_BY_ID
+		break
+	case "ruleRemoveByMsg":
+		act = CTL_RULE_REMOVE_BY_MSG
+		break
+	case "ruleRemoveByTag":
+		act = CTL_RULE_REMOVE_BY_TAG
+		break
+	case "ruleRemoveTargetById":
+		act = CTL_REMOVE_TARGET_BY_ID
+		break
+	case "ruleRemoveTargetByMsg":
+		act = CTL_REMOVE_TARGET_BY_MSG
+		break
+	case "ruleRemoveTargetByTag":
+		act = CTL_REMOVE_TARGET_BY_TAG
+		break
+	case "hashEngine":
+		act = CTL_HASH_ENGINE
+		break
+	case "hashEnforcement":
+		act = CTL_HASH_ENFORCEMENT
+		break
+	default:
+		return 0, "", "", "", "Invalid ctl action"
+	}
+	return act, value, strings.TrimSpace(collection), strings.TrimSpace(colkey), ""
 }

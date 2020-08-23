@@ -63,20 +63,6 @@ GO111MODULE=on go build -buildmode=plugin -o coraza.so cmd/skipper/main.go
 skipper -filter-plugin coraza
 ```
 
-## Build debian/centos 
-
-Install debian dpkg build tools (dpkg) and run
-
-```
-./scripts/debian/package.sh
-```
-
-If you want to build a CentOS package, you must transform the debian .deb file to rpm using alien:
-```
-$ alien -r coraza-waf0.1.0-alpha1_amd64.deb
-coraza-waf0.1.0-alpha1.amd64.rpm generated
-```
-
 ## Test
 
 Standard Golang tests:
@@ -104,25 +90,23 @@ go run cmd/testsuite/main.go -path ../owasp-modsecurity-crs -rules ../owasp-mods
 
 ## Run with Docker
 
-You can import the image and use volumes to replace the /etc/coraza-waf directory with your own settings.
-
 ```
-# Run with default configurations
-$ docker run --name waf -d docker.pkg.github.com/jptosso/coraza-waf/waf -p 9090:9090
-
-# Run with volumes
-$ docker run --name waf -d docker.pkg.github.com/jptosso/coraza-waf/waf -p 9090:9090 \
-	-v custom-settings:/etc/coraza-waf \
-	-v logs:/opt/coraza-waf/log
-
+$ docker run --name my-waf -v /some/config/routes.eskip:/etc/coraza-waf/routes.eskip:ro -d -p 9090:9090 jptosso/coraza-waf
 ```
 
-You can also create your own image like this:
+Alternatively, a simple Dockerfile can be used to generate a new image that includes the necessary content (which is a much cleaner solution than the bind mount above):
+
 ```
-FROM docker.pkg.github.com/jptosso/coraza-waf/waf
-COPY routes.eskip /etc/coraza-waf/routes.eskip
-COPY rules.conf /etc/coraza-waf/profiles/default/rules.conf
+FROM jptosso/coraza-waf
+COPY static-settings-directory /etc/coraza-waf
 ```
+
+Place this file in the same directory as your directory of content ("static-settings-directory"), ``run docker build -t my-waf .``, then start your container:
+
+```
+$ docker run --name my-waf -d -p 9090:9090 some-waf-server
+```
+Then you can hit http://localhost:9090 or http://host-ip:9090 in your browser.
 
 ## Using Reverse Proxy WAF
 

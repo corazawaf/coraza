@@ -55,11 +55,10 @@ type Transaction struct {
     // Copies from the WafInstance
     AuditEngine int
     AuditLogParts []int
-    DebugLogLevel int
     ForceRequestBodyVariable bool
     RequestBodyAccess bool
     RequestBodyLimit int64
-    RequestBodyProcessor bool
+    RequestBodyProcessor int
     ResponseBodyAccess bool
     ResponseBodyLimit int64
     RuleEngine bool
@@ -69,10 +68,9 @@ type Transaction struct {
 
     // Rules with this id are going to be skipped
     RuleRemoveById []int
-    // Rules with this messages are going to be skipped
-    RuleRemoveByMsg []string
-    // Rules with this tags are going to be skipped
-    RuleRemoveByTag []string
+
+    // Used by ctl to remove rule targets by id during the transaction
+    RuleRemoveTargetById map[int][]*Collection
 
     // Will skip this number of rules, this value will be decreased on each skip
     Skip int `json:"skip"`
@@ -457,6 +455,8 @@ func (tx *Transaction) Init(waf *Waf) error{
     tx.WafInstance = waf
     tx.initVars()
     tx.Mux = &sync.RWMutex{}
+    tx.RuleRemoveTargetById = map[int][]*Collection{}
+    tx.RuleRemoveById = []int{}
     return nil
 }
 
@@ -468,8 +468,14 @@ func (tx *Transaction) ExecutePhase(phase int) error{
 
     for _, r := range tx.WafInstance.Rules.GetRules() {
         //we always execute secmarkers
-        if r.Phase != phase{
+        if r.Phase != phase {
             continue
+        }
+        for _, eid := range tx.RuleRemoveById{
+            if r.Id == eid {
+                //Exception
+                continue
+            }
         }
         if tx.SkipAfter != ""{
             if r.SecMark != tx.SkipAfter{
@@ -654,5 +660,16 @@ func (tx *Transaction) SavePersistentData() {
     for col, pc := range tx.PersistentCollections{
         pc.SetData(tx.Collections[col].Data)
         pc.Save()
+    }
+}
+
+func (tx *Transaction) RemoveRuleTargetById(id int, col string, key string){
+    c := &Collection{col, key}
+    if tx.RuleRemoveTargetById[id] == nil{
+        tx.RuleRemoveTargetById[id] = []*Collection{
+            c,
+        }
+    }else{
+        tx.RuleRemoveTargetById[id] = append(tx.RuleRemoveTargetById[id], c)
     }
 }

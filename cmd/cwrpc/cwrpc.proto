@@ -1,0 +1,39 @@
+//EXPERIMENTAL for grpc
+
+service Waf {
+	rpc Create (NewWafRequest) returns (WafInstanceStat) {}
+	rpc Destroy (WafInstance) returns (WafInstanceStat) {}
+}
+
+service Transaction {
+	rpc CreateAndUpdate (TransactionUpdate) returns (TransactionStatus) {}
+	rpc Update (TransactionUpdate) returns (TransactionStatus) {}
+	rpc Get (Transaction) returns (TransactionStatus) {}
+}
+
+message Transaction {
+	string id = "";
+}
+
+message TransactionUpdate {
+	map<string, map<string, []string>> Collection = N;
+	int phase = 0;
+}
+
+message TransactionStatus {
+	string id = "";
+	bool disrupted = false;
+	int lastphase = 0;
+}
+
+message WafInstance {
+	string file = "/etc/coraza-waf/profiles/default/rules.conf";
+	string id = "noid";
+}
+
+message WafInstanceStat {
+	string file = "/etc/coraza-waf/profiles/default/rules.conf";
+	string id = "noid";
+	int rules = 0;
+	int status = 0;
+}
