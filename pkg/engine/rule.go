@@ -106,22 +106,28 @@ func (r *Rule) Init() {
 
 func (r *Rule) Evaluate(tx *Transaction) []string{
 	matchedValues := []string{}
-
+	for _, nid := range tx.RuleRemoveById{
+		if nid == r.Id {
+			return matchedValues
+		}
+	}
 	ecol := tx.RuleRemoveTargetById[r.Id]
+	
 	for _, v := range r.Variables {
 		values := []string{}
 		if ecol != nil {
+			ignore := false
 			for _, c := range ecol{
 				if c.Name == v.Collection && c.Key == v.Key {
-					// We skip this because of ctl:ruleremovetarget
-					continue
+					ignore = true
+					break
 				}
 			}
-		}
-
-
+			if ignore {
+				continue
+			}
+		}	
 		//TODO IMPORTANT: The match notification must be switched, we can't log empty keys!!
-
 		values = tx.GetField(v.Collection, v.Key, v.Exceptions)
 
 		if v.Count{	

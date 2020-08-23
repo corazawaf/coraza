@@ -47,6 +47,7 @@ type Transaction struct {
 
     //Response data to be sent
     Status int `json:"status"`
+
     Logdata []string `json:"logdata"`
 
     // Rules will be skipped after a rule with this SecMarker is found
@@ -65,6 +66,7 @@ type Transaction struct {
     HashEngine bool
     HashEnforcement bool
     AuditLogType int
+    LastPhase int
 
     // Rules with this id are going to be skipped
     RuleRemoveById []int
@@ -80,6 +82,9 @@ type Transaction struct {
 
     // Contains the ID of the rule that disrupted the transaction
     DisruptiveRuleId int `json:"disruptive_rule_id"`
+
+    // Contains duration in useconds per phase
+    StopWatches map[int]int
 
     // Used for paralelism
     Mux *sync.RWMutex
@@ -216,7 +221,7 @@ func (tx *Transaction) SetFullRequest() {
             headers += fmt.Sprintf("%s: %s\n", k, v2)
         }
     }
-    full_request := fmt.Sprintf("%s\n%s\n%s", 
+    full_request := fmt.Sprintf("%s\n%s\n\n%s\n", 
         tx.Collections["request_line"].GetFirstString(),
         headers,
         tx.Collections["request_body"].GetFirstString())
@@ -250,6 +255,7 @@ func (tx *Transaction) SetRemoteUser(user string) {
 func (tx *Transaction) SetRequestBody(body string, length int64, mime string) {
     tx.Mux.Lock()
     defer tx.Mux.Unlock()
+    //TODO requires more validations. chunks, etc
     if !tx.RequestBodyAccess || (tx.RequestBodyLimit > 0 && length > tx.RequestBodyLimit){
         return
     }
@@ -373,6 +379,7 @@ func (tx *Transaction) SetRequestLine(method string, protocol string, requestUri
     tx.Mux.Lock()
     defer tx.Mux.Unlock()
     tx.Collections["request_method"].AddToKey("", method)
+    tx.Collections["request_uri"].AddToKey("", requestUri)
     tx.Collections["request_protocol"].AddToKey("", protocol)
     tx.Collections["request_line"].AddToKey("", fmt.Sprintf("%s %s %s", method, requestUri, protocol))
 
@@ -437,7 +444,7 @@ func (tx *Transaction) initVars() {
     tx.InitTxCollection()
 
     tx.SetSingleCollection("id", txid)
-    tx.SetSingleCollection("timestamp", strconv.FormatInt(time.Now().Unix(), 10))
+    tx.SetSingleCollection("timestamp", strconv.FormatInt(time.Now().UnixNano(), 10))
     tx.Disrupted = false
     tx.AuditEngine = tx.WafInstance.AuditEngine
     tx.AuditLogParts = tx.WafInstance.AuditLogParts
@@ -457,25 +464,18 @@ func (tx *Transaction) Init(waf *Waf) error{
     tx.Mux = &sync.RWMutex{}
     tx.RuleRemoveTargetById = map[int][]*Collection{}
     tx.RuleRemoveById = []int{}
+    tx.StopWatches = map[int]int{}
     return nil
 }
 
 func (tx *Transaction) ExecutePhase(phase int) error{
-    if phase < 1 || phase > 5 {
-        return fmt.Errorf("Phase must be between 1 and 5, %d used", phase)
-    }
+    ts := time.Now().UnixNano()
     usedRules := 0
-
+    tx.LastPhase = phase
     for _, r := range tx.WafInstance.Rules.GetRules() {
         //we always execute secmarkers
         if r.Phase != phase {
             continue
-        }
-        for _, eid := range tx.RuleRemoveById{
-            if r.Id == eid {
-                //Exception
-                continue
-            }
         }
         if tx.SkipAfter != ""{
             if r.SecMark != tx.SkipAfter{
@@ -495,6 +495,7 @@ func (tx *Transaction) ExecutePhase(phase int) error{
         tx.Capture = false //we reset the capture flag on every run
         usedRules++
     }
+    tx.StopWatches[phase] = int(time.Now().UnixNano() - ts)
     if tx.Disrupted || phase == 5{
         if phase != 5{
             tx.ExecutePhase(5)
@@ -544,6 +545,24 @@ func (tx *Transaction) GetSingleCollection(key string) string{
     return col.GetFirstString()
 }
 
+func (tx *Transaction) GetTimestamp() string{
+    t := time.Unix(0, tx.Collections["timestamp"].GetFirstInt64())
+    ts := t.Format("02/Jan/2006:15:04:20 -0700")    
+    return ts
+}
+
+func (tx *Transaction) GetStopWatch() string {
+    ts := tx.Collections["timestamp"].GetFirstInt64()
+    sum := 0
+    for _, r := range tx.StopWatches{
+        sum += r
+    }
+    diff := time.Now().UnixNano()-ts
+    sw := fmt.Sprintf("%d %d; combined=%d, p1=%d, p2=%d, p3=%d, p4=%d, p5=%d",
+        ts, diff, sum, tx.StopWatches[1], tx.StopWatches[2], tx.StopWatches[3], tx.StopWatches[4], tx.StopWatches[5])
+    return sw
+}
+
 func (tx *Transaction) GetField(collection string, key string, exceptions []string) ([]string){
 
     switch collection{
@@ -566,13 +585,13 @@ func (tx *Transaction) GetField(collection string, key string, exceptions []stri
 
 //Returns directory and filename
 func (tx *Transaction) GetAuditPath() (string, string){
-    t := time.Unix(tx.Collections["timestamp"].GetFirstInt64(), 0)
+    t := time.Unix(0, tx.Collections["timestamp"].GetFirstInt64())
 
     // append the two directories
-    p2 := fmt.Sprintf("/%s/%s/", t.Format("20060106"), t.Format("20060106-1504"))
+    p2 := fmt.Sprintf("/%s/%s/", t.Format("20060102"), t.Format("20060102-1504"))
     logdir:= path.Join(tx.WafInstance.AuditLogStorageDir, p2)
     // Append the filename
-    filename := fmt.Sprintf("/%s-%s", t.Format("20060106-150405"), tx.Id)
+    filename := fmt.Sprintf("/%s-%s", t.Format("20060102-150405"), tx.Id)
     return logdir, filename
 }
 
@@ -596,7 +615,7 @@ func (tx *Transaction) ToAuditJson() []byte{
 
 func (tx *Transaction) ToAuditLog() *AuditLog{
     al := &AuditLog{}
-    al.Init(tx, tx.AuditLogParts)
+    al.Init(tx)
     return al
 }
 

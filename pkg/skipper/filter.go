@@ -102,8 +102,6 @@ func (f *CorazaFilter) Request(ctx filters.FilterContext) {
 }
 
 func (f *CorazaFilter) Response(ctx filters.FilterContext) {
-    //f.mux.Lock()
-    //defer f.mux.Unlock()    
     if f.tx.Disrupted{
         //Skip response phase
         f.ErrorPage(ctx)

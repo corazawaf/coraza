@@ -1,0 +1,25 @@
+---
+  meta:
+    author: jptosso
+    description: None
+    enabled: true
+    name: ctl.yaml
+  tests:
+  -
+    test_title: ctl-501
+    stages:
+    -
+      stage:
+        input:
+          uri: /foo.php?bar=blah&ooo=123&bbb=3
+        output:
+          no_log_contains: id "501"
+  -
+    test_title: ctl-503
+    stages:
+    -
+      stage:
+        input:
+          uri: /foo.php?bar=blah&ooo=123&bbb=3
+        output:
+          no_log_contains: id "503"          

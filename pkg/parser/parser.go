@@ -134,40 +134,40 @@ func (p *Parser) Evaluate(data string) error{
 			var val int
 			switch c{
 				case 'A':
-					val = engine.AUDIT_LOG_PART_HEADER
+					val = engine.AUDIT_LOG_PART_A
 					break
 				case 'B':
-					val = engine.AUDIT_LOG_PART_REQUEST_HEADERS
+					val = engine.AUDIT_LOG_PART_B
 					break
 				case 'C':
-					val = engine.AUDIT_LOG_PART_REQUEST_BODY
+					val = engine.AUDIT_LOG_PART_C
 					break
 				case 'D':
-					val = engine.AUDIT_LOG_PART_RESERVED_1
+					val = engine.AUDIT_LOG_PART_D
 					break
 				case 'E':
-					val = engine.AUDIT_LOG_PART_INT_RESPONSE_BODY
+					val = engine.AUDIT_LOG_PART_E
 					break
 				case 'F':
-					val = engine.AUDIT_LOG_PART_FIN_RESPONSE_BODY
+					val = engine.AUDIT_LOG_PART_F
 					break
 				case 'G':
-					val = engine.AUDIT_LOG_PART_FIN_RESPONSE_HEADERS
+					val = engine.AUDIT_LOG_PART_G
 					break
 				case 'H':
-					val = engine.AUDIT_LOG_PART_RESPONSE_BODY
+					val = engine.AUDIT_LOG_PART_H
 					break
 				case 'I':
-					val = engine.AUDIT_LOG_PART_AUDIT_LOG_TRAIL
+					val = engine.AUDIT_LOG_PART_I
 					break
 				case 'J':
-					val = engine.AUDIT_LOG_PART_FILES_MULTIPART
+					val = engine.AUDIT_LOG_PART_J
 					break
 				case 'K':
-					val = engine.AUDIT_LOG_PART_ALL_MATCHED_RULES
+					val = engine.AUDIT_LOG_PART_K
 					break
 				case 'Z':
-					val = engine.AUDIT_LOG_PART_FINAL_BOUNDARY
+					val = engine.AUDIT_LOG_PART_Z
 					break
 			}
 			//TODO validate repeated parts
