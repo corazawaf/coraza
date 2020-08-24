@@ -2,6 +2,7 @@ package lua
 
 import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
+	"github.com/jptosso/coraza-waf/pkg/utils"
 	"github.com/yuin/gopher-lua"
 	"context"
 	"time"
@@ -55,16 +56,16 @@ var luaExports = map[string]lua.LGFunction{
     "setfirstvar": luaTxSetFieldSingle,
 
     //Next to implement
-    "getfirstvar": luaTxGetField,
-    "redisset": luaWafVersion,
-    "redisget": luaWafVersion,
-    "rediscmd": luaWafVersion,
-    "log": luaWafVersion,
-    "transform": luaWafVersion,
-    "timestamp": luaWafVersion,
-    "servertime": luaWafVersion,
-    "xpath": luaWafVersion,
-    "http": luaWafVersion,
+    //"getfirstvar": luaTxGetField,
+    //"redisset": luaWafVersion,
+    //"redisget": luaWafVersion,
+    //"rediscmd": luaWafVersion,
+    //"log": luaWafVersion,
+    //"transform": luaWafVersion,
+    //"timestamp": luaWafVersion,
+    //"servertime": luaWafVersion,
+    //"xpath": luaWafVersion,
+    //"http": luaWafVersion,
 }
 
 func luaWafVersion(L *lua.LState) int {
@@ -83,7 +84,7 @@ func luaTxGetField(L *lua.LState) int {
 	data := t.Tx.GetField(col, key, []string{})
 	table := L.NewTable()
 	for _, r := range data{
-		table.Append(lua.LString(r))
+		table.Append(lua.LString(r.Value))
 	}
 	L.Push(table)
     return 1
@@ -94,11 +95,15 @@ func luaTxSetField(L *lua.LState) int {
 	if !ok {
 	    return 0
 	}	
-	//allowed := []string{"status"}
+	blacklist := []string{"id"}
 	col := L.CheckString(1)
 	key := L.CheckString(2)
 	newval := L.CheckTable(3)
 	data := []string{}
+	if utils.ArrayContains(blacklist, col){
+		// cannot update this field
+		return 0
+	}	
 	newval.ForEach(func (key lua.LValue, value lua.LValue){
 		//TODO is it sorted?
 		data = append(data, value.String())
@@ -112,9 +117,14 @@ func luaTxSetFieldSingle(L *lua.LState) int {
 	if !ok {
 	    return 0
 	}	
-	//allowed := []string{"status"}
+	blacklist := []string{"id"}
 	col := L.CheckString(1)
 	newval := L.CheckString(2)
+
+	if utils.ArrayContains(blacklist, col){
+		// cannot update this field
+		return 0
+	}
 	waf.Tx.Collections[col].Data[""] = []string{newval}
     return 0
 }

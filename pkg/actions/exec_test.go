@@ -20,9 +20,14 @@ func TestExec(t *testing.T){
 		t.Error("Failed to load lua file")
 	}
 	exec.Evaluate(r, tx)
-	//TODO we must blacklist the id variable
+	
 	id := tx.GetSingleCollection("id")
-	if id != "test"{
-		t.Error("Failed to update transaction through exec LUA, got", id)
+	if id == "test"{
+		t.Error("Failed to update transaction through exec LUA, shouldn't update ID")
 	}
+
+	body := tx.GetSingleCollection("response_body")
+	if body != "test"{
+		t.Error("Failed to update transaction through exec LUA, got", body)
+	}	
 }

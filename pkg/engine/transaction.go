@@ -17,14 +17,22 @@ import (
     "time"
     "path"
     "encoding/json"
+    "github.com/antchfx/xmlquery"
+    log"github.com/sirupsen/logrus"
 )
 
 type MatchedRule struct {
 	Id int
 	DisruptiveAction int
 	Messages []string
-	MatchedData []string
+	MatchedData []*MatchData
     Rule *Rule
+}
+
+type MatchData struct {
+    Collection string
+    Key string
+    Value string
 }
 
 type Transaction struct {
@@ -41,7 +49,7 @@ type Transaction struct {
     Disrupted bool `json:"disrupted"`
 
     // Contains all collections, including persistent
-    Collections map[string]*utils.LocalCollection
+    Collections map[string]*LocalCollection
     //This map is used to store persistent collections saves, useful to save them after transaction is finished
     PersistentCollections map[string]*PersistentCollection
 
@@ -55,7 +63,7 @@ type Transaction struct {
 
     // Copies from the WafInstance
     AuditEngine int
-    AuditLogParts []int
+    AuditLogParts []rune
     ForceRequestBodyVariable bool
     RequestBodyAccess bool
     RequestBodyLimit int64
@@ -91,6 +99,8 @@ type Transaction struct {
 
     // Contains de *engine.Waf instance for the current transaction
     WafInstance *Waf
+
+    XmlDoc *xmlquery.Node
 }
 
 func (tx *Transaction) MacroExpansion(data string) string{
@@ -263,11 +273,12 @@ func (tx *Transaction) SetRequestBody(body string, length int64, mime string) {
     tx.Collections["request_body"].AddToKey("", body)
     tx.Collections["request_body_length"].AddToKey("", l)
     if mime == "application/xml"{
-        tx.Collections["xml"].AddToKey("", body)
-        //AVOID XML vulnerabilities!! LIKE XXE
-        //https://github.com/antchfx/xmlquery
-        //doc, err := xmlquery.Parse(strings.NewReader(s))
-        //tx.Xml = doc
+        var err error
+        tx.XmlDoc, err = xmlquery.Parse(strings.NewReader(body))
+        if err != nil {
+            log.Error("Cannot parse XML body for request")
+        }        
+        tx.Collections["request_body"].Data[""] = []string{}
     }else if mime == "application/json" {
         // JSON!
         //doc, err := xmlquery.Parse(strings.NewReader(s))
@@ -415,10 +426,10 @@ func (tx *Transaction) InitTxCollection(){
                       "request_filename", "request_headers", "request_headers_names", "request_method", "request_protocol", "request_filename", "full_request",
                       "request_uri", "request_line", "response_body", "response_content_length", "response_content_type", "request_cookies", "request_uri_raw",
                       "response_headers", "response_headers_names", "response_protocol", "response_status", "appid", "id", "timestamp", "files_names", "files",
-                      "files_combined_size", "reqbody_processor", "request_body_length"}
+                      "files_combined_size", "reqbody_processor", "request_body_length", "xml", "matched_vars"}
     
     for _, k := range keys{
-        tx.Collections[k] = &utils.LocalCollection{}
+        tx.Collections[k] = &LocalCollection{}
         tx.Collections[k].Init(k)
     }
 
@@ -438,7 +449,7 @@ func (tx *Transaction) ResetCapture(){
 }
 
 func (tx *Transaction) initVars() {
-    tx.Collections = map[string]*utils.LocalCollection{}
+    tx.Collections = map[string]*LocalCollection{}
     txid := utils.RandomString(19)
     tx.Id = txid
     tx.InitTxCollection()
@@ -477,6 +488,7 @@ func (tx *Transaction) ExecutePhase(phase int) error{
         if r.Phase != phase {
             continue
         }
+
         if tx.SkipAfter != ""{
             if r.SecMark != tx.SkipAfter{
                 continue
@@ -507,20 +519,24 @@ func (tx *Transaction) ExecutePhase(phase int) error{
     return nil
 }
 
-func (tx *Transaction) MatchRule(rule *Rule, msgs []string, matched []string){
+func (tx *Transaction) MatchRule(rule *Rule, msgs []string, match []*MatchData){
     mr := &MatchedRule{
         Id: rule.Id,
-        DisruptiveAction: rule.DisruptiveAction,
+        DisruptiveAction: 0,
         Messages: msgs,
-        MatchedData: matched,
+        MatchedData: match,
         Rule: rule,
     }
     tx.MatchedRules = append(tx.MatchedRules, mr)
-
+    mv := tx.Collections["matched_vars"].Data[""]
+    for _, m := range match{
+        mv = append(mv, m.Value)
+    }
+    tx.Collections["matched_vars"].Data[""] = mv
 }
 
 func (tx *Transaction) InitCollection(key string){
-    col := &utils.LocalCollection{}
+    col := &LocalCollection{}
     col.Init(key)
     tx.Collections[key] = col
 
@@ -531,7 +547,7 @@ func (tx *Transaction) ToJSON() ([]byte, error){
 }
 
 func (tx *Transaction) SetSingleCollection(key string, value string){
-    tx.Collections[key] = &utils.LocalCollection{}
+    tx.Collections[key] = &LocalCollection{}
     tx.Collections[key].Init(key)
     tx.Collections[key].Add("", []string{value})
 }
@@ -563,20 +579,33 @@ func (tx *Transaction) GetStopWatch() string {
     return sw
 }
 
-func (tx *Transaction) GetField(collection string, key string, exceptions []string) ([]string){
-
+func (tx *Transaction) GetField(collection string, key string, exceptions []string) ([]*MatchData){
     switch collection{
     case "xml":
-        // TODO, for version 0.1
-        return tx.Collections["request_body"].Data[""]
+        if tx.XmlDoc == nil{
+            return []*MatchData{}
+        }
+        data, err := xmlquery.QueryAll(tx.XmlDoc, key)
+        if err != nil{
+            log.Error("Invalid xpath expression " + key)
+            return []*MatchData{}
+        }
+        res := []*MatchData{}
+        for _, d := range data {
+            res = append(res, &MatchData{
+                Collection: "XML",
+                Value: d.InnerText(),
+            })
+        }
+        return res
     case "json":
         // TODO, for future versions
-        return tx.Collections["request_body"].Data[""]
+        return []*MatchData{}
     default:
         col := tx.Collections[collection]
         key = tx.MacroExpansion(key)
         if col == nil{
-            return []string{}
+            return []*MatchData{}
         }
         return col.GetWithExceptions(key, exceptions)        
     }
@@ -631,6 +660,7 @@ func (tx *Transaction) GetErrorPage() string{
         buff += "<h1>Coraza Security Error - Debug Mode</h1>"
         buff += "<h3>Rules Triggered</h3>"
         buff += "<table class='table table-striped'><thead><tr><th>ID</th><th>Action</th><th>Msg</th><th>Match</th><th>Raw Rule</th></tr></thead><tbody>"
+        /*
         for _, mr := range tx.MatchedRules{
             match := strings.Join(mr.MatchedData, "<br>")
             rule := mr.Rule.Raw
@@ -638,7 +668,7 @@ func (tx *Transaction) GetErrorPage() string{
                 rule += "<br><strong>CHAIN:</strong> " + child.Raw
             }
             buff += fmt.Sprintf("<tr><td>%d</td><td>%d</td><td></td><td>%s</td><td>%s</td></tr>", mr.Id, mr.DisruptiveAction, match, rule)
-        }
+        }*/
         buff += "</tbody></table>"
 
         buff += "<h3>Transaction Collections</h3>"

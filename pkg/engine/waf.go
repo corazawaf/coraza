@@ -21,19 +21,6 @@ const (
     AUDIT_LOG_DISABLED                   = 1
     AUDIT_LOG_RELEVANT                   = 2
 
-    AUDIT_LOG_PART_A                     = 0 // nothing
-    AUDIT_LOG_PART_B                     = 1 //request headers
-    AUDIT_LOG_PART_C                     = 2 //request body
-    AUDIT_LOG_PART_D                     = 3 //reserved
-    AUDIT_LOG_PART_E                     = 4 //reserved
-    AUDIT_LOG_PART_F                     = 5 // response headers
-    AUDIT_LOG_PART_G                     = 6 // response body
-    AUDIT_LOG_PART_H                     = 7 // audit log trailer
-    AUDIT_LOG_PART_I                     = 8 // replace C with smaller description
-    AUDIT_LOG_PART_J                     = 9 // file uploads
-    AUDIT_LOG_PART_K                     = 10 // full list of rules
-    AUDIT_LOG_PART_Z                     = 11 // nothing
-
     ERROR_PAGE_DEFAULT                   = 0
     ERROR_PAGE_SCRIPT                    = 1
     ERROR_PAGE_FILE                      = 2
@@ -67,7 +54,7 @@ type Waf struct {
     AuditLogStorageDir string
 
     // Array of logging parts to be used
-    AuditLogParts []int
+    AuditLogParts []rune
 
     // Audit engine mode
     AuditLogType int

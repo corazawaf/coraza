@@ -1,4 +1,4 @@
-package utils
+package engine
 
 import(
 	pcre"github.com/gijsbers/go-pcre"
@@ -6,9 +6,13 @@ import(
 	"strings"
 	"fmt"
 	"strconv"
-
+	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
+type Collection struct{
+	Name string
+	Key string
+}
 
 type LocalCollection struct {
 	Data map[string][]string `json:"data"`
@@ -48,7 +52,7 @@ func (c *LocalCollection) Get(key string) []string{
 		return data
 	}
 	if key[0] == '/'{
-		key = TrimLeftChars(key, 1)
+		key = utils.TrimLeftChars(key, 1)
 		key = strings.TrimSuffix(key, string('/'))
 		re := pcre.MustCompile(key, 0)
 		result := []string{}
@@ -67,49 +71,61 @@ func (c *LocalCollection) Get(key string) []string{
 }
 
 //PCRE compatible collection
-func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []string{
+func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []*MatchData{
 	//we return every value in case there is no key but there is a collection
 	if len(key) == 0{
-		data := []string{}
+		data := []*MatchData{}
 		for k := range c.Data{
-			if ArrayContains(exceptions, k){
+			if utils.ArrayContains(exceptions, k){
 				continue
 			}
 			for _, v := range c.Data[k]{
 				//val := k + "=" + n
-				data = append(data, v)
+				data = append(data, &MatchData{
+					Collection: c.Name,
+					Value: v,
+					Key: k,
+				})
 			}
 		}
 		return data
 	}
 
 	if key[0] == '/'{
-		key = TrimLeftChars(key, 1)
+		key = utils.TrimLeftChars(key, 1)
 		key = strings.TrimSuffix(key, string('/'))
 		re := pcre.MustCompile(key, 0)
-		result := []string{}
+		result := []*MatchData{}
 		for k := range c.Data {
-			if ArrayContains(exceptions, k){
+			if utils.ArrayContains(exceptions, k){
 				continue
 			}
 		    m := re.Matcher([]byte(k), 0)
 		    if m.Matches(){
 		    	for _, d := range c.Data[k]{
-		    		result = append(result, d)
+		    		result = append(result, &MatchData{
+		    			Collection: c.Name,
+		    			Key: k,
+		    			Value: d,
+		    		})
 		    	}
 		    }
 		}
 		return result
 	}else{
-		ret := []string{}
+		ret := []*MatchData{}
 		//We pass through every record to apply filters
 		for k := range c.Data{
-			if ArrayContains(exceptions, k){
+			if utils.ArrayContains(exceptions, k){
 				continue
 			}
 			if k == key{
 				for _, kd := range c.Data[k]{
-					ret = append(ret, kd)
+					ret = append(ret, &MatchData{
+		    			Collection: c.Name,
+		    			Key: k,
+		    			Value: kd,
+		    		})
 				}
 			}
 		}
@@ -155,15 +171,11 @@ func (c *LocalCollection) Concat() []string{
 }
 
 func (c *LocalCollection) Add(key string, value []string) {
-	c.mux.Lock()
 	c.Data[key] = value
-	c.mux.Unlock()
 }
 
 func (c *LocalCollection) AddToKey(key string, value string) {
-	c.mux.Lock()
 	c.Data[key] = append(c.Data[key], value)
-	c.mux.Unlock()
 }
 
 
@@ -173,9 +185,7 @@ func (c *LocalCollection) Set(key string, value []string) {
 
 func (c *LocalCollection) AddMap(data map[string][]string) {
 	for k, v := range data{
-		c.mux.RLock()
 		c.Data[strings.ToLower(k)] = v
-		c.mux.RUnlock()
 	}
 }
 

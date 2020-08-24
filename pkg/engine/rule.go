@@ -1,9 +1,9 @@
 package engine
 
 import(
-	"fmt"
 	"strconv"
 	"reflect"
+	_"github.com/sirupsen/logrus"
 )
 
 const (
@@ -104,8 +104,8 @@ func (r *Rule) Init() {
 }
 
 
-func (r *Rule) Evaluate(tx *Transaction) []string{
-	matchedValues := []string{}
+func (r *Rule) Evaluate(tx *Transaction) []*MatchData{
+	matchedValues := []*MatchData{}
 	for _, nid := range tx.RuleRemoveById{
 		if nid == r.Id {
 			return matchedValues
@@ -114,7 +114,7 @@ func (r *Rule) Evaluate(tx *Transaction) []string{
 	ecol := tx.RuleRemoveTargetById[r.Id]
 	
 	for _, v := range r.Variables {
-		values := []string{}
+		values := []*MatchData{}
 		if ecol != nil {
 			ignore := false
 			for _, c := range ecol{
@@ -127,67 +127,43 @@ func (r *Rule) Evaluate(tx *Transaction) []string{
 				continue
 			}
 		}	
-		//TODO IMPORTANT: The match notification must be switched, we can't log empty keys!!
+		
 		values = tx.GetField(v.Collection, v.Key, v.Exceptions)
 
 		if v.Count{	
-			l := len(values)
-			arg := strconv.Itoa(l)
-			//TODO is this the right way count works?
-			if v.Key != "" && l > 0{
-				arg = strconv.Itoa(len(values[0]))
-			}
-			if r.executeOperator(arg, tx) {
-				for _, a := range r.Actions{
-					if a.GetType() == ACTION_TYPE_DISRUPTIVE{
-						//we skip disruptive by now
-						continue
-					}
-					a.Evaluate(r, tx)
+			if v.Key != ""  && len(values) == 1{
+				values[0].Value = strconv.Itoa(len(values[0].Value))
+			} else {
+				values = []*MatchData{
+					&MatchData{
+						Collection: v.Collection,
+						Key: v.Key,
+						Value: strconv.Itoa(len(values)),
+					},
 				}
-				matchedValues = append(matchedValues, fmt.Sprintf("%s.%s=%s", v.Collection, v.Key, arg))
-			}			
-		}else{
-			if len(values) == 0{
-				if r.executeOperator("", tx) {
-					for _, a := range r.Actions{
-						if a.GetType() == ACTION_TYPE_DISRUPTIVE {
-							//we skip disruptive by now
-							continue
-						}						
-						a.Evaluate(r, tx)
-					}
-					matchedValues = append(matchedValues, fmt.Sprintf("%s.%s=%s", v.Collection, v.Key, ""))
-				}	
-				continue
 			}
-			for _, arg := range values {
-				var args []string
-				if r.MultiMatch{
-					args = r.executeTransformationsMultimatch(arg)
-				}else{
-					args = []string{r.executeTransformations(arg)}
-				}
-				for _, carg := range args{
-					if r.executeOperator(carg, tx){
-						col := ""
-						//TODO REVISAR CUALES SE EJECUTAN Y CUANDO:
-						for _, a := range r.Actions{
-							if a.GetType() == ACTION_TYPE_DISRUPTIVE{
-								//we skip disruptive by now
-								continue
-							}		
-							a.Evaluate(r, tx)
-						}
-						//TODO check this out
-						if v.Collection == ""{
-							col = v.Key
-						}else{
-							col = fmt.Sprintf("%s:%s", v.Collection, v.Key)
-						}
-						col = fmt.Sprintf("%s:%s", col, carg)
-						matchedValues = append(matchedValues, col)
-					}
+		}
+		if len(values) == 0{
+			if r.executeOperator("", tx){
+				matchedValues = append(matchedValues, &MatchData{
+				})
+			}	
+			continue		
+		}
+		for _, arg := range values {
+			var args []string
+			if r.MultiMatch{
+				args = r.executeTransformationsMultimatch(arg.Value)
+			}else{
+				args = []string{r.executeTransformations(arg.Value)}
+			}
+			for _, carg := range args{
+				if r.executeOperator(carg, tx){
+					matchedValues = append(matchedValues, &MatchData{
+						Collection: v.Collection,
+						Key: v.Key,
+						Value: carg,
+					})
 				}
 			}
 		}
@@ -195,8 +171,17 @@ func (r *Rule) Evaluate(tx *Transaction) []string{
 	
 	if len(matchedValues) == 0{
 		//No match for variables
-		return []string{}
+		return matchedValues
 	}
+
+	// We run non disruptive actions even if there is no chain match
+	for _, a := range r.Actions{
+		if a.GetType() != ACTION_TYPE_NONDISRUPTIVE{
+			continue
+		}		
+		a.Evaluate(r, tx)
+	}	
+
 
 	tx.Capture = false //TODO shall we remove this?
 
@@ -208,21 +193,22 @@ func (r *Rule) Evaluate(tx *Transaction) []string{
 			m := nr.Evaluate(tx)
 			if len(m) == 0{
 				//we fail the chain
-				return []string{}
+				return []*MatchData{}
 			}
 			msgs = 	append(msgs, tx.MacroExpansion(nr.Msg))
 			//TODO add matched values from the chain rule
-			//matchedValues = append(matchedValues, )
+			for _, child := range m{
+				matchedValues = append(matchedValues, child)
+			}
 			nr = nr.Chain
 		}
 		tx.MatchRule(r, msgs, matchedValues)
 	}
-
 	if r.ParentId == 0{
 		tx.MatchRule(r, []string{tx.MacroExpansion(r.Msg)}, matchedValues)
 		//we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
 		for _, a := range r.Actions{
-			if a.GetType() == ACTION_TYPE_DISRUPTIVE {
+			if a.GetType() == ACTION_TYPE_DISRUPTIVE || a.GetType() == ACTION_TYPE_FLOW {
 				a.Evaluate(r, tx)
 			}
 		}

@@ -1,7 +1,6 @@
 package operators
 import(
 	"testing"
-	"github.com/jptosso/coraza-waf/pkg/utils"
     "github.com/jptosso/coraza-waf/pkg/engine"
 )
 
@@ -9,7 +8,7 @@ func TestCaptureGroups(t *testing.T) {
     rx := &Rx{}
     rx.Init(`^(?i:file|ftps?|https?)://([^/]*).*$`)
     tx := getTransaction()
-    tx.Collections = map[string]*utils.LocalCollection{}
+    tx.Collections = map[string]*engine.LocalCollection{}
     tx.InitTxCollection()
     tx.Capture = true
     str := "https://www.google.com/somesuperdupersearch?id=1"

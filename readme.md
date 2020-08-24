@@ -32,9 +32,8 @@ Most features are available for testing, APIs are unstable but close to the fina
 - [ ] Optimized pcre compilation instructions
 - [ ] OWASP CRS Full Support (almost there)
 - [ ] cssdecode and jsdecode transformation
-- [ ] ctl, proxy actions
-- [ ] persistent collections
-- [ ] custom error pages
+- [ ] some disruptive actions
+- [ ] some lua features
 
 
 ## Compile from source
@@ -42,6 +41,7 @@ Most features are available for testing, APIs are unstable but close to the fina
 Compilation prerequisites: 
 * golang 1.13+
 * C compiler (gcc)
+* Libpcre++-dev
 
 You can compile each package individually running: `go build cmd/skipper/main.go` or using the make scripts.
 

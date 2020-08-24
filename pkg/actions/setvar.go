@@ -29,7 +29,7 @@ func (a *Setvar) Init(r *engine.Rule, data string) string {
     spl := strings.SplitN(kv[0], ".", 2)
     //allowed := []string{"tx", "ip", "session"}
     a.Collection = spl[0]
-    a.Key = spl[1]
+    a.Key = strings.ToLower(spl[1])
     a.Value = kv[1]
     return ""
 }

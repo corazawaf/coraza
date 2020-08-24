@@ -77,49 +77,9 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
 		}
 		break
 	case CTL_AUDIT_LOG_PARTS:
-		tx.AuditLogParts = []int{}
+		tx.AuditLogParts = []rune{}
 		for _, c := range a.Value{
-			var val int
-			switch c{
-				case 'A':
-					val = engine.AUDIT_LOG_PART_A
-					break
-				case 'B':
-					val = engine.AUDIT_LOG_PART_B
-					break
-				case 'C':
-					val = engine.AUDIT_LOG_PART_C
-					break
-				case 'D':
-					val = engine.AUDIT_LOG_PART_D
-					break
-				case 'E':
-					val = engine.AUDIT_LOG_PART_E
-					break
-				case 'F':
-					val = engine.AUDIT_LOG_PART_F
-					break
-				case 'G':
-					val = engine.AUDIT_LOG_PART_G
-					break
-				case 'H':
-					val = engine.AUDIT_LOG_PART_H
-					break
-				case 'I':
-					val = engine.AUDIT_LOG_PART_I
-					break
-				case 'J':
-					val = engine.AUDIT_LOG_PART_J
-					break
-				case 'K':
-					val = engine.AUDIT_LOG_PART_K
-					break
-				case 'Z':
-					val = engine.AUDIT_LOG_PART_Z
-					break
-			}
-			//TODO validate repeated parts
-			tx.AuditLogParts = append(tx.AuditLogParts, val)
+			tx.AuditLogParts = append(tx.AuditLogParts, c)
 		}
 		break
 	case CTL_FORCE_REQUEST_BODY_VAR:

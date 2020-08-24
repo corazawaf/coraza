@@ -92,35 +92,22 @@ func (al *AuditLog) Init(tx *Transaction){
 			//body and headers are audit parts
 		},
 	}
-	/*
-	AUDIT_LOG_PART_A	= 0 // nothing
-	AUDIT_LOG_PART_B	= 1 //request headers
-	AUDIT_LOG_PART_C	= 2 //request body
-	AUDIT_LOG_PART_D	= 3 //reserved
-	AUDIT_LOG_PART_E	= 4 //reserved
-	AUDIT_LOG_PART_F	= 5 // response headers
-	AUDIT_LOG_PART_G	= 6 // response body
-	AUDIT_LOG_PART_H	= 7 // audit log trailer
-	AUDIT_LOG_PART_I	= 8 // replace C with smaller description
-	AUDIT_LOG_PART_J	= 9 // file uploads
-	AUDIT_LOG_PART_K	= 10 // full list of rules
-	AUDIT_LOG_PART_Z	= 11 // nothing
-	*/
+
 	for _, p := range parts{
 		switch p{
-		case AUDIT_LOG_PART_B:
+		case 'B':
 			al.Transaction.Request.Headers = tx.Collections["request_headers"].Data
 			break
-		case AUDIT_LOG_PART_C:
+		case 'C':
 			al.Transaction.Request.Body = tx.Collections["request_body"].GetFirstString()		
 			break
-		case AUDIT_LOG_PART_F:
+		case 'F':
 			al.Transaction.Response.Headers = tx.Collections["response_headers"].Data
 			break
-		case AUDIT_LOG_PART_G:
+		case 'G':
 			al.Transaction.Response.Body = tx.Collections["response_body"].GetFirstString()
 			break
-		case AUDIT_LOG_PART_H:
+		case 'H':
 			servera := tx.Collections["response_headers"].Get("server")
 			server := ""
 			if len(server) > 0{
@@ -134,13 +121,15 @@ func (al *AuditLog) Init(tx *Transaction){
 				Stopwatch: tx.GetStopWatch(),
 			}
 			break			
-		case AUDIT_LOG_PART_I:
+		case 'I':
 			// not implemented
+			// TODO
 			break
-		case AUDIT_LOG_PART_J:
+		case 'J':
 			//upload data
+			// TODO
 			break
-		case AUDIT_LOG_PART_K:
+		case 'K':
 			for _, mr := range tx.MatchedRules{
 				r := mr.Rule
 				al.Messages = append(al.Messages, &AuditMessage{
