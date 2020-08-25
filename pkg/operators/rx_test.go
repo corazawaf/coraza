@@ -21,6 +21,17 @@ func TestCaptureGroups(t *testing.T) {
     if tx.Collections["tx"].Data["1"][0] != "www.google.com"{
     	t.Errorf("Invalid capture 1, got " + tx.Collections["tx"].Data["1"][0])	
     }
+
+    rx.Init(`^(\d+)-(\d+)`)
+    if !rx.Evaluate(tx, "4-5"){
+        t.Errorf("Invalid @rx for range")   
+    }
+    if tx.Collections["tx"].Data["1"][0] != "4"{
+        t.Errorf("Invalid capture @rx for range")   
+    }
+    if tx.Collections["tx"].Data["2"][0] != "5"{
+        t.Errorf("Invalid capture @rx for range")   
+    }    
 }
 
 func testRegexMatch(regex string, match string) []string{

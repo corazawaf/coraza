@@ -191,7 +191,7 @@ func runTest(waf *engine.Waf, profile testProfile) (bool, int, error){
 				}else{
 					tx.SetUrl(u)
 					tx.AddGetArgsFromUrl(u)
-					path = u.EscapedPath()//or unescaped?	
+					path = stage.Stage.Input.Uri//or unescaped?	
 				}
 				
 			}
@@ -219,17 +219,22 @@ func runTest(waf *engine.Waf, profile testProfile) (bool, int, error){
 					ctt = ct[0]
 				}
 				mediaType, params, _ := mime.ParseMediaType(ctt)
-				tx.SetRequestBody(data, int64(len(data)), mediaType)
-				if strings.HasPrefix(mediaType, "multipart/") {
+				if method == "GET" || method == "HEAD" || method == "OPTIONS" {
+					length := strconv.Itoa(len(data))
+					if len(tx.Collections["request_headers"].Data["content-length"]) == 0{
+						tx.Collections["request_headers"].Data["content-length"] = []string{length}
+					}
+					// Just for testing
+					tx.Collections["request_body"].Data["0"] = []string{data}
+				}else if strings.HasPrefix(mediaType, "multipart/") {
 					parseMultipart(data, params["boundary"], tx)
-				}else{
+				}else if strings.HasPrefix(mediaType, "") {
+					tx.SetRequestBody(data, int64(len(data)), mediaType)
 					u, err := url.ParseQuery(data)
 					if err == nil{
 						tx.SetArgsPost(u)
 					}
 				}
-				length := strconv.Itoa(len(data))
-				tx.Collections["request_headers"].Data["content-length"] = []string{length}
 			}
 
 			for i := 2; i <= 5; i++{

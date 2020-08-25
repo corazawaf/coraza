@@ -8,6 +8,12 @@ type Severity struct {
 }
 
 func (a *Severity) Init(r *engine.Rule, data string) string {
+	l := []string{"EMERGENCY", "ALERT", "CRITICAL", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG",}
+	for _, val := range l {
+		if val == data{
+			//r.Severity = i
+		}
+	}
 	r.Severity = data
 	return ""
 }

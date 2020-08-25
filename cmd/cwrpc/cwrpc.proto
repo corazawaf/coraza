@@ -9,6 +9,8 @@ service Transaction {
 	rpc CreateAndUpdate (TransactionUpdate) returns (TransactionStatus) {}
 	rpc Update (TransactionUpdate) returns (TransactionStatus) {}
 	rpc Get (Transaction) returns (TransactionStatus) {}
+	rpc UploadRawRequest (Transaction) returns (TransactionStatus) {}
+	rpc UploadRawResponse (Transaction) returns (TransactionStatus) {}
 }
 
 message Transaction {

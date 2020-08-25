@@ -6,19 +6,22 @@ import(
 )
 
 type Lt struct{
-	data int
+	data string
 }
 
 func (o *Lt) Init(data string){
-	k, _ := strconv.Atoi(data)
-	o.data = k
+	o.data = data
 }
 
 func (o *Lt) Evaluate(tx *engine.Transaction, value string) bool{
+	vv := tx.MacroExpansion(o.data)
+	data, err := strconv.Atoi(vv)
+	if err != nil {
+		data = 0
+	}
 	v, err := strconv.Atoi(value)
 	if err != nil {
-		//retornamos false?
-		return false
-	}
-	return o.data > v
+		v = 0
+	}	
+	return v < data
 }

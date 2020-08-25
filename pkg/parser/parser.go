@@ -539,26 +539,24 @@ func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error{
     	actions = fmt.Sprintf("%s, %s", p.defaultActions, actions)
     }
 
-    actionsmap := actionsmod.ActionsMap()
 	for matcher.Match(subject, 0){
 		m := matcher.GroupString(1)
 		index := matcher.Index()
 		spl := strings.SplitN(m, ":", 2)
 		value := ""
 		key := strings.Trim(spl[0], " ")
+
 		if len(spl) == 2{
 			value = strings.Trim(spl[1], " ")
 		}
-		if actionsmap[key] == nil{
+		if actionsmod.ActionsMap()[key] == nil{
 			//TODO some fixing here, this is a bug
 			p.log("Invalid action " + key)
 		}else{
-			action := actionsmap[key]
+			action := actionsmod.ActionsMap()[key]
 			err := action.Init(r, value)
 			if err != ""{
 				p.log(err)
-				// TODO we should return an error later
-				return nil
 			}
 			r.Actions = append(r.Actions, action)
 		}

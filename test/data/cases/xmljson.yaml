@@ -13,6 +13,7 @@
         input:
           headers:
             Content-Type: application/xml
+            Content-Length: 89
           data: "<?xml version=\"1.0\"?><xml><Cs7QAF attribute_name=\"attribute_value\">test123</Cs7QAF></xml>"
         output:
           log_contains: id "601"          

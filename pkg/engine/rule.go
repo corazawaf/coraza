@@ -127,9 +127,8 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData{
 				continue
 			}
 		}	
-		
-		values = tx.GetField(v.Collection, v.Key, v.Exceptions)
 
+		values = tx.GetField(v.Collection, v.Key, v.Exceptions)
 		if v.Count{	
 			if v.Key != ""  && len(values) == 1{
 				values[0].Value = strconv.Itoa(len(values[0].Value))

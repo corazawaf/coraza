@@ -15,6 +15,10 @@ import (
     "net/http"
     "net/url"
     "time"
+    "io/ioutil"
+    "mime"
+    "errors"
+    "bufio"
     "path"
     "encoding/json"
     "github.com/antchfx/xmlquery"
@@ -122,7 +126,7 @@ func (tx *Transaction) MacroExpansion(data string) string{
         if collection == nil{
             return ""
         }
-        expansion := collection.Get(key)
+        expansion := collection.Get(strings.ToLower(key))
         if len(expansion) == 0{
             data = strings.ReplaceAll(data, v, "")
         }else{
@@ -208,6 +212,7 @@ func (tx *Transaction) SetFiles(files map[string][]*multipart.FileHeader) {
     defer tx.Mux.Unlock()
     totalSize := int64(0)
     for field, fheaders := range files{
+        // TODO add them to temporal storage
         tx.Collections["files_names"].AddToKey("", field)
         for _, header := range fheaders{
             tx.Collections["files"].AddToKey("", header.Filename)
@@ -270,7 +275,6 @@ func (tx *Transaction) SetRequestBody(body string, length int64, mime string) {
         return
     }
     l := strconv.FormatInt(length, 10)
-    tx.Collections["request_body"].AddToKey("", body)
     tx.Collections["request_body_length"].AddToKey("", l)
     if mime == "application/xml"{
         var err error
@@ -283,6 +287,8 @@ func (tx *Transaction) SetRequestBody(body string, length int64, mime string) {
         // JSON!
         //doc, err := xmlquery.Parse(strings.NewReader(s))
         //tx.Json = doc
+    }else if mime == "" {
+        tx.Collections["request_body"].AddToKey("", body)
     }
     /*
     //TODO shall we do this and force the real length?
@@ -448,7 +454,8 @@ func (tx *Transaction) ResetCapture(){
     }
 }
 
-func (tx *Transaction) initVars() {
+func (tx *Transaction) Init(waf *Waf) error{
+    tx.WafInstance = waf
     tx.Collections = map[string]*LocalCollection{}
     txid := utils.RandomString(19)
     tx.Id = txid
@@ -467,19 +474,164 @@ func (tx *Transaction) initVars() {
     tx.AuditLogType = tx.WafInstance.AuditLogType
     tx.Skip = 0
     tx.PersistentCollections = map[string]*PersistentCollection{}
-}
-
-func (tx *Transaction) Init(waf *Waf) error{
-    tx.WafInstance = waf
-    tx.initVars()
     tx.Mux = &sync.RWMutex{}
     tx.RuleRemoveTargetById = map[int][]*Collection{}
     tx.RuleRemoveById = []int{}
     tx.StopWatches = map[int]int{}
+
     return nil
 }
 
-func (tx *Transaction) ExecutePhase(phase int) error{
+// Parse binary request including body, does only supports http/1.1 and http/1.0
+func (tx *Transaction) ParseRequestString(data string) error{
+    buf := bufio.NewReader(strings.NewReader(data))
+    req, err := http.ReadRequest(buf)
+    if err != nil {
+        return err
+    }
+
+    err = tx.ParseRequestObject(req)
+    if err != nil {
+        return err
+    }
+    return nil
+}
+
+// Parse binary response including body, does only supports http/1.1 and http/1.0
+func (tx *Transaction) ParseResponseString(req *http.Request, data string) error{
+    buf := bufio.NewReader(strings.NewReader(data))
+    res, err := http.ReadResponse(buf, req)
+    if err != nil {
+        return err
+    }
+
+    err = tx.ParseResponseObject(res)
+    if err != nil {
+        return err
+    }
+    return nil
+}
+
+// Parse golang http request object into transaction
+func (tx *Transaction) ParseRequestObject(req *http.Request) error{
+    re := regexp.MustCompile(`^\[(.*?)\]:(\d+)$`)
+    matches := re.FindAllStringSubmatch(req.RemoteAddr, -1)
+    address := ""
+    port := 0
+    //no more validations as we don't spake weird ip addresses
+    if len(matches) > 0 {
+        address = string(matches[0][1])
+        port, _ = strconv.Atoi(string(matches[0][2]))
+    }
+    tx.SetRequestHeaders(req.Header)
+    tx.SetArgsGet(req.URL.Query())
+    tx.SetUrl(req.URL)
+    tx.SetRemoteAddress(address, port)
+    tx.SetRequestCookies(req.Cookies())
+    tx.SetRequestLine(req.Method, req.Proto, req.RequestURI)
+    tx.ExecutePhase(1)
+
+    if tx.Disrupted || req.Body == nil{
+        return nil
+    }
+
+    //phase 2
+    cl := tx.Collections["request_headers"].Data["content-type"]
+    ctype := "text/plain"
+    ct := ""
+    if len(cl) > 0{
+        spl := strings.SplitN(cl[0], ";", 2)
+        ctype = spl[0]
+        ct = cl[0]
+    }
+    //f.tx.SetReqBodyProcessor("URLENCODED")
+    switch ctype {
+    case "application/x-www-form-urlencoded":
+        //url encode
+        err := req.ParseForm()
+        if err != nil {
+            return err
+        }
+        tx.SetArgsPost(req.PostForm)
+        break
+    case "multipart/form-data":
+        //multipart
+        //url encode
+        tx.SetReqBodyProcessor("MULTIPART")
+        err := req.ParseMultipartForm(tx.RequestBodyLimit)
+        if err != nil {
+            return errors.New("Unable to parse multipart data")
+        }
+        tx.SetFiles(req.MultipartForm.File)
+        tx.SetArgsPost(req.MultipartForm.Value)
+        break
+    }
+    body, err := ioutil.ReadAll(req.Body)
+    defer req.Body.Close()
+    //TODO BUFFERING
+    if err != nil{
+        return err
+    }
+    tx.SetRequestBody(string(body), int64(len(body)), ct)    
+    tx.ExecutePhase(2)     
+    return nil
+}
+
+// Parse golang http response object into transaction
+func (tx *Transaction) ParseResponseObject(res *http.Response) error{
+    tx.SetResponseHeaders(res.Header)
+    //res.Header.Set("X-Coraza-Waf", "woo")
+    if tx.ExecutePhase(3) {
+        return nil
+    }
+    //TODO response body
+    tx.ExecutePhase(4)
+    return nil
+}
+
+// Parse request body from a string
+// Avoid it as it is a heavy load operation
+func (tx *Transaction) ParseRequestBodyBinary(mimeval string, body string) error{
+    // Maybe it would be easier to create an http instance with fake headers and append the body
+    _, params, _ := mime.ParseMediaType(mimeval)
+    boundary := params["boundary"]
+    mr := multipart.NewReader(strings.NewReader(body), boundary)
+    files := map[string][]*multipart.FileHeader{}
+    args := map[string][]string{}
+    for {
+        p, err := mr.NextPart()
+        if err != nil {
+            break
+        }
+        data, err := ioutil.ReadAll(p)
+        if err != nil {
+            return err
+        }
+        key := p.FormName()
+        file := p.FileName()
+        mpf := &multipart.FileHeader{
+            Filename: file, 
+            Header: p.Header, 
+            Size: int64(len(data)),
+        }
+        if files[key] == nil{
+            files[key] = []*multipart.FileHeader{mpf}
+        }else{
+            files[key] = append(files[key], mpf)
+        }
+        if args[key] == nil{
+            args[key] = []string{string(data)}
+        }else{
+            args[key] = append(args[key], string(data))
+        }
+    }
+    tx.SetFiles(files)
+    tx.SetArgsPost(args)
+    return nil
+}
+
+// Placeholder for http/2 streaming features
+func (tx *Transaction) ExecutePhase(phase int) bool{
     ts := time.Now().UnixNano()
     usedRules := 0
     tx.LastPhase = phase
@@ -516,7 +668,7 @@ func (tx *Transaction) ExecutePhase(phase int) error{
             tx.SavePersistentData()
         }
     }
-    return nil
+    return tx.Disrupted
 }
 
 func (tx *Transaction) MatchRule(rule *Rule, msgs []string, match []*MatchData){
@@ -647,7 +799,6 @@ func (tx *Transaction) ToAuditLog() *AuditLog{
     al.Init(tx)
     return al
 }
-
 
 func (tx *Transaction) SaveLog() error{
     return tx.WafInstance.Logger.WriteAudit(tx)
