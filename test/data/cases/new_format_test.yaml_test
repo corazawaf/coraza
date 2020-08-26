@@ -1,0 +1,24 @@
+---
+  meta:
+    author: jptosso
+    description: None
+    enabled: true
+    name: test.yaml
+  tests:
+  -
+    test_title: test-1
+    stages:
+    -
+      stage:
+        rules: |
+          SecRule ...
+        input:
+          uri: /foo.php?bar=blah&ooo=123&bbb=3
+        output:
+          no_log_contains: id "200"
+          tx:
+            -
+              exp: "request_uri//*[0]"
+              equal: "/foo.php?bar=blah&ooo=123&bbb=3"
+              not_equal: "..."
+              regex: "^\/foo.php\?bar=blah&ooo=123&bbb=3$"
