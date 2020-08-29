@@ -1,19 +1,19 @@
-package transformations
+package operators
 import(
 	"testing"
 	"encoding/json"
 	"os"
-	"reflect"
-	"fmt"
 	"strconv"
+	"fmt"
 	"strings"
 	"path/filepath"
 	"io/ioutil"
+	"github.com/jptosso/coraza-waf/pkg/engine"
 )
 
 type Test struct {
 	Input string `json:"input"`
-	Output string `json:"output"`
+	Param string `json:"param"`
 	Name string `json:"name"`
 	Ret int `json:"ret"`
 	Type string `json:"type"`
@@ -21,7 +21,7 @@ type Test struct {
 
 //https://github.com/SpiderLabs/secrules-language-tests/
 func TestTransformations(t *testing.T) {
-	root := "../../test/data/transformations/"
+	root := "../../test/data/operators/"
 	files := [][]byte{}
     filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
     	if strings.HasSuffix(path, ".json"){
@@ -30,6 +30,8 @@ func TestTransformations(t *testing.T) {
     	}
         return nil
     })
+    waf := engine.Waf{}
+    waf.Init()
 	for _, f := range files {
 
 		cases := []*Test{}
@@ -40,33 +42,27 @@ func TestTransformations(t *testing.T) {
 		for _, data := range cases {
 			//UNMARSHALL does not transform \u0000 to binary
 			data.Input = strings.ReplaceAll(data.Input,  `\u0000`, "\u0000")
-			data.Output = strings.ReplaceAll(data.Output,  `\u0000`, "\u0000")
+			data.Param = strings.ReplaceAll(data.Param,  `\u0000`, "\u0000")
 			
 			if strings.Contains(data.Input, `\x`) {
 				data.Input, _ = strconv.Unquote(`"`+data.Input+`"`)
 			}
-			if strings.Contains(data.Output, `\x`) {
-				data.Output, _ = strconv.Unquote(`"`+data.Output+`"`)
+			if strings.Contains(data.Param, `\x`) {
+				data.Param, _ = strconv.Unquote(`"`+data.Param+`"`)
 			}
-			trans := TransformationsMap()[data.Name]
-			if trans == nil{
-				//t.Error("Invalid transformation test for " + data.Name)
+			op := OperatorsMap()[data.Name]
+			if op == nil{
 				continue
 			}
-			out := executeTransformation(trans, data.Input)
-			if out != data.Output{
-				t.Error(fmt.Sprintf("Invalid transformation result for %s with input %s, got %s and expected %s\n", data.Name, data.Input, out, data.Output))
+			if data.Name == "pmFromFile"{
+				data.Param = root + "op/" + data.Param
+			}
+			op.Init(data.Param)
+			res := op.Evaluate(waf.NewTransaction(), data.Input)
+			if (res && data.Ret != 1) || (!res && data.Ret == 1){
+				t.Error(fmt.Sprintf("Invalid operator result for %s(%s, %s) expected %d", data.Name, data.Input, data.Param, data.Ret))
 			}
 		}
 	}
 
-}
-
-func executeTransformation(t interface{}, value string) string{
-    rf := reflect.ValueOf(t)
-    rargs := make([]reflect.Value, 1)
-    rargs[0] = reflect.ValueOf(value)
-    call := rf.Call(rargs)
-    value = call[0].String()
-    return value
 }

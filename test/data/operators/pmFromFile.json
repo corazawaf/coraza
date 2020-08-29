@@ -4,10 +4,10 @@
       "type" : "op",
       "ret" : 0,
       "input" : "xxxyyyzzz",
-      "param" : "test-cases/secrules-language-tests/operators/op/pmFromFile-01.dat"
+      "param" : "pmFromFile-01.dat"
    },
    {
-      "param" : "test-cases/secrules-language-tests/operators/op/pmFromFile-01.dat",
+      "param" : "pmFromFile-01.dat",
       "input" : "defxxxyyy",
       "name" : "pmFromFile",
       "type" : "op",
@@ -17,7 +17,7 @@
       "name" : "pmFromFile",
       "ret" : 1,
       "type" : "op",
-      "param" : "test-cases/secrules-language-tests/operators/op/pmFromFile-01.dat",
+      "param" : "pmFromFile-01.dat",
       "input" : "xxxdefyyy"
    },
    {
@@ -25,20 +25,20 @@
       "ret" : 1,
       "type" : "op",
       "input" : "xxxyyydef",
-      "param" : "test-cases/secrules-language-tests/operators/op/pmFromFile-01.dat"
+      "param" : "pmFromFile-01.dat"
    },
    {
       "ret" : 1,
       "type" : "op",
       "name" : "pmFromFile",
       "input" : "xxx yyy zzz",
-      "param" : "test-cases/secrules-language-tests/operators/op/pmFromFile-01.dat"
+      "param" : "pmFromFile-01.dat"
    },
    {
       "ret" : 0,
       "type" : "op",
       "name" : "pmFromFile",
-      "param" : "test-cases/secrules-language-tests/operators/op/pmFromFile-01.dat",
+      "param" : "pmFromFile-01.dat",
       "input" : "xxx yyy"
    }
 ]
