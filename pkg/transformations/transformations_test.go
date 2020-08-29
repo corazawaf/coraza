@@ -3,6 +3,8 @@ import(
 	"testing"
 	"encoding/json"
 	"os"
+	"reflect"
+	"fmt"
 	"strings"
 	"path/filepath"
 	"io/ioutil"
@@ -18,11 +20,11 @@ type Test struct {
 
 //https://github.com/SpiderLabs/secrules-language-tests/
 func TestTransformations(t *testing.T) {
-	root := "./test/data/slt/transformations/"
+	root := "../../test/data/transformations/"
 	files := [][]byte{}
-    err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+    filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
     	if strings.HasSuffix(path, ".json"){
-    		data, err := ioutil.ReadFile(path)
+    		data, _ := ioutil.ReadFile(path)
         	files = append(files, data)
     	}
         return nil
@@ -37,14 +39,23 @@ func TestTransformations(t *testing.T) {
 		for _, data := range cases {
 			trans := TransformationsMap()[data.Name]
 			if trans == nil{
-				t.Error("Invalid transformation test for " + data.Name)
+				//t.Error("Invalid transformation test for " + data.Name)
 				continue
 			}
-			out := trans(data.Input)
+			out := executeTransformation(trans, data.Input)
 			if out != data.Output{
-				t.Error(fmt.Sprintf("Invalid transaction result for %s with input %s\n", data.Name, data.Input))
+				t.Error(fmt.Sprintf("Invalid transformation result for %s with input %s, got %s and expected %s\n", data.Name, data.Input, out, data.Output))
 			}
 		}
 	}
 
+}
+
+func executeTransformation(t interface{}, value string) string{
+    rf := reflect.ValueOf(t)
+    rargs := make([]reflect.Value, 1)
+    rargs[0] = reflect.ValueOf(value)
+    call := rf.Call(rargs)
+    value = call[0].String()
+    return value
 }
