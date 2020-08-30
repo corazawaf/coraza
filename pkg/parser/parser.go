@@ -356,10 +356,11 @@ func (p *Parser) Evaluate(data string) error{
 	case "SecRule":
 		rule, err := p.ParseRule(opts)
 		if err != nil{
-			p.log("Failed to compile rule.")
-			return err
+			p.log("Failed to compile rule: " + opts)
+			//return err
+		}else{
+			p.waf.Rules.Add(rule)
 		}
-		p.waf.Rules.Add(rule)
 	case "SecAction":
 		rule, err := p.ParseRule("\"@unconditionalMatch\" \"" + opts + "\"")
 		if err != nil{

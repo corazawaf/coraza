@@ -18,7 +18,7 @@ func (o *Ge) Init(data string){
 func (o *Ge) Evaluate(tx *engine.Transaction, value string) bool{
 	v, err := strconv.Atoi(value)
 	if  err != nil{
-		return false
+		v = 0
 	}
 	return v >= o.data
 }

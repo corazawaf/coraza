@@ -3,7 +3,6 @@ import(
 	"net"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/utils"
-	"fmt"
 	"strings"
 )
 
@@ -19,12 +18,15 @@ func (o *IpMatch) Init(data string){
 		if sb == ""{
 			continue
 		}
-		if !strings.Contains(sb, "/"){
+		if strings.Contains(sb, ":") && !strings.Contains(sb, "/"){
+			//ipv6
+			sb = sb + "/128"
+		}else if strings.Contains(sb, ".") && !strings.Contains(sb, "/"){
+			//ipv4
 			sb = sb + "/32"
-		}		
+		}
 		_, subnet, err := net.ParseCIDR(sb)
 		if err != nil{
-			fmt.Println("Invalid CIDR " + sb)
 			continue
 		}
 		o.subnets = append(o.subnets, subnet)

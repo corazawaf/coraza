@@ -20,5 +20,6 @@ require (
 	github.com/yuin/gopher-lua v0.0.0-20190514113301-1cd887cd7036
 	github.com/zalando/skipper v0.11.101
 	golang.org/x/crypto v0.0.0-20191205180655-e7c4368fe9dd // indirect
+	golang.org/x/text v0.3.2
 	gopkg.in/yaml.v2 v2.2.7
 )
