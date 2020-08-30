@@ -3,148 +3,155 @@ import(
 	"encoding/json"
 )
 
-type AuditTransaction struct {
-	TransactionId string `json:"transaction_id"`
-	Time string `json:"time"`
-	RemotePort int `json:"remote_port"`
-	LocalAddress string `json:"local_address"`
-	LocalPort int `json:"local_port"`
-	RemoteAddress string `json:"remote_address"`
-}
-
-type AuditRequest struct {
-	Headers map[string][]string `json:"headers"`
-	RequestLine string `json:"request_line"`
-	Body string `json:"body"`
-}
-
-type AuditResponse struct{
-	Protocol string `json:"protocol"`
-	Status int `json:"status"`
-	Headers map[string][]string `json:"headers"`
-	Body string `json:"body"`
-}
-
-type AuditAction struct{
-	Message string `json:"message"`
-	Phase int `json:"phase"`
-	Intercepted bool `json:"intercepted"`
-}
-
-type AuditMatchedRuleActionset struct {
-	Id int `json:"id"`
-	IsChained bool `json:"is_chained"`
-	ChainStarter bool `json:"chain_starter"`
-	tags []string `json:"tags"`
-	Phase int `json:"phase"`
-}
-
-type AuditMatchedRuleConfig struct {
-	LineNum int `json:"line_num"`
-	Filename string `json:"filename"`
-}
-
-type AuditMatchedRuleOperator struct {
-	Operator string `json:"operator"`
-	OperatorParam string `json:"operator_param"`
-	Target string `json:"target"`
-	Negated bool `json:"negated"`
-}
-
-type AuditMatchedRule struct {
-	Actionset *AuditMatchedRuleActionset `json:"actionset"`
-	Config *AuditMatchedRuleConfig `json:"config"`
-	IsMatched bool `json:"is_matched"`
-	Unparsed string `json:"unparsed"`
-	Operator *AuditMatchedRuleOperator `json:"operator"`
-}
-
-type AuditMatchedRules struct {
-	Rules []*AuditMatchedRule `json:"rules"`
-}
-
-type AuditData struct{
-	EngineMode string `json:"engine_mode"`
-	Server string `json:"server"`
-	Stopwatch map[string]string `json:"stopwatch"`
-	Producer string `json:"producer"`
-	Action *AuditAction `json:"action"`
-}
-
 type AuditLog struct{
 	Transaction *AuditTransaction `json:"transaction"`
-	Request *AuditRequest `json:"request"`
-	Response *AuditResponse `json:"response"`
-	AuditData *AuditData `json:"audit_data"`
-	MatchedRules *AuditMatchedRules `json:"matched_rules"`
+	Messages []*AuditMessage `json:"messages"`
 }
 
-func (al *AuditLog) Init(tx *Transaction, parts []int){
-	/*
-	for _, p := range parts{
-		switch p{
-		AUDIT_PARTS:
-			break
-		}
-	}*/
-	al.Transaction = &AuditTransaction{
-		TransactionId: tx.Id,
-		Time: "",
-		RemotePort: 0,
-		LocalAddress: "",
-		LocalPort: 0,
-		RemoteAddress: tx.Collections["remote_addr"].GetFirstString(),
-	}
-	al.Request = &AuditRequest{
-		Headers: tx.Collections["request_headers"].Data,
-		RequestLine: tx.Collections["request_line"].GetFirstString(),
-		Body: tx.Collections["request_body"].GetFirstString(),
-	}
-	al.Response = &AuditResponse{
-		//Protocol: tx.Collections["protocol"].GetFirstString(),
-		//Status: tx.Collections["status"].GetFirstInt(),
-		Headers: tx.Collections["response_headers"].Data,
-		Body: tx.Collections["response_body"].GetFirstString(),
-	}	
+type AuditTransaction struct{
+	Timestamp string `json:"timestamp"`
+	Id string `json:"id"`
+	ClientIp string `json:"client_ip"`
+	ClientPort int `json:"client_port"`
+	HostIp string `json:"host_ip"`
+	HostPort int `json:"host_port"`
+	ServerId string `json:"server_id"`
+	Request *AuditTransactionRequest `json:"request"`
+	Response *AuditTransactionResponse `json:"response"`
+	Producer *AuditTransactionProducer `json:"producer"`
+}
 
-	al.AuditData = &AuditData{
-		EngineMode: "ENABLED",
-		Server: "",
-		Stopwatch: nil, 
-		Producer: "Coraza Web Application Firewall",
-		Action: &AuditAction{
-			Message: "",
-			Phase: 0,
-			Intercepted: false,
+type AuditTransactionResponse struct{
+	Status int
+	Headers map[string][]string
+	Body string
+}
+
+type AuditTransactionProducer struct{
+	Connector string `json:"connector"`
+	Version string `json:"version"`
+	Server string `json:"server"`
+	RuleEngine bool `json:"rule_engine"`
+	Stopwatch string `json:"stopwatch"`
+}
+
+type AuditTransactionRequest struct{
+	Protocol string `json:"protocol"`
+	Uri string `json:"uri"`
+	HttpVersion string `json:"http_version"`
+	Headers map[string][]string `json:"headers"`
+	Body string `json:"body"`
+	Files []*AuditTransactionRequestFiles `json:"files"`
+}
+
+type AuditTransactionRequestFiles struct{
+	Name string `json:"name"`
+	Size int64  `json:"size"`
+	Mime string `json:"mime"`
+}
+
+type AuditMessage struct{
+	Actionset string `json:"actionset"`
+	Message string `json:"message"`
+	Data *AuditMessageData `json:"data"`
+}
+
+type AuditMessageData struct{
+	File string `json:"file"`
+	Line int `json:"line"`
+	Id int `json:"id"`
+	Rev string `json:"rev"`
+	Msg string `json:"msg"`
+	Data string `json:"data"`
+	Severity int `json:"severity"`
+	Ver string `json:"ver"`
+	Maturity int `json:"maturity"`
+	Accuracy int `json:"accuracy"`
+	Tags []string `json:"tags"`
+}
+
+func (al *AuditLog) Init(tx *Transaction){
+	parts := tx.AuditLogParts
+	al.Messages = []*AuditMessage{}
+	al.Transaction = &AuditTransaction{
+		Timestamp: tx.GetTimestamp(),
+		Id: tx.Id,
+		ClientIp: tx.Collections["remote_addr"].GetFirstString(),
+		ClientPort: tx.Collections["remote_port"].GetFirstInt(),
+		HostIp: "",
+		HostPort: 0,
+		ServerId: "",
+		Request: &AuditTransactionRequest{
+			Protocol: tx.Collections["request_method"].GetFirstString(),
+			Uri: tx.Collections["request_uri"].GetFirstString(),
+			HttpVersion: tx.Collections["request_protocol"].GetFirstString(),
+			//Body and headers are audit parts
+		},
+		Response: &AuditTransactionResponse{
+			Status: tx.Collections["response_status"].GetFirstInt(),
+			//body and headers are audit parts
 		},
 	}
-	al.MatchedRules = &AuditMatchedRules{
-		Rules: []*AuditMatchedRule{},
-	}
 
-	for _, mr := range tx.MatchedRules{
-		r := mr.Rule
-		al.MatchedRules.Rules = append(al.MatchedRules.Rules, &AuditMatchedRule{
-			Actionset: &AuditMatchedRuleActionset{
-				Id: r.Id,
-				IsChained: (r.Id == 0),
-				ChainStarter: (r.Id != 0 && r.Chain != nil), 
-				tags: r.Tags,
-				Phase: r.Phase,
-			},
-			Config: &AuditMatchedRuleConfig{
-				LineNum: 0,
-				Filename: "",
-			},
-			IsMatched: false,
-			Unparsed: r.Raw,
-			Operator: &AuditMatchedRuleOperator{
-				Operator: "",
-				OperatorParam: "",
-				Target: "",
-				Negated: false,
-			},
-		})	
+	for _, p := range parts{
+		switch p{
+		case 'B':
+			al.Transaction.Request.Headers = tx.Collections["request_headers"].Data
+			break
+		case 'C':
+			al.Transaction.Request.Body = tx.Collections["request_body"].GetFirstString()		
+			break
+		case 'F':
+			al.Transaction.Response.Headers = tx.Collections["response_headers"].Data
+			break
+		case 'G':
+			al.Transaction.Response.Body = tx.Collections["response_body"].GetFirstString()
+			break
+		case 'H':
+			servera := tx.Collections["response_headers"].Get("server")
+			server := ""
+			if len(server) > 0{
+				server = servera[0]
+			}
+			al.Transaction.Producer = &AuditTransactionProducer{
+				Connector: "unknown",
+				Version: "unknown",
+				Server: server,
+				RuleEngine: tx.RuleEngine,
+				Stopwatch: tx.GetStopWatch(),
+			}
+			break			
+		case 'I':
+			// not implemented
+			// TODO
+			break
+		case 'J':
+			//upload data
+			// TODO
+			break
+		case 'K':
+			for _, mr := range tx.MatchedRules{
+				r := mr.Rule
+				al.Messages = append(al.Messages, &AuditMessage{
+					Actionset: "",
+					Message: "",
+					Data: &AuditMessageData{
+						File: "",
+						Line: 0,
+						Id: r.Id,
+						Rev: r.Rev,
+						Msg: r.Msg,
+						Data: "",
+						//Severity: r.Severity,
+						//Ver: r.Ver,
+						//Maturity: r.Maturity,
+						//Accuracy: r.Accuracy,
+						Tags: r.Tags,
+					},
+				})	
+			}			
+			break
+		}
 	}
 }
 

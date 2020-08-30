@@ -3,7 +3,6 @@ package actions
 import(
 	"strings"
 	"github.com/jptosso/coraza-waf/pkg/engine"
-	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
 // Initializes a persistent collection and add the data to the standard collections engine.
@@ -22,7 +21,7 @@ func (a *InitCol) Init(r *engine.Rule, data string) string {
 func (a *InitCol) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	pc := &engine.PersistentCollection{}
     pc.New(nil, tx.WafInstance.WebAppId, a.Collection, a.Key, 10000)
-    col := &utils.LocalCollection{}
+    col := &engine.LocalCollection{}
     col.Init(a.Collection)
     col.Data = pc.GetData()
     tx.Collections[a.Collection] = col

@@ -30,7 +30,7 @@ func TestCLogFileCreation(t *testing.T){
 	if err != nil{
 		t.Error("Invalid JSON audit file")
 	}
-	if al.Transaction.TransactionId != tx.Id{
+	if al.Transaction.Id != tx.Id{
 		t.Error("Invalid ID for JSON audit file")
 	}
 }

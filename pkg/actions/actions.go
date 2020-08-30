@@ -32,7 +32,7 @@ func ActionsMap() map[string]engine.Action {
 		//Can update transaction but cannot affect the flow nor disrupt the request
 		"append": &Append{},
 		"capture": &Capture{},
-		//"ctl": &Ctl{},
+		"ctl": &Ctl{},
 		"exec": &Exec{},
 		"expirevar": &Expirevar{},
 		//"deprecateVar": &DeprecateVar{},

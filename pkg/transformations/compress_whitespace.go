@@ -1,10 +1,29 @@
 package transformations
 import (
-	pcre"github.com/gijsbers/go-pcre"
+	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
-func CompressWhitespace(data string) string{
-	re := pcre.MustCompile(`\s+`, 0)
-	//TODO avoid \n, \s includes line break
-	return re.ReplaceAllString(data, " ", 0)
+func CompressWhitespace(value string) string{
+    a := []byte{}
+    i := 0
+    inWhiteSpace := false
+    length := len(value)
+
+    for i < length {
+        if (utils.IsSpace(value[i])) {
+            if (inWhiteSpace) {
+                i++
+                continue
+            } else {
+                inWhiteSpace = true
+                a = append(a, ' ')
+            }
+        } else {
+            inWhiteSpace = false
+            a = append(a, value[i])
+        }
+        i++
+    }
+
+    return string(a)
 }

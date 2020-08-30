@@ -16,12 +16,12 @@ func (o *Gt) Init(data string){
 func (o *Gt) Evaluate(tx *engine.Transaction, value string) bool{
 	v, err := strconv.Atoi(value)
 	if  err != nil{
-		return false
+		v = 0
 	}
 	data := tx.MacroExpansion(o.data)
 	k, err := strconv.Atoi(data)
 	if err != nil{
-		return false
+		k = 0
 	}
 	return k < v
 }

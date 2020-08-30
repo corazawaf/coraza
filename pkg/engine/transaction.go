@@ -15,16 +15,28 @@ import (
     "net/http"
     "net/url"
     "time"
+    "io/ioutil"
+    "mime"
+    "errors"
+    "bufio"
     "path"
     "encoding/json"
+    "github.com/antchfx/xmlquery"
+    log"github.com/sirupsen/logrus"
 )
 
 type MatchedRule struct {
 	Id int
 	DisruptiveAction int
 	Messages []string
-	MatchedData []string
+	MatchedData []*MatchData
     Rule *Rule
+}
+
+type MatchData struct {
+    Collection string
+    Key string
+    Value string
 }
 
 type Transaction struct {
@@ -41,12 +53,13 @@ type Transaction struct {
     Disrupted bool `json:"disrupted"`
 
     // Contains all collections, including persistent
-    Collections map[string]*utils.LocalCollection
+    Collections map[string]*LocalCollection
     //This map is used to store persistent collections saves, useful to save them after transaction is finished
     PersistentCollections map[string]*PersistentCollection
 
     //Response data to be sent
     Status int `json:"status"`
+
     Logdata []string `json:"logdata"`
 
     // Rules will be skipped after a rule with this SecMarker is found
@@ -54,25 +67,24 @@ type Transaction struct {
 
     // Copies from the WafInstance
     AuditEngine int
-    AuditLogParts []int
-    DebugLogLevel int
+    AuditLogParts []rune
     ForceRequestBodyVariable bool
     RequestBodyAccess bool
     RequestBodyLimit int64
-    RequestBodyProcessor bool
+    RequestBodyProcessor int
     ResponseBodyAccess bool
     ResponseBodyLimit int64
     RuleEngine bool
     HashEngine bool
     HashEnforcement bool
     AuditLogType int
+    LastPhase int
 
     // Rules with this id are going to be skipped
     RuleRemoveById []int
-    // Rules with this messages are going to be skipped
-    RuleRemoveByMsg []string
-    // Rules with this tags are going to be skipped
-    RuleRemoveByTag []string
+
+    // Used by ctl to remove rule targets by id during the transaction
+    RuleRemoveTargetById map[int][]*Collection
 
     // Will skip this number of rules, this value will be decreased on each skip
     Skip int `json:"skip"`
@@ -83,11 +95,16 @@ type Transaction struct {
     // Contains the ID of the rule that disrupted the transaction
     DisruptiveRuleId int `json:"disruptive_rule_id"`
 
+    // Contains duration in useconds per phase
+    StopWatches map[int]int
+
     // Used for paralelism
     Mux *sync.RWMutex
 
     // Contains de *engine.Waf instance for the current transaction
     WafInstance *Waf
+
+    XmlDoc *xmlquery.Node
 }
 
 func (tx *Transaction) MacroExpansion(data string) string{
@@ -109,7 +126,7 @@ func (tx *Transaction) MacroExpansion(data string) string{
         if collection == nil{
             return ""
         }
-        expansion := collection.Get(key)
+        expansion := collection.Get(strings.ToLower(key))
         if len(expansion) == 0{
             data = strings.ReplaceAll(data, v, "")
         }else{
@@ -195,6 +212,7 @@ func (tx *Transaction) SetFiles(files map[string][]*multipart.FileHeader) {
     defer tx.Mux.Unlock()
     totalSize := int64(0)
     for field, fheaders := range files{
+        // TODO add them to temporal storage
         tx.Collections["files_names"].AddToKey("", field)
         for _, header := range fheaders{
             tx.Collections["files"].AddToKey("", header.Filename)
@@ -218,7 +236,7 @@ func (tx *Transaction) SetFullRequest() {
             headers += fmt.Sprintf("%s: %s\n", k, v2)
         }
     }
-    full_request := fmt.Sprintf("%s\n%s\n%s", 
+    full_request := fmt.Sprintf("%s\n%s\n\n%s\n", 
         tx.Collections["request_line"].GetFirstString(),
         headers,
         tx.Collections["request_body"].GetFirstString())
@@ -252,22 +270,25 @@ func (tx *Transaction) SetRemoteUser(user string) {
 func (tx *Transaction) SetRequestBody(body string, length int64, mime string) {
     tx.Mux.Lock()
     defer tx.Mux.Unlock()
+    //TODO requires more validations. chunks, etc
     if !tx.RequestBodyAccess || (tx.RequestBodyLimit > 0 && length > tx.RequestBodyLimit){
         return
     }
     l := strconv.FormatInt(length, 10)
-    tx.Collections["request_body"].AddToKey("", body)
     tx.Collections["request_body_length"].AddToKey("", l)
     if mime == "application/xml"{
-        tx.Collections["xml"].AddToKey("", body)
-        //AVOID XML vulnerabilities!! LIKE XXE
-        //https://github.com/antchfx/xmlquery
-        //doc, err := xmlquery.Parse(strings.NewReader(s))
-        //tx.Xml = doc
+        var err error
+        tx.XmlDoc, err = xmlquery.Parse(strings.NewReader(body))
+        if err != nil {
+            log.Error("Cannot parse XML body for request")
+        }        
+        tx.Collections["request_body"].Data[""] = []string{}
     }else if mime == "application/json" {
         // JSON!
         //doc, err := xmlquery.Parse(strings.NewReader(s))
         //tx.Json = doc
+    }else if mime == "" {
+        tx.Collections["request_body"].AddToKey("", body)
     }
     /*
     //TODO shall we do this and force the real length?
@@ -375,6 +396,7 @@ func (tx *Transaction) SetRequestLine(method string, protocol string, requestUri
     tx.Mux.Lock()
     defer tx.Mux.Unlock()
     tx.Collections["request_method"].AddToKey("", method)
+    tx.Collections["request_uri"].AddToKey("", requestUri)
     tx.Collections["request_protocol"].AddToKey("", protocol)
     tx.Collections["request_line"].AddToKey("", fmt.Sprintf("%s %s %s", method, requestUri, protocol))
 
@@ -410,10 +432,10 @@ func (tx *Transaction) InitTxCollection(){
                       "request_filename", "request_headers", "request_headers_names", "request_method", "request_protocol", "request_filename", "full_request",
                       "request_uri", "request_line", "response_body", "response_content_length", "response_content_type", "request_cookies", "request_uri_raw",
                       "response_headers", "response_headers_names", "response_protocol", "response_status", "appid", "id", "timestamp", "files_names", "files",
-                      "files_combined_size", "reqbody_processor", "request_body_length"}
+                      "files_combined_size", "reqbody_processor", "request_body_length", "xml", "matched_vars"}
     
     for _, k := range keys{
-        tx.Collections[k] = &utils.LocalCollection{}
+        tx.Collections[k] = &LocalCollection{}
         tx.Collections[k].Init(k)
     }
 
@@ -432,14 +454,15 @@ func (tx *Transaction) ResetCapture(){
     }
 }
 
-func (tx *Transaction) initVars() {
-    tx.Collections = map[string]*utils.LocalCollection{}
+func (tx *Transaction) Init(waf *Waf) error{
+    tx.WafInstance = waf
+    tx.Collections = map[string]*LocalCollection{}
     txid := utils.RandomString(19)
     tx.Id = txid
     tx.InitTxCollection()
 
     tx.SetSingleCollection("id", txid)
-    tx.SetSingleCollection("timestamp", strconv.FormatInt(time.Now().Unix(), 10))
+    tx.SetSingleCollection("timestamp", strconv.FormatInt(time.Now().UnixNano(), 10))
     tx.Disrupted = false
     tx.AuditEngine = tx.WafInstance.AuditEngine
     tx.AuditLogParts = tx.WafInstance.AuditLogParts
@@ -451,26 +474,173 @@ func (tx *Transaction) initVars() {
     tx.AuditLogType = tx.WafInstance.AuditLogType
     tx.Skip = 0
     tx.PersistentCollections = map[string]*PersistentCollection{}
-}
-
-func (tx *Transaction) Init(waf *Waf) error{
-    tx.WafInstance = waf
-    tx.initVars()
     tx.Mux = &sync.RWMutex{}
+    tx.RuleRemoveTargetById = map[int][]*Collection{}
+    tx.RuleRemoveById = []int{}
+    tx.StopWatches = map[int]int{}
+
     return nil
 }
 
-func (tx *Transaction) ExecutePhase(phase int) error{
-    if phase < 1 || phase > 5 {
-        return fmt.Errorf("Phase must be between 1 and 5, %d used", phase)
+// Parse binary request including body, does only supports http/1.1 and http/1.0
+func (tx *Transaction) ParseRequestString(data string) error{
+    buf := bufio.NewReader(strings.NewReader(data))
+    req, err := http.ReadRequest(buf)
+    if err != nil {
+        return err
     }
-    usedRules := 0
 
+    err = tx.ParseRequestObject(req)
+    if err != nil {
+        return err
+    }
+    return nil
+}
+
+// Parse binary response including body, does only supports http/1.1 and http/1.0
+func (tx *Transaction) ParseResponseString(req *http.Request, data string) error{
+    buf := bufio.NewReader(strings.NewReader(data))
+    res, err := http.ReadResponse(buf, req)
+    if err != nil {
+        return err
+    }
+
+    err = tx.ParseResponseObject(res)
+    if err != nil {
+        return err
+    }
+    return nil
+}
+
+// Parse golang http request object into transaction
+func (tx *Transaction) ParseRequestObject(req *http.Request) error{
+    re := regexp.MustCompile(`^\[(.*?)\]:(\d+)$`)
+    matches := re.FindAllStringSubmatch(req.RemoteAddr, -1)
+    address := ""
+    port := 0
+    //no more validations as we don't spake weird ip addresses
+    if len(matches) > 0 {
+        address = string(matches[0][1])
+        port, _ = strconv.Atoi(string(matches[0][2]))
+    }
+    tx.SetRequestHeaders(req.Header)
+    tx.SetArgsGet(req.URL.Query())
+    tx.SetUrl(req.URL)
+    tx.SetRemoteAddress(address, port)
+    tx.SetRequestCookies(req.Cookies())
+    tx.SetRequestLine(req.Method, req.Proto, req.RequestURI)
+    tx.ExecutePhase(1)
+
+    if tx.Disrupted || req.Body == nil{
+        return nil
+    }
+
+    //phase 2
+    cl := tx.Collections["request_headers"].Data["content-type"]
+    ctype := "text/plain"
+    ct := ""
+    if len(cl) > 0{
+        spl := strings.SplitN(cl[0], ";", 2)
+        ctype = spl[0]
+        ct = cl[0]
+    }
+    //f.tx.SetReqBodyProcessor("URLENCODED")
+    switch ctype {
+    case "application/x-www-form-urlencoded":
+        //url encode
+        err := req.ParseForm()
+        if err != nil {
+            return err
+        }
+        tx.SetArgsPost(req.PostForm)
+        break
+    case "multipart/form-data":
+        //multipart
+        //url encode
+        tx.SetReqBodyProcessor("MULTIPART")
+        err := req.ParseMultipartForm(tx.RequestBodyLimit)
+        if err != nil {
+            return errors.New("Unable to parse multipart data")
+        }
+        tx.SetFiles(req.MultipartForm.File)
+        tx.SetArgsPost(req.MultipartForm.Value)
+        break
+    }
+    body, err := ioutil.ReadAll(req.Body)
+    defer req.Body.Close()
+    //TODO BUFFERING
+    if err != nil{
+        return err
+    }
+    tx.SetRequestBody(string(body), int64(len(body)), ct)    
+    tx.ExecutePhase(2)     
+    return nil
+}
+
+// Parse golang http response object into transaction
+func (tx *Transaction) ParseResponseObject(res *http.Response) error{
+    tx.SetResponseHeaders(res.Header)
+    //res.Header.Set("X-Coraza-Waf", "woo")
+    if tx.ExecutePhase(3) {
+        return nil
+    }
+    //TODO response body
+    tx.ExecutePhase(4)
+    return nil
+}
+
+// Parse request body from a string
+// Avoid it as it is a heavy load operation
+func (tx *Transaction) ParseRequestBodyBinary(mimeval string, body string) error{
+    // Maybe it would be easier to create an http instance with fake headers and append the body
+    _, params, _ := mime.ParseMediaType(mimeval)
+    boundary := params["boundary"]
+    mr := multipart.NewReader(strings.NewReader(body), boundary)
+    files := map[string][]*multipart.FileHeader{}
+    args := map[string][]string{}
+    for {
+        p, err := mr.NextPart()
+        if err != nil {
+            break
+        }
+        data, err := ioutil.ReadAll(p)
+        if err != nil {
+            return err
+        }
+        key := p.FormName()
+        file := p.FileName()
+        mpf := &multipart.FileHeader{
+            Filename: file, 
+            Header: p.Header, 
+            Size: int64(len(data)),
+        }
+        if files[key] == nil{
+            files[key] = []*multipart.FileHeader{mpf}
+        }else{
+            files[key] = append(files[key], mpf)
+        }
+        if args[key] == nil{
+            args[key] = []string{string(data)}
+        }else{
+            args[key] = append(args[key], string(data))
+        }
+    }
+    tx.SetFiles(files)
+    tx.SetArgsPost(args)
+    return nil
+}
+
+// Placeholder for http/2 streaming features
+func (tx *Transaction) ExecutePhase(phase int) bool{
+    ts := time.Now().UnixNano()
+    usedRules := 0
+    tx.LastPhase = phase
     for _, r := range tx.WafInstance.Rules.GetRules() {
         //we always execute secmarkers
-        if r.Phase != phase{
+        if r.Phase != phase {
             continue
         }
+
         if tx.SkipAfter != ""{
             if r.SecMark != tx.SkipAfter{
                 continue
@@ -489,6 +659,7 @@ func (tx *Transaction) ExecutePhase(phase int) error{
         tx.Capture = false //we reset the capture flag on every run
         usedRules++
     }
+    tx.StopWatches[phase] = int(time.Now().UnixNano() - ts)
     if tx.Disrupted || phase == 5{
         if phase != 5{
             tx.ExecutePhase(5)
@@ -497,23 +668,27 @@ func (tx *Transaction) ExecutePhase(phase int) error{
             tx.SavePersistentData()
         }
     }
-    return nil
+    return tx.Disrupted
 }
 
-func (tx *Transaction) MatchRule(rule *Rule, msgs []string, matched []string){
+func (tx *Transaction) MatchRule(rule *Rule, msgs []string, match []*MatchData){
     mr := &MatchedRule{
         Id: rule.Id,
-        DisruptiveAction: rule.DisruptiveAction,
+        DisruptiveAction: 0,
         Messages: msgs,
-        MatchedData: matched,
+        MatchedData: match,
         Rule: rule,
     }
     tx.MatchedRules = append(tx.MatchedRules, mr)
-
+    mv := tx.Collections["matched_vars"].Data[""]
+    for _, m := range match{
+        mv = append(mv, m.Value)
+    }
+    tx.Collections["matched_vars"].Data[""] = mv
 }
 
 func (tx *Transaction) InitCollection(key string){
-    col := &utils.LocalCollection{}
+    col := &LocalCollection{}
     col.Init(key)
     tx.Collections[key] = col
 
@@ -524,7 +699,7 @@ func (tx *Transaction) ToJSON() ([]byte, error){
 }
 
 func (tx *Transaction) SetSingleCollection(key string, value string){
-    tx.Collections[key] = &utils.LocalCollection{}
+    tx.Collections[key] = &LocalCollection{}
     tx.Collections[key].Init(key)
     tx.Collections[key].Add("", []string{value})
 }
@@ -538,20 +713,51 @@ func (tx *Transaction) GetSingleCollection(key string) string{
     return col.GetFirstString()
 }
 
-func (tx *Transaction) GetField(collection string, key string, exceptions []string) ([]string){
+func (tx *Transaction) GetTimestamp() string{
+    t := time.Unix(0, tx.Collections["timestamp"].GetFirstInt64())
+    ts := t.Format("02/Jan/2006:15:04:20 -0700")    
+    return ts
+}
 
+func (tx *Transaction) GetStopWatch() string {
+    ts := tx.Collections["timestamp"].GetFirstInt64()
+    sum := 0
+    for _, r := range tx.StopWatches{
+        sum += r
+    }
+    diff := time.Now().UnixNano()-ts
+    sw := fmt.Sprintf("%d %d; combined=%d, p1=%d, p2=%d, p3=%d, p4=%d, p5=%d",
+        ts, diff, sum, tx.StopWatches[1], tx.StopWatches[2], tx.StopWatches[3], tx.StopWatches[4], tx.StopWatches[5])
+    return sw
+}
+
+func (tx *Transaction) GetField(collection string, key string, exceptions []string) ([]*MatchData){
     switch collection{
     case "xml":
-        // TODO, for version 0.1
-        return tx.Collections["request_body"].Data[""]
+        if tx.XmlDoc == nil{
+            return []*MatchData{}
+        }
+        data, err := xmlquery.QueryAll(tx.XmlDoc, key)
+        if err != nil{
+            log.Error("Invalid xpath expression " + key)
+            return []*MatchData{}
+        }
+        res := []*MatchData{}
+        for _, d := range data {
+            res = append(res, &MatchData{
+                Collection: "XML",
+                Value: d.InnerText(),
+            })
+        }
+        return res
     case "json":
         // TODO, for future versions
-        return tx.Collections["request_body"].Data[""]
+        return []*MatchData{}
     default:
         col := tx.Collections[collection]
         key = tx.MacroExpansion(key)
         if col == nil{
-            return []string{}
+            return []*MatchData{}
         }
         return col.GetWithExceptions(key, exceptions)        
     }
@@ -560,13 +766,13 @@ func (tx *Transaction) GetField(collection string, key string, exceptions []stri
 
 //Returns directory and filename
 func (tx *Transaction) GetAuditPath() (string, string){
-    t := time.Unix(tx.Collections["timestamp"].GetFirstInt64(), 0)
+    t := time.Unix(0, tx.Collections["timestamp"].GetFirstInt64())
 
     // append the two directories
-    p2 := fmt.Sprintf("/%s/%s/", t.Format("20060106"), t.Format("20060106-1504"))
+    p2 := fmt.Sprintf("/%s/%s/", t.Format("20060102"), t.Format("20060102-1504"))
     logdir:= path.Join(tx.WafInstance.AuditLogStorageDir, p2)
     // Append the filename
-    filename := fmt.Sprintf("/%s-%s", t.Format("20060106-150405"), tx.Id)
+    filename := fmt.Sprintf("/%s-%s", t.Format("20060102-150405"), tx.Id)
     return logdir, filename
 }
 
@@ -590,10 +796,9 @@ func (tx *Transaction) ToAuditJson() []byte{
 
 func (tx *Transaction) ToAuditLog() *AuditLog{
     al := &AuditLog{}
-    al.Init(tx, tx.AuditLogParts)
+    al.Init(tx)
     return al
 }
-
 
 func (tx *Transaction) SaveLog() error{
     return tx.WafInstance.Logger.WriteAudit(tx)
@@ -606,6 +811,7 @@ func (tx *Transaction) GetErrorPage() string{
         buff += "<h1>Coraza Security Error - Debug Mode</h1>"
         buff += "<h3>Rules Triggered</h3>"
         buff += "<table class='table table-striped'><thead><tr><th>ID</th><th>Action</th><th>Msg</th><th>Match</th><th>Raw Rule</th></tr></thead><tbody>"
+        /*
         for _, mr := range tx.MatchedRules{
             match := strings.Join(mr.MatchedData, "<br>")
             rule := mr.Rule.Raw
@@ -613,7 +819,7 @@ func (tx *Transaction) GetErrorPage() string{
                 rule += "<br><strong>CHAIN:</strong> " + child.Raw
             }
             buff += fmt.Sprintf("<tr><td>%d</td><td>%d</td><td></td><td>%s</td><td>%s</td></tr>", mr.Id, mr.DisruptiveAction, match, rule)
-        }
+        }*/
         buff += "</tbody></table>"
 
         buff += "<h3>Transaction Collections</h3>"
@@ -654,5 +860,16 @@ func (tx *Transaction) SavePersistentData() {
     for col, pc := range tx.PersistentCollections{
         pc.SetData(tx.Collections[col].Data)
         pc.Save()
+    }
+}
+
+func (tx *Transaction) RemoveRuleTargetById(id int, col string, key string){
+    c := &Collection{col, key}
+    if tx.RuleRemoveTargetById[id] == nil{
+        tx.RuleRemoveTargetById[id] = []*Collection{
+            c,
+        }
+    }else{
+        tx.RuleRemoveTargetById[id] = append(tx.RuleRemoveTargetById[id], c)
     }
 }

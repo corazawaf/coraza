@@ -10,6 +10,7 @@ import (
     "fmt"
     "strings"
     "errors"
+    "time"
     "os"
     "regexp"
     "bufio"
@@ -144,6 +145,7 @@ func benchmarkreport(){
 func runTest(waf *engine.Waf, profile testProfile) (bool, int, error){
 	passed := 0
 	for _, test := range profile.Tests{
+		tn := time.Now().UnixNano()
 		pass := true
 		for _, stage := range test.Stages{
 			tx := waf.NewTransaction()
@@ -168,8 +170,8 @@ func runTest(waf *engine.Waf, profile testProfile) (bool, int, error){
 			}
 			method := "GET"
 			if stage.Stage.Input.Method != ""{
-				tx.SetRequestMethod(stage.Stage.Input.Method)
 				method = stage.Stage.Input.Method
+				tx.SetRequestMethod(method)
 			}
 
 			//Request Line
@@ -189,11 +191,14 @@ func runTest(waf *engine.Waf, profile testProfile) (bool, int, error){
 				}else{
 					tx.SetUrl(u)
 					tx.AddGetArgsFromUrl(u)
-					path = u.EscapedPath()//or unescaped?	
+					path = stage.Stage.Input.Uri//or unescaped?	
 				}
 				
 			}
 			tx.SetRequestLine(method, httpv, path)
+
+			//PHASE 1
+			tx.ExecutePhase(1)
 
 			// POST DATA
 			if stage.Stage.Input.Data != ""{
@@ -208,27 +213,31 @@ func runTest(waf *engine.Waf, profile testProfile) (bool, int, error){
 				case reflect.String:
 					data = stage.Stage.Input.Data.(string)
 				}
-				// TODO add mime
-				tx.SetRequestBody(data, int64(len(data)), "")
 				ct := tx.Collections["request_headers"].Data["content-type"]
 				ctt := ""
 				if len(ct) == 1{
 					ctt = ct[0]
 				}
 				mediaType, params, _ := mime.ParseMediaType(ctt)
-				if strings.HasPrefix(mediaType, "multipart/") {
+				if method == "GET" || method == "HEAD" || method == "OPTIONS" {
+					length := strconv.Itoa(len(data))
+					if len(tx.Collections["request_headers"].Data["content-length"]) == 0{
+						tx.Collections["request_headers"].Data["content-length"] = []string{length}
+					}
+					// Just for testing
+					tx.Collections["request_body"].Data["0"] = []string{data}
+				}else if strings.HasPrefix(mediaType, "multipart/") {
 					parseMultipart(data, params["boundary"], tx)
-				}else{
+				}else if strings.HasPrefix(mediaType, "") {
+					tx.SetRequestBody(data, int64(len(data)), mediaType)
 					u, err := url.ParseQuery(data)
 					if err == nil{
 						tx.SetArgsPost(u)
 					}
 				}
-				length := strconv.Itoa(len(data))
-				tx.Collections["request_headers"].Data["content-length"] = []string{length}
 			}
 
-			for i := 1; i <= 5; i++{
+			for i := 2; i <= 5; i++{
 				tx.ExecutePhase(i)
 			}
 			log := ""
@@ -255,7 +264,7 @@ func runTest(waf *engine.Waf, profile testProfile) (bool, int, error){
 				continue
 			}
 		}
-		fmt.Printf("%s: %s\033[0m (0us)\n", test.Title, result)
+		fmt.Printf("%s: %s\033[0m (%dus)\n", test.Title, result, time.Now().UnixNano()-tn)
 	}
 	return len(profile.Tests) == passed, 0, nil
 }

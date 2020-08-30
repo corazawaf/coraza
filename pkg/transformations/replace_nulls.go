@@ -4,6 +4,6 @@ import (
 )
 
 func ReplaceNulls(data string) string{
-	re := pcre.MustCompile(`\u0000`, 0)
+	re := pcre.MustCompile(`\0`, 0)
 	return re.ReplaceAllString(data, " ", 0)
 }

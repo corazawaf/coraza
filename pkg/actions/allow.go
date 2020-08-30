@@ -4,17 +4,27 @@ import(
 	"github.com/jptosso/coraza-waf/pkg/engine"
 )
 
+//0 nothing, 1 phase, 2 request
 type Allow struct {
-
+	allow int
 }
 
 func (a *Allow) Init(r *engine.Rule, b1 string) string {
-	// Does not require initializer
+	// Does not require 
+	if b1 == "phase"{
+		a.allow = 1
+	}else if b1 == "request"{
+		a.allow = 2
+	}else if b1 == ""{
+		a.allow = 0
+	}else{
+		return "Invalid value for action allow"
+	}
 	return ""
 }
 
 func (a *Allow) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
-	tx.Disrupted = false
+	//Huge TODO here
 }
 
 func (a *Allow) GetType() int{

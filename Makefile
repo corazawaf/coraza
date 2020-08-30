@@ -8,8 +8,8 @@ GOGET=$(GOCMD) get
 BINARY_NAME=skipper
 BINARY_UNIX=$(BINARY_NAME)
 
-all: libinjection compile
-compile: 	
+all: waf
+waf: 	
 		CGO_ENABLED=1 go get ./...
 		$(GOBUILD)
 test: 

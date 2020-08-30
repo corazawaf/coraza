@@ -3,6 +3,7 @@ module github.com/jptosso/coraza-waf
 go 1.13
 
 require (
+	github.com/antchfx/xmlquery v1.2.4
 	github.com/bobusumisu/aho-corasick v0.0.0-20190714010706-87defef828b4
 	github.com/c-bata/go-prompt v0.2.3
 	github.com/gijsbers/go-pcre v0.0.0-20161214203829-a84f3096ab3c
@@ -19,5 +20,6 @@ require (
 	github.com/yuin/gopher-lua v0.0.0-20190514113301-1cd887cd7036
 	github.com/zalando/skipper v0.11.101
 	golang.org/x/crypto v0.0.0-20191205180655-e7c4368fe9dd // indirect
+	golang.org/x/text v0.3.2
 	gopkg.in/yaml.v2 v2.2.7
 )

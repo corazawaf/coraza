@@ -10,6 +10,7 @@ import(
 	"strings"
 	"net/http"
 	"io/ioutil"
+	"path/filepath"
 	"fmt"
 	"bufio"
 	"time"
@@ -19,6 +20,8 @@ import(
 )
 
 type Parser struct {
+	configfile string
+	configdir string
 	nextChain bool
 	RuleEngine string
 	waf *engine.Waf
@@ -33,6 +36,8 @@ func (p *Parser) Init(waf *engine.Waf) {
 }
 
 func (p *Parser) FromFile(profilePath string) error{
+	p.configfile = profilePath
+	p.configdir = filepath.Dir(profilePath) + "/"
     file, err := utils.OpenFile(profilePath)
     if err != nil {
     	p.log("Cannot open profile path " + profilePath)
@@ -129,49 +134,9 @@ func (p *Parser) Evaluate(data string) error{
 		p.waf.AuditLogFileMode, _ = strconv.Atoi(opts)
 		break
 	case "SecAuditLogParts":
-		p.waf.AuditLogParts = []int{}
+		p.waf.AuditLogParts = []rune{}
 		for _, c := range opts{
-			var val int
-			switch c{
-				case 'A':
-					val = engine.AUDIT_LOG_PART_HEADER
-					break
-				case 'B':
-					val = engine.AUDIT_LOG_PART_REQUEST_HEADERS
-					break
-				case 'C':
-					val = engine.AUDIT_LOG_PART_REQUEST_BODY
-					break
-				case 'D':
-					val = engine.AUDIT_LOG_PART_RESERVED_1
-					break
-				case 'E':
-					val = engine.AUDIT_LOG_PART_INT_RESPONSE_BODY
-					break
-				case 'F':
-					val = engine.AUDIT_LOG_PART_FIN_RESPONSE_BODY
-					break
-				case 'G':
-					val = engine.AUDIT_LOG_PART_FIN_RESPONSE_HEADERS
-					break
-				case 'H':
-					val = engine.AUDIT_LOG_PART_RESPONSE_BODY
-					break
-				case 'I':
-					val = engine.AUDIT_LOG_PART_AUDIT_LOG_TRAIL
-					break
-				case 'J':
-					val = engine.AUDIT_LOG_PART_FILES_MULTIPART
-					break
-				case 'K':
-					val = engine.AUDIT_LOG_PART_ALL_MATCHED_RULES
-					break
-				case 'Z':
-					val = engine.AUDIT_LOG_PART_FINAL_BOUNDARY
-					break
-			}
-			//TODO validate repeated parts
-			p.waf.AuditLogParts = append(p.waf.AuditLogParts, val)
+			p.waf.AuditLogParts = append(p.waf.AuditLogParts, c)
 		}
 		break
 	case "SecAuditLogRelevantStatus":
@@ -391,12 +356,18 @@ func (p *Parser) Evaluate(data string) error{
 	case "SecRule":
 		rule, err := p.ParseRule(opts)
 		if err != nil{
+			p.log("Failed to compile rule: " + opts)
+			//return err
+		}else{
+			p.waf.Rules.Add(rule)
+		}
+	case "SecAction":
+		rule, err := p.ParseRule("\"@unconditionalMatch\" \"" + opts + "\"")
+		if err != nil{
 			p.log("Failed to compile rule.")
 			return err
 		}
 		p.waf.Rules.Add(rule)
-	case "SecAction":
-		p.ParseRule("\"@unconditionalMatch\" " + opts)
 	case "SecMarker":
 		p.nextSecMark = opts
 	case "SecComponentSignature":
@@ -547,6 +518,12 @@ func (p *Parser) compileRuleOperator(r *engine.Rule, operator string) error{
 	if r.OperatorObj.Operator == nil{
 		return p.log("Invalid operator " + op)
 	}else{
+		fileops := []string{"ipMatchFromFile", "pmFromFile"}
+		for _, fo := range fileops{
+			if fo == op{
+				r.OperatorObj.Data = p.configdir + r.OperatorObj.Data
+			}
+		}
 		r.OperatorObj.Operator.Init(r.OperatorObj.Data)
 	}
 	return nil
@@ -563,26 +540,24 @@ func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error{
     	actions = fmt.Sprintf("%s, %s", p.defaultActions, actions)
     }
 
-    actionsmap := actionsmod.ActionsMap()
 	for matcher.Match(subject, 0){
 		m := matcher.GroupString(1)
 		index := matcher.Index()
 		spl := strings.SplitN(m, ":", 2)
 		value := ""
 		key := strings.Trim(spl[0], " ")
+
 		if len(spl) == 2{
 			value = strings.Trim(spl[1], " ")
 		}
-		if actionsmap[key] == nil{
+		if actionsmod.ActionsMap()[key] == nil{
 			//TODO some fixing here, this is a bug
 			p.log("Invalid action " + key)
 		}else{
-			action := actionsmap[key]
+			action := actionsmod.ActionsMap()[key]
 			err := action.Init(r, value)
 			if err != ""{
 				p.log(err)
-				// TODO we should return an error later
-				return nil
 			}
 			r.Actions = append(r.Actions, action)
 		}

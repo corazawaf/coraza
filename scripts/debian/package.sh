@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PACKAGE=coraza-waf
-VERSION=0.1-1
+VERSION=0.1-alpha.1
 TMP_PATH=/tmp/coraza-waf-build/$VERSION
 COMPATIBILITY=9
 
@@ -52,6 +52,7 @@ Section: base
 Source: https://github.com/jptosso/coraza-waf/releases/download/%{version}/coraza-waf-%VERSION-linux-amd64.tar.gz
 Priority: optional
 Architecture: amd64
+Depends: libpcre++-dev
 Homepage: https://jptosso.github.io/coraza-waf/
 Maintainer: Juan Pablo Tosso <jptosso@gmail.com>
 Description: Coraza Web Application Firewall
