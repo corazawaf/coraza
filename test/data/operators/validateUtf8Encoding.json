@@ -189,7 +189,7 @@
       "name" : "validateUtf8Encoding"
    },
    {
-      "input" : "\\0\\xe4",
+      "input" : "\\u0000\\xe4",
       "param" : "",
       "name" : "validateUtf8Encoding",
       "ret" : 1,
@@ -221,6 +221,6 @@
       "ret" : 1,
       "type" : "op",
       "param" : "",
-      "input" : "\\xFF\\0"
+      "input" : "\\xFF\\u0000"
    }
 ]

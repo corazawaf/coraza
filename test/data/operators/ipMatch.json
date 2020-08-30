@@ -6182,7 +6182,7 @@
    },
    {
       "type" : "op",
-      "ret" : 1,
+      "ret" : 0,
       "name" : "ipMatch",
       "input" : "0000:0000:0000:0000:0000:ffff:ffff:ffff",
       "param" : "0:0::/80"

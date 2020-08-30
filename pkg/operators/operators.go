@@ -21,13 +21,13 @@ func OperatorsMap() map[string]engine.Operator {
 		"pmFromFile": &PmFromFile{},
 		"pm": &Pm{},
 		"validateByteRange": &ValidateByteRange{},
-		//"validateUrlEncoding": &ValidateUrlEncoding{},
+		"validateUrlEncoding": &ValidateUrlEncoding{},
 		"streq": &Streq{},	
-		//"ipMatch": &IpMatch{},
-		//"ipMatchFromFile": &IpMatchFromFile{},
+		"ipMatch": &IpMatch{},
+		"ipMatchFromFile": &IpMatchFromFile{},
 		"geoLookup": &GeoLookup{},
 		"rbl": &Rbl{},
-		//"validateUtf8Encoding": &ValidateUtf8Encoding{},
+		"validateUtf8Encoding": &ValidateUtf8Encoding{},
 		"noMatch": &NoMatch{},
 	}
 }

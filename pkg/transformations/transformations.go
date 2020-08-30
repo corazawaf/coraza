@@ -4,7 +4,7 @@ func TransformationsMap() map[string]interface{} {
 	return map[string]interface{}{
 		//"base64Decode":       Base64decode,
 		"lowercase":          	LowerCase,
-		//"removeWhitespace":   RemoveWhitespace,
+		"removeWhitespace":		RemoveWhitespace,
 		"removeNulls":        	RemoveNulls,
 		"replaceNulls":       	ReplaceNulls,
 		"compressWhitespace": 	CompressWhitespace,
