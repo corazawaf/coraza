@@ -68,5 +68,7 @@ func asciiToString(ascii []int) string{
 }
 
 func getTransaction() *engine.Transaction{
-	return &engine.Transaction{}
+	waf := &engine.Waf{}
+	waf.Init()
+	return waf.NewTransaction()
 }

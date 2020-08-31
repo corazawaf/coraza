@@ -365,36 +365,40 @@ func (tx *Transaction) SetUrl(u *url.URL){
     if len(spl) > 0{
         RequestBasename = spl[len(spl)-1]
     }
-    tx.Collections["request_uri"].AddToKey("", u.EscapedPath())
-    tx.Collections["request_filename"].AddToKey("", u.Path)
-    tx.Collections["request_basename"].AddToKey("", RequestBasename)
-    tx.Collections["query_string"].AddToKey("", u.RawQuery)
-    tx.Collections["request_uri_raw"].AddToKey("", u.String())
+    tx.GetCollection("request_uri").AddToKey("", u.EscapedPath())
+    tx.GetCollection("request_filename").AddToKey("", u.Path)
+    tx.GetCollection("request_basename").AddToKey("", RequestBasename)
+    tx.GetCollection("query_string").AddToKey("", u.RawQuery)
+    tx.GetCollection("request_uri_raw").AddToKey("", u.String())
 }
 
 //Sets args_get and args_get_names
 func (tx *Transaction) AddGetArgsFromUrl(u *url.URL){
     params := u.Query()
+    argsg := tx.GetCollection("args_get")
+    args := tx.GetCollection("args")
     for k, v := range params{
         for _, vv := range v{
-            tx.Collections["args_get"].AddToKey(k, vv)
-            tx.Collections["args"].AddToKey(k, vv)
+            argsg.AddToKey(k, vv)
+            args.AddToKey(k, vv)
         }
-        tx.Collections["args_get_names"].AddToKey("", k)
-        tx.Collections["args_names"].AddToKey("", k)
+        tx.GetCollection("args_get_names").AddToKey("", k)
+        tx.GetCollection("args_names").AddToKey("", k)
     }
 }
 
 //Sets args_post and args_post_names
 func (tx *Transaction) AddPostArgsFromUrl(u *url.URL){
     params := u.Query()
+    argsp := tx.GetCollection("args_post")
+    args := tx.GetCollection("args")
     for k, v := range params{
         for _, vv := range v{
-            tx.Collections["args_post"].AddToKey(k, vv)
-            tx.Collections["args"].AddToKey(k, vv)
+            argsp.AddToKey(k, vv)
+            args.AddToKey(k, vv)
         }
-        tx.Collections["args_post_names"].AddToKey("", k)
-        tx.Collections["args_names"].AddToKey("", k)
+        tx.GetCollection("args_post_names").AddToKey("", k)
+        tx.GetCollection("args_names").AddToKey("", k)
     }
 }
 
@@ -511,7 +515,7 @@ func (tx *Transaction) ParseRequestObject(req *http.Request) error{
     }
 
     //phase 2
-    cl := tx.Collections["request_headers"].Data["content-type"]
+    cl := tx.GetCollection("request_headers").GetSimple("content-type")
     ctype := "text/plain"
     ct := ""
     if len(cl) > 0{
