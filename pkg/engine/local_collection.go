@@ -39,12 +39,15 @@ func (c *LocalCollection) InitCollection(key string) {
 
 //PCRE compatible collection
 func (c *LocalCollection) Get(key string) []string{
+    c.mux.RLock()
+    defer c.mux.RUnlock()
+    cdata := c.Data
 	//we return every value in case there is no key but there is a collection
 	if len(key) == 0{
 		data := []string{}
 		// how does modsecurity solves this?
-		for k := range c.Data{
-			for _, v := range c.Data[k]{
+		for k := range cdata{
+			for _, v := range cdata[k]{
 				//val := k + "=" + n
 				data = append(data, v)
 			}
@@ -56,22 +59,31 @@ func (c *LocalCollection) Get(key string) []string{
 		key = strings.TrimSuffix(key, string('/'))
 		re := pcre.MustCompile(key, 0)
 		result := []string{}
-		for k := range c.Data {
+		for k := range cdata {
 		    m := re.Matcher([]byte(k), 0)
 		    if m.Matches(){
-		    	for _, d := range c.Data[k]{
+		    	for _, d := range cdata[k]{
 		    		result = append(result, d)
 		    	}
 		    }
 		}
 		return result
 	}else{
-		return c.Data[key]
+		return cdata[key]
 	}
+}
+
+func (c *LocalCollection) GetSimple(key string) []string{
+    c.mux.RLock()
+    defer c.mux.RUnlock()
+	return c.Data[key]
 }
 
 //PCRE compatible collection
 func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []*MatchData{
+    c.mux.RLock()
+    defer c.mux.RUnlock()	
+    cdata := c.Data
 	//we return every value in case there is no key but there is a collection
 	if len(key) == 0{
 		data := []*MatchData{}
@@ -96,13 +108,13 @@ func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []*
 		key = strings.TrimSuffix(key, string('/'))
 		re := pcre.MustCompile(key, 0)
 		result := []*MatchData{}
-		for k := range c.Data {
+		for k := range cdata {
 			if utils.ArrayContains(exceptions, k){
 				continue
 			}
 		    m := re.Matcher([]byte(k), 0)
 		    if m.Matches(){
-		    	for _, d := range c.Data[k]{
+		    	for _, d := range cdata[k]{
 		    		result = append(result, &MatchData{
 		    			Collection: c.Name,
 		    			Key: k,
@@ -115,12 +127,12 @@ func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []*
 	}else{
 		ret := []*MatchData{}
 		//We pass through every record to apply filters
-		for k := range c.Data{
+		for k := range cdata{
 			if utils.ArrayContains(exceptions, k){
 				continue
 			}
 			if k == key{
-				for _, kd := range c.Data[k]{
+				for _, kd := range cdata[k]{
 					ret = append(ret, &MatchData{
 		    			Collection: c.Name,
 		    			Key: k,
@@ -134,6 +146,8 @@ func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []*
 }
 
 func (c *LocalCollection) GetFirstString() string{
+    c.mux.RLock()
+    defer c.mux.RUnlock()	
 	a := c.Data[""]
 	if len(a) > 0{
 		return a[0]
@@ -143,6 +157,8 @@ func (c *LocalCollection) GetFirstString() string{
 }
 
 func (c *LocalCollection) GetFirstInt64() int64{
+    c.mux.RLock()
+    defer c.mux.RUnlock()	
 	a := c.Data[""]
 	if len(a) > 0{
 		i, _ := strconv.ParseInt(a[0], 10, 64)
@@ -153,6 +169,8 @@ func (c *LocalCollection) GetFirstInt64() int64{
 }
 
 func (c *LocalCollection) GetFirstInt() int{
+    c.mux.RLock()
+    defer c.mux.RUnlock()	
 	a := c.Data[""]
 	if len(a) > 0{
 		i, _ := strconv.Atoi(a[0])
@@ -171,29 +189,41 @@ func (c *LocalCollection) Concat() []string{
 }
 
 func (c *LocalCollection) Add(key string, value []string) {
+    c.mux.Lock()
+    defer c.mux.Unlock()	
 	c.Data[key] = value
 }
 
 func (c *LocalCollection) AddToKey(key string, value string) {
+    c.mux.Lock()
+    defer c.mux.Unlock()		
 	c.Data[key] = append(c.Data[key], value)
 }
 
 
 func (c *LocalCollection) Set(key string, value []string) {
+    c.mux.Lock()
+    defer c.mux.Unlock()
 	c.Data[key] = value
 }
 
 func (c *LocalCollection) AddMap(data map[string][]string) {
+    c.mux.Lock()
+    defer c.mux.Unlock()		
 	for k, v := range data{
 		c.Data[strings.ToLower(k)] = v
 	}
 }
 
 func (c *LocalCollection) Update(key string, value []string) {
+    c.mux.Lock()
+    defer c.mux.Unlock()
 	c.Data[key] = value
 }
 
 func (c *LocalCollection) Remove(key string) {
+    c.mux.Lock()
+    defer c.mux.Unlock()		
 	delete(c.Data, key)
 }
 
@@ -202,5 +232,7 @@ func (c *LocalCollection) Flush(key string) {
 }
 
 func (c *LocalCollection) GetData() map[string][]string {
+    c.mux.RLock()
+    defer c.mux.RUnlock()		
 	return c.Data
 }

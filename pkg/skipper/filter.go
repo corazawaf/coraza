@@ -69,7 +69,7 @@ func (f *CorazaFilter) ErrorPage(ctx filters.FilterContext) {
     f.tx.ExecutePhase(5)
     serve.ServeHTTP(ctx, http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request){
         rw.WriteHeader(http.StatusForbidden)
-        rw.Header().Set("Content-Type", "text/html")
+        //rw.Header().Set("Content-Type", "text/html")
         io.WriteString(rw, f.tx.GetErrorPage())    
     }))
 }

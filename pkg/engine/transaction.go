@@ -107,6 +107,34 @@ type Transaction struct {
     XmlDoc *xmlquery.Node
 }
 
+func (tx *Transaction) Init(waf *Waf) error{
+    tx.Mux = &sync.RWMutex{}
+    tx.WafInstance = waf
+    tx.Collections = map[string]*LocalCollection{}
+    txid := utils.RandomString(19)
+    tx.Id = txid
+    tx.InitTxCollection()
+
+    tx.SetSingleCollection("id", txid)
+    tx.SetSingleCollection("timestamp", strconv.FormatInt(time.Now().UnixNano(), 10))
+    tx.Disrupted = false
+    tx.AuditEngine = tx.WafInstance.AuditEngine
+    tx.AuditLogParts = tx.WafInstance.AuditLogParts
+    tx.RequestBodyAccess = tx.WafInstance.RequestBodyAccess
+    tx.RequestBodyLimit = tx.WafInstance.RequestBodyLimit
+    tx.ResponseBodyAccess = tx.WafInstance.ResponseBodyAccess
+    tx.ResponseBodyLimit = tx.WafInstance.ResponseBodyLimit
+    tx.RuleEngine = tx.WafInstance.RuleEngine
+    tx.AuditLogType = tx.WafInstance.AuditLogType
+    tx.Skip = 0
+    tx.PersistentCollections = map[string]*PersistentCollection{}
+    tx.RuleRemoveTargetById = map[int][]*Collection{}
+    tx.RuleRemoveById = []int{}
+    tx.StopWatches = map[int]int{}
+
+    return nil
+}
+
 func (tx *Transaction) MacroExpansion(data string) string{
     if data == ""{
         return ""
@@ -122,7 +150,7 @@ func (tx *Transaction) MacroExpansion(data string) string{
         if len(matchspl) == 2{
             key = matchspl[1]            
         }
-        collection := tx.Collections[col]
+        collection := tx.GetCollection(col)
         if collection == nil{
             return ""
         }
@@ -141,23 +169,25 @@ func (tx *Transaction) MacroExpansion(data string) string{
 
 //Sets request_headers and request_headers_names
 func (tx *Transaction) SetRequestHeaders(headers map[string][]string) {
+    hl := tx.GetCollection("request_headers")
+    rhn := tx.GetCollection("request_headers_names")
     tx.Mux.Lock()
     defer tx.Mux.Unlock()
-    tx.Collections["request_headers"].AddMap(headers)
+    hl.AddMap(headers)
     for k, _ := range headers{
         if k == "" {
             continue
         }
         k = strings.ToLower(k)
-        tx.Collections["request_headers_names"].AddToKey("", k)
+        rhn.AddToKey("", k)
     }
     //default cases for compatibility:
-    if tx.Collections["request_headers"].Data["content-length"] == nil {
-        tx.Collections["request_headers"].Data["content-length"] = []string{"0"}
+    if hl.Data["content-length"] == nil {
+        hl.Data["content-length"] = []string{"0"}
     }
-    if tx.Collections["request_headers"].Data["content-type"] == nil {
+    if hl.Data["content-type"] == nil {
         //is this the default content-type?
-        tx.Collections["request_headers"].Data["content-type"] = []string{"text/plain"}
+        hl.Data["content-type"] = []string{"text/plain"}
     }
 }
 
@@ -166,69 +196,66 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
     tx.Mux.Lock()
     defer tx.Mux.Unlock()
     key = strings.ToLower(key)
-    tx.Collections["request_headers_names"].AddToKey("", key)
-    tx.Collections["request_headers"].AddToKey(key, value)
+    tx.GetCollection("request_headers_names").AddToKey("", key)
+    tx.GetCollection("request_headers").AddToKey(key, value)
 }
 
 //Sets args_get, args_get_names. Also adds to args_names and args
 func (tx *Transaction) SetArgsGet(args map[string][]string) {
-    tx.Mux.Lock()
-    defer tx.Mux.Unlock()
-    tx.Collections["args_get"].AddMap(args)
-    tx.Collections["args"].AddMap(args)
+    tx.GetCollection("args_get").AddMap(args)
+    tx.GetCollection("args").AddMap(args)
+    agn := tx.GetCollection("args_get_names")
+    an := tx.GetCollection("args_names")
     for k, _ := range args{
         if k == "" {
             continue
         }
-        tx.Collections["args_get_names"].AddToKey("", k)
-        tx.Collections["args_names"].AddToKey("", k)
+        agn.AddToKey("", k)
+        an.AddToKey("", k)
     }  
 }
 
 //Sets args_post, args_post_names. Also adds to args_names and args
 func (tx *Transaction) SetArgsPost(args map[string][]string) {
-    tx.Mux.Lock()
-    defer tx.Mux.Unlock()
-    tx.Collections["args_post"].AddMap(args)
-    tx.Collections["args"].AddMap(args)
+    tx.GetCollection("args_post").AddMap(args)
+    tx.GetCollection("args").AddMap(args)
+    apn := tx.GetCollection("args_post_names")
+    an := tx.GetCollection("args_names")
     for k, _ := range args{
         if k == "" {
             continue
         }
-        tx.Collections["args_post_names"].AddToKey("", k)
-        tx.Collections["args_names"].AddToKey("", k)
-    }  
+        apn.AddToKey("", k)
+        an.AddToKey("", k)
+    } 
 }
 
 func (tx *Transaction) SetAuthType(auth string) {
-    tx.Mux.Lock()
-    defer tx.Mux.Unlock()
-    tx.Collections["auth_type"].AddToKey("", auth)
+    tx.GetCollection("auth_type").AddToKey("", auth)
 }
 
 //Sets files, files_combined_size, files_names, files_sizes, files_tmpnames, files_tmp_content
 func (tx *Transaction) SetFiles(files map[string][]*multipart.FileHeader) {
-    tx.Mux.Lock()
-    defer tx.Mux.Unlock()
+    fn := tx.GetCollection("files_names")
+    fl := tx.GetCollection("files")
+    fs := tx.GetCollection("files_sizes")
     totalSize := int64(0)
     for field, fheaders := range files{
         // TODO add them to temporal storage
-        tx.Collections["files_names"].AddToKey("", field)
+        fn.AddToKey("", field)
         for _, header := range fheaders{
-            tx.Collections["files"].AddToKey("", header.Filename)
+            fl.AddToKey("", header.Filename)
             totalSize += header.Size
-            tx.Collections["files_sizes"].AddToKey("", fmt.Sprintf("%d", header.Size))
+            fs.AddToKey("", fmt.Sprintf("%d", header.Size))
         }
     }
-    tx.Collections["files_combined_size"].AddToKey("", fmt.Sprintf("%d", totalSize))
+    tx.GetCollection("files_combined_size").AddToKey("", fmt.Sprintf("%d", totalSize))
 }
 
 //Will be built from request_line, request_headers and request_body
 func (tx *Transaction) SetFullRequest() {
-    tx.Mux.Lock()
-    defer tx.Mux.Unlock()
     headers := ""
-    for k, v := range tx.Collections["request_headers"].Data{
+    for k, v := range tx.GetCollection("request_headers").Data{
         if k == "" {
             continue
         }
@@ -237,26 +264,22 @@ func (tx *Transaction) SetFullRequest() {
         }
     }
     full_request := fmt.Sprintf("%s\n%s\n\n%s\n", 
-        tx.Collections["request_line"].GetFirstString(),
+        tx.GetCollection("request_line").GetFirstString(),
         headers,
-        tx.Collections["request_body"].GetFirstString())
-    tx.Collections["full_request"].AddToKey("", full_request)
+        tx.GetCollection("request_body").GetFirstString())
+    tx.GetCollection("full_request").AddToKey("", full_request)
 }
 
 
 //Sets remote_address and remote_port
 func (tx *Transaction) SetRemoteAddress(address string, port int) {
-    tx.Mux.Lock()
-    defer tx.Mux.Unlock()
     p := strconv.Itoa(port)
-    tx.Collections["remote_addr"].AddToKey("", address)
-    tx.Collections["remote_port"].AddToKey("", p)
+    tx.GetCollection("remote_addr").AddToKey("", address)
+    tx.GetCollection("remote_port").AddToKey("", p)
 }
 
 func (tx *Transaction) SetReqBodyProcessor(processor string){
-    tx.Mux.Lock()
-    defer tx.Mux.Unlock()
-    tx.Collections["reqbody_processor"].AddToKey("", processor)
+    tx.GetCollection("reqbody_processor").AddToKey("", processor)
 }
 
 func (tx *Transaction) SetRemoteUser(user string) {
@@ -268,8 +291,6 @@ func (tx *Transaction) SetRemoteUser(user string) {
 
 //Sets request_body and request_body_length, it won't work if request_body_inspection is off
 func (tx *Transaction) SetRequestBody(body string, length int64, mime string) {
-    tx.Mux.Lock()
-    defer tx.Mux.Unlock()
     //TODO requires more validations. chunks, etc
     if !tx.RequestBodyAccess || (tx.RequestBodyLimit > 0 && length > tx.RequestBodyLimit){
         return
@@ -302,8 +323,6 @@ func (tx *Transaction) SetRequestBody(body string, length int64, mime string) {
 
 //Sets request_cookies and request_cookies_names
 func (tx *Transaction) SetRequestCookies(cookies []*http.Cookie) {
-    tx.Mux.Lock()
-    defer tx.Mux.Unlock()
     for _, c := range cookies{
         tx.Collections["request_cookies"].AddToKey(c.Name, c.Value)
         tx.Collections["request_cookies_names"].AddToKey("", c.Name)
@@ -312,8 +331,6 @@ func (tx *Transaction) SetRequestCookies(cookies []*http.Cookie) {
 
 //sets response_body and response_body_length, it won't work if response_body_inpsection is off
 func (tx *Transaction) SetResponseBody(body string, length int64) {
-    tx.Mux.Lock()
-    defer tx.Mux.Unlock()
     if !tx.ResponseBodyAccess || length > tx.ResponseBodyLimit{
         return
     }
@@ -324,8 +341,6 @@ func (tx *Transaction) SetResponseBody(body string, length int64) {
 
 //Sets response_headers, response_headers_names, response_content_length and response_content_type
 func (tx *Transaction) SetResponseHeaders(headers map[string][]string) {
-    tx.Mux.Lock()
-    defer tx.Mux.Unlock()
     tx.Collections["response_headers"].AddMap(headers)
     for k, _ := range headers{
         if k == "" {
@@ -337,8 +352,6 @@ func (tx *Transaction) SetResponseHeaders(headers map[string][]string) {
 
 //Sets response_status
 func (tx *Transaction) SetResponseStatus(status int) {
-    tx.Mux.Lock()
-    defer tx.Mux.Unlock()
     s := strconv.Itoa(status)
     tx.Collections["response_status"].AddToKey("", s)
 
@@ -346,8 +359,6 @@ func (tx *Transaction) SetResponseStatus(status int) {
 
 //Sets request_uri, request_filename, request_basename, query_string and request_uri_raw
 func (tx *Transaction) SetUrl(u *url.URL){
-    tx.Mux.Lock()
-    defer tx.Mux.Unlock()
     RequestBasename := u.EscapedPath()
     a := regexp.MustCompile(`\/|\\`) // \ o /
     spl := a.Split(RequestBasename, -1)
@@ -363,8 +374,6 @@ func (tx *Transaction) SetUrl(u *url.URL){
 
 //Sets args_get and args_get_names
 func (tx *Transaction) AddGetArgsFromUrl(u *url.URL){
-    tx.Mux.Lock()
-    defer tx.Mux.Unlock()
     params := u.Query()
     for k, v := range params{
         for _, vv := range v{
@@ -378,8 +387,6 @@ func (tx *Transaction) AddGetArgsFromUrl(u *url.URL){
 
 //Sets args_post and args_post_names
 func (tx *Transaction) AddPostArgsFromUrl(u *url.URL){
-    tx.Mux.Lock()
-    defer tx.Mux.Unlock()
     params := u.Query()
     for k, v := range params{
         for _, vv := range v{
@@ -393,26 +400,20 @@ func (tx *Transaction) AddPostArgsFromUrl(u *url.URL){
 
 //Adds request_line, request_method, request_protocol, request_basename and request_uri
 func (tx *Transaction) SetRequestLine(method string, protocol string, requestUri string) {
-    tx.Mux.Lock()
-    defer tx.Mux.Unlock()
-    tx.Collections["request_method"].AddToKey("", method)
-    tx.Collections["request_uri"].AddToKey("", requestUri)
-    tx.Collections["request_protocol"].AddToKey("", protocol)
-    tx.Collections["request_line"].AddToKey("", fmt.Sprintf("%s %s %s", method, requestUri, protocol))
+    tx.GetCollection("request_method").AddToKey("", method)
+    tx.GetCollection("request_uri").AddToKey("", requestUri)
+    tx.GetCollection("request_protocol").AddToKey("", protocol)
+    tx.GetCollection("request_line").AddToKey("", fmt.Sprintf("%s %s %s", method, requestUri, protocol))
 
 }
 
 //Adds request_line, request_method, request_protocol, request_basename and request_uri
 func (tx *Transaction) SetRequestMethod(method string) {
-    tx.Mux.Lock()
-    defer tx.Mux.Unlock()
     tx.Collections["request_method"].AddToKey("", method)
 }
 
 //Resolves remote hostname and sets remote_host variable
 func (tx *Transaction) ResolveRemoteHost() {
-    tx.Mux.Lock()
-    defer tx.Mux.Unlock()
     addr, err := net.LookupAddr(tx.Collections["remote_addr"].GetFirstString())
     if err != nil{
         return
@@ -448,39 +449,13 @@ func (tx *Transaction) InitTxCollection(){
 //Reset the capture collection for further uses
 func (tx *Transaction) ResetCapture(){
     //We reset capture 0-9
+    ctx := tx.GetCollection("tx")
     for i := 0; i < 10; i++{
         si := strconv.Itoa(i)
-        tx.Collections["tx"].Data[si] = []string{""}
+        ctx.Set(si, []string{""})
     }
 }
 
-func (tx *Transaction) Init(waf *Waf) error{
-    tx.WafInstance = waf
-    tx.Collections = map[string]*LocalCollection{}
-    txid := utils.RandomString(19)
-    tx.Id = txid
-    tx.InitTxCollection()
-
-    tx.SetSingleCollection("id", txid)
-    tx.SetSingleCollection("timestamp", strconv.FormatInt(time.Now().UnixNano(), 10))
-    tx.Disrupted = false
-    tx.AuditEngine = tx.WafInstance.AuditEngine
-    tx.AuditLogParts = tx.WafInstance.AuditLogParts
-    tx.RequestBodyAccess = tx.WafInstance.RequestBodyAccess
-    tx.RequestBodyLimit = tx.WafInstance.RequestBodyLimit
-    tx.ResponseBodyAccess = tx.WafInstance.ResponseBodyAccess
-    tx.ResponseBodyLimit = tx.WafInstance.ResponseBodyLimit
-    tx.RuleEngine = tx.WafInstance.RuleEngine
-    tx.AuditLogType = tx.WafInstance.AuditLogType
-    tx.Skip = 0
-    tx.PersistentCollections = map[string]*PersistentCollection{}
-    tx.Mux = &sync.RWMutex{}
-    tx.RuleRemoveTargetById = map[int][]*Collection{}
-    tx.RuleRemoveById = []int{}
-    tx.StopWatches = map[int]int{}
-
-    return nil
-}
 
 // Parse binary request including body, does only supports http/1.1 and http/1.0
 func (tx *Transaction) ParseRequestString(data string) error{
@@ -659,7 +634,9 @@ func (tx *Transaction) ExecutePhase(phase int) bool{
         tx.Capture = false //we reset the capture flag on every run
         usedRules++
     }
+    tx.Mux.Lock()
     tx.StopWatches[phase] = int(time.Now().UnixNano() - ts)
+    tx.Mux.Unlock()
     if tx.Disrupted || phase == 5{
         if phase != 5{
             tx.ExecutePhase(5)
@@ -679,17 +656,20 @@ func (tx *Transaction) MatchRule(rule *Rule, msgs []string, match []*MatchData){
         MatchedData: match,
         Rule: rule,
     }
+    m := tx.GetCollection("matched_vars")
     tx.MatchedRules = append(tx.MatchedRules, mr)
-    mv := tx.Collections["matched_vars"].Data[""]
+    mv := m.GetSimple("")
     for _, m := range match{
         mv = append(mv, m.Value)
     }
-    tx.Collections["matched_vars"].Data[""] = mv
+    m.Set("", mv)
 }
 
 func (tx *Transaction) InitCollection(key string){
     col := &LocalCollection{}
     col.Init(key)
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()    
     tx.Collections[key] = col
 
 }
@@ -698,15 +678,15 @@ func (tx *Transaction) ToJSON() ([]byte, error){
     return json.Marshal(tx)
 }
 
-func (tx *Transaction) SetSingleCollection(key string, value string){
+func (tx *Transaction) SetSingleCollection(key string, value string){ 
     tx.Collections[key] = &LocalCollection{}
     tx.Collections[key].Init(key)
     tx.Collections[key].Add("", []string{value})
 }
 
-func (tx *Transaction) GetSingleCollection(key string) string{
+func (tx *Transaction) GetSingleCollection(key string) string{ 
     key = strings.ToLower(key)
-    col := tx.Collections[key]
+    col := tx.GetCollection(key)
     if col == nil{
         return ""
     }
@@ -714,13 +694,13 @@ func (tx *Transaction) GetSingleCollection(key string) string{
 }
 
 func (tx *Transaction) GetTimestamp() string{
-    t := time.Unix(0, tx.Collections["timestamp"].GetFirstInt64())
+    t := time.Unix(0, tx.GetCollection("timestamp").GetFirstInt64())
     ts := t.Format("02/Jan/2006:15:04:20 -0700")    
     return ts
 }
 
-func (tx *Transaction) GetStopWatch() string {
-    ts := tx.Collections["timestamp"].GetFirstInt64()
+func (tx *Transaction) GetStopWatch() string {  
+    ts := tx.GetCollection("timestamp").GetFirstInt64()
     sum := 0
     for _, r := range tx.StopWatches{
         sum += r
@@ -731,7 +711,7 @@ func (tx *Transaction) GetStopWatch() string {
     return sw
 }
 
-func (tx *Transaction) GetField(collection string, key string, exceptions []string) ([]*MatchData){
+func (tx *Transaction) GetField(collection string, key string, exceptions []string) ([]*MatchData){     
     switch collection{
     case "xml":
         if tx.XmlDoc == nil{
@@ -754,7 +734,8 @@ func (tx *Transaction) GetField(collection string, key string, exceptions []stri
         // TODO, for future versions
         return []*MatchData{}
     default:
-        col := tx.Collections[collection]
+
+        col := tx.GetCollection(collection)
         key = tx.MacroExpansion(key)
         if col == nil{
             return []*MatchData{}
@@ -764,9 +745,27 @@ func (tx *Transaction) GetField(collection string, key string, exceptions []stri
 
 }
 
+func (tx *Transaction) GetCollection(name string) *LocalCollection{     
+    tx.Mux.RLock()
+    defer tx.Mux.RUnlock()
+    return tx.Collections[name] 
+}
+
+func (tx *Transaction) GetCollections() map[string]*LocalCollection{     
+    tx.Mux.RLock()
+    defer tx.Mux.RUnlock()
+    return tx.Collections
+}
+
+func (tx *Transaction) GetRemovedTargets(id int) []*Collection{     
+    tx.Mux.RLock()
+    defer tx.Mux.RUnlock()
+    return tx.RuleRemoveTargetById[id]
+}
+
 //Returns directory and filename
 func (tx *Transaction) GetAuditPath() (string, string){
-    t := time.Unix(0, tx.Collections["timestamp"].GetFirstInt64())
+    t := time.Unix(0, tx.GetCollection("timestamp").GetFirstInt64())
 
     // append the two directories
     p2 := fmt.Sprintf("/%s/%s/", t.Format("20060102"), t.Format("20060102-1504"))
@@ -824,7 +823,7 @@ func (tx *Transaction) GetErrorPage() string{
 
         buff += "<h3>Transaction Collections</h3>"
         buff += "<table class='table table-striped'><thead><tr><th>Collection</th><th>Key</th><th>Values</th></tr></thead><tbody>"
-        for key, col := range tx.Collections{
+        for key, col := range tx.GetCollections(){
             for k2, data := range col.Data{
                 d := strings.Join(data, "<br>")
                 buff += fmt.Sprintf("<tr><td>%s</td><td>%s</td><td>%s</td></tr>", key, k2, d)
@@ -858,12 +857,14 @@ func (tx *Transaction) GetErrorPage() string{
 
 func (tx *Transaction) SavePersistentData() {
     for col, pc := range tx.PersistentCollections{
-        pc.SetData(tx.Collections[col].Data)
+        pc.SetData(tx.GetCollection(col).Data)
         pc.Save()
     }
 }
 
 func (tx *Transaction) RemoveRuleTargetById(id int, col string, key string){
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
     c := &Collection{col, key}
     if tx.RuleRemoveTargetById[id] == nil{
         tx.RuleRemoveTargetById[id] = []*Collection{
