@@ -167,7 +167,7 @@ func runTest(waf *engine.Waf, profile testProfile) (bool, int, error){
 				for k, v := range stage.Stage.Input.Headers{
 					tx.AddRequestHeader(k, v)
 				}
-			}
+			}			
 			method := "GET"
 			if stage.Stage.Input.Method != ""{
 				method = stage.Stage.Input.Method
@@ -213,7 +213,8 @@ func runTest(waf *engine.Waf, profile testProfile) (bool, int, error){
 				case reflect.String:
 					data = stage.Stage.Input.Data.(string)
 				}
-				ct := tx.Collections["request_headers"].Data["content-type"]
+				rh := tx.GetCollection("request_headers")
+				ct := rh.GetSimple("content-type")
 				ctt := ""
 				if len(ct) == 1{
 					ctt = ct[0]
@@ -221,11 +222,11 @@ func runTest(waf *engine.Waf, profile testProfile) (bool, int, error){
 				mediaType, params, _ := mime.ParseMediaType(ctt)
 				if method == "GET" || method == "HEAD" || method == "OPTIONS" {
 					length := strconv.Itoa(len(data))
-					if len(tx.Collections["request_headers"].Data["content-length"]) == 0{
-						tx.Collections["request_headers"].Data["content-length"] = []string{length}
+					if len(rh.GetSimple("content-length")) == 0{
+						rh.Set("content-length", []string{length})
 					}
 					// Just for testing
-					tx.Collections["request_body"].Data["0"] = []string{data}
+					tx.GetCollection("request_body").Set("", []string{data})
 				}else if strings.HasPrefix(mediaType, "multipart/") {
 					parseMultipart(data, params["boundary"], tx)
 				}else if strings.HasPrefix(mediaType, "") {

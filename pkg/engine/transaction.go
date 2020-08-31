@@ -193,8 +193,6 @@ func (tx *Transaction) SetRequestHeaders(headers map[string][]string) {
 
 //Adds a request header
 func (tx *Transaction) AddRequestHeader(key string, value string) {
-    tx.Mux.Lock()
-    defer tx.Mux.Unlock()
     key = strings.ToLower(key)
     tx.GetCollection("request_headers_names").AddToKey("", key)
     tx.GetCollection("request_headers").AddToKey(key, value)
@@ -296,20 +294,20 @@ func (tx *Transaction) SetRequestBody(body string, length int64, mime string) {
         return
     }
     l := strconv.FormatInt(length, 10)
-    tx.Collections["request_body_length"].AddToKey("", l)
+    tx.GetCollection("request_body_length").AddToKey("", l)
     if mime == "application/xml"{
         var err error
         tx.XmlDoc, err = xmlquery.Parse(strings.NewReader(body))
         if err != nil {
             log.Error("Cannot parse XML body for request")
         }        
-        tx.Collections["request_body"].Data[""] = []string{}
+        tx.GetCollection("request_body").Set("", []string{})
     }else if mime == "application/json" {
         // JSON!
         //doc, err := xmlquery.Parse(strings.NewReader(s))
         //tx.Json = doc
     }else if mime == "" {
-        tx.Collections["request_body"].AddToKey("", body)
+        tx.GetCollection("request_body").Set("", []string{body})
     }
     /*
     //TODO shall we do this and force the real length?
