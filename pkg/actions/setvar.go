@@ -45,7 +45,7 @@ func (a *Setvar) GetType() int{
 }
 
 func (a *Setvar) evaluateTxCollection(r *engine.Rule, tx *engine.Transaction, key string, value string){
-    collection := tx.Collections[a.Collection]
+    collection := tx.GetCollection(a.Collection)
     if collection == nil {
         fmt.Println("Invalid Collection " + a.Collection)
         return

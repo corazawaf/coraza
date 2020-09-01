@@ -24,6 +24,8 @@ func (a *InitCol) Evaluate(r *engine.Rule, tx *engine.Transaction) {
     col := &engine.LocalCollection{}
     col.Init(a.Collection)
     col.Data = pc.GetData()
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
     tx.Collections[a.Collection] = col
     tx.PersistentCollections[a.Collection] = pc
 }

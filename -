@@ -1,0 +1,214 @@
+S3()                                                                      S3()
+
+
+
+NNAAMMEE
+       s3 -
+
+DDEESSCCRRIIPPTTIIOONN
+       This  section  explains  prominent concepts and notations in the set of
+       high-level S3 commands provided.
+
+   PPaatthh AArrgguummeenntt TTyyppee
+       Whenever using a command, at least one path argument must be specified.
+       There are two types of path arguments: LLooccaallPPaatthh and SS33UUrrii.
+
+       LLooccaallPPaatthh: represents the path of a local file or directory.  It can be
+       written as an absolute path or relative path.
+
+       SS33UUrrii: represents the location of a S3 object, prefix, or bucket.  This
+       must  be  written in the form ss33::////mmyybbuucckkeett//mmyykkeeyy where mmyybbuucckkeett is the
+       specified S3 bucket, mmyykkeeyy is the specified S3 key.  The path  argument
+       must  begin with ss33:://// in order to denote that the path argument refers
+       to a S3 object. Note that prefixes are separated  by  forward  slashes.
+       For  example, if the S3 object mmyyoobbjjeecctt had the prefix mmyypprreeffiixx, the S3
+       key would be mmyypprreeffiixx//mmyyoobbjjeecctt, and if the object  was  in  the  bucket
+       mmyybbuucckkeett, the SS33UUrrii would be ss33::////mmyybbuucckkeett//mmyypprreeffiixx//mmyyoobbjjeecctt.
+
+       SS33UUrrii  also supports S3 access points. To specify an access point, this
+       value must be of the form ss33::////<<aacccceessss--ppooiinntt--aarrnn>>//<<kkeeyy>>. For for  exam-
+       ple  if  the  access  point  mmyyaacccceessssppooiinntt  to  be  used  has  the ARN:
+       aarrnn::aawwss::ss33::uuss--wweesstt--22::112233445566778899001122::aacccceessssppooiinntt//mmyyaacccceessssppooiinntt   and   the
+       object  being  accessed has the key mmyykkeeyy, then the SS33UURRII used must be:
+       ss33::////aarrnn::aawwss::ss33::uuss--wweesstt--22::112233445566778899001122::aacccceessssppooiinntt//mmyyaacccceessssppooiinntt//mmyykkeeyy.
+       Similar  to  bucket  names, you can also use prefixes with access point
+       ARNs        for         the         SS33UUrrii.         For         example:
+       ss33::////aarrnn::aawwss::ss33::uuss--wweesstt--22::112233445566778899001122::aacccceessssppooiinntt//mmyyaacccceessssppooiinntt//mmyypprree--
+       ffiixx//
+
+       The higher level ss33 commands do nnoott support access point  object  ARNs.
+       For      example,      if      the     following     was     specified:
+       ss33::////aarrnn::aawwss::ss33::uuss--wweesstt--22::112233445566778899001122::aacccceessssppooiinntt//mmyyaacccceessss--
+       ppooiinntt//oobbjjeecctt//mmyykkeeyy   the   SS33UURRII   will   resolve  to  the  object  key
+       oobbjjeecctt//mmyykkeeyy
+
+   OOrrddeerr ooff PPaatthh AArrgguummeennttss
+       Every command takes one or two positional path  arguments.   The  first
+       path  argument represents the source, which is the local file/directory
+       or S3 object/prefix/bucket that is being referenced.   If  there  is  a
+       second path argument, it represents the destination, which is the local
+       file/directory or S3 object/prefix/bucket that is  being  operated  on.
+       Commands  with only one path argument do not have a destination because
+       the operation is being performed only on the source.
+
+   SSiinnggllee LLooccaall FFiillee aanndd SS33 OObbjjeecctt OOppeerraattiioonnss
+       Some commands perform operations only on single files and  S3  objects.
+       The following commands are single file/object operations if no ----rreeccuurr--
+       ssiivvee flag is provided.
+
+          +o ccpp
+
+          +o mmvv
+
+          +o rrmm
+
+       For this type of operation, the first path argument, the  source,  must
+       exist  and be a local file or S3 object.  The second path argument, the
+       destination, can be the name of  a  local  file,  local  directory,  S3
+       object, S3 prefix, or S3 bucket.
+
+       The  destination  is  indicated  as a local directory, S3 prefix, or S3
+       bucket if it ends with a forward slash or back slash.  The use of slash
+       depends  on  the  path argument type.  If the path argument is a LLooccaall--
+       PPaatthh, the type of slash is the separator used by the operating  system.
+       If  the  path  is a SS33UUrrii, the forward slash must always be used.  If a
+       slash is at the end of the destination, the destination file or  object
+       will  adopt the name of the source file or object.  Otherwise, if there
+       is no slash at the end, the file or object will be saved under the name
+       provided.  See examples in ccpp and mmvv to illustrate this description.
+
+   DDiirreeccttoorryy aanndd SS33 PPrreeffiixx OOppeerraattiioonnss
+       Some commands only perform operations on the contents of a local direc-
+       tory or S3 prefix/bucket.  Adding or omitting a forward slash  or  back
+       slash  to the end of any path argument, depending on its type, does not
+       affect the results of  the  operation.   The  following  commands  will
+       always result in a directory or S3 prefix/bucket operation:
+
+       +o ssyynncc
+
+       +o mmbb
+
+       +o rrbb
+
+       +o llss
+
+   UUssee ooff EExxcclluuddee aanndd IInncclluuddee FFiilltteerrss
+       Currently, there is no support for the use of UNIX style wildcards in a
+       command's  path  arguments.   However,  most  commands  have  ----eexxcclluuddee
+       ""<<vvaalluuee>>""  and  ----iinncclluuddee  ""<<vvaalluuee>>""  parameters  that  can achieve the
+       desired result.  These parameters perform pattern  matching  to  either
+       exclude  or include a particular file or object.  The following pattern
+       symbols are supported.
+
+          +o **: Matches everything
+
+          +o ??: Matches any single character
+
+          +o [[sseeqquueennccee]]: Matches any character in sseeqquueennccee
+
+          +o [[!!sseeqquueennccee]]: Matches any character not in sseeqquueennccee
+
+       Any number of these parameters can be passed to a command.  You can  do
+       this  by  providing  an ----eexxcclluuddee or ----iinncclluuddee argument multiple times,
+       e.g.  ----iinncclluuddee ""**..ttxxtt"" ----iinncclluuddee ""**..ppnngg"".   When  there  are  multiple
+       filters,  the rule is the filters that appear later in the command take
+       precedence over filters that appear earlier in the command.  For  exam-
+       ple, if the filter parameters passed to the command were
+
+          --exclude "*" --include "*.txt"
+
+       All  files  will  be  excluded from the command except for files ending
+       with ..ttxxtt  However, if the order of the filter parameters  was  changed
+       to
+
+          --include "*.txt" --exclude "*"
+
+       All files will be excluded from the command.
+
+       Each  filter  is evaluated against the ssoouurrccee ddiirreeccttoorryy.  If the source
+       location is a file instead of a directory, the directory containing the
+       file is used as the source directory.  For example, suppose you had the
+       following directory structure:
+
+          /tmp/foo/
+            .git/
+            |---config
+            |---description
+            foo.txt
+            bar.txt
+            baz.jpg
+
+       In the command aawwss ss33 ssyynncc //ttmmpp//ffoooo ss33::////bbuucckkeett// the  source  directory
+       is  //ttmmpp//ffoooo.   Any  include/exclude filters will be evaluated with the
+       source directory prepended.  Below are several examples to  demonstrate
+       this.
+
+       Given  the directory structure above and the command aawwss ss33 ccpp //ttmmpp//ffoooo
+       ss33::////bbuucckkeett// ----rreeccuurrssiivvee ----eexxcclluuddee ""..ggiitt//**"", the files ..ggiitt//ccoonnffiigg  and
+       ..ggiitt//ddeessccrriippttiioonn  will be excluded from the files to upload because the
+       exclude filter ..ggiitt//** will have the source  prepended  to  the  filter.
+       This means that:
+
+          /tmp/foo/.git/* -> /tmp/foo/.git/config       (matches, should exclude)
+          /tmp/foo/.git/* -> /tmp/foo/.git/description  (matches, should exclude)
+          /tmp/foo/.git/* -> /tmp/foo/foo.txt  (does not match, should include)
+          /tmp/foo/.git/* -> /tmp/foo/bar.txt  (does not match, should include)
+          /tmp/foo/.git/* -> /tmp/foo/baz.jpg  (does not match, should include)
+
+       The  command  aawwss  ss33  ccpp  //ttmmpp//ffoooo// ss33::////bbuucckkeett// ----rreeccuurrssiivvee ----eexxcclluuddee
+       ""bbaa**"" will exclude //ttmmpp//ffoooo//bbaarr..ttxxtt and //ttmmpp//ffoooo//bbaazz..jjppgg:
+
+          /tmp/foo/ba* -> /tmp/foo/.git/config      (does not match, should include)
+          /tmp/foo/ba* -> /tmp/foo/.git/description (does not match, should include)
+          /tmp/foo/ba* -> /tmp/foo/foo.txt          (does not match, should include)
+          /tmp/foo/ba* -> /tmp/foo/bar.txt  (matches, should exclude)
+          /tmp/foo/ba* -> /tmp/foo/baz.jpg  (matches, should exclude)
+
+       Note that, by default, _a_l_l _f_i_l_e_s _a_r_e _i_n_c_l_u_d_e_d.  This means that provid-
+       ing  oonnllyy  an  ----iinncclluuddee  filter  will not change what files are trans-
+       ferred.  ----iinncclluuddee will only re-include files that have  been  excluded
+       from an ----eexxcclluuddee filter.  If you only want to upload files with a par-
+       ticular extension, you need to first exclude all files, then re-include
+       the files with the particular extension.  This command will upload oonnllyy
+       files ending with ..jjppgg:
+
+          aws s3 cp /tmp/foo/ s3://bucket/ --recursive --exclude "*" --include "*.jpg"
+
+       If you wanted to include both ..jjppgg files as well as ..ttxxtt files you  can
+       run:
+
+          aws s3 cp /tmp/foo/ s3://bucket/ --recursive \
+              --exclude "*" --include "*.jpg" --include "*.txt"
+
+       See 'aws help' for descriptions of global parameters.
+
+SSYYNNOOPPSSIISS
+          aws s3 <Command> [<Arg> ...]
+
+OOPPTTIIOONNSS
+       _N_o_n_e
+
+       See 'aws help' for descriptions of global parameters.
+
+AAVVAAIILLAABBLLEE CCOOMMMMAANNDDSS
+       +o cp
+
+       +o ls
+
+       +o mb
+
+       +o mv
+
+       +o presign
+
+       +o rb
+
+       +o rm
+
+       +o sync
+
+       +o website
+
+
+
+                                                                          S3()

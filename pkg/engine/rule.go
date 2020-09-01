@@ -3,6 +3,7 @@ package engine
 import(
 	"strconv"
 	"reflect"
+	"sync"
 	_"github.com/sirupsen/logrus"
 )
 
@@ -96,11 +97,14 @@ type Rule struct {
 
 	// Rule Set Version
 	Version string `json:"version"`
+
+	mux *sync.RWMutex
 }
 
 func (r *Rule) Init() {
 	r.Phase = 1
 	r.Tags = []string{}
+	r.mux = &sync.RWMutex{}
 }
 
 
@@ -111,8 +115,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData{
 			return matchedValues
 		}
 	}
-	ecol := tx.RuleRemoveTargetById[r.Id]
-	
+	ecol := tx.GetRemovedTargets(r.Id)
 	for _, v := range r.Variables {
 		values := []*MatchData{}
 		if ecol != nil {

@@ -3,15 +3,18 @@ import(
 	"errors"
 	"fmt"
 	"sort"
+	"sync"
 	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
 type RuleGroup struct{
 	rules []*Rule
+	mux *sync.RWMutex
 }
 
 func (rg *RuleGroup) Init(){
 	rg.rules = []*Rule{}
+	rg.mux = &sync.RWMutex{}
 }
 
 // Adds a rule to the collection
@@ -25,6 +28,8 @@ func (rg *RuleGroup) Add(rule *Rule) error{
 }
 
 func (rg *RuleGroup) GetRules() []*Rule{
+	rg.mux.RLock()
+	defer rg.mux.RUnlock()
 	return rg.rules
 }
 
