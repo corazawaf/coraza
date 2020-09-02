@@ -91,12 +91,12 @@ func ArraySlice(arr []interface{}, index int) []interface{}{
     return arr
 }
 
-func CopyMap(m map[string]interface{}) map[string]interface{} {
+func CopyMapRecursive(m map[string]interface{}) map[string]interface{} {
     cp := make(map[string]interface{})
     for k, v := range m {
         vm, ok := v.(map[string]interface{})
         if ok {
-            cp[k] = CopyMap(vm)
+            cp[k] = CopyMapRecursive(vm)
         } else {
             cp[k] = v
         }
@@ -104,6 +104,16 @@ func CopyMap(m map[string]interface{}) map[string]interface{} {
 
     return cp
 }
+
+func CopyMap(m map[interface{}]interface{}) map[interface{}]interface{} {
+    cp := make(map[interface{}]interface{})
+    for k, v := range m {
+        cp[k] = v
+    }
+
+    return cp
+}
+
 
 func OpenFile(path string) ([]byte, error){
     var ret []byte

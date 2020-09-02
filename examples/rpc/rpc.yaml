@@ -1,0 +1,13 @@
+# experimental
+sock: /opt/coraza-waf/var/run/coraza-rdp.sock
+pid: /opt/coraza-waf/var/run/coraza-rdp.pid
+apps:
+  -
+    id: test-app
+    config: /etc/coraza-waf/policies/default/default.conf
+transaction_max_ttl: 600
+max_connections: 0
+redis:
+  address: 127.0.0.1
+  port: 6379
+  database: 0

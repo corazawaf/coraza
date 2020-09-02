@@ -21,23 +21,18 @@ func (o *ValidateUtf8Encoding) Evaluate(tx *engine.Transaction, value string) bo
     bytes_left := len(str_c)
     for i := 0; i < len(value); {
         rc := detectUtf8Character(str_c[i:], bytes_left);
-
+        //We use switch in case we debug information
         switch (rc) {
             case UNICODE_ERROR_CHARACTERS_MISSING :
                 return true
-                break
             case UNICODE_ERROR_INVALID_ENCODING :
                 return true
-                break
             case UNICODE_ERROR_OVERLONG_CHARACTER :
                 return true
-                break
             case UNICODE_ERROR_RESTRICTED_CHARACTER :
                 return true
-                break
             case UNICODE_ERROR_DECODING_ERROR :
                 return true
-                break
         }
 
         if (rc <= 0) {

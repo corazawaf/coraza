@@ -118,6 +118,7 @@ func (tx *Transaction) Init(waf *Waf) error{
     tx.SetSingleCollection("id", txid)
     tx.SetSingleCollection("timestamp", strconv.FormatInt(time.Now().UnixNano(), 10))
     tx.Disrupted = false
+    //TODO copy objects
     tx.AuditEngine = tx.WafInstance.AuditEngine
     tx.AuditLogParts = tx.WafInstance.AuditLogParts
     tx.RequestBodyAccess = tx.WafInstance.RequestBodyAccess
@@ -182,12 +183,8 @@ func (tx *Transaction) SetRequestHeaders(headers map[string][]string) {
         rhn.AddToKey("", k)
     }
     //default cases for compatibility:
-    if hl.Data["content-length"] == nil {
-        hl.Data["content-length"] = []string{"0"}
-    }
-    if hl.Data["content-type"] == nil {
-        //is this the default content-type?
-        hl.Data["content-type"] = []string{"text/plain"}
+    if hl.GetSimple("content-length") == nil {
+        hl.Set("content-length", []string{"0"})
     }
 }
 
@@ -805,6 +802,7 @@ func (tx *Transaction) SaveLog() error{
     return tx.WafInstance.Logger.WriteAudit(tx)
 }
 
+// Get html error page as a string
 func (tx *Transaction) GetErrorPage() string{
     switch tx.WafInstance.ErrorPageMethod{
     case ERROR_PAGE_DEBUG:
@@ -857,6 +855,7 @@ func (tx *Transaction) GetErrorPage() string{
     return fmt.Sprintf("<h1>Error 403</h1><!-- %s -->", tx.Id)
 }
 
+// Save persistent collections to persistence engine
 func (tx *Transaction) SavePersistentData() {
     for col, pc := range tx.PersistentCollections{
         pc.SetData(tx.GetCollection(col).Data)
@@ -864,6 +863,7 @@ func (tx *Transaction) SavePersistentData() {
     }
 }
 
+// Removes the VARIABLE/TARGET from the rule ID
 func (tx *Transaction) RemoveRuleTargetById(id int, col string, key string){
     tx.Mux.Lock()
     defer tx.Mux.Unlock()
