@@ -1,6 +1,6 @@
 package transformations
 import (
-	
+	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
 func CssDecode(data string) string{
@@ -23,7 +23,7 @@ func cssDecodeInplace(input string) string {
 
                 /* Check for 1-6 hex characters following the backslash */
                 j = 0;
-                for ((j < 6) && (i + j < input_len) && (validHex(input[i + j]))) {
+                for ((j < 6) && (i + j < input_len) && (utils.ValidHex(input[i + j]))) {
                     j++
                 }
 
@@ -42,14 +42,14 @@ func cssDecodeInplace(input string) string {
                         case 2:
                         case 3:
                             /* Use the last two from the end. */
-                            d[c] = x2c(input[i + j - 2:])
+                            d[c] = utils.X2c(input[i + j - 2:])
                             c++
                             break
                         case 4:
                             /* Use the last two from the end, but request
                              * a full width check.
                              */
-                            d[c] = x2c(input[i + j - 2:])
+                            d[c] = utils.X2c(input[i + j - 2:])
                             fullcheck = true
                             break
 
@@ -58,7 +58,7 @@ func cssDecodeInplace(input string) string {
                              * a full width check if the number is greater
                              * or equal to 0xFFFF.
                              */
-                            d[c] = x2c(input[i + j - 2:])
+                            d[c] = utils.X2c(input[i + j - 2:])
                             /* Do full check if first byte is 0 */
                             if (input[i] == '0') {
                                 fullcheck = true
@@ -72,7 +72,7 @@ func cssDecodeInplace(input string) string {
                              * a full width check if the number is greater
                              * or equal to 0xFFFF.
                              */
-                            d[c] = x2c(input[i + j - 2:])
+                            d[c] = utils.X2c(input[i + j - 2:])
 
                             /* Do full check if first/second bytes are 0 */
                             if ((input[i] == '0') && (input[i + 1] == '0')) {
@@ -146,27 +146,6 @@ func xsingle2c(what string) byte{
 		digit = what[0] - '0'
 	}
     return digit
-}
-
-func x2c(what string) byte {
-    var digit byte
-    if what[0] >= 'A' {
-    	digit = ((what[0] & 0xdf) - 'A') + 10
-    }else{
-    	digit = (what[0] - '0')
-    }
-    digit *= 16;
-    if what[1] >= 'A' {
-    	digit += ((what[1] & 0xdf) - 'A') + 10
-    }else{
-    	digit += (what[1] - '0')
-    }
-
-    return digit
-}
-
-func validHex(x byte) bool{
-	return (((x >= '0') && (x <= '9')) || ((x >= 'a') && (x <= 'f')) || ((x >= 'A') && (x <= 'F')))
 }
 
 func isspace(char byte) bool {

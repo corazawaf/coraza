@@ -1,83 +1,69 @@
 package transformations
 
 import (
-	"net/url"
+	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
 func UrlDecode(data string) string {
-	ndata, err := url.QueryUnescape(data)
-	if err != nil {
-		return data
-	}
-	return ndata
+	res, _, _ := doUrlDecode(data)
+	return res
 }
-
-/*
 
 //extracted from https://github.com/senghoo/modsecurity-go/blob/master/utils/urlencode.go
-//string, is unicode
-func decode(s string, uni bool) (string, int) {
-	// Count %, check that they're well-formed.
-	errCount := 0
-	res := bytes.NewBuffer(nil)
-	for i := 0; i < len(s); {
-		switch {
-		case s[i] == '%' && len(s) > i+2 && IsHex(s[i+1]) && IsHex(s[i+2]):
-			res.WriteByte(UnHex(s[i+1])<<4 | UnHex(s[i+2]))
-			i += 3
-		case uni && s[i] == '%' && len(s) > i+5 && (s[i+1] == 'u' || s[i+1] == 'U') && IsHex(s[i+2]) && IsHex(s[i+3]) && IsHex(s[i+4]) && IsHex(s[i+5]):
-			var v rune
-			var runeTmp [utf8.UTFMax]byte
-			c0 := rune(UnHex(s[i+2]))
-			c1 := rune(UnHex(s[i+3]))
-			c2 := rune(UnHex(s[i+4]))
-			c3 := rune(UnHex(s[i+5]))
-			v = c0<<4 | c1
-			if v == 0xff {
-				v = (c2<<4 | c3) + 0x20 // full width ascii offset
-			} else {
-				v = v<<4 | c2
-				v = v<<4 | c3
-			}
-			n := utf8.EncodeRune(runeTmp[:], v)
-			res.Write(runeTmp[:n])
-			i += 6
-		case s[i] == '%':
-			res.WriteByte('%')
-			errCount++
-			i++
-		case s[i] == '+':
-			res.WriteByte(' ')
-			i++
-		default:
-			res.WriteByte(s[i])
-			i++
-		}
-	}
+func doUrlDecode(input string) (string, bool, int) {
+    d := []byte(input)
+    input_len := len(d)
+    var i, count, invalid_count, c int
 
-	return res.String(), errCount
+    changed := false
+
+    for i < input_len {
+        if input[i] == '%' {
+            /* Character is a percent sign. */
+
+            /* Are there enough bytes available? */
+            if (i + 2 < input_len) {
+                c1 := input[i + 1]
+                c2 := input[i + 2]
+                if (utils.ValidHex(c1) && utils.ValidHex(c2)) {
+                    uni := utils.X2c(input[i + 1:])
+
+                    d[c] = uni
+                    c++
+                    count++
+                    i += 3
+                    changed = true
+                } else {
+                    /* Not a valid encoding, skip this % */
+                    d[c] = input[i]
+                    c++
+                    i++
+                    count++
+                    invalid_count++
+                }
+            } else {
+                /* Not enough bytes available, copy the raw bytes. */
+                d[c] = input[i]
+                c++
+                i++
+                count++
+                invalid_count++
+            }
+        } else {
+            /* Character is not a percent sign. */
+            if (input[i] == '+') {
+                d[c] = ' '
+                c++
+                changed = true
+            } else {
+                d[c] = input[i]
+                c++
+            }
+            count++
+            i++
+        }
+    }
+
+    return string(d[0:c]), changed, invalid_count;
+
 }
-
-func IsHex(c byte) bool {
-	switch {
-	case '0' <= c && c <= '9':
-		return true
-	case 'a' <= c && c <= 'f':
-		return true
-	case 'A' <= c && c <= 'F':
-		return true
-	}
-	return false
-}
-
-func UnHex(c byte) byte {
-	switch {
-	case '0' <= c && c <= '9':
-		return c - '0'
-	case 'a' <= c && c <= 'f':
-		return c - 'a' + 10
-	case 'A' <= c && c <= 'F':
-		return c - 'A' + 10
-	}
-	return 0
-}*/

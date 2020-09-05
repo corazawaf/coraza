@@ -141,3 +141,40 @@ func OpenFile(path string) ([]byte, error){
 func StripSpaces(str string) string{
     return strings.Replace(str, " ", "", -1)    
 }
+
+func ValidHex(x byte) bool{
+	return (((x >= '0') && (x <= '9')) || ((x >= 'a') && (x <= 'f')) || ((x >= 'A') && (x <= 'F')))
+}
+
+func X2c(what string) byte {
+    var digit byte
+    if what[0] >= 'A' {
+    	digit = ((what[0] & 0xdf) - 'A') + 10
+    }else{
+    	digit = (what[0] - '0')
+    }
+    digit *= 16;
+    if what[1] >= 'A' {
+    	digit += ((what[1] & 0xdf) - 'A') + 10
+    }else{
+    	digit += (what[1] - '0')
+    }
+
+    return digit
+}
+
+func IsXDigit(char int) bool{
+    c := byte(char)
+    return ValidHex(c)
+}
+
+func C2x(what byte, where []byte) []byte{
+    c2xTable := []byte("0123456789abcdef")
+    b := []byte(where)
+
+    what = what & 0xff;
+    b[0] = c2xTable[what >> 4]
+    b[1] = c2xTable[what & 0x0f]
+
+    return b
+}

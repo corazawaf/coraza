@@ -303,7 +303,7 @@ func (tx *Transaction) SetRequestBody(body string, length int64, mime string) {
         // JSON!
         //doc, err := xmlquery.Parse(strings.NewReader(s))
         //tx.Json = doc
-    }else if mime == "" {
+    }else {
         tx.GetCollection("request_body").Set("", []string{body})
     }
     /*

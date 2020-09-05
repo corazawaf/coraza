@@ -9,6 +9,7 @@ import(
 	"strings"
 	"path/filepath"
 	"io/ioutil"
+	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
 type Test struct {
@@ -21,6 +22,7 @@ type Test struct {
 
 //https://github.com/SpiderLabs/secrules-language-tests/
 func TestTransformations(t *testing.T) {
+	utils.InitUnicodeMapping()
 	root := "../../test/data/transformations/"
 	files := [][]byte{}
     filepath.Walk(root, func(path string, info os.FileInfo, err error) error {

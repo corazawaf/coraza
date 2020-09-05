@@ -546,9 +546,13 @@ func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error{
 		spl := strings.SplitN(m, ":", 2)
 		value := ""
 		key := strings.Trim(spl[0], " ")
+	    subject = subject[index[1]:]
 
 		if len(spl) == 2{
 			value = strings.Trim(spl[1], " ")
+		}
+		if key == ""{
+			continue
 		}
 		if actionsmod.ActionsMap()[key] == nil{
 			//TODO some fixing here, this is a bug
@@ -561,7 +565,6 @@ func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error{
 			}
 			r.Actions = append(r.Actions, action)
 		}
-	    subject = subject[index[1]:]
 	    if len(subject) == 0{
 	    	break
 	    }

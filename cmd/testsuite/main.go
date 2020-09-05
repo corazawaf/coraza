@@ -229,7 +229,7 @@ func runTest(waf *engine.Waf, profile testProfile) (bool, int, error){
 					tx.GetCollection("request_body").Set("", []string{data})
 				}else if strings.HasPrefix(mediaType, "multipart/") {
 					parseMultipart(data, params["boundary"], tx)
-				}else if strings.HasPrefix(mediaType, "") {
+				}else {
 					tx.SetRequestBody(data, int64(len(data)), mediaType)
 					u, err := url.ParseQuery(data)
 					if err == nil{
@@ -280,7 +280,7 @@ func requestToTx(req *http.Request, tx *engine.Transaction){
     matches := re.FindAllStringSubmatch(req.RemoteAddr, -1)
     address := ""
     port := 0
-    //no more validations as we don't spake weird ip addresses
+    //no more validations as we don't take weird ip addresses
     if len(matches) > 0 {
         address = string(matches[0][1])
         port, _ = strconv.Atoi(string(matches[0][2]))
