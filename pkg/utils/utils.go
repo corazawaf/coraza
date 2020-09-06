@@ -91,12 +91,12 @@ func ArraySlice(arr []interface{}, index int) []interface{}{
     return arr
 }
 
-func CopyMap(m map[string]interface{}) map[string]interface{} {
+func CopyMapRecursive(m map[string]interface{}) map[string]interface{} {
     cp := make(map[string]interface{})
     for k, v := range m {
         vm, ok := v.(map[string]interface{})
         if ok {
-            cp[k] = CopyMap(vm)
+            cp[k] = CopyMapRecursive(vm)
         } else {
             cp[k] = v
         }
@@ -104,6 +104,16 @@ func CopyMap(m map[string]interface{}) map[string]interface{} {
 
     return cp
 }
+
+func CopyMap(m map[interface{}]interface{}) map[interface{}]interface{} {
+    cp := make(map[interface{}]interface{})
+    for k, v := range m {
+        cp[k] = v
+    }
+
+    return cp
+}
+
 
 func OpenFile(path string) ([]byte, error){
     var ret []byte
@@ -130,4 +140,41 @@ func OpenFile(path string) ([]byte, error){
 
 func StripSpaces(str string) string{
     return strings.Replace(str, " ", "", -1)    
+}
+
+func ValidHex(x byte) bool{
+	return (((x >= '0') && (x <= '9')) || ((x >= 'a') && (x <= 'f')) || ((x >= 'A') && (x <= 'F')))
+}
+
+func X2c(what string) byte {
+    var digit byte
+    if what[0] >= 'A' {
+    	digit = ((what[0] & 0xdf) - 'A') + 10
+    }else{
+    	digit = (what[0] - '0')
+    }
+    digit *= 16;
+    if what[1] >= 'A' {
+    	digit += ((what[1] & 0xdf) - 'A') + 10
+    }else{
+    	digit += (what[1] - '0')
+    }
+
+    return digit
+}
+
+func IsXDigit(char int) bool{
+    c := byte(char)
+    return ValidHex(c)
+}
+
+func C2x(what byte, where []byte) []byte{
+    c2xTable := []byte("0123456789abcdef")
+    b := []byte(where)
+
+    what = what & 0xff;
+    b[0] = c2xTable[what >> 4]
+    b[1] = c2xTable[what & 0x0f]
+
+    return b
 }

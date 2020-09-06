@@ -118,6 +118,7 @@ func (tx *Transaction) Init(waf *Waf) error{
     tx.SetSingleCollection("id", txid)
     tx.SetSingleCollection("timestamp", strconv.FormatInt(time.Now().UnixNano(), 10))
     tx.Disrupted = false
+    //TODO copy objects
     tx.AuditEngine = tx.WafInstance.AuditEngine
     tx.AuditLogParts = tx.WafInstance.AuditLogParts
     tx.RequestBodyAccess = tx.WafInstance.RequestBodyAccess
@@ -182,12 +183,8 @@ func (tx *Transaction) SetRequestHeaders(headers map[string][]string) {
         rhn.AddToKey("", k)
     }
     //default cases for compatibility:
-    if hl.Data["content-length"] == nil {
-        hl.Data["content-length"] = []string{"0"}
-    }
-    if hl.Data["content-type"] == nil {
-        //is this the default content-type?
-        hl.Data["content-type"] = []string{"text/plain"}
+    if hl.GetSimple("content-length") == nil {
+        hl.Set("content-length", []string{"0"})
     }
 }
 
@@ -306,7 +303,7 @@ func (tx *Transaction) SetRequestBody(body string, length int64, mime string) {
         // JSON!
         //doc, err := xmlquery.Parse(strings.NewReader(s))
         //tx.Json = doc
-    }else if mime == "" {
+    }else {
         tx.GetCollection("request_body").Set("", []string{body})
     }
     /*
@@ -607,7 +604,8 @@ func (tx *Transaction) ParseRequestBodyBinary(mimeval string, body string) error
     return nil
 }
 
-// Placeholder for http/2 streaming features
+// Execute rules for the specified phase, between 1 and 5
+// Returns true if transaction is disrupted
 func (tx *Transaction) ExecutePhase(phase int) bool{
     ts := time.Now().UnixNano()
     usedRules := 0
@@ -627,11 +625,9 @@ func (tx *Transaction) ExecutePhase(phase int) bool{
         }
         if tx.Skip > 0{
             tx.Skip--
-            //fmt.Println("Skipping rule (skip) " + fmt.Sprintf("%d", r.Id))
             //Skipping rule
             continue
         }
-        //tx.WafInstance.Logger.Debug(fmt.Sprintf("Evaluating rule %d", r.Id))
         r.Evaluate(tx)
         tx.Capture = false //we reset the capture flag on every run
         usedRules++
@@ -805,6 +801,7 @@ func (tx *Transaction) SaveLog() error{
     return tx.WafInstance.Logger.WriteAudit(tx)
 }
 
+// Get html error page as a string
 func (tx *Transaction) GetErrorPage() string{
     switch tx.WafInstance.ErrorPageMethod{
     case ERROR_PAGE_DEBUG:
@@ -857,6 +854,7 @@ func (tx *Transaction) GetErrorPage() string{
     return fmt.Sprintf("<h1>Error 403</h1><!-- %s -->", tx.Id)
 }
 
+// Save persistent collections to persistence engine
 func (tx *Transaction) SavePersistentData() {
     for col, pc := range tx.PersistentCollections{
         pc.SetData(tx.GetCollection(col).Data)
@@ -864,6 +862,7 @@ func (tx *Transaction) SavePersistentData() {
     }
 }
 
+// Removes the VARIABLE/TARGET from the rule ID
 func (tx *Transaction) RemoveRuleTargetById(id int, col string, key string){
     tx.Mux.Lock()
     defer tx.Mux.Unlock()

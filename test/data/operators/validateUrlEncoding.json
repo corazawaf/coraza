@@ -96,5 +96,12 @@
       "ret" : 1,
       "type" : "op",
       "name" : "validateUrlEncoding"
+   },
+   {
+      "param" : "",
+      "input" : "x=new %w20$",
+      "ret" : 1,
+      "type" : "op",
+      "name" : "validateUrlEncoding"
    }
 ]

@@ -1,14 +1,25 @@
 package transformations
 
 import (
+	"strings"
 	"path/filepath"
 )
 
 func NormalisePathWin(data string) string {
-	//these are constants and cant be changed :(
-	//filepath.Separator = `\\`
-	//filepath.PathListSeparator = ";"
-	return clean(data) //filepath.Clean(data)
+	leng := len(data)
+	cl := clean(data)
+	cl = strings.ReplaceAll(cl, "\\", "/")
+	if cl == "."{
+		return ""
+	}
+	if leng >= 2 && cl[0] == '.' && cl[1] == '/'{
+		cl = cl[2:]
+	}
+	if data[leng-1]  == '\\'{
+		return cl + "/"
+	}else{
+		return cl
+	}	
 }
 
 //We had to force the changes to the original library :(
