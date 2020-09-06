@@ -604,7 +604,8 @@ func (tx *Transaction) ParseRequestBodyBinary(mimeval string, body string) error
     return nil
 }
 
-// Placeholder for http/2 streaming features
+// Execute rules for the specified phase, between 1 and 5
+// Returns true if transaction is disrupted
 func (tx *Transaction) ExecutePhase(phase int) bool{
     ts := time.Now().UnixNano()
     usedRules := 0
@@ -624,11 +625,9 @@ func (tx *Transaction) ExecutePhase(phase int) bool{
         }
         if tx.Skip > 0{
             tx.Skip--
-            //fmt.Println("Skipping rule (skip) " + fmt.Sprintf("%d", r.Id))
             //Skipping rule
             continue
         }
-        //tx.WafInstance.Logger.Debug(fmt.Sprintf("Evaluating rule %d", r.Id))
         r.Evaluate(tx)
         tx.Capture = false //we reset the capture flag on every run
         usedRules++

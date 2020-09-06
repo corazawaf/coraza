@@ -109,7 +109,7 @@ func (p *Parser) Evaluate(data string) error{
 		if directive == key {
 			re, _ := regexp.Compile(regex)
 			if !re.MatchString(opts){
-				return p.log("Invalid parameters for directive " + directive)
+				return p.log("Invalid arguments for directive " + directive)
 			}
 			break
 		}
@@ -270,9 +270,6 @@ func (p *Parser) Evaluate(data string) error{
 	case "SecResponseBodyMimeTypesClear":
 		p.waf.ResponseBodyMimeTypes = []string{}
 		break
-	case "SecRuleInheritance":
-		p.log("SecRuleInheritance is not supported yet.")
-		break
 	case "SecRulePerfTime":
 		p.log("SecRulePerfTime is not supported yet.")
 		break
@@ -357,7 +354,7 @@ func (p *Parser) Evaluate(data string) error{
 		rule, err := p.ParseRule(opts)
 		if err != nil{
 			p.log("Failed to compile rule: " + opts)
-			//return err
+			return err
 		}else{
 			p.waf.Rules.Add(rule)
 		}
@@ -419,6 +416,7 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error){
 	if err != nil{
 		return nil, err
 	}	
+	
 	if len(matches) > 1{
     	actions = utils.RemoveQuotes(matches[1])
     	err = p.compileRuleActions(rule, actions) 
@@ -538,6 +536,9 @@ func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error{
 	subject := []byte(actions)
     if len(p.defaultActions) > 0{
     	actions = fmt.Sprintf("%s, %s", p.defaultActions, actions)
+    }
+    if len(actions) == 0{
+    	return nil
     }
 
 	for matcher.Match(subject, 0){
