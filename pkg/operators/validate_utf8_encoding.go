@@ -42,7 +42,7 @@ func (o *ValidateUtf8Encoding) Evaluate(tx *engine.Transaction, value string) bo
         i += rc
         bytes_left -= rc
     }
-    return false;
+    return false
 }
 
 
