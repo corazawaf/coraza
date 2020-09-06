@@ -17,7 +17,6 @@ import (
     "time"
     "io/ioutil"
     "mime"
-    "errors"
     "bufio"
     "path"
     "encoding/json"
@@ -172,8 +171,6 @@ func (tx *Transaction) MacroExpansion(data string) string{
 func (tx *Transaction) SetRequestHeaders(headers map[string][]string) {
     hl := tx.GetCollection("request_headers")
     rhn := tx.GetCollection("request_headers_names")
-    tx.Mux.Lock()
-    defer tx.Mux.Unlock()
     hl.AddMap(headers)
     for k, _ := range headers{
         if k == "" {
@@ -183,9 +180,12 @@ func (tx *Transaction) SetRequestHeaders(headers map[string][]string) {
         rhn.AddToKey("", k)
     }
     //default cases for compatibility:
-    if hl.GetSimple("content-length") == nil {
+    cl := hl.GetSimple("content-length")[0]
+    if cl == "" {
         hl.Set("content-length", []string{"0"})
+        cl = "0"
     }
+    tx.GetCollection("request_body_length").Set("", []string{cl})
 }
 
 //Adds a request header
@@ -360,7 +360,7 @@ func (tx *Transaction) SetUrl(u *url.URL){
     if len(spl) > 0{
         RequestBasename = spl[len(spl)-1]
     }
-    tx.GetCollection("request_uri").AddToKey("", u.EscapedPath())
+    tx.GetCollection("request_uri").AddToKey("", u.String())
     tx.GetCollection("request_filename").AddToKey("", u.Path)
     tx.GetCollection("request_basename").AddToKey("", RequestBasename)
     tx.GetCollection("query_string").AddToKey("", u.RawQuery)
@@ -534,7 +534,8 @@ func (tx *Transaction) ParseRequestObject(req *http.Request) error{
         tx.SetReqBodyProcessor("MULTIPART")
         err := req.ParseMultipartForm(tx.RequestBodyLimit)
         if err != nil {
-            return errors.New("Unable to parse multipart data")
+            panic(err)
+            return err
         }
         tx.SetFiles(req.MultipartForm.File)
         tx.SetArgsPost(req.MultipartForm.Value)
