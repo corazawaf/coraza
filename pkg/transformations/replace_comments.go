@@ -40,5 +40,5 @@ func doReplaceComments(value string) string{
         j++
     }
 
-    return string(input[0:j]);
+    return string(input[0:j])
 }

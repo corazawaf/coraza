@@ -64,9 +64,9 @@ func doHtmlEntityDecode(input string) string{
                         } else {
                             i = j;
                         }
-                        continue;
+                        continue
                     } else {
-                        goto HTML_ENT_OUT;
+                        goto HTML_ENT_OUT
                     }
                 } else {
                     /* Decimal entity. */

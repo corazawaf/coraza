@@ -50,5 +50,5 @@ func RemoveComments(value string) string{
         input[j] = ' '
         j++
     }
-    return string(input[0:j]);
+    return string(input[0:j])
 }
