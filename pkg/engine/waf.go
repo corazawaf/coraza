@@ -161,6 +161,7 @@ func (w *Waf) Init() {
     w.AuditEngine = AUDIT_LOG_DISABLED
     w.AuditLogType = AUDIT_LOG_CONCURRENT
     w.PersistenceUri = "inmemory"
+    w.RequestBodyLimit = 10000000 //10mb
 }
 
 func (w *Waf) InitLogger(){
@@ -215,4 +216,10 @@ func (w *Waf) NewTransaction() *Transaction{
 	tx := &Transaction{}
 	tx.Init(w)
 	return tx
+}
+
+func NewWaf() *Waf{
+    waf := &Waf{}
+    waf.Init()
+    return waf
 }
