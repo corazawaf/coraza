@@ -42,7 +42,7 @@ jobs:
       with:
         languages: ${{ matrix.language }}
     - run: |
-       make libinjection
+       sudo make libinjection
        make
 
     - name: Perform CodeQL Analysis
