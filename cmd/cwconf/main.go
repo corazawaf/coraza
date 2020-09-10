@@ -9,7 +9,7 @@ import(
 )
 
 func main(){
-	file := flag.String("f", "", "path of config file to test")
+	file := flag.String("f", "", "path of WAF config file to test")
 	flag.Parse()
 
 	if *file == ""{

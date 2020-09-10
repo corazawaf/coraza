@@ -14,11 +14,11 @@ func TransformationsMap() map[string]interface{} {
 		"urlDecode":          	UrlDecode,
 		"urlEncode":          	UrlEncode,
 		"urlDecodeUni":       	UrlDecodeUni,
-		//"utf8toUnicode":      Utf8ToUnicode, //tons of bugs
+		"utf8toUnicode":		Utf8ToUnicode, //tons of bugs
 		"replaceComments":    	ReplaceComments,
 		"removeComments":		RemoveComments,
 		//"htmlEntityDecode":   HtmlEntityDecode,
-		//"cssDecode": 			CssDecode,
+		"cssDecode": 			CssDecode,
 		//"jsDecode": 			JsDecode,
 		"cmdLine":          	CmdLine,
 		"length":           	Length,
