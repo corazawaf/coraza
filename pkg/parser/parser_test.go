@@ -95,6 +95,19 @@ func TestString3(t *testing.T) {
 	}
 }
 
+func TestString4(t *testing.T) {
+	rule := `SecRule REQUEST_HEADERS:User-Agent "@unconditionalMatch" "id:1, drop, phase: 1, t:none"`
+	waf := &engine.Waf{}
+	waf.Init()
+	tx := waf.NewTransaction()
+	p := &Parser{}
+	p.Init(waf)
+	p.Evaluate(rule)
+	tx.ExecutePhase(1)
+	if !tx.Disrupted{
+		t.Error("Failed to execute rule")
+	}
+}
 /*
 * Directives
 * TODO There should be an elegant way to separate them from the parser

@@ -14,9 +14,10 @@ func (a *Append) Init(r *engine.Rule, data string) string {
 }
 
 func (a *Append) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
-	rb := tx.Collections["tx"].Get("response_body")
+	t := tx.GetCollection("tx")
+	rb := t.GetSimple("response_body")
 	if len(rb) > 0{
-		tx.Collections["tx"].Set("response_body", []string{rb[0]+a.Data})
+		t.Set("response_body", []string{rb[0]+a.Data})
 	}
 }
 
