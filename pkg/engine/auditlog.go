@@ -1,17 +1,42 @@
+// Copyright 2020 Juan Pablo Tosso
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package engine
 import(
 	"encoding/json"
 )
 
+// Main struct for audit log data
 type AuditLog struct{
+	// Transaction information
 	Transaction *AuditTransaction `json:"transaction"`
+
+	// Triggered rules information
 	Messages []*AuditMessage `json:"messages"`
 }
 
+// Transaction information
 type AuditTransaction struct{
+	// Timestamp "02/Jan/2006:15:04:20 -0700" format
 	Timestamp string `json:"timestamp"`
+
+	// Unique ID
 	Id string `json:"id"`
+
+	// Client IP Address string representation
 	ClientIp string `json:"client_ip"`
+	
 	ClientPort int `json:"client_port"`
 	HostIp string `json:"host_ip"`
 	HostPort int `json:"host_port"`
@@ -140,7 +165,7 @@ func (al *AuditLog) Init(tx *Transaction){
 						Line: 0,
 						Id: r.Id,
 						Rev: r.Rev,
-						Msg: r.Msg,
+						Msg: tx.MacroExpansion(r.Msg),
 						Data: "",
 						//Severity: r.Severity,
 						//Ver: r.Ver,
