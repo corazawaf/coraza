@@ -1,9 +1,10 @@
 package transformations
+
+//#include <ctype.h>
+import "C"
 import(
 	"strconv"
 	"strings"
-	"unicode"
-	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
 const NPSB = '\x41'
@@ -13,6 +14,7 @@ func HtmlEntityDecode(data string) string{
 
 func doHtmlEntityDecode(input string) string{
     d := []byte(input)
+    d = append(d, 0x00)
     input_len := len(input)
     var i, count, curr int
 
@@ -46,23 +48,23 @@ func doHtmlEntityDecode(input string) string{
                     j++ /* j is the position of the first digit now. */
 
                     k = j
-                    for (j < input_len) && (utils.ValidHex(input[j])) {
+                    for (j < input_len) && (C.isxdigit(C.int(input[j])) == 1) {
                         j++
                     }
                     if (j > k) { /* Do we have at least one digit? */
                         /* Decode the entity. */
-                        x := make([]byte, (j - k) + 1)
-                        x = append(x, input[k:j]...)
-                        n, _ := strconv.Atoi(string(x))
+                        x := make([]byte, (j - k))
+                        x = append(x, input[k:k+j]...)
+                        n, _ := strconv.ParseInt(string(x), 16, 8)
                         d[curr] = byte(n)
                         curr++
                         count++
 
                         /* Skip over the semicolon if it's there. */
                         if ((j < input_len) && (input[j] == ';')) {
-                            i = j + 1;
+                            i = j + 1
                         } else {
-                            i = j;
+                            i = j
                         }
                         continue
                     } else {
@@ -71,13 +73,13 @@ func doHtmlEntityDecode(input string) string{
                 } else {
                     /* Decimal entity. */
                     k = j
-                    for (j < input_len) && (unicode.IsDigit(rune(input[j]))) {
+                    for (j < input_len) && (C.isdigit(C.int(input[j])) == 1) {
                         j++
                     }
                     if (j > k) { /* Do we have at least one digit? */
                         /* Decode the entity. */
-                        x := make([]byte, (j - k) + 1)
-                        x = append(x, input[k:j]...)
+                        x := make([]byte, (j - k))
+                        x = append(x, input[k:k+j]...)
                         n, _ := strconv.Atoi(string(x))
                         d[curr] = byte(n)
                         curr++
@@ -98,7 +100,7 @@ func doHtmlEntityDecode(input string) string{
                 /* Text entity. */
                 k = j
                 for j < input_len && isalnum(input[j]) {
-                    j++;
+                    j++
                 }
                 if (j > k) { /* Do we have at least one digit? */
                     x := make([]byte, (j - k) + 1)
@@ -152,12 +154,9 @@ HTML_ENT_OUT:
         }
     }
 
-    return string(d[0:curr])
+    return string(d[:curr])
 }
 
 func isalnum(input byte) bool{
-    if !unicode.IsLetter(rune(input)) || !unicode.IsNumber(rune(input)) {
-        return false
-    }
-    return true
+    return C.isdigit(C.int(input)) == 1
 }

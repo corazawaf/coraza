@@ -2,7 +2,7 @@ package transformations
 
 func TransformationsMap() map[string]interface{} {
 	return map[string]interface{}{
-		//"base64Decode":       Base64decode,
+		"base64Decode":       Base64decode,
 		"lowercase":          	LowerCase,
 		"removeWhitespace":		RemoveWhitespace,
 		"removeNulls":        	RemoveNulls,
@@ -14,12 +14,12 @@ func TransformationsMap() map[string]interface{} {
 		"urlDecode":          	UrlDecode,
 		"urlEncode":          	UrlEncode,
 		"urlDecodeUni":       	UrlDecodeUni,
-		//"utf8toUnicode":      Utf8ToUnicode, //tons of bugs
+		"utf8toUnicode":		Utf8ToUnicode,
 		"replaceComments":    	ReplaceComments,
 		"removeComments":		RemoveComments,
 		//"htmlEntityDecode":   HtmlEntityDecode,
-		//"cssDecode": 			CssDecode,
-		//"jsDecode": 			JsDecode,
+		"cssDecode": 			CssDecode,
+		"jsDecode": 			JsDecode,
 		"cmdLine":          	CmdLine,
 		"length":           	Length,
 		"hexEncode":        	HexEncode,

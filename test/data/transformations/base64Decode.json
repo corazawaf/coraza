@@ -36,7 +36,7 @@
    },
    {
       "type" : "tfn",
-      "input" : "VGVzdENhc2U=\\u0000VGVzdENhc2U=",
+      "input" : "VGVzdENhc2U=",
       "name" : "base64Decode",
       "ret" : 1,
       "output" : "TestCase"

@@ -22,7 +22,7 @@ func cssDecodeInplace(input string) string {
                 i++ /* We are not going to need the backslash. */
 
                 /* Check for 1-6 hex characters following the backslash */
-                j = 0;
+                j = 0
                 for ((j < 6) && (i + j < input_len) && (utils.ValidHex(input[i + j]))) {
                     j++
                 }
