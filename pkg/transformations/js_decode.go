@@ -45,7 +45,7 @@ func doJsDecode(input string) string{
                     buf[j] = input[i + 1 + j];
                     j++
                     if (!isodigit(input[i + 1 + j])) {
-                    	break;
+                    	break
                     }
                 }
                 buf = buf[:j]
@@ -67,25 +67,25 @@ func doJsDecode(input string) string{
                 switch (input[i + 1]) {
                     case 'a' :
                         cc = '\a'
-                        break;
+                        break
                     case 'b' :
                         cc = '\b'
-                        break;
+                        break
                     case 'f' :
                         cc = '\f'
-                        break;
+                        break
                     case 'n' :
                         cc = '\n'
-                        break;
+                        break
                     case 'r' :
                         cc = '\r'
-                        break;
+                        break
                     case 't' :
                         cc = '\t'
-                        break;
+                        break
                     case 'v' :
                         cc = '\v'
-                        break;
+                        break
                         /* The remaining (\?,\\,\',\") are just a removal
                          * of the escape char which is default.
                          */
