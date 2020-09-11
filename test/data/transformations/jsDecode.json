@@ -35,27 +35,6 @@
       "ret" : 1
    },
    {
-      "input" : "\\x",
-      "name" : "jsDecode",
-      "type" : "tfn",
-      "ret" : 1,
-      "output" : "x"
-   },
-   {
-      "output" : "xx0",
-      "ret" : 1,
-      "name" : "jsDecode",
-      "input" : "\\x\\x0",
-      "type" : "tfn"
-   },
-   {
-      "output" : "xx0\u0000",
-      "type" : "tfn",
-      "input" : "\\x\\x0\u0000",
-      "name" : "jsDecode",
-      "ret" : 1
-   },
-   {
       "output" : "u",
       "input" : "\\u",
       "name" : "jsDecode",

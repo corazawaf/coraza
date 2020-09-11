@@ -34,7 +34,8 @@ func doUtf8ToUnicode(input string) string{
         unicode_len := 0
         d := 0
         var c byte
-        utf := []byte(input[i:])
+        utf := []byte(input[i:])        
+        utf = append(utf, '\x00')
 
         c = utf[0]
 
@@ -108,14 +109,14 @@ func doUtf8ToUnicode(input string) string{
             /* check we have at least three bytes */
             if (bytes_left < 3) {
                 /* check second byte starts with binary 10 */
-                unicode_len = UNICODE_ERROR_CHARACTERS_MISSING;
+                unicode_len = UNICODE_ERROR_CHARACTERS_MISSING
             } else if (((utf[1]) & 0xC0) != 0x80) {
                 /* check third byte starts with binary 10 */
-                unicode_len = UNICODE_ERROR_INVALID_ENCODING;
+                unicode_len = UNICODE_ERROR_INVALID_ENCODING
             } else if (((utf[2]) & 0xC0) != 0x80) {
-                unicode_len = UNICODE_ERROR_INVALID_ENCODING;
+                unicode_len = UNICODE_ERROR_INVALID_ENCODING
             } else {
-                unicode_len = 3;
+                unicode_len = 3
                 count +=6;
                 if (count <= leng) {
                     length := 0
