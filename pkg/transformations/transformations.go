@@ -31,7 +31,7 @@ func TransformationsMap() map[string]interface{} {
 		"utf8toUnicode":		Utf8ToUnicode,
 		"replaceComments":    	ReplaceComments,
 		"removeComments":		RemoveComments,
-		"htmlEntityDecode":   HtmlEntityDecode,
+		//"htmlEntityDecode":   HtmlEntityDecode,
 		"cssDecode": 			CssDecode,
 		"jsDecode": 			JsDecode,
 		"cmdLine":				CmdLine,

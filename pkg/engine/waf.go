@@ -16,6 +16,7 @@ package engine
 import (
     "errors"
     "strings"
+    "sync"
     "github.com/oschwald/geoip2-golang"
     "github.com/jptosso/coraza-waf/pkg/engine/persistence"
     pcre"github.com/gijsbers/go-pcre"
@@ -145,6 +146,8 @@ type Waf struct {
     // Sensor ID tu, must be unique per cluster nodes    
     SensorId string
 
+    mux *sync.RWMutex
+
     // To be used
     /*
     StreamOutBodyInspection bool
@@ -170,6 +173,7 @@ type Waf struct {
 // Initializes an instance of WAF
 func (w *Waf) Init() {
 	//TODO replace with SecCacheEngine redis://user:password@localhost:6379
+    w.mux = &sync.RWMutex{}
     w.Rules = &RuleGroup{}
     w.Rules.Init()
     w.AuditEngine = AUDIT_LOG_DISABLED
@@ -227,6 +231,8 @@ func (w *Waf) InitPersistenceEngine(uri string) error{
 
 // Returns a new initialized transaction for this WAF instance
 func (w *Waf) NewTransaction() *Transaction{
+    w.mux.RLock()
+    defer w.mux.RUnlock()
 	tx := &Transaction{}
 	tx.Init(w)
 	return tx

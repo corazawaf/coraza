@@ -122,6 +122,8 @@ type Transaction struct {
 
 func (tx *Transaction) Init(waf *Waf) error{
     tx.Mux = &sync.RWMutex{}
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
     tx.WafInstance = waf
     tx.Collections = map[string]*LocalCollection{}
     txid := utils.RandomString(19)
@@ -449,7 +451,7 @@ func (tx *Transaction) InitTxCollection(){
                       "request_filename", "request_headers", "request_headers_names", "request_method", "request_protocol", "request_filename", "full_request",
                       "request_uri", "request_line", "response_body", "response_content_length", "response_content_type", "request_cookies", "request_uri_raw",
                       "response_headers", "response_headers_names", "response_protocol", "response_status", "appid", "id", "timestamp", "files_names", "files",
-                      "files_combined_size", "reqbody_processor", "request_body_length", "xml", "matched_vars", "rule", "ip", "global"}
+                      "files_combined_size", "reqbody_processor", "request_body_length", "xml", "matched_vars", "rule", "ip", "global", "session"}
     
     for _, k := range keys{
         tx.Collections[k] = &LocalCollection{}
@@ -627,24 +629,34 @@ func (tx *Transaction) ParseRequestBodyBinary(mimeval string, body string) error
 func (tx *Transaction) ExecutePhase(phase int) bool{
     ts := time.Now().UnixNano()
     usedRules := 0
+    tx.Mux.Lock()
     tx.LastPhase = phase
+    tx.Mux.Unlock()
     for _, r := range tx.WafInstance.Rules.GetRules() {
         if r.Phase != phase {
             continue
         }
         //we always evaluate secmarkers
         if tx.SkipAfter != ""{
+            tx.Mux.RLock()
             if r.SecMark == tx.SkipAfter{
                 tx.SkipAfter = ""
             }else{
+                tx.Mux.RUnlock()
                 continue
             }
+            tx.Mux.RUnlock()
         }
+        tx.Mux.RLock()
         if tx.Skip > 0{
+            tx.Mux.RUnlock()
+            tx.Mux.Lock()
             tx.Skip--
+            tx.Mux.Unlock()
             //Skipping rule
             continue
         }
+        tx.Mux.RUnlock()
         txr := tx.GetCollection("rule")
         rid := strconv.Itoa(r.Id)
         txr.Set("id", []string{rid})
@@ -679,7 +691,9 @@ func (tx *Transaction) MatchRule(rule *Rule, msgs []string, match []*MatchData){
         Rule: rule,
     }
     m := tx.GetCollection("matched_vars")
+    tx.Mux.Lock()
     tx.MatchedRules = append(tx.MatchedRules, mr)
+    tx.Mux.Unlock()
     for _, mm := range match{
        m.AddToKey("", mm.Value)
     }
@@ -902,4 +916,16 @@ func (tx *Transaction) RegisterPersistentCollection(collection string, pc *Persi
     tx.Mux.Lock()
     defer tx.Mux.Unlock()
     tx.PersistentCollections[collection] = pc
+}
+
+func (tx *Transaction) IsCapturable() bool{
+    tx.Mux.RLock()
+    defer tx.Mux.RUnlock()
+    return tx.Capture
+}
+
+func (tx *Transaction) SetCapturable(capturable bool) {
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
+    tx.Capture = capturable
 }
