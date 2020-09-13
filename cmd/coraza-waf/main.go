@@ -15,34 +15,32 @@
 package main
 
 import (
-	"fmt"
-	"log"
-	skfilter "github.com/jptosso/coraza-waf/pkg/skipper"
+	log"github.com/sirupsen/logrus"
 	"github.com/zalando/skipper"
+	"flag"
+	"os"
+	"fmt"
 	"github.com/zalando/skipper/config"
 )
 
 func main() {
-	fmt.Println("   _____ ____  _____             ______         ")
-	fmt.Println("  / ____/ __ \\|  __ \\     /\\    |___  /   /\\    ")
-	fmt.Println(" | |   | |  | | |__) |   /  \\      / /   /  \\   ")
-	fmt.Println(" | |   | |  | |  _  /   / /\\ \\    / /   / /\\ \\  ")
-	fmt.Println(" | |___| |__| | | \\ \\  / ____ \\  / /__ / ____ \\ ")
-	fmt.Println("  \\_____\\____/|_|  \\_\\/_/    \\_\\/_____/_/    \\_\\")
-	fmt.Println("          Web Application Firewall - Skipper")
-	fmt.Println("Preparing reverse proxy")
+	cfgfile := flag.String("f", "/etc/coraza-waf/skipper.yaml", "Skipper Proxy configuration path")
+	flag.Parse()
+
+	os.Args = []string{os.Args[0], "-config-file="+*cfgfile}
+
 	cfg := config.NewConfig()
 	if err := cfg.Parse(); err != nil {
 		log.Fatalf("Error processing config: %s", err)
 	}
-	if cfg.ConfigFile == "" {
-		cfg.ConfigFile = "/etc/coraza-waf/skipper.yaml"
-	}
-	if cfg.RoutesFile == "" {
-		cfg.RoutesFile = "/etc/coraza-waf/routes.eskip"
-	}
+
 	opts := cfg.ToOptions()
 
-	opts.CustomFilters = append(opts.CustomFilters, &skfilter.CorazaSpec{})
+	opts.CustomFilters = append(opts.CustomFilters, &CorazaSpec{})
+	if cfg.ApplicationLog != ""{
+		fmt.Println("Coraza WAF will be logging to log files.")
+	}else{
+		fmt.Println("Logging to stdout")
+	}
 	log.Fatal(skipper.Run(opts))
 }

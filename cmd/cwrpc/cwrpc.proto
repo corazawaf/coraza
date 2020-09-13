@@ -1,28 +1,47 @@
-//EXPERIMENTAL for grpc
+syntax = "proto3";
+
+option go_package = "/internal/grpc/waf";
 
 service Transaction {
 	rpc CreateAndUpdate (TransactionUpdate) returns (TransactionStatus) {}
 	rpc Update (TransactionUpdate) returns (TransactionStatus) {}
-	rpc Get (Transaction) returns (TransactionStatus) {}
-	rpc GetCollection (Transaction) returns (TransactionStatus) {}
-	rpc UploadRawRequest (Transaction) returns (TransactionStatus) {}
-	rpc UploadRawRequestBody (Transaction) returns (TransactionStatus) {}
-	rpc UploadRawResponse (Transaction) returns (TransactionStatus) {}
-	rpc UploadRawResponseBody (Transaction) returns (TransactionStatus) {}
+	rpc Get (TransactionUpdate) returns (TransactionStatus) {}
+	rpc GetCollection (TransactionData) returns (TransactionData) {}
+	rpc UploadRawRequest (TransactionRawData) returns (TransactionStatus) {}
+	rpc UploadRawRequestBody (TransactionRawData) returns (TransactionStatus) {}
+	rpc UploadRawResponse (TransactionRawData) returns (TransactionStatus) {}
+	rpc UploadRawResponseBody (TransactionRawData) returns (TransactionStatus) {}
 }
 
-message Transaction {
-	string id = "";
+enum phase {
+	NONE = 0;
+    REQUEST_HEADERS = 1;
+    REQUEST_BODY = 2;
+    RESPONSE_HEADERS = 3;
+    RESPONSE_BODY = 4;
+    LOGGING = 5;
 }
 
 message TransactionUpdate {
-	strind id = "";
-	map<string, map<string, []string>> Collection = N;
-	int phase = 0;
+	string id = 10;
+    phase phase = 11;
 }
 
 message TransactionStatus {
-	string id = "";
-	bool disrupted = false;
-	int lastphase = 0;
+	string id = 20;
+	bool disrupted = 21;
+	
+}
+
+message TransactionData {
+	string id = 30;
+	string collection = 31;
+	repeated string data = 32;
+	phase phase = 33;
+}
+
+message TransactionRawData {
+	string id = 40;
+	string data = 41;
+    phase phase = 42;
 }

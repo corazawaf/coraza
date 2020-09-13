@@ -66,7 +66,7 @@ func (a *Setvar) evaluateTxCollection(r *engine.Rule, tx *engine.Transaction, ke
     }
 
     if a.Key[0] == '!'{
-        //TODO remove from collection
+        collection.Remove(a.Key[1:])
     }else{
         res := collection.Get(a.Key)
         if len(res) == 0{

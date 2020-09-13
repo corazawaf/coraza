@@ -198,8 +198,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData{
 		a.Evaluate(r, tx)
 	}	
 
-
-	tx.Capture = false //TODO shall we remove this?
+	tx.SetCapturable(false)
 
 	if r.Chain != nil{
 		//Log.Debug("Running chain rule...")

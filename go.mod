@@ -11,15 +11,13 @@ require (
 	github.com/mattn/go-colorable v0.1.7 // indirect
 	github.com/mattn/go-runewidth v0.0.7 // indirect
 	github.com/mattn/go-tty v0.0.3 // indirect
-	github.com/onsi/ginkgo v1.10.3 // indirect
 	github.com/onsi/gomega v1.7.1 // indirect
 	github.com/oschwald/geoip2-golang v1.3.0
 	github.com/oschwald/maxminddb-golang v1.5.0 // indirect
 	github.com/pkg/term v0.0.0-20200520122047-c3ffed290a03 // indirect
 	github.com/sirupsen/logrus v1.4.2
-	github.com/yuin/gopher-lua v0.0.0-20190514113301-1cd887cd7036
-	github.com/zalando/skipper v0.11.101
-	golang.org/x/crypto v0.0.0-20191205180655-e7c4368fe9dd // indirect
+	github.com/yuin/gopher-lua v0.0.0-20200603152657-dc2b0ca8b37e
+	github.com/zalando/skipper v0.11.151
 	golang.org/x/text v0.3.2
-	gopkg.in/yaml.v2 v2.2.7
+	gopkg.in/yaml.v2 v2.3.0
 )

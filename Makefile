@@ -1,6 +1,6 @@
 # Go parameters
 GOCMD=go
-ENTRYFILE=cmd/skipper/main.go
+ENTRYFILE=cmd/skipper/*.go
 GOBUILD=$(GOCMD) build -ldflags "-w -s" $(ENTRYFILE)
 GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
@@ -36,9 +36,7 @@ eskip:
 		mv bin/eskip ../	
 
 skipper-filter:
-		sed -i 's/package skipper/package main/g' pkg/skipper/filter.go > pkg/skipper/filter.go
-		go build -ldflags "-w -s" -linkshared pkg/skipper/filter.go -o skipper_mod_coraza_waf.so
-		sed -i 's/package main/package skipper/g' pkg/skipper/filter.go > pkg/skipper/filter.go
+		go build -ldflags "-w -s" -linkshared cmd/coraza-waf/skipper.go -o skipper_mod_coraza_waf.so
 install:
 		# only for debian by now
 		mkdir -p /etc/coraza-waf/profiles/default

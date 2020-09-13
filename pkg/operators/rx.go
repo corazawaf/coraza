@@ -36,7 +36,7 @@ func (o *Rx) Evaluate(tx *engine.Transaction, value string) bool{
 	re := pcre.MustCompile(o.re, 0)
 	//TODO JIT optimization but test check concurrency first
 	m := re.MatcherString(value, 0)
-	if tx.Capture{
+	if tx.IsCapturable(){
 		tx.ResetCapture()
 	}
 	//m.Match(subject, 0)
@@ -44,7 +44,7 @@ func (o *Rx) Evaluate(tx *engine.Transaction, value string) bool{
 		if i == 10{
 			return true
 		}
-		if tx.Capture{
+		if tx.IsCapturable(){
 			tx.CaptureField(i, m.GroupString(i))
 		}
 	}

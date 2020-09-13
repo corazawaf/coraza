@@ -23,7 +23,7 @@ RUN mkdir -p /opt/coraza-waf/log/audit
 RUN useradd -r -s /bin/false coraza-waf
 RUN cp scripts/debian/coraza-waf.service /etc/init.d/coraza-waf
 RUN cp examples/skipper/default.conf /etc/coraza-waf/profiles/default/
-RUN go build -ldflags "-w -s" cmd/skipper/main.go 
+RUN go build -ldflags "-w -s" cmd/coraza-waf/*.go 
 RUN mv main /bin/coraza-waf
 RUN cp examples/skipper/routes.eskip /etc/coraza-waf/
 RUN cp examples/skipper/skipper.yaml /etc/coraza-waf/

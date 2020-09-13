@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package skipper
+package main
 
 import (
 	"io"
+	"context"
 	"net/http"
-
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/parser"
 	"github.com/zalando/skipper/filters"
@@ -31,8 +31,6 @@ type CorazaFilter struct {
 	policypath  string
 	wafinstance *engine.Waf
 
-	//context values
-	tx *engine.Transaction
 }
 
 func (s *CorazaSpec) Name() string { return "corazaWAF" }
@@ -58,34 +56,49 @@ func (s *CorazaSpec) CreateFilter(config []interface{}) (filters.Filter, error) 
 	}
 	wi.Rules.Sort()
 	wi.InitLogger()
-	tx := &engine.Transaction{}
-	tx.Init(wi)
-	return &CorazaFilter{policypath, wi, tx}, nil
+	return &CorazaFilter{policypath, wi}, nil
 }
 
 func (f *CorazaFilter) Request(ctx filters.FilterContext) {
+	tx := f.wafinstance.NewTransaction()
 	req := ctx.Request()
+	*req = *(req.WithContext(context.WithValue(req.Context(), "tx", tx)))
 
-	err := f.tx.ParseRequestObject(req)
-	if err != nil || f.tx.Disrupted {
+	err := tx.ParseRequestObjectHeaders(req)
+	if err != nil || tx.ExecutePhase(1) {
 		f.ErrorPage(ctx)
+		return
+	}
+
+	err = tx.ParseRequestObjectBody(req)
+	if err != nil || tx.ExecutePhase(2) {
+		f.ErrorPage(ctx)
+		return
 	}
 }
 
 func (f *CorazaFilter) Response(ctx filters.FilterContext) {
-	err := f.tx.ParseResponseObject(ctx.Response())
-	if err != nil || f.tx.Disrupted {
+	res := ctx.Response()
+	tx := f.GetTransaction(ctx)
+	err := tx.ParseResponseObject(res)
+	if err != nil || tx.Disrupted {
 		f.ErrorPage(ctx)
 		return
 	}
-	f.tx.ExecutePhase(5)
+	tx.ExecutePhase(5)
 }
 
 func (f *CorazaFilter) ErrorPage(ctx filters.FilterContext) {
-	f.tx.ExecutePhase(5)
+	tx := f.GetTransaction(ctx)
 	serve.ServeHTTP(ctx, http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		rw.WriteHeader(http.StatusForbidden)
 		//rw.Header().Set("Content-Type", "text/html")
-		io.WriteString(rw, f.tx.GetErrorPage())
+		io.WriteString(rw, tx.GetErrorPage())
 	}))
 }
+
+func (f *CorazaFilter) GetTransaction(ctx filters.FilterContext) *engine.Transaction {
+	req := ctx.Request()
+	return req.Context().Value("tx").(*engine.Transaction)
+}
+
