@@ -194,11 +194,14 @@ func (tx *Transaction) SetRequestHeaders(headers map[string][]string) {
         rhn.AddToKey("", k)
     }
     //default cases for compatibility:
-    cl := hl.GetSimple("content-length")[0]
-    if cl == "" {
+    c := hl.GetSimple("content-length")
+    cl := "0"
+    if len(c) > 0 {
+        cl = hl.GetSimple("content-length")[0]
+    }else{
         hl.Set("content-length", []string{"0"})
-        cl = "0"
     }
+
     tx.GetCollection("request_body_length").Set("", []string{cl})
 }
 
@@ -437,7 +440,7 @@ func (tx *Transaction) ResolveRemoteHost() {
 //
 func (tx *Transaction) CaptureField(index int, value string) {
     i := strconv.Itoa(index)
-    tx.Collections["tx"].Data[i] = []string{value}
+    tx.GetCollection("tx").Set(i, []string{value})
 }
 
 func (tx *Transaction) InitTxCollection(){
@@ -446,7 +449,7 @@ func (tx *Transaction) InitTxCollection(){
                       "request_filename", "request_headers", "request_headers_names", "request_method", "request_protocol", "request_filename", "full_request",
                       "request_uri", "request_line", "response_body", "response_content_length", "response_content_type", "request_cookies", "request_uri_raw",
                       "response_headers", "response_headers_names", "response_protocol", "response_status", "appid", "id", "timestamp", "files_names", "files",
-                      "files_combined_size", "reqbody_processor", "request_body_length", "xml", "matched_vars", "rule"}
+                      "files_combined_size", "reqbody_processor", "request_body_length", "xml", "matched_vars", "rule", "ip", "global"}
     
     for _, k := range keys{
         tx.Collections[k] = &LocalCollection{}
@@ -478,10 +481,15 @@ func (tx *Transaction) ParseRequestString(data string) error{
         return err
     }
 
-    err = tx.ParseRequestObject(req)
+    err = tx.ParseRequestObjectHeaders(req)
     if err != nil {
         return err
     }
+
+    err = tx.ParseRequestObjectBody(req)
+    if err != nil {
+        return err
+    }    
     return nil
 }
 
@@ -501,12 +509,12 @@ func (tx *Transaction) ParseResponseString(req *http.Request, data string) error
 }
 
 // Parse golang http request object into transaction
-func (tx *Transaction) ParseRequestObject(req *http.Request) error{
+func (tx *Transaction) ParseRequestObjectHeaders(req *http.Request) error{
     re := regexp.MustCompile(`^\[(.*?)\]:(\d+)$`)
     matches := re.FindAllStringSubmatch(req.RemoteAddr, -1)
     address := ""
     port := 0
-    //no more validations as we don't spake weird ip addresses
+    //no more validations as we don't expect weird ip addresses
     if len(matches) > 0 {
         address = string(matches[0][1])
         port, _ = strconv.Atoi(string(matches[0][2]))
@@ -517,12 +525,10 @@ func (tx *Transaction) ParseRequestObject(req *http.Request) error{
     tx.SetRemoteAddress(address, port)
     tx.SetRequestCookies(req.Cookies())
     tx.SetRequestLine(req.Method, req.Proto, req.RequestURI)
-    tx.ExecutePhase(1)
+    return nil
+}
 
-    if tx.Disrupted || req.Body == nil{
-        return nil
-    }
-
+func (tx *Transaction) ParseRequestObjectBody(req *http.Request) error{
     //phase 2
     cl := tx.GetCollection("request_headers").GetSimple("content-type")
     ctype := "text/plain"
@@ -547,8 +553,8 @@ func (tx *Transaction) ParseRequestObject(req *http.Request) error{
         //url encode
         tx.SetReqBodyProcessor("MULTIPART")
         err := req.ParseMultipartForm(tx.RequestBodyLimit)
+        defer req.Body.Close()
         if err != nil {
-            panic(err)
             return err
         }
         tx.SetFiles(req.MultipartForm.File)
@@ -556,16 +562,13 @@ func (tx *Transaction) ParseRequestObject(req *http.Request) error{
         break
     }
     body, err := ioutil.ReadAll(req.Body)
-    defer req.Body.Close()
     //TODO BUFFERING
     if err != nil{
         return err
     }
-    tx.SetRequestBody(string(body), int64(len(body)), ct)    
-    tx.ExecutePhase(2)     
+    tx.SetRequestBody(string(body), int64(len(body)), ct)   
     return nil
 }
-
 // Parse golang http response object into transaction
 func (tx *Transaction) ParseResponseObject(res *http.Response) error{
     tx.SetResponseHeaders(res.Header)
@@ -626,16 +629,15 @@ func (tx *Transaction) ExecutePhase(phase int) bool{
     usedRules := 0
     tx.LastPhase = phase
     for _, r := range tx.WafInstance.Rules.GetRules() {
-        //we always execute secmarkers
         if r.Phase != phase {
             continue
         }
-
+        //we always evaluate secmarkers
         if tx.SkipAfter != ""{
-            if r.SecMark != tx.SkipAfter{
-                continue
-            }else{
+            if r.SecMark == tx.SkipAfter{
                 tx.SkipAfter = ""
+            }else{
+                continue
             }
         }
         if tx.Skip > 0{
@@ -678,11 +680,9 @@ func (tx *Transaction) MatchRule(rule *Rule, msgs []string, match []*MatchData){
     }
     m := tx.GetCollection("matched_vars")
     tx.MatchedRules = append(tx.MatchedRules, mr)
-    mv := m.GetSimple("")
-    for _, m := range match{
-        mv = append(mv, m.Value)
+    for _, mm := range match{
+       m.AddToKey("", mm.Value)
     }
-    m.Set("", mv)
 }
 
 func (tx *Transaction) InitCollection(key string){
@@ -896,4 +896,10 @@ func (tx *Transaction) RemoveRuleTargetById(id int, col string, key string){
     }else{
         tx.RuleRemoveTargetById[id] = append(tx.RuleRemoveTargetById[id], c)
     }
+}
+
+func (tx *Transaction) RegisterPersistentCollection(collection string, pc *PersistentCollection){
+    tx.Mux.Lock()
+    defer tx.Mux.Unlock()
+    tx.PersistentCollections[collection] = pc
 }

@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package skipper
+package main
 
 import (
 	"io"
 	"net/http"
-
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/parser"
 	"github.com/zalando/skipper/filters"
@@ -58,17 +57,23 @@ func (s *CorazaSpec) CreateFilter(config []interface{}) (filters.Filter, error) 
 	}
 	wi.Rules.Sort()
 	wi.InitLogger()
-	tx := &engine.Transaction{}
-	tx.Init(wi)
-	return &CorazaFilter{policypath, wi, tx}, nil
+	return &CorazaFilter{policypath, wi, nil}, nil
 }
 
 func (f *CorazaFilter) Request(ctx filters.FilterContext) {
+	f.tx = f.wafinstance.NewTransaction()
 	req := ctx.Request()
 
-	err := f.tx.ParseRequestObject(req)
-	if err != nil || f.tx.Disrupted {
+	err := f.tx.ParseRequestObjectHeaders(req)
+	if err != nil || f.tx.ExecutePhase(1) {
 		f.ErrorPage(ctx)
+		return
+	}
+
+	err = f.tx.ParseRequestObjectBody(req)
+	if err != nil || f.tx.ExecutePhase(2) {
+		f.ErrorPage(ctx)
+		return
 	}
 }
 

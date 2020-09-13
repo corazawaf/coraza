@@ -43,13 +43,13 @@ Compilation prerequisites:
 * C compiler (gcc)
 * Libpcre++-dev
 
-You can compile each package individually running: `go build cmd/skipper/main.go` or using the make scripts.
+You can compile each package individually running: `go build cmd/coraza-waf/*.go` or using the make scripts.
 
 ```
 # Get dependencies
 go get ./...
 # make libinjection is required
-make libinjection
+sudo make libinjection
 make
 sudo make install
 
@@ -59,7 +59,7 @@ sudo make install
 ## Compile as a skipper plugin
 
 ```
-GO111MODULE=on go build -buildmode=plugin -o coraza.so cmd/skipper/main.go
+GO111MODULE=on go build -buildmode=plugin -o coraza.so cmd/skipper/skipper.go
 skipper -filter-plugin coraza
 ```
 

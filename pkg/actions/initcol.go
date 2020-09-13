@@ -35,13 +35,10 @@ func (a *InitCol) Init(r *engine.Rule, data string) string {
 func (a *InitCol) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	pc := &engine.PersistentCollection{}
     pc.New(nil, tx.WafInstance.WebAppId, a.Collection, a.Key, 10000)
-    col := &engine.LocalCollection{}
-    col.Init(a.Collection)
-    col.Data = pc.GetData()
-    tx.Mux.Lock()
-    defer tx.Mux.Unlock()
-    tx.Collections[a.Collection] = col
-    tx.PersistentCollections[a.Collection] = pc
+    col := tx.GetCollection(a.Collection)
+
+    col.SetData(pc.GetData())
+    tx.RegisterPersistentCollection(a.Collection, pc)
 }
 
 func (a *InitCol) GetType() int{

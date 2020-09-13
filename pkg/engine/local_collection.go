@@ -250,3 +250,9 @@ func (c *LocalCollection) GetData() map[string][]string {
     defer c.mux.RUnlock()		
 	return c.Data
 }
+
+func (c *LocalCollection) SetData(data map[string][]string) {
+    c.mux.Lock()
+    defer c.mux.Unlock()		
+	c.Data = data
+}
