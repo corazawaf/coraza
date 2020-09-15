@@ -14,7 +14,7 @@
 
 package actions
 
-import(
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
 )
 
@@ -27,10 +27,10 @@ func (a *Logdata) Init(r *engine.Rule, data string) string {
 	return ""
 }
 
-func (a *Logdata) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
+func (a *Logdata) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	tx.Logdata = append(tx.Logdata, tx.MacroExpansion(a.data))
 }
 
-func (a *Logdata) GetType() int{
+func (a *Logdata) GetType() int {
 	return engine.ACTION_TYPE_NONDISRUPTIVE
 }

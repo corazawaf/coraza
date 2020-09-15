@@ -15,25 +15,25 @@
 package transformations
 
 import (
-	"strings"
 	"path/filepath"
+	"strings"
 )
 
 func NormalisePathWin(data string) string {
 	leng := len(data)
 	cl := clean(data)
 	cl = strings.ReplaceAll(cl, "\\", "/")
-	if cl == "."{
+	if cl == "." {
 		return ""
 	}
-	if leng >= 2 && cl[0] == '.' && cl[1] == '/'{
+	if leng >= 2 && cl[0] == '.' && cl[1] == '/' {
 		cl = cl[2:]
 	}
-	if data[leng-1]  == '\\'{
+	if data[leng-1] == '\\' {
 		return cl + "/"
-	}else{
+	} else {
 		return cl
-	}	
+	}
 }
 
 //We had to force the changes to the original library :(

@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: coraza-skipper-ingress
+  namespace: kube-system
+  labels:
+    application: coraza-skipper-ingress
+    version: v0.10.180
+    component: ingress
+spec:
+  selector:
+    matchLabels:
+      application: coraza-skipper-ingress
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      name: coraza-skipper-ingress
+      labels:
+        application: coraza-skipper-ingress
+        version: v0.11.1
+        component: ingress
+    spec:
+      priorityClassName: system-node-critical
+      tolerations:
+      - key: dedicated
+        operator: Exists
+      nodeSelector:
+        kubernetes.io/role: worker
+      hostNetwork: true
+      containers:
+      - name: coraza-skipper-ingress
+        image: jptosso/coraza-waf:latest
+        ports:
+        - name: ingress-port
+          containerPort: 9999
+          hostPort: 9999
+        - name: metrics-port
+          containerPort: 9911
+        command: ["/bin/sh", "-c"]
+        args:
+          - "cat << EOF > /etc/coraza-waf/skipper.yaml"
+          - "kubernetes: true"
+          - "kubernetes-in-cluster: true"
+          - "kubernetes-path-mode: path-prefix"
+          - "address: :9999"
+          - "wait-first-route-load: true"
+          - "proxy-preserve-host: true"
+          - "serve-host-metrics: true"
+          - "enable-ratelimits: true"
+          - "experimental-upgrade: true"
+          - "metrics-exp-decay-sample: true"
+          - "reverse-source-predicate: true"
+          - "lb-healthcheck-interval: 3s"
+          - "metrics-flavour: codahale,prometheus"
+          - "enable-connection-metrics: true"
+          - "max-audit-body: 0"
+          - "histogram-metric-buckets: .01,.025,.05,.075,.1,.2,.3,.4,.5,.75,1,2,3,4,5,7,10,15,20,30,60,120,300,600"
+          - "application-log: /opt/coraza-waf/log/skipper.log"
+          - "application-log-level: error"
+          - "EOF"
+        resources:
+          requests:
+            cpu: 150m
+            memory: 150Mi
+        readinessProbe:
+          httpGet:
+            path: /kube-system/healthz
+            port: 9999
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000

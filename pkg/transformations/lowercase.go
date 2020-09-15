@@ -13,10 +13,11 @@
 // limitations under the License.
 
 package transformations
-import(
+
+import (
 	"strings"
 )
 
-func LowerCase(data string) string{
+func LowerCase(data string) string {
 	return strings.ToLower(data)
 }

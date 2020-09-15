@@ -31,7 +31,6 @@ Most features are available for testing, APIs are unstable but close to the fina
 - [ ] Normalized API
 - [ ] Optimized pcre compilation instructions
 - [ ] OWASP CRS Full Support (almost there)
-- [ ] cssdecode and jsdecode transformation
 - [ ] some disruptive actions
 - [ ] some lua features
 
@@ -59,7 +58,7 @@ sudo make install
 ## Compile as a skipper plugin
 
 ```
-GO111MODULE=on go build -buildmode=plugin -o coraza.so cmd/skipper/skipper.go
+GO111MODULE=on go build -buildmode=plugin -o coraza.so cmd/coraza-waf/skipper.go
 skipper -filter-plugin coraza
 ```
 
@@ -144,8 +143,7 @@ import(
 
 func main(){
 	// Create waf instance
-	waf := &engine.Waf{}
-	waf.Init()
+	waf := engine.NewWaf()
 
 	// Parse some rules
 	p := parser.Parser{}
@@ -164,14 +162,10 @@ func main(){
 
 ## Deployment options
 
-* [Load Balancer -> Coraza WAF -> Application](#) (Recommended)
+* [Docker -> Application](#)
 * [Nginx + Coraza WAF -> Application](#)
 * [Coraza WAF -> Application](#)
 * [Kubern8 Ingress Controller](#)
-
-## Missing features and known bugs
-
-* cssdecode andjsdecode transformations are not implemented	
 
 
 ## License

@@ -14,21 +14,21 @@
 
 package actions
 
-import(
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
 )
 
-type Chain struct {}
+type Chain struct{}
 
 func (a *Chain) Init(r *engine.Rule, b1 string) string {
 	r.HasChain = true
 	return ""
 }
 
-func (a *Chain) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
+func (a *Chain) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// Not evaluated
 }
 
-func (a *Chain) GetType() int{
+func (a *Chain) GetType() int {
 	return engine.ACTION_TYPE_FLOW
 }

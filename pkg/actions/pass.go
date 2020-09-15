@@ -14,7 +14,7 @@
 
 package actions
 
-import(
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
 )
 
@@ -26,10 +26,10 @@ func (a *Pass) Init(r *engine.Rule, data string) string {
 	return ""
 }
 
-func (a *Pass) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
+func (a *Pass) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// Not evaluated
 }
 
-func (a *Pass) GetType() int{
+func (a *Pass) GetType() int {
 	return engine.ACTION_TYPE_DISRUPTIVE
 }

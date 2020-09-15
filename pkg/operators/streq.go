@@ -13,18 +13,19 @@
 // limitations under the License.
 
 package operators
-import(
+
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
 )
 
-type Streq struct{
+type Streq struct {
 	data string
 }
 
-func (o *Streq) Init(data string){
+func (o *Streq) Init(data string) {
 	o.data = data
 }
 
-func (o *Streq) Evaluate(tx *engine.Transaction, value string) bool{
+func (o *Streq) Evaluate(tx *engine.Transaction, value string) bool {
 	return o.data == value
 }

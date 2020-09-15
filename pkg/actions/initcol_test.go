@@ -13,23 +13,24 @@
 // limitations under the License.
 
 package actions
-import(
-	"testing"
+
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
+	"testing"
 )
 
-func TestInitcol(t *testing.T){
+func TestInitcol(t *testing.T) {
 	w := engine.NewWaf()
 	tx := w.NewTransaction()
 	r := &engine.Rule{}
 	r.Init()
 
 	ic := InitCol{}
-	if ic.Init(r, "session=test") != ""{
+	if ic.Init(r, "session=test") != "" {
 		t.Error("Failed to initialize persistent collection")
 	}
 	ic.Evaluate(r, tx)
-	if len(tx.PersistentCollections) == 0{
+	if len(tx.PersistentCollections) == 0 {
 		t.Error("Failed to initialize persistent collection")
 	}
 }

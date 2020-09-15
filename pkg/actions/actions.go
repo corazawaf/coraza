@@ -13,48 +13,49 @@
 // limitations under the License.
 
 package actions
-import(
+
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
 )
 
 func ActionsMap() map[string]engine.Action {
 	return map[string]engine.Action{
-		// #### Flow Actions #### 
+		// #### Flow Actions ####
 		//Sets variables for the transaction and rule
 		"chain": &Chain{},
 		//"skip": &Skip{},
 		"skipAfter": &SkipAfter{},
 
-		// #### Metadata Actions #### 
+		// #### Metadata Actions ####
 		//These variables goes to the rule object
 		//"accuracy": &Accurracy{},
-		"id": &Id{},
+		"id":       &Id{},
 		"maturity": &Maturity{},
-		"msg": &Msg{},
-		"phase": &Phase{},
-		"rev": &Rev{},
+		"msg":      &Msg{},
+		"phase":    &Phase{},
+		"rev":      &Rev{},
 		"severity": &Severity{},
-		"tag": &Tag{},
-		"ver": &Ver{},
+		"tag":      &Tag{},
+		"ver":      &Ver{},
 
-		// #### Data actions #### 
+		// #### Data actions ####
 		//These variables goes to the transaction
 		"status": &Status{},
 		//"xmlns": &Xmlns{},
 
 		// #### Non Disruptive Actions ####
 		//Can update transaction but cannot affect the flow nor disrupt the request
-		"append": &Append{},
-		"capture": &Capture{},
-		"ctl": &Ctl{},
-		"exec": &Exec{},
+		"append":    &Append{},
+		"capture":   &Capture{},
+		"ctl":       &Ctl{},
+		"exec":      &Exec{},
 		"expirevar": &Expirevar{},
 		//"deprecateVar": &DeprecateVar{},
-		"initcol": &InitCol{},
-		"log": &Log{},
-		"logdata": &Logdata{},
+		"initcol":    &InitCol{},
+		"log":        &Log{},
+		"logdata":    &Logdata{},
 		"multiMatch": &MultiMatch{},
-		"nolog": &Nolog{},
+		"nolog":      &Nolog{},
 		//"prepend": &Prepend{},
 		//"sanitiseArg": &SanitiseArg{},
 		//"sanitiseMatched": &SanitiseMatched{},
@@ -66,15 +67,15 @@ func ActionsMap() map[string]engine.Action {
 		//"setsid": &Setsid{},
 		//"setenv": &Setenv{},
 		"setvar": &Setvar{},
-		"t": &T{},
+		"t":      &T{},
 
-		// #### Disruptive Actions #### 
+		// #### Disruptive Actions ####
 		// can manage the whole request and response process, doesnt run if SecRuleEngine is off or DetectionOnly is on
 		"allow": &Allow{},
 		"block": &Block{},
-		"deny": &Deny{},
-		"drop": &Drop{},
-		"pass": &Pass{},
+		"deny":  &Deny{},
+		"drop":  &Drop{},
+		"pass":  &Pass{},
 		//"pause": &Pause{},
 		//"proxy": &Proxy{},
 		//"redirect": &Redirect{},

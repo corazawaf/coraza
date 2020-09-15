@@ -13,32 +13,33 @@
 // limitations under the License.
 
 package operators
-import(
-	"strings"
-	"strconv"
-	"fmt"
-	"regexp"
+
+import (
 	"encoding/hex"
+	"fmt"
 	"github.com/jptosso/coraza-waf/pkg/engine"
+	"regexp"
+	"strconv"
+	"strings"
 )
 
-type ValidateByteRange struct{
+type ValidateByteRange struct {
 	re *regexp.Regexp
 }
 
-func (o *ValidateByteRange) Init(data string){
+func (o *ValidateByteRange) Init(data string) {
 	ranges := strings.Split(data, ",")
 	spl := ranges
 	rega := []string{}
-	for _, br := range spl{
+	for _, br := range spl {
 		br = strings.Trim(br, " ")
 		b1 := 0
 		b2 := 0
-		if strings.Contains(br, "-"){
+		if strings.Contains(br, "-") {
 			spl = strings.SplitN(br, "-", 2)
 			b1, _ = strconv.Atoi(spl[0])
 			b2, _ = strconv.Atoi(spl[1])
-		}else{
+		} else {
 			b1, _ := strconv.Atoi(br)
 			b2 = b1
 		}
@@ -48,10 +49,10 @@ func (o *ValidateByteRange) Init(data string){
 	}
 	rege := strings.Join(rega, "|")
 	//fmt.Println(rege)
-	o.re = regexp.MustCompile(rege)	
+	o.re = regexp.MustCompile(rege)
 }
 
-func (o *ValidateByteRange) Evaluate(tx *engine.Transaction, data string) bool{
+func (o *ValidateByteRange) Evaluate(tx *engine.Transaction, data string) bool {
 	data = o.re.ReplaceAllString(data, "")
 	//fmt.Println("DEBUG: ", data, len(data))
 	//fmt.Printf("%s: %d\n", data, len(data))

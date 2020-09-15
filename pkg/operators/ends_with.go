@@ -14,19 +14,19 @@
 
 package operators
 
-import(
-	"strings"
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
+	"strings"
 )
 
-type EndsWith struct{
+type EndsWith struct {
 	data string
 }
 
-func (o *EndsWith) Init(data string){
+func (o *EndsWith) Init(data string) {
 	o.data = data
 }
 
-func (o *EndsWith) Evaluate(tx *engine.Transaction, value string) bool{
+func (o *EndsWith) Evaluate(tx *engine.Transaction, value string) bool {
 	return strings.HasSuffix(value, o.data)
 }

@@ -14,15 +14,15 @@
 
 package engine
 
-import(
-	"testing"
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine/persistence"
+	"testing"
 )
 
 var engine PersistenceEngine
 var col *PersistentCollection
 
-func TestInitialization(t *testing.T){
+func TestInitialization(t *testing.T) {
 	engine = &persistence.MemoryEngine{}
 	engine.Init("")
 	col = &PersistentCollection{}
@@ -38,19 +38,19 @@ func TestInitialization(t *testing.T){
 	col.Init(engine, "testapp", "SESSION", "127.0.0.1")
 
 	data := col.GetData()
-	if len(data) == 0{
+	if len(data) == 0 {
 		t.Error("Failed to retrieve persistent collection")
 	}
 
-	if len(data["TEST"]) != 1{
+	if len(data["TEST"]) != 1 {
 		t.Error("Failed to retrieve persistent collection")
-	}	
+	}
 
-	if data["TEST"][0] != "123"{
+	if data["TEST"][0] != "123" {
 		t.Error("Failed to retrieve persistent collection")
-	}		
+	}
 
-	if data["IS_NEW"][0] != "1"{
+	if data["IS_NEW"][0] != "1" {
 		t.Error("Failed to retrieve persistent collection")
-	}			
+	}
 }

@@ -14,24 +14,24 @@
 
 package operators
 
-import(
-	"strconv"
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
+	"strconv"
 )
 
 //TODO macro expansion
-type Ge struct{
+type Ge struct {
 	data int
 }
 
-func (o *Ge) Init(data string){
+func (o *Ge) Init(data string) {
 	k, _ := strconv.Atoi(data)
 	o.data = k
 }
 
-func (o *Ge) Evaluate(tx *engine.Transaction, value string) bool{
+func (o *Ge) Evaluate(tx *engine.Transaction, value string) bool {
 	v, err := strconv.Atoi(value)
-	if  err != nil{
+	if err != nil {
 		v = 0
 	}
 	return v >= o.data

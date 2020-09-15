@@ -14,19 +14,18 @@
 
 package operators
 
-import(
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
 )
 
-type VerifyCC struct{
-	
+type VerifyCC struct {
 }
 
-func (o *VerifyCC) Init(data string){
+func (o *VerifyCC) Init(data string) {
 	// not implemented
 }
 
-func (o *VerifyCC) Evaluate(tx *engine.Transaction, value string) bool{
+func (o *VerifyCC) Evaluate(tx *engine.Transaction, value string) bool {
 	//not implemented
-    return false
+	return false
 }

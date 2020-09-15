@@ -13,9 +13,9 @@
 // limitations under the License.
 
 package transformations
+
 import (
 	"strings"
-	
 )
 
 /*
@@ -31,51 +31,51 @@ replacing all commas [,] and semicolon [;] into a space
 replacing all multiple spaces (including tab, newline, etc.) into one space
 transform all characters to lowercase
 */
-func CmdLine(data string) string{
+func CmdLine(data string) string {
 	space := 0
 	ret := ""
-	for _, a:= range data{
-        switch (a) {
-            /* remove some characters */
-            case '"':
-            case '\'':
-            case '\\':
-            case '^':
-                break;
+	for _, a := range data {
+		switch a {
+		/* remove some characters */
+		case '"':
+		case '\'':
+		case '\\':
+		case '^':
+			break
 
-            /* replace some characters to space (only one) */
-            case ' ':
-            case ',':
-            case ';':
-            case '\t':
-            case '\r':
-            case '\n':
-                if (space == 0) {
+		/* replace some characters to space (only one) */
+		case ' ':
+		case ',':
+		case ';':
+		case '\t':
+		case '\r':
+		case '\n':
+			if space == 0 {
 
-                    ret += " "
-                    space++
-                }
-                break
+				ret += " "
+				space++
+			}
+			break
 
-            /* remove space before / or ( */
-            case '/':
-            case '(':
-                if (space != 0) {
-                	ret = ret[0:len(ret)-2] //TODO: CHECK
-                    //ret.pop_back();
-                }
-                space = 0;
+		/* remove space before / or ( */
+		case '/':
+		case '(':
+			if space != 0 {
+				ret = ret[0 : len(ret)-2] //TODO: CHECK
+				//ret.pop_back();
+			}
+			space = 0
 
-                ret += string(a)
-                break;
+			ret += string(a)
+			break
 
-            /* copy normal characters */
-            default :
-                b := strings.ToLower(string(a))
-                ret += b
-                space = 0
-                break
-        }
-    }
+		/* copy normal characters */
+		default:
+			b := strings.ToLower(string(a))
+			ret += b
+			space = 0
+			break
+		}
+	}
 	return data
 }

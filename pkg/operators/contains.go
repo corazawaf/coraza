@@ -14,19 +14,19 @@
 
 package operators
 
-import(
-	"strings"
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
+	"strings"
 )
 
-type Contains struct{
+type Contains struct {
 	data string
 }
 
-func (o *Contains) Init(data string){
+func (o *Contains) Init(data string) {
 	o.data = data
 }
 
-func (o *Contains) Evaluate(tx *engine.Transaction, value string) bool{
+func (o *Contains) Evaluate(tx *engine.Transaction, value string) bool {
 	return strings.Contains(value, o.data)
 }

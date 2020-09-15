@@ -1,0 +1,94 @@
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: hostnetwork
+spec:
+  hostNetwork: true
+  hostPorts:
+  - max: 10000
+    min: 50
+  supplementalGroups:
+    rule: RunAsAny
+  fsGroup:
+    rule: RunAsAny
+  runAsUser:
+    # Require the container to run without root privileges.
+    rule: 'MustRunAsNonRoot'
+  seLinux:
+    rule: RunAsAny
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: hostnetwork-psp
+rules:
+- apiGroups:
+  - extensions
+  resourceNames:
+  - hostnetwork
+  resources:
+  - podsecuritypolicies
+  verbs:
+  - use
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: coraza-skipper-ingress
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: coraza-skipper-ingress
+rules:
+- apiGroups:
+    - extensions
+  resources:
+    - ingresses
+  verbs:
+    - get
+    - list
+- apiGroups: [""]
+  resources:
+    - namespaces
+    - services
+    - endpoints
+    - pods
+  verbs:
+    - get
+    - list
+- apiGroups:
+  - zalando.org
+  resources:
+  - routegroups
+  verbs:
+  - get
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: coraza-skipper-ingress
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: coraza-skipper-ingress
+subjects:
+- kind: ServiceAccount
+  name: coraza-skipper-ingress
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  name: skipper-ingress-hostnetwork-psp
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: hostnetwork-psp
+subjects:
+- kind: ServiceAccount
+  name: coraza-skipper-ingress
+  namespace: kube-system

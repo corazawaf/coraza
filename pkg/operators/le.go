@@ -14,22 +14,21 @@
 
 package operators
 
-import(
-	"strconv"
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
+	"strconv"
 )
 
-
-type Le struct{
+type Le struct {
 	data int
 }
 
-func (o *Le) Init(data string){
+func (o *Le) Init(data string) {
 	k, _ := strconv.Atoi(data)
 	o.data = k
 }
 
-func (o *Le) Evaluate(tx *engine.Transaction, value string) bool{
+func (o *Le) Evaluate(tx *engine.Transaction, value string) bool {
 	v := 0
 	v, err := strconv.Atoi(value)
 	if err != nil {

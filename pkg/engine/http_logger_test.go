@@ -14,11 +14,12 @@
 
 package engine
 
-import(
-	_"testing"
-	_"time"
-	_"fmt"
+import (
+	_ "fmt"
+	_ "testing"
+	_ "time"
 )
+
 /*
 func TestHttpLogger(t *testing.T) {
 	logger := &HttpLogger{}
@@ -56,7 +57,7 @@ func TestHttpLogger(t *testing.T) {
 		if counter >= 300{
 			break
 		}
-	}	
+	}
 	if logger.LastError == nil{
 		t.Errorf("False negative while uploading logs")
 	}

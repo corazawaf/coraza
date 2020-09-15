@@ -14,9 +14,9 @@
 
 package parser
 
-import(
-	"testing"
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
+	"testing"
 )
 
 func TestString(t *testing.T) {
@@ -26,27 +26,27 @@ func TestString(t *testing.T) {
 	p := &Parser{}
 	p.Init(waf)
 	p.Evaluate(rule)
-	
-	if len(waf.Rules.GetRules()) != 1{
+
+	if len(waf.Rules.GetRules()) != 1 {
 		t.Error("Rule not created")
 	}
 	r := waf.Rules.GetRules()[0]
-	if len(r.Actions) != 3{
+	if len(r.Actions) != 3 {
 		t.Error("Failed to parse actions")
 	}
-	if len(r.Variables) != 2{
+	if len(r.Variables) != 2 {
 		t.Error("Failed to parse variables, got", len(r.Variables))
 	}
-	if len(r.Variables[1].Exceptions) != 1{
+	if len(r.Variables[1].Exceptions) != 1 {
 		t.Error("Failed to add exceptions to rule variable")
 		return
 	}
-	if r.Variables[1].Exceptions[0] != `/x-(coraza|\w+)/`{
+	if r.Variables[1].Exceptions[0] != `/x-(coraza|\w+)/` {
 		t.Error("Invalid variable key for regex, got:", r.Variables[1].Exceptions[0])
 	}
 }
 
-func TestString2(t *testing.T){
+func TestString2(t *testing.T) {
 	rule := `SecRule ARGS|ARGS_NAMES|REQUEST_COOKIES|!REQUEST_COOKIES:/__utm/|REQUEST_COOKIES_NAMES|REQUEST_BODY|REQUEST_HEADERS|XML:/*|XML://@* \
     "@rx (?:rO0ABQ|KztAAU|Cs7QAF)" \
     "id:944210,\
@@ -75,15 +75,15 @@ func TestString2(t *testing.T){
 	p := &Parser{}
 	p.Init(waf)
 	p.Evaluate(rule)
-	
-	if len(waf.Rules.GetRules()) != 1{
+
+	if len(waf.Rules.GetRules()) != 1 {
 		t.Error("Rule not created")
 		return
 	}
 	r := waf.Rules.GetRules()[0]
-	if len(r.Variables) != 8{
+	if len(r.Variables) != 8 {
 		t.Error("Failed to parse variables, got", len(r.Variables))
-		for _, v := range r.Variables{
+		for _, v := range r.Variables {
 			t.Error(v)
 		}
 	}
@@ -96,15 +96,15 @@ func TestString3(t *testing.T) {
 	p := &Parser{}
 	p.Init(waf)
 	p.Evaluate(rule)
-	
-	if len(waf.Rules.GetRules()) != 1{
+
+	if len(waf.Rules.GetRules()) != 1 {
 		t.Error("Rule not created")
 	}
 	r := waf.Rules.GetRules()[0]
-	if len(r.Actions) != 3{
+	if len(r.Actions) != 3 {
 		t.Error("Failed to parse actions")
 	}
-	if len(r.Variables) != 1 && r.Variables[0].Key != "User-Agent"{
+	if len(r.Variables) != 1 && r.Variables[0].Key != "User-Agent" {
 		t.Error("Failed to parse variables")
 	}
 }
@@ -118,12 +118,12 @@ func TestString4(t *testing.T) {
 	p.Init(waf)
 	p.Evaluate(rule)
 	tx.ExecutePhase(1)
-	if !tx.Disrupted{
+	if !tx.Disrupted {
 		t.Error("Failed to execute rule")
 	}
 }
+
 /*
 * Directives
 * TODO There should be an elegant way to separate them from the parser
-*/
-
+ */

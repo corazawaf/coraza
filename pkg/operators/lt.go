@@ -14,20 +14,20 @@
 
 package operators
 
-import(
-	"strconv"
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
+	"strconv"
 )
 
-type Lt struct{
+type Lt struct {
 	data string
 }
 
-func (o *Lt) Init(data string){
+func (o *Lt) Init(data string) {
 	o.data = data
 }
 
-func (o *Lt) Evaluate(tx *engine.Transaction, value string) bool{
+func (o *Lt) Evaluate(tx *engine.Transaction, value string) bool {
 	vv := tx.MacroExpansion(o.data)
 	data, err := strconv.Atoi(vv)
 	if err != nil {
@@ -36,6 +36,6 @@ func (o *Lt) Evaluate(tx *engine.Transaction, value string) bool{
 	v, err := strconv.Atoi(value)
 	if err != nil {
 		v = 0
-	}	
+	}
 	return v < data
 }

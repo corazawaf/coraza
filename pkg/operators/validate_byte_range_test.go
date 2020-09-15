@@ -13,13 +13,14 @@
 // limitations under the License.
 
 package operators
-import(
-	"testing"
+
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
+	"testing"
 )
 
 func TestCRS920272(t *testing.T) {
-    ranges := "32-36,38-126"
+	ranges := "32-36,38-126"
 	good_strings := [][]int{
 		{104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 111},
 		{38, 104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 111, 126},
@@ -36,24 +37,23 @@ func TestCRS920272(t *testing.T) {
 	op.Init(ranges)
 	tx := getTransaction()
 
-	for _, gs := range good_strings{
+	for _, gs := range good_strings {
 		str := asciiToString(gs)
-		if op.Evaluate(tx, str){
+		if op.Evaluate(tx, str) {
 			t.Errorf("Invalid byte between ranges (positive): %s", str)
 		}
 	}
 
-	for _, bs := range bad_strings{
+	for _, bs := range bad_strings {
 		str := asciiToString(bs)
-		if !op.Evaluate(tx, str){
+		if !op.Evaluate(tx, str) {
 			t.Errorf("Invalid byte between ranges (negative): %s", str)
 		}
 	}
 }
 
-
 func TestCRS920270(t *testing.T) {
-    ranges := "1-255"
+	ranges := "1-255"
 	good_strings := [][]int{
 		{104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 111},
 		{38, 104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 111, 126},
@@ -65,23 +65,23 @@ func TestCRS920270(t *testing.T) {
 	op.Init(ranges)
 	tx := getTransaction()
 
-	for _, gs := range good_strings{
+	for _, gs := range good_strings {
 		str := asciiToString(gs)
-		if op.Evaluate(tx, str){
+		if op.Evaluate(tx, str) {
 			t.Errorf("Invalid null byte: %s", str)
 		}
 	}
 }
 
-func asciiToString(ascii []int) string{
+func asciiToString(ascii []int) string {
 	runes := []rune{}
-	for _, a := range ascii{
+	for _, a := range ascii {
 		runes = append(runes, rune(a))
 	}
 	return string(runes)
 }
 
-func getTransaction() *engine.Transaction{
+func getTransaction() *engine.Transaction {
 	waf := &engine.Waf{}
 	waf.Init()
 	return waf.NewTransaction()

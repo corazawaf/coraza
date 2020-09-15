@@ -13,72 +13,73 @@
 // limitations under the License.
 
 package operators
-import(
+
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
 )
 
-type ValidateUrlEncoding struct{
+type ValidateUrlEncoding struct {
 	data string
 }
 
-func (o *ValidateUrlEncoding) Init(data string){
+func (o *ValidateUrlEncoding) Init(data string) {
 	// Does not require initialization
 }
 
-func (o *ValidateUrlEncoding) Evaluate(tx *engine.Transaction, value string) bool{
-    if len(value) == 0 {
-        return false
-    }
+func (o *ValidateUrlEncoding) Evaluate(tx *engine.Transaction, value string) bool {
+	if len(value) == 0 {
+		return false
+	}
 
-    rc := validateUrlEncoding(value, len(value))
-    switch (rc) {
-        case 1 :
-            /* Encoding is valid */
-            return false
-        case -2 :
-            // Invalid URL Encoding: Non-hexadecimal 
-            return true
-        case -3 :
-        	//Invalid URL Encoding: Not enough characters at the end of input
-            return true
-        case -1 :
+	rc := validateUrlEncoding(value, len(value))
+	switch rc {
+	case 1:
+		/* Encoding is valid */
+		return false
+	case -2:
+		// Invalid URL Encoding: Non-hexadecimal
+		return true
+	case -3:
+		//Invalid URL Encoding: Not enough characters at the end of input
+		return true
+	case -1:
 
-        default :
-            //Invalid URL Encoding: Internal error
-            return true
-    }
-    return true
+	default:
+		//Invalid URL Encoding: Internal error
+		return true
+	}
+	return true
 }
 
 func validateUrlEncoding(input string, input_length int) int {
-    var i int
+	var i int
 
-    if input_length == 0 {
-        return -1
-    }
+	if input_length == 0 {
+		return -1
+	}
 
-    for i < input_length {
-        if (input[i] == '%') {
-            if (i + 2 >= input_length) {
-                /* Not enough bytes. */
-                return -3
-            } else {
-                /* Here we only decode a %xx combination if it is valid,
-                 * leaving it as is otherwise.
-                 */
-                c1 := input[i + 1]
-                c2 := input[i + 2]
+	for i < input_length {
+		if input[i] == '%' {
+			if i+2 >= input_length {
+				/* Not enough bytes. */
+				return -3
+			} else {
+				/* Here we only decode a %xx combination if it is valid,
+				 * leaving it as is otherwise.
+				 */
+				c1 := input[i+1]
+				c2 := input[i+2]
 
-                if ( (((c1 >= '0') && (c1 <= '9')) || ((c1 >= 'a') && (c1 <= 'f')) || ((c1 >= 'A') && (c1 <= 'F'))) && (((c2 >= '0') && (c2 <= '9')) || ((c2 >= 'a') && (c2 <= 'f')) || ((c2 >= 'A') && (c2 <= 'F'))) ) {
-                    i += 3
-                } else {
-                    /* Non-hexadecimal characters used in encoding. */
-                    return -2
-                }
-            }
-        } else {
-            i++
-        }
-    }
-    return 1
+				if (((c1 >= '0') && (c1 <= '9')) || ((c1 >= 'a') && (c1 <= 'f')) || ((c1 >= 'A') && (c1 <= 'F'))) && (((c2 >= '0') && (c2 <= '9')) || ((c2 >= 'a') && (c2 <= 'f')) || ((c2 >= 'A') && (c2 <= 'F'))) {
+					i += 3
+				} else {
+					/* Non-hexadecimal characters used in encoding. */
+					return -2
+				}
+			}
+		} else {
+			i++
+		}
+	}
+	return 1
 }

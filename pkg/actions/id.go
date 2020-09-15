@@ -14,9 +14,9 @@
 
 package actions
 
-import(
-	"strconv"
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
+	"strconv"
 )
 
 type Id struct {
@@ -24,17 +24,17 @@ type Id struct {
 
 func (a *Id) Init(r *engine.Rule, data string) string {
 	i, err := strconv.Atoi(data)
-	if err != nil{
+	if err != nil {
 		return "Invalid rule ID " + data
 	}
 	r.Id = int(i)
 	return ""
 }
 
-func (a *Id) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
+func (a *Id) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// Not evaluated
 }
 
-func (a *Id) GetType() int{
+func (a *Id) GetType() int {
 	return engine.ACTION_TYPE_METADATA
 }

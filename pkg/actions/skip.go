@@ -14,7 +14,7 @@
 
 package actions
 
-import(
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"strconv"
 )
@@ -26,17 +26,17 @@ type Skip struct {
 
 func (a *Skip) Init(r *engine.Rule, data string) string {
 	i, err := strconv.Atoi(data)
-	if err != nil{
+	if err != nil {
 		return "Invalid integer value"
 	}
 	a.data = i
 	return ""
 }
 
-func (a *Skip) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
+func (a *Skip) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	tx.Skip = a.data
 }
 
-func (a *Skip) GetType() int{
+func (a *Skip) GetType() int {
 	return engine.ACTION_TYPE_FLOW
 }
