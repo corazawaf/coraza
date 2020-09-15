@@ -18,31 +18,32 @@
 package main
 
 import (
-    "flag"
-    "fmt"
-    "strings"
-    "errors"
-    "time"
-    "os"
-    "regexp"
-    "bufio"
-    "io/ioutil"
-    "reflect"
-    "mime"
-    "mime/multipart"
-    "strconv"
-    "path/filepath"
-    "net/url"
-    "net/http"
-    b64 "encoding/base64"
-	"github.com/jptosso/coraza-waf/pkg/utils"
+	"bufio"
+	b64 "encoding/base64"
+	"errors"
+	"flag"
+	"fmt"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/parser"
+	"github.com/jptosso/coraza-waf/pkg/utils"
 	"gopkg.in/yaml.v2"
+	"io/ioutil"
+	"mime"
+	"mime/multipart"
+	"net/http"
+	"net/url"
+	"os"
+	"path/filepath"
+	"reflect"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
 )
 
 var debug = false
 var failonly = false
+
 func main() {
 	mode := flag.String("mode", "test", "Testing mode: benchmark|test")
 	path := flag.String("path", "./", "Path to find yaml files")
@@ -59,60 +60,60 @@ func main() {
 
 	fmt.Println("Starting Coraza WAF testsuite...")
 
-	if *mode == "test"{
+	if *mode == "test" {
 		waf := &engine.Waf{}
 		waf.Init()
 		parser := &parser.Parser{}
 		parser.Init(waf)
 		err := parser.FromFile(*rules)
-		if err != nil{
+		if err != nil {
 			fmt.Println("Error parsing configurations")
 			fmt.Println(err)
 			return
-		}		
+		}
 		fmt.Printf("Loaded %d rules\n", waf.Rules.Count())
 		err = evaluateTests(*path, waf)
-		if err != nil{
+		if err != nil {
 			fmt.Println(err)
 			return
 		}
-	}else if *mode == "benchmark"{
+	} else if *mode == "benchmark" {
 		fmt.Println("Not supported yet.")
 	}
 }
 
-func getYamlFromDir(directory string) ([]string, error){
+func getYamlFromDir(directory string) ([]string, error) {
 	files := []string{}
 	err := filepath.Walk(directory,
-	    func(path string, info os.FileInfo, err error) error {
-	    if err != nil {
-	        return err
-	    }
-	    if strings.HasSuffix(path, ".yaml"){
-	    	files = append(files, path)
-	    }
-	    return nil
-	})
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if strings.HasSuffix(path, ".yaml") {
+				files = append(files, path)
+			}
+			return nil
+		})
 	if err != nil {
-	    return files, err
+		return files, err
 	}
 	return files, nil
 }
 
-func evaluateTests(path string, waf *engine.Waf) error{
+func evaluateTests(path string, waf *engine.Waf) error {
 	files, err := getYamlFromDir(path)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	profiles := []testProfile{}
-	for _, f := range files{
+	for _, f := range files {
 		data, err := utils.OpenFile(f)
-		if err != nil{
+		if err != nil {
 			return errors.New("Cannot open file " + f)
 		}
 		p, err := parseTest(data)
-		if err != nil{
-			if debug{
+		if err != nil {
+			if debug {
 				fmt.Println(err)
 			}
 			return errors.New("Error parsing test " + f)
@@ -121,12 +122,12 @@ func evaluateTests(path string, waf *engine.Waf) error{
 	}
 	fmt.Printf("%d tests loaded.\n", len(profiles))
 	oks := 0
-	for _, p := range profiles{
+	for _, p := range profiles {
 		res, _, err := runTest(waf, p)
-		if err != nil{
+		if err != nil {
 			return err
 		}
-		if res{
+		if res {
 			oks++
 		}
 	}
@@ -134,16 +135,16 @@ func evaluateTests(path string, waf *engine.Waf) error{
 	return nil
 }
 
-func parseTest(data []byte) (testProfile, error){
-        profile := testProfile{}
-        err := yaml.Unmarshal(data, &profile)
-        if err != nil{
-        	return profile, err
-        }
-        return profile, nil
+func parseTest(data []byte) (testProfile, error) {
+	profile := testProfile{}
+	err := yaml.Unmarshal(data, &profile)
+	if err != nil {
+		return profile, err
+	}
+	return profile, nil
 }
 
-func benchmarkreport(){
+func benchmarkreport() {
 	fmt.Println("Results:")
 	fmt.Println("Started at: ")
 	fmt.Println("Ended at: (N minutes)")
@@ -154,20 +155,20 @@ func benchmarkreport(){
 }
 
 //Returns result, time elapsed and error
-func runTest(waf *engine.Waf, profile testProfile) (bool, int, error){
+func runTest(waf *engine.Waf, profile testProfile) (bool, int, error) {
 	passed := 0
-	for _, test := range profile.Tests{
+	for _, test := range profile.Tests {
 		tn := time.Now().UnixNano()
 		pass := true
-		for _, stage := range test.Stages{
+		for _, stage := range test.Stages {
 			tx := waf.NewTransaction()
-			if stage.Stage.Input.EncodedRequest != ""{
+			if stage.Stage.Input.EncodedRequest != "" {
 				sDec, _ := b64.StdEncoding.DecodeString(stage.Stage.Input.EncodedRequest)
 				stage.Stage.Input.RawRequest = string(sDec)
 			}
-			if stage.Stage.Input.RawRequest != ""{
+			if stage.Stage.Input.RawRequest != "" {
 				req, err := requestFromString(stage.Stage.Input.RawRequest)
-				if err != nil{
+				if err != nil {
 					fmt.Println("Error parsing HTTP request:")
 					fmt.Println(err)
 					return false, 0, err
@@ -175,37 +176,37 @@ func runTest(waf *engine.Waf, profile testProfile) (bool, int, error){
 				requestToTx(req, tx)
 			}
 			//Apply tx data
-			if len(stage.Stage.Input.Headers) > 0{
-				for k, v := range stage.Stage.Input.Headers{
+			if len(stage.Stage.Input.Headers) > 0 {
+				for k, v := range stage.Stage.Input.Headers {
 					tx.AddRequestHeader(k, v)
 				}
-			}			
+			}
 			method := "GET"
-			if stage.Stage.Input.Method != ""{
+			if stage.Stage.Input.Method != "" {
 				method = stage.Stage.Input.Method
 				tx.SetRequestMethod(method)
 			}
 
 			//Request Line
 			httpv := "HTTP/1.1"
-			if stage.Stage.Input.Version != ""{
+			if stage.Stage.Input.Version != "" {
 				httpv = stage.Stage.Input.Version
 			}
 
 			path := "/"
-			if stage.Stage.Input.Uri != ""{
+			if stage.Stage.Input.Uri != "" {
 				u, err := url.Parse(stage.Stage.Input.Uri)
 				if err != nil {
-					if debug{
+					if debug {
 						fmt.Println("Invalid URL: " + stage.Stage.Input.Uri)
 						fmt.Println(err)
 					}
-				}else{
+				} else {
 					tx.SetUrl(u)
 					tx.AddGetArgsFromUrl(u)
-					path = stage.Stage.Input.Uri//or unescaped?	
+					path = stage.Stage.Input.Uri //or unescaped?
 				}
-				
+
 			}
 			tx.SetRequestLine(method, httpv, path)
 
@@ -213,67 +214,67 @@ func runTest(waf *engine.Waf, profile testProfile) (bool, int, error){
 			tx.ExecutePhase(1)
 
 			// POST DATA
-			if stage.Stage.Input.Data != ""{
+			if stage.Stage.Input.Data != "" {
 				data := ""
 				v := reflect.ValueOf(stage.Stage.Input.Data)
 				switch v.Kind() {
 				case reflect.Slice:
-			        for i := 0; i < v.Len(); i++ {
-			            data += fmt.Sprintf("%s\r\n", v.Index(i))
-			        }
-			        data += "\r\n"
+					for i := 0; i < v.Len(); i++ {
+						data += fmt.Sprintf("%s\r\n", v.Index(i))
+					}
+					data += "\r\n"
 				case reflect.String:
 					data = stage.Stage.Input.Data.(string)
 				}
 				rh := tx.GetCollection("request_headers")
 				ct := rh.GetSimple("content-type")
 				ctt := ""
-				if len(ct) == 1{
+				if len(ct) == 1 {
 					ctt = ct[0]
 				}
 				mediaType, params, _ := mime.ParseMediaType(ctt)
 				if method == "GET" || method == "HEAD" || method == "OPTIONS" {
 					length := strconv.Itoa(len(data))
-					if len(rh.GetSimple("content-length")) == 0{
+					if len(rh.GetSimple("content-length")) == 0 {
 						rh.Set("content-length", []string{length})
 					}
 					// Just for testing
 					tx.GetCollection("request_body").Set("", []string{data})
-				}else if strings.HasPrefix(mediaType, "multipart/") {
+				} else if strings.HasPrefix(mediaType, "multipart/") {
 					parseMultipart(data, params["boundary"], tx)
-				}else {
+				} else {
 					tx.SetRequestBody(data, int64(len(data)), mediaType)
 					u, err := url.ParseQuery(data)
-					if err == nil{
+					if err == nil {
 						tx.SetArgsPost(u)
 					}
 				}
 			}
 
-			for i := 2; i <= 5; i++{
+			for i := 2; i <= 5; i++ {
 				tx.ExecutePhase(i)
 			}
 			log := ""
-			for _, mr := range tx.MatchedRules{
+			for _, mr := range tx.MatchedRules {
 				log += fmt.Sprintf(" [id \"%d\"]", mr.Id)
 			}
 			//now we evaluate tests
-			if stage.Stage.Output.LogContains != ""{
-				if !strings.Contains(log, stage.Stage.Output.LogContains){
+			if stage.Stage.Output.LogContains != "" {
+				if !strings.Contains(log, stage.Stage.Output.LogContains) {
 					pass = false
 				}
 			}
-			if stage.Stage.Output.NoLogContains != ""{
-				if strings.Contains(log, stage.Stage.Output.NoLogContains){
+			if stage.Stage.Output.NoLogContains != "" {
+				if strings.Contains(log, stage.Stage.Output.NoLogContains) {
 					pass = false
 				}
 			}
 		}
 		result := "\033[31mFailed"
-		if pass{
+		if pass {
 			result = "\033[32mPassed"
 			passed++
-			if failonly{
+			if failonly {
 				continue
 			}
 		}
@@ -283,30 +284,30 @@ func runTest(waf *engine.Waf, profile testProfile) (bool, int, error){
 }
 
 func requestFromString(data string) (*http.Request, error) {
-    req, err := http.ReadRequest(bufio.NewReader(strings.NewReader(data)))
-    return req, err
+	req, err := http.ReadRequest(bufio.NewReader(strings.NewReader(data)))
+	return req, err
 }
 
-func requestToTx(req *http.Request, tx *engine.Transaction){
-    re := regexp.MustCompile(`^\[(.*?)\]:(\d+)$`)
-    matches := re.FindAllStringSubmatch(req.RemoteAddr, -1)
-    address := ""
-    port := 0
-    //no more validations as we don't take weird ip addresses
-    if len(matches) > 0 {
-        address = string(matches[0][1])
-        port, _ = strconv.Atoi(string(matches[0][2]))
-    }
-    tx.SetRequestHeaders(req.Header)
-    tx.SetArgsGet(req.URL.Query())
-    tx.SetUrl(req.URL)
-    tx.SetRemoteAddress(address, port)
-    tx.SetRequestCookies(req.Cookies())
-    tx.SetRequestLine(req.Method, req.Proto, req.RequestURI)
+func requestToTx(req *http.Request, tx *engine.Transaction) {
+	re := regexp.MustCompile(`^\[(.*?)\]:(\d+)$`)
+	matches := re.FindAllStringSubmatch(req.RemoteAddr, -1)
+	address := ""
+	port := 0
+	//no more validations as we don't take weird ip addresses
+	if len(matches) > 0 {
+		address = string(matches[0][1])
+		port, _ = strconv.Atoi(string(matches[0][2]))
+	}
+	tx.SetRequestHeaders(req.Header)
+	tx.SetArgsGet(req.URL.Query())
+	tx.SetUrl(req.URL)
+	tx.SetRemoteAddress(address, port)
+	tx.SetRequestCookies(req.Cookies())
+	tx.SetRequestLine(req.Method, req.Proto, req.RequestURI)
 }
 
-func parseMultipart(body string, boundary string, tx *engine.Transaction) error{
-	if debug{
+func parseMultipart(body string, boundary string, tx *engine.Transaction) error {
+	if debug {
 		fmt.Println("Parsing multipart")
 	}
 	mr := multipart.NewReader(strings.NewReader(body), boundary)
@@ -324,67 +325,67 @@ func parseMultipart(body string, boundary string, tx *engine.Transaction) error{
 		key := p.FormName()
 		file := p.FileName()
 		mpf := &multipart.FileHeader{
-			Filename: file, 
-			Header: p.Header, 
-			Size: int64(len(data)),
+			Filename: file,
+			Header:   p.Header,
+			Size:     int64(len(data)),
 		}
-		if files[key] == nil{
+		if files[key] == nil {
 			files[key] = []*multipart.FileHeader{mpf}
-		}else{
+		} else {
 			files[key] = append(files[key], mpf)
 		}
-		if args[key] == nil{
+		if args[key] == nil {
 			args[key] = []string{string(data)}
-		}else{
+		} else {
 			args[key] = append(args[key], string(data))
 		}
 	}
-    tx.SetFiles(files)
-    tx.SetArgsPost(args)
-    return nil
+	tx.SetFiles(files)
+	tx.SetArgsPost(args)
+	return nil
 }
 
-type testProfile struct{
-	Meta testMeta        `yaml:"meta"`
-	Tests []testTest     `yaml:"tests"`
+type testProfile struct {
+	Meta  testMeta   `yaml:"meta"`
+	Tests []testTest `yaml:"tests"`
 }
 
-type testMeta struct{
-	Author string        `yaml:"author"`
-	Description string   `yaml:"description"`
-	Enabled bool         `yaml:"enabled"`
-	Name string          `yaml:"name"`
+type testMeta struct {
+	Author      string `yaml:"author"`
+	Description string `yaml:"description"`
+	Enabled     bool   `yaml:"enabled"`
+	Name        string `yaml:"name"`
 }
 
-type testTest struct{
-	Title string         `yaml:"test_title"`
-	Description string   `yaml:"desc"`
-	Stages []testStage   `yaml:"stages"`
+type testTest struct {
+	Title       string      `yaml:"test_title"`
+	Description string      `yaml:"desc"`
+	Stages      []testStage `yaml:"stages"`
 }
 
-type testStage struct{
+type testStage struct {
 	Stage testStageInner `yaml:"stage"`
 }
 
-type testStageInner struct{
-	Input testInput      `yaml:"input"`
-	Output testOutput    `yaml:"output"`	
+type testStageInner struct {
+	Input  testInput  `yaml:"input"`
+	Output testOutput `yaml:"output"`
 }
 
-type testInput struct{
-	DestAddr string      `yaml:"dest_addr"`
-	Port int             `yaml:"port"`
-	Method string        `yaml:"method"`
-	Uri string           `yaml:"uri"`
-	Version string       `yaml:"version"`
-	Data interface{}        `yaml:"data"` //Accepts array or string
-	Headers map[string]string    `yaml:"headers"`
-	RawRequest string `yaml:"raw_request"`
-	EncodedRequest string `yaml:"encoded_request"`
+type testInput struct {
+	DestAddr       string            `yaml:"dest_addr"`
+	Port           int               `yaml:"port"`
+	Method         string            `yaml:"method"`
+	Uri            string            `yaml:"uri"`
+	Version        string            `yaml:"version"`
+	Data           interface{}       `yaml:"data"` //Accepts array or string
+	Headers        map[string]string `yaml:"headers"`
+	RawRequest     string            `yaml:"raw_request"`
+	EncodedRequest string            `yaml:"encoded_request"`
 }
 
-type testOutput struct{
-	LogContains string   `yaml:"log_contains"`
+type testOutput struct {
+	LogContains   string `yaml:"log_contains"`
 	NoLogContains string `yaml:"no_log_contains"`
-	ExpectError bool     `yaml:"expect_error"`
+	ExpectError   bool   `yaml:"expect_error"`
 }

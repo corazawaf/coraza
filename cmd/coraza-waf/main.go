@@ -15,19 +15,19 @@
 package main
 
 import (
-	log"github.com/sirupsen/logrus"
-	"github.com/zalando/skipper"
 	"flag"
-	"os"
 	"fmt"
+	log "github.com/sirupsen/logrus"
+	"github.com/zalando/skipper"
 	"github.com/zalando/skipper/config"
+	"os"
 )
 
 func main() {
 	cfgfile := flag.String("f", "/etc/coraza-waf/skipper.yaml", "Skipper Proxy configuration path")
 	flag.Parse()
 
-	os.Args = []string{os.Args[0], "-config-file="+*cfgfile}
+	os.Args = []string{os.Args[0], "-config-file=" + *cfgfile}
 
 	cfg := config.NewConfig()
 	if err := cfg.Parse(); err != nil {
@@ -37,9 +37,9 @@ func main() {
 	opts := cfg.ToOptions()
 
 	opts.CustomFilters = append(opts.CustomFilters, &CorazaSpec{})
-	if cfg.ApplicationLog != ""{
+	if cfg.ApplicationLog != "" {
 		fmt.Println("Coraza WAF will be logging to log files.")
-	}else{
+	} else {
 		fmt.Println("Logging to stdout")
 	}
 	log.Fatal(skipper.Run(opts))

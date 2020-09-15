@@ -15,14 +15,13 @@
 package engine
 
 import (
-	"testing"
 	"encoding/json"
-	"os"
 	"io/ioutil"
+	"os"
+	"testing"
 )
 
-
-func TestCLogFileCreation(t *testing.T){
+func TestCLogFileCreation(t *testing.T) {
 	waf := &Waf{}
 	waf.AuditLogStorageDir = "/tmp/audit/"
 	waf.AuditLogPath = "/tmp/audit/audit.log"
@@ -35,16 +34,16 @@ func TestCLogFileCreation(t *testing.T){
 		t.Error("Directory was not created: " + fpath)
 	}
 	file, err := ioutil.ReadFile(fpath + fname)
-	if err != nil{
+	if err != nil {
 		t.Error("Audit file was not created")
 		return
 	}
 	al := &AuditLog{}
 	err = json.Unmarshal([]byte(file), al)
-	if err != nil{
+	if err != nil {
 		t.Error("Invalid JSON audit file")
 	}
-	if al.Transaction.Id != tx.Id{
+	if al.Transaction.Id != tx.Id {
 		t.Error("Invalid ID for JSON audit file")
 	}
 }

@@ -14,7 +14,7 @@
 
 package actions
 
-import(
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
 )
 
@@ -24,23 +24,23 @@ type Allow struct {
 }
 
 func (a *Allow) Init(r *engine.Rule, b1 string) string {
-	// Does not require 
-	if b1 == "phase"{
+	// Does not require
+	if b1 == "phase" {
 		a.allow = 1
-	}else if b1 == "request"{
+	} else if b1 == "request" {
 		a.allow = 2
-	}else if b1 == ""{
+	} else if b1 == "" {
 		a.allow = 0
-	}else{
+	} else {
 		return "Invalid value for action allow"
 	}
 	return ""
 }
 
-func (a *Allow) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
+func (a *Allow) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	//Huge TODO here
 }
 
-func (a *Allow) GetType() int{
+func (a *Allow) GetType() int {
 	return engine.ACTION_TYPE_DISRUPTIVE
 }

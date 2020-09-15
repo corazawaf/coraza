@@ -14,26 +14,26 @@
 
 package engine
 
-import(
-	"strconv"
+import (
+	_ "github.com/sirupsen/logrus"
 	"reflect"
+	"strconv"
 	"sync"
-	_"github.com/sirupsen/logrus"
 )
 
 const (
-	ACTION_TYPE_METADATA 		= 1
-	ACTION_TYPE_DISRUPTIVE 		= 2
-	ACTION_TYPE_DATA 			= 3
-	ACTION_TYPE_NONDISRUPTIVE 	= 4
-	ACTION_TYPE_FLOW 			= 5
+	ACTION_TYPE_METADATA      = 1
+	ACTION_TYPE_DISRUPTIVE    = 2
+	ACTION_TYPE_DATA          = 3
+	ACTION_TYPE_NONDISRUPTIVE = 4
+	ACTION_TYPE_FLOW          = 5
 
-	ACTION_DISRUPTIVE_PASS		= 0
-	ACTION_DISRUPTIVE_DROP		= 1
-	ACTION_DISRUPTIVE_BLOCK		= 2
-	ACTION_DISRUPTIVE_DENY		= 3
-	ACTION_DISRUPTIVE_PROXY		= 4
-	ACTION_DISRUPTIVE_REDIRECT	= 5
+	ACTION_DISRUPTIVE_PASS     = 0
+	ACTION_DISRUPTIVE_DROP     = 1
+	ACTION_DISRUPTIVE_BLOCK    = 2
+	ACTION_DISRUPTIVE_DENY     = 3
+	ACTION_DISRUPTIVE_PROXY    = 4
+	ACTION_DISRUPTIVE_REDIRECT = 5
 )
 
 type Action interface {
@@ -49,48 +49,46 @@ type Operator interface {
 
 type RuleOp struct {
 	Operator Operator
-	Data string
+	Data     string
 	Negation bool
 	//OpEval OperatorFunction
 }
 
 type RuleTransformation struct {
 	Function string
-	TfFunc interface {} `json:"-"`
+	TfFunc   interface{} `json:"-"`
 }
 
 type RuleVariable struct {
-	Count bool
+	Count      bool
 	Collection string
-	Key string
+	Key        string
 	Exceptions []string
 }
-
 
 type Rule struct {
 	// Contains de non-compiled variables part of the rule
 	Vars string `json:"vars"`
 
+	Variables        []RuleVariable       `json:"variables"`
+	Operator         string               `json:"operator"`
+	OperatorObj      *RuleOp              `json:"operator_obj"`
+	Disruptive       bool                 `json:"disruptive"`
+	Transformations  []RuleTransformation `json:"transformations"`
+	HasChain         bool                 `json:"has_chain"`
+	ParentId         int                  `json:"parent_id"`
+	Actions          []Action             `json:"actions"`
+	ActionParams     string               `json:"action_params"`
+	MultiMatch       bool                 `json:"multimatch"`
+	Severity         string               `json:"severity"`
+	Skip             bool                 `json:"skip"`
+	SecMark          string               `json:"secmark"`
+	Log              bool                 `json:"log"`
+	Raw              string               `json:"raw"`
+	Chain            *Rule                `json:"chain"`
+	DisruptiveAction int                  `json:"disruptive_action"`
 
-	Variables []RuleVariable `json:"variables"`
-	Operator string `json:"operator"`
-	OperatorObj *RuleOp `json:"operator_obj"`
-	Disruptive bool `json:"disruptive"`
-	Transformations []RuleTransformation `json:"transformations"`
-	HasChain bool `json:"has_chain"`
-	ParentId int `json:"parent_id"`
-	Actions []Action `json:"actions"`
-	ActionParams string `json:"action_params"`
-	MultiMatch bool `json:"multimatch"`
-	Severity string `json:"severity"`
-	Skip bool `json:"skip"`
-	SecMark string `json:"secmark"`
-	Log bool `json:"log"`
-	Raw string `json:"raw"`
-	Chain *Rule `json:"chain"`
-	DisruptiveAction int `json:"disruptive_action"`
-
-	//METADATA 
+	//METADATA
 	// Rule unique sorted identifier
 	Id int `json:"id"`
 
@@ -121,10 +119,9 @@ func (r *Rule) Init() {
 	r.mux = &sync.RWMutex{}
 }
 
-
-func (r *Rule) Evaluate(tx *Transaction) []*MatchData{
+func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 	matchedValues := []*MatchData{}
-	for _, nid := range tx.RuleRemoveById{
+	for _, nid := range tx.RuleRemoveById {
 		if nid == r.Id {
 			return matchedValues
 		}
@@ -134,7 +131,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData{
 		values := []*MatchData{}
 		if ecol != nil {
 			ignore := false
-			for _, c := range ecol{
+			for _, c := range ecol {
 				if c.Name == v.Collection && c.Key == v.Key {
 					ignore = true
 					break
@@ -143,86 +140,85 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData{
 			if ignore {
 				continue
 			}
-		}	
+		}
 
 		values = tx.GetField(v.Collection, v.Key, v.Exceptions)
-		if v.Count{	
-			if v.Key != ""  && len(values) == 1{
+		if v.Count {
+			if v.Key != "" && len(values) == 1 {
 				values[0].Value = strconv.Itoa(len(values[0].Value))
 			} else {
 				values = []*MatchData{
 					&MatchData{
 						Collection: v.Collection,
-						Key: v.Key,
-						Value: strconv.Itoa(len(values)),
+						Key:        v.Key,
+						Value:      strconv.Itoa(len(values)),
 					},
 				}
 			}
 		}
-		if len(values) == 0{
-			if r.executeOperator("", tx){
-				matchedValues = append(matchedValues, &MatchData{
-				})
-			}	
-			continue		
+		if len(values) == 0 {
+			if r.executeOperator("", tx) {
+				matchedValues = append(matchedValues, &MatchData{})
+			}
+			continue
 		}
 		for _, arg := range values {
 			var args []string
-			if r.MultiMatch{
+			if r.MultiMatch {
 				args = r.executeTransformationsMultimatch(arg.Value)
-			}else{
+			} else {
 				args = []string{r.executeTransformations(arg.Value)}
 			}
-			for _, carg := range args{
-				if r.executeOperator(carg, tx){
+			for _, carg := range args {
+				if r.executeOperator(carg, tx) {
 					matchedValues = append(matchedValues, &MatchData{
 						Collection: v.Collection,
-						Key: v.Key,
-						Value: carg,
+						Key:        v.Key,
+						Value:      carg,
 					})
 				}
 			}
 		}
 	}
-	
-	if len(matchedValues) == 0{
+
+	if len(matchedValues) == 0 {
 		//No match for variables
 		return matchedValues
 	}
 
 	// We run non disruptive actions even if there is no chain match
-	for _, a := range r.Actions{
-		if a.GetType() != ACTION_TYPE_NONDISRUPTIVE{
+	for _, a := range r.Actions {
+		if a.GetType() != ACTION_TYPE_NONDISRUPTIVE {
 			continue
-		}		
+		}
 		a.Evaluate(r, tx)
-	}	
+	}
 
 	tx.SetCapturable(false)
 
-	if r.Chain != nil{
+	if r.Chain != nil {
 		//Log.Debug("Running chain rule...")
 		msgs := []string{}
 		nr := r.Chain
-		for nr != nil{
+		for nr != nil {
 			m := nr.Evaluate(tx)
-			if len(m) == 0{
+			if len(m) == 0 {
 				//we fail the chain
 				return []*MatchData{}
 			}
-			msgs = 	append(msgs, tx.MacroExpansion(nr.Msg))
+			msgs = append(msgs, tx.MacroExpansion(nr.Msg))
 			//TODO add matched values from the chain rule
-			for _, child := range m{
+			for _, child := range m {
 				matchedValues = append(matchedValues, child)
 			}
 			nr = nr.Chain
 		}
 		tx.MatchRule(r, msgs, matchedValues)
 	}
-	if r.ParentId == 0{
+	if r.ParentId == 0 {
 		tx.MatchRule(r, []string{tx.MacroExpansion(r.Msg)}, matchedValues)
 		//we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
-		for _, a := range r.Actions{
+		for _, a := range r.Actions {
 			if a.GetType() == ACTION_TYPE_DISRUPTIVE || a.GetType() == ACTION_TYPE_FLOW {
 				a.Evaluate(r, tx)
 			}
@@ -232,37 +228,37 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData{
 }
 
 func (r *Rule) executeOperator(data string, tx *Transaction) bool {
-    result := r.OperatorObj.Operator.Evaluate(tx, data)
-    if r.OperatorObj.Negation && result{
-    	return false
-    }
-    if r.OperatorObj.Negation && !result{
-    	return true
-    }
+	result := r.OperatorObj.Operator.Evaluate(tx, data)
+	if r.OperatorObj.Negation && result {
+		return false
+	}
+	if r.OperatorObj.Negation && !result {
+		return true
+	}
 	return result
 }
 
-func (r *Rule) executeTransformationsMultimatch(value string) []string{
+func (r *Rule) executeTransformationsMultimatch(value string) []string {
 	//Im not already sure if multimatch is cumulative or not... if not we should just make value constant
 	res := []string{}
 	for _, t := range r.Transformations {
-	    rf := reflect.ValueOf(t.TfFunc)
-	    rargs := make([]reflect.Value, 1)
-	    rargs[0] = reflect.ValueOf(value)
-	    call := rf.Call(rargs)
-	    value = call[0].String()
-	    res = append(res, value)
+		rf := reflect.ValueOf(t.TfFunc)
+		rargs := make([]reflect.Value, 1)
+		rargs[0] = reflect.ValueOf(value)
+		call := rf.Call(rargs)
+		value = call[0].String()
+		res = append(res, value)
 	}
 	return res
 }
 
-func (r *Rule) executeTransformations(value string) string{
+func (r *Rule) executeTransformations(value string) string {
 	for _, t := range r.Transformations {
-	    rf := reflect.ValueOf(t.TfFunc)
-	    rargs := make([]reflect.Value, 1)
-	    rargs[0] = reflect.ValueOf(value)
-	    call := rf.Call(rargs)
-	    value = call[0].String()
+		rf := reflect.ValueOf(t.TfFunc)
+		rargs := make([]reflect.Value, 1)
+		rargs[0] = reflect.ValueOf(value)
+		call := rf.Call(rargs)
+		value = call[0].String()
 	}
 	return value
 }
@@ -272,9 +268,9 @@ func (r *Rule) AddVariable(count bool, collection string, key string) {
 	r.Variables = append(r.Variables, rv)
 }
 
-func (r *Rule) AddNegateVariable(collection string, key string){
-	for i, vr := range r.Variables{
-		if vr.Collection == collection{
+func (r *Rule) AddNegateVariable(collection string, key string) {
+	for i, vr := range r.Variables {
+		if vr.Collection == collection {
 			vr.Exceptions = append(vr.Exceptions, key)
 			r.Variables[i] = vr
 			return

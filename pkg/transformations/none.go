@@ -13,9 +13,9 @@
 // limitations under the License.
 
 package transformations
-import(
-)
 
-func None(data string) string{
+import ()
+
+func None(data string) string {
 	return data
 }

@@ -15,13 +15,13 @@
 package main
 
 import (
-	"io"
 	"context"
-	"net/http"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/parser"
 	"github.com/zalando/skipper/filters"
 	"github.com/zalando/skipper/filters/serve"
+	"io"
+	"net/http"
 )
 
 type CorazaSpec struct{}
@@ -30,7 +30,6 @@ type CorazaFilter struct {
 	//constant values
 	policypath  string
 	wafinstance *engine.Waf
-
 }
 
 func (s *CorazaSpec) Name() string { return "corazaWAF" }
@@ -101,4 +100,3 @@ func (f *CorazaFilter) GetTransaction(ctx filters.FilterContext) *engine.Transac
 	req := ctx.Request()
 	return req.Context().Value("tx").(*engine.Transaction)
 }
-

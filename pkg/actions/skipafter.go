@@ -14,7 +14,7 @@
 
 package actions
 
-import(
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"strings"
 )
@@ -29,10 +29,10 @@ func (a *SkipAfter) Init(r *engine.Rule, data string) string {
 	return ""
 }
 
-func (a *SkipAfter) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
+func (a *SkipAfter) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	tx.SkipAfter = a.data
 }
 
-func (a *SkipAfter) GetType() int{
+func (a *SkipAfter) GetType() int {
 	return engine.ACTION_TYPE_FLOW
 }

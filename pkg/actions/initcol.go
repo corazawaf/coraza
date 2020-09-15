@@ -14,15 +14,15 @@
 
 package actions
 
-import(
-	"strings"
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
+	"strings"
 )
 
 // Initializes a persistent collection and add the data to the standard collections engine.
 type InitCol struct {
 	Collection string
-	Key string
+	Key        string
 }
 
 func (a *InitCol) Init(r *engine.Rule, data string) string {
@@ -34,13 +34,13 @@ func (a *InitCol) Init(r *engine.Rule, data string) string {
 
 func (a *InitCol) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	pc := &engine.PersistentCollection{}
-    pc.New(nil, tx.WafInstance.WebAppId, a.Collection, a.Key, 10000)
-    col := tx.GetCollection(a.Collection)
-    
-    col.SetData(pc.GetData())
-    tx.RegisterPersistentCollection(a.Collection, pc)
+	pc.New(nil, tx.WafInstance.WebAppId, a.Collection, a.Key, 10000)
+	col := tx.GetCollection(a.Collection)
+
+	col.SetData(pc.GetData())
+	tx.RegisterPersistentCollection(a.Collection, pc)
 }
 
-func (a *InitCol) GetType() int{
+func (a *InitCol) GetType() int {
 	return engine.ACTION_TYPE_NONDISRUPTIVE
 }

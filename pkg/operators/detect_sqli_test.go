@@ -14,12 +14,13 @@
 
 package operators
 
-import(
-	_"testing"
-	_"fmt"
-	_"github.com/jptosso/coraza-waf/test/utils"
-	_"github.com/jptosso/coraza-waf/pkg/engine"
+import (
+	_ "fmt"
+	_ "github.com/jptosso/coraza-waf/pkg/engine"
+	_ "github.com/jptosso/coraza-waf/test/utils"
+	_ "testing"
 )
+
 /*
 func TestDetectSqliUnicodeStringCorrect(t *testing.T) {
     bw := newSqli("")
@@ -69,7 +70,7 @@ func TestDetectSqliBinaryString(t *testing.T) {
     result := bw.Evaluate(&tx, data)
     if !result {
     	t.Errorf("Invalid DetectSqli operator result")
-    }    
+    }
 }
 
 func newSqli(data string) engine.Operator{

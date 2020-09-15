@@ -14,12 +14,12 @@
 
 package actions
 
-import(
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/transformations"
 )
 
-type T struct {}
+type T struct{}
 
 func (a *T) Init(r *engine.Rule, transformation string) string {
 	if transformation == "none" {
@@ -29,7 +29,7 @@ func (a *T) Init(r *engine.Rule, transformation string) string {
 	}
 	transformations := transformations.TransformationsMap()
 	tt := transformations[transformation]
-	if tt == nil{
+	if tt == nil {
 		return "Unsupported transformation " + transformation
 	}
 	tf := engine.RuleTransformation{transformation, tt}
@@ -37,10 +37,10 @@ func (a *T) Init(r *engine.Rule, transformation string) string {
 	return ""
 }
 
-func (a *T) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
+func (a *T) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// Not evaluated
 }
 
-func (a *T) GetType() int{
+func (a *T) GetType() int {
 	return engine.ACTION_TYPE_NONDISRUPTIVE
 }

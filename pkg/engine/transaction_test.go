@@ -13,14 +13,15 @@
 // limitations under the License.
 
 package engine
-import(
-	"testing"
+
+import (
 	"strings"
+	"testing"
 )
 
 var wafi = NewWaf()
 
-func TestTxSetters(t *testing.T){
+func TestTxSetters(t *testing.T) {
 	tx := wafi.NewTransaction()
 	ht := []string{
 		"POST /testurl.php?id=123&b=456 HTTP/1.1",
@@ -36,32 +37,32 @@ func TestTxSetters(t *testing.T){
 	tx.ParseRequestString(data)
 	exp := map[string]string{
 		//TODO somehow host is being overriden
-		//"%{request_headers.host}": "www.test.com:80", 
+		//"%{request_headers.host}": "www.test.com:80",
 		"%{request_headers.x-test-header}": "test456",
-		"%{request_method}": "POST",
-		"%{ARGS_GET.id}": "123",
-		"%{request_cookies.test}": "123",
-		"%{args_post.testfield}": "456",
-		"%{args.testfield}": "456",
-		"%{request_line}": "POST /testurl.php?id=123&b=456 HTTP/1.1",
-		"%{query_string}": "id=123&b=456",
-		"%{request_body_length}": "13",
-		"%{request_filename}": "/testurl.php",
-		"%{request_protocol}": "HTTP/1.1",
-		"%{request_uri}": "/testurl.php?id=123&b=456",
-		"%{request_uri_raw}": "/testurl.php?id=123&b=456",
-		"%{id}": tx.Id,
+		"%{request_method}":                "POST",
+		"%{ARGS_GET.id}":                   "123",
+		"%{request_cookies.test}":          "123",
+		"%{args_post.testfield}":           "456",
+		"%{args.testfield}":                "456",
+		"%{request_line}":                  "POST /testurl.php?id=123&b=456 HTTP/1.1",
+		"%{query_string}":                  "id=123&b=456",
+		"%{request_body_length}":           "13",
+		"%{request_filename}":              "/testurl.php",
+		"%{request_protocol}":              "HTTP/1.1",
+		"%{request_uri}":                   "/testurl.php?id=123&b=456",
+		"%{request_uri_raw}":               "/testurl.php?id=123&b=456",
+		"%{id}":                            tx.Id,
 	}
 
-	for k, v := range exp{
+	for k, v := range exp {
 		res := tx.MacroExpansion(k)
-		if res != v{
+		if res != v {
 			t.Error("Failed set transaction for " + k + ", expected " + v + ", got " + res)
 		}
 	}
 }
 
-func TestTxMultipart(t *testing.T){
+func TestTxMultipart(t *testing.T) {
 	tx := wafi.NewTransaction()
 	ht := []string{
 		"POST / HTTP/1.1",
@@ -95,13 +96,13 @@ func TestTxMultipart(t *testing.T){
 	data := strings.Join(ht, "\r\n")
 	tx.ParseRequestString(data)
 	exp := map[string]string{
-		"%{args_post.text}": "test-value",
+		"%{args_post.text}":      "test-value",
 		"%{files_combined_size}": "69",
 	}
 
-	for k, v := range exp{
+	for k, v := range exp {
 		res := tx.MacroExpansion(k)
-		if res != v{
+		if res != v {
 			t.Error("Failed set transaction for multipart " + k + ", expected " + v + ", got " + res)
 		}
 	}
@@ -109,6 +110,6 @@ func TestTxMultipart(t *testing.T){
 	//TODO check files
 }
 
-func TestTxPhases(t *testing.T){
+func TestTxPhases(t *testing.T) {
 
 }

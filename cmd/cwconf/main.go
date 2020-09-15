@@ -1,18 +1,18 @@
 package main
 
-import(
+import (
 	"flag"
-	"os"
 	"fmt"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/parser"
+	"os"
 )
 
-func main(){
+func main() {
 	file := flag.String("f", "", "path of WAF config file to test")
 	flag.Parse()
 
-	if *file == ""{
+	if *file == "" {
 		fmt.Println("-f is mandatory.")
 		os.Exit(1)
 	}
@@ -23,7 +23,7 @@ func main(){
 	p := &parser.Parser{}
 	p.Init(waf)
 
-	if p.FromFile(*file) != nil{
+	if p.FromFile(*file) != nil {
 		fmt.Println("Exited with errors")
 		os.Exit(11)
 	}

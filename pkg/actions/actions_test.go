@@ -13,12 +13,14 @@
 // limitations under the License.
 
 package actions
-import(
+
+import (
 	"testing"
 )
-func TestActions(t *testing.T){
+
+func TestActions(t *testing.T) {
 	am := ActionsMap()
-	if am == nil || len(am) == 0{
+	if am == nil || len(am) == 0 {
 		t.Error("Failed to parse actions")
 	}
 }

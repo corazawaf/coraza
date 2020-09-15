@@ -14,7 +14,7 @@
 
 package actions
 
-import(
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
 )
 
@@ -26,10 +26,10 @@ func (a *Maturity) Init(r *engine.Rule, data string) string {
 	return ""
 }
 
-func (a *Maturity) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
+func (a *Maturity) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// Not evaluated
 }
 
-func (a *Maturity) GetType() int{
+func (a *Maturity) GetType() int {
 	return engine.ACTION_TYPE_METADATA
 }

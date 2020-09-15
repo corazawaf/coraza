@@ -13,26 +13,26 @@
 // limitations under the License.
 
 package transformations
+
 import (
 	"path/filepath"
 )
 
-func NormalisePath(data string) string{
+func NormalisePath(data string) string {
 	leng := len(data)
 	if leng < 1 {
 		return data
 	}
 	clean := filepath.Clean(data)
-	if clean == "."{
+	if clean == "." {
 		return ""
 	}
-	if leng >= 2 && clean[0] == '.' && clean[1] == '/'{
+	if leng >= 2 && clean[0] == '.' && clean[1] == '/' {
 		clean = clean[2:]
 	}
-	if data[len(data)-1]  == '/'{
+	if data[len(data)-1] == '/' {
 		return clean + "/"
-	}else{
+	} else {
 		return clean
 	}
 }
-

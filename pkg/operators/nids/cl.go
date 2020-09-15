@@ -14,26 +14,26 @@
 
 package nids
 
-import(
+import (
 	"regexp"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 type NidCl struct{}
 
-func (n *NidCl) Evaluate(nid string) bool{
-	if len(nid) < 8{
+func (n *NidCl) Evaluate(nid string) bool {
+	if len(nid) < 8 {
 		return false
 	}
 	re, err := regexp.Compile(`[^\dk]`)
 	if err != nil {
 		return false
-	}	
+	}
 	nid = strings.ToLower(nid)
 	nid = re.ReplaceAllString(nid, "")
 	rut, _ := strconv.Atoi(nid[:len(nid)-1])
-	dv := nid[len(nid)-1:len(nid)]
+	dv := nid[len(nid)-1 : len(nid)]
 
 	var sum = 0
 	var factor = 2
@@ -47,7 +47,7 @@ func (n *NidCl) Evaluate(nid string) bool{
 		}
 	}
 
-	if val := 11 - (sum %11) ; val == 11 {
+	if val := 11 - (sum % 11); val == 11 {
 		ndv = "0"
 	} else if val == 10 {
 		ndv = "k"

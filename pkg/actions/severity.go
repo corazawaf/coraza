@@ -14,7 +14,7 @@
 
 package actions
 
-import(
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
 )
 
@@ -22,9 +22,9 @@ type Severity struct {
 }
 
 func (a *Severity) Init(r *engine.Rule, data string) string {
-	l := []string{"EMERGENCY", "ALERT", "CRITICAL", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG",}
+	l := []string{"EMERGENCY", "ALERT", "CRITICAL", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG"}
 	for _, val := range l {
-		if val == data{
+		if val == data {
 			//r.Severity = i
 		}
 	}
@@ -32,10 +32,10 @@ func (a *Severity) Init(r *engine.Rule, data string) string {
 	return ""
 }
 
-func (a *Severity) Evaluate(r *engine.Rule, tx *engine.Transaction) () {
+func (a *Severity) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// Not evaluated
 }
 
-func (a *Severity) GetType() int{
+func (a *Severity) GetType() int {
 	return engine.ACTION_TYPE_METADATA
 }

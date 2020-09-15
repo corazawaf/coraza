@@ -25,59 +25,59 @@ func UrlDecode(data string) string {
 
 //extracted from https://github.com/senghoo/modsecurity-go/blob/master/utils/urlencode.go
 func doUrlDecode(input string) (string, bool, int) {
-    d := []byte(input)
-    input_len := len(d)
-    var i, count, invalid_count, c int
+	d := []byte(input)
+	input_len := len(d)
+	var i, count, invalid_count, c int
 
-    changed := false
+	changed := false
 
-    for i < input_len {
-        if input[i] == '%' {
-            /* Character is a percent sign. */
+	for i < input_len {
+		if input[i] == '%' {
+			/* Character is a percent sign. */
 
-            /* Are there enough bytes available? */
-            if (i + 2 < input_len) {
-                c1 := input[i + 1]
-                c2 := input[i + 2]
-                if (utils.ValidHex(c1) && utils.ValidHex(c2)) {
-                    uni := utils.X2c(input[i + 1:])
+			/* Are there enough bytes available? */
+			if i+2 < input_len {
+				c1 := input[i+1]
+				c2 := input[i+2]
+				if utils.ValidHex(c1) && utils.ValidHex(c2) {
+					uni := utils.X2c(input[i+1:])
 
-                    d[c] = uni
-                    c++
-                    count++
-                    i += 3
-                    changed = true
-                } else {
-                    /* Not a valid encoding, skip this % */
-                    d[c] = input[i]
-                    c++
-                    i++
-                    count++
-                    invalid_count++
-                }
-            } else {
-                /* Not enough bytes available, copy the raw bytes. */
-                d[c] = input[i]
-                c++
-                i++
-                count++
-                invalid_count++
-            }
-        } else {
-            /* Character is not a percent sign. */
-            if (input[i] == '+') {
-                d[c] = ' '
-                c++
-                changed = true
-            } else {
-                d[c] = input[i]
-                c++
-            }
-            count++
-            i++
-        }
-    }
+					d[c] = uni
+					c++
+					count++
+					i += 3
+					changed = true
+				} else {
+					/* Not a valid encoding, skip this % */
+					d[c] = input[i]
+					c++
+					i++
+					count++
+					invalid_count++
+				}
+			} else {
+				/* Not enough bytes available, copy the raw bytes. */
+				d[c] = input[i]
+				c++
+				i++
+				count++
+				invalid_count++
+			}
+		} else {
+			/* Character is not a percent sign. */
+			if input[i] == '+' {
+				d[c] = ' '
+				c++
+				changed = true
+			} else {
+				d[c] = input[i]
+				c++
+			}
+			count++
+			i++
+		}
+	}
 
-    return string(d[0:c]), changed, invalid_count;
+	return string(d[0:c]), changed, invalid_count
 
 }
