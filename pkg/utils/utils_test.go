@@ -10,7 +10,7 @@ func TestOpenFile(t *testing.T){
 		t.Error("Failed to read remote file with OpenFile")
 	}
 
-	b, err = OpenFile("../../README.md")
+	b, err = OpenFile("../../readme.md")
 	if len(b) == 0 || err != nil{
 		t.Error("Failed to read local file with OpenFile")
 	}	
