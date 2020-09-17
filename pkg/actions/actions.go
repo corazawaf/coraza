@@ -22,8 +22,8 @@ func ActionsMap() map[string]engine.Action {
 	return map[string]engine.Action{
 		// #### Flow Actions ####
 		//Sets variables for the transaction and rule
-		"chain": &Chain{},
-		"skip": &Skip{},
+		"chain":     &Chain{},
+		"skip":      &Skip{},
 		"skipAfter": &SkipAfter{},
 
 		// #### Metadata Actions ####

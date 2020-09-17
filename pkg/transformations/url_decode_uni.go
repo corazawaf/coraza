@@ -53,10 +53,10 @@ func inplaceUniDecode(input string) string {
 							}
 						}
 						/*
-						                        //TODO implement unicode mappings
-												if (Code >= 0 && Code <= 65535)  {
-													hmap = utils.UnicodeMapping.At(Code)
-												}
+							                        //TODO implement unicode mappings
+													if (Code >= 0 && Code <= 65535)  {
+														hmap = utils.UnicodeMapping.At(Code)
+													}
 						*/
 						if hmap != -1 {
 							d[c] = byte(hmap)

@@ -529,7 +529,7 @@ func (tx *Transaction) ParseRequestObjectHeaders(req *http.Request) error {
 
 func (tx *Transaction) ParseRequestObjectBody(req *http.Request) error {
 	//phase 2
-	if req.Body == nil{
+	if req.Body == nil {
 		return nil
 	}
 	cl := tx.GetCollection("request_headers").GetSimple("content-type")
@@ -628,10 +628,10 @@ func (tx *Transaction) ParseRequestBodyBinary(mimeval string, body string) error
 // Execute rules for the specified phase, between 1 and 5
 // Returns true if transaction is disrupted
 func (tx *Transaction) ExecutePhase(phase int) bool {
-	if tx.Disrupted && phase != 5{
+	if tx.Disrupted && phase != 5 {
 		return true
 	}
-	if tx.LastPhase == 5{
+	if tx.LastPhase == 5 {
 		return false
 	}
 	tx.LastPhase = phase
@@ -677,7 +677,7 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 		usedRules++
 		if tx.Disrupted {
 			break
-		}		
+		}
 	}
 	tx.Mux.Lock()
 	tx.StopWatches[phase] = int(time.Now().UnixNano() - ts)

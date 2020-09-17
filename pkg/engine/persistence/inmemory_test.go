@@ -1,11 +1,12 @@
 package persistence
-import(
+
+import (
+	ttlcache "github.com/ReneKroon/ttlcache/v2"
 	"testing"
-	ttlcache"github.com/ReneKroon/ttlcache/v2"
 	"time"
 )
 
-func TestInmemoryTtlcache(t *testing.T){
+func TestInmemoryTtlcache(t *testing.T) {
 	cache := ttlcache.NewCache()
 	defer cache.Close()
 	cache.SetTTL(time.Duration(1 * time.Second))
@@ -18,19 +19,19 @@ func TestInmemoryTtlcache(t *testing.T){
 
 	if value, exists := cache.Get("key"); exists != nil {
 		t.Error("Failed to key key")
-	}else{
-		if value != "value"{
+	} else {
+		if value != "value" {
 			t.Error("Failed to key key")
 		}
 	}
-	<- workChan
+	<-workChan
 	if _, exists := cache.Get("key"); exists == nil {
 		t.Error("Persistent key failed to expire over TTL")
 	}
 
 }
 
-func TestInmemoryPersistence(t *testing.T){
+func TestInmemoryPersistence(t *testing.T) {
 	me := MemoryEngine{}
 	me.Init("")
 	st := map[string][]string{
@@ -39,7 +40,7 @@ func TestInmemoryPersistence(t *testing.T){
 		},
 	}
 	me.Set("test", st)
-	if me.Get("test")["test"][0] != "test2"{
+	if me.Get("test")["test"][0] != "test2" {
 		t.Error("Failed to create inmemory persistent collection")
 	}
 	me.Delete("test")

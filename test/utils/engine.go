@@ -14,7 +14,7 @@
 
 package utils
 
-import(
+import (
 	b64 "encoding/base64"
 	"errors"
 	"fmt"
@@ -31,12 +31,12 @@ import(
 
 type callback func(string, bool)
 
-type TestSuite struct{
+type TestSuite struct {
 	profiles []*testProfile
-	waf *engine.Waf
+	waf      *engine.Waf
 }
 
-func (ts *TestSuite) Init(cfg string){
+func (ts *TestSuite) Init(cfg string) {
 	ts.profiles = []*testProfile{}
 	ts.waf = engine.NewWaf()
 	parser := &parser.Parser{}
@@ -74,7 +74,7 @@ func (ts *TestSuite) GetProfiles() []*testProfile {
 func (ts *TestSuite) runTest(profile *testProfile) (bool, error) {
 	passed := 0
 	waf := ts.waf
-	if profile.Rules != ""{
+	if profile.Rules != "" {
 		log.Debug("Loading rules from string")
 		waf = engine.NewWaf()
 		p := &parser.Parser{}
@@ -157,21 +157,21 @@ func (ts *TestSuite) runTest(profile *testProfile) (bool, error) {
 				}
 			}
 			if len(stage.Stage.Output.TriggeredRules) > 0 {
-				for _, trr := range stage.Stage.Output.TriggeredRules{
-					if !utils.ArrayContainsInt(tr, trr){
+				for _, trr := range stage.Stage.Output.TriggeredRules {
+					if !utils.ArrayContainsInt(tr, trr) {
 						pass = false
 						break
 					}
 				}
 			}
 			if len(stage.Stage.Output.NonTriggeredRules) > 0 {
-				for _, trr := range stage.Stage.Output.NonTriggeredRules{
-					if utils.ArrayContainsInt(tr, trr){
+				for _, trr := range stage.Stage.Output.NonTriggeredRules {
+					if utils.ArrayContainsInt(tr, trr) {
 						pass = false
 						break
 					}
 				}
-			}			
+			}
 		}
 		if pass {
 			passed++
@@ -180,7 +180,7 @@ func (ts *TestSuite) runTest(profile *testProfile) (bool, error) {
 	return len(profile.Tests) == passed, nil
 }
 
-func parseInputData(input interface{}, tx *engine.Transaction){
+func parseInputData(input interface{}, tx *engine.Transaction) {
 	data := ""
 	v := reflect.ValueOf(input)
 	switch v.Kind() {
@@ -200,7 +200,6 @@ func parseInputData(input interface{}, tx *engine.Transaction){
 	}
 	tx.ParseRequestBodyBinary(ctt, data)
 }
-
 
 type testProfile struct {
 	Meta  testMeta   `yaml:"meta"`
@@ -245,9 +244,9 @@ type testInput struct {
 }
 
 type testOutput struct {
-	LogContains   string `yaml:"log_contains"`
-	NoLogContains string `yaml:"no_log_contains"`
-	ExpectError   bool   `yaml:"expect_error"`
-	TriggeredRules []int `yaml:"triggered_rules"`
-	NonTriggeredRules []int `yaml:"non_triggered_rules"`
+	LogContains       string `yaml:"log_contains"`
+	NoLogContains     string `yaml:"no_log_contains"`
+	ExpectError       bool   `yaml:"expect_error"`
+	TriggeredRules    []int  `yaml:"triggered_rules"`
+	NonTriggeredRules []int  `yaml:"non_triggered_rules"`
 }

@@ -14,10 +14,10 @@
 
 package persistence
 
-import(
-	ttlcache"github.com/ReneKroon/ttlcache/v2"
-	"time"
+import (
 	"errors"
+	ttlcache "github.com/ReneKroon/ttlcache/v2"
+	"time"
 )
 
 type MemoryEngine struct {
