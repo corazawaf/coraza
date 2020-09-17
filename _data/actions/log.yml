@@ -1,0 +1,10 @@
+name: log
+description: |
+  Indicates that a successful match of the rule needs to be logged.
+actiongroup: Non-disruptive
+version: 0.1
+experimental: true
+example: |
+  SecAction phase:1,id:117,pass,initcol:ip=%{REMOTE_ADDR},log
+data: |
+  This action will log matches to the audit log.

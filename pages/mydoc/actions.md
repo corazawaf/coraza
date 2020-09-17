@@ -5,7 +5,6 @@ last_updated: July 16, 2020
 sidebar: mydoc_sidebar
 permalink: actions.html
 folder: mydoc
-summary: This document contains the detailed configurations for each action. Most of the data was copied from the ModSecurity WIKI
 ---
 
 Each action belongs to one of five groups:

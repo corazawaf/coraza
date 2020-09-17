@@ -17,4 +17,4 @@ topnav_dropdowns:
         - title: Coraza WAF Slack
           external_url: ...
         - title: Coraza WAF Overflow
-          external_url: http://stackoverflow.com/questions/tagged/jekyll
+          external_url: http://stackoverflow.com/questions/tagged/corazawaf

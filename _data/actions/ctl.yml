@@ -9,27 +9,28 @@ example: |
   # white-list the user parameter for rule #981260 when the REQUEST_URI is /index.php
   SecRule REQUEST_URI "@beginsWith /index.php" "phase:1,t:none,pass, \
     nolog,ctl:ruleRemoveTargetById=981260;ARGS:user
+experimental: true
+version: 0.1
 data: |
   The following configuration options are supported:
 
   1. **auditEngine**
   2. **auditLogParts**
-  3. **debugLogLevel** (Supported on libModSecurity: TBI)
-  4. **forceRequestBodyVariable**
-  5. **requestBodyAccess**
-  6. **requestBodyLimit** (Supported on libModSecurity: TBI)
-  7. **requestBodyProcessor**
-  8. **responseBodyAccess** (Supported on libModSecurity: TBI)
-  9. **responseBodyLimit** (Supported on libModSecurity: TBI)
-  10. **ruleEngine**
-  11. **ruleRemoveById** - since this action us triggered at run time, it should be specified before the rule in which it is disabling.
-  12. **ruleRemoveByMsg** (Supported on libModSecurity: TBI)
-  13. **ruleRemoveByTag** (Supported on libModSecurity: TBI)
-  14. **ruleRemoveTargetById** - since this action is used to just remove targets, users don't need to use the char ! before the target list.
-  15. **ruleRemoveTargetByMsg** - since this action is used to just remove targets, users don't need to use the char ! before the target list. (Supported on libModSecurity: TBI)
-  16. **ruleRemoveTargetByTag** - since this action is used to just remove targets, users don't need to use the char ! before the target list.
-  17. **hashEngine** (Supported on libModSecurity: TBI)
-  18. **hashEnforcement** (Supported on libModSecurity: TBI)
+  3. **forceRequestBodyVariable**
+  4. **requestBodyAccess**
+  5. **requestBodyLimit**
+  6. **requestBodyProcessor**
+  7. **responseBodyAccess**
+  8. **responseBodyLimit** 
+  9. **ruleEngine**
+  10. **ruleRemoveById** - since this action us triggered at run time, it should be specified before the rule in which it is disabling.
+  11. **ruleRemoveByMsg** 
+  12. **ruleRemoveByTag** 
+  13. **ruleRemoveTargetById** - since this action is used to just remove targets, users don't need to use the char ! before the target list.
+  14. **ruleRemoveTargetByMsg** - since this action is used to just remove targets, users don't need to use the char ! before the target list. (Supported on libModSecurity: TBI)
+  15. **ruleRemoveTargetByTag** - since this action is used to just remove targets, users don't need to use the char ! before the target list.
+  16. **hashEngine** 
+  17. **hashEnforcement** 
   With the exception of the requestBodyProcessor and forceRequestBodyVariable settings, each configuration option corresponds to one configuration directive and the usage is identical.
 
   The requestBodyProcessor option allows you to configure the request body processor. By default, ModSecurity will use the URLENCODED and MULTIPART processors to process an application/x-www-form-urlencoded and a multipart/form-data body, respectively. Other two processors are also supported: JSON and XML, but they are never used implicitly. Instead, you must tell ModSecurity to use it by placing a few rules in the REQUEST_HEADERS processing phase. After the request body is processed as XML, you will be able to use the XML-related features to inspect it.

@@ -1,0 +1,9 @@
+name: id
+description: |
+  Assigns a unique ID to the rule or chain in which it appears. This action is mandatory and must be numeric.
+actiongroup: Meta-data
+version: 0.1
+example: |
+  SecRule &REQUEST_HEADERS:Host "@eq 0" "log,id:60008,severity:2,msg:'Request Missing a Host Header'"
+data: |
+  You should use the expirevar actions at the same time that you use setvar actions in order to keep the intended expiration time. If they are used on their own (perhaps in a SecAction directive), the expire time will be reset.

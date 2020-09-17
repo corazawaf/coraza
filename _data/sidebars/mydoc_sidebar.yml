@@ -36,8 +36,8 @@ entries:
       url: /license.html
       output: web, pdf     
 
-    - title: Differences with ModSecurity
-      url: /differences-modsecurity.html
+    - title: What is Coraza WAF
+      url: /coraza-waf.html
       output: web, pdf       
 
   - title: Release Notes

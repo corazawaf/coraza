@@ -1,0 +1,7 @@
+name: deny
+description: |
+  Stops rule processing and intercepts transaction.
+actiongroup: Disruptive
+version: 0.1
+example: |
+  SecRule REQUEST_HEADERS:User-Agent "nikto" "log,deny,id:107,msg:'Nikto Scanners Identified'"

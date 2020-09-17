@@ -1,0 +1,16 @@
+name: drop
+description: |
+  Initiates an immediate close of the TCP connection by sending a FIN packet.
+actiongroup: Flow
+version: 0.1
+experimental: true
+example: |
+  # The following example initiates an IP collection for tracking Basic Authentication attempts. If the client goes over the threshold of more than 25 attempts in 2 minutes, it will DROP subsequent connections.
+  SecAction phase:1,id:109,initcol:ip=%{REMOTE_ADDR},nolog
+  SecRule ARGS:login "!^$" "nolog,phase:1,id:110,setvar:ip.auth_attempt=+1,deprecatevar:ip.auth_attempt=25/120"
+  SecRule IP:AUTH_ATTEMPT "@gt 25" "log,drop,phase:1,id:111,msg:'Possible Brute Force Attack'"
+data: |
+  **Important:** This action does not directly interrupt the TCP connection, instead it tells the WAF implementation to perform a TCP FIN, it's up to the implementation to drop the TCP connection. In case it does not support TCP FIN it will behave as a DENY.
+
+  
+  This action is extremely useful when responding to both Brute Force and Denial of Service attacks in that, in both cases, you want to minimize both the network bandwidth and the data returned to the client. This action causes error message to appear in the log "(9)Bad file descriptor: core_output_filter: writing data to the network"

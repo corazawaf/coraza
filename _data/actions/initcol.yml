@@ -1,0 +1,10 @@
+name: initcol
+description: |
+  Initializes a named persistent collection with the selected Persistence Engine.
+actiongroup: Non-disruptive
+version: 0.1
+example: |
+  # The following example initiates IP address tracking, which is best done in phase 1:
+  SecAction phase:1,id:116,nolog,pass,initcol:ip=%{REMOTE_ADDR}
+data: |
+  See the "Persistent Storage" section for further details.

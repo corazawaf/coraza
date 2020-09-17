@@ -1,0 +1,25 @@
+name: chain
+description: |
+  Chains the current rule with the rule that immediately follows it, creating a rule chain. Chained rules allow for more complex processing logic.
+actiongroup: Flow
+version: 0.1
+example: |
+  # Refuse to accept POST requests that do not contain Content-Length header. 
+  # (Do note that this rule should be preceded by a rule 
+  # that verifies only valid request methods are used.) 
+  SecRule REQUEST_METHOD "^POST$" phase:1,chain,t:none,id:105
+    SecRule &REQUEST_HEADERS:Content-Length "@eq 0" t:none
+data: |
+  **Note:** Rule chains allow you to simulate logical AND. The disruptive actions specified in the first portion of the chained rule will be triggered only if all of the variable checks return positive hits. If any one aspect of a chained rule comes back negative, then the entire rule chain will fail to match. Also note that disruptive actions, execution phases, metadata actions (id, rev, msg, tag, severity, logdata), skip, and skipAfter actions can be specified only by the chain starter rule.
+  
+  The following directives can be used in rule chains:
+
+  * SecAction
+  * SecRule
+  * SecRuleScript
+
+  Special rules control the usage of actions in chained rules:
+
+  * Any actions that affect the rule flow (i.e., the disruptive actions, skip and skipAfter) can be used only in the chain starter. They will be executed only if the entire chain matches.
+  * Non-disruptive rules can be used in any rule; they will be executed if the rule that contains them matches and not only when the entire chain matches.
+  * The metadata actions (e.g., id, rev, msg) can be used only in the chain starter.

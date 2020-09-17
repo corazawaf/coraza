@@ -1,0 +1,10 @@
+name: accuracy
+description: |
+  Appends text given as parameter to the end of response body. Content injection must be en- abled (using the SecContentInjection directive). No content type checks are made, which means that before using any of the content injection actions, you must check whether the content type of the response is adequate for injection.
+actiongroup: Meta-data
+version: 0.1
+supported: false
+example: |
+  SecRule RESPONSE_CONTENT_TYPE "^text/html" "nolog,id:99,pass,append:'<hr>Footer'"
+data: |
+  **Warning:** Although macro expansion is allowed in the additional content, you are strongly cau- tioned against inserting user-defined data fields into output. Doing so would create a cross-site scripting vulnerability.
