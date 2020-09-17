@@ -82,6 +82,15 @@ func ArrayContains(arr []string, search string) bool {
 	return false
 }
 
+func ArrayContainsInt(arr []int, search int) bool {
+	for _, v := range arr {
+		if v == search {
+			return true
+		}
+	}
+	return false
+}
+
 /*
 func GetValues(m map[string][]string) []string{
     ret := []string{}

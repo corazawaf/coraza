@@ -625,6 +625,13 @@ func (tx *Transaction) ParseRequestBodyBinary(mimeval string, body string) error
 // Execute rules for the specified phase, between 1 and 5
 // Returns true if transaction is disrupted
 func (tx *Transaction) ExecutePhase(phase int) bool {
+	if tx.Disrupted && phase != 5{
+		return true
+	}
+	if tx.LastPhase == 5{
+		return false
+	}
+	tx.LastPhase = phase
 	ts := time.Now().UnixNano()
 	usedRules := 0
 	tx.Mux.Lock()
@@ -665,6 +672,9 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 		r.Evaluate(tx)
 		tx.Capture = false //we reset the capture flag on every run
 		usedRules++
+		if tx.Disrupted {
+			break
+		}		
 	}
 	tx.Mux.Lock()
 	tx.StopWatches[phase] = int(time.Now().UnixNano() - ts)

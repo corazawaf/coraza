@@ -544,12 +544,12 @@ func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error {
 	//REGEX: ((.*?)((?<!\\)(?!\B'[^']*),(?![^']*'\B)|$))
 	//This regex splits actions by comma and assign key:values with supported escaped quotes
 	//TODO needs fixing, sometimes we empty strings as key
-	re := pcre.MustCompile(`(.*?)((?<!\\)(?!\B'[^']*),(?![^']*'\B)|$)`, 0)
-	matcher := re.MatcherString(actions, 0)
-	subject := []byte(actions)
 	if len(p.defaultActions) > 0 {
 		actions = fmt.Sprintf("%s, %s", p.defaultActions, actions)
 	}
+	re := pcre.MustCompile(`(.*?)((?<!\\)(?!\B'[^']*),(?![^']*'\B)|$)`, 0)
+	matcher := re.MatcherString(actions, 0)
+	subject := []byte(actions)
 	if len(actions) == 0 {
 		return nil
 	}

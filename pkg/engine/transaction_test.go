@@ -109,7 +109,3 @@ func TestTxMultipart(t *testing.T) {
 
 	//TODO check files
 }
-
-func TestTxPhases(t *testing.T) {
-
-}
