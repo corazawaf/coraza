@@ -17,24 +17,13 @@ package engine
 import (
 	"strings"
 	"testing"
+	"net/url"
 )
 
 var wafi = NewWaf()
 
 func TestTxSetters(t *testing.T) {
-	tx := wafi.NewTransaction()
-	ht := []string{
-		"POST /testurl.php?id=123&b=456 HTTP/1.1",
-		"Host: www.test.com:80",
-		"Cookie: test=123",
-		"Content-Type: application/x-www-form-urlencoded",
-		"X-Test-Header: test456",
-		"Content-Length: 13",
-		"",
-		"testfield=456",
-	}
-	data := strings.Join(ht, "\r\n")
-	tx.ParseRequestString(data)
+	tx := makeTransaction()
 	exp := map[string]string{
 		//TODO somehow host is being overriden
 		//"%{request_headers.host}": "www.test.com:80",
@@ -108,4 +97,108 @@ func TestTxMultipart(t *testing.T) {
 	}
 
 	//TODO check files
+}
+
+func TestTxRequestBinary(t *testing.T){
+	//ParseRequestBodyBinary
+}
+func TestTxResponse(t *testing.T){
+	//ParseResponseString
+}
+func TestTxSetters2(t *testing.T) {
+	tx := wafi.NewTransaction()
+	tx.RequestBodyAccess = true
+	//tx.AddRequestHeader
+	tx.SetRemoteUser("testuser")
+	tx.SetRequestBody("asdf", 4, "application/xml")
+	tx.SetRequestBody("asdf", 4, "application/json")
+	//SetResponseBody
+	//SetResponseHeaders
+	//SetResponseStatus
+	uri, _ := url.Parse("?id=123&name=456&test=789")
+	tx.AddGetArgsFromUrl(uri)
+	tx.AddPostArgsFromUrl(uri)
+	tx.SetRequestMethod("GET")
+	tx.SetRemoteAddress("1.1.1.1", 1234)
+	tx.ResolveRemoteHost()
+	tx.CaptureField(1, "test")
+	if tx.GetCollection("tx").Get("1")[0] != "test"{
+		t.Error("Failed to set capture")
+	}
+	tx.ResetCapture()
+	if tx.GetCollection("tx").Get("1")[0] != ""{
+		t.Error("Failed to reset capture groups")
+	}
+	//MatchRule
+	//GetStopWatch
+	//getCollections()
+	//GetRemovedTargets()
+	//IsRelevantStatus()
+	if tx.GetErrorPage() == ""{
+		t.Error("Failed to render error page")
+	}
+	//RemoveRuleTargetById
+	//RegisterPersistentCollection
+	tx.SetCapturable(false)
+	if tx.IsCapturable() {
+		t.Error("Failed to set capturable")
+	}
+	tx.SetFullRequest()
+	if tx.GetCollection("full_request").GetFirstString() == ""{
+		t.Error("Failed to set full_request")
+	}
+
+	exp := map[string]string{
+		"%{remote_user}": "testuser",
+		"%{args_post.name}": "456",
+		"%{args_get.name}": "456",
+		"%{args.name}": "456",
+		"%{remote_host}": "one.one.one.one.",
+	}
+
+	for k, v := range exp {
+		res := tx.MacroExpansion(k)
+		if res != v {
+			t.Error("Failed set transaction for " + k + ", expected " + v + ", got " + res)
+		}
+	}
+}
+
+func TestTxGetField(t *testing.T){
+	//GetField
+}
+
+func TestTxPhases(t *testing.T){
+	tx := wafi.NewTransaction()
+	tx.ExecutePhase(1)
+	if tx.LastPhase != 1{
+		t.Error("Failed to execute phase")
+	}
+	tx.Disrupted = true
+	tx.ExecutePhase(2)
+	if tx.LastPhase != 1{
+		t.Error("Phase 2 should be stopped")
+	}
+	tx.Disrupted = false
+	tx.ExecutePhase(5)
+	if tx.LastPhase != 5{
+		t.Error("Failed to execute phase 5")
+	}	
+}
+
+func makeTransaction() *Transaction{
+	tx := wafi.NewTransaction()
+	ht := []string{
+		"POST /testurl.php?id=123&b=456 HTTP/1.1",
+		"Host: www.test.com:80",
+		"Cookie: test=123",
+		"Content-Type: application/x-www-form-urlencoded",
+		"X-Test-Header: test456",
+		"Content-Length: 13",
+		"",
+		"testfield=456",
+	}
+	data := strings.Join(ht, "\r\n")
+	tx.ParseRequestString(data)
+	return tx
 }

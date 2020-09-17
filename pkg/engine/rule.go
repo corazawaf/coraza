@@ -213,12 +213,12 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 			}
 			nr = nr.Chain
 		}
-		if r.Log{
+		if r.Log {
 			tx.MatchRule(r, msgs, matchedValues)
 		}
 	}
 	if r.ParentId == 0 {
-		if r.Log{
+		if r.Log {
 			tx.MatchRule(r, []string{tx.MacroExpansion(r.Msg)}, matchedValues)
 		}
 		//we need to add disruptive actions in the end, otherwise they would be triggered without their chains.

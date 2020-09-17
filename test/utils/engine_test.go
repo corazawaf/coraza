@@ -14,11 +14,11 @@
 
 package utils
 
-import(
+import (
 	"testing"
 )
 
-func TestEngine(t *testing.T){
+func TestEngine(t *testing.T) {
 	files := []string{
 		"../data/engine/phases.yaml",
 		"../data/engine/actions.yaml",
@@ -28,14 +28,14 @@ func TestEngine(t *testing.T){
 	ts := &TestSuite{}
 	ts.Init("/dev/null")
 
-	for _, f := range files{
+	for _, f := range files {
 		err := ts.AddProfile(f)
-		if err != nil{
+		if err != nil {
 			t.Error(err)
 		}
 	}
-	ts.Start(func(a string, b bool){
-		if !b{
+	ts.Start(func(a string, b bool) {
+		if !b {
 			t.Error("Failed to run engine test: " + a)
 		}
 	})

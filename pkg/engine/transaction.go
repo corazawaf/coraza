@@ -296,9 +296,7 @@ func (tx *Transaction) SetReqBodyProcessor(processor string) {
 }
 
 func (tx *Transaction) SetRemoteUser(user string) {
-	tx.Mux.Lock()
-	defer tx.Mux.Unlock()
-	tx.Collections["remote_user"].AddToKey("", user)
+	tx.GetCollection("remote_user").AddToKey("", user)
 }
 
 //Sets request_body and request_body_length, it won't work if request_body_inspection is off
@@ -309,7 +307,7 @@ func (tx *Transaction) SetRequestBody(body string, length int64, mime string) {
 	}
 	l := strconv.FormatInt(length, 10)
 	tx.GetCollection("request_body_length").AddToKey("", l)
-	if mime == "application/xml" {
+	if mime == "application/xml" || mime == "text/xml" {
 		var err error
 		tx.XmlDoc, err = xmlquery.Parse(strings.NewReader(body))
 		if err != nil {
@@ -365,7 +363,7 @@ func (tx *Transaction) SetResponseHeaders(headers map[string][]string) {
 //Sets response_status
 func (tx *Transaction) SetResponseStatus(status int) {
 	s := strconv.Itoa(status)
-	tx.Collections["response_status"].AddToKey("", s)
+	tx.GetCollection("response_status").Set("", []string{s})
 
 }
 
@@ -425,16 +423,16 @@ func (tx *Transaction) SetRequestLine(method string, protocol string, requestUri
 
 //Adds request_line, request_method, request_protocol, request_basename and request_uri
 func (tx *Transaction) SetRequestMethod(method string) {
-	tx.Collections["request_method"].AddToKey("", method)
+	tx.GetCollection("request_method").Set("", []string{method})
 }
 
 //Resolves remote hostname and sets remote_host variable
 func (tx *Transaction) ResolveRemoteHost() {
-	addr, err := net.LookupAddr(tx.Collections["remote_addr"].GetFirstString())
+	addr, err := net.LookupAddr(tx.GetCollection("remote_addr").GetFirstString())
 	if err != nil {
 		return
 	}
-	tx.Collections["remote_host"].AddToKey("", addr[0])
+	tx.GetCollection("remote_host").Set("", []string{addr[0]})
 }
 
 //
@@ -446,9 +444,9 @@ func (tx *Transaction) CaptureField(index int, value string) {
 func (tx *Transaction) InitTxCollection() {
 	keys := []string{"args", "args_post", "args_get", "args_names", "args_post_names", "args_get_names", "query_string", "remote_addr", "request_basename", "request_uri", "tx", "remote_port",
 		"request_body", "request_content_type", "request_content_length", "request_cookies", "request_cookies_names", "request_line", "files_sizes",
-		"request_filename", "request_headers", "request_headers_names", "request_method", "request_protocol", "request_filename", "full_request",
+		"request_filename", "request_headers", "request_headers_names", "request_method", "request_protocol", "request_filename", "full_request", "remote_host",
 		"request_uri", "request_line", "response_body", "response_content_length", "response_content_type", "request_cookies", "request_uri_raw",
-		"response_headers", "response_headers_names", "response_protocol", "response_status", "appid", "id", "timestamp", "files_names", "files",
+		"response_headers", "response_headers_names", "response_protocol", "response_status", "appid", "id", "timestamp", "files_names", "files", "remote_user",
 		"files_combined_size", "reqbody_processor", "request_body_length", "xml", "matched_vars", "rule", "ip", "global", "session"}
 
 	for _, k := range keys {
@@ -529,7 +527,7 @@ func (tx *Transaction) ParseRequestObjectHeaders(req *http.Request) error {
 
 func (tx *Transaction) ParseRequestObjectBody(req *http.Request) error {
 	//phase 2
-	if req.Body == nil{
+	if req.Body == nil {
 		return nil
 	}
 	cl := tx.GetCollection("request_headers").GetSimple("content-type")
@@ -628,10 +626,10 @@ func (tx *Transaction) ParseRequestBodyBinary(mimeval string, body string) error
 // Execute rules for the specified phase, between 1 and 5
 // Returns true if transaction is disrupted
 func (tx *Transaction) ExecutePhase(phase int) bool {
-	if tx.Disrupted && phase != 5{
+	if tx.Disrupted && phase != 5 {
 		return true
 	}
-	if tx.LastPhase == 5{
+	if tx.LastPhase == 5 {
 		return false
 	}
 	tx.LastPhase = phase
@@ -677,7 +675,7 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 		usedRules++
 		if tx.Disrupted {
 			break
-		}		
+		}
 	}
 	tx.Mux.Lock()
 	tx.StopWatches[phase] = int(time.Now().UnixNano() - ts)
@@ -710,15 +708,6 @@ func (tx *Transaction) MatchRule(rule *Rule, msgs []string, match []*MatchData) 
 	}
 }
 
-func (tx *Transaction) InitCollection(key string) {
-	col := &LocalCollection{}
-	col.Init(key)
-	tx.Mux.Lock()
-	defer tx.Mux.Unlock()
-	tx.Collections[key] = col
-
-}
-
 func (tx *Transaction) ToJSON() ([]byte, error) {
 	return json.Marshal(tx)
 }
@@ -727,15 +716,6 @@ func (tx *Transaction) SetSingleCollection(key string, value string) {
 	tx.Collections[key] = &LocalCollection{}
 	tx.Collections[key].Init(key)
 	tx.Collections[key].Add("", []string{value})
-}
-
-func (tx *Transaction) GetSingleCollection(key string) string {
-	key = strings.ToLower(key)
-	col := tx.GetCollection(key)
-	if col == nil {
-		return ""
-	}
-	return col.GetFirstString()
 }
 
 func (tx *Transaction) GetTimestamp() string {
