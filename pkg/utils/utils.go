@@ -27,16 +27,18 @@ import (
 const randomchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 var Ctx = context.Background()
+var mu sync.Mutex
 
 func RandomString(length int) string {
 	bytes := make([]byte, length)
-	//There is an entropy bug here with a lot of concurrency
-	var mu sync.Mutex
+	//There is an entropy bug here with a lot of concurrency, so we need sync
+
 	mu.Lock()
 	_, err := rand.Read(bytes)
 	mu.Unlock()
 	if err != nil {
-		//...
+		// is it ok?
+		return RandomString(length)
 	}
 
 	for i, b := range bytes {
@@ -91,51 +93,11 @@ func ArrayContainsInt(arr []int, search int) bool {
 	return false
 }
 
-/*
-func GetValues(m map[string][]string) []string{
-    ret := []string{}
-    for _,v := range m{
-        ret = append(ret, v)
-    }
-    return ret
-}
-
-func GetKeys(m map[string][]string) []string{
-    ret := []string{}
-    for k,_ := range m{
-        ret = append(ret, k)
-    }
-    return ret
-}*/
-
 func ArraySlice(arr []interface{}, index int) []interface{} {
 	copy(arr[index:], arr[index+1:])
 	arr[len(arr)-1] = ""
 	arr = arr[:len(arr)-1]
 	return arr
-}
-
-func CopyMapRecursive(m map[string]interface{}) map[string]interface{} {
-	cp := make(map[string]interface{})
-	for k, v := range m {
-		vm, ok := v.(map[string]interface{})
-		if ok {
-			cp[k] = CopyMapRecursive(vm)
-		} else {
-			cp[k] = v
-		}
-	}
-
-	return cp
-}
-
-func CopyMap(m map[interface{}]interface{}) map[interface{}]interface{} {
-	cp := make(map[interface{}]interface{})
-	for k, v := range m {
-		cp[k] = v
-	}
-
-	return cp
 }
 
 func OpenFile(path string) ([]byte, error) {
@@ -159,45 +121,4 @@ func OpenFile(path string) ([]byte, error) {
 		}
 	}
 	return ret, nil
-}
-
-func StripSpaces(str string) string {
-	return strings.Replace(str, " ", "", -1)
-}
-
-func ValidHex(x byte) bool {
-	return (((x >= '0') && (x <= '9')) || ((x >= 'a') && (x <= 'f')) || ((x >= 'A') && (x <= 'F')))
-}
-
-func X2c(what string) byte {
-	var digit byte
-	if what[0] >= 'A' {
-		digit = ((what[0] & 0xdf) - 'A') + 10
-	} else {
-		digit = (what[0] - '0')
-	}
-	digit *= 16
-	if what[1] >= 'A' {
-		digit += ((what[1] & 0xdf) - 'A') + 10
-	} else {
-		digit += (what[1] - '0')
-	}
-
-	return digit
-}
-
-func IsXDigit(char int) bool {
-	c := byte(char)
-	return ValidHex(c)
-}
-
-func C2x(what byte, where []byte) []byte {
-	c2xTable := []byte("0123456789abcdef")
-	b := []byte(where)
-
-	what = what & 0xff
-	b[0] = c2xTable[what>>4]
-	b[1] = c2xTable[what&0x0f]
-
-	return b
 }

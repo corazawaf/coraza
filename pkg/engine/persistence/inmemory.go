@@ -14,20 +14,39 @@
 
 package persistence
 
+import(
+	ttlcache"github.com/ReneKroon/ttlcache/v2"
+	"time"
+	"errors"
+)
+
 type MemoryEngine struct {
-	data map[string]map[string][]string
+	//data map[string]map[string][]string
+	data *ttlcache.Cache
 }
 
 func (r *MemoryEngine) Init(url string) error {
-	r.data = map[string]map[string][]string{}
+	r.data = ttlcache.NewCache()
+	//TODO r.data.close()
+	r.data.SetTTL(time.Duration(1000 * time.Second))
 	return nil
 }
 
 func (r *MemoryEngine) Get(key string) map[string][]string {
-	return r.data[key]
+	if value, exists := r.data.Get(key); exists == nil {
+		return value.(map[string][]string)
+	}
+	return nil
 }
 
-func (r *MemoryEngine) Set(key string, data map[string][]string) error {
-	r.data[key] = data
+func (r *MemoryEngine) Set(key string, value map[string][]string) error {
+	r.data.SetWithTTL(key, value, 1000*time.Second)
+	return nil
+}
+
+func (r *MemoryEngine) Delete(key string) error {
+	if result := r.data.Remove(key); result == ttlcache.ErrNotFound {
+		return errors.New("Key not found")
+	}
 	return nil
 }

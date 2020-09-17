@@ -529,6 +529,9 @@ func (tx *Transaction) ParseRequestObjectHeaders(req *http.Request) error {
 
 func (tx *Transaction) ParseRequestObjectBody(req *http.Request) error {
 	//phase 2
+	if req.Body == nil{
+		return nil
+	}
 	cl := tx.GetCollection("request_headers").GetSimple("content-type")
 	ctype := "text/plain"
 	ct := ""
