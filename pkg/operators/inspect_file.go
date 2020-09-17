@@ -31,6 +31,8 @@ func (o *InspectFile) Init(data string) {
 
 func (o *InspectFile) Evaluate(tx *engine.Transaction, value string) bool {
 	//TODO parametrize timeout
+	//TODO add relative path capabilities
+	//TODO add lua special support
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	//Add /bin/bash to context?

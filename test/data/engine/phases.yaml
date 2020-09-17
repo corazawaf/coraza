@@ -1,0 +1,25 @@
+---
+  meta:
+    author: jptosso
+    description: Test if the 5 transaction phase are being executed
+    enabled: true
+    name: phases.yaml
+  tests:
+  -
+    test_title: phases
+    stages:
+    -
+      stage:
+        output:
+          triggered_rules:
+            - 1
+            - 2
+            - 3
+            - 4
+            - 5
+  rules: |
+    SecAction "id: 1, phase: 1, log, pass"
+    SecAction "id: 2, phase: 2, log, pass"
+    SecAction "id: 3, phase: 3, log, pass"
+    SecAction "id: 4, phase: 4, log, pass"
+    SecAction "id: 5, phase: 5, log, pass"

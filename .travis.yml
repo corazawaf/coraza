@@ -24,7 +24,6 @@ script:
   # Execute some tests
   - mkdir /tmp/audit
   - go test ./... -coverprofile=docs/coverage-waf.out
-  - go run cmd/testsuite/main.go -path test/data -rules test/data/test-rules.conf
   # And finally run the SonarQube analysis - read the "sonar-project.properties"
   # file to see the specific configuration
   - sonar-scanner

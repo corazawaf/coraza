@@ -1,0 +1,42 @@
+---
+  meta:
+    author: jptosso
+    description: Test if the directives work
+    enabled: true
+    name: directives.yaml
+  tests:
+  -
+    test_title: directives
+    stages:
+    -
+      stage:
+        output:
+          triggered_rules:
+            - 1
+            - 7
+            - 9
+          non_triggered_rules:
+            - 2
+            - 4
+            - 5
+            - 6
+            - 8
+  rules: |
+    SecDefaultAction log
+
+    SecAction "id: 1"
+    SecAction "id: 2, nolog, skipAfter:test-mark"
+
+    SecAction "id: 4"
+    SecAction "id: 5"
+    SecAction "id: 6"
+
+    SecMarker test-mark
+    SecAction "id: 7, skipAfter: test-mark3"
+
+    SecMarker test-mark2
+    SecAction "id: 8"
+    SecMarker test-mark3
+    SecAction "id: 9"
+
+

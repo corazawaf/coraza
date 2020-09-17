@@ -23,7 +23,7 @@ func ActionsMap() map[string]engine.Action {
 		// #### Flow Actions ####
 		//Sets variables for the transaction and rule
 		"chain": &Chain{},
-		//"skip": &Skip{},
+		"skip": &Skip{},
 		"skipAfter": &SkipAfter{},
 
 		// #### Metadata Actions ####
@@ -53,9 +53,11 @@ func ActionsMap() map[string]engine.Action {
 		//"deprecateVar": &DeprecateVar{},
 		"initcol":    &InitCol{},
 		"log":        &Log{},
+		"auditlog":   &Log{}, //Just an alias
 		"logdata":    &Logdata{},
 		"multiMatch": &MultiMatch{},
 		"nolog":      &Nolog{},
+		"noauditlog": &Nolog{}, //Just an alias
 		//"prepend": &Prepend{},
 		//"sanitiseArg": &SanitiseArg{},
 		//"sanitiseMatched": &SanitiseMatched{},

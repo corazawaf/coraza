@@ -213,10 +213,14 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 			}
 			nr = nr.Chain
 		}
-		tx.MatchRule(r, msgs, matchedValues)
+		if r.Log{
+			tx.MatchRule(r, msgs, matchedValues)
+		}
 	}
 	if r.ParentId == 0 {
-		tx.MatchRule(r, []string{tx.MacroExpansion(r.Msg)}, matchedValues)
+		if r.Log{
+			tx.MatchRule(r, []string{tx.MacroExpansion(r.Msg)}, matchedValues)
+		}
 		//we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
 		for _, a := range r.Actions {
 			if a.GetType() == ACTION_TYPE_DISRUPTIVE || a.GetType() == ACTION_TYPE_FLOW {
