@@ -43,12 +43,7 @@ func TestTxSetters(t *testing.T) {
 		"%{id}":                            tx.Id,
 	}
 
-	for k, v := range exp {
-		res := tx.MacroExpansion(k)
-		if res != v {
-			t.Error("Failed set transaction for " + k + ", expected " + v + ", got " + res)
-		}
-	}
+	validateMacroExpansion(exp, tx, t)
 }
 
 func TestTxMultipart(t *testing.T) {
@@ -89,32 +84,52 @@ func TestTxMultipart(t *testing.T) {
 		"%{files_combined_size}": "69",
 	}
 
-	for k, v := range exp {
-		res := tx.MacroExpansion(k)
-		if res != v {
-			t.Error("Failed set transaction for multipart " + k + ", expected " + v + ", got " + res)
-		}
-	}
+	validateMacroExpansion(exp, tx, t)
 
 	//TODO check files
 }
 
-func TestTxRequestBinary(t *testing.T){
-	//ParseRequestBodyBinary
-}
 func TestTxResponse(t *testing.T){
-	//ParseResponseString
+	tx := wafi.NewTransaction()
+	ht := []string{
+		"HTTP/1.1 200 OK",
+		"Content-Type: text/html",
+		"Last-Modified: Mon, 14 Sep 2020 21:10:42 GMT",
+		"Accept-Ranges: bytes",
+		"ETag: \"0b5f480db8ad61:0\"",
+		"Vary: Accept-Encoding",
+		"Server: Microsoft-IIS/8.5",
+		"Content-Security-Policy: default-src: https:; frame-ancestors 'self' X-Frame-Options: SAMEORIGIN",
+		"Strict-Transport-Security: max-age=31536000; includeSubDomains; preload",
+		"Date: Wed, 16 Sep 2020 14:14:09 GMT",
+		"Connection: close",
+		"Content-Length: 10",
+		"",
+		"testcontent",
+	}
+	data := strings.Join(ht, "\r\n")	
+	tx.ParseResponseString(nil, data)
+
+	exp := map[string]string{
+		"%{response_headers.server}": "Microsoft-IIS/8.5",
+	}
+
+	validateMacroExpansion(exp, tx, t)
 }
+
 func TestTxSetters2(t *testing.T) {
 	tx := wafi.NewTransaction()
 	tx.RequestBodyAccess = true
-	//tx.AddRequestHeader
+	tx.AddRequestHeader("testheader", "testvalue")
+	tx.AddRequestHeader("testheader2", "testvalue2")
 	tx.SetRemoteUser("testuser")
 	tx.SetRequestBody("asdf", 4, "application/xml")
 	tx.SetRequestBody("asdf", 4, "application/json")
 	//SetResponseBody
-	//SetResponseHeaders
-	//SetResponseStatus
+	tx.SetResponseHeaders(map[string][]string{
+		"test": []string{ "testvalue" },
+		})
+	tx.SetResponseStatus(200)
 	uri, _ := url.Parse("?id=123&name=456&test=789")
 	tx.AddGetArgsFromUrl(uri)
 	tx.AddPostArgsFromUrl(uri)
@@ -154,14 +169,12 @@ func TestTxSetters2(t *testing.T) {
 		"%{args_get.name}": "456",
 		"%{args.name}": "456",
 		"%{remote_host}": "one.one.one.one.",
+		"%{request_headers.testheader}": "testvalue",
+		"%{request_headers.testheader2}": "testvalue2",
+		"%{response_headers.test}": "testvalue",
 	}
 
-	for k, v := range exp {
-		res := tx.MacroExpansion(k)
-		if res != v {
-			t.Error("Failed set transaction for " + k + ", expected " + v + ", got " + res)
-		}
-	}
+	validateMacroExpansion(exp, tx, t)
 }
 
 func TestTxGetField(t *testing.T){
@@ -201,4 +214,13 @@ func makeTransaction() *Transaction{
 	data := strings.Join(ht, "\r\n")
 	tx.ParseRequestString(data)
 	return tx
+}
+
+func validateMacroExpansion(tests map[string]string, tx *Transaction, t *testing.T) {
+	for k, v := range tests {
+		res := tx.MacroExpansion(k)
+		if res != v {
+			t.Error("Failed set transaction for " + k + ", expected " + v + ", got " + res)
+		}
+	}
 }
