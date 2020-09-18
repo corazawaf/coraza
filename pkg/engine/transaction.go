@@ -23,7 +23,6 @@ import (
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
-	"mime"
 	"mime/multipart"
 	"net"
 	"net/http"
@@ -579,47 +578,6 @@ func (tx *Transaction) ParseResponseObject(res *http.Response) error {
 	}
 	//TODO response body
 	tx.ExecutePhase(4)
-	return nil
-}
-
-// Parse request body from a string
-// Avoid it as it is a heavy load operation
-func (tx *Transaction) ParseRequestBodyBinary(mimeval string, body string) error {
-	// Maybe it would be easier to create an http instance with fake headers and append the body
-	_, params, _ := mime.ParseMediaType(mimeval)
-	boundary := params["boundary"]
-	mr := multipart.NewReader(strings.NewReader(body), boundary)
-	files := map[string][]*multipart.FileHeader{}
-	args := map[string][]string{}
-	for {
-		p, err := mr.NextPart()
-		if err != nil {
-			break
-		}
-		data, err := ioutil.ReadAll(p)
-		if err != nil {
-			return err
-		}
-		key := p.FormName()
-		file := p.FileName()
-		mpf := &multipart.FileHeader{
-			Filename: file,
-			Header:   p.Header,
-			Size:     int64(len(data)),
-		}
-		if files[key] == nil {
-			files[key] = []*multipart.FileHeader{mpf}
-		} else {
-			files[key] = append(files[key], mpf)
-		}
-		if args[key] == nil {
-			args[key] = []string{string(data)}
-		} else {
-			args[key] = append(args[key], string(data))
-		}
-	}
-	tx.SetFiles(files)
-	tx.SetArgsPost(args)
 	return nil
 }
 
