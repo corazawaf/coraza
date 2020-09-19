@@ -108,6 +108,7 @@ func doUtf8ToUnicode(input string) string {
 						curr++
 						break
 					case 4:
+						break
 					case 5:
 						break
 					}
@@ -161,6 +162,7 @@ func doUtf8ToUnicode(input string) string {
 						curr++
 						break
 					case 4:
+						break
 					case 5:
 						break
 					}
@@ -224,6 +226,7 @@ func doUtf8ToUnicode(input string) string {
 						curr++
 						break
 					case 4:
+						break
 					case 5:
 						break
 					}

@@ -1,6 +1,6 @@
 # Go parameters
 GOCMD=go
-ENTRYFILE=cmd/coraza-waf/*.go
+ENTRYFILE=cmd/coraza-waf/skipper.go cmd/coraza-waf/main.go
 GOBUILD=$(GOCMD) build -ldflags "-w -s" $(ENTRYFILE)
 GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
