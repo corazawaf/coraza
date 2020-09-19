@@ -32,50 +32,30 @@ replacing all multiple spaces (including tab, newline, etc.) into one space
 transform all characters to lowercase
 */
 func CmdLine(data string) string {
-	space := 0
+	space := false
 	ret := ""
 	for _, a := range data {
-		switch a {
-		/* remove some characters */
-		case '"':
-		case '\'':
-		case '\\':
-		case '^':
-			break
-
-		/* replace some characters to space (only one) */
-		case ' ':
-		case ',':
-		case ';':
-		case '\t':
-		case '\r':
-		case '\n':
-			if space == 0 {
-
+		if a == '"' || a == '\'' || a == '\\' || a == '^' { 
+			/* remove some characters */			
+		}else if a == ' ' || a == ',' || a == ';' || a == '\t' || a == '\r' || a == '\n' {
+			/* replace some characters to space (only one) */
+			if !space {
 				ret += " "
-				space++
+				space = true
 			}
-			break
-
-		/* remove space before / or ( */
-		case '/':
-		case '(':
-			if space != 0 {
-				ret = ret[0 : len(ret)-2] //TODO: CHECK
-				//ret.pop_back();
+		}else if a == '/' || a == '(' {
+			/* remove space before / or ( */
+			if space {
+				ret = ret[: len(ret)-1]
 			}
-			space = 0
+			space = false
 
 			ret += string(a)
-			break
-
-		/* copy normal characters */
-		default:
+		}else{
 			b := strings.ToLower(string(a))
 			ret += b
-			space = 0
-			break
+			space = false
 		}
 	}
-	return data
+	return ret
 }
