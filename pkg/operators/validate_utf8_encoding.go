@@ -32,6 +32,7 @@ func (o *ValidateUtf8Encoding) Init(data string) {
 }
 
 func (o *ValidateUtf8Encoding) Evaluate(tx *engine.Transaction, value string) bool {
+	//TODO https://golang.org/pkg/unicode/utf8/#ValidString should be enough but it fails (?)
 	str_c := []byte(value)
 	bytes_left := len(str_c)
 	for i := 0; i < len(value); {

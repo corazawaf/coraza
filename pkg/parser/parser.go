@@ -120,7 +120,7 @@ func (p *Parser) Evaluate(data string) error {
 		if directive == key {
 			re, _ := regexp.Compile(regex)
 			if !re.MatchString(opts) {
-				return p.log("Invalid arguments for directive " + directive)
+				return p.log("Invalid arguments for directive " + directive + ", got " + opts)
 			}
 			break
 		}
@@ -139,10 +139,18 @@ func (p *Parser) Evaluate(data string) error {
 		p.waf.AuditLogPath = opts
 		break
 	case "SecAuditLogDirMode":
-		p.waf.AuditLogDirMode, _ = strconv.Atoi(opts)
+		mode := 0600
+		if opts != "default"{
+			mode, _ = strconv.Atoi(opts)
+		}
+		p.waf.AuditLogDirMode = mode
 		break
 	case "SecAuditLogFileMode":
-		p.waf.AuditLogFileMode, _ = strconv.Atoi(opts)
+		mode := 0600
+		if opts != "default"{
+			mode, _ = strconv.Atoi(opts)
+		}		
+		p.waf.AuditLogFileMode = mode
 		break
 	case "SecAuditLogParts":
 		p.waf.AuditLogParts = []rune{}

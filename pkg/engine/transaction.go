@@ -343,7 +343,7 @@ func (tx *Transaction) SetResponseBody(body string, length int64) {
 	if !tx.ResponseBodyAccess || length > tx.ResponseBodyLimit {
 		return
 	}
-	l := fmt.Sprintf("%d", length)
+	l := strconv.FormatInt(length, 10)
 	tx.Collections["response_body"].AddToKey("", body)
 	tx.Collections["response_body_length"].AddToKey("", l)
 }

@@ -17,6 +17,7 @@ package parser
 import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"testing"
+	"strings"
 )
 
 func TestString(t *testing.T) {
@@ -129,18 +130,24 @@ func TestString4(t *testing.T) {
  */
 
  func TestDirectives(t *testing.T) {
-	rule := `
-	SecAuditLogDirMode
-	SecAuditLogFileMode
-	SecAuditLogType
-	SecCollectionTimeout
-	SecContentInjection
-	SecHashEngine
-	
-	`
+	data := []string{
+		"SecAuditLogDirMode 777",
+		"SecAuditLogFileMode 777",
+		"SecAuditLogType Concurrent",
+		"SecCollectionTimeout 1000",
+		"SecContentInjection On",
+		"SecHashEngine On",
+	}
 	waf := &engine.Waf{}
 	waf.Init()
 	p := &Parser{}
 	p.Init(waf)
-	p.Evaluate(rule)
+	p.FromString(strings.Join(data, "\n"))
+
+	if waf.AuditLogFileMode != 777{
+		t.Error("Failed to set log file mode")
+	}
+	if waf.AuditLogDirMode != 777{
+		t.Error("Failed to set log file mode")
+	}
 }
