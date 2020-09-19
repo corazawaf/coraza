@@ -13,3 +13,26 @@
 // limitations under the License.
 
 package engine
+
+import(
+	"testing"
+)
+
+func TestLocalCollection(t *testing.T){
+	lc := NewCollection("test")
+
+	lc.InitCollection("test2")
+	if lc.Data["test2"] == nil {
+		t.Error("Failed to initialize Local Collection")
+	}
+
+	lc.Update("test2", []string{"test3"})
+	if lc.GetData()["test2"][0] != "test3"{
+		t.Error("Failed to update local collection")
+	}
+
+	lc.Remove("test2")
+	if lc.GetData()["test2"] != nil {
+		t.Error("Failed to remove from local collection")
+	}
+}

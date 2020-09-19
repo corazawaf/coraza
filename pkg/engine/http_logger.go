@@ -51,15 +51,17 @@ func (hl *HttpLogger) start() {
 			next := hl.next()
 			//We could use statistical models to adjust this time
 			if next == nil {
-				time.Sleep(10 * time.Millisecond)
-				continue
-			} else {
 				time.Sleep(1 * time.Millisecond)
+				continue
 			}
 			err := hl.upload(next.ToAuditLog())
 			if err != nil {
 				hl.LastError = err
 				hl.Add(next)
+			}else{
+				hl.mux.Lock()
+				hl.UploadCount++
+				hl.mux.Unlock()
 			}
 		}
 		defer hl.wg.Done()
@@ -72,7 +74,6 @@ func (hl *HttpLogger) next() *Transaction {
 	if len(hl.queue) == 0 {
 		return nil
 	}
-	hl.UploadCount += 1
 	n := hl.queue[0]
 	hl.queue = hl.queue[1:]
 	return n
