@@ -29,7 +29,20 @@ func TestWAFInitialize(t *testing.T) {
 }
 
 func TestGeoIP(t *testing.T) {
+	w := NewWaf()
+	err := w.InitGeoip("")
+	if err == nil {
+		t.Error("Invalid geoip location shouldnt work")
+	}
+}
 
+func TestPersistenceInit(t *testing.T){
+	w := NewWaf()
+
+	err := w.InitPersistenceEngine("inmemory://")
+	if err != nil {
+		t.Error("Failed to init persistence engine")
+	}
 }
 
 func TestNewTransaction(t *testing.T) {

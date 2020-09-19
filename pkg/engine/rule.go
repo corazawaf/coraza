@@ -153,6 +153,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 				}
 			}
 		}
+		
 		if len(values) == 0 {
 			if r.executeOperator("", tx) {
 				matchedValues = append(matchedValues, &MatchData{})
@@ -240,8 +241,7 @@ func (r *Rule) executeOperator(data string, tx *Transaction) bool {
 }
 
 func (r *Rule) executeTransformationsMultimatch(value string) []string {
-	//Im not already sure if multimatch is cumulative or not... if not we should just make value constant
-	res := []string{}
+	res := []string{ value }
 	for _, t := range r.Transformations {
 		rf := reflect.ValueOf(t.TfFunc)
 		rargs := make([]reflect.Value, 1)

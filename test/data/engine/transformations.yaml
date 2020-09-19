@@ -1,0 +1,26 @@
+---
+  meta:
+    author: jptosso
+    description: Test if the transformations work
+    enabled: true
+    name: transformations.yaml
+  tests:
+  -
+    test_title: transformations
+    stages:
+    -
+      stage:
+        input:
+            headers: 
+              test: 1234
+              test2: 456
+        output:
+          triggered_rules:
+            - 777
+          non_triggered_rules:
+            - 778
+  rules: |
+    # multimatch transformations
+    SecRule REQUEST_HEADERS "1234" "id: 777, phase:1, log, multiMatch, t:md5"
+    SecRule REQUEST_HEADERS "1234" "id: 778, phase:1, log, t:md5"
+
