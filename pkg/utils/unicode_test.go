@@ -19,6 +19,7 @@ import (
 )
 
 func TestUnicode(t *testing.T) {
+	InitUnicodeMapping()
 	uni := &Unicode{}
 	uni.Init()
 	if uni.At(0x00a1) != 0x21 {
