@@ -304,6 +304,7 @@ func (tx *Transaction) SetRequestBody(body string, length int64, mime string) {
 	if !tx.RequestBodyAccess || (tx.RequestBodyLimit > 0 && length > tx.RequestBodyLimit) {
 		return
 	}
+
 	l := strconv.FormatInt(length, 10)
 	tx.GetCollection("request_body_length").AddToKey("", l)
 	if mime == "application/xml" || mime == "text/xml" {
@@ -561,7 +562,6 @@ func (tx *Transaction) ParseRequestObjectBody(req *http.Request) error {
 		break
 	}
 	body, err := ioutil.ReadAll(req.Body)
-	//TODO BUFFERING
 	if err != nil {
 		return err
 	}
@@ -708,7 +708,7 @@ func (tx *Transaction) GetField(collection string, key string, exceptions []stri
 		res := []*MatchData{}
 		for _, d := range data {
 			res = append(res, &MatchData{
-				Collection: "XML",
+				Collection: "xml",
 				Value:      d.InnerText(),
 			})
 		}

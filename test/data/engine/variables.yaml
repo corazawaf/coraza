@@ -16,5 +16,20 @@
           triggered_rules:
             - 1
           non_triggered_rules:
+    -
+      stage:
+        input:
+            uri: /index.php?t1=aaa&t2=bbb&t3=ccc
+            method: POST
+            headers:
+                content-type: application/xml
+            data: "<?xml version=\"1.0\"?><xml><Cs7QAF attribute_name=\"attribute_value\">test123</Cs7QAF></xml>"         
+        output:
+          triggered_rules:
+            - 1
+            - 2
+          non_triggered_rules:            
   rules: |
+    SecRequestBodyAccess On
     SecRule &ARGS_GET:/t.*/ "@gt 2" "id: 1, block, log"
+    SecRule XML:/*|XML://@* "test123" "id:2, phase:2,log"

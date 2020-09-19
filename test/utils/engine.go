@@ -192,7 +192,12 @@ func parseInputData(input interface{}, tx *engine.Transaction) {
 	case reflect.String:
 		data = input.(string)
 	}
-	tx.ParseRequestString(data)
+	ct := ""
+	cto := tx.GetCollection("request_headers").Get("content-type")
+	if len(cto) > 0 {
+		ct = cto[0]
+	}
+	tx.SetRequestBody(data, int64(len(data)), ct)
 }
 
 type testProfile struct {

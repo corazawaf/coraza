@@ -145,8 +145,10 @@ func TestTxSetters2(t *testing.T) {
 		t.Error("Failed to reset capture groups")
 	}
 	//MatchRule
-	//GetStopWatch
-	//getCollections()
+	tx.GetStopWatch()
+	if tx.GetCollections() == nil {
+		t.Error("Failed to initialize TX collections")
+	}
 	//GetRemovedTargets()
 	//IsRelevantStatus()
 	if tx.GetErrorPage() == ""{
@@ -163,7 +165,14 @@ func TestTxSetters2(t *testing.T) {
 			t.Error("Failed to create rule remove target by id")
 		}
 	}
-	//RegisterPersistentCollection
+
+	pc := &PersistentCollection{}
+	//pc.Init("test")
+	tx.RegisterPersistentCollection("test", pc)
+	if tx.PersistentCollections["test"] == nil {
+		t.Error("Failed to initialize persistent collection")
+	}
+
 	tx.SetCapturable(false)
 	if tx.IsCapturable() {
 		t.Error("Failed to set capturable")
