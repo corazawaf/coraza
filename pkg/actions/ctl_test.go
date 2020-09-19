@@ -45,10 +45,24 @@ func TestCtl(t *testing.T) {
 		}
 	}
 
-	ctl.Init(r, "auditEngine=off")
+	ctl.Init(r, "auditEngine=Off")
 	ctl.Evaluate(r, tx)
 
 	if tx.AuditEngine != engine.AUDIT_LOG_DISABLED {
 		t.Error("Failed to disable audit log")
+	}
+
+	ctl.Init(r, "ruleEngine=Off")
+	ctl.Evaluate(r, tx)
+
+	if tx.RuleEngine {
+		t.Error("Failed to disable rule engine")
+	}	
+
+	ctl.Init(r, "requestBodyLimit=12345")	
+	ctl.Evaluate(r, tx)
+
+	if tx.RequestBodyLimit != 12345 {
+		t.Error("Failed to set request body limit")
 	}
 }

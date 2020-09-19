@@ -127,3 +127,20 @@ func TestString4(t *testing.T) {
 * Directives
 * TODO There should be an elegant way to separate them from the parser
  */
+
+ func TestDirectives(t *testing.T) {
+	rule := `
+	SecAuditLogDirMode
+	SecAuditLogFileMode
+	SecAuditLogType
+	SecCollectionTimeout
+	SecContentInjection
+	SecHashEngine
+	
+	`
+	waf := &engine.Waf{}
+	waf.Init()
+	p := &Parser{}
+	p.Init(waf)
+	p.Evaluate(rule)
+}
