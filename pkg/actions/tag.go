@@ -22,7 +22,7 @@ type Tag struct {
 }
 
 func (a *Tag) Init(r *engine.Rule, data string) string {
-	r.Tags = append(r.Tags, data[1:len(data)-1])
+	r.Tags = append(r.Tags, data)
 	return ""
 }
 

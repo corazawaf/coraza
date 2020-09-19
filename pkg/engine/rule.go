@@ -129,20 +129,17 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 	ecol := tx.GetRemovedTargets(r.Id)
 	for _, v := range r.Variables {
 		values := []*MatchData{}
+		exceptions := make([]string, len(v.Exceptions))
+		copy(exceptions, v.Exceptions)
 		if ecol != nil {
-			ignore := false
 			for _, c := range ecol {
-				if c.Name == v.Collection && c.Key == v.Key {
-					ignore = true
-					break
+				if c.Name == v.Collection {
+					exceptions = append(exceptions, c.Key)
 				}
-			}
-			if ignore {
-				continue
 			}
 		}
 
-		values = tx.GetField(v.Collection, v.Key, v.Exceptions)
+		values = tx.GetField(v.Collection, v.Key, exceptions)
 		if v.Count {
 			if v.Key != "" && len(values) == 1 {
 				values[0].Value = strconv.Itoa(len(values[0].Value))

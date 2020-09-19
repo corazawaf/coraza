@@ -23,6 +23,7 @@ func TestEngine(t *testing.T) {
 		"../data/engine/phases.yaml",
 		"../data/engine/actions.yaml",
 		"../data/engine/directives.yaml",
+		"../data/engine/ctl.yaml",
 	}
 
 	ts := &TestSuite{}
