@@ -152,7 +152,17 @@ func TestTxSetters2(t *testing.T) {
 	if tx.GetErrorPage() == ""{
 		t.Error("Failed to render error page")
 	}
-	//RemoveRuleTargetById
+
+
+	tx.RemoveRuleTargetById(1, "col", "key")
+	if len(tx.RuleRemoveTargetById) == 0 || len(tx.RuleRemoveTargetById[1]) == 0{
+		t.Error("Failed to remove rule target by id")
+	}else{
+		ctl := tx.RuleRemoveTargetById[1][0]
+		if ctl.Name != "col" || ctl.Key != "key" {
+			t.Error("Failed to create rule remove target by id")
+		}
+	}
 	//RegisterPersistentCollection
 	tx.SetCapturable(false)
 	if tx.IsCapturable() {

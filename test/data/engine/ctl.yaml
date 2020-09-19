@@ -1,0 +1,34 @@
+---
+  meta:
+    author: jptosso
+    description: Test if the ctl action works
+    enabled: true
+    name: ctl.yaml
+  tests:
+  -
+    test_title: actions
+    stages:
+    -
+      stage:
+        input:
+            uri: /test.php?id=1234
+        output:
+          triggered_rules:
+            - 1
+            - 4
+          non_triggered_rules:
+            - 2
+            - 3
+            - 5
+  rules: |
+    SecAction "id: 1, phase: 1, ctl:ruleRemoveByTag=test, \
+        ctl:ruleRemoveByMsg=test, \
+        ctl:ruleRemoveTargetById=5;ARGS:id, \
+        log"
+    SecAction "id: 2, phase: 1, log, tag:test"
+    SecAction "id: 3, phase: 1, log, msg:'test'"
+
+    # this rule should match
+    SecRule ARGS "1234" "id: 4, phase: 1, log"
+    # this rule shouldn't match because of the CTL
+    SecRule ARGS "1234" "id: 5, phase: 1, log"

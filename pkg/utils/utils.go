@@ -63,7 +63,10 @@ func RemoveQuotes(s string) string {
 		return ""
 	}
 	s = strings.TrimSuffix(s, `"`)
-	return strings.TrimPrefix(s, `"`)
+	s = strings.TrimPrefix(s, `"`)
+	s = strings.TrimSuffix(s, `'`)
+	s = strings.TrimPrefix(s, `'`)
+	return s
 }
 
 func StringInSlice(a string, list []string) bool {
