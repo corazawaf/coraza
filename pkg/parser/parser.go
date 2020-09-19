@@ -24,13 +24,10 @@ import (
 	"github.com/jptosso/coraza-waf/pkg/operators"
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	log "github.com/sirupsen/logrus"
-	"io/ioutil"
-	"net/http"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type Parser struct {
@@ -123,7 +120,7 @@ func (p *Parser) Evaluate(data string) error {
 		if directive == key {
 			re, _ := regexp.Compile(regex)
 			if !re.MatchString(opts) {
-				return p.log("Invalid arguments for directive " + directive)
+				return p.log("Invalid arguments for directive " + directive + ", got " + opts)
 			}
 			break
 		}
@@ -142,10 +139,18 @@ func (p *Parser) Evaluate(data string) error {
 		p.waf.AuditLogPath = opts
 		break
 	case "SecAuditLogDirMode":
-		p.waf.AuditLogDirMode, _ = strconv.Atoi(opts)
+		mode := 0600
+		if opts != "default"{
+			mode, _ = strconv.Atoi(opts)
+		}
+		p.waf.AuditLogDirMode = mode
 		break
 	case "SecAuditLogFileMode":
-		p.waf.AuditLogFileMode, _ = strconv.Atoi(opts)
+		mode := 0600
+		if opts != "default"{
+			mode, _ = strconv.Atoi(opts)
+		}		
+		p.waf.AuditLogFileMode = mode
 		break
 	case "SecAuditLogParts":
 		p.waf.AuditLogParts = []rune{}
@@ -243,25 +248,14 @@ func (p *Parser) Evaluate(data string) error {
 		p.log("SecConnWriteStateLimit is not supported yet.")
 		break
 	case "SecRemoteRules":
-		log.Warn("SecRemoteRules is experimental, use with caution")
-		spl := strings.SplitN(opts, " ", 2)
-		key := spl[0]
-		url := spl[1]
-		client := &http.Client{
-			Timeout: time.Second * 30,
-		}
-		req, _ := http.NewRequest("GET", url, nil)
-		req.Header.Set("ModSec-key", key)
-		res, err := client.Do(req)
-		if err != nil {
+		data, err := utils.OpenFile(opts)
+		if err != nil || p.FromString(string(data)) != nil {
 			if p.waf.AbortOnRemoteRulesFail {
-				return p.log("Unable to fetch remote rules")
+				return p.log("Failed to parse remote rules")
+			}else{
+				return err
 			}
-			return err
 		}
-		defer res.Body.Close()
-		b, _ := ioutil.ReadAll(res.Body)
-		p.FromString(string(b))
 		break
 	case "SecRemoteRulesFailAction":
 		p.waf.AbortOnRemoteRulesFail = (opts == "Abort")
@@ -309,9 +303,10 @@ func (p *Parser) Evaluate(data string) error {
 		p.log("SecRuleUpdateActionById is not supported yet.")
 		break
 	case "SecRuleUpdateTargetById":
-		spl := strings.SplitN(opts, " ", 2)
+		/*spl := strings.SplitN(opts, " ", 2)
 		id, _ := strconv.Atoi(spl[0])
 		p.waf.Rules.FindById(id)
+		*/
 		p.log("SecRuleUpdateTargetById is not supported yet.")
 		break
 	case "SecRuleUpdateTargetByMsg":

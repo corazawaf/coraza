@@ -28,6 +28,7 @@ func TestCLogFileCreation(t *testing.T) {
 	waf.Init()
 	waf.InitLogger()
 	tx := waf.NewTransaction()
+	tx.AuditLogParts = []rune("ABCDEFGHIJKZ")
 	waf.Logger.WriteAudit(tx)
 	fpath, fname := tx.GetAuditPath()
 	if _, err := os.Stat(fpath); os.IsNotExist(err) {

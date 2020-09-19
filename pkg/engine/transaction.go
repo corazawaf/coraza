@@ -16,7 +16,6 @@ package engine
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/antchfx/xmlquery"
@@ -304,6 +303,7 @@ func (tx *Transaction) SetRequestBody(body string, length int64, mime string) {
 	if !tx.RequestBodyAccess || (tx.RequestBodyLimit > 0 && length > tx.RequestBodyLimit) {
 		return
 	}
+
 	l := strconv.FormatInt(length, 10)
 	tx.GetCollection("request_body_length").AddToKey("", l)
 	if mime == "application/xml" || mime == "text/xml" {
@@ -343,7 +343,7 @@ func (tx *Transaction) SetResponseBody(body string, length int64) {
 	if !tx.ResponseBodyAccess || length > tx.ResponseBodyLimit {
 		return
 	}
-	l := fmt.Sprintf("%d", length)
+	l := strconv.FormatInt(length, 10)
 	tx.Collections["response_body"].AddToKey("", body)
 	tx.Collections["response_body_length"].AddToKey("", l)
 }
@@ -561,7 +561,6 @@ func (tx *Transaction) ParseRequestObjectBody(req *http.Request) error {
 		break
 	}
 	body, err := ioutil.ReadAll(req.Body)
-	//TODO BUFFERING
 	if err != nil {
 		return err
 	}
@@ -708,7 +707,7 @@ func (tx *Transaction) GetField(collection string, key string, exceptions []stri
 		res := []*MatchData{}
 		for _, d := range data {
 			res = append(res, &MatchData{
-				Collection: "XML",
+				Collection: "xml",
 				Value:      d.InnerText(),
 			})
 		}
@@ -790,34 +789,7 @@ func (tx *Transaction) SaveLog() error {
 func (tx *Transaction) GetErrorPage() string {
 	switch tx.WafInstance.ErrorPageMethod {
 	case ERROR_PAGE_DEBUG:
-		buff := "<link href=\"https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css\" rel=\"stylesheet\">"
-		buff += "<h1>Coraza Security Error - Debug Mode</h1>"
-		buff += "<h3>Rules Triggered</h3>"
-		buff += "<table class='table table-striped'><thead><tr><th>ID</th><th>Action</th><th>Msg</th><th>Match</th><th>Raw Rule</th></tr></thead><tbody>"
-		/*
-		   for _, mr := range tx.MatchedRules{
-		       match := strings.Join(mr.MatchedData, "<br>")
-		       rule := mr.Rule.Raw
-		       for child := mr.Rule.Chain; child != nil; child = child.Chain{
-		           rule += "<br><strong>CHAIN:</strong> " + child.Raw
-		       }
-		       buff += fmt.Sprintf("<tr><td>%d</td><td>%d</td><td></td><td>%s</td><td>%s</td></tr>", mr.Id, mr.DisruptiveAction, match, rule)
-		   }*/
-		buff += "</tbody></table>"
-
-		buff += "<h3>Transaction Collections</h3>"
-		buff += "<table class='table table-striped'><thead><tr><th>Collection</th><th>Key</th><th>Values</th></tr></thead><tbody>"
-		for key, col := range tx.GetCollections() {
-			for k2, data := range col.Data {
-				d := strings.Join(data, "<br>")
-				buff += fmt.Sprintf("<tr><td>%s</td><td>%s</td><td>%s</td></tr>", key, k2, d)
-			}
-		}
-		buff += "</tbody></table>"
-		var prettyJSON bytes.Buffer
-		json.Indent(&prettyJSON, tx.ToAuditJson(), "", "\t")
-		buff += fmt.Sprintf("<h3>Audit Log</h3><pre>%s</pre>", prettyJSON.String())
-		return buff
+		return "Debug page not implemented yet."
 	case ERROR_PAGE_SCRIPT:
 		cmd := exec.Command(tx.WafInstance.ErrorPageFile)
 		path, file := tx.GetAuditPath()

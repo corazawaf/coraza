@@ -51,3 +51,22 @@ func TestMultipleAddress(t *testing.T) {
 		}
 	}
 }
+
+func TestFromFile(t *testing.T) {
+	addrok := []string{"127.0.0.1", "192.168.0.1", "192.168.0.253"}
+	addrfail := []string{"127.0.0.2", "192.168.1.1"}
+
+	ipm := &IpMatchFromFile{}
+	ipm.Init("../../test/data/operators/op/netranges.dat")
+	for _, ok := range addrok {
+		if !ipm.Evaluate(nil, ok) {
+			t.Errorf("Invalid result for single CIDR IpMatchFromFile " + ok)
+		}
+	}
+
+	for _, fail := range addrfail {
+		if ipm.Evaluate(nil, fail) {
+			t.Errorf("Invalid result for single CIDR IpMatchFromFile" + fail)
+		}
+	}
+}

@@ -61,6 +61,7 @@ func (c *PersistentCollection) New(engine PersistenceEngine, webappid string, co
 	c.ttl = ttl
 	c.key = key
 	c.engine = engine
+	c.changed = true
 	c.webapp = webappid
 	timenow := strconv.FormatInt(time.Now().UnixNano(), 10)
 	c.data = map[string][]string{
@@ -96,5 +97,6 @@ func (c *PersistentCollection) GetData() map[string][]string {
 }
 
 func (c *PersistentCollection) SetData(data map[string][]string) {
+	c.changed = true
 	c.data = data
 }

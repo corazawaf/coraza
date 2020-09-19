@@ -125,7 +125,7 @@ func TestTxSetters2(t *testing.T) {
 	tx.SetRemoteUser("testuser")
 	tx.SetRequestBody("asdf", 4, "application/xml")
 	tx.SetRequestBody("asdf", 4, "application/json")
-	//SetResponseBody
+	tx.SetResponseBody("test", 4)
 	tx.SetResponseHeaders(map[string][]string{
 		"test": []string{ "testvalue" },
 		})
@@ -145,8 +145,10 @@ func TestTxSetters2(t *testing.T) {
 		t.Error("Failed to reset capture groups")
 	}
 	//MatchRule
-	//GetStopWatch
-	//getCollections()
+	tx.GetStopWatch()
+	if tx.GetCollections() == nil {
+		t.Error("Failed to initialize TX collections")
+	}
 	//GetRemovedTargets()
 	//IsRelevantStatus()
 	if tx.GetErrorPage() == ""{
@@ -163,7 +165,14 @@ func TestTxSetters2(t *testing.T) {
 			t.Error("Failed to create rule remove target by id")
 		}
 	}
-	//RegisterPersistentCollection
+
+	pc := &PersistentCollection{}
+	//pc.Init("test")
+	tx.RegisterPersistentCollection("test", pc)
+	if tx.PersistentCollections["test"] == nil {
+		t.Error("Failed to initialize persistent collection")
+	}
+
 	tx.SetCapturable(false)
 	if tx.IsCapturable() {
 		t.Error("Failed to set capturable")
@@ -206,6 +215,19 @@ func TestTxPhases(t *testing.T){
 	tx.ExecutePhase(5)
 	if tx.LastPhase != 5{
 		t.Error("Failed to execute phase 5")
+	}	
+}
+
+func TestErrorPage(t *testing.T) {
+	tx := makeTransaction()
+	tx.WafInstance.ErrorPageMethod = ERROR_PAGE_SCRIPT
+	tx.WafInstance.ErrorPageFile = "../../examples/scripts/error.sh"
+	if tx.GetErrorPage() == "Error script failed" {
+		t.Error("Failed to execute test error script")
+	}
+	tx.WafInstance.ErrorPageFile = "../../"
+	if tx.GetErrorPage() != "Error script failed" {
+		t.Error("This error script shouldnt be working")
 	}	
 }
 
