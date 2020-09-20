@@ -220,9 +220,6 @@ func (p *Parser) Evaluate(data string) error {
 	case "SecGsbLookupDb":
 
 		break
-	case "SecGuardianLog":
-
-		break
 	case "SecHttpBlKey":
 		//p.waf.HttpBlKey = opts
 		break
