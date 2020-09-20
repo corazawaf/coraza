@@ -120,6 +120,7 @@ func TestTxResponse(t *testing.T){
 func TestTxSetters2(t *testing.T) {
 	tx := wafi.NewTransaction()
 	tx.RequestBodyAccess = true
+	tx.ResponseBodyAccess = true
 	tx.AddRequestHeader("testheader", "testvalue")
 	tx.AddRequestHeader("testheader2", "testvalue2")
 	tx.SetRemoteUser("testuser")
@@ -231,6 +232,22 @@ func TestErrorPage(t *testing.T) {
 	}	
 }
 
+func TestTxMatch(t *testing.T) {
+	waf := NewWaf()
+	r := NewRule()
+	mr := []*MatchData{
+		&MatchData{
+			"test",
+			"test",
+			"test",
+		},
+	}
+	tx := waf.NewTransaction()
+	tx.MatchRule(r, []string{"msg"}, mr)
+	if len(tx.MatchedRules) == 0 {
+		t.Error("Failed to match value")
+	}
+}
 func makeTransaction() *Transaction{
 	tx := wafi.NewTransaction()
 	ht := []string{
