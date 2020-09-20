@@ -27,8 +27,18 @@ func TestCLogFileCreation(t *testing.T) {
 	waf.AuditLogPath = "/tmp/audit/audit.log"
 	waf.Init()
 	waf.InitLogger()
+	r := NewRule()
+	mr := []*MatchData{
+		&MatchData{
+			"test",
+			"test",
+			"test",
+		},
+	}
 	tx := waf.NewTransaction()
+	tx.MatchRule(r, []string{"msg"}, mr)
 	tx.AuditLogParts = []rune("ABCDEFGHIJKZ")
+
 	waf.Logger.WriteAudit(tx)
 	fpath, fname := tx.GetAuditPath()
 	if _, err := os.Stat(fpath); os.IsNotExist(err) {

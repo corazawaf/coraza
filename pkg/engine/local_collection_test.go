@@ -36,3 +36,25 @@ func TestLocalCollection(t *testing.T){
 		t.Error("Failed to remove from local collection")
 	}
 }
+
+func TestLocalCollectionMatchData(t *testing.T){
+	lc := NewCollection("test")
+	lc.InitCollection("test2")
+	lc.Update("test2", []string{"test3"})
+
+	md := lc.GetWithExceptions("test2", []string{})
+	if len(md) == 0{
+		t.Error("Failed to get matched data")
+		return
+	}
+	md0 := md[0]
+	if md0.Collection != "test"{
+		t.Error("Failed to set matched data collection")
+	}
+	if md0.Key != "test2"{
+		t.Error("Failed to set matched data key")
+	}	
+	if md0.Value != "test3"{
+		t.Error("Failed to set matched data value")
+	}		
+}

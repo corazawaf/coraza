@@ -78,8 +78,8 @@ func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []*
 
 				data = append(data, &MatchData{
 					Collection: c.Name,
-					Value:      v,
 					Key:        k,
+					Value:      v,
 				})
 			}
 		}

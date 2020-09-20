@@ -446,7 +446,8 @@ func (tx *Transaction) InitTxCollection() {
 		"request_filename", "request_headers", "request_headers_names", "request_method", "request_protocol", "request_filename", "full_request", "remote_host",
 		"request_uri", "request_line", "response_body", "response_content_length", "response_content_type", "request_cookies", "request_uri_raw",
 		"response_headers", "response_headers_names", "response_protocol", "response_status", "appid", "id", "timestamp", "files_names", "files", "remote_user",
-		"files_combined_size", "reqbody_processor", "request_body_length", "xml", "matched_vars", "rule", "ip", "global", "session"}
+		"files_combined_size", "reqbody_processor", "request_body_length", "xml", "matched_vars", "rule", "ip", "global", "session",
+		"matched_var", "matched_var_name"}
 
 	for _, k := range keys {
 		tx.Collections[k] = &LocalCollection{}
@@ -656,12 +657,17 @@ func (tx *Transaction) MatchRule(rule *Rule, msgs []string, match []*MatchData) 
 		MatchedData:      match,
 		Rule:             rule,
 	}
-	m := tx.GetCollection("matched_vars")
+	mvs := tx.GetCollection("matched_vars")
+	mv := tx.GetCollection("matched_var")
+	mvn := tx.GetCollection("matched_var_name")
 	tx.Mux.Lock()
 	tx.MatchedRules = append(tx.MatchedRules, mr)
 	tx.Mux.Unlock()
 	for _, mm := range match {
-		m.AddToKey("", mm.Value)
+		value := fmt.Sprintf("%s:%s", strings.ToUpper(mm.Collection), mm.Key)
+		mvs.AddToKey("", value)
+		mv.AddToKey("", mm.Value)
+		mvn.Set("", []string{mm.Value})
 	}
 }
 
