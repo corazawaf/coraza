@@ -1,7 +1,7 @@
 # Go parameters
 GOCMD=go
 ENTRYFILE=cmd/coraza-waf/skipper.go cmd/coraza-waf/main.go
-GOBUILD=$(GOCMD) build -ldflags "-w -s" $(ENTRYFILE)
+GOBUILD=$(GOCMD) build -ldflags "-w -s" $(ENTRYFILE) -o coraza-waf
 GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
@@ -34,27 +34,17 @@ eskip:
 		cd skipper
 		make eskip
 		mv bin/eskip ../	
-
 skipper-filter:
 		go build -ldflags "-w -s" -linkshared cmd/coraza-waf/skipper.go -o skipper_mod_coraza_waf.so
-install:
+install: libinjection eskip
 		# only for debian by now
 		mkdir -p /etc/coraza-waf/profiles/default
 		mkdir -p /opt/coraza-waf/log/audit
 		id -u coraza-waf &>/dev/null || useradd -r -s /bin/false coraza-waf
 		cp scripts/debian/coraza-waf.service /etc/init.d/coraza-waf
 		cp examples/skipper/default.conf /etc/coraza-waf/profiles/default/
-		mv main /bin/coraza-waf
+		mv coraza-waf /bin/coraza-waf
+		mv eskip /bin/
 		cp examples/skipper/routes.eskip /etc/coraza-waf/
 		cp examples/skipper/skipper.yaml /etc/coraza-waf/
 		cp examples/skipper/default.conf /etc/coraza-waf/profiles/default/rules.conf
-		update-rc.d coraza-waf defaults
-		make eskip
-		mv eskip /bin/
-		chown -R coraza-waf:root /opt/coraza-waf/log
-		chown -R root:root /etc/coraza-waf
-		chown root:root /bin/coraza-waf
-		chown root:root /bin/eskip
-		find /opt/coraza-waf -type d -exec chmod 755 {} \;
-		find /etc/coraza-waf -type d -exec chmod 755 {} \;
-		find /etc/coraza-waf -type f -exec chmod 655 {} \;

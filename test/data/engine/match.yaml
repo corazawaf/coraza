@@ -1,9 +1,9 @@
 ---
   meta:
     author: jptosso
-    description: Test if the ctl action works
+    description: Test if the match action works
     enabled: true
-    name: ctl.yaml
+    name: match.yaml
   tests:
   -
     test_title: actions
@@ -15,10 +15,11 @@
         output:
           triggered_rules:
             - 26
+            - 27
           non_triggered_rules:
   rules: |
-    SecRule ARGS "12345" "chain,deny,id:26, log"
+    SecRule ARGS "12345" "chain,pass,id:26, log"
         SecRule MATCHED_VARS "@eq ARGS:id" ""
 
-    #SecRule ARGS "1234" "chain,deny,id:27"
-    #    SecRule MATCHED_VAR "12345" ""
+    SecRule ARGS "12345" "chain,pass,id:27, log"
+        SecRule MATCHED_VAR "12345" ""

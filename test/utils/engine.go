@@ -61,7 +61,10 @@ func (ts *TestSuite) AddProfile(path string) error {
 func (ts *TestSuite) Start(cb callback) error {
 	//TODO add routines
 	for _, p := range ts.profiles {
-		res, _ := ts.runTest(p)
+		res, err := ts.runTest(p)
+		if err != nil{
+			log.Error(err)
+		}
 		cb(p.Meta.Name, res)
 	}
 	return nil
