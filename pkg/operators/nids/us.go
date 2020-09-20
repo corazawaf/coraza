@@ -30,9 +30,9 @@ func (n *NidUs) Evaluate(nid string) bool {
 	if len(nid) < 9 {
 		return false
 	}
-	area, _ := strconv.Atoi(nid[0:2])
-	group, _ := strconv.Atoi(nid[3:4])
-	serial, _ := strconv.Atoi(nid[5:8])
+	area, _ := strconv.Atoi(nid[0:3])
+	group, _ := strconv.Atoi(nid[3:5])
+	serial, _ := strconv.Atoi(nid[5:9])
 	if area == 0 || group == 0 || serial == 0 || area >= 740 || area == 666 {
 		return false
 	}

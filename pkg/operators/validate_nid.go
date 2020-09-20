@@ -17,6 +17,7 @@ package operators
 import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/operators/nids"
+	log "github.com/sirupsen/logrus"
 	"regexp"
 	"strings"
 )
@@ -28,6 +29,10 @@ type ValidateNid struct {
 
 func (o *ValidateNid) Init(data string) {
 	spl := strings.SplitN(data, " ", 2)
+	if len(spl) != 2{
+		log.Error("Invalid @validateNid argument")
+		return 
+	}
 	o.fn = nids.NidMap()[spl[0]]
 	o.rgx = spl[1]
 }

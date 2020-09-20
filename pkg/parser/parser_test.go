@@ -137,17 +137,56 @@ func TestString4(t *testing.T) {
 		"SecCollectionTimeout 1000",
 		"SecContentInjection On",
 		"SecHashEngine On",
+		"SecHashKey nonworking",
+		"SecHashParam nonworking",
+		"SecHashMethodRx nonworking",
+		"SecHashMethodPm nonworking",
+		"SecGeoLookupDb /dev/null",
+		"SecGsbLookupDb nonworking",
+		"SecHttpBlKey nonworking",
+		"SecInterceptOnError nonworking",
+		"SecPcreMatchLimit nonworking",
+		"SecPcreMatchLimitRecursion nonworking",
+		"SecConnReadStateLimit nonworking",
+		"SecSensorId sensor1",
+		"SecConnWriteStateLimit nonworking",
+		"SecRemoteRules https://raw.githubusercontent.com/jptosso/coraza-waf/master/examples/skipper/default.conf",
+		"SecRulePerfTime nonworking",
+		"SecStreamOutBodyInspection nonworking",
+		"SecRuleUpdateTargetByTag nonworking",
+		"SecRuleUpdateTargetByMsg nonworking",
+		"SecRuleUpdateTargetById nonworking",
+		"SecRuleUpdateActionById nonworking",
+		"SecRuleScript nonworking",
+		"SecUploadDir nonworking",
+		"SecUploadFileLimit nonworking",
+		"SecUploadFileMode nonworking",
+		"SecUploadKeepFiles nonworking",
+		"SecWebAppId test",
+		"SecXmlExternalEntity nonworking",
+		"SecRequestBodyLimit 10000",
+		"SecResponseBodyAccess On",
+		"SecComponentSignature signature",
+		"SecErrorPage debug",
 	}
 	waf := &engine.Waf{}
 	waf.Init()
 	p := &Parser{}
 	p.Init(waf)
-	p.FromString(strings.Join(data, "\n"))
+	err := p.FromString(strings.Join(data, "\n"))
+	if err != nil {
+		t.Error("Failed to parse some directives")
+	}
 
 	if waf.AuditLogFileMode != 777{
 		t.Error("Failed to set log file mode")
 	}
 	if waf.AuditLogDirMode != 777{
 		t.Error("Failed to set log file mode")
+	}
+
+	err = p.FromString("Unsupported 123")
+	if err == nil{
+		t.Error("Invalid directives shouldn't work")
 	}
 }
