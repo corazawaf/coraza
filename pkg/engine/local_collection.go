@@ -15,7 +15,6 @@
 package engine
 
 import (
-	"fmt"
 	pcre "github.com/gijsbers/go-pcre"
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	"strconv"
@@ -51,40 +50,10 @@ func (c *LocalCollection) InitCollection(key string) {
 	c.Data[key] = []string{}
 }
 
-//PCRE compatible collection
 func (c *LocalCollection) Get(key string) []string {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
-	cdata := c.Data
-	//we return every value in case there is no key but there is a collection
-	if len(key) == 0 {
-		data := []string{}
-		// how does modsecurity solves this?
-		for k := range cdata {
-			for _, v := range cdata[k] {
-				//val := k + "=" + n
-				data = append(data, v)
-			}
-		}
-		return data
-	}
-	if key[0] == '/' {
-		key = utils.TrimLeftChars(key, 1)
-		key = strings.TrimSuffix(key, string('/'))
-		re := pcre.MustCompile(key, 0)
-		result := []string{}
-		for k := range cdata {
-			m := re.Matcher([]byte(k), 0)
-			if m.Matches() {
-				for _, d := range cdata[k] {
-					result = append(result, d)
-				}
-			}
-		}
-		return result
-	} else {
-		return cdata[key]
-	}
+	return c.Data[key]
 }
 
 func (c *LocalCollection) GetSimple(key string) []string {
@@ -93,7 +62,7 @@ func (c *LocalCollection) GetSimple(key string) []string {
 	return c.Data[key]
 }
 
-//PCRE compatible collection
+//PCRE compatible collection with exceptions
 func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []*MatchData {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
@@ -106,11 +75,11 @@ func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []*
 				continue
 			}
 			for _, v := range c.Data[k] {
-				//val := k + "=" + n
+
 				data = append(data, &MatchData{
 					Collection: c.Name,
-					Value:      v,
 					Key:        k,
+					Value:      v,
 				})
 			}
 		}
@@ -118,8 +87,7 @@ func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []*
 	}
 
 	if key[0] == '/' {
-		key = utils.TrimLeftChars(key, 1)
-		key = strings.TrimSuffix(key, string('/'))
+		key = key[1:len(key)-1] //we strip slashes
 		re := pcre.MustCompile(key, 0)
 		result := []*MatchData{}
 		for k := range cdata {
@@ -194,14 +162,6 @@ func (c *LocalCollection) GetFirstInt() int {
 	}
 }
 
-func (c *LocalCollection) Concat() []string {
-	r := []string{}
-	for k, v := range c.Data {
-		r = append(r, fmt.Sprintf("%s=%s", k, v))
-	}
-	return r
-}
-
 func (c *LocalCollection) Add(key string, value []string) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
@@ -238,10 +198,6 @@ func (c *LocalCollection) Remove(key string) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
 	delete(c.Data, key)
-}
-
-func (c *LocalCollection) Flush(key string) {
-	//not implemented
 }
 
 func (c *LocalCollection) GetData() map[string][]string {

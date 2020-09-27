@@ -63,7 +63,10 @@ func RemoveQuotes(s string) string {
 		return ""
 	}
 	s = strings.TrimSuffix(s, `"`)
-	return strings.TrimPrefix(s, `"`)
+	s = strings.TrimPrefix(s, `"`)
+	s = strings.TrimSuffix(s, `'`)
+	s = strings.TrimPrefix(s, `'`)
+	return s
 }
 
 func StringInSlice(a string, list []string) bool {
@@ -91,13 +94,6 @@ func ArrayContainsInt(arr []int, search int) bool {
 		}
 	}
 	return false
-}
-
-func ArraySlice(arr []interface{}, index int) []interface{} {
-	copy(arr[index:], arr[index+1:])
-	arr[len(arr)-1] = ""
-	arr = arr[:len(arr)-1]
-	return arr
 }
 
 func OpenFile(path string) ([]byte, error) {

@@ -15,47 +15,27 @@
 package operators
 
 import (
-	"fmt"
+	log "github.com/sirupsen/logrus"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/utils"
-	"net"
 	"strings"
 )
 
 type IpMatchFromFile struct {
-	ranges []*net.IPNet
+	ip *IpMatch
 }
 
 func (o *IpMatchFromFile) Init(data string) {
+	o.ip = &IpMatch{}
 	list, err := utils.OpenFile(data)
 	if err != nil {
-		fmt.Println("Error opening " + data)
+		log.Error("Error opening " + data)
 		return
 	}
-	spl := strings.Split(string(list), "\n")
-	for _, n := range spl {
-		n = utils.StripSpaces(n)
-		if n == "" {
-			continue
-		}
-		if !strings.Contains(n, "/") {
-			n = n + "/32"
-		}
-		_, subnet, err := net.ParseCIDR(n)
-		if err != nil {
-			fmt.Println("Invalid CIDR " + n)
-			continue
-		}
-		o.ranges = append(o.ranges, subnet)
-	}
+	subnets := strings.ReplaceAll(string(list), "\n", ",")
+	o.ip.Init(subnets)
 }
 
 func (o *IpMatchFromFile) Evaluate(tx *engine.Transaction, value string) bool {
-	ip := net.ParseIP(value)
-	for _, n := range o.ranges {
-		if n.Contains(ip) {
-			return true
-		}
-	}
-	return false
+	return o.ip.Evaluate(tx, value)
 }

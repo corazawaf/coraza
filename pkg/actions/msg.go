@@ -16,13 +16,14 @@ package actions
 
 import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
+	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
 type Msg struct {
 }
 
 func (a *Msg) Init(r *engine.Rule, data string) string {
-	r.Msg = data
+	r.Msg = utils.RemoveQuotes(data)
 	return ""
 }
 
