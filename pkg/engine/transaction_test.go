@@ -111,7 +111,7 @@ func TestTxResponse(t *testing.T){
 	tx.ParseResponseString(nil, data)
 
 	exp := map[string]string{
-		"%{response_headers.connection}": "close",
+		"%{response_headers.content-length}": "10",
 	}
 
 	validateMacroExpansion(exp, tx, t)

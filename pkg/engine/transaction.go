@@ -588,7 +588,7 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 		return true
 	}
 	if tx.LastPhase == 5 {
-		return false
+		return tx.Disrupted
 	}
 	tx.LastPhase = phase
 	ts := time.Now().UnixNano()
@@ -629,6 +629,7 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 		//txr.Set("logdata", []string{r.LogData})
 		txr.Set("msg", []string{r.Msg})
 		r.Evaluate(tx)
+
 		tx.Capture = false //we reset the capture flag on every run
 		usedRules++
 		if tx.Disrupted {
