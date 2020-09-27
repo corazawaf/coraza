@@ -111,6 +111,7 @@ func TestTxResponse(t *testing.T){
 	tx.ParseResponseString(nil, data)
 
 	exp := map[string]string{
+		"%{response_headers.content-length}": "10",
 		"%{response_headers.server}": "Microsoft-IIS/8.5",
 	}
 

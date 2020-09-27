@@ -5,6 +5,7 @@ import(
 	"net/http"
 	"github.com/zalando/skipper/filters"
 	"github.com/opentracing/opentracing-go"
+	"github.com/jptosso/coraza-waf/pkg/engine"
 )
 
 
@@ -101,5 +102,9 @@ func TestSkipper(t *testing.T){
 	}
 	ctx := &testCtx{}
 	f.Request(ctx)
+	tx := ctx.Request().Context().Value("tx").(*engine.Transaction)
+	if !tx.Disrupted{
+		t.Error("Failed to disrupt transaction")
+	}
 	f.Response(ctx)
 }

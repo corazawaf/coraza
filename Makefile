@@ -1,7 +1,7 @@
 # Go parameters
 GOCMD=go
-ENTRYFILE=cmd/coraza-waf/skipper.go cmd/coraza-waf/main.go
-GOBUILD=$(GOCMD) build -ldflags "-w -s" $(ENTRYFILE)
+ENTRYFILE=cmd/coraza-waf/*.go
+GOBUILD=$(GOCMD) build -ldflags "-w -s" -o coraza-waf $(ENTRYFILE)
 GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
@@ -29,12 +29,6 @@ libinjection:
 		cp pkg/utils/libinjection/src/*.h /usr/local/include/
 		chmod 444 /usr/local/include/libinjection*
 		ldconfig
-eskip:
-		git clone https://github.com/zalando/skipper
-		cd skipper
-		make eskip
-		mv bin/eskip ../	
-
 skipper-filter:
 		go build -ldflags "-w -s" -linkshared cmd/coraza-waf/skipper.go -o skipper_mod_coraza_waf.so
 install:
@@ -44,7 +38,7 @@ install:
 		id -u coraza-waf &>/dev/null || useradd -r -s /bin/false coraza-waf
 		cp scripts/debian/coraza-waf.service /etc/init.d/coraza-waf
 		cp examples/skipper/default.conf /etc/coraza-waf/profiles/default/
-		mv main /bin/coraza-waf
+		mv coraza-waf /bin/coraza-waf
 		cp examples/skipper/routes.eskip /etc/coraza-waf/
 		cp examples/skipper/skipper.yaml /etc/coraza-waf/
 		cp examples/skipper/default.conf /etc/coraza-waf/profiles/default/rules.conf
@@ -58,3 +52,5 @@ install:
 		find /opt/coraza-waf -type d -exec chmod 755 {} \;
 		find /etc/coraza-waf -type d -exec chmod 755 {} \;
 		find /etc/coraza-waf -type f -exec chmod 655 {} \;
+		# If we want to bind low ports using coraza-waf
+		setcap CAP_NET_BIND_SERVICE=+eip /bin/coraza-waf
