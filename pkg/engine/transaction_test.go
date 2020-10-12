@@ -15,9 +15,9 @@
 package engine
 
 import (
+	"net/url"
 	"strings"
 	"testing"
-	"net/url"
 )
 
 var wafi = NewWaf()
@@ -89,7 +89,7 @@ func TestTxMultipart(t *testing.T) {
 	//TODO check files
 }
 
-func TestTxResponse(t *testing.T){
+func TestTxResponse(t *testing.T) {
 	tx := wafi.NewTransaction()
 	ht := []string{
 		"HTTP/1.1 200 OK",
@@ -107,7 +107,7 @@ func TestTxResponse(t *testing.T){
 		"",
 		"testcontent",
 	}
-	data := strings.Join(ht, "\r\n")	
+	data := strings.Join(ht, "\r\n")
 	tx.ParseResponseString(nil, data)
 
 	exp := map[string]string{
@@ -127,8 +127,8 @@ func TestTxSetters2(t *testing.T) {
 	tx.SetRequestBody("asdf", 4, "application/json")
 	//SetResponseBody
 	tx.SetResponseHeaders(map[string][]string{
-		"test": []string{ "testvalue" },
-		})
+		"test": []string{"testvalue"},
+	})
 	tx.SetResponseStatus(200)
 	uri, _ := url.Parse("?id=123&name=456&test=789")
 	tx.AddGetArgsFromUrl(uri)
@@ -137,11 +137,11 @@ func TestTxSetters2(t *testing.T) {
 	tx.SetRemoteAddress("1.1.1.1", 1234)
 	tx.ResolveRemoteHost()
 	tx.CaptureField(1, "test")
-	if tx.GetCollection("tx").Get("1")[0] != "test"{
+	if tx.GetCollection("tx").Get("1")[0] != "test" {
 		t.Error("Failed to set capture")
 	}
 	tx.ResetCapture()
-	if tx.GetCollection("tx").Get("1")[0] != ""{
+	if tx.GetCollection("tx").Get("1")[0] != "" {
 		t.Error("Failed to reset capture groups")
 	}
 	//MatchRule
@@ -149,7 +149,7 @@ func TestTxSetters2(t *testing.T) {
 	//getCollections()
 	//GetRemovedTargets()
 	//IsRelevantStatus()
-	if tx.GetErrorPage() == ""{
+	if tx.GetErrorPage() == "" {
 		t.Error("Failed to render error page")
 	}
 	//RemoveRuleTargetById
@@ -159,47 +159,47 @@ func TestTxSetters2(t *testing.T) {
 		t.Error("Failed to set capturable")
 	}
 	tx.SetFullRequest()
-	if tx.GetCollection("full_request").GetFirstString() == ""{
+	if tx.GetCollection("full_request").GetFirstString() == "" {
 		t.Error("Failed to set full_request")
 	}
 
 	exp := map[string]string{
-		"%{remote_user}": "testuser",
-		"%{args_post.name}": "456",
-		"%{args_get.name}": "456",
-		"%{args.name}": "456",
-		"%{remote_host}": "one.one.one.one.",
-		"%{request_headers.testheader}": "testvalue",
+		"%{remote_user}":                 "testuser",
+		"%{args_post.name}":              "456",
+		"%{args_get.name}":               "456",
+		"%{args.name}":                   "456",
+		"%{remote_host}":                 "one.one.one.one.",
+		"%{request_headers.testheader}":  "testvalue",
 		"%{request_headers.testheader2}": "testvalue2",
-		"%{response_headers.test}": "testvalue",
+		"%{response_headers.test}":       "testvalue",
 	}
 
 	validateMacroExpansion(exp, tx, t)
 }
 
-func TestTxGetField(t *testing.T){
+func TestTxGetField(t *testing.T) {
 	//GetField
 }
 
-func TestTxPhases(t *testing.T){
+func TestTxPhases(t *testing.T) {
 	tx := wafi.NewTransaction()
 	tx.ExecutePhase(1)
-	if tx.LastPhase != 1{
+	if tx.LastPhase != 1 {
 		t.Error("Failed to execute phase")
 	}
 	tx.Disrupted = true
 	tx.ExecutePhase(2)
-	if tx.LastPhase != 1{
+	if tx.LastPhase != 1 {
 		t.Error("Phase 2 should be stopped")
 	}
 	tx.Disrupted = false
 	tx.ExecutePhase(5)
-	if tx.LastPhase != 5{
+	if tx.LastPhase != 5 {
 		t.Error("Failed to execute phase 5")
-	}	
+	}
 }
 
-func makeTransaction() *Transaction{
+func makeTransaction() *Transaction {
 	tx := wafi.NewTransaction()
 	ht := []string{
 		"POST /testurl.php?id=123&b=456 HTTP/1.1",

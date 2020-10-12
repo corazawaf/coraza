@@ -29,6 +29,8 @@ libinjection:
 		cp pkg/utils/libinjection/src/*.h /usr/local/include/
 		chmod 444 /usr/local/include/libinjection*
 		ldconfig
+protoc:
+		protoc -I internal/proto --go_out=plugins=grpc:. internal/proto/*.proto
 skipper-filter:
 		go build -ldflags "-w -s" -linkshared cmd/coraza-waf/skipper.go -o skipper_mod_coraza_waf.so
 install:

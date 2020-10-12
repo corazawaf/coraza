@@ -413,7 +413,7 @@ func (tx *Transaction) AddPostArgsFromUrl(u *url.URL) {
 
 //Adds request_line, request_method, request_protocol, request_basename and request_uri
 func (tx *Transaction) SetRequestLine(method string, protocol string, requestUri string) {
-	tx.GetCollection("request_method").AddToKey("", method)
+	tx.SetRequestMethod(method)
 	tx.GetCollection("request_uri").AddToKey("", requestUri)
 	tx.GetCollection("request_protocol").AddToKey("", protocol)
 	tx.GetCollection("request_line").AddToKey("", fmt.Sprintf("%s %s %s", method, requestUri, protocol))
@@ -515,12 +515,12 @@ func (tx *Transaction) ParseRequestObjectHeaders(req *http.Request) error {
 		address = string(matches[0][1])
 		port, _ = strconv.Atoi(string(matches[0][2]))
 	}
-	tx.SetRequestHeaders(req.Header)
 	tx.SetArgsGet(req.URL.Query())
 	tx.SetUrl(req.URL)
 	tx.SetRemoteAddress(address, port)
-	tx.SetRequestCookies(req.Cookies())
 	tx.SetRequestLine(req.Method, req.Proto, req.RequestURI)
+	tx.SetRequestHeaders(req.Header)
+	tx.SetRequestCookies(req.Cookies())
 	return nil
 }
 
