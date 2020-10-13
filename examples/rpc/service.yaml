@@ -1,0 +1,51 @@
+key: test-profile
+profile: /etc/coraza-waf/profiles/test/test.conf
+config:
+  argument_separator: '&'
+  default_actions: "pass"
+  geoipdb: /etc/coraza-waf/geoip.db
+  tmp_dir: /tmp
+  unicode_map: /etc/coraza-waf/unicode.mapping
+  unicode_page: 20127
+  collection_timeout: 3600
+  pcre_match_limit: 1500
+  pcre_match_limit_recursion: 1500
+  file_upload:
+    path: /tmp/upload
+    limit: 10
+    filemode: 0640
+    keep_files: false
+  request_body:
+    in_memory_limit: 131072
+    limit: 134217728
+    limit_action: ProcessPartial
+  response_body:
+    in_memory_limit: 131072
+    limit: 134217728
+    limit_action: ProcessPartial
+    mime_types:
+      - text/plain
+      - text/html
+      - text/xml
+  features:
+    audit: true
+    rules: true
+    content_injection: true
+    request_body_access: true
+    response_body_access: true
+    body_inspection: true
+  audit:
+    files:
+      - /opt/coraza-waf/log/test_app.log
+    directory: /opt/coraza-waf/log/audit
+    dirmode: 0600
+    filemode: 0600
+    relevant_status: "^(?:5|4(?!04))"
+    logparts:
+      - request_headers
+      - request_body
+      - response_headers
+      - response_body
+      - audit_data
+      - match_data
+      - files_data

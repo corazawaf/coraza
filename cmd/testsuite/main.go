@@ -19,11 +19,11 @@ package main
 
 import (
 	"flag"
-	"strings"
-	"os"
 	"fmt"
+	test "github.com/jptosso/coraza-waf/test/utils"
+	"os"
 	"path/filepath"
-	test"github.com/jptosso/coraza-waf/test/utils"
+	"strings"
 )
 
 var debug = false
@@ -43,16 +43,16 @@ func main() {
 	ts := &test.TestSuite{}
 	ts.Init(*rules)
 	files, err := getYamlFromDir(*path)
-	if err != nil{
+	if err != nil {
 		panic("Cannot load path " + *path)
 	}
 	i := 0
-	for _, f := range files{
+	for _, f := range files {
 		ts.AddProfile(f)
 		i++
 	}
 	fmt.Printf("Loaded %d profiles.\n", i)
-	ts.Start(func(name string, pass bool){
+	ts.Start(func(name string, pass bool) {
 		result := "\033[31mFailed"
 		if pass {
 			result = "\033[32mPassed"

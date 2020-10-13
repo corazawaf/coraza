@@ -16,7 +16,7 @@ package engine
 
 import (
 	"errors"
-	pcre "github.com/gijsbers/go-pcre"
+	pcre "github.com/jptosso/coraza-waf/pkg/utils/pcre"
 	"github.com/jptosso/coraza-waf/pkg/engine/persistence"
 	"github.com/oschwald/geoip2-golang"
 	log "github.com/sirupsen/logrus"

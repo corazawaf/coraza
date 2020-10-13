@@ -96,3 +96,7 @@ func (rg *RuleGroup) FindByTag(tag string) []*Rule {
 func (rg *RuleGroup) Count() int {
 	return len(rg.rules)
 }
+
+func (rg *RuleGroup) Clear() {
+	rg.rules = []*Rule{}
+}
