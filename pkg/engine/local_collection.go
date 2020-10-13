@@ -16,7 +16,7 @@ package engine
 
 import (
 	"fmt"
-	pcre "github.com/gijsbers/go-pcre"
+	pcre "github.com/jptosso/coraza-waf/pkg/utils/pcre"
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	"strconv"
 	"strings"

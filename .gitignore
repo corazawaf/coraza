@@ -13,3 +13,4 @@
 *.out
 test/crs
 /main
+vendor/

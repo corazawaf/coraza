@@ -37,8 +37,9 @@ message NewTransaction {
 	string protocol = 4;
 	string request_addr = 5;
 	int32 request_port = 6;
-	repeated Header request_headers = 7;
-	bool evaluate = 8;
+	string server_id = 7;
+	repeated Header request_headers = 8;
+	bool evaluate = 9;
 }
 
 message NewRequestBody {

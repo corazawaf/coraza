@@ -18,7 +18,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	pcre "github.com/gijsbers/go-pcre"
+	pcre "github.com/jptosso/coraza-waf/pkg/utils/pcre"
 	actionsmod "github.com/jptosso/coraza-waf/pkg/actions"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/operators"

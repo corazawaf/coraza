@@ -15,7 +15,7 @@
 package utils
 
 /*
-#cgo LDFLAGS: -L./libinjection/src -linjection
+#cgo LDFLAGS: -L/usr/local/lib -linjection
 #cgo CFLAGS: -I./libinjection/src
 #include "libinjection.h"
 #include "libinjection_sqli.h"

@@ -22,19 +22,6 @@ Coraza WAF is a Golang implementation of Modsecurity built from scratch, it supp
 - [Coraza Web Application Firewall](#coraza-web-application-firewall)
 
 
-## About current version (0.1.0-alpha1)
-
-Most features are available for testing, APIs are unstable but close to the final product. 
-
-## What is not working
-
-- [ ] Normalized API
-- [ ] Optimized pcre compilation instructions
-- [ ] OWASP CRS Full Support (almost there)
-- [ ] some disruptive actions
-- [ ] some lua features
-
-
 ## Compile from source
 
 Compilation prerequisites: 
@@ -54,6 +41,16 @@ sudo make install
 
 ```
 
+## Install (Ubuntu)
+
+You can install Coraza WAF directly from the official PPA repository:
+
+```
+sudo add-apt-repository ppa:jptosso/coraza
+sudo apt-get update
+sudo apt install corazawaf
+
+```
 
 ## Compile as a skipper plugin
 
@@ -64,18 +61,11 @@ skipper -filter-plugin coraza
 
 ## Test
 
-Standard Golang tests:
+Golang test suite:
 ```
 git clone https://github.com/jptosso/coraza-waf
 cd coraza-waf/
 go test ./...
-```
-
-Rule core test:
-```
-git clone https://github.com/jptosso/coraza-waf
-cd coraza-waf/
-go run cmd/testsuite/main.go -path test/ -rules test/data/test-rules.conf
 ```
 
 Test against OWASP CRS
@@ -119,8 +109,9 @@ Then you can hit http://localhost:9090 or http://host-ip:9090 in your browser.
 * */opt/coraza/var/log/coraza-waf/audit/*: This directory contains the concurrent logs created by the audit engine.
 * */usr/local/bin/coraza-waf*: Coraza WAF binary location.
 
-Sample:
+Sample eskip configuration:
 ```
+#/etc/coraza-waf/routes.eskip
 samplesite:
         Path("/")
         -> corazaWAF("/etc/coraza-waf/profiles/default/rules.conf")
@@ -159,13 +150,25 @@ func main(){
 	}
 }
 ```
+## Using as a gRPC service
+
+```
+$ coraza-waf -m rpc -f /etc/coraza-waf/rpc.yaml
+```
+
+And check our official wrappers:
+* [Coraza WAF NodeJS Express Middleware](#)
+
+More information [available here](#).
 
 ## Deployment options
 
 * [Docker -> Application](#)
-* [Nginx + Coraza WAF -> Application](#)
-* [Coraza WAF -> Application](#)
-* [Kubern8 Ingress Controller](#)
+* [Nginx + Coraza WAF Reverse Proxy -> Application](#)
+* [Nginx + Coraza WAF RPC -> Application](#)
+* [Coraza WAF Reverse Proxy -> Application](#)
+* [Application + Coraza WAF (rpc)](#)
+* [Kubern8 Ingress Controller -> Application](#)
 
 
 ## License
