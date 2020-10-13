@@ -45,5 +45,6 @@ func OperatorsMap() map[string]engine.Operator {
 		"rbl":                  &Rbl{},
 		"validateUtf8Encoding": &ValidateUtf8Encoding{},
 		"noMatch":              &NoMatch{},
+		"validateNid":			&ValidateNid{},
 	}
 }

@@ -112,6 +112,7 @@ func TestTxResponse(t *testing.T) {
 
 	exp := map[string]string{
 		"%{response_headers.content-length}": "10",
+		"%{response_headers.server}": "Microsoft-IIS/8.5",
 	}
 
 	validateMacroExpansion(exp, tx, t)
@@ -120,12 +121,13 @@ func TestTxResponse(t *testing.T) {
 func TestTxSetters2(t *testing.T) {
 	tx := wafi.NewTransaction()
 	tx.RequestBodyAccess = true
+	tx.ResponseBodyAccess = true
 	tx.AddRequestHeader("testheader", "testvalue")
 	tx.AddRequestHeader("testheader2", "testvalue2")
 	tx.SetRemoteUser("testuser")
 	tx.SetRequestBody("asdf", 4, "application/xml")
 	tx.SetRequestBody("asdf", 4, "application/json")
-	//SetResponseBody
+	tx.SetResponseBody("test", 4)
 	tx.SetResponseHeaders(map[string][]string{
 		"test": []string{"testvalue"},
 	})
@@ -145,15 +147,34 @@ func TestTxSetters2(t *testing.T) {
 		t.Error("Failed to reset capture groups")
 	}
 	//MatchRule
-	//GetStopWatch
-	//getCollections()
+	tx.GetStopWatch()
+	if tx.GetCollections() == nil {
+		t.Error("Failed to initialize TX collections")
+	}
 	//GetRemovedTargets()
 	//IsRelevantStatus()
 	if tx.GetErrorPage() == "" {
 		t.Error("Failed to render error page")
 	}
-	//RemoveRuleTargetById
-	//RegisterPersistentCollection
+
+
+	tx.RemoveRuleTargetById(1, "col", "key")
+	if len(tx.RuleRemoveTargetById) == 0 || len(tx.RuleRemoveTargetById[1]) == 0{
+		t.Error("Failed to remove rule target by id")
+	}else{
+		ctl := tx.RuleRemoveTargetById[1][0]
+		if ctl.Name != "col" || ctl.Key != "key" {
+			t.Error("Failed to create rule remove target by id")
+		}
+	}
+
+	pc := &PersistentCollection{}
+	//pc.Init("test")
+	tx.RegisterPersistentCollection("test", pc)
+	if tx.PersistentCollections["test"] == nil {
+		t.Error("Failed to initialize persistent collection")
+	}
+
 	tx.SetCapturable(false)
 	if tx.IsCapturable() {
 		t.Error("Failed to set capturable")
@@ -199,7 +220,37 @@ func TestTxPhases(t *testing.T) {
 	}
 }
 
-func makeTransaction() *Transaction {
+func TestErrorPage(t *testing.T) {
+	tx := makeTransaction()
+	tx.WafInstance.ErrorPageMethod = ERROR_PAGE_SCRIPT
+	tx.WafInstance.ErrorPageFile = "../../examples/scripts/error.sh"
+	if tx.GetErrorPage() == "Error script failed" {
+		t.Error("Failed to execute test error script")
+	}
+	tx.WafInstance.ErrorPageFile = "../../"
+	if tx.GetErrorPage() != "Error script failed" {
+		t.Error("This error script shouldnt be working")
+	}	
+}
+
+func TestTxMatch(t *testing.T) {
+	waf := NewWaf()
+	r := NewRule()
+	mr := []*MatchData{
+		&MatchData{
+			"test",
+			"test",
+			"test",
+		},
+	}
+	tx := waf.NewTransaction()
+	tx.MatchRule(r, []string{"msg"}, mr)
+	if len(tx.MatchedRules) == 0 {
+		t.Error("Failed to match value")
+	}
+}
+
+func makeTransaction() *Transaction{
 	tx := wafi.NewTransaction()
 	ht := []string{
 		"POST /testurl.php?id=123&b=456 HTTP/1.1",

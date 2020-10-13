@@ -128,21 +128,18 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 	}
 	ecol := tx.GetRemovedTargets(r.Id)
 	for _, v := range r.Variables {
-		values := []*MatchData{}
+		var values []*MatchData
+		exceptions := make([]string, len(v.Exceptions))
+		copy(exceptions, v.Exceptions)
 		if ecol != nil {
-			ignore := false
 			for _, c := range ecol {
-				if c.Name == v.Collection && c.Key == v.Key {
-					ignore = true
-					break
+				if c.Name == v.Collection {
+					exceptions = append(exceptions, c.Key)
 				}
-			}
-			if ignore {
-				continue
 			}
 		}
 
-		values = tx.GetField(v.Collection, v.Key, v.Exceptions)
+		values = tx.GetField(v.Collection, v.Key, exceptions)
 		if v.Count {
 			if v.Key != "" && len(values) == 1 {
 				values[0].Value = strconv.Itoa(len(values[0].Value))
@@ -156,6 +153,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 				}
 			}
 		}
+		
 		if len(values) == 0 {
 			if r.executeOperator("", tx) {
 				matchedValues = append(matchedValues, &MatchData{})
@@ -172,8 +170,8 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 			for _, carg := range args {
 				if r.executeOperator(carg, tx) {
 					matchedValues = append(matchedValues, &MatchData{
-						Collection: v.Collection,
-						Key:        v.Key,
+						Collection: arg.Collection,
+						Key:        arg.Key,
 						Value:      carg,
 					})
 				}
@@ -196,9 +194,8 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 
 	tx.SetCapturable(false)
 
+	msgs := []string{tx.MacroExpansion(r.Msg)}
 	if r.Chain != nil {
-		//Log.Debug("Running chain rule...")
-		msgs := []string{}
 		nr := r.Chain
 		for nr != nil {
 			m := nr.Evaluate(tx)
@@ -207,19 +204,16 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 				return []*MatchData{}
 			}
 			msgs = append(msgs, tx.MacroExpansion(nr.Msg))
-			//TODO add matched values from the chain rule
+			
 			for _, child := range m {
 				matchedValues = append(matchedValues, child)
 			}
 			nr = nr.Chain
 		}
-		if r.Log {
-			tx.MatchRule(r, msgs, matchedValues)
-		}
 	}
 	if r.ParentId == 0 {
 		if r.Log {
-			tx.MatchRule(r, []string{tx.MacroExpansion(r.Msg)}, matchedValues)
+			tx.MatchRule(r, msgs, matchedValues)
 		}
 		//we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
 		for _, a := range r.Actions {
@@ -243,8 +237,7 @@ func (r *Rule) executeOperator(data string, tx *Transaction) bool {
 }
 
 func (r *Rule) executeTransformationsMultimatch(value string) []string {
-	//Im not already sure if multimatch is cumulative or not... if not we should just make value constant
-	res := []string{}
+	res := []string{ value }
 	for _, t := range r.Transformations {
 		rf := reflect.ValueOf(t.TfFunc)
 		rargs := make([]reflect.Value, 1)
@@ -280,4 +273,10 @@ func (r *Rule) AddNegateVariable(collection string, key string) {
 			return
 		}
 	}
+}
+
+func NewRule() *Rule{
+	r := &Rule{}
+	r.Init()
+	return r
 }
