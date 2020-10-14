@@ -42,7 +42,8 @@ jobs:
       with:
         languages: ${{ matrix.language }}
     - run: |
-       sudo make libinjection
+       go mod vendor
+       make libinjection
        make
 
     - name: Perform CodeQL Analysis
