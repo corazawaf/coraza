@@ -36,7 +36,7 @@ func TestGeoIP(t *testing.T) {
 	}
 }
 
-func TestPersistenceInit(t *testing.T){
+func TestPersistenceInit(t *testing.T) {
 	w := NewWaf()
 
 	err := w.InitPersistenceEngine("inmemory://")

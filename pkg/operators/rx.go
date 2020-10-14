@@ -15,8 +15,8 @@
 package operators
 
 import (
-	pcre "github.com/gijsbers/go-pcre"
 	"github.com/jptosso/coraza-waf/pkg/engine"
+	pcre "github.com/jptosso/coraza-waf/pkg/utils/pcre"
 )
 
 //It is possible to apply recursion limits but it must be added to the library

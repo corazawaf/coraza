@@ -57,9 +57,9 @@ func TestCtl(t *testing.T) {
 
 	if tx.RuleEngine {
 		t.Error("Failed to disable rule engine")
-	}	
+	}
 
-	ctl.Init(r, "requestBodyLimit=12345")	
+	ctl.Init(r, "requestBodyLimit=12345")
 	ctl.Evaluate(r, tx)
 
 	if tx.RequestBodyLimit != 12345 {

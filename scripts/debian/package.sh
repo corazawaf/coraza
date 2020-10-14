@@ -1,62 +1,73 @@
 #!/bin/bash
 
-PACKAGE=coraza-waf
-VERSION=0.1-alpha.1
-TMP_PATH=/tmp/coraza-waf-build/$VERSION
-COMPATIBILITY=9
+PACKAGE=corazawaf
+VERSION=0.1alpha.21
+TMP_PATH=/tmp/coraza-waf-build/$PACKAGE-$VERSION
+COMPATIBILITY=10
 
+make clean
+sudo apt update
+sudo apt install -y gnupg \
+				 dput \
+				 dh-make \
+				 devscripts \
+				 lintian \
+				 debhelper \
+               	 golang-go \
+               	 libpcre++-dev
 
-gcc -std=c99 -Wall -Werror -fpic -c pkg/utils/libinjection/src/libinjection_sqli.c -o libinjection_sqli.o 
-gcc -std=c99 -Wall -Werror -fpic -c pkg/utils/libinjection/src/libinjection_xss.c -o libinjection_xss.o
-gcc -std=c99 -Wall -Werror -fpic -c pkg/utils/libinjection/src/libinjection_html5.c -o libinjection_html5.o
-gcc -dynamiclib -shared -o libinjection.so libinjection_sqli.o libinjection_xss.o libinjection_html5.o
-			
+sudo rm -rf $TMP_PATH
+mkdir -p $TMP_PATH
+cp -r * $TMP_PATH/
+cd $TMP_PATH/
+sudo make libinjection-install
+pwd
 
-rm -rf $TMP_PATH
-mkdir -p $TMP_PATH/DEBIAN
-mkdir -p $TMP_PATH/etc/init.d
-mkdir -p $TMP_PATH/etc/coraza-waf/profiles/default
-mkdir -p $TMP_PATH/opt/coraza-waf/log/audit
-mkdir -p $TMP_PATH/bin
-mkdir -p $TMP_PATH/usr/local/include
-mkdir -p $TMP_PATH/usr/local/lib
+dh_make -p $PACKAGE \
+		--single \
+		--native \
+		--copyright apache \
+		--email jptosso@gmail.com
+rm debian/*.ex debian/*.EX 
+cat scripts/debian/rules > debian/rules
+echo $COMPATIBILITY > debian/compat
+touch NEWS install-sh missing Makefile.am README AUTHORS ChangeLog
+cp LICENSE COPYING
 
-cp *.so $TMP_PATH/usr/local/lib
-cp *.o $TMP_PATH/usr/local/lib
-cp pkg/utils/libinjection/src/*.h $TMP_PATH/usr/local/include/
-chmod 444 $TMP_PATH/usr/local/include/libinjection*
+perl -i -pe "s/unstable/$(lsb_release -cs)/" debian/changelog
 
-go get ./...
-go build cmd/skipper/main.go
+cat << EOF > debian/postinst
+#!/bin/bash
+useradd -r -s /bin/false coraza-waf ||true
+chown -R coraza-waf:root /opt/coraza-waf/log
+chown -R root:root /etc/coraza-waf
+find /opt/coraza-waf -type d -exec chmod 755 {} \;
+find /etc/coraza-waf -type d -exec chmod 755 {} \;
+find /etc/coraza-waf -type f -exec chmod 655 {} \;
+chown -R root:root /bin/coraza-waf
+#update-rc.d coraza-waf defaults
+ldconfig
+#TODO add inittab for autorespawn
+EOF
 
-cp scripts/debian/coraza-waf.service $TMP_PATH/etc/init.d/coraza-waf
-cp examples/skipper/default.conf $TMP_PATH/etc/coraza-waf/profiles/default/
-cp scripts/debian/postinst $TMP_PATH/DEBIAN/
-cp changelog $TMP_PATH/DEBIAN/
-cp LICENSE $TMP_PATH/DEBIAN/license
-cp main $TMP_PATH/bin/coraza-waf
-cp examples/skipper/* $TMP_PATH/etc/coraza-waf/
-echo $COMPATIBILITY > $TMP_PATH/DEBIAN/compat
-touch $TMP_PATH/etc/coraza-waf/profiles/default/rules.conf
-
-cd ../
-git clone https://github.com/zalando/skipper
-cd skipper
-make eskip
-mv bin/eskip $TMP_PATH/bin/
-
-cat << EOF > $TMP_PATH/DEBIAN/control
-Package: $PACKAGE
-Version: $VERSION
+cat << EOF > debian/control
+Source: corazawaf
 Section: base
-Source: https://github.com/jptosso/coraza-waf/releases/download/%{version}/coraza-waf-%VERSION-linux-amd64.tar.gz
 Priority: optional
+Maintainer: Juan Pablo Tosso <jptosso@gmail.com>
+Build-Depends: debhelper (>=10),
+               dh-golang (>=1.34),
+               libpcre++-dev,
+               golang-go,
+               rsync,
+               build-essential
+
+Package: $PACKAGE
 Architecture: amd64
 Depends: libpcre++-dev
 Homepage: https://jptosso.github.io/coraza-waf/
-Maintainer: Juan Pablo Tosso <jptosso@gmail.com>
 Description: Coraza Web Application Firewall
 EOF
 
-cd $TMP_PATH/..
-dpkg-deb --build $PACKAGE_$VERSION
+perl -i -0777 -pe "s/(Copyright: ).+\n +.+/\${1}$(date +%Y) Juan Pablo Tosso <jptosso@gmail.com>/" debian/copyright
+debuild -S

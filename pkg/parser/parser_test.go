@@ -16,8 +16,8 @@ package parser
 
 import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
-	"testing"
 	"strings"
+	"testing"
 )
 
 func TestString(t *testing.T) {
@@ -129,7 +129,7 @@ func TestString4(t *testing.T) {
 * TODO There should be an elegant way to separate them from the parser
  */
 
- func TestDirectives(t *testing.T) {
+func TestDirectives(t *testing.T) {
 	data := []string{
 		"SecAuditLogDirMode 777",
 		"SecAuditLogFileMode 777",
@@ -178,15 +178,15 @@ func TestString4(t *testing.T) {
 		t.Error("Failed to parse some directives")
 	}
 
-	if waf.AuditLogFileMode != 777{
+	if waf.AuditLogFileMode != 777 {
 		t.Error("Failed to set log file mode")
 	}
-	if waf.AuditLogDirMode != 777{
+	if waf.AuditLogDirMode != 777 {
 		t.Error("Failed to set log file mode")
 	}
 
 	err = p.FromString("Unsupported 123")
-	if err == nil{
+	if err == nil {
 		t.Error("Invalid directives shouldn't work")
 	}
 }

@@ -24,10 +24,27 @@ import (
 )
 
 func main() {
-	cfgfile := flag.String("f", "/etc/coraza-waf/skipper.yaml", "Skipper Proxy configuration path")
+	cfgmode := flag.String("m", "skipper", "Configuration Mode, skipper or grpc")
+	cfgfile := flag.String("f", "", "Configurations path")
 	flag.Parse()
+	if *cfgmode == "grpc" {
+		server := &grpcServer{}
+		err := server.Init(*cfgfile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Info("Running grpc server")
+		log.Fatal(server.Serve())
+	} else if *cfgmode == "skipper" {
+		initSkipper(*cfgfile)
+	} else {
+		log.Fatal("Invalid operation mode -m")
+	}
 
-	os.Args = []string{os.Args[0], "-config-file=" + *cfgfile}
+}
+
+func initSkipper(cfgfile string) {
+	os.Args = []string{os.Args[0], "-config-file=" + cfgfile}
 
 	cfg := config.NewConfig()
 	if err := cfg.Parse(); err != nil {

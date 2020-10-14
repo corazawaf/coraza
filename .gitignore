@@ -13,3 +13,5 @@
 *.out
 test/crs
 /main
+vendor/
+coraza-waf

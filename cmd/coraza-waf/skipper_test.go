@@ -1,25 +1,25 @@
 package main
 
-import(
-	"testing"
-	"net/http"
-	"github.com/zalando/skipper/filters"
+import (
+	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/opentracing/opentracing-go"
+	"github.com/zalando/skipper/filters"
+	"net/http"
+	"testing"
 )
 
-
-type testCtx struct{
+type testCtx struct {
 	//Implements filterContext
 	res *http.Response
 	req *http.Request
 }
 
-func (tc *testCtx) ResponseWriter() http.ResponseWriter{
+func (tc *testCtx) ResponseWriter() http.ResponseWriter {
 	return nil
 }
 
-func (tc *testCtx) Request() *http.Request{
-	if tc.req != nil{
+func (tc *testCtx) Request() *http.Request {
+	if tc.req != nil {
 		return tc.req
 	}
 	req, _ := http.NewRequest("GET", "https://www.github.com/test", nil)
@@ -28,7 +28,7 @@ func (tc *testCtx) Request() *http.Request{
 }
 
 func (tc *testCtx) Response() *http.Response {
-	if tc.res != nil{
+	if tc.res != nil {
 		return tc.res
 	}
 	client := &http.Client{}
@@ -89,17 +89,20 @@ func (tc *testCtx) Split() (filters.FilterContext, error) {
 
 func (tc *testCtx) Loopback() {}
 
-
-func TestSkipper(t *testing.T){
+func TestSkipper(t *testing.T) {
 	cs := &CorazaSpec{}
 	cfg := make([]interface{}, 1)
 	cfg[0] = "../../examples/skipper/default.conf"
 	f, err := cs.CreateFilter(cfg)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 		return
 	}
 	ctx := &testCtx{}
 	f.Request(ctx)
+	tx := ctx.Request().Context().Value("tx").(*engine.Transaction)
+	if !tx.Disrupted {
+		t.Error("Failed to disrupt transaction")
+	}
 	f.Response(ctx)
 }

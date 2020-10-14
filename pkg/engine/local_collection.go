@@ -15,8 +15,8 @@
 package engine
 
 import (
-	pcre "github.com/gijsbers/go-pcre"
 	"github.com/jptosso/coraza-waf/pkg/utils"
+	pcre "github.com/jptosso/coraza-waf/pkg/utils/pcre"
 	"strconv"
 	"strings"
 	"sync"
@@ -87,7 +87,7 @@ func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []*
 	}
 
 	if key[0] == '/' {
-		key = key[1:len(key)-1] //we strip slashes
+		key = key[1 : len(key)-1] //we strip slashes
 		re := pcre.MustCompile(key, 0)
 		result := []*MatchData{}
 		for k := range cdata {

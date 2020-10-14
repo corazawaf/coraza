@@ -15,9 +15,9 @@
 package engine
 
 import (
+	"net/url"
 	"strings"
 	"testing"
-	"net/url"
 )
 
 var wafi = NewWaf()
@@ -89,7 +89,7 @@ func TestTxMultipart(t *testing.T) {
 	//TODO check files
 }
 
-func TestTxResponse(t *testing.T){
+func TestTxResponse(t *testing.T) {
 	tx := wafi.NewTransaction()
 	ht := []string{
 		"HTTP/1.1 200 OK",
@@ -107,11 +107,12 @@ func TestTxResponse(t *testing.T){
 		"",
 		"testcontent",
 	}
-	data := strings.Join(ht, "\r\n")	
+	data := strings.Join(ht, "\r\n")
 	tx.ParseResponseString(nil, data)
 
 	exp := map[string]string{
-		"%{response_headers.server}": "Microsoft-IIS/8.5",
+		"%{response_headers.content-length}": "10",
+		"%{response_headers.server}":         "Microsoft-IIS/8.5",
 	}
 
 	validateMacroExpansion(exp, tx, t)
@@ -124,12 +125,13 @@ func TestTxSetters2(t *testing.T) {
 	tx.AddRequestHeader("testheader", "testvalue")
 	tx.AddRequestHeader("testheader2", "testvalue2")
 	tx.SetRemoteUser("testuser")
-	tx.SetRequestBody("asdf", 4, "application/xml")
-	tx.SetRequestBody("asdf", 4, "application/json")
-	tx.SetResponseBody("test", 4)
+	tx.SetRequestBody([]byte("test"), 4, "application/xml")
+	tx.SetRequestBody([]byte("test"), 4, "application/json")
+	tx.SetRequestBody([]byte("testuru=s0me&testuru2=c"), 4, "application/x-www-form-urlencoded")
+	tx.SetResponseBody([]byte("test"), 4)
 	tx.SetResponseHeaders(map[string][]string{
-		"test": []string{ "testvalue" },
-		})
+		"test": []string{"testvalue"},
+	})
 	tx.SetResponseStatus(200)
 	uri, _ := url.Parse("?id=123&name=456&test=789")
 	tx.AddGetArgsFromUrl(uri)
@@ -138,11 +140,11 @@ func TestTxSetters2(t *testing.T) {
 	tx.SetRemoteAddress("1.1.1.1", 1234)
 	tx.ResolveRemoteHost()
 	tx.CaptureField(1, "test")
-	if tx.GetCollection("tx").Get("1")[0] != "test"{
+	if tx.GetCollection("tx").Get("1")[0] != "test" {
 		t.Error("Failed to set capture")
 	}
 	tx.ResetCapture()
-	if tx.GetCollection("tx").Get("1")[0] != ""{
+	if tx.GetCollection("tx").Get("1")[0] != "" {
 		t.Error("Failed to reset capture groups")
 	}
 	//MatchRule
@@ -152,15 +154,14 @@ func TestTxSetters2(t *testing.T) {
 	}
 	//GetRemovedTargets()
 	//IsRelevantStatus()
-	if tx.GetErrorPage() == ""{
+	if tx.GetErrorPage() == "" {
 		t.Error("Failed to render error page")
 	}
 
-
 	tx.RemoveRuleTargetById(1, "col", "key")
-	if len(tx.RuleRemoveTargetById) == 0 || len(tx.RuleRemoveTargetById[1]) == 0{
+	if len(tx.RuleRemoveTargetById) == 0 || len(tx.RuleRemoveTargetById[1]) == 0 {
 		t.Error("Failed to remove rule target by id")
-	}else{
+	} else {
 		ctl := tx.RuleRemoveTargetById[1][0]
 		if ctl.Name != "col" || ctl.Key != "key" {
 			t.Error("Failed to create rule remove target by id")
@@ -179,44 +180,45 @@ func TestTxSetters2(t *testing.T) {
 		t.Error("Failed to set capturable")
 	}
 	tx.SetFullRequest()
-	if tx.GetCollection("full_request").GetFirstString() == ""{
+	if tx.GetCollection("full_request").GetFirstString() == "" {
 		t.Error("Failed to set full_request")
 	}
 
 	exp := map[string]string{
-		"%{remote_user}": "testuser",
-		"%{args_post.name}": "456",
-		"%{args_get.name}": "456",
-		"%{args.name}": "456",
-		"%{remote_host}": "one.one.one.one.",
-		"%{request_headers.testheader}": "testvalue",
+		"%{remote_user}":                 "testuser",
+		"%{args_post.name}":              "456",
+		"%{args_post.testuru}": "s0me",
+		"%{args_get.name}":               "456",
+		"%{args.name}":                   "456",
+		"%{remote_host}":                 "one.one.one.one.",
+		"%{request_headers.testheader}":  "testvalue",
 		"%{request_headers.testheader2}": "testvalue2",
-		"%{response_headers.test}": "testvalue",
+		"%{response_headers.test}":       "testvalue",
 	}
 
 	validateMacroExpansion(exp, tx, t)
 }
 
-func TestTxGetField(t *testing.T){
+func TestTxGetField(t *testing.T) {
 	//GetField
 }
 
-func TestTxPhases(t *testing.T){
+func TestTxPhases(t *testing.T) {
 	tx := wafi.NewTransaction()
 	tx.ExecutePhase(1)
-	if tx.LastPhase != 1{
+	if tx.LastPhase != 1 {
 		t.Error("Failed to execute phase")
 	}
 	tx.Disrupted = true
 	tx.ExecutePhase(2)
-	if tx.LastPhase != 1{
+	if tx.LastPhase != 1 {
 		t.Error("Phase 2 should be stopped")
 	}
 	tx.Disrupted = false
 	tx.ExecutePhase(5)
-	if tx.LastPhase != 5{
+	if tx.LastPhase != 5 {
 		t.Error("Failed to execute phase 5")
-	}	
+	}
 }
 
 func TestErrorPage(t *testing.T) {
@@ -229,7 +231,7 @@ func TestErrorPage(t *testing.T) {
 	tx.WafInstance.ErrorPageFile = "../../"
 	if tx.GetErrorPage() != "Error script failed" {
 		t.Error("This error script shouldnt be working")
-	}	
+	}
 }
 
 func TestTxMatch(t *testing.T) {
@@ -248,7 +250,8 @@ func TestTxMatch(t *testing.T) {
 		t.Error("Failed to match value")
 	}
 }
-func makeTransaction() *Transaction{
+
+func makeTransaction() *Transaction {
 	tx := wafi.NewTransaction()
 	ht := []string{
 		"POST /testurl.php?id=123&b=456 HTTP/1.1",
