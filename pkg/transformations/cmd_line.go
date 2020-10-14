@@ -35,23 +35,23 @@ func CmdLine(data string) string {
 	space := false
 	ret := ""
 	for _, a := range data {
-		if a == '"' || a == '\'' || a == '\\' || a == '^' { 
-			/* remove some characters */			
-		}else if a == ' ' || a == ',' || a == ';' || a == '\t' || a == '\r' || a == '\n' {
+		if a == '"' || a == '\'' || a == '\\' || a == '^' {
+			/* remove some characters */
+		} else if a == ' ' || a == ',' || a == ';' || a == '\t' || a == '\r' || a == '\n' {
 			/* replace some characters to space (only one) */
 			if !space {
 				ret += " "
 				space = true
 			}
-		}else if a == '/' || a == '(' {
+		} else if a == '/' || a == '(' {
 			/* remove space before / or ( */
 			if space {
-				ret = ret[: len(ret)-1]
+				ret = ret[:len(ret)-1]
 			}
 			space = false
 
 			ret += string(a)
-		}else{
+		} else {
 			b := strings.ToLower(string(a))
 			ret += b
 			space = false

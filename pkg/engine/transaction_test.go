@@ -112,7 +112,7 @@ func TestTxResponse(t *testing.T) {
 
 	exp := map[string]string{
 		"%{response_headers.content-length}": "10",
-		"%{response_headers.server}": "Microsoft-IIS/8.5",
+		"%{response_headers.server}":         "Microsoft-IIS/8.5",
 	}
 
 	validateMacroExpansion(exp, tx, t)
@@ -157,11 +157,10 @@ func TestTxSetters2(t *testing.T) {
 		t.Error("Failed to render error page")
 	}
 
-
 	tx.RemoveRuleTargetById(1, "col", "key")
-	if len(tx.RuleRemoveTargetById) == 0 || len(tx.RuleRemoveTargetById[1]) == 0{
+	if len(tx.RuleRemoveTargetById) == 0 || len(tx.RuleRemoveTargetById[1]) == 0 {
 		t.Error("Failed to remove rule target by id")
-	}else{
+	} else {
 		ctl := tx.RuleRemoveTargetById[1][0]
 		if ctl.Name != "col" || ctl.Key != "key" {
 			t.Error("Failed to create rule remove target by id")
@@ -230,7 +229,7 @@ func TestErrorPage(t *testing.T) {
 	tx.WafInstance.ErrorPageFile = "../../"
 	if tx.GetErrorPage() != "Error script failed" {
 		t.Error("This error script shouldnt be working")
-	}	
+	}
 }
 
 func TestTxMatch(t *testing.T) {
@@ -250,7 +249,7 @@ func TestTxMatch(t *testing.T) {
 	}
 }
 
-func makeTransaction() *Transaction{
+func makeTransaction() *Transaction {
 	tx := wafi.NewTransaction()
 	ht := []string{
 		"POST /testurl.php?id=123&b=456 HTTP/1.1",

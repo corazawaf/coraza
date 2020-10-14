@@ -16,8 +16,8 @@ package transformations
 
 import (
 	"fmt"
-	"unicode/utf8"
 	"strconv"
+	"unicode/utf8"
 )
 
 func Utf8ToUnicode(str string) string {

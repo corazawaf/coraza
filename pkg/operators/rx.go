@@ -15,8 +15,8 @@
 package operators
 
 import (
-	pcre "github.com/jptosso/coraza-waf/pkg/utils/pcre"
 	"github.com/jptosso/coraza-waf/pkg/engine"
+	pcre "github.com/jptosso/coraza-waf/pkg/utils/pcre"
 )
 
 //It is possible to apply recursion limits but it must be added to the library

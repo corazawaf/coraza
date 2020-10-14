@@ -298,17 +298,17 @@ func (tx *Transaction) SetRemoteUser(user string) {
 }
 
 //Sets request_body and request_body_length, it won't work if request_body_inspection is off
-func (tx *Transaction) SetRequestBody(body string, length int64, mime string) {
+func (tx *Transaction) SetRequestBody(body []byte, length int64, mime string) error {
 	//TODO requires more validations. chunks, etc
 	if !tx.RequestBodyAccess || (tx.RequestBodyLimit > 0 && length > tx.RequestBodyLimit) {
-		return
+		return nil
 	}
 
 	l := strconv.FormatInt(length, 10)
 	tx.GetCollection("request_body_length").AddToKey("", l)
 	if mime == "application/xml" || mime == "text/xml" {
 		var err error
-		tx.XmlDoc, err = xmlquery.Parse(strings.NewReader(body))
+		tx.XmlDoc, err = xmlquery.Parse(strings.NewReader(string(body)))
 		if err != nil {
 			log.Error("Cannot parse XML body for request")
 		}
@@ -317,9 +317,17 @@ func (tx *Transaction) SetRequestBody(body string, length int64, mime string) {
 		// JSON!
 		//doc, err := xmlquery.Parse(strings.NewReader(s))
 		//tx.Json = doc
+	} else if mime == "application/x-www-form-urlencoded" {
+		uri, err := url.Parse(string(body))
+		if err != nil {
+			return err
+		}
+		tx.AddPostArgsFromUrl(uri)
 	} else {
-		tx.GetCollection("request_body").Set("", []string{body})
+		tx.GetCollection("request_body").Set("", []string{string(body)})
 	}
+	//TODO mime accepted MIMES
+	return nil
 	/*
 	   //TODO shall we do this and force the real length?
 	   l := strconv.Itoa(length)
@@ -339,12 +347,12 @@ func (tx *Transaction) SetRequestCookies(cookies []*http.Cookie) {
 }
 
 //sets response_body and response_body_length, it won't work if response_body_inpsection is off
-func (tx *Transaction) SetResponseBody(body string, length int64) {
+func (tx *Transaction) SetResponseBody(body []byte, length int64) {
 	if !tx.ResponseBodyAccess || length > tx.ResponseBodyLimit {
 		return
 	}
 	l := strconv.FormatInt(length, 10)
-	tx.Collections["response_body"].AddToKey("", body)
+	tx.Collections["response_body"].AddToKey("", string(body))
 	tx.Collections["response_body_length"].AddToKey("", l)
 }
 
@@ -363,7 +371,6 @@ func (tx *Transaction) SetResponseHeaders(headers map[string][]string) {
 func (tx *Transaction) SetResponseStatus(status int) {
 	s := strconv.Itoa(status)
 	tx.GetCollection("response_status").Set("", []string{s})
-
 }
 
 //Sets request_uri, request_filename, request_basename, query_string and request_uri_raw
@@ -565,7 +572,7 @@ func (tx *Transaction) ParseRequestObjectBody(req *http.Request) error {
 	if err != nil {
 		return err
 	}
-	tx.SetRequestBody(string(body), int64(len(body)), ct)
+	tx.SetRequestBody(body, int64(len(body)), ct)
 	return nil
 }
 

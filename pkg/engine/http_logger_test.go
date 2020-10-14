@@ -27,15 +27,15 @@ func TestHttpLogger(t *testing.T) {
 	tx := w.NewTransaction()
 	logger.Add(tx)
 	counter := 0
-	for logger.UploadCount == 0{
+	for logger.UploadCount == 0 {
 		time.Sleep(100 * time.Millisecond)
 		counter += 1
-		if counter >= 150{ //15 seconds
+		if counter >= 150 { //15 seconds
 			break
 		}
 	}
 
-	if logger.LastError != nil || logger.UploadCount == 0{
+	if logger.LastError != nil || logger.UploadCount == 0 {
 		t.Errorf("Failed to upload https log")
 	}
 }

@@ -4,20 +4,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
-	"os"
-	"strings"
-	"sync"
+	ttlcache "github.com/ReneKroon/ttlcache/v2"
 	grpc "github.com/jptosso/coraza-waf/internal/grpc/waf"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/parser"
 	"github.com/jptosso/coraza-waf/pkg/utils"
-	googlegrpc "google.golang.org/grpc"
 	log "github.com/sirupsen/logrus"
+	googlegrpc "google.golang.org/grpc"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
+	"net"
 	"net/url"
+	"os"
 	"path/filepath"
+	"strings"
+	"sync"
+	"time"
 )
 
 /*
@@ -64,37 +66,66 @@ type grpcFileUpload struct {
 }
 
 type grpcConfig struct {
-	ArgumentSeparator       string            `yaml:"argument_separator"`
-	DefaultActions          string            `yaml:"default_actions"`
-	GeoipDb                 string            `yaml:"geoipdb"`
-	TmpDir                  string            `yaml:"tmp_dir"`
-	UnicodeMap              string            `yaml:"unicode_map"`
-	UnicodePage             int               `yaml:"unicode_page"`
-	CollectionTimeout       int               `yaml:"collection_timeout"`
-	PcreMatchLimit          int               `yaml:"pcre_match_limit"`
-	PcreMatchLimitRecursion int               `yaml:"pcre_match_limit_recursion"`
-	FileUpload              *grpcFileUpload   `yaml:"file_upload"`
-	RequestBody             *grpcRequestBody  `yaml:request_body"`
-	ResponseBody            *grpcResponseBody `yaml:"response_body"`
-	Features                *grpcFeatures     `yaml:"features"`
-	Audit                   *grpcAudit        `yaml:"audit"`
+	// Specifies which character to use as the separator for
+	// application/x-www-form-urlencoded content
+	ArgumentSeparator string `yaml:"argument_separator"`
+
+	// Defines the default list of actions, which will be
+	// inherited by the rules in the same configuration context.
+	DefaultActions string `yaml:"default_actions"`
+
+	// Persistent collection timeout in seconds
+	CollectionTimeout int `yaml:"collection_timeout"`
+
+	// File upload configurations
+	FileUpload *grpcFileUpload `yaml:"file_upload"`
+
+	// Request Body access configurations
+	RequestBody *grpcRequestBody `yaml:"request_body""`
+
+	// Response Body access configurations
+	ResponseBody *grpcResponseBody `yaml:"response_body"`
+
+	// Enabled features
+	Features *grpcFeatures `yaml:"features"`
+
+	// Audit engine configuration
+	Audit *grpcAudit `yaml:"audit"`
 }
 
 type grpcConfigFile struct {
 	Key     string      `yaml:"key"`
+
+	// Path to profile file
 	Profile string      `yaml:"profile"`
 	Config  *grpcConfig `yaml:"config"`
 }
 
 type grpcMainConfig struct {
 	Address          string `yaml:"address"`
-	Port             string `yaml:"port"`
+	Port             int    `yaml:"port"`
 	Pid              string `yaml:"pid"`
 	UnixSock         string `yaml:"unix_sock"`
 	ApplicationsPath string `yaml:"apps_dir"`
-	TxMaxTtl         string `yaml:"transaction_max_ttl"`
+	TxTtl            int    `yaml:"transaction_ttl"`
 	MaxConnections   string `yaml:"max_connections"`
 	RedisUri         string `yaml:"redis_uri"`
+	LogLevel         string `yaml:"loglevel"`
+
+	// Path to GeoIP database
+	GeoipDb string `yaml:"geoipdb"`
+
+	// Path to store temporary file
+	TmpDir string `yaml:"tmp_dir"`
+
+	// Path to unicode mapping file
+	UnicodeMap string `yaml:"unicode_map"`
+
+	// Unicode page for unicode decoding
+	// See https://jptosso.github.io/coraza-waf/unicode.html
+	UnicodePage             int `yaml:"unicode_page"`
+	PcreMatchLimit          int `yaml:"pcre_match_limit"`
+	PcreMatchLimitRecursion int `yaml:"pcre_match_limit_recursion"`
 }
 
 type grpcServer struct {
@@ -102,7 +133,17 @@ type grpcServer struct {
 }
 
 var waflist sync.Map
-var transactions sync.Map
+var transactions *ttlcache.Cache
+
+func initTtl(ttl int) {
+	expirationCallback := func(key string, value interface{}) {
+		tx := value.(*engine.Transaction)
+		tx.ExecutePhase(5)
+	}
+	transactions = ttlcache.NewCache()
+	transactions.SetTTL(time.Duration(time.Duration(ttl) * time.Second))
+	transactions.SetExpirationCallback(expirationCallback)
+}
 
 func (s *grpcServer) Init(cfgfile string) error {
 	data, err := utils.OpenFile(cfgfile)
@@ -113,6 +154,7 @@ func (s *grpcServer) Init(cfgfile string) error {
 	if err != nil {
 		return err
 	}
+	initTtl(s.cfg.TxTtl)
 	files := [][]byte{}
 	log.Debug("Loading applications from: " + s.cfg.ApplicationsPath)
 	filepath.Walk(s.cfg.ApplicationsPath, func(path string, info os.FileInfo, err error) error {
@@ -143,8 +185,9 @@ func (s *grpcServer) Init(cfgfile string) error {
 }
 
 func (s *grpcServer) Serve() error {
-	host := "127.0.0.1"
-	port := 5001
+	host := s.cfg.Address
+	port := s.cfg.Port
+	log.Debug("Going to listen on %s:%d", host, port)
 	addr := fmt.Sprintf("%s:%d", host, port)
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -162,17 +205,17 @@ func (s *grpcServer) Serve() error {
 	return nil
 }
 
-func getTransaction(id string) (*engine.Transaction, error){
-	txi, _ := transactions.Load(id)
+func getTransaction(id string) (*engine.Transaction, error) {
+	txi, _ := transactions.Get(id)
 	if txi == nil {
-		return nil, errors.New("Invalid transaction ID");
+		return nil, errors.New("Invalid transaction ID")
 	}
 	return txi.(*engine.Transaction), nil
 }
 
 func headersToCollection(headers []*grpc.Header) map[string][]string {
 	col := map[string][]string{}
-	for _, h := range headers{
+	for _, h := range headers {
 		col[h.Key] = h.Values
 	}
 	return col
@@ -203,48 +246,61 @@ func (s grpcHandler) Create(ctx context.Context, req *grpc.NewTransaction) (*grp
 	tx.SetUrl(uri)
 	tx.AddGetArgsFromUrl(uri)
 	tx.SetRequestLine(req.Method, req.Protocol, req.Uri)
-	if req.Evaluate{
+	if req.Evaluate {
 		tx.ExecutePhase(1)
 	}
-	transactions.Store(tx.Id, tx)
+	transactions.Set(tx.Id, tx)
 	return txToStatus(tx), nil
 }
 
 func (s grpcHandler) SetRequestBody(ctx context.Context, req *grpc.NewRequestBody) (*grpc.TransactionStatus, error) {
 	tx, err := getTransaction(req.Txid)
-	if err != nil{
+	if err != nil {
 		return nil, err
+	}
+	err = tx.SetRequestBody(req.Body, int64(len(req.Body)), req.Mime)
+	if err != nil {
+		return nil, err
+	}
+	if req.Evaluate {
+		tx.ExecutePhase(2)
 	}
 	return txToStatus(tx), nil
 }
 
 func (s grpcHandler) SetResponseHeaders(ctx context.Context, req *grpc.NewResponseHeaders) (*grpc.TransactionStatus, error) {
 	tx, err := getTransaction(req.Txid)
-	if err != nil{
+	if err != nil {
 		return nil, err
+	}
+	tx.SetResponseStatus(int(req.Status))
+	tx.SetResponseHeaders(headersToCollection(req.ResponseHeaders))
+	if req.Evaluate {
+		tx.ExecutePhase(3)
 	}
 	return txToStatus(tx), nil
 }
 
 func (s grpcHandler) SetResponseBody(ctx context.Context, req *grpc.NewResponseBody) (*grpc.TransactionStatus, error) {
 	tx, err := getTransaction(req.Txid)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
-	return txToStatus(tx), nil
-}
-
-func (s grpcHandler) AddRequestFiles(ctx context.Context, req *grpc.RequestFiles) (*grpc.TransactionStatus, error) {
-	tx, err := getTransaction(req.Txid)
-	if err != nil{
-		return nil, err
+	tx.SetResponseBody(req.Body, int64(len(req.Body)))
+	if req.Evaluate {
+		tx.ExecutePhase(4)
 	}
-	return txToStatus(tx), nil
+	if req.Finish {
+		tx.ExecutePhase(5)
+	}
+	status := txToStatus(tx)
+	//TODO delete tx
+	return status, nil
 }
 
 func (s grpcHandler) Get(ctx context.Context, req *grpc.TransactionId) (*grpc.TransactionStatus, error) {
 	tx, err := getTransaction(req.Txid)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	return txToStatus(tx), nil
@@ -252,17 +308,19 @@ func (s grpcHandler) Get(ctx context.Context, req *grpc.TransactionId) (*grpc.Tr
 
 func (s grpcHandler) Close(ctx context.Context, req *grpc.TransactionId) (*grpc.TransactionStatus, error) {
 	tx, err := getTransaction(req.Txid)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
+	tx.ExecutePhase(5)
+	transactions.Remove(tx.Id)
 	return txToStatus(tx), nil
 }
 
 func txToStatus(tx *engine.Transaction) *grpc.TransactionStatus {
 	status := &grpc.TransactionStatus{
-		Id: tx.Id,
+		Id:        tx.Id,
 		Disrupted: tx.Disrupted,
-		Status: int32(tx.Status),
+		Status:    int32(tx.Status),
 	}
 	return status
 }

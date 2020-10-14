@@ -29,9 +29,9 @@ type ValidateNid struct {
 
 func (o *ValidateNid) Init(data string) {
 	spl := strings.SplitN(data, " ", 2)
-	if len(spl) != 2{
+	if len(spl) != 2 {
 		log.Error("Invalid @validateNid argument")
-		return 
+		return
 	}
 	o.fn = nids.NidMap()[spl[0]]
 	o.rgx = spl[1]

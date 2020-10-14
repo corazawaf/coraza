@@ -15,9 +15,9 @@
 package operators
 
 import (
-	log "github.com/sirupsen/logrus"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/utils"
+	log "github.com/sirupsen/logrus"
 	"strings"
 )
 

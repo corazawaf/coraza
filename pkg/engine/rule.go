@@ -153,7 +153,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 				}
 			}
 		}
-		
+
 		if len(values) == 0 {
 			if r.executeOperator("", tx) {
 				matchedValues = append(matchedValues, &MatchData{})
@@ -204,7 +204,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 				return []*MatchData{}
 			}
 			msgs = append(msgs, tx.MacroExpansion(nr.Msg))
-			
+
 			for _, child := range m {
 				matchedValues = append(matchedValues, child)
 			}
@@ -237,7 +237,7 @@ func (r *Rule) executeOperator(data string, tx *Transaction) bool {
 }
 
 func (r *Rule) executeTransformationsMultimatch(value string) []string {
-	res := []string{ value }
+	res := []string{value}
 	for _, t := range r.Transformations {
 		rf := reflect.ValueOf(t.TfFunc)
 		rargs := make([]reflect.Value, 1)
@@ -275,7 +275,7 @@ func (r *Rule) AddNegateVariable(collection string, key string) {
 	}
 }
 
-func NewRule() *Rule{
+func NewRule() *Rule {
 	r := &Rule{}
 	r.Init()
 	return r

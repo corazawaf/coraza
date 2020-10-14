@@ -58,7 +58,7 @@ func (hl *HttpLogger) start() {
 			if err != nil {
 				hl.LastError = err
 				hl.Add(next)
-			}else{
+			} else {
 				hl.mux.Lock()
 				hl.UploadCount++
 				hl.mux.Unlock()

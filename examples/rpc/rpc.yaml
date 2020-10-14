@@ -3,6 +3,7 @@ address: 127.0.0.1
 port: 5001
 pid: /opt/coraza-waf/var/run/coraza-rdp.pid
 apps_dir: /etc/coraza-waf/services/
-transaction_max_ttl: 600
+transaction_ttl: 600
 max_connections: 0
 redis_uri: redis://127.0.0.1
+loglevel: info

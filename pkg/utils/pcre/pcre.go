@@ -1,4 +1,4 @@
- // Copyright (c) 2011 Florian Weimer. All rights reserved.
+// Copyright (c) 2011 Florian Weimer. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -53,6 +53,7 @@
 // http://www.pcre.org/pcre.txt
 
 package pcre
+
 /*
 #cgo LDFLAGS: -L/usr/local/lib -lpcre
 #include <pcre.h>

@@ -18,11 +18,11 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	pcre "github.com/jptosso/coraza-waf/pkg/utils/pcre"
 	actionsmod "github.com/jptosso/coraza-waf/pkg/actions"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/operators"
 	"github.com/jptosso/coraza-waf/pkg/utils"
+	pcre "github.com/jptosso/coraza-waf/pkg/utils/pcre"
 	log "github.com/sirupsen/logrus"
 	"path/filepath"
 	"regexp"
@@ -140,16 +140,16 @@ func (p *Parser) Evaluate(data string) error {
 		break
 	case "SecAuditLogDirMode":
 		mode := 0600
-		if opts != "default"{
+		if opts != "default" {
 			mode, _ = strconv.Atoi(opts)
 		}
 		p.waf.AuditLogDirMode = mode
 		break
 	case "SecAuditLogFileMode":
 		mode := 0600
-		if opts != "default"{
+		if opts != "default" {
 			mode, _ = strconv.Atoi(opts)
-		}		
+		}
 		p.waf.AuditLogFileMode = mode
 		break
 	case "SecAuditLogParts":
@@ -249,7 +249,7 @@ func (p *Parser) Evaluate(data string) error {
 		if err != nil || p.FromString(string(data)) != nil {
 			if p.waf.AbortOnRemoteRulesFail {
 				return p.log("Failed to parse remote rules")
-			}else{
+			} else {
 				return err
 			}
 		}

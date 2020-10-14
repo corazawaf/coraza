@@ -7,7 +7,6 @@ service Transaction {
 	rpc SetRequestBody (NewRequestBody) returns(TransactionStatus) {}
 	rpc SetResponseHeaders (NewResponseHeaders) returns(TransactionStatus) {}
 	rpc SetResponseBody (NewResponseBody) returns(TransactionStatus) {}	
-	rpc AddRequestFiles (RequestFiles) returns (TransactionStatus) {}
 	rpc Get (TransactionId) returns (TransactionStatus) {}
 	rpc Close (TransactionId) returns (TransactionStatus) {}
 }
@@ -46,6 +45,7 @@ message NewRequestBody {
 	string txid = 1;
 	bool evaluate = 2;
 	bytes body = 3;
+	string mime = 4;
 }
 
 message NewResponseHeaders {
@@ -60,6 +60,7 @@ message NewResponseBody {
 	string txid = 1;
 	bool evaluate = 2;
 	bytes body = 3;
+	bool finish = 4;
 }
 
 message TransactionStatus {
@@ -77,9 +78,4 @@ message TransactionFile {
 	string mime = 2;
 	string name = 3;
 	bytes body = 4;
-}
-
-message RequestFiles {
-	string txid = 1;
-	repeated TransactionFile files = 2;
 }

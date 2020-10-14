@@ -30,7 +30,7 @@ func main() {
 	if *cfgmode == "grpc" {
 		server := &grpcServer{}
 		err := server.Init(*cfgfile)
-		if err != nil{
+		if err != nil {
 			log.Fatal(err)
 		}
 		log.Info("Running grpc server")
