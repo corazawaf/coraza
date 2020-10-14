@@ -197,7 +197,7 @@ func parseInputData(input interface{}, tx *engine.Transaction) {
 	if len(cto) > 0 {
 		ct = cto[0]
 	}
-	tx.SetRequestBody(data, int64(len(data)), ct)
+	tx.SetRequestBody([]byte(data), int64(len(data)), ct)
 }
 
 type testProfile struct {

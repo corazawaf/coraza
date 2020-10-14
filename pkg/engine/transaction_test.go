@@ -125,9 +125,10 @@ func TestTxSetters2(t *testing.T) {
 	tx.AddRequestHeader("testheader", "testvalue")
 	tx.AddRequestHeader("testheader2", "testvalue2")
 	tx.SetRemoteUser("testuser")
-	tx.SetRequestBody("asdf", 4, "application/xml")
-	tx.SetRequestBody("asdf", 4, "application/json")
-	tx.SetResponseBody("test", 4)
+	tx.SetRequestBody([]byte("test"), 4, "application/xml")
+	tx.SetRequestBody([]byte("test"), 4, "application/json")
+	tx.SetRequestBody([]byte("testuru=s0me&testuru2=c"), 4, "application/x-www-form-urlencoded")
+	tx.SetResponseBody([]byte("test"), 4)
 	tx.SetResponseHeaders(map[string][]string{
 		"test": []string{"testvalue"},
 	})
@@ -186,6 +187,7 @@ func TestTxSetters2(t *testing.T) {
 	exp := map[string]string{
 		"%{remote_user}":                 "testuser",
 		"%{args_post.name}":              "456",
+		"%{args_post.testuru}": "s0me",
 		"%{args_get.name}":               "456",
 		"%{args.name}":                   "456",
 		"%{remote_host}":                 "one.one.one.one.",

@@ -318,7 +318,11 @@ func (tx *Transaction) SetRequestBody(body []byte, length int64, mime string) er
 		//doc, err := xmlquery.Parse(strings.NewReader(s))
 		//tx.Json = doc
 	} else if mime == "application/x-www-form-urlencoded" {
-		uri, err := url.Parse(string(body))
+		if len(tx.GetCollection("args_post").Data) == 0 {
+			// Post args already sent, we should avoid duplications
+			return nil
+		}
+		uri, err := url.Parse("?" + string(body))
 		if err != nil {
 			return err
 		}

@@ -1,25 +1,25 @@
 package main
 
 import (
-	"context"
-	"errors"
-	"fmt"
-	ttlcache "github.com/ReneKroon/ttlcache/v2"
-	grpc "github.com/jptosso/coraza-waf/internal/grpc/waf"
-	"github.com/jptosso/coraza-waf/pkg/engine"
-	"github.com/jptosso/coraza-waf/pkg/parser"
-	"github.com/jptosso/coraza-waf/pkg/utils"
-	log "github.com/sirupsen/logrus"
-	googlegrpc "google.golang.org/grpc"
-	"gopkg.in/yaml.v2"
-	"io/ioutil"
-	"net"
-	"net/url"
 	"os"
-	"path/filepath"
-	"strings"
+	"net"
+	"fmt"
 	"sync"
 	"time"
+	"errors"
+	"context"
+	"strings"
+	"net/url"
+	"io/ioutil"
+	"path/filepath"	
+	"gopkg.in/yaml.v2"
+	log "github.com/sirupsen/logrus"
+	googlegrpc "google.golang.org/grpc"
+	"github.com/jptosso/coraza-waf/pkg/utils"
+	"github.com/jptosso/coraza-waf/pkg/engine"
+	"github.com/jptosso/coraza-waf/pkg/parser"	
+	ttlcache "github.com/ReneKroon/ttlcache/v2"
+	grpc "github.com/jptosso/coraza-waf/internal/grpc/waf"
 )
 
 /*
@@ -187,8 +187,8 @@ func (s *grpcServer) Init(cfgfile string) error {
 func (s *grpcServer) Serve() error {
 	host := s.cfg.Address
 	port := s.cfg.Port
-	log.Debug("Going to listen on %s:%d", host, port)
 	addr := fmt.Sprintf("%s:%d", host, port)
+	log.Debug("Going to listen on " + addr)
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
