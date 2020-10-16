@@ -54,7 +54,7 @@ sudo apt install corazawaf
 
 ```
 GO111MODULE=on go build -buildmode=plugin -o coraza.so cmd/coraza-waf/skipper.go
-skipper -filter-plugin coraza
+skipper -filter-plugin coraza.so
 ```
 
 ## Test

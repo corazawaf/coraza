@@ -22,7 +22,8 @@
             - 6
             - 8
   rules: |
-    SecDefaultAction log
+    SecDefaultAction phase:1,pass,log
+    SecDefaultAction phase:2,deny,log
 
     SecAction "id: 1"
     SecAction "id: 2, nolog, skipAfter:test-mark"

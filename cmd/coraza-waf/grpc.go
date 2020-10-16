@@ -1,25 +1,25 @@
 package main
 
 import (
-	"os"
-	"net"
-	"fmt"
-	"sync"
-	"time"
-	"errors"
 	"context"
-	"strings"
-	"net/url"
-	"io/ioutil"
-	"path/filepath"	
-	"gopkg.in/yaml.v2"
-	log "github.com/sirupsen/logrus"
-	googlegrpc "google.golang.org/grpc"
-	"github.com/jptosso/coraza-waf/pkg/utils"
-	"github.com/jptosso/coraza-waf/pkg/engine"
-	"github.com/jptosso/coraza-waf/pkg/parser"	
+	"errors"
+	"fmt"
 	ttlcache "github.com/ReneKroon/ttlcache/v2"
 	grpc "github.com/jptosso/coraza-waf/internal/grpc/waf"
+	"github.com/jptosso/coraza-waf/pkg/engine"
+	"github.com/jptosso/coraza-waf/pkg/parser"
+	"github.com/jptosso/coraza-waf/pkg/utils"
+	log "github.com/sirupsen/logrus"
+	googlegrpc "google.golang.org/grpc"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
+	"net"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
 )
 
 /*
@@ -94,7 +94,7 @@ type grpcConfig struct {
 }
 
 type grpcConfigFile struct {
-	Key     string      `yaml:"key"`
+	Key string `yaml:"key"`
 
 	// Path to profile file
 	Profile string      `yaml:"profile"`
