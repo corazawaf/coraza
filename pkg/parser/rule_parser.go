@@ -1,18 +1,18 @@
 package parser
 
-import(
-	"strings"
-	"strconv"
+import (
 	"errors"
-	"github.com/jptosso/coraza-waf/pkg/engine"
-	"github.com/jptosso/coraza-waf/pkg/utils"
-	"github.com/jptosso/coraza-waf/pkg/operators"
 	actionsmod "github.com/jptosso/coraza-waf/pkg/actions"
-	pcre "github.com/jptosso/coraza-waf/pkg/utils/pcre"	
+	"github.com/jptosso/coraza-waf/pkg/engine"
+	"github.com/jptosso/coraza-waf/pkg/operators"
+	"github.com/jptosso/coraza-waf/pkg/utils"
+	pcre "github.com/jptosso/coraza-waf/pkg/utils/pcre"
+	"strconv"
+	"strings"
 )
 
 type RuleParser struct {
-	rule *engine.Rule
+	rule      *engine.Rule
 	configdir string
 }
 
@@ -108,19 +108,19 @@ func (p *RuleParser) ParseActions(actions string, defaults []*DefaultActions) er
 	phase := act["phase"]
 	pp := 1
 	var err error
-	if phase != nil || len(phase) > 0{
+	if phase != nil || len(phase) > 0 {
 		pp, err = PhaseToInt(phase[0])
-		if err != nil{
+		if err != nil {
 			return err
 		}
 	}
 
-	for _, acts := range defaults{
+	for _, acts := range defaults {
 		cp := acts.Phase
 		if cp != pp {
 			//Not our phase bruh
 			continue
-		}else{
+		} else {
 			act = MergeActions(acts.Actions, act)
 			p.rule.DefaultDisruptiveAction = acts.DisruptiveAction
 			break //TODO is it ok to break?
@@ -151,15 +151,15 @@ func (p *RuleParser) GetRule() *engine.Rule {
 	return p.rule
 }
 
-func NewRuleParser() *RuleParser{
+func NewRuleParser() *RuleParser {
 	rp := &RuleParser{}
 	rp.Init()
 	return rp
 }
 
-func ParseActions(actions string) (map[string][]string, error){
+func ParseActions(actions string) (map[string][]string, error) {
 	//This regex splits actions by comma and assign key:values with supported escaped quotes
-	//TODO needs fixing, sometimes we empty strings as key	
+	//TODO needs fixing, sometimes we empty strings as key
 	re := pcre.MustCompile(`(.*?)((?<!\\)(?!\B'[^']*),(?![^']*'\B)|$)`, 0)
 	matcher := re.MatcherString(actions, 0)
 	subject := []byte(actions)
@@ -183,41 +183,41 @@ func ParseActions(actions string) (map[string][]string, error){
 		}
 		if res[key] == nil {
 			res[key] = []string{value}
-		}else{
+		} else {
 			res[key] = append(res[key], value)
 		}
 		if len(subject) == 0 {
 			break
 		}
-	}	
+	}
 	return res, nil
 }
 
-func PhaseToInt(phase string) (int, error){
+func PhaseToInt(phase string) (int, error) {
 	if phase == "request" {
 		return 1, nil
-	}else if phase == "response" {
+	} else if phase == "response" {
 		return 4, nil
-	}else if phase == "log" {
+	} else if phase == "log" {
 		return 5, nil
 	}
 	p, err := strconv.Atoi(phase)
 
-	if err != nil || p < 1 || p > 5{
+	if err != nil || p < 1 || p > 5 {
 		return 0, errors.New("Invalid phase " + phase)
 	}
 	// This should never happen (?)
 	return p, nil
 }
 
-func MergeActions(origin map[string][]string, extra map[string][]string) map[string][]string{
+func MergeActions(origin map[string][]string, extra map[string][]string) map[string][]string {
 	newdata := map[string][]string{}
-	for _, m := range []map[string][]string{origin, extra}{
-		for k, v := range m{
-			if newdata[k] == nil{
+	for _, m := range []map[string][]string{origin, extra} {
+		for k, v := range m {
+			if newdata[k] == nil {
 				newdata[k] = v
-			}else{
-				for _, vv := range v{
+			} else {
+				for _, vv := range v {
 					newdata[k] = append(newdata[k], vv)
 				}
 			}

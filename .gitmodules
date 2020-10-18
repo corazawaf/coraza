@@ -1,3 +1,6 @@
 [submodule "pkg/utils/libinjection"]
 	path = pkg/utils/libinjection
 	url = https://github.com/client9/libinjection
+[submodule "docs/crs"]
+	path = docs/crs
+	url = https://github.com/coreruleset/coreruleset

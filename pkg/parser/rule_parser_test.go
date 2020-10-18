@@ -1,18 +1,19 @@
 package parser
 
-import(
-	"testing"
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
+	"testing"
 )
 
-func TestDefaultActions(t *testing.T){
+func TestDefaultActions(t *testing.T) {
 	waf := engine.NewWaf()
-	p := NewParser(waf)
+	p, _ := NewParser(waf)
 	err := p.AddDefaultActions("log, pass, phase: 1")
-	if err != nil{
+	if err != nil {
 		t.Error("Error parsing default actions", err)
 	}
-	if len(p.GetDefaultActions()) == 0 {
+	p.AddDefaultActions("log, drop, phase:2")
+	if len(p.GetDefaultActions()) != 2 {
 		t.Error("Default actions were not created")
 	}
 
@@ -20,8 +21,12 @@ func TestDefaultActions(t *testing.T){
 	if err != nil {
 		t.Error("Failed to parse rule", err)
 	}
+	if r.DefaultDisruptiveAction != "pass" {
+		t.Error("Failed to assign default disruptive rule to action, currently " + r.DefaultDisruptiveAction)
+	}
+	r2, _ := p.ParseRule(`ARGS "test" "phase:2,id:2"`)
 
-	if r.DefaultDisruptiveAction != "pass"{
+	if r2.DefaultDisruptiveAction != "drop" {
 		t.Error("Failed to assign default disruptive rule to action, currently " + r.DefaultDisruptiveAction)
 	}
 }

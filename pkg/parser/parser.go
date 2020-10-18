@@ -49,9 +49,13 @@ type Parser struct {
 
 func (p *Parser) Init(waf *engine.Waf) {
 	p.waf = waf
+	p.defaultActions = []*DefaultActions{}
 }
 
 func (p *Parser) FromFile(profilePath string) error {
+	if !utils.FileExists(profilePath) {
+		return errors.New("Invalid profile path")
+	}
 	p.configfile = profilePath
 	p.configdir = filepath.Dir(profilePath) + "/"
 	file, err := utils.OpenFile(profilePath)
@@ -466,7 +470,7 @@ func (p *Parser) AddDefaultActions(data string) error {
 	pp := actions["phase"]
 	if pp == nil || len(pp) == 0 {
 		return errors.New("Default action requires a phase")
-	}	
+	}
 	phase, err := PhaseToInt(pp[0])
 	if err != nil {
 		return errors.New("Default action requires a phase")
@@ -504,9 +508,11 @@ func (p *Parser) GetDefaultActions() []*DefaultActions {
 	return p.defaultActions
 }
 
-
-func NewParser(waf *engine.Waf) *Parser{
+func NewParser(waf *engine.Waf) (*Parser, error) {
+	if waf == nil {
+		return nil, errors.New("Must use a valid waf instance")
+	}
 	p := &Parser{}
 	p.Init(waf)
-	return p
+	return p, nil
 }

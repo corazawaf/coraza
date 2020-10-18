@@ -88,7 +88,7 @@ type Rule struct {
 	Raw                     string               `json:"raw"`
 	Chain                   *Rule                `json:"chain"`
 	DisruptiveAction        int                  `json:"disruptive_action"`
-	DefaultDisruptiveAction string                  `json:"default_disruptive_action"`
+	DefaultDisruptiveAction string               `json:"default_disruptive_action"`
 
 	//METADATA
 	// Rule unique sorted identifier
