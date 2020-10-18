@@ -22,22 +22,19 @@
             - 6
             - 8
   rules: |
-    SecDefaultAction phase:1,pass,log
-    SecDefaultAction phase:2,deny,log
-
-    SecAction "id: 1"
+    SecAction "id: 1, log"
     SecAction "id: 2, nolog, skipAfter:test-mark"
 
-    SecAction "id: 4"
-    SecAction "id: 5"
+    SecAction "id: 4, log"
+    SecAction "id: 5,log"
     SecAction "id: 6"
 
     SecMarker test-mark
-    SecAction "id: 7, skipAfter: test-mark3"
+    SecAction "id: 7, log, skipAfter: test-mark3"
 
     SecMarker test-mark2
-    SecAction "id: 8"
+    SecAction "id: 8, log"
     SecMarker test-mark3
-    SecAction "id: 9"
+    SecAction "id: 9, log"
 
 
