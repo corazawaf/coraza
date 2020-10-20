@@ -1,9 +1,10 @@
 # experimental
 address: 127.0.0.1
 port: 5001
-pid: /opt/coraza-waf/var/run/coraza-rdp.pid
 apps_dir: /etc/coraza-waf/services/
+# If a transaction is not manually finished, it will be closed and saved to audit after transaction_ttl seconds.
 transaction_ttl: 600
 max_connections: 0
 redis_uri: redis://127.0.0.1
 loglevel: info
+logfile: /opt/coraza-waf/log/grpc.log

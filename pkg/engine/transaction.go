@@ -608,7 +608,12 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 	tx.LastPhase = phase
 	tx.Mux.Unlock()
 	for _, r := range tx.WafInstance.Rules.GetRules() {
+		log.Debug(fmt.Sprintf("Evaluating rule %d", r.Id))
 		if r.Phase != phase {
+			continue
+		}
+		if utils.ArrayContainsInt(tx.RuleRemoveById, r.Id) {
+			log.Debug(fmt.Sprintf("Skipping rule %d because of a ctl", r.Id))
 			continue
 		}
 		//we always evaluate secmarkers
@@ -618,6 +623,7 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 				tx.SkipAfter = ""
 			} else {
 				tx.Mux.RUnlock()
+				log.Debug("Skipping rule because of secmarker")
 				continue
 			}
 			tx.Mux.RUnlock()
@@ -629,6 +635,7 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 			tx.Skip--
 			tx.Mux.Unlock()
 			//Skipping rule
+			log.Debug("Skipping rule because of skip")
 			continue
 		}
 		tx.Mux.RUnlock()
@@ -639,24 +646,28 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 		txr.Set("severity", []string{r.Severity})
 		//txr.Set("logdata", []string{r.LogData})
 		txr.Set("msg", []string{r.Msg})
-		r.Evaluate(tx)
+		match := r.Evaluate(tx)
+		if len(match) > 0 {
+			log.Debug(fmt.Sprintf("Rule %d matched", r.Id))
+		}
 
 		tx.Capture = false //we reset the capture flag on every run
 		usedRules++
 		if tx.Disrupted {
+			tx.ExecutePhase(5)
 			break
 		}
 	}
 	tx.Mux.Lock()
 	tx.StopWatches[phase] = int(time.Now().UnixNano() - ts)
 	tx.Mux.Unlock()
-	if tx.Disrupted || phase == 5 {
-		if phase != 5 {
-			tx.ExecutePhase(5)
-		} else if tx.IsRelevantStatus() {
+	if phase == 5 {
+		if tx.IsRelevantStatus() {
+			log.Debug("Saving transaction audit log")
 			tx.SaveLog()
-			tx.SavePersistentData()
 		}
+		log.Debug("Saving persistent data")
+		tx.SavePersistentData()
 	}
 	return tx.Disrupted
 }

@@ -1,3 +1,17 @@
+// Copyright 2020 Juan Pablo Tosso
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package crs
 
 import (
@@ -7,60 +21,65 @@ import (
 	"github.com/jptosso/coraza-waf/pkg/parser"
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 )
 
 type Crs struct {
-	DefaultParanoia              int
-	EnforceUrlEncoded            bool
-	InboundAnomalyScoreThreshold int
-	OutboundScoreThreshold       int
-	Exclusions                   map[string][]string // Path and application
-	AllowedHttpMethods           []string
-	AllowedReqContentType        []string
-	AllowedHttpVersions          []string
-	AllowedReqCharset            []string
-	ForbiddenFileExtensions      []string
-	ForbiddenRequestHeaders      []string
-	StaticFileExtensions         []string
-	CountryBlock                 []string
-	MaxNumArgs                   int
-	MaxArgNameLength             int
-	MaxArgValueLength            int
-	MaxTotalArgLength            int
-	MaxFileSize                  int64
-	MaxCombinedFileSize          int64
-	SamplingPercentaje           int
+	TemplateDir                  string   `yaml:"template_dir"`
+	DefaultParanoia              int      `yaml:"default_paranoia"`
+	EnforceUrlEncoded            bool     `yaml:"enforce_reqbody_url_encoded"`
+	InboundAnomalyScoreThreshold int      `yaml:"inbound_anomaly_score_threshold"`
+	OutboundScoreThreshold       int      `yaml:"outbound_anomaly_score_threshold"`
+	Exclusions                   []string `yaml:"exclusions"`
+	AllowedHttpMethods           []string `yaml:"allowed_http_methods"`
+	AllowedReqContentType        []string `yaml:"allowed_request_content_type"`
+	AllowedHttpVersions          []string `yaml:"allowed_http_versions"`
+	AllowedReqCharset            []string `yaml:"allowed_request_ct_charset"`
+	ForbiddenFileExtensions      []string `yaml:"forbidden_file_extensions"`
+	ForbiddenRequestHeaders      []string `yaml:"forbidden_request_headers"`
+	StaticFileExtensions         []string `yaml:"static_extensions"`
+	CountryBlock                 []string `yaml:"country_block"`
+	MaxNumArgs                   int      `yaml:"max_num_args"`
+	MaxArgNameLength             int      `yaml:"max_arg_name_length"`
+	MaxArgValueLength            int      `yaml:"max_arg_value_length"`
+	MaxTotalArgsLength           int      `yaml:"max_total_args_length"`
+	MaxFileSize                  int64    `yaml:max_file_size""`
+	MaxCombinedFileSize          int64    `yaml:"max_combined_file_size"`
+	SamplingPercentage           int      `yaml:"sampling_percentage"`
+	DosBlockTimeout              int      `yaml:"dos_block_timeout"`
+	DosCounterThreshold          int      `yaml:"dos_counter_threshold"`
+	DosBurstTimeSlice            int      `yaml:"dos_burst_time_slice"`
+	ValidateUtf8Encoding         bool     `yaml:"validate_utf8_encoding"`
+	ReputationBlock              bool     `yaml:"reputation_block"`
+	ReputationBlockDuration      int      `yaml:"reputation_block_duration"`
+	IpWhitelist                  []string `yaml:"ip_whitelist"`
+	Mode                         string   `yaml:"mode"`
+	PreRules                     string   `yaml:"pre_rules"`
+	AfterRules                   string   `yaml:"after_rules"`
 	//BlockBlSearchIp              bool
 	//BlockBlSuspiciousIp          bool
 	//BlockBlHarvesterIp           bool
 	//BlockBlSpammerIp             bool
 
-	DosBlockTimeout         int
-	DosCounterThreshold     int
-	DosBurstTimeSlice       int
-	ValidateUtf8Encoding    bool
-	ReputationBlock         bool
-	ReputationBlockDuration int
-	IpWhitelist             []string
-
-	IpKey      string
-	SessionKey string
-
-	files []string
-	waf      *engine.Waf
+	waf *engine.Waf
 }
 
-func (c *Crs) Init(templatepath string, waf *engine.Waf) error {
+func (c *Crs) Init(waf *engine.Waf) error {
 	if waf == nil {
 		return errors.New("WAF cannot be nil")
 	}
-	if !dirExists(templatepath) {
+	c.waf = waf
+	return nil
+}
+
+func (c *Crs) Build() error {
+	if !dirExists(c.TemplateDir) {
 		return errors.New("Template dir must exist")
 	}
-	c.files = []string{}
 	files := []string{
+		"REQUEST-901-INITIALIZATION.conf",
 		"REQUEST-903.9001-DRUPAL-EXCLUSION-RULES.conf",
 		"REQUEST-903.9002-WORDPRESS-EXCLUSION-RULES.conf",
 		"REQUEST-903.9003-NEXTCLOUD-EXCLUSION-RULES.conf",
@@ -92,17 +111,13 @@ func (c *Crs) Init(templatepath string, waf *engine.Waf) error {
 		"RESPONSE-959-BLOCKING-EVALUATION.conf",
 		"RESPONSE-980-CORRELATION.conf",
 	}
-	for _, f := range files{
-		if !utils.FileExists(templatepath + f){
-			return errors.New("File " + f + " must exist")
+	for i, f := range files {
+		p := path.Join(c.TemplateDir, f)
+		if !utils.FileExists(p) {
+			return errors.New("File " + p + " must exist")
 		}
-		c.files = append(c.files, templatepath + f)
+		files[i] = p
 	}
-	c.waf = waf
-	return nil
-}
-
-func (c *Crs) Build() error {
 	replace := map[string]string{
 		"paranoia_level":                       strconv.Itoa(c.DefaultParanoia),
 		"enforce_bodyproc_urlencoded":          boolToString(c.EnforceUrlEncoded),
@@ -119,10 +134,10 @@ func (c *Crs) Build() error {
 		"max_num_args":                         strconv.Itoa(c.MaxNumArgs),
 		"arg_name_length":                      strconv.Itoa(c.MaxArgNameLength),
 		"arg_length":                           strconv.Itoa(c.MaxArgValueLength),
-		"total_arg_length":                     strconv.Itoa(c.MaxTotalArgLength),
+		"total_arg_length":                     strconv.Itoa(c.MaxTotalArgsLength),
 		"max_file_size":                        strconv.FormatInt(c.MaxFileSize, 10),
 		"combined_file_sizes":                  strconv.FormatInt(c.MaxCombinedFileSize, 10),
-		"sampling_percentage":                  strconv.Itoa(c.SamplingPercentaje),
+		"sampling_percentage":                  strconv.Itoa(c.SamplingPercentage),
 		"dos_block_timeout":                    strconv.Itoa(c.DosBlockTimeout),
 		"dos_counter_threshold":                strconv.Itoa(c.DosCounterThreshold),
 		"dos_burst_time_slice":                 strconv.Itoa(c.DosBurstTimeSlice),
@@ -130,8 +145,30 @@ func (c *Crs) Build() error {
 		"do_reput_block":                       boolToString(c.ReputationBlock),
 		"reput_block_duration":                 strconv.Itoa(c.ReputationBlockDuration),
 		"ip_whitelist":                         strings.Join(c.IpWhitelist, ","),
+		"crs_setup_version": "300",
 	}
-	buff := "SecAction \"id:900000,nolog,phase:1,t:none,"
+	buff := ""
+	var err error
+	p, _ := parser.NewParser(c.waf)
+	err = p.FromString(c.PreRules)
+	if err != nil {
+		return err
+	}
+	switch c.Mode {
+	case "strict":
+		buff = `SecDefaultAction "phase:1,log,auditlog,deny,status:403"\nSecDefaultAction "phase:2,log,auditlog,deny,status:403"\n`
+		break
+	case "scoring":
+		buff = `SecDefaultAction "phase:1,log,auditlog,pass"\nSecDefaultAction "phase:2,log,auditlog,pass"\n`
+		break
+	default:
+		buff = c.Mode + "\n"
+	}
+	err = p.FromString(buff)
+	if err != nil {
+		return err
+	}
+	buff = "SecAction \"id:900000,nolog,phase:1,t:none,"
 	for k, v := range replace {
 		buff += fmt.Sprintf("setvar:tx.%s=%s,", k, v)
 	}
@@ -139,9 +176,11 @@ func (c *Crs) Build() error {
 		buff += fmt.Sprintf("setvar:tx.crs_exclusions_%s=1,", e)
 	}
 	buff += "pass\"\n"
-	var err error
-	p, _ := parser.NewParser(c.waf)
 	err = p.FromString(buff)
+	if err != nil {
+		return err
+	}
+	err = p.FromString(c.AfterRules)
 	if err != nil {
 		return err
 	}
@@ -151,22 +190,22 @@ func (c *Crs) Build() error {
 			return err
 		}
 	}
-	for _, f := range c.files {
+	for _, f := range files {
 		err = p.FromFile(f)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func NewCrs(template string, waf *engine.Waf) (*Crs, error) {
+func NewCrs(waf *engine.Waf) (*Crs, error) {
 	c := &Crs{
 		DefaultParanoia:    1,
 		AllowedHttpMethods: []string{"GET", "HEAD", "POST", "OPTIONS"},
 		IpWhitelist:        []string{"127.0.0.1"},
 	}
-	err := c.Init(template, waf)
+	err := c.Init(waf)
 	if err != nil {
 		return nil, err
 	}

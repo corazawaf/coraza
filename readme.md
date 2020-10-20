@@ -30,12 +30,13 @@ Compilation prerequisites:
 You can compile each package individually running: `go build cmd/coraza-waf/*.go` or using the make scripts.
 
 ```
+$ git clone --recursive https://github.com/jptosso/coraza-waf
+# if already cloned use git submodule update --init --recursive
+$ cd coraza-waf
 # Get dependencies
-go get ./...
-# make libinjection is required
-sudo make libinjection
-make
-sudo make install
+$ go get ./...
+$ make
+$ sudo make install
 
 ```
 
@@ -61,18 +62,17 @@ skipper -filter-plugin coraza.so
 
 Golang test suite:
 ```
-git clone https://github.com/jptosso/coraza-waf
+git clone --recursive https://github.com/jptosso/coraza-waf
 cd coraza-waf/
 go test ./... -v
 ```
 
 Test against OWASP CRS
 ```
-git clone https://github.com/jptosso/coraza-waf
-git clone https://github.com/SpiderLabs/owasp-modsecurity-crs
+git clone --recursive https://github.com/jptosso/coraza-waf
 # Create your OWASP CRS package owasp-crs.conf
 cd coraza-waf/
-go run cmd/testsuite/main.go -path ../owasp-modsecurity-crs -rules ../owasp-modsecurity-crs/owasp-crs.conf
+go run cmd/testsuite/main.go -path docs/rs -rules crs/some-rules.conf
 ```
 
 ## Run with Docker
@@ -135,8 +135,7 @@ func main(){
 	waf := engine.NewWaf()
 
 	// Parse some rules
-	p := parser.Parser{}
-	p.Init(waf)
+	p, _ := parser.NewParser(waf)
 	p.FromString(`SecRule REQUEST_HEADERS:test "TestValue" "id:1, drop, log"`)
 
 	// Create Transaction
@@ -154,10 +153,20 @@ func main(){
 $ coraza-waf -m rpc -f /etc/coraza-waf/rpc.yaml
 ```
 
-And check our official wrappers:
+Check our official wrappers:
 * [Coraza WAF NodeJS Express Middleware](#)
 
 More information [available here](#).
+
+### Using gRPC with OWASP CRS
+
+Coraza WAF gRPC applications can be configured to automatically import and setup OWASP CRS, just enable CRS as a feature in the service.yaml file and set ``config.crs.template_dir`` to your OWASP CRS path or ``/etc/coraza-waf/crs/`` if coraza is installed.
+
+You may check the customization options [here](#).
+
+## Using the CRS engine
+
+Coraza WAF can be configured with OWASP CRS without the need to download and setup the packages. The ``pkg.crs`` package contains tools to automatically import and setup CRS.
 
 ## Deployment options
 

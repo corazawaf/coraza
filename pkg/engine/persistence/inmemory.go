@@ -18,6 +18,7 @@ import (
 	"errors"
 	ttlcache "github.com/ReneKroon/ttlcache/v2"
 	"time"
+	log "github.com/sirupsen/logrus"
 )
 
 type MemoryEngine struct {
@@ -33,6 +34,7 @@ func (r *MemoryEngine) Init(url string) error {
 }
 
 func (r *MemoryEngine) Get(key string) map[string][]string {
+	log.Debug("Getting in memory collection " + key)
 	if value, exists := r.data.Get(key); exists == nil {
 		return value.(map[string][]string)
 	}
@@ -40,6 +42,7 @@ func (r *MemoryEngine) Get(key string) map[string][]string {
 }
 
 func (r *MemoryEngine) Set(key string, value map[string][]string) error {
+	log.Debug("Setting in memory collection " + key)
 	r.data.SetWithTTL(key, value, 1000*time.Second)
 	return nil
 }

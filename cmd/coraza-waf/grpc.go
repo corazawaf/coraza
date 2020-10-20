@@ -1,3 +1,17 @@
+// Copyright 2020 Juan Pablo Tosso
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
@@ -6,6 +20,7 @@ import (
 	"fmt"
 	ttlcache "github.com/ReneKroon/ttlcache/v2"
 	grpc "github.com/jptosso/coraza-waf/internal/grpc/waf"
+	"github.com/jptosso/coraza-waf/pkg/crs"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/parser"
 	"github.com/jptosso/coraza-waf/pkg/utils"
@@ -37,12 +52,13 @@ type grpcAudit struct {
 }
 
 type grpcFeatures struct {
-	Audit              string `yaml:"audit"`
-	Rules              string `yaml:"rules"`
-	ContentInjection   string `yaml:"content_injection"`
-	RequestBodyAccess  string `yaml:"request_body_access"`
-	ResponseBodyAccess string `yaml:"response_body_access"`
-	BodyInspection     string `yaml:"body_inspection"`
+	Crs                bool `yaml:"crs"`
+	Audit              bool `yaml:"audit"`
+	Rules              bool `yaml:"rules"`
+	ContentInjection   bool `yaml:"content_injection"`
+	RequestBodyAccess  bool `yaml:"request_body_access"`
+	ResponseBodyAccess bool `yaml:"response_body_access"`
+	BodyInspection     bool `yaml:"body_inspection"`
 }
 
 type grpcResponseBody struct {
@@ -91,6 +107,9 @@ type grpcConfig struct {
 
 	// Audit engine configuration
 	Audit *grpcAudit `yaml:"audit"`
+
+	// OWASP CRS config
+	Crs *crs.Crs `yaml:"crs"`
 }
 
 type grpcConfigFile struct {
@@ -130,7 +149,9 @@ type grpcMainConfig struct {
 
 type grpcServer struct {
 	cfg *grpcMainConfig
+	srv *googlegrpc.Server
 }
+
 
 var waflist sync.Map
 var transactions *ttlcache.Cache
@@ -154,18 +175,38 @@ func (s *grpcServer) Init(cfgfile string) error {
 	if err != nil {
 		return err
 	}
+	switch s.cfg.LogLevel {
+	case "info":
+		log.SetLevel(log.InfoLevel)
+		break
+	case "debug":
+		log.SetLevel(log.DebugLevel)
+		break
+	case "warn":
+		log.SetLevel(log.WarnLevel)
+		break
+	case "error":
+		log.SetLevel(log.ErrorLevel)		
+		break
+	default:
+		log.SetLevel(log.WarnLevel)
+		break		
+	}
 	initTtl(s.cfg.TxTtl)
-	files := [][]byte{}
+	files := []string{}
 	log.Debug("Loading applications from: " + s.cfg.ApplicationsPath)
 	filepath.Walk(s.cfg.ApplicationsPath, func(path string, info os.FileInfo, err error) error {
 		if strings.HasSuffix(path, ".yaml") {
 			log.Debug("Loading application: " + path)
-			data, _ := ioutil.ReadFile(path)
-			files = append(files, data)
+			files = append(files, path)
 		}
 		return nil
 	})
-	for _, data := range files {
+	for _, path := range files {
+		data, err := ioutil.ReadFile(path)
+		if err != nil{
+			return err
+		}
 		var c *grpcConfigFile
 		err = yaml.Unmarshal(data, &c)
 		if err != nil {
@@ -175,9 +216,21 @@ func (s *grpcServer) Init(cfgfile string) error {
 		parser := &parser.Parser{}
 		log.Info("Loading application: " + c.Key)
 		parser.Init(waf)
-		err := parser.FromFile(c.Profile)
+		err = parser.FromFile(c.Profile)
 		if err != nil {
 			return err
+		}
+		if c.Config.Features.Crs {
+			log.Info("Application is using OWASP CRS")
+			err = c.Config.Crs.Init(waf)
+			if err != nil {
+				return err
+			}
+			err := c.Config.Crs.Build()
+			if err != nil {
+				return err
+			}
+			log.Debug(fmt.Sprintf("%d rules after CRS", waf.Rules.Count()))
 		}
 		waflist.Store(c.Key, waf)
 	}
@@ -194,15 +247,28 @@ func (s *grpcServer) Serve() error {
 		return err
 	}
 
-	srv := googlegrpc.NewServer()
+	s.srv = googlegrpc.NewServer()
 	serviceServer := NewGrpcServer()
-	grpc.RegisterTransactionServer(srv, serviceServer)
+	grpc.RegisterTransactionServer(s.srv, serviceServer)
 
-	if err := srv.Serve(listener); err != nil {
+	if err := s.srv.Serve(listener); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+
+func (s *grpcServer) Close(){
+	log.Info("Attempting to gracefully stop GRPC")
+	s.srv.GracefulStop()
+	log.Info(fmt.Sprintf("GRPC stopped, attempting to close %d transactions, it might take a few minutes", transactions.Count()))
+	transactions.Close()
+	for transactions.Count() > 0{
+		//Waiting for all transactions to be closed
+	}
+	log.Warn("We just deleted all pending transactions, it might be fixed in the future.")
+	log.Info("All transactions closed")
 }
 
 func getTransaction(id string) (*engine.Transaction, error) {
@@ -241,12 +307,16 @@ func (s grpcHandler) Create(ctx context.Context, req *grpc.NewTransaction) (*grp
 	}
 	waf := wi.(*engine.Waf)
 	tx = waf.NewTransaction()
+	log.Debug("Created transaction " + tx.Id)
 	tx.SetRequestHeaders(headersToCollection(req.RequestHeaders))
 	uri, _ := url.Parse(req.Uri)
 	tx.SetUrl(uri)
 	tx.AddGetArgsFromUrl(uri)
 	tx.SetRequestLine(req.Method, req.Protocol, req.Uri)
+	tx.SetRemoteAddress(req.RequestAddr, int(req.RequestPort))
+
 	if req.Evaluate {
+		log.Debug("Evaluating transaction " + tx.Id)
 		tx.ExecutePhase(1)
 	}
 	transactions.Set(tx.Id, tx)
@@ -290,12 +360,10 @@ func (s grpcHandler) SetResponseBody(ctx context.Context, req *grpc.NewResponseB
 	if req.Evaluate {
 		tx.ExecutePhase(4)
 	}
-	if req.Finish {
-		tx.ExecutePhase(5)
-	}
+	tx.ExecutePhase(5)
 	status := txToStatus(tx)
-	//TODO delete tx
-	return status, nil
+	transactions.Remove(tx.Id)
+	return status, err
 }
 
 func (s grpcHandler) Get(ctx context.Context, req *grpc.TransactionId) (*grpc.TransactionStatus, error) {
@@ -314,6 +382,27 @@ func (s grpcHandler) Close(ctx context.Context, req *grpc.TransactionId) (*grpc.
 	tx.ExecutePhase(5)
 	transactions.Remove(tx.Id)
 	return txToStatus(tx), nil
+}
+
+func (s grpcHandler) GetCollection(ctx context.Context, req *grpc.CollectionRequest) (*grpc.CollectionResponse, error) {
+	wi, _ := waflist.Load(req.Wafkey)
+	if wi == nil {
+		return nil, errors.New("Invalid Waf Key")
+	}
+	waf := wi.(*engine.Waf)
+	cols := []*grpc.Collection{}
+	cdata := waf.PersistenceEngine.Get(fmt.Sprintf("c-%s-%s-%s", waf.WebAppId, req.Name, req.Key))
+	for k, v := range cdata {
+		cols = append(cols, &grpc.Collection{
+			Key: k,
+			Values: v,
+		})
+	}
+	col := &grpc.CollectionResponse{
+		Name: fmt.Sprintf("%s:%s", req.Name, req.Key),
+		Collections: cols,
+	}
+	return col, nil
 }
 
 func txToStatus(tx *engine.Transaction) *grpc.TransactionStatus {

@@ -21,20 +21,35 @@ import (
 	"github.com/zalando/skipper"
 	"github.com/zalando/skipper/config"
 	"os"
+	"os/signal"
+	"syscall"
+	"strconv"
+	"io/ioutil"
 )
+
+var grpcsrv *grpcServer
 
 func main() {
 	cfgmode := flag.String("m", "skipper", "Configuration Mode, skipper or grpc")
 	cfgfile := flag.String("f", "", "Configurations path")
+	pidfile := flag.String("pid", "/tmp/coraza.pid", "Pid file location")
 	flag.Parse()
+
+	err := writePidFile(*pidfile)
+	if err != nil{
+		log.Error(err)
+		os.Exit(1)
+	}
+	closeHandler(*pidfile)
+
 	if *cfgmode == "grpc" {
-		server := &grpcServer{}
-		err := server.Init(*cfgfile)
+		grpcsrv = &grpcServer{}
+		err := grpcsrv.Init(*cfgfile)
 		if err != nil {
 			log.Fatal(err)
 		}
 		log.Info("Running grpc server")
-		log.Fatal(server.Serve())
+		log.Fatal(grpcsrv.Serve())
 	} else if *cfgmode == "skipper" {
 		initSkipper(*cfgfile)
 	} else {
@@ -60,4 +75,37 @@ func initSkipper(cfgfile string) {
 		fmt.Println("Logging to stdout")
 	}
 	log.Fatal(skipper.Run(opts))
+}
+
+func writePidFile(pidFile string) error {
+	if piddata, err := ioutil.ReadFile(pidFile); err == nil {
+		if pid, err := strconv.Atoi(string(piddata)); err == nil {
+			if process, err := os.FindProcess(pid); err == nil {
+				// Send SIGKILL
+				if err := process.Signal(syscall.Signal(0)); err == nil {
+					// We only get an error if the pid isn't running, or it's not ours.
+					return fmt.Errorf("pid already running: %d", pid)
+				}
+			}
+		}
+	}
+	// If we get here, then the pidfile didn't exist,
+	// or the pid in it doesn't belong to the user running this app.
+	return ioutil.WriteFile(pidFile, []byte(fmt.Sprintf("%d", os.Getpid())), 0664)
+}
+
+func closeHandler(pidfile string) {
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		log.Info("Closing Coraza WAF")
+		err := os.Remove(pidfile)
+		if err != nil {
+			log.Error("Failed to remove pid file")
+			os.Exit(1)
+		}
+		grpcsrv.Close()
+		os.Exit(0)
+	}()
 }

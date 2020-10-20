@@ -71,7 +71,9 @@ func (a *Setvar) evaluateTxCollection(r *engine.Rule, tx *engine.Transaction, ke
 			collection.Set(tx.MacroExpansion(a.Key), []string{"0"})
 			res = []string{"0"}
 		}
-		if a.Value[0] == '+' {
+		if len(a.Value) == 0 {
+			collection.Set(tx.MacroExpansion(a.Key), []string{""})
+		}else if a.Value[0] == '+' {
 			me, _ := strconv.Atoi(tx.MacroExpansion(a.Value[1:]))
 			txv, err := strconv.Atoi(res[0])
 			if err != nil {

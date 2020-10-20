@@ -9,6 +9,7 @@ service Transaction {
 	rpc SetResponseBody (NewResponseBody) returns(TransactionStatus) {}	
 	rpc Get (TransactionId) returns (TransactionStatus) {}
 	rpc Close (TransactionId) returns (TransactionStatus) {}
+	rpc GetCollection (CollectionRequest) returns (CollectionResponse) {}
 }
 
 enum phase {
@@ -78,4 +79,20 @@ message TransactionFile {
 	string mime = 2;
 	string name = 3;
 	bytes body = 4;
+}
+
+message Collection {
+	string key = 1;
+	repeated string values = 2;
+}
+
+message CollectionRequest {
+	string wafkey = 1;
+	string name = 2;
+	string key = 3;
+}
+
+message CollectionResponse {
+	string name = 1;
+	repeated Collection collections = 2;
 }
