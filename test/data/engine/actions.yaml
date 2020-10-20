@@ -24,7 +24,7 @@
             - 8
             - 9
   rules: |
-    SecAction "id: 1, log, initcol:ip=12345, setvar: ip.test=123"
+    SecAction "id: 1, log, initcol:ip=12345, setvar:ip.test=123"
     SecAction "id: 2, nolog"
     SecRule IP:test "123" "id: 3, ctl:ruleRemoveById=4, log"
     SecAction "id: 4, log, pass"
