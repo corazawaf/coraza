@@ -29,4 +29,5 @@ script:
   # file to see the specific configuration
   - sonar-scanner
   - make
+  - go mod vendor
   - sudo make install
