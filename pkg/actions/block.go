@@ -38,10 +38,6 @@ func (a *Block) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 		dn := &Deny{}
 		dn.Evaluate(r, tx)
 		break
-	case "pass":
-		ps := &Pass{}
-		ps.Evaluate(r, tx)
-		break
 	case "allow":
 		//not implemented
 		break
@@ -53,6 +49,10 @@ func (a *Block) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 		break
 	case "pause":
 		//not implemented
+		break
+	default:
+		ps := &Pass{}
+		ps.Evaluate(r, tx)
 		break
 	}
 }

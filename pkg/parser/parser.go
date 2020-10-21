@@ -42,7 +42,6 @@ type Parser struct {
 	RuleEngine string
 	waf        *engine.Waf
 
-	nextSecMark    string
 	defaultActions []*DefaultActions
 	currentLine    int
 }
@@ -380,8 +379,18 @@ func (p *Parser) Evaluate(data string) error {
 			return err
 		}
 		p.waf.Rules.Add(rule)
+		log.Debug("Added special secmark rule")
 	case "SecMarker":
-		p.nextSecMark = opts
+		rule, err := p.ParseRule(`"@unconditionalMatch" "id:1, pass, nolog"`)
+		if err != nil {
+			p.log("Error creating secmarker rule")
+			return err
+		}
+		rule.SecMark = opts
+		rule.Id = 0
+		rule.Phase = 0
+		p.waf.Rules.Add(rule)
+		log.Debug("Added special secmarker rule")
 	case "SecComponentSignature":
 		p.waf.ComponentSignature = opts
 	case "SecErrorPage":
@@ -447,17 +456,19 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error) {
 		parent := rules[len(rules)-1]
 		rule.ParentId = parent.Id
 		lastchain := parent
-
 		for lastchain.Chain != nil {
 			lastchain = lastchain.Chain
 		}
 
 		lastchain.Chain = rule
+		if rule.HasChain {
+			p.nextChain = true
+		}
+		return nil, nil
 	}
 	if rule.HasChain {
 		p.nextChain = true
 	}
-	rule.SecMark = p.nextSecMark
 	return rule, nil
 }
 

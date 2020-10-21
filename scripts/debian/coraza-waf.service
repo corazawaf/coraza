@@ -2,13 +2,15 @@
 Description=Coraza Web Application Firewall GRPC Server
 After=redis-server.target
 StartLimitIntervalSec=0
+
 [Service]
 Type=simple
 Restart=always
 RestartSec=1
 User=coraza-waf
-ExecStart=/usr/bin/env coraza-waf -m grpc -f /etc/coraza-waf/rpc.yaml -pid /opt/coraza-waf/run/coraza-rpc.pid
-ExecStop=kill $(cat /opt/coraza-waf/run/coraza-rpc.pid)
-ExecReload=kill -1 $(cat /opt/coraza-waf/run/coraza-rpc.pid)
+ExecStart=/opt/coraza-waf/bin/coraza-ctl start
+ExecStop=/opt/coraza-waf/bin/coraza-ctl stop
+ExecReload=/opt/coraza-waf/bin/coraza-ctl reload
+
 [Install]
 WantedBy=multi-user.target

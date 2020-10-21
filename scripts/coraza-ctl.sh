@@ -1,15 +1,5 @@
 #!/bin/bash
 
-### BEGIN INIT INFO
-# Provides:          coraza-waf
-# Required-Start:    $local_fs $network
-# Required-Stop:     $local_fs
-# Default-Start:     2 3 4 5
-# Default-Stop:      0 1 6
-# Short-Description: Coraza Web Application Firewall
-# Description:       Coraza Web Application Firewall
-### END INIT INFO
-
 user=coraza-waf
 pid=/opt/coraza-waf/run/coraza-rpc.pid
 config=/etc/coraza-waf/rpc.yaml
@@ -45,10 +35,7 @@ case "$1" in
     sudo -u $user bash -c 'kill -1 $(cat /opt/coraza-waf/run/coraza-rpc.pid)'
     ;;        
   *)
-    echo "Usage: /etc/init.d/coraza-waf {start|stop|restart|reload}"
+    echo "Usage: coraza-ctl {start|stop|restart|reload}"
     exit 1
     ;;
 esac
-
-
-exit 0

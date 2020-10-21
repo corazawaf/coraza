@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PACKAGE=corazawaf
-VERSION=0.1alpha.21
+VERSION=0.1alpha.4
 TMP_PATH=/tmp/coraza-waf-build/$PACKAGE-$VERSION
 COMPATIBILITY=10
 
@@ -56,10 +56,8 @@ Section: base
 Priority: optional
 Maintainer: Juan Pablo Tosso <jptosso@gmail.com>
 Build-Depends: debhelper (>=10),
-               dh-golang (>=1.34),
                libpcre++-dev,
                golang-go,
-               rsync,
                build-essential
 
 Package: $PACKAGE

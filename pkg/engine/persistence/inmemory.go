@@ -17,8 +17,8 @@ package persistence
 import (
 	"errors"
 	ttlcache "github.com/ReneKroon/ttlcache/v2"
-	"time"
 	log "github.com/sirupsen/logrus"
+	"time"
 )
 
 type MemoryEngine struct {

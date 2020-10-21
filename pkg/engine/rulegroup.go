@@ -18,7 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jptosso/coraza-waf/pkg/utils"
-	"sort"
+	//"sort"
 	"sync"
 )
 
@@ -35,7 +35,11 @@ func (rg *RuleGroup) Init() {
 // Adds a rule to the collection
 // Will return an error if the ID is already used
 func (rg *RuleGroup) Add(rule *Rule) error {
-	if rg.FindById(rule.Id) != nil {
+	if rule == nil {
+		// this is an ugly solution but chains should not return rules
+		return nil
+	}
+	if rg.FindById(rule.Id) != nil && rule.Id != 0 {
 		return errors.New(fmt.Sprintf("There is a another rule with ID %d", rule.Id))
 	}
 	rg.rules = append(rg.rules, rule)
@@ -49,9 +53,11 @@ func (rg *RuleGroup) GetRules() []*Rule {
 }
 
 func (rg *RuleGroup) Sort() {
-	sort.Slice(rg.rules, func(i, j int) bool {
-		return rg.rules[i].Id < rg.rules[j].Id
-	})
+	// Apparently rules shouldn't be sorted
+	/*
+		sort.Slice(rg.rules, func(i, j int) bool {
+			return rg.rules[i].Id < rg.rules[j].Id
+		})*/
 }
 
 func (rg *RuleGroup) FindById(id int) *Rule {

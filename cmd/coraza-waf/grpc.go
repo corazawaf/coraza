@@ -152,7 +152,6 @@ type grpcServer struct {
 	srv *googlegrpc.Server
 }
 
-
 var waflist sync.Map
 var transactions *ttlcache.Cache
 
@@ -186,11 +185,11 @@ func (s *grpcServer) Init(cfgfile string) error {
 		log.SetLevel(log.WarnLevel)
 		break
 	case "error":
-		log.SetLevel(log.ErrorLevel)		
+		log.SetLevel(log.ErrorLevel)
 		break
 	default:
 		log.SetLevel(log.WarnLevel)
-		break		
+		break
 	}
 	initTtl(s.cfg.TxTtl)
 	files := []string{}
@@ -204,7 +203,7 @@ func (s *grpcServer) Init(cfgfile string) error {
 	})
 	for _, path := range files {
 		data, err := ioutil.ReadFile(path)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 		var c *grpcConfigFile
@@ -258,13 +257,12 @@ func (s *grpcServer) Serve() error {
 	return nil
 }
 
-
-func (s *grpcServer) Close(){
+func (s *grpcServer) Close() {
 	log.Info("Attempting to gracefully stop GRPC")
 	s.srv.GracefulStop()
 	log.Info(fmt.Sprintf("GRPC stopped, attempting to close %d transactions, it might take a few minutes", transactions.Count()))
 	transactions.Close()
-	for transactions.Count() > 0{
+	for transactions.Count() > 0 {
 		//Waiting for all transactions to be closed
 	}
 	log.Warn("We just deleted all pending transactions, it might be fixed in the future.")
@@ -394,12 +392,12 @@ func (s grpcHandler) GetCollection(ctx context.Context, req *grpc.CollectionRequ
 	cdata := waf.PersistenceEngine.Get(fmt.Sprintf("c-%s-%s-%s", waf.WebAppId, req.Name, req.Key))
 	for k, v := range cdata {
 		cols = append(cols, &grpc.Collection{
-			Key: k,
+			Key:    k,
 			Values: v,
 		})
 	}
 	col := &grpc.CollectionResponse{
-		Name: fmt.Sprintf("%s:%s", req.Name, req.Key),
+		Name:        fmt.Sprintf("%s:%s", req.Name, req.Key),
 		Collections: cols,
 	}
 	return col, nil

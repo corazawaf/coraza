@@ -120,6 +120,7 @@ func (c *Crs) Build() error {
 	}
 	replace := map[string]string{
 		"paranoia_level":                       strconv.Itoa(c.DefaultParanoia),
+		"executing_paranoia_level":             strconv.Itoa(c.DefaultParanoia),
 		"enforce_bodyproc_urlencoded":          boolToString(c.EnforceUrlEncoded),
 		"inbound_anomaly_score_threshold":      strconv.Itoa(c.InboundAnomalyScoreThreshold),
 		"outbound_anomaly_score_threshold":     strconv.Itoa(c.OutboundScoreThreshold),
@@ -145,7 +146,11 @@ func (c *Crs) Build() error {
 		"do_reput_block":                       boolToString(c.ReputationBlock),
 		"reput_block_duration":                 strconv.Itoa(c.ReputationBlockDuration),
 		"ip_whitelist":                         strings.Join(c.IpWhitelist, ","),
-		"crs_setup_version": "300",
+		"crs_setup_version":                    "300",
+		"critical_anomaly_score":  				"5",
+		"error_anomaly_score":  				"4",
+		"warning_anomaly_score":  				"3",
+		"notice_anomaly_score":  				"2",
 	}
 	buff := ""
 	var err error
@@ -156,10 +161,10 @@ func (c *Crs) Build() error {
 	}
 	switch c.Mode {
 	case "strict":
-		buff = `SecDefaultAction "phase:1,log,auditlog,deny,status:403"\nSecDefaultAction "phase:2,log,auditlog,deny,status:403"\n`
+		buff = `SecDefaultAction "phase:1,log,auditlog,deny,status:403"` + "\n" + `SecDefaultAction "phase:2,log,auditlog,deny,status:403"` + "\n"
 		break
 	case "scoring":
-		buff = `SecDefaultAction "phase:1,log,auditlog,pass"\nSecDefaultAction "phase:2,log,auditlog,pass"\n`
+		buff = `SecDefaultAction "phase:1,log,auditlog,pass"` + "\n" + `SecDefaultAction "phase:2,log,auditlog,pass"` + "\n"
 		break
 	default:
 		buff = c.Mode + "\n"
@@ -196,6 +201,7 @@ func (c *Crs) Build() error {
 			return err
 		}
 	}
+	c.waf.Rules.Sort()
 	return nil
 }
 
@@ -217,7 +223,7 @@ func joinAndEnclose(arr []string, enclose string) string {
 	for i, e := range arr {
 		res[i] = enclose + e + enclose
 	}
-	return strings.Join(res, " ")
+	return "'" + strings.Join(res, " ") + "'"
 }
 
 func boolToString(b bool) string {

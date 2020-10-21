@@ -20,11 +20,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/zalando/skipper"
 	"github.com/zalando/skipper/config"
+	"io/ioutil"
 	"os"
 	"os/signal"
-	"syscall"
 	"strconv"
-	"io/ioutil"
+	"syscall"
 )
 
 var grpcsrv *grpcServer
@@ -36,7 +36,7 @@ func main() {
 	flag.Parse()
 
 	err := writePidFile(*pidfile)
-	if err != nil{
+	if err != nil {
 		log.Error(err)
 		os.Exit(1)
 	}

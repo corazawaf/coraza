@@ -122,7 +122,7 @@ func (p *RuleParser) ParseActions(actions string, defaults []*DefaultActions) er
 	phase := act["phase"]
 	pp := 1
 	var err error
-	if phase != nil || len(phase) > 0 {
+	if phase != nil && len(phase) > 0 {
 		pp, err = PhaseToInt(phase[0])
 		if err != nil {
 			return err
@@ -172,36 +172,43 @@ func NewRuleParser() *RuleParser {
 }
 
 func ParseActions(actions string) (map[string][]string, error) {
-	//This regex splits actions by comma and assign key:values with supported escaped quotes
-	//TODO needs fixing, sometimes we empty strings as key
-	re := pcre.MustCompile(`(.*?)((?<!\\)(?!\B'[^']*),(?![^']*'\B)|$)`, 0)
-	matcher := re.MatcherString(actions, 0)
-	subject := []byte(actions)
+	iskey := true
+	ckey := ""
+	cval := ""
+	quoted := false
 	res := map[string][]string{}
-	if len(actions) == 0 {
-		return res, nil
-	}
-	for matcher.Match(subject, 0) {
-		m := matcher.GroupString(1)
-		index := matcher.Index()
-		spl := strings.SplitN(m, ":", 2)
-		value := ""
-		key := strings.Trim(spl[0], " ")
-		subject = subject[index[1]:]
-
-		if len(spl) == 2 {
-			value = strings.Trim(spl[1], " ")
-		}
-		if key == "" {
+	for i, c := range actions {
+		if iskey && c == ' ' {
+			//skip whitespaces in key
 			continue
+		} else if (!quoted && c == ',') {
+			res[ckey] = append(res[ckey], cval)
+			ckey = ""
+			cval = ""
+			iskey = true
+		} else if iskey && c == ':' {
+			iskey = false
+			if res[ckey] == nil{
+				res[ckey] = []string{}
+			}
+		} else if !iskey && c == '\'' && actions[i-1] != '\\' {
+			if quoted {
+				quoted = false
+				iskey = true
+			} else {
+				quoted = true
+			}
+		} else if !iskey {
+			if c == ' ' && !quoted {
+				//skip unquoted whitespaces
+				continue
+			}
+			cval += string(c)
+		} else if iskey {
+			ckey += string(c)
 		}
-		if res[key] == nil {
-			res[key] = []string{value}
-		} else {
-			res[key] = append(res[key], value)
-		}
-		if len(subject) == 0 {
-			break
+		if i+1 == len(actions) {
+			res[ckey] = append(res[ckey], cval)
 		}
 	}
 	return res, nil
@@ -217,7 +224,7 @@ func PhaseToInt(phase string) (int, error) {
 	}
 	p, err := strconv.Atoi(phase)
 
-	if err != nil || p < 1 || p > 5 {
+	if err != nil || p < 0 || p > 5 {
 		return 0, errors.New("Invalid phase " + phase)
 	}
 	// This should never happen (?)
