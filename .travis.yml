@@ -24,10 +24,10 @@ before_install:
 script:
   # Execute some tests
   - mkdir /tmp/audit
+  - go mod vendor
   - go test ./... -coverprofile=docs/coverage-waf.out -coverpkg=./...
   # And finally run the SonarQube analysis - read the "sonar-project.properties"
   # file to see the specific configuration
   - sonar-scanner
   - make
-  - go mod vendor
   - sudo make install
