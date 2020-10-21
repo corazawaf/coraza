@@ -1,8 +1,11 @@
 language: go
 dist: trusty
 sudo: true
+env:
+  - GOFLAGS=-mod=vendor
 go:
   - 1.13.x
+  - 1.14.x
 
 go_import_path: github.com/jptosso/coraza-waf
 
