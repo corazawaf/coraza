@@ -41,21 +41,24 @@ skipper-filter:
 install:
 		# only for debian by now
 		mkdir -p ${DESTDIR}${CORDIR}/profiles/default
+		mkdir -p ${DESTDIR}${CORDIR}/crs
 		mkdir -p ${DESTDIR}${OPTDIR}/log/audit
+		mkdir -p ${DESTDIR}${OPTDIR}/run
+		mkdir -p ${DESTDIR}${OPTDIR}/bin
 		mkdir -p ${DESTDIR}/usr/include
 		mkdir -p ${DESTDIR}/usr/lib
+		mkdir -p ${DESTDIR}/etc/systemd/system
 		mkdir -p ${DESTDIR}${BINDIR}
 		#libinjection
 		cp *.so ${DESTDIR}/usr/lib
 		cp *.o ${DESTDIR}/usr/lib
 		cp pkg/utils/libinjection/src/*.h ${DESTDIR}/usr/include/
-		#ldconfig will fail in CI
-		ldconfig ||true
-
 		useradd -r -s /bin/false coraza-waf || true
-		cp examples/skipper/default.conf ${DESTDIR}${CORDIR}/profiles/default/
 		cp coraza-waf ${DESTDIR}${BINDIR}/coraza-waf
 		cp examples/skipper/routes.eskip ${DESTDIR}${CORDIR}/
+		cp docs/crs/rules/* ${DESTDIR}${CORDIR}/crs/
+		cp scripts/debian/coraza-waf.service ${DESTDIR}/etc/systemd/system/
+		cp scripts/coraza-ctl.sh ${DESTDIR}${OPTDIR}/bin/coraza-ctl
 		cp examples/rpc/rpc.yaml ${DESTDIR}${CORDIR}/
 		cp examples/skipper/skipper.yaml ${DESTDIR}${CORDIR}/
 		cp examples/skipper/default.conf ${DESTDIR}${CORDIR}/profiles/default/rules.conf

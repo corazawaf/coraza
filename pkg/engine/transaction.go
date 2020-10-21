@@ -171,8 +171,10 @@ func (tx *Transaction) MacroExpansion(data string) string {
 		expansion := collection.Get(strings.ToLower(key))
 		if len(expansion) == 0 {
 			data = strings.ReplaceAll(data, v, "")
+			log.Debug("Failed to expand " + match)
 		} else {
 			data = strings.ReplaceAll(data, v, expansion[0])
+			log.Debug(fmt.Sprintf("Expanding %%{%s} to %s", match, expansion[0]))
 		}
 	}
 	//fmt.Println("Macro: " + data)
@@ -601,26 +603,38 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 	if tx.LastPhase == 5 {
 		return tx.Disrupted
 	}
+	diff := phase - tx.LastPhase
+	if diff > 1 {
+		tx.ExecutePhase(phase - 1)
+	}
 	tx.LastPhase = phase
+	log.Debug(fmt.Sprintf("===== Starting Phase %d =====", phase))
 	ts := time.Now().UnixNano()
 	usedRules := 0
 	tx.Mux.Lock()
 	tx.LastPhase = phase
 	tx.Mux.Unlock()
 	for _, r := range tx.WafInstance.Rules.GetRules() {
-		if r.Phase != phase {
+		// Rules with phase 0 will always run
+		if r.Phase != phase && r.Phase != 0 {
 			continue
 		}
+		if utils.ArrayContainsInt(tx.RuleRemoveById, r.Id) {
+			log.Debug(fmt.Sprintf("Skipping rule %d because of a ctl", r.Id))
+			continue
+		}
+		log.Debug(fmt.Sprintf("Evaluating rule %d", r.Id))
 		//we always evaluate secmarkers
 		if tx.SkipAfter != "" {
 			tx.Mux.RLock()
 			if r.SecMark == tx.SkipAfter {
 				tx.SkipAfter = ""
+				log.Debug("Matched SecMarker " + r.SecMark)
 			} else {
-				tx.Mux.RUnlock()
-				continue
+				log.Debug("Skipping rule because of secmarker, expecting " + tx.SkipAfter)
 			}
 			tx.Mux.RUnlock()
+			continue
 		}
 		tx.Mux.RLock()
 		if tx.Skip > 0 {
@@ -629,6 +643,7 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 			tx.Skip--
 			tx.Mux.Unlock()
 			//Skipping rule
+			log.Debug("Skipping rule because of skip")
 			continue
 		}
 		tx.Mux.RUnlock()
@@ -639,27 +654,73 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 		txr.Set("severity", []string{r.Severity})
 		//txr.Set("logdata", []string{r.LogData})
 		txr.Set("msg", []string{r.Msg})
-		r.Evaluate(tx)
+		match := r.Evaluate(tx)
+		if len(match) > 0 {
+			log.Debug(fmt.Sprintf("Rule %d matched", r.Id))
+			for _, m := range match{
+				log.Debug(fmt.Sprintf("MATCH %s:%s", m.Key, m.Value))
+			}
+		}
 
 		tx.Capture = false //we reset the capture flag on every run
 		usedRules++
-		if tx.Disrupted {
+		if tx.Disrupted && phase != 5 {
+			log.Debug(fmt.Sprintf("Disrupted by rule %d", r.Id))
+			// TODO Maybe we shouldnt force phase 5?
+			tx.ExecutePhase(5)
 			break
 		}
 	}
+	log.Debug(fmt.Sprintf("===== Finished Phase %d =====", phase))
 	tx.Mux.Lock()
 	tx.StopWatches[phase] = int(time.Now().UnixNano() - ts)
 	tx.Mux.Unlock()
-	if tx.Disrupted || phase == 5 {
-		if phase != 5 {
-			tx.ExecutePhase(5)
-		} else if tx.IsRelevantStatus() {
+	if phase == 5 {
+		log.Trace(tx.DebugTransaction())
+		if tx.IsRelevantStatus() {
+			log.Debug("Saving transaction audit log")
 			tx.SaveLog()
-			tx.SavePersistentData()
 		}
+		log.Debug("Saving persistent data")
+		tx.SavePersistentData()
 	}
 	return tx.Disrupted
 }
+
+func (tx *Transaction) DebugTransaction() string {
+	res := ""
+	for _, c := range tx.Collections {
+		res += fmt.Sprintf("%s:\n", c.Name)
+		for key, values := range c.Data {
+			if key == "" {
+				key = "NOKEY"
+			}
+			res += fmt.Sprintf("\t%s:\n", key)
+			for _, v := range values {
+				if v == "" {
+					continue
+				}
+				res += fmt.Sprintf("\t\t%s\n", v)
+			}
+		}
+	}
+	return res
+}
+
+func (tx *Transaction) MatchVars(match []*MatchData) {
+
+	mvs := tx.GetCollection("matched_vars")
+	mv := tx.GetCollection("matched_var")
+	mvn := tx.GetCollection("matched_var_name")
+	mvs.Set("", []string{})
+	for _, mm := range match {
+		value := fmt.Sprintf("%s:%s", strings.ToUpper(mm.Collection), mm.Key)
+		mvs.AddToKey("", value)
+		mv.Set("", []string{mm.Value})
+		mvn.Set("", []string{mm.Key})
+	}
+}
+
 
 func (tx *Transaction) MatchRule(rule *Rule, msgs []string, match []*MatchData) {
 	mr := &MatchedRule{
@@ -669,18 +730,9 @@ func (tx *Transaction) MatchRule(rule *Rule, msgs []string, match []*MatchData) 
 		MatchedData:      match,
 		Rule:             rule,
 	}
-	mvs := tx.GetCollection("matched_vars")
-	mv := tx.GetCollection("matched_var")
-	mvn := tx.GetCollection("matched_var_name")
 	tx.Mux.Lock()
 	tx.MatchedRules = append(tx.MatchedRules, mr)
 	tx.Mux.Unlock()
-	for _, mm := range match {
-		value := fmt.Sprintf("%s:%s", strings.ToUpper(mm.Collection), mm.Key)
-		mvs.AddToKey("", value)
-		mv.AddToKey("", mm.Value)
-		mvn.Set("", []string{mm.Value})
-	}
 }
 
 func (tx *Transaction) ToJSON() ([]byte, error) {

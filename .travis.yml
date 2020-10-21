@@ -1,8 +1,11 @@
 language: go
 dist: trusty
 sudo: true
+env:
+  - GOFLAGS=-mod=vendor
 go:
   - 1.13.x
+  - 1.14.x
 
 go_import_path: github.com/jptosso/coraza-waf
 
@@ -24,7 +27,10 @@ before_install:
 script:
   # Execute some tests
   - mkdir /tmp/audit
+  - go mod vendor
   - go test ./... -coverprofile=docs/coverage-waf.out -coverpkg=./...
   # And finally run the SonarQube analysis - read the "sonar-project.properties"
   # file to see the specific configuration
   - sonar-scanner
+  - make
+  - sudo make install

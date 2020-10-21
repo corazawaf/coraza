@@ -32,8 +32,9 @@ const (
 	ACTION_DISRUPTIVE_DROP     = 1
 	ACTION_DISRUPTIVE_BLOCK    = 2
 	ACTION_DISRUPTIVE_DENY     = 3
-	ACTION_DISRUPTIVE_PROXY    = 4
-	ACTION_DISRUPTIVE_REDIRECT = 5
+	ACTION_DISRUPTIVE_ALLOW    = 4
+	ACTION_DISRUPTIVE_PROXY    = 5
+	ACTION_DISRUPTIVE_REDIRECT = 6
 )
 
 type Action interface {
@@ -70,23 +71,24 @@ type Rule struct {
 	// Contains de non-compiled variables part of the rule
 	Vars string `json:"vars"`
 
-	Variables        []RuleVariable       `json:"variables"`
-	Operator         string               `json:"operator"`
-	OperatorObj      *RuleOp              `json:"operator_obj"`
-	Disruptive       bool                 `json:"disruptive"`
-	Transformations  []RuleTransformation `json:"transformations"`
-	HasChain         bool                 `json:"has_chain"`
-	ParentId         int                  `json:"parent_id"`
-	Actions          []Action             `json:"actions"`
-	ActionParams     string               `json:"action_params"`
-	MultiMatch       bool                 `json:"multimatch"`
-	Severity         string               `json:"severity"`
-	Skip             bool                 `json:"skip"`
-	SecMark          string               `json:"secmark"`
-	Log              bool                 `json:"log"`
-	Raw              string               `json:"raw"`
-	Chain            *Rule                `json:"chain"`
-	DisruptiveAction int                  `json:"disruptive_action"`
+	Variables               []RuleVariable       `json:"variables"`
+	Operator                string               `json:"operator"`
+	OperatorObj             *RuleOp              `json:"operator_obj"`
+	Disruptive              bool                 `json:"disruptive"`
+	Transformations         []RuleTransformation `json:"transformations"`
+	HasChain                bool                 `json:"has_chain"`
+	ParentId                int                  `json:"parent_id"`
+	Actions                 []Action             `json:"actions"`
+	ActionParams            string               `json:"action_params"`
+	MultiMatch              bool                 `json:"multimatch"`
+	Severity                string               `json:"severity"`
+	Skip                    bool                 `json:"skip"`
+	SecMark                 string               `json:"secmark"`
+	Log                     bool                 `json:"log"`
+	Raw                     string               `json:"raw"`
+	Chain                   *Rule                `json:"chain"`
+	DisruptiveAction        int                  `json:"disruptive_action"`
+	DefaultDisruptiveAction string               `json:"default_disruptive_action"`
 
 	//METADATA
 	// Rule unique sorted identifier
@@ -183,6 +185,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 		//No match for variables
 		return matchedValues
 	}
+	tx.MatchVars(matchedValues)
 
 	// We run non disruptive actions even if there is no chain match
 	for _, a := range r.Actions {

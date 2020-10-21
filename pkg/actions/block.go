@@ -26,7 +26,35 @@ func (a *Block) Init(r *engine.Rule, b1 string) string {
 }
 
 func (a *Block) Evaluate(r *engine.Rule, tx *engine.Transaction) {
-
+	if r.DefaultDisruptiveAction == "" {
+		return
+	}
+	switch r.DefaultDisruptiveAction {
+	case "drop":
+		dr := &Drop{}
+		dr.Evaluate(r, tx)
+		break
+	case "deny":
+		dn := &Deny{}
+		dn.Evaluate(r, tx)
+		break
+	case "allow":
+		//not implemented
+		break
+	case "redirect":
+		//not implemented
+		break
+	case "proxy":
+		//not implemented
+		break
+	case "pause":
+		//not implemented
+		break
+	default:
+		ps := &Pass{}
+		ps.Evaluate(r, tx)
+		break
+	}
 }
 
 func (a *Block) GetType() int {

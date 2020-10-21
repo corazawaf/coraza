@@ -18,6 +18,7 @@ import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"strings"
 	"testing"
+	"fmt"
 )
 
 func TestString(t *testing.T) {
@@ -33,7 +34,7 @@ func TestString(t *testing.T) {
 	}
 	r := waf.Rules.GetRules()[0]
 	if len(r.Actions) != 3 {
-		t.Error("Failed to parse actions")
+		t.Error(fmt.Sprintf("Failed to parse actions, got %d", len(r.Actions)))
 	}
 	if len(r.Variables) != 2 {
 		t.Error("Failed to parse variables, got", len(r.Variables))

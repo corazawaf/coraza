@@ -20,7 +20,6 @@ import (
 	"fmt"
 	actionsmod "github.com/jptosso/coraza-waf/pkg/actions"
 	"github.com/jptosso/coraza-waf/pkg/engine"
-	"github.com/jptosso/coraza-waf/pkg/operators"
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	pcre "github.com/jptosso/coraza-waf/pkg/utils/pcre"
 	log "github.com/sirupsen/logrus"
@@ -30,6 +29,12 @@ import (
 	"strings"
 )
 
+type DefaultActions struct {
+	Phase            int
+	DisruptiveAction string
+	Actions          map[string][]string
+}
+
 type Parser struct {
 	configfile string
 	configdir  string
@@ -37,16 +42,19 @@ type Parser struct {
 	RuleEngine string
 	waf        *engine.Waf
 
-	nextSecMark    string
-	defaultActions string
+	defaultActions []*DefaultActions
 	currentLine    int
 }
 
 func (p *Parser) Init(waf *engine.Waf) {
 	p.waf = waf
+	p.defaultActions = []*DefaultActions{}
 }
 
 func (p *Parser) FromFile(profilePath string) error {
+	if !utils.FileExists(profilePath) {
+		return errors.New("Invalid profile path")
+	}
 	p.configfile = profilePath
 	p.configdir = filepath.Dir(profilePath) + "/"
 	file, err := utils.OpenFile(profilePath)
@@ -197,7 +205,7 @@ func (p *Parser) Evaluate(data string) error {
 		//p.waf.ContentInjection = (opts == "On")
 		break
 	case "SecDefaultAction":
-		p.defaultActions = opts
+		p.AddDefaultActions(opts)
 		break
 	case "SecHashEngine":
 		// p.waf.HashEngine = (opts == "On")
@@ -371,8 +379,18 @@ func (p *Parser) Evaluate(data string) error {
 			return err
 		}
 		p.waf.Rules.Add(rule)
+		log.Debug("Added special secmark rule")
 	case "SecMarker":
-		p.nextSecMark = opts
+		rule, err := p.ParseRule(`"@unconditionalMatch" "id:1, pass, nolog"`)
+		if err != nil {
+			p.log("Error creating secmarker rule")
+			return err
+		}
+		rule.SecMark = opts
+		rule.Id = 0
+		rule.Phase = 0
+		p.waf.Rules.Add(rule)
+		log.Debug("Added special secmarker rule")
 	case "SecComponentSignature":
 		p.waf.ComponentSignature = opts
 	case "SecErrorPage":
@@ -402,34 +420,35 @@ func (p *Parser) Evaluate(data string) error {
 
 func (p *Parser) ParseRule(data string) (*engine.Rule, error) {
 	var err error
-	var rule = new(engine.Rule)
-	rule.Init()
-	rule.Raw = "SecRule " + data
+	rp := NewRuleParser()
 
 	spl := strings.SplitN(data, " ", 2)
-	rule.Vars = utils.RemoveQuotes(spl[0])
+	vars := utils.RemoveQuotes(spl[0])
 
 	//regex: "(?:[^"\\]|\\.)*"
 	r := regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
 	matches := r.FindAllString(data, -1)
 	actions := ""
-	operators := utils.RemoveQuotes(matches[0])
-	err = p.compileRuleVariables(rule, rule.Vars)
+	operator := utils.RemoveQuotes(matches[0])
+	err = rp.ParseVariables(vars)
 	if err != nil {
 		return nil, err
 	}
-	err = p.compileRuleOperator(rule, operators)
+	err = rp.ParseOperator(operator)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(matches) > 1 {
 		actions = utils.RemoveQuotes(matches[1])
-		err = p.compileRuleActions(rule, actions)
+		err = rp.ParseActions(actions, p.defaultActions)
 		if err != nil {
 			return nil, err
 		}
 	}
+
+	rule := rp.GetRule()
+	rule.Raw = "SecRule " + data
 
 	if p.nextChain {
 		p.nextChain = false
@@ -437,145 +456,56 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error) {
 		parent := rules[len(rules)-1]
 		rule.ParentId = parent.Id
 		lastchain := parent
-
 		for lastchain.Chain != nil {
 			lastchain = lastchain.Chain
 		}
 
 		lastchain.Chain = rule
+		if rule.HasChain {
+			p.nextChain = true
+		}
+		return nil, nil
 	}
 	if rule.HasChain {
 		p.nextChain = true
 	}
-	rule.SecMark = p.nextSecMark
 	return rule, nil
 }
 
-func (p *Parser) compileRuleVariables(r *engine.Rule, vars string) error {
-	//Splits the values by KEY, KEY:VALUE, &!KEY, KEY:/REGEX/, KEY1|KEY2
-	//GROUP 1 is collection, group 3 is vlue, group 3 can be empty
-	//TODO this is not an elegant way to parse variables but it works and it won't generate workload
-	re := pcre.MustCompile(`(((?:&|!)?XML):?(.*?)(?:\||$))|((?:&|!)?[\w_]+):?([\w-_]+|\/.*?(?<!\\)\/)?`, 0)
-	matcher := re.MatcherString(vars, 0)
-	subject := []byte(vars)
-	for matcher.Match(subject, 0) {
-		vname := matcher.GroupString(4)
-		vvalue := strings.ToLower(matcher.GroupString(5))
-		if vname == "" {
-			//This case is only for XML, sorry for the ugly code :(
-			vname = matcher.GroupString(2)
-			vvalue = strings.ToLower(matcher.GroupString(3))
+func (p *Parser) AddDefaultActions(data string) error {
+	//allowed := []string{"pass", "deny", "drop", "log", "nolog", "auditlog", "noauditlog", "t"}
+	actions, err := ParseActions(data)
+	if err != nil {
+		return err
+	}
+	pp := actions["phase"]
+	if pp == nil || len(pp) == 0 {
+		return errors.New("Default action requires a phase")
+	}
+	phase, err := PhaseToInt(pp[0])
+	if err != nil {
+		return errors.New("Default action requires a phase")
+	}
+	disruptive := ""
+	for k, _ := range actions {
+		act := actionsmod.ActionsMap()[k]
+		if act == nil {
+			return errors.New("Invalid action " + k)
 		}
-		index := matcher.Index()
-		counter := false
-		negation := false
-		if vname[0] == '&' {
-			vname = vname[1:]
-			counter = true
-		}
-		if vname[0] == '!' {
-			vname = vname[1:]
-			negation = true
-		}
-
-		collection := strings.ToLower(vname)
-		if negation {
-			r.AddNegateVariable(collection, vvalue)
-		} else {
-			r.AddVariable(counter, collection, vvalue)
-		}
-
-		subject = subject[index[1]:]
-		if len(subject) == 0 {
-			break
+		if actionsmod.ActionsMap()[k].GetType() == engine.ACTION_TYPE_DISRUPTIVE {
+			disruptive = k
 		}
 	}
-	return nil
-}
-
-func (p *Parser) compileRuleOperator(r *engine.Rule, operator string) error {
-	if operator == "" {
-		operator = "@rx "
+	if disruptive == "" {
+		return errors.New("Default action must contain a disruptive action")
 	}
-	if operator[0] != '@' && operator[0] != '!' {
-		//default operator RX
-		operator = "@rx " + operator
+	da := &DefaultActions{
+		Phase:            phase,
+		Actions:          actions,
+		DisruptiveAction: disruptive,
 	}
-	spl := strings.SplitN(operator, " ", 2)
-	op := spl[0]
-	r.Operator = operator
-	r.OperatorObj = new(engine.RuleOp)
-
-	if op[0] == '!' {
-		r.OperatorObj.Negation = true
-		op = utils.TrimLeftChars(op, 1)
-	}
-	if op[0] == '@' {
-		op = utils.TrimLeftChars(op, 1)
-		if len(spl) == 2 {
-			r.OperatorObj.Data = spl[1]
-		}
-	}
-
-	r.OperatorObj.Operator = operators.OperatorsMap()[op]
-	if r.OperatorObj.Operator == nil {
-		return p.log("Invalid operator " + op)
-	} else {
-		fileops := []string{"ipMatchFromFile", "pmFromFile"}
-		for _, fo := range fileops {
-			if fo == op {
-				r.OperatorObj.Data = p.configdir + r.OperatorObj.Data
-			}
-		}
-		r.OperatorObj.Operator.Init(r.OperatorObj.Data)
-	}
-	return nil
-}
-
-func (p *Parser) compileRuleActions(r *engine.Rule, actions string) error {
-	//REGEX: ((.*?)((?<!\\)(?!\B'[^']*),(?![^']*'\B)|$))
-	//This regex splits actions by comma and assign key:values with supported escaped quotes
-	//TODO needs fixing, sometimes we empty strings as key
-	if len(p.defaultActions) > 0 {
-		actions = fmt.Sprintf("%s, %s", p.defaultActions, actions)
-	}
-	re := pcre.MustCompile(`(.*?)((?<!\\)(?!\B'[^']*),(?![^']*'\B)|$)`, 0)
-	matcher := re.MatcherString(actions, 0)
-	subject := []byte(actions)
-	if len(actions) == 0 {
-		return nil
-	}
-
-	for matcher.Match(subject, 0) {
-		m := matcher.GroupString(1)
-		index := matcher.Index()
-		spl := strings.SplitN(m, ":", 2)
-		value := ""
-		key := strings.Trim(spl[0], " ")
-		subject = subject[index[1]:]
-
-		if len(spl) == 2 {
-			value = strings.Trim(spl[1], " ")
-		}
-		if key == "" {
-			continue
-		}
-		if actionsmod.ActionsMap()[key] == nil {
-			//TODO some fixing here, this is a bug
-			p.log("Invalid action " + key)
-		} else {
-			action := actionsmod.ActionsMap()[key]
-			err := action.Init(r, value)
-			if err != "" {
-				p.log(err)
-			}
-			r.Actions = append(r.Actions, action)
-		}
-		if len(subject) == 0 {
-			break
-		}
-	}
-
+	p.defaultActions = append(p.defaultActions, da)
+	//TODO validate disruptive action and no metadata actions
 	return nil
 }
 
@@ -583,4 +513,17 @@ func (p *Parser) log(msg string) error {
 	msg = fmt.Sprintf("[Parser] [Line %d] %s", p.currentLine, msg)
 	log.Error(msg)
 	return errors.New(msg)
+}
+
+func (p *Parser) GetDefaultActions() []*DefaultActions {
+	return p.defaultActions
+}
+
+func NewParser(waf *engine.Waf) (*Parser, error) {
+	if waf == nil {
+		return nil, errors.New("Must use a valid waf instance")
+	}
+	p := &Parser{}
+	p.Init(waf)
+	return p, nil
 }

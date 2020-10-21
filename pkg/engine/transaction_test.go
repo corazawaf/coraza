@@ -187,7 +187,7 @@ func TestTxSetters2(t *testing.T) {
 	exp := map[string]string{
 		"%{remote_user}":                 "testuser",
 		"%{args_post.name}":              "456",
-		"%{args_post.testuru}": "s0me",
+		"%{args_post.testuru}":           "s0me",
 		"%{args_get.name}":               "456",
 		"%{args.name}":                   "456",
 		"%{remote_host}":                 "one.one.one.one.",

@@ -19,6 +19,7 @@ import (
 	"crypto/rand"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -117,4 +118,12 @@ func OpenFile(path string) ([]byte, error) {
 		}
 	}
 	return ret, nil
+}
+
+func FileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
 }

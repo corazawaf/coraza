@@ -179,6 +179,7 @@ func (w *Waf) Init() {
 	w.AuditLogType = AUDIT_LOG_CONCURRENT
 	w.PersistenceUri = "inmemory"
 	w.RequestBodyLimit = 10000000 //10mb
+	w.InitPersistenceEngine()
 }
 
 func (w *Waf) InitLogger() {
@@ -208,7 +209,8 @@ func (w *Waf) InitGeoip(path string) error {
 }
 
 // Initializes Persistence Engine
-func (w *Waf) InitPersistenceEngine(uri string) error {
+func (w *Waf) InitPersistenceEngine() error {
+	uri := w.PersistenceUri
 	spl := strings.SplitN(uri, ":", 2)
 	if len(spl) == 0 {
 		return errors.New("Invalid persistence Engine")

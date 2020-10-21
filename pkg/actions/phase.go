@@ -22,7 +22,16 @@ import (
 type Phase struct{}
 
 func (a *Phase) Init(r *engine.Rule, data string) string {
-	i, _ := strconv.Atoi(data)
+	i, err := strconv.Atoi(data)
+	if data == "request" {
+		i = 2
+	} else if data == "response" {
+		i = 4
+	} else if data == "logging" {
+		i = 5
+	} else if err != nil || i > 5 || i < 1 {
+		return "Invalid phase " + data
+	}
 	r.Phase = int(i)
 	return ""
 }

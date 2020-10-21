@@ -39,7 +39,7 @@ func TestGeoIP(t *testing.T) {
 func TestPersistenceInit(t *testing.T) {
 	w := NewWaf()
 
-	err := w.InitPersistenceEngine("inmemory://")
+	err := w.InitPersistenceEngine()
 	if err != nil {
 		t.Error("Failed to init persistence engine")
 	}
