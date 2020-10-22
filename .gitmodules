@@ -4,3 +4,6 @@
 [submodule "docs/crs"]
 	path = docs/crs
 	url = https://github.com/coreruleset/coreruleset
+[submodule "docs/proto"]
+	path = docs/proto
+	url = https://github.com/jptosso/coraza-waf-proto

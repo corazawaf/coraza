@@ -1,1 +1,0 @@
-``$ protoc -I internal/proto --go_out=plugins=grpc:. internal/proto/*.proto``
