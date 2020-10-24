@@ -147,10 +147,10 @@ func (c *Crs) Build() error {
 		"reput_block_duration":                 strconv.Itoa(c.ReputationBlockDuration),
 		"ip_whitelist":                         strings.Join(c.IpWhitelist, ","),
 		"crs_setup_version":                    "300",
-		"critical_anomaly_score":  				"5",
-		"error_anomaly_score":  				"4",
-		"warning_anomaly_score":  				"3",
-		"notice_anomaly_score":  				"2",
+		"critical_anomaly_score":               "5",
+		"error_anomaly_score":                  "4",
+		"warning_anomaly_score":                "3",
+		"notice_anomaly_score":                 "2",
 	}
 	buff := ""
 	var err error

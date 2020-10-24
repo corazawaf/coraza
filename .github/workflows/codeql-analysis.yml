@@ -42,6 +42,7 @@ jobs:
       with:
         languages: ${{ matrix.language }}
     - run: |
+       git submodule update --init --recursive
        go mod vendor
        make libinjection
        make

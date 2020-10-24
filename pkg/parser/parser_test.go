@@ -15,10 +15,10 @@
 package parser
 
 import (
+	"fmt"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"strings"
 	"testing"
-	"fmt"
 )
 
 func TestString(t *testing.T) {

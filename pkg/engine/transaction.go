@@ -131,7 +131,6 @@ func (tx *Transaction) Init(waf *Waf) error {
 	tx.SetSingleCollection("id", txid)
 	tx.SetSingleCollection("timestamp", strconv.FormatInt(time.Now().UnixNano(), 10))
 	tx.Disrupted = false
-	//TODO copy objects
 	tx.AuditEngine = tx.WafInstance.AuditEngine
 	tx.AuditLogParts = tx.WafInstance.AuditLogParts
 	tx.RequestBodyAccess = tx.WafInstance.RequestBodyAccess
@@ -552,6 +551,7 @@ func (tx *Transaction) ParseRequestObjectBody(req *http.Request) error {
 		ct = cl[0]
 	}
 	//f.tx.SetReqBodyProcessor("URLENCODED")
+	//TODO use bodyprocessor
 	switch ctype {
 	case "application/x-www-form-urlencoded":
 		//url encode
@@ -657,7 +657,7 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 		match := r.Evaluate(tx)
 		if len(match) > 0 {
 			log.Debug(fmt.Sprintf("Rule %d matched", r.Id))
-			for _, m := range match{
+			for _, m := range match {
 				log.Debug(fmt.Sprintf("MATCH %s:%s", m.Key, m.Value))
 			}
 		}
@@ -677,12 +677,14 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 	tx.Mux.Unlock()
 	if phase == 5 {
 		log.Trace(tx.DebugTransaction())
-		if tx.IsRelevantStatus() {
-			log.Debug("Saving transaction audit log")
-			tx.SaveLog()
-		}
 		log.Debug("Saving persistent data")
 		tx.SavePersistentData()
+		if tx.AuditEngine == AUDIT_LOG_RELEVANT && tx.IsRelevantStatus() {
+			tx.SaveLog()
+		}else if tx.AuditEngine == AUDIT_LOG_ENABLED{
+			tx.SaveLog()
+		}
+
 	}
 	return tx.Disrupted
 }
@@ -712,15 +714,19 @@ func (tx *Transaction) MatchVars(match []*MatchData) {
 	mvs := tx.GetCollection("matched_vars")
 	mv := tx.GetCollection("matched_var")
 	mvn := tx.GetCollection("matched_var_name")
+
+	mvv := []string{}
+	mvnv := []string{}
 	mvs.Set("", []string{})
 	for _, mm := range match {
 		value := fmt.Sprintf("%s:%s", strings.ToUpper(mm.Collection), mm.Key)
 		mvs.AddToKey("", value)
-		mv.Set("", []string{mm.Value})
-		mvn.Set("", []string{mm.Key})
+		mvv = append(mvv, mm.Value)
+		mvnv = append(mvnv, mm.Key)
 	}
+	mv.Set("", mvv)
+	mvn.Set("", mvnv)
 }
-
 
 func (tx *Transaction) MatchRule(rule *Rule, msgs []string, match []*MatchData) {
 	mr := &MatchedRule{

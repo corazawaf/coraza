@@ -181,14 +181,14 @@ func ParseActions(actions string) (map[string][]string, error) {
 		if iskey && c == ' ' {
 			//skip whitespaces in key
 			continue
-		} else if (!quoted && c == ',') {
+		} else if !quoted && c == ',' {
 			res[ckey] = append(res[ckey], cval)
 			ckey = ""
 			cval = ""
 			iskey = true
 		} else if iskey && c == ':' {
 			iskey = false
-			if res[ckey] == nil{
+			if res[ckey] == nil {
 				res[ckey] = []string{}
 			}
 		} else if !iskey && c == '\'' && actions[i-1] != '\\' {
