@@ -1,0 +1,52 @@
+# Max concurrency, note golang does not support forking, so we are talking about concurrent tasks
+concurrency: 4
+error_log: /opt/coraza/var/log/proxy.log
+pid: /opt/coraza/var/log/coraza.pid
+# redis :// [[username :] password@] host [: port] [/ database][? [timeout=timeout[d|h|m|s|ms|us|ns]] [&_database=database_]]
+redis_server: redis://1.1.1.1:1234
+upstreams:
+  - hash: some_upstream
+    strategy: round_robin
+    servers:
+      - address: 10.10.10.10
+        port: 4444
+        ssl: true
+        weight: 5
+servers:
+  - listen:
+      - 0.0.0.0:80
+      - 8080
+    hostnames:
+      - hostname.com
+    ssl:
+      private_key: /path/to/key.pem
+      certificate: /path/to/certificate.crt
+      protocols:
+        - TLSv1.3
+      ciphers:
+        - ECDHE-ECDSA-AES128-GCM-SHA256
+    proxy:
+      headers:
+        - Host: hostname.com
+        - X-Real-IP: $remote_addr
+        - X-Forwarded-For: $proxy_add_x_forwarded_for
+      client_max_body_size: 10m
+      client_body_buffer_size: 128k
+      connect_timeout: 90
+      send_timeout: 90
+      read_timeout: 90
+      buffers: 32 4k
+    locations:
+      # REGEX will be added in the near future
+      - path: /application/
+        # In case you set path_trail as true the whole url is going to be sent to the upstream server:
+        # METHOD /applications/application_name/following_stuffs?id=1 HTTP/1.1
+        # Otherwise, the path will only be:
+        # METHOD /following_stuffs?id=1 HTTP/1.1
+        path_trail: false
+        policy: /opt/coraza/etc/coraza/policies/default/policy.conf
+        error_cgi: /opt/coraza/etc/coraza/scripts/error.py
+        access_log: /opt/coraza/var/log/access_1.log
+        # It supports the same syntax as the policy audit log settings, it will be overwritten by the policy settings if set.
+        audit_log: /opt/coraza/var/log/audit.log
+        upstream: some_upstream

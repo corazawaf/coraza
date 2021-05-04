@@ -681,7 +681,7 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 		tx.SavePersistentData()
 		if tx.AuditEngine == AUDIT_LOG_RELEVANT && tx.IsRelevantStatus() {
 			tx.SaveLog()
-		}else if tx.AuditEngine == AUDIT_LOG_ENABLED{
+		} else if tx.AuditEngine == AUDIT_LOG_ENABLED {
 			tx.SaveLog()
 		}
 
