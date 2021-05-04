@@ -1,5 +1,5 @@
 language: go
-dist: trusty
+dist: bionic
 sudo: true
 env:
   - GOFLAGS=-mod=vendor
