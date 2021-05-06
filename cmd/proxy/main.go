@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/jptosso/coraza-waf/pkg/proxy"
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 )
 
@@ -33,5 +34,8 @@ func main() {
 		return
 	}
 	ps := proxy.ProxyServer{}
-	ps.Init(config)
+	err = ps.Init(config)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

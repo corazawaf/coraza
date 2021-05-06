@@ -1,5 +1,6 @@
 # Max concurrency, note golang does not support forking, so we are talking about concurrent tasks
 concurrency: 4
+loglevel: debug
 error_log: /opt/coraza/var/log/proxy.log
 pid: /opt/coraza/var/log/coraza.pid
 # redis :// [[username :] password@] host [: port] [/ database][? [timeout=timeout[d|h|m|s|ms|us|ns]] [&_database=database_]]
@@ -8,16 +9,17 @@ upstreams:
   - hash: some_upstream
     strategy: round_robin
     servers:
-      - address: 10.10.10.10
-        port: 4444
+      - server: jptosso.github.io
+        path: /coraza-waf/
+        port: 443
         ssl: true
         weight: 5
 servers:
   - listen:
-      - 0.0.0.0:80
-      - 8080
+      - 0.0.0.0:5555
+      - 4444
     hostnames:
-      - hostname.com
+      - jptosso.github.io
     ssl:
       private_key: /path/to/key.pem
       certificate: /path/to/certificate.crt
