@@ -12,31 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package operators
+package proxy
 
 import (
-	"github.com/jptosso/coraza-waf/pkg/engine"
-	"strconv"
+	"crypto/tls"
 )
 
-type Gt struct {
-	data string
+type TlsConfig struct {
+	Config *tls.Config
 }
 
-func (o *Gt) Init(data string) {
-	o.data = data
+func (tc *TlsConfig) AddCertificate(crt string, key string) error {
+	cert, err := tls.LoadX509KeyPair(crt, key)
+	if err != nil {
+		return err
+	}
+	tc.Config.Certificates = append(tc.Config.Certificates, cert)
+	return nil
 }
 
-func (o *Gt) Evaluate(tx *engine.Transaction, value string) bool {
-	value = tx.MacroExpansion(value)
-	v, err := strconv.Atoi(value)
-	if err != nil {
-		v = 0
+func (tc *TlsConfig) Build() *tls.Config {
+	tc.Config.BuildNameToCertificate()
+	return tc.Config
+}
+
+func NewTlsConfig() *TlsConfig {
+	tc := &TlsConfig{
+		&tls.Config{},
 	}
-	data := tx.MacroExpansion(o.data)
-	k, err := strconv.Atoi(data)
-	if err != nil {
-		k = 0
-	}
-	return k < v
+	tc.Config.Certificates = []tls.Certificate{}
+	//TODO add first certificate as placeholder (self-signed)? [0]
+	return tc
 }
