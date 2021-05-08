@@ -61,12 +61,12 @@ type Proxy struct {
 }
 
 type Location struct {
-	Path      string `yaml:""`
-	PathTrail bool   `yaml:""`
-	Policy    string `yaml:""`
-	ErrorCgi  string `yaml:""`
-	AccessLog string `yaml:""`
-	Upstream  string `yaml:""`
+	Path      string `yaml:"path"`
+	PathTrail bool   `yaml:"path_trail"`
+	Profile   string `yaml:"profile"`
+	ErrorCgi  string `yaml:"error_cgi"`
+	AccessLog string `yaml:"access_log"`
+	Upstream  string `yaml:"upstream"`
 
 	//Private non YAML fields
 	Listeners []*http.ServeMux
@@ -74,6 +74,7 @@ type Location struct {
 	mux       *sync.RWMutex
 	ups       *Upstream
 	server    *Server
+
 	// Amount of characters to strip on url, basically len(Path)
 	padding int
 }
@@ -120,11 +121,10 @@ func ParseConfig(data []byte) (*Config, error) {
 				}
 			}
 			if ups == nil {
-				log.Error("No upstream %s found location", location.Upstream)
+				//log.Error("No upstream %s found location", location.Upstream)
 			} else {
 				location.SetUpstream(ups)
 			}
-
 		}
 	}
 	return &config, nil

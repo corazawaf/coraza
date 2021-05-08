@@ -19,20 +19,24 @@ import (
 	"strconv"
 )
 
-//TODO macro expansion
 type Ge struct {
-	data int
+	data string
 }
 
 func (o *Ge) Init(data string) {
-	k, _ := strconv.Atoi(data)
-	o.data = k
+	o.data = data
 }
 
 func (o *Ge) Evaluate(tx *engine.Transaction, value string) bool {
+	value = tx.MacroExpansion(value)
 	v, err := strconv.Atoi(value)
 	if err != nil {
 		v = 0
 	}
-	return v >= o.data
+	data := tx.MacroExpansion(o.data)
+	dataint, err := strconv.Atoi(data)
+	if err != nil {
+		dataint = 0
+	}
+	return v >= dataint
 }

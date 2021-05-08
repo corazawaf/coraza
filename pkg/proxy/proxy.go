@@ -19,13 +19,16 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/jptosso/coraza-waf/pkg/engine"
-	policy "github.com/jptosso/coraza-waf/pkg/parser"
+	"github.com/jptosso/coraza-waf/pkg/profile"
+	"github.com/jptosso/coraza-waf/pkg/utils"
 	log "github.com/sirupsen/logrus"
 	"io"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -52,7 +55,7 @@ func (ps *ProxyServer) Init(config *Config) error {
 		if server.Ssl != nil {
 			log.Info("Adding keys to TLS")
 			err := sslconf.AddCertificate(server.Ssl.Certificate, server.Ssl.PrivateKey)
-			if err != nil{
+			if err != nil {
 				log.Fatal(err)
 				return err
 			}
@@ -83,9 +86,16 @@ func (ps *ProxyServer) Init(config *Config) error {
 
 		for _, location := range server.Locations {
 			log.Info(fmt.Sprintf("Creating location handler for server %d", i))
-			waf := engine.NewWaf()
-			parser, _ := policy.NewParser(waf)
-			err := parser.FromFile(location.Policy)
+			pdata, err := utils.OpenFile(location.Profile)
+			if err != nil {
+				return err
+			}
+			pf, err := profile.ParseProfile(pdata)
+			if err != nil {
+				return err
+			}
+
+			waf, err := pf.Build()
 			if err != nil {
 				return err
 			}
@@ -150,6 +160,7 @@ func (l *Location) ModifyResponse(response *http.Response) error {
 	ctx := response.Request.Context()
 	ups := ctx.Value("ups").(*ProxyCtx)
 	tx := ups.Tx
+	tx.ParseResponseObjectHeaders(response)
 	//phases 4 and 5
 	tx.ExecutePhase(4)
 	tx.ExecutePhase(5)
@@ -171,7 +182,7 @@ func (l *Location) Director(req *http.Request) {
 	req.URL.Host = host
 	req.Host = host
 	req.URL.Scheme = "http"
-	if ups.Upstream.Ssl{
+	if ups.Upstream.Ssl {
 		req.URL.Scheme = "https"
 	}
 }
@@ -181,10 +192,35 @@ func (l *Location) ErrorHandler(responsewriter http.ResponseWriter, request *htt
 	ups := ctx.Value("ups").(*ProxyCtx)
 	tx := ups.Tx
 	tx.ExecutePhase(5)
+	responsewriter.Header().Add("Content-Type", "text/html")
 	responsewriter.WriteHeader(500)
-	responsewriter.Header().Set("Content-Type", "text/html")
-	io.WriteString(responsewriter, fmt.Sprintf("Gateway Error\n<!-- TX: %s -->\n", tx.Collections["id"].GetFirstString()))
-	log.Error(err)
+	if l.ErrorCgi != "" {
+		cmd := exec.Command(l.ErrorCgi)
+		cmd.Env = os.Environ()
+		rawrule := tx.WafInstance.Rules.FindById(tx.DisruptiveRuleId).Raw
+		cmd.Env = append(cmd.Env, "TXID="+tx.Id)
+		cmd.Env = append(cmd.Env, "RULES_TRIGGERED="+getTriggeredRules(tx))
+		cmd.Env = append(cmd.Env, "DISRUPTIVE_RULE_ID="+strconv.Itoa(tx.DisruptiveRuleId))
+		cmd.Env = append(cmd.Env, "DISRUPTIVE_RULE="+rawrule)
+		cmd.Env = append(cmd.Env, "DISRUPTIVE_RULE_MACROED="+tx.MacroExpansion(rawrule))
+		for k, v := range tx.Collections["tx"].Data {
+			for i, data := range v {
+				cmd.Env = append(cmd.Env, fmt.Sprintf("TX_%s_%d=%s", k, i, data))
+			}
+		}
+		stdout, err := cmd.Output()
+		if err != nil {
+			io.WriteString(responsewriter, "System error, contact administrator.")
+			log.Error(err)
+		} else {
+			io.WriteString(responsewriter, string(stdout))
+		}
+	} else {
+		io.WriteString(responsewriter, fmt.Sprintf("Gateway Error\n<!-- TX: %s -->\n", tx.Collections["id"].GetFirstString()))
+	}
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 func (l *Location) RequestHandler(w http.ResponseWriter, r *http.Request) {
@@ -200,14 +236,26 @@ func (l *Location) RequestHandler(w http.ResponseWriter, r *http.Request) {
 	// this will assign the new TX to the parent context pointer
 	r = r.WithContext(ctx)
 	//phase 1, 2 y 3
-	l.LoadRequestHeadersPhase(tx, w, r)
+	err := tx.ParseRequestObjectHeaders(r)
+	if err != nil {
+
+	}
+	tx.ExecutePhase(1)
 	if tx.Disrupted {
-		//TODO disrupt
+		l.ErrorHandler(w, r, nil)
 		return
 	}
+	err = tx.ParseRequestObjectBody(r)
+	if err != nil {
 
+	}
+	tx.ExecutePhase(2)
+	if tx.Disrupted {
+		l.ErrorHandler(w, r, nil)
+		return
+	}
 	w.Header().Set("X-Coraza-Version", "1.0")
-	w.Header().Set("X-Transaction-Id", "...")
+	w.Header().Set("X-Transaction-Id", tx.Id)
 	log.Info("Serving to upstream")
 	p.Proxy.ServeHTTP(w, r)
 }
@@ -216,23 +264,6 @@ func (l *Location) GetNextUpstream() *UpstreamServer {
 	//round robin, weight, etc...
 	log.Info("Serving upstream")
 	return l.ups.Servers[0]
-}
-
-func (l *Location) LoadRequestHeadersPhase(tx *engine.Transaction, w http.ResponseWriter, r *http.Request) {
-	//basenamespl := regexp.MustCompile(`\/|\\`)
-	addrspl := strings.SplitN(r.RemoteAddr, ":", 2)
-	port := 0
-	if len(addrspl) == 2 {
-		port, _ = strconv.Atoi(addrspl[1])
-	}
-	tx.SetRequestHeaders(r.Header)
-	tx.SetArgsGet(r.URL.Query())
-	//tx.SetAuthType("") //Not supported
-	tx.SetUrl(r.URL)
-	tx.SetRemoteAddress(addrspl[0], port)
-	//tx.SetRemoteUser("") //Not supported
-	tx.SetRequestCookies(r.Cookies())
-	tx.SetRequestLine(r.Method, r.Proto, r.RequestURI)
 }
 
 func (l *Location) SetUpstream(ups *Upstream) error {
@@ -263,8 +294,9 @@ func (l *Location) SetUpstream(ups *Upstream) error {
 				KeepAlive: 60 * time.Second,
 				DualStack: true,
 			}).DialContext,
-			MaxIdleConns:          100,
-			IdleConnTimeout:       90 * time.Second,
+			MaxIdleConns:    100,
+			IdleConnTimeout: 90 * time.Second,
+			// Apparently TLSHandshakeTimeout generates the error TLS handshake error from...
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
 		}
@@ -273,4 +305,12 @@ func (l *Location) SetUpstream(ups *Upstream) error {
 	}
 	l.ups = ups
 	return nil
+}
+
+func getTriggeredRules(tx *engine.Transaction) string {
+	buff := ""
+	for _, tr := range tx.MatchedRules {
+		buff += " " + strconv.Itoa(tr.Id)
+	}
+	return ""
 }

@@ -583,14 +583,14 @@ func (tx *Transaction) ParseRequestObjectBody(req *http.Request) error {
 }
 
 // Parse golang http response object into transaction
+func (tx *Transaction) ParseResponseObjectHeaders(res *http.Response) error {
+	tx.SetResponseHeaders(res.Header)
+	return nil
+}
+
+// Parse golang http response object into transaction
 func (tx *Transaction) ParseResponseObject(res *http.Response) error {
 	tx.SetResponseHeaders(res.Header)
-	//res.Header.Set("X-Coraza-Waf", "woo")
-	if tx.ExecutePhase(3) {
-		return nil
-	}
-	//TODO response body
-	tx.ExecutePhase(4)
 	return nil
 }
 
