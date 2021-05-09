@@ -129,15 +129,12 @@ func (p *RuleParser) ParseActions(actions string, defaults []*DefaultActions) er
 		}
 	}
 
+	//TODO requires more study
 	for _, acts := range defaults {
 		cp := acts.Phase
-		if cp != pp {
-			//Not our phase bruh
-			continue
-		} else {
-			act = MergeActions(acts.Actions, act)
-			p.rule.DefaultDisruptiveAction = acts.DisruptiveAction
-			break //TODO is it ok to break?
+		if cp == pp {
+			acts.Actions = MergeActions(acts.Actions, act)
+			//break
 		}
 	}
 

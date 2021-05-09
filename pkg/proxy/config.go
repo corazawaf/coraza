@@ -89,6 +89,7 @@ type Server struct {
 
 type Config struct {
 	Concurrency string      `yaml:"concurrency"`
+	LogLevel string `yaml:"loglevel"`
 	ErrorLog    string      `yaml:"error_log"`
 	Pid         string      `yaml:"pid"`
 	Redis       string      `yaml:"redis"`
@@ -102,6 +103,7 @@ func ParseConfig(data []byte) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.SetLevel(logleveltoint(config.LogLevel))
 	for _, server := range config.Servers {
 		for i, listen := range server.Listen {
 			spl := strings.SplitN(listen, ":", 2)
@@ -128,4 +130,9 @@ func ParseConfig(data []byte) (*Config, error) {
 		}
 	}
 	return &config, nil
+}
+
+
+func logleveltoint(level string) log.Level {
+	return 5
 }

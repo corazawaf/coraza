@@ -45,7 +45,7 @@ type Crs struct {
 	MaxArgNameLength             int      `yaml:"max_arg_name_length"`
 	MaxArgValueLength            int      `yaml:"max_arg_value_length"`
 	MaxTotalArgsLength           int      `yaml:"max_total_args_length"`
-	MaxFileSize                  int64    `yaml:max_file_size""`
+	MaxFileSize                  int64    `yaml:"max_file_size`
 	MaxCombinedFileSize          int64    `yaml:"max_combined_file_size"`
 	SamplingPercentage           int      `yaml:"sampling_percentage"`
 	DosBlockTimeout              int      `yaml:"dos_block_timeout"`
@@ -56,8 +56,6 @@ type Crs struct {
 	ReputationBlockDuration      int      `yaml:"reputation_block_duration"`
 	IpWhitelist                  []string `yaml:"ip_whitelist"`
 	Mode                         string   `yaml:"mode"`
-	PreRules                     string   `yaml:"pre_rules"`
-	AfterRules                   string   `yaml:"after_rules"`
 	//BlockBlSearchIp              bool
 	//BlockBlSuspiciousIp          bool
 	//BlockBlHarvesterIp           bool
@@ -155,16 +153,14 @@ func (c *Crs) Build() error {
 	buff := ""
 	var err error
 	p, _ := parser.NewParser(c.waf)
-	err = p.FromString(c.PreRules)
-	if err != nil {
-		return err
-	}
 	switch c.Mode {
 	case "strict":
-		buff = `SecDefaultAction "phase:1,log,auditlog,deny,status:403"` + "\n" + `SecDefaultAction "phase:2,log,auditlog,deny,status:403"` + "\n"
+		buff = `SecDefaultAction "phase:1,log,auditlog,deny,status:403"` + "\n" 
+		buff += `SecDefaultAction "phase:2,log,auditlog,deny,status:403"` + "\n"
 		break
 	case "scoring":
-		buff = `SecDefaultAction "phase:1,log,auditlog,pass"` + "\n" + `SecDefaultAction "phase:2,log,auditlog,pass"` + "\n"
+		buff = `SecDefaultAction "phase:1,log,auditlog,pass"` + "\n" 
+		buff += `SecDefaultAction "phase:2,log,auditlog,pass"` + "\n"
 		break
 	default:
 		buff = c.Mode + "\n"
@@ -173,19 +169,15 @@ func (c *Crs) Build() error {
 	if err != nil {
 		return err
 	}
-	buff = "SecAction \"id:900000,nolog,phase:1,t:none,"
+	buff = "SecAction \"id:900000,pass,phase:1,t:none,"
 	for k, v := range replace {
-		buff += fmt.Sprintf("setvar:tx.%s=%s,", k, v)
+		buff += fmt.Sprintf("setvar:'tx.%s=%s',", k, v)
 	}
 	for _, e := range c.Exclusions {
-		buff += fmt.Sprintf("setvar:tx.crs_exclusions_%s=1,", e)
+		buff += fmt.Sprintf("setvar:'tx.crs_exclusions_%s=1',", e)
 	}
-	buff += "pass\"\n"
+	buff += "nolog\"\n"
 	err = p.FromString(buff)
-	if err != nil {
-		return err
-	}
-	err = p.FromString(c.AfterRules)
 	if err != nil {
 		return err
 	}
@@ -223,7 +215,7 @@ func joinAndEnclose(arr []string, enclose string) string {
 	for i, e := range arr {
 		res[i] = enclose + e + enclose
 	}
-	return "'" + strings.Join(res, " ") + "'"
+	return strings.Join(res, " ")
 }
 
 func boolToString(b bool) string {

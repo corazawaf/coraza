@@ -27,7 +27,11 @@ func (a *Deny) Init(r *engine.Rule, data string) string {
 
 func (a *Deny) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	tx.Status = 403
-	tx.DisruptiveRuleId = r.Id
+	if r.ParentId == 0{
+		tx.DisruptiveRuleId = r.Id
+	}else{
+		tx.DisruptiveRuleId = r.ParentId
+	}
 	tx.Disrupted = true
 }
 

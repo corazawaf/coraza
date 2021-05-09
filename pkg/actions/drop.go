@@ -28,7 +28,11 @@ func (a *Drop) Init(r *engine.Rule, data string) string {
 func (a *Drop) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	tx.Status = 403
 	tx.Disrupted = true
-	tx.DisruptiveRuleId = r.Id
+	if r.ParentId == 0{
+		tx.DisruptiveRuleId = r.Id
+	}else{
+		tx.DisruptiveRuleId = r.ParentId
+	}
 	//TODO maybe send a TCP RST using the ip address and port?
 }
 

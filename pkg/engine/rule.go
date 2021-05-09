@@ -116,7 +116,8 @@ type Rule struct {
 }
 
 func (r *Rule) Init() {
-	r.Phase = 1
+	//It seems default phase for modsec is 2 according to secdefaultaction documentation
+	r.Phase = 2
 	r.Tags = []string{}
 	r.mux = &sync.RWMutex{}
 }

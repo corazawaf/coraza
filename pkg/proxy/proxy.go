@@ -23,6 +23,7 @@ import (
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	log "github.com/sirupsen/logrus"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -162,6 +163,20 @@ func (l *Location) ModifyResponse(response *http.Response) error {
 	tx := ups.Tx
 	tx.ParseResponseObjectHeaders(response)
 	//phases 4 and 5
+	tx.ExecutePhase(3)
+	if tx.Disrupted{
+		response.Header = http.Header{}
+		response.Header.Add("Content-Type", "text/html")
+		response.Status = "500 Failed"
+		response.StatusCode = 500
+		body, err := errorCgi(tx, l.ErrorCgi)
+		if err != nil{
+			log.Error("Failed to send error page")
+		}
+		response.Body = ioutil.NopCloser(strings.NewReader(string(body)))
+		tx.ExecutePhase(5)
+		return nil
+	}
 	tx.ExecutePhase(4)
 	tx.ExecutePhase(5)
 	return nil
@@ -195,20 +210,7 @@ func (l *Location) ErrorHandler(responsewriter http.ResponseWriter, request *htt
 	responsewriter.Header().Add("Content-Type", "text/html")
 	responsewriter.WriteHeader(500)
 	if l.ErrorCgi != "" {
-		cmd := exec.Command(l.ErrorCgi)
-		cmd.Env = os.Environ()
-		rawrule := tx.WafInstance.Rules.FindById(tx.DisruptiveRuleId).Raw
-		cmd.Env = append(cmd.Env, "TXID="+tx.Id)
-		cmd.Env = append(cmd.Env, "RULES_TRIGGERED="+getTriggeredRules(tx))
-		cmd.Env = append(cmd.Env, "DISRUPTIVE_RULE_ID="+strconv.Itoa(tx.DisruptiveRuleId))
-		cmd.Env = append(cmd.Env, "DISRUPTIVE_RULE="+rawrule)
-		cmd.Env = append(cmd.Env, "DISRUPTIVE_RULE_MACROED="+tx.MacroExpansion(rawrule))
-		for k, v := range tx.Collections["tx"].Data {
-			for i, data := range v {
-				cmd.Env = append(cmd.Env, fmt.Sprintf("TX_%s_%d=%s", k, i, data))
-			}
-		}
-		stdout, err := cmd.Output()
+		stdout, err := errorCgi(tx, l.ErrorCgi)
 		if err != nil {
 			io.WriteString(responsewriter, "System error, contact administrator.")
 			log.Error(err)
@@ -224,12 +226,11 @@ func (l *Location) ErrorHandler(responsewriter http.ResponseWriter, request *htt
 }
 
 func (l *Location) RequestHandler(w http.ResponseWriter, r *http.Request) {
-	log.Info("Intercepting request")
+	log.Debug("Intercepting request and selecting upstream")
 	//TODO lock?
 	//l.mux.Lock()
 	//defer l.mux.Unlock()
 	//TODO revisar si se puede sobreescribir heading parser
-	log.Info("Selecting upstream")
 	p := l.GetNextUpstream()
 	tx := l.Waf.NewTransaction()
 	ctx := context.WithValue(r.Context(), "ups", &ProxyCtx{tx, p})
@@ -256,13 +257,13 @@ func (l *Location) RequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("X-Coraza-Version", "1.0")
 	w.Header().Set("X-Transaction-Id", tx.Id)
-	log.Info("Serving to upstream")
+	log.Debug("Serving to upstream")
 	p.Proxy.ServeHTTP(w, r)
 }
 
 func (l *Location) GetNextUpstream() *UpstreamServer {
 	//round robin, weight, etc...
-	log.Info("Serving upstream")
+	log.Debug("Serving upstream")
 	return l.ups.Servers[0]
 }
 
@@ -299,8 +300,9 @@ func (l *Location) SetUpstream(ups *Upstream) error {
 			// Apparently TLSHandshakeTimeout generates the error TLS handshake error from...
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
+			//DisableCompression: true,
 		}
-		reverseProxy.Transport = nil
+		//reverseProxy.Transport = nil
 		upstream.Proxy = reverseProxy
 	}
 	l.ups = ups
@@ -310,7 +312,29 @@ func (l *Location) SetUpstream(ups *Upstream) error {
 func getTriggeredRules(tx *engine.Transaction) string {
 	buff := ""
 	for _, tr := range tx.MatchedRules {
+		if tr.Id == 0{
+			continue
+		}
 		buff += " " + strconv.Itoa(tr.Id)
 	}
-	return ""
+	return buff
+}
+
+func errorCgi(tx *engine.Transaction, file string) ([]byte, error) {
+	cmd := exec.Command(file)
+	cmd.Env = os.Environ()
+	rawrule := tx.WafInstance.Rules.FindById(tx.DisruptiveRuleId).Raw
+	cmd.Env = append(cmd.Env, "TXID="+tx.Id)
+	cmd.Env = append(cmd.Env, "RULES_TRIGGERED="+getTriggeredRules(tx))
+	if tx.DisruptiveRuleId != 0 {
+		cmd.Env = append(cmd.Env, "DISRUPTIVE_RULE_ID="+strconv.Itoa(tx.DisruptiveRuleId))
+		cmd.Env = append(cmd.Env, "DISRUPTIVE_RULE="+rawrule)
+		cmd.Env = append(cmd.Env, "DISRUPTIVE_RULE_MACROED="+tx.MacroExpansion(rawrule))
+	}
+	for k, v := range tx.Collections["tx"].Data {
+		for i, data := range v {
+			cmd.Env = append(cmd.Env, fmt.Sprintf("TX_%s_%d=%s", k, i, data))
+		}
+	}
+	return cmd.Output()
 }
