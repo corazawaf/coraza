@@ -155,11 +155,11 @@ func (c *Crs) Build() error {
 	p, _ := parser.NewParser(c.waf)
 	switch c.Mode {
 	case "strict":
-		buff = `SecDefaultAction "phase:1,log,auditlog,deny,status:403"` + "\n" 
+		buff = `SecDefaultAction "phase:1,log,auditlog,deny,status:403"` + "\n"
 		buff += `SecDefaultAction "phase:2,log,auditlog,deny,status:403"` + "\n"
 		break
 	case "scoring":
-		buff = `SecDefaultAction "phase:1,log,auditlog,pass"` + "\n" 
+		buff = `SecDefaultAction "phase:1,log,auditlog,pass"` + "\n"
 		buff += `SecDefaultAction "phase:2,log,auditlog,pass"` + "\n"
 		break
 	default:

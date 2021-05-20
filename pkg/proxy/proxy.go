@@ -164,13 +164,13 @@ func (l *Location) ModifyResponse(response *http.Response) error {
 	tx.ParseResponseObjectHeaders(response)
 	//phases 4 and 5
 	tx.ExecutePhase(3)
-	if tx.Disrupted{
+	if tx.Disrupted {
 		response.Header = http.Header{}
 		response.Header.Add("Content-Type", "text/html")
 		response.Status = "500 Failed"
 		response.StatusCode = 500
 		body, err := errorCgi(tx, l.ErrorCgi)
-		if err != nil{
+		if err != nil {
 			log.Error("Failed to send error page")
 		}
 		response.Body = ioutil.NopCloser(strings.NewReader(string(body)))
@@ -312,7 +312,7 @@ func (l *Location) SetUpstream(ups *Upstream) error {
 func getTriggeredRules(tx *engine.Transaction) string {
 	buff := ""
 	for _, tr := range tx.MatchedRules {
-		if tr.Id == 0{
+		if tr.Id == 0 {
 			continue
 		}
 		buff += " " + strconv.Itoa(tr.Id)

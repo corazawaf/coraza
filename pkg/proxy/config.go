@@ -89,7 +89,7 @@ type Server struct {
 
 type Config struct {
 	Concurrency string      `yaml:"concurrency"`
-	LogLevel string `yaml:"loglevel"`
+	LogLevel    string      `yaml:"loglevel"`
 	ErrorLog    string      `yaml:"error_log"`
 	Pid         string      `yaml:"pid"`
 	Redis       string      `yaml:"redis"`
@@ -132,7 +132,16 @@ func ParseConfig(data []byte) (*Config, error) {
 	return &config, nil
 }
 
-
 func logleveltoint(level string) log.Level {
-	return 5
+	if level == "debug" {
+		return log.DebugLevel
+	} else if level == "info" {
+		return log.InfoLevel
+	} else if level == "warn" {
+		return log.WarnLevel
+	} else if level == "error" {
+		return log.ErrorLevel
+	} else {
+		return log.InfoLevel
+	}
 }
