@@ -74,7 +74,7 @@ func main(){
 	// Create Transaction
 	tx := waf.NewTransaction()
 	tx.AddRequestHeader("Test", "TestValue")
-	tx.ExecutePhase(1)
+	tx.ExecutePhase(2)
 	if tx.Disrupted{
 		fmt.Println("Transaction disrupted")
 	}
