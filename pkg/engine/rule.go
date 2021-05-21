@@ -1,4 +1,4 @@
-// Copyright 2020 Juan Pablo Tosso
+// Copyright 2021 Juan Pablo Tosso
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,10 +15,10 @@
 package engine
 
 import (
-	_ "github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"reflect"
 	"strconv"
-	"sync"
+	"strings"
 )
 
 const (
@@ -111,14 +111,12 @@ type Rule struct {
 
 	// Rule Set Version
 	Version string `json:"version"`
-
-	mux *sync.RWMutex
 }
 
 func (r *Rule) Init() {
-	r.Phase = 1
+	//It seems default phase for modsec is 2 according to secdefaultaction documentation
+	r.Phase = 2
 	r.Tags = []string{}
-	r.mux = &sync.RWMutex{}
 }
 
 func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
@@ -162,6 +160,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 			}
 			continue
 		}
+		log.Debug("Arguments expanded: " + strconv.Itoa(len(values)))
 		for _, arg := range values {
 			var args []string
 			if r.MultiMatch {
@@ -169,6 +168,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 			} else {
 				args = []string{r.executeTransformations(arg.Value)}
 			}
+			log.Debug("Transformed arguments: " + strings.Join(args, ", "))
 			for _, carg := range args {
 				if r.executeOperator(carg, tx) {
 					matchedValues = append(matchedValues, &MatchData{
@@ -185,6 +185,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 		//No match for variables
 		return matchedValues
 	}
+	//TODO bug: we are matching vars before chaining the rule
 	tx.MatchVars(matchedValues)
 
 	// We run non disruptive actions even if there is no chain match

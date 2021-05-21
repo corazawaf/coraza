@@ -1,4 +1,4 @@
-// Copyright 2020 Juan Pablo Tosso
+// Copyright 2021 Juan Pablo Tosso
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 package parser
 
 import (
+	"fmt"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"testing"
 )
@@ -42,5 +43,21 @@ func TestDefaultActions(t *testing.T) {
 
 	if r2.DefaultDisruptiveAction != "drop" {
 		t.Error("Failed to assign default disruptive rule to action, currently " + r.DefaultDisruptiveAction)
+	}
+}
+
+func TestMergeActions(t *testing.T) {
+	origin := map[string][]string{}
+	origin["test"] = []string{"test1", "test2", "test3"}
+	origin["test3"] = []string{"test1"}
+	extra := map[string][]string{}
+	extra["test2"] = []string{"test3", "test4"}
+	extra["test3"] = []string{"test1", "test4"}
+	res := MergeActions(origin, extra)
+	if len(res) != 3 {
+		t.Error(fmt.Sprintf("Failed to merge rule actions, got %d", len(res)))
+	}
+	if len(res["test3"]) != 1 {
+		t.Error(fmt.Sprintf("Invalid merged results for rule, got %d", len(res["test3"])))
 	}
 }

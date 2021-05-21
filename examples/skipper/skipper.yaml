@@ -1,4 +1,0 @@
-application-log: /opt/coraza-waf/log/system.log
-application-log-level: error
-access-log: /opt/coraza-waf/log/access.log
-routes-file: /etc/coraza-waf/routes.eskip

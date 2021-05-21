@@ -1,4 +1,4 @@
-// Copyright 2020 Juan Pablo Tosso
+// Copyright 2021 Juan Pablo Tosso
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -129,15 +129,13 @@ func (p *RuleParser) ParseActions(actions string, defaults []*DefaultActions) er
 		}
 	}
 
+	//TODO requires more study
 	for _, acts := range defaults {
 		cp := acts.Phase
-		if cp != pp {
-			//Not our phase bruh
-			continue
-		} else {
-			act = MergeActions(acts.Actions, act)
+		if cp == pp {
+			acts.Actions = MergeActions(acts.Actions, act)
 			p.rule.DefaultDisruptiveAction = acts.DisruptiveAction
-			break //TODO is it ok to break?
+			//break
 		}
 	}
 
@@ -157,7 +155,6 @@ func (p *RuleParser) ParseActions(actions string, defaults []*DefaultActions) er
 			}
 		}
 	}
-
 	return nil
 }
 
@@ -231,18 +228,17 @@ func PhaseToInt(phase string) (int, error) {
 	return p, nil
 }
 
+//Actions must be merged keeping origin values in case they are available
 func MergeActions(origin map[string][]string, extra map[string][]string) map[string][]string {
 	newdata := map[string][]string{}
-	for _, m := range []map[string][]string{origin, extra} {
-		for k, v := range m {
-			if newdata[k] == nil {
-				newdata[k] = v
-			} else {
-				for _, vv := range v {
-					newdata[k] = append(newdata[k], vv)
-				}
-			}
-		}
+	//first we copy the map
+	for k, v := range extra {
+		newdata[k] = v
+	}
+
+	//then we replace the data
+	for k, v := range origin {
+		newdata[k] = v
 	}
 	return newdata
 }

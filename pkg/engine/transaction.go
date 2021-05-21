@@ -1,4 +1,4 @@
-// Copyright 2020 Juan Pablo Tosso
+// Copyright 2021 Juan Pablo Tosso
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -619,11 +619,15 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 		if r.Phase != phase && r.Phase != 0 {
 			continue
 		}
+		rid := strconv.Itoa(r.Id)
+		if r.Id == 0 {
+			rid = strconv.Itoa(r.ParentId)
+		}
 		if utils.ArrayContainsInt(tx.RuleRemoveById, r.Id) {
-			log.Debug(fmt.Sprintf("Skipping rule %d because of a ctl", r.Id))
+			log.Debug(fmt.Sprintf("Skipping rule %s because of a ctl", rid))
 			continue
 		}
-		log.Debug(fmt.Sprintf("Evaluating rule %d", r.Id))
+		log.Debug(fmt.Sprintf("Evaluating rule %s", rid))
 		//we always evaluate secmarkers
 		if tx.SkipAfter != "" {
 			tx.Mux.RLock()
@@ -648,7 +652,6 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 		}
 		tx.Mux.RUnlock()
 		txr := tx.GetCollection("rule")
-		rid := strconv.Itoa(r.Id)
 		txr.Set("id", []string{rid})
 		txr.Set("rev", []string{r.Rev})
 		txr.Set("severity", []string{r.Severity})
@@ -656,7 +659,7 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 		txr.Set("msg", []string{r.Msg})
 		match := r.Evaluate(tx)
 		if len(match) > 0 {
-			log.Debug(fmt.Sprintf("Rule %d matched", r.Id))
+			log.Debug(fmt.Sprintf("Rule %s matched", rid))
 			for _, m := range match {
 				log.Debug(fmt.Sprintf("MATCH %s:%s", m.Key, m.Value))
 			}
@@ -665,7 +668,7 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 		tx.Capture = false //we reset the capture flag on every run
 		usedRules++
 		if tx.Disrupted && phase != 5 {
-			log.Debug(fmt.Sprintf("Disrupted by rule %d", r.Id))
+			log.Debug(fmt.Sprintf("Disrupted by rule %s", rid))
 			// TODO Maybe we shouldnt force phase 5?
 			tx.ExecutePhase(5)
 			break

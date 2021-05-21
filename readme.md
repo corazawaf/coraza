@@ -27,29 +27,6 @@ Compilation prerequisites:
 * C compiler (gcc)
 * Libpcre++-dev
 
-You can compile each package individually running: `go build cmd/coraza-waf/*.go` or using the make scripts.
-
-```
-$ git clone --recursive https://github.com/jptosso/coraza-waf
-# if already cloned use git submodule update --init --recursive
-$ cd coraza-waf
-# Get dependencies
-$ go get ./...
-$ make
-$ sudo make install
-
-```
-
-## Install (Ubuntu)
-
-You can install Coraza WAF directly from the official PPA repository:
-
-```
-sudo add-apt-repository ppa:jptosso/coraza
-sudo apt-get update
-sudo apt install corazawaf
-
-```
 
 ## Compile as a skipper plugin
 
@@ -75,51 +52,7 @@ cd coraza-waf/
 go run cmd/testsuite/main.go -path docs/rs -rules crs/some-rules.conf
 ```
 
-## Run with Docker
-
-```
-$ docker run --name my-waf -v /some/config/routes.eskip:/etc/coraza-waf/routes.eskip:ro -d -p 9090:9090 jptosso/coraza-waf
-```
-
-Alternatively, a simple Dockerfile can be used to generate a new image that includes the necessary content (which is a much cleaner solution than the bind mount above):
-
-```
-FROM jptosso/coraza-waf
-COPY static-settings-directory /etc/coraza-waf
-```
-
-Place this file in the same directory as your directory of content ("static-settings-directory"), ``run docker build -t my-waf .``, then start your container:
-
-```
-$ docker run --name my-waf -d -p 9090:9090 some-waf-server
-```
-Then you can hit http://localhost:9090 or http://host-ip:9090 in your browser.
-
-## Using Reverse Proxy WAF
-
-**Files and directories:**
-* */etc/coraza-waf/skipper.yaml*: Contains the options that will be imported by Skipper by default.
-* */etc/coraza-waf/routes.eskip*:  Contains the routes that will be used by Skipper.
-* */etc/coraza-waf/profiles/default/rules.conf*: Placeholder file with default options.
-* */opt/coraza/var/log/coraza-waf/access.log*: Access log for Skipper.
-* */opt/coraza/var/log/coraza-waf/system.log*: Skipper + Coraza system logs
-* */opt/coraza/var/log/coraza-waf/audit.log*: Audit log, contains references for each audit log, [more information here](#).
-* */opt/coraza/var/log/coraza-waf/audit/*: This directory contains the concurrent logs created by the audit engine.
-* */usr/local/bin/coraza-waf*: Coraza WAF binary location.
-
-Sample eskip configuration:
-```
-#/etc/coraza-waf/routes.eskip
-samplesite:
-        Path("/")
-        -> corazaWAF("/etc/coraza-waf/profiles/default/rules.conf")
-        -> setRequestHeader("Host", "www.samplesite.com")
-        -> "https://www.samplesite.com";
-```
-
-For more configuration options and SSL check [Skipper Documentation](#).
-
-## Using as a library
+## Using Coraza WAF
 
 ```
 package main
@@ -141,41 +74,17 @@ func main(){
 	// Create Transaction
 	tx := waf.NewTransaction()
 	tx.AddRequestHeader("Test", "TestValue")
-	tx.ExecutePhase(1)
+	tx.ExecutePhase(2)
 	if tx.Disrupted{
 		fmt.Println("Transaction disrupted")
 	}
 }
 ```
-## Using as a gRPC service
 
-```
-$ coraza-waf -m rpc -f /etc/coraza-waf/rpc.yaml
-```
-
-Check our official wrappers:
-* [Coraza WAF NodeJS Express Middleware](#)
-
-More information [available here](#).
-
-### Using gRPC with OWASP CRS
-
-Coraza WAF gRPC applications can be configured to automatically import and setup OWASP CRS, just enable CRS as a feature in the service.yaml file and set ``config.crs.template_dir`` to your OWASP CRS path or ``/etc/coraza-waf/crs/`` if coraza is installed.
-
-You may check the customization options [here](#).
 
 ## Using the CRS engine
 
 Coraza WAF can be configured with OWASP CRS without the need to download and setup the packages. The ``pkg.crs`` package contains tools to automatically import and setup CRS.
-
-## Deployment options
-
-* [Docker -> Application](#)
-* [Nginx + Coraza WAF Reverse Proxy -> Application](#)
-* [Nginx + Coraza WAF RPC -> Application](#)
-* [Coraza WAF Reverse Proxy -> Application](#)
-* [Application + Coraza WAF (rpc)](#)
-* [Kubern8 Ingress Controller -> Application](#)
 
 
 ## License
