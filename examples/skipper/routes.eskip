@@ -1,6 +1,0 @@
-demosite:
-        *
-        -> corazaWAF("/etc/coraza-waf/profiles/default/rules.conf")
-        -> setRequestHeader("Host", "jptosso.github.io")
-        -> setPath("/coraza-waf/it-worked.html")
-        -> "https://jptosso.github.io";
