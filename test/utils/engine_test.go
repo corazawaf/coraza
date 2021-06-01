@@ -20,6 +20,7 @@ import (
 
 func TestEngine(t *testing.T) {
 	files := []string{
+		"../data/engine/persistence.yaml",
 		"../data/engine/phases.yaml",
 		"../data/engine/actions.yaml",
 		"../data/engine/directives.yaml",

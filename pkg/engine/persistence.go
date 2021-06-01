@@ -30,9 +30,10 @@ Take care of race conditions between instances?If there are two transactions in 
 */
 
 type PersistenceEngine interface {
-	Init(url string) error
+	Init(url string, ttl int) error
 	Get(key string) map[string][]string
 	Set(key string, data map[string][]string) error
+	SetTtl(key string, subkey string, ttl int) error
 }
 
 type PersistentCollection struct {
@@ -80,14 +81,12 @@ func (c *PersistentCollection) Reload() error {
 }
 
 func (c *PersistentCollection) Save() error {
-	if c.changed {
-		count, _ := strconv.Atoi(c.data["UPDATE_COUNTER"][0])
-		newcount := strconv.Itoa(count + 1)
-		timenow := strconv.FormatInt(time.Now().UnixNano(), 10)
-		c.data["UPDATE_COUNTER"] = []string{newcount}
-		c.data["LAST_UPDATE_TIME"] = []string{timenow}
-		//TODO additional vars
-	}
+	count, _ := strconv.Atoi(c.data["UPDATE_COUNTER"][0])
+	newcount := strconv.Itoa(count + 1)
+	timenow := strconv.FormatInt(time.Now().UnixNano(), 10)
+	c.data["UPDATE_COUNTER"] = []string{newcount}
+	c.data["LAST_UPDATE_TIME"] = []string{timenow}
+	//TODO additional vars
 	c.engine.Set(c.collection, c.data)
 	return nil
 }
@@ -99,4 +98,8 @@ func (c *PersistentCollection) GetData() map[string][]string {
 func (c *PersistentCollection) SetData(data map[string][]string) {
 	c.changed = true
 	c.data = data
+}
+
+func (c *PersistentCollection) SetTtl(subkey string, ttl int) error{
+	return c.engine.SetTtl(c.collection, subkey, ttl)
 }

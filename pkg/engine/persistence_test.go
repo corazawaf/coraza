@@ -24,7 +24,7 @@ var col *PersistentCollection
 
 func TestInitialization(t *testing.T) {
 	engine = &persistence.MemoryEngine{}
-	engine.Init("")
+	engine.Init("", 100)
 	col = &PersistentCollection{}
 	col.Init(engine, "testapp", "SESSION", "127.0.0.1")
 
@@ -39,18 +39,18 @@ func TestInitialization(t *testing.T) {
 
 	data := col.GetData()
 	if len(data) == 0 {
-		t.Error("Failed to retrieve persistent collection")
+		t.Error("Failed to retrieve persistent collection 1")
 	}
 
 	if len(data["TEST"]) != 1 {
-		t.Error("Failed to retrieve persistent collection")
+		t.Error("Failed to retrieve persistent collection 2")
 	}
 
 	if data["TEST"][0] != "123" {
-		t.Error("Failed to retrieve persistent collection")
+		t.Error("Failed to retrieve persistent collection 3")
 	}
 
 	if data["IS_NEW"][0] != "1" {
-		t.Error("Failed to retrieve persistent collection")
+		t.Error("Failed to retrieve persistent collection 4")
 	}
 }

@@ -40,9 +40,10 @@ func (a *Expirevar) Init(r *engine.Rule, data string) string {
 }
 
 func (a *Expirevar) Evaluate(r *engine.Rule, tx *engine.Transaction) {
-	//TODO requires more research
-	//ps := &utils.PersistentCollection{}
-	//ps.Init(a.collection, a.key)
+	col := tx.PersistentCollections[a.collection]
+	if col != nil {
+		col.SetTtl(a.key, a.ttl)
+	}
 }
 
 func (a *Expirevar) GetType() int {

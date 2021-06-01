@@ -46,19 +46,7 @@ func main() {
 	if err != nil {
 		panic("Cannot load path " + *path)
 	}
-	i := 0
-	for _, f := range files {
-		ts.AddProfile(f)
-		i++
-	}
-	fmt.Printf("Loaded %d profiles.\n", i)
-	ts.Start(func(name string, pass bool) {
-		result := "\033[31mFailed"
-		if pass {
-			result = "\033[32mPassed"
-		}
-		fmt.Printf("%s: %s\033[0m\n", name, result)
-	})
+	evaluateFiles(ts, files)
 }
 
 func getYamlFromDir(directory string) ([]string, error) {
@@ -77,4 +65,20 @@ func getYamlFromDir(directory string) ([]string, error) {
 		return files, err
 	}
 	return files, nil
+}
+
+func evaluateFiles(ts *test.TestSuite, files []string){
+	i := 0
+	for _, f := range files {
+		ts.AddProfile(f)
+		i++
+	}
+	fmt.Printf("Loaded %d profiles.\n", i)
+	ts.Start(func(name string, pass bool) {
+		result := "\033[31mFailed"
+		if pass {
+			result = "\033[32mPassed"
+		}
+		fmt.Printf("%s: %s\033[0m\n", name, result)
+	})
 }

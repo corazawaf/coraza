@@ -49,6 +49,7 @@ func (o *Rbl) Evaluate(tx *engine.Transaction, value string) bool {
 			if len(txt) > 0 {
 				//status = txt[0]
 				//captures = append(captures, txt[0])
+				//tx.Collections["tx"].Data["httpbl_msg"] = []string{status}
 			}
 		}
 		c1 <- true

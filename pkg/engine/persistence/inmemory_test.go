@@ -33,7 +33,7 @@ func TestInmemoryTtlcache(t *testing.T) {
 
 func TestInmemoryPersistence(t *testing.T) {
 	me := MemoryEngine{}
-	me.Init("")
+	me.Init("", 100)
 	st := map[string][]string{
 		"test": []string{
 			"test2",
