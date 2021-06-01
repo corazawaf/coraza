@@ -100,6 +100,6 @@ func (c *PersistentCollection) SetData(data map[string][]string) {
 	c.data = data
 }
 
-func (c *PersistentCollection) SetTtl(subkey string, ttl int) error{
+func (c *PersistentCollection) SetTtl(subkey string, ttl int) error {
 	return c.engine.SetTtl(c.collection, subkey, ttl)
 }

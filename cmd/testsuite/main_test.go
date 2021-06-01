@@ -23,5 +23,5 @@ func TestYaml(t *testing.T) {
 	if len(files) == 0 || err != nil {
 		t.Error("Failed to load yaml files")
 	}
-	//evaluateFiles(files)	
+	//evaluateFiles(files)
 }

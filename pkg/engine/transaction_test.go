@@ -223,16 +223,16 @@ func TestTxPhases(t *testing.T) {
 
 func TestErrorPage(t *testing.T) {
 	/*
-	tx := makeTransaction()
-	tx.WafInstance.ErrorPageMethod = ERROR_PAGE_SCRIPT
-	tx.WafInstance.ErrorPageFile = "../../examples/scripts/error.sh"
-	if tx.GetErrorPage() == "Error script failed" {
-		t.Error("Failed to execute test error script")
-	}
-	tx.WafInstance.ErrorPageFile = "../../"
-	if tx.GetErrorPage() != "Error script failed" {
-		t.Error("This error script shouldnt be working")
-	}*/
+		tx := makeTransaction()
+		tx.WafInstance.ErrorPageMethod = ERROR_PAGE_SCRIPT
+		tx.WafInstance.ErrorPageFile = "../../examples/scripts/error.sh"
+		if tx.GetErrorPage() == "Error script failed" {
+			t.Error("Failed to execute test error script")
+		}
+		tx.WafInstance.ErrorPageFile = "../../"
+		if tx.GetErrorPage() != "Error script failed" {
+			t.Error("This error script shouldnt be working")
+		}*/
 }
 
 func TestTxMatch(t *testing.T) {

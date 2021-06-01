@@ -17,20 +17,20 @@ package persistence
 import (
 	"errors"
 	ttlcache "github.com/ReneKroon/ttlcache/v2"
-	"time"
 	"sync"
+	"time"
 )
 
 type collection struct {
-	Data map[string][]string
+	Data    map[string][]string
 	Timeout map[string]int64
-	Mux sync.Mutex
+	Mux     sync.Mutex
 }
 
 type MemoryEngine struct {
 	//data map[string]map[string][]string
 	data *ttlcache.Cache
-	ttl int
+	ttl  int
 }
 
 func (r *MemoryEngine) Init(url string, ttl int) error {
@@ -46,7 +46,7 @@ func (r *MemoryEngine) Get(key string) map[string][]string {
 		defer col.Mux.Unlock()
 		for k, _ := range col.Data {
 			to := col.Timeout[k]
-			diff := to-time.Now().Unix()
+			diff := to - time.Now().Unix()
 			if diff <= 0 {
 				//We delete the timeout subkey
 				delete(col.Data, k)
@@ -65,15 +65,15 @@ func (r *MemoryEngine) Set(key string, value map[string][]string) error {
 		col = val.(collection)
 		col.Mux.Lock()
 		defer col.Mux.Unlock()
-		col.Data = value		
+		col.Data = value
 		//We renew the collection with new ttl
-	}else{
+	} else {
 		to := map[string]int64{}
 		for k, _ := range value {
-			to[k] = time.Now().Unix()+3600
+			to[k] = time.Now().Unix() + 3600
 		}
 		col = collection{
-			Data: value,
+			Data:    value,
 			Timeout: to,
 		}
 	}
@@ -90,7 +90,7 @@ func (r *MemoryEngine) SetTtl(key string, subkey string, ttl int) error {
 		if ttl == 0 {
 			delete(col.Data, subkey)
 			delete(col.Timeout, subkey)
-		}else{
+		} else {
 			col.Timeout[subkey] = time.Now().Unix() + int64(ttl)
 		}
 		return nil

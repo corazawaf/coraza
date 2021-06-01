@@ -67,7 +67,7 @@ func getYamlFromDir(directory string) ([]string, error) {
 	return files, nil
 }
 
-func evaluateFiles(ts *test.TestSuite, files []string){
+func evaluateFiles(ts *test.TestSuite, files []string) {
 	i := 0
 	for _, f := range files {
 		ts.AddProfile(f)
