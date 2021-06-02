@@ -484,7 +484,27 @@ func (tx *Transaction) ResetCapture() {
 
 // Parse binary request including body, does only supports http/1.1 and http/1.0
 func (tx *Transaction) ParseRequestString(data string) error {
-	buf := bufio.NewReader(strings.NewReader(data))
+	bts := strings.NewReader(data)
+	// For dumb reasons we must read the headers and look for the Host header, 
+	// this function is intended for proxies and the RFC says that a Host must not be parsed...
+	// Maybe some time I will create a prettier fix
+	scanner := bufio.NewScanner(bts)
+	for scanner.Scan() {
+		l := scanner.Text()
+		if l == "" {
+			// It should mean we are now in the request body...
+			break
+		}
+		r := regexp.MustCompile(`^[h|H]ost:\s+(.*?)$`)
+		rs := r.FindStringSubmatch(l)
+		if len(rs) > 1 {
+			tx.AddRequestHeader("Host", rs[1])
+		}
+	}
+	bts.Reset(data)
+	//End of this dumb fix...
+
+	buf := bufio.NewReader(bts)
 	req, err := http.ReadRequest(buf)
 	if err != nil {
 		return err

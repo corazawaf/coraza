@@ -25,13 +25,22 @@ import (
 	"strings"
 )
 
+type ruleAction struct {
+	Key string
+	Value string
+	Atype int
+	F engine.Action
+}
+
 type RuleParser struct {
 	rule      *engine.Rule
 	configdir string
+	defaultActions map[int][]ruleAction
 }
 
 func (p *RuleParser) Init() {
 	p.rule = engine.NewRule()
+	p.defaultActions = map[int][]ruleAction{}
 }
 
 func (p *RuleParser) ParseVariables(vars string) error {
@@ -116,44 +125,58 @@ func (p *RuleParser) ParseOperator(operator string) error {
 	return nil
 }
 
-func (p *RuleParser) ParseActions(actions string, defaults []*DefaultActions) error {
+func (p *RuleParser) ParseDefaultActions(actions string) error{
 	act, _ := ParseActions(actions)
-	//first we get the phase for default actions
-	phase := act["phase"]
-	pp := 1
+	phase := 0
 	var err error
-	if phase != nil && len(phase) > 0 {
-		pp, err = PhaseToInt(phase[0])
-		if err != nil {
-			return err
+	defaultDisruptive := ""
+	for _, action := range act {
+		if action.Key == "phase"{
+			phase, err = PhaseToInt(action.Value)
+			if err != nil{
+				return err
+			}
+			continue
+		}
+		if action.Atype == engine.ACTION_TYPE_DISRUPTIVE {
+			defaultDisruptive = action.Key
 		}
 	}
-
-	//TODO requires more study
-	for _, acts := range defaults {
-		cp := acts.Phase
-		if cp == pp {
-			acts.Actions = MergeActions(acts.Actions, act)
-			p.rule.DefaultDisruptiveAction = acts.DisruptiveAction
-			//break
-		}
+	if phase == 0 {
+		return errors.New("SecDefaultAction must contain a phase")
 	}
+	if defaultDisruptive == "" {
+		return errors.New("SecDefaultAction must contain a disruptive action: " + actions)
+	}	
+	p.defaultActions[phase] = act
+	return nil
+}
 
-	for key, acts := range act {
-		for _, value := range acts {
-			action := actionsmod.ActionsMap()[key]
-			if action == nil {
-				//TODO some fixing here, this is a bug
-				return errors.New("Invalid action " + key)
-			} else {
-				err := action.Init(p.rule, value)
-				if err != "" {
-					//p.log(err)
-					continue
-				}
-				p.rule.Actions = append(p.rule.Actions, action)
+func (p *RuleParser) ParseActions(actions string) error {
+	act, _ := ParseActions(actions)
+	//first we execute metadata rules
+	for _, a := range act {
+		if a.Atype == engine.ACTION_TYPE_METADATA {
+			errs := a.F.Init(p.rule, a.Value) 
+			if errs != "" {
+				return errors.New(errs)
 			}
 		}
+	}
+
+	phase := p.rule.Phase
+
+	defaults := p.defaultActions[phase]
+	if defaults != nil {
+		act = MergeActions(act, defaults)
+	}
+
+	for _, action := range act {
+		errs := action.F.Init(p.rule, action.Value)
+		if errs != "" {
+			return errors.New(errs)
+		}
+		p.rule.Actions = append(p.rule.Actions, action.F)
 	}
 	return nil
 }
@@ -168,26 +191,29 @@ func NewRuleParser() *RuleParser {
 	return rp
 }
 
-func ParseActions(actions string) (map[string][]string, error) {
+func ParseActions(actions string) ([]ruleAction, error) {
 	iskey := true
 	ckey := ""
 	cval := ""
 	quoted := false
-	res := map[string][]string{}
+	res := []ruleAction{}
 	for i, c := range actions {
 		if iskey && c == ' ' {
 			//skip whitespaces in key
 			continue
 		} else if !quoted && c == ',' {
-			res[ckey] = append(res[ckey], cval)
+			f := actionsmod.ActionsMap()[ckey]
+			res = append(res, ruleAction{
+				Key: ckey,
+				Value: cval,
+				F: f,
+				Atype: f.GetType(), 
+			})
 			ckey = ""
 			cval = ""
 			iskey = true
 		} else if iskey && c == ':' {
 			iskey = false
-			if res[ckey] == nil {
-				res[ckey] = []string{}
-			}
 		} else if !iskey && c == '\'' && actions[i-1] != '\\' {
 			if quoted {
 				quoted = false
@@ -205,7 +231,13 @@ func ParseActions(actions string) (map[string][]string, error) {
 			ckey += string(c)
 		}
 		if i+1 == len(actions) {
-			res[ckey] = append(res[ckey], cval)
+			f := actionsmod.ActionsMap()[ckey]
+			res = append(res, ruleAction{
+				Key: ckey,
+				Value: cval,
+				F: f,
+				Atype: f.GetType(),
+			})
 		}
 	}
 	return res, nil
@@ -228,17 +260,49 @@ func PhaseToInt(phase string) (int, error) {
 	return p, nil
 }
 
-//Actions must be merged keeping origin values in case they are available
-func MergeActions(origin map[string][]string, extra map[string][]string) map[string][]string {
-	newdata := map[string][]string{}
-	//first we copy the map
-	for k, v := range extra {
-		newdata[k] = v
+/*
+So here is my research:
+SecDefaultAction must contain a phase and a disruptive action
+They will only be merged if the match the same phase
+If the rule disruptive action is block it will inherit the defaultaction disruptive actions
+DefaultAction's disruptive action will be added to the rule only if there is no DA or DA is block
+If we have:
+SecDefaultAction "phase:2,deny,status:403,log"
+Then we have a Rule:
+SecAction "id:1, phase:2, block, nolog"
+The rule ID 1 will inherit default actions and become
+SecAction "id:1, phase:2, status:403, log, nolog, deny"
+In the future I shall optimize that redundant log and nolog, it won't actually change anything but would look cooler
+*/
+func MergeActions(origin []ruleAction, defaults []ruleAction) []ruleAction {
+	res := []ruleAction{}
+	var da ruleAction //Disruptive action
+	for _, action := range defaults {
+		if action.Atype == engine.ACTION_TYPE_DISRUPTIVE {
+			da = action
+			continue
+		}
+		if action.Atype == engine.ACTION_TYPE_METADATA {
+			continue
+		}
+		res = append(res, action)
+	}
+	hasDa := false
+	for _, action := range origin {
+		if action.Atype == engine.ACTION_TYPE_DISRUPTIVE {
+			if action.Key != "block" {
+				hasDa = true
+				// We add the default rule DA in case this is no block
+				res = append(res, action)
+			}
+		}else{
+			res = append(res, action)
+		}
+	}
+	if !hasDa {
+		// We add the default disruptive action if there is no DA in rule or DA is block
+		res = append(res, da)
 	}
 
-	//then we replace the data
-	for k, v := range origin {
-		newdata[k] = v
-	}
-	return newdata
+	return res
 }

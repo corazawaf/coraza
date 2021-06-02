@@ -18,7 +18,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	actionsmod "github.com/jptosso/coraza-waf/pkg/actions"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	pcre "github.com/jptosso/coraza-waf/pkg/utils/pcre"
@@ -29,12 +28,6 @@ import (
 	"strings"
 )
 
-type DefaultActions struct {
-	Phase            int
-	DisruptiveAction string
-	Actions          map[string][]string
-}
-
 type Parser struct {
 	configfile string
 	configdir  string
@@ -42,13 +35,13 @@ type Parser struct {
 	RuleEngine string
 	waf        *engine.Waf
 
-	defaultActions []*DefaultActions
+	defaultActions []string
 	currentLine    int
 }
 
 func (p *Parser) Init(waf *engine.Waf) {
 	p.waf = waf
-	p.defaultActions = []*DefaultActions{}
+	p.defaultActions = []string{}
 }
 
 func (p *Parser) FromFile(profilePath string) error {
@@ -367,7 +360,7 @@ func (p *Parser) Evaluate(data string) error {
 	case "SecRule":
 		rule, err := p.ParseRule(opts)
 		if err != nil {
-			p.log("Failed to compile rule: " + opts)
+			p.log(fmt.Sprintf("Failed to compile rule (%s): %s", err, opts))
 			return err
 		} else {
 			p.waf.Rules.Add(rule)
@@ -375,7 +368,7 @@ func (p *Parser) Evaluate(data string) error {
 	case "SecAction":
 		rule, err := p.ParseRule("\"@unconditionalMatch\" \"" + opts + "\"")
 		if err != nil {
-			p.log("Failed to compile rule.")
+			p.log(fmt.Sprintf("Failed to compile rule (%s): %s", err, opts))
 			return err
 		}
 		p.waf.Rules.Add(rule)
@@ -422,6 +415,13 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error) {
 	var err error
 	rp := NewRuleParser()
 
+	for _, da := range p.defaultActions {
+		err = rp.ParseDefaultActions(da)
+		if err != nil{
+			return nil, err
+		}
+	}
+
 	spl := strings.SplitN(data, " ", 2)
 	vars := utils.RemoveQuotes(spl[0])
 
@@ -441,7 +441,7 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error) {
 
 	if len(matches) > 1 {
 		actions = utils.RemoveQuotes(matches[1])
-		err = rp.ParseActions(actions, p.defaultActions)
+		err = rp.ParseActions(actions)
 		if err != nil {
 			return nil, err
 		}
@@ -473,39 +473,7 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error) {
 }
 
 func (p *Parser) AddDefaultActions(data string) error {
-	//allowed := []string{"pass", "deny", "drop", "log", "nolog", "auditlog", "noauditlog", "t"}
-	actions, err := ParseActions(data)
-	if err != nil {
-		return err
-	}
-	pp := actions["phase"]
-	if pp == nil || len(pp) == 0 {
-		return errors.New("Default action requires a phase")
-	}
-	phase, err := PhaseToInt(pp[0])
-	if err != nil {
-		return errors.New("Default action requires a phase")
-	}
-	disruptive := ""
-	for k, _ := range actions {
-		act := actionsmod.ActionsMap()[k]
-		if act == nil {
-			return errors.New("Invalid action " + k)
-		}
-		if actionsmod.ActionsMap()[k].GetType() == engine.ACTION_TYPE_DISRUPTIVE {
-			disruptive = k
-		}
-	}
-	if disruptive == "" {
-		return errors.New("Default action must contain a disruptive action")
-	}
-	da := &DefaultActions{
-		Phase:            phase,
-		Actions:          actions,
-		DisruptiveAction: disruptive,
-	}
-	p.defaultActions = append(p.defaultActions, da)
-	//TODO validate disruptive action and no metadata actions
+	p.defaultActions = append(p.defaultActions, data)
 	return nil
 }
 
@@ -515,7 +483,7 @@ func (p *Parser) log(msg string) error {
 	return errors.New(msg)
 }
 
-func (p *Parser) GetDefaultActions() []*DefaultActions {
+func (p *Parser) GetDefaultActions() []string {
 	return p.defaultActions
 }
 

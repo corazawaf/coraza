@@ -44,9 +44,10 @@ func (o *Rx) Evaluate(tx *engine.Transaction, value string) bool {
 		if i == 10 {
 			return true
 		}
-		if tx.IsCapturable() {
-			tx.CaptureField(i, m.GroupString(i))
-		}
+		//I actually think everything should be capturable, there is no need for the capture action...
+		//if tx.IsCapturable() {
+		tx.CaptureField(i, m.GroupString(i))
+		//}
 	}
 	return m.Matches()
 }

@@ -17,6 +17,10 @@ package transformations
 func TransformationsMap() map[string]interface{} {
 	return map[string]interface{}{
 		"base64Decode":       Base64decode,
+		//BEGIN NON WORKING
+		"escapeSeqDecode":    EscapeSeqDecode,
+		"removeCommentsChar": EscapeSeqDecode,
+		//END NON WORKING
 		"lowercase":          LowerCase,
 		"removeWhitespace":   RemoveWhitespace,
 		"removeNulls":        RemoveNulls,

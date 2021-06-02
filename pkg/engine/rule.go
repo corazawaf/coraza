@@ -71,46 +71,49 @@ type Rule struct {
 	// Contains de non-compiled variables part of the rule
 	Vars string `json:"vars"`
 
-	Variables               []RuleVariable       `json:"variables"`
-	Operator                string               `json:"operator"`
-	OperatorObj             *RuleOp              `json:"operator_obj"`
-	Disruptive              bool                 `json:"disruptive"`
-	Transformations         []RuleTransformation `json:"transformations"`
-	HasChain                bool                 `json:"has_chain"`
-	ParentId                int                  `json:"parent_id"`
-	Actions                 []Action             `json:"actions"`
-	ActionParams            string               `json:"action_params"`
-	MultiMatch              bool                 `json:"multimatch"`
-	Severity                string               `json:"severity"`
-	Skip                    bool                 `json:"skip"`
-	SecMark                 string               `json:"secmark"`
-	Log                     bool                 `json:"log"`
-	Raw                     string               `json:"raw"`
-	Chain                   *Rule                `json:"chain"`
-	DisruptiveAction        int                  `json:"disruptive_action"`
-	DefaultDisruptiveAction string               `json:"default_disruptive_action"`
+	Variables               []RuleVariable       
+	Operator                string               
+	OperatorObj             *RuleOp              
+	Disruptive              bool                 
+	Transformations         []RuleTransformation 
+	HasChain                bool                 
+	ParentId                int                  
+	Actions                 []Action             
+	ActionParams            string               
+	MultiMatch              bool                 
+	Severity                string               
+	Skip                    bool                 
+	SecMark                 string               
+	Log                     bool                 
+	Raw                     string               
+	Chain                   *Rule                
+	DisruptiveAction        int                  
+	DefaultDisruptiveAction string               
 
 	//METADATA
 	// Rule unique sorted identifier
-	Id int `json:"id"`
+	Id int
 
 	// Rule tag list
-	Tags []string `json:"tags"`
+	Tags []string
 
 	// Rule execution phase 1-5
-	Phase int `json:"phase"`
+	Phase int
 
 	// Message text to be macro expanded and logged
-	Msg string `json:"msg"`
+	Msg string
 
 	// Rule revision value
-	Rev string `json:"rev"`
+	Rev string
 
 	// Rule maturity index
-	Maturity string `json:"maturity"`
+	Maturity string
 
 	// Rule Set Version
-	Version string `json:"version"`
+	Version string
+
+	// Used by deny to create disruption
+	Status int
 }
 
 func (r *Rule) Init() {
@@ -123,6 +126,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 	matchedValues := []*MatchData{}
 	for _, nid := range tx.RuleRemoveById {
 		if nid == r.Id {
+			//This rules will be skipped
 			return matchedValues
 		}
 	}
@@ -139,6 +143,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 			}
 		}
 
+		//Get with macro expansion
 		values = tx.GetField(v.Collection, v.Key, exceptions)
 		if v.Count {
 			if v.Key != "" && len(values) == 1 {
@@ -190,12 +195,12 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 
 	// We run non disruptive actions even if there is no chain match
 	for _, a := range r.Actions {
-		if a.GetType() != ACTION_TYPE_NONDISRUPTIVE {
-			continue
+		if a.GetType() == ACTION_TYPE_NONDISRUPTIVE {
+			a.Evaluate(r, tx)
 		}
-		a.Evaluate(r, tx)
 	}
 
+	// We reset the capturable configuration
 	tx.SetCapturable(false)
 
 	msgs := []string{tx.MacroExpansion(r.Msg)}
@@ -216,6 +221,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 		}
 	}
 	if r.ParentId == 0 {
+		// action log is required to add the rule to matched rules
 		if r.Log {
 			tx.MatchRule(r, msgs, matchedValues)
 		}

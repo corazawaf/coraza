@@ -57,7 +57,7 @@ func ActionsMap() map[string]engine.Action {
 		"logdata":    &Logdata{},
 		"multiMatch": &MultiMatch{},
 		"nolog":      &Nolog{},
-		"noauditlog": &Nolog{}, //Just an alias
+		"noauditlog": &NoAuditlog{},
 		//"prepend": &Prepend{},
 		//"sanitiseArg": &SanitiseArg{},
 		//"sanitiseMatched": &SanitiseMatched{},
