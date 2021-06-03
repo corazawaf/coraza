@@ -71,24 +71,24 @@ type Rule struct {
 	// Contains de non-compiled variables part of the rule
 	Vars string `json:"vars"`
 
-	Variables               []RuleVariable       
-	Operator                string               
-	OperatorObj             *RuleOp              
-	Disruptive              bool                 
-	Transformations         []RuleTransformation 
-	HasChain                bool                 
-	ParentId                int                  
-	Actions                 []Action             
-	ActionParams            string               
-	MultiMatch              bool                 
-	Severity                string               
-	Skip                    bool                 
-	SecMark                 string               
-	Log                     bool                 
-	Raw                     string               
-	Chain                   *Rule                
-	DisruptiveAction        int                  
-	DefaultDisruptiveAction string               
+	Variables               []RuleVariable
+	Operator                string
+	OperatorObj             *RuleOp
+	Disruptive              bool
+	Transformations         []RuleTransformation
+	HasChain                bool
+	ParentId                int
+	Actions                 []Action
+	ActionParams            string
+	MultiMatch              bool
+	Severity                string
+	Skip                    bool
+	SecMark                 string
+	Log                     bool
+	Raw                     string
+	Chain                   *Rule
+	DisruptiveAction        int
+	DefaultDisruptiveAction string
 
 	//METADATA
 	// Rule unique sorted identifier

@@ -26,15 +26,15 @@ import (
 )
 
 type ruleAction struct {
-	Key string
+	Key   string
 	Value string
 	Atype int
-	F engine.Action
+	F     engine.Action
 }
 
 type RuleParser struct {
-	rule      *engine.Rule
-	configdir string
+	rule           *engine.Rule
+	configdir      string
 	defaultActions map[int][]ruleAction
 }
 
@@ -125,15 +125,15 @@ func (p *RuleParser) ParseOperator(operator string) error {
 	return nil
 }
 
-func (p *RuleParser) ParseDefaultActions(actions string) error{
+func (p *RuleParser) ParseDefaultActions(actions string) error {
 	act, _ := ParseActions(actions)
 	phase := 0
 	var err error
 	defaultDisruptive := ""
 	for _, action := range act {
-		if action.Key == "phase"{
+		if action.Key == "phase" {
 			phase, err = PhaseToInt(action.Value)
-			if err != nil{
+			if err != nil {
 				return err
 			}
 			continue
@@ -147,7 +147,7 @@ func (p *RuleParser) ParseDefaultActions(actions string) error{
 	}
 	if defaultDisruptive == "" {
 		return errors.New("SecDefaultAction must contain a disruptive action: " + actions)
-	}	
+	}
 	p.defaultActions[phase] = act
 	return nil
 }
@@ -157,7 +157,7 @@ func (p *RuleParser) ParseActions(actions string) error {
 	//first we execute metadata rules
 	for _, a := range act {
 		if a.Atype == engine.ACTION_TYPE_METADATA {
-			errs := a.F.Init(p.rule, a.Value) 
+			errs := a.F.Init(p.rule, a.Value)
 			if errs != "" {
 				return errors.New(errs)
 			}
@@ -204,10 +204,10 @@ func ParseActions(actions string) ([]ruleAction, error) {
 		} else if !quoted && c == ',' {
 			f := actionsmod.ActionsMap()[ckey]
 			res = append(res, ruleAction{
-				Key: ckey,
+				Key:   ckey,
 				Value: cval,
-				F: f,
-				Atype: f.GetType(), 
+				F:     f,
+				Atype: f.GetType(),
 			})
 			ckey = ""
 			cval = ""
@@ -233,9 +233,9 @@ func ParseActions(actions string) ([]ruleAction, error) {
 		if i+1 == len(actions) {
 			f := actionsmod.ActionsMap()[ckey]
 			res = append(res, ruleAction{
-				Key: ckey,
+				Key:   ckey,
 				Value: cval,
-				F: f,
+				F:     f,
 				Atype: f.GetType(),
 			})
 		}
@@ -295,7 +295,7 @@ func MergeActions(origin []ruleAction, defaults []ruleAction) []ruleAction {
 				// We add the default rule DA in case this is no block
 				res = append(res, action)
 			}
-		}else{
+		} else {
 			res = append(res, action)
 		}
 	}

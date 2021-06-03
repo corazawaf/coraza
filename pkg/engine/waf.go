@@ -217,12 +217,12 @@ func (w *Waf) InitPersistenceEngine() error {
 	}
 	var pe PersistenceEngine
 	/*
-	switch spl[0] {
-	//case "redis":
-	//	pe = &persistence.RedisEngine{}
-	default:
-		pe = &persistence.MemoryEngine{}
-	}*/
+		switch spl[0] {
+		//case "redis":
+		//	pe = &persistence.RedisEngine{}
+		default:
+			pe = &persistence.MemoryEngine{}
+		}*/
 	pe = &persistence.MemoryEngine{}
 	//TODO change TTL
 	err := pe.Init(uri, 3600)

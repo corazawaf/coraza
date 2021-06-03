@@ -21,11 +21,11 @@ import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/parser"
 	"html/template"
+	"io/ioutil"
 	"log"
 	"net/http"
-	"time"
-	"io/ioutil"
 	"path"
+	"time"
 )
 
 type ClientRequest struct {
@@ -43,6 +43,7 @@ type ServerResponse struct {
 }
 
 var CRS_PATH string
+
 func main() {
 	port := flag.Int("port", 8080, "port to listen")
 	address := flag.String("addr", "0.0.0.0", "Address to listen")
@@ -84,7 +85,7 @@ func apiHandler(w http.ResponseWriter, req *http.Request) {
 	if r.Crs {
 		fmt.Println("Loading CRS rules")
 		err = loadCrs(parser)
-		if err != nil{
+		if err != nil {
 			fmt.Println(err)
 		}
 	}
@@ -115,7 +116,7 @@ func apiHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func loadCrs(pp *parser.Parser) error{
+func loadCrs(pp *parser.Parser) error {
 	files := []string{
 		"REQUEST-901-INITIALIZATION.conf",
 		"REQUEST-903.9001-DRUPAL-EXCLUSION-RULES.conf",
@@ -153,13 +154,13 @@ func loadCrs(pp *parser.Parser) error{
 	var err error
 	for _, f := range files {
 		p := path.Join(CRS_PATH, f)
-	    content, err := ioutil.ReadFile(p)
-	    if err != nil {
-	        return err
-	    }
+		content, err := ioutil.ReadFile(p)
+		if err != nil {
+			return err
+		}
 
-	    rules += string(content) + "\n"
+		rules += string(content) + "\n"
 	}
 	err = pp.FromString(rules)
-	return err	
+	return err
 }

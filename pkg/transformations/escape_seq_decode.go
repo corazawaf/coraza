@@ -14,8 +14,7 @@
 
 package transformations
 
-import (
-)
+import ()
 
 func EscapeSeqDecode(value string) string {
 	return value

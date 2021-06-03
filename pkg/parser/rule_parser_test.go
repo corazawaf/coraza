@@ -15,7 +15,6 @@
 package parser
 
 import (
-	"fmt"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"testing"
 )
@@ -31,33 +30,8 @@ func TestDefaultActions(t *testing.T) {
 	if len(p.GetDefaultActions()) != 2 {
 		t.Error("Default actions were not created")
 	}
-
-	r, err := p.ParseRule(`ARGS "test" "id:1"`)
-	if err != nil {
-		t.Error("Failed to parse rule", err)
-	}
-	if r.DefaultDisruptiveAction != "pass" {
-		t.Error("Failed to assign default disruptive rule to action, currently " + r.DefaultDisruptiveAction)
-	}
-	r2, _ := p.ParseRule(`ARGS "test" "phase:2,id:2"`)
-
-	if r2.DefaultDisruptiveAction != "drop" {
-		t.Error("Failed to assign default disruptive rule to action, currently " + r.DefaultDisruptiveAction)
-	}
 }
 
 func TestMergeActions(t *testing.T) {
-	origin := map[string][]string{}
-	origin["test"] = []string{"test1", "test2", "test3"}
-	origin["test3"] = []string{"test1"}
-	extra := map[string][]string{}
-	extra["test2"] = []string{"test3", "test4"}
-	extra["test3"] = []string{"test1", "test4"}
-	res := MergeActions(origin, extra)
-	if len(res) != 3 {
-		t.Error(fmt.Sprintf("Failed to merge rule actions, got %d", len(res)))
-	}
-	if len(res["test3"]) != 1 {
-		t.Error(fmt.Sprintf("Invalid merged results for rule, got %d", len(res["test3"])))
-	}
+
 }

@@ -485,7 +485,7 @@ func (tx *Transaction) ResetCapture() {
 // Parse binary request including body, does only supports http/1.1 and http/1.0
 func (tx *Transaction) ParseRequestString(data string) error {
 	bts := strings.NewReader(data)
-	// For dumb reasons we must read the headers and look for the Host header, 
+	// For dumb reasons we must read the headers and look for the Host header,
 	// this function is intended for proxies and the RFC says that a Host must not be parsed...
 	// Maybe some time I will create a prettier fix
 	scanner := bufio.NewScanner(bts)

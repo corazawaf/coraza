@@ -16,7 +16,7 @@ package transformations
 
 func TransformationsMap() map[string]interface{} {
 	return map[string]interface{}{
-		"base64Decode":       Base64decode,
+		"base64Decode": Base64decode,
 		//BEGIN NON WORKING
 		"escapeSeqDecode":    EscapeSeqDecode,
 		"removeCommentsChar": EscapeSeqDecode,

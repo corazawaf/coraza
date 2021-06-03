@@ -417,7 +417,7 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error) {
 
 	for _, da := range p.defaultActions {
 		err = rp.ParseDefaultActions(da)
-		if err != nil{
+		if err != nil {
 			return nil, err
 		}
 	}
