@@ -80,6 +80,7 @@ func apiHandler(w http.ResponseWriter, req *http.Request) {
 		//return
 	}
 	waf := engine.NewWaf()
+	waf.Datapath = CRS_PATH
 	parser, _ := parser.NewParser(waf)
 	parser.FromString(r.Directives)
 	if r.Crs {
@@ -151,6 +152,7 @@ func loadCrs(pp *parser.Parser) error {
 		"RESPONSE-980-CORRELATION.conf",
 	}
 	rules := "SecAction \"id:900990,phase:1,nolog,pass,t:none,setvar:tx.crs_setup_version=340\"\n"
+
 	var err error
 	for _, f := range files {
 		p := path.Join(CRS_PATH, f)

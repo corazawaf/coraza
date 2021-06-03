@@ -29,155 +29,117 @@ import (
 	//"time"
 )
 
-type callback func(string, bool)
 
-type TestSuite struct {
-	profiles []*testProfile
-	waf      *engine.Waf
-}
-
-func (ts *TestSuite) Init(cfg string) {
-	ts.profiles = []*testProfile{}
-	ts.waf = engine.NewWaf()
-	parser := &parser.Parser{}
-	parser.Init(ts.waf)
-	parser.FromFile(cfg)
-}
-
-func (ts *TestSuite) AddProfile(path string) error {
+func ParseProfile(path string) (*testProfile, error) {
 	data, err := utils.OpenFile(path)
 	if err != nil {
-		return errors.New("Cannot open file " + path)
+		return nil, errors.New("Cannot open file " + path)
 	}
 	profile := testProfile{}
 	err = yaml.Unmarshal(data, &profile)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	ts.profiles = append(ts.profiles, &profile)
-	return nil
+	return &profile, nil
 }
 
-func (ts *TestSuite) Start(cb callback) error {
-	//TODO add routines
-	for _, p := range ts.profiles {
-		res, _ := ts.runTest(p)
-		cb(p.Meta.Name, res)
-	}
-	return nil
-}
 
-func (ts *TestSuite) GetProfiles() []*testProfile {
-	return ts.profiles
-}
-
-func (ts *TestSuite) runTest(profile *testProfile) (bool, error) {
-	passed := 0
-	waf := ts.waf
-	if profile.Rules != "" {
-		log.Debug("Loading rules from string")
+// This function is related to testStage
+func (stage *testStage) Start(waf *engine.Waf, rules string) error {
+	if rules != "" {
 		waf = engine.NewWaf()
 		p := &parser.Parser{}
 		p.Init(waf)
-		p.FromString(profile.Rules)
+		p.FromString(rules)
 	}
-	for _, test := range profile.Tests {
-		//tn := time.Now().UnixNano()
-		pass := true
-		for _, stage := range test.Stages {
-			tx := waf.NewTransaction()
-			if stage.Stage.Input.EncodedRequest != "" {
-				sDec, _ := b64.StdEncoding.DecodeString(stage.Stage.Input.EncodedRequest)
-				stage.Stage.Input.RawRequest = string(sDec)
-			}
-			if stage.Stage.Input.RawRequest != "" {
-				err := tx.ParseRequestString(stage.Stage.Input.RawRequest)
-				if err != nil {
-					return false, err
-				}
-			}
-			//Apply tx data
-			if len(stage.Stage.Input.Headers) > 0 {
-				for k, v := range stage.Stage.Input.Headers {
-					tx.AddRequestHeader(k, v)
-				}
-			}
-			method := "GET"
-			if stage.Stage.Input.Method != "" {
-				method = stage.Stage.Input.Method
-				tx.SetRequestMethod(method)
-			}
-
-			//Request Line
-			httpv := "HTTP/1.1"
-			if stage.Stage.Input.Version != "" {
-				httpv = stage.Stage.Input.Version
-			}
-
-			path := "/"
-			if stage.Stage.Input.Uri != "" {
-				u, err := url.Parse(stage.Stage.Input.Uri)
-				if err != nil {
-					log.Debug("Invalid URL: " + stage.Stage.Input.Uri)
-				} else {
-					tx.SetUrl(u)
-					tx.AddGetArgsFromUrl(u)
-					path = stage.Stage.Input.Uri //or unescaped?
-				}
-
-			}
-			tx.SetRequestLine(method, httpv, path)
-
-			//PHASE 1
-			tx.ExecutePhase(1)
-
-			// POST DATA
-			if stage.Stage.Input.Data != "" {
-				parseInputData(stage.Stage.Input.Data, tx)
-			}
-
-			for i := 2; i <= 5; i++ {
-				tx.ExecutePhase(i)
-			}
-			log := ""
-			tr := []int{}
-			for _, mr := range tx.MatchedRules {
-				log += fmt.Sprintf(" [id \"%d\"]", mr.Id)
-				tr = append(tr, mr.Id)
-			}
-			//now we evaluate tests
-			if stage.Stage.Output.LogContains != "" {
-				if !strings.Contains(log, stage.Stage.Output.LogContains) {
-					pass = false
-				}
-			}
-			if stage.Stage.Output.NoLogContains != "" {
-				if strings.Contains(log, stage.Stage.Output.NoLogContains) {
-					pass = false
-				}
-			}
-			if len(stage.Stage.Output.TriggeredRules) > 0 {
-				for _, trr := range stage.Stage.Output.TriggeredRules {
-					if !utils.ArrayContainsInt(tr, trr) {
-						pass = false
-						break
-					}
-				}
-			}
-			if len(stage.Stage.Output.NonTriggeredRules) > 0 {
-				for _, trr := range stage.Stage.Output.NonTriggeredRules {
-					if utils.ArrayContainsInt(tr, trr) {
-						pass = false
-						break
-					}
-				}
-			}
-		}
-		if pass {
-			passed++
+	tx := waf.NewTransaction()
+	if stage.Stage.Input.EncodedRequest != "" {
+		sDec, _ := b64.StdEncoding.DecodeString(stage.Stage.Input.EncodedRequest)
+		stage.Stage.Input.RawRequest = string(sDec)
+	}
+	if stage.Stage.Input.RawRequest != "" {
+		err := tx.ParseRequestString(stage.Stage.Input.RawRequest)
+		if err != nil {
+			return errors.New("Failed to parse Raw Request")
 		}
 	}
-	return len(profile.Tests) == passed, nil
+	//Apply tx data
+	if len(stage.Stage.Input.Headers) > 0 {
+		for k, v := range stage.Stage.Input.Headers {
+			tx.AddRequestHeader(k, v)
+		}
+	}
+	method := "GET"
+	if stage.Stage.Input.Method != "" {
+		method = stage.Stage.Input.Method
+		tx.SetRequestMethod(method)
+	}
+
+	//Request Line
+	httpv := "HTTP/1.1"
+	if stage.Stage.Input.Version != "" {
+		httpv = stage.Stage.Input.Version
+	}
+
+	path := "/"
+	if stage.Stage.Input.Uri != "" {
+		u, err := url.Parse(stage.Stage.Input.Uri)
+		if err != nil {
+			log.Debug("Invalid URL: " + stage.Stage.Input.Uri)
+		} else {
+			tx.SetUrl(u)
+			tx.AddGetArgsFromUrl(u)
+			path = stage.Stage.Input.Uri //or unescaped?
+		}
+
+	}
+	tx.SetRequestLine(method, httpv, path)
+
+	//PHASE 1
+	tx.ExecutePhase(1)
+
+	// POST DATA
+	if stage.Stage.Input.Data != "" {
+		parseInputData(stage.Stage.Input.Data, tx)
+	}
+
+	for i := 2; i <= 5; i++ {
+		if tx.ExecutePhase(i) {
+			break
+		}
+	}
+	log := ""
+	tr := []int{}
+	for _, mr := range tx.MatchedRules {
+		log += fmt.Sprintf(" [id \"%d\"]", mr.Id)
+		tr = append(tr, mr.Id)
+	}
+	//now we evaluate tests
+	if stage.Stage.Output.LogContains != "" {
+		if !strings.Contains(log, stage.Stage.Output.LogContains) {
+			return errors.New(fmt.Sprintf("Log does not contain %s", stage.Stage.Output.LogContains))
+		}
+	}
+	if stage.Stage.Output.NoLogContains != "" {
+		if strings.Contains(log, stage.Stage.Output.NoLogContains) {
+			return errors.New(fmt.Sprintf("Log does contain %s", stage.Stage.Output.NoLogContains))
+		}
+	}
+	if len(stage.Stage.Output.TriggeredRules) > 0 {
+		for _, trr := range stage.Stage.Output.TriggeredRules {
+			if !utils.ArrayContainsInt(tr, trr) {
+				return errors.New(fmt.Sprintf("Rule %d was not triggered", trr))
+			}
+		}
+	}
+	if len(stage.Stage.Output.NonTriggeredRules) > 0 {
+		for _, trr := range stage.Stage.Output.NonTriggeredRules {
+			if utils.ArrayContainsInt(tr, trr) {
+				return errors.New(fmt.Sprintf("Rule %d was triggered", trr))
+			}
+		}
+	}
+	return nil
 }
 
 func parseInputData(input interface{}, tx *engine.Transaction) {

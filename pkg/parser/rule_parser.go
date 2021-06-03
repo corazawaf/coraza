@@ -23,6 +23,7 @@ import (
 	pcre "github.com/jptosso/coraza-waf/pkg/utils/pcre"
 	"strconv"
 	"strings"
+	"path"
 )
 
 type ruleAction struct {
@@ -34,7 +35,7 @@ type ruleAction struct {
 
 type RuleParser struct {
 	rule           *engine.Rule
-	configdir      string
+	Configdir      string
 	defaultActions map[int][]ruleAction
 }
 
@@ -117,7 +118,7 @@ func (p *RuleParser) ParseOperator(operator string) error {
 		fileops := []string{"ipMatchFromFile", "pmFromFile"}
 		for _, fo := range fileops {
 			if fo == op {
-				p.rule.OperatorObj.Data = p.configdir + p.rule.OperatorObj.Data
+				p.rule.OperatorObj.Data = path.Join(p.Configdir, p.rule.OperatorObj.Data)
 			}
 		}
 		p.rule.OperatorObj.Operator.Init(p.rule.OperatorObj.Data)

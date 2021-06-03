@@ -912,10 +912,12 @@ func (tx *Transaction) GetErrorPage() string {
 
 // Save persistent collections to persistence engine
 func (tx *Transaction) SavePersistentData() {
+	/*
+	TODO: There is a weird deadlock... gonna fix it
 	for col, pc := range tx.PersistentCollections {
 		pc.SetData(tx.GetCollection(col).Data)
 		pc.Save()
-	}
+	}*/
 }
 
 // Removes the VARIABLE/TARGET from the rule ID

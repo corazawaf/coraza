@@ -414,6 +414,7 @@ func (p *Parser) Evaluate(data string) error {
 func (p *Parser) ParseRule(data string) (*engine.Rule, error) {
 	var err error
 	rp := NewRuleParser()
+	rp.Configdir = p.waf.Datapath
 
 	for _, da := range p.defaultActions {
 		err = rp.ParseDefaultActions(da)

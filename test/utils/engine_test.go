@@ -16,6 +16,7 @@ package utils
 
 import (
 	"testing"
+	"github.com/jptosso/coraza-waf/pkg/engine"
 )
 
 func TestEngine(t *testing.T) {
@@ -30,19 +31,19 @@ func TestEngine(t *testing.T) {
 		"../data/engine/match.yaml",
 		"../data/engine/chains.yaml",
 	}
-
-	ts := &TestSuite{}
-	ts.Init("/dev/null")
-
+	waf := engine.NewWaf()
 	for _, f := range files {
-		err := ts.AddProfile(f)
+		profile, err := ParseProfile(f)
 		if err != nil {
 			t.Error(err)
 		}
+		for _, tt := range profile.Tests {
+			for _, s := range tt.Stages {
+				err := s.Start(waf, profile.Rules)
+				if err != nil {
+					t.Error(err)
+				}
+			}
+		}		
 	}
-	ts.Start(func(a string, b bool) {
-		if !b {
-			t.Error("Failed to run engine test: " + a)
-		}
-	})
 }
