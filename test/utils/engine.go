@@ -53,6 +53,7 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 		p.FromString(rules)
 	}
 	tx := waf.NewTransaction()
+	ct := ""
 	if stage.Stage.Input.EncodedRequest != "" {
 		sDec, _ := b64.StdEncoding.DecodeString(stage.Stage.Input.EncodedRequest)
 		stage.Stage.Input.RawRequest = string(sDec)
@@ -67,8 +68,11 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 	if len(stage.Stage.Input.Headers) > 0 {
 		for k, v := range stage.Stage.Input.Headers {
 			tx.AddRequestHeader(k, v)
-			if strings.ToLower(k) == "cookie" {
+			kt := strings.ToLower(k)
+			if kt == "cookie" {
 				tx.AddCookies(v)
+			}else if kt == "content-type" {
+				ct = v
 			}
 		}
 	}
@@ -103,7 +107,7 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 
 	// POST DATA
 	if stage.Stage.Input.Data != "" {
-		err := tx.SetRequestBody([]byte(parseInputData(stage.Stage.Input.Data)))
+		err := tx.SetRequestBody([]byte(parseInputData(stage.Stage.Input.Data)), ct)
 		if err != nil{
 			return err
 		}

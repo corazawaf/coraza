@@ -25,8 +25,6 @@ var wafi = NewWaf()
 func TestTxSetters(t *testing.T) {
 	tx := makeTransaction()
 	exp := map[string]string{
-		//TODO somehow host is being overriden
-		//"%{request_headers.host}": "www.test.com:80",
 		"%{request_headers.x-test-header}": "test456",
 		"%{request_method}":                "POST",
 		"%{ARGS_GET.id}":                   "123",
@@ -125,9 +123,9 @@ func TestTxSetters2(t *testing.T) {
 	tx.AddRequestHeader("testheader", "testvalue")
 	tx.AddRequestHeader("testheader2", "testvalue2")
 	tx.SetRemoteUser("testuser")
-	tx.SetRequestBody([]byte("test"), 4, "application/xml")
-	tx.SetRequestBody([]byte("test"), 4, "application/json")
-	tx.SetRequestBody([]byte("testuru=s0me&testuru2=c"), 4, "application/x-www-form-urlencoded")
+	tx.SetRequestBody([]byte("test"), "application/xml")
+	tx.SetRequestBody([]byte("test"), "application/json")
+	tx.SetRequestBody([]byte("testuru=s0me&testuru2=c"), "application/x-www-form-urlencoded")
 	tx.SetResponseBody([]byte("test"), 4)
 	tx.SetResponseHeaders(map[string][]string{
 		"test": []string{"testvalue"},

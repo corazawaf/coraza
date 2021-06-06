@@ -16,6 +16,7 @@ package engine
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/antchfx/xmlquery"
@@ -299,21 +300,23 @@ func (tx *Transaction) SetRemoteUser(user string) {
 }
 
 //Sets request_body and request_body_length, it won't work if request_body_inspection is off
-func (tx *Transaction) SetRequestBody(body []byte) error {
+func (tx *Transaction) SetRequestBody(body []byte, mime string) error {
 	//TODO requires more validations. chunks, etc
 	length := int64(len(body))
+	/*
+	TODO we will be implementing this later...
 	if !tx.RequestBodyAccess || (tx.RequestBodyLimit > 0 && length > tx.RequestBodyLimit) {
 		return nil
-	}
+	}*/
 
 	l := strconv.FormatInt(length, 10)
-	mime := tx.GetCollection("request_content_type").GetFirstString()
 	tx.GetCollection("request_body_length").AddToKey("", l)
+	tx.GetCollection("request_content_type").AddToKey("", mime)
 	if mime == "application/xml" || mime == "text/xml" {
 		var err error
 		tx.XmlDoc, err = xmlquery.Parse(strings.NewReader(string(body)))
 		if err != nil {
-			log.Error("Cannot parse XML body for request")
+			return err
 		}
 		tx.GetCollection("request_body").Set("", []string{})
 	} else if mime == "application/json" {
@@ -321,28 +324,27 @@ func (tx *Transaction) SetRequestBody(body []byte) error {
 		//doc, err := xmlquery.Parse(strings.NewReader(s))
 		//tx.Json = doc
 	} else if mime == "application/x-www-form-urlencoded" {
-		if len(tx.GetCollection("args_post").Data) == 0 {
-			// Post args already sent, we should avoid duplications
-			return nil
-		}
 		uri, err := url.Parse("?" + string(body))
 		if err != nil {
 			return err
 		}
 		tx.AddPostArgsFromUrl(uri)
+	} else if strings.HasPrefix(mime, "multipart/form-data") {
+		//multipart
+		req, _ := http.NewRequest("GET", "/", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", mime)
+		err := req.ParseMultipartForm(tx.RequestBodyLimit)
+		defer req.Body.Close()
+		if err != nil {
+			return err
+		}
+		tx.SetFiles(req.MultipartForm.File)
+		tx.SetArgsPost(req.MultipartForm.Value)
 	} else {
 		tx.GetCollection("request_body").Set("", []string{string(body)})
 	}
-	//TODO mime accepted MIMES
+
 	return nil
-	/*
-	   //TODO shall we do this and force the real length?
-	   l := strconv.Itoa(length)
-	   if tx.Collections["request_headers"].Data["content-length"] == nil{
-	       tx.Collections["request_headers"].Data["content-length"] = []string{l}
-	   }else{
-	       tx.Collections["request_headers"].Data["content-length"][0] = l
-	   }*/
 }
 
 //Sets request_cookies and request_cookies_names
@@ -568,45 +570,22 @@ func (tx *Transaction) ParseRequestObjectHeaders(req *http.Request) error {
 }
 
 func (tx *Transaction) ParseRequestObjectBody(req *http.Request) error {
-	//phase 2
+	ct := ""
+	for k, v := range req.Header {
+		if strings.ToLower(k) == "content-type" {
+			ct = v[0]
+			break
+		}
+	}
 	if req.Body == nil {
 		return nil
 	}
-	cl := tx.GetCollection("request_content_type").GetFirstString()
-	ctype := "application/x-www-form-urlencoded"
-	if len(cl) > 0 {
-		spl := strings.SplitN(cl, ";", 2)
-		ctype = spl[0]
-	}
-	//f.tx.SetReqBodyProcessor("URLENCODED")
-	//TODO use bodyprocessor
-	switch ctype {
-	case "application/x-www-form-urlencoded":
-		//url encode
-		err := req.ParseForm()
-		if err != nil {
-			return err
-		}
-		tx.SetArgsPost(req.PostForm)
-		break
-	case "multipart/form-data":
-		//multipart
-		//url encode
-		tx.SetReqBodyProcessor("MULTIPART")
-		err := req.ParseMultipartForm(tx.RequestBodyLimit)
-		defer req.Body.Close()
-		if err != nil {
-			return err
-		}
-		tx.SetFiles(req.MultipartForm.File)
-		tx.SetArgsPost(req.MultipartForm.Value)
-		break
-	}
+
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		return err
 	}
-	tx.SetRequestBody(body)
+	tx.SetRequestBody(body, ct)
 	return nil
 }
 
