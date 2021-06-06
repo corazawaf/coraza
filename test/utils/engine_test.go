@@ -15,8 +15,8 @@
 package utils
 
 import (
-	"testing"
 	"github.com/jptosso/coraza-waf/pkg/engine"
+	"testing"
 )
 
 func TestEngine(t *testing.T) {
@@ -44,6 +44,6 @@ func TestEngine(t *testing.T) {
 					t.Error(err)
 				}
 			}
-		}		
+		}
 	}
 }

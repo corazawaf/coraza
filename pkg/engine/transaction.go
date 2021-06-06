@@ -304,10 +304,10 @@ func (tx *Transaction) SetRequestBody(body []byte, mime string) error {
 	//TODO requires more validations. chunks, etc
 	length := int64(len(body))
 	/*
-	TODO we will be implementing this later...
-	if !tx.RequestBodyAccess || (tx.RequestBodyLimit > 0 && length > tx.RequestBodyLimit) {
-		return nil
-	}*/
+		TODO we will be implementing this later...
+		if !tx.RequestBodyAccess || (tx.RequestBodyLimit > 0 && length > tx.RequestBodyLimit) {
+			return nil
+		}*/
 
 	l := strconv.FormatInt(length, 10)
 	tx.GetCollection("request_body_length").AddToKey("", l)
@@ -427,12 +427,11 @@ func (tx *Transaction) AddPostArgsFromUrl(u *url.URL) {
 	}
 }
 
-
 func (tx *Transaction) AddCookies(cookies string) {
-    header := http.Header{}
-    header.Add("Cookie", cookies)
-    request := http.Request{Header: header}
-    tx.SetRequestCookies(request.Cookies())
+	header := http.Header{}
+	header.Add("Cookie", cookies)
+	request := http.Request{Header: header}
+	tx.SetRequestCookies(request.Cookies())
 }
 
 //Adds request_line, request_method, request_protocol, request_basename and request_uri
@@ -900,11 +899,11 @@ func (tx *Transaction) GetErrorPage() string {
 // Save persistent collections to persistence engine
 func (tx *Transaction) SavePersistentData() {
 	/*
-	TODO: There is a weird deadlock... gonna fix it
-	for col, pc := range tx.PersistentCollections {
-		pc.SetData(tx.GetCollection(col).Data)
-		pc.Save()
-	}*/
+		TODO: There is a weird deadlock... gonna fix it
+		for col, pc := range tx.PersistentCollections {
+			pc.SetData(tx.GetCollection(col).Data)
+			pc.Save()
+		}*/
 }
 
 // Removes the VARIABLE/TARGET from the rule ID

@@ -29,7 +29,6 @@ import (
 	//"time"
 )
 
-
 func ParseProfile(path string) (*testProfile, error) {
 	data, err := utils.OpenFile(path)
 	if err != nil {
@@ -42,7 +41,6 @@ func ParseProfile(path string) (*testProfile, error) {
 	}
 	return &profile, nil
 }
-
 
 // This function is related to testStage
 func (stage *testStage) Start(waf *engine.Waf, rules string) error {
@@ -71,7 +69,7 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 			kt := strings.ToLower(k)
 			if kt == "cookie" {
 				tx.AddCookies(v)
-			}else if kt == "content-type" {
+			} else if kt == "content-type" {
 				ct = v
 			}
 		}
@@ -108,7 +106,7 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 	// POST DATA
 	if stage.Stage.Input.Data != "" {
 		err := tx.SetRequestBody([]byte(parseInputData(stage.Stage.Input.Data)), ct)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 	}
@@ -152,7 +150,7 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 	return nil
 }
 
-func parseInputData(input interface{}) string{
+func parseInputData(input interface{}) string {
 	data := ""
 	v := reflect.ValueOf(input)
 	switch v.Kind() {

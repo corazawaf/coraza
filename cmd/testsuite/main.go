@@ -20,14 +20,14 @@ package main
 import (
 	"flag"
 	"fmt"
-	test "github.com/jptosso/coraza-waf/test/utils"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/parser"
+	test "github.com/jptosso/coraza-waf/test/utils"
 	"os"
 	"path"
-	"sync"
 	"path/filepath"
 	"strings"
+	"sync"
 	//log "github.com/sirupsen/logrus"
 )
 
@@ -87,12 +87,12 @@ func evaluateFiles(waf *engine.Waf, files []string) error {
 	var wg sync.WaitGroup
 	tests := 0
 	errs := 0
-	for i := 0 ; i < 20; i++ {
+	for i := 0; i < 20; i++ {
 		wg.Add(1)
-		go func(ind int){
+		go func(ind int) {
 			defer wg.Done()
 			next := files[0]
-			files = files[1:]			
+			files = files[1:]
 			for next != "" {
 				profile, err := test.ParseProfile(next)
 				if err != nil {
@@ -109,7 +109,7 @@ func evaluateFiles(waf *engine.Waf, files []string) error {
 						}
 					}
 				}
-				if len(files) == 0{
+				if len(files) == 0 {
 					break
 				}
 				next = files[0]
@@ -118,7 +118,7 @@ func evaluateFiles(waf *engine.Waf, files []string) error {
 		}(i)
 	}
 	wg.Wait()
-	perc := ((tests-errs)*100)/tests
+	perc := ((tests - errs) * 100) / tests
 	fmt.Printf("\nResult: %d/%d (%d%% passed)\n", tests-errs, tests, perc)
 	return nil
 }

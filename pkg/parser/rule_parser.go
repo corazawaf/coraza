@@ -21,9 +21,9 @@ import (
 	"github.com/jptosso/coraza-waf/pkg/operators"
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	pcre "github.com/jptosso/coraza-waf/pkg/utils/pcre"
+	"path"
 	"strconv"
 	"strings"
-	"path"
 )
 
 type ruleAction struct {
