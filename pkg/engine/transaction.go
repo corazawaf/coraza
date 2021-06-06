@@ -27,8 +27,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
-	"os/exec"
 	"path"
 	"regexp"
 	"strconv"
@@ -318,7 +316,6 @@ func (tx *Transaction) SetRequestBody(body []byte, mime string) error {
 		if err != nil {
 			return err
 		}
-		tx.GetCollection("request_body").Set("", []string{})
 		//} else if mime == "application/json" {
 		// JSON!
 		//doc, err := xmlquery.Parse(strings.NewReader(s))
@@ -793,7 +790,8 @@ func (tx *Transaction) GetField(collection string, key string, exceptions []stri
 		for _, d := range data {
 			res = append(res, &MatchData{
 				Collection: "xml",
-				Value:      d.InnerText(),
+				Key: key,
+				Value:      d.OutputXML(true),
 			})
 		}
 		return res
@@ -801,7 +799,6 @@ func (tx *Transaction) GetField(collection string, key string, exceptions []stri
 		// TODO, for future versions
 		return []*MatchData{}
 	default:
-
 		col := tx.GetCollection(collection)
 		key = tx.MacroExpansion(key)
 		if col == nil {
@@ -846,9 +843,6 @@ func (tx *Transaction) IsRelevantStatus() bool {
 	if tx.AuditEngine == AUDIT_LOG_DISABLED {
 		return false
 	}
-	if tx.AuditEngine == AUDIT_LOG_ENABLED {
-		return true
-	}
 	re := tx.WafInstance.AuditLogRelevantStatus
 	status := strconv.Itoa(tx.Status)
 	m := re.NewMatcher()
@@ -868,32 +862,6 @@ func (tx *Transaction) ToAuditLog() *AuditLog {
 
 func (tx *Transaction) SaveLog() error {
 	return tx.WafInstance.Logger.WriteAudit(tx)
-}
-
-// Get html error page as a string
-func (tx *Transaction) GetErrorPage() string {
-	switch tx.WafInstance.ErrorPageMethod {
-	case ERROR_PAGE_DEBUG:
-		return "Debug page not implemented yet."
-	case ERROR_PAGE_SCRIPT:
-		cmd := exec.Command(tx.WafInstance.ErrorPageFile)
-		path, file := tx.GetAuditPath()
-		cmd.Env = append(os.Environ(),
-			"TRANSACTION_ID="+tx.Id,
-			"AUDIT_FILE="+path+file,
-			"DISRUPTIVE_RULE_ID="+strconv.Itoa(tx.DisruptiveRuleId),
-		)
-		stdout, err := cmd.Output()
-		if err != nil {
-			return "Error script failed"
-		}
-		return string(stdout)
-	case ERROR_PAGE_FILE:
-		return tx.WafInstance.ErrorPageFile
-	case ERROR_PAGE_INLINE:
-		return tx.WafInstance.ErrorPageFile
-	}
-	return fmt.Sprintf("<h1>Error 403</h1><!-- %s -->", tx.Id)
 }
 
 // Save persistent collections to persistence engine

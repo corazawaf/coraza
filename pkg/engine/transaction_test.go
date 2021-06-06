@@ -152,9 +152,6 @@ func TestTxSetters2(t *testing.T) {
 	}
 	//GetRemovedTargets()
 	//IsRelevantStatus()
-	if tx.GetErrorPage() == "" {
-		t.Error("Failed to render error page")
-	}
 
 	tx.RemoveRuleTargetById(1, "col", "key")
 	if len(tx.RuleRemoveTargetById) == 0 || len(tx.RuleRemoveTargetById[1]) == 0 {
