@@ -299,13 +299,15 @@ func (tx *Transaction) SetRemoteUser(user string) {
 }
 
 //Sets request_body and request_body_length, it won't work if request_body_inspection is off
-func (tx *Transaction) SetRequestBody(body []byte, length int64, mime string) error {
+func (tx *Transaction) SetRequestBody(body []byte) error {
 	//TODO requires more validations. chunks, etc
+	length := int64(len(body))
 	if !tx.RequestBodyAccess || (tx.RequestBodyLimit > 0 && length > tx.RequestBodyLimit) {
 		return nil
 	}
 
 	l := strconv.FormatInt(length, 10)
+	mime := tx.GetCollection("request_content_type").GetFirstString()
 	tx.GetCollection("request_body_length").AddToKey("", l)
 	if mime == "application/xml" || mime == "text/xml" {
 		var err error
@@ -423,6 +425,14 @@ func (tx *Transaction) AddPostArgsFromUrl(u *url.URL) {
 	}
 }
 
+
+func (tx *Transaction) AddCookies(cookies string) {
+    header := http.Header{}
+    header.Add("Cookie", cookies)
+    request := http.Request{Header: header}
+    tx.SetRequestCookies(request.Cookies())
+}
+
 //Adds request_line, request_method, request_protocol, request_basename and request_uri
 func (tx *Transaction) SetRequestLine(method string, protocol string, requestUri string) {
 	tx.SetRequestMethod(method)
@@ -456,7 +466,7 @@ func (tx *Transaction) InitTxCollection() {
 	keys := []string{"args", "args_post", "args_get", "args_names", "args_post_names", "args_get_names", "query_string", "remote_addr", "request_basename", "request_uri", "tx", "remote_port",
 		"request_body", "request_content_type", "request_content_length", "request_cookies", "request_cookies_names", "request_line", "files_sizes",
 		"request_filename", "request_headers", "request_headers_names", "request_method", "request_protocol", "request_filename", "full_request", "remote_host",
-		"request_uri", "request_line", "response_body", "response_content_length", "response_content_type", "request_cookies", "request_uri_raw",
+		"request_uri", "request_line", "response_body", "response_content_length", "response_content_type", "request_uri_raw",
 		"response_headers", "response_headers_names", "response_protocol", "response_status", "appid", "id", "timestamp", "files_names", "files", "remote_user",
 		"files_combined_size", "reqbody_processor", "request_body_length", "xml", "matched_vars", "rule", "ip", "global", "session",
 		"matched_var", "matched_var_name"}
@@ -562,13 +572,11 @@ func (tx *Transaction) ParseRequestObjectBody(req *http.Request) error {
 	if req.Body == nil {
 		return nil
 	}
-	cl := tx.GetCollection("request_headers").GetSimple("content-type")
-	ctype := "text/plain"
-	ct := ""
+	cl := tx.GetCollection("request_content_type").GetFirstString()
+	ctype := "application/x-www-form-urlencoded"
 	if len(cl) > 0 {
-		spl := strings.SplitN(cl[0], ";", 2)
+		spl := strings.SplitN(cl, ";", 2)
 		ctype = spl[0]
-		ct = cl[0]
 	}
 	//f.tx.SetReqBodyProcessor("URLENCODED")
 	//TODO use bodyprocessor
@@ -598,7 +606,7 @@ func (tx *Transaction) ParseRequestObjectBody(req *http.Request) error {
 	if err != nil {
 		return err
 	}
-	tx.SetRequestBody(body, int64(len(body)), ct)
+	tx.SetRequestBody(body)
 	return nil
 }
 

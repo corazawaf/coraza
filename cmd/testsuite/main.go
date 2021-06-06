@@ -25,6 +25,7 @@ import (
 	"github.com/jptosso/coraza-waf/pkg/parser"
 	"os"
 	"path"
+	"sync"
 	"path/filepath"
 	"strings"
 	//log "github.com/sirupsen/logrus"
@@ -53,7 +54,11 @@ func main() {
 	waf.Datapath = path.Dir(*rules)
 	parser := &parser.Parser{}
 	parser.Init(waf)
-	parser.FromFile(*rules)		
+	err = parser.FromFile(*rules)
+	if err != nil {
+		fmt.Println(err)
+		panic(123)
+	}
 	err = evaluateFiles(waf, files)
 	if err != nil {
 		fmt.Println(err)
@@ -79,20 +84,41 @@ func getYamlFromDir(directory string) ([]string, error) {
 }
 
 func evaluateFiles(waf *engine.Waf, files []string) error {
-	for _, f := range files {
-		profile, err := test.ParseProfile(f)
-		if err != nil {
-			return err
-		}
-		for _, t := range profile.Tests {
-			fmt.Println("Running test suite " + t.Title)
-			for i, s := range t.Stages {
-				err := s.Start(waf, profile.Rules)
+	var wg sync.WaitGroup
+	tests := 0
+	errs := 0
+	for i := 0 ; i < 20; i++ {
+		wg.Add(1)
+		go func(ind int){
+			defer wg.Done()
+			next := files[0]
+			files = files[1:]			
+			for next != "" {
+				profile, err := test.ParseProfile(next)
 				if err != nil {
-					fmt.Printf("\033[0;31mStage %d: %s\033[0m\n", i+1, err)
+					fmt.Println(err)
+					os.Exit(1)
 				}
+				for _, t := range profile.Tests {
+					for _, s := range t.Stages {
+						err := s.Start(waf, profile.Rules)
+						tests++
+						if err != nil {
+							fmt.Printf("\033[0;31m%d) %s: %s\033[0m\n", ind, t.Title, err)
+							errs++
+						}
+					}
+				}
+				if len(files) == 0{
+					break
+				}
+				next = files[0]
+				files = files[1:]
 			}
-		}		
+		}(i)
 	}
+	wg.Wait()
+	perc := ((tests-errs)*100)/tests
+	fmt.Printf("\nResult: %d/%d (%d%% passed)\n", tests-errs, tests, perc)
 	return nil
 }

@@ -93,7 +93,7 @@ func (p *Parser) Evaluate(data string) error {
 	//first we get the directive
 	spl := strings.SplitN(data, " ", 2)
 	if len(spl) != 2 {
-		return p.log("Invalid syntaxis, expected [directive] [options]")
+		return p.log("Invalid syntaxis, expected [directive] [options] for:" + data)
 	}
 	log.Debug("Parsing directive: " + data)
 	directive := spl[0]

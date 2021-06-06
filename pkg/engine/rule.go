@@ -190,7 +190,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 		//No match for variables
 		return matchedValues
 	}
-	//TODO bug: we are matching vars before chaining the rule
+	// we must match the vars before runing the chains
 	tx.MatchVars(matchedValues)
 
 	// We run non disruptive actions even if there is no chain match

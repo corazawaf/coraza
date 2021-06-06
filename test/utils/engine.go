@@ -67,6 +67,9 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 	if len(stage.Stage.Input.Headers) > 0 {
 		for k, v := range stage.Stage.Input.Headers {
 			tx.AddRequestHeader(k, v)
+			if strings.ToLower(k) == "cookie" {
+				tx.AddCookies(v)
+			}
 		}
 	}
 	method := "GET"
@@ -100,7 +103,10 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 
 	// POST DATA
 	if stage.Stage.Input.Data != "" {
-		parseInputData(stage.Stage.Input.Data, tx)
+		err := tx.SetRequestBody([]byte(parseInputData(stage.Stage.Input.Data)))
+		if err != nil{
+			return err
+		}
 	}
 
 	for i := 2; i <= 5; i++ {
@@ -142,7 +148,7 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 	return nil
 }
 
-func parseInputData(input interface{}, tx *engine.Transaction) {
+func parseInputData(input interface{}) string{
 	data := ""
 	v := reflect.ValueOf(input)
 	switch v.Kind() {
@@ -154,12 +160,7 @@ func parseInputData(input interface{}, tx *engine.Transaction) {
 	case reflect.String:
 		data = input.(string)
 	}
-	ct := ""
-	cto := tx.GetCollection("request_headers").Get("content-type")
-	if len(cto) > 0 {
-		ct = cto[0]
-	}
-	tx.SetRequestBody([]byte(data), int64(len(data)), ct)
+	return data
 }
 
 type testProfile struct {
