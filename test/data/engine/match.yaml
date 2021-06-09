@@ -18,7 +18,4 @@
           non_triggered_rules:
   rules: |
     SecRule ARGS "12345" "chain,deny,id:26, log"
-        SecRule MATCHED_VARS "@eq ARGS:id" ""
-
-    #SecRule ARGS "1234" "chain,deny,id:27"
-    #    SecRule MATCHED_VAR "12345" ""
+        SecRule MATCHED_VARS "@eq 12345" ""

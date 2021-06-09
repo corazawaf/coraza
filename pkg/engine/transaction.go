@@ -22,6 +22,7 @@ import (
 	"github.com/antchfx/xmlquery"
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	log "github.com/sirupsen/logrus"
+	"html"
 	"io/ioutil"
 	"mime/multipart"
 	"net"
@@ -301,6 +302,7 @@ func (tx *Transaction) SetRemoteUser(user string) {
 func (tx *Transaction) SetRequestBody(body []byte, mime string) error {
 	//TODO requires more validations. chunks, etc
 	length := int64(len(body))
+	mime = strings.ToLower(mime)
 	/*
 		TODO we will be implementing this later...
 		if !tx.RequestBodyAccess || (tx.RequestBodyLimit > 0 && length > tx.RequestBodyLimit) {
@@ -310,36 +312,68 @@ func (tx *Transaction) SetRequestBody(body []byte, mime string) error {
 	l := strconv.FormatInt(length, 10)
 	tx.GetCollection("request_body_length").AddToKey("", l)
 	tx.GetCollection("request_content_type").AddToKey("", mime)
-	if mime == "application/xml" || mime == "text/xml" {
-		var err error
-		tx.XmlDoc, err = xmlquery.Parse(strings.NewReader(string(body)))
-		if err != nil {
-			return err
+	//FROM CTL:forcerequestbodyvariable...
+	if tx.RequestBodyProcessor == 0 && tx.ForceRequestBodyVariable {
+		tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_URLENCODED
+	}else if tx.RequestBodyProcessor == 0 {
+		// We force the body processor if none was provided
+		//if mime == "application/xml" || mime == "text/xml" {
+			// It looks like xml body processor is called by default
+		//	tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_XML
+		if mime == "application/x-www-form-urlencoded" {
+			tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_URLENCODED
+		} else if strings.HasPrefix(mime, "multipart/form-data") {
+			tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_MULTIPART
+		} else if mime == "application/json" {
+			tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_JSON
+		}else{
+			tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_URLENCODED
 		}
-		//} else if mime == "application/json" {
-		// JSON!
-		//doc, err := xmlquery.Parse(strings.NewReader(s))
-		//tx.Json = doc
-	} else if mime == "application/x-www-form-urlencoded" {
+	}
+	switch tx.RequestBodyProcessor {
+	case REQUEST_BODY_PROCESSOR_URLENCODED:
 		uri, err := url.Parse("?" + string(body))
+		tx.GetCollection("request_body").Set("", []string{string(body)})
 		if err != nil {
+			tx.GetCollection("reqbody_processor_error").Set("", []string{"1"})
+			tx.GetCollection("reqbody_processor_error_msg").Set("", []string{string(err.Error())})
 			return err
 		}
 		tx.AddPostArgsFromUrl(uri)
-	} else if strings.HasPrefix(mime, "multipart/form-data") {
-		//multipart
+	case REQUEST_BODY_PROCESSOR_XML:
+		var err error
+		options := xmlquery.ParserOptions{
+			Decoder: &xmlquery.DecoderOptions{
+				Strict:    false,
+				AutoClose: []string{},
+				Entity:    map[string]string{},
+			},
+		}
+		tx.XmlDoc, err = xmlquery.ParseWithOptions(strings.NewReader(string(body)), options)
+		if err != nil {
+			tx.GetCollection("reqbody_processor_error").Set("", []string{"1"})
+			tx.GetCollection("reqbody_processor_error_msg").Set("", []string{string(err.Error())})
+			return err
+		}
+	case REQUEST_BODY_PROCESSOR_MULTIPART:
 		req, _ := http.NewRequest("GET", "/", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", mime)
 		err := req.ParseMultipartForm(tx.RequestBodyLimit)
 		defer req.Body.Close()
 		if err != nil {
+			tx.GetCollection("reqbody_processor_error").Set("", []string{"1"})
+			tx.GetCollection("reqbody_processor_error_msg").Set("", []string{string(err.Error())})
 			return err
 		}
 		tx.SetFiles(req.MultipartForm.File)
 		tx.SetArgsPost(req.MultipartForm.Value)
-	} else {
+	case REQUEST_BODY_PROCESSOR_JSON:
 		tx.GetCollection("request_body").Set("", []string{string(body)})
 	}
+	//} else if mime == "application/json" {
+	// JSON!
+	//doc, err := xmlquery.Parse(strings.NewReader(s))
+	//tx.Json = doc
 
 	return nil
 }
@@ -467,7 +501,7 @@ func (tx *Transaction) InitTxCollection() {
 		"request_uri", "request_line", "response_body", "response_content_length", "response_content_type", "request_uri_raw",
 		"response_headers", "response_headers_names", "response_protocol", "response_status", "appid", "id", "timestamp", "files_names", "files", "remote_user",
 		"files_combined_size", "reqbody_processor", "request_body_length", "xml", "matched_vars", "rule", "ip", "global", "session",
-		"matched_var", "matched_var_name"}
+		"matched_var", "matched_var_name", "matched_var_names", "reqbody_processor_error", "reqbody_processor_error_msg"}
 
 	for _, k := range keys {
 		tx.Collections[k] = &LocalCollection{}
@@ -716,22 +750,31 @@ func (tx *Transaction) DebugTransaction() string {
 }
 
 func (tx *Transaction) MatchVars(match []*MatchData) {
-
+	// Array of values
 	mvs := tx.GetCollection("matched_vars")
+	mvs.Reset()
+	// Last value
 	mv := tx.GetCollection("matched_var")
+	mv.Reset()
+	// Last key
 	mvn := tx.GetCollection("matched_var_name")
+	mvn.Reset()
+	// Array of keys
+	mvns := tx.GetCollection("matched_var_names")
+	mvns.Reset()
 
-	mvv := []string{}
-	mvnv := []string{}
 	mvs.Set("", []string{})
 	for _, mm := range match {
-		value := fmt.Sprintf("%s:%s", strings.ToUpper(mm.Collection), mm.Key)
-		mvs.AddToKey("", value)
-		mvv = append(mvv, mm.Value)
-		mvnv = append(mvnv, mm.Key)
+		colname := strings.ToUpper(mm.Collection)
+		if mm.Key != "" {
+			colname = fmt.Sprintf("%s:%s", colname, mm.Key)
+		}
+		mvs.AddToKey("", mm.Value)
+		mv.Set("", []string{mm.Value})
+
+		mvns.AddToKey("", colname)
+		mvn.Set("", []string{colname})
 	}
-	mv.Set("", mvv)
-	mvn.Set("", mvnv)
 }
 
 func (tx *Transaction) MatchRule(rule *Rule, msgs []string, match []*MatchData) {
@@ -788,10 +831,12 @@ func (tx *Transaction) GetField(collection string, key string, exceptions []stri
 		}
 		res := []*MatchData{}
 		for _, d := range data {
+			//TODO im not sure if its ok but nvm:
+			output := html.UnescapeString(d.OutputXML(true))
 			res = append(res, &MatchData{
 				Collection: "xml",
-				Key: key,
-				Value:      d.OutputXML(true),
+				Key:        key,
+				Value:      output,
 			})
 		}
 		return res

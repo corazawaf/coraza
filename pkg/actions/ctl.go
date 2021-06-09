@@ -90,6 +90,7 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 		}
 		break
 	case CTL_AUDIT_LOG_PARTS:
+		//TODO lets switch it to a string
 		tx.AuditLogParts = []rune{}
 		for _, c := range a.Value {
 			tx.AuditLogParts = append(tx.AuditLogParts, c)
@@ -133,6 +134,17 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 			if utils.ArrayContains(r.Tags, a.Value) {
 				tx.RuleRemoveById = append(tx.RuleRemoveById, r.Id)
 			}
+		}
+	case CTL_REQUEST_BODY_PROCESSOR:
+		switch strings.ToLower(a.Value) {
+		case "xml":
+			tx.RequestBodyProcessor = engine.REQUEST_BODY_PROCESSOR_XML
+		case "json":
+			tx.RequestBodyProcessor = engine.REQUEST_BODY_PROCESSOR_JSON
+		case "urlencoded":
+			tx.RequestBodyProcessor = engine.REQUEST_BODY_PROCESSOR_URLENCODED
+		case "multipart":
+			tx.RequestBodyProcessor = engine.REQUEST_BODY_PROCESSOR_MULTIPART
 		}
 		break
 	case CTL_HASH_ENGINE:

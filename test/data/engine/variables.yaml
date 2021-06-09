@@ -31,5 +31,5 @@
           non_triggered_rules:            
   rules: |
     SecRequestBodyAccess On
-    SecRule &ARGS_GET:/t.*/ "@gt 2" "id: 1, block, log"
+    SecRule &ARGS_GET:/t.*/ "@gt 2" "id: 1, phase:1, block, log, ctl:requestBodyProcessor=XML"
     SecRule XML:/*|XML://@* "test123" "id:2, phase:2,log"

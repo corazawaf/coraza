@@ -211,3 +211,7 @@ func (c *LocalCollection) SetData(data map[string][]string) {
 	defer c.mux.Unlock()
 	c.Data = data
 }
+
+func (c *LocalCollection) Reset() {
+	c.Init(c.Name)
+}

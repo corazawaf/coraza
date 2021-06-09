@@ -169,14 +169,14 @@
         $('#loader').show();
         var req = http_req.getValue();
         var regex = /Content-length:.*\n/g;
-        var regex2 = /.*\n\n(.*?)$/g;
         var content = "";
         try{
             //WIP
-            var content = req.matchAll(regex2).next();
-            content = content.value[1];
-            req = req.replace(regex, "Content-length: " + content.length + "\n");
-            http_req.setValue(req);            
+            var sp = req.split("\n\n", 2);
+            if(sp.length > 1 ){
+                req = req.replace(regex, "Content-length: " + sp[1].length + "\n");
+                http_req.setValue(req);
+            }          
         }catch(err){}
         var obj = {
             crs: $('#use_crs').prop('checked'),

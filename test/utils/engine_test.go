@@ -17,6 +17,7 @@ package utils
 import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"testing"
+	"fmt"
 )
 
 func TestEngine(t *testing.T) {
@@ -41,7 +42,7 @@ func TestEngine(t *testing.T) {
 			for _, s := range tt.Stages {
 				err := s.Start(waf, profile.Rules)
 				if err != nil {
-					t.Error(err)
+					t.Error(fmt.Sprintf("%s: %s\n", f, err.Error()))
 				}
 			}
 		}

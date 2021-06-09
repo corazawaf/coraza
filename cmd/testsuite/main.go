@@ -57,11 +57,12 @@ func main() {
 	err = parser.FromFile(*rules)
 	if err != nil {
 		fmt.Println(err)
-		panic(123)
+		os.Exit(1)
 	}
 	err = evaluateFiles(waf, files)
 	if err != nil {
 		fmt.Println(err)
+		os.Exit(1)
 	}
 }
 
@@ -91,6 +92,9 @@ func evaluateFiles(waf *engine.Waf, files []string) error {
 		wg.Add(1)
 		go func(ind int) {
 			defer wg.Done()
+			if len(files) == 0 {
+				return
+			}
 			next := files[0]
 			files = files[1:]
 			for next != "" {

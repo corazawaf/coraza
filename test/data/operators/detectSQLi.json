@@ -16,5 +16,17 @@
       "type" : "op",
       "ret" : 1,
       "name" : "detectSQLi"
+   },
+   {
+      "input" : "this\nis a ' or ''='\nsql injection",
+      "type" : "op",
+      "ret" : 1,
+      "name" : "detectSQLi"
+   },
+   {
+      "input" : "this\nis a ' or '\n'=' sql injection",
+      "type" : "op",
+      "ret" : 1,
+      "name" : "detectSQLi"
    }
 ]
