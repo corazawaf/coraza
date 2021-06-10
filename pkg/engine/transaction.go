@@ -219,13 +219,16 @@ func (tx *Transaction) SetArgsGet(args map[string][]string) {
 	tx.GetCollection("args").AddMap(args)
 	agn := tx.GetCollection("args_get_names")
 	an := tx.GetCollection("args_names")
+	length := 0
 	for k, _ := range args {
 		if k == "" {
 			continue
 		}
 		agn.AddToKey("", k)
 		an.AddToKey("", k)
+		length += len(k)
 	}
+	tx.AddArgsLength(length)
 }
 
 //Sets args_post, args_post_names. Also adds to args_names and args
@@ -433,14 +436,17 @@ func (tx *Transaction) AddGetArgsFromUrl(u *url.URL) {
 	params := u.Query()
 	argsg := tx.GetCollection("args_get")
 	args := tx.GetCollection("args")
+	length := 0
 	for k, v := range params {
 		for _, vv := range v {
 			argsg.AddToKey(k, vv)
 			args.AddToKey(k, vv)
+			length += len(k)+len(vv)+1
 		}
 		tx.GetCollection("args_get_names").AddToKey("", k)
 		tx.GetCollection("args_names").AddToKey("", k)
 	}
+	tx.AddArgsLength(length)
 }
 
 //Sets args_post and args_post_names
@@ -448,15 +454,26 @@ func (tx *Transaction) AddPostArgsFromUrl(u *url.URL) {
 	params := u.Query()
 	argsp := tx.GetCollection("args_post")
 	args := tx.GetCollection("args")
+	length := 0
 	for k, v := range params {
 		for _, vv := range v {
 			argsp.AddToKey(k, vv)
 			args.AddToKey(k, vv)
+			length += len(k)+len(vv)+1
 		}
 		tx.GetCollection("args_post_names").AddToKey("", k)
 		tx.GetCollection("args_names").AddToKey("", k)
 	}
+	tx.AddArgsLength(length)
 }
+
+func (tx *Transaction) AddArgsLength(length int) {
+	col := tx.GetCollection("args_combined_size")
+	i := col.GetFirstInt64()+int64(length)
+	istr := strconv.FormatInt(i, 10)
+	col.Set("", []string{istr})
+}
+
 
 func (tx *Transaction) AddCookies(cookies string) {
 	header := http.Header{}
@@ -471,7 +488,6 @@ func (tx *Transaction) SetRequestLine(method string, protocol string, requestUri
 	tx.GetCollection("request_uri").AddToKey("", requestUri)
 	tx.GetCollection("request_protocol").AddToKey("", protocol)
 	tx.GetCollection("request_line").AddToKey("", fmt.Sprintf("%s %s %s", method, requestUri, protocol))
-
 }
 
 //Adds request_line, request_method, request_protocol, request_basename and request_uri
@@ -501,7 +517,7 @@ func (tx *Transaction) InitTxCollection() {
 		"request_uri", "request_line", "response_body", "response_content_length", "response_content_type", "request_uri_raw",
 		"response_headers", "response_headers_names", "response_protocol", "response_status", "appid", "id", "timestamp", "files_names", "files", "remote_user",
 		"files_combined_size", "reqbody_processor", "request_body_length", "xml", "matched_vars", "rule", "ip", "global", "session",
-		"matched_var", "matched_var_name", "matched_var_names", "reqbody_processor_error", "reqbody_processor_error_msg"}
+		"matched_var", "matched_var_name", "matched_var_names", "reqbody_processor_error", "reqbody_processor_error_msg", "args_combined_size"}
 
 	for _, k := range keys {
 		tx.Collections[k] = &LocalCollection{}

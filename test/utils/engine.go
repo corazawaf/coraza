@@ -18,12 +18,11 @@ import (
 	b64 "encoding/base64"
 	"errors"
 	"fmt"
+	"net/url"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/parser"
 	"github.com/jptosso/coraza-waf/pkg/utils"
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
-	"net/url"
 	"reflect"
 	"strings"
 	//"time"
@@ -88,15 +87,14 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 
 	path := "/"
 	if stage.Stage.Input.Uri != "" {
-		u, err := url.Parse(stage.Stage.Input.Uri)
-		if err != nil {
-			log.Debug("Invalid URL: " + stage.Stage.Input.Uri)
-		} else {
-			tx.SetUrl(u)
-			tx.AddGetArgsFromUrl(u)
-			path = stage.Stage.Input.Uri //or unescaped?
+		path = stage.Stage.Input.Uri
+		parseUrl(path, tx)
+		spl := strings.SplitN(path, "/", 2)
+		if len(spl) == 2 {
+			path = "/" + spl[1]
+		}else{
+			path = "/" + spl[0]
 		}
-
 	}
 	tx.SetRequestLine(method, httpv, path)
 
@@ -105,10 +103,8 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 
 	// POST DATA
 	if stage.Stage.Input.Data != "" {
-		err := tx.SetRequestBody([]byte(parseInputData(stage.Stage.Input.Data)), ct)
-		if err != nil {
-			return err
-		}
+		tx.SetRequestBody([]byte(parseInputData(stage.Stage.Input.Data)), ct)
+		// we ignore the error
 	}
 
 	for i := 2; i <= 5; i++ {
@@ -163,6 +159,47 @@ func parseInputData(input interface{}) string {
 		data = input.(string)
 	}
 	return data
+}
+
+func parseUrl(uri string, tx *engine.Transaction) {
+	u, err := url.Parse(uri)
+	if err == nil {
+		tx.SetUrl(u)
+		tx.AddGetArgsFromUrl(u)
+		return
+	}
+	tx.GetCollection("request_uri_raw").AddToKey("", uri)
+	tx.GetCollection("request_uri").AddToKey("", uri)
+	schema := "http"
+	args := ""
+	hostname := "127.0.0.1"
+	path := "/"
+	if strings.HasPrefix(uri, "https://") || strings.HasPrefix(uri, "http://") {
+		spl := strings.SplitN(uri, "://", 2)
+		schema = spl[0]
+		uri = spl[1]
+	}
+	if len(uri) == 0{
+		return
+	}
+	if uri[0] != '/' {
+		spl := strings.SplitN(uri, "/", 2)
+		if len(spl) == 2{
+			hostname = spl[0]
+			args = spl[1]
+			uri = spl[1]
+		}
+	}
+	spl := strings.SplitN(uri, "?", 2)
+	if len(spl) == 2 {
+		path = spl[0]
+		args = spl[1]
+	}
+	// TODO
+	schema = schema + hostname
+	tx.GetCollection("request_filename").AddToKey("", path)
+	tx.GetCollection("request_basename").AddToKey("", path)
+	tx.GetCollection("query_string").AddToKey("", args)
 }
 
 type testProfile struct {

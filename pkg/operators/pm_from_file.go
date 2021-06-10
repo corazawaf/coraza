@@ -44,7 +44,7 @@ func (o *PmFromFile) Init(data string) {
 		}
 		l = strings.ReplaceAll(l, "\r", "") //CLF
 		if l[0] != '#' {
-			o.Data = append(o.Data, l)
+			o.Data = append(o.Data, strings.ToLower(l))
 		}
 	}
 }
@@ -52,10 +52,17 @@ func (o *PmFromFile) Init(data string) {
 func (o *PmFromFile) Evaluate(tx *engine.Transaction, value string) bool {
 	o.mux.RLock()
 	defer o.mux.RUnlock()
+	value = strings.ToLower(value)
 	trie := ahocorasick.NewTrieBuilder().
 		AddStrings(o.Data).
 		Build()
 	matches := trie.MatchString(value)
+	for i := 0; i < len(matches); i++ {
+		if i == 10 {
+			return true
+		}
+		tx.CaptureField(i, string(matches[0].Match()))
+	}	
 	return len(matches) > 0
 }
 

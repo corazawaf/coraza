@@ -25,16 +25,24 @@ type Pm struct {
 }
 
 func (o *Pm) Init(data string) {
+	data = strings.ToLower(data)
 	o.data = strings.Split(data, " ")
 	// TODO this operator is supposed to support snort data syntax: "@pm A|42|C|44|F"
 	// TODO modsecurity uses mutex to queue ahocorasick, maybe its for a reason...
 }
 
 func (o *Pm) Evaluate(tx *engine.Transaction, value string) bool {
+	value = strings.ToLower(value)
 	trie := ahocorasick.NewTrieBuilder().
 		AddStrings(o.data).
 		Build()
 	matches := trie.MatchString(value)
+	for i := 0; i < len(matches); i++ {
+		if i == 10 {
+			return true
+		}
+		tx.CaptureField(i, string(matches[0].Match()))
+	}		
 	return len(matches) > 0
 }
 
