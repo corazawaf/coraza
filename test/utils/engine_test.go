@@ -15,9 +15,9 @@
 package utils
 
 import (
+	"fmt"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"testing"
-	"fmt"
 )
 
 func TestEngine(t *testing.T) {

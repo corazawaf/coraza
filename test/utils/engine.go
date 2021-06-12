@@ -18,11 +18,11 @@ import (
 	b64 "encoding/base64"
 	"errors"
 	"fmt"
-	"net/url"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/parser"
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	"gopkg.in/yaml.v2"
+	"net/url"
 	"reflect"
 	"strings"
 	//"time"
@@ -92,11 +92,13 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 		spl := strings.SplitN(path, "/", 2)
 		if len(spl) == 2 {
 			path = "/" + spl[1]
-		}else{
+		} else {
 			path = "/" + spl[0]
 		}
 	}
 	tx.SetRequestLine(method, httpv, path)
+	// This is a fix for some tests overwrites...
+	tx.GetCollection("request_line").AddToKey("", fmt.Sprintf("%s %s %s", method, stage.Stage.Input.Uri, httpv))
 
 	//PHASE 1
 	tx.ExecutePhase(1)
@@ -143,6 +145,9 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 			}
 		}
 	}
+	if stage.Stage.Output.Status != nil {
+		// Status is not supported because it depends on apache behaviour
+	}	
 	return nil
 }
 
@@ -179,12 +184,12 @@ func parseUrl(uri string, tx *engine.Transaction) {
 		schema = spl[0]
 		uri = spl[1]
 	}
-	if len(uri) == 0{
+	if len(uri) == 0 {
 		return
 	}
 	if uri[0] != '/' {
 		spl := strings.SplitN(uri, "/", 2)
-		if len(spl) == 2{
+		if len(spl) == 2 {
 			hostname = spl[0]
 			args = spl[1]
 			uri = spl[1]
@@ -250,4 +255,5 @@ type testOutput struct {
 	ExpectError       bool   `yaml:"expect_error"`
 	TriggeredRules    []int  `yaml:"triggered_rules"`
 	NonTriggeredRules []int  `yaml:"non_triggered_rules"`
+	Status []int `yaml:"status"`
 }

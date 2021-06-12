@@ -42,7 +42,7 @@ func (o *Pm) Evaluate(tx *engine.Transaction, value string) bool {
 			return true
 		}
 		tx.CaptureField(i, string(matches[0].Match()))
-	}		
+	}
 	return len(matches) > 0
 }
 

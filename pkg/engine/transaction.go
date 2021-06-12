@@ -318,10 +318,10 @@ func (tx *Transaction) SetRequestBody(body []byte, mime string) error {
 	//FROM CTL:forcerequestbodyvariable...
 	if tx.RequestBodyProcessor == 0 && tx.ForceRequestBodyVariable {
 		tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_URLENCODED
-	}else if tx.RequestBodyProcessor == 0 {
+	} else if tx.RequestBodyProcessor == 0 {
 		// We force the body processor if none was provided
 		//if mime == "application/xml" || mime == "text/xml" {
-			// It looks like xml body processor is called by default
+		// It looks like xml body processor is called by default
 		//	tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_XML
 		if mime == "application/x-www-form-urlencoded" {
 			tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_URLENCODED
@@ -329,7 +329,7 @@ func (tx *Transaction) SetRequestBody(body []byte, mime string) error {
 			tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_MULTIPART
 		} else if mime == "application/json" {
 			tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_JSON
-		}else{
+		} else {
 			tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_URLENCODED
 		}
 	}
@@ -433,7 +433,7 @@ func (tx *Transaction) SetUrl(u *url.URL) {
 
 //Sets args_get and args_get_names
 func (tx *Transaction) AddGetArgsFromUrl(u *url.URL) {
-	params := u.Query()
+	params := utils.ParseQuery(u.RawQuery, "&")
 	argsg := tx.GetCollection("args_get")
 	args := tx.GetCollection("args")
 	length := 0
@@ -441,7 +441,7 @@ func (tx *Transaction) AddGetArgsFromUrl(u *url.URL) {
 		for _, vv := range v {
 			argsg.AddToKey(k, vv)
 			args.AddToKey(k, vv)
-			length += len(k)+len(vv)+1
+			length += len(k) + len(vv) + 1
 		}
 		tx.GetCollection("args_get_names").AddToKey("", k)
 		tx.GetCollection("args_names").AddToKey("", k)
@@ -451,7 +451,7 @@ func (tx *Transaction) AddGetArgsFromUrl(u *url.URL) {
 
 //Sets args_post and args_post_names
 func (tx *Transaction) AddPostArgsFromUrl(u *url.URL) {
-	params := u.Query()
+	params := utils.ParseQuery(u.RawQuery, "&")
 	argsp := tx.GetCollection("args_post")
 	args := tx.GetCollection("args")
 	length := 0
@@ -459,7 +459,7 @@ func (tx *Transaction) AddPostArgsFromUrl(u *url.URL) {
 		for _, vv := range v {
 			argsp.AddToKey(k, vv)
 			args.AddToKey(k, vv)
-			length += len(k)+len(vv)+1
+			length += len(k) + len(vv) + 1
 		}
 		tx.GetCollection("args_post_names").AddToKey("", k)
 		tx.GetCollection("args_names").AddToKey("", k)
@@ -469,11 +469,10 @@ func (tx *Transaction) AddPostArgsFromUrl(u *url.URL) {
 
 func (tx *Transaction) AddArgsLength(length int) {
 	col := tx.GetCollection("args_combined_size")
-	i := col.GetFirstInt64()+int64(length)
+	i := col.GetFirstInt64() + int64(length)
 	istr := strconv.FormatInt(i, 10)
 	col.Set("", []string{istr})
 }
-
 
 func (tx *Transaction) AddCookies(cookies string) {
 	header := http.Header{}
@@ -606,7 +605,8 @@ func (tx *Transaction) ParseRequestObjectHeaders(req *http.Request) error {
 		address = string(matches[0][1])
 		port, _ = strconv.Atoi(string(matches[0][2]))
 	}
-	tx.SetArgsGet(req.URL.Query())
+	query := utils.ParseQuery(req.URL.RawQuery, "&")
+	tx.SetArgsGet(query)
 	tx.SetUrl(req.URL)
 	tx.SetRemoteAddress(address, port)
 	tx.SetRequestLine(req.Method, req.Proto, req.RequestURI)
