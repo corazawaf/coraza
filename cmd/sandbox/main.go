@@ -19,7 +19,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/jptosso/coraza-waf/pkg/engine"
-	"github.com/jptosso/coraza-waf/pkg/parser"
+	"github.com/jptosso/coraza-waf/pkg/seclang"
 	"html/template"
 	"io/ioutil"
 	"log"
@@ -81,7 +81,7 @@ func apiHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	waf := engine.NewWaf()
 	waf.Datapath = CRS_PATH
-	parser, _ := parser.NewParser(waf)
+	parser, _ := seclang.NewParser(waf)
 	parser.FromString(r.Directives)
 	if r.Crs {
 		fmt.Println("Loading CRS rules")
@@ -117,7 +117,7 @@ func apiHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func loadCrs(pp *parser.Parser) error {
+func loadCrs(pp *seclang.Parser) error {
 	files := []string{
 		"REQUEST-901-INITIALIZATION.conf",
 		"REQUEST-903.9001-DRUPAL-EXCLUSION-RULES.conf",

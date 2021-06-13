@@ -21,7 +21,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/jptosso/coraza-waf/pkg/engine"
-	"github.com/jptosso/coraza-waf/pkg/parser"
+	"github.com/jptosso/coraza-waf/pkg/seclang"
 	test "github.com/jptosso/coraza-waf/test/utils"
 	"os"
 	"path"
@@ -52,7 +52,7 @@ func main() {
 	}
 	waf := engine.NewWaf()
 	waf.Datapath = path.Dir(*rules)
-	parser := &parser.Parser{}
+	parser := &seclang.Parser{}
 	parser.Init(waf)
 	err = parser.FromFile(*rules)
 	if err != nil {

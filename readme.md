@@ -59,7 +59,7 @@ package main
 
 import(
 	"github.com/jptosso/coraza-waf/pkg/engine"
-	"github.com/jptosso/coraza-waf/pkg/parser"
+	"github.com/jptosso/coraza-waf/pkg/seclang"
 	"fmt"
 )
 

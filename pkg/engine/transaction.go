@@ -802,8 +802,8 @@ func (tx *Transaction) MatchRule(rule *Rule, msgs []string, match []*MatchData) 
 		Rule:             rule,
 	}
 	tx.Mux.Lock()
+	defer tx.Mux.Unlock()
 	tx.MatchedRules = append(tx.MatchedRules, mr)
-	tx.Mux.Unlock()
 }
 
 func (tx *Transaction) ToJSON() ([]byte, error) {

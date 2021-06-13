@@ -16,6 +16,7 @@ package utils
 
 import (
 	"strings"
+	"unicode"
 )
 
 func IsSpace(char byte) bool {
@@ -62,4 +63,17 @@ func C2x(what byte, where []byte) []byte {
 	b[1] = c2xTable[what&0x0f]
 
 	return b
+}
+
+func IsODigit(x byte) bool {
+	return (x >= '0') && (x <= '7')
+}
+
+func IsAlnum(s string) bool {
+    for _, r := range s {
+        if !unicode.IsNumber(r) && !unicode.IsLetter(r){
+            return false
+        }
+    }
+    return true
 }

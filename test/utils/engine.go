@@ -19,7 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jptosso/coraza-waf/pkg/engine"
-	"github.com/jptosso/coraza-waf/pkg/parser"
+	"github.com/jptosso/coraza-waf/pkg/seclang"
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	"gopkg.in/yaml.v2"
 	"net/url"
@@ -45,7 +45,7 @@ func ParseProfile(path string) (*testProfile, error) {
 func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 	if rules != "" {
 		waf = engine.NewWaf()
-		p := &parser.Parser{}
+		p := &seclang.Parser{}
 		p.Init(waf)
 		p.FromString(rules)
 	}
