@@ -10,83 +10,131 @@
 
 # Coraza Web Application Firewall
 
-Coraza WAF is a Golang implementation of Modsecurity built from scratch, it supports most of the features from ModSecurity but aims to be a completely different implementation with many new capabilities and extensibility.
 
-*This project is not intended for production yet*, APIs are going to change, it's not secure enough and it might crash.
+Welcome to Coraza Web Application Firewall, this project is a Golang port of ModSecurity with the goal to become the first enterprise-grade Open Source Web Application Firewall, extensible enough to serve as the baseline for many projects. 
 
+Please note Coraza is still a WIP.
 
-## Table of Contents
+## Prerequisites
 
-- [Coraza Web Application Firewall](#coraza-web-application-firewall)
+* Linux distribution (Debian and Centos are recommended, Windows is not supported)
+* Golang compiler v1.13+ (Note some wrappers like Caddy requires v1.16+)
+* libpcre-dev (``apt install libpcre++-dev`` for Ubuntu)
+* **CGO_ENABLED** environmental variable must be set to 1
+* libinjection must be installed and linked
 
-
-## Compile from source
-
-Compilation prerequisites: 
-* golang 1.13+
-* C compiler (gcc)
-* Libpcre++-dev
-
-
-## Compile as a skipper plugin
+You may install libinjection with the following command:
 
 ```
-GO111MODULE=on go build -buildmode=plugin -o coraza.so cmd/coraza-waf/skipper.go
-skipper -filter-plugin coraza.so
+# Must be run as root
+sudo make deps
 ```
 
-## Test
+Note this command will compile and install libinjection to your **LIBRARY_PATH** and **LD_LIBRARY_PATH**.
 
-Golang test suite:
+## Running the test suite
+
+Run the go tests:
 ```
-git clone --recursive https://github.com/jptosso/coraza-waf
-cd coraza-waf/
-go test ./... -v
+go test ./...
+go test -race ./...
 ```
 
-Test against OWASP CRS
+Run the test suite against OWASP CRS:
 ```
-git clone --recursive https://github.com/jptosso/coraza-waf
+git clone https://github.com/jptosso/coraza-waf
+git clone https://github.com/coreruleset/coreruleset
 # Create your OWASP CRS package owasp-crs.conf
+cat <<EOF >> custom-crs.conf
+SecAction "id:900005,\
+  phase:1,\
+  nolog,\
+  pass,\
+  ctl:ruleEngine=DetectionOnly,\
+  ctl:ruleRemoveById=910000,\
+  setvar:tx.paranoia_level=4,\
+  setvar:tx.crs_validate_utf8_encoding=1,\
+  setvar:tx.arg_name_length=100,\
+  setvar:tx.arg_length=400"
+EOF
+cat coreruleset/crs-setup.conf.example coreruleset/rules/*.conf >> custom-crs.conf
 cd coraza-waf/
-go run cmd/testsuite/main.go -path docs/rs -rules crs/some-rules.conf
+go run cmd/testsuite/main.go -path ../coreruleset/tests/regression/tests/ -rules ../custom-crs.conf
 ```
 
-## Using Coraza WAF
+
+## Your first Coraza WAF project
+
+Make sure ``CGO_ENABLED=1`` env is set before compiling and all dependencies are met.
 
 ```
 package main
-
 import(
+	"fmt"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/seclang"
-	"fmt"
 )
 
-func main(){
-	// Create waf instance
+func main() {
+	// First we initialize our waf and our seclang parser
 	waf := engine.NewWaf()
+	parser := seclang.NewParser(waf)
 
-	// Parse some rules
-	p, _ := parser.NewParser(waf)
-	p.FromString(`SecRule REQUEST_HEADERS:test "TestValue" "id:1, drop, log"`)
+	// Now we parse our rules
+	parser.FromString(`SecRule REMOTE_ADDR "@rx .*" "id:1,phase:1,drop"`)
 
-	// Create Transaction
+	// Then we create a transaction and assign some variables
 	tx := waf.NewTransaction()
-	tx.AddRequestHeader("Test", "TestValue")
-	tx.ExecutePhase(2)
-	if tx.Disrupted{
-		fmt.Println("Transaction disrupted")
+	tx.SetRemoteAddress("127.0.0.1")
+
+	// phase 5 will allso execute 1, 2, 3 and 4
+	tx.ExecutePhase(5)
+
+	// Finally we check the transaction status
+	if tx.Interrupted() {
+		fmt.Println("Transaction was interrupted")
 	}
 }
 ```
 
+For more examples check the examples pages in the left menu.
 
-## Using the CRS engine
+## Using the embedded sandbox
 
-Coraza WAF can be configured with OWASP CRS without the need to download and setup the packages. The ``pkg.crs`` package contains tools to automatically import and setup CRS.
+Coraza WAF repository contains a Sandbox package that can be used to test rules and the Core Ruleset.
+
+You may use the sandbox with the following command:
+
+```
+CGO_ENABLED=1 go run cmd/sandbox/main.go -port 8000 -crs ../coreruleset/rules
+```
+
+It will start the sandobox at [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+
+Please note that Coraza Sandbox is not intended to face the public internet, if you do so you may get hacked. Future versions will contain settings to avoid unsafe operations like remote resources, command execution and lua.
+
+## Compatibility status
+
+We have currently achieved a 91% compatibility with OWASP CRS, some features are under development, like:
+
+* Persistent Collections
+* Audit Log engine
+* Some transformations: jsdecode, cssdecode, escapeSeqDecode, escapeSeqDecode, htmlEntityDecode and removeCommentsChar
+* Some operators: fuzzyHash
+* Lua is still being tested
+
+## Coraza WAF implementations
+
+* [Caddy Plugin (Reverse Proxy and Web Server)](#)
+
+## Differences with ModSecurity
+
+### Custom Operators
+
+**@validateNid:** Validates national ID for many countries, replaces validateSSN.
+
+## Troubleshooting
 
 
-## License
+## Useful links
 
-Apache 2 License, please check the LICENSE file for full details.
