@@ -23,8 +23,10 @@ import (
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	log "github.com/sirupsen/logrus"
 	"html"
-	"io/ioutil"
 	"mime/multipart"
+	"io"
+	"io/ioutil"
+	"os"
 	"net"
 	"net/http"
 	"net/url"
@@ -33,12 +35,25 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"errors"
 	"time"
 )
 
+type Interruption struct {
+	// Rule that caused the interruption
+	RuleId int
+
+	// drop, deny, redirect
+	Action string
+
+	// Force this status code
+	Status int
+
+	// Parameters used by proxy and redirect
+	Data string
+}
+
 type MatchedRule struct {
-	Id               int
-	DisruptiveAction int
 	Messages         []string
 	MatchedData      []*MatchData
 	Rule             *Rule
@@ -76,7 +91,7 @@ type Transaction struct {
 	// Rules will be skipped after a rule with this SecMarker is found
 	SkipAfter string
 
-	// Copies from the WafInstance
+	// Copies from the WafInstance that may be overwritten by the ctl action
 	AuditEngine              int
 	AuditLogParts            []rune
 	ForceRequestBodyVariable bool
@@ -98,10 +113,10 @@ type Transaction struct {
 	RuleRemoveTargetById map[int][]*Collection
 
 	// Will skip this number of rules, this value will be decreased on each skip
-	Skip int `json:"skip"`
+	Skip int
 
 	// Actions with capture features will read the capture state from this field
-	Capture bool `json:"capture"`
+	Capture bool
 
 	// Contains the ID of the rule that disrupted the transaction
 	DisruptiveRuleId int `json:"disruptive_rule_id"`
@@ -113,32 +128,60 @@ type Transaction struct {
 	Mux *sync.RWMutex
 
 	// Contains de *engine.Waf instance for the current transaction
-	WafInstance *Waf
+	Waf *Waf
 
 	XmlDoc *xmlquery.Node
+
+	// Used to delete temp files after transaction is finished
+	temporaryFiles []string
 }
 
 func (tx *Transaction) Init(waf *Waf) error {
 	tx.Mux = &sync.RWMutex{}
 	tx.Mux.Lock()
 	defer tx.Mux.Unlock()
-	tx.WafInstance = waf
+	tx.Waf = waf
 	tx.Collections = map[string]*LocalCollection{}
 	txid := utils.RandomString(19)
 	tx.Id = txid
-	tx.InitTxCollection()
+	keys := []string{"args", "args_combined_size", "args_get", "args_get_names", "args_names", 
+	"args_post", "args_post_names", "auth_type", "duration", "env", "files", "files_combined_size", 
+	"files_names", "full_request", "full_request_length", "files_sizes", "files_tmpnames", 
+	"files_tmp_content", "geo", "highest_severity", "inbound_data_error", "matched_var", "matched_vars", 
+	"matched_var_name", "matched_vars_names", "modsec_build", "multipart_crlf_lf_lines", 
+	"multipart_filename", "multipart_name", "multipart_strict_error", "multipart_unmatched_boundary", 
+	"outbound_data_error", "path_info", "perf_all", "perf_combined", "perf_gc", "perf_logging", 
+	"perf_phase1", "perf_phase2", "perf_phase3", "perf_phase4", "perf_phase5", "perf_rules", 
+	"perf_sread", "perf_swrite", "query_string", "remote_addr", "remote_host", "remote_port", 
+	"remote_user", "reqbody_error", "reqbody_error_msg", "reqbody_processor", "request_basename", 
+	"request_body", "request_body_length", "request_cookies", "request_cookies_names", "request_filename", 
+	"request_headers", "request_headers_names", "request_line", "request_method", "request_protocol", 
+	"request_uri", "request_uri_raw", "response_body", "response_content_length", "response_content_type", 
+	"response_headers", "response_headers_names", "response_protocol", "response_status", "rule", 
+	"script_basename", "script_filename", "script_gid", "script_groupname", "script_mode", "script_uid", 
+	"script_username", "sdbm_delete_error", "server_addr", "server_name", "server_port", "session", 
+	"sessionid", "status_line", "stream_input_body", "stream_output_body", "time", "time_day", "time_epoch", 
+	"time_hour", "time_min", "time_mon", "time_sec", "time_wday", "time_year", "tx", "unique_id", 
+	"urlencoded_error", "userid", "useragent_ip", "webappid", "webserver_error_log", "xml"}	
+	for _, k := range keys {
+		tx.Collections[k] = &LocalCollection{}
+		tx.Collections[k].Init(k)
+	}
 
-	tx.SetSingleCollection("id", txid)
-	tx.SetSingleCollection("timestamp", strconv.FormatInt(time.Now().UnixNano(), 10))
-	tx.Disrupted = false
-	tx.AuditEngine = tx.WafInstance.AuditEngine
-	tx.AuditLogParts = tx.WafInstance.AuditLogParts
-	tx.RequestBodyAccess = tx.WafInstance.RequestBodyAccess
-	tx.RequestBodyLimit = tx.WafInstance.RequestBodyLimit
-	tx.ResponseBodyAccess = tx.WafInstance.ResponseBodyAccess
-	tx.ResponseBodyLimit = tx.WafInstance.ResponseBodyLimit
-	tx.RuleEngine = tx.WafInstance.RuleEngine
-	tx.AuditLogType = tx.WafInstance.AuditLogType
+	for i := 0; i <= 10; i++ {
+		is := strconv.Itoa(i)
+		tx.Collections["tx"].Set(is, []string{})
+	}
+	tx.GetCollection("id").AddToKey("", txid)
+	tx.GetCollection("timestamp").AddToKey("", strconv.FormatInt(time.Now().UnixNano(), 10))
+	tx.AuditEngine = tx.Waf.AuditEngine
+	tx.AuditLogParts = tx.Waf.AuditLogParts
+	tx.RequestBodyAccess = tx.Waf.RequestBodyAccess
+	tx.RequestBodyLimit = tx.Waf.RequestBodyLimit
+	tx.ResponseBodyAccess = tx.Waf.ResponseBodyAccess
+	tx.ResponseBodyLimit = tx.Waf.ResponseBodyLimit
+	tx.RuleEngine = tx.Waf.RuleEngine
+	tx.AuditLogType = tx.Waf.AuditLogType
 	tx.Skip = 0
 	tx.PersistentCollections = map[string]*PersistentCollection{}
 	tx.RuleRemoveTargetById = map[int][]*Collection{}
@@ -152,8 +195,9 @@ func (tx *Transaction) MacroExpansion(data string) string {
 	if data == "" {
 		return ""
 	}
-	//fmt.Println("DATA: ", data)
-	r := regexp.MustCompile(`%\{(.*?)\}`)
+	
+	// \w includes alphanumeric and _
+	r := regexp.MustCompile(`%\{([\w.]+?)\}`)
 	matches := r.FindAllString(data, -1)
 	for _, v := range matches {
 		match := v[2 : len(v)-1]
@@ -176,41 +220,38 @@ func (tx *Transaction) MacroExpansion(data string) string {
 			log.Debug(fmt.Sprintf("Expanding %%{%s} to %s", match, expansion[0]))
 		}
 	}
-	//fmt.Println("Macro: " + data)
+
 	return data
 }
 
-//Functions required by web server
-
 //Sets request_headers and request_headers_names
 func (tx *Transaction) SetRequestHeaders(headers map[string][]string) {
-	hl := tx.GetCollection("request_headers")
-	rhn := tx.GetCollection("request_headers_names")
-	hl.AddMap(headers)
-	for k, _ := range headers {
-		if k == "" {
-			continue
+	for h, vs := range headers {
+		for _, value := range vs {
+			tx.AddRequestHeader(h, value)
 		}
-		k = strings.ToLower(k)
-		rhn.AddToKey("", k)
 	}
-	//default cases for compatibility:
-	c := hl.GetSimple("content-length")
-	cl := "0"
-	if len(c) > 0 {
-		cl = hl.GetSimple("content-length")[0]
-	} else {
-		hl.Set("content-length", []string{"0"})
-	}
-
-	tx.GetCollection("request_body_length").Set("", []string{cl})
 }
 
 //Adds a request header
 func (tx *Transaction) AddRequestHeader(key string, value string) {
+	if key == "" {
+		return
+	}
 	key = strings.ToLower(key)
-	tx.GetCollection("request_headers_names").AddToKey("", key)
+	tx.GetCollection("request_headers_names").AddToKeyUnique("", key)
 	tx.GetCollection("request_headers").AddToKey(key, value)
+
+	//Most headers can be managed like that except cookies
+	rhmap := map[string]string{
+		"content-type": "request_content_type",
+		"content-length": "request_body_length",
+	}
+	for k, v := range rhmap {
+		if k == key {
+			tx.GetCollection(v).AddToKey("", value)
+		}
+	}
 }
 
 //Sets args_get, args_get_names. Also adds to args_names and args
@@ -228,7 +269,7 @@ func (tx *Transaction) SetArgsGet(args map[string][]string) {
 		an.AddToKey("", k)
 		length += len(k)
 	}
-	tx.AddArgsLength(length)
+	tx.addArgsLength(length)
 }
 
 //Sets args_post, args_post_names. Also adds to args_names and args
@@ -244,10 +285,6 @@ func (tx *Transaction) SetArgsPost(args map[string][]string) {
 		apn.AddToKey("", k)
 		an.AddToKey("", k)
 	}
-}
-
-func (tx *Transaction) SetAuthType(auth string) {
-	tx.GetCollection("auth_type").AddToKey("", auth)
 }
 
 //Sets files, files_combined_size, files_names, files_sizes, files_tmpnames, files_tmp_content
@@ -268,10 +305,10 @@ func (tx *Transaction) SetFiles(files map[string][]*multipart.FileHeader) {
 	tx.GetCollection("files_combined_size").AddToKey("", fmt.Sprintf("%d", totalSize))
 }
 
-//Will be built from request_line, request_headers and request_body
+//a FULL_REQUEST variable will be set from request_line, request_headers and request_body
 func (tx *Transaction) SetFullRequest() {
 	headers := ""
-	for k, v := range tx.GetCollection("request_headers").Data {
+	for k, v := range tx.GetCollection("request_headers").GetData() {
 		if k == "" {
 			continue
 		}
@@ -280,9 +317,9 @@ func (tx *Transaction) SetFullRequest() {
 		}
 	}
 	full_request := fmt.Sprintf("%s\n%s\n\n%s\n",
-		tx.GetCollection("request_line").GetFirstString(),
+		tx.GetCollection("request_line").GetFirstString(""),
 		headers,
-		tx.GetCollection("request_body").GetFirstString())
+		tx.GetCollection("request_body").GetFirstString(""))
 	tx.GetCollection("full_request").AddToKey("", full_request)
 }
 
@@ -297,24 +334,50 @@ func (tx *Transaction) SetReqBodyProcessor(processor string) {
 	tx.GetCollection("reqbody_processor").AddToKey("", processor)
 }
 
-func (tx *Transaction) SetRemoteUser(user string) {
-	tx.GetCollection("remote_user").AddToKey("", user)
-}
-
 //Sets request_body and request_body_length, it won't work if request_body_inspection is off
-func (tx *Transaction) SetRequestBody(body []byte, mime string) error {
-	//TODO requires more validations. chunks, etc
-	length := int64(len(body))
-	mime = strings.ToLower(mime)
-	/*
-		TODO we will be implementing this later...
-		if !tx.RequestBodyAccess || (tx.RequestBodyLimit > 0 && length > tx.RequestBodyLimit) {
-			return nil
-		}*/
+func (tx *Transaction) SetRequestBody(body *io.Reader) error {
+	if !tx.RequestBodyAccess{// || (tx.RequestBodyLimit > 0 && length > tx.RequestBodyLimit) {
+		return nil
+	}
 
-	l := strconv.FormatInt(length, 10)
-	tx.GetCollection("request_body_length").AddToKey("", l)
-	tx.GetCollection("request_content_type").AddToKey("", mime)
+	transfer := tx.GetCollection("request_headers").GetFirstString("transfer")
+	length := tx.GetCollection("request_headers").GetFirstInt64("content-length")
+	mime := tx.GetCollection("request_headers").GetFirstString("content-type")
+	mime = strings.ToLower(mime)
+	chunked := strings.EqualFold(transfer, "chunked")
+	var reader io.Reader
+
+	// Chunked requests will always be written to a temporary file
+	if !chunked && length > tx.RequestBodyLimit && tx.Waf.RequestBodyLimitAction == REQUEST_BODY_LIMIT_ACTION_REJECT{
+		return errors.New("Rejected request body size")
+	}else if !chunked && length > tx.RequestBodyLimit && tx.Waf.RequestBodyLimitAction == REQUEST_BODY_LIMIT_ACTION_PROCESS_PARTIAL{
+		tx.GetCollection("inbound_error_data").Set("", []string{"1"})
+	}
+
+	// In this case we are going to write the buffer to a file
+	if chunked || length > tx.Waf.RequestBodyInMemoryLimit {
+		tpath := path.Join(tx.Waf.TmpDir, utils.RandomString(16))
+		tfile, err := os.Create(tpath)
+		defer tfile.Close()
+		io.Copy(tfile, *body)
+		if err != nil {
+			return errors.New("Couldn't create temporary file to store request body buffer")
+		}
+		// We overwrite the original body with the file
+		reader = bufio.NewReader(tfile)
+		//then we copy the content to body
+		*body = (bufio.NewReader(tfile))
+		tx.addTemporaryFile(tpath)
+	}else{
+		// In this case we are going to buffer it to memory so be it !
+		b, err := ioutil.ReadAll(*body)
+		if err != nil{
+			return errors.New("Failed to store request body in memory")
+		}
+		reader = bytes.NewReader(b)
+		*body = bytes.NewReader(b)
+	}
+
 	//FROM CTL:forcerequestbodyvariable...
 	if tx.RequestBodyProcessor == 0 && tx.ForceRequestBodyVariable {
 		tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_URLENCODED
@@ -333,10 +396,14 @@ func (tx *Transaction) SetRequestBody(body []byte, mime string) error {
 			tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_URLENCODED
 		}
 	}
+
 	switch tx.RequestBodyProcessor {
 	case REQUEST_BODY_PROCESSOR_URLENCODED:
-		uri, err := url.Parse("?" + string(body))
-		tx.GetCollection("request_body").Set("", []string{string(body)})
+		buf := new(strings.Builder)
+		io.Copy(buf, reader)
+		b := buf.String()	
+		uri, err := url.Parse("?" + b)
+		tx.GetCollection("request_body").Set("", []string{b})
 		if err != nil {
 			tx.GetCollection("reqbody_processor_error").Set("", []string{"1"})
 			tx.GetCollection("reqbody_processor_error_msg").Set("", []string{string(err.Error())})
@@ -352,14 +419,14 @@ func (tx *Transaction) SetRequestBody(body []byte, mime string) error {
 				Entity:    map[string]string{},
 			},
 		}
-		tx.XmlDoc, err = xmlquery.ParseWithOptions(strings.NewReader(string(body)), options)
+		tx.XmlDoc, err = xmlquery.ParseWithOptions(reader, options)
 		if err != nil {
 			tx.GetCollection("reqbody_processor_error").Set("", []string{"1"})
 			tx.GetCollection("reqbody_processor_error_msg").Set("", []string{string(err.Error())})
 			return err
 		}
 	case REQUEST_BODY_PROCESSOR_MULTIPART:
-		req, _ := http.NewRequest("GET", "/", bytes.NewBuffer(body))
+		req, _ := http.NewRequest("GET", "/", reader)
 		req.Header.Set("Content-Type", mime)
 		err := req.ParseMultipartForm(tx.RequestBodyLimit)
 		defer req.Body.Close()
@@ -371,12 +438,13 @@ func (tx *Transaction) SetRequestBody(body []byte, mime string) error {
 		tx.SetFiles(req.MultipartForm.File)
 		tx.SetArgsPost(req.MultipartForm.Value)
 	case REQUEST_BODY_PROCESSOR_JSON:
-		tx.GetCollection("request_body").Set("", []string{string(body)})
+		buf := new(strings.Builder)
+		io.Copy(buf, reader)
+		b := buf.String()			
+		tx.GetCollection("request_body").Set("", []string{b})
 	}
-	//} else if mime == "application/json" {
-	// JSON!
-	//doc, err := xmlquery.Parse(strings.NewReader(s))
-	//tx.Json = doc
+	l := strconv.FormatInt(length, 10)
+	tx.GetCollection("request_body_length").AddToKey("", l)
 
 	return nil
 }
@@ -391,22 +459,35 @@ func (tx *Transaction) SetRequestCookies(cookies []*http.Cookie) {
 
 //sets response_body and response_body_length, it won't work if response_body_inpsection is off
 func (tx *Transaction) SetResponseBody(body []byte, length int64) {
-	if !tx.ResponseBodyAccess || length > tx.ResponseBodyLimit {
-		return
-	}
-	l := strconv.FormatInt(length, 10)
-	tx.Collections["response_body"].AddToKey("", string(body))
-	tx.Collections["response_body_length"].AddToKey("", l)
+	// TBI
 }
 
 //Sets response_headers, response_headers_names, response_content_length and response_content_type
 func (tx *Transaction) SetResponseHeaders(headers map[string][]string) {
-	tx.Collections["response_headers"].AddMap(headers)
-	for k, _ := range headers {
-		if k == "" {
-			continue
+	for h, vs := range headers {
+		for _, value := range vs {
+			tx.AddResponseHeader(h, value)
 		}
-		tx.Collections["response_headers_names"].AddToKey("", k)
+	}
+}
+
+func (tx *Transaction) AddResponseHeader(key string, value string) {
+	if key == "" {
+		return
+	}
+	key = strings.ToLower(key)
+	tx.GetCollection("response_headers_names").AddToKeyUnique("", key)
+	tx.GetCollection("response_headers").AddToKey(key, value)
+
+	//Most headers can be managed like that except cookies
+	rhmap := map[string]string{
+		"content-type": "response_content_type",
+		"content-length": "response_body_length",
+	}
+	for k, v := range rhmap {
+		if k == key {
+			tx.GetCollection(v).AddToKey("", value)
+		}
 	}
 }
 
@@ -443,10 +524,10 @@ func (tx *Transaction) AddGetArgsFromUrl(u *url.URL) {
 			args.AddToKey(k, vv)
 			length += len(k) + len(vv) + 1
 		}
-		tx.GetCollection("args_get_names").AddToKey("", k)
-		tx.GetCollection("args_names").AddToKey("", k)
+		tx.GetCollection("args_get_names").AddToKeyUnique("", k)
+		tx.GetCollection("args_names").AddToKeyUnique("", k)
 	}
-	tx.AddArgsLength(length)
+	tx.addArgsLength(length)
 }
 
 //Sets args_post and args_post_names
@@ -461,20 +542,21 @@ func (tx *Transaction) AddPostArgsFromUrl(u *url.URL) {
 			args.AddToKey(k, vv)
 			length += len(k) + len(vv) + 1
 		}
-		tx.GetCollection("args_post_names").AddToKey("", k)
-		tx.GetCollection("args_names").AddToKey("", k)
+		tx.GetCollection("args_post_names").AddToKeyUnique("", k)
+		tx.GetCollection("args_names").AddToKeyUnique("", k)
 	}
-	tx.AddArgsLength(length)
+	tx.addArgsLength(length)
 }
 
-func (tx *Transaction) AddArgsLength(length int) {
+func (tx *Transaction) addArgsLength(length int) {
 	col := tx.GetCollection("args_combined_size")
-	i := col.GetFirstInt64() + int64(length)
+	i := col.GetFirstInt64("") + int64(length)
 	istr := strconv.FormatInt(i, 10)
 	col.Set("", []string{istr})
 }
 
 func (tx *Transaction) AddCookies(cookies string) {
+	//TODO implement SecCookieFormat and SecCookieV0Separator
 	header := http.Header{}
 	header.Add("Cookie", cookies)
 	request := http.Request{Header: header}
@@ -483,20 +565,15 @@ func (tx *Transaction) AddCookies(cookies string) {
 
 //Adds request_line, request_method, request_protocol, request_basename and request_uri
 func (tx *Transaction) SetRequestLine(method string, protocol string, requestUri string) {
-	tx.SetRequestMethod(method)
+	tx.GetCollection("request_method").AddToKey("", method)
 	tx.GetCollection("request_uri").AddToKey("", requestUri)
 	tx.GetCollection("request_protocol").AddToKey("", protocol)
 	tx.GetCollection("request_line").AddToKey("", fmt.Sprintf("%s %s %s", method, requestUri, protocol))
 }
 
-//Adds request_line, request_method, request_protocol, request_basename and request_uri
-func (tx *Transaction) SetRequestMethod(method string) {
-	tx.GetCollection("request_method").Set("", []string{method})
-}
-
 //Resolves remote hostname and sets remote_host variable
 func (tx *Transaction) ResolveRemoteHost() {
-	addr, err := net.LookupAddr(tx.GetCollection("remote_addr").GetFirstString())
+	addr, err := net.LookupAddr(tx.GetCollection("remote_addr").GetFirstString(""))
 	if err != nil {
 		return
 	}
@@ -507,26 +584,6 @@ func (tx *Transaction) ResolveRemoteHost() {
 func (tx *Transaction) CaptureField(index int, value string) {
 	i := strconv.Itoa(index)
 	tx.GetCollection("tx").Set(i, []string{value})
-}
-
-func (tx *Transaction) InitTxCollection() {
-	keys := []string{"args", "args_post", "args_get", "args_names", "args_post_names", "args_get_names", "query_string", "remote_addr", "request_basename", "request_uri", "tx", "remote_port",
-		"request_body", "request_content_type", "request_content_length", "request_cookies", "request_cookies_names", "request_line", "files_sizes",
-		"request_filename", "request_headers", "request_headers_names", "request_method", "request_protocol", "request_filename", "full_request", "remote_host",
-		"request_uri", "request_line", "response_body", "response_content_length", "response_content_type", "request_uri_raw",
-		"response_headers", "response_headers_names", "response_protocol", "response_status", "appid", "id", "timestamp", "files_names", "files", "remote_user",
-		"files_combined_size", "reqbody_processor", "request_body_length", "xml", "matched_vars", "rule", "ip", "global", "session",
-		"matched_var", "matched_var_name", "matched_var_names", "reqbody_processor_error", "reqbody_processor_error_msg", "args_combined_size"}
-
-	for _, k := range keys {
-		tx.Collections[k] = &LocalCollection{}
-		tx.Collections[k].Init(k)
-	}
-
-	for i := 0; i <= 10; i++ {
-		is := strconv.Itoa(i)
-		tx.Collections["tx"].Data[is] = []string{}
-	}
 }
 
 //Reset the capture collection for further uses
@@ -540,6 +597,7 @@ func (tx *Transaction) ResetCapture() {
 }
 
 // Parse binary request including body, does only supports http/1.1 and http/1.0
+// This function is only intended for testing and debugging
 func (tx *Transaction) ParseRequestString(data string) error {
 	bts := strings.NewReader(data)
 	// For dumb reasons we must read the headers and look for the Host header,
@@ -567,12 +625,10 @@ func (tx *Transaction) ParseRequestString(data string) error {
 		return err
 	}
 
-	err = tx.ParseRequestObjectHeaders(req)
-	if err != nil {
-		return err
-	}
+	tx.ParseRequestObjectHeaders(req)
 
-	err = tx.ParseRequestObjectBody(req)
+	b := req.Body.(io.Reader)
+	err = tx.SetRequestBody(&b)
 	if err != nil {
 		return err
 	}
@@ -580,7 +636,10 @@ func (tx *Transaction) ParseRequestString(data string) error {
 }
 
 // Parse binary response including body, does only supports http/1.1 and http/1.0
+// This function is only intended for testing and debugging
 func (tx *Transaction) ParseResponseString(req *http.Request, data string) error {
+	//TODO not implemented yet
+	/*
 	buf := bufio.NewReader(strings.NewReader(data))
 	res, err := http.ReadResponse(buf, req)
 	if err != nil {
@@ -590,12 +649,13 @@ func (tx *Transaction) ParseResponseString(req *http.Request, data string) error
 	err = tx.ParseResponseObject(res)
 	if err != nil {
 		return err
-	}
+	}*/
 	return nil
 }
 
 // Parse golang http request object into transaction
-func (tx *Transaction) ParseRequestObjectHeaders(req *http.Request) error {
+// It will handle all transaction variables required for phase 1
+func (tx *Transaction) ParseRequestObjectHeaders(req *http.Request) {
 	re := regexp.MustCompile(`^\[(.*?)\]:(\d+)$`)
 	matches := re.FindAllStringSubmatch(req.RemoteAddr, -1)
 	address := ""
@@ -612,38 +672,12 @@ func (tx *Transaction) ParseRequestObjectHeaders(req *http.Request) error {
 	tx.SetRequestLine(req.Method, req.Proto, req.RequestURI)
 	tx.SetRequestHeaders(req.Header)
 	tx.SetRequestCookies(req.Cookies())
-	return nil
-}
-
-func (tx *Transaction) ParseRequestObjectBody(req *http.Request) error {
-	ct := ""
-	for k, v := range req.Header {
-		if strings.ToLower(k) == "content-type" {
-			ct = v[0]
-			break
-		}
-	}
-	if req.Body == nil {
-		return nil
-	}
-
-	body, err := ioutil.ReadAll(req.Body)
-	if err != nil {
-		return err
-	}
-	tx.SetRequestBody(body, ct)
-	return nil
 }
 
 // Parse golang http response object into transaction
 func (tx *Transaction) ParseResponseObjectHeaders(res *http.Response) error {
 	tx.SetResponseHeaders(res.Header)
-	return nil
-}
-
-// Parse golang http response object into transaction
-func (tx *Transaction) ParseResponseObject(res *http.Response) error {
-	tx.SetResponseHeaders(res.Header)
+	//TBI
 	return nil
 }
 
@@ -657,7 +691,8 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 		return tx.Disrupted
 	}
 	diff := phase - tx.LastPhase
-	if diff > 1 {
+	//TODO maybe we should stil evaluate previous phases for phase 5?
+	if diff > 1 && phase != 5 {
 		tx.ExecutePhase(phase - 1)
 	}
 	tx.LastPhase = phase
@@ -667,7 +702,7 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 	tx.Mux.Lock()
 	tx.LastPhase = phase
 	tx.Mux.Unlock()
-	for _, r := range tx.WafInstance.Rules.GetRules() {
+	for _, r := range tx.Waf.Rules.GetRules() {
 		// Rules with phase 0 will always run
 		if r.Phase != phase && r.Phase != 0 {
 			continue
@@ -732,7 +767,6 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 	tx.StopWatches[phase] = int(time.Now().UnixNano() - ts)
 	tx.Mux.Unlock()
 	if phase == 5 {
-		log.Trace(tx.DebugTransaction())
 		log.Debug("Saving persistent data")
 		tx.SavePersistentData()
 		if tx.AuditEngine == AUDIT_LOG_RELEVANT && tx.IsRelevantStatus() {
@@ -743,26 +777,6 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 
 	}
 	return tx.Disrupted
-}
-
-func (tx *Transaction) DebugTransaction() string {
-	res := ""
-	for _, c := range tx.Collections {
-		res += fmt.Sprintf("%s:\n", c.Name)
-		for key, values := range c.Data {
-			if key == "" {
-				key = "NOKEY"
-			}
-			res += fmt.Sprintf("\t%s:\n", key)
-			for _, v := range values {
-				if v == "" {
-					continue
-				}
-				res += fmt.Sprintf("\t\t%s\n", v)
-			}
-		}
-	}
-	return res
 }
 
 func (tx *Transaction) MatchVars(match []*MatchData) {
@@ -795,8 +809,6 @@ func (tx *Transaction) MatchVars(match []*MatchData) {
 
 func (tx *Transaction) MatchRule(rule *Rule, msgs []string, match []*MatchData) {
 	mr := &MatchedRule{
-		Id:               rule.Id,
-		DisruptiveAction: 0,
 		Messages:         msgs,
 		MatchedData:      match,
 		Rule:             rule,
@@ -810,20 +822,20 @@ func (tx *Transaction) ToJSON() ([]byte, error) {
 	return json.Marshal(tx)
 }
 
-func (tx *Transaction) SetSingleCollection(key string, value string) {
+func (tx *Transaction) CreateCollection(key string, value string) {
 	tx.Collections[key] = &LocalCollection{}
 	tx.Collections[key].Init(key)
 	tx.Collections[key].Add("", []string{value})
 }
 
 func (tx *Transaction) GetTimestamp() string {
-	t := time.Unix(0, tx.GetCollection("timestamp").GetFirstInt64())
+	t := time.Unix(0, tx.GetCollection("timestamp").GetFirstInt64(""))
 	ts := t.Format("02/Jan/2006:15:04:20 -0700")
 	return ts
 }
 
 func (tx *Transaction) GetStopWatch() string {
-	ts := tx.GetCollection("timestamp").GetFirstInt64()
+	ts := tx.GetCollection("timestamp").GetFirstInt64("")
 	sum := 0
 	for _, r := range tx.StopWatches {
 		sum += r
@@ -890,11 +902,11 @@ func (tx *Transaction) GetRemovedTargets(id int) []*Collection {
 
 //Returns directory and filename
 func (tx *Transaction) GetAuditPath() (string, string) {
-	t := time.Unix(0, tx.GetCollection("timestamp").GetFirstInt64())
+	t := time.Unix(0, tx.GetCollection("timestamp").GetFirstInt64(""))
 
 	// append the two directories
 	p2 := fmt.Sprintf("/%s/%s/", t.Format("20060102"), t.Format("20060102-1504"))
-	logdir := path.Join(tx.WafInstance.AuditLogStorageDir, p2)
+	logdir := path.Join(tx.Waf.AuditLogStorageDir, p2)
 	// Append the filename
 	filename := fmt.Sprintf("/%s-%s", t.Format("20060102-150405"), tx.Id)
 	return logdir, filename
@@ -904,7 +916,7 @@ func (tx *Transaction) IsRelevantStatus() bool {
 	if tx.AuditEngine == AUDIT_LOG_DISABLED {
 		return false
 	}
-	re := tx.WafInstance.AuditLogRelevantStatus
+	re := tx.Waf.AuditLogRelevantStatus
 	status := strconv.Itoa(tx.Status)
 	m := re.NewMatcher()
 	return m.MatchString(status, 0)
@@ -922,7 +934,7 @@ func (tx *Transaction) ToAuditLog() *AuditLog {
 }
 
 func (tx *Transaction) SaveLog() error {
-	return tx.WafInstance.Logger.WriteAudit(tx)
+	return tx.Waf.Logger.WriteAudit(tx)
 }
 
 // Save persistent collections to persistence engine
@@ -930,7 +942,7 @@ func (tx *Transaction) SavePersistentData() {
 	/*
 		TODO: There is a weird deadlock... gonna fix it
 		for col, pc := range tx.PersistentCollections {
-			pc.SetData(tx.GetCollection(col).Data)
+			pc.SetData(tx.GetCollection(col).GetData())
 			pc.Save()
 		}*/
 }
@@ -955,14 +967,8 @@ func (tx *Transaction) RegisterPersistentCollection(collection string, pc *Persi
 	tx.PersistentCollections[collection] = pc
 }
 
-func (tx *Transaction) IsCapturable() bool {
-	tx.Mux.RLock()
-	defer tx.Mux.RUnlock()
-	return tx.Capture
-}
-
-func (tx *Transaction) SetCapturable(capturable bool) {
+func (tx *Transaction) addTemporaryFile(path string) {
 	tx.Mux.Lock()
 	defer tx.Mux.Unlock()
-	tx.Capture = capturable
+	tx.temporaryFiles = append(tx.temporaryFiles, path)
 }

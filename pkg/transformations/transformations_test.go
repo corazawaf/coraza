@@ -72,9 +72,8 @@ func TestTransformations(t *testing.T) {
 			}
 			out := executeTransformation(trans, data.Input)
 			if out != data.Output {
-				t.Error(fmt.Sprintf("Invalid transformation result for %s with input %s, got %s and expected %s\n", data.Name, data.Input, out, data.Output))
-				t.Error([]byte(data.Output))
-				t.Error([]byte(out))
+				t.Error(fmt.Sprintf("Transformation %s:\nInput: %s\nExpected: %v\nGot: %v\nExpected String: %s\nGot String: %s", 
+					data.Name, data.Input, []byte(data.Output), []byte(out), data.Output, out))
 			}
 		}
 	}

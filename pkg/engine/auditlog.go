@@ -102,19 +102,19 @@ func (al *AuditLog) Init(tx *Transaction) {
 	al.Transaction = &AuditTransaction{
 		Timestamp:  tx.GetTimestamp(),
 		Id:         tx.Id,
-		ClientIp:   tx.Collections["remote_addr"].GetFirstString(),
-		ClientPort: tx.Collections["remote_port"].GetFirstInt(),
+		ClientIp:   tx.GetCollection("remote_addr").GetFirstString(""),
+		ClientPort: tx.GetCollection("remote_port").GetFirstInt(""),
 		HostIp:     "",
 		HostPort:   0,
 		ServerId:   "",
 		Request: &AuditTransactionRequest{
-			Protocol:    tx.Collections["request_method"].GetFirstString(),
-			Uri:         tx.Collections["request_uri"].GetFirstString(),
-			HttpVersion: tx.Collections["request_protocol"].GetFirstString(),
+			Protocol:    tx.GetCollection("request_method").GetFirstString(""),
+			Uri:         tx.GetCollection("request_uri").GetFirstString(""),
+			HttpVersion: tx.GetCollection("request_protocol").GetFirstString(""),
 			//Body and headers are audit parts
 		},
 		Response: &AuditTransactionResponse{
-			Status: tx.Collections["response_status"].GetFirstInt(),
+			Status: tx.GetCollection("response_status").GetFirstInt(""),
 			//body and headers are audit parts
 		},
 	}
@@ -122,19 +122,19 @@ func (al *AuditLog) Init(tx *Transaction) {
 	for _, p := range parts {
 		switch p {
 		case 'B':
-			al.Transaction.Request.Headers = tx.Collections["request_headers"].Data
+			al.Transaction.Request.Headers = tx.GetCollection("request_headers").GetData()
 			break
 		case 'C':
-			al.Transaction.Request.Body = tx.Collections["request_body"].GetFirstString()
+			al.Transaction.Request.Body = tx.GetCollection("request_body").GetFirstString("")
 			break
 		case 'F':
-			al.Transaction.Response.Headers = tx.Collections["response_headers"].Data
+			al.Transaction.Response.Headers = tx.GetCollection("response_headers").GetData()
 			break
 		case 'G':
-			al.Transaction.Response.Body = tx.Collections["response_body"].GetFirstString()
+			al.Transaction.Response.Body = tx.GetCollection("response_body").GetFirstString("")
 			break
 		case 'H':
-			servera := tx.Collections["response_headers"].Get("server")
+			servera := tx.GetCollection("response_headers").Get("server")
 			server := ""
 			if len(server) > 0 {
 				server = servera[0]

@@ -201,7 +201,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 	}
 
 	// We reset the capturable configuration
-	tx.SetCapturable(false)
+	tx.Capture = false
 
 	msgs := []string{tx.MacroExpansion(r.Msg)}
 	if r.Chain != nil {

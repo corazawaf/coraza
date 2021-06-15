@@ -124,7 +124,7 @@ func luaTxSetField(L *lua.LState) int {
 		//TODO is it sorted?
 		data = append(data, value.String())
 	})
-	waf.Tx.Collections[col].Data[key] = data
+	waf.Tx.GetCollection(col).GetData()[key] = data
 	return 0
 }
 
@@ -141,6 +141,6 @@ func luaTxSetFieldSingle(L *lua.LState) int {
 		// cannot update this field
 		return 0
 	}
-	waf.Tx.Collections[col].Data[""] = []string{newval}
+	waf.Tx.GetCollection(col).GetData()[""] = []string{newval}
 	return 0
 }

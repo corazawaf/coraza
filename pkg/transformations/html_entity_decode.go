@@ -22,7 +22,6 @@ import (
 )
 
 func HtmlEntityDecode(data string) string {
-	//This function is remporary as it won't work against many obfuscation attacks
 	return doHtmlEntityDecode(data)
 }
 
@@ -84,7 +83,7 @@ func doHtmlEntityDecode(input string) string{
                     if (j > k) { /* Do we have at least one digit? */
                         /* Decode the entity. */
                         x := input[k:j]
-                        n, _ := strconv.Atoi(string(x))
+                        n, _ := strconv.ParseInt(string(x), 10, 8)
                         d[curr] = byte(n)
                         curr++
                         count++;
@@ -149,5 +148,6 @@ HTML_ENT_OUT:
             count++
         }
     }
+    //d = d[:curr]
     return string(d[:count])
 }

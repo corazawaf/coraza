@@ -61,7 +61,7 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 		tx.RemoveRuleTargetById(id, a.Collection, a.ColKey)
 		break
 	case CTL_REMOVE_TARGET_BY_TAG:
-		rules := tx.WafInstance.Rules.GetRules()
+		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
 			if utils.ArrayContains(r.Tags, a.Value) {
 				tx.RemoveRuleTargetById(r.Id, a.Collection, a.ColKey)
@@ -69,7 +69,7 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 		}
 		break
 	case CTL_REMOVE_TARGET_BY_MSG:
-		rules := tx.WafInstance.Rules.GetRules()
+		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
 			if r.Msg == a.Value {
 				tx.RemoveRuleTargetById(r.Id, a.Collection, a.ColKey)
@@ -121,7 +121,7 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 		tx.RuleRemoveById = append(tx.RuleRemoveById, id)
 		break
 	case CTL_RULE_REMOVE_BY_MSG:
-		rules := tx.WafInstance.Rules.GetRules()
+		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
 			if r.Msg == a.Value {
 				tx.RuleRemoveById = append(tx.RuleRemoveById, r.Id)
@@ -129,7 +129,7 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 		}
 		break
 	case CTL_RULE_REMOVE_BY_TAG:
-		rules := tx.WafInstance.Rules.GetRules()
+		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
 			if utils.ArrayContains(r.Tags, a.Value) {
 				tx.RuleRemoveById = append(tx.RuleRemoveById, r.Id)

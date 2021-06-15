@@ -28,14 +28,14 @@ func (o *GeoLookup) Init(data string) {
 }
 
 func (o *GeoLookup) Evaluate(tx *engine.Transaction, value string) bool {
-	if tx.WafInstance.GeoDb == nil {
+	if tx.Waf.GeoDb == nil {
 		return false
 	}
 	ip := net.ParseIP(value)
-	record, err := tx.WafInstance.GeoDb.Country(ip)
+	record, err := tx.Waf.GeoDb.Country(ip)
 	if err != nil {
 		return false
 	}
-	tx.SetSingleCollection("country_code", record.Country.IsoCode)
+	tx.GetCollection("country_code").AddToKey("", record.Country.IsoCode)
 	return true
 }

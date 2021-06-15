@@ -127,3 +127,7 @@ func FileExists(filename string) bool {
 	}
 	return !info.IsDir()
 }
+
+func IsDigit(x byte) bool {
+	return (x >= '0') && (x <= '9')
+}

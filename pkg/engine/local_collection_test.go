@@ -22,7 +22,7 @@ func TestLocalCollection(t *testing.T) {
 	lc := NewCollection("test")
 
 	lc.InitCollection("test2")
-	if lc.Data["test2"] == nil {
+	if lc.GetData()["test2"] == nil {
 		t.Error("Failed to initialize Local Collection")
 	}
 

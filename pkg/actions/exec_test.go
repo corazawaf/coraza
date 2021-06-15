@@ -35,12 +35,12 @@ func TestExec(t *testing.T) {
 	}
 	exec.Evaluate(r, tx)
 
-	id := tx.GetCollection("id").GetFirstString()
+	id := tx.GetCollection("id").GetFirstString("")
 	if id == "test" {
 		t.Error("Failed to update transaction through exec LUA, shouldn't update ID")
 	}
 
-	body := tx.GetCollection("response_body").GetFirstString()
+	body := tx.GetCollection("response_body").GetFirstString("")
 	if body != "test" {
 		t.Error("Failed to update transaction through exec LUA, got", body)
 	}

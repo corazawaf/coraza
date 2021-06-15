@@ -97,9 +97,9 @@ func apiHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	//We hardcode the remote_addr header based on x-real-ip header
-	rip := tx.Collections["request_headers"].Data["x-real-ip"]
+	rip := tx.GetCollection("request_headers").GetData()["x-real-ip"]
 	if len(rip) > 0 {
-		tx.Collections["remote_addr"].Data[""] = rip
+		tx.GetCollection("remote_addr").GetData()[""] = rip
 	}
 	for i := 1; i <= 5; i++ {
 		tx.ExecutePhase(i)

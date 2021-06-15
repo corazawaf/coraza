@@ -28,7 +28,7 @@ type Collection struct {
 }
 
 type LocalCollection struct {
-	Data map[string][]string `json:"data"`
+	data map[string][]string `json:"data"`
 	mux  *sync.RWMutex
 	Name string
 }
@@ -40,41 +40,41 @@ func NewCollection(name string) *LocalCollection {
 }
 
 func (c *LocalCollection) Init(name string) {
-	c.Data = map[string][]string{}
-	c.Data[""] = []string{}
+	c.data = map[string][]string{}
+	c.data[""] = []string{}
 	c.mux = &sync.RWMutex{}
 	c.Name = name
 }
 
 func (c *LocalCollection) InitCollection(key string) {
-	c.Data[key] = []string{}
+	c.data[key] = []string{}
 }
 
 func (c *LocalCollection) Get(key string) []string {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
-	return c.Data[key]
+	return c.data[key]
 }
 
 func (c *LocalCollection) GetSimple(key string) []string {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
-	return c.Data[key]
+	return c.data[key]
 }
 
 //PCRE compatible collection with exceptions
 func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []*MatchData {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
-	cdata := c.Data
+	cdata := c.data
 	//we return every value in case there is no key but there is a collection
 	if len(key) == 0 {
 		data := []*MatchData{}
-		for k := range c.Data {
+		for k := range c.data {
 			if utils.ArrayContains(exceptions, k) {
 				continue
 			}
-			for _, v := range c.Data[k] {
+			for _, v := range c.data[k] {
 
 				data = append(data, &MatchData{
 					Collection: c.Name,
@@ -127,10 +127,10 @@ func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []*
 	}
 }
 
-func (c *LocalCollection) GetFirstString() string {
+func (c *LocalCollection) GetFirstString(key string) string {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
-	a := c.Data[""]
+	a := c.data[key]
 	if len(a) > 0 {
 		return a[0]
 	} else {
@@ -138,10 +138,10 @@ func (c *LocalCollection) GetFirstString() string {
 	}
 }
 
-func (c *LocalCollection) GetFirstInt64() int64 {
+func (c *LocalCollection) GetFirstInt64(key string) int64 {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
-	a := c.Data[""]
+	a := c.data[key]
 	if len(a) > 0 {
 		i, _ := strconv.ParseInt(a[0], 10, 64)
 		return i
@@ -150,10 +150,10 @@ func (c *LocalCollection) GetFirstInt64() int64 {
 	}
 }
 
-func (c *LocalCollection) GetFirstInt() int {
+func (c *LocalCollection) GetFirstInt(key string) int {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
-	a := c.Data[""]
+	a := c.data[key]
 	if len(a) > 0 {
 		i, _ := strconv.Atoi(a[0])
 		return i
@@ -165,51 +165,66 @@ func (c *LocalCollection) GetFirstInt() int {
 func (c *LocalCollection) Add(key string, value []string) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
-	c.Data[key] = value
+	c.data[key] = value
 }
 
 func (c *LocalCollection) AddToKey(key string, value string) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
-	c.Data[key] = append(c.Data[key], value)
+	c.data[key] = append(c.data[key], value)
+}
+
+func (c *LocalCollection) AddToKeyUnique(key string, value string) {
+	c.mux.Lock()
+	defer c.mux.Unlock()
+	pass := false
+	for _, v := range c.data[key] {
+		if v == value{
+			pass = true
+		}
+	}
+	if !pass{
+		return
+	}
+	c.data[key] = append(c.data[key], value)
 }
 
 func (c *LocalCollection) Set(key string, value []string) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
-	c.Data[key] = value
+	c.data[key] = value
 }
 
 func (c *LocalCollection) AddMap(data map[string][]string) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
 	for k, v := range data {
-		c.Data[strings.ToLower(k)] = v
+		c.data[strings.ToLower(k)] = v
 	}
 }
 
 func (c *LocalCollection) Update(key string, value []string) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
-	c.Data[key] = value
+	c.data[key] = value
 }
 
 func (c *LocalCollection) Remove(key string) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
-	delete(c.Data, key)
+	delete(c.data, key)
 }
 
 func (c *LocalCollection) GetData() map[string][]string {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
-	return c.Data
+	return c.data
 }
 
 func (c *LocalCollection) SetData(data map[string][]string) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
-	c.Data = data
+	c.data = data
 }
 
 func (c *LocalCollection) Reset() {

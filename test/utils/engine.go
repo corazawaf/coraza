@@ -18,6 +18,7 @@ import (
 	b64 "encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/seclang"
 	"github.com/jptosso/coraza-waf/pkg/utils"
@@ -50,7 +51,6 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 		p.FromString(rules)
 	}
 	tx := waf.NewTransaction()
-	ct := ""
 	if stage.Stage.Input.EncodedRequest != "" {
 		sDec, _ := b64.StdEncoding.DecodeString(stage.Stage.Input.EncodedRequest)
 		stage.Stage.Input.RawRequest = string(sDec)
@@ -68,15 +68,12 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 			kt := strings.ToLower(k)
 			if kt == "cookie" {
 				tx.AddCookies(v)
-			} else if kt == "content-type" {
-				ct = v
 			}
 		}
 	}
 	method := "GET"
 	if stage.Stage.Input.Method != "" {
 		method = stage.Stage.Input.Method
-		tx.SetRequestMethod(method)
 	}
 
 	//Request Line
@@ -105,7 +102,8 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 
 	// POST DATA
 	if stage.Stage.Input.Data != "" {
-		tx.SetRequestBody([]byte(parseInputData(stage.Stage.Input.Data)), ct)
+		r := io.Reader(strings.NewReader(parseInputData(stage.Stage.Input.Data)))
+		tx.SetRequestBody(&r)
 		// we ignore the error
 	}
 
@@ -117,8 +115,8 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 	log := ""
 	tr := []int{}
 	for _, mr := range tx.MatchedRules {
-		log += fmt.Sprintf(" [id \"%d\"]", mr.Id)
-		tr = append(tr, mr.Id)
+		log += fmt.Sprintf(" [id \"%d\"]", mr.Rule.Id)
+		tr = append(tr, mr.Rule.Id)
 	}
 	//now we evaluate tests
 	if stage.Stage.Output.LogContains != "" {
