@@ -52,13 +52,7 @@ func TestTxMultipart(t *testing.T) {
 		"",
 		"test-value",
 		"-----------------------------9051914041544843365972754266",
-		"Content-Disposition: form-data; name=\"file1\"; filename=\"a.txt\"",
-		"Content-Type: text/plain",
-		"",
-		"Content of a.txt.",
-		"",
-		"-----------------------------9051914041544843365972754266",
-		"Content-Disposition: form-data; name=\"file2\"; filename=\"a.html\"",
+		"Content-Disposition: form-data; name=\"file1\"; filename=\"a.html\"",
 		"Content-Type: text/html",
 		"",
 		"<!DOCTYPE html><title>Content of a.html.</title>",
@@ -84,8 +78,8 @@ func TestTxMultipart(t *testing.T) {
 	}
 	exp := map[string]string{
 		"%{args_post.text}":      "test-value",
-		"%{files_combined_size}": "69",
-		"%{files}": "a.txt",
+		"%{files_combined_size}": "50",
+		"%{files}": "a.html",
 		"%{files_names}": "file1",
 	}
 
