@@ -164,7 +164,9 @@ func (w *Waf) Init() {
 	w.AuditEngine = AUDIT_LOG_DISABLED
 	w.AuditLogType = AUDIT_LOG_CONCURRENT
 	w.PersistenceUri = "inmemory"
+	w.TmpDir = "/tmp"
 	w.RequestBodyLimit = 10000000 //10mb
+	w.RequestBodyInMemoryLimit = 131072
 	w.InitPersistenceEngine()
 }
 

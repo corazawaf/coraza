@@ -100,6 +100,7 @@ type Transaction struct {
 	RequestBodyProcessor     int
 	ResponseBodyAccess       bool
 	ResponseBodyLimit        int64
+	ResponseBodyMimeType []string
 	RuleEngine               bool
 	HashEngine               bool
 	HashEnforcement          bool
@@ -134,12 +135,12 @@ type Transaction struct {
 
 	// Used to delete temp files after transaction is finished
 	temporaryFiles []string
+
+	Timestamp int64
 }
 
 func (tx *Transaction) Init(waf *Waf) error {
 	tx.Mux = &sync.RWMutex{}
-	tx.Mux.Lock()
-	defer tx.Mux.Unlock()
 	tx.Waf = waf
 	tx.Collections = map[string]*LocalCollection{}
 	txid := utils.RandomString(19)
@@ -162,7 +163,8 @@ func (tx *Transaction) Init(waf *Waf) error {
 	"script_username", "sdbm_delete_error", "server_addr", "server_name", "server_port", "session", 
 	"sessionid", "status_line", "stream_input_body", "stream_output_body", "time", "time_day", "time_epoch", 
 	"time_hour", "time_min", "time_mon", "time_sec", "time_wday", "time_year", "tx", "unique_id", 
-	"urlencoded_error", "userid", "useragent_ip", "webappid", "webserver_error_log", "xml"}	
+	"urlencoded_error", "userid", "useragent_ip", "webappid", "webserver_error_log", "xml", "request_content_type",
+	"reqbody_processor_error", "reqbody_processor_error_msg"}	
 	for _, k := range keys {
 		tx.Collections[k] = &LocalCollection{}
 		tx.Collections[k].Init(k)
@@ -170,16 +172,16 @@ func (tx *Transaction) Init(waf *Waf) error {
 
 	for i := 0; i <= 10; i++ {
 		is := strconv.Itoa(i)
-		tx.Collections["tx"].Set(is, []string{})
+		tx.GetCollection("tx").Set(is, []string{})
 	}
-	tx.GetCollection("id").AddToKey("", txid)
-	tx.GetCollection("timestamp").AddToKey("", strconv.FormatInt(time.Now().UnixNano(), 10))
+	tx.Timestamp = time.Now().UnixNano()
 	tx.AuditEngine = tx.Waf.AuditEngine
 	tx.AuditLogParts = tx.Waf.AuditLogParts
-	tx.RequestBodyAccess = tx.Waf.RequestBodyAccess
-	tx.RequestBodyLimit = tx.Waf.RequestBodyLimit
-	tx.ResponseBodyAccess = tx.Waf.ResponseBodyAccess
-	tx.ResponseBodyLimit = tx.Waf.ResponseBodyLimit
+	tx.RequestBodyAccess = true
+	tx.RequestBodyLimit = 134217728
+	tx.ResponseBodyAccess = true
+	tx.ResponseBodyLimit = 524288
+	tx.ResponseBodyMimeType = []string{"text/html", "text/plain"}
 	tx.RuleEngine = tx.Waf.RuleEngine
 	tx.AuditLogType = tx.Waf.AuditLogType
 	tx.Skip = 0
@@ -197,7 +199,7 @@ func (tx *Transaction) MacroExpansion(data string) string {
 	}
 	
 	// \w includes alphanumeric and _
-	r := regexp.MustCompile(`%\{([\w.]+?)\}`)
+	r := regexp.MustCompile(`%\{([\w.-]+?)\}`)
 	matches := r.FindAllString(data, -1)
 	for _, v := range matches {
 		match := v[2 : len(v)-1]
@@ -368,7 +370,7 @@ func (tx *Transaction) SetRequestBody(body *io.Reader) error {
 		//then we copy the content to body
 		*body = (bufio.NewReader(tfile))
 		tx.addTemporaryFile(tpath)
-	}else{
+	}else{ //we write the buffer to memory
 		// In this case we are going to buffer it to memory so be it !
 		b, err := ioutil.ReadAll(*body)
 		if err != nil{
@@ -428,7 +430,7 @@ func (tx *Transaction) SetRequestBody(body *io.Reader) error {
 	case REQUEST_BODY_PROCESSOR_MULTIPART:
 		req, _ := http.NewRequest("GET", "/", reader)
 		req.Header.Set("Content-Type", mime)
-		err := req.ParseMultipartForm(tx.RequestBodyLimit)
+		err := req.ParseMultipartForm(1000000000)
 		defer req.Body.Close()
 		if err != nil {
 			tx.GetCollection("reqbody_processor_error").Set("", []string{"1"})
@@ -699,9 +701,7 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 	log.Debug(fmt.Sprintf("===== Starting Phase %d =====", phase))
 	ts := time.Now().UnixNano()
 	usedRules := 0
-	tx.Mux.Lock()
 	tx.LastPhase = phase
-	tx.Mux.Unlock()
 	for _, r := range tx.Waf.Rules.GetRules() {
 		// Rules with phase 0 will always run
 		if r.Phase != phase && r.Phase != 0 {
@@ -718,27 +718,20 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 		log.Debug(fmt.Sprintf("Evaluating rule %s", rid))
 		//we always evaluate secmarkers
 		if tx.SkipAfter != "" {
-			tx.Mux.RLock()
 			if r.SecMark == tx.SkipAfter {
 				tx.SkipAfter = ""
 				log.Debug("Matched SecMarker " + r.SecMark)
 			} else {
 				log.Debug("Skipping rule because of secmarker, expecting " + tx.SkipAfter)
 			}
-			tx.Mux.RUnlock()
 			continue
 		}
-		tx.Mux.RLock()
 		if tx.Skip > 0 {
-			tx.Mux.RUnlock()
-			tx.Mux.Lock()
 			tx.Skip--
-			tx.Mux.Unlock()
 			//Skipping rule
 			log.Debug("Skipping rule because of skip")
 			continue
 		}
-		tx.Mux.RUnlock()
 		txr := tx.GetCollection("rule")
 		txr.Set("id", []string{rid})
 		txr.Set("rev", []string{r.Rev})
@@ -763,9 +756,7 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 		}
 	}
 	log.Debug(fmt.Sprintf("===== Finished Phase %d =====", phase))
-	tx.Mux.Lock()
 	tx.StopWatches[phase] = int(time.Now().UnixNano() - ts)
-	tx.Mux.Unlock()
 	if phase == 5 {
 		log.Debug("Saving persistent data")
 		tx.SavePersistentData()
@@ -790,7 +781,7 @@ func (tx *Transaction) MatchVars(match []*MatchData) {
 	mvn := tx.GetCollection("matched_var_name")
 	mvn.Reset()
 	// Array of keys
-	mvns := tx.GetCollection("matched_var_names")
+	mvns := tx.GetCollection("matched_vars_names")
 	mvns.Reset()
 
 	mvs.Set("", []string{})
@@ -813,8 +804,6 @@ func (tx *Transaction) MatchRule(rule *Rule, msgs []string, match []*MatchData) 
 		MatchedData:      match,
 		Rule:             rule,
 	}
-	tx.Mux.Lock()
-	defer tx.Mux.Unlock()
 	tx.MatchedRules = append(tx.MatchedRules, mr)
 }
 
@@ -829,13 +818,13 @@ func (tx *Transaction) CreateCollection(key string, value string) {
 }
 
 func (tx *Transaction) GetTimestamp() string {
-	t := time.Unix(0, tx.GetCollection("timestamp").GetFirstInt64(""))
+	t := time.Unix(0, tx.Timestamp)
 	ts := t.Format("02/Jan/2006:15:04:20 -0700")
 	return ts
 }
 
 func (tx *Transaction) GetStopWatch() string {
-	ts := tx.GetCollection("timestamp").GetFirstInt64("")
+	ts := tx.Timestamp
 	sum := 0
 	for _, r := range tx.StopWatches {
 		sum += r
@@ -883,26 +872,20 @@ func (tx *Transaction) GetField(collection string, key string, exceptions []stri
 }
 
 func (tx *Transaction) GetCollection(name string) *LocalCollection {
-	tx.Mux.RLock()
-	defer tx.Mux.RUnlock()
 	return tx.Collections[name]
 }
 
 func (tx *Transaction) GetCollections() map[string]*LocalCollection {
-	tx.Mux.RLock()
-	defer tx.Mux.RUnlock()
 	return tx.Collections
 }
 
 func (tx *Transaction) GetRemovedTargets(id int) []*Collection {
-	tx.Mux.RLock()
-	defer tx.Mux.RUnlock()
 	return tx.RuleRemoveTargetById[id]
 }
 
 //Returns directory and filename
 func (tx *Transaction) GetAuditPath() (string, string) {
-	t := time.Unix(0, tx.GetCollection("timestamp").GetFirstInt64(""))
+	t := time.Unix(0, tx.Timestamp)
 
 	// append the two directories
 	p2 := fmt.Sprintf("/%s/%s/", t.Format("20060102"), t.Format("20060102-1504"))
@@ -949,8 +932,6 @@ func (tx *Transaction) SavePersistentData() {
 
 // Removes the VARIABLE/TARGET from the rule ID
 func (tx *Transaction) RemoveRuleTargetById(id int, col string, key string) {
-	tx.Mux.Lock()
-	defer tx.Mux.Unlock()
 	c := &Collection{col, key}
 	if tx.RuleRemoveTargetById[id] == nil {
 		tx.RuleRemoveTargetById[id] = []*Collection{
@@ -962,13 +943,9 @@ func (tx *Transaction) RemoveRuleTargetById(id int, col string, key string) {
 }
 
 func (tx *Transaction) RegisterPersistentCollection(collection string, pc *PersistentCollection) {
-	tx.Mux.Lock()
-	defer tx.Mux.Unlock()
 	tx.PersistentCollections[collection] = pc
 }
 
 func (tx *Transaction) addTemporaryFile(path string) {
-	tx.Mux.Lock()
-	defer tx.Mux.Unlock()
 	tx.temporaryFiles = append(tx.temporaryFiles, path)
 }

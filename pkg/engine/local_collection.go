@@ -19,7 +19,6 @@ import (
 	pcre "github.com/jptosso/coraza-waf/pkg/utils/pcre"
 	"strconv"
 	"strings"
-	"sync"
 )
 
 type Collection struct {
@@ -29,7 +28,6 @@ type Collection struct {
 
 type LocalCollection struct {
 	data map[string][]string `json:"data"`
-	mux  *sync.RWMutex
 	Name string
 }
 
@@ -42,7 +40,6 @@ func NewCollection(name string) *LocalCollection {
 func (c *LocalCollection) Init(name string) {
 	c.data = map[string][]string{}
 	c.data[""] = []string{}
-	c.mux = &sync.RWMutex{}
 	c.Name = name
 }
 
@@ -51,21 +48,15 @@ func (c *LocalCollection) InitCollection(key string) {
 }
 
 func (c *LocalCollection) Get(key string) []string {
-	c.mux.RLock()
-	defer c.mux.RUnlock()
 	return c.data[key]
 }
 
 func (c *LocalCollection) GetSimple(key string) []string {
-	c.mux.RLock()
-	defer c.mux.RUnlock()
 	return c.data[key]
 }
 
 //PCRE compatible collection with exceptions
 func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []*MatchData {
-	c.mux.RLock()
-	defer c.mux.RUnlock()
 	cdata := c.data
 	//we return every value in case there is no key but there is a collection
 	if len(key) == 0 {
@@ -128,8 +119,6 @@ func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []*
 }
 
 func (c *LocalCollection) GetFirstString(key string) string {
-	c.mux.RLock()
-	defer c.mux.RUnlock()
 	a := c.data[key]
 	if len(a) > 0 {
 		return a[0]
@@ -139,8 +128,6 @@ func (c *LocalCollection) GetFirstString(key string) string {
 }
 
 func (c *LocalCollection) GetFirstInt64(key string) int64 {
-	c.mux.RLock()
-	defer c.mux.RUnlock()
 	a := c.data[key]
 	if len(a) > 0 {
 		i, _ := strconv.ParseInt(a[0], 10, 64)
@@ -151,8 +138,6 @@ func (c *LocalCollection) GetFirstInt64(key string) int64 {
 }
 
 func (c *LocalCollection) GetFirstInt(key string) int {
-	c.mux.RLock()
-	defer c.mux.RUnlock()
 	a := c.data[key]
 	if len(a) > 0 {
 		i, _ := strconv.Atoi(a[0])
@@ -163,20 +148,14 @@ func (c *LocalCollection) GetFirstInt(key string) int {
 }
 
 func (c *LocalCollection) Add(key string, value []string) {
-	c.mux.Lock()
-	defer c.mux.Unlock()
 	c.data[key] = value
 }
 
 func (c *LocalCollection) AddToKey(key string, value string) {
-	c.mux.Lock()
-	defer c.mux.Unlock()
 	c.data[key] = append(c.data[key], value)
 }
 
 func (c *LocalCollection) AddToKeyUnique(key string, value string) {
-	c.mux.Lock()
-	defer c.mux.Unlock()
 	pass := false
 	for _, v := range c.data[key] {
 		if v == value{
@@ -190,40 +169,28 @@ func (c *LocalCollection) AddToKeyUnique(key string, value string) {
 }
 
 func (c *LocalCollection) Set(key string, value []string) {
-	c.mux.Lock()
-	defer c.mux.Unlock()
 	c.data[key] = value
 }
 
 func (c *LocalCollection) AddMap(data map[string][]string) {
-	c.mux.Lock()
-	defer c.mux.Unlock()
 	for k, v := range data {
 		c.data[strings.ToLower(k)] = v
 	}
 }
 
 func (c *LocalCollection) Update(key string, value []string) {
-	c.mux.Lock()
-	defer c.mux.Unlock()
 	c.data[key] = value
 }
 
 func (c *LocalCollection) Remove(key string) {
-	c.mux.Lock()
-	defer c.mux.Unlock()
 	delete(c.data, key)
 }
 
 func (c *LocalCollection) GetData() map[string][]string {
-	c.mux.RLock()
-	defer c.mux.RUnlock()
 	return c.data
 }
 
 func (c *LocalCollection) SetData(data map[string][]string) {
-	c.mux.Lock()
-	defer c.mux.Unlock()
 	c.data = data
 }
 

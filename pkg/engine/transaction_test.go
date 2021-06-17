@@ -15,8 +15,10 @@
 package engine
 
 import (
-	"strings"
 	"testing"
+	"io"
+	"strings"
+	"fmt"
 )
 
 var wafi = NewWaf()
@@ -37,7 +39,6 @@ func TestTxSetters(t *testing.T) {
 		"%{request_protocol}":              "HTTP/1.1",
 		"%{request_uri}":                   "/testurl.php?id=123&b=456",
 		"%{request_uri_raw}":               "/testurl.php?id=123&b=456",
-		"%{id}":                            tx.Id,
 	}
 
 	validateMacroExpansion(exp, tx, t)
@@ -45,17 +46,7 @@ func TestTxSetters(t *testing.T) {
 
 func TestTxMultipart(t *testing.T) {
 	tx := wafi.NewTransaction()
-	ht := []string{
-		"POST / HTTP/1.1",
-		"Host: localhost:8000",
-		"User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:29.0) Gecko/20100101 Firefox/29.0",
-		"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-		"Accept-Language: en-US,en;q=0.5",
-		"Accept-Encoding: gzip, deflate",
-		"Connection: keep-alive",
-		"Content-Type: multipart/form-data; boundary=---------------------------9051914041544843365972754266",
-		"Content-Length: 552",
-		"",
+	body := []string{
 		"-----------------------------9051914041544843365972754266",
 		"Content-Disposition: form-data; name=\"text\"",
 		"",
@@ -74,8 +65,23 @@ func TestTxMultipart(t *testing.T) {
 		"",
 		"-----------------------------9051914041544843365972754266--",
 	}
-	data := strings.Join(ht, "\r\n")
-	tx.ParseRequestString(data)
+	data := strings.Join(body, "\r\n")
+	headers := []string{
+		"POST / HTTP/1.1",
+		"Host: localhost:8000",
+		"User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:29.0) Gecko/20100101 Firefox/29.0",
+		"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+		"Accept-Language: en-US,en;q=0.5",
+		"Accept-Encoding: gzip, deflate",
+		"Connection: keep-alive",
+		"Content-Type: multipart/form-data; boundary=---------------------------9051914041544843365972754266",
+		fmt.Sprintf("Content-Length: %d", len(data)),
+	}
+	data = strings.Join(headers, "\r\n")+"\r\n\r\n"+data+"\r\n"
+	err := tx.ParseRequestString(data)
+	if err != nil {
+		t.Error("Failed to parse multipart request: " + err.Error())
+	}
 	exp := map[string]string{
 		"%{args_post.text}":      "test-value",
 		"%{files_combined_size}": "69",
@@ -158,6 +164,21 @@ func TestTxMatch(t *testing.T) {
 	if len(tx.MatchedRules) == 0 {
 		t.Error("Failed to match value")
 	}
+}
+
+func TestRequestBody(t *testing.T) {
+	urlencoded := "some=result&second=data"
+	//xml := "<test><content>test</content></test>"
+	tx := wafi.NewTransaction()
+
+	str := io.Reader(strings.NewReader(urlencoded))
+	tx.AddRequestHeader("content-length", "application/x-www-form-urlencoded")
+	tx.SetRequestBody(&str)
+	val := tx.GetCollection("args_post").Get("some")
+	if len(val) != 1 || val[0] != "result" {
+		t.Error("Failed to set url encoded post data")
+	}
+
 }
 
 func makeTransaction() *Transaction {

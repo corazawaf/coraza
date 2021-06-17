@@ -49,7 +49,7 @@ func (l *ConcurrentLogger) WriteAudit(tx *Transaction) error {
 	l.mux.Lock()
 	defer l.mux.Unlock()
 	// 192.168.3.130 192.168.3.1 - - [22/Aug/2009:13:24:20 +0100] "GET / HTTP/1.1" 200 56 "-" "-" SojdH8AAQEAAAugAQAAAAAA "-" /20090822/20090822-1324/20090822-132420-SojdH8AAQEAAAugAQAAAAAA 0 1248
-	t := time.Unix(0, tx.GetCollection("timestamp").GetFirstInt64(""))
+	t := time.Unix(0, tx.Timestamp)
 	ts := t.Format("02/Jan/2006:15:04:20 -0700")
 
 	ipsource := tx.GetCollection("remote_addr").GetFirstString("")
@@ -57,7 +57,7 @@ func (l *ConcurrentLogger) WriteAudit(tx *Transaction) error {
 	requestline := tx.GetCollection("request_line").GetFirstString("")
 	responsecode := tx.GetCollection("response_status").GetFirstInt("")
 	responselength := tx.GetCollection("response_content_length").GetFirstInt64("")
-	requestlength := tx.GetCollection("request_content_length").GetFirstInt64("")
+	requestlength := tx.GetCollection("request_body_length").GetFirstInt64("")
 	// append the two directories
 	// Append the filename
 	logdir, fname := tx.GetAuditPath()
