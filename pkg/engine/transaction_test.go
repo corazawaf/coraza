@@ -85,11 +85,11 @@ func TestTxMultipart(t *testing.T) {
 	exp := map[string]string{
 		"%{args_post.text}":      "test-value",
 		"%{files_combined_size}": "69",
+		"%{files}": "a.txt",
+		"%{files_names}": "file1",
 	}
 
 	validateMacroExpansion(exp, tx, t)
-
-	//TODO check files
 }
 
 func TestTxResponse(t *testing.T) {
