@@ -32,7 +32,7 @@ func Utf8ToUnicode(str string) string {
 		return ""
 	}
 	input_len := len(str)
-	length := input_len * 4 + 1
+	length := input_len*4 + 1
 	bytes_left := input_len
 	count := 0
 	data := make([]byte, length)

@@ -19,28 +19,11 @@ import (
 )
 
 func TestLocalCollection(t *testing.T) {
-	lc := NewCollection("test")
-
-	lc.InitCollection("test2")
-	if lc.GetData()["test2"] == nil {
-		t.Error("Failed to initialize Local Collection")
-	}
-
-	lc.Update("test2", []string{"test3"})
-	if lc.GetData()["test2"][0] != "test3" {
-		t.Error("Failed to update local collection")
-	}
-
-	lc.Remove("test2")
-	if lc.GetData()["test2"] != nil {
-		t.Error("Failed to remove from local collection")
-	}
 }
 
 func TestLocalCollectionMatchData(t *testing.T) {
 	lc := NewCollection("test")
-	lc.InitCollection("test2")
-	lc.Update("test2", []string{"test3"})
+	lc.Set("test2", []string{"test3"})
 
 	md := lc.GetWithExceptions("test2", []string{})
 	if len(md) == 0 {

@@ -70,10 +70,10 @@ func IsODigit(x byte) bool {
 }
 
 func IsAlnum(s string) bool {
-    for _, r := range s {
-        if !unicode.IsNumber(r) && !unicode.IsLetter(r){
-            return false
-        }
-    }
-    return true
+	for _, r := range s {
+		if !unicode.IsNumber(r) && !unicode.IsLetter(r) {
+			return false
+		}
+	}
+	return true
 }

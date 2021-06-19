@@ -35,12 +35,12 @@ func (a *InitCol) Init(r *engine.Rule, data string) string {
 func (a *InitCol) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	//disabled by now
 	/*
-	pc := &engine.PersistentCollection{}
-	pc.New(tx.Waf.PersistenceEngine, tx.Waf.WebAppId, a.Collection, tx.MacroExpansion(a.Key), 10000)
-	col := tx.GetCollection(a.Collection)
+		pc := &engine.PersistentCollection{}
+		pc.New(tx.Waf.PersistenceEngine, tx.Waf.WebAppId, a.Collection, tx.MacroExpansion(a.Key), 10000)
+		col := tx.GetCollection(a.Collection)
 
-	col.SetData(pc.GetData())
-	tx.RegisterPersistentCollection(a.Collection, pc)
+		col.SetData(pc.GetData())
+		tx.RegisterPersistentCollection(a.Collection, pc)
 	*/
 }
 

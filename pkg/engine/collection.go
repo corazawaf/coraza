@@ -22,41 +22,22 @@ import (
 )
 
 type Collection struct {
-	Name string
-	Key  string
-}
-
-type LocalCollection struct {
 	data map[string][]string `json:"data"`
-	Name string
+	name string
 }
 
-func NewCollection(name string) *LocalCollection {
-	col := &LocalCollection{}
-	col.Init(name)
-	return col
-}
-
-func (c *LocalCollection) Init(name string) {
+func (c *Collection) Init(name string) {
 	c.data = map[string][]string{}
 	c.data[""] = []string{}
-	c.Name = name
+	c.name = name
 }
 
-func (c *LocalCollection) InitCollection(key string) {
-	c.data[key] = []string{}
-}
-
-func (c *LocalCollection) Get(key string) []string {
-	return c.data[key]
-}
-
-func (c *LocalCollection) GetSimple(key string) []string {
+func (c *Collection) Get(key string) []string {
 	return c.data[key]
 }
 
 //PCRE compatible collection with exceptions
-func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []*MatchData {
+func (c *Collection) GetWithExceptions(key string, exceptions []string) []*MatchData {
 	cdata := c.data
 	//we return every value in case there is no key but there is a collection
 	if len(key) == 0 {
@@ -68,7 +49,7 @@ func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []*
 			for _, v := range c.data[k] {
 
 				data = append(data, &MatchData{
-					Collection: c.Name,
+					Collection: c.name,
 					Key:        k,
 					Value:      v,
 				})
@@ -77,6 +58,7 @@ func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []*
 		return data
 	}
 
+	// Regex
 	if key[0] == '/' {
 		key = key[1 : len(key)-1] //we strip slashes
 		re := pcre.MustCompile(key, 0)
@@ -89,7 +71,7 @@ func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []*
 			if m.Matches() {
 				for _, d := range cdata[k] {
 					result = append(result, &MatchData{
-						Collection: c.Name,
+						Collection: c.name,
 						Key:        k,
 						Value:      d,
 					})
@@ -107,7 +89,7 @@ func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []*
 			if k == key {
 				for _, kd := range cdata[k] {
 					ret = append(ret, &MatchData{
-						Collection: c.Name,
+						Collection: c.name,
 						Key:        k,
 						Value:      kd,
 					})
@@ -118,7 +100,7 @@ func (c *LocalCollection) GetWithExceptions(key string, exceptions []string) []*
 	}
 }
 
-func (c *LocalCollection) GetFirstString(key string) string {
+func (c *Collection) GetFirstString(key string) string {
 	a := c.data[key]
 	if len(a) > 0 {
 		return a[0]
@@ -127,7 +109,7 @@ func (c *LocalCollection) GetFirstString(key string) string {
 	}
 }
 
-func (c *LocalCollection) GetFirstInt64(key string) int64 {
+func (c *Collection) GetFirstInt64(key string) int64 {
 	a := c.data[key]
 	if len(a) > 0 {
 		i, _ := strconv.ParseInt(a[0], 10, 64)
@@ -137,7 +119,7 @@ func (c *LocalCollection) GetFirstInt64(key string) int64 {
 	}
 }
 
-func (c *LocalCollection) GetFirstInt(key string) int {
+func (c *Collection) GetFirstInt(key string) int {
 	a := c.data[key]
 	if len(a) > 0 {
 		i, _ := strconv.Atoi(a[0])
@@ -147,53 +129,58 @@ func (c *LocalCollection) GetFirstInt(key string) int {
 	}
 }
 
-func (c *LocalCollection) Add(key string, value []string) {
-	c.data[key] = value
-}
-
-func (c *LocalCollection) AddToKey(key string, value string) {
+func (c *Collection) Add(key string, value string) {
+	//TODO check for
 	c.data[key] = append(c.data[key], value)
 }
 
-func (c *LocalCollection) AddToKeyUnique(key string, value string) {
+func (c *Collection) AddUnique(key string, value string) {
 	pass := false
 	for _, v := range c.data[key] {
-		if v == value{
+		if v == value {
 			pass = true
 		}
 	}
-	if !pass{
+	if !pass {
 		return
 	}
 	c.data[key] = append(c.data[key], value)
 }
 
-func (c *LocalCollection) Set(key string, value []string) {
+func (c *Collection) Set(key string, value []string) {
 	c.data[key] = value
 }
 
-func (c *LocalCollection) AddMap(data map[string][]string) {
+func (c *Collection) AddMap(data map[string][]string) {
 	for k, v := range data {
 		c.data[strings.ToLower(k)] = v
 	}
 }
 
-func (c *LocalCollection) Update(key string, value []string) {
-	c.data[key] = value
-}
-
-func (c *LocalCollection) Remove(key string) {
+func (c *Collection) Remove(key string) {
 	delete(c.data, key)
 }
 
-func (c *LocalCollection) GetData() map[string][]string {
+func (c *Collection) GetData() map[string][]string {
 	return c.data
 }
 
-func (c *LocalCollection) SetData(data map[string][]string) {
+func (c *Collection) GetName() string {
+	return c.name
+}
+
+func (c *Collection) SetData(data map[string][]string) {
 	c.data = data
 }
 
-func (c *LocalCollection) Reset() {
-	c.Init(c.Name)
+func (c *Collection) Reset() {
+	c.data = map[string][]string{}
+	c.data[""] = []string{}
+}
+
+// Creates a new collection
+func NewCollection(name string) *Collection {
+	col := &Collection{}
+	col.Init(name)
+	return col
 }

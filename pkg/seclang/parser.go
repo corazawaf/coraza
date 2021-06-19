@@ -34,6 +34,7 @@ type Parser struct {
 	nextChain  bool
 	RuleEngine string
 	waf        *engine.Waf
+	lastRule *engine.Rule
 
 	defaultActions []string
 	currentLine    int
@@ -453,8 +454,7 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error) {
 
 	if p.nextChain {
 		p.nextChain = false
-		rules := p.waf.Rules.GetRules()
-		parent := rules[len(rules)-1]
+		parent := p.lastRule
 		rule.ParentId = parent.Id
 		lastchain := parent
 		for lastchain.Chain != nil {
@@ -470,6 +470,7 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error) {
 	if rule.HasChain {
 		p.nextChain = true
 	}
+	p.lastRule = rule
 	return rule, nil
 }
 

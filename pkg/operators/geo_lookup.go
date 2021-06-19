@@ -36,6 +36,6 @@ func (o *GeoLookup) Evaluate(tx *engine.Transaction, value string) bool {
 	if err != nil {
 		return false
 	}
-	tx.GetCollection("country_code").AddToKey("", record.Country.IsoCode)
+	tx.GetCollection("country_code").Add("", record.Country.IsoCode)
 	return true
 }

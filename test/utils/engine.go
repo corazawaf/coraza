@@ -18,11 +18,11 @@ import (
 	b64 "encoding/base64"
 	"errors"
 	"fmt"
-	"io"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/seclang"
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	"gopkg.in/yaml.v2"
+	"io"
 	"net/url"
 	"reflect"
 	"strings"
@@ -145,7 +145,7 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 	}
 	if stage.Stage.Output.Status != nil {
 		// Status is not supported because it depends on apache behaviour
-	}	
+	}
 	return nil
 }
 
@@ -253,5 +253,5 @@ type testOutput struct {
 	ExpectError       bool   `yaml:"expect_error"`
 	TriggeredRules    []int  `yaml:"triggered_rules"`
 	NonTriggeredRules []int  `yaml:"non_triggered_rules"`
-	Status []int `yaml:"status"`
+	Status            []int  `yaml:"status"`
 }

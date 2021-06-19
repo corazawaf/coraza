@@ -48,11 +48,10 @@ type Operator interface {
 	Evaluate(*Transaction, string) bool
 }
 
-type RuleOp struct {
+type RuleOperator struct {
 	Operator Operator
 	Data     string
 	Negation bool
-	//OpEval OperatorFunction
 }
 
 type RuleTransformation struct {
@@ -68,27 +67,17 @@ type RuleVariable struct {
 }
 
 type Rule struct {
-	// Contains de non-compiled variables part of the rule
-	Vars string `json:"vars"`
-
 	Variables               []RuleVariable
-	Operator                string
-	OperatorObj             *RuleOp
-	Disruptive              bool
+	OperatorObj             *RuleOperator
 	Transformations         []RuleTransformation
-	HasChain                bool
 	ParentId                int
 	Actions                 []Action
-	ActionParams            string
-	MultiMatch              bool
-	Severity                string
-	Skip                    bool
 	SecMark                 string
-	Log                     bool
 	Raw                     string
 	Chain                   *Rule
 	DisruptiveAction        int
 	DefaultDisruptiveAction string
+	HasChain bool
 
 	//METADATA
 	// Rule unique sorted identifier
@@ -114,6 +103,10 @@ type Rule struct {
 
 	// Used by deny to create disruption
 	Status int
+	Log                     bool
+	MultiMatch              bool
+	Severity                string
+	Skip                    bool
 }
 
 func (r *Rule) Init() {

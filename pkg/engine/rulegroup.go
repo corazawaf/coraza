@@ -23,12 +23,13 @@ import (
 )
 
 type RuleGroup struct {
-	rules []*Rule
+	// rules per phase
+	rules map[int][]*Rule
 	mux   *sync.RWMutex
 }
 
 func (rg *RuleGroup) Init() {
-	rg.rules = []*Rule{}
+	rg.rules = map[int][]*Rule{}
 	rg.mux = &sync.RWMutex{}
 }
 
@@ -39,17 +40,31 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 		// this is an ugly solution but chains should not return rules
 		return nil
 	}
-	if rg.FindById(rule.Id) != nil && rule.Id != 0 {
+	phase := rule.Phase
+	if phase < 0 || phase > 5 {
+		return errors.New("Invalid phase")
+	}
+	if rule.Id != 0 && rg.FindById(rule.Id) != nil {
 		return errors.New(fmt.Sprintf("There is a another rule with ID %d", rule.Id))
 	}
-	rg.rules = append(rg.rules, rule)
+	rg.rules[phase] = append(rg.rules[phase], rule)
 	return nil
 }
 
-func (rg *RuleGroup) GetRules() []*Rule {
+func (rg *RuleGroup) GetRules(phase int) []*Rule {
 	rg.mux.RLock()
 	defer rg.mux.RUnlock()
-	return rg.rules
+	return rg.rules[phase]
+}
+
+func (rg *RuleGroup) GetAllRules() []*Rule {
+	rg.mux.RLock()
+	defer rg.mux.RUnlock()
+	rules := []*Rule{}
+	for _, r := range rg.rules {
+		rules = append(rules, r...)
+	}
+	return rules
 }
 
 func (rg *RuleGroup) Sort() {
@@ -61,29 +76,35 @@ func (rg *RuleGroup) Sort() {
 }
 
 func (rg *RuleGroup) FindById(id int) *Rule {
-	for _, r := range rg.rules {
-		if r.Id == id {
-			return r
+	for p, _ := range rg.rules {
+		for _, r := range rg.rules[p] {
+			if r.Id == id {
+				return r
+			}
 		}
 	}
 	return nil
 }
 
 func (rg *RuleGroup) DeleteById(id int) {
-	for i, r := range rg.rules {
-		if r.Id == id {
-			copy(rg.rules[i:], rg.rules[i+1:])
-			rg.rules[len(rg.rules)-1] = nil
-			rg.rules = rg.rules[:len(rg.rules)-1]
+	for p, _ := range rg.rules {
+		for i, r := range rg.rules[p] {
+			if r.Id == id {
+				copy(rg.rules[p][i:], rg.rules[p][i+1:])
+				rg.rules[p][len(rg.rules[p])-1] = nil
+				rg.rules[p] = rg.rules[p][:len(rg.rules[p])-1]
+			}
 		}
 	}
 }
 
 func (rg *RuleGroup) FindByMsg(msg string) []*Rule {
 	rules := []*Rule{}
-	for _, r := range rg.rules {
-		if r.Msg == msg {
-			rules = append(rules, r)
+	for p, _ := range rg.rules {
+		for _, r := range rg.rules[p] {
+			if r.Msg == msg {
+				rules = append(rules, r)
+			}
 		}
 	}
 	return rules
@@ -91,18 +112,24 @@ func (rg *RuleGroup) FindByMsg(msg string) []*Rule {
 
 func (rg *RuleGroup) FindByTag(tag string) []*Rule {
 	rules := []*Rule{}
-	for _, r := range rg.rules {
-		if utils.StringInSlice(tag, r.Tags) {
-			rules = append(rules, r)
+	for p, _ := range rg.rules {
+		for _, r := range rg.rules[p] {
+			if utils.StringInSlice(tag, r.Tags) {
+				rules = append(rules, r)
+			}
 		}
 	}
 	return rules
 }
 
 func (rg *RuleGroup) Count() int {
-	return len(rg.rules)
+	c := 0
+	for _, r := range rg.rules {
+		c += len(r)
+	}
+	return c
 }
 
 func (rg *RuleGroup) Clear() {
-	rg.rules = []*Rule{}
+	rg.rules = map[int][]*Rule{}
 }

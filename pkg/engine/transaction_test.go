@@ -15,10 +15,10 @@
 package engine
 
 import (
-	"testing"
+	"fmt"
 	"io"
 	"strings"
-	"fmt"
+	"testing"
 )
 
 var wafi = NewWaf()
@@ -71,7 +71,7 @@ func TestTxMultipart(t *testing.T) {
 		"Content-Type: multipart/form-data; boundary=---------------------------9051914041544843365972754266",
 		fmt.Sprintf("Content-Length: %d", len(data)),
 	}
-	data = strings.Join(headers, "\r\n")+"\r\n\r\n"+data+"\r\n"
+	data = strings.Join(headers, "\r\n") + "\r\n\r\n" + data + "\r\n"
 	err := tx.ParseRequestString(data)
 	if err != nil {
 		t.Error("Failed to parse multipart request: " + err.Error())
@@ -79,8 +79,8 @@ func TestTxMultipart(t *testing.T) {
 	exp := map[string]string{
 		"%{args_post.text}":      "test-value",
 		"%{files_combined_size}": "50",
-		"%{files}": "a.html",
-		"%{files_names}": "file1",
+		"%{files}":               "a.html",
+		"%{files_names}":         "file1",
 	}
 
 	validateMacroExpansion(exp, tx, t)
@@ -88,32 +88,32 @@ func TestTxMultipart(t *testing.T) {
 
 func TestTxResponse(t *testing.T) {
 	/*
-	tx := wafi.NewTransaction()
-	ht := []string{
-		"HTTP/1.1 200 OK",
-		"Content-Type: text/html",
-		"Last-Modified: Mon, 14 Sep 2020 21:10:42 GMT",
-		"Accept-Ranges: bytes",
-		"ETag: \"0b5f480db8ad61:0\"",
-		"Vary: Accept-Encoding",
-		"Server: Microsoft-IIS/8.5",
-		"Content-Security-Policy: default-src: https:; frame-ancestors 'self' X-Frame-Options: SAMEORIGIN",
-		"Strict-Transport-Security: max-age=31536000; includeSubDomains; preload",
-		"Date: Wed, 16 Sep 2020 14:14:09 GMT",
-		"Connection: close",
-		"Content-Length: 10",
-		"",
-		"testcontent",
-	}
-	data := strings.Join(ht, "\r\n")
-	tx.ParseResponseString(nil, data)
+		tx := wafi.NewTransaction()
+		ht := []string{
+			"HTTP/1.1 200 OK",
+			"Content-Type: text/html",
+			"Last-Modified: Mon, 14 Sep 2020 21:10:42 GMT",
+			"Accept-Ranges: bytes",
+			"ETag: \"0b5f480db8ad61:0\"",
+			"Vary: Accept-Encoding",
+			"Server: Microsoft-IIS/8.5",
+			"Content-Security-Policy: default-src: https:; frame-ancestors 'self' X-Frame-Options: SAMEORIGIN",
+			"Strict-Transport-Security: max-age=31536000; includeSubDomains; preload",
+			"Date: Wed, 16 Sep 2020 14:14:09 GMT",
+			"Connection: close",
+			"Content-Length: 10",
+			"",
+			"testcontent",
+		}
+		data := strings.Join(ht, "\r\n")
+		tx.ParseResponseString(nil, data)
 
-	exp := map[string]string{
-		"%{response_headers.content-length}": "10",
-		"%{response_headers.server}":         "Microsoft-IIS/8.5",
-	}
+		exp := map[string]string{
+			"%{response_headers.content-length}": "10",
+			"%{response_headers.server}":         "Microsoft-IIS/8.5",
+		}
 
-	validateMacroExpansion(exp, tx, t)
+		validateMacroExpansion(exp, tx, t)
 	*/
 }
 
