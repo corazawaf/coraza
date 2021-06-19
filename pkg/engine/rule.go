@@ -68,7 +68,7 @@ type RuleVariable struct {
 
 type Rule struct {
 	Variables               []RuleVariable
-	OperatorObj             *RuleOperator
+	Operator             *RuleOperator
 	Transformations         []RuleTransformation
 	ParentId                int
 	Actions                 []Action
@@ -229,11 +229,11 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 }
 
 func (r *Rule) executeOperator(data string, tx *Transaction) bool {
-	result := r.OperatorObj.Operator.Evaluate(tx, data)
-	if r.OperatorObj.Negation && result {
+	result := r.Operator.Operator.Evaluate(tx, data)
+	if r.Operator.Negation && result {
 		return false
 	}
-	if r.OperatorObj.Negation && !result {
+	if r.Operator.Negation && !result {
 		return true
 	}
 	return result

@@ -702,7 +702,7 @@ func (tx *Transaction) ExecutePhase(phase int) bool {
 	ts := time.Now().UnixNano()
 	usedRules := 0
 	tx.LastPhase = phase
-	for _, r := range tx.Waf.Rules.GetRules(phase) {
+	for _, r := range tx.Waf.Rules.GetRules() {
 		// Rules with phase 0 will always run
 		if r.Phase != phase && r.Phase != 0 {
 			continue

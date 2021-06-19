@@ -96,32 +96,31 @@ func (p *RuleParser) ParseOperator(operator string) error {
 	}
 	spl := strings.SplitN(operator, " ", 2)
 	op := spl[0]
-	p.rule.Operator = operator
-	p.rule.OperatorObj = new(engine.RuleOp)
+	p.rule.Operator = new(engine.RuleOperator)
 
 	if op[0] == '!' {
-		p.rule.OperatorObj.Negation = true
+		p.rule.Operator.Negation = true
 		op = utils.TrimLeftChars(op, 1)
 	}
 	if op[0] == '@' {
 		op = utils.TrimLeftChars(op, 1)
 		if len(spl) == 2 {
-			p.rule.OperatorObj.Data = spl[1]
+			p.rule.Operator.Data = spl[1]
 		}
 	}
 
-	p.rule.OperatorObj.Operator = operators.OperatorsMap()[op]
-	if p.rule.OperatorObj.Operator == nil {
+	p.rule.Operator.Operator = operators.OperatorsMap()[op]
+	if p.rule.Operator.Operator == nil {
 		return errors.New("Invalid operator " + op)
 	} else {
 		//TODO add a special attribute to accept files
 		fileops := []string{"ipMatchFromFile", "pmFromFile"}
 		for _, fo := range fileops {
 			if fo == op {
-				p.rule.OperatorObj.Data = path.Join(p.Configdir, p.rule.OperatorObj.Data)
+				p.rule.Operator.Data = path.Join(p.Configdir, p.rule.Operator.Data)
 			}
 		}
-		p.rule.OperatorObj.Operator.Init(p.rule.OperatorObj.Data)
+		p.rule.Operator.Operator.Init(p.rule.Operator.Data)
 	}
 	return nil
 }
