@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"path"
 )
 
 func TestCLogFileCreation(t *testing.T) {
@@ -44,7 +45,7 @@ func TestCLogFileCreation(t *testing.T) {
 	if _, err := os.Stat(fpath); os.IsNotExist(err) {
 		t.Error("Directory was not created: " + fpath)
 	}
-	file, err := ioutil.ReadFile(fpath + fname)
+	file, err := ioutil.ReadFile(path.Join(fpath, fname))
 	if err != nil {
 		t.Error("Audit file was not created")
 		return

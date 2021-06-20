@@ -934,5 +934,5 @@ func (tx *Transaction) addTemporaryFile(path string) {
 
 //gonna remove it
 func (tx *Transaction) GetAuditPath() (string, string) {
-	return "", ""
+	return "/tmp/audit", tx.Id
 }
