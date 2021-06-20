@@ -7,6 +7,7 @@
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza-waf&metric=coverage)](https://sonarcloud.io/dashboard?id=jptosso_coraza-waf)
 ![CodeQL](https://github.com/jptosso/coraza-waf/workflows/CodeQL/badge.svg)
 [![GoDoc](https://godoc.org/github.com/jptosso/coraza-waf?status.svg)](https://godoc.org/github.com/jptosso/coraza-waf)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fjptosso%2Fcoraza-waf.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fjptosso%2Fcoraza-waf?ref=badge_shield)
 
 # Coraza Web Application Firewall
 
@@ -90,3 +91,5 @@ Coraza WAF can be configured with OWASP CRS without the need to download and set
 ## License
 
 Apache 2 License, please check the LICENSE file for full details.
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fjptosso%2Fcoraza-waf.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fjptosso%2Fcoraza-waf?ref=badge_large)
