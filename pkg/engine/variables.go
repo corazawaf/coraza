@@ -91,9 +91,11 @@ const (
 	VARIABLE_ARGS_GET_NAMES         = 0x4A
 	VARIABLE_ARGS_POST_NAMES        = 0x4B
 	VARIABLE_TX                     = 0x4C
-	VARIABLE_RULE                   = 0xFD //TODO FIX
-	VARIABLE_XML                    = 0xFB //TODO FIX
-	VARIABLE_JSON                   = 0xFA //TODO FIX
+
+	VARIABLE_RULE                   = 0x52 //TODO FIX
+	VARIABLE_XML                    = 0x53 //TODO FIX
+	VARIABLE_JSON                   = 0x54 //TODO FIX
+	VARIABLE_DURATION                   = 0x55 //TODO FIX
 
 	// Persistent collections
 	VARIABLE_GLOBAL   = 0x4D
@@ -272,6 +274,10 @@ func NameToVariable(name string) (byte, error) {
 		return VARIABLE_RULE, nil
 	case "XML":
 		return VARIABLE_XML, nil
+	case "TX":
+		return VARIABLE_TX, nil
+	case "DURATION":
+		return VARIABLE_DURATION, nil		
 	}
 	return 0, errors.New("Invalid variable " + name)
 }
@@ -442,6 +448,8 @@ func VariableToName(v byte) string {
 		return "SESSION"
 	case VARIABLE_USER:
 		return "USER"
+	case VARIABLE_DURATION:
+		return "DURATION"		
 	}
 	return ""
 }

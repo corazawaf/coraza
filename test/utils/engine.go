@@ -253,5 +253,5 @@ type testOutput struct {
 	ExpectError       bool   `yaml:"expect_error"`
 	TriggeredRules    []int  `yaml:"triggered_rules"`
 	NonTriggeredRules []int  `yaml:"non_triggered_rules"`
-	Status            []int  `yaml:"status"`
+	Status            interface{}  `yaml:"status"`
 }
