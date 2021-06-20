@@ -95,7 +95,7 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 	}
 	tx.SetRequestLine(method, httpv, path)
 	// This is a fix for some tests overwrites...
-	tx.GetCollection("request_line").Add("", fmt.Sprintf("%s %s %s", method, stage.Stage.Input.Uri, httpv))
+	tx.GetCollection(engine.VARIABLE_REQUEST_LINE).Add("", fmt.Sprintf("%s %s %s", method, stage.Stage.Input.Uri, httpv))
 
 	//PHASE 1
 	tx.ExecutePhase(1)
@@ -171,8 +171,8 @@ func parseUrl(uri string, tx *engine.Transaction) {
 		tx.AddGetArgsFromUrl(u)
 		return
 	}
-	tx.GetCollection("request_uri_raw").Add("", uri)
-	tx.GetCollection("request_uri").Add("", uri)
+	tx.GetCollection(engine.VARIABLE_REQUEST_URI_RAW).Add("", uri)
+	tx.GetCollection(engine.VARIABLE_REQUEST_URI).Add("", uri)
 	schema := "http"
 	args := ""
 	hostname := "127.0.0.1"
@@ -200,9 +200,9 @@ func parseUrl(uri string, tx *engine.Transaction) {
 	}
 	// TODO
 	schema = schema + hostname
-	tx.GetCollection("request_filename").Add("", path)
-	tx.GetCollection("request_basename").Add("", path)
-	tx.GetCollection("query_string").Add("", args)
+	tx.GetCollection(engine.VARIABLE_REQUEST_FILENAME).Add("", path)
+	tx.GetCollection(engine.VARIABLE_REQUEST_BASENAME).Add("", path)
+	tx.GetCollection(engine.VARIABLE_QUERY_STRING).Add("", args)
 }
 
 type testProfile struct {

@@ -71,7 +71,10 @@ func (p *RuleParser) ParseVariables(vars string) error {
 			negation = true
 		}
 
-		collection := strings.ToLower(vname)
+		collection, err := engine.NameToVariable(vname)
+		if err != nil {
+			return err
+		}
 		if negation {
 			p.rule.AddNegateVariable(collection, vvalue)
 		} else {
@@ -203,6 +206,9 @@ func ParseActions(actions string) ([]ruleAction, error) {
 			continue
 		} else if !quoted && c == ',' {
 			f := actionsmod.ActionsMap()[ckey]
+			if f == nil {
+				return nil, errors.New("Invalid action " + ckey)
+			}
 			res = append(res, ruleAction{
 				Key:   ckey,
 				Value: cval,

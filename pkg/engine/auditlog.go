@@ -102,19 +102,19 @@ func (al *AuditLog) Init(tx *Transaction) {
 	al.Transaction = &AuditTransaction{
 		Timestamp:  tx.GetTimestamp(),
 		Id:         tx.Id,
-		ClientIp:   tx.GetCollection("remote_addr").GetFirstString(""),
-		ClientPort: tx.GetCollection("remote_port").GetFirstInt(""),
+		ClientIp:   tx.GetCollection(VARIABLE_REMOTE_ADDR).GetFirstString(""),
+		ClientPort: tx.GetCollection(VARIABLE_REMOTE_PORT).GetFirstInt(""),
 		HostIp:     "",
 		HostPort:   0,
 		ServerId:   "",
 		Request: &AuditTransactionRequest{
-			Protocol:    tx.GetCollection("request_method").GetFirstString(""),
-			Uri:         tx.GetCollection("request_uri").GetFirstString(""),
-			HttpVersion: tx.GetCollection("request_protocol").GetFirstString(""),
+			Protocol:    tx.GetCollection(VARIABLE_REQUEST_METHOD).GetFirstString(""),
+			Uri:         tx.GetCollection(VARIABLE_REQUEST_URI).GetFirstString(""),
+			HttpVersion: tx.GetCollection(VARIABLE_REQUEST_PROTOCOL).GetFirstString(""),
 			//Body and headers are audit parts
 		},
 		Response: &AuditTransactionResponse{
-			Status: tx.GetCollection("response_status").GetFirstInt(""),
+			Status: tx.GetCollection(VARIABLE_RESPONSE_STATUS).GetFirstInt(""),
 			//body and headers are audit parts
 		},
 	}
@@ -122,19 +122,19 @@ func (al *AuditLog) Init(tx *Transaction) {
 	for _, p := range parts {
 		switch p {
 		case 'B':
-			al.Transaction.Request.Headers = tx.GetCollection("request_headers").GetData()
+			al.Transaction.Request.Headers = tx.GetCollection(VARIABLE_REQUEST_HEADERS).GetData()
 			break
 		case 'C':
-			al.Transaction.Request.Body = tx.GetCollection("request_body").GetFirstString("")
+			al.Transaction.Request.Body = tx.GetCollection(VARIABLE_REQUEST_BODY).GetFirstString("")
 			break
 		case 'F':
-			al.Transaction.Response.Headers = tx.GetCollection("response_headers").GetData()
+			al.Transaction.Response.Headers = tx.GetCollection(VARIABLE_RESPONSE_HEADERS).GetData()
 			break
 		case 'G':
-			al.Transaction.Response.Body = tx.GetCollection("response_body").GetFirstString("")
+			al.Transaction.Response.Body = tx.GetCollection(VARIABLE_RESPONSE_BODY).GetFirstString("")
 			break
 		case 'H':
-			servera := tx.GetCollection("response_headers").Get("server")
+			servera := tx.GetCollection(VARIABLE_RESPONSE_HEADERS).Get("server")
 			server := ""
 			if len(server) > 0 {
 				server = servera[0]

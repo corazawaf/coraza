@@ -18,8 +18,8 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
-	"testing"
 	"path"
+	"testing"
 )
 
 func TestCLogFileCreation(t *testing.T) {

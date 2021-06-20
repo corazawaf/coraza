@@ -32,8 +32,7 @@ func (a *T) Init(r *engine.Rule, transformation string) string {
 	if tt == nil {
 		return "Unsupported transformation " + transformation
 	}
-	tf := engine.RuleTransformation{transformation, tt}
-	r.Transformations = append(r.Transformations, tf)
+	r.Transformations = append(r.Transformations, tt)
 	return ""
 }
 

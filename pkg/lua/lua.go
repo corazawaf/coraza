@@ -17,7 +17,7 @@ package lua
 import (
 	"context"
 	"github.com/jptosso/coraza-waf/pkg/engine"
-	"github.com/jptosso/coraza-waf/pkg/utils"
+	_ "github.com/jptosso/coraza-waf/pkg/utils"
 	"github.com/yuin/gopher-lua"
 	"time"
 )
@@ -95,7 +95,7 @@ func luaTxGetField(L *lua.LState) int {
 		//fail...
 		return 0
 	}
-	col := ""
+	col, _ := engine.NameToVariable("")
 	key := ""
 	data := t.Tx.GetField(col, key, []string{})
 	table := L.NewTable()
@@ -107,40 +107,44 @@ func luaTxGetField(L *lua.LState) int {
 }
 
 func luaTxSetField(L *lua.LState) int {
-	waf, ok := L.Context().Value("waf").(*luaWaf)
-	if !ok {
-		return 0
-	}
-	blacklist := []string{"id"}
-	col := L.CheckString(1)
-	key := L.CheckString(2)
-	newval := L.CheckTable(3)
-	data := []string{}
-	if utils.ArrayContains(blacklist, col) {
-		// cannot update this field
-		return 0
-	}
-	newval.ForEach(func(key lua.LValue, value lua.LValue) {
-		//TODO is it sorted?
-		data = append(data, value.String())
-	})
-	waf.Tx.GetCollection(col).GetData()[key] = data
+	/*
+		waf, ok := L.Context().Value("waf").(*luaWaf)
+		if !ok {
+			return 0
+		}
+		blacklist := []string{"id"}
+		col,_ := engine.NameToVariable(L.CheckString(1))
+		key := L.CheckString(2)
+		newval := L.CheckTable(3)
+		data := []string{}
+		if utils.ArrayContains(blacklist, col) {
+			// cannot update this field
+			return 0
+		}
+		newval.ForEach(func(key lua.LValue, value lua.LValue) {
+			//TODO is it sorted?
+			data = append(data, value.String())
+		})
+		waf.Tx.GetCollection(col).GetData()[key] = data
+	*/
 	return 0
 }
 
 func luaTxSetFieldSingle(L *lua.LState) int {
-	waf, ok := L.Context().Value("waf").(*luaWaf)
-	if !ok {
-		return 0
-	}
-	blacklist := []string{"id"}
-	col := L.CheckString(1)
-	newval := L.CheckString(2)
+	/*
+		waf, ok := L.Context().Value("waf").(*luaWaf)
+		if !ok {
+			return 0
+		}
+		blacklist := []string{"id"}
+		col := L.CheckString(1)
+		newval := L.CheckString(2)
 
-	if utils.ArrayContains(blacklist, col) {
-		// cannot update this field
-		return 0
-	}
-	waf.Tx.GetCollection(col).GetData()[""] = []string{newval}
+		if utils.ArrayContains(blacklist, col) {
+			// cannot update this field
+			return 0
+		}
+		waf.Tx.GetCollection(col).GetData()[""] = []string{newval}
+	*/
 	return 0
 }

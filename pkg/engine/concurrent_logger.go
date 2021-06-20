@@ -52,12 +52,12 @@ func (l *ConcurrentLogger) WriteAudit(tx *Transaction) error {
 	t := time.Unix(0, tx.Timestamp)
 	ts := t.Format("02/Jan/2006:15:04:20 -0700")
 
-	ipsource := tx.GetCollection("remote_addr").GetFirstString("")
+	ipsource := tx.GetCollection(VARIABLE_REMOTE_ADDR).GetFirstString("")
 	ipserver := "-"
-	requestline := tx.GetCollection("request_line").GetFirstString("")
-	responsecode := tx.GetCollection("response_status").GetFirstInt("")
-	responselength := tx.GetCollection("response_content_length").GetFirstInt64("")
-	requestlength := tx.GetCollection("request_body_length").GetFirstInt64("")
+	requestline := tx.GetCollection(VARIABLE_REQUEST_LINE).GetFirstString("")
+	responsecode := tx.GetCollection(VARIABLE_RESPONSE_STATUS).GetFirstInt("")
+	responselength := tx.GetCollection(VARIABLE_RESPONSE_CONTENT_LENGTH).GetFirstInt64("")
+	requestlength := 0 //TODO
 	// append the two directories
 	// Append the filename
 	logdir, fname := tx.GetAuditPath()

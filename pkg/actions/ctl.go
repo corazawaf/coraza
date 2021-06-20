@@ -24,7 +24,7 @@ import (
 type Ctl struct {
 	Action     int
 	Value      string
-	Collection string
+	Collection byte
 	ColKey     string
 }
 
@@ -161,23 +161,23 @@ func (a *Ctl) GetType() int {
 	return engine.ACTION_TYPE_NONDISRUPTIVE
 }
 
-func parseCtl(data string) (int, string, string, string, string) {
+func parseCtl(data string) (int, string, byte, string, string) {
 	spl1 := strings.SplitN(data, "=", 2)
 	spl2 := strings.SplitN(spl1[1], ";", 2)
 	action := spl1[0]
 	value := spl2[0]
-	collection := ""
+	colname := ""
 	colkey := ""
 	if len(spl2) == 2 {
 		spl3 := strings.SplitN(spl2[1], ":", 2)
 		if len(spl3) == 2 {
-			collection = spl3[0]
+			colname = spl3[0]
 			colkey = spl3[1]
 		} else {
 			colkey = spl3[0]
 		}
 	}
-	collection = strings.ToLower(collection)
+	collection, _ := engine.NameToVariable(strings.TrimSpace(colname))
 	colkey = strings.ToLower(colkey)
 	act := 0
 	switch action {
@@ -233,7 +233,7 @@ func parseCtl(data string) (int, string, string, string, string) {
 		act = CTL_HASH_ENFORCEMENT
 		break
 	default:
-		return 0, "", "", "", "Invalid ctl action"
+		return 0, "", 0x00, "", "Invalid ctl action"
 	}
-	return act, value, strings.TrimSpace(collection), strings.TrimSpace(colkey), ""
+	return act, value, collection, strings.TrimSpace(colkey), ""
 }

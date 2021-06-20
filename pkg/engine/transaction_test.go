@@ -34,7 +34,6 @@ func TestTxSetters(t *testing.T) {
 		"%{args.testfield}":                "456",
 		"%{request_line}":                  "POST /testurl.php?id=123&b=456 HTTP/1.1",
 		"%{query_string}":                  "id=123&b=456",
-		"%{request_body_length}":           "13",
 		"%{request_filename}":              "/testurl.php",
 		"%{request_protocol}":              "HTTP/1.1",
 		"%{request_uri}":                   "/testurl.php?id=123&b=456",
@@ -168,7 +167,7 @@ func TestRequestBody(t *testing.T) {
 	str := io.Reader(strings.NewReader(urlencoded))
 	tx.AddRequestHeader("content-length", "application/x-www-form-urlencoded")
 	tx.SetRequestBody(&str)
-	val := tx.GetCollection("args_post").Get("some")
+	val := tx.GetCollection(VARIABLE_ARGS_POST).Get("some")
 	if len(val) != 1 || val[0] != "result" {
 		t.Error("Failed to set url encoded post data")
 	}
@@ -177,9 +176,9 @@ func TestRequestBody(t *testing.T) {
 
 func BenchmarkTransactionCreation(b *testing.B) {
 	waf := NewWaf()
-    for i := 0; i < b.N; i++ {
-        waf.NewTransaction()
-    }
+	for i := 0; i < b.N; i++ {
+		waf.NewTransaction()
+	}
 }
 
 func makeTransaction() *Transaction {
