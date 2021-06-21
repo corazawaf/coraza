@@ -26,13 +26,15 @@ func (a *Deny) Init(r *engine.Rule, data string) string {
 }
 
 func (a *Deny) Evaluate(r *engine.Rule, tx *engine.Transaction) {
-	tx.Status = 403
-	if r.ParentId == 0 {
-		tx.DisruptiveRuleId = r.Id
-	} else {
-		tx.DisruptiveRuleId = r.ParentId
+	rid := r.Id
+	if rid == 0 {
+		rid = r.ParentId
 	}
-	tx.Disrupted = true
+	tx.Interruption = &engine.Interruption{
+		Status: 403,
+		RuleId: rid,
+		Action: "deny",
+	}
 }
 
 func (a *Deny) GetType() int {

@@ -1,3 +1,16 @@
+// Copyright 2021 Juan Pablo Tosso
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package engine
 
 import (
@@ -5,10 +18,10 @@ import (
 	"strings"
 )
 
-// This file repeats the same content many times in order to make variables efficient for seclang and transactions
+// This file repeats the same content many times in order to make access
+// efficient for seclang and transactions
 
-//TODO FIX
-const VARIABLES_COUNT = 255
+const VARIABLES_COUNT = 88
 const (
 	// Single valua variables
 	VARIABLE_URLENCODED_ERROR                 = 0x00
@@ -64,7 +77,6 @@ const (
 	VARIABLE_SERVER_NAME                      = 0x32
 	VARIABLE_SERVER_PORT                      = 0x33
 	VARIABLE_SESSIONID                        = 0x34
-	VARIABLE_INBOUND_ERROR_DATA               = 0xFF //TODO FIX
 
 	// Set Variables
 	VARIABLE_RESPONSE_HEADERS_NAMES = 0x35
@@ -92,10 +104,11 @@ const (
 	VARIABLE_ARGS_POST_NAMES        = 0x4B
 	VARIABLE_TX                     = 0x4C
 
-	VARIABLE_RULE                   = 0x52 //TODO FIX
-	VARIABLE_XML                    = 0x53 //TODO FIX
-	VARIABLE_JSON                   = 0x54 //TODO FIX
-	VARIABLE_DURATION                   = 0x55 //TODO FIX
+	VARIABLE_RULE     = 0x52 //TODO FIX
+	VARIABLE_XML      = 0x53 //TODO FIX
+	VARIABLE_JSON     = 0x54 //TODO FIX
+	VARIABLE_INBOUND_ERROR_DATA               = 0x55 //TODO FIX
+	VARIABLE_DURATION               = 0x56 //TODO FIX
 
 	// Persistent collections
 	VARIABLE_GLOBAL   = 0x4D
@@ -277,7 +290,7 @@ func NameToVariable(name string) (byte, error) {
 	case "TX":
 		return VARIABLE_TX, nil
 	case "DURATION":
-		return VARIABLE_DURATION, nil		
+		return VARIABLE_DURATION, nil
 	}
 	return 0, errors.New("Invalid variable " + name)
 }
@@ -449,7 +462,9 @@ func VariableToName(v byte) string {
 	case VARIABLE_USER:
 		return "USER"
 	case VARIABLE_DURATION:
-		return "DURATION"		
+		return "DURATION"
+	case VARIABLE_RULE:
+		return "RULE"		
 	}
 	return ""
 }

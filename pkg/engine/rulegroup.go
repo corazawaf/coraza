@@ -18,9 +18,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jptosso/coraza-waf/pkg/utils"
+	"strconv"
 	"sync"
 	"time"
-	"strconv"
 )
 
 type RuleGroup struct {
@@ -151,5 +151,5 @@ func (rg *RuleGroup) Evaluate(phase int, tx *Transaction) bool {
 		usedRules++
 	}
 	tx.StopWatches[phase] = int(time.Now().UnixNano() - ts)
-	return tx.Disrupted
+	return tx.Interruption != nil
 }

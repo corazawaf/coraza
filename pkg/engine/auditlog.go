@@ -16,6 +16,7 @@ package engine
 
 import (
 	"encoding/json"
+	"time"
 )
 
 // Main struct for audit log data
@@ -99,8 +100,9 @@ type AuditMessageData struct {
 func (al *AuditLog) Init(tx *Transaction) {
 	parts := tx.AuditLogParts
 	al.Messages = []*AuditMessage{}
+	ts := time.Unix(0, tx.Timestamp).Format("02/Jan/2006:15:04:20 -0700")
 	al.Transaction = &AuditTransaction{
-		Timestamp:  tx.GetTimestamp(),
+		Timestamp:  ts,
 		Id:         tx.Id,
 		ClientIp:   tx.GetCollection(VARIABLE_REMOTE_ADDR).GetFirstString(""),
 		ClientPort: tx.GetCollection(VARIABLE_REMOTE_PORT).GetFirstInt(""),
