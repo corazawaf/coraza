@@ -15,6 +15,7 @@
 package engine
 
 import (
+	"github.com/jptosso/coraza-waf/pkg/transformations"
 	log "github.com/sirupsen/logrus"
 	"github.com/jptosso/coraza-waf/pkg/transformations"
 	"strconv"
@@ -111,6 +112,14 @@ func (r *Rule) Init() {
 }
 
 func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
+
+	tx.GetCollection(VARIABLE_RULE).SetData(map[string][]string{
+		"id":       []string{strconv.Itoa(r.Id)},
+		"msg":      []string{},
+		"rev":      []string{},
+		"logdata":  []string{},
+		"severity": []string{},
+	})
 	matchedValues := []*MatchData{}
 	for _, nid := range tx.RuleRemoveById {
 		if nid == r.Id {
@@ -128,6 +137,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 			},
 		}
 	}
+
 	ecol := tx.GetRemovedTargets(r.Id)
 	for _, v := range r.Variables {
 		var values []*MatchData
@@ -188,7 +198,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 		//No match for variables
 		return matchedValues
 	}
-	
+
 	// we must match the vars before runing the chains
 	tx.MatchVars(matchedValues)
 

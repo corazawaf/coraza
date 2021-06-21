@@ -13,3 +13,17 @@
 // limitations under the License.
 
 package seclang
+import(
+	"github.com/jptosso/coraza-waf/pkg/engine"
+	"testing"
+)
+
+func TestInterruption(t *testing.T) {
+	waf := engine.NewWaf()
+	p, _ := NewParser(waf)
+	p.FromString(`SecAction "id:1,deny,log,phase:1"`)
+	tx := waf.NewTransaction()
+	if tx.ProcessRequestHeaders() == nil {
+		t.Error("Transaction not interrupted")
+	}
+}

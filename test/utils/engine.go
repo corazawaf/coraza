@@ -72,7 +72,6 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 	}
 	tx.GetCollection(engine.VARIABLE_REQUEST_METHOD).Add("", method)
 
-
 	//Request Line
 	httpv := "HTTP/1.1"
 	if stage.Stage.Input.Version != "" {
@@ -89,7 +88,7 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 		} else {
 			path = "/" + spl[0]
 		}
-	}	
+	}
 	tx.GetCollection(engine.VARIABLE_REQUEST_LINE).Add("", fmt.Sprintf("%s %s %s", method, stage.Stage.Input.Uri, httpv))
 
 	//We can skip processConnection and ProcessUri
@@ -239,10 +238,10 @@ type testInput struct {
 }
 
 type testOutput struct {
-	LogContains       string `yaml:"log_contains"`
-	NoLogContains     string `yaml:"no_log_contains"`
-	ExpectError       bool   `yaml:"expect_error"`
-	TriggeredRules    []int  `yaml:"triggered_rules"`
-	NonTriggeredRules []int  `yaml:"non_triggered_rules"`
-	Status            interface{}  `yaml:"status"`
+	LogContains       string      `yaml:"log_contains"`
+	NoLogContains     string      `yaml:"no_log_contains"`
+	ExpectError       bool        `yaml:"expect_error"`
+	TriggeredRules    []int       `yaml:"triggered_rules"`
+	NonTriggeredRules []int       `yaml:"non_triggered_rules"`
+	Status            interface{} `yaml:"status"`
 }

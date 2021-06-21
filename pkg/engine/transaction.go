@@ -17,7 +17,6 @@ package engine
 import (
 	"bufio"
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/antchfx/xmlquery"
@@ -33,7 +32,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -71,16 +69,16 @@ type KeyValue struct {
 
 type Transaction struct {
 	// If true the transaction is going to be logged, it won't log if IsRelevantStatus() fails
-	Log bool `json:"log"`
+	Log bool
 
 	//Transaction Id
 	Id string
 
 	// Contains the list of matched rules and associated match information
-	MatchedRules []*MatchedRule `json:"matched_rules"`
+	MatchedRules []*MatchedRule
 
 	//True if the transaction has been disrupted by any rule
-	Disrupted bool `json:"disrupted"`
+	Interruption *Interruption
 
 	// Contains all collections, including persistent
 	Collections []*Collection
@@ -123,14 +121,8 @@ type Transaction struct {
 	// Actions with capture features will read the capture state from this field
 	Capture bool
 
-	// Contains the ID of the rule that disrupted the transaction
-	DisruptiveRuleId int `json:"disruptive_rule_id"`
-
 	// Contains duration in useconds per phase
 	StopWatches map[int]int
-
-	// Used for paralelism
-	Mux *sync.RWMutex
 
 	// Contains de *engine.Waf instance for the current transaction
 	Waf *Waf
@@ -144,7 +136,6 @@ type Transaction struct {
 }
 
 func (tx *Transaction) Init(waf *Waf) error {
-	tx.Mux = &sync.RWMutex{}
 	tx.Waf = waf
 	tx.Collections = make([]*Collection, VARIABLES_COUNT)
 	txid := utils.RandomString(19)
@@ -218,7 +209,7 @@ func (tx *Transaction) MacroExpansion(data string) string {
 // Adds a request header
 //
 // With this method it is possible to feed Coraza with a request header.
-// Note: Golang's *http.Request object will not contain a "Host" header 
+// Note: Golang's *http.Request object will not contain a "Host" header
 // and you might have to force it
 func (tx *Transaction) AddRequestHeader(key string, value string) {
 	if key == "" {
@@ -233,12 +224,12 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 		mp := "multipart/form-data"
 		if val == "application/x-www-form-urlencoded" {
 			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR).Add("", "URLENCODED")
-		}else if len(val) > len(mp) && val[0:len(mp)-1] == mp {
+		} else if len(val) > len(mp) && val[0:len(mp)-1] == mp {
 			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR).Add("", "MULTIPART")
 		}
-	}else if key == "host" {
+	} else if key == "host" {
 		tx.GetCollection(VARIABLE_SERVER_NAME).Add("", value)
-	}else if key == "cookie" {
+	} else if key == "cookie" {
 		// Cookies use the same syntax as GET params but with semicolon (;) separator
 		values := utils.ParseQuery(value, ";")
 		for k, vr := range values {
@@ -269,6 +260,9 @@ func (tx *Transaction) SetFullRequest() {
 	tx.GetCollection(VARIABLE_FULL_REQUEST).Add("", full_request)
 }
 
+// Adds a response header
+//
+// With this method it is possible to feed Coraza with a response header.
 func (tx *Transaction) AddResponseHeader(key string, value string) {
 	if key == "" {
 		return
@@ -284,7 +278,7 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 	}
 }
 
-//
+// Used to set the TX:[index] collection by operators
 func (tx *Transaction) CaptureField(index int, value string) {
 	i := strconv.Itoa(index)
 	tx.GetCollection(VARIABLE_TX).Set(i, []string{value})
@@ -332,24 +326,7 @@ func (tx *Transaction) ParseRequestString(data string) (*Interruption, error) {
 	return tx.ProcessRequest(req)
 }
 
-// Parse binary response including body, does only supports http/1.1 and http/1.0
-// This function is only intended for testing and debugging
-func (tx *Transaction) ParseResponseString(req *http.Request, data string) error {
-	//TODO not implemented yet
-	/*
-		buf := bufio.NewReader(strings.NewReader(data))
-		res, err := http.ReadResponse(buf, req)
-		if err != nil {
-			return err
-		}
-
-		err = tx.ParseResponseObject(res)
-		if err != nil {
-			return err
-		}*/
-	return nil
-}
-
+// Creates the MATCHED_VAR* variables required by chains and macro expansion
 func (tx *Transaction) MatchVars(match []*MatchData) {
 	// Array of values
 	mvs := tx.GetCollection(VARIABLE_MATCHED_VARS)
@@ -378,6 +355,7 @@ func (tx *Transaction) MatchVars(match []*MatchData) {
 	}
 }
 
+// Matches a rule to be logged
 func (tx *Transaction) MatchRule(rule *Rule, msgs []string, match []*MatchData) {
 	mr := &MatchedRule{
 		Messages:    msgs,
@@ -385,16 +363,6 @@ func (tx *Transaction) MatchRule(rule *Rule, msgs []string, match []*MatchData) 
 		Rule:        rule,
 	}
 	tx.MatchedRules = append(tx.MatchedRules, mr)
-}
-
-func (tx *Transaction) ToJSON() ([]byte, error) {
-	return json.Marshal(tx)
-}
-
-func (tx *Transaction) GetTimestamp() string {
-	t := time.Unix(0, tx.Timestamp)
-	ts := t.Format("02/Jan/2006:15:04:20 -0700")
-	return ts
 }
 
 func (tx *Transaction) GetStopWatch() string {
@@ -409,9 +377,10 @@ func (tx *Transaction) GetStopWatch() string {
 	return sw
 }
 
+// Retrieve data from collections applying exceptions
+// This function will apply xpath if the variable is XML
 func (tx *Transaction) GetField(collection byte, key string, exceptions []string) []*MatchData {
-	switch collection {
-	case VARIABLE_XML:
+	if collection == VARIABLE_XML {
 		if tx.XmlDoc == nil {
 			return []*MatchData{}
 		}
@@ -431,10 +400,7 @@ func (tx *Transaction) GetField(collection byte, key string, exceptions []string
 			})
 		}
 		return res
-	case VARIABLE_JSON:
-		// TODO, for future versions
-		return []*MatchData{}
-	default:
+	}else{
 		col := tx.GetCollection(collection)
 		key = tx.MacroExpansion(key)
 		if col == nil {
@@ -442,6 +408,7 @@ func (tx *Transaction) GetField(collection byte, key string, exceptions []string
 		}
 		return col.GetWithExceptions(key, exceptions)
 	}
+	// TODO some day we should add VARIABLE_JSON
 
 }
 
@@ -449,8 +416,14 @@ func (tx *Transaction) GetCollection(variable byte) *Collection {
 	return tx.Collections[variable]
 }
 
-func (tx *Transaction) GetCollections() []*Collection {
-	return tx.Collections
+// This is for debug only
+func (tx *Transaction) GetCollections() map[string]*Collection {
+	cols := map[string]*Collection{}
+	for i, col := range tx.Collections {
+		v := VariableToName(byte(i))
+		cols[v] = col
+	}
+	return cols
 }
 
 func (tx *Transaction) GetRemovedTargets(id int) []*KeyValue {
@@ -494,6 +467,8 @@ func (tx *Transaction) RemoveRuleTargetById(id int, col byte, key string) {
 	}
 }
 
+// Used by initcol to load a persistent collection and save it after the transaction
+// is finished
 func (tx *Transaction) RegisterPersistentCollection(collection string, pc *PersistentCollection) {
 	tx.PersistentCollections[collection] = pc
 }
@@ -507,10 +482,6 @@ func (tx *Transaction) removeTemporaryFiles() {
 		os.Remove(f)
 	}
 	tx.temporaryFiles = []string{}
-}
-
-func (tx *Transaction) GetInterruption() *Interruption {
-	return nil
 }
 
 // Fill all transaction variables from an http.Request object
@@ -569,22 +540,21 @@ func (tx *Transaction) ProcessConnection(client string, cPort int, server string
 	tx.GetCollection(VARIABLE_REMOTE_ADDR).Add("", client)
 	tx.GetCollection(VARIABLE_REMOTE_PORT).Add("", p)
 	tx.GetCollection(VARIABLE_SERVER_ADDR).Add("", server)
-	tx.GetCollection(VARIABLE_SERVER_PORT).Add("", p2)	
+	tx.GetCollection(VARIABLE_SERVER_PORT).Add("", p2)
 	tx.GetCollection(VARIABLE_UNIQUE_ID).Add("", tx.Id)
 
 	//TODO maybe evaluate phase 0?
 }
 
-
 // Add arguments GET or POST
-// This will set ARGS_(GET|POST), ARGS, ARGS_NAMES, ARGS_COMBINED_SIZE and 
+// This will set ARGS_(GET|POST), ARGS, ARGS_NAMES, ARGS_COMBINED_SIZE and
 // ARGS_(GET|POST)_NAMES
 func (tx *Transaction) AddArgument(orig string, key string, value string) {
 	var vals, names byte
 	if orig == "GET" {
 		vals = VARIABLE_ARGS_GET
 		names = VARIABLE_ARGS_GET_NAMES
-	}else {
+	} else {
 		vals = VARIABLE_ARGS_POST
 		names = VARIABLE_ARGS_POST_NAMES
 	}
@@ -632,13 +602,13 @@ func (tx *Transaction) ProcessUri(uri *url.URL, method string, httpVersion strin
 // that the headers should be added prior to the execution of this function.
 //
 // note: Remember to check for a possible intervention.
-func (tx *Transaction) ProcessRequestHeaders() *Interruption{
-	if !tx.RuleEngine{
+func (tx *Transaction) ProcessRequestHeaders() *Interruption {
+	if !tx.RuleEngine {
 		// RUle engine is disabled
 		return nil
 	}
 	tx.Waf.Rules.Evaluate(1, tx)
-	return tx.GetInterruption()
+	return tx.Interruption
 }
 
 // Perform the request body (if any)
@@ -649,8 +619,8 @@ func (tx *Transaction) ProcessRequestHeaders() *Interruption{
 //
 // Remember to check for a possible intervention.
 func (tx *Transaction) ProcessRequestBody(body *io.Reader) (*Interruption, error) {
-	if !tx.RequestBodyAccess || body == nil { 
-		return tx.GetInterruption(), nil
+	if !tx.RequestBodyAccess || body == nil {
+		return tx.Interruption, nil
 	}
 
 	transfer := tx.GetCollection(VARIABLE_REQUEST_HEADERS).GetFirstString("transfer")
@@ -774,7 +744,7 @@ func (tx *Transaction) ProcessRequestBody(body *io.Reader) (*Interruption, error
 		tx.GetCollection(VARIABLE_REQUEST_BODY).Set("", []string{b})
 	}
 	tx.Waf.Rules.Evaluate(2, tx)
-	return tx.GetInterruption(), nil
+	return tx.Interruption, nil
 }
 
 // Perform the analysis on the response readers.
@@ -784,16 +754,17 @@ func (tx *Transaction) ProcessRequestBody(body *io.Reader) (*Interruption, error
 //
 // note: Remember to check for a possible intervention.
 //
-func (tx *Transaction) ProcessResponseHeaders(code int, proto string) {
+func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *Interruption{
 	c := strconv.Itoa(code)
 	tx.GetCollection(VARIABLE_RESPONSE_STATUS).Add("", c)
 	tx.GetCollection(VARIABLE_RESPONSE_PROTOCOL).Add("", proto)
 
 	if !tx.RuleEngine {
-		return
+		return nil
 	}
 
 	tx.Waf.Rules.Evaluate(3, tx)
+	return tx.Interruption
 }
 
 // Perform the request body (if any)
@@ -820,7 +791,7 @@ func (tx *Transaction) ProcessResponseBody(body *io.Reader) (*Interruption, erro
 	//SET RESPONSE_CONTENT_LENGTH
 	//TODO so many things
 	tx.Waf.Rules.Evaluate(4, tx)
-	return nil, nil
+	return tx.Interruption, nil
 }
 
 // Logging all information relative to this transaction.
@@ -844,7 +815,7 @@ func (tx *Transaction) ProcessLogging() {
 	re := tx.Waf.AuditLogRelevantStatus
 	status := tx.GetCollection(VARIABLE_RESPONSE_STATUS).GetFirstString("")
 	m := re.NewMatcher()
-	if !m.MatchString(status, 0){
+	if !m.MatchString(status, 0) {
 		//Not relevant status
 		return
 	}

@@ -23,6 +23,12 @@ import (
 
 var wafi = NewWaf()
 
+func TestGetCollections(t *testing.T) {
+	//this test is just dumb
+	tx := wafi.NewTransaction()
+	tx.GetCollections()
+}
+
 func TestTxSetters(t *testing.T) {
 	tx := makeTransaction()
 	exp := map[string]string{
@@ -154,7 +160,6 @@ func TestRequestBody(t *testing.T) {
 	if len(val) != 1 || val[0] != "result" {
 		t.Error("Failed to set url encoded post data")
 	}
-
 }
 
 func BenchmarkTransactionCreation(b *testing.B) {
