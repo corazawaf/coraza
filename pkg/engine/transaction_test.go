@@ -71,7 +71,7 @@ func TestTxMultipart(t *testing.T) {
 		fmt.Sprintf("Content-Length: %d", len(data)),
 	}
 	data = strings.Join(headers, "\r\n") + "\r\n\r\n" + data + "\r\n"
-	err := tx.ParseRequestString(data)
+	_, err := tx.ParseRequestString(data)
 	if err != nil {
 		t.Error("Failed to parse multipart request: " + err.Error())
 	}
@@ -124,24 +124,6 @@ func TestTxGetField(t *testing.T) {
 	//GetField
 }
 
-func TestTxPhases(t *testing.T) {
-	tx := wafi.NewTransaction()
-	tx.ExecutePhase(1)
-	if tx.LastPhase != 1 {
-		t.Error("Failed to execute phase")
-	}
-	tx.Disrupted = true
-	tx.ExecutePhase(2)
-	if tx.LastPhase != 1 {
-		t.Error("Phase 2 should be stopped")
-	}
-	tx.Disrupted = false
-	tx.ExecutePhase(5)
-	if tx.LastPhase != 5 {
-		t.Error("Failed to execute phase 5")
-	}
-}
-
 func TestTxMatch(t *testing.T) {
 	waf := NewWaf()
 	r := NewRule()
@@ -165,8 +147,9 @@ func TestRequestBody(t *testing.T) {
 	tx := wafi.NewTransaction()
 
 	str := io.Reader(strings.NewReader(urlencoded))
-	tx.AddRequestHeader("content-length", "application/x-www-form-urlencoded")
-	tx.SetRequestBody(&str)
+	tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
+	tx.ProcessRequestHeaders()
+	tx.ProcessRequestBody(&str)
 	val := tx.GetCollection(VARIABLE_ARGS_POST).Get("some")
 	if len(val) != 1 || val[0] != "result" {
 		t.Error("Failed to set url encoded post data")

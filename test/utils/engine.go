@@ -23,7 +23,6 @@ import (
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	"gopkg.in/yaml.v2"
 	"io"
-	"net/url"
 	"reflect"
 	"strings"
 	//"time"
@@ -56,7 +55,7 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 		stage.Stage.Input.RawRequest = string(sDec)
 	}
 	if stage.Stage.Input.RawRequest != "" {
-		err := tx.ParseRequestString(stage.Stage.Input.RawRequest)
+		_, err := tx.ParseRequestString(stage.Stage.Input.RawRequest)
 		if err != nil {
 			return errors.New("Failed to parse Raw Request")
 		}
@@ -65,16 +64,14 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 	if len(stage.Stage.Input.Headers) > 0 {
 		for k, v := range stage.Stage.Input.Headers {
 			tx.AddRequestHeader(k, v)
-			kt := strings.ToLower(k)
-			if kt == "cookie" {
-				tx.AddCookies(v)
-			}
 		}
 	}
 	method := "GET"
 	if stage.Stage.Input.Method != "" {
 		method = stage.Stage.Input.Method
 	}
+	tx.GetCollection(engine.VARIABLE_REQUEST_METHOD).Add("", method)
+
 
 	//Request Line
 	httpv := "HTTP/1.1"
@@ -92,26 +89,21 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 		} else {
 			path = "/" + spl[0]
 		}
-	}
-	tx.SetRequestLine(method, httpv, path)
-	// This is a fix for some tests overwrites...
+	}	
 	tx.GetCollection(engine.VARIABLE_REQUEST_LINE).Add("", fmt.Sprintf("%s %s %s", method, stage.Stage.Input.Uri, httpv))
 
-	//PHASE 1
-	tx.ExecutePhase(1)
+	//We can skip processConnection and ProcessUri
+	tx.ProcessRequestHeaders()
 
 	// POST DATA
 	if stage.Stage.Input.Data != "" {
 		r := io.Reader(strings.NewReader(parseInputData(stage.Stage.Input.Data)))
-		tx.SetRequestBody(&r)
+		tx.ProcessRequestBody(&r)
 		// we ignore the error
 	}
+	tx.ProcessResponseHeaders(200, "HTTP/1.1")
+	tx.ProcessLogging()
 
-	for i := 2; i <= 5; i++ {
-		if tx.ExecutePhase(i) {
-			break
-		}
-	}
 	log := ""
 	tr := []int{}
 	for _, mr := range tx.MatchedRules {
@@ -165,12 +157,6 @@ func parseInputData(input interface{}) string {
 }
 
 func parseUrl(uri string, tx *engine.Transaction) {
-	u, err := url.Parse(uri)
-	if err == nil {
-		tx.SetUrl(u)
-		tx.AddGetArgsFromUrl(u)
-		return
-	}
 	tx.GetCollection(engine.VARIABLE_REQUEST_URI_RAW).Add("", uri)
 	tx.GetCollection(engine.VARIABLE_REQUEST_URI).Add("", uri)
 	schema := "http"
@@ -198,11 +184,16 @@ func parseUrl(uri string, tx *engine.Transaction) {
 		path = spl[0]
 		args = spl[1]
 	}
-	// TODO
 	schema = schema + hostname
 	tx.GetCollection(engine.VARIABLE_REQUEST_FILENAME).Add("", path)
 	tx.GetCollection(engine.VARIABLE_REQUEST_BASENAME).Add("", path)
 	tx.GetCollection(engine.VARIABLE_QUERY_STRING).Add("", args)
+	values := utils.ParseQuery(args, "&")
+	for k, vs := range values {
+		for _, v := range vs {
+			tx.AddArgument("GET", k, v)
+		}
+	}
 }
 
 type testProfile struct {

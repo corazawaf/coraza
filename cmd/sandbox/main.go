@@ -91,7 +91,7 @@ func apiHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 	tx := waf.NewTransaction()
-	err = tx.ParseRequestString(r.Request)
+	_, err = tx.ParseRequestString(r.Request)
 	if err != nil {
 		errorHandler(w, "Invalid HTTP Request")
 		return
@@ -101,9 +101,9 @@ func apiHandler(w http.ResponseWriter, req *http.Request) {
 	if len(rip) > 0 {
 		tx.GetCollection(engine.VARIABLE_REMOTE_ADDR).GetData()[""] = rip
 	}
-	for i := 1; i <= 5; i++ {
-		tx.ExecutePhase(i)
-	}
+	tx.ProcessResponseHeaders(200, "http/1.1")
+	tx.ProcessResponseBody(nil)
+	tx.ProcessLogging()
 	w.Header().Set("Content-Type", "text/html")
 	parsedTemplate, _ := template.ParseFiles("www/results.html")
 	sr := &ServerResponse{

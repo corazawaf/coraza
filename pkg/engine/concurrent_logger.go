@@ -60,7 +60,7 @@ func (l *ConcurrentLogger) WriteAudit(tx *Transaction) error {
 	requestlength := 0 //TODO
 	// append the two directories
 	// Append the filename
-	logdir, fname := tx.GetAuditPath()
+	logdir, fname := l.GetAuditPath(tx)
 	filepath := path.Join(logdir, fname)
 	str := fmt.Sprintf("%s %s - - [%s] %q %d %d %q %q %s %q %s %d %d",
 		ipsource, ipserver, ts, requestline, responsecode, responselength, "-", "-", tx.Id, "-", filepath, 0, requestlength)
@@ -77,4 +77,15 @@ func (l *ConcurrentLogger) WriteAudit(tx *Transaction) error {
 	}
 	l.auditlogger.Print(str)
 	return nil
+}
+
+func (l *ConcurrentLogger) GetAuditPath(tx *Transaction) (string, string) {
+	t := time.Unix(0, tx.Timestamp)
+
+	// append the two directories
+	p2 := fmt.Sprintf("/%s/%s/", t.Format("20060102"), t.Format("20060102-1504"))
+	logdir := path.Join(tx.Waf.AuditLogStorageDir, p2)
+	// Append the filename
+	filename := fmt.Sprintf("/%s-%s", t.Format("20060102-150405"), tx.Id)
+	return logdir, filename
 }

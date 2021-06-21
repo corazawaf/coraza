@@ -18,8 +18,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jptosso/coraza-waf/pkg/utils"
-	//"sort"
 	"sync"
+	"time"
+	"strconv"
 )
 
 type RuleGroup struct {
@@ -105,4 +106,50 @@ func (rg *RuleGroup) Count() int {
 
 func (rg *RuleGroup) Clear() {
 	rg.rules = []*Rule{}
+}
+
+// Execute rules for the specified phase, between 1 and 5
+// Returns true if transaction is disrupted
+func (rg *RuleGroup) Evaluate(phase int, tx *Transaction) bool {
+	tx.LastPhase = phase
+	ts := time.Now().UnixNano()
+	usedRules := 0
+	tx.LastPhase = phase
+	for _, r := range tx.Waf.Rules.GetRules() {
+		// Rules with phase 0 will always run
+		if r.Phase != phase && r.Phase != 0 {
+			continue
+		}
+		rid := strconv.Itoa(r.Id)
+		if r.Id == 0 {
+			rid = strconv.Itoa(r.ParentId)
+		}
+		if utils.ArrayContainsInt(tx.RuleRemoveById, r.Id) {
+			continue
+		}
+		//we always evaluate secmarkers
+		if tx.SkipAfter != "" {
+			if r.SecMark == tx.SkipAfter {
+				tx.SkipAfter = ""
+			}
+			continue
+		}
+		if tx.Skip > 0 {
+			tx.Skip--
+			//Skipping rule
+			continue
+		}
+		txr := tx.GetCollection(VARIABLE_RULE)
+		txr.Set("id", []string{rid})
+		txr.Set("rev", []string{r.Rev})
+		txr.Set("severity", []string{r.Severity})
+		//txr.Set("logdata", []string{r.LogData})
+		txr.Set("msg", []string{r.Msg})
+		r.Evaluate(tx)
+
+		tx.Capture = false //we reset the capture flag on every run
+		usedRules++
+	}
+	tx.StopWatches[phase] = int(time.Now().UnixNano() - ts)
+	return tx.Disrupted
 }

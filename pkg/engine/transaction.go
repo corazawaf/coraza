@@ -26,8 +26,6 @@ import (
 	"html"
 	"io"
 	"io/ioutil"
-	"mime/multipart"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -217,16 +215,11 @@ func (tx *Transaction) MacroExpansion(data string) string {
 	return data
 }
 
-//Sets request_headers and request_headers_names
-func (tx *Transaction) SetRequestHeaders(headers map[string][]string) {
-	for h, vs := range headers {
-		for _, value := range vs {
-			tx.AddRequestHeader(h, value)
-		}
-	}
-}
-
-//Adds a request header
+// Adds a request header
+//
+// With this method it is possible to feed Coraza with a request header.
+// Note: Golang's *http.Request object will not contain a "Host" header 
+// and you might have to force it
 func (tx *Transaction) AddRequestHeader(key string, value string) {
 	if key == "" {
 		return
@@ -235,67 +228,30 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 	tx.GetCollection(VARIABLE_REQUEST_HEADERS_NAMES).AddUnique("", key)
 	tx.GetCollection(VARIABLE_REQUEST_HEADERS).Add(key, value)
 
-	//Most headers can be managed like that except cookies
-	rhmap := map[string]byte{}
-	for k, v := range rhmap {
-		if k == key {
-			tx.GetCollection(v).Add("", value)
+	if key == "content-type" {
+		val := strings.ToLower(value)
+		mp := "multipart/form-data"
+		if val == "application/x-www-form-urlencoded" {
+			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR).Add("", "URLENCODED")
+		}else if len(val) > len(mp) && val[0:len(mp)-1] == mp {
+			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR).Add("", "MULTIPART")
+		}
+	}else if key == "host" {
+		tx.GetCollection(VARIABLE_SERVER_NAME).Add("", value)
+	}else if key == "cookie" {
+		// Cookies use the same syntax as GET params but with semicolon (;) separator
+		values := utils.ParseQuery(value, ";")
+		for k, vr := range values {
+			tx.GetCollection(VARIABLE_REQUEST_COOKIES_NAMES).AddUnique("", k)
+			for _, v := range vr {
+				tx.GetCollection(VARIABLE_REQUEST_COOKIES).Add(k, v)
+			}
 		}
 	}
 }
 
-//Sets args_get, args_get_names. Also adds to args_names and args
-func (tx *Transaction) SetArgsGet(args map[string][]string) {
-	tx.GetCollection(VARIABLE_ARGS_GET).AddMap(args)
-	tx.GetCollection(VARIABLE_ARGS).AddMap(args)
-	agn := tx.GetCollection(VARIABLE_ARGS_GET_NAMES)
-	an := tx.GetCollection(VARIABLE_ARGS_NAMES)
-	length := 0
-	for k, _ := range args {
-		if k == "" {
-			continue
-		}
-		agn.Add("", k)
-		an.Add("", k)
-		length += len(k)
-	}
-	tx.addArgsLength(length)
-}
-
-//Sets args_post, args_post_names. Also adds to args_names and args
-func (tx *Transaction) SetArgsPost(args map[string][]string) {
-	tx.GetCollection(VARIABLE_ARGS_POST).AddMap(args)
-	tx.GetCollection(VARIABLE_ARGS).AddMap(args)
-	apn := tx.GetCollection(VARIABLE_ARGS_POST_NAMES)
-	an := tx.GetCollection(VARIABLE_ARGS_NAMES)
-	for k, _ := range args {
-		if k == "" {
-			continue
-		}
-		apn.Add("", k)
-		an.Add("", k)
-	}
-}
-
-//Sets files, files_combined_size, files_names, files_sizes, files_tmpnames, files_tmp_content
-func (tx *Transaction) SetFiles(files map[string][]*multipart.FileHeader) {
-	fn := tx.GetCollection(VARIABLE_FILES_NAMES)
-	fl := tx.GetCollection(VARIABLE_FILES)
-	fs := tx.GetCollection(VARIABLE_FILES_SIZES)
-	totalSize := int64(0)
-	for field, fheaders := range files {
-		// TODO add them to temporal storage
-		fn.Add("", field)
-		for _, header := range fheaders {
-			fl.Add("", header.Filename)
-			totalSize += header.Size
-			fs.Add("", fmt.Sprintf("%d", header.Size))
-		}
-	}
-	tx.GetCollection(VARIABLE_FILES_COMBINED_SIZE).Add("", fmt.Sprintf("%d", totalSize))
-}
-
-//a FULL_REQUEST variable will be set from request_line, request_headers and request_body
+// Creates the FULL_REQUEST variable based on every input
+// It's a heavy operation and it's not used by OWASP CRS so it's optional
 func (tx *Transaction) SetFullRequest() {
 	headers := ""
 	for k, v := range tx.GetCollection(VARIABLE_REQUEST_HEADERS).GetData() {
@@ -313,152 +269,6 @@ func (tx *Transaction) SetFullRequest() {
 	tx.GetCollection(VARIABLE_FULL_REQUEST).Add("", full_request)
 }
 
-//Sets remote_address and remote_port
-func (tx *Transaction) SetRemoteAddress(address string, port int) {
-	p := strconv.Itoa(port)
-	tx.GetCollection(VARIABLE_REMOTE_ADDR).Add("", address)
-	tx.GetCollection(VARIABLE_REMOTE_PORT).Add("", p)
-}
-
-func (tx *Transaction) SetReqBodyProcessor(processor string) {
-	tx.GetCollection(VARIABLE_REQBODY_PROCESSOR).Add("", processor)
-}
-
-//Sets request_body and request_body_length, it won't work if request_body_inspection is off
-func (tx *Transaction) SetRequestBody(body *io.Reader) error {
-	if !tx.RequestBodyAccess { // || (tx.RequestBodyLimit > 0 && length > tx.RequestBodyLimit) {
-		return nil
-	}
-
-	transfer := tx.GetCollection(VARIABLE_REQUEST_HEADERS).GetFirstString("transfer")
-	length := tx.GetCollection(VARIABLE_REQUEST_HEADERS).GetFirstInt64("content-length")
-	mime := tx.GetCollection(VARIABLE_REQUEST_HEADERS).GetFirstString("content-type")
-	mime = strings.ToLower(mime)
-	chunked := strings.EqualFold(transfer, "chunked")
-	var reader io.Reader
-
-	// Chunked requests will always be written to a temporary file
-	if !chunked && length > tx.RequestBodyLimit && tx.Waf.RequestBodyLimitAction == REQUEST_BODY_LIMIT_ACTION_REJECT {
-		return errors.New("Rejected request body size")
-	} else if !chunked && length > tx.RequestBodyLimit && tx.Waf.RequestBodyLimitAction == REQUEST_BODY_LIMIT_ACTION_PROCESS_PARTIAL {
-		tx.GetCollection(VARIABLE_INBOUND_ERROR_DATA).Set("", []string{"1"})
-	}
-
-	// In this case we are going to write the buffer to a file
-	if chunked || length > tx.Waf.RequestBodyInMemoryLimit {
-		tpath := path.Join(tx.Waf.TmpDir, utils.RandomString(16))
-		tfile, err := os.Create(tpath)
-		defer tfile.Close()
-		io.Copy(tfile, *body)
-		if err != nil {
-			return errors.New("Couldn't create temporary file to store request body buffer")
-		}
-		// We overwrite the original body with the file
-		reader = bufio.NewReader(tfile)
-		//then we copy the content to body
-		*body = (bufio.NewReader(tfile))
-		tx.addTemporaryFile(tpath)
-	} else { //we write the buffer to memory
-		// In this case we are going to buffer it to memory so be it !
-		b, err := ioutil.ReadAll(*body)
-		if err != nil {
-			return errors.New("Failed to store request body in memory")
-		}
-		reader = bytes.NewReader(b)
-		*body = bytes.NewReader(b)
-	}
-
-	//FROM CTL:forcerequestbodyvariable...
-	if tx.RequestBodyProcessor == 0 && tx.ForceRequestBodyVariable {
-		tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_URLENCODED
-	} else if tx.RequestBodyProcessor == 0 {
-		// We force the body processor if none was provided
-		//if mime == "application/xml" || mime == "text/xml" {
-		// It looks like xml body processor is called by default
-		//	tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_XML
-		if mime == "application/x-www-form-urlencoded" {
-			tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_URLENCODED
-		} else if strings.HasPrefix(mime, "multipart/form-data") {
-			tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_MULTIPART
-		} else if mime == "application/json" {
-			tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_JSON
-		} else {
-			tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_URLENCODED
-		}
-	}
-
-	switch tx.RequestBodyProcessor {
-	case REQUEST_BODY_PROCESSOR_URLENCODED:
-		buf := new(strings.Builder)
-		io.Copy(buf, reader)
-		b := buf.String()
-		uri, err := url.Parse("?" + b)
-		tx.GetCollection(VARIABLE_REQUEST_BODY).Set("", []string{b})
-		if err != nil {
-			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR).Set("", []string{"1"})
-			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR_MSG).Set("", []string{string(err.Error())})
-			return err
-		}
-		tx.AddPostArgsFromUrl(uri)
-	case REQUEST_BODY_PROCESSOR_XML:
-		var err error
-		options := xmlquery.ParserOptions{
-			Decoder: &xmlquery.DecoderOptions{
-				Strict:    false,
-				AutoClose: []string{},
-				Entity:    map[string]string{},
-			},
-		}
-		tx.XmlDoc, err = xmlquery.ParseWithOptions(reader, options)
-		if err != nil {
-			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR).Set("", []string{"1"})
-			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR_MSG).Set("", []string{string(err.Error())})
-			return err
-		}
-	case REQUEST_BODY_PROCESSOR_MULTIPART:
-		req, _ := http.NewRequest("GET", "/", reader)
-		req.Header.Set("Content-Type", mime)
-		err := req.ParseMultipartForm(1000000000)
-		defer req.Body.Close()
-		if err != nil {
-			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR).Set("", []string{"1"})
-			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR_MSG).Set("", []string{string(err.Error())})
-			return err
-		}
-		tx.SetFiles(req.MultipartForm.File)
-		tx.SetArgsPost(req.MultipartForm.Value)
-	case REQUEST_BODY_PROCESSOR_JSON:
-		buf := new(strings.Builder)
-		io.Copy(buf, reader)
-		b := buf.String()
-		tx.GetCollection(VARIABLE_REQUEST_BODY).Set("", []string{b})
-	}
-
-	return nil
-}
-
-//Sets request_cookies and request_cookies_names
-func (tx *Transaction) SetRequestCookies(cookies []*http.Cookie) {
-	for _, c := range cookies {
-		tx.Collections[VARIABLE_REQUEST_COOKIES].Add(c.Name, c.Value)
-		tx.Collections[VARIABLE_REQUEST_COOKIES_NAMES].Add("", c.Name)
-	}
-}
-
-//sets response_body and response_body_length, it won't work if response_body_inpsection is off
-func (tx *Transaction) SetResponseBody(body []byte, length int64) {
-	// TBI
-}
-
-//Sets response_headers, response_headers_names, response_content_length and response_content_type
-func (tx *Transaction) SetResponseHeaders(headers map[string][]string) {
-	for h, vs := range headers {
-		for _, value := range vs {
-			tx.AddResponseHeader(h, value)
-		}
-	}
-}
-
 func (tx *Transaction) AddResponseHeader(key string, value string) {
 	if key == "" {
 		return
@@ -467,105 +277,11 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 	tx.GetCollection(VARIABLE_RESPONSE_HEADERS_NAMES).AddUnique("", key)
 	tx.GetCollection(VARIABLE_RESPONSE_HEADERS).Add(key, value)
 
-	//Most headers can be managed like that except cookies
-	rhmap := map[string]byte{
-		"content-type":   VARIABLE_RESPONSE_CONTENT_TYPE,
-		"content-length": VARIABLE_RESPONSE_CONTENT_LENGTH,
+	//Most headers can be managed like that
+	if key == "content-type" {
+		spl := strings.SplitN(value, ";", 2)
+		tx.GetCollection(VARIABLE_RESPONSE_CONTENT_TYPE).Add("", spl[0])
 	}
-	for k, v := range rhmap {
-		if k == key {
-			tx.GetCollection(v).Add("", value)
-		}
-	}
-}
-
-//Sets response_status
-func (tx *Transaction) SetResponseStatus(status int) {
-	s := strconv.Itoa(status)
-	tx.GetCollection(VARIABLE_RESPONSE_STATUS).Set("", []string{s})
-}
-
-//Sets request_uri, request_filename, request_basename, query_string and request_uri_raw
-func (tx *Transaction) SetUrl(u *url.URL) {
-	RequestBasename := u.EscapedPath()
-	a := regexp.MustCompile(`\/|\\`) // \ o /
-	spl := a.Split(RequestBasename, -1)
-	if len(spl) > 0 {
-		RequestBasename = spl[len(spl)-1]
-	}
-	tx.GetCollection(VARIABLE_REQUEST_URI).Add("", u.String())
-	tx.GetCollection(VARIABLE_REQUEST_FILENAME).Add("", u.Path)
-	tx.GetCollection(VARIABLE_REQUEST_BASENAME).Add("", RequestBasename)
-	tx.GetCollection(VARIABLE_QUERY_STRING).Add("", u.RawQuery)
-	tx.GetCollection(VARIABLE_REQUEST_URI_RAW).Add("", u.String())
-}
-
-//Sets args_get and args_get_names
-func (tx *Transaction) AddGetArgsFromUrl(u *url.URL) {
-	params := utils.ParseQuery(u.RawQuery, "&")
-	argsg := tx.GetCollection(VARIABLE_ARGS_GET)
-	args := tx.GetCollection(VARIABLE_ARGS)
-	length := 0
-	for k, v := range params {
-		for _, vv := range v {
-			argsg.Add(k, vv)
-			args.Add(k, vv)
-			length += len(k) + len(vv) + 1
-		}
-		tx.GetCollection(VARIABLE_ARGS_GET_NAMES).AddUnique("", k)
-		tx.GetCollection(VARIABLE_ARGS_NAMES).AddUnique("", k)
-	}
-	tx.addArgsLength(length)
-}
-
-//Sets args_post and args_post_names
-func (tx *Transaction) AddPostArgsFromUrl(u *url.URL) {
-	params := utils.ParseQuery(u.RawQuery, "&")
-	argsp := tx.GetCollection(VARIABLE_ARGS_POST)
-	args := tx.GetCollection(VARIABLE_ARGS)
-	length := 0
-	for k, v := range params {
-		for _, vv := range v {
-			argsp.Add(k, vv)
-			args.Add(k, vv)
-			length += len(k) + len(vv) + 1
-		}
-		tx.GetCollection(VARIABLE_ARGS_POST_NAMES).AddUnique("", k)
-		tx.GetCollection(VARIABLE_ARGS_NAMES).AddUnique("", k)
-	}
-	tx.addArgsLength(length)
-}
-
-func (tx *Transaction) addArgsLength(length int) {
-	col := tx.GetCollection(VARIABLE_ARGS_COMBINED_SIZE)
-	i := col.GetFirstInt64("") + int64(length)
-	istr := strconv.FormatInt(i, 10)
-	col.Set("", []string{istr})
-}
-
-func (tx *Transaction) AddCookies(cookies string) {
-	//TODO implement SecCookieFormat and SecCookieV0Separator
-	header := http.Header{}
-	header.Add("Cookie", cookies)
-	request := http.Request{Header: header}
-	tx.SetRequestCookies(request.Cookies())
-}
-
-//Adds request_line, request_method, request_protocol, request_basename and request_uri
-func (tx *Transaction) SetRequestLine(method string, protocol string, requestUri string) {
-	tx.GetCollection(VARIABLE_REQUEST_METHOD).Add("", method)
-	tx.GetCollection(VARIABLE_REQUEST_URI).Add("", requestUri)
-	tx.GetCollection(VARIABLE_REQUEST_PROTOCOL).Add("", protocol)
-	tx.GetCollection(VARIABLE_REQUEST_LINE).Add("", fmt.Sprintf("%s %s %s", method, requestUri, protocol))
-}
-
-//Resolves remote hostname and sets remote_host variable
-func (tx *Transaction) ResolveRemoteHost() {
-	addr, err := net.LookupAddr(tx.GetCollection(VARIABLE_REMOTE_ADDR).GetFirstString(""))
-	if err != nil {
-		return
-	}
-	tx.GetCollection(VARIABLE_REMOTE_HOST).Set("", []string{addr[0]})
 }
 
 //
@@ -586,7 +302,7 @@ func (tx *Transaction) ResetCapture() {
 
 // Parse binary request including body, does only supports http/1.1 and http/1.0
 // This function is only intended for testing and debugging
-func (tx *Transaction) ParseRequestString(data string) error {
+func (tx *Transaction) ParseRequestString(data string) (*Interruption, error) {
 	bts := strings.NewReader(data)
 	// For dumb reasons we must read the headers and look for the Host header,
 	// this function is intended for proxies and the RFC says that a Host must not be parsed...
@@ -610,17 +326,10 @@ func (tx *Transaction) ParseRequestString(data string) error {
 	buf := bufio.NewReader(bts)
 	req, err := http.ReadRequest(buf)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	tx.ParseRequestObjectHeaders(req)
-
-	b := req.Body.(io.Reader)
-	err = tx.SetRequestBody(&b)
-	if err != nil {
-		return err
-	}
-	return nil
+	return tx.ProcessRequest(req)
 }
 
 // Parse binary response including body, does only supports http/1.1 and http/1.0
@@ -639,116 +348,6 @@ func (tx *Transaction) ParseResponseString(req *http.Request, data string) error
 			return err
 		}*/
 	return nil
-}
-
-// Parse golang http request object into transaction
-// It will handle all transaction variables required for phase 1
-func (tx *Transaction) ParseRequestObjectHeaders(req *http.Request) {
-	re := regexp.MustCompile(`^\[(.*?)\]:(\d+)$`)
-	matches := re.FindAllStringSubmatch(req.RemoteAddr, -1)
-	address := ""
-	port := 0
-	//no more validations as we don't expect weird ip addresses
-	if len(matches) > 0 {
-		address = string(matches[0][1])
-		port, _ = strconv.Atoi(string(matches[0][2]))
-	}
-	query := utils.ParseQuery(req.URL.RawQuery, "&")
-	tx.SetArgsGet(query)
-	tx.SetUrl(req.URL)
-	tx.SetRemoteAddress(address, port)
-	tx.SetRequestLine(req.Method, req.Proto, req.RequestURI)
-	tx.SetRequestHeaders(req.Header)
-	tx.SetRequestCookies(req.Cookies())
-}
-
-// Parse golang http response object into transaction
-func (tx *Transaction) ParseResponseObjectHeaders(res *http.Response) error {
-	tx.SetResponseHeaders(res.Header)
-	//TBI
-	return nil
-}
-
-// Execute rules for the specified phase, between 1 and 5
-// Returns true if transaction is disrupted
-func (tx *Transaction) ExecutePhase(phase int) bool {
-	if tx.Disrupted && phase != 5 {
-		return true
-	}
-	if tx.LastPhase == 5 {
-		return tx.Disrupted
-	}
-	tx.LastPhase = phase
-	log.Debug(fmt.Sprintf("===== Starting Phase %d =====", phase))
-	ts := time.Now().UnixNano()
-	usedRules := 0
-	tx.LastPhase = phase
-	for _, r := range tx.Waf.Rules.GetRules() {
-		// Rules with phase 0 will always run
-		if r.Phase != phase && r.Phase != 0 {
-			continue
-		}
-		rid := strconv.Itoa(r.Id)
-		if r.Id == 0 {
-			rid = strconv.Itoa(r.ParentId)
-		}
-		if utils.ArrayContainsInt(tx.RuleRemoveById, r.Id) {
-			log.Debug(fmt.Sprintf("Skipping rule %s because of a ctl", rid))
-			continue
-		}
-		log.Debug(fmt.Sprintf("Evaluating rule %s", rid))
-		//we always evaluate secmarkers
-		if tx.SkipAfter != "" {
-			if r.SecMark == tx.SkipAfter {
-				tx.SkipAfter = ""
-				log.Debug("Matched SecMarker " + r.SecMark)
-			} else {
-				log.Debug("Skipping rule because of secmarker, expecting " + tx.SkipAfter)
-			}
-			continue
-		}
-		if tx.Skip > 0 {
-			tx.Skip--
-			//Skipping rule
-			log.Debug("Skipping rule because of skip")
-			continue
-		}
-		txr := tx.GetCollection(VARIABLE_RULE)
-		txr.Set("id", []string{rid})
-		txr.Set("rev", []string{r.Rev})
-		txr.Set("severity", []string{r.Severity})
-		//txr.Set("logdata", []string{r.LogData})
-		txr.Set("msg", []string{r.Msg})
-		match := r.Evaluate(tx)
-		if len(match) > 0 {
-			log.Debug(fmt.Sprintf("Rule %s matched", rid))
-			for _, m := range match {
-				log.Debug(fmt.Sprintf("MATCH %s:%s", m.Key, m.Value))
-			}
-		}
-
-		tx.Capture = false //we reset the capture flag on every run
-		usedRules++
-		if tx.Disrupted && phase != 5 {
-			log.Debug(fmt.Sprintf("Disrupted by rule %s", rid))
-			// TODO Maybe we shouldnt force phase 5?
-			tx.ExecutePhase(5)
-			break
-		}
-	}
-	log.Debug(fmt.Sprintf("===== Finished Phase %d =====", phase))
-	tx.StopWatches[phase] = int(time.Now().UnixNano() - ts)
-	if phase == 5 {
-		log.Debug("Saving persistent data")
-		tx.savePersistentData()
-		if tx.AuditEngine == AUDIT_LOG_RELEVANT && tx.isRelevantStatus() {
-			tx.saveLog()
-		} else if tx.AuditEngine == AUDIT_LOG_ENABLED {
-			tx.saveLog()
-		}
-
-	}
-	return tx.Disrupted
 }
 
 func (tx *Transaction) MatchVars(match []*MatchData) {
@@ -858,16 +457,6 @@ func (tx *Transaction) GetRemovedTargets(id int) []*KeyValue {
 	return tx.RuleRemoveTargetById[id]
 }
 
-func (tx *Transaction) isRelevantStatus() bool {
-	if tx.AuditEngine == AUDIT_LOG_DISABLED {
-		return false
-	}
-	re := tx.Waf.AuditLogRelevantStatus
-	status := strconv.Itoa(tx.Status)
-	m := re.NewMatcher()
-	return m.MatchString(status, 0)
-}
-
 func (tx *Transaction) ToAuditJson() []byte {
 	al := tx.ToAuditLog()
 	return al.ToJson()
@@ -913,7 +502,351 @@ func (tx *Transaction) addTemporaryFile(path string) {
 	tx.temporaryFiles = append(tx.temporaryFiles, path)
 }
 
-//gonna remove it
-func (tx *Transaction) GetAuditPath() (string, string) {
-	return "/tmp/audit", tx.Id
+func (tx *Transaction) removeTemporaryFiles() {
+	for _, f := range tx.temporaryFiles {
+		os.Remove(f)
+	}
+	tx.temporaryFiles = []string{}
+}
+
+func (tx *Transaction) GetInterruption() *Interruption {
+	return nil
+}
+
+// Fill all transaction variables from an http.Request object
+// Most implementations of Coraza will probably use http.Request objects
+// so this will implement all phase 0, 1 and 2 variables
+// Note: This function will stop after an interruption
+// Note: Do not manually fill any request variables
+func (tx *Transaction) ProcessRequest(req *http.Request) (*Interruption, error) {
+	var client string
+	cport := 0
+	//IMPORTANT: Some http.Request.RemoteAddr implementations will not contain port or contain IPV6: [2001:db8::1]:8080
+	spl := strings.Split(req.RemoteAddr, ":")
+	if len(spl) > 1 {
+		client = strings.Join(spl[0:len(spl)-1], "")
+		cport, _ = strconv.Atoi(spl[len(spl)-1])
+	}
+	var in *Interruption
+	// There is no socket access in the request object so we don't know the server client or port
+	tx.ProcessConnection(client, cport, "", 0)
+	tx.ProcessUri(req.URL, req.Method, req.Proto)
+	for k, vr := range req.URL.Query() {
+		for _, v := range vr {
+			tx.AddArgument("GET", k, v)
+		}
+	}
+	for k, vr := range req.Header {
+		for _, v := range vr {
+			tx.AddRequestHeader(k, v)
+		}
+	}
+	tx.AddRequestHeader("Host", req.Host)
+	in = tx.ProcessRequestHeaders()
+	if in != nil {
+		return in, nil
+	}
+	reader := io.Reader(req.Body)
+	return tx.ProcessRequestBody(&reader)
+}
+
+// This method should be called at very beginning of a request process, it is
+// expected to be executed prior to the virtual host resolution, when the
+// connection arrives on the server.
+// Important: Remember to check for a possible intervention.
+func (tx *Transaction) ProcessConnection(client string, cPort int, server string, sPort int) {
+	p := strconv.Itoa(cPort)
+	p2 := strconv.Itoa(sPort)
+
+	// Modsecurity removed this, so maybe we do the same, such a copycat
+	// addr, err := net.LookupAddr(client)
+	// if err == nil {
+	// 	tx.GetCollection(VARIABLE_REMOTE_HOST).Set("", []string{addr[0]})
+	// }else{
+	// 	tx.GetCollection(VARIABLE_REMOTE_HOST).Set("", []string{client})
+	// }
+
+	tx.GetCollection(VARIABLE_REMOTE_ADDR).Add("", client)
+	tx.GetCollection(VARIABLE_REMOTE_PORT).Add("", p)
+	tx.GetCollection(VARIABLE_SERVER_ADDR).Add("", server)
+	tx.GetCollection(VARIABLE_SERVER_PORT).Add("", p2)	
+	tx.GetCollection(VARIABLE_UNIQUE_ID).Add("", tx.Id)
+
+	//TODO maybe evaluate phase 0?
+}
+
+
+// Add arguments GET or POST
+// This will set ARGS_(GET|POST), ARGS, ARGS_NAMES, ARGS_COMBINED_SIZE and 
+// ARGS_(GET|POST)_NAMES
+func (tx *Transaction) AddArgument(orig string, key string, value string) {
+	var vals, names byte
+	if orig == "GET" {
+		vals = VARIABLE_ARGS_GET
+		names = VARIABLE_ARGS_GET_NAMES
+	}else {
+		vals = VARIABLE_ARGS_POST
+		names = VARIABLE_ARGS_POST_NAMES
+	}
+	tx.GetCollection(VARIABLE_ARGS).Add(key, value)
+	tx.GetCollection(VARIABLE_ARGS_NAMES).Add("", key)
+
+	tx.GetCollection(vals).Add(key, value)
+	tx.GetCollection(names).Add("", key)
+
+	col := tx.GetCollection(VARIABLE_ARGS_COMBINED_SIZE)
+	i := col.GetFirstInt64("") + int64(len(key)+len(value))
+	istr := strconv.FormatInt(i, 10)
+	col.Set("", []string{istr})
+}
+
+// Perform the analysis on the URI and all the query string variables.
+// This method should be called at very beginning of a request process, it is
+// expected to be executed prior to the virtual host resolution, when the
+// connection arrives on the server.
+// note: There is no direct connection between this function and any phase of
+//       the SecLanguage's phases. It is something that may occur between the
+//       SecLanguage phase 1 and 2.
+// note: This function won't add GET arguments, they must be added with AddArgument
+func (tx *Transaction) ProcessUri(uri *url.URL, method string, httpVersion string) {
+	RequestBasename := uri.EscapedPath()
+	a := regexp.MustCompile(`\/|\\`) // \ o /
+	spl := a.Split(RequestBasename, -1)
+	if len(spl) > 0 {
+		RequestBasename = spl[len(spl)-1]
+	}
+	tx.GetCollection(VARIABLE_REQUEST_URI).Add("", uri.String())
+	tx.GetCollection(VARIABLE_REQUEST_FILENAME).Add("", uri.Path)
+	tx.GetCollection(VARIABLE_REQUEST_BASENAME).Add("", RequestBasename)
+	tx.GetCollection(VARIABLE_QUERY_STRING).Add("", uri.RawQuery)
+	tx.GetCollection(VARIABLE_REQUEST_URI_RAW).Add("", uri.String())
+
+	tx.GetCollection(VARIABLE_REQUEST_METHOD).Add("", method)
+	tx.GetCollection(VARIABLE_REQUEST_PROTOCOL).Add("", httpVersion)
+	tx.GetCollection(VARIABLE_REQUEST_LINE).Add("", fmt.Sprintf("%s %s %s", method, uri.String(), httpVersion))
+}
+
+// Perform the analysis on the request readers.
+//
+// This method perform the analysis on the request headers, notice however
+// that the headers should be added prior to the execution of this function.
+//
+// note: Remember to check for a possible intervention.
+func (tx *Transaction) ProcessRequestHeaders() *Interruption{
+	if !tx.RuleEngine{
+		// RUle engine is disabled
+		return nil
+	}
+	tx.Waf.Rules.Evaluate(1, tx)
+	return tx.GetInterruption()
+}
+
+// Perform the request body (if any)
+//
+// This method perform the analysis on the request body. It is optional to
+// call that function. If this API consumer already know that there isn't a
+// body for inspect it is recommended to skip this step.
+//
+// Remember to check for a possible intervention.
+func (tx *Transaction) ProcessRequestBody(body *io.Reader) (*Interruption, error) {
+	if !tx.RequestBodyAccess || body == nil { 
+		return tx.GetInterruption(), nil
+	}
+
+	transfer := tx.GetCollection(VARIABLE_REQUEST_HEADERS).GetFirstString("transfer")
+	length := tx.GetCollection(VARIABLE_REQUEST_HEADERS).GetFirstInt64("content-length")
+	mime := tx.GetCollection(VARIABLE_REQUEST_HEADERS).GetFirstString("content-type")
+	mime = strings.ToLower(mime)
+	chunked := strings.EqualFold(transfer, "chunked")
+	var reader io.Reader
+
+	// Chunked requests will always be written to a temporary file
+	if !chunked && length > tx.RequestBodyLimit && tx.Waf.RequestBodyLimitAction == REQUEST_BODY_LIMIT_ACTION_REJECT {
+		return nil, errors.New("Rejected request body size")
+	} else if !chunked && length > tx.RequestBodyLimit && tx.Waf.RequestBodyLimitAction == REQUEST_BODY_LIMIT_ACTION_PROCESS_PARTIAL {
+		tx.GetCollection(VARIABLE_INBOUND_ERROR_DATA).Set("", []string{"1"})
+	}
+
+	// In this case we are going to write the buffer to a file
+	if chunked || length > tx.Waf.RequestBodyInMemoryLimit {
+		tpath := path.Join(tx.Waf.TmpDir, utils.RandomString(16))
+		tfile, err := os.Create(tpath)
+		defer tfile.Close()
+		io.Copy(tfile, *body)
+		if err != nil {
+			return nil, errors.New("Couldn't create temporary file to store request body buffer")
+		}
+		// We overwrite the original body with the file
+		reader = bufio.NewReader(tfile)
+		//then we copy the content to body
+		*body = (bufio.NewReader(tfile))
+		tx.addTemporaryFile(tpath)
+	} else { //we write the buffer to memory
+		// In this case we are going to buffer it to memory so be it !
+		b, err := ioutil.ReadAll(*body)
+		if err != nil {
+			return nil, errors.New("Failed to store request body in memory")
+		}
+		reader = bytes.NewReader(b)
+		*body = bytes.NewReader(b)
+	}
+
+	//FROM CTL:forcerequestbodyvariable...
+	if tx.RequestBodyProcessor == 0 && tx.ForceRequestBodyVariable {
+		tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_URLENCODED
+	} else if tx.RequestBodyProcessor == 0 {
+		// We force the body processor if none was provided
+		//if mime == "application/xml" || mime == "text/xml" {
+		// It looks like xml body processor is called by default
+		//	tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_XML
+		if mime == "application/x-www-form-urlencoded" {
+			tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_URLENCODED
+		} else if strings.HasPrefix(mime, "multipart/form-data") {
+			tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_MULTIPART
+		} else if mime == "application/json" {
+			tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_JSON
+		} else {
+			tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_URLENCODED
+		}
+	}
+
+	switch tx.RequestBodyProcessor {
+	case REQUEST_BODY_PROCESSOR_URLENCODED:
+		buf := new(strings.Builder)
+		io.Copy(buf, reader)
+		b := buf.String()
+		tx.GetCollection(VARIABLE_REQUEST_BODY).Set("", []string{b})
+		values := utils.ParseQuery(b, "&")
+		for k, vs := range values {
+			for _, v := range vs {
+				tx.AddArgument("POST", k, v)
+			}
+		}
+	case REQUEST_BODY_PROCESSOR_XML:
+		var err error
+		options := xmlquery.ParserOptions{
+			Decoder: &xmlquery.DecoderOptions{
+				Strict:    false,
+				AutoClose: []string{},
+				Entity:    map[string]string{},
+			},
+		}
+		tx.XmlDoc, err = xmlquery.ParseWithOptions(reader, options)
+		if err != nil {
+			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR).Set("", []string{"1"})
+			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR_MSG).Set("", []string{string(err.Error())})
+			return nil, err
+		}
+	case REQUEST_BODY_PROCESSOR_MULTIPART:
+		req, _ := http.NewRequest("GET", "/", reader)
+		req.Header.Set("Content-Type", mime)
+		err := req.ParseMultipartForm(1000000000)
+		defer req.Body.Close()
+		if err != nil {
+			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR).Set("", []string{"1"})
+			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR_MSG).Set("", []string{string(err.Error())})
+			return nil, err
+		}
+
+		fn := tx.GetCollection(VARIABLE_FILES_NAMES)
+		fl := tx.GetCollection(VARIABLE_FILES)
+		fs := tx.GetCollection(VARIABLE_FILES_SIZES)
+		totalSize := int64(0)
+		for field, fheaders := range req.MultipartForm.File {
+			// TODO add them to temporal storage
+			fn.Add("", field)
+			for _, header := range fheaders {
+				fl.Add("", header.Filename)
+				totalSize += header.Size
+				fs.Add("", fmt.Sprintf("%d", header.Size))
+			}
+		}
+		tx.GetCollection(VARIABLE_FILES_COMBINED_SIZE).Add("", fmt.Sprintf("%d", totalSize))
+		for k, vs := range req.MultipartForm.Value {
+			for _, v := range vs {
+				tx.AddArgument("POST", k, v)
+			}
+		}
+	case REQUEST_BODY_PROCESSOR_JSON:
+		buf := new(strings.Builder)
+		io.Copy(buf, reader)
+		b := buf.String()
+		tx.GetCollection(VARIABLE_REQUEST_BODY).Set("", []string{b})
+	}
+	tx.Waf.Rules.Evaluate(2, tx)
+	return tx.GetInterruption(), nil
+}
+
+// Perform the analysis on the response readers.
+//
+// This method perform the analysis on the response headers, notice however
+// that the headers should be added prior to the execution of this function.
+//
+// note: Remember to check for a possible intervention.
+//
+func (tx *Transaction) ProcessResponseHeaders(code int, proto string) {
+	c := strconv.Itoa(code)
+	tx.GetCollection(VARIABLE_RESPONSE_STATUS).Add("", c)
+	tx.GetCollection(VARIABLE_RESPONSE_PROTOCOL).Add("", proto)
+
+	if !tx.RuleEngine {
+		return
+	}
+
+	tx.Waf.Rules.Evaluate(3, tx)
+}
+
+// Perform the request body (if any)
+//
+// This method perform the analysis on the request body. It is optional to
+// call that method. If this API consumer already know that there isn't a
+// body for inspect it is recommended to skip this step.
+//
+// note Remember to check for a possible intervention.
+func (tx *Transaction) ProcessResponseBody(body *io.Reader) (*Interruption, error) {
+	if !tx.RuleEngine {
+		return nil, nil
+	}
+
+	if !tx.ResponseBodyAccess {
+		return nil, nil
+	}
+	ct := tx.GetCollection(VARIABLE_RESPONSE_CONTENT_TYPE).GetFirstString("")
+	if !utils.ArrayContains(tx.ResponseBodyMimeType, ct) {
+		//Not marked for inspection
+		return nil, nil
+	}
+	//SET RESPONSE_BODY
+	//SET RESPONSE_CONTENT_LENGTH
+	//TODO so many things
+	tx.Waf.Rules.Evaluate(4, tx)
+	return nil, nil
+}
+
+// Logging all information relative to this transaction.
+//
+// At this point there is not need to hold the connection, the response can be
+// delivered prior to the execution of this method.
+func (tx *Transaction) ProcessLogging() {
+	// I'm not sure why but modsecurity won't log if RuleEngine is disabled
+	if !tx.RuleEngine {
+		return
+	}
+	tx.savePersistentData()
+	tx.removeTemporaryFiles()
+
+	tx.Waf.Rules.Evaluate(5, tx)
+
+	if tx.AuditEngine == AUDIT_LOG_DISABLED {
+		// Audit engine disabled
+		return
+	}
+	re := tx.Waf.AuditLogRelevantStatus
+	status := tx.GetCollection(VARIABLE_RESPONSE_STATUS).GetFirstString("")
+	m := re.NewMatcher()
+	if !m.MatchString(status, 0){
+		//Not relevant status
+		return
+	}
+	tx.saveLog()
 }
