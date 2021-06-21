@@ -17,6 +17,7 @@ package engine
 import (
 	"github.com/jptosso/coraza-waf/pkg/transformations"
 	log "github.com/sirupsen/logrus"
+	"github.com/jptosso/coraza-waf/pkg/transformations"
 	"strconv"
 	"strings"
 )
