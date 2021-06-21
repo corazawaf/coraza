@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"path"
 	"testing"
 )
 
@@ -40,11 +41,12 @@ func TestCLogFileCreation(t *testing.T) {
 	tx.AuditLogParts = []rune("ABCDEFGHIJKZ")
 
 	waf.Logger.WriteAudit(tx)
-	fpath, fname := tx.GetAuditPath()
+	cl := &ConcurrentLogger{} //just for getauditpath
+	fpath, fname := cl.GetAuditPath(tx)
 	if _, err := os.Stat(fpath); os.IsNotExist(err) {
 		t.Error("Directory was not created: " + fpath)
 	}
-	file, err := ioutil.ReadFile(fpath + fname)
+	file, err := ioutil.ReadFile(path.Join(fpath, fname))
 	if err != nil {
 		t.Error("Audit file was not created")
 		return

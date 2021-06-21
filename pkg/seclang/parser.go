@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package parser
+package seclang
 
 import (
 	"bufio"
@@ -34,6 +34,7 @@ type Parser struct {
 	nextChain  bool
 	RuleEngine string
 	waf        *engine.Waf
+	lastRule   *engine.Rule
 
 	defaultActions []string
 	currentLine    int
@@ -358,7 +359,7 @@ func (p *Parser) Evaluate(data string) error {
 	case "SecResponseBodyAccess":
 		p.waf.ResponseBodyAccess = (opts == "On")
 	case "SecRule":
-		rule, err := p.ParseRule(opts)
+		rule, err := p.ParseRule(opts, true)
 		if err != nil {
 			p.log(fmt.Sprintf("Failed to compile rule (%s): %s", err, opts))
 			return err
@@ -366,15 +367,15 @@ func (p *Parser) Evaluate(data string) error {
 			p.waf.Rules.Add(rule)
 		}
 	case "SecAction":
-		rule, err := p.ParseRule("\"@unconditionalMatch\" \"" + opts + "\"")
+		rule, err := p.ParseRule(opts, false)
 		if err != nil {
 			p.log(fmt.Sprintf("Failed to compile rule (%s): %s", err, opts))
 			return err
 		}
 		p.waf.Rules.Add(rule)
-		log.Debug("Added special secmark rule")
+		log.Debug("Added special secaction rule")
 	case "SecMarker":
-		rule, err := p.ParseRule(`"@unconditionalMatch" "id:1, pass, nolog"`)
+		rule, err := p.ParseRule(`"id:1, pass, nolog"`, false)
 		if err != nil {
 			p.log("Error creating secmarker rule")
 			return err
@@ -386,32 +387,13 @@ func (p *Parser) Evaluate(data string) error {
 		log.Debug("Added special secmarker rule")
 	case "SecComponentSignature":
 		p.waf.ComponentSignature = opts
-	case "SecErrorPage":
-		if opts == "debug" {
-			p.waf.ErrorPageMethod = engine.ERROR_PAGE_DEBUG
-		} else if opts[0] == '|' {
-			file := opts[1:]
-			p.waf.ErrorPageMethod = engine.ERROR_PAGE_SCRIPT
-			p.waf.ErrorPageFile = file
-		} else if opts[0] == '/' {
-			file, err := utils.OpenFile(opts)
-			if err != nil {
-				p.log("Cannot open SecErrorPage, keeping default value.")
-				break
-			}
-			p.waf.ErrorPageMethod = engine.ERROR_PAGE_FILE
-			p.waf.ErrorPageFile = string(file)
-		} else {
-			p.waf.ErrorPageMethod = engine.ERROR_PAGE_INLINE
-			p.waf.ErrorPageFile = opts
-		}
 	default:
 		return p.log("Unsupported directive: " + directive)
 	}
 	return nil
 }
 
-func (p *Parser) ParseRule(data string) (*engine.Rule, error) {
+func (p *Parser) ParseRule(data string, withOperator bool) (*engine.Rule, error) {
 	var err error
 	rp := NewRuleParser()
 	rp.Configdir = p.waf.Datapath
@@ -422,26 +404,33 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error) {
 			return nil, err
 		}
 	}
-
-	spl := strings.SplitN(data, " ", 2)
-	vars := utils.RemoveQuotes(spl[0])
-
-	//regex: "(?:[^"\\]|\\.)*"
-	r := regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
-	matches := r.FindAllString(data, -1)
 	actions := ""
-	operator := utils.RemoveQuotes(matches[0])
-	err = rp.ParseVariables(vars)
-	if err != nil {
-		return nil, err
-	}
-	err = rp.ParseOperator(operator)
-	if err != nil {
-		return nil, err
-	}
+	if withOperator {
+		spl := strings.SplitN(data, " ", 2)
+		vars := utils.RemoveQuotes(spl[0])
 
-	if len(matches) > 1 {
-		actions = utils.RemoveQuotes(matches[1])
+		//regex: "(?:[^"\\]|\\.)*"
+		r := regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
+		matches := r.FindAllString(data, -1)
+		operator := utils.RemoveQuotes(matches[0])
+		err = rp.ParseVariables(vars)
+		if err != nil {
+			return nil, err
+		}
+		err = rp.ParseOperator(operator)
+		if err != nil {
+			return nil, err
+		}
+		if len(matches) > 1 {
+			actions = utils.RemoveQuotes(matches[1])
+			err = rp.ParseActions(actions)
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		//quoted actions separated by comma (,)
+		actions = utils.RemoveQuotes(data)
 		err = rp.ParseActions(actions)
 		if err != nil {
 			return nil, err
@@ -453,8 +442,7 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error) {
 
 	if p.nextChain {
 		p.nextChain = false
-		rules := p.waf.Rules.GetRules()
-		parent := rules[len(rules)-1]
+		parent := p.lastRule
 		rule.ParentId = parent.Id
 		lastchain := parent
 		for lastchain.Chain != nil {
@@ -470,6 +458,7 @@ func (p *Parser) ParseRule(data string) (*engine.Rule, error) {
 	if rule.HasChain {
 		p.nextChain = true
 	}
+	p.lastRule = rule
 	return rule, nil
 }
 

@@ -14,12 +14,14 @@
 
 package transformations
 
-func TransformationsMap() map[string]interface{} {
-	return map[string]interface{}{
+type Transformation = func(input string) string
+
+func TransformationsMap() map[string]Transformation {
+	return map[string]Transformation{
 		"base64Decode": Base64decode,
 		//BEGIN NON WORKING
 		"escapeSeqDecode":    EscapeSeqDecode,
-		"removeCommentsChar": EscapeSeqDecode,
+		"removeCommentsChar": None,
 		//END NON WORKING
 		"lowercase":          LowerCase,
 		"removeWhitespace":   RemoveWhitespace,

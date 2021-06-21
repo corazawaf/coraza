@@ -24,7 +24,7 @@ import (
 type Ctl struct {
 	Action     int
 	Value      string
-	Collection string
+	Collection byte
 	ColKey     string
 }
 
@@ -61,7 +61,7 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 		tx.RemoveRuleTargetById(id, a.Collection, a.ColKey)
 		break
 	case CTL_REMOVE_TARGET_BY_TAG:
-		rules := tx.WafInstance.Rules.GetRules()
+		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
 			if utils.ArrayContains(r.Tags, a.Value) {
 				tx.RemoveRuleTargetById(r.Id, a.Collection, a.ColKey)
@@ -69,7 +69,7 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 		}
 		break
 	case CTL_REMOVE_TARGET_BY_MSG:
-		rules := tx.WafInstance.Rules.GetRules()
+		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
 			if r.Msg == a.Value {
 				tx.RemoveRuleTargetById(r.Id, a.Collection, a.ColKey)
@@ -121,7 +121,7 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 		tx.RuleRemoveById = append(tx.RuleRemoveById, id)
 		break
 	case CTL_RULE_REMOVE_BY_MSG:
-		rules := tx.WafInstance.Rules.GetRules()
+		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
 			if r.Msg == a.Value {
 				tx.RuleRemoveById = append(tx.RuleRemoveById, r.Id)
@@ -129,7 +129,7 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 		}
 		break
 	case CTL_RULE_REMOVE_BY_TAG:
-		rules := tx.WafInstance.Rules.GetRules()
+		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
 			if utils.ArrayContains(r.Tags, a.Value) {
 				tx.RuleRemoveById = append(tx.RuleRemoveById, r.Id)
@@ -161,23 +161,23 @@ func (a *Ctl) GetType() int {
 	return engine.ACTION_TYPE_NONDISRUPTIVE
 }
 
-func parseCtl(data string) (int, string, string, string, string) {
+func parseCtl(data string) (int, string, byte, string, string) {
 	spl1 := strings.SplitN(data, "=", 2)
 	spl2 := strings.SplitN(spl1[1], ";", 2)
 	action := spl1[0]
 	value := spl2[0]
-	collection := ""
+	colname := ""
 	colkey := ""
 	if len(spl2) == 2 {
 		spl3 := strings.SplitN(spl2[1], ":", 2)
 		if len(spl3) == 2 {
-			collection = spl3[0]
+			colname = spl3[0]
 			colkey = spl3[1]
 		} else {
 			colkey = spl3[0]
 		}
 	}
-	collection = strings.ToLower(collection)
+	collection, _ := engine.NameToVariable(strings.TrimSpace(colname))
 	colkey = strings.ToLower(colkey)
 	act := 0
 	switch action {
@@ -233,7 +233,7 @@ func parseCtl(data string) (int, string, string, string, string) {
 		act = CTL_HASH_ENFORCEMENT
 		break
 	default:
-		return 0, "", "", "", "Invalid ctl action"
+		return 0, "", 0x00, "", "Invalid ctl action"
 	}
-	return act, value, strings.TrimSpace(collection), strings.TrimSpace(colkey), ""
+	return act, value, collection, strings.TrimSpace(colkey), ""
 }

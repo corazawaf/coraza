@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package parser
+package seclang
 
 import (
 	"errors"
@@ -48,7 +48,7 @@ func (p *RuleParser) ParseVariables(vars string) error {
 	//Splits the values by KEY, KEY:VALUE, &!KEY, KEY:/REGEX/, KEY1|KEY2
 	//GROUP 1 is collection, group 3 is vlue, group 3 can be empty
 	//TODO this is not an elegant way to parse variables but it works and it won't generate workload
-	re := pcre.MustCompile(`(((?:&|!)?XML):?(.*?)(?:\||$))|((?:&|!)?[\w_]+):?([\w-_]+|\/.*?(?<!\\)\/)?`, 0)
+	re := pcre.MustCompile(`(((?:&|!)?XML):?(.*?)(?:\||$))|((?:&|!)?[\w_]+):?([\w\-._]+|'?\/.*?(?<!\\)\/'?)?`, 0)
 	matcher := re.MatcherString(vars, 0)
 	subject := []byte(vars)
 	for matcher.Match(subject, 0) {
@@ -71,7 +71,10 @@ func (p *RuleParser) ParseVariables(vars string) error {
 			negation = true
 		}
 
-		collection := strings.ToLower(vname)
+		collection, err := engine.NameToVariable(vname)
+		if err != nil {
+			return err
+		}
 		if negation {
 			p.rule.AddNegateVariable(collection, vvalue)
 		} else {
@@ -96,32 +99,31 @@ func (p *RuleParser) ParseOperator(operator string) error {
 	}
 	spl := strings.SplitN(operator, " ", 2)
 	op := spl[0]
-	p.rule.Operator = operator
-	p.rule.OperatorObj = new(engine.RuleOp)
+	p.rule.Operator = new(engine.RuleOperator)
 
 	if op[0] == '!' {
-		p.rule.OperatorObj.Negation = true
+		p.rule.Operator.Negation = true
 		op = utils.TrimLeftChars(op, 1)
 	}
 	if op[0] == '@' {
 		op = utils.TrimLeftChars(op, 1)
 		if len(spl) == 2 {
-			p.rule.OperatorObj.Data = spl[1]
+			p.rule.Operator.Data = spl[1]
 		}
 	}
 
-	p.rule.OperatorObj.Operator = operators.OperatorsMap()[op]
-	if p.rule.OperatorObj.Operator == nil {
+	p.rule.Operator.Operator = operators.OperatorsMap()[op]
+	if p.rule.Operator.Operator == nil {
 		return errors.New("Invalid operator " + op)
 	} else {
 		//TODO add a special attribute to accept files
 		fileops := []string{"ipMatchFromFile", "pmFromFile"}
 		for _, fo := range fileops {
 			if fo == op {
-				p.rule.OperatorObj.Data = path.Join(p.Configdir, p.rule.OperatorObj.Data)
+				p.rule.Operator.Data = path.Join(p.Configdir, p.rule.Operator.Data)
 			}
 		}
-		p.rule.OperatorObj.Operator.Init(p.rule.OperatorObj.Data)
+		p.rule.Operator.Operator.Init(p.rule.Operator.Data)
 	}
 	return nil
 }
@@ -204,6 +206,9 @@ func ParseActions(actions string) ([]ruleAction, error) {
 			continue
 		} else if !quoted && c == ',' {
 			f := actionsmod.ActionsMap()[ckey]
+			if f == nil {
+				return nil, errors.New("Invalid action " + ckey)
+			}
 			res = append(res, ruleAction{
 				Key:   ckey,
 				Value: cval,

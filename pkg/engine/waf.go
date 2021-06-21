@@ -48,6 +48,9 @@ const (
 	REQUEST_BODY_PROCESSOR_XML        = 2
 	REQUEST_BODY_PROCESSOR_JSON       = 3
 	REQUEST_BODY_PROCESSOR_MULTIPART  = 4
+
+	REQUEST_BODY_LIMIT_ACTION_PROCESS_PARTIAL = 0
+	REQUEST_BODY_LIMIT_ACTION_REJECT          = 1
 )
 
 type Waf struct {
@@ -149,26 +152,7 @@ type Waf struct {
 
 	mux *sync.RWMutex
 
-	// To be used
-	/*
-	   StreamOutBodyInspection bool
-	   HashKey string
-	   HttpBlKey string
-	   PcreMatchLimit int
-	   ConnReadStateLimit int
-	   ConnWriteStateLimit int
-	   CollectionTimeout int
-	   ConnEngine int
-	   ContentInjection bool
-	   ForceRequestBodyVariable bool
-	   UploadDir string
-	   UploadFileLimit int
-	   UploadFileMode int
-	   InterceptOnError bool
-	   DebugLogLevel int
-	   HashEnforcement bool
-	   HashEngine bool
-	*/
+	RequestBodyLimitAction int
 }
 
 // Initializes an instance of WAF
@@ -180,7 +164,10 @@ func (w *Waf) Init() {
 	w.AuditEngine = AUDIT_LOG_DISABLED
 	w.AuditLogType = AUDIT_LOG_CONCURRENT
 	w.PersistenceUri = "inmemory"
+	w.TmpDir = "/tmp"
 	w.RequestBodyLimit = 10000000 //10mb
+	w.RequestBodyInMemoryLimit = 131072
+	w.RuleEngine = true
 	w.InitPersistenceEngine()
 }
 

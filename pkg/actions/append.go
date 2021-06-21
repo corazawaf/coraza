@@ -28,11 +28,7 @@ func (a *Append) Init(r *engine.Rule, data string) string {
 }
 
 func (a *Append) Evaluate(r *engine.Rule, tx *engine.Transaction) {
-	t := tx.GetCollection("tx")
-	rb := t.GetSimple("response_body")
-	if len(rb) > 0 {
-		t.Set("response_body", []string{rb[0] + a.Data})
-	}
+	// Not implemented
 }
 
 func (a *Append) GetType() int {

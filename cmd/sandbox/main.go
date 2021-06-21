@@ -19,7 +19,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/jptosso/coraza-waf/pkg/engine"
-	"github.com/jptosso/coraza-waf/pkg/parser"
+	"github.com/jptosso/coraza-waf/pkg/seclang"
 	"html/template"
 	"io/ioutil"
 	"log"
@@ -81,7 +81,7 @@ func apiHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	waf := engine.NewWaf()
 	waf.Datapath = CRS_PATH
-	parser, _ := parser.NewParser(waf)
+	parser, _ := seclang.NewParser(waf)
 	parser.FromString(r.Directives)
 	if r.Crs {
 		fmt.Println("Loading CRS rules")
@@ -91,19 +91,19 @@ func apiHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 	tx := waf.NewTransaction()
-	err = tx.ParseRequestString(r.Request)
+	_, err = tx.ParseRequestString(r.Request)
 	if err != nil {
 		errorHandler(w, "Invalid HTTP Request")
 		return
 	}
 	//We hardcode the remote_addr header based on x-real-ip header
-	rip := tx.Collections["request_headers"].Data["x-real-ip"]
+	rip := tx.GetCollection(engine.VARIABLE_REQUEST_HEADERS).GetData()["x-real-ip"]
 	if len(rip) > 0 {
-		tx.Collections["remote_addr"].Data[""] = rip
+		tx.GetCollection(engine.VARIABLE_REMOTE_ADDR).GetData()[""] = rip
 	}
-	for i := 1; i <= 5; i++ {
-		tx.ExecutePhase(i)
-	}
+	tx.ProcessResponseHeaders(200, "http/1.1")
+	tx.ProcessResponseBody(nil)
+	tx.ProcessLogging()
 	w.Header().Set("Content-Type", "text/html")
 	parsedTemplate, _ := template.ParseFiles("www/results.html")
 	sr := &ServerResponse{
@@ -117,7 +117,7 @@ func apiHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func loadCrs(pp *parser.Parser) error {
+func loadCrs(pp *seclang.Parser) error {
 	files := []string{
 		"REQUEST-901-INITIALIZATION.conf",
 		"REQUEST-903.9001-DRUPAL-EXCLUSION-RULES.conf",

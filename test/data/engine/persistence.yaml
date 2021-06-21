@@ -12,11 +12,11 @@
       stage:
         output:
           triggered_rules:
-            - 1
-            - 3
-            - 4
+            #- 1
+            #- 3
+            #- 4
           non_triggered_rules:
-            - 5
+            #- 5
   rules: |
     SecAction "id: 1, log, initcol:'ip=127.0.0.1', setvar:'ip.test=5'"
     # ip.test should now be expired

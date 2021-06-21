@@ -37,7 +37,7 @@ func TestCtl(t *testing.T) {
 	if tx.RuleRemoveTargetById[981260] == nil {
 		t.Error("Failed to create ruleRemoveTargetById")
 	} else {
-		if tx.RuleRemoveTargetById[981260][0].Name != "args" {
+		if tx.RuleRemoveTargetById[981260][0].Collection != engine.VARIABLE_ARGS {
 			t.Error("Failed to create ruleRemoveTargetById, invalid Collection")
 		}
 		if tx.RuleRemoveTargetById[981260][0].Key != "user" {

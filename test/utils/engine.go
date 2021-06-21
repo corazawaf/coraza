@@ -19,10 +19,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jptosso/coraza-waf/pkg/engine"
-	"github.com/jptosso/coraza-waf/pkg/parser"
+	"github.com/jptosso/coraza-waf/pkg/seclang"
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	"gopkg.in/yaml.v2"
-	"net/url"
+	"io"
 	"reflect"
 	"strings"
 	//"time"
@@ -45,18 +45,17 @@ func ParseProfile(path string) (*testProfile, error) {
 func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 	if rules != "" {
 		waf = engine.NewWaf()
-		p := &parser.Parser{}
+		p := &seclang.Parser{}
 		p.Init(waf)
 		p.FromString(rules)
 	}
 	tx := waf.NewTransaction()
-	ct := ""
 	if stage.Stage.Input.EncodedRequest != "" {
 		sDec, _ := b64.StdEncoding.DecodeString(stage.Stage.Input.EncodedRequest)
 		stage.Stage.Input.RawRequest = string(sDec)
 	}
 	if stage.Stage.Input.RawRequest != "" {
-		err := tx.ParseRequestString(stage.Stage.Input.RawRequest)
+		_, err := tx.ParseRequestString(stage.Stage.Input.RawRequest)
 		if err != nil {
 			return errors.New("Failed to parse Raw Request")
 		}
@@ -65,19 +64,14 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 	if len(stage.Stage.Input.Headers) > 0 {
 		for k, v := range stage.Stage.Input.Headers {
 			tx.AddRequestHeader(k, v)
-			kt := strings.ToLower(k)
-			if kt == "cookie" {
-				tx.AddCookies(v)
-			} else if kt == "content-type" {
-				ct = v
-			}
 		}
 	}
 	method := "GET"
 	if stage.Stage.Input.Method != "" {
 		method = stage.Stage.Input.Method
-		tx.SetRequestMethod(method)
 	}
+	tx.GetCollection(engine.VARIABLE_REQUEST_METHOD).Add("", method)
+
 
 	//Request Line
 	httpv := "HTTP/1.1"
@@ -95,30 +89,26 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 		} else {
 			path = "/" + spl[0]
 		}
-	}
-	tx.SetRequestLine(method, httpv, path)
-	// This is a fix for some tests overwrites...
-	tx.GetCollection("request_line").AddToKey("", fmt.Sprintf("%s %s %s", method, stage.Stage.Input.Uri, httpv))
+	}	
+	tx.GetCollection(engine.VARIABLE_REQUEST_LINE).Add("", fmt.Sprintf("%s %s %s", method, stage.Stage.Input.Uri, httpv))
 
-	//PHASE 1
-	tx.ExecutePhase(1)
+	//We can skip processConnection and ProcessUri
+	tx.ProcessRequestHeaders()
 
 	// POST DATA
 	if stage.Stage.Input.Data != "" {
-		tx.SetRequestBody([]byte(parseInputData(stage.Stage.Input.Data)), ct)
+		r := io.Reader(strings.NewReader(parseInputData(stage.Stage.Input.Data)))
+		tx.ProcessRequestBody(&r)
 		// we ignore the error
 	}
+	tx.ProcessResponseHeaders(200, "HTTP/1.1")
+	tx.ProcessLogging()
 
-	for i := 2; i <= 5; i++ {
-		if tx.ExecutePhase(i) {
-			break
-		}
-	}
 	log := ""
 	tr := []int{}
 	for _, mr := range tx.MatchedRules {
-		log += fmt.Sprintf(" [id \"%d\"]", mr.Id)
-		tr = append(tr, mr.Id)
+		log += fmt.Sprintf(" [id \"%d\"]", mr.Rule.Id)
+		tr = append(tr, mr.Rule.Id)
 	}
 	//now we evaluate tests
 	if stage.Stage.Output.LogContains != "" {
@@ -147,7 +137,7 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 	}
 	if stage.Stage.Output.Status != nil {
 		// Status is not supported because it depends on apache behaviour
-	}	
+	}
 	return nil
 }
 
@@ -167,14 +157,8 @@ func parseInputData(input interface{}) string {
 }
 
 func parseUrl(uri string, tx *engine.Transaction) {
-	u, err := url.Parse(uri)
-	if err == nil {
-		tx.SetUrl(u)
-		tx.AddGetArgsFromUrl(u)
-		return
-	}
-	tx.GetCollection("request_uri_raw").AddToKey("", uri)
-	tx.GetCollection("request_uri").AddToKey("", uri)
+	tx.GetCollection(engine.VARIABLE_REQUEST_URI_RAW).Add("", uri)
+	tx.GetCollection(engine.VARIABLE_REQUEST_URI).Add("", uri)
 	schema := "http"
 	args := ""
 	hostname := "127.0.0.1"
@@ -200,11 +184,16 @@ func parseUrl(uri string, tx *engine.Transaction) {
 		path = spl[0]
 		args = spl[1]
 	}
-	// TODO
 	schema = schema + hostname
-	tx.GetCollection("request_filename").AddToKey("", path)
-	tx.GetCollection("request_basename").AddToKey("", path)
-	tx.GetCollection("query_string").AddToKey("", args)
+	tx.GetCollection(engine.VARIABLE_REQUEST_FILENAME).Add("", path)
+	tx.GetCollection(engine.VARIABLE_REQUEST_BASENAME).Add("", path)
+	tx.GetCollection(engine.VARIABLE_QUERY_STRING).Add("", args)
+	values := utils.ParseQuery(args, "&")
+	for k, vs := range values {
+		for _, v := range vs {
+			tx.AddArgument("GET", k, v)
+		}
+	}
 }
 
 type testProfile struct {
@@ -255,5 +244,5 @@ type testOutput struct {
 	ExpectError       bool   `yaml:"expect_error"`
 	TriggeredRules    []int  `yaml:"triggered_rules"`
 	NonTriggeredRules []int  `yaml:"non_triggered_rules"`
-	Status []int `yaml:"status"`
+	Status            interface{}  `yaml:"status"`
 }

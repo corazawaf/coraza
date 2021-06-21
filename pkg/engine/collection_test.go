@@ -16,26 +16,28 @@ package engine
 
 import (
 	"testing"
-	"time"
 )
 
-func TestHttpLogger(t *testing.T) {
-	logger := &HttpLogger{}
-	logger.Init("https://postman-echo.com/post")
-	defer logger.Stop()
-	w := NewWaf()
-	tx := w.NewTransaction()
-	logger.Add(tx)
-	counter := 0
-	for logger.UploadCount == 0 {
-		time.Sleep(100 * time.Millisecond)
-		counter += 1
-		if counter >= 150 { //15 seconds
-			break
-		}
-	}
+func TestLocalCollection(t *testing.T) {
+}
 
-	if logger.LastError != nil || logger.UploadCount == 0 {
-		t.Errorf("Failed to upload https log")
+func TestLocalCollectionMatchData(t *testing.T) {
+	lc := NewCollection("test")
+	lc.Set("test2", []string{"test3"})
+
+	md := lc.GetWithExceptions("test2", []string{})
+	if len(md) == 0 {
+		t.Error("Failed to get matched data")
+		return
+	}
+	md0 := md[0]
+	if md0.Collection != "test" {
+		t.Error("Failed to set matched data collection")
+	}
+	if md0.Key != "test2" {
+		t.Error("Failed to set matched data key")
+	}
+	if md0.Value != "test3" {
+		t.Error("Failed to set matched data value")
 	}
 }

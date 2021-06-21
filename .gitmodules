@@ -1,3 +1,0 @@
-[submodule "pkg/utils/libinjection"]
-	path = pkg/utils/libinjection
-	url = https://github.com/client9/libinjection

@@ -12,26 +12,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package parser
-
-import (
-	"github.com/jptosso/coraza-waf/pkg/engine"
-	"testing"
-)
-
-func TestDefaultActions(t *testing.T) {
-	waf := engine.NewWaf()
-	p, _ := NewParser(waf)
-	err := p.AddDefaultActions("log, pass, phase: 1")
-	if err != nil {
-		t.Error("Error parsing default actions", err)
-	}
-	p.AddDefaultActions("log, drop, phase:2")
-	if len(p.GetDefaultActions()) != 2 {
-		t.Error("Default actions were not created")
-	}
-}
-
-func TestMergeActions(t *testing.T) {
-
-}
+package seclang

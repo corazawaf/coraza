@@ -23,7 +23,7 @@ import (
 type Setvar struct {
 	Key        string
 	Value      string
-	Collection string
+	Collection byte
 	IsRemove   bool
 }
 
@@ -41,7 +41,11 @@ func (a *Setvar) Init(r *engine.Rule, data string) string {
 	spl := strings.SplitN(data, "=", 2)
 
 	splcol := strings.SplitN(spl[0], ".", 2)
-	a.Collection = splcol[0]
+	var err error
+	a.Collection, err = engine.NameToVariable(splcol[0])
+	if err != nil {
+		return err.Error()
+	}
 	if len(splcol) == 2 {
 		a.Key = splcol[1]
 	}

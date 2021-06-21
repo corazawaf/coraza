@@ -16,7 +16,7 @@ package engine
 
 import (
 	log "github.com/sirupsen/logrus"
-	"reflect"
+	"github.com/jptosso/coraza-waf/pkg/transformations"
 	"strconv"
 	"strings"
 )
@@ -48,47 +48,31 @@ type Operator interface {
 	Evaluate(*Transaction, string) bool
 }
 
-type RuleOp struct {
+type RuleOperator struct {
 	Operator Operator
 	Data     string
 	Negation bool
-	//OpEval OperatorFunction
-}
-
-type RuleTransformation struct {
-	Function string
-	TfFunc   interface{} `json:"-"`
 }
 
 type RuleVariable struct {
 	Count      bool
-	Collection string
+	Collection byte
 	Key        string
 	Exceptions []string
 }
 
 type Rule struct {
-	// Contains de non-compiled variables part of the rule
-	Vars string `json:"vars"`
-
 	Variables               []RuleVariable
-	Operator                string
-	OperatorObj             *RuleOp
-	Disruptive              bool
-	Transformations         []RuleTransformation
-	HasChain                bool
+	Operator                *RuleOperator
+	Transformations         []transformations.Transformation
 	ParentId                int
 	Actions                 []Action
-	ActionParams            string
-	MultiMatch              bool
-	Severity                string
-	Skip                    bool
 	SecMark                 string
-	Log                     bool
 	Raw                     string
 	Chain                   *Rule
 	DisruptiveAction        int
 	DefaultDisruptiveAction string
+	HasChain                bool
 
 	//METADATA
 	// Rule unique sorted identifier
@@ -113,7 +97,11 @@ type Rule struct {
 	Version string
 
 	// Used by deny to create disruption
-	Status int
+	Status     int
+	Log        bool
+	MultiMatch bool
+	Severity   string
+	Skip       bool
 }
 
 func (r *Rule) Init() {
@@ -130,6 +118,16 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 			return matchedValues
 		}
 	}
+	// secmarkers and secactions will always match
+	if r.Operator == nil {
+		matchedValues = []*MatchData{
+			&MatchData{
+				Collection: "", //TODO replace with a placeholder
+				Key:        "",
+				Value:      "",
+			},
+		}
+	}
 	ecol := tx.GetRemovedTargets(r.Id)
 	for _, v := range r.Variables {
 		var values []*MatchData
@@ -137,7 +135,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 		copy(exceptions, v.Exceptions)
 		if ecol != nil {
 			for _, c := range ecol {
-				if c.Name == v.Collection {
+				if c.Collection == v.Collection {
 					exceptions = append(exceptions, c.Key)
 				}
 			}
@@ -151,7 +149,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 			} else {
 				values = []*MatchData{
 					&MatchData{
-						Collection: v.Collection,
+						Collection: VariableToName(v.Collection),
 						Key:        v.Key,
 						Value:      strconv.Itoa(len(values)),
 					},
@@ -190,6 +188,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 		//No match for variables
 		return matchedValues
 	}
+	
 	// we must match the vars before runing the chains
 	tx.MatchVars(matchedValues)
 
@@ -201,7 +200,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 	}
 
 	// We reset the capturable configuration
-	tx.SetCapturable(false)
+	tx.Capture = false
 
 	msgs := []string{tx.MacroExpansion(r.Msg)}
 	if r.Chain != nil {
@@ -236,11 +235,11 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 }
 
 func (r *Rule) executeOperator(data string, tx *Transaction) bool {
-	result := r.OperatorObj.Operator.Evaluate(tx, data)
-	if r.OperatorObj.Negation && result {
+	result := r.Operator.Operator.Evaluate(tx, data)
+	if r.Operator.Negation && result {
 		return false
 	}
-	if r.OperatorObj.Negation && !result {
+	if r.Operator.Negation && !result {
 		return true
 	}
 	return result
@@ -249,11 +248,7 @@ func (r *Rule) executeOperator(data string, tx *Transaction) bool {
 func (r *Rule) executeTransformationsMultimatch(value string) []string {
 	res := []string{value}
 	for _, t := range r.Transformations {
-		rf := reflect.ValueOf(t.TfFunc)
-		rargs := make([]reflect.Value, 1)
-		rargs[0] = reflect.ValueOf(value)
-		call := rf.Call(rargs)
-		value = call[0].String()
+		value = t(value)
 		res = append(res, value)
 	}
 	return res
@@ -261,21 +256,17 @@ func (r *Rule) executeTransformationsMultimatch(value string) []string {
 
 func (r *Rule) executeTransformations(value string) string {
 	for _, t := range r.Transformations {
-		rf := reflect.ValueOf(t.TfFunc)
-		rargs := make([]reflect.Value, 1)
-		rargs[0] = reflect.ValueOf(value)
-		call := rf.Call(rargs)
-		value = call[0].String()
+		value = t(value)
 	}
 	return value
 }
 
-func (r *Rule) AddVariable(count bool, collection string, key string) {
+func (r *Rule) AddVariable(count bool, collection byte, key string) {
 	rv := RuleVariable{count, collection, key, []string{}}
 	r.Variables = append(r.Variables, rv)
 }
 
-func (r *Rule) AddNegateVariable(collection string, key string) {
+func (r *Rule) AddNegateVariable(collection byte, key string) {
 	for i, vr := range r.Variables {
 		if vr.Collection == collection {
 			vr.Exceptions = append(vr.Exceptions, key)
