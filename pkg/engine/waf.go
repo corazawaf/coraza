@@ -167,6 +167,7 @@ func (w *Waf) Init() {
 	w.TmpDir = "/tmp"
 	w.RequestBodyLimit = 10000000 //10mb
 	w.RequestBodyInMemoryLimit = 131072
+	w.RuleEngine = true
 	w.InitPersistenceEngine()
 }
 
