@@ -28,11 +28,6 @@ type RuleGroup struct {
 	mux   *sync.RWMutex
 }
 
-func (rg *RuleGroup) Init() {
-	rg.rules = []*Rule{}
-	rg.mux = &sync.RWMutex{}
-}
-
 // Adds a rule to the collection
 // Will return an error if the ID is already used
 func (rg *RuleGroup) Add(rule *Rule) error {
@@ -152,4 +147,11 @@ func (rg *RuleGroup) Evaluate(phase int, tx *Transaction) bool {
 	}
 	tx.StopWatches[phase] = int(time.Now().UnixNano() - ts)
 	return tx.Interruption != nil
+}
+
+func NewRuleGroup() *RuleGroup{
+	return &RuleGroup {
+		rules: []*Rule{},
+		mux: &sync.RWMutex{},
+	}	
 }

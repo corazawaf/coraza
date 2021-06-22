@@ -45,8 +45,7 @@ func TestTransformations(t *testing.T) {
 		}
 		return nil
 	})
-	waf := engine.Waf{}
-	waf.Init()
+	waf := engine.NewWaf()
 	for _, f := range files {
 
 		cases := []*Test{}

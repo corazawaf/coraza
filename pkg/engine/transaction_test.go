@@ -16,7 +16,6 @@ package engine
 
 import (
 	"fmt"
-	"io"
 	"strings"
 	"testing"
 )
@@ -151,11 +150,10 @@ func TestRequestBody(t *testing.T) {
 	urlencoded := "some=result&second=data"
 	//xml := "<test><content>test</content></test>"
 	tx := wafi.NewTransaction()
-
-	str := io.Reader(strings.NewReader(urlencoded))
 	tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
+	tx.RequestBodyReader.Write([]byte(urlencoded))
 	tx.ProcessRequestHeaders()
-	tx.ProcessRequestBody(&str)
+	tx.ProcessRequestBody()
 	val := tx.GetCollection(VARIABLE_ARGS_POST).Get("some")
 	if len(val) != 1 || val[0] != "result" {
 		t.Error("Failed to set url encoded post data")

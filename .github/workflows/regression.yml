@@ -1,0 +1,38 @@
+name: Regression Tests
+
+on:
+  push:
+    branches: 
+      - '*'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        go-version: [1.16.x]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go-version }}
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: Setup libinjection
+      run: |
+        sudo make deps
+        sudo ldconfig
+        # Used to store log files for testing
+        mkdir /tmp/audit
+    - name: Download vendored dependencies
+      run: go mod vendor
+    - name: Tests and coverage
+      run: CGO_ENABLED=1 go test -v -coverprofile=docs/coverage-waf.out ./...
+    - name: SonarCloud Scan
+      uses: sonarsource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}      

@@ -102,7 +102,8 @@ func apiHandler(w http.ResponseWriter, req *http.Request) {
 		tx.GetCollection(engine.VARIABLE_REMOTE_ADDR).GetData()[""] = rip
 	}
 	tx.ProcessResponseHeaders(200, "http/1.1")
-	tx.ProcessResponseBody(nil)
+	tx.ResponseBodyReader.Write([]byte(r.Response))
+	tx.ProcessResponseBody()
 	tx.ProcessLogging()
 	w.Header().Set("Content-Type", "text/html")
 	parsedTemplate, _ := template.ParseFiles("www/results.html")

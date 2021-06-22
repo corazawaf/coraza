@@ -15,8 +15,8 @@
 package engine
 
 import (
-	log "github.com/sirupsen/logrus"
 	"github.com/jptosso/coraza-waf/pkg/transformations"
+	log "github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
 )
@@ -102,12 +102,6 @@ type Rule struct {
 	MultiMatch bool
 	Severity   string
 	Skip       bool
-}
-
-func (r *Rule) Init() {
-	//It seems default phase for modsec is 2 according to secdefaultaction documentation
-	r.Phase = 2
-	r.Tags = []string{}
 }
 
 func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
@@ -286,7 +280,8 @@ func (r *Rule) AddNegateVariable(collection byte, key string) {
 }
 
 func NewRule() *Rule {
-	r := &Rule{}
-	r.Init()
-	return r
+	return &Rule{	
+		Phase: 2,
+		Tags: []string{},
+	}
 }

@@ -104,11 +104,11 @@ const (
 	VARIABLE_ARGS_POST_NAMES        = 0x4B
 	VARIABLE_TX                     = 0x4C
 
-	VARIABLE_RULE     = 0x52 //TODO FIX
-	VARIABLE_XML      = 0x53 //TODO FIX
-	VARIABLE_JSON     = 0x54 //TODO FIX
-	VARIABLE_INBOUND_ERROR_DATA               = 0x55 //TODO FIX
-	VARIABLE_DURATION               = 0x56 //TODO FIX
+	VARIABLE_RULE               = 0x52 //TODO FIX
+	VARIABLE_XML                = 0x53 //TODO FIX
+	VARIABLE_JSON               = 0x54 //TODO FIX
+	VARIABLE_INBOUND_ERROR_DATA = 0x55 //TODO FIX
+	VARIABLE_DURATION           = 0x56 //TODO FIX
 
 	// Persistent collections
 	VARIABLE_GLOBAL   = 0x4D
@@ -464,7 +464,7 @@ func VariableToName(v byte) string {
 	case VARIABLE_DURATION:
 		return "DURATION"
 	case VARIABLE_RULE:
-		return "RULE"		
+		return "RULE"
 	}
 	return ""
 }

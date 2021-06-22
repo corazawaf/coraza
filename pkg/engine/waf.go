@@ -155,21 +155,6 @@ type Waf struct {
 	RequestBodyLimitAction int
 }
 
-// Initializes an instance of WAF
-func (w *Waf) Init() {
-	//TODO replace with SecCacheEngine redis://user:password@localhost:6379
-	w.mux = &sync.RWMutex{}
-	w.Rules = &RuleGroup{}
-	w.Rules.Init()
-	w.AuditEngine = AUDIT_LOG_DISABLED
-	w.AuditLogType = AUDIT_LOG_CONCURRENT
-	w.PersistenceUri = "inmemory"
-	w.TmpDir = "/tmp"
-	w.RequestBodyLimit = 10000000 //10mb
-	w.RequestBodyInMemoryLimit = 131072
-	w.RuleEngine = true
-	w.InitPersistenceEngine()
-}
 
 func (w *Waf) InitLogger() {
 	l := &Logger{}
@@ -232,7 +217,18 @@ func (w *Waf) NewTransaction() *Transaction {
 }
 
 func NewWaf() *Waf {
-	waf := &Waf{}
-	waf.Init()
+	waf := &Waf{
+		mux:  &sync.RWMutex{},
+		Rules:  NewRuleGroup(),
+		AuditEngine:  AUDIT_LOG_DISABLED,
+		AuditLogType:  AUDIT_LOG_CONCURRENT,
+		PersistenceUri:  "inmemory",
+		TmpDir:  "/tmp",
+		RequestBodyLimit:  10000000, //10mb
+		RequestBodyInMemoryLimit:  131072,
+		RuleEngine:  true,
+	}
+	waf.InitLogger()
+	waf.InitPersistenceEngine()
 	return waf
 }

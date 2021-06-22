@@ -21,8 +21,7 @@ import (
 var waf *Waf
 
 func TestWAFInitialize(t *testing.T) {
-	waf = &Waf{}
-	waf.Init()
+	waf = NewWaf()
 	if waf.Rules == nil {
 		t.Error("Failed to initialize rule groups")
 	}

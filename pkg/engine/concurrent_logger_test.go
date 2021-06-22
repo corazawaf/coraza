@@ -23,10 +23,9 @@ import (
 )
 
 func TestCLogFileCreation(t *testing.T) {
-	waf := &Waf{}
+	waf := NewWaf()
 	waf.AuditLogStorageDir = "/tmp/audit/"
 	waf.AuditLogPath = "/tmp/audit/audit.log"
-	waf.Init()
 	waf.InitLogger()
 	r := NewRule()
 	mr := []*MatchData{
