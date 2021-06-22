@@ -25,6 +25,8 @@ jobs:
       run: |
         sudo make deps
         sudo ldconfig
+        # Used to store log files for testing
+        mkdir /tmp/audit
     - name: Download vendored dependencies
       run: go mod vendor
     - name: Tests and coverage
