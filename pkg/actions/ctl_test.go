@@ -20,11 +20,9 @@ import (
 )
 
 func TestCtl(t *testing.T) {
-	waf := &engine.Waf{}
-	waf.Init()
+	waf := engine.NewWaf()
 	tx := waf.NewTransaction()
-	r := &engine.Rule{}
-	r.Init()
+	r := engine.NewRule()
 	ctl := Ctl{}
 
 	ctl.Init(r, "requestBodyProcessor=XML")

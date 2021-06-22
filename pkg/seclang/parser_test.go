@@ -13,7 +13,8 @@
 // limitations under the License.
 
 package seclang
-import(
+
+import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"testing"
 )

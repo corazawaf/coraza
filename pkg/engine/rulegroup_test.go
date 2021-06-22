@@ -19,16 +19,14 @@ import (
 )
 
 func TestRG(t *testing.T) {
-	r := &Rule{}
-	r.Init()
+	r := NewRule()
 	r.Msg = "test"
 	r.Id = 1
 	r.Tags = []string{
 		"test",
 	}
 
-	rg := &RuleGroup{}
-	rg.Init()
+	rg := NewRuleGroup()
 	rg.Add(r)
 
 	if rg.Count() != 1 {

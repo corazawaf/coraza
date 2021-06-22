@@ -16,19 +16,15 @@ package engine
 
 import (
 	"bufio"
-	"bytes"
-	"errors"
 	"fmt"
 	"github.com/antchfx/xmlquery"
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	log "github.com/sirupsen/logrus"
 	"html"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -109,6 +105,9 @@ type Transaction struct {
 	AuditLogType             int
 	LastPhase                int
 
+	RequestBodyReader  *BodyReader
+	ResponseBodyReader *BodyReader
+
 	// Rules with this id are going to be skipped
 	RuleRemoveById []int
 
@@ -140,7 +139,7 @@ func (tx *Transaction) Init(waf *Waf) error {
 	tx.Collections = make([]*Collection, VARIABLES_COUNT)
 	txid := utils.RandomString(19)
 	tx.Id = txid
-	for i, _ := range tx.Collections {
+	for i := range tx.Collections {
 		tx.Collections[i] = &Collection{}
 		tx.Collections[i].Init(VariableToName(byte(i)))
 	}
@@ -164,6 +163,9 @@ func (tx *Transaction) Init(waf *Waf) error {
 	tx.RuleRemoveTargetById = map[int][]*KeyValue{}
 	tx.RuleRemoveById = []int{}
 	tx.StopWatches = map[int]int{}
+	tx.RequestBodyReader = NewBodyReader(tx.Waf.TmpDir, tx.Waf.RequestBodyInMemoryLimit)
+	// TODO add response values
+	tx.ResponseBodyReader = NewBodyReader(tx.Waf.TmpDir, tx.Waf.RequestBodyInMemoryLimit)
 
 	return nil
 }
@@ -400,7 +402,7 @@ func (tx *Transaction) GetField(collection byte, key string, exceptions []string
 			})
 		}
 		return res
-	}else{
+	} else {
 		col := tx.GetCollection(collection)
 		key = tx.MacroExpansion(key)
 		if col == nil {
@@ -517,8 +519,11 @@ func (tx *Transaction) ProcessRequest(req *http.Request) (*Interruption, error) 
 	if in != nil {
 		return in, nil
 	}
-	reader := io.Reader(req.Body)
-	return tx.ProcessRequestBody(&reader)
+	_, err := io.Copy(tx.RequestBodyReader, req.Body)
+	if err != nil {
+		return tx.Interruption, err
+	}
+	return tx.ProcessRequestBody()
 }
 
 // This method should be called at very beginning of a request process, it is
@@ -618,50 +623,35 @@ func (tx *Transaction) ProcessRequestHeaders() *Interruption {
 // body for inspect it is recommended to skip this step.
 //
 // Remember to check for a possible intervention.
-func (tx *Transaction) ProcessRequestBody(body *io.Reader) (*Interruption, error) {
-	if !tx.RequestBodyAccess || body == nil {
+func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
+	if !tx.RequestBodyAccess || !tx.RuleEngine {
 		return tx.Interruption, nil
 	}
+	mime := "application/x-www-form-urlencoded"
 
-	transfer := tx.GetCollection(VARIABLE_REQUEST_HEADERS).GetFirstString("transfer")
-	length := tx.GetCollection(VARIABLE_REQUEST_HEADERS).GetFirstInt64("content-length")
-	mime := tx.GetCollection(VARIABLE_REQUEST_HEADERS).GetFirstString("content-type")
-	mime = strings.ToLower(mime)
-	chunked := strings.EqualFold(transfer, "chunked")
-	var reader io.Reader
+	reader := tx.RequestBodyReader.Reader()
+	if m := tx.GetCollection(VARIABLE_REQUEST_HEADERS).Get("content-type"); len(m) > 0 {
+		//spl := strings.SplitN(m[0], ";", 2) //We must skip charset or others
+		mime = m[0]
+	}
 
 	// Chunked requests will always be written to a temporary file
-	if !chunked && length > tx.RequestBodyLimit && tx.Waf.RequestBodyLimitAction == REQUEST_BODY_LIMIT_ACTION_REJECT {
-		return nil, errors.New("Rejected request body size")
-	} else if !chunked && length > tx.RequestBodyLimit && tx.Waf.RequestBodyLimitAction == REQUEST_BODY_LIMIT_ACTION_PROCESS_PARTIAL {
-		tx.GetCollection(VARIABLE_INBOUND_ERROR_DATA).Set("", []string{"1"})
+	if tx.RequestBodyReader.Size() >= tx.RequestBodyLimit {
+		if tx.Waf.RequestBodyLimitAction == REQUEST_BODY_LIMIT_ACTION_REJECT {
+			// We interrupt this transaction in case RequestBodyLimitAction is Reject
+			tx.Interruption = &Interruption{
+				Status: 403,
+				Action: "deny",
+			}
+			return tx.Interruption, nil
+		} else if tx.Waf.RequestBodyLimitAction == REQUEST_BODY_LIMIT_ACTION_PROCESS_PARTIAL {
+			tx.GetCollection(VARIABLE_INBOUND_ERROR_DATA).Set("", []string{"1"})
+			// we limit our reader to tx.RequestBodyLimit bytes
+			reader = io.LimitReader(reader, tx.RequestBodyLimit)
+		}
 	}
 
-	// In this case we are going to write the buffer to a file
-	if chunked || length > tx.Waf.RequestBodyInMemoryLimit {
-		tpath := path.Join(tx.Waf.TmpDir, utils.RandomString(16))
-		tfile, err := os.Create(tpath)
-		defer tfile.Close()
-		io.Copy(tfile, *body)
-		if err != nil {
-			return nil, errors.New("Couldn't create temporary file to store request body buffer")
-		}
-		// We overwrite the original body with the file
-		reader = bufio.NewReader(tfile)
-		//then we copy the content to body
-		*body = (bufio.NewReader(tfile))
-		tx.addTemporaryFile(tpath)
-	} else { //we write the buffer to memory
-		// In this case we are going to buffer it to memory so be it !
-		b, err := ioutil.ReadAll(*body)
-		if err != nil {
-			return nil, errors.New("Failed to store request body in memory")
-		}
-		reader = bytes.NewReader(b)
-		*body = bytes.NewReader(b)
-	}
-
-	//FROM CTL:forcerequestbodyvariable...
+	//TODO check this out
 	if tx.RequestBodyProcessor == 0 && tx.ForceRequestBodyVariable {
 		tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_URLENCODED
 	} else if tx.RequestBodyProcessor == 0 {
@@ -705,7 +695,7 @@ func (tx *Transaction) ProcessRequestBody(body *io.Reader) (*Interruption, error
 		if err != nil {
 			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR).Set("", []string{"1"})
 			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR_MSG).Set("", []string{string(err.Error())})
-			return nil, err
+			return tx.Interruption, err
 		}
 	case REQUEST_BODY_PROCESSOR_MULTIPART:
 		req, _ := http.NewRequest("GET", "/", reader)
@@ -715,7 +705,7 @@ func (tx *Transaction) ProcessRequestBody(body *io.Reader) (*Interruption, error
 		if err != nil {
 			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR).Set("", []string{"1"})
 			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR_MSG).Set("", []string{string(err.Error())})
-			return nil, err
+			return tx.Interruption, err
 		}
 
 		fn := tx.GetCollection(VARIABLE_FILES_NAMES)
@@ -754,7 +744,7 @@ func (tx *Transaction) ProcessRequestBody(body *io.Reader) (*Interruption, error
 //
 // note: Remember to check for a possible intervention.
 //
-func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *Interruption{
+func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *Interruption {
 	c := strconv.Itoa(code)
 	tx.GetCollection(VARIABLE_RESPONSE_STATUS).Add("", c)
 	tx.GetCollection(VARIABLE_RESPONSE_PROTOCOL).Add("", proto)
@@ -767,6 +757,15 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *Interrupt
 	return tx.Interruption
 }
 
+// IsProcessableRequestBody returns true if the response body meets the
+// criteria to be processed, response headers must be set before.
+// The content-type response header must be in the SecRequestBodyMime
+// This is used by webservers to stream response buffers directly to the client
+func (tx *Transaction) IsProcessableResponseBody() bool {
+	ct := tx.GetCollection(VARIABLE_RESPONSE_CONTENT_TYPE).GetFirstString("")
+	return utils.ArrayContains(tx.ResponseBodyMimeType, ct)
+}
+
 // Perform the request body (if any)
 //
 // This method perform the analysis on the request body. It is optional to
@@ -774,22 +773,18 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *Interrupt
 // body for inspect it is recommended to skip this step.
 //
 // note Remember to check for a possible intervention.
-func (tx *Transaction) ProcessResponseBody(body *io.Reader) (*Interruption, error) {
-	if !tx.RuleEngine {
-		return nil, nil
+func (tx *Transaction) ProcessResponseBody() (*Interruption, error) {
+	if !tx.RuleEngine || !tx.ResponseBodyAccess || !tx.IsProcessableResponseBody() {
+		return tx.Interruption, nil
 	}
+	length := strconv.FormatInt(tx.ResponseBodyReader.Size(), 10)
+	reader := tx.ResponseBodyReader.Reader()
+	reader = io.LimitReader(reader, tx.Waf.ResponseBodyLimit)
+	buf := new(strings.Builder)
+	io.Copy(buf, reader)
 
-	if !tx.ResponseBodyAccess {
-		return nil, nil
-	}
-	ct := tx.GetCollection(VARIABLE_RESPONSE_CONTENT_TYPE).GetFirstString("")
-	if !utils.ArrayContains(tx.ResponseBodyMimeType, ct) {
-		//Not marked for inspection
-		return nil, nil
-	}
-	//SET RESPONSE_BODY
-	//SET RESPONSE_CONTENT_LENGTH
-	//TODO so many things
+	tx.GetCollection(VARIABLE_RESPONSE_CONTENT_LENGTH).Set("", []string{length})
+	tx.GetCollection(VARIABLE_RESPONSE_BODY).Set("", []string{buf.String()})
 	tx.Waf.Rules.Evaluate(4, tx)
 	return tx.Interruption, nil
 }

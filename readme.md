@@ -7,6 +7,8 @@
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza-waf&metric=coverage)](https://sonarcloud.io/dashboard?id=jptosso_coraza-waf)
 ![CodeQL](https://github.com/jptosso/coraza-waf/workflows/CodeQL/badge.svg)
 [![GoDoc](https://godoc.org/github.com/jptosso/coraza-waf?status.svg)](https://godoc.org/github.com/jptosso/coraza-waf)
+[![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
+
 
 # Coraza Web Application Firewall
 
@@ -85,10 +87,9 @@ func main() {
 
 	// Then we create a transaction and assign some variables
 	tx := waf.NewTransaction()
-	tx.SetRemoteAddress("127.0.0.1")
+	tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 12345)
 
-	// phase 5 will allso execute 1, 2, 3 and 4
-	tx.ExecutePhase(5)
+	tx.ProcessRequestHeaders()
 
 	// Finally we check the transaction status
 	if tx.Interrupted() {
@@ -119,13 +120,13 @@ We have currently achieved a 91% compatibility with OWASP CRS, some features are
 
 * Persistent Collections
 * Audit Log engine
-* Some transformations: jsdecode, cssdecode, escapeSeqDecode, escapeSeqDecode, htmlEntityDecode and removeCommentsChar
+* Some transformations: removeCommentsChar
 * Some operators: fuzzyHash
 * Lua is still being tested
 
 ## Coraza WAF implementations
 
-* [Caddy Plugin (Reverse Proxy and Web Server)](#)
+* [Caddy Plugin (Reverse Proxy and Web Server)](https://github.com/jptosso/coraza-caddy)
 
 ## Differences with ModSecurity
 

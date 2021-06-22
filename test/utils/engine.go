@@ -22,7 +22,6 @@ import (
 	"github.com/jptosso/coraza-waf/pkg/seclang"
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	"gopkg.in/yaml.v2"
-	"io"
 	"reflect"
 	"strings"
 	//"time"
@@ -96,8 +95,8 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 
 	// POST DATA
 	if stage.Stage.Input.Data != "" {
-		r := io.Reader(strings.NewReader(parseInputData(stage.Stage.Input.Data)))
-		tx.ProcessRequestBody(&r)
+		tx.RequestBodyReader.Write([]byte(parseInputData(stage.Stage.Input.Data)))
+		tx.ProcessRequestBody()
 		// we ignore the error
 	}
 	tx.ProcessResponseHeaders(200, "HTTP/1.1")
