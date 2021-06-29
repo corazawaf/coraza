@@ -6,6 +6,7 @@ require (
 	github.com/ReneKroon/ttlcache/v2 v2.0.0
 	github.com/antchfx/xmlquery v1.3.6
 	github.com/bobusumisu/aho-corasick v0.0.0-20190714010706-87defef828b4
+	github.com/jptosso/grapeSQLI v0.0.0-20210625171351-8e1bfc003852 // indirect
 	github.com/oschwald/geoip2-golang v1.3.0
 	github.com/oschwald/maxminddb-golang v1.5.0 // indirect
 	github.com/sirupsen/logrus v1.4.2

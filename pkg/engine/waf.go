@@ -17,7 +17,7 @@ package engine
 import (
 	"errors"
 	"github.com/jptosso/coraza-waf/pkg/engine/persistence"
-	pcre "github.com/jptosso/coraza-waf/pkg/utils/pcre"
+	regex"github.com/jptosso/coraza-waf/pkg/utils/regex"
 	"github.com/oschwald/geoip2-golang"
 	log "github.com/sirupsen/logrus"
 	"strings"
@@ -127,7 +127,7 @@ type Waf struct {
 	ErrorPageMethod int
 
 	// Contains the regular expression for relevant status audit logging
-	AuditLogRelevantStatus pcre.Regexp
+	AuditLogRelevantStatus regex.Regexp
 
 	// Contains the GeoIP2 database reader object
 	GeoDb *geoip2.Reader
@@ -154,7 +154,6 @@ type Waf struct {
 
 	RequestBodyLimitAction int
 }
-
 
 func (w *Waf) InitLogger() {
 	l := &Logger{}
@@ -218,15 +217,15 @@ func (w *Waf) NewTransaction() *Transaction {
 
 func NewWaf() *Waf {
 	waf := &Waf{
-		mux:  &sync.RWMutex{},
-		Rules:  NewRuleGroup(),
-		AuditEngine:  AUDIT_LOG_DISABLED,
-		AuditLogType:  AUDIT_LOG_CONCURRENT,
-		PersistenceUri:  "inmemory",
-		TmpDir:  "/tmp",
-		RequestBodyLimit:  10000000, //10mb
-		RequestBodyInMemoryLimit:  131072,
-		RuleEngine:  true,
+		mux:                      &sync.RWMutex{},
+		Rules:                    NewRuleGroup(),
+		AuditEngine:              AUDIT_LOG_DISABLED,
+		AuditLogType:             AUDIT_LOG_CONCURRENT,
+		PersistenceUri:           "inmemory",
+		TmpDir:                   "/tmp",
+		RequestBodyLimit:         10000000, //10mb
+		RequestBodyInMemoryLimit: 131072,
+		RuleEngine:               true,
 	}
 	waf.InitLogger()
 	waf.InitPersistenceEngine()

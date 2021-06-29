@@ -20,7 +20,7 @@ import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/operators"
 	"github.com/jptosso/coraza-waf/pkg/utils"
-	pcre "github.com/jptosso/coraza-waf/pkg/utils/pcre"
+	regex"github.com/jptosso/coraza-waf/pkg/utils/regex"
 	"path"
 	"strconv"
 	"strings"
@@ -48,7 +48,7 @@ func (p *RuleParser) ParseVariables(vars string) error {
 	//Splits the values by KEY, KEY:VALUE, &!KEY, KEY:/REGEX/, KEY1|KEY2
 	//GROUP 1 is collection, group 3 is vlue, group 3 can be empty
 	//TODO this is not an elegant way to parse variables but it works and it won't generate workload
-	re := pcre.MustCompile(`(((?:&|!)?XML):?(.*?)(?:\||$))|((?:&|!)?[\w_]+):?([\w\-._]+|'?\/.*?(?<!\\)\/'?)?`, 0)
+	re := regex.MustCompile(`(((?:&|!)?XML):?(.*?)(?:\||$))|((?:&|!)?[\w_]+):?([\w\-._]+|'?\/.*?(?<!\\)\/'?)?`, 0)
 	matcher := re.MatcherString(vars, 0)
 	subject := []byte(vars)
 	for matcher.Match(subject, 0) {

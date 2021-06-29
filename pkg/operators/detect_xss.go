@@ -25,5 +25,6 @@ func (o *DetectXSS) Init(data string) {
 }
 
 func (o *DetectXSS) Evaluate(tx *engine.Transaction, value string) bool {
+	//TODO this is supposed to capture the vals but libinjection API doesn't return an output
 	return utils.IsXSS(value)
 }

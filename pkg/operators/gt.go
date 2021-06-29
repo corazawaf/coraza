@@ -28,7 +28,6 @@ func (o *Gt) Init(data string) {
 }
 
 func (o *Gt) Evaluate(tx *engine.Transaction, value string) bool {
-	value = tx.MacroExpansion(value)
 	v, err := strconv.Atoi(value)
 	if err != nil {
 		v = 0

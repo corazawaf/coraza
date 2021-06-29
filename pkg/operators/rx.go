@@ -16,13 +16,9 @@ package operators
 
 import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
-	pcre "github.com/jptosso/coraza-waf/pkg/utils/pcre"
+	regex"github.com/jptosso/coraza-waf/pkg/utils/regex"
 )
 
-//It is possible to apply recursion limits but it must be added to the library
-// https://pcre.org/pcre.txt
-//          unsigned long int match_limit;
-//          unsigned long int match_limit_recursion;
 type Rx struct {
 	re string
 }
@@ -32,9 +28,7 @@ func (o *Rx) Init(data string) {
 }
 
 func (o *Rx) Evaluate(tx *engine.Transaction, value string) bool {
-	//renow := tx.MacroExpansion(o.re)
-	re := pcre.MustCompile(o.re, 0)
-	//TODO JIT optimization but test check concurrency first
+	re := regex.MustCompile(o.re, 0)
 	m := re.MatcherString(value, 0)
 	// maybe its redundant
 	tx.ResetCapture()

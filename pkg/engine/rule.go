@@ -280,8 +280,8 @@ func (r *Rule) AddNegateVariable(collection byte, key string) {
 }
 
 func NewRule() *Rule {
-	return &Rule{	
+	return &Rule{
 		Phase: 2,
-		Tags: []string{},
+		Tags:  []string{},
 	}
 }

@@ -52,7 +52,9 @@
 // package and the flags defined below, see the PCRE documentation.
 // http://www.pcre.org/pcre.txt
 
-package pcre
+// +build linux,cgo darwin,cgo
+
+package regex
 
 /*
 #cgo LDFLAGS: -L/usr/local/lib -lpcre

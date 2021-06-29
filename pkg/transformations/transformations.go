@@ -18,11 +18,9 @@ type Transformation = func(input string) string
 
 func TransformationsMap() map[string]Transformation {
 	return map[string]Transformation{
-		"base64Decode": Base64decode,
-		//BEGIN NON WORKING
+		"base64Decode":       Base64decode,
 		"escapeSeqDecode":    EscapeSeqDecode,
-		"removeCommentsChar": None,
-		//END NON WORKING
+		"removeCommentsChar": RemoveCommentsChar,
 		"lowercase":          LowerCase,
 		"removeWhitespace":   RemoveWhitespace,
 		"removeNulls":        RemoveNulls,

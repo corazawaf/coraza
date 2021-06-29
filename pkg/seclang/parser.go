@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/utils"
-	pcre "github.com/jptosso/coraza-waf/pkg/utils/pcre"
+	regex"github.com/jptosso/coraza-waf/pkg/utils/regex"
 	log "github.com/sirupsen/logrus"
 	"path/filepath"
 	"regexp"
@@ -161,7 +161,7 @@ func (p *Parser) Evaluate(data string) error {
 		}
 		break
 	case "SecAuditLogRelevantStatus":
-		p.waf.AuditLogRelevantStatus = pcre.MustCompile(opts, 0)
+		p.waf.AuditLogRelevantStatus = regex.MustCompile(opts, 0)
 		break
 	case "SecAuditLogStorageDir":
 		p.waf.AuditLogStorageDir = opts

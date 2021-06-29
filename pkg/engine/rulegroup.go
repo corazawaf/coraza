@@ -149,9 +149,9 @@ func (rg *RuleGroup) Evaluate(phase int, tx *Transaction) bool {
 	return tx.Interruption != nil
 }
 
-func NewRuleGroup() *RuleGroup{
-	return &RuleGroup {
+func NewRuleGroup() *RuleGroup {
+	return &RuleGroup{
 		rules: []*Rule{},
-		mux: &sync.RWMutex{},
-	}	
+		mux:   &sync.RWMutex{},
+	}
 }

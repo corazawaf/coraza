@@ -25,6 +25,7 @@ func (o *DetectSQLi) Init(data string) {
 }
 
 func (o *DetectSQLi) Evaluate(tx *engine.Transaction, value string) bool {
-	res, _ := utils.IsSQLi(value)
+	res, capture := utils.IsSQLi(value)
+	tx.CaptureField(1, capture)
 	return res
 }

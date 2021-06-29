@@ -31,7 +31,7 @@ func TestBodyReaderFile(t *testing.T) {
 	f := br.Reader().(*os.File)
 	if _, err := os.Stat(f.Name()); os.IsNotExist(err) {
 		t.Error("BodyReader's Tmp file does not exist")
-	}	
+	}
 	br.Close()
 	if _, err := os.Stat(f.Name()); err == nil {
 		t.Error("BodyReader's Tmp file was not deleted")
