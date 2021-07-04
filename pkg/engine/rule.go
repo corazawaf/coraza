@@ -144,20 +144,24 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 			}
 		}
 
-		//Get with macro expansion
-		values = tx.GetField(v.Collection, v.Key, exceptions)
 		if v.Count {
-			if v.Key != "" && len(values) == 1 {
-				values[0].Value = strconv.Itoa(len(values[0].Value))
+			l := 0
+			if v.Key != "" {
+				//Get with macro expansion
+				values = tx.GetField(v.Collection, v.Key, exceptions)
+				l = len(values)
 			} else {
-				values = []*MatchData{
-					&MatchData{
-						Collection: VariableToName(v.Collection),
-						Key:        v.Key,
-						Value:      strconv.Itoa(len(values)),
-					},
-				}
+				l = len(tx.GetCollection(v.Collection).GetData())
 			}
+			values = []*MatchData{
+				&MatchData{
+					Collection: VariableToName(v.Collection),
+					Key:        v.Key,
+					Value:      strconv.Itoa(l),
+				},
+			}
+		}else{
+			values = tx.GetField(v.Collection, v.Key, exceptions)
 		}
 
 		if len(values) == 0 {
