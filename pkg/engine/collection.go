@@ -16,7 +16,7 @@ package engine
 
 import (
 	"github.com/jptosso/coraza-waf/pkg/utils"
-	regex"github.com/jptosso/coraza-waf/pkg/utils/regex"
+	regex "github.com/jptosso/coraza-waf/pkg/utils/regex"
 	"strconv"
 	"strings"
 )

@@ -1,50 +1,50 @@
 // +build !cgo,never
 
 package regex
-import(
+
+import (
 	"regexp"
 )
 
-
 type Matcher struct {
 	input string
-	rx *regexp.Regexp
+	rx    *regexp.Regexp
 
 	count int
 	match []string
 }
 
-func (m *Matcher) Matches() bool{
+func (m *Matcher) Matches() bool {
 	return m.count > 0
 }
 
-func (m *Matcher) MatchString(input string, flags int) bool{
+func (m *Matcher) MatchString(input string, flags int) bool {
 	m.match = []string{input}
 	m.match = append(m.match, m.rx.FindAllString(input, 0)...)
 	m.count = len(m.match)
 	return m.count > 0
 }
 
-func (m *Matcher) Match(input []byte, flags int) bool{
+func (m *Matcher) Match(input []byte, flags int) bool {
 	return m.MatchString(string(input), 0)
 }
 
-func (m *Matcher) Groups() int{
+func (m *Matcher) Groups() int {
 	return m.count
 }
 
-func (m *Matcher) Index() []int{
+func (m *Matcher) Index() []int {
 	return m.rx.FindStringIndex(m.input)
 }
 
-func (m *Matcher) GroupString(index int) string{
+func (m *Matcher) GroupString(index int) string {
 	if m.count > index {
 		return m.match[index]
 	}
 	return ""
 }
 
-type Regexp struct{
+type Regexp struct {
 	pattern *regexp.Regexp
 }
 
@@ -63,12 +63,11 @@ func (rx *Regexp) NewMatcher() Matcher {
 func (rx *Regexp) MatcherString(input string, flags int) Matcher {
 	m := Matcher{
 		input: input,
-		rx: rx.pattern,
+		rx:    rx.pattern,
 	}
 	m.MatchString(input, 0)
-	return m	
+	return m
 }
-
 
 func MustCompile(input string, flags int) Regexp {
 	pattern, _ := regexp.Compile(input)

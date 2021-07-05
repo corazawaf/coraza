@@ -17,7 +17,7 @@ package engine
 import (
 	"errors"
 	"github.com/jptosso/coraza-waf/pkg/engine/persistence"
-	regex"github.com/jptosso/coraza-waf/pkg/utils/regex"
+	regex "github.com/jptosso/coraza-waf/pkg/utils/regex"
 	"github.com/oschwald/geoip2-golang"
 	log "github.com/sirupsen/logrus"
 	"strings"

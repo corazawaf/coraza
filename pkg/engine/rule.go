@@ -160,7 +160,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 					Value:      strconv.Itoa(l),
 				},
 			}
-		}else{
+		} else {
 			values = tx.GetField(v.Collection, v.Key, exceptions)
 		}
 

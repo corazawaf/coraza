@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/utils"
-	regex"github.com/jptosso/coraza-waf/pkg/utils/regex"
+	regex "github.com/jptosso/coraza-waf/pkg/utils/regex"
 	log "github.com/sirupsen/logrus"
 	"path/filepath"
 	"regexp"

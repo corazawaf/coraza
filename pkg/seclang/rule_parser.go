@@ -20,7 +20,7 @@ import (
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/operators"
 	"github.com/jptosso/coraza-waf/pkg/utils"
-	regex"github.com/jptosso/coraza-waf/pkg/utils/regex"
+	regex "github.com/jptosso/coraza-waf/pkg/utils/regex"
 	"path"
 	"strconv"
 	"strings"

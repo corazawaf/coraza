@@ -15,7 +15,7 @@
 package transformations
 
 import (
-	regex"github.com/jptosso/coraza-waf/pkg/utils/regex"
+	regex "github.com/jptosso/coraza-waf/pkg/utils/regex"
 )
 
 func RemoveNulls(data string) string {
