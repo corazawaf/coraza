@@ -1,3 +1,17 @@
+// Copyright 2021 Juan Pablo Tosso
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package loggers
 
 import (
@@ -6,18 +20,19 @@ import (
 	"os"
 )
 
-type SimpleLogger struct {
+// ApacheLogger is used to store logs compatible with go-FTW
+type ApacheLogger struct {
 	file   *os.File
 	writer *io.Writter
 }
 
-func (sl *SimpleLogger) New(file string, dir string, filemod int, dirmode int) {
+func (sl *ApacheLogger) New(file string, dir string, filemode int, dirmode int) {
 	var err error
 	sl.file, err = os.OpenFile(file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	sl.writter = bufio.NewWriter(sl.file)
 }
 
-func (sl *SimpleLogger) Write(log Log) {
+func (sl *ApacheLogger) Write(log AuditLog) {
 	opts := []string{
 		"ddd MMM DD HH:mm:ss.S YYYY", // Timestamp
 		"ip address",
@@ -43,7 +58,7 @@ func (sl *SimpleLogger) Write(log Log) {
 	sl.writter.WriteString(data)
 }
 
-func (sl *SimpleLogger) Close() {
+func (sl *ApacheLogger) Close() {
 	sl.file.Close()
 	sl.writter.Flush()
 }

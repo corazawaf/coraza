@@ -30,6 +30,7 @@ type ConcurrentLogger struct {
 	mux         *sync.RWMutex
 	file        string
 	directory   string
+	writter     *io.Writter
 }
 
 func (l *ConcurrentLogger) Init(file string, directory string) error {
@@ -45,47 +46,38 @@ func (l *ConcurrentLogger) Init(file string, directory string) error {
 	return nil
 }
 
-func (l *ConcurrentLogger) WriteAudit(tx *Transaction) error {
-	l.mux.Lock()
-	defer l.mux.Unlock()
+func (l *ConcurrentLogger) Write(al *AuditLog) error {
 	// 192.168.3.130 192.168.3.1 - - [22/Aug/2009:13:24:20 +0100] "GET / HTTP/1.1" 200 56 "-" "-" SojdH8AAQEAAAugAQAAAAAA "-" /20090822/20090822-1324/20090822-132420-SojdH8AAQEAAAugAQAAAAAA 0 1248
-	t := time.Unix(0, tx.Timestamp)
-	ts := t.Format("02/Jan/2006:15:04:20 -0700")
-
-	ipsource := tx.GetCollection(VARIABLE_REMOTE_ADDR).GetFirstString("")
-	ipserver := "-"
-	requestline := tx.GetCollection(VARIABLE_REQUEST_LINE).GetFirstString("")
-	responsecode := tx.GetCollection(VARIABLE_RESPONSE_STATUS).GetFirstInt("")
-	responselength := tx.GetCollection(VARIABLE_RESPONSE_CONTENT_LENGTH).GetFirstInt64("")
-	requestlength := 0 //TODO
-	// append the two directories
-	// Append the filename
-	logdir, fname := l.GetAuditPath(tx)
-	filepath := path.Join(logdir, fname)
-	str := fmt.Sprintf("%s %s - - [%s] %q %d %d %q %q %s %q %s %d %d",
-		ipsource, ipserver, ts, requestline, responsecode, responselength, "-", "-", tx.Id, "-", filepath, 0, requestlength)
-	err := os.MkdirAll(logdir, 0777) //TODO update with settings mode
-	if err != nil {
-		return err
-	}
-
-	jsdata := tx.ToAuditJson()
-
-	err = ioutil.WriteFile(filepath, jsdata, 0600) //TODO update with settings mode
-	if err != nil {
-		return err
-	}
-	l.auditlogger.Print(str)
-	return nil
-}
-
-func (l *ConcurrentLogger) GetAuditPath(tx *Transaction) (string, string) {
-	t := time.Unix(0, tx.Timestamp)
+	t := time.Unix(0, al.Transaction.UnixTimestamp)
 
 	// append the two directories
 	p2 := fmt.Sprintf("/%s/%s/", t.Format("20060102"), t.Format("20060102-1504"))
-	logdir := path.Join(tx.Waf.AuditLogStorageDir, p2)
+	logdir := path.Join(l.dir, p2)
 	// Append the filename
-	filename := fmt.Sprintf("/%s-%s", t.Format("20060102-150405"), tx.Id)
-	return logdir, filename
+	fname := fmt.Sprintf("/%s-%s", t.Format("20060102-150405"), al.Transaction.Id)
+	filepath := path.Join(logdir, fname)
+	str := fmt.Sprintf("%s %s - - [%s] %q %d %d %q %q %s %q %s %d %d",
+		al.ClientIp, al.HostIp, al.Transaction.Timestamp, 
+		fmt.Sprintf("%s %s %s", al.Transaction.Request.Method, al.Transaction.Request.Uri, 
+			al.Transaction.Request.HttpVersion),
+		al.Transaction.Response.Status, 0/*response length*/, "-", "-", al.Transaction.Id,
+		"-", filepath, 0, 0/*request length*/)
+	err := os.MkdirAll(logdir, l.dirMode)
+	if err != nil {
+		return err
+	}
+
+	jsdata, err := al.JSON()
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(filepath, jsdata, l.fileMode)
+	if err != nil {
+		return err
+	}
+	l.mux.Lock()
+	defer l.mux.Unlock()
+	l.writter.Write(str)
+	return nil
 }

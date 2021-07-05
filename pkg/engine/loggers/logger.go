@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package persistence
+package logger
 
-import ()
+type Logger interface {
+	New(string, string, int, int)
+	Write(*AuditLog)
+	Close()
+}
