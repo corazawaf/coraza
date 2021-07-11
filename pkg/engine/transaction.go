@@ -17,9 +17,6 @@ package engine
 import (
 	"bufio"
 	"fmt"
-	"github.com/antchfx/xmlquery"
-	"github.com/jptosso/coraza-waf/pkg/utils"
-	log "github.com/sirupsen/logrus"
 	"html"
 	"io"
 	"net/http"
@@ -29,6 +26,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/antchfx/xmlquery"
+	"github.com/jptosso/coraza-waf/pkg/engine/loggers"
+	"github.com/jptosso/coraza-waf/pkg/utils"
+	log "github.com/sirupsen/logrus"
 )
 
 type Interruption struct {
@@ -157,14 +159,12 @@ func (tx *Transaction) Init(waf *Waf) error {
 	tx.ResponseBodyLimit = 524288
 	tx.ResponseBodyMimeType = []string{"text/html", "text/plain"}
 	tx.RuleEngine = tx.Waf.RuleEngine
-	tx.AuditLogType = tx.Waf.AuditLogType
 	tx.Skip = 0
 	tx.PersistentCollections = map[string]*PersistentCollection{}
 	tx.RuleRemoveTargetById = map[int][]*KeyValue{}
 	tx.RuleRemoveById = []int{}
 	tx.StopWatches = map[int]int{}
 	tx.RequestBodyReader = NewBodyReader(tx.Waf.TmpDir, tx.Waf.RequestBodyInMemoryLimit)
-	// TODO add response values
 	tx.ResponseBodyReader = NewBodyReader(tx.Waf.TmpDir, tx.Waf.RequestBodyInMemoryLimit)
 
 	return nil
@@ -434,17 +434,21 @@ func (tx *Transaction) GetRemovedTargets(id int) []*KeyValue {
 
 func (tx *Transaction) ToAuditJson() []byte {
 	al := tx.ToAuditLog()
-	return al.ToJson()
+	data, _ := al.JSON()
+	return data
 }
 
-func (tx *Transaction) ToAuditLog() *AuditLog {
-	al := &AuditLog{}
-	al.Init(tx)
+func (tx *Transaction) ToAuditLog() *loggers.AuditLog {
+	al := &loggers.AuditLog{}
 	return al
 }
 
 func (tx *Transaction) saveLog() error {
-	return tx.Waf.Logger.WriteAudit(tx)
+	for _, l := range tx.Waf.Loggers() {
+		l.Write(tx.ToAuditLog())
+	}
+
+	return nil
 }
 
 // Save persistent collections to persistence engine
@@ -821,9 +825,9 @@ func (tx *Transaction) ProcessLogging() {
 func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	al := &loggers.AuditLog{}
 	parts := tx.AuditLogParts
-	al.Messages = []*AuditMessage{}
+	al.Messages = []*loggers.AuditMessage{}
 	ts := time.Unix(0, tx.Timestamp).Format("02/Jan/2006:15:04:20 -0700")
-	al.Transaction = &AuditTransaction{
+	al.Transaction = &loggers.AuditTransaction{
 		Timestamp:  ts,
 		Id:         tx.Id,
 		ClientIp:   tx.GetCollection(VARIABLE_REMOTE_ADDR).GetFirstString(""),
@@ -831,13 +835,13 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 		HostIp:     "",
 		HostPort:   0,
 		ServerId:   "",
-		Request: &AuditTransactionRequest{
+		Request: &loggers.AuditTransactionRequest{
 			Protocol:    tx.GetCollection(VARIABLE_REQUEST_METHOD).GetFirstString(""),
 			Uri:         tx.GetCollection(VARIABLE_REQUEST_URI).GetFirstString(""),
 			HttpVersion: tx.GetCollection(VARIABLE_REQUEST_PROTOCOL).GetFirstString(""),
 			//Body and headers are audit parts
 		},
-		Response: &AuditTransactionResponse{
+		Response: &loggers.AuditTransactionResponse{
 			Status: tx.GetCollection(VARIABLE_RESPONSE_STATUS).GetFirstInt(""),
 			//body and headers are audit parts
 		},
@@ -847,45 +851,38 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 		switch p {
 		case 'B':
 			al.Transaction.Request.Headers = tx.GetCollection(VARIABLE_REQUEST_HEADERS).GetData()
-			break
 		case 'C':
 			al.Transaction.Request.Body = tx.GetCollection(VARIABLE_REQUEST_BODY).GetFirstString("")
-			break
 		case 'F':
 			al.Transaction.Response.Headers = tx.GetCollection(VARIABLE_RESPONSE_HEADERS).GetData()
-			break
 		case 'G':
 			al.Transaction.Response.Body = tx.GetCollection(VARIABLE_RESPONSE_BODY).GetFirstString("")
-			break
 		case 'H':
 			servera := tx.GetCollection(VARIABLE_RESPONSE_HEADERS).Get("server")
 			server := ""
 			if len(server) > 0 {
 				server = servera[0]
 			}
-			al.Transaction.Producer = &AuditTransactionProducer{
+			al.Transaction.Producer = &loggers.AuditTransactionProducer{
 				Connector:  "unknown",
 				Version:    "unknown",
 				Server:     server,
 				RuleEngine: tx.RuleEngine,
 				Stopwatch:  tx.GetStopWatch(),
 			}
-			break
 		case 'I':
 			// not implemented
 			// TODO
-			break
 		case 'J':
 			//upload data
 			// TODO
-			break
 		case 'K':
 			for _, mr := range tx.MatchedRules {
 				r := mr.Rule
-				al.Messages = append(al.Messages, &AuditMessage{
+				al.Messages = append(al.Messages, &loggers.AuditMessage{
 					Actionset: "",
 					Message:   "",
-					Data: &AuditMessageData{
+					Data: &loggers.AuditMessageData{
 						File: "",
 						Line: 0,
 						Id:   r.Id,
@@ -900,7 +897,6 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 					},
 				})
 			}
-			break
 		}
 	}
 	return al

@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package logger
+package loggers
 
 type Logger interface {
-	New(string, string, int, int)
+	New([]string) error
 	Write(*AuditLog)
 	Close()
 }

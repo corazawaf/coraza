@@ -18,14 +18,13 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"github.com/jptosso/coraza-waf/pkg/engine"
-	"github.com/jptosso/coraza-waf/pkg/utils"
-	regex "github.com/jptosso/coraza-waf/pkg/utils/regex"
-	log "github.com/sirupsen/logrus"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
+
+	"github.com/jptosso/coraza-waf/pkg/engine"
+	"github.com/jptosso/coraza-waf/pkg/utils"
+	log "github.com/sirupsen/logrus"
 )
 
 type Parser struct {
@@ -33,7 +32,7 @@ type Parser struct {
 	configdir  string
 	nextChain  bool
 	RuleEngine string
-	waf        *engine.Waf
+	Waf        *engine.Waf
 	lastRule   *engine.Rule
 
 	defaultActions []string
@@ -41,13 +40,13 @@ type Parser struct {
 }
 
 func (p *Parser) Init(waf *engine.Waf) {
-	p.waf = waf
+	p.Waf = waf
 	p.defaultActions = []string{}
 }
 
 func (p *Parser) FromFile(profilePath string) error {
 	if !utils.FileExists(profilePath) {
-		return errors.New("Invalid profile path")
+		return errors.New("invalid profile path")
 	}
 	p.configfile = profilePath
 	p.configdir = filepath.Dir(profilePath) + "/"
@@ -73,6 +72,7 @@ func (p *Parser) FromString(data string) error {
 		line := scanner.Text()
 		linebuffer += strings.TrimSpace(line)
 		//Check if line ends with \
+		// TODO fix performance issue in the following line:
 		match, _ := regexp.MatchString(`\\(\s+)?$`, line)
 		if !match {
 			err := p.Evaluate(linebuffer)
@@ -127,276 +127,78 @@ func (p *Parser) Evaluate(data string) error {
 			break
 		}
 	}
-	switch directive {
-	case "SecAuditEngine":
-		switch opts {
-		case "On":
-			p.waf.AuditEngine = engine.AUDIT_LOG_ENABLED
-		case "Off":
-			p.waf.AuditEngine = engine.AUDIT_LOG_DISABLED
-		case "RelevantOnly":
-			p.waf.AuditEngine = engine.AUDIT_LOG_RELEVANT
-		}
-	case "SecAuditLog":
-		p.waf.AuditLogPath = opts
-		break
-	case "SecAuditLogDirMode":
-		mode := 0600
-		if opts != "default" {
-			mode, _ = strconv.Atoi(opts)
-		}
-		p.waf.AuditLogDirMode = mode
-		break
-	case "SecAuditLogFileMode":
-		mode := 0600
-		if opts != "default" {
-			mode, _ = strconv.Atoi(opts)
-		}
-		p.waf.AuditLogFileMode = mode
-		break
-	case "SecAuditLogParts":
-		p.waf.AuditLogParts = []rune{}
-		for _, c := range opts {
-			p.waf.AuditLogParts = append(p.waf.AuditLogParts, c)
-		}
-		break
-	case "SecAuditLogRelevantStatus":
-		p.waf.AuditLogRelevantStatus = regex.MustCompile(opts, 0)
-		break
-	case "SecAuditLogStorageDir":
-		p.waf.AuditLogStorageDir = opts
-		//TODO validate access to directory
-		break
-	case "SecAuditLogType":
-		switch opts {
-		case "Concurrent":
-			p.waf.AuditLogType = engine.AUDIT_LOG_CONCURRENT
-			break
-		case "HTTPS":
-			p.waf.AuditLogType = engine.AUDIT_LOG_HTTPS
-			break
-		}
-		break
-	case "SecCollectionTimeout":
-		//p.waf.CollectionTimeout, _ = strconv.Atoi(opts)
-		break
-	case "SecConnEngine":
-		/*
-			switch opts{
-			case "On":
-				p.waf.ConnEngine = engine.CONN_ENGINE_ON
-				break
-			case "Off":
-				p.waf.ConnEngine = engine.CONN_ENGINE_OFF
-				break
-			case "DetectOnly":
-				p.waf.ConnEngine = engine.CONN_ENGINE_DETECTONLY
-				break
-			}
-			break
-		*/
-	case "SecContentInjection":
-		//p.waf.ContentInjection = (opts == "On")
-		break
-	case "SecDefaultAction":
-		p.AddDefaultActions(opts)
-		break
-	case "SecHashEngine":
-		// p.waf.HashEngine = (opts == "On")
-		break
-	case "SecHashKey":
-		//p.waf.HashKey = opts
-		break
-	case "SecHashParam":
 
-		break
-	case "SecHashMethodRx":
+	directives := map[string]Directive{
+		"SecComponentSignature":         directiveSecComponentSignature,
+		"SecMarker":                     directiveSecMarker,
+		"SecAction":                     directiveSecAction,
+		"SecRule":                       directiveSecRule,
+		"SecResponseBodyAccess":         directiveSecResponseBodyAccess,
+		"SecRequestBodyLimit":           directiveSecRequestBodyLimit,
+		"SecRequestBodyAccess":          directiveSecRequestBodyAccess,
+		"SecRuleEngine":                 directiveSecRuleEngine,
+		"SecWebAppId":                   directiveSecWebAppId,
+		"SecTmpDir":                     directiveSecTmpDir,
+		"SecAuditEngine":                directiveSecAuditEngine,
+		"SecCollectionTimeout":          directiveSecCollectionTimeout,
+		"SecAuditLogRelevantStatus":     directiveSecAuditLogRelevantStatus,
+		"SecAuditLogParts":              directiveSecAuditLogParts,
+		"SecAuditLog":                   directiveSecAuditLog,
+		"SecDefaultAction":              directiveSecDefaultAction,
+		"SecGeoLookupDb":                directiveSecGeoLookupDb,
+		"SecSensorId":                   directiveSecSensorId,
+		"SecRemoteRules":                directiveSecRemoteRules,
+		"SecRemoteRulesFailAction":      directiveSecRemoteRulesFailAction,
+		"SecRequestBodyInMemoryLimit":   directiveSecRequestBodyInMemoryLimit,
+		"SecRequestBodyLimitAction":     directiveSecRequestBodyLimitAction,
+		"SecResponseBodyLimit":          directiveSecResponseBodyLimit,
+		"SecResponseBodyLimitAction":    directiveSecResponseBodyLimitAction,
+		"SecResponseBodyMimeType":       directiveSecResponseBodyMimeType,
+		"SecResponseBodyMimeTypesClear": directiveSecResponseBodyMimeTypesClear,
+		"SecRuleRemoveById":             directiveSecRuleRemoveById,
+		"SecRuleRemoveByMsg":            directiveSecRuleRemoveByMsg,
+		"SecRuleRemoveByTag":            directiveSecRuleRemoveByTag,
+		"SecServerSignature":            directiveSecServerSignature,
 
-		break
-	case "SecHashMethodPm":
-
-		break
-	case "SecGeoLookupDb":
-		p.waf.InitGeoip(opts)
-		break
-	case "SecGsbLookupDb":
-
-		break
-	case "SecHttpBlKey":
-		//p.waf.HttpBlKey = opts
-		break
-	case "SecInterceptOnError":
-		//p.waf.InterceptOnError = (opts == "On")
-		break
-	case "SecPcreMatchLimit":
-		// p.waf.PcreMatchLimit, _ = strconv.Atoi(opts)
-		break
-	case "SecPcreMatchLimitRecursion":
-		//TODO PCRE RECURSIONLIMIT is hardcoded inside the binary :( we have to figure out something
-		p.log("SecPcreMatchLimitRecursion is not supported yet.")
-		break
-	case "SecConnReadStateLimit":
-		// p.waf.ConnReadStateLimit, _ = strconv.Atoi(opts)
-		p.log("SecConnReadStateLimit is not supported yet.")
-		break
-	case "SecSensorId":
-		p.waf.SensorId = opts
-		break
-	case "SecConnWriteStateLimit":
-		// p.waf.ConnWriteStateLimit, _ = strconv.Atoi(opts)
-		p.log("SecConnWriteStateLimit is not supported yet.")
-		break
-	case "SecRemoteRules":
-		data, err := utils.OpenFile(opts)
-		if err != nil || p.FromString(string(data)) != nil {
-			if p.waf.AbortOnRemoteRulesFail {
-				return p.log("Failed to parse remote rules")
-			} else {
-				return err
-			}
-		}
-		break
-	case "SecRemoteRulesFailAction":
-		p.waf.AbortOnRemoteRulesFail = (opts == "Abort")
-		break
-	case "SecRequestBodyInMemoryLimit":
-		p.waf.RequestBodyInMemoryLimit, _ = strconv.ParseInt(opts, 10, 64)
-		break
-	case "SecRequestBodyLimitAction":
-		p.waf.RejectOnRequestBodyLimit = (opts == "Reject")
-		break
-	case "SecResponseBodyLimit":
-		p.waf.ResponseBodyLimit, _ = strconv.ParseInt(opts, 10, 64)
-		break
-	case "SecResponseBodyLimitAction":
-		p.waf.RejectOnResponseBodyLimit = (opts == "Reject")
-		break
-	case "SecResponseBodyMimeType":
-		p.waf.ResponseBodyMimeTypes = strings.Split(opts, " ")
-		break
-	case "SecResponseBodyMimeTypesClear":
-		p.waf.ResponseBodyMimeTypes = []string{}
-		break
-	case "SecRulePerfTime":
-		p.log("SecRulePerfTime is not supported yet.")
-		break
-	case "SecRuleRemoveById":
-		id, _ := strconv.Atoi(opts)
-		p.waf.Rules.DeleteById(id)
-		break
-	case "SecRuleRemoveByMsg":
-		for _, r := range p.waf.Rules.FindByMsg(opts) {
-			p.waf.Rules.DeleteById(r.Id)
-		}
-		break
-	case "SecRuleRemoveByTag":
-		for _, r := range p.waf.Rules.FindByTag(opts) {
-			p.waf.Rules.DeleteById(r.Id)
-		}
-		break
-	case "SecRuleScript":
-		p.log("SecRuleScript is not supported yet.")
-		break
-	case "SecRuleUpdateActionById":
-		//r := p.waf.FindRuleById(0)
-		p.log("SecRuleUpdateActionById is not supported yet.")
-		break
-	case "SecRuleUpdateTargetById":
-		/*spl := strings.SplitN(opts, " ", 2)
-		id, _ := strconv.Atoi(spl[0])
-		p.waf.Rules.FindById(id)
-		*/
-		p.log("SecRuleUpdateTargetById is not supported yet.")
-		break
-	case "SecRuleUpdateTargetByMsg":
-		/*
-			spl := strings.SplitN(opts, " ", 2)
-			for _, r := range p.waf.FindRulesByMsg(spl[0]){
-
-			}
-		*/
-		p.log("SecRuleUpdateTargetByMsg is not supported yet.")
-		break
-	case "SecRuleUpdateTargetByTag":
-		/*
-			spl := strings.SplitN(opts, " ", 2)
-			for r := range p.waf.FindRulesByTag(spl[0]){
-
-			}*/
-		break
-	case "SecServerSignature":
-		p.waf.ServerSignature = opts
-		break
-	case "SecStreamOutBodyInspection":
-		//p.waf.StreamOutBodyInspection = (opts == "Abort")
-		break
-	case "SecTmpDir":
-		p.waf.TmpDir = opts
-		break
-	case "SecUploadDir":
-		//p.waf.UploadDir = opts
-		break
-	case "SecUploadFileLimit":
-		//p.waf.UploadFileLimit, _ = strconv.Atoi(opts)
-		break
-	case "SecUploadFileMode":
-		//p.waf.UploadFileMode, _ = strconv.Atoi(opts)
-		break
-	case "SecUploadKeepFiles":
-		break
-	case "SecWebAppId":
-		p.waf.WebAppId = opts
-		break
-	case "SecXmlExternalEntity":
-		break
-	case "SecRuleEngine":
-		p.waf.RuleEngine = (opts == "On")
-	case "SecRequestBodyAccess":
-		p.waf.RequestBodyAccess = (opts == "On")
-	case "SecRequestBodyLimit":
-		limit, _ := strconv.ParseInt(opts, 10, 64)
-		p.waf.RequestBodyLimit = limit
-	case "SecResponseBodyAccess":
-		p.waf.ResponseBodyAccess = (opts == "On")
-	case "SecRule":
-		rule, err := p.ParseRule(opts, true)
-		if err != nil {
-			p.log(fmt.Sprintf("Failed to compile rule (%s): %s", err, opts))
-			return err
-		} else {
-			p.waf.Rules.Add(rule)
-		}
-	case "SecAction":
-		rule, err := p.ParseRule(opts, false)
-		if err != nil {
-			p.log(fmt.Sprintf("Failed to compile rule (%s): %s", err, opts))
-			return err
-		}
-		p.waf.Rules.Add(rule)
-		log.Debug("Added special secaction rule")
-	case "SecMarker":
-		rule, err := p.ParseRule(`"id:1, pass, nolog"`, false)
-		if err != nil {
-			p.log("Error creating secmarker rule")
-			return err
-		}
-		rule.SecMark = opts
-		rule.Id = 0
-		rule.Phase = 0
-		p.waf.Rules.Add(rule)
-		log.Debug("Added special secmarker rule")
-	case "SecComponentSignature":
-		p.waf.ComponentSignature = opts
-	default:
-		return p.log("Unsupported directive: " + directive)
+		//Unsupported Directives
+		"SecXmlExternalEntity":       directiveUnsupported,
+		"SecUploadKeepFiles":         directiveUnsupported,
+		"SecUploadFileMode":          directiveUnsupported,
+		"SecUploadFileLimit":         directiveUnsupported,
+		"SecUploadDir":               directiveUnsupported,
+		"SecStreamOutBodyInspection": directiveUnsupported,
+		"SecRuleUpdateTargetByTag":   directiveUnsupported,
+		"SecRuleUpdateTargetByMsg":   directiveUnsupported,
+		"SecRuleUpdateTargetById":    directiveUnsupported,
+		"SecRuleUpdateActionById":    directiveUnsupported,
+		"SecRuleScript":              directiveUnsupported,
+		"SecRulePerfTime":            directiveUnsupported,
+		"SecConnWriteStateLimit":     directiveSecConnWriteStateLimit,
+		"SecConnReadStateLimit":      directiveSecConnReadStateLimit,
+		"SecPcreMatchLimitRecursion": directiveSecPcreMatchLimitRecursion,
+		"SecPcreMatchLimit":          directiveSecPcreMatchLimit,
+		"SecInterceptOnError":        directiveSecInterceptOnError,
+		"SecHttpBlKey":               directiveSecHttpBlKey,
+		"SecGsbLookupDb":             directiveSecGsbLookupDb,
+		"SecHashMethodPm":            directiveSecHashMethodPm,
+		"SecHashMethodRx":            directiveSecHashMethodRx,
+		"SecHashParam":               directiveSecHashParam,
+		"SecHashKey":                 directiveSecHashKey,
+		"SecHashEngine":              directiveSecHashEngine,
+		"SecContentInjection":        directiveSecContentInjection,
+		"SecConnEngine":              directiveSecConnEngine,
 	}
-	return nil
+	d := directives[directive]
+	if d == nil {
+		return p.log("Unsupported directive " + directive)
+	}
+	return d(p, opts)
 }
 
 func (p *Parser) ParseRule(data string, withOperator bool) (*engine.Rule, error) {
 	var err error
 	rp := NewRuleParser()
-	rp.Configdir = p.waf.Datapath
+	rp.Configdir = p.Waf.Datapath
 
 	for _, da := range p.defaultActions {
 		err = rp.ParseDefaultActions(da)
@@ -479,7 +281,7 @@ func (p *Parser) GetDefaultActions() []string {
 
 func NewParser(waf *engine.Waf) (*Parser, error) {
 	if waf == nil {
-		return nil, errors.New("Must use a valid waf instance")
+		return nil, errors.New("must use a valid waf instance")
 	}
 	p := &Parser{}
 	p.Init(waf)

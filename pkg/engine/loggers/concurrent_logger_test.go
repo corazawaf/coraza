@@ -12,50 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package engine
+package loggers
 
 import (
-	"encoding/json"
-	"io/ioutil"
-	"os"
-	"path"
 	"testing"
 )
 
 func TestCLogFileCreation(t *testing.T) {
-	waf := NewWaf()
-	waf.AuditLogStorageDir = "/tmp/audit/"
-	waf.AuditLogPath = "/tmp/audit/audit.log"
-	waf.InitLogger()
-	r := NewRule()
-	mr := []*MatchData{
-		&MatchData{
-			"test",
-			"test",
-			"test",
-		},
-	}
-	tx := waf.NewTransaction()
-	tx.MatchRule(r, []string{"msg"}, mr)
-	tx.AuditLogParts = []rune("ABCDEFGHIJKZ")
 
-	waf.Logger.WriteAudit(tx)
-	cl := &ConcurrentLogger{} //just for getauditpath
-	fpath, fname := cl.GetAuditPath(tx)
-	if _, err := os.Stat(fpath); os.IsNotExist(err) {
-		t.Error("Directory was not created: " + fpath)
-	}
-	file, err := ioutil.ReadFile(path.Join(fpath, fname))
-	if err != nil {
-		t.Error("Audit file was not created")
-		return
-	}
-	al := &AuditLog{}
-	err = json.Unmarshal([]byte(file), al)
-	if err != nil {
-		t.Error("Invalid JSON audit file")
-	}
-	if al.Transaction.Id != tx.Id {
-		t.Error("Invalid ID for JSON audit file")
-	}
 }

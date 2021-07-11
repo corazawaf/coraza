@@ -133,7 +133,7 @@ func TestTxMatch(t *testing.T) {
 	waf := NewWaf()
 	r := NewRule()
 	mr := []*MatchData{
-		&MatchData{
+		{
 			"test",
 			"test",
 			"test",

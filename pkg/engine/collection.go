@@ -15,14 +15,15 @@
 package engine
 
 import (
-	"github.com/jptosso/coraza-waf/pkg/utils"
-	regex "github.com/jptosso/coraza-waf/pkg/utils/regex"
 	"strconv"
 	"strings"
+
+	"github.com/jptosso/coraza-waf/pkg/utils"
+	regex "github.com/jptosso/coraza-waf/pkg/utils/regex"
 )
 
 type Collection struct {
-	data map[string][]string `json:"data"`
+	data map[string][]string
 	name string
 }
 

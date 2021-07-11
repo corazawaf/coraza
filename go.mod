@@ -1,6 +1,6 @@
 module github.com/jptosso/coraza-waf
 
-go 1.13
+go 1.16
 
 require (
 	github.com/ReneKroon/ttlcache/v2 v2.0.0

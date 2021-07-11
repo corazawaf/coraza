@@ -15,50 +15,53 @@
 package loggers
 
 import (
-	"bufio"
+	"errors"
 	"fmt"
+	"log"
 	"os"
 )
 
 // ApacheLogger is used to store logs compatible with go-FTW
 type ApacheLogger struct {
-	file   *os.File
-	writer *io.Writter
+	file *os.File
+	log  log.Logger
 }
 
-func (sl *ApacheLogger) New(file string, dir string, filemode int, dirmode int) {
+func (sl *ApacheLogger) New(args []string) error {
 	var err error
-	sl.file, err = os.OpenFile(file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	sl.writter = bufio.NewWriter(sl.file)
+	if len(args) == 0 {
+		return errors.New("syntax error: apache /path/to/file.log [filemode]")
+	}
+	sl.file, err = os.OpenFile(args[0], os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	sl.log.SetFlags(0)
+	sl.log.SetOutput(sl.file)
+	return nil
 }
 
-func (sl *ApacheLogger) Write(log AuditLog) {
-	opts := []string{
-		"ddd MMM DD HH:mm:ss.S YYYY", // Timestamp
-		"ip address",
-		"error",
-		"operator",
-		"params",
-		"variable",
-		"rules",
-		"",
-	}
+func (sl *ApacheLogger) Write(al *AuditLog) {
+	timestamp := al.Transaction.Timestamp
+	address := ""
+	operator := ""
+	params := ""
+	rules := ""
+	phase := 5
 	variable := ""
-	clientIp := ""
-	status := 0
-	phase := 0
-	id := ""
-	url := ""
+	msgs := ""
 	severity := ""
-	ts := "ddd MMM DD HH:mm:ss.S YYYY"
-	for _, r := range log.Rules {
-		opts["rules"] += fmt.Sprintf("[id \"%d\"] ", r.Id)
+	uri := ""
+	id := al.Transaction.Id
+	err := fmt.Sprintf("Access denied with code 505 (phase %d)", phase)
+	for _, r := range al.Messages {
+		rules += fmt.Sprintf("[id \"%d\"] ", r.Data.Id)
 	}
-	data := fmt.Sprintf("[%s] [error] [client %s] ModSecurity: Access denied with code 505 (phase 1). Match of \"rx ^HTTP/(0.9|1.[01])$\" against \"REQUEST_PROTOCOL\" required. %s %s [severity \"%s\"] [uri \"%s\"] [unique_id \"%s\"]\n", opts)
-	sl.writter.WriteString(data)
+	data := fmt.Sprintf("[%s] [error] [client %s] Coraza: %s. Match of \"%s %s\" against \"%s\" required. %s %s [severity \"%s\"] [uri \"%s\"] [unique_id \"%s\"]",
+		timestamp, address, err, operator, params, variable, rules, msgs, severity, uri, id)
+	sl.log.Println(data)
 }
 
 func (sl *ApacheLogger) Close() {
 	sl.file.Close()
-	sl.writter.Flush()
 }
