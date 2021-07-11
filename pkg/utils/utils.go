@@ -17,6 +17,7 @@ package utils
 import (
 	"context"
 	"crypto/rand"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -109,7 +110,7 @@ func OpenFile(path string) ([]byte, error) {
 			return nil, err
 		}
 		defer res.Body.Close()
-		ret, _ = ioutil.ReadAll(res.Body)
+		ret, _ = io.ReadAll(res.Body)
 	} else {
 		var err error
 		ret, err = ioutil.ReadFile(path)

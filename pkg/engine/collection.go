@@ -15,14 +15,15 @@
 package engine
 
 import (
-	"github.com/jptosso/coraza-waf/pkg/utils"
-	pcre "github.com/jptosso/coraza-waf/pkg/utils/pcre"
 	"strconv"
 	"strings"
+
+	"github.com/jptosso/coraza-waf/pkg/utils"
+	regex "github.com/jptosso/coraza-waf/pkg/utils/regex"
 )
 
 type Collection struct {
-	data map[string][]string `json:"data"`
+	data map[string][]string
 	name string
 }
 
@@ -61,7 +62,7 @@ func (c *Collection) GetWithExceptions(key string, exceptions []string) []*Match
 	// Regex
 	if key[0] == '/' {
 		key = key[1 : len(key)-1] //we strip slashes
-		re := pcre.MustCompile(key, 0)
+		re := regex.MustCompile(key, 0)
 		result := []*MatchData{}
 		for k := range cdata {
 			if utils.ArrayContains(exceptions, k) {

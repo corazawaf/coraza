@@ -20,19 +20,19 @@ import (
 )
 
 type Le struct {
-	data int
+	data string
 }
 
 func (o *Le) Init(data string) {
-	k, _ := strconv.Atoi(data)
-	o.data = k
+	o.data = data
 }
 
 func (o *Le) Evaluate(tx *engine.Transaction, value string) bool {
-	v := 0
+	data := tx.MacroExpansion(o.data)
+	d, _ := strconv.Atoi(data)
 	v, err := strconv.Atoi(value)
 	if err != nil {
 		v = 0
 	}
-	return v <= o.data
+	return v <= d
 }

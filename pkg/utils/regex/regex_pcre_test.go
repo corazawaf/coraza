@@ -1,6 +1,8 @@
 // Copyright (C) 2011 Florian Weimer <fw@deneb.enyo.de>
 
-package pcre
+// +build linux,cgo darwin,cgo
+
+package regex
 
 import (
 	"testing"

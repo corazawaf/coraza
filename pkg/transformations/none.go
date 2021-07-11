@@ -17,5 +17,6 @@ package transformations
 import ()
 
 func None(data string) string {
+	// This case is special and is hardcoded in the seclang parser
 	return data
 }

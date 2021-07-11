@@ -27,5 +27,6 @@ func (o *Streq) Init(data string) {
 }
 
 func (o *Streq) Evaluate(tx *engine.Transaction, value string) bool {
-	return o.data == value
+	data := tx.MacroExpansion(o.data)
+	return data == value
 }

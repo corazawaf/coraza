@@ -15,10 +15,10 @@
 package transformations
 
 import (
-	pcre "github.com/jptosso/coraza-waf/pkg/utils/pcre"
+	regex "github.com/jptosso/coraza-waf/pkg/utils/regex"
 )
 
 func ReplaceNulls(data string) string {
-	re := pcre.MustCompile(`\0`, 0)
+	re := regex.MustCompile(`\0`, 0)
 	return re.ReplaceAllString(data, " ", 0)
 }

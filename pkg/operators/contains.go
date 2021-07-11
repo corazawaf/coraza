@@ -28,5 +28,6 @@ func (o *Contains) Init(data string) {
 }
 
 func (o *Contains) Evaluate(tx *engine.Transaction, value string) bool {
-	return strings.Contains(value, o.data)
+	data := tx.MacroExpansion(o.data)
+	return strings.Contains(value, data)
 }

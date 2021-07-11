@@ -15,10 +15,11 @@
 package engine
 
 import (
-	"github.com/jptosso/coraza-waf/pkg/transformations"
-	log "github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
+
+	"github.com/jptosso/coraza-waf/pkg/transformations"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -107,11 +108,11 @@ type Rule struct {
 func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 
 	tx.GetCollection(VARIABLE_RULE).SetData(map[string][]string{
-		"id":       []string{strconv.Itoa(r.Id)},
-		"msg":      []string{},
-		"rev":      []string{},
-		"logdata":  []string{},
-		"severity": []string{},
+		"id":       {strconv.Itoa(r.Id)},
+		"msg":      {},
+		"rev":      {},
+		"logdata":  {},
+		"severity": {},
 	})
 	matchedValues := []*MatchData{}
 	for _, nid := range tx.RuleRemoveById {
@@ -123,7 +124,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 	// secmarkers and secactions will always match
 	if r.Operator == nil {
 		matchedValues = []*MatchData{
-			&MatchData{
+			{
 				Collection: "", //TODO replace with a placeholder
 				Key:        "",
 				Value:      "",
@@ -136,28 +137,30 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 		var values []*MatchData
 		exceptions := make([]string, len(v.Exceptions))
 		copy(exceptions, v.Exceptions)
-		if ecol != nil {
-			for _, c := range ecol {
-				if c.Collection == v.Collection {
-					exceptions = append(exceptions, c.Key)
-				}
+		for _, c := range ecol {
+			if c.Collection == v.Collection {
+				exceptions = append(exceptions, c.Key)
 			}
 		}
 
-		//Get with macro expansion
-		values = tx.GetField(v.Collection, v.Key, exceptions)
 		if v.Count {
-			if v.Key != "" && len(values) == 1 {
-				values[0].Value = strconv.Itoa(len(values[0].Value))
+			l := 0
+			if v.Key != "" {
+				//Get with macro expansion
+				values = tx.GetField(v.Collection, v.Key, exceptions)
+				l = len(values)
 			} else {
-				values = []*MatchData{
-					&MatchData{
-						Collection: VariableToName(v.Collection),
-						Key:        v.Key,
-						Value:      strconv.Itoa(len(values)),
-					},
-				}
+				l = len(tx.GetCollection(v.Collection).GetData())
 			}
+			values = []*MatchData{
+				{
+					Collection: VariableToName(v.Collection),
+					Key:        v.Key,
+					Value:      strconv.Itoa(l),
+				},
+			}
+		} else {
+			values = tx.GetField(v.Collection, v.Key, exceptions)
 		}
 
 		if len(values) == 0 {
@@ -216,9 +219,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 			}
 			msgs = append(msgs, tx.MacroExpansion(nr.Msg))
 
-			for _, child := range m {
-				matchedValues = append(matchedValues, child)
-			}
+			matchedValues = append(matchedValues, m...)
 			nr = nr.Chain
 		}
 	}
@@ -280,8 +281,8 @@ func (r *Rule) AddNegateVariable(collection byte, key string) {
 }
 
 func NewRule() *Rule {
-	return &Rule{	
+	return &Rule{
 		Phase: 2,
-		Tags: []string{},
+		Tags:  []string{},
 	}
 }

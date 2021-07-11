@@ -16,12 +16,11 @@ package engine
 
 import (
 	"errors"
-	"github.com/jptosso/coraza-waf/pkg/engine/persistence"
-	pcre "github.com/jptosso/coraza-waf/pkg/utils/pcre"
-	"github.com/oschwald/geoip2-golang"
-	log "github.com/sirupsen/logrus"
-	"strings"
 	"sync"
+
+	"github.com/jptosso/coraza-waf/pkg/engine/loggers"
+	regex "github.com/jptosso/coraza-waf/pkg/utils/regex"
+	"github.com/oschwald/geoip2-golang"
 )
 
 const (
@@ -58,7 +57,7 @@ type Waf struct {
 	Rules *RuleGroup
 
 	// Audit logger engine
-	Logger *Logger
+	loggers []loggers.Logger
 
 	// Absolute path where rules are going to look for data files or scripts
 	Datapath string
@@ -66,26 +65,8 @@ type Waf struct {
 	// Audit mode status
 	AuditEngine int
 
-	// Log path for audit engine
-	AuditLogPath string
-
-	// Log path for audit engine concurrent files
-	AuditLogStorageDir string
-
 	// Array of logging parts to be used
 	AuditLogParts []rune
-
-	// Audit engine mode
-	AuditLogType int
-
-	// CHMOD value for concurrent audit log directories
-	AuditLogDirMode int
-
-	// CHMOD value for concurrent log files
-	AuditLogFileMode int
-
-	// Path for debug log
-	DebugLog string
 
 	// If true, transactions will have access to the request body
 	RequestBodyAccess bool
@@ -120,14 +101,8 @@ type Waf struct {
 	// This signature is going to be reported in audit logs
 	ComponentSignature string
 
-	// Contains the body or path of the error page
-	ErrorPageFile string
-
-	// Contains the error page method to be used
-	ErrorPageMethod int
-
 	// Contains the regular expression for relevant status audit logging
-	AuditLogRelevantStatus pcre.Regexp
+	AuditLogRelevantStatus regex.Regexp
 
 	// Contains the GeoIP2 database reader object
 	GeoDb *geoip2.Reader
@@ -155,23 +130,6 @@ type Waf struct {
 	RequestBodyLimitAction int
 }
 
-
-func (w *Waf) InitLogger() {
-	l := &Logger{}
-	var err error
-	/*
-	   switch w.AuditLogType{
-	   default:
-	       err = l.InitConcurrent(w.AuditLogPath, w.AuditLogStorageDir)
-	   }
-	*/
-	err = l.InitConcurrent(w.AuditLogPath, w.AuditLogStorageDir)
-	if err != nil {
-		log.Error("Failed to initialize concurrent logger, concurrent logging will be disabled.")
-	}
-	w.Logger = l
-}
-
 // Initializes Geoip2 database
 func (w *Waf) InitGeoip(path string) error {
 	var err error
@@ -183,27 +141,8 @@ func (w *Waf) InitGeoip(path string) error {
 }
 
 // Initializes Persistence Engine
-func (w *Waf) InitPersistenceEngine() error {
-	uri := w.PersistenceUri
-	spl := strings.SplitN(uri, ":", 2)
-	if len(spl) == 0 {
-		return errors.New("Invalid persistence Engine")
-	}
-	var pe PersistenceEngine
-	/*
-		switch spl[0] {
-		//case "redis":
-		//	pe = &persistence.RedisEngine{}
-		default:
-			pe = &persistence.MemoryEngine{}
-		}*/
-	pe = &persistence.MemoryEngine{}
-	//TODO change TTL
-	err := pe.Init(uri, 3600)
-	if err != nil {
-		return err
-	}
-	w.PersistenceEngine = pe
+func (w *Waf) SetPersistenceEngine(uri string) error {
+	// Not implemented
 	return nil
 }
 
@@ -216,19 +155,40 @@ func (w *Waf) NewTransaction() *Transaction {
 	return tx
 }
 
+// AddLogger creates a new logger for the current WAF instance
+// You may add as many loggers as you want
+// Keep in mind loggers locks go routines
+func (w *Waf) AddLogger(engine string, args []string) error {
+	var l loggers.Logger
+	switch engine {
+	case "apache":
+		l = &loggers.ApacheLogger{}
+	case "concurrent":
+		l = &loggers.ConcurrentLogger{}
+	default:
+		return errors.New("invalid logger " + engine)
+	}
+	l.New(args)
+	w.loggers = append(w.loggers, l)
+	return nil
+}
+
+// Logger returns
+func (w *Waf) Loggers() []loggers.Logger {
+	return w.loggers
+}
+
 func NewWaf() *Waf {
 	waf := &Waf{
-		mux:  &sync.RWMutex{},
-		Rules:  NewRuleGroup(),
-		AuditEngine:  AUDIT_LOG_DISABLED,
-		AuditLogType:  AUDIT_LOG_CONCURRENT,
-		PersistenceUri:  "inmemory",
-		TmpDir:  "/tmp",
-		RequestBodyLimit:  10000000, //10mb
-		RequestBodyInMemoryLimit:  131072,
-		RuleEngine:  true,
+		mux:                      &sync.RWMutex{},
+		Rules:                    NewRuleGroup(),
+		AuditEngine:              AUDIT_LOG_DISABLED,
+		PersistenceUri:           "inmemory",
+		TmpDir:                   "/tmp",
+		RequestBodyLimit:         10000000, //10mb
+		RequestBodyInMemoryLimit: 131072,
+		RuleEngine:               true,
+		loggers:                  []loggers.Logger{},
 	}
-	waf.InitLogger()
-	waf.InitPersistenceEngine()
 	return waf
 }

@@ -33,8 +33,12 @@ func (o *Pm) Init(data string) {
 
 func (o *Pm) Evaluate(tx *engine.Transaction, value string) bool {
 	value = strings.ToLower(value)
+	data := make([]string, len(o.data))
+	for i := range o.data {
+		data[i] = tx.MacroExpansion(o.data[i])
+	}
 	trie := ahocorasick.NewTrieBuilder().
-		AddStrings(o.data).
+		AddStrings(data).
 		Build()
 	matches := trie.MatchString(value)
 	for i := 0; i < len(matches); i++ {

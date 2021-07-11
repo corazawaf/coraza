@@ -15,12 +15,12 @@
 package engine
 
 import (
-	"errors"
 	"fmt"
-	"github.com/jptosso/coraza-waf/pkg/utils"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
 type RuleGroup struct {
@@ -36,7 +36,7 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 		return nil
 	}
 	if rg.FindById(rule.Id) != nil && rule.Id != 0 {
-		return errors.New(fmt.Sprintf("There is a another rule with ID %d", rule.Id))
+		return fmt.Errorf("there is a another rule with id %d", rule.Id)
 	}
 	rg.rules = append(rg.rules, rule)
 	return nil
@@ -149,9 +149,9 @@ func (rg *RuleGroup) Evaluate(phase int, tx *Transaction) bool {
 	return tx.Interruption != nil
 }
 
-func NewRuleGroup() *RuleGroup{
-	return &RuleGroup {
+func NewRuleGroup() *RuleGroup {
+	return &RuleGroup{
 		rules: []*Rule{},
-		mux: &sync.RWMutex{},
-	}	
+		mux:   &sync.RWMutex{},
+	}
 }

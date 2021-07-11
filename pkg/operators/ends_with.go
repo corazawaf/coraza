@@ -28,5 +28,6 @@ func (o *EndsWith) Init(data string) {
 }
 
 func (o *EndsWith) Evaluate(tx *engine.Transaction, value string) bool {
-	return strings.HasSuffix(value, o.data)
+	data := tx.MacroExpansion(o.data)
+	return strings.HasSuffix(value, data)
 }

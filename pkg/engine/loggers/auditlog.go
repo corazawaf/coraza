@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package engine
+package loggers
 
 import (
 	"encoding/json"
-	"time"
 )
 
 // Main struct for audit log data
@@ -31,7 +30,8 @@ type AuditLog struct {
 // Transaction information
 type AuditTransaction struct {
 	// Timestamp "02/Jan/2006:15:04:20 -0700" format
-	Timestamp string `json:"timestamp"`
+	Timestamp     string `json:"timestamp"`
+	UnixTimestamp int64  `json:"unix_timestamp"`
 
 	// Unique ID
 	Id string `json:"id"`
@@ -63,6 +63,7 @@ type AuditTransactionProducer struct {
 }
 
 type AuditTransactionRequest struct {
+	Method         string                          `json:"method"`
 	Protocol    string                          `json:"protocol"`
 	Uri         string                          `json:"uri"`
 	HttpVersion string                          `json:"http_version"`
@@ -97,93 +98,6 @@ type AuditMessageData struct {
 	Tags     []string `json:"tags"`
 }
 
-func (al *AuditLog) Init(tx *Transaction) {
-	parts := tx.AuditLogParts
-	al.Messages = []*AuditMessage{}
-	ts := time.Unix(0, tx.Timestamp).Format("02/Jan/2006:15:04:20 -0700")
-	al.Transaction = &AuditTransaction{
-		Timestamp:  ts,
-		Id:         tx.Id,
-		ClientIp:   tx.GetCollection(VARIABLE_REMOTE_ADDR).GetFirstString(""),
-		ClientPort: tx.GetCollection(VARIABLE_REMOTE_PORT).GetFirstInt(""),
-		HostIp:     "",
-		HostPort:   0,
-		ServerId:   "",
-		Request: &AuditTransactionRequest{
-			Protocol:    tx.GetCollection(VARIABLE_REQUEST_METHOD).GetFirstString(""),
-			Uri:         tx.GetCollection(VARIABLE_REQUEST_URI).GetFirstString(""),
-			HttpVersion: tx.GetCollection(VARIABLE_REQUEST_PROTOCOL).GetFirstString(""),
-			//Body and headers are audit parts
-		},
-		Response: &AuditTransactionResponse{
-			Status: tx.GetCollection(VARIABLE_RESPONSE_STATUS).GetFirstInt(""),
-			//body and headers are audit parts
-		},
-	}
-
-	for _, p := range parts {
-		switch p {
-		case 'B':
-			al.Transaction.Request.Headers = tx.GetCollection(VARIABLE_REQUEST_HEADERS).GetData()
-			break
-		case 'C':
-			al.Transaction.Request.Body = tx.GetCollection(VARIABLE_REQUEST_BODY).GetFirstString("")
-			break
-		case 'F':
-			al.Transaction.Response.Headers = tx.GetCollection(VARIABLE_RESPONSE_HEADERS).GetData()
-			break
-		case 'G':
-			al.Transaction.Response.Body = tx.GetCollection(VARIABLE_RESPONSE_BODY).GetFirstString("")
-			break
-		case 'H':
-			servera := tx.GetCollection(VARIABLE_RESPONSE_HEADERS).Get("server")
-			server := ""
-			if len(server) > 0 {
-				server = servera[0]
-			}
-			al.Transaction.Producer = &AuditTransactionProducer{
-				Connector:  "unknown",
-				Version:    "unknown",
-				Server:     server,
-				RuleEngine: tx.RuleEngine,
-				Stopwatch:  tx.GetStopWatch(),
-			}
-			break
-		case 'I':
-			// not implemented
-			// TODO
-			break
-		case 'J':
-			//upload data
-			// TODO
-			break
-		case 'K':
-			for _, mr := range tx.MatchedRules {
-				r := mr.Rule
-				al.Messages = append(al.Messages, &AuditMessage{
-					Actionset: "",
-					Message:   "",
-					Data: &AuditMessageData{
-						File: "",
-						Line: 0,
-						Id:   r.Id,
-						Rev:  r.Rev,
-						Msg:  tx.MacroExpansion(r.Msg),
-						Data: "",
-						//Severity: r.Severity,
-						//Ver: r.Ver,
-						//Maturity: r.Maturity,
-						//Accuracy: r.Accuracy,
-						Tags: r.Tags,
-					},
-				})
-			}
-			break
-		}
-	}
-}
-
-func (al *AuditLog) ToJson() []byte {
-	js, _ := json.Marshal(al)
-	return js
+func (al *AuditLog) JSON() ([]byte, error) {
+	return json.Marshal(al)
 }

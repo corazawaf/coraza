@@ -12,21 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package loggers
 
 import (
 	"testing"
 )
 
-func TestLibijection(t *testing.T) {
-	sqli := "' or ''='"
-	xss := "<script>alert(123)</Script>"
-	issqli, _ := IsSQLi(sqli)
-	if !issqli {
-		t.Error("Failed to detect sql injection")
-	}
+func TestCLogFileCreation(t *testing.T) {
 
-	if !IsXSS(xss) {
-		t.Error("Failed to detect Cross Site Scripting")
-	}
 }
