@@ -103,30 +103,6 @@ func (p *Parser) Evaluate(data string) error {
 	if len(opts) >= 3 && opts[0] == '"' && opts[len(opts)-1] == '"' {
 		opts = strings.Trim(opts, `"`)
 	}
-	validations := map[string]string{
-		"SecAuditEngine":            `^(On|Off|RelevantOnly)$`,
-		"SecAuditLog":               `^(\|\/|https:\/\/|\/)?.*$`,
-		"SecAuditLogDirMode":        `^([0-7]{3,5}|default)$`,
-		"SecAuditLogFileMode":       `^([0-7]{3,5}|default)$`,
-		"SecAuditLogParts":          `^[A-KZ]{1,12}$`, // Does not validate repetitions
-		"SecAuditLogRelevantStatus": `.*?`,
-		"SecAuditLogStorageDir":     `^\/.*?`, // Requires more love
-		"SecAuditLogType":           `^(Concurrent|HTTPS)$`,
-		"SecCollectionTimeout":      `^[\d]{1,9}$`, // Maybe validate a real int value?
-		"SecConnEngine":             `^(On|Off|DetectOnly)$`,
-		"SecContentInjection":       `^(On|Off)$`,
-		"SecDefaultAction":          `.*?`,
-		"SecHashEngine":             `^(On|Off)$`,
-	}
-	for key, regex := range validations {
-		if directive == key {
-			re, _ := regexp.Compile(regex)
-			if !re.MatchString(opts) {
-				return p.log("Invalid arguments for directive " + directive + ", got " + opts)
-			}
-			break
-		}
-	}
 
 	directives := map[string]Directive{
 		"SecComponentSignature":         directiveSecComponentSignature,

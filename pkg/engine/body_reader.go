@@ -27,7 +27,7 @@ type BodyReader struct {
 	io.Writer   //OK?
 	tmpDir      string
 	buffer      *bytes.Buffer
-	writter     *os.File
+	writer      *os.File
 	length      int64
 	memoryLimit int64
 }
@@ -37,17 +37,17 @@ type BodyReader struct {
 func (br *BodyReader) Write(data []byte) (n int, err error) {
 	l := int64(len(data)) + br.length
 	if l >= br.memoryLimit {
-		if br.writter == nil {
-			br.writter, err = os.CreateTemp(br.tmpDir, "body*")
+		if br.writer == nil {
+			br.writer, err = os.CreateTemp(br.tmpDir, "body*")
 			if err != nil {
 				return 0, err
 			}
 			// we dump the previous buffer
-			br.writter.Write(br.buffer.Bytes())
+			br.writer.Write(br.buffer.Bytes())
 			defer br.buffer.Reset()
 		}
 		br.length = l
-		return br.writter.Write(data)
+		return br.writer.Write(data)
 	}
 	br.length = l
 	return br.buffer.Write(data)
@@ -55,11 +55,11 @@ func (br *BodyReader) Write(data []byte) (n int, err error) {
 
 // Reader Returns a working reader for the body buffer in memory or file
 func (br *BodyReader) Reader() io.Reader {
-	if br.writter == nil {
+	if br.writer == nil {
 		return bytes.NewReader(br.buffer.Bytes())
 	}
-	br.writter.Seek(0, 0)
-	return br.writter
+	br.writer.Seek(0, 0)
+	return br.writer
 }
 
 // String returns a string with the whole body buffer
@@ -77,17 +77,19 @@ func (br *BodyReader) Size() int64 {
 
 // Close will close all readers and delete temporary files
 func (br *BodyReader) Close() {
-	if br.writter == nil {
+	if br.writer == nil {
 		return
 	}
-	br.writter.Close()
-	os.Remove(br.writter.Name())
+	br.writer.Close()
+	if br.writer != nil {
+		os.Remove(br.writer.Name())
+	}
 }
 
 // NewBodyReader Initializes a body reader
-// Temporary files will be written to tmpDir
 // After writing memLimit bytes to the memory buffer, data will be
 // written to a temporary file
+// Temporary files will be written to tmpDir
 func NewBodyReader(tmpDir string, memLimit int64) *BodyReader {
 	return &BodyReader{
 		buffer:      &bytes.Buffer{},

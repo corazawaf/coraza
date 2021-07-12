@@ -21,7 +21,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -81,7 +80,7 @@ type Transaction struct {
 	// Contains all collections, including persistent
 	Collections []*Collection
 	//This map is used to store persistent collections saves, useful to save them after transaction is finished
-	PersistentCollections map[string]*PersistentCollection
+	PersistentCollections map[string]*interface{}
 
 	//Response data to be sent
 	Status int `json:"status"`
@@ -130,9 +129,6 @@ type Transaction struct {
 
 	XmlDoc *xmlquery.Node
 
-	// Used to delete temp files after transaction is finished
-	temporaryFiles []string
-
 	Timestamp int64
 }
 
@@ -160,7 +156,7 @@ func (tx *Transaction) Init(waf *Waf) error {
 	tx.ResponseBodyMimeType = []string{"text/html", "text/plain"}
 	tx.RuleEngine = tx.Waf.RuleEngine
 	tx.Skip = 0
-	tx.PersistentCollections = map[string]*PersistentCollection{}
+	//tx.PersistentCollections = map[string]*interface{}
 	tx.RuleRemoveTargetById = map[int][]*KeyValue{}
 	tx.RuleRemoveById = []int{}
 	tx.StopWatches = map[int]int{}
@@ -433,19 +429,14 @@ func (tx *Transaction) GetRemovedTargets(id int) []*KeyValue {
 }
 
 func (tx *Transaction) ToAuditJson() []byte {
-	al := tx.ToAuditLog()
+	al := tx.AuditLog()
 	data, _ := al.JSON()
 	return data
 }
 
-func (tx *Transaction) ToAuditLog() *loggers.AuditLog {
-	al := &loggers.AuditLog{}
-	return al
-}
-
 func (tx *Transaction) saveLog() error {
 	for _, l := range tx.Waf.Loggers() {
-		l.Write(tx.ToAuditLog())
+		l.Write(tx.AuditLog())
 	}
 
 	return nil
@@ -475,19 +466,8 @@ func (tx *Transaction) RemoveRuleTargetById(id int, col byte, key string) {
 
 // Used by initcol to load a persistent collection and save it after the transaction
 // is finished
-func (tx *Transaction) RegisterPersistentCollection(collection string, pc *PersistentCollection) {
-	tx.PersistentCollections[collection] = pc
-}
-
-func (tx *Transaction) addTemporaryFile(path string) {
-	tx.temporaryFiles = append(tx.temporaryFiles, path)
-}
-
-func (tx *Transaction) removeTemporaryFiles() {
-	for _, f := range tx.temporaryFiles {
-		os.Remove(f)
-	}
-	tx.temporaryFiles = []string{}
+func (tx *Transaction) RegisterPersistentCollection(collection string, pc *interface{}) {
+	//tx.PersistentCollections[collection] = pc
 }
 
 // Fill all transaction variables from an http.Request object
@@ -803,7 +783,6 @@ func (tx *Transaction) ProcessLogging() {
 		return
 	}
 	tx.savePersistentData()
-	tx.removeTemporaryFiles()
 
 	tx.Waf.Rules.Evaluate(5, tx)
 
@@ -811,13 +790,16 @@ func (tx *Transaction) ProcessLogging() {
 		// Audit engine disabled
 		return
 	}
-	re := tx.Waf.AuditLogRelevantStatus
-	status := tx.GetCollection(VARIABLE_RESPONSE_STATUS).GetFirstString("")
-	m := re.NewMatcher()
-	if !m.MatchString(status, 0) {
-		//Not relevant status
-		return
+	if tx.Waf.AuditEngine == AUDIT_LOG_RELEVANT {
+		re := tx.Waf.AuditLogRelevantStatus
+		status := tx.GetCollection(VARIABLE_RESPONSE_STATUS).GetFirstString("")
+		m := re.NewMatcher()
+		if !m.MatchString(status, 0) {
+			//Not relevant status
+			return
+		}
 	}
+
 	tx.saveLog()
 }
 

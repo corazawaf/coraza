@@ -271,7 +271,7 @@ func directiveSecAuditLog(p *Parser, opts string) error {
 	if len(opts) == 0 {
 		return errors.New("syntax error: SecAuditLog [concurrent/https/...] [parameters]")
 	}
-	spl := strings.SplitN(opts, " ", 2)
+	spl := strings.Split(opts, " ")
 	args := []string{}
 	if len(spl) > 1 {
 		args = append(args, spl[0:]...)

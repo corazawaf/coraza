@@ -56,6 +56,7 @@ func (sl *ApacheLogger) Write(al *AuditLog) {
 	err := fmt.Sprintf("Access denied with code 505 (phase %d)", phase)
 	for _, r := range al.Messages {
 		rules += fmt.Sprintf("[id \"%d\"] ", r.Data.Id)
+		msgs += fmt.Sprintf("[msg \"%s\"]", r.Data.Msg)
 	}
 	data := fmt.Sprintf("[%s] [error] [client %s] Coraza: %s. Match of \"%s %s\" against \"%s\" required. %s %s [severity \"%s\"] [uri \"%s\"] [unique_id \"%s\"]",
 		timestamp, address, err, operator, params, variable, rules, msgs, severity, uri, id)

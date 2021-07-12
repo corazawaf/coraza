@@ -173,6 +173,8 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 		for _, arg := range values {
 			var args []string
 			if r.MultiMatch {
+				// TODO in the future, we don't need to run every transformation
+				// We can try for each until found
 				args = r.executeTransformationsMultimatch(arg.Value)
 			} else {
 				args = []string{r.executeTransformations(arg.Value)}

@@ -15,7 +15,7 @@
 package operators
 
 import (
-	ahocorasick "github.com/bobusumisu/aho-corasick"
+	ahocorasick "github.com/jptosso/aho-corasick"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"strings"
 )

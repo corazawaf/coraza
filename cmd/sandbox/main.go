@@ -18,14 +18,15 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/jptosso/coraza-waf/pkg/engine"
-	"github.com/jptosso/coraza-waf/pkg/seclang"
 	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"path"
 	"time"
+
+	"github.com/jptosso/coraza-waf/pkg/engine"
+	"github.com/jptosso/coraza-waf/pkg/seclang"
 )
 
 type ClientRequest struct {
@@ -76,8 +77,8 @@ func apiHandler(w http.ResponseWriter, req *http.Request) {
 	var r ClientRequest
 	err := json.NewDecoder(req.Body).Decode(&r)
 	if err != nil {
-		//http.Error(w, err.Error(), http.StatusBadRequest)
-		//return
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 	waf := engine.NewWaf()
 	waf.Datapath = CRS_PATH
@@ -96,11 +97,7 @@ func apiHandler(w http.ResponseWriter, req *http.Request) {
 		errorHandler(w, "Invalid HTTP Request")
 		return
 	}
-	//We hardcode the remote_addr header based on x-real-ip header
-	rip := tx.GetCollection(engine.VARIABLE_REQUEST_HEADERS).GetData()["x-real-ip"]
-	if len(rip) > 0 {
-		tx.GetCollection(engine.VARIABLE_REMOTE_ADDR).GetData()[""] = rip
-	}
+
 	tx.ProcessResponseHeaders(200, "http/1.1")
 	tx.ResponseBodyReader.Write([]byte(r.Response))
 	tx.ProcessResponseBody()

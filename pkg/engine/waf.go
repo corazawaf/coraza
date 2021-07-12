@@ -117,7 +117,7 @@ type Waf struct {
 	TmpDir string
 
 	// Provide acces to the persistence engine
-	PersistenceEngine PersistenceEngine
+	//PersistenceEngine PersistenceEngine
 
 	// Contains the connection uri for the persistence engine
 	PersistenceUri string
@@ -168,7 +168,13 @@ func (w *Waf) AddLogger(engine string, args []string) error {
 	default:
 		return errors.New("invalid logger " + engine)
 	}
-	l.New(args)
+	if len(args) > 1 {
+		args = args[1:]
+	}
+	err := l.New(args)
+	if err != nil {
+		return err
+	}
 	w.loggers = append(w.loggers, l)
 	return nil
 }
@@ -183,6 +189,7 @@ func NewWaf() *Waf {
 		mux:                      &sync.RWMutex{},
 		Rules:                    NewRuleGroup(),
 		AuditEngine:              AUDIT_LOG_DISABLED,
+		AuditLogParts:            []rune("ABCFHZ"),
 		PersistenceUri:           "inmemory",
 		TmpDir:                   "/tmp",
 		RequestBodyLimit:         10000000, //10mb
