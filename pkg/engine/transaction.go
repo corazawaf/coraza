@@ -808,7 +808,8 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	al := &loggers.AuditLog{}
 	parts := tx.AuditLogParts
 	al.Messages = []*loggers.AuditMessage{}
-	ts := time.Unix(0, tx.Timestamp).Format("02/Jan/2006:15:04:20 -0700")
+	//YYYY/MM/DD HH:mm:ss
+	ts := time.Unix(0, tx.Timestamp).Format("2006/01/02 15:04:05")
 	al.Transaction = &loggers.AuditTransaction{
 		Timestamp:  ts,
 		Id:         tx.Id,
