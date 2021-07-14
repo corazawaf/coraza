@@ -488,7 +488,7 @@ func (tx *Transaction) ProcessRequest(req *http.Request) (*Interruption, error) 
 	// There is no socket access in the request object so we don't know the server client or port
 	tx.ProcessConnection(client, cport, "", 0)
 	tx.ProcessUri(req.URL, req.Method, req.Proto)
-	for k, vr := range req.URL.Query() {
+	for k, vr := range utils.ParseQuery(req.URL.RawQuery, "&") {
 		for _, v := range vr {
 			tx.AddArgument("GET", k, v)
 		}
@@ -498,7 +498,10 @@ func (tx *Transaction) ProcessRequest(req *http.Request) (*Interruption, error) 
 			tx.AddRequestHeader(k, v)
 		}
 	}
-	tx.AddRequestHeader("Host", req.Host)
+	if req.Host != "" {
+		tx.AddRequestHeader("Host", req.Host)
+	}
+
 	in = tx.ProcessRequestHeaders()
 	if in != nil {
 		return in, nil
@@ -611,7 +614,7 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 	if !tx.RequestBodyAccess || !tx.RuleEngine {
 		return tx.Interruption, nil
 	}
-	mime := "application/x-www-form-urlencoded"
+	mime := ""
 
 	reader := tx.RequestBodyReader.Reader()
 	if m := tx.GetCollection(VARIABLE_REQUEST_HEADERS).Get("content-type"); len(m) > 0 {
@@ -634,28 +637,15 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 			reader = io.LimitReader(reader, tx.RequestBodyLimit)
 		}
 	}
+	rbp := tx.GetCollection(VARIABLE_REQBODY_PROCESSOR).GetFirstString("")
 
-	//TODO check this out
-	if tx.RequestBodyProcessor == 0 && tx.ForceRequestBodyVariable {
-		tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_URLENCODED
-	} else if tx.RequestBodyProcessor == 0 {
-		// We force the body processor if none was provided
-		//if mime == "application/xml" || mime == "text/xml" {
-		// It looks like xml body processor is called by default
-		//	tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_XML
-		if mime == "application/x-www-form-urlencoded" {
-			tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_URLENCODED
-		} else if strings.HasPrefix(mime, "multipart/form-data") {
-			tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_MULTIPART
-		} else if mime == "application/json" {
-			tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_JSON
-		} else {
-			tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_URLENCODED
-		}
+	// We force URLENCODED if mime is x-www... or we have an empty RBP and ForceRequestBodyVariable
+	if mime == "application/x-www-form-urlencoded" || (rbp == "" && tx.ForceRequestBodyVariable) {
+		rbp = "URLENCODED"
 	}
 
-	switch tx.RequestBodyProcessor {
-	case REQUEST_BODY_PROCESSOR_URLENCODED:
+	switch rbp {
+	case "URLENCODED":
 		buf := new(strings.Builder)
 		io.Copy(buf, reader)
 		b := buf.String()
@@ -666,7 +656,7 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 				tx.AddArgument("POST", k, v)
 			}
 		}
-	case REQUEST_BODY_PROCESSOR_XML:
+	case "XML":
 		var err error
 		options := xmlquery.ParserOptions{
 			Decoder: &xmlquery.DecoderOptions{
@@ -681,7 +671,7 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR_MSG).Set("", []string{string(err.Error())})
 			return tx.Interruption, err
 		}
-	case REQUEST_BODY_PROCESSOR_MULTIPART:
+	case "MULTIPART":
 		req, _ := http.NewRequest("GET", "/", reader)
 		req.Header.Set("Content-Type", mime)
 		err := req.ParseMultipartForm(1000000000)
@@ -711,7 +701,7 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 				tx.AddArgument("POST", k, v)
 			}
 		}
-	case REQUEST_BODY_PROCESSOR_JSON:
+	case "JSON":
 		buf := new(strings.Builder)
 		io.Copy(buf, reader)
 		b := buf.String()

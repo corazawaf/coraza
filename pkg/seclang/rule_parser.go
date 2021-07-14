@@ -16,14 +16,15 @@ package seclang
 
 import (
 	"errors"
+	"path"
+	"strconv"
+	"strings"
+
 	actionsmod "github.com/jptosso/coraza-waf/pkg/actions"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/operators"
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	regex "github.com/jptosso/coraza-waf/pkg/utils/regex"
-	"path"
-	"strconv"
-	"strings"
 )
 
 type ruleAction struct {
@@ -110,6 +111,9 @@ func (p *RuleParser) ParseOperator(operator string) error {
 		if len(spl) == 2 {
 			p.rule.Operator.Data = spl[1]
 		}
+	}
+	if op == "unconditionalMatch" {
+		p.rule.AlwaysMatch = true
 	}
 
 	p.rule.Operator.Operator = operators.OperatorsMap()[op]

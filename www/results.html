@@ -65,7 +65,7 @@
                 {{ range $i, $mr := .Transaction.MatchedRules}}
                 <tr>
                     <td>{{ $mr.Rule.Id }}</td>
-                    <td>{{ $mr.Rule.Raw }}</td>
+                    <td>{{ $mr.Messages }}</td>
                 </tr>
                 {{ end }}
             </tbody>

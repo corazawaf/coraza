@@ -15,10 +15,11 @@
 package actions
 
 import (
-	"github.com/jptosso/coraza-waf/pkg/engine"
-	"github.com/jptosso/coraza-waf/pkg/utils"
 	"strconv"
 	"strings"
+
+	"github.com/jptosso/coraza-waf/pkg/engine"
+	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
 type Ctl struct {
@@ -114,7 +115,7 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 		tx.RequestBodyLimit = limit
 		break
 	case CTL_RULE_ENGINE:
-		tx.RuleEngine = (a.Value == "on")
+		tx.RuleEngine = (a.Value == "on" || a.Value == "DetectOnly")
 		break
 	case CTL_RULE_REMOVE_BY_ID:
 		id, _ := strconv.Atoi(a.Value)

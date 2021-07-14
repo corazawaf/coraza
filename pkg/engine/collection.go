@@ -29,7 +29,7 @@ type Collection struct {
 
 func (c *Collection) Init(name string) {
 	c.data = map[string][]string{}
-	c.data[""] = []string{}
+	//c.data[""] = []string{}
 	c.name = name
 }
 

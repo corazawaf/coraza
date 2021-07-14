@@ -94,7 +94,7 @@ func apiHandler(w http.ResponseWriter, req *http.Request) {
 	tx := waf.NewTransaction()
 	_, err = tx.ParseRequestString(r.Request)
 	if err != nil {
-		errorHandler(w, "Invalid HTTP Request")
+		errorHandler(w, "Invalid HTTP Request: "+err.Error())
 		return
 	}
 

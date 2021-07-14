@@ -12,7 +12,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.61.1/theme/ayu-dark.min.css" integrity="sha512-3/qeNGuMFHa3JQVnHybYEdUbc0ktOoIqqkNiF+UpjroQ0StzmwFvMtEWL6Bt+9SUF6xgYYeW29x3SXC07MwvDw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.61.1/mode/http/http.min.js" integrity="sha512-1TbXvXWYOJTHAG0mDVITR1ZrzT+WI/bjwbMI1CeJ23OUVA8ysHN+c1hHrzkyDgvjk4wdj+lPdhyyydVn6MNK+g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <link rel="stylesheet" href="public/client.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/json2html/2.1.0/json2html.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" integrity="sha512-iBBXm8fW90+nuLcSKlbmrPcLa0OT92xO1BIsZ+ywDWZCvqsWgccV3gFoRBv0z+8dLJgyAHIhR35VZc2oM/gI1w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         body{
@@ -95,8 +94,8 @@
         <div class="row">
             <div class="col-md-2 left-bar">
                 <div class="form-check">
-                    <input class="form-check-input" type="checkbox" value="" id="defaultCheck1">
-                    <label class="form-check-label" for="defaultCheck1">
+                    <input class="form-check-input" type="checkbox" value="" id="auto_ct">
+                    <label class="form-check-label" for="auto_ct">
                         Auto Content Length
                     </label>
                 </div>
@@ -170,14 +169,17 @@
         var req = http_req.getValue();
         var regex = /Content-length:.*\n/g;
         var content = "";
-        try{
-            //WIP
-            var sp = req.split("\n\n", 2);
-            if(sp.length > 1 ){
-                req = req.replace(regex, "Content-length: " + sp[1].length + "\n");
-                http_req.setValue(req);
-            }          
-        }catch(err){}
+        if($('#auto_ct').prop('checked')){
+            try{
+                //WIP
+                var sp = req.split("\n\n", 2);
+                if(sp.length > 1 ){
+                    req = req.replace(regex, "Content-length: " + sp[1].length + "\n");
+                    http_req.setValue(req);
+                }          
+            }catch(err){}
+        }
+
         var obj = {
             crs: $('#use_crs').prop('checked'),
             directives: directives.getValue(),

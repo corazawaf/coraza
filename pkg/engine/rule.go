@@ -74,6 +74,7 @@ type Rule struct {
 	DisruptiveAction        int
 	DefaultDisruptiveAction string
 	HasChain                bool
+	AlwaysMatch             bool
 
 	//METADATA
 	// Rule unique sorted identifier
@@ -163,10 +164,13 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 			values = tx.GetField(v.Collection, v.Key, exceptions)
 		}
 
+		if r.AlwaysMatch {
+			matchedValues = append(matchedValues, &MatchData{
+				// TODO add something here?
+			})
+		}
 		if len(values) == 0 {
-			if r.executeOperator("", tx) {
-				matchedValues = append(matchedValues, &MatchData{})
-			}
+			// TODO should we run the operators here?
 			continue
 		}
 		log.Debug("Arguments expanded: " + strconv.Itoa(len(values)))

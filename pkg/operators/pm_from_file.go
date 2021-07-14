@@ -16,15 +16,17 @@ package operators
 
 import (
 	"fmt"
+	"strings"
+	"sync"
+
 	ahocorasick "github.com/jptosso/aho-corasick"
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/utils"
-	"strings"
-	"sync"
 )
 
 type PmFromFile struct {
 	Data []string
+	trie *ahocorasick.Trie
 	mux  *sync.RWMutex
 }
 
@@ -47,16 +49,16 @@ func (o *PmFromFile) Init(data string) {
 			o.Data = append(o.Data, strings.ToLower(l))
 		}
 	}
+	o.trie = ahocorasick.NewTrieBuilder().
+		AddStrings(o.Data).
+		Build()
 }
 
 func (o *PmFromFile) Evaluate(tx *engine.Transaction, value string) bool {
 	o.mux.RLock()
 	defer o.mux.RUnlock()
 	value = strings.ToLower(value)
-	trie := ahocorasick.NewTrieBuilder().
-		AddStrings(o.Data).
-		Build()
-	matches := trie.MatchString(value)
+	matches := o.trie.MatchString(value)
 	for i := 0; i < len(matches); i++ {
 		if i == 10 {
 			return true

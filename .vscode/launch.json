@@ -10,7 +10,18 @@
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/sandbox/main.go",
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "-crs", "${input:crs_path}"
+            ]
+        }
+    ],
+    "inputs": [
+        {
+            "id": "crs_path",
+            "description": "Path to CRS rules directory",
+            "default": "/tmp/coreruleset/rules/",
+            "type":"promptString"
         }
     ]
 }
