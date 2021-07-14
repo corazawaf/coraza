@@ -98,29 +98,21 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 		}
 		break
 	case CTL_FORCE_REQUEST_BODY_VAR:
-		if a.Value == "on" {
+		if strings.ToLower(a.Value) == "on" {
 			tx.ForceRequestBodyVariable = true
 		} else {
 			tx.ForceRequestBodyVariable = false
 		}
-		break
 	case CTL_REQUEST_BODY_ACCESS:
 		tx.RequestBodyAccess = a.Value == "on"
-		break
 	case CTL_REQUEST_BODY_LIMIT:
-		limit, err := strconv.ParseInt(a.Value, 10, 64)
-		if err != nil {
-			return //error
-		}
+		limit, _ := strconv.ParseInt(a.Value, 10, 64)
 		tx.RequestBodyLimit = limit
-		break
 	case CTL_RULE_ENGINE:
-		tx.RuleEngine = (a.Value == "on" || a.Value == "DetectOnly")
-		break
+		tx.RuleEngine = (strings.ToLower(a.Value) == "on" || a.Value == "DetectOnly")
 	case CTL_RULE_REMOVE_BY_ID:
 		id, _ := strconv.Atoi(a.Value)
 		tx.RuleRemoveById = append(tx.RuleRemoveById, id)
-		break
 	case CTL_RULE_REMOVE_BY_MSG:
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
@@ -128,7 +120,6 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 				tx.RuleRemoveById = append(tx.RuleRemoveById, r.Id)
 			}
 		}
-		break
 	case CTL_RULE_REMOVE_BY_TAG:
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
@@ -140,12 +131,16 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 		switch strings.ToLower(a.Value) {
 		case "xml":
 			tx.RequestBodyProcessor = engine.REQUEST_BODY_PROCESSOR_XML
+			tx.GetCollection(engine.VARIABLE_REQBODY_PROCESSOR).Set("", []string{"XML"})
 		case "json":
 			tx.RequestBodyProcessor = engine.REQUEST_BODY_PROCESSOR_JSON
+			tx.GetCollection(engine.VARIABLE_REQBODY_PROCESSOR).Set("", []string{"JSON"})
 		case "urlencoded":
 			tx.RequestBodyProcessor = engine.REQUEST_BODY_PROCESSOR_URLENCODED
+			tx.GetCollection(engine.VARIABLE_REQBODY_PROCESSOR).Set("", []string{"URLENCODED"})
 		case "multipart":
 			tx.RequestBodyProcessor = engine.REQUEST_BODY_PROCESSOR_MULTIPART
+			tx.GetCollection(engine.VARIABLE_REQBODY_PROCESSOR).Set("", []string{"MULTIPART"})
 		}
 		break
 	case CTL_HASH_ENGINE:

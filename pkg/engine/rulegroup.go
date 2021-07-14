@@ -111,6 +111,9 @@ func (rg *RuleGroup) Evaluate(phase int, tx *Transaction) bool {
 	usedRules := 0
 	tx.LastPhase = phase
 	for _, r := range tx.Waf.Rules.GetRules() {
+		if tx.Interruption != nil {
+			return true
+		}
 		// Rules with phase 0 will always run
 		if r.Phase != phase && r.Phase != 0 {
 			continue

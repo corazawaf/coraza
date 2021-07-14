@@ -20,7 +20,7 @@
         {
             "id": "crs_path",
             "description": "Path to CRS rules directory",
-            "default": "/tmp/coreruleset/rules/",
+            "default": "${workspaceFolder}/../coreruleset/rules/",
             "type":"promptString"
         }
     ]

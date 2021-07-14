@@ -16,12 +16,14 @@ package utils
 
 import (
 	"fmt"
-	"github.com/jptosso/coraza-waf/pkg/engine"
 	"testing"
+
+	"github.com/jptosso/coraza-waf/pkg/engine"
 )
 
 func TestEngine(t *testing.T) {
 	files := []string{
+		"../data/engine/body_processors.yaml",
 		"../data/engine/persistence.yaml",
 		"../data/engine/phases.yaml",
 		"../data/engine/actions.yaml",

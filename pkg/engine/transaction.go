@@ -219,10 +219,9 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 
 	if key == "content-type" {
 		val := strings.ToLower(value)
-		mp := "multipart/form-data"
 		if val == "application/x-www-form-urlencoded" {
 			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR).Add("", "URLENCODED")
-		} else if len(val) > len(mp) && val[0:len(mp)-1] == mp {
+		} else if strings.HasPrefix(val, "multipart/form-data") {
 			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR).Add("", "MULTIPART")
 		}
 	} else if key == "host" {
@@ -639,8 +638,10 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 	}
 	rbp := tx.GetCollection(VARIABLE_REQBODY_PROCESSOR).GetFirstString("")
 
-	// We force URLENCODED if mime is x-www... or we have an empty RBP and ForceRequestBodyVariable
-	if mime == "application/x-www-form-urlencoded" || (rbp == "" && tx.ForceRequestBodyVariable) {
+	// Default VARIABLE_REQBODY_PROCESSOR values
+	// XML and JSON must be forced with ctl:requestBodyProcessor=JSON
+	if rbp == "" && tx.ForceRequestBodyVariable {
+		// We force URLENCODED if mime is x-www... or we have an empty RBP and ForceRequestBodyVariable
 		rbp = "URLENCODED"
 	}
 

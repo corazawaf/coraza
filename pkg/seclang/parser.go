@@ -137,6 +137,12 @@ func (p *Parser) Evaluate(data string) error {
 		"SecServerSignature":            directiveSecServerSignature,
 
 		//Unsupported Directives
+		"SecRequestBodyNoFilesLimit": directiveUnsupported,
+		"SecDataDir":                 directiveUnsupported,
+		"SecArgumentSeparator":       directiveUnsupported,
+		"SecCookieFormat":            directiveUnsupported,
+		"SecUnicodeMapFile":          directiveUnsupported,
+		"SecStatusEngine":            directiveUnsupported,
 		"SecXmlExternalEntity":       directiveUnsupported,
 		"SecUploadKeepFiles":         directiveUnsupported,
 		"SecUploadFileMode":          directiveUnsupported,

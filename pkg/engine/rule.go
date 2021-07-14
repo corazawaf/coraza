@@ -110,10 +110,10 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 
 	tx.GetCollection(VARIABLE_RULE).SetData(map[string][]string{
 		"id":       {strconv.Itoa(r.Id)},
-		"msg":      {},
-		"rev":      {},
-		"logdata":  {},
-		"severity": {},
+		"msg":      {r.Msg},
+		"rev":      {r.Rev},
+		"logdata":  {}, // TODO
+		"severity": {r.Severity},
 	})
 	matchedValues := []*MatchData{}
 	for _, nid := range tx.RuleRemoveById {

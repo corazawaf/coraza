@@ -76,6 +76,8 @@ func TestTxMultipart(t *testing.T) {
 		fmt.Sprintf("Content-Length: %d", len(data)),
 	}
 	data = strings.Join(headers, "\r\n") + "\r\n\r\n" + data + "\r\n"
+	tx.RequestBodyAccess = true
+	tx.RequestBodyLimit = 9999999
 	_, err := tx.ParseRequestString(data)
 	if err != nil {
 		t.Error("Failed to parse multipart request: " + err.Error())
