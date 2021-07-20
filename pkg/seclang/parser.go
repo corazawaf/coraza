@@ -68,12 +68,12 @@ func (p *Parser) FromFile(profilePath string) error {
 func (p *Parser) FromString(data string) error {
 	scanner := bufio.NewScanner(strings.NewReader(data))
 	var linebuffer = ""
+	pattern := regexp.MustCompile(`\\(\s+)?$`)
 	for scanner.Scan() {
 		line := scanner.Text()
 		linebuffer += strings.TrimSpace(line)
 		//Check if line ends with \
-		// TODO fix performance issue in the following line:
-		match, _ := regexp.MatchString(`\\(\s+)?$`, line)
+		match := pattern.MatchString(line)
 		if !match {
 			err := p.Evaluate(linebuffer)
 			if err != nil {

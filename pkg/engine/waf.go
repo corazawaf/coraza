@@ -180,8 +180,8 @@ func (w *Waf) NewTransaction() *Transaction {
 		RuleRemoveTargetById: map[int][]*KeyValue{},
 		RuleRemoveById:       []int{},
 		StopWatches:          map[int]int{},
-		RequestBodyReader:    NewBodyReader(w.TmpDir, w.RequestBodyInMemoryLimit),
-		ResponseBodyReader:   NewBodyReader(w.TmpDir, w.RequestBodyInMemoryLimit),
+		RequestBodyBuffer:    NewBodyReader(w.TmpDir, w.RequestBodyInMemoryLimit),
+		ResponseBodyBuffer:   NewBodyReader(w.TmpDir, w.RequestBodyInMemoryLimit),
 	}
 	for i := range tx.Collections {
 		tx.Collections[i] = &Collection{}

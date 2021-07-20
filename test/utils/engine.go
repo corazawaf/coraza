@@ -18,12 +18,13 @@ import (
 	b64 "encoding/base64"
 	"errors"
 	"fmt"
+	"reflect"
+	"strings"
+
 	"github.com/jptosso/coraza-waf/pkg/engine"
 	"github.com/jptosso/coraza-waf/pkg/seclang"
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	"gopkg.in/yaml.v2"
-	"reflect"
-	"strings"
 	//"time"
 )
 
@@ -95,7 +96,7 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 
 	// POST DATA
 	if stage.Stage.Input.Data != "" {
-		tx.RequestBodyReader.Write([]byte(parseInputData(stage.Stage.Input.Data)))
+		tx.RequestBodyBuffer.Write([]byte(parseInputData(stage.Stage.Input.Data)))
 		tx.ProcessRequestBody()
 		// we ignore the error
 	}

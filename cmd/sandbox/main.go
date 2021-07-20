@@ -99,7 +99,7 @@ func apiHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	tx.ProcessResponseHeaders(200, "http/1.1")
-	tx.ResponseBodyReader.Write([]byte(r.Response))
+	tx.ResponseBodyBuffer.Write([]byte(r.Response))
 	tx.ProcessResponseBody()
 	tx.ProcessLogging()
 	w.Header().Set("Content-Type", "text/html")

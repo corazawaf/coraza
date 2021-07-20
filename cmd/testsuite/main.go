@@ -20,14 +20,17 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/jptosso/coraza-waf/pkg/engine"
-	"github.com/jptosso/coraza-waf/pkg/seclang"
-	test "github.com/jptosso/coraza-waf/test/utils"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
+	"runtime/pprof"
 	"strings"
 	"sync"
+
+	"github.com/jptosso/coraza-waf/pkg/engine"
+	"github.com/jptosso/coraza-waf/pkg/seclang"
+	test "github.com/jptosso/coraza-waf/test/utils"
 	//log "github.com/sirupsen/logrus"
 )
 
@@ -37,6 +40,8 @@ var failonly = false
 func main() {
 	rpath := flag.String("path", "./", "Path to find yaml files")
 	rules := flag.String("rules", "/tmp/rules.conf", "Path to rule files for testing.")
+	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
+
 	//fo := flag.Bool("fo", false, "Filter by fails only.")
 	//proxy := flag.String("p", "", "Tests will be proxied to this url, example: https://10.10.10.10:443")
 	//duration := flag.Int("d", 500, "Max tests duration in seconds.")
@@ -46,6 +51,14 @@ func main() {
 	flag.Parse()
 	//log.SetLevel(log.DebugLevel)
 
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
 	files, err := getYamlFromDir(*rpath)
 	if err != nil {
 		panic("Cannot load path " + *rpath)

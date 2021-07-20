@@ -15,7 +15,7 @@
 package transformations
 
 import (
-	"strings"
+	"unicode"
 )
 
 /*
@@ -33,14 +33,14 @@ transform all characters to lowercase
 */
 func CmdLine(data string, utils *Tools) string {
 	space := false
-	ret := ""
+	ret := []byte{}
 	for _, a := range data {
 		if a == '"' || a == '\'' || a == '\\' || a == '^' {
 			/* remove some characters */
 		} else if a == ' ' || a == ',' || a == ';' || a == '\t' || a == '\r' || a == '\n' {
 			/* replace some characters to space (only one) */
 			if !space {
-				ret += " "
+				ret = append(ret, ' ')
 				space = true
 			}
 		} else if a == '/' || a == '(' {
@@ -50,12 +50,12 @@ func CmdLine(data string, utils *Tools) string {
 			}
 			space = false
 
-			ret += string(a)
+			ret = append(ret, byte(a))
 		} else {
-			b := strings.ToLower(string(a))
-			ret += b
+			b := unicode.ToLower(a)
+			ret = append(ret, byte(b))
 			space = false
 		}
 	}
-	return ret
+	return string(ret)
 }

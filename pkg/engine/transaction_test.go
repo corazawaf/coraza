@@ -153,7 +153,7 @@ func TestRequestBody(t *testing.T) {
 	//xml := "<test><content>test</content></test>"
 	tx := wafi.NewTransaction()
 	tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
-	tx.RequestBodyReader.Write([]byte(urlencoded))
+	tx.RequestBodyBuffer.Write([]byte(urlencoded))
 	tx.ProcessRequestHeaders()
 	tx.ProcessRequestBody()
 	val := tx.GetCollection(VARIABLE_ARGS_POST).Get("some")

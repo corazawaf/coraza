@@ -23,7 +23,7 @@ import (
 
 // BoddyReader is used to read RequestBody and ResponseBody objects
 // It will handle memory usage for buffering and processing
-type BodyReader struct {
+type BodyBuffer struct {
 	io.Writer   //OK?
 	tmpDir      string
 	buffer      *bytes.Buffer
@@ -34,7 +34,7 @@ type BodyReader struct {
 
 // Write appends data to the body buffer by chunks
 // You may dump io.Readers using io.Copy(br, reader)
-func (br *BodyReader) Write(data []byte) (n int, err error) {
+func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	l := int64(len(data)) + br.length
 	if l >= br.memoryLimit {
 		if br.writer == nil {
@@ -54,7 +54,7 @@ func (br *BodyReader) Write(data []byte) (n int, err error) {
 }
 
 // Reader Returns a working reader for the body buffer in memory or file
-func (br *BodyReader) Reader() io.Reader {
+func (br *BodyBuffer) Reader() io.Reader {
 	if br.writer == nil {
 		return bytes.NewReader(br.buffer.Bytes())
 	}
@@ -64,19 +64,19 @@ func (br *BodyReader) Reader() io.Reader {
 
 // String returns a string with the whole body buffer
 // In some cases it will be needed for body processing
-func (br *BodyReader) String() string {
+func (br *BodyBuffer) String() string {
 	buf := new(strings.Builder)
 	io.Copy(buf, br.Reader())
 	return buf.String()
 }
 
 // Size returns the current size of the body buffer
-func (br *BodyReader) Size() int64 {
+func (br *BodyBuffer) Size() int64 {
 	return br.length
 }
 
 // Close will close all readers and delete temporary files
-func (br *BodyReader) Close() {
+func (br *BodyBuffer) Close() {
 	if br.writer == nil {
 		return
 	}
@@ -90,8 +90,8 @@ func (br *BodyReader) Close() {
 // After writing memLimit bytes to the memory buffer, data will be
 // written to a temporary file
 // Temporary files will be written to tmpDir
-func NewBodyReader(tmpDir string, memLimit int64) *BodyReader {
-	return &BodyReader{
+func NewBodyReader(tmpDir string, memLimit int64) *BodyBuffer {
+	return &BodyBuffer{
 		buffer:      &bytes.Buffer{},
 		tmpDir:      tmpDir,
 		memoryLimit: memLimit,

@@ -106,8 +106,8 @@ type Transaction struct {
 	AuditLogType             int
 	LastPhase                int
 
-	RequestBodyReader  *BodyReader
-	ResponseBodyReader *BodyReader
+	RequestBodyBuffer  *BodyBuffer
+	ResponseBodyBuffer *BodyBuffer
 
 	// Rules with this id are going to be skipped
 	RuleRemoveById []int
@@ -471,7 +471,7 @@ func (tx *Transaction) ProcessRequest(req *http.Request) (*Interruption, error) 
 	if in != nil {
 		return in, nil
 	}
-	_, err := io.Copy(tx.RequestBodyReader, req.Body)
+	_, err := io.Copy(tx.RequestBodyBuffer, req.Body)
 	if err != nil {
 		return tx.Interruption, err
 	}
@@ -581,14 +581,14 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 	}
 	mime := ""
 
-	reader := tx.RequestBodyReader.Reader()
+	reader := tx.RequestBodyBuffer.Reader()
 	if m := tx.GetCollection(VARIABLE_REQUEST_HEADERS).Get("content-type"); len(m) > 0 {
 		//spl := strings.SplitN(m[0], ";", 2) //We must skip charset or others
 		mime = m[0]
 	}
 
 	// Chunked requests will always be written to a temporary file
-	if tx.RequestBodyReader.Size() >= tx.RequestBodyLimit {
+	if tx.RequestBodyBuffer.Size() >= tx.RequestBodyLimit {
 		if tx.Waf.RequestBodyLimitAction == REQUEST_BODY_LIMIT_ACTION_REJECT {
 			// We interrupt this transaction in case RequestBodyLimitAction is Reject
 			tx.Interruption = &Interruption{
@@ -718,8 +718,8 @@ func (tx *Transaction) ProcessResponseBody() (*Interruption, error) {
 	if !tx.RuleEngine || !tx.ResponseBodyAccess || !tx.IsProcessableResponseBody() {
 		return tx.Interruption, nil
 	}
-	length := strconv.FormatInt(tx.ResponseBodyReader.Size(), 10)
-	reader := tx.ResponseBodyReader.Reader()
+	length := strconv.FormatInt(tx.ResponseBodyBuffer.Size(), 10)
+	reader := tx.ResponseBodyBuffer.Reader()
 	reader = io.LimitReader(reader, tx.Waf.ResponseBodyLimit)
 	buf := new(strings.Builder)
 	io.Copy(buf, reader)

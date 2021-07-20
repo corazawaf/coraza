@@ -48,26 +48,6 @@ func TestCompileFail(t *testing.T) {
 	check("a\000bc", "NUL byte in pattern", 1)
 }
 
-func strings(b [][]byte) (r []string) {
-	r = make([]string, len(b))
-	for i, v := range b {
-		r[i] = string(v)
-	}
-	return
-}
-
-func equal(l, r []string) bool {
-	if len(l) != len(r) {
-		return false
-	}
-	for i, lv := range l {
-		if lv != r[i] {
-			return false
-		}
-	}
-	return true
-}
-
 func checkmatch1(t *testing.T, dostring bool, m *Matcher,
 	pattern, subject string, args ...interface{}) {
 	re := MustCompile(pattern, 0)
