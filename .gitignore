@@ -15,3 +15,4 @@ test/crs
 /main
 vendor/
 coraza-waf
+__debug_bin

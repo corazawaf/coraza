@@ -18,7 +18,7 @@ import (
 	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
-func UrlDecode(data string) string {
+func UrlDecode(data string, utils *Tools) string {
 	res, _, _ := doUrlDecode(data)
 	return res
 }

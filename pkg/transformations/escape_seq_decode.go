@@ -15,11 +15,12 @@
 package transformations
 
 import (
-	"github.com/jptosso/coraza-waf/pkg/utils"
 	"strconv"
+
+	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
-func EscapeSeqDecode(input string) string {
+func EscapeSeqDecode(input string, tools *Tools) string {
 	var i, count, d int
 	input_len := len(input)
 	data := []byte(input)

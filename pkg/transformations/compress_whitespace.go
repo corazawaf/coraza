@@ -14,11 +14,9 @@
 
 package transformations
 
-import (
-	"github.com/jptosso/coraza-waf/pkg/utils"
-)
+import "github.com/jptosso/coraza-waf/pkg/utils"
 
-func CompressWhitespace(value string) string {
+func CompressWhitespace(value string, tools *Tools) string {
 	a := []byte{}
 	i := 0
 	inWhiteSpace := false

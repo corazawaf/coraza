@@ -18,6 +18,6 @@ import (
 	"strings"
 )
 
-func LowerCase(data string) string {
+func LowerCase(data string, utils *Tools) string {
 	return strings.ToLower(data)
 }

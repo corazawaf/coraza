@@ -19,7 +19,7 @@ import (
 	"strings"
 )
 
-func NormalisePathWin(data string) string {
+func NormalisePathWin(data string, utils *Tools) string {
 	leng := len(data)
 	cl := clean(data)
 	cl = strings.ReplaceAll(cl, "\\", "/")

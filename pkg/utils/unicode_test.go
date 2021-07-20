@@ -19,9 +19,11 @@ import (
 )
 
 func TestUnicode(t *testing.T) {
-	InitUnicodeMapping()
-	uni := &Unicode{}
-	uni.Init()
+	uni, err := NewUnicode("20127")
+	if err != nil {
+		t.Error("invalid unicode mapping default")
+		return
+	}
 	if uni.At(0x00a1) != 0x21 {
 		t.Error("Invalid unicode character")
 	}

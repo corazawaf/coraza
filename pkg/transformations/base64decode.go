@@ -14,9 +14,7 @@
 
 package transformations
 
-import ()
-
-func Base64decode(data string) string {
+func Base64decode(data string, utils *Tools) string {
 	res := doBase64decode(data)
 	if res == "" {
 		return data

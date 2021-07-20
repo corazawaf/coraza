@@ -102,5 +102,4 @@ func (l *ConcurrentLogger) Write(al *AuditLog) {
 }
 
 func (cl *ConcurrentLogger) Close() {
-
 }

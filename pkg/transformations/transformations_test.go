@@ -17,14 +17,14 @@ package transformations
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/jptosso/coraza-waf/pkg/utils"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
 type Test struct {
@@ -37,7 +37,6 @@ type Test struct {
 
 //https://github.com/SpiderLabs/secrules-language-tests/
 func TestTransformations(t *testing.T) {
-	utils.InitUnicodeMapping()
 	root := "../../test/data/transformations/"
 	files := [][]byte{}
 	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
@@ -70,21 +69,15 @@ func TestTransformations(t *testing.T) {
 				//t.Error("Invalid transformation test for " + data.Name)
 				continue
 			}
-			out := executeTransformation(trans, data.Input)
+			unicode, _ := utils.NewUnicode("20127")
+			tools := &Tools{
+				Unicode: unicode,
+			}
+			out := trans(data.Input, tools)
 			if out != data.Output {
 				t.Error(fmt.Sprintf("Transformation %s:\nInput: %s\nExpected: %v\nGot: %v\nExpected String: %s\nGot String: %s",
 					data.Name, data.Input, []byte(data.Output), []byte(out), data.Output, out))
 			}
 		}
 	}
-
-}
-
-func executeTransformation(t interface{}, value string) string {
-	rf := reflect.ValueOf(t)
-	rargs := make([]reflect.Value, 1)
-	rargs[0] = reflect.ValueOf(value)
-	call := rf.Call(rargs)
-	value = call[0].String()
-	return value
 }

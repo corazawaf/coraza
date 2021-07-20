@@ -15,13 +15,14 @@
 package transformations
 
 import (
-	"github.com/jptosso/coraza-waf/pkg/utils"
 	"strconv"
 	"strings"
 	"unicode"
+
+	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
-func HtmlEntityDecode(data string) string {
+func HtmlEntityDecode(data string, utils *Tools) string {
 	return doHtmlEntityDecode(data)
 }
 

@@ -19,7 +19,7 @@ import (
 	"io"
 )
 
-func Md5(data string) string {
+func Md5(data string, utils *Tools) string {
 	h := md5.New()
 	io.WriteString(h, data)
 	return string(h.Sum(nil))

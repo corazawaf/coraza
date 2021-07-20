@@ -14,7 +14,7 @@
 
 package transformations
 
-func RemoveComments(value string) string {
+func RemoveComments(value string, utils *Tools) string {
 	inputLen := len(value)
 	// we must add one pad to the right
 	input := []byte(value + "\x00")

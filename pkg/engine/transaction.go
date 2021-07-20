@@ -132,40 +132,6 @@ type Transaction struct {
 	Timestamp int64
 }
 
-func (tx *Transaction) Init(waf *Waf) error {
-	tx.Waf = waf
-	tx.Collections = make([]*Collection, VARIABLES_COUNT)
-	txid := utils.RandomString(19)
-	tx.Id = txid
-	for i := range tx.Collections {
-		tx.Collections[i] = &Collection{}
-		tx.Collections[i].Init(VariableToName(byte(i)))
-	}
-
-	for i := 0; i <= 10; i++ {
-		is := strconv.Itoa(i)
-		tx.GetCollection(VARIABLE_TX).Set(is, []string{})
-	}
-	tx.Timestamp = time.Now().UnixNano()
-	tx.AuditEngine = tx.Waf.AuditEngine
-	tx.AuditLogParts = tx.Waf.AuditLogParts
-	tx.RequestBodyAccess = true
-	tx.RequestBodyLimit = 134217728
-	tx.ResponseBodyAccess = true
-	tx.ResponseBodyLimit = 524288
-	tx.ResponseBodyMimeType = []string{"text/html", "text/plain"}
-	tx.RuleEngine = tx.Waf.RuleEngine
-	tx.Skip = 0
-	//tx.PersistentCollections = map[string]*interface{}
-	tx.RuleRemoveTargetById = map[int][]*KeyValue{}
-	tx.RuleRemoveById = []int{}
-	tx.StopWatches = map[int]int{}
-	tx.RequestBodyReader = NewBodyReader(tx.Waf.TmpDir, tx.Waf.RequestBodyInMemoryLimit)
-	tx.ResponseBodyReader = NewBodyReader(tx.Waf.TmpDir, tx.Waf.RequestBodyInMemoryLimit)
-
-	return nil
-}
-
 func (tx *Transaction) MacroExpansion(data string) string {
 	if data == "" {
 		return ""

@@ -16,6 +16,7 @@ package transformations
 
 import (
 	"fmt"
+
 	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
@@ -27,7 +28,7 @@ const (
 	UNICODE_ERROR_DECODING_ERROR       = -5
 )
 
-func Utf8ToUnicode(str string) string {
+func Utf8ToUnicode(str string, tools *Tools) string {
 	if str == "" {
 		return ""
 	}

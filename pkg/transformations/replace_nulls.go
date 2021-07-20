@@ -18,7 +18,7 @@ import (
 	regex "github.com/jptosso/coraza-waf/pkg/utils/regex"
 )
 
-func ReplaceNulls(data string) string {
+func ReplaceNulls(data string, utils *Tools) string {
 	re := regex.MustCompile(`\0`, 0)
 	return re.ReplaceAllString(data, " ", 0)
 }

@@ -31,7 +31,7 @@ replacing all commas [,] and semicolon [;] into a space
 replacing all multiple spaces (including tab, newline, etc.) into one space
 transform all characters to lowercase
 */
-func CmdLine(data string) string {
+func CmdLine(data string, utils *Tools) string {
 	space := false
 	ret := ""
 	for _, a := range data {

@@ -18,7 +18,7 @@ import (
 	"encoding/hex"
 )
 
-func HexEncode(data string) string {
+func HexEncode(data string, utils *Tools) string {
 	src := []byte(data)
 
 	return hex.EncodeToString(src)

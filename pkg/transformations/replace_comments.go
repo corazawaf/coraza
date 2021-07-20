@@ -14,9 +14,7 @@
 
 package transformations
 
-import ()
-
-func ReplaceComments(data string) string {
+func ReplaceComments(data string, utils *Tools) string {
 	return doReplaceComments(data)
 }
 

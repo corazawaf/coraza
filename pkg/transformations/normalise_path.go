@@ -18,7 +18,7 @@ import (
 	"path/filepath"
 )
 
-func NormalisePath(data string) string {
+func NormalisePath(data string, utils *Tools) string {
 	leng := len(data)
 	if leng < 1 {
 		return data

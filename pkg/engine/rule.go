@@ -132,6 +132,9 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 			},
 		}
 	}
+	tools := &transformations.Tools{
+		Unicode: tx.Waf.Unicode,
+	}
 
 	ecol := tx.GetRemovedTargets(r.Id)
 	for _, v := range r.Variables {
@@ -179,9 +182,9 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 			if r.MultiMatch {
 				// TODO in the future, we don't need to run every transformation
 				// We can try for each until found
-				args = r.executeTransformationsMultimatch(arg.Value)
+				args = r.executeTransformationsMultimatch(arg.Value, tools)
 			} else {
-				args = []string{r.executeTransformations(arg.Value)}
+				args = []string{r.executeTransformations(arg.Value, tools)}
 			}
 			log.Debug("Transformed arguments: " + strings.Join(args, ", "))
 			for _, carg := range args {
@@ -255,18 +258,18 @@ func (r *Rule) executeOperator(data string, tx *Transaction) bool {
 	return result
 }
 
-func (r *Rule) executeTransformationsMultimatch(value string) []string {
+func (r *Rule) executeTransformationsMultimatch(value string, tools *transformations.Tools) []string {
 	res := []string{value}
 	for _, t := range r.Transformations {
-		value = t(value)
+		value = t(value, tools)
 		res = append(res, value)
 	}
 	return res
 }
 
-func (r *Rule) executeTransformations(value string) string {
+func (r *Rule) executeTransformations(value string, tools *transformations.Tools) string {
 	for _, t := range r.Transformations {
-		value = t(value)
+		value = t(value, tools)
 	}
 	return value
 }

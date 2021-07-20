@@ -303,3 +303,43 @@ func directiveSecAuditEngine(p *Parser, opts string) error {
 	}
 	return nil
 }
+
+func directiveSecDataDir(p *Parser, opts string) error {
+	//TODO validations
+	p.Waf.DataDir = opts
+	return nil
+}
+
+func directiveSecUploadKeepFiles(p *Parser, opts string) error {
+	p.Waf.UploadKeepFiles = parseBoolean(opts)
+	return nil
+}
+
+func directiveSecUploadFileMode(p *Parser, opts string) error {
+	fm, err := strconv.ParseUint(opts, 10, 8)
+	p.Waf.UploadFileMode = uint8(fm)
+	return err
+}
+
+func directiveSecUploadFileLimit(p *Parser, opts string) error {
+	var err error
+	p.Waf.UploadFileLimit, err = strconv.Atoi(opts)
+	return err
+}
+
+func directiveSecUploadDir(p *Parser, opts string) error {
+	// TODO validations
+	p.Waf.UploadDir = opts
+	return nil
+}
+
+func directiveSecRequestBodyNoFilesLimit(p *Parser, opts string) error {
+	var err error
+	p.Waf.RequestBodyNoFilesLimit, err = strconv.ParseInt(opts, 10, 64)
+	return err
+}
+
+func parseBoolean(data string) bool {
+	data = strings.ToLower(data)
+	return data == "on"
+}

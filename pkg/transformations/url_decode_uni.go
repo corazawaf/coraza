@@ -18,11 +18,11 @@ import (
 	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
-func UrlDecodeUni(data string) string {
-	return inplaceUniDecode(data)
+func UrlDecodeUni(data string, tools *Tools) string {
+	return inplaceUniDecode(data, tools.Unicode)
 }
 
-func inplaceUniDecode(input string) string {
+func inplaceUniDecode(input string, mapper *utils.Unicode) string {
 	d := []byte(input)
 	input_len := len(d)
 	var i, count, fact, j, xv, c int
@@ -52,12 +52,10 @@ func inplaceUniDecode(input string) string {
 								fact *= 16
 							}
 						}
-						/*
-							                        //TODO implement unicode mappings
-													if (Code >= 0 && Code <= 65535)  {
-														hmap = utils.UnicodeMapping.At(Code)
-													}
-						*/
+						if Code >= 0 && Code <= 65535 {
+							// TODO it is not working :(
+							//hmap = mapper.At(Code)
+						}
 						if hmap != -1 {
 							d[c] = byte(hmap)
 						} else {

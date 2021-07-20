@@ -18,7 +18,7 @@ import (
 	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
-func RemoveWhitespace(data string) string {
+func RemoveWhitespace(data string, tools *Tools) string {
 	// loop through all the chars
 	newstr := make([]byte, len(data))
 	var i, c int

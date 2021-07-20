@@ -19,7 +19,7 @@ import (
 	"io"
 )
 
-func Sha1(data string) string {
+func Sha1(data string, utils *Tools) string {
 	h := sha1.New()
 	io.WriteString(h, data)
 	return string(h.Sum(nil))

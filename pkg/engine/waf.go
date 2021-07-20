@@ -16,9 +16,12 @@ package engine
 
 import (
 	"errors"
+	"strconv"
 	"sync"
+	"time"
 
 	"github.com/jptosso/coraza-waf/pkg/engine/loggers"
+	"github.com/jptosso/coraza-waf/pkg/utils"
 	regex "github.com/jptosso/coraza-waf/pkg/utils/regex"
 	"github.com/oschwald/geoip2-golang"
 )
@@ -125,6 +128,17 @@ type Waf struct {
 	// Sensor ID tu, must be unique per cluster nodes
 	SensorId string
 
+	// Path to store data files
+	DataDir string
+
+	UploadKeepFiles         bool
+	UploadFileMode          uint8
+	UploadFileLimit         int
+	UploadDir               string
+	RequestBodyNoFilesLimit int64
+
+	Unicode *utils.Unicode
+
 	mux *sync.RWMutex
 
 	RequestBodyLimitAction int
@@ -150,8 +164,34 @@ func (w *Waf) SetPersistenceEngine(uri string) error {
 func (w *Waf) NewTransaction() *Transaction {
 	w.mux.RLock()
 	defer w.mux.RUnlock()
-	tx := &Transaction{}
-	tx.Init(w)
+	tx := &Transaction{
+		Waf:                  w,
+		Collections:          make([]*Collection, VARIABLES_COUNT),
+		Id:                   utils.RandomString(19),
+		Timestamp:            time.Now().UnixNano(),
+		AuditEngine:          w.AuditEngine,
+		AuditLogParts:        w.AuditLogParts,
+		RuleEngine:           w.RuleEngine,
+		RequestBodyAccess:    true,
+		RequestBodyLimit:     134217728,
+		ResponseBodyAccess:   true,
+		ResponseBodyLimit:    524288,
+		ResponseBodyMimeType: []string{"text/html", "text/plain"},
+		RuleRemoveTargetById: map[int][]*KeyValue{},
+		RuleRemoveById:       []int{},
+		StopWatches:          map[int]int{},
+		RequestBodyReader:    NewBodyReader(w.TmpDir, w.RequestBodyInMemoryLimit),
+		ResponseBodyReader:   NewBodyReader(w.TmpDir, w.RequestBodyInMemoryLimit),
+	}
+	for i := range tx.Collections {
+		tx.Collections[i] = &Collection{}
+		tx.Collections[i].Init(VariableToName(byte(i)))
+	}
+
+	for i := 0; i <= 10; i++ {
+		is := strconv.Itoa(i)
+		tx.GetCollection(VARIABLE_TX).Set(is, []string{})
+	}
 	return tx
 }
 
@@ -185,17 +225,20 @@ func (w *Waf) Loggers() []loggers.Logger {
 }
 
 func NewWaf() *Waf {
+	//default: us-ascii
+	unicode, _ := utils.NewUnicode("20127")
 	waf := &Waf{
-		mux:                      &sync.RWMutex{},
-		Rules:                    NewRuleGroup(),
 		AuditEngine:              AUDIT_LOG_DISABLED,
 		AuditLogParts:            []rune("ABCFHZ"),
-		PersistenceUri:           "inmemory",
-		TmpDir:                   "/tmp",
-		RequestBodyLimit:         10000000, //10mb
-		RequestBodyInMemoryLimit: 131072,
-		RuleEngine:               true,
 		loggers:                  []loggers.Logger{},
+		mux:                      &sync.RWMutex{},
+		PersistenceUri:           "inmemory",
+		RequestBodyInMemoryLimit: 131072,
+		RequestBodyLimit:         10000000, //10mb
+		RuleEngine:               true,
+		Rules:                    NewRuleGroup(),
+		TmpDir:                   "/tmp",
+		Unicode:                  unicode,
 	}
 	return waf
 }

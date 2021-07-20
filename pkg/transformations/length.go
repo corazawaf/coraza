@@ -19,6 +19,6 @@ import (
 	"unicode/utf8"
 )
 
-func Length(data string) string {
+func Length(data string, utils *Tools) string {
 	return strconv.Itoa(utf8.RuneCountInString(data))
 }

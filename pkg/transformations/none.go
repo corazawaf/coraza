@@ -14,9 +14,7 @@
 
 package transformations
 
-import ()
-
-func None(data string) string {
+func None(data string, utils *Tools) string {
 	// This case is special and is hardcoded in the seclang parser
 	return data
 }

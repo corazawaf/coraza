@@ -18,7 +18,7 @@ import (
 	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
-func CssDecode(data string) string {
+func CssDecode(data string, utils *Tools) string {
 	return cssDecodeInplace(data)
 }
 

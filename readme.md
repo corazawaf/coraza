@@ -27,7 +27,7 @@ Please note Coraza is still a WIP.
 
 You may install libinjection with the following command:
 
-```
+```sh
 # Must be run as root
 sudo make deps
 ```
@@ -37,13 +37,13 @@ Note this command will compile and install libinjection to your **LIBRARY_PATH**
 ## Running the test suite
 
 Run the go tests:
-```
+```sh
 go test ./...
 go test -race ./...
 ```
 
 Run the test suite against OWASP CRS:
-```
+```sh
 git clone https://github.com/jptosso/coraza-waf
 git clone https://github.com/coreruleset/coreruleset
 # Create your OWASP CRS package owasp-crs.conf
@@ -69,7 +69,7 @@ go run cmd/testsuite/main.go -path ../coreruleset/tests/regression/tests/ -rules
 
 Make sure ``CGO_ENABLED=1`` env is set before compiling and all dependencies are met.
 
-```
+```go
 package main
 import(
 	"fmt"
@@ -98,7 +98,59 @@ func main() {
 }
 ```
 
-For more examples check the examples pages in the left menu.
+### Integrate with any framework
+
+Using the standard net/http library:
+
+```go
+package main
+import(
+	"github.com/jptosso/coraza-waf/engine"
+	"github.com/jptosso/coraza-waf/seclang"
+)
+
+func SomeErrorPage(w http.ResponseWriter) {
+	w.WriteHeader(403)
+	w.Write([]byte("WAF ERROR")
+}
+
+func someHandler(waf *engine.Waf) http.Handler {
+  return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    tx := waf.NewTransaction()
+	tx.ProcessRequest(r)
+	if tx.Interruption != nil {
+		SomeErrorPage(w)
+	}
+  })
+}
+```
+
+Responses are harder to handle, because we must intercept the response writers and integrate them with the Coraza BodyReader.
+
+### Handling HTTP responses with Coraza
+
+Responses are usually long buffers, so duplicating the response or buffering it in memory is hard. 
+In order to avoid issues while handling long buffers Coraza provides the engine.BodyReader struct, it will handle long buffers storing them to temporary files if needed.
+
+```go
+func someHandler(waf *engine.Waf) http.Handler {
+  return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    tx := waf.NewTransaction()
+	tx.ProcessRequest(r)
+	if tx.Interruption != nil {
+		SomeErrorPage(w)
+	}
+	// We will use the Coraza response reader:
+	tx.ProcessResponseHeaders()
+	tx.ResponseWriter.Write([]byte("Some of the response body"))
+	tx.ProcessResponseBody()
+	// We will dump the buffered response into the response writer:
+	io.Copy(w, tx.ResponseWriter)
+  })
+}
+```
+
+We can create our own implementation of [http.ResponseWriter](https://pkg.go.dev/net/http#ResponseWriter), see [examples/response_writer.go](#).
 
 ## Using the embedded sandbox
 
@@ -106,7 +158,7 @@ Coraza WAF repository contains a Sandbox package that can be used to test rules 
 
 You may use the sandbox with the following command:
 
-```
+```sh
 CGO_ENABLED=1 go run cmd/sandbox/main.go -port 8000 -crs ../coreruleset/rules
 ```
 
@@ -127,12 +179,7 @@ We have currently achieved a 91% compatibility with OWASP CRS, some features are
 ## Coraza WAF implementations
 
 * [Caddy Plugin (Reverse Proxy and Web Server)](https://github.com/jptosso/coraza-caddy)
-
-## Differences with ModSecurity
-
-### Custom Operators
-
-**@validateNid:** Validates national ID for many countries, replaces validateSSN.
+* [Gin Middleware](#)
 
 ## Troubleshooting
 

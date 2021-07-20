@@ -14,36 +14,42 @@
 
 package transformations
 
-type Transformation = func(input string) string
+import "github.com/jptosso/coraza-waf/pkg/utils"
+
+type Tools struct {
+	Unicode *utils.Unicode
+}
+
+type Transformation = func(input string, tools *Tools) string
 
 func TransformationsMap() map[string]Transformation {
 	return map[string]Transformation{
 		"base64Decode":       Base64decode,
-		"escapeSeqDecode":    EscapeSeqDecode,
-		"removeCommentsChar": RemoveCommentsChar,
-		"lowercase":          LowerCase,
-		"removeWhitespace":   RemoveWhitespace,
-		"removeNulls":        RemoveNulls,
-		"replaceNulls":       ReplaceNulls,
-		"compressWhitespace": CompressWhitespace,
-		"none":               None,
-		"sha1":               Sha1,
-		"md5":                Md5,
-		"urlDecode":          UrlDecode,
-		"urlEncode":          UrlEncode,
-		"urlDecodeUni":       UrlDecodeUni,
-		"utf8toUnicode":      Utf8ToUnicode,
-		"replaceComments":    ReplaceComments,
-		"removeComments":     RemoveComments,
-		"htmlEntityDecode":   HtmlEntityDecode,
-		"cssDecode":          CssDecode,
-		"jsDecode":           JsDecode,
 		"cmdLine":            CmdLine,
-		"length":             Length,
+		"compressWhitespace": CompressWhitespace,
+		"cssDecode":          CssDecode,
+		"escapeSeqDecode":    EscapeSeqDecode,
 		"hexEncode":          HexEncode,
-		"normalizePath":      NormalisePath,
+		"htmlEntityDecode":   HtmlEntityDecode,
+		"jsDecode":           JsDecode,
+		"length":             Length,
+		"lowercase":          LowerCase,
+		"md5":                Md5,
+		"none":               None,
 		"normalisePath":      NormalisePath,
-		"normalizePathWin":   NormalisePathWin,
 		"normalisePathWin":   NormalisePathWin,
+		"normalizePath":      NormalisePath,
+		"normalizePathWin":   NormalisePathWin,
+		"removeComments":     RemoveComments,
+		"removeCommentsChar": RemoveCommentsChar,
+		"removeNulls":        RemoveNulls,
+		"removeWhitespace":   RemoveWhitespace,
+		"replaceComments":    ReplaceComments,
+		"replaceNulls":       ReplaceNulls,
+		"sha1":               Sha1,
+		"urlDecode":          UrlDecode,
+		"urlDecodeUni":       UrlDecodeUni,
+		"urlEncode":          UrlEncode,
+		"utf8toUnicode":      Utf8ToUnicode,
 	}
 }

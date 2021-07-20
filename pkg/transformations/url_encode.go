@@ -14,9 +14,7 @@
 
 package transformations
 
-import ()
-
-func UrlEncode(data string) string {
+func UrlEncode(data string, utils *Tools) string {
 	return doUrlEncode(data)
 }
 
