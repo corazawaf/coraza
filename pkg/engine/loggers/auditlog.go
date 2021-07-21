@@ -58,12 +58,12 @@ type AuditTransactionProducer struct {
 	Connector  string `json:"connector"`
 	Version    string `json:"version"`
 	Server     string `json:"server"`
-	RuleEngine bool   `json:"rule_engine"`
+	RuleEngine string `json:"rule_engine"`
 	Stopwatch  string `json:"stopwatch"`
 }
 
 type AuditTransactionRequest struct {
-	Method         string                          `json:"method"`
+	Method      string                          `json:"method"`
 	Protocol    string                          `json:"protocol"`
 	Uri         string                          `json:"uri"`
 	HttpVersion string                          `json:"http_version"`

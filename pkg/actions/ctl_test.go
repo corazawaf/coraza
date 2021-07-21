@@ -15,8 +15,9 @@
 package actions
 
 import (
-	"github.com/jptosso/coraza-waf/pkg/engine"
 	"testing"
+
+	"github.com/jptosso/coraza-waf/pkg/engine"
 )
 
 func TestCtl(t *testing.T) {
@@ -53,7 +54,7 @@ func TestCtl(t *testing.T) {
 	ctl.Init(r, "ruleEngine=Off")
 	ctl.Evaluate(r, tx)
 
-	if tx.RuleEngine {
+	if tx.RuleEngine != engine.RULE_ENGINE_OFF {
 		t.Error("Failed to disable rule engine")
 	}
 
@@ -62,5 +63,14 @@ func TestCtl(t *testing.T) {
 
 	if tx.RequestBodyLimit != 12345 {
 		t.Error("Failed to set request body limit")
+	}
+
+	bodyprocessors := []string{"XML", "JSON", "URLENCODED", "MULTIPART"}
+	for _, bp := range bodyprocessors {
+		ctl.Init(r, "requestBodyProcessor="+bp)
+		ctl.Evaluate(r, tx)
+		if tx.GetCollection(engine.VARIABLE_REQBODY_PROCESSOR).GetFirstString("") != bp {
+			t.Error("failed to set RequestBodyProcessor " + bp)
+		}
 	}
 }

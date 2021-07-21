@@ -97,8 +97,7 @@ type Transaction struct {
 	RequestBodyProcessor     int
 	ResponseBodyAccess       bool
 	ResponseBodyLimit        int64
-	ResponseBodyMimeType     []string
-	RuleEngine               bool
+	RuleEngine               int
 	HashEngine               bool
 	HashEnforcement          bool
 	AuditLogType             int
@@ -580,7 +579,7 @@ func (tx *Transaction) ProcessUri(uri *url.URL, method string, httpVersion strin
 //
 // note: Remember to check for a possible intervention.
 func (tx *Transaction) ProcessRequestHeaders() *Interruption {
-	if !tx.RuleEngine {
+	if tx.RuleEngine == RULE_ENGINE_OFF {
 		// RUle engine is disabled
 		return nil
 	}
@@ -596,7 +595,7 @@ func (tx *Transaction) ProcessRequestHeaders() *Interruption {
 //
 // Remember to check for a possible intervention.
 func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
-	if !tx.RequestBodyAccess || !tx.RuleEngine {
+	if !tx.RequestBodyAccess || tx.RuleEngine == RULE_ENGINE_OFF {
 		return tx.Interruption, nil
 	}
 	mime := ""
@@ -710,7 +709,7 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *Interrupt
 	tx.GetCollection(VARIABLE_RESPONSE_STATUS).Add("", c)
 	tx.GetCollection(VARIABLE_RESPONSE_PROTOCOL).Add("", proto)
 
-	if !tx.RuleEngine {
+	if tx.RuleEngine == RULE_ENGINE_OFF {
 		return nil
 	}
 
@@ -724,7 +723,7 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *Interrupt
 // This is used by webservers to stream response buffers directly to the client
 func (tx *Transaction) IsProcessableResponseBody() bool {
 	ct := tx.GetCollection(VARIABLE_RESPONSE_CONTENT_TYPE).GetFirstString("")
-	return utils.ArrayContains(tx.ResponseBodyMimeType, ct)
+	return utils.ArrayContains(tx.Waf.ResponseBodyMimeTypes, ct)
 }
 
 // Perform the request body (if any)
@@ -735,7 +734,7 @@ func (tx *Transaction) IsProcessableResponseBody() bool {
 //
 // note Remember to check for a possible intervention.
 func (tx *Transaction) ProcessResponseBody() (*Interruption, error) {
-	if !tx.RuleEngine || !tx.ResponseBodyAccess || !tx.IsProcessableResponseBody() {
+	if tx.RuleEngine == RULE_ENGINE_OFF || !tx.ResponseBodyAccess || !tx.IsProcessableResponseBody() {
 		return tx.Interruption, nil
 	}
 	length := strconv.FormatInt(tx.ResponseBodyBuffer.Size(), 10)
@@ -756,7 +755,7 @@ func (tx *Transaction) ProcessResponseBody() (*Interruption, error) {
 // delivered prior to the execution of this method.
 func (tx *Transaction) ProcessLogging() {
 	// I'm not sure why but modsecurity won't log if RuleEngine is disabled
-	if !tx.RuleEngine {
+	if tx.RuleEngine == RULE_ENGINE_OFF {
 		return
 	}
 	//tx.savePersistentData()
@@ -811,6 +810,15 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 			//body and headers are audit parts
 		},
 	}
+	rengine := ""
+	switch tx.RuleEngine {
+	case RULE_ENGINE_OFF:
+		rengine = "Off"
+	case RULE_ENGINE_DETECTONLY:
+		rengine = "DetectOnly"
+	case RULE_ENGINE_ON:
+		rengine = "On"
+	}
 
 	for _, p := range parts {
 		switch p {
@@ -832,7 +840,7 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 				Connector:  "unknown",
 				Version:    "unknown",
 				Server:     server,
-				RuleEngine: tx.RuleEngine,
+				RuleEngine: rengine,
 				Stopwatch:  tx.GetStopWatch(),
 			}
 		case 'I':

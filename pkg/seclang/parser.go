@@ -95,12 +95,12 @@ func (p *Parser) evaluate(data string) error {
 	}
 	//first we get the directive
 	spl := strings.SplitN(data, " ", 2)
-	if len(spl) != 2 {
-		return p.log("Invalid syntaxis, expected [directive] [options] for:" + data)
+	opts := ""
+	if len(spl) == 2 {
+		opts = spl[1]
 	}
 	log.Debug("Parsing directive: " + data)
 	directive := spl[0]
-	opts := spl[1]
 
 	if len(opts) >= 3 && opts[0] == '"' && opts[len(opts)-1] == '"' {
 		opts = strings.Trim(opts, `"`)

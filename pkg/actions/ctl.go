@@ -109,7 +109,14 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 		limit, _ := strconv.ParseInt(a.Value, 10, 64)
 		tx.RequestBodyLimit = limit
 	case CTL_RULE_ENGINE:
-		tx.RuleEngine = (strings.ToLower(a.Value) == "on" || a.Value == "DetectOnly")
+		switch strings.ToLower(a.Value) {
+		case "off":
+			tx.RuleEngine = engine.RULE_ENGINE_OFF
+		case "on":
+			tx.RuleEngine = engine.RULE_ENGINE_ON
+		case "detectonly":
+			tx.RuleEngine = engine.RULE_ENGINE_DETECTONLY
+		}
 	case CTL_RULE_REMOVE_BY_ID:
 		id, _ := strconv.Atoi(a.Value)
 		tx.RuleRemoveById = append(tx.RuleRemoveById, id)

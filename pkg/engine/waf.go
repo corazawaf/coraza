@@ -54,6 +54,10 @@ const (
 
 	REQUEST_BODY_LIMIT_ACTION_PROCESS_PARTIAL = 0
 	REQUEST_BODY_LIMIT_ACTION_REJECT          = 1
+
+	RULE_ENGINE_ON         = 0
+	RULE_ENGINE_DETECTONLY = 1
+	RULE_ENGINE_OFF        = 2
 )
 
 type Waf struct {
@@ -88,7 +92,7 @@ type Waf struct {
 	ResponseBodyLimit int64
 
 	// Defines if rules are going to be evaluated
-	RuleEngine bool
+	RuleEngine int
 
 	// If true, transaction will fail if response size is bigger than the page limit
 	RejectOnResponseBodyLimit bool
@@ -178,7 +182,6 @@ func (w *Waf) NewTransaction() *Transaction {
 		RequestBodyLimit:     134217728,
 		ResponseBodyAccess:   true,
 		ResponseBodyLimit:    524288,
-		ResponseBodyMimeType: []string{"text/html", "text/plain"},
 		RuleRemoveTargetById: map[int][]*KeyValue{},
 		RuleRemoveById:       []int{},
 		StopWatches:          map[int]int{},
@@ -238,7 +241,8 @@ func NewWaf() *Waf {
 		mux:                      &sync.RWMutex{},
 		RequestBodyInMemoryLimit: 131072,
 		RequestBodyLimit:         10000000, //10mb
-		RuleEngine:               true,
+		ResponseBodyMimeTypes:    []string{"text/html", "text/plain"},
+		RuleEngine:               RULE_ENGINE_ON,
 		Rules:                    NewRuleGroup(),
 		TmpDir:                   "/tmp",
 		CollectionTimeout:        3600,

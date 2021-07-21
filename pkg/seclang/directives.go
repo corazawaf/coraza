@@ -86,7 +86,16 @@ func directiveSecRequestBodyAccess(p *Parser, opts string) error {
 }
 
 func directiveSecRuleEngine(p *Parser, opts string) error {
-	p.Waf.RuleEngine = (opts == "On")
+	switch strings.ToLower(opts) {
+	case "on":
+		p.Waf.RuleEngine = engine.RULE_ENGINE_ON
+	case "off":
+		p.Waf.RuleEngine = engine.RULE_ENGINE_OFF
+	case "detectonly":
+		p.Waf.RuleEngine = engine.RULE_ENGINE_DETECTONLY
+	default:
+		return errors.New("invalid SecRuleEngine argument")
+	}
 	return nil
 }
 

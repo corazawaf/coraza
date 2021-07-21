@@ -67,7 +67,7 @@ func (rg *RuleGroup) FindById(id int) *Rule {
 
 func (rg *RuleGroup) DeleteById(id int) {
 	for i, r := range rg.rules {
-		if r.Id == id {
+		if r != nil && r.Id == id {
 			copy(rg.rules[i:], rg.rules[i+1:])
 			rg.rules[len(rg.rules)-1] = nil
 			rg.rules = rg.rules[:len(rg.rules)-1]

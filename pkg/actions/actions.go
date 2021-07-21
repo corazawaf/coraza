@@ -19,6 +19,7 @@ import (
 )
 
 func ActionsMap() map[string]engine.Action {
+	//TODO optimize this
 	return map[string]engine.Action{
 		// #### Flow Actions ####
 		//Sets variables for the transaction and rule
