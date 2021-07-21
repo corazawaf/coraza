@@ -132,13 +132,15 @@ type Transaction struct {
 	Timestamp int64
 }
 
+var macroRegexp = regexp.MustCompile(`%\{([\w.-]+?)\}`)
+
 func (tx *Transaction) MacroExpansion(data string) string {
 	if data == "" {
 		return ""
 	}
 
 	// \w includes alphanumeric and _
-	r := regexp.MustCompile(`%\{([\w.-]+?)\}`)
+	r := macroRegexp
 	matches := r.FindAllString(data, -1)
 	for _, v := range matches {
 		match := v[2 : len(v)-1]
@@ -342,7 +344,10 @@ func (tx *Transaction) GetStopWatch() string {
 
 // Retrieve data from collections applying exceptions
 // This function will apply xpath if the variable is XML
-func (tx *Transaction) GetField(collection byte, key string, exceptions []string) []*MatchData {
+func (tx *Transaction) GetField(rv RuleVariable, exceptions []string) []*MatchData {
+	collection := rv.Collection
+	key := rv.Key
+	re := rv.Regex
 	if collection == VARIABLE_XML {
 		if tx.XmlDoc == nil {
 			return []*MatchData{}
@@ -369,7 +374,7 @@ func (tx *Transaction) GetField(collection byte, key string, exceptions []string
 		if col == nil {
 			return []*MatchData{}
 		}
-		return col.GetWithExceptions(key, exceptions)
+		return col.Find(key, re, exceptions)
 	}
 	// TODO some day we should add VARIABLE_JSON
 

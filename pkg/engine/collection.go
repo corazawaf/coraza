@@ -38,7 +38,7 @@ func (c *Collection) Get(key string) []string {
 }
 
 //PCRE compatible collection with exceptions
-func (c *Collection) GetWithExceptions(key string, exceptions []string) []*MatchData {
+func (c *Collection) Find(key string, re *regex.Regexp, exceptions []string) []*MatchData {
 	cdata := c.data
 	//we return every value in case there is no key but there is a collection
 	if len(key) == 0 {
@@ -48,7 +48,6 @@ func (c *Collection) GetWithExceptions(key string, exceptions []string) []*Match
 				continue
 			}
 			for _, v := range c.data[k] {
-
 				data = append(data, &MatchData{
 					Collection: c.name,
 					Key:        k,
@@ -60,9 +59,8 @@ func (c *Collection) GetWithExceptions(key string, exceptions []string) []*Match
 	}
 
 	// Regex
-	if key[0] == '/' {
-		key = key[1 : len(key)-1] //we strip slashes
-		re := regex.MustCompile(key, 0)
+	if re != nil {
+		//TODO we must cache this regex to enhance performance
 		result := []*MatchData{}
 		for k := range cdata {
 			if utils.ArrayContains(exceptions, k) {

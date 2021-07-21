@@ -39,23 +39,25 @@ func inplaceUniDecode(input string, mapper *utils.Unicode) string {
 					if (utils.ValidHex(input[i+2])) && (utils.ValidHex(input[i+3])) && (utils.ValidHex(input[i+4])) && (utils.ValidHex(input[i+5])) {
 						Code = 0
 						fact = 1
-						for j = 5; j >= 2; j-- {
-							if utils.ValidHex((input[i+j])) {
-								if input[i+j] >= 97 {
-									xv = (int(input[i+j]) - 97) + 10
-								} else if input[i+j] >= 65 {
-									xv = (int(input[i+j]) - 65) + 10
-								} else {
-									xv = int(input[i+j]) - 48
+						if mapper != nil && mapper.Map != "" {
+							for j = 5; j >= 2; j-- {
+								if utils.ValidHex((input[i+j])) {
+									if input[i+j] >= 97 {
+										xv = (int(input[i+j]) - 97) + 10
+									} else if input[i+j] >= 65 {
+										xv = (int(input[i+j]) - 65) + 10
+									} else {
+										xv = int(input[i+j]) - 48
+									}
+									Code += (xv * fact)
+									fact *= 16
 								}
-								Code += (xv * fact)
-								fact *= 16
+							}
+							if Code >= 0 && Code <= 65535 {
+								hmap = mapper.At(Code)
 							}
 						}
-						if Code >= 0 && Code <= 65535 {
-							// TODO it is not working :(
-							//hmap = mapper.At(Code)
-						}
+
 						if hmap != -1 {
 							d[c] = byte(hmap)
 						} else {

@@ -226,7 +226,6 @@ func (w *Waf) Loggers() []loggers.Logger {
 
 func NewWaf() *Waf {
 	//default: us-ascii
-	unicode, _ := utils.NewUnicode("20127")
 	waf := &Waf{
 		AuditEngine:              AUDIT_LOG_DISABLED,
 		AuditLogParts:            []rune("ABCFHZ"),
@@ -238,7 +237,6 @@ func NewWaf() *Waf {
 		RuleEngine:               true,
 		Rules:                    NewRuleGroup(),
 		TmpDir:                   "/tmp",
-		Unicode:                  unicode,
 	}
 	return waf
 }

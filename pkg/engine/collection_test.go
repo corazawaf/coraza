@@ -25,7 +25,7 @@ func TestLocalCollectionMatchData(t *testing.T) {
 	lc := NewCollection("test")
 	lc.Set("test2", []string{"test3"})
 
-	md := lc.GetWithExceptions("test2", []string{})
+	md := lc.Find("test2", nil, []string{})
 	if len(md) == 0 {
 		t.Error("Failed to get matched data")
 		return

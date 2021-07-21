@@ -339,6 +339,12 @@ func directiveSecRequestBodyNoFilesLimit(p *Parser, opts string) error {
 	return err
 }
 
+func directiveSecUnicodeMap(p *Parser, opts string) error {
+	unicode, err := utils.NewUnicode(opts)
+	p.Waf.Unicode = unicode
+	return err
+}
+
 func parseBoolean(data string) bool {
 	data = strings.ToLower(data)
 	return data == "on"

@@ -22,6 +22,7 @@ import (
 
 type Unicode struct {
 	wmap []int
+	Map  string
 }
 
 //At Get unicode mapping for input
@@ -118,5 +119,6 @@ func NewUnicode(uni string) (*Unicode, error) {
 	}
 	return &Unicode{
 		wmap: wmap,
+		Map:  uni,
 	}, nil
 }

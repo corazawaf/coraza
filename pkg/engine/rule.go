@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/jptosso/coraza-waf/pkg/transformations"
+	"github.com/jptosso/coraza-waf/pkg/utils/regex"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -59,6 +60,7 @@ type RuleVariable struct {
 	Count      bool
 	Collection byte
 	Key        string
+	Regex      *regex.Regexp //for performance
 	Exceptions []string
 }
 
@@ -107,7 +109,6 @@ type Rule struct {
 }
 
 func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
-
 	tx.GetCollection(VARIABLE_RULE).SetData(map[string][]string{
 		"id":       {strconv.Itoa(r.Id)},
 		"msg":      {r.Msg},
@@ -151,7 +152,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 			l := 0
 			if v.Key != "" {
 				//Get with macro expansion
-				values = tx.GetField(v.Collection, v.Key, exceptions)
+				values = tx.GetField(v, exceptions)
 				l = len(values)
 			} else {
 				l = len(tx.GetCollection(v.Collection).GetData())
@@ -164,7 +165,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 				},
 			}
 		} else {
-			values = tx.GetField(v.Collection, v.Key, exceptions)
+			values = tx.GetField(v, exceptions)
 		}
 
 		if r.AlwaysMatch {
@@ -275,7 +276,19 @@ func (r *Rule) executeTransformations(value string, tools *transformations.Tools
 }
 
 func (r *Rule) AddVariable(count bool, collection byte, key string) {
-	rv := RuleVariable{count, collection, key, []string{}}
+	var re regex.Regexp
+	var rv RuleVariable
+	if collection != VARIABLE_XML && len(key) > 0 && key[0] == '/' {
+		var err error
+		nkey := key[1 : len(key)-1] //we strip slashes
+		re, err = regex.Compile(nkey, 0)
+		if err == nil {
+			rv = RuleVariable{count, collection, key, &re, []string{}}
+			r.Variables = append(r.Variables, rv)
+			return
+		}
+	}
+	rv = RuleVariable{count, collection, key, nil, []string{}}
 	r.Variables = append(r.Variables, rv)
 }
 

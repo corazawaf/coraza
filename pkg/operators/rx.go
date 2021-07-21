@@ -20,19 +20,15 @@ import (
 )
 
 type Rx struct {
-	re string
+	re regex.Regexp
 }
 
 func (o *Rx) Init(data string) {
-	o.re = data
+	o.re = regex.MustCompile(data, 0)
 }
 
 func (o *Rx) Evaluate(tx *engine.Transaction, value string) bool {
-	re := regex.MustCompile(o.re, 0)
-	m := re.MatcherString(value, 0)
-	// maybe its redundant
-	tx.ResetCapture()
-	//m.Match(subject, 0)
+	m := o.re.MatcherString(value, 0)
 	for i := 0; i < m.Groups()+1; i++ {
 		if i == 10 {
 			return true

@@ -23,8 +23,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-
-	"github.com/jptosso/coraza-waf/pkg/utils"
 )
 
 type Test struct {
@@ -69,10 +67,7 @@ func TestTransformations(t *testing.T) {
 				//t.Error("Invalid transformation test for " + data.Name)
 				continue
 			}
-			unicode, _ := utils.NewUnicode("20127")
-			tools := &Tools{
-				Unicode: unicode,
-			}
+			tools := &Tools{}
 			out := trans(data.Input, tools)
 			if out != data.Output {
 				t.Error(fmt.Sprintf("Transformation %s:\nInput: %s\nExpected: %v\nGot: %v\nExpected String: %s\nGot String: %s",

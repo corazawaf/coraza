@@ -57,7 +57,7 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 	if stage.Stage.Input.RawRequest != "" {
 		_, err := tx.ParseRequestString(stage.Stage.Input.RawRequest)
 		if err != nil {
-			return errors.New("Failed to parse Raw Request")
+			return errors.New("failed to parse Raw Request")
 		}
 	}
 	//Apply tx data
@@ -77,17 +77,12 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 	if stage.Stage.Input.Version != "" {
 		httpv = stage.Stage.Input.Version
 	}
+	tx.GetCollection(engine.VARIABLE_REQUEST_PROTOCOL).Add("", httpv)
 
 	path := "/"
 	if stage.Stage.Input.Uri != "" {
 		path = stage.Stage.Input.Uri
 		parseUrl(path, tx)
-		spl := strings.SplitN(path, "/", 2)
-		if len(spl) == 2 {
-			path = "/" + spl[1]
-		} else {
-			path = "/" + spl[0]
-		}
 	}
 	tx.GetCollection(engine.VARIABLE_REQUEST_LINE).Add("", fmt.Sprintf("%s %s %s", method, stage.Stage.Input.Uri, httpv))
 
@@ -112,25 +107,25 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 	//now we evaluate tests
 	if stage.Stage.Output.LogContains != "" {
 		if !strings.Contains(log, stage.Stage.Output.LogContains) {
-			return errors.New(fmt.Sprintf("Log does not contain %s", stage.Stage.Output.LogContains))
+			return fmt.Errorf("log does not contain %s", stage.Stage.Output.LogContains)
 		}
 	}
 	if stage.Stage.Output.NoLogContains != "" {
 		if strings.Contains(log, stage.Stage.Output.NoLogContains) {
-			return errors.New(fmt.Sprintf("Log does contain %s", stage.Stage.Output.NoLogContains))
+			return fmt.Errorf("log does contain %s", stage.Stage.Output.NoLogContains)
 		}
 	}
 	if len(stage.Stage.Output.TriggeredRules) > 0 {
 		for _, trr := range stage.Stage.Output.TriggeredRules {
 			if !utils.ArrayContainsInt(tr, trr) {
-				return errors.New(fmt.Sprintf("Rule %d was not triggered", trr))
+				return fmt.Errorf("rule %d was not triggered", trr)
 			}
 		}
 	}
 	if len(stage.Stage.Output.NonTriggeredRules) > 0 {
 		for _, trr := range stage.Stage.Output.NonTriggeredRules {
 			if utils.ArrayContainsInt(tr, trr) {
-				return errors.New(fmt.Sprintf("Rule %d was triggered", trr))
+				return fmt.Errorf("rule %d was triggered", trr)
 			}
 		}
 	}
@@ -158,13 +153,10 @@ func parseInputData(input interface{}) string {
 func parseUrl(uri string, tx *engine.Transaction) {
 	tx.GetCollection(engine.VARIABLE_REQUEST_URI_RAW).Add("", uri)
 	tx.GetCollection(engine.VARIABLE_REQUEST_URI).Add("", uri)
-	schema := "http"
 	args := ""
-	hostname := "127.0.0.1"
 	path := "/"
 	if strings.HasPrefix(uri, "https://") || strings.HasPrefix(uri, "http://") {
 		spl := strings.SplitN(uri, "://", 2)
-		schema = spl[0]
 		uri = spl[1]
 	}
 	if len(uri) == 0 {
@@ -173,7 +165,6 @@ func parseUrl(uri string, tx *engine.Transaction) {
 	if uri[0] != '/' {
 		spl := strings.SplitN(uri, "/", 2)
 		if len(spl) == 2 {
-			hostname = spl[0]
 			args = spl[1]
 			uri = spl[1]
 		}
@@ -183,7 +174,6 @@ func parseUrl(uri string, tx *engine.Transaction) {
 		path = spl[0]
 		args = spl[1]
 	}
-	schema = schema + hostname
 	tx.GetCollection(engine.VARIABLE_REQUEST_FILENAME).Add("", path)
 	tx.GetCollection(engine.VARIABLE_REQUEST_BASENAME).Add("", path)
 	tx.GetCollection(engine.VARIABLE_QUERY_STRING).Add("", args)
