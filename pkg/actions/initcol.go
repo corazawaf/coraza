@@ -15,32 +15,45 @@
 package actions
 
 import (
-	"github.com/jptosso/coraza-waf/pkg/engine"
 	"strings"
+
+	"github.com/jptosso/coraza-waf/pkg/engine"
 )
 
 // Initializes a persistent collection and add the data to the standard collections engine.
 type InitCol struct {
-	Collection string
-	Key        string
+	collection string
+	variable   byte
+	key        string
 }
 
 func (a *InitCol) Init(r *engine.Rule, data string) string {
 	kv := strings.SplitN(data, "=", 2)
-	a.Collection = kv[0]
-	a.Key = kv[1]
+	a.collection = kv[0]
+	a.key = kv[1]
 	return ""
 }
 
 func (a *InitCol) Evaluate(r *engine.Rule, tx *engine.Transaction) {
-	//disabled by now
 	/*
-		pc := &engine.PersistentCollection{}
-		pc.New(tx.Waf.PersistenceEngine, tx.Waf.WebAppId, a.Collection, tx.MacroExpansion(a.Key), 10000)
-		col := tx.GetCollection(a.Collection)
-
-		col.SetData(pc.GetData())
-		tx.RegisterPersistentCollection(a.Collection, pc)
+		key := tx.MacroExpansion(a.key)
+		data := tx.Waf.Persistence.Get(a.variable, key)
+		if data == nil {
+			ts := time.Now().UnixNano()
+			tss := strconv.FormatInt(ts, 10)
+			tsstimeout := strconv.FormatInt(ts+(int64(tx.Waf.CollectionTimeout)*1000), 10)
+			data = map[string][]string{
+				"CREATE_TIME":      {tss},
+				"IS_NEW":           {"1"},
+				"KEY":              {key},
+				"LAST_UPDATE_TIME": {tss},
+				"TIMEOUT":          {tsstimeout},
+				"UPDATE_COUNTER":   {"0"},
+				"UPDATE_RATE":      {"0"},
+			}
+		}
+		tx.GetCollection(a.variable).SetData(data)
+		tx.PersistentCollections[a.variable] = key
 	*/
 }
 

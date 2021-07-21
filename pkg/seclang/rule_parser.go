@@ -40,11 +40,6 @@ type RuleParser struct {
 	defaultActions map[int][]ruleAction
 }
 
-func (p *RuleParser) Init() {
-	p.rule = engine.NewRule()
-	p.defaultActions = map[int][]ruleAction{}
-}
-
 func (p *RuleParser) ParseVariables(vars string) error {
 	//Splits the values by KEY, KEY:VALUE, &!KEY, KEY:/REGEX/, KEY1|KEY2
 	//GROUP 1 is collection, group 3 is vlue, group 3 can be empty
@@ -159,6 +154,7 @@ func (p *RuleParser) ParseDefaultActions(actions string) error {
 	return nil
 }
 
+// ParseActions
 func (p *RuleParser) ParseActions(actions string) error {
 	act, _ := ParseActions(actions)
 	//first we execute metadata rules
@@ -188,16 +184,24 @@ func (p *RuleParser) ParseActions(actions string) error {
 	return nil
 }
 
-func (p *RuleParser) GetRule() *engine.Rule {
+// Rule returns the compiled rule
+func (p *RuleParser) Rule() *engine.Rule {
 	return p.rule
 }
 
+// NewRuleParser Creates a new rule parser, each rule parser
+// will contain a single rule that can be obtained using ruleparser.Rule()
 func NewRuleParser() *RuleParser {
-	rp := &RuleParser{}
-	rp.Init()
+	rp := &RuleParser{
+		rule:           engine.NewRule(),
+		defaultActions: map[int][]ruleAction{},
+	}
 	return rp
 }
 
+// ParseActions will assign the function name, arguments and
+// function (pkg.actions) for each action splitted by comma (,)
+// Action arguments are allowed to wrap values between collons('')
 func ParseActions(actions string) ([]ruleAction, error) {
 	iskey := true
 	ckey := ""
@@ -253,11 +257,14 @@ func ParseActions(actions string) ([]ruleAction, error) {
 	return res, nil
 }
 
+// PhaseToInt transforms a phase string to it's integer
+// value, modsecurity allows request(1), response(3), log(5),
+// 1,2,3,4,5 values
 func PhaseToInt(phase string) (int, error) {
 	if phase == "request" {
 		return 1, nil
 	} else if phase == "response" {
-		return 4, nil
+		return 3, nil
 	} else if phase == "log" {
 		return 5, nil
 	}

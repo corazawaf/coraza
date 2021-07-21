@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/jptosso/coraza-waf/pkg/engine/loggers"
+	"github.com/jptosso/coraza-waf/pkg/engine/persistence"
 	"github.com/jptosso/coraza-waf/pkg/utils"
 	regex "github.com/jptosso/coraza-waf/pkg/utils/regex"
 	"github.com/oschwald/geoip2-golang"
@@ -122,8 +123,8 @@ type Waf struct {
 	// Provide acces to the persistence engine
 	//PersistenceEngine PersistenceEngine
 
-	// Contains the connection uri for the persistence engine
-	PersistenceUri string
+	// Persistence engine
+	Persistence persistence.Persistence
 
 	// Sensor ID tu, must be unique per cluster nodes
 	SensorId string
@@ -136,6 +137,7 @@ type Waf struct {
 	UploadFileLimit         int
 	UploadDir               string
 	RequestBodyNoFilesLimit int64
+	CollectionTimeout       int
 
 	Unicode *utils.Unicode
 
@@ -197,12 +199,12 @@ func (w *Waf) NewTransaction() *Transaction {
 
 // AddLogger creates a new logger for the current WAF instance
 // You may add as many loggers as you want
-// Keep in mind loggers locks go routines
+// Keep in mind loggers may lock go routines
 func (w *Waf) AddLogger(engine string, args []string) error {
 	var l loggers.Logger
 	switch engine {
-	case "apache":
-		l = &loggers.ApacheLogger{}
+	case "modsec":
+		l = &loggers.ModsecLogger{}
 	case "concurrent":
 		l = &loggers.ConcurrentLogger{}
 	default:
@@ -219,11 +221,14 @@ func (w *Waf) AddLogger(engine string, args []string) error {
 	return nil
 }
 
-// Logger returns
+// Logger returns the initiated loggers
+// Coraza supports unlimited loggers, so you can write for example
+// to syslog and a local drive at the same time
 func (w *Waf) Loggers() []loggers.Logger {
 	return w.loggers
 }
 
+// NewWaf creates a new WAF instance with default variables
 func NewWaf() *Waf {
 	//default: us-ascii
 	waf := &Waf{
@@ -231,12 +236,12 @@ func NewWaf() *Waf {
 		AuditLogParts:            []rune("ABCFHZ"),
 		loggers:                  []loggers.Logger{},
 		mux:                      &sync.RWMutex{},
-		PersistenceUri:           "inmemory",
 		RequestBodyInMemoryLimit: 131072,
 		RequestBodyLimit:         10000000, //10mb
 		RuleEngine:               true,
 		Rules:                    NewRuleGroup(),
 		TmpDir:                   "/tmp",
+		CollectionTimeout:        3600,
 	}
 	return waf
 }

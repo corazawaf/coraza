@@ -162,6 +162,33 @@ func TestRequestBody(t *testing.T) {
 	}
 }
 
+func TestFullRequest(t *testing.T) {
+	tx := makeTransaction()
+	tx.SetFullRequest()
+	data := tx.GetCollection(VARIABLE_FULL_REQUEST).GetFirstString("")
+	if len(data) == 0 {
+		t.Error("invalid FULL_REQUEST length")
+	}
+}
+
+func TestResponseHeader(t *testing.T) {
+	tx := makeTransaction()
+	tx.AddResponseHeader("content-type", "test")
+	if tx.GetCollection(VARIABLE_RESPONSE_CONTENT_TYPE).GetFirstString("") != "test" {
+		t.Error("invalid RESPONSE_CONTENT_TYPE after response headers")
+	}
+}
+
+func TestAuditLog(t *testing.T) {
+	tx := makeTransaction()
+	tx.AuditLogParts = []rune("ABCDEFGHIJK")
+	al := tx.AuditLog()
+	if al.Transaction.Id != tx.Id {
+		t.Error("invalid auditlog id")
+	}
+	//TODO more checks
+}
+
 func BenchmarkTransactionCreation(b *testing.B) {
 	waf := NewWaf()
 	for i := 0; i < b.N; i++ {

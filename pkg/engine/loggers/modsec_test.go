@@ -22,7 +22,7 @@ import (
 )
 
 func TestApacheLogger_Write(t *testing.T) {
-	l := &ApacheLogger{}
+	l := &ModsecLogger{}
 	tmp := "/tmp/something.log"
 	err := l.New([]string{tmp})
 	if err != nil {

@@ -79,8 +79,6 @@ type Transaction struct {
 
 	// Contains all collections, including persistent
 	Collections []*Collection
-	//This map is used to store persistent collections saves, useful to save them after transaction is finished
-	PersistentCollections map[string]*interface{}
 
 	//Response data to be sent
 	Status int `json:"status"`
@@ -108,6 +106,9 @@ type Transaction struct {
 
 	RequestBodyBuffer  *BodyBuffer
 	ResponseBodyBuffer *BodyBuffer
+
+	// Used to store known persistent collections VARIABLE:KEY
+	PersistentCollections map[byte]string
 
 	// Rules with this id are going to be skipped
 	RuleRemoveById []int
@@ -414,12 +415,26 @@ func (tx *Transaction) saveLog() error {
 
 // Save persistent collections to persistence engine
 func (tx *Transaction) savePersistentData() {
-	/*
-		TODO: There is a weird deadlock... gonna fix it
-		for col, pc := range tx.PersistentCollections {
-			pc.SetData(tx.GetCollection(col).GetData())
-			pc.Save()
-		}*/
+	for v, key := range tx.PersistentCollections {
+		data := tx.GetCollection(v).GetData()
+		upc, _ := strconv.Atoi(data["UPDATE_COUNTER"][0])
+		upc++
+		ct, _ := strconv.ParseInt(data["CREATE_TIME"][0], 10, 64)
+		rate := strconv.FormatInt(ct/(int64(ct)*1000), 10)
+		ts := time.Now().UnixNano()
+		tss := strconv.FormatInt(ts, 10)
+		to := ts + int64(tx.Waf.CollectionTimeout)*1000
+		timeout := strconv.FormatInt(to, 10)
+		data["IS_NEW"] = []string{"0"}
+		data["UPDATE_COUNTER"] = []string{strconv.Itoa(upc)}
+		data["UPDATE_RATE"] = []string{rate}
+		// TODO timeout should only be updated when the collection was modified
+		// but the current design isn't compatible
+		// New version may have multiple collection types allowing us to identify this cases
+		data["TIMEOUT"] = []string{timeout}
+		data["LAST_UPDATE_TIME"] = []string{tss}
+		tx.Waf.Persistence.Save(v, key, data)
+	}
 }
 
 // Removes the VARIABLE/TARGET from the rule ID
@@ -744,7 +759,7 @@ func (tx *Transaction) ProcessLogging() {
 	if !tx.RuleEngine {
 		return
 	}
-	tx.savePersistentData()
+	//tx.savePersistentData()
 
 	tx.Waf.Rules.Evaluate(5, tx)
 
@@ -763,6 +778,11 @@ func (tx *Transaction) ProcessLogging() {
 	}
 
 	tx.saveLog()
+}
+
+// Interrupted will return true if the transaction was interrupted
+func (tx *Transaction) Interrupted() bool {
+	return tx.Interruption != nil
 }
 
 // AuditLog returns an AuditLog struct

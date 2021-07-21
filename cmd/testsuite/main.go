@@ -65,8 +65,7 @@ func main() {
 	}
 	waf := engine.NewWaf()
 	waf.Datapath = path.Dir(*rules)
-	parser := &seclang.Parser{}
-	parser.Init(waf)
+	parser, _ := seclang.NewParser(waf)
 	err = parser.FromFile(*rules)
 	if err != nil {
 		fmt.Println(err)

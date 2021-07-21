@@ -21,13 +21,13 @@ import (
 	"os"
 )
 
-// ApacheLogger is used to store logs compatible with go-FTW
-type ApacheLogger struct {
+// ModsecLogger is used to store logs compatible with go-FTW
+type ModsecLogger struct {
 	file *os.File
 	log  log.Logger
 }
 
-func (sl *ApacheLogger) New(args []string) error {
+func (sl *ModsecLogger) New(args []string) error {
 	var err error
 	if len(args) == 0 {
 		return errors.New("syntax error: apache /path/to/file.log [filemode]")
@@ -41,7 +41,7 @@ func (sl *ApacheLogger) New(args []string) error {
 	return nil
 }
 
-func (sl *ApacheLogger) Write(al *AuditLog) {
+func (sl *ModsecLogger) Write(al *AuditLog) {
 	timestamp := al.Transaction.Timestamp
 	address := ""
 	operator := ""
@@ -63,6 +63,6 @@ func (sl *ApacheLogger) Write(al *AuditLog) {
 	sl.log.Println(data)
 }
 
-func (sl *ApacheLogger) Close() {
+func (sl *ModsecLogger) Close() {
 	sl.file.Close()
 }

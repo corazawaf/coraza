@@ -1,11 +1,10 @@
 <img src="https://github.com/jptosso/coraza-waf/raw/master/docs/logo.png" width="50%">
 
-[![Build Status](https://travis-ci.org/jptosso/Coraza-waf.svg?branch=master)](https://travis-ci.org/jptosso/Coraza-waf)
+![Build Status](https://github.com/jptosso/coraza-waf/actions/workflows/regression.yml/badge.svg)
+![CodeQL](https://github.com/jptosso/coraza-waf/workflows/CodeQL/badge.svg)
 [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza-waf&metric=bugs)](https://sonarcloud.io/dashboard?id=jptosso_coraza-waf)
-[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza-waf&metric=ncloc)](https://sonarcloud.io/dashboard?id=jptosso_coraza-waf)
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza-waf&metric=sqale_rating)](https://sonarcloud.io/dashboard?id=jptosso_coraza-waf)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza-waf&metric=coverage)](https://sonarcloud.io/dashboard?id=jptosso_coraza-waf)
-![CodeQL](https://github.com/jptosso/coraza-waf/workflows/CodeQL/badge.svg)
 [![GoDoc](https://godoc.org/github.com/jptosso/coraza-waf?status.svg)](https://godoc.org/github.com/jptosso/coraza-waf)
 [![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
 
@@ -20,7 +19,7 @@ Please note Coraza is still a WIP.
 ## Prerequisites
 
 * Linux distribution (Debian and Centos are recommended, Windows is not supported)
-* Golang compiler v1.13+ (Note some wrappers like Caddy requires v1.16+)
+* Golang compiler v1.16
 * libpcre-dev (``apt install libpcre++-dev`` for Ubuntu)
 * **CGO_ENABLED** environmental variable must be set to 1
 * libinjection must be installed and linked
@@ -42,26 +41,15 @@ go test ./...
 go test -race ./...
 ```
 
-Run the test suite against OWASP CRS:
+### Run the test suite against OWASP CRS:
+
+You can run the testsuite using our OWASP CRS test docker image, it will run a Coraza instance using Caddy and [go-ftw](https://github.com/fzipi/go-ftw)
+
 ```sh
-git clone https://github.com/jptosso/coraza-waf
-git clone https://github.com/coreruleset/coreruleset
-# Create your OWASP CRS package owasp-crs.conf
-cat <<EOF >> custom-crs.conf
-SecAction "id:900005,\
-  phase:1,\
-  nolog,\
-  pass,\
-  ctl:ruleEngine=DetectionOnly,\
-  ctl:ruleRemoveById=910000,\
-  setvar:tx.paranoia_level=4,\
-  setvar:tx.crs_validate_utf8_encoding=1,\
-  setvar:tx.arg_name_length=100,\
-  setvar:tx.arg_length=400"
-EOF
-cat coreruleset/crs-setup.conf.example coreruleset/rules/*.conf >> custom-crs.conf
-cd coraza-waf/
-go run cmd/testsuite/main.go -path ../coreruleset/tests/regression/tests/ -rules ../custom-crs.conf
+git clone https://github.com/jptosso/coraza-ruleset
+cd coraza-ruleset
+docker build . -t crs
+docker run crs -name crs
 ```
 
 
@@ -171,15 +159,24 @@ Please note that Coraza Sandbox is not intended to face the public internet, if 
 We have currently achieved a 91% compatibility with OWASP CRS, some features are under development, like:
 
 * Persistent Collections
-* Audit Log engine
-* Some transformations: removeCommentsChar
 * Some operators: fuzzyHash
-* Lua is still being tested
+* Lua is still being tested, it may be replaced with WASM
+
+## Why Coraza WAF?
+
+### Philosophy
+
+* **Simplicity:** Anyone should be able to understand and modify Coraza WAF's source code
+* **Extensibility:** It should be easy to extend Coraza WAF with new functionalities
+* **Innovation:** Coraza WAF isn't just a ModSecurity port, it must include awesome new functions (in the meantime it's just a port :sweat_smile:)
+* **Community:** Coraza WAF is a community project and everyone's idea will be heard
 
 ## Coraza WAF implementations
 
 * [Caddy Plugin (Reverse Proxy and Web Server)](https://github.com/jptosso/coraza-caddy)
-* [Gin Middleware](#)
+* [Traefik Plugin (Reverse Proxy and Web Server)](#) (soon)
+* [Gin Middleware (Web Framework)](#) (soon)
+* [Buffalo Plugin (Web Framework)](#) (soon)
 
 ## Troubleshooting
 

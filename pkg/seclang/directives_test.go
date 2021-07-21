@@ -33,7 +33,7 @@ func Test_directiveSecAuditLog(t *testing.T) {
 	}{
 		{"Test nil logger", args{p, ""}, true},
 		//{"Test concurrent logger", args{p, "concurrent"}, false},
-		{"Test apache logger", args{p, "apache /tmp/log.log"}, false},
+		{"Test modsec logger", args{p, "modsec /tmp/log.log"}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

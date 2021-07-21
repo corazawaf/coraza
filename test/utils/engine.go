@@ -45,8 +45,7 @@ func ParseProfile(path string) (*testProfile, error) {
 func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 	if rules != "" {
 		waf = engine.NewWaf()
-		p := &seclang.Parser{}
-		p.Init(waf)
+		p, _ := seclang.NewParser(waf)
 		p.FromString(rules)
 	}
 	tx := waf.NewTransaction()

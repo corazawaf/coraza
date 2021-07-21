@@ -27,6 +27,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Parser provides functions to evaluate (compile) SecLang directives
 type Parser struct {
 	configfile string
 	configdir  string
@@ -39,11 +40,9 @@ type Parser struct {
 	currentLine    int
 }
 
-func (p *Parser) Init(waf *engine.Waf) {
-	p.Waf = waf
-	p.defaultActions = []string{}
-}
-
+// FromFile imports directives from a file
+// It will return error if any directive fails to parse
+// or arguments are invalid
 func (p *Parser) FromFile(profilePath string) error {
 	if !utils.FileExists(profilePath) {
 		return errors.New("invalid profile path")
@@ -65,6 +64,9 @@ func (p *Parser) FromFile(profilePath string) error {
 	return nil
 }
 
+// FromString imports directives from a string
+// It will return error if any directive fails to parse
+// or arguments are invalid
 func (p *Parser) FromString(data string) error {
 	scanner := bufio.NewScanner(strings.NewReader(data))
 	var linebuffer = ""
@@ -75,7 +77,7 @@ func (p *Parser) FromString(data string) error {
 		//Check if line ends with \
 		match := pattern.MatchString(line)
 		if !match {
-			err := p.Evaluate(linebuffer)
+			err := p.evaluate(linebuffer)
 			if err != nil {
 				return err
 			}
@@ -87,7 +89,7 @@ func (p *Parser) FromString(data string) error {
 	return nil
 }
 
-func (p *Parser) Evaluate(data string) error {
+func (p *Parser) evaluate(data string) error {
 	if data == "" || data[0] == '#' {
 		return nil
 	}
@@ -178,6 +180,8 @@ func (p *Parser) Evaluate(data string) error {
 	return d(p, opts)
 }
 
+// ParseRule will take a rule string and create a rule struct
+// Rules without operator will become SecActions
 func (p *Parser) ParseRule(data string, withOperator bool) (*engine.Rule, error) {
 	var err error
 	rp := NewRuleParser()
@@ -222,7 +226,7 @@ func (p *Parser) ParseRule(data string, withOperator bool) (*engine.Rule, error)
 		}
 	}
 
-	rule := rp.GetRule()
+	rule := rp.Rule()
 	rule.Raw = "SecRule " + data
 
 	if p.nextChain {
@@ -247,6 +251,9 @@ func (p *Parser) ParseRule(data string, withOperator bool) (*engine.Rule, error)
 	return rule, nil
 }
 
+// AddDEfaultActions compiles an actions string
+// Requires a phase and a disruptive action, example:
+// AddDefaultActions("deny,phase:1,log")
 func (p *Parser) AddDefaultActions(data string) error {
 	p.defaultActions = append(p.defaultActions, data)
 	return nil
@@ -258,15 +265,21 @@ func (p *Parser) log(msg string) error {
 	return errors.New(msg)
 }
 
+// GetDefaultActions returns the default actions as an
+// array of strings, they are not evaluated yet
 func (p *Parser) GetDefaultActions() []string {
 	return p.defaultActions
 }
 
+// NewParser creates a new parser from a WAF instance
+// Rules and settings will be associated with the supplied waf
 func NewParser(waf *engine.Waf) (*Parser, error) {
 	if waf == nil {
 		return nil, errors.New("must use a valid waf instance")
 	}
-	p := &Parser{}
-	p.Init(waf)
+	p := &Parser{
+		Waf:            waf,
+		defaultActions: []string{},
+	}
 	return p, nil
 }

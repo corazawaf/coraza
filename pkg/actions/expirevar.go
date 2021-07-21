@@ -41,10 +41,7 @@ func (a *Expirevar) Init(r *engine.Rule, data string) string {
 }
 
 func (a *Expirevar) Evaluate(r *engine.Rule, tx *engine.Transaction) {
-	col := tx.PersistentCollections[a.collection]
-	if col != nil {
-		//col.SetTtl(a.key, a.ttl)
-	}
+	// Not implemented
 }
 
 func (a *Expirevar) GetType() int {

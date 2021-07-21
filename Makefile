@@ -8,8 +8,7 @@ REPO=https://github.com/libinjection/libinjection
 
 all: deps
 test: 
-		$(GOTEST) ./...
-		$(GOTEST) -v -coverprofile=docs/coverage-waf.out ./...
+		$(GOTEST) -v -coverpkg=./... -coverprofile=docs/coverage-waf.out ./...
 deps:
 		git clone $(REPO) $(TMPDIR)
 		gcc -std=c99 -Wall -Werror -fpic -c $(TMPDIR)/src/libinjection_sqli.c -o $(TMPDIR)/libinjection_sqli.o 
