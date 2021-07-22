@@ -15,8 +15,9 @@
 package seclang
 
 import (
-	"github.com/jptosso/coraza-waf/pkg/engine"
 	"testing"
+
+	"github.com/jptosso/coraza-waf/pkg/engine"
 )
 
 func TestDefaultActions(t *testing.T) {
@@ -29,6 +30,11 @@ func TestDefaultActions(t *testing.T) {
 	p.AddDefaultActions("log, drop, phase:2")
 	if len(p.GetDefaultActions()) != 2 {
 		t.Error("Default actions were not created")
+	}
+	p.FromString(`SecAction "phase:2, id:1"`)
+	if len(waf.Rules.GetRules()[0].Actions) != 4 {
+		t.Error("failed to set SecDefaultActions")
+		t.Error(waf.Rules.GetRules()[0].Actions)
 	}
 }
 
