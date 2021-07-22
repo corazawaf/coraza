@@ -15,9 +15,47 @@
 package loggers
 
 import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
 	"testing"
+	"time"
 )
 
 func TestCLogFileCreation(t *testing.T) {
+	file, err := ioutil.TempFile("/tmp", "tmpaudir")
+	if err != nil {
+		t.Error("failed to create concurrent logger file")
+	}
+	logger := &ConcurrentLogger{}
+	logger.New([]string{file.Name(), "/tmp", "0777", "0777"})
+	ts := time.Now().UnixNano()
+	al := &AuditLog{
+		Transaction: &AuditTransaction{
+			UnixTimestamp: ts,
+			Id:            "123",
+			Request:       &AuditTransactionRequest{},
+			Response:      &AuditTransactionResponse{},
+		},
+	}
+	logger.Write(al)
+	tt := time.Unix(0, ts)
+	p2 := fmt.Sprintf("/%s/%s/", tt.Format("20060102"), tt.Format("20060102-1504"))
+	logdir := path.Join("/tmp", p2)
+	// Append the filename
+	fname := fmt.Sprintf("/%s-%s", tt.Format("20060102-150405"), al.Transaction.Id)
+	p := path.Join(logdir, fname)
+
+	data, err := os.ReadFile(p)
+	if err != nil {
+		t.Error("failed to create audit file for concurrent logger")
+		return
+	}
+	al2 := &AuditLog{}
+	if json.Unmarshal(data, al2) != nil {
+		t.Error("failed to parse json from concurrent audit log", p)
+	}
 
 }

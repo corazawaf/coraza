@@ -16,6 +16,7 @@ package engine
 
 import (
 	"errors"
+	"io/fs"
 	"strconv"
 	"sync"
 	"time"
@@ -137,7 +138,7 @@ type Waf struct {
 	DataDir string
 
 	UploadKeepFiles         bool
-	UploadFileMode          uint8
+	UploadFileMode          fs.FileMode
 	UploadFileLimit         int
 	UploadDir               string
 	RequestBodyNoFilesLimit int64

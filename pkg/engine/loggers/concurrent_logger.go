@@ -15,7 +15,6 @@
 package loggers
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"io/fs"
@@ -26,6 +25,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 type ConcurrentLogger struct {
@@ -33,7 +34,6 @@ type ConcurrentLogger struct {
 	mux         *sync.RWMutex
 	file        string
 	directory   string
-	writer      *bufio.Writer
 	dirMode     fs.FileMode
 	fileMode    fs.FileMode
 }
@@ -43,14 +43,13 @@ func (l *ConcurrentLogger) New(args []string) error {
 	if len(args) > 1 {
 		l.file = args[0]
 		l.directory = args[1]
-	} else if len(args) > 2 {
-		dm, err := strconv.ParseUint(args[2], 10, 32)
+		// fs.FileModes are octal (base 8)
+		dm, err := strconv.ParseInt(args[2], 8, 32)
 		if err != nil {
 			return err
 		}
 		l.dirMode = fs.FileMode(dm)
-	} else if len(args) > 3 {
-		fm, err := strconv.ParseUint(args[3], 10, 32)
+		fm, err := strconv.ParseInt(args[3], 8, 32)
 		if err != nil {
 			return err
 		}
@@ -84,6 +83,7 @@ func (l *ConcurrentLogger) Write(al *AuditLog) {
 		"-", filepath, 0, 0 /*request length*/)
 	err := os.MkdirAll(logdir, l.dirMode)
 	if err != nil {
+		logrus.Error("Failed to create concurrent audit path")
 		return
 	}
 
@@ -91,14 +91,13 @@ func (l *ConcurrentLogger) Write(al *AuditLog) {
 	if err != nil {
 		return
 	}
-
 	err = ioutil.WriteFile(filepath, jsdata, l.fileMode)
 	if err != nil {
 		return
 	}
 	l.mux.Lock()
 	defer l.mux.Unlock()
-	l.writer.Write([]byte(str))
+	l.auditlogger.Println(str)
 }
 
 func (cl *ConcurrentLogger) Close() {

@@ -17,6 +17,7 @@ package seclang
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"strconv"
 	"strings"
 
@@ -325,8 +326,8 @@ func directiveSecUploadKeepFiles(p *Parser, opts string) error {
 }
 
 func directiveSecUploadFileMode(p *Parser, opts string) error {
-	fm, err := strconv.ParseUint(opts, 10, 8)
-	p.Waf.UploadFileMode = uint8(fm)
+	fm, err := strconv.ParseInt(opts, 8, 32)
+	p.Waf.UploadFileMode = fs.FileMode(fm)
 	return err
 }
 
