@@ -243,6 +243,8 @@ func NewWaf() *Waf {
 		RequestBodyInMemoryLimit: 131072,
 		RequestBodyLimit:         10000000, //10mb
 		ResponseBodyMimeTypes:    []string{"text/html", "text/plain"},
+		ResponseBodyLimit:        524288,
+		ResponseBodyAccess:       false,
 		RuleEngine:               RULE_ENGINE_ON,
 		Rules:                    NewRuleGroup(),
 		TmpDir:                   "/tmp",

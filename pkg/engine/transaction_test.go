@@ -189,6 +189,18 @@ func TestAuditLog(t *testing.T) {
 	//TODO more checks
 }
 
+func TestResponseBody(t *testing.T) {
+	tx := makeTransaction()
+	tx.ResponseBodyAccess = true
+	tx.RuleEngine = RULE_ENGINE_ON
+	tx.AddResponseHeader("content-type", "text/plain")
+	tx.ResponseBodyBuffer.Write([]byte("test123"))
+	tx.ProcessResponseBody()
+	if tx.GetCollection(VARIABLE_RESPONSE_BODY).GetFirstString("") != "test123" {
+		t.Error("failed to set response body")
+	}
+}
+
 func BenchmarkTransactionCreation(b *testing.B) {
 	waf := NewWaf()
 	for i := 0; i < b.N; i++ {
