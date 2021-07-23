@@ -95,6 +95,7 @@ package main
 import(
 	"github.com/jptosso/coraza-waf/engine"
 	"github.com/jptosso/coraza-waf/seclang"
+	"net/http"
 )
 
 func SomeErrorPage(w http.ResponseWriter) {
@@ -130,10 +131,10 @@ func someHandler(waf *engine.Waf) http.Handler {
 	}
 	// We will use the Coraza response reader:
 	tx.ProcessResponseHeaders()
-	tx.ResponseWriter.Write([]byte("Some of the response body"))
+	tx.ResponseBuffer.Write([]byte("Some of the response body"))
 	tx.ProcessResponseBody()
 	// We will dump the buffered response into the response writer:
-	io.Copy(w, tx.ResponseWriter)
+	io.Copy(w, tx.ResponseBuffer)
   })
 }
 ```
@@ -171,6 +172,29 @@ We have currently achieved a 91% compatibility with OWASP CRS, some features are
 * **Innovation:** Coraza WAF isn't just a ModSecurity port, it must include awesome new functions (in the meantime it's just a port :sweat_smile:)
 * **Community:** Coraza WAF is a community project and everyone's idea will be heard
 
+### Roadmap (long term)
+
+* WASM scripts support, Lua was removed
+* Performance improvements
+* More tests and documentation
+* Integrated DDOS protection and directives with iptables(And others) integration
+* Integrated protocol validations ([rfc2616](https://datatracker.ietf.org/doc/html/rfc2616))
+* Integrated CSRF protection
+* Integrated bot detection with captcha
+* More loggers and persistence engines
+* More integrations (traefik, gin and buffalo)
+* Open Policy Agent package (OPA)
+* Online sandbox
+* HTTP/2 and HTTP/3 support
+* Enhanced rule profiling 
+* Native antivirus integration (maybe)
+* Automatic coreruleset integration (download and setup) (maybe)
+* Enhanced data masking features
+* Enhanced data signing features (cookies, forms, etc)
+* OpenAPI enforcement
+* JWT enforcement
+* JSON and YAML query
+
 ## Coraza WAF implementations
 
 * [Caddy Plugin (Reverse Proxy and Web Server)](https://github.com/jptosso/coraza-caddy)
@@ -180,6 +204,18 @@ We have currently achieved a 91% compatibility with OWASP CRS, some features are
 
 ## Troubleshooting
 
+## How to contribute
+
+Contributions are welcome, there are so many TODOs, also functionalities, fixes, bug reports and any help you can provide. Just send your PR.
+
+```sh
+cd /path/to/coraza
+egrep -Rin "TODO|FIXME" -R --exclude-dir=vendor *
+```
 
 ## Useful links
 
+## Special thanks 
+
+* Modsecurity team for creating SecLang
+* OWASP Coreruleset team for the CRS and their feedback
