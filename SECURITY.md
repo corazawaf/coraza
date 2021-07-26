@@ -6,8 +6,8 @@ Versions currently being supported with security updates.
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.1.x   | :white_check_mark: |
+| v1.x    | :white_check_mark: |
 
 ## Reporting a Vulnerability
 
-Please send any vulnerability to jptosso@gmail.com before making them public, as Coraza is a WIP, we will just provide a thank you note on the PR. 
+Please send any vulnerability to jptosso@gmail.com before making them public, as Coraza is a WIP, we will just provide a thank you note on the PR.

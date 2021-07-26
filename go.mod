@@ -1,4 +1,4 @@
-module github.com/jptosso/coraza-waf
+module github.com/jptosso/coraza-waf/v1
 
 go 1.16
 
