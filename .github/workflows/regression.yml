@@ -32,7 +32,7 @@ jobs:
     - name: Download vendored dependencies
       run: go mod vendor
     - name: Tests and coverage
-      run: CGO_ENABLED=1 go test -v -coverpkg=./... -coverprofile=docs/coverage-waf.out ./...
+      run: CGO_ENABLED=1 go test -v -coverpkg=./... -coverprofile=coverage-waf.out ./...
     - name: SonarCloud Scan
       uses: sonarsource/sonarcloud-github-action@master
       env:
