@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strconv"
 
-	engine "github.com/jptosso/coraza-waf/v1"
+	engine "github.com/jptosso/coraza-waf"
 )
 
 var HTTP_STATUSES = []int{100, 101, 102, 103, 200,

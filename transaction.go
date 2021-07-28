@@ -27,8 +27,8 @@ import (
 	"time"
 
 	"github.com/antchfx/xmlquery"
-	"github.com/jptosso/coraza-waf/v1/loggers"
-	"github.com/jptosso/coraza-waf/v1/utils"
+	"github.com/jptosso/coraza-waf/loggers"
+	"github.com/jptosso/coraza-waf/utils"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -17,7 +17,7 @@ package seclang
 import (
 	"testing"
 
-	engine "github.com/jptosso/coraza-waf/v1"
+	engine "github.com/jptosso/coraza-waf"
 )
 
 func Test_directiveSecAuditLog(t *testing.T) {

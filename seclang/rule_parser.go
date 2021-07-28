@@ -20,11 +20,11 @@ import (
 	"strconv"
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf/v1"
-	actionsmod "github.com/jptosso/coraza-waf/v1/actions"
-	"github.com/jptosso/coraza-waf/v1/operators"
-	"github.com/jptosso/coraza-waf/v1/utils"
-	regex "github.com/jptosso/coraza-waf/v1/utils/regex"
+	engine "github.com/jptosso/coraza-waf"
+	actionsmod "github.com/jptosso/coraza-waf/actions"
+	"github.com/jptosso/coraza-waf/operators"
+	"github.com/jptosso/coraza-waf/utils"
+	regex "github.com/jptosso/coraza-waf/utils/regex"
 )
 
 type ruleAction struct {

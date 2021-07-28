@@ -17,7 +17,7 @@ package transformations
 import (
 	"strconv"
 
-	"github.com/jptosso/coraza-waf/v1/utils"
+	"github.com/jptosso/coraza-waf/utils"
 )
 
 func JsDecode(data string, utils *Tools) string {

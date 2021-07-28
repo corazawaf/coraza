@@ -14,7 +14,7 @@
 
 package transformations
 
-import "github.com/jptosso/coraza-waf/v1/utils"
+import "github.com/jptosso/coraza-waf/utils"
 
 type Tools struct {
 	Unicode *utils.Unicode

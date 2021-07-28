@@ -19,8 +19,8 @@ import (
 	"strconv"
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf/v1"
-	_ "github.com/jptosso/coraza-waf/v1/utils"
+	engine "github.com/jptosso/coraza-waf"
+	_ "github.com/jptosso/coraza-waf/utils"
 )
 
 type Expirevar struct {

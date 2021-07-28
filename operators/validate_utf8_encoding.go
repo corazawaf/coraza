@@ -14,7 +14,7 @@
 
 package operators
 
-import engine "github.com/jptosso/coraza-waf/v1"
+import engine "github.com/jptosso/coraza-waf"
 
 const (
 	UNICODE_ERROR_CHARACTERS_MISSING   = -1

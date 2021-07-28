@@ -57,8 +57,8 @@ Make sure ``CGO_ENABLED=1`` env is set before compiling and all dependencies are
 package main
 import(
 	"fmt"
-	engine"github.com/jptosso/coraza-waf/v1"
-	"github.com/jptosso/coraza-waf/v1/seclang"
+	engine"github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/seclang"
 )
 
 func main() {
@@ -89,8 +89,8 @@ Using the standard net/http library:
 ```go
 package main
 import(
-	engine"github.com/jptosso/coraza-waf/v1"
-	"github.com/jptosso/coraza-waf/v1/seclang"
+	engine"github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/seclang"
 	"net/http"
 )
 

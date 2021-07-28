@@ -19,7 +19,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/jptosso/coraza-waf/v1/utils"
+	"github.com/jptosso/coraza-waf/utils"
 )
 
 func HtmlEntityDecode(data string, utils *Tools) string {

@@ -17,7 +17,7 @@ package operators
 import (
 	"net"
 
-	engine "github.com/jptosso/coraza-waf/v1"
+	engine "github.com/jptosso/coraza-waf"
 )
 
 type GeoLookup struct {
