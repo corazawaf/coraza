@@ -17,15 +17,16 @@ package operators
 import (
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 )
 
 type BeginsWith struct {
 	data string
 }
 
-func (o *BeginsWith) Init(data string) {
+func (o *BeginsWith) Init(data string) error {
 	o.data = data
+	return nil
 }
 
 func (o *BeginsWith) Evaluate(tx *engine.Transaction, value string) bool {

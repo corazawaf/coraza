@@ -17,7 +17,7 @@ package operators
 import (
 	"testing"
 
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 )
 
 func TestCRS920272(t *testing.T) {

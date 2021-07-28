@@ -15,10 +15,11 @@
 package actions
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 	"github.com/jptosso/coraza-waf/v1/utils"
 )
 
@@ -49,8 +50,8 @@ const (
 	CTL_RESPONSE_BODY_LIMIT    = 16
 )
 
-func (a *Ctl) Init(r *engine.Rule, data string) string {
-	var err string
+func (a *Ctl) Init(r *engine.Rule, data string) error {
+	var err error
 	a.Action, a.Value, a.Collection, a.ColKey, err = parseCtl(data)
 	return err
 }
@@ -164,7 +165,7 @@ func (a *Ctl) GetType() int {
 	return engine.ACTION_TYPE_NONDISRUPTIVE
 }
 
-func parseCtl(data string) (int, string, byte, string, string) {
+func parseCtl(data string) (int, string, byte, string, error) {
 	spl1 := strings.SplitN(data, "=", 2)
 	spl2 := strings.SplitN(spl1[1], ";", 2)
 	action := spl1[0]
@@ -236,7 +237,7 @@ func parseCtl(data string) (int, string, byte, string, string) {
 		act = CTL_HASH_ENFORCEMENT
 		break
 	default:
-		return 0, "", 0x00, "", "Invalid ctl action"
+		return 0, "", 0x00, "", fmt.Errorf("Invalid ctl action")
 	}
-	return act, value, collection, strings.TrimSpace(colkey), ""
+	return act, value, collection, strings.TrimSpace(colkey), nil
 }

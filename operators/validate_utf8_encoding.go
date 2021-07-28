@@ -14,9 +14,7 @@
 
 package operators
 
-import (
-	"github.com/jptosso/coraza-waf/v1/engine"
-)
+import engine "github.com/jptosso/coraza-waf/v1"
 
 const (
 	UNICODE_ERROR_CHARACTERS_MISSING   = -1
@@ -28,7 +26,8 @@ const (
 
 type ValidateUtf8Encoding struct{}
 
-func (o *ValidateUtf8Encoding) Init(data string) {
+func (o *ValidateUtf8Encoding) Init(data string) error {
+	return nil
 }
 
 func (o *ValidateUtf8Encoding) Evaluate(tx *engine.Transaction, value string) bool {

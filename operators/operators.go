@@ -14,9 +14,7 @@
 
 package operators
 
-import (
-	"github.com/jptosso/coraza-waf/v1/engine"
-)
+import engine "github.com/jptosso/coraza-waf/v1"
 
 func OperatorsMap() map[string]engine.Operator {
 	return map[string]engine.Operator{

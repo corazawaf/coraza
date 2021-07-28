@@ -19,15 +19,16 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 )
 
 type InspectFile struct {
 	path string
 }
 
-func (o *InspectFile) Init(data string) {
+func (o *InspectFile) Init(data string) error {
 	o.path = data
+	return nil
 }
 
 func (o *InspectFile) Evaluate(tx *engine.Transaction, value string) bool {

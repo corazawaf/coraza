@@ -17,7 +17,7 @@ package actions
 import (
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 )
 
 // Initializes a persistent collection and add the data to the standard collections engine.
@@ -27,11 +27,11 @@ type InitCol struct {
 	key        string
 }
 
-func (a *InitCol) Init(r *engine.Rule, data string) string {
+func (a *InitCol) Init(r *engine.Rule, data string) error {
 	kv := strings.SplitN(data, "=", 2)
 	a.collection = kv[0]
 	a.key = kv[1]
-	return ""
+	return nil
 }
 
 func (a *InitCol) Evaluate(r *engine.Rule, tx *engine.Transaction) {

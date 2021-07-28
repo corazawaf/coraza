@@ -15,21 +15,22 @@
 package actions
 
 import (
+	"fmt"
 	"strconv"
 
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 )
 
 type Id struct {
 }
 
-func (a *Id) Init(r *engine.Rule, data string) string {
+func (a *Id) Init(r *engine.Rule, data string) error {
 	i, err := strconv.Atoi(data)
 	if err != nil {
-		return "Invalid rule ID " + data
+		return fmt.Errorf("Invalid rule ID %s", data)
 	}
 	r.Id = int(i)
-	return ""
+	return nil
 }
 
 func (a *Id) Evaluate(r *engine.Rule, tx *engine.Transaction) {

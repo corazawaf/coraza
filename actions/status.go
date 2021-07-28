@@ -15,9 +15,10 @@
 package actions
 
 import (
+	"fmt"
 	"strconv"
 
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 )
 
 var HTTP_STATUSES = []int{100, 101, 102, 103, 200,
@@ -32,15 +33,15 @@ var HTTP_STATUSES = []int{100, 101, 102, 103, 200,
 type Status struct {
 }
 
-func (a *Status) Init(r *engine.Rule, b1 string) string {
+func (a *Status) Init(r *engine.Rule, b1 string) error {
 	status, _ := strconv.Atoi(b1)
 	for _, s := range HTTP_STATUSES {
 		if status == s {
 			r.Status = status
-			return ""
+			return nil
 		}
 	}
-	return "Invalid HTTP status"
+	return fmt.Errorf("Invalid HTTP status")
 }
 
 func (a *Status) Evaluate(r *engine.Rule, tx *engine.Transaction) {

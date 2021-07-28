@@ -15,10 +15,11 @@
 package actions
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 )
 
 type Setvar struct {
@@ -29,9 +30,9 @@ type Setvar struct {
 }
 
 //this action win run even if rule is not triggered.!
-func (a *Setvar) Init(r *engine.Rule, data string) string {
+func (a *Setvar) Init(r *engine.Rule, data string) error {
 	if data == "" {
-		return "setvar requires arguments"
+		return fmt.Errorf("setvar requires arguments")
 	}
 
 	if data[0] == '!' {
@@ -45,7 +46,7 @@ func (a *Setvar) Init(r *engine.Rule, data string) string {
 	var err error
 	a.Collection, err = engine.NameToVariable(splcol[0])
 	if err != nil {
-		return err.Error()
+		return err
 	}
 	if len(splcol) == 2 {
 		a.Key = splcol[1]
@@ -53,7 +54,7 @@ func (a *Setvar) Init(r *engine.Rule, data string) string {
 	if len(spl) == 2 {
 		a.Value = spl[1]
 	}
-	return ""
+	return nil
 }
 
 func (a *Setvar) Evaluate(r *engine.Rule, tx *engine.Transaction) {

@@ -19,9 +19,7 @@ import (
 	"strconv"
 )
 
-type NidUs struct{}
-
-func (n *NidUs) Evaluate(nid string) bool {
+func NidUs(nid string) bool {
 	re, err := regexp.Compile(`[^\d]`)
 	if err != nil {
 		return false

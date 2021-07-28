@@ -15,25 +15,27 @@
 package actions
 
 import (
-	"github.com/jptosso/coraza-waf/v1/engine"
+	"fmt"
+
+	engine "github.com/jptosso/coraza-waf/v1"
 	"github.com/jptosso/coraza-waf/v1/transformations"
 )
 
 type T struct{}
 
-func (a *T) Init(r *engine.Rule, transformation string) string {
+func (a *T) Init(r *engine.Rule, transformation string) error {
 	if transformation == "none" {
 		//remove elements
 		r.Transformations = r.Transformations[:0]
-		return ""
+		return nil
 	}
 	transformations := transformations.TransformationsMap()
 	tt := transformations[transformation]
 	if tt == nil {
-		return "Unsupported transformation " + transformation
+		return fmt.Errorf("Unsupported transformation %s", transformation)
 	}
 	r.Transformations = append(r.Transformations, tt)
-	return ""
+	return nil
 }
 
 func (a *T) Evaluate(r *engine.Rule, tx *engine.Transaction) {

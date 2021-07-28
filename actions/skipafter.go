@@ -17,7 +17,7 @@ package actions
 import (
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 )
 
 type SkipAfter struct {
@@ -25,9 +25,9 @@ type SkipAfter struct {
 }
 
 //NOT IMPLEMENTED
-func (a *SkipAfter) Init(r *engine.Rule, data string) string {
+func (a *SkipAfter) Init(r *engine.Rule, data string) error {
 	a.data = strings.Trim(data, `"`)
-	return ""
+	return nil
 }
 
 func (a *SkipAfter) Evaluate(r *engine.Rule, tx *engine.Transaction) {

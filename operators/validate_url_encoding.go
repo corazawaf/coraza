@@ -14,16 +14,15 @@
 
 package operators
 
-import (
-	"github.com/jptosso/coraza-waf/v1/engine"
-)
+import engine "github.com/jptosso/coraza-waf/v1"
 
 type ValidateUrlEncoding struct {
 	data string
 }
 
-func (o *ValidateUrlEncoding) Init(data string) {
+func (o *ValidateUrlEncoding) Init(data string) error {
 	// Does not require initialization
+	return nil
 }
 
 func (o *ValidateUrlEncoding) Evaluate(tx *engine.Transaction, value string) bool {

@@ -15,12 +15,12 @@
 package operators
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 	"github.com/jptosso/coraza-waf/v1/operators/nids"
-	log "github.com/sirupsen/logrus"
 )
 
 type ValidateNid struct {
@@ -28,14 +28,14 @@ type ValidateNid struct {
 	rgx string
 }
 
-func (o *ValidateNid) Init(data string) {
+func (o *ValidateNid) Init(data string) error {
 	spl := strings.SplitN(data, " ", 2)
 	if len(spl) != 2 {
-		log.Error("Invalid @validateNid argument")
-		return
+		return fmt.Errorf("Invalid @validateNid argument")
 	}
 	o.fn = nids.NidMap()[spl[0]]
 	o.rgx = spl[1]
+	return nil
 }
 
 func (o *ValidateNid) Evaluate(tx *engine.Transaction, value string) bool {
@@ -50,7 +50,8 @@ func (o *ValidateNid) Evaluate(tx *engine.Transaction, value string) bool {
 		if i >= 10 {
 			break
 		}
-		if o.fn.Evaluate(m[0]) {
+		//should we capture more than one NID?
+		if o.fn(m[0]) {
 			res = true
 			if tx.Capture {
 				tx.CaptureField(i, m[0])

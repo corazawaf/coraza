@@ -17,15 +17,16 @@ package operators
 import (
 	"strconv"
 
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 )
 
 type Ge struct {
 	data string
 }
 
-func (o *Ge) Init(data string) {
+func (o *Ge) Init(data string) error {
 	o.data = data
+	return nil
 }
 
 func (o *Ge) Evaluate(tx *engine.Transaction, value string) bool {

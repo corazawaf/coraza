@@ -18,18 +18,19 @@ import (
 	"strings"
 
 	ahocorasick "github.com/jptosso/aho-corasick"
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 )
 
 type Pm struct {
 	data []string
 }
 
-func (o *Pm) Init(data string) {
+func (o *Pm) Init(data string) error {
 	data = strings.ToLower(data)
 	o.data = strings.Split(data, " ")
 	// TODO this operator is supposed to support snort data syntax: "@pm A|42|C|44|F"
 	// TODO modsecurity uses mutex to queue ahocorasick, maybe its for a reason...
+	return nil
 }
 
 func (o *Pm) Evaluate(tx *engine.Transaction, value string) bool {
@@ -49,8 +50,4 @@ func (o *Pm) Evaluate(tx *engine.Transaction, value string) bool {
 		tx.CaptureField(i, string(matches[0].Match()))
 	}
 	return len(matches) > 0
-}
-
-func (o *Pm) GetType() string {
-	return ""
 }

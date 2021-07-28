@@ -1,6 +1,6 @@
 // Copyright (C) 2011 Florian Weimer <fw@deneb.enyo.de>
 
-// +build linux,cgo darwin,cgo
+// +build cgo
 
 package regex
 

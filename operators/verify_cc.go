@@ -14,15 +14,14 @@
 
 package operators
 
-import (
-	"github.com/jptosso/coraza-waf/v1/engine"
-)
+import engine "github.com/jptosso/coraza-waf/v1"
 
 type VerifyCC struct {
 }
 
-func (o *VerifyCC) Init(data string) {
+func (o *VerifyCC) Init(data string) error {
 	// not implemented
+	return nil
 }
 
 func (o *VerifyCC) Evaluate(tx *engine.Transaction, value string) bool {

@@ -20,7 +20,7 @@ import (
 	"sync"
 
 	ahocorasick "github.com/jptosso/aho-corasick"
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 	"github.com/jptosso/coraza-waf/v1/utils"
 )
 
@@ -30,14 +30,13 @@ type PmFromFile struct {
 	mux  *sync.RWMutex
 }
 
-func (o *PmFromFile) Init(data string) {
+func (o *PmFromFile) Init(data string) error {
 	o.Data = []string{}
 	o.mux = &sync.RWMutex{}
 	b, err := utils.OpenFile(data)
 	content := string(b)
 	if err != nil {
-		fmt.Println("Error parsing path " + data)
-		return
+		return fmt.Errorf("Error parsing path %s", data)
 	}
 	sp := strings.Split(string(content), "\n")
 	for _, l := range sp {
@@ -52,6 +51,7 @@ func (o *PmFromFile) Init(data string) {
 	o.trie = ahocorasick.NewTrieBuilder().
 		AddStrings(o.Data).
 		Build()
+	return nil
 }
 
 func (o *PmFromFile) Evaluate(tx *engine.Transaction, value string) bool {
@@ -66,8 +66,4 @@ func (o *PmFromFile) Evaluate(tx *engine.Transaction, value string) bool {
 		tx.CaptureField(i, string(matches[0].Match()))
 	}
 	return len(matches) > 0
-}
-
-func (o *PmFromFile) GetType() string {
-	return ""
 }

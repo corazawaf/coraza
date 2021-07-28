@@ -16,7 +16,6 @@ package engine
 
 import (
 	"strconv"
-	"strings"
 
 	"github.com/jptosso/coraza-waf/v1/utils"
 	regex "github.com/jptosso/coraza-waf/v1/utils/regex"
@@ -25,6 +24,7 @@ import (
 type Collection struct {
 	data map[string][]string
 	name string
+	//PersistentKey string // for persistent collections
 }
 
 func (c *Collection) Init(name string) {
@@ -148,12 +148,6 @@ func (c *Collection) AddUnique(key string, value string) {
 
 func (c *Collection) Set(key string, value []string) {
 	c.data[key] = value
-}
-
-func (c *Collection) AddMap(data map[string][]string) {
-	for k, v := range data {
-		c.data[strings.ToLower(k)] = v
-	}
 }
 
 func (c *Collection) Remove(key string) {

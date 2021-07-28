@@ -14,15 +14,13 @@
 
 package actions
 
-import (
-	"github.com/jptosso/coraza-waf/v1/engine"
-)
+import engine "github.com/jptosso/coraza-waf/v1"
 
 type Capture struct{}
 
-func (a *Capture) Init(r *engine.Rule, b1 string) string {
+func (a *Capture) Init(r *engine.Rule, b1 string) error {
 	//r.Capture = true
-	return ""
+	return nil
 }
 
 func (a *Capture) Evaluate(r *engine.Rule, tx *engine.Transaction) {

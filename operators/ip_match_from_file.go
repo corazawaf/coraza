@@ -15,26 +15,26 @@
 package operators
 
 import (
+	"fmt"
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 	"github.com/jptosso/coraza-waf/v1/utils"
-	log "github.com/sirupsen/logrus"
 )
 
 type IpMatchFromFile struct {
 	ip *IpMatch
 }
 
-func (o *IpMatchFromFile) Init(data string) {
+func (o *IpMatchFromFile) Init(data string) error {
 	o.ip = &IpMatch{}
 	list, err := utils.OpenFile(data)
 	if err != nil {
-		log.Error("Error opening " + data)
-		return
+		return fmt.Errorf("Error opening %s", data)
 	}
 	subnets := strings.ReplaceAll(string(list), "\n", ",")
 	o.ip.Init(subnets)
+	return nil
 }
 
 func (o *IpMatchFromFile) Evaluate(tx *engine.Transaction, value string) bool {

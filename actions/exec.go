@@ -15,7 +15,9 @@
 package actions
 
 import (
-	"github.com/jptosso/coraza-waf/v1/engine"
+	"fmt"
+
+	engine "github.com/jptosso/coraza-waf/v1"
 	"github.com/jptosso/coraza-waf/v1/utils"
 )
 
@@ -23,13 +25,13 @@ type Exec struct {
 	cachedScript string
 }
 
-func (a *Exec) Init(r *engine.Rule, data string) string {
+func (a *Exec) Init(r *engine.Rule, data string) error {
 	fdata, err := utils.OpenFile(data)
 	if err != nil {
-		return "Cannot load file " + data
+		return fmt.Errorf("Cannot load file %s", data)
 	}
 	a.cachedScript = string(fdata)
-	return ""
+	return nil
 }
 
 func (a *Exec) Evaluate(r *engine.Rule, tx *engine.Transaction) {

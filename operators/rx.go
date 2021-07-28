@@ -15,7 +15,7 @@
 package operators
 
 import (
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 	regex "github.com/jptosso/coraza-waf/v1/utils/regex"
 )
 
@@ -23,8 +23,10 @@ type Rx struct {
 	re regex.Regexp
 }
 
-func (o *Rx) Init(data string) {
-	o.re = regex.MustCompile(data, 0)
+func (o *Rx) Init(data string) error {
+	re, err := regex.Compile(data, 0)
+	o.re = re
+	return err
 }
 
 func (o *Rx) Evaluate(tx *engine.Transaction, value string) bool {

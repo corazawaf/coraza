@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jptosso/coraza-waf/v1/engine/loggers"
-	"github.com/jptosso/coraza-waf/v1/engine/persistence"
+	"github.com/jptosso/coraza-waf/v1/loggers"
+	"github.com/jptosso/coraza-waf/v1/persistence"
 	"github.com/jptosso/coraza-waf/v1/utils"
 	regex "github.com/jptosso/coraza-waf/v1/utils/regex"
 	"github.com/oschwald/geoip2-golang"
@@ -154,7 +154,7 @@ type Waf struct {
 }
 
 // Initializes Geoip2 database
-func (w *Waf) InitGeoip(path string) error {
+func (w *Waf) SetGeoip(path string) error {
 	var err error
 	w.GeoDb, err = geoip2.Open(path)
 	if err != nil {
@@ -164,7 +164,7 @@ func (w *Waf) InitGeoip(path string) error {
 }
 
 // Initializes Persistence Engine
-func (w *Waf) SetPersistenceEngine(uri string) error {
+func (w *Waf) SetPersistenceEngine(args string) error {
 	// Not implemented
 	return nil
 }

@@ -40,13 +40,13 @@ const (
 )
 
 type Action interface {
-	Init(*Rule, string) string
+	Init(*Rule, string) error
 	Evaluate(*Rule, *Transaction)
 	GetType() int
 }
 
 type Operator interface {
-	Init(string)
+	Init(string) error
 	Evaluate(*Transaction, string) bool
 }
 

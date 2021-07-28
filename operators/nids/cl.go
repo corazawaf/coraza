@@ -20,9 +20,7 @@ import (
 	"strings"
 )
 
-type NidCl struct{}
-
-func (n *NidCl) Evaluate(nid string) bool {
+func NidCl(nid string) bool {
 	if len(nid) < 8 {
 		return false
 	}
@@ -33,7 +31,7 @@ func (n *NidCl) Evaluate(nid string) bool {
 	nid = strings.ToLower(nid)
 	nid = re.ReplaceAllString(nid, "")
 	rut, _ := strconv.Atoi(nid[:len(nid)-1])
-	dv := nid[len(nid)-1 : len(nid)]
+	dv := nid[len(nid)-1:]
 
 	var sum = 0
 	var factor = 2

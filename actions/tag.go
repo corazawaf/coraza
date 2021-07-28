@@ -14,16 +14,14 @@
 
 package actions
 
-import (
-	"github.com/jptosso/coraza-waf/v1/engine"
-)
+import engine "github.com/jptosso/coraza-waf/v1"
 
 type Tag struct {
 }
 
-func (a *Tag) Init(r *engine.Rule, data string) string {
+func (a *Tag) Init(r *engine.Rule, data string) error {
 	r.Tags = append(r.Tags, data)
-	return ""
+	return nil
 }
 
 func (a *Tag) Evaluate(r *engine.Rule, tx *engine.Transaction) {

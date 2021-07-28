@@ -14,17 +14,15 @@
 
 package actions
 
-import (
-	"github.com/jptosso/coraza-waf/v1/engine"
-)
+import engine "github.com/jptosso/coraza-waf/v1"
 
 type Append struct {
 	Data string
 }
 
-func (a *Append) Init(r *engine.Rule, data string) string {
+func (a *Append) Init(r *engine.Rule, data string) error {
 	a.Data = data
-	return ""
+	return nil
 }
 
 func (a *Append) Evaluate(r *engine.Rule, tx *engine.Transaction) {

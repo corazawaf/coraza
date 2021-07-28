@@ -15,7 +15,9 @@
 package actions
 
 import (
-	"github.com/jptosso/coraza-waf/v1/engine"
+	"fmt"
+
+	engine "github.com/jptosso/coraza-waf/v1"
 )
 
 //0 nothing, 1 phase, 2 request
@@ -23,7 +25,7 @@ type Allow struct {
 	allow int
 }
 
-func (a *Allow) Init(r *engine.Rule, b1 string) string {
+func (a *Allow) Init(r *engine.Rule, b1 string) error {
 	// Does not require
 	if b1 == "phase" {
 		a.allow = 1
@@ -32,9 +34,9 @@ func (a *Allow) Init(r *engine.Rule, b1 string) string {
 	} else if b1 == "" {
 		a.allow = 0
 	} else {
-		return "Invalid value for action allow"
+		fmt.Errorf("Invalid value for action allow")
 	}
-	return ""
+	return nil
 }
 
 func (a *Allow) Evaluate(r *engine.Rule, tx *engine.Transaction) {

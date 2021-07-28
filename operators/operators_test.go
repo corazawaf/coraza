@@ -24,7 +24,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 )
 
 type Test struct {

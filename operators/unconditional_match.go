@@ -14,13 +14,12 @@
 
 package operators
 
-import (
-	"github.com/jptosso/coraza-waf/v1/engine"
-)
+import engine "github.com/jptosso/coraza-waf/v1"
 
 type UnconditionalMatch struct{}
 
-func (o *UnconditionalMatch) Init(data string) {
+func (o *UnconditionalMatch) Init(data string) error {
+	return nil
 }
 
 func (o *UnconditionalMatch) Evaluate(tx *engine.Transaction, value string) bool {

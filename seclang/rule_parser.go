@@ -20,8 +20,8 @@ import (
 	"strconv"
 	"strings"
 
+	engine "github.com/jptosso/coraza-waf/v1"
 	actionsmod "github.com/jptosso/coraza-waf/v1/actions"
-	"github.com/jptosso/coraza-waf/v1/engine"
 	"github.com/jptosso/coraza-waf/v1/operators"
 	"github.com/jptosso/coraza-waf/v1/utils"
 	regex "github.com/jptosso/coraza-waf/v1/utils/regex"
@@ -122,7 +122,10 @@ func (p *RuleParser) ParseOperator(operator string) error {
 				p.rule.Operator.Data = path.Join(p.Configdir, p.rule.Operator.Data)
 			}
 		}
-		p.rule.Operator.Operator.Init(p.rule.Operator.Data)
+		err := p.rule.Operator.Operator.Init(p.rule.Operator.Data)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -161,8 +164,8 @@ func (p *RuleParser) ParseActions(actions string) error {
 	for _, a := range act {
 		if a.Atype == engine.ACTION_TYPE_METADATA {
 			errs := a.F.Init(p.rule, a.Value)
-			if errs != "" {
-				return errors.New(errs)
+			if errs != nil {
+				return errs
 			}
 		}
 	}
@@ -176,8 +179,8 @@ func (p *RuleParser) ParseActions(actions string) error {
 
 	for _, action := range act {
 		errs := action.F.Init(p.rule, action.Value)
-		if errs != "" {
-			return errors.New(errs)
+		if errs != nil {
+			return errs
 		}
 		p.rule.Actions = append(p.rule.Actions, action.F)
 	}

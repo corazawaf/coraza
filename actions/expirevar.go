@@ -15,10 +15,11 @@
 package actions
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 	_ "github.com/jptosso/coraza-waf/v1/utils"
 )
 
@@ -28,16 +29,16 @@ type Expirevar struct {
 	key        string
 }
 
-func (a *Expirevar) Init(r *engine.Rule, data string) string {
+func (a *Expirevar) Init(r *engine.Rule, data string) error {
 	spl := strings.SplitN(data, "=", 2)
 	a.ttl, _ = strconv.Atoi(spl[1])
 	spl = strings.SplitN(spl[0], ".", 2)
 	if len(spl) != 2 {
-		return "Expirevar must contain key=value"
+		return fmt.Errorf("Expirevar must contain key=value")
 	}
 	a.collection = spl[0]
 	a.key = spl[1]
-	return ""
+	return nil
 }
 
 func (a *Expirevar) Evaluate(r *engine.Rule, tx *engine.Transaction) {

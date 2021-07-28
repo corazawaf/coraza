@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 	"github.com/jptosso/coraza-waf/v1/utils"
 	regex "github.com/jptosso/coraza-waf/v1/utils/regex"
 	log "github.com/sirupsen/logrus"
@@ -221,7 +221,7 @@ func directiveSecGsbLookupDb(p *Parser, opts string) error {
 }
 
 func directiveSecGeoLookupDb(p *Parser, opts string) error {
-	p.Waf.InitGeoip(opts)
+	p.Waf.SetGeoip(opts)
 	return nil
 }
 

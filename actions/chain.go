@@ -14,15 +14,13 @@
 
 package actions
 
-import (
-	"github.com/jptosso/coraza-waf/v1/engine"
-)
+import engine "github.com/jptosso/coraza-waf/v1"
 
 type Chain struct{}
 
-func (a *Chain) Init(r *engine.Rule, b1 string) string {
+func (a *Chain) Init(r *engine.Rule, b1 string) error {
 	r.HasChain = true
-	return ""
+	return nil
 }
 
 func (a *Chain) Evaluate(r *engine.Rule, tx *engine.Transaction) {

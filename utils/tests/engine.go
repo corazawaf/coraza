@@ -21,7 +21,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 	"github.com/jptosso/coraza-waf/v1/seclang"
 	"github.com/jptosso/coraza-waf/v1/utils"
 	"gopkg.in/yaml.v2"

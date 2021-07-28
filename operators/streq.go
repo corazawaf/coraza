@@ -14,16 +14,15 @@
 
 package operators
 
-import (
-	"github.com/jptosso/coraza-waf/v1/engine"
-)
+import engine "github.com/jptosso/coraza-waf/v1"
 
 type Streq struct {
 	data string
 }
 
-func (o *Streq) Init(data string) {
+func (o *Streq) Init(data string) error {
 	o.data = data
+	return nil
 }
 
 func (o *Streq) Evaluate(tx *engine.Transaction, value string) bool {

@@ -29,7 +29,7 @@ func TestWAFInitialize(t *testing.T) {
 
 func TestGeoIP(t *testing.T) {
 	w := NewWaf()
-	err := w.InitGeoip("")
+	err := w.SetGeoip("")
 	if err == nil {
 		t.Error("Invalid geoip location shouldnt work")
 	}

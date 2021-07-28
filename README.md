@@ -1,20 +1,16 @@
-<img src="https://github.com/jptosso/coraza-waf/raw/master/docs/logo.png" width="50%">
+# Coraza Web Application Firewall
 
 ![Build Status](https://github.com/jptosso/coraza-waf/actions/workflows/regression.yml/badge.svg)
 ![CodeQL](https://github.com/jptosso/coraza-waf/workflows/CodeQL/badge.svg)
-[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza-waf&metric=bugs)](https://sonarcloud.io/dashboard?id=jptosso_coraza-waf)
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza-waf&metric=sqale_rating)](https://sonarcloud.io/dashboard?id=jptosso_coraza-waf)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza-waf&metric=coverage)](https://sonarcloud.io/dashboard?id=jptosso_coraza-waf)
 [![GoDoc](https://godoc.org/github.com/jptosso/coraza-waf?status.svg)](https://godoc.org/github.com/jptosso/coraza-waf)
-[![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 
-
-# Coraza Web Application Firewall
-
-
-Welcome to Coraza Web Application Firewall, this project is a Golang port of ModSecurity with the goal to become the first enterprise-grade Open Source Web Application Firewall, extensible enough to serve as the baseline for many projects. 
-
-Please note Coraza is still a WIP.
+<div align="center">
+	<img src="https://jptosso.github.io/coraza-waf/images/company_logo.png" width="50%">
+</div>
+Welcome to Coraza Web Application Firewall, this project is a Golang port of ModSecurity with the goal to become the first enterprise-grade Open Source Web Application Firewall, flexible and powerful enough to serve as the baseline for many projects.
 
 ## Prerequisites
 
@@ -36,12 +32,13 @@ Note this command will compile and install libinjection to your **LIBRARY_PATH**
 ## Running the test suite
 
 Run the go tests:
+
 ```sh
 go test ./...
 go test -race ./...
 ```
 
-### Run the test suite against OWASP CRS:
+### Run the test suite against OWASP CRS
 
 You can run the testsuite using our OWASP CRS test docker image, it will run a Coraza instance using Caddy and [go-ftw](https://github.com/fzipi/go-ftw)
 
@@ -52,7 +49,6 @@ docker build . -t crs
 docker run crs -name crs
 ```
 
-
 ## Your first Coraza WAF project
 
 Make sure ``CGO_ENABLED=1`` env is set before compiling and all dependencies are met.
@@ -61,7 +57,7 @@ Make sure ``CGO_ENABLED=1`` env is set before compiling and all dependencies are
 package main
 import(
 	"fmt"
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine"github.com/jptosso/coraza-waf/v1"
 	"github.com/jptosso/coraza-waf/v1/seclang"
 )
 
@@ -93,8 +89,8 @@ Using the standard net/http library:
 ```go
 package main
 import(
-	"github.com/jptosso/coraza-waf/engine"
-	"github.com/jptosso/coraza-waf/seclang"
+	engine"github.com/jptosso/coraza-waf/v1"
+	"github.com/jptosso/coraza-waf/v1/seclang"
 	"net/http"
 )
 
@@ -123,37 +119,22 @@ In order to avoid issues while handling long buffers Coraza provides the engine.
 
 ```go
 func someHandler(waf *engine.Waf) http.Handler {
-  return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    tx := waf.NewTransaction()
-	tx.ProcessRequest(r)
-	if tx.Interruption != nil {
-		SomeErrorPage(w)
-	}
-	// We will use the Coraza response reader:
-	tx.ProcessResponseHeaders()
-	tx.ResponseBuffer.Write([]byte("Some of the response body"))
-	tx.ProcessResponseBody()
-	// We will dump the buffered response into the response writer:
-	io.Copy(w, tx.ResponseBuffer)
-  })
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tx := waf.NewTransaction()
+		tx.ProcessRequest(r)
+		if tx.Interruption != nil {
+			SomeErrorPage(w)
+		}
+		// We will use the Coraza response reader:
+		tx.ProcessResponseHeaders()
+		tx.ResponseBuffer.Write([]byte("Some of the response body"))
+		tx.ProcessResponseBody()
+		// We will dump the buffered response into the response writer:
+		io.Copy(w, tx.ResponseBuffer)
+	})
 }
+
 ```
-
-We can create our own implementation of [http.ResponseWriter](https://pkg.go.dev/net/http#ResponseWriter), see [examples/response_writer.go](#).
-
-## Using the embedded sandbox
-
-Coraza WAF repository contains a Sandbox package that can be used to test rules and the Core Ruleset.
-
-You may use the sandbox with the following command:
-
-```sh
-CGO_ENABLED=1 go run cmd/sandbox/main.go -port 8000 -crs ../coreruleset/rules
-```
-
-It will start the sandobox at [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
-
-Please note that Coraza Sandbox is not intended to face the public internet, if you do so you may get hacked. Future versions will contain settings to avoid unsafe operations like remote resources, command execution and lua.
 
 ## Compatibility status
 
@@ -186,7 +167,7 @@ We have currently achieved a 91% compatibility with OWASP CRS, some features are
 * Open Policy Agent package (OPA)
 * Online sandbox
 * HTTP/2 and HTTP/3 support
-* Enhanced rule profiling 
+* Enhanced rule profiling
 * Native antivirus integration (maybe)
 * Automatic coreruleset integration (download and setup) (maybe)
 * Enhanced data masking features
@@ -202,6 +183,11 @@ We have currently achieved a 91% compatibility with OWASP CRS, some features are
 * [Gin Middleware (Web Framework)](#) (soon)
 * [Buffalo Plugin (Web Framework)](#) (soon)
 
+## Some useful tools
+
+* [Go FTW](#): rule testing engine
+* [Coraza Sandbox](#): rule testing sandbox with web interface
+
 ## Troubleshooting
 
 ## How to contribute
@@ -215,7 +201,13 @@ egrep -Rin "TODO|FIXME" -R --exclude-dir=vendor *
 
 ## Useful links
 
-## Special thanks 
+## Special thanks
 
 * Modsecurity team for creating SecLang
 * OWASP Coreruleset team for the CRS and their feedback
+
+## About
+
+The name **Coraza** is trademarked, **Coraza** is a registered trademark of Juan Pablo Tosso.
+
+* Author on Twitter [@jptosso](https://twitter.com/jptosso)

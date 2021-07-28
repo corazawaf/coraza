@@ -15,7 +15,7 @@
 package actions
 
 import (
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 )
 
 func ActionsMap() map[string]engine.Action {

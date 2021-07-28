@@ -14,16 +14,14 @@
 
 package actions
 
-import (
-	"github.com/jptosso/coraza-waf/v1/engine"
-)
+import engine "github.com/jptosso/coraza-waf/v1"
 
 type MultiMatch struct {
 }
 
-func (a *MultiMatch) Init(r *engine.Rule, data string) string {
+func (a *MultiMatch) Init(r *engine.Rule, data string) error {
 	r.MultiMatch = true
-	return ""
+	return nil
 }
 
 func (a *MultiMatch) Evaluate(r *engine.Rule, tx *engine.Transaction) {

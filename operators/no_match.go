@@ -14,15 +14,14 @@
 
 package operators
 
-import (
-	"github.com/jptosso/coraza-waf/v1/engine"
-)
+import engine "github.com/jptosso/coraza-waf/v1"
 
 type NoMatch struct {
 }
 
-func (o *NoMatch) Init(data string) {
+func (o *NoMatch) Init(data string) error {
 	// No need to init
+	return nil
 }
 
 func (o *NoMatch) Evaluate(tx *engine.Transaction, value string) bool {

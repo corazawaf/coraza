@@ -15,13 +15,14 @@
 package operators
 
 import (
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 	"github.com/jptosso/coraza-waf/v1/utils"
 )
 
 type DetectXSS struct{}
 
-func (o *DetectXSS) Init(data string) {
+func (o *DetectXSS) Init(data string) error {
+	return nil
 }
 
 func (o *DetectXSS) Evaluate(tx *engine.Transaction, value string) bool {

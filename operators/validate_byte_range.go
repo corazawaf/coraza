@@ -21,14 +21,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 )
 
 type ValidateByteRange struct {
 	re *regexp.Regexp
 }
 
-func (o *ValidateByteRange) Init(data string) {
+func (o *ValidateByteRange) Init(data string) error {
 	ranges := strings.Split(data, ",")
 	spl := ranges
 	rega := []string{}
@@ -51,6 +51,7 @@ func (o *ValidateByteRange) Init(data string) {
 	rege := strings.Join(rega, "|")
 	//fmt.Println(rege)
 	o.re = regexp.MustCompile(rege)
+	return nil
 }
 
 func (o *ValidateByteRange) Evaluate(tx *engine.Transaction, data string) bool {

@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/antchfx/xmlquery"
-	"github.com/jptosso/coraza-waf/v1/engine/loggers"
+	"github.com/jptosso/coraza-waf/v1/loggers"
 	"github.com/jptosso/coraza-waf/v1/utils"
 	log "github.com/sirupsen/logrus"
 )
@@ -100,14 +100,11 @@ type Transaction struct {
 	RuleEngine               int
 	HashEngine               bool
 	HashEnforcement          bool
-	AuditLogType             int
-	LastPhase                int
+
+	LastPhase int
 
 	RequestBodyBuffer  *BodyBuffer
 	ResponseBodyBuffer *BodyBuffer
-
-	// Used to store known persistent collections VARIABLE:KEY
-	PersistentCollections map[byte]string
 
 	// Rules with this id are going to be skipped
 	RuleRemoveById []int
@@ -414,8 +411,12 @@ func (tx *Transaction) saveLog() error {
 
 // Save persistent collections to persistence engine
 func (tx *Transaction) savePersistentData() {
-	for v, key := range tx.PersistentCollections {
-		data := tx.GetCollection(v).GetData()
+	//TODO
+	pers := []byte{VARIABLE_SESSION, VARIABLE_IP}
+	for _, v := range pers {
+		col := tx.GetCollection(v)
+		data := col.GetData()
+		//key := col.PersistentKey
 		upc, _ := strconv.Atoi(data["UPDATE_COUNTER"][0])
 		upc++
 		ct, _ := strconv.ParseInt(data["CREATE_TIME"][0], 10, 64)
@@ -432,7 +433,7 @@ func (tx *Transaction) savePersistentData() {
 		// New version may have multiple collection types allowing us to identify this cases
 		data["TIMEOUT"] = []string{timeout}
 		data["LAST_UPDATE_TIME"] = []string{tss}
-		tx.Waf.Persistence.Save(v, key, data)
+		//tx.Waf.Persistence.Save(v, key, data)
 	}
 }
 
@@ -446,12 +447,6 @@ func (tx *Transaction) RemoveRuleTargetById(id int, col byte, key string) {
 	} else {
 		tx.RuleRemoveTargetById[id] = append(tx.RuleRemoveTargetById[id], c)
 	}
-}
-
-// Used by initcol to load a persistent collection and save it after the transaction
-// is finished
-func (tx *Transaction) RegisterPersistentCollection(collection string, pc *interface{}) {
-	//tx.PersistentCollections[collection] = pc
 }
 
 // ProcessRequest

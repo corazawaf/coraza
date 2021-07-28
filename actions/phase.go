@@ -15,14 +15,15 @@
 package actions
 
 import (
+	"fmt"
 	"strconv"
 
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 )
 
 type Phase struct{}
 
-func (a *Phase) Init(r *engine.Rule, data string) string {
+func (a *Phase) Init(r *engine.Rule, data string) error {
 	i, err := strconv.Atoi(data)
 	if data == "request" {
 		i = 2
@@ -31,10 +32,10 @@ func (a *Phase) Init(r *engine.Rule, data string) string {
 	} else if data == "logging" {
 		i = 5
 	} else if err != nil || i > 5 || i < 1 {
-		return "Invalid phase " + data
+		return fmt.Errorf("Invalid phase %s", data)
 	}
 	r.Phase = int(i)
-	return ""
+	return nil
 }
 
 func (a *Phase) Evaluate(r *engine.Rule, tx *engine.Transaction) {

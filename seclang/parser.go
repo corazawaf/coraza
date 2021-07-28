@@ -22,7 +22,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 	"github.com/jptosso/coraza-waf/v1/utils"
 	log "github.com/sirupsen/logrus"
 )

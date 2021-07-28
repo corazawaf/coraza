@@ -18,7 +18,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 	"github.com/jptosso/coraza-waf/v1/utils"
 )
 
@@ -26,7 +26,7 @@ type IpMatch struct {
 	subnets []*net.IPNet
 }
 
-func (o *IpMatch) Init(data string) {
+func (o *IpMatch) Init(data string) error {
 	o.subnets = []*net.IPNet{}
 	subnets := strings.Split(data, ",")
 	for _, sb := range subnets {
@@ -47,6 +47,7 @@ func (o *IpMatch) Init(data string) {
 		}
 		o.subnets = append(o.subnets, subnet)
 	}
+	return nil
 }
 
 func (o *IpMatch) Evaluate(tx *engine.Transaction, value string) bool {

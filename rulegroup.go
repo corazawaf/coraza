@@ -48,14 +48,6 @@ func (rg *RuleGroup) GetRules() []*Rule {
 	return rg.rules
 }
 
-func (rg *RuleGroup) Sort() {
-	// Apparently rules shouldn't be sorted
-	/*
-		sort.Slice(rg.rules, func(i, j int) bool {
-			return rg.rules[i].Id < rg.rules[j].Id
-		})*/
-}
-
 func (rg *RuleGroup) FindById(id int) *Rule {
 	for _, r := range rg.rules {
 		if r.Id == id {

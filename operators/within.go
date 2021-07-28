@@ -17,15 +17,16 @@ package operators
 import (
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 )
 
 type Within struct {
 	data string
 }
 
-func (o *Within) Init(data string) {
+func (o *Within) Init(data string) error {
 	o.data = data
+	return nil
 }
 
 func (o *Within) Evaluate(tx *engine.Transaction, value string) bool {

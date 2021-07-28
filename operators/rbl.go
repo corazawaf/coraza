@@ -19,16 +19,17 @@ import (
 	"net"
 	"time"
 
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 )
 
 type Rbl struct {
 	service string
 }
 
-func (o *Rbl) Init(data string) {
+func (o *Rbl) Init(data string) error {
 	o.service = data
 	//TODO validate hostname
+	return nil
 }
 
 //https://github.com/mrichman/godnsbl

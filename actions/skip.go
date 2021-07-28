@@ -15,9 +15,10 @@
 package actions
 
 import (
+	"fmt"
 	"strconv"
 
-	"github.com/jptosso/coraza-waf/v1/engine"
+	engine "github.com/jptosso/coraza-waf/v1"
 )
 
 //NOT IMPLEMENTED
@@ -25,13 +26,13 @@ type Skip struct {
 	data int
 }
 
-func (a *Skip) Init(r *engine.Rule, data string) string {
+func (a *Skip) Init(r *engine.Rule, data string) error {
 	i, err := strconv.Atoi(data)
 	if err != nil {
-		return "Invalid integer value"
+		return fmt.Errorf("Invalid integer value")
 	}
 	a.data = i
-	return ""
+	return nil
 }
 
 func (a *Skip) Evaluate(r *engine.Rule, tx *engine.Transaction) {
