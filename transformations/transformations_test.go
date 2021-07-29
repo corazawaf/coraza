@@ -35,7 +35,7 @@ type Test struct {
 
 //https://github.com/SpiderLabs/secrules-language-tests/
 func TestTransformations(t *testing.T) {
-	root := "../../test/data/transformations/"
+	root := "../test/data/transformations/"
 	files := [][]byte{}
 	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if strings.HasSuffix(path, ".json") {
