@@ -22,8 +22,8 @@ import (
 	"regexp"
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf/v1"
-	"github.com/jptosso/coraza-waf/v1/utils"
+	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/utils"
 	log "github.com/sirupsen/logrus"
 )
 

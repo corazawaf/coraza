@@ -21,9 +21,9 @@ import (
 	"strconv"
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf/v1"
-	"github.com/jptosso/coraza-waf/v1/utils"
-	regex "github.com/jptosso/coraza-waf/v1/utils/regex"
+	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/utils"
+	regex "github.com/jptosso/coraza-waf/utils/regex"
 	log "github.com/sirupsen/logrus"
 )
 

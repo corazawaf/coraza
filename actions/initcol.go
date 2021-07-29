@@ -17,7 +17,7 @@ package actions
 import (
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf/v1"
+	engine "github.com/jptosso/coraza-waf"
 )
 
 // Initializes a persistent collection and add the data to the standard collections engine.

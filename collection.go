@@ -17,8 +17,8 @@ package engine
 import (
 	"strconv"
 
-	"github.com/jptosso/coraza-waf/v1/utils"
-	regex "github.com/jptosso/coraza-waf/v1/utils/regex"
+	"github.com/jptosso/coraza-waf/utils"
+	regex "github.com/jptosso/coraza-waf/utils/regex"
 )
 
 type Collection struct {

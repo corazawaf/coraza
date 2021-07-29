@@ -14,7 +14,7 @@
 
 package transformations
 
-import "github.com/jptosso/coraza-waf/v1/utils"
+import "github.com/jptosso/coraza-waf/utils"
 
 func CompressWhitespace(value string, tools *Tools) string {
 	a := []byte{}

@@ -21,9 +21,9 @@ import (
 	"reflect"
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf/v1"
-	"github.com/jptosso/coraza-waf/v1/seclang"
-	"github.com/jptosso/coraza-waf/v1/utils"
+	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/seclang"
+	"github.com/jptosso/coraza-waf/utils"
 	"gopkg.in/yaml.v2"
 	//"time"
 )

@@ -15,7 +15,7 @@
 package transformations
 
 import (
-	"github.com/jptosso/coraza-waf/v1/utils"
+	"github.com/jptosso/coraza-waf/utils"
 )
 
 func CssDecode(data string, utils *Tools) string {

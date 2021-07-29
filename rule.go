@@ -18,8 +18,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v1/transformations"
-	"github.com/jptosso/coraza-waf/v1/utils/regex"
+	"github.com/jptosso/coraza-waf/transformations"
+	"github.com/jptosso/coraza-waf/utils/regex"
 	log "github.com/sirupsen/logrus"
 )
 

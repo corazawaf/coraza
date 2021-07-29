@@ -15,8 +15,8 @@
 package operators
 
 import (
-	engine "github.com/jptosso/coraza-waf/v1"
-	regex "github.com/jptosso/coraza-waf/v1/utils/regex"
+	engine "github.com/jptosso/coraza-waf"
+	regex "github.com/jptosso/coraza-waf/utils/regex"
 )
 
 type Rx struct {

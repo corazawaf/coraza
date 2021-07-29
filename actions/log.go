@@ -14,7 +14,7 @@
 
 package actions
 
-import engine "github.com/jptosso/coraza-waf/v1"
+import engine "github.com/jptosso/coraza-waf"
 
 type Log struct {
 }

@@ -21,10 +21,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jptosso/coraza-waf/v1/loggers"
-	"github.com/jptosso/coraza-waf/v1/persistence"
-	"github.com/jptosso/coraza-waf/v1/utils"
-	regex "github.com/jptosso/coraza-waf/v1/utils/regex"
+	"github.com/jptosso/coraza-waf/loggers"
+	"github.com/jptosso/coraza-waf/persistence"
+	"github.com/jptosso/coraza-waf/utils"
+	regex "github.com/jptosso/coraza-waf/utils/regex"
 	"github.com/oschwald/geoip2-golang"
 )
 

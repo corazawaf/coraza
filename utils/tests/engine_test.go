@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"testing"
 
-	engine "github.com/jptosso/coraza-waf/v1"
+	engine "github.com/jptosso/coraza-waf"
 )
 
 func TestEngine(t *testing.T) {

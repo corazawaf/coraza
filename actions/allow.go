@@ -17,7 +17,7 @@ package actions
 import (
 	"fmt"
 
-	engine "github.com/jptosso/coraza-waf/v1"
+	engine "github.com/jptosso/coraza-waf"
 )
 
 //0 nothing, 1 phase, 2 request

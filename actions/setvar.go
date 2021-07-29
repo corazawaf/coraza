@@ -19,7 +19,7 @@ import (
 	"strconv"
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf/v1"
+	engine "github.com/jptosso/coraza-waf"
 )
 
 type Setvar struct {

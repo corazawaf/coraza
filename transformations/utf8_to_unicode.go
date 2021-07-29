@@ -17,7 +17,7 @@ package transformations
 import (
 	"fmt"
 
-	"github.com/jptosso/coraza-waf/v1/utils"
+	"github.com/jptosso/coraza-waf/utils"
 )
 
 const (

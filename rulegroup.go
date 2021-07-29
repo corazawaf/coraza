@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jptosso/coraza-waf/v1/utils"
+	"github.com/jptosso/coraza-waf/utils"
 )
 
 type RuleGroup struct {

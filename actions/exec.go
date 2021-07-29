@@ -17,8 +17,8 @@ package actions
 import (
 	"fmt"
 
-	engine "github.com/jptosso/coraza-waf/v1"
-	"github.com/jptosso/coraza-waf/v1/utils"
+	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/utils"
 )
 
 type Exec struct {
