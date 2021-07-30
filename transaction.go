@@ -409,14 +409,17 @@ func (tx *Transaction) saveLog() error {
 	return nil
 }
 
-// Save persistent collections to persistence engine
+// SavePersistentData save persistent collections to persistence engine
 func (tx *Transaction) savePersistentData() {
 	//TODO
 	pers := []byte{VARIABLE_SESSION, VARIABLE_IP}
 	for _, v := range pers {
 		col := tx.GetCollection(v)
+		if col.PersistenceKey != "" {
+			continue
+		}
 		data := col.GetData()
-		//key := col.PersistentKey
+		//key := col.PersistenceKey
 		upc, _ := strconv.Atoi(data["UPDATE_COUNTER"][0])
 		upc++
 		ct, _ := strconv.ParseInt(data["CREATE_TIME"][0], 10, 64)
@@ -768,7 +771,7 @@ func (tx *Transaction) ProcessLogging() {
 	if tx.RuleEngine == RULE_ENGINE_OFF {
 		return
 	}
-	//tx.savePersistentData()
+	defer tx.savePersistentData()
 
 	tx.Waf.Rules.Evaluate(5, tx)
 

@@ -48,7 +48,7 @@ func (p *Parser) FromFile(profilePath string) error {
 		return errors.New("invalid profile path")
 	}
 	p.configfile = profilePath
-	p.configdir = filepath.Dir(profilePath) + "/"
+	p.configdir = filepath.Dir(profilePath)
 	file, err := utils.OpenFile(profilePath)
 	if err != nil {
 		p.log("Cannot open profile path " + profilePath)
@@ -185,7 +185,7 @@ func (p *Parser) evaluate(data string) error {
 func (p *Parser) ParseRule(data string, withOperator bool) (*engine.Rule, error) {
 	var err error
 	rp := NewRuleParser()
-	rp.Configdir = p.Waf.Datapath
+	rp.Configdir = p.configdir
 
 	for _, da := range p.defaultActions {
 		err = rp.ParseDefaultActions(da)

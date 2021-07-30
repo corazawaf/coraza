@@ -78,6 +78,12 @@ type Rule struct {
 	HasChain                bool
 	AlwaysMatch             bool
 
+	// Where is this rule stored
+	File string
+
+	// Line of the file where this rule was found
+	Line int
+
 	//METADATA
 	// Rule unique sorted identifier
 	Id int

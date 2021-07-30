@@ -22,9 +22,9 @@ import (
 )
 
 type Collection struct {
-	data map[string][]string
-	name string
-	//PersistentKey string // for persistent collections
+	data           map[string][]string
+	name           string
+	PersistenceKey string // for persistent collections
 }
 
 func (c *Collection) Init(name string) {

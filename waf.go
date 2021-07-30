@@ -68,9 +68,6 @@ type Waf struct {
 	// Audit logger engine
 	loggers []loggers.Logger
 
-	// Absolute path where rules are going to look for data files or scripts
-	Datapath string
-
 	// Audit mode status
 	AuditEngine int
 
@@ -134,7 +131,7 @@ type Waf struct {
 	// Sensor ID tu, must be unique per cluster nodes
 	SensorId string
 
-	// Path to store data files
+	// Path to store data files (ej cache)
 	DataDir string
 
 	UploadKeepFiles         bool

@@ -36,7 +36,7 @@ func (o *PmFromFile) Init(data string) error {
 	b, err := utils.OpenFile(data)
 	content := string(b)
 	if err != nil {
-		return fmt.Errorf("Error parsing path %s", data)
+		return fmt.Errorf("error reading path %s", data)
 	}
 	sp := strings.Split(string(content), "\n")
 	for _, l := range sp {
