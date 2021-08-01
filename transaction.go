@@ -411,15 +411,13 @@ func (tx *Transaction) saveLog() error {
 
 // SavePersistentData save persistent collections to persistence engine
 func (tx *Transaction) savePersistentData() {
-	//TODO
-	pers := []byte{VARIABLE_SESSION, VARIABLE_IP}
+	//TODO, disabled by now, maybe we should add persistent variables to the
+	// collection struct, something like col.Persist("key")
+	//pers := []byte{VARIABLE_SESSION, VARIABLE_IP}
+	pers := []byte{}
 	for _, v := range pers {
 		col := tx.GetCollection(v)
-		if col == nil {
-			//TODO remove, this shouldnt happen but it is happening
-			continue
-		}
-		if col.PersistenceKey != "" {
+		if col == nil || col.PersistenceKey != "" {
 			continue
 		}
 		data := col.GetData()
