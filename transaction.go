@@ -415,6 +415,10 @@ func (tx *Transaction) savePersistentData() {
 	pers := []byte{VARIABLE_SESSION, VARIABLE_IP}
 	for _, v := range pers {
 		col := tx.GetCollection(v)
+		if col == nil {
+			//TODO remove, this shouldnt happen but it is happening
+			continue
+		}
 		if col.PersistenceKey != "" {
 			continue
 		}
