@@ -115,7 +115,7 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 			tx.RuleEngine = engine.RULE_ENGINE_OFF
 		case "on":
 			tx.RuleEngine = engine.RULE_ENGINE_ON
-		case "detectonly":
+		case "detectiononly":
 			tx.RuleEngine = engine.RULE_ENGINE_DETECTONLY
 		}
 	case CTL_RULE_REMOVE_BY_ID:

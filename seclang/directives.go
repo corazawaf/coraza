@@ -92,7 +92,7 @@ func directiveSecRuleEngine(p *Parser, opts string) error {
 		p.Waf.RuleEngine = engine.RULE_ENGINE_ON
 	case "off":
 		p.Waf.RuleEngine = engine.RULE_ENGINE_OFF
-	case "detectonly":
+	case "detectiononly":
 		p.Waf.RuleEngine = engine.RULE_ENGINE_DETECTONLY
 	default:
 		return errors.New("invalid SecRuleEngine argument")

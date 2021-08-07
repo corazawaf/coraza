@@ -492,6 +492,7 @@ func (tx *Transaction) ProcessRequest(req *http.Request) (*Interruption, error) 
 	if err != nil {
 		return tx.Interruption, err
 	}
+	req.Body = io.NopCloser(tx.RequestBodyBuffer.Reader())
 	return tx.ProcessRequestBody()
 }
 
