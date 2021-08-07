@@ -52,7 +52,7 @@ func Test_directiveSecAuditLog(t *testing.T) {
 	if w.SensorId != "test" {
 		t.Error("failed to set SecSensorId")
 	}
-	p.FromString("SecRuleEngine DetectOnly")
+	p.FromString("SecRuleEngine DetectionOnly")
 	if w.RuleEngine != engine.RULE_ENGINE_DETECTONLY {
 		t.Error("failed to set SecRuleEngine")
 	}
