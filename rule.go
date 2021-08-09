@@ -16,11 +16,10 @@ package engine
 
 import (
 	"strconv"
-	"strings"
 
 	"github.com/jptosso/coraza-waf/transformations"
 	"github.com/jptosso/coraza-waf/utils/regex"
-	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 )
 
 const (
@@ -141,6 +140,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 	}
 	tools := &transformations.Tools{
 		Unicode: tx.Waf.Unicode,
+		Logger:  tx.Waf.Logger,
 	}
 
 	ecol := tx.GetRemovedTargets(r.Id)
@@ -183,7 +183,10 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 			// TODO should we run the operators here?
 			continue
 		}
-		log.Debug("Arguments expanded: " + strconv.Itoa(len(values)))
+		tx.Waf.Logger.Debug("Arguments expanded",
+			zap.String("tx", tx.Id),
+			zap.Int("count", len(values)),
+		)
 		for _, arg := range values {
 			var args []string
 			if r.MultiMatch {
@@ -193,7 +196,11 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 			} else {
 				args = []string{r.executeTransformations(arg.Value, tools)}
 			}
-			log.Debug("Transformed arguments: " + strings.Join(args, ", "))
+			tx.Waf.Logger.Debug("arguments transformed",
+				zap.String("tx", tx.Id),
+				zap.Strings("arguments", args),
+			)
+
 			for _, carg := range args {
 				if r.executeOperator(carg, tx) {
 					matchedValues = append(matchedValues, &MatchData{

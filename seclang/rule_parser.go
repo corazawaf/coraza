@@ -16,6 +16,8 @@ package seclang
 
 import (
 	"errors"
+	"fmt"
+	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -120,6 +122,9 @@ func (p *RuleParser) ParseOperator(operator string) error {
 		for _, fo := range fileops {
 			if fo == op {
 				p.rule.Operator.Data = path.Join(p.Configdir, p.rule.Operator.Data)
+				if _, err := os.Stat(p.rule.Operator.Data); errors.Is(err, os.ErrNotExist) {
+					return fmt.Errorf("cannot find file %s", p.rule.Operator.Data)
+				}
 			}
 		}
 		err := p.rule.Operator.Operator.Init(p.rule.Operator.Data)
@@ -131,9 +136,11 @@ func (p *RuleParser) ParseOperator(operator string) error {
 }
 
 func (p *RuleParser) ParseDefaultActions(actions string) error {
-	act, _ := ParseActions(actions)
+	act, err := ParseActions(actions)
+	if err != nil {
+		return err
+	}
 	phase := 0
-	var err error
 	defaultDisruptive := ""
 	for _, action := range act {
 		if action.Key == "phase" {
@@ -249,6 +256,9 @@ func ParseActions(actions string) ([]ruleAction, error) {
 		}
 		if i+1 == len(actions) {
 			f := actionsmod.ActionsMap()[ckey]
+			if f == nil {
+				return nil, fmt.Errorf("invalid action %s", ckey)
+			}
 			res = append(res, ruleAction{
 				Key:   ckey,
 				Value: cval,

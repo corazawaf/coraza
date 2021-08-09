@@ -14,10 +14,14 @@
 
 package transformations
 
-import "github.com/jptosso/coraza-waf/utils"
+import (
+	"github.com/jptosso/coraza-waf/utils"
+	"go.uber.org/zap"
+)
 
 type Tools struct {
 	Unicode *utils.Unicode
+	Logger  *zap.Logger
 }
 
 type Transformation = func(input string, tools *Tools) string

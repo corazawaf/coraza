@@ -24,7 +24,7 @@ import (
 
 	engine "github.com/jptosso/coraza-waf"
 	"github.com/jptosso/coraza-waf/utils"
-	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 )
 
 // Parser provides functions to evaluate (compile) SecLang directives
@@ -45,19 +45,26 @@ type Parser struct {
 // or arguments are invalid
 func (p *Parser) FromFile(profilePath string) error {
 	if !utils.FileExists(profilePath) {
+		p.Waf.Logger.Error("cannot read configurations file",
+			zap.String("path", profilePath),
+		)
 		return errors.New("invalid profile path")
 	}
 	p.configfile = profilePath
 	p.configdir = filepath.Dir(profilePath)
 	file, err := utils.OpenFile(profilePath)
 	if err != nil {
-		p.log("Cannot open profile path " + profilePath)
+		p.Waf.Logger.Error(err.Error(),
+			zap.String("path", profilePath),
+		)
 		return err
 	}
 
 	err = p.FromString(string(file))
 	if err != nil {
-		log.Error("Cannot parse configurations")
+		p.Waf.Logger.Error(err.Error(),
+			zap.String("path", profilePath),
+		)
 		return err
 	}
 	//TODO validar el error de scanner.Err()
@@ -99,7 +106,9 @@ func (p *Parser) evaluate(data string) error {
 	if len(spl) == 2 {
 		opts = spl[1]
 	}
-	log.Debug("Parsing directive: " + data)
+	p.Waf.Logger.Debug("parsing directive",
+		zap.String("directive", data),
+	)
 	directive := spl[0]
 
 	if len(opts) >= 3 && opts[0] == '"' && opts[len(opts)-1] == '"' {
@@ -261,7 +270,9 @@ func (p *Parser) AddDefaultActions(data string) error {
 
 func (p *Parser) log(msg string) error {
 	msg = fmt.Sprintf("[Parser] [Line %d] %s", p.currentLine, msg)
-	log.Error(msg)
+	p.Waf.Logger.Error(msg,
+		zap.Int("line", p.currentLine),
+	)
 	return errors.New(msg)
 }
 

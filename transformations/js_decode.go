@@ -58,9 +58,9 @@ func doJsDecode(input string) string {
 				j := 0
 
 				for (i+1+j < input_len) && (j < 3) {
-					buf[j] = input[i+1+j]
+					buf[j] = input[i+j]
 					j++
-					if !isodigit(input[i+1+j]) {
+					if !isodigit(input[i+j]) {
 						break
 					}
 				}

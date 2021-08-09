@@ -25,8 +25,6 @@ import (
 	"strconv"
 	"sync"
 	"time"
-
-	"github.com/sirupsen/logrus"
 )
 
 type ConcurrentLogger struct {
@@ -83,7 +81,7 @@ func (l *ConcurrentLogger) Write(al *AuditLog) {
 		"-", filepath, 0, 0 /*request length*/)
 	err := os.MkdirAll(logdir, l.dirMode)
 	if err != nil {
-		logrus.Error("Failed to create concurrent audit path")
+		//logrus.Error("Failed to create concurrent audit path")
 		return
 	}
 

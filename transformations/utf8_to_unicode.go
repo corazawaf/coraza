@@ -64,7 +64,7 @@ func Utf8ToUnicode(str string, tools *Tools) string {
 			if bytes_left < 2 {
 				/* check second byte starts with binary 10 */
 				unicode_len = UNICODE_ERROR_CHARACTERS_MISSING
-			} else if (utf[1] & 0xC0) != 0x80 {
+			} else if len(utf) > 1 && (utf[1]&0xC0) != 0x80 {
 				unicode_len = UNICODE_ERROR_INVALID_ENCODING
 			} else {
 				unicode_len = 2
@@ -72,7 +72,10 @@ func Utf8ToUnicode(str string, tools *Tools) string {
 				if count <= length {
 					l := 0
 					/* compute character number */
-					d = int(((c & 0x1F) << 6) | (utf[1] & 0x3F))
+					d = int(((c & 0x1F) << 6))
+					if len(utf) > 1 {
+						d |= int(utf[1] & 0x3F)
+					}
 					data[datai] = '%'
 					datai++
 					data[datai] = 'u'
@@ -116,10 +119,10 @@ func Utf8ToUnicode(str string, tools *Tools) string {
 			if bytes_left < 3 {
 				/* check second byte starts with binary 10 */
 				unicode_len = UNICODE_ERROR_CHARACTERS_MISSING
-			} else if ((utf[1]) & 0xC0) != 0x80 {
+			} else if len(utf) > 1 && ((utf[1])&0xC0) != 0x80 {
 				/* check third byte starts with binary 10 */
 				unicode_len = UNICODE_ERROR_INVALID_ENCODING
-			} else if ((utf[2]) & 0xC0) != 0x80 {
+			} else if len(utf) > 2 && ((utf[2])&0xC0) != 0x80 {
 				unicode_len = UNICODE_ERROR_INVALID_ENCODING
 			} else {
 				unicode_len = 3
@@ -127,7 +130,14 @@ func Utf8ToUnicode(str string, tools *Tools) string {
 				if count <= length {
 					l := 0
 					/* compute character number */
-					d = int(((c & 0x0F) << 12) | ((utf[1] & 0x3F) << 6) | (utf[2] & 0x3F))
+					lut := len(utf)
+					d = int(c & 0x0F << 2)
+					if lut > 1 {
+						d |= int(((utf[1] & 0x3F) << 6))
+					}
+					if lut > 2 {
+						d |= int(utf[2] & 0x3F)
+					}
 					data[datai] = '%'
 					datai++
 					data[datai] = 'u'

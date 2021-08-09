@@ -24,7 +24,7 @@ import (
 	engine "github.com/jptosso/coraza-waf"
 	"github.com/jptosso/coraza-waf/utils"
 	regex "github.com/jptosso/coraza-waf/utils/regex"
-	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 )
 
 type Directive = func(p *Parser, opts string) error
@@ -35,16 +35,12 @@ func directiveSecComponentSignature(p *Parser, opts string) error {
 }
 
 func directiveSecMarker(p *Parser, opts string) error {
-	rule, err := p.ParseRule(`"id:1, pass, nolog"`, false)
-	if err != nil {
-		p.log("Error creating secmarker rule")
-		return err
-	}
+	rule, _ := p.ParseRule(`"id:1, pass, nolog"`, false)
 	rule.SecMark = opts
 	rule.Id = 0
 	rule.Phase = 0
 	p.Waf.Rules.Add(rule)
-	log.Debug("Added special secmarker rule")
+	p.Waf.Logger.Debug("added secmark rule")
 	return nil
 }
 
@@ -55,7 +51,9 @@ func directiveSecAction(p *Parser, opts string) error {
 		return err
 	}
 	p.Waf.Rules.Add(rule)
-	log.Debug("Added special secaction rule")
+	p.Waf.Logger.Debug("Added SecAction",
+		zap.String("rule", opts),
+	)
 	return nil
 }
 

@@ -29,7 +29,6 @@ import (
 	"github.com/antchfx/xmlquery"
 	"github.com/jptosso/coraza-waf/loggers"
 	"github.com/jptosso/coraza-waf/utils"
-	log "github.com/sirupsen/logrus"
 )
 
 type Interruption struct {
@@ -159,10 +158,8 @@ func (tx *Transaction) MacroExpansion(data string) string {
 		expansion := collection.Get(strings.ToLower(key))
 		if len(expansion) == 0 {
 			data = strings.ReplaceAll(data, v, "")
-			log.Debug("Failed to expand " + match)
 		} else {
 			data = strings.ReplaceAll(data, v, expansion[0])
-			log.Debug(fmt.Sprintf("Expanding %%{%s} to %s", match, expansion[0]))
 		}
 	}
 
@@ -351,7 +348,6 @@ func (tx *Transaction) GetField(rv RuleVariable, exceptions []string) []*MatchDa
 		}
 		data, err := xmlquery.QueryAll(tx.XmlDoc, key)
 		if err != nil {
-			log.Error("Invalid xpath expression " + key)
 			return []*MatchData{}
 		}
 		res := []*MatchData{}

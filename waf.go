@@ -26,6 +26,7 @@ import (
 	"github.com/jptosso/coraza-waf/utils"
 	regex "github.com/jptosso/coraza-waf/utils/regex"
 	"github.com/oschwald/geoip2-golang"
+	"go.uber.org/zap"
 )
 
 const (
@@ -33,19 +34,9 @@ const (
 	CONN_ENGINE_ON         = 1
 	CONN_ENGINE_DETECTONLY = 2
 
-	AUDIT_LOG_CONCURRENT = 0
-	AUDIT_LOG_HTTPS      = 1
-	AUDIT_LOG_SCRIPT     = 2
-
 	AUDIT_LOG_ENABLED  = 0
 	AUDIT_LOG_DISABLED = 1
 	AUDIT_LOG_RELEVANT = 2
-
-	ERROR_PAGE_DEFAULT = 0
-	ERROR_PAGE_SCRIPT  = 1
-	ERROR_PAGE_FILE    = 2
-	ERROR_PAGE_INLINE  = 3
-	ERROR_PAGE_DEBUG   = 4
 
 	REQUEST_BODY_PROCESSOR_DEFAULT    = 0
 	REQUEST_BODY_PROCESSOR_URLENCODED = 1
@@ -148,6 +139,8 @@ type Waf struct {
 	RequestBodyLimitAction int
 
 	ArgumentSeparator string
+
+	Logger *zap.Logger
 }
 
 // Initializes Geoip2 database
@@ -234,6 +227,10 @@ func (w *Waf) Loggers() []loggers.Logger {
 // NewWaf creates a new WAF instance with default variables
 func NewWaf() *Waf {
 	//default: us-ascii
+	logger, err := zap.NewProduction()
+	if err != nil {
+		panic(err)
+	}
 	waf := &Waf{
 		ArgumentSeparator:        "&",
 		AuditEngine:              AUDIT_LOG_DISABLED,
@@ -249,6 +246,8 @@ func NewWaf() *Waf {
 		Rules:                    NewRuleGroup(),
 		TmpDir:                   "/tmp",
 		CollectionTimeout:        3600,
+		Logger:                   logger,
 	}
+	logger.Info("a new waf instance was created")
 	return waf
 }

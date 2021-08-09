@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/jptosso/coraza-waf/utils"
+	"go.uber.org/zap"
 )
 
 type RuleGroup struct {
@@ -35,6 +36,7 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 		// this is an ugly solution but chains should not return rules
 		return nil
 	}
+
 	if rg.FindById(rule.Id) != nil && rule.Id != 0 {
 		return fmt.Errorf("there is a another rule with id %d", rule.Id)
 	}
@@ -98,6 +100,10 @@ func (rg *RuleGroup) Clear() {
 // Execute rules for the specified phase, between 1 and 5
 // Returns true if transaction is disrupted
 func (rg *RuleGroup) Evaluate(phase int, tx *Transaction) bool {
+	tx.Waf.Logger.Debug("transaction evaluated",
+		zap.String("id", tx.Id),
+		zap.Int("phase", phase),
+	)
 	tx.LastPhase = phase
 	ts := time.Now().UnixNano()
 	usedRules := 0
