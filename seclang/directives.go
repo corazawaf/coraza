@@ -353,6 +353,28 @@ func directiveSecUnicodeMap(p *Parser, opts string) error {
 	return err
 }
 
+func directiveSecDebugLog(p *Parser, opts string) error {
+	cfg := zap.NewProductionConfig()
+	cfg.OutputPaths = []string{
+		opts,
+	}
+	cfg.Level = p.Waf.LoggerAtomicLevel
+	logger, err := cfg.Build()
+	if err != nil {
+		return err
+	}
+	p.Waf.Logger = logger
+	return nil
+}
+
+func directiveSecDebugLogLevel(p *Parser, opts string) error {
+	lvl, err := strconv.Atoi(opts)
+	if err != nil {
+		return err
+	}
+	return p.Waf.SetLogLevel(lvl)
+}
+
 func parseBoolean(data string) bool {
 	data = strings.ToLower(data)
 	return data == "on"

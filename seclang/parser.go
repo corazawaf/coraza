@@ -167,6 +167,8 @@ func (p *Parser) evaluate(data string) error {
 		"SecAuditEngine":                directiveSecAuditEngine,
 		"SecAction":                     directiveSecAction,
 		"SecUnicodeMap":                 directiveSecUnicodeMap,
+		"SecDebugLog":                   directiveSecDebugLog,
+		"SecDebugLogLevel":              directiveSecDebugLogLevel,
 
 		//Unsupported Directives
 		"SecAuditLogType":            directiveUnsupported,

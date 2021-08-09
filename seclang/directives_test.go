@@ -15,9 +15,12 @@
 package seclang
 
 import (
+	"io/ioutil"
+	"strings"
 	"testing"
 
 	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/utils"
 )
 
 func Test_directiveSecAuditLog(t *testing.T) {
@@ -116,4 +119,31 @@ func Test_directiveSecAuditLog(t *testing.T) {
 	//"SecAuditLogParts":              directiveSecAuditLogParts,
 	//"SecAuditLog":                   directiveSecAuditLog,
 	//"SecAuditEngine":                directiveSecAuditEngine,
+}
+
+func TestDebugDirectives(t *testing.T) {
+	waf := engine.NewWaf()
+	tmpf, _ := ioutil.TempFile("/tmp", "*.log")
+	tmp := tmpf.Name()
+	p, _ := NewParser(waf)
+	err := directiveSecDebugLog(p, tmp)
+	if err != nil {
+		t.Error(err)
+	}
+	p.Waf.Logger.Info("abc123")
+	data, _ := utils.OpenFile(tmp)
+	if !strings.Contains(string(data), "abc123") {
+		t.Error("failed to write info log")
+	}
+	p.Waf.Logger.Debug("efgh123")
+	data, _ = utils.OpenFile(tmp)
+	if strings.Contains(string(data), "efgh123") {
+		t.Error("debug data shouldn't be written")
+	}
+	p.Waf.SetLogLevel(5)
+	p.Waf.Logger.Debug("efgh123")
+	data, _ = utils.OpenFile(tmp)
+	if !strings.Contains(string(data), "efgh123") {
+		t.Error("debug data wasn't writen")
+	}
 }

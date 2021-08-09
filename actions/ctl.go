@@ -48,6 +48,7 @@ const (
 	CTL_REQUEST_BODY_PROCESSOR = 14
 	CTL_RESPONSE_BODY_ACCESS   = 15
 	CTL_RESPONSE_BODY_LIMIT    = 16
+	CTL_DEBUG_LOG_LEVEL        = 17
 )
 
 func (a *Ctl) Init(r *engine.Rule, data string) error {
@@ -156,6 +157,10 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 		break
 	case CTL_HASH_ENFORCEMENT:
 		// Not supported yet
+		break
+	case CTL_DEBUG_LOG_LEVEL:
+		lvl, _ := strconv.Atoi(a.Value)
+		tx.Waf.SetLogLevel(lvl)
 		break
 	}
 

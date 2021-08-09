@@ -16,7 +16,9 @@ package engine
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -27,6 +29,7 @@ import (
 	regex "github.com/jptosso/coraza-waf/utils/regex"
 	"github.com/oschwald/geoip2-golang"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -140,7 +143,8 @@ type Waf struct {
 
 	ArgumentSeparator string
 
-	Logger *zap.Logger
+	Logger            *zap.Logger
+	LoggerAtomicLevel zap.AtomicLevel
 }
 
 // Initializes Geoip2 database
@@ -227,10 +231,14 @@ func (w *Waf) Loggers() []loggers.Logger {
 // NewWaf creates a new WAF instance with default variables
 func NewWaf() *Waf {
 	//default: us-ascii
-	logger, err := zap.NewProduction()
-	if err != nil {
-		panic(err)
-	}
+	atom := zap.NewAtomicLevel()
+	atom.SetLevel(zap.InfoLevel)
+	encoderCfg := zap.NewProductionEncoderConfig()
+	logger := zap.New(zapcore.NewCore(
+		zapcore.NewJSONEncoder(encoderCfg),
+		zapcore.Lock(os.Stdout),
+		atom,
+	))
 	waf := &Waf{
 		ArgumentSeparator:        "&",
 		AuditEngine:              AUDIT_LOG_DISABLED,
@@ -247,7 +255,31 @@ func NewWaf() *Waf {
 		TmpDir:                   "/tmp",
 		CollectionTimeout:        3600,
 		Logger:                   logger,
+		LoggerAtomicLevel:        atom,
 	}
 	logger.Info("a new waf instance was created")
 	return waf
+}
+
+func (w *Waf) SetLogLevel(lvl int) error {
+	//setlevel is not concurrent friendly
+	w.mux.Lock()
+	defer w.mux.Unlock()
+	switch lvl {
+	case 0:
+		w.LoggerAtomicLevel.SetLevel(zapcore.FatalLevel)
+	case 1:
+		w.LoggerAtomicLevel.SetLevel(zapcore.PanicLevel)
+	case 2:
+		w.LoggerAtomicLevel.SetLevel(zapcore.ErrorLevel)
+	case 3:
+		w.LoggerAtomicLevel.SetLevel(zapcore.WarnLevel)
+	case 4:
+		w.LoggerAtomicLevel.SetLevel(zapcore.InfoLevel)
+	case 5:
+		w.LoggerAtomicLevel.SetLevel(zapcore.DebugLevel)
+	default:
+		return fmt.Errorf("invalid SecDebugLogLevel value")
+	}
+	return nil
 }

@@ -178,7 +178,7 @@ We have currently achieved a 91% compatibility with OWASP CRS, some features are
 
 ## Coraza WAF implementations
 
-* [Caddy Plugin (Reverse Proxy and Web Server)](https://github.com/jptosso/coraza-caddy)
+* [Caddy Plugin (Reverse Proxy and Web Server)](https://github.com/jptosso/coraza-caddy) (Stable)
 * [Traefik Plugin (Reverse Proxy and Web Server)](#) (soon)
 * [Gin Middleware (Web Framework)](#) (soon)
 * [Buffalo Plugin (Web Framework)](#) (soon)
