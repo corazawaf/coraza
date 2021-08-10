@@ -399,7 +399,9 @@ func (tx *Transaction) ToAuditJson() []byte {
 
 func (tx *Transaction) saveLog() error {
 	for _, l := range tx.Waf.AuditLoggers() {
-		l.Write(tx.AuditLog())
+		if err := l.Write(tx.AuditLog()); err != nil {
+			tx.Waf.Logger.Error(err.Error())
+		}
 	}
 
 	return nil
@@ -868,17 +870,17 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 					Actionset: "",
 					Message:   "",
 					Data: &loggers.AuditMessageData{
-						File: "",
-						Line: 0,
-						Id:   r.Id,
-						Rev:  r.Rev,
-						Msg:  tx.MacroExpansion(r.Msg),
-						Data: "",
-						//Severity: r.Severity,
-						//Ver: r.Ver,
-						//Maturity: r.Maturity,
-						//Accuracy: r.Accuracy,
-						Tags: r.Tags,
+						File:     "",
+						Line:     0,
+						Id:       r.Id,
+						Rev:      r.Rev,
+						Msg:      tx.MacroExpansion(r.Msg),
+						Data:     "",
+						Severity: r.Severity,
+						Ver:      r.Version,
+						Maturity: r.Maturity,
+						Accuracy: r.Accuracy,
+						Tags:     r.Tags,
 					},
 				})
 			}

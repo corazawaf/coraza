@@ -14,13 +14,21 @@
 
 package actions
 
-import engine "github.com/jptosso/coraza-waf"
+import (
+	"strconv"
+
+	engine "github.com/jptosso/coraza-waf"
+)
 
 type Maturity struct {
 }
 
 func (a *Maturity) Init(r *engine.Rule, data string) error {
-	r.Maturity = data
+	m, err := strconv.Atoi(data)
+	if err != nil {
+		return err
+	}
+	r.Maturity = m
 	return nil
 }
 

@@ -14,19 +14,27 @@
 
 package actions
 
-import engine "github.com/jptosso/coraza-waf"
+import (
+	"fmt"
+
+	engine "github.com/jptosso/coraza-waf"
+)
 
 type Severity struct {
 }
 
 func (a *Severity) Init(r *engine.Rule, data string) error {
 	l := []string{"EMERGENCY", "ALERT", "CRITICAL", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG"}
-	for _, val := range l {
+	s := -1
+	for i, val := range l {
 		if val == data {
-			//r.Severity = i
+			s = i
 		}
 	}
-	r.Severity = data
+	if s == -1 {
+		return fmt.Errorf("invalid severity %s", data)
+	}
+	r.Severity = s
 	return nil
 }
 

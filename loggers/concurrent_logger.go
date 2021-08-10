@@ -63,7 +63,7 @@ func (l *ConcurrentLogger) New(args []string) error {
 	return nil
 }
 
-func (l *ConcurrentLogger) Write(al *AuditLog) {
+func (l *ConcurrentLogger) Write(al *AuditLog) error {
 	// 192.168.3.130 192.168.3.1 - - [22/Aug/2009:13:24:20 +0100] "GET / HTTP/1.1" 200 56 "-" "-" SojdH8AAQEAAAugAQAAAAAA "-" /20090822/20090822-1324/20090822-132420-SojdH8AAQEAAAugAQAAAAAA 0 1248
 	t := time.Unix(0, al.Transaction.UnixTimestamp)
 
@@ -82,21 +82,23 @@ func (l *ConcurrentLogger) Write(al *AuditLog) {
 	err := os.MkdirAll(logdir, l.dirMode)
 	if err != nil {
 		//logrus.Error("Failed to create concurrent audit path")
-		return
+		return err
 	}
 
 	jsdata, err := al.JSON()
 	if err != nil {
-		return
+		return err
 	}
 	err = ioutil.WriteFile(filepath, jsdata, l.fileMode)
 	if err != nil {
-		return
+		return err
 	}
 	l.mux.Lock()
 	defer l.mux.Unlock()
 	l.auditlogger.Println(str)
+	return nil
 }
 
-func (cl *ConcurrentLogger) Close() {
+func (cl *ConcurrentLogger) Close() error {
+	return nil
 }

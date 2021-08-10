@@ -100,16 +100,18 @@ type Rule struct {
 	Rev string
 
 	// Rule maturity index
-	Maturity string
+	Maturity int
 
 	// Rule Set Version
 	Version string
+
+	Accuracy int
 
 	// Used by deny to create disruption
 	Status     int
 	Log        bool
 	MultiMatch bool
-	Severity   string
+	Severity   int
 	Skip       bool
 }
 
@@ -119,7 +121,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 		"msg":      {r.Msg},
 		"rev":      {r.Rev},
 		"logdata":  {}, // TODO
-		"severity": {r.Severity},
+		"severity": {strconv.Itoa(r.Severity)},
 	})
 	matchedValues := []*MatchData{}
 	for _, nid := range tx.RuleRemoveById {

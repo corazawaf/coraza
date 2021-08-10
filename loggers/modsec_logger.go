@@ -41,7 +41,7 @@ func (sl *ModsecLogger) New(args []string) error {
 	return nil
 }
 
-func (sl *ModsecLogger) Write(al *AuditLog) {
+func (sl *ModsecLogger) Write(al *AuditLog) error {
 	timestamp := al.Transaction.Timestamp
 	address := ""
 	operator := ""
@@ -61,8 +61,10 @@ func (sl *ModsecLogger) Write(al *AuditLog) {
 	data := fmt.Sprintf("[%s] [error] [client %s] Coraza: %s. Match of \"%s %s\" against \"%s\" required. %s %s [severity \"%s\"] [uri \"%s\"] [unique_id \"%s\"]",
 		timestamp, address, err, operator, params, variable, rules, msgs, severity, uri, id)
 	sl.log.Println(data)
+	return nil
 }
 
-func (sl *ModsecLogger) Close() {
+func (sl *ModsecLogger) Close() error {
 	sl.file.Close()
+	return nil
 }
