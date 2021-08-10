@@ -66,7 +66,7 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	case CTL_REMOVE_TARGET_BY_TAG:
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
-			if utils.ArrayContains(r.Tags, a.Value) {
+			if utils.StringInSlice(a.Value, r.Tags) {
 				tx.RemoveRuleTargetById(r.Id, a.Collection, a.ColKey)
 			}
 		}
@@ -132,7 +132,7 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	case CTL_RULE_REMOVE_BY_TAG:
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
-			if utils.ArrayContains(r.Tags, a.Value) {
+			if utils.StringInSlice(a.Value, r.Tags) {
 				tx.RuleRemoveById = append(tx.RuleRemoveById, r.Id)
 			}
 		}

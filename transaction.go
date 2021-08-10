@@ -77,7 +77,7 @@ type Transaction struct {
 	Interruption *Interruption
 
 	// Contains all collections, including persistent
-	Collections []*Collection
+	collections []*Collection
 
 	//Response data to be sent
 	Status int `json:"status"`
@@ -204,7 +204,7 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 // It's a heavy operation and it's not used by OWASP CRS so it's optional
 func (tx *Transaction) SetFullRequest() {
 	headers := ""
-	for k, v := range tx.GetCollection(VARIABLE_REQUEST_HEADERS).GetData() {
+	for k, v := range tx.GetCollection(VARIABLE_REQUEST_HEADERS).Data() {
 		if k == "" {
 			continue
 		}
@@ -374,13 +374,13 @@ func (tx *Transaction) GetField(rv RuleVariable, exceptions []string) []*MatchDa
 }
 
 func (tx *Transaction) GetCollection(variable byte) *Collection {
-	return tx.Collections[variable]
+	return tx.collections[variable]
 }
 
 // This is for debug only
 func (tx *Transaction) GetCollections() map[string]*Collection {
 	cols := map[string]*Collection{}
-	for i, col := range tx.Collections {
+	for i, col := range tx.collections {
 		v := VariableToName(byte(i))
 		cols[v] = col
 	}
@@ -398,7 +398,7 @@ func (tx *Transaction) ToAuditJson() []byte {
 }
 
 func (tx *Transaction) saveLog() error {
-	for _, l := range tx.Waf.Loggers() {
+	for _, l := range tx.Waf.AuditLoggers() {
 		l.Write(tx.AuditLog())
 	}
 
@@ -416,7 +416,7 @@ func (tx *Transaction) savePersistentData() {
 		if col == nil || col.PersistenceKey != "" {
 			continue
 		}
-		data := col.GetData()
+		data := col.Data()
 		//key := col.PersistenceKey
 		upc, _ := strconv.Atoi(data["UPDATE_COUNTER"][0])
 		upc++
@@ -735,7 +735,7 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *Interrupt
 // This is used by webservers to stream response buffers directly to the client
 func (tx *Transaction) IsProcessableResponseBody() bool {
 	ct := tx.GetCollection(VARIABLE_RESPONSE_CONTENT_TYPE).GetFirstString("")
-	return utils.ArrayContains(tx.Waf.ResponseBodyMimeTypes, ct)
+	return utils.StringInSlice(ct, tx.Waf.ResponseBodyMimeTypes)
 }
 
 // Perform the request body (if any)
@@ -835,11 +835,11 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	for _, p := range parts {
 		switch p {
 		case 'B':
-			al.Transaction.Request.Headers = tx.GetCollection(VARIABLE_REQUEST_HEADERS).GetData()
+			al.Transaction.Request.Headers = tx.GetCollection(VARIABLE_REQUEST_HEADERS).Data()
 		case 'C':
 			al.Transaction.Request.Body = tx.GetCollection(VARIABLE_REQUEST_BODY).GetFirstString("")
 		case 'F':
-			al.Transaction.Response.Headers = tx.GetCollection(VARIABLE_RESPONSE_HEADERS).GetData()
+			al.Transaction.Response.Headers = tx.GetCollection(VARIABLE_RESPONSE_HEADERS).Data()
 		case 'G':
 			al.Transaction.Response.Body = tx.GetCollection(VARIABLE_RESPONSE_BODY).GetFirstString("")
 		case 'H':

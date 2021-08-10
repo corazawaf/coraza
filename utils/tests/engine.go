@@ -116,15 +116,23 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 	}
 	if len(stage.Stage.Output.TriggeredRules) > 0 {
 		for _, trr := range stage.Stage.Output.TriggeredRules {
-			if !utils.ArrayContainsInt(tr, trr) {
-				return fmt.Errorf("rule %d was not triggered", trr)
+			triggered := false
+			for _, t := range tr {
+				if t == trr {
+					triggered = true
+				}
+			}
+			if !triggered {
+				return fmt.Errorf("%d waf not triggered", trr)
 			}
 		}
 	}
 	if len(stage.Stage.Output.NonTriggeredRules) > 0 {
 		for _, trr := range stage.Stage.Output.NonTriggeredRules {
-			if utils.ArrayContainsInt(tr, trr) {
-				return fmt.Errorf("rule %d was triggered", trr)
+			for _, t := range tr {
+				if t == trr {
+					return fmt.Errorf("%d waf triggered", trr)
+				}
 			}
 		}
 	}

@@ -284,7 +284,7 @@ func directiveSecAuditLog(p *Parser, opts string) error {
 	if len(spl) > 1 {
 		args = append(args, spl[0:]...)
 	}
-	return p.Waf.AddLogger(spl[0], args)
+	return p.Waf.AddAuditLogger(spl[0], args)
 }
 
 func directiveSecAuditLogRelevantStatus(p *Parser, opts string) error {

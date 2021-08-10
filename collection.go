@@ -27,12 +27,6 @@ type Collection struct {
 	PersistenceKey string // for persistent collections
 }
 
-func (c *Collection) Init(name string) {
-	c.data = map[string][]string{}
-	//c.data[""] = []string{}
-	c.name = name
-}
-
 func (c *Collection) Get(key string) []string {
 	return c.data[key]
 }
@@ -44,7 +38,7 @@ func (c *Collection) Find(key string, re *regex.Regexp, exceptions []string) []*
 	if len(key) == 0 {
 		data := []*MatchData{}
 		for k := range c.data {
-			if utils.ArrayContains(exceptions, k) {
+			if utils.StringInSlice(k, exceptions) {
 				continue
 			}
 			for _, v := range c.data[k] {
@@ -63,7 +57,7 @@ func (c *Collection) Find(key string, re *regex.Regexp, exceptions []string) []*
 		//TODO we must cache this regex to enhance performance
 		result := []*MatchData{}
 		for k := range cdata {
-			if utils.ArrayContains(exceptions, k) {
+			if utils.StringInSlice(k, exceptions) {
 				continue
 			}
 			m := re.Matcher([]byte(k), 0)
@@ -82,7 +76,7 @@ func (c *Collection) Find(key string, re *regex.Regexp, exceptions []string) []*
 		ret := []*MatchData{}
 		//We pass through every record to apply filters
 		for k := range cdata {
-			if utils.ArrayContains(exceptions, k) {
+			if utils.StringInSlice(k, exceptions) {
 				continue
 			}
 			if k == key {
@@ -154,11 +148,11 @@ func (c *Collection) Remove(key string) {
 	delete(c.data, key)
 }
 
-func (c *Collection) GetData() map[string][]string {
+func (c *Collection) Data() map[string][]string {
 	return c.data
 }
 
-func (c *Collection) GetName() string {
+func (c *Collection) Name() string {
 	return c.name
 }
 
@@ -173,7 +167,9 @@ func (c *Collection) Reset() {
 
 // Creates a new collection
 func NewCollection(name string) *Collection {
-	col := &Collection{}
-	col.Init(name)
+	col := &Collection{
+		data: map[string][]string{},
+		name: name,
+	}
 	return col
 }

@@ -60,7 +60,7 @@ type Waf struct {
 	Rules *RuleGroup
 
 	// Audit logger engine
-	loggers []loggers.Logger
+	auditLoggers []loggers.Logger
 
 	// Audit mode status
 	AuditEngine int
@@ -169,7 +169,7 @@ func (w *Waf) NewTransaction() *Transaction {
 	defer w.mux.RUnlock()
 	tx := &Transaction{
 		Waf:                  w,
-		Collections:          make([]*Collection, VARIABLES_COUNT),
+		collections:          make([]*Collection, VARIABLES_COUNT),
 		Id:                   utils.RandomString(19),
 		Timestamp:            time.Now().UnixNano(),
 		AuditEngine:          w.AuditEngine,
@@ -185,9 +185,8 @@ func (w *Waf) NewTransaction() *Transaction {
 		RequestBodyBuffer:    NewBodyReader(w.TmpDir, w.RequestBodyInMemoryLimit),
 		ResponseBodyBuffer:   NewBodyReader(w.TmpDir, w.RequestBodyInMemoryLimit),
 	}
-	for i := range tx.Collections {
-		tx.Collections[i] = &Collection{}
-		tx.Collections[i].Init(VariableToName(byte(i)))
+	for i := range tx.collections {
+		tx.collections[i] = NewCollection(VariableToName(byte(i)))
 	}
 
 	for i := 0; i <= 10; i++ {
@@ -197,10 +196,10 @@ func (w *Waf) NewTransaction() *Transaction {
 	return tx
 }
 
-// AddLogger creates a new logger for the current WAF instance
+// AddAuditLogger creates a new logger for the current WAF instance
 // You may add as many loggers as you want
 // Keep in mind loggers may lock go routines
-func (w *Waf) AddLogger(engine string, args []string) error {
+func (w *Waf) AddAuditLogger(engine string, args []string) error {
 	var l loggers.Logger
 	switch engine {
 	case "modsec":
@@ -217,15 +216,15 @@ func (w *Waf) AddLogger(engine string, args []string) error {
 	if err != nil {
 		return err
 	}
-	w.loggers = append(w.loggers, l)
+	w.auditLoggers = append(w.auditLoggers, l)
 	return nil
 }
 
 // Logger returns the initiated loggers
 // Coraza supports unlimited loggers, so you can write for example
 // to syslog and a local drive at the same time
-func (w *Waf) Loggers() []loggers.Logger {
-	return w.loggers
+func (w *Waf) AuditLoggers() []loggers.Logger {
+	return w.auditLoggers
 }
 
 // NewWaf creates a new WAF instance with default variables
@@ -243,7 +242,7 @@ func NewWaf() *Waf {
 		ArgumentSeparator:        "&",
 		AuditEngine:              AUDIT_LOG_DISABLED,
 		AuditLogParts:            []rune("ABCFHZ"),
-		loggers:                  []loggers.Logger{},
+		auditLoggers:             []loggers.Logger{},
 		mux:                      &sync.RWMutex{},
 		RequestBodyInMemoryLimit: 131072,
 		RequestBodyLimit:         10000000, //10mb

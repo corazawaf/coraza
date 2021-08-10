@@ -80,18 +80,9 @@ func StringInSlice(a string, list []string) bool {
 	return false
 }
 
-func ArrayContains(arr []string, search string) bool {
-	for _, v := range arr {
-		if v == search {
-			return true
-		}
-	}
-	return false
-}
-
-func ArrayContainsInt(arr []int, search int) bool {
-	for _, v := range arr {
-		if v == search {
+func IntInSlice(a int, list []int) bool {
+	for _, b := range list {
+		if b == a {
 			return true
 		}
 	}

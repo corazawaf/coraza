@@ -161,7 +161,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 				values = tx.GetField(v, exceptions)
 				l = len(values)
 			} else {
-				l = len(tx.GetCollection(v.Collection).GetData())
+				l = len(tx.GetCollection(v.Collection).Data())
 			}
 			values = []*MatchData{
 				{

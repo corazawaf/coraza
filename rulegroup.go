@@ -120,7 +120,7 @@ func (rg *RuleGroup) Evaluate(phase int, tx *Transaction) bool {
 		if r.Id == 0 {
 			rid = strconv.Itoa(r.ParentId)
 		}
-		if utils.ArrayContainsInt(tx.RuleRemoveById, r.Id) {
+		if utils.IntInSlice(r.Id, tx.RuleRemoveById) {
 			continue
 		}
 		//we always evaluate secmarkers
