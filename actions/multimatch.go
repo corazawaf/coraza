@@ -28,6 +28,6 @@ func (a *MultiMatch) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// Not evaluated
 }
 
-func (a *MultiMatch) GetType() int {
+func (a *MultiMatch) Type() int {
 	return engine.ACTION_TYPE_NONDISRUPTIVE
 }

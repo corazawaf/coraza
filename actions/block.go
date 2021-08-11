@@ -29,6 +29,6 @@ func (a *Block) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// This should never run
 }
 
-func (a *Block) GetType() int {
+func (a *Block) Type() int {
 	return engine.ACTION_TYPE_DISRUPTIVE
 }

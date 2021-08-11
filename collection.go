@@ -54,7 +54,6 @@ func (c *Collection) Find(key string, re *regex.Regexp, exceptions []string) []*
 
 	// Regex
 	if re != nil {
-		//TODO we must cache this regex to enhance performance
 		result := []*MatchData{}
 		for k := range cdata {
 			if utils.StringInSlice(k, exceptions) {
@@ -123,7 +122,6 @@ func (c *Collection) GetFirstInt(key string) int {
 }
 
 func (c *Collection) Add(key string, value string) {
-	//TODO check for
 	c.data[key] = append(c.data[key], value)
 }
 

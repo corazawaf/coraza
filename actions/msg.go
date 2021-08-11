@@ -31,6 +31,6 @@ func (a *Msg) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// Not evaluated
 }
 
-func (a *Msg) GetType() int {
+func (a *Msg) Type() int {
 	return engine.ACTION_TYPE_METADATA
 }

@@ -36,6 +36,6 @@ func (a *Maturity) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// Not evaluated
 }
 
-func (a *Maturity) GetType() int {
+func (a *Maturity) Type() int {
 	return engine.ACTION_TYPE_METADATA
 }

@@ -42,6 +42,6 @@ func (a *Phase) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// Not evaluated
 }
 
-func (a *Phase) GetType() int {
+func (a *Phase) Type() int {
 	return engine.ACTION_TYPE_METADATA
 }

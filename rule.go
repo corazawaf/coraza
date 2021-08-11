@@ -41,7 +41,7 @@ const (
 type Action interface {
 	Init(*Rule, string) error
 	Evaluate(*Rule, *Transaction)
-	GetType() int
+	Type() int
 }
 
 type Operator interface {
@@ -107,6 +107,8 @@ type Rule struct {
 
 	Accuracy int
 
+	LogData string
+
 	// Used by deny to create disruption
 	Status     int
 	Log        bool
@@ -116,13 +118,10 @@ type Rule struct {
 }
 
 func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
-	tx.GetCollection(VARIABLE_RULE).SetData(map[string][]string{
-		"id":       {strconv.Itoa(r.Id)},
-		"msg":      {r.Msg},
-		"rev":      {r.Rev},
-		"logdata":  {}, // TODO
-		"severity": {strconv.Itoa(r.Severity)},
-	})
+	tx.Waf.Logger.Debug("Evaluating rule",
+		zap.Int("rule", r.Id),
+		zap.String("tx", tx.Id),
+	)
 	matchedValues := []*MatchData{}
 	for _, nid := range tx.RuleRemoveById {
 		if nid == r.Id {
@@ -130,11 +129,18 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 			return matchedValues
 		}
 	}
+	tx.GetCollection(VARIABLE_RULE).SetData(map[string][]string{
+		"id":       {strconv.Itoa(r.Id)},
+		"msg":      {r.Msg},
+		"rev":      {r.Rev},
+		"logdata":  {tx.MacroExpansion(r.LogData)},
+		"severity": {strconv.Itoa(r.Severity)},
+	})
 	// secmarkers and secactions will always match
 	if r.Operator == nil {
 		matchedValues = []*MatchData{
 			{
-				Collection: "", //TODO replace with a placeholder
+				Collection: "none",
 				Key:        "",
 				Value:      "",
 			},
@@ -186,6 +192,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 			continue
 		}
 		tx.Waf.Logger.Debug("Arguments expanded",
+			zap.Int("rule", r.Id),
 			zap.String("tx", tx.Id),
 			zap.Int("count", len(values)),
 		)
@@ -199,6 +206,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 				args = []string{r.executeTransformations(arg.Value, tools)}
 			}
 			tx.Waf.Logger.Debug("arguments transformed",
+				zap.Int("rule", r.Id),
 				zap.String("tx", tx.Id),
 				zap.Strings("arguments", args),
 			)
@@ -225,7 +233,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 
 	// We run non disruptive actions even if there is no chain match
 	for _, a := range r.Actions {
-		if a.GetType() == ACTION_TYPE_NONDISRUPTIVE {
+		if a.Type() == ACTION_TYPE_NONDISRUPTIVE {
 			a.Evaluate(r, tx)
 		}
 	}
@@ -255,7 +263,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 		}
 		//we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
 		for _, a := range r.Actions {
-			if a.GetType() == ACTION_TYPE_DISRUPTIVE || a.GetType() == ACTION_TYPE_FLOW {
+			if a.Type() == ACTION_TYPE_DISRUPTIVE || a.Type() == ACTION_TYPE_FLOW {
 				a.Evaluate(r, tx)
 			}
 		}

@@ -30,6 +30,6 @@ func (a *Pass) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// Not evaluated
 }
 
-func (a *Pass) GetType() int {
+func (a *Pass) Type() int {
 	return engine.ACTION_TYPE_DISRUPTIVE
 }

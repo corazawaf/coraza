@@ -28,6 +28,6 @@ func (a *Ver) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// Not evaluated
 }
 
-func (a *Ver) GetType() int {
+func (a *Ver) Type() int {
 	return engine.ACTION_TYPE_METADATA
 }

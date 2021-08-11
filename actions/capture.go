@@ -27,6 +27,6 @@ func (a *Capture) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	tx.Capture = true
 }
 
-func (a *Capture) GetType() int {
+func (a *Capture) Type() int {
 	return engine.ACTION_TYPE_NONDISRUPTIVE
 }

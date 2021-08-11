@@ -37,6 +37,6 @@ func (a *Drop) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	}
 }
 
-func (a *Drop) GetType() int {
+func (a *Drop) Type() int {
 	return engine.ACTION_TYPE_DISRUPTIVE
 }

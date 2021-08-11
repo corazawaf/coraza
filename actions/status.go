@@ -48,6 +48,6 @@ func (a *Status) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 
 }
 
-func (a *Status) GetType() int {
+func (a *Status) Type() int {
 	return engine.ACTION_TYPE_DATA
 }

@@ -19,8 +19,10 @@ import (
 	"fmt"
 	"html"
 	"io"
+	"mime"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -324,6 +326,8 @@ func (tx *Transaction) MatchRule(rule *Rule, msgs []string, match []*MatchData) 
 	tx.MatchedRules = append(tx.MatchedRules, mr)
 }
 
+// GetStopWatch
+// Normally it should be named StopWatch() but it would be confusing
 func (tx *Transaction) GetStopWatch() string {
 	ts := tx.Timestamp
 	sum := 0
@@ -353,6 +357,10 @@ func (tx *Transaction) GetField(rv RuleVariable, exceptions []string) []*MatchDa
 		res := []*MatchData{}
 		for _, d := range data {
 			//TODO im not sure if its ok but nvm:
+			// According to Modsecurity handbook modsecurity builds a collection
+			// that contains all iterations of the matched elements
+			// doesn't seem too efficient, we are going to modify that
+			// also I don't like xmlquery
 			output := html.UnescapeString(d.OutputXML(true))
 			res = append(res, &MatchData{
 				Collection: "xml",
@@ -515,8 +523,6 @@ func (tx *Transaction) ProcessConnection(client string, cPort int, server string
 	tx.GetCollection(VARIABLE_SERVER_ADDR).Add("", server)
 	tx.GetCollection(VARIABLE_SERVER_PORT).Add("", p2)
 	tx.GetCollection(VARIABLE_UNIQUE_ID).Add("", tx.Id)
-
-	//TODO maybe evaluate phase 0?
 }
 
 // ExtractArguments transforms an url encoded string to a map and creates
@@ -688,6 +694,8 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 		totalSize := int64(0)
 		for field, fheaders := range req.MultipartForm.File {
 			// TODO add them to temporal storage
+			// or maybe not, according to http.MultipartForm, it does exactly that
+			// the main issue is how do I get this path?
 			fn.Add("", field)
 			for _, header := range fheaders {
 				fl.Add("", header.Filename)
@@ -769,9 +777,9 @@ func (tx *Transaction) ProcessResponseBody() (*Interruption, error) {
 // delivered prior to the execution of this method.
 func (tx *Transaction) ProcessLogging() {
 	// I'm not sure why but modsecurity won't log if RuleEngine is disabled
-	if tx.RuleEngine == RULE_ENGINE_OFF {
-		return
-	}
+	//if tx.RuleEngine == RULE_ENGINE_OFF {
+	//	return
+	//}
 	defer tx.savePersistentData()
 
 	tx.Waf.Rules.Evaluate(5, tx)
@@ -840,6 +848,8 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 			al.Transaction.Request.Headers = tx.GetCollection(VARIABLE_REQUEST_HEADERS).Data()
 		case 'C':
 			al.Transaction.Request.Body = tx.GetCollection(VARIABLE_REQUEST_BODY).GetFirstString("")
+			//TODO maybe change to:
+			//al.Transaction.Request.Body = tx.RequestBodyBuffer.String()
 		case 'F':
 			al.Transaction.Response.Headers = tx.GetCollection(VARIABLE_RESPONSE_HEADERS).Data()
 		case 'G':
@@ -851,18 +861,35 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 				server = servera[0]
 			}
 			al.Transaction.Producer = &loggers.AuditTransactionProducer{
-				Connector:  "unknown",
+				Connector:  "unknown", //TODO maybe add connector variable to Waf
 				Version:    "unknown",
 				Server:     server,
 				RuleEngine: rengine,
 				Stopwatch:  tx.GetStopWatch(),
 			}
 		case 'I':
-			// not implemented
-			// TODO
+			/*
+			* TODO:
+			* This part is a replacement for part C. It will log the same data as C in
+			* all cases except when multipart/form-data encoding in used. In this case,
+			* it will log a fake application/x-www-form-urlencoded body that contains
+			* the information about parameters but not about the files. This is handy
+			* if you don’t want to have (often large) files stored in your audit logs.
+			 */
 		case 'J':
 			//upload data
-			// TODO
+			al.Transaction.Request.Files = []*loggers.AuditTransactionRequestFiles{}
+			for i, name := range tx.GetCollection(VARIABLE_FILES).Get("") {
+				//TODO we kind of assume there is a file_size for each file with the same index
+				size, _ := strconv.ParseInt(tx.GetCollection(VARIABLE_FILES_SIZES).Get("")[i], 10, 64)
+				ext := filepath.Ext(name)
+				at := &loggers.AuditTransactionRequestFiles{
+					Size: size,
+					Name: name,
+					Mime: mime.TypeByExtension(ext),
+				}
+				al.Transaction.Request.Files = append(al.Transaction.Request.Files, at)
+			}
 		case 'K':
 			for _, mr := range tx.MatchedRules {
 				r := mr.Rule
@@ -870,12 +897,12 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 					Actionset: "",
 					Message:   "",
 					Data: &loggers.AuditMessageData{
-						File:     "",
-						Line:     0,
+						File:     mr.Rule.File,
+						Line:     mr.Rule.Line,
 						Id:       r.Id,
 						Rev:      r.Rev,
 						Msg:      tx.MacroExpansion(r.Msg),
-						Data:     "",
+						Data:     tx.MacroExpansion(r.LogData),
 						Severity: r.Severity,
 						Ver:      r.Version,
 						Maturity: r.Maturity,

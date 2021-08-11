@@ -27,6 +27,6 @@ func (a *Chain) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// Not evaluated
 }
 
-func (a *Chain) GetType() int {
+func (a *Chain) Type() int {
 	return engine.ACTION_TYPE_FLOW
 }

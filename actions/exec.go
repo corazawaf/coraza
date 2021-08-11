@@ -38,6 +38,6 @@ func (a *Exec) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// Not implemented
 }
 
-func (a *Exec) GetType() int {
+func (a *Exec) Type() int {
 	return engine.ACTION_TYPE_NONDISRUPTIVE
 }

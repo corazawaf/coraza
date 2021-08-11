@@ -45,6 +45,6 @@ func (a *Expirevar) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// Not implemented
 }
 
-func (a *Expirevar) GetType() int {
+func (a *Expirevar) Type() int {
 	return engine.ACTION_TYPE_NONDISRUPTIVE
 }

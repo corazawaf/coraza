@@ -28,6 +28,6 @@ func (a *Log) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// Not evaluated
 }
 
-func (a *Log) GetType() int {
+func (a *Log) Type() int {
 	return engine.ACTION_TYPE_NONDISRUPTIVE
 }

@@ -57,6 +57,6 @@ func (a *InitCol) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	*/
 }
 
-func (a *InitCol) GetType() int {
+func (a *InitCol) Type() int {
 	return engine.ACTION_TYPE_NONDISRUPTIVE
 }

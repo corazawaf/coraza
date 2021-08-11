@@ -10,4 +10,4 @@ Versions currently being supported with security updates.
 
 ## Reporting a Vulnerability
 
-Please send any vulnerability to jptosso@gmail.com before making them public, as Coraza is a WIP, we will just provide a thank you note on the PR.
+Please send any vulnerability to jptosso@gmail.com before making them public, proper credits will be provided.

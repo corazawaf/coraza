@@ -241,7 +241,7 @@ SecAuditLogParts ABIJDEFHZ
 # Use a single file for logging. This is much easier to look at, but
 # assumes that you will use the audit log only ocassionally.
 #
-SecAuditLog Modsec /var/log/coraza_audit.log 0600
+#SecAuditLog Modsec /opt/coraza/var/log/coraza_audit.log 0600
 
 # Concurrent logging:
 SecAuditLog Concurrent /opt/coraza/var/audit/audit.log /opt/coraza/var/audit 0600 0600

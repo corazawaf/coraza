@@ -29,6 +29,6 @@ func (a *Append) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// Not implemented
 }
 
-func (a *Append) GetType() int {
+func (a *Append) Type() int {
 	return engine.ACTION_TYPE_METADATA
 }

@@ -28,6 +28,6 @@ func (a *Tag) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// Not evaluated
 }
 
-func (a *Tag) GetType() int {
+func (a *Tag) Type() int {
 	return engine.ACTION_TYPE_METADATA
 }

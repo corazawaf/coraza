@@ -28,6 +28,6 @@ func (a *NoAuditlog) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// Not evaluated
 }
 
-func (a *NoAuditlog) GetType() int {
+func (a *NoAuditlog) Type() int {
 	return engine.ACTION_TYPE_NONDISRUPTIVE
 }

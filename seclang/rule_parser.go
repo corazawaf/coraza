@@ -231,7 +231,7 @@ func ParseActions(actions string) ([]ruleAction, error) {
 				Key:   ckey,
 				Value: cval,
 				F:     f,
-				Atype: f.GetType(),
+				Atype: f.Type(),
 			})
 			ckey = ""
 			cval = ""
@@ -263,7 +263,7 @@ func ParseActions(actions string) ([]ruleAction, error) {
 				Key:   ckey,
 				Value: cval,
 				F:     f,
-				Atype: f.GetType(),
+				Atype: f.Type(),
 			})
 		}
 	}

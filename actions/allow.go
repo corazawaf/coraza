@@ -26,23 +26,29 @@ type Allow struct {
 }
 
 func (a *Allow) Init(r *engine.Rule, b1 string) error {
-	// Does not require
 	if b1 == "phase" {
-		a.allow = 1
+		a.allow = 2 //skip current phase
 	} else if b1 == "request" {
-		a.allow = 2
+		a.allow = 3 //skip phases until RESPONSE_HEADERS
 	} else if b1 == "" {
-		a.allow = 0
+		a.allow = 1 // skip all phases
 	} else {
-		fmt.Errorf("Invalid value for action allow")
+		return fmt.Errorf("invalid value for action allow")
 	}
 	return nil
 }
 
 func (a *Allow) Evaluate(r *engine.Rule, tx *engine.Transaction) {
-	//Huge TODO here
+	//TODO implement this:
+	if a.allow == 1 {
+		tx.RuleEngine = engine.RULE_ENGINE_OFF
+	} else if a.allow == 2 {
+		//tx.SkipToPhase = tx.LastPhase +1
+	} else if a.allow == 3 && tx.LastPhase < 3 {
+		//tx.SkipToPhase = 3
+	}
 }
 
-func (a *Allow) GetType() int {
+func (a *Allow) Type() int {
 	return engine.ACTION_TYPE_DISRUPTIVE
 }

@@ -42,6 +42,6 @@ func (a *Severity) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// Not evaluated
 }
 
-func (a *Severity) GetType() int {
+func (a *Severity) Type() int {
 	return engine.ACTION_TYPE_METADATA
 }

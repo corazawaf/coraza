@@ -34,6 +34,6 @@ func (a *SkipAfter) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	tx.SkipAfter = a.data
 }
 
-func (a *SkipAfter) GetType() int {
+func (a *SkipAfter) Type() int {
 	return engine.ACTION_TYPE_FLOW
 }

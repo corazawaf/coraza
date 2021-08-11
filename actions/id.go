@@ -27,7 +27,7 @@ type Id struct {
 func (a *Id) Init(r *engine.Rule, data string) error {
 	i, err := strconv.Atoi(data)
 	if err != nil {
-		return fmt.Errorf("Invalid rule ID %s", data)
+		return fmt.Errorf("invalid rule id %s", data)
 	}
 	r.Id = int(i)
 	return nil
@@ -37,6 +37,6 @@ func (a *Id) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// Not evaluated
 }
 
-func (a *Id) GetType() int {
+func (a *Id) Type() int {
 	return engine.ACTION_TYPE_METADATA
 }

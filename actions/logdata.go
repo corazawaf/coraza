@@ -17,18 +17,17 @@ package actions
 import engine "github.com/jptosso/coraza-waf"
 
 type Logdata struct {
-	data string
 }
 
 func (a *Logdata) Init(r *engine.Rule, data string) error {
-	a.data = data
+	r.LogData = data
 	return nil
 }
 
 func (a *Logdata) Evaluate(r *engine.Rule, tx *engine.Transaction) {
-	tx.Logdata = append(tx.Logdata, tx.MacroExpansion(a.data))
+	tx.Logdata = append(tx.Logdata, tx.MacroExpansion(r.LogData))
 }
 
-func (a *Logdata) GetType() int {
+func (a *Logdata) Type() int {
 	return engine.ACTION_TYPE_NONDISRUPTIVE
 }

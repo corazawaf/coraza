@@ -37,6 +37,6 @@ func (a *Deny) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	}
 }
 
-func (a *Deny) GetType() int {
+func (a *Deny) Type() int {
 	return engine.ACTION_TYPE_DISRUPTIVE
 }

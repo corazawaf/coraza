@@ -42,6 +42,6 @@ func (a *T) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// Not evaluated
 }
 
-func (a *T) GetType() int {
+func (a *T) Type() int {
 	return engine.ACTION_TYPE_NONDISRUPTIVE
 }

@@ -63,7 +63,7 @@ func (a *Setvar) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	a.evaluateTxCollection(r, tx, key, value)
 }
 
-func (a *Setvar) GetType() int {
+func (a *Setvar) Type() int {
 	return engine.ACTION_TYPE_NONDISRUPTIVE
 }
 

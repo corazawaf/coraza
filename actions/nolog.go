@@ -28,6 +28,6 @@ func (a *Nolog) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	// Not evaluated
 }
 
-func (a *Nolog) GetType() int {
+func (a *Nolog) Type() int {
 	return engine.ACTION_TYPE_NONDISRUPTIVE
 }
