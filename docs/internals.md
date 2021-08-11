@@ -1,24 +1,26 @@
 # Internals of ``Coraza WAF``
 
-## Core
 
-### WAF Engine
+## WAF Engine
 
 Waf is the main interface used to store settings, rules and create transactions, most directives will set variables for Waf instances. A coraza implementation might have unlimited Waf instances and each Waf might process unlimited transactions.
 
-### Transactions
+## Transactions
 
 Transactions are an instance of an url call for a Waf instance, transactions are created with ``wafinstance.NewTransaction()``. Transactions holds collections and configurations that may be updated using rules.
 
-### Macro Expansion
+## Macro Expansion
 
 Macro expansions are a function available for ``transactions``, a macro expansion will compile a string and provide variables data to the current context. Macro expansion is performed by running a regular expresion that will find ``%{request_headers.test}`` and replace it with it's value using:
 
 ```go
-newvalue := tx.GetCollection(NameToVariable("request_headers")).GetFirstString("test")
+v1 := tx.GetCollection(NameToVariable("request_headers")).GetFirstString("test")
+v2 := tx.MacroExpansion("%{request_headers.test}")
+v1 == v2
+// true
 ```
 
-### Rules
+## Rules
 
 Rules are triggered by ``RuleGroup.Evaluate(phase)`` based on the phase number, rules with phase 0 or ``rule.AlwaysMatch`` will always run. Rules that always run are SecMarkers or SecActions which means rules without operators.
 
@@ -44,13 +46,13 @@ The return of this function contains each ``MatchData``, which will tell the tra
 
 **Important:** Rules may update a ``Transaction`` behaviour but not a ``Waf`` instance.
 
-#### Operators
+### Operators
 
 Operators are stored in ``github.com/jptosso/coraza-waf/operators`` and contains an initializer and an evaluation function. Initializers are used to apply arguments during compilation, for example, ``"@rx /\d+/"`` will run ``op.Init("/\\d+")``. ``op.Evaluate(tx, "args")`` is applied for each compiled variable and will return if the condition matches. Operators uses ``Transaction`` to create logs, capture fields and access additional variables from the transaction.
 
 **Note:** Operators must be concurrent-friendly
 
-#### Actions
+### Actions
 
 Actions are stored in ``github.com/jptosso/coraza-waf/actions`` and contains an initializer and an evaluation function, the initializers are evaluated during compilation, for example, ``id:4`` will run ``act.Init("4")``. Depending on the ``Type()`` of each action, it will run on different phases.
 
@@ -58,18 +60,18 @@ Actions are stored in ``github.com/jptosso/coraza-waf/actions`` and contains an 
 * **Flow actions:** These actions affect the rule flow (for example skip or skipAfter). Flow actions are evaluated after the rule successfully matched and will only run for the parent rule of a chain.
 * **Meta-data actions:** Meta-data actions are used to provide more information about rules. Examples include id, rev, severity and msg. Meta-data rules are only initialized, they won't be evaluated, ``act.Evaluate(...)`` will never be called.
 
-#### Transformations
+### Transformations
 
 Transformations are simple functions to transform some string into another string. There is a special struct called ``transactions.Tools``, that contains useful "tools" required for some transformations, which are ``UnicodeMapping`` for ``utf8ToUnicode`` and ``waf.Logger`` to debug transformations. More fields may be added in the future.
 
 **Note:** Transformations are evaluated thousands of times per transaction and they must be SUPER FAST.
 
 
-### Rule Groups
+## Rule Groups
 
 Rule Groups are like Modsecurity ``Rules``, it's just a container for rules that will return the list of rules concurrent-safe and will evaluate rules based on the requested phase.
 
-### Collections
+## Collections
 
 Collections are used by Coraza to store ``Variables``, all Variables are treated as the same type, even if they map values, they are single values or arrays.
 
@@ -96,7 +98,7 @@ Variables are compiled in runtime in order to support Regex(precompiled) and XML
 
 **Note:** Collections are not concurrent-safe, don't share transactions between routines.
 
-### Phases
+## Phases
 
 Phases are used by ``RuleGroup`` to filter between execution phases on HTTP/1.1 and HTTP/1.0.
 
@@ -133,8 +135,12 @@ This is a special phase, it will always run but it must be handled by the client
 * ```AuditEngine``` must be ```On``` or ```RelevantOnly```
 * If ```AuditEngine``` was set to ```RelevantOnly``` the response status must match ```AuditLogRelevantStatus```
 
-### Body handling
+## Body handling
 
-### Persistent Collections
+BodyBuffer is a struct that will manage the request or response buffer and store the data to temprary files if required. BodyBuffer will apply a few rules to decide whether to buffer the data in memory or write a temporary file, it will also return a ```Reader``` to the memory buffer or the temporary file created. Temporary files must be deleted by ```tx.ProccessLoging```.
+
+## Persistent Collections
 
 Not working yet.
+
+## The ```tx.ProcessRequest(req)``` helper

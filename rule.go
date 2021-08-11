@@ -38,44 +38,101 @@ const (
 	ACTION_DISRUPTIVE_REDIRECT = 6
 )
 
+// This interface is used by this rule's actions
 type Action interface {
+	// Initializes an action, will be done during compilation
 	Init(*Rule, string) error
+	// Evaluate will be done during rule evaluation
 	Evaluate(*Rule, *Transaction)
+	// Type will return the rule type, it's used by Evaluate
+	// to choose when to evaluate each action
 	Type() int
 }
 
+// Operator interface is used to define rule @operators
 type Operator interface {
+	// Init is used during compilation to setup and cache
+	// the operator
 	Init(string) error
+	// Evaluate is used during the rule evaluation,
+	// it returns true if the operator succeeded against
+	// the input data for the transaction
 	Evaluate(*Transaction, string) bool
 }
 
+// RuleOperator is a container for an operator,
 type RuleOperator struct {
+	// Operator to be used
 	Operator Operator
-	Data     string
+	// Data to initialize the operator
+	Data string
+	// If true, rule will match if op.Evaluate returns false
 	Negation bool
 }
 
+// RuleVariable is compiled during runtime by transactions
+// to get values from the transaction's variables
+// It supports xml, regex, exceptions and many more features
 type RuleVariable struct {
-	Count      bool
+	// If true, the count of results will be returned
+	Count bool
+
+	// The VARIABLE that will be requested
 	Collection byte
-	Key        string
-	Regex      *regex.Regexp //for performance
+
+	// The key for the variable that is going to be requested
+	Key string
+
+	// If not nil, a regex will be used instead of a key
+	Regex *regex.Regexp //for performance
+
+	// A slice of key exceptions
 	Exceptions []string
 }
 
+// Rule is used to test a Transaction against certain operators
+// and execute actions
 type Rule struct {
-	Variables               []RuleVariable
-	Operator                *RuleOperator
-	Transformations         []transformations.Transformation
-	ParentId                int
-	Actions                 []Action
-	SecMark                 string
-	Raw                     string
-	Chain                   *Rule
-	DisruptiveAction        int
-	DefaultDisruptiveAction string
-	HasChain                bool
-	AlwaysMatch             bool
+	// Contains a list of variables that will be compiled
+	// by a transaction
+	Variables []RuleVariable
+
+	// Contains a pointer to the Operator struct used
+	// SecActions and SecMark can have nil Operators
+	Operator *RuleOperator
+
+	// List of transformations to be evaluated
+	// In the future, transformations might be run by the
+	// action itself
+	Transformations []transformations.Transformation
+
+	// Contains the Id of the parent rule if you are inside
+	// a chain. Otherwise it will be 0
+	ParentId int
+
+	// Slice of initialized actions to be evaluated during
+	// the rule evaluation process
+	Actions []Action
+
+	// Used to mark a rule as a secmarker and alter flows
+	SecMark string
+
+	// Contains the raw rule code
+	Raw string
+
+	// Contains the child rule to chain, nil if there are no chains
+	Chain *Rule
+
+	// Contains the disruptive action, it does nothing and might be
+	// removed in future versions
+	DisruptiveAction int
+
+	// Used by the chain action to indicate if the next rule is chained
+	// to this one, it's only used for compilation
+	HasChain bool
+
+	// If true, this rule will always match and won't run it's operator
+	AlwaysMatch bool
 
 	// Where is this rule stored
 	File string
@@ -102,21 +159,30 @@ type Rule struct {
 	// Rule maturity index
 	Maturity int
 
-	// Rule Set Version
+	// RuleSet Version
 	Version string
 
+	// Rule accuracy
 	Accuracy int
 
+	// Rule severity
+	Severity int
+
+	// Rule logdata
 	LogData string
 
-	// Used by deny to create disruption
-	Status     int
-	Log        bool
+	// If true and this rule is matched, this rule will be
+	// written to the audit log
+	// If no auditlog, this rule won't be logged
+	Log bool
+
+	// If true, the transformations will be multimatched
 	MultiMatch bool
-	Severity   int
-	Skip       bool
 }
 
+// Evaluate will evaluate the current rule for the indicated transaction
+// If the operator matches, actions will be evaluated and it will return
+// the matched variables, keys and values (MatchData)
 func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 	tx.Waf.Logger.Debug("Evaluating rule",
 		zap.Int("rule", r.Id),
@@ -151,7 +217,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 		Logger:  tx.Waf.Logger,
 	}
 
-	ecol := tx.GetRemovedTargets(r.Id)
+	ecol := tx.RuleRemoveTargetById[r.Id]
 	for _, v := range r.Variables {
 		var values []*MatchData
 		exceptions := make([]string, len(v.Exceptions))
@@ -298,6 +364,9 @@ func (r *Rule) executeTransformations(value string, tools *transformations.Tools
 	return value
 }
 
+// AddsVariable appends a new variable to the rule, it will
+// precompile regular expressions and transforma the variable name
+// to it's byte form
 func (r *Rule) AddVariable(count bool, collection byte, key string) {
 	var re regex.Regexp
 	var rv RuleVariable
@@ -315,6 +384,9 @@ func (r *Rule) AddVariable(count bool, collection byte, key string) {
 	r.Variables = append(r.Variables, rv)
 }
 
+// AddNegateVariable will append an exception to a variable,
+// for example, if you want to skip checking REQUEST_HEADERS:referer,
+// you just r.AddNegateVariable(VARIABLE_REQUEST_HEADERS, "referer")
 func (r *Rule) AddNegateVariable(collection byte, key string) {
 	for i, vr := range r.Variables {
 		if vr.Collection == collection {
@@ -325,6 +397,7 @@ func (r *Rule) AddNegateVariable(collection byte, key string) {
 	}
 }
 
+// NewRule returns a new initialized rule
 func NewRule() *Rule {
 	return &Rule{
 		Phase: 2,

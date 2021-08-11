@@ -31,6 +31,7 @@ import (
 	"github.com/antchfx/xmlquery"
 	"github.com/jptosso/coraza-waf/loggers"
 	"github.com/jptosso/coraza-waf/utils"
+	"go.uber.org/zap"
 )
 
 type Interruption struct {
@@ -47,22 +48,35 @@ type Interruption struct {
 	Data string
 }
 
+// MatchedRule contains a list of macro expanded messages,
+// matched variables and a pointer to the rule
 type MatchedRule struct {
-	Messages    []string
+	// A single rule may contain multiple messages from chains
+	Messages []string
+	// A slice of matched variables
 	MatchedData []*MatchData
-	Rule        *Rule
+	// A pointer to the triggered rule
+	Rule *Rule
 }
 
+// MatchData works like VariableKey but is used for logging
+// so it contains the collection as a string and it's value
 type MatchData struct {
+	// Variable name as a string
 	Collection string
-	Key        string
-	Value      string
+	// Key of the variable, blank if no key is required
+	Key string
+	// Value of the current VARIABLE:KEY
+	Value string
 }
 
-type KeyValue struct {
-	Name       string
+// VariableKey is used to store Variables with it's key, for example:
+// ARGS:id would be the same as {VARIABLE_ARGS, "id"}
+type VariableKey struct {
+	// Contains the variable
 	Collection byte
-	Key        string
+	// Contains the key of the variable
+	Key string
 }
 
 type Transaction struct {
@@ -84,6 +98,8 @@ type Transaction struct {
 	//Response data to be sent
 	Status int `json:"status"`
 
+	// This is used to store log messages
+	// TODO check how we are going to reuse it for logging
 	Logdata []string `json:"logdata"`
 
 	// Rules will be skipped after a rule with this SecMarker is found
@@ -102,21 +118,31 @@ type Transaction struct {
 	HashEngine               bool
 	HashEnforcement          bool
 
+	// Stores the last phase that was evaluated
+	// Used by allow to skip phases
 	LastPhase int
 
-	RequestBodyBuffer  *BodyBuffer
+	// Handles request body buffers
+	RequestBodyBuffer *BodyBuffer
+
+	// Handles response body buffers
 	ResponseBodyBuffer *BodyBuffer
 
-	// Rules with this id are going to be skipped
+	// Rules with this id are going to be skipped while processing a phase
 	RuleRemoveById []int
 
 	// Used by ctl to remove rule targets by id during the transaction
-	RuleRemoveTargetById map[int][]*KeyValue
+	// All other "target removers" like "ByTag" are an abstraction of "ById"
+	// For example, if you want to remove REQUEST_HEADERS:User-Agent from rule 85:
+	// {85: {VARIABLE_REQUEST_HEADERS, "user-agent"}}
+	RuleRemoveTargetById map[int][]*VariableKey
 
 	// Will skip this number of rules, this value will be decreased on each skip
 	Skip int
 
 	// Actions with capture features will read the capture state from this field
+	// We have currently removed this feature as Capture will always run
+	// We must reuse it in the future
 	Capture bool
 
 	// Contains duration in useconds per phase
@@ -125,13 +151,22 @@ type Transaction struct {
 	// Contains de *engine.Waf instance for the current transaction
 	Waf *Waf
 
+	// In case of an XML request body we will cache the XML object here
 	XmlDoc *xmlquery.Node
 
+	// Timestamp of the request
 	Timestamp int64
 }
 
+// Used to test macro expansions
 var macroRegexp = regexp.MustCompile(`%\{([\w.-]+?)\}`)
 
+// MacroExpansion expands a string that contains %{somevalue.some-key}
+// into it's first value, for example:
+// 	v1 := tx.MacroExpansion("%{request_headers.user-agent")
+//  v2 := tx.GetCollection(VARIABLE_REQUEST_HEADERS).GetFirstString("user-agent")
+//  v1 == v2 // returns true
+// Important: this function is case insensitive
 func (tx *Transaction) MacroExpansion(data string) string {
 	if data == "" {
 		return ""
@@ -168,7 +203,7 @@ func (tx *Transaction) MacroExpansion(data string) string {
 	return data
 }
 
-// Adds a request header
+// AddRequestHeader Adds a request header
 //
 // With this method it is possible to feed Coraza with a request header.
 // Note: Golang's *http.Request object will not contain a "Host" header
@@ -202,7 +237,7 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 	}
 }
 
-// Creates the FULL_REQUEST variable based on every input
+// SetFullRequest Creates the FULL_REQUEST variable based on every input
 // It's a heavy operation and it's not used by OWASP CRS so it's optional
 func (tx *Transaction) SetFullRequest() {
 	headers := ""
@@ -221,7 +256,7 @@ func (tx *Transaction) SetFullRequest() {
 	tx.GetCollection(VARIABLE_FULL_REQUEST).Add("", full_request)
 }
 
-// Adds a response header
+// AddResponseHeader Adds a response header variable
 //
 // With this method it is possible to feed Coraza with a response header.
 func (tx *Transaction) AddResponseHeader(key string, value string) {
@@ -239,13 +274,15 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 	}
 }
 
-// Used to set the TX:[index] collection by operators
+// CaptureField is used to set the TX:[index] variables by operators
+// that supports capture, like @rx
 func (tx *Transaction) CaptureField(index int, value string) {
 	i := strconv.Itoa(index)
 	tx.GetCollection(VARIABLE_TX).Set(i, []string{value})
 }
 
-//Reset the capture collection for further uses
+// ResetCapture Resets the captured variables for further uses
+// Captures variables must be always reset before capturing again
 func (tx *Transaction) ResetCapture() {
 	//We reset capture 0-9
 	ctx := tx.GetCollection(VARIABLE_TX)
@@ -255,39 +292,58 @@ func (tx *Transaction) ResetCapture() {
 	}
 }
 
-// Parse binary request including body, does only supports http/1.1 and http/1.0
-// This function is only intended for testing and debugging
-func (tx *Transaction) ParseRequestString(data string) (*Interruption, error) {
-	bts := strings.NewReader(data)
+// ParseRequestReader Parses binary request including body,
+// it does only supports http/1.1 and http/1.0
+// This function does not run ProcessConnection
+// This function will store in memory the whole reader,
+// DON't USE IT FOR PRODUCTION yet
+func (tx *Transaction) ParseRequestReader(data io.Reader) (*Interruption, error) {
 	// For dumb reasons we must read the headers and look for the Host header,
 	// this function is intended for proxies and the RFC says that a Host must not be parsed...
 	// Maybe some time I will create a prettier fix
-	scanner := bufio.NewScanner(bts)
+	scanner := bufio.NewScanner(data)
+	// read request line
+	scanner.Scan()
+	spl := strings.SplitN(scanner.Text(), " ", 3)
+	if len(spl) != 3 {
+		return nil, fmt.Errorf("invalid request line")
+	}
+	tx.ProcessUri(spl[1], spl[0], spl[2])
+	if spl := strings.SplitN(spl[1], "?", 2); len(spl) == 2 {
+		tx.ExtractArguments("GET", spl[1])
+	}
 	for scanner.Scan() {
 		l := scanner.Text()
 		if l == "" {
 			// It should mean we are now in the request body...
 			break
 		}
-		r := regexp.MustCompile(`^[h|H]ost:\s+(.*?)$`)
-		rs := r.FindStringSubmatch(l)
-		if len(rs) > 1 {
-			tx.AddRequestHeader("Host", rs[1])
+		spl := strings.SplitN(l, ":", 2)
+		if len(spl) != 2 {
+			return nil, fmt.Errorf("invalid request header")
+		}
+		k := strings.Trim(spl[0], " ")
+		v := strings.Trim(spl[1], " ")
+		tx.AddRequestHeader(k, v)
+	}
+	if it := tx.ProcessRequestHeaders(); it != nil {
+		return it, nil
+	}
+	ct := tx.GetCollection(VARIABLE_REQUEST_HEADERS).GetFirstString("content-type")
+	ct = strings.Split(ct, ";")[0]
+	for scanner.Scan() {
+		fmt.Println(scanner.Text(), tx.RequestBodyProcessor)
+
+		tx.RequestBodyBuffer.Write(scanner.Bytes())
+		if ct != "application/x-www-form-urlencoded" {
+			tx.RequestBodyBuffer.Write([]byte{'\r', '\n'})
 		}
 	}
-	bts.Reset(data)
-	//End of this dumb fix...
-
-	buf := bufio.NewReader(bts)
-	req, err := http.ReadRequest(buf)
-	if err != nil {
-		return nil, err
-	}
-
-	return tx.ProcessRequest(req)
+	return tx.ProcessRequestBody()
 }
 
-// Creates the MATCHED_VAR* variables required by chains and macro expansion
+// MatchVars Creates the MATCHED_ variables required by chains and macro expansion
+// MATCHED_VARS, MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES
 func (tx *Transaction) MatchVars(match []*MatchData) {
 	// Array of values
 	mvs := tx.GetCollection(VARIABLE_MATCHED_VARS)
@@ -316,7 +372,7 @@ func (tx *Transaction) MatchVars(match []*MatchData) {
 	}
 }
 
-// Matches a rule to be logged
+// MatchRule Matches a rule to be logged
 func (tx *Transaction) MatchRule(rule *Rule, msgs []string, match []*MatchData) {
 	mr := &MatchedRule{
 		Messages:    msgs,
@@ -326,7 +382,7 @@ func (tx *Transaction) MatchRule(rule *Rule, msgs []string, match []*MatchData) 
 	tx.MatchedRules = append(tx.MatchedRules, mr)
 }
 
-// GetStopWatch
+// GetStopWatch is used to debug phase durations
 // Normally it should be named StopWatch() but it would be confusing
 func (tx *Transaction) GetStopWatch() string {
 	ts := tx.Timestamp
@@ -340,8 +396,10 @@ func (tx *Transaction) GetStopWatch() string {
 	return sw
 }
 
-// Retrieve data from collections applying exceptions
+// GetField Retrieve data from collections applying exceptions
 // This function will apply xpath if the variable is XML
+// In future releases we may remove de exceptions slice and
+// make it easier to use
 func (tx *Transaction) GetField(rv RuleVariable, exceptions []string) []*MatchData {
 	collection := rv.Collection
 	key := rv.Key
@@ -381,11 +439,14 @@ func (tx *Transaction) GetField(rv RuleVariable, exceptions []string) []*MatchDa
 
 }
 
+// GetCollection transforms a VARIABLE_ constant into a
+// *Collection used to get VARIABLES data
 func (tx *Transaction) GetCollection(variable byte) *Collection {
 	return tx.collections[variable]
 }
 
-// This is for debug only
+// GetCollections is used to debug collections, it maps
+// the Collection slice into a map of variable names and collections
 func (tx *Transaction) GetCollections() map[string]*Collection {
 	cols := map[string]*Collection{}
 	for i, col := range tx.collections {
@@ -393,16 +454,6 @@ func (tx *Transaction) GetCollections() map[string]*Collection {
 		cols[v] = col
 	}
 	return cols
-}
-
-func (tx *Transaction) GetRemovedTargets(id int) []*KeyValue {
-	return tx.RuleRemoveTargetById[id]
-}
-
-func (tx *Transaction) ToAuditJson() []byte {
-	al := tx.AuditLog()
-	data, _ := al.JSON()
-	return data
 }
 
 func (tx *Transaction) saveLog() error {
@@ -415,7 +466,7 @@ func (tx *Transaction) saveLog() error {
 	return nil
 }
 
-// SavePersistentData save persistent collections to persistence engine
+// savePersistentData save persistent collections to persistence engine
 func (tx *Transaction) savePersistentData() {
 	//TODO, disabled by now, maybe we should add persistent variables to the
 	// collection struct, something like col.Persist("key")
@@ -448,11 +499,12 @@ func (tx *Transaction) savePersistentData() {
 	}
 }
 
-// Removes the VARIABLE/TARGET from the rule ID
+// RemoveRuleTargetById Removes the VARIABLE:KEY from the rule ID
+// It's mostly used by CTL to dinamically remove targets from rules
 func (tx *Transaction) RemoveRuleTargetById(id int, col byte, key string) {
-	c := &KeyValue{"", col, key}
+	c := &VariableKey{col, key}
 	if tx.RuleRemoveTargetById[id] == nil {
-		tx.RuleRemoveTargetById[id] = []*KeyValue{
+		tx.RuleRemoveTargetById[id] = []*VariableKey{
 			c,
 		}
 	} else {
@@ -502,7 +554,7 @@ func (tx *Transaction) ProcessRequest(req *http.Request) (*Interruption, error) 
 	return tx.ProcessRequestBody()
 }
 
-// This method should be called at very beginning of a request process, it is
+// ProcessConnection should be called at very beginning of a request process, it is
 // expected to be executed prior to the virtual host resolution, when the
 // connection arrives on the server.
 // Important: Remember to check for a possible intervention.
@@ -540,7 +592,7 @@ func (tx *Transaction) ExtractArguments(orig string, uri string) {
 	}
 }
 
-// Add arguments GET or POST
+// AddArgument Add arguments GET or POST
 // This will set ARGS_(GET|POST), ARGS, ARGS_NAMES, ARGS_COMBINED_SIZE and
 // ARGS_(GET|POST)_NAMES
 func (tx *Transaction) AddArgument(orig string, key string, value string) {
@@ -564,7 +616,7 @@ func (tx *Transaction) AddArgument(orig string, key string, value string) {
 	col.Set("", []string{istr})
 }
 
-// Perform the analysis on the URI and all the query string variables.
+// ProcessUri Performs the analysis on the URI and all the query string variables.
 // This method should be called at very beginning of a request process, it is
 // expected to be executed prior to the virtual host resolution, when the
 // connection arrives on the server.
@@ -592,7 +644,7 @@ func (tx *Transaction) ProcessUri(uri string, method string, httpVersion string)
 	tx.GetCollection(VARIABLE_REQUEST_LINE).Add("", fmt.Sprintf("%s %s %s", method, huri.String(), httpVersion))
 }
 
-// Perform the analysis on the request readers.
+// ProcessRequestHeaders Performs the analysis on the request readers.
 //
 // This method perform the analysis on the request headers, notice however
 // that the headers should be added prior to the execution of this function.
@@ -607,7 +659,7 @@ func (tx *Transaction) ProcessRequestHeaders() *Interruption {
 	return tx.Interruption
 }
 
-// Perform the request body (if any)
+// ProcessRequestBody Performs the request body (if any)
 //
 // This method perform the analysis on the request body. It is optional to
 // call that function. If this API consumer already know that there isn't a
@@ -648,6 +700,7 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 	if rbp == "" && tx.ForceRequestBodyVariable {
 		// We force URLENCODED if mime is x-www... or we have an empty RBP and ForceRequestBodyVariable
 		rbp = "URLENCODED"
+		tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_URLENCODED
 	}
 
 	switch rbp {
@@ -719,7 +772,7 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 	return tx.Interruption, nil
 }
 
-// Perform the analysis on the response readers.
+// ProcessResponseHeaders Perform the analysis on the response readers.
 //
 // This method perform the analysis on the response headers, notice however
 // that the headers should be added prior to the execution of this function.
@@ -740,15 +793,16 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *Interrupt
 }
 
 // IsProcessableRequestBody returns true if the response body meets the
-// criteria to be processed, response headers must be set before.
+// criteria to be processed, response headers must be set before this.
 // The content-type response header must be in the SecRequestBodyMime
-// This is used by webservers to stream response buffers directly to the client
+// This is used by webservers to choose whether tostream response buffers
+// directly to the client or write them to Coraza
 func (tx *Transaction) IsProcessableResponseBody() bool {
 	ct := tx.GetCollection(VARIABLE_RESPONSE_CONTENT_TYPE).GetFirstString("")
 	return utils.StringInSlice(ct, tx.Waf.ResponseBodyMimeTypes)
 }
 
-// Perform the request body (if any)
+// ProcessResponseBody Perform the request body (if any)
 //
 // This method perform the analysis on the request body. It is optional to
 // call that method. If this API consumer already know that there isn't a
@@ -771,7 +825,7 @@ func (tx *Transaction) ProcessResponseBody() (*Interruption, error) {
 	return tx.Interruption, nil
 }
 
-// Logging all information relative to this transaction.
+// ProcessLogging Logging all information relative to this transaction.
 //
 // At this point there is not need to hold the connection, the response can be
 // delivered prior to the execution of this method.
@@ -780,12 +834,19 @@ func (tx *Transaction) ProcessLogging() {
 	//if tx.RuleEngine == RULE_ENGINE_OFF {
 	//	return
 	//}
-	defer tx.savePersistentData()
+	defer func() {
+		tx.savePersistentData()
+		tx.RequestBodyBuffer.Close()
+		tx.ResponseBodyBuffer.Close()
+	}()
 
 	tx.Waf.Rules.Evaluate(5, tx)
 
 	if tx.AuditEngine == AUDIT_LOG_DISABLED {
 		// Audit engine disabled
+		tx.Waf.Logger.Debug("Transaction not marked for audit logging, AuditEngine is disabled",
+			zap.String("tx", tx.Id),
+		)
 		return
 	}
 	if tx.Waf.AuditEngine == AUDIT_LOG_RELEVANT {
@@ -794,10 +855,15 @@ func (tx *Transaction) ProcessLogging() {
 		m := re.NewMatcher()
 		if !m.MatchString(status, 0) {
 			//Not relevant status
+			tx.Waf.Logger.Debug("Transaction status not marked for audit logging",
+				zap.String("tx", tx.Id),
+			)
 			return
 		}
 	}
-
+	tx.Waf.Logger.Debug("Transaction marked for audit logging",
+		zap.String("tx", tx.Id),
+	)
 	tx.saveLog()
 }
 
@@ -806,7 +872,7 @@ func (tx *Transaction) Interrupted() bool {
 	return tx.Interruption != nil
 }
 
-// AuditLog returns an AuditLog struct
+// AuditLog returns an AuditLog struct, used to write audit logs
 func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	al := &loggers.AuditLog{}
 	parts := tx.AuditLogParts
@@ -897,10 +963,11 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 					Actionset: "",
 					Message:   "",
 					Data: &loggers.AuditMessageData{
-						File:     mr.Rule.File,
-						Line:     mr.Rule.Line,
-						Id:       r.Id,
-						Rev:      r.Rev,
+						File: mr.Rule.File,
+						Line: mr.Rule.Line,
+						Id:   r.Id,
+						Rev:  r.Rev,
+						// TODO check this out, msg and logdata are also available somewhere else
 						Msg:      tx.MacroExpansion(r.Msg),
 						Data:     tx.MacroExpansion(r.LogData),
 						Severity: r.Severity,

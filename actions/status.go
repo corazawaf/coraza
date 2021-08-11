@@ -31,21 +31,22 @@ var HTTP_STATUSES = []int{100, 101, 102, 103, 200,
 	505, 506, 507, 508, 510, 511, 511}
 
 type Status struct {
+	status int
 }
 
 func (a *Status) Init(r *engine.Rule, b1 string) error {
 	status, _ := strconv.Atoi(b1)
 	for _, s := range HTTP_STATUSES {
 		if status == s {
-			r.Status = status
+			a.status = status
 			return nil
 		}
 	}
-	return fmt.Errorf("Invalid HTTP status")
+	return fmt.Errorf("invalid http status")
 }
 
 func (a *Status) Evaluate(r *engine.Rule, tx *engine.Transaction) {
-
+	tx.Status = a.status
 }
 
 func (a *Status) Type() int {

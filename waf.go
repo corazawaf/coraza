@@ -55,6 +55,13 @@ const (
 	RULE_ENGINE_OFF        = 2
 )
 
+// Waf instances are used to store configurations and rules
+// Every web application should have a different Waf instance
+// but you can share an instance if you are okwith sharing
+// configurations, rules and logging.
+// Transactions and SecLang parser requires a Waf instance
+// You can use as many Waf instances as you want and they are
+// concurrent safe
 type Waf struct {
 	// RuleGroup object, contains all rules and helpers
 	Rules *RuleGroup
@@ -125,7 +132,7 @@ type Waf struct {
 	// Sensor ID tu, must be unique per cluster nodes
 	SensorId string
 
-	// Path to store data files (ej cache)
+	// Path to store data files (ex. cache)
 	DataDir string
 
 	UploadKeepFiles         bool
@@ -135,19 +142,26 @@ type Waf struct {
 	RequestBodyNoFilesLimit int64
 	CollectionTimeout       int
 
+	// Used to perform unicode mapping, required by t:utf8ToUnicode
 	Unicode *utils.Unicode
 
+	// Used by some functions to support concurrent tasks
 	mux *sync.RWMutex
 
 	RequestBodyLimitAction int
 
 	ArgumentSeparator string
 
-	Logger            *zap.Logger
+	// Used for the debug logger
+	Logger *zap.Logger
+
+	// Used to allow switching the debug level during runtime
+	// ctl cannot switch use it as it will update de lvl
+	// for the whole Waf instance
 	LoggerAtomicLevel zap.AtomicLevel
 }
 
-// Initializes Geoip2 database
+// SetGeoip Initializes Geoip2 database
 func (w *Waf) SetGeoip(path string) error {
 	var err error
 	w.GeoDb, err = geoip2.Open(path)
@@ -157,13 +171,7 @@ func (w *Waf) SetGeoip(path string) error {
 	return nil
 }
 
-// Initializes Persistence Engine
-func (w *Waf) SetPersistenceEngine(args string) error {
-	// Not implemented
-	return nil
-}
-
-// Returns a new initialized transaction for this WAF instance
+// NewTransaction Creates a new initialized transaction for this WAF instance
 func (w *Waf) NewTransaction() *Transaction {
 	w.mux.RLock()
 	defer w.mux.RUnlock()
@@ -179,7 +187,7 @@ func (w *Waf) NewTransaction() *Transaction {
 		RequestBodyLimit:     134217728,
 		ResponseBodyAccess:   true,
 		ResponseBodyLimit:    524288,
-		RuleRemoveTargetById: map[int][]*KeyValue{},
+		RuleRemoveTargetById: map[int][]*VariableKey{},
 		RuleRemoveById:       []int{},
 		StopWatches:          map[int]int{},
 		RequestBodyBuffer:    NewBodyReader(w.TmpDir, w.RequestBodyInMemoryLimit),
@@ -260,10 +268,11 @@ func NewWaf() *Waf {
 	return waf
 }
 
+// SetLogLevel changes the debug level of the Waf instance
 func (w *Waf) SetLogLevel(lvl int) error {
-	//setlevel is not concurrent friendly
-	w.mux.Lock()
-	defer w.mux.Unlock()
+	//setlevel is concurrent safe
+	//w.mux.Lock()
+	//defer w.mux.Unlock()
 	switch lvl {
 	case 0:
 		w.LoggerAtomicLevel.SetLevel(zapcore.FatalLevel)

@@ -14,19 +14,20 @@
 
 package actions
 
-import engine "github.com/jptosso/coraza-waf"
+import (
+	engine "github.com/jptosso/coraza-waf"
+)
 
-type NoAuditlog struct {
-}
+type Auditlog struct{}
 
-func (a *NoAuditlog) Init(r *engine.Rule, data string) error {
+func (a *Auditlog) Init(r *engine.Rule, data string) error {
 	return nil
 }
 
-func (a *NoAuditlog) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *Auditlog) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	tx.Log = true
 }
 
-func (a *NoAuditlog) Type() int {
+func (a *Auditlog) Type() int {
 	return engine.ACTION_TYPE_NONDISRUPTIVE
 }

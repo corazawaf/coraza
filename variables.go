@@ -118,6 +118,9 @@ const (
 	VARIABLE_RESOURCE = 0x51
 )
 
+// NameToVariable returns the byte interpretation
+// of a variable from a string
+// Returns error if there is no representation
 func NameToVariable(name string) (byte, error) {
 	name = strings.ToUpper(name)
 	switch name {
@@ -295,6 +298,8 @@ func NameToVariable(name string) (byte, error) {
 	return 0, errors.New("Invalid variable " + name)
 }
 
+// VariableToName transforms a VARIABLE representation
+// into a string, it's used for audit and logging
 func VariableToName(v byte) string {
 	switch v {
 	case VARIABLE_URLENCODED_ERROR:

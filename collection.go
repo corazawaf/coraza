@@ -21,17 +21,26 @@ import (
 	regex "github.com/jptosso/coraza-waf/utils/regex"
 )
 
+// Collections are used to store VARIABLE data
+// for transactions, this data structured is designed
+// to store slices of data for keys
+// Important: Collections ARE NOT concurrent safe
 type Collection struct {
-	data           map[string][]string
-	name           string
-	PersistenceKey string // for persistent collections
+	data map[string][]string
+	name string
+
+	// The key used to store the collection if it must persist
+	PersistenceKey string
 }
 
+// Get returns a slice of strings for a key
 func (c *Collection) Get(key string) []string {
 	return c.data[key]
 }
 
-//PCRE compatible collection with exceptions
+//Find is returns a slice of MatchData for the
+// regex or key, exceptions are used to skip
+// some keys
 func (c *Collection) Find(key string, re *regex.Regexp, exceptions []string) []*MatchData {
 	cdata := c.data
 	//we return every value in case there is no key but there is a collection
@@ -92,6 +101,7 @@ func (c *Collection) Find(key string, re *regex.Regexp, exceptions []string) []*
 	}
 }
 
+// GetFirstString returns the first string ocurrence of a key
 func (c *Collection) GetFirstString(key string) string {
 	a := c.data[key]
 	if len(a) > 0 {
@@ -101,6 +111,7 @@ func (c *Collection) GetFirstString(key string) string {
 	}
 }
 
+// GetFirstInt64 returns the first int64 ocurrence of a key
 func (c *Collection) GetFirstInt64(key string) int64 {
 	a := c.data[key]
 	if len(a) > 0 {
@@ -111,6 +122,7 @@ func (c *Collection) GetFirstInt64(key string) int64 {
 	}
 }
 
+// GetFirstInt returns the first int ocurrence of a key
 func (c *Collection) GetFirstInt(key string) int {
 	a := c.data[key]
 	if len(a) > 0 {
@@ -121,10 +133,12 @@ func (c *Collection) GetFirstInt(key string) int {
 	}
 }
 
+// Add a value to some key
 func (c *Collection) Add(key string, value string) {
 	c.data[key] = append(c.data[key], value)
 }
 
+// AddUnique will add a value to a key if it is not already there
 func (c *Collection) AddUnique(key string, value string) {
 	pass := false
 	for _, v := range c.data[key] {
@@ -138,26 +152,33 @@ func (c *Collection) AddUnique(key string, value string) {
 	c.data[key] = append(c.data[key], value)
 }
 
+// Set will replace the key's value with this slice
 func (c *Collection) Set(key string, value []string) {
 	c.data[key] = value
 }
 
+// Remove deletes the key from the collection
 func (c *Collection) Remove(key string) {
 	delete(c.data, key)
 }
 
+// Data returns the stored data
 func (c *Collection) Data() map[string][]string {
 	return c.data
 }
 
+// Name returns the name for the current collection
 func (c *Collection) Name() string {
 	return c.name
 }
 
+// SetData replaces the data map with something else
+// Useful for persistent collections
 func (c *Collection) SetData(data map[string][]string) {
 	c.data = data
 }
 
+// Reset the current collection
 func (c *Collection) Reset() {
 	c.data = map[string][]string{}
 	c.data[""] = []string{}

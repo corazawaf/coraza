@@ -54,7 +54,7 @@ func (stage *testStage) Start(waf *engine.Waf, rules string) error {
 		stage.Stage.Input.RawRequest = string(sDec)
 	}
 	if stage.Stage.Input.RawRequest != "" {
-		_, err := tx.ParseRequestString(stage.Stage.Input.RawRequest)
+		_, err := tx.ParseRequestReader(strings.NewReader(stage.Stage.Input.RawRequest))
 		if err != nil {
 			return errors.New("failed to parse Raw Request")
 		}

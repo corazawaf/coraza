@@ -78,7 +78,7 @@ func TestTxMultipart(t *testing.T) {
 	data = strings.Join(headers, "\r\n") + "\r\n\r\n" + data + "\r\n"
 	tx.RequestBodyAccess = true
 	tx.RequestBodyLimit = 9999999
-	_, err := tx.ParseRequestString(data)
+	_, err := tx.ParseRequestReader(strings.NewReader(data))
 	if err != nil {
 		t.Error("Failed to parse multipart request: " + err.Error())
 	}
@@ -221,7 +221,7 @@ func makeTransaction() *Transaction {
 		"testfield=456",
 	}
 	data := strings.Join(ht, "\r\n")
-	tx.ParseRequestString(data)
+	tx.ParseRequestReader(strings.NewReader(data))
 	return tx
 }
 

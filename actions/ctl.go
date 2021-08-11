@@ -159,8 +159,10 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 		// Not supported yet
 		break
 	case CTL_DEBUG_LOG_LEVEL:
-		lvl, _ := strconv.Atoi(a.Value)
-		tx.Waf.SetLogLevel(lvl)
+		//lvl, _ := strconv.Atoi(a.Value)
+		// TODO
+		// We cannot update the log level, it would affect the whole waf instance...
+		//tx.Waf.SetLogLevel(lvl)
 		break
 	}
 

@@ -44,12 +44,15 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 	return nil
 }
 
+// GetRules returns the slice of rules,
+// it's concurrent safe.
 func (rg *RuleGroup) GetRules() []*Rule {
 	rg.mux.RLock()
 	defer rg.mux.RUnlock()
 	return rg.rules
 }
 
+// FindById return a Rule with the requested Id
 func (rg *RuleGroup) FindById(id int) *Rule {
 	for _, r := range rg.rules {
 		if r.Id == id {
@@ -59,6 +62,7 @@ func (rg *RuleGroup) FindById(id int) *Rule {
 	return nil
 }
 
+// DeleteById removes a rule by it's Id
 func (rg *RuleGroup) DeleteById(id int) {
 	for i, r := range rg.rules {
 		if r != nil && r.Id == id {
@@ -69,6 +73,7 @@ func (rg *RuleGroup) DeleteById(id int) {
 	}
 }
 
+// FindByMsg returns a slice of rules that matches the msg
 func (rg *RuleGroup) FindByMsg(msg string) []*Rule {
 	rules := []*Rule{}
 	for _, r := range rg.rules {
@@ -79,6 +84,7 @@ func (rg *RuleGroup) FindByMsg(msg string) []*Rule {
 	return rules
 }
 
+// FindByTag returns a slice of rules that matches the tag
 func (rg *RuleGroup) FindByTag(tag string) []*Rule {
 	rules := []*Rule{}
 	for _, r := range rg.rules {
@@ -89,15 +95,17 @@ func (rg *RuleGroup) FindByTag(tag string) []*Rule {
 	return rules
 }
 
+// Count returns the count of rules
 func (rg *RuleGroup) Count() int {
 	return len(rg.rules)
 }
 
+// Clear will remove each and every rule stored
 func (rg *RuleGroup) Clear() {
 	rg.rules = []*Rule{}
 }
 
-// Execute rules for the specified phase, between 1 and 5
+// Evaluate rules for the specified phase, between 1 and 5
 // Returns true if transaction is disrupted
 func (rg *RuleGroup) Evaluate(phase int, tx *Transaction) bool {
 	tx.Waf.Logger.Debug("transaction evaluated",

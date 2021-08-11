@@ -54,7 +54,7 @@ func ActionsMap() map[string]engine.Action {
 		//"deprecateVar": &DeprecateVar{},
 		"initcol":    &InitCol{},
 		"log":        &Log{},
-		"auditlog":   &Log{}, //Just an alias
+		"auditlog":   &Auditlog{}, //Just an alias
 		"logdata":    &Logdata{},
 		"multiMatch": &MultiMatch{},
 		"nolog":      &Nolog{},
