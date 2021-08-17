@@ -16,6 +16,7 @@ package actions
 
 import (
 	"fmt"
+	"strconv"
 
 	engine "github.com/jptosso/coraza-waf"
 )
@@ -26,8 +27,12 @@ type Severity struct {
 func (a *Severity) Init(r *engine.Rule, data string) error {
 	l := []string{"EMERGENCY", "ALERT", "CRITICAL", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG"}
 	s := -1
+	num, err := strconv.Atoi(data)
+	if err != nil {
+		num = -1
+	}
 	for i, val := range l {
-		if val == data {
+		if val == data || num == i {
 			s = i
 		}
 	}

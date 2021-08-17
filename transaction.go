@@ -309,9 +309,6 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*Interruption, error)
 		return nil, fmt.Errorf("invalid request line")
 	}
 	tx.ProcessUri(spl[1], spl[0], spl[2])
-	if spl := strings.SplitN(spl[1], "?", 2); len(spl) == 2 {
-		tx.ExtractArguments("GET", spl[1])
-	}
 	for scanner.Scan() {
 		l := scanner.Text()
 		if l == "" {
@@ -335,6 +332,7 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*Interruption, error)
 		fmt.Println(scanner.Text(), tx.RequestBodyProcessor)
 
 		tx.RequestBodyBuffer.Write(scanner.Bytes())
+		// urlencoded cannot end with CRLF
 		if ct != "application/x-www-form-urlencoded" {
 			tx.RequestBodyBuffer.Write([]byte{'\r', '\n'})
 		}
@@ -531,7 +529,6 @@ func (tx *Transaction) ProcessRequest(req *http.Request) (*Interruption, error) 
 	// There is no socket access in the request object so we don't know the server client or port
 	tx.ProcessConnection(client, cport, "", 0)
 	tx.ProcessUri(req.URL.String(), req.Method, req.Proto)
-	tx.ExtractArguments("GET", req.URL.RawQuery)
 	for k, vr := range req.Header {
 		for _, v := range vr {
 			tx.AddRequestHeader(k, v)
@@ -642,6 +639,7 @@ func (tx *Transaction) ProcessUri(uri string, method string, httpVersion string)
 	tx.GetCollection(VARIABLE_REQUEST_METHOD).Add("", method)
 	tx.GetCollection(VARIABLE_REQUEST_PROTOCOL).Add("", httpVersion)
 	tx.GetCollection(VARIABLE_REQUEST_LINE).Add("", fmt.Sprintf("%s %s %s", method, huri.String(), httpVersion))
+	tx.ExtractArguments("GET", huri.RawQuery)
 }
 
 // ProcessRequestHeaders Performs the analysis on the request readers.
