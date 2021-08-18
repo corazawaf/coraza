@@ -12,37 +12,47 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package testing
 
 import (
 	"fmt"
 	"testing"
 
 	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/seclang"
 )
 
 func TestEngine(t *testing.T) {
 	files := []string{
-		"../../test/data/engine/body_processors.yaml",
-		"../../test/data/engine/persistence.yaml",
-		"../../test/data/engine/phases.yaml",
-		"../../test/data/engine/actions.yaml",
-		"../../test/data/engine/directives.yaml",
-		"../../test/data/engine/ctl.yaml",
-		"../../test/data/engine/variables.yaml",
-		"../../test/data/engine/transformations.yaml",
-		"../../test/data/engine/match.yaml",
-		"../../test/data/engine/chains.yaml",
+		"../testdata/engine/body_processors.yaml",
+		"../testdata/engine/persistence.yaml",
+		"../testdata/engine/phases.yaml",
+		"../testdata/engine/actions.yaml",
+		"../testdata/engine/directives.yaml",
+		"../testdata/engine/ctl.yaml",
+		"../testdata/engine/variables.yaml",
+		"../testdata/engine/transformations.yaml",
+		"../testdata/engine/match.yaml",
+		"../testdata/engine/chains.yaml",
 	}
 	waf := engine.NewWaf()
 	for _, f := range files {
-		profile, err := ParseProfile(f)
+		profile, err := NewProfile(f)
 		if err != nil {
 			t.Error(err)
 		}
 		for _, tt := range profile.Tests {
 			for _, s := range tt.Stages {
-				err := s.Start(waf, profile.Rules)
+				var err error
+				if profile.Rules == "" {
+					err = s.Start(waf)
+				} else {
+					w := engine.NewWaf()
+					p, _ := seclang.NewParser(w)
+					p.FromString(profile.Rules)
+					err = s.Start(w)
+				}
+
 				if err != nil {
 					t.Error(fmt.Sprintf("%s: %s\n", f, err.Error()))
 				}

@@ -454,16 +454,6 @@ func (tx *Transaction) GetCollections() map[string]*Collection {
 	return cols
 }
 
-func (tx *Transaction) saveLog() error {
-	for _, l := range tx.Waf.AuditLoggers() {
-		if err := l.Write(tx.AuditLog()); err != nil {
-			tx.Waf.Logger.Error(err.Error())
-		}
-	}
-
-	return nil
-}
-
 // savePersistentData save persistent collections to persistence engine
 func (tx *Transaction) savePersistentData() {
 	//TODO, disabled by now, maybe we should add persistent variables to the
@@ -618,7 +608,7 @@ func (tx *Transaction) AddArgument(orig string, key string, value string) {
 // expected to be executed prior to the virtual host resolution, when the
 // connection arrives on the server.
 // note: There is no direct connection between this function and any phase of
-//       the SecLanguage's phases. It is something that may occur between the
+//       the SecLanguages phases. It is something that may occur between the
 //       SecLanguage phase 1 and 2.
 // note: This function won't add GET arguments, they must be added with AddArgument
 func (tx *Transaction) ProcessUri(uri string, method string, httpVersion string) {
@@ -847,7 +837,8 @@ func (tx *Transaction) ProcessLogging() {
 		)
 		return
 	}
-	if tx.Waf.AuditEngine == AUDIT_LOG_RELEVANT {
+
+	if tx.AuditEngine == AUDIT_LOG_RELEVANT && !tx.Log {
 		re := tx.Waf.AuditLogRelevantStatus
 		status := tx.GetCollection(VARIABLE_RESPONSE_STATUS).GetFirstString("")
 		m := re.NewMatcher()
@@ -859,10 +850,15 @@ func (tx *Transaction) ProcessLogging() {
 			return
 		}
 	}
+
 	tx.Waf.Logger.Debug("Transaction marked for audit logging",
 		zap.String("tx", tx.Id),
 	)
-	tx.saveLog()
+	for _, l := range tx.Waf.AuditLoggers() {
+		if err := l.Write(tx.AuditLog()); err != nil {
+			tx.Waf.Logger.Error(err.Error())
+		}
+	}
 }
 
 // Interrupted will return true if the transaction was interrupted

@@ -57,7 +57,7 @@ func TestFromFile(t *testing.T) {
 	addrfail := []string{"127.0.0.2", "192.168.1.1"}
 
 	ipm := &IpMatchFromFile{}
-	ipm.Init("../test/data/operators/op/netranges.dat")
+	ipm.Init("../testdata/operators/op/netranges.dat")
 	for _, ok := range addrok {
 		if !ipm.Evaluate(nil, ok) {
 			t.Errorf("Invalid result for single CIDR IpMatchFromFile " + ok)
