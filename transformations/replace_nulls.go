@@ -14,11 +14,12 @@
 
 package transformations
 
-import (
-	regex "github.com/jptosso/coraza-waf/utils/regex"
-)
-
 func ReplaceNulls(data string, utils *Tools) string {
-	re := regex.MustCompile(`\0`, 0)
-	return re.ReplaceAllString(data, " ", 0)
+	value := []byte(data)
+	for i := 0; i < len(value); i++ {
+		if value[i] == '\x00' {
+			value[i] = ' '
+		}
+	}
+	return string(value)
 }

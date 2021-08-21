@@ -17,7 +17,7 @@
       "name" : "rx",
       "type" : "op",
       "ret" : 0,
-      "param" : "TestCase",
+      "param" : "TestCase2",
       "input" : ""
    },
    {
@@ -79,21 +79,6 @@
       "input" : "a2b1",
       "ret" : 1,
       "re_groups": ["a2", "a", "2"]
-   },
-   {
-      "type" : "op",
-      "name" : "rx",
-      "param" : "<\\?(?!xml)",
-      "input" : "<?php",
-      "ret" : 1,
-      "re_groups": ["<?"]
-   },
-   {
-      "type" : "op",
-      "name" : "rx",
-      "param" : "<\\?(?!xml)",
-      "input" : "<?xml",
-      "ret" : 0
    },
    {
       "type" : "op",

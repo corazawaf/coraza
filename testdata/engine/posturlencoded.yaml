@@ -1,0 +1,24 @@
+---
+  meta:
+    author: jptosso
+    description: Test if the body processors work
+    enabled: true
+    name: posturlencoded.yaml
+  tests:
+  -
+    test_title: posturlencoded
+    stages:
+    -
+      stage:
+        input:
+            uri: /
+            method: POST
+            headers:
+              content-type: application/x-www-form-urlencoded
+            data: "test=123"
+        output:
+          triggered_rules:
+            - 4445
+  rules: |
+    SecRequestBodyAccess On
+    SecRule ARGS:test "123" "phase:2, id:4445,block,log"

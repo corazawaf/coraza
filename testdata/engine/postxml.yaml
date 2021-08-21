@@ -3,24 +3,12 @@
     author: jptosso
     description: Test if the body processors work
     enabled: true
-    name: body_processors.yaml
+    name: postxml.yaml
   tests:
   -
-    test_title: body_processors
+    test_title: postxml
     stages:
-    -
-      stage:
-        input:
-            uri: /
-            method: POST
-            headers:
-              content-type: application/x-www-form-urlencoded
-            data: "test=123"
-        output:
-          triggered_rules:
-            - 1
-            - 2
-    -
+    -  
       stage:
         input:
             uri: /index.php?t1=aaa&t2=bbb&t3=ccc
@@ -35,12 +23,6 @@
           non_triggered_rules:  
             - 103
   rules: |
-    SecRequestBodyAccess On
-
-    # First rule must be triggered because URLENCODED is the default processor
-    SecRule REQBODY_PROCESSOR "URLENCODED" "phase:2,id:1,block,log"
-    SecRule ARGS "123" "phase:2, id:2,block,log"
-
     SecRule REQUEST_HEADERS:content-type "application/xml" "id: 100, phase:1, pass, log, ctl:requestBodyProcessor=XML"
     SecRule REQBODY_PROCESSOR "XML" "id: 101,phase:2,log,block"
     SecRule XML:/*|XML://@* "test123" "id:102, phase:2,log,block"

@@ -612,24 +612,49 @@ func (tx *Transaction) AddArgument(orig string, key string, value string) {
 //       SecLanguage phase 1 and 2.
 // note: This function won't add GET arguments, they must be added with AddArgument
 func (tx *Transaction) ProcessUri(uri string, method string, httpVersion string) {
-	// TODO manual url decode
-	huri, _ := url.Parse(uri)
-	RequestBasename := huri.EscapedPath()
-	a := regexp.MustCompile(`\/|\\`) // \ o /
-	spl := a.Split(RequestBasename, -1)
-	if len(spl) > 0 {
-		RequestBasename = spl[len(spl)-1]
-	}
-	tx.GetCollection(VARIABLE_REQUEST_URI).Add("", huri.String())
-	tx.GetCollection(VARIABLE_REQUEST_FILENAME).Add("", huri.Path)
-	tx.GetCollection(VARIABLE_REQUEST_BASENAME).Add("", RequestBasename)
-	tx.GetCollection(VARIABLE_QUERY_STRING).Add("", huri.RawQuery)
-	tx.GetCollection(VARIABLE_REQUEST_URI_RAW).Add("", huri.String())
-
 	tx.GetCollection(VARIABLE_REQUEST_METHOD).Add("", method)
 	tx.GetCollection(VARIABLE_REQUEST_PROTOCOL).Add("", httpVersion)
-	tx.GetCollection(VARIABLE_REQUEST_LINE).Add("", fmt.Sprintf("%s %s %s", method, huri.String(), httpVersion))
-	tx.ExtractArguments("GET", huri.RawQuery)
+	tx.GetCollection(VARIABLE_REQUEST_URI_RAW).Add("", uri)
+
+	//TODO modsecurity uses HTTP/${VERSION} instead of just version, let's check it out
+	tx.GetCollection(VARIABLE_REQUEST_LINE).Add("", fmt.Sprintf("%s %s %s", method, uri, httpVersion))
+
+	var err error
+
+	//we remove anchors
+	if in := strings.Index(uri, "#"); in != -1 {
+		uri = uri[:in]
+	}
+	path := ""
+	parsedUrl, err := url.Parse(uri)
+	query := ""
+	if err != nil {
+		//TODO
+		tx.GetCollection(VARIABLE_URI_PARSE_ERROR).Set("", []string{"1"})
+		posRawQuery := strings.Index(uri, "?")
+		if posRawQuery != -1 {
+			tx.ExtractArguments("GET", uri[posRawQuery+1:])
+			path = uri[:posRawQuery]
+			query = uri[posRawQuery+1:]
+		} else {
+			path = uri
+		}
+		tx.GetCollection(VARIABLE_REQUEST_URI).Add("", uri)
+	} else {
+		tx.ExtractArguments("GET", parsedUrl.RawQuery)
+		tx.GetCollection(VARIABLE_REQUEST_URI).Add("", parsedUrl.String())
+		path = parsedUrl.Path
+		query = parsedUrl.RawQuery
+	}
+	offset := strings.LastIndexAny(path, "/\\")
+	if offset != -1 && len(path) > offset+1 {
+		tx.GetCollection(VARIABLE_REQUEST_BASENAME).Add("", path[offset+1:])
+	} else {
+		tx.GetCollection(VARIABLE_REQUEST_BASENAME).Add("", path)
+	}
+	tx.GetCollection(VARIABLE_REQUEST_FILENAME).Add("", path)
+
+	tx.GetCollection(VARIABLE_QUERY_STRING).Add("", query)
 }
 
 // ProcessRequestHeaders Performs the analysis on the request readers.

@@ -197,9 +197,16 @@ func (w *Waf) NewTransaction() *Transaction {
 		tx.collections[i] = NewCollection(VariableToName(byte(i)))
 	}
 
+	txvar := tx.GetCollection(VARIABLE_TX)
 	for i := 0; i <= 10; i++ {
 		is := strconv.Itoa(i)
-		tx.GetCollection(VARIABLE_TX).Set(is, []string{})
+		txvar.Set(is, []string{})
+	}
+	defaults := map[byte]string{
+		VARIABLE_URI_PARSE_ERROR: "0",
+	}
+	for v, data := range defaults {
+		tx.GetCollection(v).Set("", []string{data})
 	}
 	return tx
 }
@@ -264,7 +271,7 @@ func NewWaf() *Waf {
 		Logger:                   logger,
 		LoggerAtomicLevel:        atom,
 	}
-	logger.Info("a new waf instance was created")
+	logger.Debug("a new waf instance was created")
 	return waf
 }
 

@@ -15,6 +15,7 @@
 package engine
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/jptosso/coraza-waf/transformations"
@@ -367,34 +368,35 @@ func (r *Rule) executeTransformations(value string, tools *transformations.Tools
 // AddsVariable appends a new variable to the rule, it will
 // precompile regular expressions and transforma the variable name
 // to it's byte form
-func (r *Rule) AddVariable(count bool, collection byte, key string) {
-	var re regex.Regexp
+func (r *Rule) AddVariable(count bool, negation bool, collection byte, key string, regexkey bool) error {
+	if negation {
+		for i, vr := range r.Variables {
+			if vr.Collection == collection {
+				vr.Exceptions = append(vr.Exceptions, key)
+				r.Variables[i] = vr
+				return nil
+			}
+		}
+		//TODO check if we can add something here
+		panic(fmt.Errorf("cannot negate a variable that haven't been created"))
+	}
 	var rv RuleVariable
-	if collection != VARIABLE_XML && len(key) > 0 && key[0] == '/' {
+	if len(key) > 0 && regexkey {
+		// REGEX EXPRESSION
+		var re regex.Regexp
 		var err error
-		nkey := key[1 : len(key)-1] //we strip slashes
-		re, err = regex.Compile(nkey, 0)
-		if err == nil {
-			rv = RuleVariable{count, collection, key, &re, []string{}}
-			r.Variables = append(r.Variables, rv)
-			return
+		fmt.Println(key)
+		re, err = regex.Compile(key, 0)
+		if err != nil {
+			return err
 		}
+		rv = RuleVariable{count, collection, key, &re, []string{}}
+		r.Variables = append(r.Variables, rv)
+	} else {
+		rv = RuleVariable{count, collection, key, nil, []string{}}
+		r.Variables = append(r.Variables, rv)
 	}
-	rv = RuleVariable{count, collection, key, nil, []string{}}
-	r.Variables = append(r.Variables, rv)
-}
-
-// AddNegateVariable will append an exception to a variable,
-// for example, if you want to skip checking REQUEST_HEADERS:referer,
-// you just r.AddNegateVariable(VARIABLE_REQUEST_HEADERS, "referer")
-func (r *Rule) AddNegateVariable(collection byte, key string) {
-	for i, vr := range r.Variables {
-		if vr.Collection == collection {
-			vr.Exceptions = append(vr.Exceptions, key)
-			r.Variables[i] = vr
-			return
-		}
-	}
+	return nil
 }
 
 // NewRule returns a new initialized rule

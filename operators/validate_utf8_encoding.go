@@ -32,23 +32,35 @@ func (o *ValidateUtf8Encoding) Init(data string) error {
 
 func (o *ValidateUtf8Encoding) Evaluate(tx *engine.Transaction, value string) bool {
 	//TODO https://golang.org/pkg/unicode/utf8/#ValidString should be enough but it fails (?)
-	str_c := []byte(value)
-	rc := detectUtf8Character(str_c, len(str_c))
-	//We use switch in case we debug information
-	switch rc {
-	case UNICODE_ERROR_CHARACTERS_MISSING:
-		return true
-	case UNICODE_ERROR_INVALID_ENCODING:
-		return true
-	case UNICODE_ERROR_OVERLONG_CHARACTER:
-		return true
-	case UNICODE_ERROR_RESTRICTED_CHARACTER:
-		return true
-	case UNICODE_ERROR_DECODING_ERROR:
-		return true
+	if value == "" {
+		return false
 	}
+	str_c := []byte(value)
+	bytes_left := len(str_c)
+	for i := 0; i < len(value); {
+		rc := detectUtf8Character(str_c[i:], bytes_left)
+		//We use switch in case we debug information
+		switch rc {
+		case UNICODE_ERROR_CHARACTERS_MISSING:
+			return true
+		case UNICODE_ERROR_INVALID_ENCODING:
+			return true
+		case UNICODE_ERROR_OVERLONG_CHARACTER:
+			return true
+		case UNICODE_ERROR_RESTRICTED_CHARACTER:
+			return true
+		case UNICODE_ERROR_DECODING_ERROR:
+			return true
+		}
 
-	return rc <= 0
+		if rc <= 0 {
+			return true
+		}
+
+		i += rc
+		bytes_left -= rc
+	}
+	return false
 }
 
 func detectUtf8Character(p_read []byte, length int) int {

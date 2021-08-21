@@ -16,7 +16,7 @@ package operators
 
 import (
 	engine "github.com/jptosso/coraza-waf"
-	"github.com/jptosso/coraza-waf/utils"
+	"github.com/jptosso/coraza-waf/utils/libinjection"
 )
 
 type DetectSQLi struct{}
@@ -26,7 +26,7 @@ func (o *DetectSQLi) Init(data string) error {
 }
 
 func (o *DetectSQLi) Evaluate(tx *engine.Transaction, value string) bool {
-	res, capture := utils.IsSQLi(value)
+	res, capture := libinjection.IsSQLi(value)
 	tx.CaptureField(1, capture)
 	return res
 }

@@ -21,7 +21,7 @@ import (
 // This file repeats the same content many times in order to make access
 // efficient for seclang and transactions
 
-const VARIABLES_COUNT = 88
+const VARIABLES_COUNT = 89
 const (
 	// Single valua variables
 	VARIABLE_URLENCODED_ERROR                 = 0x00
@@ -104,18 +104,19 @@ const (
 	VARIABLE_ARGS_POST_NAMES        = 0x4B
 	VARIABLE_TX                     = 0x4C
 
-	VARIABLE_RULE               = 0x52 //TODO FIX
-	VARIABLE_XML                = 0x53 //TODO FIX
-	VARIABLE_JSON               = 0x54 //TODO FIX
-	VARIABLE_INBOUND_ERROR_DATA = 0x55 //TODO FIX
-	VARIABLE_DURATION           = 0x56 //TODO FIX
-
 	// Persistent collections
 	VARIABLE_GLOBAL   = 0x4D
 	VARIABLE_IP       = 0x4E
 	VARIABLE_SESSION  = 0x4F
 	VARIABLE_USER     = 0x50
 	VARIABLE_RESOURCE = 0x51
+
+	VARIABLE_RULE               = 0x52 //TODO FIX
+	VARIABLE_XML                = 0x53 //TODO FIX
+	VARIABLE_JSON               = 0x54 //TODO FIX
+	VARIABLE_INBOUND_ERROR_DATA = 0x55 //TODO FIX
+	VARIABLE_DURATION           = 0x56 //TODO FIX
+	VARIABLE_URI_PARSE_ERROR    = 0x57
 )
 
 // NameToVariable returns the byte interpretation
@@ -294,6 +295,8 @@ func NameToVariable(name string) (byte, error) {
 		return VARIABLE_TX, nil
 	case "DURATION":
 		return VARIABLE_DURATION, nil
+	case "URI_PARSE_ERROR":
+		return VARIABLE_URI_PARSE_ERROR, nil
 	}
 	return 0, errors.New("Invalid variable " + name)
 }
@@ -470,6 +473,8 @@ func VariableToName(v byte) string {
 		return "DURATION"
 	case VARIABLE_RULE:
 		return "RULE"
+	case VARIABLE_URI_PARSE_ERROR:
+		return "URI_PARSE_ERROR"
 	}
 	return ""
 }

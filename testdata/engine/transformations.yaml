@@ -17,10 +17,9 @@
         output:
           triggered_rules:
             - 777
-          non_triggered_rules:
             - 778
+          non_triggered_rules:
   rules: |
-    # multimatch transformations
-    SecRule REQUEST_HEADERS "1234" "id: 777, phase:1, log, multiMatch, t:md5"
-    SecRule REQUEST_HEADERS "1234" "id: 778, phase:1, log, t:md5"
+    SecRule REQUEST_HEADERS:test "81dc9bdb52d04dc20036dbd8313ed055" "id:777, phase:1, log, multiMatch, t:none, t:md5, t:hexEncode"
+    SecRule REQUEST_HEADERS:test2 "@eq 32" "id:778, phase:1, log, t:none, t:md5, t:hexEncode, t:length"
 

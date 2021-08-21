@@ -1,6 +1,6 @@
-// Copyright (C) 2011 Florian Weimer <fw@deneb.enyo.de>
-
 // +build cgo
+
+// Copyright (C) 2011 Florian Weimer <fw@deneb.enyo.de>
 
 package regex
 

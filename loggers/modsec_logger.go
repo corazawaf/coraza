@@ -43,23 +43,29 @@ func (sl *ModsecLogger) New(args []string) error {
 
 func (sl *ModsecLogger) Write(al *AuditLog) error {
 	timestamp := al.Transaction.Timestamp
-	address := ""
-	operator := ""
-	params := ""
+	address := al.Transaction.ClientIp
 	rules := ""
 	phase := 5
-	variable := ""
 	msgs := ""
 	severity := ""
 	uri := ""
+	status := 0
+	if al.Transaction.Request != nil {
+		uri = al.Transaction.Request.Uri
+	}
+	if al.Transaction.Response != nil {
+		status = al.Transaction.Response.Status
+	}
+	logdata := ""
+
 	id := al.Transaction.Id
-	err := fmt.Sprintf("Access denied with code 505 (phase %d)", phase)
+	err := fmt.Sprintf("Access denied with code %d (phase %d)", status, phase)
 	for _, r := range al.Messages {
 		rules += fmt.Sprintf("[id \"%d\"] ", r.Data.Id)
 		msgs += fmt.Sprintf("[msg \"%s\"]", r.Data.Msg)
 	}
-	data := fmt.Sprintf("[%s] [error] [client %s] Coraza: %s. Match of \"%s %s\" against \"%s\" required. %s %s [severity \"%s\"] [uri \"%s\"] [unique_id \"%s\"]",
-		timestamp, address, err, operator, params, variable, rules, msgs, severity, uri, id)
+	data := fmt.Sprintf("[%s] [error] [client %s] Coraza: %s. %s %s %s [severity \"%s\"] [uri \"%s\"] [unique_id \"%s\"]",
+		timestamp, address, err, logdata, rules, msgs, severity, uri, id)
 	sl.log.Println(data)
 	return nil
 }

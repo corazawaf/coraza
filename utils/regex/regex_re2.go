@@ -1,57 +1,17 @@
-// +build !cgo,never
-// Copyright (c) 2011 Florian Weimer. All rights reserved.
+// +build !cgo
+// Copyright 2021 Juan Pablo Tosso
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// * Redistributions of source code must retain the above copyright
-//   notice, this list of conditions and the following disclaimer.
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
-// * Redistributions in binary form must reproduce the above copyright
-//   notice, this list of conditions and the following disclaimer in the
-//   documentation and/or other materials provided with the distribution.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-// Package pcre provides access to the Perl Compatible Regular
-// Expresion library, PCRE.
-//
-// It implements two main types, Regexp and Matcher.  Regexp objects
-// store a compiled regular expression. They consist of two immutable
-// parts: pcre and pcre_extra. Compile()/MustCompile() initialize pcre.
-// Calling Study() on a compiled Regexp initializes pcre_extra.
-// Compilation of regular expressions using Compile or MustCompile is
-// slightly expensive, so these objects should be kept and reused,
-// instead of compiling them from scratch for each matching attempt.
-// CompileJIT and MustCompileJIT are way more expensive, because they
-// run Study() after compiling a Regexp, but they tend to give
-// much better perfomance:
-// http://sljit.sourceforge.net/regex_perf.html
-//
-// Matcher objects keeps the results of a match against a []byte or
-// string subject.  The Group and GroupString functions provide access
-// to capture groups; both versions work no matter if the subject was a
-// []byte or string, but the version with the matching type is slightly
-// more efficient.
-//
-// Matcher objects contain some temporary space and refer the original
-// subject.  They are mutable and can be reused (using Match,
-// MatchString, Reset or ResetString).
-//
-// For details on the regular expression language implemented by this
-// package and the flags defined below, see the PCRE documentation.
-// http://www.pcre.org/pcre.txt
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package regex
 
@@ -72,8 +32,12 @@ func (m *Matcher) Matches() bool {
 }
 
 func (m *Matcher) MatchString(input string, flags int) bool {
+	match := m.rx.FindAllString(input, 10)
+	if len(match) == 0 {
+		return false
+	}
 	m.match = []string{input}
-	m.match = append(m.match, m.rx.FindAllString(input, 0)...)
+	m.match = append(m.match, match...)
 	m.count = len(m.match)
 	return m.count > 0
 }
@@ -122,11 +86,11 @@ func (rx *Regexp) MatcherString(input string, flags int) Matcher {
 	return m
 }
 
-func MustCompile(input string, flags int) Regexp {
-	pattern, _ := regexp.Compile(input)
+func Compile(input string, flags int) (Regexp, error) {
+	pattern, err := regexp.Compile(input)
 	return Regexp{
 		pattern: pattern,
-	}
+	}, err
 }
 
 func MustCompile(input string, flags int) Regexp {

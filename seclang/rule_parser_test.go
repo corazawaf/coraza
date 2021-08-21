@@ -41,3 +41,14 @@ func TestDefaultActions(t *testing.T) {
 func TestMergeActions(t *testing.T) {
 
 }
+
+func TestVariables(t *testing.T) {
+	waf := engine.NewWaf()
+	p, _ := NewParser(waf)
+	//single variable with key
+	p.FromString(`SecRule REQUEST_HEADERS:test "" "id:1"`)
+	v := waf.Rules.GetRules()[0].Variables[0]
+	if v.Collection != engine.VARIABLE_REQUEST_HEADERS || v.Key != "test" {
+		t.Error("failed to parse single key variable")
+	}
+}

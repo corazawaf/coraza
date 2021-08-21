@@ -26,7 +26,6 @@ import (
 	actionsmod "github.com/jptosso/coraza-waf/actions"
 	"github.com/jptosso/coraza-waf/operators"
 	"github.com/jptosso/coraza-waf/utils"
-	regex "github.com/jptosso/coraza-waf/utils/regex"
 )
 
 type ruleAction struct {
@@ -43,45 +42,91 @@ type RuleParser struct {
 }
 
 func (p *RuleParser) ParseVariables(vars string) error {
-	//Splits the values by KEY, KEY:VALUE, &!KEY, KEY:/REGEX/, KEY1|KEY2
-	//GROUP 1 is collection, group 3 is vlue, group 3 can be empty
-	//TODO this is not an elegant way to parse variables but it works and it won't generate workload
-	re := regex.MustCompile(`(((?:&|!)?XML):?(.*?)(?:\||$))|((?:&|!)?[\w_]+):?([\w\-._]+|'?\/.*?(?<!\\)\/'?)?`, 0)
-	matcher := re.MatcherString(vars, 0)
-	subject := []byte(vars)
-	for matcher.Match(subject, 0) {
-		vname := matcher.GroupString(4)
-		vvalue := strings.ToLower(matcher.GroupString(5))
-		if vname == "" {
-			//This case is only for XML, sorry for the ugly code :(
-			vname = matcher.GroupString(2)
-			vvalue = strings.ToLower(matcher.GroupString(3))
-		}
-		index := matcher.Index()
-		counter := false
-		negation := false
-		if vname[0] == '&' {
-			vname = vname[1:]
-			counter = true
-		}
-		if vname[0] == '!' {
-			vname = vname[1:]
-			negation = true
-		}
 
-		collection, err := engine.NameToVariable(vname)
-		if err != nil {
-			return err
+	// 0 = variable name
+	// 1 = key
+	// 2 = inside regex
+	// 3 = inside xpath
+	curr := 0
+	isnegation := false
+	iscount := false
+	curvar := []byte{}
+	curkey := []byte{}
+	isescaped := false
+	//fmt.Println(vars + ":")
+	for i := 0; i < len(vars); i++ {
+		c := vars[i]
+		if (c == '|') || i+1 >= len(vars) || (curr == 2 && c == '/' && !isescaped) {
+			//if next variable or end
+			//if regex we ignore |
+			//we wont support pipe for xpath, maybe later
+			if c != '|' {
+				// we don't want to miss the last character
+				if curr == 0 {
+					curvar = append(curvar, c)
+				} else if curr != 2 && c != '/' {
+					// we don't want the last slash if it's a regex
+					curkey = append(curkey, c)
+				}
+			}
+			v, err := engine.NameToVariable(string(curvar))
+			if err != nil {
+				return err
+			}
+			//fmt.Printf("(PREVIOUS %s) %s:%s (%t %t)\n", vars, curvar, curkey, iscount, isnegation)
+			err = p.rule.AddVariable(iscount, isnegation, v, string(curkey), curr == 2)
+			if err != nil {
+				return err
+			}
+			curvar = []byte{}
+			curkey = []byte{}
+			iscount = false
+			isnegation = false
+			curr = 0
+			continue
 		}
-		if negation {
-			p.rule.AddNegateVariable(collection, vvalue)
-		} else {
-			p.rule.AddVariable(counter, collection, vvalue)
-		}
-
-		subject = subject[index[1]:]
-		if len(subject) == 0 {
-			break
+		switch curr {
+		case 0:
+			if c == '!' {
+				isnegation = true
+			} else if c == '&' {
+				iscount = true
+			} else if c == ':' {
+				// we skip to key context
+				curr = 1
+			} else {
+				// we append the current character
+				curvar = append(curvar, c)
+			}
+		case 1:
+			if len(curkey) == 0 && (string(curvar) == "XML" || string(curvar) == "JSON") {
+				// We are starting a XPATH
+				curr = 3
+				curkey = append(curkey, c)
+			} else if c == '/' {
+				// We are starting a regex
+				curr = 2
+			} else {
+				curkey = append(curkey, c)
+			}
+		case 2:
+			//REGEX
+			if c == '/' && !isescaped {
+				// unescaped / will stop the regex
+				curr = 1
+			} else if c == '\\' {
+				curkey = append(curkey, '\\')
+				if isescaped {
+					isescaped = false
+				} else {
+					isescaped = true
+				}
+			} else {
+				curkey = append(curkey, c)
+			}
+		case 3:
+			//XPATH
+			curkey = append(curkey, c)
 		}
 	}
 	return nil
@@ -166,7 +211,10 @@ func (p *RuleParser) ParseDefaultActions(actions string) error {
 
 // ParseActions
 func (p *RuleParser) ParseActions(actions string) error {
-	act, _ := ParseActions(actions)
+	act, err := ParseActions(actions)
+	if err != nil {
+		return err
+	}
 	//first we execute metadata rules
 	for _, a := range act {
 		if a.Atype == engine.ACTION_TYPE_METADATA {

@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/utils/libinjection"
 )
 
 type Test struct {
@@ -37,10 +38,17 @@ type Test struct {
 
 //https://github.com/SpiderLabs/secrules-language-tests/
 func TestTransformations(t *testing.T) {
-	root := "../test/data/operators/"
+	root := "../testdata/operators/"
 	files := [][]byte{}
+	if _, err := os.Stat(root); os.IsNotExist(err) {
+		t.Error("failed to find operator test files")
+	}
 	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if strings.HasSuffix(path, ".json") {
+			// TODO until we remove libinjection cgo
+			if !libinjection.LIBINJECTION_CGO && (strings.Contains(path, "detectSQLi") || strings.Contains(path, "detectXSS")) {
+				return nil
+			}
 			data, _ := ioutil.ReadFile(path)
 			files = append(files, data)
 		}
@@ -72,10 +80,12 @@ func TestTransformations(t *testing.T) {
 			if data.Name == "pmFromFile" {
 				data.Param = root + "op/" + data.Param
 			}
-			op.Init(data.Param)
+			if err := op.Init(data.Param); err != nil {
+				t.Error(err)
+			}
 			res := op.Evaluate(waf.NewTransaction(), data.Input)
 			if (res && data.Ret != 1) || (!res && data.Ret == 1) {
-				t.Error(fmt.Sprintf("Invalid operator result for %s(%s, %s) expected %d", data.Name, data.Input, data.Param, data.Ret))
+				t.Error(fmt.Sprintf("Invalid operator result for @%s(%q, %q), expected %d", data.Name, data.Param, data.Input, data.Ret))
 			}
 		}
 	}

@@ -24,7 +24,8 @@ import (
 
 func TestEngine(t *testing.T) {
 	files := []string{
-		"../testdata/engine/body_processors.yaml",
+		"../testdata/engine/postxml.yaml",
+		"../testdata/engine/posturlencoded.yaml",
 		"../testdata/engine/persistence.yaml",
 		"../testdata/engine/phases.yaml",
 		"../testdata/engine/actions.yaml",
@@ -49,7 +50,9 @@ func TestEngine(t *testing.T) {
 				} else {
 					w := engine.NewWaf()
 					p, _ := seclang.NewParser(w)
-					p.FromString(profile.Rules)
+					if err := p.FromString(profile.Rules); err != nil {
+						panic(err)
+					}
 					err = s.Start(w)
 				}
 
