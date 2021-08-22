@@ -329,7 +329,6 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*Interruption, error)
 	ct := tx.GetCollection(VARIABLE_REQUEST_HEADERS).GetFirstString("content-type")
 	ct = strings.Split(ct, ";")[0]
 	for scanner.Scan() {
-		fmt.Println(scanner.Text(), tx.RequestBodyProcessor)
 
 		tx.RequestBodyBuffer.Write(scanner.Bytes())
 		// urlencoded cannot end with CRLF

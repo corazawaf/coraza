@@ -385,7 +385,6 @@ func (r *Rule) AddVariable(count bool, negation bool, collection byte, key strin
 		// REGEX EXPRESSION
 		var re regex.Regexp
 		var err error
-		fmt.Println(key)
 		re, err = regex.Compile(key, 0)
 		if err != nil {
 			return err
