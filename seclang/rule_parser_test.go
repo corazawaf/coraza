@@ -51,4 +51,33 @@ func TestVariables(t *testing.T) {
 	if v.Collection != engine.VARIABLE_REQUEST_HEADERS || v.Key != "test" {
 		t.Error("failed to parse single key variable")
 	}
+	err := p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/^(?:phpMyAdminphp|MyAdmin_https)$/' "id:2"`)
+	if err != nil {
+		t.Error(err)
+	}
+	if waf.Rules.GetRules()[1].Variables[0].Key != `^(?:phpMyAdminphp|MyAdmin_https)$` {
+		t.Error("failed to parse '/^(?:phpMyAdminphp|MyAdmin_https)$'")
+	}
+	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/^(?:phpMyAdminphp|MyAdmin_https)$/'|ARGS:test "id:2"`)
+	if err != nil {
+		t.Error(err)
+	}
+	if waf.Rules.GetRules()[2].Variables[1].Key != `test` {
+		t.Error("failed to parse second variable after weird regex")
+	}
+	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/.*/'|ARGS:/a|b/ "id:2"`)
+	if err != nil {
+		t.Error(err)
+	}
+	if waf.Rules.GetRules()[2].Variables[1].Regex != nil {
+		t.Error("failed to parse second variable after weird regex")
+	}
+
+	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/.*/'|ARGS:/a|b/|XML:/*|ARGS|REQUEST_HEADERS "id:2"`)
+	if err != nil {
+		t.Error(err)
+	}
+	if waf.Rules.GetRules()[2].Variables[1].Regex != nil {
+		t.Error("failed to parse second variable after weird regex")
+	}
 }

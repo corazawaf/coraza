@@ -207,7 +207,7 @@ func (p *Parser) ParseRule(data string, withOperator bool) (*engine.Rule, error)
 	actions := ""
 	if withOperator {
 		spl := strings.SplitN(data, " ", 2)
-		vars := utils.RemoveQuotes(spl[0])
+		vars := spl[0]
 
 		//regex: "(?:[^"\\]|\\.)*"
 		r := regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
