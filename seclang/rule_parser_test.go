@@ -46,38 +46,50 @@ func TestVariables(t *testing.T) {
 	waf := engine.NewWaf()
 	p, _ := NewParser(waf)
 	//single variable with key
-	p.FromString(`SecRule REQUEST_HEADERS:test "" "id:1"`)
+	err := p.FromString(`SecRule REQUEST_HEADERS:test "" "id:1"`)
+	if err != nil {
+		t.Error(err)
+	}
 	v := waf.Rules.GetRules()[0].Variables[0]
 	if v.Collection != engine.VARIABLE_REQUEST_HEADERS || v.Key != "test" {
 		t.Error("failed to parse single key variable")
 	}
-	err := p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/^(?:phpMyAdminphp|MyAdmin_https)$/' "id:2"`)
+	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/^(?:phpMyAdminphp|MyAdmin_https)$/' "id:2"`)
 	if err != nil {
 		t.Error(err)
 	}
 	if waf.Rules.GetRules()[1].Variables[0].Key != `^(?:phpMyAdminphp|MyAdmin_https)$` {
 		t.Error("failed to parse '/^(?:phpMyAdminphp|MyAdmin_https)$'")
 	}
-	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/^(?:phpMyAdminphp|MyAdmin_https)$/'|ARGS:test "id:2"`)
+	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/^(?:phpMyAdminphp|MyAdmin_https)$/'|ARGS:test "id:3"`)
 	if err != nil {
 		t.Error(err)
 	}
 	if waf.Rules.GetRules()[2].Variables[1].Key != `test` {
-		t.Error("failed to parse second variable after weird regex")
+		t.Error("failed to parse second variable after weird regex 1")
 	}
-	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/.*/'|ARGS:/a|b/ "id:2"`)
+	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/.*/'|ARGS:/a|b/ "id:4"`)
 	if err != nil {
 		t.Error(err)
 	}
-	if waf.Rules.GetRules()[2].Variables[1].Regex != nil {
-		t.Error("failed to parse second variable after weird regex")
+	if waf.Rules.GetRules()[3].Variables[1].Regex == nil {
+		t.Error("failed to parse second variable after weird regex 2 ")
 	}
 
-	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/.*/'|ARGS:/a|b/|XML:/*|ARGS|REQUEST_HEADERS "id:2"`)
+	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/.*/'|ARGS:/a|b/|XML:/*|ARGS|REQUEST_HEADERS "id:5"`)
 	if err != nil {
 		t.Error(err)
 	}
-	if waf.Rules.GetRules()[2].Variables[1].Regex != nil {
-		t.Error("failed to parse second variable after weird regex")
+	if waf.Rules.GetRules()[4].Variables[1].Regex == nil {
+		t.Error("failed to parse second variable after weird regex 3")
 	}
+
+	err = p.FromString(`SecRule XML:/*|XML://@* "id:6"`)
+	if err != nil {
+		t.Error(err)
+	}
+	if waf.Rules.GetRules()[5].Variables[1].Key != "//@*" {
+		t.Error("failed to parse second variable after XPATH")
+	}
+
 }

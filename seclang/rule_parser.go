@@ -56,7 +56,7 @@ func (p *RuleParser) ParseVariables(vars string) error {
 	isquoted := false
 	for i := 0; i < len(vars); i++ {
 		c := vars[i]
-		if (c == '|' && curr < 2) || i+1 > len(vars) || (curr == 2 && c == '/' && !isescaped) {
+		if (c == '|' && curr != 2) || i+1 >= len(vars) || (curr == 2 && c == '/' && !isescaped) {
 			//if next variable or end
 			//if regex we ignore |
 			//we wont support pipe for xpath, maybe later
@@ -76,9 +76,11 @@ func (p *RuleParser) ParseVariables(vars string) error {
 			//fmt.Printf("(PREVIOUS %s) %s:%s (%t %t)\n", vars, curvar, curkey, iscount, isnegation)
 			if isquoted {
 				// if it is quoted we remove the last quote
-				fmt.Println(vars)
 				if len(vars) <= i+1 || vars[i+1] != '\'' {
-					return fmt.Errorf("unclosed quote: " + string(curkey))
+					if vars[i] != '\'' {
+						//TODO fix here
+						return fmt.Errorf("unclosed quote: " + string(curkey))
+					}
 				}
 				// we skip one additional character
 				i += 2
