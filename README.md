@@ -18,13 +18,6 @@ Welcome to Coraza Web Application Firewall, this project is a Golang port of Mod
 * Golang compiler v1.16+
 
 ### Optional Prerequisites 
-* libpcre-dev (``apt install libpcre++-dev`` for Ubuntu)
-* **CGO_ENABLED** environmental variable must be set to 1
-* libinjection must be installed and linked
-
-Note this command will compile and install libinjection to your **LIBRARY_PATH** and **LD_LIBRARY_PATH**.
-
-## Important notes about CGO
 
 In this Coraza version, you can set CGO_ENABLED to 1 or 0, if you set it to 1, you will be required to link libinjection and libpcre to enable PCRE expressions, @detectSQLi and @detectXSS, if you set it to 0 you won't need any dynamic library but your implementation won't support @detectSQLi, @detectXSS nor PCRE expressions, **which means OWASP CRS won't work**.
 
@@ -33,10 +26,16 @@ Future versions of Coraza will fully remove CGO.
 |             | CGO Enabled | CGO Disabled |
 |-------------|-------------|--------------|
 | @detectSQLi | Yes         | No           |
-| @detectSQLi | Yes         | No           |
+| @detectXSS  | Yes         | No           |
 | PCRE regex  | Yes         | No           |
 | RE2 regex   | Yes         | Yes          |
+| OWASP CRS   | Yes         | No           |
 
+If you want to install Coraza with CGO support, you will need:
+
+* libpcre-dev (``apt install libpcre++-dev`` for Ubuntu)
+* **CGO_ENABLED** environmental variable must be set to 1
+* libinjection must be installed and linked
 
 ## Running the test suite
 
