@@ -17,42 +17,48 @@ package loggers
 import (
 	"errors"
 	"log/syslog"
-	"net/url"
 )
 
 type SyslogLogger struct {
 	format formatter
-	uri    *url.URL
 	writer *syslog.Writer
 }
 
-func (sl *SyslogLogger) New(args []string) error {
+func (sl *SyslogLogger) New(args map[string]string) error {
 	var err error
 	if len(args) != 2 {
 		return errors.New("invalid arguments count for syslog logger")
 	}
-	switch args[0] {
+	server := args["server"]
+	format := args["format"]
+	protocol := args["protocol"]
+	if protocol == "" {
+		protocol = "tcp"
+	}
+	if format == "" {
+		format = "cef"
+	}
+	switch format {
 	case "cef":
 		sl.format = cefFormatter
 	default:
 		return errors.New("invalid syslog formatter")
 	}
-	sl.uri, err = url.Parse(args[1])
-	if err != nil {
-		return err
+	if server == "" {
+		server = "127.0.0.1:514"
 	}
-	sl.writer, err = syslog.Dial(sl.uri.Scheme, sl.uri.Host, syslog.LOG_ALERT, "com.coraza.waf")
+	sl.writer, err = syslog.Dial(protocol, server, syslog.LOG_ALERT, "com.coraza.waf")
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (sl *SyslogLogger) Write(al *AuditLog) {
+func (sl *SyslogLogger) Write(al *AuditLog) error {
 	l, _ := sl.format(al)
-	sl.writer.Alert(l) //returns error but whatever
+	return sl.writer.Alert(l) //returns error but whatever
 }
 
-func (sl *SyslogLogger) Close() {
-	sl.writer.Close()
+func (sl *SyslogLogger) Close() error {
+	return sl.writer.Close()
 }

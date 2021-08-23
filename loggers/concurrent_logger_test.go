@@ -30,7 +30,13 @@ func TestCLogFileCreation(t *testing.T) {
 		t.Error("failed to create concurrent logger file")
 	}
 	logger := &ConcurrentLogger{}
-	logger.New([]string{file.Name(), "/tmp", "0777", "0777"})
+	args := map[string]string{
+		"file":      file.Name(),
+		"directory": "/tmp",
+		"dirmode":   "0777",
+		"filemode":  "0777",
+	}
+	logger.New(args)
 	ts := time.Now().UnixNano()
 	al := &AuditLog{
 		Transaction: &AuditTransaction{

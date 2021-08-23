@@ -21,10 +21,13 @@ import (
 	"testing"
 )
 
-func TestApacheLogger_Write(t *testing.T) {
-	l := &ModsecLogger{}
+func TestSerialLogger_Write(t *testing.T) {
+	l := &SerialLogger{}
 	tmp := "/tmp/something.log"
-	err := l.New([]string{tmp})
+	args := map[string]string{
+		"file": tmp,
+	}
+	err := l.New(args)
 	if err != nil {
 		t.Error(err)
 	}

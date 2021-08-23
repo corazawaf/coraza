@@ -532,11 +532,13 @@ func (tx *Transaction) ProcessRequest(req *http.Request) (*Interruption, error) 
 	if in != nil {
 		return in, nil
 	}
-	_, err := io.Copy(tx.RequestBodyBuffer, req.Body)
-	if err != nil {
-		return tx.Interruption, err
+	if req.Body != nil {
+		_, err := io.Copy(tx.RequestBodyBuffer, req.Body)
+		if err != nil {
+			return tx.Interruption, err
+		}
+		req.Body = io.NopCloser(tx.RequestBodyBuffer.Reader())
 	}
-	req.Body = io.NopCloser(tx.RequestBodyBuffer.Reader())
 	return tx.ProcessRequestBody()
 }
 

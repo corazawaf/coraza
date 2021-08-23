@@ -15,7 +15,7 @@
 package loggers
 
 type Logger interface {
-	New([]string) error
+	New(map[string]string) error
 	Write(*AuditLog) error
 	Close() error
 }

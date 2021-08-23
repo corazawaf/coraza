@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -279,10 +280,11 @@ func directiveSecAuditLog(p *Parser, opts string) error {
 	if len(opts) == 0 {
 		return errors.New("syntax error: SecAuditLog [concurrent/https/...] [parameters]")
 	}
-	spl := strings.Split(opts, " ")
-	args := []string{}
-	if len(spl) > 1 {
-		args = append(args, spl[0:]...)
+	spl := strings.SplitN(opts, " ", 2)
+	args := map[string]string{}
+	re := regexp.MustCompile(`([\w\-_]+)=(.*?(?:\s|$))`)
+	for _, data := range re.FindAllStringSubmatch(spl[1], -1) {
+		args[data[1]] = data[2]
 	}
 	return p.Waf.AddAuditLogger(spl[0], args)
 }

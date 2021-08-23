@@ -21,18 +21,22 @@ import (
 	"os"
 )
 
-// ModsecLogger is used to store logs compatible with go-FTW
-type ModsecLogger struct {
+// SerialLogger is used to store logs compatible with go-FTW
+type SerialLogger struct {
 	file *os.File
 	log  log.Logger
 }
 
-func (sl *ModsecLogger) New(args []string) error {
+func (sl *SerialLogger) New(args map[string]string) error {
 	var err error
 	if len(args) == 0 {
 		return errors.New("syntax error: apache /path/to/file.log [filemode]")
 	}
-	sl.file, err = os.OpenFile(args[0], os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file := args["file"]
+	if file == "" {
+		return errors.New("file cannot be empty")
+	}
+	sl.file, err = os.OpenFile(file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
@@ -41,7 +45,7 @@ func (sl *ModsecLogger) New(args []string) error {
 	return nil
 }
 
-func (sl *ModsecLogger) Write(al *AuditLog) error {
+func (sl *SerialLogger) Write(al *AuditLog) error {
 	timestamp := al.Transaction.Timestamp
 	address := al.Transaction.ClientIp
 	rules := ""
@@ -70,7 +74,7 @@ func (sl *ModsecLogger) Write(al *AuditLog) error {
 	return nil
 }
 
-func (sl *ModsecLogger) Close() error {
+func (sl *SerialLogger) Close() error {
 	sl.file.Close()
 	return nil
 }

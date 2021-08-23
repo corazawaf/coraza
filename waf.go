@@ -214,18 +214,17 @@ func (w *Waf) NewTransaction() *Transaction {
 // AddAuditLogger creates a new logger for the current WAF instance
 // You may add as many loggers as you want
 // Keep in mind loggers may lock go routines
-func (w *Waf) AddAuditLogger(engine string, args []string) error {
+func (w *Waf) AddAuditLogger(engine string, args map[string]string) error {
 	var l loggers.Logger
 	switch engine {
-	case "modsec":
-		l = &loggers.ModsecLogger{}
+	case "serial":
+		l = &loggers.SerialLogger{}
 	case "concurrent":
 		l = &loggers.ConcurrentLogger{}
+	case "syslog":
+		l = &loggers.SyslogLogger{}
 	default:
 		return errors.New("invalid logger " + engine)
-	}
-	if len(args) > 1 {
-		args = args[1:]
 	}
 	err := l.New(args)
 	if err != nil {

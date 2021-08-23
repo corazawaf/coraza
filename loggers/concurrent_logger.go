@@ -36,25 +36,38 @@ type ConcurrentLogger struct {
 	fileMode    fs.FileMode
 }
 
-func (l *ConcurrentLogger) New(args []string) error {
+func (l *ConcurrentLogger) New(args map[string]string) error {
 	var err error
 	if len(args) > 1 {
-		l.file = args[0]
-		l.directory = args[1]
+		l.file = args["file"]
+		if l.file == "" {
+			return fmt.Errorf("concurrent logger file is required")
+		}
+		l.directory = args["directory"]
 		// fs.FileModes are octal (base 8)
-		dm, err := strconv.ParseInt(args[2], 8, 32)
-		if err != nil {
-			return err
+		var dm int64
+		if args["dirmode"] == "" {
+			dm = 0600
+		} else {
+			dm, err = strconv.ParseInt(args["dirmode"], 8, 32)
+			if err != nil {
+				return err
+			}
 		}
 		l.dirMode = fs.FileMode(dm)
-		fm, err := strconv.ParseInt(args[3], 8, 32)
-		if err != nil {
-			return err
+		var fm int64
+		if args["filemode"] == "" {
+			fm = 0600
+		} else {
+			fm, err = strconv.ParseInt(args["filemode"], 8, 32)
+			if err != nil {
+				return err
+			}
 		}
 		l.fileMode = fs.FileMode(fm)
 	}
 	l.mux = &sync.RWMutex{}
-	faudit, err := os.OpenFile(l.file, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	faudit, err := os.OpenFile(l.file, os.O_CREATE|os.O_WRONLY|os.O_APPEND, l.fileMode)
 	if err != nil {
 		return err
 	}
