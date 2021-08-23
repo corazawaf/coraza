@@ -49,9 +49,9 @@ type AuditTransaction struct {
 }
 
 type AuditTransactionResponse struct {
-	Status  int
-	Headers map[string][]string
-	Body    string
+	Status  int                 `json:"status"`
+	Headers map[string][]string `json:"headers"`
+	Body    string              `json:"body"`
 }
 
 type AuditTransactionProducer struct {
