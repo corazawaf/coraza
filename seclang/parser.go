@@ -29,12 +29,14 @@ import (
 
 // Parser provides functions to evaluate (compile) SecLang directives
 type Parser struct {
-	configfile string
-	configdir  string
-	nextChain  bool
-	RuleEngine string
-	Waf        *engine.Waf
-	lastRule   *engine.Rule
+	configfile            string
+	configdir             string
+	nextChain             bool
+	Waf                   *engine.Waf
+	DisabledDirectives    []string
+	DisabledRuleActions   []string
+	DisabledRuleOperators []string
+	lastRule              *engine.Rule
 
 	defaultActions []string
 	currentLine    int
@@ -115,6 +117,10 @@ func (p *Parser) evaluate(data string) error {
 		opts = strings.Trim(opts, `"`)
 	}
 
+	if utils.StringInSlice(directive, p.DisabledDirectives) {
+		return fmt.Errorf("%s directive is disabled", directive)
+	}
+
 	directives := map[string]Directive{
 		"SecWebAppId":                   directiveSecWebAppId,
 		"SecUploadKeepFiles":            directiveSecUploadKeepFiles,
@@ -171,18 +177,14 @@ func (p *Parser) evaluate(data string) error {
 		"SecDebugLogLevel":              directiveSecDebugLogLevel,
 
 		//Unsupported Directives
-		"SecAuditLogType":            directiveUnsupported,
-		"SecArgumentSeparator":       directiveUnsupported,
-		"SecCookieFormat":            directiveUnsupported,
-		"SecStatusEngine":            directiveUnsupported,
-		"SecXmlExternalEntity":       directiveUnsupported,
-		"SecStreamOutBodyInspection": directiveUnsupported,
-		"SecRuleUpdateTargetByTag":   directiveUnsupported,
-		"SecRuleUpdateTargetByMsg":   directiveUnsupported,
-		"SecRuleUpdateTargetById":    directiveUnsupported,
-		"SecRuleUpdateActionById":    directiveUnsupported,
-		"SecRuleScript":              directiveUnsupported,
-		"SecRulePerfTime":            directiveUnsupported,
+		"SecArgumentSeparator":     directiveUnsupported,
+		"SecCookieFormat":          directiveUnsupported,
+		"SecRuleUpdateTargetByTag": directiveUnsupported,
+		"SecRuleUpdateTargetByMsg": directiveUnsupported,
+		"SecRuleUpdateTargetById":  directiveUnsupported,
+		"SecRuleUpdateActionById":  directiveUnsupported,
+		"SecRuleScript":            directiveUnsupported,
+		"SecRulePerfTime":          directiveUnsupported,
 	}
 	d := directives[directive]
 	if d == nil {
@@ -195,7 +197,7 @@ func (p *Parser) evaluate(data string) error {
 // Rules without operator will become SecActions
 func (p *Parser) ParseRule(data string, withOperator bool) (*engine.Rule, error) {
 	var err error
-	rp := NewRuleParser()
+	rp := NewRuleParser(p)
 	rp.Configdir = p.configdir
 
 	for _, da := range p.defaultActions {
@@ -213,6 +215,9 @@ func (p *Parser) ParseRule(data string, withOperator bool) (*engine.Rule, error)
 		r := regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
 		matches := r.FindAllString(data, -1)
 		operator := utils.RemoveQuotes(matches[0])
+		if utils.StringInSlice(operator, p.DisabledRuleOperators) {
+			return nil, fmt.Errorf("%s rule operator is disabled", operator)
+		}
 		err = rp.ParseVariables(vars)
 		if err != nil {
 			return nil, err
@@ -291,8 +296,9 @@ func NewParser(waf *engine.Waf) (*Parser, error) {
 		return nil, errors.New("must use a valid waf instance")
 	}
 	p := &Parser{
-		Waf:            waf,
-		defaultActions: []string{},
+		Waf:                waf,
+		defaultActions:     []string{},
+		DisabledDirectives: []string{},
 	}
 	return p, nil
 }

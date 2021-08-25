@@ -36,6 +36,7 @@ type ruleAction struct {
 }
 
 type RuleParser struct {
+	parser         *Parser
 	rule           *engine.Rule
 	Configdir      string
 	defaultActions map[int][]ruleAction
@@ -233,6 +234,12 @@ func (p *RuleParser) ParseActions(actions string) error {
 	if err != nil {
 		return err
 	}
+	//check if forbidden action:
+	for _, a := range act {
+		if utils.StringInSlice(a.Key, p.parser.DisabledRuleActions) {
+			return fmt.Errorf("%s rule action is disabled", a.Key)
+		}
+	}
 	//first we execute metadata rules
 	for _, a := range act {
 		if a.Atype == engine.ACTION_TYPE_METADATA {
@@ -267,10 +274,11 @@ func (p *RuleParser) Rule() *engine.Rule {
 
 // NewRuleParser Creates a new rule parser, each rule parser
 // will contain a single rule that can be obtained using ruleparser.Rule()
-func NewRuleParser() *RuleParser {
+func NewRuleParser(p *Parser) *RuleParser {
 	rp := &RuleParser{
 		rule:           engine.NewRule(),
 		defaultActions: map[int][]ruleAction{},
+		parser:         p,
 	}
 	return rp
 }
