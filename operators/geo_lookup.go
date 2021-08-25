@@ -37,7 +37,7 @@ func (o *GeoLookup) Evaluate(tx *engine.Transaction, value string) bool {
 	if err != nil {
 		return false
 	}
-	tx.GetCollection(engine.VARIABLE_GEO).Add("COUNTRY_CODE", record.Country.IsoCode)
+	tx.GetCollection(engine.VARIABLE_GEO).Set("COUNTRY_CODE", []string{record.Country.IsoCode})
 	//TODO:
 	// NOTE: US ONLY VARIABLES WON'T BE ADDED, also NA and SA will be replaced with AM because of reasons
 	// COUNTRY_CODE3: Up to three character country code.

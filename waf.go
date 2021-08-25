@@ -197,17 +197,48 @@ func (w *Waf) NewTransaction() *Transaction {
 		tx.collections[i] = NewCollection(VariableToName(byte(i)))
 	}
 
+	// we must initialize single variables
+	for i := 0x00; i <= VARIABLE_SESSIONID; i++ {
+		tx.GetCollection(byte(i)).Set("", []string{""})
+	}
+
+	// set capture variables
 	txvar := tx.GetCollection(VARIABLE_TX)
 	for i := 0; i <= 10; i++ {
 		is := strconv.Itoa(i)
-		txvar.Set(is, []string{})
+		txvar.Set(is, []string{""})
 	}
+
+	// Some defaults
 	defaults := map[byte]string{
-		VARIABLE_URI_PARSE_ERROR: "0",
+		VARIABLE_URI_PARSE_ERROR:                  "0",
+		VARIABLE_FILES_COMBINED_SIZE:              "0",
+		VARIABLE_URLENCODED_ERROR:                 "0",
+		VARIABLE_FULL_REQUEST_LENGTH:              "0",
+		VARIABLE_MULTIPART_BOUNDARY_QUOTED:        "0",
+		VARIABLE_MULTIPART_BOUNDARY_WHITESPACE:    "0",
+		VARIABLE_MULTIPART_CRLF_LF_LINES:          "0",
+		VARIABLE_MULTIPART_DATA_AFTER:             "0",
+		VARIABLE_MULTIPART_DATA_BEFORE:            "0",
+		VARIABLE_MULTIPART_FILE_LIMIT_EXCEEDED:    "0",
+		VARIABLE_MULTIPART_HEADER_FOLDING:         "0",
+		VARIABLE_MULTIPART_INVALID_HEADER_FOLDING: "0",
+		VARIABLE_MULTIPART_INVALID_PART:           "0",
+		VARIABLE_MULTIPART_INVALID_QUOTING:        "0",
+		VARIABLE_MULTIPART_LF_LINE:                "0",
+		VARIABLE_MULTIPART_MISSING_SEMICOLON:      "0",
+		VARIABLE_MULTIPART_STRICT_ERROR:           "0",
+		VARIABLE_MULTIPART_UNMATCHED_BOUNDARY:     "0",
+		VARIABLE_OUTBOUND_DATA_ERROR:              "0",
+		VARIABLE_REQBODY_ERROR:                    "0",
+		VARIABLE_REQBODY_PROCESSOR_ERROR:          "0",
+		VARIABLE_REQUEST_BODY_LENGTH:              "0",
+		VARIABLE_DURATION:                         "0",
 	}
 	for v, data := range defaults {
 		tx.GetCollection(v).Set("", []string{data})
 	}
+
 	return tx
 }
 

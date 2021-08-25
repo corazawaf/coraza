@@ -219,12 +219,12 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 	if key == "content-type" {
 		val := strings.ToLower(value)
 		if val == "application/x-www-form-urlencoded" {
-			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR).Add("", "URLENCODED")
+			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR).Set("", []string{"URLENCODED"})
 		} else if strings.HasPrefix(val, "multipart/form-data") {
-			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR).Add("", "MULTIPART")
+			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR).Set("", []string{"MULTIPART"})
 		}
 	} else if key == "host" {
-		tx.GetCollection(VARIABLE_SERVER_NAME).Add("", value)
+		tx.GetCollection(VARIABLE_SERVER_NAME).Set("", []string{value})
 	} else if key == "cookie" {
 		// Cookies use the same syntax as GET params but with semicolon (;) separator
 		values := utils.ParseQuery(value, ";")
@@ -253,7 +253,7 @@ func (tx *Transaction) SetFullRequest() {
 		tx.GetCollection(VARIABLE_REQUEST_LINE).GetFirstString(""),
 		headers,
 		tx.GetCollection(VARIABLE_REQUEST_BODY).GetFirstString(""))
-	tx.GetCollection(VARIABLE_FULL_REQUEST).Add("", full_request)
+	tx.GetCollection(VARIABLE_FULL_REQUEST).Set("", []string{full_request})
 }
 
 // AddResponseHeader Adds a response header variable
@@ -270,7 +270,7 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 	//Most headers can be managed like that
 	if key == "content-type" {
 		spl := strings.SplitN(value, ";", 2)
-		tx.GetCollection(VARIABLE_RESPONSE_CONTENT_TYPE).Add("", spl[0])
+		tx.GetCollection(VARIABLE_RESPONSE_CONTENT_TYPE).Set("", []string{spl[0]})
 	}
 }
 
@@ -558,11 +558,11 @@ func (tx *Transaction) ProcessConnection(client string, cPort int, server string
 	// 	tx.GetCollection(VARIABLE_REMOTE_HOST).Set("", []string{client})
 	// }
 
-	tx.GetCollection(VARIABLE_REMOTE_ADDR).Add("", client)
-	tx.GetCollection(VARIABLE_REMOTE_PORT).Add("", p)
-	tx.GetCollection(VARIABLE_SERVER_ADDR).Add("", server)
-	tx.GetCollection(VARIABLE_SERVER_PORT).Add("", p2)
-	tx.GetCollection(VARIABLE_UNIQUE_ID).Add("", tx.Id)
+	tx.GetCollection(VARIABLE_REMOTE_ADDR).Set("", []string{client})
+	tx.GetCollection(VARIABLE_REMOTE_PORT).Set("", []string{p})
+	tx.GetCollection(VARIABLE_SERVER_ADDR).Set("", []string{server})
+	tx.GetCollection(VARIABLE_SERVER_PORT).Set("", []string{p2})
+	tx.GetCollection(VARIABLE_UNIQUE_ID).Set("", []string{tx.Id})
 }
 
 // ExtractArguments transforms an url encoded string to a map and creates
@@ -613,12 +613,12 @@ func (tx *Transaction) AddArgument(orig string, key string, value string) {
 //       SecLanguage phase 1 and 2.
 // note: This function won't add GET arguments, they must be added with AddArgument
 func (tx *Transaction) ProcessUri(uri string, method string, httpVersion string) {
-	tx.GetCollection(VARIABLE_REQUEST_METHOD).Add("", method)
-	tx.GetCollection(VARIABLE_REQUEST_PROTOCOL).Add("", httpVersion)
-	tx.GetCollection(VARIABLE_REQUEST_URI_RAW).Add("", uri)
+	tx.GetCollection(VARIABLE_REQUEST_METHOD).Set("", []string{method})
+	tx.GetCollection(VARIABLE_REQUEST_PROTOCOL).Set("", []string{httpVersion})
+	tx.GetCollection(VARIABLE_REQUEST_URI_RAW).Set("", []string{uri})
 
 	//TODO modsecurity uses HTTP/${VERSION} instead of just version, let's check it out
-	tx.GetCollection(VARIABLE_REQUEST_LINE).Add("", fmt.Sprintf("%s %s %s", method, uri, httpVersion))
+	tx.GetCollection(VARIABLE_REQUEST_LINE).Set("", []string{fmt.Sprintf("%s %s %s", method, uri, httpVersion)})
 
 	var err error
 
@@ -640,22 +640,22 @@ func (tx *Transaction) ProcessUri(uri string, method string, httpVersion string)
 		} else {
 			path = uri
 		}
-		tx.GetCollection(VARIABLE_REQUEST_URI).Add("", uri)
+		tx.GetCollection(VARIABLE_REQUEST_URI).Set("", []string{uri})
 	} else {
 		tx.ExtractArguments("GET", parsedUrl.RawQuery)
-		tx.GetCollection(VARIABLE_REQUEST_URI).Add("", parsedUrl.String())
+		tx.GetCollection(VARIABLE_REQUEST_URI).Set("", []string{parsedUrl.String()})
 		path = parsedUrl.Path
 		query = parsedUrl.RawQuery
 	}
 	offset := strings.LastIndexAny(path, "/\\")
 	if offset != -1 && len(path) > offset+1 {
-		tx.GetCollection(VARIABLE_REQUEST_BASENAME).Add("", path[offset+1:])
+		tx.GetCollection(VARIABLE_REQUEST_BASENAME).Set("", []string{path[offset+1:]})
 	} else {
-		tx.GetCollection(VARIABLE_REQUEST_BASENAME).Add("", path)
+		tx.GetCollection(VARIABLE_REQUEST_BASENAME).Set("", []string{path})
 	}
-	tx.GetCollection(VARIABLE_REQUEST_FILENAME).Add("", path)
+	tx.GetCollection(VARIABLE_REQUEST_FILENAME).Set("", []string{path})
 
-	tx.GetCollection(VARIABLE_QUERY_STRING).Add("", query)
+	tx.GetCollection(VARIABLE_QUERY_STRING).Set("", []string{query})
 }
 
 // ProcessRequestHeaders Performs the analysis on the request readers.
@@ -770,7 +770,7 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 				fs.Add("", fmt.Sprintf("%d", header.Size))
 			}
 		}
-		tx.GetCollection(VARIABLE_FILES_COMBINED_SIZE).Add("", fmt.Sprintf("%d", totalSize))
+		tx.GetCollection(VARIABLE_FILES_COMBINED_SIZE).Set("", []string{fmt.Sprintf("%d", totalSize)})
 		for k, vs := range req.MultipartForm.Value {
 			for _, v := range vs {
 				tx.AddArgument("POST", k, v)
@@ -795,8 +795,8 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 //
 func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *Interruption {
 	c := strconv.Itoa(code)
-	tx.GetCollection(VARIABLE_RESPONSE_STATUS).Add("", c)
-	tx.GetCollection(VARIABLE_RESPONSE_PROTOCOL).Add("", proto)
+	tx.GetCollection(VARIABLE_RESPONSE_STATUS).Set("", []string{c})
+	tx.GetCollection(VARIABLE_RESPONSE_PROTOCOL).Set("", []string{proto})
 
 	if tx.RuleEngine == RULE_ENGINE_OFF {
 		return nil

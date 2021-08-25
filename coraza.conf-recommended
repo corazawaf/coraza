@@ -133,14 +133,6 @@ FL %{MULTIPART_FILE_LIMIT_EXCEEDED}'"
 SecRule MULTIPART_UNMATCHED_BOUNDARY "@eq 1" \
     "id:'200004',phase:2,t:none,log,deny,msg:'Multipart parser detected a possible unmatched boundary.'"
 
-
-# PCRE Tuning
-# We want to avoid a potential RegEx DoS condition
-# **Not supported yet**
-#
-SecPcreMatchLimit 1000
-SecPcreMatchLimitRecursion 1000
-
 # Some internal errors will set flags in TX and we will need to look for these.
 # All of these are prefixed with "MSC_".  The following flags currently exist:
 #
@@ -246,10 +238,13 @@ SecAuditLogParts ABIJDEFHZ
 # Use a single file for logging. This is much easier to look at, but
 # assumes that you will use the audit log only ocassionally.
 #
-#SecAuditLog Modsec /opt/coraza/var/log/coraza_audit.log 0600
+#SecAuditLog Serial file=/opt/coraza/var/log/coraza_audit.log filemode=0600
 
 # Concurrent logging:
-SecAuditLog Concurrent /opt/coraza/var/audit/audit.log /opt/coraza/var/audit 0600 0600
+SecAuditLog Concurrent file=/opt/coraza/var/audit/audit.log \
+     path=/opt/coraza/var/audit \
+     filemode=0600 \
+     dirmode=0600
 
 
 # -- Miscellaneous -----------------------------------------------------------
