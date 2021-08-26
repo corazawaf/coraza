@@ -89,7 +89,7 @@ func (p *RuleParser) ParseVariables(vars string) error {
 			} else if curr == 2 {
 				i++
 			}
-			err = p.rule.AddVariable(iscount, isnegation, v, string(curkey), curr == 2)
+			err = p.rule.AddVariable(iscount, isnegation, v, strings.ToLower(string(curkey)), curr == 2)
 			if err != nil {
 				return err
 			}
