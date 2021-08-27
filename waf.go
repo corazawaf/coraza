@@ -26,8 +26,8 @@ import (
 	"github.com/jptosso/coraza-waf/loggers"
 	"github.com/jptosso/coraza-waf/persistence"
 	"github.com/jptosso/coraza-waf/utils"
+	"github.com/jptosso/coraza-waf/utils/geoip"
 	regex "github.com/jptosso/coraza-waf/utils/regex"
-	"github.com/oschwald/geoip2-golang"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -112,7 +112,7 @@ type Waf struct {
 	AuditLogRelevantStatus regex.Regexp
 
 	// Contains the GeoIP2 database reader object
-	GeoDb *geoip2.Reader
+	GeoDb geoip.GeoDb
 
 	// If true WAF engine will fail when remote rules cannot be loaded
 	AbortOnRemoteRulesFail bool
@@ -159,16 +159,6 @@ type Waf struct {
 	// ctl cannot switch use it as it will update de lvl
 	// for the whole Waf instance
 	LoggerAtomicLevel zap.AtomicLevel
-}
-
-// SetGeoip Initializes Geoip2 database
-func (w *Waf) SetGeoip(path string) error {
-	var err error
-	w.GeoDb, err = geoip2.Open(path)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // NewTransaction Creates a new initialized transaction for this WAF instance

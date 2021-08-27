@@ -23,13 +23,13 @@ func TestNidCl(t *testing.T) {
 	nok := []string{"11.111.111-k", "16100407-2", "8.492.655-7", "84926557", "111111112", "5348281-4"}
 	for _, o := range ok {
 		if !NidCl(o) {
-			t.Errorf("Invalid NID CL for " + o)
+			t.Errorf("Invalid NID CL for %s", o)
 		}
 	}
 
 	for _, o := range nok {
 		if NidCl(o) {
-			t.Errorf("Valid NID CL for " + o)
+			t.Errorf("Valid NID CL for %s", o)
 		}
 	}
 	if NidCl("") {

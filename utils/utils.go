@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -122,4 +123,13 @@ func FileExists(filename string) bool {
 
 func IsDigit(x byte) bool {
 	return (x >= '0') && (x <= '9')
+}
+
+func ArgsToMap(args string) map[string]string {
+	a := map[string]string{}
+	re := regexp.MustCompile(`([\w\-_]+)=(.*?(?:\s|$))`)
+	for _, data := range re.FindAllStringSubmatch(args, -1) {
+		a[data[1]] = data[2]
+	}
+	return a
 }

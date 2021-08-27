@@ -27,14 +27,6 @@ func TestWAFInitialize(t *testing.T) {
 	}
 }
 
-func TestGeoIP(t *testing.T) {
-	w := NewWaf()
-	err := w.SetGeoip("")
-	if err == nil {
-		t.Error("Invalid geoip location shouldnt work")
-	}
-}
-
 func TestNewTransaction(t *testing.T) {
 
 }

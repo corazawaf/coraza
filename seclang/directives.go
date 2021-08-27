@@ -18,12 +18,12 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"regexp"
 	"strconv"
 	"strings"
 
 	engine "github.com/jptosso/coraza-waf"
 	"github.com/jptosso/coraza-waf/utils"
+	"github.com/jptosso/coraza-waf/utils/geoip"
 	regex "github.com/jptosso/coraza-waf/utils/regex"
 	"go.uber.org/zap"
 )
@@ -220,7 +220,28 @@ func directiveSecGsbLookupDb(p *Parser, opts string) error {
 }
 
 func directiveSecGeoLookupDb(p *Parser, opts string) error {
-	p.Waf.SetGeoip(opts)
+	spl := strings.SplitN(opts, " ", 2)
+	module := spl[0]
+	args := utils.ArgsToMap(spl[1])
+	var err error
+	switch module {
+	case "maxminddb":
+		db := &geoip.Maxminddb{}
+		err = db.Init(args)
+		if err != nil {
+			return err
+		}
+		p.Waf.GeoDb = db
+	case "ip2location":
+		db := &geoip.Ip2Location{}
+		err = db.Init(args)
+		if err != nil {
+			return err
+		}
+		p.Waf.GeoDb = db
+	default:
+		return fmt.Errorf("invalid geoip engine %s", module)
+	}
 	return nil
 }
 
@@ -281,11 +302,7 @@ func directiveSecAuditLog(p *Parser, opts string) error {
 		return errors.New("syntax error: SecAuditLog [concurrent/https/...] [parameters]")
 	}
 	spl := strings.SplitN(opts, " ", 2)
-	args := map[string]string{}
-	re := regexp.MustCompile(`([\w\-_]+)=(.*?(?:\s|$))`)
-	for _, data := range re.FindAllStringSubmatch(spl[1], -1) {
-		args[data[1]] = data[2]
-	}
+	args := utils.ArgsToMap(spl[1])
 	return p.Waf.AddAuditLogger(spl[0], args)
 }
 

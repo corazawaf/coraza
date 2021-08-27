@@ -15,14 +15,12 @@
 package operators
 
 import (
-	"net"
+	"strconv"
 
 	engine "github.com/jptosso/coraza-waf"
 )
 
-type GeoLookup struct {
-	data string
-}
+type GeoLookup struct{}
 
 func (o *GeoLookup) Init(data string) error {
 	return nil
@@ -32,21 +30,19 @@ func (o *GeoLookup) Evaluate(tx *engine.Transaction, value string) bool {
 	if tx.Waf.GeoDb == nil {
 		return false
 	}
-	ip := net.ParseIP(value)
-	record, err := tx.Waf.GeoDb.Country(ip)
+	record, err := tx.Waf.GeoDb.Get(value)
 	if err != nil {
 		return false
 	}
-	tx.GetCollection(engine.VARIABLE_GEO).Set("COUNTRY_CODE", []string{record.Country.IsoCode})
-	//TODO:
-	// NOTE: US ONLY VARIABLES WON'T BE ADDED, also NA and SA will be replaced with AM because of reasons
-	// COUNTRY_CODE3: Up to three character country code.
-	// COUNTRY_NAME: The full country name.
-	// COUNTRY_CONTINENT: The two character continent that the country is located. EX: EU
-	// REGION: The two character region. For US, this is state. For Canada, providence, etc.
-	// CITY: The city name if supported by the database.
-	// POSTAL_CODE: The postal code if supported by the database.
-	// LATITUDE: The latitude if supported by the database.
-	// LONGITUDE: The longitude if supported by the database.
+	tx.GetCollection(engine.VARIABLE_GEO).SetData(map[string][]string{
+		"COUNTRY_CODE":      {record.IsoCode},
+		"COUNTRY_NAME":      {record.CountryName},
+		"COUNTRY_CONTINENT": {record.Continent},
+		"REGION":            {record.Region},
+		"CITY":              {record.City},
+		"POSTAL_CODE":       {record.PostalCode},
+		"LATITUDE":          {strconv.FormatFloat(record.Latitude, 'f', -1, 64)},
+		"LONGITUDE":         {strconv.FormatFloat(record.Longitude, 'f', -1, 64)},
+	})
 	return true
 }
