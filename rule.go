@@ -17,6 +17,7 @@ package engine
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/jptosso/coraza-waf/transformations"
 	"github.com/jptosso/coraza-waf/utils/regex"
@@ -392,7 +393,7 @@ func (r *Rule) AddVariable(count bool, negation bool, collection byte, key strin
 		rv = RuleVariable{count, collection, key, &re, []string{}}
 		r.Variables = append(r.Variables, rv)
 	} else {
-		rv = RuleVariable{count, collection, key, nil, []string{}}
+		rv = RuleVariable{count, collection, strings.ToLower(key), nil, []string{}}
 		r.Variables = append(r.Variables, rv)
 	}
 	return nil
