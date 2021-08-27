@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"net/url"
 	"strings"
 )
 
@@ -19,6 +20,14 @@ func ParseQuery(query string, separator string) map[string][]string {
 		value := ""
 		if i := strings.Index(key, "="); i >= 0 {
 			key, value = key[:i], key[i+1:]
+		}
+		key, err := url.QueryUnescape(key)
+		if err != nil {
+			continue
+		}
+		value, err = url.QueryUnescape(value)
+		if err != nil {
+			continue
 		}
 		m[key] = append(m[key], value)
 	}
