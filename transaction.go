@@ -562,7 +562,6 @@ func (tx *Transaction) ProcessConnection(client string, cPort int, server string
 	tx.GetCollection(VARIABLE_REMOTE_PORT).Set("", []string{p})
 	tx.GetCollection(VARIABLE_SERVER_ADDR).Set("", []string{server})
 	tx.GetCollection(VARIABLE_SERVER_PORT).Set("", []string{p2})
-	tx.GetCollection(VARIABLE_UNIQUE_ID).Set("", []string{tx.Id})
 }
 
 // ExtractArguments transforms an url encoded string to a map and creates
@@ -900,15 +899,17 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	//YYYY/MM/DD HH:mm:ss
 	ts := time.Unix(0, tx.Timestamp).Format("2006/01/02 15:04:05")
 	al.Transaction = &loggers.AuditTransaction{
-		Timestamp:  ts,
-		Id:         tx.Id,
-		ClientIp:   tx.GetCollection(VARIABLE_REMOTE_ADDR).GetFirstString(""),
-		ClientPort: tx.GetCollection(VARIABLE_REMOTE_PORT).GetFirstInt(""),
-		HostIp:     "",
-		HostPort:   0,
-		ServerId:   "",
+		Timestamp:     ts,
+		UnixTimestamp: tx.Timestamp,
+		Id:            tx.Id,
+		ClientIp:      tx.GetCollection(VARIABLE_REMOTE_ADDR).GetFirstString(""),
+		ClientPort:    tx.GetCollection(VARIABLE_REMOTE_PORT).GetFirstInt(""),
+		HostIp:        "",
+		HostPort:      0,
+		ServerId:      "",
 		Request: &loggers.AuditTransactionRequest{
-			Protocol:    tx.GetCollection(VARIABLE_REQUEST_METHOD).GetFirstString(""),
+			Method:      tx.GetCollection(VARIABLE_REQUEST_METHOD).GetFirstString(""),
+			Protocol:    tx.GetCollection(VARIABLE_REQUEST_PROTOCOL).GetFirstString(""),
 			Uri:         tx.GetCollection(VARIABLE_REQUEST_URI).GetFirstString(""),
 			HttpVersion: tx.GetCollection(VARIABLE_REQUEST_PROTOCOL).GetFirstString(""),
 			//Body and headers are audit parts

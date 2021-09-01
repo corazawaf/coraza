@@ -224,6 +224,7 @@ func (w *Waf) NewTransaction() *Transaction {
 		VARIABLE_REQBODY_PROCESSOR_ERROR:          "0",
 		VARIABLE_REQUEST_BODY_LENGTH:              "0",
 		VARIABLE_DURATION:                         "0",
+		VARIABLE_UNIQUE_ID:                        tx.Id,
 	}
 	for v, data := range defaults {
 		tx.GetCollection(v).Set("", []string{data})

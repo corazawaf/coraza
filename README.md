@@ -37,7 +37,7 @@ If you want to install Coraza with CGO support, you will need:
 * **CGO_ENABLED** environmental variable must be set to 1
 * libinjection must be installed and linked
 
-## Running the test suite
+## Running the tests
 
 Run the go tests:
 
@@ -57,6 +57,8 @@ cd coraza-ruleset
 docker build . -t crs
 docker run crs -name crs
 ```
+
+You may also use our [testesuite](https://github.com/jptosso/coraza-testsuite)
 
 ## Your first Coraza WAF project
 
@@ -147,11 +149,7 @@ func someHandler(waf *engine.Waf) http.Handler {
 
 ## Compatibility status
 
-We have currently achieved a 91% compatibility with OWASP CRS, some features are under development, like:
-
-* Persistent Collections
-* Some operators: fuzzyHash
-* Lua is still being tested, it may be replaced with WASM
+We are fully compatible with OWASP CRS, except by DDOS and anti-bot protection.
 
 ## Why Coraza WAF?
 
@@ -174,8 +172,6 @@ We have currently achieved a 91% compatibility with OWASP CRS, some features are
 * More loggers and persistence engines
 * More integrations (traefik, gin and buffalo)
 * Open Policy Agent package (OPA)
-* Online sandbox
-* HTTP/2 and HTTP/3 support
 * Enhanced rule profiling
 * Native antivirus integration (maybe)
 * Automatic coreruleset integration (download and setup) (maybe)
@@ -188,14 +184,14 @@ We have currently achieved a 91% compatibility with OWASP CRS, some features are
 ## Coraza WAF implementations
 
 * [Caddy Plugin (Reverse Proxy and Web Server)](https://github.com/jptosso/coraza-caddy) (Stable)
-* [Traefik Plugin (Reverse Proxy and Web Server)](#) (soon)
-* [Gin Middleware (Web Framework)](#) (soon)
+* [Traefik Plugin (Reverse Proxy and Web Server)](https://github.com/jptosso/coraza-traefik) (not working yet)
+* [Gin Middleware (Web Framework)](https://github.com/jptosso/coraza-gin) (Preview)
 * [Buffalo Plugin (Web Framework)](#) (soon)
 
 ## Some useful tools
 
-* [Go FTW](#): rule testing engine
-* [Coraza Sandbox](#): rule testing sandbox with web interface
+* [Go FTW](https://github.com/fzipi/go-ftw): rule testing engine
+* [Coraza Playground](https://playground.coraza.io/): rule testing sandbox with web interface
 
 ## Troubleshooting
 
