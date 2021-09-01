@@ -17,11 +17,13 @@ package utils
 import (
 	"context"
 	"crypto/rand"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -132,4 +134,18 @@ func ArgsToMap(args string) map[string]string {
 		a[data[1]] = data[2]
 	}
 	return a
+}
+
+func PhaseToInt(data string) (int, error) {
+	i, err := strconv.Atoi(data)
+	if data == "request" {
+		i = 2
+	} else if data == "response" {
+		i = 4
+	} else if data == "logging" {
+		i = 5
+	} else if err != nil || i > 5 || i < 1 {
+		return 0, fmt.Errorf("invalid phase %s", data)
+	}
+	return i, nil
 }

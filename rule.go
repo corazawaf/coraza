@@ -12,12 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package engine
+package coraza
 
 import (
-	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/jptosso/coraza-waf/transformations"
 	"github.com/jptosso/coraza-waf/utils/regex"
@@ -30,18 +28,10 @@ const (
 	ACTION_TYPE_DATA          = 3
 	ACTION_TYPE_NONDISRUPTIVE = 4
 	ACTION_TYPE_FLOW          = 5
-
-	ACTION_DISRUPTIVE_PASS     = 0
-	ACTION_DISRUPTIVE_DROP     = 1
-	ACTION_DISRUPTIVE_BLOCK    = 2
-	ACTION_DISRUPTIVE_DENY     = 3
-	ACTION_DISRUPTIVE_ALLOW    = 4
-	ACTION_DISRUPTIVE_PROXY    = 5
-	ACTION_DISRUPTIVE_REDIRECT = 6
 )
 
 // This interface is used by this rule's actions
-type Action interface {
+type RuleAction interface {
 	// Initializes an action, will be done during compilation
 	Init(*Rule, string) error
 	// Evaluate will be done during rule evaluation
@@ -114,7 +104,7 @@ type Rule struct {
 
 	// Slice of initialized actions to be evaluated during
 	// the rule evaluation process
-	Actions []Action
+	Actions []RuleAction
 
 	// Used to mark a rule as a secmarker and alter flows
 	SecMark string
@@ -124,10 +114,6 @@ type Rule struct {
 
 	// Contains the child rule to chain, nil if there are no chains
 	Chain *Rule
-
-	// Contains the disruptive action, it does nothing and might be
-	// removed in future versions
-	DisruptiveAction int
 
 	// Used by the chain action to indicate if the next rule is chained
 	// to this one, it's only used for compilation
@@ -150,7 +136,7 @@ type Rule struct {
 	Tags []string
 
 	// Rule execution phase 1-5
-	Phase int
+	Phase Phase
 
 	// Message text to be macro expanded and logged
 	Msg string
@@ -185,12 +171,12 @@ type Rule struct {
 // Evaluate will evaluate the current rule for the indicated transaction
 // If the operator matches, actions will be evaluated and it will return
 // the matched variables, keys and values (MatchData)
-func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
+func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	tx.Waf.Logger.Debug("Evaluating rule",
 		zap.Int("rule", r.Id),
 		zap.String("tx", tx.Id),
 	)
-	matchedValues := []*MatchData{}
+	matchedValues := []MatchData{}
 	for _, nid := range tx.RuleRemoveById {
 		if nid == r.Id {
 			//This rules will be skipped
@@ -206,7 +192,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 	})
 	// secmarkers and secactions will always match
 	if r.Operator == nil {
-		matchedValues = []*MatchData{
+		matchedValues = []MatchData{
 			{
 				Collection: "none",
 				Key:        "",
@@ -221,7 +207,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 
 	ecol := tx.RuleRemoveTargetById[r.Id]
 	for _, v := range r.Variables {
-		var values []*MatchData
+		var values []MatchData
 		exceptions := make([]string, len(v.Exceptions))
 		copy(exceptions, v.Exceptions)
 		for _, c := range ecol {
@@ -239,7 +225,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 			} else {
 				l = len(tx.GetCollection(v.Collection).Data())
 			}
-			values = []*MatchData{
+			values = []MatchData{
 				{
 					Collection: VariableToName(v.Collection),
 					Key:        v.Key,
@@ -251,7 +237,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 		}
 
 		if r.AlwaysMatch {
-			matchedValues = append(matchedValues, &MatchData{
+			matchedValues = append(matchedValues, MatchData{
 				// TODO add something here?
 			})
 		}
@@ -281,7 +267,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 
 			for _, carg := range args {
 				if r.executeOperator(carg, tx) {
-					matchedValues = append(matchedValues, &MatchData{
+					matchedValues = append(matchedValues, MatchData{
 						Collection: arg.Collection,
 						Key:        arg.Key,
 						Value:      carg,
@@ -316,7 +302,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 			m := nr.Evaluate(tx)
 			if len(m) == 0 {
 				//we fail the chain
-				return []*MatchData{}
+				return []MatchData{}
 			}
 			msgs = append(msgs, tx.MacroExpansion(nr.Msg))
 
@@ -327,7 +313,7 @@ func (r *Rule) Evaluate(tx *Transaction) []*MatchData {
 	if r.ParentId == 0 {
 		// action log is required to add the rule to matched rules
 		if r.Log {
-			tx.MatchRule(r, msgs, matchedValues)
+			tx.MatchRule(*r, msgs, matchedValues)
 		}
 		//we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
 		for _, a := range r.Actions {
@@ -364,39 +350,6 @@ func (r *Rule) executeTransformations(value string, tools *transformations.Tools
 		value = t(value, tools)
 	}
 	return value
-}
-
-// AddsVariable appends a new variable to the rule, it will
-// precompile regular expressions and transforma the variable name
-// to it's byte form
-func (r *Rule) AddVariable(count bool, negation bool, collection byte, key string, regexkey bool) error {
-	if negation {
-		for i, vr := range r.Variables {
-			if vr.Collection == collection {
-				vr.Exceptions = append(vr.Exceptions, key)
-				r.Variables[i] = vr
-				return nil
-			}
-		}
-		//TODO check if we can add something here
-		panic(fmt.Errorf("cannot negate a variable that haven't been created"))
-	}
-	var rv RuleVariable
-	if len(key) > 0 && regexkey {
-		// REGEX EXPRESSION
-		var re regex.Regexp
-		var err error
-		re, err = regex.Compile(key, 0)
-		if err != nil {
-			return err
-		}
-		rv = RuleVariable{count, collection, key, &re, []string{}}
-		r.Variables = append(r.Variables, rv)
-	} else {
-		rv = RuleVariable{count, collection, strings.ToLower(key), nil, []string{}}
-		r.Variables = append(r.Variables, rv)
-	}
-	return nil
 }
 
 // NewRule returns a new initialized rule

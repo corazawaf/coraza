@@ -15,33 +15,25 @@
 package actions
 
 import (
-	"fmt"
-	"strconv"
-
-	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/utils"
 )
 
 type Phase struct{}
 
-func (a *Phase) Init(r *engine.Rule, data string) error {
-	i, err := strconv.Atoi(data)
-	if data == "request" {
-		i = 2
-	} else if data == "response" {
-		i = 4
-	} else if data == "logging" {
-		i = 5
-	} else if err != nil || i > 5 || i < 1 {
-		return fmt.Errorf("Invalid phase %s", data)
+func (a *Phase) Init(r *coraza.Rule, data string) error {
+	p, err := utils.PhaseToInt(data)
+	if err != nil {
+		return err
 	}
-	r.Phase = int(i)
+	r.Phase = coraza.Phase(p)
 	return nil
 }
 
-func (a *Phase) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *Phase) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not evaluated
 }
 
 func (a *Phase) Type() int {
-	return engine.ACTION_TYPE_METADATA
+	return coraza.ACTION_TYPE_METADATA
 }

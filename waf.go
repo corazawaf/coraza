@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package engine
+package coraza
 
 import (
 	"errors"
@@ -30,6 +30,16 @@ import (
 	regex "github.com/jptosso/coraza-waf/utils/regex"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+)
+
+type Phase int
+
+const (
+	PHASE_REQUEST_HEADERS  Phase = 1
+	PHASE_REQUEST_BODY     Phase = 2
+	PHASE_RESPONSE_HEADERS Phase = 3
+	PHASE_RESPONSE_BODY    Phase = 4
+	PHASE_LOGGING          Phase = 5
 )
 
 const (
@@ -177,9 +187,9 @@ func (w *Waf) NewTransaction() *Transaction {
 		RequestBodyLimit:     134217728,
 		ResponseBodyAccess:   true,
 		ResponseBodyLimit:    524288,
-		RuleRemoveTargetById: map[int][]*VariableKey{},
+		RuleRemoveTargetById: map[int][]VariableKey{},
 		RuleRemoveById:       []int{},
-		StopWatches:          map[int]int{},
+		StopWatches:          map[Phase]int{},
 		RequestBodyBuffer:    NewBodyReader(w.TmpDir, w.RequestBodyInMemoryLimit),
 		ResponseBodyBuffer:   NewBodyReader(w.TmpDir, w.RequestBodyInMemoryLimit),
 	}

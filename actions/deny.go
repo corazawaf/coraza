@@ -21,7 +21,6 @@ import (
 type Deny struct{}
 
 func (a *Deny) Init(r *engine.Rule, data string) error {
-	r.DisruptiveAction = engine.ACTION_DISRUPTIVE_DENY
 	return nil
 }
 

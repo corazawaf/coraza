@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package engine
+package coraza
 
 import (
 	"fmt"
@@ -105,12 +105,12 @@ func (rg *RuleGroup) Clear() {
 	rg.rules = []*Rule{}
 }
 
-// Evaluate rules for the specified phase, between 1 and 5
+// Eval rules for the specified phase, between 1 and 5
 // Returns true if transaction is disrupted
-func (rg *RuleGroup) Evaluate(phase int, tx *Transaction) bool {
+func (rg *RuleGroup) Eval(phase Phase, tx *Transaction) bool {
 	tx.Waf.Logger.Debug("transaction evaluated",
 		zap.String("id", tx.Id),
-		zap.Int("phase", phase),
+		zap.Int("phase", int(phase)),
 	)
 	tx.LastPhase = phase
 	ts := time.Now().UnixNano()

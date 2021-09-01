@@ -21,7 +21,6 @@ import (
 type Drop struct{}
 
 func (a *Drop) Init(r *engine.Rule, data string) error {
-	r.DisruptiveAction = engine.ACTION_DISRUPTIVE_DROP
 	return nil
 }
 

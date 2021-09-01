@@ -22,7 +22,6 @@ type Pass struct {
 }
 
 func (a *Pass) Init(r *engine.Rule, data string) error {
-	r.DisruptiveAction = engine.ACTION_DISRUPTIVE_PASS
 	return nil
 }
 

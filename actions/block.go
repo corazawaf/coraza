@@ -21,7 +21,6 @@ import (
 type Block struct{}
 
 func (a *Block) Init(r *engine.Rule, b1 string) error {
-	r.DisruptiveAction = engine.ACTION_DISRUPTIVE_BLOCK
 	return nil
 }
 

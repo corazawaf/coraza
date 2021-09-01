@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package engine
+package coraza
 
 import (
 	"bufio"
@@ -54,9 +54,9 @@ type MatchedRule struct {
 	// A single rule may contain multiple messages from chains
 	Messages []string
 	// A slice of matched variables
-	MatchedData []*MatchData
+	MatchedData []MatchData
 	// A pointer to the triggered rule
-	Rule *Rule
+	Rule Rule
 }
 
 // MatchData works like VariableKey but is used for logging
@@ -87,7 +87,7 @@ type Transaction struct {
 	Id string
 
 	// Contains the list of matched rules and associated match information
-	MatchedRules []*MatchedRule
+	MatchedRules []MatchedRule
 
 	//True if the transaction has been disrupted by any rule
 	Interruption *Interruption
@@ -96,11 +96,10 @@ type Transaction struct {
 	collections []*Collection
 
 	//Response data to be sent
-	Status int `json:"status"`
+	Status int
 
 	// This is used to store log messages
-	// TODO check how we are going to reuse it for logging
-	Logdata []string `json:"logdata"`
+	Logdata string
 
 	// Rules will be skipped after a rule with this SecMarker is found
 	SkipAfter string
@@ -120,7 +119,7 @@ type Transaction struct {
 
 	// Stores the last phase that was evaluated
 	// Used by allow to skip phases
-	LastPhase int
+	LastPhase Phase
 
 	// Handles request body buffers
 	RequestBodyBuffer *BodyBuffer
@@ -135,7 +134,7 @@ type Transaction struct {
 	// All other "target removers" like "ByTag" are an abstraction of "ById"
 	// For example, if you want to remove REQUEST_HEADERS:User-Agent from rule 85:
 	// {85: {VARIABLE_REQUEST_HEADERS, "user-agent"}}
-	RuleRemoveTargetById map[int][]*VariableKey
+	RuleRemoveTargetById map[int][]VariableKey
 
 	// Will skip this number of rules, this value will be decreased on each skip
 	Skip int
@@ -146,13 +145,14 @@ type Transaction struct {
 	Capture bool
 
 	// Contains duration in useconds per phase
-	StopWatches map[int]int
+	StopWatches map[Phase]int
 
 	// Contains de *engine.Waf instance for the current transaction
 	Waf *Waf
 
 	// In case of an XML request body we will cache the XML object here
-	XmlDoc *xmlquery.Node
+	xmlDoc *xmlquery.Node
+	//jsonDoc *jsonquery.Node
 
 	// Timestamp of the request
 	Timestamp int64
@@ -341,7 +341,7 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*Interruption, error)
 
 // MatchVars Creates the MATCHED_ variables required by chains and macro expansion
 // MATCHED_VARS, MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES
-func (tx *Transaction) MatchVars(match []*MatchData) {
+func (tx *Transaction) MatchVars(match []MatchData) {
 	// Array of values
 	mvs := tx.GetCollection(VARIABLE_MATCHED_VARS)
 	mvs.Reset()
@@ -370,8 +370,8 @@ func (tx *Transaction) MatchVars(match []*MatchData) {
 }
 
 // MatchRule Matches a rule to be logged
-func (tx *Transaction) MatchRule(rule *Rule, msgs []string, match []*MatchData) {
-	mr := &MatchedRule{
+func (tx *Transaction) MatchRule(rule Rule, msgs []string, match []MatchData) {
+	mr := MatchedRule{
 		Messages:    msgs,
 		MatchedData: match,
 		Rule:        rule,
@@ -397,19 +397,19 @@ func (tx *Transaction) GetStopWatch() string {
 // This function will apply xpath if the variable is XML
 // In future releases we may remove de exceptions slice and
 // make it easier to use
-func (tx *Transaction) GetField(rv RuleVariable, exceptions []string) []*MatchData {
+func (tx *Transaction) GetField(rv RuleVariable, exceptions []string) []MatchData {
 	collection := rv.Collection
 	key := rv.Key
 	re := rv.Regex
 	if collection == VARIABLE_XML {
-		if tx.XmlDoc == nil {
-			return []*MatchData{}
+		if tx.xmlDoc == nil {
+			return []MatchData{}
 		}
-		data, err := xmlquery.QueryAll(tx.XmlDoc, key)
+		data, err := xmlquery.QueryAll(tx.xmlDoc, key)
 		if err != nil {
-			return []*MatchData{}
+			return []MatchData{}
 		}
-		res := []*MatchData{}
+		res := []MatchData{}
 		for _, d := range data {
 			//TODO im not sure if its ok but nvm:
 			// According to Modsecurity handbook modsecurity builds a collection
@@ -417,7 +417,7 @@ func (tx *Transaction) GetField(rv RuleVariable, exceptions []string) []*MatchDa
 			// doesn't seem too efficient, we are going to modify that
 			// also I don't like xmlquery
 			output := html.UnescapeString(d.OutputXML(true))
-			res = append(res, &MatchData{
+			res = append(res, MatchData{
 				Collection: "xml",
 				Key:        key,
 				Value:      output,
@@ -428,7 +428,7 @@ func (tx *Transaction) GetField(rv RuleVariable, exceptions []string) []*MatchDa
 		col := tx.GetCollection(collection)
 		key = tx.MacroExpansion(key)
 		if col == nil {
-			return []*MatchData{}
+			return []MatchData{}
 		}
 		return col.Find(key, re, exceptions)
 	}
@@ -489,9 +489,9 @@ func (tx *Transaction) savePersistentData() {
 // RemoveRuleTargetById Removes the VARIABLE:KEY from the rule ID
 // It's mostly used by CTL to dinamically remove targets from rules
 func (tx *Transaction) RemoveRuleTargetById(id int, col byte, key string) {
-	c := &VariableKey{col, key}
+	c := VariableKey{col, key}
 	if tx.RuleRemoveTargetById[id] == nil {
-		tx.RuleRemoveTargetById[id] = []*VariableKey{
+		tx.RuleRemoveTargetById[id] = []VariableKey{
 			c,
 		}
 	} else {
@@ -668,7 +668,7 @@ func (tx *Transaction) ProcessRequestHeaders() *Interruption {
 		// RUle engine is disabled
 		return nil
 	}
-	tx.Waf.Rules.Evaluate(1, tx)
+	tx.Waf.Rules.Eval(PHASE_REQUEST_HEADERS, tx)
 	return tx.Interruption
 }
 
@@ -737,7 +737,7 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 				Entity:    map[string]string{},
 			},
 		}
-		tx.XmlDoc, err = xmlquery.ParseWithOptions(reader, options)
+		tx.xmlDoc, err = xmlquery.ParseWithOptions(reader, options)
 		if err != nil {
 			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR).Set("", []string{"1"})
 			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR_MSG).Set("", []string{string(err.Error())})
@@ -781,7 +781,7 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 		b := buf.String()
 		tx.GetCollection(VARIABLE_REQUEST_BODY).Set("", []string{b})
 	}
-	tx.Waf.Rules.Evaluate(2, tx)
+	tx.Waf.Rules.Eval(PHASE_REQUEST_BODY, tx)
 	return tx.Interruption, nil
 }
 
@@ -801,7 +801,7 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *Interrupt
 		return nil
 	}
 
-	tx.Waf.Rules.Evaluate(3, tx)
+	tx.Waf.Rules.Eval(PHASE_RESPONSE_HEADERS, tx)
 	return tx.Interruption
 }
 
@@ -811,6 +811,7 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *Interrupt
 // This is used by webservers to choose whether tostream response buffers
 // directly to the client or write them to Coraza
 func (tx *Transaction) IsProcessableResponseBody() bool {
+	//TODO add more validations
 	ct := tx.GetCollection(VARIABLE_RESPONSE_CONTENT_TYPE).GetFirstString("")
 	return utils.StringInSlice(ct, tx.Waf.ResponseBodyMimeTypes)
 }
@@ -834,7 +835,7 @@ func (tx *Transaction) ProcessResponseBody() (*Interruption, error) {
 
 	tx.GetCollection(VARIABLE_RESPONSE_CONTENT_LENGTH).Set("", []string{length})
 	tx.GetCollection(VARIABLE_RESPONSE_BODY).Set("", []string{buf.String()})
-	tx.Waf.Rules.Evaluate(4, tx)
+	tx.Waf.Rules.Eval(PHASE_RESPONSE_BODY, tx)
 	return tx.Interruption, nil
 }
 
@@ -853,7 +854,7 @@ func (tx *Transaction) ProcessLogging() {
 		tx.ResponseBodyBuffer.Close()
 	}()
 
-	tx.Waf.Rules.Evaluate(5, tx)
+	tx.Waf.Rules.Eval(PHASE_LOGGING, tx)
 
 	if tx.AuditEngine == AUDIT_LOG_DISABLED {
 		// Audit engine disabled

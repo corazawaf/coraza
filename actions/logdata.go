@@ -25,7 +25,7 @@ func (a *Logdata) Init(r *engine.Rule, data string) error {
 }
 
 func (a *Logdata) Evaluate(r *engine.Rule, tx *engine.Transaction) {
-	tx.Logdata = append(tx.Logdata, tx.MacroExpansion(r.LogData))
+	tx.Logdata = tx.MacroExpansion(r.LogData)
 }
 
 func (a *Logdata) Type() int {

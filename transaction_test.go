@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package engine
+package coraza
 
 import (
 	"fmt"
@@ -134,7 +134,7 @@ func TestTxGetField(t *testing.T) {
 func TestTxMatch(t *testing.T) {
 	waf := NewWaf()
 	r := NewRule()
-	mr := []*MatchData{
+	mr := []MatchData{
 		{
 			"test",
 			"test",
@@ -142,7 +142,7 @@ func TestTxMatch(t *testing.T) {
 		},
 	}
 	tx := waf.NewTransaction()
-	tx.MatchRule(r, []string{"msg"}, mr)
+	tx.MatchRule(*r, []string{"msg"}, mr)
 	if len(tx.MatchedRules) == 0 {
 		t.Error("Failed to match value")
 	}

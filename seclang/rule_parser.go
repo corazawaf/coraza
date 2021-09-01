@@ -22,24 +22,25 @@ import (
 	"strconv"
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf"
 	actionsmod "github.com/jptosso/coraza-waf/actions"
 	"github.com/jptosso/coraza-waf/operators"
 	"github.com/jptosso/coraza-waf/utils"
+	regex "github.com/jptosso/coraza-waf/utils/regex"
 )
 
 type ruleAction struct {
 	Key   string
 	Value string
 	Atype int
-	F     engine.Action
+	F     coraza.RuleAction
 }
 
 type RuleParser struct {
 	parser         *Parser
-	rule           *engine.Rule
+	rule           *coraza.Rule
 	Configdir      string
-	defaultActions map[int][]ruleAction
+	defaultActions map[coraza.Phase][]ruleAction
 }
 
 func (p *RuleParser) ParseVariables(vars string) error {
@@ -70,7 +71,7 @@ func (p *RuleParser) ParseVariables(vars string) error {
 					curkey = append(curkey, c)
 				}
 			}
-			v, err := engine.NameToVariable(string(curvar))
+			v, err := coraza.NameToVariable(string(curvar))
 			if err != nil {
 				return err
 			}
@@ -89,9 +90,32 @@ func (p *RuleParser) ParseVariables(vars string) error {
 			} else if curr == 2 {
 				i++
 			}
-			err = p.rule.AddVariable(iscount, isnegation, v, string(curkey), curr == 2)
-			if err != nil {
-				return err
+			key := string(curkey)
+			if isnegation {
+				for i, vr := range p.rule.Variables {
+					if vr.Collection == v {
+						vr.Exceptions = append(vr.Exceptions, key)
+						p.rule.Variables[i] = vr
+						return nil
+					}
+				}
+				//TODO check if we can add something here
+				panic(fmt.Errorf("cannot negate a variable that haven't been created"))
+			}
+			var rv coraza.RuleVariable
+			if len(curkey) > 0 && curr == 2 {
+				// REGEX EXPRESSION
+				var re regex.Regexp
+				var err error
+				re, err = regex.Compile(key, 0)
+				if err != nil {
+					return err
+				}
+				rv = coraza.RuleVariable{iscount, v, key, &re, []string{}}
+				p.rule.Variables = append(p.rule.Variables, rv)
+			} else {
+				rv = coraza.RuleVariable{iscount, v, strings.ToLower(key), nil, []string{}}
+				p.rule.Variables = append(p.rule.Variables, rv)
 			}
 			curvar = []byte{}
 			curkey = []byte{}
@@ -161,7 +185,7 @@ func (p *RuleParser) ParseOperator(operator string) error {
 	}
 	spl := strings.SplitN(operator, " ", 2)
 	op := spl[0]
-	p.rule.Operator = new(engine.RuleOperator)
+	p.rule.Operator = new(coraza.RuleOperator)
 
 	if op[0] == '!' {
 		p.rule.Operator.Negation = true
@@ -214,7 +238,7 @@ func (p *RuleParser) ParseDefaultActions(actions string) error {
 			}
 			continue
 		}
-		if action.Atype == engine.ACTION_TYPE_DISRUPTIVE {
+		if action.Atype == coraza.ACTION_TYPE_DISRUPTIVE {
 			defaultDisruptive = action.Key
 		}
 	}
@@ -224,7 +248,7 @@ func (p *RuleParser) ParseDefaultActions(actions string) error {
 	if defaultDisruptive == "" {
 		return errors.New("SecDefaultAction must contain a disruptive action: " + actions)
 	}
-	p.defaultActions[phase] = act
+	p.defaultActions[coraza.Phase(phase)] = act
 	return nil
 }
 
@@ -242,7 +266,7 @@ func (p *RuleParser) ParseActions(actions string) error {
 	}
 	//first we execute metadata rules
 	for _, a := range act {
-		if a.Atype == engine.ACTION_TYPE_METADATA {
+		if a.Atype == coraza.ACTION_TYPE_METADATA {
 			errs := a.F.Init(p.rule, a.Value)
 			if errs != nil {
 				return errs
@@ -268,7 +292,7 @@ func (p *RuleParser) ParseActions(actions string) error {
 }
 
 // Rule returns the compiled rule
-func (p *RuleParser) Rule() *engine.Rule {
+func (p *RuleParser) Rule() *coraza.Rule {
 	return p.rule
 }
 
@@ -276,8 +300,8 @@ func (p *RuleParser) Rule() *engine.Rule {
 // will contain a single rule that can be obtained using ruleparser.Rule()
 func NewRuleParser(p *Parser) *RuleParser {
 	rp := &RuleParser{
-		rule:           engine.NewRule(),
-		defaultActions: map[int][]ruleAction{},
+		rule:           coraza.NewRule(),
+		defaultActions: map[coraza.Phase][]ruleAction{},
 		parser:         p,
 	}
 	return rp
@@ -382,18 +406,18 @@ func MergeActions(origin []ruleAction, defaults []ruleAction) []ruleAction {
 	res := []ruleAction{}
 	var da ruleAction //Disruptive action
 	for _, action := range defaults {
-		if action.Atype == engine.ACTION_TYPE_DISRUPTIVE {
+		if action.Atype == coraza.ACTION_TYPE_DISRUPTIVE {
 			da = action
 			continue
 		}
-		if action.Atype == engine.ACTION_TYPE_METADATA {
+		if action.Atype == coraza.ACTION_TYPE_METADATA {
 			continue
 		}
 		res = append(res, action)
 	}
 	hasDa := false
 	for _, action := range origin {
-		if action.Atype == engine.ACTION_TYPE_DISRUPTIVE {
+		if action.Atype == coraza.ACTION_TYPE_DISRUPTIVE {
 			if action.Key != "block" {
 				hasDa = true
 				// We add the default rule DA in case this is no block

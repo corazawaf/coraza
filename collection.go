@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package engine
+package coraza
 
 import (
 	"strconv"
@@ -41,17 +41,17 @@ func (c *Collection) Get(key string) []string {
 //Find is returns a slice of MatchData for the
 // regex or key, exceptions are used to skip
 // some keys
-func (c *Collection) Find(key string, re *regex.Regexp, exceptions []string) []*MatchData {
+func (c *Collection) Find(key string, re *regex.Regexp, exceptions []string) []MatchData {
 	cdata := c.data
 	//we return every value in case there is no key but there is a collection
 	if len(key) == 0 {
-		data := []*MatchData{}
+		data := []MatchData{}
 		for k := range c.data {
 			if utils.StringInSlice(k, exceptions) {
 				continue
 			}
 			for _, v := range c.data[k] {
-				data = append(data, &MatchData{
+				data = append(data, MatchData{
 					Collection: c.name,
 					Key:        k,
 					Value:      v,
@@ -63,7 +63,7 @@ func (c *Collection) Find(key string, re *regex.Regexp, exceptions []string) []*
 
 	// Regex
 	if re != nil {
-		result := []*MatchData{}
+		result := []MatchData{}
 		for k := range cdata {
 			if utils.StringInSlice(k, exceptions) {
 				continue
@@ -71,7 +71,7 @@ func (c *Collection) Find(key string, re *regex.Regexp, exceptions []string) []*
 			m := re.Matcher([]byte(k), 0)
 			if m.Matches() {
 				for _, d := range cdata[k] {
-					result = append(result, &MatchData{
+					result = append(result, MatchData{
 						Collection: c.name,
 						Key:        k,
 						Value:      d,
@@ -81,7 +81,7 @@ func (c *Collection) Find(key string, re *regex.Regexp, exceptions []string) []*
 		}
 		return result
 	} else {
-		ret := []*MatchData{}
+		ret := []MatchData{}
 		//We pass through every record to apply filters
 		for k := range cdata {
 			if utils.StringInSlice(k, exceptions) {
@@ -89,7 +89,7 @@ func (c *Collection) Find(key string, re *regex.Regexp, exceptions []string) []*
 			}
 			if k == key {
 				for _, kd := range cdata[k] {
-					ret = append(ret, &MatchData{
+					ret = append(ret, MatchData{
 						Collection: c.name,
 						Key:        k,
 						Value:      kd,

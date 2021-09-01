@@ -18,9 +18,9 @@ import (
 	engine "github.com/jptosso/coraza-waf"
 )
 
-func ActionsMap() map[string]engine.Action {
+func ActionsMap() map[string]engine.RuleAction {
 	//TODO optimize this
-	return map[string]engine.Action{
+	return map[string]engine.RuleAction{
 		// #### Flow Actions ####
 		//Sets variables for the transaction and rule
 		"chain":     &Chain{},

@@ -12,16 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package engine
+package coraza
 
 import (
 	"bytes"
 	"io"
 	"os"
-	"strings"
 )
 
-// BoddyReader is used to read RequestBody and ResponseBody objects
+// BodyReader is used to read RequestBody and ResponseBody objects
 // It will handle memory usage for buffering and processing
 type BodyBuffer struct {
 	io.Writer   //OK?
@@ -60,14 +59,6 @@ func (br *BodyBuffer) Reader() io.Reader {
 	}
 	br.writer.Seek(0, 0)
 	return br.writer
-}
-
-// String returns a string with the whole body buffer
-// In some cases it will be needed for body processing
-func (br *BodyBuffer) String() string {
-	buf := new(strings.Builder)
-	io.Copy(buf, br.Reader())
-	return buf.String()
 }
 
 // Size returns the current size of the body buffer
