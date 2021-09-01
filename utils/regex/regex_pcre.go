@@ -177,7 +177,7 @@ func toHeap(ptr *C.pcre) (re Regexp) {
 // If compilation fails, the second return value holds a *CompileError.
 func Compile(pattern string, flags int) (Regexp, error) {
 	//Hardcoded for coraza
-	flags = DOTALL | MULTILINE // | CASELESS
+	//flags = DOTALL | MULTILINE // | CASELESS
 	pattern1 := C.CString(pattern)
 	defer C.free(unsafe.Pointer(pattern1))
 	if clen := int(C.strlen(pattern1)); clen != len(pattern) {
