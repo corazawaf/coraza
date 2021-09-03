@@ -18,21 +18,28 @@ import (
 	"fmt"
 
 	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/plugins"
 	"github.com/jptosso/coraza-waf/transformations"
 )
 
 type T struct{}
 
-func (a *T) Init(r *engine.Rule, transformation string) error {
-	if transformation == "none" {
+func (a *T) Init(r *engine.Rule, input string) error {
+	if input == "none" {
 		//remove elements
 		r.Transformations = r.Transformations[:0]
 		return nil
 	}
-	transformations := transformations.TransformationsMap()
-	tt := transformations[transformation]
+	transforms := transformations.TransformationsMap()
+	tt := transforms[input]
 	if tt == nil {
-		return fmt.Errorf("Unsupported transformation %s", transformation)
+		//now we test from the plugins:
+		if result, ok := plugins.CustomTransformations.Load(input); ok {
+			tt = result.(transformations.Transformation)
+		}
+	}
+	if tt == nil {
+		return fmt.Errorf("unsupported transformation %s", input)
 	}
 	r.Transformations = append(r.Transformations, tt)
 	return nil

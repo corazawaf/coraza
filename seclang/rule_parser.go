@@ -25,6 +25,7 @@ import (
 	"github.com/jptosso/coraza-waf"
 	actionsmod "github.com/jptosso/coraza-waf/actions"
 	"github.com/jptosso/coraza-waf/operators"
+	"github.com/jptosso/coraza-waf/plugins"
 	"github.com/jptosso/coraza-waf/utils"
 	regex "github.com/jptosso/coraza-waf/utils/regex"
 )
@@ -203,6 +204,12 @@ func (p *RuleParser) ParseOperator(operator string) error {
 
 	p.rule.Operator.Operator = operators.OperatorsMap()[op]
 	if p.rule.Operator.Operator == nil {
+		//now we test from the plugins:
+		if result, ok := plugins.CustomOperators.Load(op); ok {
+			p.rule.Operator.Operator = result.(plugins.PluginOperatorWrapper)()
+		}
+	}
+	if p.rule.Operator.Operator == nil {
 		return errors.New("Invalid operator " + op)
 	} else {
 		//TODO add a special attribute to accept files
@@ -322,6 +329,12 @@ func ParseActions(actions string) ([]ruleAction, error) {
 			continue
 		} else if !quoted && c == ',' {
 			f := actionsmod.ActionsMap()[ckey]
+			if f == nil {
+				//now we test from the plugins:
+				if result, ok := plugins.CustomActions.Load(ckey); ok {
+					f = result.(plugins.PluginActionWrapper)()
+				}
+			}
 			if f == nil {
 				return nil, errors.New("Invalid action " + ckey)
 			}
