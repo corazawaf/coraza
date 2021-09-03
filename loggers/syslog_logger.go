@@ -62,3 +62,5 @@ func (sl *SyslogLogger) Write(al *AuditLog) error {
 func (sl *SyslogLogger) Close() error {
 	return sl.writer.Close()
 }
+
+var _ Logger = (*SyslogLogger)(nil)

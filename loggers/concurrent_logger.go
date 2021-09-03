@@ -115,3 +115,5 @@ func (l *ConcurrentLogger) Write(al *AuditLog) error {
 func (cl *ConcurrentLogger) Close() error {
 	return nil
 }
+
+var _ Logger = (*ConcurrentLogger)(nil)

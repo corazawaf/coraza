@@ -78,3 +78,5 @@ func (sl *SerialLogger) Close() error {
 	sl.file.Close()
 	return nil
 }
+
+var _ Logger = (*SerialLogger)(nil)
