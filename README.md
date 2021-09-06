@@ -8,7 +8,7 @@
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 
 <div align="center">
-	<img src="https://jptosso.github.io/coraza-waf/images/company_logo.png" width="50%">
+	<img src="https://coraza.io/images/logo.png" width="50%">
 </div>
 Welcome to Coraza Web Application Firewall, this project is a Golang port of ModSecurity with the goal to become the first enterprise-grade Open Source Web Application Firewall, flexible and powerful enough to serve as the baseline for many projects.
 
