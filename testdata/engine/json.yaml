@@ -1,0 +1,33 @@
+---
+  meta:
+    author: jptosso
+    description: Test if the json request body work
+    enabled: true
+    name: json.yaml
+  tests:
+  -
+    test_title: json
+    stages:
+    -
+      stage:
+        input:
+            uri: /index.php?t1=aaa&t2=bbb&t3=ccc
+            method: POST
+            headers:
+                content-type: application/json
+            data: "{\"test\":123, \"test2\": 456}"
+        output:
+          triggered_rules:
+            - 100
+            - 101
+            - 102
+            - 104
+          non_triggered_rules:  
+            - 103
+  rules: |
+    SecRule REQUEST_HEADERS:content-type "application/json" "id: 100, phase:1, pass, log, ctl:requestBodyProcessor=JSON"
+    SecRule REQBODY_PROCESSOR "JSON" "id: 101,phase:2,log,block"
+    SecRule JSON:/*|JSON://@* "123" "id:102, phase:2,log,block"
+    
+    SecRule REQUEST_BODY "456" "id:103, phase:2, log"
+    SecRule JSON:/test "@eq 123" "id:104, phase:2,log,block"

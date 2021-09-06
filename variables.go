@@ -297,6 +297,8 @@ func NameToVariable(name string) (byte, error) {
 		return VARIABLE_DURATION, nil
 	case "URI_PARSE_ERROR":
 		return VARIABLE_URI_PARSE_ERROR, nil
+	case "JSON":
+		return VARIABLE_JSON, nil
 	}
 	return 0, errors.New("Invalid variable " + name)
 }
@@ -475,6 +477,10 @@ func VariableToName(v byte) string {
 		return "RULE"
 	case VARIABLE_URI_PARSE_ERROR:
 		return "URI_PARSE_ERROR"
+	case VARIABLE_JSON:
+		return "JSON"
+	case VARIABLE_XML:
+		return "XML"
 	}
 	return ""
 }

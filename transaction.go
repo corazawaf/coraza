@@ -28,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/antchfx/jsonquery"
 	"github.com/antchfx/xmlquery"
 	"github.com/jptosso/coraza-waf/loggers"
 	"github.com/jptosso/coraza-waf/utils"
@@ -151,8 +152,8 @@ type Transaction struct {
 	Waf *Waf
 
 	// In case of an XML request body we will cache the XML object here
-	xmlDoc *xmlquery.Node
-	//jsonDoc *jsonquery.Node
+	xmlDoc  *xmlquery.Node
+	jsonDoc *jsonquery.Node
 
 	// Timestamp of the request
 	Timestamp int64
@@ -419,6 +420,29 @@ func (tx *Transaction) GetField(rv RuleVariable, exceptions []string) []MatchDat
 			output := html.UnescapeString(d.OutputXML(true))
 			res = append(res, MatchData{
 				Collection: "xml",
+				Key:        key,
+				Value:      output,
+			})
+		}
+		return res
+	} else if collection == VARIABLE_JSON {
+		if tx.jsonDoc == nil {
+			return []MatchData{}
+		}
+		data, err := jsonquery.QueryAll(tx.jsonDoc, key)
+		if err != nil {
+			return []MatchData{}
+		}
+		res := []MatchData{}
+		for _, d := range data {
+			//TODO im not sure if its ok but nvm:
+			// According to Modsecurity handbook modsecurity builds a collection
+			// that contains all iterations of the matched elements
+			// doesn't seem too efficient, we are going to modify that
+			// also I don't like xmlquery
+			output := html.UnescapeString(d.InnerText())
+			res = append(res, MatchData{
+				Collection: "json",
 				Key:        key,
 				Value:      output,
 			})
@@ -776,10 +800,13 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 			}
 		}
 	case "JSON":
-		buf := new(strings.Builder)
-		io.Copy(buf, reader)
-		b := buf.String()
-		tx.GetCollection(VARIABLE_REQUEST_BODY).Set("", []string{b})
+		var err error
+		tx.jsonDoc, err = jsonquery.Parse(reader)
+		if err != nil {
+			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR).Set("", []string{"1"})
+			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR_MSG).Set("", []string{string(err.Error())})
+			return tx.Interruption, err
+		}
 	}
 	tx.Waf.Rules.Eval(PHASE_REQUEST_BODY, tx)
 	return tx.Interruption, nil

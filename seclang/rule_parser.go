@@ -112,12 +112,23 @@ func (p *RuleParser) ParseVariables(vars string) error {
 				if err != nil {
 					return err
 				}
-				rv = coraza.RuleVariable{iscount, v, key, &re, []string{}}
-				p.rule.Variables = append(p.rule.Variables, rv)
+				rv = coraza.RuleVariable{
+					Count:      iscount,
+					Collection: v,
+					Key:        key,
+					Regex:      &re,
+					Exceptions: []string{},
+				}
 			} else {
-				rv = coraza.RuleVariable{iscount, v, strings.ToLower(key), nil, []string{}}
-				p.rule.Variables = append(p.rule.Variables, rv)
+				rv = coraza.RuleVariable{
+					Count:      iscount,
+					Collection: v,
+					Key:        strings.ToLower(key),
+					Regex:      nil,
+					Exceptions: []string{},
+				}
 			}
+			p.rule.Variables = append(p.rule.Variables, rv)
 			curvar = []byte{}
 			curkey = []byte{}
 			iscount = false

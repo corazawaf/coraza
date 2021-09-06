@@ -170,7 +170,7 @@ We are fully compatible with OWASP CRS, except by DDOS and anti-bot protection.
 * Integrated CSRF protection
 * Integrated bot detection with captcha
 * More loggers and persistence engines
-* More integrations (traefik, gin and buffalo)
+* More integrations (traefik and buffalo)
 * Open Policy Agent package (OPA)
 * Enhanced rule profiling
 * Native antivirus integration (maybe)
@@ -187,6 +187,10 @@ We are fully compatible with OWASP CRS, except by DDOS and anti-bot protection.
 * [Traefik Plugin (Reverse Proxy and Web Server)](https://github.com/jptosso/coraza-traefik) (not working yet)
 * [Gin Middleware (Web Framework)](https://github.com/jptosso/coraza-gin) (Preview)
 * [Buffalo Plugin (Web Framework)](#) (soon)
+
+## Coraza Plugins
+
+* [coraza-bluemonday](https://github.com/jptosso/coraza-bluemonday): Detect bluemonday policy failures with the ```@htmlPolicy``` operator. This is a testing plugin.
 
 ## Some useful tools
 

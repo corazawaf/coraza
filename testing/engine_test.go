@@ -16,6 +16,7 @@ package testing
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 
 	engine "github.com/jptosso/coraza-waf"
@@ -23,18 +24,12 @@ import (
 )
 
 func TestEngine(t *testing.T) {
-	files := []string{
-		"../testdata/engine/postxml.yaml",
-		"../testdata/engine/posturlencoded.yaml",
-		"../testdata/engine/persistence.yaml",
-		"../testdata/engine/phases.yaml",
-		"../testdata/engine/actions.yaml",
-		"../testdata/engine/directives.yaml",
-		"../testdata/engine/ctl.yaml",
-		"../testdata/engine/variables.yaml",
-		"../testdata/engine/transformations.yaml",
-		"../testdata/engine/match.yaml",
-		"../testdata/engine/chains.yaml",
+	files, err := filepath.Glob("../testdata/engine/*.yaml")
+	if err != nil {
+		t.Error(err)
+	}
+	if len(files) == 0 {
+		t.Error("failed to find test files")
 	}
 	waf := engine.NewWaf()
 	for _, f := range files {
