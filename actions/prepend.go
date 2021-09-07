@@ -14,26 +14,37 @@
 
 package actions
 
-import engine "github.com/jptosso/coraza-waf"
+import (
+	"io"
 
-type Append struct {
+	"github.com/jptosso/coraza-waf"
+	engine "github.com/jptosso/coraza-waf"
+)
+
+type Prepend struct {
 	data string
 }
 
-func (a *Append) Init(r *engine.Rule, data string) error {
+func (a *Prepend) Init(r *engine.Rule, data string) error {
 	a.data = data
 	return nil
 }
 
-func (a *Append) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *Prepend) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	if !tx.Waf.ContentInjection {
 		tx.Waf.Logger.Debug("append rejected because of ContentInjection")
 		return
 	}
 	data := tx.MacroExpansion(a.data)
-	tx.ResponseBodyBuffer.Write([]byte(data))
+	buf := coraza.NewBodyReader(tx.Waf.TmpDir, tx.Waf.RequestBodyInMemoryLimit)
+	buf.Write([]byte(data))
+	io.Copy(buf, tx.ResponseBodyBuffer.Reader())
+	//TODO we should add a new reader function that flushes the previous buffer
+	// response body buffer will be duplicated until the garbage collector does his thing
+	// We overwrite the response body buffer with the new buffer
+	*tx.ResponseBodyBuffer = *buf
 }
 
-func (a *Append) Type() int {
+func (a *Prepend) Type() int {
 	return engine.ACTION_TYPE_NONDISRUPTIVE
 }

@@ -1,0 +1,24 @@
+---
+  meta:
+    author: jptosso
+    description: Test if content injection works
+    enabled: true
+    name: contentinjection.yaml
+  tests:
+  -
+    test_title: content injection
+    stages:
+    -
+      stage:
+        output:
+          triggered_rules:
+            - 10
+          non_triggered_rules:
+  rules: |
+    SecResponseBodyMimeType text/html
+    SecRuleEngine On
+    SecContentInjection On
+    SecResponseBodyAccess On
+    SecAction "id:1, phase:3, append:abcdef, prepend:123"
+    SecRule RESPONSE_BODY "123abcdef" "id:10, phase:4, log"
+

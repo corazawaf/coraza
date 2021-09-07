@@ -14,7 +14,9 @@
 
 package operators
 
-import engine "github.com/jptosso/coraza-waf"
+import (
+	engine "github.com/jptosso/coraza-waf"
+)
 
 type Streq struct {
 	data string

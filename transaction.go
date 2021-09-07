@@ -773,9 +773,12 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 		err := req.ParseMultipartForm(1000000000)
 		defer req.Body.Close()
 		if err != nil {
+			tx.GetCollection(VARIABLE_REQBODY_ERROR).Set("", []string{"1"})
+			tx.GetCollection(VARIABLE_REQBODY_ERROR_MSG).Set("", []string{string(err.Error())})
 			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR).Set("", []string{"1"})
 			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR_MSG).Set("", []string{string(err.Error())})
-			return tx.Interruption, err
+			// we should not report this error
+			return nil, nil
 		}
 
 		fn := tx.GetCollection(VARIABLE_FILES_NAMES)
@@ -803,9 +806,12 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 		var err error
 		tx.jsonDoc, err = jsonquery.Parse(reader)
 		if err != nil {
+			tx.GetCollection(VARIABLE_REQBODY_ERROR).Set("", []string{"1"})
+			tx.GetCollection(VARIABLE_REQBODY_ERROR_MSG).Set("", []string{string(err.Error())})
 			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR).Set("", []string{"1"})
 			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR_MSG).Set("", []string{string(err.Error())})
-			return tx.Interruption, err
+			// we should not report this error
+			return nil, nil
 		}
 	}
 	tx.Waf.Rules.Eval(PHASE_REQUEST_BODY, tx)
@@ -854,14 +860,14 @@ func (tx *Transaction) ProcessResponseBody() (*Interruption, error) {
 	if tx.RuleEngine == RULE_ENGINE_OFF || !tx.ResponseBodyAccess || !tx.IsProcessableResponseBody() {
 		return tx.Interruption, nil
 	}
-	length := strconv.FormatInt(tx.ResponseBodyBuffer.Size(), 10)
 	reader := tx.ResponseBodyBuffer.Reader()
 	reader = io.LimitReader(reader, tx.Waf.ResponseBodyLimit)
 	buf := new(strings.Builder)
-	io.Copy(buf, reader)
+	length, _ := io.Copy(buf, reader)
 
-	tx.GetCollection(VARIABLE_RESPONSE_CONTENT_LENGTH).Set("", []string{length})
+	tx.GetCollection(VARIABLE_RESPONSE_CONTENT_LENGTH).Set("", []string{strconv.FormatInt(length, 10)})
 	tx.GetCollection(VARIABLE_RESPONSE_BODY).Set("", []string{buf.String()})
+	fmt.Println(buf.String())
 	tx.Waf.Rules.Eval(PHASE_RESPONSE_BODY, tx)
 	return tx.Interruption, nil
 }
@@ -981,6 +987,7 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 				Server:     server,
 				RuleEngine: rengine,
 				Stopwatch:  tx.GetStopWatch(),
+				Rulesets:   tx.Waf.ComponentNames,
 			}
 		case 'I':
 			/*

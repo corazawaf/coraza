@@ -47,6 +47,7 @@ func ActionsMap() map[string]engine.RuleAction {
 		// #### Non Disruptive Actions ####
 		//Can update transaction but cannot affect the flow nor disrupt the request
 		"append":    &Append{},
+		"prepend":   &Prepend{},
 		"capture":   &Capture{},
 		"ctl":       &Ctl{},
 		"exec":      &Exec{},

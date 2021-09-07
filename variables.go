@@ -116,7 +116,9 @@ const (
 	VARIABLE_JSON               = 0x54 //TODO FIX
 	VARIABLE_INBOUND_ERROR_DATA = 0x55 //TODO FIX
 	VARIABLE_DURATION           = 0x56 //TODO FIX
-	VARIABLE_URI_PARSE_ERROR    = 0x57
+
+	// deprecated: VARIABLE_URI_PARSE_ERROR
+	VARIABLE_URI_PARSE_ERROR = 0x57
 )
 
 // NameToVariable returns the byte interpretation

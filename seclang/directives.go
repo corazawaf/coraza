@@ -31,7 +31,7 @@ import (
 type Directive = func(p *Parser, opts string) error
 
 func directiveSecComponentSignature(p *Parser, opts string) error {
-	p.Waf.ComponentSignature = opts
+	p.Waf.ComponentNames = append(p.Waf.ComponentNames, opts)
 	return nil
 }
 
@@ -271,6 +271,7 @@ func directiveSecDefaultAction(p *Parser, opts string) error {
 }
 
 func directiveSecContentInjection(p *Parser, opts string) error {
+	p.Waf.ContentInjection = parseBoolean(opts)
 	return nil
 }
 

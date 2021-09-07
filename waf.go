@@ -85,6 +85,9 @@ type Waf struct {
 	// Array of logging parts to be used
 	AuditLogParts []rune
 
+	// Status of the content injection for responses and requests
+	ContentInjection bool
+
 	// If true, transactions will have access to the request body
 	RequestBodyAccess bool
 
@@ -115,8 +118,11 @@ type Waf struct {
 	// Web Application id, apps sharing the same id will share persistent collections
 	WebAppId string
 
-	// This signature is going to be reported in audit logs
+	// Deprecated: ComponentSignature
 	ComponentSignature string
+
+	// Add significant rule components to audit log
+	ComponentNames []string
 
 	// Contains the regular expression for relevant status audit logging
 	AuditLogRelevantStatus regex.Regexp

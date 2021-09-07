@@ -68,6 +68,9 @@ func (stage *ProfileTestStage) Start(waf *engine.Waf) error {
 		// we ignore the error
 	}
 	tx.ProcessResponseHeaders(200, "HTTP/1.1")
+	// for testing
+	tx.AddResponseHeader("content-type", "text/html")
+	tx.ProcessResponseBody()
 	tx.ProcessLogging()
 
 	log := ""
