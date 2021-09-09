@@ -34,38 +34,46 @@ type ConcurrentLogger struct {
 	directory   string
 	dirMode     fs.FileMode
 	fileMode    fs.FileMode
+	format      formatter
 }
 
 func (l *ConcurrentLogger) New(args map[string]string) error {
 	var err error
-	if len(args) > 1 {
-		l.file = args["file"]
-		if l.file == "" {
-			return fmt.Errorf("concurrent logger file is required")
-		}
-		l.directory = args["directory"]
-		// fs.FileModes are octal (base 8)
-		var dm int64
-		if args["dirmode"] == "" {
-			dm = 0600
-		} else {
-			dm, err = strconv.ParseInt(args["dirmode"], 8, 32)
-			if err != nil {
-				return err
-			}
-		}
-		l.dirMode = fs.FileMode(dm)
-		var fm int64
-		if args["filemode"] == "" {
-			fm = 0600
-		} else {
-			fm, err = strconv.ParseInt(args["filemode"], 8, 32)
-			if err != nil {
-				return err
-			}
-		}
-		l.fileMode = fs.FileMode(fm)
+	l.file = args["file"]
+	if l.file == "" {
+		return fmt.Errorf("concurrent logger file is required")
 	}
+	l.directory = args["directory"]
+	// fs.FileModes are octal (base 8)
+	var dm int64
+	if args["dirmode"] == "" {
+		dm = 0600
+	} else {
+		dm, err = strconv.ParseInt(args["dirmode"], 8, 32)
+		if err != nil {
+			return err
+		}
+	}
+	l.dirMode = fs.FileMode(dm)
+	var fm int64
+	if args["filemode"] == "" {
+		fm = 0600
+	} else {
+		fm, err = strconv.ParseInt(args["filemode"], 8, 32)
+		if err != nil {
+			return err
+		}
+	}
+	l.fileMode = fs.FileMode(fm)
+	format := args["format"]
+	if format == "" {
+		format = "json"
+	}
+	fn, err := getFormatter(format)
+	if err != nil {
+		return err
+	}
+	l.format = fn
 	l.mux = &sync.RWMutex{}
 	faudit, err := os.OpenFile(l.file, os.O_CREATE|os.O_WRONLY|os.O_APPEND, l.fileMode)
 	if err != nil {
@@ -98,11 +106,11 @@ func (l *ConcurrentLogger) Write(al *AuditLog) error {
 		return err
 	}
 
-	jsdata, err := al.JSON()
+	jsdata, err := l.format(al)
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(filepath, jsdata, l.fileMode)
+	err = ioutil.WriteFile(filepath, []byte(jsdata), l.fileMode)
 	if err != nil {
 		return err
 	}

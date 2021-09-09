@@ -25,7 +25,8 @@ func TestSerialLogger_Write(t *testing.T) {
 	l := &SerialLogger{}
 	tmp := "/tmp/something.log"
 	args := map[string]string{
-		"file": tmp,
+		"file":   tmp,
+		"format": "ftw",
 	}
 	err := l.New(args)
 	if err != nil {

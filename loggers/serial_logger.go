@@ -16,15 +16,15 @@ package loggers
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"os"
 )
 
 // SerialLogger is used to store logs compatible with go-FTW
 type SerialLogger struct {
-	file *os.File
-	log  log.Logger
+	file   *os.File
+	log    log.Logger
+	format formatter
 }
 
 func (sl *SerialLogger) New(args map[string]string) error {
@@ -36,6 +36,15 @@ func (sl *SerialLogger) New(args map[string]string) error {
 	if file == "" {
 		return errors.New("file cannot be empty")
 	}
+	format := args["format"]
+	if format == "" {
+		format = "modsec"
+	}
+	fn, err := getFormatter(format)
+	if err != nil {
+		return err
+	}
+	sl.format = fn
 	sl.file, err = os.OpenFile(file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
@@ -46,30 +55,11 @@ func (sl *SerialLogger) New(args map[string]string) error {
 }
 
 func (sl *SerialLogger) Write(al *AuditLog) error {
-	timestamp := al.Transaction.Timestamp
-	address := al.Transaction.ClientIp
-	rules := ""
-	phase := 5
-	msgs := ""
-	severity := ""
-	uri := ""
-	status := 0
-	if al.Transaction.Request != nil {
-		uri = al.Transaction.Request.Uri
+	data, err := sl.format(al)
+	if err != nil {
+		return err
 	}
-	if al.Transaction.Response != nil {
-		status = al.Transaction.Response.Status
-	}
-	logdata := ""
 
-	id := al.Transaction.Id
-	err := fmt.Sprintf("Access denied with code %d (phase %d)", status, phase)
-	for _, r := range al.Messages {
-		rules += fmt.Sprintf("[id \"%d\"] ", r.Data.Id)
-		msgs += fmt.Sprintf("[msg \"%s\"]", r.Data.Msg)
-	}
-	data := fmt.Sprintf("[%s] [error] [client %s] Coraza: %s. %s %s %s [severity \"%s\"] [uri \"%s\"] [unique_id \"%s\"]",
-		timestamp, address, err, logdata, rules, msgs, severity, uri, id)
 	sl.log.Println(data)
 	return nil
 }

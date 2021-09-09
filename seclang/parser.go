@@ -150,7 +150,6 @@ func (p *Parser) evaluate(data string) error {
 		"SecPcreMatchLimitRecursion":    directiveSecPcreMatchLimitRecursion,
 		"SecPcreMatchLimit":             directiveSecPcreMatchLimit,
 		"SecMarker":                     directiveSecMarker,
-		"SecInterceptOnError":           directiveSecInterceptOnError,
 		"SecHttpBlKey":                  directiveSecHttpBlKey,
 		"SecHashParam":                  directiveSecHashParam,
 		"SecHashMethodRx":               directiveSecHashMethodRx,

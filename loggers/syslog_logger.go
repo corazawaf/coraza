@@ -38,12 +38,11 @@ func (sl *SyslogLogger) New(args map[string]string) error {
 	if format == "" {
 		format = "cef"
 	}
-	switch format {
-	case "cef":
-		sl.format = cefFormatter
-	default:
-		return errors.New("invalid syslog formatter")
+	fn, err := getFormatter(format)
+	if err != nil {
+		return err
 	}
+	sl.format = fn
 	if server == "" {
 		server = "127.0.0.1:514"
 	}

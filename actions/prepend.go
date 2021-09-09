@@ -39,8 +39,6 @@ func (a *Prepend) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	buf := coraza.NewBodyReader(tx.Waf.TmpDir, tx.Waf.RequestBodyInMemoryLimit)
 	buf.Write([]byte(data))
 	io.Copy(buf, tx.ResponseBodyBuffer.Reader())
-	//TODO we should add a new reader function that flushes the previous buffer
-	// response body buffer will be duplicated until the garbage collector does his thing
 	// We overwrite the response body buffer with the new buffer
 	*tx.ResponseBodyBuffer = *buf
 }

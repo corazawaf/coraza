@@ -201,6 +201,21 @@ func TestResponseBody(t *testing.T) {
 	}
 }
 
+func TestAuditLogMessage(t *testing.T) {
+	tx := makeTransaction()
+	tx.AuditLogParts = []rune("ABCDEFGHIJK")
+	rule := NewRule()
+	rule.Id = 131
+	tx.MatchRule(*rule, []string{"some msg"}, []MatchData{{"UNIQUE_ID", "", tx.Id}})
+	if len(tx.MatchedRules) == 0 || tx.MatchedRules[0].Rule.Id != rule.Id {
+		t.Error("failed to match rule for audit")
+	}
+	al := tx.AuditLog()
+	if len(al.Messages) == 0 || al.Messages[0].Data.Id != rule.Id {
+		t.Error("failed to add rules to audit logs")
+	}
+}
+
 func BenchmarkTransactionCreation(b *testing.B) {
 	waf := NewWaf()
 	for i := 0; i < b.N; i++ {

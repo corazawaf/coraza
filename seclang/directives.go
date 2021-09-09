@@ -180,7 +180,7 @@ func directiveSecRemoteRules(p *Parser, opts string) error {
 		if p.Waf.AbortOnRemoteRulesFail {
 			return p.log("Failed to parse remote rules")
 		} else {
-			return err
+			return nil
 		}
 	}
 	return nil
@@ -204,10 +204,6 @@ func directiveSecPcreMatchLimitRecursion(p *Parser, opts string) error {
 }
 
 func directiveSecPcreMatchLimit(p *Parser, opts string) error {
-	return nil
-}
-
-func directiveSecInterceptOnError(p *Parser, opts string) error {
 	return nil
 }
 
@@ -313,10 +309,7 @@ func directiveSecAuditLogRelevantStatus(p *Parser, opts string) error {
 }
 
 func directiveSecAuditLogParts(p *Parser, opts string) error {
-	p.Waf.AuditLogParts = []rune{}
-	for _, c := range opts {
-		p.Waf.AuditLogParts = append(p.Waf.AuditLogParts, c)
-	}
+	p.Waf.AuditLogParts = []rune(opts)
 	return nil
 }
 

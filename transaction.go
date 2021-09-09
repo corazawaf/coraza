@@ -705,6 +705,7 @@ func (tx *Transaction) ProcessRequestHeaders() *Interruption {
 // Remember to check for a possible intervention.
 func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 	if !tx.RequestBodyAccess || tx.RuleEngine == RULE_ENGINE_OFF {
+		tx.Waf.Rules.Eval(PHASE_REQUEST_BODY, tx)
 		return tx.Interruption, nil
 	}
 	mime := ""
@@ -858,6 +859,7 @@ func (tx *Transaction) IsProcessableResponseBody() bool {
 // note Remember to check for a possible intervention.
 func (tx *Transaction) ProcessResponseBody() (*Interruption, error) {
 	if tx.RuleEngine == RULE_ENGINE_OFF || !tx.ResponseBodyAccess || !tx.IsProcessableResponseBody() {
+		tx.Waf.Rules.Eval(PHASE_RESPONSE_BODY, tx)
 		return tx.Interruption, nil
 	}
 	reader := tx.ResponseBodyBuffer.Reader()
@@ -867,7 +869,6 @@ func (tx *Transaction) ProcessResponseBody() (*Interruption, error) {
 
 	tx.GetCollection(VARIABLE_RESPONSE_CONTENT_LENGTH).Set("", []string{strconv.FormatInt(length, 10)})
 	tx.GetCollection(VARIABLE_RESPONSE_BODY).Set("", []string{buf.String()})
-	fmt.Println(buf.String())
 	tx.Waf.Rules.Eval(PHASE_RESPONSE_BODY, tx)
 	return tx.Interruption, nil
 }
@@ -938,9 +939,9 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 		Id:            tx.Id,
 		ClientIp:      tx.GetCollection(VARIABLE_REMOTE_ADDR).GetFirstString(""),
 		ClientPort:    tx.GetCollection(VARIABLE_REMOTE_PORT).GetFirstInt(""),
-		HostIp:        "",
-		HostPort:      0,
-		ServerId:      "",
+		HostIp:        tx.GetCollection(VARIABLE_SERVER_ADDR).GetFirstString(""),
+		HostPort:      tx.GetCollection(VARIABLE_SERVER_PORT).GetFirstInt(""),
+		ServerId:      tx.GetCollection(VARIABLE_SERVER_NAME).GetFirstString(""), //TODO check
 		Request: &loggers.AuditTransactionRequest{
 			Method:      tx.GetCollection(VARIABLE_REQUEST_METHOD).GetFirstString(""),
 			Protocol:    tx.GetCollection(VARIABLE_REQUEST_PROTOCOL).GetFirstString(""),
@@ -1013,19 +1014,19 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 				al.Transaction.Request.Files = append(al.Transaction.Request.Files, at)
 			}
 		case 'K':
+			mrs := []*loggers.AuditMessage{}
 			for _, mr := range tx.MatchedRules {
 				r := mr.Rule
-				al.Messages = append(al.Messages, &loggers.AuditMessage{
-					Actionset: "",
-					Message:   "",
+				mrs = append(mrs, &loggers.AuditMessage{
+					Actionset: strings.Join(tx.Waf.ComponentNames, " "),
+					Message:   tx.Logdata,
 					Data: &loggers.AuditMessageData{
-						File: mr.Rule.File,
-						Line: mr.Rule.Line,
-						Id:   r.Id,
-						Rev:  r.Rev,
-						// TODO check this out, msg and logdata are also available somewhere else
-						Msg:      tx.MacroExpansion(r.Msg),
-						Data:     tx.MacroExpansion(r.LogData),
+						File:     mr.Rule.File,
+						Line:     mr.Rule.Line,
+						Id:       r.Id,
+						Rev:      r.Rev,
+						Msg:      tx.MacroExpansion(strings.Join(mr.Messages, " ")), //TODO check
+						Data:     tx.MacroExpansion(r.LogData),                      //TODO LogData MUST be in the matched rule
 						Severity: r.Severity,
 						Ver:      r.Version,
 						Maturity: r.Maturity,
@@ -1034,6 +1035,7 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 					},
 				})
 			}
+			al.Messages = mrs
 		}
 	}
 	return al
