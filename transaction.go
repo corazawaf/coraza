@@ -704,7 +704,10 @@ func (tx *Transaction) ProcessRequestHeaders() *Interruption {
 //
 // Remember to check for a possible intervention.
 func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
-	if !tx.RequestBodyAccess || tx.RuleEngine == RULE_ENGINE_OFF {
+	if tx.RuleEngine == RULE_ENGINE_OFF {
+		return tx.Interruption, nil
+	}
+	if !tx.RequestBodyAccess {
 		tx.Waf.Rules.Eval(PHASE_REQUEST_BODY, tx)
 		return tx.Interruption, nil
 	}
@@ -858,7 +861,10 @@ func (tx *Transaction) IsProcessableResponseBody() bool {
 //
 // note Remember to check for a possible intervention.
 func (tx *Transaction) ProcessResponseBody() (*Interruption, error) {
-	if tx.RuleEngine == RULE_ENGINE_OFF || !tx.ResponseBodyAccess || !tx.IsProcessableResponseBody() {
+	if tx.RuleEngine == RULE_ENGINE_OFF {
+		return tx.Interruption, nil
+	}
+	if !tx.ResponseBodyAccess || !tx.IsProcessableResponseBody() {
 		tx.Waf.Rules.Eval(PHASE_RESPONSE_BODY, tx)
 		return tx.Interruption, nil
 	}
