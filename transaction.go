@@ -892,6 +892,7 @@ func (tx *Transaction) ProcessLogging() {
 		tx.savePersistentData()
 		tx.RequestBodyBuffer.Close()
 		tx.ResponseBodyBuffer.Close()
+		tx.Waf.Logger.Debug("Transaction finished", zap.String("event", "FINISH_TRANSACTION"), zap.String("txid", tx.Id), zap.Bool("interrupted", tx.Interrupted()))
 	}()
 
 	tx.Waf.Rules.Eval(PHASE_LOGGING, tx)

@@ -175,6 +175,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	tx.Waf.Logger.Debug("Evaluating rule",
 		zap.Int("rule", r.Id),
 		zap.String("tx", tx.Id),
+		zap.String("event", "EVALUATE_RULE"),
 	)
 	matchedValues := []MatchData{}
 	for _, nid := range tx.RuleRemoveById {
@@ -192,6 +193,10 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	})
 	// secmarkers and secactions will always match
 	if r.Operator == nil {
+		tx.Waf.Logger.Debug("Forcing rule match", zap.String("txid", tx.Id),
+			zap.Int("rule", r.Id),
+			zap.String("event", "RULE_FORCE_MATCH"),
+		)
 		matchedValues = []MatchData{
 			{
 				Collection: "none",
@@ -240,6 +245,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 			matchedValues = append(matchedValues, MatchData{
 				// TODO add something here?
 			})
+			continue
 		}
 		if len(values) == 0 {
 			// TODO should we run the operators here?
@@ -266,13 +272,23 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 			)
 
 			for _, carg := range args {
-				if r.executeOperator(carg, tx) {
+				match := r.executeOperator(carg, tx)
+				if match {
 					matchedValues = append(matchedValues, MatchData{
 						Collection: arg.Collection,
 						Key:        arg.Key,
 						Value:      carg,
 					})
 				}
+				tx.Waf.Logger.Debug("Evaluate rule operator", zap.String("txid", tx.Id),
+					zap.Int("rule", r.Id),
+					zap.String("event", "EVALUATE_RULE_OPERATOR"),
+					zap.String("operator", "nn"), //TODO fix
+					zap.String("data", carg),
+					zap.String("variable", arg.Collection),
+					zap.String("key", arg.Key),
+					zap.Bool("result", match),
+				)
 			}
 		}
 	}
@@ -316,12 +332,19 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 			tx.MatchRule(*r, msgs, matchedValues)
 		}
 		//we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
+		tx.Waf.Logger.Debug("detecting rule disruptive action", zap.String("txid", tx.Id), zap.Int("rule", r.Id))
 		for _, a := range r.Actions {
 			if a.Type() == ACTION_TYPE_DISRUPTIVE || a.Type() == ACTION_TYPE_FLOW {
+				tx.Waf.Logger.Debug("evaluating rule disruptive action", zap.String("txid", tx.Id), zap.Int("rule", r.Id))
 				a.Evaluate(r, tx)
 			}
 		}
 	}
+	tx.Waf.Logger.Debug("finished evaluating rule", zap.String("txid", tx.Id),
+		zap.Int("rule", r.Id),
+		zap.Int("matched_values", len(matchedValues)),
+		zap.String("event", "FINISH_RULE"),
+	)
 	return matchedValues
 }
 

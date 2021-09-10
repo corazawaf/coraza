@@ -247,6 +247,8 @@ func (w *Waf) NewTransaction() *Transaction {
 		tx.GetCollection(v).Set("", []string{data})
 	}
 
+	w.Logger.Debug("new transaction created", zap.String("event", "NEW_TRANSACTION"), zap.String("txid", tx.Id))
+
 	return tx
 }
 

@@ -123,7 +123,7 @@ func (p *RuleParser) ParseVariables(vars string) error {
 				rv = coraza.RuleVariable{
 					Count:      iscount,
 					Collection: v,
-					Key:        key,
+					Key:        strings.ToLower(key),
 					Regex:      nil,
 					Exceptions: []string{},
 				}

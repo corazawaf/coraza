@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	engine "github.com/jptosso/coraza-waf"
+	"go.uber.org/zap"
 )
 
 type SkipAfter struct {
@@ -31,6 +32,11 @@ func (a *SkipAfter) Init(r *engine.Rule, data string) error {
 }
 
 func (a *SkipAfter) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+	tx.Waf.Logger.Debug("Starting secmarker",
+		zap.String("txid", tx.Id),
+		zap.String("event", "INIT_SECMARK"),
+		zap.String("secmark", a.data),
+	)
 	tx.SkipAfter = a.data
 }
 

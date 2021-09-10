@@ -108,16 +108,22 @@ func (rg *RuleGroup) Clear() {
 // Eval rules for the specified phase, between 1 and 5
 // Returns true if transaction is disrupted
 func (rg *RuleGroup) Eval(phase Phase, tx *Transaction) bool {
-	tx.Waf.Logger.Debug("transaction evaluated",
-		zap.String("id", tx.Id),
+	tx.Waf.Logger.Debug("Evaluating phase",
+		zap.String("event", "EVALUATE_PHASE"),
+		zap.String("txid", tx.Id),
 		zap.Int("phase", int(phase)),
 	)
 	tx.LastPhase = phase
-	ts := time.Now().UnixNano()
 	usedRules := 0
-	tx.LastPhase = phase
+	ts := time.Now().UnixNano()
 	for _, r := range tx.Waf.Rules.GetRules() {
 		if tx.Interruption != nil {
+			tx.Waf.Logger.Debug("Finished phase",
+				zap.String("event", "FINISH_PHASE"),
+				zap.String("txid", tx.Id),
+				zap.Int("phase", int(phase)),
+				zap.Int("rules", usedRules),
+			)
 			return true
 		}
 		// Rules with phase 0 will always run
@@ -134,7 +140,17 @@ func (rg *RuleGroup) Eval(phase Phase, tx *Transaction) bool {
 		//we always evaluate secmarkers
 		if tx.SkipAfter != "" {
 			if r.SecMark == tx.SkipAfter {
+				tx.Waf.Logger.Debug("SkipAfter was finished", zap.String("txid", tx.Id),
+					zap.String("secmark", r.SecMark),
+					zap.String("event", "FINISH_SECMARK"),
+				)
 				tx.SkipAfter = ""
+			} else {
+				tx.Waf.Logger.Debug("Skipping rule because of SkipAfter", zap.String("txid", tx.Id),
+					zap.Int("rule", r.Id),
+					zap.String("secmark", tx.SkipAfter),
+					zap.String("event", "SKIP_RULE_BY_SECMARK"),
+				)
 			}
 			continue
 		}
@@ -155,6 +171,12 @@ func (rg *RuleGroup) Eval(phase Phase, tx *Transaction) bool {
 		tx.Capture = false //we reset the capture flag on every run
 		usedRules++
 	}
+	tx.Waf.Logger.Debug("Finished phase",
+		zap.String("event", "FINISH_PHASE"),
+		zap.String("txid", tx.Id),
+		zap.Int("phase", int(phase)),
+		zap.Int("rules", usedRules),
+	)
 	tx.StopWatches[phase] = int(time.Now().UnixNano() - ts)
 	return tx.Interruption != nil
 }
