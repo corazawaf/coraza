@@ -3,7 +3,7 @@
     author: jptosso
     description: Test if the ctl action works
     enabled: true
-    name: ctl.yaml
+    name: match.yaml
   tests:
   -
     test_title: actions
@@ -11,11 +11,22 @@
     -
       stage:
         input:
+            method: post
             uri: /test.php?id=12345
+            headers:
+              content-type: application/x-www-form-urlencoded
+            data: testuru
         output:
           triggered_rules:
+            - 100
+            - 101
+            - 102
             - 26
           non_triggered_rules:
   rules: |
-    SecRule ARGS "12345" "chain,deny,id:26, log"
+    SecRequestBodyAccess On
+    SecRule REQUEST_BODY "testuru" "id:100,pass,log, phase:2"
+    SecRule ARGS_NAMES "^test.*" "id:101,pass,log, phase:2"
+    SecRule REQUEST_COOKIES|!REQUEST_COOKIES:/__utm/|!REQUEST_COOKIES:/_pk_ref/|REQUEST_COOKIES_NAMES|ARGS_NAMES|ARGS|XML:/* "testuru" "id:102,log,pass,phase:2"
+    SecRule ARGS "12345" "chain,deny,id:26, log, phase: 2"
         SecRule MATCHED_VARS "@eq 12345" ""

@@ -91,44 +91,10 @@ func (p *RuleParser) ParseVariables(vars string) error {
 			} else if curr == 2 {
 				i++
 			}
-			key := string(curkey)
-			if isnegation {
-				for i, vr := range p.rule.Variables {
-					if vr.Collection == v {
-						vr.Exceptions = append(vr.Exceptions, key)
-						p.rule.Variables[i] = vr
-						return nil
-					}
-				}
-				//TODO check if we can add something here
-				panic(fmt.Errorf("cannot negate a variable that haven't been created"))
+			err = p.AddVariable(iscount, isnegation, v, string(curkey), curr == 2)
+			if err != nil {
+				return err
 			}
-			var rv coraza.RuleVariable
-			if len(curkey) > 0 && curr == 2 {
-				// REGEX EXPRESSION
-				var re regex.Regexp
-				var err error
-				re, err = regex.Compile(key, 0)
-				if err != nil {
-					return err
-				}
-				rv = coraza.RuleVariable{
-					Count:      iscount,
-					Collection: v,
-					Key:        key,
-					Regex:      &re,
-					Exceptions: []string{},
-				}
-			} else {
-				rv = coraza.RuleVariable{
-					Count:      iscount,
-					Collection: v,
-					Key:        strings.ToLower(key),
-					Regex:      nil,
-					Exceptions: []string{},
-				}
-			}
-			p.rule.Variables = append(p.rule.Variables, rv)
 			curvar = []byte{}
 			curkey = []byte{}
 			iscount = false
@@ -183,6 +149,49 @@ func (p *RuleParser) ParseVariables(vars string) error {
 			//XPATH
 			curkey = append(curkey, c)
 		}
+	}
+	return nil
+}
+
+func (p *RuleParser) AddVariable(count bool, negation bool, collection byte, key string, regexkey bool) error {
+	r := p.rule
+	if negation {
+		for i, vr := range r.Variables {
+			if vr.Collection == collection {
+				vr.Exceptions = append(vr.Exceptions, key)
+				r.Variables[i] = vr
+				return nil
+			}
+		}
+		//TODO check if we can add something here
+		panic(fmt.Errorf("cannot negate a variable that haven't been created"))
+	}
+	var rv coraza.RuleVariable
+	if len(key) > 0 && regexkey {
+		// REGEX EXPRESSION
+		var re regex.Regexp
+		var err error
+		re, err = regex.Compile(key, 0)
+		if err != nil {
+			return err
+		}
+		rv = coraza.RuleVariable{
+			Count:      count,
+			Collection: collection,
+			Key:        key,
+			Regex:      &re,
+			Exceptions: []string{},
+		}
+		r.Variables = append(r.Variables, rv)
+	} else {
+		rv = coraza.RuleVariable{
+			Count:      count,
+			Collection: collection,
+			Key:        strings.ToLower(key), //TODO to lower?
+			Regex:      nil,
+			Exceptions: []string{},
+		}
+		r.Variables = append(r.Variables, rv)
 	}
 	return nil
 }

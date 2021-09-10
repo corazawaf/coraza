@@ -17,6 +17,7 @@ package seclang
 import (
 	"testing"
 
+	"github.com/jptosso/coraza-waf"
 	engine "github.com/jptosso/coraza-waf"
 )
 
@@ -84,12 +85,24 @@ func TestVariables(t *testing.T) {
 		t.Error("failed to parse second variable after weird regex 3")
 	}
 
-	err = p.FromString(`SecRule XML:/*|XML://@* "id:6"`)
+	err = p.FromString(`SecRule XML:/*|XML://@* "" "id:6"`)
 	if err != nil {
 		t.Error(err)
 	}
 	if waf.Rules.GetRules()[5].Variables[1].Key != "//@*" {
 		t.Error("failed to parse second variable after XPATH")
 	}
+}
 
+func TestVariableCases(t *testing.T) {
+	waf := coraza.NewWaf()
+	p, _ := NewParser(waf)
+	err := p.FromString(`SecRule REQUEST_COOKIES|!REQUEST_COOKIES:/__utm/|!REQUEST_COOKIES:/_pk_ref/|REQUEST_COOKIES_NAMES|ARGS_NAMES|ARGS|XML:/* "" "id:7,pass"`)
+	if err != nil {
+		t.Error(err)
+	}
+	rule := waf.Rules.GetRules()[0]
+	if len(rule.Variables) != 5 || rule.Variables[2].Collection != coraza.VARIABLE_ARGS_NAMES {
+		t.Errorf("failed to parse some variables, %d variables", len(rule.Variables))
+	}
 }

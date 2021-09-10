@@ -131,7 +131,7 @@ func ArgsToMap(args string) map[string]string {
 	a := map[string]string{}
 	re := regexp.MustCompile(`([\w\-_]+)=(.*?(?:\s|$))`)
 	for _, data := range re.FindAllStringSubmatch(args, -1) {
-		a[data[1]] = data[2]
+		a[strings.TrimSpace(data[1])] = strings.TrimSpace(data[2])
 	}
 	return a
 }

@@ -201,9 +201,11 @@ func TestResponseBody(t *testing.T) {
 	}
 }
 
-func TestAuditLogMessage(t *testing.T) {
+func TestAuditLogFields(t *testing.T) {
 	tx := makeTransaction()
 	tx.AuditLogParts = []rune("ABCDEFGHIJK")
+	tx.AddRequestHeader("test", "test")
+	tx.AddResponseHeader("test", "test")
 	rule := NewRule()
 	rule.Id = 131
 	tx.MatchRule(*rule, []string{"some msg"}, []MatchData{{"UNIQUE_ID", "", tx.Id}})
@@ -213,6 +215,12 @@ func TestAuditLogMessage(t *testing.T) {
 	al := tx.AuditLog()
 	if len(al.Messages) == 0 || al.Messages[0].Data.Id != rule.Id {
 		t.Error("failed to add rules to audit logs")
+	}
+	if al.Transaction.Request.Headers == nil || al.Transaction.Request.Headers["test"][0] != "test" {
+		t.Error("failed to add request header to audit log")
+	}
+	if al.Transaction.Response.Headers == nil || al.Transaction.Response.Headers["test"][0] != "test" {
+		t.Error("failed to add Response header to audit log")
 	}
 }
 
