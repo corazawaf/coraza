@@ -57,7 +57,7 @@ func (br *BodyBuffer) Reader() io.Reader {
 	if br.writer == nil {
 		return bytes.NewReader(br.buffer.Bytes())
 	}
-	br.writer.Seek(0, 0)
+	_, _ = br.writer.Seek(0, 0)
 	return br.writer
 }
 

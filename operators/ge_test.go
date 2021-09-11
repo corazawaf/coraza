@@ -21,7 +21,9 @@ import (
 
 func TestGe(t *testing.T) {
 	geo := &Ge{}
-	geo.Init("2500")
+	if err := geo.Init("2500"); err != nil {
+		t.Error("Cannot init geo")
+	}
 	if !geo.Evaluate(nil, "2800") {
 		t.Errorf("Invalid result for @ge operator")
 	}

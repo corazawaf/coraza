@@ -31,6 +31,7 @@ func (a *InitCol) Init(r *engine.Rule, data string) error {
 	kv := strings.SplitN(data, "=", 2)
 	a.collection = kv[0]
 	a.key = kv[1]
+	a.variable = 0x0
 	return nil
 }
 

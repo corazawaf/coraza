@@ -17,7 +17,6 @@ package operators
 import engine "github.com/jptosso/coraza-waf"
 
 type ValidateUrlEncoding struct {
-	data string
 }
 
 func (o *ValidateUrlEncoding) Init(data string) error {

@@ -32,37 +32,26 @@ func EscapeSeqDecode(input string, tools *Tools) string {
 			switch input[i+1] {
 			case 'a':
 				c = '\a'
-				break
 			case 'b':
 				c = '\b'
-				break
 			case 'f':
 				c = '\f'
-				break
 			case 'n':
 				c = '\n'
-				break
 			case 'r':
 				c = '\r'
-				break
 			case 't':
 				c = '\t'
-				break
 			case 'v':
 				c = '\v'
-				break
 			case '\\':
 				c = '\\'
-				break
 			case '?':
 				c = '?'
-				break
 			case '\'':
 				c = '\''
-				break
 			case '"':
 				c = '"'
-				break
 			}
 
 			if c != -1 {

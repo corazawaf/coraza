@@ -20,7 +20,9 @@ import (
 
 func TestLe(t *testing.T) {
 	le := &Le{}
-	le.Init("2500")
+	if err := le.Init("2500"); err != nil {
+		t.Error("failed to init le operator")
+	}
 	if !le.Evaluate(nil, "2400") {
 		t.Errorf("Invalid result for @le operator")
 	}

@@ -153,9 +153,13 @@ func TestRequestBody(t *testing.T) {
 	//xml := "<test><content>test</content></test>"
 	tx := wafi.NewTransaction()
 	tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
-	tx.RequestBodyBuffer.Write([]byte(urlencoded))
+	if _, err := tx.RequestBodyBuffer.Write([]byte(urlencoded)); err != nil {
+		t.Error("Failed to write body buffer")
+	}
 	tx.ProcessRequestHeaders()
-	tx.ProcessRequestBody()
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Error("Failed to process request body")
+	}
 	val := tx.GetCollection(VARIABLE_ARGS_POST).Get("some")
 	if len(val) != 1 || val[0] != "result" {
 		t.Error("Failed to set url encoded post data")
@@ -194,8 +198,12 @@ func TestResponseBody(t *testing.T) {
 	tx.ResponseBodyAccess = true
 	tx.RuleEngine = RULE_ENGINE_ON
 	tx.AddResponseHeader("content-type", "text/plain")
-	tx.ResponseBodyBuffer.Write([]byte("test123"))
-	tx.ProcessResponseBody()
+	if _, err := tx.ResponseBodyBuffer.Write([]byte("test123")); err != nil {
+		t.Error("Failed to write response body buffer")
+	}
+	if _, err := tx.ProcessResponseBody(); err != nil {
+		t.Error("Failed to process response body")
+	}
 	if tx.GetCollection(VARIABLE_RESPONSE_BODY).GetFirstString("") != "test123" {
 		t.Error("failed to set response body")
 	}
@@ -244,7 +252,7 @@ func makeTransaction() *Transaction {
 		"testfield=456",
 	}
 	data := strings.Join(ht, "\r\n")
-	tx.ParseRequestReader(strings.NewReader(data))
+	_, _ = tx.ParseRequestReader(strings.NewReader(data))
 	return tx
 }
 

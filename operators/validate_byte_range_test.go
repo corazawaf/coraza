@@ -35,7 +35,9 @@ func TestCRS920272(t *testing.T) {
 	}
 
 	op := &ValidateByteRange{}
-	op.Init(ranges)
+	if err := op.Init(ranges); err != nil {
+		t.Error("Cannot init validatebuterange operator")
+	}
 	tx := getTransaction()
 
 	for _, gs := range good_strings {
@@ -63,7 +65,9 @@ func TestCRS920270(t *testing.T) {
 	}
 
 	op := &ValidateByteRange{}
-	op.Init(ranges)
+	if err := op.Init(ranges); err != nil {
+		t.Error("Cannot init validatebuterange operator")
+	}
 	tx := getTransaction()
 
 	for _, gs := range good_strings {

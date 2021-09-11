@@ -62,7 +62,6 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	case CTL_REMOVE_TARGET_BY_ID:
 		id, _ := strconv.Atoi(a.Value)
 		tx.RemoveRuleTargetById(id, a.Collection, a.ColKey)
-		break
 	case CTL_REMOVE_TARGET_BY_TAG:
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
@@ -70,7 +69,6 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 				tx.RemoveRuleTargetById(r.Id, a.Collection, a.ColKey)
 			}
 		}
-		break
 	case CTL_REMOVE_TARGET_BY_MSG:
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
@@ -78,27 +76,21 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 				tx.RemoveRuleTargetById(r.Id, a.Collection, a.ColKey)
 			}
 		}
-		break
 	case CTL_AUDIT_ENGINE:
 		switch a.Value {
 		case "On":
 			tx.AuditEngine = engine.AUDIT_LOG_ENABLED
-			break
 		case "Off":
 			tx.AuditEngine = engine.AUDIT_LOG_DISABLED
-			break
 		case "RelevantOnly":
 			tx.AuditEngine = engine.AUDIT_LOG_RELEVANT
-			break
 		}
-		break
 	case CTL_AUDIT_LOG_PARTS:
 		//TODO lets switch it to a string
 		tx.AuditLogParts = []rune{}
 		for _, c := range a.Value {
 			tx.AuditLogParts = append(tx.AuditLogParts, c)
 		}
-		break
 	case CTL_FORCE_REQUEST_BODY_VAR:
 		if strings.ToLower(a.Value) == "on" {
 			tx.ForceRequestBodyVariable = true
@@ -151,19 +143,15 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 			tx.RequestBodyProcessor = engine.REQUEST_BODY_PROCESSOR_MULTIPART
 			tx.GetCollection(engine.VARIABLE_REQBODY_PROCESSOR).Set("", []string{"MULTIPART"})
 		}
-		break
 	case CTL_HASH_ENGINE:
 		// Not supported yet
-		break
 	case CTL_HASH_ENFORCEMENT:
 		// Not supported yet
-		break
 	case CTL_DEBUG_LOG_LEVEL:
 		//lvl, _ := strconv.Atoi(a.Value)
 		// TODO
 		// We cannot update the log level, it would affect the whole waf instance...
 		//tx.Waf.SetLogLevel(lvl)
-		break
 	}
 
 }
@@ -194,55 +182,38 @@ func parseCtl(data string) (int, string, byte, string, error) {
 	switch action {
 	case "auditEngine":
 		act = CTL_AUDIT_ENGINE
-		break
 	case "auditLogParts":
 		act = CTL_AUDIT_LOG_PARTS
-		break
 	case "forceRequestBodyVariable":
 		act = CTL_FORCE_REQUEST_BODY_VAR
-		break
 	case "requestBodyAccess":
 		act = CTL_REQUEST_BODY_ACCESS
-		break
 	case "requestBodyLimit":
 		act = CTL_REQUEST_BODY_LIMIT
-		break
 	case "requestBodyProcessor":
 		act = CTL_REQUEST_BODY_PROCESSOR
-		break
 	case "responseBodyAccess":
 		act = CTL_RESPONSE_BODY_ACCESS
-		break
 	case "responseBodyLimit":
 		act = CTL_RESPONSE_BODY_LIMIT
-		break
 	case "ruleEngine":
 		act = CTL_RULE_ENGINE
-		break
 	case "ruleRemoveById":
 		act = CTL_RULE_REMOVE_BY_ID
-		break
 	case "ruleRemoveByMsg":
 		act = CTL_RULE_REMOVE_BY_MSG
-		break
 	case "ruleRemoveByTag":
 		act = CTL_RULE_REMOVE_BY_TAG
-		break
 	case "ruleRemoveTargetById":
 		act = CTL_REMOVE_TARGET_BY_ID
-		break
 	case "ruleRemoveTargetByMsg":
 		act = CTL_REMOVE_TARGET_BY_MSG
-		break
 	case "ruleRemoveTargetByTag":
 		act = CTL_REMOVE_TARGET_BY_TAG
-		break
 	case "hashEngine":
 		act = CTL_HASH_ENGINE
-		break
 	case "hashEnforcement":
 		act = CTL_HASH_ENFORCEMENT
-		break
 	default:
 		return 0, "", 0x00, "", fmt.Errorf("Invalid ctl action")
 	}

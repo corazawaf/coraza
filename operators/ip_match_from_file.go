@@ -30,11 +30,10 @@ func (o *IpMatchFromFile) Init(data string) error {
 	o.ip = &IpMatch{}
 	list, err := utils.OpenFile(data)
 	if err != nil {
-		return fmt.Errorf("Error opening %s", data)
+		return fmt.Errorf("error opening %s", data)
 	}
 	subnets := strings.ReplaceAll(string(list), "\n", ",")
-	o.ip.Init(subnets)
-	return nil
+	return o.ip.Init(subnets)
 }
 
 func (o *IpMatchFromFile) Evaluate(tx *engine.Transaction, value string) bool {

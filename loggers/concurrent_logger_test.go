@@ -36,7 +36,9 @@ func TestCLogFileCreation(t *testing.T) {
 		"dirmode":   "0777",
 		"filemode":  "0777",
 	}
-	logger.New(args)
+	if err := logger.New(args); err != nil {
+		t.Error("failed to create logger")
+	}
 	ts := time.Now().UnixNano()
 	al := &AuditLog{
 		Transaction: &AuditTransaction{
@@ -46,7 +48,9 @@ func TestCLogFileCreation(t *testing.T) {
 			Response:      &AuditTransactionResponse{},
 		},
 	}
-	logger.Write(al)
+	if err := logger.Write(al); err != nil {
+		t.Error("failed to write to logger")
+	}
 	tt := time.Unix(0, ts)
 	p2 := fmt.Sprintf("/%s/%s/", tt.Format("20060102"), tt.Format("20060102-1504"))
 	logdir := path.Join("/tmp", p2)

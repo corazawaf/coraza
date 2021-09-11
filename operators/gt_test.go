@@ -21,7 +21,9 @@ import (
 
 func TestGt(t *testing.T) {
 	gto := &Gt{}
-	gto.Init("2500")
+	if err := gto.Init("2500"); err != nil {
+		t.Error("Cannot init gto operator")
+	}
 	if !gto.Evaluate(nil, "2800") {
 		t.Errorf("Invalid result for @gt operator")
 	}
