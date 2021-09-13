@@ -15,25 +15,18 @@
 package transformations
 
 import (
-	"github.com/jptosso/coraza-waf/utils"
+	"strings"
+	"unicode"
 )
 
+// RemoveWhitespace removes all whitespace characters from input.
 func RemoveWhitespace(data string, tools *Tools) string {
-	// loop through all the chars
-	newstr := make([]byte, len(data))
-	var i, c int
-	for i < len(data) {
-		// remove whitespaces and non breaking spaces (NBSP)
-		if utils.IsSpace(data[i]) || (data[i] == 160) {
-			i++
-			continue
-		} else {
-			newstr[c] += data[i]
-			c++
-			i++
+	return strings.Map(func(r rune) rune {
+		if unicode.IsSpace(r) {
+			// if the character is a space, drop it
+			return -1
 		}
-	}
-
-	//Don't forget to remove the after padding
-	return string(newstr[0:c])
+		// else keep it in the string
+		return r
+	}, data)
 }
