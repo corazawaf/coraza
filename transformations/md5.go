@@ -21,7 +21,9 @@ import (
 
 func Md5(data string, utils *Tools) string {
 	h := md5.New()
-	io.WriteString(h, data)
+	_, err := io.WriteString(h, data)
+	if err != nil {
+		utils.Logger.Error("error writing md5 string")
+	}
 	return string(h.Sum(nil))
-	//return fmt.Sprintf("%x", h.Sum(nil))
 }

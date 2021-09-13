@@ -44,7 +44,9 @@ func TestSerialLogger_Write(t *testing.T) {
 			},
 		},
 	}
-	l.Write(al)
+	if err := l.Write(al); err != nil {
+		t.Error("failed to write to serial logger")
+	}
 	file, err := os.Open(tmp)
 	if err != nil {
 		t.Error(err)

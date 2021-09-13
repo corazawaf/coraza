@@ -33,12 +33,12 @@ func doHtmlEntityDecode(input string) string {
 	var i, count, curr int
 	for (i < input_len) && (count < input_len) {
 		cp := 1
-		z := 1
+		var z int
 		/* Require an ampersand and at least one character to
 		 * start looking into the entity.
 		 */
 		if (input[i] == '&') && (i+1 < input_len) {
-			k := i + 1
+			var k int
 			j := i + 1
 			if input[j] == '#' {
 				/* Numerical entity. */

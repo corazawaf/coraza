@@ -40,7 +40,12 @@ func directiveSecMarker(p *Parser, opts string) error {
 	rule.SecMark = opts
 	rule.Id = 0
 	rule.Phase = 0
-	p.Waf.Rules.Add(rule)
+	if err := p.Waf.Rules.Add(rule); err != nil {
+		if perr := p.log(fmt.Sprintf("Failed to compile rule (%s): %s", err, opts)); perr != nil {
+			return perr // can't write to log, return this instead
+		}
+		return err
+	}
 	p.Waf.Logger.Debug("added secmark rule")
 	return nil
 }
@@ -48,10 +53,17 @@ func directiveSecMarker(p *Parser, opts string) error {
 func directiveSecAction(p *Parser, opts string) error {
 	rule, err := p.ParseRule(opts, false)
 	if err != nil {
-		p.log(fmt.Sprintf("Failed to compile rule (%s): %s", err, opts))
+		if perr := p.log(fmt.Sprintf("Failed to compile rule (%s): %s", err, opts)); perr != nil {
+			return perr // can't write to log, return this instead
+		}
 		return err
 	}
-	p.Waf.Rules.Add(rule)
+	if err := p.Waf.Rules.Add(rule); err != nil {
+		if perr := p.log(fmt.Sprintf("Failed to compile rule (%s): %s", err, opts)); perr != nil {
+			return perr // can't write to log, return this instead
+		}
+		return err
+	}
 	p.Waf.Logger.Debug("Added SecAction",
 		zap.String("rule", opts),
 	)
@@ -61,12 +73,12 @@ func directiveSecAction(p *Parser, opts string) error {
 func directiveSecRule(p *Parser, opts string) error {
 	rule, err := p.ParseRule(opts, true)
 	if err != nil {
-		p.log(fmt.Sprintf("Failed to compile rule (%s): %s", err, opts))
+		if perr := p.log(fmt.Sprintf("Failed to compile rule (%s): %s", err, opts)); perr != nil {
+			return perr // can't write to log, return this instead
+		}
 		return err
-	} else {
-		p.Waf.Rules.Add(rule)
 	}
-	return nil
+	return p.Waf.Rules.Add(rule)
 }
 
 func directiveSecResponseBodyAccess(p *Parser, opts string) error {
@@ -262,8 +274,7 @@ func directiveSecHashEngine(p *Parser, opts string) error {
 }
 
 func directiveSecDefaultAction(p *Parser, opts string) error {
-	p.AddDefaultActions(opts)
-	return nil
+	return p.AddDefaultActions(opts)
 }
 
 func directiveSecContentInjection(p *Parser, opts string) error {

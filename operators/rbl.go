@@ -67,6 +67,4 @@ func (o *Rbl) Evaluate(tx *engine.Transaction, value string) bool {
 		// TIMEOUT
 		return false
 	}
-
-	return true
 }

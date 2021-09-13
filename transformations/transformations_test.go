@@ -40,13 +40,15 @@ func TestTransformations(t *testing.T) {
 	if _, err := os.Stat(root); os.IsNotExist(err) {
 		t.Error("failed to find transformation test files")
 	}
-	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	if err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if strings.HasSuffix(path, ".json") {
 			data, _ := ioutil.ReadFile(path)
 			files = append(files, data)
 		}
 		return nil
-	})
+	}); err != nil {
+		t.Error("Error walking files")
+	}
 	for _, f := range files {
 
 		cases := []*Test{}

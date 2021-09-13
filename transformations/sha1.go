@@ -21,7 +21,9 @@ import (
 
 func Sha1(data string, utils *Tools) string {
 	h := sha1.New()
-	io.WriteString(h, data)
+	_, err := io.WriteString(h, data)
+	if err != nil {
+		utils.Logger.Error("error writing sha1 string")
+	}
 	return string(h.Sum(nil))
-	//return fmt.Sprintf("%x", h.Sum(nil))
 }

@@ -23,7 +23,9 @@ import (
 func TestInterruption(t *testing.T) {
 	waf := engine.NewWaf()
 	p, _ := NewParser(waf)
-	p.FromString(`SecAction "id:1,deny,log,phase:1"`)
+	if err := p.FromString(`SecAction "id:1,deny,log,phase:1"`); err != nil {
+		t.Error("Could not create from string")
+	}
 	tx := waf.NewTransaction()
 	if tx.ProcessRequestHeaders() == nil {
 		t.Error("Transaction not interrupted")

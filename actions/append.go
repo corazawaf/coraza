@@ -31,7 +31,9 @@ func (a *Append) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 		return
 	}
 	data := tx.MacroExpansion(a.data)
-	tx.ResponseBodyBuffer.Write([]byte(data))
+	if _, err := tx.ResponseBodyBuffer.Write([]byte(data)); err != nil {
+		tx.Waf.Logger.Debug("append failed to write to response buffer")
+	}
 }
 
 func (a *Append) Type() int {

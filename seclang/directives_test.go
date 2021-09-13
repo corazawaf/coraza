@@ -26,63 +26,97 @@ import (
 func Test_directiveSecAuditLog(t *testing.T) {
 	w := engine.NewWaf()
 	p, _ := NewParser(w)
-	p.FromString("SecWebAppId test123")
+	if err := p.FromString("SecWebAppId test123"); err != nil {
+		t.Error("failed to set parser from string")
+	}
 	if w.WebAppId != "test123" {
 		t.Error("failed to set SecWebAppId")
 	}
-	p.FromString("SecUploadKeepFiles On")
+	if err := p.FromString("SecUploadKeepFiles On"); err != nil {
+		t.Error("failed to set parser from string")
+	}
 	if !w.UploadKeepFiles {
 		t.Error("failed to set SecUploadKeepFiles")
 	}
-	p.FromString("SecUploadFileMode 0700")
+	if err := p.FromString("SecUploadFileMode 0700"); err != nil {
+		t.Error("failed to set parser from string")
+	}
 	//if w.UploadFileMode != 0700 {
 	//	t.Error("Failed to set SecUploadFileMode")
 	//}
-	p.FromString("SecUploadFileLimit 1000")
+	if err := p.FromString("SecUploadFileLimit 1000"); err != nil {
+		t.Error("failed to set parser from string")
+	}
 	if w.UploadFileLimit != 1000 {
 		t.Error("failed to set SecUploadFileLimit")
 	}
-	p.FromString("SecUploadDir /tmp")
+	if err := p.FromString("SecUploadDir /tmp"); err != nil {
+		t.Error("failed to set parser from string")
+	}
 	if w.UploadDir != "/tmp" {
 		t.Error("failed to set SecUploadDir")
 	}
-	p.FromString("SecTmpDir /tmp")
+	if err := p.FromString("SecTmpDir /tmp"); err != nil {
+		t.Error("failed to set parser from string")
+	}
 	if w.TmpDir != "/tmp" {
 		t.Error("failed to set SecTmpDir")
 	}
 	//"SecServerSignature":            directiveSecServerSignature,
-	p.FromString("SecSensorId test")
+	if err := p.FromString("SecSensorId test"); err != nil {
+		t.Error("failed to set parser from string")
+	}
 	if w.SensorId != "test" {
 		t.Error("failed to set SecSensorId")
 	}
-	p.FromString("SecRuleEngine DetectionOnly")
+	if err := p.FromString("SecRuleEngine DetectionOnly"); err != nil {
+		t.Error("failed to set parser from string")
+	}
 	if w.RuleEngine != engine.RULE_ENGINE_DETECTONLY {
 		t.Error("failed to set SecRuleEngine")
 	}
-	p.FromString(`SecAction "id:1,tag:test"`)
-	p.FromString("SecRuleRemoveByTag test")
+	if err := p.FromString(`SecAction "id:1,tag:test"`); err != nil {
+		t.Error("failed to set parser from string")
+	}
+	if err := p.FromString("SecRuleRemoveByTag test"); err != nil {
+		t.Error("failed to set parser from string")
+	}
 	if p.Waf.Rules.Count() != 0 {
 		t.Error("Failed to remove rule with SecRuleRemoveByTag")
 	}
-	p.FromString(`SecAction "id:1,msg:'test'"`)
-	p.FromString("SecRuleRemoveByMsg test")
+	if err := p.FromString(`SecAction "id:1,msg:'test'"`); err != nil {
+		t.Error("failed to set parser from string")
+	}
+	if err := p.FromString("SecRuleRemoveByMsg test"); err != nil {
+		t.Error("failed to set parser from string")
+	}
 	if p.Waf.Rules.Count() != 0 {
 		t.Error("Failed to remove rule with SecRuleRemoveByMsg")
 	}
-	p.FromString(`SecAction "id:1"`)
-	p.FromString("SecRuleRemoveById 1")
+	if err := p.FromString(`SecAction "id:1"`); err != nil {
+		t.Error("failed to set parser from string")
+	}
+	if err := p.FromString("SecRuleRemoveById 1"); err != nil {
+		t.Error("failed to set parser from string")
+	}
 	if p.Waf.Rules.Count() != 0 {
 		t.Error("Failed to remove rule with SecRuleRemoveById")
 	}
-	p.FromString("SecUnicodeMap 20127")
+	if err := p.FromString("SecUnicodeMap 20127"); err != nil {
+		t.Error("failed to set parser from string")
+	}
 	if p.Waf.Unicode.Map != "20127" {
 		t.Error("failed to set SecUnicodeMap")
 	}
-	p.FromString("SecResponseBodyMimeTypesClear")
+	if err := p.FromString("SecResponseBodyMimeTypesClear"); err != nil {
+		t.Error("failed to set parser from string")
+	}
 	if len(p.Waf.ResponseBodyMimeTypes) != 0 {
 		t.Error("failed to set SecResponseBodyMimeTypesClear")
 	}
-	p.FromString("SecResponseBodyMimeType text/html")
+	if err := p.FromString("SecResponseBodyMimeType text/html"); err != nil {
+		t.Error("failed to set parser from string")
+	}
 	if p.Waf.ResponseBodyMimeTypes[0] != "text/html" {
 		t.Error("failed to set SecResponseBodyMimeType")
 	}
@@ -140,7 +174,9 @@ func TestDebugDirectives(t *testing.T) {
 	if strings.Contains(string(data), "efgh123") {
 		t.Error("debug data shouldn't be written")
 	}
-	p.Waf.SetLogLevel(5)
+	if err := p.Waf.SetLogLevel(5); err != nil {
+		t.Error("setting log level")
+	}
 	p.Waf.Logger.Debug("efgh123")
 	data, _ = utils.OpenFile(tmp)
 	if !strings.Contains(string(data), "efgh123") {

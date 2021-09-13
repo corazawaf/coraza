@@ -35,7 +35,7 @@ func NidCl(nid string) bool {
 
 	var sum = 0
 	var factor = 2
-	var ndv = "0"
+	var ndv string
 	for ; rut != 0; rut /= 10 {
 		sum += rut % 10 * factor
 		if factor == 7 {
@@ -45,11 +45,13 @@ func NidCl(nid string) bool {
 		}
 	}
 
-	if val := 11 - (sum % 11); val == 11 {
+	val := 11 - (sum % 11)
+	switch val {
+	case 11:
 		ndv = "0"
-	} else if val == 10 {
+	case 10:
 		ndv = "k"
-	} else {
+	default:
 		ndv = strconv.Itoa(val)
 	}
 	return ndv == dv

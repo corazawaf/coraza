@@ -26,11 +26,15 @@ func TestCtl(t *testing.T) {
 	r := engine.NewRule()
 	ctl := Ctl{}
 
-	ctl.Init(r, "requestBodyProcessor=XML")
+	if err := ctl.Init(r, "requestBodyProcessor=XML"); err != nil {
+		t.Error("Failed to init requestBodyProcessor=XML")
+	}
 	ctl.Evaluate(r, tx)
 	// Not implemented yet
 
-	ctl.Init(r, "ruleRemoveTargetById=981260;ARGS:user")
+	if err := ctl.Init(r, "ruleRemoveTargetById=981260;ARGS:user"); err != nil {
+		t.Error("failed to init ruleRemoveTargetById=981260;ARGS:user")
+	}
 	ctl.Evaluate(r, tx)
 
 	if tx.RuleRemoveTargetById[981260] == nil {
@@ -44,21 +48,27 @@ func TestCtl(t *testing.T) {
 		}
 	}
 
-	ctl.Init(r, "auditEngine=Off")
+	if err := ctl.Init(r, "auditEngine=Off"); err != nil {
+		t.Error("failed to init ctl with auditEngine=Off")
+	}
 	ctl.Evaluate(r, tx)
 
 	if tx.AuditEngine != engine.AUDIT_LOG_DISABLED {
 		t.Error("Failed to disable audit log")
 	}
 
-	ctl.Init(r, "ruleEngine=Off")
+	if err := ctl.Init(r, "ruleEngine=Off"); err != nil {
+		t.Error("failed to init ctl using ruleEngine=Off")
+	}
 	ctl.Evaluate(r, tx)
 
 	if tx.RuleEngine != engine.RULE_ENGINE_OFF {
 		t.Error("Failed to disable rule engine")
 	}
 
-	ctl.Init(r, "requestBodyLimit=12345")
+	if err := ctl.Init(r, "requestBodyLimit=12345"); err != nil {
+		t.Error("failed to init ctl with requestBodyLimit=12345")
+	}
 	ctl.Evaluate(r, tx)
 
 	if tx.RequestBodyLimit != 12345 {
@@ -67,7 +77,9 @@ func TestCtl(t *testing.T) {
 
 	bodyprocessors := []string{"XML", "JSON", "URLENCODED", "MULTIPART"}
 	for _, bp := range bodyprocessors {
-		ctl.Init(r, "requestBodyProcessor="+bp)
+		if err := ctl.Init(r, "requestBodyProcessor="+bp); err != nil {
+			t.Errorf("failed to init requestBodyProcessor %s", bp)
+		}
 		ctl.Evaluate(r, tx)
 		if tx.GetCollection(engine.VARIABLE_REQBODY_PROCESSOR).GetFirstString("") != bp {
 			t.Error("failed to set RequestBodyProcessor " + bp)
