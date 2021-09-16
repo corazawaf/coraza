@@ -38,7 +38,7 @@ jobs:
     - name: Update ftw deps
       run: cd ftw && go get -u github.com/jptosso/coraza-waf@$GITHUB_SHA
     - name: Download CRS
-      run: cd / && go install github.com/jptosso/crsmon/cmd/crsmon
+      run: cd / && go install github.com/jptosso/crsmon/cmd/crsmon@latest
     - name: Build CRS
       run: crsmon -path ./crs -v paranoia_level=4 -v crs_validate_utf8_encoding=1 -v arg_name_length=100 -v arg_length=400
     - name: clone crs tests
