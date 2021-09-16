@@ -372,6 +372,44 @@ func (tx *Transaction) MatchVars(match []MatchData) {
 
 // MatchRule Matches a rule to be logged
 func (tx *Transaction) MatchRule(rule Rule, msgs []string, match []MatchData) {
+	if rule.Log && tx.Waf.ErrorLogger != nil {
+		str := strings.Builder{}
+		str.WriteString("Warning. ")
+		variable := match[0].Collection
+		if match[0].Key != "" {
+			variable += fmt.Sprintf(":%s", match[0].Key)
+		}
+		str.WriteString(fmt.Sprintf("Match of \"- %s\" against %q required. ", rule.Operator.Data, variable))
+		str.WriteString(fmt.Sprintf("[file %q] ", rule.File))
+		str.WriteString(fmt.Sprintf("[line %q] ", rule.Line))
+		str.WriteString(fmt.Sprintf("[id %q] ", rule.Id))
+		str.WriteString(fmt.Sprintf("[msg %q] ", msgs[0]))
+		str.WriteString(fmt.Sprintf("[data %q]", tx.MacroExpansion(rule.LogData)))
+		if rule.Severity != -1 {
+			severity := "someseverity"
+			str.WriteString(fmt.Sprintf(" [severity %q]", severity))
+		}
+		switch EventSeverity(rule.Severity) {
+		case EventEmergency:
+			tx.Waf.ErrorLogger.Emergency(str.String())
+		case EventAlert:
+			tx.Waf.ErrorLogger.Alert(str.String())
+		case EventCritical:
+			tx.Waf.ErrorLogger.Critical(str.String())
+		case EventError:
+			tx.Waf.ErrorLogger.Error(str.String())
+		case EventWarning:
+			tx.Waf.ErrorLogger.Warning(str.String())
+		case EventNotice:
+			tx.Waf.ErrorLogger.Notice(str.String())
+		case EventInfo:
+			tx.Waf.ErrorLogger.Info(str.String())
+		case EventDebug:
+			tx.Waf.ErrorLogger.Debug(str.String())
+		default:
+			//TODO
+		}
+	}
 	tx.Waf.Logger.Debug("rule matched", zap.String("txid", tx.Id), zap.Int("rule", rule.Id), zap.Int("count", len(match)))
 	mr := MatchedRule{
 		Messages:    msgs,

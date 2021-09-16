@@ -168,7 +168,7 @@ func TestSecAuditLogs(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if !strings.Contains(string(data), "rule 4482") {
-		t.Errorf("invalid audit log for %s got:\n%s", f1, data)
+	if !strings.Contains(string(data), "id \"4482\"") {
+		t.Errorf("missing rule id from audit log, got:\n%s", data)
 	}
 }
