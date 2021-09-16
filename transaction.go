@@ -372,6 +372,7 @@ func (tx *Transaction) MatchVars(match []MatchData) {
 
 // MatchRule Matches a rule to be logged
 func (tx *Transaction) MatchRule(rule Rule, msgs []string, match []MatchData) {
+	tx.Waf.Logger.Debug("rule matched", zap.String("txid", tx.Id), zap.Int("rule", rule.Id), zap.Int("count", len(match)))
 	mr := MatchedRule{
 		Messages:    msgs,
 		MatchedData: match,

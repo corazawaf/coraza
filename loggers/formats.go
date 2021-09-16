@@ -74,7 +74,7 @@ func ftwFormatter(al *AuditLog) (string, error) {
 	err := fmt.Sprintf("Access denied with code %d (phase %d)", status, phase)
 	for _, r := range al.Messages {
 		rules += fmt.Sprintf("[id \"%d\"] ", r.Data.Id)
-		msgs += fmt.Sprintf("[msg \"%s\"]", r.Data.Msg)
+		msgs += fmt.Sprintf("[msg \"%s\"] ", r.Data.Msg)
 	}
 	data := fmt.Sprintf("[%s] [error] [client %s] Coraza: %s. %s %s %s [severity \"%s\"] [uri \"%s\"] [unique_id \"%s\"]",
 		timestamp, address, err, logdata, rules, msgs, severity, uri, id)
@@ -152,4 +152,6 @@ func getFormatter(f string) (formatter, error) {
 var (
 	_ formatter = cefFormatter
 	_ formatter = ftwFormatter
+	_ formatter = modsecFormatter
+	_ formatter = jsonFormatter
 )
