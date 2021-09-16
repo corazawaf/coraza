@@ -1,4 +1,4 @@
-name: Regression Tests
+name: Core Ruleset Tests
 
 on:
   push:
@@ -33,10 +33,10 @@ jobs:
       with:
         lfs: true
         fetch-depth: 0 #for better blame info
-        repository: jptosso/coraza-ftw
+        repository: jptosso/coraza-testsuite
         path: ftw
     - name: Update ftw deps
-      run: go get -u github.com/jptosso/coraza-waf@master # maybe change master?
+      run: go get -u github.com/jptosso/coraza-waf@$GITHUB_REF # maybe change master?
     - name: Download CRS
       run: go install github.com/jptosso/crsmon/cmd/crsmon
     - name: Build CRS
