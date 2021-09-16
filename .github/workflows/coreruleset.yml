@@ -36,7 +36,7 @@ jobs:
         repository: jptosso/coraza-testsuite
         path: ftw
     - name: Update ftw deps
-      run: go get -u github.com/jptosso/coraza-waf@master
+      run: go get -u github.com/jptosso/coraza-waf@latest
     - name: Download CRS
       run: go install github.com/jptosso/crsmon/cmd/crsmon
     - name: Build CRS
