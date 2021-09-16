@@ -36,7 +36,7 @@ jobs:
         repository: jptosso/coraza-testsuite
         path: ftw
     - name: Update ftw deps
-      run: go get -u github.com/jptosso/coraza-waf@latest
+      run: cd ftw && go get -u github.com/jptosso/coraza-waf@$GITHUB_SHA
     - name: Download CRS
       run: go install github.com/jptosso/crsmon/cmd/crsmon
     - name: Build CRS
@@ -44,4 +44,4 @@ jobs:
     - name: clone crs tests
       run: git clone https://github.com/coreruleset/coreruleset
     - name: Run tests
-      run: go run *.go run -d ./coreruleset/tests/regression -r ./crs/crs.conf
+      run: cd ftw && go run *.go run -d ./coreruleset/tests/regression -r ./crs/crs.conf
