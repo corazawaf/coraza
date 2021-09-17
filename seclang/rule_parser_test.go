@@ -15,6 +15,7 @@
 package seclang
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/jptosso/coraza-waf"
@@ -104,5 +105,17 @@ func TestVariableCases(t *testing.T) {
 	rule := waf.Rules.GetRules()[0]
 	if len(rule.Variables) != 5 || rule.Variables[2].Collection != coraza.VARIABLE_ARGS_NAMES {
 		t.Errorf("failed to parse some variables, %d variables", len(rule.Variables))
+	}
+}
+
+func TestErrorLine(t *testing.T) {
+	waf := coraza.NewWaf()
+	p, _ := NewParser(waf)
+	err := p.FromString("SecAction \"id:1\"\n#test\nSomefaulty")
+	if err == nil {
+		t.Error("that shouldn't happen o.o")
+	}
+	if !strings.Contains(err.Error(), "Line 3") {
+		t.Error("failed to find error line, got " + err.Error())
 	}
 }
