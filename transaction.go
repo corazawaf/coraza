@@ -379,10 +379,15 @@ func (tx *Transaction) MatchRule(rule Rule, msgs []string, match []MatchData) {
 		if match[0].Key != "" {
 			variable += fmt.Sprintf(":%s", match[0].Key)
 		}
-		str.WriteString(fmt.Sprintf("Match of \"- %s\" against %q required. ", rule.Operator.Data, variable))
+		if rule.Operator != nil {
+			str.WriteString(fmt.Sprintf("Match of \"- %s\" against %q required. ", rule.Operator.Data, variable))
+		} else {
+			//TODO check msg
+			str.WriteString("Unconditional match. ")
+		}
 		str.WriteString(fmt.Sprintf("[file %q] ", rule.File))
-		str.WriteString(fmt.Sprintf("[line %q] ", rule.Line))
-		str.WriteString(fmt.Sprintf("[id %q] ", rule.Id))
+		str.WriteString(fmt.Sprintf("[line \"%d\"] ", rule.Line))
+		str.WriteString(fmt.Sprintf("[id \"%d\"] ", rule.Id))
 		str.WriteString(fmt.Sprintf("[msg %q] ", msgs[0]))
 		str.WriteString(fmt.Sprintf("[data %q]", tx.MacroExpansion(rule.LogData)))
 		if rule.Severity != -1 {
