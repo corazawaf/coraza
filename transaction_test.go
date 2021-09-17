@@ -232,6 +232,53 @@ func TestAuditLogFields(t *testing.T) {
 	}
 }
 
+type testel struct {
+	Output string
+}
+
+func (te *testel) Emergency(msg string) {
+	te.Output = msg
+}
+func (te *testel) Alert(msg string) {
+	te.Output = msg
+}
+func (te *testel) Critical(msg string) {
+	te.Output = msg
+}
+func (te *testel) Error(msg string) {
+	te.Output = msg
+}
+func (te *testel) Warning(msg string) {
+	te.Output = msg
+}
+func (te *testel) Notice(msg string) {
+	te.Output = msg
+}
+func (te *testel) Info(msg string) {
+	te.Output = msg
+}
+func (te *testel) Debug(msg string) {
+	te.Output = msg
+}
+
+var _ EventLogger = &testel{}
+
+func TestErrorLog(t *testing.T) {
+	tx := makeTransaction()
+	el := &testel{}
+	tx.Waf.ErrorLogger = el
+	rule := NewRule()
+	rule.Id = 15
+	rule.Msg = "test"
+	rule.Log = true
+	tx.MatchRule(*rule, []string{"messages"}, []MatchData{{
+		Collection: "test",
+	}})
+	if !strings.Contains(el.Output, `[id "15"]`) {
+		t.Error("failed to create error log with severity")
+	}
+}
+
 func BenchmarkTransactionCreation(b *testing.B) {
 	waf := NewWaf()
 	for i := 0; i < b.N; i++ {

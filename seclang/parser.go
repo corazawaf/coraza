@@ -81,6 +81,7 @@ func (p *Parser) FromString(data string) error {
 	var linebuffer = ""
 	pattern := regexp.MustCompile(`\\(\s+)?$`)
 	for scanner.Scan() {
+		p.currentLine++
 		line := scanner.Text()
 		linebuffer += strings.TrimSpace(line)
 		//Check if line ends with \

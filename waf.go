@@ -33,6 +33,7 @@ import (
 )
 
 type Phase int
+type EventSeverity int
 
 const (
 	PHASE_REQUEST_HEADERS  Phase = 1
@@ -40,6 +41,17 @@ const (
 	PHASE_RESPONSE_HEADERS Phase = 3
 	PHASE_RESPONSE_BODY    Phase = 4
 	PHASE_LOGGING          Phase = 5
+)
+
+const (
+	EventEmergency EventSeverity = 0
+	EventAlert     EventSeverity = 1
+	EventCritical  EventSeverity = 2
+	EventError     EventSeverity = 3
+	EventWarning   EventSeverity = 4
+	EventNotice    EventSeverity = 5
+	EventInfo      EventSeverity = 6
+	EventDebug     EventSeverity = 7
 )
 
 const (
@@ -64,6 +76,17 @@ const (
 	RULE_ENGINE_DETECTONLY = 1
 	RULE_ENGINE_OFF        = 2
 )
+
+type EventLogger interface {
+	Emergency(msg string)
+	Alert(msg string)
+	Critical(msg string)
+	Error(msg string)
+	Warning(msg string)
+	Notice(msg string)
+	Info(msg string)
+	Debug(msg string)
+}
 
 // Waf instances are used to store configurations and rules
 // Every web application should have a different Waf instance
@@ -175,6 +198,9 @@ type Waf struct {
 	// ctl cannot switch use it as it will update de lvl
 	// for the whole Waf instance
 	LoggerAtomicLevel zap.AtomicLevel
+
+	// Used to write logs to implementation's error log
+	ErrorLogger EventLogger
 }
 
 // NewTransaction Creates a new initialized transaction for this WAF instance

@@ -1,9 +1,12 @@
 package seclang
 
 import (
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/utils"
 )
 
 func TestRuleMatch(t *testing.T) {
@@ -127,5 +130,45 @@ func TestSecMarkers(t *testing.T) {
 	}
 	if len(tx.MatchedRules) == 1 {
 		t.Errorf("not matching any rule after secmark")
+	}
+}
+
+func TestSecAuditLogs(t *testing.T) {
+	waf := coraza.NewWaf()
+	parser, _ := NewParser(waf)
+	f1 := utils.RandomString(15)
+	err := parser.FromString(`
+		SecAuditEngine On
+		SecAction "id:4482,log,auditlog, msg:'test'"
+		SecAuditLogParts ABCDEFGHIJK
+		SecRuleEngine On
+	`)
+	if err != nil {
+		t.Error(err)
+	}
+	err = parser.FromString("SecAuditLog serial file=/tmp/" + f1 + ".log format=ftw")
+	if err != nil {
+		t.Error(err)
+	}
+	tx := waf.NewTransaction()
+	tx.ProcessUri("/test.php?id=1", "get", "http/1.1")
+	tx.ProcessRequestHeaders()
+	tx.ProcessRequestBody()
+	tx.ProcessLogging()
+
+	if len(tx.MatchedRules) == 0 {
+		t.Error("failed to match rules")
+	}
+
+	if tx.AuditLog().Messages[0].Data.Id != 4482 {
+		t.Error("failed to match rule id")
+	}
+
+	data, err := os.ReadFile("/tmp/" + f1 + ".log")
+	if err != nil {
+		t.Error(err)
+	}
+	if !strings.Contains(string(data), "id \"4482\"") {
+		t.Errorf("missing rule id from audit log, got:\n%s", data)
 	}
 }
