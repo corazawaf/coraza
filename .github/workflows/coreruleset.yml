@@ -44,4 +44,4 @@ jobs:
     - name: clone crs tests
       run: git clone https://github.com/coreruleset/coreruleset
     - name: Run tests
-      run: cd ftw && go run *.go run -d ./coreruleset/tests/regression -r ./crs/crs.conf
+      run: cd ftw && go run *.go run -d ../coreruleset/tests/regression -r ../crs/crs.conf || true
