@@ -124,40 +124,6 @@ func TestMatcher(t *testing.T) {
 	check(`def`, "abcdefghi", "def")
 }
 
-func TestPartial(t *testing.T) {
-	re := MustCompile(`^abc`, 0)
-
-	// Check we get a partial match when we should
-	m := re.MatcherString("ab", PARTIAL_SOFT)
-	if !m.Matches() {
-		t.Error("Failed to find any matches")
-	} else if !m.Partial() {
-		t.Error("The match was not partial")
-	}
-
-	// Check we get an exact match when we should
-	m = re.MatcherString("abc", PARTIAL_SOFT)
-	if !m.Matches() {
-		t.Error("Failed to find any matches")
-	} else if m.Partial() {
-		t.Error("Match was partial but should have been exact")
-	}
-
-	m = re.Matcher([]byte("ab"), PARTIAL_SOFT)
-	if !m.Matches() {
-		t.Error("Failed to find any matches")
-	} else if !m.Partial() {
-		t.Error("The match was not partial")
-	}
-
-	m = re.Matcher([]byte("abc"), PARTIAL_SOFT)
-	if !m.Matches() {
-		t.Error("Failed to find any matches")
-	} else if m.Partial() {
-		t.Error("Match was partial but should have been exact")
-	}
-}
-
 func TestCaseless(t *testing.T) {
 	m := MustCompile("abc", CASELESS).MatcherString("...Abc...", 0)
 	if !m.Matches() {
@@ -166,82 +132,5 @@ func TestCaseless(t *testing.T) {
 	m = MustCompile("abc", 0).MatcherString("Abc", 0)
 	if m.Matches() {
 		t.Error("!CASELESS")
-	}
-}
-
-func TestNamed(t *testing.T) {
-	pattern := "(?<L>a)(?<M>X)*bc(?<DIGITS>\\d*)"
-	m := MustCompile(pattern, 0).MatcherString("abc12", 0)
-	if !m.Matches() {
-		t.Error("Matches")
-	}
-	if ok, err := m.NamedPresent("L"); !ok || err != nil {
-		t.Errorf("NamedPresent(\"L\"): %v", err)
-	}
-	if ok, err := m.NamedPresent("M"); ok || err != nil {
-		t.Errorf("NamedPresent(\"M\"): %v", err)
-	}
-	if ok, err := m.NamedPresent("DIGITS"); !ok || err != nil {
-		t.Errorf("NamedPresent(\"DIGITS\"): %v", err)
-	}
-	if str, err := m.NamedString("DIGITS"); str != "12" || err != nil {
-		t.Errorf("NamedString(\"DIGITS\"): %v", err)
-	}
-}
-
-func TestMatcherIndex(t *testing.T) {
-	m := MustCompile("bcd", 0).Matcher([]byte("abcdef"), 0)
-	i := m.Index()
-	if i[0] != 1 {
-		t.Error("FindIndex start", i[0])
-	}
-	if i[1] != 4 {
-		t.Error("FindIndex end", i[1])
-	}
-
-	m = MustCompile("xyz", 0).Matcher([]byte("abcdef"), 0)
-	i = m.Index()
-	if i != nil {
-		t.Error("Index returned for non-match", i)
-	}
-}
-
-func TestFindIndex(t *testing.T) {
-	re := MustCompile("bcd", 0)
-	i := re.FindIndex([]byte("abcdef"), 0)
-	if i[0] != 1 {
-		t.Error("FindIndex start", i[0])
-	}
-	if i[1] != 4 {
-		t.Error("FindIndex end", i[1])
-	}
-}
-
-func TestExtract(t *testing.T) {
-	re := MustCompile("b(c)(d)", 0)
-	m := re.MatcherString("abcdef", 0)
-	i := m.ExtractString()
-	if i[0] != "abcdef" {
-		t.Error("Full line unavailable: ", i[0])
-	}
-	if i[1] != "c" {
-		t.Error("First match group no as expected: ", i[1])
-	}
-	if i[2] != "d" {
-		t.Error("Second match group no as expected: ", i[2])
-	}
-}
-
-func TestReplaceAll(t *testing.T) {
-	re := MustCompile("foo", 0)
-	// Don't change at ends.
-	result := re.ReplaceAll([]byte("I like foods."), []byte("car"), 0)
-	if string(result) != "I like cards." {
-		t.Error("ReplaceAll", result)
-	}
-	// Change at ends.
-	result = re.ReplaceAll([]byte("food fight fools foo"), []byte("car"), 0)
-	if string(result) != "card fight carls car" {
-		t.Error("ReplaceAll2", result)
 	}
 }

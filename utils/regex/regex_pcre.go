@@ -66,7 +66,6 @@ package regex
 import "C"
 
 import (
-	"fmt"
 	"strconv"
 	"unsafe"
 )
@@ -201,18 +200,6 @@ func Compile(pattern string, flags int) (Regexp, error) {
 	return heap, nil
 }
 
-// CompileJIT is a combination of Compile and Study. It first compiles
-// the pattern and if this succeeds calls Study on the compiled pattern.
-// comFlags are Compile flags, jitFlags are study flags.
-// If compilation fails, the second return value holds a *CompileError.
-func CompileJIT(pattern string, comFlags, jitFlags int) (Regexp, error) {
-	re, err := Compile(pattern, comFlags)
-	if err == nil {
-		err = (&re).Study(jitFlags)
-	}
-	return re, err
-}
-
 // MustCompile compiles the pattern.  If compilation fails, panic.
 func MustCompile(pattern string, flags int) (re Regexp) {
 	re, err := Compile(pattern, flags)
@@ -220,48 +207,6 @@ func MustCompile(pattern string, flags int) (re Regexp) {
 		panic(err)
 	}
 	return
-}
-
-// MustCompileJIT compiles and studies the pattern.  On failure it panics.
-func MustCompileJIT(pattern string, comFlags, jitFlags int) (re Regexp) {
-	re, err := CompileJIT(pattern, comFlags, jitFlags)
-	if err != nil {
-		panic(err)
-	}
-	return
-}
-
-// Study adds Just-In-Time compilation to a Regexp. This may give a huge
-// speed boost when matching. If an error occurs, return value is non-nil.
-// Flags optionally specifies JIT compilation options for partial matches.
-func (re *Regexp) Study(flags int) error {
-	if re.extra != nil {
-		return fmt.Errorf("Study: Regexp has already been optimized")
-	}
-	if flags == 0 {
-		flags = STUDY_JIT_COMPILE
-	}
-
-	ptr := (*C.pcre)(unsafe.Pointer(&re.ptr[0]))
-	var err *C.char
-	extra := C.pcre_study(ptr, C.int(flags), &err)
-	if err != nil {
-		return fmt.Errorf("%s", C.GoString(err))
-	}
-	if extra == nil {
-		// Studying the pattern may not produce useful information.
-		return nil
-	}
-	defer C.free(unsafe.Pointer(extra))
-
-	var size C.size_t
-	rc := C.pcre_fullinfo(ptr, extra, C.PCRE_INFO_JITSIZE, unsafe.Pointer(&size))
-	if rc != 0 || size == 0 {
-		return fmt.Errorf("Study failed to obtain JIT size (%d)", int(rc))
-	}
-	re.extra = make([]byte, size)
-	C.memcpy(unsafe.Pointer(&re.extra[0]), unsafe.Pointer(extra), size)
-	return nil
 }
 
 // Groups returns the number of capture groups in the compiled pattern.
@@ -432,12 +377,6 @@ func (m *Matcher) Matches() bool {
 	return m.matches
 }
 
-// Partial returns true if a previous call to Matcher, MatcherString, Reset,
-// ResetString, Match or MatchString found a partial match.
-func (m *Matcher) Partial() bool {
-	return m.partial
-}
-
 // Groups returns the number of groups in the current pattern.
 func (m *Matcher) Groups() int {
 	return m.groups
@@ -468,56 +407,6 @@ func (m *Matcher) Group(group int) []byte {
 	return nil
 }
 
-// Extract returns a slice of byte slices for a single match.
-// The first byte slice contains the complete match.
-// Subsequent byte slices contain the captured groups.
-// If there was no match then nil is returned.
-func (m *Matcher) Extract() [][]byte {
-	if !m.matches {
-		return nil
-	}
-	extract := make([][]byte, m.groups+1)
-	extract[0] = m.subjectb
-	for i := 1; i <= m.groups; i++ {
-		x0 := m.ovector[2*i]
-		x1 := m.ovector[2*i+1]
-		extract[i] = m.subjectb[x0:x1]
-	}
-	return extract
-}
-
-// ExtractString returns a slice of strings for a single match.
-// The first string contains the complete match.
-// Subsequent strings in the slice contain the captured groups.
-// If there was no match then nil is returned.
-func (m *Matcher) ExtractString() []string {
-	if !m.matches {
-		return nil
-	}
-	extract := make([]string, m.groups+1)
-	extract[0] = m.subjects
-	for i := 1; i <= m.groups; i++ {
-		x0 := m.ovector[2*i]
-		x1 := m.ovector[2*i+1]
-		extract[i] = m.subjects[x0:x1]
-	}
-	return extract
-}
-
-// GroupIndices returns the numbered capture group positions of the last
-// match (performed by Matcher, MatcherString, Reset, ResetString, Match,
-// or MatchString). Group 0 is the part of the subject which matches
-// the whole pattern; the first actual capture group is numbered 1.
-// Capture groups which are not present return a nil slice.
-func (m *Matcher) GroupIndices(group int) []int {
-	start := m.ovector[2*group]
-	end := m.ovector[2*group+1]
-	if start >= 0 {
-		return []int{int(start), int(end)}
-	}
-	return nil
-}
-
 // GroupString returns the numbered capture group as a string.  Group 0
 // is the part of the subject which matches the whole pattern; the first
 // actual capture group is numbered 1.  Capture groups which are not
@@ -532,93 +421,6 @@ func (m *Matcher) GroupString(group int) string {
 		return m.subjects[start:end]
 	}
 	return ""
-}
-
-// Index returns the start and end of the first match, if a previous
-// call to Matcher, MatcherString, Reset, ResetString, Match or
-// MatchString succeeded. loc[0] is the start and loc[1] is the end.
-func (m *Matcher) Index() (loc []int) {
-	if !m.matches {
-		return nil
-	}
-	loc = []int{int(m.ovector[0]), int(m.ovector[1])}
-	return
-}
-
-// name2index converts a group name to its group index number.
-func (m *Matcher) name2index(name string) (int, error) {
-	if m.re.ptr == nil {
-		return 0, fmt.Errorf("Matcher.Named: uninitialized")
-	}
-	name1 := C.CString(name)
-	defer C.free(unsafe.Pointer(name1))
-	group := int(C.pcre_get_stringnumber(
-		(*C.pcre)(unsafe.Pointer(&m.re.ptr[0])), name1))
-	if group < 0 {
-		return group, fmt.Errorf("Matcher.Named: unknown name: " + name)
-	}
-	return group, nil
-}
-
-// Named returns the value of the named capture group.
-// This is a nil slice if the capture group is not present.
-// If the name does not refer to a group then error is non-nil.
-func (m *Matcher) Named(group string) ([]byte, error) {
-	groupNum, err := m.name2index(group)
-	if err != nil {
-		return []byte{}, err
-	}
-	return m.Group(groupNum), nil
-}
-
-// NamedString returns the value of the named capture group,
-// or an empty string if the capture group is not present.
-// If the name does not refer to a group then error is non-nil.
-func (m *Matcher) NamedString(group string) (string, error) {
-	groupNum, err := m.name2index(group)
-	if err != nil {
-		return "", err
-	}
-	return m.GroupString(groupNum), nil
-}
-
-// NamedPresent returns true if the named capture group is present.
-// If the name does not refer to a group then error is non-nil.
-func (m *Matcher) NamedPresent(group string) (bool, error) {
-	groupNum, err := m.name2index(group)
-	if err != nil {
-		return false, err
-	}
-	return m.Present(groupNum), nil
-}
-
-// FindIndex returns the start and end of the first match,
-// or nil if no match.  loc[0] is the start and loc[1] is the end.
-func (re *Regexp) FindIndex(bytes []byte, flags int) (loc []int) {
-	m := re.Matcher(bytes, flags)
-	if m.Matches() {
-		loc = []int{int(m.ovector[0]), int(m.ovector[1])}
-		return
-	}
-	return nil
-}
-
-// ReplaceAll returns a copy of a byte slice
-// where all pattern matches are replaced by repl.
-func (re Regexp) ReplaceAll(bytes, repl []byte, flags int) []byte {
-	m := re.Matcher(bytes, flags)
-	r := []byte{}
-	for m.matches {
-		r = append(append(r, bytes[:m.ovector[0]]...), repl...)
-		bytes = bytes[m.ovector[1]:]
-		m.Match(bytes, flags)
-	}
-	return append(r, bytes...)
-}
-
-// ReplaceAllString is equivalent to ReplaceAll with string return type.
-func (re Regexp) ReplaceAllString(in, repl string, flags int) string {
-	return string(re.ReplaceAll([]byte(in), []byte(repl), flags))
 }
 
 // CompileError holds details about a compilation error,
