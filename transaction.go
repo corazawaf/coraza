@@ -526,32 +526,34 @@ func (tx *Transaction) savePersistentData() {
 	//TODO, disabled by now, maybe we should add persistent variables to the
 	// collection struct, something like col.Persist("key")
 	//pers := []byte{VARIABLE_SESSION, VARIABLE_IP}
-	pers := []byte{}
-	for _, v := range pers {
-		col := tx.GetCollection(v)
-		if col == nil || col.PersistenceKey != "" {
-			continue
+	/*
+		pers := []byte{}
+		for _, v := range pers {
+			col := tx.GetCollection(v)
+			if col == nil || col.PersistenceKey != "" {
+				continue
+			}
+			data := col.Data()
+			//key := col.PersistenceKey
+			upc, _ := strconv.Atoi(data["UPDATE_COUNTER"][0])
+			upc++
+			ct, _ := strconv.ParseInt(data["CREATE_TIME"][0], 10, 64)
+			rate := strconv.FormatInt(ct/(int64(ct)*1000), 10)
+			ts := time.Now().UnixNano()
+			tss := strconv.FormatInt(ts, 10)
+			to := ts + int64(tx.Waf.CollectionTimeout)*1000
+			timeout := strconv.FormatInt(to, 10)
+			data["IS_NEW"] = []string{"0"}
+			data["UPDATE_COUNTER"] = []string{strconv.Itoa(upc)}
+			data["UPDATE_RATE"] = []string{rate}
+			// TODO timeout should only be updated when the collection was modified
+			// but the current design isn't compatible
+			// New version may have multiple collection types allowing us to identify this cases
+			data["TIMEOUT"] = []string{timeout}
+			data["LAST_UPDATE_TIME"] = []string{tss}
+			//tx.Waf.Persistence.Save(v, key, data)
 		}
-		data := col.Data()
-		//key := col.PersistenceKey
-		upc, _ := strconv.Atoi(data["UPDATE_COUNTER"][0])
-		upc++
-		ct, _ := strconv.ParseInt(data["CREATE_TIME"][0], 10, 64)
-		rate := strconv.FormatInt(ct/(int64(ct)*1000), 10)
-		ts := time.Now().UnixNano()
-		tss := strconv.FormatInt(ts, 10)
-		to := ts + int64(tx.Waf.CollectionTimeout)*1000
-		timeout := strconv.FormatInt(to, 10)
-		data["IS_NEW"] = []string{"0"}
-		data["UPDATE_COUNTER"] = []string{strconv.Itoa(upc)}
-		data["UPDATE_RATE"] = []string{rate}
-		// TODO timeout should only be updated when the collection was modified
-		// but the current design isn't compatible
-		// New version may have multiple collection types allowing us to identify this cases
-		data["TIMEOUT"] = []string{timeout}
-		data["LAST_UPDATE_TIME"] = []string{tss}
-		//tx.Waf.Persistence.Save(v, key, data)
-	}
+	*/
 }
 
 // RemoveRuleTargetById Removes the VARIABLE:KEY from the rule ID

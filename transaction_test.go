@@ -16,6 +16,7 @@ package coraza
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 	"testing"
 )
@@ -268,6 +269,16 @@ func TestErrorLog(t *testing.T) {
 	}})
 	if !strings.Contains(el.Output, `[id "15"]`) {
 		t.Error("failed to create error log with severity")
+	}
+}
+
+func TestRequestStruct(t *testing.T) {
+	req, _ := http.NewRequest("POST", "https://www.coraza.io/test", strings.NewReader("test=456"))
+	waf := NewWaf()
+	tx := waf.NewTransaction()
+	tx.ProcessRequest(req)
+	if tx.GetCollection(VARIABLE_REQUEST_METHOD).GetFirstString("") != "POST" {
+		t.Error("failed to set request from request object")
 	}
 }
 
