@@ -37,8 +37,15 @@ func (a *Prepend) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	}
 	data := tx.MacroExpansion(a.data)
 	buf := coraza.NewBodyReader(tx.Waf.TmpDir, tx.Waf.RequestBodyInMemoryLimit)
-	buf.Write([]byte(data))
-	io.Copy(buf, tx.ResponseBodyBuffer.Reader())
+	_, err := buf.Write([]byte(data))
+	if err != nil {
+		tx.Waf.Logger.Debug("failed to write buffer while evaluating prepend action")
+	}
+	reader := tx.ResponseBodyBuffer.Reader()
+	_, err = io.Copy(buf, reader)
+	if err != nil {
+		tx.Waf.Logger.Debug("failed to append response buffer while evaluating prepend action")
+	}
 	// We overwrite the response body buffer with the new buffer
 	*tx.ResponseBodyBuffer = *buf
 }

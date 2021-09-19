@@ -26,6 +26,8 @@ import (
 
 // Start will begin the test stage
 func (stage *ProfileTestStage) Start(waf *engine.Waf) error {
+	log := ""
+
 	tx := waf.NewTransaction()
 	if stage.Stage.Input.EncodedRequest != "" {
 		sDec, _ := b64.StdEncoding.DecodeString(stage.Stage.Input.EncodedRequest)
@@ -63,17 +65,16 @@ func (stage *ProfileTestStage) Start(waf *engine.Waf) error {
 
 	// POST DATA
 	if stage.Stage.Input.Data != "" {
-		tx.RequestBodyBuffer.Write([]byte(parseInputData(stage.Stage.Input.Data)))
-		tx.ProcessRequestBody()
+		_, _ = tx.RequestBodyBuffer.Write([]byte(parseInputData(stage.Stage.Input.Data)))
+		_, _ = tx.ProcessRequestBody()
 		// we ignore the error
 	}
 	tx.ProcessResponseHeaders(200, "HTTP/1.1")
 	// for testing
 	tx.AddResponseHeader("content-type", "text/html")
-	tx.ProcessResponseBody()
+	_, _ = tx.ProcessResponseBody() // we are ignoring result and error
 	tx.ProcessLogging()
 
-	log := ""
 	tr := []int{}
 	for _, mr := range tx.MatchedRules {
 		log += fmt.Sprintf(" [id \"%d\"]", mr.Rule.Id)
@@ -112,9 +113,7 @@ func (stage *ProfileTestStage) Start(waf *engine.Waf) error {
 			}
 		}
 	}
-	if stage.Stage.Output.Status != nil {
-		// Status is not supported because it depends on apache behaviour
-	}
+
 	return nil
 }
 

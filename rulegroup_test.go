@@ -27,7 +27,9 @@ func TestRG(t *testing.T) {
 	}
 
 	rg := NewRuleGroup()
-	rg.Add(r)
+	if err := rg.Add(r); err != nil {
+		t.Error("Failed to add rule to rulegroup")
+	}
 
 	if rg.Count() != 1 {
 		t.Error("Failed to add rule to rulegroup")

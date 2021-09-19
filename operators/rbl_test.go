@@ -20,7 +20,9 @@ import (
 
 func TestRbl(t *testing.T) {
 	rbl := &Rbl{}
-	rbl.Init("xbl.spamhaus.org")
+	if err := rbl.Init("xbl.spamhaus.org"); err != nil {
+		t.Error("Cannot init rbl operator")
+	}
 	// Twitter ip address
 	if rbl.Evaluate(nil, "199.16.156.5") {
 		t.Errorf("Invalid result for @rbl operator")

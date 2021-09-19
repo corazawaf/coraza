@@ -18,7 +18,7 @@ func TestRuleMatch(t *testing.T) {
 		SecDebugLogLevel 5
 		SecDefaultAction "phase:1,deny,status:403,log"
 		SecRule REMOTE_ADDR "^127.*" "id:1,phase:1"
-		SecRule REMOTE_ADDR "!@rx 127.0.0.1" "id:1,phase:1"
+		SecRule REMOTE_ADDR "!@rx 127.0.0.1" "id:2,phase:1"
 	`)
 	if err != nil {
 		t.Error(err.Error())
@@ -124,8 +124,8 @@ func TestSecMarkers(t *testing.T) {
 	if tx.Interrupted() {
 		t.Error("transaction failed to skipAfter")
 	}
-	tx.ProcessRequestBody()
-	if tx.Interruption == nil {
+	interruption, err := tx.ProcessRequestBody()
+	if interruption == nil || err != nil {
 		t.Error("failed to interrupt")
 	}
 	if len(tx.MatchedRules) == 1 {

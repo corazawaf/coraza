@@ -83,25 +83,18 @@ func doJsDecode(input string) string {
 				switch input[i+1] {
 				case 'a':
 					cc = '\a'
-					break
 				case 'b':
 					cc = '\b'
-					break
 				case 'f':
 					cc = '\f'
-					break
 				case 'n':
 					cc = '\n'
-					break
 				case 'r':
 					cc = '\r'
-					break
 				case 't':
 					cc = '\t'
-					break
 				case 'v':
 					cc = '\v'
-					break
 					/* The remaining (\?,\\,\',\") are just a removal
 					 * of the escape char which is default.
 					 */

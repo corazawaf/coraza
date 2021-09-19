@@ -19,21 +19,23 @@ import (
 	"testing"
 
 	"github.com/jptosso/coraza-waf"
-	engine "github.com/jptosso/coraza-waf"
 )
 
 func TestDefaultActions(t *testing.T) {
-	waf := engine.NewWaf()
+	waf := coraza.NewWaf()
 	p, _ := NewParser(waf)
-	err := p.AddDefaultActions("log, pass, phase: 1")
-	if err != nil {
+	if err := p.AddDefaultActions("log, pass, phase: 1"); err != nil {
 		t.Error("Error parsing default actions", err)
 	}
-	p.AddDefaultActions("log, drop, phase:2")
+	if err := p.AddDefaultActions("log, drop, phase:2"); err != nil {
+		t.Error("Could not add default actions")
+	}
 	if len(p.GetDefaultActions()) != 2 {
 		t.Error("Default actions were not created")
 	}
-	p.FromString(`SecAction "phase:2, id:1"`)
+	if err := p.FromString(`SecAction "phase:2, id:1"`); err != nil {
+		t.Error("Could not create from string")
+	}
 	if len(waf.Rules.GetRules()[0].Actions) != 4 {
 		t.Error("failed to set SecDefaultActions")
 		t.Error(waf.Rules.GetRules()[0].Actions)
@@ -45,7 +47,7 @@ func TestMergeActions(t *testing.T) {
 }
 
 func TestVariables(t *testing.T) {
-	waf := engine.NewWaf()
+	waf := coraza.NewWaf()
 	p, _ := NewParser(waf)
 	//single variable with key
 	err := p.FromString(`SecRule REQUEST_HEADERS:test "" "id:1"`)
@@ -53,7 +55,7 @@ func TestVariables(t *testing.T) {
 		t.Error(err)
 	}
 	v := waf.Rules.GetRules()[0].Variables[0]
-	if v.Collection != engine.VARIABLE_REQUEST_HEADERS || v.Key != "test" {
+	if v.Collection != coraza.VARIABLE_REQUEST_HEADERS || v.Key != "test" {
 		t.Error("failed to parse single key variable")
 	}
 	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/^(?:phpMyAdminphp|MyAdmin_https)$/' "id:2"`)

@@ -43,7 +43,7 @@ func TestTransformations(t *testing.T) {
 	if _, err := os.Stat(root); os.IsNotExist(err) {
 		t.Error("failed to find operator test files")
 	}
-	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	if err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if strings.HasSuffix(path, ".json") {
 			// TODO until we remove libinjection cgo
 			if !libinjection.LIBINJECTION_CGO && (strings.Contains(path, "detectSQLi") || strings.Contains(path, "detectXSS")) {
@@ -53,7 +53,9 @@ func TestTransformations(t *testing.T) {
 			files = append(files, data)
 		}
 		return nil
-	})
+	}); err != nil {
+		t.Error("failed to walk test files")
+	}
 	waf := engine.NewWaf()
 	for _, f := range files {
 

@@ -26,7 +26,7 @@ func inplaceUniDecode(input string, mapper *utils.Unicode) string {
 	d := []byte(input)
 	input_len := len(d)
 	var i, count, fact, j, xv, c int
-	Code := -1
+	var code int
 	hmap := -1
 
 	for i < input_len {
@@ -37,7 +37,7 @@ func inplaceUniDecode(input string, mapper *utils.Unicode) string {
 				if i+5 < input_len {
 					/* We have at least 4 data bytes. */
 					if (utils.ValidHex(input[i+2])) && (utils.ValidHex(input[i+3])) && (utils.ValidHex(input[i+4])) && (utils.ValidHex(input[i+5])) {
-						Code = 0
+						code = 0
 						fact = 1
 						if mapper != nil && mapper.Map != "" {
 							for j = 5; j >= 2; j-- {
@@ -49,12 +49,12 @@ func inplaceUniDecode(input string, mapper *utils.Unicode) string {
 									} else {
 										xv = int(input[i+j]) - 48
 									}
-									Code += (xv * fact)
+									code += (xv * fact)
 									fact *= 16
 								}
 							}
-							if Code >= 0 && Code <= 65535 {
-								hmap = mapper.At(Code)
+							if code >= 0 && code <= 65535 {
+								hmap = mapper.At(code)
 							}
 						}
 

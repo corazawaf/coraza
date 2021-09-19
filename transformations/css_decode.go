@@ -51,25 +51,21 @@ func cssDecodeInplace(input string) string {
 					case 1:
 						d[c] = xsingle2c(input[i:])
 						c++
-						break
 
 					case 2:
 						/* Use the last two from the end. */
 						d[c] = utils.X2c(input[i+j-2:])
 						c++
-						break
 					case 3:
 						/* Use the last two from the end. */
 						d[c] = utils.X2c(input[i+j-2:])
 						c++
-						break
 					case 4:
 						/* Use the last two from the end, but request
 						 * a full width check.
 						 */
 						d[c] = utils.X2c(input[i+j-2:])
 						fullcheck = true
-						break
 
 					case 5:
 						/* Use the last two from the end, but request
@@ -83,7 +79,6 @@ func cssDecodeInplace(input string) string {
 						} else {
 							c++
 						}
-						break
 
 					case 6:
 						/* Use the last two from the end, but request
@@ -98,7 +93,6 @@ func cssDecodeInplace(input string) string {
 						} else {
 							c++
 						}
-						break
 					}
 
 					/* Full width ASCII (0xff01 - 0xff5e) needs 0x20 added */

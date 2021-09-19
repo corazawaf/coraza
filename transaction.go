@@ -331,10 +331,14 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*Interruption, error)
 	ct = strings.Split(ct, ";")[0]
 	for scanner.Scan() {
 
-		tx.RequestBodyBuffer.Write(scanner.Bytes())
+		if _, err := tx.RequestBodyBuffer.Write(scanner.Bytes()); err != nil {
+			return nil, fmt.Errorf("cannot write to request body to buffer")
+		}
 		// urlencoded cannot end with CRLF
 		if ct != "application/x-www-form-urlencoded" {
-			tx.RequestBodyBuffer.Write([]byte{'\r', '\n'})
+			if _, err := tx.RequestBodyBuffer.Write([]byte{'\r', '\n'}); err != nil {
+				return nil, fmt.Errorf("cannot write to request body to buffer")
+			}
 		}
 	}
 	return tx.ProcessRequestBody()
@@ -607,7 +611,8 @@ func (tx *Transaction) ProcessRequest(req *http.Request) (*Interruption, error) 
 		if err != nil {
 			return tx.Interruption, err
 		}
-		req.Body = io.NopCloser(tx.RequestBodyBuffer.Reader())
+		reader := tx.RequestBodyBuffer.Reader()
+		req.Body = io.NopCloser(reader)
 	}
 	return tx.ProcessRequestBody()
 }
@@ -760,6 +765,7 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 	mime := ""
 
 	reader := tx.RequestBodyBuffer.Reader()
+
 	if m := tx.GetCollection(VARIABLE_REQUEST_HEADERS).Get("content-type"); len(m) > 0 {
 		//spl := strings.SplitN(m[0], ";", 2) //We must skip charset or others
 		mime = m[0]
@@ -793,7 +799,10 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 	switch rbp {
 	case "URLENCODED":
 		buf := new(strings.Builder)
-		io.Copy(buf, reader)
+		if _, err := io.Copy(buf, reader); err != nil {
+			tx.Waf.Logger.Debug("Cannot copy reader buffer")
+		}
+
 		b := buf.String()
 		tx.GetCollection(VARIABLE_REQUEST_BODY).Set("", []string{b})
 		values := utils.ParseQuery(b, "&")
