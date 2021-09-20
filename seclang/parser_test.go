@@ -31,3 +31,12 @@ func TestInterruption(t *testing.T) {
 		t.Error("Transaction not interrupted")
 	}
 }
+
+func TestDirectivesCaseInsensitive(t *testing.T) {
+	waf := engine.NewWaf()
+	p, _ := NewParser(waf)
+	err := p.FromString("seCwEbAppid 15")
+	if err != nil {
+		t.Error(err)
+	}
+}

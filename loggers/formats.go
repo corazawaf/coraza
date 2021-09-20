@@ -17,8 +17,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 
-	"github.com/pcktdmp/cef/cefevent"
+	"github.com/jptosso/coraza-waf/utils"
 )
 
 type formatter = func(al *AuditLog) (string, error)
@@ -34,23 +35,41 @@ func jsonFormatter(al *AuditLog) (string, error) {
 func cefFormatter(al *AuditLog) (string, error) {
 	f := make(map[string]string)
 	f["src"] = al.Transaction.ClientIp
-	f["timestamp"] = al.Transaction.Timestamp
 	f["status"] = strconv.Itoa(al.Transaction.Response.Status)
 	// TODO add more fields
-
-	event := cefevent.CefEvent{
-		Version:            0,
-		DeviceVendor:       "Coraza Technologies",
-		DeviceProduct:      "Coraza WAF",
-		DeviceVersion:      "1.0",
-		DeviceEventClassId: "AUDIT",
-		Name:               "...",
-		Severity:           "...",
-		Extensions:         f,
+	timestamp := al.Transaction.Timestamp
+	host := "localhost"
+	m := &AuditMessage{}
+	severity := "0"
+	if len(al.Messages) > 0 {
+		m = al.Messages[len(al.Messages)-1]
+		severity = fmt.Sprintf("%d", m.Data.Severity)
 	}
+	msg := m.Message
+	data := m.Data.Data
 
-	cef, _ := event.Generate()
-	return cef, nil
+	if msg == "" {
+		msg = "n/a"
+	}
+	if data == "" {
+		data = "n/a"
+	}
+	if severity == "" {
+		severity = "n/a"
+	}
+	ext := ""
+	for k, v := range f {
+		v := strings.ReplaceAll(v, "|", "\\|")
+		ext += fmt.Sprintf("%s=%s ", k, v)
+	}
+	ext = strings.TrimSpace(ext)
+	return fmt.Sprintf("%s %s CEF:0|coraza|coraza-waf|v1.2|%s|%s|%s|%s",
+		timestamp,
+		host,
+		msg,
+		data,
+		severity,
+		ext), nil
 }
 
 func ftwFormatter(al *AuditLog) (string, error) {
@@ -82,7 +101,7 @@ func ftwFormatter(al *AuditLog) (string, error) {
 }
 
 func modsecFormatter(al *AuditLog) (string, error) {
-	boundary := ""
+	boundary := utils.RandomString(10)
 	parts := map[byte]string{}
 	// [27/Jul/2016:05:46:16 +0200] V5guiH8AAQEAADTeJ2wAAAAK 192.168.3.1 50084 192.168.3.111 80
 	parts['A'] = fmt.Sprintf("[%s] %s %s %d %s %d", al.Transaction.Timestamp, al.Transaction.Id,

@@ -29,7 +29,7 @@ import (
 	"time"
 )
 
-const randomchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+const randomchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 
 var Ctx = context.Background()
 var mu sync.Mutex
@@ -42,7 +42,7 @@ func RandomString(length int) string {
 	_, err := rand.Read(bytes)
 	mu.Unlock()
 	if err != nil {
-		// is it ok?
+		// TODO is it ok?
 		return RandomString(length)
 	}
 
