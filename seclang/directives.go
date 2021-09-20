@@ -187,7 +187,14 @@ func directiveSecRemoteRulesFailAction(p *Parser, opts string) error {
 }
 
 func directiveSecRemoteRules(p *Parser, opts string) error {
-	data, err := utils.OpenFile(opts)
+	spl := strings.SplitN(opts, " ", 2)
+	url := opts
+	key := ""
+	if len(spl) == 2 {
+		key = spl[0]
+		url = spl[1]
+	}
+	data, err := utils.OpenFile(url, true, key)
 	if err != nil || p.FromString(string(data)) != nil {
 		if p.Waf.AbortOnRemoteRulesFail {
 			return p.log("Failed to parse remote rules")

@@ -50,7 +50,7 @@ func TestFormatters(t *testing.T) {
 			if out, err := f(c.AuditLog); err != nil {
 				t.Error(err)
 			} else if out != c.Output {
-				t.Errorf("failed to match log formatter %s, got %s", format, out)
+				t.Errorf("failed to match log formatter %s, \ngot: %s\nexpected: %s", format, out, c.Output)
 			}
 		}
 	}

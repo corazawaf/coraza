@@ -15,7 +15,6 @@
 package loggers
 
 import (
-	"errors"
 	"log/syslog"
 )
 
@@ -26,9 +25,6 @@ type SyslogLogger struct {
 
 func (sl *SyslogLogger) New(args map[string]string) error {
 	var err error
-	if len(args) != 2 {
-		return errors.New("invalid arguments count for syslog logger")
-	}
 	server := args["server"]
 	format := args["format"]
 	protocol := args["protocol"]

@@ -19,7 +19,6 @@ import (
 	"strings"
 
 	engine "github.com/jptosso/coraza-waf"
-	"github.com/jptosso/coraza-waf/utils"
 )
 
 type IpMatch struct {
@@ -30,7 +29,7 @@ func (o *IpMatch) Init(data string) error {
 	o.subnets = []*net.IPNet{}
 	subnets := strings.Split(data, ",")
 	for _, sb := range subnets {
-		sb = utils.StripSpaces(sb)
+		sb = strings.TrimSpace(sb)
 		if sb == "" {
 			continue
 		}

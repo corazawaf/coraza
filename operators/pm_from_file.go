@@ -33,7 +33,7 @@ type PmFromFile struct {
 func (o *PmFromFile) Init(data string) error {
 	o.Data = []string{}
 	o.mux = &sync.RWMutex{}
-	b, err := utils.OpenFile(data)
+	b, err := utils.OpenFile(data, true, "")
 	content := string(b)
 	if err != nil {
 		return fmt.Errorf("error reading path %s", data)

@@ -29,3 +29,14 @@ func TestRandomString(t *testing.T) {
 		t.Error("Failed to generate entropy")
 	}
 }
+
+func TestOpenRemote(t *testing.T) {
+	//TODO add some key logic
+	f, err := OpenFile("https://www.coraza.io/", true, "")
+	if err != nil {
+		t.Error(err)
+	}
+	if len(f) == 0 {
+		t.Error("failed to download file")
+	}
+}

@@ -28,7 +28,7 @@ type IpMatchFromFile struct {
 
 func (o *IpMatchFromFile) Init(data string) error {
 	o.ip = &IpMatch{}
-	list, err := utils.OpenFile(data)
+	list, err := utils.OpenFile(data, true, "")
 	if err != nil {
 		return fmt.Errorf("error opening %s", data)
 	}

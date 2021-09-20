@@ -15,17 +15,12 @@
 package utils
 
 import (
-	"strings"
 	"unicode"
 )
 
 func IsSpace(char byte) bool {
 	//https://en.cppreference.com/w/cpp/string/byte/isspace
-	return char == ' ' || char == '\f' || char == '\n' || char == '\t' || char == '\r' || char == '\v'
-}
-
-func StripSpaces(str string) string {
-	return strings.Replace(str, " ", "", -1)
+	return unicode.IsSpace(rune(char))
 }
 
 func ValidHex(x byte) bool {

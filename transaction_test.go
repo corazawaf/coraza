@@ -19,6 +19,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/jptosso/coraza-waf/utils/regex"
 )
 
 var wafi = NewWaf()
@@ -288,6 +290,28 @@ func TestRequestStruct(t *testing.T) {
 	if tx.GetCollection(VARIABLE_REQUEST_METHOD).GetFirstString("") != "POST" {
 		t.Error("failed to set request from request object")
 	}
+}
+
+func TestResetCapture(t *testing.T) {
+	tx := makeTransaction()
+	tx.CaptureField(5, "test")
+	if tx.GetCollection(VARIABLE_TX).GetFirstString("5") != "test" {
+		t.Error("failed to set capture field from tx")
+	}
+	tx.ResetCapture()
+	if tx.GetCollection(VARIABLE_TX).GetFirstString("5") != "" {
+		t.Error("failed to reset capture field from tx")
+	}
+}
+
+func TestRelevantAuditLogging(t *testing.T) {
+	tx := makeTransaction()
+	tx.Waf.AuditLogRelevantStatus = regex.MustCompile(`(403)`, 0)
+	tx.GetCollection(VARIABLE_RESPONSE_STATUS).Set("", []string{"403"})
+	tx.AuditEngine = AUDIT_LOG_RELEVANT
+	tx.Log = false
+	tx.ProcessLogging()
+	//TODO how do we check if the log was writen?
 }
 
 func BenchmarkTransactionCreation(b *testing.B) {

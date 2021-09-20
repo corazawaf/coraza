@@ -704,17 +704,21 @@ func (tx *Transaction) ProcessUri(uri string, method string, httpVersion string)
 	parsedUrl, err := url.Parse(uri)
 	query := ""
 	if err != nil {
-		//TODO
-		tx.GetCollection(VARIABLE_URI_PARSE_ERROR).Set("", []string{"1"})
-		posRawQuery := strings.Index(uri, "?")
-		if posRawQuery != -1 {
-			tx.ExtractArguments("GET", uri[posRawQuery+1:])
-			path = uri[:posRawQuery]
-			query = uri[posRawQuery+1:]
-		} else {
-			path = uri
-		}
+		tx.GetCollection(VARIABLE_URLENCODED_ERROR).Set("", []string{err.Error()})
+		path = uri
 		tx.GetCollection(VARIABLE_REQUEST_URI).Set("", []string{uri})
+		/*
+			tx.GetCollection(VARIABLE_URI_PARSE_ERROR).Set("", []string{"1"})
+			posRawQuery := strings.Index(uri, "?")
+			if posRawQuery != -1 {
+				tx.ExtractArguments("GET", uri[posRawQuery+1:])
+				path = uri[:posRawQuery]
+				query = uri[posRawQuery+1:]
+			} else {
+				path = uri
+			}
+			tx.GetCollection(VARIABLE_REQUEST_URI).Set("", []string{uri})
+		*/
 	} else {
 		tx.ExtractArguments("GET", parsedUrl.RawQuery)
 		tx.GetCollection(VARIABLE_REQUEST_URI).Set("", []string{parsedUrl.String()})
@@ -805,6 +809,8 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 
 		b := buf.String()
 		tx.GetCollection(VARIABLE_REQUEST_BODY).Set("", []string{b})
+		//TODO add url encode validation
+		//tx.GetCollection(VARIABLE_URLENCODED_ERROR).Set("", []string{err.Error()})
 		values := utils.ParseQuery(b, "&")
 		for k, vs := range values {
 			for _, v := range vs {

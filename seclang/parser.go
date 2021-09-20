@@ -46,15 +46,9 @@ type Parser struct {
 // It will return error if any directive fails to parse
 // or arguments are invalid
 func (p *Parser) FromFile(profilePath string) error {
-	if !utils.FileExists(profilePath) {
-		p.Waf.Logger.Error("cannot read configurations file",
-			zap.String("path", profilePath),
-		)
-		return errors.New("invalid profile path")
-	}
 	p.configfile = profilePath
 	p.configdir = filepath.Dir(profilePath)
-	file, err := utils.OpenFile(profilePath)
+	file, err := utils.OpenFile(profilePath, false, "")
 	if err != nil {
 		p.Waf.Logger.Error(err.Error(),
 			zap.String("path", profilePath),

@@ -21,7 +21,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -92,35 +91,25 @@ func IntInSlice(a int, list []int) bool {
 	return false
 }
 
-func OpenFile(path string) ([]byte, error) {
-	var ret []byte
+func OpenFile(path string, allowRemote bool, key string) ([]byte, error) {
 	if strings.HasPrefix(path, "https://") {
+		if !allowRemote {
+			return []byte{}, fmt.Errorf("remote resources are not allowed")
+		}
 		client := &http.Client{
 			Timeout: time.Second * 15,
 		}
 		req, _ := http.NewRequest("GET", path, nil)
+		req.Header.Add("Coraza-key", key)
 		res, err := client.Do(req)
 		if err != nil {
 			return nil, err
 		}
 		defer res.Body.Close()
-		ret, _ = io.ReadAll(res.Body)
+		return io.ReadAll(res.Body)
 	} else {
-		var err error
-		ret, err = ioutil.ReadFile(path)
-		if err != nil {
-			return nil, err
-		}
+		return ioutil.ReadFile(path)
 	}
-	return ret, nil
-}
-
-func FileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
 }
 
 func IsDigit(x byte) bool {

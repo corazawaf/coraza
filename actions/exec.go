@@ -26,7 +26,7 @@ type Exec struct {
 }
 
 func (a *Exec) Init(r *engine.Rule, data string) error {
-	fdata, err := utils.OpenFile(data)
+	fdata, err := utils.OpenFile(data, false, "")
 	if err != nil {
 		return fmt.Errorf("Cannot load file %s", data)
 	}
