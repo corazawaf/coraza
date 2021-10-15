@@ -68,13 +68,13 @@ Make sure ``CGO_ENABLED=1`` env is set before compiling and all dependencies are
 package main
 import(
 	"fmt"
-	engine"github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf"
 	"github.com/jptosso/coraza-waf/seclang"
 )
 
 func main() {
 	// First we initialize our waf and our seclang parser
-	waf := engine.NewWaf()
+	waf := coraza.NewWaf()
 	parser := seclang.NewParser(waf)
 
 	// Now we parse our rules
@@ -100,7 +100,7 @@ Using the standard net/http library:
 ```go
 package main
 import(
-	engine"github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf"
 	"github.com/jptosso/coraza-waf/seclang"
 	"net/http"
 )
@@ -187,6 +187,7 @@ We are fully compatible with OWASP CRS, except by DDOS and anti-bot protection.
 * [Traefik Plugin (Reverse Proxy and Web Server)](https://github.com/jptosso/coraza-traefik) (not working yet)
 * [Gin Middleware (Web Framework)](https://github.com/jptosso/coraza-gin) (Preview)
 * [Buffalo Plugin (Web Framework)](#) (soon)
+* [Coraza Server (HAPROXY, REST and GRPC)](https://github.com/jptosso/coraza-server) (experimenta)
 
 ## Coraza Plugins
 
@@ -214,6 +215,10 @@ egrep -Rin "TODO|FIXME" -R --exclude-dir=vendor *
 
 * Modsecurity team for creating SecLang
 * OWASP Coreruleset team for the CRS and their feedback
+
+### Companies using Coraza
+
+* [Babiel](https://babiel.com)
 
 ## About
 
