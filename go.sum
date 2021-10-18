@@ -1,7 +1,7 @@
 github.com/antchfx/jsonquery v1.1.4 h1:+OlFO3QS9wjU0MKx9MgHm5f6o6hdd4e9mUTp0wTjxlM=
 github.com/antchfx/jsonquery v1.1.4/go.mod h1:cHs8r6Bymd8j6HI6Ej1IJbjahKvLBcIEh54dfmo+E9A=
-github.com/antchfx/xmlquery v1.3.7 h1:0hc7OU2rFIu8MMKT5kknruaTKsoCybkUaUFMnB1LOO4=
-github.com/antchfx/xmlquery v1.3.7/go.mod h1:wojC/BxjEkjJt6dPiAqUzoXO5nIMWtxHS8PD8TmN4ks=
+github.com/antchfx/xmlquery v1.3.8 h1:dRnBQM3Vk5BVJFvFwsHOLAox+mEiNw5ZusaUNCrEdoU=
+github.com/antchfx/xmlquery v1.3.8/go.mod h1:wojC/BxjEkjJt6dPiAqUzoXO5nIMWtxHS8PD8TmN4ks=
 github.com/antchfx/xpath v1.1.7/go.mod h1:Yee4kTMuNiPYJ7nSNorELQMr1J33uOpXDMByNYhvtNk=
 github.com/antchfx/xpath v1.2.0 h1:mbwv7co+x0RwgeGAOHdrKy89GvHaGvxxBtPK0uF9Zr8=
 github.com/antchfx/xpath v1.2.0/go.mod h1:i54GszH55fYfBmoZXapTHN8T8tkcHfRgLyVwwqzXNcs=
