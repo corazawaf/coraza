@@ -157,6 +157,9 @@ type Transaction struct {
 
 	// Timestamp of the request
 	Timestamp int64
+
+	// Used internaly to build the HIGHEST_SEVERITY variable
+	highestSeverity int
 }
 
 // Used to test macro expansions
@@ -426,6 +429,14 @@ func (tx *Transaction) MatchRule(rule Rule, msgs []string, match []MatchData) {
 		Rule:        rule,
 	}
 	tx.MatchedRules = append(tx.MatchedRules, mr)
+
+	// set highest_severity
+	hs := tx.GetCollection(VARIABLE_HIGHEST_SEVERITY)
+	maxSeverity := hs.GetFirstInt("")
+	if rule.Severity > maxSeverity {
+		hs.Set("", []string{strconv.Itoa(rule.Severity)})
+		tx.Waf.Logger.Debug("Set highest severity", zap.Int("severity", rule.Severity))
+	}
 }
 
 // GetStopWatch is used to debug phase durations
@@ -504,7 +515,6 @@ func (tx *Transaction) GetField(rv RuleVariable, exceptions []string) []MatchDat
 		}
 		return col.Find(key, re, exceptions)
 	}
-	// TODO some day we should add VARIABLE_JSON
 
 }
 
@@ -869,14 +879,28 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 		}
 	case "JSON":
 		var err error
+		//reader to string
+		buf := new(strings.Builder)
+		if _, err := io.Copy(buf, reader); err != nil {
+			tx.Waf.Logger.Debug("Cannot copy reader buffer")
+		}
+		//string to reader
+		reader = strings.NewReader(buf.String())
 		tx.jsonDoc, err = jsonquery.Parse(reader)
 		if err != nil {
-			tx.GetCollection(VARIABLE_REQBODY_ERROR).Set("", []string{"1"})
-			tx.GetCollection(VARIABLE_REQBODY_ERROR_MSG).Set("", []string{string(err.Error())})
-			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR).Set("", []string{"1"})
-			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR_MSG).Set("", []string{string(err.Error())})
+			tx.generateReqbodyError(err)
 			// we should not report this error
-			return nil, nil
+			//return nil, nil
+		}
+		jsmap, err := utils.JSONToMap(buf.String())
+		if err != nil {
+			tx.generateReqbodyError(err)
+			//return nil, nil
+		}
+		for k, v := range jsmap {
+			//TODO is it ok to use AddArgument? it will also sum to args_combined_size
+			tx.AddArgument("POST", k, v)
+			//fmt.Printf("%q=%q\n", k, v)
 		}
 	}
 	tx.Waf.Rules.Eval(PHASE_REQUEST_BODY, tx)
@@ -1107,4 +1131,12 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 		}
 	}
 	return al
+}
+
+// generateReqbodyError generates all of the error variables for the request body parser
+func (tx *Transaction) generateReqbodyError(err error) {
+	tx.GetCollection(VARIABLE_REQBODY_ERROR).Set("", []string{"1"})
+	tx.GetCollection(VARIABLE_REQBODY_ERROR_MSG).Set("", []string{string(err.Error())})
+	tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR).Set("", []string{"1"})
+	tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR_MSG).Set("", []string{string(err.Error())})
 }
