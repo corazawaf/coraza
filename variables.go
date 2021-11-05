@@ -21,7 +21,7 @@ import (
 // This file repeats the same content many times in order to make access
 // efficient for seclang and transactions
 
-const VARIABLES_COUNT = 89
+const VARIABLES_COUNT = 90
 const (
 	// Single valua variables
 	VARIABLE_URLENCODED_ERROR                 = 0x00
@@ -119,6 +119,8 @@ const (
 
 	// deprecated: VARIABLE_URI_PARSE_ERROR
 	VARIABLE_URI_PARSE_ERROR = 0x57
+
+	VARIABLE_ENV = 0x58 //TODO FIX
 )
 
 // NameToVariable returns the byte interpretation
@@ -301,6 +303,8 @@ func NameToVariable(name string) (byte, error) {
 		return VARIABLE_URI_PARSE_ERROR, nil
 	case "JSON":
 		return VARIABLE_JSON, nil
+	case "ENV":
+		return VARIABLE_ENV, nil
 	}
 	return 0, errors.New("Invalid variable " + name)
 }
@@ -483,6 +487,8 @@ func VariableToName(v byte) string {
 		return "JSON"
 	case VARIABLE_XML:
 		return "XML"
+	case VARIABLE_ENV:
+		return "ENV"
 	}
 	return ""
 }

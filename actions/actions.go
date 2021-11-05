@@ -69,7 +69,7 @@ func ActionsMap() map[string]engine.RuleAction {
 		//"setuid": &Setuid{},
 		//"setrsc": &Setrsc{},
 		//"setsid": &Setsid{},
-		//"setenv": &Setenv{},
+		"setenv": &SetEnv{},
 		"setvar": &Setvar{},
 		"t":      &T{},
 

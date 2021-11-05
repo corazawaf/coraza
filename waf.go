@@ -20,6 +20,7 @@ import (
 	"io/fs"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -271,6 +272,16 @@ func (w *Waf) NewTransaction() *Transaction {
 	}
 	for v, data := range defaults {
 		tx.GetCollection(v).Set("", []string{data})
+	}
+
+	// Get all env variables
+	env := tx.GetCollection(VARIABLE_ENV)
+	for _, e := range os.Environ() {
+		spl := strings.SplitN(e, "=", 2)
+		if len(spl) != 2 {
+			continue
+		}
+		env.Set(spl[0], []string{spl[1]})
 	}
 
 	w.Logger.Debug("new transaction created", zap.String("event", "NEW_TRANSACTION"), zap.String("txid", tx.Id))
