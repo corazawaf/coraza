@@ -25,21 +25,34 @@ type Severity struct {
 }
 
 func (a *Severity) Init(r *engine.Rule, data string) error {
-	l := []string{"EMERGENCY", "ALERT", "CRITICAL", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG"}
-	s := -1
-	num, err := strconv.Atoi(data)
+	sev, err := strconv.Atoi(data)
 	if err != nil {
-		num = -1
-	}
-	for i, val := range l {
-		if val == data || num == i {
-			s = i
+		// its a string
+		switch data {
+		case "EMERGENCY":
+			sev = 0
+		case "ALERT":
+			sev = 1
+		case "CRITICAL":
+			sev = 2
+		case "ERROR":
+			sev = 3
+		case "WARNING":
+			sev = 4
+		case "NOTICE":
+			sev = 5
+		case "INFO":
+			sev = 6
+		case "DEBUG":
+			sev = 7
+		default:
+			// if we reach this point we fail
+			return fmt.Errorf("invalid severity %q", data)
 		}
+	} else if sev < 0 || sev > 7 {
+		return fmt.Errorf("invalid severity %d", sev)
 	}
-	if s == -1 {
-		return fmt.Errorf("invalid severity %s", data)
-	}
-	r.Severity = s
+	r.Severity = sev
 	return nil
 }
 
