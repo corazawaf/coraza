@@ -66,10 +66,9 @@ func RemoveQuotes(s string) string {
 	if s == "" {
 		return ""
 	}
-	s = strings.TrimSuffix(s, `"`)
-	s = strings.TrimPrefix(s, `"`)
-	s = strings.TrimSuffix(s, `'`)
-	s = strings.TrimPrefix(s, `'`)
+	s = strings.Trim(s, `"`)
+	s = strings.Trim(s, `'`)
+	s = strings.Trim(s, "`")
 	return s
 }
 

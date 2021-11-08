@@ -29,7 +29,7 @@ type Skip struct {
 func (a *Skip) Init(r *engine.Rule, data string) error {
 	i, err := strconv.Atoi(data)
 	if err != nil {
-		return fmt.Errorf("Invalid integer value")
+		return fmt.Errorf("invalid integer value")
 	}
 	a.data = i
 	return nil

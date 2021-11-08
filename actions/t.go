@@ -25,6 +25,7 @@ import (
 type T struct{}
 
 func (a *T) Init(r *engine.Rule, input string) error {
+	// TODO there is a chance that it won't work, it requires tests
 	if input == "none" {
 		//remove elements
 		r.Transformations = r.Transformations[:0]

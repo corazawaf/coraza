@@ -18,19 +18,18 @@ import (
 	"io"
 
 	"github.com/jptosso/coraza-waf"
-	engine "github.com/jptosso/coraza-waf"
 )
 
 type Prepend struct {
 	data string
 }
 
-func (a *Prepend) Init(r *engine.Rule, data string) error {
+func (a *Prepend) Init(r *coraza.Rule, data string) error {
 	a.data = data
 	return nil
 }
 
-func (a *Prepend) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *Prepend) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	if !tx.Waf.ContentInjection {
 		tx.Waf.Logger.Debug("append rejected because of ContentInjection")
 		return
@@ -48,8 +47,9 @@ func (a *Prepend) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	}
 	// We overwrite the response body buffer with the new buffer
 	*tx.ResponseBodyBuffer = *buf
+	// Maybe in the future we could add the prepend function to the BodyBuffer
 }
 
 func (a *Prepend) Type() int {
-	return engine.ACTION_TYPE_NONDISRUPTIVE
+	return coraza.ACTION_TYPE_NONDISRUPTIVE
 }

@@ -25,7 +25,6 @@ type SkipAfter struct {
 	data string
 }
 
-//NOT IMPLEMENTED
 func (a *SkipAfter) Init(r *engine.Rule, data string) error {
 	a.data = strings.Trim(data, `"`)
 	return nil

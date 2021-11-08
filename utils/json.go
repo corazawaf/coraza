@@ -9,6 +9,7 @@ import (
 // Transform JSON to a map[string]string
 // Example input: {"data": {"name": "John", "age": 30}, "items": [1,2,3]}
 // Example output: map[string]string{"json.data.name": "John", "json.data.age": "30", "json.items.0": "1", "json.items.1": "2", "json.items.2": "3"}
+// TODO add some anti DOS protection
 func JSONToMap(data string) (map[string]string, error) {
 	result := make(map[string]interface{})
 	if err := json.Unmarshal([]byte(data), &result); err != nil {

@@ -14,7 +14,10 @@
 
 package actions
 
-import engine "github.com/jptosso/coraza-waf"
+import (
+	engine "github.com/jptosso/coraza-waf"
+	"go.uber.org/zap"
+)
 
 type Append struct {
 	data string
@@ -32,7 +35,7 @@ func (a *Append) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	}
 	data := tx.MacroExpansion(a.data)
 	if _, err := tx.ResponseBodyBuffer.Write([]byte(data)); err != nil {
-		tx.Waf.Logger.Debug("append failed to write to response buffer")
+		tx.Waf.Logger.Error("append failed to write to response buffer", zap.Error(err))
 	}
 }
 

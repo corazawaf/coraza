@@ -21,7 +21,7 @@ import (
 // This file repeats the same content many times in order to make access
 // efficient for seclang and transactions
 
-const VARIABLES_COUNT = 91
+const VARIABLES_COUNT = 92
 const (
 	// Single valua variables
 	VARIABLE_URLENCODED_ERROR                 = 0x00
@@ -122,6 +122,7 @@ const (
 
 	VARIABLE_ENV              = 0x58 //TODO FIX
 	VARIABLE_HIGHEST_SEVERITY = 0x59 //TODO FIX
+	VARIABLE_STATUS_LINE      = 0x5A //TODO FIX
 )
 
 // NameToVariable returns the byte interpretation
@@ -308,6 +309,8 @@ func NameToVariable(name string) (byte, error) {
 		return VARIABLE_ENV, nil
 	case "HIGHEST_SEVERITY":
 		return VARIABLE_HIGHEST_SEVERITY, nil
+	case "STATUS_LINE":
+		return VARIABLE_STATUS_LINE, nil
 	}
 	return 0, errors.New("Invalid variable " + name)
 }
@@ -494,6 +497,8 @@ func VariableToName(v byte) string {
 		return "ENV"
 	case VARIABLE_HIGHEST_SEVERITY:
 		return "HIGHEST_SEVERITY"
+	case VARIABLE_STATUS_LINE:
+		return "STATUS_LINE"
 	}
 	return ""
 }

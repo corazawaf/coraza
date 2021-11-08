@@ -898,8 +898,11 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 			//return nil, nil
 		}
 		for k, v := range jsmap {
-			//TODO is it ok to use AddArgument? it will also sum to args_combined_size
-			tx.AddArgument("POST", k, v)
+			//We cannot use AddArgument because it will create a vulnerability where attackers can add additional data to json.data
+			tx.GetCollection(VARIABLE_ARGS).Set(k, []string{v})
+			tx.GetCollection(VARIABLE_ARGS_NAMES).AddUnique("", k)
+			tx.GetCollection(VARIABLE_ARGS_POST).Set(k, []string{v})
+			tx.GetCollection(VARIABLE_ARGS_POST_NAMES).AddUnique("", k)
 			//fmt.Printf("%q=%q\n", k, v)
 		}
 	}

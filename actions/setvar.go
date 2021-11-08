@@ -29,7 +29,6 @@ type Setvar struct {
 	IsRemove   bool
 }
 
-//this action win run even if rule is not triggered.!
 func (a *Setvar) Init(r *engine.Rule, data string) error {
 	if data == "" {
 		return fmt.Errorf("setvar requires arguments")
@@ -40,10 +39,15 @@ func (a *Setvar) Init(r *engine.Rule, data string) error {
 		data = data[1:]
 	}
 
+	var err error
 	spl := strings.SplitN(data, "=", 2)
+	/*
+		TODO requires more testing
+		if len(spl) != 2 {
+			return fmt.Errorf("setvar requires key=value syntax")
+		}*/
 
 	splcol := strings.SplitN(spl[0], ".", 2)
-	var err error
 	a.Collection, err = engine.NameToVariable(splcol[0])
 	if err != nil {
 		return err
