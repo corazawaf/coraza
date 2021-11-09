@@ -14,16 +14,20 @@
 
 package transformations
 
-import "github.com/jptosso/coraza-waf/utils"
+import (
+	"unicode"
 
-func CompressWhitespace(value string, tools *Tools) string {
+	"github.com/jptosso/coraza-waf/v2"
+)
+
+func CompressWhitespace(value string, tools coraza.RuleTransformationTools) string {
 	a := []byte{}
 	i := 0
 	inWhiteSpace := false
 	length := len(value)
 
 	for i < length {
-		if utils.IsSpace(value[i]) {
+		if unicode.IsSpace(rune(value[i])) {
 			if inWhiteSpace {
 				i++
 				continue

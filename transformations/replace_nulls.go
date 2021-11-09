@@ -14,7 +14,9 @@
 
 package transformations
 
-func ReplaceNulls(data string, utils *Tools) string {
+import "github.com/jptosso/coraza-waf/v2"
+
+func ReplaceNulls(data string, utils coraza.RuleTransformationTools) string {
 	value := []byte(data)
 	for i := 0; i < len(value); i++ {
 		if value[i] == '\x00' {

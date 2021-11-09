@@ -19,17 +19,16 @@ import (
 	"os"
 	"strings"
 
-	"github.com/jptosso/coraza-waf"
-	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/v2"
 	"go.uber.org/zap"
 )
 
-type SetEnv struct {
+type setenvFn struct {
 	key   string
 	value string
 }
 
-func (a *SetEnv) Init(r *engine.Rule, data string) error {
+func (a *setenvFn) Init(r *coraza.Rule, data string) error {
 	spl := strings.SplitN(data, "=", 2)
 	if len(spl) != 2 {
 		return fmt.Errorf("invalid key value for setvar")
@@ -39,7 +38,7 @@ func (a *SetEnv) Init(r *engine.Rule, data string) error {
 	return nil
 }
 
-func (a *SetEnv) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *setenvFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	v := tx.MacroExpansion(a.value)
 	// set env variable
 	if err := os.Setenv(a.key, v); err != nil {
@@ -50,6 +49,15 @@ func (a *SetEnv) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 
 }
 
-func (a *SetEnv) Type() int {
-	return engine.ACTION_TYPE_NONDISRUPTIVE
+func (a *setenvFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeNondisruptive
 }
+
+func setenv() coraza.RuleAction {
+	return &setenvFn{}
+}
+
+var (
+	_ coraza.RuleAction = &setenvFn{}
+	_ RuleActionWrapper = setenv
+)

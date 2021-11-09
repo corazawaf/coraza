@@ -17,10 +17,11 @@ package transformations
 import (
 	"strconv"
 
-	"github.com/jptosso/coraza-waf/utils"
+	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/utils"
 )
 
-func JsDecode(data string, utils *Tools) string {
+func JsDecode(data string, utils coraza.RuleTransformationTools) string {
 	//https://github.com/SpiderLabs/ModSecurity/blob/b66224853b4e9d30e0a44d16b29d5ed3842a6b11/src/actions/transformations/js_decode.cc
 	return doJsDecode(data)
 }

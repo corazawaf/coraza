@@ -15,27 +15,40 @@
 package actions
 
 import (
+	"fmt"
 	"strconv"
 
-	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
-type Maturity struct {
+type maturityFn struct {
 }
 
-func (a *Maturity) Init(r *engine.Rule, data string) error {
+func (a *maturityFn) Init(r *coraza.Rule, data string) error {
 	m, err := strconv.Atoi(data)
 	if err != nil {
 		return err
+	}
+	if m < 1 || m > 9 {
+		return fmt.Errorf("maturity must be between 1 and 9, not %d", m)
 	}
 	r.Maturity = m
 	return nil
 }
 
-func (a *Maturity) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *maturityFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not evaluated
 }
 
-func (a *Maturity) Type() int {
-	return engine.ACTION_TYPE_METADATA
+func (a *maturityFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeMetadata
 }
+
+func maturity() coraza.RuleAction {
+	return &maturityFn{}
+}
+
+var (
+	_ coraza.RuleAction = &maturityFn{}
+	_ RuleActionWrapper = maturity
+)

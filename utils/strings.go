@@ -49,26 +49,6 @@ func IsXDigit(char int) bool {
 	return ValidHex(c)
 }
 
-func C2x(what byte, where []byte) []byte {
-	c2xTable := []byte("0123456789abcdef")
-	b := []byte(where)
-
-	what = what & 0xff
-	b[0] = c2xTable[what>>4]
-	b[1] = c2xTable[what&0x0f]
-
-	return b
-}
-
 func IsODigit(x byte) bool {
 	return (x >= '0') && (x <= '7')
-}
-
-func IsAlnum(s string) bool {
-	for _, r := range s {
-		if !unicode.IsNumber(r) && !unicode.IsLetter(r) {
-			return false
-		}
-	}
-	return true
 }

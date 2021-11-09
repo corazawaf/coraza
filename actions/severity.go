@@ -18,13 +18,13 @@ import (
 	"fmt"
 	"strconv"
 
-	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
-type Severity struct {
+type severityFn struct {
 }
 
-func (a *Severity) Init(r *engine.Rule, data string) error {
+func (a *severityFn) Init(r *coraza.Rule, data string) error {
 	sev, err := strconv.Atoi(data)
 	if err != nil {
 		// its a string
@@ -56,10 +56,19 @@ func (a *Severity) Init(r *engine.Rule, data string) error {
 	return nil
 }
 
-func (a *Severity) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *severityFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not evaluated
 }
 
-func (a *Severity) Type() int {
-	return engine.ACTION_TYPE_METADATA
+func (a *severityFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeMetadata
 }
+
+func severity() coraza.RuleAction {
+	return &severityFn{}
+}
+
+var (
+	_ coraza.RuleAction = &severityFn{}
+	_ RuleActionWrapper = severity
+)

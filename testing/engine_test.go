@@ -19,8 +19,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	engine "github.com/jptosso/coraza-waf"
-	"github.com/jptosso/coraza-waf/seclang"
+	engine "github.com/jptosso/coraza-waf/v2"
+	seclang "github.com/jptosso/coraza-waf/v2/seclang"
 )
 
 func TestEngine(t *testing.T) {

@@ -16,9 +16,11 @@ package transformations
 
 import (
 	"path/filepath"
+
+	"github.com/jptosso/coraza-waf/v2"
 )
 
-func NormalisePath(data string, utils *Tools) string {
+func NormalisePath(data string, utils coraza.RuleTransformationTools) string {
 	leng := len(data)
 	if leng < 1 {
 		return data

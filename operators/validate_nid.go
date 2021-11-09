@@ -19,8 +19,8 @@ import (
 	"regexp"
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf"
-	"github.com/jptosso/coraza-waf/operators/nids"
+	engine "github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/operators/nids"
 )
 
 type ValidateNid struct {

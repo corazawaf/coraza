@@ -17,9 +17,11 @@ package transformations
 import (
 	"crypto/md5"
 	"io"
+
+	"github.com/jptosso/coraza-waf/v2"
 )
 
-func Md5(data string, utils *Tools) string {
+func Md5(data string, utils coraza.RuleTransformationTools) string {
 	h := md5.New()
 	_, err := io.WriteString(h, data)
 	if err != nil {

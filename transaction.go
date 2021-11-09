@@ -17,7 +17,6 @@ package coraza
 import (
 	"bufio"
 	"fmt"
-	"html"
 	"io"
 	"mime"
 	"net/http"
@@ -28,10 +27,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/antchfx/jsonquery"
-	"github.com/antchfx/xmlquery"
-	"github.com/jptosso/coraza-waf/loggers"
-	"github.com/jptosso/coraza-waf/utils"
+	loggers "github.com/jptosso/coraza-waf/v2/loggers"
+	utils "github.com/jptosso/coraza-waf/v2/utils"
 	"go.uber.org/zap"
 )
 
@@ -69,15 +66,6 @@ type MatchData struct {
 	Key string
 	// Value of the current VARIABLE:KEY
 	Value string
-}
-
-// VariableKey is used to store Variables with it's key, for example:
-// ARGS:id would be the same as {VARIABLE_ARGS, "id"}
-type VariableKey struct {
-	// Contains the variable
-	Collection byte
-	// Contains the key of the variable
-	Key string
 }
 
 type Transaction struct {
@@ -120,7 +108,7 @@ type Transaction struct {
 
 	// Stores the last phase that was evaluated
 	// Used by allow to skip phases
-	LastPhase Phase
+	LastPhase RulePhase
 
 	// Handles request body buffers
 	RequestBodyBuffer *BodyBuffer
@@ -129,13 +117,13 @@ type Transaction struct {
 	ResponseBodyBuffer *BodyBuffer
 
 	// Rules with this id are going to be skipped while processing a phase
-	RuleRemoveById []int
+	ruleRemoveById []int
 
 	// Used by ctl to remove rule targets by id during the transaction
 	// All other "target removers" like "ByTag" are an abstraction of "ById"
 	// For example, if you want to remove REQUEST_HEADERS:User-Agent from rule 85:
 	// {85: {VARIABLE_REQUEST_HEADERS, "user-agent"}}
-	RuleRemoveTargetById map[int][]VariableKey
+	ruleRemoveTargetById map[int][]RuleVariableParams
 
 	// Will skip this number of rules, this value will be decreased on each skip
 	Skip int
@@ -146,14 +134,10 @@ type Transaction struct {
 	Capture bool
 
 	// Contains duration in useconds per phase
-	StopWatches map[Phase]int
+	StopWatches map[RulePhase]int
 
-	// Contains de *engine.Waf instance for the current transaction
-	Waf *Waf
-
-	// In case of an XML request body we will cache the XML object here
-	xmlDoc  *xmlquery.Node
-	jsonDoc *jsonquery.Node
+	// Contains a Waf instance for the current transaction
+	Waf Waf
 
 	// Timestamp of the request
 	Timestamp int64
@@ -182,7 +166,7 @@ func (tx *Transaction) MacroExpansion(data string) string {
 	for _, v := range matches {
 		match := v[2 : len(v)-1]
 		matchspl := strings.SplitN(match, ".", 2)
-		col, err := NameToVariable(strings.ToLower(matchspl[0]))
+		col, err := ParseRuleVariable(strings.ToLower(matchspl[0]))
 		if err != nil {
 			//Invalid collection
 			continue
@@ -454,85 +438,25 @@ func (tx *Transaction) GetStopWatch() string {
 }
 
 // GetField Retrieve data from collections applying exceptions
-// This function will apply xpath if the variable is XML
 // In future releases we may remove de exceptions slice and
 // make it easier to use
-func (tx *Transaction) GetField(rv RuleVariable, exceptions []string) []MatchData {
-	collection := rv.Collection
+func (tx *Transaction) GetField(rv RuleVariableParams, exceptions []string) []MatchData {
+	collection := rv.Variable
 	key := rv.Key
 	re := rv.Regex
-	if collection == VARIABLE_XML {
-		if tx.xmlDoc == nil {
-			return []MatchData{}
-		}
-		data, err := xmlquery.QueryAll(tx.xmlDoc, key)
-		if err != nil {
-			return []MatchData{}
-		}
-		res := []MatchData{}
-		for _, d := range data {
-			//TODO im not sure if its ok but nvm:
-			// According to Modsecurity handbook modsecurity builds a collection
-			// that contains all iterations of the matched elements
-			// doesn't seem too efficient, we are going to modify that
-			// also I don't like xmlquery
-			output := html.UnescapeString(d.OutputXML(true))
-			res = append(res, MatchData{
-				Collection: "xml",
-				Key:        key,
-				Value:      output,
-			})
-		}
-		return res
-	} else if collection == VARIABLE_JSON {
-		if tx.jsonDoc == nil {
-			return []MatchData{}
-		}
-		data, err := jsonquery.QueryAll(tx.jsonDoc, key)
-		if err != nil {
-			return []MatchData{}
-		}
-		res := []MatchData{}
-		for _, d := range data {
-			//TODO im not sure if its ok but nvm:
-			// According to Modsecurity handbook modsecurity builds a collection
-			// that contains all iterations of the matched elements
-			// doesn't seem too efficient, we are going to modify that
-			// also I don't like xmlquery
-			output := html.UnescapeString(d.InnerText())
-			res = append(res, MatchData{
-				Collection: "json",
-				Key:        key,
-				Value:      output,
-			})
-		}
-		return res
-	} else {
-		col := tx.GetCollection(collection)
-		key = tx.MacroExpansion(key)
-		if col == nil {
-			return []MatchData{}
-		}
-		return col.Find(key, re, exceptions)
+	col := tx.GetCollection(collection)
+	key = tx.MacroExpansion(key)
+	if col == nil {
+		return []MatchData{}
 	}
+	return col.Find(key, re, exceptions)
 
 }
 
 // GetCollection transforms a VARIABLE_ constant into a
 // *Collection used to get VARIABLES data
-func (tx *Transaction) GetCollection(variable byte) *Collection {
+func (tx *Transaction) GetCollection(variable RuleVariable) *Collection {
 	return tx.collections[variable]
-}
-
-// GetCollections is used to debug collections, it maps
-// the Collection slice into a map of variable names and collections
-func (tx *Transaction) GetCollections() map[string]*Collection {
-	cols := map[string]*Collection{}
-	for i, col := range tx.collections {
-		v := VariableToName(byte(i))
-		cols[v] = col
-	}
-	return cols
 }
 
 // savePersistentData save persistent collections to persistence engine
@@ -572,15 +496,23 @@ func (tx *Transaction) savePersistentData() {
 
 // RemoveRuleTargetById Removes the VARIABLE:KEY from the rule ID
 // It's mostly used by CTL to dinamically remove targets from rules
-func (tx *Transaction) RemoveRuleTargetById(id int, col byte, key string) {
-	c := VariableKey{col, key}
-	if tx.RuleRemoveTargetById[id] == nil {
-		tx.RuleRemoveTargetById[id] = []VariableKey{
+func (tx *Transaction) RemoveRuleTargetById(id int, variable RuleVariable, key string) {
+	c := RuleVariableParams{
+		Variable: variable,
+		Key:      key,
+	}
+	// Used if it's empty
+	if tx.ruleRemoveTargetById[id] == nil {
+		tx.ruleRemoveTargetById[id] = []RuleVariableParams{
 			c,
 		}
 	} else {
-		tx.RuleRemoveTargetById[id] = append(tx.RuleRemoveTargetById[id], c)
+		tx.ruleRemoveTargetById[id] = append(tx.ruleRemoveTargetById[id], c)
 	}
+}
+
+func (tx *Transaction) RemoveRuleById(id int) {
+	tx.ruleRemoveById = append(tx.ruleRemoveById, id)
 }
 
 // ProcessRequest
@@ -668,7 +600,7 @@ func (tx *Transaction) ExtractArguments(orig string, uri string) {
 // This will set ARGS_(GET|POST), ARGS, ARGS_NAMES, ARGS_COMBINED_SIZE and
 // ARGS_(GET|POST)_NAMES
 func (tx *Transaction) AddArgument(orig string, key string, value string) {
-	var vals, names byte
+	var vals, names RuleVariable
 	if orig == "GET" {
 		vals = VARIABLE_ARGS_GET
 		names = VARIABLE_ARGS_GET_NAMES
@@ -828,20 +760,7 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 			}
 		}
 	case "XML":
-		var err error
-		options := xmlquery.ParserOptions{
-			Decoder: &xmlquery.DecoderOptions{
-				Strict:    false,
-				AutoClose: []string{},
-				Entity:    map[string]string{},
-			},
-		}
-		tx.xmlDoc, err = xmlquery.ParseWithOptions(reader, options)
-		if err != nil {
-			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR).Set("", []string{"1"})
-			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR_MSG).Set("", []string{string(err.Error())})
-			return tx.Interruption, err
-		}
+		// TODO
 	case "MULTIPART":
 		req, _ := http.NewRequest("GET", "/", reader)
 		req.Header.Set("Content-Type", mime)
@@ -878,19 +797,10 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 			}
 		}
 	case "JSON":
-		var err error
-		//reader to string
+		// reader to string
 		buf := new(strings.Builder)
 		if _, err := io.Copy(buf, reader); err != nil {
 			tx.Waf.Logger.Debug("Cannot copy reader buffer")
-		}
-		//string to reader
-		reader = strings.NewReader(buf.String())
-		tx.jsonDoc, err = jsonquery.Parse(reader)
-		if err != nil {
-			tx.generateReqbodyError(err)
-			// we should not report this error
-			//return nil, nil
 		}
 		jsmap, err := utils.JSONToMap(buf.String())
 		if err != nil {
@@ -996,8 +906,7 @@ func (tx *Transaction) ProcessLogging() {
 	if tx.AuditEngine == AUDIT_LOG_RELEVANT && !tx.Log {
 		re := tx.Waf.AuditLogRelevantStatus
 		status := tx.GetCollection(VARIABLE_RESPONSE_STATUS).GetFirstString("")
-		m := re.NewMatcher()
-		if !m.MatchString(status, 0) {
+		if re != nil && !re.Match([]byte(status)) {
 			//Not relevant status
 			tx.Waf.Logger.Debug("Transaction status not marked for audit logging",
 				zap.String("tx", tx.Id),

@@ -15,20 +15,28 @@
 package coraza
 
 import (
+	"fmt"
+	"regexp"
 	"strconv"
 
-	"github.com/jptosso/coraza-waf/transformations"
-	"github.com/jptosso/coraza-waf/utils/regex"
 	"go.uber.org/zap"
 )
 
+type RuleActionType int
+
 const (
-	ACTION_TYPE_METADATA      = 1
-	ACTION_TYPE_DISRUPTIVE    = 2
-	ACTION_TYPE_DATA          = 3
-	ACTION_TYPE_NONDISRUPTIVE = 4
-	ACTION_TYPE_FLOW          = 5
+	ActionTypeMetadata      RuleActionType = 1
+	ActionTypeDisruptive    RuleActionType = 2
+	ActionTypeData          RuleActionType = 3
+	ActionTypeNondisruptive RuleActionType = 4
+	ActionTypeFlow          RuleActionType = 5
 )
+
+type RuleTransformationTools struct {
+	Logger *zap.Logger
+}
+
+type RuleTransformation = func(input string, tools RuleTransformationTools) string
 
 // This interface is used by this rule's actions
 type RuleAction interface {
@@ -38,11 +46,19 @@ type RuleAction interface {
 	Evaluate(*Rule, *Transaction)
 	// Type will return the rule type, it's used by Evaluate
 	// to choose when to evaluate each action
-	Type() int
+	Type() RuleActionType
+}
+
+type RuleActionParams struct {
+	// The name of the action, used for logging
+	Name string
+
+	// The action to be executed
+	Function RuleAction
 }
 
 // Operator interface is used to define rule @operators
-type Operator interface {
+type RuleOperator interface {
 	// Init is used during compilation to setup and cache
 	// the operator
 	Init(string) error
@@ -53,9 +69,9 @@ type Operator interface {
 }
 
 // RuleOperator is a container for an operator,
-type RuleOperator struct {
+type RuleOperatorParams struct {
 	// Operator to be used
-	Operator Operator
+	Operator RuleOperator
 	// Data to initialize the operator
 	Data string
 	// If true, rule will match if op.Evaluate returns false
@@ -65,21 +81,32 @@ type RuleOperator struct {
 // RuleVariable is compiled during runtime by transactions
 // to get values from the transaction's variables
 // It supports xml, regex, exceptions and many more features
-type RuleVariable struct {
+type RuleVariableParams struct {
+	// We store the name for performance
+	Name string
+
 	// If true, the count of results will be returned
 	Count bool
 
 	// The VARIABLE that will be requested
-	Collection byte
+	Variable RuleVariable
 
 	// The key for the variable that is going to be requested
 	Key string
 
 	// If not nil, a regex will be used instead of a key
-	Regex *regex.Regexp //for performance
+	Regex *regexp.Regexp //for performance
 
 	// A slice of key exceptions
 	Exceptions []string
+}
+
+type RuleTransformationParams struct {
+	// The transformation to be used, used for logging
+	Name string
+
+	// The transformation function to be used
+	Function RuleTransformation
 }
 
 // Rule is used to test a Transaction against certain operators
@@ -87,24 +114,24 @@ type RuleVariable struct {
 type Rule struct {
 	// Contains a list of variables that will be compiled
 	// by a transaction
-	Variables []RuleVariable
+	Variables []RuleVariableParams
 
 	// Contains a pointer to the Operator struct used
 	// SecActions and SecMark can have nil Operators
-	Operator *RuleOperator
+	Operator *RuleOperatorParams
 
 	// List of transformations to be evaluated
 	// In the future, transformations might be run by the
 	// action itself
-	Transformations []transformations.Transformation
+	Transformations []RuleTransformationParams
+
+	// Slice of initialized actions to be evaluated during
+	// the rule evaluation process
+	Actions []RuleActionParams
 
 	// Contains the Id of the parent rule if you are inside
 	// a chain. Otherwise it will be 0
 	ParentId int
-
-	// Slice of initialized actions to be evaluated during
-	// the rule evaluation process
-	Actions []RuleAction
 
 	// Used to mark a rule as a secmarker and alter flows
 	SecMark string
@@ -115,13 +142,6 @@ type Rule struct {
 	// Contains the child rule to chain, nil if there are no chains
 	Chain *Rule
 
-	// Used by the chain action to indicate if the next rule is chained
-	// to this one, it's only used for compilation
-	HasChain bool
-
-	// If true, this rule will always match and won't run it's operator
-	AlwaysMatch bool
-
 	// Where is this rule stored
 	File string
 
@@ -129,14 +149,14 @@ type Rule struct {
 	Line int
 
 	//METADATA
-	// Rule unique sorted identifier
+	// Rule unique identifier, can be a an int
 	Id int
 
 	// Rule tag list
 	Tags []string
 
 	// Rule execution phase 1-5
-	Phase Phase
+	Phase RulePhase
 
 	// Message text to be macro expanded and logged
 	Msg string
@@ -166,6 +186,10 @@ type Rule struct {
 
 	// If true, the transformations will be multimatched
 	MultiMatch bool
+
+	// If true, the rule will always match
+	// The difference with a nil Operator is that this one will match the variables
+	AlwaysMatch bool
 }
 
 // Evaluate will evaluate the current rule for the indicated transaction
@@ -178,12 +202,6 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		zap.String("event", "EVALUATE_RULE"),
 	)
 	matchedValues := []MatchData{}
-	for _, nid := range tx.RuleRemoveById {
-		if nid == r.Id {
-			//This rules will be skipped
-			return matchedValues
-		}
-	}
 	tx.GetCollection(VARIABLE_RULE).SetData(map[string][]string{
 		"id":       {strconv.Itoa(r.Id)},
 		"msg":      {r.Msg},
@@ -192,31 +210,17 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		"severity": {strconv.Itoa(r.Severity)},
 	})
 	// secmarkers and secactions will always match
-	if r.Operator == nil {
-		tx.Waf.Logger.Debug("Forcing rule match", zap.String("txid", tx.Id),
-			zap.Int("rule", r.Id),
-			zap.String("event", "RULE_FORCE_MATCH"),
-		)
-		matchedValues = []MatchData{
-			{
-				Collection: "none",
-				Key:        "",
-				Value:      "",
-			},
-		}
-	}
-	tools := &transformations.Tools{
-		Unicode: tx.Waf.Unicode,
-		Logger:  tx.Waf.Logger,
+	tools := RuleTransformationTools{
+		Logger: tx.Waf.Logger,
 	}
 
-	ecol := tx.RuleRemoveTargetById[r.Id]
+	ecol := tx.ruleRemoveTargetById[r.Id]
 	for _, v := range r.Variables {
 		var values []MatchData
 		exceptions := make([]string, len(v.Exceptions))
 		copy(exceptions, v.Exceptions)
 		for _, c := range ecol {
-			if c.Collection == v.Collection {
+			if c.Variable == v.Variable {
 				exceptions = append(exceptions, c.Key)
 			}
 		}
@@ -228,11 +232,11 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 				values = tx.GetField(v, exceptions)
 				l = len(values)
 			} else {
-				l = len(tx.GetCollection(v.Collection).Data())
+				l = len(tx.GetCollection(v.Variable).Data())
 			}
 			values = []MatchData{
 				{
-					Collection: VariableToName(v.Collection),
+					Collection: v.Name,
 					Key:        v.Key,
 					Value:      strconv.Itoa(l),
 				},
@@ -242,8 +246,11 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		}
 
 		if r.AlwaysMatch {
+			//TODO is it ok? or we must not match every var
 			matchedValues = append(matchedValues, MatchData{
-				// TODO add something here?
+				Collection: v.Name,
+				Key:        v.Key,
+				Value:      "",
 			})
 			continue
 		}
@@ -293,6 +300,21 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		}
 	}
 
+	if r.Operator == nil {
+		tx.Waf.Logger.Debug("Forcing rule match", zap.String("txid", tx.Id),
+			zap.Int("rule", r.Id),
+			zap.String("event", "RULE_FORCE_MATCH"),
+		)
+		// TODO Append or match?
+		matchedValues = []MatchData{
+			{
+				Collection: "Always Match",
+				Key:        "",
+				Value:      "",
+			},
+		}
+	}
+
 	if len(matchedValues) == 0 {
 		//No match for variables
 		return matchedValues
@@ -303,8 +325,8 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 
 	// We run non disruptive actions even if there is no chain match
 	for _, a := range r.Actions {
-		if a.Type() == ACTION_TYPE_NONDISRUPTIVE {
-			a.Evaluate(r, tx)
+		if a.Function.Type() == ActionTypeNondisruptive {
+			a.Function.Evaluate(r, tx)
 		}
 	}
 
@@ -334,9 +356,9 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		//we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
 		tx.Waf.Logger.Debug("detecting rule disruptive action", zap.String("txid", tx.Id), zap.Int("rule", r.Id))
 		for _, a := range r.Actions {
-			if a.Type() == ACTION_TYPE_DISRUPTIVE || a.Type() == ACTION_TYPE_FLOW {
+			if a.Function.Type() == ActionTypeDisruptive || a.Function.Type() == ActionTypeFlow {
 				tx.Waf.Logger.Debug("evaluating rule disruptive action", zap.String("txid", tx.Id), zap.Int("rule", r.Id))
-				a.Evaluate(r, tx)
+				a.Function.Evaluate(r, tx)
 			}
 		}
 	}
@@ -359,18 +381,18 @@ func (r *Rule) executeOperator(data string, tx *Transaction) bool {
 	return result
 }
 
-func (r *Rule) executeTransformationsMultimatch(value string, tools *transformations.Tools) []string {
+func (r *Rule) executeTransformationsMultimatch(value string, tools RuleTransformationTools) []string {
 	res := []string{value}
 	for _, t := range r.Transformations {
-		value = t(value, tools)
+		value = t.Function(value, tools)
 		res = append(res, value)
 	}
 	return res
 }
 
-func (r *Rule) executeTransformations(value string, tools *transformations.Tools) string {
+func (r *Rule) executeTransformations(value string, tools RuleTransformationTools) string {
 	for _, t := range r.Transformations {
-		value = t(value, tools)
+		value = t.Function(value, tools)
 	}
 	return value
 }
@@ -381,4 +403,21 @@ func NewRule() *Rule {
 		Phase: 2,
 		Tags:  []string{},
 	}
+}
+
+// ParseRulePhase parses the phase of the rule from a to 5
+// or request:2, response:4, logging:5
+// if the phase is invalid it will return an error
+func ParseRulePhase(phase string) (RulePhase, error) {
+	i, err := strconv.Atoi(phase)
+	if phase == "request" {
+		i = 2
+	} else if phase == "response" {
+		i = 4
+	} else if phase == "logging" {
+		i = 5
+	} else if err != nil || i > 5 || i < 1 {
+		return 0, fmt.Errorf("invalid phase %s", phase)
+	}
+	return RulePhase(i), nil
 }

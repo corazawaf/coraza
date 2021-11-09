@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jptosso/coraza-waf"
-	"github.com/jptosso/coraza-waf/utils"
+	"github.com/jptosso/coraza-waf/v2"
+	utils "github.com/jptosso/coraza-waf/v2/utils"
 )
 
 func TestRuleMatch(t *testing.T) {

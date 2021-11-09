@@ -15,27 +15,36 @@
 package actions
 
 import (
-	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
-type Drop struct{}
+type dropFn struct{}
 
-func (a *Drop) Init(r *engine.Rule, data string) error {
+func (a *dropFn) Init(r *coraza.Rule, data string) error {
 	return nil
 }
 
-func (a *Drop) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *dropFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	rid := r.Id
 	if rid == 0 {
 		rid = r.ParentId
 	}
-	tx.Interruption = &engine.Interruption{
+	tx.Interruption = &coraza.Interruption{
 		Status: 403,
 		RuleId: rid,
 		Action: "drop",
 	}
 }
 
-func (a *Drop) Type() int {
-	return engine.ACTION_TYPE_DISRUPTIVE
+func (a *dropFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeDisruptive
 }
+
+func drop() coraza.RuleAction {
+	return &dropFn{}
+}
+
+var (
+	_ coraza.RuleAction = &dropFn{}
+	_ RuleActionWrapper = drop
+)

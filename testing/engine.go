@@ -21,7 +21,7 @@ import (
 	"reflect"
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf"
+	engine "github.com/jptosso/coraza-waf/v2"
 )
 
 // Start will begin the test stage

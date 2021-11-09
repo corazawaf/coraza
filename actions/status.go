@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strconv"
 
-	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
 var HTTP_STATUSES = []int{100, 101, 102, 103, 200,
@@ -34,7 +34,7 @@ type Status struct {
 	status int
 }
 
-func (a *Status) Init(r *engine.Rule, b1 string) error {
+func (a *Status) Init(r *coraza.Rule, b1 string) error {
 	status, _ := strconv.Atoi(b1)
 	for _, s := range HTTP_STATUSES {
 		if status == s {
@@ -45,10 +45,10 @@ func (a *Status) Init(r *engine.Rule, b1 string) error {
 	return fmt.Errorf("invalid http status")
 }
 
-func (a *Status) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *Status) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	tx.Status = a.status
 }
 
-func (a *Status) Type() int {
-	return engine.ACTION_TYPE_DATA
+func (a *Status) Type() coraza.RuleActionType {
+	return coraza.ActionTypeData
 }

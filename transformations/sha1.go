@@ -17,9 +17,11 @@ package transformations
 import (
 	"crypto/sha1"
 	"io"
+
+	"github.com/jptosso/coraza-waf/v2"
 )
 
-func Sha1(data string, utils *Tools) string {
+func Sha1(data string, utils coraza.RuleTransformationTools) string {
 	h := sha1.New()
 	_, err := io.WriteString(h, data)
 	if err != nil {

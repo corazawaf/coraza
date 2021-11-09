@@ -15,20 +15,20 @@
 package actions
 
 import (
-	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/v2"
 	"go.uber.org/zap"
 )
 
-type Append struct {
+type appendFn struct {
 	data string
 }
 
-func (a *Append) Init(r *engine.Rule, data string) error {
+func (a *appendFn) Init(r *coraza.Rule, data string) error {
 	a.data = data
 	return nil
 }
 
-func (a *Append) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *appendFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	if !tx.Waf.ContentInjection {
 		tx.Waf.Logger.Debug("append rejected because of ContentInjection")
 		return
@@ -39,6 +39,15 @@ func (a *Append) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	}
 }
 
-func (a *Append) Type() int {
-	return engine.ACTION_TYPE_NONDISRUPTIVE
+func (a *appendFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeNondisruptive
 }
+
+func append() coraza.RuleAction {
+	return &appendFn{}
+}
+
+var (
+	_ coraza.RuleAction = &appendFn{}
+	_ RuleActionWrapper = append
+)

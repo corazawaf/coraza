@@ -18,25 +18,43 @@ import (
 	"fmt"
 	"strconv"
 
-	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
-type Id struct {
+type idFn struct {
 }
 
-func (a *Id) Init(r *engine.Rule, data string) error {
+func (a *idFn) Init(r *coraza.Rule, data string) error {
+	if data == "" {
+		return fmt.Errorf("id action requires a parameter")
+	}
 	i, err := strconv.Atoi(data)
 	if err != nil {
 		return fmt.Errorf("invalid rule id %s", data)
 	}
 	r.Id = int(i)
+	if r.Id < 0 {
+		return fmt.Errorf("rule id (%d) cannot be negative", r.Id)
+	}
+	if r.Id == 0 {
+		return fmt.Errorf("rule id (%d) cannot be zero", r.Id)
+	}
 	return nil
 }
 
-func (a *Id) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *idFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not evaluated
 }
 
-func (a *Id) Type() int {
-	return engine.ACTION_TYPE_METADATA
+func (a *idFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeMetadata
 }
+
+func id() coraza.RuleAction {
+	return &idFn{}
+}
+
+var (
+	_ coraza.RuleAction = &idFn{}
+	_ RuleActionWrapper = id
+)

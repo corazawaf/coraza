@@ -18,27 +18,38 @@ import (
 	"fmt"
 	"strconv"
 
-	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
-//NOT IMPLEMENTED
-type Skip struct {
+type skipFn struct {
 	data int
 }
 
-func (a *Skip) Init(r *engine.Rule, data string) error {
+func (a *skipFn) Init(r *coraza.Rule, data string) error {
 	i, err := strconv.Atoi(data)
 	if err != nil {
-		return fmt.Errorf("invalid integer value")
+		return fmt.Errorf("invalid value for skip")
+	}
+	if i < 1 {
+		return fmt.Errorf("skip cannot be less than 1, got %d", i)
 	}
 	a.data = i
 	return nil
 }
 
-func (a *Skip) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *skipFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	tx.Skip = a.data
 }
 
-func (a *Skip) Type() int {
-	return engine.ACTION_TYPE_FLOW
+func (a *skipFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeFlow
 }
+
+func skip() coraza.RuleAction {
+	return &skipFn{}
+}
+
+var (
+	_ coraza.RuleAction = &skipFn{}
+	_ RuleActionWrapper = skip
+)

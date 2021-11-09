@@ -22,8 +22,8 @@ import (
 	"regexp"
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf"
-	"github.com/jptosso/coraza-waf/utils"
+	engine "github.com/jptosso/coraza-waf/v2"
+	utils "github.com/jptosso/coraza-waf/v2/utils"
 	"go.uber.org/zap"
 )
 
@@ -249,12 +249,12 @@ func (p *Parser) ParseRule(data string, withOperator bool) (*engine.Rule, error)
 		}
 
 		lastchain.Chain = rule
-		if rule.HasChain {
+		if rule.Chain != nil {
 			p.nextChain = true
 		}
 		return nil, nil
 	}
-	if rule.HasChain {
+	if rule.Chain != nil {
 		p.nextChain = true
 	}
 	p.lastRule = rule

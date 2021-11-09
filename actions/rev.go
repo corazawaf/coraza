@@ -14,20 +14,31 @@
 
 package actions
 
-import engine "github.com/jptosso/coraza-waf"
+import (
+	"github.com/jptosso/coraza-waf/v2"
+)
 
-type Rev struct {
+type revFn struct {
 }
 
-func (a *Rev) Init(r *engine.Rule, data string) error {
+func (a *revFn) Init(r *coraza.Rule, data string) error {
 	r.Rev = data
 	return nil
 }
 
-func (a *Rev) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *revFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not evaluated
 }
 
-func (a *Rev) Type() int {
-	return engine.ACTION_TYPE_METADATA
+func (a *revFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeMetadata
 }
+
+func rev() coraza.RuleAction {
+	return &revFn{}
+}
+
+var (
+	_ coraza.RuleAction = &revFn{}
+	_ RuleActionWrapper = rev
+)

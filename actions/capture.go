@@ -14,19 +14,29 @@
 
 package actions
 
-import engine "github.com/jptosso/coraza-waf"
+import (
+	"github.com/jptosso/coraza-waf/v2"
+)
 
-type Capture struct{}
+type captureFn struct{}
 
-func (a *Capture) Init(r *engine.Rule, b1 string) error {
-	//r.Capture = true
+func (a *captureFn) Init(r *coraza.Rule, b1 string) error {
 	return nil
 }
 
-func (a *Capture) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *captureFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	tx.Capture = true
 }
 
-func (a *Capture) Type() int {
-	return engine.ACTION_TYPE_NONDISRUPTIVE
+func (a *captureFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeNondisruptive
 }
+
+func capture() coraza.RuleAction {
+	return &captureFn{}
+}
+
+var (
+	_ coraza.RuleAction = &captureFn{}
+	_ RuleActionWrapper = capture
+)

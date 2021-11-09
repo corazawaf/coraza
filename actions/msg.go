@@ -15,22 +15,31 @@
 package actions
 
 import (
-	engine "github.com/jptosso/coraza-waf"
-	"github.com/jptosso/coraza-waf/utils"
+	"github.com/jptosso/coraza-waf/v2"
+	utils "github.com/jptosso/coraza-waf/v2/utils"
 )
 
-type Msg struct {
+type msgFn struct {
 }
 
-func (a *Msg) Init(r *engine.Rule, data string) error {
+func (a *msgFn) Init(r *coraza.Rule, data string) error {
 	r.Msg = utils.RemoveQuotes(data)
 	return nil
 }
 
-func (a *Msg) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *msgFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not evaluated
 }
 
-func (a *Msg) Type() int {
-	return engine.ACTION_TYPE_METADATA
+func (a *msgFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeMetadata
 }
+
+func msg() coraza.RuleAction {
+	return &msgFn{}
+}
+
+var (
+	_ coraza.RuleAction = &msgFn{}
+	_ RuleActionWrapper = msg
+)

@@ -5,14 +5,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jptosso/coraza-waf"
-	"github.com/jptosso/coraza-waf/plugins"
-	"github.com/jptosso/coraza-waf/transformations"
+	"github.com/jptosso/coraza-waf/v2"
+	plugins "github.com/jptosso/coraza-waf/v2/plugins"
+	transformations "github.com/jptosso/coraza-waf/v2/transformations"
 )
 
 func init() {
 	plugins.RegisterTransformation("testToLower", transformationToLowercase)
-	plugins.RegisterOperator("even", func() coraza.Operator {
+	plugins.RegisterOperator("even", func() coraza.RuleOperator {
 		return &opEven{}
 	})
 	plugins.RegisterAction("id15", func() coraza.RuleAction {
@@ -22,7 +22,7 @@ func init() {
 
 // Test transformation, string to lowercase
 
-func transformationToLowercase(input string, _ *transformations.Tools) string {
+func transformationToLowercase(input string, _ *transformations.TransformationTools) string {
 	return strings.ToLower(input)
 }
 
@@ -37,8 +37,8 @@ func (id15) Init(rule *coraza.Rule, _ string) error {
 
 func (id15) Evaluate(_ *coraza.Rule, _ *coraza.Transaction) {}
 
-func (id15) Type() int {
-	return coraza.ACTION_TYPE_DATA
+func (id15) Type() coraza.RuleActionType {
+	return coraza.ActionTypeData
 }
 
 // Test operator, match if number is even
@@ -56,9 +56,9 @@ func (opEven) Evaluate(_ *coraza.Transaction, input string) bool {
 
 // Tripwires
 
-var _ transformations.Transformation = transformationToLowercase
+var _ transformations.RuleTransformation = transformationToLowercase
 var _ coraza.RuleAction = &id15{}
-var _ coraza.Operator = &opEven{}
+var _ coraza.RuleOperator = &opEven{}
 
 func TestPlugins(t *testing.T) {
 	waf := coraza.NewWaf()

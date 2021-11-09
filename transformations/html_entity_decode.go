@@ -15,9 +15,10 @@
 package transformations
 
 import (
+	"github.com/jptosso/coraza-waf/v2"
 	"golang.org/x/net/html"
 )
 
-func HtmlEntityDecode(data string, utils *Tools) string {
+func HtmlEntityDecode(data string, utils coraza.RuleTransformationTools) string {
 	return html.UnescapeString(data)
 }

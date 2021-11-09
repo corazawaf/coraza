@@ -15,10 +15,11 @@
 package transformations
 
 import (
-	"github.com/jptosso/coraza-waf/utils"
+	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/utils"
 )
 
-func UrlDecode(data string, utils *Tools) string {
+func UrlDecode(data string, utils coraza.RuleTransformationTools) string {
 	res, _, _ := doUrlDecode(data)
 	return res
 }

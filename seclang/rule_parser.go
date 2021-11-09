@@ -19,21 +19,21 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/jptosso/coraza-waf"
-	actionsmod "github.com/jptosso/coraza-waf/actions"
-	"github.com/jptosso/coraza-waf/operators"
-	"github.com/jptosso/coraza-waf/plugins"
-	"github.com/jptosso/coraza-waf/utils"
-	regex "github.com/jptosso/coraza-waf/utils/regex"
+	"github.com/jptosso/coraza-waf/v2"
+	actionsmod "github.com/jptosso/coraza-waf/v2/actions"
+	operators "github.com/jptosso/coraza-waf/v2/operators"
+	plugins "github.com/jptosso/coraza-waf/v2/plugins"
+	utils "github.com/jptosso/coraza-waf/v2/utils"
 )
 
 type ruleAction struct {
 	Key   string
 	Value string
-	Atype int
+	Atype coraza.RuleActionType
 	F     coraza.RuleAction
 }
 
@@ -41,7 +41,7 @@ type RuleParser struct {
 	parser         *Parser
 	rule           *coraza.Rule
 	Configdir      string
-	defaultActions map[coraza.Phase][]ruleAction
+	defaultActions map[coraza.RulePhase][]ruleAction
 }
 
 func (p *RuleParser) ParseVariables(vars string) error {
@@ -72,7 +72,7 @@ func (p *RuleParser) ParseVariables(vars string) error {
 					curkey = append(curkey, c)
 				}
 			}
-			v, err := coraza.NameToVariable(string(curvar))
+			v, err := coraza.ParseRuleVariable(string(curvar))
 			if err != nil {
 				return err
 			}
@@ -153,11 +153,11 @@ func (p *RuleParser) ParseVariables(vars string) error {
 	return nil
 }
 
-func (p *RuleParser) AddVariable(count bool, negation bool, collection byte, key string, regexkey bool) error {
+func (p *RuleParser) AddVariable(count bool, negation bool, collection coraza.RuleVariable, key string, regexkey bool) error {
 	r := p.rule
 	if negation {
 		for i, vr := range r.Variables {
-			if vr.Collection == collection {
+			if vr.Variable == collection {
 				vr.Exceptions = append(vr.Exceptions, key)
 				r.Variables[i] = vr
 				return nil
@@ -166,27 +166,27 @@ func (p *RuleParser) AddVariable(count bool, negation bool, collection byte, key
 		//TODO check if we can add something here
 		panic(fmt.Errorf("cannot negate a variable that haven't been created"))
 	}
-	var rv coraza.RuleVariable
+	var rv coraza.RuleVariableParams
 	if len(key) > 0 && regexkey {
 		// REGEX EXPRESSION
-		var re regex.Regexp
+		var re *regexp.Regexp
 		var err error
-		re, err = regex.Compile(key, 0)
+		re, err = regexp.Compile(key)
 		if err != nil {
 			return err
 		}
-		rv = coraza.RuleVariable{
+		rv = coraza.RuleVariableParams{
 			Count:      count,
-			Collection: collection,
+			Variable:   collection,
 			Key:        key,
-			Regex:      &re,
+			Regex:      re,
 			Exceptions: []string{},
 		}
 		r.Variables = append(r.Variables, rv)
 	} else {
-		rv = coraza.RuleVariable{
+		rv = coraza.RuleVariableParams{
 			Count:      count,
-			Collection: collection,
+			Variable:   collection,
 			Key:        strings.ToLower(key), //TODO to lower?
 			Regex:      nil,
 			Exceptions: []string{},
@@ -206,7 +206,7 @@ func (p *RuleParser) ParseOperator(operator string) error {
 	}
 	spl := strings.SplitN(operator, " ", 2)
 	op := spl[0]
-	p.rule.Operator = new(coraza.RuleOperator)
+	p.rule.Operator = new(coraza.RuleOperatorParams)
 
 	if op[0] == '!' {
 		p.rule.Operator.Negation = true
@@ -265,7 +265,7 @@ func (p *RuleParser) ParseDefaultActions(actions string) error {
 			}
 			continue
 		}
-		if action.Atype == coraza.ACTION_TYPE_DISRUPTIVE {
+		if action.Atype == coraza.ActionTypeDisruptive {
 			defaultDisruptive = action.Key
 		}
 	}
@@ -275,7 +275,7 @@ func (p *RuleParser) ParseDefaultActions(actions string) error {
 	if defaultDisruptive == "" {
 		return errors.New("SecDefaultAction must contain a disruptive action: " + actions)
 	}
-	p.defaultActions[coraza.Phase(phase)] = act
+	p.defaultActions[coraza.RulePhase(phase)] = act
 	return nil
 }
 
@@ -293,7 +293,7 @@ func (p *RuleParser) ParseActions(actions string) error {
 	}
 	//first we execute metadata rules
 	for _, a := range act {
-		if a.Atype == coraza.ACTION_TYPE_METADATA {
+		if a.Atype == coraza.ActionTypeMetadata {
 			errs := a.F.Init(p.rule, a.Value)
 			if errs != nil {
 				return errs
@@ -313,7 +313,10 @@ func (p *RuleParser) ParseActions(actions string) error {
 		if errs != nil {
 			return errs
 		}
-		p.rule.Actions = append(p.rule.Actions, action.F)
+		p.rule.Actions = append(p.rule.Actions, coraza.RuleActionParams{
+			Function: action.F,
+			Name:     action.Key,
+		})
 	}
 	return nil
 }
@@ -328,7 +331,7 @@ func (p *RuleParser) Rule() *coraza.Rule {
 func NewRuleParser(p *Parser) *RuleParser {
 	rp := &RuleParser{
 		rule:           coraza.NewRule(),
-		defaultActions: map[coraza.Phase][]ruleAction{},
+		defaultActions: map[coraza.RulePhase][]ruleAction{},
 		parser:         p,
 	}
 	return rp
@@ -439,18 +442,18 @@ func MergeActions(origin []ruleAction, defaults []ruleAction) []ruleAction {
 	res := []ruleAction{}
 	var da ruleAction //Disruptive action
 	for _, action := range defaults {
-		if action.Atype == coraza.ACTION_TYPE_DISRUPTIVE {
+		if action.Atype == coraza.ActionTypeDisruptive {
 			da = action
 			continue
 		}
-		if action.Atype == coraza.ACTION_TYPE_METADATA {
+		if action.Atype == coraza.ActionTypeMetadata {
 			continue
 		}
 		res = append(res, action)
 	}
 	hasDa := false
 	for _, action := range origin {
-		if action.Atype == coraza.ACTION_TYPE_DISRUPTIVE {
+		if action.Atype == coraza.ActionTypeDisruptive {
 			if action.Key != "block" {
 				hasDa = true
 				// We add the default rule DA in case this is no block

@@ -15,25 +15,33 @@
 package actions
 
 import (
-	"github.com/jptosso/coraza-waf"
-	"github.com/jptosso/coraza-waf/utils"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
-type Phase struct{}
+type phaseFn struct{}
 
-func (a *Phase) Init(r *coraza.Rule, data string) error {
-	p, err := utils.PhaseToInt(data)
+func (a *phaseFn) Init(r *coraza.Rule, data string) error {
+	p, err := coraza.ParseRulePhase(data)
 	if err != nil {
 		return err
 	}
-	r.Phase = coraza.Phase(p)
+	r.Phase = p
 	return nil
 }
 
-func (a *Phase) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *phaseFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not evaluated
 }
 
-func (a *Phase) Type() int {
-	return coraza.ACTION_TYPE_METADATA
+func (a *phaseFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeMetadata
 }
+
+func phase() coraza.RuleAction {
+	return &phaseFn{}
+}
+
+var (
+	_ coraza.RuleAction = &phaseFn{}
+	_ RuleActionWrapper = phase
+)

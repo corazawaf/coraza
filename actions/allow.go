@@ -17,15 +17,15 @@ package actions
 import (
 	"fmt"
 
-	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
 //0 nothing, 1 phase, 2 request
-type Allow struct {
+type allowFn struct {
 	allow int
 }
 
-func (a *Allow) Init(r *engine.Rule, b1 string) error {
+func (a *allowFn) Init(r *coraza.Rule, b1 string) error {
 	if b1 == "phase" {
 		a.allow = 2 //skip current phase
 	} else if b1 == "request" {
@@ -38,10 +38,10 @@ func (a *Allow) Init(r *engine.Rule, b1 string) error {
 	return nil
 }
 
-func (a *Allow) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *allowFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	//TODO implement this:
 	if a.allow == 1 {
-		tx.RuleEngine = engine.RULE_ENGINE_OFF
+		tx.RuleEngine = coraza.RULE_ENGINE_OFF
 	} else if a.allow == 2 {
 		//tx.SkipToPhase = tx.LastPhase +1
 	} else if a.allow == 3 && tx.LastPhase < 3 {
@@ -49,6 +49,15 @@ func (a *Allow) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	}
 }
 
-func (a *Allow) Type() int {
-	return engine.ACTION_TYPE_DISRUPTIVE
+func (a *allowFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeDisruptive
 }
+
+func allow() coraza.RuleAction {
+	return &allowFn{}
+}
+
+var (
+	_ coraza.RuleAction = &allowFn{}
+	_ RuleActionWrapper = allow
+)

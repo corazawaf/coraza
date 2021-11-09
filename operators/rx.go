@@ -15,30 +15,36 @@
 package operators
 
 import (
-	engine "github.com/jptosso/coraza-waf"
-	regex "github.com/jptosso/coraza-waf/utils/regex"
+	"regexp"
+
+	engine "github.com/jptosso/coraza-waf/v2"
 )
 
 type Rx struct {
-	re regex.Regexp
+	re *regexp.Regexp
 }
 
 func (o *Rx) Init(data string) error {
-	re, err := regex.Compile(data, 0)
+	re, err := regexp.Compile(data)
 	o.re = re
 	return err
 }
 
 func (o *Rx) Evaluate(tx *engine.Transaction, value string) bool {
-	m := o.re.MatcherString(value, 0)
-	for i := 0; i < m.Groups()+1; i++ {
-		if i == 10 {
+	// iterate over re if it matches value
+
+	match := o.re.FindAllString(value, -1)
+	if len(match) > 0 {
+		tx.CaptureField(0, value)
+	}
+	for i, m := range match {
+		if i == 9 {
 			return true
 		}
 		//I actually think everything should be capturable, there is no need for the capture action...
 		//if tx.IsCapturable() {
-		tx.CaptureField(i, m.GroupString(i))
+		tx.CaptureField(i+1, m)
 		//}
 	}
-	return m.Matches()
+	return len(match) > 0
 }

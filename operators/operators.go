@@ -14,15 +14,13 @@
 
 package operators
 
-import engine "github.com/jptosso/coraza-waf"
+import engine "github.com/jptosso/coraza-waf/v2"
 
-func OperatorsMap() map[string]engine.Operator {
-	return map[string]engine.Operator{
+func OperatorsMap() map[string]engine.RuleOperator {
+	return map[string]engine.RuleOperator{
 		"beginsWith":           &BeginsWith{},
 		"rx":                   &Rx{},
 		"eq":                   &Eq{},
-		"detectSQLi":           &DetectSQLi{},
-		"detectXSS":            &DetectXSS{},
 		"contains":             &Contains{},
 		"endsWith":             &EndsWith{},
 		"inspectFile":          &InspectFile{},

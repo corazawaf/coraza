@@ -30,7 +30,7 @@ func JSONToMap(data string) (map[string]string, error) {
 func interfaceToMap(data map[string]interface{}) (map[string]string, error) {
 	result := make(map[string]string)
 	for key, value := range data {
-		switch value.(type) {
+		switch v := value.(type) {
 		case []interface{}:
 			m := map[string]interface{}{}
 			for i, v := range value.([]interface{}) {
@@ -63,7 +63,7 @@ func interfaceToMap(data map[string]interface{}) (map[string]string, error) {
 				result[key+"."+subkey] = subvalue
 			}
 		default:
-			return nil, fmt.Errorf("failed to unmarshall %s", value)
+			return nil, fmt.Errorf("failed to unmarshall %s", v)
 		}
 	}
 	return result, nil

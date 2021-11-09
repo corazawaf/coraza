@@ -17,14 +17,14 @@ package actions
 import (
 	"fmt"
 
-	engine "github.com/jptosso/coraza-waf"
-	"github.com/jptosso/coraza-waf/plugins"
-	"github.com/jptosso/coraza-waf/transformations"
+	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/plugins"
+	transformations "github.com/jptosso/coraza-waf/v2/transformations"
 )
 
 type T struct{}
 
-func (a *T) Init(r *engine.Rule, input string) error {
+func (a *T) Init(r *coraza.Rule, input string) error {
 	// TODO there is a chance that it won't work, it requires tests
 	if input == "none" {
 		//remove elements
@@ -36,20 +36,23 @@ func (a *T) Init(r *engine.Rule, input string) error {
 	if tt == nil {
 		//now we test from the plugins:
 		if result, ok := plugins.CustomTransformations.Load(input); ok {
-			tt = result.(transformations.Transformation)
+			tt = result.(transformations.RuleTransformation)
 		}
 	}
 	if tt == nil {
 		return fmt.Errorf("unsupported transformation %s", input)
 	}
-	r.Transformations = append(r.Transformations, tt)
+	r.Transformations = append(r.Transformations, coraza.RuleTransformationParams{
+		Function: tt,
+		Name:     input,
+	})
 	return nil
 }
 
-func (a *T) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *T) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not evaluated
 }
 
-func (a *T) Type() int {
-	return engine.ACTION_TYPE_NONDISRUPTIVE
+func (a *T) Type() coraza.RuleActionType {
+	return coraza.ActionTypeNondisruptive
 }

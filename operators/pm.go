@@ -18,7 +18,7 @@ import (
 	"strings"
 
 	ahocorasick "github.com/jptosso/aho-corasick"
-	engine "github.com/jptosso/coraza-waf"
+	engine "github.com/jptosso/coraza-waf/v2"
 )
 
 type Pm struct {

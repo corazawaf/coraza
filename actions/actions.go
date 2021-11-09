@@ -15,73 +15,58 @@
 package actions
 
 import (
-	engine "github.com/jptosso/coraza-waf"
+	"fmt"
+
+	"github.com/jptosso/coraza-waf/v2"
 )
 
-func ActionsMap() map[string]engine.RuleAction {
-	//TODO optimize this
-	return map[string]engine.RuleAction{
-		// #### Flow Actions ####
-		//Sets variables for the transaction and rule
-		"chain":     &Chain{},
-		"skip":      &Skip{},
-		"skipAfter": &SkipAfter{},
+type RuleActionWrapper = func() coraza.RuleAction
 
-		// #### Metadata Actions ####
-		//These variables goes to the rule object
-		//"accuracy": &Accurracy{},
-		"id":       &Id{},
-		"maturity": &Maturity{},
-		"msg":      &Msg{},
-		"phase":    &Phase{},
-		"rev":      &Rev{},
-		"severity": &Severity{},
-		"tag":      &Tag{},
-		"ver":      &Ver{},
+var actionmap = map[string]RuleActionWrapper{}
 
-		// #### Data actions ####
-		//These variables goes to the transaction
-		"status": &Status{},
-		//"xmlns": &Xmlns{},
+func RegisterRuleAction(name string, a RuleActionWrapper) {
+	actionmap[name] = a
+}
 
-		// #### Non Disruptive Actions ####
-		//Can update transaction but cannot affect the flow nor disrupt the request
-		"append":    &Append{},
-		"prepend":   &Prepend{},
-		"capture":   &Capture{},
-		"ctl":       &Ctl{},
-		"exec":      &Exec{},
-		"expirevar": &Expirevar{},
-		//"deprecateVar": &DeprecateVar{},
-		"initcol":    &InitCol{},
-		"log":        &Log{},
-		"auditlog":   &Auditlog{}, //Just an alias
-		"logdata":    &Logdata{},
-		"multiMatch": &MultiMatch{},
-		"nolog":      &Nolog{},
-		"noauditlog": &NoAuditlog{},
-		//"prepend": &Prepend{},
-		//"sanitiseArg": &SanitiseArg{},
-		//"sanitiseMatched": &SanitiseMatched{},
-		//"sanitiseMatchedBytes": &SanitiseMatchedBytes{},
-		//"sanitiseRequestHeader": &SanitiseRequestHeader{},
-		//"sanitiseResponseHeader": &SanitiseResponseHeader{},
-		//"setuid": &Setuid{},
-		//"setrsc": &Setrsc{},
-		//"setsid": &Setsid{},
-		"setenv": &SetEnv{},
-		"setvar": &Setvar{},
-		"t":      &T{},
+func init() {
+	RegisterRuleAction("allow", allow)
+	RegisterRuleAction("append", append)
+	RegisterRuleAction("auditlog", auditlog)
+	RegisterRuleAction("block", block)
+	RegisterRuleAction("capture", capture)
+	RegisterRuleAction("chain", chain)
+	RegisterRuleAction("ctl", ctl)
+	RegisterRuleAction("deny", deny)
+	RegisterRuleAction("drop", drop)
+	RegisterRuleAction("exec", exec)
+	RegisterRuleAction("expirevar", expirevar)
+	RegisterRuleAction("id", id)
+	RegisterRuleAction("initcol", initcol)
+	RegisterRuleAction("log", log)
+	RegisterRuleAction("logdata", logdata)
+	RegisterRuleAction("maturity", maturity)
+	RegisterRuleAction("msg", msg)
+	RegisterRuleAction("multiMatch", multimatch)
+	RegisterRuleAction("noauditlog", noauditlog)
+	RegisterRuleAction("nolog", nolog)
+	RegisterRuleAction("pass", pass)
+	RegisterRuleAction("phase", phase)
+	RegisterRuleAction("prepend", prepend)
+	RegisterRuleAction("rev", rev)
+	RegisterRuleAction("setenv", setenv)
+	RegisterRuleAction("setvar", setvar)
+	RegisterRuleAction("severity", severity)
+	RegisterRuleAction("skip", skip)
+	RegisterRuleAction("skipAfter", skipafter)
+	RegisterRuleAction("status", status)
+	RegisterRuleAction("t", t)
+	RegisterRuleAction("tag", tag)
+	RegisterRuleAction("ver", ver)
+}
 
-		// #### Disruptive Actions ####
-		// can manage the whole request and response process, doesnt run if SecRuleEngine is off or DetectionOnly is on
-		"allow": &Allow{},
-		"block": &Block{},
-		"deny":  &Deny{},
-		"drop":  &Drop{},
-		"pass":  &Pass{},
-		//"pause": &Pause{},
-		//"proxy": &Proxy{},
-		//"redirect": &Redirect{},
+func GetAction(name string) (coraza.RuleAction, error) {
+	if a, ok := actionmap[name]; ok {
+		return a(), nil
 	}
+	return nil, fmt.Errorf("invalid action %q", name)
 }

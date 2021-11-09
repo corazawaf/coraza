@@ -21,114 +21,105 @@ import (
 // This file repeats the same content many times in order to make access
 // efficient for seclang and transactions
 
-const VARIABLES_COUNT = 92
+type RuleVariable byte
+
+const ruleVariablesCount = 100 //TODO fix
 const (
-	// Single valua variables
-	VARIABLE_URLENCODED_ERROR                 = 0x00
-	VARIABLE_RESPONSE_CONTENT_TYPE            = 0x01
-	VARIABLE_UNIQUE_ID                        = 0x02
-	VARIABLE_ARGS_COMBINED_SIZE               = 0x03
-	VARIABLE_AUTH_TYPE                        = 0x04
-	VARIABLE_FILES_COMBINED_SIZE              = 0x05
-	VARIABLE_FULL_REQUEST                     = 0x06
-	VARIABLE_FULL_REQUEST_LENGTH              = 0x07
-	VARIABLE_INBOUND_DATA_ERROR               = 0x08
-	VARIABLE_MATCHED_VAR                      = 0x09
-	VARIABLE_MATCHED_VAR_NAME                 = 0x0A
-	VARIABLE_MULTIPART_BOUNDARY_QUOTED        = 0x0B
-	VARIABLE_MULTIPART_BOUNDARY_WHITESPACE    = 0x0C
-	VARIABLE_MULTIPART_CRLF_LF_LINES          = 0x0D
-	VARIABLE_MULTIPART_DATA_AFTER             = 0x0E
-	VARIABLE_MULTIPART_DATA_BEFORE            = 0x0F
-	VARIABLE_MULTIPART_FILE_LIMIT_EXCEEDED    = 0x10
-	VARIABLE_MULTIPART_HEADER_FOLDING         = 0x11
-	VARIABLE_MULTIPART_INVALID_HEADER_FOLDING = 0x12
-	VARIABLE_MULTIPART_INVALID_PART           = 0x13
-	VARIABLE_MULTIPART_INVALID_QUOTING        = 0x14
-	VARIABLE_MULTIPART_LF_LINE                = 0x15
-	VARIABLE_MULTIPART_MISSING_SEMICOLON      = 0x16
-	VARIABLE_MULTIPART_STRICT_ERROR           = 0x17
-	VARIABLE_MULTIPART_UNMATCHED_BOUNDARY     = 0x18
-	VARIABLE_OUTBOUND_DATA_ERROR              = 0x19
-	VARIABLE_PATH_INFO                        = 0x1A
-	VARIABLE_QUERY_STRING                     = 0x1B
-	VARIABLE_REMOTE_ADDR                      = 0x1C
-	VARIABLE_REMOTE_HOST                      = 0x1D
-	VARIABLE_REMOTE_PORT                      = 0x1E
-	VARIABLE_REQBODY_ERROR                    = 0x1F
-	VARIABLE_REQBODY_ERROR_MSG                = 0x20
-	VARIABLE_REQBODY_PROCESSOR_ERROR          = 0x21
-	VARIABLE_REQBODY_PROCESSOR_ERROR_MSG      = 0x22
-	VARIABLE_REQBODY_PROCESSOR                = 0x23
-	VARIABLE_REQUEST_BASENAME                 = 0x24
-	VARIABLE_REQUEST_BODY                     = 0x25
-	VARIABLE_REQUEST_BODY_LENGTH              = 0x26
-	VARIABLE_REQUEST_FILENAME                 = 0x27
-	VARIABLE_REQUEST_LINE                     = 0x28
-	VARIABLE_REQUEST_METHOD                   = 0x29
-	VARIABLE_REQUEST_PROTOCOL                 = 0x2A
-	VARIABLE_REQUEST_URI                      = 0x2B
-	VARIABLE_REQUEST_URI_RAW                  = 0x2C
-	VARIABLE_RESPONSE_BODY                    = 0x2D
-	VARIABLE_RESPONSE_CONTENT_LENGTH          = 0x2E
-	VARIABLE_RESPONSE_PROTOCOL                = 0x2F
-	VARIABLE_RESPONSE_STATUS                  = 0x30
-	VARIABLE_SERVER_ADDR                      = 0x31
-	VARIABLE_SERVER_NAME                      = 0x32
-	VARIABLE_SERVER_PORT                      = 0x33
-	VARIABLE_SESSIONID                        = 0x34
+	VARIABLE_URLENCODED_ERROR                 RuleVariable = RuleVariable(0)
+	VARIABLE_RESPONSE_CONTENT_TYPE            RuleVariable = RuleVariable(1)
+	VARIABLE_UNIQUE_ID                        RuleVariable = RuleVariable(2)
+	VARIABLE_ARGS_COMBINED_SIZE               RuleVariable = RuleVariable(3)
+	VARIABLE_AUTH_TYPE                        RuleVariable = RuleVariable(4)
+	VARIABLE_FILES_COMBINED_SIZE              RuleVariable = RuleVariable(5)
+	VARIABLE_FULL_REQUEST                     RuleVariable = RuleVariable(6)
+	VARIABLE_FULL_REQUEST_LENGTH              RuleVariable = RuleVariable(7)
+	VARIABLE_INBOUND_DATA_ERROR               RuleVariable = RuleVariable(8)
+	VARIABLE_MATCHED_VAR                      RuleVariable = RuleVariable(9)
+	VARIABLE_MATCHED_VAR_NAME                 RuleVariable = RuleVariable(10)
+	VARIABLE_MULTIPART_BOUNDARY_QUOTED        RuleVariable = RuleVariable(11)
+	VARIABLE_MULTIPART_BOUNDARY_WHITESPACE    RuleVariable = RuleVariable(12)
+	VARIABLE_MULTIPART_CRLF_LF_LINES          RuleVariable = RuleVariable(13)
+	VARIABLE_MULTIPART_DATA_AFTER             RuleVariable = RuleVariable(14)
+	VARIABLE_MULTIPART_DATA_BEFORE            RuleVariable = RuleVariable(15)
+	VARIABLE_MULTIPART_FILE_LIMIT_EXCEEDED    RuleVariable = RuleVariable(16)
+	VARIABLE_MULTIPART_HEADER_FOLDING         RuleVariable = RuleVariable(17)
+	VARIABLE_MULTIPART_INVALID_HEADER_FOLDING RuleVariable = RuleVariable(18)
+	VARIABLE_MULTIPART_INVALID_PART           RuleVariable = RuleVariable(19)
+	VARIABLE_MULTIPART_INVALID_QUOTING        RuleVariable = RuleVariable(20)
+	VARIABLE_MULTIPART_LF_LINE                RuleVariable = RuleVariable(21)
+	VARIABLE_MULTIPART_MISSING_SEMICOLON      RuleVariable = RuleVariable(22)
+	VARIABLE_MULTIPART_STRICT_ERROR           RuleVariable = RuleVariable(23)
+	VARIABLE_MULTIPART_UNMATCHED_BOUNDARY     RuleVariable = RuleVariable(24)
+	VARIABLE_OUTBOUND_DATA_ERROR              RuleVariable = RuleVariable(25)
+	VARIABLE_PATH_INFO                        RuleVariable = RuleVariable(26)
+	VARIABLE_QUERY_STRING                     RuleVariable = RuleVariable(27)
+	VARIABLE_REMOTE_ADDR                      RuleVariable = RuleVariable(28)
+	VARIABLE_REMOTE_HOST                      RuleVariable = RuleVariable(29)
+	VARIABLE_REMOTE_PORT                      RuleVariable = RuleVariable(30)
+	VARIABLE_REQBODY_ERROR                    RuleVariable = RuleVariable(31)
+	VARIABLE_REQBODY_ERROR_MSG                RuleVariable = RuleVariable(32)
+	VARIABLE_REQBODY_PROCESSOR_ERROR          RuleVariable = RuleVariable(33)
+	VARIABLE_REQBODY_PROCESSOR_ERROR_MSG      RuleVariable = RuleVariable(34)
+	VARIABLE_REQBODY_PROCESSOR                RuleVariable = RuleVariable(35)
+	VARIABLE_REQUEST_BASENAME                 RuleVariable = RuleVariable(36)
+	VARIABLE_REQUEST_BODY                     RuleVariable = RuleVariable(37)
+	VARIABLE_REQUEST_BODY_LENGTH              RuleVariable = RuleVariable(38)
+	VARIABLE_REQUEST_FILENAME                 RuleVariable = RuleVariable(39)
+	VARIABLE_REQUEST_LINE                     RuleVariable = RuleVariable(40)
+	VARIABLE_REQUEST_METHOD                   RuleVariable = RuleVariable(41)
+	VARIABLE_REQUEST_PROTOCOL                 RuleVariable = RuleVariable(42)
+	VARIABLE_REQUEST_URI                      RuleVariable = RuleVariable(43)
+	VARIABLE_REQUEST_URI_RAW                  RuleVariable = RuleVariable(44)
+	VARIABLE_RESPONSE_BODY                    RuleVariable = RuleVariable(45)
+	VARIABLE_RESPONSE_CONTENT_LENGTH          RuleVariable = RuleVariable(46)
+	VARIABLE_RESPONSE_PROTOCOL                RuleVariable = RuleVariable(47)
+	VARIABLE_RESPONSE_STATUS                  RuleVariable = RuleVariable(48)
+	VARIABLE_SERVER_ADDR                      RuleVariable = RuleVariable(49)
+	VARIABLE_SERVER_NAME                      RuleVariable = RuleVariable(50)
+	VARIABLE_SERVER_PORT                      RuleVariable = RuleVariable(51)
+	VARIABLE_SESSIONID                        RuleVariable = RuleVariable(52)
+	VARIABLE_HIGHEST_SEVERITY                 RuleVariable = RuleVariable(53)
+	VARIABLE_STATUS_LINE                      RuleVariable = RuleVariable(54)
+	VARIABLE_INBOUND_ERROR_DATA               RuleVariable = RuleVariable(55)
+	VARIABLE_DURATION                         RuleVariable = RuleVariable(56)
 
-	// Set Variables
-	VARIABLE_RESPONSE_HEADERS_NAMES = 0x35
-	VARIABLE_REQUEST_HEADERS_NAMES  = 0x36
-	VARIABLE_USERID                 = 0x37
-	VARIABLE_ARGS                   = 0x38
-	VARIABLE_ARGS_GET               = 0x39
-	VARIABLE_ARGS_POST              = 0x3A
-	VARIABLE_FILES_SIZES            = 0x3B
-	VARIABLE_FILES_NAMES            = 0x3C
-	VARIABLE_FILES_TMP_CONTENT      = 0x3D
-	VARIABLE_MULTIPART_FILENAME     = 0x3E
-	VARIABLE_MULTIPART_NAME         = 0x3F
-	VARIABLE_MATCHED_VARS_NAMES     = 0x40
-	VARIABLE_MATCHED_VARS           = 0x41
-	VARIABLE_FILES                  = 0x42
-	VARIABLE_REQUEST_COOKIES        = 0x43
-	VARIABLE_REQUEST_HEADERS        = 0x44
-	VARIABLE_RESPONSE_HEADERS       = 0x45
-	VARIABLE_GEO                    = 0x46
-	VARIABLE_REQUEST_COOKIES_NAMES  = 0x47
-	VARIABLE_FILES_TMPNAMES         = 0x48
-	VARIABLE_ARGS_NAMES             = 0x49
-	VARIABLE_ARGS_GET_NAMES         = 0x4A
-	VARIABLE_ARGS_POST_NAMES        = 0x4B
-	VARIABLE_TX                     = 0x4C
+	VARIABLE_RESPONSE_HEADERS_NAMES RuleVariable = RuleVariable(57)
+	VARIABLE_REQUEST_HEADERS_NAMES  RuleVariable = RuleVariable(58)
+	VARIABLE_USERID                 RuleVariable = RuleVariable(59)
+	VARIABLE_ARGS                   RuleVariable = RuleVariable(60)
+	VARIABLE_ARGS_GET               RuleVariable = RuleVariable(61)
+	VARIABLE_ARGS_POST              RuleVariable = RuleVariable(62)
+	VARIABLE_FILES_SIZES            RuleVariable = RuleVariable(63)
+	VARIABLE_FILES_NAMES            RuleVariable = RuleVariable(64)
+	VARIABLE_FILES_TMP_CONTENT      RuleVariable = RuleVariable(65)
+	VARIABLE_MULTIPART_FILENAME     RuleVariable = RuleVariable(66)
+	VARIABLE_MULTIPART_NAME         RuleVariable = RuleVariable(67)
+	VARIABLE_MATCHED_VARS_NAMES     RuleVariable = RuleVariable(68)
+	VARIABLE_MATCHED_VARS           RuleVariable = RuleVariable(69)
+	VARIABLE_FILES                  RuleVariable = RuleVariable(70)
+	VARIABLE_REQUEST_COOKIES        RuleVariable = RuleVariable(71)
+	VARIABLE_REQUEST_HEADERS        RuleVariable = RuleVariable(72)
+	VARIABLE_RESPONSE_HEADERS       RuleVariable = RuleVariable(73)
+	VARIABLE_GEO                    RuleVariable = RuleVariable(74)
+	VARIABLE_REQUEST_COOKIES_NAMES  RuleVariable = RuleVariable(75)
+	VARIABLE_FILES_TMPNAMES         RuleVariable = RuleVariable(76)
+	VARIABLE_ARGS_NAMES             RuleVariable = RuleVariable(77)
+	VARIABLE_ARGS_GET_NAMES         RuleVariable = RuleVariable(78)
+	VARIABLE_ARGS_POST_NAMES        RuleVariable = RuleVariable(79)
+	VARIABLE_TX                     RuleVariable = RuleVariable(80)
+	VARIABLE_RULE                   RuleVariable = RuleVariable(81)
+	VARIABLE_XML                    RuleVariable = RuleVariable(82)
+	VARIABLE_JSON                   RuleVariable = RuleVariable(83)
+	VARIABLE_ENV                    RuleVariable = RuleVariable(84)
 
-	// Persistent collections
-	VARIABLE_GLOBAL   = 0x4D
-	VARIABLE_IP       = 0x4E
-	VARIABLE_SESSION  = 0x4F
-	VARIABLE_USER     = 0x50
-	VARIABLE_RESOURCE = 0x51
-
-	VARIABLE_RULE               = 0x52 //TODO FIX
-	VARIABLE_XML                = 0x53 //TODO FIX
-	VARIABLE_JSON               = 0x54 //TODO FIX
-	VARIABLE_INBOUND_ERROR_DATA = 0x55 //TODO FIX
-	VARIABLE_DURATION           = 0x56 //TODO FIX
-
-	// deprecated: VARIABLE_URI_PARSE_ERROR
-	VARIABLE_URI_PARSE_ERROR = 0x57
-
-	VARIABLE_ENV              = 0x58 //TODO FIX
-	VARIABLE_HIGHEST_SEVERITY = 0x59 //TODO FIX
-	VARIABLE_STATUS_LINE      = 0x5A //TODO FIX
+	// Persisten storage kepy for compatibility
+	VARIABLE_IP RuleVariable = RuleVariable(85)
 )
 
-// NameToVariable returns the byte interpretation
+// ParseRuleVariable returns the byte interpretation
 // of a variable from a string
 // Returns error if there is no representation
-func NameToVariable(name string) (byte, error) {
+func ParseRuleVariable(name string) (RuleVariable, error) {
 	name = strings.ToUpper(name)
 	switch name {
 	case "URLENCODED_ERROR":
@@ -221,8 +212,6 @@ func NameToVariable(name string) (byte, error) {
 		return VARIABLE_REQUEST_URI, nil
 	case "REQUEST_URI_RAW":
 		return VARIABLE_REQUEST_URI_RAW, nil
-	case "RESOURCE":
-		return VARIABLE_RESOURCE, nil
 	case "RESPONSE_BODY":
 		return VARIABLE_RESPONSE_BODY, nil
 	case "RESPONSE_CONTENT_LENGTH":
@@ -285,14 +274,6 @@ func NameToVariable(name string) (byte, error) {
 		return VARIABLE_ARGS_GET_NAMES, nil
 	case "ARGS_POST_NAMES":
 		return VARIABLE_ARGS_POST_NAMES, nil
-	case "GLOBAL":
-		return VARIABLE_GLOBAL, nil
-	case "IP":
-		return VARIABLE_IP, nil
-	case "SESSION":
-		return VARIABLE_SESSION, nil
-	case "USER":
-		return VARIABLE_USER, nil
 	case "RULE":
 		return VARIABLE_RULE, nil
 	case "XML":
@@ -301,8 +282,6 @@ func NameToVariable(name string) (byte, error) {
 		return VARIABLE_TX, nil
 	case "DURATION":
 		return VARIABLE_DURATION, nil
-	case "URI_PARSE_ERROR":
-		return VARIABLE_URI_PARSE_ERROR, nil
 	case "JSON":
 		return VARIABLE_JSON, nil
 	case "ENV":
@@ -311,13 +290,15 @@ func NameToVariable(name string) (byte, error) {
 		return VARIABLE_HIGHEST_SEVERITY, nil
 	case "STATUS_LINE":
 		return VARIABLE_STATUS_LINE, nil
+	case "IP":
+		return VARIABLE_IP, nil
 	}
 	return 0, errors.New("Invalid variable " + name)
 }
 
-// VariableToName transforms a VARIABLE representation
+// Name transforms a VARIABLE representation
 // into a string, it's used for audit and logging
-func VariableToName(v byte) string {
+func (v RuleVariable) Name() string {
 	switch v {
 	case VARIABLE_URLENCODED_ERROR:
 		return "URLENCODED_ERROR"
@@ -409,8 +390,6 @@ func VariableToName(v byte) string {
 		return "REQUEST_URI"
 	case VARIABLE_REQUEST_URI_RAW:
 		return "REQUEST_URI_RAW"
-	case VARIABLE_RESOURCE:
-		return "RESOURCE"
 	case VARIABLE_RESPONSE_BODY:
 		return "RESPONSE_BODY"
 	case VARIABLE_RESPONSE_CONTENT_LENGTH:
@@ -475,20 +454,10 @@ func VariableToName(v byte) string {
 		return "ARGS_POST_NAMES"
 	case VARIABLE_TX:
 		return "TX"
-	case VARIABLE_GLOBAL:
-		return "GLOBAL"
-	case VARIABLE_IP:
-		return "IP"
-	case VARIABLE_SESSION:
-		return "SESSION"
-	case VARIABLE_USER:
-		return "USER"
 	case VARIABLE_DURATION:
 		return "DURATION"
 	case VARIABLE_RULE:
 		return "RULE"
-	case VARIABLE_URI_PARSE_ERROR:
-		return "URI_PARSE_ERROR"
 	case VARIABLE_JSON:
 		return "JSON"
 	case VARIABLE_XML:
@@ -499,6 +468,8 @@ func VariableToName(v byte) string {
 		return "HIGHEST_SEVERITY"
 	case VARIABLE_STATUS_LINE:
 		return "STATUS_LINE"
+	case VARIABLE_IP:
+		return "IP"
 	}
 	return ""
 }

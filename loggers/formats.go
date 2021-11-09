@@ -19,7 +19,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jptosso/coraza-waf/utils"
+	utils "github.com/jptosso/coraza-waf/v2/utils"
 )
 
 type formatter = func(al *AuditLog) (string, error)

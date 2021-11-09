@@ -14,19 +14,30 @@
 
 package actions
 
-import engine "github.com/jptosso/coraza-waf"
+import (
+	"github.com/jptosso/coraza-waf/v2"
+)
 
-type Chain struct{}
+type chainFn struct{}
 
-func (a *Chain) Init(r *engine.Rule, b1 string) error {
-	r.HasChain = true
+func (a *chainFn) Init(r *coraza.Rule, b1 string) error {
+	r.Chain = coraza.NewRule()
 	return nil
 }
 
-func (a *Chain) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *chainFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not evaluated
 }
 
-func (a *Chain) Type() int {
-	return engine.ACTION_TYPE_FLOW
+func (a *chainFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeFlow
 }
+
+func chain() coraza.RuleAction {
+	return &chainFn{}
+}
+
+var (
+	_ coraza.RuleAction = &chainFn{}
+	_ RuleActionWrapper = chain
+)

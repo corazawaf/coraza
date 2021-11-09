@@ -14,20 +14,31 @@
 
 package actions
 
-import engine "github.com/jptosso/coraza-waf"
+import (
+	"github.com/jptosso/coraza-waf/v2"
+)
 
-type Logdata struct {
+type logdataFn struct {
 }
 
-func (a *Logdata) Init(r *engine.Rule, data string) error {
+func (a *logdataFn) Init(r *coraza.Rule, data string) error {
 	r.LogData = data
 	return nil
 }
 
-func (a *Logdata) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *logdataFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	tx.Logdata = tx.MacroExpansion(r.LogData)
 }
 
-func (a *Logdata) Type() int {
-	return engine.ACTION_TYPE_NONDISRUPTIVE
+func (a *logdataFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeNondisruptive
 }
+
+func logdata() coraza.RuleAction {
+	return &logdataFn{}
+}
+
+var (
+	_ coraza.RuleAction = &logdataFn{}
+	_ RuleActionWrapper = logdata
+)

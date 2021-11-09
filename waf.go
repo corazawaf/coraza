@@ -19,29 +19,28 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/jptosso/coraza-waf/loggers"
-	"github.com/jptosso/coraza-waf/persistence"
-	"github.com/jptosso/coraza-waf/utils"
-	"github.com/jptosso/coraza-waf/utils/geoip"
-	regex "github.com/jptosso/coraza-waf/utils/regex"
+	loggers "github.com/jptosso/coraza-waf/v2/loggers"
+	utils "github.com/jptosso/coraza-waf/v2/utils"
+	"github.com/jptosso/coraza-waf/v2/utils/geoip"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-type Phase int
+type RulePhase int
 type EventSeverity int
 
 const (
-	PHASE_REQUEST_HEADERS  Phase = 1
-	PHASE_REQUEST_BODY     Phase = 2
-	PHASE_RESPONSE_HEADERS Phase = 3
-	PHASE_RESPONSE_BODY    Phase = 4
-	PHASE_LOGGING          Phase = 5
+	PHASE_REQUEST_HEADERS  RulePhase = 1
+	PHASE_REQUEST_BODY     RulePhase = 2
+	PHASE_RESPONSE_HEADERS RulePhase = 3
+	PHASE_RESPONSE_BODY    RulePhase = 4
+	PHASE_LOGGING          RulePhase = 5
 )
 
 const (
@@ -149,7 +148,7 @@ type Waf struct {
 	ComponentNames []string
 
 	// Contains the regular expression for relevant status audit logging
-	AuditLogRelevantStatus regex.Regexp
+	AuditLogRelevantStatus *regexp.Regexp
 
 	// Contains the GeoIP2 database reader object
 	GeoDb geoip.GeoDb
@@ -163,12 +162,6 @@ type Waf struct {
 	// This directory will be used to store page files
 	TmpDir string
 
-	// Provide acces to the persistence engine
-	//PersistenceEngine PersistenceEngine
-
-	// Persistence engine
-	Persistence persistence.Persistence
-
 	// Sensor ID tu, must be unique per cluster nodes
 	SensorId string
 
@@ -181,9 +174,6 @@ type Waf struct {
 	UploadDir               string
 	RequestBodyNoFilesLimit int64
 	CollectionTimeout       int
-
-	// Used to perform unicode mapping, required by t:utf8ToUnicode
-	Unicode *utils.Unicode
 
 	// Used by some functions to support concurrent tasks
 	mux *sync.RWMutex
@@ -209,8 +199,8 @@ func (w *Waf) NewTransaction() *Transaction {
 	w.mux.RLock()
 	defer w.mux.RUnlock()
 	tx := &Transaction{
-		Waf:                  w,
-		collections:          make([]*Collection, VARIABLES_COUNT),
+		Waf:                  *w,
+		collections:          make([]*Collection, ruleVariablesCount),
 		Id:                   utils.RandomString(19),
 		Timestamp:            time.Now().UnixNano(),
 		AuditEngine:          w.AuditEngine,
@@ -220,19 +210,14 @@ func (w *Waf) NewTransaction() *Transaction {
 		RequestBodyLimit:     134217728,
 		ResponseBodyAccess:   true,
 		ResponseBodyLimit:    524288,
-		RuleRemoveTargetById: map[int][]VariableKey{},
-		RuleRemoveById:       []int{},
-		StopWatches:          map[Phase]int{},
+		ruleRemoveTargetById: map[int][]RuleVariableParams{},
+		ruleRemoveById:       []int{},
+		StopWatches:          map[RulePhase]int{},
 		RequestBodyBuffer:    NewBodyReader(w.TmpDir, w.RequestBodyInMemoryLimit),
 		ResponseBodyBuffer:   NewBodyReader(w.TmpDir, w.RequestBodyInMemoryLimit),
 	}
 	for i := range tx.collections {
-		tx.collections[i] = NewCollection(VariableToName(byte(i)))
-	}
-
-	// we must initialize single variables
-	for i := 0x00; i <= VARIABLE_SESSIONID; i++ {
-		tx.GetCollection(byte(i)).Set("", []string{""})
+		tx.collections[i] = NewCollection(RuleVariable(i).Name())
 	}
 
 	// set capture variables
@@ -243,8 +228,7 @@ func (w *Waf) NewTransaction() *Transaction {
 	}
 
 	// Some defaults
-	defaults := map[byte]string{
-		VARIABLE_URI_PARSE_ERROR:                  "0",
+	defaults := map[RuleVariable]string{
 		VARIABLE_FILES_COMBINED_SIZE:              "0",
 		VARIABLE_URLENCODED_ERROR:                 "0",
 		VARIABLE_FULL_REQUEST_LENGTH:              "0",
@@ -348,6 +332,7 @@ func NewWaf() *Waf {
 		CollectionTimeout:        3600,
 		Logger:                   logger,
 		LoggerAtomicLevel:        atom,
+		AuditLogRelevantStatus:   regexp.MustCompile(`.*`),
 	}
 	logger.Debug("a new waf instance was created")
 	return waf

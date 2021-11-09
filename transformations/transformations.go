@@ -14,20 +14,10 @@
 
 package transformations
 
-import (
-	"github.com/jptosso/coraza-waf/utils"
-	"go.uber.org/zap"
-)
+import "github.com/jptosso/coraza-waf/v2"
 
-type Tools struct {
-	Unicode *utils.Unicode
-	Logger  *zap.Logger
-}
-
-type Transformation = func(input string, tools *Tools) string
-
-func TransformationsMap() map[string]Transformation {
-	return map[string]Transformation{
+func TransformationsMap() map[string]coraza.RuleTransformation {
+	return map[string]coraza.RuleTransformation{
 		"base64Decode":       Base64decode,
 		"cmdLine":            CmdLine,
 		"compressWhitespace": CompressWhitespace,

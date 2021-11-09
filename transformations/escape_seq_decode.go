@@ -17,10 +17,11 @@ package transformations
 import (
 	"strconv"
 
-	"github.com/jptosso/coraza-waf/utils"
+	"github.com/jptosso/coraza-waf/v2"
+	utils "github.com/jptosso/coraza-waf/v2/utils"
 )
 
-func EscapeSeqDecode(input string, tools *Tools) string {
+func EscapeSeqDecode(input string, tools coraza.RuleTransformationTools) string {
 	var i, count, d int
 	input_len := len(input)
 	data := []byte(input)

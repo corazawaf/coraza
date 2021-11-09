@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jptosso/coraza-waf/utils"
+	utils "github.com/jptosso/coraza-waf/v2/utils"
 	"go.uber.org/zap"
 )
 
@@ -107,7 +107,7 @@ func (rg *RuleGroup) Clear() {
 
 // Eval rules for the specified phase, between 1 and 5
 // Returns true if transaction is disrupted
-func (rg *RuleGroup) Eval(phase Phase, tx *Transaction) bool {
+func (rg *RuleGroup) Eval(phase RulePhase, tx *Transaction) bool {
 	tx.Waf.Logger.Debug("Evaluating phase",
 		zap.String("event", "EVALUATE_PHASE"),
 		zap.String("txid", tx.Id),
@@ -134,9 +134,13 @@ func (rg *RuleGroup) Eval(phase Phase, tx *Transaction) bool {
 		if r.Id == 0 {
 			rid = strconv.Itoa(r.ParentId)
 		}
-		if utils.IntInSlice(r.Id, tx.RuleRemoveById) {
+
+		// we skip the rule in case it's in the excluded list
+		if tx.ruleRemoveById != nil && utils.IntInSlice(r.Id, tx.ruleRemoveById) {
+			tx.Waf.Logger.Debug("Skipping rule", zap.Int("rule", r.Id), zap.String("txid", tx.Id))
 			continue
 		}
+
 		//we always evaluate secmarkers
 		if tx.SkipAfter != "" {
 			if r.SecMark == tx.SkipAfter {

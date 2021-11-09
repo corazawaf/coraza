@@ -17,7 +17,7 @@ package operators
 import (
 	"unicode/utf8"
 
-	engine "github.com/jptosso/coraza-waf"
+	engine "github.com/jptosso/coraza-waf/v2"
 )
 
 type ValidateUtf8Encoding struct{}

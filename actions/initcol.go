@@ -17,17 +17,18 @@ package actions
 import (
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/v2"
+	"go.uber.org/zap"
 )
 
-// Initializes a persistent collection and add the data to the standard collections engine.
-type InitCol struct {
+// Initializes a persistent collection and add the data to the standard collections coraza.
+type initcolFn struct {
 	collection string
 	variable   byte
 	key        string
 }
 
-func (a *InitCol) Init(r *engine.Rule, data string) error {
+func (a *initcolFn) Init(r *coraza.Rule, data string) error {
 	kv := strings.SplitN(data, "=", 2)
 	a.collection = kv[0]
 	a.key = kv[1]
@@ -35,7 +36,8 @@ func (a *InitCol) Init(r *engine.Rule, data string) error {
 	return nil
 }
 
-func (a *InitCol) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *initcolFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+	tx.Waf.Logger.Error("initcol was used but it's not supported", zap.Int("rule", r.Id))
 	/*
 		key := tx.MacroExpansion(a.key)
 		data := tx.Waf.Persistence.Get(a.variable, key)
@@ -58,6 +60,15 @@ func (a *InitCol) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	*/
 }
 
-func (a *InitCol) Type() int {
-	return engine.ACTION_TYPE_NONDISRUPTIVE
+func (a *initcolFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeNondisruptive
 }
+
+func initcol() coraza.RuleAction {
+	return &initcolFn{}
+}
+
+var (
+	_ coraza.RuleAction = &initcolFn{}
+	_ RuleActionWrapper = initcol
+)

@@ -17,8 +17,10 @@ package transformations
 import (
 	"strconv"
 	"unicode/utf8"
+
+	"github.com/jptosso/coraza-waf/v2"
 )
 
-func Length(data string, utils *Tools) string {
+func Length(data string, utils coraza.RuleTransformationTools) string {
 	return strconv.Itoa(utf8.RuneCountInString(data))
 }

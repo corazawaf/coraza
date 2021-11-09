@@ -17,7 +17,7 @@ package actions
 import (
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/v2"
 	"go.uber.org/zap"
 )
 
@@ -25,12 +25,12 @@ type SkipAfter struct {
 	data string
 }
 
-func (a *SkipAfter) Init(r *engine.Rule, data string) error {
+func (a *SkipAfter) Init(r *coraza.Rule, data string) error {
 	a.data = strings.Trim(data, `"`)
 	return nil
 }
 
-func (a *SkipAfter) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *SkipAfter) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	tx.Waf.Logger.Debug("Starting secmarker",
 		zap.String("txid", tx.Id),
 		zap.String("event", "INIT_SECMARK"),
@@ -39,6 +39,6 @@ func (a *SkipAfter) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 	tx.SkipAfter = a.data
 }
 
-func (a *SkipAfter) Type() int {
-	return engine.ACTION_TYPE_FLOW
+func (a *SkipAfter) Type() coraza.RuleActionType {
+	return coraza.ActionTypeFlow
 }

@@ -15,19 +15,28 @@
 package actions
 
 import (
-	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
-type Auditlog struct{}
+type auditlogFn struct{}
 
-func (a *Auditlog) Init(r *engine.Rule, data string) error {
+func (a *auditlogFn) Init(r *coraza.Rule, data string) error {
 	return nil
 }
 
-func (a *Auditlog) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *auditlogFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	tx.Log = true
 }
 
-func (a *Auditlog) Type() int {
-	return engine.ACTION_TYPE_NONDISRUPTIVE
+func (a *auditlogFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeNondisruptive
 }
+
+func auditlog() coraza.RuleAction {
+	return &auditlogFn{}
+}
+
+var (
+	_ coraza.RuleAction = &auditlogFn{}
+	_ RuleActionWrapper = auditlog
+)

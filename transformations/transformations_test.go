@@ -23,6 +23,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/jptosso/coraza-waf/v2"
 )
 
 type Test struct {
@@ -72,7 +74,7 @@ func TestTransformations(t *testing.T) {
 				//t.Error("Invalid transformation test for " + data.Name)
 				continue
 			}
-			tools := &Tools{}
+			tools := coraza.RuleTransformationTools{}
 			out := trans(data.Input, tools)
 			if out != data.Output {
 				t.Error(fmt.Sprintf("Transformation %s:\nInput: %s\nExpected: %v\nGot: %v\nExpected String: %s\nGot String: %s",

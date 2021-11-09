@@ -14,7 +14,9 @@
 
 package transformations
 
-func RemoveCommentsChar(data string, utils *Tools) string {
+import "github.com/jptosso/coraza-waf/v2"
+
+func RemoveCommentsChar(data string, utils coraza.RuleTransformationTools) string {
 	value := []byte(data)
 	for i := 0; i < len(value); {
 		if value[i] == '/' && (i+1 < len(value)) && value[i+1] == '*' {

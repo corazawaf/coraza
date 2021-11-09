@@ -15,19 +15,28 @@
 package actions
 
 import (
-	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
-type Block struct{}
+type blockFn struct{}
 
-func (a *Block) Init(r *engine.Rule, b1 string) error {
+func (a *blockFn) Init(r *coraza.Rule, b1 string) error {
 	return nil
 }
 
-func (a *Block) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *blockFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// This should never run
 }
 
-func (a *Block) Type() int {
-	return engine.ACTION_TYPE_DISRUPTIVE
+func (a *blockFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeDisruptive
 }
+
+func block() coraza.RuleAction {
+	return &blockFn{}
+}
+
+var (
+	_ coraza.RuleAction = &blockFn{}
+	_ RuleActionWrapper = block
+)

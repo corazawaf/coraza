@@ -14,20 +14,31 @@
 
 package actions
 
-import engine "github.com/jptosso/coraza-waf"
+import (
+	"github.com/jptosso/coraza-waf/v2"
+)
 
-type Nolog struct {
+type nologFn struct {
 }
 
-func (a *Nolog) Init(r *engine.Rule, data string) error {
+func (a *nologFn) Init(r *coraza.Rule, data string) error {
 	r.Log = false
 	return nil
 }
 
-func (a *Nolog) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *nologFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not evaluated
 }
 
-func (a *Nolog) Type() int {
-	return engine.ACTION_TYPE_NONDISRUPTIVE
+func (a *nologFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeNondisruptive
 }
+
+func nolog() coraza.RuleAction {
+	return &nologFn{}
+}
+
+var (
+	_ coraza.RuleAction = &nologFn{}
+	_ RuleActionWrapper = nolog
+)

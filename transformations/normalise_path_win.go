@@ -17,9 +17,11 @@ package transformations
 import (
 	"path/filepath"
 	"strings"
+
+	"github.com/jptosso/coraza-waf/v2"
 )
 
-func NormalisePathWin(data string, utils *Tools) string {
+func NormalisePathWin(data string, utils coraza.RuleTransformationTools) string {
 	leng := len(data)
 	cl := clean(data)
 	cl = strings.ReplaceAll(cl, "\\", "/")

@@ -19,17 +19,17 @@ import (
 	"strconv"
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf"
-	_ "github.com/jptosso/coraza-waf/utils"
+	"github.com/jptosso/coraza-waf/v2"
+	"go.uber.org/zap"
 )
 
-type Expirevar struct {
+type expirevarFn struct {
 	collection string
 	ttl        int
 	key        string
 }
 
-func (a *Expirevar) Init(r *engine.Rule, data string) error {
+func (a *expirevarFn) Init(r *coraza.Rule, data string) error {
 	spl := strings.SplitN(data, "=", 2)
 	a.ttl, _ = strconv.Atoi(spl[1])
 	spl = strings.SplitN(spl[0], ".", 2)
@@ -41,10 +41,20 @@ func (a *Expirevar) Init(r *engine.Rule, data string) error {
 	return nil
 }
 
-func (a *Expirevar) Evaluate(r *engine.Rule, tx *engine.Transaction) {
-	// Not implemented
+func (a *expirevarFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+	//Not supported
+	tx.Waf.Logger.Error("Expirevar was used but it's not supported", zap.Int("rule", r.Id))
 }
 
-func (a *Expirevar) Type() int {
-	return engine.ACTION_TYPE_NONDISRUPTIVE
+func (a *expirevarFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeNondisruptive
 }
+
+func expirevar() coraza.RuleAction {
+	return &expirevarFn{}
+}
+
+var (
+	_ coraza.RuleAction = &expirevarFn{}
+	_ RuleActionWrapper = expirevar
+)

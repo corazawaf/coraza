@@ -19,91 +19,95 @@ import (
 	"strconv"
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
-type Setvar struct {
-	Key        string
-	Value      string
-	Collection byte
-	IsRemove   bool
+type setvarFn struct {
+	key        string
+	value      string
+	collection coraza.RuleVariable
+	isRemove   bool
 }
 
-func (a *Setvar) Init(r *engine.Rule, data string) error {
+func (a *setvarFn) Init(r *coraza.Rule, data string) error {
 	if data == "" {
 		return fmt.Errorf("setvar requires arguments")
 	}
 
 	if data[0] == '!' {
-		a.IsRemove = true
+		a.isRemove = true
 		data = data[1:]
 	}
 
 	var err error
 	spl := strings.SplitN(data, "=", 2)
-	/*
-		TODO requires more testing
-		if len(spl) != 2 {
-			return fmt.Errorf("setvar requires key=value syntax")
-		}*/
 
 	splcol := strings.SplitN(spl[0], ".", 2)
-	a.Collection, err = engine.NameToVariable(splcol[0])
+	a.collection, err = coraza.ParseRuleVariable(splcol[0])
 	if err != nil {
 		return err
 	}
 	if len(splcol) == 2 {
-		a.Key = splcol[1]
+		a.key = splcol[1]
 	}
 	if len(spl) == 2 {
-		a.Value = spl[1]
+		a.value = spl[1]
 	}
 	return nil
 }
 
-func (a *Setvar) Evaluate(r *engine.Rule, tx *engine.Transaction) {
-	key := tx.MacroExpansion(a.Key)
-	value := tx.MacroExpansion(a.Value)
+func (a *setvarFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+	key := tx.MacroExpansion(a.key)
+	value := tx.MacroExpansion(a.value)
 	a.evaluateTxCollection(r, tx, key, value)
 }
 
-func (a *Setvar) Type() int {
-	return engine.ACTION_TYPE_NONDISRUPTIVE
+func (a *setvarFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeNondisruptive
 }
 
-func (a *Setvar) evaluateTxCollection(r *engine.Rule, tx *engine.Transaction, key string, value string) {
-	collection := tx.GetCollection(a.Collection)
+func (a *setvarFn) evaluateTxCollection(r *coraza.Rule, tx *coraza.Transaction, key string, value string) {
+	collection := tx.GetCollection(a.collection)
 	if collection == nil {
 		//fmt.Println("Invalid Collection " + a.Collection) LOG error?
 		return
 	}
 
-	if a.IsRemove {
-		collection.Remove(a.Key)
+	if a.isRemove {
+		collection.Remove(a.key)
 		return
 	}
-	res := collection.Get(a.Key)
+	res := collection.Get(a.key)
 	if len(res) == 0 {
-		collection.Set(tx.MacroExpansion(a.Key), []string{"0"})
+		collection.Set(tx.MacroExpansion(a.key), []string{"0"})
 		res = []string{"0"}
 	}
-	if len(a.Value) == 0 {
-		collection.Set(tx.MacroExpansion(a.Key), []string{""})
-	} else if a.Value[0] == '+' {
-		me, _ := strconv.Atoi(tx.MacroExpansion(a.Value[1:]))
+	if len(a.value) == 0 {
+		collection.Set(tx.MacroExpansion(a.key), []string{""})
+	} else if a.value[0] == '+' {
+		me, _ := strconv.Atoi(tx.MacroExpansion(a.value[1:]))
 		txv, err := strconv.Atoi(res[0])
 		if err != nil {
 			return
 		}
-		collection.Set(tx.MacroExpansion(a.Key), []string{strconv.Itoa(me + txv)})
-	} else if a.Value[0] == '-' {
-		me, _ := strconv.Atoi(tx.MacroExpansion(a.Value[1:]))
+		collection.Set(tx.MacroExpansion(a.key), []string{strconv.Itoa(me + txv)})
+	} else if a.value[0] == '-' {
+		me, _ := strconv.Atoi(tx.MacroExpansion(a.value[1:]))
 		txv, err := strconv.Atoi(res[0])
 		if err != nil {
 			return
 		}
-		collection.Set(tx.MacroExpansion(a.Key), []string{strconv.Itoa(txv - me)})
+		collection.Set(tx.MacroExpansion(a.key), []string{strconv.Itoa(txv - me)})
 	} else {
-		collection.Set(tx.MacroExpansion(a.Key), []string{tx.MacroExpansion(a.Value)})
+		collection.Set(tx.MacroExpansion(a.key), []string{tx.MacroExpansion(a.value)})
 	}
 }
+
+func setvar() coraza.RuleAction {
+	return &setvarFn{}
+}
+
+var (
+	_ coraza.RuleAction = &setvarFn{}
+	_ RuleActionWrapper = setvar
+)

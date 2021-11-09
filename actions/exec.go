@@ -17,15 +17,15 @@ package actions
 import (
 	"fmt"
 
-	engine "github.com/jptosso/coraza-waf"
-	"github.com/jptosso/coraza-waf/utils"
+	"github.com/jptosso/coraza-waf/v2"
+	utils "github.com/jptosso/coraza-waf/v2/utils"
 )
 
-type Exec struct {
+type execFn struct {
 	cachedScript string
 }
 
-func (a *Exec) Init(r *engine.Rule, data string) error {
+func (a *execFn) Init(r *coraza.Rule, data string) error {
 	fdata, err := utils.OpenFile(data, false, "")
 	if err != nil {
 		return fmt.Errorf("Cannot load file %s", data)
@@ -34,10 +34,19 @@ func (a *Exec) Init(r *engine.Rule, data string) error {
 	return nil
 }
 
-func (a *Exec) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *execFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not implemented
 }
 
-func (a *Exec) Type() int {
-	return engine.ACTION_TYPE_NONDISRUPTIVE
+func (a *execFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeNondisruptive
 }
+
+func exec() coraza.RuleAction {
+	return &execFn{}
+}
+
+var (
+	_ coraza.RuleAction = &execFn{}
+	_ RuleActionWrapper = exec
+)

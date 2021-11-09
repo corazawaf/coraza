@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf"
+	engine "github.com/jptosso/coraza-waf/v2"
 )
 
 type ValidateByteRange struct {

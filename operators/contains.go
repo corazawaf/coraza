@@ -17,7 +17,7 @@ package operators
 import (
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf"
+	engine "github.com/jptosso/coraza-waf/v2"
 )
 
 type Contains struct {

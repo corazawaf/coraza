@@ -15,10 +15,11 @@
 package transformations
 
 import (
-	"github.com/jptosso/coraza-waf/utils"
+	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/utils"
 )
 
-func CssDecode(data string, utils *Tools) string {
+func CssDecode(data string, utils coraza.RuleTransformationTools) string {
 	return cssDecodeInplace(data)
 }
 

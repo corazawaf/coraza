@@ -14,10 +14,14 @@
 
 package transformations
 
-import "encoding/base64"
+import (
+	"encoding/base64"
+
+	"github.com/jptosso/coraza-waf/v2"
+)
 
 // Base64decode decodes a Base64-encoded string.
-func Base64decode(data string, utils *Tools) string {
+func Base64decode(data string, utils coraza.RuleTransformationTools) string {
 	decoded, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
 		utils.Logger.Error(err.Error())

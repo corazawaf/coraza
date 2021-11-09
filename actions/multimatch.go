@@ -14,20 +14,31 @@
 
 package actions
 
-import engine "github.com/jptosso/coraza-waf"
+import (
+	"github.com/jptosso/coraza-waf/v2"
+)
 
-type MultiMatch struct {
+type multimatchFn struct {
 }
 
-func (a *MultiMatch) Init(r *engine.Rule, data string) error {
+func (a *multimatchFn) Init(r *coraza.Rule, data string) error {
 	r.MultiMatch = true
 	return nil
 }
 
-func (a *MultiMatch) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *multimatchFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not evaluated
 }
 
-func (a *MultiMatch) Type() int {
-	return engine.ACTION_TYPE_NONDISRUPTIVE
+func (a *multimatchFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeNondisruptive
 }
+
+func multimatch() coraza.RuleAction {
+	return &multimatchFn{}
+}
+
+var (
+	_ coraza.RuleAction = &multimatchFn{}
+	_ RuleActionWrapper = multimatch
+)

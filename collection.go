@@ -15,10 +15,10 @@
 package coraza
 
 import (
+	"regexp"
 	"strconv"
 
-	"github.com/jptosso/coraza-waf/utils"
-	regex "github.com/jptosso/coraza-waf/utils/regex"
+	"github.com/jptosso/coraza-waf/v2/utils"
 )
 
 // Collections are used to store VARIABLE data
@@ -41,7 +41,7 @@ func (c *Collection) Get(key string) []string {
 //Find is returns a slice of MatchData for the
 // regex or key, exceptions are used to skip
 // some keys
-func (c *Collection) Find(key string, re *regex.Regexp, exceptions []string) []MatchData {
+func (c *Collection) Find(key string, re *regexp.Regexp, exceptions []string) []MatchData {
 	cdata := c.data
 	//we return every value in case there is no key but there is a collection
 	if len(key) == 0 {
@@ -68,8 +68,7 @@ func (c *Collection) Find(key string, re *regex.Regexp, exceptions []string) []M
 			if utils.StringInSlice(k, exceptions) {
 				continue
 			}
-			m := re.Matcher([]byte(k), 0)
-			if m.Matches() {
+			if re.Match([]byte(k)) {
 				for _, d := range cdata[k] {
 					result = append(result, MatchData{
 						Collection: c.name,

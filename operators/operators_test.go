@@ -24,8 +24,7 @@ import (
 	"strings"
 	"testing"
 
-	engine "github.com/jptosso/coraza-waf"
-	"github.com/jptosso/coraza-waf/utils/libinjection"
+	engine "github.com/jptosso/coraza-waf/v2"
 )
 
 type Test struct {
@@ -45,10 +44,6 @@ func TestTransformations(t *testing.T) {
 	}
 	if err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if strings.HasSuffix(path, ".json") {
-			// TODO until we remove libinjection cgo
-			if !libinjection.LIBINJECTION_CGO && (strings.Contains(path, "detectSQLi") || strings.Contains(path, "detectXSS")) {
-				return nil
-			}
 			data, _ := ioutil.ReadFile(path)
 			files = append(files, data)
 		}

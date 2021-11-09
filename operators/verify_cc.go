@@ -14,7 +14,7 @@
 
 package operators
 
-import engine "github.com/jptosso/coraza-waf"
+import engine "github.com/jptosso/coraza-waf/v2"
 
 type VerifyCC struct {
 }

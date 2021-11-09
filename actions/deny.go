@@ -15,27 +15,36 @@
 package actions
 
 import (
-	engine "github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
-type Deny struct{}
+type denyFn struct{}
 
-func (a *Deny) Init(r *engine.Rule, data string) error {
+func (a *denyFn) Init(r *coraza.Rule, data string) error {
 	return nil
 }
 
-func (a *Deny) Evaluate(r *engine.Rule, tx *engine.Transaction) {
+func (a *denyFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	rid := r.Id
 	if rid == 0 {
 		rid = r.ParentId
 	}
-	tx.Interruption = &engine.Interruption{
+	tx.Interruption = &coraza.Interruption{
 		Status: 403,
 		RuleId: rid,
 		Action: "deny",
 	}
 }
 
-func (a *Deny) Type() int {
-	return engine.ACTION_TYPE_DISRUPTIVE
+func (a *denyFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeDisruptive
 }
+
+func deny() coraza.RuleAction {
+	return &denyFn{}
+}
+
+var (
+	_ coraza.RuleAction = &denyFn{}
+	_ RuleActionWrapper = deny
+)

@@ -18,13 +18,13 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"regexp"
 	"strconv"
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf"
-	"github.com/jptosso/coraza-waf/utils"
-	"github.com/jptosso/coraza-waf/utils/geoip"
-	regex "github.com/jptosso/coraza-waf/utils/regex"
+	engine "github.com/jptosso/coraza-waf/v2"
+	utils "github.com/jptosso/coraza-waf/v2/utils"
+	"github.com/jptosso/coraza-waf/v2/utils/geoip"
 	"go.uber.org/zap"
 )
 
@@ -322,8 +322,9 @@ func directiveSecAuditLog(p *Parser, opts string) error {
 }
 
 func directiveSecAuditLogRelevantStatus(p *Parser, opts string) error {
-	p.Waf.AuditLogRelevantStatus = regex.MustCompile(opts, 0)
-	return nil
+	var err error
+	p.Waf.AuditLogRelevantStatus, err = regexp.Compile(opts)
+	return err
 }
 
 func directiveSecAuditLogParts(p *Parser, opts string) error {

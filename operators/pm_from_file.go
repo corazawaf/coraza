@@ -20,8 +20,8 @@ import (
 	"sync"
 
 	ahocorasick "github.com/jptosso/aho-corasick"
-	engine "github.com/jptosso/coraza-waf"
-	"github.com/jptosso/coraza-waf/utils"
+	engine "github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/utils"
 )
 
 type PmFromFile struct {

@@ -19,15 +19,15 @@ import (
 	"strconv"
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf"
-	"github.com/jptosso/coraza-waf/utils"
+	"github.com/jptosso/coraza-waf/v2"
+	utils "github.com/jptosso/coraza-waf/v2/utils"
 )
 
-type Ctl struct {
-	Action     int
-	Value      string
-	Collection byte
-	ColKey     string
+type ctlFn struct {
+	action     int
+	value      string
+	collection coraza.RuleVariable
+	colKey     string
 }
 
 const (
@@ -51,97 +51,94 @@ const (
 	CTL_DEBUG_LOG_LEVEL        = 17
 )
 
-func (a *Ctl) Init(r *engine.Rule, data string) error {
+func (a *ctlFn) Init(r *coraza.Rule, data string) error {
 	var err error
-	a.Action, a.Value, a.Collection, a.ColKey, err = parseCtl(data)
+	a.action, a.value, a.collection, a.colKey, err = parseCtl(data)
 	return err
 }
 
-func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
-	switch a.Action {
+func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+	switch a.action {
 	case CTL_REMOVE_TARGET_BY_ID:
-		id, _ := strconv.Atoi(a.Value)
-		tx.RemoveRuleTargetById(id, a.Collection, a.ColKey)
+		id, _ := strconv.Atoi(a.value)
+		tx.RemoveRuleTargetById(id, a.collection, a.colKey)
 	case CTL_REMOVE_TARGET_BY_TAG:
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
-			if utils.StringInSlice(a.Value, r.Tags) {
-				tx.RemoveRuleTargetById(r.Id, a.Collection, a.ColKey)
+			if utils.StringInSlice(a.value, r.Tags) {
+				tx.RemoveRuleTargetById(r.Id, a.collection, a.colKey)
 			}
 		}
 	case CTL_REMOVE_TARGET_BY_MSG:
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
-			if r.Msg == a.Value {
-				tx.RemoveRuleTargetById(r.Id, a.Collection, a.ColKey)
+			if r.Msg == a.value {
+				tx.RemoveRuleTargetById(r.Id, a.collection, a.colKey)
 			}
 		}
 	case CTL_AUDIT_ENGINE:
-		switch a.Value {
+		switch a.value {
 		case "On":
-			tx.AuditEngine = engine.AUDIT_LOG_ENABLED
+			tx.AuditEngine = coraza.AUDIT_LOG_ENABLED
 		case "Off":
-			tx.AuditEngine = engine.AUDIT_LOG_DISABLED
+			tx.AuditEngine = coraza.AUDIT_LOG_DISABLED
 		case "RelevantOnly":
-			tx.AuditEngine = engine.AUDIT_LOG_RELEVANT
+			tx.AuditEngine = coraza.AUDIT_LOG_RELEVANT
 		}
 	case CTL_AUDIT_LOG_PARTS:
 		//TODO lets switch it to a string
-		tx.AuditLogParts = []rune{}
-		for _, c := range a.Value {
-			tx.AuditLogParts = append(tx.AuditLogParts, c)
-		}
+		tx.AuditLogParts = []rune(a.value)
 	case CTL_FORCE_REQUEST_BODY_VAR:
-		if strings.ToLower(a.Value) == "on" {
+		if strings.ToLower(a.value) == "on" {
 			tx.ForceRequestBodyVariable = true
 		} else {
 			tx.ForceRequestBodyVariable = false
 		}
 	case CTL_REQUEST_BODY_ACCESS:
-		tx.RequestBodyAccess = a.Value == "on"
+		tx.RequestBodyAccess = a.value == "on"
 	case CTL_REQUEST_BODY_LIMIT:
-		limit, _ := strconv.ParseInt(a.Value, 10, 64)
+		limit, _ := strconv.ParseInt(a.value, 10, 64)
 		tx.RequestBodyLimit = limit
 	case CTL_RULE_ENGINE:
-		switch strings.ToLower(a.Value) {
+		switch strings.ToLower(a.value) {
 		case "off":
-			tx.RuleEngine = engine.RULE_ENGINE_OFF
+			tx.RuleEngine = coraza.RULE_ENGINE_OFF
 		case "on":
-			tx.RuleEngine = engine.RULE_ENGINE_ON
+			tx.RuleEngine = coraza.RULE_ENGINE_ON
 		case "detectiononly":
-			tx.RuleEngine = engine.RULE_ENGINE_DETECTONLY
+			tx.RuleEngine = coraza.RULE_ENGINE_DETECTONLY
 		}
 	case CTL_RULE_REMOVE_BY_ID:
-		id, _ := strconv.Atoi(a.Value)
-		tx.RuleRemoveById = append(tx.RuleRemoveById, id)
+		id, _ := strconv.Atoi(a.value)
+		tx.RemoveRuleById(id)
 	case CTL_RULE_REMOVE_BY_MSG:
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
-			if r.Msg == a.Value {
-				tx.RuleRemoveById = append(tx.RuleRemoveById, r.Id)
+			if r.Msg == a.value {
+				tx.RemoveRuleById(r.Id)
 			}
 		}
 	case CTL_RULE_REMOVE_BY_TAG:
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
-			if utils.StringInSlice(a.Value, r.Tags) {
-				tx.RuleRemoveById = append(tx.RuleRemoveById, r.Id)
+			if utils.StringInSlice(a.value, r.Tags) {
+				tx.RemoveRuleById(r.Id)
 			}
 		}
 	case CTL_REQUEST_BODY_PROCESSOR:
-		switch strings.ToLower(a.Value) {
+		switch strings.ToLower(a.value) {
 		case "xml":
-			tx.RequestBodyProcessor = engine.REQUEST_BODY_PROCESSOR_XML
-			tx.GetCollection(engine.VARIABLE_REQBODY_PROCESSOR).Set("", []string{"XML"})
+			tx.RequestBodyProcessor = coraza.REQUEST_BODY_PROCESSOR_XML
+			tx.GetCollection(coraza.VARIABLE_REQBODY_PROCESSOR).Set("", []string{"XML"})
 		case "json":
-			tx.RequestBodyProcessor = engine.REQUEST_BODY_PROCESSOR_JSON
-			tx.GetCollection(engine.VARIABLE_REQBODY_PROCESSOR).Set("", []string{"JSON"})
+			tx.RequestBodyProcessor = coraza.REQUEST_BODY_PROCESSOR_JSON
+			tx.GetCollection(coraza.VARIABLE_REQBODY_PROCESSOR).Set("", []string{"JSON"})
 		case "urlencoded":
-			tx.RequestBodyProcessor = engine.REQUEST_BODY_PROCESSOR_URLENCODED
-			tx.GetCollection(engine.VARIABLE_REQBODY_PROCESSOR).Set("", []string{"URLENCODED"})
+			tx.RequestBodyProcessor = coraza.REQUEST_BODY_PROCESSOR_URLENCODED
+			tx.GetCollection(coraza.VARIABLE_REQBODY_PROCESSOR).Set("", []string{"URLENCODED"})
 		case "multipart":
-			tx.RequestBodyProcessor = engine.REQUEST_BODY_PROCESSOR_MULTIPART
-			tx.GetCollection(engine.VARIABLE_REQBODY_PROCESSOR).Set("", []string{"MULTIPART"})
+			tx.RequestBodyProcessor = coraza.REQUEST_BODY_PROCESSOR_MULTIPART
+			tx.GetCollection(coraza.VARIABLE_REQBODY_PROCESSOR).Set("", []string{"MULTIPART"})
 		}
 	case CTL_HASH_ENGINE:
 		// Not supported yet
@@ -156,11 +153,11 @@ func (a *Ctl) Evaluate(r *engine.Rule, tx *engine.Transaction) {
 
 }
 
-func (a *Ctl) Type() int {
-	return engine.ACTION_TYPE_NONDISRUPTIVE
+func (a *ctlFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeNondisruptive
 }
 
-func parseCtl(data string) (int, string, byte, string, error) {
+func parseCtl(data string) (int, string, coraza.RuleVariable, string, error) {
 	spl1 := strings.SplitN(data, "=", 2)
 	spl2 := strings.SplitN(spl1[1], ";", 2)
 	action := spl1[0]
@@ -176,7 +173,7 @@ func parseCtl(data string) (int, string, byte, string, error) {
 			colkey = spl3[0]
 		}
 	}
-	collection, _ := engine.NameToVariable(strings.TrimSpace(colname))
+	collection, _ := coraza.ParseRuleVariable(strings.TrimSpace(colname))
 	colkey = strings.ToLower(colkey)
 	act := 0
 	switch action {
@@ -219,3 +216,12 @@ func parseCtl(data string) (int, string, byte, string, error) {
 	}
 	return act, value, collection, strings.TrimSpace(colkey), nil
 }
+
+func ctl() coraza.RuleAction {
+	return &ctlFn{}
+}
+
+var (
+	_ coraza.RuleAction = &ctlFn{}
+	_ RuleActionWrapper = ctl
+)

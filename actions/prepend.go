@@ -17,19 +17,19 @@ package actions
 import (
 	"io"
 
-	"github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
-type Prepend struct {
+type prependFn struct {
 	data string
 }
 
-func (a *Prepend) Init(r *coraza.Rule, data string) error {
+func (a *prependFn) Init(r *coraza.Rule, data string) error {
 	a.data = data
 	return nil
 }
 
-func (a *Prepend) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *prependFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	if !tx.Waf.ContentInjection {
 		tx.Waf.Logger.Debug("append rejected because of ContentInjection")
 		return
@@ -50,6 +50,15 @@ func (a *Prepend) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Maybe in the future we could add the prepend function to the BodyBuffer
 }
 
-func (a *Prepend) Type() int {
-	return coraza.ACTION_TYPE_NONDISRUPTIVE
+func (a *prependFn) Type() coraza.RuleActionType {
+	return coraza.ActionTypeNondisruptive
 }
+
+func prepend() coraza.RuleAction {
+	return &prependFn{}
+}
+
+var (
+	_ coraza.RuleAction = &prependFn{}
+	_ RuleActionWrapper = prepend
+)

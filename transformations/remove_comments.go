@@ -14,7 +14,9 @@
 
 package transformations
 
-func RemoveComments(value string, utils *Tools) string {
+import "github.com/jptosso/coraza-waf/v2"
+
+func RemoveComments(value string, utils coraza.RuleTransformationTools) string {
 	inputLen := len(value)
 	// we must add one pad to the right
 	input := []byte(value + "\x00")

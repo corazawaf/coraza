@@ -17,19 +17,12 @@ package coraza
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"testing"
-
-	"github.com/jptosso/coraza-waf/utils/regex"
 )
 
 var wafi = NewWaf()
-
-func TestGetCollections(t *testing.T) {
-	//this test is just dumb
-	tx := wafi.NewTransaction()
-	tx.GetCollections()
-}
 
 func TestTxSetters(t *testing.T) {
 	tx := makeTransaction()
@@ -306,7 +299,7 @@ func TestResetCapture(t *testing.T) {
 
 func TestRelevantAuditLogging(t *testing.T) {
 	tx := makeTransaction()
-	tx.Waf.AuditLogRelevantStatus = regex.MustCompile(`(403)`, 0)
+	tx.Waf.AuditLogRelevantStatus = regexp.MustCompile(`(403)`)
 	tx.GetCollection(VARIABLE_RESPONSE_STATUS).Set("", []string{"403"})
 	tx.AuditEngine = AUDIT_LOG_RELEVANT
 	tx.Log = false

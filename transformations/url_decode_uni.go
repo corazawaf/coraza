@@ -15,18 +15,18 @@
 package transformations
 
 import (
-	"github.com/jptosso/coraza-waf/utils"
+	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/utils"
 )
 
-func UrlDecodeUni(data string, tools *Tools) string {
-	return inplaceUniDecode(data, tools.Unicode)
+func UrlDecodeUni(data string, tools coraza.RuleTransformationTools) string {
+	return inplaceUniDecode(data)
 }
 
-func inplaceUniDecode(input string, mapper *utils.Unicode) string {
+func inplaceUniDecode(input string) string {
 	d := []byte(input)
 	input_len := len(d)
-	var i, count, fact, j, xv, c int
-	var code int
+	var i, count, c int
 	hmap := -1
 
 	for i < input_len {
@@ -37,9 +37,10 @@ func inplaceUniDecode(input string, mapper *utils.Unicode) string {
 				if i+5 < input_len {
 					/* We have at least 4 data bytes. */
 					if (utils.ValidHex(input[i+2])) && (utils.ValidHex(input[i+3])) && (utils.ValidHex(input[i+4])) && (utils.ValidHex(input[i+5])) {
-						code = 0
-						fact = 1
-						if mapper != nil && mapper.Map != "" {
+						/*
+							TODO unicode mapping
+							code = 0
+							fact = 1
 							for j = 5; j >= 2; j-- {
 								if utils.ValidHex((input[i+j])) {
 									if input[i+j] >= 97 {
@@ -54,9 +55,10 @@ func inplaceUniDecode(input string, mapper *utils.Unicode) string {
 								}
 							}
 							if code >= 0 && code <= 65535 {
-								hmap = mapper.At(code)
-							}
-						}
+								t := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
+								result, _, _ := transform.String(t, string(code))
+								hmap = result
+							}*/
 
 						if hmap != -1 {
 							d[c] = byte(hmap)

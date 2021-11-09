@@ -3,7 +3,7 @@ package actions
 import (
 	"testing"
 
-	"github.com/jptosso/coraza-waf"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
 func TestSeverity(t *testing.T) {
