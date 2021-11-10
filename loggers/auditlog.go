@@ -14,10 +14,6 @@
 
 package loggers
 
-import (
-	"encoding/json"
-)
-
 // Main struct for audit log data
 type AuditLog struct {
 	// Transaction information
@@ -99,6 +95,69 @@ type AuditMessageData struct {
 	Tags     []string `json:"tags"`
 }
 
-func (al *AuditLog) JSON() ([]byte, error) {
-	return json.Marshal(al)
+func (al AuditLog) toLegacy() []byte {
+	return []byte("")
+}
+
+// LEGACY FORMAT
+
+// Main struct for audit log data
+type auditLogLegacy struct {
+	// Section A
+	Transaction AuditTransaction `json:"transaction"`
+
+	// Section B or C
+	Request *auditLogLegacyRequest `json:"request"`
+
+	// Section J (File Uploads)
+	// TBI
+
+	// Section E and F
+	Response *auditLogLegacyResponse `json:"response"`
+
+	// Section H
+	AuditData *auditLogLegacyData `json:"audit_data"`
+}
+
+type auditLogLegacyTransaction struct {
+	Time          string
+	TransactionId string
+	RemoteAddress string
+	RemotePort    int
+	LocalAddress  string
+	LocalPort     int
+}
+
+type auditLogLegacyRequest struct {
+	RequestLine string
+	Headers     map[string]string
+}
+
+type auditLogLegacyResponse struct {
+	Status   int
+	Protocol string
+	Headers  map[string]string
+}
+
+type auditLogLegacyData struct {
+	Messages              []string
+	Handler               string
+	Stopwatch             auditLogLegacyStopwatch
+	ResponseBodyDechunked bool
+	Producer              []string
+	Server                string
+	EngineMode            string
+}
+
+type auditLogLegacyStopwatch struct {
+	Combined int64 // Combined processing time
+	P1       int64 // Processing time for the Request Headers phase
+	P2       int64 // Processing time for the Request Body phase
+	P3       int64 // Processing time for the Response Headers phase
+	P4       int64 // Processing time for the Response Body phase
+	P5       int64 // Processing time for the Logging phase
+	Sr       int64 // Time spent reading from persistent storage
+	Sw       int64 // Time spent writing to persistent storage
+	L        int64 // Time spent on audit logging
+	Gc       int64 // Time spent on garbage collection
 }

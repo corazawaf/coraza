@@ -23,33 +23,35 @@ import (
 	utils "github.com/jptosso/coraza-waf/v2/utils"
 )
 
+type ctlFunctionType int
+
+const (
+	ctlRemoveTargetById     ctlFunctionType = 0
+	ctlRemoveTargetByTag    ctlFunctionType = 1
+	ctlRemoveTargetByMsg    ctlFunctionType = 2
+	ctlAuditEngine          ctlFunctionType = 3
+	ctlAuditLogParts        ctlFunctionType = 4
+	ctlForceRequestBodyVar  ctlFunctionType = 5
+	ctlRequestBodyAccess    ctlFunctionType = 6
+	ctlRequestBodyLimit     ctlFunctionType = 7
+	ctlRuleEngine           ctlFunctionType = 8
+	ctlRuleRemoveById       ctlFunctionType = 9
+	ctlRuleRemoveByMsg      ctlFunctionType = 10
+	ctlRuleRemoveByTag      ctlFunctionType = 11
+	ctlHashEngine           ctlFunctionType = 12
+	ctlHashEnforcement      ctlFunctionType = 13
+	ctlRequestBodyProcessor ctlFunctionType = 14
+	ctlResponseBodyAccess   ctlFunctionType = 15
+	ctlResponseBodyLimit    ctlFunctionType = 16
+	ctlDebugLogLevel        ctlFunctionType = 17
+)
+
 type ctlFn struct {
-	action     int
+	action     ctlFunctionType
 	value      string
 	collection coraza.RuleVariable
 	colKey     string
 }
-
-const (
-	CTL_REMOVE_TARGET_BY_ID    = 0
-	CTL_REMOVE_TARGET_BY_TAG   = 1
-	CTL_REMOVE_TARGET_BY_MSG   = 2
-	CTL_AUDIT_ENGINE           = 3
-	CTL_AUDIT_LOG_PARTS        = 4
-	CTL_FORCE_REQUEST_BODY_VAR = 5
-	CTL_REQUEST_BODY_ACCESS    = 6
-	CTL_REQUEST_BODY_LIMIT     = 7
-	CTL_RULE_ENGINE            = 8
-	CTL_RULE_REMOVE_BY_ID      = 9
-	CTL_RULE_REMOVE_BY_MSG     = 10
-	CTL_RULE_REMOVE_BY_TAG     = 11
-	CTL_HASH_ENGINE            = 12
-	CTL_HASH_ENFORCEMENT       = 13
-	CTL_REQUEST_BODY_PROCESSOR = 14
-	CTL_RESPONSE_BODY_ACCESS   = 15
-	CTL_RESPONSE_BODY_LIMIT    = 16
-	CTL_DEBUG_LOG_LEVEL        = 17
-)
 
 func (a *ctlFn) Init(r *coraza.Rule, data string) error {
 	var err error
@@ -59,24 +61,24 @@ func (a *ctlFn) Init(r *coraza.Rule, data string) error {
 
 func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	switch a.action {
-	case CTL_REMOVE_TARGET_BY_ID:
+	case ctlRemoveTargetById:
 		id, _ := strconv.Atoi(a.value)
 		tx.RemoveRuleTargetById(id, a.collection, a.colKey)
-	case CTL_REMOVE_TARGET_BY_TAG:
+	case ctlRemoveTargetByTag:
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
 			if utils.StringInSlice(a.value, r.Tags) {
 				tx.RemoveRuleTargetById(r.Id, a.collection, a.colKey)
 			}
 		}
-	case CTL_REMOVE_TARGET_BY_MSG:
+	case ctlRemoveTargetByMsg:
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
 			if r.Msg == a.value {
 				tx.RemoveRuleTargetById(r.Id, a.collection, a.colKey)
 			}
 		}
-	case CTL_AUDIT_ENGINE:
+	case ctlAuditEngine:
 		switch a.value {
 		case "On":
 			tx.AuditEngine = coraza.AUDIT_LOG_ENABLED
@@ -85,21 +87,21 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 		case "RelevantOnly":
 			tx.AuditEngine = coraza.AUDIT_LOG_RELEVANT
 		}
-	case CTL_AUDIT_LOG_PARTS:
+	case ctlAuditLogParts:
 		//TODO lets switch it to a string
 		tx.AuditLogParts = []rune(a.value)
-	case CTL_FORCE_REQUEST_BODY_VAR:
+	case ctlForceRequestBodyVar:
 		if strings.ToLower(a.value) == "on" {
 			tx.ForceRequestBodyVariable = true
 		} else {
 			tx.ForceRequestBodyVariable = false
 		}
-	case CTL_REQUEST_BODY_ACCESS:
+	case ctlRequestBodyAccess:
 		tx.RequestBodyAccess = a.value == "on"
-	case CTL_REQUEST_BODY_LIMIT:
+	case ctlRequestBodyLimit:
 		limit, _ := strconv.ParseInt(a.value, 10, 64)
 		tx.RequestBodyLimit = limit
-	case CTL_RULE_ENGINE:
+	case ctlRuleEngine:
 		switch strings.ToLower(a.value) {
 		case "off":
 			tx.RuleEngine = coraza.RULE_ENGINE_OFF
@@ -108,24 +110,24 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 		case "detectiononly":
 			tx.RuleEngine = coraza.RULE_ENGINE_DETECTONLY
 		}
-	case CTL_RULE_REMOVE_BY_ID:
+	case ctlRuleRemoveById:
 		id, _ := strconv.Atoi(a.value)
 		tx.RemoveRuleById(id)
-	case CTL_RULE_REMOVE_BY_MSG:
+	case ctlRuleRemoveByMsg:
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
 			if r.Msg == a.value {
 				tx.RemoveRuleById(r.Id)
 			}
 		}
-	case CTL_RULE_REMOVE_BY_TAG:
+	case ctlRuleRemoveByTag:
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
 			if utils.StringInSlice(a.value, r.Tags) {
 				tx.RemoveRuleById(r.Id)
 			}
 		}
-	case CTL_REQUEST_BODY_PROCESSOR:
+	case ctlRequestBodyProcessor:
 		switch strings.ToLower(a.value) {
 		case "xml":
 			tx.RequestBodyProcessor = coraza.REQUEST_BODY_PROCESSOR_XML
@@ -140,11 +142,11 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 			tx.RequestBodyProcessor = coraza.REQUEST_BODY_PROCESSOR_MULTIPART
 			tx.GetCollection(coraza.VARIABLE_REQBODY_PROCESSOR).Set("", []string{"MULTIPART"})
 		}
-	case CTL_HASH_ENGINE:
+	case ctlHashEngine:
 		// Not supported yet
-	case CTL_HASH_ENFORCEMENT:
+	case ctlHashEnforcement:
 		// Not supported yet
-	case CTL_DEBUG_LOG_LEVEL:
+	case ctlDebugLogLevel:
 		//lvl, _ := strconv.Atoi(a.Value)
 		// TODO
 		// We cannot update the log level, it would affect the whole waf instance...
@@ -157,7 +159,7 @@ func (a *ctlFn) Type() coraza.RuleActionType {
 	return coraza.ActionTypeNondisruptive
 }
 
-func parseCtl(data string) (int, string, coraza.RuleVariable, string, error) {
+func parseCtl(data string) (ctlFunctionType, string, coraza.RuleVariable, string, error) {
 	spl1 := strings.SplitN(data, "=", 2)
 	spl2 := strings.SplitN(spl1[1], ";", 2)
 	action := spl1[0]
@@ -175,44 +177,44 @@ func parseCtl(data string) (int, string, coraza.RuleVariable, string, error) {
 	}
 	collection, _ := coraza.ParseRuleVariable(strings.TrimSpace(colname))
 	colkey = strings.ToLower(colkey)
-	act := 0
+	var act ctlFunctionType
 	switch action {
 	case "auditEngine":
-		act = CTL_AUDIT_ENGINE
+		act = ctlAuditEngine
 	case "auditLogParts":
-		act = CTL_AUDIT_LOG_PARTS
+		act = ctlAuditLogParts
 	case "forceRequestBodyVariable":
-		act = CTL_FORCE_REQUEST_BODY_VAR
+		act = ctlForceRequestBodyVar
 	case "requestBodyAccess":
-		act = CTL_REQUEST_BODY_ACCESS
+		act = ctlRequestBodyAccess
 	case "requestBodyLimit":
-		act = CTL_REQUEST_BODY_LIMIT
+		act = ctlRequestBodyLimit
 	case "requestBodyProcessor":
-		act = CTL_REQUEST_BODY_PROCESSOR
+		act = ctlRequestBodyProcessor
 	case "responseBodyAccess":
-		act = CTL_RESPONSE_BODY_ACCESS
+		act = ctlResponseBodyAccess
 	case "responseBodyLimit":
-		act = CTL_RESPONSE_BODY_LIMIT
+		act = ctlResponseBodyLimit
 	case "ruleEngine":
-		act = CTL_RULE_ENGINE
+		act = ctlRuleEngine
 	case "ruleRemoveById":
-		act = CTL_RULE_REMOVE_BY_ID
+		act = ctlRuleRemoveById
 	case "ruleRemoveByMsg":
-		act = CTL_RULE_REMOVE_BY_MSG
+		act = ctlRuleRemoveByMsg
 	case "ruleRemoveByTag":
-		act = CTL_RULE_REMOVE_BY_TAG
+		act = ctlRuleRemoveByTag
 	case "ruleRemoveTargetById":
-		act = CTL_REMOVE_TARGET_BY_ID
+		act = ctlRemoveTargetById
 	case "ruleRemoveTargetByMsg":
-		act = CTL_REMOVE_TARGET_BY_MSG
+		act = ctlRemoveTargetByMsg
 	case "ruleRemoveTargetByTag":
-		act = CTL_REMOVE_TARGET_BY_TAG
+		act = ctlRemoveTargetByTag
 	case "hashEngine":
-		act = CTL_HASH_ENGINE
+		act = ctlHashEngine
 	case "hashEnforcement":
-		act = CTL_HASH_ENFORCEMENT
+		act = ctlHashEnforcement
 	default:
-		return 0, "", 0x00, "", fmt.Errorf("Invalid ctl action")
+		return 0, "", 0x00, "", fmt.Errorf("invalid ctl action")
 	}
 	return act, value, collection, strings.TrimSpace(colkey), nil
 }

@@ -1,3 +1,17 @@
+// Copyright 2021 Juan Pablo Tosso
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package loggers
 
 import (
@@ -8,7 +22,7 @@ import (
 func TestFormatters(t *testing.T) {
 	al := createAuditLog()
 	type tcase struct {
-		AuditLog *AuditLog
+		AuditLog AuditLog
 		Output   string
 	}
 	cases := map[string][]tcase{
@@ -18,7 +32,7 @@ func TestFormatters(t *testing.T) {
 	}
 
 	for format, cases := range cases {
-		f, err := getFormatter(format)
+		f, err := GetLogFormatter(format)
 		if err != nil {
 			t.Error(err)
 		}
@@ -35,7 +49,7 @@ func TestFormatters(t *testing.T) {
 
 func TestModsecBoundary(t *testing.T) {
 	al := createAuditLog()
-	out, err := modsecFormatter(al)
+	out, err := nativeFormatter(al)
 	if err != nil {
 		t.Error(err)
 	}
@@ -47,8 +61,8 @@ func TestModsecBoundary(t *testing.T) {
 	}
 }
 
-func createAuditLog() *AuditLog {
-	return &AuditLog{
+func createAuditLog() AuditLog {
+	return AuditLog{
 		Transaction: &AuditTransaction{
 			Timestamp:     "02/Jan/2006:15:04:20 -0700",
 			UnixTimestamp: 0,

@@ -17,7 +17,6 @@ package seclang
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path"
 	"regexp"
 	"strconv"
@@ -26,7 +25,6 @@ import (
 	"github.com/jptosso/coraza-waf/v2"
 	actionsmod "github.com/jptosso/coraza-waf/v2/actions"
 	operators "github.com/jptosso/coraza-waf/v2/operators"
-	plugins "github.com/jptosso/coraza-waf/v2/plugins"
 	utils "github.com/jptosso/coraza-waf/v2/utils"
 )
 
@@ -37,14 +35,14 @@ type ruleAction struct {
 	F     coraza.RuleAction
 }
 
-type RuleParser struct {
+type ruleParser struct {
 	parser         *Parser
 	rule           *coraza.Rule
 	Configdir      string
 	defaultActions map[coraza.RulePhase][]ruleAction
 }
 
-func (p *RuleParser) ParseVariables(vars string) error {
+func (p *ruleParser) ParseVariables(vars string) error {
 
 	// 0 = variable name
 	// 1 = key
@@ -153,7 +151,7 @@ func (p *RuleParser) ParseVariables(vars string) error {
 	return nil
 }
 
-func (p *RuleParser) AddVariable(count bool, negation bool, collection coraza.RuleVariable, key string, regexkey bool) error {
+func (p *ruleParser) AddVariable(count bool, negation bool, collection coraza.RuleVariable, key string, regexkey bool) error {
 	r := p.rule
 	if negation {
 		for i, vr := range r.Variables {
@@ -196,7 +194,7 @@ func (p *RuleParser) AddVariable(count bool, negation bool, collection coraza.Ru
 	return nil
 }
 
-func (p *RuleParser) ParseOperator(operator string) error {
+func (p *ruleParser) ParseOperator(operator string) error {
 	if operator == "" {
 		operator = "@rx "
 	}
@@ -224,25 +222,23 @@ func (p *RuleParser) ParseOperator(operator string) error {
 
 	p.rule.Operator.Operator = operators.OperatorsMap()[op]
 	if p.rule.Operator.Operator == nil {
-		//now we test from the plugins:
-		if result, ok := plugins.CustomOperators.Load(op); ok {
-			p.rule.Operator.Operator = result.(plugins.PluginOperatorWrapper)()
-		}
-	}
-	if p.rule.Operator.Operator == nil {
 		return errors.New("Invalid operator " + op)
 	} else {
-		//TODO add a special attribute to accept files
-		fileops := []string{"ipMatchFromFile", "pmFromFile"}
-		for _, fo := range fileops {
-			if fo == op {
-				p.rule.Operator.Data = path.Join(p.Configdir, p.rule.Operator.Data)
-				if _, err := os.Stat(p.rule.Operator.Data); errors.Is(err, os.ErrNotExist) {
-					return fmt.Errorf("cannot find file %s", p.rule.Operator.Data)
-				}
+		data := []byte(p.rule.Operator.Data)
+		// handling files by operators is hard because we must know the paths where we can
+		// search, for example, the policy path or the binary path...
+		// CRS stores the .data files in the same directory as the directives
+		if utils.StringInSlice(op, []string{"ipMatchFromFile", "pmFromFile"}) {
+			// TODO make enhancements here
+			tpath := path.Join(p.Configdir, p.rule.Operator.Data)
+			var err error
+			data, err = utils.OpenFile(tpath, false, "")
+			if err != nil {
+				return err
 			}
+			p.rule.Operator.Data = tpath
 		}
-		err := p.rule.Operator.Operator.Init(p.rule.Operator.Data)
+		err := p.rule.Operator.Operator.Init(string(data))
 		if err != nil {
 			return err
 		}
@@ -250,7 +246,7 @@ func (p *RuleParser) ParseOperator(operator string) error {
 	return nil
 }
 
-func (p *RuleParser) ParseDefaultActions(actions string) error {
+func (p *ruleParser) ParseDefaultActions(actions string) error {
 	act, err := ParseActions(actions)
 	if err != nil {
 		return err
@@ -280,7 +276,7 @@ func (p *RuleParser) ParseDefaultActions(actions string) error {
 }
 
 // ParseActions
-func (p *RuleParser) ParseActions(actions string) error {
+func (p *ruleParser) ParseActions(actions string) error {
 	act, err := ParseActions(actions)
 	if err != nil {
 		return err
@@ -322,14 +318,14 @@ func (p *RuleParser) ParseActions(actions string) error {
 }
 
 // Rule returns the compiled rule
-func (p *RuleParser) Rule() *coraza.Rule {
+func (p *ruleParser) Rule() *coraza.Rule {
 	return p.rule
 }
 
 // NewRuleParser Creates a new rule parser, each rule parser
 // will contain a single rule that can be obtained using ruleparser.Rule()
-func NewRuleParser(p *Parser) *RuleParser {
-	rp := &RuleParser{
+func NewRuleParser(p *Parser) *ruleParser {
+	rp := &ruleParser{
 		rule:           coraza.NewRule(),
 		defaultActions: map[coraza.RulePhase][]ruleAction{},
 		parser:         p,
@@ -351,15 +347,9 @@ func ParseActions(actions string) ([]ruleAction, error) {
 			//skip whitespaces in key
 			continue
 		} else if !quoted && c == ',' {
-			f := actionsmod.ActionsMap()[ckey]
-			if f == nil {
-				//now we test from the plugins:
-				if result, ok := plugins.CustomActions.Load(ckey); ok {
-					f = result.(plugins.PluginActionWrapper)()
-				}
-			}
-			if f == nil {
-				return nil, errors.New("Invalid action " + ckey)
+			f, err := actionsmod.GetAction(ckey)
+			if err != nil {
+				return nil, err
 			}
 			res = append(res, ruleAction{
 				Key:   ckey,
@@ -389,9 +379,9 @@ func ParseActions(actions string) ([]ruleAction, error) {
 			ckey += string(c)
 		}
 		if i+1 == len(actions) {
-			f := actionsmod.ActionsMap()[ckey]
-			if f == nil {
-				return nil, fmt.Errorf("invalid action %s", ckey)
+			f, err := actionsmod.GetAction(ckey)
+			if err != nil {
+				return nil, err
 			}
 			res = append(res, ruleAction{
 				Key:   ckey,

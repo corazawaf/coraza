@@ -30,12 +30,15 @@ var HTTP_STATUSES = []int{100, 101, 102, 103, 200,
 	428, 429, 431, 451, 500, 501, 502, 503, 504,
 	505, 506, 507, 508, 510, 511, 511}
 
-type Status struct {
+type statusFn struct {
 	status int
 }
 
-func (a *Status) Init(r *coraza.Rule, b1 string) error {
-	status, _ := strconv.Atoi(b1)
+func (a *statusFn) Init(r *coraza.Rule, b1 string) error {
+	status, err := strconv.Atoi(b1)
+	if err != nil {
+		return err
+	}
 	for _, s := range HTTP_STATUSES {
 		if status == s {
 			a.status = status
@@ -45,10 +48,19 @@ func (a *Status) Init(r *coraza.Rule, b1 string) error {
 	return fmt.Errorf("invalid http status")
 }
 
-func (a *Status) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *statusFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	tx.Status = a.status
 }
 
-func (a *Status) Type() coraza.RuleActionType {
+func (a *statusFn) Type() coraza.RuleActionType {
 	return coraza.ActionTypeData
 }
+
+func status() coraza.RuleAction {
+	return &statusFn{}
+}
+
+var (
+	_ coraza.RuleAction = &statusFn{}
+	_ RuleActionWrapper = status
+)

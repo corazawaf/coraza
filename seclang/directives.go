@@ -24,7 +24,6 @@ import (
 
 	engine "github.com/jptosso/coraza-waf/v2"
 	utils "github.com/jptosso/coraza-waf/v2/utils"
-	"github.com/jptosso/coraza-waf/v2/utils/geoip"
 	"go.uber.org/zap"
 )
 
@@ -234,32 +233,6 @@ func directiveSecGsbLookupDb(p *Parser, opts string) error {
 	return nil
 }
 
-func directiveSecGeoLookupDb(p *Parser, opts string) error {
-	spl := strings.SplitN(opts, " ", 2)
-	module := spl[0]
-	args := utils.ArgsToMap(spl[1])
-	var err error
-	switch module {
-	case "maxminddb":
-		db := &geoip.Maxminddb{}
-		err = db.Init(args)
-		if err != nil {
-			return err
-		}
-		p.Waf.GeoDb = db
-	case "ip2location":
-		db := &geoip.Ip2Location{}
-		err = db.Init(args)
-		if err != nil {
-			return err
-		}
-		p.Waf.GeoDb = db
-	default:
-		return fmt.Errorf("invalid geoip engine %s", module)
-	}
-	return nil
-}
-
 func directiveSecHashMethodPm(p *Parser, opts string) error {
 	return nil
 }
@@ -376,12 +349,6 @@ func directiveSecUploadDir(p *Parser, opts string) error {
 func directiveSecRequestBodyNoFilesLimit(p *Parser, opts string) error {
 	var err error
 	p.Waf.RequestBodyNoFilesLimit, err = strconv.ParseInt(opts, 10, 64)
-	return err
-}
-
-func directiveSecUnicodeMap(p *Parser, opts string) error {
-	unicode, err := utils.NewUnicode(opts)
-	p.Waf.Unicode = unicode
 	return err
 }
 

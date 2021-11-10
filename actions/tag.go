@@ -18,18 +18,27 @@ import (
 	"github.com/jptosso/coraza-waf/v2"
 )
 
-type Tag struct {
+type tagFn struct {
 }
 
-func (a *Tag) Init(r *coraza.Rule, data string) error {
+func (a *tagFn) Init(r *coraza.Rule, data string) error {
 	r.Tags = append(r.Tags, data)
 	return nil
 }
 
-func (a *Tag) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *tagFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not evaluated
 }
 
-func (a *Tag) Type() coraza.RuleActionType {
+func (a *tagFn) Type() coraza.RuleActionType {
 	return coraza.ActionTypeMetadata
 }
+
+func tag() coraza.RuleAction {
+	return &tagFn{}
+}
+
+var (
+	_ coraza.RuleAction = &tagFn{}
+	_ RuleActionWrapper = tag
+)

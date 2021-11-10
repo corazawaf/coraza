@@ -21,16 +21,16 @@ import (
 	"go.uber.org/zap"
 )
 
-type SkipAfter struct {
+type skipafterFn struct {
 	data string
 }
 
-func (a *SkipAfter) Init(r *coraza.Rule, data string) error {
+func (a *skipafterFn) Init(r *coraza.Rule, data string) error {
 	a.data = strings.Trim(data, `"`)
 	return nil
 }
 
-func (a *SkipAfter) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *skipafterFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	tx.Waf.Logger.Debug("Starting secmarker",
 		zap.String("txid", tx.Id),
 		zap.String("event", "INIT_SECMARK"),
@@ -39,6 +39,15 @@ func (a *SkipAfter) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	tx.SkipAfter = a.data
 }
 
-func (a *SkipAfter) Type() coraza.RuleActionType {
+func (a *skipafterFn) Type() coraza.RuleActionType {
 	return coraza.ActionTypeFlow
 }
+
+func skipafter() coraza.RuleAction {
+	return &skipafterFn{}
+}
+
+var (
+	_ coraza.RuleAction = &skipafterFn{}
+	_ RuleActionWrapper = skipafter
+)

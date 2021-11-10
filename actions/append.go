@@ -43,11 +43,11 @@ func (a *appendFn) Type() coraza.RuleActionType {
 	return coraza.ActionTypeNondisruptive
 }
 
-func append() coraza.RuleAction {
+func append2() coraza.RuleAction {
 	return &appendFn{}
 }
 
 var (
 	_ coraza.RuleAction = &appendFn{}
-	_ RuleActionWrapper = append
+	_ RuleActionWrapper = append2
 )

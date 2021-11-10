@@ -28,7 +28,7 @@ type execFn struct {
 func (a *execFn) Init(r *coraza.Rule, data string) error {
 	fdata, err := utils.OpenFile(data, false, "")
 	if err != nil {
-		return fmt.Errorf("Cannot load file %s", data)
+		return fmt.Errorf("cannot load file %s", data)
 	}
 	a.cachedScript = string(fdata)
 	return nil

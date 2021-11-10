@@ -15,55 +15,31 @@
 package operators
 
 import (
-	"fmt"
+	"regexp"
 	"strings"
-	"sync"
 
-	ahocorasick "github.com/jptosso/aho-corasick"
 	engine "github.com/jptosso/coraza-waf/v2"
-	"github.com/jptosso/coraza-waf/v2/utils"
 )
 
 type PmFromFile struct {
-	Data []string
-	trie *ahocorasick.Trie
-	mux  *sync.RWMutex
+	pm *Pm
 }
 
 func (o *PmFromFile) Init(data string) error {
-	o.Data = []string{}
-	o.mux = &sync.RWMutex{}
-	b, err := utils.OpenFile(data, true, "")
-	content := string(b)
-	if err != nil {
-		return fmt.Errorf("error reading path %s", data)
-	}
-	sp := strings.Split(string(content), "\n")
-	for _, l := range sp {
-		if len(l) == 0 {
+	// Split the data by LF or CRLF
+	re := regexp.MustCompile(`\r?\n`)
+	m := re.Split(data, -1)
+	lines := []string{}
+	for _, m := range m {
+		if len(m) == 0 || m[0] == '#' {
 			continue
 		}
-		l = strings.ReplaceAll(l, "\r", "") //CLF
-		if l[0] != '#' {
-			o.Data = append(o.Data, strings.ToLower(l))
-		}
+		lines = append(lines, m)
 	}
-	o.trie = ahocorasick.NewTrieBuilder().
-		AddStrings(o.Data).
-		Build()
-	return nil
+	o.pm = &Pm{}
+	return o.pm.Init(strings.Join(lines, " "))
 }
 
 func (o *PmFromFile) Evaluate(tx *engine.Transaction, value string) bool {
-	o.mux.RLock()
-	defer o.mux.RUnlock()
-	value = strings.ToLower(value)
-	matches := o.trie.MatchString(value)
-	for i := 0; i < len(matches); i++ {
-		if i == 10 {
-			return true
-		}
-		tx.CaptureField(i, string(matches[0].Match()))
-	}
-	return len(matches) > 0
+	return o.pm.Evaluate(tx, value)
 }

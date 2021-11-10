@@ -18,41 +18,40 @@ import (
 	"fmt"
 
 	"github.com/jptosso/coraza-waf/v2"
-	"github.com/jptosso/coraza-waf/v2/plugins"
 	transformations "github.com/jptosso/coraza-waf/v2/transformations"
 )
 
-type T struct{}
+type tFn struct{}
 
-func (a *T) Init(r *coraza.Rule, input string) error {
+func (a *tFn) Init(r *coraza.Rule, input string) error {
 	// TODO there is a chance that it won't work, it requires tests
+	// none is a special hardcoded transformation, it must remove previous transformations
 	if input == "none" {
 		//remove elements
-		r.Transformations = r.Transformations[:0]
+		r.ClearTransformations()
 		return nil
 	}
 	transforms := transformations.TransformationsMap()
 	tt := transforms[input]
 	if tt == nil {
-		//now we test from the plugins:
-		if result, ok := plugins.CustomTransformations.Load(input); ok {
-			tt = result.(transformations.RuleTransformation)
-		}
-	}
-	if tt == nil {
 		return fmt.Errorf("unsupported transformation %s", input)
 	}
-	r.Transformations = append(r.Transformations, coraza.RuleTransformationParams{
-		Function: tt,
-		Name:     input,
-	})
-	return nil
+	return r.AddTransformation(input, tt)
 }
 
-func (a *T) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *tFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not evaluated
 }
 
-func (a *T) Type() coraza.RuleActionType {
+func (a *tFn) Type() coraza.RuleActionType {
 	return coraza.ActionTypeNondisruptive
 }
+
+func t() coraza.RuleAction {
+	return &tFn{}
+}
+
+var (
+	_ coraza.RuleAction = &tFn{}
+	_ RuleActionWrapper = t
+)

@@ -20,17 +20,23 @@ import (
 	"github.com/jptosso/coraza-waf/v2"
 )
 
+// RuleActionWrapper is used to wrap a RuleAction so that it can be registered
+// and recreated on each call
 type RuleActionWrapper = func() coraza.RuleAction
 
+// TODO maybe change it to sync.Map
 var actionmap = map[string]RuleActionWrapper{}
 
+// RegisterRuleAction registers a new RuleAction
+// It can be used also for plugins.
+// If you register an action with an existing name, it will be overwritten.
 func RegisterRuleAction(name string, a RuleActionWrapper) {
 	actionmap[name] = a
 }
 
 func init() {
 	RegisterRuleAction("allow", allow)
-	RegisterRuleAction("append", append)
+	RegisterRuleAction("append", append2)
 	RegisterRuleAction("auditlog", auditlog)
 	RegisterRuleAction("block", block)
 	RegisterRuleAction("capture", capture)
@@ -64,6 +70,8 @@ func init() {
 	RegisterRuleAction("ver", ver)
 }
 
+// GetAction returns an unwrapped RuleAction from the actionmap based on the name
+// If the action does not exist it returns an error
 func GetAction(name string) (coraza.RuleAction, error) {
 	if a, ok := actionmap[name]; ok {
 		return a(), nil

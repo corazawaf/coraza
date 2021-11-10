@@ -1,4 +1,18 @@
-package seclang
+// Copyright 2021 Juan Pablo Tosso
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package testing
 
 import (
 	"strconv"
@@ -6,23 +20,19 @@ import (
 	"testing"
 
 	"github.com/jptosso/coraza-waf/v2"
-	plugins "github.com/jptosso/coraza-waf/v2/plugins"
-	transformations "github.com/jptosso/coraza-waf/v2/transformations"
+	"github.com/jptosso/coraza-waf/v2/actions"
+	seclang "github.com/jptosso/coraza-waf/v2/seclang"
 )
 
 func init() {
-	plugins.RegisterTransformation("testToLower", transformationToLowercase)
-	plugins.RegisterOperator("even", func() coraza.RuleOperator {
-		return &opEven{}
-	})
-	plugins.RegisterAction("id15", func() coraza.RuleAction {
+	actions.RegisterRuleAction("id15", func() coraza.RuleAction {
 		return &id15{}
 	})
 }
 
 // Test transformation, string to lowercase
 
-func transformationToLowercase(input string, _ *transformations.TransformationTools) string {
+func transformationToLowercase(input string, _ coraza.RuleTransformationTools) string {
 	return strings.ToLower(input)
 }
 
@@ -56,13 +66,13 @@ func (opEven) Evaluate(_ *coraza.Transaction, input string) bool {
 
 // Tripwires
 
-var _ transformations.RuleTransformation = transformationToLowercase
+var _ coraza.RuleTransformation = transformationToLowercase
 var _ coraza.RuleAction = &id15{}
 var _ coraza.RuleOperator = &opEven{}
 
 func TestPlugins(t *testing.T) {
 	waf := coraza.NewWaf()
-	parser, _ := NewParser(waf)
+	parser, _ := seclang.NewParser(waf)
 	if err := parser.FromString("SecRule ARGS \"@even\" \"id15,log\""); err != nil {
 		t.Error(err)
 	}

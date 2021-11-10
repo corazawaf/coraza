@@ -105,9 +105,6 @@ func Test_directiveSecAuditLog(t *testing.T) {
 	if err := p.FromString("SecUnicodeMap 20127"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if p.Waf.Unicode.Map != "20127" {
-		t.Error("failed to set SecUnicodeMap")
-	}
 	if err := p.FromString("SecResponseBodyMimeTypesClear"); err != nil {
 		t.Error("failed to set parser from string")
 	}

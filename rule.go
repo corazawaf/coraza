@@ -122,8 +122,8 @@ type Rule struct {
 
 	// List of transformations to be evaluated
 	// In the future, transformations might be run by the
-	// action itself
-	Transformations []RuleTransformationParams
+	// action itself, not sure yet
+	transformations []RuleTransformationParams
 
 	// Slice of initialized actions to be evaluated during
 	// the rule evaluation process
@@ -370,6 +370,22 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	return matchedValues
 }
 
+// AddTransformation adds a transformation to the rule
+// it fails if the transformation cannot be found
+func (r *Rule) AddTransformation(name string, t RuleTransformation) error {
+	if t == nil || name == "" {
+		return fmt.Errorf("invalid transformation %q not found", name)
+	}
+	r.transformations = append(r.transformations, RuleTransformationParams{name, t})
+	return nil
+}
+
+// ClearTransformations clears all the transformations
+// it is mostly used by the "none" transformation
+func (r *Rule) ClearTransformations() {
+	r.transformations = []RuleTransformationParams{}
+}
+
 func (r *Rule) executeOperator(data string, tx *Transaction) bool {
 	result := r.Operator.Operator.Evaluate(tx, data)
 	if r.Operator.Negation && result {
@@ -383,7 +399,7 @@ func (r *Rule) executeOperator(data string, tx *Transaction) bool {
 
 func (r *Rule) executeTransformationsMultimatch(value string, tools RuleTransformationTools) []string {
 	res := []string{value}
-	for _, t := range r.Transformations {
+	for _, t := range r.transformations {
 		value = t.Function(value, tools)
 		res = append(res, value)
 	}
@@ -391,7 +407,7 @@ func (r *Rule) executeTransformationsMultimatch(value string, tools RuleTransfor
 }
 
 func (r *Rule) executeTransformations(value string, tools RuleTransformationTools) string {
-	for _, t := range r.Transformations {
+	for _, t := range r.transformations {
 		value = t.Function(value, tools)
 	}
 	return value

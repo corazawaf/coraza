@@ -152,7 +152,6 @@ func (p *Parser) evaluate(data string) error {
 		"sechashkey":                    directiveSecHashKey,
 		"sechashengine":                 directiveSecHashEngine,
 		"secgsblookupdb":                directiveSecGsbLookupDb,
-		"secgeolookupdb":                directiveSecGeoLookupDb,
 		"secdefaultaction":              directiveSecDefaultAction,
 		"secdatadir":                    directiveSecDataDir,
 		"seccontentinjection":           directiveSecContentInjection,
@@ -166,7 +165,6 @@ func (p *Parser) evaluate(data string) error {
 		"secauditlog":                   directiveSecAuditLog,
 		"secauditengine":                directiveSecAuditEngine,
 		"secaction":                     directiveSecAction,
-		"secunicodemap":                 directiveSecUnicodeMap,
 		"secdebuglog":                   directiveSecDebugLog,
 		"secdebugloglevel":              directiveSecDebugLogLevel,
 

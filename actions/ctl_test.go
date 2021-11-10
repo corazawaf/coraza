@@ -24,18 +24,18 @@ func TestCtl(t *testing.T) {
 	waf := coraza.NewWaf()
 	tx := waf.NewTransaction()
 	r := coraza.NewRule()
-	ctl := Ctl{}
+	ctlf := ctl()
 
-	if err := ctl.Init(r, "requestBodyProcessor=XML"); err != nil {
+	if err := ctlf.Init(r, "requestBodyProcessor=XML"); err != nil {
 		t.Error("Failed to init requestBodyProcessor=XML")
 	}
-	ctl.Evaluate(r, tx)
+	ctlf.Evaluate(r, tx)
 	// Not implemented yet
 
-	if err := ctl.Init(r, "ruleRemoveTargetById=981260;ARGS:user"); err != nil {
+	if err := ctlf.Init(r, "ruleRemoveTargetById=981260;ARGS:user"); err != nil {
 		t.Error("failed to init ruleRemoveTargetById=981260;ARGS:user")
 	}
-	ctl.Evaluate(r, tx)
+	ctlf.Evaluate(r, tx)
 	/*
 		TODO
 		if tx.ruleRemoveTargetById[981260] == nil {
@@ -50,28 +50,28 @@ func TestCtl(t *testing.T) {
 		}
 	*/
 
-	if err := ctl.Init(r, "auditEngine=Off"); err != nil {
+	if err := ctlf.Init(r, "auditEngine=Off"); err != nil {
 		t.Error("failed to init ctl with auditEngine=Off")
 	}
-	ctl.Evaluate(r, tx)
+	ctlf.Evaluate(r, tx)
 
 	if tx.AuditEngine != coraza.AUDIT_LOG_DISABLED {
 		t.Error("Failed to disable audit log")
 	}
 
-	if err := ctl.Init(r, "ruleEngine=Off"); err != nil {
+	if err := ctlf.Init(r, "ruleEngine=Off"); err != nil {
 		t.Error("failed to init ctl using ruleEngine=Off")
 	}
-	ctl.Evaluate(r, tx)
+	ctlf.Evaluate(r, tx)
 
 	if tx.RuleEngine != coraza.RULE_ENGINE_OFF {
 		t.Error("Failed to disable rule engine")
 	}
 
-	if err := ctl.Init(r, "requestBodyLimit=12345"); err != nil {
+	if err := ctlf.Init(r, "requestBodyLimit=12345"); err != nil {
 		t.Error("failed to init ctl with requestBodyLimit=12345")
 	}
-	ctl.Evaluate(r, tx)
+	ctlf.Evaluate(r, tx)
 
 	if tx.RequestBodyLimit != 12345 {
 		t.Error("Failed to set request body limit")
@@ -79,10 +79,10 @@ func TestCtl(t *testing.T) {
 
 	bodyprocessors := []string{"XML", "JSON", "URLENCODED", "MULTIPART"}
 	for _, bp := range bodyprocessors {
-		if err := ctl.Init(r, "requestBodyProcessor="+bp); err != nil {
+		if err := ctlf.Init(r, "requestBodyProcessor="+bp); err != nil {
 			t.Errorf("failed to init requestBodyProcessor %s", bp)
 		}
-		ctl.Evaluate(r, tx)
+		ctlf.Evaluate(r, tx)
 		if tx.GetCollection(coraza.VARIABLE_REQBODY_PROCESSOR).GetFirstString("") != bp {
 			t.Error("failed to set RequestBodyProcessor " + bp)
 		}

@@ -17,17 +17,23 @@ package operators
 import (
 	"strings"
 
-	ahocorasick "github.com/jptosso/aho-corasick"
+	"github.com/cloudflare/ahocorasick"
 	engine "github.com/jptosso/coraza-waf/v2"
 )
 
+//TODO according to coraza researchs, re2 matching is faster than ahocorasick
+// maybe we should switch in the future
+// Pm is always lowercase
 type Pm struct {
-	data []string
+	matcher *ahocorasick.Matcher
+	// dict is used for capturing
+	dict []string
 }
 
 func (o *Pm) Init(data string) error {
 	data = strings.ToLower(data)
-	o.data = strings.Split(data, " ")
+	o.dict = strings.Split(data, " ")
+	o.matcher = ahocorasick.NewStringMatcher(o.dict)
 	// TODO this operator is supposed to support snort data syntax: "@pm A|42|C|44|F"
 	// TODO modsecurity uses mutex to queue ahocorasick, maybe its for a reason...
 	return nil
@@ -35,19 +41,12 @@ func (o *Pm) Init(data string) error {
 
 func (o *Pm) Evaluate(tx *engine.Transaction, value string) bool {
 	value = strings.ToLower(value)
-	data := make([]string, len(o.data))
-	for i := range o.data {
-		data[i] = tx.MacroExpansion(o.data[i])
-	}
-	trie := ahocorasick.NewTrieBuilder().
-		AddStrings(data).
-		Build()
-	matches := trie.MatchString(value)
+	matches := o.matcher.MatchThreadSafe([]byte(value))
 	for i := 0; i < len(matches); i++ {
 		if i == 10 {
 			return true
 		}
-		tx.CaptureField(i, string(matches[0].Match()))
+		tx.CaptureField(i, o.dict[matches[i]])
 	}
 	return len(matches) > 0
 }

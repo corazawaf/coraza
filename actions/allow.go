@@ -40,13 +40,15 @@ func (a *allowFn) Init(r *coraza.Rule, b1 string) error {
 
 func (a *allowFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	//TODO implement this:
-	if a.allow == 1 {
-		tx.RuleEngine = coraza.RULE_ENGINE_OFF
-	} else if a.allow == 2 {
-		//tx.SkipToPhase = tx.LastPhase +1
-	} else if a.allow == 3 && tx.LastPhase < 3 {
-		//tx.SkipToPhase = 3
-	}
+	/*
+		if a.allow == 1 {
+			tx.RuleEngine = coraza.RULE_ENGINE_OFF
+		} else if a.allow == 2 {
+			//tx.SkipToPhase = tx.LastPhase +1
+		} else if a.allow == 3 && tx.LastPhase < 3 {
+			//tx.SkipToPhase = 3
+		}
+	*/
 }
 
 func (a *allowFn) Type() coraza.RuleActionType {

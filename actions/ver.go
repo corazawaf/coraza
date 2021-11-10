@@ -18,18 +18,27 @@ import (
 	"github.com/jptosso/coraza-waf/v2"
 )
 
-type Ver struct {
+type verFn struct {
 }
 
-func (a *Ver) Init(r *coraza.Rule, data string) error {
+func (a *verFn) Init(r *coraza.Rule, data string) error {
 	r.Version = data
 	return nil
 }
 
-func (a *Ver) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *verFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not evaluated
 }
 
-func (a *Ver) Type() coraza.RuleActionType {
+func (a *verFn) Type() coraza.RuleActionType {
 	return coraza.ActionTypeMetadata
 }
+
+func ver() coraza.RuleAction {
+	return &verFn{}
+}
+
+var (
+	_ coraza.RuleAction = &verFn{}
+	_ RuleActionWrapper = ver
+)

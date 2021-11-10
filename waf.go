@@ -27,7 +27,6 @@ import (
 
 	loggers "github.com/jptosso/coraza-waf/v2/loggers"
 	utils "github.com/jptosso/coraza-waf/v2/utils"
-	"github.com/jptosso/coraza-waf/v2/utils/geoip"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -149,9 +148,6 @@ type Waf struct {
 
 	// Contains the regular expression for relevant status audit logging
 	AuditLogRelevantStatus *regexp.Regexp
-
-	// Contains the GeoIP2 database reader object
-	GeoDb geoip.GeoDb
 
 	// If true WAF engine will fail when remote rules cannot be loaded
 	AbortOnRemoteRulesFail bool

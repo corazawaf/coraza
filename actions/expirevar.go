@@ -34,7 +34,7 @@ func (a *expirevarFn) Init(r *coraza.Rule, data string) error {
 	a.ttl, _ = strconv.Atoi(spl[1])
 	spl = strings.SplitN(spl[0], ".", 2)
 	if len(spl) != 2 {
-		return fmt.Errorf("Expirevar must contain key=value")
+		return fmt.Errorf("expirevar must contain key and value (syntax expirevar:key=value)")
 	}
 	a.collection = spl[0]
 	a.key = spl[1]

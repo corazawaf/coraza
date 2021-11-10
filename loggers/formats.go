@@ -16,15 +16,12 @@ package loggers
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
-	"strings"
 
 	utils "github.com/jptosso/coraza-waf/v2/utils"
 )
 
-type formatter = func(al *AuditLog) (string, error)
-
-func jsonFormatter(al *AuditLog) (string, error) {
+// Legacy modsecurity 2 format
+func jsonFormatter(al AuditLog) (string, error) {
 	jsdata, err := json.Marshal(al)
 	if err != nil {
 		return "", err
@@ -32,75 +29,60 @@ func jsonFormatter(al *AuditLog) (string, error) {
 	return string(jsdata), nil
 }
 
-func cefFormatter(al *AuditLog) (string, error) {
-	f := make(map[string]string)
-	f["src"] = al.Transaction.ClientIp
-	f["status"] = strconv.Itoa(al.Transaction.Response.Status)
-	// TODO add more fields
-	timestamp := al.Transaction.Timestamp
-	host := "localhost"
-	m := &AuditMessage{}
-	severity := "0"
-	if len(al.Messages) > 0 {
-		m = al.Messages[len(al.Messages)-1]
-		severity = fmt.Sprintf("%d", m.Data.Severity)
+// Coraza json format
+// TBI
+func json2Formatter(al AuditLog) (string, error) {
+	jsdata, err := json.Marshal(al)
+	if err != nil {
+		return "", err
 	}
-	msg := m.Message
-	data := m.Data.Data
-
-	if msg == "" {
-		msg = "n/a"
-	}
-	if data == "" {
-		data = "n/a"
-	}
-	if severity == "" {
-		severity = "n/a"
-	}
-	ext := ""
-	for k, v := range f {
-		v := strings.ReplaceAll(v, "|", "\\|")
-		ext += fmt.Sprintf("%s=%s ", k, v)
-	}
-	ext = strings.TrimSpace(ext)
-	return fmt.Sprintf("%s %s CEF:0|coraza|coraza-waf|v1.2|%s|%s|%s|%s",
-		timestamp,
-		host,
-		msg,
-		data,
-		severity,
-		ext), nil
+	return string(jsdata), nil
 }
 
-func ftwFormatter(al *AuditLog) (string, error) {
-	timestamp := al.Transaction.Timestamp
-	address := al.Transaction.ClientIp
-	rules := ""
-	phase := 5
-	msgs := ""
-	severity := ""
-	uri := ""
-	status := 0
-	if al.Transaction.Request != nil {
-		uri = al.Transaction.Request.Uri
-	}
-	if al.Transaction.Response != nil {
-		status = al.Transaction.Response.Status
-	}
-	logdata := ""
+func cefFormatter(al AuditLog) (string, error) {
+	return "", fmt.Errorf("CEF loggign not implemented yet (TBI)")
+	/*
+		TODO TBI
+		f := make(map[string]string)
+		f["src"] = al.Transaction.ClientIp
+		f["status"] = strconv.Itoa(al.Transaction.Response.Status)
+		// TODO add more fields
+		timestamp := al.Transaction.Timestamp
+		host := "localhost"
+		m := &AuditMessage{}
+		severity := "0"
+		if len(al.Messages) > 0 {
+			m = al.Messages[len(al.Messages)-1]
+			severity = fmt.Sprintf("%d", m.Data.Severity)
+		}
+		msg := m.Message
+		data := m.Data.Data
 
-	id := al.Transaction.Id
-	err := fmt.Sprintf("Access denied with code %d (phase %d)", status, phase)
-	for _, r := range al.Messages {
-		rules += fmt.Sprintf("[id \"%d\"] ", r.Data.Id)
-		msgs += fmt.Sprintf("[msg \"%s\"] ", r.Data.Msg)
-	}
-	data := fmt.Sprintf("[%s] [error] [client %s] Coraza: %s. %s %s %s [severity \"%s\"] [uri \"%s\"] [unique_id \"%s\"]",
-		timestamp, address, err, logdata, rules, msgs, severity, uri, id)
-	return data, nil
+		if msg == "" {
+			msg = "n/a"
+		}
+		if data == "" {
+			data = "n/a"
+		}
+		if severity == "" {
+			severity = "n/a"
+		}
+		ext := ""
+		for k, v := range f {
+			v := strings.ReplaceAll(v, "|", "\\|")
+			ext += fmt.Sprintf("%s=%s ", k, v)
+		}
+		ext = strings.TrimSpace(ext)
+		return fmt.Sprintf("%s %s CEF:0|coraza|coraza-waf|v1.2|%s|%s|%s|%s",
+			timestamp,
+			host,
+			msg,
+			data,
+			severity,
+			ext), nil*/
 }
 
-func modsecFormatter(al *AuditLog) (string, error) {
+func nativeFormatter(al AuditLog) (string, error) {
 	boundary := utils.RandomString(10)
 	parts := map[byte]string{}
 	// [27/Jul/2016:05:46:16 +0200] V5guiH8AAQEAADTeJ2wAAAAK 192.168.3.1 50084 192.168.3.111 80
@@ -154,23 +136,8 @@ func modsecFormatter(al *AuditLog) (string, error) {
 	return data, nil
 }
 
-func getFormatter(f string) (formatter, error) {
-	switch f {
-	case "cef":
-		return cefFormatter, nil
-	case "ftw":
-		return ftwFormatter, nil
-	case "modsec":
-		return modsecFormatter, nil
-	case "json":
-		return jsonFormatter, nil
-	}
-	return nil, fmt.Errorf("invalid formatter %s", f)
-}
-
 var (
-	_ formatter = cefFormatter
-	_ formatter = ftwFormatter
-	_ formatter = modsecFormatter
-	_ formatter = jsonFormatter
+	_ LogFormatter = cefFormatter
+	_ LogFormatter = nativeFormatter
+	_ LogFormatter = jsonFormatter
 )

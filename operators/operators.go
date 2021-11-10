@@ -37,7 +37,6 @@ func OperatorsMap() map[string]engine.RuleOperator {
 		"streq":                &Streq{},
 		"ipMatch":              &IpMatch{},
 		"ipMatchFromFile":      &IpMatchFromFile{},
-		"geoLookup":            &GeoLookup{},
 		"rbl":                  &Rbl{},
 		"validateUtf8Encoding": &ValidateUtf8Encoding{},
 		"noMatch":              &NoMatch{},
