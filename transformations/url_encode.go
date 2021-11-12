@@ -16,7 +16,7 @@ package transformations
 
 import "github.com/jptosso/coraza-waf/v2"
 
-func UrlEncode(data string, utils coraza.RuleTransformationTools) string {
+func urlEncode(data string, utils coraza.RuleTransformationTools) string {
 	return doUrlEncode(data)
 }
 

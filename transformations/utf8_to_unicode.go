@@ -21,6 +21,6 @@ import (
 	"github.com/jptosso/coraza-waf/v2"
 )
 
-func Utf8ToUnicode(str string, tools coraza.RuleTransformationTools) string {
+func utf8ToUnicode(str string, tools coraza.RuleTransformationTools) string {
 	return strings.Trim(fmt.Sprintf("%+q", str), "\"")
 }

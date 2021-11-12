@@ -19,7 +19,7 @@ import (
 	"github.com/jptosso/coraza-waf/v2/utils"
 )
 
-func UrlDecode(data string, utils coraza.RuleTransformationTools) string {
+func urlDecode(data string, utils coraza.RuleTransformationTools) string {
 	res, _, _ := doUrlDecode(data)
 	return res
 }

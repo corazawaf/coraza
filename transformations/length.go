@@ -21,6 +21,6 @@ import (
 	"github.com/jptosso/coraza-waf/v2"
 )
 
-func Length(data string, utils coraza.RuleTransformationTools) string {
+func length(data string, utils coraza.RuleTransformationTools) string {
 	return strconv.Itoa(utf8.RuneCountInString(data))
 }

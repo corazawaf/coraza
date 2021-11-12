@@ -21,7 +21,7 @@ import (
 	"github.com/jptosso/coraza-waf/v2"
 )
 
-func Md5(data string, utils coraza.RuleTransformationTools) string {
+func md5T(data string, utils coraza.RuleTransformationTools) string {
 	h := md5.New()
 	_, err := io.WriteString(h, data)
 	if err != nil {

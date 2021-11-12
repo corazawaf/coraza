@@ -20,7 +20,7 @@ import (
 	"github.com/jptosso/coraza-waf/v2"
 )
 
-// RemoveNulls removes NUL bytes in input.
-func RemoveNulls(data string, utils coraza.RuleTransformationTools) string {
+// removeNulls removes NUL bytes in input.
+func removeNulls(data string, utils coraza.RuleTransformationTools) string {
 	return strings.ReplaceAll(data, "\x00", "")
 }

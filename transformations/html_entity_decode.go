@@ -19,6 +19,6 @@ import (
 	"golang.org/x/net/html"
 )
 
-func HtmlEntityDecode(data string, utils coraza.RuleTransformationTools) string {
+func htmlEntityDecode(data string, utils coraza.RuleTransformationTools) string {
 	return html.UnescapeString(data)
 }

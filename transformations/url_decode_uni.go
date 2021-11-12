@@ -19,7 +19,7 @@ import (
 	"github.com/jptosso/coraza-waf/v2/utils"
 )
 
-func UrlDecodeUni(data string, tools coraza.RuleTransformationTools) string {
+func urlDecodeUni(data string, tools coraza.RuleTransformationTools) string {
 	return inplaceUniDecode(data)
 }
 

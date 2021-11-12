@@ -20,6 +20,6 @@ import (
 	"github.com/jptosso/coraza-waf/v2"
 )
 
-func LowerCase(data string, _ coraza.RuleTransformationTools) string {
+func lowerCase(data string, _ coraza.RuleTransformationTools) string {
 	return strings.ToLower(data)
 }

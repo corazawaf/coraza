@@ -20,7 +20,7 @@ import (
 	"github.com/jptosso/coraza-waf/v2"
 )
 
-func NormalisePath(data string, utils coraza.RuleTransformationTools) string {
+func normalisePath(data string, utils coraza.RuleTransformationTools) string {
 	leng := len(data)
 	if leng < 1 {
 		return data

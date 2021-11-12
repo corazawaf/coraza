@@ -16,7 +16,7 @@ package transformations
 
 import "github.com/jptosso/coraza-waf/v2"
 
-func ReplaceComments(data string, utils coraza.RuleTransformationTools) string {
+func replaceComments(data string, utils coraza.RuleTransformationTools) string {
 	return doReplaceComments(data)
 }
 
