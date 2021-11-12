@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/jptosso/coraza-waf/v2/types/variables"
 	"github.com/jptosso/coraza-waf/v2/utils"
 )
 
@@ -44,6 +45,7 @@ func (c *Collection) Get(key string) []string {
 func (c *Collection) Find(key string, re *regexp.Regexp, exceptions []string) []MatchData {
 	cdata := c.data
 	//we return every value in case there is no key but there is a collection
+	va, _ := variables.ParseVariable(c.name)
 	if len(key) == 0 {
 		data := []MatchData{}
 		for k := range c.data {
@@ -52,6 +54,7 @@ func (c *Collection) Find(key string, re *regexp.Regexp, exceptions []string) []
 			}
 			for _, v := range c.data[k] {
 				data = append(data, MatchData{
+					Variable:     va,
 					VariableName: c.name,
 					Key:          k,
 					Value:        v,
@@ -72,6 +75,7 @@ func (c *Collection) Find(key string, re *regexp.Regexp, exceptions []string) []
 				for _, d := range cdata[k] {
 					result = append(result, MatchData{
 						VariableName: c.name,
+						Variable:     va,
 						Key:          k,
 						Value:        d,
 					})
@@ -89,6 +93,7 @@ func (c *Collection) Find(key string, re *regexp.Regexp, exceptions []string) []
 			if k == key {
 				for _, kd := range cdata[k] {
 					ret = append(ret, MatchData{
+						Variable:     va,
 						VariableName: c.name,
 						Key:          k,
 						Value:        kd,

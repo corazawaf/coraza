@@ -32,6 +32,7 @@ func TestEngine(t *testing.T) {
 		t.Error("failed to find test files")
 	}
 	waf := engine.NewWaf()
+	waf.SetLogLevel(5)
 	for _, f := range files {
 		profile, err := NewProfile(f)
 		if err != nil {

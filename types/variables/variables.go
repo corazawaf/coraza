@@ -24,7 +24,7 @@ import (
 type RuleVariable byte
 
 const (
-	UrlencodedError               RuleVariable = RuleVariable(0)
+	Unknown                       RuleVariable = RuleVariable(0)
 	ResponseContentType           RuleVariable = RuleVariable(1)
 	UniqueId                      RuleVariable = RuleVariable(2)
 	ArgsCombinedSize              RuleVariable = RuleVariable(3)
@@ -113,6 +113,8 @@ const (
 
 	// Persisten storage kepy for compatibility
 	Ip RuleVariable = RuleVariable(85)
+
+	UrlencodedError RuleVariable = RuleVariable(86)
 )
 
 // Name transforms a VARIABLE representation
@@ -292,7 +294,7 @@ func (v RuleVariable) Name() string {
 	case Ip:
 		return "IP"
 	}
-	return ""
+	return "UNKNOWN"
 }
 
 // ParseRuleVariable returns the byte interpretation

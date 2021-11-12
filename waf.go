@@ -133,7 +133,7 @@ type Waf struct {
 	// Used to allow switching the debug level during runtime
 	// ctl cannot switch use it as it will update de lvl
 	// for the whole Waf instance
-	LoggerAtomicLevel zap.AtomicLevel
+	loggerAtomicLevel *zap.AtomicLevel
 }
 
 // NewTransaction Creates a new initialized transaction for this WAF instance
@@ -224,6 +224,20 @@ func (w *Waf) SetAuditLogger(engine string) error {
 	return w.auditLogger.SetWriter(engine)
 }
 
+func (w *Waf) SetDebugLogPath(path string) error {
+	cfg := zap.NewProductionConfig()
+	cfg.OutputPaths = []string{
+		path,
+	}
+	cfg.Level = *w.loggerAtomicLevel
+	logger, err := cfg.Build()
+	if err != nil {
+		return err
+	}
+	w.Logger = logger
+	return nil
+}
+
 // Logger returns the initiated loggers
 // Coraza supports unlimited loggers, so you can write for example
 // to syslog and a local drive at the same time
@@ -263,7 +277,7 @@ func NewWaf() *Waf {
 		TmpDir:                   "/tmp",
 		CollectionTimeout:        3600,
 		Logger:                   logger,
-		LoggerAtomicLevel:        atom,
+		loggerAtomicLevel:        &atom,
 		AuditLogRelevantStatus:   regexp.MustCompile(`.*`),
 	}
 	logger.Debug("a new waf instance was created")
@@ -273,21 +287,19 @@ func NewWaf() *Waf {
 // SetLogLevel changes the debug level of the Waf instance
 func (w *Waf) SetLogLevel(lvl int) error {
 	//setlevel is concurrent safe
-	//w.mux.Lock()
-	//defer w.mux.Unlock()
 	switch lvl {
 	case 0:
-		w.LoggerAtomicLevel.SetLevel(zapcore.FatalLevel)
+		w.loggerAtomicLevel.SetLevel(zapcore.FatalLevel)
 	case 1:
-		w.LoggerAtomicLevel.SetLevel(zapcore.PanicLevel)
+		w.loggerAtomicLevel.SetLevel(zapcore.PanicLevel)
 	case 2:
-		w.LoggerAtomicLevel.SetLevel(zapcore.ErrorLevel)
+		w.loggerAtomicLevel.SetLevel(zapcore.ErrorLevel)
 	case 3:
-		w.LoggerAtomicLevel.SetLevel(zapcore.WarnLevel)
+		w.loggerAtomicLevel.SetLevel(zapcore.WarnLevel)
 	case 4:
-		w.LoggerAtomicLevel.SetLevel(zapcore.InfoLevel)
+		w.loggerAtomicLevel.SetLevel(zapcore.InfoLevel)
 	case 5:
-		w.LoggerAtomicLevel.SetLevel(zapcore.DebugLevel)
+		w.loggerAtomicLevel.SetLevel(zapcore.DebugLevel)
 	default:
 		return fmt.Errorf("invalid SecDebugLogLevel value")
 	}

@@ -26,6 +26,7 @@
           non_triggered_rules:
             - 40
   rules: |
+    SecDebugLogLevel 5
     SecRule ARGS "12345" "chain,block,id:26, log, phase: 2"
         SecRule MATCHED_VAR "12345" ""
 
@@ -34,7 +35,7 @@
 
     SecRule ARGS "12345" "chain,block, id:30, log, phase:2"
       SecRule ARGS "pineapple" "chain"
-      SecRule MATCHED_VARS "ARGS:id" "" 
+      SecRule MATCHED_VARS "12345" "" 
       #?
 
 

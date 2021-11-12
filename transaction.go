@@ -124,9 +124,6 @@ type Transaction struct {
 
 	// Timestamp of the request
 	Timestamp int64
-
-	// Used internaly to build the HIGHEST_SEVERITY variable
-	highestSeverity int
 }
 
 // Used to test macro expansions
@@ -243,6 +240,7 @@ func (tx *Transaction) resetAfterRule() {
 	}
 	tx.GetCollection(variables.MatchedVars).Reset()
 	tx.GetCollection(variables.MatchedVarsNames).Reset()
+	tx.Capture = false
 }
 
 // ParseRequestReader Parses binary request including body,
@@ -296,9 +294,13 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*Interruption, error)
 	return tx.ProcessRequestBody()
 }
 
-// MatchVars Creates the MATCHED_ variables required by chains and macro expansion
+// MatchVariable Creates the MATCHED_ variables required by chains and macro expansion
 // MATCHED_VARS, MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES
-func (tx *Transaction) MatchVars(match MatchData) {
+func (tx *Transaction) MatchVariable(match MatchData) {
+	varname := match.Variable.Name()
+	if match.Key != "" {
+		varname = fmt.Sprintf("%s:%s", varname, match.Key)
+	}
 	// Array of values
 	matchedVars := tx.GetCollection(variables.MatchedVars)
 	// Last value
@@ -310,16 +312,12 @@ func (tx *Transaction) MatchVars(match MatchData) {
 	// Array of keys
 	matchedVarsNames := tx.GetCollection(variables.MatchedVarsNames)
 
-	matchedVars.Set("", []string{})
-	colname := match.Variable.Name()
-	if match.Key != "" {
-		colname = fmt.Sprintf("%s:%s", colname, match.Key)
-	}
 	matchedVars.Add("", match.Value)
 	matchedVar.Set("", []string{match.Value})
+	//fmt.Printf("%s: %s\n", match.VariableName, match.Value)
 
-	matchedVarsNames.Add("", colname)
-	matchedVarName.Set("", []string{colname})
+	matchedVarsNames.Add("", varname)
+	matchedVarName.Set("", []string{varname})
 }
 
 // MatchRule Matches a rule to be logged

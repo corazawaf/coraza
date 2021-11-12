@@ -246,7 +246,7 @@ func (p *Parser) ParseRule(data string, withOperator bool) (*engine.Rule, error)
 			lastchain = lastchain.Chain
 		}
 
-		lastchain.Chain = rule
+		*lastchain = *rule
 		if rule.Chain != nil {
 			p.nextChain = true
 		}

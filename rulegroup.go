@@ -171,13 +171,10 @@ func (rg *ruleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 		txr := tx.GetCollection(variables.Rule)
 		txr.Set("id", []string{rid})
 		txr.Set("rev", []string{r.Rev})
-		severity := r.Severity.String()
-		txr.Set("severity", []string{severity})
-		//txr.Set("logdata", []string{r.LogData})
+		txr.Set("severity", []string{r.Severity.String()})
+		txr.Set("logdata", []string{r.LogData})
 		txr.Set("msg", []string{r.Msg})
 		r.Evaluate(tx)
-
-		tx.Capture = false //we reset the capture flag on every run
 		usedRules++
 	}
 	tx.Waf.Logger.Debug("Finished phase",

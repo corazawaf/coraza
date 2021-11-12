@@ -337,17 +337,7 @@ func directiveSecRequestBodyNoFilesLimit(p *Parser, opts string) error {
 }
 
 func directiveSecDebugLog(p *Parser, opts string) error {
-	cfg := zap.NewProductionConfig()
-	cfg.OutputPaths = []string{
-		opts,
-	}
-	cfg.Level = p.Waf.LoggerAtomicLevel
-	logger, err := cfg.Build()
-	if err != nil {
-		return err
-	}
-	p.Waf.Logger = logger
-	return nil
+	return p.Waf.SetDebugLogPath(opts)
 }
 
 func directiveSecDebugLogLevel(p *Parser, opts string) error {

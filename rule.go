@@ -195,7 +195,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	)
 	matchedValues := []MatchData{}
 	tx.GetCollection(variables.Rule).SetData(map[string][]string{
-		"id":       {strconv.Itoa(r.Id)},
+		"id":       {strconv.Itoa(rid)},
 		"msg":      {r.Msg},
 		"rev":      {r.Rev},
 		"logdata":  {tx.MacroExpansion(r.LogData)},
@@ -255,7 +255,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 				continue
 			}
 			tx.Waf.Logger.Debug("Arguments expanded",
-				zap.Int("rule", r.Id),
+				zap.Int("rule", rid),
 				zap.String("tx", tx.Id),
 				zap.Int("count", len(values)),
 			)
@@ -269,7 +269,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 					args = []string{r.executeTransformations(arg.Value, tools)}
 				}
 				tx.Waf.Logger.Debug("arguments transformed",
-					zap.Int("rule", r.Id),
+					zap.Int("rule", rid),
 					zap.String("tx", tx.Id),
 					zap.Strings("arguments", args),
 				)
@@ -285,12 +285,13 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 						})
 					}
 					tx.Waf.Logger.Debug("Evaluate rule operator", zap.String("txid", tx.Id),
-						zap.Int("rule", r.Id),
+						zap.Int("rule", rid),
 						zap.String("event", "EVALUATE_RULE_OPERATOR"),
 						zap.String("operator", "nn"), //TODO fix
 						zap.String("data", carg),
 						zap.String("variable", arg.Variable.Name()),
 						zap.String("key", arg.Key),
+						zap.String("value", carg),
 						zap.Bool("result", match),
 					)
 				}
@@ -303,8 +304,12 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		return matchedValues
 	}
 
+	tx.Waf.Logger.Debug("Attempting to match values", zap.String("txid", tx.Id),
+		zap.Int("rule", rid),
+		zap.String("event", "EVALUATE_RULE_OPERATOR"),
+		zap.Any("values", matchedValues))
 	// we must match the vars before runing the chains
-	tx.MatchVars(matchedValues[0])
+	tx.MatchVariable(matchedValues[0])
 
 	// We run non disruptive actions even if there is no chain match
 	for _, a := range r.Actions {
@@ -313,11 +318,9 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		}
 	}
 
-	// We reset the capturable configuration
-	tx.Capture = false
-
 	if r.Chain != nil {
 		nr := r.Chain
+		tx.Waf.Logger.Debug("Evaluating rule chain", zap.Int("rule", rid), zap.String("raw", nr.Raw))
 		for nr != nil {
 			m := nr.Evaluate(tx)
 			if len(m) == 0 {
@@ -342,13 +345,13 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		tx.Waf.Logger.Debug("detecting rule disruptive action", zap.String("txid", tx.Id), zap.Int("rule", r.Id))
 		for _, a := range r.Actions {
 			if a.Function.Type() == types.ActionTypeDisruptive || a.Function.Type() == types.ActionTypeFlow {
-				tx.Waf.Logger.Debug("evaluating rule disruptive action", zap.String("txid", tx.Id), zap.Int("rule", r.Id))
+				tx.Waf.Logger.Debug("evaluating rule disruptive action", zap.String("txid", tx.Id), zap.Int("rule", rid))
 				a.Function.Evaluate(r, tx)
 			}
 		}
 	}
 	tx.Waf.Logger.Debug("finished evaluating rule", zap.String("txid", tx.Id),
-		zap.Int("rule", r.Id),
+		zap.Int("rule", rid),
 		zap.Int("matched_values", len(matchedValues)),
 		zap.String("event", "FINISH_RULE"),
 	)
