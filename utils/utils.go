@@ -15,61 +15,11 @@
 package utils
 
 import (
-	"context"
-	"crypto/rand"
 	"fmt"
-	"io"
 	"io/ioutil"
-	"net/http"
 	"regexp"
 	"strings"
-	"sync"
-	"time"
 )
-
-const randomchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-
-var Ctx = context.Background()
-var mu sync.Mutex
-
-func RandomString(length int) string {
-	bytes := make([]byte, length)
-	//There is an entropy bug here with a lot of concurrency, so we need sync
-
-	mu.Lock()
-	_, err := rand.Read(bytes)
-	mu.Unlock()
-	if err != nil {
-		// TODO is it ok?
-		return RandomString(length)
-	}
-
-	for i, b := range bytes {
-		bytes[i] = randomchars[b%byte(len(randomchars))]
-	}
-	return string(bytes)
-}
-
-func TrimLeftChars(s string, n int) string {
-	m := 0
-	for i := range s {
-		if m >= n {
-			return s[i:]
-		}
-		m++
-	}
-	return s[:0]
-}
-
-func RemoveQuotes(s string) string {
-	if s == "" {
-		return ""
-	}
-	s = strings.Trim(s, `"`)
-	s = strings.Trim(s, `'`)
-	s = strings.Trim(s, "`")
-	return s
-}
 
 func StringInSlice(a string, list []string) bool {
 	for _, b := range list {
@@ -89,29 +39,12 @@ func IntInSlice(a int, list []int) bool {
 	return false
 }
 
-func OpenFile(path string, allowRemote bool, key string) ([]byte, error) {
+func OpenFile(path string, key string) ([]byte, error) {
 	if strings.HasPrefix(path, "https://") {
-		if !allowRemote {
-			return []byte{}, fmt.Errorf("remote resources are not allowed")
-		}
-		client := &http.Client{
-			Timeout: time.Second * 15,
-		}
-		req, _ := http.NewRequest("GET", path, nil)
-		req.Header.Add("Coraza-key", key)
-		res, err := client.Do(req)
-		if err != nil {
-			return nil, err
-		}
-		defer res.Body.Close()
-		return io.ReadAll(res.Body)
+		return nil, fmt.Errorf("not implemented")
 	} else {
 		return ioutil.ReadFile(path)
 	}
-}
-
-func IsDigit(x byte) bool {
-	return (x >= '0') && (x <= '9')
 }
 
 func ArgsToMap(args string) map[string]string {

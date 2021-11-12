@@ -1,32 +1,74 @@
-// Copyright 2021 Juan Pablo Tosso
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-package utils
+package bodyprocessors
 
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"strconv"
+
+	"github.com/jptosso/coraza-waf/v2/types/variables"
 )
+
+type jsonBodyProcessor struct {
+	collections collectionsMap
+}
+
+func (js *jsonBodyProcessor) Read(reader io.Reader, _ string, _ string) error {
+	// dump reader to byte array
+	var data []byte
+	buf := make([]byte, 1024)
+	for {
+		n, err := reader.Read(buf)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+		data = append(data, buf[:n]...)
+	}
+	fields, err := jsonToMap(data)
+	if err != nil {
+		return err
+	}
+	f := map[string][]string{}
+	names := []string{}
+	for key, value := range fields {
+		f[key] = []string{value}
+		names = append(names, key)
+	}
+	js.collections = collectionsMap{
+		variables.Args:     f,
+		variables.ArgsPost: f,
+		variables.ArgsNames: map[string][]string{
+			"": names,
+		},
+		variables.ArgsPostNames: map[string][]string{
+			"": names,
+		},
+	}
+	return nil
+}
+
+func (js *jsonBodyProcessor) Collections() collectionsMap {
+	return js.collections
+}
+
+func (js *jsonBodyProcessor) Find(expr string) (map[string][]string, error) {
+	return nil, nil
+}
+
+func (js *jsonBodyProcessor) VariableHook() variables.RuleVariable {
+	return variables.Json
+}
 
 // Transform JSON to a map[string]string
 // Example input: {"data": {"name": "John", "age": 30}, "items": [1,2,3]}
 // Example output: map[string]string{"json.data.name": "John", "json.data.age": "30", "json.items.0": "1", "json.items.1": "2", "json.items.2": "3"}
 // TODO add some anti DOS protection
-func JSONToMap(data string) (map[string]string, error) {
+func jsonToMap(data []byte) (map[string]string, error) {
 	result := make(map[string]interface{})
-	if err := json.Unmarshal([]byte(data), &result); err != nil {
+	if err := json.Unmarshal(data, &result); err != nil {
 		return nil, err
 	}
 	m, err := interfaceToMap(result)
@@ -84,3 +126,7 @@ func interfaceToMap(data map[string]interface{}) (map[string]string, error) {
 	}
 	return result, nil
 }
+
+var (
+	_ BodyProcessor = &jsonBodyProcessor{}
+)

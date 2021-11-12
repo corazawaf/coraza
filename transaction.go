@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jptosso/coraza-waf/v2/bodyprocessors"
 	loggers "github.com/jptosso/coraza-waf/v2/loggers"
 	"github.com/jptosso/coraza-waf/v2/types"
 	"github.com/jptosso/coraza-waf/v2/types/variables"
@@ -94,6 +95,9 @@ type Transaction struct {
 
 	// Handles response body buffers
 	ResponseBodyBuffer *BodyBuffer
+
+	// Body processor used to parse JSON, XML, etc
+	bodyProcessor bodyprocessors.BodyProcessor
 
 	// Rules with this id are going to be skipped while processing a phase
 	ruleRemoveById []int
@@ -229,15 +233,16 @@ func (tx *Transaction) CaptureField(index int, value string) {
 	tx.GetCollection(variables.Tx).Set(i, []string{value})
 }
 
-// ResetCapture Resets the captured variables for further uses
-// Captures variables must be always reset before capturing again
-func (tx *Transaction) ResetCapture() {
+// this function is used to control which variables are reset after a new rule is evaluated
+func (tx *Transaction) resetAfterRule() {
 	//We reset capture 0-9
 	ctx := tx.GetCollection(variables.Tx)
 	for i := 0; i < 10; i++ {
 		si := strconv.Itoa(i)
 		ctx.Set(si, []string{""})
 	}
+	tx.GetCollection(variables.MatchedVars).Reset()
+	tx.GetCollection(variables.MatchedVarsNames).Reset()
 }
 
 // ParseRequestReader Parses binary request including body,
@@ -293,32 +298,28 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*Interruption, error)
 
 // MatchVars Creates the MATCHED_ variables required by chains and macro expansion
 // MATCHED_VARS, MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES
-func (tx *Transaction) MatchVars(match []MatchData) {
+func (tx *Transaction) MatchVars(match MatchData) {
 	// Array of values
-	mvs := tx.GetCollection(variables.MatchedVars)
-	mvs.Reset()
+	matchedVars := tx.GetCollection(variables.MatchedVars)
 	// Last value
-	mv := tx.GetCollection(variables.MatchedVar)
-	mv.Reset()
+	matchedVar := tx.GetCollection(variables.MatchedVar)
+	matchedVar.Reset()
 	// Last key
-	mvn := tx.GetCollection(variables.MatchedVarName)
-	mvn.Reset()
+	matchedVarName := tx.GetCollection(variables.MatchedVarName)
+	matchedVarName.Reset()
 	// Array of keys
-	mvns := tx.GetCollection(variables.MatchedVarsNames)
-	mvns.Reset()
+	matchedVarsNames := tx.GetCollection(variables.MatchedVarsNames)
 
-	mvs.Set("", []string{})
-	for _, mm := range match {
-		colname := strings.ToUpper(mm.Variable.Name())
-		if mm.Key != "" {
-			colname = fmt.Sprintf("%s:%s", colname, mm.Key)
-		}
-		mvs.Add("", mm.Value)
-		mv.Set("", []string{mm.Value})
-
-		mvns.Add("", colname)
-		mvn.Set("", []string{colname})
+	matchedVars.Set("", []string{})
+	colname := match.Variable.Name()
+	if match.Key != "" {
+		colname = fmt.Sprintf("%s:%s", colname, match.Key)
 	}
+	matchedVars.Add("", match.Value)
+	matchedVar.Set("", []string{match.Value})
+
+	matchedVarsNames.Add("", colname)
+	matchedVarName.Set("", []string{colname})
 }
 
 // MatchRule Matches a rule to be logged
@@ -361,12 +362,44 @@ func (tx *Transaction) GetField(rv RuleVariableParams, exceptions []string) []Ma
 	key := rv.Key
 	re := rv.Regex
 	col := tx.GetCollection(collection)
-	key = tx.MacroExpansion(key)
 	if col == nil {
 		return []MatchData{}
 	}
-	return col.Find(key, re, exceptions)
-
+	if tx.bodyProcessor != nil && tx.bodyProcessor.VariableHook() == collection {
+		m, err := tx.bodyProcessor.Find(key)
+		if err != nil {
+			tx.Waf.Logger.Error("error getting variable", zap.String("collection", collection.Name()), zap.String("key", key), zap.Error(err))
+			return []MatchData{}
+		}
+		if len(m) == 0 {
+			return []MatchData{}
+		}
+		matches := []MatchData{}
+		for key, values := range m {
+			for _, value := range values {
+				matches = append(matches, MatchData{
+					VariableName: collection.Name(),
+					Variable:     collection,
+					Key:          key,
+					Value:        value,
+				})
+			}
+		}
+		return matches
+	} /*else if collection == variables.MatchedVars {
+		// this is another super annoying case
+		// if the variable is matched_vars, we must get the variable from the matched_vars
+		// then we recast the variable to the new type
+		// this is a bit of a hack, but it works
+		var err error
+		collection, err = variables.ParseVariable(tx.GetCollection(variables.MatchedVars).GetFirstString(""))
+		if err != nil {
+			// this should never happen
+			tx.Waf.Logger.Error("error getting the variable from MATCHED_VARS", zap.String("collection", collection.Name()), zap.String("key", key), zap.Error(err))
+			return []MatchData{}
+		}
+	}*/
+	return col.Find(tx.MacroExpansion(key), re, exceptions)
 }
 
 // GetCollection transforms a VARIABLE_ constant into a
@@ -625,13 +658,11 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 		return tx.Interruption, nil
 	}
 	mime := ""
-
-	reader := tx.RequestBodyBuffer.Reader()
-
 	if m := tx.GetCollection(variables.RequestHeaders).Get("content-type"); len(m) > 0 {
-		//spl := strings.SplitN(m[0], ";", 2) //We must skip charset or others
 		mime = m[0]
 	}
+
+	reader := tx.RequestBodyBuffer.Reader()
 
 	// Chunked requests will always be written to a temporary file
 	if tx.RequestBodyBuffer.Size() >= tx.RequestBodyLimit {
@@ -657,81 +688,36 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 		rbp = "URLENCODED"
 		tx.GetCollection(variables.ReqbodyProcessor).Set("", []string{rbp})
 	}
-
-	switch rbp {
-	case "URLENCODED":
-		buf := new(strings.Builder)
-		if _, err := io.Copy(buf, reader); err != nil {
-			tx.Waf.Logger.Debug("Cannot copy reader buffer")
-		}
-
-		b := buf.String()
-		tx.GetCollection(variables.RequestBody).Set("", []string{b})
-		//TODO add url encode validation
-		//tx.GetCollection(variables.UrlencodedError).Set("", []string{err.Error()})
-		values := utils.ParseQuery(b, "&")
-		for k, vs := range values {
-			for _, v := range vs {
-				tx.AddArgument("POST", k, v)
+	rbp = strings.ToLower(rbp)
+	bodyprocessor, err := bodyprocessors.GetBodyProcessor(rbp)
+	if err != nil {
+		tx.generateReqbodyError(err)
+		tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)
+		return tx.Interruption, nil
+	}
+	if err := bodyprocessor.Read(reader, mime, tx.Waf.UploadDir); err != nil {
+		tx.generateReqbodyError(err)
+		tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)
+		return tx.Interruption, nil
+	}
+	tx.bodyProcessor = bodyprocessor
+	// we insert the collections from the bodyprocessor into the collections map
+	for k, m := range tx.bodyProcessor.Collections() {
+		if k == variables.Args {
+			// for ARGS we make a different process, as ARGS are POST + GET and it requires ARGS_COMBINED_SIZE
+			size := 0
+			for _, vv := range m {
+				for _, v := range vv {
+					size += len(v)
+				}
 			}
+			tx.GetCollection(variables.ArgsCombinedSize).Set("", []string{strconv.Itoa(size)})
 		}
-	case "XML":
-		// TODO
-	case "MULTIPART":
-		req, _ := http.NewRequest("GET", "/", reader)
-		req.Header.Set("Content-Type", mime)
-		err := req.ParseMultipartForm(1000000000)
-		defer req.Body.Close()
-		if err != nil {
-			tx.GetCollection(variables.ReqbodyError).Set("", []string{"1"})
-			tx.GetCollection(variables.ReqbodyErrorMsg).Set("", []string{string(err.Error())})
-			tx.GetCollection(variables.ReqbodyProcessorError).Set("", []string{"1"})
-			tx.GetCollection(variables.ReqbodyProcessorErrorMsg).Set("", []string{string(err.Error())})
-			// we should not report this error
-			return nil, nil
-		}
-
-		fn := tx.GetCollection(variables.FilesNames)
-		fl := tx.GetCollection(variables.Files)
-		fs := tx.GetCollection(variables.FilesSizes)
-		totalSize := int64(0)
-		for field, fheaders := range req.MultipartForm.File {
-			// TODO add them to temporal storage
-			// or maybe not, according to http.MultipartForm, it does exactly that
-			// the main issue is how do I get this path?
-			fn.Add("", field)
-			for _, header := range fheaders {
-				fl.Add("", header.Filename)
-				totalSize += header.Size
-				fs.Add("", fmt.Sprintf("%d", header.Size))
-			}
-		}
-		tx.GetCollection(variables.FilesCombinedSize).Set("", []string{fmt.Sprintf("%d", totalSize)})
-		for k, vs := range req.MultipartForm.Value {
-			for _, v := range vs {
-				tx.AddArgument("POST", k, v)
-			}
-		}
-	case "JSON":
-		// reader to string
-		buf := new(strings.Builder)
-		if _, err := io.Copy(buf, reader); err != nil {
-			tx.Waf.Logger.Debug("Cannot copy reader buffer")
-		}
-		jsmap, err := utils.JSONToMap(buf.String())
-		if err != nil {
-			tx.generateReqbodyError(err)
-			//return nil, nil
-		}
-		for k, v := range jsmap {
-			//We cannot use AddArgument because it will create a vulnerability where attackers can add additional data to json.data
-			tx.GetCollection(variables.Args).Set(k, []string{v})
-			tx.GetCollection(variables.ArgsNames).AddUnique("", k)
-			tx.GetCollection(variables.ArgsPost).Set(k, []string{v})
-			tx.GetCollection(variables.ArgsPostNames).AddUnique("", k)
-			//fmt.Printf("%q=%q\n", k, v)
+		for mk, mv := range m {
+			tx.GetCollection(k).Set(mk, mv)
 		}
 	}
+
 	tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)
 	return tx.Interruption, nil
 }

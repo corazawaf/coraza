@@ -15,8 +15,33 @@
 package utils
 
 import (
+	"crypto/rand"
+	"strings"
+	"sync"
 	"unicode"
 )
+
+const randomchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+
+var mu sync.Mutex
+
+func RandomString(length int) string {
+	bytes := make([]byte, length)
+	//There is an entropy bug here with a lot of concurrency, so we need sync
+
+	mu.Lock()
+	_, err := rand.Read(bytes)
+	mu.Unlock()
+	if err != nil {
+		// TODO is it ok?
+		return RandomString(length)
+	}
+
+	for i, b := range bytes {
+		bytes[i] = randomchars[b%byte(len(randomchars))]
+	}
+	return string(bytes)
+}
 
 func IsSpace(char byte) bool {
 	//https://en.cppreference.com/w/cpp/string/byte/isspace
@@ -51,4 +76,28 @@ func IsXDigit(char int) bool {
 
 func IsODigit(x byte) bool {
 	return (x >= '0') && (x <= '7')
+}
+
+func IsDigit(x byte) bool {
+	return (x >= '0') && (x <= '9')
+}
+
+func TrimLeftChars(s string, n int) string {
+	m := 0
+	for i := range s {
+		if m >= n {
+			return s[i:]
+		}
+		m++
+	}
+	return s[:0]
+}
+
+func RemoveQuotes(s string) string {
+	if s == "" {
+		return ""
+	}
+	s = strings.Trim(s, `"`)
+	s = strings.Trim(s, `'`)
+	return s
 }

@@ -231,7 +231,7 @@ func (p *ruleParser) ParseOperator(operator string) error {
 			// TODO make enhancements here
 			tpath := path.Join(p.Configdir, p.rule.Operator.Data)
 			var err error
-			content, err := utils.OpenFile(tpath, false, "")
+			content, err := utils.OpenFile(tpath, "")
 			if err != nil {
 				return err
 			}

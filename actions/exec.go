@@ -15,23 +15,14 @@
 package actions
 
 import (
-	"fmt"
-
 	"github.com/jptosso/coraza-waf/v2"
 	"github.com/jptosso/coraza-waf/v2/types"
-	utils "github.com/jptosso/coraza-waf/v2/utils"
 )
 
 type execFn struct {
-	cachedScript string
 }
 
 func (a *execFn) Init(r *coraza.Rule, data string) error {
-	fdata, err := utils.OpenFile(data, false, "")
-	if err != nil {
-		return fmt.Errorf("cannot load file %s", data)
-	}
-	a.cachedScript = string(fdata)
 	return nil
 }
 

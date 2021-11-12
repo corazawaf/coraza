@@ -124,12 +124,12 @@ func TestDebugDirectives(t *testing.T) {
 		t.Error(err)
 	}
 	p.Waf.Logger.Info("abc123")
-	data, _ := utils.OpenFile(tmp, false, "")
+	data, _ := utils.OpenFile(tmp, "")
 	if !strings.Contains(string(data), "abc123") {
 		t.Error("failed to write info log")
 	}
 	p.Waf.Logger.Debug("efgh123")
-	data, _ = utils.OpenFile(tmp, false, "")
+	data, _ = utils.OpenFile(tmp, "")
 	if strings.Contains(string(data), "efgh123") {
 		t.Error("debug data shouldn't be written")
 	}
@@ -137,7 +137,7 @@ func TestDebugDirectives(t *testing.T) {
 		t.Error("setting log level")
 	}
 	p.Waf.Logger.Debug("efgh123")
-	data, _ = utils.OpenFile(tmp, false, "")
+	data, _ = utils.OpenFile(tmp, "")
 	if !strings.Contains(string(data), "efgh123") {
 		t.Error("debug data wasn't writen")
 	}

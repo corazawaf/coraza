@@ -41,9 +41,6 @@ func (o *ValidateNid) Init(data string) error {
 func (o *ValidateNid) Evaluate(tx *engine.Transaction, value string) bool {
 	re, _ := regexp.Compile(o.rgx)
 	matches := re.FindAllStringSubmatch(value, -1)
-	if tx.Capture {
-		tx.ResetCapture()
-	}
 
 	res := false
 	for i, m := range matches {

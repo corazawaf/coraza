@@ -59,7 +59,6 @@ func (o *Rbl) Evaluate(tx *engine.Transaction, value string) bool {
 	select {
 	case res := <-c1:
 		if tx.Capture && res {
-			tx.ResetCapture()
 			//tx.AddCapture()
 		}
 		return res

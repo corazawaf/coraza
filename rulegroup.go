@@ -165,6 +165,9 @@ func (rg *ruleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 			//Skipping rule
 			continue
 		}
+		// we reset captures, matched_vars, matched_vars_names, etc
+		tx.resetAfterRule()
+
 		txr := tx.GetCollection(variables.Rule)
 		txr.Set("id", []string{rid})
 		txr.Set("rev", []string{r.Rev})

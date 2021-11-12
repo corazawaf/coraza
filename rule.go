@@ -304,7 +304,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	}
 
 	// we must match the vars before runing the chains
-	tx.MatchVars(matchedValues)
+	tx.MatchVars(matchedValues[0])
 
 	// We run non disruptive actions even if there is no chain match
 	for _, a := range r.Actions {

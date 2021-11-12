@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package bodyprocessors
 
 import (
 	"testing"
@@ -57,7 +57,7 @@ func TestJSONToMap(t *testing.T) {
 		"json.e.0.a":     "1",
 		"json.f.0.0.0.z": "abc",
 	}
-	jsonMap, err := JSONToMap(jsonString)
+	jsonMap, err := jsonToMap([]byte(jsonString))
 	if err != nil {
 		t.Error(err)
 	}

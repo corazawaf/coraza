@@ -48,7 +48,7 @@ type Parser struct {
 func (p *Parser) FromFile(profilePath string) error {
 	p.configfile = profilePath
 	p.configdir = filepath.Dir(profilePath)
-	file, err := utils.OpenFile(profilePath, false, "")
+	file, err := utils.OpenFile(profilePath, "")
 	if err != nil {
 		p.Waf.Logger.Error(err.Error(),
 			zap.String("path", profilePath),

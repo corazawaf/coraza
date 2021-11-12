@@ -76,7 +76,7 @@ func TestTransformations(t *testing.T) {
 				continue
 			}
 			if data.Name == "pmFromFile" {
-				d, err := utils.OpenFile(root+"op/"+data.Param, false, "")
+				d, err := utils.OpenFile(root+"op/"+data.Param, "")
 				if err != nil {
 					t.Errorf("Cannot open file %s", data.Param)
 				}
