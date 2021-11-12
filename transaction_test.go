@@ -20,6 +20,9 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/jptosso/coraza-waf/v2/types"
+	"github.com/jptosso/coraza-waf/v2/types/variables"
 )
 
 var wafi = NewWaf()
@@ -130,15 +133,17 @@ func TestTxGetField(t *testing.T) {
 func TestTxMatch(t *testing.T) {
 	waf := NewWaf()
 	r := NewRule()
-	mr := []MatchData{
-		{
-			"test",
-			"test",
-			"test",
-		},
+	mr := MatchData{
+		"test",
+		0,
+		"test",
+		"test",
 	}
 	tx := waf.NewTransaction()
-	tx.MatchRule(*r, []string{"msg"}, mr)
+	tx.MatchRule(MatchedRule{
+		Rule:        *r,
+		MatchedData: mr,
+	})
 	if len(tx.MatchedRules) == 0 {
 		t.Error("Failed to match value")
 	}
@@ -156,25 +161,16 @@ func TestRequestBody(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error("Failed to process request body")
 	}
-	val := tx.GetCollection(VARIABLE_ARGS_POST).Get("some")
+	val := tx.GetCollection(variables.ArgsPost).Get("some")
 	if len(val) != 1 || val[0] != "result" {
 		t.Error("Failed to set url encoded post data")
-	}
-}
-
-func TestFullRequest(t *testing.T) {
-	tx := makeTransaction()
-	tx.SetFullRequest()
-	data := tx.GetCollection(VARIABLE_FULL_REQUEST).GetFirstString("")
-	if len(data) == 0 {
-		t.Error("invalid FULL_REQUEST length")
 	}
 }
 
 func TestResponseHeader(t *testing.T) {
 	tx := makeTransaction()
 	tx.AddResponseHeader("content-type", "test")
-	if tx.GetCollection(VARIABLE_RESPONSE_CONTENT_TYPE).GetFirstString("") != "test" {
+	if tx.GetCollection(variables.ResponseContentType).GetFirstString("") != "test" {
 		t.Error("invalid RESPONSE_CONTENT_TYPE after response headers")
 	}
 }
@@ -192,7 +188,7 @@ func TestAuditLog(t *testing.T) {
 func TestResponseBody(t *testing.T) {
 	tx := makeTransaction()
 	tx.ResponseBodyAccess = true
-	tx.RuleEngine = RULE_ENGINE_ON
+	tx.RuleEngine = types.RuleEngineOn
 	tx.AddResponseHeader("content-type", "text/plain")
 	if _, err := tx.ResponseBodyBuffer.Write([]byte("test123")); err != nil {
 		t.Error("Failed to write response body buffer")
@@ -200,7 +196,7 @@ func TestResponseBody(t *testing.T) {
 	if _, err := tx.ProcessResponseBody(); err != nil {
 		t.Error("Failed to process response body")
 	}
-	if tx.GetCollection(VARIABLE_RESPONSE_BODY).GetFirstString("") != "test123" {
+	if tx.GetCollection(variables.ResponseBody).GetFirstString("") != "test123" {
 		t.Error("failed to set response body")
 	}
 }
@@ -212,7 +208,15 @@ func TestAuditLogFields(t *testing.T) {
 	tx.AddResponseHeader("test", "test")
 	rule := NewRule()
 	rule.Id = 131
-	tx.MatchRule(*rule, []string{"some msg"}, []MatchData{{"UNIQUE_ID", "", tx.Id}})
+	tx.MatchRule(MatchedRule{
+		Rule:    *rule,
+		Message: "some msg",
+		Id:      tx.Id,
+		MatchedData: MatchData{
+			VariableName: "UNIQUE_ID",
+			Variable:     variables.UniqueId,
+		},
+	})
 	if len(tx.MatchedRules) == 0 || tx.MatchedRules[0].Rule.Id != rule.Id {
 		t.Error("failed to match rule for audit")
 	}
@@ -228,59 +232,12 @@ func TestAuditLogFields(t *testing.T) {
 	}
 }
 
-type testel struct {
-	Output string
-}
-
-func (te *testel) Emergency(msg string) {
-	te.Output = msg
-}
-func (te *testel) Alert(msg string) {
-	te.Output = msg
-}
-func (te *testel) Critical(msg string) {
-	te.Output = msg
-}
-func (te *testel) Error(msg string) {
-	te.Output = msg
-}
-func (te *testel) Warning(msg string) {
-	te.Output = msg
-}
-func (te *testel) Notice(msg string) {
-	te.Output = msg
-}
-func (te *testel) Info(msg string) {
-	te.Output = msg
-}
-func (te *testel) Debug(msg string) {
-	te.Output = msg
-}
-
-var _ EventLogger = &testel{}
-
-func TestErrorLog(t *testing.T) {
-	tx := makeTransaction()
-	el := &testel{}
-	tx.Waf.ErrorLogger = el
-	rule := NewRule()
-	rule.Id = 15
-	rule.Msg = "test"
-	rule.Log = true
-	tx.MatchRule(*rule, []string{"messages"}, []MatchData{{
-		Collection: "test",
-	}})
-	if !strings.Contains(el.Output, `[id "15"]`) {
-		t.Error("failed to create error log with severity")
-	}
-}
-
 func TestRequestStruct(t *testing.T) {
 	req, _ := http.NewRequest("POST", "https://www.coraza.io/test", strings.NewReader("test=456"))
 	waf := NewWaf()
 	tx := waf.NewTransaction()
 	tx.ProcessRequest(req)
-	if tx.GetCollection(VARIABLE_REQUEST_METHOD).GetFirstString("") != "POST" {
+	if tx.GetCollection(variables.RequestMethod).GetFirstString("") != "POST" {
 		t.Error("failed to set request from request object")
 	}
 }
@@ -288,11 +245,11 @@ func TestRequestStruct(t *testing.T) {
 func TestResetCapture(t *testing.T) {
 	tx := makeTransaction()
 	tx.CaptureField(5, "test")
-	if tx.GetCollection(VARIABLE_TX).GetFirstString("5") != "test" {
+	if tx.GetCollection(variables.Tx).GetFirstString("5") != "test" {
 		t.Error("failed to set capture field from tx")
 	}
 	tx.ResetCapture()
-	if tx.GetCollection(VARIABLE_TX).GetFirstString("5") != "" {
+	if tx.GetCollection(variables.Tx).GetFirstString("5") != "" {
 		t.Error("failed to reset capture field from tx")
 	}
 }
@@ -300,9 +257,10 @@ func TestResetCapture(t *testing.T) {
 func TestRelevantAuditLogging(t *testing.T) {
 	tx := makeTransaction()
 	tx.Waf.AuditLogRelevantStatus = regexp.MustCompile(`(403)`)
-	tx.GetCollection(VARIABLE_RESPONSE_STATUS).Set("", []string{"403"})
-	tx.AuditEngine = AUDIT_LOG_RELEVANT
+	tx.GetCollection(variables.ResponseStatus).Set("", []string{"403"})
+	tx.AuditEngine = types.AuditEngineRelevantOnly
 	tx.Log = false
+	//tx.Waf.auditLogger = loggers.NewAuditLogger()
 	tx.ProcessLogging()
 	//TODO how do we check if the log was writen?
 }

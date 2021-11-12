@@ -18,6 +18,7 @@ import (
 	"io"
 
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 type prependFn struct {
@@ -50,8 +51,8 @@ func (a *prependFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Maybe in the future we could add the prepend function to the BodyBuffer
 }
 
-func (a *prependFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeNondisruptive
+func (a *prependFn) Type() types.RuleActionType {
+	return types.ActionTypeNondisruptive
 }
 
 func prepend() coraza.RuleAction {

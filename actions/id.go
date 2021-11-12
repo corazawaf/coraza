@@ -19,6 +19,7 @@ import (
 	"strconv"
 
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 type idFn struct {
@@ -46,8 +47,8 @@ func (a *idFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not evaluated
 }
 
-func (a *idFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeMetadata
+func (a *idFn) Type() types.RuleActionType {
+	return types.ActionTypeMetadata
 }
 
 func id() coraza.RuleAction {

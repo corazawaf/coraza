@@ -20,12 +20,14 @@ import (
 	"strings"
 
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
+	"github.com/jptosso/coraza-waf/v2/types/variables"
 )
 
 type setvarFn struct {
 	key        string
 	value      string
-	collection coraza.RuleVariable
+	collection variables.RuleVariable
 	isRemove   bool
 }
 
@@ -43,7 +45,7 @@ func (a *setvarFn) Init(r *coraza.Rule, data string) error {
 	spl := strings.SplitN(data, "=", 2)
 
 	splcol := strings.SplitN(spl[0], ".", 2)
-	a.collection, err = coraza.ParseRuleVariable(splcol[0])
+	a.collection, err = variables.ParseVariable(splcol[0])
 	if err != nil {
 		return err
 	}
@@ -62,8 +64,8 @@ func (a *setvarFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	a.evaluateTxCollection(r, tx, key, value)
 }
 
-func (a *setvarFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeNondisruptive
+func (a *setvarFn) Type() types.RuleActionType {
+	return types.ActionTypeNondisruptive
 }
 
 func (a *setvarFn) evaluateTxCollection(r *coraza.Rule, tx *coraza.Transaction, key string, value string) {

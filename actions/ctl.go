@@ -20,6 +20,8 @@ import (
 	"strings"
 
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
+	"github.com/jptosso/coraza-waf/v2/types/variables"
 	utils "github.com/jptosso/coraza-waf/v2/utils"
 )
 
@@ -49,7 +51,7 @@ const (
 type ctlFn struct {
 	action     ctlFunctionType
 	value      string
-	collection coraza.RuleVariable
+	collection variables.RuleVariable
 	colKey     string
 }
 
@@ -79,14 +81,12 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 			}
 		}
 	case ctlAuditEngine:
-		switch a.value {
-		case "On":
-			tx.AuditEngine = coraza.AUDIT_LOG_ENABLED
-		case "Off":
-			tx.AuditEngine = coraza.AUDIT_LOG_DISABLED
-		case "RelevantOnly":
-			tx.AuditEngine = coraza.AUDIT_LOG_RELEVANT
+		ae, err := types.ParseAuditEngineStatus(a.value)
+		if err != nil {
+			tx.Waf.Logger.Error(err.Error())
+			return
 		}
+		tx.AuditEngine = ae
 	case ctlAuditLogParts:
 		//TODO lets switch it to a string
 		tx.AuditLogParts = []rune(a.value)
@@ -102,14 +102,11 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 		limit, _ := strconv.ParseInt(a.value, 10, 64)
 		tx.RequestBodyLimit = limit
 	case ctlRuleEngine:
-		switch strings.ToLower(a.value) {
-		case "off":
-			tx.RuleEngine = coraza.RULE_ENGINE_OFF
-		case "on":
-			tx.RuleEngine = coraza.RULE_ENGINE_ON
-		case "detectiononly":
-			tx.RuleEngine = coraza.RULE_ENGINE_DETECTONLY
+		re, err := types.ParseRuleEngineStatus(a.value)
+		if err != nil {
+			tx.Waf.Logger.Error(err.Error())
 		}
+		tx.RuleEngine = re
 	case ctlRuleRemoveById:
 		id, _ := strconv.Atoi(a.value)
 		tx.RemoveRuleById(id)
@@ -128,20 +125,7 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 			}
 		}
 	case ctlRequestBodyProcessor:
-		switch strings.ToLower(a.value) {
-		case "xml":
-			tx.RequestBodyProcessor = coraza.REQUEST_BODY_PROCESSOR_XML
-			tx.GetCollection(coraza.VARIABLE_REQBODY_PROCESSOR).Set("", []string{"XML"})
-		case "json":
-			tx.RequestBodyProcessor = coraza.REQUEST_BODY_PROCESSOR_JSON
-			tx.GetCollection(coraza.VARIABLE_REQBODY_PROCESSOR).Set("", []string{"JSON"})
-		case "urlencoded":
-			tx.RequestBodyProcessor = coraza.REQUEST_BODY_PROCESSOR_URLENCODED
-			tx.GetCollection(coraza.VARIABLE_REQBODY_PROCESSOR).Set("", []string{"URLENCODED"})
-		case "multipart":
-			tx.RequestBodyProcessor = coraza.REQUEST_BODY_PROCESSOR_MULTIPART
-			tx.GetCollection(coraza.VARIABLE_REQBODY_PROCESSOR).Set("", []string{"MULTIPART"})
-		}
+		tx.GetCollection(variables.ReqbodyProcessor).Set("", []string{strings.ToUpper(a.value)})
 	case ctlHashEngine:
 		// Not supported yet
 	case ctlHashEnforcement:
@@ -155,11 +139,11 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 
 }
 
-func (a *ctlFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeNondisruptive
+func (a *ctlFn) Type() types.RuleActionType {
+	return types.ActionTypeNondisruptive
 }
 
-func parseCtl(data string) (ctlFunctionType, string, coraza.RuleVariable, string, error) {
+func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, string, error) {
 	spl1 := strings.SplitN(data, "=", 2)
 	spl2 := strings.SplitN(spl1[1], ";", 2)
 	action := spl1[0]
@@ -175,7 +159,7 @@ func parseCtl(data string) (ctlFunctionType, string, coraza.RuleVariable, string
 			colkey = spl3[0]
 		}
 	}
-	collection, _ := coraza.ParseRuleVariable(strings.TrimSpace(colname))
+	collection, _ := variables.ParseVariable(strings.TrimSpace(colname))
 	colkey = strings.ToLower(colkey)
 	var act ctlFunctionType
 	switch action {

@@ -20,18 +20,20 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jptosso/coraza-waf/v2/types"
+	"github.com/jptosso/coraza-waf/v2/types/variables"
 	utils "github.com/jptosso/coraza-waf/v2/utils"
 	"go.uber.org/zap"
 )
 
-type RuleGroup struct {
+type ruleGroup struct {
 	rules []*Rule
 	mux   *sync.RWMutex
 }
 
 // Adds a rule to the collection
 // Will return an error if the ID is already used
-func (rg *RuleGroup) Add(rule *Rule) error {
+func (rg *ruleGroup) Add(rule *Rule) error {
 	if rule == nil {
 		// this is an ugly solution but chains should not return rules
 		return nil
@@ -46,14 +48,14 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 
 // GetRules returns the slice of rules,
 // it's concurrent safe.
-func (rg *RuleGroup) GetRules() []*Rule {
+func (rg *ruleGroup) GetRules() []*Rule {
 	rg.mux.RLock()
 	defer rg.mux.RUnlock()
 	return rg.rules
 }
 
 // FindById return a Rule with the requested Id
-func (rg *RuleGroup) FindById(id int) *Rule {
+func (rg *ruleGroup) FindById(id int) *Rule {
 	for _, r := range rg.rules {
 		if r.Id == id {
 			return r
@@ -63,7 +65,7 @@ func (rg *RuleGroup) FindById(id int) *Rule {
 }
 
 // DeleteById removes a rule by it's Id
-func (rg *RuleGroup) DeleteById(id int) {
+func (rg *ruleGroup) DeleteById(id int) {
 	for i, r := range rg.rules {
 		if r != nil && r.Id == id {
 			copy(rg.rules[i:], rg.rules[i+1:])
@@ -74,7 +76,7 @@ func (rg *RuleGroup) DeleteById(id int) {
 }
 
 // FindByMsg returns a slice of rules that matches the msg
-func (rg *RuleGroup) FindByMsg(msg string) []*Rule {
+func (rg *ruleGroup) FindByMsg(msg string) []*Rule {
 	rules := []*Rule{}
 	for _, r := range rg.rules {
 		if r.Msg == msg {
@@ -85,7 +87,7 @@ func (rg *RuleGroup) FindByMsg(msg string) []*Rule {
 }
 
 // FindByTag returns a slice of rules that matches the tag
-func (rg *RuleGroup) FindByTag(tag string) []*Rule {
+func (rg *ruleGroup) FindByTag(tag string) []*Rule {
 	rules := []*Rule{}
 	for _, r := range rg.rules {
 		if utils.StringInSlice(tag, r.Tags) {
@@ -96,18 +98,18 @@ func (rg *RuleGroup) FindByTag(tag string) []*Rule {
 }
 
 // Count returns the count of rules
-func (rg *RuleGroup) Count() int {
+func (rg *ruleGroup) Count() int {
 	return len(rg.rules)
 }
 
 // Clear will remove each and every rule stored
-func (rg *RuleGroup) Clear() {
+func (rg *ruleGroup) Clear() {
 	rg.rules = []*Rule{}
 }
 
 // Eval rules for the specified phase, between 1 and 5
 // Returns true if transaction is disrupted
-func (rg *RuleGroup) Eval(phase RulePhase, tx *Transaction) bool {
+func (rg *ruleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	tx.Waf.Logger.Debug("Evaluating phase",
 		zap.String("event", "EVALUATE_PHASE"),
 		zap.String("txid", tx.Id),
@@ -163,10 +165,10 @@ func (rg *RuleGroup) Eval(phase RulePhase, tx *Transaction) bool {
 			//Skipping rule
 			continue
 		}
-		txr := tx.GetCollection(VARIABLE_RULE)
+		txr := tx.GetCollection(variables.Rule)
 		txr.Set("id", []string{rid})
 		txr.Set("rev", []string{r.Rev})
-		severity := strconv.Itoa(r.Severity)
+		severity := r.Severity.String()
 		txr.Set("severity", []string{severity})
 		//txr.Set("logdata", []string{r.LogData})
 		txr.Set("msg", []string{r.Msg})
@@ -185,8 +187,8 @@ func (rg *RuleGroup) Eval(phase RulePhase, tx *Transaction) bool {
 	return tx.Interruption != nil
 }
 
-func NewRuleGroup() *RuleGroup {
-	return &RuleGroup{
+func NewRuleGroup() ruleGroup {
+	return ruleGroup{
 		rules: []*Rule{},
 		mux:   &sync.RWMutex{},
 	}

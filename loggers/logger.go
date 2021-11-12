@@ -17,13 +17,21 @@ package loggers
 import (
 	"fmt"
 	"io/fs"
+	"os"
+	"path"
+
+	"github.com/jptosso/coraza-waf/v2/utils"
 )
 
+// Logger is a wrapper to hold configurations, a writer and a formatter
+// It is stored in the WAF Instance and used by the transactions
+// It must be instanced by using NewLogger(...)
+// TODO maybe we should not export it
 type Logger struct {
-	File      string
-	Directory string
-	DirMode   fs.FileMode
-	FileMode  fs.FileMode
+	file      string
+	directory string
+	dirMode   fs.FileMode
+	fileMode  fs.FileMode
 	formatter LogFormatter
 	writer    LogWriter
 }
@@ -31,11 +39,10 @@ type Logger struct {
 // Write is used by the transactions to write to the audit log writer
 // Important: Concurrency must be handled by the writer, not the logger
 func (l Logger) Write(al AuditLog) error {
-	data, err := l.formatter(al)
-	if err != nil {
-		return err
+	if l.writer == nil {
+		return fmt.Errorf("no audit log writer")
 	}
-	return l.writer.Write(l, data)
+	return l.writer.Write(al)
 }
 
 func (l *Logger) Close() error {
@@ -63,9 +70,9 @@ func (l *Logger) SetWriter(name string) error {
 type LogFormatter = func(al AuditLog) ([]byte, error)
 type LogWriter interface {
 	// In case the writer requires previous preparations
-	Init() error
+	Init(*Logger) error
 	// Writes the audit log using the Logger properties
-	Write(Logger, []byte) error
+	Write(AuditLog) error
 	// Closes the writer if required
 	Close() error
 }
@@ -107,7 +114,7 @@ func getLogFormatter(name string) (LogFormatter, error) {
 	return formatter, nil
 }
 
-func NewLogger(file, directory string, dirMode, fileMode fs.FileMode) (Logger, error) {
+func NewAuditLogger() (*Logger, error) {
 	/*
 		if file == "" {
 			return nil, fmt.Errorf("invalid file")
@@ -115,28 +122,31 @@ func NewLogger(file, directory string, dirMode, fileMode fs.FileMode) (Logger, e
 		if directory == "" {
 			return nil, fmt.Errorf("invalid directory")
 		}*/
-	if dirMode == 0 {
-		dirMode = fs.FileMode(0755)
-	}
-	if fileMode == 0 {
-		fileMode = fs.FileMode(0644)
-	}
-	return Logger{
-		File:      file,
-		Directory: directory,
-		DirMode:   dirMode,
-		FileMode:  fileMode,
+	dirMode := fs.FileMode(0755)
+	fileMode := fs.FileMode(0644)
+	s := &serialWriter{}
+	f := path.Join(os.TempDir(), utils.RandomString(10)+"-coraza.log")
+	l := &Logger{
+		file:      f,
+		directory: "/opt/coraza/var/log/audit/",
+		dirMode:   dirMode,
+		fileMode:  fileMode,
 		formatter: nativeFormatter,
-		writer:    serialWriter,
-	}, nil
+		writer:    s,
+	}
+	return l, s.Init(l)
 }
 
 func init() {
 	RegisterLogWriter("concurrent", func() LogWriter {
-		return ConcurrentLogger{}
+		return &concurrentWriter{}
+	})
+	RegisterLogWriter("serial", func() LogWriter {
+		return &serialWriter{}
 	})
 
 	RegisterLogFormatter("json", jsonFormatter)
+	RegisterLogFormatter("json2", json2Formatter)
 	RegisterLogFormatter("native", nativeFormatter)
 	//RegisterLogFormatter("cef", cefFormatter)
 }

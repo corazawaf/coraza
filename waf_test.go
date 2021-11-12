@@ -22,9 +22,6 @@ var waf *Waf
 
 func TestWAFInitialize(t *testing.T) {
 	waf = NewWaf()
-	if waf.Rules == nil {
-		t.Error("Failed to initialize rule groups")
-	}
 }
 
 func TestNewTransaction(t *testing.T) {

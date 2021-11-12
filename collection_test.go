@@ -31,7 +31,7 @@ func TestLocalCollectionMatchData(t *testing.T) {
 		return
 	}
 	md0 := md[0]
-	if md0.Collection != "test" {
+	if md0.VariableName != "test" {
 		t.Error("Failed to set matched data collection")
 	}
 	if md0.Key != "test2" {

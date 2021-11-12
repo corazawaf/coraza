@@ -16,6 +16,7 @@ package actions
 
 import (
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 type blockFn struct{}
@@ -28,8 +29,8 @@ func (a *blockFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// This should never run
 }
 
-func (a *blockFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeDisruptive
+func (a *blockFn) Type() types.RuleActionType {
+	return types.ActionTypeDisruptive
 }
 
 func block() coraza.RuleAction {

@@ -16,6 +16,7 @@ package actions
 
 import (
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 	"go.uber.org/zap"
 )
 
@@ -39,8 +40,8 @@ func (a *appendFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	}
 }
 
-func (a *appendFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeNondisruptive
+func (a *appendFn) Type() types.RuleActionType {
+	return types.ActionTypeNondisruptive
 }
 
 func append2() coraza.RuleAction {

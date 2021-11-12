@@ -16,6 +16,7 @@ package actions
 
 import (
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 type logdataFn struct {
@@ -30,8 +31,8 @@ func (a *logdataFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	tx.Logdata = tx.MacroExpansion(r.LogData)
 }
 
-func (a *logdataFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeNondisruptive
+func (a *logdataFn) Type() types.RuleActionType {
+	return types.ActionTypeNondisruptive
 }
 
 func logdata() coraza.RuleAction {

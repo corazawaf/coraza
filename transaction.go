@@ -28,6 +28,8 @@ import (
 	"time"
 
 	loggers "github.com/jptosso/coraza-waf/v2/loggers"
+	"github.com/jptosso/coraza-waf/v2/types"
+	"github.com/jptosso/coraza-waf/v2/types/variables"
 	utils "github.com/jptosso/coraza-waf/v2/utils"
 	"go.uber.org/zap"
 )
@@ -44,28 +46,6 @@ type Interruption struct {
 
 	// Parameters used by proxy and redirect
 	Data string
-}
-
-// MatchedRule contains a list of macro expanded messages,
-// matched variables and a pointer to the rule
-type MatchedRule struct {
-	// A single rule may contain multiple messages from chains
-	Messages []string
-	// A slice of matched variables
-	MatchedData []MatchData
-	// A pointer to the triggered rule
-	Rule Rule
-}
-
-// MatchData works like VariableKey but is used for logging
-// so it contains the collection as a string and it's value
-type MatchData struct {
-	// Variable name as a string
-	Collection string
-	// Key of the variable, blank if no key is required
-	Key string
-	// Value of the current VARIABLE:KEY
-	Value string
 }
 
 type Transaction struct {
@@ -94,21 +74,20 @@ type Transaction struct {
 	SkipAfter string
 
 	// Copies from the WafInstance that may be overwritten by the ctl action
-	AuditEngine              int
+	AuditEngine              types.AuditEngineStatus
 	AuditLogParts            []rune
 	ForceRequestBodyVariable bool
 	RequestBodyAccess        bool
 	RequestBodyLimit         int64
-	RequestBodyProcessor     int
 	ResponseBodyAccess       bool
 	ResponseBodyLimit        int64
-	RuleEngine               int
+	RuleEngine               types.RuleEngineStatus
 	HashEngine               bool
 	HashEnforcement          bool
 
 	// Stores the last phase that was evaluated
 	// Used by allow to skip phases
-	LastPhase RulePhase
+	LastPhase types.RulePhase
 
 	// Handles request body buffers
 	RequestBodyBuffer *BodyBuffer
@@ -122,7 +101,7 @@ type Transaction struct {
 	// Used by ctl to remove rule targets by id during the transaction
 	// All other "target removers" like "ByTag" are an abstraction of "ById"
 	// For example, if you want to remove REQUEST_HEADERS:User-Agent from rule 85:
-	// {85: {VARIABLE_REQUEST_HEADERS, "user-agent"}}
+	// {85: {variables.RequestHeaders, "user-agent"}}
 	ruleRemoveTargetById map[int][]RuleVariableParams
 
 	// Will skip this number of rules, this value will be decreased on each skip
@@ -134,7 +113,7 @@ type Transaction struct {
 	Capture bool
 
 	// Contains duration in useconds per phase
-	StopWatches map[RulePhase]int
+	StopWatches map[types.RulePhase]int
 
 	// Contains a Waf instance for the current transaction
 	Waf Waf
@@ -152,7 +131,7 @@ var macroRegexp = regexp.MustCompile(`%\{([\w.-]+?)\}`)
 // MacroExpansion expands a string that contains %{somevalue.some-key}
 // into it's first value, for example:
 // 	v1 := tx.MacroExpansion("%{request_headers.user-agent")
-//  v2 := tx.GetCollection(VARIABLE_REQUEST_HEADERS).GetFirstString("user-agent")
+//  v2 := tx.GetCollection(variables.RequestHeaders).GetFirstString("user-agent")
 //  v1 == v2 // returns true
 // Important: this function is case insensitive
 func (tx *Transaction) MacroExpansion(data string) string {
@@ -166,7 +145,7 @@ func (tx *Transaction) MacroExpansion(data string) string {
 	for _, v := range matches {
 		match := v[2 : len(v)-1]
 		matchspl := strings.SplitN(match, ".", 2)
-		col, err := ParseRuleVariable(strings.ToLower(matchspl[0]))
+		col, err := variables.ParseVariable(matchspl[0])
 		if err != nil {
 			//Invalid collection
 			continue
@@ -201,47 +180,28 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 		return
 	}
 	key = strings.ToLower(key)
-	tx.GetCollection(VARIABLE_REQUEST_HEADERS_NAMES).AddUnique("", key)
-	tx.GetCollection(VARIABLE_REQUEST_HEADERS).Add(key, value)
+	tx.GetCollection(variables.RequestHeadersNames).AddUnique("", key)
+	tx.GetCollection(variables.RequestHeaders).Add(key, value)
 
 	if key == "content-type" {
 		val := strings.ToLower(value)
 		if val == "application/x-www-form-urlencoded" {
-			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR).Set("", []string{"URLENCODED"})
+			tx.GetCollection(variables.ReqbodyProcessor).Set("", []string{"URLENCODED"})
 		} else if strings.HasPrefix(val, "multipart/form-data") {
-			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR).Set("", []string{"MULTIPART"})
+			tx.GetCollection(variables.ReqbodyProcessor).Set("", []string{"MULTIPART"})
 		}
 	} else if key == "host" {
-		tx.GetCollection(VARIABLE_SERVER_NAME).Set("", []string{value})
+		tx.GetCollection(variables.ServerName).Set("", []string{value})
 	} else if key == "cookie" {
 		// Cookies use the same syntax as GET params but with semicolon (;) separator
 		values := utils.ParseQuery(value, ";")
 		for k, vr := range values {
-			tx.GetCollection(VARIABLE_REQUEST_COOKIES_NAMES).AddUnique("", k)
+			tx.GetCollection(variables.RequestCookiesNames).AddUnique("", k)
 			for _, v := range vr {
-				tx.GetCollection(VARIABLE_REQUEST_COOKIES).Add(k, v)
+				tx.GetCollection(variables.RequestCookies).Add(k, v)
 			}
 		}
 	}
-}
-
-// SetFullRequest Creates the FULL_REQUEST variable based on every input
-// It's a heavy operation and it's not used by OWASP CRS so it's optional
-func (tx *Transaction) SetFullRequest() {
-	headers := ""
-	for k, v := range tx.GetCollection(VARIABLE_REQUEST_HEADERS).Data() {
-		if k == "" {
-			continue
-		}
-		for _, v2 := range v {
-			headers += fmt.Sprintf("%s: %s\n", k, v2)
-		}
-	}
-	full_request := fmt.Sprintf("%s\n%s\n\n%s\n",
-		tx.GetCollection(VARIABLE_REQUEST_LINE).GetFirstString(""),
-		headers,
-		tx.GetCollection(VARIABLE_REQUEST_BODY).GetFirstString(""))
-	tx.GetCollection(VARIABLE_FULL_REQUEST).Set("", []string{full_request})
 }
 
 // AddResponseHeader Adds a response header variable
@@ -252,13 +212,13 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 		return
 	}
 	key = strings.ToLower(key)
-	tx.GetCollection(VARIABLE_RESPONSE_HEADERS_NAMES).AddUnique("", key)
-	tx.GetCollection(VARIABLE_RESPONSE_HEADERS).Add(key, value)
+	tx.GetCollection(variables.ResponseHeadersNames).AddUnique("", key)
+	tx.GetCollection(variables.ResponseHeaders).Add(key, value)
 
 	//Most headers can be managed like that
 	if key == "content-type" {
 		spl := strings.SplitN(value, ";", 2)
-		tx.GetCollection(VARIABLE_RESPONSE_CONTENT_TYPE).Set("", []string{spl[0]})
+		tx.GetCollection(variables.ResponseContentType).Set("", []string{spl[0]})
 	}
 }
 
@@ -266,14 +226,14 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 // that supports capture, like @rx
 func (tx *Transaction) CaptureField(index int, value string) {
 	i := strconv.Itoa(index)
-	tx.GetCollection(VARIABLE_TX).Set(i, []string{value})
+	tx.GetCollection(variables.Tx).Set(i, []string{value})
 }
 
 // ResetCapture Resets the captured variables for further uses
 // Captures variables must be always reset before capturing again
 func (tx *Transaction) ResetCapture() {
 	//We reset capture 0-9
-	ctx := tx.GetCollection(VARIABLE_TX)
+	ctx := tx.GetCollection(variables.Tx)
 	for i := 0; i < 10; i++ {
 		si := strconv.Itoa(i)
 		ctx.Set(si, []string{""})
@@ -314,7 +274,7 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*Interruption, error)
 	if it := tx.ProcessRequestHeaders(); it != nil {
 		return it, nil
 	}
-	ct := tx.GetCollection(VARIABLE_REQUEST_HEADERS).GetFirstString("content-type")
+	ct := tx.GetCollection(variables.RequestHeaders).GetFirstString("content-type")
 	ct = strings.Split(ct, ";")[0]
 	for scanner.Scan() {
 
@@ -335,21 +295,21 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*Interruption, error)
 // MATCHED_VARS, MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES
 func (tx *Transaction) MatchVars(match []MatchData) {
 	// Array of values
-	mvs := tx.GetCollection(VARIABLE_MATCHED_VARS)
+	mvs := tx.GetCollection(variables.MatchedVars)
 	mvs.Reset()
 	// Last value
-	mv := tx.GetCollection(VARIABLE_MATCHED_VAR)
+	mv := tx.GetCollection(variables.MatchedVar)
 	mv.Reset()
 	// Last key
-	mvn := tx.GetCollection(VARIABLE_MATCHED_VAR_NAME)
+	mvn := tx.GetCollection(variables.MatchedVarName)
 	mvn.Reset()
 	// Array of keys
-	mvns := tx.GetCollection(VARIABLE_MATCHED_VARS_NAMES)
+	mvns := tx.GetCollection(variables.MatchedVarsNames)
 	mvns.Reset()
 
 	mvs.Set("", []string{})
 	for _, mm := range match {
-		colname := strings.ToUpper(mm.Collection)
+		colname := strings.ToUpper(mm.Variable.Name())
 		if mm.Key != "" {
 			colname = fmt.Sprintf("%s:%s", colname, mm.Key)
 		}
@@ -362,64 +322,20 @@ func (tx *Transaction) MatchVars(match []MatchData) {
 }
 
 // MatchRule Matches a rule to be logged
-func (tx *Transaction) MatchRule(rule Rule, msgs []string, match []MatchData) {
-	if rule.Log && tx.Waf.ErrorLogger != nil {
-		str := strings.Builder{}
-		str.WriteString("Warning. ")
-		variable := match[0].Collection
-		if match[0].Key != "" {
-			variable += fmt.Sprintf(":%s", match[0].Key)
-		}
-		if rule.Operator != nil {
-			str.WriteString(fmt.Sprintf("Match of \"- %s\" against %q required. ", rule.Operator.Data, variable))
-		} else {
-			//TODO check msg
-			str.WriteString("Unconditional match. ")
-		}
-		str.WriteString(fmt.Sprintf("[file %q] ", rule.File))
-		str.WriteString(fmt.Sprintf("[line \"%d\"] ", rule.Line))
-		str.WriteString(fmt.Sprintf("[id \"%d\"] ", rule.Id))
-		str.WriteString(fmt.Sprintf("[msg %q] ", msgs[0]))
-		str.WriteString(fmt.Sprintf("[data %q]", tx.MacroExpansion(rule.LogData)))
-		if rule.Severity != -1 {
-			severity := "someseverity"
-			str.WriteString(fmt.Sprintf(" [severity %q]", severity))
-		}
-		switch EventSeverity(rule.Severity) {
-		case EventEmergency:
-			tx.Waf.ErrorLogger.Emergency(str.String())
-		case EventAlert:
-			tx.Waf.ErrorLogger.Alert(str.String())
-		case EventCritical:
-			tx.Waf.ErrorLogger.Critical(str.String())
-		case EventError:
-			tx.Waf.ErrorLogger.Error(str.String())
-		case EventWarning:
-			tx.Waf.ErrorLogger.Warning(str.String())
-		case EventNotice:
-			tx.Waf.ErrorLogger.Notice(str.String())
-		case EventInfo:
-			tx.Waf.ErrorLogger.Info(str.String())
-		case EventDebug:
-			tx.Waf.ErrorLogger.Debug(str.String())
-		default:
-			//TODO
-		}
-	}
-	tx.Waf.Logger.Debug("rule matched", zap.String("txid", tx.Id), zap.Int("rule", rule.Id), zap.Int("count", len(match)))
-	mr := MatchedRule{
-		Messages:    msgs,
-		MatchedData: match,
-		Rule:        rule,
-	}
+func (tx *Transaction) MatchRule(mr MatchedRule) {
+	tx.Waf.Logger.Debug("rule matched", zap.String("txid", tx.Id), zap.Int("rule", mr.Rule.Id))
+	/*
+		if mr.Rule.Log && tx.Waf.ErrorLogger != nil {
+			//TODO log based on severity
+		}*/
 	tx.MatchedRules = append(tx.MatchedRules, mr)
 
 	// set highest_severity
-	hs := tx.GetCollection(VARIABLE_HIGHEST_SEVERITY)
-	maxSeverity := hs.GetFirstInt("")
-	if rule.Severity > maxSeverity {
-		hs.Set("", []string{strconv.Itoa(rule.Severity)})
-		tx.Waf.Logger.Debug("Set highest severity", zap.Int("severity", rule.Severity))
+	hs := tx.GetCollection(variables.HighestSeverity)
+	maxSeverity, _ := types.ParseRuleSeverity(hs.GetFirstString(""))
+	if mr.Rule.Severity > maxSeverity {
+		hs.Set("", []string{strconv.Itoa(mr.Rule.Severity.Int())})
+		tx.Waf.Logger.Debug("Set highest severity", zap.Int("severity", mr.Rule.Severity.Int()))
 	}
 }
 
@@ -455,7 +371,7 @@ func (tx *Transaction) GetField(rv RuleVariableParams, exceptions []string) []Ma
 
 // GetCollection transforms a VARIABLE_ constant into a
 // *Collection used to get VARIABLES data
-func (tx *Transaction) GetCollection(variable RuleVariable) *Collection {
+func (tx *Transaction) GetCollection(variable variables.RuleVariable) *Collection {
 	return tx.collections[variable]
 }
 
@@ -496,7 +412,7 @@ func (tx *Transaction) savePersistentData() {
 
 // RemoveRuleTargetById Removes the VARIABLE:KEY from the rule ID
 // It's mostly used by CTL to dinamically remove targets from rules
-func (tx *Transaction) RemoveRuleTargetById(id int, variable RuleVariable, key string) {
+func (tx *Transaction) RemoveRuleTargetById(id int, variable variables.RuleVariable, key string) {
 	c := RuleVariableParams{
 		Variable: variable,
 		Key:      key,
@@ -575,10 +491,10 @@ func (tx *Transaction) ProcessConnection(client string, cPort int, server string
 	// 	tx.GetCollection(VARIABLE_REMOTE_HOST).Set("", []string{client})
 	// }
 
-	tx.GetCollection(VARIABLE_REMOTE_ADDR).Set("", []string{client})
-	tx.GetCollection(VARIABLE_REMOTE_PORT).Set("", []string{p})
-	tx.GetCollection(VARIABLE_SERVER_ADDR).Set("", []string{server})
-	tx.GetCollection(VARIABLE_SERVER_PORT).Set("", []string{p2})
+	tx.GetCollection(variables.RemoteAddr).Set("", []string{client})
+	tx.GetCollection(variables.RemotePort).Set("", []string{p})
+	tx.GetCollection(variables.ServerAddr).Set("", []string{server})
+	tx.GetCollection(variables.ServerPort).Set("", []string{p2})
 }
 
 // ExtractArguments transforms an url encoded string to a map and creates
@@ -600,21 +516,21 @@ func (tx *Transaction) ExtractArguments(orig string, uri string) {
 // This will set ARGS_(GET|POST), ARGS, ARGS_NAMES, ARGS_COMBINED_SIZE and
 // ARGS_(GET|POST)_NAMES
 func (tx *Transaction) AddArgument(orig string, key string, value string) {
-	var vals, names RuleVariable
+	var vals, names variables.RuleVariable
 	if orig == "GET" {
-		vals = VARIABLE_ARGS_GET
-		names = VARIABLE_ARGS_GET_NAMES
+		vals = variables.ArgsGet
+		names = variables.ArgsGetNames
 	} else {
-		vals = VARIABLE_ARGS_POST
-		names = VARIABLE_ARGS_POST_NAMES
+		vals = variables.ArgsPost
+		names = variables.ArgsPostNames
 	}
-	tx.GetCollection(VARIABLE_ARGS).Add(key, value)
-	tx.GetCollection(VARIABLE_ARGS_NAMES).Add("", key)
+	tx.GetCollection(variables.Args).Add(key, value)
+	tx.GetCollection(variables.ArgsNames).Add("", key)
 
 	tx.GetCollection(vals).Add(key, value)
 	tx.GetCollection(names).Add("", key)
 
-	col := tx.GetCollection(VARIABLE_ARGS_COMBINED_SIZE)
+	col := tx.GetCollection(variables.ArgsCombinedSize)
 	i := col.GetFirstInt64("") + int64(len(key)+len(value))
 	istr := strconv.FormatInt(i, 10)
 	col.Set("", []string{istr})
@@ -629,12 +545,12 @@ func (tx *Transaction) AddArgument(orig string, key string, value string) {
 //       SecLanguage phase 1 and 2.
 // note: This function won't add GET arguments, they must be added with AddArgument
 func (tx *Transaction) ProcessUri(uri string, method string, httpVersion string) {
-	tx.GetCollection(VARIABLE_REQUEST_METHOD).Set("", []string{method})
-	tx.GetCollection(VARIABLE_REQUEST_PROTOCOL).Set("", []string{httpVersion})
-	tx.GetCollection(VARIABLE_REQUEST_URI_RAW).Set("", []string{uri})
+	tx.GetCollection(variables.RequestMethod).Set("", []string{method})
+	tx.GetCollection(variables.RequestProtocol).Set("", []string{httpVersion})
+	tx.GetCollection(variables.RequestUriRaw).Set("", []string{uri})
 
 	//TODO modsecurity uses HTTP/${VERSION} instead of just version, let's check it out
-	tx.GetCollection(VARIABLE_REQUEST_LINE).Set("", []string{fmt.Sprintf("%s %s %s", method, uri, httpVersion)})
+	tx.GetCollection(variables.RequestLine).Set("", []string{fmt.Sprintf("%s %s %s", method, uri, httpVersion)})
 
 	var err error
 
@@ -646,9 +562,9 @@ func (tx *Transaction) ProcessUri(uri string, method string, httpVersion string)
 	parsedUrl, err := url.Parse(uri)
 	query := ""
 	if err != nil {
-		tx.GetCollection(VARIABLE_URLENCODED_ERROR).Set("", []string{err.Error()})
+		tx.GetCollection(variables.UrlencodedError).Set("", []string{err.Error()})
 		path = uri
-		tx.GetCollection(VARIABLE_REQUEST_URI).Set("", []string{uri})
+		tx.GetCollection(variables.RequestUri).Set("", []string{uri})
 		/*
 			tx.GetCollection(VARIABLE_URI_PARSE_ERROR).Set("", []string{"1"})
 			posRawQuery := strings.Index(uri, "?")
@@ -659,23 +575,23 @@ func (tx *Transaction) ProcessUri(uri string, method string, httpVersion string)
 			} else {
 				path = uri
 			}
-			tx.GetCollection(VARIABLE_REQUEST_URI).Set("", []string{uri})
+			tx.GetCollection(variables.RequestUri).Set("", []string{uri})
 		*/
 	} else {
 		tx.ExtractArguments("GET", parsedUrl.RawQuery)
-		tx.GetCollection(VARIABLE_REQUEST_URI).Set("", []string{parsedUrl.String()})
+		tx.GetCollection(variables.RequestUri).Set("", []string{parsedUrl.String()})
 		path = parsedUrl.Path
 		query = parsedUrl.RawQuery
 	}
 	offset := strings.LastIndexAny(path, "/\\")
 	if offset != -1 && len(path) > offset+1 {
-		tx.GetCollection(VARIABLE_REQUEST_BASENAME).Set("", []string{path[offset+1:]})
+		tx.GetCollection(variables.RequestBasename).Set("", []string{path[offset+1:]})
 	} else {
-		tx.GetCollection(VARIABLE_REQUEST_BASENAME).Set("", []string{path})
+		tx.GetCollection(variables.RequestBasename).Set("", []string{path})
 	}
-	tx.GetCollection(VARIABLE_REQUEST_FILENAME).Set("", []string{path})
+	tx.GetCollection(variables.RequestFilename).Set("", []string{path})
 
-	tx.GetCollection(VARIABLE_QUERY_STRING).Set("", []string{query})
+	tx.GetCollection(variables.QueryString).Set("", []string{query})
 }
 
 // ProcessRequestHeaders Performs the analysis on the request readers.
@@ -685,11 +601,11 @@ func (tx *Transaction) ProcessUri(uri string, method string, httpVersion string)
 //
 // note: Remember to check for a possible intervention.
 func (tx *Transaction) ProcessRequestHeaders() *Interruption {
-	if tx.RuleEngine == RULE_ENGINE_OFF {
+	if tx.RuleEngine == types.RuleEngineOff {
 		// RUle engine is disabled
 		return nil
 	}
-	tx.Waf.Rules.Eval(PHASE_REQUEST_HEADERS, tx)
+	tx.Waf.Rules.Eval(types.PhaseRequestHeaders, tx)
 	return tx.Interruption
 }
 
@@ -701,45 +617,45 @@ func (tx *Transaction) ProcessRequestHeaders() *Interruption {
 //
 // Remember to check for a possible intervention.
 func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
-	if tx.RuleEngine == RULE_ENGINE_OFF {
+	if tx.RuleEngine == types.RuleEngineOff {
 		return tx.Interruption, nil
 	}
 	if !tx.RequestBodyAccess {
-		tx.Waf.Rules.Eval(PHASE_REQUEST_BODY, tx)
+		tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.Interruption, nil
 	}
 	mime := ""
 
 	reader := tx.RequestBodyBuffer.Reader()
 
-	if m := tx.GetCollection(VARIABLE_REQUEST_HEADERS).Get("content-type"); len(m) > 0 {
+	if m := tx.GetCollection(variables.RequestHeaders).Get("content-type"); len(m) > 0 {
 		//spl := strings.SplitN(m[0], ";", 2) //We must skip charset or others
 		mime = m[0]
 	}
 
 	// Chunked requests will always be written to a temporary file
 	if tx.RequestBodyBuffer.Size() >= tx.RequestBodyLimit {
-		if tx.Waf.RequestBodyLimitAction == REQUEST_BODY_LIMIT_ACTION_REJECT {
+		if tx.Waf.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
 			// We interrupt this transaction in case RequestBodyLimitAction is Reject
 			tx.Interruption = &Interruption{
 				Status: 403,
 				Action: "deny",
 			}
 			return tx.Interruption, nil
-		} else if tx.Waf.RequestBodyLimitAction == REQUEST_BODY_LIMIT_ACTION_PROCESS_PARTIAL {
-			tx.GetCollection(VARIABLE_INBOUND_ERROR_DATA).Set("", []string{"1"})
+		} else if tx.Waf.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
+			tx.GetCollection(variables.InboundErrorData).Set("", []string{"1"})
 			// we limit our reader to tx.RequestBodyLimit bytes
 			reader = io.LimitReader(reader, tx.RequestBodyLimit)
 		}
 	}
-	rbp := tx.GetCollection(VARIABLE_REQBODY_PROCESSOR).GetFirstString("")
+	rbp := tx.GetCollection(variables.ReqbodyProcessor).GetFirstString("")
 
-	// Default VARIABLE_REQBODY_PROCESSOR values
+	// Default variables.ReqbodyProcessor values
 	// XML and JSON must be forced with ctl:requestBodyProcessor=JSON
 	if rbp == "" && tx.ForceRequestBodyVariable {
 		// We force URLENCODED if mime is x-www... or we have an empty RBP and ForceRequestBodyVariable
 		rbp = "URLENCODED"
-		tx.RequestBodyProcessor = REQUEST_BODY_PROCESSOR_URLENCODED
+		tx.GetCollection(variables.ReqbodyProcessor).Set("", []string{rbp})
 	}
 
 	switch rbp {
@@ -750,9 +666,9 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 		}
 
 		b := buf.String()
-		tx.GetCollection(VARIABLE_REQUEST_BODY).Set("", []string{b})
+		tx.GetCollection(variables.RequestBody).Set("", []string{b})
 		//TODO add url encode validation
-		//tx.GetCollection(VARIABLE_URLENCODED_ERROR).Set("", []string{err.Error()})
+		//tx.GetCollection(variables.UrlencodedError).Set("", []string{err.Error()})
 		values := utils.ParseQuery(b, "&")
 		for k, vs := range values {
 			for _, v := range vs {
@@ -767,17 +683,17 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 		err := req.ParseMultipartForm(1000000000)
 		defer req.Body.Close()
 		if err != nil {
-			tx.GetCollection(VARIABLE_REQBODY_ERROR).Set("", []string{"1"})
-			tx.GetCollection(VARIABLE_REQBODY_ERROR_MSG).Set("", []string{string(err.Error())})
-			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR).Set("", []string{"1"})
-			tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR_MSG).Set("", []string{string(err.Error())})
+			tx.GetCollection(variables.ReqbodyError).Set("", []string{"1"})
+			tx.GetCollection(variables.ReqbodyErrorMsg).Set("", []string{string(err.Error())})
+			tx.GetCollection(variables.ReqbodyProcessorError).Set("", []string{"1"})
+			tx.GetCollection(variables.ReqbodyProcessorErrorMsg).Set("", []string{string(err.Error())})
 			// we should not report this error
 			return nil, nil
 		}
 
-		fn := tx.GetCollection(VARIABLE_FILES_NAMES)
-		fl := tx.GetCollection(VARIABLE_FILES)
-		fs := tx.GetCollection(VARIABLE_FILES_SIZES)
+		fn := tx.GetCollection(variables.FilesNames)
+		fl := tx.GetCollection(variables.Files)
+		fs := tx.GetCollection(variables.FilesSizes)
 		totalSize := int64(0)
 		for field, fheaders := range req.MultipartForm.File {
 			// TODO add them to temporal storage
@@ -790,7 +706,7 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 				fs.Add("", fmt.Sprintf("%d", header.Size))
 			}
 		}
-		tx.GetCollection(VARIABLE_FILES_COMBINED_SIZE).Set("", []string{fmt.Sprintf("%d", totalSize)})
+		tx.GetCollection(variables.FilesCombinedSize).Set("", []string{fmt.Sprintf("%d", totalSize)})
 		for k, vs := range req.MultipartForm.Value {
 			for _, v := range vs {
 				tx.AddArgument("POST", k, v)
@@ -809,14 +725,14 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 		}
 		for k, v := range jsmap {
 			//We cannot use AddArgument because it will create a vulnerability where attackers can add additional data to json.data
-			tx.GetCollection(VARIABLE_ARGS).Set(k, []string{v})
-			tx.GetCollection(VARIABLE_ARGS_NAMES).AddUnique("", k)
-			tx.GetCollection(VARIABLE_ARGS_POST).Set(k, []string{v})
-			tx.GetCollection(VARIABLE_ARGS_POST_NAMES).AddUnique("", k)
+			tx.GetCollection(variables.Args).Set(k, []string{v})
+			tx.GetCollection(variables.ArgsNames).AddUnique("", k)
+			tx.GetCollection(variables.ArgsPost).Set(k, []string{v})
+			tx.GetCollection(variables.ArgsPostNames).AddUnique("", k)
 			//fmt.Printf("%q=%q\n", k, v)
 		}
 	}
-	tx.Waf.Rules.Eval(PHASE_REQUEST_BODY, tx)
+	tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)
 	return tx.Interruption, nil
 }
 
@@ -829,14 +745,14 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 //
 func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *Interruption {
 	c := strconv.Itoa(code)
-	tx.GetCollection(VARIABLE_RESPONSE_STATUS).Set("", []string{c})
-	tx.GetCollection(VARIABLE_RESPONSE_PROTOCOL).Set("", []string{proto})
+	tx.GetCollection(variables.ResponseStatus).Set("", []string{c})
+	tx.GetCollection(variables.ResponseProtocol).Set("", []string{proto})
 
-	if tx.RuleEngine == RULE_ENGINE_OFF {
+	if tx.RuleEngine == types.RuleEngineOff {
 		return nil
 	}
 
-	tx.Waf.Rules.Eval(PHASE_RESPONSE_HEADERS, tx)
+	tx.Waf.Rules.Eval(types.PhaseResponseHeaders, tx)
 	return tx.Interruption
 }
 
@@ -847,7 +763,7 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *Interrupt
 // directly to the client or write them to Coraza
 func (tx *Transaction) IsProcessableResponseBody() bool {
 	//TODO add more validations
-	ct := tx.GetCollection(VARIABLE_RESPONSE_CONTENT_TYPE).GetFirstString("")
+	ct := tx.GetCollection(variables.ResponseContentType).GetFirstString("")
 	return utils.StringInSlice(ct, tx.Waf.ResponseBodyMimeTypes)
 }
 
@@ -859,11 +775,11 @@ func (tx *Transaction) IsProcessableResponseBody() bool {
 //
 // note Remember to check for a possible intervention.
 func (tx *Transaction) ProcessResponseBody() (*Interruption, error) {
-	if tx.RuleEngine == RULE_ENGINE_OFF {
+	if tx.RuleEngine == types.RuleEngineOff {
 		return tx.Interruption, nil
 	}
 	if !tx.ResponseBodyAccess || !tx.IsProcessableResponseBody() {
-		tx.Waf.Rules.Eval(PHASE_RESPONSE_BODY, tx)
+		tx.Waf.Rules.Eval(types.PhaseResponseBody, tx)
 		return tx.Interruption, nil
 	}
 	reader := tx.ResponseBodyBuffer.Reader()
@@ -871,9 +787,9 @@ func (tx *Transaction) ProcessResponseBody() (*Interruption, error) {
 	buf := new(strings.Builder)
 	length, _ := io.Copy(buf, reader)
 
-	tx.GetCollection(VARIABLE_RESPONSE_CONTENT_LENGTH).Set("", []string{strconv.FormatInt(length, 10)})
-	tx.GetCollection(VARIABLE_RESPONSE_BODY).Set("", []string{buf.String()})
-	tx.Waf.Rules.Eval(PHASE_RESPONSE_BODY, tx)
+	tx.GetCollection(variables.ResponseContentLength).Set("", []string{strconv.FormatInt(length, 10)})
+	tx.GetCollection(variables.ResponseBody).Set("", []string{buf.String()})
+	tx.Waf.Rules.Eval(types.PhaseResponseBody, tx)
 	return tx.Interruption, nil
 }
 
@@ -893,9 +809,9 @@ func (tx *Transaction) ProcessLogging() {
 		tx.Waf.Logger.Debug("Transaction finished", zap.String("event", "FINISH_TRANSACTION"), zap.String("txid", tx.Id), zap.Bool("interrupted", tx.Interrupted()))
 	}()
 
-	tx.Waf.Rules.Eval(PHASE_LOGGING, tx)
+	tx.Waf.Rules.Eval(types.PhaseLogging, tx)
 
-	if tx.AuditEngine == AUDIT_LOG_DISABLED {
+	if tx.AuditEngine == types.AuditEngineOff {
 		// Audit engine disabled
 		tx.Waf.Logger.Debug("Transaction not marked for audit logging, AuditEngine is disabled",
 			zap.String("tx", tx.Id),
@@ -903,9 +819,9 @@ func (tx *Transaction) ProcessLogging() {
 		return
 	}
 
-	if tx.AuditEngine == AUDIT_LOG_RELEVANT && !tx.Log {
+	if tx.AuditEngine == types.AuditEngineRelevantOnly && !tx.Log {
 		re := tx.Waf.AuditLogRelevantStatus
-		status := tx.GetCollection(VARIABLE_RESPONSE_STATUS).GetFirstString("")
+		status := tx.GetCollection(variables.ResponseStatus).GetFirstString("")
 		if re != nil && !re.Match([]byte(status)) {
 			//Not relevant status
 			tx.Waf.Logger.Debug("Transaction status not marked for audit logging",
@@ -918,10 +834,8 @@ func (tx *Transaction) ProcessLogging() {
 	tx.Waf.Logger.Debug("Transaction marked for audit logging",
 		zap.String("tx", tx.Id),
 	)
-	for _, l := range tx.Waf.AuditLoggers() {
-		if err := l.Write(tx.AuditLog()); err != nil {
-			tx.Waf.Logger.Error(err.Error())
-		}
+	if err := tx.Waf.AuditLogger().Write(tx.AuditLog()); err != nil {
+		tx.Waf.Logger.Error(err.Error())
 	}
 }
 
@@ -931,65 +845,52 @@ func (tx *Transaction) Interrupted() bool {
 }
 
 // AuditLog returns an AuditLog struct, used to write audit logs
-func (tx *Transaction) AuditLog() *loggers.AuditLog {
-	al := &loggers.AuditLog{}
+func (tx *Transaction) AuditLog() loggers.AuditLog {
+	al := loggers.AuditLog{}
 	parts := tx.AuditLogParts
-	al.Messages = []*loggers.AuditMessage{}
+	al.Messages = []loggers.AuditMessage{}
 	//YYYY/MM/DD HH:mm:ss
 	ts := time.Unix(0, tx.Timestamp).Format("2006/01/02 15:04:05")
-	al.Transaction = &loggers.AuditTransaction{
+	al.Transaction = loggers.AuditTransaction{
 		Timestamp:     ts,
 		UnixTimestamp: tx.Timestamp,
 		Id:            tx.Id,
-		ClientIp:      tx.GetCollection(VARIABLE_REMOTE_ADDR).GetFirstString(""),
-		ClientPort:    tx.GetCollection(VARIABLE_REMOTE_PORT).GetFirstInt(""),
-		HostIp:        tx.GetCollection(VARIABLE_SERVER_ADDR).GetFirstString(""),
-		HostPort:      tx.GetCollection(VARIABLE_SERVER_PORT).GetFirstInt(""),
-		ServerId:      tx.GetCollection(VARIABLE_SERVER_NAME).GetFirstString(""), //TODO check
-		Request: &loggers.AuditTransactionRequest{
-			Method:      tx.GetCollection(VARIABLE_REQUEST_METHOD).GetFirstString(""),
-			Protocol:    tx.GetCollection(VARIABLE_REQUEST_PROTOCOL).GetFirstString(""),
-			Uri:         tx.GetCollection(VARIABLE_REQUEST_URI).GetFirstString(""),
-			HttpVersion: tx.GetCollection(VARIABLE_REQUEST_PROTOCOL).GetFirstString(""),
-			//Body and headers are audit parts
+		ClientIp:      tx.GetCollection(variables.RemoteAddr).GetFirstString(""),
+		ClientPort:    tx.GetCollection(variables.RemotePort).GetFirstInt(""),
+		HostIp:        tx.GetCollection(variables.ServerAddr).GetFirstString(""),
+		HostPort:      tx.GetCollection(variables.ServerPort).GetFirstInt(""),
+		ServerId:      tx.GetCollection(variables.ServerName).GetFirstString(""), //TODO check
+		Request: loggers.AuditTransactionRequest{
+			Method:      tx.GetCollection(variables.RequestMethod).GetFirstString(""),
+			Protocol:    tx.GetCollection(variables.RequestProtocol).GetFirstString(""),
+			Uri:         tx.GetCollection(variables.RequestUri).GetFirstString(""),
+			HttpVersion: tx.GetCollection(variables.RequestProtocol).GetFirstString(""),
+			//Body and headers are audit variables.RequestUriRaws
 		},
-		Response: &loggers.AuditTransactionResponse{
-			Status: tx.GetCollection(VARIABLE_RESPONSE_STATUS).GetFirstInt(""),
+		Response: loggers.AuditTransactionResponse{
+			Status: tx.GetCollection(variables.ResponseStatus).GetFirstInt(""),
 			//body and headers are audit parts
 		},
 	}
-	rengine := ""
-	switch tx.RuleEngine {
-	case RULE_ENGINE_OFF:
-		rengine = "Off"
-	case RULE_ENGINE_DETECTONLY:
-		rengine = "DetectOnly"
-	case RULE_ENGINE_ON:
-		rengine = "On"
-	}
+	rengine := tx.RuleEngine.String()
 
 	for _, p := range parts {
 		switch p {
 		case 'B':
-			al.Transaction.Request.Headers = tx.GetCollection(VARIABLE_REQUEST_HEADERS).Data()
+			al.Transaction.Request.Headers = tx.GetCollection(variables.RequestHeaders).Data()
 		case 'C':
-			al.Transaction.Request.Body = tx.GetCollection(VARIABLE_REQUEST_BODY).GetFirstString("")
+			al.Transaction.Request.Body = tx.GetCollection(variables.RequestBody).GetFirstString("")
 			//TODO maybe change to:
 			//al.Transaction.Request.Body = tx.RequestBodyBuffer.String()
 		case 'F':
-			al.Transaction.Response.Headers = tx.GetCollection(VARIABLE_RESPONSE_HEADERS).Data()
+			al.Transaction.Response.Headers = tx.GetCollection(variables.ResponseHeaders).Data()
 		case 'G':
-			al.Transaction.Response.Body = tx.GetCollection(VARIABLE_RESPONSE_BODY).GetFirstString("")
+			al.Transaction.Response.Body = tx.GetCollection(variables.ResponseBody).GetFirstString("")
 		case 'H':
-			servera := tx.GetCollection(VARIABLE_RESPONSE_HEADERS).Get("server")
-			server := ""
-			if len(server) > 0 {
-				server = servera[0]
-			}
-			al.Transaction.Producer = &loggers.AuditTransactionProducer{
+			al.Transaction.Producer = loggers.AuditTransactionProducer{
 				Connector:  "unknown", //TODO maybe add connector variable to Waf
 				Version:    "unknown",
-				Server:     server,
+				Server:     "",
 				RuleEngine: rengine,
 				Stopwatch:  tx.GetStopWatch(),
 				Rulesets:   tx.Waf.ComponentNames,
@@ -1005,37 +906,40 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 			 */
 		case 'J':
 			//upload data
-			al.Transaction.Request.Files = []*loggers.AuditTransactionRequestFiles{}
-			for i, name := range tx.GetCollection(VARIABLE_FILES).Get("") {
+			files := []loggers.AuditTransactionRequestFiles{}
+			al.Transaction.Request.Files = []loggers.AuditTransactionRequestFiles{}
+			for i, name := range tx.GetCollection(variables.Files).Get("") {
 				//TODO we kind of assume there is a file_size for each file with the same index
-				size, _ := strconv.ParseInt(tx.GetCollection(VARIABLE_FILES_SIZES).Get("")[i], 10, 64)
+				size, _ := strconv.ParseInt(tx.GetCollection(variables.FilesSizes).Get("")[i], 10, 64)
 				ext := filepath.Ext(name)
-				at := &loggers.AuditTransactionRequestFiles{
+				at := loggers.AuditTransactionRequestFiles{
 					Size: size,
 					Name: name,
 					Mime: mime.TypeByExtension(ext),
 				}
-				al.Transaction.Request.Files = append(al.Transaction.Request.Files, at)
+				files = append(files, at)
 			}
+			al.Transaction.Request.Files = files
 		case 'K':
-			mrs := []*loggers.AuditMessage{}
+			mrs := []loggers.AuditMessage{}
 			for _, mr := range tx.MatchedRules {
 				r := mr.Rule
-				mrs = append(mrs, &loggers.AuditMessage{
+				mrs = append(mrs, loggers.AuditMessage{
 					Actionset: strings.Join(tx.Waf.ComponentNames, " "),
 					Message:   tx.Logdata,
-					Data: &loggers.AuditMessageData{
+					Data: loggers.AuditMessageData{
 						File:     mr.Rule.File,
 						Line:     mr.Rule.Line,
 						Id:       r.Id,
 						Rev:      r.Rev,
-						Msg:      tx.MacroExpansion(strings.Join(mr.Messages, " ")), //TODO check
-						Data:     tx.MacroExpansion(r.LogData),                      //TODO LogData MUST be in the matched rule
+						Msg:      mr.Message,
+						Data:     mr.Data,
 						Severity: r.Severity,
 						Ver:      r.Version,
 						Maturity: r.Maturity,
 						Accuracy: r.Accuracy,
 						Tags:     r.Tags,
+						Raw:      r.Raw,
 					},
 				})
 			}
@@ -1047,8 +951,8 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 
 // generateReqbodyError generates all of the error variables for the request body parser
 func (tx *Transaction) generateReqbodyError(err error) {
-	tx.GetCollection(VARIABLE_REQBODY_ERROR).Set("", []string{"1"})
-	tx.GetCollection(VARIABLE_REQBODY_ERROR_MSG).Set("", []string{string(err.Error())})
-	tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR).Set("", []string{"1"})
-	tx.GetCollection(VARIABLE_REQBODY_PROCESSOR_ERROR_MSG).Set("", []string{string(err.Error())})
+	tx.GetCollection(variables.ReqbodyError).Set("", []string{"1"})
+	tx.GetCollection(variables.ReqbodyErrorMsg).Set("", []string{string(err.Error())})
+	tx.GetCollection(variables.ReqbodyProcessorError).Set("", []string{"1"})
+	tx.GetCollection(variables.ReqbodyProcessorErrorMsg).Set("", []string{string(err.Error())})
 }

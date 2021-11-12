@@ -16,6 +16,7 @@ package actions
 
 import (
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 type chainFn struct{}
@@ -29,8 +30,8 @@ func (a *chainFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not evaluated
 }
 
-func (a *chainFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeFlow
+func (a *chainFn) Type() types.RuleActionType {
+	return types.ActionTypeFlow
 }
 
 func chain() coraza.RuleAction {

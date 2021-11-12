@@ -15,7 +15,6 @@
 package coraza
 
 import (
-	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -26,66 +25,14 @@ import (
 	"time"
 
 	loggers "github.com/jptosso/coraza-waf/v2/loggers"
+	"github.com/jptosso/coraza-waf/v2/types"
+	"github.com/jptosso/coraza-waf/v2/types/variables"
 	utils "github.com/jptosso/coraza-waf/v2/utils"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-type RulePhase int
-type EventSeverity int
-
-const (
-	PHASE_REQUEST_HEADERS  RulePhase = 1
-	PHASE_REQUEST_BODY     RulePhase = 2
-	PHASE_RESPONSE_HEADERS RulePhase = 3
-	PHASE_RESPONSE_BODY    RulePhase = 4
-	PHASE_LOGGING          RulePhase = 5
-)
-
-const (
-	EventEmergency EventSeverity = 0
-	EventAlert     EventSeverity = 1
-	EventCritical  EventSeverity = 2
-	EventError     EventSeverity = 3
-	EventWarning   EventSeverity = 4
-	EventNotice    EventSeverity = 5
-	EventInfo      EventSeverity = 6
-	EventDebug     EventSeverity = 7
-)
-
-const (
-	CONN_ENGINE_OFF        = 0
-	CONN_ENGINE_ON         = 1
-	CONN_ENGINE_DETECTONLY = 2
-
-	AUDIT_LOG_ENABLED  = 0
-	AUDIT_LOG_DISABLED = 1
-	AUDIT_LOG_RELEVANT = 2
-
-	REQUEST_BODY_PROCESSOR_DEFAULT    = 0
-	REQUEST_BODY_PROCESSOR_URLENCODED = 1
-	REQUEST_BODY_PROCESSOR_XML        = 2
-	REQUEST_BODY_PROCESSOR_JSON       = 3
-	REQUEST_BODY_PROCESSOR_MULTIPART  = 4
-
-	REQUEST_BODY_LIMIT_ACTION_PROCESS_PARTIAL = 0
-	REQUEST_BODY_LIMIT_ACTION_REJECT          = 1
-
-	RULE_ENGINE_ON         = 0
-	RULE_ENGINE_DETECTONLY = 1
-	RULE_ENGINE_OFF        = 2
-)
-
-type EventLogger interface {
-	Emergency(msg string)
-	Alert(msg string)
-	Critical(msg string)
-	Error(msg string)
-	Warning(msg string)
-	Notice(msg string)
-	Info(msg string)
-	Debug(msg string)
-}
+type LogCallback = func(rule MatchedRule)
 
 // Waf instances are used to store configurations and rules
 // Every web application should have a different Waf instance
@@ -94,15 +41,17 @@ type EventLogger interface {
 // Transactions and SecLang parser requires a Waf instance
 // You can use as many Waf instances as you want and they are
 // concurrent safe
+// All Waf instance fields are inmutable, if you update any
+// of them in runtime you might create concurrency issues
 type Waf struct {
-	// RuleGroup object, contains all rules and helpers
-	Rules *RuleGroup
+	// ruleGroup object, contains all rules and helpers
+	Rules ruleGroup
 
 	// Audit logger engine
-	auditLoggers []loggers.Logger
+	auditLogger *loggers.Logger
 
 	// Audit mode status
-	AuditEngine int
+	AuditEngine types.AuditEngineStatus
 
 	// Array of logging parts to be used
 	AuditLogParts []rune
@@ -126,7 +75,7 @@ type Waf struct {
 	ResponseBodyLimit int64
 
 	// Defines if rules are going to be evaluated
-	RuleEngine int
+	RuleEngine types.RuleEngineStatus
 
 	// If true, transaction will fail if response size is bigger than the page limit
 	RejectOnResponseBodyLimit bool
@@ -174,7 +123,7 @@ type Waf struct {
 	// Used by some functions to support concurrent tasks
 	mux *sync.RWMutex
 
-	RequestBodyLimitAction int
+	RequestBodyLimitAction types.RequestBodyLimitAction
 
 	ArgumentSeparator string
 
@@ -185,9 +134,6 @@ type Waf struct {
 	// ctl cannot switch use it as it will update de lvl
 	// for the whole Waf instance
 	LoggerAtomicLevel zap.AtomicLevel
-
-	// Used to write logs to implementation's error log
-	ErrorLogger EventLogger
 }
 
 // NewTransaction Creates a new initialized transaction for this WAF instance
@@ -196,7 +142,7 @@ func (w *Waf) NewTransaction() *Transaction {
 	defer w.mux.RUnlock()
 	tx := &Transaction{
 		Waf:                  *w,
-		collections:          make([]*Collection, ruleVariablesCount),
+		collections:          make([]*Collection, 100), // TODO fix count
 		Id:                   utils.RandomString(19),
 		Timestamp:            time.Now().UnixNano(),
 		AuditEngine:          w.AuditEngine,
@@ -208,55 +154,56 @@ func (w *Waf) NewTransaction() *Transaction {
 		ResponseBodyLimit:    524288,
 		ruleRemoveTargetById: map[int][]RuleVariableParams{},
 		ruleRemoveById:       []int{},
-		StopWatches:          map[RulePhase]int{},
+		StopWatches:          map[types.RulePhase]int{},
 		RequestBodyBuffer:    NewBodyReader(w.TmpDir, w.RequestBodyInMemoryLimit),
 		ResponseBodyBuffer:   NewBodyReader(w.TmpDir, w.RequestBodyInMemoryLimit),
 	}
 	for i := range tx.collections {
-		tx.collections[i] = NewCollection(RuleVariable(i).Name())
+		tx.collections[i] = NewCollection(variables.RuleVariable(i).Name())
 	}
 
 	// set capture variables
-	txvar := tx.GetCollection(VARIABLE_TX)
+	txvar := tx.GetCollection(variables.Tx)
 	for i := 0; i <= 10; i++ {
 		is := strconv.Itoa(i)
 		txvar.Set(is, []string{""})
 	}
 
 	// Some defaults
-	defaults := map[RuleVariable]string{
-		VARIABLE_FILES_COMBINED_SIZE:              "0",
-		VARIABLE_URLENCODED_ERROR:                 "0",
-		VARIABLE_FULL_REQUEST_LENGTH:              "0",
-		VARIABLE_MULTIPART_BOUNDARY_QUOTED:        "0",
-		VARIABLE_MULTIPART_BOUNDARY_WHITESPACE:    "0",
-		VARIABLE_MULTIPART_CRLF_LF_LINES:          "0",
-		VARIABLE_MULTIPART_DATA_AFTER:             "0",
-		VARIABLE_MULTIPART_DATA_BEFORE:            "0",
-		VARIABLE_MULTIPART_FILE_LIMIT_EXCEEDED:    "0",
-		VARIABLE_MULTIPART_HEADER_FOLDING:         "0",
-		VARIABLE_MULTIPART_INVALID_HEADER_FOLDING: "0",
-		VARIABLE_MULTIPART_INVALID_PART:           "0",
-		VARIABLE_MULTIPART_INVALID_QUOTING:        "0",
-		VARIABLE_MULTIPART_LF_LINE:                "0",
-		VARIABLE_MULTIPART_MISSING_SEMICOLON:      "0",
-		VARIABLE_MULTIPART_STRICT_ERROR:           "0",
-		VARIABLE_MULTIPART_UNMATCHED_BOUNDARY:     "0",
-		VARIABLE_OUTBOUND_DATA_ERROR:              "0",
-		VARIABLE_REQBODY_ERROR:                    "0",
-		VARIABLE_REQBODY_PROCESSOR_ERROR:          "0",
-		VARIABLE_REQUEST_BODY_LENGTH:              "0",
-		VARIABLE_DURATION:                         "0",
-		VARIABLE_HIGHEST_SEVERITY:                 "0",
-		VARIABLE_UNIQUE_ID:                        tx.Id,
-		//VARIABLE_REQBODY_PROCESSOR:                "",
+	defaults := map[variables.RuleVariable]string{
+		variables.FilesCombinedSize:             "0",
+		variables.UrlencodedError:               "0",
+		variables.FullRequestLength:             "0",
+		variables.MultipartBoundaryQuoted:       "0",
+		variables.MultipartBoundaryWhitespace:   "0",
+		variables.MultipartCrlfLfLines:          "0",
+		variables.MultipartDataAfter:            "0",
+		variables.MultipartDataBefore:           "0",
+		variables.MultipartFileLimitExceeded:    "0",
+		variables.MultipartHeaderFolding:        "0",
+		variables.MultipartInvalidHeaderFolding: "0",
+		variables.MultipartInvalidPart:          "0",
+		variables.MultipartInvalidQuoting:       "0",
+		variables.MultipartLfLine:               "0",
+		variables.MultipartMissingSemicolon:     "0",
+		variables.MultipartStrictError:          "0",
+		variables.MultipartUnmatchedBoundary:    "0",
+		variables.OutboundDataError:             "0",
+		variables.ReqbodyError:                  "0",
+		variables.ReqbodyProcessorError:         "0",
+		variables.RequestBodyLength:             "0",
+		variables.Duration:                      "0",
+		variables.HighestSeverity:               "0",
+		variables.UniqueId:                      tx.Id,
+		//TODO single variables must be defaulted to empty string
+		variables.RemoteAddr: "",
 	}
 	for v, data := range defaults {
 		tx.GetCollection(v).Set("", []string{data})
 	}
 
 	// Get all env variables
-	env := tx.GetCollection(VARIABLE_ENV)
+	env := tx.GetCollection(variables.Env)
 	for _, e := range os.Environ() {
 		spl := strings.SplitN(e, "=", 2)
 		if len(spl) != 2 {
@@ -273,31 +220,15 @@ func (w *Waf) NewTransaction() *Transaction {
 // AddAuditLogger creates a new logger for the current WAF instance
 // You may add as many loggers as you want
 // Keep in mind loggers may lock go routines
-func (w *Waf) AddAuditLogger(engine string, args map[string]string) error {
-	var l loggers.Logger
-	switch engine {
-	case "serial":
-		l = &loggers.SerialLogger{}
-	case "concurrent":
-		l = &loggers.ConcurrentLogger{}
-	case "syslog":
-		l = &loggers.SyslogLogger{}
-	default:
-		return errors.New("invalid logger " + engine)
-	}
-	err := l.New(args)
-	if err != nil {
-		return err
-	}
-	w.auditLoggers = append(w.auditLoggers, l)
-	return nil
+func (w *Waf) SetAuditLogger(engine string) error {
+	return w.auditLogger.SetWriter(engine)
 }
 
 // Logger returns the initiated loggers
 // Coraza supports unlimited loggers, so you can write for example
 // to syslog and a local drive at the same time
-func (w *Waf) AuditLoggers() []loggers.Logger {
-	return w.auditLoggers
+func (w *Waf) AuditLogger() loggers.Logger {
+	return *w.auditLogger
 }
 
 // NewWaf creates a new WAF instance with default variables
@@ -311,18 +242,23 @@ func NewWaf() *Waf {
 		zapcore.Lock(os.Stdout),
 		atom,
 	))
+	al, err := loggers.NewAuditLogger()
+	if err != nil {
+		// TODO this error is wrong
+		logger.Fatal("failed to create audit logger", zap.Error(err))
+	}
 	waf := &Waf{
 		ArgumentSeparator:        "&",
-		AuditEngine:              AUDIT_LOG_DISABLED,
+		AuditEngine:              types.AuditEngineOff,
 		AuditLogParts:            []rune("ABCFHZ"),
-		auditLoggers:             []loggers.Logger{},
+		auditLogger:              al,
 		mux:                      &sync.RWMutex{},
 		RequestBodyInMemoryLimit: 131072,
 		RequestBodyLimit:         10000000, //10mb
 		ResponseBodyMimeTypes:    []string{"text/html", "text/plain"},
 		ResponseBodyLimit:        524288,
 		ResponseBodyAccess:       false,
-		RuleEngine:               RULE_ENGINE_ON,
+		RuleEngine:               types.RuleEngineOn,
 		Rules:                    NewRuleGroup(),
 		TmpDir:                   "/tmp",
 		CollectionTimeout:        3600,

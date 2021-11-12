@@ -14,13 +14,16 @@
 
 package loggers
 
+import "github.com/jptosso/coraza-waf/v2/types"
+
 // Main struct for audit log data
 type AuditLog struct {
+	Parts types.AuditLogParts
 	// Transaction information
-	Transaction *AuditTransaction `json:"transaction"`
+	Transaction AuditTransaction `json:"transaction"`
 
 	// Triggered rules information
-	Messages []*AuditMessage `json:"messages"`
+	Messages []AuditMessage `json:"messages"`
 }
 
 // Transaction information
@@ -35,13 +38,13 @@ type AuditTransaction struct {
 	// Client IP Address string representation
 	ClientIp string `json:"client_ip"`
 
-	ClientPort int                       `json:"client_port"`
-	HostIp     string                    `json:"host_ip"`
-	HostPort   int                       `json:"host_port"`
-	ServerId   string                    `json:"server_id"`
-	Request    *AuditTransactionRequest  `json:"request"`
-	Response   *AuditTransactionResponse `json:"response"`
-	Producer   *AuditTransactionProducer `json:"producer"`
+	ClientPort int                      `json:"client_port"`
+	HostIp     string                   `json:"host_ip"`
+	HostPort   int                      `json:"host_port"`
+	ServerId   string                   `json:"server_id"`
+	Request    AuditTransactionRequest  `json:"request"`
+	Response   AuditTransactionResponse `json:"response"`
+	Producer   AuditTransactionProducer `json:"producer"`
 }
 
 type AuditTransactionResponse struct {
@@ -60,13 +63,13 @@ type AuditTransactionProducer struct {
 }
 
 type AuditTransactionRequest struct {
-	Method      string                          `json:"method"`
-	Protocol    string                          `json:"protocol"`
-	Uri         string                          `json:"uri"`
-	HttpVersion string                          `json:"http_version"`
-	Headers     map[string][]string             `json:"headers"`
-	Body        string                          `json:"body"`
-	Files       []*AuditTransactionRequestFiles `json:"files"`
+	Method      string                         `json:"method"`
+	Protocol    string                         `json:"protocol"`
+	Uri         string                         `json:"uri"`
+	HttpVersion string                         `json:"http_version"`
+	Headers     map[string][]string            `json:"headers"`
+	Body        string                         `json:"body"`
+	Files       []AuditTransactionRequestFiles `json:"files"`
 }
 
 type AuditTransactionRequestFiles struct {
@@ -76,27 +79,24 @@ type AuditTransactionRequestFiles struct {
 }
 
 type AuditMessage struct {
-	Actionset string            `json:"actionset"`
-	Message   string            `json:"message"`
-	Data      *AuditMessageData `json:"data"`
+	Actionset string           `json:"actionset"`
+	Message   string           `json:"message"`
+	Data      AuditMessageData `json:"data"`
 }
 
 type AuditMessageData struct {
-	File     string   `json:"file"`
-	Line     int      `json:"line"`
-	Id       int      `json:"id"`
-	Rev      string   `json:"rev"`
-	Msg      string   `json:"msg"`
-	Data     string   `json:"data"`
-	Severity int      `json:"severity"`
-	Ver      string   `json:"ver"`
-	Maturity int      `json:"maturity"`
-	Accuracy int      `json:"accuracy"`
-	Tags     []string `json:"tags"`
-}
-
-func (al AuditLog) toLegacy() []byte {
-	return []byte("")
+	File     string             `json:"file"`
+	Line     int                `json:"line"`
+	Id       int                `json:"id"`
+	Rev      string             `json:"rev"`
+	Msg      string             `json:"msg"`
+	Data     string             `json:"data"`
+	Severity types.RuleSeverity `json:"severity"`
+	Ver      string             `json:"ver"`
+	Maturity int                `json:"maturity"`
+	Accuracy int                `json:"accuracy"`
+	Tags     []string           `json:"tags"`
+	Raw      string             `json:"raw"`
 }
 
 // LEGACY FORMAT
@@ -104,19 +104,19 @@ func (al AuditLog) toLegacy() []byte {
 // Main struct for audit log data
 type auditLogLegacy struct {
 	// Section A
-	Transaction AuditTransaction `json:"transaction"`
+	Transaction auditLogLegacyTransaction `json:"transaction"`
 
 	// Section B or C
-	Request *auditLogLegacyRequest `json:"request"`
+	Request auditLogLegacyRequest `json:"request"`
 
 	// Section J (File Uploads)
 	// TBI
 
 	// Section E and F
-	Response *auditLogLegacyResponse `json:"response"`
+	Response auditLogLegacyResponse `json:"response"`
 
 	// Section H
-	AuditData *auditLogLegacyData `json:"audit_data"`
+	AuditData auditLogLegacyData `json:"audit_data"`
 }
 
 type auditLogLegacyTransaction struct {

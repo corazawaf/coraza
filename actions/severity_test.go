@@ -18,12 +18,13 @@ import (
 	"testing"
 
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 func TestSeverity(t *testing.T) {
 	tests := []struct {
 		name string
-		want int
+		want types.RuleSeverity
 	}{
 		// string input
 		{"EMERGENCY", 0},

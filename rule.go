@@ -19,17 +19,9 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/jptosso/coraza-waf/v2/types"
+	"github.com/jptosso/coraza-waf/v2/types/variables"
 	"go.uber.org/zap"
-)
-
-type RuleActionType int
-
-const (
-	ActionTypeMetadata      RuleActionType = 1
-	ActionTypeDisruptive    RuleActionType = 2
-	ActionTypeData          RuleActionType = 3
-	ActionTypeNondisruptive RuleActionType = 4
-	ActionTypeFlow          RuleActionType = 5
 )
 
 type RuleTransformationTools struct {
@@ -46,7 +38,7 @@ type RuleAction interface {
 	Evaluate(*Rule, *Transaction)
 	// Type will return the rule type, it's used by Evaluate
 	// to choose when to evaluate each action
-	Type() RuleActionType
+	Type() types.RuleActionType
 }
 
 type RuleActionParams struct {
@@ -89,7 +81,7 @@ type RuleVariableParams struct {
 	Count bool
 
 	// The VARIABLE that will be requested
-	Variable RuleVariable
+	Variable variables.RuleVariable
 
 	// The key for the variable that is going to be requested
 	Key string
@@ -156,7 +148,7 @@ type Rule struct {
 	Tags []string
 
 	// Rule execution phase 1-5
-	Phase RulePhase
+	Phase types.RulePhase
 
 	// Message text to be macro expanded and logged
 	Msg string
@@ -174,7 +166,7 @@ type Rule struct {
 	Accuracy int
 
 	// Rule severity
-	Severity int
+	Severity types.RuleSeverity
 
 	// Rule logdata
 	LogData string
@@ -186,132 +178,123 @@ type Rule struct {
 
 	// If true, the transformations will be multimatched
 	MultiMatch bool
-
-	// If true, the rule will always match
-	// The difference with a nil Operator is that this one will match the variables
-	AlwaysMatch bool
 }
 
 // Evaluate will evaluate the current rule for the indicated transaction
 // If the operator matches, actions will be evaluated and it will return
 // the matched variables, keys and values (MatchData)
 func (r *Rule) Evaluate(tx *Transaction) []MatchData {
+	rid := r.Id
+	if rid == 0 {
+		rid = r.ParentId
+	}
 	tx.Waf.Logger.Debug("Evaluating rule",
-		zap.Int("rule", r.Id),
+		zap.Int("rule", rid),
 		zap.String("tx", tx.Id),
 		zap.String("event", "EVALUATE_RULE"),
 	)
 	matchedValues := []MatchData{}
-	tx.GetCollection(VARIABLE_RULE).SetData(map[string][]string{
+	tx.GetCollection(variables.Rule).SetData(map[string][]string{
 		"id":       {strconv.Itoa(r.Id)},
 		"msg":      {r.Msg},
 		"rev":      {r.Rev},
 		"logdata":  {tx.MacroExpansion(r.LogData)},
-		"severity": {strconv.Itoa(r.Severity)},
+		"severity": {r.Severity.String()},
 	})
 	// secmarkers and secactions will always match
 	tools := RuleTransformationTools{
 		Logger: tx.Waf.Logger,
 	}
 
-	ecol := tx.ruleRemoveTargetById[r.Id]
-	for _, v := range r.Variables {
-		var values []MatchData
-		exceptions := make([]string, len(v.Exceptions))
-		copy(exceptions, v.Exceptions)
-		for _, c := range ecol {
-			if c.Variable == v.Variable {
-				exceptions = append(exceptions, c.Key)
-			}
-		}
-
-		if v.Count {
-			l := 0
-			if v.Key != "" {
-				//Get with macro expansion
-				values = tx.GetField(v, exceptions)
-				l = len(values)
-			} else {
-				l = len(tx.GetCollection(v.Variable).Data())
-			}
-			values = []MatchData{
-				{
-					Collection: v.Name,
-					Key:        v.Key,
-					Value:      strconv.Itoa(l),
-				},
-			}
-		} else {
-			values = tx.GetField(v, exceptions)
-		}
-
-		if r.AlwaysMatch {
-			//TODO is it ok? or we must not match every var
-			matchedValues = append(matchedValues, MatchData{
-				Collection: v.Name,
-				Key:        v.Key,
-				Value:      "",
-			})
-			continue
-		}
-		if len(values) == 0 {
-			// TODO should we run the operators here?
-			continue
-		}
-		tx.Waf.Logger.Debug("Arguments expanded",
-			zap.Int("rule", r.Id),
-			zap.String("tx", tx.Id),
-			zap.Int("count", len(values)),
-		)
-		for _, arg := range values {
-			var args []string
-			if r.MultiMatch {
-				// TODO in the future, we don't need to run every transformation
-				// We can try for each until found
-				args = r.executeTransformationsMultimatch(arg.Value, tools)
-			} else {
-				args = []string{r.executeTransformations(arg.Value, tools)}
-			}
-			tx.Waf.Logger.Debug("arguments transformed",
-				zap.Int("rule", r.Id),
-				zap.String("tx", tx.Id),
-				zap.Strings("arguments", args),
-			)
-
-			for _, carg := range args {
-				match := r.executeOperator(carg, tx)
-				if match {
-					matchedValues = append(matchedValues, MatchData{
-						Collection: arg.Collection,
-						Key:        arg.Key,
-						Value:      carg,
-					})
-				}
-				tx.Waf.Logger.Debug("Evaluate rule operator", zap.String("txid", tx.Id),
-					zap.Int("rule", r.Id),
-					zap.String("event", "EVALUATE_RULE_OPERATOR"),
-					zap.String("operator", "nn"), //TODO fix
-					zap.String("data", carg),
-					zap.String("variable", arg.Collection),
-					zap.String("key", arg.Key),
-					zap.Bool("result", match),
-				)
-			}
-		}
-	}
-
+	// SecMark and SecAction uses nil operator
 	if r.Operator == nil {
 		tx.Waf.Logger.Debug("Forcing rule match", zap.String("txid", tx.Id),
 			zap.Int("rule", r.Id),
 			zap.String("event", "RULE_FORCE_MATCH"),
 		)
-		// TODO Append or match?
 		matchedValues = []MatchData{
 			{
-				Collection: "Always Match",
-				Key:        "",
-				Value:      "",
+				Key:   "",
+				Value: "",
 			},
+		}
+	} else {
+		ecol := tx.ruleRemoveTargetById[r.Id]
+		for _, v := range r.Variables {
+			var values []MatchData
+			exceptions := make([]string, len(v.Exceptions))
+			copy(exceptions, v.Exceptions)
+			for _, c := range ecol {
+				if c.Variable == v.Variable {
+					exceptions = append(exceptions, c.Key)
+				}
+			}
+
+			if v.Count {
+				l := 0
+				if v.Key != "" {
+					//Get with macro expansion
+					values = tx.GetField(v, exceptions)
+					l = len(values)
+				} else {
+					l = len(tx.GetCollection(v.Variable).Data())
+				}
+				values = []MatchData{
+					{
+						VariableName: v.Variable.Name(),
+						Variable:     v.Variable,
+						Key:          v.Key,
+						Value:        strconv.Itoa(l),
+					},
+				}
+			} else {
+				values = tx.GetField(v, exceptions)
+			}
+			if len(values) == 0 {
+				// TODO should we run the operators here?
+				continue
+			}
+			tx.Waf.Logger.Debug("Arguments expanded",
+				zap.Int("rule", r.Id),
+				zap.String("tx", tx.Id),
+				zap.Int("count", len(values)),
+			)
+			for _, arg := range values {
+				var args []string
+				if r.MultiMatch {
+					// TODO in the future, we don't need to run every transformation
+					// We can try for each until found
+					args = r.executeTransformationsMultimatch(arg.Value, tools)
+				} else {
+					args = []string{r.executeTransformations(arg.Value, tools)}
+				}
+				tx.Waf.Logger.Debug("arguments transformed",
+					zap.Int("rule", r.Id),
+					zap.String("tx", tx.Id),
+					zap.Strings("arguments", args),
+				)
+
+				for _, carg := range args {
+					match := r.executeOperator(carg, tx)
+					if match {
+						matchedValues = append(matchedValues, MatchData{
+							VariableName: v.Variable.Name(),
+							Variable:     arg.Variable,
+							Key:          arg.Key,
+							Value:        carg,
+						})
+					}
+					tx.Waf.Logger.Debug("Evaluate rule operator", zap.String("txid", tx.Id),
+						zap.Int("rule", r.Id),
+						zap.String("event", "EVALUATE_RULE_OPERATOR"),
+						zap.String("operator", "nn"), //TODO fix
+						zap.String("data", carg),
+						zap.String("variable", arg.Variable.Name()),
+						zap.String("key", arg.Key),
+						zap.Bool("result", match),
+					)
+				}
+			}
 		}
 	}
 
@@ -325,7 +308,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 
 	// We run non disruptive actions even if there is no chain match
 	for _, a := range r.Actions {
-		if a.Function.Type() == ActionTypeNondisruptive {
+		if a.Function.Type() == types.ActionTypeNondisruptive {
 			a.Function.Evaluate(r, tx)
 		}
 	}
@@ -333,7 +316,6 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	// We reset the capturable configuration
 	tx.Capture = false
 
-	msgs := []string{tx.MacroExpansion(r.Msg)}
 	if r.Chain != nil {
 		nr := r.Chain
 		for nr != nil {
@@ -342,7 +324,6 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 				//we fail the chain
 				return []MatchData{}
 			}
-			msgs = append(msgs, tx.MacroExpansion(nr.Msg))
 
 			matchedValues = append(matchedValues, m...)
 			nr = nr.Chain
@@ -351,12 +332,16 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	if r.ParentId == 0 {
 		// action log is required to add the rule to matched rules
 		if r.Log {
-			tx.MatchRule(*r, msgs, matchedValues)
+			tx.MatchRule(MatchedRule{
+				Rule:        *r,
+				MatchedData: matchedValues[0],
+				Message:     tx.MacroExpansion(r.Msg),
+			})
 		}
 		//we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
 		tx.Waf.Logger.Debug("detecting rule disruptive action", zap.String("txid", tx.Id), zap.Int("rule", r.Id))
 		for _, a := range r.Actions {
-			if a.Function.Type() == ActionTypeDisruptive || a.Function.Type() == ActionTypeFlow {
+			if a.Function.Type() == types.ActionTypeDisruptive || a.Function.Type() == types.ActionTypeFlow {
 				tx.Waf.Logger.Debug("evaluating rule disruptive action", zap.String("txid", tx.Id), zap.Int("rule", r.Id))
 				a.Function.Evaluate(r, tx)
 			}
@@ -368,6 +353,11 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		zap.String("event", "FINISH_RULE"),
 	)
 	return matchedValues
+}
+
+// AddAction adds an action to the rule
+func (r *Rule) AddAction(name string, action RuleAction) {
+	r.Actions = append(r.Actions, RuleActionParams{name, action})
 }
 
 // AddTransformation adds a transformation to the rule
@@ -419,21 +409,4 @@ func NewRule() *Rule {
 		Phase: 2,
 		Tags:  []string{},
 	}
-}
-
-// ParseRulePhase parses the phase of the rule from a to 5
-// or request:2, response:4, logging:5
-// if the phase is invalid it will return an error
-func ParseRulePhase(phase string) (RulePhase, error) {
-	i, err := strconv.Atoi(phase)
-	if phase == "request" {
-		i = 2
-	} else if phase == "response" {
-		i = 4
-	} else if phase == "logging" {
-		i = 5
-	} else if err != nil || i > 5 || i < 1 {
-		return 0, fmt.Errorf("invalid phase %s", phase)
-	}
-	return RulePhase(i), nil
 }

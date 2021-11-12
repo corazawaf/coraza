@@ -16,6 +16,7 @@ package actions
 
 import (
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 type multimatchFn struct {
@@ -30,8 +31,8 @@ func (a *multimatchFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not evaluated
 }
 
-func (a *multimatchFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeNondisruptive
+func (a *multimatchFn) Type() types.RuleActionType {
+	return types.ActionTypeNondisruptive
 }
 
 func multimatch() coraza.RuleAction {

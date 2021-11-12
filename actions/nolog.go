@@ -16,6 +16,7 @@ package actions
 
 import (
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 type nologFn struct {
@@ -30,8 +31,8 @@ func (a *nologFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not evaluated
 }
 
-func (a *nologFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeNondisruptive
+func (a *nologFn) Type() types.RuleActionType {
+	return types.ActionTypeNondisruptive
 }
 
 func nolog() coraza.RuleAction {

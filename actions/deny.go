@@ -16,6 +16,7 @@ package actions
 
 import (
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 type denyFn struct{}
@@ -36,8 +37,8 @@ func (a *denyFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	}
 }
 
-func (a *denyFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeDisruptive
+func (a *denyFn) Type() types.RuleActionType {
+	return types.ActionTypeDisruptive
 }
 
 func deny() coraza.RuleAction {

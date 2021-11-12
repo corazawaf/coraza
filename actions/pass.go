@@ -16,6 +16,7 @@ package actions
 
 import (
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 type passFn struct {
@@ -29,8 +30,8 @@ func (a *passFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not evaluated
 }
 
-func (a *passFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeDisruptive
+func (a *passFn) Type() types.RuleActionType {
+	return types.ActionTypeDisruptive
 }
 
 func pass() coraza.RuleAction {

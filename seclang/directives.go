@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 	utils "github.com/jptosso/coraza-waf/v2/utils"
 	"go.uber.org/zap"
 )
@@ -97,17 +97,9 @@ func directiveSecRequestBodyAccess(p *Parser, opts string) error {
 }
 
 func directiveSecRuleEngine(p *Parser, opts string) error {
-	switch strings.ToLower(opts) {
-	case "on":
-		p.Waf.RuleEngine = engine.RULE_ENGINE_ON
-	case "off":
-		p.Waf.RuleEngine = engine.RULE_ENGINE_OFF
-	case "detectiononly":
-		p.Waf.RuleEngine = engine.RULE_ENGINE_DETECTONLY
-	default:
-		return errors.New("invalid SecRuleEngine argument")
-	}
-	return nil
+	engine, err := types.ParseRuleEngineStatus(opts)
+	p.Waf.RuleEngine = engine
+	return err
 }
 
 func directiveUnsupported(p *Parser, opts string) error {
@@ -287,11 +279,9 @@ func directiveSecCollectionTimeout(p *Parser, opts string) error {
 
 func directiveSecAuditLog(p *Parser, opts string) error {
 	if len(opts) == 0 {
-		return errors.New("syntax error: SecAuditLog [concurrent/https/...] [parameters]")
+		return errors.New("syntax error: SecAuditLog [concurrent/https/serial/...]")
 	}
-	spl := strings.SplitN(opts, " ", 2)
-	args := utils.ArgsToMap(spl[1])
-	return p.Waf.AddAuditLogger(spl[0], args)
+	return p.Waf.SetAuditLogger(opts)
 }
 
 func directiveSecAuditLogRelevantStatus(p *Parser, opts string) error {
@@ -306,15 +296,9 @@ func directiveSecAuditLogParts(p *Parser, opts string) error {
 }
 
 func directiveSecAuditEngine(p *Parser, opts string) error {
-	switch opts {
-	case "On":
-		p.Waf.AuditEngine = engine.AUDIT_LOG_ENABLED
-	case "Off":
-		p.Waf.AuditEngine = engine.AUDIT_LOG_DISABLED
-	case "RelevantOnly":
-		p.Waf.AuditEngine = engine.AUDIT_LOG_RELEVANT
-	}
-	return nil
+	au, err := types.ParseAuditEngineStatus(opts)
+	p.Waf.AuditEngine = au
+	return err
 }
 
 func directiveSecDataDir(p *Parser, opts string) error {

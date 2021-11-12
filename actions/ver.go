@@ -16,6 +16,7 @@ package actions
 
 import (
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 type verFn struct {
@@ -30,8 +31,8 @@ func (a *verFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not evaluated
 }
 
-func (a *verFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeMetadata
+func (a *verFn) Type() types.RuleActionType {
+	return types.ActionTypeMetadata
 }
 
 func ver() coraza.RuleAction {

@@ -15,42 +15,17 @@
 package actions
 
 import (
-	"fmt"
-	"strconv"
-
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 type severityFn struct {
 }
 
 func (a *severityFn) Init(r *coraza.Rule, data string) error {
-	sev, err := strconv.Atoi(data)
+	sev, err := types.ParseRuleSeverity(data)
 	if err != nil {
-		// its a string
-		switch data {
-		case "EMERGENCY":
-			sev = 0
-		case "ALERT":
-			sev = 1
-		case "CRITICAL":
-			sev = 2
-		case "ERROR":
-			sev = 3
-		case "WARNING":
-			sev = 4
-		case "NOTICE":
-			sev = 5
-		case "INFO":
-			sev = 6
-		case "DEBUG":
-			sev = 7
-		default:
-			// if we reach this point we fail
-			return fmt.Errorf("invalid severity %q", data)
-		}
-	} else if sev < 0 || sev > 7 {
-		return fmt.Errorf("invalid severity %d", sev)
+		return err
 	}
 	r.Severity = sev
 	return nil
@@ -60,8 +35,8 @@ func (a *severityFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not evaluated
 }
 
-func (a *severityFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeMetadata
+func (a *severityFn) Type() types.RuleActionType {
+	return types.ActionTypeMetadata
 }
 
 func severity() coraza.RuleAction {

@@ -19,6 +19,7 @@ import (
 	"strconv"
 
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 var HTTP_STATUSES = []int{100, 101, 102, 103, 200,
@@ -52,8 +53,8 @@ func (a *statusFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	tx.Status = a.status
 }
 
-func (a *statusFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeData
+func (a *statusFn) Type() types.RuleActionType {
+	return types.ActionTypeData
 }
 
 func status() coraza.RuleAction {

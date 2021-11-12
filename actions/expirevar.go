@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 	"go.uber.org/zap"
 )
 
@@ -46,8 +47,8 @@ func (a *expirevarFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	tx.Waf.Logger.Error("Expirevar was used but it's not supported", zap.Int("rule", r.Id))
 }
 
-func (a *expirevarFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeNondisruptive
+func (a *expirevarFn) Type() types.RuleActionType {
+	return types.ActionTypeNondisruptive
 }
 
 func expirevar() coraza.RuleAction {

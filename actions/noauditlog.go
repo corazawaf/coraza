@@ -16,6 +16,7 @@ package actions
 
 import (
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 type noauditlogFn struct {
@@ -29,8 +30,8 @@ func (a *noauditlogFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	tx.Log = true
 }
 
-func (a *noauditlogFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeNondisruptive
+func (a *noauditlogFn) Type() types.RuleActionType {
+	return types.ActionTypeNondisruptive
 }
 
 func noauditlog() coraza.RuleAction {

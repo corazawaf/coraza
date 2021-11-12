@@ -25,13 +25,15 @@ import (
 	"github.com/jptosso/coraza-waf/v2"
 	actionsmod "github.com/jptosso/coraza-waf/v2/actions"
 	operators "github.com/jptosso/coraza-waf/v2/operators"
+	"github.com/jptosso/coraza-waf/v2/types"
+	"github.com/jptosso/coraza-waf/v2/types/variables"
 	utils "github.com/jptosso/coraza-waf/v2/utils"
 )
 
 type ruleAction struct {
 	Key   string
 	Value string
-	Atype coraza.RuleActionType
+	Atype types.RuleActionType
 	F     coraza.RuleAction
 }
 
@@ -39,7 +41,7 @@ type ruleParser struct {
 	parser         *Parser
 	rule           *coraza.Rule
 	Configdir      string
-	defaultActions map[coraza.RulePhase][]ruleAction
+	defaultActions map[types.RulePhase][]ruleAction
 }
 
 func (p *ruleParser) ParseVariables(vars string) error {
@@ -70,7 +72,7 @@ func (p *ruleParser) ParseVariables(vars string) error {
 					curkey = append(curkey, c)
 				}
 			}
-			v, err := coraza.ParseRuleVariable(string(curvar))
+			v, err := variables.ParseVariable(string(curvar))
 			if err != nil {
 				return err
 			}
@@ -151,7 +153,7 @@ func (p *ruleParser) ParseVariables(vars string) error {
 	return nil
 }
 
-func (p *ruleParser) AddVariable(count bool, negation bool, collection coraza.RuleVariable, key string, regexkey bool) error {
+func (p *ruleParser) AddVariable(count bool, negation bool, collection variables.RuleVariable, key string, regexkey bool) error {
 	r := p.rule
 	if negation {
 		for i, vr := range r.Variables {
@@ -216,9 +218,6 @@ func (p *ruleParser) ParseOperator(operator string) error {
 			p.rule.Operator.Data = spl[1]
 		}
 	}
-	if op == "unconditionalMatch" {
-		p.rule.AlwaysMatch = true
-	}
 
 	p.rule.Operator.Operator = operators.OperatorsMap()[op]
 	if p.rule.Operator.Operator == nil {
@@ -232,11 +231,12 @@ func (p *ruleParser) ParseOperator(operator string) error {
 			// TODO make enhancements here
 			tpath := path.Join(p.Configdir, p.rule.Operator.Data)
 			var err error
-			data, err = utils.OpenFile(tpath, false, "")
+			content, err := utils.OpenFile(tpath, false, "")
 			if err != nil {
 				return err
 			}
 			p.rule.Operator.Data = tpath
+			data = content
 		}
 		err := p.rule.Operator.Operator.Init(string(data))
 		if err != nil {
@@ -261,7 +261,7 @@ func (p *ruleParser) ParseDefaultActions(actions string) error {
 			}
 			continue
 		}
-		if action.Atype == coraza.ActionTypeDisruptive {
+		if action.Atype == types.ActionTypeDisruptive {
 			defaultDisruptive = action.Key
 		}
 	}
@@ -271,7 +271,7 @@ func (p *ruleParser) ParseDefaultActions(actions string) error {
 	if defaultDisruptive == "" {
 		return errors.New("SecDefaultAction must contain a disruptive action: " + actions)
 	}
-	p.defaultActions[coraza.RulePhase(phase)] = act
+	p.defaultActions[types.RulePhase(phase)] = act
 	return nil
 }
 
@@ -289,7 +289,7 @@ func (p *ruleParser) ParseActions(actions string) error {
 	}
 	//first we execute metadata rules
 	for _, a := range act {
-		if a.Atype == coraza.ActionTypeMetadata {
+		if a.Atype == types.ActionTypeMetadata {
 			errs := a.F.Init(p.rule, a.Value)
 			if errs != nil {
 				return errs
@@ -327,7 +327,7 @@ func (p *ruleParser) Rule() *coraza.Rule {
 func NewRuleParser(p *Parser) *ruleParser {
 	rp := &ruleParser{
 		rule:           coraza.NewRule(),
-		defaultActions: map[coraza.RulePhase][]ruleAction{},
+		defaultActions: map[types.RulePhase][]ruleAction{},
 		parser:         p,
 	}
 	return rp
@@ -432,18 +432,18 @@ func MergeActions(origin []ruleAction, defaults []ruleAction) []ruleAction {
 	res := []ruleAction{}
 	var da ruleAction //Disruptive action
 	for _, action := range defaults {
-		if action.Atype == coraza.ActionTypeDisruptive {
+		if action.Atype == types.ActionTypeDisruptive {
 			da = action
 			continue
 		}
-		if action.Atype == coraza.ActionTypeMetadata {
+		if action.Atype == types.ActionTypeMetadata {
 			continue
 		}
 		res = append(res, action)
 	}
 	hasDa := false
 	for _, action := range origin {
-		if action.Atype == coraza.ActionTypeDisruptive {
+		if action.Atype == types.ActionTypeDisruptive {
 			if action.Key != "block" {
 				hasDa = true
 				// We add the default rule DA in case this is no block

@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 //0 nothing, 1 phase, 2 request
@@ -51,8 +52,8 @@ func (a *allowFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	*/
 }
 
-func (a *allowFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeDisruptive
+func (a *allowFn) Type() types.RuleActionType {
+	return types.ActionTypeDisruptive
 }
 
 func allow() coraza.RuleAction {

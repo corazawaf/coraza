@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 	utils "github.com/jptosso/coraza-waf/v2/utils"
 )
 
@@ -38,8 +39,8 @@ func (a *execFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not implemented
 }
 
-func (a *execFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeNondisruptive
+func (a *execFn) Type() types.RuleActionType {
+	return types.ActionTypeNondisruptive
 }
 
 func exec() coraza.RuleAction {

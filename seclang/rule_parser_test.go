@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types/variables"
 )
 
 func TestDefaultActions(t *testing.T) {
@@ -55,7 +56,7 @@ func TestVariables(t *testing.T) {
 		t.Error(err)
 	}
 	v := waf.Rules.GetRules()[0].Variables[0]
-	if v.Variable != coraza.VARIABLE_REQUEST_HEADERS || v.Key != "test" {
+	if v.Variable != variables.RequestHeaders || v.Key != "test" {
 		t.Error("failed to parse single key variable")
 	}
 	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/^(?:phpMyAdminphp|MyAdmin_https)$/' "id:2"`)
@@ -105,7 +106,7 @@ func TestVariableCases(t *testing.T) {
 		t.Error(err)
 	}
 	rule := waf.Rules.GetRules()[0]
-	if len(rule.Variables) != 5 || rule.Variables[2].Variable != coraza.VARIABLE_ARGS_NAMES {
+	if len(rule.Variables) != 5 || rule.Variables[2].Variable != variables.ArgsNames {
 		t.Errorf("failed to parse some variables, %d variables", len(rule.Variables))
 	}
 }

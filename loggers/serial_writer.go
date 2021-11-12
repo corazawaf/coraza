@@ -12,37 +12,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package actions
+package loggers
 
 import (
-	"github.com/jptosso/coraza-waf/v2"
-	"github.com/jptosso/coraza-waf/v2/types"
+	"log"
+	"os"
 )
 
-type phaseFn struct{}
+// serialWriter is used to store logs in a single file
+type serialWriter struct {
+	file *os.File
+	log  log.Logger
+	l    *Logger
+}
 
-func (a *phaseFn) Init(r *coraza.Rule, data string) error {
-	p, err := types.ParseRulePhase(data)
+func (sl *serialWriter) Init(l *Logger) error {
+	sl.l = l
+	var err error
+	sl.file, err = os.OpenFile(l.file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
-	r.Phase = p
+	sl.log.SetFlags(0)
+	sl.log.SetOutput(sl.file)
 	return nil
 }
 
-func (a *phaseFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
-	// Not evaluated
+func (sl *serialWriter) Write(al AuditLog) error {
+	data, err := sl.l.formatter(al)
+	if err != nil {
+		return err
+	}
+
+	sl.log.Println(string(data))
+	return nil
 }
 
-func (a *phaseFn) Type() types.RuleActionType {
-	return types.ActionTypeMetadata
+func (sl *serialWriter) Close() error {
+	sl.file.Close()
+	return nil
 }
 
-func phase() coraza.RuleAction {
-	return &phaseFn{}
-}
-
-var (
-	_ coraza.RuleAction = &phaseFn{}
-	_ RuleActionWrapper = phase
-)
+var _ LogWriter = (*serialWriter)(nil)

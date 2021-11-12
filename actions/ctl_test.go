@@ -18,6 +18,8 @@ import (
 	"testing"
 
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
+	"github.com/jptosso/coraza-waf/v2/types/variables"
 )
 
 func TestCtl(t *testing.T) {
@@ -55,7 +57,7 @@ func TestCtl(t *testing.T) {
 	}
 	ctlf.Evaluate(r, tx)
 
-	if tx.AuditEngine != coraza.AUDIT_LOG_DISABLED {
+	if tx.AuditEngine != types.AuditEngineOff {
 		t.Error("Failed to disable audit log")
 	}
 
@@ -64,8 +66,8 @@ func TestCtl(t *testing.T) {
 	}
 	ctlf.Evaluate(r, tx)
 
-	if tx.RuleEngine != coraza.RULE_ENGINE_OFF {
-		t.Error("Failed to disable rule engine")
+	if tx.RuleEngine != types.RuleEngineOff {
+		t.Errorf("Failed to disable rule engine, got %s", tx.RuleEngine.String())
 	}
 
 	if err := ctlf.Init(r, "requestBodyLimit=12345"); err != nil {
@@ -83,7 +85,7 @@ func TestCtl(t *testing.T) {
 			t.Errorf("failed to init requestBodyProcessor %s", bp)
 		}
 		ctlf.Evaluate(r, tx)
-		if tx.GetCollection(coraza.VARIABLE_REQBODY_PROCESSOR).GetFirstString("") != bp {
+		if tx.GetCollection(variables.ReqbodyProcessor).GetFirstString("") != bp {
 			t.Error("failed to set RequestBodyProcessor " + bp)
 		}
 	}

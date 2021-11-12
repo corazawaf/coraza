@@ -52,9 +52,9 @@ func (c *Collection) Find(key string, re *regexp.Regexp, exceptions []string) []
 			}
 			for _, v := range c.data[k] {
 				data = append(data, MatchData{
-					Collection: c.name,
-					Key:        k,
-					Value:      v,
+					VariableName: c.name,
+					Key:          k,
+					Value:        v,
 				})
 			}
 		}
@@ -71,9 +71,9 @@ func (c *Collection) Find(key string, re *regexp.Regexp, exceptions []string) []
 			if re.Match([]byte(k)) {
 				for _, d := range cdata[k] {
 					result = append(result, MatchData{
-						Collection: c.name,
-						Key:        k,
-						Value:      d,
+						VariableName: c.name,
+						Key:          k,
+						Value:        d,
 					})
 				}
 			}
@@ -89,9 +89,9 @@ func (c *Collection) Find(key string, re *regexp.Regexp, exceptions []string) []
 			if k == key {
 				for _, kd := range cdata[k] {
 					ret = append(ret, MatchData{
-						Collection: c.name,
-						Key:        k,
-						Value:      kd,
+						VariableName: c.name,
+						Key:          k,
+						Value:        kd,
 					})
 				}
 			}

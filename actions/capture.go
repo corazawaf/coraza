@@ -16,6 +16,7 @@ package actions
 
 import (
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 type captureFn struct{}
@@ -28,8 +29,8 @@ func (a *captureFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	tx.Capture = true
 }
 
-func (a *captureFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeNondisruptive
+func (a *captureFn) Type() types.RuleActionType {
+	return types.ActionTypeNondisruptive
 }
 
 func capture() coraza.RuleAction {

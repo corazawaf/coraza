@@ -19,6 +19,7 @@ import (
 	"strconv"
 
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 type skipFn struct {
@@ -41,8 +42,8 @@ func (a *skipFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	tx.Skip = a.data
 }
 
-func (a *skipFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeFlow
+func (a *skipFn) Type() types.RuleActionType {
+	return types.ActionTypeFlow
 }
 
 func skip() coraza.RuleAction {

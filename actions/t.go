@@ -19,6 +19,7 @@ import (
 
 	"github.com/jptosso/coraza-waf/v2"
 	transformations "github.com/jptosso/coraza-waf/v2/transformations"
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 type tFn struct{}
@@ -43,8 +44,8 @@ func (a *tFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not evaluated
 }
 
-func (a *tFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeNondisruptive
+func (a *tFn) Type() types.RuleActionType {
+	return types.ActionTypeNondisruptive
 }
 
 func t() coraza.RuleAction {

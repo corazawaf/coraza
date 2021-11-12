@@ -30,4 +30,4 @@
       SecRule ARGS "@noMatch" ""
 
     SecRule REQUEST_URI "@rx (\d+)" "id:3, chain, log"
-      SecRule MATCHED_VARS "12345" ""
+      SecRule REQUEST_METHOD "GET" ""

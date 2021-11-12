@@ -20,6 +20,8 @@ import (
 	"strings"
 
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
+	"github.com/jptosso/coraza-waf/v2/types/variables"
 	"go.uber.org/zap"
 )
 
@@ -45,12 +47,12 @@ func (a *setenvFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 		tx.Waf.Logger.Error("Error setting env variable", zap.Error(err))
 	}
 	// TODO is this ok?
-	tx.GetCollection(coraza.VARIABLE_ENV).Set(a.key, []string{v})
+	tx.GetCollection(variables.Env).Set(a.key, []string{v})
 
 }
 
-func (a *setenvFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeNondisruptive
+func (a *setenvFn) Type() types.RuleActionType {
+	return types.ActionTypeNondisruptive
 }
 
 func setenv() coraza.RuleAction {

@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 	"go.uber.org/zap"
 )
 
@@ -39,8 +40,8 @@ func (a *skipafterFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	tx.SkipAfter = a.data
 }
 
-func (a *skipafterFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeFlow
+func (a *skipafterFn) Type() types.RuleActionType {
+	return types.ActionTypeFlow
 }
 
 func skipafter() coraza.RuleAction {

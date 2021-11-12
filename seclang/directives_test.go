@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	engine "github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 	"github.com/jptosso/coraza-waf/v2/utils"
 )
 
@@ -41,9 +42,6 @@ func Test_directiveSecAuditLog(t *testing.T) {
 	if err := p.FromString("SecUploadFileMode 0700"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	//if w.UploadFileMode != 0700 {
-	//	t.Error("Failed to set SecUploadFileMode")
-	//}
 	if err := p.FromString("SecUploadFileLimit 1000"); err != nil {
 		t.Error("failed to set parser from string")
 	}
@@ -72,8 +70,8 @@ func Test_directiveSecAuditLog(t *testing.T) {
 	if err := p.FromString("SecRuleEngine DetectionOnly"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if w.RuleEngine != engine.RULE_ENGINE_DETECTONLY {
-		t.Error("failed to set SecRuleEngine")
+	if w.RuleEngine != types.RuleEngineDetectionOnly {
+		t.Errorf("failed to set SecRuleEngine, got %s and expected %s", w.RuleEngine.String(), types.RuleEngineDetectionOnly.String())
 	}
 	if err := p.FromString(`SecAction "id:1,tag:test"`); err != nil {
 		t.Error("failed to set parser from string")
@@ -102,9 +100,6 @@ func Test_directiveSecAuditLog(t *testing.T) {
 	if p.Waf.Rules.Count() != 0 {
 		t.Error("Failed to remove rule with SecRuleRemoveById")
 	}
-	if err := p.FromString("SecUnicodeMap 20127"); err != nil {
-		t.Error("failed to set parser from string")
-	}
 	if err := p.FromString("SecResponseBodyMimeTypesClear"); err != nil {
 		t.Error("failed to set parser from string")
 	}
@@ -117,39 +112,6 @@ func Test_directiveSecAuditLog(t *testing.T) {
 	if p.Waf.ResponseBodyMimeTypes[0] != "text/html" {
 		t.Error("failed to set SecResponseBodyMimeType")
 	}
-	//"SecResponseBodyLimitAction":    directiveSecResponseBodyLimitAction,
-	//"SecResponseBodyLimit":          directiveSecResponseBodyLimit,
-	//"SecResponseBodyAccess":         directiveSecResponseBodyAccess,
-	//"SecRequestBodyNoFilesLimit":    directiveSecRequestBodyNoFilesLimit,
-	//"SecRequestBodyLimitAction":     directiveSecRequestBodyLimitAction,
-	//"SecRequestBodyLimit":           directiveSecRequestBodyLimit,
-	//"SecRequestBodyInMemoryLimit":   directiveSecRequestBodyInMemoryLimit,
-	//"SecRequestBodyAccess":          directiveSecRequestBodyAccess,
-	//"SecRemoteRulesFailAction":      directiveSecRemoteRulesFailAction,
-	//"SecRemoteRules":                directiveSecRemoteRules,
-	//"SecPcreMatchLimitRecursion":    directiveSecPcreMatchLimitRecursion,
-	//"SecPcreMatchLimit":             directiveSecPcreMatchLimit,
-	//"SecInterceptOnError":           directiveSecInterceptOnError,
-	//"SecHttpBlKey":                  directiveSecHttpBlKey,
-	//"SecHashParam":                  directiveSecHashParam,
-	//"SecHashMethodRx":               directiveSecHashMethodRx,
-	//"SecHashMethodPm":               directiveSecHashMethodPm,
-	//"SecHashKey":                    directiveSecHashKey,
-	//"SecHashEngine":                 directiveSecHashEngine,
-	//"SecGsbLookupDb":                directiveSecGsbLookupDb,
-	//"SecGeoLookupDb":                directiveSecGeoLookupDb,
-	//"SecDefaultAction":              directiveSecDefaultAction,
-	//"SecDataDir":                    directiveSecDataDir,
-	//"SecContentInjection":           directiveSecContentInjection,
-	//"SecConnWriteStateLimit":        directiveSecConnWriteStateLimit,
-	//"SecConnReadStateLimit":         directiveSecConnReadStateLimit,
-	//"SecConnEngine":                 directiveSecConnEngine,
-	//"SecComponentSignature":         directiveSecComponentSignature,
-	//"SecCollectionTimeout":          directiveSecCollectionTimeout,
-	//"SecAuditLogRelevantStatus":     directiveSecAuditLogRelevantStatus,
-	//"SecAuditLogParts":              directiveSecAuditLogParts,
-	//"SecAuditLog":                   directiveSecAuditLog,
-	//"SecAuditEngine":                directiveSecAuditEngine,
 }
 
 func TestDebugDirectives(t *testing.T) {

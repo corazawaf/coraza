@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	engine "github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/utils"
 )
 
 type Test struct {
@@ -75,14 +76,22 @@ func TestTransformations(t *testing.T) {
 				continue
 			}
 			if data.Name == "pmFromFile" {
-				data.Param = root + "op/" + data.Param
+				d, err := utils.OpenFile(root+"op/"+data.Param, false, "")
+				if err != nil {
+					t.Errorf("Cannot open file %s", data.Param)
+				}
+				data.Param = string(d)
 			}
 			if err := op.Init(data.Param); err != nil {
 				t.Error(err)
 			}
 			res := op.Evaluate(waf.NewTransaction(), data.Input)
 			if (res && data.Ret != 1) || (!res && data.Ret == 1) {
-				t.Error(fmt.Sprintf("Invalid operator result for @%s(%q, %q), expected %d", data.Name, data.Param, data.Input, data.Ret))
+				expected := "match"
+				if data.Ret == 0 {
+					expected = "no match"
+				}
+				t.Error(fmt.Sprintf("Invalid operator result for @%s(%q, %q), %s expected", data.Name, data.Param, data.Input, expected))
 			}
 		}
 	}

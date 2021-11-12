@@ -15,9 +15,9 @@
 package operators
 
 import (
-	"regexp"
 	"strings"
 
+	"github.com/cloudflare/ahocorasick"
 	engine "github.com/jptosso/coraza-waf/v2"
 )
 
@@ -27,17 +27,22 @@ type PmFromFile struct {
 
 func (o *PmFromFile) Init(data string) error {
 	// Split the data by LF or CRLF
-	re := regexp.MustCompile(`\r?\n`)
-	m := re.Split(data, -1)
 	lines := []string{}
-	for _, m := range m {
-		if len(m) == 0 || m[0] == '#' {
+	sp := strings.Split(data, "\n")
+	for _, l := range sp {
+		if len(l) == 0 {
 			continue
 		}
-		lines = append(lines, m)
+		l = strings.ReplaceAll(l, "\r", "") //CLF
+		if l[0] != '#' {
+			lines = append(lines, strings.ToLower(l))
+		}
 	}
-	o.pm = &Pm{}
-	return o.pm.Init(strings.Join(lines, " "))
+	o.pm = &Pm{
+		dict:    lines,
+		matcher: ahocorasick.NewStringMatcher(lines),
+	}
+	return nil
 }
 
 func (o *PmFromFile) Evaluate(tx *engine.Transaction, value string) bool {

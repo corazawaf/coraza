@@ -20,12 +20,13 @@
           triggered_rules:
             - 1
             - 1234
-            - 2
+            #- 2
             - 15
           non_triggered_rules:            
   rules: |
     SecRequestBodyAccess On
     SecRule ARGS:/^t1$/ "aaa" "id:1,phase:1,block,log"
     SecRule &ARGS_GET:/t.*/ "@gt 2" "id: 1234, phase:1, block, log, ctl:requestBodyProcessor=XML"
-    SecRule XML:/*|XML://@* "test123" "id:2, phase:2,log"
+    # xpath support was removed from the main package
+    #SecRule XML:/*|XML://@* "test123" "id:2, phase:2,log"
     SecRule REQUEST_METHOD "POST" "id:15, log"

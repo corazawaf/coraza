@@ -16,6 +16,7 @@ package actions
 
 import (
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 type dropFn struct{}
@@ -36,8 +37,8 @@ func (a *dropFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	}
 }
 
-func (a *dropFn) Type() coraza.RuleActionType {
-	return coraza.ActionTypeDisruptive
+func (a *dropFn) Type() types.RuleActionType {
+	return types.ActionTypeDisruptive
 }
 
 func drop() coraza.RuleAction {

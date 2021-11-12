@@ -29,27 +29,30 @@ func TestCLogFileCreation(t *testing.T) {
 	if err != nil {
 		t.Error("failed to create concurrent logger file")
 	}
-	logger := &ConcurrentLogger{}
-	args := map[string]string{
-		"file":      file.Name(),
-		"directory": "/tmp",
-		"dirmode":   "0777",
-		"filemode":  "0777",
+	logger := &concurrentWriter{}
+	l, err := NewAuditLogger()
+	if err != nil {
+		t.Error("failed to create audit logger", err)
 	}
-	if err := logger.New(args); err != nil {
-		t.Error("failed to create logger")
+	l.file = file.Name()
+	l.directory = "/tmp"
+	l.fileMode = 0777
+	l.dirMode = 0777
+	l.formatter = jsonFormatter
+	if err := logger.Init(l); err != nil {
+		t.Error(err)
 	}
 	ts := time.Now().UnixNano()
-	al := &AuditLog{
-		Transaction: &AuditTransaction{
+	al := AuditLog{
+		Transaction: AuditTransaction{
 			UnixTimestamp: ts,
 			Id:            "123",
-			Request:       &AuditTransactionRequest{},
-			Response:      &AuditTransactionResponse{},
+			Request:       AuditTransactionRequest{},
+			Response:      AuditTransactionResponse{},
 		},
 	}
 	if err := logger.Write(al); err != nil {
-		t.Error("failed to write to logger")
+		t.Error("failed to write to logger: ", err)
 	}
 	tt := time.Unix(0, ts)
 	p2 := fmt.Sprintf("/%s/%s/", tt.Format("20060102"), tt.Format("20060102-1504"))
@@ -67,5 +70,4 @@ func TestCLogFileCreation(t *testing.T) {
 	if json.Unmarshal(data, al2) != nil {
 		t.Error("failed to parse json from concurrent audit log", p)
 	}
-
 }
