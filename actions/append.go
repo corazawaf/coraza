@@ -50,5 +50,5 @@ func append2() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &appendFn{}
-	_ RuleActionWrapper = append2
+	_ ruleActionWrapper = append2
 )

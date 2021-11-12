@@ -15,8 +15,6 @@
 package actions
 
 import (
-	"fmt"
-
 	"github.com/jptosso/coraza-waf/v2"
 	transformations "github.com/jptosso/coraza-waf/v2/transformations"
 	"github.com/jptosso/coraza-waf/v2/types"
@@ -32,10 +30,9 @@ func (a *tFn) Init(r *coraza.Rule, input string) error {
 		r.ClearTransformations()
 		return nil
 	}
-	transforms := transformations.TransformationsMap()
-	tt := transforms[input]
-	if tt == nil {
-		return fmt.Errorf("unsupported transformation %s", input)
+	tt, err := transformations.GetTransformation(input)
+	if err != nil {
+		return err
 	}
 	return r.AddTransformation(input, tt)
 }
@@ -54,5 +51,5 @@ func t() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &tFn{}
-	_ RuleActionWrapper = t
+	_ ruleActionWrapper = t
 )

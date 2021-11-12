@@ -47,5 +47,5 @@ func drop() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &dropFn{}
-	_ RuleActionWrapper = drop
+	_ ruleActionWrapper = drop
 )

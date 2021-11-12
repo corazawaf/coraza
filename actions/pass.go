@@ -40,5 +40,5 @@ func pass() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &passFn{}
-	_ RuleActionWrapper = pass
+	_ ruleActionWrapper = pass
 )

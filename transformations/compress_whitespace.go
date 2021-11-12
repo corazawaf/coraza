@@ -20,7 +20,7 @@ import (
 	"github.com/jptosso/coraza-waf/v2"
 )
 
-func CompressWhitespace(value string, tools coraza.RuleTransformationTools) string {
+func compressWhitespace(value string, tools coraza.RuleTransformationTools) string {
 	a := []byte{}
 	i := 0
 	inWhiteSpace := false

@@ -44,5 +44,5 @@ func phase() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &phaseFn{}
-	_ RuleActionWrapper = phase
+	_ ruleActionWrapper = phase
 )

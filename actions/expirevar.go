@@ -57,5 +57,5 @@ func expirevar() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &expirevarFn{}
-	_ RuleActionWrapper = expirevar
+	_ ruleActionWrapper = expirevar
 )

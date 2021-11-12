@@ -19,7 +19,7 @@ import (
 	"github.com/jptosso/coraza-waf/v2/utils"
 )
 
-func CssDecode(data string, utils coraza.RuleTransformationTools) string {
+func cssDecode(data string, utils coraza.RuleTransformationTools) string {
 	return cssDecodeInplace(data)
 }
 

@@ -57,5 +57,5 @@ func id() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &idFn{}
-	_ RuleActionWrapper = id
+	_ ruleActionWrapper = id
 )

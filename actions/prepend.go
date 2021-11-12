@@ -61,5 +61,5 @@ func prepend() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &prependFn{}
-	_ RuleActionWrapper = prepend
+	_ ruleActionWrapper = prepend
 )

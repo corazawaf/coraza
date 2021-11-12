@@ -40,5 +40,5 @@ func exec() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &execFn{}
-	_ RuleActionWrapper = exec
+	_ ruleActionWrapper = exec
 )

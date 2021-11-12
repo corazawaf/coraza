@@ -71,5 +71,5 @@ func initcol() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &initcolFn{}
-	_ RuleActionWrapper = initcol
+	_ ruleActionWrapper = initcol
 )

@@ -33,7 +33,7 @@ replacing all commas [,] and semicolon [;] into a space
 replacing all multiple spaces (including tab, newline, etc.) into one space
 transform all characters to lowercase
 */
-func CmdLine(data string, utils coraza.RuleTransformationTools) string {
+func cmdLine(data string, utils coraza.RuleTransformationTools) string {
 	space := false
 	ret := []byte{}
 	for _, a := range data {

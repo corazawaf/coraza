@@ -41,5 +41,5 @@ func ver() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &verFn{}
-	_ RuleActionWrapper = ver
+	_ ruleActionWrapper = ver
 )

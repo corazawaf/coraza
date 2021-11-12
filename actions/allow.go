@@ -62,5 +62,5 @@ func allow() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &allowFn{}
-	_ RuleActionWrapper = allow
+	_ ruleActionWrapper = allow
 )

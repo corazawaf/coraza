@@ -63,5 +63,5 @@ func status() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &statusFn{}
-	_ RuleActionWrapper = status
+	_ ruleActionWrapper = status
 )

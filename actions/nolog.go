@@ -41,5 +41,5 @@ func nolog() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &nologFn{}
-	_ RuleActionWrapper = nolog
+	_ ruleActionWrapper = nolog
 )

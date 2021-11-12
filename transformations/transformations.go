@@ -14,36 +14,52 @@
 
 package transformations
 
-import "github.com/jptosso/coraza-waf/v2"
+import (
+	"fmt"
 
-func TransformationsMap() map[string]coraza.RuleTransformation {
-	return map[string]coraza.RuleTransformation{
-		"base64Decode":       Base64decode,
-		"cmdLine":            CmdLine,
-		"compressWhitespace": CompressWhitespace,
-		"cssDecode":          CssDecode,
-		"escapeSeqDecode":    EscapeSeqDecode,
-		"hexEncode":          HexEncode,
-		"htmlEntityDecode":   HtmlEntityDecode,
-		"jsDecode":           JsDecode,
-		"length":             Length,
-		"lowercase":          LowerCase,
-		"md5":                Md5,
-		"none":               None,
-		"normalisePath":      NormalisePath,
-		"normalisePathWin":   NormalisePathWin,
-		"normalizePath":      NormalisePath,
-		"normalizePathWin":   NormalisePathWin,
-		"removeComments":     RemoveComments,
-		"removeCommentsChar": RemoveCommentsChar,
-		"removeNulls":        RemoveNulls,
-		"removeWhitespace":   RemoveWhitespace,
-		"replaceComments":    ReplaceComments,
-		"replaceNulls":       ReplaceNulls,
-		"sha1":               Sha1,
-		"urlDecode":          UrlDecode,
-		"urlDecodeUni":       UrlDecodeUni,
-		"urlEncode":          UrlEncode,
-		"utf8toUnicode":      Utf8ToUnicode,
+	"github.com/jptosso/coraza-waf/v2"
+)
+
+var transformations = map[string]coraza.RuleTransformation{}
+
+func RegisterTransformation(name string, trans coraza.RuleTransformation) {
+	transformations[name] = trans
+}
+
+// Get a transformation by name
+func GetTransformation(name string) (coraza.RuleTransformation, error) {
+	if t, ok := transformations[name]; ok {
+		return t, nil
 	}
+	return nil, fmt.Errorf("invalid transformation name %q", name)
+}
+
+func init() {
+	RegisterTransformation("base64Decode", Base64decode)
+	RegisterTransformation("cmdLine", CmdLine)
+	RegisterTransformation("compressWhitespace", CompressWhitespace)
+	RegisterTransformation("cssDecode", CssDecode)
+	RegisterTransformation("escapeSeqDecode", EscapeSeqDecode)
+	RegisterTransformation("hexEncode", HexEncode)
+	RegisterTransformation("htmlEntityDecode", HtmlEntityDecode)
+	RegisterTransformation("jsDecode", JsDecode)
+	RegisterTransformation("length", Length)
+	RegisterTransformation("lowercase", LowerCase)
+	RegisterTransformation("md5", Md5)
+	RegisterTransformation("none", None)
+	RegisterTransformation("normalisePath", NormalisePath)
+	RegisterTransformation("normalisePathWin", NormalisePathWin)
+	RegisterTransformation("normalizePath", NormalisePath)
+	RegisterTransformation("normalizePathWin", NormalisePathWin)
+	RegisterTransformation("removeComments", RemoveComments)
+	RegisterTransformation("removeCommentsChar", RemoveCommentsChar)
+	RegisterTransformation("removeNulls", RemoveNulls)
+	RegisterTransformation("removeWhitespace", RemoveWhitespace)
+	RegisterTransformation("replaceComments", ReplaceComments)
+	RegisterTransformation("replaceNulls", ReplaceNulls)
+	RegisterTransformation("sha1", Sha1)
+	RegisterTransformation("urlDecode", UrlDecode)
+	RegisterTransformation("urlDecodeUni", UrlDecodeUni)
+	RegisterTransformation("urlEncode", UrlEncode)
+	RegisterTransformation("utf8toUnicode", Utf8ToUnicode)
 }

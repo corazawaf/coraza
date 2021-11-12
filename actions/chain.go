@@ -40,5 +40,5 @@ func chain() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &chainFn{}
-	_ RuleActionWrapper = chain
+	_ ruleActionWrapper = chain
 )

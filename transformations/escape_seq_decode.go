@@ -21,7 +21,7 @@ import (
 	utils "github.com/jptosso/coraza-waf/v2/utils"
 )
 
-func EscapeSeqDecode(input string, tools coraza.RuleTransformationTools) string {
+func escapeSeqDecode(input string, tools coraza.RuleTransformationTools) string {
 	var i, count, d int
 	input_len := len(input)
 	data := []byte(input)

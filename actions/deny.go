@@ -47,5 +47,5 @@ func deny() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &denyFn{}
-	_ RuleActionWrapper = deny
+	_ ruleActionWrapper = deny
 )

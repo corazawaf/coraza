@@ -41,5 +41,5 @@ func multimatch() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &multimatchFn{}
-	_ RuleActionWrapper = multimatch
+	_ ruleActionWrapper = multimatch
 )

@@ -111,5 +111,5 @@ func setvar() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &setvarFn{}
-	_ RuleActionWrapper = setvar
+	_ ruleActionWrapper = setvar
 )

@@ -61,5 +61,5 @@ func setenv() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &setenvFn{}
-	_ RuleActionWrapper = setenv
+	_ ruleActionWrapper = setenv
 )

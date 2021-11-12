@@ -24,19 +24,11 @@ jobs:
       with:
         lfs: true
         fetch-depth: 0 #for better blame info
-    - name: Setup libinjection
-      run: |
-        sudo make deps
-        sudo ldconfig
-        # Used to store log files for testing
-        mkdir /tmp/audit
     - name: Download vendored dependencies
       run: go mod vendor
     - name: Tests and coverage
-      run: CGO_ENABLED=1 go test -v -coverpkg=./... -coverprofile=coverage-waf.out ./...
-    # now we also test CGO disabled
-    - name: Tests and coverage
-      run: CGO_ENABLED=0 go test -v -coverpkg=./..../...      
+      run: go test -v -coverpkg=./... -coverprofile=coverage-waf.out ./...
+    # now we also test CGO disabled    
     - name: SonarCloud Scan
       uses: sonarsource/sonarcloud-github-action@master
       env:

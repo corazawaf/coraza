@@ -41,5 +41,5 @@ func tag() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &tagFn{}
-	_ RuleActionWrapper = tag
+	_ ruleActionWrapper = tag
 )

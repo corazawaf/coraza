@@ -52,5 +52,5 @@ func skip() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &skipFn{}
-	_ RuleActionWrapper = skip
+	_ ruleActionWrapper = skip
 )

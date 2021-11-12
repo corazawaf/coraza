@@ -20,7 +20,7 @@ import (
 	"github.com/jptosso/coraza-waf/v2"
 )
 
-func HexEncode(data string, utils coraza.RuleTransformationTools) string {
+func hexEncode(data string, utils coraza.RuleTransformationTools) string {
 	src := []byte(data)
 
 	return hex.EncodeToString(src)

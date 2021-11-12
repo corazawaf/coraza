@@ -69,9 +69,9 @@ func TestTransformations(t *testing.T) {
 			if strings.Contains(data.Output, `\x`) {
 				data.Output, _ = strconv.Unquote(`"` + data.Output + `"`)
 			}
-			trans := TransformationsMap()[data.Name]
-			if trans == nil {
-				//t.Error("Invalid transformation test for " + data.Name)
+			trans, err := GetTransformation(data.Name)
+			if err != nil {
+				//t.Error(err)
 				continue
 			}
 			tools := coraza.RuleTransformationTools{}

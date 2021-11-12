@@ -39,5 +39,5 @@ func block() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &blockFn{}
-	_ RuleActionWrapper = block
+	_ ruleActionWrapper = block
 )

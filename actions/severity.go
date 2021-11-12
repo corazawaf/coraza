@@ -45,5 +45,5 @@ func severity() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &severityFn{}
-	_ RuleActionWrapper = severity
+	_ ruleActionWrapper = severity
 )

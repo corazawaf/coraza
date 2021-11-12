@@ -41,5 +41,5 @@ func log() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &logFn{}
-	_ RuleActionWrapper = log
+	_ ruleActionWrapper = log
 )

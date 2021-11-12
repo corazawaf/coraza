@@ -39,5 +39,5 @@ func capture() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &captureFn{}
-	_ RuleActionWrapper = capture
+	_ ruleActionWrapper = capture
 )

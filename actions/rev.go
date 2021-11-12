@@ -41,5 +41,5 @@ func rev() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &revFn{}
-	_ RuleActionWrapper = rev
+	_ ruleActionWrapper = rev
 )

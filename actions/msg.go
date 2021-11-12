@@ -42,5 +42,5 @@ func msg() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &msgFn{}
-	_ RuleActionWrapper = msg
+	_ ruleActionWrapper = msg
 )

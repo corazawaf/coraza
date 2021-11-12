@@ -40,5 +40,5 @@ func noauditlog() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &noauditlogFn{}
-	_ RuleActionWrapper = noauditlog
+	_ ruleActionWrapper = noauditlog
 )

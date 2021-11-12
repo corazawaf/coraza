@@ -209,5 +209,5 @@ func ctl() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &ctlFn{}
-	_ RuleActionWrapper = ctl
+	_ ruleActionWrapper = ctl
 )

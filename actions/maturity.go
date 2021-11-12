@@ -51,5 +51,5 @@ func maturity() coraza.RuleAction {
 
 var (
 	_ coraza.RuleAction = &maturityFn{}
-	_ RuleActionWrapper = maturity
+	_ ruleActionWrapper = maturity
 )
