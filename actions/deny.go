@@ -22,6 +22,7 @@ import (
 type denyFn struct{}
 
 func (a *denyFn) Init(r *coraza.Rule, data string) error {
+	r.Disruptive = true
 	return nil
 }
 

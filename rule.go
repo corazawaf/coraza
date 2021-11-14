@@ -184,6 +184,9 @@ type Rule struct {
 
 	// If true, the transformations will be multimatched
 	MultiMatch bool
+
+	// Used for error logging
+	Disruptive bool
 }
 
 // Evaluate will evaluate the current rule for the indicated transaction
@@ -342,13 +345,13 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		// action log is required to add the rule to matched rules
 		if r.Log {
 			tx.MatchRule(MatchedRule{
-				Rule:        *r,
-				MatchedData: matchedValues[0],
-				Message:     tx.MacroExpansion(r.Msg),
-				Data:        tx.MacroExpansion(r.LogData),
-				Uri:         tx.GetCollection(variables.RequestUri).GetFirstString(""),
-				Id:          tx.Id,
-				//Disruptive: false,
+				Rule:            *r,
+				MatchedData:     matchedValues[0],
+				Message:         tx.MacroExpansion(r.Msg),
+				Data:            tx.MacroExpansion(r.LogData),
+				Uri:             tx.GetCollection(variables.RequestUri).GetFirstString(""),
+				Id:              tx.Id,
+				Disruptive:      r.Disruptive,
 				ServerIpAddress: tx.GetCollection(variables.ServerAddr).GetFirstString(""),
 				ClientIpAddress: tx.GetCollection(variables.RemoteAddr).GetFirstString(""),
 			})

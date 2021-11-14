@@ -22,6 +22,7 @@ import (
 type dropFn struct{}
 
 func (a *dropFn) Init(r *coraza.Rule, data string) error {
+	r.Disruptive = true
 	return nil
 }
 
