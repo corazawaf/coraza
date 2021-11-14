@@ -30,7 +30,7 @@ func (a *denyFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	if rid == 0 {
 		rid = r.ParentId
 	}
-	tx.Interruption = &coraza.Interruption{
+	tx.Interruption = &types.Interruption{
 		Status: 403,
 		RuleId: rid,
 		Action: "deny",

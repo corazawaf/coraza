@@ -125,3 +125,17 @@ const (
 	AuditLogPartRulesMatched                auditLogPart = 'K'
 	AuditLogPartFinalBoundary               auditLogPart = 'Z'
 )
+
+type Interruption struct {
+	// Rule that caused the interruption
+	RuleId int
+
+	// drop, deny, redirect
+	Action string
+
+	// Force this status code
+	Status int
+
+	// Parameters used by proxy and redirect
+	Data string
+}

@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jptosso/coraza-waf/v2/geo"
 	loggers "github.com/jptosso/coraza-waf/v2/loggers"
 	"github.com/jptosso/coraza-waf/v2/types"
 	"github.com/jptosso/coraza-waf/v2/types/variables"
@@ -32,7 +33,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type LogCallback = func(rule MatchedRule)
+type ErrorLogCallback = func(rule MatchedRule)
 
 // Waf instances are used to store configurations and rules
 // Every web application should have a different Waf instance
@@ -130,10 +131,14 @@ type Waf struct {
 	// Used for the debug logger
 	Logger *zap.Logger
 
+	geo geo.GeoReader
+
 	// Used to allow switching the debug level during runtime
 	// ctl cannot switch use it as it will update de lvl
 	// for the whole Waf instance
 	loggerAtomicLevel *zap.AtomicLevel
+
+	errorLogCb ErrorLogCallback
 }
 
 // NewTransaction Creates a new initialized transaction for this WAF instance
@@ -304,4 +309,16 @@ func (w *Waf) SetLogLevel(lvl int) error {
 		return fmt.Errorf("invalid SecDebugLogLevel value")
 	}
 	return nil
+}
+
+func (w *Waf) SetErrorLogCb(cb ErrorLogCallback) {
+	w.errorLogCb = cb
+}
+
+func (w *Waf) SetGeoReader(reader geo.GeoReader) {
+	w.geo = reader
+}
+
+func (w *Waf) Geo() geo.GeoReader {
+	return w.geo
 }
