@@ -279,7 +279,7 @@ func TestLogCallback(t *testing.T) {
 			Variable:     variables.UniqueId,
 		},
 	})
-	if buffer == "" {
+	if buffer == "" && strings.Contains(buffer, tx.Id) {
 		t.Error("failed to call error log callback")
 	}
 }

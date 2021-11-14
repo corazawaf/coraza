@@ -345,6 +345,12 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 				Rule:        *r,
 				MatchedData: matchedValues[0],
 				Message:     tx.MacroExpansion(r.Msg),
+				Data:        tx.MacroExpansion(r.LogData),
+				Uri:         tx.GetCollection(variables.RequestUri).GetFirstString(""),
+				Id:          tx.Id,
+				//Disruptive: false,
+				ServerIpAddress: tx.GetCollection(variables.ServerAddr).GetFirstString(""),
+				ClientIpAddress: tx.GetCollection(variables.RemoteAddr).GetFirstString(""),
 			})
 		}
 		//we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
