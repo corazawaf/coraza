@@ -35,20 +35,6 @@ import (
 	"go.uber.org/zap"
 )
 
-type Interruption struct {
-	// Rule that caused the interruption
-	RuleId int
-
-	// drop, deny, redirect
-	Action string
-
-	// Force this status code
-	Status int
-
-	// Parameters used by proxy and redirect
-	Data string
-}
-
 type Transaction struct {
 	// If true the transaction is going to be logged, it won't log if IsRelevantStatus() fails
 	Log bool
@@ -60,7 +46,7 @@ type Transaction struct {
 	MatchedRules []MatchedRule
 
 	//True if the transaction has been disrupted by any rule
-	Interruption *Interruption
+	Interruption *types.Interruption
 
 	// Contains all collections, including persistent
 	collections []*Collection
@@ -91,10 +77,10 @@ type Transaction struct {
 	LastPhase types.RulePhase
 
 	// Handles request body buffers
-	RequestBodyBuffer *BodyBuffer
+	RequestBodyBuffer *bodyBuffer
 
 	// Handles response body buffers
-	ResponseBodyBuffer *BodyBuffer
+	ResponseBodyBuffer *bodyBuffer
 
 	// Body processor used to parse JSON, XML, etc
 	bodyProcessor bodyprocessors.BodyProcessor
@@ -248,7 +234,7 @@ func (tx *Transaction) resetAfterRule() {
 // This function does not run ProcessConnection
 // This function will store in memory the whole reader,
 // DON't USE IT FOR PRODUCTION yet
-func (tx *Transaction) ParseRequestReader(data io.Reader) (*Interruption, error) {
+func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, error) {
 	// For dumb reasons we must read the headers and look for the Host header,
 	// this function is intended for proxies and the RFC says that a Host must not be parsed...
 	// Maybe some time I will create a prettier fix
@@ -335,6 +321,10 @@ func (tx *Transaction) MatchRule(mr MatchedRule) {
 	if mr.Rule.Severity > maxSeverity {
 		hs.Set("", []string{strconv.Itoa(mr.Rule.Severity.Int())})
 		tx.Waf.Logger.Debug("Set highest severity", zap.Int("severity", mr.Rule.Severity.Int()))
+	}
+	// Rules are matched to error log in real time
+	if tx.Waf.errorLogCb != nil {
+		tx.Waf.errorLogCb(mr)
 	}
 }
 
@@ -468,7 +458,7 @@ func (tx *Transaction) RemoveRuleById(id int) {
 // so this will implement all phase 0, 1 and 2 variables
 // Note: This function will stop after an interruption
 // Note: Do not manually fill any request variables
-func (tx *Transaction) ProcessRequest(req *http.Request) (*Interruption, error) {
+func (tx *Transaction) ProcessRequest(req *http.Request) (*types.Interruption, error) {
 	var client string
 	cport := 0
 	//IMPORTANT: Some http.Request.RemoteAddr implementations will not contain port or contain IPV6: [2001:db8::1]:8080
@@ -477,7 +467,7 @@ func (tx *Transaction) ProcessRequest(req *http.Request) (*Interruption, error) 
 		client = strings.Join(spl[0:len(spl)-1], "")
 		cport, _ = strconv.Atoi(spl[len(spl)-1])
 	}
-	var in *Interruption
+	var in *types.Interruption
 	// There is no socket access in the request object so we don't know the server client or port
 	tx.ProcessConnection(client, cport, "", 0)
 	tx.ProcessUri(req.URL.String(), req.Method, req.Proto)
@@ -631,7 +621,7 @@ func (tx *Transaction) ProcessUri(uri string, method string, httpVersion string)
 // that the headers should be added prior to the execution of this function.
 //
 // note: Remember to check for a possible intervention.
-func (tx *Transaction) ProcessRequestHeaders() *Interruption {
+func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 	if tx.RuleEngine == types.RuleEngineOff {
 		// RUle engine is disabled
 		return nil
@@ -647,7 +637,7 @@ func (tx *Transaction) ProcessRequestHeaders() *Interruption {
 // body for inspect it is recommended to skip this step.
 //
 // Remember to check for a possible intervention.
-func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
+func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
 		return tx.Interruption, nil
 	}
@@ -666,7 +656,7 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 	if tx.RequestBodyBuffer.Size() >= tx.RequestBodyLimit {
 		if tx.Waf.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
 			// We interrupt this transaction in case RequestBodyLimitAction is Reject
-			tx.Interruption = &Interruption{
+			tx.Interruption = &types.Interruption{
 				Status: 403,
 				Action: "deny",
 			}
@@ -727,7 +717,7 @@ func (tx *Transaction) ProcessRequestBody() (*Interruption, error) {
 //
 // note: Remember to check for a possible intervention.
 //
-func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *Interruption {
+func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Interruption {
 	c := strconv.Itoa(code)
 	tx.GetCollection(variables.ResponseStatus).Set("", []string{c})
 	tx.GetCollection(variables.ResponseProtocol).Set("", []string{proto})
@@ -758,7 +748,7 @@ func (tx *Transaction) IsProcessableResponseBody() bool {
 // body for inspect it is recommended to skip this step.
 //
 // note Remember to check for a possible intervention.
-func (tx *Transaction) ProcessResponseBody() (*Interruption, error) {
+func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
 		return tx.Interruption, nil
 	}

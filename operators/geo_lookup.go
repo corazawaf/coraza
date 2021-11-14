@@ -12,47 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package nids
+package operators
 
 import (
-	"regexp"
-	"strconv"
-	"strings"
+	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types/variables"
 )
 
-func NidCl(nid string) bool {
-	if len(nid) < 8 {
+type geoLookup struct{}
+
+func (o *geoLookup) Init(data string) error {
+	return nil
+}
+
+func (o *geoLookup) Evaluate(tx *coraza.Transaction, value string) bool {
+	geo := tx.Waf.Geo()
+	if geo == nil {
 		return false
 	}
-	re, err := regexp.Compile(`[^\dk]`)
+	record, err := geo.Get(value)
 	if err != nil {
 		return false
 	}
-	nid = strings.ToLower(nid)
-	nid = re.ReplaceAllString(nid, "")
-	rut, _ := strconv.Atoi(nid[:len(nid)-1])
-	dv := nid[len(nid)-1:]
-
-	var sum = 0
-	var factor = 2
-	var ndv string
-	for ; rut != 0; rut /= 10 {
-		sum += rut % 10 * factor
-		if factor == 7 {
-			factor = 2
-		} else {
-			factor++
-		}
-	}
-
-	val := 11 - (sum % 11)
-	switch val {
-	case 11:
-		ndv = "0"
-	case 10:
-		ndv = "k"
-	default:
-		ndv = strconv.Itoa(val)
-	}
-	return ndv == dv
+	tx.GetCollection(variables.Geo).SetData(geo.Get(value))
+	return true
 }
+
+var geolook coraza.RuleOperator = &geoLookup{}

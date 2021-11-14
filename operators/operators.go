@@ -48,6 +48,7 @@ func init() {
 	RegisterOperator("validateUtf8Encoding", func() engine.RuleOperator { return &validateUtf8Encoding{} })
 	RegisterOperator("noMatch", func() engine.RuleOperator { return &noMatch{} })
 	RegisterOperator("validateNid", func() engine.RuleOperator { return &validateNid{} })
+	RegisterOperator("geoLookup", func() engine.RuleOperator { return &geoLookup{} })
 }
 func GetOperator(name string) (engine.RuleOperator, error) {
 	if op, ok := operators[name]; ok {
