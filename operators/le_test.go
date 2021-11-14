@@ -19,7 +19,7 @@ import (
 )
 
 func TestLe(t *testing.T) {
-	le := &Le{}
+	le := &le{}
 	if err := le.Init("2500"); err != nil {
 		t.Error("failed to init le operator")
 	}

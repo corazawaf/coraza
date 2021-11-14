@@ -19,7 +19,7 @@ import (
 )
 
 func TestRbl(t *testing.T) {
-	rbl := &Rbl{}
+	rbl := &rbl{}
 	if err := rbl.Init("xbl.spamhaus.org"); err != nil {
 		t.Error("Cannot init rbl operator")
 	}

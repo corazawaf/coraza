@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/jptosso/coraza-waf/v2/types"
 	"github.com/jptosso/coraza-waf/v2/types/variables"
@@ -41,7 +42,7 @@ type RuleAction interface {
 	Type() types.RuleActionType
 }
 
-type RuleActionParams struct {
+type ruleActionParams struct {
 	// The name of the action, used for logging
 	Name string
 
@@ -61,9 +62,12 @@ type RuleOperator interface {
 }
 
 // RuleOperator is a container for an operator,
-type RuleOperatorParams struct {
+type ruleOperatorParams struct {
 	// Operator to be used
 	Operator RuleOperator
+
+	// Function name (ex @rx)
+	Function string
 	// Data to initialize the operator
 	Data string
 	// If true, rule will match if op.Evaluate returns false
@@ -73,7 +77,7 @@ type RuleOperatorParams struct {
 // RuleVariable is compiled during runtime by transactions
 // to get values from the transaction's variables
 // It supports xml, regex, exceptions and many more features
-type RuleVariableParams struct {
+type ruleVariableParams struct {
 	// We store the name for performance
 	Name string
 
@@ -93,7 +97,7 @@ type RuleVariableParams struct {
 	Exceptions []string
 }
 
-type RuleTransformationParams struct {
+type ruleTransformationParams struct {
 	// The transformation to be used, used for logging
 	Name string
 
@@ -106,20 +110,20 @@ type RuleTransformationParams struct {
 type Rule struct {
 	// Contains a list of variables that will be compiled
 	// by a transaction
-	Variables []RuleVariableParams
+	variables []ruleVariableParams
 
-	// Contains a pointer to the Operator struct used
+	// Contains a pointer to the operator struct used
 	// SecActions and SecMark can have nil Operators
-	Operator *RuleOperatorParams
+	operator *ruleOperatorParams
 
 	// List of transformations to be evaluated
 	// In the future, transformations might be run by the
 	// action itself, not sure yet
-	transformations []RuleTransformationParams
+	transformations []ruleTransformationParams
 
 	// Slice of initialized actions to be evaluated during
 	// the rule evaluation process
-	Actions []RuleActionParams
+	actions []ruleActionParams
 
 	// Contains the Id of the parent rule if you are inside
 	// a chain. Otherwise it will be 0
@@ -151,6 +155,8 @@ type Rule struct {
 	Phase types.RulePhase
 
 	// Message text to be macro expanded and logged
+	// In future versions we might use a special type of string that
+	// supports cached macro expansions. For performance
 	Msg string
 
 	// Rule revision value
@@ -207,7 +213,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	}
 
 	// SecMark and SecAction uses nil operator
-	if r.Operator == nil {
+	if r.operator == nil {
 		tx.Waf.Logger.Debug("Forcing rule match", zap.String("txid", tx.Id),
 			zap.Int("rule", r.Id),
 			zap.String("event", "RULE_FORCE_MATCH"),
@@ -220,7 +226,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		}
 	} else {
 		ecol := tx.ruleRemoveTargetById[r.Id]
-		for _, v := range r.Variables {
+		for _, v := range r.variables {
 			var values []MatchData
 			exceptions := make([]string, len(v.Exceptions))
 			copy(exceptions, v.Exceptions)
@@ -312,7 +318,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	tx.MatchVariable(matchedValues[0])
 
 	// We run non disruptive actions even if there is no chain match
-	for _, a := range r.Actions {
+	for _, a := range r.actions {
 		if a.Function.Type() == types.ActionTypeNondisruptive {
 			a.Function.Evaluate(r, tx)
 		}
@@ -343,7 +349,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		}
 		//we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
 		tx.Waf.Logger.Debug("detecting rule disruptive action", zap.String("txid", tx.Id), zap.Int("rule", r.Id))
-		for _, a := range r.Actions {
+		for _, a := range r.actions {
 			if a.Function.Type() == types.ActionTypeDisruptive || a.Function.Type() == types.ActionTypeFlow {
 				tx.Waf.Logger.Debug("evaluating rule disruptive action", zap.String("txid", tx.Id), zap.Int("rule", rid))
 				a.Function.Evaluate(r, tx)
@@ -359,8 +365,42 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 }
 
 // AddAction adds an action to the rule
-func (r *Rule) AddAction(name string, action RuleAction) {
-	r.Actions = append(r.Actions, RuleActionParams{name, action})
+func (r *Rule) AddAction(name string, action RuleAction) error {
+	// TODO add more logic, like one persistent action per rule etc
+	r.actions = append(r.actions, ruleActionParams{name, action})
+	return nil
+}
+
+func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool, isnegation bool, isregex bool) error {
+	var re *regexp.Regexp
+	if isregex {
+		var err error
+		re, err = regexp.Compile(key)
+		if err != nil {
+			return err
+		}
+	}
+	if isnegation {
+		counter := 0
+		for _, rv := range r.variables {
+			if rv.Variable == v {
+				rv.Exceptions = append(rv.Exceptions, key)
+				counter++
+			}
+		}
+		if counter == 0 {
+			return fmt.Errorf("cannot create a variable exception is the variable %q is not used", v.Name())
+		}
+	} else {
+		r.variables = append(r.variables, ruleVariableParams{
+			Count:      iscount,
+			Variable:   v,
+			Key:        strings.ToLower(key), // is it ok tolower here?
+			Regex:      re,
+			Exceptions: []string{},
+		})
+	}
+	return nil
 }
 
 // AddTransformation adds a transformation to the rule
@@ -369,22 +409,31 @@ func (r *Rule) AddTransformation(name string, t RuleTransformation) error {
 	if t == nil || name == "" {
 		return fmt.Errorf("invalid transformation %q not found", name)
 	}
-	r.transformations = append(r.transformations, RuleTransformationParams{name, t})
+	r.transformations = append(r.transformations, ruleTransformationParams{name, t})
 	return nil
 }
 
 // ClearTransformations clears all the transformations
 // it is mostly used by the "none" transformation
 func (r *Rule) ClearTransformations() {
-	r.transformations = []RuleTransformationParams{}
+	r.transformations = []ruleTransformationParams{}
+}
+
+func (r *Rule) SetOperator(operator RuleOperator, function string, params string) {
+	r.operator = &ruleOperatorParams{
+		Operator: operator,
+		Function: function,
+		Data:     params,
+		Negation: (len(function) > 0 && function[0] == '!'),
+	}
 }
 
 func (r *Rule) executeOperator(data string, tx *Transaction) bool {
-	result := r.Operator.Operator.Evaluate(tx, data)
-	if r.Operator.Negation && result {
+	result := r.operator.Operator.Evaluate(tx, data)
+	if r.operator.Negation && result {
 		return false
 	}
-	if r.Operator.Negation && !result {
+	if r.operator.Negation && !result {
 		return true
 	}
 	return result

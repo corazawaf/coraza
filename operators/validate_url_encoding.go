@@ -16,20 +16,20 @@ package operators
 
 import engine "github.com/jptosso/coraza-waf/v2"
 
-type ValidateUrlEncoding struct {
+type validateUrlEncoding struct {
 }
 
-func (o *ValidateUrlEncoding) Init(data string) error {
+func (o *validateUrlEncoding) Init(data string) error {
 	// Does not require initialization
 	return nil
 }
 
-func (o *ValidateUrlEncoding) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *validateUrlEncoding) Evaluate(tx *engine.Transaction, value string) bool {
 	if len(value) == 0 {
 		return false
 	}
 
-	rc := validateUrlEncoding(value, len(value))
+	rc := validateUrlEncodingInternal(value, len(value))
 	switch rc {
 	case 1:
 		/* Encoding is valid */
@@ -49,7 +49,7 @@ func (o *ValidateUrlEncoding) Evaluate(tx *engine.Transaction, value string) boo
 	return true
 }
 
-func validateUrlEncoding(input string, input_length int) int {
+func validateUrlEncodingInternal(input string, input_length int) int {
 	var i int
 
 	if input_length == 0 {

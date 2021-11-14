@@ -23,14 +23,14 @@ import (
 
 //TODO according to coraza researchs, re2 matching is faster than ahocorasick
 // maybe we should switch in the future
-// Pm is always lowercase
-type Pm struct {
+// pm is always lowercase
+type pm struct {
 	matcher *ahocorasick.Matcher
 	// dict is used for capturing
 	dict []string
 }
 
-func (o *Pm) Init(data string) error {
+func (o *pm) Init(data string) error {
 	data = strings.ToLower(data)
 	o.dict = strings.Split(data, " ")
 	o.matcher = ahocorasick.NewStringMatcher(o.dict)
@@ -39,7 +39,7 @@ func (o *Pm) Init(data string) error {
 	return nil
 }
 
-func (o *Pm) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *pm) Evaluate(tx *engine.Transaction, value string) bool {
 	value = strings.ToLower(value)
 	matches := o.matcher.MatchThreadSafe([]byte(value))
 	for i := 0; i < len(matches); i++ {

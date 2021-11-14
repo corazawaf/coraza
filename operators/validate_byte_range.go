@@ -24,11 +24,11 @@ import (
 	engine "github.com/jptosso/coraza-waf/v2"
 )
 
-type ValidateByteRange struct {
+type validateByteRange struct {
 	re *regexp.Regexp
 }
 
-func (o *ValidateByteRange) Init(data string) error {
+func (o *validateByteRange) Init(data string) error {
 	ranges := strings.Split(data, ",")
 	spl := ranges
 	rega := []string{}
@@ -54,7 +54,7 @@ func (o *ValidateByteRange) Init(data string) error {
 	return nil
 }
 
-func (o *ValidateByteRange) Evaluate(tx *engine.Transaction, data string) bool {
+func (o *validateByteRange) Evaluate(tx *engine.Transaction, data string) bool {
 	data = o.re.ReplaceAllString(data, "")
 	//fmt.Println("DEBUG: ", data, len(data))
 	//fmt.Printf("%s: %d\n", data, len(data))

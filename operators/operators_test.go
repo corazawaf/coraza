@@ -71,8 +71,8 @@ func TestTransformations(t *testing.T) {
 			if strings.Contains(data.Param, `\x`) {
 				data.Param, _ = strconv.Unquote(`"` + data.Param + `"`)
 			}
-			op := OperatorsMap()[data.Name]
-			if op == nil {
+			op, err := GetOperator(data.Name)
+			if err != nil {
 				continue
 			}
 			if data.Name == "pmFromFile" {

@@ -16,14 +16,14 @@ package operators
 
 import engine "github.com/jptosso/coraza-waf/v2"
 
-type NoMatch struct {
+type noMatch struct {
 }
 
-func (o *NoMatch) Init(data string) error {
+func (o *noMatch) Init(data string) error {
 	// No need to init
 	return nil
 }
 
-func (o *NoMatch) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *noMatch) Evaluate(tx *engine.Transaction, value string) bool {
 	return false
 }

@@ -23,7 +23,7 @@ func TestOneAddress(t *testing.T) {
 	addrok := "127.0.0.1"
 	addrfail := "127.0.0.2"
 	cidr := "127.0.0.1/32"
-	ipm := &IpMatch{}
+	ipm := &ipMatch{}
 	if err := ipm.Init(cidr); err != nil {
 		t.Error("Cannot init ipmatchtest operator")
 	}
@@ -39,7 +39,7 @@ func TestMultipleAddress(t *testing.T) {
 	addrok := []string{"127.0.0.1", "192.168.0.1", "192.168.0.253"}
 	addrfail := []string{"127.0.0.2", "192.168.1.1"}
 	cidr := "127.0.0.1, 192.168.0.0/24"
-	ipm := &IpMatch{}
+	ipm := &ipMatch{}
 	if err := ipm.Init(cidr); err != nil {
 		t.Error("Cannot init ipmatchtest operator")
 	}
@@ -60,7 +60,7 @@ func TestFromFile(t *testing.T) {
 	addrok := []string{"127.0.0.1", "192.168.0.1", "192.168.0.253"}
 	addrfail := []string{"127.0.0.2", "192.168.1.1"}
 
-	ipm := &IpMatchFromFile{}
+	ipm := &ipMatchFromFile{}
 	if err := ipm.Init("../testdata/operators/op/netranges.dat"); err != nil {
 		t.Error("Cannot init ipmatchfromfile operator")
 	}

@@ -11,10 +11,11 @@
     -
       stage:
         input:
-            uri: /index.php?t1=aaa&t2=bbb&t3=ccc
+            uri: /index.php?t1=aaa&t2=bbb&t3=ccc&a=test
             method: POST
             headers:
                 content-type: application/xml
+                cookie: phpmyadminphp=test
             data: "<?xml version=\"1.0\"?><xml><Cs7QAF attribute_name=\"attribute_value\">test123</Cs7QAF></xml>"         
         output:
           triggered_rules:
@@ -25,6 +26,7 @@
           non_triggered_rules:            
   rules: |
     SecRequestBodyAccess On
+    SecDebugLogLevel 5
     SecRule ARGS:/^t1$/ "aaa" "id:1,phase:1,block,log"
     SecRule &ARGS_GET:/t.*/ "@gt 2" "id: 1234, phase:1, block, log"
     SecRule REQUEST_METHOD "POST" "id:15, log"

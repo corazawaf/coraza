@@ -18,16 +18,16 @@ import (
 	engine "github.com/jptosso/coraza-waf/v2"
 )
 
-type Streq struct {
+type streq struct {
 	data string
 }
 
-func (o *Streq) Init(data string) error {
+func (o *streq) Init(data string) error {
 	o.data = data
 	return nil
 }
 
-func (o *Streq) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *streq) Evaluate(tx *engine.Transaction, value string) bool {
 	data := tx.MacroExpansion(o.data)
 	return data == value
 }

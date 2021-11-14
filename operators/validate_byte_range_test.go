@@ -34,7 +34,7 @@ func TestCRS920272(t *testing.T) {
 		{104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 111, 0},
 	}
 
-	op := &ValidateByteRange{}
+	op := &validateByteRange{}
 	if err := op.Init(ranges); err != nil {
 		t.Error("Cannot init validatebuterange operator")
 	}
@@ -64,7 +64,7 @@ func TestCRS920270(t *testing.T) {
 		{1, 104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 111, 255},
 	}
 
-	op := &ValidateByteRange{}
+	op := &validateByteRange{}
 	if err := op.Init(ranges); err != nil {
 		t.Error("Cannot init validatebuterange operator")
 	}

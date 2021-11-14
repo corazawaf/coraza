@@ -20,16 +20,16 @@ import (
 	engine "github.com/jptosso/coraza-waf/v2"
 )
 
-type Eq struct {
+type eq struct {
 	data string
 }
 
-func (o *Eq) Init(data string) error {
+func (o *eq) Init(data string) error {
 	o.data = data
 	return nil
 }
 
-func (o *Eq) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *eq) Evaluate(tx *engine.Transaction, value string) bool {
 	d1, err := strconv.Atoi(tx.MacroExpansion(o.data))
 	if err != nil {
 		d1 = 0

@@ -152,7 +152,7 @@ func (w *Waf) NewTransaction() *Transaction {
 		RequestBodyLimit:     134217728,
 		ResponseBodyAccess:   true,
 		ResponseBodyLimit:    524288,
-		ruleRemoveTargetById: map[int][]RuleVariableParams{},
+		ruleRemoveTargetById: map[int][]ruleVariableParams{},
 		ruleRemoveById:       []int{},
 		StopWatches:          map[types.RulePhase]int{},
 		RequestBodyBuffer:    NewBodyReader(w.TmpDir, w.RequestBodyInMemoryLimit),

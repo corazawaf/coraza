@@ -20,16 +20,16 @@ import (
 	engine "github.com/jptosso/coraza-waf/v2"
 )
 
-type EndsWith struct {
+type endsWith struct {
 	data string
 }
 
-func (o *EndsWith) Init(data string) error {
+func (o *endsWith) Init(data string) error {
 	o.data = data
 	return nil
 }
 
-func (o *EndsWith) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *endsWith) Evaluate(tx *engine.Transaction, value string) bool {
 	data := tx.MacroExpansion(o.data)
 	return strings.HasSuffix(value, data)
 }

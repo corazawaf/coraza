@@ -106,7 +106,7 @@ type Transaction struct {
 	// All other "target removers" like "ByTag" are an abstraction of "ById"
 	// For example, if you want to remove REQUEST_HEADERS:User-Agent from rule 85:
 	// {85: {variables.RequestHeaders, "user-agent"}}
-	ruleRemoveTargetById map[int][]RuleVariableParams
+	ruleRemoveTargetById map[int][]ruleVariableParams
 
 	// Will skip this number of rules, this value will be decreased on each skip
 	Skip int
@@ -355,7 +355,7 @@ func (tx *Transaction) GetStopWatch() string {
 // GetField Retrieve data from collections applying exceptions
 // In future releases we may remove de exceptions slice and
 // make it easier to use
-func (tx *Transaction) GetField(rv RuleVariableParams, exceptions []string) []MatchData {
+func (tx *Transaction) GetField(rv ruleVariableParams, exceptions []string) []MatchData {
 	collection := rv.Variable
 	key := rv.Key
 	re := rv.Regex
@@ -444,13 +444,13 @@ func (tx *Transaction) savePersistentData() {
 // RemoveRuleTargetById Removes the VARIABLE:KEY from the rule ID
 // It's mostly used by CTL to dinamically remove targets from rules
 func (tx *Transaction) RemoveRuleTargetById(id int, variable variables.RuleVariable, key string) {
-	c := RuleVariableParams{
+	c := ruleVariableParams{
 		Variable: variable,
 		Key:      key,
 	}
 	// Used if it's empty
 	if tx.ruleRemoveTargetById[id] == nil {
-		tx.ruleRemoveTargetById[id] = []RuleVariableParams{
+		tx.ruleRemoveTargetById[id] = []ruleVariableParams{
 			c,
 		}
 	} else {

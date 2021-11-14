@@ -20,16 +20,16 @@ import (
 	engine "github.com/jptosso/coraza-waf/v2"
 )
 
-type Ge struct {
+type ge struct {
 	data string
 }
 
-func (o *Ge) Init(data string) error {
+func (o *ge) Init(data string) error {
 	o.data = data
 	return nil
 }
 
-func (o *Ge) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *ge) Evaluate(tx *engine.Transaction, value string) bool {
 	v, err := strconv.Atoi(value)
 	if err != nil {
 		v = 0

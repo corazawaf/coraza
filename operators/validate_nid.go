@@ -23,12 +23,12 @@ import (
 	"github.com/jptosso/coraza-waf/v2/operators/nids"
 )
 
-type ValidateNid struct {
+type validateNid struct {
 	fn  nids.Nid
 	rgx string
 }
 
-func (o *ValidateNid) Init(data string) error {
+func (o *validateNid) Init(data string) error {
 	spl := strings.SplitN(data, " ", 2)
 	if len(spl) != 2 {
 		return fmt.Errorf("Invalid @validateNid argument")
@@ -38,7 +38,7 @@ func (o *ValidateNid) Init(data string) error {
 	return nil
 }
 
-func (o *ValidateNid) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *validateNid) Evaluate(tx *engine.Transaction, value string) bool {
 	re, _ := regexp.Compile(o.rgx)
 	matches := re.FindAllStringSubmatch(value, -1)
 

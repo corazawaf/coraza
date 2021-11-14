@@ -20,7 +20,7 @@ import (
 )
 
 func TestGt(t *testing.T) {
-	gto := &Gt{}
+	gto := &gt{}
 	if err := gto.Init("2500"); err != nil {
 		t.Error("Cannot init gto operator")
 	}

@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 	"path"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -91,7 +90,9 @@ func (p *ruleParser) ParseVariables(vars string) error {
 			} else if curr == 2 {
 				i++
 			}
-			err = p.AddVariable(iscount, isnegation, v, string(curkey), curr == 2)
+
+			key := string(curkey)
+			err = p.rule.AddVariable(v, key, iscount, isnegation, curr == 2)
 			if err != nil {
 				return err
 			}
@@ -153,96 +154,50 @@ func (p *ruleParser) ParseVariables(vars string) error {
 	return nil
 }
 
-func (p *ruleParser) AddVariable(count bool, negation bool, collection variables.RuleVariable, key string, regexkey bool) error {
-	r := p.rule
-	if negation {
-		for i, vr := range r.Variables {
-			if vr.Variable == collection {
-				vr.Exceptions = append(vr.Exceptions, key)
-				r.Variables[i] = vr
-				return nil
-			}
-		}
-		//TODO check if we can add something here
-		panic(fmt.Errorf("cannot negate a variable that haven't been created"))
-	}
-	var rv coraza.RuleVariableParams
-	if len(key) > 0 && regexkey {
-		// REGEX EXPRESSION
-		var re *regexp.Regexp
-		var err error
-		re, err = regexp.Compile(key)
-		if err != nil {
-			return err
-		}
-		rv = coraza.RuleVariableParams{
-			Count:      count,
-			Variable:   collection,
-			Key:        key,
-			Regex:      re,
-			Exceptions: []string{},
-		}
-		r.Variables = append(r.Variables, rv)
-	} else {
-		rv = coraza.RuleVariableParams{
-			Count:      count,
-			Variable:   collection,
-			Key:        strings.ToLower(key), //TODO to lower?
-			Regex:      nil,
-			Exceptions: []string{},
-		}
-		r.Variables = append(r.Variables, rv)
-	}
-	return nil
-}
-
 func (p *ruleParser) ParseOperator(operator string) error {
-	if operator == "" {
-		operator = "@rx "
-	}
-	if operator[0] != '@' && operator[0] != '!' {
+	if len(operator) == 0 || operator[0] != '@' && operator[0] != '!' {
 		//default operator RX
 		operator = "@rx " + operator
 	}
 	spl := strings.SplitN(operator, " ", 2)
 	op := spl[0]
-	p.rule.Operator = new(coraza.RuleOperatorParams)
 
-	if op[0] == '!' {
-		p.rule.Operator.Negation = true
-		op = utils.TrimLeftChars(op, 1)
+	opdata := ""
+	if len(spl) == 2 {
+		opdata = spl[1]
 	}
 	if op[0] == '@' {
+		// we trim @
 		op = utils.TrimLeftChars(op, 1)
-		if len(spl) == 2 {
-			p.rule.Operator.Data = spl[1]
-		}
+	} else if len(op) > 2 && op[0] == '!' && op[1] == '@' {
+		// we trim !@
+		op = utils.TrimLeftChars(op, 2)
 	}
 
-	p.rule.Operator.Operator = operators.OperatorsMap()[op]
-	if p.rule.Operator.Operator == nil {
-		return errors.New("Invalid operator " + op)
-	} else {
-		data := []byte(p.rule.Operator.Data)
-		// handling files by operators is hard because we must know the paths where we can
-		// search, for example, the policy path or the binary path...
-		// CRS stores the .data files in the same directory as the directives
-		if utils.StringInSlice(op, []string{"ipMatchFromFile", "pmFromFile"}) {
-			// TODO make enhancements here
-			tpath := path.Join(p.Configdir, p.rule.Operator.Data)
-			var err error
-			content, err := utils.OpenFile(tpath, "")
-			if err != nil {
-				return err
-			}
-			p.rule.Operator.Data = tpath
-			data = content
-		}
-		err := p.rule.Operator.Operator.Init(string(data))
+	opfn, err := operators.GetOperator(op)
+	if err != nil {
+		return err
+	}
+	data := []byte(opdata)
+	// handling files by operators is hard because we must know the paths where we can
+	// search, for example, the policy path or the binary path...
+	// CRS stores the .data files in the same directory as the directives
+	if utils.StringInSlice(op, []string{"ipMatchFromFile", "pmFromFile"}) {
+		// TODO make enhancements here
+		tpath := path.Join(p.Configdir, opdata)
+		var err error
+		content, err := utils.OpenFile(tpath, "")
 		if err != nil {
 			return err
 		}
+		opdata = tpath
+		data = content
 	}
+	err = opfn.Init(string(data))
+	if err != nil {
+		return err
+	}
+	p.rule.SetOperator(opfn, spl[0], opdata)
 	return nil
 }
 
@@ -309,10 +264,9 @@ func (p *ruleParser) ParseActions(actions string) error {
 		if errs != nil {
 			return errs
 		}
-		p.rule.Actions = append(p.rule.Actions, coraza.RuleActionParams{
-			Function: action.F,
-			Name:     action.Key,
-		})
+		if err := p.rule.AddAction(action.Key, action.F); err != nil {
+			return err
+		}
 	}
 	return nil
 }

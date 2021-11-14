@@ -85,7 +85,7 @@ func (mr MatchedRule) matchData() string {
 		value = value[:200]
 	}
 	log := &strings.Builder{}
-	if mr.Rule.Operator != nil {
+	if mr.Rule.operator != nil {
 		log.WriteString(fmt.Sprintf("Matched \"Operator %s matched %s at %s.",
 			"", value, v))
 	} else {

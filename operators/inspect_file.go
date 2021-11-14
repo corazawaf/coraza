@@ -22,16 +22,16 @@ import (
 	engine "github.com/jptosso/coraza-waf/v2"
 )
 
-type InspectFile struct {
+type inspectFile struct {
 	path string
 }
 
-func (o *InspectFile) Init(data string) error {
+func (o *inspectFile) Init(data string) error {
 	o.path = data
 	return nil
 }
 
-func (o *InspectFile) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *inspectFile) Evaluate(tx *engine.Transaction, value string) bool {
 	//TODO parametrize timeout
 	//TODO add relative path capabilities
 	//TODO add lua special support

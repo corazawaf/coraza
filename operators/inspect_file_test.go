@@ -20,7 +20,7 @@ import (
 )
 
 func TestInspectFile(t *testing.T) {
-	ipf := &InspectFile{}
+	ipf := &inspectFile{}
 	if err := ipf.Init("/bin/echo"); err != nil {
 		t.Error("cannot init inspectfile operator")
 	}

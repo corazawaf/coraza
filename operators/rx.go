@@ -20,17 +20,17 @@ import (
 	engine "github.com/jptosso/coraza-waf/v2"
 )
 
-type Rx struct {
+type rx struct {
 	re *regexp.Regexp
 }
 
-func (o *Rx) Init(data string) error {
+func (o *rx) Init(data string) error {
 	re, err := regexp.Compile(data)
 	o.re = re
 	return err
 }
 
-func (o *Rx) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *rx) Evaluate(tx *engine.Transaction, value string) bool {
 	// iterate over re if it matches value
 
 	match := o.re.FindAllString(value, -1)

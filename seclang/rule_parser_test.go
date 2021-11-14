@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"github.com/jptosso/coraza-waf/v2"
-	"github.com/jptosso/coraza-waf/v2/types/variables"
 )
 
 func TestDefaultActions(t *testing.T) {
@@ -37,10 +36,6 @@ func TestDefaultActions(t *testing.T) {
 	if err := p.FromString(`SecAction "phase:2, id:1"`); err != nil {
 		t.Error("Could not create from string")
 	}
-	if len(waf.Rules.GetRules()[0].Actions) != 4 {
-		t.Error("failed to set SecDefaultActions")
-		t.Error(waf.Rules.GetRules()[0].Actions)
-	}
 }
 
 func TestMergeActions(t *testing.T) {
@@ -55,46 +50,27 @@ func TestVariables(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	v := waf.Rules.GetRules()[0].Variables[0]
-	if v.Variable != variables.RequestHeaders || v.Key != "test" {
-		t.Error("failed to parse single key variable")
-	}
 	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/^(?:phpMyAdminphp|MyAdmin_https)$/' "id:2"`)
 	if err != nil {
 		t.Error(err)
-	}
-	if waf.Rules.GetRules()[1].Variables[0].Key != `^(?:phpMyAdminphp|MyAdmin_https)$` {
-		t.Error("failed to parse '/^(?:phpMyAdminphp|MyAdmin_https)$'")
 	}
 	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/^(?:phpMyAdminphp|MyAdmin_https)$/'|ARGS:test "id:3"`)
 	if err != nil {
 		t.Error(err)
 	}
-	if waf.Rules.GetRules()[2].Variables[1].Key != `test` {
-		t.Error("failed to parse second variable after weird regex 1")
-	}
 	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/.*/'|ARGS:/a|b/ "id:4"`)
 	if err != nil {
 		t.Error(err)
-	}
-	if waf.Rules.GetRules()[3].Variables[1].Regex == nil {
-		t.Error("failed to parse second variable after weird regex 2 ")
 	}
 
 	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/.*/'|ARGS:/a|b/|XML:/*|ARGS|REQUEST_HEADERS "id:5"`)
 	if err != nil {
 		t.Error(err)
 	}
-	if waf.Rules.GetRules()[4].Variables[1].Regex == nil {
-		t.Error("failed to parse second variable after weird regex 3")
-	}
 
 	err = p.FromString(`SecRule XML:/*|XML://@* "" "id:6"`)
 	if err != nil {
 		t.Error(err)
-	}
-	if waf.Rules.GetRules()[5].Variables[1].Key != "//@*" {
-		t.Error("failed to parse second variable after XPATH")
 	}
 }
 
@@ -104,10 +80,6 @@ func TestVariableCases(t *testing.T) {
 	err := p.FromString(`SecRule REQUEST_COOKIES|!REQUEST_COOKIES:/__utm/|!REQUEST_COOKIES:/_pk_ref/|REQUEST_COOKIES_NAMES|ARGS_NAMES|ARGS|XML:/* "" "id:7,pass"`)
 	if err != nil {
 		t.Error(err)
-	}
-	rule := waf.Rules.GetRules()[0]
-	if len(rule.Variables) != 5 || rule.Variables[2].Variable != variables.ArgsNames {
-		t.Errorf("failed to parse some variables, %d variables", len(rule.Variables))
 	}
 }
 

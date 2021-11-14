@@ -79,37 +79,6 @@ func TestRuleMatchWithRegex(t *testing.T) {
 	}
 }
 
-func TestRuleMatchCaseSensitivity(t *testing.T) {
-	waf := coraza.NewWaf()
-	parser, _ := NewParser(waf)
-	err := parser.FromString(`
-		SecRuleEngine On
-		SecDebugLog /tmp/coraza.log
-		SecDebugLogLevel 5
-		SecDefaultAction "phase:1,deny,status:403,log"
-		# shouldnt match
-		SecRule REQUEST_HEADERS "^SomEthing$" "id:1,phase:1"
-		SecRule &REQUEST_HEADERS:User-AgenT "@eq 0" "phase:1, id:2,deny,status:403"
-		SecRule REQUEST_HEADERS:user-Agent "some" "phase:2, id:3,deny,status:403"
-	`)
-	if err != nil {
-		t.Error(err.Error())
-	}
-	tx := waf.NewTransaction()
-	tx.AddRequestHeader("user-Agent", "something")
-	tx.ProcessRequestHeaders()
-	if len(tx.MatchedRules) > 0 {
-		t.Errorf("failed to match rules with %d", len(tx.MatchedRules))
-	}
-	if tx.Interruption != nil {
-		t.Error("failed transaction was interrupted")
-	}
-
-	if it, _ := tx.ProcessRequestBody(); it == nil {
-		t.Error("transaction wasn't interrupted")
-	}
-}
-
 func TestSecMarkers(t *testing.T) {
 	waf := coraza.NewWaf()
 	parser, _ := NewParser(waf)

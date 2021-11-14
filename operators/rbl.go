@@ -22,11 +22,11 @@ import (
 	engine "github.com/jptosso/coraza-waf/v2"
 )
 
-type Rbl struct {
+type rbl struct {
 	service string
 }
 
-func (o *Rbl) Init(data string) error {
+func (o *rbl) Init(data string) error {
 	o.service = data
 	//TODO validate hostname
 	return nil
@@ -34,7 +34,7 @@ func (o *Rbl) Init(data string) error {
 
 //https://github.com/mrichman/godnsbl
 //https://github.com/SpiderLabs/ModSecurity/blob/b66224853b4e9d30e0a44d16b29d5ed3842a6b11/src/operators/rbl.cc
-func (o *Rbl) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *rbl) Evaluate(tx *engine.Transaction, value string) bool {
 	//TODO validate address
 	c1 := make(chan bool)
 	//captures := []string{}

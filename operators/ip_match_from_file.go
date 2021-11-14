@@ -22,12 +22,12 @@ import (
 	"github.com/jptosso/coraza-waf/v2/utils"
 )
 
-type IpMatchFromFile struct {
-	ip *IpMatch
+type ipMatchFromFile struct {
+	ip *ipMatch
 }
 
-func (o *IpMatchFromFile) Init(data string) error {
-	o.ip = &IpMatch{}
+func (o *ipMatchFromFile) Init(data string) error {
+	o.ip = &ipMatch{}
 	list, err := utils.OpenFile(data, "")
 	if err != nil {
 		return fmt.Errorf("error opening %s", data)
@@ -36,6 +36,6 @@ func (o *IpMatchFromFile) Init(data string) error {
 	return o.ip.Init(subnets)
 }
 
-func (o *IpMatchFromFile) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *ipMatchFromFile) Evaluate(tx *engine.Transaction, value string) bool {
 	return o.ip.Evaluate(tx, value)
 }

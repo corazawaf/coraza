@@ -20,16 +20,16 @@ import (
 	engine "github.com/jptosso/coraza-waf/v2"
 )
 
-type BeginsWith struct {
+type beginsWith struct {
 	data string
 }
 
-func (o *BeginsWith) Init(data string) error {
+func (o *beginsWith) Init(data string) error {
 	o.data = data
 	return nil
 }
 
-func (o *BeginsWith) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *beginsWith) Evaluate(tx *engine.Transaction, value string) bool {
 	data := tx.MacroExpansion(o.data)
 	return strings.HasPrefix(value, data)
 }

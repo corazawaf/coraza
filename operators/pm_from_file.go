@@ -21,11 +21,11 @@ import (
 	engine "github.com/jptosso/coraza-waf/v2"
 )
 
-type PmFromFile struct {
-	pm *Pm
+type pmFromFile struct {
+	pm *pm
 }
 
-func (o *PmFromFile) Init(data string) error {
+func (o *pmFromFile) Init(data string) error {
 	// Split the data by LF or CRLF
 	lines := []string{}
 	sp := strings.Split(data, "\n")
@@ -38,13 +38,13 @@ func (o *PmFromFile) Init(data string) error {
 			lines = append(lines, strings.ToLower(l))
 		}
 	}
-	o.pm = &Pm{
+	o.pm = &pm{
 		dict:    lines,
 		matcher: ahocorasick.NewStringMatcher(lines),
 	}
 	return nil
 }
 
-func (o *PmFromFile) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *pmFromFile) Evaluate(tx *engine.Transaction, value string) bool {
 	return o.pm.Evaluate(tx, value)
 }

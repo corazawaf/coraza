@@ -20,16 +20,16 @@ import (
 	engine "github.com/jptosso/coraza-waf/v2"
 )
 
-type Contains struct {
+type contains struct {
 	data string
 }
 
-func (o *Contains) Init(data string) error {
+func (o *contains) Init(data string) error {
 	o.data = data
 	return nil
 }
 
-func (o *Contains) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *contains) Evaluate(tx *engine.Transaction, value string) bool {
 	data := tx.MacroExpansion(o.data)
 	return strings.Contains(value, data)
 }

@@ -20,16 +20,16 @@ import (
 	engine "github.com/jptosso/coraza-waf/v2"
 )
 
-type Lt struct {
+type lt struct {
 	data string
 }
 
-func (o *Lt) Init(data string) error {
+func (o *lt) Init(data string) error {
 	o.data = data
 	return nil
 }
 
-func (o *Lt) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *lt) Evaluate(tx *engine.Transaction, value string) bool {
 	vv := tx.MacroExpansion(o.data)
 	data, err := strconv.Atoi(vv)
 	if err != nil {
