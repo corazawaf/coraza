@@ -16,6 +16,7 @@ package coraza
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/jptosso/coraza-waf/v2/types/variables"
@@ -66,7 +67,8 @@ func (mr MatchedRule) details() string {
 	}
 	resolvedIp := ""
 	log.WriteString(fmt.Sprintf(" [file %q] [line %q] [id %q] [rev %q] [msg %q] [data %q] [severity %q] [ver %q] [maturity %q] [accuracy %q]",
-		mr.Rule.File, mr.Rule.Line, mr.Rule.Id, mr.Rule.Rev, msg, data, mr.Rule.Severity.String(), mr.Rule.Version, mr.Rule.Maturity, mr.Rule.Accuracy))
+		mr.Rule.File, strconv.Itoa(mr.Rule.Line), strconv.Itoa(mr.Rule.Id), mr.Rule.Rev, msg, data, mr.Rule.Severity.String(), mr.Rule.Version,
+		strconv.Itoa(mr.Rule.Maturity), strconv.Itoa(mr.Rule.Accuracy)))
 	for _, t := range mr.Rule.Tags {
 		log.WriteString(fmt.Sprintf(" [tag %q]", t))
 	}
