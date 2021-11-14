@@ -30,12 +30,13 @@ func (o *geoLookup) Evaluate(tx *coraza.Transaction, value string) bool {
 	if geo == nil {
 		return false
 	}
-	record, err := geo.Get(value)
+	data, err := geo.Get(value)
 	if err != nil {
+		tx.Waf.Logger.Error("failed to get country from geo reader")
 		return false
 	}
-	tx.GetCollection(variables.Geo).SetData(geo.Get(value))
+	tx.GetCollection(variables.Geo).SetData(data)
 	return true
 }
 
-var geolook coraza.RuleOperator = &geoLookup{}
+var _ coraza.RuleOperator = &geoLookup{}

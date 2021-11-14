@@ -265,6 +265,25 @@ func TestRelevantAuditLogging(t *testing.T) {
 	//TODO how do we check if the log was writen?
 }
 
+func TestLogCallback(t *testing.T) {
+	waf := NewWaf()
+	buffer := ""
+	waf.errorLogCb = func(mr MatchedRule) {
+		buffer = mr.ErrorLog(403)
+	}
+	tx := waf.NewTransaction()
+	tx.MatchRule(MatchedRule{
+		Rule: *NewRule(),
+		MatchedData: MatchData{
+			VariableName: "UNIQUE_ID",
+			Variable:     variables.UniqueId,
+		},
+	})
+	if buffer == "" {
+		t.Error("failed to call error log callback")
+	}
+}
+
 func BenchmarkTransactionCreation(b *testing.B) {
 	waf := NewWaf()
 	for i := 0; i < b.N; i++ {
