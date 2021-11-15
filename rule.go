@@ -199,6 +199,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	}
 	tx.Waf.Logger.Debug("Evaluating rule",
 		zap.Int("rule", rid),
+		zap.String("raw", r.Raw),
 		zap.String("tx", tx.Id),
 		zap.String("event", "EVALUATE_RULE"),
 	)

@@ -47,7 +47,8 @@ func TestEngine(t *testing.T) {
 					w := engine.NewWaf()
 					p, _ := seclang.NewParser(w)
 					if err := p.FromString(profile.Rules); err != nil {
-						panic(err)
+						t.Error(err)
+						break
 					}
 					err = s.Start(w)
 				}

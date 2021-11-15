@@ -23,6 +23,7 @@ import (
 	"github.com/jptosso/coraza-waf/v2/types"
 	"github.com/jptosso/coraza-waf/v2/types/variables"
 	utils "github.com/jptosso/coraza-waf/v2/utils"
+	"go.uber.org/zap"
 )
 
 type ctlFunctionType int
@@ -91,9 +92,11 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 		//TODO lets switch it to a string
 		tx.AuditLogParts = []rune(a.value)
 	case ctlForceRequestBodyVar:
-		if strings.ToLower(a.value) == "on" {
+		val := strings.ToLower(a.value)
+		tx.Waf.Logger.Debug("Forcing request body var with CTL", zap.String("status", val))
+		if val == "on" {
 			tx.ForceRequestBodyVariable = true
-		} else {
+		} else if val == "off" {
 			tx.ForceRequestBodyVariable = false
 		}
 	case ctlRequestBodyAccess:
@@ -145,6 +148,9 @@ func (a *ctlFn) Type() types.RuleActionType {
 
 func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, string, error) {
 	spl1 := strings.SplitN(data, "=", 2)
+	if len(spl1) != 2 {
+		return ctlRemoveTargetById, "", 0, "", fmt.Errorf("invalid syntax")
+	}
 	spl2 := strings.SplitN(spl1[1], ";", 2)
 	action := spl1[0]
 	value := spl2[0]

@@ -11,11 +11,16 @@
     -
       stage:
         input:
+            method: POST
             uri: /test.php?id=1234
+            data: "pineapple=pizza"
         output:
           triggered_rules:
             - 1
             - 4
+            - 100
+            - 103
+            - 105
           non_triggered_rules:
             - 2
             - 3
@@ -23,11 +28,14 @@
             - 6
             - 7
   rules: |
-    SecAction "id: 1, phase: 1, ctl:ruleRemoveByTag=test, \
+    SecDebugLogLevel 5
+    SecRequestBodyAccess On
+    SecAction "id:1, phase:1, ctl:ruleRemoveByTag=test, \
         ctl:ruleRemoveByMsg=test, \
         ctl:ruleRemoveTargetById=5;ARGS:id, \
         ctl:ruleRemoveTargetByTag=test-tag;ARGS:id, \
         ctl:ruleRemoveTargetByMsg=sometest;ARGS:id, \
+        ctl:forceRequestBodyVariable=On, \
         log"
     SecAction "id: 2, phase: 1, log, tag:test"
     SecAction "id: 3, phase: 1, log, msg:'test'"
@@ -40,3 +48,8 @@
     #shouldnt match
     SecRule ARGS "1234" "id: 6, phase: 1, log, tag:test-tag"
     SecRule ARGS "1234" "id: 7, phase: 1, log, msg:'sometest'"
+
+    # should match
+    SecRule REQBODY_PROCESSOR "URLENCODED" "id:100,log,phase:2"
+    SecRule REQUEST_BODY "pizza" "id:103,log,phase:2"
+    SecRule ARGS:pineapple "pizza" "id:105,log,phase:2"
