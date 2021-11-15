@@ -23,10 +23,22 @@
             - 1234
             #- 2
             - 15
-          non_triggered_rules:            
+          non_triggered_rules:  
+            - 200002
+    -
+      stage:
+        input:
+          uri: /
+          method: GET
+        output:
+          non_triggered_rules:
+            - 200002          
   rules: |
     SecRequestBodyAccess On
     SecDebugLogLevel 5
     SecRule ARGS:/^t1$/ "aaa" "id:1,phase:1,block,log"
     SecRule &ARGS_GET:/t.*/ "@gt 2" "id: 1234, phase:1, block, log"
     SecRule REQUEST_METHOD "POST" "id:15, log"
+
+    SecRule REQBODY_ERROR "!@eq 0" \
+      "id:'200002', phase:2,t:none,log,deny,status:400,msg:'Failed to parse request body.',logdata:'%{reqbody_error_msg}',severity:2"

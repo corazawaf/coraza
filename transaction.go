@@ -676,7 +676,14 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		rbp = "URLENCODED"
 		tx.GetCollection(variables.ReqbodyProcessor).Set("", []string{rbp})
 	}
+	tx.Waf.Logger.Debug("Attempting to process request body", zap.String("txid", tx.Id),
+		zap.String("bodyprocessor", rbp))
 	rbp = strings.ToLower(rbp)
+	if rbp == "" {
+		//so there is no bodyprocessor, we don't want to generate an error
+		tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)
+		return tx.Interruption, nil
+	}
 	bodyprocessor, err := bodyprocessors.GetBodyProcessor(rbp)
 	if err != nil {
 		tx.generateReqbodyError(err)
