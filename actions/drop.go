@@ -31,10 +31,12 @@ func (a *dropFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	if rid == 0 {
 		rid = r.ParentId
 	}
-	tx.Interruption = &types.Interruption{
-		Status: 403,
-		RuleId: rid,
-		Action: "drop",
+	if tx.RuleEngine == types.RuleEngineOn {
+		tx.Interruption = &types.Interruption{
+			Status: 403,
+			RuleId: rid,
+			Action: "drop",
+		}
 	}
 }
 

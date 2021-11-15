@@ -120,7 +120,7 @@ func clean(path string) string {
 }
 
 func isPathSeparator(c uint8) bool {
-	return '\\' == c
+	return c == '\\'
 }
 
 func volumeNameLen(path string) int {

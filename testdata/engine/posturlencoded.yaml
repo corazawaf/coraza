@@ -20,7 +20,20 @@
           triggered_rules:
             - 4445
             - 456
+          non_triggered_rules:
+            - 200002   
+    -
+      stage:
+        input:
+          uri: /
+          method: GET
+        output:
+          non_triggered_rules:
+            - 200002      
   rules: |
     SecRequestBodyAccess On
     SecRule ARGS:test "123" "phase:2, id:4445,block,log"
     SecRule REQUEST_BODY "test=" "phase:2, id:456, log"
+
+    SecRule REQBODY_ERROR "!@eq 0" \
+      "id:'200002', phase:2,t:none,log,deny,status:400,msg:'Failed to parse request body.',logdata:'%{reqbody_error_msg}',severity:2"

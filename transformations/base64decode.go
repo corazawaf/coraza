@@ -18,14 +18,18 @@ import (
 	"encoding/base64"
 
 	"github.com/jptosso/coraza-waf/v2"
+	"go.uber.org/zap"
 )
 
 // base64decode decodes a Base64-encoded string.
 func base64decode(data string, utils coraza.RuleTransformationTools) string {
 	decoded, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
-		utils.Logger.Error(err.Error())
-		decoded = []byte{}
+		if len(data) > 200 {
+			data = data[:200] + "..."
+		}
+		utils.Logger.Error(err.Error(), zap.String("transformation", "base64decode"), zap.String("input", data))
+		decoded = []byte(data)
 	}
 	return string(decoded)
 }
