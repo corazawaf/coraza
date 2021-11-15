@@ -67,9 +67,9 @@ func escapeSeqDecode(input string, tools coraza.RuleTransformationTools) string 
 						/* Two digits. */
 						c = int(utils.X2c(input[i+2:]))
 						i += 4
-					} else {
-						/* Invalid encoding, do nothing. */
 					}
+					/* Else Invalid encoding, do nothing. */
+
 				} else {
 					if utils.IsODigit(input[i+1]) { /* Octal. */
 						buf := make([]byte, 4)

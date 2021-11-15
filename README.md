@@ -18,6 +18,16 @@ Welcome to Coraza Web Application Firewall, this project is an enterprise grade,
 * Linux distribution (Debian and Centos are recommended, Windows is not supported yet)
 * Golang compiler v1.16+
 
+
+## Migrate from v1
+
+* Rollback SecAuditLog to the legacy syntax (serial/concurrent)
+* Attach an error log handler using ```waf.SetErrorLogCb(cb)``` (optional)
+* If you are using @detectXSS and @detectSQLi (CRS) install the plugin [github.com/jptosso/coraza-libinjection](https://github.com/jptosso/coraza-libinjection)
+* If you are using @rx with libpcre (CRS) install the plugin [github.com/jptosso/coraza-pcre](https://github.com/jptosso/coraza-pcre)
+* If you are using low level APIs check the complete changelog as most of them were removed
+
+
 ## Running the tests
 
 Run the go tests:
@@ -25,18 +35,6 @@ Run the go tests:
 ```sh
 go test ./...
 go test -race ./...
-```
-
-
-### Run the test suite against OWASP CRS
-
-You can run the testsuite using our OWASP CRS test docker image, it will run a Coraza instance using Caddy and [go-ftw](https://github.com/fzipi/go-ftw)
-
-```sh
-git clone https://github.com/jptosso/coraza-crs-tests
-cd coraza-crs-tests
-docker build . -t crs
-docker run crs -name crs
 ```
 
 ## Coraza v2 differences with v1
@@ -174,7 +172,7 @@ egrep -Rin "TODO|FIXME" -R --exclude-dir=vendor *
 
 ### Companies using Coraza
 
-* [Babiel](https://babiel.com)
+* [Babiel](https://babiel.com) (supporter)
 
 ## About
 

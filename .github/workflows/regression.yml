@@ -4,14 +4,15 @@ on:
   push:
     branches: 
       - '*'
+      - 'v2/*'
   pull_request:
-    branches: [ master ]
+    branches: [ master v2/master ]
 
 jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.16.x]
+        go-version: [1.16.x, 1.17.x]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -33,4 +34,4 @@ jobs:
       uses: sonarsource/sonarcloud-github-action@master
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}      
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
