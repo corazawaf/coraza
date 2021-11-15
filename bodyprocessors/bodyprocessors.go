@@ -55,4 +55,7 @@ func init() {
 	RegisterBodyProcessor("multipart", func() BodyProcessor {
 		return &multipartBodyProcessor{}
 	})
+	RegisterBodyProcessor("xml", func() BodyProcessor {
+		return &xmlBodyProcessor{}
+	})
 }

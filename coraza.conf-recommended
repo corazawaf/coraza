@@ -15,12 +15,6 @@ SecRuleEngine DetectionOnly
 #
 SecRequestBodyAccess On
 
-# Validates the url is valid for decoding, otherwise an attacker may bypass the filters
-# and hide variables from Coraza using non utf8 strings and invalid urlencoded characters
-# like %xx.
-SecRule URI_PARSER_ERROR "!@eq 0" \
-"id:'200006', phase:1,t:none,log,deny,status:400,msg:'Failed to parse request url.',logdata:'Failed to parse request url',severity:2"
-
 # Enable XML request body parser.
 # Initiate XML Processor in case of xml content-type
 #
@@ -230,7 +224,7 @@ SecDataDir /tmp/
 # level response status codes).
 #
 SecAuditEngine RelevantOnly
-SecAuditLogRelevantStatus "^(?:5|4(?!04))"
+SecAuditLogRelevantStatus "^(?:(5|4)(0|1)[0-9])$"
 
 # Log everything we know about a transaction.
 SecAuditLogParts ABIJDEFHZ
