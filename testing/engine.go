@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 
 	engine "github.com/jptosso/coraza-waf/v2"
@@ -59,15 +60,18 @@ func (stage *ProfileTestStage) Start(waf *engine.Waf) error {
 		tx.ProcessUri(stage.Stage.Input.Uri, method, httpv)
 	}
 
-	//We can skip processConnection
-	tx.ProcessRequestHeaders()
-
 	// POST DATA
 	if stage.Stage.Input.Data != "" {
-		_, _ = tx.RequestBodyBuffer.Write([]byte(parseInputData(stage.Stage.Input.Data)))
-		_, _ = tx.ProcessRequestBody()
+		idata := parseInputData(stage.Stage.Input.Data)
+		if !stage.Stage.Input.StopMagic {
+			tx.AddRequestHeader("content-length", strconv.Itoa(len(idata)))
+		}
+		_, _ = tx.RequestBodyBuffer.Write([]byte(idata))
 		// we ignore the error
 	}
+	//We can skip processConnection
+	tx.ProcessRequestHeaders()
+	_, _ = tx.ProcessRequestBody()
 	tx.ProcessResponseHeaders(200, "HTTP/1.1")
 	// for testing
 	tx.AddResponseHeader("content-type", "text/html")

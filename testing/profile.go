@@ -61,6 +61,7 @@ type ProfileTestStageInnerInput struct {
 	Headers        map[string]string `yaml:"headers"`
 	RawRequest     string            `yaml:"raw_request"`
 	EncodedRequest string            `yaml:"encoded_request"`
+	StopMagic      bool              `yaml:"stop_magic"`
 }
 
 type ProfileTestStageInnerOutput struct {
