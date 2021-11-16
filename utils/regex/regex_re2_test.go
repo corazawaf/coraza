@@ -1,3 +1,4 @@
+//go:build !cgo
 // +build !cgo
 
 // Copyright 2021 Juan Pablo Tosso

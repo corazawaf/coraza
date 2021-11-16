@@ -1,3 +1,4 @@
+//go:build cgo
 // +build cgo
 
 // Copyright (C) 2011 Florian Weimer <fw@deneb.enyo.de>

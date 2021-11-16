@@ -1,4 +1,6 @@
+//go:build !cgo
 // +build !cgo
+
 // Copyright 2021 Juan Pablo Tosso
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
