@@ -14,7 +14,7 @@
 
 package operators
 
-import engine "github.com/jptosso/coraza-waf/v2"
+import "github.com/jptosso/coraza-waf/v2"
 
 type validateUrlEncoding struct {
 }
@@ -24,7 +24,7 @@ func (o *validateUrlEncoding) Init(data string) error {
 	return nil
 }
 
-func (o *validateUrlEncoding) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *validateUrlEncoding) Evaluate(tx *coraza.Transaction, value string) bool {
 	if len(value) == 0 {
 		return false
 	}

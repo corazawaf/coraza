@@ -19,7 +19,7 @@ import (
 	"net"
 	"time"
 
-	engine "github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
 type rbl struct {
@@ -34,7 +34,7 @@ func (o *rbl) Init(data string) error {
 
 //https://github.com/mrichman/godnsbl
 //https://github.com/SpiderLabs/ModSecurity/blob/b66224853b4e9d30e0a44d16b29d5ed3842a6b11/src/operators/rbl.cc
-func (o *rbl) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *rbl) Evaluate(tx *coraza.Transaction, value string) bool {
 	//TODO validate address
 	c1 := make(chan bool)
 	//captures := []string{}

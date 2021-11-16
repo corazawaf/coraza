@@ -24,7 +24,7 @@ import (
 	"strings"
 	"testing"
 
-	engine "github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2"
 	"github.com/jptosso/coraza-waf/v2/utils"
 )
 
@@ -52,7 +52,7 @@ func TestTransformations(t *testing.T) {
 	}); err != nil {
 		t.Error("failed to walk test files")
 	}
-	waf := engine.NewWaf()
+	waf := coraza.NewWaf()
 	for _, f := range files {
 
 		cases := []*Test{}

@@ -14,7 +14,7 @@
 
 package operators
 
-import engine "github.com/jptosso/coraza-waf/v2"
+import "github.com/jptosso/coraza-waf/v2"
 
 type VerifyCC struct {
 }
@@ -24,7 +24,7 @@ func (o *VerifyCC) Init(data string) error {
 	return nil
 }
 
-func (o *VerifyCC) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *VerifyCC) Evaluate(tx *coraza.Transaction, value string) bool {
 	//not implemented
 	return false
 }

@@ -29,9 +29,6 @@ import (
 type Collection struct {
 	data map[string][]string
 	name string
-
-	// The key used to store the collection if it must persist
-	PersistenceKey string
 }
 
 // Get returns a slice of strings for a key

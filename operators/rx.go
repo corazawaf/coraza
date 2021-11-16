@@ -17,7 +17,7 @@ package operators
 import (
 	"regexp"
 
-	engine "github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
 type rx struct {
@@ -30,7 +30,7 @@ func (o *rx) Init(data string) error {
 	return err
 }
 
-func (o *rx) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *rx) Evaluate(tx *coraza.Transaction, value string) bool {
 	// iterate over re if it matches value
 
 	match := o.re.FindAllString(value, -1)

@@ -189,7 +189,7 @@ func (p *Parser) evaluate(data string) error {
 // Rules without operator will become SecActions
 func (p *Parser) ParseRule(data string, withOperator bool) (*engine.Rule, error) {
 	var err error
-	rp := NewRuleParser(p)
+	rp := newRuleParser(p)
 	rp.Configdir = p.Configdir
 
 	for _, da := range p.defaultActions {

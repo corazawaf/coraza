@@ -17,7 +17,7 @@ package operators
 import (
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
 type within struct {
@@ -29,7 +29,7 @@ func (o *within) Init(data string) error {
 	return nil
 }
 
-func (o *within) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *within) Evaluate(tx *coraza.Transaction, value string) bool {
 	data := tx.MacroExpansion(o.data)
 	return strings.Contains(data, value)
 }

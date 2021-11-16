@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 	"path"
-	"strconv"
 	"strings"
 
 	"github.com/jptosso/coraza-waf/v2"
@@ -206,11 +205,11 @@ func (p *ruleParser) ParseDefaultActions(actions string) error {
 	if err != nil {
 		return err
 	}
-	phase := 0
+	phase := types.RulePhase(0)
 	defaultDisruptive := ""
 	for _, action := range act {
 		if action.Key == "phase" {
-			phase, err = PhaseToInt(action.Value)
+			phase, err = types.ParseRulePhase(action.Value)
 			if err != nil {
 				return err
 			}
@@ -256,7 +255,7 @@ func (p *ruleParser) ParseActions(actions string) error {
 
 	defaults := p.defaultActions[phase]
 	if defaults != nil {
-		act = MergeActions(act, defaults)
+		act = mergeActions(act, defaults)
 	}
 
 	for _, action := range act {
@@ -276,9 +275,9 @@ func (p *ruleParser) Rule() *coraza.Rule {
 	return p.rule
 }
 
-// NewRuleParser Creates a new rule parser, each rule parser
+// newRuleParser Creates a new rule parser, each rule parser
 // will contain a single rule that can be obtained using ruleparser.Rule()
-func NewRuleParser(p *Parser) *ruleParser {
+func newRuleParser(p *Parser) *ruleParser {
 	rp := &ruleParser{
 		rule:           coraza.NewRule(),
 		defaultActions: map[types.RulePhase][]ruleAction{},
@@ -348,26 +347,6 @@ func ParseActions(actions string) ([]ruleAction, error) {
 	return res, nil
 }
 
-// PhaseToInt transforms a phase string to it's integer
-// value, modsecurity allows request(1), response(3), log(5),
-// 1,2,3,4,5 values
-func PhaseToInt(phase string) (int, error) {
-	if phase == "request" {
-		return 1, nil
-	} else if phase == "response" {
-		return 3, nil
-	} else if phase == "log" {
-		return 5, nil
-	}
-	p, err := strconv.Atoi(phase)
-
-	if err != nil || p < 0 || p > 5 {
-		return 0, errors.New("Invalid phase " + phase)
-	}
-	// This should never happen (?)
-	return p, nil
-}
-
 /*
 So here is my research:
 SecDefaultAction must contain a phase and a disruptive action
@@ -382,7 +361,7 @@ The rule ID 1 will inherit default actions and become
 SecAction "id:1, phase:2, status:403, log, nolog, deny"
 In the future I shall optimize that redundant log and nolog, it won't actually change anything but would look cooler
 */
-func MergeActions(origin []ruleAction, defaults []ruleAction) []ruleAction {
+func mergeActions(origin []ruleAction, defaults []ruleAction) []ruleAction {
 	res := []ruleAction{}
 	var da ruleAction //Disruptive action
 	for _, action := range defaults {

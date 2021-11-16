@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
 type validateByteRange struct {
@@ -54,7 +54,7 @@ func (o *validateByteRange) Init(data string) error {
 	return nil
 }
 
-func (o *validateByteRange) Evaluate(tx *engine.Transaction, data string) bool {
+func (o *validateByteRange) Evaluate(tx *coraza.Transaction, data string) bool {
 	data = o.re.ReplaceAllString(data, "")
 	//fmt.Println("DEBUG: ", data, len(data))
 	//fmt.Printf("%s: %d\n", data, len(data))

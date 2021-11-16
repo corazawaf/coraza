@@ -17,46 +17,46 @@ package operators
 import (
 	"fmt"
 
-	engine "github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
-type operatorsWrapper = func() engine.RuleOperator
+type operatorsWrapper = func() coraza.RuleOperator
 
 var operators = map[string]operatorsWrapper{}
 
 func init() {
-	RegisterOperator("beginsWith", func() engine.RuleOperator { return &beginsWith{} })
-	RegisterOperator("rx", func() engine.RuleOperator { return &rx{} })
-	RegisterOperator("eq", func() engine.RuleOperator { return &eq{} })
-	RegisterOperator("contains", func() engine.RuleOperator { return &contains{} })
-	RegisterOperator("endsWith", func() engine.RuleOperator { return &endsWith{} })
-	RegisterOperator("inspectFile", func() engine.RuleOperator { return &inspectFile{} })
-	RegisterOperator("ge", func() engine.RuleOperator { return &ge{} })
-	RegisterOperator("gt", func() engine.RuleOperator { return &gt{} })
-	RegisterOperator("le", func() engine.RuleOperator { return &le{} })
-	RegisterOperator("lt", func() engine.RuleOperator { return &lt{} })
-	RegisterOperator("unconditionalMatch", func() engine.RuleOperator { return &unconditionalMatch{} })
-	RegisterOperator("within", func() engine.RuleOperator { return &within{} })
-	RegisterOperator("pmFromFile", func() engine.RuleOperator { return &pmFromFile{} })
-	RegisterOperator("pm", func() engine.RuleOperator { return &pm{} })
-	RegisterOperator("validateByteRange", func() engine.RuleOperator { return &validateByteRange{} })
-	RegisterOperator("validateUrlEncoding", func() engine.RuleOperator { return &validateUrlEncoding{} })
-	RegisterOperator("streq", func() engine.RuleOperator { return &streq{} })
-	RegisterOperator("ipMatch", func() engine.RuleOperator { return &ipMatch{} })
-	RegisterOperator("ipMatchFromFile", func() engine.RuleOperator { return &ipMatchFromFile{} })
-	RegisterOperator("rbl", func() engine.RuleOperator { return &rbl{} })
-	RegisterOperator("validateUtf8Encoding", func() engine.RuleOperator { return &validateUtf8Encoding{} })
-	RegisterOperator("noMatch", func() engine.RuleOperator { return &noMatch{} })
-	RegisterOperator("validateNid", func() engine.RuleOperator { return &validateNid{} })
-	RegisterOperator("geoLookup", func() engine.RuleOperator { return &geoLookup{} })
+	RegisterOperator("beginsWith", func() coraza.RuleOperator { return &beginsWith{} })
+	RegisterOperator("rx", func() coraza.RuleOperator { return &rx{} })
+	RegisterOperator("eq", func() coraza.RuleOperator { return &eq{} })
+	RegisterOperator("contains", func() coraza.RuleOperator { return &contains{} })
+	RegisterOperator("endsWith", func() coraza.RuleOperator { return &endsWith{} })
+	RegisterOperator("inspectFile", func() coraza.RuleOperator { return &inspectFile{} })
+	RegisterOperator("ge", func() coraza.RuleOperator { return &ge{} })
+	RegisterOperator("gt", func() coraza.RuleOperator { return &gt{} })
+	RegisterOperator("le", func() coraza.RuleOperator { return &le{} })
+	RegisterOperator("lt", func() coraza.RuleOperator { return &lt{} })
+	RegisterOperator("unconditionalMatch", func() coraza.RuleOperator { return &unconditionalMatch{} })
+	RegisterOperator("within", func() coraza.RuleOperator { return &within{} })
+	RegisterOperator("pmFromFile", func() coraza.RuleOperator { return &pmFromFile{} })
+	RegisterOperator("pm", func() coraza.RuleOperator { return &pm{} })
+	RegisterOperator("validateByteRange", func() coraza.RuleOperator { return &validateByteRange{} })
+	RegisterOperator("validateUrlEncoding", func() coraza.RuleOperator { return &validateUrlEncoding{} })
+	RegisterOperator("streq", func() coraza.RuleOperator { return &streq{} })
+	RegisterOperator("ipMatch", func() coraza.RuleOperator { return &ipMatch{} })
+	RegisterOperator("ipMatchFromFile", func() coraza.RuleOperator { return &ipMatchFromFile{} })
+	RegisterOperator("rbl", func() coraza.RuleOperator { return &rbl{} })
+	RegisterOperator("validateUtf8Encoding", func() coraza.RuleOperator { return &validateUtf8Encoding{} })
+	RegisterOperator("noMatch", func() coraza.RuleOperator { return &noMatch{} })
+	RegisterOperator("validateNid", func() coraza.RuleOperator { return &validateNid{} })
+	RegisterOperator("geoLookup", func() coraza.RuleOperator { return &geoLookup{} })
 }
-func GetOperator(name string) (engine.RuleOperator, error) {
+func GetOperator(name string) (coraza.RuleOperator, error) {
 	if op, ok := operators[name]; ok {
 		return op(), nil
 	}
 	return nil, fmt.Errorf("operator %s not found", name)
 }
 
-func RegisterOperator(name string, op func() engine.RuleOperator) {
+func RegisterOperator(name string, op func() coraza.RuleOperator) {
 	operators[name] = op
 }

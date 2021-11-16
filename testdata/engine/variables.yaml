@@ -15,8 +15,8 @@
             method: "POST"
             headers:
                 content-type: application/xml
-                cookie: phpmyadminphp=test
-            data: "<?xml version=\"1.0\"?><xml><Cs7QAF attribute_name=\"attribute_value\">test123</Cs7QAF></xml>"         
+                CookIe: phpmyadminphp=test
+            data: "text"
         output:
           triggered_rules:
             - 1
@@ -25,6 +25,8 @@
             - 15
             - 110
             - 200
+            - 300
+            - 400
           non_triggered_rules:
             
   rules: |
@@ -38,3 +40,6 @@
 
     SecAction "id:130,setvar:'tx.allowed_methods=GET HEAD OPTIONS'"
     SecRule REQUEST_METHOD "!@within %{tx.allowed_methods}" "id:200,log"
+
+    SecRule REQUEST_COOKIES:pHpMyAdmInPhp "test" "id:300,phase:1,block,log"
+    SecRule ARGS_GET_NAMES "t1" "id:400,log"

@@ -17,7 +17,7 @@ package operators
 import (
 	"unicode/utf8"
 
-	engine "github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
 type validateUtf8Encoding struct{}
@@ -26,6 +26,6 @@ func (o *validateUtf8Encoding) Init(data string) error {
 	return nil
 }
 
-func (o *validateUtf8Encoding) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *validateUtf8Encoding) Evaluate(tx *coraza.Transaction, value string) bool {
 	return utf8.ValidString(value)
 }

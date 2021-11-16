@@ -14,7 +14,7 @@
 
 package operators
 
-import engine "github.com/jptosso/coraza-waf/v2"
+import "github.com/jptosso/coraza-waf/v2"
 
 type unconditionalMatch struct{}
 
@@ -22,6 +22,6 @@ func (o *unconditionalMatch) Init(data string) error {
 	return nil
 }
 
-func (o *unconditionalMatch) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *unconditionalMatch) Evaluate(tx *coraza.Transaction, value string) bool {
 	return true
 }

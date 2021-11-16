@@ -15,7 +15,7 @@
 package operators
 
 import (
-	engine "github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
 type streq struct {
@@ -27,7 +27,7 @@ func (o *streq) Init(data string) error {
 	return nil
 }
 
-func (o *streq) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *streq) Evaluate(tx *coraza.Transaction, value string) bool {
 	data := tx.MacroExpansion(o.data)
 	return data == value
 }

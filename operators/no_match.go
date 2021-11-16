@@ -14,7 +14,7 @@
 
 package operators
 
-import engine "github.com/jptosso/coraza-waf/v2"
+import "github.com/jptosso/coraza-waf/v2"
 
 type noMatch struct {
 }
@@ -24,6 +24,6 @@ func (o *noMatch) Init(data string) error {
 	return nil
 }
 
-func (o *noMatch) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *noMatch) Evaluate(tx *coraza.Transaction, value string) bool {
 	return false
 }

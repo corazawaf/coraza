@@ -18,7 +18,7 @@ import (
 	"strings"
 
 	"github.com/cloudflare/ahocorasick"
-	engine "github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
 //TODO according to coraza researchs, re2 matching is faster than ahocorasick
@@ -39,7 +39,7 @@ func (o *pm) Init(data string) error {
 	return nil
 }
 
-func (o *pm) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *pm) Evaluate(tx *coraza.Transaction, value string) bool {
 	value = strings.ToLower(value)
 	matches := o.matcher.MatchThreadSafe([]byte(value))
 	for i := 0; i < len(matches); i++ {
@@ -50,3 +50,5 @@ func (o *pm) Evaluate(tx *engine.Transaction, value string) bool {
 	}
 	return len(matches) > 0
 }
+
+var _ coraza.RuleOperator = (*pm)(nil)

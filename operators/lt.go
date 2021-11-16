@@ -17,7 +17,7 @@ package operators
 import (
 	"strconv"
 
-	engine "github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
 type lt struct {
@@ -29,7 +29,7 @@ func (o *lt) Init(data string) error {
 	return nil
 }
 
-func (o *lt) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *lt) Evaluate(tx *coraza.Transaction, value string) bool {
 	vv := tx.MacroExpansion(o.data)
 	data, err := strconv.Atoi(vv)
 	if err != nil {
