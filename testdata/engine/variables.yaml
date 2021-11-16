@@ -12,7 +12,7 @@
       stage:
         input:
             uri: /index.php?t1=aaa&t2=bbb&t3=ccc&a=test
-            method: POST
+            method: "POST"
             headers:
                 content-type: application/xml
                 cookie: phpmyadminphp=test
@@ -23,9 +23,18 @@
             - 1234
             #- 2
             - 15
+            - 110
+            - 200
+          non_triggered_rules:
+            
   rules: |
     SecRequestBodyAccess On
     SecDebugLogLevel 5
     SecRule ARGS:/^t1$/ "aaa" "id:1,phase:1,block,log"
     SecRule &ARGS_GET:/t.*/ "@gt 2" "id: 1234, phase:1, block, log"
     SecRule REQUEST_METHOD "POST" "id:15, log"
+    SecAction "id:100,setvar:'tx.test=%{REQUEST_METHOD}'"
+    SecRule TX:test "POST" "id:110,log"
+
+    SecAction "id:130,setvar:'tx.allowed_methods=GET HEAD OPTIONS'"
+    SecRule REQUEST_METHOD "!@within %{tx.allowed_methods}" "id:200,log"

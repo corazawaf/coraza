@@ -41,3 +41,15 @@ func TestLocalCollectionMatchData(t *testing.T) {
 		t.Error("Failed to set matched data value")
 	}
 }
+
+func TestAddUnique(t *testing.T) {
+	col := NewCollection("test")
+	col.AddUnique("test", "test2")
+	col.AddUnique("test", "test2")
+	if len(col.data["test"]) != 1 {
+		t.Error("Failed to add unique")
+	}
+	if col.data["test"][0] != "test2" {
+		t.Error("Failed to add unique")
+	}
+}

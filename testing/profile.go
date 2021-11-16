@@ -42,7 +42,8 @@ type ProfileTest struct {
 
 type ProfileTestStage struct {
 	Stage ProfileTestStageInner `yaml:"stage"`
-	Pass  bool
+	Pass  bool                  `yaml:"pass"`
+	Debug bool                  `yaml:"debug"`
 }
 
 type ProfileTestStageInner struct {

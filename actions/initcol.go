@@ -19,7 +19,6 @@ import (
 
 	"github.com/jptosso/coraza-waf/v2"
 	"github.com/jptosso/coraza-waf/v2/types"
-	"go.uber.org/zap"
 )
 
 // Initializes a persistent collection and add the data to the standard collections coraza.
@@ -38,7 +37,7 @@ func (a *initcolFn) Init(r *coraza.Rule, data string) error {
 }
 
 func (a *initcolFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
-	tx.Waf.Logger.Error("initcol was used but it's not supported", zap.Int("rule", r.Id))
+	//tx.Waf.Logger.Error("initcol was used but it's not supported", zap.Int("rule", r.Id))
 	/*
 		key := tx.MacroExpansion(a.key)
 		data := tx.Waf.Persistence.Get(a.variable, key)

@@ -144,16 +144,14 @@ func (c *Collection) Add(key string, value string) {
 
 // AddUnique will add a value to a key if it is not already there
 func (c *Collection) AddUnique(key string, value string) {
-	pass := false
-	for _, v := range c.data[key] {
-		if v == value {
-			pass = true
-		}
-	}
-	if !pass {
+	if c.data[key] == nil {
+		c.Add(key, value)
 		return
 	}
-	c.data[key] = append(c.data[key], value)
+	if utils.StringInSlice(value, c.data[key]) {
+		return
+	}
+	c.Add(key, value)
 }
 
 // Set will replace the key's value with this slice

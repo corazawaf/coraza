@@ -30,7 +30,7 @@ import (
 // Parser provides functions to evaluate (compile) SecLang directives
 type Parser struct {
 	configfile            string
-	configdir             string
+	Configdir             string
 	nextChain             bool
 	Waf                   *engine.Waf
 	DisabledDirectives    []string
@@ -47,7 +47,7 @@ type Parser struct {
 // or arguments are invalid
 func (p *Parser) FromFile(profilePath string) error {
 	p.configfile = profilePath
-	p.configdir = filepath.Dir(profilePath)
+	p.Configdir = filepath.Dir(profilePath)
 	file, err := utils.OpenFile(profilePath, "")
 	if err != nil {
 		p.Waf.Logger.Error(err.Error(),
@@ -190,7 +190,7 @@ func (p *Parser) evaluate(data string) error {
 func (p *Parser) ParseRule(data string, withOperator bool) (*engine.Rule, error) {
 	var err error
 	rp := NewRuleParser(p)
-	rp.Configdir = p.configdir
+	rp.Configdir = p.Configdir
 
 	for _, da := range p.defaultActions {
 		err = rp.ParseDefaultActions(da)

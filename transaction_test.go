@@ -23,6 +23,7 @@ import (
 
 	"github.com/jptosso/coraza-waf/v2/types"
 	"github.com/jptosso/coraza-waf/v2/types/variables"
+	"github.com/jptosso/coraza-waf/v2/utils"
 )
 
 var wafi = NewWaf()
@@ -281,6 +282,26 @@ func TestLogCallback(t *testing.T) {
 	})
 	if buffer == "" && strings.Contains(buffer, tx.Id) {
 		t.Error("failed to call error log callback")
+	}
+}
+
+func TestHeaderSetters(t *testing.T) {
+	waf := NewWaf()
+	tx := waf.NewTransaction()
+	tx.AddRequestHeader("cookie", "abc=def;hij=klm")
+	tx.AddRequestHeader("test1", "test2")
+	c := tx.GetCollection(variables.RequestCookies).GetFirstString("abc")
+	if c != "def" {
+		t.Errorf("failed to set cookie, got %q", c)
+	}
+	if tx.GetCollection(variables.RequestHeaders).GetFirstString("cookie") != "abc=def;hij=klm" {
+		t.Error("failed to set request header")
+	}
+	if !utils.StringInSlice("cookie", tx.GetCollection(variables.RequestHeadersNames).Get("")) {
+		t.Error("failed to set header name")
+	}
+	if !utils.StringInSlice("abc", tx.GetCollection(variables.RequestCookiesNames).Get("")) {
+		t.Error("failed to set cookie name")
 	}
 }
 

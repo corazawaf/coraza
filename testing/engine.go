@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	engine "github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types/variables"
 )
 
 // Start will begin the test stage
@@ -40,10 +41,8 @@ func (stage *ProfileTestStage) Start(waf *engine.Waf) error {
 		}
 	}
 	//Apply tx data
-	if len(stage.Stage.Input.Headers) > 0 {
-		for k, v := range stage.Stage.Input.Headers {
-			tx.AddRequestHeader(k, v)
-		}
+	for k, v := range stage.Stage.Input.Headers {
+		tx.AddRequestHeader(k, v)
 	}
 	method := "GET"
 	if stage.Stage.Input.Method != "" {
@@ -100,7 +99,10 @@ func (stage *ProfileTestStage) Start(waf *engine.Waf) error {
 				}
 			}
 			if !triggered {
-				return fmt.Errorf("%d waf not triggered", trr)
+				if stage.Debug {
+					dumptransaction(tx)
+				}
+				return fmt.Errorf("%d was not triggered", trr)
 			}
 		}
 	}
@@ -130,4 +132,19 @@ func parseInputData(input interface{}) string {
 		data = input.(string)
 	}
 	return data
+}
+
+func dumptransaction(tx *engine.Transaction) {
+	fmt.Println("======DEBUG======")
+	for v := byte(1); v < 100; v++ {
+		vr := variables.RuleVariable(v)
+		if vr.Name() == "UNKNOWN" {
+			break
+		}
+		fmt.Printf("%s:\n", vr.Name())
+		data := tx.GetCollection(vr).Data()
+		for k, d := range data {
+			fmt.Printf("-->%s: %s\n", k, strings.Join(d, ","))
+		}
+	}
 }

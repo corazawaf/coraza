@@ -177,8 +177,6 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 		} else if strings.HasPrefix(val, "multipart/form-data") {
 			tx.GetCollection(variables.ReqbodyProcessor).Set("", []string{"MULTIPART"})
 		}
-	} else if key == "host" {
-		tx.GetCollection(variables.ServerName).Set("", []string{value})
 	} else if key == "cookie" {
 		// Cookies use the same syntax as GET params but with semicolon (;) separator
 		values := utils.ParseQuery(value, ";")

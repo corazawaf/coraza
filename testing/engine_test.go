@@ -16,6 +16,8 @@ package testing
 
 import (
 	"fmt"
+	"os"
+	"path"
 	"path/filepath"
 	"testing"
 
@@ -46,6 +48,9 @@ func TestEngine(t *testing.T) {
 				} else {
 					w := engine.NewWaf()
 					p, _ := seclang.NewParser(w)
+					// use current script path
+					pwd, _ := os.Getwd()
+					p.Configdir = path.Join(pwd, "../", "testdata")
 					if err := p.FromString(profile.Rules); err != nil {
 						t.Error(err)
 						break
