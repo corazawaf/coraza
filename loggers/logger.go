@@ -19,8 +19,6 @@ import (
 	"io/fs"
 	"os"
 	"path"
-
-	"github.com/jptosso/coraza-waf/v2/utils"
 )
 
 // Logger is a wrapper to hold configurations, a writer and a formatter
@@ -45,10 +43,16 @@ func (l Logger) Write(al AuditLog) error {
 	return l.writer.Write(al)
 }
 
+// Close is sed to close the write stream
+// It must be called when the waf instance won't be used anymore
 func (l *Logger) Close() error {
 	return l.writer.Close()
 }
 
+// SetFormatter sets the formatter for the logger
+// A valid formatter created using RegisterLogFormatter(...) is required
+// Default formatters are: json, json2 and native
+// json2 is an "enhanced" version of the original modsecurity json formatter
 func (l *Logger) SetFormatter(f string) error {
 	formatter, err := getLogFormatter(f)
 	if err != nil {
@@ -58,6 +62,9 @@ func (l *Logger) SetFormatter(f string) error {
 	return nil
 }
 
+// SetWriter sets the writer for the logger
+// A valid writer created using RegisterLogWriter(...) is required
+// Default writers are: serial and concurrent
 func (l *Logger) SetWriter(name string) error {
 	writer, err := getLogWriter(name)
 	if err != nil {
@@ -67,7 +74,13 @@ func (l *Logger) SetWriter(name string) error {
 	return nil
 }
 
+// LogFormatter is the interface for all log formatters
+// A LogFormatter receives an auditlog and generates "readable" audit log
 type LogFormatter = func(al AuditLog) ([]byte, error)
+
+// LogWriter is the interface for all log writers
+// A LogWriter receives an auditlog and writes it to the output stream
+// An output stream may be a file, a socket, an http request, etc
 type LogWriter interface {
 	// In case the writer requires previous preparations
 	Init(*Logger) error
@@ -88,7 +101,7 @@ func RegisterLogWriter(name string, writer func() LogWriter) {
 	writers[name] = writer
 }
 
-// GetLogger returns a logger by name
+// getLogWriter returns a logger by name
 // It returns an error if it doesn't exist
 func getLogWriter(name string) (LogWriter, error) {
 	logger := writers[name]
@@ -98,7 +111,7 @@ func getLogWriter(name string) (LogWriter, error) {
 	return logger(), nil
 }
 
-// RegisterLogFormat registers a new logger format
+// RegisterLogFormatter registers a new logger format
 // it can be used for plugins
 func RegisterLogFormatter(name string, f func(al AuditLog) ([]byte, error)) {
 	formatters[name] = f
@@ -114,6 +127,13 @@ func getLogFormatter(name string) (LogFormatter, error) {
 	return formatter, nil
 }
 
+// NewAuditLogger creates a default logger
+// Default settings are:
+// Dirmode: 0755
+// Filemode: 0644
+// Formatter: native
+// Writer: serial
+// Path: /tmp/coraza-audit.log
 func NewAuditLogger() (*Logger, error) {
 	/*
 		if file == "" {
@@ -125,7 +145,7 @@ func NewAuditLogger() (*Logger, error) {
 	dirMode := fs.FileMode(0755)
 	fileMode := fs.FileMode(0644)
 	s := &serialWriter{}
-	f := path.Join(os.TempDir(), utils.RandomString(10)+"-coraza.log")
+	f := path.Join(os.TempDir(), "coraza-audit.log")
 	l := &Logger{
 		file:      f,
 		directory: "/opt/coraza/var/log/audit/",
@@ -148,5 +168,5 @@ func init() {
 	RegisterLogFormatter("json", jsonFormatter)
 	RegisterLogFormatter("json2", json2Formatter)
 	RegisterLogFormatter("native", nativeFormatter)
-	//RegisterLogFormatter("cef", cefFormatter)
+	// RegisterLogFormatter("cef", cefFormatter)
 }

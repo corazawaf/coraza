@@ -17,20 +17,20 @@ package transformations
 import "github.com/jptosso/coraza-waf/v2"
 
 func urlEncode(data string, utils coraza.RuleTransformationTools) string {
-	return doUrlEncode(data)
+	return doURLEncode(data)
 }
 
-func doUrlEncode(input string) string {
-	input_len := len(input)
+func doURLEncode(input string) string {
+	inputLen := len(input)
 	var i, count, c int
-	leng := input_len * 3
+	leng := inputLen * 3
 	d := make([]byte, leng)
 	d = append(d, []byte(input)...)
 	c2xTable := []byte("0123456789abcdef")
 
 	/* ENH Only encode the characters that really need to be encoded. */
 
-	for i = 0; i < input_len; i++ {
+	for i = 0; i < inputLen; i++ {
 		cc := input[i]
 
 		if cc == ' ' {

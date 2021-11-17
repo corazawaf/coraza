@@ -58,9 +58,9 @@ func (p *ruleParser) ParseVariables(vars string) error {
 	for i := 0; i < len(vars); i++ {
 		c := vars[i]
 		if (c == '|' && curr != 2) || i+1 >= len(vars) || (curr == 2 && c == '/' && !isescaped) {
-			//if next variable or end
-			//if regex we ignore |
-			//we wont support pipe for xpath, maybe later
+			// if next variable or end
+			// if regex we ignore |
+			// we wont support pipe for xpath, maybe later
 			if c != '|' {
 				// we don't want to miss the last character
 				if curr == 0 {
@@ -74,12 +74,12 @@ func (p *ruleParser) ParseVariables(vars string) error {
 			if err != nil {
 				return err
 			}
-			//fmt.Printf("(PREVIOUS %s) %s:%s (%t %t)\n", vars, curvar, curkey, iscount, isnegation)
+			// fmt.Printf("(PREVIOUS %s) %s:%s (%t %t)\n", vars, curvar, curkey, iscount, isnegation)
 			if isquoted {
 				// if it is quoted we remove the last quote
 				if len(vars) <= i+1 || vars[i+1] != '\'' {
 					if vars[i] != '\'' {
-						//TODO fix here
+						// TODO fix here
 						return fmt.Errorf("unclosed quote: " + string(curkey))
 					}
 				}
@@ -104,49 +104,50 @@ func (p *ruleParser) ParseVariables(vars string) error {
 		}
 		switch curr {
 		case 0:
-			if c == '!' {
+			switch c {
+			case '!':
 				isnegation = true
-			} else if c == '&' {
+			case '&':
 				iscount = true
-			} else if c == ':' {
-				// we skip to key context
+			case ':':
 				curr = 1
-			} else {
-				// we append the current character
+			default:
 				curvar = append(curvar, c)
 			}
 		case 1:
-			if len(curkey) == 0 && (string(curvar) == "XML" || string(curvar) == "JSON") {
+			switch {
+			case len(curkey) == 0 && (string(curvar) == "XML" || string(curvar) == "JSON"):
 				// We are starting a XPATH
 				curr = 3
 				curkey = append(curkey, c)
-			} else if c == '/' {
+			case c == '/':
 				// We are starting a regex
 				curr = 2
-			} else if c == '\'' {
+			case c == '\'':
 				// we start a quoted regex
 				// we go back to the loop to find /
 				isquoted = true
-			} else {
+			default:
 				curkey = append(curkey, c)
 			}
 		case 2:
-			//REGEX
-			if c == '/' && !isescaped {
+			// REGEX
+			switch {
+			case c == '/' && !isescaped:
 				// unescaped / will stop the regex
 				curr = 1
-			} else if c == '\\' {
+			case c == '\\':
 				curkey = append(curkey, '\\')
 				if isescaped {
 					isescaped = false
 				} else {
 					isescaped = true
 				}
-			} else {
+			default:
 				curkey = append(curkey, c)
 			}
 		case 3:
-			//XPATH
+			// XPATH
 			curkey = append(curkey, c)
 		}
 	}
@@ -155,7 +156,7 @@ func (p *ruleParser) ParseVariables(vars string) error {
 
 func (p *ruleParser) ParseOperator(operator string) error {
 	if len(operator) == 0 || operator[0] != '@' && operator[0] != '!' {
-		//default operator RX
+		// default operator RX
 		operator = "@rx " + operator
 	}
 	spl := strings.SplitN(operator, " ", 2)
@@ -201,7 +202,7 @@ func (p *ruleParser) ParseOperator(operator string) error {
 }
 
 func (p *ruleParser) ParseDefaultActions(actions string) error {
-	act, err := ParseActions(actions)
+	act, err := parseActions(actions)
 	if err != nil {
 		return err
 	}
@@ -231,17 +232,17 @@ func (p *ruleParser) ParseDefaultActions(actions string) error {
 
 // ParseActions
 func (p *ruleParser) ParseActions(actions string) error {
-	act, err := ParseActions(actions)
+	act, err := parseActions(actions)
 	if err != nil {
 		return err
 	}
-	//check if forbidden action:
+	// check if forbidden action:
 	for _, a := range act {
 		if utils.StringInSlice(a.Key, p.parser.DisabledRuleActions) {
 			return fmt.Errorf("%s rule action is disabled", a.Key)
 		}
 	}
-	//first we execute metadata rules
+	// first we execute metadata rules
 	for _, a := range act {
 		if a.Atype == types.ActionTypeMetadata {
 			errs := a.F.Init(p.rule, a.Value)
@@ -286,10 +287,10 @@ func newRuleParser(p *Parser) *ruleParser {
 	return rp
 }
 
-// ParseActions will assign the function name, arguments and
+// parseActions will assign the function name, arguments and
 // function (pkg.actions) for each action splitted by comma (,)
 // Action arguments are allowed to wrap values between collons('')
-func ParseActions(actions string) ([]ruleAction, error) {
+func parseActions(actions string) ([]ruleAction, error) {
 	iskey := true
 	ckey := ""
 	cval := ""
@@ -297,7 +298,7 @@ func ParseActions(actions string) ([]ruleAction, error) {
 	res := []ruleAction{}
 	for i, c := range actions {
 		if iskey && c == ' ' {
-			//skip whitespaces in key
+			// skip whitespaces in key
 			continue
 		} else if !quoted && c == ',' {
 			f, err := actionsmod.GetAction(ckey)
@@ -324,7 +325,7 @@ func ParseActions(actions string) ([]ruleAction, error) {
 			}
 		} else if !iskey {
 			if c == ' ' && !quoted {
-				//skip unquoted whitespaces
+				// skip unquoted whitespaces
 				continue
 			}
 			cval += string(c)
@@ -363,7 +364,7 @@ In the future I shall optimize that redundant log and nolog, it won't actually c
 */
 func mergeActions(origin []ruleAction, defaults []ruleAction) []ruleAction {
 	res := []ruleAction{}
-	var da ruleAction //Disruptive action
+	var da ruleAction // Disruptive action
 	for _, action := range defaults {
 		if action.Atype == types.ActionTypeDisruptive {
 			da = action

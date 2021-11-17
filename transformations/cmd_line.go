@@ -37,15 +37,16 @@ func cmdLine(data string, utils coraza.RuleTransformationTools) string {
 	space := false
 	ret := []byte{}
 	for _, a := range data {
-		if a == '"' || a == '\'' || a == '\\' || a == '^' {
+		switch {
+		case a == '"' || a == '\'' || a == '\\' || a == '^':
 			/* remove some characters */
-		} else if a == ' ' || a == ',' || a == ';' || a == '\t' || a == '\r' || a == '\n' {
+		case a == ' ' || a == ',' || a == ';' || a == '\t' || a == '\r' || a == '\n':
 			/* replace some characters to space (only one) */
 			if !space {
 				ret = append(ret, ' ')
 				space = true
 			}
-		} else if a == '/' || a == '(' {
+		case a == '/' || a == '(':
 			/* remove space before / or ( */
 			if space {
 				ret = ret[:len(ret)-1]
@@ -53,7 +54,7 @@ func cmdLine(data string, utils coraza.RuleTransformationTools) string {
 			space = false
 
 			ret = append(ret, byte(a))
-		} else {
+		default:
 			b := unicode.ToLower(a)
 			ret = append(ret, byte(b))
 			space = false

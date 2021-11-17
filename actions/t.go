@@ -26,7 +26,7 @@ func (a *tFn) Init(r *coraza.Rule, input string) error {
 	// TODO there is a chance that it won't work, it requires tests
 	// none is a special hardcoded transformation, it must remove previous transformations
 	if input == "none" {
-		//remove elements
+		// remove elements
 		r.ClearTransformations()
 		return nil
 	}

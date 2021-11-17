@@ -21,7 +21,7 @@ import (
 	"github.com/jptosso/coraza-waf/v2"
 )
 
-//TODO according to coraza researchs, re2 matching is faster than ahocorasick
+// TODO according to coraza researchs, re2 matching is faster than ahocorasick
 // maybe we should switch in the future
 // pm is always lowercase
 type pm struct {

@@ -18,7 +18,7 @@ import (
 	"strings"
 
 	"github.com/cloudflare/ahocorasick"
-	engine "github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
 type pmFromFile struct {
@@ -33,7 +33,7 @@ func (o *pmFromFile) Init(data string) error {
 		if len(l) == 0 {
 			continue
 		}
-		l = strings.ReplaceAll(l, "\r", "") //CLF
+		l = strings.ReplaceAll(l, "\r", "") // CLF
 		if l[0] != '#' {
 			lines = append(lines, strings.ToLower(l))
 		}
@@ -45,6 +45,6 @@ func (o *pmFromFile) Init(data string) error {
 	return nil
 }
 
-func (o *pmFromFile) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *pmFromFile) Evaluate(tx *coraza.Transaction, value string) bool {
 	return o.pm.Evaluate(tx, value)
 }

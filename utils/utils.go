@@ -17,7 +17,6 @@ package utils
 import (
 	"fmt"
 	"io/ioutil"
-	"regexp"
 	"strings"
 )
 
@@ -45,13 +44,4 @@ func OpenFile(path string, key string) ([]byte, error) {
 	} else {
 		return ioutil.ReadFile(path)
 	}
-}
-
-func ArgsToMap(args string) map[string]string {
-	a := map[string]string{}
-	re := regexp.MustCompile(`([\w\-_]+)=(.*?(?:\s|$))`)
-	for _, data := range re.FindAllStringSubmatch(args, -1) {
-		a[strings.TrimSpace(data[1])] = strings.TrimSpace(data[2])
-	}
-	return a
 }

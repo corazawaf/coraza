@@ -28,14 +28,16 @@ func jsDecode(data string, utils coraza.RuleTransformationTools) string {
 
 func doJsDecode(input string) string {
 	d := []byte(input)
-	input_len := len(input)
+	inputLen := len(input)
 	var i, c int
 
-	for i < input_len {
+	for i < inputLen {
 		if input[i] == '\\' {
 			/* Character is an escape. */
 
-			if (i+5 < input_len) && (input[i+1] == 'u') && (utils.ValidHex(input[i+2])) && (utils.ValidHex(input[i+3])) && (utils.ValidHex(input[i+4])) && (utils.ValidHex(input[i+5])) {
+			switch {
+
+			case (i+5 < inputLen) && (input[i+1] == 'u') && (utils.ValidHex(input[i+2])) && (utils.ValidHex(input[i+3])) && (utils.ValidHex(input[i+4])) && (utils.ValidHex(input[i+5])):
 				/* \uHHHH */
 
 				/* Use only the lower byte. */
@@ -48,17 +50,17 @@ func doJsDecode(input string) string {
 
 				c++
 				i += 6
-			} else if (i+3 < input_len) && (input[i+1] == 'x') && utils.ValidHex(input[i+2]) && utils.ValidHex(input[i+3]) {
+			case (i+3 < inputLen) && (input[i+1] == 'x') && utils.ValidHex(input[i+2]) && utils.ValidHex(input[i+3]):
 				/* \xHH */
 				d[c] = utils.X2c(input[i+2:])
 				c++
 				i += 4
-			} else if (i+1 < input_len) && isodigit(input[i+1]) {
+			case (i+1 < inputLen) && isodigit(input[i+1]):
 				/* \OOO (only one byte, \000 - \377) */
 				buf := make([]byte, 3)
 				j := 0
 
-				for (i+1+j < input_len) && (j < 3) {
+				for (i+1+j < inputLen) && (j < 3) {
 					buf[j] = input[i+j]
 					j++
 					if !isodigit(input[i+j]) {
@@ -78,7 +80,7 @@ func doJsDecode(input string) string {
 					c++
 					i += 1 + j
 				}
-			} else if i+1 < input_len {
+			case i+1 < inputLen:
 				/* \C */
 				cc := input[i+1]
 				switch input[i+1] {
@@ -104,9 +106,9 @@ func doJsDecode(input string) string {
 				d[c] = cc
 				c++
 				i += 2
-			} else {
+			default:
 				/* Not enough bytes */
-				for i < input_len {
+				for i < inputLen {
 					d[c] = input[i]
 					c++
 					i++

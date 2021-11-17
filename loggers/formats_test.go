@@ -14,10 +14,6 @@
 
 package loggers
 
-import (
-	"testing"
-)
-
 /*
 func TestFormatters(t *testing.T) {
 	al := createAuditLog()
@@ -45,7 +41,7 @@ func TestFormatters(t *testing.T) {
 			}
 		}
 	}
-}*/
+}
 
 func TestModsecBoundary(t *testing.T) {
 	// TODO...
@@ -85,3 +81,4 @@ func createAuditLog() AuditLog {
 		},
 	}
 }
+*/

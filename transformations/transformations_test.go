@@ -59,7 +59,7 @@ func TestTransformations(t *testing.T) {
 			t.Error("Cannot parse test case")
 		}
 		for _, data := range cases {
-			//UNMARSHALL does not transform \u0000 to binary
+			// UNMARSHALL does not transform \u0000 to binary
 			data.Input = strings.ReplaceAll(data.Input, `\u0000`, "\u0000")
 			data.Output = strings.ReplaceAll(data.Output, `\u0000`, "\u0000")
 
@@ -71,7 +71,7 @@ func TestTransformations(t *testing.T) {
 			}
 			trans, err := GetTransformation(data.Name)
 			if err != nil {
-				//t.Error(err)
+				// t.Error(err)
 				continue
 			}
 			tools := coraza.RuleTransformationTools{}

@@ -14,6 +14,7 @@
 package variables
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -23,6 +24,39 @@ func TestNameToVariable(t *testing.T) {
 		_, err := ParseVariable(v)
 		if err != nil {
 			t.Error("failed to test variable " + v)
+		}
+	}
+}
+
+func TestVariableToName(t *testing.T) {
+	if len(rulemap) != len(rulemapRev) {
+		t.Error("rulemap and rulemapRev are not equal")
+	}
+	for i := 0; i < len(rulemap); i++ {
+		v := RuleVariable(i)
+		if v.Name() != rulemap[v] {
+			t.Error("failed to test variable " + v.Name())
+		}
+		if rulemapRev[v.Name()] != v {
+			t.Error("failed to test variable " + v.Name())
+		}
+	}
+}
+
+func TestParseVariable(t *testing.T) {
+	for i := 0; i < len(rulemap); i++ {
+		v := RuleVariable(i)
+		name := v.Name()
+		// we create some lowercase cases
+		if i%3 == 0 {
+			name = strings.ToLower(name)
+		}
+		vv, err := ParseVariable(name)
+		if err != nil {
+			t.Errorf("failed to test variable %s", name)
+		}
+		if v != vv {
+			t.Errorf("failed to test variable %s", name)
 		}
 	}
 }

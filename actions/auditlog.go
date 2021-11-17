@@ -38,6 +38,6 @@ func auditlog() coraza.RuleAction {
 }
 
 var (
-	_ coraza.RuleAction = &auditlogFn{}
+	_ coraza.RuleAction = (*auditlogFn)(nil)
 	_ ruleActionWrapper = auditlog
 )

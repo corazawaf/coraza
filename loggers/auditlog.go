@@ -33,24 +33,25 @@ type AuditTransaction struct {
 	UnixTimestamp int64  `json:"unix_timestamp"`
 
 	// Unique ID
-	Id string `json:"id"`
+	ID string `json:"id"`
 
 	// Client IP Address string representation
-	ClientIp string `json:"client_ip"`
+	ClientIP string `json:"client_ip"`
 
 	ClientPort int                      `json:"client_port"`
-	HostIp     string                   `json:"host_ip"`
+	HostIP     string                   `json:"host_ip"`
 	HostPort   int                      `json:"host_port"`
-	ServerId   string                   `json:"server_id"`
+	ServerID   string                   `json:"server_id"`
 	Request    AuditTransactionRequest  `json:"request"`
 	Response   AuditTransactionResponse `json:"response"`
 	Producer   AuditTransactionProducer `json:"producer"`
 }
 
 type AuditTransactionResponse struct {
-	Status  int                 `json:"status"`
-	Headers map[string][]string `json:"headers"`
-	Body    string              `json:"body"`
+	Protocol string              `json:"protocol"`
+	Status   int                 `json:"status"`
+	Headers  map[string][]string `json:"headers"`
+	Body     string              `json:"body"`
 }
 
 type AuditTransactionProducer struct {
@@ -65,8 +66,8 @@ type AuditTransactionProducer struct {
 type AuditTransactionRequest struct {
 	Method      string                         `json:"method"`
 	Protocol    string                         `json:"protocol"`
-	Uri         string                         `json:"uri"`
-	HttpVersion string                         `json:"http_version"`
+	URI         string                         `json:"uri"`
+	HTTPVersion string                         `json:"http_version"`
 	Headers     map[string][]string            `json:"headers"`
 	Body        string                         `json:"body"`
 	Files       []AuditTransactionRequestFiles `json:"files"`
@@ -87,7 +88,7 @@ type AuditMessage struct {
 type AuditMessageData struct {
 	File     string             `json:"file"`
 	Line     int                `json:"line"`
-	Id       int                `json:"id"`
+	ID       int                `json:"id"`
 	Rev      string             `json:"rev"`
 	Msg      string             `json:"msg"`
 	Data     string             `json:"data"`
@@ -121,7 +122,7 @@ type auditLogLegacy struct {
 
 type auditLogLegacyTransaction struct {
 	Time          string
-	TransactionId string
+	TransactionID string
 	RemoteAddress string
 	RemotePort    int
 	LocalAddress  string

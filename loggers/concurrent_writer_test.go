@@ -46,7 +46,7 @@ func TestCLogFileCreation(t *testing.T) {
 	al := AuditLog{
 		Transaction: AuditTransaction{
 			UnixTimestamp: ts,
-			Id:            "123",
+			ID:            "123",
 			Request:       AuditTransactionRequest{},
 			Response:      AuditTransactionResponse{},
 		},
@@ -58,7 +58,7 @@ func TestCLogFileCreation(t *testing.T) {
 	p2 := fmt.Sprintf("/%s/%s/", tt.Format("20060102"), tt.Format("20060102-1504"))
 	logdir := path.Join("/tmp", p2)
 	// Append the filename
-	fname := fmt.Sprintf("/%s-%s", tt.Format("20060102-150405"), al.Transaction.Id)
+	fname := fmt.Sprintf("/%s-%s", tt.Format("20060102-150405"), al.Transaction.ID)
 	p := path.Join(logdir, fname)
 
 	data, err := os.ReadFile(p)

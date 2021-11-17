@@ -39,12 +39,12 @@ func TestSerialLogger_Write(t *testing.T) {
 	}
 	al := AuditLog{
 		Transaction: AuditTransaction{
-			Id: "test123",
+			ID: "test123",
 		},
 		Messages: []AuditMessage{
 			{
 				Data: AuditMessageData{
-					Id:  100,
+					ID:  100,
 					Raw: "SecAction \"id:100\"",
 				},
 			},

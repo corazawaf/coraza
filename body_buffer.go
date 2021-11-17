@@ -23,7 +23,7 @@ import (
 // BodyReader is used to read RequestBody and ResponseBody objects
 // It will handle memory usage for buffering and processing
 type bodyBuffer struct {
-	io.Writer   //OK?
+	io.Writer   // OK?
 	tmpDir      string
 	buffer      *bytes.Buffer
 	writer      *os.File
@@ -42,7 +42,9 @@ func (br *bodyBuffer) Write(data []byte) (n int, err error) {
 				return 0, err
 			}
 			// we dump the previous buffer
-			br.writer.Write(br.buffer.Bytes())
+			if _, err := br.writer.Write(br.buffer.Bytes()); err != nil {
+				return 0, err
+			}
 			defer br.buffer.Reset()
 		}
 		br.length = l

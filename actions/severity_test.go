@@ -35,7 +35,7 @@ func TestSeverity(t *testing.T) {
 		{"NOTICE", 5},
 		{"INFO", 6},
 		{"DEBUG", 7},
-		//numeric input
+		// numeric input
 		{"0", 0},
 		{"1", 1},
 		{"2", 2},

@@ -24,10 +24,10 @@ import (
 func TestDefaultActions(t *testing.T) {
 	waf := coraza.NewWaf()
 	p, _ := NewParser(waf)
-	if err := p.AddDefaultActions("log, pass, phase: 1"); err != nil {
+	if err := p.addDefaultActions("log, pass, phase: 1"); err != nil {
 		t.Error("Error parsing default actions", err)
 	}
-	if err := p.AddDefaultActions("log, drop, phase:2"); err != nil {
+	if err := p.addDefaultActions("log, drop, phase:2"); err != nil {
 		t.Error("Could not add default actions")
 	}
 	if len(p.GetDefaultActions()) != 2 {
@@ -45,7 +45,7 @@ func TestMergeActions(t *testing.T) {
 func TestVariables(t *testing.T) {
 	waf := coraza.NewWaf()
 	p, _ := NewParser(waf)
-	//single variable with key
+	// single variable with key
 	err := p.FromString(`SecRule REQUEST_HEADERS:test "" "id:1"`)
 	if err != nil {
 		t.Error(err)

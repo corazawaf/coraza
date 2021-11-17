@@ -129,14 +129,16 @@ func TestSecAuditLogs(t *testing.T) {
 	tx := waf.NewTransaction()
 	tx.ProcessUri("/test.php?id=1", "get", "http/1.1")
 	tx.ProcessRequestHeaders()
-	tx.ProcessRequestBody()
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Error(err)
+	}
 	tx.ProcessLogging()
 
 	if len(tx.MatchedRules) == 0 {
 		t.Error("failed to match rules")
 	}
 
-	if tx.AuditLog().Messages[0].Data.Id != 4482 {
+	if tx.AuditLog().Messages[0].Data.ID != 4482 {
 		t.Error("failed to match rule id")
 	}
 }

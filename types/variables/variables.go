@@ -21,12 +21,16 @@ import (
 // This file repeats the same content many times in order to make access
 // efficient for seclang and transactions
 
+// RuleVariable is used for the rule to identify information
+// Each RuleVariable is unique and represents a variable
 type RuleVariable byte
 
 const (
+	// Unknown is the default value for a variable
+	// it's using for testing and error catching
 	Unknown                       RuleVariable = RuleVariable(0)
 	ResponseContentType           RuleVariable = RuleVariable(1)
-	UniqueId                      RuleVariable = RuleVariable(2)
+	UniqueID                      RuleVariable = RuleVariable(2)
 	ArgsCombinedSize              RuleVariable = RuleVariable(3)
 	AuthType                      RuleVariable = RuleVariable(4)
 	FilesCombinedSize             RuleVariable = RuleVariable(5)
@@ -67,8 +71,8 @@ const (
 	RequestLine                   RuleVariable = RuleVariable(40)
 	RequestMethod                 RuleVariable = RuleVariable(41)
 	RequestProtocol               RuleVariable = RuleVariable(42)
-	RequestUri                    RuleVariable = RuleVariable(43)
-	RequestUriRaw                 RuleVariable = RuleVariable(44)
+	RequestURI                    RuleVariable = RuleVariable(43)
+	RequestURIRaw                 RuleVariable = RuleVariable(44)
 	ResponseBody                  RuleVariable = RuleVariable(45)
 	ResponseContentLength         RuleVariable = RuleVariable(46)
 	ResponseProtocol              RuleVariable = RuleVariable(47)
@@ -105,194 +109,115 @@ const (
 	ArgsNames            RuleVariable = RuleVariable(77)
 	ArgsGetNames         RuleVariable = RuleVariable(78)
 	ArgsPostNames        RuleVariable = RuleVariable(79)
-	Tx                   RuleVariable = RuleVariable(80)
+	TX                   RuleVariable = RuleVariable(80)
 	Rule                 RuleVariable = RuleVariable(81)
-	Xml                  RuleVariable = RuleVariable(82)
-	Json                 RuleVariable = RuleVariable(83)
+	XML                  RuleVariable = RuleVariable(82)
+	JSON                 RuleVariable = RuleVariable(83)
 	Env                  RuleVariable = RuleVariable(84)
 
 	// Persisten storage kepy for compatibility
-	Ip RuleVariable = RuleVariable(85)
+	IP RuleVariable = RuleVariable(85)
 
 	UrlencodedError RuleVariable = RuleVariable(86)
 )
 
+var rulemap = map[RuleVariable]string{
+	Unknown:                       "UNKNOWN",
+	UrlencodedError:               "URLENCODED_ERROR",
+	ResponseContentType:           "RESPONSE_CONTENT_TYPE",
+	UniqueID:                      "UNIQUE_ID",
+	ArgsCombinedSize:              "ARGS_COMBINED_SIZE",
+	AuthType:                      "AUTH_TYPE",
+	FilesCombinedSize:             "FILES_COMBINED_SIZE",
+	FullRequest:                   "FULL_REQUEST",
+	FullRequestLength:             "FULL_REQUEST_LENGTH",
+	InboundDataError:              "INBOUND_DATA_ERROR",
+	MatchedVar:                    "MATCHED_VAR",
+	MatchedVarName:                "MATCHED_VAR_NAME",
+	MultipartBoundaryQuoted:       "MULTIPART_BOUNDARY_QUOTED",
+	MultipartBoundaryWhitespace:   "MULTIPART_BOUNDARY_WHITESPACE",
+	MultipartCrlfLfLines:          "MULTIPART_CRLF_LF_LINES",
+	MultipartDataAfter:            "MULTIPART_DATA_AFTER",
+	MultipartDataBefore:           "MULTIPART_DATA_BEFORE",
+	MultipartFileLimitExceeded:    "MULTIPART_FILE_LIMIT_EXCEEDED",
+	MultipartHeaderFolding:        "MULTIPART_HEADER_FOLDING",
+	MultipartInvalidHeaderFolding: "MULTIPART_INVALID_HEADER_FOLDING",
+	MultipartInvalidPart:          "MULTIPART_INVALID_PART",
+	MultipartInvalidQuoting:       "MULTIPART_INVALID_QUOTING",
+	MultipartLfLine:               "MULTIPART_LF_LINE",
+	MultipartMissingSemicolon:     "MULTIPART_MISSING_SEMICOLON",
+	MultipartStrictError:          "MULTIPART_STRICT_ERROR",
+	MultipartUnmatchedBoundary:    "MULTIPART_UNMATCHED_BOUNDARY",
+	OutboundDataError:             "OUTBOUND_DATA_ERROR",
+	PathInfo:                      "PATH_INFO",
+	QueryString:                   "QUERY_STRING",
+	RemoteAddr:                    "REMOTE_ADDR",
+	RemoteHost:                    "REMOTE_HOST",
+	RemotePort:                    "REMOTE_PORT",
+	ReqbodyError:                  "REQBODY_ERROR",
+	ReqbodyErrorMsg:               "REQBODY_ERROR_MSG",
+	ReqbodyProcessorError:         "REQBODY_PROCESSOR_ERROR",
+	ReqbodyProcessorErrorMsg:      "REQBODY_PROCESSOR_ERROR_MSG",
+	ReqbodyProcessor:              "REQBODY_PROCESSOR",
+	RequestBasename:               "REQUEST_BASENAME",
+	RequestBody:                   "REQUEST_BODY",
+	RequestBodyLength:             "REQUEST_BODY_LENGTH",
+	RequestFilename:               "REQUEST_FILENAME",
+	RequestLine:                   "REQUEST_LINE",
+	RequestMethod:                 "REQUEST_METHOD",
+	RequestProtocol:               "REQUEST_PROTOCOL",
+	RequestURI:                    "REQUEST_URI",
+	RequestURIRaw:                 "REQUEST_URI_RAW",
+	ResponseBody:                  "RESPONSE_BODY",
+	ResponseContentLength:         "RESPONSE_CONTENT_LENGTH",
+	ResponseProtocol:              "RESPONSE_PROTOCOL",
+	ResponseStatus:                "RESPONSE_STATUS",
+	ServerAddr:                    "SERVER_ADDR",
+	ServerName:                    "SERVER_NAME",
+	ServerPort:                    "SERVER_PORT",
+	Sessionid:                     "SESSIONID",
+	HighestSeverity:               "HIGHEST_SEVERITY",
+	StatusLine:                    "STATUS_LINE",
+	InboundErrorData:              "INBOUND_ERROR_DATA",
+	Duration:                      "DURATION",
+	ResponseHeadersNames:          "RESPONSE_HEADERS_NAMES",
+	RequestHeadersNames:           "REQUEST_HEADERS_NAMES",
+	Userid:                        "USERID",
+	Args:                          "ARGS",
+	ArgsGet:                       "ARGS_GET",
+	ArgsPost:                      "ARGS_POST",
+	FilesSizes:                    "FILES_SIZES",
+	FilesNames:                    "FILES_NAMES",
+	FilesTmpContent:               "FILES_TMP_CONTENT",
+	MultipartFilename:             "MULTIPART_FILENAME",
+	MultipartName:                 "MULTIPART_NAME",
+	MatchedVarsNames:              "MATCHED_VARS_NAMES",
+	MatchedVars:                   "MATCHED_VARS",
+	Files:                         "FILES",
+	RequestCookies:                "REQUEST_COOKIES",
+	RequestHeaders:                "REQUEST_HEADERS",
+	ResponseHeaders:               "RESPONSE_HEADERS",
+	Geo:                           "GEO",
+	RequestCookiesNames:           "REQUEST_COOKIES_NAMES",
+	FilesTmpnames:                 "FILES_TMPNAMES",
+	ArgsNames:                     "ARGS_NAMES",
+	ArgsGetNames:                  "ARGS_GET_NAMES",
+	ArgsPostNames:                 "ARGS_POST_NAMES",
+	TX:                            "TX",
+	Rule:                          "RULE",
+	XML:                           "XML",
+	JSON:                          "JSON",
+	Env:                           "ENV",
+	IP:                            "IP",
+}
+
+var rulemapRev = map[string]RuleVariable{}
+
 // Name transforms a VARIABLE representation
 // into a string, it's used for audit and logging
 func (v RuleVariable) Name() string {
-	switch v {
-	case UrlencodedError:
-		return "URLENCODED_ERROR"
-	case ResponseContentType:
-		return "RESPONSE_CONTENT_TYPE"
-	case UniqueId:
-		return "UNIQUE_ID"
-	case ArgsCombinedSize:
-		return "ARGS_COMBINED_SIZE"
-	case AuthType:
-		return "AUTH_TYPE"
-	case FilesCombinedSize:
-		return "FILES_COMBINED_SIZE"
-	case FullRequest:
-		return "FULL_REQUEST"
-	case FullRequestLength:
-		return "FULL_REQUEST_LENGTH"
-	case InboundDataError:
-		return "INBOUND_DATA_ERROR"
-	case MatchedVar:
-		return "MATCHED_VAR"
-	case MatchedVarName:
-		return "MATCHED_VAR_NAME"
-	case MultipartBoundaryQuoted:
-		return "MULTIPART_BOUNDARY_QUOTED"
-	case MultipartBoundaryWhitespace:
-		return "MULTIPART_BOUNDARY_WHITESPACE"
-	case MultipartCrlfLfLines:
-		return "MULTIPART_CRLF_LF_LINES"
-	case MultipartDataAfter:
-		return "MULTIPART_DATA_AFTER"
-	case MultipartDataBefore:
-		return "MULTIPART_DATA_BEFORE"
-	case MultipartFileLimitExceeded:
-		return "MULTIPART_FILE_LIMIT_EXCEEDED"
-	case MultipartHeaderFolding:
-		return "MULTIPART_HEADER_FOLDING"
-	case MultipartInvalidHeaderFolding:
-		return "MULTIPART_INVALID_HEADER_FOLDING"
-	case MultipartInvalidPart:
-		return "MULTIPART_INVALID_PART"
-	case MultipartInvalidQuoting:
-		return "MULTIPART_INVALID_QUOTING"
-	case MultipartLfLine:
-		return "MULTIPART_LF_LINE"
-	case MultipartMissingSemicolon:
-		return "MULTIPART_MISSING_SEMICOLON"
-	case MultipartStrictError:
-		return "MULTIPART_STRICT_ERROR"
-	case MultipartUnmatchedBoundary:
-		return "MULTIPART_UNMATCHED_BOUNDARY"
-	case OutboundDataError:
-		return "OUTBOUND_DATA_ERROR"
-	case PathInfo:
-		return "PATH_INFO"
-	case QueryString:
-		return "QUERY_STRING"
-	case RemoteAddr:
-		return "REMOTE_ADDR"
-	case RemoteHost:
-		return "REMOTE_HOST"
-	case RemotePort:
-		return "REMOTE_PORT"
-	case ReqbodyError:
-		return "REQBODY_ERROR"
-	case ReqbodyErrorMsg:
-		return "REQBODY_ERROR_MSG"
-	case ReqbodyProcessorError:
-		return "REQBODY_PROCESSOR_ERROR"
-	case ReqbodyProcessorErrorMsg:
-		return "REQBODY_PROCESSOR_ERROR_MSG"
-	case ReqbodyProcessor:
-		return "REQBODY_PROCESSOR"
-	case RequestBasename:
-		return "REQUEST_BASENAME"
-	case RequestBody:
-		return "REQUEST_BODY"
-	case RequestBodyLength:
-		return "REQUEST_BODY_LENGTH"
-	case RequestFilename:
-		return "REQUEST_FILENAME"
-	case RequestLine:
-		return "REQUEST_LINE"
-	case RequestMethod:
-		return "REQUEST_METHOD"
-	case RequestProtocol:
-		return "REQUEST_PROTOCOL"
-	case RequestUri:
-		return "REQUEST_URI"
-	case RequestUriRaw:
-		return "REQUEST_URI_RAW"
-	case ResponseBody:
-		return "RESPONSE_BODY"
-	case ResponseContentLength:
-		return "RESPONSE_CONTENT_LENGTH"
-	case ResponseProtocol:
-		return "RESPONSE_PROTOCOL"
-	case ResponseStatus:
-		return "RESPONSE_STATUS"
-	case ServerAddr:
-		return "SERVER_ADDR"
-	case ServerName:
-		return "SERVER_NAME"
-	case ServerPort:
-		return "SERVER_PORT"
-	case Sessionid:
-		return "SESSIONID"
-	case HighestSeverity:
-		return "HIGHEST_SEVERITY"
-	case StatusLine:
-		return "STATUS_LINE"
-	case InboundErrorData:
-		return "INBOUND_ERROR_DATA"
-	case Duration:
-		return "DURATION"
-	case ResponseHeadersNames:
-		return "RESPONSE_HEADERS_NAMES"
-	case RequestHeadersNames:
-		return "REQUEST_HEADERS_NAMES"
-	case Userid:
-		return "USERID"
-	case Args:
-		return "ARGS"
-	case ArgsGet:
-		return "ARGS_GET"
-	case ArgsPost:
-		return "ARGS_POST"
-	case FilesSizes:
-		return "FILES_SIZES"
-	case FilesNames:
-		return "FILES_NAMES"
-	case FilesTmpContent:
-		return "FILES_TMP_CONTENT"
-	case MultipartFilename:
-		return "MULTIPART_FILENAME"
-	case MultipartName:
-		return "MULTIPART_NAME"
-	case MatchedVarsNames:
-		return "MATCHED_VARS_NAMES"
-	case MatchedVars:
-		return "MATCHED_VARS"
-	case Files:
-		return "FILES"
-	case RequestCookies:
-		return "REQUEST_COOKIES"
-	case RequestHeaders:
-		return "REQUEST_HEADERS"
-	case ResponseHeaders:
-		return "RESPONSE_HEADERS"
-	case Geo:
-		return "GEO"
-	case RequestCookiesNames:
-		return "REQUEST_COOKIES_NAMES"
-	case FilesTmpnames:
-		return "FILES_TMPNAMES"
-	case ArgsNames:
-		return "ARGS_NAMES"
-	case ArgsGetNames:
-		return "ARGS_GET_NAMES"
-	case ArgsPostNames:
-		return "ARGS_POST_NAMES"
-	case Tx:
-		return "TX"
-	case Rule:
-		return "RULE"
-	case Xml:
-		return "XML"
-	case Json:
-		return "JSON"
-	case Env:
-		return "ENV"
-	case Ip:
-		return "IP"
+	if name, ok := rulemap[v]; ok {
+		return name
 	}
 	return "UNKNOWN"
 }
@@ -301,179 +226,15 @@ func (v RuleVariable) Name() string {
 // of a variable from a string
 // Returns error if there is no representation
 func ParseVariable(v string) (RuleVariable, error) {
-	switch strings.ToUpper(v) {
-	case "URLENCODED_ERROR":
-		return UrlencodedError, nil
-	case "RESPONSE_CONTENT_TYPE":
-		return ResponseContentType, nil
-	case "UNIQUE_ID":
-		return UniqueId, nil
-	case "ARGS_COMBINED_SIZE":
-		return ArgsCombinedSize, nil
-	case "AUTH_TYPE":
-		return AuthType, nil
-	case "FILES_COMBINED_SIZE":
-		return FilesCombinedSize, nil
-	case "FULL_REQUEST":
-		return FullRequest, nil
-	case "FULL_REQUEST_LENGTH":
-		return FullRequestLength, nil
-	case "INBOUND_DATA_ERROR":
-		return InboundDataError, nil
-	case "MATCHED_VAR":
-		return MatchedVar, nil
-	case "MATCHED_VAR_NAME":
-		return MatchedVarName, nil
-	case "MULTIPART_BOUNDARY_QUOTED":
-		return MultipartBoundaryQuoted, nil
-	case "MULTIPART_BOUNDARY_WHITESPACE":
-		return MultipartBoundaryWhitespace, nil
-	case "MULTIPART_CRLF_LF_LINES":
-		return MultipartCrlfLfLines, nil
-	case "MULTIPART_DATA_AFTER":
-		return MultipartDataAfter, nil
-	case "MULTIPART_DATA_BEFORE":
-		return MultipartDataBefore, nil
-	case "MULTIPART_FILE_LIMIT_EXCEEDED":
-		return MultipartFileLimitExceeded, nil
-	case "MULTIPART_HEADER_FOLDING":
-		return MultipartHeaderFolding, nil
-	case "MULTIPART_INVALID_HEADER_FOLDING":
-		return MultipartInvalidHeaderFolding, nil
-	case "MULTIPART_INVALID_PART":
-		return MultipartInvalidPart, nil
-	case "MULTIPART_INVALID_QUOTING":
-		return MultipartInvalidQuoting, nil
-	case "MULTIPART_LF_LINE":
-		return MultipartLfLine, nil
-	case "MULTIPART_MISSING_SEMICOLON":
-		return MultipartMissingSemicolon, nil
-	case "MULTIPART_STRICT_ERROR":
-		return MultipartStrictError, nil
-	case "MULTIPART_UNMATCHED_BOUNDARY":
-		return MultipartUnmatchedBoundary, nil
-	case "OUTBOUND_DATA_ERROR":
-		return OutboundDataError, nil
-	case "PATH_INFO":
-		return PathInfo, nil
-	case "QUERY_STRING":
-		return QueryString, nil
-	case "REMOTE_ADDR":
-		return RemoteAddr, nil
-	case "REMOTE_HOST":
-		return RemoteHost, nil
-	case "REMOTE_PORT":
-		return RemotePort, nil
-	case "REQBODY_ERROR":
-		return ReqbodyError, nil
-	case "REQBODY_ERROR_MSG":
-		return ReqbodyErrorMsg, nil
-	case "REQBODY_PROCESSOR_ERROR":
-		return ReqbodyProcessorError, nil
-	case "REQBODY_PROCESSOR_ERROR_MSG":
-		return ReqbodyProcessorErrorMsg, nil
-	case "REQBODY_PROCESSOR":
-		return ReqbodyProcessor, nil
-	case "REQUEST_BASENAME":
-		return RequestBasename, nil
-	case "REQUEST_BODY":
-		return RequestBody, nil
-	case "REQUEST_BODY_LENGTH":
-		return RequestBodyLength, nil
-	case "REQUEST_FILENAME":
-		return RequestFilename, nil
-	case "REQUEST_LINE":
-		return RequestLine, nil
-	case "REQUEST_METHOD":
-		return RequestMethod, nil
-	case "REQUEST_PROTOCOL":
-		return RequestProtocol, nil
-	case "REQUEST_URI":
-		return RequestUri, nil
-	case "REQUEST_URI_RAW":
-		return RequestUriRaw, nil
-	case "RESPONSE_BODY":
-		return ResponseBody, nil
-	case "RESPONSE_CONTENT_LENGTH":
-		return ResponseContentLength, nil
-	case "RESPONSE_PROTOCOL":
-		return ResponseProtocol, nil
-	case "RESPONSE_STATUS":
-		return ResponseStatus, nil
-	case "SERVER_ADDR":
-		return ServerAddr, nil
-	case "SERVER_NAME":
-		return ServerName, nil
-	case "SERVER_PORT":
-		return ServerPort, nil
-	case "SESSIONID":
-		return Sessionid, nil
-	case "HIGHEST_SEVERITY":
-		return HighestSeverity, nil
-	case "STATUS_LINE":
-		return StatusLine, nil
-	case "INBOUND_ERROR_DATA":
-		return InboundErrorData, nil
-	case "DURATION":
-		return Duration, nil
-	case "RESPONSE_HEADERS_NAMES":
-		return ResponseHeadersNames, nil
-	case "REQUEST_HEADERS_NAMES":
-		return RequestHeadersNames, nil
-	case "USERID":
-		return Userid, nil
-	case "ARGS":
-		return Args, nil
-	case "ARGS_GET":
-		return ArgsGet, nil
-	case "ARGS_POST":
-		return ArgsPost, nil
-	case "FILES_SIZES":
-		return FilesSizes, nil
-	case "FILES_NAMES":
-		return FilesNames, nil
-	case "FILES_TMP_CONTENT":
-		return FilesTmpContent, nil
-	case "MULTIPART_FILENAME":
-		return MultipartFilename, nil
-	case "MULTIPART_NAME":
-		return MultipartName, nil
-	case "MATCHED_VARS_NAMES":
-		return MatchedVarsNames, nil
-	case "MATCHED_VARS":
-		return MatchedVars, nil
-	case "FILES":
-		return Files, nil
-	case "REQUEST_COOKIES":
-		return RequestCookies, nil
-	case "REQUEST_HEADERS":
-		return RequestHeaders, nil
-	case "RESPONSE_HEADERS":
-		return ResponseHeaders, nil
-	case "GEO":
-		return Geo, nil
-	case "REQUEST_COOKIES_NAMES":
-		return RequestCookiesNames, nil
-	case "FILES_TMPNAMES":
-		return FilesTmpnames, nil
-	case "ARGS_NAMES":
-		return ArgsNames, nil
-	case "ARGS_GET_NAMES":
-		return ArgsGetNames, nil
-	case "ARGS_POST_NAMES":
-		return ArgsPostNames, nil
-	case "TX":
-		return Tx, nil
-	case "RULE":
-		return Rule, nil
-	case "XML":
-		return Xml, nil
-	case "JSON":
-		return Json, nil
-	case "ENV":
-		return Env, nil
-	case "IP":
-		return Ip, nil
+	if v, ok := rulemapRev[strings.ToUpper(v)]; ok {
+		return v, nil
 	}
 	return 0, fmt.Errorf("unknown variable %s", v)
+}
+
+func init() {
+	// we fill the rulemapRev with the reverse of rulemap
+	for k, v := range rulemap {
+		rulemapRev[v] = k
+	}
 }

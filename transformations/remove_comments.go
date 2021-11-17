@@ -44,19 +44,20 @@ func removeComments(value string, utils coraza.RuleTransformationTools) string {
 				j++
 			}
 		} else {
-			if (input[i] == '*') && (i+1 < inputLen) && (input[i+1] == '/') {
+			switch {
+			case (input[i] == '*') && (i+1 < inputLen) && (input[i+1] == '/'):
 				incomment = false
 				i += 2
 				input[j] = input[i]
 				i++
 				j++
-			} else if (input[i] == '-') && (i+1 < inputLen) && (input[i+1] == '-') && (i+2 < inputLen) && (input[i+2] == '>') {
+			case (input[i] == '-') && (i+1 < inputLen) && (input[i+1] == '-') && (i+2 < inputLen) && (input[i+2] == '>'):
 				incomment = false
 				i += 3
 				input[j] = input[i]
 				i++
 				j++
-			} else {
+			default:
 				i++
 			}
 		}

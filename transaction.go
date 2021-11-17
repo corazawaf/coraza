@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//      http:// www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -39,19 +39,19 @@ type Transaction struct {
 	// If true the transaction is going to be logged, it won't log if IsRelevantStatus() fails
 	Log bool
 
-	//Transaction Id
+	// Transaction Id
 	Id string
 
 	// Contains the list of matched rules and associated match information
 	MatchedRules []MatchedRule
 
-	//True if the transaction has been disrupted by any rule
+	// True if the transaction has been disrupted by any rule
 	Interruption *types.Interruption
 
 	// Contains all collections, including persistent
 	collections []*Collection
 
-	//Response data to be sent
+	// Response data to be sent
 	Status int
 
 	// This is used to store log messages
@@ -134,7 +134,7 @@ func (tx *Transaction) MacroExpansion(data string) string {
 		matchspl := strings.SplitN(match, ".", 2)
 		col, err := variables.ParseVariable(matchspl[0])
 		if err != nil {
-			//Invalid collection
+			// Invalid collection
 			continue
 		}
 		key := ""
@@ -200,7 +200,7 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 	tx.GetCollection(variables.ResponseHeadersNames).AddUnique("", key)
 	tx.GetCollection(variables.ResponseHeaders).Add(key, value)
 
-	//Most headers can be managed like that
+	// Most headers can be managed like that
 	if key == "content-type" {
 		spl := strings.SplitN(value, ";", 2)
 		tx.GetCollection(variables.ResponseContentType).Set("", []string{spl[0]})
@@ -211,13 +211,13 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 // that supports capture, like @rx
 func (tx *Transaction) CaptureField(index int, value string) {
 	i := strconv.Itoa(index)
-	tx.GetCollection(variables.Tx).Set(i, []string{value})
+	tx.GetCollection(variables.TX).Set(i, []string{value})
 }
 
 // this function is used to control which variables are reset after a new rule is evaluated
 func (tx *Transaction) resetAfterRule() {
-	//We reset capture 0-9
-	ctx := tx.GetCollection(variables.Tx)
+	// We reset capture 0-9
+	ctx := tx.GetCollection(variables.TX)
 	for i := 0; i < 10; i++ {
 		si := strconv.Itoa(i)
 		ctx.Set(si, []string{""})
@@ -298,7 +298,7 @@ func (tx *Transaction) MatchVariable(match MatchData) {
 
 	matchedVars.Add("", match.Value)
 	matchedVar.Set("", []string{match.Value})
-	//fmt.Printf("%s: %s\n", match.VariableName, match.Value)
+	// fmt.Printf("%s: %s\n", match.VariableName, match.Value)
 
 	matchedVarsNames.Add("", varname)
 	matchedVarName.Set("", []string{varname})
@@ -309,7 +309,7 @@ func (tx *Transaction) MatchRule(mr MatchedRule) {
 	tx.Waf.Logger.Debug("rule matched", zap.String("txid", tx.Id), zap.Int("rule", mr.Rule.Id))
 	/*
 		if mr.Rule.Log && tx.Waf.ErrorLogger != nil {
-			//TODO log based on severity
+			// TODO log based on severity
 		}*/
 	tx.MatchedRules = append(tx.MatchedRules, mr)
 
@@ -396,9 +396,9 @@ func (tx *Transaction) GetCollection(variable variables.RuleVariable) *Collectio
 
 // savePersistentData save persistent collections to persistence engine
 func (tx *Transaction) savePersistentData() {
-	//TODO, disabled by now, maybe we should add persistent variables to the
+	// TODO, disabled by now, maybe we should add persistent variables to the
 	// collection struct, something like col.Persist("key")
-	//pers := []byte{VARIABLE_SESSION, VARIABLE_IP}
+	// pers := []byte{VARIABLE_SESSION, VARIABLE_IP}
 	/*
 		pers := []byte{}
 		for _, v := range pers {
@@ -407,7 +407,7 @@ func (tx *Transaction) savePersistentData() {
 				continue
 			}
 			data := col.Data()
-			//key := col.PersistenceKey
+			// key := col.PersistenceKey
 			upc, _ := strconv.Atoi(data["UPDATE_COUNTER"][0])
 			upc++
 			ct, _ := strconv.ParseInt(data["CREATE_TIME"][0], 10, 64)
@@ -424,7 +424,7 @@ func (tx *Transaction) savePersistentData() {
 			// New version may have multiple collection types allowing us to identify this cases
 			data["TIMEOUT"] = []string{timeout}
 			data["LAST_UPDATE_TIME"] = []string{tss}
-			//tx.Waf.Persistence.Save(v, key, data)
+			// tx.Waf.Persistence.Save(v, key, data)
 		}
 	*/
 }
@@ -459,7 +459,7 @@ func (tx *Transaction) RemoveRuleById(id int) {
 func (tx *Transaction) ProcessRequest(req *http.Request) (*types.Interruption, error) {
 	var client string
 	cport := 0
-	//IMPORTANT: Some http.Request.RemoteAddr implementations will not contain port or contain IPV6: [2001:db8::1]:8080
+	// IMPORTANT: Some http.Request.RemoteAddr implementations will not contain port or contain IPV6: [2001:db8::1]:8080
 	spl := strings.Split(req.RemoteAddr, ":")
 	if len(spl) > 1 {
 		client = strings.Join(spl[0:len(spl)-1], "")
@@ -566,14 +566,14 @@ func (tx *Transaction) AddArgument(orig string, key string, value string) {
 func (tx *Transaction) ProcessUri(uri string, method string, httpVersion string) {
 	tx.GetCollection(variables.RequestMethod).Set("", []string{method})
 	tx.GetCollection(variables.RequestProtocol).Set("", []string{httpVersion})
-	tx.GetCollection(variables.RequestUriRaw).Set("", []string{uri})
+	tx.GetCollection(variables.RequestURIRaw).Set("", []string{uri})
 
-	//TODO modsecurity uses HTTP/${VERSION} instead of just version, let's check it out
+	// TODO modsecurity uses HTTP/${VERSION} instead of just version, let's check it out
 	tx.GetCollection(variables.RequestLine).Set("", []string{fmt.Sprintf("%s %s %s", method, uri, httpVersion)})
 
 	var err error
 
-	//we remove anchors
+	// we remove anchors
 	if in := strings.Index(uri, "#"); in != -1 {
 		uri = uri[:in]
 	}
@@ -583,7 +583,7 @@ func (tx *Transaction) ProcessUri(uri string, method string, httpVersion string)
 	if err != nil {
 		tx.GetCollection(variables.UrlencodedError).Set("", []string{err.Error()})
 		path = uri
-		tx.GetCollection(variables.RequestUri).Set("", []string{uri})
+		tx.GetCollection(variables.RequestURI).Set("", []string{uri})
 		/*
 			tx.GetCollection(VARIABLE_URI_PARSE_ERROR).Set("", []string{"1"})
 			posRawQuery := strings.Index(uri, "?")
@@ -598,7 +598,7 @@ func (tx *Transaction) ProcessUri(uri string, method string, httpVersion string)
 		*/
 	} else {
 		tx.ExtractArguments("GET", parsedUrl.RawQuery)
-		tx.GetCollection(variables.RequestUri).Set("", []string{parsedUrl.String()})
+		tx.GetCollection(variables.RequestURI).Set("", []string{parsedUrl.String()})
 		path = parsedUrl.Path
 		query = parsedUrl.RawQuery
 	}
@@ -678,7 +678,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		zap.String("bodyprocessor", rbp))
 	rbp = strings.ToLower(rbp)
 	if rbp == "" {
-		//so there is no bodyprocessor, we don't want to generate an error
+		// so there is no bodyprocessor, we don't want to generate an error
 		tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.Interruption, nil
 	}
@@ -741,7 +741,7 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Int
 // This is used by webservers to choose whether tostream response buffers
 // directly to the client or write them to Coraza
 func (tx *Transaction) IsProcessableResponseBody() bool {
-	//TODO add more validations
+	// TODO add more validations
 	ct := tx.GetCollection(variables.ResponseContentType).GetFirstString("")
 	return utils.StringInSlice(ct, tx.Waf.ResponseBodyMimeTypes)
 }
@@ -778,9 +778,9 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 // delivered prior to the execution of this method.
 func (tx *Transaction) ProcessLogging() {
 	// I'm not sure why but modsecurity won't log if RuleEngine is disabled
-	//if tx.RuleEngine == RULE_ENGINE_OFF {
-	//	return
-	//}
+	// if tx.RuleEngine == RULE_ENGINE_OFF {
+	// 	return
+	// }
 	defer func() {
 		tx.savePersistentData()
 		tx.RequestBodyBuffer.Close()
@@ -802,7 +802,7 @@ func (tx *Transaction) ProcessLogging() {
 		re := tx.Waf.AuditLogRelevantStatus
 		status := tx.GetCollection(variables.ResponseStatus).GetFirstString("")
 		if re != nil && !re.Match([]byte(status)) {
-			//Not relevant status
+			// Not relevant status
 			tx.Waf.Logger.Debug("Transaction status not marked for audit logging",
 				zap.String("tx", tx.Id),
 			)
@@ -828,27 +828,27 @@ func (tx *Transaction) AuditLog() loggers.AuditLog {
 	al := loggers.AuditLog{}
 	parts := tx.AuditLogParts
 	al.Messages = []loggers.AuditMessage{}
-	//YYYY/MM/DD HH:mm:ss
+	// YYYY/MM/DD HH:mm:ss
 	ts := time.Unix(0, tx.Timestamp).Format("2006/01/02 15:04:05")
 	al.Transaction = loggers.AuditTransaction{
 		Timestamp:     ts,
 		UnixTimestamp: tx.Timestamp,
-		Id:            tx.Id,
-		ClientIp:      tx.GetCollection(variables.RemoteAddr).GetFirstString(""),
+		ID:            tx.Id,
+		ClientIP:      tx.GetCollection(variables.RemoteAddr).GetFirstString(""),
 		ClientPort:    tx.GetCollection(variables.RemotePort).GetFirstInt(""),
-		HostIp:        tx.GetCollection(variables.ServerAddr).GetFirstString(""),
+		HostIP:        tx.GetCollection(variables.ServerAddr).GetFirstString(""),
 		HostPort:      tx.GetCollection(variables.ServerPort).GetFirstInt(""),
-		ServerId:      tx.GetCollection(variables.ServerName).GetFirstString(""), //TODO check
+		ServerID:      tx.GetCollection(variables.ServerName).GetFirstString(""), // TODO check
 		Request: loggers.AuditTransactionRequest{
 			Method:      tx.GetCollection(variables.RequestMethod).GetFirstString(""),
 			Protocol:    tx.GetCollection(variables.RequestProtocol).GetFirstString(""),
-			Uri:         tx.GetCollection(variables.RequestUri).GetFirstString(""),
-			HttpVersion: tx.GetCollection(variables.RequestProtocol).GetFirstString(""),
-			//Body and headers are audit variables.RequestUriRaws
+			URI:         tx.GetCollection(variables.RequestURI).GetFirstString(""),
+			HTTPVersion: tx.GetCollection(variables.RequestProtocol).GetFirstString(""),
+			// Body and headers are audit variables.RequestUriRaws
 		},
 		Response: loggers.AuditTransactionResponse{
 			Status: tx.GetCollection(variables.ResponseStatus).GetFirstInt(""),
-			//body and headers are audit parts
+			// body and headers are audit parts
 		},
 	}
 	rengine := tx.RuleEngine.String()
@@ -859,15 +859,15 @@ func (tx *Transaction) AuditLog() loggers.AuditLog {
 			al.Transaction.Request.Headers = tx.GetCollection(variables.RequestHeaders).Data()
 		case 'C':
 			al.Transaction.Request.Body = tx.GetCollection(variables.RequestBody).GetFirstString("")
-			//TODO maybe change to:
-			//al.Transaction.Request.Body = tx.RequestBodyBuffer.String()
+			// TODO maybe change to:
+			// al.Transaction.Request.Body = tx.RequestBodyBuffer.String()
 		case 'F':
 			al.Transaction.Response.Headers = tx.GetCollection(variables.ResponseHeaders).Data()
 		case 'G':
 			al.Transaction.Response.Body = tx.GetCollection(variables.ResponseBody).GetFirstString("")
 		case 'H':
 			al.Transaction.Producer = loggers.AuditTransactionProducer{
-				Connector:  "unknown", //TODO maybe add connector variable to Waf
+				Connector:  "unknown", // TODO maybe add connector variable to Waf
 				Version:    "unknown",
 				Server:     "",
 				RuleEngine: rengine,
@@ -884,11 +884,11 @@ func (tx *Transaction) AuditLog() loggers.AuditLog {
 			* if you don’t want to have (often large) files stored in your audit logs.
 			 */
 		case 'J':
-			//upload data
+			// upload data
 			files := []loggers.AuditTransactionRequestFiles{}
 			al.Transaction.Request.Files = []loggers.AuditTransactionRequestFiles{}
 			for i, name := range tx.GetCollection(variables.Files).Get("") {
-				//TODO we kind of assume there is a file_size for each file with the same index
+				// TODO we kind of assume there is a file_size for each file with the same index
 				size, _ := strconv.ParseInt(tx.GetCollection(variables.FilesSizes).Get("")[i], 10, 64)
 				ext := filepath.Ext(name)
 				at := loggers.AuditTransactionRequestFiles{
@@ -909,7 +909,7 @@ func (tx *Transaction) AuditLog() loggers.AuditLog {
 					Data: loggers.AuditMessageData{
 						File:     mr.Rule.File,
 						Line:     mr.Rule.Line,
-						Id:       r.Id,
+						ID:       r.Id,
 						Rev:      r.Rev,
 						Msg:      mr.Message,
 						Data:     mr.Data,

@@ -36,12 +36,12 @@ func (c *Collection) Get(key string) []string {
 	return c.data[key]
 }
 
-//Find is returns a slice of MatchData for the
+// Find is returns a slice of MatchData for the
 // regex or key, exceptions are used to skip
 // some keys
 func (c *Collection) Find(key string, re *regexp.Regexp, exceptions []string) []MatchData {
 	cdata := c.data
-	//we return every value in case there is no key but there is a collection
+	// we return every value in case there is no key but there is a collection
 	va, _ := variables.ParseVariable(c.name)
 	if len(key) == 0 {
 		data := []MatchData{}
@@ -82,7 +82,7 @@ func (c *Collection) Find(key string, re *regexp.Regexp, exceptions []string) []
 		return result
 	} else {
 		ret := []MatchData{}
-		//We pass through every record to apply filters
+		// We pass through every record to apply filters
 		for k := range cdata {
 			if utils.StringInSlice(k, exceptions) {
 				continue
@@ -102,36 +102,32 @@ func (c *Collection) Find(key string, re *regexp.Regexp, exceptions []string) []
 	}
 }
 
-// GetFirstString returns the first string ocurrence of a key
+// GetFirstString returns the first string occurrence of a key
 func (c *Collection) GetFirstString(key string) string {
-	a := c.data[key]
-	if len(a) > 0 {
+	if a, ok := c.data[key]; ok && len(a) > 0 {
 		return a[0]
-	} else {
-		return ""
 	}
+	return ""
 }
 
-// GetFirstInt64 returns the first int64 ocurrence of a key
+// GetFirstInt64 returns the first int64 occurrence of a key
 func (c *Collection) GetFirstInt64(key string) int64 {
 	a := c.data[key]
 	if len(a) > 0 {
 		i, _ := strconv.ParseInt(a[0], 10, 64)
 		return i
-	} else {
-		return 0
 	}
+	return 0
 }
 
-// GetFirstInt returns the first int ocurrence of a key
+// GetFirstInt returns the first int occurrence of a key
 func (c *Collection) GetFirstInt(key string) int {
 	a := c.data[key]
 	if len(a) > 0 {
 		i, _ := strconv.Atoi(a[0])
 		return i
-	} else {
-		return 0
 	}
+	return 0
 }
 
 // Add a value to some key

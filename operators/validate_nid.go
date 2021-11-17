@@ -56,7 +56,7 @@ func (o *validateNid) Evaluate(tx *coraza.Transaction, value string) bool {
 		if i >= 10 {
 			break
 		}
-		//should we capture more than one NID?
+		// should we capture more than one NID?
 		if o.fn(m[0]) {
 			res = true
 			if tx.Capture {
@@ -71,10 +71,7 @@ func nidCl(nid string) bool {
 	if len(nid) < 8 {
 		return false
 	}
-	re, err := regexp.Compile(`[^\dk]`)
-	if err != nil {
-		return false
-	}
+	re := regexp.MustCompile(`[^\dk]`)
 	nid = strings.ToLower(nid)
 	nid = re.ReplaceAllString(nid, "")
 	rut, _ := strconv.Atoi(nid[:len(nid)-1])
@@ -105,10 +102,7 @@ func nidCl(nid string) bool {
 }
 
 func nidUs(nid string) bool {
-	re, err := regexp.Compile(`[^\d]`)
-	if err != nil {
-		return false
-	}
+	re := regexp.MustCompile(`[^\d]`)
 	nid = re.ReplaceAllString(nid, "")
 	if len(nid) < 9 {
 		return false

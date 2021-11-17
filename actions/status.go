@@ -22,7 +22,7 @@ import (
 	"github.com/jptosso/coraza-waf/v2/types"
 )
 
-var HTTP_STATUSES = []int{100, 101, 102, 103, 200,
+var htpStatuses = []int{100, 101, 102, 103, 200,
 	201, 202, 203, 200, 204, 205, 206, 207, 208,
 	226, 300, 301, 302, 303, 304, 305, 306, 307,
 	302, 308, 301, 400, 401, 402, 403, 404, 405,
@@ -40,7 +40,7 @@ func (a *statusFn) Init(r *coraza.Rule, b1 string) error {
 	if err != nil {
 		return err
 	}
-	for _, s := range HTTP_STATUSES {
+	for _, s := range htpStatuses {
 		if status == s {
 			a.status = status
 			return nil

@@ -23,11 +23,11 @@ import (
 
 func escapeSeqDecode(input string, tools coraza.RuleTransformationTools) string {
 	var i, count, d int
-	input_len := len(input)
+	inputLen := len(input)
 	data := []byte(input)
 
-	for i < input_len {
-		if (input[i] == '\\') && (i+1 < input_len) {
+	for i < inputLen {
+		if (input[i] == '\\') && (i+1 < inputLen) {
 			c := -1
 
 			switch input[i+1] {
@@ -63,7 +63,7 @@ func escapeSeqDecode(input string, tools coraza.RuleTransformationTools) string 
 			if c == -1 {
 				if (input[i+1] == 'x') || (input[i+1] == 'X') {
 					/* Hexadecimal. */
-					if (i+3 < input_len) && (utils.IsXDigit(int(input[i+2]))) && (utils.IsXDigit(int(input[i+3]))) {
+					if (i+3 < inputLen) && (utils.IsXDigit(int(input[i+2]))) && (utils.IsXDigit(int(input[i+3]))) {
 						/* Two digits. */
 						c = int(utils.X2c(input[i+2:]))
 						i += 4
@@ -75,15 +75,15 @@ func escapeSeqDecode(input string, tools coraza.RuleTransformationTools) string 
 						buf := make([]byte, 4)
 						j := 0
 
-						for (i+1+j < input_len) && (j < 3) {
+						for (i+1+j < inputLen) && (j < 3) {
 							buf[j] = input[i+1+j]
 							j++
 							if (len(input) > (i + 1 + j)) && !utils.IsODigit(input[i+1+j]) {
 								break
 							}
 						}
-						//buf[j] = '\x00'
-						//This line actually means that the string ends here so:
+						// buf[j] = '\x00'
+						// This line actually means that the string ends here so:
 						buf = buf[:j]
 
 						if j > 0 {

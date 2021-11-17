@@ -21,26 +21,27 @@ import (
 	"github.com/jptosso/coraza-waf/v2/types"
 )
 
-//0 nothing, 1 phase, 2 request
+// 0 nothing, 1 phase, 2 request
 type allowFn struct {
 	allow int
 }
 
 func (a *allowFn) Init(r *coraza.Rule, b1 string) error {
-	if b1 == "phase" {
-		a.allow = 2 //skip current phase
-	} else if b1 == "request" {
-		a.allow = 3 //skip phases until RESPONSE_HEADERS
-	} else if b1 == "" {
+	switch b1 {
+	case "phase":
+		a.allow = 2 // skip current phase
+	case "request":
+		a.allow = 3 // skip phases until RESPONSE_HEADERS
+	case "":
 		a.allow = 1 // skip all phases
-	} else {
-		return fmt.Errorf("invalid value for action allow")
+	default:
+		return fmt.Errorf("invalid argument %s for allow", b1)
 	}
 	return nil
 }
 
 func (a *allowFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
-	//TODO implement this:
+	// TODO implement this:
 	/*
 		if a.allow == 1 {
 			tx.RuleEngine = coraza.RULE_ENGINE_OFF
@@ -61,6 +62,6 @@ func allow() coraza.RuleAction {
 }
 
 var (
-	_ coraza.RuleAction = &allowFn{}
+	_ coraza.RuleAction = (*allowFn)(nil)
 	_ ruleActionWrapper = allow
 )

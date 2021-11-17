@@ -20,24 +20,24 @@ import (
 )
 
 func urlDecode(data string, utils coraza.RuleTransformationTools) string {
-	res, _, _ := doUrlDecode(data)
+	res, _, _ := doURLDecode(data)
 	return res
 }
 
-//extracted from https://github.com/senghoo/modsecurity-go/blob/master/utils/urlencode.go
-func doUrlDecode(input string) (string, bool, int) {
+// extracted from https://github.com/senghoo/modsecurity-go/blob/master/utils/urlencode.go
+func doURLDecode(input string) (string, bool, int) {
 	d := []byte(input)
-	input_len := len(d)
-	var i, count, invalid_count, c int
+	inputLen := len(d)
+	var i, count, invalidCount, c int
 
 	changed := false
 
-	for i < input_len {
+	for i < inputLen {
 		if input[i] == '%' {
 			/* Character is a percent sign. */
 
 			/* Are there enough bytes available? */
-			if i+2 < input_len {
+			if i+2 < inputLen {
 				c1 := input[i+1]
 				c2 := input[i+2]
 				if utils.ValidHex(c1) && utils.ValidHex(c2) {
@@ -54,7 +54,7 @@ func doUrlDecode(input string) (string, bool, int) {
 					c++
 					i++
 					count++
-					invalid_count++
+					invalidCount++
 				}
 			} else {
 				/* Not enough bytes available, copy the raw bytes. */
@@ -62,7 +62,7 @@ func doUrlDecode(input string) (string, bool, int) {
 				c++
 				i++
 				count++
-				invalid_count++
+				invalidCount++
 			}
 		} else {
 			/* Character is not a percent sign. */
@@ -79,6 +79,6 @@ func doUrlDecode(input string) (string, bool, int) {
 		}
 	}
 
-	return string(d[0:c]), changed, invalid_count
+	return string(d[0:c]), changed, invalidCount
 
 }

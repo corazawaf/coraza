@@ -71,7 +71,7 @@ func (a *setvarFn) Type() types.RuleActionType {
 func (a *setvarFn) evaluateTxCollection(r *coraza.Rule, tx *coraza.Transaction, key string, value string) {
 	collection := tx.GetCollection(a.collection)
 	if collection == nil {
-		//fmt.Println("Invalid Collection " + a.Collection) LOG error?
+		// fmt.Println("Invalid Collection " + a.Collection) LOG error?
 		return
 	}
 
@@ -84,23 +84,24 @@ func (a *setvarFn) evaluateTxCollection(r *coraza.Rule, tx *coraza.Transaction, 
 		collection.Set(tx.MacroExpansion(a.key), []string{"0"})
 		res = []string{"0"}
 	}
-	if len(a.value) == 0 {
+	switch {
+	case len(a.value) == 0:
 		collection.Set(tx.MacroExpansion(a.key), []string{""})
-	} else if a.value[0] == '+' {
+	case a.value[0] == '+':
 		me, _ := strconv.Atoi(tx.MacroExpansion(a.value[1:]))
 		txv, err := strconv.Atoi(res[0])
 		if err != nil {
 			return
 		}
 		collection.Set(tx.MacroExpansion(a.key), []string{strconv.Itoa(me + txv)})
-	} else if a.value[0] == '-' {
+	case a.value[0] == '-':
 		me, _ := strconv.Atoi(tx.MacroExpansion(a.value[1:]))
 		txv, err := strconv.Atoi(res[0])
 		if err != nil {
 			return
 		}
 		collection.Set(tx.MacroExpansion(a.key), []string{strconv.Itoa(txv - me)})
-	} else {
+	default:
 		collection.Set(tx.MacroExpansion(a.key), []string{tx.MacroExpansion(a.value)})
 	}
 }

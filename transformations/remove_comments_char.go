@@ -19,29 +19,28 @@ import "github.com/jptosso/coraza-waf/v2"
 func removeCommentsChar(data string, utils coraza.RuleTransformationTools) string {
 	value := []byte(data)
 	for i := 0; i < len(value); {
-		if value[i] == '/' && (i+1 < len(value)) && value[i+1] == '*' {
+		switch {
+		case value[i] == '/' && (i+1 < len(value)) && value[i+1] == '*':
 			value = erase(value, i, 2)
-		} else if value[i] == '*' &&
-			(i+1 < len(value)) && value[i+1] == '/' {
+		case value[i] == '*' && (i+1 < len(value)) && value[i+1] == '/':
 			value = erase(value, i, 2)
-		} else if value[i] == '<' &&
+		case value[i] == '<' &&
 			(i+1 < len(value)) &&
 			value[i+1] == '!' &&
 			(i+2 < len(value)) &&
 			value[i+2] == '-' &&
 			(i+3 < len(value)) &&
-			value[i+3] == '-' {
+			value[i+3] == '-':
 			value = erase(value, i, 4)
-		} else if value[i] == '-' &&
+		case value[i] == '-' &&
 			(i+1 < len(value)) && value[i+1] == '-' &&
-			(i+2 < len(value)) && value[i+2] == '>' {
+			(i+2 < len(value)) && value[i+2] == '>':
 			value = erase(value, i, 3)
-		} else if value[i] == '-' &&
-			(i+1 < len(value)) && value[i+1] == '-' {
+		case value[i] == '-' && (i+1 < len(value)) && value[i+1] == '-':
 			value = erase(value, i, 2)
-		} else if value[i] == '#' {
+		case value[i] == '#':
 			value = erase(value, i, 1)
-		} else {
+		default:
 			i++
 		}
 	}

@@ -61,7 +61,7 @@ func TestJSONToMap(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	//fmt.Println(jsonMap)
+	// fmt.Println(jsonMap)
 	for k, v := range asserts {
 		if jsonMap[k] != v {
 			t.Errorf("Expected %s=%s", k, v)

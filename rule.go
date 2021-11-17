@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//      http:// www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -91,7 +91,7 @@ type ruleVariableParams struct {
 	Key string
 
 	// If not nil, a regex will be used instead of a key
-	Regex *regexp.Regexp //for performance
+	Regex *regexp.Regexp // for performance
 
 	// A slice of key exceptions
 	Exceptions []string
@@ -144,7 +144,7 @@ type Rule struct {
 	// Line of the file where this rule was found
 	Line int
 
-	//METADATA
+	// METADATA
 	// Rule unique identifier, can be a an int
 	Id int
 
@@ -243,7 +243,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 			if v.Count {
 				l := 0
 				if v.Key != "" {
-					//Get with macro expansion
+					// Get with macro expansion
 					values = tx.GetField(v, exceptions)
 					l = len(values)
 				} else {
@@ -297,7 +297,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 					tx.Waf.Logger.Debug("Evaluate rule operator", zap.String("txid", tx.Id),
 						zap.Int("rule", rid),
 						zap.String("event", "EVALUATE_RULE_OPERATOR"),
-						zap.String("operator", "nn"), //TODO fix
+						zap.String("operator", "nn"), // TODO fix
 						zap.String("data", carg),
 						zap.String("variable", arg.Variable.Name()),
 						zap.String("key", arg.Key),
@@ -310,7 +310,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	}
 
 	if len(matchedValues) == 0 {
-		//No match for variables
+		// No match for variables
 		return matchedValues
 	}
 
@@ -318,7 +318,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		zap.Int("rule", rid),
 		zap.String("event", "EVALUATE_RULE_OPERATOR"),
 		zap.Any("values", matchedValues))
-	// we must match the vars before runing the chains
+	// we must match the vars before running the chains
 	tx.MatchVariable(matchedValues[0])
 
 	// We run non disruptive actions even if there is no chain match
@@ -334,7 +334,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		for nr != nil {
 			m := nr.Evaluate(tx)
 			if len(m) == 0 {
-				//we fail the chain
+				// we fail the chain
 				return []MatchData{}
 			}
 
@@ -350,14 +350,14 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 				MatchedData:     matchedValues[0],
 				Message:         tx.MacroExpansion(r.Msg),
 				Data:            tx.MacroExpansion(r.LogData),
-				Uri:             tx.GetCollection(variables.RequestUri).GetFirstString(""),
+				Uri:             tx.GetCollection(variables.RequestURI).GetFirstString(""),
 				Id:              tx.Id,
 				Disruptive:      r.Disruptive,
 				ServerIpAddress: tx.GetCollection(variables.ServerAddr).GetFirstString(""),
 				ClientIpAddress: tx.GetCollection(variables.RemoteAddr).GetFirstString(""),
 			})
 		}
-		//we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
+		// we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
 		tx.Waf.Logger.Debug("detecting rule disruptive action", zap.String("txid", tx.Id), zap.Int("rule", r.Id))
 		for _, a := range r.actions {
 			if a.Function.Type() == types.ActionTypeDisruptive || a.Function.Type() == types.ActionTypeFlow {

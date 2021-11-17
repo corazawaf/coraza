@@ -246,7 +246,7 @@ func directiveSecHashEngine(p *Parser, opts string) error {
 }
 
 func directiveSecDefaultAction(p *Parser, opts string) error {
-	return p.AddDefaultActions(opts)
+	return p.addDefaultActions(opts)
 }
 
 func directiveSecContentInjection(p *Parser, opts string) error {
@@ -273,7 +273,7 @@ func directiveSecConnEngine(p *Parser, opts string) error {
 }
 
 func directiveSecCollectionTimeout(p *Parser, opts string) error {
-	//p.waf.CollectionTimeout, _ = strconv.Atoi(opts)
+	// p.waf.CollectionTimeout, _ = strconv.Atoi(opts)
 	return nil
 }
 
@@ -302,7 +302,7 @@ func directiveSecAuditEngine(p *Parser, opts string) error {
 }
 
 func directiveSecDataDir(p *Parser, opts string) error {
-	//TODO validations
+	// TODO validations
 	p.Waf.DataDir = opts
 	return nil
 }

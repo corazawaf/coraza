@@ -143,7 +143,7 @@ func (rg *ruleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 			continue
 		}
 
-		//we always evaluate secmarkers
+		// we always evaluate secmarkers
 		if tx.SkipAfter != "" {
 			if r.SecMark == tx.SkipAfter {
 				tx.Waf.Logger.Debug("SkipAfter was finished", zap.String("txid", tx.Id),
@@ -162,7 +162,7 @@ func (rg *ruleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 		}
 		if tx.Skip > 0 {
 			tx.Skip--
-			//Skipping rule
+			// Skipping rule
 			continue
 		}
 		// we reset captures, matched_vars, matched_vars_names, etc

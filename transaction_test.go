@@ -123,12 +123,8 @@ func TestTxResponse(t *testing.T) {
 	*/
 }
 
-func TestTxSetters2(t *testing.T) {
-	//TODO must be rebuilt
-}
-
 func TestTxGetField(t *testing.T) {
-	//GetField
+	// GetField
 }
 
 func TestTxMatch(t *testing.T) {
@@ -152,7 +148,7 @@ func TestTxMatch(t *testing.T) {
 
 func TestRequestBody(t *testing.T) {
 	urlencoded := "some=result&second=data"
-	//xml := "<test><content>test</content></test>"
+	// xml := "<test><content>test</content></test>"
 	tx := wafi.NewTransaction()
 	tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
 	if _, err := tx.RequestBodyBuffer.Write([]byte(urlencoded)); err != nil {
@@ -180,10 +176,10 @@ func TestAuditLog(t *testing.T) {
 	tx := makeTransaction()
 	tx.AuditLogParts = []rune("ABCDEFGHIJK")
 	al := tx.AuditLog()
-	if al.Transaction.Id != tx.Id {
+	if al.Transaction.ID != tx.Id {
 		t.Error("invalid auditlog id")
 	}
-	//TODO more checks
+	// TODO more checks
 }
 
 func TestResponseBody(t *testing.T) {
@@ -215,14 +211,14 @@ func TestAuditLogFields(t *testing.T) {
 		Id:      tx.Id,
 		MatchedData: MatchData{
 			VariableName: "UNIQUE_ID",
-			Variable:     variables.UniqueId,
+			Variable:     variables.UniqueID,
 		},
 	})
 	if len(tx.MatchedRules) == 0 || tx.MatchedRules[0].Rule.Id != rule.Id {
 		t.Error("failed to match rule for audit")
 	}
 	al := tx.AuditLog()
-	if len(al.Messages) == 0 || al.Messages[0].Data.Id != rule.Id {
+	if len(al.Messages) == 0 || al.Messages[0].Data.ID != rule.Id {
 		t.Error("failed to add rules to audit logs")
 	}
 	if al.Transaction.Request.Headers == nil || al.Transaction.Request.Headers["test"][0] != "test" {
@@ -237,7 +233,9 @@ func TestRequestStruct(t *testing.T) {
 	req, _ := http.NewRequest("POST", "https://www.coraza.io/test", strings.NewReader("test=456"))
 	waf := NewWaf()
 	tx := waf.NewTransaction()
-	tx.ProcessRequest(req)
+	if _, err := tx.ProcessRequest(req); err != nil {
+		t.Error(err)
+	}
 	if tx.GetCollection(variables.RequestMethod).GetFirstString("") != "POST" {
 		t.Error("failed to set request from request object")
 	}
@@ -246,11 +244,11 @@ func TestRequestStruct(t *testing.T) {
 func TestResetCapture(t *testing.T) {
 	tx := makeTransaction()
 	tx.CaptureField(5, "test")
-	if tx.GetCollection(variables.Tx).GetFirstString("5") != "test" {
+	if tx.GetCollection(variables.TX).GetFirstString("5") != "test" {
 		t.Error("failed to set capture field from tx")
 	}
 	tx.resetAfterRule()
-	if tx.GetCollection(variables.Tx).GetFirstString("5") != "" {
+	if tx.GetCollection(variables.TX).GetFirstString("5") != "" {
 		t.Error("failed to reset capture field from tx")
 	}
 }
@@ -261,9 +259,9 @@ func TestRelevantAuditLogging(t *testing.T) {
 	tx.GetCollection(variables.ResponseStatus).Set("", []string{"403"})
 	tx.AuditEngine = types.AuditEngineRelevantOnly
 	tx.Log = false
-	//tx.Waf.auditLogger = loggers.NewAuditLogger()
+	// tx.Waf.auditLogger = loggers.NewAuditLogger()
 	tx.ProcessLogging()
-	//TODO how do we check if the log was writen?
+	// TODO how do we check if the log was writen?
 }
 
 func TestLogCallback(t *testing.T) {
@@ -277,7 +275,7 @@ func TestLogCallback(t *testing.T) {
 		Rule: *NewRule(),
 		MatchedData: MatchData{
 			VariableName: "UNIQUE_ID",
-			Variable:     variables.UniqueId,
+			Variable:     variables.UniqueID,
 		},
 	})
 	if buffer == "" && strings.Contains(buffer, tx.Id) {

@@ -24,21 +24,21 @@ func cssDecode(data string, utils coraza.RuleTransformationTools) string {
 }
 
 func cssDecodeInplace(input string) string {
-	//TODO the following shall be int64?
+	// TODO the following shall be int64?
 	var c, i, j, count int
 	d := []byte(input)
-	input_len := len(d)
+	inputLen := len(d)
 
-	for i < input_len {
+	for i < inputLen {
 		/* Is the character a backslash? */
 		if input[i] == '\\' {
 			/* Is there at least one more byte? */
-			if i+1 < input_len {
+			if i+1 < inputLen {
 				i++ /* We are not going to need the backslash. */
 
 				/* Check for 1-6 hex characters following the backslash */
 				j = 0
-				for (j < 6) && (i+j < input_len) && (utils.ValidHex(input[i+j])) {
+				for (j < 6) && (i+j < inputLen) && (utils.ValidHex(input[i+j])) {
 					j++
 				}
 
@@ -106,7 +106,7 @@ func cssDecodeInplace(input string) string {
 					}
 
 					/* We must ignore a single whitespace after a hex escape */
-					if (i+j < input_len) && isspace(input[i+j]) {
+					if (i+j < inputLen) && isspace(input[i+j]) {
 						j++
 					}
 

@@ -27,21 +27,21 @@ type urlencodedBodyProcessor struct {
 	collections *collectionsMap
 }
 
-func (ue *urlencodedBodyProcessor) Read(reader io.Reader, _ string, _ string) error {
+func (ubp *urlencodedBodyProcessor) Read(reader io.Reader, _ string, _ string) error {
 	buf := new(strings.Builder)
 	if _, err := io.Copy(buf, reader); err != nil {
 		return err
 	}
 
 	b := buf.String()
-	//TODO add url encode validation
-	//tx.GetCollection(VARIABLE_URLENCODED_ERROR).Set("", []string{err.Error()})
+	// TODO add url encode validation
+	// tx.GetCollection(VARIABLE_URLENCODED_ERROR).Set("", []string{err.Error()})
 	values := utils.ParseQuery(b, "&")
 	m := map[string][]string{}
 	for k, vs := range values {
 		m[k] = vs
 	}
-	ue.collections = &collectionsMap{
+	ubp.collections = &collectionsMap{
 		variables.ArgsPost: m,
 		variables.Args:     m,
 		variables.RequestBody: map[string][]string{
@@ -54,16 +54,16 @@ func (ue *urlencodedBodyProcessor) Read(reader io.Reader, _ string, _ string) er
 	return nil
 }
 
-func (js *urlencodedBodyProcessor) Collections() collectionsMap {
-	return *js.collections
+func (ubp *urlencodedBodyProcessor) Collections() collectionsMap {
+	return *ubp.collections
 }
 
-func (js *urlencodedBodyProcessor) Find(expr string) (map[string][]string, error) {
+func (ubp *urlencodedBodyProcessor) Find(expr string) (map[string][]string, error) {
 	return nil, nil
 }
 
-func (js *urlencodedBodyProcessor) VariableHook() variables.RuleVariable {
-	return variables.Json
+func (ubp *urlencodedBodyProcessor) VariableHook() variables.RuleVariable {
+	return variables.JSON
 }
 
 var (

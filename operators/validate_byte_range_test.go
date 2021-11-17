@@ -22,13 +22,13 @@ import (
 
 func TestCRS920272(t *testing.T) {
 	ranges := "32-36,38-126"
-	good_strings := [][]int{
+	goodStrings := [][]int{
 		{104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 111},
 		{38, 104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 111, 126},
 		{32, 104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 111, 125},
 	}
 
-	bad_strings := [][]int{
+	badStrings := [][]int{
 		{35, 38, 104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 127, 128},
 		{104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 111, -1},
 		{104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 111, 0},
@@ -40,14 +40,14 @@ func TestCRS920272(t *testing.T) {
 	}
 	tx := getTransaction()
 
-	for _, gs := range good_strings {
+	for _, gs := range goodStrings {
 		str := asciiToString(gs)
 		if op.Evaluate(tx, str) {
 			t.Errorf("Invalid byte between ranges (positive): %s", str)
 		}
 	}
 
-	for _, bs := range bad_strings {
+	for _, bs := range badStrings {
 		str := asciiToString(bs)
 		if !op.Evaluate(tx, str) {
 			t.Errorf("Invalid byte between ranges (negative): %s", str)

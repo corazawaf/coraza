@@ -4,12 +4,16 @@ repos:
   hooks:
     - id: go-fmt
     - id: go-vet
-    - id: go-lint
+#    - id: go-lint
     - id: go-imports
-    - id: go-cyclo
-      args: [-over=15]
-    - id: no-go-testing
-    - id: golangci-lint
-    - id: go-critic
-    - id: go-unit-tests
+#    - id: go-cyclo
+#      args: [-over=37] # we must drop it down to 15
+#    - id: golangci-lint
+#    - id: go-critic
+#    - id: go-unit-tests
     - id: go-mod-tidy
+#- repo: https://github.com/adrienverge/yamllint.git
+#  rev: v1.26.3
+#  hooks:
+#    - id: yamllint
+#      args: [-c=.yamllint]

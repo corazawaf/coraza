@@ -99,7 +99,7 @@ func (mr MatchedRule) matchData() string {
 
 func (mr MatchedRule) AuditLog(code int) string {
 	log := &strings.Builder{}
-	log.WriteString(fmt.Sprintf("[client %q]", mr.ClientIpAddress))
+	log.WriteString(fmt.Sprintf("[client %q] ", mr.ClientIpAddress))
 	if mr.Disruptive {
 		log.WriteString(fmt.Sprintf("Coraza: Access denied with code %d (phase %d). ", code, mr.Rule.Phase))
 	} else {
@@ -110,7 +110,7 @@ func (mr MatchedRule) AuditLog(code int) string {
 	return log.String()
 }
 
-//ErrorLog returns the same as audit log but without matchData
+// ErrorLog returns the same as audit log but without matchData
 func (mr MatchedRule) ErrorLog(code int) string {
 	msg := mr.Message
 	if len(msg) > 200 {
@@ -123,7 +123,7 @@ func (mr MatchedRule) ErrorLog(code int) string {
 	} else {
 		log.WriteString("Coraza: Warning. ")
 	}
-	//log.WriteString(mr.matchData())
+	// log.WriteString(mr.matchData())
 	log.WriteString(msg)
 	log.WriteString(mr.details())
 	return log.String()

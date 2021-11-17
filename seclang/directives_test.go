@@ -60,7 +60,6 @@ func Test_directiveSecAuditLog(t *testing.T) {
 	if w.TmpDir != "/tmp" {
 		t.Error("failed to set SecTmpDir")
 	}
-	//"SecServerSignature":            directiveSecServerSignature,
 	if err := p.FromString("SecSensorId test"); err != nil {
 		t.Error("failed to set parser from string")
 	}
@@ -139,6 +138,6 @@ func TestDebugDirectives(t *testing.T) {
 	p.Waf.Logger.Debug("efgh123")
 	data, _ = utils.OpenFile(tmp, "")
 	if !strings.Contains(string(data), "efgh123") {
-		t.Error("debug data wasn't writen")
+		t.Error("debug data wasn't written")
 	}
 }

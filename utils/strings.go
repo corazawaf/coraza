@@ -27,7 +27,7 @@ var mu sync.Mutex
 
 func RandomString(length int) string {
 	bytes := make([]byte, length)
-	//There is an entropy bug here with a lot of concurrency, so we need sync
+	// There is an entropy bug here with a lot of concurrency, so we need sync
 
 	mu.Lock()
 	_, err := rand.Read(bytes)

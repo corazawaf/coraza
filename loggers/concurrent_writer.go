@@ -51,17 +51,16 @@ func (cl concurrentWriter) Write(al AuditLog) error {
 	p2 := fmt.Sprintf("/%s/%s/", t.Format("20060102"), t.Format("20060102-1504"))
 	logdir := path.Join(cl.logger.directory, p2)
 	// Append the filename
-	fname := fmt.Sprintf("/%s-%s", t.Format("20060102-150405"), al.Transaction.Id)
+	fname := fmt.Sprintf("/%s-%s", t.Format("20060102-150405"), al.Transaction.ID)
 	filepath := path.Join(logdir, fname)
 	str := fmt.Sprintf("%s %s - - [%s] %q %d %d %q %q %s %q %s %d %d",
-		al.Transaction.ClientIp, al.Transaction.HostIp, al.Transaction.Timestamp,
-		fmt.Sprintf("%s %s %s", al.Transaction.Request.Method, al.Transaction.Request.Uri,
-			al.Transaction.Request.HttpVersion),
-		al.Transaction.Response.Status, 0 /*response length*/, "-", "-", al.Transaction.Id,
+		al.Transaction.ClientIP, al.Transaction.HostIP, al.Transaction.Timestamp,
+		fmt.Sprintf("%s %s %s", al.Transaction.Request.Method, al.Transaction.Request.URI,
+			al.Transaction.Request.HTTPVersion),
+		al.Transaction.Response.Status, 0 /*response length*/, "-", "-", al.Transaction.ID,
 		"-", filepath, 0, 0 /*request length*/)
 	err := os.MkdirAll(logdir, cl.logger.dirMode)
 	if err != nil {
-		//logrus.Error("Failed to create concurrent audit path")
 		return err
 	}
 

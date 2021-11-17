@@ -73,7 +73,7 @@ func (js *jsonBodyProcessor) Find(expr string) (map[string][]string, error) {
 }
 
 func (js *jsonBodyProcessor) VariableHook() variables.RuleVariable {
-	return variables.Json
+	return variables.JSON
 }
 
 // Transform JSON to a map[string]string
@@ -108,12 +108,12 @@ func interfaceToMap(data map[string]interface{}) (map[string]string, error) {
 			}
 			// we set the parent key to count the number of items
 			result[key] = strconv.Itoa(len(m))
-			if m2, err := interfaceToMap(m); err != nil {
+			m2, err := interfaceToMap(m)
+			if err != nil {
 				return nil, err
-			} else {
-				for key2, value2 := range m2 {
-					result[key+"."+key2] = value2
-				}
+			}
+			for key2, value2 := range m2 {
+				result[key+"."+key2] = value2
 			}
 		case string:
 			result[key] = value.(string)

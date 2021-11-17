@@ -23,9 +23,13 @@ import (
 
 func TestBodyReaderMemory(t *testing.T) {
 	br := NewBodyReader("/tmp", 500)
-	br.Write([]byte("test"))
+	if _, err := br.Write([]byte("test")); err != nil {
+		t.Error(err)
+	}
 	buf := new(strings.Builder)
-	io.Copy(buf, br.Reader())
+	if _, err := io.Copy(buf, br.Reader()); err != nil {
+		t.Error(err)
+	}
 	if buf.String() != "test" {
 		t.Error("Failed to get BodyReader from memory")
 	}
@@ -35,14 +39,18 @@ func TestBodyReaderMemory(t *testing.T) {
 func TestBodyReaderFile(t *testing.T) {
 	// body reader memory limit is 1 byte
 	br := NewBodyReader("/tmp", 1)
-	br.Write([]byte("test"))
+	if _, err := br.Write([]byte("test")); err != nil {
+		t.Error(err)
+	}
 	buf := new(strings.Builder)
-	io.Copy(buf, br.Reader())
+	if _, err := io.Copy(buf, br.Reader()); err != nil {
+		t.Error(err)
+	}
 	if buf.String() != "test" {
 		t.Error("Failed to get BodyReader from file")
 	}
 	// Let's check if files are being deleted
-	f := br.Reader().(*os.File)
+	f := (br.Reader()).(*os.File)
 	if _, err := os.Stat(f.Name()); os.IsNotExist(err) {
 		t.Error("BodyReader's Tmp file does not exist")
 	}
@@ -55,9 +63,13 @@ func TestBodyReaderFile(t *testing.T) {
 func TestBodyReaderWriteFromReader(t *testing.T) {
 	br := NewBodyReader("/tmp", 5)
 	b := strings.NewReader("test")
-	io.Copy(br, b)
+	if _, err := io.Copy(br, b); err != nil {
+		t.Error(err)
+	}
 	buf := new(strings.Builder)
-	io.Copy(buf, br.Reader())
+	if _, err := io.Copy(buf, br.Reader()); err != nil {
+		t.Error(err)
+	}
 	if buf.String() != "test" {
 		t.Error("Failed to write bodyreader from io.Reader")
 	}

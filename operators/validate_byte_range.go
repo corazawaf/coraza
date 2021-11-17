@@ -49,14 +49,14 @@ func (o *validateByteRange) Init(data string) error {
 		rega = append(rega, fmt.Sprintf("[\\x%s-\\x%s]", b1h, b2h))
 	}
 	rege := strings.Join(rega, "|")
-	//fmt.Println(rege)
+	// fmt.Println(rege)
 	o.re = regexp.MustCompile(rege)
 	return nil
 }
 
 func (o *validateByteRange) Evaluate(tx *coraza.Transaction, data string) bool {
 	data = o.re.ReplaceAllString(data, "")
-	//fmt.Println("DEBUG: ", data, len(data))
-	//fmt.Printf("%s: %d\n", data, len(data))
+	// fmt.Println("DEBUG: ", data, len(data))
+	// fmt.Printf("%s: %d\n", data, len(data))
 	return len(data) > 0
 }

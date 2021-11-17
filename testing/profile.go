@@ -55,9 +55,9 @@ type ProfileTestStageInnerInput struct {
 	DestAddr       string            `yaml:"dest_addr"`
 	Port           int               `yaml:"port"`
 	Method         string            `yaml:"method"`
-	Uri            string            `yaml:"uri"`
+	URI            string            `yaml:"uri"`
 	Version        string            `yaml:"version"`
-	Data           interface{}       `yaml:"data"` //Accepts array or string
+	Data           interface{}       `yaml:"data"` // Accepts array or string
 	Headers        map[string]string `yaml:"headers"`
 	RawRequest     string            `yaml:"raw_request"`
 	EncodedRequest string            `yaml:"encoded_request"`
@@ -73,7 +73,7 @@ type ProfileTestStageInnerOutput struct {
 	Status            interface{} `yaml:"status"`
 }
 
-//NewProfile creates a new profile from a file
+// NewProfile creates a new profile from a file
 func NewProfile(path string) (*Profile, error) {
 	f, err := os.ReadFile(path)
 	if err != nil {

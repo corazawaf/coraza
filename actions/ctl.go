@@ -29,7 +29,7 @@ import (
 type ctlFunctionType int
 
 const (
-	ctlRemoveTargetById     ctlFunctionType = 0
+	ctlRemoveTargetByID     ctlFunctionType = 0
 	ctlRemoveTargetByTag    ctlFunctionType = 1
 	ctlRemoveTargetByMsg    ctlFunctionType = 2
 	ctlAuditEngine          ctlFunctionType = 3
@@ -38,7 +38,7 @@ const (
 	ctlRequestBodyAccess    ctlFunctionType = 6
 	ctlRequestBodyLimit     ctlFunctionType = 7
 	ctlRuleEngine           ctlFunctionType = 8
-	ctlRuleRemoveById       ctlFunctionType = 9
+	ctlRuleRemoveByID       ctlFunctionType = 9
 	ctlRuleRemoveByMsg      ctlFunctionType = 10
 	ctlRuleRemoveByTag      ctlFunctionType = 11
 	ctlHashEngine           ctlFunctionType = 12
@@ -64,7 +64,7 @@ func (a *ctlFn) Init(r *coraza.Rule, data string) error {
 
 func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	switch a.action {
-	case ctlRemoveTargetById:
+	case ctlRemoveTargetByID:
 		id, _ := strconv.Atoi(a.value)
 		tx.RemoveRuleTargetById(id, a.collection, a.colKey)
 	case ctlRemoveTargetByTag:
@@ -89,7 +89,7 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 		}
 		tx.AuditEngine = ae
 	case ctlAuditLogParts:
-		//TODO lets switch it to a string
+		// TODO lets switch it to a string
 		tx.AuditLogParts = []rune(a.value)
 	case ctlForceRequestBodyVar:
 		val := strings.ToLower(a.value)
@@ -110,7 +110,7 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 			tx.Waf.Logger.Error(err.Error())
 		}
 		tx.RuleEngine = re
-	case ctlRuleRemoveById:
+	case ctlRuleRemoveByID:
 		id, _ := strconv.Atoi(a.value)
 		tx.RemoveRuleById(id)
 	case ctlRuleRemoveByMsg:
@@ -134,10 +134,10 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	case ctlHashEnforcement:
 		// Not supported yet
 	case ctlDebugLogLevel:
-		//lvl, _ := strconv.Atoi(a.Value)
+		// lvl, _ := strconv.Atoi(a.Value)
 		// TODO
 		// We cannot update the log level, it would affect the whole waf instance...
-		//tx.Waf.SetLogLevel(lvl)
+		// tx.Waf.SetLogLevel(lvl)
 	}
 
 }
@@ -149,7 +149,7 @@ func (a *ctlFn) Type() types.RuleActionType {
 func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, string, error) {
 	spl1 := strings.SplitN(data, "=", 2)
 	if len(spl1) != 2 {
-		return ctlRemoveTargetById, "", 0, "", fmt.Errorf("invalid syntax")
+		return ctlRemoveTargetByID, "", 0, "", fmt.Errorf("invalid syntax")
 	}
 	spl2 := strings.SplitN(spl1[1], ";", 2)
 	action := spl1[0]
@@ -188,13 +188,13 @@ func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, str
 	case "ruleEngine":
 		act = ctlRuleEngine
 	case "ruleRemoveById":
-		act = ctlRuleRemoveById
+		act = ctlRuleRemoveByID
 	case "ruleRemoveByMsg":
 		act = ctlRuleRemoveByMsg
 	case "ruleRemoveByTag":
 		act = ctlRuleRemoveByTag
 	case "ruleRemoveTargetById":
-		act = ctlRemoveTargetById
+		act = ctlRemoveTargetByID
 	case "ruleRemoveTargetByMsg":
 		act = ctlRemoveTargetByMsg
 	case "ruleRemoveTargetByTag":

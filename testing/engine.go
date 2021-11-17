@@ -41,7 +41,7 @@ func (stage *ProfileTestStage) Start(waf *engine.Waf) error {
 			return errors.New("failed to parse Raw Request")
 		}
 	}
-	//Apply tx data
+	// Apply tx data
 	for k, v := range stage.Stage.Input.Headers {
 		tx.AddRequestHeader(k, v)
 	}
@@ -50,14 +50,14 @@ func (stage *ProfileTestStage) Start(waf *engine.Waf) error {
 		method = stage.Stage.Input.Method
 	}
 
-	//Request Line
+	// Request Line
 	httpv := "HTTP/1.1"
 	if stage.Stage.Input.Version != "" {
 		httpv = stage.Stage.Input.Version
 	}
 
-	if stage.Stage.Input.Uri != "" {
-		tx.ProcessUri(stage.Stage.Input.Uri, method, httpv)
+	if stage.Stage.Input.URI != "" {
+		tx.ProcessUri(stage.Stage.Input.URI, method, httpv)
 	}
 
 	// POST DATA
@@ -69,7 +69,7 @@ func (stage *ProfileTestStage) Start(waf *engine.Waf) error {
 		_, _ = tx.RequestBodyBuffer.Write([]byte(idata))
 		// we ignore the error
 	}
-	//We can skip processConnection
+	// We can skip processConnection
 	tx.ProcessRequestHeaders()
 	_, _ = tx.ProcessRequestBody()
 	tx.ProcessResponseHeaders(200, "HTTP/1.1")
@@ -83,7 +83,7 @@ func (stage *ProfileTestStage) Start(waf *engine.Waf) error {
 		log += fmt.Sprintf(" [id \"%d\"]", mr.Rule.Id)
 		tr = append(tr, mr.Rule.Id)
 	}
-	//now we evaluate tests
+	// now we evaluate tests
 	if stage.Stage.Output.LogContains != "" {
 		if !strings.Contains(log, stage.Stage.Output.LogContains) {
 			return fmt.Errorf("log does not contain %s", stage.Stage.Output.LogContains)

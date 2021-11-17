@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//      http:// www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -63,7 +63,7 @@ func (p *Parser) FromFile(profilePath string) error {
 		)
 		return err
 	}
-	//TODO validar el error de scanner.Err()
+	// TODO validar el error de scanner.Err()
 	return nil
 }
 
@@ -78,7 +78,7 @@ func (p *Parser) FromString(data string) error {
 		p.currentLine++
 		line := scanner.Text()
 		linebuffer += strings.TrimSpace(line)
-		//Check if line ends with \
+		// Check if line ends with \
 		match := pattern.MatchString(line)
 		if !match {
 			err := p.evaluate(linebuffer)
@@ -97,7 +97,7 @@ func (p *Parser) evaluate(data string) error {
 	if data == "" || data[0] == '#' {
 		return nil
 	}
-	//first we get the directive
+	// first we get the directive
 	spl := strings.SplitN(data, " ", 2)
 	opts := ""
 	if len(spl) == 2 {
@@ -168,7 +168,7 @@ func (p *Parser) evaluate(data string) error {
 		"secdebuglog":                   directiveSecDebugLog,
 		"secdebugloglevel":              directiveSecDebugLogLevel,
 
-		//Unsupported Directives
+		// Unsupported Directives
 		"secargumentseparator":     directiveUnsupported,
 		"seccookieformat":          directiveUnsupported,
 		"secruleupdatetargetbytag": directiveUnsupported,
@@ -203,7 +203,7 @@ func (p *Parser) ParseRule(data string, withOperator bool) (*engine.Rule, error)
 		spl := strings.SplitN(data, " ", 2)
 		vars := spl[0]
 
-		//regex: "(?:[^"\\]|\\.)*"
+		// regex: "(?:[^"\\]|\\.)*"
 		r := regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
 		matches := r.FindAllString(data, -1)
 		operator := utils.RemoveQuotes(matches[0])
@@ -226,7 +226,7 @@ func (p *Parser) ParseRule(data string, withOperator bool) (*engine.Rule, error)
 			}
 		}
 	} else {
-		//quoted actions separated by comma (,)
+		// quoted actions separated by comma (,)
 		actions = utils.RemoveQuotes(data)
 		err = rp.ParseActions(actions)
 		if err != nil {
@@ -259,10 +259,10 @@ func (p *Parser) ParseRule(data string, withOperator bool) (*engine.Rule, error)
 	return rule, nil
 }
 
-// AddDEfaultActions compiles an actions string
+// addDefaultActions compiles an actions string
 // Requires a phase and a disruptive action, example:
-// AddDefaultActions("deny,phase:1,log")
-func (p *Parser) AddDefaultActions(data string) error {
+// addDefaultActions("deny,phase:1,log")
+func (p *Parser) addDefaultActions(data string) error {
 	p.defaultActions = append(p.defaultActions, data)
 	return nil
 }

@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//      http:// www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -78,18 +78,18 @@ func doBase64decode(input string) string {
 		if src[i] == '=' {
 			j++
 			if j > 2 {
-				//ERROR
+				// ERROR
 				return input
 			}
 		}
 
 		if src[i] > 127 || base64_dec_map[src[i]] == 127 {
-			//ERROR
+			// ERROR
 			return input
 		}
 
 		if base64_dec_map[src[i]] < 64 && j != 0 {
-			//ERROR
+			// ERROR
 			return input
 		}
 		n++
@@ -97,6 +97,10 @@ func doBase64decode(input string) string {
 
 	n = ((n * 6) + 7) >> 3
 	n -= j
+	if len(dst) == 0 || slen < n {
+		// ERROR
+		return input
+	}
 
 	j = 3
 	n = 0

@@ -168,7 +168,7 @@ func (w *Waf) NewTransaction() *Transaction {
 	}
 
 	// set capture variables
-	txvar := tx.GetCollection(variables.Tx)
+	txvar := tx.GetCollection(variables.TX)
 	for i := 0; i <= 10; i++ {
 		is := strconv.Itoa(i)
 		txvar.Set(is, []string{""})
@@ -199,8 +199,8 @@ func (w *Waf) NewTransaction() *Transaction {
 		variables.RequestBodyLength:             "0",
 		variables.Duration:                      "0",
 		variables.HighestSeverity:               "0",
-		variables.UniqueId:                      tx.Id,
-		//TODO single variables must be defaulted to empty string
+		variables.UniqueID:                      tx.Id,
+		// TODO single variables must be defaulted to empty string
 		variables.RemoteAddr: "",
 	}
 	for v, data := range defaults {
@@ -229,10 +229,15 @@ func (w *Waf) SetAuditLogger(engine string) error {
 	return w.auditLogger.SetWriter(engine)
 }
 
+// SetDebugLogPath sets the path for the debug log
+// If the path is empty, the debug log will be disabled
+// note: this is not thread safe
 func (w *Waf) SetDebugLogPath(path string) error {
 	cfg := zap.NewProductionConfig()
-	cfg.OutputPaths = []string{
-		path,
+	if path == "" {
+		cfg.OutputPaths = []string{}
+	} else {
+		cfg.OutputPaths = []string{path}
 	}
 	cfg.Level = *w.loggerAtomicLevel
 	logger, err := cfg.Build()
@@ -246,11 +251,15 @@ func (w *Waf) SetDebugLogPath(path string) error {
 // Logger returns the initiated loggers
 // Coraza supports unlimited loggers, so you can write for example
 // to syslog and a local drive at the same time
-func (w *Waf) AuditLogger() loggers.Logger {
-	return *w.auditLogger
+// AuditLogger() returns nil if the audit logger is not set
+// Please try to use a nil logger...
+func (w *Waf) AuditLogger() *loggers.Logger {
+	return w.auditLogger
 }
 
 // NewWaf creates a new WAF instance with default variables
+// TODO there is much to fix here:
+// - what are the default
 func NewWaf() *Waf {
 	//default: us-ascii
 	atom := zap.NewAtomicLevel()
@@ -273,7 +282,7 @@ func NewWaf() *Waf {
 		auditLogger:              al,
 		mux:                      &sync.RWMutex{},
 		RequestBodyInMemoryLimit: 131072,
-		RequestBodyLimit:         10000000, //10mb
+		RequestBodyLimit:         10000000, // 10mb
 		ResponseBodyMimeTypes:    []string{"text/html", "text/plain"},
 		ResponseBodyLimit:        524288,
 		ResponseBodyAccess:       false,
@@ -291,7 +300,7 @@ func NewWaf() *Waf {
 
 // SetLogLevel changes the debug level of the Waf instance
 func (w *Waf) SetLogLevel(lvl int) error {
-	//setlevel is concurrent safe
+	// setlevel is concurrent safe
 	switch lvl {
 	case 0:
 		w.loggerAtomicLevel.SetLevel(zapcore.FatalLevel)

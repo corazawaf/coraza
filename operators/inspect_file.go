@@ -32,12 +32,12 @@ func (o *inspectFile) Init(data string) error {
 }
 
 func (o *inspectFile) Evaluate(tx *engine.Transaction, value string) bool {
-	//TODO parametrize timeout
-	//TODO add relative path capabilities
-	//TODO add lua special support
+	// TODO parametrize timeout
+	// TODO add relative path capabilities
+	// TODO add lua special support
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	//Add /bin/bash to context?
+	// Add /bin/bash to context?
 	cmd := exec.CommandContext(ctx, o.path, value)
 	_, err := cmd.CombinedOutput()
 	if ctx.Err() == context.DeadlineExceeded || err != nil {

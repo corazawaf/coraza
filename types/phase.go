@@ -34,13 +34,14 @@ const (
 // if the phase is invalid it will return an error
 func ParseRulePhase(phase string) (RulePhase, error) {
 	i, err := strconv.Atoi(phase)
-	if phase == "request" {
+	switch {
+	case phase == "request":
 		i = 2
-	} else if phase == "response" {
+	case phase == "response":
 		i = 4
-	} else if phase == "logging" {
+	case phase == "logging":
 		i = 5
-	} else if err != nil || i > 5 || i < 1 {
+	case err != nil || i > 5 || i < 1:
 		return 0, fmt.Errorf("invalid phase %s", phase)
 	}
 	return RulePhase(i), nil

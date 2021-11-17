@@ -38,13 +38,7 @@ func normalisePathWin(data string, utils coraza.RuleTransformationTools) string 
 	}
 }
 
-//We had to force the changes to the original library :(
-const (
-	PathSeparator     = '\\' // OS-specific path separator
-	PathListSeparator = ';'  // OS-specific path list separator
-)
-
-//We overwrite the linux version manually
+// We overwrite the linux version manually
 func clean(path string) string {
 	originalPath := path
 	volLen := volumeNameLen(path)

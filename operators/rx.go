@@ -41,10 +41,10 @@ func (o *rx) Evaluate(tx *coraza.Transaction, value string) bool {
 		if i == 9 {
 			return true
 		}
-		//I actually think everything should be capturable, there is no need for the capture action...
-		//if tx.IsCapturable() {
+		// I actually think everything should be capturable, there is no need for the capture action...
+		// if tx.IsCapturable() {
 		tx.CaptureField(i+1, m)
-		//}
+		// }
 	}
 	return len(match) > 0
 }

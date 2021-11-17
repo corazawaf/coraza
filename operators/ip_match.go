@@ -34,11 +34,11 @@ func (o *ipMatch) Init(data string) error {
 			continue
 		}
 		if strings.Contains(sb, ":") && !strings.Contains(sb, "/") {
-			//ipv6
-			sb = sb + "/128"
+			// ipv6
+			sb += "/128"
 		} else if strings.Contains(sb, ".") && !strings.Contains(sb, "/") {
-			//ipv4
-			sb = sb + "/32"
+			// ipv4
+			sb += "/32"
 		}
 		_, subnet, err := net.ParseCIDR(sb)
 		if err != nil {

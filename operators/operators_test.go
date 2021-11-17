@@ -61,7 +61,7 @@ func TestTransformations(t *testing.T) {
 			t.Error("Cannot parse test case")
 		}
 		for _, data := range cases {
-			//UNMARSHALL does not transform \u0000 to binary
+			// UNMARSHALL does not transform \u0000 to binary
 			data.Input = strings.ReplaceAll(data.Input, `\u0000`, "\u0000")
 			data.Param = strings.ReplaceAll(data.Param, `\u0000`, "\u0000")
 

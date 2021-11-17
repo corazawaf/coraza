@@ -40,7 +40,7 @@ func init() {
 	RegisterOperator("pmFromFile", func() coraza.RuleOperator { return &pmFromFile{} })
 	RegisterOperator("pm", func() coraza.RuleOperator { return &pm{} })
 	RegisterOperator("validateByteRange", func() coraza.RuleOperator { return &validateByteRange{} })
-	RegisterOperator("validateUrlEncoding", func() coraza.RuleOperator { return &validateUrlEncoding{} })
+	RegisterOperator("validateUrlEncoding", func() coraza.RuleOperator { return &validateURLEncoding{} })
 	RegisterOperator("streq", func() coraza.RuleOperator { return &streq{} })
 	RegisterOperator("ipMatch", func() coraza.RuleOperator { return &ipMatch{} })
 	RegisterOperator("ipMatchFromFile", func() coraza.RuleOperator { return &ipMatchFromFile{} })

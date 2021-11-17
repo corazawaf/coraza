@@ -54,7 +54,7 @@ func (xml *xmlBodyProcessor) Find(expr string) (map[string][]string, error) {
 }
 
 func (xml *xmlBodyProcessor) VariableHook() variables.RuleVariable {
-	return variables.Xml
+	return variables.XML
 }
 
 var (

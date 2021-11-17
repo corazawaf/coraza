@@ -26,7 +26,7 @@ type multipartBodyProcessor struct {
 	collections *collectionsMap
 }
 
-func (ue *multipartBodyProcessor) Read(reader io.Reader, mime string, storagePath string) error {
+func (mbp *multipartBodyProcessor) Read(reader io.Reader, mime string, storagePath string) error {
 	req, _ := http.NewRequest("GET", "/", reader)
 	req.Header.Set("Content-Type", mime)
 	err := req.ParseMultipartForm(1000000000)
@@ -62,7 +62,7 @@ func (ue *multipartBodyProcessor) Read(reader io.Reader, mime string, storagePat
 	fcs := map[string][]string{
 		"": {fmt.Sprintf("%d", totalSize)},
 	}
-	ue.collections = &collectionsMap{
+	mbp.collections = &collectionsMap{
 		variables.FilesNames:        fn,
 		variables.Files:             fl,
 		variables.FilesSizes:        fs,
@@ -74,18 +74,18 @@ func (ue *multipartBodyProcessor) Read(reader io.Reader, mime string, storagePat
 	return nil
 }
 
-func (js *multipartBodyProcessor) Collections() collectionsMap {
-	return *js.collections
+func (mbp *multipartBodyProcessor) Collections() collectionsMap {
+	return *mbp.collections
 }
 
-func (js *multipartBodyProcessor) Find(expr string) (map[string][]string, error) {
+func (mbp *multipartBodyProcessor) Find(expr string) (map[string][]string, error) {
 	return nil, nil
 }
 
-func (js *multipartBodyProcessor) VariableHook() variables.RuleVariable {
-	return variables.Json
+func (mbp *multipartBodyProcessor) VariableHook() variables.RuleVariable {
+	return variables.JSON
 }
 
 var (
-	_ BodyProcessor = &multipartBodyProcessor{}
+	_ BodyProcessor = (*multipartBodyProcessor)(nil)
 )
