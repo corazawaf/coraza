@@ -19,6 +19,9 @@ import (
 )
 
 // base64decode decodes a Base64-encoded string.
+// Important: We cannot use the golang base64 package because it does not
+// support mixed content like RAW+BASE64+RAW
+// This implementations supports base64 between non-base64 content
 func base64decode(data string, utils coraza.RuleTransformationTools) string {
 	res := doBase64decode(data)
 	if res == "" {

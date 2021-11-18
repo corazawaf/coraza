@@ -16,7 +16,7 @@ package transformations
 
 import (
 	"github.com/jptosso/coraza-waf/v2"
-	"github.com/jptosso/coraza-waf/v2/utils"
+	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
 )
 
 func cssDecode(data string, utils coraza.RuleTransformationTools) string {
@@ -42,7 +42,8 @@ func cssDecodeInplace(input string) string {
 					j++
 				}
 
-				if j > 0 {
+				switch {
+				case j > 0:
 					/* We have at least one valid hexadecimal character. */
 					fullcheck := false
 
@@ -113,11 +114,11 @@ func cssDecodeInplace(input string) string {
 					/* Move over. */
 					count++
 					i += j
-				} else if input[i] == '\n' {
+				case input[i] == '\n':
 					/* No hexadecimal digits after backslash */
 					/* A newline character following backslash is ignored. */
 					i++
-				} else {
+				default:
 					/* The character after backslash is not a hexadecimal digit,
 					 * nor a newline. */
 					/* Use one character after backslash as is. */

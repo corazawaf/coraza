@@ -16,6 +16,7 @@ package operators
 
 import (
 	_ "fmt"
+	"os"
 	"testing"
 )
 
@@ -61,7 +62,11 @@ func TestFromFile(t *testing.T) {
 	addrfail := []string{"127.0.0.2", "192.168.1.1"}
 
 	ipm := &ipMatchFromFile{}
-	if err := ipm.Init("../testdata/operators/op/netranges.dat"); err != nil {
+	data, err := os.ReadFile("../testdata/operators/op/netranges.dat")
+	if err != nil {
+		t.Error("Cannot read test data", err)
+	}
+	if err := ipm.Init(string(data)); err != nil {
 		t.Error("Cannot init ipmatchfromfile operator")
 	}
 	for _, ok := range addrok {

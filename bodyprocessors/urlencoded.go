@@ -20,7 +20,7 @@ import (
 	"strings"
 
 	"github.com/jptosso/coraza-waf/v2/types/variables"
-	"github.com/jptosso/coraza-waf/v2/utils"
+	utils "github.com/jptosso/coraza-waf/v2/utils/url"
 )
 
 type urlencodedBodyProcessor struct {

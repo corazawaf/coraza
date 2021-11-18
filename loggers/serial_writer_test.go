@@ -21,7 +21,7 @@ import (
 	"strings"
 	"testing"
 
-	utils "github.com/jptosso/coraza-waf/v2/utils"
+	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
 )
 
 func TestSerialLogger_Write(t *testing.T) {

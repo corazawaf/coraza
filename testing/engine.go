@@ -16,7 +16,6 @@ package testing
 
 import (
 	b64 "encoding/base64"
-	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -26,106 +25,54 @@ import (
 	"github.com/jptosso/coraza-waf/v2/types/variables"
 )
 
-// Start will begin the test stage
-func (stage *ProfileTestStage) Start(waf *engine.Waf) error {
-	log := ""
+type test struct {
+	waf         *engine.Waf
+	transaction *engine.Transaction
+	magic       bool
+	name        string
+	body        string
 
-	tx := waf.NewTransaction()
-	if stage.Stage.Input.EncodedRequest != "" {
-		sDec, _ := b64.StdEncoding.DecodeString(stage.Stage.Input.EncodedRequest)
-		stage.Stage.Input.RawRequest = string(sDec)
-	}
-	if stage.Stage.Input.RawRequest != "" {
-		_, err := tx.ParseRequestReader(strings.NewReader(stage.Stage.Input.RawRequest))
-		if err != nil {
-			return errors.New("failed to parse Raw Request")
-		}
-	}
-	// Apply tx data
-	for k, v := range stage.Stage.Input.Headers {
-		tx.AddRequestHeader(k, v)
-	}
-	method := "GET"
-	if stage.Stage.Input.Method != "" {
-		method = stage.Stage.Input.Method
-	}
+	// public variables
+	RequestAddress   string
+	RequestPort      int
+	RequestUri       string
+	RequestMethod    string
+	RequestProtocol  string
+	RequestHeaders   map[string]string
+	ResponseHeaders  map[string]string
+	ResponseCode     int
+	ResponseProtocol string
+	ServerAddress    string
+	ServerPort       int
+	ExpectedOutput   expectedOutput
+}
 
-	// Request Line
-	httpv := "HTTP/1.1"
-	if stage.Stage.Input.Version != "" {
-		httpv = stage.Stage.Input.Version
-	}
+func (t *test) SetWaf(waf *engine.Waf) {
+	t.waf = waf
+}
 
-	if stage.Stage.Input.URI != "" {
-		tx.ProcessUri(stage.Stage.Input.URI, method, httpv)
-	}
+func (t *test) DisableMagic() {
+	t.magic = false
+}
 
-	// POST DATA
-	if stage.Stage.Input.Data != "" {
-		idata := parseInputData(stage.Stage.Input.Data)
-		if !stage.Stage.Input.StopMagic {
-			tx.AddRequestHeader("content-length", strconv.Itoa(len(idata)))
-		}
-		_, _ = tx.RequestBodyBuffer.Write([]byte(idata))
-		// we ignore the error
+func (t *test) SetEncodedRequest(request string) error {
+	sDec, err := b64.StdEncoding.DecodeString(request)
+	if err != nil {
+		return err
 	}
-	// We can skip processConnection
-	tx.ProcessRequestHeaders()
-	_, _ = tx.ProcessRequestBody()
-	tx.ProcessResponseHeaders(200, "HTTP/1.1")
-	// for testing
-	tx.AddResponseHeader("content-type", "text/html")
-	_, _ = tx.ProcessResponseBody() // we are ignoring result and error
-	tx.ProcessLogging()
+	return t.SetRawRequest(sDec)
+}
 
-	tr := []int{}
-	for _, mr := range tx.MatchedRules {
-		log += fmt.Sprintf(" [id \"%d\"]", mr.Rule.Id)
-		tr = append(tr, mr.Rule.Id)
-	}
-	// now we evaluate tests
-	if stage.Stage.Output.LogContains != "" {
-		if !strings.Contains(log, stage.Stage.Output.LogContains) {
-			return fmt.Errorf("log does not contain %s", stage.Stage.Output.LogContains)
-		}
-	}
-	if stage.Stage.Output.NoLogContains != "" {
-		if strings.Contains(log, stage.Stage.Output.NoLogContains) {
-			return fmt.Errorf("log does contain %s", stage.Stage.Output.NoLogContains)
-		}
-	}
-	if len(stage.Stage.Output.TriggeredRules) > 0 {
-		for _, trr := range stage.Stage.Output.TriggeredRules {
-			triggered := false
-			for _, t := range tr {
-				if t == trr {
-					triggered = true
-				}
-			}
-			if !triggered {
-				if stage.Debug {
-					dumptransaction(tx)
-				}
-				return fmt.Errorf("%d was not triggered", trr)
-			}
-		}
-	}
-	if len(stage.Stage.Output.NonTriggeredRules) > 0 {
-		for _, trr := range stage.Stage.Output.NonTriggeredRules {
-			for _, t := range tr {
-				if t == trr {
-					return fmt.Errorf("%d waf triggered", trr)
-				}
-			}
-		}
-	}
-
+func (t *test) SetRawRequest(request []byte) error {
 	return nil
 }
 
-func parseInputData(input interface{}) string {
+func (t *test) SetRequestBody(body interface{}) error {
+	if body == nil {
+		return nil
+	}
 	data := ""
-	v := reflect.ValueOf(input)
+	v := reflect.ValueOf(body)
 	switch v.Kind() {
 	case reflect.Slice:
 		for i := 0; i < v.Len(); i++ {
@@ -133,22 +80,135 @@ func parseInputData(input interface{}) string {
 		}
 		data += "\r\n"
 	case reflect.String:
-		data = input.(string)
+		data = body.(string)
 	}
-	return data
+	lbody := len(data)
+	if lbody == 0 {
+		return nil
+	}
+	t.body = data
+	if t.magic {
+		t.RequestHeaders["content-length"] = strconv.Itoa(lbody)
+	}
+	if _, err := t.transaction.RequestBodyBuffer.Write([]byte(data)); err != nil {
+		return err
+	}
+	return nil
 }
 
-func dumptransaction(tx *engine.Transaction) {
-	fmt.Println("======DEBUG======")
+func (t *test) RunPhases() error {
+	t.transaction.ProcessConnection(t.RequestAddress, t.RequestPort, t.ServerAddress, t.ServerPort)
+	t.transaction.ProcessUri(t.RequestUri, t.RequestMethod, t.RequestProtocol)
+	for k, v := range t.RequestHeaders {
+		t.transaction.AddRequestHeader(k, v)
+	}
+	t.transaction.ProcessRequestHeaders()
+	if _, err := t.transaction.ProcessRequestBody(); err != nil {
+		return err
+	}
+	for k, v := range t.ResponseHeaders {
+		t.transaction.AddResponseHeader(k, v)
+	}
+	t.transaction.ProcessResponseHeaders(t.ResponseCode, t.ResponseProtocol)
+	if _, err := t.transaction.ProcessResponseBody(); err != nil {
+		return err
+	}
+	t.transaction.ProcessLogging()
+	return nil
+}
+
+func (t *test) OutputErrors() []string {
+	var errors []string
+	if lc := t.ExpectedOutput.LogContains; lc != "" {
+		if !t.LogContains(lc) {
+			errors = append(errors, fmt.Sprintf("Expected log to contain '%s'", lc))
+		}
+	}
+	if lc := t.ExpectedOutput.NoLogContains; lc != "" {
+		if t.LogContains(lc) {
+			errors = append(errors, fmt.Sprintf("Expected log to not contain '%s'", lc))
+		}
+	}
+	if rc := t.ExpectedOutput.Status; rc != 0 {
+		// do nothing
+	}
+	if tr := t.ExpectedOutput.TriggeredRules; tr != nil {
+		for _, rule := range tr {
+			if !t.LogContains(fmt.Sprintf("id \"%d\"", rule)) {
+				errors = append(errors, fmt.Sprintf("Expected rule '%d' to be triggered", rule))
+			}
+		}
+	}
+	if tr := t.ExpectedOutput.NonTriggeredRules; tr != nil {
+		for _, rule := range tr {
+			if t.LogContains(fmt.Sprintf("id \"%d\"", rule)) {
+				errors = append(errors, fmt.Sprintf("Expected rule '%d' to not be triggered", rule))
+			}
+		}
+	}
+
+	return errors
+}
+
+func (t *test) LogContains(log string) bool {
+	for _, mr := range t.transaction.MatchedRules {
+		if strings.Contains(mr.ErrorLog(t.ResponseCode), log) {
+			return true
+		}
+	}
+	return false
+}
+
+func (t *test) Transaction() *engine.Transaction {
+	return t.transaction
+}
+
+func (test *test) String() string {
+	tx := test.transaction
+	res := "======DEBUG======\n"
 	for v := byte(1); v < 100; v++ {
 		vr := variables.RuleVariable(v)
 		if vr.Name() == "UNKNOWN" {
 			break
 		}
-		fmt.Printf("%s:\n", vr.Name())
+		res += fmt.Sprintf("%s:\n", vr.Name())
 		data := tx.GetCollection(vr).Data()
 		for k, d := range data {
-			fmt.Printf("-->%s: %s\n", k, strings.Join(d, ","))
+			if k != "" {
+				res += fmt.Sprintf("-->%s: %s\n", k, strings.Join(d, ","))
+			} else {
+				res += fmt.Sprintf("-->%s\n", strings.Join(d, ","))
+			}
 		}
 	}
+	return res
+}
+
+func (test *test) Request() string {
+	str := fmt.Sprintf("%s %s %s\r\n", test.RequestMethod, test.RequestUri, test.RequestProtocol)
+	for k, v := range test.RequestHeaders {
+		str += fmt.Sprintf("%s: %s\r\n", k, v)
+	}
+	str += "\r\n"
+	if test.body != "" {
+		str += test.body
+	}
+	return str
+}
+
+func newTest(name string, waf *engine.Waf) *test {
+	t := &test{
+		name:            name,
+		waf:             waf,
+		transaction:     waf.NewTransaction(),
+		RequestHeaders:  map[string]string{},
+		ResponseHeaders: map[string]string{},
+		RequestMethod:   "GET",
+		RequestProtocol: "HTTP/1.1",
+		RequestUri:      "/",
+		RequestAddress:  "127.0.0.1",
+		RequestPort:     80,
+		magic:           true,
+	}
+	return t
 }

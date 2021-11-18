@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"github.com/jptosso/coraza-waf/v2/types"
-	utils "github.com/jptosso/coraza-waf/v2/utils"
 	"go.uber.org/zap"
 )
 
@@ -178,22 +177,7 @@ func directiveSecRemoteRulesFailAction(p *Parser, opts string) error {
 }
 
 func directiveSecRemoteRules(p *Parser, opts string) error {
-	spl := strings.SplitN(opts, " ", 2)
-	url := opts
-	key := ""
-	if len(spl) == 2 {
-		key = spl[0]
-		url = spl[1]
-	}
-	data, err := utils.OpenFile(url, key)
-	if err != nil || p.FromString(string(data)) != nil {
-		if p.Waf.AbortOnRemoteRulesFail {
-			return p.log("Failed to parse remote rules")
-		} else {
-			return nil
-		}
-	}
-	return nil
+	return fmt.Errorf("not implemented")
 }
 
 func directiveSecConnWriteStateLimit(p *Parser, opts string) error {

@@ -16,13 +16,8 @@ package testing
 
 import (
 	"fmt"
-	"os"
-	"path"
 	"path/filepath"
 	"testing"
-
-	engine "github.com/jptosso/coraza-waf/v2"
-	seclang "github.com/jptosso/coraza-waf/v2/seclang"
 )
 
 func TestEngine(t *testing.T) {
@@ -33,36 +28,25 @@ func TestEngine(t *testing.T) {
 	if len(files) == 0 {
 		t.Error("failed to find test files")
 	}
-	waf := engine.NewWaf()
-	if err := waf.SetLogLevel(5); err != nil {
-		t.Error(err)
-	}
 	for _, f := range files {
 		profile, err := NewProfile(f)
 		if err != nil {
 			t.Error(err)
 		}
-		for _, tt := range profile.Tests {
-			for _, s := range tt.Stages {
-				var err error
-				if profile.Rules == "" {
-					err = s.Start(waf)
-				} else {
-					w := engine.NewWaf()
-					p, _ := seclang.NewParser(w)
-					// use current script path
-					pwd, _ := os.Getwd()
-					p.Configdir = path.Join(pwd, "../", "testdata")
-					if err := p.FromString(profile.Rules); err != nil {
-						t.Error(err)
-						break
-					}
-					err = s.Start(w)
+		tt, err := profile.TestList(nil)
+		if err != nil {
+			t.Error(err)
+		}
+		for _, test := range tt {
+			if err := test.RunPhases(); err != nil {
+				t.Error(err)
+			}
+			for _, e := range test.OutputErrors() {
+				debug := ""
+				for _, mr := range test.transaction.MatchedRules {
+					debug += fmt.Sprintf(" %d", mr.Rule.Id)
 				}
-
-				if err != nil {
-					t.Error(fmt.Sprintf("%s: %s\n", f, err.Error()))
-				}
+				t.Errorf("%s - %s: %s\nGot: %s\n%s\nREQUEST:\n%s", profile.Meta.Name, test.name, e, debug, test.String(), test.Request())
 			}
 		}
 	}

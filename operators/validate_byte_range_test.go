@@ -57,7 +57,7 @@ func TestCRS920272(t *testing.T) {
 
 func TestCRS920270(t *testing.T) {
 	ranges := "1-255"
-	good_strings := [][]int{
+	goodStrings := [][]int{
 		{104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 111},
 		{38, 104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 111, 126},
 		{32, 104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 111, 125},
@@ -70,7 +70,7 @@ func TestCRS920270(t *testing.T) {
 	}
 	tx := getTransaction()
 
-	for _, gs := range good_strings {
+	for _, gs := range goodStrings {
 		str := asciiToString(gs)
 		if op.Evaluate(tx, str) {
 			t.Errorf("Invalid null byte: %s", str)

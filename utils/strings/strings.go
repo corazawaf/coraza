@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package strings
 
 import (
 	"crypto/rand"
@@ -100,4 +100,13 @@ func RemoveQuotes(s string) string {
 	s = strings.Trim(s, `"`)
 	s = strings.Trim(s, `'`)
 	return s
+}
+
+func StringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
 }

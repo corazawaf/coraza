@@ -25,7 +25,6 @@ import (
 	"testing"
 
 	"github.com/jptosso/coraza-waf/v2"
-	"github.com/jptosso/coraza-waf/v2/utils"
 )
 
 type Test struct {
@@ -75,8 +74,10 @@ func TestTransformations(t *testing.T) {
 			if err != nil {
 				continue
 			}
-			if data.Name == "pmFromFile" {
-				d, err := utils.OpenFile(root+"op/"+data.Param, "")
+			if data.Name == "pmFromFile" || data.Name == "ipMatchFromFile" {
+				// read file
+				fname := root + "op/" + data.Param
+				d, err := os.ReadFile(fname)
 				if err != nil {
 					t.Errorf("Cannot open file %s", data.Param)
 				}

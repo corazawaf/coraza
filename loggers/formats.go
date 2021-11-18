@@ -17,7 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	utils "github.com/jptosso/coraza-waf/v2/utils"
+	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
 )
 
 // Legacy modsecurity 2 format

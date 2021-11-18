@@ -15,11 +15,9 @@
 package operators
 
 import (
-	"fmt"
 	"strings"
 
 	engine "github.com/jptosso/coraza-waf/v2"
-	"github.com/jptosso/coraza-waf/v2/utils"
 )
 
 type ipMatchFromFile struct {
@@ -28,11 +26,7 @@ type ipMatchFromFile struct {
 
 func (o *ipMatchFromFile) Init(data string) error {
 	o.ip = &ipMatch{}
-	list, err := utils.OpenFile(data, "")
-	if err != nil {
-		return fmt.Errorf("error opening %s", data)
-	}
-	subnets := strings.ReplaceAll(string(list), "\n", ",")
+	subnets := strings.ReplaceAll(data, "\n", ",")
 	return o.ip.Init(subnets)
 }
 
