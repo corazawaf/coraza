@@ -284,6 +284,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 					zap.Strings("arguments", args),
 				)
 
+				// args represents the transformed variables
 				for _, carg := range args {
 					match := r.executeOperator(carg, tx)
 					if match {
@@ -297,7 +298,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 					tx.Waf.Logger.Debug("Evaluate rule operator", zap.String("txid", tx.Id),
 						zap.Int("rule", rid),
 						zap.String("event", "EVALUATE_RULE_OPERATOR"),
-						zap.String("operator", "nn"), // TODO fix
+						zap.String("operator", r.operator.Function), // TODO fix
 						zap.String("data", carg),
 						zap.String("variable", arg.Variable.Name()),
 						zap.String("key", arg.Key),

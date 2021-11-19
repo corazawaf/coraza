@@ -38,12 +38,20 @@ func (ubp *urlencodedBodyProcessor) Read(reader io.Reader, _ string, _ string) e
 	// tx.GetCollection(VARIABLE_URLENCODED_ERROR).Set("", []string{err.Error()})
 	values := utils.ParseQuery(b, "&")
 	m := map[string][]string{}
+	keys := []string{}
 	for k, vs := range values {
 		m[k] = vs
+		keys = append(keys, k)
 	}
 	ubp.collections = &collectionsMap{
 		variables.ArgsPost: m,
-		variables.Args:     m,
+		variables.ArgsPostNames: map[string][]string{
+			"": keys,
+		},
+		variables.Args: m,
+		variables.ArgsNames: map[string][]string{
+			"": keys,
+		},
 		variables.RequestBody: map[string][]string{
 			"": {b},
 		},

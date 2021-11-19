@@ -46,7 +46,7 @@ func TestEngine(t *testing.T) {
 				for _, mr := range test.transaction.MatchedRules {
 					debug += fmt.Sprintf(" %d", mr.Rule.Id)
 				}
-				t.Errorf("%s - %s: %s\nGot: %s\n%s\nREQUEST:\n%s", profile.Meta.Name, test.name, e, debug, test.String(), test.Request())
+				t.Errorf("%s - %s: %s\nGot: %s\n%s\nREQUEST:\n%s", profile.Meta.Name, test.Name, e, debug, test.String(), test.Request())
 			}
 		}
 	}

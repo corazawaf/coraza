@@ -199,9 +199,13 @@ func (w *Waf) NewTransaction() *Transaction {
 		variables.RequestBodyLength:             "0",
 		variables.Duration:                      "0",
 		variables.HighestSeverity:               "0",
+		variables.ArgsCombinedSize:              "0",
 		variables.UniqueID:                      tx.Id,
 		// TODO single variables must be defaulted to empty string
-		variables.RemoteAddr: "",
+		variables.RemoteAddr:       "",
+		variables.ReqbodyProcessor: "",
+		variables.RequestBody:      "",
+		variables.ResponseBody:     "",
 	}
 	for v, data := range defaults {
 		tx.GetCollection(v).Set("", []string{data})

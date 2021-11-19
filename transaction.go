@@ -536,6 +536,7 @@ func (tx *Transaction) ExtractArguments(orig string, uri string) {
 // This will set ARGS_(GET|POST), ARGS, ARGS_NAMES, ARGS_COMBINED_SIZE and
 // ARGS_(GET|POST)_NAMES
 func (tx *Transaction) AddArgument(orig string, key string, value string) {
+	// TODO implement ARGS value limit using ArgumentsLimit
 	var vals, names variables.RuleVariable
 	if orig == "GET" {
 		vals = variables.ArgsGet
@@ -638,7 +639,7 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 // Remember to check for a possible intervention.
 func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
-		return tx.Interruption, nil
+		return nil, nil
 	}
 	if !tx.RequestBodyAccess {
 		tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)

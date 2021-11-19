@@ -63,8 +63,8 @@ type expectedOutput struct {
 	Status            interface{} `yaml:"status,omitempty"`
 }
 
-func (p *Profile) TestList(waf *coraza.Waf) ([]*test, error) {
-	var tests []*test
+func (p *Profile) TestList(waf *coraza.Waf) ([]*Test, error) {
+	var tests []*Test
 	for _, t := range p.Tests {
 		name := t.Title
 		for _, tt := range t.Stages {

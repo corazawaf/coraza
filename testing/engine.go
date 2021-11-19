@@ -25,11 +25,11 @@ import (
 	"github.com/jptosso/coraza-waf/v2/types/variables"
 )
 
-type test struct {
+type Test struct {
 	waf         *engine.Waf
 	transaction *engine.Transaction
 	magic       bool
-	name        string
+	Name        string
 	body        string
 
 	// public variables
@@ -47,15 +47,18 @@ type test struct {
 	ExpectedOutput   expectedOutput
 }
 
-func (t *test) SetWaf(waf *engine.Waf) {
+func (t *Test) SetWaf(waf *engine.Waf) {
 	t.waf = waf
 }
 
-func (t *test) DisableMagic() {
+func (t *Test) DisableMagic() {
 	t.magic = false
 }
 
-func (t *test) SetEncodedRequest(request string) error {
+func (t *Test) SetEncodedRequest(request string) error {
+	if request == "" {
+		return nil
+	}
 	sDec, err := b64.StdEncoding.DecodeString(request)
 	if err != nil {
 		return err
@@ -63,11 +66,44 @@ func (t *test) SetEncodedRequest(request string) error {
 	return t.SetRawRequest(sDec)
 }
 
-func (t *test) SetRawRequest(request []byte) error {
+func (t *Test) SetRawRequest(request []byte) error {
+	if len(request) == 0 {
+		return nil
+	}
+	spl := strings.Split(string(request), "\r\n")
+	if len(spl) == 0 {
+		return fmt.Errorf("invalid request")
+	}
+	// parse request line
+	reqLine := strings.Split(spl[0], " ")
+	if len(reqLine) != 3 {
+		return fmt.Errorf("invalid request line")
+	}
+	t.RequestMethod = reqLine[0]
+	t.RequestUri = reqLine[1]
+	t.RequestProtocol = reqLine[2]
+	// parse headers
+	t.RequestHeaders = make(map[string]string)
+	i := 1
+	for i = 1; i < len(spl); i++ {
+		if spl[i] == "" {
+			break
+		}
+		header := strings.Split(spl[i], ":")
+		if len(header) != 2 {
+			return fmt.Errorf("invalid header")
+		}
+		t.RequestHeaders[strings.TrimSpace(header[0])] = strings.TrimSpace(header[1])
+	}
+	// parse body
+	if i < len(spl) {
+		return t.SetRequestBody(strings.Join(spl[i:], "\r\n"))
+	}
+
 	return nil
 }
 
-func (t *test) SetRequestBody(body interface{}) error {
+func (t *Test) SetRequestBody(body interface{}) error {
 	if body == nil {
 		return nil
 	}
@@ -96,7 +132,7 @@ func (t *test) SetRequestBody(body interface{}) error {
 	return nil
 }
 
-func (t *test) RunPhases() error {
+func (t *Test) RunPhases() error {
 	t.transaction.ProcessConnection(t.RequestAddress, t.RequestPort, t.ServerAddress, t.ServerPort)
 	t.transaction.ProcessUri(t.RequestUri, t.RequestMethod, t.RequestProtocol)
 	for k, v := range t.RequestHeaders {
@@ -117,7 +153,7 @@ func (t *test) RunPhases() error {
 	return nil
 }
 
-func (t *test) OutputErrors() []string {
+func (t *Test) OutputErrors() []string {
 	var errors []string
 	if lc := t.ExpectedOutput.LogContains; lc != "" {
 		if !t.LogContains(lc) {
@@ -150,7 +186,7 @@ func (t *test) OutputErrors() []string {
 	return errors
 }
 
-func (t *test) LogContains(log string) bool {
+func (t *Test) LogContains(log string) bool {
 	for _, mr := range t.transaction.MatchedRules {
 		if strings.Contains(mr.ErrorLog(t.ResponseCode), log) {
 			return true
@@ -159,11 +195,11 @@ func (t *test) LogContains(log string) bool {
 	return false
 }
 
-func (t *test) Transaction() *engine.Transaction {
+func (t *Test) Transaction() *engine.Transaction {
 	return t.transaction
 }
 
-func (test *test) String() string {
+func (test *Test) String() string {
 	tx := test.transaction
 	res := "======DEBUG======\n"
 	for v := byte(1); v < 100; v++ {
@@ -184,7 +220,7 @@ func (test *test) String() string {
 	return res
 }
 
-func (test *test) Request() string {
+func (test *Test) Request() string {
 	str := fmt.Sprintf("%s %s %s\r\n", test.RequestMethod, test.RequestUri, test.RequestProtocol)
 	for k, v := range test.RequestHeaders {
 		str += fmt.Sprintf("%s: %s\r\n", k, v)
@@ -196,9 +232,9 @@ func (test *test) Request() string {
 	return str
 }
 
-func newTest(name string, waf *engine.Waf) *test {
-	t := &test{
-		name:            name,
+func newTest(name string, waf *engine.Waf) *Test {
+	t := &Test{
+		Name:            name,
 		waf:             waf,
 		transaction:     waf.NewTransaction(),
 		RequestHeaders:  map[string]string{},

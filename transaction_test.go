@@ -303,6 +303,25 @@ func TestHeaderSetters(t *testing.T) {
 	}
 }
 
+func TestRequestBodyProcessingAlgorithm(t *testing.T) {
+	waf := NewWaf()
+	tx := waf.NewTransaction()
+	tx.RuleEngine = types.RuleEngineOn
+	tx.RequestBodyAccess = true
+	tx.ForceRequestBodyVariable = true
+	tx.AddRequestHeader("content-type", "text/plain")
+	tx.AddRequestHeader("content-length", "7")
+	if _, err := tx.RequestBodyBuffer.Write([]byte("test123")); err != nil {
+		t.Error("Failed to write request body buffer")
+	}
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Error("failed to process request body")
+	}
+	if tx.GetCollection(variables.RequestBody).GetFirstString("") != "test123" {
+		t.Error("failed to set request body")
+	}
+}
+
 func BenchmarkTransactionCreation(b *testing.B) {
 	waf := NewWaf()
 	for i := 0; i < b.N; i++ {
