@@ -235,10 +235,7 @@ SecAuditLogParts ABIJDEFHZ
 #SecAuditLog Serial file=/opt/coraza/var/log/coraza_audit.log filemode=0600
 
 # Concurrent logging:
-SecAuditLog Concurrent file=/opt/coraza/var/audit/audit.log \
-     path=/opt/coraza/var/audit \
-     filemode=0600 \
-     dirmode=0600
+SecAuditLog Serial
 
 
 # -- Miscellaneous -----------------------------------------------------------

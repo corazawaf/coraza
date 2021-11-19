@@ -265,7 +265,7 @@ func directiveSecAuditLog(p *Parser, opts string) error {
 	if len(opts) == 0 {
 		return errors.New("syntax error: SecAuditLog [concurrent/https/serial/...]")
 	}
-	return p.Waf.SetAuditLogger(opts)
+	return p.Waf.SetAuditLogger(strings.ToLower(opts))
 }
 
 func directiveSecAuditLogRelevantStatus(p *Parser, opts string) error {
