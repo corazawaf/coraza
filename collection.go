@@ -19,7 +19,7 @@ import (
 	"strconv"
 
 	"github.com/jptosso/coraza-waf/v2/types/variables"
-	"github.com/jptosso/coraza-waf/v2/utils"
+	"github.com/jptosso/coraza-waf/v2/utils/strings"
 )
 
 // Collections are used to store VARIABLE data
@@ -46,7 +46,7 @@ func (c *Collection) Find(key string, re *regexp.Regexp, exceptions []string) []
 	if len(key) == 0 {
 		data := []MatchData{}
 		for k := range c.data {
-			if utils.StringInSlice(k, exceptions) {
+			if strings.StringInSlice(k, exceptions) {
 				continue
 			}
 			for _, v := range c.data[k] {
@@ -65,7 +65,7 @@ func (c *Collection) Find(key string, re *regexp.Regexp, exceptions []string) []
 	if re != nil {
 		result := []MatchData{}
 		for k := range cdata {
-			if utils.StringInSlice(k, exceptions) {
+			if strings.StringInSlice(k, exceptions) {
 				continue
 			}
 			if re.Match([]byte(k)) {
@@ -84,7 +84,7 @@ func (c *Collection) Find(key string, re *regexp.Regexp, exceptions []string) []
 		ret := []MatchData{}
 		// We pass through every record to apply filters
 		for k := range cdata {
-			if utils.StringInSlice(k, exceptions) {
+			if strings.StringInSlice(k, exceptions) {
 				continue
 			}
 			if k == key {
@@ -141,7 +141,7 @@ func (c *Collection) AddUnique(key string, value string) {
 		c.Add(key, value)
 		return
 	}
-	if utils.StringInSlice(value, c.data[key]) {
+	if strings.StringInSlice(value, c.data[key]) {
 		return
 	}
 	c.Add(key, value)

@@ -16,7 +16,7 @@ package transformations
 
 import (
 	"github.com/jptosso/coraza-waf/v2"
-	"github.com/jptosso/coraza-waf/v2/utils"
+	"github.com/jptosso/coraza-waf/v2/utils/strings"
 )
 
 func urlDecode(data string, utils coraza.RuleTransformationTools) string {
@@ -40,8 +40,8 @@ func doURLDecode(input string) (string, bool, int) {
 			if i+2 < inputLen {
 				c1 := input[i+1]
 				c2 := input[i+2]
-				if utils.ValidHex(c1) && utils.ValidHex(c2) {
-					uni := utils.X2c(input[i+1:])
+				if strings.ValidHex(c1) && strings.ValidHex(c2) {
+					uni := strings.X2c(input[i+1:])
 
 					d[c] = uni
 					c++

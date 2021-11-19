@@ -9,7 +9,7 @@ repos:
 #    - id: go-cyclo
 #      args: [-over=37] # we must drop it down to 15
 #    - id: golangci-lint
-#    - id: go-critic
+    - id: go-critic
 #    - id: go-unit-tests
     - id: go-mod-tidy
 #- repo: https://github.com/adrienverge/yamllint.git

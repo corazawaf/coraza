@@ -16,7 +16,7 @@ package transformations
 
 import (
 	"github.com/jptosso/coraza-waf/v2"
-	"github.com/jptosso/coraza-waf/v2/utils"
+	"github.com/jptosso/coraza-waf/v2/utils/strings"
 )
 
 func urlDecodeUni(data string, tools coraza.RuleTransformationTools) string {
@@ -36,13 +36,13 @@ func inplaceUniDecode(input string) string {
 				/* IIS-specific %u encoding. */
 				if i+5 < input_len {
 					/* We have at least 4 data bytes. */
-					if (utils.ValidHex(input[i+2])) && (utils.ValidHex(input[i+3])) && (utils.ValidHex(input[i+4])) && (utils.ValidHex(input[i+5])) {
+					if (strings.ValidHex(input[i+2])) && (strings.ValidHex(input[i+3])) && (strings.ValidHex(input[i+4])) && (strings.ValidHex(input[i+5])) {
 						/*
 							TODO unicode mapping
 							code = 0
 							fact = 1
 							for j = 5; j >= 2; j-- {
-								if utils.ValidHex((input[i+j])) {
+								if strings.ValidHex((input[i+j])) {
 									if input[i+j] >= 97 {
 										xv = (int(input[i+j]) - 97) + 10
 									} else if input[i+j] >= 65 {
@@ -65,7 +65,7 @@ func inplaceUniDecode(input string) string {
 						} else {
 							/* We first make use of the lower byte here,
 							 * ignoring the higher byte. */
-							d[c] = utils.X2c(input[i+4:])
+							d[c] = strings.X2c(input[i+4:])
 
 							/* Full width ASCII (ff01 - ff5e)
 							 * needs 0x20 added */
@@ -107,8 +107,8 @@ func inplaceUniDecode(input string) string {
 					c1 := input[i+1]
 					c2 := input[i+2]
 
-					if utils.ValidHex(c1) && utils.ValidHex(c2) {
-						d[c] = utils.X2c(input[i+1:])
+					if strings.ValidHex(c1) && strings.ValidHex(c2) {
+						d[c] = strings.X2c(input[i+1:])
 						c++
 						count++
 						i += 3

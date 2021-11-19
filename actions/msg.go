@@ -17,7 +17,7 @@ package actions
 import (
 	"github.com/jptosso/coraza-waf/v2"
 	"github.com/jptosso/coraza-waf/v2/types"
-	utils "github.com/jptosso/coraza-waf/v2/utils"
+	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
 )
 
 type msgFn struct {

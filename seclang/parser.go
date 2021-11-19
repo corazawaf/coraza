@@ -18,12 +18,13 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	engine "github.com/jptosso/coraza-waf/v2"
-	utils "github.com/jptosso/coraza-waf/v2/utils"
+	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
 	"go.uber.org/zap"
 )
 
@@ -48,7 +49,7 @@ type Parser struct {
 func (p *Parser) FromFile(profilePath string) error {
 	p.configfile = profilePath
 	p.Configdir = filepath.Dir(profilePath)
-	file, err := utils.OpenFile(profilePath, "")
+	file, err := os.ReadFile(profilePath)
 	if err != nil {
 		p.Waf.Logger.Error(err.Error(),
 			zap.String("path", profilePath),

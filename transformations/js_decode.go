@@ -18,7 +18,7 @@ import (
 	"strconv"
 
 	"github.com/jptosso/coraza-waf/v2"
-	"github.com/jptosso/coraza-waf/v2/utils"
+	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
 )
 
 func jsDecode(data string, utils coraza.RuleTransformationTools) string {

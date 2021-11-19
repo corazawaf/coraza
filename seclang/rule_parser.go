@@ -17,6 +17,7 @@ package seclang
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path"
 	"strings"
 
@@ -25,7 +26,7 @@ import (
 	operators "github.com/jptosso/coraza-waf/v2/operators"
 	"github.com/jptosso/coraza-waf/v2/types"
 	"github.com/jptosso/coraza-waf/v2/types/variables"
-	utils "github.com/jptosso/coraza-waf/v2/utils"
+	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
 )
 
 type ruleAction struct {
@@ -186,7 +187,7 @@ func (p *ruleParser) ParseOperator(operator string) error {
 		// TODO make enhancements here
 		tpath := path.Join(p.Configdir, opdata)
 		var err error
-		content, err := utils.OpenFile(tpath, "")
+		content, err := os.ReadFile(tpath)
 		if err != nil {
 			return err
 		}
@@ -296,11 +297,13 @@ func parseActions(actions string) ([]ruleAction, error) {
 	cval := ""
 	quoted := false
 	res := []ruleAction{}
+actionLoop:
 	for i, c := range actions {
-		if iskey && c == ' ' {
+		switch {
+		case iskey && c == ' ':
 			// skip whitespaces in key
-			continue
-		} else if !quoted && c == ',' {
+			continue actionLoop
+		case !quoted && c == ',':
 			f, err := actionsmod.GetAction(ckey)
 			if err != nil {
 				return nil, err
@@ -314,22 +317,22 @@ func parseActions(actions string) ([]ruleAction, error) {
 			ckey = ""
 			cval = ""
 			iskey = true
-		} else if iskey && c == ':' {
+		case iskey && c == ':':
 			iskey = false
-		} else if !iskey && c == '\'' && actions[i-1] != '\\' {
+		case !iskey && c == '\'' && actions[i-1] != '\\':
 			if quoted {
 				quoted = false
 				iskey = true
 			} else {
 				quoted = true
 			}
-		} else if !iskey {
+		case !iskey:
 			if c == ' ' && !quoted {
 				// skip unquoted whitespaces
-				continue
+				continue actionLoop
 			}
 			cval += string(c)
-		} else if iskey {
+		case iskey:
 			ckey += string(c)
 		}
 		if i+1 == len(actions) {

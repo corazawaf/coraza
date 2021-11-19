@@ -27,9 +27,11 @@
             - 200
             - 300
             - 400
+            - 10
           non_triggered_rules:
             
   rules: |
+    SecRule REQBODY_PROCESSOR "" "id: 10, log"
     SecRequestBodyAccess On
     SecDebugLogLevel 5
     SecRule ARGS:/^t1$/ "aaa" "id:1,phase:1,block,log"

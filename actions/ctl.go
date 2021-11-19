@@ -22,7 +22,7 @@ import (
 	"github.com/jptosso/coraza-waf/v2"
 	"github.com/jptosso/coraza-waf/v2/types"
 	"github.com/jptosso/coraza-waf/v2/types/variables"
-	utils "github.com/jptosso/coraza-waf/v2/utils"
+	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
 	"go.uber.org/zap"
 )
 

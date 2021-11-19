@@ -29,9 +29,6 @@ func normalisePath(data string, utils coraza.RuleTransformationTools) string {
 	if clean == "." {
 		return ""
 	}
-	if leng >= 2 && clean[0] == '.' && clean[1] == '/' {
-		clean = clean[2:]
-	}
 	if data[len(data)-1] == '/' {
 		return clean + "/"
 	} else {

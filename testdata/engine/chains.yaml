@@ -15,7 +15,7 @@
         output:
           triggered_rules:
             - 1
-            - 3
+            - 1313
           non_triggered_rules:
             - 2
   rules: |
@@ -29,5 +29,5 @@
       SecAction "chain"
       SecRule ARGS "@noMatch" ""
 
-    SecRule REQUEST_URI "@rx (\d+)" "id:3, chain, log"
+    SecRule REQUEST_URI "@rx (\d+)" "id:1313, chain, log"
       SecRule REQUEST_METHOD "GET" ""

@@ -222,5 +222,12 @@
       "type" : "tfn",
       "ret" : 0,
       "output" : "%gg"
+   },
+   {
+      "input": "var%3d%20@.%3d%20%28%20SELECT",
+      "name": "urlDecodeUni",
+      "type": "tfn",
+      "ret": 0,
+      "output": "var= @.= ( SELECT"
    }
 ]

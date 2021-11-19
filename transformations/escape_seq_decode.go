@@ -18,7 +18,7 @@ import (
 	"strconv"
 
 	"github.com/jptosso/coraza-waf/v2"
-	utils "github.com/jptosso/coraza-waf/v2/utils"
+	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
 )
 
 func escapeSeqDecode(input string, tools coraza.RuleTransformationTools) string {

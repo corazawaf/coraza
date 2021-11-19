@@ -22,7 +22,7 @@ import (
 
 	"github.com/jptosso/coraza-waf/v2/types"
 	"github.com/jptosso/coraza-waf/v2/types/variables"
-	utils "github.com/jptosso/coraza-waf/v2/utils"
+	"github.com/jptosso/coraza-waf/v2/utils/strings"
 	"go.uber.org/zap"
 )
 
@@ -90,7 +90,7 @@ func (rg *ruleGroup) FindByMsg(msg string) []*Rule {
 func (rg *ruleGroup) FindByTag(tag string) []*Rule {
 	rules := []*Rule{}
 	for _, r := range rg.rules {
-		if utils.StringInSlice(tag, r.Tags) {
+		if strings.StringInSlice(tag, r.Tags) {
 			rules = append(rules, r)
 		}
 	}
@@ -118,6 +118,7 @@ func (rg *ruleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	tx.LastPhase = phase
 	usedRules := 0
 	ts := time.Now().UnixNano()
+RulesLoop:
 	for _, r := range tx.Waf.Rules.GetRules() {
 		if tx.Interruption != nil {
 			tx.Waf.Logger.Debug("Finished phase",
@@ -138,9 +139,11 @@ func (rg *ruleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 		}
 
 		// we skip the rule in case it's in the excluded list
-		if tx.ruleRemoveById != nil && utils.IntInSlice(r.Id, tx.ruleRemoveById) {
-			tx.Waf.Logger.Debug("Skipping rule", zap.Int("rule", r.Id), zap.String("txid", tx.Id))
-			continue
+		for _, trb := range tx.ruleRemoveById {
+			if trb == r.Id {
+				tx.Waf.Logger.Debug("Skipping rule", zap.Int("rule", r.Id), zap.String("txid", tx.Id))
+				continue RulesLoop
+			}
 		}
 
 		// we always evaluate secmarkers

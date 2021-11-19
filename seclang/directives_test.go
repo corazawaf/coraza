@@ -16,12 +16,12 @@ package seclang
 
 import (
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
 	engine "github.com/jptosso/coraza-waf/v2"
 	"github.com/jptosso/coraza-waf/v2/types"
-	"github.com/jptosso/coraza-waf/v2/utils"
 )
 
 func Test_directiveSecAuditLog(t *testing.T) {
@@ -123,12 +123,12 @@ func TestDebugDirectives(t *testing.T) {
 		t.Error(err)
 	}
 	p.Waf.Logger.Info("abc123")
-	data, _ := utils.OpenFile(tmp, "")
+	data, _ := os.ReadFile(tmp)
 	if !strings.Contains(string(data), "abc123") {
 		t.Error("failed to write info log")
 	}
 	p.Waf.Logger.Debug("efgh123")
-	data, _ = utils.OpenFile(tmp, "")
+	data, _ = os.ReadFile(tmp)
 	if strings.Contains(string(data), "efgh123") {
 		t.Error("debug data shouldn't be written")
 	}
@@ -136,7 +136,7 @@ func TestDebugDirectives(t *testing.T) {
 		t.Error("setting log level")
 	}
 	p.Waf.Logger.Debug("efgh123")
-	data, _ = utils.OpenFile(tmp, "")
+	data, _ = os.ReadFile(tmp)
 	if !strings.Contains(string(data), "efgh123") {
 		t.Error("debug data wasn't written")
 	}

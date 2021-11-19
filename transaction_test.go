@@ -23,7 +23,7 @@ import (
 
 	"github.com/jptosso/coraza-waf/v2/types"
 	"github.com/jptosso/coraza-waf/v2/types/variables"
-	"github.com/jptosso/coraza-waf/v2/utils"
+	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
 )
 
 var wafi = NewWaf()
@@ -300,6 +300,25 @@ func TestHeaderSetters(t *testing.T) {
 	}
 	if !utils.StringInSlice("abc", tx.GetCollection(variables.RequestCookiesNames).Get("")) {
 		t.Error("failed to set cookie name")
+	}
+}
+
+func TestRequestBodyProcessingAlgorithm(t *testing.T) {
+	waf := NewWaf()
+	tx := waf.NewTransaction()
+	tx.RuleEngine = types.RuleEngineOn
+	tx.RequestBodyAccess = true
+	tx.ForceRequestBodyVariable = true
+	tx.AddRequestHeader("content-type", "text/plain")
+	tx.AddRequestHeader("content-length", "7")
+	if _, err := tx.RequestBodyBuffer.Write([]byte("test123")); err != nil {
+		t.Error("Failed to write request body buffer")
+	}
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Error("failed to process request body")
+	}
+	if tx.GetCollection(variables.RequestBody).GetFirstString("") != "test123" {
+		t.Error("failed to set request body")
 	}
 }
 

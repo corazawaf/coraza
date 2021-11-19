@@ -17,60 +17,104 @@ package testing
 import (
 	"os"
 
+	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/seclang"
 	"gopkg.in/yaml.v2"
 )
 
 type Profile struct {
-	Meta  ProfileMeta   `yaml:"meta"`
-	Tests []ProfileTest `yaml:"tests"`
-	Rules string        `yaml:"rules"`
+	Rules string `yaml:"rules,omitempty"`
 	Pass  bool
+	Meta  struct {
+		Author      string `yaml:"author,omitempty"`
+		Description string `yaml:"description,omitempty"`
+		Enabled     bool   `yaml:"enabled,omitempty"`
+		Name        string `yaml:"name,omitempty"`
+	} `yaml:"meta,omitempty"`
+	Tests []struct {
+		Title       string `yaml:"test_title,omitempty"`
+		Description string `yaml:"desc,omitempty"`
+		Stages      []struct {
+			Stage struct {
+				Input struct {
+					DestAddr       string            `yaml:"dest_addr,omitempty"`
+					Port           int               `yaml:"port,omitempty"`
+					Method         string            `yaml:"method,omitempty"`
+					URI            string            `yaml:"uri,omitempty"`
+					Version        string            `yaml:"version,omitempty"`
+					Data           interface{}       `yaml:"data,omitempty"` // Accepts array or string
+					Headers        map[string]string `yaml:"headers,omitempty"`
+					RawRequest     []byte            `yaml:"raw_request,omitempty"`
+					EncodedRequest string            `yaml:"encoded_request,omitempty"`
+					StopMagic      bool              `yaml:"stop_magic,omitempty"`
+				} `yaml:"input,omitempty"`
+				Output expectedOutput `yaml:"output,omitempty"`
+			} `yaml:"stage,omitempty"`
+		} `yaml:"stages,omitempty"`
+	} `yaml:"tests,omitempty"`
 }
 
-type ProfileMeta struct {
-	Author      string `yaml:"author"`
-	Description string `yaml:"description"`
-	Enabled     bool   `yaml:"enabled"`
-	Name        string `yaml:"name"`
+type expectedOutput struct {
+	LogContains       string      `yaml:"log_contains,omitempty"`
+	NoLogContains     string      `yaml:"no_log_contains,omitempty"`
+	ExpectError       bool        `yaml:"expect_error,omitempty"`
+	TriggeredRules    []int       `yaml:"triggered_rules,omitempty"`
+	NonTriggeredRules []int       `yaml:"non_triggered_rules,omitempty"`
+	Status            interface{} `yaml:"status,omitempty"`
 }
 
-type ProfileTest struct {
-	Title       string             `yaml:"test_title"`
-	Description string             `yaml:"desc"`
-	Stages      []ProfileTestStage `yaml:"stages"`
-}
-
-type ProfileTestStage struct {
-	Stage ProfileTestStageInner `yaml:"stage"`
-	Pass  bool                  `yaml:"pass"`
-	Debug bool                  `yaml:"debug"`
-}
-
-type ProfileTestStageInner struct {
-	Input  ProfileTestStageInnerInput  `yaml:"input"`
-	Output ProfileTestStageInnerOutput `yaml:"output"`
-}
-
-type ProfileTestStageInnerInput struct {
-	DestAddr       string            `yaml:"dest_addr"`
-	Port           int               `yaml:"port"`
-	Method         string            `yaml:"method"`
-	URI            string            `yaml:"uri"`
-	Version        string            `yaml:"version"`
-	Data           interface{}       `yaml:"data"` // Accepts array or string
-	Headers        map[string]string `yaml:"headers"`
-	RawRequest     string            `yaml:"raw_request"`
-	EncodedRequest string            `yaml:"encoded_request"`
-	StopMagic      bool              `yaml:"stop_magic"`
-}
-
-type ProfileTestStageInnerOutput struct {
-	LogContains       string      `yaml:"log_contains"`
-	NoLogContains     string      `yaml:"no_log_contains"`
-	ExpectError       bool        `yaml:"expect_error"`
-	TriggeredRules    []int       `yaml:"triggered_rules"`
-	NonTriggeredRules []int       `yaml:"non_triggered_rules"`
-	Status            interface{} `yaml:"status"`
+func (p *Profile) TestList(waf *coraza.Waf) ([]*Test, error) {
+	var tests []*Test
+	for _, t := range p.Tests {
+		name := t.Title
+		for _, tt := range t.Stages {
+			stage := tt.Stage
+			w := waf
+			if w == nil || p.Rules != "" {
+				w = coraza.NewWaf()
+				parser, _ := seclang.NewParser(w)
+				parser.Configdir = "../testdata/"
+				if err := parser.FromString(p.Rules); err != nil {
+					return nil, err
+				}
+			}
+			test := newTest(name, w)
+			test.ExpectedOutput = stage.Output
+			// test.RequestAddress =
+			// test.RequestPort =
+			if stage.Input.URI != "" {
+				test.RequestUri = stage.Input.URI
+			}
+			if stage.Input.Method != "" {
+				test.RequestMethod = stage.Input.Method
+			}
+			if stage.Input.Version != "" {
+				test.RequestProtocol = stage.Input.Version
+			}
+			if stage.Input.Headers != nil {
+				test.RequestHeaders = stage.Input.Headers
+			}
+			// test.ResponseHeaders = stage.Output.Headers
+			test.ResponseCode = 200
+			test.ResponseProtocol = "HTTP/1.1"
+			test.ServerAddress = stage.Input.DestAddr
+			test.ServerPort = stage.Input.Port
+			if stage.Input.StopMagic {
+				test.DisableMagic()
+			}
+			if err := test.SetEncodedRequest(stage.Input.EncodedRequest); err != nil {
+				return nil, err
+			}
+			if err := test.SetRawRequest(stage.Input.RawRequest); err != nil {
+				return nil, err
+			}
+			if err := test.SetRequestBody(stage.Input.Data); err != nil {
+				return nil, err
+			}
+			tests = append(tests, test)
+		}
+	}
+	return tests, nil
 }
 
 // NewProfile creates a new profile from a file
