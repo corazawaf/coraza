@@ -50,7 +50,7 @@ func TestBodyReaderFile(t *testing.T) {
 		t.Error("Failed to get BodyReader from file")
 	}
 	// Let's check if files are being deleted
-	f := (br.Reader()).(*os.File)
+	f := br.writer
 	if _, err := os.Stat(f.Name()); os.IsNotExist(err) {
 		t.Error("BodyReader's Tmp file does not exist")
 	}

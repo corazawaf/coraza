@@ -30,7 +30,7 @@ func Test_directiveSecAuditLog(t *testing.T) {
 	if err := p.FromString("SecWebAppId test123"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if w.WebAppId != "test123" {
+	if w.WebAppID != "test123" {
 		t.Error("failed to set SecWebAppId")
 	}
 	if err := p.FromString("SecUploadKeepFiles On"); err != nil {

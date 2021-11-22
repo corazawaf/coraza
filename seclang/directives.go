@@ -80,7 +80,7 @@ func directiveSecRule(p *Parser, opts string) error {
 }
 
 func directiveSecResponseBodyAccess(p *Parser, opts string) error {
-	p.Waf.ResponseBodyAccess = (opts == "On")
+	p.Waf.ResponseBodyAccess = (strings.ToLower(opts) == "on")
 	return nil
 }
 
@@ -91,7 +91,7 @@ func directiveSecRequestBodyLimit(p *Parser, opts string) error {
 }
 
 func directiveSecRequestBodyAccess(p *Parser, opts string) error {
-	p.Waf.RequestBodyAccess = (opts == "On")
+	p.Waf.RequestBodyAccess = (strings.ToLower(opts) == "on")
 	return nil
 }
 
@@ -106,7 +106,7 @@ func directiveUnsupported(p *Parser, opts string) error {
 }
 
 func directiveSecWebAppId(p *Parser, opts string) error {
-	p.Waf.WebAppId = opts
+	p.Waf.WebAppID = opts
 	return nil
 }
 
@@ -151,7 +151,7 @@ func directiveSecResponseBodyMimeType(p *Parser, opts string) error {
 }
 
 func directiveSecResponseBodyLimitAction(p *Parser, opts string) error {
-	p.Waf.RejectOnResponseBodyLimit = (opts == "Reject")
+	p.Waf.RejectOnResponseBodyLimit = (strings.ToLower(opts) == "reject")
 	return nil
 }
 
@@ -162,7 +162,7 @@ func directiveSecResponseBodyLimit(p *Parser, opts string) error {
 }
 
 func directiveSecRequestBodyLimitAction(p *Parser, opts string) error {
-	p.Waf.RejectOnRequestBodyLimit = (opts == "Reject")
+	p.Waf.RejectOnRequestBodyLimit = (strings.ToLower(opts) == "reject")
 	return nil
 }
 
@@ -172,7 +172,7 @@ func directiveSecRequestBodyInMemoryLimit(p *Parser, opts string) error {
 }
 
 func directiveSecRemoteRulesFailAction(p *Parser, opts string) error {
-	p.Waf.AbortOnRemoteRulesFail = (opts == "Abort")
+	p.Waf.AbortOnRemoteRulesFail = (strings.ToLower(opts) == "abort")
 	return nil
 }
 

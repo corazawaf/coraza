@@ -20,6 +20,7 @@
           triggered_rules:
             - 101
             - 102
+            - 500
           non_triggered_rules:  
             - 103
   rules: |
@@ -27,4 +28,5 @@
     SecRule REQBODY_PROCESSOR "XML" "id: 101,phase:2,log,block"
     SecRule XML:/*|XML://@* "test123" "id:102, phase:2,log,block"
     #REQUEST_BODY must be empty for XML body processor
-    SecRule REQUEST_BODY "test123" "id:103, phase:2, log"
+    SecRule XML:/* "test123" "id:500, log"
+    SecRule XML://@* "attribute_value" "id:501, log"
