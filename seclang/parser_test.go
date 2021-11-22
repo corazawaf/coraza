@@ -40,3 +40,12 @@ func TestDirectivesCaseInsensitive(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestDefaultConfigurationFile(t *testing.T) {
+	waf := engine.NewWaf()
+	p, _ := NewParser(waf)
+	err := p.FromFile("../coraza.conf-recommended")
+	if err != nil {
+		t.Error(err)
+	}
+}

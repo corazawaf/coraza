@@ -180,7 +180,13 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 		}
 	} else if key == "cookie" {
 		// Cookies use the same syntax as GET params but with semicolon (;) separator
-		values := url2.ParseQuery(value, ";")
+		values, err := url2.ParseQuery(value, ";")
+		if err != nil {
+			// if cookie parsing fails we create a urlencoded_error
+			// TODO maybe we should have another variable for this
+			tx.GetCollection(variables.UrlencodedError).Set("", []string{err.Error()})
+			return
+		}
 		for k, vr := range values {
 			tx.GetCollection(variables.RequestCookiesNames).AddUnique("", k)
 			for _, v := range vr {
@@ -524,7 +530,11 @@ func (tx *Transaction) ExtractArguments(orig string, uri string) {
 	if tx.Waf.ArgumentSeparator != "" {
 		sep = tx.Waf.ArgumentSeparator
 	}
-	data := url2.ParseQuery(uri, sep)
+	data, err := url2.ParseQuery(uri, sep)
+	// we create a URLENCODED_ERROR if we fail to parse the URL
+	if err != nil {
+		tx.GetCollection(variables.UrlencodedError).Set("", []string{err.Error()})
+	}
 	for k, vs := range data {
 		for _, v := range vs {
 			tx.AddArgument(orig, k, v)

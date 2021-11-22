@@ -19,7 +19,10 @@ import (
 	"strings"
 )
 
-func ParseQuery(query string, separator string) map[string][]string {
+// ParseQuery parses the URL-encoded query string and returns the corresponding map.
+// It takes separators as parameter, for example: & or ; or &;
+// It returns error if the query string is malformed.
+func ParseQuery(query string, separator string) (map[string][]string, error) {
 	m := make(map[string][]string)
 	for query != "" {
 		key := query
@@ -37,13 +40,13 @@ func ParseQuery(query string, separator string) map[string][]string {
 		}
 		key, err := url.QueryUnescape(key)
 		if err != nil {
-			continue
+			return nil, err
 		}
 		value, err = url.QueryUnescape(value)
 		if err != nil {
-			continue
+			return nil, err
 		}
 		m[key] = append(m[key], value)
 	}
-	return m
+	return m, nil
 }

@@ -36,7 +36,15 @@ func (ubp *urlencodedBodyProcessor) Read(reader io.Reader, _ string, _ string) e
 	b := buf.String()
 	// TODO add url encode validation
 	// tx.GetCollection(VARIABLE_URLENCODED_ERROR).Set("", []string{err.Error()})
-	values := utils.ParseQuery(b, "&")
+	values, err := utils.ParseQuery(b, "&")
+	if err != nil {
+		ubp.collections = &collectionsMap{
+			variables.UrlencodedError: map[string][]string{
+				"": {err.Error()},
+			},
+		}
+		return nil
+	}
 	m := map[string][]string{}
 	keys := []string{}
 	for k, vs := range values {
