@@ -56,8 +56,10 @@ func (mbp *multipartBodyProcessor) Read(reader io.Reader, mime string, storagePa
 		}
 	}
 	m := map[string][]string{}
+	names := []string{}
 	for k, vs := range req.MultipartForm.Value {
 		m[k] = vs
+		names = append(names, k)
 	}
 	fcs := map[string][]string{
 		"": {fmt.Sprintf("%d", totalSize)},
@@ -68,7 +70,10 @@ func (mbp *multipartBodyProcessor) Read(reader io.Reader, mime string, storagePa
 		variables.FilesSizes:        fs,
 		variables.FilesCombinedSize: fcs,
 		variables.ArgsPost:          m,
-		variables.Args:              m,
+		variables.ArgsPostNames: map[string][]string{
+			"": names,
+		},
+		variables.Args: m,
 	}
 
 	return nil

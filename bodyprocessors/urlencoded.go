@@ -57,9 +57,6 @@ func (ubp *urlencodedBodyProcessor) Read(reader io.Reader, _ string, _ string) e
 			"": keys,
 		},
 		variables.Args: m,
-		variables.ArgsNames: map[string][]string{
-			"": keys,
-		},
 		variables.RequestBody: map[string][]string{
 			"": {b},
 		},

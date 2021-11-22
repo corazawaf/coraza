@@ -11,12 +11,12 @@
     -
       stage:
         input:
-            uri: /index.php?t1=aaa&t2=bbb&t3=ccc&a=test
+            uri: /index.php?t1=aaa&t2=bbb&t3=ccc&a=test&jsessionid=74B0CB414BD77D17B5680A6386EF1666
             method: "POST"
             headers:
-                content-type: application/xml
+                content-type: application/x-www-form-urlencoded
                 CookIe: phpmyadminphp=test
-            data: "text"
+            data: "pineapple=123"
         output:
           triggered_rules:
             - 1
@@ -28,6 +28,8 @@
             - 300
             - 400
             - 10
+            #- 500
+            #- 600
           non_triggered_rules:
             
   rules: |
@@ -45,3 +47,6 @@
 
     SecRule REQUEST_COOKIES:pHpMyAdmInPhp "test" "id:300,phase:1,block,log"
     SecRule ARGS_GET_NAMES "t1" "id:400,log"
+
+    SecRule ARGS_NAMES "jsessionid" "id: 500, log, phase:2"
+    SecRule ARGS_NAMES "pineapple" "id: 600, log, phase:2"

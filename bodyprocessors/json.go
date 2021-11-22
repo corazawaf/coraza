@@ -54,9 +54,6 @@ func (js *jsonBodyProcessor) Read(reader io.Reader, _ string, _ string) error {
 	js.collections = collectionsMap{
 		variables.Args:     f,
 		variables.ArgsPost: f,
-		variables.ArgsNames: map[string][]string{
-			"": names,
-		},
 		variables.ArgsPostNames: map[string][]string{
 			"": names,
 		},

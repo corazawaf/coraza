@@ -717,9 +717,15 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 				}
 			}
 			tx.GetCollection(variables.ArgsCombinedSize).Set("", []string{strconv.Itoa(size)})
-		}
-		for mk, mv := range m {
-			tx.GetCollection(k).Set(mk, mv)
+			// in case we receive Args, we must add manually the args and argsnames, otherwise it will be overwritten
+			for kk, vv := range m {
+				tx.GetCollection(variables.Args).Set(kk, vv)
+				tx.GetCollection(variables.ArgsNames).AddUnique("", kk)
+			}
+		} else {
+			for mk, mv := range m {
+				tx.GetCollection(k).Set(mk, mv)
+			}
 		}
 	}
 
