@@ -24,21 +24,23 @@ func removeComments(value string, utils coraza.RuleTransformationTools) string {
 	var i, j int
 	incomment := false
 
+charLoop:
 	for i < inputLen {
 		if !incomment {
-			if (input[i] == '/') && (i+1 < inputLen) && (input[i+1] == '*') {
+			switch {
+			case (input[i] == '/') && (i+1 < inputLen) && (input[i+1] == '*'):
 				incomment = true
 				i += 2
-			} else if (input[i] == '<') && (i+1 < inputLen) && (input[i+1] == '!') && (i+2 < inputLen) && (input[i+2] == '-') && (i+3 < inputLen) && (input[i+3] == '-') && !incomment {
+			case (input[i] == '<') && (i+1 < inputLen) && (input[i+1] == '!') && (i+2 < inputLen) && (input[i+2] == '-') && (i+3 < inputLen) && (input[i+3] == '-') && !incomment:
 				incomment = true
 				i += 4
-			} else if (input[i] == '-') && (i+1 < inputLen) && (input[i+1] == '-') && !incomment {
+			case (input[i] == '-') && (i+1 < inputLen) && (input[i+1] == '-') && !incomment:
 				input[i] = ' '
-				break
-			} else if input[i] == '#' && !incomment {
+				break charLoop
+			case input[i] == '#' && !incomment:
 				input[i] = ' '
-				break
-			} else {
+				break charLoop
+			default:
 				input[j] = input[i]
 				i++
 				j++

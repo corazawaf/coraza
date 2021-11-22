@@ -15,6 +15,7 @@
 package bodyprocessors
 
 import (
+	"encoding/xml"
 	"io"
 
 	"github.com/jptosso/coraza-waf/v2/types/variables"
@@ -24,37 +25,71 @@ import (
 // This hack should work for OWASP CRS
 // This skeleton may be used for other plugins
 type xmlBodyProcessor struct {
-	body string
+	values   []string
+	contents []string
 }
 
-func (xml *xmlBodyProcessor) Read(reader io.Reader, _ string, _ string) error {
-	// reader to body
-	buf := make([]byte, 1024)
-	for {
-		n, err := reader.Read(buf)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return err
-		}
-		xml.body += string(buf[:n])
-	}
-	return nil
+func (xbp *xmlBodyProcessor) Read(reader io.Reader, _ string, _ string) error {
+	var err error
+	xbp.values, xbp.contents, err = readXml(reader)
+	return err
 }
 
-func (xml *xmlBodyProcessor) Collections() collectionsMap {
+func (xbp *xmlBodyProcessor) Collections() collectionsMap {
 	return collectionsMap{}
 }
 
-func (xml *xmlBodyProcessor) Find(expr string) (map[string][]string, error) {
-	return map[string][]string{
-		"": {xml.body},
-	}, nil
+func (xbp *xmlBodyProcessor) Find(expr string) (map[string][]string, error) {
+	switch expr {
+	case "//@*":
+		// attribute values
+		return map[string][]string{"": xbp.values}, nil
+	case "/*":
+		// inner text
+		return map[string][]string{"": xbp.contents}, nil
+	default:
+		// unsupported expression
+		return nil, nil
+	}
 }
 
 func (xml *xmlBodyProcessor) VariableHook() variables.RuleVariable {
 	return variables.XML
+}
+
+func readXml(reader io.Reader) (attrs []string, content []string, err error) {
+	dec := xml.NewDecoder(reader)
+	var n xmlNode
+	err = dec.Decode(&n)
+	if err != nil {
+		return
+	}
+	xmlWalk([]xmlNode{n}, func(n xmlNode) bool {
+		a := n.Attrs
+		for _, attr := range a {
+			attrs = append(attrs, attr.Value)
+		}
+		if len(n.Nodes) == 0 {
+			content = append(content, string(n.Content))
+		}
+		return true
+	})
+	return
+}
+
+func xmlWalk(nodes []xmlNode, f func(xmlNode) bool) {
+	for _, n := range nodes {
+		if f(n) {
+			xmlWalk(n.Nodes, f)
+		}
+	}
+}
+
+type xmlNode struct {
+	XMLName xml.Name
+	Attrs   []xml.Attr `xml:",any,attr"`
+	Content []byte     `xml:",innerxml"`
+	Nodes   []xmlNode  `xml:",any"`
 }
 
 var (

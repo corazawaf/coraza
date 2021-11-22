@@ -88,10 +88,7 @@ type Waf struct {
 	ResponseBodyMimeTypes []string
 
 	// Web Application id, apps sharing the same id will share persistent collections
-	WebAppId string
-
-	// Deprecated: ComponentSignature
-	ComponentSignature string
+	WebAppID string
 
 	// Add significant rule components to audit log
 	ComponentNames []string
@@ -206,6 +203,9 @@ func (w *Waf) NewTransaction() *Transaction {
 		variables.ReqbodyProcessor: "",
 		variables.RequestBody:      "",
 		variables.ResponseBody:     "",
+
+		// others
+		// variables.WebAppID: w.WebAppID, not implemented yet
 	}
 	for v, data := range defaults {
 		tx.GetCollection(v).Set("", []string{data})
@@ -262,10 +262,7 @@ func (w *Waf) AuditLogger() *loggers.Logger {
 }
 
 // NewWaf creates a new WAF instance with default variables
-// TODO there is much to fix here:
-// - what are the default
 func NewWaf() *Waf {
-	//default: us-ascii
 	atom := zap.NewAtomicLevel()
 	atom.SetLevel(zap.InfoLevel)
 	encoderCfg := zap.NewProductionEncoderConfig()
@@ -324,14 +321,22 @@ func (w *Waf) SetLogLevel(lvl int) error {
 	return nil
 }
 
+// SetErrorLogCb sets the callback function for error logging
+// The errorcallback receives all the error data and some
+// helpers to write modsecurity style logs
 func (w *Waf) SetErrorLogCb(cb ErrorLogCallback) {
 	w.errorLogCb = cb
 }
 
+// SetGeoReader is used by directives to assign a geo reader
+// This function is not thread safe
 func (w *Waf) SetGeoReader(reader geo.GeoReader) {
 	w.geo = reader
 }
 
+// Geo returns the geo processor for the current WAF instance
+// Geo is nil if the geo processor is not set
+// A geo processor requires a Geo plugin to be installed
 func (w *Waf) Geo() geo.GeoReader {
 	return w.geo
 }
