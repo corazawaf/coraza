@@ -203,7 +203,6 @@ func (w *Waf) NewTransaction() *Transaction {
 		variables.ReqbodyProcessor: "",
 		variables.RequestBody:      "",
 		variables.ResponseBody:     "",
-
 		// others
 		// variables.WebAppID: w.WebAppID, not implemented yet
 	}
