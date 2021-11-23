@@ -268,6 +268,13 @@ func directiveSecAuditLog(p *Parser, opts string) error {
 	return p.Waf.SetAuditLogger(strings.ToLower(opts))
 }
 
+func directiveSecAuditLogFormat(p *Parser, opts string) error {
+	if len(opts) == 0 {
+		return errors.New("syntax error: SecAuditLogFormat [json/json2/native/...]")
+	}
+	return p.Waf.SetAuditLoggerFormat(strings.ToLower(opts))
+}
+
 func directiveSecAuditLogRelevantStatus(p *Parser, opts string) error {
 	var err error
 	p.Waf.AuditLogRelevantStatus, err = regexp.Compile(opts)

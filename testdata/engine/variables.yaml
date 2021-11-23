@@ -16,7 +16,7 @@
             headers:
                 content-type: application/x-www-form-urlencoded
                 CookIe: phpmyadminphp=test
-            data: "pineapple=123"
+            data: "pineapple=123&file=cat+/etc/\\passw\\d"
         output:
           triggered_rules:
             - 1
@@ -28,8 +28,9 @@
             - 300
             - 400
             - 10
-            #- 500
-            #- 600
+            - 500
+            - 600
+            - 700
           non_triggered_rules:
             
   rules: |
@@ -50,3 +51,4 @@
 
     SecRule ARGS_NAMES "jsessionid" "id: 500, log, phase:2"
     SecRule ARGS_NAMES "pineapple" "id: 600, log, phase:2"
+    SecRule ARGS "(?:^|[^\\])\\[cdeghijklmpqwxyz123456789]" "id:700,log,phase:2"

@@ -71,7 +71,7 @@ func (l *Logger) SetWriter(name string) error {
 		return err
 	}
 	l.writer = writer
-	return nil
+	return l.writer.Init(l)
 }
 
 // LogFormatter is the interface for all log formatters
@@ -144,17 +144,20 @@ func NewAuditLogger() (*Logger, error) {
 		}*/
 	dirMode := fs.FileMode(0755)
 	fileMode := fs.FileMode(0644)
-	s := &serialWriter{}
 	f := path.Join(os.TempDir(), "coraza-audit.log")
 	l := &Logger{
 		file:      f,
 		directory: "/opt/coraza/var/log/audit/",
 		dirMode:   dirMode,
 		fileMode:  fileMode,
-		formatter: nativeFormatter,
-		writer:    s,
 	}
-	return l, s.Init(l)
+	if err := l.SetWriter("serial"); err != nil {
+		return nil, err
+	}
+	if err := l.SetFormatter("native"); err != nil {
+		return nil, err
+	}
+	return l, nil
 }
 
 func init() {

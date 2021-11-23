@@ -232,6 +232,11 @@ func (w *Waf) SetAuditLogger(engine string) error {
 	return w.auditLogger.SetWriter(engine)
 }
 
+// SetAuditLoggerFormat sets the format for the audit logger
+func (w *Waf) SetAuditLoggerFormat(format string) error {
+	return w.auditLogger.SetFormatter(format)
+}
+
 // SetDebugLogPath sets the path for the debug log
 // If the path is empty, the debug log will be disabled
 // note: this is not thread safe

@@ -232,9 +232,6 @@ SecAuditLogParts ABIJDEFHZ
 # Use a single file for logging. This is much easier to look at, but
 # assumes that you will use the audit log only ocassionally.
 #
-#SecAuditLog Serial file=/opt/coraza/var/log/coraza_audit.log filemode=0600
-
-# Concurrent logging:
 SecAuditLog Serial
 
 
