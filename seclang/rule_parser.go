@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 
 	"github.com/jptosso/coraza-waf/v2"
@@ -92,7 +93,23 @@ func (p *ruleParser) ParseVariables(vars string) error {
 			}
 
 			key := string(curkey)
-			err = p.rule.AddVariable(v, key, iscount, isnegation, curr == 2)
+			var re interface{}
+			switch {
+			case key != "" && curr == 2:
+				// in case of a non-empty regex
+				re, err = regexp.Compile(key)
+				if err != nil {
+					return err
+				}
+			case key != "":
+				// in case of a non-empty string we set the key to string
+				re = key
+			}
+			if isnegation {
+				err = p.rule.AddVariableNegation(v, re)
+			} else {
+				err = p.rule.AddVariable(v, re, iscount)
+			}
 			if err != nil {
 				return err
 			}

@@ -38,7 +38,8 @@ type Logger struct {
 // Important: Concurrency must be handled by the writer, not the logger
 func (l Logger) Write(al AuditLog) error {
 	if l.writer == nil {
-		return fmt.Errorf("no audit log writer")
+		return nil // we return nil because it is not an error, it is just not set
+		// return fmt.Errorf("no audit log writer")
 	}
 	return l.writer.Write(al)
 }
@@ -46,6 +47,9 @@ func (l Logger) Write(al AuditLog) error {
 // Close is sed to close the write stream
 // It must be called when the waf instance won't be used anymore
 func (l *Logger) Close() error {
+	if l.writer == nil {
+		return fmt.Errorf("no writer to close")
+	}
 	return l.writer.Close()
 }
 
@@ -150,9 +154,6 @@ func NewAuditLogger() (*Logger, error) {
 		directory: "/opt/coraza/var/log/audit/",
 		dirMode:   dirMode,
 		fileMode:  fileMode,
-	}
-	if err := l.SetWriter("serial"); err != nil {
-		return nil, err
 	}
 	if err := l.SetFormatter("native"); err != nil {
 		return nil, err

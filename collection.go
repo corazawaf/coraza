@@ -27,8 +27,9 @@ import (
 // to store slices of data for keys
 // Important: Collections ARE NOT concurrent safe
 type Collection struct {
-	data map[string][]string
-	name string
+	data     map[string][]string
+	name     string
+	variable variables.RuleVariable
 }
 
 // Get returns a slice of strings for a key
@@ -36,70 +37,40 @@ func (c *Collection) Get(key string) []string {
 	return c.data[key]
 }
 
-// Find is returns a slice of MatchData for the
-// regex or key, exceptions are used to skip
-// some keys
-func (c *Collection) Find(key string, re *regexp.Regexp, exceptions []string) []MatchData {
-	cdata := c.data
-	// we return every value in case there is no key but there is a collection
-	va, _ := variables.ParseVariable(c.name)
-	if len(key) == 0 {
-		data := []MatchData{}
-		for k := range c.data {
-			if strings.StringInSlice(k, exceptions) {
-				continue
-			}
-			for _, v := range c.data[k] {
-				data = append(data, MatchData{
-					Variable:     va,
+// Find is returns a slice of MatchData for the regex
+func (c *Collection) FindRegex(key *regexp.Regexp) []MatchData {
+	result := []MatchData{}
+	for k, data := range c.data {
+		if key.MatchString(k) {
+			for _, d := range data {
+				result = append(result, MatchData{
 					VariableName: c.name,
+					Variable:     c.variable,
+					Key:          k,
+					Value:        d,
+				})
+			}
+		}
+	}
+	return result
+}
+
+func (c *Collection) FindString(key string) []MatchData {
+	result := []MatchData{}
+	for k, vv := range c.data {
+		if key == "" || k == key {
+			for _, v := range vv {
+				result = append(result, MatchData{
+					VariableName: c.name,
+					Variable:     c.variable,
 					Key:          k,
 					Value:        v,
 				})
 			}
 		}
-		return data
 	}
+	return result
 
-	// Regex
-	if re != nil {
-		result := []MatchData{}
-		for k := range cdata {
-			if strings.StringInSlice(k, exceptions) {
-				continue
-			}
-			if re.Match([]byte(k)) {
-				for _, d := range cdata[k] {
-					result = append(result, MatchData{
-						VariableName: c.name,
-						Variable:     va,
-						Key:          k,
-						Value:        d,
-					})
-				}
-			}
-		}
-		return result
-	} else {
-		ret := []MatchData{}
-		// We pass through every record to apply filters
-		for k := range cdata {
-			if strings.StringInSlice(k, exceptions) {
-				continue
-			}
-			if k == key {
-				for _, kd := range cdata[k] {
-					ret = append(ret, MatchData{
-						Variable:     va,
-						VariableName: c.name,
-						Key:          k,
-						Value:        kd,
-					})
-				}
-			}
-		}
-		return ret
-	}
 }
 
 // GetFirstString returns the first string occurrence of a key
@@ -180,10 +151,11 @@ func (c *Collection) Reset() {
 }
 
 // Creates a new collection
-func NewCollection(name string) *Collection {
+func NewCollection(variable variables.RuleVariable) *Collection {
 	col := &Collection{
-		data: map[string][]string{},
-		name: name,
+		data:     map[string][]string{},
+		name:     variable.Name(),
+		variable: variable,
 	}
 	return col
 }

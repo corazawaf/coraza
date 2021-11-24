@@ -26,6 +26,10 @@ type collectionsMap map[variables.RuleVariable]map[string][]string
 type BodyProcessor interface {
 	Read(reader io.Reader, mime string, storagePath string) error
 	Collections() collectionsMap
+	// Find returns the values in the body based on the input string
+	// A string might be an xpath, a regex, a variable name, etc
+	// The find function is responsible of transforming the input
+	// string into a valid usable expression
 	Find(string) (map[string][]string, error)
 	VariableHook() variables.RuleVariable
 }

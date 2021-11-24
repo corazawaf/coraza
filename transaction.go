@@ -350,24 +350,26 @@ func (tx *Transaction) GetStopWatch() string {
 // GetField Retrieve data from collections applying exceptions
 // In future releases we may remove de exceptions slice and
 // make it easier to use
-func (tx *Transaction) GetField(rv ruleVariableParams, exceptions []string) []MatchData {
+func (tx *Transaction) GetField(rv ruleVariableParams) []MatchData {
 	collection := rv.Variable
-	key := rv.Key
-	re := rv.Regex
 	col := tx.GetCollection(collection)
 	if col == nil {
 		return []MatchData{}
 	}
+
+	matches := []MatchData{}
+	// In this case we are going to use the bodyprocessor to get the data
+	// It requires the VariableHook() function to match the current variable
 	if tx.bodyProcessor != nil && tx.bodyProcessor.VariableHook() == collection {
-		m, err := tx.bodyProcessor.Find(key)
+		m, err := tx.bodyProcessor.Find(rv.KeyStr)
 		if err != nil {
-			tx.Waf.Logger.Error("error getting variable", zap.String("collection", collection.Name()), zap.String("key", key), zap.Error(err))
+			tx.Waf.Logger.Error("error getting variable", zap.String("collection", collection.Name()),
+				zap.String("key", rv.KeyStr), zap.Error(err))
 			return []MatchData{}
 		}
 		if len(m) == 0 {
 			return []MatchData{}
 		}
-		matches := []MatchData{}
 		for key, values := range m {
 			for _, value := range values {
 				matches = append(matches, MatchData{
@@ -378,21 +380,49 @@ func (tx *Transaction) GetField(rv ruleVariableParams, exceptions []string) []Ma
 				})
 			}
 		}
-		return matches
-	} /*else if collection == variables.MatchedVars {
-		// this is another super annoying case
-		// if the variable is matched_vars, we must get the variable from the matched_vars
-		// then we recast the variable to the new type
-		// this is a bit of a hack, but it works
-		var err error
-		collection, err = variables.ParseVariable(tx.GetCollection(variables.MatchedVars).GetFirstString(""))
-		if err != nil {
-			// this should never happen
-			tx.Waf.Logger.Error("error getting the variable from MATCHED_VARS", zap.String("collection", collection.Name()), zap.String("key", key), zap.Error(err))
-			return []MatchData{}
+	} else {
+		// in case we are not using a variablehook
+		// Now that we have access to the collection, we can apply the exceptions
+		if rv.KeyRx == nil {
+			matches = col.FindString(rv.KeyStr)
+		} else {
+			matches = col.FindRegex(rv.KeyRx)
 		}
-	}*/
-	return col.Find(tx.MacroExpansion(key), re, exceptions)
+	}
+
+	for i, c := range matches {
+		for _, ex := range rv.Exceptions {
+			// in case it matches the regex or the keystr
+			if (ex.KeyRx != nil && ex.KeyRx.MatchString(c.Key)) || ex.KeyStr == c.Key {
+				tx.Waf.Logger.Debug("Variable exception triggered", zap.String("var", rv.Variable.Name()),
+					zap.String("key", ex.KeyStr), zap.String("txid", tx.Id), zap.String("match", c.Key), zap.Bool("regex", ex.KeyRx != nil))
+				// we remove the exception from the list of values
+				// we tried with standard append but it fails... let's do some hacking
+				// m2 := append(matches[:i], matches[i+1:]...)
+				m2 := make([]MatchData, len(matches)-1)
+				for i2, m := range matches {
+					if i == i2 {
+						continue
+					}
+					m2 = append(m2, m)
+				}
+				matches = m2
+			}
+		}
+	}
+	if rv.Count {
+		count := len(matches)
+		matches = []MatchData{
+			{
+				VariableName: collection.Name(),
+				Variable:     collection,
+				Key:          rv.KeyStr,
+				Value:        strconv.Itoa(count),
+			},
+		}
+		tx.Waf.Logger.Debug("Transforming match to count", zap.String("tx", tx.Id), zap.String("count", matches[0].Value))
+	}
+	return matches
 }
 
 // GetCollection transforms a VARIABLE_ constant into a
@@ -441,7 +471,7 @@ func (tx *Transaction) savePersistentData() {
 func (tx *Transaction) RemoveRuleTargetById(id int, variable variables.RuleVariable, key string) {
 	c := ruleVariableParams{
 		Variable: variable,
-		Key:      key,
+		KeyStr:   key,
 	}
 	// Used if it's empty
 	if tx.ruleRemoveTargetById[id] == nil {

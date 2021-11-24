@@ -31,14 +31,19 @@
             - 500
             - 600
             - 700
+            - 1000
           non_triggered_rules:
+            - 800
+            - 900
+            - 1100
             
   rules: |
     SecRule REQBODY_PROCESSOR "" "id: 10, log"
     SecRequestBodyAccess On
     SecDebugLogLevel 5
+    SecDebugLog /tmp/secdebug.log
     SecRule ARGS:/^t1$/ "aaa" "id:1,phase:1,block,log"
-    SecRule &ARGS_GET:/t.*/ "@gt 2" "id: 1234, phase:1, block, log"
+    SecRule &ARGS_GET:/t.*/ "@gt 0" "id: 1234, phase:1, block, log"
     SecRule REQUEST_METHOD "POST" "id:15, log"
     SecAction "id:100,setvar:'tx.test=%{REQUEST_METHOD}'"
     SecRule TX:test "POST" "id:110,log"
@@ -52,3 +57,9 @@
     SecRule ARGS_NAMES "jsessionid" "id: 500, log, phase:2"
     SecRule ARGS_NAMES "pineapple" "id: 600, log, phase:2"
     SecRule ARGS "(?:^|[^\\])\\[cdeghijklmpqwxyz123456789]" "id:700,log,phase:2"
+
+    SecRule ARGS|!ARGS:t1 "aaa" "id:800,log,phase:1"
+
+    SecRule ARGS|!ARGS:/t.*/ "aaa" "id:900,log,phase:1"
+    SecRule ARGS|!ARGS:/js.*/ "bbb" "id:1000,log,phase:1"
+    SecRule ARGS|!ARGS:/js.*/ "74B0CB414BD77D17B5680A6386EF1666" "id:1100,log,phase:1"
