@@ -117,71 +117,8 @@ func (p *Parser) evaluate(data string) error {
 		return fmt.Errorf("%s directive is disabled", directive)
 	}
 
-	directives := map[string]Directive{
-		"secwebappid":                   directiveSecWebAppId,
-		"secuploadkeepfiles":            directiveSecUploadKeepFiles,
-		"secuploadfilemode":             directiveSecUploadFileMode,
-		"secuploadfilelimit":            directiveSecUploadFileLimit,
-		"secuploaddir":                  directiveSecUploadDir,
-		"sectmpdir":                     directiveSecTmpDir,
-		"secserversignature":            directiveSecServerSignature,
-		"secsensorid":                   directiveSecSensorId,
-		"secruleremovebytag":            directiveSecRuleRemoveByTag,
-		"secruleremovebymsg":            directiveSecRuleRemoveByMsg,
-		"secruleremovebyid":             directiveSecRuleRemoveById,
-		"secruleengine":                 directiveSecRuleEngine,
-		"secrule":                       directiveSecRule,
-		"secresponsebodymimetypesclear": directiveSecResponseBodyMimeTypesClear,
-		"secresponsebodymimetype":       directiveSecResponseBodyMimeType,
-		"secresponsebodylimitaction":    directiveSecResponseBodyLimitAction,
-		"secresponsebodylimit":          directiveSecResponseBodyLimit,
-		"secresponsebodyaccess":         directiveSecResponseBodyAccess,
-		"secrequestbodynofileslimit":    directiveSecRequestBodyNoFilesLimit,
-		"secrequestbodylimitaction":     directiveSecRequestBodyLimitAction,
-		"secrequestbodylimit":           directiveSecRequestBodyLimit,
-		"secrequestbodyinmemorylimit":   directiveSecRequestBodyInMemoryLimit,
-		"secrequestbodyaccess":          directiveSecRequestBodyAccess,
-		"secremoterulesfailaction":      directiveSecRemoteRulesFailAction,
-		"secremoterules":                directiveSecRemoteRules,
-		"secpcrematchlimitrecursion":    directiveSecPcreMatchLimitRecursion,
-		"secpcrematchlimit":             directiveSecPcreMatchLimit,
-		"secmarker":                     directiveSecMarker,
-		"sechttpblkey":                  directiveSecHttpBlKey,
-		"sechashparam":                  directiveSecHashParam,
-		"sechashmethodrx":               directiveSecHashMethodRx,
-		"sechashmethodpm":               directiveSecHashMethodPm,
-		"sechashkey":                    directiveSecHashKey,
-		"sechashengine":                 directiveSecHashEngine,
-		"secgsblookupdb":                directiveSecGsbLookupDb,
-		"secdefaultaction":              directiveSecDefaultAction,
-		"secdatadir":                    directiveSecDataDir,
-		"seccontentinjection":           directiveSecContentInjection,
-		"secconnwritestatelimit":        directiveSecConnWriteStateLimit,
-		"secconnreadstatelimit":         directiveSecConnReadStateLimit,
-		"secconnengine":                 directiveSecConnEngine,
-		"seccomponentsignature":         directiveSecComponentSignature,
-		"seccollectiontimeout":          directiveSecCollectionTimeout,
-		"secauditlogrelevantstatus":     directiveSecAuditLogRelevantStatus,
-		"secauditlogparts":              directiveSecAuditLogParts,
-		"secauditlog":                   directiveSecAuditLog,
-		"secauditengine":                directiveSecAuditEngine,
-		"secaction":                     directiveSecAction,
-		"secdebuglog":                   directiveSecDebugLog,
-		"secdebugloglevel":              directiveSecDebugLogLevel,
-		"secauditlogformat":             directiveSecAuditLogFormat,
-
-		// Unsupported Directives
-		"secargumentseparator":     directiveUnsupported,
-		"seccookieformat":          directiveUnsupported,
-		"secruleupdatetargetbytag": directiveUnsupported,
-		"secruleupdatetargetbymsg": directiveUnsupported,
-		"secruleupdatetargetbyid":  directiveUnsupported,
-		"secruleupdateactionbyid":  directiveUnsupported,
-		"secrulescript":            directiveUnsupported,
-		"secruleperftime":          directiveUnsupported,
-	}
-	d := directives[strings.ToLower(directive)]
-	if d == nil {
+	d, ok := directivesMap[strings.ToLower(directive)]
+	if !ok || d == nil {
 		return p.log("Unsupported directive " + directive)
 	}
 	return d(p, opts)

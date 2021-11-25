@@ -32,6 +32,7 @@
             - 600
             - 700
             - 1000
+            #- 1500
           non_triggered_rules:
             - 800
             - 900
@@ -43,7 +44,9 @@
     SecDebugLogLevel 5
     SecDebugLog /tmp/secdebug.log
     SecRule ARGS:/^t1$/ "aaa" "id:1,phase:1,block,log"
-    SecRule &ARGS_GET:/t.*/ "@gt 0" "id: 1234, phase:1, block, log"
+    SecRule &ARGS_GET:/t.*/ "@gt 2" "id: 1234, phase:1, block, log"
+    # TODO
+    #SecRule &ARGS_GET|!ARGS_GET:/.*/ "@eq 0" "id: 1500, phase:1, block, log"
     SecRule REQUEST_METHOD "POST" "id:15, log"
     SecAction "id:100,setvar:'tx.test=%{REQUEST_METHOD}'"
     SecRule TX:test "POST" "id:110,log"

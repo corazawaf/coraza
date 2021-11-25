@@ -395,7 +395,8 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []MatchData {
 			// in case it matches the regex or the keystr
 			if (ex.KeyRx != nil && ex.KeyRx.MatchString(c.Key)) || ex.KeyStr == c.Key {
 				tx.Waf.Logger.Debug("Variable exception triggered", zap.String("var", rv.Variable.Name()),
-					zap.String("key", ex.KeyStr), zap.String("txid", tx.Id), zap.String("match", c.Key), zap.Bool("regex", ex.KeyRx != nil))
+					zap.String("key", ex.KeyStr), zap.String("txid", tx.Id), zap.String("match", c.Key),
+					zap.Bool("regex", ex.KeyRx != nil))
 				// we remove the exception from the list of values
 				// we tried with standard append but it fails... let's do some hacking
 				// m2 := append(matches[:i], matches[i+1:]...)
@@ -420,7 +421,8 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []MatchData {
 				Value:        strconv.Itoa(count),
 			},
 		}
-		tx.Waf.Logger.Debug("Transforming match to count", zap.String("tx", tx.Id), zap.String("count", matches[0].Value))
+		tx.Waf.Logger.Debug("Transforming match to count", zap.String("tx", tx.Id),
+			zap.String("count", matches[0].Value))
 	}
 	return matches
 }

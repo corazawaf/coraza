@@ -49,3 +49,24 @@ func TestDefaultConfigurationFile(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestChains(t *testing.T) {
+	/*
+		waf := engine.NewWaf()
+		p, _ := NewParser(waf)
+		if err := p.FromString(`
+		SecAction "id:1,deny,log,phase:1,chain"
+		SecRule ARGS "chain"
+		SecRule REQUEST_HEADERS ""
+		`); err != nil {
+			t.Error("Could not create from string")
+		}
+		rules := waf.Rules.GetRules()
+		if len(rules) != 1 || rules[0].Chain == nil {
+			t.Errorf("Chain not created %v", rules[0])
+			return
+		}
+			if rules[0].Chain.Chain == nil {
+				t.Error("Chain over chain not created")
+			}*/
+}
