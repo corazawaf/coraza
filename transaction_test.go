@@ -358,7 +358,34 @@ func TestTxVariables(t *testing.T) {
 }
 
 func TestTxVariablesExceptions(t *testing.T) {
-
+	tx := makeTransaction()
+	rv := ruleVariableParams{
+		Name:     "REQUEST_HEADERS",
+		Variable: variables.RequestHeaders,
+		KeyStr:   "ho.*",
+		KeyRx:    regexp.MustCompile("ho.*"),
+		Exceptions: []ruleVariableException{
+			{KeyStr: "host"},
+		},
+	}
+	fields := tx.GetField(rv)
+	if len(fields) != 0 {
+		t.Errorf("REQUEST_HEADERS:host should not match, got %d matches, %v", len(fields), fields)
+	}
+	rv.Exceptions = []ruleVariableException{}
+	fields = tx.GetField(rv)
+	if len(fields) != 1 || fields[0].Value != "www.test.com:80" {
+		t.Errorf("failed to match rule variable REQUEST_HEADERS:host, %d matches, %v", len(fields), fields)
+	}
+	rv.Exceptions = []ruleVariableException{
+		{
+			KeyRx: regexp.MustCompile("ho.*"),
+		},
+	}
+	fields = tx.GetField(rv)
+	if len(fields) != 0 {
+		t.Errorf("REQUEST_HEADERS:host should not match, got %d matches, %v", len(fields), fields)
+	}
 }
 
 func BenchmarkTransactionCreation(b *testing.B) {

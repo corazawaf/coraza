@@ -390,6 +390,7 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []MatchData {
 		}
 	}
 
+	rmi := []int{}
 	for i, c := range matches {
 		for _, ex := range rv.Exceptions {
 			// in case it matches the regex or the keystr
@@ -400,16 +401,14 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []MatchData {
 				// we remove the exception from the list of values
 				// we tried with standard append but it fails... let's do some hacking
 				// m2 := append(matches[:i], matches[i+1:]...)
-				m2 := make([]MatchData, len(matches)-1)
-				for i2, m := range matches {
-					if i == i2 {
-						continue
-					}
-					m2 = append(m2, m)
-				}
-				matches = m2
+				rmi = append(rmi, i)
 			}
 		}
+	}
+	// we read the list of indexes backwards
+	// then we remove each one of them
+	for i := len(rmi) - 1; i >= 0; i-- {
+		matches = append(matches[:rmi[i]], matches[rmi[i]+1:]...)
 	}
 	if rv.Count {
 		count := len(matches)

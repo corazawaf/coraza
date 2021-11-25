@@ -219,7 +219,7 @@ func (v RuleVariable) Name() string {
 	if name, ok := rulemap[v]; ok {
 		return name
 	}
-	return "UNKNOWN"
+	return "ERROR"
 }
 
 // ParseRuleVariable returns the byte interpretation

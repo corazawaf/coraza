@@ -124,9 +124,9 @@ func (p *Parser) evaluate(data string) error {
 	return d(p, opts)
 }
 
-// ParseRule will take a rule string and create a rule struct
+// parseRule will take a rule string and create a rule struct
 // Rules without operator will become SecActions
-func (p *Parser) ParseRule(data string, withOperator bool) (*engine.Rule, error) {
+func (p *Parser) parseRule(data string, withOperator bool) (*engine.Rule, error) {
 	var err error
 	rp := newRuleParser(p)
 	rp.Configdir = p.Configdir
@@ -212,12 +212,6 @@ func (p *Parser) log(msg string) error {
 		zap.Int("line", p.currentLine),
 	)
 	return errors.New(msg)
-}
-
-// GetDefaultActions returns the default actions as an
-// array of strings, they are not evaluated yet
-func (p *Parser) GetDefaultActions() []string {
-	return p.defaultActions
 }
 
 // NewParser creates a new parser from a WAF instance

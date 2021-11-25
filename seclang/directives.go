@@ -34,7 +34,7 @@ func directiveSecComponentSignature(p *Parser, opts string) error {
 }
 
 func directiveSecMarker(p *Parser, opts string) error {
-	rule, _ := p.ParseRule(`"id:1, pass, nolog"`, false)
+	rule, _ := p.parseRule(`"id:1, pass, nolog"`, false)
 	rule.SecMark = opts
 	rule.Id = 0
 	rule.Phase = 0
@@ -49,7 +49,7 @@ func directiveSecMarker(p *Parser, opts string) error {
 }
 
 func directiveSecAction(p *Parser, opts string) error {
-	rule, err := p.ParseRule(opts, false)
+	rule, err := p.parseRule(opts, false)
 	if err != nil {
 		if perr := p.log(fmt.Sprintf("Failed to compile rule (%s): %s", err, opts)); perr != nil {
 			return perr // can't write to log, return this instead
@@ -69,7 +69,7 @@ func directiveSecAction(p *Parser, opts string) error {
 }
 
 func directiveSecRule(p *Parser, opts string) error {
-	rule, err := p.ParseRule(opts, true)
+	rule, err := p.parseRule(opts, true)
 	if err != nil {
 		if perr := p.log(fmt.Sprintf("Failed to compile rule (%s): %s", err, opts)); perr != nil {
 			return perr // can't write to log, return this instead
