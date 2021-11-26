@@ -16,6 +16,7 @@ package coraza
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 )
@@ -69,14 +70,14 @@ func (br *bodyBuffer) Size() int64 {
 }
 
 // Close will close all readers and delete temporary files
-func (br *bodyBuffer) Close() {
+func (br *bodyBuffer) Close() error {
 	if br.writer == nil {
-		return
+		return fmt.Errorf("invalid writer")
 	}
-	br.writer.Close()
-	if br.writer != nil {
-		os.Remove(br.writer.Name())
+	if err := br.writer.Close(); err != nil {
+		return err
 	}
+	return os.Remove(br.writer.Name())
 }
 
 // NewBodyReader Initializes a body reader

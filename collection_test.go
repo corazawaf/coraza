@@ -15,35 +15,29 @@
 package coraza
 
 import (
+	"regexp"
 	"testing"
+
+	"github.com/jptosso/coraza-waf/v2/types/variables"
 )
 
 func TestLocalCollection(t *testing.T) {
 }
 
 func TestLocalCollectionMatchData(t *testing.T) {
-	lc := NewCollection("test")
+	lc := NewCollection(variables.Args)
 	lc.Set("test2", []string{"test3"})
-
-	md := lc.Find("test2", nil, []string{})
-	if len(md) == 0 {
-		t.Error("Failed to get matched data")
-		return
+	lc.Set("other4", []string{"test"})
+	if l := len(lc.FindRegex(regexp.MustCompile("test.*"))); l != 1 {
+		t.Errorf("failed to find regex, got %d", l)
 	}
-	md0 := md[0]
-	if md0.VariableName != "test" {
-		t.Error("Failed to set matched data collection")
-	}
-	if md0.Key != "test2" {
-		t.Error("Failed to set matched data key")
-	}
-	if md0.Value != "test3" {
-		t.Error("Failed to set matched data value")
+	if l := len(lc.FindString("other4")); l != 1 {
+		t.Errorf("failed to find string, got %d", l)
 	}
 }
 
 func TestAddUnique(t *testing.T) {
-	col := NewCollection("test")
+	col := NewCollection(variables.Args)
 	col.AddUnique("test", "test2")
 	col.AddUnique("test", "test2")
 	if len(col.data["test"]) != 1 {

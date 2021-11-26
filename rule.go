@@ -74,6 +74,16 @@ type ruleOperatorParams struct {
 	Negation bool
 }
 
+type ruleVariableException struct {
+	// The string key for the variable that is going to be requested
+	// If KeyRx is not nil, KeyStr is ignored
+	KeyStr string
+
+	// The key for the variable that is going to be requested
+	// If nil, KeyStr is going to be used
+	KeyRx *regexp.Regexp
+}
+
 // RuleVariable is compiled during runtime by transactions
 // to get values from the transaction's variables
 // It supports xml, regex, exceptions and many more features
@@ -88,13 +98,15 @@ type ruleVariableParams struct {
 	Variable variables.RuleVariable
 
 	// The key for the variable that is going to be requested
-	Key string
+	// If nil, KeyStr is going to be used
+	KeyRx *regexp.Regexp
 
-	// If not nil, a regex will be used instead of a key
-	Regex *regexp.Regexp // for performance
+	// The string key for the variable that is going to be requested
+	// If KeyRx is not nil, KeyStr is ignored
+	KeyStr string
 
 	// A slice of key exceptions
-	Exceptions []string
+	Exceptions []ruleVariableException
 }
 
 type ruleTransformationParams struct {
@@ -232,53 +244,38 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		ecol := tx.ruleRemoveTargetById[r.Id]
 		for _, v := range r.variables {
 			var values []MatchData
-			exceptions := make([]string, len(v.Exceptions))
-			copy(exceptions, v.Exceptions)
 			for _, c := range ecol {
 				if c.Variable == v.Variable {
-					exceptions = append(exceptions, c.Key)
+					// TODO shall we check the pointer?
+					v.Exceptions = append(v.Exceptions, ruleVariableException{c.KeyStr, nil})
 				}
 			}
 
-			if v.Count {
-				l := 0
-				if v.Key != "" {
-					// Get with macro expansion
-					values = tx.GetField(v, exceptions)
-					l = len(values)
-				} else {
-					l = len(tx.GetCollection(v.Variable).Data())
-				}
-				values = []MatchData{
-					{
-						VariableName: v.Variable.Name(),
-						Variable:     v.Variable,
-						Key:          v.Key,
-						Value:        strconv.Itoa(l),
-					},
-				}
-			} else {
-				values = tx.GetField(v, exceptions)
-			}
+			values = tx.GetField(v)
 			if len(values) == 0 {
 				// TODO should we run the operators here?
 				continue
 			}
-			tx.Waf.Logger.Debug("Arguments expanded",
+			tx.Waf.Logger.Debug("Expanding arguments",
 				zap.Int("rule", rid),
 				zap.String("tx", tx.Id),
 				zap.Int("count", len(values)),
 			)
 			for _, arg := range values {
 				var args []string
+				tx.Waf.Logger.Debug("Transforming argument",
+					zap.Int("rule", rid),
+					zap.String("tx", tx.Id),
+					zap.String("argument", arg.Value),
+				)
 				if r.MultiMatch {
 					// TODO in the future, we don't need to run every transformation
-					// We can try for each until found
+					// We could try for each until found
 					args = r.executeTransformationsMultimatch(arg.Value, tools)
 				} else {
 					args = []string{r.executeTransformations(arg.Value, tools)}
 				}
-				tx.Waf.Logger.Debug("arguments transformed",
+				tx.Waf.Logger.Debug("Arguments transformed",
 					zap.Int("rule", rid),
 					zap.String("tx", tx.Id),
 					zap.Strings("arguments", args),
@@ -382,34 +379,63 @@ func (r *Rule) AddAction(name string, action RuleAction) error {
 	return nil
 }
 
-func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool, isnegation bool, isregex bool) error {
+// AddVariable adds a variable to the rule
+// The key can be a regexp.Regexp, a string or nil, in case of regexp
+// it will be used to match the variable, in case of string it will
+// be a fixed match, in case of nil it will match everything
+func (r *Rule) AddVariable(v variables.RuleVariable, key interface{}, iscount bool) error {
 	var re *regexp.Regexp
-	if isregex {
-		var err error
-		re, err = regexp.Compile(key)
-		if err != nil {
-			return err
+	str := ""
+	switch v := key.(type) {
+	case *regexp.Regexp:
+		re = v
+		str = re.String()
+	case string:
+		str = strings.ToLower(v)
+	case nil:
+		// we allow this
+	default:
+		return fmt.Errorf("invalid key type %T", v)
+	}
+	r.variables = append(r.variables, ruleVariableParams{
+		Count:      iscount,
+		Variable:   v,
+		KeyStr:     str,
+		KeyRx:      re,
+		Exceptions: []ruleVariableException{},
+	})
+	return nil
+}
+
+func (r *Rule) AddVariableNegation(v variables.RuleVariable, key interface{}) error {
+	counter := 0
+	var re *regexp.Regexp
+	str := ""
+	switch v := key.(type) {
+	case string:
+		st := v
+		if st == "" {
+			return fmt.Errorf("invalid variable negation key, it cannot be empty")
+		}
+		str = st
+	case *regexp.Regexp:
+		if v.String() == "" {
+			return fmt.Errorf("invalid variable negation key, it cannot be an empty regex")
+		}
+		re = v
+		str = re.String()
+	default:
+		return fmt.Errorf("invalid negation input %s, %T", v, v)
+	}
+	for i, rv := range r.variables {
+		if rv.Variable == v {
+			rv.Exceptions = append(rv.Exceptions, ruleVariableException{str, re})
+			r.variables[i] = rv
+			counter++
 		}
 	}
-	if isnegation {
-		counter := 0
-		for _, rv := range r.variables {
-			if rv.Variable == v {
-				rv.Exceptions = append(rv.Exceptions, key)
-				counter++
-			}
-		}
-		if counter == 0 {
-			return fmt.Errorf("cannot create a variable exception is the variable %q is not used", v.Name())
-		}
-	} else {
-		r.variables = append(r.variables, ruleVariableParams{
-			Count:      iscount,
-			Variable:   v,
-			Key:        strings.ToLower(key), // is it ok tolower here?
-			Regex:      re,
-			Exceptions: []string{},
-		})
+	if counter == 0 {
+		return fmt.Errorf("cannot create a variable exception is the variable %q is not used", v.Name())
 	}
 	return nil
 }

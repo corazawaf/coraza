@@ -122,22 +122,12 @@ func TestDebugDirectives(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	if err := directiveSecDebugLogLevel(p, "5"); err != nil {
+		t.Error(err)
+	}
 	p.Waf.Logger.Info("abc123")
 	data, _ := os.ReadFile(tmp)
 	if !strings.Contains(string(data), "abc123") {
 		t.Error("failed to write info log")
-	}
-	p.Waf.Logger.Debug("efgh123")
-	data, _ = os.ReadFile(tmp)
-	if strings.Contains(string(data), "efgh123") {
-		t.Error("debug data shouldn't be written")
-	}
-	if err := p.Waf.SetLogLevel(5); err != nil {
-		t.Error("setting log level")
-	}
-	p.Waf.Logger.Debug("efgh123")
-	data, _ = os.ReadFile(tmp)
-	if !strings.Contains(string(data), "efgh123") {
-		t.Error("debug data wasn't written")
 	}
 }

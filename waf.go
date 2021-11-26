@@ -161,7 +161,7 @@ func (w *Waf) NewTransaction() *Transaction {
 		ResponseBodyBuffer:   NewBodyReader(w.TmpDir, w.RequestBodyInMemoryLimit),
 	}
 	for i := range tx.collections {
-		tx.collections[i] = NewCollection(variables.RuleVariable(i).Name())
+		tx.collections[i] = NewCollection(variables.RuleVariable(i))
 	}
 
 	// set capture variables
@@ -268,18 +268,8 @@ func (w *Waf) AuditLogger() *loggers.Logger {
 // NewWaf creates a new WAF instance with default variables
 func NewWaf() *Waf {
 	atom := zap.NewAtomicLevel()
-	atom.SetLevel(zap.InfoLevel)
-	encoderCfg := zap.NewProductionEncoderConfig()
-	logger := zap.New(zapcore.NewCore(
-		zapcore.NewJSONEncoder(encoderCfg),
-		zapcore.Lock(os.Stdout),
-		atom,
-	))
-	al, err := loggers.NewAuditLogger()
-	if err != nil {
-		// TODO this error is wrong
-		logger.Fatal("failed to create audit logger", zap.Error(err))
-	}
+	atom.SetLevel(zap.FatalLevel)
+	al, _ := loggers.NewAuditLogger()
 	waf := &Waf{
 		ArgumentSeparator:        "&",
 		AuditEngine:              types.AuditEngineOff,
@@ -295,11 +285,11 @@ func NewWaf() *Waf {
 		Rules:                    NewRuleGroup(),
 		TmpDir:                   "/tmp",
 		CollectionTimeout:        3600,
-		Logger:                   logger,
 		loggerAtomicLevel:        &atom,
 		AuditLogRelevantStatus:   regexp.MustCompile(`.*`),
 	}
-	logger.Debug("a new waf instance was created")
+	waf.SetDebugLogPath("/dev/null")
+	waf.Logger.Debug("a new waf instance was created")
 	return waf
 }
 

@@ -30,7 +30,7 @@ func TestDefaultActions(t *testing.T) {
 	if err := p.addDefaultActions("log, drop, phase:2"); err != nil {
 		t.Error("Could not add default actions")
 	}
-	if len(p.GetDefaultActions()) != 2 {
+	if len(p.defaultActions) != 2 {
 		t.Error("Default actions were not created")
 	}
 	if err := p.FromString(`SecAction "phase:2, id:1"`); err != nil {

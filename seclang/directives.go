@@ -34,7 +34,7 @@ func directiveSecComponentSignature(p *Parser, opts string) error {
 }
 
 func directiveSecMarker(p *Parser, opts string) error {
-	rule, _ := p.ParseRule(`"id:1, pass, nolog"`, false)
+	rule, _ := p.parseRule(`"id:1, pass, nolog"`, false)
 	rule.SecMark = opts
 	rule.Id = 0
 	rule.Phase = 0
@@ -49,7 +49,7 @@ func directiveSecMarker(p *Parser, opts string) error {
 }
 
 func directiveSecAction(p *Parser, opts string) error {
-	rule, err := p.ParseRule(opts, false)
+	rule, err := p.parseRule(opts, false)
 	if err != nil {
 		if perr := p.log(fmt.Sprintf("Failed to compile rule (%s): %s", err, opts)); perr != nil {
 			return perr // can't write to log, return this instead
@@ -69,7 +69,7 @@ func directiveSecAction(p *Parser, opts string) error {
 }
 
 func directiveSecRule(p *Parser, opts string) error {
-	rule, err := p.ParseRule(opts, true)
+	rule, err := p.parseRule(opts, true)
 	if err != nil {
 		if perr := p.log(fmt.Sprintf("Failed to compile rule (%s): %s", err, opts)); perr != nil {
 			return perr // can't write to log, return this instead
@@ -342,4 +342,95 @@ func directiveSecDebugLogLevel(p *Parser, opts string) error {
 func parseBoolean(data string) bool {
 	data = strings.ToLower(data)
 	return data == "on"
+}
+
+var (
+	_ Directive = directiveSecAction
+	_ Directive = directiveSecAuditEngine
+	_ Directive = directiveSecAuditLog
+	_ Directive = directiveSecAuditLogFormat
+	_ Directive = directiveSecAuditLogParts
+	_ Directive = directiveSecAuditLogRelevantStatus
+	_ Directive = directiveSecContentInjection
+	_ Directive = directiveSecDataDir
+	_ Directive = directiveSecDefaultAction
+	_ Directive = directiveSecDebugLog
+	_ Directive = directiveSecDebugLogLevel
+	_ Directive = directiveSecHashEngine
+	_ Directive = directiveSecHashKey
+	_ Directive = directiveSecHashMethodPm
+	_ Directive = directiveSecHashMethodRx
+	_ Directive = directiveSecHashParam
+	_ Directive = directiveSecHttpBlKey
+	_ Directive = directiveSecMarker
+	_ Directive = directiveSecRemoteRules
+	_ Directive = directiveSecSensorId
+)
+
+var directivesMap = map[string]Directive{
+	"secwebappid":                   directiveSecWebAppId,
+	"secuploadkeepfiles":            directiveSecUploadKeepFiles,
+	"secuploadfilemode":             directiveSecUploadFileMode,
+	"secuploadfilelimit":            directiveSecUploadFileLimit,
+	"secuploaddir":                  directiveSecUploadDir,
+	"sectmpdir":                     directiveSecTmpDir,
+	"secserversignature":            directiveSecServerSignature,
+	"secsensorid":                   directiveSecSensorId,
+	"secruleremovebytag":            directiveSecRuleRemoveByTag,
+	"secruleremovebymsg":            directiveSecRuleRemoveByMsg,
+	"secruleremovebyid":             directiveSecRuleRemoveById,
+	"secruleengine":                 directiveSecRuleEngine,
+	"secrule":                       directiveSecRule,
+	"secresponsebodymimetypesclear": directiveSecResponseBodyMimeTypesClear,
+	"secresponsebodymimetype":       directiveSecResponseBodyMimeType,
+	"secresponsebodylimitaction":    directiveSecResponseBodyLimitAction,
+	"secresponsebodylimit":          directiveSecResponseBodyLimit,
+	"secresponsebodyaccess":         directiveSecResponseBodyAccess,
+	"secrequestbodynofileslimit":    directiveSecRequestBodyNoFilesLimit,
+	"secrequestbodylimitaction":     directiveSecRequestBodyLimitAction,
+	"secrequestbodylimit":           directiveSecRequestBodyLimit,
+	"secrequestbodyinmemorylimit":   directiveSecRequestBodyInMemoryLimit,
+	"secrequestbodyaccess":          directiveSecRequestBodyAccess,
+	"secremoterulesfailaction":      directiveSecRemoteRulesFailAction,
+	"secremoterules":                directiveSecRemoteRules,
+	"secpcrematchlimitrecursion":    directiveSecPcreMatchLimitRecursion,
+	"secpcrematchlimit":             directiveSecPcreMatchLimit,
+	"secmarker":                     directiveSecMarker,
+	"sechttpblkey":                  directiveSecHttpBlKey,
+	"sechashparam":                  directiveSecHashParam,
+	"sechashmethodrx":               directiveSecHashMethodRx,
+	"sechashmethodpm":               directiveSecHashMethodPm,
+	"sechashkey":                    directiveSecHashKey,
+	"sechashengine":                 directiveSecHashEngine,
+	"secgsblookupdb":                directiveSecGsbLookupDb,
+	"secdefaultaction":              directiveSecDefaultAction,
+	"secdatadir":                    directiveSecDataDir,
+	"seccontentinjection":           directiveSecContentInjection,
+	"secconnwritestatelimit":        directiveSecConnWriteStateLimit,
+	"secconnreadstatelimit":         directiveSecConnReadStateLimit,
+	"secconnengine":                 directiveSecConnEngine,
+	"seccomponentsignature":         directiveSecComponentSignature,
+	"seccollectiontimeout":          directiveSecCollectionTimeout,
+	"secauditlogrelevantstatus":     directiveSecAuditLogRelevantStatus,
+	"secauditlogparts":              directiveSecAuditLogParts,
+	"secauditlog":                   directiveSecAuditLog,
+	"secauditengine":                directiveSecAuditEngine,
+	"secaction":                     directiveSecAction,
+	"secdebuglog":                   directiveSecDebugLog,
+	"secdebugloglevel":              directiveSecDebugLogLevel,
+	"secauditlogformat":             directiveSecAuditLogFormat,
+
+	// Unsupported Directives
+	"secargumentseparator":     directiveUnsupported,
+	"seccookieformat":          directiveUnsupported,
+	"secruleupdatetargetbytag": directiveUnsupported,
+	"secruleupdatetargetbymsg": directiveUnsupported,
+	"secruleupdatetargetbyid":  directiveUnsupported,
+	"secruleupdateactionbyid":  directiveUnsupported,
+	"secrulescript":            directiveUnsupported,
+	"secruleperftime":          directiveUnsupported,
+}
+
+func RegisterDirective(name string, directive Directive) {
+	directivesMap[name] = directive
 }

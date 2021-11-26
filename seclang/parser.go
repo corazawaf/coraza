@@ -117,79 +117,16 @@ func (p *Parser) evaluate(data string) error {
 		return fmt.Errorf("%s directive is disabled", directive)
 	}
 
-	directives := map[string]Directive{
-		"secwebappid":                   directiveSecWebAppId,
-		"secuploadkeepfiles":            directiveSecUploadKeepFiles,
-		"secuploadfilemode":             directiveSecUploadFileMode,
-		"secuploadfilelimit":            directiveSecUploadFileLimit,
-		"secuploaddir":                  directiveSecUploadDir,
-		"sectmpdir":                     directiveSecTmpDir,
-		"secserversignature":            directiveSecServerSignature,
-		"secsensorid":                   directiveSecSensorId,
-		"secruleremovebytag":            directiveSecRuleRemoveByTag,
-		"secruleremovebymsg":            directiveSecRuleRemoveByMsg,
-		"secruleremovebyid":             directiveSecRuleRemoveById,
-		"secruleengine":                 directiveSecRuleEngine,
-		"secrule":                       directiveSecRule,
-		"secresponsebodymimetypesclear": directiveSecResponseBodyMimeTypesClear,
-		"secresponsebodymimetype":       directiveSecResponseBodyMimeType,
-		"secresponsebodylimitaction":    directiveSecResponseBodyLimitAction,
-		"secresponsebodylimit":          directiveSecResponseBodyLimit,
-		"secresponsebodyaccess":         directiveSecResponseBodyAccess,
-		"secrequestbodynofileslimit":    directiveSecRequestBodyNoFilesLimit,
-		"secrequestbodylimitaction":     directiveSecRequestBodyLimitAction,
-		"secrequestbodylimit":           directiveSecRequestBodyLimit,
-		"secrequestbodyinmemorylimit":   directiveSecRequestBodyInMemoryLimit,
-		"secrequestbodyaccess":          directiveSecRequestBodyAccess,
-		"secremoterulesfailaction":      directiveSecRemoteRulesFailAction,
-		"secremoterules":                directiveSecRemoteRules,
-		"secpcrematchlimitrecursion":    directiveSecPcreMatchLimitRecursion,
-		"secpcrematchlimit":             directiveSecPcreMatchLimit,
-		"secmarker":                     directiveSecMarker,
-		"sechttpblkey":                  directiveSecHttpBlKey,
-		"sechashparam":                  directiveSecHashParam,
-		"sechashmethodrx":               directiveSecHashMethodRx,
-		"sechashmethodpm":               directiveSecHashMethodPm,
-		"sechashkey":                    directiveSecHashKey,
-		"sechashengine":                 directiveSecHashEngine,
-		"secgsblookupdb":                directiveSecGsbLookupDb,
-		"secdefaultaction":              directiveSecDefaultAction,
-		"secdatadir":                    directiveSecDataDir,
-		"seccontentinjection":           directiveSecContentInjection,
-		"secconnwritestatelimit":        directiveSecConnWriteStateLimit,
-		"secconnreadstatelimit":         directiveSecConnReadStateLimit,
-		"secconnengine":                 directiveSecConnEngine,
-		"seccomponentsignature":         directiveSecComponentSignature,
-		"seccollectiontimeout":          directiveSecCollectionTimeout,
-		"secauditlogrelevantstatus":     directiveSecAuditLogRelevantStatus,
-		"secauditlogparts":              directiveSecAuditLogParts,
-		"secauditlog":                   directiveSecAuditLog,
-		"secauditengine":                directiveSecAuditEngine,
-		"secaction":                     directiveSecAction,
-		"secdebuglog":                   directiveSecDebugLog,
-		"secdebugloglevel":              directiveSecDebugLogLevel,
-		"secauditlogformat":             directiveSecAuditLogFormat,
-
-		// Unsupported Directives
-		"secargumentseparator":     directiveUnsupported,
-		"seccookieformat":          directiveUnsupported,
-		"secruleupdatetargetbytag": directiveUnsupported,
-		"secruleupdatetargetbymsg": directiveUnsupported,
-		"secruleupdatetargetbyid":  directiveUnsupported,
-		"secruleupdateactionbyid":  directiveUnsupported,
-		"secrulescript":            directiveUnsupported,
-		"secruleperftime":          directiveUnsupported,
-	}
-	d := directives[strings.ToLower(directive)]
-	if d == nil {
+	d, ok := directivesMap[strings.ToLower(directive)]
+	if !ok || d == nil {
 		return p.log("Unsupported directive " + directive)
 	}
 	return d(p, opts)
 }
 
-// ParseRule will take a rule string and create a rule struct
+// parseRule will take a rule string and create a rule struct
 // Rules without operator will become SecActions
-func (p *Parser) ParseRule(data string, withOperator bool) (*engine.Rule, error) {
+func (p *Parser) parseRule(data string, withOperator bool) (*engine.Rule, error) {
 	var err error
 	rp := newRuleParser(p)
 	rp.Configdir = p.Configdir
@@ -275,12 +212,6 @@ func (p *Parser) log(msg string) error {
 		zap.Int("line", p.currentLine),
 	)
 	return errors.New(msg)
-}
-
-// GetDefaultActions returns the default actions as an
-// array of strings, they are not evaluated yet
-func (p *Parser) GetDefaultActions() []string {
-	return p.defaultActions
 }
 
 // NewParser creates a new parser from a WAF instance

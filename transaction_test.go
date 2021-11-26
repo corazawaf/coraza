@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -319,6 +320,71 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 	}
 	if tx.GetCollection(variables.RequestBody).GetFirstString("") != "test123" {
 		t.Error("failed to set request body")
+	}
+}
+
+func TestTxVariables(t *testing.T) {
+	tx := makeTransaction()
+	rv := ruleVariableParams{
+		Name:     "REQUEST_HEADERS",
+		Variable: variables.RequestHeaders,
+		KeyStr:   "ho.*",
+		KeyRx:    regexp.MustCompile("ho.*"),
+	}
+	if len(tx.GetField(rv)) != 1 || tx.GetField(rv)[0].Value != "www.test.com:80" {
+		t.Errorf("failed to match rule variable REQUEST_HEADERS:host, %d matches, %v", len(tx.GetField(rv)), tx.GetField(rv))
+	}
+	rv.Count = true
+	if len(tx.GetField(rv)) == 0 || tx.GetField(rv)[0].Value != "1" {
+		t.Errorf("failed to get count for regexp variable")
+	}
+	// now nil key
+	rv.KeyRx = nil
+	if len(tx.GetField(rv)) == 0 {
+		t.Error("failed to match rule variable REQUEST_HEADERS with nil key")
+	}
+	rv.KeyStr = ""
+	f := tx.GetField(rv)
+	if len(f) == 0 {
+		t.Error("failed to count variable REQUEST_HEADERS ")
+	}
+	count, err := strconv.Atoi(f[0].Value)
+	if err != nil {
+		t.Error(err)
+	}
+	if count != 5 {
+		t.Errorf("failed to match rule variable REQUEST_HEADERS with count, %v", rv)
+	}
+}
+
+func TestTxVariablesExceptions(t *testing.T) {
+	tx := makeTransaction()
+	rv := ruleVariableParams{
+		Name:     "REQUEST_HEADERS",
+		Variable: variables.RequestHeaders,
+		KeyStr:   "ho.*",
+		KeyRx:    regexp.MustCompile("ho.*"),
+		Exceptions: []ruleVariableException{
+			{KeyStr: "host"},
+		},
+	}
+	fields := tx.GetField(rv)
+	if len(fields) != 0 {
+		t.Errorf("REQUEST_HEADERS:host should not match, got %d matches, %v", len(fields), fields)
+	}
+	rv.Exceptions = []ruleVariableException{}
+	fields = tx.GetField(rv)
+	if len(fields) != 1 || fields[0].Value != "www.test.com:80" {
+		t.Errorf("failed to match rule variable REQUEST_HEADERS:host, %d matches, %v", len(fields), fields)
+	}
+	rv.Exceptions = []ruleVariableException{
+		{
+			KeyRx: regexp.MustCompile("ho.*"),
+		},
+	}
+	fields = tx.GetField(rv)
+	if len(fields) != 0 {
+		t.Errorf("REQUEST_HEADERS:host should not match, got %d matches, %v", len(fields), fields)
 	}
 }
 
