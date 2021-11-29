@@ -30,7 +30,7 @@ func jsonFormatter(al AuditLog) ([]byte, error) {
 }
 
 // Coraza json format
-func json2Formatter(al AuditLog) ([]byte, error) {
+func legacyJsonFormatter(al AuditLog) ([]byte, error) {
 	reqHeaders := map[string]string{}
 	for k, v := range al.Transaction.Request.Headers {
 		reqHeaders[k] = v[0]
@@ -67,49 +67,6 @@ func json2Formatter(al AuditLog) ([]byte, error) {
 		return nil, err
 	}
 	return jsdata, nil
-}
-
-func cefFormatter(al AuditLog) ([]byte, error) {
-	return nil, fmt.Errorf("CEF loggign not implemented yet (TBI)")
-	/*
-		TODO TBI
-		f := make(map[string]string)
-		f["src"] = al.Transaction.ClientIp
-		f["status"] = strconv.Itoa(al.Transaction.Response.Status)
-		// TODO add more fields
-		timestamp := al.Transaction.Timestamp
-		host := "localhost"
-		m := &AuditMessage{}
-		severity := "0"
-		if len(al.Messages) > 0 {
-			m = al.Messages[len(al.Messages)-1]
-			severity = fmt.Sprintf("%d", m.Data.Severity)
-		}
-		msg := m.Message
-		data := m.Data.Data
-
-		if msg == "" {
-			msg = "n/a"
-		}
-		if data == "" {
-			data = "n/a"
-		}
-		if severity == "" {
-			severity = "n/a"
-		}
-		ext := ""
-		for k, v := range f {
-			v := strings.ReplaceAll(v, "|", "\\|")
-			ext += fmt.Sprintf("%s=%s ", k, v)
-		}
-		ext = strings.TrimSpace(ext)
-		return fmt.Sprintf("%s %s CEF:0|coraza|coraza-waf|v1.2|%s|%s|%s|%s",
-			timestamp,
-			host,
-			msg,
-			data,
-			severity,
-			ext), nil*/
 }
 
 func nativeFormatter(al AuditLog) ([]byte, error) {
@@ -164,7 +121,6 @@ func nativeFormatter(al AuditLog) ([]byte, error) {
 }
 
 var (
-	_ LogFormatter = cefFormatter
 	_ LogFormatter = nativeFormatter
 	_ LogFormatter = jsonFormatter
 )

@@ -16,8 +16,6 @@ package transformations
 
 import (
 	"unicode"
-
-	"github.com/jptosso/coraza-waf/v2"
 )
 
 /*
@@ -33,7 +31,7 @@ replacing all commas [,] and semicolon [;] into a space
 replacing all multiple spaces (including tab, newline, etc.) into one space
 transform all characters to lowercase
 */
-func cmdLine(data string, utils coraza.RuleTransformationTools) string {
+func cmdLine(data string) (string, error) {
 	space := false
 	ret := []byte{}
 	for _, a := range data {
@@ -60,5 +58,5 @@ func cmdLine(data string, utils coraza.RuleTransformationTools) string {
 			space = false
 		}
 	}
-	return string(ret)
+	return string(ret), nil
 }

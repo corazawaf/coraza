@@ -33,12 +33,12 @@ func (a *idFn) Init(r *coraza.Rule, data string) error {
 	if err != nil {
 		return fmt.Errorf("invalid rule id %s", data)
 	}
-	r.Id = int(i)
-	if r.Id < 0 {
-		return fmt.Errorf("rule id (%d) cannot be negative", r.Id)
+	r.ID = int(i)
+	if r.ID < 0 {
+		return fmt.Errorf("rule id (%d) cannot be negative", r.ID)
 	}
-	if r.Id == 0 {
-		return fmt.Errorf("rule id (%d) cannot be zero", r.Id)
+	if r.ID == 0 {
+		return fmt.Errorf("rule id (%d) cannot be zero", r.ID)
 	}
 	return nil
 }

@@ -23,7 +23,7 @@ import (
 
 // BodyReader is used to read RequestBody and ResponseBody objects
 // It will handle memory usage for buffering and processing
-type bodyBuffer struct {
+type BodyBuffer struct {
 	io.Writer   // OK?
 	tmpDir      string
 	buffer      *bytes.Buffer
@@ -34,7 +34,7 @@ type bodyBuffer struct {
 
 // Write appends data to the body buffer by chunks
 // You may dump io.Readers using io.Copy(br, reader)
-func (br *bodyBuffer) Write(data []byte) (n int, err error) {
+func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	l := int64(len(data)) + br.length
 	if l >= br.memoryLimit {
 		if br.writer == nil {
@@ -56,7 +56,7 @@ func (br *bodyBuffer) Write(data []byte) (n int, err error) {
 }
 
 // Reader Returns a working reader for the body buffer in memory or file
-func (br *bodyBuffer) Reader() io.Reader {
+func (br *BodyBuffer) Reader() io.Reader {
 	if br.writer == nil {
 		return bytes.NewReader(br.buffer.Bytes())
 	}
@@ -65,12 +65,12 @@ func (br *bodyBuffer) Reader() io.Reader {
 }
 
 // Size returns the current size of the body buffer
-func (br *bodyBuffer) Size() int64 {
+func (br *BodyBuffer) Size() int64 {
 	return br.length
 }
 
 // Close will close all readers and delete temporary files
-func (br *bodyBuffer) Close() error {
+func (br *BodyBuffer) Close() error {
 	if br.writer == nil {
 		return fmt.Errorf("invalid writer")
 	}
@@ -80,12 +80,12 @@ func (br *bodyBuffer) Close() error {
 	return os.Remove(br.writer.Name())
 }
 
-// NewBodyReader Initializes a body reader
+// NewBodyBuffer Initializes a body reader
 // After writing memLimit bytes to the memory buffer, data will be
 // written to a temporary file
 // Temporary files will be written to tmpDir
-func NewBodyReader(tmpDir string, memLimit int64) *bodyBuffer {
-	return &bodyBuffer{
+func NewBodyBuffer(tmpDir string, memLimit int64) *BodyBuffer {
+	return &BodyBuffer{
 		buffer:      &bytes.Buffer{},
 		tmpDir:      tmpDir,
 		memoryLimit: memLimit,

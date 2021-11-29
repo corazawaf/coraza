@@ -43,9 +43,9 @@ type MatchedRule struct {
 	// Macro expanded logdata
 	Data string
 	// Full request uri unparsed
-	Uri string
+	URI string
 	// Transaction id
-	Id string
+	ID string
 	// Is disruptive
 	Disruptive bool
 	// Server IP address
@@ -67,13 +67,13 @@ func (mr MatchedRule) details() string {
 	}
 	resolvedIp := ""
 	log.WriteString(fmt.Sprintf(" [file %q] [line %q] [id %q] [rev %q] [msg %q] [data %q] [severity %q] [ver %q] [maturity %q] [accuracy %q]",
-		mr.Rule.File, strconv.Itoa(mr.Rule.Line), strconv.Itoa(mr.Rule.Id), mr.Rule.Rev, msg, data, mr.Rule.Severity.String(), mr.Rule.Version,
+		mr.Rule.File, strconv.Itoa(mr.Rule.Line), strconv.Itoa(mr.Rule.ID), mr.Rule.Rev, msg, data, mr.Rule.Severity.String(), mr.Rule.Version,
 		strconv.Itoa(mr.Rule.Maturity), strconv.Itoa(mr.Rule.Accuracy)))
 	for _, t := range mr.Rule.Tags {
 		log.WriteString(fmt.Sprintf(" [tag %q]", t))
 	}
 	log.WriteString(fmt.Sprintf(" [hostname %q] [uri %q] [unique_id %q]",
-		resolvedIp, mr.Uri, mr.Id))
+		resolvedIp, mr.URI, mr.ID))
 	return log.String()
 }
 

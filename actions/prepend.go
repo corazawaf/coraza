@@ -36,7 +36,7 @@ func (a *prependFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 		return
 	}
 	data := tx.MacroExpansion(a.data)
-	buf := coraza.NewBodyReader(tx.Waf.TmpDir, tx.Waf.RequestBodyInMemoryLimit)
+	buf := coraza.NewBodyBuffer(tx.Waf.TmpDir, tx.Waf.RequestBodyInMemoryLimit)
 	_, err := buf.Write([]byte(data))
 	if err != nil {
 		tx.Waf.Logger.Debug("failed to write buffer while evaluating prepend action")

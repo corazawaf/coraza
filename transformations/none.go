@@ -14,9 +14,7 @@
 
 package transformations
 
-import "github.com/jptosso/coraza-waf/v2"
-
-func none(data string, utils coraza.RuleTransformationTools) string {
+func none(data string) (string, error) {
 	// This case is special and is hardcoded in the seclang parser
-	return data
+	return data, nil
 }

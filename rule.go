@@ -25,13 +25,15 @@ import (
 	"go.uber.org/zap"
 )
 
-type RuleTransformationTools struct {
-	Logger *zap.Logger
-}
+// RuleTransformation is used to create transformation plugins
+// See the documentation for more information
+// If a transformation fails to run it will return the same string
+// and an error, errors are only used for logging, it won't stop
+// the execution of the rule
+type RuleTransformation = func(input string) (string, error)
 
-type RuleTransformation = func(input string, tools RuleTransformationTools) string
-
-// This interface is used by this rule's actions
+// RuleAction is used used to create Action plugins
+// See the documentation: https://www.coraza.io/docs/waf/actions
 type RuleAction interface {
 	// Initializes an action, will be done during compilation
 	Init(*Rule, string) error
@@ -42,9 +44,14 @@ type RuleAction interface {
 	Type() types.RuleActionType
 }
 
+// ruleActionParams is used as a wrapper to store the action name
+// and parameters, basically for logging purposes.
 type ruleActionParams struct {
 	// The name of the action, used for logging
 	Name string
+
+	// Parameters used by the action
+	Param string
 
 	// The action to be executed
 	Function RuleAction
@@ -139,7 +146,7 @@ type Rule struct {
 
 	// Contains the Id of the parent rule if you are inside
 	// a chain. Otherwise it will be 0
-	ParentId int
+	ParentID int
 
 	// Used to mark a rule as a secmarker and alter flows
 	SecMark string
@@ -158,7 +165,7 @@ type Rule struct {
 
 	// METADATA
 	// Rule unique identifier, can be a an int
-	Id int
+	ID int
 
 	// Rule tag list
 	Tags []string
@@ -205,9 +212,9 @@ type Rule struct {
 // If the operator matches, actions will be evaluated and it will return
 // the matched variables, keys and values (MatchData)
 func (r *Rule) Evaluate(tx *Transaction) []MatchData {
-	rid := r.Id
+	rid := r.ID
 	if rid == 0 {
-		rid = r.ParentId
+		rid = r.ParentID
 	}
 	tx.Waf.Logger.Debug("Evaluating rule",
 		zap.Int("rule", rid),
@@ -224,14 +231,11 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		"severity": {r.Severity.String()},
 	})
 	// secmarkers and secactions will always match
-	tools := RuleTransformationTools{
-		Logger: tx.Waf.Logger,
-	}
 
 	// SecMark and SecAction uses nil operator
 	if r.operator == nil {
 		tx.Waf.Logger.Debug("Forcing rule match", zap.String("txid", tx.Id),
-			zap.Int("rule", r.Id),
+			zap.Int("rule", r.ID),
 			zap.String("event", "RULE_FORCE_MATCH"),
 		)
 		matchedValues = []MatchData{
@@ -241,7 +245,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 			},
 		}
 	} else {
-		ecol := tx.ruleRemoveTargetById[r.Id]
+		ecol := tx.ruleRemoveTargetById[r.ID]
 		for _, v := range r.variables {
 			var values []MatchData
 			for _, c := range ecol {
@@ -268,12 +272,23 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 					zap.String("tx", tx.Id),
 					zap.String("argument", arg.Value),
 				)
+				var errs []error
 				if r.MultiMatch {
 					// TODO in the future, we don't need to run every transformation
 					// We could try for each until found
-					args = r.executeTransformationsMultimatch(arg.Value, tools)
+					args, errs = r.executeTransformationsMultimatch(arg.Value)
 				} else {
-					args = []string{r.executeTransformations(arg.Value, tools)}
+					ars, es := r.executeTransformations(arg.Value)
+					args = []string{ars}
+					errs = es
+				}
+				if errs != nil && len(errs) > 0 {
+					tx.Waf.Logger.Error("Error transforming argument",
+						zap.Int("rule", rid),
+						zap.String("tx", tx.Id),
+						zap.String("argument", arg.Value),
+						zap.Errors("errors", errs),
+					)
 				}
 				tx.Waf.Logger.Debug("Arguments transformed",
 					zap.Int("rule", rid),
@@ -340,7 +355,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 			nr = nr.Chain
 		}
 	}
-	if r.ParentId == 0 {
+	if r.ParentID == 0 {
 		// action log is required to add the rule to matched rules
 		if r.Log {
 			tx.MatchRule(MatchedRule{
@@ -348,15 +363,15 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 				MatchedData:     matchedValues[0],
 				Message:         tx.MacroExpansion(r.Msg),
 				Data:            tx.MacroExpansion(r.LogData),
-				Uri:             tx.GetCollection(variables.RequestURI).GetFirstString(""),
-				Id:              tx.Id,
+				URI:             tx.GetCollection(variables.RequestURI).GetFirstString(""),
+				ID:              tx.Id,
 				Disruptive:      r.Disruptive,
 				ServerIpAddress: tx.GetCollection(variables.ServerAddr).GetFirstString(""),
 				ClientIpAddress: tx.GetCollection(variables.RemoteAddr).GetFirstString(""),
 			})
 		}
 		// we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
-		tx.Waf.Logger.Debug("detecting rule disruptive action", zap.String("txid", tx.Id), zap.Int("rule", r.Id))
+		tx.Waf.Logger.Debug("detecting rule disruptive action", zap.String("txid", tx.Id), zap.Int("rule", r.ID))
 		for _, a := range r.actions {
 			if a.Function.Type() == types.ActionTypeDisruptive || a.Function.Type() == types.ActionTypeFlow {
 				tx.Waf.Logger.Debug("evaluating rule disruptive action", zap.String("txid", tx.Id), zap.Int("rule", rid))
@@ -375,7 +390,10 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 // AddAction adds an action to the rule
 func (r *Rule) AddAction(name string, action RuleAction) error {
 	// TODO add more logic, like one persistent action per rule etc
-	r.actions = append(r.actions, ruleActionParams{name, action})
+	r.actions = append(r.actions, ruleActionParams{
+		Name:     name,
+		Function: action,
+	})
 	return nil
 }
 
@@ -456,12 +474,15 @@ func (r *Rule) ClearTransformations() {
 	r.transformations = []ruleTransformationParams{}
 }
 
-func (r *Rule) SetOperator(operator RuleOperator, function string, params string) {
+// SetOperator sets the operator of the rule
+// There can be only one operator per rule
+// functionName and params are used for logging
+func (r *Rule) SetOperator(operator RuleOperator, functionName string, params string) {
 	r.operator = &ruleOperatorParams{
 		Operator: operator,
-		Function: function,
+		Function: functionName,
 		Data:     params,
-		Negation: (len(function) > 0 && function[0] == '!'),
+		Negation: (len(functionName) > 0 && functionName[0] == '!'),
 	}
 }
 
@@ -476,20 +497,32 @@ func (r *Rule) executeOperator(data string, tx *Transaction) bool {
 	return result
 }
 
-func (r *Rule) executeTransformationsMultimatch(value string, tools RuleTransformationTools) []string {
+func (r *Rule) executeTransformationsMultimatch(value string) ([]string, []error) {
 	res := []string{value}
+	errs := []error{}
+	var err error
 	for _, t := range r.transformations {
-		value = t.Function(value, tools)
+		value, err = t.Function(value)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
 		res = append(res, value)
 	}
-	return res
+	return res, errs
 }
 
-func (r *Rule) executeTransformations(value string, tools RuleTransformationTools) string {
+func (r *Rule) executeTransformations(value string) (string, []error) {
+	errs := []error{}
 	for _, t := range r.transformations {
-		value = t.Function(value, tools)
+		v, err := t.Function(value)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		value = v
 	}
-	return value
+	return value, errs
 }
 
 // NewRule returns a new initialized rule

@@ -15,12 +15,11 @@
 package transformations
 
 import (
-	"github.com/jptosso/coraza-waf/v2"
 	"github.com/jptosso/coraza-waf/v2/utils/strings"
 )
 
-func urlDecodeUni(data string, tools coraza.RuleTransformationTools) string {
-	return inplaceUniDecode(data)
+func urlDecodeUni(data string) (string, error) {
+	return inplaceUniDecode(data), nil
 }
 
 func inplaceUniDecode(input string) string {

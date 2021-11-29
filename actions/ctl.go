@@ -79,14 +79,14 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
 			if utils.StringInSlice(a.value, r.Tags) {
-				tx.RemoveRuleTargetById(r.Id, a.collection, a.colKey)
+				tx.RemoveRuleTargetById(r.ID, a.collection, a.colKey)
 			}
 		}
 	case ctlRemoveTargetByMsg:
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
 			if r.Msg == a.value {
-				tx.RemoveRuleTargetById(r.Id, a.collection, a.colKey)
+				tx.RemoveRuleTargetById(r.ID, a.collection, a.colKey)
 			}
 		}
 	case ctlAuditEngine:
@@ -125,14 +125,14 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
 			if r.Msg == a.value {
-				tx.RemoveRuleById(r.Id)
+				tx.RemoveRuleById(r.ID)
 			}
 		}
 	case ctlRuleRemoveByTag:
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
 			if utils.StringInSlice(a.value, r.Tags) {
-				tx.RemoveRuleById(r.Id)
+				tx.RemoveRuleById(r.ID)
 			}
 		}
 	case ctlRequestBodyProcessor:

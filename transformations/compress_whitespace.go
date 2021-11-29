@@ -16,11 +16,9 @@ package transformations
 
 import (
 	"unicode"
-
-	"github.com/jptosso/coraza-waf/v2"
 )
 
-func compressWhitespace(value string, tools coraza.RuleTransformationTools) string {
+func compressWhitespace(value string) (string, error) {
 	a := []byte{}
 	i := 0
 	inWhiteSpace := false
@@ -42,5 +40,5 @@ func compressWhitespace(value string, tools coraza.RuleTransformationTools) stri
 		i++
 	}
 
-	return string(a)
+	return string(a), nil
 }

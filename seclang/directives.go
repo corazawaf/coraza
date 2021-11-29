@@ -36,7 +36,7 @@ func directiveSecComponentSignature(p *Parser, opts string) error {
 func directiveSecMarker(p *Parser, opts string) error {
 	rule, _ := p.parseRule(`"id:1, pass, nolog"`, false)
 	rule.SecMark = opts
-	rule.Id = 0
+	rule.ID = 0
 	rule.Phase = 0
 	if err := p.Waf.Rules.Add(rule); err != nil {
 		if perr := p.log(fmt.Sprintf("Failed to compile rule (%s): %s", err, opts)); perr != nil {
@@ -122,14 +122,14 @@ func directiveSecServerSignature(p *Parser, opts string) error {
 
 func directiveSecRuleRemoveByTag(p *Parser, opts string) error {
 	for _, r := range p.Waf.Rules.FindByTag(opts) {
-		p.Waf.Rules.DeleteById(r.Id)
+		p.Waf.Rules.DeleteById(r.ID)
 	}
 	return nil
 }
 
 func directiveSecRuleRemoveByMsg(p *Parser, opts string) error {
 	for _, r := range p.Waf.Rules.FindByMsg(opts) {
-		p.Waf.Rules.DeleteById(r.Id)
+		p.Waf.Rules.DeleteById(r.ID)
 	}
 	return nil
 }

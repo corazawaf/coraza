@@ -16,10 +16,8 @@ package transformations
 
 import (
 	"strings"
-
-	"github.com/jptosso/coraza-waf/v2"
 )
 
-func lowerCase(data string, _ coraza.RuleTransformationTools) string {
-	return strings.ToLower(data)
+func lowerCase(data string) (string, error) {
+	return strings.ToLower(data), nil
 }

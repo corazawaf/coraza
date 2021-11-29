@@ -22,7 +22,7 @@ import (
 	"github.com/jptosso/coraza-waf/v2/utils/strings"
 )
 
-// Collections are used to store VARIABLE data
+// Collection are used to store VARIABLE data
 // for transactions, this data structured is designed
 // to store slices of data for keys
 // Important: Collections ARE NOT concurrent safe
@@ -37,7 +37,7 @@ func (c *Collection) Get(key string) []string {
 	return c.data[key]
 }
 
-// Find is returns a slice of MatchData for the regex
+// FindRegex returns a slice of MatchData for the regex
 func (c *Collection) FindRegex(key *regexp.Regexp) []MatchData {
 	result := []MatchData{}
 	for k, data := range c.data {
@@ -55,6 +55,7 @@ func (c *Collection) FindRegex(key *regexp.Regexp) []MatchData {
 	return result
 }
 
+// FindString returns a slice of MatchData for the string
 func (c *Collection) FindString(key string) []MatchData {
 	result := []MatchData{}
 	for k, vv := range c.data {
@@ -150,7 +151,7 @@ func (c *Collection) Reset() {
 	c.data[""] = []string{}
 }
 
-// Creates a new collection
+// NewCollection Creates a new collection
 func NewCollection(variable variables.RuleVariable) *Collection {
 	col := &Collection{
 		data:     map[string][]string{},

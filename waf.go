@@ -157,8 +157,8 @@ func (w *Waf) NewTransaction() *Transaction {
 		ruleRemoveTargetById: map[int][]ruleVariableParams{},
 		ruleRemoveById:       []int{},
 		StopWatches:          map[types.RulePhase]int{},
-		RequestBodyBuffer:    NewBodyReader(w.TmpDir, w.RequestBodyInMemoryLimit),
-		ResponseBodyBuffer:   NewBodyReader(w.TmpDir, w.RequestBodyInMemoryLimit),
+		RequestBodyBuffer:    NewBodyBuffer(w.TmpDir, w.RequestBodyInMemoryLimit),
+		ResponseBodyBuffer:   NewBodyBuffer(w.TmpDir, w.RequestBodyInMemoryLimit),
 	}
 	for i := range tx.collections {
 		tx.collections[i] = NewCollection(variables.RuleVariable(i))
@@ -288,7 +288,9 @@ func NewWaf() *Waf {
 		loggerAtomicLevel:        &atom,
 		AuditLogRelevantStatus:   regexp.MustCompile(`.*`),
 	}
-	waf.SetDebugLogPath("/dev/null")
+	if err := waf.SetDebugLogPath("/dev/null"); err != nil {
+		fmt.Println(err)
+	}
 	waf.Logger.Debug("a new waf instance was created")
 	return waf
 }

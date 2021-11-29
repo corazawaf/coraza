@@ -14,14 +14,12 @@
 
 package transformations
 
-import "github.com/jptosso/coraza-waf/v2"
-
-func replaceNulls(data string, utils coraza.RuleTransformationTools) string {
+func replaceNulls(data string) (string, error) {
 	value := []byte(data)
 	for i := 0; i < len(value); i++ {
 		if value[i] == '\x00' {
 			value[i] = ' '
 		}
 	}
-	return string(value)
+	return string(value), nil
 }

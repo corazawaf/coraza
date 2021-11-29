@@ -16,12 +16,10 @@ package transformations
 
 import (
 	"encoding/hex"
-
-	"github.com/jptosso/coraza-waf/v2"
 )
 
-func hexEncode(data string, utils coraza.RuleTransformationTools) string {
+func hexEncode(data string) (string, error) {
 	src := []byte(data)
 
-	return hex.EncodeToString(src)
+	return hex.EncodeToString(src), nil
 }

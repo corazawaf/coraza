@@ -179,7 +179,7 @@ func (p *Parser) parseRule(data string, withOperator bool) (*engine.Rule, error)
 	if p.nextChain {
 		p.nextChain = false
 		parent := p.lastRule
-		rule.ParentId = parent.Id
+		rule.ParentID = parent.ID
 		lastchain := parent
 		for lastchain.Chain != nil {
 			lastchain = lastchain.Chain

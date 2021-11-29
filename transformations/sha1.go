@@ -17,15 +17,13 @@ package transformations
 import (
 	"crypto/sha1"
 	"io"
-
-	"github.com/jptosso/coraza-waf/v2"
 )
 
-func sha1T(data string, utils coraza.RuleTransformationTools) string {
+func sha1T(data string) (string, error) {
 	h := sha1.New()
 	_, err := io.WriteString(h, data)
 	if err != nil {
-		utils.Logger.Error("error writing sha1 string")
+		return data, err
 	}
-	return string(h.Sum(nil))
+	return string(h.Sum(nil)), nil
 }

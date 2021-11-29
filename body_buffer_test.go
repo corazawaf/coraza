@@ -22,7 +22,7 @@ import (
 )
 
 func TestBodyReaderMemory(t *testing.T) {
-	br := NewBodyReader("/tmp", 500)
+	br := NewBodyBuffer("/tmp", 500)
 	if _, err := br.Write([]byte("test")); err != nil {
 		t.Error(err)
 	}
@@ -38,7 +38,7 @@ func TestBodyReaderMemory(t *testing.T) {
 
 func TestBodyReaderFile(t *testing.T) {
 	// body reader memory limit is 1 byte
-	br := NewBodyReader("/tmp", 1)
+	br := NewBodyBuffer("/tmp", 1)
 	if _, err := br.Write([]byte("test")); err != nil {
 		t.Error(err)
 	}
@@ -61,7 +61,7 @@ func TestBodyReaderFile(t *testing.T) {
 }
 
 func TestBodyReaderWriteFromReader(t *testing.T) {
-	br := NewBodyReader("/tmp", 5)
+	br := NewBodyBuffer("/tmp", 5)
 	b := strings.NewReader("test")
 	if _, err := io.Copy(br, b); err != nil {
 		t.Error(err)

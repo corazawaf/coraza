@@ -27,9 +27,9 @@ func (a *dropFn) Init(r *coraza.Rule, data string) error {
 }
 
 func (a *dropFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
-	rid := r.Id
+	rid := r.ID
 	if rid == 0 {
-		rid = r.ParentId
+		rid = r.ParentID
 	}
 	if tx.RuleEngine == types.RuleEngineOn {
 		tx.Interruption = &types.Interruption{

@@ -170,7 +170,6 @@ func init() {
 	})
 
 	RegisterLogFormatter("json", jsonFormatter)
-	RegisterLogFormatter("json2", json2Formatter)
+	RegisterLogFormatter("legacyjson", legacyJsonFormatter)
 	RegisterLogFormatter("native", nativeFormatter)
-	// RegisterLogFormatter("cef", cefFormatter)
 }

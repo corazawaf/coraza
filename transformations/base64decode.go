@@ -14,20 +14,16 @@
 
 package transformations
 
-import (
-	"github.com/jptosso/coraza-waf/v2"
-)
-
 // base64decode decodes a Base64-encoded string.
 // Important: We cannot use the golang base64 package because it does not
 // support mixed content like RAW+BASE64+RAW
 // This implementations supports base64 between non-base64 content
-func base64decode(data string, utils coraza.RuleTransformationTools) string {
+func base64decode(data string) (string, error) {
 	res := doBase64decode(data)
 	if res == "" {
-		return data
+		return data, nil
 	} else {
-		return res
+		return res, nil
 	}
 }
 

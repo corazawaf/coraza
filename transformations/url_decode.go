@@ -15,13 +15,13 @@
 package transformations
 
 import (
-	"github.com/jptosso/coraza-waf/v2"
 	"github.com/jptosso/coraza-waf/v2/utils/strings"
 )
 
-func urlDecode(data string, utils coraza.RuleTransformationTools) string {
+func urlDecode(data string) (string, error) {
 	res, _, _ := doURLDecode(data)
-	return res
+	// TODO add error?
+	return res, nil
 }
 
 // extracted from https://github.com/senghoo/modsecurity-go/blob/master/utils/urlencode.go

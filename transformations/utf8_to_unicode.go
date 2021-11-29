@@ -17,10 +17,8 @@ package transformations
 import (
 	"fmt"
 	"strings"
-
-	"github.com/jptosso/coraza-waf/v2"
 )
 
-func utf8ToUnicode(str string, tools coraza.RuleTransformationTools) string {
-	return strings.Trim(fmt.Sprintf("%+q", str), "\"")
+func utf8ToUnicode(str string) (string, error) {
+	return strings.Trim(fmt.Sprintf("%+q", str), "\""), nil
 }

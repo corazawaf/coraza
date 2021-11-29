@@ -17,15 +17,13 @@ package transformations
 import (
 	"crypto/md5"
 	"io"
-
-	"github.com/jptosso/coraza-waf/v2"
 )
 
-func md5T(data string, utils coraza.RuleTransformationTools) string {
+func md5T(data string) (string, error) {
 	h := md5.New()
 	_, err := io.WriteString(h, data)
 	if err != nil {
-		utils.Logger.Error("error writing md5 string")
+		return data, err
 	}
-	return string(h.Sum(nil))
+	return string(h.Sum(nil)), nil
 }

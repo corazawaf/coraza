@@ -14,9 +14,7 @@
 
 package transformations
 
-import "github.com/jptosso/coraza-waf/v2"
-
-func removeCommentsChar(data string, utils coraza.RuleTransformationTools) string {
+func removeCommentsChar(data string) (string, error) {
 	value := []byte(data)
 	for i := 0; i < len(value); {
 		switch {
@@ -44,7 +42,7 @@ func removeCommentsChar(data string, utils coraza.RuleTransformationTools) strin
 			i++
 		}
 	}
-	return string(value)
+	return string(value), nil
 }
 
 func erase(str []byte, i int, count int) []byte {

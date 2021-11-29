@@ -205,21 +205,21 @@ func TestAuditLogFields(t *testing.T) {
 	tx.AddRequestHeader("test", "test")
 	tx.AddResponseHeader("test", "test")
 	rule := NewRule()
-	rule.Id = 131
+	rule.ID = 131
 	tx.MatchRule(MatchedRule{
 		Rule:    *rule,
 		Message: "some msg",
-		Id:      tx.Id,
+		ID:      tx.Id,
 		MatchedData: MatchData{
 			VariableName: "UNIQUE_ID",
 			Variable:     variables.UniqueID,
 		},
 	})
-	if len(tx.MatchedRules) == 0 || tx.MatchedRules[0].Rule.Id != rule.Id {
+	if len(tx.MatchedRules) == 0 || tx.MatchedRules[0].Rule.ID != rule.ID {
 		t.Error("failed to match rule for audit")
 	}
 	al := tx.AuditLog()
-	if len(al.Messages) == 0 || al.Messages[0].Data.ID != rule.Id {
+	if len(al.Messages) == 0 || al.Messages[0].Data.ID != rule.ID {
 		t.Error("failed to add rules to audit logs")
 	}
 	if al.Transaction.Request.Headers == nil || al.Transaction.Request.Headers["test"][0] != "test" {

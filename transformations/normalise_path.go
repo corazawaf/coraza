@@ -16,22 +16,20 @@ package transformations
 
 import (
 	"path/filepath"
-
-	"github.com/jptosso/coraza-waf/v2"
 )
 
-func normalisePath(data string, utils coraza.RuleTransformationTools) string {
+func normalisePath(data string) (string, error) {
 	leng := len(data)
 	if leng < 1 {
-		return data
+		return data, nil
 	}
 	clean := filepath.Clean(data)
 	if clean == "." {
-		return ""
+		return "", nil
 	}
 	if data[len(data)-1] == '/' {
-		return clean + "/"
+		return clean + "/", nil
 	} else {
-		return clean
+		return clean, nil
 	}
 }

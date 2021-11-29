@@ -78,10 +78,10 @@ type Transaction struct {
 	LastPhase types.RulePhase
 
 	// Handles request body buffers
-	RequestBodyBuffer *bodyBuffer
+	RequestBodyBuffer *BodyBuffer
 
 	// Handles response body buffers
-	ResponseBodyBuffer *bodyBuffer
+	ResponseBodyBuffer *BodyBuffer
 
 	// Body processor used to parse JSON, XML, etc
 	bodyProcessor bodyprocessors.BodyProcessor
@@ -250,7 +250,7 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 	if len(spl) != 3 {
 		return nil, fmt.Errorf("invalid request line")
 	}
-	tx.ProcessUri(spl[1], spl[0], spl[2])
+	tx.ProcessURI(spl[1], spl[0], spl[2])
 	for scanner.Scan() {
 		l := scanner.Text()
 		if l == "" {
@@ -313,7 +313,7 @@ func (tx *Transaction) MatchVariable(match MatchData) {
 
 // MatchRule Matches a rule to be logged
 func (tx *Transaction) MatchRule(mr MatchedRule) {
-	tx.Waf.Logger.Debug("rule matched", zap.String("txid", tx.Id), zap.Int("rule", mr.Rule.Id))
+	tx.Waf.Logger.Debug("rule matched", zap.String("txid", tx.Id), zap.Int("rule", mr.Rule.ID))
 	/*
 		if mr.Rule.Log && tx.Waf.ErrorLogger != nil {
 			// TODO log based on severity
@@ -467,9 +467,9 @@ func (tx *Transaction) savePersistentData() {
 	*/
 }
 
-// RemoveRuleTargetById Removes the VARIABLE:KEY from the rule ID
+// RemoveRuleTargetByID Removes the VARIABLE:KEY from the rule ID
 // It's mostly used by CTL to dinamically remove targets from rules
-func (tx *Transaction) RemoveRuleTargetById(id int, variable variables.RuleVariable, key string) {
+func (tx *Transaction) RemoveRuleTargetByID(id int, variable variables.RuleVariable, key string) {
 	c := ruleVariableParams{
 		Variable: variable,
 		KeyStr:   key,
@@ -484,7 +484,7 @@ func (tx *Transaction) RemoveRuleTargetById(id int, variable variables.RuleVaria
 	}
 }
 
-func (tx *Transaction) RemoveRuleById(id int) {
+func (tx *Transaction) RemoveRuleByID(id int) {
 	tx.ruleRemoveById = append(tx.ruleRemoveById, id)
 }
 
@@ -506,7 +506,7 @@ func (tx *Transaction) ProcessRequest(req *http.Request) (*types.Interruption, e
 	var in *types.Interruption
 	// There is no socket access in the request object so we don't know the server client or port
 	tx.ProcessConnection(client, cport, "", 0)
-	tx.ProcessUri(req.URL.String(), req.Method, req.Proto)
+	tx.ProcessURI(req.URL.String(), req.Method, req.Proto)
 	for k, vr := range req.Header {
 		for _, v := range vr {
 			tx.AddRequestHeader(k, v)
@@ -598,7 +598,7 @@ func (tx *Transaction) AddArgument(orig string, key string, value string) {
 	col.Set("", []string{istr})
 }
 
-// ProcessUri Performs the analysis on the URI and all the query string variables.
+// ProcessURI Performs the analysis on the URI and all the query string variables.
 // This method should be called at very beginning of a request process, it is
 // expected to be executed prior to the virtual host resolution, when the
 // connection arrives on the server.
@@ -606,7 +606,7 @@ func (tx *Transaction) AddArgument(orig string, key string, value string) {
 //       the SecLanguages phases. It is something that may occur between the
 //       SecLanguage phase 1 and 2.
 // note: This function won't add GET arguments, they must be added with AddArgument
-func (tx *Transaction) ProcessUri(uri string, method string, httpVersion string) {
+func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string) {
 	tx.GetCollection(variables.RequestMethod).Set("", []string{method})
 	tx.GetCollection(variables.RequestProtocol).Set("", []string{httpVersion})
 	tx.GetCollection(variables.RequestURIRaw).Set("", []string{uri})
@@ -784,7 +784,7 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Int
 	return tx.Interruption
 }
 
-// IsProcessableRequestBody returns true if the response body meets the
+// IsProcessableResponseBody returns true if the response body meets the
 // criteria to be processed, response headers must be set before this.
 // The content-type response header must be in the SecRequestBodyMime
 // This is used by webservers to choose whether tostream response buffers
@@ -958,7 +958,7 @@ func (tx *Transaction) AuditLog() loggers.AuditLog {
 					Data: loggers.AuditMessageData{
 						File:     mr.Rule.File,
 						Line:     mr.Rule.Line,
-						ID:       r.Id,
+						ID:       r.ID,
 						Rev:      r.Rev,
 						Msg:      mr.Message,
 						Data:     mr.Data,

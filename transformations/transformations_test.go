@@ -23,8 +23,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-
-	"github.com/jptosso/coraza-waf/v2"
 )
 
 type Test struct {
@@ -74,8 +72,10 @@ func TestTransformations(t *testing.T) {
 				// t.Error(err)
 				continue
 			}
-			tools := coraza.RuleTransformationTools{}
-			out := trans(data.Input, tools)
+			out, err := trans(data.Input)
+			if err != nil {
+				t.Error(err)
+			}
 			if out != data.Output {
 				t.Error(fmt.Sprintf("Transformation %s:\nInput: %s\nExpected: %v\nGot: %v\nExpected String: %s\nGot String: %s",
 					data.Name, data.Input, []byte(data.Output), []byte(out), data.Output, out))

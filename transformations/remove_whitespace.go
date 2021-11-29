@@ -17,12 +17,10 @@ package transformations
 import (
 	"strings"
 	"unicode"
-
-	"github.com/jptosso/coraza-waf/v2"
 )
 
 // removeWhitespace removes all whitespace characters from input.
-func removeWhitespace(data string, tools coraza.RuleTransformationTools) string {
+func removeWhitespace(data string) (string, error) {
 	return strings.Map(func(r rune) rune {
 		if unicode.IsSpace(r) {
 			// if the character is a space, drop it
@@ -30,5 +28,5 @@ func removeWhitespace(data string, tools coraza.RuleTransformationTools) string 
 		}
 		// else keep it in the string
 		return r
-	}, data)
+	}, data), nil
 }

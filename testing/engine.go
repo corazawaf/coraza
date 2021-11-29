@@ -85,7 +85,7 @@ func (t *Test) SetRawRequest(request []byte) error {
 	// parse headers
 	t.RequestHeaders = make(map[string]string)
 	i := 1
-	for i = 1; i < len(spl); i++ {
+	for ; i < len(spl); i++ {
 		if spl[i] == "" {
 			break
 		}
@@ -165,9 +165,10 @@ func (t *Test) OutputErrors() []string {
 			errors = append(errors, fmt.Sprintf("Expected log to not contain '%s'", lc))
 		}
 	}
-	if rc := t.ExpectedOutput.Status; rc != 0 {
-		// do nothing
-	}
+	/*
+		if rc := t.ExpectedOutput.Status; rc != 0 {
+			// do nothing
+		}*/
 	if tr := t.ExpectedOutput.TriggeredRules; tr != nil {
 		for _, rule := range tr {
 			if !t.LogContains(fmt.Sprintf("id \"%d\"", rule)) {

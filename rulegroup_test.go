@@ -21,7 +21,7 @@ import (
 func TestRG(t *testing.T) {
 	r := NewRule()
 	r.Msg = "test"
-	r.Id = 1
+	r.ID = 1
 	r.Tags = []string{
 		"test",
 	}

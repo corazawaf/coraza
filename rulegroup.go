@@ -39,8 +39,8 @@ func (rg *ruleGroup) Add(rule *Rule) error {
 		return nil
 	}
 
-	if rg.FindById(rule.Id) != nil && rule.Id != 0 {
-		return fmt.Errorf("there is a another rule with id %d", rule.Id)
+	if rg.FindById(rule.ID) != nil && rule.ID != 0 {
+		return fmt.Errorf("there is a another rule with id %d", rule.ID)
 	}
 	rg.rules = append(rg.rules, rule)
 	return nil
@@ -57,7 +57,7 @@ func (rg *ruleGroup) GetRules() []*Rule {
 // FindById return a Rule with the requested Id
 func (rg *ruleGroup) FindById(id int) *Rule {
 	for _, r := range rg.rules {
-		if r.Id == id {
+		if r.ID == id {
 			return r
 		}
 	}
@@ -67,7 +67,7 @@ func (rg *ruleGroup) FindById(id int) *Rule {
 // DeleteById removes a rule by it's Id
 func (rg *ruleGroup) DeleteById(id int) {
 	for i, r := range rg.rules {
-		if r != nil && r.Id == id {
+		if r != nil && r.ID == id {
 			copy(rg.rules[i:], rg.rules[i+1:])
 			rg.rules[len(rg.rules)-1] = nil
 			rg.rules = rg.rules[:len(rg.rules)-1]
@@ -133,15 +133,15 @@ RulesLoop:
 		if r.Phase != phase && r.Phase != 0 {
 			continue
 		}
-		rid := strconv.Itoa(r.Id)
-		if r.Id == 0 {
-			rid = strconv.Itoa(r.ParentId)
+		rid := strconv.Itoa(r.ID)
+		if r.ID == 0 {
+			rid = strconv.Itoa(r.ParentID)
 		}
 
 		// we skip the rule in case it's in the excluded list
 		for _, trb := range tx.ruleRemoveById {
-			if trb == r.Id {
-				tx.Waf.Logger.Debug("Skipping rule", zap.Int("rule", r.Id), zap.String("txid", tx.Id))
+			if trb == r.ID {
+				tx.Waf.Logger.Debug("Skipping rule", zap.Int("rule", r.ID), zap.String("txid", tx.Id))
 				continue RulesLoop
 			}
 		}
@@ -156,7 +156,7 @@ RulesLoop:
 				tx.SkipAfter = ""
 			} else {
 				tx.Waf.Logger.Debug("Skipping rule because of SkipAfter", zap.String("txid", tx.Id),
-					zap.Int("rule", r.Id),
+					zap.Int("rule", r.ID),
 					zap.String("secmark", tx.SkipAfter),
 					zap.String("event", "SKIP_RULE_BY_SECMARK"),
 				)
