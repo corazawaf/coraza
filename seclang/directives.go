@@ -26,7 +26,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type Directive = func(p *Parser, opts string) error
+type directive = func(p *Parser, opts string) error
 
 func directiveSecComponentSignature(p *Parser, opts string) error {
 	p.Waf.ComponentNames = append(p.Waf.ComponentNames, opts)
@@ -105,7 +105,7 @@ func directiveUnsupported(p *Parser, opts string) error {
 	return nil
 }
 
-func directiveSecWebAppId(p *Parser, opts string) error {
+func directiveSecWebAppID(p *Parser, opts string) error {
 	p.Waf.WebAppID = opts
 	return nil
 }
@@ -122,21 +122,21 @@ func directiveSecServerSignature(p *Parser, opts string) error {
 
 func directiveSecRuleRemoveByTag(p *Parser, opts string) error {
 	for _, r := range p.Waf.Rules.FindByTag(opts) {
-		p.Waf.Rules.DeleteById(r.ID)
+		p.Waf.Rules.DeleteByID(r.ID)
 	}
 	return nil
 }
 
 func directiveSecRuleRemoveByMsg(p *Parser, opts string) error {
 	for _, r := range p.Waf.Rules.FindByMsg(opts) {
-		p.Waf.Rules.DeleteById(r.ID)
+		p.Waf.Rules.DeleteByID(r.ID)
 	}
 	return nil
 }
 
-func directiveSecRuleRemoveById(p *Parser, opts string) error {
+func directiveSecRuleRemoveByID(p *Parser, opts string) error {
 	id, _ := strconv.Atoi(opts)
-	p.Waf.Rules.DeleteById(id)
+	p.Waf.Rules.DeleteByID(id)
 	return nil
 }
 
@@ -184,8 +184,8 @@ func directiveSecConnWriteStateLimit(p *Parser, opts string) error {
 	return nil
 }
 
-func directiveSecSensorId(p *Parser, opts string) error {
-	p.Waf.SensorId = opts
+func directiveSecSensorID(p *Parser, opts string) error {
+	p.Waf.SensorID = opts
 	return nil
 }
 
@@ -201,7 +201,7 @@ func directiveSecPcreMatchLimit(p *Parser, opts string) error {
 	return nil
 }
 
-func directiveSecHttpBlKey(p *Parser, opts string) error {
+func directiveSecHTTPBlKey(p *Parser, opts string) error {
 	return nil
 }
 
@@ -345,40 +345,40 @@ func parseBoolean(data string) bool {
 }
 
 var (
-	_ Directive = directiveSecAction
-	_ Directive = directiveSecAuditEngine
-	_ Directive = directiveSecAuditLog
-	_ Directive = directiveSecAuditLogFormat
-	_ Directive = directiveSecAuditLogParts
-	_ Directive = directiveSecAuditLogRelevantStatus
-	_ Directive = directiveSecContentInjection
-	_ Directive = directiveSecDataDir
-	_ Directive = directiveSecDefaultAction
-	_ Directive = directiveSecDebugLog
-	_ Directive = directiveSecDebugLogLevel
-	_ Directive = directiveSecHashEngine
-	_ Directive = directiveSecHashKey
-	_ Directive = directiveSecHashMethodPm
-	_ Directive = directiveSecHashMethodRx
-	_ Directive = directiveSecHashParam
-	_ Directive = directiveSecHttpBlKey
-	_ Directive = directiveSecMarker
-	_ Directive = directiveSecRemoteRules
-	_ Directive = directiveSecSensorId
+	_ directive = directiveSecAction
+	_ directive = directiveSecAuditEngine
+	_ directive = directiveSecAuditLog
+	_ directive = directiveSecAuditLogFormat
+	_ directive = directiveSecAuditLogParts
+	_ directive = directiveSecAuditLogRelevantStatus
+	_ directive = directiveSecContentInjection
+	_ directive = directiveSecDataDir
+	_ directive = directiveSecDefaultAction
+	_ directive = directiveSecDebugLog
+	_ directive = directiveSecDebugLogLevel
+	_ directive = directiveSecHashEngine
+	_ directive = directiveSecHashKey
+	_ directive = directiveSecHashMethodPm
+	_ directive = directiveSecHashMethodRx
+	_ directive = directiveSecHashParam
+	_ directive = directiveSecHTTPBlKey
+	_ directive = directiveSecMarker
+	_ directive = directiveSecRemoteRules
+	_ directive = directiveSecSensorID
 )
 
-var directivesMap = map[string]Directive{
-	"secwebappid":                   directiveSecWebAppId,
+var directivesMap = map[string]directive{
+	"secwebappid":                   directiveSecWebAppID,
 	"secuploadkeepfiles":            directiveSecUploadKeepFiles,
 	"secuploadfilemode":             directiveSecUploadFileMode,
 	"secuploadfilelimit":            directiveSecUploadFileLimit,
 	"secuploaddir":                  directiveSecUploadDir,
 	"sectmpdir":                     directiveSecTmpDir,
 	"secserversignature":            directiveSecServerSignature,
-	"secsensorid":                   directiveSecSensorId,
+	"secsensorid":                   directiveSecSensorID,
 	"secruleremovebytag":            directiveSecRuleRemoveByTag,
 	"secruleremovebymsg":            directiveSecRuleRemoveByMsg,
-	"secruleremovebyid":             directiveSecRuleRemoveById,
+	"secruleremovebyid":             directiveSecRuleRemoveByID,
 	"secruleengine":                 directiveSecRuleEngine,
 	"secrule":                       directiveSecRule,
 	"secresponsebodymimetypesclear": directiveSecResponseBodyMimeTypesClear,
@@ -396,7 +396,7 @@ var directivesMap = map[string]Directive{
 	"secpcrematchlimitrecursion":    directiveSecPcreMatchLimitRecursion,
 	"secpcrematchlimit":             directiveSecPcreMatchLimit,
 	"secmarker":                     directiveSecMarker,
-	"sechttpblkey":                  directiveSecHttpBlKey,
+	"sechttpblkey":                  directiveSecHTTPBlKey,
 	"sechashparam":                  directiveSecHashParam,
 	"sechashmethodrx":               directiveSecHashMethodRx,
 	"sechashmethodpm":               directiveSecHashMethodPm,
@@ -429,8 +429,4 @@ var directivesMap = map[string]Directive{
 	"secruleupdateactionbyid":  directiveUnsupported,
 	"secrulescript":            directiveUnsupported,
 	"secruleperftime":          directiveUnsupported,
-}
-
-func RegisterDirective(name string, directive Directive) {
-	directivesMap[name] = directive
 }

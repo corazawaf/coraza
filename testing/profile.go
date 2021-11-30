@@ -22,6 +22,9 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Profile represents a test profile
+// It contains metadata and instructions for a test
+// It requires more documentation
 type Profile struct {
 	Rules string `yaml:"rules,omitempty"`
 	Pass  bool
@@ -63,6 +66,7 @@ type expectedOutput struct {
 	Status            interface{} `yaml:"status,omitempty"`
 }
 
+// TestList returns a list of tests created for a profile
 func (p *Profile) TestList(waf *coraza.Waf) ([]*Test, error) {
 	var tests []*Test
 	for _, t := range p.Tests {
@@ -83,7 +87,7 @@ func (p *Profile) TestList(waf *coraza.Waf) ([]*Test, error) {
 			// test.RequestAddress =
 			// test.RequestPort =
 			if stage.Input.URI != "" {
-				test.RequestUri = stage.Input.URI
+				test.RequestURI = stage.Input.URI
 			}
 			if stage.Input.Method != "" {
 				test.RequestMethod = stage.Input.Method

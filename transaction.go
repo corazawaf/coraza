@@ -36,12 +36,19 @@ import (
 	"go.uber.org/zap"
 )
 
+// Transaction is created from a WAF instance to handle web requests and responses,
+// it contains a copy of most WAF configurations that can be safely changed.
+// Transactions are used to store all data like URLs, request and response
+// headers. Transactions are used to evaluate rules by phase and generate disruptive
+// actions. Disruptive actions can be read from *tx.Interruption.
+// It is safe to manage multiple transactions but transactions themself are not
+// thread safe
 type Transaction struct {
 	// If true the transaction is going to be logged, it won't log if IsRelevantStatus() fails
 	Log bool
 
-	// Transaction Id
-	Id string
+	// Transaction ID
+	ID string
 
 	// Contains the list of matched rules and associated match information
 	MatchedRules []MatchedRule
@@ -87,13 +94,13 @@ type Transaction struct {
 	bodyProcessor bodyprocessors.BodyProcessor
 
 	// Rules with this id are going to be skipped while processing a phase
-	ruleRemoveById []int
+	ruleRemoveByID []int
 
-	// Used by ctl to remove rule targets by id during the transaction
-	// All other "target removers" like "ByTag" are an abstraction of "ById"
+	// ruleRemoveTargetByID is used by ctl to remove rule targets by id during the
+	// transaction. All other "target removers" like "ByTag" are an abstraction of "ById"
 	// For example, if you want to remove REQUEST_HEADERS:User-Agent from rule 85:
 	// {85: {variables.RequestHeaders, "user-agent"}}
-	ruleRemoveTargetById map[int][]ruleVariableParams
+	ruleRemoveTargetByID map[int][]ruleVariableParams
 
 	// Will skip this number of rules, this value will be decreased on each skip
 	Skip int
@@ -313,7 +320,7 @@ func (tx *Transaction) MatchVariable(match MatchData) {
 
 // MatchRule Matches a rule to be logged
 func (tx *Transaction) MatchRule(mr MatchedRule) {
-	tx.Waf.Logger.Debug("rule matched", zap.String("txid", tx.Id), zap.Int("rule", mr.Rule.ID))
+	tx.Waf.Logger.Debug("rule matched", zap.String("txid", tx.ID), zap.Int("rule", mr.Rule.ID))
 	/*
 		if mr.Rule.Log && tx.Waf.ErrorLogger != nil {
 			// TODO log based on severity
@@ -396,7 +403,7 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []MatchData {
 			// in case it matches the regex or the keystr
 			if (ex.KeyRx != nil && ex.KeyRx.MatchString(c.Key)) || ex.KeyStr == c.Key {
 				tx.Waf.Logger.Debug("Variable exception triggered", zap.String("var", rv.Variable.Name()),
-					zap.String("key", ex.KeyStr), zap.String("txid", tx.Id), zap.String("match", c.Key),
+					zap.String("key", ex.KeyStr), zap.String("txid", tx.ID), zap.String("match", c.Key),
 					zap.Bool("regex", ex.KeyRx != nil))
 				// we remove the exception from the list of values
 				// we tried with standard append but it fails... let's do some hacking
@@ -420,7 +427,7 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []MatchData {
 				Value:        strconv.Itoa(count),
 			},
 		}
-		tx.Waf.Logger.Debug("Transforming match to count", zap.String("tx", tx.Id),
+		tx.Waf.Logger.Debug("Transforming match to count", zap.String("tx", tx.ID),
 			zap.String("count", matches[0].Value))
 	}
 	return matches
@@ -475,21 +482,22 @@ func (tx *Transaction) RemoveRuleTargetByID(id int, variable variables.RuleVaria
 		KeyStr:   key,
 	}
 	// Used if it's empty
-	if tx.ruleRemoveTargetById[id] == nil {
-		tx.ruleRemoveTargetById[id] = []ruleVariableParams{
+	if tx.ruleRemoveTargetByID[id] == nil {
+		tx.ruleRemoveTargetByID[id] = []ruleVariableParams{
 			c,
 		}
 	} else {
-		tx.ruleRemoveTargetById[id] = append(tx.ruleRemoveTargetById[id], c)
+		tx.ruleRemoveTargetByID[id] = append(tx.ruleRemoveTargetByID[id], c)
 	}
 }
 
+// RemoveRuleByID Removes a rule from the transaction
+// It does not affect the WAF rules
 func (tx *Transaction) RemoveRuleByID(id int) {
-	tx.ruleRemoveById = append(tx.ruleRemoveById, id)
+	tx.ruleRemoveByID = append(tx.ruleRemoveByID, id)
 }
 
-// ProcessRequest
-// Fill all transaction variables from an http.Request object
+// ProcessRequest fills all transaction variables from an http.Request object
 // Most implementations of Coraza will probably use http.Request objects
 // so this will implement all phase 0, 1 and 2 variables
 // Note: This function will stop after an interruption
@@ -621,7 +629,7 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 		uri = uri[:in]
 	}
 	path := ""
-	parsedUrl, err := url.Parse(uri)
+	parsedURL, err := url.Parse(uri)
 	query := ""
 	if err != nil {
 		tx.GetCollection(variables.UrlencodedError).Set("", []string{err.Error()})
@@ -640,10 +648,10 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 			tx.GetCollection(variables.RequestUri).Set("", []string{uri})
 		*/
 	} else {
-		tx.ExtractArguments("GET", parsedUrl.RawQuery)
-		tx.GetCollection(variables.RequestURI).Set("", []string{parsedUrl.String()})
-		path = parsedUrl.Path
-		query = parsedUrl.RawQuery
+		tx.ExtractArguments("GET", parsedURL.RawQuery)
+		tx.GetCollection(variables.RequestURI).Set("", []string{parsedURL.String()})
+		path = parsedURL.Path
+		query = parsedURL.RawQuery
 	}
 	offset := strings.LastIndexAny(path, "/\\")
 	if offset != -1 && len(path) > offset+1 {
@@ -717,7 +725,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		rbp = "URLENCODED"
 		tx.GetCollection(variables.ReqbodyProcessor).Set("", []string{rbp})
 	}
-	tx.Waf.Logger.Debug("Attempting to process request body", zap.String("txid", tx.Id),
+	tx.Waf.Logger.Debug("Attempting to process request body", zap.String("txid", tx.ID),
 		zap.String("bodyprocessor", rbp))
 	rbp = strings.ToLower(rbp)
 	if rbp == "" {
@@ -792,7 +800,7 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Int
 func (tx *Transaction) IsProcessableResponseBody() bool {
 	// TODO add more validations
 	ct := tx.GetCollection(variables.ResponseContentType).GetFirstString("")
-	return utils.StringInSlice(ct, tx.Waf.ResponseBodyMimeTypes)
+	return utils.InSlice(ct, tx.Waf.ResponseBodyMimeTypes)
 }
 
 // ProcessResponseBody Perform the request body (if any)
@@ -834,7 +842,7 @@ func (tx *Transaction) ProcessLogging() {
 		tx.savePersistentData()
 		tx.RequestBodyBuffer.Close()
 		tx.ResponseBodyBuffer.Close()
-		tx.Waf.Logger.Debug("Transaction finished", zap.String("event", "FINISH_TRANSACTION"), zap.String("txid", tx.Id), zap.Bool("interrupted", tx.Interrupted()))
+		tx.Waf.Logger.Debug("Transaction finished", zap.String("event", "FINISH_TRANSACTION"), zap.String("txid", tx.ID), zap.Bool("interrupted", tx.Interrupted()))
 	}()
 
 	tx.Waf.Rules.Eval(types.PhaseLogging, tx)
@@ -842,7 +850,7 @@ func (tx *Transaction) ProcessLogging() {
 	if tx.AuditEngine == types.AuditEngineOff {
 		// Audit engine disabled
 		tx.Waf.Logger.Debug("Transaction not marked for audit logging, AuditEngine is disabled",
-			zap.String("tx", tx.Id),
+			zap.String("tx", tx.ID),
 		)
 		return
 	}
@@ -853,14 +861,14 @@ func (tx *Transaction) ProcessLogging() {
 		if re != nil && !re.Match([]byte(status)) {
 			// Not relevant status
 			tx.Waf.Logger.Debug("Transaction status not marked for audit logging",
-				zap.String("tx", tx.Id),
+				zap.String("tx", tx.ID),
 			)
 			return
 		}
 	}
 
 	tx.Waf.Logger.Debug("Transaction marked for audit logging",
-		zap.String("tx", tx.Id),
+		zap.String("tx", tx.ID),
 	)
 	if err := tx.Waf.AuditLogger().Write(tx.AuditLog()); err != nil {
 		tx.Waf.Logger.Error(err.Error())
@@ -882,7 +890,7 @@ func (tx *Transaction) AuditLog() loggers.AuditLog {
 	al.Transaction = loggers.AuditTransaction{
 		Timestamp:     ts,
 		UnixTimestamp: tx.Timestamp,
-		ID:            tx.Id,
+		ID:            tx.ID,
 		ClientIP:      tx.GetCollection(variables.RemoteAddr).GetFirstString(""),
 		ClientPort:    tx.GetCollection(variables.RemotePort).GetFirstInt(""),
 		HostIP:        tx.GetCollection(variables.ServerAddr).GetFirstString(""),

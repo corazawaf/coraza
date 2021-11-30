@@ -20,19 +20,42 @@ import (
 	"strings"
 )
 
+// RuleSeverity represents the severity of a triggered rule
+// It can have a numeric value or string value
+// There are 8 levels of severity:
+// 0 - Emergency
+// 1 - Alert
+// 2 - Critical
+// 3 - Error
+// 4 - Warning
+// 5 - Notice
+// 6 - Info
+// 7 - Debug
+// RuleSeverity is used by error callbacks to chose wether to
+// log the error or not
 type RuleSeverity int
 
 const (
+	// RuleSeverityEmergency represents the emergency severity
+	// We "shold" exit the process immediately
 	RuleSeverityEmergency RuleSeverity = 0
-	RuleSeverityAlert     RuleSeverity = 1
-	RuleSeverityCritical  RuleSeverity = 2
-	RuleSeverityError     RuleSeverity = 3
-	RuleSeverityWarning   RuleSeverity = 4
-	RuleSeverityNotice    RuleSeverity = 5
-	RuleSeverityInfo      RuleSeverity = 6
-	RuleSeverityDebug     RuleSeverity = 7
+	// RuleSeverityAlert represents the alert severity
+	RuleSeverityAlert RuleSeverity = 1
+	// RuleSeverityCritical represents the critical severity
+	RuleSeverityCritical RuleSeverity = 2
+	// RuleSeverityError represents the error severity
+	RuleSeverityError RuleSeverity = 3
+	// RuleSeverityWarning represents the warning severity
+	RuleSeverityWarning RuleSeverity = 4
+	// RuleSeverityNotice represents the notice severity
+	RuleSeverityNotice RuleSeverity = 5
+	// RuleSeverityInfo represents the info severity
+	RuleSeverityInfo RuleSeverity = 6
+	// RuleSeverityDebug represents the debug severity
+	RuleSeverityDebug RuleSeverity = 7
 )
 
+// String returns the string representation of the severity
 func (rs RuleSeverity) String() string {
 	switch rs {
 	case RuleSeverityEmergency:
@@ -55,10 +78,12 @@ func (rs RuleSeverity) String() string {
 	return "unknown"
 }
 
+// Int returns the integer value of the severity
 func (rs RuleSeverity) Int() int {
 	return int(rs)
 }
 
+// ParseRuleSeverity parses a string into a RuleSeverity
 func ParseRuleSeverity(input string) (RuleSeverity, error) {
 	if len(input) == 1 {
 		s, err := strconv.Atoi(input)

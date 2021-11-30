@@ -49,9 +49,9 @@ type MatchedRule struct {
 	// Is disruptive
 	Disruptive bool
 	// Server IP address
-	ServerIpAddress string
+	ServerIPAddress string
 	// Client IP address
-	ClientIpAddress string
+	ClientIPAddress string
 	// A slice of matched variables
 	MatchedData MatchData
 	// A reference to the triggered rule
@@ -65,7 +65,7 @@ func (mr MatchedRule) details() string {
 	if len(data) > 200 {
 		msg = data[:200]
 	}
-	resolvedIp := ""
+	resolvedIP := ""
 	log.WriteString(fmt.Sprintf(" [file %q] [line %q] [id %q] [rev %q] [msg %q] [data %q] [severity %q] [ver %q] [maturity %q] [accuracy %q]",
 		mr.Rule.File, strconv.Itoa(mr.Rule.Line), strconv.Itoa(mr.Rule.ID), mr.Rule.Rev, msg, data, mr.Rule.Severity.String(), mr.Rule.Version,
 		strconv.Itoa(mr.Rule.Maturity), strconv.Itoa(mr.Rule.Accuracy)))
@@ -73,7 +73,7 @@ func (mr MatchedRule) details() string {
 		log.WriteString(fmt.Sprintf(" [tag %q]", t))
 	}
 	log.WriteString(fmt.Sprintf(" [hostname %q] [uri %q] [unique_id %q]",
-		resolvedIp, mr.URI, mr.ID))
+		resolvedIP, mr.URI, mr.ID))
 	return log.String()
 }
 
@@ -97,9 +97,11 @@ func (mr MatchedRule) matchData() string {
 	return ""
 }
 
+// AuditLog transforms the matched rule into an audit log
+// using the legacy Modsecurity syntax
 func (mr MatchedRule) AuditLog(code int) string {
 	log := &strings.Builder{}
-	log.WriteString(fmt.Sprintf("[client %q] ", mr.ClientIpAddress))
+	log.WriteString(fmt.Sprintf("[client %q] ", mr.ClientIPAddress))
 	if mr.Disruptive {
 		log.WriteString(fmt.Sprintf("Coraza: Access denied with code %d (phase %d). ", code, mr.Rule.Phase))
 	} else {
@@ -117,7 +119,7 @@ func (mr MatchedRule) ErrorLog(code int) string {
 		msg = msg[:200]
 	}
 	log := &strings.Builder{}
-	log.WriteString(fmt.Sprintf("[client %q]", mr.ClientIpAddress))
+	log.WriteString(fmt.Sprintf("[client %q]", mr.ClientIPAddress))
 	if mr.Disruptive {
 		log.WriteString(fmt.Sprintf("Coraza: Access denied with code %d (phase %d). ", code, mr.Rule.Phase))
 	} else {

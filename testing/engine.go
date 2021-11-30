@@ -25,36 +25,57 @@ import (
 	"github.com/jptosso/coraza-waf/v2/types/variables"
 )
 
+// Test represents a unique transaction within
+// a WAF instance for a test case
 type Test struct {
-	waf         *engine.Waf
+	// waf contains a waf instance pointer
+	waf *engine.Waf
+	// transaction contains the current transaction
 	transaction *engine.Transaction
 	magic       bool
 	Name        string
 	body        string
 
 	// public variables
-	RequestAddress   string
-	RequestPort      int
-	RequestUri       string
-	RequestMethod    string
-	RequestProtocol  string
-	RequestHeaders   map[string]string
-	ResponseHeaders  map[string]string
-	ResponseCode     int
+	// RequestAddress contains the address of the request
+	RequestAddress string
+	// RequestPort contains the port of the request
+	RequestPort int
+	// RequestURI contains the uri of the request
+	RequestURI string
+	// RequestMethod contains the method of the request
+	RequestMethod string
+	// RequestProtocol contains the protocol of the request
+	RequestProtocol string
+	// RequestHeaders contains the headers of the request
+	RequestHeaders map[string]string
+	// ResponseHeaders contains the headers of the response
+	ResponseHeaders map[string]string
+	// ResponseCode contains the response code of the response
+	ResponseCode int
+	// ResponseProtocol contains the protocol of the response
 	ResponseProtocol string
-	ServerAddress    string
-	ServerPort       int
-	ExpectedOutput   expectedOutput
+	// ServerAddress contains the address of the server
+	ServerAddress string
+	// ServerPort contains the port of the server
+	ServerPort int
+	// Expected contains the expected result of the test
+	ExpectedOutput expectedOutput
 }
 
+// SetWaf sets the waf instance pointer
 func (t *Test) SetWaf(waf *engine.Waf) {
 	t.waf = waf
 }
 
+// DisableMagic disables the magic flag
+// which auto sets content-type and content-length
 func (t *Test) DisableMagic() {
 	t.magic = false
 }
 
+// SetEncodedRequest reads a base64 encoded request
+// and sets it as the current request
 func (t *Test) SetEncodedRequest(request string) error {
 	if request == "" {
 		return nil
@@ -66,6 +87,8 @@ func (t *Test) SetEncodedRequest(request string) error {
 	return t.SetRawRequest(sDec)
 }
 
+// SetRawRequest reads a raw request
+// and sets it as the current request
 func (t *Test) SetRawRequest(request []byte) error {
 	if len(request) == 0 {
 		return nil
@@ -80,7 +103,7 @@ func (t *Test) SetRawRequest(request []byte) error {
 		return fmt.Errorf("invalid request line")
 	}
 	t.RequestMethod = reqLine[0]
-	t.RequestUri = reqLine[1]
+	t.RequestURI = reqLine[1]
 	t.RequestProtocol = reqLine[2]
 	// parse headers
 	t.RequestHeaders = make(map[string]string)
@@ -103,6 +126,7 @@ func (t *Test) SetRawRequest(request []byte) error {
 	return nil
 }
 
+// SetRequestBody sets the request body
 func (t *Test) SetRequestBody(body interface{}) error {
 	if body == nil {
 		return nil
@@ -132,9 +156,10 @@ func (t *Test) SetRequestBody(body interface{}) error {
 	return nil
 }
 
+// RunPhases runs the phases of the test from 1 to 5
 func (t *Test) RunPhases() error {
 	t.transaction.ProcessConnection(t.RequestAddress, t.RequestPort, t.ServerAddress, t.ServerPort)
-	t.transaction.ProcessUri(t.RequestUri, t.RequestMethod, t.RequestProtocol)
+	t.transaction.ProcessURI(t.RequestURI, t.RequestMethod, t.RequestProtocol)
 	for k, v := range t.RequestHeaders {
 		t.transaction.AddRequestHeader(k, v)
 	}
@@ -153,6 +178,8 @@ func (t *Test) RunPhases() error {
 	return nil
 }
 
+// OutputErrors returns a list of errors
+// that occurred during the test
 func (t *Test) OutputErrors() []string {
 	var errors []string
 	if lc := t.ExpectedOutput.LogContains; lc != "" {
@@ -187,6 +214,7 @@ func (t *Test) OutputErrors() []string {
 	return errors
 }
 
+// LogContains checks if the log contains a string
 func (t *Test) LogContains(log string) bool {
 	for _, mr := range t.transaction.MatchedRules {
 		if strings.Contains(mr.ErrorLog(t.ResponseCode), log) {
@@ -196,12 +224,15 @@ func (t *Test) LogContains(log string) bool {
 	return false
 }
 
+// Transaction returns the transaction
 func (t *Test) Transaction() *engine.Transaction {
 	return t.transaction
 }
 
-func (test *Test) String() string {
-	tx := test.transaction
+// String returns a string representation of the test
+// for debugging
+func (t *Test) String() string {
+	tx := t.transaction
 	res := "======DEBUG======\n"
 	for v := byte(1); v < 100; v++ {
 		vr := variables.RuleVariable(v)
@@ -221,14 +252,15 @@ func (test *Test) String() string {
 	return res
 }
 
-func (test *Test) Request() string {
-	str := fmt.Sprintf("%s %s %s\r\n", test.RequestMethod, test.RequestUri, test.RequestProtocol)
-	for k, v := range test.RequestHeaders {
+// Request returns the raw request
+func (t *Test) Request() string {
+	str := fmt.Sprintf("%s %s %s\r\n", t.RequestMethod, t.RequestURI, t.RequestProtocol)
+	for k, v := range t.RequestHeaders {
 		str += fmt.Sprintf("%s: %s\r\n", k, v)
 	}
 	str += "\r\n"
-	if test.body != "" {
-		str += test.body
+	if t.body != "" {
+		str += t.body
 	}
 	return str
 }
@@ -242,7 +274,7 @@ func newTest(name string, waf *engine.Waf) *Test {
 		ResponseHeaders: map[string]string{},
 		RequestMethod:   "GET",
 		RequestProtocol: "HTTP/1.1",
-		RequestUri:      "/",
+		RequestURI:      "/",
 		RequestAddress:  "127.0.0.1",
 		RequestPort:     80,
 		magic:           true,

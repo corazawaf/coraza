@@ -18,11 +18,11 @@ import "fmt"
 
 // readers stores an unexported map of registered GeoReaders
 // They must only be added by directives as it is not concurrent-safe for writing
-var readers = map[string]GeoReader{}
+var readers = map[string]Reader{}
 
-// GeoReader is the interface that wraps a GeoIP database
+// Reader is the interface that wraps a GeoIP database
 // It is used by the @geoLookup operator to create the GEO variables
-type GeoReader interface {
+type Reader interface {
 	// Init a geo reader for the given file, for example .mmdb, data, etc
 	// It fails in case the file is invalid, cannot be read or is not supported
 	// Init is called by the directive SecGeoLookupDb
@@ -37,15 +37,15 @@ type GeoReader interface {
 	Close() error
 }
 
-// RegisterGeoReader registers a new GeoReader plugin
+// Register registers a new GeoReader plugin
 // There are no defaults GeoReaders
-func RegisterGeoReader(name string, reader GeoReader) {
+func Register(name string, reader Reader) {
 	readers[name] = reader
 }
 
-// GetGeoReader returns a GeoReader by name
+// GetReader returns a GeoReader by name
 // It fails if the georeader does not exist
-func GetGeoReader(name string) (GeoReader, error) {
+func GetReader(name string) (Reader, error) {
 	if reader, ok := readers[name]; ok {
 		return reader, nil
 	}

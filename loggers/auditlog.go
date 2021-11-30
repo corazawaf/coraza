@@ -16,7 +16,7 @@ package loggers
 
 import "github.com/jptosso/coraza-waf/v2/types"
 
-// Main struct for audit log data
+// AuditLog represents the main struct for audit log data
 type AuditLog struct {
 	Parts types.AuditLogParts
 	// Transaction information
@@ -26,7 +26,8 @@ type AuditLog struct {
 	Messages []AuditMessage `json:"messages"`
 }
 
-// Transaction information
+// AuditTransaction contains transaction specific
+// information
 type AuditTransaction struct {
 	// Timestamp "02/Jan/2006:15:04:20 -0700" format
 	Timestamp     string `json:"timestamp"`
@@ -47,6 +48,8 @@ type AuditTransaction struct {
 	Producer   AuditTransactionProducer `json:"producer"`
 }
 
+// AuditTransactionResponse contains response specific
+// information
 type AuditTransactionResponse struct {
 	Protocol string              `json:"protocol"`
 	Status   int                 `json:"status"`
@@ -54,6 +57,8 @@ type AuditTransactionResponse struct {
 	Body     string              `json:"body"`
 }
 
+// AuditTransactionProducer contains producer specific
+// information for debugging
 type AuditTransactionProducer struct {
 	Connector  string   `json:"connector"`
 	Version    string   `json:"version"`
@@ -63,6 +68,8 @@ type AuditTransactionProducer struct {
 	Rulesets   []string `json:"rulesets"`
 }
 
+// AuditTransactionRequest contains request specific
+// information
 type AuditTransactionRequest struct {
 	Method      string                         `json:"method"`
 	Protocol    string                         `json:"protocol"`
@@ -73,18 +80,24 @@ type AuditTransactionRequest struct {
 	Files       []AuditTransactionRequestFiles `json:"files"`
 }
 
+// AuditTransactionRequestFiles contains information
+// for the uploaded files using multipart forms
 type AuditTransactionRequestFiles struct {
 	Name string `json:"name"`
 	Size int64  `json:"size"`
 	Mime string `json:"mime"`
 }
 
+// AuditMessage contains information about the triggered
+// rules
 type AuditMessage struct {
 	Actionset string           `json:"actionset"`
 	Message   string           `json:"message"`
 	Data      AuditMessageData `json:"data"`
 }
 
+// AuditMessageData contains information about the triggered
+// rules in detail
 type AuditMessageData struct {
 	File     string             `json:"file"`
 	Line     int                `json:"line"`

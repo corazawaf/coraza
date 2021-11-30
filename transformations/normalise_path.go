@@ -29,7 +29,6 @@ func normalisePath(data string) (string, error) {
 	}
 	if data[len(data)-1] == '/' {
 		return clean + "/", nil
-	} else {
-		return clean, nil
 	}
+	return clean, nil
 }

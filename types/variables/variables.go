@@ -1,3 +1,7 @@
+/*
+Package variables contains the representation of the variables used in the rules
+Variables are created as bytes and they have a string representation
+*/
 // Copyright 2021 Juan Pablo Tosso
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,18 +30,27 @@ import (
 type RuleVariable byte
 
 const (
-	// Unknown is the default value for a variable
-	// it's using for testing and error catching
-	Unknown                       RuleVariable = iota
-	ResponseContentType           RuleVariable = iota
-	UniqueID                      RuleVariable = iota
-	ArgsCombinedSize              RuleVariable = iota
-	AuthType                      RuleVariable = iota
-	FilesCombinedSize             RuleVariable = iota
-	FullRequest                   RuleVariable = iota
-	FullRequestLength             RuleVariable = iota
-	InboundDataError              RuleVariable = iota
-	MatchedVar                    RuleVariable = iota
+	// Unknown is used as placeholder for errors
+	Unknown RuleVariable = iota
+	// ResponseContentType is the content type of the response
+	ResponseContentType RuleVariable = iota
+	// UniqueID is the unique id of the transaction
+	UniqueID RuleVariable = iota
+	// ArgsCombinedSize is the combined size of the arguments
+	ArgsCombinedSize RuleVariable = iota
+	// AuthType is the authentication type
+	AuthType RuleVariable = iota
+	// FilesCombinedSize is the combined size of the uploaded files
+	FilesCombinedSize RuleVariable = iota
+	// FullRequest is the full request
+	FullRequest RuleVariable = iota
+	// FullRequestLength is the length of the full request
+	FullRequestLength RuleVariable = iota
+	// InboundDataError represents errors for inbound data
+	InboundDataError RuleVariable = iota
+	// MatchedVar is the value of the matched variable
+	MatchedVar RuleVariable = iota
+	// MatchedVarName is the name of the matched variable
 	MatchedVarName                RuleVariable = iota
 	MultipartBoundaryQuoted       RuleVariable = iota
 	MultipartBoundaryWhitespace   RuleVariable = iota
@@ -85,40 +98,36 @@ const (
 	StatusLine                    RuleVariable = iota
 	InboundErrorData              RuleVariable = iota
 	Duration                      RuleVariable = iota
-
-	ResponseHeadersNames RuleVariable = iota
-	RequestHeadersNames  RuleVariable = iota
-	Userid               RuleVariable = iota
-	Args                 RuleVariable = iota
-	ArgsGet              RuleVariable = iota
-	ArgsPost             RuleVariable = iota
-	FilesSizes           RuleVariable = iota
-	FilesNames           RuleVariable = iota
-	FilesTmpContent      RuleVariable = iota
-	MultipartFilename    RuleVariable = iota
-	MultipartName        RuleVariable = iota
-	MatchedVarsNames     RuleVariable = iota
-	MatchedVars          RuleVariable = iota
-	Files                RuleVariable = iota
-	RequestCookies       RuleVariable = iota
-	RequestHeaders       RuleVariable = iota
-	ResponseHeaders      RuleVariable = iota
-	Geo                  RuleVariable = iota
-	RequestCookiesNames  RuleVariable = iota
-	FilesTmpnames        RuleVariable = iota
-	ArgsNames            RuleVariable = iota
-	ArgsGetNames         RuleVariable = iota
-	ArgsPostNames        RuleVariable = iota
-	TX                   RuleVariable = iota
-	Rule                 RuleVariable = iota
-	XML                  RuleVariable = iota
-	JSON                 RuleVariable = iota
-	Env                  RuleVariable = iota
-
-	// Persisten storage kepy for compatibility
-	IP RuleVariable = iota
-
-	UrlencodedError RuleVariable = iota
+	ResponseHeadersNames          RuleVariable = iota
+	RequestHeadersNames           RuleVariable = iota
+	Userid                        RuleVariable = iota
+	Args                          RuleVariable = iota
+	ArgsGet                       RuleVariable = iota
+	ArgsPost                      RuleVariable = iota
+	FilesSizes                    RuleVariable = iota
+	FilesNames                    RuleVariable = iota
+	FilesTmpContent               RuleVariable = iota
+	MultipartFilename             RuleVariable = iota
+	MultipartName                 RuleVariable = iota
+	MatchedVarsNames              RuleVariable = iota
+	MatchedVars                   RuleVariable = iota
+	Files                         RuleVariable = iota
+	RequestCookies                RuleVariable = iota
+	RequestHeaders                RuleVariable = iota
+	ResponseHeaders               RuleVariable = iota
+	Geo                           RuleVariable = iota
+	RequestCookiesNames           RuleVariable = iota
+	FilesTmpnames                 RuleVariable = iota
+	ArgsNames                     RuleVariable = iota
+	ArgsGetNames                  RuleVariable = iota
+	ArgsPostNames                 RuleVariable = iota
+	TX                            RuleVariable = iota
+	Rule                          RuleVariable = iota
+	XML                           RuleVariable = iota
+	JSON                          RuleVariable = iota
+	Env                           RuleVariable = iota
+	IP                            RuleVariable = iota
+	UrlencodedError               RuleVariable = iota
 )
 
 var rulemap = map[RuleVariable]string{
@@ -222,7 +231,7 @@ func (v RuleVariable) Name() string {
 	return "ERROR"
 }
 
-// ParseRuleVariable returns the byte interpretation
+// ParseVariable returns the byte interpretation
 // of a variable from a string
 // Returns error if there is no representation
 func ParseVariable(v string) (RuleVariable, error) {

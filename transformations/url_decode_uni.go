@@ -24,16 +24,16 @@ func urlDecodeUni(data string) (string, error) {
 
 func inplaceUniDecode(input string) string {
 	d := []byte(input)
-	input_len := len(d)
+	inputLen := len(d)
 	var i, count, c int
 	hmap := -1
 
-	for i < input_len {
+	for i < inputLen {
 		if input[i] == '%' {
-			if (i+1 < input_len) && ((input[i+1] == 'u') || (input[i+1] == 'U')) {
+			if (i+1 < inputLen) && ((input[i+1] == 'u') || (input[i+1] == 'U')) {
 				/* Character is a percent sign. */
 				/* IIS-specific %u encoding. */
-				if i+5 < input_len {
+				if i+5 < inputLen {
 					/* We have at least 4 data bytes. */
 					if (strings.ValidHex(input[i+2])) && (strings.ValidHex(input[i+3])) && (strings.ValidHex(input[i+4])) && (strings.ValidHex(input[i+5])) {
 						/*
@@ -98,7 +98,7 @@ func inplaceUniDecode(input string) string {
 			} else {
 				/* Standard URL encoding. */
 				/* Are there enough bytes available? */
-				if i+2 < input_len {
+				if i+2 < inputLen {
 					/* Yes. */
 
 					/* Decode a %xx combo only if it is valid.

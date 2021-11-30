@@ -25,31 +25,33 @@ type operatorsWrapper = func() coraza.RuleOperator
 var operators = map[string]operatorsWrapper{}
 
 func init() {
-	RegisterOperator("beginsWith", func() coraza.RuleOperator { return &beginsWith{} })
-	RegisterOperator("rx", func() coraza.RuleOperator { return &rx{} })
-	RegisterOperator("eq", func() coraza.RuleOperator { return &eq{} })
-	RegisterOperator("contains", func() coraza.RuleOperator { return &contains{} })
-	RegisterOperator("endsWith", func() coraza.RuleOperator { return &endsWith{} })
-	RegisterOperator("inspectFile", func() coraza.RuleOperator { return &inspectFile{} })
-	RegisterOperator("ge", func() coraza.RuleOperator { return &ge{} })
-	RegisterOperator("gt", func() coraza.RuleOperator { return &gt{} })
-	RegisterOperator("le", func() coraza.RuleOperator { return &le{} })
-	RegisterOperator("lt", func() coraza.RuleOperator { return &lt{} })
-	RegisterOperator("unconditionalMatch", func() coraza.RuleOperator { return &unconditionalMatch{} })
-	RegisterOperator("within", func() coraza.RuleOperator { return &within{} })
-	RegisterOperator("pmFromFile", func() coraza.RuleOperator { return &pmFromFile{} })
-	RegisterOperator("pm", func() coraza.RuleOperator { return &pm{} })
-	RegisterOperator("validateByteRange", func() coraza.RuleOperator { return &validateByteRange{} })
-	RegisterOperator("validateUrlEncoding", func() coraza.RuleOperator { return &validateURLEncoding{} })
-	RegisterOperator("streq", func() coraza.RuleOperator { return &streq{} })
-	RegisterOperator("ipMatch", func() coraza.RuleOperator { return &ipMatch{} })
-	RegisterOperator("ipMatchFromFile", func() coraza.RuleOperator { return &ipMatchFromFile{} })
-	RegisterOperator("rbl", func() coraza.RuleOperator { return &rbl{} })
-	RegisterOperator("validateUtf8Encoding", func() coraza.RuleOperator { return &validateUtf8Encoding{} })
-	RegisterOperator("noMatch", func() coraza.RuleOperator { return &noMatch{} })
-	RegisterOperator("validateNid", func() coraza.RuleOperator { return &validateNid{} })
-	RegisterOperator("geoLookup", func() coraza.RuleOperator { return &geoLookup{} })
+	RegisterPlugin("beginsWith", func() coraza.RuleOperator { return &beginsWith{} })
+	RegisterPlugin("rx", func() coraza.RuleOperator { return &rx{} })
+	RegisterPlugin("eq", func() coraza.RuleOperator { return &eq{} })
+	RegisterPlugin("contains", func() coraza.RuleOperator { return &contains{} })
+	RegisterPlugin("endsWith", func() coraza.RuleOperator { return &endsWith{} })
+	RegisterPlugin("inspectFile", func() coraza.RuleOperator { return &inspectFile{} })
+	RegisterPlugin("ge", func() coraza.RuleOperator { return &ge{} })
+	RegisterPlugin("gt", func() coraza.RuleOperator { return &gt{} })
+	RegisterPlugin("le", func() coraza.RuleOperator { return &le{} })
+	RegisterPlugin("lt", func() coraza.RuleOperator { return &lt{} })
+	RegisterPlugin("unconditionalMatch", func() coraza.RuleOperator { return &unconditionalMatch{} })
+	RegisterPlugin("within", func() coraza.RuleOperator { return &within{} })
+	RegisterPlugin("pmFromFile", func() coraza.RuleOperator { return &pmFromFile{} })
+	RegisterPlugin("pm", func() coraza.RuleOperator { return &pm{} })
+	RegisterPlugin("validateByteRange", func() coraza.RuleOperator { return &validateByteRange{} })
+	RegisterPlugin("validateUrlEncoding", func() coraza.RuleOperator { return &validateURLEncoding{} })
+	RegisterPlugin("streq", func() coraza.RuleOperator { return &streq{} })
+	RegisterPlugin("ipMatch", func() coraza.RuleOperator { return &ipMatch{} })
+	RegisterPlugin("ipMatchFromFile", func() coraza.RuleOperator { return &ipMatchFromFile{} })
+	RegisterPlugin("rbl", func() coraza.RuleOperator { return &rbl{} })
+	RegisterPlugin("validateUtf8Encoding", func() coraza.RuleOperator { return &validateUtf8Encoding{} })
+	RegisterPlugin("noMatch", func() coraza.RuleOperator { return &noMatch{} })
+	RegisterPlugin("validateNid", func() coraza.RuleOperator { return &validateNid{} })
+	RegisterPlugin("geoLookup", func() coraza.RuleOperator { return &geoLookup{} })
 }
+
+// GetOperator returns an operator by name
 func GetOperator(name string) (coraza.RuleOperator, error) {
 	if op, ok := operators[name]; ok {
 		return op(), nil
@@ -57,6 +59,8 @@ func GetOperator(name string) (coraza.RuleOperator, error) {
 	return nil, fmt.Errorf("operator %s not found", name)
 }
 
-func RegisterOperator(name string, op func() coraza.RuleOperator) {
+// RegisterPlugin registers a new operator
+// If the operator already exists it will be overwritten
+func RegisterPlugin(name string, op func() coraza.RuleOperator) {
 	operators[name] = op
 }

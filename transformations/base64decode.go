@@ -14,6 +14,22 @@
 
 package transformations
 
+var base64DecMap = []byte{
+	127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
+	127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
+	127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
+	127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
+	127, 127, 127, 62, 127, 127, 127, 63, 52, 53,
+	54, 55, 56, 57, 58, 59, 60, 61, 127, 127,
+	127, 64, 127, 127, 127, 0, 1, 2, 3, 4,
+	5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+	15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+	25, 127, 127, 127, 127, 127, 127, 26, 27, 28,
+	29, 30, 31, 32, 33, 34, 35, 36, 37, 38,
+	39, 40, 41, 42, 43, 44, 45, 46, 47, 48,
+	49, 50, 51, 127, 127, 127, 127, 127,
+}
+
 // base64decode decodes a Base64-encoded string.
 // Important: We cannot use the golang base64 package because it does not
 // support mixed content like RAW+BASE64+RAW
@@ -22,9 +38,8 @@ func base64decode(data string) (string, error) {
 	res := doBase64decode(data)
 	if res == "" {
 		return data, nil
-	} else {
-		return res, nil
 	}
+	return res, nil
 }
 
 func doBase64decode(input string) string {
@@ -32,21 +47,6 @@ func doBase64decode(input string) string {
 	src := []byte(input)
 	var j, x, i, n int
 	dst := make([]byte, slen)
-	base64_dec_map := []byte{
-		127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
-		127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
-		127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
-		127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
-		127, 127, 127, 62, 127, 127, 127, 63, 52, 53,
-		54, 55, 56, 57, 58, 59, 60, 61, 127, 127,
-		127, 64, 127, 127, 127, 0, 1, 2, 3, 4,
-		5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
-		15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
-		25, 127, 127, 127, 127, 127, 127, 26, 27, 28,
-		29, 30, 31, 32, 33, 34, 35, 36, 37, 38,
-		39, 40, 41, 42, 43, 44, 45, 46, 47, 48,
-		49, 50, 51, 127, 127, 127, 127, 127,
-	}
 
 	/* First pass: check for validity and get output length */
 	for ; i < slen; i++ {
@@ -82,12 +82,12 @@ func doBase64decode(input string) string {
 			}
 		}
 
-		if src[i] > 127 || base64_dec_map[src[i]] == 127 {
+		if src[i] > 127 || base64DecMap[src[i]] == 127 {
 			// ERROR
 			return input
 		}
 
-		if base64_dec_map[src[i]] < 64 && j != 0 {
+		if base64DecMap[src[i]] < 64 && j != 0 {
 			// ERROR
 			return input
 		}
@@ -113,11 +113,11 @@ func doBase64decode(input string) string {
 			srcc++
 			continue
 		}
-		if base64_dec_map[src[srcc]] == 64 {
+		if base64DecMap[src[srcc]] == 64 {
 			j--
 		}
 
-		x = (x << 6) | int(base64_dec_map[src[srcc]]&0x3F)
+		x = (x << 6) | int(base64DecMap[src[srcc]]&0x3F)
 		n++
 		if n == 4 {
 			n = 0

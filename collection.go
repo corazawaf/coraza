@@ -113,7 +113,7 @@ func (c *Collection) AddUnique(key string, value string) {
 		c.Add(key, value)
 		return
 	}
-	if strings.StringInSlice(value, c.data[key]) {
+	if strings.InSlice(value, c.data[key]) {
 		return
 	}
 	c.Add(key, value)

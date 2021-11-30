@@ -31,9 +31,8 @@ func normalisePathWin(data string) (string, error) {
 	}
 	if data[leng-1] == '\\' {
 		return cl + "/", nil
-	} else {
-		return cl, nil
 	}
+	return cl, nil
 }
 
 // We overwrite the linux version manually

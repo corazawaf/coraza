@@ -33,7 +33,7 @@ func (a *skipafterFn) Init(r *coraza.Rule, data string) error {
 
 func (a *skipafterFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	tx.Waf.Logger.Debug("Starting secmarker",
-		zap.String("txid", tx.Id),
+		zap.String("txid", tx.ID),
 		zap.String("event", "INIT_SECMARK"),
 		zap.String("secmark", a.data),
 	)

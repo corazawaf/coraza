@@ -113,7 +113,7 @@ func (p *Parser) evaluate(data string) error {
 		opts = strings.Trim(opts, `"`)
 	}
 
-	if utils.StringInSlice(directive, p.DisabledDirectives) {
+	if utils.InSlice(directive, p.DisabledDirectives) {
 		return fmt.Errorf("%s directive is disabled", directive)
 	}
 
@@ -146,7 +146,7 @@ func (p *Parser) parseRule(data string, withOperator bool) (*engine.Rule, error)
 		r := regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
 		matches := r.FindAllString(data, -1)
 		operator := utils.RemoveQuotes(matches[0])
-		if utils.StringInSlice(operator, p.DisabledRuleOperators) {
+		if utils.InSlice(operator, p.DisabledRuleOperators) {
 			return nil, fmt.Errorf("%s rule operator is disabled", operator)
 		}
 		err = rp.ParseVariables(vars)

@@ -63,7 +63,7 @@ func Test_directiveSecAuditLog(t *testing.T) {
 	if err := p.FromString("SecSensorId test"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if w.SensorId != "test" {
+	if w.SensorID != "test" {
 		t.Error("failed to set SecSensorId")
 	}
 	if err := p.FromString("SecRuleEngine DetectionOnly"); err != nil {

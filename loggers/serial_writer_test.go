@@ -26,7 +26,7 @@ import (
 
 func TestSerialLogger_Write(t *testing.T) {
 	l := &serialWriter{}
-	tmp := path.Join("/tmp", utils.RandomString(10)+"-audit.log")
+	tmp := path.Join("/tmp", utils.SafeRandom(10)+"-audit.log")
 	defer os.Remove(tmp)
 	logger, err := NewAuditLogger()
 	if err != nil {

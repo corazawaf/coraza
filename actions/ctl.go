@@ -74,19 +74,19 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	switch a.action {
 	case ctlRemoveTargetByID:
 		id, _ := strconv.Atoi(a.value)
-		tx.RemoveRuleTargetById(id, a.collection, a.colKey)
+		tx.RemoveRuleTargetByID(id, a.collection, a.colKey)
 	case ctlRemoveTargetByTag:
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
-			if utils.StringInSlice(a.value, r.Tags) {
-				tx.RemoveRuleTargetById(r.ID, a.collection, a.colKey)
+			if utils.InSlice(a.value, r.Tags) {
+				tx.RemoveRuleTargetByID(r.ID, a.collection, a.colKey)
 			}
 		}
 	case ctlRemoveTargetByMsg:
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
 			if r.Msg == a.value {
-				tx.RemoveRuleTargetById(r.ID, a.collection, a.colKey)
+				tx.RemoveRuleTargetByID(r.ID, a.collection, a.colKey)
 			}
 		}
 	case ctlAuditEngine:
@@ -120,19 +120,19 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 		tx.RuleEngine = re
 	case ctlRuleRemoveByID:
 		id, _ := strconv.Atoi(a.value)
-		tx.RemoveRuleById(id)
+		tx.RemoveRuleByID(id)
 	case ctlRuleRemoveByMsg:
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
 			if r.Msg == a.value {
-				tx.RemoveRuleById(r.ID)
+				tx.RemoveRuleByID(r.ID)
 			}
 		}
 	case ctlRuleRemoveByTag:
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
-			if utils.StringInSlice(a.value, r.Tags) {
-				tx.RemoveRuleById(r.ID)
+			if utils.InSlice(a.value, r.Tags) {
+				tx.RemoveRuleByID(r.ID)
 			}
 		}
 	case ctlRequestBodyProcessor:

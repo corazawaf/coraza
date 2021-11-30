@@ -18,14 +18,16 @@ import (
 	"crypto/rand"
 	"strings"
 	"sync"
-	"unicode"
 )
 
 const randomchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 
 var mu sync.Mutex
 
-func RandomString(length int) string {
+// SafeRandom returns a random string of length n
+// It is safe to use this function in concurrent environments
+// If it fails, it will try again, it should fail more than once
+func SafeRandom(length int) string {
 	bytes := make([]byte, length)
 	// There is an entropy bug here with a lot of concurrency, so we need sync
 
@@ -34,7 +36,7 @@ func RandomString(length int) string {
 	mu.Unlock()
 	if err != nil {
 		// TODO is it ok?
-		return RandomString(length)
+		return SafeRandom(length)
 	}
 
 	for i, b := range bytes {
@@ -43,15 +45,12 @@ func RandomString(length int) string {
 	return string(bytes)
 }
 
-func IsSpace(char byte) bool {
-	//https://en.cppreference.com/w/cpp/string/byte/isspace
-	return unicode.IsSpace(rune(char))
-}
-
+// ValidHex returns true if the byte is a valid hex character
 func ValidHex(x byte) bool {
 	return (((x >= '0') && (x <= '9')) || ((x >= 'a') && (x <= 'f')) || ((x >= 'A') && (x <= 'F')))
 }
 
+// X2c converts a hex character to its ascii value
 func X2c(what string) byte {
 	var digit byte
 	if what[0] >= 'A' {
@@ -69,30 +68,7 @@ func X2c(what string) byte {
 	return digit
 }
 
-func IsXDigit(char int) bool {
-	c := byte(char)
-	return ValidHex(c)
-}
-
-func IsODigit(x byte) bool {
-	return (x >= '0') && (x <= '7')
-}
-
-func IsDigit(x byte) bool {
-	return (x >= '0') && (x <= '9')
-}
-
-func TrimLeftChars(s string, n int) string {
-	m := 0
-	for i := range s {
-		if m >= n {
-			return s[i:]
-		}
-		m++
-	}
-	return s[:0]
-}
-
+// RemoveQuotes removes quotes from a string
 func RemoveQuotes(s string) string {
 	if s == "" {
 		return ""
@@ -102,7 +78,8 @@ func RemoveQuotes(s string) string {
 	return s
 }
 
-func StringInSlice(a string, list []string) bool {
+// InSlice returns true if the string is in the slice
+func InSlice(a string, list []string) bool {
 	for _, b := range list {
 		if b == a {
 			return true

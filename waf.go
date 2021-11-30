@@ -33,6 +33,9 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+// ErrorLogCallback is used to set a callback function to log errors
+// It is triggered when an error is raised by the WAF
+// It contains the severity so the cb can decide to log it or not
 type ErrorLogCallback = func(rule MatchedRule)
 
 // Waf instances are used to store configurations and rules
@@ -46,7 +49,7 @@ type ErrorLogCallback = func(rule MatchedRule)
 // of them in runtime you might create concurrency issues
 type Waf struct {
 	// ruleGroup object, contains all rules and helpers
-	Rules ruleGroup
+	Rules RuleGroup
 
 	// Audit logger engine
 	auditLogger *loggers.Logger
@@ -105,8 +108,8 @@ type Waf struct {
 	// This directory will be used to store page files
 	TmpDir string
 
-	// Sensor ID tu, must be unique per cluster nodes
-	SensorId string
+	// Sensor ID identifies the sensor in ac cluster
+	SensorID string
 
 	// Path to store data files (ex. cache)
 	DataDir string
@@ -128,7 +131,7 @@ type Waf struct {
 	// Used for the debug logger
 	Logger *zap.Logger
 
-	geo geo.GeoReader
+	geo geo.Reader
 
 	// Used to allow switching the debug level during runtime
 	// ctl cannot switch use it as it will update de lvl
@@ -145,7 +148,7 @@ func (w *Waf) NewTransaction() *Transaction {
 	tx := &Transaction{
 		Waf:                  *w,
 		collections:          make([]*Collection, 100), // TODO fix count
-		Id:                   utils.RandomString(19),
+		ID:                   utils.SafeRandom(19),
 		Timestamp:            time.Now().UnixNano(),
 		AuditEngine:          w.AuditEngine,
 		AuditLogParts:        w.AuditLogParts,
@@ -154,8 +157,8 @@ func (w *Waf) NewTransaction() *Transaction {
 		RequestBodyLimit:     134217728,
 		ResponseBodyAccess:   true,
 		ResponseBodyLimit:    524288,
-		ruleRemoveTargetById: map[int][]ruleVariableParams{},
-		ruleRemoveById:       []int{},
+		ruleRemoveTargetByID: map[int][]ruleVariableParams{},
+		ruleRemoveByID:       []int{},
 		StopWatches:          map[types.RulePhase]int{},
 		RequestBodyBuffer:    NewBodyBuffer(w.TmpDir, w.RequestBodyInMemoryLimit),
 		ResponseBodyBuffer:   NewBodyBuffer(w.TmpDir, w.RequestBodyInMemoryLimit),
@@ -197,7 +200,7 @@ func (w *Waf) NewTransaction() *Transaction {
 		variables.Duration:                      "0",
 		variables.HighestSeverity:               "0",
 		variables.ArgsCombinedSize:              "0",
-		variables.UniqueID:                      tx.Id,
+		variables.UniqueID:                      tx.ID,
 		// TODO single variables must be defaulted to empty string
 		variables.RemoteAddr:       "",
 		variables.ReqbodyProcessor: "",
@@ -220,12 +223,12 @@ func (w *Waf) NewTransaction() *Transaction {
 		env.Set(spl[0], []string{spl[1]})
 	}
 
-	w.Logger.Debug("new transaction created", zap.String("event", "NEW_TRANSACTION"), zap.String("txid", tx.Id))
+	w.Logger.Debug("new transaction created", zap.String("event", "NEW_TRANSACTION"), zap.String("txid", tx.ID))
 
 	return tx
 }
 
-// AddAuditLogger creates a new logger for the current WAF instance
+// SetAuditLogger creates a new logger for the current WAF instance
 // You may add as many loggers as you want
 // Keep in mind loggers may lock go routines
 func (w *Waf) SetAuditLogger(engine string) error {
@@ -256,7 +259,7 @@ func (w *Waf) SetDebugLogPath(path string) error {
 	return nil
 }
 
-// Logger returns the initiated loggers
+// AuditLogger returns the initiated loggers
 // Coraza supports unlimited loggers, so you can write for example
 // to syslog and a local drive at the same time
 // AuditLogger() returns nil if the audit logger is not set
@@ -326,13 +329,13 @@ func (w *Waf) SetErrorLogCb(cb ErrorLogCallback) {
 
 // SetGeoReader is used by directives to assign a geo reader
 // This function is not thread safe
-func (w *Waf) SetGeoReader(reader geo.GeoReader) {
+func (w *Waf) SetGeoReader(reader geo.Reader) {
 	w.geo = reader
 }
 
 // Geo returns the geo processor for the current WAF instance
 // Geo is nil if the geo processor is not set
 // A geo processor requires a Geo plugin to be installed
-func (w *Waf) Geo() geo.GeoReader {
+func (w *Waf) Geo() geo.Reader {
 	return w.geo
 }

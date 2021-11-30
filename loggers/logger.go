@@ -99,7 +99,7 @@ type loggerWrapper = func() LogWriter
 var writers = map[string]loggerWrapper{}
 var formatters = map[string]LogFormatter{}
 
-// RegisterLogger registers a new logger
+// RegisterLogWriter registers a new logger
 // it can be used for plugins
 func RegisterLogWriter(name string, writer func() LogWriter) {
 	writers[name] = writer
@@ -170,6 +170,6 @@ func init() {
 	})
 
 	RegisterLogFormatter("json", jsonFormatter)
-	RegisterLogFormatter("legacyjson", legacyJsonFormatter)
+	RegisterLogFormatter("legacyjson", legacyJSONFormatter)
 	RegisterLogFormatter("native", nativeFormatter)
 }

@@ -57,7 +57,7 @@ type ruleActionParams struct {
 	Function RuleAction
 }
 
-// Operator interface is used to define rule @operators
+// RuleOperator interface is used to define rule @operators
 type RuleOperator interface {
 	// Init is used during compilation to setup and cache
 	// the operator
@@ -219,7 +219,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	tx.Waf.Logger.Debug("Evaluating rule",
 		zap.Int("rule", rid),
 		zap.String("raw", r.Raw),
-		zap.String("tx", tx.Id),
+		zap.String("tx", tx.ID),
 		zap.String("event", "EVALUATE_RULE"),
 	)
 	matchedValues := []MatchData{}
@@ -234,7 +234,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 
 	// SecMark and SecAction uses nil operator
 	if r.operator == nil {
-		tx.Waf.Logger.Debug("Forcing rule match", zap.String("txid", tx.Id),
+		tx.Waf.Logger.Debug("Forcing rule match", zap.String("txid", tx.ID),
 			zap.Int("rule", r.ID),
 			zap.String("event", "RULE_FORCE_MATCH"),
 		)
@@ -245,7 +245,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 			},
 		}
 	} else {
-		ecol := tx.ruleRemoveTargetById[r.ID]
+		ecol := tx.ruleRemoveTargetByID[r.ID]
 		for _, v := range r.variables {
 			var values []MatchData
 			for _, c := range ecol {
@@ -262,14 +262,14 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 			}
 			tx.Waf.Logger.Debug("Expanding arguments",
 				zap.Int("rule", rid),
-				zap.String("tx", tx.Id),
+				zap.String("tx", tx.ID),
 				zap.Int("count", len(values)),
 			)
 			for _, arg := range values {
 				var args []string
 				tx.Waf.Logger.Debug("Transforming argument",
 					zap.Int("rule", rid),
-					zap.String("tx", tx.Id),
+					zap.String("tx", tx.ID),
 					zap.String("argument", arg.Value),
 				)
 				var errs []error
@@ -285,14 +285,14 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 				if errs != nil && len(errs) > 0 {
 					tx.Waf.Logger.Error("Error transforming argument",
 						zap.Int("rule", rid),
-						zap.String("tx", tx.Id),
+						zap.String("tx", tx.ID),
 						zap.String("argument", arg.Value),
 						zap.Errors("errors", errs),
 					)
 				}
 				tx.Waf.Logger.Debug("Arguments transformed",
 					zap.Int("rule", rid),
-					zap.String("tx", tx.Id),
+					zap.String("tx", tx.ID),
 					zap.Strings("arguments", args),
 				)
 
@@ -307,7 +307,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 							Value:        carg,
 						})
 					}
-					tx.Waf.Logger.Debug("Evaluate rule operator", zap.String("txid", tx.Id),
+					tx.Waf.Logger.Debug("Evaluate rule operator", zap.String("txid", tx.ID),
 						zap.Int("rule", rid),
 						zap.String("event", "EVALUATE_RULE_OPERATOR"),
 						zap.String("operator", r.operator.Function), // TODO fix
@@ -327,7 +327,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		return matchedValues
 	}
 
-	tx.Waf.Logger.Debug("Attempting to match values", zap.String("txid", tx.Id),
+	tx.Waf.Logger.Debug("Attempting to match values", zap.String("txid", tx.ID),
 		zap.Int("rule", rid),
 		zap.String("event", "EVALUATE_RULE_OPERATOR"),
 		zap.Any("values", matchedValues))
@@ -364,22 +364,22 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 				Message:         tx.MacroExpansion(r.Msg),
 				Data:            tx.MacroExpansion(r.LogData),
 				URI:             tx.GetCollection(variables.RequestURI).GetFirstString(""),
-				ID:              tx.Id,
+				ID:              tx.ID,
 				Disruptive:      r.Disruptive,
-				ServerIpAddress: tx.GetCollection(variables.ServerAddr).GetFirstString(""),
-				ClientIpAddress: tx.GetCollection(variables.RemoteAddr).GetFirstString(""),
+				ServerIPAddress: tx.GetCollection(variables.ServerAddr).GetFirstString(""),
+				ClientIPAddress: tx.GetCollection(variables.RemoteAddr).GetFirstString(""),
 			})
 		}
 		// we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
-		tx.Waf.Logger.Debug("detecting rule disruptive action", zap.String("txid", tx.Id), zap.Int("rule", r.ID))
+		tx.Waf.Logger.Debug("detecting rule disruptive action", zap.String("txid", tx.ID), zap.Int("rule", r.ID))
 		for _, a := range r.actions {
 			if a.Function.Type() == types.ActionTypeDisruptive || a.Function.Type() == types.ActionTypeFlow {
-				tx.Waf.Logger.Debug("evaluating rule disruptive action", zap.String("txid", tx.Id), zap.Int("rule", rid))
+				tx.Waf.Logger.Debug("evaluating rule disruptive action", zap.String("txid", tx.ID), zap.Int("rule", rid))
 				a.Function.Evaluate(r, tx)
 			}
 		}
 	}
-	tx.Waf.Logger.Debug("finished evaluating rule", zap.String("txid", tx.Id),
+	tx.Waf.Logger.Debug("finished evaluating rule", zap.String("txid", tx.ID),
 		zap.Int("rule", rid),
 		zap.Int("matched_values", len(matchedValues)),
 		zap.String("event", "FINISH_RULE"),
@@ -425,6 +425,12 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key interface{}, iscount bo
 	return nil
 }
 
+// AddVariableNegation adds an exception to a variable
+// It returns an error if the variable is not used or
+// the selector is empty, for example:
+// OK: SecRule ARGS|!ARGS:id "..."
+// ERROR: SecRule !ARGS:id "..."
+// ERROR: SecRule !ARGS: "..."
 func (r *Rule) AddVariableNegation(v variables.RuleVariable, key interface{}) error {
 	counter := 0
 	var re *regexp.Regexp

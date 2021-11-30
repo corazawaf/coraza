@@ -43,7 +43,7 @@ func TestRG(t *testing.T) {
 		t.Error("Failed to find rules by tag")
 	}
 
-	rg.DeleteById(1)
+	rg.DeleteByID(1)
 	if rg.Count() != 0 {
 		t.Error("Failed to remove rule from rulegroup")
 	}

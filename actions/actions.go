@@ -27,47 +27,47 @@ type ruleActionWrapper = func() coraza.RuleAction
 // TODO maybe change it to sync.Map
 var actionmap = map[string]ruleActionWrapper{}
 
-// RegisterRuleAction registers a new RuleAction
+// RegisterPlugin registers a new RuleAction
 // It can be used also for plugins.
 // If you register an action with an existing name, it will be overwritten.
-func RegisterRuleAction(name string, a func() coraza.RuleAction) {
+func RegisterPlugin(name string, a func() coraza.RuleAction) {
 	actionmap[name] = a
 }
 
 func init() {
-	RegisterRuleAction("allow", allow)
-	RegisterRuleAction("append", append2)
-	RegisterRuleAction("auditlog", auditlog)
-	RegisterRuleAction("block", block)
-	RegisterRuleAction("capture", capture)
-	RegisterRuleAction("chain", chain)
-	RegisterRuleAction("ctl", ctl)
-	RegisterRuleAction("deny", deny)
-	RegisterRuleAction("drop", drop)
-	RegisterRuleAction("exec", exec)
-	RegisterRuleAction("expirevar", expirevar)
-	RegisterRuleAction("id", id)
-	RegisterRuleAction("initcol", initcol)
-	RegisterRuleAction("log", log)
-	RegisterRuleAction("logdata", logdata)
-	RegisterRuleAction("maturity", maturity)
-	RegisterRuleAction("msg", msg)
-	RegisterRuleAction("multiMatch", multimatch)
-	RegisterRuleAction("noauditlog", noauditlog)
-	RegisterRuleAction("nolog", nolog)
-	RegisterRuleAction("pass", pass)
-	RegisterRuleAction("phase", phase)
-	RegisterRuleAction("prepend", prepend)
-	RegisterRuleAction("rev", rev)
-	RegisterRuleAction("setenv", setenv)
-	RegisterRuleAction("setvar", setvar)
-	RegisterRuleAction("severity", severity)
-	RegisterRuleAction("skip", skip)
-	RegisterRuleAction("skipAfter", skipafter)
-	RegisterRuleAction("status", status)
-	RegisterRuleAction("t", t)
-	RegisterRuleAction("tag", tag)
-	RegisterRuleAction("ver", ver)
+	RegisterPlugin("allow", allow)
+	RegisterPlugin("append", append2)
+	RegisterPlugin("auditlog", auditlog)
+	RegisterPlugin("block", block)
+	RegisterPlugin("capture", capture)
+	RegisterPlugin("chain", chain)
+	RegisterPlugin("ctl", ctl)
+	RegisterPlugin("deny", deny)
+	RegisterPlugin("drop", drop)
+	RegisterPlugin("exec", exec)
+	RegisterPlugin("expirevar", expirevar)
+	RegisterPlugin("id", id)
+	RegisterPlugin("initcol", initcol)
+	RegisterPlugin("log", log)
+	RegisterPlugin("logdata", logdata)
+	RegisterPlugin("maturity", maturity)
+	RegisterPlugin("msg", msg)
+	RegisterPlugin("multiMatch", multimatch)
+	RegisterPlugin("noauditlog", noauditlog)
+	RegisterPlugin("nolog", nolog)
+	RegisterPlugin("pass", pass)
+	RegisterPlugin("phase", phase)
+	RegisterPlugin("prepend", prepend)
+	RegisterPlugin("rev", rev)
+	RegisterPlugin("setenv", setenv)
+	RegisterPlugin("setvar", setvar)
+	RegisterPlugin("severity", severity)
+	RegisterPlugin("skip", skip)
+	RegisterPlugin("skipAfter", skipafter)
+	RegisterPlugin("status", status)
+	RegisterPlugin("t", t)
+	RegisterPlugin("tag", tag)
+	RegisterPlugin("ver", ver)
 }
 
 // GetAction returns an unwrapped RuleAction from the actionmap based on the name

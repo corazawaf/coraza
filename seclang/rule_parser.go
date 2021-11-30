@@ -186,10 +186,10 @@ func (p *ruleParser) ParseOperator(operator string) error {
 	}
 	if op[0] == '@' {
 		// we trim @
-		op = utils.TrimLeftChars(op, 1)
+		op = op[1:]
 	} else if len(op) > 2 && op[0] == '!' && op[1] == '@' {
 		// we trim !@
-		op = utils.TrimLeftChars(op, 2)
+		op = op[2:]
 	}
 
 	opfn, err := operators.GetOperator(op)
@@ -200,7 +200,7 @@ func (p *ruleParser) ParseOperator(operator string) error {
 	// handling files by operators is hard because we must know the paths where we can
 	// search, for example, the policy path or the binary path...
 	// CRS stores the .data files in the same directory as the directives
-	if utils.StringInSlice(op, []string{"ipMatchFromFile", "pmFromFile"}) {
+	if utils.InSlice(op, []string{"ipMatchFromFile", "pmFromFile"}) {
 		// TODO make enhancements here
 		tpath := path.Join(p.Configdir, opdata)
 		var err error
@@ -256,7 +256,7 @@ func (p *ruleParser) ParseActions(actions string) error {
 	}
 	// check if forbidden action:
 	for _, a := range act {
-		if utils.StringInSlice(a.Key, p.parser.DisabledRuleActions) {
+		if utils.InSlice(a.Key, p.parser.DisabledRuleActions) {
 			return fmt.Errorf("%s rule action is disabled", a.Key)
 		}
 	}

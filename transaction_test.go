@@ -177,7 +177,7 @@ func TestAuditLog(t *testing.T) {
 	tx := makeTransaction()
 	tx.AuditLogParts = []rune("ABCDEFGHIJK")
 	al := tx.AuditLog()
-	if al.Transaction.ID != tx.Id {
+	if al.Transaction.ID != tx.ID {
 		t.Error("invalid auditlog id")
 	}
 	// TODO more checks
@@ -209,7 +209,7 @@ func TestAuditLogFields(t *testing.T) {
 	tx.MatchRule(MatchedRule{
 		Rule:    *rule,
 		Message: "some msg",
-		ID:      tx.Id,
+		ID:      tx.ID,
 		MatchedData: MatchData{
 			VariableName: "UNIQUE_ID",
 			Variable:     variables.UniqueID,
@@ -279,7 +279,7 @@ func TestLogCallback(t *testing.T) {
 			Variable:     variables.UniqueID,
 		},
 	})
-	if buffer == "" && strings.Contains(buffer, tx.Id) {
+	if buffer == "" && strings.Contains(buffer, tx.ID) {
 		t.Error("failed to call error log callback")
 	}
 }
@@ -296,10 +296,10 @@ func TestHeaderSetters(t *testing.T) {
 	if tx.GetCollection(variables.RequestHeaders).GetFirstString("cookie") != "abc=def;hij=klm" {
 		t.Error("failed to set request header")
 	}
-	if !utils.StringInSlice("cookie", tx.GetCollection(variables.RequestHeadersNames).Get("")) {
+	if !utils.InSlice("cookie", tx.GetCollection(variables.RequestHeadersNames).Get("")) {
 		t.Error("failed to set header name")
 	}
-	if !utils.StringInSlice("abc", tx.GetCollection(variables.RequestCookiesNames).Get("")) {
+	if !utils.InSlice("abc", tx.GetCollection(variables.RequestCookiesNames).Get("")) {
 		t.Error("failed to set cookie name")
 	}
 }

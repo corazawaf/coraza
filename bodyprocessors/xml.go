@@ -31,7 +31,7 @@ type xmlBodyProcessor struct {
 
 func (xbp *xmlBodyProcessor) Read(reader io.Reader, _ string, _ string) error {
 	var err error
-	xbp.values, xbp.contents, err = readXml(reader)
+	xbp.values, xbp.contents, err = readXML(reader)
 	return err
 }
 
@@ -53,11 +53,11 @@ func (xbp *xmlBodyProcessor) Find(expr string) (map[string][]string, error) {
 	}
 }
 
-func (xml *xmlBodyProcessor) VariableHook() variables.RuleVariable {
+func (xbp *xmlBodyProcessor) VariableHook() variables.RuleVariable {
 	return variables.XML
 }
 
-func readXml(reader io.Reader) (attrs []string, content []string, err error) {
+func readXML(reader io.Reader) (attrs []string, content []string, err error) {
 	dec := xml.NewDecoder(reader)
 	var n xmlNode
 	err = dec.Decode(&n)

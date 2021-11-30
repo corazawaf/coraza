@@ -1,3 +1,21 @@
+/*
+Package loggers implements a set of log formatters and writers
+for audit logging.
+
+The following log formats are supported:
+
+- JSON
+- Coraza
+- Native
+
+The following log writers are supported:
+
+- Serial
+- Concurrent
+
+More writers and formatters can be registered using the RegisterWriter and
+RegisterFormatter functions.
+*/
 // Copyright 2021 Juan Pablo Tosso
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +38,6 @@ import (
 	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
 )
 
-// Legacy modsecurity 2 format
 func jsonFormatter(al AuditLog) ([]byte, error) {
 	jsdata, err := json.Marshal(al)
 	if err != nil {
@@ -30,7 +47,7 @@ func jsonFormatter(al AuditLog) ([]byte, error) {
 }
 
 // Coraza json format
-func legacyJsonFormatter(al AuditLog) ([]byte, error) {
+func legacyJSONFormatter(al AuditLog) ([]byte, error) {
 	reqHeaders := map[string]string{}
 	for k, v := range al.Transaction.Request.Headers {
 		reqHeaders[k] = v[0]
@@ -70,7 +87,7 @@ func legacyJsonFormatter(al AuditLog) ([]byte, error) {
 }
 
 func nativeFormatter(al AuditLog) ([]byte, error) {
-	boundary := utils.RandomString(10)
+	boundary := utils.SafeRandom(10)
 	parts := map[byte]string{}
 	// [27/Jul/2016:05:46:16 +0200] V5guiH8AAQEAADTeJ2wAAAAK 192.168.3.1 50084 192.168.3.111 80
 	parts['A'] = fmt.Sprintf("[%s] %s %s %d %s %d", al.Transaction.Timestamp, al.Transaction.ID,

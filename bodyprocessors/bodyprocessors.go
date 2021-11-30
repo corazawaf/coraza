@@ -23,14 +23,26 @@ import (
 
 type collectionsMap map[variables.RuleVariable]map[string][]string
 
+// BodyProcessor interface is used to create
+// body processors for different content-types.
+// They are able to read the body, force a collection.
+// Hook to some variable and return data based on special
+// expressions like XPATH, JQ, etc.
 type BodyProcessor interface {
+	// Read will read the body and initialize the body processor
+	// It will return an error if the body is not valid
 	Read(reader io.Reader, mime string, storagePath string) error
+	// Collections returns a map of collections, for example,
+	// the ARGS_POST variables from the REQUEST_BODY.
 	Collections() collectionsMap
 	// Find returns the values in the body based on the input string
 	// A string might be an xpath, a regex, a variable name, etc
 	// The find function is responsible of transforming the input
 	// string into a valid usable expression
 	Find(string) (map[string][]string, error)
+	// VariableHook tells the transaction to hook a variable
+	// to the body processor, it will execute Find
+	// rather than read it from the collections map
 	VariableHook() variables.RuleVariable
 }
 
@@ -38,10 +50,15 @@ type bodyProcessorWrapper = func() BodyProcessor
 
 var processors = map[string]bodyProcessorWrapper{}
 
+// RegisterBodyProcessor registers a body processor
+// by name. If the body processor is already registered,
+// it will be overwritten
 func RegisterBodyProcessor(name string, fn func() BodyProcessor) {
 	processors[name] = fn
 }
 
+// GetBodyProcessor returns a body processor by name
+// If the body processor is not found, it returns an error
 func GetBodyProcessor(name string) (BodyProcessor, error) {
 	if fn, ok := processors[name]; ok {
 		return fn(), nil

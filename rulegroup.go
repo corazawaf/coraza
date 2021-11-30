@@ -26,20 +26,24 @@ import (
 	"go.uber.org/zap"
 )
 
-type ruleGroup struct {
+// RuleGroup is a collection of rules
+// It contains all helpers required to manage the rules
+// It is not concurrent safe, so it's not recommended to use it
+// after compilation
+type RuleGroup struct {
 	rules []*Rule
 	mux   *sync.RWMutex
 }
 
-// Adds a rule to the collection
+// Add a rule to the collection
 // Will return an error if the ID is already used
-func (rg *ruleGroup) Add(rule *Rule) error {
+func (rg *RuleGroup) Add(rule *Rule) error {
 	if rule == nil {
 		// this is an ugly solution but chains should not return rules
 		return nil
 	}
 
-	if rg.FindById(rule.ID) != nil && rule.ID != 0 {
+	if rg.FindByID(rule.ID) != nil && rule.ID != 0 {
 		return fmt.Errorf("there is a another rule with id %d", rule.ID)
 	}
 	rg.rules = append(rg.rules, rule)
@@ -48,14 +52,14 @@ func (rg *ruleGroup) Add(rule *Rule) error {
 
 // GetRules returns the slice of rules,
 // it's concurrent safe.
-func (rg *ruleGroup) GetRules() []*Rule {
+func (rg *RuleGroup) GetRules() []*Rule {
 	rg.mux.RLock()
 	defer rg.mux.RUnlock()
 	return rg.rules
 }
 
-// FindById return a Rule with the requested Id
-func (rg *ruleGroup) FindById(id int) *Rule {
+// FindByID return a Rule with the requested Id
+func (rg *RuleGroup) FindByID(id int) *Rule {
 	for _, r := range rg.rules {
 		if r.ID == id {
 			return r
@@ -64,8 +68,8 @@ func (rg *ruleGroup) FindById(id int) *Rule {
 	return nil
 }
 
-// DeleteById removes a rule by it's Id
-func (rg *ruleGroup) DeleteById(id int) {
+// DeleteByID removes a rule by it's Id
+func (rg *RuleGroup) DeleteByID(id int) {
 	for i, r := range rg.rules {
 		if r != nil && r.ID == id {
 			copy(rg.rules[i:], rg.rules[i+1:])
@@ -76,7 +80,7 @@ func (rg *ruleGroup) DeleteById(id int) {
 }
 
 // FindByMsg returns a slice of rules that matches the msg
-func (rg *ruleGroup) FindByMsg(msg string) []*Rule {
+func (rg *RuleGroup) FindByMsg(msg string) []*Rule {
 	rules := []*Rule{}
 	for _, r := range rg.rules {
 		if r.Msg == msg {
@@ -87,10 +91,10 @@ func (rg *ruleGroup) FindByMsg(msg string) []*Rule {
 }
 
 // FindByTag returns a slice of rules that matches the tag
-func (rg *ruleGroup) FindByTag(tag string) []*Rule {
+func (rg *RuleGroup) FindByTag(tag string) []*Rule {
 	rules := []*Rule{}
 	for _, r := range rg.rules {
-		if strings.StringInSlice(tag, r.Tags) {
+		if strings.InSlice(tag, r.Tags) {
 			rules = append(rules, r)
 		}
 	}
@@ -98,21 +102,21 @@ func (rg *ruleGroup) FindByTag(tag string) []*Rule {
 }
 
 // Count returns the count of rules
-func (rg *ruleGroup) Count() int {
+func (rg *RuleGroup) Count() int {
 	return len(rg.rules)
 }
 
 // Clear will remove each and every rule stored
-func (rg *ruleGroup) Clear() {
+func (rg *RuleGroup) Clear() {
 	rg.rules = []*Rule{}
 }
 
 // Eval rules for the specified phase, between 1 and 5
 // Returns true if transaction is disrupted
-func (rg *ruleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
+func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	tx.Waf.Logger.Debug("Evaluating phase",
 		zap.String("event", "EVALUATE_PHASE"),
-		zap.String("txid", tx.Id),
+		zap.String("txid", tx.ID),
 		zap.Int("phase", int(phase)),
 	)
 	tx.LastPhase = phase
@@ -123,7 +127,7 @@ RulesLoop:
 		if tx.Interruption != nil {
 			tx.Waf.Logger.Debug("Finished phase",
 				zap.String("event", "FINISH_PHASE"),
-				zap.String("txid", tx.Id),
+				zap.String("txid", tx.ID),
 				zap.Int("phase", int(phase)),
 				zap.Int("rules", usedRules),
 			)
@@ -139,9 +143,9 @@ RulesLoop:
 		}
 
 		// we skip the rule in case it's in the excluded list
-		for _, trb := range tx.ruleRemoveById {
+		for _, trb := range tx.ruleRemoveByID {
 			if trb == r.ID {
-				tx.Waf.Logger.Debug("Skipping rule", zap.Int("rule", r.ID), zap.String("txid", tx.Id))
+				tx.Waf.Logger.Debug("Skipping rule", zap.Int("rule", r.ID), zap.String("txid", tx.ID))
 				continue RulesLoop
 			}
 		}
@@ -149,13 +153,13 @@ RulesLoop:
 		// we always evaluate secmarkers
 		if tx.SkipAfter != "" {
 			if r.SecMark == tx.SkipAfter {
-				tx.Waf.Logger.Debug("SkipAfter was finished", zap.String("txid", tx.Id),
+				tx.Waf.Logger.Debug("SkipAfter was finished", zap.String("txid", tx.ID),
 					zap.String("secmark", r.SecMark),
 					zap.String("event", "FINISH_SECMARK"),
 				)
 				tx.SkipAfter = ""
 			} else {
-				tx.Waf.Logger.Debug("Skipping rule because of SkipAfter", zap.String("txid", tx.Id),
+				tx.Waf.Logger.Debug("Skipping rule because of SkipAfter", zap.String("txid", tx.ID),
 					zap.Int("rule", r.ID),
 					zap.String("secmark", tx.SkipAfter),
 					zap.String("event", "SKIP_RULE_BY_SECMARK"),
@@ -182,7 +186,7 @@ RulesLoop:
 	}
 	tx.Waf.Logger.Debug("Finished phase",
 		zap.String("event", "FINISH_PHASE"),
-		zap.String("txid", tx.Id),
+		zap.String("txid", tx.ID),
 		zap.Int("phase", int(phase)),
 		zap.Int("rules", usedRules),
 	)
@@ -190,8 +194,12 @@ RulesLoop:
 	return tx.Interruption != nil
 }
 
-func NewRuleGroup() ruleGroup {
-	return ruleGroup{
+// NewRuleGroup creates an empty RuleGroup that
+// can be attached to a WAF instance
+// You might use this function to replace the rules
+// and "reload" the WAF
+func NewRuleGroup() RuleGroup {
+	return RuleGroup{
 		rules: []*Rule{},
 		mux:   &sync.RWMutex{},
 	}

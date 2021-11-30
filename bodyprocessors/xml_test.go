@@ -22,7 +22,7 @@ func TestXMLAttribures(t *testing.T) {
 </book>
 
 </bookstore>`
-	attrs, contents, err := readXml(bytes.NewReader([]byte(xmldoc)))
+	attrs, contents, err := readXML(bytes.NewReader([]byte(xmldoc)))
 	if err != nil {
 		t.Error(err)
 	}
@@ -36,12 +36,12 @@ func TestXMLAttribures(t *testing.T) {
 	eattrs := []string{"en", "value"}
 	econtent := []string{"Harry Potter", "29.99", "Learning XML", "39.95"}
 	for _, attr := range eattrs {
-		if !strings.StringInSlice(attr, attrs) {
+		if !strings.InSlice(attr, attrs) {
 			t.Errorf("Expected attribute %s, got %v", attr, attrs)
 		}
 	}
 	for _, content := range econtent {
-		if !strings.StringInSlice(content, contents) {
+		if !strings.InSlice(content, contents) {
 			t.Errorf("Expected content %s, got %v", content, contents)
 		}
 	}

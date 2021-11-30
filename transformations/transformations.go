@@ -22,11 +22,14 @@ import (
 
 var transformations = map[string]coraza.RuleTransformation{}
 
-func RegisterTransformation(name string, trans coraza.RuleTransformation) {
+// RegisterPlugin registers a transformation by name
+// If the transformation is already registered, it will be overwritten
+func RegisterPlugin(name string, trans coraza.RuleTransformation) {
 	transformations[name] = trans
 }
 
-// Get a transformation by name
+// GetTransformation returns a transformation by name
+// If the transformation is not found, it returns an error
 func GetTransformation(name string) (coraza.RuleTransformation, error) {
 	if t, ok := transformations[name]; ok {
 		return t, nil
@@ -35,31 +38,31 @@ func GetTransformation(name string) (coraza.RuleTransformation, error) {
 }
 
 func init() {
-	RegisterTransformation("base64Decode", base64decode)
-	RegisterTransformation("cmdLine", cmdLine)
-	RegisterTransformation("compressWhitespace", compressWhitespace)
-	RegisterTransformation("cssDecode", cssDecode)
-	RegisterTransformation("escapeSeqDecode", escapeSeqDecode)
-	RegisterTransformation("hexEncode", hexEncode)
-	RegisterTransformation("htmlEntityDecode", htmlEntityDecode)
-	RegisterTransformation("jsDecode", jsDecode)
-	RegisterTransformation("length", length)
-	RegisterTransformation("lowercase", lowerCase)
-	RegisterTransformation("md5", md5T)
-	RegisterTransformation("none", none)
-	RegisterTransformation("normalisePath", normalisePath)
-	RegisterTransformation("normalisePathWin", normalisePathWin)
-	RegisterTransformation("normalizePath", normalisePath)
-	RegisterTransformation("normalizePathWin", normalisePathWin)
-	RegisterTransformation("removeComments", removeComments)
-	RegisterTransformation("removeCommentsChar", removeCommentsChar)
-	RegisterTransformation("removeNulls", removeNulls)
-	RegisterTransformation("removeWhitespace", removeWhitespace)
-	RegisterTransformation("replaceComments", replaceComments)
-	RegisterTransformation("replaceNulls", replaceNulls)
-	RegisterTransformation("sha1", sha1T)
-	RegisterTransformation("urlDecode", urlDecode)
-	RegisterTransformation("urlDecodeUni", urlDecodeUni)
-	RegisterTransformation("urlEncode", urlEncode)
-	RegisterTransformation("utf8toUnicode", utf8ToUnicode)
+	RegisterPlugin("base64Decode", base64decode)
+	RegisterPlugin("cmdLine", cmdLine)
+	RegisterPlugin("compressWhitespace", compressWhitespace)
+	RegisterPlugin("cssDecode", cssDecode)
+	RegisterPlugin("escapeSeqDecode", escapeSeqDecode)
+	RegisterPlugin("hexEncode", hexEncode)
+	RegisterPlugin("htmlEntityDecode", htmlEntityDecode)
+	RegisterPlugin("jsDecode", jsDecode)
+	RegisterPlugin("length", length)
+	RegisterPlugin("lowercase", lowerCase)
+	RegisterPlugin("md5", md5T)
+	RegisterPlugin("none", none)
+	RegisterPlugin("normalisePath", normalisePath)
+	RegisterPlugin("normalisePathWin", normalisePathWin)
+	RegisterPlugin("normalizePath", normalisePath)
+	RegisterPlugin("normalizePathWin", normalisePathWin)
+	RegisterPlugin("removeComments", removeComments)
+	RegisterPlugin("removeCommentsChar", removeCommentsChar)
+	RegisterPlugin("removeNulls", removeNulls)
+	RegisterPlugin("removeWhitespace", removeWhitespace)
+	RegisterPlugin("replaceComments", replaceComments)
+	RegisterPlugin("replaceNulls", replaceNulls)
+	RegisterPlugin("sha1", sha1T)
+	RegisterPlugin("urlDecode", urlDecode)
+	RegisterPlugin("urlDecodeUni", urlDecodeUni)
+	RegisterPlugin("urlEncode", urlEncode)
+	RegisterPlugin("utf8toUnicode", utf8ToUnicode)
 }

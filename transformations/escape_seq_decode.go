@@ -62,7 +62,7 @@ func escapeSeqDecode(input string) (string, error) {
 			if c == -1 {
 				if (input[i+1] == 'x') || (input[i+1] == 'X') {
 					/* Hexadecimal. */
-					if (i+3 < inputLen) && (utils.IsXDigit(int(input[i+2]))) && (utils.IsXDigit(int(input[i+3]))) {
+					if (i+3 < inputLen) && (utils.ValidHex((input[i+2]))) && (utils.ValidHex((input[i+3]))) {
 						/* Two digits. */
 						c = int(utils.X2c(input[i+2:]))
 						i += 4
@@ -70,14 +70,14 @@ func escapeSeqDecode(input string) (string, error) {
 					/* Else Invalid encoding, do nothing. */
 
 				} else {
-					if utils.IsODigit(input[i+1]) { /* Octal. */
+					if isODigit(input[i+1]) { /* Octal. */
 						buf := make([]byte, 4)
 						j := 0
 
 						for (i+1+j < inputLen) && (j < 3) {
 							buf[j] = input[i+1+j]
 							j++
-							if (len(input) > (i + 1 + j)) && !utils.IsODigit(input[i+1+j]) {
+							if (len(input) > (i + 1 + j)) && !isODigit(input[i+1+j]) {
 								break
 							}
 						}
@@ -115,4 +115,8 @@ func escapeSeqDecode(input string) (string, error) {
 		}
 	}
 	return string(data[:count]), nil
+}
+
+func isODigit(c byte) bool {
+	return (c >= '0') && (c <= '7')
 }

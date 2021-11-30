@@ -45,7 +45,7 @@ func TestRuleMatch(t *testing.T) {
 		t.Error("failed to interrupt transaction")
 	}
 
-	if tx.Interruption.RuleId != 1 {
+	if tx.Interruption.RuleID != 1 {
 		t.Error("failed to set interruption rule id")
 	}
 }
@@ -74,7 +74,7 @@ func TestRuleMatchWithRegex(t *testing.T) {
 	}
 	if tx.Interruption == nil {
 		t.Error("failed to interrupt transaction")
-	} else if tx.Interruption.RuleId != 1 {
+	} else if tx.Interruption.RuleID != 1 {
 		t.Error("failed to set interruption rule id")
 	}
 }
@@ -127,7 +127,7 @@ func TestSecAuditLogs(t *testing.T) {
 		t.Error(err)
 	}
 	tx := waf.NewTransaction()
-	tx.ProcessUri("/test.php?id=1", "get", "http/1.1")
+	tx.ProcessURI("/test.php?id=1", "get", "http/1.1")
 	tx.ProcessRequestHeaders()
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error(err)
