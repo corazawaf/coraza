@@ -265,7 +265,8 @@ func (t *Test) Request() string {
 	return str
 }
 
-func newTest(name string, waf *engine.Waf) *Test {
+// NewTest creates a new test with default properties
+func NewTest(name string, waf *engine.Waf) *Test {
 	t := &Test{
 		Name:            name,
 		waf:             waf,

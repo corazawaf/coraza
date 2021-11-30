@@ -14,6 +14,11 @@
 
 package loggers
 
+import (
+	"encoding/json"
+	"testing"
+)
+
 /*
 func TestFormatters(t *testing.T) {
 	al := createAuditLog()
@@ -47,14 +52,35 @@ func TestModsecBoundary(t *testing.T) {
 	// TODO...
 }
 
+*/
+
+func TestLegacyFormatter(t *testing.T) {
+	al := createAuditLog()
+	data, err := legacyJSONFormatter(al)
+	if err != nil {
+		t.Error(err)
+	}
+	var legacyAl auditLogLegacy
+	if err := json.Unmarshal(data, &legacyAl); err != nil {
+		t.Error(err)
+	}
+	if legacyAl.Transaction.Time != al.Transaction.Timestamp {
+		t.Errorf("failed to match legacy formatter, \ngot: %s\nexpected: %s", legacyAl.Transaction.Time, al.Transaction.Timestamp)
+	}
+	// validate transaction ID
+	if legacyAl.Transaction.TransactionID != al.Transaction.ID {
+		t.Errorf("failed to match legacy formatter, \ngot: %s\nexpected: %s", legacyAl.Transaction.TransactionID, al.Transaction.ID)
+	}
+}
+
 func createAuditLog() AuditLog {
 	return AuditLog{
 		Transaction: AuditTransaction{
 			Timestamp:     "02/Jan/2006:15:04:20 -0700",
 			UnixTimestamp: 0,
-			Id:            "123",
+			ID:            "123",
 			Request: AuditTransactionRequest{
-				Uri:    "/test.php",
+				URI:    "/test.php",
 				Method: "GET",
 				Headers: map[string][]string{
 					"some": {
@@ -81,4 +107,3 @@ func createAuditLog() AuditLog {
 		},
 	}
 }
-*/

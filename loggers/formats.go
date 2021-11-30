@@ -38,6 +38,7 @@ import (
 	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
 )
 
+// Coraza format
 func jsonFormatter(al AuditLog) ([]byte, error) {
 	jsdata, err := json.Marshal(al)
 	if err != nil {
@@ -46,7 +47,7 @@ func jsonFormatter(al AuditLog) ([]byte, error) {
 	return jsdata, nil
 }
 
-// Coraza json format
+// Coraza legacy json format
 func legacyJSONFormatter(al AuditLog) ([]byte, error) {
 	reqHeaders := map[string]string{}
 	for k, v := range al.Transaction.Request.Headers {

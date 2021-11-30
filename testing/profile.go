@@ -82,7 +82,7 @@ func (p *Profile) TestList(waf *coraza.Waf) ([]*Test, error) {
 					return nil, err
 				}
 			}
-			test := newTest(name, w)
+			test := NewTest(name, w)
 			test.ExpectedOutput = stage.Output
 			// test.RequestAddress =
 			// test.RequestPort =

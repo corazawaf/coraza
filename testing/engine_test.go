@@ -15,39 +15,65 @@
 package testing
 
 import (
-	"fmt"
-	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/jptosso/coraza-waf/v2"
 )
 
-func TestEngine(t *testing.T) {
-	files, err := filepath.Glob("../testdata/engine/*.yaml")
-	if err != nil {
+func TestRawRequests(t *testing.T) {
+	waf := coraza.NewWaf()
+	test := NewTest("test", waf)
+	if err := test.SetRawRequest([]byte("OPTIONS /test HTTP/1.1\r\nHost: www.example.com\r\n\r\n")); err != nil {
 		t.Error(err)
 	}
-	if len(files) == 0 {
-		t.Error("failed to find test files")
+	if test.RequestMethod != "OPTIONS" {
+		t.Errorf("Expected OPTIONS, got %s", test.RequestMethod)
 	}
-	for _, f := range files {
-		profile, err := NewProfile(f)
-		if err != nil {
-			t.Error(err)
+	if test.RequestURI != "/test" {
+		t.Errorf("Expected /test, got %s", test.RequestURI)
+	}
+}
+
+func TestDebug(t *testing.T) {
+	waf := coraza.NewWaf()
+	test := NewTest("test", waf)
+	if err := test.SetRawRequest([]byte("OPTIONS /test HTTP/1.1\r\nHost: www.example.com\r\n\r\n")); err != nil {
+		t.Error(err)
+	}
+	if err := test.RunPhases(); err != nil {
+		t.Error(err)
+	}
+	debug := test.String()
+	expected := []string{
+		"REQUEST_URI:\n-->/test",
+		"REQUEST_METHOD:\n-->OPTIONS",
+	}
+	for _, e := range expected {
+		if !strings.Contains(debug, e) {
+			t.Errorf("Expected %s, got %s", e, debug)
 		}
-		tt, err := profile.TestList(nil)
-		if err != nil {
-			t.Error(err)
-		}
-		for _, test := range tt {
-			if err := test.RunPhases(); err != nil {
-				t.Error(err)
-			}
-			for _, e := range test.OutputErrors() {
-				debug := ""
-				for _, mr := range test.transaction.MatchedRules {
-					debug += fmt.Sprintf(" %d", mr.Rule.ID)
-				}
-				t.Errorf("%s - %s: %s\nGot: %s\n%s\nREQUEST:\n%s", profile.Meta.Name, test.Name, e, debug, test.String(), test.Request())
-			}
+	}
+}
+
+func TestRequest(t *testing.T) {
+	waf := coraza.NewWaf()
+	test := NewTest("test", waf)
+	req := "OPTIONS /test HTTP/1.1\r\nHost: www.example.com\r\n\r\n"
+	if err := test.SetRawRequest([]byte(req)); err != nil {
+		t.Error(err)
+	}
+	if err := test.RunPhases(); err != nil {
+		t.Error(err)
+	}
+	req = test.Request()
+	expected := []string{
+		"OPTIONS /test HTTP/1.1",
+		"Host: www.example.com",
+	}
+	for _, e := range expected {
+		if !strings.Contains(req, e) {
+			t.Errorf("Expected %s, got %s", e, req)
 		}
 	}
 }

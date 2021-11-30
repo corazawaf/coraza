@@ -30,24 +30,24 @@ import (
 type ctlFunctionType int
 
 const (
-	ctlRemoveTargetByID     ctlFunctionType = 0
-	ctlRemoveTargetByTag    ctlFunctionType = 1
-	ctlRemoveTargetByMsg    ctlFunctionType = 2
-	ctlAuditEngine          ctlFunctionType = 3
-	ctlAuditLogParts        ctlFunctionType = 4
-	ctlForceRequestBodyVar  ctlFunctionType = 5
-	ctlRequestBodyAccess    ctlFunctionType = 6
-	ctlRequestBodyLimit     ctlFunctionType = 7
-	ctlRuleEngine           ctlFunctionType = 8
-	ctlRuleRemoveByID       ctlFunctionType = 9
-	ctlRuleRemoveByMsg      ctlFunctionType = 10
-	ctlRuleRemoveByTag      ctlFunctionType = 11
-	ctlHashEngine           ctlFunctionType = 12
-	ctlHashEnforcement      ctlFunctionType = 13
-	ctlRequestBodyProcessor ctlFunctionType = 14
-	ctlResponseBodyAccess   ctlFunctionType = 15
-	ctlResponseBodyLimit    ctlFunctionType = 16
-	ctlDebugLogLevel        ctlFunctionType = 17
+	ctlRemoveTargetByID     ctlFunctionType = iota
+	ctlRemoveTargetByTag    ctlFunctionType = iota
+	ctlRemoveTargetByMsg    ctlFunctionType = iota
+	ctlAuditEngine          ctlFunctionType = iota
+	ctlAuditLogParts        ctlFunctionType = iota
+	ctlForceRequestBodyVar  ctlFunctionType = iota
+	ctlRequestBodyAccess    ctlFunctionType = iota
+	ctlRequestBodyLimit     ctlFunctionType = iota
+	ctlRuleEngine           ctlFunctionType = iota
+	ctlRuleRemoveByID       ctlFunctionType = iota
+	ctlRuleRemoveByMsg      ctlFunctionType = iota
+	ctlRuleRemoveByTag      ctlFunctionType = iota
+	ctlHashEngine           ctlFunctionType = iota
+	ctlHashEnforcement      ctlFunctionType = iota
+	ctlRequestBodyProcessor ctlFunctionType = iota
+	ctlResponseBodyAccess   ctlFunctionType = iota
+	ctlResponseBodyLimit    ctlFunctionType = iota
+	ctlDebugLogLevel        ctlFunctionType = iota
 )
 
 type ctlFn struct {
