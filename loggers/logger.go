@@ -17,8 +17,7 @@ package loggers
 import (
 	"fmt"
 	"io/fs"
-	"os"
-	"path"
+	"path/filepath"
 )
 
 // Logger is a wrapper to hold configurations, a writer and a formatter
@@ -76,6 +75,36 @@ func (l *Logger) SetWriter(name string) error {
 	}
 	l.writer = writer
 	return l.writer.Init(l)
+}
+
+// SetFile sets the file for the logger
+// The file path must exist and must be absolute
+func (l *Logger) SetFile(file string) error {
+	if !filepath.IsAbs(file) {
+		return fmt.Errorf("file path must be absolute")
+	}
+	l.file = file
+	return nil
+}
+
+// SetDir sets the directory for the concurrent logger
+// The directory must exist and must be absolute
+func (l *Logger) SetDir(dir string) error {
+	if !filepath.IsAbs(dir) {
+		return fmt.Errorf("directory path must be absolute")
+	}
+	l.directory = dir
+	return nil
+}
+
+// SetFileMode sets the file mode for the logger
+func (l *Logger) SetFileMode(mode fs.FileMode) {
+	l.fileMode = mode
+}
+
+// SetDirMode sets the directory mode for the logger
+func (l *Logger) SetDirMode(mode fs.FileMode) {
+	l.dirMode = mode
 }
 
 // LogFormatter is the interface for all log formatters
@@ -137,23 +166,12 @@ func getLogFormatter(name string) (LogFormatter, error) {
 // Filemode: 0644
 // Formatter: native
 // Writer: serial
-// Path: /tmp/coraza-audit.log
 func NewAuditLogger() (*Logger, error) {
-	/*
-		if file == "" {
-			return nil, fmt.Errorf("invalid file")
-		}
-		if directory == "" {
-			return nil, fmt.Errorf("invalid directory")
-		}*/
 	dirMode := fs.FileMode(0755)
 	fileMode := fs.FileMode(0644)
-	f := path.Join(os.TempDir(), "coraza-audit.log")
 	l := &Logger{
-		file:      f,
-		directory: "/opt/coraza/var/log/audit/",
-		dirMode:   dirMode,
-		fileMode:  fileMode,
+		dirMode:  dirMode,
+		fileMode: fileMode,
 	}
 	if err := l.SetFormatter("native"); err != nil {
 		return nil, err

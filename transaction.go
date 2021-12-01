@@ -870,8 +870,11 @@ func (tx *Transaction) ProcessLogging() {
 	tx.Waf.Logger.Debug("Transaction marked for audit logging",
 		zap.String("tx", tx.ID),
 	)
-	if err := tx.Waf.AuditLogger().Write(tx.AuditLog()); err != nil {
-		tx.Waf.Logger.Error(err.Error())
+	if tx.Waf.AuditLogger() != nil {
+		// we don't log if there is an empty auditlogger
+		if err := tx.Waf.AuditLogger().Write(tx.AuditLog()); err != nil {
+			tx.Waf.Logger.Error(err.Error())
+		}
 	}
 }
 

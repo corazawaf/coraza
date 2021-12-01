@@ -29,7 +29,6 @@ jobs:
       run: go mod vendor
     - name: Tests and coverage
       run: go test -v -coverpkg=./... -coverprofile=coverage-waf.out ./...
-    # now we also test CGO disabled    
     - name: SonarCloud Scan
       uses: sonarsource/sonarcloud-github-action@master
       env:

@@ -29,7 +29,7 @@ type serialWriter struct {
 func (sl *serialWriter) Init(l *Logger) error {
 	sl.l = l
 	var err error
-	sl.file, err = os.OpenFile(l.file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	sl.file, err = os.OpenFile(l.file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, l.fileMode)
 	if err != nil {
 		return err
 	}

@@ -263,16 +263,46 @@ func directiveSecCollectionTimeout(p *Parser, opts string) error {
 
 func directiveSecAuditLog(p *Parser, opts string) error {
 	if len(opts) == 0 {
-		return errors.New("syntax error: SecAuditLog [concurrent/https/serial/...]")
+		return errors.New("syntax error: SecAuditLog /some/absolute/path.log")
 	}
-	return p.Waf.SetAuditLogger(strings.ToLower(opts))
+	p.Waf.AuditLog = opts
+	if err := p.Waf.UpdateAuditLogger(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func directiveSecAuditLogType(p *Parser, opts string) error {
+	if len(opts) == 0 {
+		return errors.New("syntax error: SecAuditLogType [concurrent/https/serial/...]")
+	}
+	p.Waf.AuditLogType = strings.ToLower(opts)
+	if err := p.Waf.UpdateAuditLogger(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func directiveSecAuditLogFormat(p *Parser, opts string) error {
 	if len(opts) == 0 {
-		return errors.New("syntax error: SecAuditLogFormat [json/json2/native/...]")
+		return errors.New("syntax error: SecAuditLogFormat [json/jsonlegacy/native/...]")
 	}
-	return p.Waf.SetAuditLoggerFormat(strings.ToLower(opts))
+	p.Waf.AuditLogFormat = strings.ToLower(opts)
+	if err := p.Waf.UpdateAuditLogger(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func directiveSecAuditLogDir(p *Parser, opts string) error {
+	if len(opts) == 0 {
+		return errors.New("syntax error: SecAuditLogDir /some/absolute/path")
+	}
+	if err := p.Waf.UpdateAuditLogger(); err != nil {
+		return err
+	}
+	p.Waf.AuditLogDir = opts
+	return nil
 }
 
 func directiveSecAuditLogRelevantStatus(p *Parser, opts string) error {
@@ -348,6 +378,7 @@ var (
 	_ directive = directiveSecAction
 	_ directive = directiveSecAuditEngine
 	_ directive = directiveSecAuditLog
+	_ directive = directiveSecAuditLogType
 	_ directive = directiveSecAuditLogFormat
 	_ directive = directiveSecAuditLogParts
 	_ directive = directiveSecAuditLogRelevantStatus
@@ -413,12 +444,14 @@ var directivesMap = map[string]directive{
 	"seccollectiontimeout":          directiveSecCollectionTimeout,
 	"secauditlogrelevantstatus":     directiveSecAuditLogRelevantStatus,
 	"secauditlogparts":              directiveSecAuditLogParts,
+	"secauditlogdir":                directiveSecAuditLogDir,
 	"secauditlog":                   directiveSecAuditLog,
 	"secauditengine":                directiveSecAuditEngine,
 	"secaction":                     directiveSecAction,
 	"secdebuglog":                   directiveSecDebugLog,
 	"secdebugloglevel":              directiveSecDebugLogLevel,
 	"secauditlogformat":             directiveSecAuditLogFormat,
+	"secauditlogtype":               directiveSecAuditLogType,
 
 	// Unsupported Directives
 	"secargumentseparator":     directiveUnsupported,

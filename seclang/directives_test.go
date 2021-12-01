@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	engine "github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/loggers"
 	"github.com/jptosso/coraza-waf/v2/types"
 )
 
@@ -130,4 +131,69 @@ func TestDebugDirectives(t *testing.T) {
 	if !strings.Contains(string(data), "abc123") {
 		t.Error("failed to write info log")
 	}
+}
+
+func TestSecAuditLogDirectivesDefaults(t *testing.T) {
+	waf := engine.NewWaf()
+	tmpf, err := ioutil.TempFile("/tmp", "*.log")
+	if err != nil {
+		t.Error(err)
+	}
+	parser, _ := NewParser(waf)
+	if err := directiveSecAuditLog(parser, tmpf.Name()); err != nil {
+		t.Error(err)
+	}
+	if err := directiveSecAuditLogDir(parser, "/tmp"); err != nil {
+		t.Error(err)
+	}
+	if waf.AuditLogger() == nil {
+		t.Error("Invalid audit logger (nil)")
+		return
+	}
+	if err := waf.AuditLogger().Write(loggers.AuditLog{
+		Parts: types.AuditLogParts("ABCDEFGHIJ"),
+		Transaction: loggers.AuditTransaction{
+			ID: "test-12345",
+		},
+	}); err != nil {
+		t.Error(err)
+	}
+	data, err := ioutil.ReadFile(tmpf.Name())
+	if err != nil {
+		t.Error(err)
+	}
+	if !strings.Contains(string(data), "test-12345") {
+		t.Error("failed to write audit log")
+	}
+}
+
+func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
+	waf := engine.NewWaf()
+	tmpf, err := ioutil.TempFile("/tmp", "*.log")
+	if err != nil {
+		t.Error(err)
+	}
+	auditpath := "/tmp/audit/"
+	parser, _ := NewParser(waf)
+	if err := directiveSecAuditLog(parser, tmpf.Name()); err != nil {
+		t.Error(err)
+	}
+	if err := directiveSecAuditLogFormat(parser, "json"); err != nil {
+		t.Error(err)
+	}
+	if err := directiveSecAuditLogDir(parser, auditpath); err != nil {
+		t.Error(err)
+	}
+	if err := directiveSecAuditLogType(parser, "concurrent"); err != nil {
+		t.Error(err)
+	}
+	if err := waf.AuditLogger().Write(loggers.AuditLog{
+		Parts: types.AuditLogParts("ABCDEFGHIJKZ"),
+		Transaction: loggers.AuditTransaction{
+			ID: "test-12345",
+		},
+	}); err != nil {
+		t.Error(err)
+	}
+
 }

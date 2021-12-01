@@ -114,6 +114,17 @@ type Waf struct {
 	// Path to store data files (ex. cache)
 	DataDir string
 
+	// AUDIT LOG VARIABLES
+
+	// AuditLog contains the log file absolute path
+	AuditLog string
+	// AuditLogDir contains the concurrent logging directory
+	AuditLogDir string
+	// AuditLogFormat is the audit log format
+	AuditLogFormat string
+	// AuditLogType is the audit log type
+	AuditLogType string
+
 	UploadKeepFiles         bool
 	UploadFileMode          fs.FileMode
 	UploadFileLimit         int
@@ -228,16 +239,57 @@ func (w *Waf) NewTransaction() *Transaction {
 	return tx
 }
 
-// SetAuditLogger creates a new logger for the current WAF instance
-// You may add as many loggers as you want
-// Keep in mind loggers may lock go routines
-func (w *Waf) SetAuditLogger(engine string) error {
-	return w.auditLogger.SetWriter(engine)
-}
+// UpdateAuditLogger compiles every SecAuditLog directive
+// into a single *loggers.Logger
+// This is required after updating w.AuditLog* variables
+// It doesn't look to effective but the reason for this is
+// that we have to reinitialize the logger after updating
+// This is not concurrency safe, it should never be called
+// after the rules are being used
+func (w *Waf) UpdateAuditLogger() error {
+	al, err := loggers.NewAuditLogger()
+	if err != nil {
+		return err
+	}
+	if w.AuditLog == "" {
+		// when there is no path we won't log
+		return nil
+	}
+	if err := al.SetFile(w.AuditLog); err != nil {
+		return err
+	}
 
-// SetAuditLoggerFormat sets the format for the audit logger
-func (w *Waf) SetAuditLoggerFormat(format string) error {
-	return w.auditLogger.SetFormatter(format)
+	// SecAuditLogFormat provides a log format, default is native
+	if w.AuditLogFormat != "" {
+		if err := al.SetFormatter(w.AuditLogFormat); err != nil {
+			return err
+		}
+	} else {
+		if err := al.SetFormatter("native"); err != nil {
+			return err
+		}
+	}
+
+	// SecAuditLogDir provides the log directory,
+	// there is no default value
+	if w.AuditLogDir != "" {
+		if err := al.SetDir(w.AuditLogDir); err != nil {
+			return err
+		}
+	}
+
+	// SecAuditLog provides the log type, default is serial
+	if w.AuditLogType != "" {
+		if err := al.SetWriter(w.AuditLogType); err != nil {
+			return err
+		}
+	} else {
+		if err := al.SetWriter("serial"); err != nil {
+			return err
+		}
+	}
+	w.auditLogger = al
+	return nil
 }
 
 // SetDebugLogPath sets the path for the debug log
@@ -272,12 +324,10 @@ func (w *Waf) AuditLogger() *loggers.Logger {
 func NewWaf() *Waf {
 	atom := zap.NewAtomicLevel()
 	atom.SetLevel(zap.FatalLevel)
-	al, _ := loggers.NewAuditLogger()
 	waf := &Waf{
 		ArgumentSeparator:        "&",
 		AuditEngine:              types.AuditEngineOff,
 		AuditLogParts:            []rune("ABCFHZ"),
-		auditLogger:              al,
 		mux:                      &sync.RWMutex{},
 		RequestBodyInMemoryLimit: 131072,
 		RequestBodyLimit:         10000000, // 10mb

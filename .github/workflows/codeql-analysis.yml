@@ -1,9 +1,10 @@
 name: "CodeQL"
-
 on:
   push:
     branches: 
       - '*'
+      - 'v1/*'
+      - 'v2/*'
   pull_request:
     # The branches below must be a subset of the branches above
     branches: [master]
@@ -13,7 +14,6 @@ jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
-
     strategy:
       fail-fast: false
       matrix:
