@@ -171,17 +171,21 @@ func TestSecAuditLogDirectivesDefaults(t *testing.T) {
 
 func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	waf := engine.NewWaf()
-	auditpath := "/tmp/audit/"
+	auditpath := "/tmp/"
 	parser, _ := NewParser(waf)
 	if err := parser.FromString(`
-	SecAuditLog /tmp/audit/audit.log
-	SecAuditLogDir /tmp/audit
+	SecAuditLog /tmp/audit.log
 	SecAuditLogFormat json
 	SecAuditLogType concurrent
+	SecAuditLogDir /tmp
 	`); err != nil {
 		t.Error(err)
 	}
 	id := utils.SafeRandom(10)
+	if waf.AuditLogger() == nil {
+		t.Error("Invalid audit logger (nil)")
+		return
+	}
 	if err := waf.AuditLogger().Write(loggers.AuditLog{
 		Parts: types.AuditLogParts("ABCDEFGHIJKZ"),
 		Transaction: loggers.AuditTransaction{
