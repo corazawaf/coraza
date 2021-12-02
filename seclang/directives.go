@@ -298,10 +298,32 @@ func directiveSecAuditLogDir(p *Parser, opts string) error {
 	if len(opts) == 0 {
 		return errors.New("syntax error: SecAuditLogDir /some/absolute/path")
 	}
+	p.Waf.AuditLogDir = opts
 	if err := p.Waf.UpdateAuditLogger(); err != nil {
 		return err
 	}
-	p.Waf.AuditLogDir = opts
+	return nil
+}
+
+func directiveSecAuditLogDirMode(p *Parser, opts string) error {
+	if len(opts) == 0 {
+		return errors.New("syntax error: SecAuditLogDirMode [0777/0700/...]")
+	}
+	// p.Waf.AuditLogDirMode, _ = strconv.ParseInt(opts, 8, 32)
+	if err := p.Waf.UpdateAuditLogger(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func directiveSecAuditLogFileMode(p *Parser, opts string) error {
+	if len(opts) == 0 {
+		return errors.New("syntax error: SecAuditLogFileMode [0777/0700/...]")
+	}
+	// p.Waf.AuditLogFileMode, _ = strconv.ParseInt(opts, 8, 32)
+	if err := p.Waf.UpdateAuditLogger(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -445,6 +467,7 @@ var directivesMap = map[string]directive{
 	"secauditlogrelevantstatus":     directiveSecAuditLogRelevantStatus,
 	"secauditlogparts":              directiveSecAuditLogParts,
 	"secauditlogdir":                directiveSecAuditLogDir,
+	"secauditlogstoragedir":         directiveSecAuditLogDir,
 	"secauditlog":                   directiveSecAuditLog,
 	"secauditengine":                directiveSecAuditEngine,
 	"secaction":                     directiveSecAction,
@@ -452,6 +475,8 @@ var directivesMap = map[string]directive{
 	"secdebugloglevel":              directiveSecDebugLogLevel,
 	"secauditlogformat":             directiveSecAuditLogFormat,
 	"secauditlogtype":               directiveSecAuditLogType,
+	"secauditlogfilemode":           directiveSecAuditLogFileMode,
+	"secauditlogdirmode":            directiveSecAuditLogDirMode,
 
 	// Unsupported Directives
 	"secargumentseparator":     directiveUnsupported,

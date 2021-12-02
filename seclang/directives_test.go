@@ -15,6 +15,7 @@
 package seclang
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -23,6 +24,7 @@ import (
 	engine "github.com/jptosso/coraza-waf/v2"
 	"github.com/jptosso/coraza-waf/v2/loggers"
 	"github.com/jptosso/coraza-waf/v2/types"
+	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
 )
 
 func Test_directiveSecAuditLog(t *testing.T) {
@@ -169,31 +171,62 @@ func TestSecAuditLogDirectivesDefaults(t *testing.T) {
 
 func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	waf := engine.NewWaf()
-	tmpf, err := ioutil.TempFile("/tmp", "*.log")
-	if err != nil {
-		t.Error(err)
-	}
 	auditpath := "/tmp/audit/"
 	parser, _ := NewParser(waf)
-	if err := directiveSecAuditLog(parser, tmpf.Name()); err != nil {
+	if err := parser.FromString(`
+	SecAuditLog /tmp/audit/audit.log
+	SecAuditLogDir /tmp/audit
+	SecAuditLogFormat json
+	SecAuditLogType concurrent
+	`); err != nil {
 		t.Error(err)
 	}
-	if err := directiveSecAuditLogFormat(parser, "json"); err != nil {
-		t.Error(err)
-	}
-	if err := directiveSecAuditLogDir(parser, auditpath); err != nil {
-		t.Error(err)
-	}
-	if err := directiveSecAuditLogType(parser, "concurrent"); err != nil {
-		t.Error(err)
-	}
+	id := utils.SafeRandom(10)
 	if err := waf.AuditLogger().Write(loggers.AuditLog{
 		Parts: types.AuditLogParts("ABCDEFGHIJKZ"),
 		Transaction: loggers.AuditTransaction{
-			ID: "test-12345",
+			ID: id,
 		},
 	}); err != nil {
 		t.Error(err)
 	}
+	f, err := findFileContaining(auditpath, id)
+	if err != nil {
+		t.Error(err)
+	}
+	data, err := ioutil.ReadFile(f)
+	if err != nil {
+		t.Error(err)
+	}
+	if !strings.Contains(string(data), id) {
+		t.Error("failed to write audit log")
+	}
+	// we test it is a valid json
+	var j map[string]interface{}
+	if err := json.Unmarshal(data, &j); err != nil {
+		t.Error(err)
+	}
+}
 
+// Find a file by name recursively containing some string
+func findFileContaining(path string, search string) (string, error) {
+	files, err := ioutil.ReadDir(path)
+	if err != nil {
+		return "", err
+	}
+	for _, file := range files {
+		if file.IsDir() {
+			fullpath := path + "/" + file.Name()
+			file, err := findFileContaining(fullpath, search)
+			if err != nil {
+				return "", err
+			}
+			if file != "" {
+				return file, nil
+			}
+		} else if strings.Contains(file.Name(), search) {
+			return path + "/" + file.Name(), nil
+		}
+	}
+	return "", nil
 }
