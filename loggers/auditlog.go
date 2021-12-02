@@ -18,11 +18,13 @@ import "github.com/jptosso/coraza-waf/v2/types"
 
 // AuditLog represents the main struct for audit log data
 type AuditLog struct {
-	Parts types.AuditLogParts
-	// Transaction information
+	// Parts contains the parts of the audit log
+	Parts types.AuditLogParts `json:"-"`
+
+	// Transaction contains the transaction information
 	Transaction AuditTransaction `json:"transaction"`
 
-	// Triggered rules information
+	// Messages contains the triggered rules information
 	Messages []AuditMessage `json:"messages"`
 }
 

@@ -28,7 +28,6 @@ func (a *nologFn) Init(r *coraza.Rule, data string) error {
 }
 
 func (a *nologFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
-	// Not evaluated
 }
 
 func (a *nologFn) Type() types.RuleActionType {

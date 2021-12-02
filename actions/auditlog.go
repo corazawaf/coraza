@@ -22,11 +22,12 @@ import (
 type auditlogFn struct{}
 
 func (a *auditlogFn) Init(r *coraza.Rule, data string) error {
+	r.Audit = true
 	return nil
 }
 
 func (a *auditlogFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
-	tx.Log = true
+	// Nothing here
 }
 
 func (a *auditlogFn) Type() types.RuleActionType {

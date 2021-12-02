@@ -24,11 +24,11 @@ type logFn struct {
 
 func (a *logFn) Init(r *coraza.Rule, data string) error {
 	r.Log = true
+	r.Audit = true
 	return nil
 }
 
 func (a *logFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
-	// Not evaluated
 }
 
 func (a *logFn) Type() types.RuleActionType {

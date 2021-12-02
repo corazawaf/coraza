@@ -98,7 +98,7 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 		tx.AuditEngine = ae
 	case ctlAuditLogParts:
 		// TODO lets switch it to a string
-		tx.AuditLogParts = []rune(a.value)
+		tx.AuditLogParts = types.AuditLogParts(a.value)
 	case ctlForceRequestBodyVar:
 		val := strings.ToLower(a.value)
 		tx.Waf.Logger.Debug("Forcing request body var with CTL", zap.String("status", val))

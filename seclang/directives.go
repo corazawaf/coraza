@@ -334,7 +334,7 @@ func directiveSecAuditLogRelevantStatus(p *Parser, opts string) error {
 }
 
 func directiveSecAuditLogParts(p *Parser, opts string) error {
-	p.Waf.AuditLogParts = []rune(opts)
+	p.Waf.AuditLogParts = types.AuditLogParts(opts)
 	return nil
 }
 

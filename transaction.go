@@ -44,9 +44,6 @@ import (
 // It is safe to manage multiple transactions but transactions themself are not
 // thread safe
 type Transaction struct {
-	// If true the transaction is going to be logged, it won't log if IsRelevantStatus() fails
-	Log bool
-
 	// Transaction ID
 	ID string
 
@@ -70,7 +67,7 @@ type Transaction struct {
 
 	// Copies from the WafInstance that may be overwritten by the ctl action
 	AuditEngine              types.AuditEngineStatus
-	AuditLogParts            []rune
+	AuditLogParts            types.AuditLogParts
 	ForceRequestBodyVariable bool
 	RequestBodyAccess        bool
 	RequestBodyLimit         int64
@@ -118,6 +115,10 @@ type Transaction struct {
 
 	// Timestamp of the request
 	Timestamp int64
+
+	// When a rule matches and contains r.Audit = true, this will be set to true
+	// and it will write to the audit log
+	audit bool
 }
 
 // Used to test macro expansions
@@ -327,6 +328,11 @@ func (tx *Transaction) MatchRule(mr MatchedRule) {
 		}*/
 	tx.MatchedRules = append(tx.MatchedRules, mr)
 
+	// If the rule is set to audit, we log the transaction to the audit log
+	if mr.Rule.Audit {
+		tx.audit = true
+	}
+
 	// set highest_severity
 	hs := tx.GetCollection(variables.HighestSeverity)
 	maxSeverity, _ := types.ParseRuleSeverity(hs.GetFirstString(""))
@@ -335,7 +341,8 @@ func (tx *Transaction) MatchRule(mr MatchedRule) {
 		tx.Waf.Logger.Debug("Set highest severity", zap.Int("severity", mr.Rule.Severity.Int()))
 	}
 	// Rules are matched to error log in real time
-	if tx.Waf.errorLogCb != nil {
+	// We only match rules if rule.Log is forced
+	if mr.Rule.Log && tx.Waf.errorLogCb != nil {
 		tx.Waf.errorLogCb(mr)
 	}
 }
@@ -437,41 +444,6 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []MatchData {
 // *Collection used to get VARIABLES data
 func (tx *Transaction) GetCollection(variable variables.RuleVariable) *Collection {
 	return tx.collections[variable]
-}
-
-// savePersistentData save persistent collections to persistence engine
-func (tx *Transaction) savePersistentData() {
-	// TODO, disabled by now, maybe we should add persistent variables to the
-	// collection struct, something like col.Persist("key")
-	// pers := []byte{VARIABLE_SESSION, VARIABLE_IP}
-	/*
-		pers := []byte{}
-		for _, v := range pers {
-			col := tx.GetCollection(v)
-			if col == nil || col.PersistenceKey != "" {
-				continue
-			}
-			data := col.Data()
-			// key := col.PersistenceKey
-			upc, _ := strconv.Atoi(data["UPDATE_COUNTER"][0])
-			upc++
-			ct, _ := strconv.ParseInt(data["CREATE_TIME"][0], 10, 64)
-			rate := strconv.FormatInt(ct/(int64(ct)*1000), 10)
-			ts := time.Now().UnixNano()
-			tss := strconv.FormatInt(ts, 10)
-			to := ts + int64(tx.Waf.CollectionTimeout)*1000
-			timeout := strconv.FormatInt(to, 10)
-			data["IS_NEW"] = []string{"0"}
-			data["UPDATE_COUNTER"] = []string{strconv.Itoa(upc)}
-			data["UPDATE_RATE"] = []string{rate}
-			// TODO timeout should only be updated when the collection was modified
-			// but the current design isn't compatible
-			// New version may have multiple collection types allowing us to identify this cases
-			data["TIMEOUT"] = []string{timeout}
-			data["LAST_UPDATE_TIME"] = []string{tss}
-			// tx.Waf.Persistence.Save(v, key, data)
-		}
-	*/
 }
 
 // RemoveRuleTargetByID Removes the VARIABLE:KEY from the rule ID
@@ -830,7 +802,7 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 }
 
 // ProcessLogging Logging all information relative to this transaction.
-//
+// An error log
 // At this point there is not need to hold the connection, the response can be
 // delivered prior to the execution of this method.
 func (tx *Transaction) ProcessLogging() {
@@ -839,7 +811,6 @@ func (tx *Transaction) ProcessLogging() {
 	// 	return
 	// }
 	defer func() {
-		tx.savePersistentData()
 		tx.RequestBodyBuffer.Close()
 		tx.ResponseBodyBuffer.Close()
 		tx.Waf.Logger.Debug("Transaction finished", zap.String("event", "FINISH_TRANSACTION"), zap.String("txid", tx.ID), zap.Bool("interrupted", tx.Interrupted()))
@@ -855,7 +826,13 @@ func (tx *Transaction) ProcessLogging() {
 		return
 	}
 
-	if tx.AuditEngine == types.AuditEngineRelevantOnly && !tx.Log {
+	if tx.AuditEngine == types.AuditEngineRelevantOnly && !tx.audit {
+		// Transaction marked not for audit logging
+		tx.Waf.Logger.Debug("Transaction not marked for audit logging, AuditEngine is RelevantOnly and we got noauditlog")
+		return
+	}
+
+	if tx.AuditEngine == types.AuditEngineRelevantOnly && tx.audit {
 		re := tx.Waf.AuditLogRelevantStatus
 		status := tx.GetCollection(variables.ResponseStatus).GetFirstString("")
 		if re != nil && !re.Match([]byte(status)) {
@@ -889,6 +866,7 @@ func (tx *Transaction) AuditLog() loggers.AuditLog {
 	al.Messages = []loggers.AuditMessage{}
 	// YYYY/MM/DD HH:mm:ss
 	ts := time.Unix(0, tx.Timestamp).Format("2006/01/02 15:04:05")
+	al.Parts = tx.AuditLogParts
 	al.Transaction = loggers.AuditTransaction{
 		Timestamp:     ts,
 		UnixTimestamp: tx.Timestamp,
@@ -919,8 +897,8 @@ func (tx *Transaction) AuditLog() loggers.AuditLog {
 	al.Transaction.Response.Headers = tx.GetCollection(variables.ResponseHeaders).Data()
 	al.Transaction.Response.Body = tx.GetCollection(variables.ResponseBody).GetFirstString("")
 	al.Transaction.Producer = loggers.AuditTransactionProducer{
-		Connector:  "unknown", // TODO maybe add connector variable to Waf
-		Version:    "unknown",
+		Connector:  tx.Waf.ProducerConnector,
+		Version:    tx.Waf.ProducerConnectorVersion,
 		Server:     "",
 		RuleEngine: rengine,
 		Stopwatch:  tx.GetStopWatch(),
@@ -954,13 +932,13 @@ func (tx *Transaction) AuditLog() loggers.AuditLog {
 		r := mr.Rule
 		mrs = append(mrs, loggers.AuditMessage{
 			Actionset: strings.Join(tx.Waf.ComponentNames, " "),
-			Message:   tx.Logdata,
+			Message:   mr.Message,
 			Data: loggers.AuditMessageData{
 				File:     mr.Rule.File,
 				Line:     mr.Rule.Line,
 				ID:       r.ID,
 				Rev:      r.Rev,
-				Msg:      mr.Message,
+				Msg:      r.Msg,
 				Data:     mr.Data,
 				Severity: r.Severity,
 				Ver:      r.Version,

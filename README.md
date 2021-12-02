@@ -59,49 +59,21 @@ import(
 func main() {
 	// First we initialize our waf and our seclang parser
 	waf := coraza.NewWaf()
-	parser := seclang.NewParser(waf)
+	parser, _ := seclang.NewParser(waf)
 
 	// Now we parse our rules
-	parser.FromString(`SecRule REMOTE_ADDR "@rx .*" "id:1,phase:1,drop"`)
+	if err := parser.FromString(`SecRule REMOTE_ADDR "@rx .*" "id:1,phase:1,deny,status:403"`); err != nil {
+		fmt.Println(err)
+	}
 
 	// Then we create a transaction and assign some variables
 	tx := waf.NewTransaction()
 	tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 12345)
 
-	tx.ProcessRequestHeaders()
-
-	// Finally we check the transaction status
-	if tx.Interrupted() {
-		fmt.Println("Transaction was interrupted")
+	// Finally we process the request headers phase, which may return an interruption
+	if it := tx.ProcessRequestHeaders(); it != nil {
+		fmt.Printf("Transaction was interrupted with status %d\n", it.Status)
 	}
-}
-```
-
-### Integrate with any framework
-
-Using the standard net/http library:
-
-```go
-package main
-import(
-	"github.com/jptosso/coraza-waf/v2"
-	"github.com/jptosso/coraza-waf/v2/seclang"
-	"net/http"
-)
-
-func SomeErrorPage(w http.ResponseWriter) {
-	w.WriteHeader(403)
-	w.Write([]byte("WAF ERROR")
-}
-
-func someHandler(waf *engine.Waf) http.Handler {
-  return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    tx := waf.NewTransaction()
-	tx.ProcessRequest(r)
-	if tx.Interruption != nil {
-		SomeErrorPage(w)
-	}
-  })
 }
 ```
 
@@ -118,20 +90,16 @@ func someHandler(waf *engine.Waf) http.Handler {
 
 * WASM scripts support
 * Lua script support
-* Integrated DDOS protection and directives with iptables(And others) integration
-* Integrated protocol validations ([rfc2616](https://datatracker.ietf.org/doc/html/rfc2616)) (maybe)
-* Integrated CSRF protection (maybe)
+* Integrated DDOS protection and directives with iptables(Or others) integration
 * Integrated bot detection with captcha
 * Open Policy Agent package (OPA)
-* Native antivirus integration (maybe)
-* Automatic coreruleset integration (download and setup) (maybe)
 * Enhanced data signing features (cookies, forms, etc)
 * OpenAPI enforcement
 * JWT enforcement
 * XML request body processor
-* Libinjection integration
-* Lib PCRE integration
-* Bluemonday policies
+* Libinjection integration (done)
+* Lib PCRE integration (done)
+* Bluemonday policies (maybe)
 
 ## Coraza WAF implementations
 
@@ -178,3 +146,7 @@ egrep -Rin "TODO|FIXME" -R --exclude-dir=vendor *
 The name **Coraza** is trademarked, **Coraza** is a registered trademark of Juan Pablo Tosso.
 
 * Author on Twitter [@jptosso](https://twitter.com/jptosso)
+
+## Donations
+
+For donations, see [Donations site](https://www.tosso.io/donate)

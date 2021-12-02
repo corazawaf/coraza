@@ -58,7 +58,7 @@ type Waf struct {
 	AuditEngine types.AuditEngineStatus
 
 	// Array of logging parts to be used
-	AuditLogParts []rune
+	AuditLogParts types.AuditLogParts
 
 	// Status of the content injection for responses and requests
 	ContentInjection bool
@@ -138,6 +138,13 @@ type Waf struct {
 	RequestBodyLimitAction types.RequestBodyLimitAction
 
 	ArgumentSeparator string
+
+	// ProducerConnector is used by connectors to identify the producer
+	// on audit logs, for example, apache-modcoraza
+	ProducerConnector string
+	// ProducerConnectorVersion is used by connectors to identify the producer
+	// version on audit logs
+	ProducerConnectorVersion string
 
 	// Used for the debug logger
 	Logger *zap.Logger
@@ -327,7 +334,7 @@ func NewWaf() *Waf {
 	waf := &Waf{
 		ArgumentSeparator:        "&",
 		AuditEngine:              types.AuditEngineOff,
-		AuditLogParts:            []rune("ABCFHZ"),
+		AuditLogParts:            types.AuditLogParts("ABCFHZ"),
 		mux:                      &sync.RWMutex{},
 		RequestBodyInMemoryLimit: 131072,
 		RequestBodyLimit:         10000000, // 10mb

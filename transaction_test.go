@@ -175,7 +175,7 @@ func TestResponseHeader(t *testing.T) {
 
 func TestAuditLog(t *testing.T) {
 	tx := makeTransaction()
-	tx.AuditLogParts = []rune("ABCDEFGHIJK")
+	tx.AuditLogParts = types.AuditLogParts("ABCDEFGHIJK")
 	al := tx.AuditLog()
 	if al.Transaction.ID != tx.ID {
 		t.Error("invalid auditlog id")
@@ -201,7 +201,7 @@ func TestResponseBody(t *testing.T) {
 
 func TestAuditLogFields(t *testing.T) {
 	tx := makeTransaction()
-	tx.AuditLogParts = []rune("ABCDEFGHIJK")
+	tx.AuditLogParts = types.AuditLogParts("ABCDEFGHIJK")
 	tx.AddRequestHeader("test", "test")
 	tx.AddResponseHeader("test", "test")
 	rule := NewRule()
@@ -259,7 +259,6 @@ func TestRelevantAuditLogging(t *testing.T) {
 	tx.Waf.AuditLogRelevantStatus = regexp.MustCompile(`(403)`)
 	tx.GetCollection(variables.ResponseStatus).Set("", []string{"403"})
 	tx.AuditEngine = types.AuditEngineRelevantOnly
-	tx.Log = false
 	// tx.Waf.auditLogger = loggers.NewAuditLogger()
 	tx.ProcessLogging()
 	// TODO how do we check if the log was writen?

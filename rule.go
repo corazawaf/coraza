@@ -196,10 +196,11 @@ type Rule struct {
 	// Rule logdata
 	LogData string
 
-	// If true and this rule is matched, this rule will be
-	// written to the audit log
-	// If no auditlog, this rule won't be logged
+	// If true, triggering this rule write to the error log
 	Log bool
+
+	// If true, triggering this rule write to the audit log
+	Audit bool
 
 	// If true, the transformations will be multimatched
 	MultiMatch bool
@@ -282,7 +283,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 					args = []string{ars}
 					errs = es
 				}
-				if errs != nil && len(errs) > 0 {
+				if len(errs) > 0 {
 					tx.Waf.Logger.Error("Error transforming argument",
 						zap.Int("rule", rid),
 						zap.String("tx", tx.ID),
