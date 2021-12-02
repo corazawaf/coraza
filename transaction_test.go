@@ -388,6 +388,10 @@ func TestTxVariablesExceptions(t *testing.T) {
 	}
 }
 
+func TestAuditLogMessages(t *testing.T) {
+
+}
+
 func BenchmarkTransactionCreation(b *testing.B) {
 	waf := NewWaf()
 	for i := 0; i < b.N; i++ {

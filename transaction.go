@@ -886,7 +886,6 @@ func (tx *Transaction) Interrupted() bool {
 // AuditLog returns an AuditLog struct, used to write audit logs
 func (tx *Transaction) AuditLog() loggers.AuditLog {
 	al := loggers.AuditLog{}
-	parts := tx.AuditLogParts
 	al.Messages = []loggers.AuditMessage{}
 	// YYYY/MM/DD HH:mm:ss
 	ts := time.Unix(0, tx.Timestamp).Format("2006/01/02 15:04:05")
@@ -913,78 +912,66 @@ func (tx *Transaction) AuditLog() loggers.AuditLog {
 	}
 	rengine := tx.RuleEngine.String()
 
-	for _, p := range parts {
-		switch p {
-		case 'B':
-			al.Transaction.Request.Headers = tx.GetCollection(variables.RequestHeaders).Data()
-		case 'C':
-			al.Transaction.Request.Body = tx.GetCollection(variables.RequestBody).GetFirstString("")
-			// TODO maybe change to:
-			// al.Transaction.Request.Body = tx.RequestBodyBuffer.String()
-		case 'F':
-			al.Transaction.Response.Headers = tx.GetCollection(variables.ResponseHeaders).Data()
-		case 'G':
-			al.Transaction.Response.Body = tx.GetCollection(variables.ResponseBody).GetFirstString("")
-		case 'H':
-			al.Transaction.Producer = loggers.AuditTransactionProducer{
-				Connector:  "unknown", // TODO maybe add connector variable to Waf
-				Version:    "unknown",
-				Server:     "",
-				RuleEngine: rengine,
-				Stopwatch:  tx.GetStopWatch(),
-				Rulesets:   tx.Waf.ComponentNames,
-			}
-		case 'I':
-			/*
-			* TODO:
-			* This part is a replacement for part C. It will log the same data as C in
-			* all cases except when multipart/form-data encoding in used. In this case,
-			* it will log a fake application/x-www-form-urlencoded body that contains
-			* the information about parameters but not about the files. This is handy
-			* if you don’t want to have (often large) files stored in your audit logs.
-			 */
-		case 'J':
-			// upload data
-			files := []loggers.AuditTransactionRequestFiles{}
-			al.Transaction.Request.Files = []loggers.AuditTransactionRequestFiles{}
-			for i, name := range tx.GetCollection(variables.Files).Get("") {
-				// TODO we kind of assume there is a file_size for each file with the same index
-				size, _ := strconv.ParseInt(tx.GetCollection(variables.FilesSizes).Get("")[i], 10, 64)
-				ext := filepath.Ext(name)
-				at := loggers.AuditTransactionRequestFiles{
-					Size: size,
-					Name: name,
-					Mime: mime.TypeByExtension(ext),
-				}
-				files = append(files, at)
-			}
-			al.Transaction.Request.Files = files
-		case 'K':
-			mrs := []loggers.AuditMessage{}
-			for _, mr := range tx.MatchedRules {
-				r := mr.Rule
-				mrs = append(mrs, loggers.AuditMessage{
-					Actionset: strings.Join(tx.Waf.ComponentNames, " "),
-					Message:   tx.Logdata,
-					Data: loggers.AuditMessageData{
-						File:     mr.Rule.File,
-						Line:     mr.Rule.Line,
-						ID:       r.ID,
-						Rev:      r.Rev,
-						Msg:      mr.Message,
-						Data:     mr.Data,
-						Severity: r.Severity,
-						Ver:      r.Version,
-						Maturity: r.Maturity,
-						Accuracy: r.Accuracy,
-						Tags:     r.Tags,
-						Raw:      r.Raw,
-					},
-				})
-			}
-			al.Messages = mrs
-		}
+	al.Transaction.Request.Headers = tx.GetCollection(variables.RequestHeaders).Data()
+	al.Transaction.Request.Body = tx.GetCollection(variables.RequestBody).GetFirstString("")
+	// TODO maybe change to:
+	// al.Transaction.Request.Body = tx.RequestBodyBuffer.String()
+	al.Transaction.Response.Headers = tx.GetCollection(variables.ResponseHeaders).Data()
+	al.Transaction.Response.Body = tx.GetCollection(variables.ResponseBody).GetFirstString("")
+	al.Transaction.Producer = loggers.AuditTransactionProducer{
+		Connector:  "unknown", // TODO maybe add connector variable to Waf
+		Version:    "unknown",
+		Server:     "",
+		RuleEngine: rengine,
+		Stopwatch:  tx.GetStopWatch(),
+		Rulesets:   tx.Waf.ComponentNames,
 	}
+	/*
+	* TODO:
+	* This part is a replacement for part C. It will log the same data as C in
+	* all cases except when multipart/form-data encoding in used. In this case,
+	* it will log a fake application/x-www-form-urlencoded body that contains
+	* the information about parameters but not about the files. This is handy
+	* if you don’t want to have (often large) files stored in your audit logs.
+	 */
+	// upload data
+	files := []loggers.AuditTransactionRequestFiles{}
+	al.Transaction.Request.Files = []loggers.AuditTransactionRequestFiles{}
+	for i, name := range tx.GetCollection(variables.Files).Get("") {
+		// TODO we kind of assume there is a file_size for each file with the same index
+		size, _ := strconv.ParseInt(tx.GetCollection(variables.FilesSizes).Get("")[i], 10, 64)
+		ext := filepath.Ext(name)
+		at := loggers.AuditTransactionRequestFiles{
+			Size: size,
+			Name: name,
+			Mime: mime.TypeByExtension(ext),
+		}
+		files = append(files, at)
+	}
+	al.Transaction.Request.Files = files
+	mrs := []loggers.AuditMessage{}
+	for _, mr := range tx.MatchedRules {
+		r := mr.Rule
+		mrs = append(mrs, loggers.AuditMessage{
+			Actionset: strings.Join(tx.Waf.ComponentNames, " "),
+			Message:   tx.Logdata,
+			Data: loggers.AuditMessageData{
+				File:     mr.Rule.File,
+				Line:     mr.Rule.Line,
+				ID:       r.ID,
+				Rev:      r.Rev,
+				Msg:      mr.Message,
+				Data:     mr.Data,
+				Severity: r.Severity,
+				Ver:      r.Version,
+				Maturity: r.Maturity,
+				Accuracy: r.Accuracy,
+				Tags:     r.Tags,
+				Raw:      r.Raw,
+			},
+		})
+	}
+	al.Messages = mrs
 	return al
 }
 
