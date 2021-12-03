@@ -34,6 +34,7 @@ package loggers
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
 )
@@ -51,12 +52,18 @@ func jsonFormatter(al AuditLog) ([]byte, error) {
 func legacyJSONFormatter(al AuditLog) ([]byte, error) {
 	reqHeaders := map[string]string{}
 	for k, v := range al.Transaction.Request.Headers {
-		reqHeaders[k] = v[0]
+		reqHeaders[k] = strings.Join(v, ", ")
 	}
 	resHeaders := map[string]string{}
 	for k, v := range al.Transaction.Response.Headers {
-		resHeaders[k] = v[0]
+		resHeaders[k] = strings.Join(v, ", ")
 	}
+	messages := []string{}
+	for _, m := range al.Messages {
+		messages = append(messages, m.Message)
+	}
+	producers := []string{al.Transaction.Producer.Connector}
+	producers = append(producers, al.Transaction.Producer.Rulesets...)
 	al2 := auditLogLegacy{
 		Transaction: auditLogLegacyTransaction{
 			Time:          al.Transaction.Timestamp,
@@ -76,7 +83,10 @@ func legacyJSONFormatter(al AuditLog) ([]byte, error) {
 			Headers:  resHeaders,
 		},
 		AuditData: auditLogLegacyData{
-			Stopwatch: auditLogLegacyStopwatch{},
+			Stopwatch:  auditLogLegacyStopwatch{},
+			Messages:   messages,
+			Producer:   producers,
+			EngineMode: al.Transaction.Producer.RuleEngine,
 		},
 	}
 
@@ -141,4 +151,5 @@ func nativeFormatter(al AuditLog) ([]byte, error) {
 var (
 	_ LogFormatter = nativeFormatter
 	_ LogFormatter = jsonFormatter
+	_ LogFormatter = legacyJSONFormatter
 )

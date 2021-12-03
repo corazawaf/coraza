@@ -136,33 +136,37 @@ type auditLogLegacy struct {
 }
 
 type auditLogLegacyTransaction struct {
-	Time          string
-	TransactionID string
-	RemoteAddress string
-	RemotePort    int
-	LocalAddress  string
-	LocalPort     int
+	// Time format 03/Dec/2021:01:13:44.468137 +0000
+	Time          string `json:"time"`
+	TransactionID string `json:"transaction_id"`
+	RemoteAddress string `json:"remote_address"`
+	RemotePort    int    `json:"remote_port"`
+	LocalAddress  string `json:"local_address"`
+	LocalPort     int    `json:"local_port"`
 }
 
 type auditLogLegacyRequest struct {
-	RequestLine string
-	Headers     map[string]string
+	RequestLine string `json:"request_line"`
+	// Headers should be a map of slices but in this case they are
+	// joined by comma (,)
+	Headers map[string]string `json:"headers"`
 }
 
 type auditLogLegacyResponse struct {
-	Status   int
-	Protocol string
-	Headers  map[string]string
+	Status   int               `json:"status"`
+	Protocol string            `json:"protocol"`
+	Headers  map[string]string `json:"headers"`
 }
 
 type auditLogLegacyData struct {
-	Messages              []string
-	Handler               string
-	Stopwatch             auditLogLegacyStopwatch
-	ResponseBodyDechunked bool
-	Producer              []string
-	Server                string
-	EngineMode            string
+	Messages              []string                `json:"messages"`
+	ErrorMessages         []string                `json:"error_messages"`
+	Handler               string                  `json:"handler"`
+	Stopwatch             auditLogLegacyStopwatch `json:"stopwatch"`
+	ResponseBodyDechunked bool                    `json:"response_body_dechunked"`
+	Producer              []string                `json:"producer"`
+	Server                string                  `json:"server"`
+	EngineMode            string                  `json:"engine_mode"`
 }
 
 type auditLogLegacyStopwatch struct {
