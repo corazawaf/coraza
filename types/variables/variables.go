@@ -51,83 +51,118 @@ const (
 	// MatchedVar is the value of the matched variable
 	MatchedVar RuleVariable = iota
 	// MatchedVarName is the name of the matched variable
-	MatchedVarName                RuleVariable = iota
-	MultipartBoundaryQuoted       RuleVariable = iota
-	MultipartBoundaryWhitespace   RuleVariable = iota
-	MultipartCrlfLfLines          RuleVariable = iota
-	MultipartDataAfter            RuleVariable = iota
-	MultipartDataBefore           RuleVariable = iota
-	MultipartFileLimitExceeded    RuleVariable = iota
-	MultipartHeaderFolding        RuleVariable = iota
+	MatchedVarName RuleVariable = iota
+	// MultipartBoundaryQuoted kept for compatibility
+	MultipartBoundaryQuoted RuleVariable = iota
+	// MultipartBoundaryWhitespace kept for compatibility
+	MultipartBoundaryWhitespace RuleVariable = iota
+	// MultipartCrlfLfLines kept for compatibility
+	MultipartCrlfLfLines RuleVariable = iota
+	// MultipartDataAfter kept for compatibility
+	MultipartDataAfter RuleVariable = iota
+	// MultipartDataBefore kept for compatibility
+	MultipartDataBefore RuleVariable = iota
+	// MultipartFileLimitExceeded kept for compatibility
+	MultipartFileLimitExceeded RuleVariable = iota
+	// MultipartHeaderFolding kept for compatibility
+	MultipartHeaderFolding RuleVariable = iota
+	// MultipartInvalidHeaderFolding kept for compatibility
 	MultipartInvalidHeaderFolding RuleVariable = iota
-	MultipartInvalidPart          RuleVariable = iota
-	MultipartInvalidQuoting       RuleVariable = iota
-	MultipartLfLine               RuleVariable = iota
-	MultipartMissingSemicolon     RuleVariable = iota
-	MultipartStrictError          RuleVariable = iota
-	MultipartUnmatchedBoundary    RuleVariable = iota
-	OutboundDataError             RuleVariable = iota
-	PathInfo                      RuleVariable = iota
-	QueryString                   RuleVariable = iota
-	RemoteAddr                    RuleVariable = iota
-	RemoteHost                    RuleVariable = iota
-	RemotePort                    RuleVariable = iota
-	ReqbodyError                  RuleVariable = iota
-	ReqbodyErrorMsg               RuleVariable = iota
-	ReqbodyProcessorError         RuleVariable = iota
-	ReqbodyProcessorErrorMsg      RuleVariable = iota
-	ReqbodyProcessor              RuleVariable = iota
-	RequestBasename               RuleVariable = iota
-	RequestBody                   RuleVariable = iota
-	RequestBodyLength             RuleVariable = iota
-	RequestFilename               RuleVariable = iota
-	RequestLine                   RuleVariable = iota
-	RequestMethod                 RuleVariable = iota
-	RequestProtocol               RuleVariable = iota
-	RequestURI                    RuleVariable = iota
-	RequestURIRaw                 RuleVariable = iota
-	ResponseBody                  RuleVariable = iota
-	ResponseContentLength         RuleVariable = iota
-	ResponseProtocol              RuleVariable = iota
-	ResponseStatus                RuleVariable = iota
-	ServerAddr                    RuleVariable = iota
-	ServerName                    RuleVariable = iota
-	ServerPort                    RuleVariable = iota
-	Sessionid                     RuleVariable = iota
-	HighestSeverity               RuleVariable = iota
-	StatusLine                    RuleVariable = iota
-	InboundErrorData              RuleVariable = iota
-	Duration                      RuleVariable = iota
-	ResponseHeadersNames          RuleVariable = iota
-	RequestHeadersNames           RuleVariable = iota
-	Userid                        RuleVariable = iota
-	Args                          RuleVariable = iota
-	ArgsGet                       RuleVariable = iota
-	ArgsPost                      RuleVariable = iota
-	FilesSizes                    RuleVariable = iota
-	FilesNames                    RuleVariable = iota
-	FilesTmpContent               RuleVariable = iota
-	MultipartFilename             RuleVariable = iota
-	MultipartName                 RuleVariable = iota
-	MatchedVarsNames              RuleVariable = iota
-	MatchedVars                   RuleVariable = iota
-	Files                         RuleVariable = iota
-	RequestCookies                RuleVariable = iota
-	RequestHeaders                RuleVariable = iota
-	ResponseHeaders               RuleVariable = iota
-	Geo                           RuleVariable = iota
-	RequestCookiesNames           RuleVariable = iota
-	FilesTmpnames                 RuleVariable = iota
-	ArgsNames                     RuleVariable = iota
-	ArgsGetNames                  RuleVariable = iota
-	ArgsPostNames                 RuleVariable = iota
-	TX                            RuleVariable = iota
-	Rule                          RuleVariable = iota
-	XML                           RuleVariable = iota
-	JSON                          RuleVariable = iota
-	Env                           RuleVariable = iota
-	IP                            RuleVariable = iota
-	UrlencodedError               RuleVariable = iota
+	// MultipartInvalidPart kept for compatibility
+	MultipartInvalidPart RuleVariable = iota
+	// MultipartInvalidQuoting kept for compatibility
+	MultipartInvalidQuoting RuleVariable = iota
+	// MultipartLfLine kept for compatibility
+	MultipartLfLine RuleVariable = iota
+	// MultipartMissingSemicolon kept for compatibility
+	MultipartMissingSemicolon RuleVariable = iota
+	// MultipartStrictError kept for compatibility
+	MultipartStrictError RuleVariable = iota
+	// MultipartUnmatchedBoundary kept for compatibility
+	MultipartUnmatchedBoundary RuleVariable = iota
+	OutboundDataError          RuleVariable = iota
+	PathInfo                   RuleVariable = iota
+	QueryString                RuleVariable = iota
+	RemoteAddr                 RuleVariable = iota
+	RemoteHost                 RuleVariable = iota
+	RemotePort                 RuleVariable = iota
+	ReqbodyError               RuleVariable = iota
+	ReqbodyErrorMsg            RuleVariable = iota
+	ReqbodyProcessorError      RuleVariable = iota
+	ReqbodyProcessorErrorMsg   RuleVariable = iota
+	ReqbodyProcessor           RuleVariable = iota
+	RequestBasename            RuleVariable = iota
+	RequestBody                RuleVariable = iota
+	RequestBodyLength          RuleVariable = iota
+	RequestFilename            RuleVariable = iota
+	RequestLine                RuleVariable = iota
+	RequestMethod              RuleVariable = iota
+	RequestProtocol            RuleVariable = iota
+	RequestURI                 RuleVariable = iota
+	RequestURIRaw              RuleVariable = iota
+	ResponseBody               RuleVariable = iota
+	ResponseContentLength      RuleVariable = iota
+	ResponseProtocol           RuleVariable = iota
+	ResponseStatus             RuleVariable = iota
+	ServerAddr                 RuleVariable = iota
+	ServerName                 RuleVariable = iota
+	ServerPort                 RuleVariable = iota
+	Sessionid                  RuleVariable = iota
+	HighestSeverity            RuleVariable = iota
+	StatusLine                 RuleVariable = iota
+	InboundErrorData           RuleVariable = iota
+	// Duration contains the time in miliseconds from
+	// the beginning of the transaction until this point
+	Duration RuleVariable = iota
+	// ResponseHeadersNames contains the names of the response headers
+	ResponseHeadersNames RuleVariable = iota
+	// RequestHeadersNames contains the names of the request headers
+	RequestHeadersNames RuleVariable = iota
+	Userid              RuleVariable = iota
+	// Args contains copies of ArgsGet and ArgsPost
+	Args RuleVariable = iota
+	// ArgsGet contains the GET (URL) arguments
+	ArgsGet RuleVariable = iota
+	// ArgsPost contains the POST (BODY) arguments
+	ArgsPost RuleVariable = iota
+	// FilesSizes contains the sizes of the uploaded files
+	FilesSizes RuleVariable = iota
+	// FilesNames contains the names of the uploaded files
+	FilesNames        RuleVariable = iota
+	FilesTmpContent   RuleVariable = iota
+	MultipartFilename RuleVariable = iota
+	MultipartName     RuleVariable = iota
+	MatchedVarsNames  RuleVariable = iota
+	MatchedVars       RuleVariable = iota
+	Files             RuleVariable = iota
+	RequestCookies    RuleVariable = iota
+	RequestHeaders    RuleVariable = iota
+	ResponseHeaders   RuleVariable = iota
+	// Geo contains the location information of the client
+	Geo                 RuleVariable = iota
+	RequestCookiesNames RuleVariable = iota
+	FilesTmpnames       RuleVariable = iota
+	// ArgsNames contains the names of the arguments (POST and GET)
+	ArgsNames RuleVariable = iota
+	// ArgsGetNames contains the names of the GET arguments
+	ArgsGetNames RuleVariable = iota
+	// ArgsPostNames contains the names of the POST arguments
+	ArgsPostNames RuleVariable = iota
+	// TX contains transaction specific variables created with setvar
+	TX RuleVariable = iota
+	// Rule contains rule metadata
+	Rule RuleVariable = iota
+	// XML provides minimal XPATH support
+	XML RuleVariable = iota
+	// JSON does not provide any data, might be removed
+	JSON RuleVariable = iota
+	// Env contains the process environment variables
+	Env RuleVariable = iota
+	// IP is kept for compatibility
+	IP RuleVariable = iota
+	// UrlencodedError equals 1 if we failed to parse de URL
+	// It applies for URL query part and urlencoded post body
+	UrlencodedError RuleVariable = iota
 )
 
 var rulemap = map[RuleVariable]string{
@@ -231,10 +266,10 @@ func (v RuleVariable) Name() string {
 	return "ERROR"
 }
 
-// ParseVariable returns the byte interpretation
+// Parse returns the byte interpretation
 // of a variable from a string
 // Returns error if there is no representation
-func ParseVariable(v string) (RuleVariable, error) {
+func Parse(v string) (RuleVariable, error) {
 	if v, ok := rulemapRev[strings.ToUpper(v)]; ok {
 		return v, nil
 	}

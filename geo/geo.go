@@ -18,7 +18,7 @@ import "fmt"
 
 // readers stores an unexported map of registered GeoReaders
 // They must only be added by directives as it is not concurrent-safe for writing
-var readers = map[string]Reader{}
+var readers = map[string]func() Reader{}
 
 // Reader is the interface that wraps a GeoIP database
 // It is used by the @geoLookup operator to create the GEO variables
@@ -37,9 +37,9 @@ type Reader interface {
 	Close() error
 }
 
-// Register registers a new GeoReader plugin
+// RegisterPlugin registers a new GeoReader plugin
 // There are no defaults GeoReaders
-func Register(name string, reader Reader) {
+func RegisterPlugin(name string, reader func() Reader) {
 	readers[name] = reader
 }
 
@@ -47,7 +47,7 @@ func Register(name string, reader Reader) {
 // It fails if the georeader does not exist
 func GetReader(name string) (Reader, error) {
 	if reader, ok := readers[name]; ok {
-		return reader, nil
+		return reader(), nil
 	}
 	return nil, fmt.Errorf("geo reader not found: %s", name)
 }

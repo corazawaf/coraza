@@ -45,7 +45,7 @@ func (a *setvarFn) Init(r *coraza.Rule, data string) error {
 	spl := strings.SplitN(data, "=", 2)
 
 	splcol := strings.SplitN(spl[0], ".", 2)
-	a.collection, err = variables.ParseVariable(splcol[0])
+	a.collection, err = variables.Parse(splcol[0])
 	if err != nil {
 		return err
 	}

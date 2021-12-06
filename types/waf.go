@@ -114,7 +114,7 @@ func ParseRequestBodyLimitAction(rbla string) (RequestBodyLimitAction, error) {
 
 type auditLogPart byte
 
-//AuditLogParts represents the parts of the audit log
+// AuditLogParts represents the parts of the audit log
 // A: Audit log header (mandatory).
 // B: Request headers.
 // C: Request body

@@ -141,7 +141,7 @@ func (tx *Transaction) MacroExpansion(data string) string {
 	for _, v := range matches {
 		match := v[2 : len(v)-1]
 		matchspl := strings.SplitN(match, ".", 2)
-		col, err := variables.ParseVariable(matchspl[0])
+		col, err := variables.Parse(matchspl[0])
 		if err != nil {
 			// Invalid collection
 			continue

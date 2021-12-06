@@ -62,7 +62,10 @@ func legacyJSONFormatter(al AuditLog) ([]byte, error) {
 	for _, m := range al.Messages {
 		messages = append(messages, m.Message)
 	}
-	producers := []string{al.Transaction.Producer.Connector}
+	producers := []string{}
+	if conn := al.Transaction.Producer.Connector; conn != "" {
+		producers = append(producers, conn)
+	}
 	producers = append(producers, al.Transaction.Producer.Rulesets...)
 	al2 := auditLogLegacy{
 		Transaction: auditLogLegacyTransaction{

@@ -27,10 +27,12 @@
             - 5
             - 6
             - 7
+            - 444
   rules: |
     SecDebugLogLevel 5
     SecRequestBodyAccess On
     SecAction "id:1, phase:1, ctl:ruleRemoveByTag=test, \
+        ctl:ruleRemoveById=444, \
         ctl:ruleRemoveByMsg=test, \
         ctl:ruleRemoveTargetById=5;ARGS:id, \
         ctl:ruleRemoveTargetByTag=test-tag;ARGS:id, \
@@ -53,3 +55,5 @@
     SecRule REQBODY_PROCESSOR "URLENCODED" "id:100,log,phase:2"
     SecRule REQUEST_BODY "pizza" "id:103,log,phase:2"
     SecRule ARGS:pineapple "pizza" "id:105,log,phase:2"
+
+    SecAction "id:444,phase:2,log"

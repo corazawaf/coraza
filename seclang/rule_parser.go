@@ -72,7 +72,7 @@ func (p *ruleParser) ParseVariables(vars string) error {
 					curkey = append(curkey, c)
 				}
 			}
-			v, err := variables.ParseVariable(string(curvar))
+			v, err := variables.Parse(string(curvar))
 			if err != nil {
 				return err
 			}

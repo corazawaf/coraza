@@ -45,26 +45,39 @@ type Parser struct {
 
 // FromFile imports directives from a file
 // It will return error if any directive fails to parse
-// or arguments are invalid
+// or the file does not exist.
+// If the path contains a *, it will be expanded to all
+// files in the directory matching the pattern
 func (p *Parser) FromFile(profilePath string) error {
-	p.configfile = profilePath
-	p.Configdir = filepath.Dir(profilePath)
-	file, err := os.ReadFile(profilePath)
-	if err != nil {
-		p.Waf.Logger.Error(err.Error(),
-			zap.String("path", profilePath),
-		)
-		return err
+	files := []string{}
+	if strings.Contains(profilePath, "*") {
+		var err error
+		files, err = filepath.Glob(profilePath)
+		if err != nil {
+			return err
+		}
+	} else {
+		files = append(files, profilePath)
 	}
+	for _, profilePath := range files {
+		p.configfile = profilePath
+		p.Configdir = filepath.Dir(profilePath)
+		file, err := os.ReadFile(profilePath)
+		if err != nil {
+			p.Waf.Logger.Error(err.Error(),
+				zap.String("path", profilePath),
+			)
+			return err
+		}
 
-	err = p.FromString(string(file))
-	if err != nil {
-		p.Waf.Logger.Error(err.Error(),
-			zap.String("path", profilePath),
-		)
-		return err
+		err = p.FromString(string(file))
+		if err != nil {
+			p.Waf.Logger.Error(err.Error(),
+				zap.String("path", profilePath),
+			)
+			return err
+		}
 	}
-	// TODO validar el error de scanner.Err()
 	return nil
 }
 

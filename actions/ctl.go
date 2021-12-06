@@ -173,7 +173,7 @@ func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, str
 			colkey = spl3[0]
 		}
 	}
-	collection, _ := variables.ParseVariable(strings.TrimSpace(colname))
+	collection, _ := variables.Parse(strings.TrimSpace(colname))
 	colkey = strings.ToLower(colkey)
 	var act ctlFunctionType
 	switch action {
