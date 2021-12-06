@@ -506,7 +506,10 @@ func (tx *Transaction) ProcessRequest(req *http.Request) (*types.Interruption, e
 		if err != nil {
 			return tx.Interruption, err
 		}
-		reader := tx.RequestBodyBuffer.Reader()
+		reader, err := tx.RequestBodyBuffer.Reader()
+		if err != nil {
+			return tx.Interruption, err
+		}
 		req.Body = io.NopCloser(reader)
 	}
 	return tx.ProcessRequestBody()
@@ -671,7 +674,10 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		mime = m[0]
 	}
 
-	reader := tx.RequestBodyBuffer.Reader()
+	reader, err := tx.RequestBodyBuffer.Reader()
+	if err != nil {
+		return nil, err
+	}
 
 	// Chunked requests will always be written to a temporary file
 	if tx.RequestBodyBuffer.Size() >= tx.RequestBodyLimit {
@@ -790,7 +796,10 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		tx.Waf.Rules.Eval(types.PhaseResponseBody, tx)
 		return tx.Interruption, nil
 	}
-	reader := tx.ResponseBodyBuffer.Reader()
+	reader, err := tx.ResponseBodyBuffer.Reader()
+	if err != nil {
+		return nil, err
+	}
 	reader = io.LimitReader(reader, tx.Waf.ResponseBodyLimit)
 	buf := new(strings.Builder)
 	length, _ := io.Copy(buf, reader)

@@ -30,7 +30,6 @@ func (mbp *multipartBodyProcessor) Read(reader io.Reader, mime string, storagePa
 	req, _ := http.NewRequest("GET", "/", reader)
 	req.Header.Set("Content-Type", mime)
 	err := req.ParseMultipartForm(1000000000)
-	defer req.Body.Close()
 	if err != nil {
 		return err
 	}

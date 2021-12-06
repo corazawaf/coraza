@@ -41,7 +41,10 @@ func (a *prependFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	if err != nil {
 		tx.Waf.Logger.Debug("failed to write buffer while evaluating prepend action")
 	}
-	reader := tx.ResponseBodyBuffer.Reader()
+	reader, err := tx.ResponseBodyBuffer.Reader()
+	if err != nil {
+		tx.Waf.Logger.Debug("failed to read response body while evaluating prepend action")
+	}
 	_, err = io.Copy(buf, reader)
 	if err != nil {
 		tx.Waf.Logger.Debug("failed to append response buffer while evaluating prepend action")

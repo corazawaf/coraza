@@ -56,12 +56,14 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 }
 
 // Reader Returns a working reader for the body buffer in memory or file
-func (br *BodyBuffer) Reader() io.Reader {
+func (br *BodyBuffer) Reader() (io.Reader, error) {
 	if br.writer == nil {
-		return bytes.NewReader(br.buffer.Bytes())
+		return bytes.NewReader(br.buffer.Bytes()), nil
 	}
-	_, _ = br.writer.Seek(0, 0)
-	return br.writer
+	if _, err := br.writer.Seek(0, 0); err != nil {
+		return nil, err
+	}
+	return br.writer, nil
 }
 
 // Size returns the current size of the body buffer

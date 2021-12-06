@@ -27,7 +27,11 @@ func TestBodyReaderMemory(t *testing.T) {
 		t.Error(err)
 	}
 	buf := new(strings.Builder)
-	if _, err := io.Copy(buf, br.Reader()); err != nil {
+	reader, err := br.Reader()
+	if err != nil {
+		t.Error(err)
+	}
+	if _, err := io.Copy(buf, reader); err != nil {
 		t.Error(err)
 	}
 	if buf.String() != "test" {
@@ -43,7 +47,11 @@ func TestBodyReaderFile(t *testing.T) {
 		t.Error(err)
 	}
 	buf := new(strings.Builder)
-	if _, err := io.Copy(buf, br.Reader()); err != nil {
+	reader, err := br.Reader()
+	if err != nil {
+		t.Error(err)
+	}
+	if _, err := io.Copy(buf, reader); err != nil {
 		t.Error(err)
 	}
 	if buf.String() != "test" {
@@ -67,7 +75,11 @@ func TestBodyReaderWriteFromReader(t *testing.T) {
 		t.Error(err)
 	}
 	buf := new(strings.Builder)
-	if _, err := io.Copy(buf, br.Reader()); err != nil {
+	reader, err := br.Reader()
+	if err != nil {
+		t.Error(err)
+	}
+	if _, err := io.Copy(buf, reader); err != nil {
 		t.Error(err)
 	}
 	if buf.String() != "test" {
