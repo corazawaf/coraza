@@ -141,7 +141,7 @@ const (
 	// Geo contains the location information of the client
 	Geo                 RuleVariable = iota
 	RequestCookiesNames RuleVariable = iota
-	FilesTmpnames       RuleVariable = iota
+	FilesTmpNames       RuleVariable = iota
 	// ArgsNames contains the names of the arguments (POST and GET)
 	ArgsNames RuleVariable = iota
 	// ArgsGetNames contains the names of the GET arguments
@@ -243,7 +243,7 @@ var rulemap = map[RuleVariable]string{
 	ResponseHeaders:               "RESPONSE_HEADERS",
 	Geo:                           "GEO",
 	RequestCookiesNames:           "REQUEST_COOKIES_NAMES",
-	FilesTmpnames:                 "FILES_TMPNAMES",
+	FilesTmpNames:                 "FILES_TMPNAMES",
 	ArgsNames:                     "ARGS_NAMES",
 	ArgsGetNames:                  "ARGS_GET_NAMES",
 	ArgsPostNames:                 "ARGS_POST_NAMES",

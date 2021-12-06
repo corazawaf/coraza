@@ -91,7 +91,7 @@ func TestTxMultipart(t *testing.T) {
 	}
 	exp := map[string]string{
 		"%{args_post.text}":      "test-value",
-		"%{files_combined_size}": "50",
+		"%{files_combined_size}": "60",
 		"%{files}":               "a.html",
 		"%{files_names}":         "file1",
 	}
