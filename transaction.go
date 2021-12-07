@@ -133,9 +133,9 @@ func (tx *Transaction) MacroExpansion(data string) string {
 	result := []rune{}
 	inMacro := false
 	macroOpen := false
-	inKey := false   // this means we are after the .
-	collection := "" // used to store the collection name
-	key := ""        // used to store the key of the collection
+	inKey := false         // this means we are after the .
+	collection := []rune{} // used to store the collection name
+	key := []rune{}        // used to store the key of the collection
 	for _, c := range data {
 		if !inMacro && c == '%' {
 			inMacro = true
@@ -150,25 +150,27 @@ func (tx *Transaction) MacroExpansion(data string) string {
 			// we close the macro
 			inMacro = false
 			macroOpen = false
-			variable, err := variables.Parse(collection)
+			colName := string(collection)
+			keyName := string(key)
+			variable, err := variables.Parse(colName)
 			if err != nil {
 				tx.Waf.Logger.Error("Failed to evaluate macro expansion", zap.String("txid", tx.ID), zap.Error(err))
 				continue
 			}
 			col := tx.GetCollection(variable)
 			if col == nil {
-				tx.Waf.Logger.Error("Failed to evaluate macro expansion", zap.String("txid", tx.ID), zap.String("collection", collection))
+				tx.Waf.Logger.Error("Failed to evaluate macro expansion", zap.String("txid", tx.ID), zap.String("collection", colName))
 				continue
 			}
-			res := col.Get(key)
+			res := col.Get(keyName)
 			if len(res) != 0 {
 				// non empty result
 				result = append(result, []rune(res[0])...)
-				tx.Waf.Logger.Debug("Macro expanding", zap.String("txid", tx.ID), zap.String("collection", collection), zap.String("key", key), zap.String("result", res[0]))
+				tx.Waf.Logger.Debug("Macro expanding", zap.String("txid", tx.ID), zap.String("collection", colName), zap.String("key", keyName), zap.String("result", res[0]))
 			}
 			// we reset collection and key
-			collection = ""
-			key = ""
+			collection = []rune{}
+			key = []rune{}
 			continue
 		}
 		if inMacro && macroOpen {
@@ -178,10 +180,10 @@ func (tx *Transaction) MacroExpansion(data string) string {
 				continue
 			}
 			if inKey {
-				key += string(c)
+				key = append(key, c)
 				continue
 			}
-			collection += string(c)
+			collection = append(collection, c)
 			continue
 		}
 		// we append the character
@@ -257,9 +259,10 @@ func (tx *Transaction) CaptureField(index int, value string) {
 func (tx *Transaction) resetAfterRule() {
 	// We reset capture 0-9
 	ctx := tx.GetCollection(variables.TX)
-	for i := 0; i < 10; i++ {
-		si := strconv.Itoa(i)
-		ctx.Set(si, []string{""})
+	// RUNE 48 = 0
+	// RUNE 57 = 9
+	for i := rune(48); i <= 57; i++ {
+		ctx.Set(string(i), []string{""})
 	}
 	tx.GetCollection(variables.MatchedVars).Reset()
 	tx.GetCollection(variables.MatchedVarsNames).Reset()
