@@ -137,6 +137,8 @@ func (tx *Transaction) MacroExpansion(data string) string {
 	inKey := false                  // this means we are after the .
 	collection := strings.Builder{} // used to store the collection name
 	key := strings.Builder{}        // used to store the key of the collection
+	collection.Grow(30)
+	key.Grow(30)
 	for _, c := range data {
 		if !inMacro && c == '%' {
 			inMacro = true
@@ -171,7 +173,9 @@ func (tx *Transaction) MacroExpansion(data string) string {
 			}
 			// we reset collection and key
 			collection.Reset()
+			collection.Grow(30)
 			key.Reset()
+			key.Grow(30)
 			continue
 		}
 		if inMacro && macroOpen {

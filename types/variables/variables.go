@@ -18,7 +18,7 @@ Variables are created as bytes and they have a string representation
 package variables
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 )
 
@@ -266,6 +266,8 @@ func (v RuleVariable) Name() string {
 	return "ERROR"
 }
 
+var errUnknownVariable = errors.New("Unknown variable")
+
 // Parse returns the byte interpretation
 // of a variable from a string
 // Returns error if there is no representation
@@ -273,7 +275,7 @@ func Parse(v string) (RuleVariable, error) {
 	if v, ok := rulemapRev[strings.ToUpper(v)]; ok {
 		return v, nil
 	}
-	return 0, fmt.Errorf("unknown variable %s", v)
+	return 0, errUnknownVariable
 }
 
 func init() {
