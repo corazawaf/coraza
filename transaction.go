@@ -130,12 +130,13 @@ func (tx *Transaction) MacroExpansion(data string) string {
 	if data == "" {
 		return ""
 	}
-	result := []rune{}
+	result := strings.Builder{}
+	result.Grow(len(data) * 2)
 	inMacro := false
 	macroOpen := false
-	inKey := false         // this means we are after the .
-	collection := []rune{} // used to store the collection name
-	key := []rune{}        // used to store the key of the collection
+	inKey := false                  // this means we are after the .
+	collection := strings.Builder{} // used to store the collection name
+	key := strings.Builder{}        // used to store the key of the collection
 	for _, c := range data {
 		if !inMacro && c == '%' {
 			inMacro = true
@@ -150,8 +151,8 @@ func (tx *Transaction) MacroExpansion(data string) string {
 			// we close the macro
 			inMacro = false
 			macroOpen = false
-			colName := string(collection)
-			keyName := string(key)
+			colName := collection.String()
+			keyName := key.String()
 			variable, err := variables.Parse(colName)
 			if err != nil {
 				tx.Waf.Logger.Error("Failed to evaluate macro expansion", zap.String("txid", tx.ID), zap.Error(err))
@@ -165,12 +166,12 @@ func (tx *Transaction) MacroExpansion(data string) string {
 			res := col.Get(keyName)
 			if len(res) != 0 {
 				// non empty result
-				result = append(result, []rune(res[0])...)
+				result.WriteString(res[0])
 				tx.Waf.Logger.Debug("Macro expanding", zap.String("txid", tx.ID), zap.String("collection", colName), zap.String("key", keyName), zap.String("result", res[0]))
 			}
 			// we reset collection and key
-			collection = []rune{}
-			key = []rune{}
+			collection.Reset()
+			key.Reset()
 			continue
 		}
 		if inMacro && macroOpen {
@@ -180,16 +181,16 @@ func (tx *Transaction) MacroExpansion(data string) string {
 				continue
 			}
 			if inKey {
-				key = append(key, c)
+				key.WriteRune(c)
 				continue
 			}
-			collection = append(collection, c)
+			collection.WriteRune(c)
 			continue
 		}
 		// we append the character
-		result = append(result, c)
+		result.WriteRune(c)
 	}
-	return string(result)
+	return result.String()
 }
 
 // AddRequestHeader Adds a request header
