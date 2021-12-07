@@ -30,7 +30,9 @@ type multipartBodyProcessor struct {
 	collections *collectionsMap
 }
 
-func (mbp *multipartBodyProcessor) Read(reader io.Reader, mimeType string, storagePath string) error {
+func (mbp *multipartBodyProcessor) Read(reader io.Reader, options Options) error {
+	mimeType := options.Mime
+	storagePath := options.StoragePath
 	mediaType, params, err := mime.ParseMediaType(mimeType)
 	if err != nil {
 		log.Fatal(err)

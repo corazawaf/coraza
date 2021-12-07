@@ -58,16 +58,28 @@ func (c *Collection) FindRegex(key *regexp.Regexp) []MatchData {
 // FindString returns a slice of MatchData for the string
 func (c *Collection) FindString(key string) []MatchData {
 	result := []MatchData{}
-	for k, vv := range c.data {
-		if key == "" || k == key {
-			for _, v := range vv {
+	if key == "" {
+		for k, data := range c.data {
+			for _, d := range data {
 				result = append(result, MatchData{
 					VariableName: c.name,
 					Variable:     c.variable,
 					Key:          k,
-					Value:        v,
+					Value:        d,
 				})
 			}
+		}
+		return result
+	}
+	// if key is not empty
+	if e, ok := c.data[key]; ok {
+		for _, value := range e {
+			result = append(result, MatchData{
+				VariableName: c.name,
+				Variable:     c.variable,
+				Key:          key,
+				Value:        value,
+			})
 		}
 	}
 	return result

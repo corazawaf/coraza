@@ -27,7 +27,7 @@ type jsonBodyProcessor struct {
 	collections collectionsMap
 }
 
-func (js *jsonBodyProcessor) Read(reader io.Reader, _ string, _ string) error {
+func (js *jsonBodyProcessor) Read(reader io.Reader, _ Options) error {
 	// dump reader to byte array
 	var data []byte
 	buf := make([]byte, 1024)

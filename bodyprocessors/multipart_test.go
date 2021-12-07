@@ -29,7 +29,10 @@ Content-Type: text/html
 	payload = strings.ReplaceAll(payload, "\n", "\r\n")
 
 	p := multipartBodyProcessor{}
-	if err := p.Read(strings.NewReader(payload), "multipart/form-data; boundary=---------------------------9051914041544843365972754266", "/tmp"); err != nil {
+	if err := p.Read(strings.NewReader(payload), Options{
+		Mime:        "multipart/form-data; boundary=---------------------------9051914041544843365972754266",
+		StoragePath: "/tmp",
+	}); err != nil {
 		t.Error(err)
 	}
 

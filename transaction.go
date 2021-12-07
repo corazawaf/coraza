@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -121,9 +120,6 @@ type Transaction struct {
 	audit bool
 }
 
-// Used to test macro expansions
-var macroRegexp = regexp.MustCompile(`%\{([\w.-]+?)\}`)
-
 // MacroExpansion expands a string that contains %{somevalue.some-key}
 // into it's first value, for example:
 // 	v1 := tx.MacroExpansion("%{request_headers.user-agent")
@@ -134,36 +130,63 @@ func (tx *Transaction) MacroExpansion(data string) string {
 	if data == "" {
 		return ""
 	}
-
-	// \w includes alphanumeric and _
-	r := macroRegexp
-	matches := r.FindAllString(data, -1)
-	for _, v := range matches {
-		match := v[2 : len(v)-1]
-		matchspl := strings.SplitN(match, ".", 2)
-		col, err := variables.Parse(matchspl[0])
-		if err != nil {
-			// Invalid collection
+	result := []rune{}
+	inMacro := false
+	macroOpen := false
+	inKey := false   // this means we are after the .
+	collection := "" // used to store the collection name
+	key := ""        // used to store the key of the collection
+	for _, c := range data {
+		if !inMacro && c == '%' {
+			inMacro = true
+			macroOpen = false
 			continue
 		}
-		key := ""
-		if len(matchspl) == 2 {
-			key = matchspl[1]
-		}
-		collection := tx.GetCollection(col)
-		if collection == nil {
-			// Invalid collection again
+		if inMacro && !macroOpen && c == '{' {
+			macroOpen = true
 			continue
 		}
-		expansion := collection.Get(strings.ToLower(key))
-		if len(expansion) == 0 {
-			data = strings.ReplaceAll(data, v, "")
-		} else {
-			data = strings.ReplaceAll(data, v, expansion[0])
+		if inMacro && macroOpen && c == '}' {
+			// we close the macro
+			inMacro = false
+			macroOpen = false
+			variable, err := variables.Parse(collection)
+			if err != nil {
+				tx.Waf.Logger.Error("Failed to evaluate macro expansion", zap.String("txid", tx.ID), zap.Error(err))
+				continue
+			}
+			col := tx.GetCollection(variable)
+			if col == nil {
+				tx.Waf.Logger.Error("Failed to evaluate macro expansion", zap.String("txid", tx.ID), zap.String("collection", collection))
+				continue
+			}
+			res := col.Get(key)
+			if len(res) != 0 {
+				// empty result
+				result = append(result, []rune(res[0])...)
+			}
+			// we reset collection and key
+			collection = ""
+			key = ""
+			continue
 		}
+		if inMacro && macroOpen {
+			// we are inside the macro
+			if c == '.' {
+				inKey = true
+				continue
+			}
+			if inKey {
+				key += string(c)
+				continue
+			}
+			collection += string(c)
+			continue
+		}
+		// we append the character
+		result = append(result, c)
 	}
-
-	return data
+	return string(result)
 }
 
 // AddRequestHeader Adds a request header
@@ -665,7 +688,8 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
 		return nil, nil
 	}
-	if !tx.RequestBodyAccess {
+	// we won't process empty request bodies or disabled RequestBodyAccess
+	if !tx.RequestBodyAccess || tx.RequestBodyBuffer.Size() == 0 {
 		tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.Interruption, nil
 	}
@@ -717,7 +741,10 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.Interruption, nil
 	}
-	if err := bodyprocessor.Read(reader, mime, tx.Waf.UploadDir); err != nil {
+	if err := bodyprocessor.Read(reader, bodyprocessors.Options{
+		Mime:        mime,
+		StoragePath: tx.Waf.UploadDir,
+	}); err != nil {
 		tx.generateReqbodyError(err)
 		tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.Interruption, nil
