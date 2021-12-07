@@ -162,8 +162,9 @@ func (tx *Transaction) MacroExpansion(data string) string {
 			}
 			res := col.Get(key)
 			if len(res) != 0 {
-				// empty result
+				// non empty result
 				result = append(result, []rune(res[0])...)
+				tx.Waf.Logger.Debug("Macro expanding", zap.String("txid", tx.ID), zap.String("collection", collection), zap.String("key", key), zap.String("result", res[0]))
 			}
 			// we reset collection and key
 			collection = ""

@@ -18,8 +18,10 @@ import (
 	"regexp"
 	"strconv"
 
+	"strings"
+
 	"github.com/jptosso/coraza-waf/v2/types/variables"
-	"github.com/jptosso/coraza-waf/v2/utils/strings"
+	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
 )
 
 // Collection are used to store VARIABLE data
@@ -34,7 +36,7 @@ type Collection struct {
 
 // Get returns a slice of strings for a key
 func (c *Collection) Get(key string) []string {
-	return c.data[key]
+	return c.data[strings.ToLower(key)]
 }
 
 // FindRegex returns a slice of MatchData for the regex
@@ -125,7 +127,7 @@ func (c *Collection) AddUnique(key string, value string) {
 		c.Add(key, value)
 		return
 	}
-	if strings.InSlice(value, c.data[key]) {
+	if utils.InSlice(value, c.data[key]) {
 		return
 	}
 	c.Add(key, value)
