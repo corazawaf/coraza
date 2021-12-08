@@ -17,15 +17,20 @@ package operators
 import (
 	"strconv"
 
+	"github.com/jptosso/coraza-waf/v2"
 	engine "github.com/jptosso/coraza-waf/v2"
 )
 
 type ge struct {
-	data string
+	data coraza.Macro
 }
 
 func (o *ge) Init(data string) error {
-	o.data = data
+	macro, err := coraza.NewMacro(data)
+	if err != nil {
+		return err
+	}
+	o.data = *macro
 	return nil
 }
 
@@ -34,7 +39,7 @@ func (o *ge) Evaluate(tx *engine.Transaction, value string) bool {
 	if err != nil {
 		v = 0
 	}
-	data := tx.MacroExpansion(o.data)
+	data := o.data.Expand(tx)
 	dataint, err := strconv.Atoi(data)
 	if err != nil {
 		dataint = 0

@@ -21,15 +21,19 @@ import (
 )
 
 type within struct {
-	data string
+	data coraza.Macro
 }
 
 func (o *within) Init(data string) error {
-	o.data = data
+	macro, err := coraza.NewMacro(data)
+	if err != nil {
+		return err
+	}
+	o.data = *macro
 	return nil
 }
 
 func (o *within) Evaluate(tx *coraza.Transaction, value string) bool {
-	data := tx.MacroExpansion(o.data)
+	data := o.data.Expand(tx)
 	return strings.Contains(data, value)
 }

@@ -19,15 +19,19 @@ import (
 )
 
 type streq struct {
-	data string
+	data coraza.Macro
 }
 
 func (o *streq) Init(data string) error {
-	o.data = data
+	macro, err := coraza.NewMacro(data)
+	if err != nil {
+		return err
+	}
+	o.data = *macro
 	return nil
 }
 
 func (o *streq) Evaluate(tx *coraza.Transaction, value string) bool {
-	data := tx.MacroExpansion(o.data)
+	data := o.data.Expand(tx)
 	return data == value
 }

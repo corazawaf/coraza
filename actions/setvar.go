@@ -25,8 +25,8 @@ import (
 )
 
 type setvarFn struct {
-	key        string
-	value      string
+	key        coraza.Macro
+	value      coraza.Macro
 	collection variables.RuleVariable
 	isRemove   bool
 }
@@ -50,17 +50,25 @@ func (a *setvarFn) Init(r *coraza.Rule, data string) error {
 		return err
 	}
 	if len(splcol) == 2 {
-		a.key = splcol[1]
+		macro, err := coraza.NewMacro(splcol[1])
+		if err != nil {
+			return err
+		}
+		a.key = *macro
 	}
 	if len(spl) == 2 {
-		a.value = spl[1]
+		macro, err := coraza.NewMacro(spl[1])
+		if err != nil {
+			return err
+		}
+		a.value = *macro
 	}
 	return nil
 }
 
 func (a *setvarFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
-	key := tx.MacroExpansion(a.key)
-	value := tx.MacroExpansion(a.value)
+	key := a.key.Expand(tx)
+	value := a.value.Expand(tx)
 	a.evaluateTxCollection(r, tx, key, value)
 }
 
@@ -76,33 +84,34 @@ func (a *setvarFn) evaluateTxCollection(r *coraza.Rule, tx *coraza.Transaction, 
 	}
 
 	if a.isRemove {
-		collection.Remove(a.key)
+		collection.Remove(key)
 		return
 	}
-	res := collection.Get(a.key)
+	res := collection.Get(key)
 	if len(res) == 0 {
-		collection.Set(tx.MacroExpansion(a.key), []string{"0"})
+		collection.Set(key, []string{"0"})
 		res = []string{"0"}
 	}
 	switch {
-	case len(a.value) == 0:
-		collection.Set(tx.MacroExpansion(a.key), []string{""})
-	case a.value[0] == '+':
-		me, _ := strconv.Atoi(tx.MacroExpansion(a.value[1:]))
+	case len(value) == 0:
+		collection.Set(key, []string{""})
+	case value[0] == '+':
+		// TODO maybe we should validate here
+		me, _ := strconv.Atoi(value[1:])
 		txv, err := strconv.Atoi(res[0])
 		if err != nil {
 			return
 		}
-		collection.Set(tx.MacroExpansion(a.key), []string{strconv.Itoa(me + txv)})
-	case a.value[0] == '-':
-		me, _ := strconv.Atoi(tx.MacroExpansion(a.value[1:]))
+		collection.Set(key, []string{strconv.Itoa(me + txv)})
+	case value[0] == '-':
+		me, _ := strconv.Atoi(value[1:])
 		txv, err := strconv.Atoi(res[0])
 		if err != nil {
 			return
 		}
-		collection.Set(tx.MacroExpansion(a.key), []string{strconv.Itoa(txv - me)})
+		collection.Set(key, []string{strconv.Itoa(txv - me)})
 	default:
-		collection.Set(tx.MacroExpansion(a.key), []string{tx.MacroExpansion(a.value)})
+		collection.Set(key, []string{value})
 	}
 }
 

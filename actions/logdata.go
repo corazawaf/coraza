@@ -23,12 +23,16 @@ type logdataFn struct {
 }
 
 func (a *logdataFn) Init(r *coraza.Rule, data string) error {
-	r.LogData = data
+	macro, err := coraza.NewMacro(data)
+	if err != nil {
+		return err
+	}
+	r.LogData = *macro
 	return nil
 }
 
 func (a *logdataFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
-	tx.Logdata = tx.MacroExpansion(r.LogData)
+	tx.Logdata = r.LogData.Expand(tx)
 }
 
 func (a *logdataFn) Type() types.RuleActionType {

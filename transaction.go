@@ -120,83 +120,6 @@ type Transaction struct {
 	audit bool
 }
 
-// MacroExpansion expands a string that contains %{somevalue.some-key}
-// into it's first value, for example:
-// 	v1 := tx.MacroExpansion("%{request_headers.user-agent")
-//  v2 := tx.GetCollection(variables.RequestHeaders).GetFirstString("user-agent")
-//  v1 == v2 // returns true
-// Important: this function is case insensitive
-func (tx *Transaction) MacroExpansion(data string) string {
-	if data == "" {
-		return ""
-	}
-	result := strings.Builder{}
-	result.Grow(len(data) * 2)
-	inMacro := false
-	macroOpen := false
-	inKey := false                  // this means we are after the .
-	collection := strings.Builder{} // used to store the collection name
-	key := strings.Builder{}        // used to store the key of the collection
-	collection.Grow(30)
-	key.Grow(30)
-	for _, c := range data {
-		if !inMacro && c == '%' {
-			inMacro = true
-			macroOpen = false
-			continue
-		}
-		if inMacro && !macroOpen && c == '{' {
-			macroOpen = true
-			continue
-		}
-		if inMacro && macroOpen && c == '}' {
-			// we close the macro
-			inMacro = false
-			macroOpen = false
-			colName := collection.String()
-			keyName := key.String()
-			variable, err := variables.Parse(colName)
-			if err != nil {
-				tx.Waf.Logger.Error("Failed to evaluate macro expansion", zap.String("txid", tx.ID), zap.Error(err))
-				continue
-			}
-			col := tx.GetCollection(variable)
-			if col == nil {
-				tx.Waf.Logger.Error("Failed to evaluate macro expansion", zap.String("txid", tx.ID), zap.String("collection", colName))
-				continue
-			}
-			res := col.Get(keyName)
-			if len(res) != 0 {
-				// non empty result
-				result.WriteString(res[0])
-				tx.Waf.Logger.Debug("Macro expanding", zap.String("txid", tx.ID), zap.String("collection", colName), zap.String("key", keyName), zap.String("result", res[0]))
-			}
-			// we reset collection and key
-			collection.Reset()
-			collection.Grow(30)
-			key.Reset()
-			key.Grow(30)
-			continue
-		}
-		if inMacro && macroOpen {
-			// we are inside the macro
-			if c == '.' {
-				inKey = true
-				continue
-			}
-			if inKey {
-				key.WriteRune(c)
-				continue
-			}
-			collection.WriteRune(c)
-			continue
-		}
-		// we append the character
-		result.WriteRune(c)
-	}
-	return result.String()
-}
-
 // AddRequestHeader Adds a request header
 //
 // With this method it is possible to feed Coraza with a request header.
@@ -330,7 +253,7 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 func (tx *Transaction) MatchVariable(match MatchData) {
 	varname := match.Variable.Name()
 	if match.Key != "" {
-		varname = fmt.Sprintf("%s:%s", varname, match.Key)
+		varname += fmt.Sprintf(":%s", match.Key)
 	}
 	// Array of values
 	matchedVars := tx.GetCollection(variables.MatchedVars)
@@ -983,7 +906,7 @@ func (tx *Transaction) AuditLog() loggers.AuditLog {
 				Line:     mr.Rule.Line,
 				ID:       r.ID,
 				Rev:      r.Rev,
-				Msg:      r.Msg,
+				Msg:      r.Msg.String(),
 				Data:     mr.Data,
 				Severity: r.Severity,
 				Ver:      r.Version,

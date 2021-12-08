@@ -21,11 +21,15 @@ import (
 )
 
 type appendFn struct {
-	data string
+	data coraza.Macro
 }
 
 func (a *appendFn) Init(r *coraza.Rule, data string) error {
-	a.data = data
+	macro, err := coraza.NewMacro(data)
+	if err != nil {
+		return err
+	}
+	a.data = *macro
 	return nil
 }
 
@@ -34,7 +38,7 @@ func (a *appendFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 		tx.Waf.Logger.Debug("append rejected because of ContentInjection")
 		return
 	}
-	data := tx.MacroExpansion(a.data)
+	data := a.data.Expand(tx)
 	if _, err := tx.ResponseBodyBuffer.Write([]byte(data)); err != nil {
 		tx.Waf.Logger.Error("append failed to write to response buffer", zap.Error(err))
 	}

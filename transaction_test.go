@@ -472,7 +472,11 @@ func makeTransaction() *Transaction {
 
 func validateMacroExpansion(tests map[string]string, tx *Transaction, t *testing.T) {
 	for k, v := range tests {
-		res := tx.MacroExpansion(k)
+		macro, err := NewMacro(k)
+		if err != nil {
+			t.Error(err)
+		}
+		res := macro.Expand(tx)
 		if res != v {
 			t.Error("Failed set transaction for " + k + ", expected " + v + ", got " + res)
 		}

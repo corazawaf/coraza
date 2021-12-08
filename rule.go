@@ -176,7 +176,7 @@ type Rule struct {
 	// Message text to be macro expanded and logged
 	// In future versions we might use a special type of string that
 	// supports cached macro expansions. For performance
-	Msg string
+	Msg Macro
 
 	// Rule revision value
 	Rev string
@@ -194,7 +194,7 @@ type Rule struct {
 	Severity types.RuleSeverity
 
 	// Rule logdata
-	LogData string
+	LogData Macro
 
 	// If true, triggering this rule write to the error log
 	Log bool
@@ -226,9 +226,9 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	matchedValues := []MatchData{}
 	tx.GetCollection(variables.Rule).SetData(map[string][]string{
 		"id":       {strconv.Itoa(rid)},
-		"msg":      {r.Msg},
+		"msg":      {r.Msg.Expand(tx)},
 		"rev":      {r.Rev},
-		"logdata":  {tx.MacroExpansion(r.LogData)},
+		"logdata":  {r.LogData.Expand(tx)},
 		"severity": {r.Severity.String()},
 	})
 	// secmarkers and secactions will always match
@@ -362,8 +362,8 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 			tx.MatchRule(MatchedRule{
 				Rule:            *r,
 				MatchedData:     matchedValues[0],
-				Message:         tx.MacroExpansion(r.Msg),
-				Data:            tx.MacroExpansion(r.LogData),
+				Message:         r.Msg.Expand(tx),
+				Data:            r.LogData.Expand(tx),
 				URI:             tx.GetCollection(variables.RequestURI).GetFirstString(""),
 				ID:              tx.ID,
 				Disruptive:      r.Disruptive,
