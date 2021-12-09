@@ -20,10 +20,16 @@ import (
 	"path/filepath"
 )
 
+type LoggerOptions struct {
+	DirMode  fs.FileMode
+	FileMode fs.FileMode
+	File     string
+	Dir      string
+}
+
 // Logger is a wrapper to hold configurations, a writer and a formatter
 // It is stored in the WAF Instance and used by the transactions
 // It must be instanced by using NewLogger(...)
-// TODO maybe we should not export it
 type Logger struct {
 	file      string
 	directory string
