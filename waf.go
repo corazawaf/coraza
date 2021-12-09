@@ -165,7 +165,7 @@ func (w *Waf) NewTransaction() *Transaction {
 	defer w.mux.RUnlock()
 	tx := &Transaction{
 		Waf:                  *w,
-		collections:          make([]*Collection, 100), // TODO fix count
+		collections:          make([]*Collection, variables.Count), // TODO fix count
 		ID:                   utils.SafeRandom(19),
 		Timestamp:            time.Now().UnixNano(),
 		AuditEngine:          w.AuditEngine,

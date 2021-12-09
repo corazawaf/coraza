@@ -250,6 +250,7 @@ func TestRequestStruct(t *testing.T) {
 
 func TestResetCapture(t *testing.T) {
 	tx := makeTransaction()
+	tx.Capture = true
 	tx.CaptureField(5, "test")
 	if tx.GetCollection(variables.TX).GetFirstString("5") != "test" {
 		t.Error("failed to set capture field from tx")

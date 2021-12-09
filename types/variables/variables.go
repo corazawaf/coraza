@@ -25,6 +25,9 @@ import (
 // This file repeats the same content many times in order to make access
 // efficient for seclang and transactions
 
+// Count contains the number of existing variables
+const Count = 87
+
 // RuleVariable is used for the rule to identify information
 // Each RuleVariable is unique and represents a variable
 type RuleVariable byte
@@ -263,7 +266,7 @@ func (v RuleVariable) Name() string {
 	if name, ok := rulemap[v]; ok {
 		return name
 	}
-	return "ERROR"
+	return "INVALID_VARIABLE"
 }
 
 var errUnknownVariable = errors.New("Unknown variable")

@@ -185,16 +185,18 @@ func (tx *Transaction) CaptureField(index int, value string) {
 
 // this function is used to control which variables are reset after a new rule is evaluated
 func (tx *Transaction) resetAfterRule() {
-	// We reset capture 0-9
-	ctx := tx.GetCollection(variables.TX)
-	// RUNE 48 = 0
-	// RUNE 57 = 9
-	for i := rune(48); i <= 57; i++ {
-		ctx.Set(string(i), []string{""})
+	if tx.Capture {
+		// We reset capture 0-9
+		ctx := tx.GetCollection(variables.TX)
+		// RUNE 48 = 0
+		// RUNE 57 = 9
+		for i := rune(48); i <= 57; i++ {
+			ctx.Set(string(i), []string{""})
+		}
+		tx.Capture = false
 	}
 	tx.GetCollection(variables.MatchedVars).Reset()
 	tx.GetCollection(variables.MatchedVarsNames).Reset()
-	tx.Capture = false
 }
 
 // ParseRequestReader Parses binary request including body,
@@ -276,7 +278,7 @@ func (tx *Transaction) MatchVariable(match MatchData) {
 
 // MatchRule Matches a rule to be logged
 func (tx *Transaction) MatchRule(mr MatchedRule) {
-	tx.Waf.Logger.Debug("rule matched", zap.String("txid", tx.ID), zap.Int("rule", mr.Rule.ID))
+	tx.Waf.Logger.Debug("rule matched", zap.String("txid", tx.ID), zap.Int("rule", mr.Rule.ID), zap.String("data", mr.Data))
 	/*
 		if mr.Rule.Log && tx.Waf.ErrorLogger != nil {
 			// TODO log based on severity

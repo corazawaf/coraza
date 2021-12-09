@@ -16,6 +16,7 @@
             headers:
                 content-type: application/x-www-form-urlencoded
                 CookIe: phpmyadminphp=test
+                user-agent: <ModSecurity CRS 3 Tests
             data: "pineapple=123&file=cat+/etc/\\passw\\d"
         output:
           triggered_rules:
@@ -37,6 +38,7 @@
             - 800
             - 900
             - 1100
+            - 920274
             
   rules: |
     SecRule REQBODY_PROCESSOR "" "id: 10, log"
@@ -66,3 +68,6 @@
     SecRule ARGS|!ARGS:/t.*/ "aaa" "id:900,log,phase:1"
     SecRule ARGS|!ARGS:/js.*/ "bbb" "id:1000,log,phase:1"
     SecRule ARGS|!ARGS:/js.*/ "74B0CB414BD77D17B5680A6386EF1666" "id:1100,log,phase:1"
+
+    SecRule REQUEST_HEADERS|!REQUEST_HEADERS:User-Agent|!REQUEST_HEADERS:Referer|!REQUEST_HEADERS:Cookie|!REQUEST_HEADERS:Sec-Fetch-User|!REQUEST_HEADERS:Sec-CH-UA-Mobile \
+      "@validateByteRange 32,34,38,42-59,61,65-90,95,97-122" "id:920274,phase:1,log,t:none,t:urlDecodeUni"

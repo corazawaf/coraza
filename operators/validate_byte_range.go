@@ -73,19 +73,18 @@ func (o *validateByteRange) Evaluate(tx *coraza.Transaction, data string) bool {
 		return false
 	}
 	input := []byte(data)
-	for _, b := range o.data {
-		pass := true
-		for _, c := range input {
-			// fmt.Printf("%d %d: %s\n", b[0], b[1], string(c))
-			if (byte(c) < b[0]) || (byte(c) > b[1]) {
-				pass = false
+	// we must iterate each byte from input and check if it is in the range
+	// if every byte is within the range we return false
+	matched := 0
+	for _, c := range input {
+		for _, r := range o.data {
+			if c >= r[0] && c <= r[1] {
+				matched++
+				break
 			}
 		}
-		if pass {
-			return false
-		}
 	}
-	return true
+	return len(input) != matched
 }
 
 func (o *validateByteRange) addRange(start int, end int) error {

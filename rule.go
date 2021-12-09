@@ -442,7 +442,7 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key interface{}) er
 		if st == "" {
 			return fmt.Errorf("invalid variable negation key, it cannot be empty")
 		}
-		str = st
+		str = strings.ToLower(st)
 	case *regexp.Regexp:
 		if v.String() == "" {
 			return fmt.Errorf("invalid variable negation key, it cannot be an empty regex")
