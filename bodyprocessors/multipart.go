@@ -74,7 +74,6 @@ func (mbp *multipartBodyProcessor) Read(reader io.Reader, options Options) error
 			fileSizes = append(fileSizes, fmt.Sprintf("%d", sz))
 			filesArgNames = append(filesArgNames, p.FormName())
 		} else {
-			fmt.Println("VARIABLE", p.FormName())
 			// if is a field
 			data, err := io.ReadAll(p)
 			if err != nil {
