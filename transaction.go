@@ -193,7 +193,7 @@ func (tx *Transaction) resetCaptures() {
 	// RUNE 48 = 0
 	// RUNE 57 = 9
 	for i := rune(48); i <= 57; i++ {
-		ctx.Set(string(i), []string{""})
+		ctx.SetIndex(string(i), 0, "")
 	}
 	tx.Capture = false
 }

@@ -138,6 +138,20 @@ func (c *Collection) Set(key string, value []string) {
 	c.data[key] = value
 }
 
+// SetIndex will place the value under the index
+// If the index is higher than the current size of the collection
+// it will be appended
+func (c *Collection) SetIndex(key string, index int, value string) {
+	if c.data[key] == nil {
+		c.data[key] = []string{}
+	}
+	if len(c.data[key]) <= index {
+		c.data[key] = append(c.data[key], value)
+		return
+	}
+	c.data[key][index] = value
+}
+
 // Remove deletes the key from the collection
 func (c *Collection) Remove(key string) {
 	delete(c.data, key)
@@ -161,8 +175,10 @@ func (c *Collection) SetData(data map[string][]string) {
 
 // Reset the current collection
 func (c *Collection) Reset() {
-	c.data = map[string][]string{}
-	c.data[""] = []string{}
+	c.data = nil
+	c.data = map[string][]string{
+		"": {},
+	}
 }
 
 // NewCollection Creates a new collection
