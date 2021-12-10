@@ -22,6 +22,7 @@ import (
 	"github.com/jptosso/coraza-waf/v2"
 	"github.com/jptosso/coraza-waf/v2/types"
 	"github.com/jptosso/coraza-waf/v2/types/variables"
+	"go.uber.org/zap"
 )
 
 type setvarFn struct {
@@ -69,6 +70,7 @@ func (a *setvarFn) Init(r *coraza.Rule, data string) error {
 func (a *setvarFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	key := a.key.Expand(tx)
 	value := a.value.Expand(tx)
+	tx.Waf.Logger.Debug("Setting var", zap.String("key", key), zap.String("value", value))
 	a.evaluateTxCollection(r, tx, key, value)
 }
 

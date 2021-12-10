@@ -15,35 +15,33 @@
 package operators
 
 import (
-	"regexp"
+	"strconv"
+	"testing"
 
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types/variables"
 )
 
-type rx struct {
-	re *regexp.Regexp
-}
-
-func (o *rx) Init(data string) error {
-	re, err := regexp.Compile(data)
-	o.re = re
-	return err
-}
-
-func (o *rx) Evaluate(tx *coraza.Transaction, value string) bool {
-	match := o.re.FindAllString(value, -1)
-	lcount := len(match)
-	if !tx.Capture && lcount > 0 {
-		return true
+func TestRx1(t *testing.T) {
+	rx := &rx{}
+	if err := rx.Init("."); err != nil {
+		t.Error(err)
 	}
-	if lcount > 0 && tx.Capture {
-		tx.CaptureField(0, value)
+	waf := coraza.NewWaf()
+	tx := waf.NewTransaction()
+	tx.Capture = true
+	res := rx.Evaluate(tx, "somedata")
+	if !res {
+		t.Error("rx1 failed")
 	}
-	for i, m := range match {
-		if i == 9 {
-			return true
+	vars := tx.GetCollection(variables.TX).Data()
+	if vars["0"][0] != "somedata" {
+		t.Error("rx1 failed")
+	}
+	for i, c := range "somedata" {
+		istr := strconv.Itoa(i + 1)
+		if vars[istr][0] != string(c) {
+			t.Errorf("rx1 failed, expected %s, got %s", string(c), vars[istr][0])
 		}
-		tx.CaptureField(i+1, m)
 	}
-	return lcount > 0
 }

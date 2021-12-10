@@ -179,24 +179,23 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 // CaptureField is used to set the TX:[index] variables by operators
 // that supports capture, like @rx
 func (tx *Transaction) CaptureField(index int, value string) {
+	tx.Waf.Logger.Debug("Capturing field", zap.String("txid", tx.ID),
+		zap.Int("index", index), zap.String("value", value))
 	i := strconv.Itoa(index)
 	tx.GetCollection(variables.TX).Set(i, []string{value})
 }
 
 // this function is used to control which variables are reset after a new rule is evaluated
-func (tx *Transaction) resetAfterRule() {
-	if tx.Capture {
-		// We reset capture 0-9
-		ctx := tx.GetCollection(variables.TX)
-		// RUNE 48 = 0
-		// RUNE 57 = 9
-		for i := rune(48); i <= 57; i++ {
-			ctx.Set(string(i), []string{""})
-		}
-		tx.Capture = false
+func (tx *Transaction) resetCaptures() {
+	tx.Waf.Logger.Debug("Reseting captured variables", zap.String("txid", tx.ID))
+	// We reset capture 0-9
+	ctx := tx.GetCollection(variables.TX)
+	// RUNE 48 = 0
+	// RUNE 57 = 9
+	for i := rune(48); i <= 57; i++ {
+		ctx.Set(string(i), []string{""})
 	}
-	tx.GetCollection(variables.MatchedVars).Reset()
-	tx.GetCollection(variables.MatchedVarsNames).Reset()
+	tx.Capture = false
 }
 
 // ParseRequestReader Parses binary request including body,

@@ -148,6 +148,10 @@ type Rule struct {
 	// a chain. Otherwise it will be 0
 	ParentID int
 
+	// Capture is used by the transaction to tell the operator
+	// to capture variables on TX:0-9
+	Capture bool
+
 	// Used to mark a rule as a secmarker and alter flows
 	SecMark string
 
@@ -213,6 +217,10 @@ type Rule struct {
 // If the operator matches, actions will be evaluated and it will return
 // the matched variables, keys and values (MatchData)
 func (r *Rule) Evaluate(tx *Transaction) []MatchData {
+	if r.Capture {
+		tx.Capture = true
+		defer tx.resetCaptures()
+	}
 	rid := r.ID
 	if rid == 0 {
 		rid = r.ParentID
@@ -338,6 +346,8 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	// We run non disruptive actions even if there is no chain match
 	for _, a := range r.actions {
 		if a.Function.Type() == types.ActionTypeNondisruptive {
+			tx.Waf.Logger.Debug("evaluating action", zap.String("type", "non_disruptive"),
+				zap.String("txid", tx.ID), zap.Int("rule", rid), zap.String("action", a.Name))
 			a.Function.Evaluate(r, tx)
 		}
 	}
@@ -375,7 +385,8 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		tx.Waf.Logger.Debug("detecting rule disruptive action", zap.String("txid", tx.ID), zap.Int("rule", r.ID))
 		for _, a := range r.actions {
 			if a.Function.Type() == types.ActionTypeDisruptive || a.Function.Type() == types.ActionTypeFlow {
-				tx.Waf.Logger.Debug("evaluating rule disruptive action", zap.String("txid", tx.ID), zap.Int("rule", rid))
+				tx.Waf.Logger.Debug("evaluating action", zap.String("type", "disruptive"),
+					zap.String("txid", tx.ID), zap.Int("rule", rid), zap.String("action", a.Name))
 				a.Function.Evaluate(r, tx)
 			}
 		}

@@ -172,8 +172,9 @@ RulesLoop:
 			// Skipping rule
 			continue
 		}
-		// we reset captures, matched_vars, matched_vars_names, etc
-		tx.resetAfterRule()
+		// we reset matched_vars, matched_vars_names, etc
+		tx.GetCollection(variables.MatchedVars).Reset()
+		tx.GetCollection(variables.MatchedVarsNames).Reset()
 
 		txr := tx.GetCollection(variables.Rule)
 		txr.Set("id", []string{rid})

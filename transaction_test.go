@@ -255,7 +255,7 @@ func TestResetCapture(t *testing.T) {
 	if tx.GetCollection(variables.TX).GetFirstString("5") != "test" {
 		t.Error("failed to set capture field from tx")
 	}
-	tx.resetAfterRule()
+	tx.resetCaptures()
 	if tx.GetCollection(variables.TX).GetFirstString("5") != "" {
 		t.Error("failed to reset capture field from tx")
 	}
