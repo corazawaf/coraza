@@ -36,11 +36,10 @@ func (o *validateByteRange) Init(data string) error {
 	var err error
 	for _, br := range spl {
 		br = strings.TrimSpace(br)
-		start := 0
-		end := 0
+		var start, end uint64
 		spl := strings.Split(br, "-")
 		if len(spl) == 1 {
-			start, err = strconv.Atoi(spl[0])
+			start, err = strconv.ParseUint(spl[0], 10, 8)
 			if err != nil {
 				return err
 			}
@@ -49,11 +48,11 @@ func (o *validateByteRange) Init(data string) error {
 			}
 			continue
 		}
-		start, err = strconv.Atoi(spl[0])
+		start, err = strconv.ParseUint(spl[0], 10, 8)
 		if err != nil {
 			return err
 		}
-		end, err = strconv.Atoi(spl[1])
+		end, err = strconv.ParseUint(spl[1], 10, 8)
 		if err != nil {
 			return err
 		}
@@ -87,11 +86,11 @@ func (o *validateByteRange) Evaluate(tx *coraza.Transaction, data string) bool {
 	return len(input) != matched
 }
 
-func (o *validateByteRange) addRange(start int, end int) error {
-	if (start < 0) || (start > 255) {
+func (o *validateByteRange) addRange(start uint64, end uint64) error {
+	if start > 255 {
 		return fmt.Errorf("invalid byte %d", start)
 	}
-	if (end < 0) || (end > 255) {
+	if end > 255 {
 		return fmt.Errorf("invalid byte %d", end)
 	}
 	o.data = append(o.data, []byte{byte(start), byte(end)})
