@@ -12,40 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package actions
+package operators
 
 import (
+	"strconv"
+	"testing"
+
 	"github.com/jptosso/coraza-waf/v2"
-	"github.com/jptosso/coraza-waf/v2/types"
-	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
+	"github.com/jptosso/coraza-waf/v2/types/variables"
 )
 
-type msgFn struct {
-}
-
-func (a *msgFn) Init(r *coraza.Rule, data string) error {
-	data = utils.RemoveQuotes(data)
-	msg, err := coraza.NewMacro(data)
-	if err != nil {
-		return err
+func TestRx1(t *testing.T) {
+	rx := &rx{}
+	if err := rx.Init("."); err != nil {
+		t.Error(err)
 	}
-	r.Msg = *msg
-	return nil
+	waf := coraza.NewWaf()
+	tx := waf.NewTransaction()
+	tx.Capture = true
+	res := rx.Evaluate(tx, "somedata")
+	if !res {
+		t.Error("rx1 failed")
+	}
+	vars := tx.GetCollection(variables.TX).Data()
+	if vars["0"][0] != "somedata" {
+		t.Error("rx1 failed")
+	}
+	for i, c := range "somedata" {
+		istr := strconv.Itoa(i + 1)
+		if vars[istr][0] != string(c) {
+			t.Errorf("rx1 failed, expected %s, got %s", string(c), vars[istr][0])
+		}
+	}
 }
-
-func (a *msgFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
-	// Not evaluated
-}
-
-func (a *msgFn) Type() types.RuleActionType {
-	return types.ActionTypeMetadata
-}
-
-func msg() coraza.RuleAction {
-	return &msgFn{}
-}
-
-var (
-	_ coraza.RuleAction = &msgFn{}
-	_ ruleActionWrapper = msg
-)

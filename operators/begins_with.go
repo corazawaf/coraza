@@ -17,19 +17,23 @@ package operators
 import (
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
 type beginsWith struct {
-	data string
+	data coraza.Macro
 }
 
 func (o *beginsWith) Init(data string) error {
-	o.data = data
+	macro, err := coraza.NewMacro(data)
+	if err != nil {
+		return err
+	}
+	o.data = *macro
 	return nil
 }
 
-func (o *beginsWith) Evaluate(tx *engine.Transaction, value string) bool {
-	data := tx.MacroExpansion(o.data)
+func (o *beginsWith) Evaluate(tx *coraza.Transaction, value string) bool {
+	data := o.data.Expand(tx)
 	return strings.HasPrefix(value, data)
 }

@@ -94,13 +94,17 @@ func (t *Test) SetRawRequest(request []byte) error {
 		return nil
 	}
 	spl := strings.Split(string(request), "\r\n")
-	if len(spl) == 0 {
-		return fmt.Errorf("invalid request")
+	if len(spl) == 0 || len(spl) == 1 {
+		// lets try with \n
+		spl = strings.Split(string(request), "\n")
+		if len(spl) == 0 || len(spl) == 1 {
+			return fmt.Errorf("Invalid request")
+		}
 	}
 	// parse request line
 	reqLine := strings.Split(spl[0], " ")
 	if len(reqLine) != 3 {
-		return fmt.Errorf("invalid request line")
+		return fmt.Errorf("invalid request line, got %v", reqLine)
 	}
 	t.RequestMethod = reqLine[0]
 	t.RequestURI = reqLine[1]
@@ -234,7 +238,7 @@ func (t *Test) Transaction() *engine.Transaction {
 func (t *Test) String() string {
 	tx := t.transaction
 	res := "======DEBUG======\n"
-	for v := byte(1); v < 100; v++ {
+	for v := byte(1); v < variables.Count; v++ {
 		vr := variables.RuleVariable(v)
 		if vr.Name() == "UNKNOWN" {
 			break

@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -121,51 +120,6 @@ type Transaction struct {
 	audit bool
 }
 
-// Used to test macro expansions
-var macroRegexp = regexp.MustCompile(`%\{([\w.-]+?)\}`)
-
-// MacroExpansion expands a string that contains %{somevalue.some-key}
-// into it's first value, for example:
-// 	v1 := tx.MacroExpansion("%{request_headers.user-agent")
-//  v2 := tx.GetCollection(variables.RequestHeaders).GetFirstString("user-agent")
-//  v1 == v2 // returns true
-// Important: this function is case insensitive
-func (tx *Transaction) MacroExpansion(data string) string {
-	if data == "" {
-		return ""
-	}
-
-	// \w includes alphanumeric and _
-	r := macroRegexp
-	matches := r.FindAllString(data, -1)
-	for _, v := range matches {
-		match := v[2 : len(v)-1]
-		matchspl := strings.SplitN(match, ".", 2)
-		col, err := variables.Parse(matchspl[0])
-		if err != nil {
-			// Invalid collection
-			continue
-		}
-		key := ""
-		if len(matchspl) == 2 {
-			key = matchspl[1]
-		}
-		collection := tx.GetCollection(col)
-		if collection == nil {
-			// Invalid collection again
-			continue
-		}
-		expansion := collection.Get(strings.ToLower(key))
-		if len(expansion) == 0 {
-			data = strings.ReplaceAll(data, v, "")
-		} else {
-			data = strings.ReplaceAll(data, v, expansion[0])
-		}
-	}
-
-	return data
-}
-
 // AddRequestHeader Adds a request header
 //
 // With this method it is possible to feed Coraza with a request header.
@@ -225,20 +179,22 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 // CaptureField is used to set the TX:[index] variables by operators
 // that supports capture, like @rx
 func (tx *Transaction) CaptureField(index int, value string) {
+	tx.Waf.Logger.Debug("Capturing field", zap.String("txid", tx.ID),
+		zap.Int("index", index), zap.String("value", value))
 	i := strconv.Itoa(index)
 	tx.GetCollection(variables.TX).Set(i, []string{value})
 }
 
 // this function is used to control which variables are reset after a new rule is evaluated
-func (tx *Transaction) resetAfterRule() {
+func (tx *Transaction) resetCaptures() {
+	tx.Waf.Logger.Debug("Reseting captured variables", zap.String("txid", tx.ID))
 	// We reset capture 0-9
 	ctx := tx.GetCollection(variables.TX)
-	for i := 0; i < 10; i++ {
-		si := strconv.Itoa(i)
-		ctx.Set(si, []string{""})
+	// RUNE 48 = 0
+	// RUNE 57 = 9
+	for i := rune(48); i <= 57; i++ {
+		ctx.SetIndex(string(i), 0, "")
 	}
-	tx.GetCollection(variables.MatchedVars).Reset()
-	tx.GetCollection(variables.MatchedVarsNames).Reset()
 	tx.Capture = false
 }
 
@@ -298,7 +254,7 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 func (tx *Transaction) MatchVariable(match MatchData) {
 	varname := match.Variable.Name()
 	if match.Key != "" {
-		varname = fmt.Sprintf("%s:%s", varname, match.Key)
+		varname += fmt.Sprintf(":%s", match.Key)
 	}
 	// Array of values
 	matchedVars := tx.GetCollection(variables.MatchedVars)
@@ -321,7 +277,7 @@ func (tx *Transaction) MatchVariable(match MatchData) {
 
 // MatchRule Matches a rule to be logged
 func (tx *Transaction) MatchRule(mr MatchedRule) {
-	tx.Waf.Logger.Debug("rule matched", zap.String("txid", tx.ID), zap.Int("rule", mr.Rule.ID))
+	tx.Waf.Logger.Debug("rule matched", zap.String("txid", tx.ID), zap.Int("rule", mr.Rule.ID), zap.String("data", mr.Data))
 	/*
 		if mr.Rule.Log && tx.Waf.ErrorLogger != nil {
 			// TODO log based on severity
@@ -665,7 +621,8 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
 		return nil, nil
 	}
-	if !tx.RequestBodyAccess {
+	// we won't process empty request bodies or disabled RequestBodyAccess
+	if !tx.RequestBodyAccess || tx.RequestBodyBuffer.Size() == 0 {
 		tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.Interruption, nil
 	}
@@ -717,7 +674,10 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.Interruption, nil
 	}
-	if err := bodyprocessor.Read(reader, mime, tx.Waf.UploadDir); err != nil {
+	if err := bodyprocessor.Read(reader, bodyprocessors.Options{
+		Mime:        mime,
+		StoragePath: tx.Waf.UploadDir,
+	}); err != nil {
 		tx.generateReqbodyError(err)
 		tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.Interruption, nil
@@ -947,7 +907,7 @@ func (tx *Transaction) AuditLog() loggers.AuditLog {
 				Line:     mr.Rule.Line,
 				ID:       r.ID,
 				Rev:      r.Rev,
-				Msg:      r.Msg,
+				Msg:      r.Msg.String(),
 				Data:     mr.Data,
 				Severity: r.Severity,
 				Ver:      r.Version,

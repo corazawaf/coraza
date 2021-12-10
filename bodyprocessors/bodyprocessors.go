@@ -17,11 +17,22 @@ package bodyprocessors
 import (
 	"fmt"
 	"io"
+	"io/fs"
 
 	"github.com/jptosso/coraza-waf/v2/types/variables"
 )
 
 type collectionsMap map[variables.RuleVariable]map[string][]string
+
+type Options struct {
+	// Mime is the type of the body, it may contain parameters
+	// like charset, boundary, etc.
+	Mime string
+	// StoragePath is the path where the body will be stored
+	StoragePath string
+	// FileMode is the mode of the file that will be created
+	FileMode fs.FileMode
+}
 
 // BodyProcessor interface is used to create
 // body processors for different content-types.
@@ -29,9 +40,9 @@ type collectionsMap map[variables.RuleVariable]map[string][]string
 // Hook to some variable and return data based on special
 // expressions like XPATH, JQ, etc.
 type BodyProcessor interface {
-	// Read will read the body and initialize the body processor
+	// Read will process the body and initialize the body processor
 	// It will return an error if the body is not valid
-	Read(reader io.Reader, mime string, storagePath string) error
+	Read(reader io.Reader, options Options) error
 	// Collections returns a map of collections, for example,
 	// the ARGS_POST variables from the REQUEST_BODY.
 	Collections() collectionsMap
@@ -50,10 +61,10 @@ type bodyProcessorWrapper = func() BodyProcessor
 
 var processors = map[string]bodyProcessorWrapper{}
 
-// RegisterBodyProcessor registers a body processor
+// RegisterPlugin registers a body processor
 // by name. If the body processor is already registered,
 // it will be overwritten
-func RegisterBodyProcessor(name string, fn func() BodyProcessor) {
+func RegisterPlugin(name string, fn func() BodyProcessor) {
 	processors[name] = fn
 }
 
@@ -67,16 +78,16 @@ func GetBodyProcessor(name string) (BodyProcessor, error) {
 }
 
 func init() {
-	RegisterBodyProcessor("json", func() BodyProcessor {
+	RegisterPlugin("json", func() BodyProcessor {
 		return &jsonBodyProcessor{}
 	})
-	RegisterBodyProcessor("urlencoded", func() BodyProcessor {
+	RegisterPlugin("urlencoded", func() BodyProcessor {
 		return &urlencodedBodyProcessor{}
 	})
-	RegisterBodyProcessor("multipart", func() BodyProcessor {
+	RegisterPlugin("multipart", func() BodyProcessor {
 		return &multipartBodyProcessor{}
 	})
-	RegisterBodyProcessor("xml", func() BodyProcessor {
+	RegisterPlugin("xml", func() BodyProcessor {
 		return &xmlBodyProcessor{}
 	})
 }

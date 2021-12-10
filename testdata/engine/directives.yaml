@@ -15,12 +15,15 @@
             - 1
             - 7
             - 9
+            - 9001000
+            - 9001002
           non_triggered_rules:
             - 2
             - 4
             - 5
             - 6
             - 8
+            - 9001001
   rules: |
     SecAction "id: 1, log"
     SecAction "id: 2, nolog, skipAfter:test-mark"
@@ -37,4 +40,13 @@
     SecMarker test-mark3
     SecAction "id: 9, log"
 
+    SecRule &TX:crs_exclusions_drupal|TX:crs_exclusions_drupal "@eq 0" \
+    "id:9001000,\
+    phase:2,\
+    log, \
+    skipAfter:END-DRUPAL-RULE-EXCLUSIONS"
 
+    SecAction "id: 9001001, log, phase:2"
+
+    SecMarker END-DRUPAL-RULE-EXCLUSIONS
+    SecAction "id: 9001002, log, phase:2"

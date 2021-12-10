@@ -31,20 +31,19 @@ func (o *rx) Init(data string) error {
 }
 
 func (o *rx) Evaluate(tx *coraza.Transaction, value string) bool {
-	// iterate over re if it matches value
-
 	match := o.re.FindAllString(value, -1)
-	if len(match) > 0 {
+	lcount := len(match)
+	if !tx.Capture && lcount > 0 {
+		return true
+	}
+	if lcount > 0 && tx.Capture {
 		tx.CaptureField(0, value)
 	}
 	for i, m := range match {
 		if i == 9 {
 			return true
 		}
-		// I actually think everything should be capturable, there is no need for the capture action...
-		// if tx.IsCapturable() {
 		tx.CaptureField(i+1, m)
-		// }
 	}
-	return len(match) > 0
+	return lcount > 0
 }

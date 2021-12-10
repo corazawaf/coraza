@@ -250,11 +250,12 @@ func TestRequestStruct(t *testing.T) {
 
 func TestResetCapture(t *testing.T) {
 	tx := makeTransaction()
+	tx.Capture = true
 	tx.CaptureField(5, "test")
 	if tx.GetCollection(variables.TX).GetFirstString("5") != "test" {
 		t.Error("failed to set capture field from tx")
 	}
-	tx.resetAfterRule()
+	tx.resetCaptures()
 	if tx.GetCollection(variables.TX).GetFirstString("5") != "" {
 		t.Error("failed to reset capture field from tx")
 	}
@@ -472,7 +473,11 @@ func makeTransaction() *Transaction {
 
 func validateMacroExpansion(tests map[string]string, tx *Transaction, t *testing.T) {
 	for k, v := range tests {
-		res := tx.MacroExpansion(k)
+		macro, err := NewMacro(k)
+		if err != nil {
+			t.Error(err)
+		}
+		res := macro.Expand(tx)
 		if res != v {
 			t.Error("Failed set transaction for " + k + ", expected " + v + ", got " + res)
 		}

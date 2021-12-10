@@ -83,7 +83,7 @@ func (rg *RuleGroup) DeleteByID(id int) {
 func (rg *RuleGroup) FindByMsg(msg string) []*Rule {
 	rules := []*Rule{}
 	for _, r := range rg.rules {
-		if r.Msg == msg {
+		if r.Msg.String() == msg {
 			rules = append(rules, r)
 		}
 	}
@@ -172,15 +172,17 @@ RulesLoop:
 			// Skipping rule
 			continue
 		}
-		// we reset captures, matched_vars, matched_vars_names, etc
-		tx.resetAfterRule()
+		// TODO this lines are SUPER SLOW
+		// we reset matched_vars, matched_vars_names, etc
+		tx.GetCollection(variables.MatchedVars).Reset()
+		tx.GetCollection(variables.MatchedVarsNames).Reset()
 
 		txr := tx.GetCollection(variables.Rule)
 		txr.Set("id", []string{rid})
 		txr.Set("rev", []string{r.Rev})
 		txr.Set("severity", []string{r.Severity.String()})
-		txr.Set("logdata", []string{r.LogData})
-		txr.Set("msg", []string{r.Msg})
+		txr.Set("logdata", []string{r.LogData.String()})
+		txr.Set("msg", []string{r.Msg.String()})
 		r.Evaluate(tx)
 		usedRules++
 	}

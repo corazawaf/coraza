@@ -1,0 +1,30 @@
+---
+  meta:
+    author: jptosso
+    description: Test if the macro expansions work
+    enabled: true
+    name: macroexpansion.yaml
+  tests:
+  -
+    test_title: macroexpansions
+    stages:
+    -
+      stage:
+        output:
+          triggered_rules:
+            - 100
+            - 150
+            - 200
+          non_triggered_rules:
+            - 901500
+  rules: |
+    SecAction "id:1,pass,setvar:'tx.inbound_anomaly_score_threshold=5',setvar:'tx.paranoia_level=1'"
+
+    SecRule TX:inbound_anomaly_score_threshold "@eq 5" "id:100,log,pass"
+
+    SecRule TX:inbound_anomaly_score_threshold "@eq %{tx.inbound_anomaly_ScorE_threshold}" "id:150,log,pass"
+
+    SecRule TX:paranoia_level "@eq 1" "id:200,log,pass"
+
+    SecRule TX:executing_paranoia_level "@lt %{tx.paranoia_level}" "id:901500,phase:1,log"
+

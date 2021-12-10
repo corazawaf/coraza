@@ -21,16 +21,20 @@ import (
 )
 
 type lt struct {
-	data string
+	data coraza.Macro
 }
 
 func (o *lt) Init(data string) error {
-	o.data = data
+	macro, err := coraza.NewMacro(data)
+	if err != nil {
+		return err
+	}
+	o.data = *macro
 	return nil
 }
 
 func (o *lt) Evaluate(tx *coraza.Transaction, value string) bool {
-	vv := tx.MacroExpansion(o.data)
+	vv := o.data.Expand(tx)
 	data, err := strconv.Atoi(vv)
 	if err != nil {
 		data = 0

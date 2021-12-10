@@ -148,6 +148,10 @@ type Rule struct {
 	// a chain. Otherwise it will be 0
 	ParentID int
 
+	// Capture is used by the transaction to tell the operator
+	// to capture variables on TX:0-9
+	Capture bool
+
 	// Used to mark a rule as a secmarker and alter flows
 	SecMark string
 
@@ -176,7 +180,7 @@ type Rule struct {
 	// Message text to be macro expanded and logged
 	// In future versions we might use a special type of string that
 	// supports cached macro expansions. For performance
-	Msg string
+	Msg Macro
 
 	// Rule revision value
 	Rev string
@@ -194,7 +198,7 @@ type Rule struct {
 	Severity types.RuleSeverity
 
 	// Rule logdata
-	LogData string
+	LogData Macro
 
 	// If true, triggering this rule write to the error log
 	Log bool
@@ -213,6 +217,10 @@ type Rule struct {
 // If the operator matches, actions will be evaluated and it will return
 // the matched variables, keys and values (MatchData)
 func (r *Rule) Evaluate(tx *Transaction) []MatchData {
+	if r.Capture {
+		tx.Capture = true
+		defer tx.resetCaptures()
+	}
 	rid := r.ID
 	if rid == 0 {
 		rid = r.ParentID
@@ -226,9 +234,9 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	matchedValues := []MatchData{}
 	tx.GetCollection(variables.Rule).SetData(map[string][]string{
 		"id":       {strconv.Itoa(rid)},
-		"msg":      {r.Msg},
+		"msg":      {r.Msg.Expand(tx)},
 		"rev":      {r.Rev},
-		"logdata":  {tx.MacroExpansion(r.LogData)},
+		"logdata":  {r.LogData.Expand(tx)},
 		"severity": {r.Severity.String()},
 	})
 	// secmarkers and secactions will always match
@@ -338,6 +346,8 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	// We run non disruptive actions even if there is no chain match
 	for _, a := range r.actions {
 		if a.Function.Type() == types.ActionTypeNondisruptive {
+			tx.Waf.Logger.Debug("evaluating action", zap.String("type", "non_disruptive"),
+				zap.String("txid", tx.ID), zap.Int("rule", rid), zap.String("action", a.Name))
 			a.Function.Evaluate(r, tx)
 		}
 	}
@@ -362,8 +372,8 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 			tx.MatchRule(MatchedRule{
 				Rule:            *r,
 				MatchedData:     matchedValues[0],
-				Message:         tx.MacroExpansion(r.Msg),
-				Data:            tx.MacroExpansion(r.LogData),
+				Message:         r.Msg.Expand(tx),
+				Data:            r.LogData.Expand(tx),
 				URI:             tx.GetCollection(variables.RequestURI).GetFirstString(""),
 				ID:              tx.ID,
 				Disruptive:      r.Disruptive,
@@ -375,7 +385,8 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		tx.Waf.Logger.Debug("detecting rule disruptive action", zap.String("txid", tx.ID), zap.Int("rule", r.ID))
 		for _, a := range r.actions {
 			if a.Function.Type() == types.ActionTypeDisruptive || a.Function.Type() == types.ActionTypeFlow {
-				tx.Waf.Logger.Debug("evaluating rule disruptive action", zap.String("txid", tx.ID), zap.Int("rule", rid))
+				tx.Waf.Logger.Debug("evaluating action", zap.String("type", "disruptive"),
+					zap.String("txid", tx.ID), zap.Int("rule", rid), zap.String("action", a.Name))
 				a.Function.Evaluate(r, tx)
 			}
 		}
@@ -442,7 +453,7 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key interface{}) er
 		if st == "" {
 			return fmt.Errorf("invalid variable negation key, it cannot be empty")
 		}
-		str = st
+		str = strings.ToLower(st)
 	case *regexp.Regexp:
 		if v.String() == "" {
 			return fmt.Errorf("invalid variable negation key, it cannot be an empty regex")

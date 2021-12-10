@@ -18,12 +18,15 @@ Variables are created as bytes and they have a string representation
 package variables
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 )
 
 // This file repeats the same content many times in order to make access
 // efficient for seclang and transactions
+
+// Count contains the number of existing variables
+const Count = 87
 
 // RuleVariable is used for the rule to identify information
 // Each RuleVariable is unique and represents a variable
@@ -263,8 +266,10 @@ func (v RuleVariable) Name() string {
 	if name, ok := rulemap[v]; ok {
 		return name
 	}
-	return "ERROR"
+	return "INVALID_VARIABLE"
 }
+
+var errUnknownVariable = errors.New("Unknown variable")
 
 // Parse returns the byte interpretation
 // of a variable from a string
@@ -273,7 +278,7 @@ func Parse(v string) (RuleVariable, error) {
 	if v, ok := rulemapRev[strings.ToUpper(v)]; ok {
 		return v, nil
 	}
-	return 0, fmt.Errorf("unknown variable %s", v)
+	return 0, errUnknownVariable
 }
 
 func init() {

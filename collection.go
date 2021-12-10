@@ -18,8 +18,10 @@ import (
 	"regexp"
 	"strconv"
 
+	"strings"
+
 	"github.com/jptosso/coraza-waf/v2/types/variables"
-	"github.com/jptosso/coraza-waf/v2/utils/strings"
+	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
 )
 
 // Collection are used to store VARIABLE data
@@ -34,7 +36,7 @@ type Collection struct {
 
 // Get returns a slice of strings for a key
 func (c *Collection) Get(key string) []string {
-	return c.data[key]
+	return c.data[strings.ToLower(key)]
 }
 
 // FindRegex returns a slice of MatchData for the regex
@@ -58,16 +60,28 @@ func (c *Collection) FindRegex(key *regexp.Regexp) []MatchData {
 // FindString returns a slice of MatchData for the string
 func (c *Collection) FindString(key string) []MatchData {
 	result := []MatchData{}
-	for k, vv := range c.data {
-		if key == "" || k == key {
-			for _, v := range vv {
+	if key == "" {
+		for k, data := range c.data {
+			for _, d := range data {
 				result = append(result, MatchData{
 					VariableName: c.name,
 					Variable:     c.variable,
 					Key:          k,
-					Value:        v,
+					Value:        d,
 				})
 			}
+		}
+		return result
+	}
+	// if key is not empty
+	if e, ok := c.data[key]; ok {
+		for _, value := range e {
+			result = append(result, MatchData{
+				VariableName: c.name,
+				Variable:     c.variable,
+				Key:          key,
+				Value:        value,
+			})
 		}
 	}
 	return result
@@ -113,7 +127,7 @@ func (c *Collection) AddUnique(key string, value string) {
 		c.Add(key, value)
 		return
 	}
-	if strings.InSlice(value, c.data[key]) {
+	if utils.InSlice(value, c.data[key]) {
 		return
 	}
 	c.Add(key, value)
@@ -122,6 +136,20 @@ func (c *Collection) AddUnique(key string, value string) {
 // Set will replace the key's value with this slice
 func (c *Collection) Set(key string, value []string) {
 	c.data[key] = value
+}
+
+// SetIndex will place the value under the index
+// If the index is higher than the current size of the collection
+// it will be appended
+func (c *Collection) SetIndex(key string, index int, value string) {
+	if c.data[key] == nil {
+		c.data[key] = []string{}
+	}
+	if len(c.data[key]) <= index {
+		c.data[key] = append(c.data[key], value)
+		return
+	}
+	c.data[key][index] = value
 }
 
 // Remove deletes the key from the collection
@@ -147,8 +175,10 @@ func (c *Collection) SetData(data map[string][]string) {
 
 // Reset the current collection
 func (c *Collection) Reset() {
-	c.data = map[string][]string{}
-	c.data[""] = []string{}
+	c.data = nil
+	c.data = map[string][]string{
+		"": {},
+	}
 }
 
 // NewCollection Creates a new collection

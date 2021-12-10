@@ -20,7 +20,8 @@ import (
 
 func TestRG(t *testing.T) {
 	r := NewRule()
-	r.Msg = "test"
+	macroMsg, _ := NewMacro("test")
+	r.Msg = *macroMsg
 	r.ID = 1
 	r.Tags = []string{
 		"test",

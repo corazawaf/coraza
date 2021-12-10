@@ -27,7 +27,7 @@ import (
 
 type setenvFn struct {
 	key   string
-	value string
+	value coraza.Macro
 }
 
 func (a *setenvFn) Init(r *coraza.Rule, data string) error {
@@ -36,12 +36,16 @@ func (a *setenvFn) Init(r *coraza.Rule, data string) error {
 		return fmt.Errorf("invalid key value for setvar")
 	}
 	a.key = spl[0]
-	a.value = spl[1]
+	macro, err := coraza.NewMacro(spl[1])
+	if err != nil {
+		return err
+	}
+	a.value = *macro
 	return nil
 }
 
 func (a *setenvFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
-	v := tx.MacroExpansion(a.value)
+	v := a.value.Expand(tx)
 	// set env variable
 	if err := os.Setenv(a.key, v); err != nil {
 		tx.Waf.Logger.Error("Error setting env variable", zap.Error(err))

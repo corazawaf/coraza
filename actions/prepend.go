@@ -22,11 +22,15 @@ import (
 )
 
 type prependFn struct {
-	data string
+	data coraza.Macro
 }
 
 func (a *prependFn) Init(r *coraza.Rule, data string) error {
-	a.data = data
+	macro, err := coraza.NewMacro(data)
+	if err != nil {
+		return err
+	}
+	a.data = *macro
 	return nil
 }
 
@@ -35,7 +39,7 @@ func (a *prependFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 		tx.Waf.Logger.Debug("append rejected because of ContentInjection")
 		return
 	}
-	data := tx.MacroExpansion(a.data)
+	data := a.data.Expand(tx)
 	buf := coraza.NewBodyBuffer(tx.Waf.TmpDir, tx.Waf.RequestBodyInMemoryLimit)
 	_, err := buf.Write([]byte(data))
 	if err != nil {

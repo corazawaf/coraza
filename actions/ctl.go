@@ -85,7 +85,7 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	case ctlRemoveTargetByMsg:
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
-			if r.Msg == a.value {
+			if r.Msg.String() == a.value {
 				tx.RemoveRuleTargetByID(r.ID, a.collection, a.colKey)
 			}
 		}
@@ -124,7 +124,7 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	case ctlRuleRemoveByMsg:
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
-			if r.Msg == a.value {
+			if r.Msg.String() == a.value {
 				tx.RemoveRuleByID(r.ID)
 			}
 		}

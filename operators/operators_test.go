@@ -57,7 +57,7 @@ func TestTransformations(t *testing.T) {
 		cases := []*Test{}
 		err := json.Unmarshal(f, &cases)
 		if err != nil {
-			t.Error("Cannot parse test case")
+			t.Error("Cannot parse test case", err)
 		}
 		for _, data := range cases {
 			// UNMARSHALL does not transform \u0000 to binary
@@ -65,10 +65,16 @@ func TestTransformations(t *testing.T) {
 			data.Param = strings.ReplaceAll(data.Param, `\u0000`, "\u0000")
 
 			if strings.Contains(data.Input, `\x`) {
-				data.Input, _ = strconv.Unquote(`"` + data.Input + `"`)
+				data.Input, err = strconv.Unquote(`"` + data.Input + `"`)
+				if err != nil {
+					t.Error("Cannot parse test case", err)
+				}
 			}
 			if strings.Contains(data.Param, `\x`) {
-				data.Param, _ = strconv.Unquote(`"` + data.Param + `"`)
+				data.Param, err = strconv.Unquote(`"` + data.Param + `"`)
+				if err != nil {
+					t.Error("Cannot parse test case", err)
+				}
 			}
 			op, err := GetOperator(data.Name)
 			if err != nil {
@@ -87,6 +93,8 @@ func TestTransformations(t *testing.T) {
 				t.Error(err)
 			}
 			res := op.Evaluate(waf.NewTransaction(), data.Input)
+			// 1 = expected true
+			// 0 = expected false
 			if (res && data.Ret != 1) || (!res && data.Ret == 1) {
 				expected := "match"
 				if data.Ret == 0 {

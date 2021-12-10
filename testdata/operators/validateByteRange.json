@@ -14,20 +14,6 @@
       "type" : "op"
    },
    {
-      "param" : "xxx",
-      "input" : "TestCase",
-      "type" : "op",
-      "ret" : 1,
-      "name" : "validateByteRange"
-   },
-   {
-      "param" : "xxx",
-      "input" : "\u0000",
-      "type" : "op",
-      "ret" : 0,
-      "name" : "validateByteRange"
-   },
-   {
       "param" : "0-255",
       "input" : "abcdefghi",
       "name" : "validateByteRange",

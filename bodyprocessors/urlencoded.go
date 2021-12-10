@@ -27,7 +27,7 @@ type urlencodedBodyProcessor struct {
 	collections *collectionsMap
 }
 
-func (ubp *urlencodedBodyProcessor) Read(reader io.Reader, _ string, _ string) error {
+func (ubp *urlencodedBodyProcessor) Read(reader io.Reader, _ Options) error {
 	buf := new(strings.Builder)
 	if _, err := io.Copy(buf, reader); err != nil {
 		return err

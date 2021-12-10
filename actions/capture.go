@@ -22,11 +22,13 @@ import (
 type captureFn struct{}
 
 func (a *captureFn) Init(r *coraza.Rule, b1 string) error {
+	// this will capture only the current rule
+	r.Capture = true
 	return nil
 }
 
 func (a *captureFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
-	tx.Capture = true
+
 }
 
 func (a *captureFn) Type() types.RuleActionType {

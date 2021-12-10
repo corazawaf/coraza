@@ -487,4 +487,5 @@ var directivesMap = map[string]directive{
 	"secruleupdateactionbyid":  directiveUnsupported,
 	"secrulescript":            directiveUnsupported,
 	"secruleperftime":          directiveUnsupported,
+	"SecUnicodeMap":            directiveUnsupported,
 }

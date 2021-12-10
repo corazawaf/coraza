@@ -15,9 +15,7 @@
 package operators
 
 import (
-	"encoding/hex"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -25,38 +23,76 @@ import (
 )
 
 type validateByteRange struct {
-	re *regexp.Regexp
+	data [][]byte
 }
 
 func (o *validateByteRange) Init(data string) error {
+	o.data = [][]byte{}
+	if data == "" {
+		return nil
+	}
 	ranges := strings.Split(data, ",")
 	spl := ranges
-	rega := []string{}
+	var err error
 	for _, br := range spl {
-		br = strings.Trim(br, " ")
-		b1 := 0
-		b2 := 0
-		if strings.Contains(br, "-") {
-			spl = strings.SplitN(br, "-", 2)
-			b1, _ = strconv.Atoi(spl[0])
-			b2, _ = strconv.Atoi(spl[1])
-		} else {
-			b1, _ := strconv.Atoi(br)
-			b2 = b1
+		br = strings.TrimSpace(br)
+		var start, end uint64
+		spl := strings.Split(br, "-")
+		if len(spl) == 1 {
+			start, err = strconv.ParseUint(spl[0], 10, 8)
+			if err != nil {
+				return err
+			}
+			if err := o.addRange(start, start); err != nil {
+				return err
+			}
+			continue
 		}
-		b1h := hex.EncodeToString([]byte{byte(b1)})
-		b2h := hex.EncodeToString([]byte{byte(b2)})
-		rega = append(rega, fmt.Sprintf("[\\x%s-\\x%s]", b1h, b2h))
+		start, err = strconv.ParseUint(spl[0], 10, 8)
+		if err != nil {
+			return err
+		}
+		end, err = strconv.ParseUint(spl[1], 10, 8)
+		if err != nil {
+			return err
+		}
+		if err := o.addRange(start, end); err != nil {
+			return err
+		}
 	}
-	rege := strings.Join(rega, "|")
-	// fmt.Println(rege)
-	o.re = regexp.MustCompile(rege)
 	return nil
 }
 
 func (o *validateByteRange) Evaluate(tx *coraza.Transaction, data string) bool {
-	data = o.re.ReplaceAllString(data, "")
-	// fmt.Println("DEBUG: ", data, len(data))
-	// fmt.Printf("%s: %d\n", data, len(data))
-	return len(data) > 0
+	lenData := len(o.data)
+	if lenData == 0 {
+		return true
+	}
+	if data == "" && lenData > 0 {
+		return false
+	}
+	input := []byte(data)
+	// we must iterate each byte from input and check if it is in the range
+	// if every byte is within the range we return false
+	matched := 0
+	for _, c := range input {
+		for _, r := range o.data {
+			if c >= r[0] && c <= r[1] {
+				matched++
+				break
+			}
+		}
+	}
+	return len(input) != matched
+}
+
+func (o *validateByteRange) addRange(start uint64, end uint64) error {
+	if start > 255 {
+		return fmt.Errorf("invalid byte %d", start)
+	}
+	if end > 255 {
+		return fmt.Errorf("invalid byte %d", end)
+	}
+	o.data = append(o.data, []byte{byte(start), byte(end)})
+	return nil
 }

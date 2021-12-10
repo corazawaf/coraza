@@ -29,7 +29,7 @@ type xmlBodyProcessor struct {
 	contents []string
 }
 
-func (xbp *xmlBodyProcessor) Read(reader io.Reader, _ string, _ string) error {
+func (xbp *xmlBodyProcessor) Read(reader io.Reader, _ Options) error {
 	var err error
 	xbp.values, xbp.contents, err = readXML(reader)
 	return err

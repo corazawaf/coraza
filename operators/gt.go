@@ -17,24 +17,28 @@ package operators
 import (
 	"strconv"
 
-	engine "github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2"
 )
 
 type gt struct {
-	data string
+	data coraza.Macro
 }
 
 func (o *gt) Init(data string) error {
-	o.data = data
+	macro, err := coraza.NewMacro(data)
+	if err != nil {
+		return err
+	}
+	o.data = *macro
 	return nil
 }
 
-func (o *gt) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *gt) Evaluate(tx *coraza.Transaction, value string) bool {
 	v, err := strconv.Atoi(value)
 	if err != nil {
 		v = 0
 	}
-	data := tx.MacroExpansion(o.data)
+	data := o.data.Expand(tx)
 	k, err := strconv.Atoi(data)
 	if err != nil {
 		k = 0

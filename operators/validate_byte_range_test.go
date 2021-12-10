@@ -20,70 +20,30 @@ import (
 	engine "github.com/jptosso/coraza-waf/v2"
 )
 
-func TestCRS920272(t *testing.T) {
-	ranges := "32-36,38-126"
-	goodStrings := [][]int{
-		{104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 111},
-		{38, 104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 111, 126},
-		{32, 104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 111, 125},
-	}
-
-	badStrings := [][]int{
-		{35, 38, 104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 127, 128},
-		{104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 111, -1},
-		{104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 111, 0},
-	}
-
+func TestValidateByteRangeCase4(t *testing.T) {
+	ranges := "0-255"
 	op := &validateByteRange{}
 	if err := op.Init(ranges); err != nil {
-		t.Error("Cannot init validatebuterange operator")
+		t.Error("Cannot init byte range operator")
 	}
 	tx := getTransaction()
-
-	for _, gs := range goodStrings {
-		str := asciiToString(gs)
-		if op.Evaluate(tx, str) {
-			t.Errorf("Invalid byte between ranges (positive): %s", str)
-		}
-	}
-
-	for _, bs := range badStrings {
-		str := asciiToString(bs)
-		if !op.Evaluate(tx, str) {
-			t.Errorf("Invalid byte between ranges (negative): %s", str)
-		}
+	if op.Evaluate(tx, "\u00d0\u0090") {
+		t.Error("Invalid byte between ranges (negative)", []byte("\u00d0\u0090"))
 	}
 }
 
-func TestCRS920270(t *testing.T) {
-	ranges := "1-255"
-	goodStrings := [][]int{
-		{104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 111},
-		{38, 104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 111, 126},
-		{32, 104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 111, 125},
-		{1, 104, 101, 108, 111, 32, 119, 97, 122, 122, 117, 112, 32, 98, 114, 111, 255},
-	}
-
+func TestValidateByteRangeCase5(t *testing.T) {
+	ranges := "9,10,13,32-126,128-255"
 	op := &validateByteRange{}
 	if err := op.Init(ranges); err != nil {
-		t.Error("Cannot init validatebuterange operator")
+		t.Error("Cannot init byte range operator")
 	}
-	tx := getTransaction()
-
-	for _, gs := range goodStrings {
-		str := asciiToString(gs)
-		if op.Evaluate(tx, str) {
-			t.Errorf("Invalid null byte: %s", str)
-		}
+	if len(op.data) != 5 || op.data[0][0] != 9 || op.data[1][0] != 10 || op.data[2][0] != 13 || op.data[3][0] != 32 || op.data[3][1] != 126 || op.data[4][0] != 128 || op.data[4][1] != 255 {
+		t.Error("Invalid range length", len(op.data))
 	}
-}
-
-func asciiToString(ascii []int) string {
-	runes := []rune{}
-	for _, a := range ascii {
-		runes = append(runes, rune(a))
+	if op.Evaluate(nil, "/\ufffdindex.html?test=test1") {
+		t.Error("Invalid byte between ranges (negative)", []byte("/\ufffdindex.html?test=test1"))
 	}
-	return string(runes)
 }
 
 func getTransaction() *engine.Transaction {
