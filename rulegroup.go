@@ -184,6 +184,7 @@ RulesLoop:
 		txr.Set("logdata", []string{r.LogData.String()})
 		txr.Set("msg", []string{r.Msg.String()})
 		r.Evaluate(tx)
+		tx.Capture = false // we reset captures
 		usedRules++
 	}
 	tx.Waf.Logger.Debug("Finished phase",

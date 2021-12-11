@@ -71,7 +71,7 @@ func (a *setvarFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	key := a.key.Expand(tx)
 	value := a.value.Expand(tx)
 	tx.Waf.Logger.Debug("Setting var", zap.String("key", key), zap.String("value", value))
-	a.evaluateTxCollection(r, tx, key, value)
+	a.evaluateTxCollection(r, tx, strings.ToLower(key), value)
 }
 
 func (a *setvarFn) Type() types.RuleActionType {
@@ -89,25 +89,37 @@ func (a *setvarFn) evaluateTxCollection(r *coraza.Rule, tx *coraza.Transaction, 
 		collection.Remove(key)
 		return
 	}
-	res := collection.Get(key)
-	if len(res) == 0 {
-		collection.Set(key, []string{"0"})
-		res = []string{"0"}
+	res := ""
+	if r := collection.Get(key); len(r) > 0 {
+		res = r[0]
 	}
+	var err error
 	switch {
 	case len(value) == 0:
+		// if nothing to input
 		collection.Set(key, []string{""})
 	case value[0] == '+':
-		// TODO maybe we should validate here
-		me, _ := strconv.Atoi(value[1:])
-		txv, err := strconv.Atoi(res[0])
-		if err != nil {
-			return
+		// if we want to sum
+		sum := 0
+		if len(value) > 1 {
+			sum, err = strconv.Atoi(value[1:])
+			if err != nil {
+				tx.Waf.Logger.Error("Invalid value for setvar", zap.String("value", value))
+				return
+			}
 		}
-		collection.Set(key, []string{strconv.Itoa(me + txv)})
+		val := 0
+		if res != "" {
+			val, err = strconv.Atoi(res)
+			if err != nil {
+				tx.Waf.Logger.Error("Invalid value for setvar", zap.String("value", res))
+				return
+			}
+		}
+		collection.Set(key, []string{strconv.Itoa(sum + val)})
 	case value[0] == '-':
 		me, _ := strconv.Atoi(value[1:])
-		txv, err := strconv.Atoi(res[0])
+		txv, err := strconv.Atoi(res)
 		if err != nil {
 			return
 		}

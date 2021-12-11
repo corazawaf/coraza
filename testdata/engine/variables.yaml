@@ -32,6 +32,7 @@
             - 500
             - 600
             - 700
+            - 100
             - 1000
             #- 1500
             - 123123
@@ -50,7 +51,7 @@
     # TODO
     #SecRule &ARGS_GET|!ARGS_GET:/.*/ "@eq 0" "id: 1500, phase:1, block, log"
     SecRule REQUEST_METHOD "POST" "id:15, log"
-    SecAction "id:100,setvar:'tx.test=%{REQUEST_METHOD}'"
+    SecAction "id:100,log,setvar:'tx.test=%{REQUEST_METHOD}'"
     SecRule TX:test "POST" "id:110,log"
 
     SecAction "id:130,setvar:'tx.allowed_methods=GET HEAD OPTIONS'"

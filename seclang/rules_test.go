@@ -15,6 +15,7 @@
 package seclang
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/jptosso/coraza-waf/v2"
@@ -26,8 +27,6 @@ func TestRuleMatch(t *testing.T) {
 	parser, _ := NewParser(waf)
 	err := parser.FromString(`
 		SecRuleEngine On
-		SecDebugLog /tmp/coraza.log
-		SecDebugLogLevel 5
 		SecDefaultAction "phase:1,deny,status:403,log"
 		SecRule REMOTE_ADDR "^127.*" "id:1,phase:1"
 		SecRule REMOTE_ADDR "!@rx 127.0.0.1" "id:2,phase:1"
@@ -55,8 +54,6 @@ func TestRuleMatchWithRegex(t *testing.T) {
 	parser, _ := NewParser(waf)
 	err := parser.FromString(`
 		SecRuleEngine On
-		SecDebugLog /tmp/coraza.log
-		SecDebugLogLevel 5
 		SecDefaultAction "phase:1,deny,status:403,log"
 		SecRule ARGS:/^id_.*/ "123" "phase:1, id:1"
 	`)
@@ -140,5 +137,79 @@ func TestSecAuditLogs(t *testing.T) {
 
 	if tx.AuditLog().Messages[0].Data.ID != 4482 {
 		t.Error("failed to match rule id")
+	}
+}
+
+func TestRuleLogging(t *testing.T) {
+	waf := coraza.NewWaf()
+	logs := []string{}
+	waf.SetErrorLogCb(func(mr coraza.MatchedRule) {
+		logs = append(logs, mr.ErrorLog(403))
+	})
+	parser, _ := NewParser(waf)
+	err := parser.FromString(`
+		SecRule ARGS ".*" "phase:1, id:1,capture,log,setvar:'tx.arg_%{tx.0}=%{tx.0}'"
+		SecAction "id:2,phase:1,log,setvar:'tx.test=ok'"
+		SecAction "id:3,phase:1,nolog"
+	`)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	tx := waf.NewTransaction()
+	tx.AddArgument("GET", "test1", "123")
+	tx.AddArgument("GET", "test2", "456")
+	tx.ProcessRequestHeaders()
+	if len(tx.MatchedRules) != 3 {
+		t.Errorf("failed to match rules with %d", len(tx.MatchedRules))
+	}
+	// we expect 3 logs
+	if len(logs) != 3 {
+		t.Errorf("failed to log with %d", len(logs))
+	} else {
+		for _, l := range logs[:1] {
+			if !strings.Contains(l, "[id \"1\"]") {
+				t.Errorf("failed to log rule, got \n%s", l)
+			}
+		}
+		if !strings.Contains(logs[2], "[id \"2\"]") {
+			t.Errorf("failed to log rule, got \n%s", logs[2])
+		}
+	}
+	txcol := tx.GetCollection(variables.TX)
+	if txcol.GetFirstString("arg_123") != "123" || txcol.GetFirstString("arg_456") != "456" {
+		t.Errorf("failed to match setvar from multiple match, got %q and %q", txcol.GetFirstString("arg_test1"), txcol.GetFirstString("arg_test2"))
+	}
+	if txcol.GetFirstString("test") != "ok" {
+		t.Errorf("failed to match setvar from multiple match, got %q", txcol.GetFirstString("test"))
+	}
+}
+
+func TestRuleChains(t *testing.T) {
+	waf := coraza.NewWaf()
+	parser, _ := NewParser(waf)
+	err := parser.FromString(`
+		SecRule ARGS "123" "id:1,phase:1,log,chain"
+			SecRule &ARGS "@gt 0" "chain"
+			SecRule ARGS "456" "setvar:'tx.test=ok'"
+		
+		SecRule ARGS "123" "id:2,phase:1,log,chain"
+			SecRule &ARGS "@gt 100" "chain"
+			SecRule ARGS "456" "setvar:'tx.test2=fail'"
+	`)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	tx := waf.NewTransaction()
+	tx.AddArgument("GET", "test1", "123")
+	tx.AddArgument("GET", "test2", "456")
+	tx.ProcessRequestHeaders()
+	if len(tx.MatchedRules) != 1 {
+		t.Errorf("failed to match rules with %d matches, expected 1", len(tx.MatchedRules))
+	}
+	if tx.GetCollection(variables.TX).GetFirstString("test") != "ok" {
+		t.Error("failed to set var")
+	}
+	if tx.GetCollection(variables.TX).GetFirstString("test2") == "fail" {
+		t.Error("failed to set var, it shouldn't be set")
 	}
 }

@@ -66,7 +66,7 @@ func (mr MatchedRule) details() string {
 		msg = data[:200]
 	}
 	resolvedIP := ""
-	log.WriteString(fmt.Sprintf(" [file %q] [line %q] [id %q] [rev %q] [msg %q] [data %q] [severity %q] [ver %q] [maturity %q] [accuracy %q]",
+	log.WriteString(fmt.Sprintf(" [file %q] [line %q] [id %q] [rev %q] [msg %q] [data %q] [severity %q] [ver %q] [maturity %q] [accuracy %q]",
 		mr.Rule.File, strconv.Itoa(mr.Rule.Line), strconv.Itoa(mr.Rule.ID), mr.Rule.Rev, msg, data, mr.Rule.Severity.String(), mr.Rule.Version,
 		strconv.Itoa(mr.Rule.Maturity), strconv.Itoa(mr.Rule.Accuracy)))
 	for _, t := range mr.Rule.Tags {
