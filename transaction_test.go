@@ -134,25 +134,6 @@ func TestTxGetField(t *testing.T) {
 	// GetField
 }
 
-func TestTxMatch(t *testing.T) {
-	waf := NewWaf()
-	r := NewRule()
-	mr := MatchData{
-		"test",
-		0,
-		"test",
-		"test",
-	}
-	tx := waf.NewTransaction()
-	tx.MatchRule(MatchedRule{
-		Rule:        *r,
-		MatchedData: mr,
-	})
-	if len(tx.MatchedRules) == 0 {
-		t.Error("Failed to match value")
-	}
-}
-
 func TestRequestBody(t *testing.T) {
 	urlencoded := "some=result&second=data"
 	// xml := "<test><content>test</content></test>"
@@ -212,11 +193,8 @@ func TestAuditLogFields(t *testing.T) {
 	tx.AddResponseHeader("test", "test")
 	rule := NewRule()
 	rule.ID = 131
-	tx.MatchRule(MatchedRule{
-		Rule:    *rule,
-		Message: "some msg",
-		ID:      tx.ID,
-		MatchedData: MatchData{
+	tx.MatchRule(rule, []MatchData{
+		{
 			VariableName: "UNIQUE_ID",
 			Variable:     variables.UniqueID,
 		},
@@ -278,9 +256,9 @@ func TestLogCallback(t *testing.T) {
 		buffer = mr.ErrorLog(403)
 	}
 	tx := waf.NewTransaction()
-	tx.MatchRule(MatchedRule{
-		Rule: *NewRule(),
-		MatchedData: MatchData{
+	rule := NewRule()
+	tx.MatchRule(rule, []MatchData{
+		{
 			VariableName: "UNIQUE_ID",
 			Variable:     variables.UniqueID,
 		},

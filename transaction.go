@@ -195,7 +195,6 @@ func (tx *Transaction) resetCaptures() {
 	for i := rune(48); i <= 57; i++ {
 		ctx.SetIndex(string(i), 0, "")
 	}
-	tx.Capture = false
 }
 
 // ParseRequestReader Parses binary request including body,
@@ -276,31 +275,39 @@ func (tx *Transaction) MatchVariable(match MatchData) {
 }
 
 // MatchRule Matches a rule to be logged
-func (tx *Transaction) MatchRule(mr MatchedRule) {
-	tx.Waf.Logger.Debug("rule matched", zap.String("txid", tx.ID), zap.Int("rule", mr.Rule.ID), zap.String("data", mr.Data))
-	/*
-		if mr.Rule.Log && tx.Waf.ErrorLogger != nil {
-			// TODO log based on severity
-		}*/
-	tx.MatchedRules = append(tx.MatchedRules, mr)
+func (tx *Transaction) MatchRule(r *Rule, md []MatchData) {
+	tx.Waf.Logger.Debug("rule matched", zap.String("txid", tx.ID), zap.Int("rule", r.ID))
+	// tx.MatchedRules = append(tx.MatchedRules, mr)
 
 	// If the rule is set to audit, we log the transaction to the audit log
-	if mr.Rule.Audit {
+	if r.Audit {
 		tx.audit = true
 	}
 
 	// set highest_severity
 	hs := tx.GetCollection(variables.HighestSeverity)
 	maxSeverity, _ := types.ParseRuleSeverity(hs.GetFirstString(""))
-	if mr.Rule.Severity > maxSeverity {
-		hs.Set("", []string{strconv.Itoa(mr.Rule.Severity.Int())})
-		tx.Waf.Logger.Debug("Set highest severity", zap.Int("severity", mr.Rule.Severity.Int()))
+	if r.Severity > maxSeverity {
+		hs.Set("", []string{strconv.Itoa(r.Severity.Int())})
+		tx.Waf.Logger.Debug("Set highest severity", zap.Int("severity", r.Severity.Int()))
 	}
-	// Rules are matched to error log in real time
-	// We only match rules if rule.Log is forced
-	if mr.Rule.Log && tx.Waf.errorLogCb != nil {
-		tx.Waf.errorLogCb(mr)
+	for _, data := range md {
+		mr := MatchedRule{
+			URI:             tx.GetCollection(variables.RequestURI).GetFirstString(""),
+			ID:              tx.ID,
+			ServerIPAddress: tx.GetCollection(variables.ServerAddr).GetFirstString(""),
+			ClientIPAddress: tx.GetCollection(variables.RemoteAddr).GetFirstString(""),
+			Message:         r.Msg.Expand(tx),
+			Data:            r.LogData.Expand(tx),
+			Rule:            *r,
+			MatchedData:     data,
+		}
+		tx.MatchedRules = append(tx.MatchedRules, mr)
+		if tx.Waf.errorLogCb != nil && r.Log {
+			tx.Waf.errorLogCb(mr)
+		}
 	}
+
 }
 
 // GetStopWatch is used to debug phase durations
