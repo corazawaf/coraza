@@ -251,10 +251,12 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 // MatchVariable Creates the MATCHED_ variables required by chains and macro expansion
 // MATCHED_VARS, MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES
 func (tx *Transaction) MatchVariable(match MatchData) {
-	varname := match.Variable.Name()
+	varname := match.VariableName
 	if match.Key != "" {
 		varname += fmt.Sprintf(":%s", match.Key)
 	}
+	// TODO this is a temporary fix, the match should be VARIABLE:key
+	varname += fmt.Sprintf(":%s", match.Value)
 	// Array of values
 	matchedVars := tx.GetCollection(variables.MatchedVars)
 	// Last value

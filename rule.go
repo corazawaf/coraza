@@ -216,7 +216,7 @@ type Rule struct {
 // Evaluate will evaluate the current rule for the indicated transaction
 // If the operator matches, actions will be evaluated and it will return
 // the matched variables, keys and values (MatchData)
-func (r *Rule) Evaluate(tx *Transaction) bool {
+func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	if r.Capture {
 		tx.Capture = true
 	}
@@ -318,7 +318,7 @@ func (r *Rule) Evaluate(tx *Transaction) bool {
 						matchedValues = append(matchedValues, mr)
 						// we only capture when it matches
 						if r.Capture {
-							tx.resetCaptures()
+							defer tx.resetCaptures()
 						}
 					}
 					tx.Waf.Logger.Debug("Evaluate rule operator", zap.String("txid", tx.ID),
@@ -337,16 +337,22 @@ func (r *Rule) Evaluate(tx *Transaction) bool {
 	}
 
 	if len(matchedValues) == 0 {
-		return false
+		return matchedValues
 	}
 
 	if r.Chain != nil {
 		nr := r.Chain
 		tx.Waf.Logger.Debug("Evaluating rule chain", zap.Int("rule", rid), zap.String("raw", nr.Raw))
 		for nr != nil {
-			if !nr.Evaluate(tx) {
+			mv := nr.Evaluate(tx)
+			if len(mv) == 0 {
 				// we fail the chain
-				return false
+				return nil
+			}
+			// we set the last chain match as the current rules
+			if nr.Chain == nil {
+				matchedValues = mv
+				break
 			}
 			nr = nr.Chain
 		}
@@ -371,7 +377,7 @@ func (r *Rule) Evaluate(tx *Transaction) bool {
 		}
 
 	}
-	return len(matchedValues) > 0
+	return matchedValues
 }
 
 func (r *Rule) matchVariable(tx *Transaction, m MatchData) {
