@@ -33,7 +33,7 @@ func (a *denyFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	}
 	if tx.RuleEngine == types.RuleEngineOn {
 		tx.Interruption = &types.Interruption{
-			Status: 403,
+			Status: r.DisruptiveStatus,
 			RuleID: rid,
 			Action: "deny",
 		}

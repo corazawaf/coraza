@@ -20,11 +20,20 @@ import (
 	"path/filepath"
 )
 
+// LoggerOptions contains all the information required by a Logger
+// like where to store a log and the file permissions.
+// Implementations may ignore the options.
 type LoggerOptions struct {
-	DirMode  fs.FileMode
+	// DirMode is the file mode to assign to newly created directories
+	DirMode fs.FileMode
+	// FileMode is the mode to assign to newly created files
 	FileMode fs.FileMode
-	File     string
-	Dir      string
+	// File provides a unique path to some location like
+	// /var/log/coraza/audit.log
+	File string
+	// Dir provides a unique path to write files, it's mostly
+	// used for concurrent logging
+	Dir string
 }
 
 // Logger is a wrapper to hold configurations, a writer and a formatter

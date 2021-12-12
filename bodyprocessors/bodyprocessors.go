@@ -24,6 +24,9 @@ import (
 
 type collectionsMap map[variables.RuleVariable]map[string][]string
 
+// Options are used by BodyProcessors to provide some settings
+// like a path to store temporary files.
+// Implementations may ignore the options.
 type Options struct {
 	// Mime is the type of the body, it may contain parameters
 	// like charset, boundary, etc.

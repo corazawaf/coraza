@@ -161,6 +161,10 @@ type Rule struct {
 	// Contains the child rule to chain, nil if there are no chains
 	Chain *Rule
 
+	// DisruptiveStatus is the status that will be set to interruptions
+	// by disruptive rules
+	DisruptiveStatus int
+
 	// Where is this rule stored
 	File string
 

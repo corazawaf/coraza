@@ -246,3 +246,27 @@ func TestTagsAreNotPrintedTwice(t *testing.T) {
 		}
 	}
 }
+
+func TestStatusFromInterruptions(t *testing.T) {
+	waf := coraza.NewWaf()
+	logs := []string{}
+	waf.SetErrorLogCb(func(mr coraza.MatchedRule) {
+		logs = append(logs, mr.ErrorLog(403))
+	})
+	parser, _ := NewParser(waf)
+	err := parser.FromString(`
+		SecRule ARGS "123" "phase:1, id:1,log,deny,status:500"
+	`)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	tx := waf.NewTransaction()
+	tx.AddArgument("GET", "test1", "123")
+	tx.AddArgument("GET", "test2", "456")
+	it := tx.ProcessRequestHeaders()
+	if it == nil {
+		t.Error("failed to interrupt")
+	} else if it.Status != 500 {
+		t.Errorf("failed to set status, got %d", it.Status)
+	}
+}
