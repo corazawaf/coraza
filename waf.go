@@ -304,6 +304,8 @@ func (w *Waf) UpdateAuditLogger() error {
 // note: this is not thread safe
 func (w *Waf) SetDebugLogPath(path string) error {
 	cfg := zap.NewProductionConfig()
+	// sampling would make us loose some debug logs
+	cfg.Sampling = nil
 	if path == "" {
 		cfg.OutputPaths = []string{}
 	} else {

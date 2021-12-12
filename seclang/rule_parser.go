@@ -278,6 +278,10 @@ func (p *ruleParser) ParseActions(actions string) error {
 	}
 
 	for _, action := range act {
+		// now we evaluate non-metadata actions
+		if action.Atype == types.ActionTypeMetadata {
+			continue
+		}
 		errs := action.F.Init(p.rule, action.Value)
 		if errs != nil {
 			return errs

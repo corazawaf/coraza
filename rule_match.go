@@ -97,7 +97,7 @@ func (mr MatchedRule) matchData() string {
 	return ""
 }
 
-// AuditLog transforms the matched rule into an audit log
+// AuditLog transforms the matched rule into an error log
 // using the legacy Modsecurity syntax
 func (mr MatchedRule) AuditLog(code int) string {
 	log := &strings.Builder{}

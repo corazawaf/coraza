@@ -15,6 +15,7 @@
 package seclang
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
@@ -211,5 +212,37 @@ func TestRuleChains(t *testing.T) {
 	}
 	if tx.GetCollection(variables.TX).GetFirstString("test2") == "fail" {
 		t.Error("failed to set var, it shouldn't be set")
+	}
+}
+
+func TestTagsAreNotPrintedTwice(t *testing.T) {
+	waf := coraza.NewWaf()
+	logs := []string{}
+	waf.SetErrorLogCb(func(mr coraza.MatchedRule) {
+		logs = append(logs, mr.ErrorLog(403))
+	})
+	parser, _ := NewParser(waf)
+	err := parser.FromString(`
+		SecRule ARGS ".*" "phase:1, id:1,log,tag:'some1',tag:'some2'"
+	`)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	tx := waf.NewTransaction()
+	tx.AddArgument("GET", "test1", "123")
+	tx.AddArgument("GET", "test2", "456")
+	tx.ProcessRequestHeaders()
+	if len(tx.MatchedRules) != 2 {
+		t.Errorf("failed to match rules with %d", len(tx.MatchedRules))
+	}
+	// we expect 2 logs
+	if len(logs) != 2 {
+		t.Errorf("failed to log with %d", len(logs))
+	}
+	re := regexp.MustCompile(`\[tag "some1"\]`)
+	for _, l := range logs {
+		if len(re.FindAllString(l, -1)) > 1 {
+			t.Errorf("failed to log tag, got multiple instances (%d)\n%s", len(re.FindAllString(l, -1)), l)
+		}
 	}
 }
