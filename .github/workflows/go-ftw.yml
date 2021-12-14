@@ -52,7 +52,8 @@ jobs:
         sed -i 's/\/some\/path\/to\/log.log/\/tmp\/output.log/g' .ftw.yaml
         sed -i 's/\/\/ _ "github.com/_ "github.com/g' main.go
         mv main.go caddy/main.go
-        go get -u github.com/jptosso/coraza-caddy@51db837
+        go get github.com/jptosso/coraza-caddy@51db837
+        go mod tidy
         go get ./...
         go get -u github.com/jptosso/coraza-pcre@1bea0f0
         go get -u github.com/jptosso/coraza-libinjection@f462893
