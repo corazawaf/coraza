@@ -24,8 +24,6 @@ jobs:
       with:
         lfs: true
         fetch-depth: 0 #for better blame info
-    - name: Download vendored dependencies
-      run: go mod vendor
     - name: Prepare libinjection and PCRE
       run: |
         git clone https://github.com/libinjection/libinjection
