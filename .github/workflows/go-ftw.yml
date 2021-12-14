@@ -64,4 +64,4 @@ jobs:
         caddy start -adapter caddyfile -config ./Caddyfile
     - name: Run go-ftw
       run: |
-        go-ftw run -d coreruleset/tests/regression
+        go-ftw run -d /tmp/coreruleset/tests/regression
