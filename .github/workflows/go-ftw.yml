@@ -47,7 +47,7 @@ jobs:
         sed -i 's/\/some\/path\/to\/log.log/\/tmp\/output.log/g' Caddyfile
         sed -i 's/\/some\/path\/to\/log.log/\/tmp\/output.log/g' .ftw.yaml
         ln -s . /tmp/path
-        sed -i 's/.\//\/tmp/\path\//g' Caddyfile
+        sed -i 's/.\//\/tmp\/path\//g' Caddyfile
         sed -i 's/\/\/ _ "github.com/_ "github.com/g' main.go
         mv main.go caddy/main.go
         go get ./...
