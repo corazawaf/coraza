@@ -68,9 +68,9 @@ jobs:
           setvar:tx.combined_file_sizes=65535
             `
           
-          include /tmp/path/coraza.conf-recommended
-          include /tmp/path/coreruleset/crs-setup.conf.example
-          include /tmp/path/coreruleset/rules/*.conf
+          include /tmp/coraza.conf-recommended
+          include /tmp/coreruleset/crs-setup.conf.example
+          include /tmp/coreruleset/rules/*.conf
           }
           respond "ok"
         }
@@ -78,16 +78,17 @@ jobs:
     - name: Go code
       run: |
         go install github.com/fzipi/go-ftw@latest
-        git clone https://github.com/coreruleset/coreruleset
+        git clone https://github.com/coreruleset/coreruleset /tmp/coreruleset
         mkdir caddy
         wget https://raw.githubusercontent.com/jptosso/coraza-caddy/master/caddy/main.go
         wget https://gist.githubusercontent.com/jptosso/bea81ca0de225b3e09846f627abc5b74/raw/cbec9526280400bbbdb1de51460d6dc748c116ab/.ftw.yaml
-        ln -s . /tmp/path
+        ln -s $(pwd) /tmp/path
         sed -i 's/\/some\/path\/to\/log.log/\/tmp\/output.log/g' .ftw.yaml
         sed -i 's/\/\/ _ "github.com/_ "github.com/g' main.go
         mv main.go caddy/main.go
         go get ./...
         go install caddy/main.go
+        cp coraza.conf-recommended /tmp/
     - name: Start Caddy server
       run: |
         caddy start -adapter caddyfile -config ./Caddyfile
