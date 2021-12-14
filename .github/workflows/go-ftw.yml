@@ -87,6 +87,9 @@ jobs:
         sed -i 's/\/\/ _ "github.com/_ "github.com/g' main.go
         mv main.go caddy/main.go
         go get ./...
+        go get -u github.com/jptosso/coraza-caddy@51db837
+        go get -u github.com/jptosso/coraza-pcre@1bea0f0
+        go get -u github.com/jptosso/coraza-libinjection@f462893
         go install caddy/main.go
         cp coraza.conf-recommended /tmp/
     - name: Start Caddy server
