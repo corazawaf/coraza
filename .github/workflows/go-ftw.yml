@@ -58,6 +58,7 @@ jobs:
         go get -u github.com/jptosso/coraza-pcre@1bea0f0
         go get -u github.com/jptosso/coraza-libinjection@f462893
         go install caddy/main.go
+        sudo setcap CAP_NET_BIND_SERVICE=+eip $(which caddy)
     - name: Start Caddy server
       run: |
         caddy start -adapter caddyfile -config ./Caddyfile
