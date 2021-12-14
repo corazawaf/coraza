@@ -26,11 +26,21 @@ type macroToken struct {
 	variable *variables.RuleVariable
 	key      string
 }
+
+// Macro is used to create tokenized strings that can be
+// "expanded" at high speed and concurrent-safe.
+// A Macro contains tokens for strings and expansions
+// For example: some string %{tx.var} some string
+// The previous example would create 3 tokens:
+// String token: some string
+// Variable token: Variable: TX, key: var
+// String token: some string
 type Macro struct {
 	original string
 	tokens   []macroToken
 }
 
+// Expand the pre-compiled macro expression into a string
 func (m *Macro) Expand(tx *Transaction) string {
 	res := strings.Builder{}
 	for _, token := range m.tokens {
@@ -123,10 +133,12 @@ func (m *Macro) Compile(input string) error {
 	return nil
 }
 
+// String returns the original string
 func (m *Macro) String() string {
 	return m.original
 }
 
+// NewMacro creates a new macro
 func NewMacro(data string) (*Macro, error) {
 	macro := &Macro{
 		tokens: []macroToken{},

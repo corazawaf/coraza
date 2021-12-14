@@ -15,24 +15,13 @@
 package actions
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/jptosso/coraza-waf/v2"
 	"github.com/jptosso/coraza-waf/v2/types"
 )
 
-var htpStatuses = []int{100, 101, 102, 103, 200,
-	201, 202, 203, 200, 204, 205, 206, 207, 208,
-	226, 300, 301, 302, 303, 304, 305, 306, 307,
-	302, 308, 301, 400, 401, 402, 403, 404, 405,
-	406, 407, 408, 409, 410, 411, 412, 413, 414,
-	415, 416, 417, 418, 421, 422, 423, 424, 426,
-	428, 429, 431, 451, 500, 501, 502, 503, 504,
-	505, 506, 507, 508, 510, 511, 511}
-
 type statusFn struct {
-	status int
 }
 
 func (a *statusFn) Init(r *coraza.Rule, b1 string) error {
@@ -40,17 +29,11 @@ func (a *statusFn) Init(r *coraza.Rule, b1 string) error {
 	if err != nil {
 		return err
 	}
-	for _, s := range htpStatuses {
-		if status == s {
-			a.status = status
-			return nil
-		}
-	}
-	return fmt.Errorf("invalid http status")
+	r.DisruptiveStatus = status
+	return nil
 }
 
 func (a *statusFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
-	tx.Status = a.status
 }
 
 func (a *statusFn) Type() types.RuleActionType {

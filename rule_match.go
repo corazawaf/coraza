@@ -97,7 +97,7 @@ func (mr MatchedRule) matchData() string {
 	return ""
 }
 
-// AuditLog transforms the matched rule into an audit log
+// AuditLog transforms the matched rule into an error log
 // using the legacy Modsecurity syntax
 func (mr MatchedRule) AuditLog(code int) string {
 	log := &strings.Builder{}
@@ -119,7 +119,7 @@ func (mr MatchedRule) ErrorLog(code int) string {
 		msg = msg[:200]
 	}
 	log := &strings.Builder{}
-	log.WriteString(fmt.Sprintf("[client %q]", mr.ClientIPAddress))
+	log.WriteString(fmt.Sprintf("[client %q] ", mr.ClientIPAddress))
 	if mr.Disruptive {
 		log.WriteString(fmt.Sprintf("Coraza: Access denied with code %d (phase %d). ", code, mr.Rule.Phase))
 	} else {

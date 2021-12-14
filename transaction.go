@@ -55,9 +55,6 @@ type Transaction struct {
 	// Contains all collections, including persistent
 	collections []*Collection
 
-	// Response data to be sent
-	Status int
-
 	// This is used to store log messages
 	Logdata string
 
