@@ -6,6 +6,7 @@
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza-waf&metric=coverage)](https://sonarcloud.io/dashboard?id=jptosso_coraza-waf)
 [![GoDoc](https://godoc.org/github.com/jptosso/coraza-waf?status.svg)](https://godoc.org/github.com/jptosso/coraza-waf)
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+[![Coreruleset Compatibility](https://github.com/jptosso/coraza-waf/actions/workflows/go-ftw.yml/badge.svg)](https://github.com/jptosso/coraza-waf/actions/workflows/go-ftw.yml)
 
 <div align="center">
 	<img src="https://coraza.io/images/logo.png" width="50%">
