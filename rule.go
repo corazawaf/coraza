@@ -369,7 +369,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 			tx.Waf.Logger.Debug("Detecting rule disruptive action", zap.String("txid", tx.ID), zap.Int("rule", r.ID))
 			for _, a := range r.actions {
 				if a.Function.Type() == types.ActionTypeDisruptive || a.Function.Type() == types.ActionTypeFlow {
-					tx.Waf.Logger.Debug("Evaluating action", zap.String("type", "disruptive"),
+					tx.Waf.Logger.Debug("Evaluating action", zap.String("type", "disruptive or flow"),
 						zap.String("txid", tx.ID), zap.Int("rule", rid), zap.String("action", a.Name))
 					a.Function.Evaluate(r, tx)
 				}

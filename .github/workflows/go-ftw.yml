@@ -1,0 +1,46 @@
+name: Coreruleset Compatibility
+
+on:
+  push:
+    branches: 
+      - 'v2/*'
+  pull_request:
+    branches: [ v2/master ]
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        go-version: [1.17.x]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go-version }}
+    - name: Checkout code
+      uses: actions/checkout@v2
+      with:
+        lfs: true
+        fetch-depth: 0 #for better blame info
+    - name: Download vendored dependencies
+      run: go mod vendor
+    - name: Prepare environment
+      run: |
+        go install github.com/fzipi/go-ftw@latest
+        git clone https://github.com/coreruleset/coreruleset
+        git clone https://github.com/jptosso/coraza-caddy
+        sed -i 's/\/\/ _ "github.com/_ "github.com/g' coraza-caddy/caddy/main.go
+        rm coraza-caddy/go.mod coraza-caddy/go.sum
+        go install coraza-caddy/caddy/main.go
+        wget https://gist.githubusercontent.com/jptosso/bea81ca0de225b3e09846f627abc5b74/raw/cbec9526280400bbbdb1de51460d6dc748c116ab/.ftw.yaml
+        wget https://gist.githubusercontent.com/jptosso/bea81ca0de225b3e09846f627abc5b74/raw/cbec9526280400bbbdb1de51460d6dc748c116ab/Caddyfile
+        sed -i 's/\/some\/pat\h/to\/log\.log/\/tmp\/output.log/g' Caddyfile
+        sed -i 's/\/some\/pat\h/to\/log\.log/\/tmp\/output.log/g' .ftw.yaml
+    - name: Start Caddy server
+      run: |
+        caddy start -adapter caddyfile -config ./Caddyfile
+    - name: Run go-ftw
+      run: |
+        go-ftw run -d coreruleset/tests/regression
