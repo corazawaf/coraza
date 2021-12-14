@@ -46,6 +46,7 @@ jobs:
         wget https://gist.githubusercontent.com/jptosso/bea81ca0de225b3e09846f627abc5b74/raw/cbec9526280400bbbdb1de51460d6dc748c116ab/Caddyfile
         sed -i 's/\/some\/path\/to\/log.log/\/tmp\/output.log/g' Caddyfile
         sed -i 's/\/some\/path\/to\/log.log/\/tmp\/output.log/g' .ftw.yaml
+        sed -i 's/.\//$(pwd)\//g' Caddyfile
         sed -i 's/\/\/ _ "github.com/_ "github.com/g' main.go
         mv main.go caddy/main.go
         go get ./...
