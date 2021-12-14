@@ -48,8 +48,8 @@ jobs:
         go install caddy/main.go
         wget https://gist.githubusercontent.com/jptosso/bea81ca0de225b3e09846f627abc5b74/raw/cbec9526280400bbbdb1de51460d6dc748c116ab/.ftw.yaml
         wget https://gist.githubusercontent.com/jptosso/bea81ca0de225b3e09846f627abc5b74/raw/cbec9526280400bbbdb1de51460d6dc748c116ab/Caddyfile
-        sed -i 's/\/some\/pat\h/to\/log.log/\/tmp\/output.log/g' Caddyfile
-        sed -i 's/\/some\/pat\h/to\/log.log/\/tmp\/output.log/g' .ftw.yaml
+        sed -i 's/\/some\/path\/to\/log.log/\/tmp\/output.log/g' Caddyfile
+        sed -i 's/\/some\/path\/to\/log.log/\/tmp\/output.log/g' .ftw.yaml
     - name: Start Caddy server
       run: |
         caddy start -adapter caddyfile -config ./Caddyfile
