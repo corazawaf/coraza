@@ -34,6 +34,8 @@ type LoggerOptions struct {
 	// Dir provides a unique path to write files, it's mostly
 	// used for concurrent logging
 	Dir string
+
+	Formatter LogFormatter
 }
 
 // Logger is a wrapper to hold configurations, a writer and a formatter
@@ -89,15 +91,25 @@ func (l *Logger) SetWriter(name string) error {
 		return err
 	}
 	l.writer = writer
-	return l.writer.Init(l)
+	return l.writer.Init(LoggerOptions{
+		DirMode:   l.dirMode,
+		FileMode:  l.fileMode,
+		File:      l.file,
+		Dir:       l.directory,
+		Formatter: l.formatter,
+	})
 }
 
 // SetFile sets the file for the logger
 // The file path must exist and must be absolute
 func (l *Logger) SetFile(file string) error {
-	if !filepath.IsAbs(file) {
-		return fmt.Errorf("file path must be absolute")
-	}
+	/*
+		File can be a url
+		if !filepath.IsAbs(file) {
+			return fmt.Errorf("file path must be absolute")
+		}
+	*/
+
 	l.file = file
 	return nil
 }
@@ -131,7 +143,7 @@ type LogFormatter = func(al AuditLog) ([]byte, error)
 // An output stream may be a file, a socket, an http request, etc
 type LogWriter interface {
 	// In case the writer requires previous preparations
-	Init(*Logger) error
+	Init(LoggerOptions) error
 	// Writes the audit log using the Logger properties
 	Write(AuditLog) error
 	// Closes the writer if required

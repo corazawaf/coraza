@@ -22,7 +22,7 @@ import (
 type chainFn struct{}
 
 func (a *chainFn) Init(r *coraza.Rule, b1 string) error {
-	r.Chain = coraza.NewRule()
+	r.HasChain = true
 	return nil
 }
 

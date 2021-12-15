@@ -215,6 +215,8 @@ type Rule struct {
 
 	// Used for error logging
 	Disruptive bool
+
+	HasChain bool
 }
 
 // Evaluate will evaluate the current rule for the indicated transaction

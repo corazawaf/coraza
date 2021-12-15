@@ -38,10 +38,9 @@ type ruleAction struct {
 }
 
 type ruleParser struct {
-	parser         *Parser
 	rule           *coraza.Rule
-	Configdir      string
 	defaultActions map[types.RulePhase][]ruleAction
+	options        RuleOptions
 }
 
 func (p *ruleParser) ParseVariables(vars string) error {
@@ -202,7 +201,7 @@ func (p *ruleParser) ParseOperator(operator string) error {
 	// CRS stores the .data files in the same directory as the directives
 	if utils.InSlice(op, []string{"ipMatchFromFile", "pmFromFile"}) {
 		// TODO make enhancements here
-		tpath := path.Join(p.Configdir, opdata)
+		tpath := path.Join(p.options.ConfigDir, opdata)
 		var err error
 		content, err := os.ReadFile(tpath)
 		if err != nil {
@@ -250,13 +249,17 @@ func (p *ruleParser) ParseDefaultActions(actions string) error {
 
 // ParseActions
 func (p *ruleParser) ParseActions(actions string) error {
+	disabledActions, ok := p.options.Waf.GetConfig("disabled_rule_actions").([]string)
+	if !ok {
+		disabledActions = []string{}
+	}
 	act, err := parseActions(actions)
 	if err != nil {
 		return err
 	}
 	// check if forbidden action:
 	for _, a := range act {
-		if utils.InSlice(a.Key, p.parser.DisabledRuleActions) {
+		if utils.InSlice(a.Key, disabledActions) {
 			return fmt.Errorf("%s rule action is disabled", a.Key)
 		}
 	}
@@ -298,15 +301,110 @@ func (p *ruleParser) Rule() *coraza.Rule {
 	return p.rule
 }
 
-// newRuleParser Creates a new rule parser, each rule parser
-// will contain a single rule that can be obtained using ruleparser.Rule()
-func newRuleParser(p *Parser) *ruleParser {
+type RuleOptions struct {
+	ConfigFile   string
+	ConfigDir    string
+	Waf          *coraza.Waf
+	WithOperator bool
+	Line         int
+	Data         string
+}
+
+func ParseRule(options RuleOptions) (*coraza.Rule, error) {
+	var err error
 	rp := &ruleParser{
+		options:        options,
 		rule:           coraza.NewRule(),
 		defaultActions: map[types.RulePhase][]ruleAction{},
-		parser:         p,
 	}
-	return rp
+
+	defaultActions, ok := options.Waf.GetConfig("rule_default_actions").([]string)
+	if !ok {
+		defaultActions = []string{}
+	}
+	disabledRuleOperators, ok := options.Waf.GetConfig("disabled_rule_operators").([]string)
+	if !ok {
+		disabledRuleOperators = []string{}
+	}
+
+	for _, da := range defaultActions {
+		err = rp.ParseDefaultActions(da)
+		if err != nil {
+			return nil, err
+		}
+	}
+	actions := ""
+	if options.WithOperator {
+		spl := strings.SplitN(options.Data, " ", 2)
+		vars := spl[0]
+
+		// regex: "(?:[^"\\]|\\.)*"
+		r := regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
+		matches := r.FindAllString(options.Data, -1)
+		operator := utils.RemoveQuotes(matches[0])
+		if utils.InSlice(operator, disabledRuleOperators) {
+			return nil, fmt.Errorf("%s rule operator is disabled", operator)
+		}
+		err = rp.ParseVariables(vars)
+		if err != nil {
+			return nil, err
+		}
+		err = rp.ParseOperator(operator)
+		if err != nil {
+			return nil, err
+		}
+		if len(matches) > 1 {
+			actions = utils.RemoveQuotes(matches[1])
+			err = rp.ParseActions(actions)
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		// quoted actions separated by comma (,)
+		actions = utils.RemoveQuotes(options.Data)
+		err = rp.ParseActions(actions)
+		if err != nil {
+			return nil, err
+		}
+	}
+	rule := rp.Rule()
+	if options.WithOperator {
+		rule.Raw = "SecRule " + options.Data
+	} else {
+		rule.Raw = options.Data
+	}
+	rule.File = options.ConfigFile
+	rule.Line = options.Line
+
+	if parent := getLastRuleExpectingChain(options.Waf); parent != nil {
+
+		rule.ParentID = parent.ID
+		lastchain := parent
+		for lastchain.Chain != nil {
+			lastchain = lastchain.Chain
+		}
+		lastchain.Chain = rule
+		return nil, nil
+	}
+	return rp.rule, nil
+}
+
+func getLastRuleExpectingChain(w *coraza.Waf) *coraza.Rule {
+	rules := w.Rules.GetRules()
+	if len(rules) == 0 {
+		return nil
+	}
+	lastRule := rules[len(rules)-1]
+	parent := lastRule
+	for parent.Chain != nil {
+		parent = parent.Chain
+	}
+	// chain rules with ID -1 are not processed
+	if parent.HasChain && parent.Chain == nil {
+		return lastRule
+	}
+	return nil
 }
 
 // parseActions will assign the function name, arguments and

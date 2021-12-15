@@ -121,11 +121,11 @@ func TestDebugDirectives(t *testing.T) {
 	tmpf, _ := ioutil.TempFile("/tmp", "*.log")
 	tmp := tmpf.Name()
 	p, _ := NewParser(waf)
-	err := directiveSecDebugLog(p, tmp)
+	err := directiveSecDebugLog(waf, tmp)
 	if err != nil {
 		t.Error(err)
 	}
-	if err := directiveSecDebugLogLevel(p, "5"); err != nil {
+	if err := directiveSecDebugLogLevel(waf, "5"); err != nil {
 		t.Error(err)
 	}
 	p.Waf.Logger.Info("abc123")
@@ -141,11 +141,10 @@ func TestSecAuditLogDirectivesDefaults(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	parser, _ := NewParser(waf)
-	if err := directiveSecAuditLog(parser, tmpf.Name()); err != nil {
+	if err := directiveSecAuditLog(waf, tmpf.Name()); err != nil {
 		t.Error(err)
 	}
-	if err := directiveSecAuditLogDir(parser, "/tmp"); err != nil {
+	if err := directiveSecAuditLogDir(waf, "/tmp"); err != nil {
 		t.Error(err)
 	}
 	if waf.AuditLogger() == nil {

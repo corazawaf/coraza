@@ -270,3 +270,17 @@ func TestStatusFromInterruptions(t *testing.T) {
 		t.Errorf("failed to set status, got %d", it.Status)
 	}
 }
+
+func TestChainWithUnconditionalMatch(t *testing.T) {
+	waf := coraza.NewWaf()
+	p, _ := NewParser(waf)
+	if err := p.FromString(`
+	SecAction "id:7, pass, phase:1, log, chain, skip:2"
+    SecRule REMOTE_ADDR "@unconditionalMatch" ""
+	`); err != nil {
+		t.Error(err)
+	}
+	if waf.Rules.Count() != 1 {
+		t.Errorf("invalid rule count, got %d", waf.Rules.Count())
+	}
+}

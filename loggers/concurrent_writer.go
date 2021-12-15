@@ -28,18 +28,18 @@ import (
 type concurrentWriter struct {
 	mux         *sync.RWMutex
 	auditlogger *log.Logger
-	logger      *Logger
+	options     LoggerOptions
 }
 
-func (cl *concurrentWriter) Init(l *Logger) error {
+func (cl *concurrentWriter) Init(l LoggerOptions) error {
 	cl.mux = &sync.RWMutex{}
-	faudit, err := os.OpenFile(l.file, os.O_CREATE|os.O_WRONLY|os.O_APPEND, l.fileMode)
+	faudit, err := os.OpenFile(l.File, os.O_CREATE|os.O_WRONLY|os.O_APPEND, l.FileMode)
 	if err != nil {
 		return err
 	}
 	mw := io.MultiWriter(faudit)
+	cl.options = l
 	cl.auditlogger = log.New(mw, "", 0)
-	cl.logger = l
 	return nil
 }
 
@@ -49,7 +49,7 @@ func (cl concurrentWriter) Write(al AuditLog) error {
 
 	// append the two directories
 	p2 := fmt.Sprintf("/%s/%s/", t.Format("20060102"), t.Format("20060102-1504"))
-	logdir := path.Join(cl.logger.directory, p2)
+	logdir := path.Join(cl.options.Dir, p2)
 	// Append the filename
 	fname := fmt.Sprintf("/%s-%s", t.Format("20060102-150405"), al.Transaction.ID)
 	filepath := path.Join(logdir, fname)
@@ -59,16 +59,16 @@ func (cl concurrentWriter) Write(al AuditLog) error {
 			al.Transaction.Request.HTTPVersion),
 		al.Transaction.Response.Status, 0 /*response length*/, "-", "-", al.Transaction.ID,
 		"-", filepath, 0, 0 /*request length*/)
-	err := os.MkdirAll(logdir, cl.logger.dirMode)
+	err := os.MkdirAll(logdir, cl.options.DirMode)
 	if err != nil {
 		return err
 	}
 
-	jsdata, err := cl.logger.formatter(al)
+	jsdata, err := cl.options.Formatter(al)
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(filepath, []byte(jsdata), cl.logger.fileMode)
+	err = ioutil.WriteFile(filepath, []byte(jsdata), cl.options.FileMode)
 	if err != nil {
 		return err
 	}
