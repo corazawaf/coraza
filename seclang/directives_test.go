@@ -81,7 +81,7 @@ func Test_directiveSecAuditLog(t *testing.T) {
 	if err := p.FromString("SecRuleRemoveByTag test"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if p.Waf.Rules.Count() != 0 {
+	if p.waf.Rules.Count() != 0 {
 		t.Error("Failed to remove rule with SecRuleRemoveByTag")
 	}
 	if err := p.FromString(`SecAction "id:1,msg:'test'"`); err != nil {
@@ -90,7 +90,7 @@ func Test_directiveSecAuditLog(t *testing.T) {
 	if err := p.FromString("SecRuleRemoveByMsg test"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if p.Waf.Rules.Count() != 0 {
+	if p.waf.Rules.Count() != 0 {
 		t.Error("Failed to remove rule with SecRuleRemoveByMsg")
 	}
 	if err := p.FromString(`SecAction "id:1"`); err != nil {
@@ -99,19 +99,19 @@ func Test_directiveSecAuditLog(t *testing.T) {
 	if err := p.FromString("SecRuleRemoveById 1"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if p.Waf.Rules.Count() != 0 {
+	if p.waf.Rules.Count() != 0 {
 		t.Error("Failed to remove rule with SecRuleRemoveById")
 	}
 	if err := p.FromString("SecResponseBodyMimeTypesClear"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if len(p.Waf.ResponseBodyMimeTypes) != 0 {
+	if len(p.waf.ResponseBodyMimeTypes) != 0 {
 		t.Error("failed to set SecResponseBodyMimeTypesClear")
 	}
 	if err := p.FromString("SecResponseBodyMimeType text/html"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if p.Waf.ResponseBodyMimeTypes[0] != "text/html" {
+	if p.waf.ResponseBodyMimeTypes[0] != "text/html" {
 		t.Error("failed to set SecResponseBodyMimeType")
 	}
 }
@@ -128,7 +128,7 @@ func TestDebugDirectives(t *testing.T) {
 	if err := directiveSecDebugLogLevel(waf, "5"); err != nil {
 		t.Error(err)
 	}
-	p.Waf.Logger.Info("abc123")
+	p.waf.Logger.Info("abc123")
 	data, _ := os.ReadFile(tmp)
 	if !strings.Contains(string(data), "abc123") {
 		t.Error("failed to write info log")

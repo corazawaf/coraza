@@ -29,6 +29,10 @@ import (
 
 type directive = func(w *coraza.Waf, opts string) error
 
+func RegisterDirectivePlugin(name string, directive func(w *coraza.Waf, opts string) error) {
+	directivesMap[strings.ToLower(name)] = directive
+}
+
 func directiveSecComponentSignature(w *coraza.Waf, opts string) error {
 	w.ComponentNames = append(w.ComponentNames, opts)
 	return nil

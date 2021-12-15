@@ -30,7 +30,7 @@ import (
 
 // Parser provides functions to evaluate (compile) SecLang directives
 type Parser struct {
-	Waf         *engine.Waf
+	waf         *engine.Waf
 	currentLine int
 	currentFile string
 	currentDir  string
@@ -55,12 +55,12 @@ func (p *Parser) FromFile(profilePath string) error {
 	for _, profilePath := range files {
 		p.currentFile = profilePath
 		p.currentDir = filepath.Dir(profilePath)
-		p.Waf.SetConfig("last_porfile_line", p.currentLine)
-		p.Waf.SetConfig("parser_config_file", p.currentFile)
-		p.Waf.SetConfig("parser_config_dir", p.currentDir)
+		p.waf.SetConfig("last_porfile_line", p.currentLine)
+		p.waf.SetConfig("parser_config_file", p.currentFile)
+		p.waf.SetConfig("parser_config_dir", p.currentDir)
 		file, err := os.ReadFile(profilePath)
 		if err != nil {
-			p.Waf.Logger.Error(err.Error(),
+			p.waf.Logger.Error(err.Error(),
 				zap.String("path", profilePath),
 			)
 			return err
@@ -68,7 +68,7 @@ func (p *Parser) FromFile(profilePath string) error {
 
 		err = p.FromString(string(file))
 		if err != nil {
-			p.Waf.Logger.Error(err.Error(),
+			p.waf.Logger.Error(err.Error(),
 				zap.String("path", profilePath),
 			)
 			return err
@@ -104,7 +104,7 @@ func (p *Parser) FromString(data string) error {
 }
 
 func (p *Parser) evaluate(data string) error {
-	disabledDirectives, ok := p.Waf.GetConfig("disabled_directives").([]string)
+	disabledDirectives, ok := p.waf.GetConfig("disabled_directives").([]string)
 	if !ok {
 		disabledDirectives = []string{}
 	}
@@ -117,7 +117,7 @@ func (p *Parser) evaluate(data string) error {
 	if len(spl) == 2 {
 		opts = spl[1]
 	}
-	p.Waf.Logger.Debug("parsing directive",
+	p.waf.Logger.Debug("parsing directive",
 		zap.String("directive", data),
 	)
 	directive := spl[0]
@@ -134,12 +134,12 @@ func (p *Parser) evaluate(data string) error {
 	if !ok || d == nil {
 		return p.log("Unsupported directive " + directive)
 	}
-	return d(p.Waf, opts)
+	return d(p.waf, opts)
 }
 
 func (p *Parser) log(msg string) error {
 	msg = fmt.Sprintf("[Parser] [Line %d] %s", p.currentLine, msg)
-	p.Waf.Logger.Error(msg,
+	p.waf.Logger.Error(msg,
 		zap.Int("line", p.currentLine),
 	)
 	return errors.New(msg)
@@ -147,7 +147,7 @@ func (p *Parser) log(msg string) error {
 
 func (p *Parser) SetCurrentDir(dir string) {
 	p.currentDir = dir
-	p.Waf.SetConfig("parser_config_dir", p.currentDir)
+	p.waf.SetConfig("parser_config_dir", p.currentDir)
 }
 
 // NewParser creates a new parser from a WAF instance
@@ -157,7 +157,7 @@ func NewParser(waf *engine.Waf) (*Parser, error) {
 		return nil, errors.New("must use a valid waf instance")
 	}
 	p := &Parser{
-		Waf: waf,
+		waf: waf,
 	}
 	return p, nil
 }
