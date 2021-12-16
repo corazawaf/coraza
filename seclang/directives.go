@@ -85,9 +85,9 @@ func directiveSecAction(w *coraza.Waf, opts string) error {
 }
 
 func directiveSecRule(w *coraza.Waf, opts string) error {
-	line, _ := w.GetConfig("parser_last_line").(int)
-	configFile, _ := w.GetConfig("parser_config_file").(string)
-	configDir, _ := w.GetConfig("parser_config_dir").(string)
+	line, _ := w.GetConfig("parser_last_line", 0).(int)
+	configFile, _ := w.GetConfig("parser_config_file", "").(string)
+	configDir, _ := w.GetConfig("parser_config_dir", "").(string)
 	rule, err := ParseRule(RuleOptions{
 		Waf:          w,
 		Data:         opts,
@@ -256,7 +256,7 @@ func directiveSecHashEngine(w *coraza.Waf, opts string) error {
 }
 
 func directiveSecDefaultAction(w *coraza.Waf, opts string) error {
-	da, ok := w.GetConfig("rule_default_actions").([]string)
+	da, ok := w.GetConfig("rule_default_actions", []string{}).([]string)
 	if !ok {
 		da = []string{}
 	}

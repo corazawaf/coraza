@@ -249,7 +249,7 @@ func (p *ruleParser) ParseDefaultActions(actions string) error {
 
 // ParseActions
 func (p *ruleParser) ParseActions(actions string) error {
-	disabledActions, ok := p.options.Waf.GetConfig("disabled_rule_actions").([]string)
+	disabledActions, ok := p.options.Waf.GetConfig("disabled_rule_actions", []string{}).([]string)
 	if !ok {
 		disabledActions = []string{}
 	}
@@ -318,11 +318,11 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
 
-	defaultActions, ok := options.Waf.GetConfig("rule_default_actions").([]string)
+	defaultActions, ok := options.Waf.GetConfig("rule_default_actions", []string{}).([]string)
 	if !ok {
 		defaultActions = []string{}
 	}
-	disabledRuleOperators, ok := options.Waf.GetConfig("disabled_rule_operators").([]string)
+	disabledRuleOperators, ok := options.Waf.GetConfig("disabled_rule_operators", []string{}).([]string)
 	if !ok {
 		disabledRuleOperators = []string{}
 	}

@@ -104,7 +104,7 @@ func (p *Parser) FromString(data string) error {
 }
 
 func (p *Parser) evaluate(data string) error {
-	disabledDirectives, ok := p.waf.GetConfig("disabled_directives").([]string)
+	disabledDirectives, ok := p.waf.GetConfig("disabled_directives", []string{}).([]string)
 	if !ok {
 		disabledDirectives = []string{}
 	}

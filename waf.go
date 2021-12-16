@@ -409,7 +409,11 @@ func (w *Waf) SetConfig(key string, value interface{}) {
 }
 
 // GetConfig returns the configuration value for the given key.
+// If the key is not found, defaultValue is returned
 // This function is concurrent-safe.
-func (w *Waf) GetConfig(key string) interface{} {
-	return w.config[key]
+func (w *Waf) GetConfig(key string, defaultValue interface{}) interface{} {
+	if value, ok := w.config[key]; ok {
+		return value
+	}
+	return defaultValue
 }
