@@ -83,3 +83,12 @@ func TestTransformations(t *testing.T) {
 		}
 	}
 }
+
+func TestTransformationsAreCaseInsensitive(t *testing.T) {
+	if _, err := GetTransformation("cmdLine"); err != nil {
+		t.Error(err)
+	}
+	if _, err := GetTransformation("cmdline"); err != nil {
+		t.Error(err)
+	}
+}
