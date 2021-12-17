@@ -77,7 +77,7 @@ func (p *Profile) TestList(waf *coraza.Waf) ([]*Test, error) {
 			if w == nil || p.Rules != "" {
 				w = coraza.NewWaf()
 				parser, _ := seclang.NewParser(w)
-				parser.Configdir = "../testdata/"
+				parser.SetCurrentDir("../testdata/")
 				if err := parser.FromString(p.Rules); err != nil {
 					return nil, err
 				}

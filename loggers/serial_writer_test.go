@@ -25,7 +25,6 @@ import (
 )
 
 func TestSerialLogger_Write(t *testing.T) {
-	l := &serialWriter{}
 	tmp := path.Join("/tmp", utils.SafeRandom(10)+"-audit.log")
 	defer os.Remove(tmp)
 	logger, err := NewAuditLogger()
@@ -33,7 +32,7 @@ func TestSerialLogger_Write(t *testing.T) {
 		t.Error(err)
 	}
 	logger.file = tmp
-	err = l.Init(logger)
+	err = logger.SetWriter("serial")
 	if err != nil {
 		t.Error(err)
 	}
@@ -50,7 +49,7 @@ func TestSerialLogger_Write(t *testing.T) {
 			},
 		},
 	}
-	if err := l.Write(al); err != nil {
+	if err := logger.Write(al); err != nil {
 		t.Error("failed to write to serial logger")
 	}
 

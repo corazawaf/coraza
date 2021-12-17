@@ -30,17 +30,10 @@ import (
 
 // Parser provides functions to evaluate (compile) SecLang directives
 type Parser struct {
-	configfile            string
-	Configdir             string
-	nextChain             bool
-	Waf                   *engine.Waf
-	DisabledDirectives    []string
-	DisabledRuleActions   []string
-	DisabledRuleOperators []string
-	lastRule              *engine.Rule
-
-	defaultActions []string
-	currentLine    int
+	waf         *engine.Waf
+	currentLine int
+	currentFile string
+	currentDir  string
 }
 
 // FromFile imports directives from a file
@@ -60,11 +53,14 @@ func (p *Parser) FromFile(profilePath string) error {
 		files = append(files, profilePath)
 	}
 	for _, profilePath := range files {
-		p.configfile = profilePath
-		p.Configdir = filepath.Dir(profilePath)
+		p.currentFile = profilePath
+		p.currentDir = filepath.Dir(profilePath)
+		p.waf.SetConfig("last_porfile_line", p.currentLine)
+		p.waf.SetConfig("parser_config_file", p.currentFile)
+		p.waf.SetConfig("parser_config_dir", p.currentDir)
 		file, err := os.ReadFile(profilePath)
 		if err != nil {
-			p.Waf.Logger.Error(err.Error(),
+			p.waf.Logger.Error(err.Error(),
 				zap.String("path", profilePath),
 			)
 			return err
@@ -72,7 +68,7 @@ func (p *Parser) FromFile(profilePath string) error {
 
 		err = p.FromString(string(file))
 		if err != nil {
-			p.Waf.Logger.Error(err.Error(),
+			p.waf.Logger.Error(err.Error(),
 				zap.String("path", profilePath),
 			)
 			return err
@@ -108,6 +104,10 @@ func (p *Parser) FromString(data string) error {
 }
 
 func (p *Parser) evaluate(data string) error {
+	disabledDirectives, ok := p.waf.GetConfig("disabled_directives", []string{}).([]string)
+	if !ok {
+		disabledDirectives = []string{}
+	}
 	if data == "" || data[0] == '#' {
 		return nil
 	}
@@ -117,7 +117,7 @@ func (p *Parser) evaluate(data string) error {
 	if len(spl) == 2 {
 		opts = spl[1]
 	}
-	p.Waf.Logger.Debug("parsing directive",
+	p.waf.Logger.Debug("parsing directive",
 		zap.String("directive", data),
 	)
 	directive := spl[0]
@@ -126,7 +126,7 @@ func (p *Parser) evaluate(data string) error {
 		opts = strings.Trim(opts, `"`)
 	}
 
-	if utils.InSlice(directive, p.DisabledDirectives) {
+	if utils.InSlice(directive, disabledDirectives) {
 		return fmt.Errorf("%s directive is disabled", directive)
 	}
 
@@ -134,97 +134,20 @@ func (p *Parser) evaluate(data string) error {
 	if !ok || d == nil {
 		return p.log("Unsupported directive " + directive)
 	}
-	return d(p, opts)
-}
-
-// parseRule will take a rule string and create a rule struct
-// Rules without operator will become SecActions
-func (p *Parser) parseRule(data string, withOperator bool) (*engine.Rule, error) {
-	var err error
-	rp := newRuleParser(p)
-	rp.Configdir = p.Configdir
-
-	for _, da := range p.defaultActions {
-		err = rp.ParseDefaultActions(da)
-		if err != nil {
-			return nil, err
-		}
-	}
-	actions := ""
-	if withOperator {
-		spl := strings.SplitN(data, " ", 2)
-		vars := spl[0]
-
-		// regex: "(?:[^"\\]|\\.)*"
-		r := regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
-		matches := r.FindAllString(data, -1)
-		operator := utils.RemoveQuotes(matches[0])
-		if utils.InSlice(operator, p.DisabledRuleOperators) {
-			return nil, fmt.Errorf("%s rule operator is disabled", operator)
-		}
-		err = rp.ParseVariables(vars)
-		if err != nil {
-			return nil, err
-		}
-		err = rp.ParseOperator(operator)
-		if err != nil {
-			return nil, err
-		}
-		if len(matches) > 1 {
-			actions = utils.RemoveQuotes(matches[1])
-			err = rp.ParseActions(actions)
-			if err != nil {
-				return nil, err
-			}
-		}
-	} else {
-		// quoted actions separated by comma (,)
-		actions = utils.RemoveQuotes(data)
-		err = rp.ParseActions(actions)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	rule := rp.Rule()
-	rule.Raw = "SecRule " + data
-
-	if p.nextChain {
-		p.nextChain = false
-		parent := p.lastRule
-		rule.ParentID = parent.ID
-		lastchain := parent
-		for lastchain.Chain != nil {
-			lastchain = lastchain.Chain
-		}
-
-		*lastchain = *rule
-		if rule.Chain != nil {
-			p.nextChain = true
-		}
-		return nil, nil
-	}
-	if rule.Chain != nil {
-		p.nextChain = true
-	}
-	p.lastRule = rule
-	return rule, nil
-}
-
-// addDefaultActions compiles an actions string
-// Requires a phase and a disruptive action, example:
-// addDefaultActions("deny,phase:1,log")
-func (p *Parser) addDefaultActions(data string) error {
-	p.defaultActions = append(p.defaultActions, data)
-	return nil
+	return d(p.waf, opts)
 }
 
 func (p *Parser) log(msg string) error {
 	msg = fmt.Sprintf("[Parser] [Line %d] %s", p.currentLine, msg)
-	p.Waf.Logger.Error(msg,
+	p.waf.Logger.Error(msg,
 		zap.Int("line", p.currentLine),
 	)
 	return errors.New(msg)
+}
+
+func (p *Parser) SetCurrentDir(dir string) {
+	p.currentDir = dir
+	p.waf.SetConfig("parser_config_dir", p.currentDir)
 }
 
 // NewParser creates a new parser from a WAF instance
@@ -234,9 +157,7 @@ func NewParser(waf *engine.Waf) (*Parser, error) {
 		return nil, errors.New("must use a valid waf instance")
 	}
 	p := &Parser{
-		Waf:                waf,
-		defaultActions:     []string{},
-		DisabledDirectives: []string{},
+		waf: waf,
 	}
 	return p, nil
 }

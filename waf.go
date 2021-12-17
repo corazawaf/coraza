@@ -157,6 +157,8 @@ type Waf struct {
 	loggerAtomicLevel *zap.AtomicLevel
 
 	errorLogCb ErrorLogCallback
+
+	config map[string]interface{}
 }
 
 // NewTransaction Creates a new initialized transaction for this WAF instance
@@ -349,6 +351,7 @@ func NewWaf() *Waf {
 		CollectionTimeout:        3600,
 		loggerAtomicLevel:        &atom,
 		AuditLogRelevantStatus:   regexp.MustCompile(`.*`),
+		config:                   map[string]interface{}{},
 	}
 	if err := waf.SetDebugLogPath("/dev/null"); err != nil {
 		fmt.Println(err)
@@ -397,4 +400,20 @@ func (w *Waf) SetGeoReader(reader geo.Reader) {
 // A geo processor requires a Geo plugin to be installed
 func (w *Waf) Geo() geo.Reader {
 	return w.geo
+}
+
+// SetConfig is used to share configuration from directives
+// to Transactions. This function is not concurrent-safe.
+func (w *Waf) SetConfig(key string, value interface{}) {
+	w.config[key] = value
+}
+
+// GetConfig returns the configuration value for the given key.
+// If the key is not found, defaultValue is returned
+// This function is concurrent-safe.
+func (w *Waf) GetConfig(key string, defaultValue interface{}) interface{} {
+	if value, ok := w.config[key]; ok {
+		return value
+	}
+	return defaultValue
 }

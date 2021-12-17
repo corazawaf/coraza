@@ -15,31 +15,35 @@
 package loggers
 
 import (
+	"fmt"
 	"log"
 	"os"
 )
 
 // serialWriter is used to store logs in a single file
 type serialWriter struct {
-	file *os.File
-	log  log.Logger
-	l    *Logger
+	file    *os.File
+	log     log.Logger
+	options LoggerOptions
 }
 
-func (sl *serialWriter) Init(l *Logger) error {
-	sl.l = l
+func (sl *serialWriter) Init(l LoggerOptions) error {
+	sl.options = l
 	var err error
-	sl.file, err = os.OpenFile(l.file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, l.fileMode)
+	sl.file, err = os.OpenFile(sl.options.File, os.O_APPEND|os.O_CREATE|os.O_WRONLY, sl.options.FileMode)
 	if err != nil {
 		return err
 	}
 	sl.log.SetFlags(0)
 	sl.log.SetOutput(sl.file)
+	if sl.options.Formatter == nil {
+		return fmt.Errorf("formetter cannot be nil")
+	}
 	return nil
 }
 
 func (sl *serialWriter) Write(al AuditLog) error {
-	data, err := sl.l.formatter(al)
+	data, err := sl.options.Formatter(al)
 	if err != nil {
 		return err
 	}

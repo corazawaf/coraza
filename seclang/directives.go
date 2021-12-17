@@ -22,233 +22,265 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/jptosso/coraza-waf/v2"
 	"github.com/jptosso/coraza-waf/v2/types"
 	"go.uber.org/zap"
 )
 
-type directive = func(p *Parser, opts string) error
+type directive = func(w *coraza.Waf, opts string) error
 
-func directiveSecComponentSignature(p *Parser, opts string) error {
-	p.Waf.ComponentNames = append(p.Waf.ComponentNames, opts)
+func RegisterDirectivePlugin(name string, directive func(w *coraza.Waf, opts string) error) {
+	directivesMap[strings.ToLower(name)] = directive
+}
+
+func directiveSecComponentSignature(w *coraza.Waf, opts string) error {
+	w.ComponentNames = append(w.ComponentNames, opts)
 	return nil
 }
 
-func directiveSecMarker(p *Parser, opts string) error {
-	rule, _ := p.parseRule(`"id:1, pass, nolog"`, false)
+func directiveSecMarker(w *coraza.Waf, opts string) error {
+	rule, err := ParseRule(RuleOptions{
+		Waf:          w,
+		Data:         "id:1, pass, nolog",
+		WithOperator: false,
+	})
+	if err != nil {
+		return err
+	}
 	rule.SecMark = opts
 	rule.ID = 0
 	rule.Phase = 0
-	if err := p.Waf.Rules.Add(rule); err != nil {
-		if perr := p.log(fmt.Sprintf("Failed to compile rule (%s): %s", err, opts)); perr != nil {
+	if err := w.Rules.Add(rule); err != nil {
+		if perr := fmt.Errorf("Failed to compile rule (%s): %s", err, opts); perr != nil {
 			return perr // can't write to log, return this instead
 		}
 		return err
 	}
-	p.Waf.Logger.Debug("added secmark rule")
+	w.Logger.Debug("added secmark rule")
 	return nil
 }
 
-func directiveSecAction(p *Parser, opts string) error {
-	rule, err := p.parseRule(opts, false)
+func directiveSecAction(w *coraza.Waf, opts string) error {
+	rule, err := ParseRule(RuleOptions{
+		Waf:          w,
+		Data:         opts,
+		WithOperator: false,
+	})
 	if err != nil {
-		if perr := p.log(fmt.Sprintf("Failed to compile rule (%s): %s", err, opts)); perr != nil {
+		if perr := fmt.Errorf("Failed to compile rule (%s): %s", err, opts); perr != nil {
 			return perr // can't write to log, return this instead
 		}
 		return err
 	}
-	if err := p.Waf.Rules.Add(rule); err != nil {
-		if perr := p.log(fmt.Sprintf("Failed to compile rule (%s): %s", err, opts)); perr != nil {
+	if err := w.Rules.Add(rule); err != nil {
+		if perr := fmt.Errorf("Failed to compile rule (%s): %s", err, opts); perr != nil {
 			return perr // can't write to log, return this instead
 		}
 		return err
 	}
-	p.Waf.Logger.Debug("Added SecAction",
+	w.Logger.Debug("Added SecAction",
 		zap.String("rule", opts),
 	)
 	return nil
 }
 
-func directiveSecRule(p *Parser, opts string) error {
-	rule, err := p.parseRule(opts, true)
+func directiveSecRule(w *coraza.Waf, opts string) error {
+	line, _ := w.GetConfig("parser_last_line", 0).(int)
+	configFile, _ := w.GetConfig("parser_config_file", "").(string)
+	configDir, _ := w.GetConfig("parser_config_dir", "").(string)
+	rule, err := ParseRule(RuleOptions{
+		Waf:          w,
+		Data:         opts,
+		WithOperator: true,
+		Line:         line,
+		ConfigFile:   configFile,
+		ConfigDir:    configDir,
+	})
 	if err != nil {
-		if perr := p.log(fmt.Sprintf("Failed to compile rule (%s): %s", err, opts)); perr != nil {
+		if perr := fmt.Errorf("Failed to compile rule (%s): %s", err, opts); perr != nil {
 			return perr // can't write to log, return this instead
 		}
 		return err
 	}
-	return p.Waf.Rules.Add(rule)
+	return w.Rules.Add(rule)
 }
 
-func directiveSecResponseBodyAccess(p *Parser, opts string) error {
-	p.Waf.ResponseBodyAccess = (strings.ToLower(opts) == "on")
+func directiveSecResponseBodyAccess(w *coraza.Waf, opts string) error {
+	w.ResponseBodyAccess = (strings.ToLower(opts) == "on")
 	return nil
 }
 
-func directiveSecRequestBodyLimit(p *Parser, opts string) error {
+func directiveSecRequestBodyLimit(w *coraza.Waf, opts string) error {
 	limit, _ := strconv.ParseInt(opts, 10, 64)
-	p.Waf.RequestBodyLimit = limit
+	w.RequestBodyLimit = limit
 	return nil
 }
 
-func directiveSecRequestBodyAccess(p *Parser, opts string) error {
-	p.Waf.RequestBodyAccess = (strings.ToLower(opts) == "on")
+func directiveSecRequestBodyAccess(w *coraza.Waf, opts string) error {
+	w.RequestBodyAccess = (strings.ToLower(opts) == "on")
 	return nil
 }
 
-func directiveSecRuleEngine(p *Parser, opts string) error {
+func directiveSecRuleEngine(w *coraza.Waf, opts string) error {
 	engine, err := types.ParseRuleEngineStatus(opts)
-	p.Waf.RuleEngine = engine
+	w.RuleEngine = engine
 	return err
 }
 
-func directiveUnsupported(p *Parser, opts string) error {
+func directiveUnsupported(w *coraza.Waf, opts string) error {
 	return nil
 }
 
-func directiveSecWebAppID(p *Parser, opts string) error {
-	p.Waf.WebAppID = opts
+func directiveSecWebAppID(w *coraza.Waf, opts string) error {
+	w.WebAppID = opts
 	return nil
 }
 
-func directiveSecTmpDir(p *Parser, opts string) error {
-	p.Waf.TmpDir = opts
+func directiveSecTmpDir(w *coraza.Waf, opts string) error {
+	w.TmpDir = opts
 	return nil
 }
 
-func directiveSecServerSignature(p *Parser, opts string) error {
-	p.Waf.ServerSignature = opts
+func directiveSecServerSignature(w *coraza.Waf, opts string) error {
+	w.ServerSignature = opts
 	return nil
 }
 
-func directiveSecRuleRemoveByTag(p *Parser, opts string) error {
-	for _, r := range p.Waf.Rules.FindByTag(opts) {
-		p.Waf.Rules.DeleteByID(r.ID)
+func directiveSecRuleRemoveByTag(w *coraza.Waf, opts string) error {
+	for _, r := range w.Rules.FindByTag(opts) {
+		w.Rules.DeleteByID(r.ID)
 	}
 	return nil
 }
 
-func directiveSecRuleRemoveByMsg(p *Parser, opts string) error {
-	for _, r := range p.Waf.Rules.FindByMsg(opts) {
-		p.Waf.Rules.DeleteByID(r.ID)
+func directiveSecRuleRemoveByMsg(w *coraza.Waf, opts string) error {
+	for _, r := range w.Rules.FindByMsg(opts) {
+		w.Rules.DeleteByID(r.ID)
 	}
 	return nil
 }
 
-func directiveSecRuleRemoveByID(p *Parser, opts string) error {
+func directiveSecRuleRemoveByID(w *coraza.Waf, opts string) error {
 	id, _ := strconv.Atoi(opts)
-	p.Waf.Rules.DeleteByID(id)
+	w.Rules.DeleteByID(id)
 	return nil
 }
 
-func directiveSecResponseBodyMimeTypesClear(p *Parser, opts string) error {
-	p.Waf.ResponseBodyMimeTypes = []string{}
+func directiveSecResponseBodyMimeTypesClear(w *coraza.Waf, opts string) error {
+	w.ResponseBodyMimeTypes = []string{}
 	return nil
 }
 
-func directiveSecResponseBodyMimeType(p *Parser, opts string) error {
-	p.Waf.ResponseBodyMimeTypes = strings.Split(opts, " ")
+func directiveSecResponseBodyMimeType(w *coraza.Waf, opts string) error {
+	w.ResponseBodyMimeTypes = strings.Split(opts, " ")
 	return nil
 }
 
-func directiveSecResponseBodyLimitAction(p *Parser, opts string) error {
-	p.Waf.RejectOnResponseBodyLimit = (strings.ToLower(opts) == "reject")
+func directiveSecResponseBodyLimitAction(w *coraza.Waf, opts string) error {
+	w.RejectOnResponseBodyLimit = (strings.ToLower(opts) == "reject")
 	return nil
 }
 
-func directiveSecResponseBodyLimit(p *Parser, opts string) error {
+func directiveSecResponseBodyLimit(w *coraza.Waf, opts string) error {
 	var err error
-	p.Waf.ResponseBodyLimit, err = strconv.ParseInt(opts, 10, 64)
+	w.ResponseBodyLimit, err = strconv.ParseInt(opts, 10, 64)
 	return err
 }
 
-func directiveSecRequestBodyLimitAction(p *Parser, opts string) error {
-	p.Waf.RejectOnRequestBodyLimit = (strings.ToLower(opts) == "reject")
+func directiveSecRequestBodyLimitAction(w *coraza.Waf, opts string) error {
+	w.RejectOnRequestBodyLimit = (strings.ToLower(opts) == "reject")
 	return nil
 }
 
-func directiveSecRequestBodyInMemoryLimit(p *Parser, opts string) error {
-	p.Waf.RequestBodyInMemoryLimit, _ = strconv.ParseInt(opts, 10, 64)
+func directiveSecRequestBodyInMemoryLimit(w *coraza.Waf, opts string) error {
+	w.RequestBodyInMemoryLimit, _ = strconv.ParseInt(opts, 10, 64)
 	return nil
 }
 
-func directiveSecRemoteRulesFailAction(p *Parser, opts string) error {
-	p.Waf.AbortOnRemoteRulesFail = (strings.ToLower(opts) == "abort")
+func directiveSecRemoteRulesFailAction(w *coraza.Waf, opts string) error {
+	w.AbortOnRemoteRulesFail = (strings.ToLower(opts) == "abort")
 	return nil
 }
 
-func directiveSecRemoteRules(p *Parser, opts string) error {
+func directiveSecRemoteRules(w *coraza.Waf, opts string) error {
 	return fmt.Errorf("not implemented")
 }
 
-func directiveSecConnWriteStateLimit(p *Parser, opts string) error {
+func directiveSecConnWriteStateLimit(w *coraza.Waf, opts string) error {
 	return nil
 }
 
-func directiveSecSensorID(p *Parser, opts string) error {
-	p.Waf.SensorID = opts
+func directiveSecSensorID(w *coraza.Waf, opts string) error {
+	w.SensorID = opts
 	return nil
 }
 
-func directiveSecConnReadStateLimit(p *Parser, opts string) error {
+func directiveSecConnReadStateLimit(w *coraza.Waf, opts string) error {
 	return nil
 }
 
-func directiveSecPcreMatchLimitRecursion(p *Parser, opts string) error {
+func directiveSecPcreMatchLimitRecursion(w *coraza.Waf, opts string) error {
 	return nil
 }
 
-func directiveSecPcreMatchLimit(p *Parser, opts string) error {
+func directiveSecPcreMatchLimit(w *coraza.Waf, opts string) error {
 	return nil
 }
 
-func directiveSecHTTPBlKey(p *Parser, opts string) error {
+func directiveSecHTTPBlKey(w *coraza.Waf, opts string) error {
 	return nil
 }
 
-func directiveSecGsbLookupDb(p *Parser, opts string) error {
+func directiveSecGsbLookupDb(w *coraza.Waf, opts string) error {
 	return nil
 }
 
-func directiveSecHashMethodPm(p *Parser, opts string) error {
+func directiveSecHashMethodPm(w *coraza.Waf, opts string) error {
 	return nil
 }
 
-func directiveSecHashMethodRx(p *Parser, opts string) error {
+func directiveSecHashMethodRx(w *coraza.Waf, opts string) error {
 	return nil
 }
 
-func directiveSecHashParam(p *Parser, opts string) error {
+func directiveSecHashParam(w *coraza.Waf, opts string) error {
 	return nil
 }
 
-func directiveSecHashKey(p *Parser, opts string) error {
+func directiveSecHashKey(w *coraza.Waf, opts string) error {
 	return nil
 }
 
-func directiveSecHashEngine(p *Parser, opts string) error {
+func directiveSecHashEngine(w *coraza.Waf, opts string) error {
 	return nil
 }
 
-func directiveSecDefaultAction(p *Parser, opts string) error {
-	return p.addDefaultActions(opts)
-}
-
-func directiveSecContentInjection(p *Parser, opts string) error {
-	p.Waf.ContentInjection = parseBoolean(opts)
+func directiveSecDefaultAction(w *coraza.Waf, opts string) error {
+	da, ok := w.GetConfig("rule_default_actions", []string{}).([]string)
+	if !ok {
+		da = []string{}
+	}
+	da = append(da, opts)
+	w.SetConfig("rule_default_actions", da)
 	return nil
 }
 
-func directiveSecConnEngine(p *Parser, opts string) error {
+func directiveSecContentInjection(w *coraza.Waf, opts string) error {
+	w.ContentInjection = parseBoolean(opts)
+	return nil
+}
+
+func directiveSecConnEngine(w *coraza.Waf, opts string) error {
 	/*
 		switch opts{
 		case "On":
-			p.waf.ConnEngine = engine.CONN_ENGINE_ON
+			w.ConnEngine = engine.CONN_ENGINE_ON
 			break
 		case "Off":
-			p.waf.ConnEngine = engine.CONN_ENGINE_OFF
+			w.ConnEngine = engine.CONN_ENGINE_OFF
 			break
 		case "DetectOnly":
-			p.waf.ConnEngine = engine.CONN_ENGINE_DETECTONLY
+			w.ConnEngine = engine.CONN_ENGINE_DETECTONLY
 			break
 		}
 		break
@@ -256,139 +288,157 @@ func directiveSecConnEngine(p *Parser, opts string) error {
 	return nil
 }
 
-func directiveSecCollectionTimeout(p *Parser, opts string) error {
-	// p.waf.CollectionTimeout, _ = strconv.Atoi(opts)
+func directiveSecCollectionTimeout(w *coraza.Waf, opts string) error {
+	// w.CollectionTimeout, _ = strconv.Atoi(opts)
 	return nil
 }
 
-func directiveSecAuditLog(p *Parser, opts string) error {
+func directiveSecAuditLog(w *coraza.Waf, opts string) error {
 	if len(opts) == 0 {
 		return errors.New("syntax error: SecAuditLog /some/absolute/path.log")
 	}
-	p.Waf.AuditLog = opts
-	if err := p.Waf.UpdateAuditLogger(); err != nil {
+	w.AuditLog = opts
+	if err := w.UpdateAuditLogger(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func directiveSecAuditLogType(p *Parser, opts string) error {
+func directiveSecAuditLogType(w *coraza.Waf, opts string) error {
 	if len(opts) == 0 {
 		return errors.New("syntax error: SecAuditLogType [concurrent/https/serial/...]")
 	}
-	p.Waf.AuditLogType = strings.ToLower(opts)
-	if err := p.Waf.UpdateAuditLogger(); err != nil {
+	w.AuditLogType = strings.ToLower(opts)
+	if err := w.UpdateAuditLogger(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func directiveSecAuditLogFormat(p *Parser, opts string) error {
+func directiveSecAuditLogFormat(w *coraza.Waf, opts string) error {
 	if len(opts) == 0 {
 		return errors.New("syntax error: SecAuditLogFormat [json/jsonlegacy/native/...]")
 	}
-	p.Waf.AuditLogFormat = strings.ToLower(opts)
-	if err := p.Waf.UpdateAuditLogger(); err != nil {
+	w.AuditLogFormat = strings.ToLower(opts)
+	if err := w.UpdateAuditLogger(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func directiveSecAuditLogDir(p *Parser, opts string) error {
+func directiveSecAuditLogDir(w *coraza.Waf, opts string) error {
 	if len(opts) == 0 {
 		return errors.New("syntax error: SecAuditLogDir /some/absolute/path")
 	}
-	p.Waf.AuditLogDir = opts
-	if err := p.Waf.UpdateAuditLogger(); err != nil {
+	w.AuditLogDir = opts
+	if err := w.UpdateAuditLogger(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func directiveSecAuditLogDirMode(p *Parser, opts string) error {
+func directiveSecAuditLogDirMode(w *coraza.Waf, opts string) error {
 	if len(opts) == 0 {
 		return errors.New("syntax error: SecAuditLogDirMode [0777/0700/...]")
 	}
-	// p.Waf.AuditLogDirMode, _ = strconv.ParseInt(opts, 8, 32)
-	if err := p.Waf.UpdateAuditLogger(); err != nil {
+	// w.AuditLogDirMode, _ = strconv.ParseInt(opts, 8, 32)
+	if err := w.UpdateAuditLogger(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func directiveSecAuditLogFileMode(p *Parser, opts string) error {
+func directiveSecAuditLogFileMode(w *coraza.Waf, opts string) error {
 	if len(opts) == 0 {
 		return errors.New("syntax error: SecAuditLogFileMode [0777/0700/...]")
 	}
-	// p.Waf.AuditLogFileMode, _ = strconv.ParseInt(opts, 8, 32)
-	if err := p.Waf.UpdateAuditLogger(); err != nil {
+	// w.AuditLogFileMode, _ = strconv.ParseInt(opts, 8, 32)
+	if err := w.UpdateAuditLogger(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func directiveSecAuditLogRelevantStatus(p *Parser, opts string) error {
+func directiveSecAuditLogRelevantStatus(w *coraza.Waf, opts string) error {
 	var err error
-	p.Waf.AuditLogRelevantStatus, err = regexp.Compile(opts)
+	w.AuditLogRelevantStatus, err = regexp.Compile(opts)
 	return err
 }
 
-func directiveSecAuditLogParts(p *Parser, opts string) error {
-	p.Waf.AuditLogParts = types.AuditLogParts(opts)
+func directiveSecAuditLogParts(w *coraza.Waf, opts string) error {
+	w.AuditLogParts = types.AuditLogParts(opts)
 	return nil
 }
 
-func directiveSecAuditEngine(p *Parser, opts string) error {
+func directiveSecAuditEngine(w *coraza.Waf, opts string) error {
 	au, err := types.ParseAuditEngineStatus(opts)
-	p.Waf.AuditEngine = au
+	w.AuditEngine = au
 	return err
 }
 
-func directiveSecDataDir(p *Parser, opts string) error {
+func directiveSecDataDir(w *coraza.Waf, opts string) error {
 	// TODO validations
-	p.Waf.DataDir = opts
+	w.DataDir = opts
 	return nil
 }
 
-func directiveSecUploadKeepFiles(p *Parser, opts string) error {
-	p.Waf.UploadKeepFiles = parseBoolean(opts)
+func directiveSecUploadKeepFiles(w *coraza.Waf, opts string) error {
+	w.UploadKeepFiles = parseBoolean(opts)
 	return nil
 }
 
-func directiveSecUploadFileMode(p *Parser, opts string) error {
+func directiveSecUploadFileMode(w *coraza.Waf, opts string) error {
 	fm, err := strconv.ParseInt(opts, 8, 32)
-	p.Waf.UploadFileMode = fs.FileMode(fm)
+	w.UploadFileMode = fs.FileMode(fm)
 	return err
 }
 
-func directiveSecUploadFileLimit(p *Parser, opts string) error {
+func directiveSecUploadFileLimit(w *coraza.Waf, opts string) error {
 	var err error
-	p.Waf.UploadFileLimit, err = strconv.Atoi(opts)
+	w.UploadFileLimit, err = strconv.Atoi(opts)
 	return err
 }
 
-func directiveSecUploadDir(p *Parser, opts string) error {
+func directiveSecUploadDir(w *coraza.Waf, opts string) error {
 	// TODO validations
-	p.Waf.UploadDir = opts
+	w.UploadDir = opts
 	return nil
 }
 
-func directiveSecRequestBodyNoFilesLimit(p *Parser, opts string) error {
+func directiveSecRequestBodyNoFilesLimit(w *coraza.Waf, opts string) error {
 	var err error
-	p.Waf.RequestBodyNoFilesLimit, err = strconv.ParseInt(opts, 10, 64)
+	w.RequestBodyNoFilesLimit, err = strconv.ParseInt(opts, 10, 64)
 	return err
 }
 
-func directiveSecDebugLog(p *Parser, opts string) error {
-	return p.Waf.SetDebugLogPath(opts)
+func directiveSecDebugLog(w *coraza.Waf, opts string) error {
+	return w.SetDebugLogPath(opts)
 }
 
-func directiveSecDebugLogLevel(p *Parser, opts string) error {
+func directiveSecDebugLogLevel(w *coraza.Waf, opts string) error {
 	lvl, err := strconv.Atoi(opts)
 	if err != nil {
 		return err
 	}
-	return p.Waf.SetLogLevel(lvl)
+	return w.SetLogLevel(lvl)
+}
+
+func directiveSecRuleUpdateTargetById(w *coraza.Waf, opts string) error {
+	spl := strings.SplitN(opts, " ", 2)
+	if len(spl) != 2 {
+		return errors.New("syntax error: SecRuleUpdateTargetById id \"VARIABLES\"")
+	}
+	id, err := strconv.Atoi(spl[0])
+	if err != nil {
+		return err
+	}
+	rule := w.Rules.FindByID(id)
+	rp := &RuleParser{
+		rule:           rule,
+		options:        RuleOptions{},
+		defaultActions: map[types.RulePhase][]ruleAction{},
+	}
+	return rp.ParseVariables(strings.Trim(spl[1], "\""))
 }
 
 func parseBoolean(data string) bool {
@@ -418,6 +468,7 @@ var (
 	_ directive = directiveSecMarker
 	_ directive = directiveSecRemoteRules
 	_ directive = directiveSecSensorID
+	_ directive = directiveSecRuleUpdateTargetById
 )
 
 var directivesMap = map[string]directive{
@@ -483,7 +534,7 @@ var directivesMap = map[string]directive{
 	"seccookieformat":          directiveUnsupported,
 	"secruleupdatetargetbytag": directiveUnsupported,
 	"secruleupdatetargetbymsg": directiveUnsupported,
-	"secruleupdatetargetbyid":  directiveUnsupported,
+	"secruleupdatetargetbyid":  directiveSecRuleUpdateTargetById,
 	"secruleupdateactionbyid":  directiveUnsupported,
 	"secrulescript":            directiveUnsupported,
 	"secruleperftime":          directiveUnsupported,

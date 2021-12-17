@@ -29,7 +29,6 @@ func TestCLogFileCreation(t *testing.T) {
 	if err != nil {
 		t.Error("failed to create concurrent logger file")
 	}
-	logger := &concurrentWriter{}
 	l, err := NewAuditLogger()
 	if err != nil {
 		t.Error("failed to create audit logger", err)
@@ -39,7 +38,7 @@ func TestCLogFileCreation(t *testing.T) {
 	l.fileMode = 0777
 	l.dirMode = 0777
 	l.formatter = jsonFormatter
-	if err := logger.Init(l); err != nil {
+	if err := l.SetWriter("concurrent"); err != nil {
 		t.Error(err)
 	}
 	ts := time.Now().UnixNano()
@@ -51,7 +50,7 @@ func TestCLogFileCreation(t *testing.T) {
 			Response:      AuditTransactionResponse{},
 		},
 	}
-	if err := logger.Write(al); err != nil {
+	if err := l.Write(al); err != nil {
 		t.Error("failed to write to logger: ", err)
 	}
 	tt := time.Unix(0, ts)

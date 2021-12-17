@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jptosso/coraza-waf/v2"
 	engine "github.com/jptosso/coraza-waf/v2"
 	"github.com/jptosso/coraza-waf/v2/loggers"
 	"github.com/jptosso/coraza-waf/v2/types"
@@ -81,7 +82,7 @@ func Test_directiveSecAuditLog(t *testing.T) {
 	if err := p.FromString("SecRuleRemoveByTag test"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if p.Waf.Rules.Count() != 0 {
+	if p.waf.Rules.Count() != 0 {
 		t.Error("Failed to remove rule with SecRuleRemoveByTag")
 	}
 	if err := p.FromString(`SecAction "id:1,msg:'test'"`); err != nil {
@@ -90,7 +91,7 @@ func Test_directiveSecAuditLog(t *testing.T) {
 	if err := p.FromString("SecRuleRemoveByMsg test"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if p.Waf.Rules.Count() != 0 {
+	if p.waf.Rules.Count() != 0 {
 		t.Error("Failed to remove rule with SecRuleRemoveByMsg")
 	}
 	if err := p.FromString(`SecAction "id:1"`); err != nil {
@@ -99,19 +100,19 @@ func Test_directiveSecAuditLog(t *testing.T) {
 	if err := p.FromString("SecRuleRemoveById 1"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if p.Waf.Rules.Count() != 0 {
+	if p.waf.Rules.Count() != 0 {
 		t.Error("Failed to remove rule with SecRuleRemoveById")
 	}
 	if err := p.FromString("SecResponseBodyMimeTypesClear"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if len(p.Waf.ResponseBodyMimeTypes) != 0 {
+	if len(p.waf.ResponseBodyMimeTypes) != 0 {
 		t.Error("failed to set SecResponseBodyMimeTypesClear")
 	}
 	if err := p.FromString("SecResponseBodyMimeType text/html"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if p.Waf.ResponseBodyMimeTypes[0] != "text/html" {
+	if p.waf.ResponseBodyMimeTypes[0] != "text/html" {
 		t.Error("failed to set SecResponseBodyMimeType")
 	}
 }
@@ -121,14 +122,14 @@ func TestDebugDirectives(t *testing.T) {
 	tmpf, _ := ioutil.TempFile("/tmp", "*.log")
 	tmp := tmpf.Name()
 	p, _ := NewParser(waf)
-	err := directiveSecDebugLog(p, tmp)
+	err := directiveSecDebugLog(waf, tmp)
 	if err != nil {
 		t.Error(err)
 	}
-	if err := directiveSecDebugLogLevel(p, "5"); err != nil {
+	if err := directiveSecDebugLogLevel(waf, "5"); err != nil {
 		t.Error(err)
 	}
-	p.Waf.Logger.Info("abc123")
+	p.waf.Logger.Info("abc123")
 	data, _ := os.ReadFile(tmp)
 	if !strings.Contains(string(data), "abc123") {
 		t.Error("failed to write info log")
@@ -141,11 +142,10 @@ func TestSecAuditLogDirectivesDefaults(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	parser, _ := NewParser(waf)
-	if err := directiveSecAuditLog(parser, tmpf.Name()); err != nil {
+	if err := directiveSecAuditLog(waf, tmpf.Name()); err != nil {
 		t.Error(err)
 	}
-	if err := directiveSecAuditLogDir(parser, "/tmp"); err != nil {
+	if err := directiveSecAuditLogDir(waf, "/tmp"); err != nil {
 		t.Error(err)
 	}
 	if waf.AuditLogger() == nil {
@@ -210,6 +210,28 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	if err := json.Unmarshal(data, &j); err != nil {
 		t.Error(err)
 	}
+}
+
+func TestSecRuleUpdateTargetBy(t *testing.T) {
+	waf := coraza.NewWaf()
+	rule, err := ParseRule(RuleOptions{
+		Data:         "REQUEST_URI \"^/test\" \"id:181,tag:test\"",
+		Waf:          waf,
+		WithOperator: true,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	if err := waf.Rules.Add(rule); err != nil {
+		t.Error(err)
+	}
+	if waf.Rules.Count() != 1 {
+		t.Error("Failed to add rule")
+	}
+	if err := directiveSecRuleUpdateTargetById(waf, "181 \"REQUEST_HEADERS\""); err != nil {
+		t.Error(err)
+	}
+
 }
 
 // Find a file by name recursively containing some string

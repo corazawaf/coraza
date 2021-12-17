@@ -21,23 +21,6 @@ import (
 	"github.com/jptosso/coraza-waf/v2"
 )
 
-func TestDefaultActions(t *testing.T) {
-	waf := coraza.NewWaf()
-	p, _ := NewParser(waf)
-	if err := p.addDefaultActions("log, pass, phase: 1"); err != nil {
-		t.Error("Error parsing default actions", err)
-	}
-	if err := p.addDefaultActions("log, drop, phase:2"); err != nil {
-		t.Error("Could not add default actions")
-	}
-	if len(p.defaultActions) != 2 {
-		t.Error("Default actions were not created")
-	}
-	if err := p.FromString(`SecAction "phase:2, id:1"`); err != nil {
-		t.Error("Could not create from string")
-	}
-}
-
 func TestMergeActions(t *testing.T) {
 
 }
