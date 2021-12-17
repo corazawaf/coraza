@@ -426,7 +426,7 @@ func directiveSecDebugLogLevel(w *coraza.Waf, opts string) error {
 func directiveSecRuleUpdateTargetById(w *coraza.Waf, opts string) error {
 	spl := strings.SplitN(opts, " ", 2)
 	if len(spl) != 2 {
-		return errors.New("syntax error: SecRuleUpdateTargetById id target")
+		return errors.New("syntax error: SecRuleUpdateTargetById id \"VARIABLES\"")
 	}
 	id, err := strconv.Atoi(spl[0])
 	if err != nil {
