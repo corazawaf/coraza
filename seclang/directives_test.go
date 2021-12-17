@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jptosso/coraza-waf/v2"
 	engine "github.com/jptosso/coraza-waf/v2"
 	"github.com/jptosso/coraza-waf/v2/loggers"
 	"github.com/jptosso/coraza-waf/v2/types"
@@ -209,6 +210,28 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	if err := json.Unmarshal(data, &j); err != nil {
 		t.Error(err)
 	}
+}
+
+func TestSecRuleUpdateTargetBy(t *testing.T) {
+	waf := coraza.NewWaf()
+	rule, err := ParseRule(RuleOptions{
+		Data:         "REQUEST_URI \"^/test\" \"id:181,tag:test\"",
+		Waf:          waf,
+		WithOperator: true,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	if err := waf.Rules.Add(rule); err != nil {
+		t.Error(err)
+	}
+	if waf.Rules.Count() != 1 {
+		t.Error("Failed to add rule")
+	}
+	if err := directiveSecRuleUpdateTargetById(waf, "181 \"REQUEST_HEADERS\""); err != nil {
+		t.Error(err)
+	}
+
 }
 
 // Find a file by name recursively containing some string

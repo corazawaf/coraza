@@ -37,13 +37,13 @@ type ruleAction struct {
 	F     coraza.RuleAction
 }
 
-type ruleParser struct {
+type RuleParser struct {
 	rule           *coraza.Rule
 	defaultActions map[types.RulePhase][]ruleAction
 	options        RuleOptions
 }
 
-func (p *ruleParser) ParseVariables(vars string) error {
+func (p *RuleParser) ParseVariables(vars string) error {
 
 	// 0 = variable name
 	// 1 = key
@@ -171,7 +171,7 @@ func (p *ruleParser) ParseVariables(vars string) error {
 	return nil
 }
 
-func (p *ruleParser) ParseOperator(operator string) error {
+func (p *RuleParser) ParseOperator(operator string) error {
 	if len(operator) == 0 || operator[0] != '@' && operator[0] != '!' {
 		// default operator RX
 		operator = "@rx " + operator
@@ -218,7 +218,7 @@ func (p *ruleParser) ParseOperator(operator string) error {
 	return nil
 }
 
-func (p *ruleParser) ParseDefaultActions(actions string) error {
+func (p *RuleParser) ParseDefaultActions(actions string) error {
 	act, err := parseActions(actions)
 	if err != nil {
 		return err
@@ -248,7 +248,7 @@ func (p *ruleParser) ParseDefaultActions(actions string) error {
 }
 
 // ParseActions
-func (p *ruleParser) ParseActions(actions string) error {
+func (p *RuleParser) ParseActions(actions string) error {
 	disabledActions, ok := p.options.Waf.GetConfig("disabled_rule_actions", []string{}).([]string)
 	if !ok {
 		disabledActions = []string{}
@@ -297,7 +297,7 @@ func (p *ruleParser) ParseActions(actions string) error {
 }
 
 // Rule returns the compiled rule
-func (p *ruleParser) Rule() *coraza.Rule {
+func (p *RuleParser) Rule() *coraza.Rule {
 	return p.rule
 }
 
@@ -312,7 +312,7 @@ type RuleOptions struct {
 
 func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 	var err error
-	rp := &ruleParser{
+	rp := &RuleParser{
 		options:        options,
 		rule:           coraza.NewRule(),
 		defaultActions: map[types.RulePhase][]ruleAction{},

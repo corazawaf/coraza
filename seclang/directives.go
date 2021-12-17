@@ -423,6 +423,24 @@ func directiveSecDebugLogLevel(w *coraza.Waf, opts string) error {
 	return w.SetLogLevel(lvl)
 }
 
+func directiveSecRuleUpdateTargetById(w *coraza.Waf, opts string) error {
+	spl := strings.SplitN(opts, " ", 2)
+	if len(spl) != 2 {
+		return errors.New("syntax error: SecRuleUpdateTargetById id target")
+	}
+	id, err := strconv.Atoi(spl[0])
+	if err != nil {
+		return err
+	}
+	rule := w.Rules.FindByID(id)
+	rp := &RuleParser{
+		rule:           rule,
+		options:        RuleOptions{},
+		defaultActions: map[types.RulePhase][]ruleAction{},
+	}
+	return rp.ParseVariables(strings.Trim(spl[1], "\""))
+}
+
 func parseBoolean(data string) bool {
 	data = strings.ToLower(data)
 	return data == "on"
@@ -450,6 +468,7 @@ var (
 	_ directive = directiveSecMarker
 	_ directive = directiveSecRemoteRules
 	_ directive = directiveSecSensorID
+	_ directive = directiveSecRuleUpdateTargetById
 )
 
 var directivesMap = map[string]directive{
@@ -515,7 +534,7 @@ var directivesMap = map[string]directive{
 	"seccookieformat":          directiveUnsupported,
 	"secruleupdatetargetbytag": directiveUnsupported,
 	"secruleupdatetargetbymsg": directiveUnsupported,
-	"secruleupdatetargetbyid":  directiveUnsupported,
+	"secruleupdatetargetbyid":  directiveSecRuleUpdateTargetById,
 	"secruleupdateactionbyid":  directiveUnsupported,
 	"secrulescript":            directiveUnsupported,
 	"secruleperftime":          directiveUnsupported,
