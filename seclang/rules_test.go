@@ -284,3 +284,31 @@ func TestChainWithUnconditionalMatch(t *testing.T) {
 		t.Errorf("invalid rule count, got %d", waf.Rules.Count())
 	}
 }
+
+func TestLogsAreNotPrintedManyTimes(t *testing.T) {
+	waf := coraza.NewWaf()
+	logs := []string{}
+	waf.SetErrorLogCb(func(mr coraza.MatchedRule) {
+		logs = append(logs, mr.ErrorLog(403))
+	})
+	parser, _ := NewParser(waf)
+	err := parser.FromString(`
+		SecRule ARGS|REQUEST_HEADERS|!ARGS:test1 ".*" "phase:1, id:1,log,tag:'some1',tag:'some2'"
+	`)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	tx := waf.NewTransaction()
+	tx.AddArgument("GET", "test1", "123")
+	tx.AddArgument("GET", "test2", "456")
+	tx.AddArgument("GET", "test2", "789")
+	tx.AddRequestHeader("test", "123")
+	tx.ProcessRequestHeaders()
+	if len(tx.MatchedRules) != 3 {
+		t.Errorf("failed to match rules with %d", len(tx.MatchedRules))
+	}
+	// we expect 2 logs
+	if len(logs) != 3 {
+		t.Errorf("failed to log with %d", len(logs))
+	}
+}
