@@ -16,6 +16,7 @@ package seclang
 
 import (
 	"encoding/json"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -144,9 +145,17 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	SecAuditLog /tmp/audit.log
 	SecAuditLogFormat json
 	SecAuditLogDir /tmp
+	SecAuditLogDirMode 0777
+	SecAuditLogFileMode 0777
 	SecAuditLogType concurrent
 	`); err != nil {
 		t.Error(err)
+	}
+	if waf.Config.Get("auditlog_dir_mode", fs.FileMode(0555)) != fs.FileMode(0777) {
+		t.Error("failed to set auditlog_dir_mode")
+	}
+	if waf.Config.Get("auditlog_file_mode", fs.FileMode(0555)) != fs.FileMode(0777) {
+		t.Error("failed to set auditlog_file_mode")
 	}
 	id := utils.SafeRandom(10)
 	if waf.AuditLogWriter == nil {

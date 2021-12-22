@@ -354,7 +354,7 @@ func directiveSecAuditLogDirMode(w *coraza.Waf, opts string) error {
 	if err != nil {
 		return err
 	}
-	w.Config.Set("auditlog_dir_mode", auditLogDirMode)
+	w.Config.Set("auditlog_dir_mode", fs.FileMode(auditLogDirMode))
 	if err := w.AuditLogWriter.Init(w.Config); err != nil {
 		return err
 	}
@@ -369,7 +369,7 @@ func directiveSecAuditLogFileMode(w *coraza.Waf, opts string) error {
 	if err != nil {
 		return err
 	}
-	w.Config.Set("auditlog_file_mode", auditLogFileMode)
+	w.Config.Set("auditlog_file_mode", fs.FileMode(auditLogFileMode))
 	if err := w.AuditLogWriter.Init(w.Config); err != nil {
 		return err
 	}
