@@ -30,6 +30,8 @@ jobs:
     - name: Tests and coverage
       run: go test -v -coverpkg=./... -coverprofile=coverage-waf.out ./...
     - name: SonarCloud Scan
+      # We only push sonarcloud for golang v1.17.x
+      if: ${{ matrix.go-version == '1.17.x' }}
       uses: sonarsource/sonarcloud-github-action@master
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
