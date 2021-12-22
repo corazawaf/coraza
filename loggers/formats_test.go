@@ -76,8 +76,8 @@ func TestLegacyFormatter(t *testing.T) {
 	}
 }
 
-func createAuditLog() AuditLog {
-	return AuditLog{
+func createAuditLog() *AuditLog {
+	return &AuditLog{
 		Transaction: AuditTransaction{
 			Timestamp:     "02/Jan/2006:15:04:20 -0700",
 			UnixTimestamp: 0,

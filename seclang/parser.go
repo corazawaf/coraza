@@ -55,9 +55,9 @@ func (p *Parser) FromFile(profilePath string) error {
 	for _, profilePath := range files {
 		p.currentFile = profilePath
 		p.currentDir = filepath.Dir(profilePath)
-		p.waf.SetConfig("last_porfile_line", p.currentLine)
-		p.waf.SetConfig("parser_config_file", p.currentFile)
-		p.waf.SetConfig("parser_config_dir", p.currentDir)
+		p.waf.Config.Set("last_porfile_line", p.currentLine)
+		p.waf.Config.Set("parser_config_file", p.currentFile)
+		p.waf.Config.Set("parser_config_dir", p.currentDir)
 		file, err := os.ReadFile(profilePath)
 		if err != nil {
 			p.waf.Logger.Error(err.Error(),
@@ -104,10 +104,7 @@ func (p *Parser) FromString(data string) error {
 }
 
 func (p *Parser) evaluate(data string) error {
-	disabledDirectives, ok := p.waf.GetConfig("disabled_directives", []string{}).([]string)
-	if !ok {
-		disabledDirectives = []string{}
-	}
+	disabledDirectives := p.waf.Config.Get("disabled_directives", []string{}).([]string)
 	if data == "" || data[0] == '#' {
 		return nil
 	}
@@ -147,7 +144,7 @@ func (p *Parser) log(msg string) error {
 
 func (p *Parser) SetCurrentDir(dir string) {
 	p.currentDir = dir
-	p.waf.SetConfig("parser_config_dir", p.currentDir)
+	p.waf.Config.Set("parser_config_dir", p.currentDir)
 }
 
 // NewParser creates a new parser from a WAF instance

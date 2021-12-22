@@ -136,39 +136,6 @@ func TestDebugDirectives(t *testing.T) {
 	}
 }
 
-func TestSecAuditLogDirectivesDefaults(t *testing.T) {
-	waf := engine.NewWaf()
-	tmpf, err := ioutil.TempFile("/tmp", "*.log")
-	if err != nil {
-		t.Error(err)
-	}
-	if err := directiveSecAuditLog(waf, tmpf.Name()); err != nil {
-		t.Error(err)
-	}
-	if err := directiveSecAuditLogDir(waf, "/tmp"); err != nil {
-		t.Error(err)
-	}
-	if waf.AuditLogger() == nil {
-		t.Error("Invalid audit logger (nil)")
-		return
-	}
-	if err := waf.AuditLogger().Write(loggers.AuditLog{
-		Parts: types.AuditLogParts("ABCDEFGHIJ"),
-		Transaction: loggers.AuditTransaction{
-			ID: "test-12345",
-		},
-	}); err != nil {
-		t.Error(err)
-	}
-	data, err := ioutil.ReadFile(tmpf.Name())
-	if err != nil {
-		t.Error(err)
-	}
-	if !strings.Contains(string(data), "test-12345") {
-		t.Error("failed to write audit log")
-	}
-}
-
 func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	waf := engine.NewWaf()
 	auditpath := "/tmp/"
@@ -176,17 +143,17 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	if err := parser.FromString(`
 	SecAuditLog /tmp/audit.log
 	SecAuditLogFormat json
-	SecAuditLogType concurrent
 	SecAuditLogDir /tmp
+	SecAuditLogType concurrent
 	`); err != nil {
 		t.Error(err)
 	}
 	id := utils.SafeRandom(10)
-	if waf.AuditLogger() == nil {
+	if waf.AuditLogWriter == nil {
 		t.Error("Invalid audit logger (nil)")
 		return
 	}
-	if err := waf.AuditLogger().Write(loggers.AuditLog{
+	if err := waf.AuditLogWriter.Write(&loggers.AuditLog{
 		Parts: types.AuditLogParts("ABCDEFGHIJKZ"),
 		Transaction: loggers.AuditTransaction{
 			ID: id,

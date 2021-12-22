@@ -27,13 +27,3 @@ func TestWAFInitialize(t *testing.T) {
 func TestNewTransaction(t *testing.T) {
 
 }
-
-func TestAuditLoggerVars(t *testing.T) {
-	waf := NewWaf()
-	waf.AuditLog = "/tmp/test.log"
-	waf.AuditLogFormat = "native"
-	waf.AuditLogType = "serial"
-	if err := waf.UpdateAuditLogger(); err != nil {
-		t.Error(err)
-	}
-}

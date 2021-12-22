@@ -24,8 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jptosso/coraza-waf/v2/geo"
-	loggers "github.com/jptosso/coraza-waf/v2/loggers"
+	"github.com/jptosso/coraza-waf/v2/loggers"
 	"github.com/jptosso/coraza-waf/v2/types"
 	"github.com/jptosso/coraza-waf/v2/types/variables"
 	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
@@ -50,9 +49,6 @@ type ErrorLogCallback = func(rule MatchedRule)
 type Waf struct {
 	// ruleGroup object, contains all rules and helpers
 	Rules RuleGroup
-
-	// Audit logger engine
-	auditLogger *loggers.Logger
 
 	// Audit mode status
 	AuditEngine types.AuditEngineStatus
@@ -114,23 +110,17 @@ type Waf struct {
 	// Path to store data files (ex. cache)
 	DataDir string
 
-	// AUDIT LOG VARIABLES
+	// If true, the WAF will store the uploaded files in the UploadDir
+	// directory
+	UploadKeepFiles bool
+	// UploadFileMode instructs the waf to set the file mode for uploaded files
+	UploadFileMode fs.FileMode
+	// UploadFileLimit is the maximum size of the uploaded file to be stored
+	UploadFileLimit int
+	// UploadDir is the directory where the uploaded files will be stored
+	UploadDir string
 
-	// AuditLog contains the log file absolute path
-	AuditLog string
-	// AuditLogDir contains the concurrent logging directory
-	AuditLogDir string
-	// AuditLogFormat is the audit log format
-	AuditLogFormat string
-	// AuditLogType is the audit log type
-	AuditLogType string
-
-	UploadKeepFiles         bool
-	UploadFileMode          fs.FileMode
-	UploadFileLimit         int
-	UploadDir               string
 	RequestBodyNoFilesLimit int64
-	CollectionTimeout       int
 
 	// Used by some functions to support concurrent tasks
 	mux *sync.RWMutex
@@ -149,8 +139,6 @@ type Waf struct {
 	// Used for the debug logger
 	Logger *zap.Logger
 
-	geo geo.Reader
-
 	// Used to allow switching the debug level during runtime
 	// ctl cannot switch use it as it will update de lvl
 	// for the whole Waf instance
@@ -158,7 +146,11 @@ type Waf struct {
 
 	errorLogCb ErrorLogCallback
 
-	config map[string]interface{}
+	// Config stores the "out of the box" configurations for the waf
+	Config types.WafConfig
+
+	// AuditLogWriter is used to write audit logs
+	AuditLogWriter loggers.LogWriter
 }
 
 // NewTransaction Creates a new initialized transaction for this WAF instance
@@ -248,59 +240,6 @@ func (w *Waf) NewTransaction() *Transaction {
 	return tx
 }
 
-// UpdateAuditLogger compiles every SecAuditLog directive
-// into a single *loggers.Logger
-// This is required after updating w.AuditLog* variables
-// It doesn't look to effective but the reason for this is
-// that we have to reinitialize the logger after updating
-// This is not concurrency safe, it should never be called
-// after the rules are being used
-func (w *Waf) UpdateAuditLogger() error {
-	al, err := loggers.NewAuditLogger()
-	if err != nil {
-		return err
-	}
-	if w.AuditLog == "" {
-		// when there is no path we won't log
-		return nil
-	}
-	if err := al.SetFile(w.AuditLog); err != nil {
-		return err
-	}
-
-	// SecAuditLogFormat provides a log format, default is native
-	if w.AuditLogFormat != "" {
-		if err := al.SetFormatter(w.AuditLogFormat); err != nil {
-			return err
-		}
-	} else {
-		if err := al.SetFormatter("native"); err != nil {
-			return err
-		}
-	}
-
-	// SecAuditLogDir provides the log directory,
-	// there is no default value
-	if w.AuditLogDir != "" {
-		if err := al.SetDir(w.AuditLogDir); err != nil {
-			return err
-		}
-	}
-
-	// SecAuditLog provides the log type, default is serial
-	if w.AuditLogType != "" {
-		if err := al.SetWriter(w.AuditLogType); err != nil {
-			return err
-		}
-	} else {
-		if err := al.SetWriter("serial"); err != nil {
-			return err
-		}
-	}
-	w.auditLogger = al
-	return nil
-}
-
 // SetDebugLogPath sets the path for the debug log
 // If the path is empty, the debug log will be disabled
 // note: this is not thread safe
@@ -322,21 +261,14 @@ func (w *Waf) SetDebugLogPath(path string) error {
 	return nil
 }
 
-// AuditLogger returns the initiated loggers
-// Coraza supports unlimited loggers, so you can write for example
-// to syslog and a local drive at the same time
-// AuditLogger() returns nil if the audit logger is not set
-// Please try to use a nil logger...
-func (w *Waf) AuditLogger() *loggers.Logger {
-	return w.auditLogger
-}
-
 // NewWaf creates a new WAF instance with default variables
 func NewWaf() *Waf {
 	atom := zap.NewAtomicLevel()
 	atom.SetLevel(zap.FatalLevel)
+	logWriter, _ := loggers.GetLogWriter("serial")
 	waf := &Waf{
 		ArgumentSeparator:        "&",
+		AuditLogWriter:           logWriter,
 		AuditEngine:              types.AuditEngineOff,
 		AuditLogParts:            types.AuditLogParts("ABCFHZ"),
 		mux:                      &sync.RWMutex{},
@@ -348,10 +280,16 @@ func NewWaf() *Waf {
 		RuleEngine:               types.RuleEngineOn,
 		Rules:                    NewRuleGroup(),
 		TmpDir:                   "/tmp",
-		CollectionTimeout:        3600,
 		loggerAtomicLevel:        &atom,
 		AuditLogRelevantStatus:   regexp.MustCompile(`.*`),
-		config:                   map[string]interface{}{},
+		Config: types.WafConfig{
+			"auditlog_file":   "/dev/null",
+			"auditlog_format": "native",
+		},
+	}
+	// We initialize a basic audit log writer to /dev/null
+	if err := logWriter.Init(waf.Config); err != nil {
+		fmt.Println(err)
 	}
 	if err := waf.SetDebugLogPath("/dev/null"); err != nil {
 		fmt.Println(err)
@@ -387,33 +325,4 @@ func (w *Waf) SetLogLevel(lvl int) error {
 // helpers to write modsecurity style logs
 func (w *Waf) SetErrorLogCb(cb ErrorLogCallback) {
 	w.errorLogCb = cb
-}
-
-// SetGeoReader is used by directives to assign a geo reader
-// This function is not thread safe
-func (w *Waf) SetGeoReader(reader geo.Reader) {
-	w.geo = reader
-}
-
-// Geo returns the geo processor for the current WAF instance
-// Geo is nil if the geo processor is not set
-// A geo processor requires a Geo plugin to be installed
-func (w *Waf) Geo() geo.Reader {
-	return w.geo
-}
-
-// SetConfig is used to share configuration from directives
-// to Transactions. This function is not concurrent-safe.
-func (w *Waf) SetConfig(key string, value interface{}) {
-	w.config[key] = value
-}
-
-// GetConfig returns the configuration value for the given key.
-// If the key is not found, defaultValue is returned
-// This function is concurrent-safe.
-func (w *Waf) GetConfig(key string, defaultValue interface{}) interface{} {
-	if value, ok := w.config[key]; ok {
-		return value
-	}
-	return defaultValue
 }

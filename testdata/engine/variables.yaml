@@ -36,6 +36,7 @@
             - 1000
             #- 1500
             - 123123
+            - 9123
           non_triggered_rules:
             - 800
             - 900
@@ -43,11 +44,13 @@
             - 920274
             - 123124
             - 123125
+            - 9124
+          log_contains: some-secret
   rules: |
     SecRule REQBODY_PROCESSOR "" "id: 10, log"
     SecRequestBodyAccess On
     SecRule ARGS:/^t1$/ "aaa" "id:1,phase:1,block,log"
-    SecRule &ARGS_GET:/t.*/ "@gt 2" "id: 1234, phase:1, block, log"
+    SecRule &ARGS_GET:/t.*/ "@gt 2" "id: 1234, phase:1, block, log, setenv:test=some-secret"
     # TODO
     #SecRule &ARGS_GET|!ARGS_GET:/.*/ "@eq 0" "id: 1500, phase:1, block, log"
     SecRule REQUEST_METHOD "POST" "id:15, log"
@@ -79,4 +82,12 @@
     SecRule TX:0 "@eq 4" "id:123124,phase:1,log"
 
     SecRule REQUEST_METHOD "^.*$" "id:123125,phase:1,t:length,log,setvar:'tx.testuru2=%{tx.0}',chain"
-      SecRule TX:testuru2 "@eq 4" ""    
+      SecRule TX:testuru2 "@eq 4" ""
+
+    SecRule ARGS:t1 "bbb" "id:9123,phase:1,log"
+    SecRuleUpdateTargetById 9123 "ARGS:t2"
+
+    SecRule ARGS "bbb" "id:9124,phase:1,log"
+    SecRuleUpdateTargetById 9124 "!ARGS:t2"
+
+    SecAction "id: 99999, log, msg:'%{env.test}'"

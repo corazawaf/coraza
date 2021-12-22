@@ -230,7 +230,7 @@ SecAuditLogRelevantStatus "^(?:(5|4)(0|1)[0-9])$"
 SecAuditLogParts ABIJDEFHZ
 
 # Use a single file for logging. This is much easier to look at, but
-# assumes that you will use the audit log only ocassionally.
+# assumes that you will use the audit log only occasionally.
 #
 SecAuditLogType Serial
 

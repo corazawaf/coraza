@@ -16,7 +16,6 @@ package operators
 
 import (
 	"github.com/jptosso/coraza-waf/v2"
-	"github.com/jptosso/coraza-waf/v2/types/variables"
 )
 
 type geoLookup struct{}
@@ -26,16 +25,7 @@ func (o *geoLookup) Init(data string) error {
 }
 
 func (o *geoLookup) Evaluate(tx *coraza.Transaction, value string) bool {
-	geo := tx.Waf.Geo()
-	if geo == nil {
-		return false
-	}
-	data, err := geo.Get(value)
-	if err != nil {
-		tx.Waf.Logger.Error("failed to get country from geo reader")
-		return false
-	}
-	tx.GetCollection(variables.Geo).SetData(data)
+	// kept for compatibility, it requires a plugin.
 	return true
 }
 

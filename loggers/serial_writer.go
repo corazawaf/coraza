@@ -15,40 +15,40 @@
 package loggers
 
 import (
-	"fmt"
+	"io/fs"
 	"log"
 	"os"
+
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 // serialWriter is used to store logs in a single file
 type serialWriter struct {
-	file    *os.File
-	log     log.Logger
-	options LoggerOptions
+	file      *os.File
+	log       log.Logger
+	formatter LogFormatter
 }
 
-func (sl *serialWriter) Init(l LoggerOptions) error {
-	sl.options = l
+func (sl *serialWriter) Init(l types.WafConfig) error {
+	fileName := l.Get("auditlog_file", "").(string)
+	fileMode := l.Get("auditlog_file_mode", fs.FileMode(0644)).(fs.FileMode)
+	sl.formatter = l.Get("auditlog_formatter", nativeFormatter).(LogFormatter)
 	var err error
-	sl.file, err = os.OpenFile(sl.options.File, os.O_APPEND|os.O_CREATE|os.O_WRONLY, sl.options.FileMode)
+	sl.file, err = os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, fileMode)
 	if err != nil {
 		return err
 	}
 	sl.log.SetFlags(0)
 	sl.log.SetOutput(sl.file)
-	if sl.options.Formatter == nil {
-		return fmt.Errorf("formetter cannot be nil")
-	}
 	return nil
 }
 
-func (sl *serialWriter) Write(al AuditLog) error {
-	data, err := sl.options.Formatter(al)
+func (sl *serialWriter) Write(al *AuditLog) error {
+	bts, err := sl.formatter(al)
 	if err != nil {
 		return err
 	}
-
-	sl.log.Println(string(data))
+	sl.log.Println(string(bts))
 	return nil
 }
 

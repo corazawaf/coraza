@@ -17,39 +17,49 @@ package loggers
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"log"
 	"os"
 	"path"
 	"sync"
 	"time"
+
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 type concurrentWriter struct {
-	mux         *sync.RWMutex
-	auditlogger *log.Logger
-	options     LoggerOptions
+	mux           *sync.RWMutex
+	auditlogger   *log.Logger
+	auditDir      string
+	auditDirMode  fs.FileMode
+	auditFileMode fs.FileMode
+	formatter     LogFormatter
 }
 
-func (cl *concurrentWriter) Init(l LoggerOptions) error {
+func (cl *concurrentWriter) Init(conf types.WafConfig) error {
+	fileName := conf.Get("auditlog_file", "").(string)
+	cl.auditFileMode = conf.Get("auditlog_file_mode", fs.FileMode(0644)).(fs.FileMode)
+	cl.auditDir = conf.Get("auditlog_dir", "").(string)
+	cl.auditDirMode = conf.Get("auditlog_dir_mode", fs.FileMode(0755)).(fs.FileMode)
+	cl.formatter = conf.Get("auditlog_formatter", nativeFormatter).(LogFormatter)
 	cl.mux = &sync.RWMutex{}
-	faudit, err := os.OpenFile(l.File, os.O_CREATE|os.O_WRONLY|os.O_APPEND, l.FileMode)
+	faudit, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, cl.auditFileMode)
 	if err != nil {
 		return err
 	}
 	mw := io.MultiWriter(faudit)
-	cl.options = l
 	cl.auditlogger = log.New(mw, "", 0)
 	return nil
 }
 
-func (cl concurrentWriter) Write(al AuditLog) error {
+func (cl concurrentWriter) Write(al *AuditLog) error {
 	// 192.168.3.130 192.168.3.1 - - [22/Aug/2009:13:24:20 +0100] "GET / HTTP/1.1" 200 56 "-" "-" SojdH8AAQEAAAugAQAAAAAA "-" /20090822/20090822-1324/20090822-132420-SojdH8AAQEAAAugAQAAAAAA 0 1248
 	t := time.Unix(0, al.Transaction.UnixTimestamp)
 
 	// append the two directories
 	p2 := fmt.Sprintf("/%s/%s/", t.Format("20060102"), t.Format("20060102-1504"))
-	logdir := path.Join(cl.options.Dir, p2)
+	logdir := path.Join(cl.auditDir, p2)
 	// Append the filename
 	fname := fmt.Sprintf("/%s-%s", t.Format("20060102-150405"), al.Transaction.ID)
 	filepath := path.Join(logdir, fname)
@@ -59,16 +69,16 @@ func (cl concurrentWriter) Write(al AuditLog) error {
 			al.Transaction.Request.HTTPVersion),
 		al.Transaction.Response.Status, 0 /*response length*/, "-", "-", al.Transaction.ID,
 		"-", filepath, 0, 0 /*request length*/)
-	err := os.MkdirAll(logdir, cl.options.DirMode)
+	err := os.MkdirAll(logdir, cl.auditDirMode)
 	if err != nil {
 		return err
 	}
 
-	jsdata, err := cl.options.Formatter(al)
+	jsdata, err := cl.formatter(al)
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(filepath, []byte(jsdata), cl.options.FileMode)
+	err = ioutil.WriteFile(filepath, []byte(jsdata), cl.auditFileMode)
 	if err != nil {
 		return err
 	}
