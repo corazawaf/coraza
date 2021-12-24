@@ -1,0 +1,23 @@
+name: lint (pre-commit)
+
+on:
+  pull_request:
+    branches: [v1/*, v2/*]
+  push:
+    branches: [v1/*, v2/*]
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: v1.17.x
+    - name: Install dependencies
+      run: cd /tmp && GO111MODULE=on go get -v -u github.com/go-critic/go-critic/cmd/gocritic
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+    - uses: pre-commit/action@v2.0.3
+      with: 
+        extra_args: --all-files
