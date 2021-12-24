@@ -17,11 +17,14 @@ package loggers
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"path"
 	"testing"
 	"time"
+
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 func TestCLogFileCreation(t *testing.T) {
@@ -29,20 +32,15 @@ func TestCLogFileCreation(t *testing.T) {
 	if err != nil {
 		t.Error("failed to create concurrent logger file")
 	}
-	l, err := NewAuditLogger()
-	if err != nil {
-		t.Error("failed to create audit logger", err)
-	}
-	l.file = file.Name()
-	l.directory = "/tmp"
-	l.fileMode = 0777
-	l.dirMode = 0777
-	l.formatter = jsonFormatter
-	if err := l.SetWriter("concurrent"); err != nil {
-		t.Error(err)
+	config := types.WafConfig{
+		"auditlog_file":      file.Name(),
+		"auditlog_dir":       "/tmp",
+		"auditlog_file_mode": fs.FileMode(0777),
+		"auditlog_dir_mode":  fs.FileMode(0777),
+		"auditlog_formatter": jsonFormatter,
 	}
 	ts := time.Now().UnixNano()
-	al := AuditLog{
+	al := &AuditLog{
 		Transaction: AuditTransaction{
 			UnixTimestamp: ts,
 			ID:            "123",
@@ -50,7 +48,11 @@ func TestCLogFileCreation(t *testing.T) {
 			Response:      AuditTransactionResponse{},
 		},
 	}
-	if err := l.Write(al); err != nil {
+	writer := &concurrentWriter{}
+	if err := writer.Init(config); err != nil {
+		t.Error("failed to init concurrent logger", err)
+	}
+	if err := writer.Write(al); err != nil {
 		t.Error("failed to write to logger: ", err)
 	}
 	tt := time.Unix(0, ts)

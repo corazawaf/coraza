@@ -19,6 +19,27 @@ import (
 	"strings"
 )
 
+// WafConfig is used to store the configuration of the WAF
+// Internal configurations are not exported.
+// This is used to connect directives with audit loggers.
+// A Waf instance will share it's WafConfig object with the
+// audit loggers.
+type WafConfig map[string]interface{}
+
+// Get returns the configuration value for the given key
+// If the key is not found, it returns the default value
+func (w WafConfig) Get(key string, defaultValue interface{}) interface{} {
+	if value, ok := w[key]; ok {
+		return value
+	}
+	return defaultValue
+}
+
+// Set sets the configuration value for the given key
+func (w WafConfig) Set(key string, value interface{}) {
+	w[key] = value
+}
+
 // AuditEngineStatus represents the functionality
 // of the audit engine.
 type AuditEngineStatus int

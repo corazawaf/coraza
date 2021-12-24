@@ -15,28 +15,27 @@
 package loggers
 
 import (
-	"bufio"
 	"os"
 	"path"
 	"strings"
 	"testing"
 
+	"github.com/jptosso/coraza-waf/v2/types"
 	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
 )
 
 func TestSerialLogger_Write(t *testing.T) {
 	tmp := path.Join("/tmp", utils.SafeRandom(10)+"-audit.log")
 	defer os.Remove(tmp)
-	logger, err := NewAuditLogger()
-	if err != nil {
+	writer := &serialWriter{}
+	config := types.WafConfig{
+		"auditlog_file":      tmp,
+		"auditlog_formatter": jsonFormatter,
+	}
+	if err := writer.Init(config); err != nil {
 		t.Error(err)
 	}
-	logger.file = tmp
-	err = logger.SetWriter("serial")
-	if err != nil {
-		t.Error(err)
-	}
-	al := AuditLog{
+	al := &AuditLog{
 		Transaction: AuditTransaction{
 			ID: "test123",
 		},
@@ -49,24 +48,18 @@ func TestSerialLogger_Write(t *testing.T) {
 			},
 		},
 	}
-	if err := logger.Write(al); err != nil {
+	if err := writer.Write(al); err != nil {
 		t.Error("failed to write to serial logger")
 	}
 
-	f, err := os.OpenFile(tmp, os.O_RDONLY, 0666)
+	data, err := os.ReadFile(tmp)
 	if err != nil {
-		t.Error(f)
+		t.Error("failed to read serial logger file", err)
 	}
-	// copy io.Reader to string
-	scanner := bufio.NewScanner(f)
-	var data string
-	for scanner.Scan() {
-		data += scanner.Text()
+	if !strings.Contains(string(data), "test123") {
+		t.Errorf("failed to parse log tx id from serial log: \n%q on file %q", string(data), tmp)
 	}
-	if !strings.Contains(data, "test123") {
-		t.Errorf("failed to parse log tx id from serial log: %q on file %q", data, tmp)
-	}
-	if !strings.Contains(data, "id:100") {
-		t.Errorf("failed to parse log rule id: %q on file %q", data, tmp)
+	if !strings.Contains(string(data), "id:100") {
+		t.Errorf("failed to parse log rule id: \n%q on file %q", string(data), tmp)
 	}
 }

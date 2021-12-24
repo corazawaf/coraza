@@ -822,9 +822,9 @@ func (tx *Transaction) ProcessLogging() {
 	tx.Waf.Logger.Debug("Transaction marked for audit logging",
 		zap.String("tx", tx.ID),
 	)
-	if tx.Waf.AuditLogger() != nil {
+	if writer := tx.Waf.AuditLogWriter; writer != nil {
 		// we don't log if there is an empty auditlogger
-		if err := tx.Waf.AuditLogger().Write(tx.AuditLog()); err != nil {
+		if err := writer.Write(tx.AuditLog()); err != nil {
 			tx.Waf.Logger.Error(err.Error())
 		}
 	}
@@ -836,8 +836,8 @@ func (tx *Transaction) Interrupted() bool {
 }
 
 // AuditLog returns an AuditLog struct, used to write audit logs
-func (tx *Transaction) AuditLog() loggers.AuditLog {
-	al := loggers.AuditLog{}
+func (tx *Transaction) AuditLog() *loggers.AuditLog {
+	al := &loggers.AuditLog{}
 	al.Messages = []loggers.AuditMessage{}
 	// YYYY/MM/DD HH:mm:ss
 	ts := time.Unix(0, tx.Timestamp).Format("2006/01/02 15:04:05")

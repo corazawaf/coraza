@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/loggers"
 	"github.com/jptosso/coraza-waf/v2/types"
 	"go.uber.org/zap"
 )
@@ -85,9 +86,9 @@ func directiveSecAction(w *coraza.Waf, opts string) error {
 }
 
 func directiveSecRule(w *coraza.Waf, opts string) error {
-	line, _ := w.GetConfig("parser_last_line", 0).(int)
-	configFile, _ := w.GetConfig("parser_config_file", "").(string)
-	configDir, _ := w.GetConfig("parser_config_dir", "").(string)
+	line := w.Config.Get("parser_last_line", 0).(int)
+	configFile := w.Config.Get("parser_config_file", "").(string)
+	configDir := w.Config.Get("parser_config_dir", "").(string)
 	rule, err := ParseRule(RuleOptions{
 		Waf:          w,
 		Data:         opts,
@@ -256,12 +257,12 @@ func directiveSecHashEngine(w *coraza.Waf, opts string) error {
 }
 
 func directiveSecDefaultAction(w *coraza.Waf, opts string) error {
-	da, ok := w.GetConfig("rule_default_actions", []string{}).([]string)
+	da, ok := w.Config.Get("rule_default_actions", []string{}).([]string)
 	if !ok {
 		da = []string{}
 	}
 	da = append(da, opts)
-	w.SetConfig("rule_default_actions", da)
+	w.Config.Set("rule_default_actions", da)
 	return nil
 }
 
@@ -297,8 +298,8 @@ func directiveSecAuditLog(w *coraza.Waf, opts string) error {
 	if len(opts) == 0 {
 		return errors.New("syntax error: SecAuditLog /some/absolute/path.log")
 	}
-	w.AuditLog = opts
-	if err := w.UpdateAuditLogger(); err != nil {
+	w.Config.Set("auditlog_file", opts)
+	if err := w.AuditLogWriter.Init(w.Config); err != nil {
 		return err
 	}
 	return nil
@@ -308,19 +309,27 @@ func directiveSecAuditLogType(w *coraza.Waf, opts string) error {
 	if len(opts) == 0 {
 		return errors.New("syntax error: SecAuditLogType [concurrent/https/serial/...]")
 	}
-	w.AuditLogType = strings.ToLower(opts)
-	if err := w.UpdateAuditLogger(); err != nil {
+	writer, err := loggers.GetLogWriter(opts)
+	if err != nil {
 		return err
 	}
+	if err := writer.Init(w.Config); err != nil {
+		return err
+	}
+	w.AuditLogWriter = writer
 	return nil
 }
 
 func directiveSecAuditLogFormat(w *coraza.Waf, opts string) error {
 	if len(opts) == 0 {
-		return errors.New("syntax error: SecAuditLogFormat [json/jsonlegacy/native/...]")
+		return errors.New("syntax error: SecAuditLogFormat [json/native/...]")
 	}
-	w.AuditLogFormat = strings.ToLower(opts)
-	if err := w.UpdateAuditLogger(); err != nil {
+	formatter, err := loggers.GetLogFormatter(opts)
+	if err != nil {
+		return err
+	}
+	w.Config.Set("auditlog_formatter", formatter)
+	if err := w.AuditLogWriter.Init(w.Config); err != nil {
 		return err
 	}
 	return nil
@@ -330,8 +339,8 @@ func directiveSecAuditLogDir(w *coraza.Waf, opts string) error {
 	if len(opts) == 0 {
 		return errors.New("syntax error: SecAuditLogDir /some/absolute/path")
 	}
-	w.AuditLogDir = opts
-	if err := w.UpdateAuditLogger(); err != nil {
+	w.Config.Set("auditlog_dir", opts)
+	if err := w.AuditLogWriter.Init(w.Config); err != nil {
 		return err
 	}
 	return nil
@@ -341,8 +350,12 @@ func directiveSecAuditLogDirMode(w *coraza.Waf, opts string) error {
 	if len(opts) == 0 {
 		return errors.New("syntax error: SecAuditLogDirMode [0777/0700/...]")
 	}
-	// w.AuditLogDirMode, _ = strconv.ParseInt(opts, 8, 32)
-	if err := w.UpdateAuditLogger(); err != nil {
+	auditLogDirMode, err := strconv.ParseInt(opts, 8, 32)
+	if err != nil {
+		return err
+	}
+	w.Config.Set("auditlog_dir_mode", fs.FileMode(auditLogDirMode))
+	if err := w.AuditLogWriter.Init(w.Config); err != nil {
 		return err
 	}
 	return nil
@@ -352,8 +365,12 @@ func directiveSecAuditLogFileMode(w *coraza.Waf, opts string) error {
 	if len(opts) == 0 {
 		return errors.New("syntax error: SecAuditLogFileMode [0777/0700/...]")
 	}
-	// w.AuditLogFileMode, _ = strconv.ParseInt(opts, 8, 32)
-	if err := w.UpdateAuditLogger(); err != nil {
+	auditLogFileMode, err := strconv.ParseInt(opts, 8, 32)
+	if err != nil {
+		return err
+	}
+	w.Config.Set("auditlog_file_mode", fs.FileMode(auditLogFileMode))
+	if err := w.AuditLogWriter.Init(w.Config); err != nil {
 		return err
 	}
 	return nil

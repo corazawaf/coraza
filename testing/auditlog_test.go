@@ -28,6 +28,14 @@ import (
 func TestAuditLogMessages(t *testing.T) {
 	waf := coraza.NewWaf()
 	parser, _ := seclang.NewParser(waf)
+	// generate a random tmp file
+	file, err := os.CreateTemp("/tmp", "tmp*.log")
+	if err != nil {
+		t.Error(err)
+	}
+	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
+		t.Error(err)
+	}
 	if err := parser.FromString(`
 		SecRuleEngine DetectionOnly
 		SecAuditEngine On
@@ -37,15 +45,7 @@ func TestAuditLogMessages(t *testing.T) {
 	`); err != nil {
 		t.Error(err)
 	}
-	// generate a random tmp file
-	file, err := os.CreateTemp("/tmp", "tmp*.log")
-	if err != nil {
-		t.Error(err)
-	}
 	defer os.Remove(file.Name())
-	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
-		t.Error(err)
-	}
 	tx := waf.NewTransaction()
 	tx.AddArgument("GET", "test", "test")
 	tx.ProcessRequestHeaders()
@@ -113,6 +113,15 @@ func TestAuditLogRelevantOnly(t *testing.T) {
 func TestAuditLogRelevantOnlyOk(t *testing.T) {
 	waf := coraza.NewWaf()
 	parser, _ := seclang.NewParser(waf)
+	// generate a random tmp file
+	file, err := os.CreateTemp("/tmp", "tmp*.log")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.Remove(file.Name())
+	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
+		t.Error(err)
+	}
 	if err := parser.FromString(`
 		SecRuleEngine DetectionOnly
 		SecAuditEngine RelevantOnly
@@ -121,15 +130,6 @@ func TestAuditLogRelevantOnlyOk(t *testing.T) {
 		SecAuditLogRelevantStatus ".*"
 		SecRule ARGS "@unconditionalMatch" "id:1,phase:1,log,msg:'unconditional match'"
 	`); err != nil {
-		t.Error(err)
-	}
-	// generate a random tmp file
-	file, err := os.CreateTemp("/tmp", "tmp*.log")
-	if err != nil {
-		t.Error(err)
-	}
-	defer os.Remove(file.Name())
-	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
 		t.Error(err)
 	}
 	tx := waf.NewTransaction()

@@ -199,7 +199,7 @@ func (p *RuleParser) ParseOperator(operator string) error {
 	// handling files by operators is hard because we must know the paths where we can
 	// search, for example, the policy path or the binary path...
 	// CRS stores the .data files in the same directory as the directives
-	if utils.InSlice(op, []string{"ipMatchFromFile", "pmFromFile"}) {
+	if strings.HasSuffix(op, "FromFile") {
 		// TODO make enhancements here
 		tpath := path.Join(p.options.ConfigDir, opdata)
 		var err error
@@ -249,10 +249,7 @@ func (p *RuleParser) ParseDefaultActions(actions string) error {
 
 // ParseActions
 func (p *RuleParser) ParseActions(actions string) error {
-	disabledActions, ok := p.options.Waf.GetConfig("disabled_rule_actions", []string{}).([]string)
-	if !ok {
-		disabledActions = []string{}
-	}
+	disabledActions := p.options.Waf.Config.Get("disabled_rule_actions", []string{}).([]string)
 	act, err := parseActions(actions)
 	if err != nil {
 		return err
@@ -318,14 +315,8 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
 
-	defaultActions, ok := options.Waf.GetConfig("rule_default_actions", []string{}).([]string)
-	if !ok {
-		defaultActions = []string{}
-	}
-	disabledRuleOperators, ok := options.Waf.GetConfig("disabled_rule_operators", []string{}).([]string)
-	if !ok {
-		disabledRuleOperators = []string{}
-	}
+	defaultActions := options.Waf.Config.Get("rule_default_actions", []string{}).([]string)
+	disabledRuleOperators := options.Waf.Config.Get("disabled_rule_operators", []string{}).([]string)
 
 	for _, da := range defaultActions {
 		err = rp.ParseDefaultActions(da)
