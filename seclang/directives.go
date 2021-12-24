@@ -437,7 +437,7 @@ func directiveSecDebugLogLevel(w *coraza.Waf, opts string) error {
 	if err != nil {
 		return err
 	}
-	return w.SetLogLevel(lvl)
+	return w.SetDebugLogLevel(lvl)
 }
 
 func directiveSecRuleUpdateTargetById(w *coraza.Waf, opts string) error {

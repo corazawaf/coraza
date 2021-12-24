@@ -25,11 +25,10 @@ import (
 // This file repeats the same content many times in order to make access
 // efficient for seclang and transactions
 
-// Count contains the number of existing variables
-const Count = 87
+// VariablesCount contains the number of existing variables
+const VariablesCount = 87
 
-// RuleVariable is used for the rule to identify information
-// Each RuleVariable is unique and represents a variable
+// RuleVariable is used to identify information from a transaction
 type RuleVariable byte
 
 const (
@@ -142,9 +141,11 @@ const (
 	RequestHeaders    RuleVariable = iota
 	ResponseHeaders   RuleVariable = iota
 	// Geo contains the location information of the client
-	Geo                 RuleVariable = iota
+	Geo RuleVariable = iota
+	// RequestCookiesNames contains the names of the request cookies
 	RequestCookiesNames RuleVariable = iota
-	FilesTmpNames       RuleVariable = iota
+	// FilesTmpNames contains the names of the uploaded temporal files
+	FilesTmpNames RuleVariable = iota
 	// ArgsNames contains the names of the arguments (POST and GET)
 	ArgsNames RuleVariable = iota
 	// ArgsGetNames contains the names of the GET arguments

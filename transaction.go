@@ -245,9 +245,9 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 	return tx.ProcessRequestBody()
 }
 
-// MatchVariable Creates the MATCHED_ variables required by chains and macro expansion
+// matchVariable Creates the MATCHED_ variables required by chains and macro expansion
 // MATCHED_VARS, MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES
-func (tx *Transaction) MatchVariable(match MatchData) {
+func (tx *Transaction) matchVariable(match MatchData) {
 	varname := match.VariableName
 	if match.Key != "" {
 		varname += fmt.Sprintf(":%s", match.Key)
@@ -298,7 +298,7 @@ func (tx *Transaction) MatchRule(r *Rule, md []MatchData) {
 			ClientIPAddress: tx.GetCollection(variables.RemoteAddr).GetFirstString(""),
 			Message:         r.Msg.Expand(tx),
 			Data:            r.LogData.Expand(tx),
-			Rule:            *r,
+			Rule:            r,
 			MatchedData:     data,
 		}
 		tx.MatchedRules = append(tx.MatchedRules, mr)
@@ -415,14 +415,7 @@ func (tx *Transaction) RemoveRuleTargetByID(id int, variable variables.RuleVaria
 		Variable: variable,
 		KeyStr:   key,
 	}
-	// Used if it's empty
-	if tx.ruleRemoveTargetByID[id] == nil {
-		tx.ruleRemoveTargetByID[id] = []ruleVariableParams{
-			c,
-		}
-	} else {
-		tx.ruleRemoveTargetByID[id] = append(tx.ruleRemoveTargetByID[id], c)
-	}
+	tx.ruleRemoveTargetByID[id] = append(tx.ruleRemoveTargetByID[id], c)
 }
 
 // RemoveRuleByID Removes a rule from the transaction

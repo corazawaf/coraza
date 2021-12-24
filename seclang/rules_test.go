@@ -312,3 +312,20 @@ func TestLogsAreNotPrintedManyTimes(t *testing.T) {
 		t.Errorf("failed to log with %d", len(logs))
 	}
 }
+
+func TestSampleRxRule(t *testing.T) {
+	waf := coraza.NewWaf()
+	parser, _ := NewParser(waf)
+	err := parser.FromString(`
+	SecRule REQUEST_METHOD "@rx ^(?:GET|HEAD)$" "phase:1,id:1,log,deny,status:403,chain"
+	SecRule REQUEST_HEADERS:Content-Length "!@rx ^0?$"`)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	tx := waf.NewTransaction()
+	tx.ProcessURI("/test", "GET", "HTTP/1.1")
+	tx.AddRequestHeader("Content-Length", "15")
+	if it := tx.ProcessRequestHeaders(); it == nil {
+		t.Error("failed to interrupt")
+	}
+}

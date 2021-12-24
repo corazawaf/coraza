@@ -15,7 +15,6 @@
 package coraza
 
 import (
-	"regexp"
 	"testing"
 
 	"github.com/jptosso/coraza-waf/v2/types/variables"
@@ -41,11 +40,31 @@ func TestRuleNegativeVariables(t *testing.T) {
 		t.Errorf("got %d exceptions", len(rule.variables[0].Exceptions))
 	}
 
-	if err := rule.AddVariable(variables.Args, regexp.MustCompile("test.*"), false); err != nil {
+	if err := rule.AddVariable(variables.Args, "/test.*/", false); err != nil {
 		t.Error(err)
 	}
 
 	if rule.variables[1].KeyRx == nil || rule.variables[1].KeyRx.String() != "test.*" {
 		t.Error("variable regex cannot be nil")
+	}
+}
+
+func TestVariableKeysAreCaseInsensitive(t *testing.T) {
+	rule := NewRule()
+	if err := rule.AddVariable(variables.Args, "Som3ThinG", false); err != nil {
+		t.Error(err)
+	}
+	if rule.variables[0].KeyStr != "som3thing" {
+		t.Error("variable key is not case insensitive")
+	}
+}
+
+func TestVariablesRxAreCaseSensitive(t *testing.T) {
+	rule := NewRule()
+	if err := rule.AddVariable(variables.Args, "/Som3ThinG/", false); err != nil {
+		t.Error(err)
+	}
+	if rule.variables[0].KeyRx.String() != "Som3ThinG" {
+		t.Error("variable key is not case insensitive")
 	}
 }
