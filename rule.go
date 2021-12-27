@@ -401,7 +401,7 @@ func (r *Rule) matchVariable(tx *Transaction, m MatchData) {
 	// we must match the vars before running the chains
 
 	// We run non disruptive actions even if there is no chain match
-	tx.MatchVariable(m)
+	tx.matchVariable(m)
 	for _, a := range r.actions {
 		if a.Function.Type() == types.ActionTypeNondisruptive {
 			tx.Waf.Logger.Debug("evaluating action", zap.String("type", "non_disruptive"),
@@ -425,24 +425,17 @@ func (r *Rule) AddAction(name string, action RuleAction) error {
 // The key can be a regexp.Regexp, a string or nil, in case of regexp
 // it will be used to match the variable, in case of string it will
 // be a fixed match, in case of nil it will match everything
-func (r *Rule) AddVariable(v variables.RuleVariable, key interface{}, iscount bool) error {
+func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) error {
 	var re *regexp.Regexp
-	str := ""
-	switch v := key.(type) {
-	case *regexp.Regexp:
-		re = v
-		str = re.String()
-	case string:
-		str = strings.ToLower(v)
-	case nil:
-		// we allow this
-	default:
-		return fmt.Errorf("invalid key type %T", v)
+	if len(key) > 2 && key[0] == '/' && key[len(key)-1] == '/' {
+		key = key[1 : len(key)-1]
+		re = regexp.MustCompile(key)
 	}
 	r.variables = append(r.variables, ruleVariableParams{
+		Name:       v.Name(),
 		Count:      iscount,
 		Variable:   v,
-		KeyStr:     str,
+		KeyStr:     strings.ToLower(key),
 		KeyRx:      re,
 		Exceptions: []ruleVariableException{},
 	})
@@ -455,29 +448,16 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key interface{}, iscount bo
 // OK: SecRule ARGS|!ARGS:id "..."
 // ERROR: SecRule !ARGS:id "..."
 // ERROR: SecRule !ARGS: "..."
-func (r *Rule) AddVariableNegation(v variables.RuleVariable, key interface{}) error {
+func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 	counter := 0
 	var re *regexp.Regexp
-	str := ""
-	switch v := key.(type) {
-	case string:
-		st := v
-		if st == "" {
-			return fmt.Errorf("invalid variable negation key, it cannot be empty")
-		}
-		str = strings.ToLower(st)
-	case *regexp.Regexp:
-		if v.String() == "" {
-			return fmt.Errorf("invalid variable negation key, it cannot be an empty regex")
-		}
-		re = v
-		str = re.String()
-	default:
-		return fmt.Errorf("invalid negation input %s, %T", v, v)
+	if len(key) > 2 && key[0] == '/' && key[len(key)-1] == '/' {
+		key = key[1 : len(key)-1]
+		re = regexp.MustCompile(key)
 	}
 	for i, rv := range r.variables {
 		if rv.Variable == v {
-			rv.Exceptions = append(rv.Exceptions, ruleVariableException{str, re})
+			rv.Exceptions = append(rv.Exceptions, ruleVariableException{strings.ToLower(key), re})
 			r.variables[i] = rv
 			counter++
 		}

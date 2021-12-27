@@ -159,7 +159,7 @@ func (w *Waf) NewTransaction() *Transaction {
 	defer w.mux.RUnlock()
 	tx := &Transaction{
 		Waf:                  *w,
-		collections:          make([]*Collection, variables.Count), // TODO fix count
+		collections:          make([]*Collection, variables.VariablesCount), // TODO fix count
 		ID:                   utils.SafeRandom(19),
 		Timestamp:            time.Now().UnixNano(),
 		AuditEngine:          w.AuditEngine,
@@ -298,8 +298,8 @@ func NewWaf() *Waf {
 	return waf
 }
 
-// SetLogLevel changes the debug level of the Waf instance
-func (w *Waf) SetLogLevel(lvl int) error {
+// SetDebugLogLevel changes the debug level of the Waf instance
+func (w *Waf) SetDebugLogLevel(lvl int) error {
 	// setlevel is concurrent safe
 	switch lvl {
 	case 0:

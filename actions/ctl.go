@@ -60,7 +60,7 @@ type ctlFn struct {
 
 func (a *ctlFn) Init(r *coraza.Rule, data string) error {
 	var err error
-	a.action, a.value, a.collection, a.colKey, err = parseCtl(data)
+	a.action, a.value, a.collection, a.colKey, err = a.parseCtl(data)
 	if len(a.colKey) > 2 && a.colKey[0] == '/' && a.colKey[len(a.colKey)-1] == '/' {
 		a.colRx, err = regexp.Compile(a.colKey[1 : len(a.colKey)-1])
 		if err != nil {
@@ -73,8 +73,14 @@ func (a *ctlFn) Init(r *coraza.Rule, data string) error {
 func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	switch a.action {
 	case ctlRemoveTargetByID:
-		id, _ := strconv.Atoi(a.value)
-		tx.RemoveRuleTargetByID(id, a.collection, a.colKey)
+		ran, err := a.rangeToInts(tx.Waf.Rules.GetRules(), a.value)
+		if err != nil {
+			tx.Waf.Logger.Error("invalid range", zap.Error(err))
+			return
+		}
+		for _, id := range ran {
+			tx.RemoveRuleTargetByID(id, a.collection, a.colKey)
+		}
 	case ctlRemoveTargetByTag:
 		rules := tx.Waf.Rules.GetRules()
 		for _, r := range rules {
@@ -154,7 +160,7 @@ func (a *ctlFn) Type() types.RuleActionType {
 	return types.ActionTypeNondisruptive
 }
 
-func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, string, error) {
+func (a *ctlFn) parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, string, error) {
 	spl1 := strings.SplitN(data, "=", 2)
 	if len(spl1) != 2 {
 		return ctlRemoveTargetByID, "", 0, "", fmt.Errorf("invalid syntax")
@@ -215,6 +221,35 @@ func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, str
 		return 0, "", 0x00, "", fmt.Errorf("invalid ctl action")
 	}
 	return act, value, collection, strings.TrimSpace(colkey), nil
+}
+
+func (a *ctlFn) rangeToInts(rules []*coraza.Rule, input string) ([]int, error) {
+	ids := []int{}
+	spl := strings.SplitN(input, "-", 2)
+	var start, end int
+	var err error
+	if len(spl) != 2 {
+		id, err := strconv.Atoi(input)
+		if err != nil {
+			return nil, err
+		}
+		start, end = id, id
+	} else {
+		start, err = strconv.Atoi(spl[0])
+		if err != nil {
+			return nil, err
+		}
+		end, err = strconv.Atoi(spl[1])
+		if err != nil {
+			return nil, err
+		}
+	}
+	for _, r := range rules {
+		if r.ID >= start && r.ID <= end {
+			ids = append(ids, r.ID)
+		}
+	}
+	return ids, nil
 }
 
 func ctl() coraza.RuleAction {

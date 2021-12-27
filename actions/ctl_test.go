@@ -90,3 +90,47 @@ func TestCtl(t *testing.T) {
 		}
 	}
 }
+
+func TestCtlParseRange(t *testing.T) {
+	a := &ctlFn{}
+	rules := []*coraza.Rule{
+		{
+			ID: 5,
+		},
+		{
+			ID: 15,
+		},
+	}
+	ints, err := a.rangeToInts(rules, "1-2")
+	if err != nil {
+		t.Error("Failed to parse range")
+	}
+	if len(ints) != 0 {
+		t.Error("Failed to parse range")
+	}
+	ints, err = a.rangeToInts(rules, "4-5")
+	if err != nil {
+		t.Error("Failed to parse range")
+	}
+	if len(ints) != 1 {
+		t.Error("Failed to parse range")
+	}
+	ints, err = a.rangeToInts(rules, "4-15")
+	if err != nil {
+		t.Error("Failed to parse range")
+	}
+	if len(ints) != 2 {
+		t.Error("Failed to parse range")
+	}
+	ints, err = a.rangeToInts(rules, "5")
+	if err != nil {
+		t.Error("Failed to parse range")
+	}
+	if len(ints) != 1 {
+		t.Error("Failed to parse range")
+	}
+	_, err = a.rangeToInts(rules, "test")
+	if err == nil {
+		t.Error("Failed to parse range")
+	}
+}

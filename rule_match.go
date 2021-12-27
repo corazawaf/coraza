@@ -55,7 +55,7 @@ type MatchedRule struct {
 	// A slice of matched variables
 	MatchedData MatchData
 	// A reference to the triggered rule
-	Rule Rule
+	Rule *Rule
 }
 
 func (mr MatchedRule) details() string {

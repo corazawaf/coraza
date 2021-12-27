@@ -43,7 +43,7 @@ go test -race ./...
 * Full audit engine refactor with plugins support
 * New enhanced plugins interface for transformations, actions, body processors and operators
 * Now we are fully compliant with Seclang from modsecurity v2
-* Many features removed and transformed into plugins: XML processing, PCRE regex, Libinjection (@detectXSS and @detectSQLi)
+* Many features removed and transformed into plugins: XML processing, GeoIP, PCRE regex, Libinjection (@detectXSS and @detectSQLi)
 * Better debug logging
 * New error logging (like modsecurity)
 

@@ -92,22 +92,14 @@ func (p *RuleParser) ParseVariables(vars string) error {
 			}
 
 			key := string(curkey)
-			var re interface{}
-			switch {
-			case key != "" && curr == 2:
-				// in case of a non-empty regex
-				re, err = regexp.Compile(key)
-				if err != nil {
-					return err
-				}
-			case key != "":
-				// in case of a non-empty string we set the key to string
-				re = key
+			if curr == 2 {
+				// we are inside a regex
+				key = fmt.Sprintf("/%s/", key)
 			}
 			if isnegation {
-				err = p.rule.AddVariableNegation(v, re)
+				err = p.rule.AddVariableNegation(v, key)
 			} else {
-				err = p.rule.AddVariable(v, re, iscount)
+				err = p.rule.AddVariable(v, key, iscount)
 			}
 			if err != nil {
 				return err
