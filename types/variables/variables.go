@@ -2,7 +2,7 @@
 Package variables contains the representation of the variables used in the rules
 Variables are created as bytes and they have a string representation
 */
-// Copyright 2021 Juan Pablo Tosso
+// Copyright 2022 Juan Pablo Tosso
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
