@@ -53,7 +53,7 @@ type Transaction struct {
 	Interruption *types.Interruption
 
 	// Contains all collections, including persistent
-	collections []*Collection
+	collections [variables.VariablesCount]*Collection
 
 	// This is used to store log messages
 	Logdata string
@@ -778,12 +778,6 @@ func (tx *Transaction) ProcessLogging() {
 	// if tx.RuleEngine == RULE_ENGINE_OFF {
 	// 	return
 	// }
-	defer func() {
-		tx.RequestBodyBuffer.Close()
-		tx.ResponseBodyBuffer.Close()
-		tx.Waf.Logger.Debug("Transaction finished", zap.String("event", "FINISH_TRANSACTION"), zap.String("txid", tx.ID), zap.Bool("interrupted", tx.Interrupted()))
-	}()
-
 	tx.Waf.Rules.Eval(types.PhaseLogging, tx)
 
 	if tx.AuditEngine == types.AuditEngineOff {
@@ -919,6 +913,24 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	}
 	al.Messages = mrs
 	return al
+}
+
+// Clean the transaction after phase 5
+// This method helps the GC to clean up the transaction faster and release resources
+// It also allows caches the transaction back into the sync.Pool
+func (tx *Transaction) Clean() error {
+	defer transactionPool.Put(tx)
+	for k := range tx.collections {
+		tx.collections[k] = nil
+	}
+	if err := tx.RequestBodyBuffer.Close(); err != nil {
+		return err
+	}
+	if err := tx.ResponseBodyBuffer.Close(); err != nil {
+		return err
+	}
+	tx.Waf.Logger.Debug("Transaction finished", zap.String("event", "FINISH_TRANSACTION"), zap.String("txid", tx.ID), zap.Bool("interrupted", tx.Interrupted()))
+	return nil
 }
 
 // generateReqbodyError generates all of the error variables for the request body parser

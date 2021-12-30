@@ -32,6 +32,13 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+// Initializing pool for transactions
+var transactionPool = sync.Pool{
+	// New optionally specifies a function to generate
+	// a value when Get would otherwise return nil.
+	New: func() interface{} { return new(Transaction) },
+}
+
 // ErrorLogCallback is used to set a callback function to log errors
 // It is triggered when an error is raised by the WAF
 // It contains the severity so the cb can decide to log it or not
@@ -155,26 +162,25 @@ type Waf struct {
 
 // NewTransaction Creates a new initialized transaction for this WAF instance
 func (w *Waf) NewTransaction() *Transaction {
-	w.mux.RLock()
-	defer w.mux.RUnlock()
-	tx := &Transaction{
-		Waf:                  *w,
-		collections:          make([]*Collection, variables.VariablesCount), // TODO fix count
-		ID:                   utils.SafeRandom(19),
-		Timestamp:            time.Now().UnixNano(),
-		AuditEngine:          w.AuditEngine,
-		AuditLogParts:        w.AuditLogParts,
-		RuleEngine:           w.RuleEngine,
-		RequestBodyAccess:    true,
-		RequestBodyLimit:     134217728,
-		ResponseBodyAccess:   true,
-		ResponseBodyLimit:    524288,
-		ruleRemoveTargetByID: map[int][]ruleVariableParams{},
-		ruleRemoveByID:       []int{},
-		StopWatches:          map[types.RulePhase]int{},
-		RequestBodyBuffer:    NewBodyBuffer(w.TmpDir, w.RequestBodyInMemoryLimit),
-		ResponseBodyBuffer:   NewBodyBuffer(w.TmpDir, w.RequestBodyInMemoryLimit),
-	}
+	// w.mux.RLock()
+	// defer w.mux.RUnlock()
+	tx := transactionPool.Get().(*Transaction)
+	tx.Waf = *w
+	tx.collections = [variables.VariablesCount]*Collection{}
+	tx.ID = utils.SafeRandom(19)
+	tx.Timestamp = time.Now().UnixNano()
+	tx.AuditEngine = w.AuditEngine
+	tx.AuditLogParts = w.AuditLogParts
+	tx.RuleEngine = w.RuleEngine
+	tx.RequestBodyAccess = true
+	tx.RequestBodyLimit = 134217728
+	tx.ResponseBodyAccess = true
+	tx.ResponseBodyLimit = 524288
+	tx.ruleRemoveTargetByID = map[int][]ruleVariableParams{}
+	tx.ruleRemoveByID = []int{}
+	tx.StopWatches = map[types.RulePhase]int{}
+	tx.RequestBodyBuffer = NewBodyBuffer(w.TmpDir, w.RequestBodyInMemoryLimit)
+	tx.ResponseBodyBuffer = NewBodyBuffer(w.TmpDir, w.RequestBodyInMemoryLimit)
 	for i := range tx.collections {
 		tx.collections[i] = NewCollection(variables.RuleVariable(i))
 	}

@@ -76,6 +76,8 @@ func (br *BodyBuffer) Close() error {
 	if br.writer == nil {
 		return fmt.Errorf("invalid writer")
 	}
+	br.buffer.Reset()
+	br.buffer = nil
 	if err := br.writer.Close(); err != nil {
 		return err
 	}
