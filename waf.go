@@ -165,7 +165,7 @@ func (w *Waf) NewTransaction() *Transaction {
 	// w.mux.RLock()
 	// defer w.mux.RUnlock()
 	tx := transactionPool.Get().(*Transaction)
-	tx.Waf = *w
+	tx.Waf = w
 	tx.collections = [variables.VariablesCount]*Collection{}
 	tx.ID = utils.SafeRandom(19)
 	tx.Timestamp = time.Now().UnixNano()
@@ -178,7 +178,7 @@ func (w *Waf) NewTransaction() *Transaction {
 	tx.ResponseBodyLimit = 524288
 	tx.ruleRemoveTargetByID = map[int][]ruleVariableParams{}
 	tx.ruleRemoveByID = []int{}
-	tx.StopWatches = map[types.RulePhase]int{}
+	tx.stopWatches = map[types.RulePhase]int64{}
 	tx.RequestBodyBuffer = NewBodyBuffer(w.TmpDir, w.RequestBodyInMemoryLimit)
 	tx.ResponseBodyBuffer = NewBodyBuffer(w.TmpDir, w.RequestBodyInMemoryLimit)
 	for i := range tx.collections {

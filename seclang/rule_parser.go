@@ -367,6 +367,8 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 		for lastchain.Chain != nil {
 			lastchain = lastchain.Chain
 		}
+		// TODO we must remove defaultactions from chains
+		rule.Phase = 0
 		lastchain.Chain = rule
 		return nil, nil
 	}
