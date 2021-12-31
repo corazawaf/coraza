@@ -162,8 +162,6 @@ type Waf struct {
 
 // NewTransaction Creates a new initialized transaction for this WAF instance
 func (w *Waf) NewTransaction() *Transaction {
-	// w.mux.RLock()
-	// defer w.mux.RUnlock()
 	tx := transactionPool.Get().(*Transaction)
 	tx.Waf = w
 	tx.collections = [variables.VariablesCount]*Collection{}
@@ -181,6 +179,7 @@ func (w *Waf) NewTransaction() *Transaction {
 	tx.stopWatches = map[types.RulePhase]int64{}
 	tx.RequestBodyBuffer = NewBodyBuffer(w.TmpDir, w.RequestBodyInMemoryLimit)
 	tx.ResponseBodyBuffer = NewBodyBuffer(w.TmpDir, w.RequestBodyInMemoryLimit)
+
 	for i := range tx.collections {
 		tx.collections[i] = NewCollection(variables.RuleVariable(i))
 	}
