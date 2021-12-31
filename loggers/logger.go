@@ -70,7 +70,7 @@ func RegisterLogFormatter(name string, f func(al *AuditLog) ([]byte, error)) {
 // GetLogFormatter returns a formatter by name
 // It returns an error if it doesn't exist
 func GetLogFormatter(name string) (LogFormatter, error) {
-	formatter := formatters[name]
+	formatter := formatters[strings.ToLower(name)]
 	if formatter == nil {
 		return nil, fmt.Errorf("invalid formatter %q", name)
 	}

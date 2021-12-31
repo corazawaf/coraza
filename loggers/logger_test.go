@@ -25,7 +25,6 @@ func TestDefaultWriters(t *testing.T) {
 			t.Errorf("invalid %s writer", writer)
 		}
 	}
-
 }
 func TestWriterPlugins(t *testing.T) {
 
