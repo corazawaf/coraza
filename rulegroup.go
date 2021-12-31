@@ -1,4 +1,4 @@
-// Copyright 2021 Juan Pablo Tosso
+// Copyright 2022 Juan Pablo Tosso
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -124,14 +124,8 @@ func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	ts := time.Now().UnixNano()
 RulesLoop:
 	for _, r := range tx.Waf.Rules.GetRules() {
-		if tx.Interruption != nil {
-			tx.Waf.Logger.Debug("Finished phase",
-				zap.String("event", "FINISH_PHASE"),
-				zap.String("txid", tx.ID),
-				zap.Int("phase", int(phase)),
-				zap.Int("rules", usedRules),
-			)
-			return true
+		if tx.Interruption != nil && phase != types.PhaseLogging {
+			break RulesLoop
 		}
 		// Rules with phase 0 will always run
 		if r.Phase != phase && r.Phase != 0 {
@@ -193,7 +187,7 @@ RulesLoop:
 		zap.Int("phase", int(phase)),
 		zap.Int("rules", usedRules),
 	)
-	tx.StopWatches[phase] = int(time.Now().UnixNano() - ts)
+	tx.stopWatches[phase] = time.Now().UnixNano() - ts
 	return tx.Interruption != nil
 }
 

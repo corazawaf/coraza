@@ -1,4 +1,4 @@
-// Copyright 2021 Juan Pablo Tosso
+// Copyright 2022 Juan Pablo Tosso
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@ package coraza
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"os"
 )
@@ -73,13 +72,15 @@ func (br *BodyBuffer) Size() int64 {
 
 // Close will close all readers and delete temporary files
 func (br *BodyBuffer) Close() error {
-	if br.writer == nil {
-		return fmt.Errorf("invalid writer")
+	br.buffer.Reset()
+	br.buffer = nil
+	if br.writer != nil {
+		if err := br.writer.Close(); err != nil {
+			return err
+		}
+		return os.Remove(br.writer.Name())
 	}
-	if err := br.writer.Close(); err != nil {
-		return err
-	}
-	return os.Remove(br.writer.Name())
+	return nil
 }
 
 // NewBodyBuffer Initializes a body reader

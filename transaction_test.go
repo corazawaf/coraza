@@ -1,4 +1,4 @@
-// Copyright 2021 Juan Pablo Tosso
+// Copyright 2022 Juan Pablo Tosso
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -168,6 +168,9 @@ func TestAuditLog(t *testing.T) {
 		t.Error("invalid auditlog id")
 	}
 	// TODO more checks
+	if err := tx.Clean(); err != nil {
+		t.Error(err)
+	}
 }
 
 func TestResponseBody(t *testing.T) {
@@ -183,6 +186,9 @@ func TestResponseBody(t *testing.T) {
 	}
 	if tx.GetCollection(variables.ResponseBody).GetFirstString("") != "test123" {
 		t.Error("failed to set response body")
+	}
+	if err := tx.Clean(); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -212,6 +218,9 @@ func TestAuditLogFields(t *testing.T) {
 	if al.Transaction.Response.Headers == nil || al.Transaction.Response.Headers["test"][0] != "test" {
 		t.Error("failed to add Response header to audit log")
 	}
+	if err := tx.Clean(); err != nil {
+		t.Error(err)
+	}
 }
 
 func TestRequestStruct(t *testing.T) {
@@ -223,6 +232,9 @@ func TestRequestStruct(t *testing.T) {
 	}
 	if tx.GetCollection(variables.RequestMethod).GetFirstString("") != "POST" {
 		t.Error("failed to set request from request object")
+	}
+	if err := tx.Clean(); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -237,6 +249,9 @@ func TestResetCapture(t *testing.T) {
 	if tx.GetCollection(variables.TX).GetFirstString("5") != "" {
 		t.Error("failed to reset capture field from tx")
 	}
+	if err := tx.Clean(); err != nil {
+		t.Error(err)
+	}
 }
 
 func TestRelevantAuditLogging(t *testing.T) {
@@ -247,6 +262,9 @@ func TestRelevantAuditLogging(t *testing.T) {
 	// tx.Waf.auditLogger = loggers.NewAuditLogger()
 	tx.ProcessLogging()
 	// TODO how do we check if the log was writen?
+	if err := tx.Clean(); err != nil {
+		t.Error(err)
+	}
 }
 
 func TestLogCallback(t *testing.T) {
@@ -265,6 +283,9 @@ func TestLogCallback(t *testing.T) {
 	})
 	if buffer == "" && strings.Contains(buffer, tx.ID) {
 		t.Error("failed to call error log callback")
+	}
+	if err := tx.Clean(); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -286,6 +307,9 @@ func TestHeaderSetters(t *testing.T) {
 	if !utils.InSlice("abc", tx.GetCollection(variables.RequestCookiesNames).Get("")) {
 		t.Error("failed to set cookie name")
 	}
+	if err := tx.Clean(); err != nil {
+		t.Error(err)
+	}
 }
 
 func TestRequestBodyProcessingAlgorithm(t *testing.T) {
@@ -304,6 +328,9 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 	}
 	if tx.GetCollection(variables.RequestBody).GetFirstString("") != "test123" {
 		t.Error("failed to set request body")
+	}
+	if err := tx.Clean(); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -339,6 +366,9 @@ func TestTxVariables(t *testing.T) {
 	if count != 5 {
 		t.Errorf("failed to match rule variable REQUEST_HEADERS with count, %v", rv)
 	}
+	if err := tx.Clean(); err != nil {
+		t.Error(err)
+	}
 }
 
 func TestTxVariablesExceptions(t *testing.T) {
@@ -370,6 +400,9 @@ func TestTxVariablesExceptions(t *testing.T) {
 	if len(fields) != 0 {
 		t.Errorf("REQUEST_HEADERS:host should not match, got %d matches, %v", len(fields), fields)
 	}
+	if err := tx.Clean(); err != nil {
+		t.Error(err)
+	}
 }
 
 func TestAuditLogMessages(t *testing.T) {
@@ -392,6 +425,9 @@ func TestProcessRequestMultipart(t *testing.T) {
 	reader := bufio.NewReader(req.Body)
 	if _, err := reader.ReadString('\n'); err != nil {
 		t.Error("failed to read multipart request", err)
+	}
+	if err := tx.Clean(); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -431,6 +467,35 @@ func BenchmarkTransactionCreation(b *testing.B) {
 		waf.NewTransaction()
 	}
 }
+
+func BenchmarkNewTxWithoutPool(b *testing.B) {
+	var p *Transaction
+	waf := NewWaf()
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 10000; j++ {
+			p = new(Transaction)
+			p.Waf = waf
+		}
+	}
+}
+
+/*
+Commented because go-critic hates it.
+func BenchmarkNewTxWithPool(b *testing.B) {
+	var p *Transaction
+	b.ReportAllocs()
+	b.ResetTimer()
+	waf := NewWaf()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 10000; j++ {
+			p = transactionPool.Get().(*Transaction)
+			p.Waf = waf
+			transactionPool.Put(p)
+		}
+	}
+}*/
 
 func makeTransaction() *Transaction {
 	tx := wafi.NewTransaction()

@@ -23,6 +23,7 @@ Welcome to Coraza Web Application Firewall, this project is an enterprise grade,
 
 * Rollback SecAuditLog to the legacy syntax (serial/concurrent)
 * Attach an error log handler using ```waf.SetErrorLogCb(cb)``` (optional)
+* the function Transaction.Clean() must be used to clear transaction data, files and take it back to the sync poo.
 * If you are using @detectXSS and @detectSQLi (CRS) install the plugin [github.com/jptosso/coraza-libinjection](https://github.com/jptosso/coraza-libinjection)
 * If you are using @rx with libpcre (CRS) install the plugin [github.com/jptosso/coraza-pcre](https://github.com/jptosso/coraza-pcre)
 * If you are using low level APIs check the complete changelog as most of them were removed
@@ -69,6 +70,10 @@ func main() {
 
 	// Then we create a transaction and assign some variables
 	tx := waf.NewTransaction()
+	defer func(){
+		tx.ProcessLogging()
+		tx.Clean()
+	}()
 	tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 12345)
 
 	// Finally we process the request headers phase, which may return an interruption

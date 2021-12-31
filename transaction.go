@@ -1,4 +1,4 @@
-// Copyright 2021 Juan Pablo Tosso
+// Copyright 2022 Juan Pablo Tosso
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ type Transaction struct {
 	Interruption *types.Interruption
 
 	// Contains all collections, including persistent
-	collections []*Collection
+	collections [variables.VariablesCount]*Collection
 
 	// This is used to store log messages
 	Logdata string
@@ -104,10 +104,10 @@ type Transaction struct {
 	Capture bool
 
 	// Contains duration in useconds per phase
-	StopWatches map[types.RulePhase]int
+	stopWatches map[types.RulePhase]int64
 
 	// Contains a Waf instance for the current transaction
-	Waf Waf
+	Waf *Waf
 
 	// Timestamp of the request
 	Timestamp int64
@@ -169,7 +169,7 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 	// Most headers can be managed like that
 	if key == "content-type" {
 		spl := strings.SplitN(value, ";", 2)
-		tx.GetCollection(variables.ResponseContentType).Set("", []string{spl[0]})
+		tx.GetCollection(variables.ResponseContentType).SetIndex("", 0, spl[0])
 	}
 }
 
@@ -179,7 +179,7 @@ func (tx *Transaction) CaptureField(index int, value string) {
 	tx.Waf.Logger.Debug("Capturing field", zap.String("txid", tx.ID),
 		zap.Int("index", index), zap.String("value", value))
 	i := strconv.Itoa(index)
-	tx.GetCollection(variables.TX).Set(i, []string{value})
+	tx.GetCollection(variables.TX).SetIndex(i, 0, value)
 }
 
 // this function is used to control which variables are reset after a new rule is evaluated
@@ -266,11 +266,11 @@ func (tx *Transaction) matchVariable(match MatchData) {
 	matchedVarsNames := tx.GetCollection(variables.MatchedVarsNames)
 
 	matchedVars.Add("", match.Value)
-	matchedVar.Set("", []string{match.Value})
+	matchedVar.SetIndex("", 0, match.Value)
 	// fmt.Printf("%s: %s\n", match.VariableName, match.Value)
 
 	matchedVarsNames.Add("", varname)
-	matchedVarName.Set("", []string{varname})
+	matchedVarName.SetIndex("", 0, varname)
 }
 
 // MatchRule Matches a rule to be logged
@@ -287,7 +287,7 @@ func (tx *Transaction) MatchRule(r *Rule, md []MatchData) {
 	hs := tx.GetCollection(variables.HighestSeverity)
 	maxSeverity, _ := types.ParseRuleSeverity(hs.GetFirstString(""))
 	if r.Severity > maxSeverity {
-		hs.Set("", []string{strconv.Itoa(r.Severity.Int())})
+		hs.SetIndex("", 0, strconv.Itoa(r.Severity.Int()))
 		tx.Waf.Logger.Debug("Set highest severity", zap.Int("severity", r.Severity.Int()))
 	}
 	for _, data := range md {
@@ -313,13 +313,13 @@ func (tx *Transaction) MatchRule(r *Rule, md []MatchData) {
 // Normally it should be named StopWatch() but it would be confusing
 func (tx *Transaction) GetStopWatch() string {
 	ts := tx.Timestamp
-	sum := 0
-	for _, r := range tx.StopWatches {
+	sum := int64(0)
+	for _, r := range tx.stopWatches {
 		sum += r
 	}
 	diff := time.Now().UnixNano() - ts
 	sw := fmt.Sprintf("%d %d; combined=%d, p1=%d, p2=%d, p3=%d, p4=%d, p5=%d",
-		ts, diff, sum, tx.StopWatches[1], tx.StopWatches[2], tx.StopWatches[3], tx.StopWatches[4], tx.StopWatches[5])
+		ts, diff, sum, tx.stopWatches[1], tx.stopWatches[2], tx.stopWatches[3], tx.stopWatches[4], tx.stopWatches[5])
 	return sw
 }
 
@@ -382,9 +382,13 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []MatchData {
 		}
 	}
 	// we read the list of indexes backwards
-	// then we remove each one of them
+	// then we remove each one of them because of the exceptions
 	for i := len(rmi) - 1; i >= 0; i-- {
-		matches = append(matches[:rmi[i]], matches[rmi[i]+1:]...)
+		if len(matches) < rmi[i]+1 {
+			matches = matches[:rmi[i]-1]
+		} else {
+			matches = append(matches[:rmi[i]], matches[rmi[i]+1:]...)
+		}
 	}
 	if rv.Count {
 		count := len(matches)
@@ -486,10 +490,10 @@ func (tx *Transaction) ProcessConnection(client string, cPort int, server string
 	// 	tx.GetCollection(VARIABLE_REMOTE_HOST).Set("", []string{client})
 	// }
 
-	tx.GetCollection(variables.RemoteAddr).Set("", []string{client})
-	tx.GetCollection(variables.RemotePort).Set("", []string{p})
-	tx.GetCollection(variables.ServerAddr).Set("", []string{server})
-	tx.GetCollection(variables.ServerPort).Set("", []string{p2})
+	tx.GetCollection(variables.RemoteAddr).SetIndex("", 0, client)
+	tx.GetCollection(variables.RemotePort).SetIndex("", 0, p)
+	tx.GetCollection(variables.ServerAddr).SetIndex("", 0, server)
+	tx.GetCollection(variables.ServerPort).SetIndex("", 0, p2)
 }
 
 // ExtractArguments transforms an url encoded string to a map and creates
@@ -545,12 +549,12 @@ func (tx *Transaction) AddArgument(orig string, key string, value string) {
 //       SecLanguage phase 1 and 2.
 // note: This function won't add GET arguments, they must be added with AddArgument
 func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string) {
-	tx.GetCollection(variables.RequestMethod).Set("", []string{method})
-	tx.GetCollection(variables.RequestProtocol).Set("", []string{httpVersion})
-	tx.GetCollection(variables.RequestURIRaw).Set("", []string{uri})
+	tx.GetCollection(variables.RequestMethod).SetIndex("", 0, method)
+	tx.GetCollection(variables.RequestProtocol).SetIndex("", 0, httpVersion)
+	tx.GetCollection(variables.RequestURIRaw).SetIndex("", 0, uri)
 
 	// TODO modsecurity uses HTTP/${VERSION} instead of just version, let's check it out
-	tx.GetCollection(variables.RequestLine).Set("", []string{fmt.Sprintf("%s %s %s", method, uri, httpVersion)})
+	tx.GetCollection(variables.RequestLine).SetIndex("", 0, fmt.Sprintf("%s %s %s", method, uri, httpVersion))
 
 	var err error
 
@@ -778,12 +782,6 @@ func (tx *Transaction) ProcessLogging() {
 	// if tx.RuleEngine == RULE_ENGINE_OFF {
 	// 	return
 	// }
-	defer func() {
-		tx.RequestBodyBuffer.Close()
-		tx.ResponseBodyBuffer.Close()
-		tx.Waf.Logger.Debug("Transaction finished", zap.String("event", "FINISH_TRANSACTION"), zap.String("txid", tx.ID), zap.Bool("interrupted", tx.Interrupted()))
-	}()
-
 	tx.Waf.Rules.Eval(types.PhaseLogging, tx)
 
 	if tx.AuditEngine == types.AuditEngineOff {
@@ -919,6 +917,24 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	}
 	al.Messages = mrs
 	return al
+}
+
+// Clean the transaction after phase 5
+// This method helps the GC to clean up the transaction faster and release resources
+// It also allows caches the transaction back into the sync.Pool
+func (tx *Transaction) Clean() error {
+	defer transactionPool.Put(tx)
+	for k := range tx.collections {
+		tx.collections[k] = nil
+	}
+	if err := tx.RequestBodyBuffer.Close(); err != nil {
+		return err
+	}
+	if err := tx.ResponseBodyBuffer.Close(); err != nil {
+		return err
+	}
+	tx.Waf.Logger.Debug("Transaction finished", zap.String("event", "FINISH_TRANSACTION"), zap.String("txid", tx.ID), zap.Bool("interrupted", tx.Interrupted()))
+	return nil
 }
 
 // generateReqbodyError generates all of the error variables for the request body parser
