@@ -16,7 +16,7 @@ jobs:
         go-version: v1.17.x
     - name: Install dependencies
       run: |
-        cd /tmp && GO111MODULE=on go get -v -u github.com/go-critic/go-critic/cmd/gocritic
+        cd /tmp go install github.com/go-critic/go-critic/cmd/gocritic@latest
         curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.43.0
     - uses: actions/checkout@v2
     - uses: actions/setup-python@v2
