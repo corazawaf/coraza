@@ -141,7 +141,7 @@ func nativeFormatter(al *AuditLog) ([]byte, error) {
 	parts['H'] = fmt.Sprintf("Stopwatch: %s\nResponse-Body-Transformed: %s\nProducer: %s\nServer: %s", "", "", "", "")
 	parts['K'] = ""
 	for _, r := range al.Messages {
-		parts['K'] = fmt.Sprintf("%s\n", r.Data.Raw)
+		parts['K'] += fmt.Sprintf("%s\n", r.Data.Raw)
 	}
 	parts['Z'] = ""
 	data := ""
