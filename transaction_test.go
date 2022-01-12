@@ -138,6 +138,7 @@ func TestRequestBody(t *testing.T) {
 	urlencoded := "some=result&second=data"
 	// xml := "<test><content>test</content></test>"
 	tx := wafi.NewTransaction()
+	tx.RequestBodyAccess = true
 	tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
 	if _, err := tx.RequestBodyBuffer.Write([]byte(urlencoded)); err != nil {
 		t.Error("Failed to write body buffer")
