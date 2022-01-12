@@ -278,7 +278,7 @@ func NewWaf() *Waf {
 		AuditLogParts:            types.AuditLogParts("ABCFHZ"),
 		mux:                      &sync.RWMutex{},
 		RequestBodyInMemoryLimit: 131072,
-		RequestBodyLimit:         10000000, // 10mb
+		RequestBodyLimit:         134217728, // 10mb
 		ResponseBodyMimeTypes:    []string{"text/html", "text/plain"},
 		ResponseBodyLimit:        524288,
 		ResponseBodyAccess:       false,
@@ -287,6 +287,7 @@ func NewWaf() *Waf {
 		TmpDir:                   "/tmp",
 		loggerAtomicLevel:        &atom,
 		AuditLogRelevantStatus:   regexp.MustCompile(`.*`),
+		RequestBodyAccess:        true,
 		Config: types.WafConfig{
 			"auditlog_file":   "/dev/null",
 			"auditlog_format": "native",
