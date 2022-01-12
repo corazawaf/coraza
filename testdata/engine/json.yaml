@@ -28,6 +28,7 @@
             - 1111
             - 1102
   rules: |
+    SecRequestBodyAccess On
     SecRule REQUEST_HEADERS:content-type "application/json" "id: 100, phase:1, pass, log, ctl:requestBodyProcessor=JSON"
     SecRule REQBODY_PROCESSOR "JSON" "id: 101,phase:2,log,block"
 

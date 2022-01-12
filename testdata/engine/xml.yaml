@@ -24,6 +24,7 @@
           non_triggered_rules:  
             - 103
   rules: |
+    SecRequestBodyAccess On
     SecRule REQUEST_HEADERS:content-type "application/xml" "id: 100, phase:1, pass, log, ctl:requestBodyProcessor=XML"
     SecRule REQBODY_PROCESSOR "XML" "id: 101,phase:2,log,block"
     SecRule XML:/*|XML://@* "test123" "id:102, phase:2,log,block"

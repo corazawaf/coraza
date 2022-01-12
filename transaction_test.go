@@ -499,6 +499,7 @@ func BenchmarkNewTxWithPool(b *testing.B) {
 
 func makeTransaction() *Transaction {
 	tx := wafi.NewTransaction()
+	tx.RequestBodyAccess = true
 	ht := []string{
 		"POST /testurl.php?id=123&b=456 HTTP/1.1",
 		"Host: www.test.com:80",

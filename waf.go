@@ -287,7 +287,7 @@ func NewWaf() *Waf {
 		TmpDir:                   "/tmp",
 		loggerAtomicLevel:        &atom,
 		AuditLogRelevantStatus:   regexp.MustCompile(`.*`),
-		RequestBodyAccess:        true,
+		RequestBodyAccess:        false,
 		Config: types.WafConfig{
 			"auditlog_file":   "/dev/null",
 			"auditlog_format": "native",
