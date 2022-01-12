@@ -138,6 +138,7 @@ func TestRequestBody(t *testing.T) {
 	urlencoded := "some=result&second=data"
 	// xml := "<test><content>test</content></test>"
 	tx := wafi.NewTransaction()
+	tx.RequestBodyAccess = true
 	tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
 	if _, err := tx.RequestBodyBuffer.Write([]byte(urlencoded)); err != nil {
 		t.Error("Failed to write body buffer")
@@ -499,6 +500,7 @@ func BenchmarkNewTxWithPool(b *testing.B) {
 
 func makeTransaction() *Transaction {
 	tx := wafi.NewTransaction()
+	tx.RequestBodyAccess = true
 	ht := []string{
 		"POST /testurl.php?id=123&b=456 HTTP/1.1",
 		"Host: www.test.com:80",

@@ -25,5 +25,18 @@ func TestWAFInitialize(t *testing.T) {
 }
 
 func TestNewTransaction(t *testing.T) {
-
+	waf := NewWaf()
+	waf.RequestBodyAccess = true
+	waf.ResponseBodyAccess = true
+	waf.RequestBodyLimit = 1044
+	tx := waf.NewTransaction()
+	if !tx.RequestBodyAccess {
+		t.Error("Request body access not enabled")
+	}
+	if !tx.ResponseBodyAccess {
+		t.Error("Response body access not enabled")
+	}
+	if tx.RequestBodyLimit != 1044 {
+		t.Error("Request body limit not set")
+	}
 }
