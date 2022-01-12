@@ -170,10 +170,10 @@ func (w *Waf) NewTransaction() *Transaction {
 	tx.AuditEngine = w.AuditEngine
 	tx.AuditLogParts = w.AuditLogParts
 	tx.RuleEngine = w.RuleEngine
-	tx.RequestBodyAccess = true
-	tx.RequestBodyLimit = 134217728
-	tx.ResponseBodyAccess = true
-	tx.ResponseBodyLimit = 524288
+	tx.RequestBodyAccess = w.RequestBodyAccess
+	tx.RequestBodyLimit = w.RequestBodyLimit
+	tx.ResponseBodyAccess = w.ResponseBodyAccess
+	tx.ResponseBodyLimit = w.ResponseBodyLimit
 	tx.ruleRemoveTargetByID = map[int][]ruleVariableParams{}
 	tx.ruleRemoveByID = []int{}
 	tx.stopWatches = map[types.RulePhase]int64{}
