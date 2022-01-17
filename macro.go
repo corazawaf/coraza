@@ -138,6 +138,13 @@ func (m *Macro) String() string {
 	return m.original
 }
 
+// Tokens return the count of tokens
+// If the macro is not compiled, it will return 0
+// If no macro is found and it is compiled, it will return 1
+func (m *Macro) Tokens() int {
+	return len(m.tokens)
+}
+
 // NewMacro creates a new macro
 func NewMacro(data string) (*Macro, error) {
 	macro := &Macro{
