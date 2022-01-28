@@ -89,6 +89,7 @@ func directiveSecRule(w *coraza.Waf, opts string) error {
 	line := w.Config.Get("parser_last_line", 0).(int)
 	configFile := w.Config.Get("parser_config_file", "").(string)
 	configDir := w.Config.Get("parser_config_dir", "").(string)
+	ignoreErrors := w.Config.Get("ignore_rule_compilation_errors", false).(bool)
 	rule, err := ParseRule(RuleOptions{
 		Waf:          w,
 		Data:         opts,
@@ -97,13 +98,26 @@ func directiveSecRule(w *coraza.Waf, opts string) error {
 		ConfigFile:   configFile,
 		ConfigDir:    configDir,
 	})
-	if err != nil {
-		if perr := fmt.Errorf("Failed to compile rule (%s): %s", err, opts); perr != nil {
-			return perr // can't write to log, return this instead
-		}
-		return err
+	if err != nil && !ignoreErrors {
+		return fmt.Errorf("Failed to compile rule (%s): %s", err, opts)
+	} else if err != nil && ignoreErrors {
+		w.Logger.Debug("Ignoring rule compilation error",
+			zap.String("rule", opts),
+			zap.Error(err),
+		)
+		return nil
 	}
-	return w.Rules.Add(rule)
+	err = w.Rules.Add(rule)
+	if err != nil && !ignoreErrors {
+		return err
+	} else if err != nil && ignoreErrors {
+		w.Logger.Debug("Ignoring rule compilation error",
+			zap.String("rule", opts),
+			zap.Error(err),
+		)
+		return nil
+	}
+	return nil
 }
 
 func directiveSecResponseBodyAccess(w *coraza.Waf, opts string) error {
@@ -267,7 +281,11 @@ func directiveSecDefaultAction(w *coraza.Waf, opts string) error {
 }
 
 func directiveSecContentInjection(w *coraza.Waf, opts string) error {
-	w.ContentInjection = parseBoolean(opts)
+	b, err := parseBoolean(opts)
+	if err != nil {
+		return newDirectiveError(err, "SecContentInjection")
+	}
+	w.ContentInjection = b
 	return nil
 }
 
@@ -400,7 +418,11 @@ func directiveSecDataDir(w *coraza.Waf, opts string) error {
 }
 
 func directiveSecUploadKeepFiles(w *coraza.Waf, opts string) error {
-	w.UploadKeepFiles = parseBoolean(opts)
+	b, err := parseBoolean(opts)
+	if err != nil {
+		return newDirectiveError(err, "SecUploadKeepFiles")
+	}
+	w.UploadKeepFiles = b
 	return nil
 }
 
@@ -458,9 +480,33 @@ func directiveSecRuleUpdateTargetById(w *coraza.Waf, opts string) error {
 	return rp.ParseVariables(strings.Trim(spl[1], "\""))
 }
 
-func parseBoolean(data string) bool {
+func directiveSecIgnoreRuleCompilationErrors(w *coraza.Waf, opts string) error {
+	b, err := parseBoolean(opts)
+	if err != nil {
+		return newDirectiveError(err, "SecIgnoreRuleCompilationErrors")
+	}
+	if b {
+		w.Logger.Warn(`Coraza is running in Compatibility Mode (SecIgnoreRuleCompilationErrors On)
+		, which may cause unexpected behavior on faulty rules.`)
+	}
+	w.Config.Set("ignore_rule_compilation_errors", b)
+	return nil
+}
+
+func newDirectiveError(err error, directive string) error {
+	return fmt.Errorf("syntax error for directive %s: %s", directive, err)
+}
+
+func parseBoolean(data string) (bool, error) {
 	data = strings.ToLower(data)
-	return data == "on"
+	switch data {
+	case "on":
+		return true, nil
+	case "off":
+		return false, nil
+	default:
+		return false, errors.New("syntax error: [on/off]")
+	}
 }
 
 var (
@@ -489,62 +535,63 @@ var (
 )
 
 var directivesMap = map[string]directive{
-	"secwebappid":                   directiveSecWebAppID,
-	"secuploadkeepfiles":            directiveSecUploadKeepFiles,
-	"secuploadfilemode":             directiveSecUploadFileMode,
-	"secuploadfilelimit":            directiveSecUploadFileLimit,
-	"secuploaddir":                  directiveSecUploadDir,
-	"sectmpdir":                     directiveSecTmpDir,
-	"secserversignature":            directiveSecServerSignature,
-	"secsensorid":                   directiveSecSensorID,
-	"secruleremovebytag":            directiveSecRuleRemoveByTag,
-	"secruleremovebymsg":            directiveSecRuleRemoveByMsg,
-	"secruleremovebyid":             directiveSecRuleRemoveByID,
-	"secruleengine":                 directiveSecRuleEngine,
-	"secrule":                       directiveSecRule,
-	"secresponsebodymimetypesclear": directiveSecResponseBodyMimeTypesClear,
-	"secresponsebodymimetype":       directiveSecResponseBodyMimeType,
-	"secresponsebodylimitaction":    directiveSecResponseBodyLimitAction,
-	"secresponsebodylimit":          directiveSecResponseBodyLimit,
-	"secresponsebodyaccess":         directiveSecResponseBodyAccess,
-	"secrequestbodynofileslimit":    directiveSecRequestBodyNoFilesLimit,
-	"secrequestbodylimitaction":     directiveSecRequestBodyLimitAction,
-	"secrequestbodylimit":           directiveSecRequestBodyLimit,
-	"secrequestbodyinmemorylimit":   directiveSecRequestBodyInMemoryLimit,
-	"secrequestbodyaccess":          directiveSecRequestBodyAccess,
-	"secremoterulesfailaction":      directiveSecRemoteRulesFailAction,
-	"secremoterules":                directiveSecRemoteRules,
-	"secpcrematchlimitrecursion":    directiveSecPcreMatchLimitRecursion,
-	"secpcrematchlimit":             directiveSecPcreMatchLimit,
-	"secmarker":                     directiveSecMarker,
-	"sechttpblkey":                  directiveSecHTTPBlKey,
-	"sechashparam":                  directiveSecHashParam,
-	"sechashmethodrx":               directiveSecHashMethodRx,
-	"sechashmethodpm":               directiveSecHashMethodPm,
-	"sechashkey":                    directiveSecHashKey,
-	"sechashengine":                 directiveSecHashEngine,
-	"secgsblookupdb":                directiveSecGsbLookupDb,
-	"secdefaultaction":              directiveSecDefaultAction,
-	"secdatadir":                    directiveSecDataDir,
-	"seccontentinjection":           directiveSecContentInjection,
-	"secconnwritestatelimit":        directiveSecConnWriteStateLimit,
-	"secconnreadstatelimit":         directiveSecConnReadStateLimit,
-	"secconnengine":                 directiveSecConnEngine,
-	"seccomponentsignature":         directiveSecComponentSignature,
-	"seccollectiontimeout":          directiveSecCollectionTimeout,
-	"secauditlogrelevantstatus":     directiveSecAuditLogRelevantStatus,
-	"secauditlogparts":              directiveSecAuditLogParts,
-	"secauditlogdir":                directiveSecAuditLogDir,
-	"secauditlogstoragedir":         directiveSecAuditLogDir,
-	"secauditlog":                   directiveSecAuditLog,
-	"secauditengine":                directiveSecAuditEngine,
-	"secaction":                     directiveSecAction,
-	"secdebuglog":                   directiveSecDebugLog,
-	"secdebugloglevel":              directiveSecDebugLogLevel,
-	"secauditlogformat":             directiveSecAuditLogFormat,
-	"secauditlogtype":               directiveSecAuditLogType,
-	"secauditlogfilemode":           directiveSecAuditLogFileMode,
-	"secauditlogdirmode":            directiveSecAuditLogDirMode,
+	"secwebappid":                    directiveSecWebAppID,
+	"secuploadkeepfiles":             directiveSecUploadKeepFiles,
+	"secuploadfilemode":              directiveSecUploadFileMode,
+	"secuploadfilelimit":             directiveSecUploadFileLimit,
+	"secuploaddir":                   directiveSecUploadDir,
+	"sectmpdir":                      directiveSecTmpDir,
+	"secserversignature":             directiveSecServerSignature,
+	"secsensorid":                    directiveSecSensorID,
+	"secruleremovebytag":             directiveSecRuleRemoveByTag,
+	"secruleremovebymsg":             directiveSecRuleRemoveByMsg,
+	"secruleremovebyid":              directiveSecRuleRemoveByID,
+	"secruleengine":                  directiveSecRuleEngine,
+	"secrule":                        directiveSecRule,
+	"secresponsebodymimetypesclear":  directiveSecResponseBodyMimeTypesClear,
+	"secresponsebodymimetype":        directiveSecResponseBodyMimeType,
+	"secresponsebodylimitaction":     directiveSecResponseBodyLimitAction,
+	"secresponsebodylimit":           directiveSecResponseBodyLimit,
+	"secresponsebodyaccess":          directiveSecResponseBodyAccess,
+	"secrequestbodynofileslimit":     directiveSecRequestBodyNoFilesLimit,
+	"secrequestbodylimitaction":      directiveSecRequestBodyLimitAction,
+	"secrequestbodylimit":            directiveSecRequestBodyLimit,
+	"secrequestbodyinmemorylimit":    directiveSecRequestBodyInMemoryLimit,
+	"secrequestbodyaccess":           directiveSecRequestBodyAccess,
+	"secremoterulesfailaction":       directiveSecRemoteRulesFailAction,
+	"secremoterules":                 directiveSecRemoteRules,
+	"secpcrematchlimitrecursion":     directiveSecPcreMatchLimitRecursion,
+	"secpcrematchlimit":              directiveSecPcreMatchLimit,
+	"secmarker":                      directiveSecMarker,
+	"sechttpblkey":                   directiveSecHTTPBlKey,
+	"sechashparam":                   directiveSecHashParam,
+	"sechashmethodrx":                directiveSecHashMethodRx,
+	"sechashmethodpm":                directiveSecHashMethodPm,
+	"sechashkey":                     directiveSecHashKey,
+	"sechashengine":                  directiveSecHashEngine,
+	"secgsblookupdb":                 directiveSecGsbLookupDb,
+	"secdefaultaction":               directiveSecDefaultAction,
+	"secdatadir":                     directiveSecDataDir,
+	"seccontentinjection":            directiveSecContentInjection,
+	"secconnwritestatelimit":         directiveSecConnWriteStateLimit,
+	"secconnreadstatelimit":          directiveSecConnReadStateLimit,
+	"secconnengine":                  directiveSecConnEngine,
+	"seccomponentsignature":          directiveSecComponentSignature,
+	"seccollectiontimeout":           directiveSecCollectionTimeout,
+	"secauditlogrelevantstatus":      directiveSecAuditLogRelevantStatus,
+	"secauditlogparts":               directiveSecAuditLogParts,
+	"secauditlogdir":                 directiveSecAuditLogDir,
+	"secauditlogstoragedir":          directiveSecAuditLogDir,
+	"secauditlog":                    directiveSecAuditLog,
+	"secauditengine":                 directiveSecAuditEngine,
+	"secaction":                      directiveSecAction,
+	"secdebuglog":                    directiveSecDebugLog,
+	"secdebugloglevel":               directiveSecDebugLogLevel,
+	"secauditlogformat":              directiveSecAuditLogFormat,
+	"secauditlogtype":                directiveSecAuditLogType,
+	"secauditlogfilemode":            directiveSecAuditLogFileMode,
+	"secauditlogdirmode":             directiveSecAuditLogDirMode,
+	"secignorerulecompilationerrors": directiveSecIgnoreRuleCompilationErrors,
 
 	// Unsupported Directives
 	"secargumentseparator":     directiveUnsupported,

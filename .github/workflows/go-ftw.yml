@@ -24,18 +24,6 @@ jobs:
       with:
         lfs: true
         fetch-depth: 0 #for better blame info
-    - name: Prepare libinjection and PCRE
-      run: |
-        git clone https://github.com/libinjection/libinjection
-        gcc -std=c99 -Wall -Werror -fpic -c libinjection/src/libinjection_sqli.c -o libinjection/libinjection_sqli.o 
-        gcc -std=c99 -Wall -Werror -fpic -c libinjection/src/libinjection_xss.c -o libinjection/libinjection_xss.o
-        gcc -std=c99 -Wall -Werror -fpic -c libinjection/src/libinjection_html5.c -o libinjection/libinjection_html5.o
-        gcc -dynamiclib -shared -o libinjection/libinjection.so libinjection/libinjection_sqli.o libinjection/libinjection_xss.o libinjection/libinjection_html5.o
-        sudo cp libinjection/*.so /usr/local/lib
-        sudo cp libinjection/*.o /usr/local/lib
-        sudo cp libinjection/src/*.h /usr/local/include/
-        sudo chmod 444 /usr/local/include/libinjection*
-        sudo ldconfig
     - name: Create Caddyfile
       run: |
         wget https://gist.githubusercontent.com/jptosso/d3aca6d062c816b732aab358f28bbc3f/raw/18b1dfcabcb63c5e2dbad68ff25a5af4b1d3fd7d/Caddyfile
@@ -52,11 +40,10 @@ jobs:
         sed -i 's/\/some\/path\/to\/log.log/\/tmp\/output.log/g' .ftw.yaml
         sed -i 's/\/\/ _ "github.com/_ "github.com/g' main.go
         mv main.go caddy/main.go
-        go get github.com/jptosso/coraza-caddy@51db837
+        go get github.com/jptosso/coraza-caddy@9c2db28
         go mod tidy
         go get ./...
         go get -u github.com/jptosso/coraza-pcre@1bea0f0
-        go get -u github.com/jptosso/coraza-libinjection@f462893
         go install caddy/main.go
         sudo setcap CAP_NET_BIND_SERVICE=+eip $(which caddy)
     - name: Start Caddy server
