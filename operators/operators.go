@@ -49,6 +49,8 @@ func init() {
 	RegisterPlugin("noMatch", func() coraza.RuleOperator { return &noMatch{} })
 	RegisterPlugin("validateNid", func() coraza.RuleOperator { return &validateNid{} })
 	RegisterPlugin("geoLookup", func() coraza.RuleOperator { return &geoLookup{} })
+	RegisterPlugin("detectSQLi", func() coraza.RuleOperator { return &detectSQLi{} })
+	RegisterPlugin("detectXSS", func() coraza.RuleOperator { return &detectXSS{} })
 }
 
 // GetOperator returns an operator by name
