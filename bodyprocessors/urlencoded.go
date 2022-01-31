@@ -24,7 +24,7 @@ import (
 )
 
 type urlencodedBodyProcessor struct {
-	collections *collectionsMap
+	collections *CollectionsMap
 }
 
 func (ubp *urlencodedBodyProcessor) Read(reader io.Reader, _ Options) error {
@@ -38,7 +38,7 @@ func (ubp *urlencodedBodyProcessor) Read(reader io.Reader, _ Options) error {
 	// tx.GetCollection(VARIABLE_URLENCODED_ERROR).Set("", []string{err.Error()})
 	values, err := utils.ParseQuery(b, "&")
 	if err != nil {
-		ubp.collections = &collectionsMap{
+		ubp.collections = &CollectionsMap{
 			variables.UrlencodedError: map[string][]string{
 				"": {err.Error()},
 			},
@@ -51,7 +51,7 @@ func (ubp *urlencodedBodyProcessor) Read(reader io.Reader, _ Options) error {
 		m[k] = vs
 		keys = append(keys, k)
 	}
-	ubp.collections = &collectionsMap{
+	ubp.collections = &CollectionsMap{
 		variables.ArgsPost: m,
 		variables.ArgsPostNames: map[string][]string{
 			"": keys,
@@ -67,7 +67,7 @@ func (ubp *urlencodedBodyProcessor) Read(reader io.Reader, _ Options) error {
 	return nil
 }
 
-func (ubp *urlencodedBodyProcessor) Collections() collectionsMap {
+func (ubp *urlencodedBodyProcessor) Collections() CollectionsMap {
 	return *ubp.collections
 }
 

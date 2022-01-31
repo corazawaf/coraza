@@ -22,7 +22,12 @@ import (
 	"github.com/jptosso/coraza-waf/v2/types/variables"
 )
 
-type collectionsMap map[variables.RuleVariable]map[string][]string
+// CollectionsMap is used to store results for collections, example:
+// REQUEST_HEADERS:
+//   cookies: [cookie1: value1, cookie2: value2]
+//   user-agent: ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36"]
+
+type CollectionsMap map[variables.RuleVariable]map[string][]string
 
 // Options are used by BodyProcessors to provide some settings
 // like a path to store temporary files.
@@ -48,7 +53,7 @@ type BodyProcessor interface {
 	Read(reader io.Reader, options Options) error
 	// Collections returns a map of collections, for example,
 	// the ARGS_POST variables from the REQUEST_BODY.
-	Collections() collectionsMap
+	Collections() CollectionsMap
 	// Find returns the values in the body based on the input string
 	// A string might be an xpath, a regex, a variable name, etc
 	// The find function is responsible of transforming the input

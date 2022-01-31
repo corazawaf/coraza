@@ -24,7 +24,7 @@ import (
 )
 
 type jsonBodyProcessor struct {
-	collections collectionsMap
+	collections CollectionsMap
 }
 
 func (js *jsonBodyProcessor) Read(reader io.Reader, _ Options) error {
@@ -51,7 +51,7 @@ func (js *jsonBodyProcessor) Read(reader io.Reader, _ Options) error {
 		f[key] = []string{value}
 		names = append(names, key)
 	}
-	js.collections = collectionsMap{
+	js.collections = CollectionsMap{
 		variables.Args:     f,
 		variables.ArgsPost: f,
 		variables.ArgsPostNames: map[string][]string{
@@ -61,7 +61,7 @@ func (js *jsonBodyProcessor) Read(reader io.Reader, _ Options) error {
 	return nil
 }
 
-func (js *jsonBodyProcessor) Collections() collectionsMap {
+func (js *jsonBodyProcessor) Collections() CollectionsMap {
 	return js.collections
 }
 

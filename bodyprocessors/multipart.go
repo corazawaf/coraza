@@ -27,7 +27,7 @@ import (
 )
 
 type multipartBodyProcessor struct {
-	collections *collectionsMap
+	collections *CollectionsMap
 }
 
 func (mbp *multipartBodyProcessor) Read(reader io.Reader, options Options) error {
@@ -88,7 +88,7 @@ func (mbp *multipartBodyProcessor) Read(reader io.Reader, options Options) error
 
 		}
 	}
-	mbp.collections = &collectionsMap{
+	mbp.collections = &CollectionsMap{
 		variables.FilesNames: map[string][]string{
 			"": filesArgNames,
 		},
@@ -114,7 +114,7 @@ func (mbp *multipartBodyProcessor) Read(reader io.Reader, options Options) error
 	return nil
 }
 
-func (mbp *multipartBodyProcessor) Collections() collectionsMap {
+func (mbp *multipartBodyProcessor) Collections() CollectionsMap {
 	return *mbp.collections
 }
 

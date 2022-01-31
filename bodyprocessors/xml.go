@@ -35,8 +35,8 @@ func (xbp *xmlBodyProcessor) Read(reader io.Reader, _ Options) error {
 	return err
 }
 
-func (xbp *xmlBodyProcessor) Collections() collectionsMap {
-	return collectionsMap{}
+func (xbp *xmlBodyProcessor) Collections() CollectionsMap {
+	return CollectionsMap{}
 }
 
 func (xbp *xmlBodyProcessor) Find(expr string) (map[string][]string, error) {
