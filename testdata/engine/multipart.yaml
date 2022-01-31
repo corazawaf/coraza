@@ -14,9 +14,8 @@
             uri: /test.php?id=12345
             headers:
               Host: www.example.com
-              content-type: multipart/form-data; boundary=--0000
-            data: |
               Content-Type: multipart/form-data; boundary=--0000
+            data: |
               ----0000
               Content-Disposition: form-data; name="_msg_body"
 
