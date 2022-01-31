@@ -7,7 +7,7 @@
 [![GoDoc](https://godoc.org/github.com/jptosso/coraza-waf?status.svg)](https://godoc.org/github.com/jptosso/coraza-waf)
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 [![Coreruleset Compatibility](https://github.com/jptosso/coraza-waf/actions/workflows/go-ftw.yml/badge.svg)](https://github.com/jptosso/coraza-waf/actions/workflows/go-ftw.yml)
-[![OWASP Lab Project](https://img.shields.io/badge/owasp-lab%20project-brightgreen)](https://owasp.org/www-project-coraza-web-application-firewall)
+[![OWASP Lab Project](https://img.shields.io/badge/owasp-incubator%20project-brightgreen)](https://owasp.org/www-project-coraza-web-application-firewall)
 
 <div align="center">
 	<img src="https://coraza.io/images/logo.png" width="50%">
