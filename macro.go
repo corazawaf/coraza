@@ -65,11 +65,12 @@ func (m *Macro) Expand(tx *Transaction) string {
 	return res.String()
 }
 
+// Compile the macro into tokens, each token represents a string or a variable:
 // Example input: %{var.foo} and %{var.bar}
 // expected result:
-// macroToken{text: "%{var.foo}", variable: &variables.Var, key: "foo"},
-// macroToken{text: " and ", variable: nil, key: ""}
-// macroToken{text: "%{var.bar}", variable: &variables.Var, key: "bar"}
+// [0] macroToken{text: "%{var.foo}", variable: &variables.Var, key: "foo"},
+// [1] macroToken{text: " and ", variable: nil, key: ""}
+// [2] macroToken{text: "%{var.bar}", variable: &variables.Var, key: "bar"}
 func (m *Macro) Compile(input string) error {
 	data := []rune(input)
 	currentToken := ""
@@ -138,11 +139,9 @@ func (m *Macro) String() string {
 	return m.original
 }
 
-// Tokens return the count of tokens
-// If the macro is not compiled, it will return 0
-// If no macro is found and it is compiled, it will return 1
-func (m *Macro) Tokens() int {
-	return len(m.tokens)
+// IsExpandable return true if there are macro expanadable tokens
+func (m *Macro) IsExpandable() bool {
+	return len(m.tokens) > 1
 }
 
 // NewMacro creates a new macro

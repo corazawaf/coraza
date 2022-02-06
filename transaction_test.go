@@ -448,6 +448,23 @@ func TestTransactionSyncPool(t *testing.T) {
 	}
 }
 
+func TestTxPhase4Magic(t *testing.T) {
+	waf := NewWaf()
+	tx := waf.NewTransaction()
+	tx.AddResponseHeader("content-type", "text/html")
+	tx.ResponseBodyAccess = true
+	tx.Waf.ResponseBodyLimit = 3
+	if _, err := tx.ResponseBodyBuffer.Write([]byte("more bytes")); err != nil {
+		t.Error(err)
+	}
+	if _, err := tx.ProcessResponseBody(); err != nil {
+		t.Error(err)
+	}
+	if tx.GetCollection(variables.OutboundDataError).GetFirstString("") != "1" {
+		t.Error("failed to set outbound data error")
+	}
+}
+
 func multipartRequest(req *http.Request) error {
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)

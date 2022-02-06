@@ -203,7 +203,7 @@ func TestSecRuleUpdateTargetBy(t *testing.T) {
 	if waf.Rules.Count() != 1 {
 		t.Error("Failed to add rule")
 	}
-	if err := directiveSecRuleUpdateTargetById(waf, "181 \"REQUEST_HEADERS\""); err != nil {
+	if err := directiveSecRuleUpdateTargetByID(waf, "181 \"REQUEST_HEADERS\""); err != nil {
 		t.Error(err)
 	}
 

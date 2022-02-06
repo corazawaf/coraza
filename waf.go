@@ -180,8 +180,14 @@ func (w *Waf) NewTransaction() *Transaction {
 	tx.HashEngine = false
 	tx.HashEnforcement = false
 	tx.LastPhase = 0
-	tx.RequestBodyBuffer = NewBodyBuffer(w.TmpDir, w.RequestBodyInMemoryLimit)
-	tx.ResponseBodyBuffer = NewBodyBuffer(w.TmpDir, w.RequestBodyInMemoryLimit)
+	tx.RequestBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
+		TmpPath:     w.TmpDir,
+		MemoryLimit: w.RequestBodyInMemoryLimit,
+	})
+	tx.ResponseBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
+		TmpPath:     w.TmpDir,
+		MemoryLimit: w.RequestBodyInMemoryLimit,
+	})
 	tx.bodyProcessor = nil
 	tx.ruleRemoveByID = []int{}
 	tx.ruleRemoveTargetByID = map[int][]ruleVariableParams{}

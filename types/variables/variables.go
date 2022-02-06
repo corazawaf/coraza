@@ -82,37 +82,84 @@ const (
 	MultipartStrictError RuleVariable = iota
 	// MultipartUnmatchedBoundary kept for compatibility
 	MultipartUnmatchedBoundary RuleVariable = iota
-	OutboundDataError          RuleVariable = iota
-	PathInfo                   RuleVariable = iota
-	QueryString                RuleVariable = iota
-	RemoteAddr                 RuleVariable = iota
-	RemoteHost                 RuleVariable = iota
-	RemotePort                 RuleVariable = iota
-	ReqbodyError               RuleVariable = iota
-	ReqbodyErrorMsg            RuleVariable = iota
-	ReqbodyProcessorError      RuleVariable = iota
-	ReqbodyProcessorErrorMsg   RuleVariable = iota
-	ReqbodyProcessor           RuleVariable = iota
-	RequestBasename            RuleVariable = iota
-	RequestBody                RuleVariable = iota
-	RequestBodyLength          RuleVariable = iota
-	RequestFilename            RuleVariable = iota
-	RequestLine                RuleVariable = iota
-	RequestMethod              RuleVariable = iota
-	RequestProtocol            RuleVariable = iota
-	RequestURI                 RuleVariable = iota
-	RequestURIRaw              RuleVariable = iota
-	ResponseBody               RuleVariable = iota
-	ResponseContentLength      RuleVariable = iota
-	ResponseProtocol           RuleVariable = iota
-	ResponseStatus             RuleVariable = iota
-	ServerAddr                 RuleVariable = iota
-	ServerName                 RuleVariable = iota
-	ServerPort                 RuleVariable = iota
-	Sessionid                  RuleVariable = iota
-	HighestSeverity            RuleVariable = iota
-	StatusLine                 RuleVariable = iota
-	InboundErrorData           RuleVariable = iota
+	// OutboundDataError will be set to 1 when the response body size
+	// is above the setting configured by SecResponseBodyLimit
+	OutboundDataError RuleVariable = iota
+	// PathInfo is kept for compatibility
+	PathInfo RuleVariable = iota
+	// QueryString contains the raw query string part of a request URI
+	QueryString RuleVariable = iota
+	// RemoteAddr is the remote address of the connection
+	RemoteAddr RuleVariable = iota
+	// RemoteHost is the remote host of the connection, not implemented
+	RemoteHost RuleVariable = iota
+	// RemotePort is the remote port of the connection
+	RemotePort RuleVariable = iota
+	// ReqbodyError contains the status of the request body processor used
+	// for request body parsing, 0 means no error, 1 means error
+	ReqbodyError RuleVariable = iota
+	// ReqbodyErrorMsg contains the error message of the request body processor error
+	ReqbodyErrorMsg RuleVariable = iota
+	// ReqbodyProcessorError is the same as ReqbodyErrr ?
+	ReqbodyProcessorError RuleVariable = iota
+	// ReqbodyProcessorErrorMsg is the same as ReqbodyErrorMsg ?
+	ReqbodyProcessorErrorMsg RuleVariable = iota
+	// ReqbodyProcessor contains the name of the request body processor used, default
+	// ones are: URLENCODED, MULTIPART, and XML. They can be extended using plugins.
+	ReqbodyProcessor RuleVariable = iota
+	// RequestBasename contains the name after the last slash in the request URI
+	// It does not pass through any anti-evasion, use with transformations
+	RequestBasename RuleVariable = iota
+	// RequestBody contains the full request body, it will only be available
+	// For urlencoded requests. It is possible to force it's presence by using
+	// the ctl:forceRequestBodyVariable action
+	RequestBody RuleVariable = iota
+	// RequestBodyLength contains the length of the request body in bytes calculated from
+	// the BodyBuffer, not from the content-type header
+	RequestBodyLength RuleVariable = iota
+	// RequestFilename holds the relative request URL without the query string part.
+	// Anti-evasion transformations are not used by default
+	RequestFilename RuleVariable = iota
+	// RequestLine This variable holds the complete request line sent to the server
+	// (including the request method and HTTP version information).
+	RequestLine RuleVariable = iota
+	// RequestMethod is the request method
+	RequestMethod RuleVariable = iota
+	// RequestProtocol is the protocol used in the request
+	RequestProtocol RuleVariable = iota
+	// RequestURI holds the full request URL including the query string data without
+	// the domain name
+	RequestURI RuleVariable = iota
+	// RequestURIRaw is the same as RequestURI but with the domain name in case
+	// it was provided in the request line
+	RequestURIRaw RuleVariable = iota
+	// ResponseBody contains the full response body, it will only be available if
+	// responseBodyAccess is set to on and the response mime matches the configured
+	// processable mime types
+	ResponseBody RuleVariable = iota
+	// ResponseContentLength contains the length of the response body in bytes calculated from
+	// the BodyBuffer, not from the content-type header
+	ResponseContentLength RuleVariable = iota
+	// ResponseProtocol is the protocol used in the response
+	ResponseProtocol RuleVariable = iota
+	// ResponseStatus is the status code of the response
+	ResponseStatus RuleVariable = iota
+	// ServerAddr is the address of the server
+	ServerAddr RuleVariable = iota
+	// ServerName is the name of the server
+	ServerName RuleVariable = iota
+	// ServerPort is the port of the server
+	ServerPort RuleVariable = iota
+	// Sessionid is not supported
+	Sessionid RuleVariable = iota
+	// HighestSeverity is the highest severity from all matched rules
+	HighestSeverity RuleVariable = iota
+	// StatusLine is the status line of the response, including the request method
+	// and HTTP version information
+	StatusLine RuleVariable = iota
+	// InboundErrorData will be set to 1 when the request body size
+	// is above the setting configured by SecRequesteBodyLimit
+	InboundErrorData RuleVariable = iota
 	// Duration contains the time in miliseconds from
 	// the beginning of the transaction until this point
 	Duration RuleVariable = iota
@@ -120,7 +167,8 @@ const (
 	ResponseHeadersNames RuleVariable = iota
 	// RequestHeadersNames contains the names of the request headers
 	RequestHeadersNames RuleVariable = iota
-	Userid              RuleVariable = iota
+	// Userid is not supported
+	Userid RuleVariable = iota
 	// Args contains copies of ArgsGet and ArgsPost
 	Args RuleVariable = iota
 	// ArgsGet contains the GET (URL) arguments
@@ -130,16 +178,31 @@ const (
 	// FilesSizes contains the sizes of the uploaded files
 	FilesSizes RuleVariable = iota
 	// FilesNames contains the names of the uploaded files
-	FilesNames        RuleVariable = iota
-	FilesTmpContent   RuleVariable = iota
+	FilesNames RuleVariable = iota
+	// FilesTmpContent is not supported
+	FilesTmpContent RuleVariable = iota
+	// MultipartFilename contains the multipart data from field FILENAME
 	MultipartFilename RuleVariable = iota
-	MultipartName     RuleVariable = iota
-	MatchedVarsNames  RuleVariable = iota
-	MatchedVars       RuleVariable = iota
-	Files             RuleVariable = iota
-	RequestCookies    RuleVariable = iota
-	RequestHeaders    RuleVariable = iota
-	ResponseHeaders   RuleVariable = iota
+	// MultipartName contains the multipart data from field NAME.
+	MultipartName RuleVariable = iota
+	// MatchedVarsNames is similar to MATCHED_VAR_NAME except that it is
+	// a collection of all matches for the current operator check.
+	MatchedVarsNames RuleVariable = iota
+	// MatchedVars is similar to MATCHED_VAR except that it is a collection
+	// of all matches for the current operator check
+	MatchedVars RuleVariable = iota
+	// Files contains a collection of original file names
+	// (as they were called on the remote user’s filesys- tem).
+	// Available only on inspected multipart/form-data requests.
+	Files RuleVariable = iota
+	// RequestCookies is a collection of all of request cookies (values only
+	RequestCookies RuleVariable = iota
+	// RequestHeaders can be used as either a collection of all of the request
+	// headers or can be used to inspect selected headers
+	RequestHeaders RuleVariable = iota
+	// ResponseHeaders can be used as either a collection of all of the response
+	// headers or can be used to inspect selected headers
+	ResponseHeaders RuleVariable = iota
 	// Geo contains the location information of the client
 	Geo RuleVariable = iota
 	// RequestCookiesNames contains the names of the request cookies

@@ -30,6 +30,8 @@ import (
 
 type directive = func(w *coraza.Waf, opts string) error
 
+// RegisterDirectivePlugin registers a new directive plugin that can be automatically evaluated
+// as a seclang directive.
 func RegisterDirectivePlugin(name string, directive func(w *coraza.Waf, opts string) error) {
 	directivesMap[strings.ToLower(name)] = directive
 }
@@ -462,7 +464,7 @@ func directiveSecDebugLogLevel(w *coraza.Waf, opts string) error {
 	return w.SetDebugLogLevel(lvl)
 }
 
-func directiveSecRuleUpdateTargetById(w *coraza.Waf, opts string) error {
+func directiveSecRuleUpdateTargetByID(w *coraza.Waf, opts string) error {
 	spl := strings.SplitN(opts, " ", 2)
 	if len(spl) != 2 {
 		return errors.New("syntax error: SecRuleUpdateTargetById id \"VARIABLES\"")
@@ -531,7 +533,7 @@ var (
 	_ directive = directiveSecMarker
 	_ directive = directiveSecRemoteRules
 	_ directive = directiveSecSensorID
-	_ directive = directiveSecRuleUpdateTargetById
+	_ directive = directiveSecRuleUpdateTargetByID
 )
 
 var directivesMap = map[string]directive{
@@ -598,7 +600,7 @@ var directivesMap = map[string]directive{
 	"seccookieformat":          directiveUnsupported,
 	"secruleupdatetargetbytag": directiveUnsupported,
 	"secruleupdatetargetbymsg": directiveUnsupported,
-	"secruleupdatetargetbyid":  directiveSecRuleUpdateTargetById,
+	"secruleupdatetargetbyid":  directiveSecRuleUpdateTargetByID,
 	"secruleupdateactionbyid":  directiveUnsupported,
 	"secrulescript":            directiveUnsupported,
 	"secruleperftime":          directiveUnsupported,

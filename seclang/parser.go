@@ -142,6 +142,10 @@ func (p *Parser) log(msg string) error {
 	return errors.New(msg)
 }
 
+// SetCurrentDir forces the current directory of the parser to dir
+// If FromFile was used, the file directory will be used instead unless
+// overwritten by this function
+// It is mostly used by operators that consumes relative paths
 func (p *Parser) SetCurrentDir(dir string) {
 	p.currentDir = dir
 	p.waf.Config.Set("parser_config_dir", p.currentDir)
