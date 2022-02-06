@@ -163,22 +163,34 @@ type Waf struct {
 // NewTransaction Creates a new initialized transaction for this WAF instance
 func (w *Waf) NewTransaction() *Transaction {
 	tx := transactionPool.Get().(*Transaction)
-	tx.Waf = w
-	tx.collections = [variables.VariablesCount]*Collection{}
 	tx.ID = utils.SafeRandom(19)
-	tx.Timestamp = time.Now().UnixNano()
+	tx.MatchedRules = []MatchedRule{}
+	tx.Interruption = nil
+	tx.collections = [variables.VariablesCount]*Collection{}
+	tx.Logdata = ""
+	tx.SkipAfter = ""
 	tx.AuditEngine = w.AuditEngine
 	tx.AuditLogParts = w.AuditLogParts
-	tx.RuleEngine = w.RuleEngine
+	tx.ForceRequestBodyVariable = false
 	tx.RequestBodyAccess = w.RequestBodyAccess
 	tx.RequestBodyLimit = w.RequestBodyLimit
 	tx.ResponseBodyAccess = w.ResponseBodyAccess
 	tx.ResponseBodyLimit = w.ResponseBodyLimit
-	tx.ruleRemoveTargetByID = map[int][]ruleVariableParams{}
-	tx.ruleRemoveByID = []int{}
-	tx.stopWatches = map[types.RulePhase]int64{}
+	tx.RuleEngine = w.RuleEngine
+	tx.HashEngine = false
+	tx.HashEnforcement = false
+	tx.LastPhase = 0
 	tx.RequestBodyBuffer = NewBodyBuffer(w.TmpDir, w.RequestBodyInMemoryLimit)
 	tx.ResponseBodyBuffer = NewBodyBuffer(w.TmpDir, w.RequestBodyInMemoryLimit)
+	tx.bodyProcessor = nil
+	tx.ruleRemoveByID = []int{}
+	tx.ruleRemoveTargetByID = map[int][]ruleVariableParams{}
+	tx.Skip = 0
+	tx.Capture = false
+	tx.stopWatches = map[types.RulePhase]int64{}
+	tx.Waf = w
+	tx.Timestamp = time.Now().UnixNano()
+	tx.audit = false
 
 	for i := range tx.collections {
 		tx.collections[i] = NewCollection(variables.RuleVariable(i))
