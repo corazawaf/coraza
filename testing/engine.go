@@ -135,17 +135,8 @@ func (t *Test) SetRequestBody(body interface{}) error {
 	if body == nil {
 		return nil
 	}
-	data := ""
-	v := reflect.ValueOf(body)
-	switch v.Kind() {
-	case reflect.Slice:
-		for i := 0; i < v.Len(); i++ {
-			data += fmt.Sprintf("%s\r\n", v.Index(i))
-		}
-		data += "\r\n"
-	case reflect.String:
-		data = body.(string)
-	}
+	data := bodyToString(body)
+
 	lbody := len(data)
 	if lbody == 0 {
 		return nil
@@ -155,6 +146,23 @@ func (t *Test) SetRequestBody(body interface{}) error {
 		t.RequestHeaders["content-length"] = strconv.Itoa(lbody)
 	}
 	if _, err := t.transaction.RequestBodyBuffer.Write([]byte(data)); err != nil {
+		return err
+	}
+	return nil
+}
+
+// SetResponseBody sets the request body
+func (t *Test) SetResponseBody(body interface{}) error {
+	if body == nil {
+		return nil
+	}
+	data := bodyToString(body)
+
+	lbody := len(data)
+	if lbody == 0 {
+		return nil
+	}
+	if _, err := t.transaction.ResponseBodyBuffer.Write([]byte(data)); err != nil {
 		return err
 	}
 	return nil
@@ -285,4 +293,21 @@ func NewTest(name string, waf *engine.Waf) *Test {
 		magic:           true,
 	}
 	return t
+}
+
+func bodyToString(iface interface{}) string {
+	data := ""
+	v := reflect.ValueOf(iface)
+	switch v.Kind() {
+	case reflect.Slice:
+		for i := 0; i < v.Len(); i++ {
+			data += fmt.Sprintf("%s\r\n", v.Index(i))
+		}
+		data += "\r\n"
+	case reflect.String:
+		data = iface.(string)
+	default:
+		panic("Error: bodyToString() only accepts slices and strings")
+	}
+	return data
 }

@@ -463,6 +463,9 @@ func TestTxPhase4Magic(t *testing.T) {
 	if tx.GetCollection(variables.OutboundDataError).GetFirstString("") != "1" {
 		t.Error("failed to set outbound data error")
 	}
+	if tx.GetCollection(variables.ResponseBody).GetFirstString("") != "mor" {
+		t.Error("failed to set response body")
+	}
 }
 
 func multipartRequest(req *http.Request) error {
