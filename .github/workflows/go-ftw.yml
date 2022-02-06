@@ -26,7 +26,7 @@ jobs:
         fetch-depth: 0 #for better blame info
     - name: Create Caddyfile
       run: |
-        wget https://gist.githubusercontent.com/jptosso/d3aca6d062c816b732aab358f28bbc3f/raw/18b1dfcabcb63c5e2dbad68ff25a5af4b1d3fd7d/Caddyfile
+        wget https://gist.githubusercontent.com/jptosso/9d17244af317d5857148cb9ed74b055c/raw/32b72d00664a89081b60a0764d32db66965597e1/Caddyfile
     - name: Setup CRS
       run: |
         git clone https://github.com/coreruleset/coreruleset /tmp/coreruleset
@@ -46,6 +46,8 @@ jobs:
         go get -u github.com/jptosso/coraza-pcre@1bea0f0
         go install caddy/main.go
         sudo setcap CAP_NET_BIND_SERVICE=+eip $(which caddy)
+    - name: Start httpbin
+      run: docker run -p 8080:80 kennethreitz/httpbin
     - name: Start Caddy server
       run: |
         caddy start -adapter caddyfile -config ./Caddyfile
