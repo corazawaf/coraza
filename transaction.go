@@ -641,6 +641,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 
 	// Chunked requests will always be written to a temporary file
 	if tx.RequestBodyBuffer.Size() >= tx.RequestBodyLimit {
+		tx.GetCollection(variables.InboundErrorData).Set("", []string{"1"})
 		if tx.Waf.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
 			// We interrupt this transaction in case RequestBodyLimitAction is Reject
 			tx.Interruption = &types.Interruption{
