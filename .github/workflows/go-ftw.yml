@@ -31,7 +31,7 @@ jobs:
       run: docker run -p 8080:80 -d kennethreitz/httpbin
     - name: Create Caddyfile
       run: |
-        wget https://gist.githubusercontent.com/jptosso/9d17244af317d5857148cb9ed74b055c/raw/32b72d00664a89081b60a0764d32db66965597e1/Caddyfile?nocache1 -o Caddyfile
+        wget https://gist.githubusercontent.com/jptosso/9d17244af317d5857148cb9ed74b055c/raw/32b72d00664a89081b60a0764d32db66965597e1/Caddyfile
     - name: Setup CRS
       run: |
         git clone https://github.com/coreruleset/coreruleset /tmp/coreruleset
@@ -41,7 +41,7 @@ jobs:
         go install github.com/fzipi/go-ftw@latest
         mkdir caddy
         wget https://raw.githubusercontent.com/jptosso/coraza-caddy/master/caddy/main.go
-        wget https://gist.githubusercontent.com/jptosso/bea81ca0de225b3e09846f627abc5b74/raw/cbec9526280400bbbdb1de51460d6dc748c116ab/.ftw.yaml? -o .ftw.yaml
+        wget https://gist.githubusercontent.com/jptosso/bea81ca0de225b3e09846f627abc5b74/raw/cbec9526280400bbbdb1de51460d6dc748c116ab/.ftw.yaml
         sed -i 's/\/some\/path\/to\/log.log/\/tmp\/output.log/g' .ftw.yaml
         sed -i 's/\/\/ _ "github.com/_ "github.com/g' main.go
         mv main.go caddy/main.go
