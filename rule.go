@@ -32,10 +32,10 @@ import (
 // the execution of the rule
 type RuleTransformation = func(input string) (string, error)
 
-// RuleAction is used used to create Action plugins
+// RuleAction is used to create Action plugins
 // See the documentation: https://www.coraza.io/docs/waf/actions
 type RuleAction interface {
-	// Initializes an action, will be done during compilation
+	// Init an action, will be done during compilation
 	Init(*Rule, string) error
 	// Evaluate will be done during rule evaluation
 	Evaluate(*Rule, *Transaction)
@@ -210,7 +210,7 @@ type Rule struct {
 	// If true, triggering this rule write to the audit log
 	Audit bool
 
-	// If true, the transformations will be multimatched
+	// If true, the transformations will be multi matched
 	MultiMatch bool
 
 	// Used for error logging
@@ -225,6 +225,7 @@ type Rule struct {
 func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	if r.Capture {
 		tx.Capture = true
+		defer tx.resetCaptures()
 	}
 	rid := r.ID
 	if rid == 0 {
@@ -322,10 +323,6 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 						}
 						r.matchVariable(tx, mr)
 						matchedValues = append(matchedValues, mr)
-						// we only capture when it matches
-						if r.Capture {
-							defer tx.resetCaptures()
-						}
 					}
 					tx.Waf.Logger.Debug("Evaluate rule operator", zap.String("txid", tx.ID),
 						zap.Int("rule", rid),
@@ -391,16 +388,18 @@ func (r *Rule) matchVariable(tx *Transaction, m MatchData) {
 	if rid == 0 {
 		rid = r.ParentID
 	}
-	tx.Waf.Logger.Debug("Matching value", zap.String("txid", tx.ID),
-		zap.Int("rule", rid),
-		zap.String("event", "EVALUATE_RULE_OPERATOR"),
-		zap.Any("variable", m.VariableName),
-		zap.String("key", m.Key),
-		zap.String("value", m.Value),
-	)
+	if !m.isNil() {
+		tx.Waf.Logger.Debug("Matching value", zap.String("txid", tx.ID),
+			zap.Int("rule", rid),
+			zap.String("event", "EVALUATE_RULE_OPERATOR"),
+			zap.Any("variable", m.VariableName),
+			zap.String("key", m.Key),
+			zap.String("value", m.Value),
+		)
+	}
 	// we must match the vars before running the chains
 
-	// We run non disruptive actions even if there is no chain match
+	// We run non-disruptive actions even if there is no chain match
 	tx.matchVariable(m)
 	for _, a := range r.actions {
 		if a.Function.Type() == types.ActionTypeNondisruptive {
@@ -492,7 +491,7 @@ func (r *Rule) SetOperator(operator RuleOperator, functionName string, params st
 		Operator: operator,
 		Function: functionName,
 		Data:     params,
-		Negation: (len(functionName) > 0 && functionName[0] == '!'),
+		Negation: len(functionName) > 0 && functionName[0] == '!',
 	}
 }
 

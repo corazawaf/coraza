@@ -113,5 +113,5 @@ func ParseRuleSeverity(input string) (RuleSeverity, error) {
 	case "debug":
 		return RuleSeverityDebug, nil
 	}
-	return 0, fmt.Errorf("Unknown severity: %s", input)
+	return 0, fmt.Errorf("unknown severity: %s", input)
 }

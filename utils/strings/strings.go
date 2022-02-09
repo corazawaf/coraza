@@ -20,7 +20,9 @@ import (
 	"sync"
 )
 
-const randomchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+const (
+	randomBytes = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+)
 
 var mu sync.Mutex
 
@@ -40,14 +42,14 @@ func SafeRandom(length int) string {
 	}
 
 	for i, b := range bytes {
-		bytes[i] = randomchars[b%byte(len(randomchars))]
+		bytes[i] = randomBytes[b%byte(len(randomBytes))]
 	}
 	return string(bytes)
 }
 
 // ValidHex returns true if the byte is a valid hex character
 func ValidHex(x byte) bool {
-	return ((x >= '0') && (x <= '9')) || ((x >= 'a') && (x <= 'f')) || ((x >= 'A') && (x <= 'F'))
+	return (x >= '0' && x <= '9') || (x >= 'a' && x <= 'f') || (x >= 'A' && x <= 'F')
 }
 
 // X2c converts a hex character to its ascii value

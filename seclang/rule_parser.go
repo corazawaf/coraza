@@ -361,15 +361,14 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 	rule.Line = options.Line
 
 	if parent := getLastRuleExpectingChain(options.Waf); parent != nil {
-
 		rule.ParentID = parent.ID
-		lastchain := parent
-		for lastchain.Chain != nil {
-			lastchain = lastchain.Chain
+		lastChain := parent
+		for lastChain.Chain != nil {
+			lastChain = lastChain.Chain
 		}
 		// TODO we must remove defaultactions from chains
 		rule.Phase = 0
-		lastchain.Chain = rule
+		lastChain.Chain = rule
 		return nil, nil
 	}
 	return rp.rule, nil

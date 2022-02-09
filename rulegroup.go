@@ -16,7 +16,6 @@ package coraza
 
 import (
 	"fmt"
-	"strconv"
 	"sync"
 	"time"
 
@@ -131,10 +130,6 @@ RulesLoop:
 		if r.Phase != phase && r.Phase != 0 {
 			continue
 		}
-		rid := strconv.Itoa(r.ID)
-		if r.ID == 0 {
-			rid = strconv.Itoa(r.ParentID)
-		}
 
 		// we skip the rule in case it's in the excluded list
 		for _, trb := range tx.ruleRemoveByID {
@@ -171,12 +166,6 @@ RulesLoop:
 		tx.GetCollection(variables.MatchedVars).Reset()
 		tx.GetCollection(variables.MatchedVarsNames).Reset()
 
-		txr := tx.GetCollection(variables.Rule)
-		txr.Set("id", []string{rid})
-		txr.Set("rev", []string{r.Rev})
-		txr.Set("severity", []string{r.Severity.String()})
-		txr.Set("logdata", []string{r.LogData.String()})
-		txr.Set("msg", []string{r.Msg.String()})
 		r.Evaluate(tx)
 		tx.Capture = false // we reset captures
 		usedRules++
