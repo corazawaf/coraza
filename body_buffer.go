@@ -23,7 +23,6 @@ import (
 // BodyBuffer is used to read RequestBody and ResponseBody objects
 // It will handle memory usage for buffering and processing
 type BodyBuffer struct {
-	io.Writer   // OK?
 	tmpDir      string
 	buffer      *bytes.Buffer
 	writer      *os.File
