@@ -164,7 +164,7 @@ type Waf struct {
 func (w *Waf) NewTransaction() *Transaction {
 	tx := transactionPool.Get().(*Transaction)
 	tx.Waf = w
-	tx.collections = [variables.VariablesCount]*Collection{}
+	tx.collections = [variables.Count]*Collection{}
 	tx.ID = utils.SafeRandom(19)
 	tx.Timestamp = time.Now().UnixNano()
 	tx.AuditEngine = w.AuditEngine

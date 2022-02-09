@@ -238,7 +238,7 @@ func (t *Test) Transaction() *engine.Transaction {
 func (t *Test) String() string {
 	tx := t.transaction
 	res := "======DEBUG======\n"
-	for v := byte(1); v < variables.VariablesCount; v++ {
+	for v := byte(1); v < variables.Count; v++ {
 		vr := variables.RuleVariable(v)
 		if vr.Name() == "UNKNOWN" {
 			break

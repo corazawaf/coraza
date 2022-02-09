@@ -53,7 +53,7 @@ type Transaction struct {
 	Interruption *types.Interruption
 
 	// Contains all collections, including persistent
-	collections [variables.VariablesCount]*Collection
+	collections [variables.Count]*Collection
 
 	// This is used to store log messages
 	Logdata string
@@ -195,7 +195,7 @@ func (tx *Transaction) resetCaptures() {
 }
 
 // ParseRequestReader Parses binary request including body,
-// it does only supports http/1.1 and http/1.0
+// it does only support http/1.1 and http/1.0
 // This function does not run ProcessConnection
 // This function will store in memory the whole reader,
 // DON't USE IT FOR PRODUCTION yet

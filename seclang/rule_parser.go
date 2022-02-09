@@ -393,8 +393,8 @@ func getLastRuleExpectingChain(w *coraza.Waf) *coraza.Rule {
 }
 
 // parseActions will assign the function name, arguments and
-// function (pkg.actions) for each action splitted by comma (,)
-// Action arguments are allowed to wrap values between collons('')
+// function (pkg.actions) for each action split by comma (,)
+// Action arguments are allowed to wrap values between colons('')
 func parseActions(actions string) ([]ruleAction, error) {
 	iskey := true
 	ckey := ""
