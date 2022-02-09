@@ -47,7 +47,7 @@ func SafeRandom(length int) string {
 
 // ValidHex returns true if the byte is a valid hex character
 func ValidHex(x byte) bool {
-	return (((x >= '0') && (x <= '9')) || ((x >= 'a') && (x <= 'f')) || ((x >= 'A') && (x <= 'F')))
+	return ((x >= '0') && (x <= '9')) || ((x >= 'a') && (x <= 'f')) || ((x >= 'A') && (x <= 'F'))
 }
 
 // X2c converts a hex character to its ascii value
@@ -56,13 +56,13 @@ func X2c(what string) byte {
 	if what[0] >= 'A' {
 		digit = ((what[0] & 0xdf) - 'A') + 10
 	} else {
-		digit = (what[0] - '0')
+		digit = what[0] - '0'
 	}
 	digit *= 16
 	if what[1] >= 'A' {
 		digit += ((what[1] & 0xdf) - 'A') + 10
 	} else {
-		digit += (what[1] - '0')
+		digit += what[1] - '0'
 	}
 
 	return digit
