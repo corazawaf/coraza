@@ -39,7 +39,6 @@ jobs:
         go install github.com/fzipi/go-ftw@latest
         mkdir caddy
         wget https://raw.githubusercontent.com/jptosso/coraza-caddy/master/caddy/main.go
-        cp testdata/coreruleset/.ftw.yml .
         cp testdata/coreruleset/Caddyfile .
         ls -lh
         sed -i 's/\/some\/path\/to\/log.log/\/tmp\/output.log/g' .ftw.yaml
@@ -56,4 +55,4 @@ jobs:
         caddy start -adapter caddyfile -config ./Caddyfile
     - name: Run go-ftw
       run: |
-        go-ftw run -d /tmp/coreruleset/tests/regression
+        go-ftw run -d /tmp/coreruleset/tests/regression --config testdata/coreruleset/.ftw.yml
