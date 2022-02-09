@@ -39,7 +39,9 @@ jobs:
         go install github.com/fzipi/go-ftw@latest
         mkdir caddy
         wget https://raw.githubusercontent.com/jptosso/coraza-caddy/master/caddy/main.go
-        mv testdata/coreruleset/.ftw.yml testdata/coreruleset/Caddyfile ./
+        cp testdata/coreruleset/.ftw.yml .
+        cp testdata/coreruleset/Caddyfile .
+        ls -lh
         sed -i 's/\/some\/path\/to\/log.log/\/tmp\/output.log/g' .ftw.yaml
         sed -i 's/\/\/ _ "github.com/_ "github.com/g' main.go
         mv main.go caddy/main.go
