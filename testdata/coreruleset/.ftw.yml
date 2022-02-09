@@ -1,7 +1,7 @@
 ---
 # For caddy configuration see the next file, Caddyfile
 # Just type: go-ftw run -d ./coreruleset/tests/regression --config .ftw.yaml
-logfile: '/some/path/to/log.log'
+logfile: '/tmp/output.log'
 logtype:
   name: 'apache'
   timeregex:  '\[([A-Z][a-z]{2} [A-z][a-z]{2} \d{1,2} \d{1,2}\:\d{1,2}\:\d{1,2}\.\d+? \d{4})\]'

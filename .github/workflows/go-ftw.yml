@@ -41,7 +41,6 @@ jobs:
         wget https://raw.githubusercontent.com/jptosso/coraza-caddy/master/caddy/main.go
         cp testdata/coreruleset/Caddyfile .
         ls -lh
-        sed -i 's/\/some\/path\/to\/log.log/\/tmp\/output.log/g' .ftw.yaml
         sed -i 's/\/\/ _ "github.com/_ "github.com/g' main.go
         mv main.go caddy/main.go
         go get github.com/jptosso/coraza-caddy@9c2db28
