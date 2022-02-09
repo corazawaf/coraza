@@ -937,7 +937,7 @@ func (tx *Transaction) Clean() error {
 	return nil
 }
 
-// generateReqbodyError generates all of the error variables for the request body parser
+// generateReqbodyError generates all the error variables for the request body parser
 func (tx *Transaction) generateReqbodyError(err error) {
 	tx.GetCollection(variables.ReqbodyError).Set("", []string{"1"})
 	tx.GetCollection(variables.ReqbodyErrorMsg).Set("", []string{string(err.Error())})
