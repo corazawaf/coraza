@@ -15,7 +15,7 @@
 package operators
 
 import (
-	"github.com/bxlxx/libinjection-go"
+	"github.com/corazawaf/libinjection-go"
 	"github.com/jptosso/coraza-waf/v2"
 )
 

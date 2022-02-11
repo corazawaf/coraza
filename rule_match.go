@@ -22,8 +22,8 @@ import (
 	"github.com/jptosso/coraza-waf/v2/types/variables"
 )
 
-// MatchData works like VariableKey but is used for logging
-// so it contains the collection as a string and it's value
+// MatchData works like VariableKey but is used for logging,
+// so it contains the collection as a string, and it's value
 type MatchData struct {
 	// variable name stored for cache
 	VariableName string
@@ -33,6 +33,10 @@ type MatchData struct {
 	Key string
 	// Value of the current VARIABLE:KEY
 	Value string
+}
+
+func (m MatchData) isNil() bool {
+	return m == MatchData{}
 }
 
 // MatchedRule contains a list of macro expanded messages,

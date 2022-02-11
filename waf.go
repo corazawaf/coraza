@@ -44,14 +44,14 @@ var transactionPool = sync.Pool{
 // It contains the severity so the cb can decide to log it or not
 type ErrorLogCallback = func(rule MatchedRule)
 
-// Waf instances are used to store configurations and rules
-// Every web application should have a different Waf instance
-// but you can share an instance if you are okwith sharing
+// Waf instance is used to store configurations and rules
+// Every web application should have a different Waf instance,
+// but you can share an instance if you are ok with sharing
 // configurations, rules and logging.
 // Transactions and SecLang parser requires a Waf instance
-// You can use as many Waf instances as you want and they are
+// You can use as many Waf instances as you want, and they are
 // concurrent safe
-// All Waf instance fields are inmutable, if you update any
+// All Waf instance fields are immutable, if you update any
 // of them in runtime you might create concurrency issues
 type Waf struct {
 	// ruleGroup object, contains all rules and helpers
@@ -164,7 +164,7 @@ type Waf struct {
 func (w *Waf) NewTransaction() *Transaction {
 	tx := transactionPool.Get().(*Transaction)
 	tx.Waf = w
-	tx.collections = [variables.VariablesCount]*Collection{}
+	tx.collections = [variables.Count]*Collection{}
 	tx.ID = utils.SafeRandom(19)
 	tx.Timestamp = time.Now().UnixNano()
 	tx.AuditEngine = w.AuditEngine
@@ -223,7 +223,7 @@ func (w *Waf) NewTransaction() *Transaction {
 		variables.ReqbodyProcessor: "",
 		variables.RequestBody:      "",
 		variables.ResponseBody:     "",
-		// others
+		// TODO others
 		// variables.WebAppID: w.WebAppID, not implemented yet
 	}
 	for v, data := range defaults {
@@ -327,7 +327,7 @@ func (w *Waf) SetDebugLogLevel(lvl int) error {
 }
 
 // SetErrorLogCb sets the callback function for error logging
-// The errorcallback receives all the error data and some
+// The error callback receives all the error data and some
 // helpers to write modsecurity style logs
 func (w *Waf) SetErrorLogCb(cb ErrorLogCallback) {
 	w.errorLogCb = cb
