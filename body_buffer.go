@@ -25,10 +25,10 @@ import (
 // BodyBuffer is used to read RequestBody and ResponseBody objects
 // It will handle memory usage for buffering and processing
 type BodyBuffer struct {
-	options   types.BodyBufferOptions
-	buffer    *bytes.Buffer
-	writer    *os.File
-	length    int64
+	options types.BodyBufferOptions
+	buffer  *bytes.Buffer
+	writer  *os.File
+	length  int64
 }
 
 // Write appends data to the body buffer by chunks
