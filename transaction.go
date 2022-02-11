@@ -767,9 +767,8 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 	reader = io.LimitReader(reader, tx.Waf.ResponseBodyLimit)
 	buf := new(strings.Builder)
 	length, _ := io.Copy(buf, reader)
-	// TODO should we handle this case better?
-	// What if someone creates a ResponseBodyLimit that is exactly the expected size
-	if length >= tx.Waf.ResponseBodyLimit {
+
+	if tx.ResponseBodyBuffer.Size() >= tx.Waf.ResponseBodyLimit {
 		tx.GetCollection(variables.OutboundDataError).Set("", []string{"1"})
 	}
 
