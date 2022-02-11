@@ -25,9 +25,6 @@ import (
 // This file repeats the same content many times in order to make access
 // efficient for seclang and transactions
 
-// Count contains the number of existing variables
-const Count = 87
-
 // RuleVariable is used to identify information from a transaction
 type RuleVariable byte
 

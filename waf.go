@@ -166,7 +166,7 @@ func (w *Waf) NewTransaction() *Transaction {
 	tx.ID = utils.SafeRandom(19)
 	tx.MatchedRules = []MatchedRule{}
 	tx.Interruption = nil
-	tx.collections = [variables.VariablesCount]*Collection{}
+	tx.collections = [types.VariablesCount]*Collection{}
 	tx.Logdata = ""
 	tx.SkipAfter = ""
 	tx.AuditEngine = w.AuditEngine

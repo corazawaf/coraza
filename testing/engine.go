@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	engine "github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2/types"
 	"github.com/jptosso/coraza-waf/v2/types/variables"
 )
 
@@ -246,7 +247,7 @@ func (t *Test) Transaction() *engine.Transaction {
 func (t *Test) String() string {
 	tx := t.transaction
 	res := "======DEBUG======\n"
-	for v := byte(1); v < variables.Count; v++ {
+	for v := byte(1); v < types.VariablesCount; v++ {
 		vr := variables.RuleVariable(v)
 		if vr.Name() == "UNKNOWN" {
 			break
