@@ -383,15 +383,14 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 	rule.Line = options.Line
 
 	if parent := getLastRuleExpectingChain(options.Waf); parent != nil {
-
 		rule.ParentID = parent.ID
-		lastchain := parent
-		for lastchain.Chain != nil {
-			lastchain = lastchain.Chain
+		lastChain := parent
+		for lastChain.Chain != nil {
+			lastChain = lastChain.Chain
 		}
 		// TODO we must remove defaultactions from chains
 		rule.Phase = 0
-		lastchain.Chain = rule
+		lastChain.Chain = rule
 		return nil, nil
 	}
 	return rp.rule, nil
@@ -415,8 +414,8 @@ func getLastRuleExpectingChain(w *coraza.Waf) *coraza.Rule {
 }
 
 // parseActions will assign the function name, arguments and
-// function (pkg.actions) for each action splitted by comma (,)
-// Action arguments are allowed to wrap values between collons('')
+// function (pkg.actions) for each action split by comma (,)
+// Action arguments are allowed to wrap values between colons('')
 func parseActions(actions string) ([]ruleAction, error) {
 	iskey := true
 	ckey := ""

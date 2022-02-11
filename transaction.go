@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/jptosso/coraza-waf/v2/bodyprocessors"
-	loggers "github.com/jptosso/coraza-waf/v2/loggers"
+	"github.com/jptosso/coraza-waf/v2/loggers"
 	"github.com/jptosso/coraza-waf/v2/types"
 	"github.com/jptosso/coraza-waf/v2/types/variables"
 	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
@@ -53,7 +53,7 @@ type Transaction struct {
 	Interruption *types.Interruption
 
 	// Contains all collections, including persistent
-	collections [variables.VariablesCount]*Collection
+	collections [variables.Count]*Collection
 
 	// This is used to store log messages
 	Logdata string
@@ -113,14 +113,14 @@ type Transaction struct {
 	Timestamp int64
 
 	// When a rule matches and contains r.Audit = true, this will be set to true
-	// and it will write to the audit log
+	// it will write to the audit log
 	audit bool
 }
 
 // AddRequestHeader Adds a request header
 //
 // With this method it is possible to feed Coraza with a request header.
-// Note: Golang's *http.Request object will not contain a "Host" header
+// Note: Golang's *http.Request object will not contain a "Host" header,
 // and you might have to force it
 func (tx *Transaction) AddRequestHeader(key string, value string) {
 	if key == "" {
@@ -195,7 +195,7 @@ func (tx *Transaction) resetCaptures() {
 }
 
 // ParseRequestReader Parses binary request including body,
-// it does only supports http/1.1 and http/1.0
+// it does only support http/1.1 and http/1.0
 // This function does not run ProcessConnection
 // This function will store in memory the whole reader,
 // DON't USE IT FOR PRODUCTION yet
@@ -248,12 +248,12 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 // matchVariable Creates the MATCHED_ variables required by chains and macro expansion
 // MATCHED_VARS, MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES
 func (tx *Transaction) matchVariable(match MatchData) {
-	varname := match.VariableName
+	varName := match.VariableName
 	if match.Key != "" {
-		varname += fmt.Sprintf(":%s", match.Key)
+		varName += fmt.Sprintf(":%s", match.Key)
 	}
 	// TODO this is a temporary fix, the match should be VARIABLE:key
-	varname += fmt.Sprintf(":%s", match.Value)
+	varName += fmt.Sprintf(":%s", match.Value)
 	// Array of values
 	matchedVars := tx.GetCollection(variables.MatchedVars)
 	// Last value
@@ -269,8 +269,8 @@ func (tx *Transaction) matchVariable(match MatchData) {
 	matchedVar.SetIndex("", 0, match.Value)
 	// fmt.Printf("%s: %s\n", match.VariableName, match.Value)
 
-	matchedVarsNames.Add("", varname)
-	matchedVarName.SetIndex("", 0, varname)
+	matchedVarsNames.Add("", varName)
+	matchedVarName.SetIndex("", 0, varName)
 }
 
 // MatchRule Matches a rule to be logged
@@ -306,7 +306,6 @@ func (tx *Transaction) MatchRule(r *Rule, md []MatchData) {
 			tx.Waf.errorLogCb(mr)
 		}
 	}
-
 }
 
 // GetStopWatch is used to debug phase durations
@@ -357,7 +356,7 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []MatchData {
 			}
 		}
 	} else {
-		// in case we are not using a variablehook
+		// in case we are not using a variable hook
 		// Now that we have access to the collection, we can apply the exceptions
 		if rv.KeyRx == nil {
 			matches = col.FindString(rv.KeyStr)
@@ -369,13 +368,13 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []MatchData {
 	rmi := []int{}
 	for i, c := range matches {
 		for _, ex := range rv.Exceptions {
-			// in case it matches the regex or the keystr
+			// in case it matches the regex or the keyStr
 			if (ex.KeyRx != nil && ex.KeyRx.MatchString(c.Key)) || ex.KeyStr == c.Key {
 				tx.Waf.Logger.Debug("Variable exception triggered", zap.String("var", rv.Variable.Name()),
 					zap.String("key", ex.KeyStr), zap.String("txid", tx.ID), zap.String("match", c.Key),
 					zap.Bool("regex", ex.KeyRx != nil))
 				// we remove the exception from the list of values
-				// we tried with standard append but it fails... let's do some hacking
+				// we tried with standard append, but it fails... let's do some hacking
 				// m2 := append(matches[:i], matches[i+1:]...)
 				rmi = append(rmi, i)
 			}
@@ -413,7 +412,7 @@ func (tx *Transaction) GetCollection(variable variables.RuleVariable) *Collectio
 }
 
 // RemoveRuleTargetByID Removes the VARIABLE:KEY from the rule ID
-// It's mostly used by CTL to dinamically remove targets from rules
+// It's mostly used by CTL to dynamically remove targets from rules
 func (tx *Transaction) RemoveRuleTargetByID(id int, variable variables.RuleVariable, key string) {
 	c := ruleVariableParams{
 		Variable: variable,
@@ -819,7 +818,7 @@ func (tx *Transaction) ProcessLogging() {
 		zap.String("tx", tx.ID),
 	)
 	if writer := tx.Waf.AuditLogWriter; writer != nil {
-		// we don't log if there is an empty auditlogger
+		// we don't log if there is an empty audit logger
 		if err := writer.Write(tx.AuditLog()); err != nil {
 			tx.Waf.Logger.Error(err.Error())
 		}
@@ -942,7 +941,7 @@ func (tx *Transaction) Clean() error {
 	return nil
 }
 
-// generateReqbodyError generates all of the error variables for the request body parser
+// generateReqbodyError generates all the error variables for the request body parser
 func (tx *Transaction) generateReqbodyError(err error) {
 	tx.GetCollection(variables.ReqbodyError).Set("", []string{"1"})
 	tx.GetCollection(variables.ReqbodyErrorMsg).Set("", []string{string(err.Error())})

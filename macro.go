@@ -65,30 +65,29 @@ func (m *Macro) Expand(tx *Transaction) string {
 	return res.String()
 }
 
-// Compile the macro into tokens, each token represents a string or a variable:
+// Compile is used to parse the input and generate the corresponding token
 // Example input: %{var.foo} and %{var.bar}
 // expected result:
 // [0] macroToken{text: "%{var.foo}", variable: &variables.Var, key: "foo"},
 // [1] macroToken{text: " and ", variable: nil, key: ""}
 // [2] macroToken{text: "%{var.bar}", variable: &variables.Var, key: "bar"}
 func (m *Macro) Compile(input string) error {
-	data := []rune(input)
-	currentToken := ""
+	currentToken := strings.Builder{}
 	m.original = input
 	isMacro := false
-	for i := 0; i < len(data); i++ {
-		c := data[i]
-		if c == '%' && (i <= len(data) && data[i+1] == '{') {
+	for i := 0; i < len(input); i++ {
+		c := input[i]
+		if c == '%' && (i <= len(input) && input[i+1] == '{') {
 			// we have a macro
-			if len(currentToken) > 0 {
+			if currentToken.Len() > 0 {
 				// we add the text token
 				m.tokens = append(m.tokens, macroToken{
-					text:     currentToken,
+					text:     currentToken.String(),
 					variable: nil,
 					key:      "",
 				})
 			}
-			currentToken = ""
+			currentToken.Reset()
 			isMacro = true
 			i++
 			continue
@@ -97,12 +96,12 @@ func (m *Macro) Compile(input string) error {
 			if c == '}' {
 				// we close a macro
 				isMacro = false
-				spl := strings.SplitN(currentToken, ".", 2)
+				spl := strings.SplitN(currentToken.String(), ".", 2)
 				key := ""
 				if len(spl) == 2 {
 					key = spl[1]
 				} else if len(spl) == 0 {
-					return fmt.Errorf("invalid macro %s", currentToken)
+					return fmt.Errorf("invalid macro %s", currentToken.String())
 				}
 				v, err := variables.Parse(spl[0])
 				if err != nil {
@@ -110,23 +109,23 @@ func (m *Macro) Compile(input string) error {
 				}
 				// we add the variable token
 				m.tokens = append(m.tokens, macroToken{
-					text:     currentToken,
+					text:     currentToken.String(),
 					variable: &v,
 					key:      strings.ToLower(key),
 				})
-				currentToken = ""
+				currentToken.Reset()
 				continue
 			}
-			currentToken += string(c)
+			currentToken.WriteByte(c)
 			continue
 		}
 		// we have a normal character
-		currentToken += string(c)
+		currentToken.WriteByte(c)
 	}
 	// if there is something left
-	if len(currentToken) > 0 {
+	if currentToken.Len() > 0 {
 		m.tokens = append(m.tokens, macroToken{
-			text:     currentToken,
+			text:     currentToken.String(),
 			variable: nil,
 			key:      "",
 		})

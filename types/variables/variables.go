@@ -25,8 +25,8 @@ import (
 // This file repeats the same content many times in order to make access
 // efficient for seclang and transactions
 
-// VariablesCount contains the number of existing variables
-const VariablesCount = 87
+// Count contains the number of existing variables
+const Count = 87
 
 // RuleVariable is used to identify information from a transaction
 type RuleVariable byte
@@ -333,7 +333,7 @@ func (v RuleVariable) Name() string {
 	return "INVALID_VARIABLE"
 }
 
-var errUnknownVariable = errors.New("Unknown variable")
+var errUnknownVariable = errors.New("unknown variable")
 
 // Parse returns the byte interpretation
 // of a variable from a string

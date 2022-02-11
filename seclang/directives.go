@@ -123,7 +123,7 @@ func directiveSecRule(w *coraza.Waf, opts string) error {
 }
 
 func directiveSecResponseBodyAccess(w *coraza.Waf, opts string) error {
-	w.ResponseBodyAccess = (strings.ToLower(opts) == "on")
+	w.ResponseBodyAccess = strings.ToLower(opts) == "on"
 	return nil
 }
 
@@ -134,7 +134,7 @@ func directiveSecRequestBodyLimit(w *coraza.Waf, opts string) error {
 }
 
 func directiveSecRequestBodyAccess(w *coraza.Waf, opts string) error {
-	w.RequestBodyAccess = (strings.ToLower(opts) == "on")
+	w.RequestBodyAccess = strings.ToLower(opts) == "on"
 	return nil
 }
 
@@ -194,7 +194,7 @@ func directiveSecResponseBodyMimeType(w *coraza.Waf, opts string) error {
 }
 
 func directiveSecResponseBodyLimitAction(w *coraza.Waf, opts string) error {
-	w.RejectOnResponseBodyLimit = (strings.ToLower(opts) == "reject")
+	w.RejectOnResponseBodyLimit = strings.ToLower(opts) == "reject"
 	return nil
 }
 
@@ -205,7 +205,7 @@ func directiveSecResponseBodyLimit(w *coraza.Waf, opts string) error {
 }
 
 func directiveSecRequestBodyLimitAction(w *coraza.Waf, opts string) error {
-	w.RejectOnRequestBodyLimit = (strings.ToLower(opts) == "reject")
+	w.RejectOnRequestBodyLimit = strings.ToLower(opts) == "reject"
 	return nil
 }
 
@@ -215,7 +215,7 @@ func directiveSecRequestBodyInMemoryLimit(w *coraza.Waf, opts string) error {
 }
 
 func directiveSecRemoteRulesFailAction(w *coraza.Waf, opts string) error {
-	w.AbortOnRemoteRulesFail = (strings.ToLower(opts) == "abort")
+	w.AbortOnRemoteRulesFail = strings.ToLower(opts) == "abort"
 	return nil
 }
 
