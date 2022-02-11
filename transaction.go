@@ -53,7 +53,7 @@ type Transaction struct {
 	Interruption *types.Interruption
 
 	// Contains all collections, including persistent
-	collections [variables.Count]*Collection
+	collections [types.VariablesCount]*Collection
 
 	// This is used to store log messages
 	Logdata string
@@ -640,6 +640,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 
 	// Chunked requests will always be written to a temporary file
 	if tx.RequestBodyBuffer.Size() >= tx.RequestBodyLimit {
+		tx.GetCollection(variables.InboundErrorData).Set("", []string{"1"})
 		if tx.Waf.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
 			// We interrupt this transaction in case RequestBodyLimitAction is Reject
 			tx.Interruption = &types.Interruption{
@@ -765,6 +766,10 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 	reader = io.LimitReader(reader, tx.Waf.ResponseBodyLimit)
 	buf := new(strings.Builder)
 	length, _ := io.Copy(buf, reader)
+
+	if tx.ResponseBodyBuffer.Size() >= tx.Waf.ResponseBodyLimit {
+		tx.GetCollection(variables.OutboundDataError).Set("", []string{"1"})
+	}
 
 	tx.GetCollection(variables.ResponseContentLength).Set("", []string{strconv.FormatInt(length, 10)})
 	tx.GetCollection(variables.ResponseBody).Set("", []string{buf.String()})

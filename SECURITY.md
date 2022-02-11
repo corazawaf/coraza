@@ -11,7 +11,7 @@ Versions currently being supported with security updates.
 
 ## Reporting a Vulnerability
 
-Please send any vulnerability to jptosso@gmail.com before making them public, proper credits will be awarded and we will patch it as soon as possible.
+Please send any vulnerability to jptosso@gmail.com before making them public, proper credits will be awarded, and we will patch it as soon as possible.
 
 ## :trophy: Hall of Fame :trophy:
 

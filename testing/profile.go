@@ -58,12 +58,14 @@ type Profile struct {
 }
 
 type expectedOutput struct {
-	LogContains       string      `yaml:"log_contains,omitempty"`
-	NoLogContains     string      `yaml:"no_log_contains,omitempty"`
-	ExpectError       bool        `yaml:"expect_error,omitempty"`
-	TriggeredRules    []int       `yaml:"triggered_rules,omitempty"`
-	NonTriggeredRules []int       `yaml:"non_triggered_rules,omitempty"`
-	Status            interface{} `yaml:"status,omitempty"`
+	Headers           map[string]string `yaml:"headers,omitempty"`
+	Data              interface{}       `yaml:"data,omitempty"` // Accepts array or string
+	LogContains       string            `yaml:"log_contains,omitempty"`
+	NoLogContains     string            `yaml:"no_log_contains,omitempty"`
+	ExpectError       bool              `yaml:"expect_error,omitempty"`
+	TriggeredRules    []int             `yaml:"triggered_rules,omitempty"`
+	NonTriggeredRules []int             `yaml:"non_triggered_rules,omitempty"`
+	Status            interface{}       `yaml:"status,omitempty"`
 }
 
 // TestList returns a list of tests created for a profile
@@ -98,6 +100,9 @@ func (p *Profile) TestList(waf *coraza.Waf) ([]*Test, error) {
 			if stage.Input.Headers != nil {
 				test.RequestHeaders = stage.Input.Headers
 			}
+			if stage.Output.Headers != nil {
+				test.ResponseHeaders = stage.Output.Headers
+			}
 			// test.ResponseHeaders = stage.Output.Headers
 			test.ResponseCode = 200
 			test.ResponseProtocol = "HTTP/1.1"
@@ -113,6 +118,9 @@ func (p *Profile) TestList(waf *coraza.Waf) ([]*Test, error) {
 				return nil, err
 			}
 			if err := test.SetRequestBody(stage.Input.Data); err != nil {
+				return nil, err
+			}
+			if err := test.SetResponseBody(stage.Output.Data); err != nil {
 				return nil, err
 			}
 			tests = append(tests, test)

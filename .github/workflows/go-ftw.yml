@@ -6,7 +6,10 @@ on:
       - 'v2/*'
   pull_request:
     branches: [ v2/master ]
-
+  # Cron just in case the CRS team changed something and we are not compatible anymore
+  # At 06:00 on Monday, Wednesday, and Friday
+  schedule:
+    - cron: '0 6 * * 1,3,5'
 jobs:
   test:
     strategy:
@@ -24,20 +27,20 @@ jobs:
       with:
         lfs: true
         fetch-depth: 0 #for better blame info
-    - name: Create Caddyfile
-      run: |
-        wget https://gist.githubusercontent.com/jptosso/d3aca6d062c816b732aab358f28bbc3f/raw/18b1dfcabcb63c5e2dbad68ff25a5af4b1d3fd7d/Caddyfile
+    - name: Start httpbin
+      run: docker run -p 8080:80 -d kennethreitz/httpbin
     - name: Setup CRS
       run: |
         git clone https://github.com/coreruleset/coreruleset /tmp/coreruleset
         cp coraza.conf-recommended /tmp/
+        cp testdata/coreruleset/postdirectives.conf /tmp/
     - name: Go code
       run: |
         go install github.com/fzipi/go-ftw@latest
         mkdir caddy
         wget https://raw.githubusercontent.com/jptosso/coraza-caddy/master/caddy/main.go
-        wget https://gist.githubusercontent.com/jptosso/bea81ca0de225b3e09846f627abc5b74/raw/cbec9526280400bbbdb1de51460d6dc748c116ab/.ftw.yaml
-        sed -i 's/\/some\/path\/to\/log.log/\/tmp\/output.log/g' .ftw.yaml
+        cp testdata/coreruleset/Caddyfile .
+        ls -lh
         sed -i 's/\/\/ _ "github.com/_ "github.com/g' main.go
         mv main.go caddy/main.go
         go get github.com/jptosso/coraza-caddy@9c2db28
@@ -51,4 +54,4 @@ jobs:
         caddy start -adapter caddyfile -config ./Caddyfile
     - name: Run go-ftw
       run: |
-        go-ftw run -d /tmp/coreruleset/tests/regression
+        go-ftw run -d /tmp/coreruleset/tests/regression --config testdata/coreruleset/.ftw.yml

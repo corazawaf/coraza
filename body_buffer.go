@@ -18,25 +18,26 @@ import (
 	"bytes"
 	"io"
 	"os"
+
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 // BodyBuffer is used to read RequestBody and ResponseBody objects
 // It will handle memory usage for buffering and processing
 type BodyBuffer struct {
-	tmpDir      string
-	buffer      *bytes.Buffer
-	writer      *os.File
-	length      int64
-	memoryLimit int64
+	options types.BodyBufferOptions
+	buffer  *bytes.Buffer
+	writer  *os.File
+	length  int64
 }
 
 // Write appends data to the body buffer by chunks
 // You may dump io.Readers using io.Copy(br, reader)
 func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	l := int64(len(data)) + br.length
-	if l >= br.memoryLimit {
+	if l >= br.options.MemoryLimit {
 		if br.writer == nil {
-			br.writer, err = os.CreateTemp(br.tmpDir, "body*")
+			br.writer, err = os.CreateTemp(br.options.TmpPath, "body*")
 			if err != nil {
 				return 0, err
 			}
@@ -86,10 +87,9 @@ func (br *BodyBuffer) Close() error {
 // After writing memLimit bytes to the memory buffer, data will be
 // written to a temporary file
 // Temporary files will be written to tmpDir
-func NewBodyBuffer(tmpDir string, memLimit int64) *BodyBuffer {
+func NewBodyBuffer(options types.BodyBufferOptions) *BodyBuffer {
 	return &BodyBuffer{
-		buffer:      &bytes.Buffer{},
-		tmpDir:      tmpDir,
-		memoryLimit: memLimit,
+		options: options,
+		buffer:  &bytes.Buffer{},
 	}
 }
