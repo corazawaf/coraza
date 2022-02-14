@@ -16,7 +16,12 @@ tests:
           output:
             triggered_rules:
               - 1
+            non_triggered_rules:
+              - 2
 rules: |
   SecGeoLookupDb ../testdata/mmdb/GeoLite2-City.mmdb
   SecRule SERVER_ADDR "@geoLookup" "chain,id:1,log,msg:'geoip triggered',phase:1"
   SecRule GEO:COUNTRY_CODE "@streq GB"
+  
+  SecRule SERVER_ADDR "@geoLookup" "chain,id:2,log,msg:'geoip non-triggered',phase:1"
+  SecRule GEO:COUNTRY_CODE "!@streq GB"
