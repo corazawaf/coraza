@@ -349,8 +349,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		for nr != nil {
 			mv := nr.Evaluate(tx)
 			if len(mv) == 0 {
-				// we fail the chain
-				return nil
+				break
 			}
 			// we set the last chain match as the current rules
 			if nr.Chain == nil {
