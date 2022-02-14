@@ -22,9 +22,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v2"
-	"github.com/jptosso/coraza-waf/v2/loggers"
-	"github.com/jptosso/coraza-waf/v2/types"
+	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v2/loggers"
+	"github.com/corazawaf/coraza/v2/types"
 	"go.uber.org/zap"
 )
 
@@ -123,7 +123,11 @@ func directiveSecRule(w *coraza.Waf, opts string) error {
 }
 
 func directiveSecResponseBodyAccess(w *coraza.Waf, opts string) error {
-	w.ResponseBodyAccess = strings.ToLower(opts) == "on"
+	b, err := parseBoolean(strings.ToLower(opts))
+	if err != nil {
+		return newDirectiveError(err, "SecResponseBodyAccess")
+	}
+	w.ResponseBodyAccess = b
 	return nil
 }
 
@@ -134,7 +138,11 @@ func directiveSecRequestBodyLimit(w *coraza.Waf, opts string) error {
 }
 
 func directiveSecRequestBodyAccess(w *coraza.Waf, opts string) error {
-	w.RequestBodyAccess = strings.ToLower(opts) == "on"
+	b, err := parseBoolean(strings.ToLower(opts))
+	if err != nil {
+		return newDirectiveError(err, "SecRequestBodyAccess")
+	}
+	w.RequestBodyAccess = b
 	return nil
 }
 

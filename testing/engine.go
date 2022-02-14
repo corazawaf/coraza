@@ -21,9 +21,9 @@ import (
 	"strconv"
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf/v2"
-	"github.com/jptosso/coraza-waf/v2/types"
-	"github.com/jptosso/coraza-waf/v2/types/variables"
+	engine "github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v2/types"
+	"github.com/corazawaf/coraza/v2/types/variables"
 )
 
 // Test represents a unique transaction within

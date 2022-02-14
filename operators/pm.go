@@ -18,7 +18,7 @@ import (
 	"strings"
 
 	"github.com/cloudflare/ahocorasick"
-	"github.com/jptosso/coraza-waf/v2"
+	"github.com/corazawaf/coraza/v2"
 )
 
 // TODO according to coraza researchs, re2 matching is faster than ahocorasick

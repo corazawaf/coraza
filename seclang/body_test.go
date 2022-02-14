@@ -17,8 +17,8 @@ package seclang
 import (
 	"testing"
 
-	"github.com/jptosso/coraza-waf/v2"
-	"github.com/jptosso/coraza-waf/v2/types/variables"
+	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v2/types/variables"
 )
 
 /*

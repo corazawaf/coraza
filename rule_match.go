@@ -19,7 +19,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v2/types/variables"
+	"github.com/corazawaf/coraza/v2/types/variables"
 )
 
 // MatchData works like VariableKey but is used for logging,
@@ -35,6 +35,7 @@ type MatchData struct {
 	Value string
 }
 
+// isNil checks if the variable is nil
 func (m MatchData) isNil() bool {
 	return m == MatchData{}
 }

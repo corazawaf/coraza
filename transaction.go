@@ -26,12 +26,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jptosso/coraza-waf/v2/bodyprocessors"
-	"github.com/jptosso/coraza-waf/v2/loggers"
-	"github.com/jptosso/coraza-waf/v2/types"
-	"github.com/jptosso/coraza-waf/v2/types/variables"
-	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
-	url2 "github.com/jptosso/coraza-waf/v2/utils/url"
+	"github.com/corazawaf/coraza/v2/bodyprocessors"
+	"github.com/corazawaf/coraza/v2/loggers"
+	"github.com/corazawaf/coraza/v2/types"
+	"github.com/corazawaf/coraza/v2/types/variables"
+	utils "github.com/corazawaf/coraza/v2/utils/strings"
+	url2 "github.com/corazawaf/coraza/v2/utils/url"
 	"go.uber.org/zap"
 )
 

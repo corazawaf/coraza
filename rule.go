@@ -20,8 +20,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v2/types"
-	"github.com/jptosso/coraza-waf/v2/types/variables"
+	"github.com/corazawaf/coraza/v2/types"
+	"github.com/corazawaf/coraza/v2/types/variables"
 	"go.uber.org/zap"
 )
 
@@ -225,7 +225,6 @@ type Rule struct {
 func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	if r.Capture {
 		tx.Capture = true
-		defer tx.resetCaptures()
 	}
 	rid := r.ID
 	if rid == 0 {
@@ -323,6 +322,11 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 						}
 						r.matchVariable(tx, mr)
 						matchedValues = append(matchedValues, mr)
+
+						// we only capture when it matches
+						if r.Capture {
+							defer tx.resetCaptures()
+						}
 					}
 					tx.Waf.Logger.Debug("Evaluate rule operator", zap.String("txid", tx.ID),
 						zap.Int("rule", rid),

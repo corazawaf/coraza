@@ -17,7 +17,7 @@ package operators
 import (
 	"strconv"
 
-	"github.com/jptosso/coraza-waf/v2"
+	"github.com/corazawaf/coraza/v2"
 )
 
 type le struct {
