@@ -15,11 +15,10 @@
 package testing
 
 import (
-	"os"
-
 	"github.com/corazawaf/coraza/v2"
 	"github.com/corazawaf/coraza/v2/seclang"
 	"gopkg.in/yaml.v2"
+	"os"
 )
 
 // Profile represents a test profile

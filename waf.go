@@ -16,6 +16,7 @@ package coraza
 
 import (
 	"fmt"
+	"github.com/oschwald/geoip2-golang"
 	"io/fs"
 	"os"
 	"regexp"
@@ -158,6 +159,9 @@ type Waf struct {
 
 	// AuditLogWriter is used to write audit logs
 	AuditLogWriter loggers.LogWriter
+
+	// Geo IP database interface
+	GeoIPDB *geoip2.Reader
 }
 
 // NewTransaction Creates a new initialized transaction for this WAF instance

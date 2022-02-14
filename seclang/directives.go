@@ -25,6 +25,7 @@ import (
 	"github.com/corazawaf/coraza/v2"
 	"github.com/corazawaf/coraza/v2/loggers"
 	"github.com/corazawaf/coraza/v2/types"
+	"github.com/oschwald/geoip2-golang"
 	"go.uber.org/zap"
 )
 
@@ -70,13 +71,13 @@ func directiveSecAction(w *coraza.Waf, opts string) error {
 		WithOperator: false,
 	})
 	if err != nil {
-		if perr := fmt.Errorf("Failed to compile rule (%s): %s", err, opts); perr != nil {
+		if perr := fmt.Errorf("failed to compile rule (%s): %s", err, opts); perr != nil {
 			return perr // can't write to log, return this instead
 		}
 		return err
 	}
 	if err := w.Rules.Add(rule); err != nil {
-		if perr := fmt.Errorf("Failed to compile rule (%s): %s", err, opts); perr != nil {
+		if perr := fmt.Errorf("failed to compile rule (%s): %s", err, opts); perr != nil {
 			return perr // can't write to log, return this instead
 		}
 		return err
@@ -257,6 +258,16 @@ func directiveSecHTTPBlKey(w *coraza.Waf, opts string) error {
 }
 
 func directiveSecGsbLookupDb(w *coraza.Waf, opts string) error {
+	return nil
+}
+
+func directiveSecGeoLookupDb(w *coraza.Waf, opts string) error {
+	var err error
+	w.Config.Set("geo_lookup_db", opts)
+	w.GeoIPDB, err = geoip2.Open(opts)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -542,6 +553,7 @@ var (
 	_ directive = directiveSecRemoteRules
 	_ directive = directiveSecSensorID
 	_ directive = directiveSecRuleUpdateTargetByID
+	_ directive = directiveSecGeoLookupDb
 )
 
 var directivesMap = map[string]directive{
@@ -580,6 +592,7 @@ var directivesMap = map[string]directive{
 	"sechashkey":                     directiveSecHashKey,
 	"sechashengine":                  directiveSecHashEngine,
 	"secgsblookupdb":                 directiveSecGsbLookupDb,
+	"secgeolookupdb":                 directiveSecGeoLookupDb,
 	"secdefaultaction":               directiveSecDefaultAction,
 	"secdatadir":                     directiveSecDataDir,
 	"seccontentinjection":            directiveSecContentInjection,

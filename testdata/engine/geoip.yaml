@@ -1,0 +1,22 @@
+---
+meta:
+  author: bxlxx
+  description: This is a mix of many tests used to check geoip module.
+  enabled: true
+  name: geoip.yaml
+tests:
+  -
+    test_title: geoip rules test
+    stages:
+      -
+        stage:
+          debug: true
+          input:
+            dest_addr: "81.2.69.142"
+          output:
+            triggered_rules:
+              - 1
+rules: |
+  SecGeoLookupDb ../testdata/mmdb/GeoLite2-City.mmdb
+  SecRule SERVER_ADDR "@geoLookup" "chain,id:1,log,msg:'geoip triggered',phase:1"
+  SecRule GEO:COUNTRY_CODE "@streq GB"

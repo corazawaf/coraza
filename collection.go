@@ -96,6 +96,16 @@ func (c *Collection) GetFirstString(key string) string {
 	return ""
 }
 
+// GetFirstFloat64 returns the first float64 occurrence of a key
+func (c *Collection) GetFirstFloat64(key string) float64 {
+	a := c.data[key]
+	if len(a) > 0 {
+		i, _ := strconv.ParseFloat(a[0], 64)
+		return i
+	}
+	return 0
+}
+
 // GetFirstInt64 returns the first int64 occurrence of a key
 func (c *Collection) GetFirstInt64(key string) int64 {
 	a := c.data[key]
