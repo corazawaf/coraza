@@ -59,7 +59,7 @@ func TestDebug(t *testing.T) {
 func TestRequest(t *testing.T) {
 	waf := coraza.NewWaf()
 	test := NewTest("test", waf)
-	req := "OPTIONS /test HTTP/1.1\r\nHost: www.example.com\r\n\r\n"
+	req := buildRequest("GET", "/test")
 	if err := test.SetRawRequest([]byte(req)); err != nil {
 		t.Error(err)
 	}
@@ -68,7 +68,7 @@ func TestRequest(t *testing.T) {
 	}
 	req = test.Request()
 	expected := []string{
-		"OPTIONS /test HTTP/1.1",
+		"GET /test HTTP/1.1",
 		"Host: www.example.com",
 	}
 	for _, e := range expected {
@@ -76,4 +76,33 @@ func TestRequest(t *testing.T) {
 			t.Errorf("Expected %s, got %s", e, req)
 		}
 	}
+}
+
+func TestResponse(t *testing.T) {
+	waf := coraza.NewWaf()
+	waf.ResponseBodyAccess = true
+	test := NewTest("test", waf)
+	req := buildRequest("POST", "/test")
+	if err := test.SetRawRequest([]byte(req)); err != nil {
+		t.Error(err)
+	}
+	test.ResponseHeaders["content-type"] = "application/x-www-form-urlencoded"
+	if err := test.SetResponseBody("someoutput=withvalue"); err != nil {
+		t.Error(err)
+	}
+	if err := test.RunPhases(); err != nil {
+		t.Error(err)
+	}
+	/*
+		if s := test.Transaction().GetCollection(variables.ArgsPost).GetFirstString("someoutput"); s != "withvalue" {
+			t.Errorf("Expected someoutput=withvalue, got %s", s)
+		}
+	*/
+}
+
+func buildRequest(method, uri string) string {
+	return strings.Join([]string{
+		method + " " + uri + " HTTP/1.1",
+		"Host: www.example.com",
+	}, "\r\n")
 }

@@ -23,14 +23,13 @@ import (
 	"testing"
 
 	"github.com/jptosso/coraza-waf/v2"
-	engine "github.com/jptosso/coraza-waf/v2"
 	"github.com/jptosso/coraza-waf/v2/loggers"
 	"github.com/jptosso/coraza-waf/v2/types"
 	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
 )
 
 func Test_directiveSecAuditLog(t *testing.T) {
-	w := engine.NewWaf()
+	w := coraza.NewWaf()
 	p, _ := NewParser(w)
 	if err := p.FromString("SecWebAppId test123"); err != nil {
 		t.Error("failed to set parser from string")
@@ -119,7 +118,7 @@ func Test_directiveSecAuditLog(t *testing.T) {
 }
 
 func TestDebugDirectives(t *testing.T) {
-	waf := engine.NewWaf()
+	waf := coraza.NewWaf()
 	tmpf, _ := ioutil.TempFile("/tmp", "*.log")
 	tmp := tmpf.Name()
 	p, _ := NewParser(waf)
@@ -138,7 +137,7 @@ func TestDebugDirectives(t *testing.T) {
 }
 
 func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
-	waf := engine.NewWaf()
+	waf := coraza.NewWaf()
 	auditpath := "/tmp/"
 	parser, _ := NewParser(waf)
 	if err := parser.FromString(`
@@ -204,7 +203,7 @@ func TestSecRuleUpdateTargetBy(t *testing.T) {
 	if waf.Rules.Count() != 1 {
 		t.Error("Failed to add rule")
 	}
-	if err := directiveSecRuleUpdateTargetById(waf, "181 \"REQUEST_HEADERS\""); err != nil {
+	if err := directiveSecRuleUpdateTargetByID(waf, "181 \"REQUEST_HEADERS\""); err != nil {
 		t.Error(err)
 	}
 
@@ -231,4 +230,30 @@ func findFileContaining(path string, search string) (string, error) {
 		}
 	}
 	return "", nil
+}
+
+func TestInvalidBooleanForDirectives(t *testing.T) {
+	waf := coraza.NewWaf()
+	p, _ := NewParser(waf)
+	if err := p.FromString("SecIgnoreRuleCompilationErrors sure"); err == nil {
+		t.Error("failed to error on invalid boolean")
+	}
+}
+
+func TestInvalidRulesWithIgnoredErrors(t *testing.T) {
+	directives := `
+	SecRule REQUEST_URI "@no_op ^/test" "id:181,tag:test"
+	SecRule REQUEST_URI "@no_op ^/test" "id:200,tag:test,invalid:5"
+	SecRule REQUEST_URI "@rx ^/test" "id:181,tag:repeated-id"
+	`
+	waf := coraza.NewWaf()
+	p, _ := NewParser(waf)
+	if err := p.FromString("secignorerulecompilationerrors On\n" + directives); err != nil {
+		t.Error(err)
+	}
+	waf = coraza.NewWaf()
+	p, _ = NewParser(waf)
+	if err := p.FromString(directives); err == nil {
+		t.Error("failed to error on invalid rule")
+	}
 }

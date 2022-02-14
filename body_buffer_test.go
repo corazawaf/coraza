@@ -19,10 +19,15 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/jptosso/coraza-waf/v2/types"
 )
 
 func TestBodyReaderMemory(t *testing.T) {
-	br := NewBodyBuffer("/tmp", 500)
+	br := NewBodyBuffer(types.BodyBufferOptions{
+		TmpPath:     "/tmp",
+		MemoryLimit: 500,
+	})
 	if _, err := br.Write([]byte("test")); err != nil {
 		t.Error(err)
 	}
@@ -42,7 +47,10 @@ func TestBodyReaderMemory(t *testing.T) {
 
 func TestBodyReaderFile(t *testing.T) {
 	// body reader memory limit is 1 byte
-	br := NewBodyBuffer("/tmp", 1)
+	br := NewBodyBuffer(types.BodyBufferOptions{
+		TmpPath:     "/tmp",
+		MemoryLimit: 1,
+	})
 	if _, err := br.Write([]byte("test")); err != nil {
 		t.Error(err)
 	}
@@ -69,7 +77,10 @@ func TestBodyReaderFile(t *testing.T) {
 }
 
 func TestBodyReaderWriteFromReader(t *testing.T) {
-	br := NewBodyBuffer("/tmp", 5)
+	br := NewBodyBuffer(types.BodyBufferOptions{
+		TmpPath:     "/tmp",
+		MemoryLimit: 5,
+	})
 	b := strings.NewReader("test")
 	if _, err := io.Copy(br, b); err != nil {
 		t.Error(err)

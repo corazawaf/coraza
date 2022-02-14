@@ -37,12 +37,18 @@ type ruleAction struct {
 	F     coraza.RuleAction
 }
 
+// RuleParser is used to programatically create new rules using seclang formatted strings
 type RuleParser struct {
 	rule           *coraza.Rule
 	defaultActions map[types.RulePhase][]ruleAction
 	options        RuleOptions
 }
 
+// ParseVariables parses variables from a string and transforms it into
+// variables, variable negations and variable counters.
+// Multiple separated variables: VARIABLE1|VARIABLE2|VARIABLE3
+// Variable count: &VARIABLE1
+// Variable key negation: REQUEST_HEADERS|!REQUEST_HEADERS:user-agent
 func (p *RuleParser) ParseVariables(vars string) error {
 
 	// 0 = variable name
@@ -163,6 +169,9 @@ func (p *RuleParser) ParseVariables(vars string) error {
 	return nil
 }
 
+// ParseOperator parses a seclang formatted operator string
+// A operator must begin with @ (like @rx), if no operator is specified, rx
+// will be used. Everything after the operator will be used as operator argument
 func (p *RuleParser) ParseOperator(operator string) error {
 	if len(operator) == 0 || operator[0] != '@' && operator[0] != '!' {
 		// default operator RX
@@ -210,6 +219,13 @@ func (p *RuleParser) ParseOperator(operator string) error {
 	return nil
 }
 
+// ParseDefaultActions parses a list of actions separated by a comma
+// and assigns it to the specified phase.
+// Default Actions MUST contain a phase
+// Only one phase can be specified per WAF instance
+// A disruptive action is required to be specified
+// Each rule on the indicated phase will inherit the previously declared actions
+// If the user overwrites the default actions, the default actions will be overwritten
 func (p *RuleParser) ParseDefaultActions(actions string) error {
 	act, err := parseActions(actions)
 	if err != nil {
@@ -239,7 +255,8 @@ func (p *RuleParser) ParseDefaultActions(actions string) error {
 	return nil
 }
 
-// ParseActions
+// ParseActions parses a comma separated list of actions:arguments
+// Arguments can be wrapper inside quotes
 func (p *RuleParser) ParseActions(actions string) error {
 	disabledActions := p.options.Waf.Config.Get("disabled_rule_actions", []string{}).([]string)
 	act, err := parseActions(actions)
@@ -290,6 +307,7 @@ func (p *RuleParser) Rule() *coraza.Rule {
 	return p.rule
 }
 
+// RuleOptions contains the options used to compile a rule
 type RuleOptions struct {
 	ConfigFile   string
 	ConfigDir    string
@@ -299,6 +317,10 @@ type RuleOptions struct {
 	Data         string
 }
 
+// ParseRule parses a rule from a string
+// The string must match the seclang format
+// In case WithOperator is false, the rule will be parsed without operator
+// This function is created for external plugin directives
 func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 	var err error
 	rp := &RuleParser{
@@ -361,15 +383,14 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 	rule.Line = options.Line
 
 	if parent := getLastRuleExpectingChain(options.Waf); parent != nil {
-
 		rule.ParentID = parent.ID
-		lastchain := parent
-		for lastchain.Chain != nil {
-			lastchain = lastchain.Chain
+		lastChain := parent
+		for lastChain.Chain != nil {
+			lastChain = lastChain.Chain
 		}
 		// TODO we must remove defaultactions from chains
 		rule.Phase = 0
-		lastchain.Chain = rule
+		lastChain.Chain = rule
 		return nil, nil
 	}
 	return rp.rule, nil
@@ -393,8 +414,8 @@ func getLastRuleExpectingChain(w *coraza.Waf) *coraza.Rule {
 }
 
 // parseActions will assign the function name, arguments and
-// function (pkg.actions) for each action splitted by comma (,)
-// Action arguments are allowed to wrap values between collons('')
+// function (pkg.actions) for each action split by comma (,)
+// Action arguments are allowed to wrap values between colons('')
 func parseActions(actions string) ([]ruleAction, error) {
 	iskey := true
 	ckey := ""

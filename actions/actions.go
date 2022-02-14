@@ -16,6 +16,7 @@ package actions
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/jptosso/coraza-waf/v2"
 )
@@ -31,6 +32,7 @@ var actionmap = map[string]ruleActionWrapper{}
 // It can be used also for plugins.
 // If you register an action with an existing name, it will be overwritten.
 func RegisterPlugin(name string, a func() coraza.RuleAction) {
+	name = strings.ToLower(name)
 	actionmap[name] = a
 }
 
@@ -73,6 +75,7 @@ func init() {
 // GetAction returns an unwrapped RuleAction from the actionmap based on the name
 // If the action does not exist it returns an error
 func GetAction(name string) (coraza.RuleAction, error) {
+	name = strings.ToLower(name)
 	if a, ok := actionmap[name]; ok {
 		return a(), nil
 	}

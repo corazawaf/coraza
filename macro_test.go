@@ -43,7 +43,7 @@ func TestMacro(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	if len(macro.tokens) != 4 || macro.Expand(tx) != "some complex text secretly wrapped in macro secretly" {
+	if !macro.IsExpandable() || len(macro.tokens) != 4 || macro.Expand(tx) != "some complex text secretly wrapped in macro secretly" {
 		t.Errorf("failed to parse replacements %v", macro.tokens)
 	}
 }

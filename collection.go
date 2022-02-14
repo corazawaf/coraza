@@ -175,6 +175,10 @@ func (c *Collection) SetData(data map[string][]string) {
 
 // Reset the current collection
 func (c *Collection) Reset() {
+	// we don't reset the collection if it wasn't used, for performance reasons
+	if len(c.data) == 1 && len(c.data[""]) == 0 {
+		return
+	}
 	c.data = nil
 	c.data = map[string][]string{
 		"": {},

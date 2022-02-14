@@ -329,3 +329,42 @@ func TestSampleRxRule(t *testing.T) {
 		t.Error("failed to interrupt")
 	}
 }
+
+func TestTXIssue147(t *testing.T) {
+	// https://github.com/jptosso/coraza-waf/issues/147
+	waf := coraza.NewWaf()
+	parser, _ := NewParser(waf)
+	err := parser.FromString(`SecRule RESPONSE_BODY "@rx ^#!\s?/" "id:950140,phase:4,log,deny,status:403"`)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	tx := waf.NewTransaction()
+	// response body access is required
+	tx.ResponseBodyAccess = true
+	// we need a content-type header
+	tx.AddResponseHeader("Content-Type", "text/html")
+	if tx.IsProcessableResponseBody() {
+		if _, err := tx.ResponseBodyBuffer.Write([]byte("#!/usr/bin/python")); err != nil {
+			t.Error(err)
+		}
+		it, err := tx.ProcessResponseBody()
+		if err != nil {
+			t.Error(err)
+		}
+		if it != nil {
+			httpOutMsg := ""
+			for _, res := range tx.MatchedRules {
+				httpOutMsg = httpOutMsg + res.MatchedData.Key + ":" + res.MatchedData.Value + "\n"
+				httpOutMsg = httpOutMsg + "Message:" + res.Message + "\n"
+
+			}
+			if len(httpOutMsg) == 0 || len(tx.MatchedRules) == 0 {
+				t.Error("failed to log")
+			}
+		} else {
+			t.Error("failed to block response body")
+		}
+	} else {
+		t.Error("failed to process response body")
+	}
+}

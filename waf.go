@@ -44,14 +44,14 @@ var transactionPool = sync.Pool{
 // It contains the severity so the cb can decide to log it or not
 type ErrorLogCallback = func(rule MatchedRule)
 
-// Waf instances are used to store configurations and rules
-// Every web application should have a different Waf instance
-// but you can share an instance if you are okwith sharing
+// Waf instance is used to store configurations and rules
+// Every web application should have a different Waf instance,
+// but you can share an instance if you are ok with sharing
 // configurations, rules and logging.
 // Transactions and SecLang parser requires a Waf instance
-// You can use as many Waf instances as you want and they are
+// You can use as many Waf instances as you want, and they are
 // concurrent safe
-// All Waf instance fields are inmutable, if you update any
+// All Waf instance fields are immutable, if you update any
 // of them in runtime you might create concurrency issues
 type Waf struct {
 	// ruleGroup object, contains all rules and helpers
@@ -163,22 +163,40 @@ type Waf struct {
 // NewTransaction Creates a new initialized transaction for this WAF instance
 func (w *Waf) NewTransaction() *Transaction {
 	tx := transactionPool.Get().(*Transaction)
-	tx.Waf = w
-	tx.collections = [variables.VariablesCount]*Collection{}
 	tx.ID = utils.SafeRandom(19)
-	tx.Timestamp = time.Now().UnixNano()
+	tx.MatchedRules = []MatchedRule{}
+	tx.Interruption = nil
+	tx.collections = [types.VariablesCount]*Collection{}
+	tx.Logdata = ""
+	tx.SkipAfter = ""
 	tx.AuditEngine = w.AuditEngine
 	tx.AuditLogParts = w.AuditLogParts
-	tx.RuleEngine = w.RuleEngine
+	tx.ForceRequestBodyVariable = false
 	tx.RequestBodyAccess = w.RequestBodyAccess
 	tx.RequestBodyLimit = w.RequestBodyLimit
 	tx.ResponseBodyAccess = w.ResponseBodyAccess
 	tx.ResponseBodyLimit = w.ResponseBodyLimit
-	tx.ruleRemoveTargetByID = map[int][]ruleVariableParams{}
+	tx.RuleEngine = w.RuleEngine
+	tx.HashEngine = false
+	tx.HashEnforcement = false
+	tx.LastPhase = 0
+	tx.RequestBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
+		TmpPath:     w.TmpDir,
+		MemoryLimit: w.RequestBodyInMemoryLimit,
+	})
+	tx.ResponseBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
+		TmpPath:     w.TmpDir,
+		MemoryLimit: w.RequestBodyInMemoryLimit,
+	})
+	tx.bodyProcessor = nil
 	tx.ruleRemoveByID = []int{}
+	tx.ruleRemoveTargetByID = map[int][]ruleVariableParams{}
+	tx.Skip = 0
+	tx.Capture = false
 	tx.stopWatches = map[types.RulePhase]int64{}
-	tx.RequestBodyBuffer = NewBodyBuffer(w.TmpDir, w.RequestBodyInMemoryLimit)
-	tx.ResponseBodyBuffer = NewBodyBuffer(w.TmpDir, w.RequestBodyInMemoryLimit)
+	tx.Waf = w
+	tx.Timestamp = time.Now().UnixNano()
+	tx.audit = false
 
 	for i := range tx.collections {
 		tx.collections[i] = NewCollection(variables.RuleVariable(i))
@@ -223,7 +241,7 @@ func (w *Waf) NewTransaction() *Transaction {
 		variables.ReqbodyProcessor: "",
 		variables.RequestBody:      "",
 		variables.ResponseBody:     "",
-		// others
+		// TODO others
 		// variables.WebAppID: w.WebAppID, not implemented yet
 	}
 	for v, data := range defaults {
@@ -327,7 +345,7 @@ func (w *Waf) SetDebugLogLevel(lvl int) error {
 }
 
 // SetErrorLogCb sets the callback function for error logging
-// The errorcallback receives all the error data and some
+// The error callback receives all the error data and some
 // helpers to write modsecurity style logs
 func (w *Waf) SetErrorLogCb(cb ErrorLogCallback) {
 	w.errorLogCb = cb

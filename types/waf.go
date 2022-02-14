@@ -195,3 +195,12 @@ type Interruption struct {
 	// Parameters used by proxy and redirect
 	Data string
 }
+
+// BodyBufferOptions is used to feed a coraza.BodyBuffer with parameters
+type BodyBufferOptions struct {
+	// TmpPath is the path to store temporary files
+	TmpPath string
+	// MemoryLimit is the maximum amount of memory to be stored in memory
+	// Once the limit is reached, the file will be stored on disk
+	MemoryLimit int64
+}

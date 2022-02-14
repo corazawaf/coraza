@@ -1,17 +1,17 @@
-# Coraza Web Application Firewall v2
+# OWASP Coraza Web Application Firewall v2
 
-![Build Status](https://github.com/jptosso/coraza-waf/actions/workflows/regression.yml/badge.svg)
-![CodeQL](https://github.com/jptosso/coraza-waf/workflows/CodeQL/badge.svg)
-[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza-waf&metric=sqale_rating)](https://sonarcloud.io/dashboard?id=jptosso_coraza-waf)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza-waf&metric=coverage)](https://sonarcloud.io/dashboard?id=jptosso_coraza-waf)
-[![GoDoc](https://godoc.org/github.com/jptosso/coraza-waf?status.svg)](https://godoc.org/github.com/jptosso/coraza-waf)
-[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+[![Build Status](https://github.com/jptosso/coraza-waf/actions/workflows/regression.yml/badge.svg)](https://github.com/jptosso/coraza-waf/actions/workflows/regression.yml)
 [![Coreruleset Compatibility](https://github.com/jptosso/coraza-waf/actions/workflows/go-ftw.yml/badge.svg)](https://github.com/jptosso/coraza-waf/actions/workflows/go-ftw.yml)
+[![CodeQL](https://github.com/jptosso/coraza-waf/workflows/CodeQL/badge.svg)](https://github.com/jptosso/coraza-waf/workflows/CodeQL)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza-waf&metric=coverage)](https://sonarcloud.io/dashboard?id=jptosso_coraza-waf)
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+[![OWASP Lab Project](https://img.shields.io/badge/owasp-incubator%20project-brightgreen)](https://owasp.org/www-project-coraza-web-application-firewall)
+[![GoDoc](https://godoc.org/github.com/jptosso/coraza-waf?status.svg)](https://godoc.org/github.com/jptosso/coraza-waf/v2)
 
 <div align="center">
 	<img src="https://coraza.io/images/logo.png" width="50%">
 </div>
-Welcome to Coraza Web Application Firewall, this project is an enterprise grade, Golang port of ModSecurity, flexible and powerful enough to serve as the baseline for many projects.
+Welcome to OWASP Coraza Web Application Firewall, Coraza is a golang enterprise-grade Web Application Firewall framework that supports Modsecurity's seclang language and is 100% compatible with OWASP Core Ruleset.
 
 ## Prerequisites
 
@@ -23,10 +23,9 @@ Welcome to Coraza Web Application Firewall, this project is an enterprise grade,
 
 * Rollback SecAuditLog to the legacy syntax (serial/concurrent)
 * Attach an error log handler using ```waf.SetErrorLogCb(cb)``` (optional)
-* the function Transaction.Clean() must be used to clear transaction data, files and take it back to the sync poo.
-* If you are using @detectXSS and @detectSQLi (CRS) install the plugin [github.com/jptosso/coraza-libinjection](https://github.com/jptosso/coraza-libinjection)
+* the function Transaction.Clean() must be used to clear transaction data, files and take them back to the sync pool.
 * If you are using @rx with libpcre (CRS) install the plugin [github.com/jptosso/coraza-pcre](https://github.com/jptosso/coraza-pcre)
-* If you are using low level APIs check the complete changelog as most of them were removed
+* If you are using low level APIs check the complete changelog as most of them were removed.
 
 
 ## Running the tests
@@ -42,9 +41,9 @@ go test -race ./...
 
 * Full internal API refactor, public API has not changed
 * Full audit engine refactor with plugins support
-* New enhanced plugins interface for transformations, actions, body processors and operators
-* Now we are fully compliant with Seclang from modsecurity v2
-* Many features removed and transformed into plugins: XML processing, GeoIP, PCRE regex, Libinjection (@detectXSS and @detectSQLi)
+* New enhanced plugins interface for transformations, actions, body processors, and operators
+* We are fully compliant with Seclang from modsecurity v2
+* Many features removed and transformed into plugins: XML (Mostly), GeoIP and PCRE regex
 * Better debug logging
 * New error logging (like modsecurity)
 
@@ -89,23 +88,16 @@ func main() {
 
 * **Simplicity:** Anyone should be able to understand and modify Coraza WAF's source code
 * **Extensibility:** It should be easy to extend Coraza WAF with new functionalities
-* **Innovation:** Coraza WAF isn't just a ModSecurity port, it must include awesome new functions (in the meantime it's just a port :sweat_smile:)
-* **Community:** Coraza WAF is a community project and everyone's idea will be heard
+* **Innovation:** Coraza WAF isn't just a ModSecurity port. It must include awesome new functions (in the meantime, it's just a port :sweat_smile:)
+* **Community:** Coraza WAF is a community project, and all ideas will be considered
 
-### Plugins roadmap
 
+### Roadmap
+
+* New rule language
+* GraphQL body processor
+* C exports
 * WASM scripts support
-* Lua script support
-* Integrated DDOS protection and directives with iptables(Or others) integration
-* Integrated bot detection with captcha
-* Open Policy Agent package (OPA)
-* Enhanced data signing features (cookies, forms, etc)
-* OpenAPI enforcement
-* JWT enforcement
-* XML request body processor
-* Libinjection integration (done)
-* Lib PCRE integration (done)
-* Bluemonday policies (maybe)
 
 ## Coraza WAF implementations
 
@@ -122,37 +114,30 @@ func main() {
 
 * [Go FTW](https://github.com/fzipi/go-ftw): rule testing engine
 * [Coraza Playground](https://playground.coraza.io/): rule testing sandbox with web interface
+* [OWASP Core Ruleset](https://github.com/coreruleset/coreruleset/): Awesome rule set, compatible with Coraza
 
 ## Troubleshooting
 
 ## How to contribute
 
-Contributions are welcome, there are so many TODOs, also functionalities, fixes, bug reports and any help you can provide. Just send your PR.
+Contributions are welcome. There are many TODOs, functionalities, fixes, bug reports, and any help you can provide. Just send your PR.
 
 ```sh
 cd /path/to/coraza
 egrep -Rin "TODO|FIXME" -R --exclude-dir=vendor *
 ```
 
-## Useful links
-
 ## Special thanks
 
 * Modsecurity team for creating ModSecurity
 * OWASP Coreruleset team for the CRS and their help
-* @fzipi for his support and help
-* @dune73 for the Modsecurity Handbook (The bible for this project) and all of his support
 
 ### Companies using Coraza
 
 * [Babiel](https://babiel.com) (supporter)
 
-## About
-
-The name **Coraza** is trademarked, **Coraza** is a registered trademark of Juan Pablo Tosso.
-
 * Author on Twitter [@jptosso](https://twitter.com/jptosso)
 
 ## Donations
 
-For donations, see [Donations site](https://www.tosso.io/donate)
+For donations, see [Donations site](https://www.owasp.org/donate/)

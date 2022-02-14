@@ -23,14 +23,14 @@ import (
 	"regexp"
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf/v2"
+	"github.com/jptosso/coraza-waf/v2"
 	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
 	"go.uber.org/zap"
 )
 
 // Parser provides functions to evaluate (compile) SecLang directives
 type Parser struct {
-	waf         *engine.Waf
+	waf         *coraza.Waf
 	currentLine int
 	currentFile string
 	currentDir  string
@@ -142,14 +142,19 @@ func (p *Parser) log(msg string) error {
 	return errors.New(msg)
 }
 
+// SetCurrentDir forces the current directory of the parser to dir
+// If FromFile was used, the file directory will be used instead unless
+// overwritten by this function
+// It is mostly used by operators that consumes relative paths
 func (p *Parser) SetCurrentDir(dir string) {
 	p.currentDir = dir
 	p.waf.Config.Set("parser_config_dir", p.currentDir)
 }
 
 // NewParser creates a new parser from a WAF instance
-// Rules and settings will be associated with the supplied waf
-func NewParser(waf *engine.Waf) (*Parser, error) {
+// Rules and settings will be inserted into the WAF
+// rule container (RuleGroup).
+func NewParser(waf *coraza.Waf) (*Parser, error) {
 	if waf == nil {
 		return nil, errors.New("must use a valid waf instance")
 	}

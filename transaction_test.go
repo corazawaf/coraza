@@ -432,6 +432,42 @@ func TestProcessRequestMultipart(t *testing.T) {
 	}
 }
 
+func TestTransactionSyncPool(t *testing.T) {
+	waf := NewWaf()
+	tx := waf.NewTransaction()
+	tx.MatchedRules = append(tx.MatchedRules, MatchedRule{Rule: &Rule{ID: 1234}})
+	for i := 0; i < 1000; i++ {
+		if err := tx.Clean(); err != nil {
+			t.Error(err)
+		}
+		tx = waf.NewTransaction()
+		if len(tx.MatchedRules) != 0 {
+			t.Errorf("failed to sync transaction pool, %d rules found after %d attempts", len(tx.MatchedRules), i+1)
+			return
+		}
+	}
+}
+
+func TestTxPhase4Magic(t *testing.T) {
+	waf := NewWaf()
+	tx := waf.NewTransaction()
+	tx.AddResponseHeader("content-type", "text/html")
+	tx.ResponseBodyAccess = true
+	tx.Waf.ResponseBodyLimit = 3
+	if _, err := tx.ResponseBodyBuffer.Write([]byte("more bytes")); err != nil {
+		t.Error(err)
+	}
+	if _, err := tx.ProcessResponseBody(); err != nil {
+		t.Error(err)
+	}
+	if tx.GetCollection(variables.OutboundDataError).GetFirstString("") != "1" {
+		t.Error("failed to set outbound data error")
+	}
+	if tx.GetCollection(variables.ResponseBody).GetFirstString("") != "mor" {
+		t.Error("failed to set response body")
+	}
+}
+
 func multipartRequest(req *http.Request) error {
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)
