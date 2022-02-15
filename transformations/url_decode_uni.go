@@ -15,7 +15,7 @@
 package transformations
 
 import (
-	"github.com/jptosso/coraza-waf/v2/utils/strings"
+	"github.com/corazawaf/coraza/v2/utils/strings"
 )
 
 func urlDecodeUni(data string) (string, error) {

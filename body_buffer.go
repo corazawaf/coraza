@@ -19,7 +19,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/jptosso/coraza-waf/v2/types"
+	"github.com/corazawaf/coraza/v2/types"
 )
 
 // BodyBuffer is used to read RequestBody and ResponseBody objects

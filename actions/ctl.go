@@ -20,10 +20,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v2"
-	"github.com/jptosso/coraza-waf/v2/types"
-	"github.com/jptosso/coraza-waf/v2/types/variables"
-	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
+	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v2/types"
+	"github.com/corazawaf/coraza/v2/types/variables"
+	utils "github.com/corazawaf/coraza/v2/utils/strings"
 	"go.uber.org/zap"
 )
 

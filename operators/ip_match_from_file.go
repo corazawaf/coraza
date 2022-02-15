@@ -17,7 +17,7 @@ package operators
 import (
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf/v2"
+	engine "github.com/corazawaf/coraza/v2"
 )
 
 type ipMatchFromFile struct {

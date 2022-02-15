@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	"github.com/jptosso/coraza-waf/v2"
+	"github.com/corazawaf/coraza/v2"
 )
 
 type interceptor struct {

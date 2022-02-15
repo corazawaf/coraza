@@ -18,7 +18,7 @@ import (
 	"encoding/xml"
 	"io"
 
-	"github.com/jptosso/coraza-waf/v2/types/variables"
+	"github.com/corazawaf/coraza/v2/types/variables"
 )
 
 // This is only intended for compatibility, xpath is not supported

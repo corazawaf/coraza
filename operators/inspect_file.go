@@ -19,7 +19,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/jptosso/coraza-waf/v2"
+	"github.com/corazawaf/coraza/v2"
 )
 
 type inspectFile struct {
