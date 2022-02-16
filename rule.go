@@ -343,26 +343,18 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		return matchedValues
 	}
 
-	if r.Chain != nil {
-		nr := r.Chain
-		tx.Waf.Logger.Debug("Evaluating rule chain", zap.Int("rule", rid), zap.String("raw", nr.Raw))
-		for nr != nil {
-			mv := nr.Evaluate(tx)
-			if len(mv) == 0 {
-				// we fail the chain
+	// disruptive actions are only evaluated by parent rules
+	if r.ParentID == 0 {
+		// we only run the chains for the parent rule
+		for nr := r.Chain; nr != nil; {
+			tx.Waf.Logger.Debug("Evaluating rule chain", zap.Int("rule", rid), zap.String("raw", nr.Raw))
+			fmt.Println(nr.Raw)
+			matchedValues = nr.Evaluate(tx)
+			if len(matchedValues) == 0 {
 				return nil
-			}
-			// we set the last chain match as the current rules
-			if nr.Chain == nil {
-				matchedValues = mv
-				break
 			}
 			nr = nr.Chain
 		}
-	}
-
-	// disruptive actions are only evaluated by parent rules
-	if r.ParentID == 0 {
 		// we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
 		if tx.RuleEngine != types.RuleEngineDetectionOnly {
 			tx.Waf.Logger.Debug("Detecting rule disruptive action", zap.String("txid", tx.ID), zap.Int("rule", r.ID))
