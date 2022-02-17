@@ -67,8 +67,11 @@ func (mr MatchedRule) details() string {
 	log := &strings.Builder{}
 	msg := mr.Message
 	data := mr.Data
+	if len(msg) > 200 {
+		msg = msg[:200]
+	}
 	if len(data) > 200 {
-		msg = data[:200]
+		data = data[:200]
 	}
 	resolvedIP := ""
 	log.WriteString(fmt.Sprintf(" [file %q] [line %q] [id %q] [rev %q] [msg %q] [data %q] [severity %q] [ver %q] [maturity %q] [accuracy %q]",

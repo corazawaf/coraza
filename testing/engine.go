@@ -282,7 +282,6 @@ func (t *Test) Request() string {
 func NewTest(name string, waf *engine.Waf) *Test {
 	t := &Test{
 		Name:            name,
-		waf:             waf,
 		transaction:     waf.NewTransaction(),
 		RequestHeaders:  map[string]string{},
 		ResponseHeaders: map[string]string{},
@@ -293,6 +292,7 @@ func NewTest(name string, waf *engine.Waf) *Test {
 		RequestPort:     80,
 		magic:           true,
 	}
+	t.SetWaf(waf)
 	return t
 }
 
