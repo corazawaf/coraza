@@ -220,7 +220,7 @@ type Rule struct {
 }
 
 // Evaluate will evaluate the current rule for the indicated transaction
-// If the operator matches, actions will be evaluated and it will return
+// If the operator matches, actions will be evaluated, and it will return
 // the matched variables, keys and values (MatchData)
 func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	if r.Capture {

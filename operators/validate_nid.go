@@ -33,7 +33,7 @@ type validateNid struct {
 func (o *validateNid) Init(data string) error {
 	spl := strings.SplitN(data, " ", 2)
 	if len(spl) != 2 {
-		return fmt.Errorf("Invalid @validateNid argument")
+		return fmt.Errorf("invalid @validateNid argument")
 	}
 	switch spl[0] {
 	case "cl":
@@ -41,7 +41,7 @@ func (o *validateNid) Init(data string) error {
 	case "us":
 		o.fn = nidUs
 	default:
-		return fmt.Errorf("Invalid @validateNid argument")
+		return fmt.Errorf("invalid @validateNid argument")
 	}
 	o.rgx = spl[1]
 	return nil

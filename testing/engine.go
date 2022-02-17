@@ -99,7 +99,7 @@ func (t *Test) SetRawRequest(request []byte) error {
 		// lets try with \n
 		spl = strings.Split(string(request), "\n")
 		if len(spl) == 0 || len(spl) == 1 {
-			return fmt.Errorf("Invalid request")
+			return fmt.Errorf("invalid request")
 		}
 	}
 	// parse request line
