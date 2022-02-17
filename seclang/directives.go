@@ -54,10 +54,7 @@ func directiveSecMarker(w *coraza.Waf, opts string) error {
 	rule.ID = 0
 	rule.Phase = 0
 	if err := w.Rules.Add(rule); err != nil {
-		if perr := fmt.Errorf("failed to compile rule (%s): %s", err, opts); perr != nil {
-			return perr // can't write to log, return this instead
-		}
-		return err
+		return newCompileRuleError(err, opts)
 	}
 	w.Logger.Debug("added secmark rule")
 	return nil
@@ -70,16 +67,10 @@ func directiveSecAction(w *coraza.Waf, opts string) error {
 		WithOperator: false,
 	})
 	if err != nil {
-		if perr := fmt.Errorf("failed to compile rule (%s): %s", err, opts); perr != nil {
-			return perr // can't write to log, return this instead
-		}
-		return err
+		return newCompileRuleError(err, opts)
 	}
 	if err := w.Rules.Add(rule); err != nil {
-		if perr := fmt.Errorf("failed to compile rule (%s): %s", err, opts); perr != nil {
-			return perr // can't write to log, return this instead
-		}
-		return err
+		return newCompileRuleError(err, opts)
 	}
 	w.Logger.Debug("Added SecAction",
 		zap.String("rule", opts),
@@ -101,7 +92,7 @@ func directiveSecRule(w *coraza.Waf, opts string) error {
 		ConfigDir:    configDir,
 	})
 	if err != nil && !ignoreErrors {
-		return fmt.Errorf("failed to compile rule (%s): %s", err, opts)
+		return newCompileRuleError(err, opts)
 	} else if err != nil && ignoreErrors {
 		w.Logger.Debug("Ignoring rule compilation error",
 			zap.String("rule", opts),
@@ -501,6 +492,10 @@ func directiveSecIgnoreRuleCompilationErrors(w *coraza.Waf, opts string) error {
 	}
 	w.Config.Set("ignore_rule_compilation_errors", b)
 	return nil
+}
+
+func newCompileRuleError(err error, opts string) error {
+	return fmt.Errorf("failed to compile rule (%s): %s", err, opts)
 }
 
 func newDirectiveError(err error, directive string) error {
