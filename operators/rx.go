@@ -17,7 +17,7 @@ package operators
 import (
 	"regexp"
 
-	"github.com/jptosso/coraza-waf/v2"
+	"github.com/corazawaf/coraza/v2"
 )
 
 type rx struct {

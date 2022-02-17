@@ -19,7 +19,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v2/types/variables"
+	"github.com/corazawaf/coraza/v2/types/variables"
 )
 
 // MatchData works like VariableKey but is used for logging,
@@ -35,6 +35,7 @@ type MatchData struct {
 	Value string
 }
 
+// // isNil is used to check whether the MatchData is empty
 func (m MatchData) isNil() bool {
 	return m == MatchData{}
 }
@@ -66,8 +67,11 @@ func (mr MatchedRule) details() string {
 	log := &strings.Builder{}
 	msg := mr.Message
 	data := mr.Data
+	if len(msg) > 200 {
+		msg = msg[:200]
+	}
 	if len(data) > 200 {
-		msg = data[:200]
+		data = data[:200]
 	}
 	resolvedIP := ""
 	log.WriteString(fmt.Sprintf(" [file %q] [line %q] [id %q] [rev %q] [msg %q] [data %q] [severity %q] [ver %q] [maturity %q] [accuracy %q]",

@@ -21,9 +21,9 @@ import (
 	"strconv"
 	"strings"
 
-	engine "github.com/jptosso/coraza-waf/v2"
-	"github.com/jptosso/coraza-waf/v2/types"
-	"github.com/jptosso/coraza-waf/v2/types/variables"
+	engine "github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v2/types"
+	"github.com/corazawaf/coraza/v2/types/variables"
 )
 
 // Test represents a unique transaction within
@@ -99,7 +99,7 @@ func (t *Test) SetRawRequest(request []byte) error {
 		// lets try with \n
 		spl = strings.Split(string(request), "\n")
 		if len(spl) == 0 || len(spl) == 1 {
-			return fmt.Errorf("Invalid request")
+			return fmt.Errorf("invalid request")
 		}
 	}
 	// parse request line
@@ -282,7 +282,6 @@ func (t *Test) Request() string {
 func NewTest(name string, waf *engine.Waf) *Test {
 	t := &Test{
 		Name:            name,
-		waf:             waf,
 		transaction:     waf.NewTransaction(),
 		RequestHeaders:  map[string]string{},
 		ResponseHeaders: map[string]string{},
@@ -293,6 +292,7 @@ func NewTest(name string, waf *engine.Waf) *Test {
 		RequestPort:     80,
 		magic:           true,
 	}
+	t.SetWaf(waf)
 	return t
 }
 

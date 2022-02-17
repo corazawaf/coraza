@@ -17,8 +17,8 @@ package operators
 import (
 	"strconv"
 
-	"github.com/jptosso/coraza-waf/v2"
-	engine "github.com/jptosso/coraza-waf/v2"
+	"github.com/corazawaf/coraza/v2"
+	engine "github.com/corazawaf/coraza/v2"
 )
 
 type ge struct {

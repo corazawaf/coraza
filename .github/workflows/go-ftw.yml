@@ -47,7 +47,7 @@ jobs:
         ls -lh
         sed -i 's/\/\/ _ "github.com/_ "github.com/g' main.go
         mv main.go caddy/main.go
-        go get github.com/jptosso/coraza-caddy@9c2db28
+        go get github.com/jptosso/coraza-caddy@7123efa
         go mod tidy
         go get ./...
         go get -u github.com/jptosso/coraza-pcre@1bea0f0
