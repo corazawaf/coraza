@@ -23,8 +23,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jptosso/coraza-waf/v2"
-	"github.com/jptosso/coraza-waf/v2/types/variables"
+	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v2/types/variables"
 )
 
 func TestRuleMatch(t *testing.T) {
@@ -335,7 +335,7 @@ func TestSampleRxRule(t *testing.T) {
 }
 
 func TestTXIssue147(t *testing.T) {
-	// https://github.com/jptosso/coraza-waf/issues/147
+	// https://github.com/corazawaf/coraza/issues/147
 	waf := coraza.NewWaf()
 	parser, _ := NewParser(waf)
 	err := parser.FromString(`SecRule RESPONSE_BODY "@rx ^#!\s?/" "id:950140,phase:4,log,deny,status:403"`)

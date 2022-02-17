@@ -19,7 +19,7 @@ import (
 	"io"
 	"io/fs"
 
-	"github.com/jptosso/coraza-waf/v2/types/variables"
+	"github.com/corazawaf/coraza/v2/types/variables"
 )
 
 // CollectionsMap is used to store results for collections, example:

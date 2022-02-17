@@ -19,8 +19,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v2/types/variables"
-	utils "github.com/jptosso/coraza-waf/v2/utils/url"
+	"github.com/corazawaf/coraza/v2/types/variables"
+	utils "github.com/corazawaf/coraza/v2/utils/url"
 )
 
 type urlencodedBodyProcessor struct {
