@@ -20,8 +20,8 @@ import (
 
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v2/types/variables"
-	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
+	"github.com/corazawaf/coraza/v2/types/variables"
+	utils "github.com/corazawaf/coraza/v2/utils/strings"
 )
 
 // Collection are used to store VARIABLE data

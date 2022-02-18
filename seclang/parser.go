@@ -23,8 +23,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v2"
-	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
+	"github.com/corazawaf/coraza/v2"
+	utils "github.com/corazawaf/coraza/v2/utils/strings"
 	"go.uber.org/zap"
 )
 

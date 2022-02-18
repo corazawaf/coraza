@@ -14,7 +14,7 @@
 
 package operators
 
-import "github.com/jptosso/coraza-waf/v2"
+import "github.com/corazawaf/coraza/v2"
 
 type unconditionalMatch struct{}
 

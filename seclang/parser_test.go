@@ -17,7 +17,7 @@ package seclang
 import (
 	"testing"
 
-	engine "github.com/jptosso/coraza-waf/v2"
+	engine "github.com/corazawaf/coraza/v2"
 )
 
 func TestInterruption(t *testing.T) {

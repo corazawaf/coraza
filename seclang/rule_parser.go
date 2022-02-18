@@ -22,12 +22,12 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v2"
-	actionsmod "github.com/jptosso/coraza-waf/v2/actions"
-	operators "github.com/jptosso/coraza-waf/v2/operators"
-	"github.com/jptosso/coraza-waf/v2/types"
-	"github.com/jptosso/coraza-waf/v2/types/variables"
-	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
+	"github.com/corazawaf/coraza/v2"
+	actionsmod "github.com/corazawaf/coraza/v2/actions"
+	operators "github.com/corazawaf/coraza/v2/operators"
+	"github.com/corazawaf/coraza/v2/types"
+	"github.com/corazawaf/coraza/v2/types/variables"
+	utils "github.com/corazawaf/coraza/v2/utils/strings"
 )
 
 type ruleAction struct {

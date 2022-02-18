@@ -15,12 +15,16 @@
 package seclang
 
 import (
+	"bufio"
+	"bytes"
+	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/jptosso/coraza-waf/v2"
-	"github.com/jptosso/coraza-waf/v2/types/variables"
+	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v2/types/variables"
 )
 
 func TestRuleMatch(t *testing.T) {
@@ -331,7 +335,7 @@ func TestSampleRxRule(t *testing.T) {
 }
 
 func TestTXIssue147(t *testing.T) {
-	// https://github.com/jptosso/coraza-waf/issues/147
+	// https://github.com/corazawaf/coraza/issues/147
 	waf := coraza.NewWaf()
 	parser, _ := NewParser(waf)
 	err := parser.FromString(`SecRule RESPONSE_BODY "@rx ^#!\s?/" "id:950140,phase:4,log,deny,status:403"`)
@@ -366,5 +370,65 @@ func TestTXIssue147(t *testing.T) {
 		}
 	} else {
 		t.Error("failed to process response body")
+	}
+}
+
+// from issue https://github.com/corazawaf/coraza/issues/159 @zpeasystart
+func TestDirectiveSecAuditLog(t *testing.T) {
+	waf := coraza.NewWaf()
+	p, _ := NewParser(waf)
+	if err := p.FromString(`
+	SecRule REQUEST_FILENAME "@unconditionalMatch" "id:100, phase:2, t:none, log, setvar:'tx.count=+1',chain"
+	SecRule ARGS:username "@unconditionalMatch" "t:none, setvar:'tx.count=+2',chain"
+	SecRule ARGS:password "@unconditionalMatch" "t:none, setvar:'tx.count=+3'"
+		`); err != nil {
+		t.Error(err)
+	}
+	tx := waf.NewTransaction()
+	tx.RequestBodyAccess = true
+	tx.ForceRequestBodyVariable = true
+	// request
+	rdata := []string{
+		"POST /login HTTP/1.1",
+		"Accept: */*",
+		"Accept-Encoding: gzip, deflate",
+		"Connection: close",
+		"Origin: http://test.com",
+		"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36",
+		"Content-Type: application/x-www-form-urlencoded; charset=UTF-8",
+		"Referer: http://somehost.com/login.jsp",
+		"X-Requested-With: XMLHttpRequest",
+		"Content-Length: 59",
+		"Accept-Language: zh-CN,zh;q=0.9",
+		"",
+		"username=root&password=123&rememberMe=on&time=1644979180757",
+	}
+	data := bytes.NewBuffer([]byte(strings.Join(rdata, "\r\n")))
+	req, err := http.ReadRequest(bufio.NewReader(data))
+	if err != nil {
+		t.Errorf("Description HTTP request parsing failed")
+	}
+	_, err = tx.ProcessRequest(req)
+	if err != nil {
+		t.Errorf("Failed to load the HTTP request")
+	}
+	// There is no problem loading the rules
+	c := 0
+	r := waf.Rules.FindByID(100)
+	for r != nil {
+		c++
+		r = r.Chain
+	}
+	if c != 3 {
+		t.Errorf("failed to compile multiple chains, expected 3, got %d", c)
+	}
+	// Why is the number of matches 4
+	macro, err := coraza.NewMacro("%{tx.count}")
+	if err != nil {
+		t.Error(err)
+	}
+	c, _ = strconv.Atoi(macro.Expand(tx))
+	if c != 6 {
+		t.Errorf("Why is the number of matches %d", c)
 	}
 }

@@ -31,7 +31,11 @@ jobs:
       run: docker run -p 8080:80 -d kennethreitz/httpbin
     - name: Setup CRS
       run: |
-        git clone https://github.com/coreruleset/coreruleset /tmp/coreruleset
+        git clone https://github.com/coreruleset/coreruleset
+        cd coreruleset
+        git checkout 6d8e8f8
+        cd ..
+        mv coreruleset /tmp
         cp coraza.conf-recommended /tmp/
         cp testdata/coreruleset/postdirectives.conf /tmp/
     - name: Go code
@@ -43,7 +47,7 @@ jobs:
         ls -lh
         sed -i 's/\/\/ _ "github.com/_ "github.com/g' main.go
         mv main.go caddy/main.go
-        go get github.com/jptosso/coraza-caddy@9c2db28
+        go get github.com/jptosso/coraza-caddy@7123efa
         go mod tidy
         go get ./...
         go get -u github.com/jptosso/coraza-pcre@1bea0f0

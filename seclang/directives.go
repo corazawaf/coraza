@@ -22,9 +22,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jptosso/coraza-waf/v2"
-	"github.com/jptosso/coraza-waf/v2/loggers"
-	"github.com/jptosso/coraza-waf/v2/types"
+	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v2/loggers"
+	"github.com/corazawaf/coraza/v2/types"
 	"go.uber.org/zap"
 )
 
@@ -54,10 +54,7 @@ func directiveSecMarker(w *coraza.Waf, opts string) error {
 	rule.ID = 0
 	rule.Phase = 0
 	if err := w.Rules.Add(rule); err != nil {
-		if perr := fmt.Errorf("Failed to compile rule (%s): %s", err, opts); perr != nil {
-			return perr // can't write to log, return this instead
-		}
-		return err
+		return newCompileRuleError(err, opts)
 	}
 	w.Logger.Debug("added secmark rule")
 	return nil
@@ -70,16 +67,10 @@ func directiveSecAction(w *coraza.Waf, opts string) error {
 		WithOperator: false,
 	})
 	if err != nil {
-		if perr := fmt.Errorf("Failed to compile rule (%s): %s", err, opts); perr != nil {
-			return perr // can't write to log, return this instead
-		}
-		return err
+		return newCompileRuleError(err, opts)
 	}
 	if err := w.Rules.Add(rule); err != nil {
-		if perr := fmt.Errorf("Failed to compile rule (%s): %s", err, opts); perr != nil {
-			return perr // can't write to log, return this instead
-		}
-		return err
+		return newCompileRuleError(err, opts)
 	}
 	w.Logger.Debug("Added SecAction",
 		zap.String("rule", opts),
@@ -101,7 +92,7 @@ func directiveSecRule(w *coraza.Waf, opts string) error {
 		ConfigDir:    configDir,
 	})
 	if err != nil && !ignoreErrors {
-		return fmt.Errorf("Failed to compile rule (%s): %s", err, opts)
+		return newCompileRuleError(err, opts)
 	} else if err != nil && ignoreErrors {
 		w.Logger.Debug("Ignoring rule compilation error",
 			zap.String("rule", opts),
@@ -123,7 +114,11 @@ func directiveSecRule(w *coraza.Waf, opts string) error {
 }
 
 func directiveSecResponseBodyAccess(w *coraza.Waf, opts string) error {
-	w.ResponseBodyAccess = strings.ToLower(opts) == "on"
+	b, err := parseBoolean(strings.ToLower(opts))
+	if err != nil {
+		return newDirectiveError(err, "SecResponseBodyAccess")
+	}
+	w.ResponseBodyAccess = b
 	return nil
 }
 
@@ -134,7 +129,11 @@ func directiveSecRequestBodyLimit(w *coraza.Waf, opts string) error {
 }
 
 func directiveSecRequestBodyAccess(w *coraza.Waf, opts string) error {
-	w.RequestBodyAccess = strings.ToLower(opts) == "on"
+	b, err := parseBoolean(strings.ToLower(opts))
+	if err != nil {
+		return newDirectiveError(err, "SecRequestBodyAccess")
+	}
+	w.RequestBodyAccess = b
 	return nil
 }
 
@@ -493,6 +492,10 @@ func directiveSecIgnoreRuleCompilationErrors(w *coraza.Waf, opts string) error {
 	}
 	w.Config.Set("ignore_rule_compilation_errors", b)
 	return nil
+}
+
+func newCompileRuleError(err error, opts string) error {
+	return fmt.Errorf("failed to compile rule (%s): %s", err, opts)
 }
 
 func newDirectiveError(err error, directive string) error {

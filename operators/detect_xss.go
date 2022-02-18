@@ -15,8 +15,8 @@
 package operators
 
 import (
+	"github.com/corazawaf/coraza/v2"
 	"github.com/corazawaf/libinjection-go"
-	"github.com/jptosso/coraza-waf/v2"
 )
 
 type detectXSS struct {

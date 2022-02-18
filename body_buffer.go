@@ -19,12 +19,14 @@ import (
 	"io"
 	"os"
 
-	"github.com/jptosso/coraza-waf/v2/types"
+	"github.com/corazawaf/coraza/v2/types"
 )
 
 // BodyBuffer is used to read RequestBody and ResponseBody objects
 // It will handle memory usage for buffering and processing
+// It implements io.Copy(bodyBuffer, someReader) by inherit io.Writer
 type BodyBuffer struct {
+	io.Writer
 	options types.BodyBufferOptions
 	buffer  *bytes.Buffer
 	writer  *os.File

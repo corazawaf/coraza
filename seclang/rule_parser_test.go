@@ -18,7 +18,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jptosso/coraza-waf/v2"
+	"github.com/corazawaf/coraza/v2"
 )
 
 func TestMergeActions(t *testing.T) {

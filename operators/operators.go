@@ -17,7 +17,7 @@ package operators
 import (
 	"fmt"
 
-	"github.com/jptosso/coraza-waf/v2"
+	"github.com/corazawaf/coraza/v2"
 )
 
 type operatorsWrapper = func() coraza.RuleOperator

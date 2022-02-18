@@ -22,13 +22,36 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jptosso/coraza-waf/v2"
-	"github.com/jptosso/coraza-waf/v2/loggers"
-	"github.com/jptosso/coraza-waf/v2/types"
-	utils "github.com/jptosso/coraza-waf/v2/utils/strings"
+	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v2/loggers"
+	"github.com/corazawaf/coraza/v2/types"
+	utils "github.com/corazawaf/coraza/v2/utils/strings"
 )
 
-func Test_directiveSecAuditLog(t *testing.T) {
+func Test_NonImplementedDirective(t *testing.T) {
+	rules := []string{
+		`SecSensorId WAFSensor01`,
+		`SecConnReadStateLimit 50 "!@ipMatch 127.0.0.1"`,
+		`SecPcreMatchLimit 1500`,
+		`SecPcreMatchLimitRecursion 1500`,
+		`SecHttpBlKey whdkfieyhtnf`,
+		`SecHashMethodRx HashHref "product_info|list_product"`,
+		`SecHashMethodPm HashHref“product_info list_product”`,
+		`SecHashParam "hmac"`,
+		`SecHashKey "this_is_my_key" KeyOnly`,
+		`SecHashEngine On`,
+	}
+	w := coraza.NewWaf()
+	p, _ := NewParser(w)
+	for _, rule := range rules {
+		err := p.FromString(rule)
+		if err != nil {
+			t.Errorf("failed to set directive: %s", rule)
+		}
+	}
+}
+
+func Test_directive(t *testing.T) {
 	w := coraza.NewWaf()
 	p, _ := NewParser(w)
 	if err := p.FromString("SecWebAppId test123"); err != nil {
@@ -114,6 +137,15 @@ func Test_directiveSecAuditLog(t *testing.T) {
 	}
 	if p.waf.ResponseBodyMimeTypes[0] != "text/html" {
 		t.Error("failed to set SecResponseBodyMimeType")
+	}
+	if err := p.FromString(`SecServerSignature "Microsoft-IIS/6.0"`); err != nil {
+		t.Error("failed to set directive: SecServerSignature")
+	}
+	if err := p.FromString(`SecRequestBodyInMemoryLimit 131072`); err != nil {
+		t.Error("failed to set directive: SecRequestBodyInMemoryLimit")
+	}
+	if err := p.FromString(`SecRemoteRulesFailAction Abort`); err != nil {
+		t.Error("failed to set directive: SecRemoteRulesFailAction")
 	}
 }
 
