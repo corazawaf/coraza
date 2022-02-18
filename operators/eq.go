@@ -34,11 +34,11 @@ func (o *eq) Init(data string) error {
 }
 
 func (o *eq) Evaluate(tx *coraza.Transaction, value string) bool {
-	d1, err := strconv.Atoi(o.data.Expand(tx))
+	d1, err := strconv.ParseFloat(o.data.Expand(tx), 64)
 	if err != nil {
 		d1 = 0
 	}
-	d2, err := strconv.Atoi(value)
+	d2, err := strconv.ParseFloat(value, 64)
 	if err != nil {
 		d2 = 0
 	}

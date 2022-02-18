@@ -35,14 +35,13 @@ func (o *ge) Init(data string) error {
 }
 
 func (o *ge) Evaluate(tx *engine.Transaction, value string) bool {
-	v, err := strconv.Atoi(value)
+	v, err := strconv.ParseFloat(value, 64)
 	if err != nil {
 		v = 0
 	}
-	data := o.data.Expand(tx)
-	dataint, err := strconv.Atoi(data)
+	d, err := strconv.ParseFloat(o.data.Expand(tx), 64)
 	if err != nil {
-		dataint = 0
+		d = 0
 	}
-	return v >= dataint
+	return v >= d
 }

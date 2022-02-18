@@ -17,6 +17,7 @@ package seclang
 import (
 	"errors"
 	"fmt"
+	"github.com/oschwald/geoip2-golang"
 	"io/fs"
 	"regexp"
 	"strconv"
@@ -248,6 +249,23 @@ func directiveSecHTTPBlKey(w *coraza.Waf, opts string) error {
 }
 
 func directiveSecGsbLookupDb(w *coraza.Waf, opts string) error {
+	return nil
+}
+
+func directiveSecGeoLookupDb(w *coraza.Waf, opts string) error {
+	var file = "geoip_file"
+	if w.GeoIPDB != nil {
+		if w.Config.Get(file, "") == opts {
+			return nil
+		}
+	}
+
+	var err error
+	w.Config.Set(file, opts)
+	w.GeoIPDB, err = geoip2.Open(opts)
+	if err != nil {
+		return newDirectiveError(err, "SecGeoLookupDb")
+	}
 	return nil
 }
 
@@ -537,6 +555,7 @@ var (
 	_ directive = directiveSecRemoteRules
 	_ directive = directiveSecSensorID
 	_ directive = directiveSecRuleUpdateTargetByID
+	_ directive = directiveSecGeoLookupDb
 )
 
 var directivesMap = map[string]directive{
@@ -575,6 +594,7 @@ var directivesMap = map[string]directive{
 	"sechashkey":                     directiveSecHashKey,
 	"sechashengine":                  directiveSecHashEngine,
 	"secgsblookupdb":                 directiveSecGsbLookupDb,
+	"secgeolookupdb":                 directiveSecGeoLookupDb,
 	"secdefaultaction":               directiveSecDefaultAction,
 	"secdatadir":                     directiveSecDataDir,
 	"seccontentinjection":            directiveSecContentInjection,
