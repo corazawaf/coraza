@@ -25,15 +25,17 @@ jobs:
       with:
         lfs: true
         fetch-depth: 0 #for better blame info
+      # Limit on the number of downloads
+      # ip2location: 5 times per hour
     - name: Download files required for testing
       run: |        
         mkdir -p testdata/geoip_db
         wget "https://www.ip2location.com/download/?token=84ahR6TrTb7jfzayqXwQXljxjdPyP89XjQ9gFI7S8kKETj8UiROFqQZWZ3Eu9O8Y&file=DB11LITEBINIPV6" -O testdata/geoip_db/IP2LOCATION-LITE-DB11.IPV6.BIN.ZIP
         unzip testdata/geoip_db/IP2LOCATION-LITE-DB11.IPV6.BIN.ZIP -d testdata/geoip_db
-        
+      
         wget "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=9TvcTZ7wIqmVAGrz&suffix=tar.gz" -O testdata/geoip_db/GeoLite2-City.tar.gz
         tar -zxvf testdata/geoip_db/GeoLite2-City.tar.gz -C testdata/geoip_db
-        mv testdata/geoip_db/`ls testdata/geoip_db | grep _`/GeoLite2-City.mmdb testdata/geoip_db
+        mv testdata/geoip_db/`ls testdata/geoip_db | grep GeoLite2-City_`/GeoLite2-City.mmdb testdata/geoip_db/
         
         ls -lah
     - name: Download vendored dependencies
