@@ -432,3 +432,78 @@ func TestDirectiveSecAuditLog(t *testing.T) {
 		t.Errorf("Why is the number of matches %d", c)
 	}
 }
+
+// https://github.com/corazawaf/coraza/issues/160
+func TestIssue160(t *testing.T) {
+	waf := coraza.NewWaf()
+	parser, err := NewParser(waf)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// test case 3
+	err = parser.FromString(`
+		SecRequestBodyAccess On
+		SecAction "id:900330,phase:1,nolog,pass,t:none,setvar:tx.total_arg_length=10"
+
+		SecRule &TX:TOTAL_ARG_LENGTH "@eq 1" "id:920390,phase:2,deny,t:none,msg:'Total arguments size exceeded',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}',ver:'OWASP_CRS/3.4.0-dev',severity:'CRITICAL',chain"
+    	SecRule ARGS_COMBINED_SIZE "@gt %{tx.total_arg_length}" "t:none"
+	`)
+	if err != nil {
+		t.Error(err)
+	}
+
+	tx := waf.NewTransaction()
+	reader := strings.NewReader(`POST / HTTP/1.1
+Host: localhost
+User-Agent: curl/7.77.0
+Accept: */*
+Content-Length: 154
+Content-Type: application/x-www-form-urlencoded
+
+foo=111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111`)
+	it, err := tx.ParseRequestReader(reader)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if it.RuleID != 920390 {
+		t.Error("Failed to test limit arguments")
+	}
+
+	// test case 4
+	err = parser.FromString(`
+		SecRequestBodyAccess On
+		SecAction "id:900350,phase:1,nolog,pass,t:none,setvar:tx.combined_file_sizes=10"
+
+		SecRule &TX:COMBINED_FILE_SIZES "@eq 1" "id:920410,phase:2,deny,t:none,msg:'Total uploaded files size too large',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}',ver:'OWASP_CRS/3.4.0-dev',severity:'CRITICAL',chain"
+    	SecRule FILES_COMBINED_SIZE "@gt %{tx.combined_file_sizes}" "t:none,setvar:'tx.anomaly_score_pl1=+%{tx.critical_anomaly_score}'"
+	`)
+	if err != nil {
+		t.Log(err)
+	}
+
+	tx = waf.NewTransaction()
+	reader = strings.NewReader(`POST / HTTP/1.1
+Host: localhost
+User-Agent: curl/7.77.0
+Accept: */*
+Content-Length: 284
+Content-Type: multipart/form-data; boundary=------------------------6e0011d57082257a
+
+--------------------------6e0011d57082257a
+Content-Disposition: form-data; name="file"; filename="1.txt"
+Content-Type: text/plain
+
+qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq
+
+--------------------------6e0011d57082257a--`)
+	it, err = tx.ParseRequestReader(reader)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if it.RuleID != 920410 {
+		t.Error("Failed to test limit file size")
+	}
+}
