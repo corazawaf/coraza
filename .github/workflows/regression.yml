@@ -26,9 +26,7 @@ jobs:
         lfs: true
         fetch-depth: 0 #for better blame info
     - name: Download files required for testing
-      run: |
-        apt-get install wget unzip tar
-        
+      run: |        
         mkdir -p testdata/geoip_db
         wget https://www.ip2location.com/download/?token=84ahR6TrTb7jfzayqXwQXljxjdPyP89XjQ9gFI7S8kKETj8UiROFqQZWZ3Eu9O8Y&file=DB11LITEBINIPV6 -O testdata/geoip_db/IP2LOCATION-LITE-DB11.IPV6.BIN.ZIP
         unzip testdata/geoip_db/IP2LOCATION-LITE-DB11.IPV6.BIN.ZIP -d testdata/geoip_db
