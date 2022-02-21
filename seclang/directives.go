@@ -17,7 +17,7 @@ package seclang
 import (
 	"errors"
 	"fmt"
-	"github.com/oschwald/geoip2-golang"
+	"github.com/corazawaf/coraza/v2/utils/geoip"
 	"io/fs"
 	"regexp"
 	"strconv"
@@ -253,19 +253,36 @@ func directiveSecGsbLookupDb(w *coraza.Waf, opts string) error {
 }
 
 func directiveSecGeoLookupDb(w *coraza.Waf, opts string) error {
-	var file = "geoip_file"
-	if w.GeoIPDB != nil {
-		if w.Config.Get(file, "") == opts {
-			return nil
+	spl := strings.Split(opts, " ")
+	if len(spl) > 2 {
+		return fmt.Errorf("error configuration for SecGeoLookupDb directive")
+	}
+	if w.Config.Get("geoip_file_type", "non-configure") == spl[0] &&
+		w.Config.Get("geoip_file", "non-configure") == spl[1] {
+		return nil
+	}
+	w.Config.Set("geoip_file_type", spl[0])
+	w.Config.Set("geoip_file", spl[1])
+
+	var db geoip.GeoDb
+	switch spl[0] {
+	case "maxminddb":
+		db = &geoip.MaxMinddb{}
+		err := db.Init(spl[1])
+		if err != nil {
+			return err
 		}
+	case "ip2location":
+		db = &geoip.IP2Location{}
+		err := db.Init(spl[1])
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("invalid geoip engine: %s", spl[0])
 	}
 
-	var err error
-	w.Config.Set(file, opts)
-	w.GeoIPDB, err = geoip2.Open(opts)
-	if err != nil {
-		return newDirectiveError(err, "SecGeoLookupDb")
-	}
+	w.GeoDB = db
 	return nil
 }
 

@@ -3,7 +3,7 @@ package operators
 import (
 	engine "github.com/corazawaf/coraza/v2"
 	"github.com/corazawaf/coraza/v2/types/variables"
-	"github.com/oschwald/geoip2-golang"
+	"github.com/corazawaf/coraza/v2/utils/geoip"
 	"strconv"
 	"testing"
 )
@@ -16,7 +16,12 @@ func Test_geoLookup(t *testing.T) {
 
 	var err error
 	waf := engine.NewWaf()
-	waf.GeoIPDB, err = geoip2.Open("../testdata/mmdb/GeoLite2-City.mmdb")
+	db := &geoip.MaxMinddb{}
+	err = db.Init("../testdata/geoip_db/GeoLite2-City.mmdb")
+	if err != nil {
+		t.Error(err)
+	}
+	waf.GeoDB = db
 	if err != nil {
 		t.Errorf("geoip db init error: %s", err)
 	}

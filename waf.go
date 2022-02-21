@@ -16,6 +16,7 @@ package coraza
 
 import (
 	"fmt"
+	"github.com/corazawaf/coraza/v2/utils/geoip"
 	"io/fs"
 	"os"
 	"regexp"
@@ -28,7 +29,6 @@ import (
 	"github.com/corazawaf/coraza/v2/types"
 	"github.com/corazawaf/coraza/v2/types/variables"
 	utils "github.com/corazawaf/coraza/v2/utils/strings"
-	"github.com/oschwald/geoip2-golang"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -160,8 +160,8 @@ type Waf struct {
 	// AuditLogWriter is used to write audit logs
 	AuditLogWriter loggers.LogWriter
 
-	// GeoIP database interface
-	GeoIPDB *geoip2.Reader
+	// GeoDb reader interface
+	GeoDB geoip.GeoDb
 }
 
 // NewTransaction Creates a new initialized transaction for this WAF instance

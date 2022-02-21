@@ -1,0 +1,43 @@
+---
+meta:
+  author: Xinyu Wu
+  description: This is a mix of many tests used to check geoip ip2location engine.
+  enabled: true
+  name: geoip_ip2location.yaml
+tests:
+  -
+    test_title: geoip rules test
+    stages:
+      -
+        stage:
+          debug: true
+          input:
+            dest_addr: "81.2.69.142"
+          output:
+            triggered_rules:
+              - 8
+              - 11
+              - 12
+            non_triggered_rules:
+              - 9
+              - 10
+              - 13
+rules: |
+  SecGeoLookupDb ip2location ../testdata/geoip_db/IP2LOCATION-LITE-DB11.IPV6.BIN
+  SecRule SERVER_ADDR "@geoLookup" "chain,id:8,log,phase:1"
+  SecRule GEO:COUNTRY_CODE "@streq GB"
+  
+  SecRule SERVER_ADDR "@geoLookup" "chain,id:9,log,phase:1"
+  SecRule GEO:COUNTRY_NAME "@streq United Kingdom"
+  
+  SecRule SERVER_ADDR "@geoLookup" "chain,id:10,log,phase:1"
+  SecRule GEO:Region "!@streq England"
+  
+  SecRule SERVER_ADDR "@geoLookup" "chain,id:11,log,phase:1"
+  SecRule GEO:City "@streq Bracknell"
+  
+  SecRule SERVER_ADDR "@geoLookup" "chain,id:12,log,phase:1"
+  SecRule GEO:LATITUDE "@lt 50"
+  
+  SecRule SERVER_ADDR "@geoLookup" "chain,id:13,log,phase:1"
+  SecRule GEO:LONGITUDE "@lt -20.1"
