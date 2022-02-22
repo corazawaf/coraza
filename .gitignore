@@ -17,4 +17,3 @@ vendor/
 coraza-waf
 __debug_bin
 seclang/crs_test.go
-testdata/geoip_db/

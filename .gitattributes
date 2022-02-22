@@ -1,0 +1,2 @@
+testdata/geoip_db/IP2LOCATION-LITE-DB11.IPV6.BIN filter=lfs diff=lfs merge=lfs -text
+testdata/geoip_db/GeoLite2-City.mmdb filter=lfs diff=lfs merge=lfs -text
