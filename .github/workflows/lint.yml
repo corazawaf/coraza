@@ -20,6 +20,9 @@ jobs:
         curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.43.0
         go install golang.org/x/lint/golint@latest
     - uses: actions/checkout@v2
+      with:
+        lfs: true
+        fetch-depth: 0
     - uses: actions/setup-python@v2
     - uses: pre-commit/action@v2.0.3
       with: 
