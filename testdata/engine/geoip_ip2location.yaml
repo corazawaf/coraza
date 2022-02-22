@@ -17,10 +17,10 @@ tests:
             triggered_rules:
               - 8
               - 11
-              - 12
             non_triggered_rules:
               - 9
               - 10
+              - 12
               - 13
 rules: |
   SecGeoLookupDb ip2location ../testdata/geoip_db/IP2LOCATION-LITE-DB11.IPV6.BIN
