@@ -36,10 +36,10 @@
     SecRule GEO:COUNTRY_CONTINENT "!@streq europe"
     
     SecRule SERVER_ADDR "@geoLookup" "chain,id:4,log,phase:1"
-    SecRule GEO:CITY "@streq Hayling Island"
+    SecRule GEO:CITY "@streq Chingford"
     
     SecRule SERVER_ADDR "@geoLookup" "chain,id:5,log,phase:1"
-    SecRule GEO:POSTAL_CODE "@streq PO11"
+    SecRule GEO:POSTAL_CODE "@streq E4"
     
     SecRule SERVER_ADDR "@geoLookup" "chain,id:6,log,phase:1"
     SecRule GEO:LATITUDE "@lt 50"

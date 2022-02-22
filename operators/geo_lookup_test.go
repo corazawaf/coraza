@@ -43,11 +43,11 @@ func Test_geoLookup(t *testing.T) {
 		t.Errorf("Invalid `COUNTRY_CONTINENT` key for @geoLookup operator")
 	}
 
-	if tx.GetCollection(variables.Geo).GetFirstString(city) != "Hayling Island" {
+	if tx.GetCollection(variables.Geo).GetFirstString(city) != "Chingford" {
 		t.Errorf("Invalid `CITY` key for @geoLookup operator")
 	}
 
-	if tx.GetCollection(variables.Geo).GetFirstString(postalCode) != "PO11" {
+	if tx.GetCollection(variables.Geo).GetFirstString(postalCode) != "E4" {
 		t.Errorf("Invalid `POSTAL_CODE` key for @geoLookup operator")
 	}
 
@@ -55,7 +55,7 @@ func Test_geoLookup(t *testing.T) {
 	if err != nil {
 		t.Errorf("latitude data parse error: %s", err.Error())
 	}
-	if latitude != 50.7799 {
+	if latitude != 51.6311 {
 		t.Errorf("Invalid `LATITUDE` key for @geoLookup operator")
 	}
 
@@ -63,7 +63,7 @@ func Test_geoLookup(t *testing.T) {
 	if err != nil {
 		t.Errorf("longitude data parse error: %s", err.Error())
 	}
-	if longitude != -0.9707 {
+	if longitude != 0.0018 {
 		t.Errorf("Invalid `LONGITUDE` key for @geoLookup operator")
 	}
 }
