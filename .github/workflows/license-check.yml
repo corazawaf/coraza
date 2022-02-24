@@ -1,0 +1,24 @@
+name: license-check
+
+on:
+  pull_request:
+    branches: [v2/*]
+  push:
+    branches: [v2/*]
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: v1.17.x
+    - name: Install go-licenses
+      run: |
+        go install github.com/google/go-licenses@latest
+    - uses: actions/checkout@v2
+    - name: Run go-licenses
+      run: |
+        go-licenses csv github.com/corazawaf/coraza/v2
+        go-licenses check github.com/corazawaf/coraza/v2

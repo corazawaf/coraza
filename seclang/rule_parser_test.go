@@ -77,3 +77,14 @@ func TestErrorLine(t *testing.T) {
 		t.Error("failed to find error line, got " + err.Error())
 	}
 }
+
+func TestVariableParsing2(t *testing.T) {
+	waf := coraza.NewWaf()
+	p, _ := NewParser(waf)
+	if err := p.FromString(`
+	SecRule ARGS|REQUEST_COOKIES|REQUEST_HEADERS "" "id:930120"
+	SecRuleUpdateTargetById 930120 "!ARGS:/(?i:csrf)/|!ARGS:/(?i:xsrf)/|!REQUEST_COOKIES:/(?i:csrf)/|!REQUEST_COOKIES:/(?i:xsrf)/|!REQUEST_HEADERS:/(?i:csrf)/|!REQUEST_HEADERS:/(?i:xsrf)/"
+	`); err != nil {
+		t.Error(err)
+	}
+}

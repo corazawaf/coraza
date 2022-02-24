@@ -147,6 +147,7 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 			return
 		}
 		for k, vr := range values {
+			k = strings.ToLower(k)
 			tx.GetCollection(variables.RequestCookiesNames).AddUnique("", k)
 			for _, v := range vr {
 				tx.GetCollection(variables.RequestCookies).Add(k, v)

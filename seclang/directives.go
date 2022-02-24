@@ -473,12 +473,18 @@ func directiveSecRuleUpdateTargetByID(w *coraza.Waf, opts string) error {
 		return err
 	}
 	rule := w.Rules.FindByID(id)
+	if rule == nil {
+		return fmt.Errorf("rule %d not found ", id)
+	}
 	rp := &RuleParser{
 		rule:           rule,
 		options:        RuleOptions{},
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
-	return rp.ParseVariables(strings.Trim(spl[1], "\""))
+	if err := rp.ParseVariables(strings.Trim(spl[1], "\"")); err != nil {
+		return fmt.Errorf("SecRuleUpdateTargetById error %q: %s", opts, err)
+	}
+	return nil
 }
 
 func directiveSecIgnoreRuleCompilationErrors(w *coraza.Waf, opts string) error {
