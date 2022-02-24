@@ -432,3 +432,53 @@ func TestDirectiveSecAuditLog(t *testing.T) {
 		t.Errorf("Why is the number of matches %d", c)
 	}
 }
+
+func TestIssue176(t *testing.T) {
+	waf := coraza.NewWaf()
+	rules := `SecRule REQUEST_COOKIES:sessionId "test" "id:1,phase:1,deny,log,msg:'test rule',logdata:'Matched %{MATCHED_VAR_NAME}'"`
+	parser, err := NewParser(waf)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = parser.FromString(rules)
+	if err != nil {
+		t.Error()
+		return
+	}
+
+	tx := waf.NewTransaction()
+	tx.AddRequestHeader("Cookie", "sessionId=test")
+	it := tx.ProcessRequestHeaders()
+	if it == nil {
+		t.Error("error test for github issue #176")
+	}
+
+	// Test for argument case-sensitive
+	err = parser.FromString(`
+		SecRule ARGS:Test1 "123" "id:3,phase:1,log,deny"
+	`)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	tx = waf.NewTransaction()
+	tx.AddArgument("GET", "Test1", "123")
+	it = tx.ProcessRequestHeaders()
+	if it == nil {
+		t.Error("failed to test argument case-sensitive")
+	}
+
+	err = parser.FromString(`
+		SecRule ARGS:test2 "123" "id:5,phase:1,log,deny"
+	`)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	tx = waf.NewTransaction()
+	tx.AddArgument("GET", "Test2", "123")
+	it = tx.ProcessRequestHeaders()
+	if it != nil {
+		t.Error("failed to test argument case-sensitive")
+	}
+}

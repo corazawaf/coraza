@@ -425,11 +425,15 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 		key = key[1 : len(key)-1]
 		re = regexp.MustCompile(key)
 	}
+
+	if _, ok := variables.CaseSensitiveList[v]; !ok {
+		key = strings.ToLower(key)
+	}
 	r.variables = append(r.variables, ruleVariableParams{
 		Name:       v.Name(),
 		Count:      iscount,
 		Variable:   v,
-		KeyStr:     strings.ToLower(key),
+		KeyStr:     key,
 		KeyRx:      re,
 		Exceptions: []ruleVariableException{},
 	})
@@ -449,9 +453,12 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 		key = key[1 : len(key)-1]
 		re = regexp.MustCompile(key)
 	}
+	if _, ok := variables.CaseSensitiveList[v]; !ok {
+		key = strings.ToLower(key)
+	}
 	for i, rv := range r.variables {
 		if rv.Variable == v {
-			rv.Exceptions = append(rv.Exceptions, ruleVariableException{strings.ToLower(key), re})
+			rv.Exceptions = append(rv.Exceptions, ruleVariableException{key, re})
 			r.variables[i] = rv
 			counter++
 		}

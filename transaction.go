@@ -147,6 +147,7 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 			return
 		}
 		for k, vr := range values {
+			k = strings.ToLower(k)
 			tx.GetCollection(variables.RequestCookiesNames).AddUnique("", k)
 			for _, v := range vr {
 				tx.GetCollection(variables.RequestCookies).Add(k, v)
@@ -517,6 +518,7 @@ func (tx *Transaction) ExtractArguments(orig string, uri string) {
 // AddArgument Add arguments GET or POST
 // This will set ARGS_(GET|POST), ARGS, ARGS_NAMES, ARGS_COMBINED_SIZE and
 // ARGS_(GET|POST)_NAMES
+// TODO: [BUG] argument support case?
 func (tx *Transaction) AddArgument(orig string, key string, value string) {
 	// TODO implement ARGS value limit using ArgumentsLimit
 	var vals, names variables.RuleVariable

@@ -54,7 +54,7 @@ func TestVariableKeysAreCaseInsensitive(t *testing.T) {
 	if err := rule.AddVariable(variables.Args, "Som3ThinG", false); err != nil {
 		t.Error(err)
 	}
-	if rule.variables[0].KeyStr != "som3thing" {
+	if rule.variables[0].KeyStr == "som3thing" {
 		t.Error("variable key is not case insensitive")
 	}
 }
