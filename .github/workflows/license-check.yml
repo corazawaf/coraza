@@ -18,6 +18,9 @@ jobs:
       run: |
         go install github.com/google/go-licenses@latest
     - uses: actions/checkout@v2
+    - name: Go mod vendor
+      run: |
+        go mod vendor
     - name: Run go-licenses
       run: |
         go-licenses csv github.com/corazawaf/coraza/v2
