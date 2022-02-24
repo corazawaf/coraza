@@ -7,7 +7,7 @@ on:
     branches: [v2/*]
 
 jobs:
-  pre-commit:
+  license-check:
     runs-on: ubuntu-latest
     steps:
     - name: Install Go
