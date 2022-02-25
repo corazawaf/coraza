@@ -229,11 +229,6 @@ const (
 	UrlencodedError RuleVariable = iota
 )
 
-// CaseSensitiveList is used to store case-sensitive variables
-var CaseSensitiveList = map[RuleVariable]struct{}{
-	Args: {},
-}
-
 var rulemap = map[RuleVariable]string{
 	Unknown:                       "UNKNOWN",
 	UrlencodedError:               "URLENCODED_ERROR",
