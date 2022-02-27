@@ -425,6 +425,7 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 		key = key[1 : len(key)-1]
 		re = regexp.MustCompile(key)
 	}
+
 	r.variables = append(r.variables, ruleVariableParams{
 		Name:       v.Name(),
 		Count:      iscount,
@@ -449,6 +450,7 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 		key = key[1 : len(key)-1]
 		re = regexp.MustCompile(key)
 	}
+
 	for i, rv := range r.variables {
 		if rv.Variable == v {
 			rv.Exceptions = append(rv.Exceptions, ruleVariableException{strings.ToLower(key), re})
