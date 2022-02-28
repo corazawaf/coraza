@@ -468,6 +468,29 @@ func TestTxPhase4Magic(t *testing.T) {
 	}
 }
 
+func TestVariablesMatch(t *testing.T) {
+	waf := NewWaf()
+	tx := waf.NewTransaction()
+	tx.matchVariable(MatchData{
+		VariableName: "ARGS_NAMES",
+		Variable:     variables.ArgsNames,
+		Key:          "sample",
+		Value:        "samplevalue",
+	})
+	expect := map[variables.RuleVariable]string{
+		variables.MatchedVar:       "samplevalue",
+		variables.MatchedVarName:   "ARGS_NAMES:sample",
+		variables.MatchedVars:      "samplevalue",
+		variables.MatchedVarsNames: "ARGS_NAMES:sample",
+	}
+
+	for k, v := range expect {
+		if m := tx.GetCollection(k).GetFirstString(""); m != v {
+			t.Errorf("failed to match variable %s, got %s", k.Name(), m)
+		}
+	}
+}
+
 func multipartRequest(req *http.Request) error {
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)

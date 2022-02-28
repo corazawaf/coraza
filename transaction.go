@@ -249,12 +249,13 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 // matchVariable Creates the MATCHED_ variables required by chains and macro expansion
 // MATCHED_VARS, MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES
 func (tx *Transaction) matchVariable(match MatchData) {
-	varName := match.VariableName
+	varName := strings.Builder{}
+	//varName.Grow(len(match.VariableName) * 2)
+	varName.WriteString(match.VariableName)
 	if match.Key != "" {
-		varName += fmt.Sprintf(":%s", match.Key)
+		varName.WriteByte(':')
+		varName.WriteString(match.Key)
 	}
-	// TODO this is a temporary fix, the match should be VARIABLE:key
-	varName += fmt.Sprintf(":%s", match.Value)
 	// Array of values
 	matchedVars := tx.GetCollection(variables.MatchedVars)
 	// Last value
@@ -270,8 +271,8 @@ func (tx *Transaction) matchVariable(match MatchData) {
 	matchedVar.SetIndex("", 0, match.Value)
 	// fmt.Printf("%s: %s\n", match.VariableName, match.Value)
 
-	matchedVarsNames.Add("", varName)
-	matchedVarName.SetIndex("", 0, varName)
+	matchedVarsNames.Add("", varName.String())
+	matchedVarName.SetIndex("", 0, varName.String())
 }
 
 // MatchRule Matches a rule to be logged
@@ -530,10 +531,10 @@ func (tx *Transaction) AddArgument(orig string, key string, value string) {
 		names = variables.ArgsPostNames
 	}
 	tx.GetCollection(variables.Args).Add(key, value)
-	tx.GetCollection(variables.ArgsNames).Add("", key)
+	tx.GetCollection(variables.ArgsNames).Add(key, key)
 
 	tx.GetCollection(vals).Add(key, value)
-	tx.GetCollection(names).Add("", key)
+	tx.GetCollection(names).Add(key, key)
 
 	col := tx.GetCollection(variables.ArgsCombinedSize)
 	i := col.GetFirstInt64("") + int64(len(key)+len(value))
@@ -702,7 +703,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 			// in case we receive Args, we must add manually the args and argsnames, otherwise it will be overwritten
 			for kk, vv := range m {
 				tx.GetCollection(variables.Args).Set(kk, vv)
-				tx.GetCollection(variables.ArgsNames).AddUnique("", kk)
+				tx.GetCollection(variables.ArgsNames).AddUnique(kk, kk)
 			}
 		} else {
 			for mk, mv := range m {
