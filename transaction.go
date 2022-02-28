@@ -253,8 +253,6 @@ func (tx *Transaction) matchVariable(match MatchData) {
 	if match.Key != "" {
 		varName += fmt.Sprintf(":%s", match.Key)
 	}
-	// TODO this is a temporary fix, the match should be VARIABLE:key
-	varName += fmt.Sprintf(":%s", match.Value)
 	// Array of values
 	matchedVars := tx.GetCollection(variables.MatchedVars)
 	// Last value
@@ -530,10 +528,10 @@ func (tx *Transaction) AddArgument(orig string, key string, value string) {
 		names = variables.ArgsPostNames
 	}
 	tx.GetCollection(variables.Args).Add(key, value)
-	tx.GetCollection(variables.ArgsNames).Add("", key)
+	tx.GetCollection(variables.ArgsNames).AddUnique("", key)
 
 	tx.GetCollection(vals).Add(key, value)
-	tx.GetCollection(names).Add("", key)
+	tx.GetCollection(names).AddUnique("", key)
 
 	col := tx.GetCollection(variables.ArgsCombinedSize)
 	i := col.GetFirstInt64("") + int64(len(key)+len(value))
