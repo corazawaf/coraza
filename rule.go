@@ -370,9 +370,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 			}
 
 		}
-		if r.Log {
-			tx.MatchRule(r, matchedValues)
-		}
+		tx.MatchRule(r, matchedValues)
 
 	}
 	return matchedValues
