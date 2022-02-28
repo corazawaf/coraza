@@ -478,16 +478,18 @@ func TestVariablesMatch(t *testing.T) {
 		Value:        "samplevalue",
 	})
 	expect := map[variables.RuleVariable]string{
-		variables.MatchedVar:       "samplevalue",
-		variables.MatchedVarName:   "ARGS_NAMES:sample",
-		variables.MatchedVars:      "samplevalue",
-		variables.MatchedVarsNames: "ARGS_NAMES:sample",
+		variables.MatchedVar:     "samplevalue",
+		variables.MatchedVarName: "ARGS_NAMES:sample",
 	}
 
 	for k, v := range expect {
 		if m := tx.GetCollection(k).GetFirstString(""); m != v {
 			t.Errorf("failed to match variable %s, got %s", k.Name(), m)
 		}
+	}
+
+	if v := tx.GetCollection(variables.MatchedVars).GetFirstString("sample"); v != "samplevalue" {
+		t.Errorf("failed to match variable %s, got %s", variables.MatchedVars.Name(), v)
 	}
 }
 

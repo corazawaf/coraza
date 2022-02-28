@@ -250,7 +250,6 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 // MATCHED_VARS, MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES
 func (tx *Transaction) matchVariable(match MatchData) {
 	varName := strings.Builder{}
-	//varName.Grow(len(match.VariableName) * 2)
 	varName.WriteString(match.VariableName)
 	if match.Key != "" {
 		varName.WriteByte(':')
@@ -267,7 +266,7 @@ func (tx *Transaction) matchVariable(match MatchData) {
 	// Array of keys
 	matchedVarsNames := tx.GetCollection(variables.MatchedVarsNames)
 
-	matchedVars.Add("", match.Value)
+	matchedVars.Add(match.Key, match.Value)
 	matchedVar.SetIndex("", 0, match.Value)
 	// fmt.Printf("%s: %s\n", match.VariableName, match.Value)
 
