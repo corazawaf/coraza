@@ -42,14 +42,9 @@ func directiveSecComponentSignature(w *coraza.Waf, opts string) error {
 }
 
 func directiveSecMarker(w *coraza.Waf, opts string) error {
-	rule, err := ParseRule(RuleOptions{
-		Waf:          w,
-		Data:         "id:1, pass, nolog",
-		WithOperator: false,
-	})
-	if err != nil {
-		return err
-	}
+	rule := coraza.NewRule()
+	rule.Directive = "SecMarker"
+	rule.Raw = fmt.Sprintf("%s %s", rule.Directive, opts)
 	rule.SecMark = opts
 	rule.ID = 0
 	rule.Phase = 0
@@ -63,6 +58,7 @@ func directiveSecMarker(w *coraza.Waf, opts string) error {
 func directiveSecAction(w *coraza.Waf, opts string) error {
 	rule, err := ParseRule(RuleOptions{
 		Waf:          w,
+		Directive:    "SecAction",
 		Data:         opts,
 		WithOperator: false,
 	})
@@ -85,6 +81,7 @@ func directiveSecRule(w *coraza.Waf, opts string) error {
 	ignoreErrors := w.Config.Get("ignore_rule_compilation_errors", false).(bool)
 	rule, err := ParseRule(RuleOptions{
 		Waf:          w,
+		Directive:    "SecRule",
 		Data:         opts,
 		WithOperator: true,
 		Line:         line,

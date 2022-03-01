@@ -314,6 +314,7 @@ type RuleOptions struct {
 	Waf          *coraza.Waf
 	WithOperator bool
 	Line         int
+	Directive    string
 	Data         string
 }
 
@@ -374,11 +375,7 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 		}
 	}
 	rule := rp.Rule()
-	if options.WithOperator {
-		rule.Raw = "SecRule " + options.Data
-	} else {
-		rule.Raw = options.Data
-	}
+	rule.Raw = fmt.Sprintf("%s %s", options.Directive, options.Data)
 	rule.File = options.ConfigFile
 	rule.Line = options.Line
 

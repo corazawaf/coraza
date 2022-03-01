@@ -127,6 +127,9 @@ type ruleTransformationParams struct {
 // Rule is used to test a Transaction against certain operators
 // and execute actions
 type Rule struct {
+	// Directive contains the rule directive
+	Directive string
+
 	// Contains a list of variables that will be compiled
 	// by a transaction
 	variables []ruleVariableParams
@@ -145,7 +148,7 @@ type Rule struct {
 	actions []ruleActionParams
 
 	// Contains the Id of the parent rule if you are inside
-	// a chain. Otherwise it will be 0
+	// a chain. Otherwise, it will be 0
 	ParentID int
 
 	// Capture is used by the transaction to tell the operator
