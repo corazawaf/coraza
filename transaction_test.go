@@ -488,7 +488,7 @@ func TestVariablesMatch(t *testing.T) {
 		}
 	}
 
-	if v := tx.GetCollection(variables.MatchedVars).GetFirstString("sample"); v != "samplevalue" {
+	if v := tx.GetCollection(variables.MatchedVars).GetFirstString("ARGS_NAMES:sample"); v != "samplevalue" {
 		t.Errorf("failed to match variable %s, got %s", variables.MatchedVars.Name(), v)
 	}
 }
