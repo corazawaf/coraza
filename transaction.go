@@ -266,11 +266,11 @@ func (tx *Transaction) matchVariable(match MatchData) {
 	// Array of keys
 	matchedVarsNames := tx.GetCollection(variables.MatchedVarsNames)
 
-	matchedVars.Add(match.Key, match.Value)
+	matchedVars.Add(varName.String(), match.Value)
 	matchedVar.SetIndex("", 0, match.Value)
 	// fmt.Printf("%s: %s\n", match.VariableName, match.Value)
 
-	matchedVarsNames.Add("", varName.String())
+	matchedVarsNames.Add(varName.String(), varName.String())
 	matchedVarName.SetIndex("", 0, varName.String())
 }
 
