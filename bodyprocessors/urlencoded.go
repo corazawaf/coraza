@@ -51,12 +51,14 @@ func (ubp *urlencodedBodyProcessor) Read(reader io.Reader, _ Options) error {
 		m[k] = vs
 		keys = append(keys, k)
 	}
+	pn := map[string][]string{}
+	for _, value := range keys {
+		pn[value] = []string{value}
+	}
 	ubp.collections = &CollectionsMap{
-		variables.ArgsPost: m,
-		variables.ArgsPostNames: map[string][]string{
-			"": keys,
-		},
-		variables.Args: m,
+		variables.ArgsPost:      m,
+		variables.ArgsPostNames: pn,
+		variables.Args:          m,
 		variables.RequestBody: map[string][]string{
 			"": {b},
 		},
