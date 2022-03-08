@@ -164,7 +164,7 @@ func TestRuleLogging(t *testing.T) {
 	tx.AddArgument("GET", "test1", "123")
 	tx.AddArgument("GET", "test2", "456")
 	tx.ProcessRequestHeaders()
-	if len(tx.MatchedRules) != 3 {
+	if len(tx.MatchedRules) != 4 {
 		t.Errorf("failed to match rules with %d", len(tx.MatchedRules))
 	}
 	// we expect 3 logs

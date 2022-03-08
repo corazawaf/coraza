@@ -145,7 +145,7 @@ type Rule struct {
 	actions []ruleActionParams
 
 	// Contains the Id of the parent rule if you are inside
-	// a chain. Otherwise it will be 0
+	// a chain. Otherwise, it will be 0
 	ParentID int
 
 	// Capture is used by the transaction to tell the operator
@@ -370,9 +370,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 			}
 
 		}
-		if r.Log {
-			tx.MatchRule(r, matchedValues)
-		}
+		tx.MatchRule(r, matchedValues)
 
 	}
 	return matchedValues
