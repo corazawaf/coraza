@@ -88,6 +88,10 @@ func (mbp *multipartBodyProcessor) Read(reader io.Reader, options Options) error
 
 		}
 	}
+	pn := map[string][]string{}
+	for _, value := range postNames {
+		pn[value] = []string{value}
+	}
 	mbp.collections = &CollectionsMap{
 		variables.FilesNames: map[string][]string{
 			"": filesArgNames,
@@ -101,11 +105,9 @@ func (mbp *multipartBodyProcessor) Read(reader io.Reader, options Options) error
 		variables.FilesSizes: map[string][]string{
 			"": fileSizes,
 		},
-		variables.ArgsPostNames: map[string][]string{
-			"": postNames,
-		},
-		variables.ArgsPost: postFields,
-		variables.Args:     postFields,
+		variables.ArgsPostNames: pn,
+		variables.ArgsPost:      postFields,
+		variables.Args:          postFields,
 		variables.FilesCombinedSize: map[string][]string{
 			"": {fmt.Sprintf("%d", totalSize)},
 		},
