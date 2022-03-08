@@ -127,9 +127,6 @@ type ruleTransformationParams struct {
 // Rule is used to test a Transaction against certain operators
 // and execute actions
 type Rule struct {
-	// Directive contains the rule directive
-	Directive string
-
 	// Contains a list of variables that will be compiled
 	// by a transaction
 	variables []ruleVariableParams

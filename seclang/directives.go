@@ -43,8 +43,7 @@ func directiveSecComponentSignature(w *coraza.Waf, opts string) error {
 
 func directiveSecMarker(w *coraza.Waf, opts string) error {
 	rule := coraza.NewRule()
-	rule.Directive = "SecMarker"
-	rule.Raw = fmt.Sprintf("%s %s", rule.Directive, opts)
+	rule.Raw = fmt.Sprintf("SecMarker %s", opts)
 	rule.SecMark = opts
 	rule.ID = 0
 	rule.Phase = 0
