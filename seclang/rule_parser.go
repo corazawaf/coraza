@@ -173,16 +173,19 @@ func (p *RuleParser) ParseVariables(vars string) error {
 // A operator must begin with @ (like @rx), if no operator is specified, rx
 // will be used. Everything after the operator will be used as operator argument
 func (p *RuleParser) ParseOperator(operator string) error {
+	// default operator @RX
 	if len(operator) == 0 || operator[0] != '@' && operator[0] != '!' {
-		// default operator RX
 		operator = "@rx " + operator
+	} else if operator[0] == '!' && operator[1] != '@' {
+		operator = "!@rx " + operator[1:]
 	}
+
 	spl := strings.SplitN(operator, " ", 2)
-	op := spl[0]
+	op := strings.TrimSpace(spl[0])
 
 	opdata := ""
 	if len(spl) == 2 {
-		opdata = spl[1]
+		opdata = strings.TrimSpace(spl[1])
 	}
 	if op[0] == '@' {
 		// we trim @
