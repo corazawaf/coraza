@@ -174,9 +174,12 @@ func (p *RuleParser) ParseVariables(vars string) error {
 // will be used. Everything after the operator will be used as operator argument
 func (p *RuleParser) ParseOperator(operator string) error {
 	// default operator @RX
-	if len(operator) == 0 || operator[0] != '@' && operator[0] != '!' {
+	switch {
+	case len(operator) == 0 || operator[0] != '@' && operator[0] != '!':
 		operator = "@rx " + operator
-	} else if operator[0] == '!' && operator[1] != '@' {
+	case len(operator) == 1 && operator == "!":
+		operator = "!@rx"
+	case len(operator) > 1 && operator[0] == '!' && operator[1] != '@':
 		operator = "!@rx " + operator[1:]
 	}
 
