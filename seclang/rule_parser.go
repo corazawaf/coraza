@@ -330,7 +330,9 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
 
-	defaultActions := options.Waf.Config.Get("rule_default_actions", []string{}).([]string)
+	defaultActions := options.Waf.Config.Get("rule_default_actions", []string{
+		"phase:2,log,auditlog,pass",
+	}).([]string)
 	disabledRuleOperators := options.Waf.Config.Get("disabled_rule_operators", []string{}).([]string)
 
 	for _, da := range defaultActions {
