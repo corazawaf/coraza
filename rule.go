@@ -320,7 +320,9 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 							Key:          arg.Key,
 							Value:        carg,
 						}
-						r.matchVariable(tx, mr)
+						if r.ParentID == 0 {
+							r.matchVariable(tx, mr)
+						}
 						matchedValues = append(matchedValues, mr)
 
 						// we only capture when it matches
