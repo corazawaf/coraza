@@ -173,16 +173,22 @@ func (p *RuleParser) ParseVariables(vars string) error {
 // A operator must begin with @ (like @rx), if no operator is specified, rx
 // will be used. Everything after the operator will be used as operator argument
 func (p *RuleParser) ParseOperator(operator string) error {
-	if len(operator) == 0 || operator[0] != '@' && operator[0] != '!' {
-		// default operator RX
+	// default operator @RX
+	switch {
+	case len(operator) == 0 || operator[0] != '@' && operator[0] != '!':
 		operator = "@rx " + operator
+	case len(operator) == 1 && operator == "!":
+		operator = "!@rx"
+	case len(operator) > 1 && operator[0] == '!' && operator[1] != '@':
+		operator = "!@rx " + operator[1:]
 	}
+
 	spl := strings.SplitN(operator, " ", 2)
-	op := spl[0]
+	op := strings.TrimSpace(spl[0])
 
 	opdata := ""
 	if len(spl) == 2 {
-		opdata = spl[1]
+		opdata = strings.TrimSpace(spl[1])
 	}
 	if op[0] == '@' {
 		// we trim @
@@ -314,6 +320,7 @@ type RuleOptions struct {
 	Waf          *coraza.Waf
 	WithOperator bool
 	Line         int
+	Directive    string
 	Data         string
 }
 
@@ -374,11 +381,7 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 		}
 	}
 	rule := rp.Rule()
-	if options.WithOperator {
-		rule.Raw = "SecRule " + options.Data
-	} else {
-		rule.Raw = options.Data
-	}
+	rule.Raw = fmt.Sprintf("%s %s", options.Directive, options.Data)
 	rule.File = options.ConfigFile
 	rule.Line = options.Line
 

@@ -42,17 +42,13 @@ func directiveSecComponentSignature(w *coraza.Waf, opts string) error {
 }
 
 func directiveSecMarker(w *coraza.Waf, opts string) error {
-	rule, err := ParseRule(RuleOptions{
-		Waf:          w,
-		Data:         "id:1, pass, nolog",
-		WithOperator: false,
-	})
-	if err != nil {
-		return err
-	}
+	rule := coraza.NewRule()
+	rule.Raw = fmt.Sprintf("SecMarker %s", opts)
 	rule.SecMark = opts
 	rule.ID = 0
 	rule.Phase = 0
+	rule.Line = w.Config.Get("parser_last_line", 0).(int)
+	rule.File = w.Config.Get("parser_config_file", "").(string)
 	if err := w.Rules.Add(rule); err != nil {
 		return newCompileRuleError(err, opts)
 	}
@@ -63,8 +59,11 @@ func directiveSecMarker(w *coraza.Waf, opts string) error {
 func directiveSecAction(w *coraza.Waf, opts string) error {
 	rule, err := ParseRule(RuleOptions{
 		Waf:          w,
+		Directive:    "SecAction",
 		Data:         opts,
 		WithOperator: false,
+		Line:         w.Config.Get("parser_last_line", 0).(int),
+		ConfigFile:   w.Config.Get("parser_config_file", "").(string),
 	})
 	if err != nil {
 		return newCompileRuleError(err, opts)
@@ -79,17 +78,15 @@ func directiveSecAction(w *coraza.Waf, opts string) error {
 }
 
 func directiveSecRule(w *coraza.Waf, opts string) error {
-	line := w.Config.Get("parser_last_line", 0).(int)
-	configFile := w.Config.Get("parser_config_file", "").(string)
-	configDir := w.Config.Get("parser_config_dir", "").(string)
 	ignoreErrors := w.Config.Get("ignore_rule_compilation_errors", false).(bool)
 	rule, err := ParseRule(RuleOptions{
 		Waf:          w,
+		Directive:    "SecRule",
 		Data:         opts,
 		WithOperator: true,
-		Line:         line,
-		ConfigFile:   configFile,
-		ConfigDir:    configDir,
+		Line:         w.Config.Get("parser_last_line", 0).(int),
+		ConfigFile:   w.Config.Get("parser_config_file", "").(string),
+		ConfigDir:    w.Config.Get("parser_config_dir", "").(string),
 	})
 	if err != nil && !ignoreErrors {
 		return newCompileRuleError(err, opts)
