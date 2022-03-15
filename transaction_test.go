@@ -476,7 +476,7 @@ func TestVariablesMatch(t *testing.T) {
 		Variable:     variables.ArgsNames,
 		Key:          "sample",
 		Value:        "samplevalue",
-	})
+	}, 0)
 	expect := map[variables.RuleVariable]string{
 		variables.MatchedVar:     "samplevalue",
 		variables.MatchedVarName: "ARGS_NAMES:sample",

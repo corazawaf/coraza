@@ -248,7 +248,7 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 
 // matchVariable Creates the MATCHED_ variables required by chains and macro expansion
 // MATCHED_VARS, MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES
-func (tx *Transaction) matchVariable(match MatchData) {
+func (tx *Transaction) matchVariable(match MatchData, parentID int) {
 	varName := strings.Builder{}
 	varName.WriteString(match.VariableName)
 	if match.Key != "" {
@@ -257,21 +257,24 @@ func (tx *Transaction) matchVariable(match MatchData) {
 	}
 	// Array of values
 	matchedVars := tx.GetCollection(variables.MatchedVars)
-	// Last value
-	matchedVar := tx.GetCollection(variables.MatchedVar)
-	matchedVar.Reset()
-	// Last key
-	matchedVarName := tx.GetCollection(variables.MatchedVarName)
-	matchedVarName.Reset()
 	// Array of keys
 	matchedVarsNames := tx.GetCollection(variables.MatchedVarsNames)
 
 	matchedVars.Add(varName.String(), match.Value)
-	matchedVar.SetIndex("", 0, match.Value)
-	// fmt.Printf("%s: %s\n", match.VariableName, match.Value)
-
 	matchedVarsNames.Add(varName.String(), varName.String())
-	matchedVarName.SetIndex("", 0, varName.String())
+
+	//Only keep the last value/key for parent rule
+	if parentID == 0 {
+		// Last value
+		matchedVar := tx.GetCollection(variables.MatchedVar)
+		matchedVar.Reset()
+		matchedVar.SetIndex("", 0, match.Value)
+		// Last key
+		matchedVarName := tx.GetCollection(variables.MatchedVarName)
+		matchedVarName.Reset()
+		matchedVarName.SetIndex("", 0, varName.String())
+	}
+
 }
 
 // MatchRule Matches a rule to be logged

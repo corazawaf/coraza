@@ -320,9 +320,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 							Key:          arg.Key,
 							Value:        carg,
 						}
-						if r.ParentID == 0 {
-							r.matchVariable(tx, mr)
-						}
+						r.matchVariable(tx, mr)
 						matchedValues = append(matchedValues, mr)
 
 						// we only capture when it matches
@@ -395,7 +393,7 @@ func (r *Rule) matchVariable(tx *Transaction, m MatchData) {
 	// we must match the vars before running the chains
 
 	// We run non-disruptive actions even if there is no chain match
-	tx.matchVariable(m)
+	tx.matchVariable(m, r.ParentID)
 	for _, a := range r.actions {
 		if a.Function.Type() == types.ActionTypeNondisruptive {
 			tx.Waf.Logger.Debug("evaluating action", zap.String("type", "non_disruptive"),
