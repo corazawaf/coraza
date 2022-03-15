@@ -263,7 +263,7 @@ func (tx *Transaction) matchVariable(match MatchData, parentID int) {
 	matchedVars.Add(varName.String(), match.Value)
 	matchedVarsNames.Add(varName.String(), varName.String())
 
-	//Only keep the last value/key for parent rule
+	// Only keep the last value/key for parent rule
 	if parentID == 0 {
 		// Last value
 		matchedVar := tx.GetCollection(variables.MatchedVar)
