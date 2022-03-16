@@ -5,13 +5,13 @@
 [![CodeQL](https://github.com/corazawaf/coraza/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/corazawaf/coraza/actions/workflows/codeql-analysis.yml)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=jptosso_coraza-waf&metric=coverage)](https://sonarcloud.io/dashboard?id=jptosso_coraza-waf)
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
-[![OWASP Lab Project](https://img.shields.io/badge/owasp-incubator%20project-brightgreen)](https://owasp.org/www-project-coraza-web-application-firewall)
+[![OWASP Lab Project](https://img.shields.io/badge/owasp-lab%20project-brightgreen)](https://owasp.org/www-project-coraza-web-application-firewall)
 [![GoDoc](https://godoc.org/github.com/corazawaf/coraza?status.svg)](https://godoc.org/github.com/corazawaf/coraza/v2)
 
 <div align="center">
 	<img src="https://coraza.io/images/logo.png" width="50%">
 </div>
-Welcome to OWASP Coraza Web Application Firewall, Coraza is a golang enterprise-grade Web Application Firewall framework that supports Modsecurity's seclang language and is 100% compatible with OWASP Core Ruleset.
+Welcome to OWASP Coraza Web Application Firewall, OWASP Coraza is a golang enterprise-grade Web Application Firewall framework that supports Modsecurity's seclang language and is 100% compatible with OWASP Core Ruleset.
 
 ## Prerequisites
 
@@ -37,6 +37,18 @@ go test ./...
 go test -race ./...
 ```
 
+Using pre-commit 
+
+```sh
+pip install pre-commit
+pre-commit run --all-files
+```
+
+You can also install the pre-commit git hook by running
+```sh
+pre-commit install
+```
+
 ## Coraza v2 differences with v1
 
 * Full internal API refactor, public API has not changed
@@ -46,6 +58,7 @@ go test -race ./...
 * Many features removed and transformed into plugins: XML (Mostly), GeoIP and PCRE regex
 * Better debug logging
 * New error logging (like modsecurity)
+* Better performance
 
 ## Your first Coraza WAF project
 
@@ -118,6 +131,17 @@ func main() {
 
 ## Troubleshooting
 
+**Dependency issues**: 
+```
+go get: github.com/jptosso/coraza-waf/v2@v2.0.0-rc.3: parsing go.mod:
+	module declares its path as: github.com/corazawaf/coraza/v2
+	        but was required as: github.com/jptosso/coraza-waf/v2
+```
+Coraza was migrated from github.com/jptosso/coraza-waf to github.com/corazawaf/coraza. Most dependencies has already been updated to use the new repo, but you must make sure they all use v2.0.0-rc.3+. You may use the following command to fix the error:
+```sh
+go get -u github.com/corazawaf/coraza@v2.0.0-rc.3
+```
+
 ## How to contribute
 
 Contributions are welcome. There are many TODOs, functionalities, fixes, bug reports, and any help you can provide. Just send your PR.
@@ -136,8 +160,10 @@ egrep -Rin "TODO|FIXME" -R --exclude-dir=vendor *
 
 * [Babiel](https://babiel.com) (supporter)
 
-* Author on Twitter [@jptosso](https://twitter.com/jptosso)
+### Author on Twitter 
+
+- [@jptosso](https://twitter.com/jptosso)
 
 ## Donations
 
-For donations, see [Donations site](https://www.owasp.org/donate/)
+For donations, see [Donations site](https://owasp.org/donate/?reponame=www-project-coraza-web-application-firewall&title=OWASP+Coraza+Web+Application+Firewall)
