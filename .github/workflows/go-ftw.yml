@@ -47,10 +47,10 @@ jobs:
         ls -lh
         sed -i 's/\/\/ _ "github.com/_ "github.com/g' main.go
         mv main.go caddy/main.go
-        go get github.com/jptosso/coraza-caddy@7123efa
+        go get github.com/jptosso/coraza-caddy@ffa1472
         go mod tidy
         go get ./...
-        go get -u github.com/jptosso/coraza-pcre@1bea0f0
+        go get -u github.com/jptosso/coraza-pcre@593842e
         go install caddy/main.go
         sudo setcap CAP_NET_BIND_SERVICE=+eip $(which caddy)
     - name: Start Caddy server
