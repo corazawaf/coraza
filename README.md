@@ -139,7 +139,7 @@ go get: github.com/jptosso/coraza-waf/v2@v2.0.0-rc.3: parsing go.mod:
 ```
 Coraza was migrated from github.com/jptosso/coraza-waf to github.com/corazawaf/coraza. Most dependencies has already been updated to use the new repo, but you must make sure they all use v2.0.0-rc.3+. You may use the following command to fix the error:
 ```sh
-go get -u github.com/corazawaf/coraza@v2.0.0-rc.3
+go get -u github.com/corazawaf/coraza/v2@v2.0.0-rc.3
 ```
 
 ## How to contribute
