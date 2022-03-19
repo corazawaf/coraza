@@ -33,6 +33,8 @@ type MatchData struct {
 	Key string
 	// Value of the current VARIABLE:KEY
 	Value string
+	// Value of parent ID for a chained rule
+	ParentRuleID int
 }
 
 // // isNil is used to check whether the MatchData is empty

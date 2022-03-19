@@ -248,7 +248,7 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 
 // matchVariable Creates the MATCHED_ variables required by chains and macro expansion
 // MATCHED_VARS, MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES
-func (tx *Transaction) matchVariable(match MatchData, parentID int) {
+func (tx *Transaction) matchVariable(match MatchData) {
 	varName := strings.Builder{}
 	varName.WriteString(match.VariableName)
 	if match.Key != "" {
@@ -264,7 +264,7 @@ func (tx *Transaction) matchVariable(match MatchData, parentID int) {
 	matchedVarsNames.Add(varName.String(), varName.String())
 
 	// Only keep the last value/key for parent rule
-	if parentID == 0 {
+	if match.ParentRuleID == 0 {
 		// Last value
 		matchedVar := tx.GetCollection(variables.MatchedVar)
 		matchedVar.Reset()
