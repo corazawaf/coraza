@@ -76,16 +76,34 @@ func (js *jsonBodyProcessor) VariableHook() variables.RuleVariable {
 // Transform JSON to a map[string]string
 // Example input: {"data": {"name": "John", "age": 30}, "items": [1,2,3]}
 // Example output: map[string]string{"json.data.name": "John", "json.data.age": "30", "json.items.0": "1", "json.items.1": "2", "json.items.2": "3"}
+// Example input: [{"data": {"name": "John", "age": 30}, "items": [1,2,3]}]
+// Example output: map[string]string{"json.0.data.name": "John", "json.0.data.age": "30", "json.0.items.0": "1", "json.0.items.1": "2", "json.0.items.2": "3"}
 // TODO add some anti DOS protection
 func jsonToMap(data []byte) (map[string]string, error) {
-	result := make(map[string]interface{})
-	if err := json.Unmarshal(data, &result); err != nil {
+	var (
+		result interface{}
+		m      map[string]string
+		err    error
+	)
+	if err = json.Unmarshal(data, &result); err != nil {
 		return nil, err
 	}
-	m, err := interfaceToMap(result)
-	if err != nil {
-		return nil, err
+
+	switch result := result.(type) {
+	case map[string]interface{}:
+		m, err = interfaceToMap(result)
+		if err != nil {
+			return nil, err
+		}
+	case []interface{}:
+		m, err = arrayToMap(result)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("invalid JSON")
 	}
+
 	res := make(map[string]string)
 	for key, value := range m {
 		res["json."+key] = value
@@ -93,46 +111,75 @@ func jsonToMap(data []byte) (map[string]string, error) {
 	return res, nil
 }
 
+// Transform []interface{} into map[string]string recursively
+func arrayToMap(data []interface{}) (map[string]string, error) {
+	result := make(map[string]string)
+	for index, value := range data {
+		switch value := value.(type) {
+		case map[string]interface{}:
+			m, err := interfaceToMap(value)
+			if err != nil {
+				return nil, err
+			}
+			for k, v := range m {
+				result[fmt.Sprintf("%d.%s", index, k)] = v
+			}
+		case []interface{}:
+			subMap, err := arrayToMap(value)
+			if err != nil {
+				return nil, err
+			}
+			for k, v := range subMap {
+				result[fmt.Sprintf("%d.%s", index, k)] = v
+			}
+		default:
+			return nil, fmt.Errorf("invalid JSON")
+		}
+	}
+	return result, nil
+}
+
 // Transform map[string]interface{} into map[string]string recursively
 func interfaceToMap(data map[string]interface{}) (map[string]string, error) {
 	result := make(map[string]string)
 	for key, value := range data {
-		switch v := value.(type) {
+		switch value := value.(type) {
 		case []interface{}:
 			m := map[string]interface{}{}
-			for i, v := range value.([]interface{}) {
+			for i, v := range value {
 				m[strconv.Itoa(i)] = v
 			}
 			// we set the parent key to count the number of items
 			result[key] = strconv.Itoa(len(m))
+
 			m2, err := interfaceToMap(m)
 			if err != nil {
 				return nil, err
 			}
-			for key2, value2 := range m2 {
-				result[key+"."+key2] = value2
+			for k, v := range m2 {
+				result[fmt.Sprintf("%s.%s", key, k)] = v
 			}
 		case string:
-			result[key] = value.(string)
+			result[key] = value
 		case int:
-			result[key] = strconv.Itoa(value.(int))
+			result[key] = strconv.Itoa(value)
 		case nil:
 			// TODO check if we ignore this or let it pass
 			result[key] = ""
 		case float64:
-			result[key] = strconv.FormatFloat(value.(float64), 'f', -1, 64)
+			result[key] = strconv.FormatFloat(value, 'f', -1, 64)
 		case bool:
-			result[key] = strconv.FormatBool(value.(bool))
+			result[key] = strconv.FormatBool(value)
 		case map[string]interface{}:
-			submap, err := interfaceToMap(value.(map[string]interface{}))
+			subMap, err := interfaceToMap(value)
 			if err != nil {
 				return nil, err
 			}
-			for subkey, subvalue := range submap {
-				result[key+"."+subkey] = subvalue
+			for k, v := range subMap {
+				result[fmt.Sprintf("%s.%s", key, k)] = v
 			}
 		default:
-			return nil, fmt.Errorf("failed to unmarshall %s", v)
+			return nil, fmt.Errorf("failed to unmarshall %s", value)
 		}
 	}
 	return result, nil
