@@ -19,16 +19,16 @@ import (
 	"strings"
 )
 
-// WafConfig is used to store the configuration of the WAF
+// Config is used to store the configuration of the WAF
 // Internal configurations are not exported.
 // This is used to connect directives with audit loggers.
-// A Waf instance will share it's WafConfig object with the
+// A Waf instance will share it's Config object with the
 // audit loggers.
-type WafConfig map[string]interface{}
+type Config map[string]interface{}
 
 // Get returns the configuration value for the given key
 // If the key is not found, it returns the default value
-func (w WafConfig) Get(key string, defaultValue interface{}) interface{} {
+func (w Config) Get(key string, defaultValue interface{}) interface{} {
 	if value, ok := w[key]; ok {
 		return value
 	}
@@ -36,7 +36,7 @@ func (w WafConfig) Get(key string, defaultValue interface{}) interface{} {
 }
 
 // Set sets the configuration value for the given key
-func (w WafConfig) Set(key string, value interface{}) {
+func (w Config) Set(key string, value interface{}) {
 	w[key] = value
 }
 

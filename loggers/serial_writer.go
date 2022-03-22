@@ -29,10 +29,10 @@ type serialWriter struct {
 	formatter LogFormatter
 }
 
-func (sl *serialWriter) Init(l types.WafConfig) error {
-	fileName := l.Get("auditlog_file", "").(string)
-	fileMode := l.Get("auditlog_file_mode", fs.FileMode(0644)).(fs.FileMode)
-	sl.formatter = l.Get("auditlog_formatter", nativeFormatter).(LogFormatter)
+func (sl *serialWriter) Init(c types.Config) error {
+	fileName := c.Get("auditlog_file", "/dev/null").(string)
+	fileMode := c.Get("auditlog_file_mode", fs.FileMode(0644)).(fs.FileMode)
+	sl.formatter = c.Get("auditlog_formatter", nativeFormatter).(LogFormatter)
 	var err error
 	sl.file, err = os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, fileMode)
 	if err != nil {

@@ -32,7 +32,7 @@ func TestCLogFileCreation(t *testing.T) {
 	if err != nil {
 		t.Error("failed to create concurrent logger file")
 	}
-	config := types.WafConfig{
+	config := types.Config{
 		"auditlog_file":      file.Name(),
 		"auditlog_dir":       "/tmp",
 		"auditlog_file_mode": fs.FileMode(0777),
