@@ -16,7 +16,6 @@ package seclang
 
 import (
 	"encoding/json"
-	"io/fs"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -105,7 +104,7 @@ func Test_directive(t *testing.T) {
 	if err := p.FromString("SecRuleRemoveByTag test"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if p.waf.Rules.Count() != 0 {
+	if p.options.Waf.Rules.Count() != 0 {
 		t.Error("Failed to remove rule with SecRuleRemoveByTag")
 	}
 	if err := p.FromString(`SecAction "id:1,msg:'test'"`); err != nil {
@@ -114,7 +113,7 @@ func Test_directive(t *testing.T) {
 	if err := p.FromString("SecRuleRemoveByMsg test"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if p.waf.Rules.Count() != 0 {
+	if p.options.Waf.Rules.Count() != 0 {
 		t.Error("Failed to remove rule with SecRuleRemoveByMsg")
 	}
 	if err := p.FromString(`SecAction "id:1"`); err != nil {
@@ -123,19 +122,19 @@ func Test_directive(t *testing.T) {
 	if err := p.FromString("SecRuleRemoveById 1"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if p.waf.Rules.Count() != 0 {
+	if p.options.Waf.Rules.Count() != 0 {
 		t.Error("Failed to remove rule with SecRuleRemoveById")
 	}
 	if err := p.FromString("SecResponseBodyMimeTypesClear"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if len(p.waf.ResponseBodyMimeTypes) != 0 {
+	if len(p.options.Waf.ResponseBodyMimeTypes) != 0 {
 		t.Error("failed to set SecResponseBodyMimeTypesClear")
 	}
 	if err := p.FromString("SecResponseBodyMimeType text/html"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if p.waf.ResponseBodyMimeTypes[0] != "text/html" {
+	if p.options.Waf.ResponseBodyMimeTypes[0] != "text/html" {
 		t.Error("failed to set SecResponseBodyMimeType")
 	}
 	if err := p.FromString(`SecServerSignature "Microsoft-IIS/6.0"`); err != nil {
@@ -154,14 +153,20 @@ func TestDebugDirectives(t *testing.T) {
 	tmpf, _ := ioutil.TempFile("/tmp", "*.log")
 	tmp := tmpf.Name()
 	p, _ := NewParser(waf)
-	err := directiveSecDebugLog(waf, tmp)
+	err := directiveSecDebugLog(&DirectiveOptions{
+		Waf:  waf,
+		Opts: tmp,
+	})
 	if err != nil {
 		t.Error(err)
 	}
-	if err := directiveSecDebugLogLevel(waf, "5"); err != nil {
+	if err := directiveSecDebugLogLevel(&DirectiveOptions{
+		Waf:  waf,
+		Opts: "5",
+	}); err != nil {
 		t.Error(err)
 	}
-	p.waf.Logger.Info("abc123")
+	p.options.Waf.Logger.Info("abc123")
 	data, _ := os.ReadFile(tmp)
 	if !strings.Contains(string(data), "abc123") {
 		t.Error("failed to write info log")
@@ -181,12 +186,6 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	SecAuditLogType concurrent
 	`); err != nil {
 		t.Error(err)
-	}
-	if waf.Config.Get("auditlog_dir_mode", fs.FileMode(0555)) != fs.FileMode(0777) {
-		t.Error("failed to set auditlog_dir_mode")
-	}
-	if waf.Config.Get("auditlog_file_mode", fs.FileMode(0555)) != fs.FileMode(0777) {
-		t.Error("failed to set auditlog_file_mode")
 	}
 	id := utils.SafeRandom(10)
 	if waf.AuditLogWriter == nil {
@@ -235,7 +234,10 @@ func TestSecRuleUpdateTargetBy(t *testing.T) {
 	if waf.Rules.Count() != 1 {
 		t.Error("Failed to add rule")
 	}
-	if err := directiveSecRuleUpdateTargetByID(waf, "181 \"REQUEST_HEADERS\""); err != nil {
+	if err := directiveSecRuleUpdateTargetByID(&DirectiveOptions{
+		Waf:  waf,
+		Opts: "181 \"REQUEST_HEADERS\"",
+	}); err != nil {
 		t.Error(err)
 	}
 

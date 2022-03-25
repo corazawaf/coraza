@@ -28,7 +28,7 @@ func TestSerialLogger_Write(t *testing.T) {
 	tmp := path.Join("/tmp", utils.SafeRandom(10)+"-audit.log")
 	defer os.Remove(tmp)
 	writer := &serialWriter{}
-	config := types.WafConfig{
+	config := types.Config{
 		"auditlog_file":      tmp,
 		"auditlog_formatter": jsonFormatter,
 	}

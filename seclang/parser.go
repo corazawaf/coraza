@@ -18,19 +18,19 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"github.com/corazawaf/coraza/v2/types"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/corazawaf/coraza/v2"
-	utils "github.com/corazawaf/coraza/v2/utils/strings"
 	"go.uber.org/zap"
 )
 
 // Parser provides functions to evaluate (compile) SecLang directives
 type Parser struct {
-	waf         *coraza.Waf
+	options     *DirectiveOptions
 	currentLine int
 	currentFile string
 	currentDir  string
@@ -55,12 +55,9 @@ func (p *Parser) FromFile(profilePath string) error {
 	for _, profilePath := range files {
 		p.currentFile = profilePath
 		p.currentDir = filepath.Dir(profilePath)
-		p.waf.Config.Set("last_porfile_line", p.currentLine)
-		p.waf.Config.Set("parser_config_file", p.currentFile)
-		p.waf.Config.Set("parser_config_dir", p.currentDir)
 		file, err := os.ReadFile(profilePath)
 		if err != nil {
-			p.waf.Logger.Error(err.Error(),
+			p.options.Waf.Logger.Error(err.Error(),
 				zap.String("path", profilePath),
 			)
 			return err
@@ -68,7 +65,7 @@ func (p *Parser) FromFile(profilePath string) error {
 
 		err = p.FromString(string(file))
 		if err != nil {
-			p.waf.Logger.Error(err.Error(),
+			p.options.Waf.Logger.Error(err.Error(),
 				zap.String("path", profilePath),
 			)
 			return err
@@ -104,7 +101,6 @@ func (p *Parser) FromString(data string) error {
 }
 
 func (p *Parser) evaluate(data string) error {
-	disabledDirectives := p.waf.Config.Get("disabled_directives", []string{}).([]string)
 	if data == "" || data[0] == '#' {
 		return nil
 	}
@@ -114,7 +110,7 @@ func (p *Parser) evaluate(data string) error {
 	if len(spl) == 2 {
 		opts = spl[1]
 	}
-	p.waf.Logger.Debug("parsing directive",
+	p.options.Waf.Logger.Debug("parsing directive",
 		zap.String("directive", data),
 	)
 	directive := spl[0]
@@ -123,20 +119,21 @@ func (p *Parser) evaluate(data string) error {
 		opts = strings.Trim(opts, `"`)
 	}
 
-	if utils.InSlice(directive, disabledDirectives) {
-		return fmt.Errorf("%s directive is disabled", directive)
-	}
-
 	d, ok := directivesMap[strings.ToLower(directive)]
 	if !ok || d == nil {
 		return p.log("Unsupported directive " + directive)
 	}
-	return d(p.waf, opts)
+
+	p.options.Opts = opts
+	p.options.Config.Set("last_profile_line", p.currentLine)
+	p.options.Config.Set("parser_config_file", p.currentFile)
+	p.options.Config.Set("parser_config_dir", p.currentDir)
+	return d(p.options)
 }
 
 func (p *Parser) log(msg string) error {
 	msg = fmt.Sprintf("[Parser] [Line %d] %s", p.currentLine, msg)
-	p.waf.Logger.Error(msg,
+	p.options.Waf.Logger.Error(msg,
 		zap.Int("line", p.currentLine),
 	)
 	return errors.New(msg)
@@ -148,7 +145,6 @@ func (p *Parser) log(msg string) error {
 // It is mostly used by operators that consumes relative paths
 func (p *Parser) SetCurrentDir(dir string) {
 	p.currentDir = dir
-	p.waf.Config.Set("parser_config_dir", p.currentDir)
 }
 
 // NewParser creates a new parser from a WAF instance
@@ -159,7 +155,10 @@ func NewParser(waf *coraza.Waf) (*Parser, error) {
 		return nil, errors.New("must use a valid waf instance")
 	}
 	p := &Parser{
-		waf: waf,
+		options: &DirectiveOptions{
+			Waf:    waf,
+			Config: make(types.Config),
+		},
 	}
 	return p, nil
 }
