@@ -30,6 +30,8 @@ import (
 	utils "github.com/corazawaf/coraza/v2/utils/strings"
 )
 
+const defaultActionsPhase2 = "phase:2,log,auditlog,pass"
+
 type ruleAction struct {
 	Key   string
 	Value string
@@ -208,7 +210,7 @@ func (p *RuleParser) ParseOperator(operator string) error {
 	// CRS stores the .data files in the same directory as the directives
 	if strings.HasSuffix(op, "FromFile") {
 		// TODO make enhancements here
-		tpath := path.Join(p.options.ConfigDir, opdata)
+		tpath := path.Join(p.options.Config.Get("parser_config_dir", "").(string), opdata)
 		var err error
 		content, err := os.ReadFile(tpath)
 		if err != nil {
@@ -264,7 +266,7 @@ func (p *RuleParser) ParseDefaultActions(actions string) error {
 // ParseActions parses a comma separated list of actions:arguments
 // Arguments can be wrapper inside quotes
 func (p *RuleParser) ParseActions(actions string) error {
-	disabledActions := p.options.Waf.Config.Get("disabled_rule_actions", []string{}).([]string)
+	disabledActions := p.options.Config.Get("disabled_rule_actions", []string{}).([]string)
 	act, err := parseActions(actions)
 	if err != nil {
 		return err
@@ -315,11 +317,9 @@ func (p *RuleParser) Rule() *coraza.Rule {
 
 // RuleOptions contains the options used to compile a rule
 type RuleOptions struct {
-	ConfigFile   string
-	ConfigDir    string
-	Waf          *coraza.Waf
 	WithOperator bool
-	Line         int
+	Waf          *coraza.Waf
+	Config       types.Config
 	Directive    string
 	Data         string
 }
@@ -336,10 +336,10 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
 
-	defaultActions := options.Waf.Config.Get("rule_default_actions", []string{
-		"phase:2,log,auditlog,pass",
-	}).([]string)
-	disabledRuleOperators := options.Waf.Config.Get("disabled_rule_operators", []string{}).([]string)
+	defaultActions := options.Config.Get("rule_default_actions", []string{
+    defaultActionsPhase2,
+  }).([]string)
+	disabledRuleOperators := options.Config.Get("disabled_rule_operators", []string{}).([]string)
 
 	for _, da := range defaultActions {
 		err = rp.ParseDefaultActions(da)
@@ -384,8 +384,8 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 	}
 	rule := rp.Rule()
 	rule.Raw = fmt.Sprintf("%s %s", options.Directive, options.Data)
-	rule.File = options.ConfigFile
-	rule.Line = options.Line
+	rule.File = options.Config.Get("parser_config_file", "").(string)
+	rule.Line = options.Config.Get("parser_last_line", 0).(int)
 
 	if parent := getLastRuleExpectingChain(options.Waf); parent != nil {
 		rule.ParentID = parent.ID

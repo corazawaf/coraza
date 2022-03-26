@@ -29,14 +29,14 @@ type LogFormatter = func(al *AuditLog) ([]byte, error)
 // A LogWriter receives an auditlog and writes it to the output stream
 // An output stream may be a file, a socket, an http request, etc
 type LogWriter interface {
-	// In case the writer requires previous preparations
-	Init(types.WafConfig) error
-	// Writes the audit log
+	// Init the writer requires previous preparations
+	Init(types.Config) error
+	// Write the audit log
 	// Using the LogFormatter is mandatory to generate a "readable" audit log
 	// It is not sent as a bslice because some writers may require some Audit
 	// metadata.
 	Write(*AuditLog) error
-	// Closes the writer if required
+	// Close the writer if required
 	Close() error
 }
 

@@ -153,9 +153,6 @@ type Waf struct {
 
 	errorLogCb ErrorLogCallback
 
-	// Config stores the "out of the box" configurations for the waf
-	Config types.WafConfig
-
 	// AuditLogWriter is used to write audit logs
 	AuditLogWriter loggers.LogWriter
 }
@@ -306,13 +303,9 @@ func NewWaf() *Waf {
 		loggerAtomicLevel:        &atom,
 		AuditLogRelevantStatus:   regexp.MustCompile(`.*`),
 		RequestBodyAccess:        false,
-		Config: types.WafConfig{
-			"auditlog_file":   "/dev/null",
-			"auditlog_format": "native",
-		},
 	}
 	// We initialize a basic audit log writer to /dev/null
-	if err := logWriter.Init(waf.Config); err != nil {
+	if err := logWriter.Init(types.Config{}); err != nil {
 		fmt.Println(err)
 	}
 	if err := waf.SetDebugLogPath("/dev/null"); err != nil {
@@ -324,7 +317,7 @@ func NewWaf() *Waf {
 
 // SetDebugLogLevel changes the debug level of the Waf instance
 func (w *Waf) SetDebugLogLevel(lvl int) error {
-	// setlevel is concurrent safe
+	// setLevel is concurrent safe
 	switch lvl {
 	case 0:
 		w.loggerAtomicLevel.SetLevel(zapcore.FatalLevel)
