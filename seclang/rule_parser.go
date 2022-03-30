@@ -337,8 +337,8 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 	}
 
 	defaultActions := options.Config.Get("rule_default_actions", []string{
-    defaultActionsPhase2,
-  }).([]string)
+		defaultActionsPhase2,
+	}).([]string)
 	disabledRuleOperators := options.Config.Get("disabled_rule_operators", []string{}).([]string)
 
 	for _, da := range defaultActions {
