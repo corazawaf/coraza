@@ -77,3 +77,24 @@ func TestErrorLine(t *testing.T) {
 		t.Error("failed to find error line, got " + err.Error())
 	}
 }
+
+func TestDefaultActionsForPhase2(t *testing.T) {
+	waf := coraza.NewWaf()
+	p, _ := NewParser(waf)
+	err := p.FromString(`
+	SecAction "id:1,phase:2"
+	SecAction "id:2,phase:1"`)
+	if err != nil {
+		t.Error("that shouldn't happen", err)
+	}
+	if waf.Rules.GetRules()[0].Log != true {
+		t.Error("failed to set log to true because of default actions")
+	}
+	if waf.Rules.GetRules()[0].Audit != true {
+		t.Error("failed to set audit to true because of default actions")
+	}
+
+	if waf.Rules.GetRules()[1].Log || waf.Rules.GetRules()[1].Audit {
+		t.Error("phase 1 rules shouldn't have log set by default actions")
+	}
+}
