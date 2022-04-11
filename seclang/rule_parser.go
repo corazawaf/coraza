@@ -30,6 +30,8 @@ import (
 	utils "github.com/corazawaf/coraza/v2/utils/strings"
 )
 
+const defaultActionsPhase2 = "phase:2,log,auditlog,pass"
+
 type ruleAction struct {
 	Key   string
 	Value string
@@ -334,7 +336,9 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
 
-	defaultActions := options.Config.Get("rule_default_actions", []string{}).([]string)
+	defaultActions := options.Config.Get("rule_default_actions", []string{
+		defaultActionsPhase2,
+	}).([]string)
 	disabledRuleOperators := options.Config.Get("disabled_rule_operators", []string{}).([]string)
 
 	for _, da := range defaultActions {
