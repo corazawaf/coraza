@@ -15,7 +15,6 @@
 package operators
 
 import (
-	"strconv"
 	"testing"
 
 	"github.com/corazawaf/coraza/v2"
@@ -24,7 +23,7 @@ import (
 
 func TestRx1(t *testing.T) {
 	rx := &rx{}
-	if err := rx.Init("."); err != nil {
+	if err := rx.Init("som(.*)ta"); err != nil {
 		t.Error(err)
 	}
 	waf := coraza.NewWaf()
@@ -38,10 +37,7 @@ func TestRx1(t *testing.T) {
 	if vars["0"][0] != "somedata" {
 		t.Error("rx1 failed")
 	}
-	for i, c := range "somedata" {
-		istr := strconv.Itoa(i + 1)
-		if vars[istr][0] != string(c) {
-			t.Errorf("rx1 failed, expected %s, got %s", string(c), vars[istr][0])
-		}
+	if vars["1"][0] != "eda" {
+		t.Error("rx1 failed")
 	}
 }
