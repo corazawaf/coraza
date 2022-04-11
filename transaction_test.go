@@ -420,13 +420,19 @@ func TestProcessRequestMultipart(t *testing.T) {
 	if _, err := tx.ProcessRequest(req); err != nil {
 		t.Error(err)
 	}
+
 	if req.Body == nil {
 		t.Error("failed to process multipart request")
 	}
+
 	reader := bufio.NewReader(req.Body)
-	if _, err := reader.ReadString('\n'); err != nil {
+	if line, err := reader.ReadString('\n'); err != nil {
+		if err == io.EOF && len(line) == 0 {
+			return
+		}
 		t.Error("failed to read multipart request", err)
 	}
+
 	if err := tx.Clean(); err != nil {
 		t.Error(err)
 	}
@@ -507,6 +513,7 @@ func multipartRequest(req *http.Request) error {
 			return err
 		}
 	}
+
 	var fw io.Writer
 	if fw, err = w.CreateFormFile("fupload", tempfile.Name()); err != nil {
 		return err

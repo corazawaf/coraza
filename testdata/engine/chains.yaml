@@ -16,8 +16,13 @@
           triggered_rules:
             - 1
             - 1313
+            - 1314
           non_triggered_rules:
             - 2
+          log_contains:
+            - "MatchedVarName1:REQUEST_URI, MatchedVar1:/test.php?id=12345"
+            - "MatchedVarName2:REQUEST_METHOD, MatchedVar2:GET"
+
   rules: |
     SecAction "id: 1, log, chain"
       SecAction "chain"
@@ -29,5 +34,8 @@
       SecAction "chain"
       SecRule ARGS "@noMatch" ""
 
-    SecRule REQUEST_URI "@rx (\d+)" "id:1313, chain, log"
+    SecRule REQUEST_URI "@rx (\d+)" "id:1313, chain, log, msg:'MatchedVarName1:%{MATCHED_VAR_NAME}, MatchedVar1:%{MATCHED_VAR}'"
       SecRule REQUEST_METHOD "GET" ""
+    
+    SecRule REQUEST_URI "@rx (\d+)" "id:1314, chain, log"
+      SecRule REQUEST_METHOD "GET" "msg:'MatchedVarName2:%{MATCHED_VAR_NAME}, MatchedVar2:%{MATCHED_VAR}'"

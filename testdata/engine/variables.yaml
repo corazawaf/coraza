@@ -25,6 +25,7 @@
             #- 2
             - 15
             - 110
+            - 130
             - 200
             - 300
             - 400
@@ -37,6 +38,7 @@
             #- 1500
             - 123123
             - 9123
+            - 99999
           non_triggered_rules:
             - 800
             - 900
@@ -45,7 +47,8 @@
             - 123124
             - 123125
             - 9124
-          log_contains: some-secret
+          log_contains: 
+            - 'id "1234"'
   rules: |
     SecRule REQBODY_PROCESSOR "" "id: 10, log"
     SecRequestBodyAccess On

@@ -223,6 +223,15 @@ type Rule struct {
 // If the operator matches, actions will be evaluated, and it will return
 // the matched variables, keys and values (MatchData)
 func (r *Rule) Evaluate(tx *Transaction) []MatchData {
+	parentMatchData := MatchData{}
+	return r.evaluateRule(tx, parentMatchData)
+}
+
+// evaluateRule will evaluate the current rule for the indicated transaction
+// If the operator matches, actions will be evaluated, and it will return
+// the matched variables, keys and values (MatchData)
+// parentMatchData preserves parent Context for chained rules
+func (r *Rule) evaluateRule(tx *Transaction, parentMatchData MatchData) []MatchData {
 	if r.Capture {
 		tx.Capture = true
 	}
@@ -232,6 +241,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	}
 
 	matchedValues := []MatchData{}
+
 	// we log if we are the parent rule
 	tx.Waf.Logger.Debug("Evaluating rule",
 		zap.Int("rule", rid),
@@ -314,13 +324,29 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 				for _, carg := range args {
 					match := r.executeOperator(carg, tx)
 					if match {
+						// Chain rule, check the parent msg
 						mr := MatchData{
 							VariableName: v.Variable.Name(),
 							Variable:     arg.Variable,
 							Key:          arg.Key,
 							Value:        carg,
 						}
+
+						// Set the txn variables for expansions before usage
 						r.matchVariable(tx, mr)
+
+						if r.Msg.original != "" {
+							mr.Message = r.Msg.Expand(tx)
+							mr.Data = r.LogData.Expand(tx)
+						} else if r.ParentID != 0 {
+							mr.Message = parentMatchData.Message
+							if r.LogData.original != "" {
+								mr.Data = r.LogData.Expand(tx)
+							} else {
+								mr.Data = parentMatchData.Data
+							}
+						}
+
 						matchedValues = append(matchedValues, mr)
 
 						// we only capture when it matches
@@ -350,14 +376,19 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	// disruptive actions are only evaluated by parent rules
 	if r.ParentID == 0 {
 		// we only run the chains for the parent rule
+		matchedChainValues := matchedValues
 		for nr := r.Chain; nr != nil; {
 			tx.Waf.Logger.Debug("Evaluating rule chain", zap.Int("rule", rid), zap.String("raw", nr.Raw))
-			matchedValues = nr.Evaluate(tx)
-			if len(matchedValues) == 0 {
-				return nil
+			matchedChainValues = nr.evaluateRule(tx, matchedChainValues[len(matchedChainValues)-1])
+			if len(matchedChainValues) == 0 {
+				return matchedChainValues
 			}
 			nr = nr.Chain
 		}
+		if r.Chain != nil {
+			matchedValues = append(matchedValues, matchedChainValues...)
+		}
+
 		// we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
 		if tx.RuleEngine != types.RuleEngineDetectionOnly {
 			tx.Waf.Logger.Debug("Detecting rule disruptive action", zap.String("txid", tx.ID), zap.Int("rule", r.ID))
@@ -368,10 +399,9 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 					a.Function.Evaluate(r, tx)
 				}
 			}
-
 		}
-		tx.MatchRule(r, matchedValues)
 
+		tx.MatchRule(r, matchedValues)
 	}
 	return matchedValues
 }

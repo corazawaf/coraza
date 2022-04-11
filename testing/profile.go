@@ -60,8 +60,8 @@ type Profile struct {
 type expectedOutput struct {
 	Headers           map[string]string `yaml:"headers,omitempty"`
 	Data              interface{}       `yaml:"data,omitempty"` // Accepts array or string
-	LogContains       string            `yaml:"log_contains,omitempty"`
-	NoLogContains     string            `yaml:"no_log_contains,omitempty"`
+	LogContains       []string          `yaml:"log_contains,omitempty"`
+	NoLogContains     []string          `yaml:"no_log_contains,omitempty"`
 	ExpectError       bool              `yaml:"expect_error,omitempty"`
 	TriggeredRules    []int             `yaml:"triggered_rules,omitempty"`
 	NonTriggeredRules []int             `yaml:"non_triggered_rules,omitempty"`

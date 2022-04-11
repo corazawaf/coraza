@@ -54,7 +54,7 @@ func TestAuditLogMessages(t *testing.T) {
 		t.Errorf("Expected 1 message, got %d", len(al.Messages))
 	}
 	if al.Messages[0].Message != "unconditional match" {
-		t.Errorf("Expected message 'unconditional match', got '%s'", al.Messages[0].Message)
+		t.Errorf("Expected message 'unconditional match', got '%v'", al.Messages[0].Message)
 	}
 	tx.ProcessLogging()
 	// now we read file

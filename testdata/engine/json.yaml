@@ -20,11 +20,11 @@
           triggered_rules:
             - 100
             - 101
+            - 103
             - 1100
             - 1101
             - 1010
           non_triggered_rules:  
-            - 103
             - 1111
             - 1102
   rules: |

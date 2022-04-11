@@ -195,14 +195,19 @@ func (t *Test) RunPhases() error {
 // that occurred during the test
 func (t *Test) OutputErrors() []string {
 	var errors []string
-	if lc := t.ExpectedOutput.LogContains; lc != "" {
-		if !t.LogContains(lc) {
-			errors = append(errors, fmt.Sprintf("Expected log to contain '%s'", lc))
+	if lcs := t.ExpectedOutput.LogContains; lcs != nil {
+		for _, lc := range lcs {
+			if !t.LogContains(lc) {
+				fmt.Println(lc)
+				errors = append(errors, fmt.Sprintf("Expected log to contain '%s'", lc))
+			}
 		}
 	}
-	if lc := t.ExpectedOutput.NoLogContains; lc != "" {
-		if t.LogContains(lc) {
-			errors = append(errors, fmt.Sprintf("Expected log to not contain '%s'", lc))
+	if lcs := t.ExpectedOutput.NoLogContains; lcs != nil {
+		for _, lc := range lcs {
+			if t.LogContains(lc) {
+				errors = append(errors, fmt.Sprintf("Expected log to not contain '%s'", lc))
+			}
 		}
 	}
 	/*
