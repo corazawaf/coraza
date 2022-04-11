@@ -124,6 +124,7 @@ func (mr MatchedRule) AuditLog(code int) string {
 		}
 		log.WriteString(mr.matchData(matchData))
 		log.WriteString(mr.details(matchData))
+		log.WriteString("\n")
 	}
 	return log.String()
 }
@@ -137,17 +138,17 @@ func (mr MatchedRule) ErrorLog(code int) string {
 	}
 	log := &strings.Builder{}
 
-	if mr.Disruptive {
-		log.WriteString(fmt.Sprintf("Coraza: Access denied with code %d (phase %d):: ", code, mr.Rule.Phase))
-	} else {
-		log.WriteString("Coraza: Warning:: ")
-	}
-	log.WriteString(msg)
-
 	for _, matchData := range mr.MatchedDatas {
-		log.WriteString("\n")
-		log.WriteString(fmt.Sprintf("[client %q]", mr.ClientIPAddress))
+		log.WriteString(fmt.Sprintf("[client %q] ", mr.ClientIPAddress))
+		if mr.Disruptive {
+			log.WriteString(fmt.Sprintf("Coraza: Access denied with code %d (phase %d). ", code, mr.Rule.Phase))
+		} else {
+			log.WriteString("Coraza: Warning. ")
+		}
+		log.WriteString(msg)
+		log.WriteString(" ")
 		log.WriteString(mr.details(matchData))
+		log.WriteString("\n")
 	}
 	return log.String()
 }
