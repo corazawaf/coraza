@@ -2,10 +2,7 @@ name: Coreruleset Compatibility
 
 on:
   push:
-    branches: 
-      - 'v2/*'
   pull_request:
-    branches: [ v2/master ]
   # Cron just in case the CRS team changed something and we are not compatible anymore
   # At 06:00 on Monday, Wednesday, and Friday
   schedule:
@@ -33,7 +30,7 @@ jobs:
       run: |
         git clone https://github.com/coreruleset/coreruleset
         cd coreruleset
-        git checkout 6d8e8f8
+        git checkout 3c9947b
         cd ..
         mv coreruleset /tmp
         cp coraza.conf-recommended /tmp/
@@ -45,12 +42,10 @@ jobs:
         wget https://raw.githubusercontent.com/jptosso/coraza-caddy/master/caddy/main.go
         cp testdata/coreruleset/Caddyfile .
         ls -lh
-        sed -i 's/\/\/ _ "github.com/_ "github.com/g' main.go
         mv main.go caddy/main.go
         go get github.com/jptosso/coraza-caddy@ffa1472
         go mod tidy
         go get ./...
-        go get -u github.com/jptosso/coraza-pcre@593842e
         go install caddy/main.go
         sudo setcap CAP_NET_BIND_SERVICE=+eip $(which caddy)
     - name: Start Caddy server
