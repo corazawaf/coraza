@@ -660,7 +660,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 
 	// Default variables.ReqbodyProcessor values
 	// XML and JSON must be forced with ctl:requestBodyProcessor=JSON
-	if rbp == "" && tx.ForceRequestBodyVariable {
+	if tx.ForceRequestBodyVariable {
 		// We force URLENCODED if mime is x-www... or we have an empty RBP and ForceRequestBodyVariable
 		rbp = "URLENCODED"
 		tx.GetCollection(variables.ReqbodyProcessor).Set("", []string{rbp})

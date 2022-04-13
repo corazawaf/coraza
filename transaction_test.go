@@ -493,6 +493,38 @@ func TestVariablesMatch(t *testing.T) {
 	}
 }
 
+func TestTxReqBodyForce(t *testing.T) {
+	waf := NewWaf()
+	tx := waf.NewTransaction()
+	tx.RequestBodyAccess = true
+	tx.ForceRequestBodyVariable = true
+	if _, err := tx.RequestBodyBuffer.Write([]byte("test")); err != nil {
+		t.Error(err)
+	}
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Error(err)
+	}
+	if tx.GetCollection(variables.RequestBody).GetFirstString("") != "test" {
+		t.Error("failed to set request body")
+	}
+}
+
+func TestTxReqBodyForceNegative(t *testing.T) {
+	waf := NewWaf()
+	tx := waf.NewTransaction()
+	tx.RequestBodyAccess = true
+	tx.ForceRequestBodyVariable = false
+	if _, err := tx.RequestBodyBuffer.Write([]byte("test")); err != nil {
+		t.Error(err)
+	}
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Error(err)
+	}
+	if tx.GetCollection(variables.RequestBody).GetFirstString("") == "test" {
+		t.Error("reqbody should not be there")
+	}
+}
+
 func multipartRequest(req *http.Request) error {
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)
