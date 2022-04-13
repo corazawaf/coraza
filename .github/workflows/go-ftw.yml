@@ -2,10 +2,7 @@ name: Coreruleset Compatibility
 
 on:
   push:
-    branches: 
-      - 'v2/*'
   pull_request:
-    branches: [ v2/master ]
   # Cron just in case the CRS team changed something and we are not compatible anymore
   # At 06:00 on Monday, Wednesday, and Friday
   schedule:
