@@ -268,14 +268,13 @@ func (tx *Transaction) matchVariable(match MatchData) {
 
 	matchedVars.Add(varName.String(), match.Value)
 	matchedVar.SetIndex("", 0, match.Value)
-	// fmt.Printf("%s: %s\n", match.VariableName, match.Value)
 
 	matchedVarsNames.Add(varName.String(), varName.String())
 	matchedVarName.SetIndex("", 0, varName.String())
 }
 
 // MatchRule Matches a rule to be logged
-func (tx *Transaction) MatchRule(r *Rule, md []MatchData) {
+func (tx *Transaction) MatchRule(r *Rule, mds []MatchData) {
 	tx.Waf.Logger.Debug("rule matched", zap.String("txid", tx.ID), zap.Int("rule", r.ID))
 	// tx.MatchedRules = append(tx.MatchedRules, mr)
 
@@ -291,21 +290,28 @@ func (tx *Transaction) MatchRule(r *Rule, md []MatchData) {
 		hs.SetIndex("", 0, strconv.Itoa(r.Severity.Int()))
 		tx.Waf.Logger.Debug("Set highest severity", zap.Int("severity", r.Severity.Int()))
 	}
-	for _, data := range md {
-		mr := MatchedRule{
-			URI:             tx.GetCollection(variables.RequestURI).GetFirstString(""),
-			ID:              tx.ID,
-			ServerIPAddress: tx.GetCollection(variables.ServerAddr).GetFirstString(""),
-			ClientIPAddress: tx.GetCollection(variables.RemoteAddr).GetFirstString(""),
-			Message:         r.Msg.Expand(tx),
-			Data:            r.LogData.Expand(tx),
-			Rule:            r,
-			MatchedData:     data,
+
+	mr := MatchedRule{
+		URI:             tx.GetCollection(variables.RequestURI).GetFirstString(""),
+		ID:              tx.ID,
+		ServerIPAddress: tx.GetCollection(variables.ServerAddr).GetFirstString(""),
+		ClientIPAddress: tx.GetCollection(variables.RemoteAddr).GetFirstString(""),
+		Rule:            r,
+		MatchedDatas:    mds,
+	}
+
+	for _, md := range mds {
+		// Use 1st set message of rule chain as message
+		if md.Message != "" {
+			mr.Message = md.Message
+			mr.Data = md.Data
+			break
 		}
-		tx.MatchedRules = append(tx.MatchedRules, mr)
-		if tx.Waf.errorLogCb != nil && r.Log {
-			tx.Waf.errorLogCb(mr)
-		}
+	}
+
+	tx.MatchedRules = append(tx.MatchedRules, mr)
+	if tx.Waf.errorLogCb != nil && r.Log {
+		tx.Waf.errorLogCb(mr)
 	}
 }
 
@@ -656,6 +662,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 			reader = io.LimitReader(reader, tx.RequestBodyLimit)
 		}
 	}
+
 	rbp := tx.GetCollection(variables.ReqbodyProcessor).GetFirstString("")
 
 	// Default variables.ReqbodyProcessor values
@@ -902,24 +909,26 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	mrs := []loggers.AuditMessage{}
 	for _, mr := range tx.MatchedRules {
 		r := mr.Rule
-		mrs = append(mrs, loggers.AuditMessage{
-			Actionset: strings.Join(tx.Waf.ComponentNames, " "),
-			Message:   mr.Message,
-			Data: loggers.AuditMessageData{
-				File:     mr.Rule.File,
-				Line:     mr.Rule.Line,
-				ID:       r.ID,
-				Rev:      r.Rev,
-				Msg:      r.Msg.String(),
-				Data:     mr.Data,
-				Severity: r.Severity,
-				Ver:      r.Version,
-				Maturity: r.Maturity,
-				Accuracy: r.Accuracy,
-				Tags:     r.Tags,
-				Raw:      r.Raw,
-			},
-		})
+		for _, matchData := range mr.MatchedDatas {
+			mrs = append(mrs, loggers.AuditMessage{
+				Actionset: strings.Join(tx.Waf.ComponentNames, " "),
+				Message:   matchData.Message,
+				Data: loggers.AuditMessageData{
+					File:     mr.Rule.File,
+					Line:     mr.Rule.Line,
+					ID:       r.ID,
+					Rev:      r.Rev,
+					Msg:      matchData.Message,
+					Data:     matchData.Data,
+					Severity: r.Severity,
+					Ver:      r.Version,
+					Maturity: r.Maturity,
+					Accuracy: r.Accuracy,
+					Tags:     r.Tags,
+					Raw:      r.Raw,
+				},
+			})
+		}
 	}
 	al.Messages = mrs
 	return al

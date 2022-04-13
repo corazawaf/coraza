@@ -24,9 +24,10 @@
             - 1101
             - 1010
           non_triggered_rules:  
-            - 103
             - 1111
             - 1102
+            - 103
+
   rules: |
     SecRequestBodyAccess On
     SecRule REQUEST_HEADERS:content-type "application/json" "id: 100, phase:1, pass, log, ctl:requestBodyProcessor=JSON"

@@ -320,6 +320,8 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 							Key:          arg.Key,
 							Value:        carg,
 						}
+						mr.Message = r.Msg.Expand(tx)
+						mr.Data = r.LogData.Expand(tx)
 						r.matchVariable(tx, mr)
 						matchedValues = append(matchedValues, mr)
 
