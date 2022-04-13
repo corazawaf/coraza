@@ -645,11 +645,6 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	if err != nil {
 		return nil, err
 	}
-	buf := new(strings.Builder)
-	reader2, err := tx.RequestBodyBuffer.Reader()
-	if err != nil {
-		return tx.Interruption, nil
-	}
 
 	// Chunked requests will always be written to a temporary file
 	if tx.RequestBodyBuffer.Size() >= tx.RequestBodyLimit {
@@ -665,14 +660,8 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 			tx.GetCollection(variables.InboundErrorData).Set("", []string{"1"})
 			// we limit our reader to tx.RequestBodyLimit bytes
 			reader = io.LimitReader(reader, tx.RequestBodyLimit)
-			reader2 = io.LimitReader(reader2, tx.RequestBodyLimit)
 		}
 	}
-
-	if _, err := io.Copy(buf, reader2); err != nil {
-		return tx.Interruption, nil
-	}
-	tx.GetCollection(variables.RequestBody).Set("", []string{buf.String()})
 
 	rbp := tx.GetCollection(variables.ReqbodyProcessor).GetFirstString("")
 
