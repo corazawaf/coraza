@@ -18,6 +18,18 @@
             - 1313
           non_triggered_rules:
             - 2
+            - 200
+      stage:
+        input:
+            uri: /test.php?var=prepayloadpost
+        output:
+          triggered_rules:
+            - 1
+            - 200
+          non_triggered_rules:
+            - 2
+            - 1313
+          log_contains: 'found within ARGS:var: prepayloadpost'
   rules: |
     SecAction "id: 1, log, chain"
       SecAction "chain"
@@ -31,3 +43,10 @@
 
     SecRule REQUEST_URI "@rx (\d+)" "id:1313, chain, log"
       SecRule REQUEST_METHOD "GET" ""
+
+    SecRule ARGS "@rx prepayloadpost"  "id:200, phase:2, log, msg:'Rule Parent 200', \
+      logdata:'Matched Data: %{TX.0} found within %{TX.200_MATCHED_VAR_NAME}: %{MATCHED_VAR}',\
+      setvar:'tx.200_matched_var_name=%{MATCHED_VAR_NAME}',\
+      chain"
+      SecRule MATCHED_VAR "@rx pre" "chain"
+        SecRule MATCHED_VAR "@rx post"

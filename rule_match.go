@@ -133,13 +133,11 @@ func (mr MatchedRule) AuditLog(code int) string {
 
 // ErrorLog returns the same as audit log but without matchData
 func (mr MatchedRule) ErrorLog(code int) string {
-	// Use Last of chain as message
 	msg := mr.MatchedDatas[0].Message
 	for _, md := range mr.MatchedDatas {
-		// Use 1st set message of rule chain as message
+		// Use last set message of rule chain as message
 		if md.Message != "" {
 			msg = md.Message
-			break
 		}
 	}
 	if len(msg) > 200 {
