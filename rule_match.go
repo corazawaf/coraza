@@ -63,7 +63,7 @@ type MatchedRule struct {
 	ClientIPAddress string
 	// A slice of matched variables
 	MatchedDatas []MatchData
-	// Depricated
+	// Deprecated
 	MatchedData MatchData
 	// A reference to the triggered rule
 	Rule *Rule
