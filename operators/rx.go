@@ -31,19 +31,19 @@ func (o *rx) Init(data string) error {
 }
 
 func (o *rx) Evaluate(tx *coraza.Transaction, value string) bool {
-	match := o.re.FindAllString(value, -1)
+	match := o.re.FindAllSubmatch([]byte(value), -1)
 	lcount := len(match)
 	if !tx.Capture && lcount > 0 {
 		return true
 	}
+
 	if lcount > 0 && tx.Capture {
-		tx.CaptureField(0, value)
-	}
-	for i, m := range match {
-		if i == 9 {
-			return true
+		for i, c := range match[0] {
+			if i == 9 {
+				return true
+			}
+			tx.CaptureField(i, string(c))
 		}
-		tx.CaptureField(i+1, m)
 	}
 	return lcount > 0
 }

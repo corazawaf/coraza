@@ -482,3 +482,56 @@ func TestIssue176(t *testing.T) {
 	//		t.Error("failed to test argument case-sensitive")
 	//	}
 }
+
+func TestRxCapture(t *testing.T) {
+	waf := coraza.NewWaf()
+	rules := `SecRule &TX:allowed_request_content_type_charset "@eq 0" \
+        "id:901168,\
+        phase:1,\
+        pass,\
+        nolog,\
+        ver:'OWASP_CRS/3.4.0-dev',\
+        setvar:'tx.allowed_request_content_type_charset=|utf-8| |iso-8859-1| |iso-8859-15| |windows-1252|'"
+    SecRule REQUEST_HEADERS:Content-Type "@rx charset\s*=\s*[\"']?([^;\"'\s]+)" \
+        "id:920480,\
+        phase:1,\
+        deny,\
+        capture,\
+        t:none,\
+        msg:'Request content type charset is not allowed by policy',\
+        logdata:'%{MATCHED_VAR}',\
+        tag:'application-multi',\
+        tag:'language-multi',\
+        tag:'platform-multi',\
+        tag:'attack-protocol',\
+        tag:'paranoia-level/1',\
+        tag:'OWASP_CRS',\
+        tag:'capec/1000/255/153',\
+        tag:'PCI/12.1',\
+        ver:'OWASP_CRS/3.4.0-dev',\
+        severity:'CRITICAL',\
+        setvar:'tx.content_type_charset=|%{tx.1}|',\
+        chain"
+        SecRule TX:content_type_charset "!@within %{tx.allowed_request_content_type_charset}" \
+            "t:lowercase,\
+            ctl:forceRequestBodyVariable=On,\
+            setvar:'tx.inbound_anomaly_score_pl1=+%{tx.critical_anomaly_score}'"`
+	parser, err := NewParser(waf)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = parser.FromString(rules)
+	if err != nil {
+		t.Error()
+		return
+	}
+
+	tx := waf.NewTransaction()
+	tx.AddRequestHeader("Content-Type", "text/html; charset=utf-8")
+	it := tx.ProcessRequestHeaders()
+	if it != nil {
+		t.Error("failed test for rx captured")
+	}
+}
