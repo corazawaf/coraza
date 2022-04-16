@@ -135,9 +135,10 @@ func (mr MatchedRule) AuditLog(code int) string {
 func (mr MatchedRule) ErrorLog(code int) string {
 	msg := mr.MatchedDatas[0].Message
 	for _, md := range mr.MatchedDatas {
-		// Use last set message of rule chain as message
+		// Use 1st set message of rule chain as message
 		if md.Message != "" {
 			msg = md.Message
+			break
 		}
 	}
 	if len(msg) > 200 {
