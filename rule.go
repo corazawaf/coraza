@@ -363,9 +363,6 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 			matchedValues = append(matchedValues, matchedChainValues...)
 			nr = nr.Chain
 		}
-		/*if r.Chain != nil {
-
-		}*/
 		// we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
 		if tx.RuleEngine != types.RuleEngineDetectionOnly {
 			tx.Waf.Logger.Debug("Detecting rule disruptive action", zap.String("txid", tx.ID), zap.Int("rule", r.ID))
