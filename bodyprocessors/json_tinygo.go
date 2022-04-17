@@ -1,5 +1,5 @@
-//go:build !tinygo
-// +build !tinygo
+//go:build tinygo
+// +build tinygo
 
 // Copyright 2022 Juan Pablo Tosso
 //
@@ -18,10 +18,11 @@
 package bodyprocessors
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"strconv"
+
+	"github.com/tidwall/gjson"
 
 	"github.com/corazawaf/coraza/v2/types/variables"
 )
@@ -88,9 +89,7 @@ func jsonToMap(data []byte) (map[string]string, error) {
 		m      map[string]string
 		err    error
 	)
-	if err = json.Unmarshal(data, &result); err != nil {
-		return nil, err
-	}
+	result = gjson.Parse(string(data)).Value()
 
 	switch result := result.(type) {
 	case map[string]interface{}:
