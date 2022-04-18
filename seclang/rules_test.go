@@ -164,11 +164,11 @@ func TestRuleLogging(t *testing.T) {
 	tx.AddArgument("GET", "test1", "123")
 	tx.AddArgument("GET", "test2", "456")
 	tx.ProcessRequestHeaders()
-	if len(tx.MatchedRules) != 4 {
+	if len(tx.MatchedRules) != 3 {
 		t.Errorf("failed to match rules with %d", len(tx.MatchedRules))
 	}
-	// we expect 3 logs
-	if len(logs) != 3 {
+	// we expect 2 logs
+	if len(logs) != 2 {
 		t.Errorf("failed to log with %d", len(logs))
 	} else {
 		for _, l := range logs[:1] {
@@ -176,7 +176,7 @@ func TestRuleLogging(t *testing.T) {
 				t.Errorf("failed to log rule, got \n%s", l)
 			}
 		}
-		if !strings.Contains(logs[2], "[id \"2\"]") {
+		if !strings.Contains(logs[1], "[id \"2\"]") {
 			t.Errorf("failed to log rule, got \n%s", logs[2])
 		}
 	}
@@ -236,17 +236,17 @@ func TestTagsAreNotPrintedTwice(t *testing.T) {
 	tx.AddArgument("GET", "test1", "123")
 	tx.AddArgument("GET", "test2", "456")
 	tx.ProcessRequestHeaders()
-	if len(tx.MatchedRules) != 2 {
+	if len(tx.MatchedRules) != 1 {
 		t.Errorf("failed to match rules with %d", len(tx.MatchedRules))
 	}
-	// we expect 2 logs
-	if len(logs) != 2 {
+	// we expect 1 log
+	if len(logs) != 1 {
 		t.Errorf("failed to log with %d", len(logs))
 	}
 	re := regexp.MustCompile(`\[tag "some1"\]`)
 	for _, l := range logs {
-		if len(re.FindAllString(l, -1)) > 1 {
-			t.Errorf("failed to log tag, got multiple instances (%d)\n%s", len(re.FindAllString(l, -1)), l)
+		if len(re.FindAllString(l, -1)) < 2 {
+			t.Errorf("failed to log tag, missing instances (%d)\n%s", len(re.FindAllString(l, -1)), l)
 		}
 	}
 }
@@ -308,11 +308,11 @@ func TestLogsAreNotPrintedManyTimes(t *testing.T) {
 	tx.AddArgument("GET", "test2", "789")
 	tx.AddRequestHeader("test", "123")
 	tx.ProcessRequestHeaders()
-	if len(tx.MatchedRules) != 3 {
+	if len(tx.MatchedRules) != 1 {
 		t.Errorf("failed to match rules with %d", len(tx.MatchedRules))
 	}
 	// we expect 2 logs
-	if len(logs) != 3 {
+	if len(logs) != 1 {
 		t.Errorf("failed to log with %d", len(logs))
 	}
 }
@@ -358,8 +358,8 @@ func TestTXIssue147(t *testing.T) {
 		if it != nil {
 			httpOutMsg := ""
 			for _, res := range tx.MatchedRules {
-				httpOutMsg = httpOutMsg + res.MatchedData.Key + ":" + res.MatchedData.Value + "\n"
-				httpOutMsg = httpOutMsg + "Message:" + res.Message + "\n"
+				httpOutMsg = httpOutMsg + res.MatchedDatas[0].Key + ":" + res.MatchedDatas[0].Value + "\n"
+				httpOutMsg = httpOutMsg + "Message:" + res.MatchedDatas[0].Message + "\n"
 
 			}
 			if len(httpOutMsg) == 0 || len(tx.MatchedRules) == 0 {

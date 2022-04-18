@@ -320,7 +320,11 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 							Key:          arg.Key,
 							Value:        carg,
 						}
+						// Set the txn variables for expansions before usage
 						r.matchVariable(tx, mr)
+
+						mr.Message = r.Msg.Expand(tx)
+						mr.Data = r.LogData.Expand(tx)
 						matchedValues = append(matchedValues, mr)
 
 						// we only capture when it matches
@@ -352,10 +356,11 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		// we only run the chains for the parent rule
 		for nr := r.Chain; nr != nil; {
 			tx.Waf.Logger.Debug("Evaluating rule chain", zap.Int("rule", rid), zap.String("raw", nr.Raw))
-			matchedValues = nr.Evaluate(tx)
-			if len(matchedValues) == 0 {
-				return nil
+			matchedChainValues := nr.Evaluate(tx)
+			if len(matchedChainValues) == 0 {
+				return matchedChainValues
 			}
+			matchedValues = append(matchedValues, matchedChainValues...)
 			nr = nr.Chain
 		}
 		// we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
