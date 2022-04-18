@@ -246,7 +246,17 @@ func (t *Test) Transaction() *engine.Transaction {
 // for debugging
 func (t *Test) String() string {
 	tx := t.transaction
-	res := "======DEBUG======\n"
+	res := "\n======ERRORLOG======\n"
+	for _, mr := range tx.MatchedRules {
+		res += mr.ErrorLog(t.ResponseCode)
+		res += "======MatchData======\n"
+		for _, md := range mr.MatchedDatas {
+			res += fmt.Sprintf("%+v", md) + "\n"
+		}
+		res += "\n"
+	}
+
+	res += "======DEBUG======\n"
 	for v := byte(1); v < types.VariablesCount; v++ {
 		vr := variables.RuleVariable(v)
 		if vr.Name() == "UNKNOWN" {

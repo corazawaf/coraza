@@ -18,6 +18,48 @@
             - 1313
           non_triggered_rules:
             - 2
+            - 200
+            - 20
+      stage:
+        input:
+            uri: /test.php?var=prepayloadpost
+        output:
+          triggered_rules:
+            - 1
+            - 200
+          non_triggered_rules:
+            - 2
+            - 1313
+            - 20
+          log_contains: 'found within ARGS:var: prepayloadpost'
+      stage:
+        input:
+            uri: /test.php
+            headers:
+              Host: attack20ing.com
+        output:
+          triggered_rules:
+            - 1
+            - 20
+          non_triggered_rules:
+            - 2
+            - 1313
+            - 21
+          log_contains: 'FoundChain20 attacking.com in REQUEST_HEADERS:host'
+      stage:
+        input:
+            uri: /test.php
+            headers:
+              Host: attack21ing.com
+        output:
+          triggered_rules:
+            - 1
+            - 21
+          non_triggered_rules:
+            - 20
+            - 2
+            - 1313
+          log_contains: 'FoundSubChain21 REQUEST_HEADERS:host in MATCHED_VARS_NAMES:REQUEST_HEADERS:host'
   rules: |
     SecAction "id: 1, log, chain"
       SecAction "chain"
@@ -31,3 +73,34 @@
 
     SecRule REQUEST_URI "@rx (\d+)" "id:1313, chain, log"
       SecRule REQUEST_METHOD "GET" ""
+
+    SecRule ARGS "@rx prepayloadpost"  "id:200, phase:2, log, msg:'Rule Parent 200', \
+      logdata:'Matched Data: %{TX.0} found within %{TX.200_MATCHED_VAR_NAME}: %{MATCHED_VAR}',\
+      setvar:'tx.200_matched_var_name=%{MATCHED_VAR_NAME}',\
+      chain"
+      SecRule MATCHED_VAR "@rx pre" "chain"
+        SecRule MATCHED_VAR "@rx post"
+
+    SecRule REQUEST_HEADERS "@rx attack20" \
+      "id:20,\
+      phase:1,\
+      log,\
+      msg:'Chained rule Parent test',\
+      logdata:'FoundChain20 %{MATCHED_VAR} in %{MATCHED_VAR_NAME}',\
+      chain"
+      SecRule MATCHED_VARS_NAMES "@rx host" \
+        "block"
+
+    SecRule REQUEST_HEADERS "@rx attack21" \
+      "id:21,\
+      phase:1,\
+      log,\
+      chain"
+      SecRule MATCHED_VARS_NAMES "@rx host" \
+        "msg:'Sub Chain Rule',\
+        logdata:'FoundSubChain21 %{MATCHED_VAR} in %{MATCHED_VAR_NAME}',\
+        chain"
+        SecRule MATCHED_VAR_NAME "@rx MATCHED_VARS_NAMES:REQUEST_HEADERS:host" \
+        "msg:'Sub Sub Chain Rule',\
+        logdata:'FoundSubSubChain21 %{MATCHED_VAR} in %{MATCHED_VAR_NAME}',\
+        block"
