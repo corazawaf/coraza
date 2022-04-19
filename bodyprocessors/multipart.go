@@ -19,11 +19,11 @@ import (
 	"io"
 	"log"
 	"mime"
-	"mime/multipart"
 	"os"
 	"strings"
 
 	"github.com/corazawaf/coraza/v2/types/variables"
+	"github.com/corazawaf/coraza/v2/utils/multipart"
 )
 
 type multipartBodyProcessor struct {
@@ -69,7 +69,7 @@ func (mbp *multipartBodyProcessor) Read(reader io.Reader, options Options) error
 				return err
 			}
 			totalSize += sz
-			filesNames = append(filesNames, p.FileName())
+			filesNames = append(filesNames, p.OriginFileName())
 			fileList = append(fileList, temp.Name())
 			fileSizes = append(fileSizes, fmt.Sprintf("%d", sz))
 			filesArgNames = append(filesArgNames, p.FormName())
