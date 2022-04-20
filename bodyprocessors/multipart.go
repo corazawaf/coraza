@@ -16,7 +16,6 @@ package bodyprocessors
 
 import (
 	"fmt"
-	mp "github.com/corazawaf/coraza/v2/utils/multipart"
 	"io"
 	"log"
 	"mime"
@@ -25,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v2/types/variables"
+	mp "github.com/corazawaf/coraza/v2/utils/multipart"
 )
 
 type multipartBodyProcessor struct {
