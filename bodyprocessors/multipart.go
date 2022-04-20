@@ -16,14 +16,15 @@ package bodyprocessors
 
 import (
 	"fmt"
+	mp "github.com/corazawaf/coraza/v2/utils/multipart"
 	"io"
 	"log"
 	"mime"
+	"mime/multipart"
 	"os"
 	"strings"
 
 	"github.com/corazawaf/coraza/v2/types/variables"
-	"github.com/corazawaf/coraza/v2/utils/multipart"
 )
 
 type multipartBodyProcessor struct {
@@ -56,10 +57,10 @@ func (mbp *multipartBodyProcessor) Read(reader io.Reader, options Options) error
 		if err != nil {
 			return err
 		}
-		// we create a temp file
 
 		// if is a file
-		if p.FileName() != "" {
+		filename := mp.OriginFileName(p)
+		if filename != "" {
 			temp, err := os.CreateTemp(storagePath, "crzmp*")
 			if err != nil {
 				return err
@@ -69,7 +70,7 @@ func (mbp *multipartBodyProcessor) Read(reader io.Reader, options Options) error
 				return err
 			}
 			totalSize += sz
-			filesNames = append(filesNames, p.OriginFileName())
+			filesNames = append(filesNames, filename)
 			fileList = append(fileList, temp.Name())
 			fileSizes = append(fileSizes, fmt.Sprintf("%d", sz))
 			filesArgNames = append(filesArgNames, p.FormName())
