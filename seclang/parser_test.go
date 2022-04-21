@@ -91,14 +91,15 @@ func TestHardcodedIncludeDirectiveDDOS(t *testing.T) {
 func TestHardcodedIncludeDirectiveDDOS2(t *testing.T) {
 	waf := coraza.NewWaf()
 	p, _ := NewParser(waf)
-	tmpFile, err := os.CreateTemp(os.TempDir(), "rand*.conf")
+	tmpFile, err := os.CreateTemp(os.TempDir(), "rand1*.conf")
 	if err != nil {
 		t.Fatal(err)
 	}
-	tmpFile2, err := os.CreateTemp(os.TempDir(), "rand*.conf")
+	tmpFile2, err := os.CreateTemp(os.TempDir(), "rand2*.conf")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	w := bufio.NewWriter(tmpFile)
 	for i := 0; i < maxIncludeRecursion+1; i++ {
 		data := fmt.Sprintf("Include %s\n", tmpFile2.Name())
