@@ -15,6 +15,7 @@
 package operators
 
 import (
+	"bytes"
 	"regexp"
 
 	"github.com/corazawaf/coraza/v2"
@@ -31,7 +32,7 @@ func (o *rx) Init(data string) error {
 }
 
 func (o *rx) Evaluate(tx *coraza.Transaction, value string) bool {
-	match := o.re.FindAllSubmatch([]byte(value), -1)
+	match := o.re.FindAllSubmatch(o.convert(value), -1)
 	lcount := len(match)
 	if !tx.Capture && lcount > 0 {
 		return true
@@ -46,4 +47,12 @@ func (o *rx) Evaluate(tx *coraza.Transaction, value string) bool {
 		}
 	}
 	return lcount > 0
+}
+
+func (o *rx) convert(src string) []byte {
+	var buf bytes.Buffer
+	for i := range src {
+		buf.WriteRune(rune(src[i]))
+	}
+	return buf.Bytes()
 }
