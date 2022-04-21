@@ -15,6 +15,9 @@
 package seclang
 
 import (
+	"bufio"
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/corazawaf/coraza/v2"
@@ -62,6 +65,51 @@ func TestHardcodedIncludeDirective(t *testing.T) {
 	}
 	if err := p.FromString("Include unknown"); err == nil {
 		t.Error("Include directive should fail")
+	}
+}
+
+func TestHardcodedIncludeDirectiveDDOS(t *testing.T) {
+	waf := coraza.NewWaf()
+	p, _ := NewParser(waf)
+	tmpFile, err := os.CreateTemp(os.TempDir(), "rand*.conf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := fmt.Sprintf("Include %s\n", tmpFile.Name())
+	// write data to tmpFile
+	w := bufio.NewWriter(tmpFile)
+	if _, err := w.WriteString(data); err != nil {
+		t.Fatal(err)
+	}
+	w.Flush()
+	tmpFile.Close()
+	if err := p.FromFile(tmpFile.Name()); err == nil {
+		t.Error("Include directive should fail in case of recursion")
+	}
+}
+
+func TestHardcodedIncludeDirectiveDDOS2(t *testing.T) {
+	waf := coraza.NewWaf()
+	p, _ := NewParser(waf)
+	tmpFile, err := os.CreateTemp(os.TempDir(), "rand*.conf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tmpFile2, err := os.CreateTemp(os.TempDir(), "rand*.conf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := bufio.NewWriter(tmpFile)
+	for i := 0; i < maxIncludeRecursion+1; i++ {
+		data := fmt.Sprintf("Include %s\n", tmpFile2.Name())
+		if _, err := w.WriteString(data); err != nil {
+			t.Fatal(err)
+		}
+	}
+	w.Flush()
+	tmpFile.Close()
+	if err := p.FromFile(tmpFile.Name()); err == nil {
+		t.Error("Include directive should fail in case of a lot of recursion")
 	}
 }
 

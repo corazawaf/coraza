@@ -29,12 +29,16 @@ import (
 	"go.uber.org/zap"
 )
 
+// maxIncludeRecursion is used to avoid DDOS by including files that include
+const maxIncludeRecursion = 500
+
 // Parser provides functions to evaluate (compile) SecLang directives
 type Parser struct {
-	options     *DirectiveOptions
-	currentLine int
-	currentFile string
-	currentDir  string
+	options      *DirectiveOptions
+	currentLine  int
+	currentFile  string
+	currentDir   string
+	includeCount int
 }
 
 // FromFile imports directives from a file
@@ -122,6 +126,15 @@ func (p *Parser) evaluate(data string) error {
 	directive = strings.ToLower(directive)
 	if directive == "include" {
 		// this is a special hardcoded case
+		// we cannot add it as a directive type because there are recursion issues
+		if p.currentFile == opts {
+			return fmt.Errorf("include directive cannot include itself")
+		}
+		// note a user might still include another file that includes the original file
+		// generating a DDOS attack
+		if p.includeCount >= maxIncludeRecursion {
+			return fmt.Errorf("cannot include more than %d files", maxIncludeRecursion)
+		}
 		return p.FromFile(opts)
 	}
 	d, ok := directivesMap[directive]
