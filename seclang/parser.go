@@ -18,11 +18,12 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"github.com/corazawaf/coraza/v2/types"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/corazawaf/coraza/v2/types"
 
 	"github.com/corazawaf/coraza/v2"
 	"go.uber.org/zap"
@@ -118,8 +119,12 @@ func (p *Parser) evaluate(data string) error {
 	if len(opts) >= 3 && opts[0] == '"' && opts[len(opts)-1] == '"' {
 		opts = strings.Trim(opts, `"`)
 	}
-
-	d, ok := directivesMap[strings.ToLower(directive)]
+	directive = strings.ToLower(directive)
+	if directive == "include" {
+		// this is a special hardcoded case
+		return p.FromFile(opts)
+	}
+	d, ok := directivesMap[directive]
 	if !ok || d == nil {
 		return p.log("Unsupported directive " + directive)
 	}

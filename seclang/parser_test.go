@@ -17,6 +17,7 @@ package seclang
 import (
 	"testing"
 
+	"github.com/corazawaf/coraza/v2"
 	engine "github.com/corazawaf/coraza/v2"
 )
 
@@ -47,6 +48,20 @@ func TestDefaultConfigurationFile(t *testing.T) {
 	err := p.FromFile("../coraza.conf-recommended")
 	if err != nil {
 		t.Error(err)
+	}
+}
+
+func TestHardcodedIncludeDirective(t *testing.T) {
+	waf := coraza.NewWaf()
+	p, _ := NewParser(waf)
+	if err := p.FromString("Include ../coraza.conf-recommended"); err != nil {
+		t.Error(err)
+	}
+	if waf.Rules.Count() == 0 {
+		t.Error("No rules loaded using include directive")
+	}
+	if err := p.FromString("Include unknown"); err == nil {
+		t.Error("Include directive should fail")
 	}
 }
 
