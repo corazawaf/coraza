@@ -129,9 +129,6 @@ type Waf struct {
 
 	RequestBodyNoFilesLimit int64
 
-	// Used by some functions to support concurrent tasks
-	mux *sync.RWMutex
-
 	RequestBodyLimitAction types.RequestBodyLimitAction
 
 	ArgumentSeparator string
@@ -291,7 +288,6 @@ func NewWaf() *Waf {
 		AuditLogWriter:           logWriter,
 		AuditEngine:              types.AuditEngineOff,
 		AuditLogParts:            types.AuditLogParts("ABCFHZ"),
-		mux:                      &sync.RWMutex{},
 		RequestBodyInMemoryLimit: 131072,
 		RequestBodyLimit:         134217728, // 10mb
 		ResponseBodyMimeTypes:    []string{"text/html", "text/plain"},
