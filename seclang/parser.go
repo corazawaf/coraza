@@ -18,22 +18,27 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"github.com/corazawaf/coraza/v2/types"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/corazawaf/coraza/v2/types"
+
 	"github.com/corazawaf/coraza/v2"
 	"go.uber.org/zap"
 )
 
+// maxIncludeRecursion is used to avoid DDOS by including files that include
+const maxIncludeRecursion = 500
+
 // Parser provides functions to evaluate (compile) SecLang directives
 type Parser struct {
-	options     *DirectiveOptions
-	currentLine int
-	currentFile string
-	currentDir  string
+	options      *DirectiveOptions
+	currentLine  int
+	currentFile  string
+	currentDir   string
+	includeCount int
 }
 
 // FromFile imports directives from a file
@@ -118,8 +123,19 @@ func (p *Parser) evaluate(data string) error {
 	if len(opts) >= 3 && opts[0] == '"' && opts[len(opts)-1] == '"' {
 		opts = strings.Trim(opts, `"`)
 	}
-
-	d, ok := directivesMap[strings.ToLower(directive)]
+	directive = strings.ToLower(directive)
+	if directive == "include" {
+		// this is a special hardcoded case
+		// we cannot add it as a directive type because there are recursion issues
+		// note a user might still include another file that includes the original file
+		// generating a DDOS attack
+		if p.includeCount >= maxIncludeRecursion {
+			return fmt.Errorf("cannot include more than %d files", maxIncludeRecursion)
+		}
+		p.includeCount++
+		return p.FromFile(opts)
+	}
+	d, ok := directivesMap[directive]
 	if !ok || d == nil {
 		return p.log("Unsupported directive " + directive)
 	}
