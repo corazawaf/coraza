@@ -524,7 +524,6 @@ func (tx *Transaction) ExtractArguments(orig string, uri string) {
 // AddArgument Add arguments GET or POST
 // This will set ARGS_(GET|POST), ARGS, ARGS_NAMES, ARGS_COMBINED_SIZE and
 // ARGS_(GET|POST)_NAMES
-// TODO: [BUG] argument support case?
 func (tx *Transaction) AddArgument(orig string, key string, value string) {
 	// TODO implement ARGS value limit using ArgumentsLimit
 	var vals, names variables.RuleVariable
@@ -535,6 +534,7 @@ func (tx *Transaction) AddArgument(orig string, key string, value string) {
 		vals = variables.ArgsPost
 		names = variables.ArgsPostNames
 	}
+	key = strings.ToLower(key)
 	tx.GetCollection(variables.Args).Add(key, value)
 	tx.GetCollection(variables.ArgsNames).Add(key, key)
 

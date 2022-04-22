@@ -583,3 +583,29 @@ func Test941310(t *testing.T) {
 		t.Error("non utf-8 rx test fails")
 	}
 }
+
+func TestArgumentsCaseSensitive(t *testing.T) {
+	waf := coraza.NewWaf()
+	rules := `SecRule ARGS:Test1 "123" "id:3, phase:2, log, deny"`
+	parser, err := NewParser(waf)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = parser.FromString(rules)
+	if err != nil {
+		t.Error()
+		return
+	}
+
+	tx := waf.NewTransaction()
+	tx.AddArgument("POST", "Test1", `123`)
+	it, err := tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it == nil {
+		t.Error("failed to test arguments case sensitive")
+	}
+}
