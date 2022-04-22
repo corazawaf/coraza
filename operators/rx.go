@@ -51,7 +51,7 @@ func (o *rx) Evaluate(tx *coraza.Transaction, value string) bool {
 
 func (o *rx) convert(src string) []byte {
 	var buf bytes.Buffer
-	for i := range src {
+	for i := 0; i < len(src); i++ {
 		buf.WriteRune(rune(src[i]))
 	}
 	return buf.Bytes()

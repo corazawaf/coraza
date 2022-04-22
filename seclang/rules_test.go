@@ -574,7 +574,7 @@ func Test941310(t *testing.T) {
 	}
 
 	tx := waf.NewTransaction()
-	tx.AddArgument("POST", "var", `\\xbcscript\\xbealert(\xa2XSS\xa2)\xbc/script\xbe`)
+	tx.AddArgument("POST", "var", `\xd0\xbcscript\xd0\xbealert(\xc2\xa2XSS\xc2\xa2)\xd0\xbc/script\xd0\xbe`)
 	it, err := tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
