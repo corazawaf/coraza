@@ -32,201 +32,201 @@ const (
 	// Unknown is used as placeholder for errors
 	Unknown RuleVariable = iota
 	// ResponseContentType is the content type of the response
-	ResponseContentType RuleVariable = iota
+	ResponseContentType
 	// UniqueID is the unique id of the transaction
-	UniqueID RuleVariable = iota
+	UniqueID
 	// ArgsCombinedSize is the combined size of the arguments
-	ArgsCombinedSize RuleVariable = iota
+	ArgsCombinedSize
 	// AuthType is the authentication type
-	AuthType RuleVariable = iota
+	AuthType
 	// FilesCombinedSize is the combined size of the uploaded files
-	FilesCombinedSize RuleVariable = iota
+	FilesCombinedSize
 	// FullRequest is the full request
-	FullRequest RuleVariable = iota
+	FullRequest
 	// FullRequestLength is the length of the full request
-	FullRequestLength RuleVariable = iota
+	FullRequestLength
 	// InboundDataError represents errors for inbound data
-	InboundDataError RuleVariable = iota
+	InboundDataError
 	// MatchedVar is the value of the matched variable
-	MatchedVar RuleVariable = iota
+	MatchedVar
 	// MatchedVarName is the name of the matched variable
-	MatchedVarName RuleVariable = iota
+	MatchedVarName
 	// MultipartBoundaryQuoted kept for compatibility
-	MultipartBoundaryQuoted RuleVariable = iota
+	MultipartBoundaryQuoted
 	// MultipartBoundaryWhitespace kept for compatibility
-	MultipartBoundaryWhitespace RuleVariable = iota
+	MultipartBoundaryWhitespace
 	// MultipartCrlfLfLines kept for compatibility
-	MultipartCrlfLfLines RuleVariable = iota
+	MultipartCrlfLfLines
 	// MultipartDataAfter kept for compatibility
-	MultipartDataAfter RuleVariable = iota
+	MultipartDataAfter
 	// MultipartDataBefore kept for compatibility
-	MultipartDataBefore RuleVariable = iota
+	MultipartDataBefore
 	// MultipartFileLimitExceeded kept for compatibility
-	MultipartFileLimitExceeded RuleVariable = iota
+	MultipartFileLimitExceeded
 	// MultipartHeaderFolding kept for compatibility
-	MultipartHeaderFolding RuleVariable = iota
+	MultipartHeaderFolding
 	// MultipartInvalidHeaderFolding kept for compatibility
-	MultipartInvalidHeaderFolding RuleVariable = iota
+	MultipartInvalidHeaderFolding
 	// MultipartInvalidPart kept for compatibility
-	MultipartInvalidPart RuleVariable = iota
+	MultipartInvalidPart
 	// MultipartInvalidQuoting kept for compatibility
-	MultipartInvalidQuoting RuleVariable = iota
+	MultipartInvalidQuoting
 	// MultipartLfLine kept for compatibility
-	MultipartLfLine RuleVariable = iota
+	MultipartLfLine
 	// MultipartMissingSemicolon kept for compatibility
-	MultipartMissingSemicolon RuleVariable = iota
+	MultipartMissingSemicolon
 	// MultipartStrictError kept for compatibility
-	MultipartStrictError RuleVariable = iota
+	MultipartStrictError
 	// MultipartUnmatchedBoundary kept for compatibility
-	MultipartUnmatchedBoundary RuleVariable = iota
+	MultipartUnmatchedBoundary
 	// OutboundDataError will be set to 1 when the response body size
 	// is above the setting configured by SecResponseBodyLimit
-	OutboundDataError RuleVariable = iota
+	OutboundDataError
 	// PathInfo is kept for compatibility
-	PathInfo RuleVariable = iota
+	PathInfo
 	// QueryString contains the raw query string part of a request URI
-	QueryString RuleVariable = iota
+	QueryString
 	// RemoteAddr is the remote address of the connection
-	RemoteAddr RuleVariable = iota
+	RemoteAddr
 	// RemoteHost is the remote host of the connection, not implemented
-	RemoteHost RuleVariable = iota
+	RemoteHost
 	// RemotePort is the remote port of the connection
-	RemotePort RuleVariable = iota
+	RemotePort
 	// ReqbodyError contains the status of the request body processor used
 	// for request body parsing, 0 means no error, 1 means error
-	ReqbodyError RuleVariable = iota
+	ReqbodyError
 	// ReqbodyErrorMsg contains the error message of the request body processor error
-	ReqbodyErrorMsg RuleVariable = iota
+	ReqbodyErrorMsg
 	// ReqbodyProcessorError is the same as ReqbodyErrr ?
-	ReqbodyProcessorError RuleVariable = iota
+	ReqbodyProcessorError
 	// ReqbodyProcessorErrorMsg is the same as ReqbodyErrorMsg ?
-	ReqbodyProcessorErrorMsg RuleVariable = iota
+	ReqbodyProcessorErrorMsg
 	// ReqbodyProcessor contains the name of the request body processor used, default
 	// ones are: URLENCODED, MULTIPART, and XML. They can be extended using plugins.
-	ReqbodyProcessor RuleVariable = iota
+	ReqbodyProcessor
 	// RequestBasename contains the name after the last slash in the request URI
 	// It does not pass through any anti-evasion, use with transformations
-	RequestBasename RuleVariable = iota
+	RequestBasename
 	// RequestBody contains the full request body, it will only be available
 	// For urlencoded requests. It is possible to force it's presence by using
 	// the ctl:forceRequestBodyVariable action
-	RequestBody RuleVariable = iota
+	RequestBody
 	// RequestBodyLength contains the length of the request body in bytes calculated from
 	// the BodyBuffer, not from the content-type header
-	RequestBodyLength RuleVariable = iota
+	RequestBodyLength
 	// RequestFilename holds the relative request URL without the query string part.
 	// Anti-evasion transformations are not used by default
-	RequestFilename RuleVariable = iota
+	RequestFilename
 	// RequestLine This variable holds the complete request line sent to the server
 	// (including the request method and HTTP version information).
-	RequestLine RuleVariable = iota
+	RequestLine
 	// RequestMethod is the request method
-	RequestMethod RuleVariable = iota
+	RequestMethod
 	// RequestProtocol is the protocol used in the request
-	RequestProtocol RuleVariable = iota
+	RequestProtocol
 	// RequestURI holds the full request URL including the query string data without
 	// the domain name
-	RequestURI RuleVariable = iota
+	RequestURI
 	// RequestURIRaw is the same as RequestURI but with the domain name in case
 	// it was provided in the request line
-	RequestURIRaw RuleVariable = iota
+	RequestURIRaw
 	// ResponseBody contains the full response body, it will only be available if
 	// responseBodyAccess is set to on and the response mime matches the configured
 	// processable mime types
-	ResponseBody RuleVariable = iota
+	ResponseBody
 	// ResponseContentLength contains the length of the response body in bytes calculated from
 	// the BodyBuffer, not from the content-type header
-	ResponseContentLength RuleVariable = iota
+	ResponseContentLength
 	// ResponseProtocol is the protocol used in the response
-	ResponseProtocol RuleVariable = iota
+	ResponseProtocol
 	// ResponseStatus is the status code of the response
-	ResponseStatus RuleVariable = iota
+	ResponseStatus
 	// ServerAddr is the address of the server
-	ServerAddr RuleVariable = iota
+	ServerAddr
 	// ServerName is the name of the server
-	ServerName RuleVariable = iota
+	ServerName
 	// ServerPort is the port of the server
-	ServerPort RuleVariable = iota
+	ServerPort
 	// Sessionid is not supported
-	Sessionid RuleVariable = iota
+	Sessionid
 	// HighestSeverity is the highest severity from all matched rules
-	HighestSeverity RuleVariable = iota
+	HighestSeverity
 	// StatusLine is the status line of the response, including the request method
 	// and HTTP version information
-	StatusLine RuleVariable = iota
+	StatusLine
 	// InboundErrorData will be set to 1 when the request body size
 	// is above the setting configured by SecRequesteBodyLimit
-	InboundErrorData RuleVariable = iota
+	InboundErrorData
 	// Duration contains the time in miliseconds from
 	// the beginning of the transaction until this point
-	Duration RuleVariable = iota
+	Duration
 	// ResponseHeadersNames contains the names of the response headers
-	ResponseHeadersNames RuleVariable = iota
+	ResponseHeadersNames
 	// RequestHeadersNames contains the names of the request headers
-	RequestHeadersNames RuleVariable = iota
+	RequestHeadersNames
 	// Userid is not supported
-	Userid RuleVariable = iota
+	Userid
 	// Args contains copies of ArgsGet and ArgsPost
-	Args RuleVariable = iota
+	Args
 	// ArgsGet contains the GET (URL) arguments
-	ArgsGet RuleVariable = iota
+	ArgsGet
 	// ArgsPost contains the POST (BODY) arguments
-	ArgsPost RuleVariable = iota
+	ArgsPost
 	// FilesSizes contains the sizes of the uploaded files
-	FilesSizes RuleVariable = iota
+	FilesSizes
 	// FilesNames contains the names of the uploaded files
-	FilesNames RuleVariable = iota
+	FilesNames
 	// FilesTmpContent is not supported
-	FilesTmpContent RuleVariable = iota
+	FilesTmpContent
 	// MultipartFilename contains the multipart data from field FILENAME
-	MultipartFilename RuleVariable = iota
+	MultipartFilename
 	// MultipartName contains the multipart data from field NAME.
-	MultipartName RuleVariable = iota
+	MultipartName
 	// MatchedVarsNames is similar to MATCHED_VAR_NAME except that it is
 	// a collection of all matches for the current operator check.
-	MatchedVarsNames RuleVariable = iota
+	MatchedVarsNames
 	// MatchedVars is similar to MATCHED_VAR except that it is a collection
 	// of all matches for the current operator check
-	MatchedVars RuleVariable = iota
+	MatchedVars
 	// Files contains a collection of original file names
 	// (as they were called on the remote user’s filesys- tem).
 	// Available only on inspected multipart/form-data requests.
-	Files RuleVariable = iota
+	Files
 	// RequestCookies is a collection of all of request cookies (values only
-	RequestCookies RuleVariable = iota
+	RequestCookies
 	// RequestHeaders can be used as either a collection of all of the request
 	// headers or can be used to inspect selected headers
-	RequestHeaders RuleVariable = iota
+	RequestHeaders
 	// ResponseHeaders can be used as either a collection of all of the response
 	// headers or can be used to inspect selected headers
-	ResponseHeaders RuleVariable = iota
+	ResponseHeaders
 	// Geo contains the location information of the client
-	Geo RuleVariable = iota
+	Geo
 	// RequestCookiesNames contains the names of the request cookies
-	RequestCookiesNames RuleVariable = iota
+	RequestCookiesNames
 	// FilesTmpNames contains the names of the uploaded temporal files
-	FilesTmpNames RuleVariable = iota
+	FilesTmpNames
 	// ArgsNames contains the names of the arguments (POST and GET)
-	ArgsNames RuleVariable = iota
+	ArgsNames
 	// ArgsGetNames contains the names of the GET arguments
-	ArgsGetNames RuleVariable = iota
+	ArgsGetNames
 	// ArgsPostNames contains the names of the POST arguments
-	ArgsPostNames RuleVariable = iota
+	ArgsPostNames
 	// TX contains transaction specific variables created with setvar
-	TX RuleVariable = iota
+	TX
 	// Rule contains rule metadata
-	Rule RuleVariable = iota
+	Rule
 	// XML provides minimal XPATH support
-	XML RuleVariable = iota
+	XML
 	// JSON does not provide any data, might be removed
-	JSON RuleVariable = iota
+	JSON
 	// Env contains the process environment variables
-	Env RuleVariable = iota
+	Env
 	// IP is kept for compatibility
-	IP RuleVariable = iota
+	IP
 	// UrlencodedError equals 1 if we failed to parse de URL
 	// It applies for URL query part and urlencoded post body
-	UrlencodedError RuleVariable = iota
+	UrlencodedError
 )
 
 var rulemap = map[RuleVariable]string{
