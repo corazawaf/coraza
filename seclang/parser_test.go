@@ -78,9 +78,6 @@ func TestHardcodedSubIncludeDirective(t *testing.T) {
 	if waf.Rules.Count() != 3 {
 		t.Error("Expected 3 rules loaded using include directive. Found: ", waf.Rules.Count())
 	}
-	if err := p.FromString("Include unknown"); err == nil {
-		t.Error("Include directive should fail")
-	}
 }
 
 func TestHardcodedSubIncludeDirectiveAbsolutePath(t *testing.T) {
@@ -93,9 +90,6 @@ func TestHardcodedSubIncludeDirectiveAbsolutePath(t *testing.T) {
 	}
 	if waf.Rules.Count() != 3 {
 		t.Error("Expected 3 rules loaded using include directive. Found: ", waf.Rules.Count())
-	}
-	if err := p.FromString("Include unknown"); err == nil {
-		t.Error("Include directive should fail")
 	}
 }
 
