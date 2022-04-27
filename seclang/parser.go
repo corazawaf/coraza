@@ -58,7 +58,12 @@ func (p *Parser) FromFile(profilePath string) error {
 		files = append(files, profilePath)
 	}
 	for _, profilePath := range files {
+		profilePath = strings.TrimSpace(profilePath)
+		if !strings.HasPrefix(profilePath, "/") {
+			profilePath = filepath.Join(p.currentDir, profilePath)
+		}
 		p.currentFile = profilePath
+		lastDir := p.currentDir
 		p.currentDir = filepath.Dir(profilePath)
 		file, err := os.ReadFile(profilePath)
 		if err != nil {
@@ -75,6 +80,8 @@ func (p *Parser) FromFile(profilePath string) error {
 			)
 			return err
 		}
+		// restore the lastDir post processing all includes
+		p.currentDir = lastDir
 	}
 	return nil
 }
