@@ -24,8 +24,8 @@ Welcome to OWASP Coraza Web Application Firewall, OWASP Coraza is a golang enter
 * Rollback SecAuditLog to the legacy syntax (serial/concurrent)
 * Attach an error log handler using ```waf.SetErrorLogCb(cb)``` (optional)
 * the function Transaction.Clean() must be used to clear transaction data, files and take them back to the sync pool.
-* If you are using @rx with libpcre (CRS) install the plugin [github.com/jptosso/coraza-pcre](https://github.com/jptosso/coraza-pcre)
 * If you are using low level APIs check the complete changelog as most of them were removed.
+* OWASP CRS does not require any external dependency anymore
 
 
 ## Running the tests
