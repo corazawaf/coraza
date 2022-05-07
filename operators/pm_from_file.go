@@ -30,10 +30,10 @@ func (o *pmFromFile) Init(data string) error {
 	lines := []string{}
 	sp := strings.Split(data, "\n")
 	for _, l := range sp {
+		l = strings.ReplaceAll(l, "\r", "") // CLF
 		if len(l) == 0 {
 			continue
 		}
-		l = strings.ReplaceAll(l, "\r", "") // CLF
 		if l[0] != '#' {
 			lines = append(lines, strings.ToLower(l))
 		}
