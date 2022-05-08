@@ -31,4 +31,26 @@ func TestPmfm(t *testing.T) {
 	if !p.Evaluate(tx, "def") {
 		t.Error("failed to match pmFromFile")
 	}
+
+	data = "\r\nasd\r\n# 123\r\n\r\n\r\n"
+	if err := p.Init(data); err != nil {
+		t.Error(err)
+	}
+	tx = waf.NewTransaction()
+	if !p.Evaluate(tx, "asd") {
+		t.Error("failed to match pmFromFile")
+	}
+	if p.Evaluate(tx, "123") {
+		t.Error("failed to match pmFromFile")
+	}
+
+	data = "\nSecRuleRemoveById 123456\r\n\n# SecRuleRemoveById 234567\r\n\r\n\n\r\n" // Mix LF & CRLF
+	if err := p.Init(data); err != nil {
+		t.Error(err)
+	}
+	tx = waf.NewTransaction()
+	if !p.Evaluate(tx, "SecRuleRemoveById 123456") {
+		t.Error("failed to match pmFromFile")
+	}
+
 }
