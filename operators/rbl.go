@@ -15,6 +15,7 @@
 package operators
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"time"
@@ -37,33 +38,47 @@ func (o *rbl) Init(data string) error {
 // https://github.com/SpiderLabs/ModSecurity/blob/b66224853b4e9d30e0a44d16b29d5ed3842a6b11/src/operators/rbl.cc
 func (o *rbl) Evaluate(tx *coraza.Transaction, value string) bool {
 	// TODO validate address
-	c1 := make(chan bool)
-	captures := []string{}
+	resC := make(chan bool)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	defer func() {
+		cancel()
+		close(resC)
+	}()
 
 	addr := fmt.Sprintf("%s.%s", value, o.service)
+	captures := []string{}
 	go func() {
-		res, err := net.LookupHost(addr)
+		res, err := net.DefaultResolver.LookupHost(ctx, addr)
 		if err != nil {
-			c1 <- false
+			resC <- false
+			return
 		}
 		// var status string
 		if len(res) > 0 {
-			txt, _ := net.LookupTXT(addr)
+			txt, err := net.DefaultResolver.LookupTXT(ctx, addr)
+			if err != nil {
+				resC <- false
+				return
+			}
+
 			if len(txt) > 0 {
 				status := txt[0]
 				captures = append(captures, txt[0])
 				tx.GetCollection(variables.TX).Set("httpbl_msg", []string{status})
 			}
 		}
-		c1 <- true
+
+		resC <- true
 	}()
+
 	select {
-	case res := <-c1:
+	case res := <-resC:
 		if res && len(captures) > 0 {
 			tx.CaptureField(0, captures[0])
 		}
 		return res
-	case <-time.After(1):
+	case <-time.After(200 * time.Millisecond):
 		// TIMEOUT
 		return false
 	}

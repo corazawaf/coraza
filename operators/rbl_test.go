@@ -16,25 +16,34 @@ package operators
 
 import (
 	"testing"
+
+	"go.uber.org/goleak"
 )
+
+func TestMain(m *testing.M) {
+	goleak.VerifyTestMain(m)
+}
 
 func TestRbl(t *testing.T) {
 	rbl := &rbl{}
 	if err := rbl.Init("xbl.spamhaus.org"); err != nil {
 		t.Error("Cannot init rbl operator")
 	}
+
 	// Twitter ip address
 	if rbl.Evaluate(nil, "199.16.156.5") {
 		t.Errorf("Invalid result for @rbl operator")
 	}
+
 	// Facebook ip address
 	if rbl.Evaluate(nil, "176.13.13.13") {
 		t.Errorf("Invalid result for @rbl operator")
 	}
+
 	/*
-	   // We dont have any permanently banned ip address :(
-	   if !rbl.Evaluate(nil, "71.6.158.166") {
-	       t.Errorf("Invalid result for @rbl operator, should be blacklisted")
-	   }
+		// We dont have any permanently banned ip address :(
+		if !rbl.Evaluate(nil, "71.6.158.166") {
+			t.Errorf("Invalid result for @rbl operator, should be blacklisted")
+		}
 	*/
 }
