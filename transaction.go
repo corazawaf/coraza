@@ -32,7 +32,6 @@ import (
 	"github.com/corazawaf/coraza/v2/types/variables"
 	utils "github.com/corazawaf/coraza/v2/utils/strings"
 	url2 "github.com/corazawaf/coraza/v2/utils/url"
-	"go.uber.org/zap"
 )
 
 // Transaction is created from a WAF instance to handle web requests and responses,
@@ -177,15 +176,18 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 // CaptureField is used to set the TX:[index] variables by operators
 // that supports capture, like @rx
 func (tx *Transaction) CaptureField(index int, value string) {
-	tx.Waf.Logger.Debug("Capturing field", zap.String("txid", tx.ID),
-		zap.Int("index", index), zap.String("value", value))
+	tx.Waf.Logger.WithFields(Fields{
+		"txid":  tx.ID,
+		"index": index,
+		"value": value,
+	}).Debug("Capturing field")
 	i := strconv.Itoa(index)
 	tx.GetCollection(variables.TX).SetIndex(i, 0, value)
 }
 
 // this function is used to control which variables are reset after a new rule is evaluated
 func (tx *Transaction) resetCaptures() {
-	tx.Waf.Logger.Debug("Reseting captured variables", zap.String("txid", tx.ID))
+	tx.Waf.Logger.WithField("txid", tx.ID).Debug("Reseting captured variables")
 	// We reset capture 0-9
 	ctx := tx.GetCollection(variables.TX)
 	// RUNE 48 = 0
@@ -275,7 +277,10 @@ func (tx *Transaction) matchVariable(match MatchData) {
 
 // MatchRule Matches a rule to be logged
 func (tx *Transaction) MatchRule(r *Rule, mds []MatchData) {
-	tx.Waf.Logger.Debug("rule matched", zap.String("txid", tx.ID), zap.Int("rule", r.ID))
+	tx.Waf.Logger.WithFields(Fields{
+		"txid": tx.ID,
+		"rule": r.ID,
+	}).Debug("rule matched")
 	// tx.MatchedRules = append(tx.MatchedRules, mr)
 
 	// If the rule is set to audit, we log the transaction to the audit log
@@ -288,7 +293,7 @@ func (tx *Transaction) MatchRule(r *Rule, mds []MatchData) {
 	maxSeverity, _ := types.ParseRuleSeverity(hs.GetFirstString(""))
 	if r.Severity > maxSeverity {
 		hs.SetIndex("", 0, strconv.Itoa(r.Severity.Int()))
-		tx.Waf.Logger.Debug("Set highest severity", zap.Int("severity", r.Severity.Int()))
+		tx.Waf.Logger.WithField("severity", r.Severity.Int()).Debug("Set highest severity")
 	}
 
 	mr := MatchedRule{
@@ -345,8 +350,11 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []MatchData {
 	if tx.bodyProcessor != nil && tx.bodyProcessor.VariableHook() == collection {
 		m, err := tx.bodyProcessor.Find(rv.KeyStr)
 		if err != nil {
-			tx.Waf.Logger.Error("error getting variable", zap.String("collection", collection.Name()),
-				zap.String("key", rv.KeyStr), zap.Error(err))
+			tx.Waf.Logger.WithFields(Fields{
+				"collection": collection.Name(),
+				"key":        rv.KeyStr,
+				"error":      err,
+			}).Error("error getting variable")
 			return []MatchData{}
 		}
 		if len(m) == 0 {
@@ -377,9 +385,13 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []MatchData {
 		for _, ex := range rv.Exceptions {
 			// in case it matches the regex or the keyStr
 			if (ex.KeyRx != nil && ex.KeyRx.MatchString(c.Key)) || ex.KeyStr == c.Key {
-				tx.Waf.Logger.Debug("Variable exception triggered", zap.String("var", rv.Variable.Name()),
-					zap.String("key", ex.KeyStr), zap.String("txid", tx.ID), zap.String("match", c.Key),
-					zap.Bool("regex", ex.KeyRx != nil))
+				tx.Waf.Logger.WithFields(Fields{
+					"var":   rv.Variable.Name(),
+					"key":   ex.KeyStr,
+					"txid":  tx.ID,
+					"match": c.Key,
+					"regex": ex.KeyRx != nil,
+				}).Debug("Variable exception triggered")
 				// we remove the exception from the list of values
 				// we tried with standard append, but it fails... let's do some hacking
 				// m2 := append(matches[:i], matches[i+1:]...)
@@ -406,8 +418,10 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []MatchData {
 				Value:        strconv.Itoa(count),
 			},
 		}
-		tx.Waf.Logger.Debug("Transforming match to count", zap.String("tx", tx.ID),
-			zap.String("count", matches[0].Value))
+		tx.Waf.Logger.WithFields(Fields{
+			"tx":    tx.ID,
+			"count": matches[0].Value,
+		}).Debug("Transforming match to count")
 	}
 	return matches
 }
@@ -672,8 +686,10 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		rbp = "URLENCODED"
 		tx.GetCollection(variables.ReqbodyProcessor).Set("", []string{rbp})
 	}
-	tx.Waf.Logger.Debug("Attempting to process request body", zap.String("txid", tx.ID),
-		zap.String("bodyprocessor", rbp))
+	tx.Waf.Logger.WithFields(Fields{
+		"txid":          tx.ID,
+		"bodyprocessor": rbp,
+	}).Debug("Attempting to process request body")
 	rbp = strings.ToLower(rbp)
 	if rbp == "" {
 		// so there is no bodyprocessor, we don't want to generate an error
@@ -799,9 +815,7 @@ func (tx *Transaction) ProcessLogging() {
 
 	if tx.AuditEngine == types.AuditEngineOff {
 		// Audit engine disabled
-		tx.Waf.Logger.Debug("Transaction not marked for audit logging, AuditEngine is disabled",
-			zap.String("tx", tx.ID),
-		)
+		tx.Waf.Logger.WithField("tx", tx.ID).Debug("Transaction not marked for audit logging, AuditEngine is disabled")
 		return
 	}
 
@@ -816,16 +830,12 @@ func (tx *Transaction) ProcessLogging() {
 		status := tx.GetCollection(variables.ResponseStatus).GetFirstString("")
 		if re != nil && !re.Match([]byte(status)) {
 			// Not relevant status
-			tx.Waf.Logger.Debug("Transaction status not marked for audit logging",
-				zap.String("tx", tx.ID),
-			)
+			tx.Waf.Logger.WithField("tx", tx.ID).Debug("Transaction status not marked for audit logging")
 			return
 		}
 	}
 
-	tx.Waf.Logger.Debug("Transaction marked for audit logging",
-		zap.String("tx", tx.ID),
-	)
+	tx.Waf.Logger.WithField("tx", tx.ID).Debug("Transaction marked for audit logging")
 	if writer := tx.Waf.AuditLogWriter; writer != nil {
 		// we don't log if there is an empty audit logger
 		if err := writer.Write(tx.AuditLog()); err != nil {
@@ -948,7 +958,11 @@ func (tx *Transaction) Clean() error {
 	if err := tx.ResponseBodyBuffer.Close(); err != nil {
 		return err
 	}
-	tx.Waf.Logger.Debug("Transaction finished", zap.String("event", "FINISH_TRANSACTION"), zap.String("txid", tx.ID), zap.Bool("interrupted", tx.Interrupted()))
+	tx.Waf.Logger.WithFields(Fields{
+		"event":       "FINISH_TRANSACTION",
+		"txid":        tx.ID,
+		"interrupted": tx.Interrupted(),
+	}).Debug("Transaction finished")
 	return nil
 }
 

@@ -22,7 +22,6 @@ import (
 	"github.com/corazawaf/coraza/v2"
 	"github.com/corazawaf/coraza/v2/types"
 	"github.com/corazawaf/coraza/v2/types/variables"
-	"go.uber.org/zap"
 )
 
 type setenvFn struct {
@@ -48,7 +47,7 @@ func (a *setenvFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	v := a.value.Expand(tx)
 	// set env variable
 	if err := os.Setenv(a.key, v); err != nil {
-		tx.Waf.Logger.Error("Error setting env variable", zap.Error(err))
+		tx.Waf.Logger.WithField("error", err).Error("Error setting env variable")
 	}
 	// TODO is this ok?
 	tx.GetCollection(variables.Env).Set(a.key, []string{v})

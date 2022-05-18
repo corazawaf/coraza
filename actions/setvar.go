@@ -22,7 +22,6 @@ import (
 	"github.com/corazawaf/coraza/v2"
 	"github.com/corazawaf/coraza/v2/types"
 	"github.com/corazawaf/coraza/v2/types/variables"
-	"go.uber.org/zap"
 )
 
 type setvarFn struct {
@@ -70,7 +69,10 @@ func (a *setvarFn) Init(r *coraza.Rule, data string) error {
 func (a *setvarFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	key := a.key.Expand(tx)
 	value := a.value.Expand(tx)
-	tx.Waf.Logger.Debug("Setting var", zap.String("key", key), zap.String("value", value))
+	tx.Waf.Logger.WithFields(coraza.Fields{
+		"key":   key,
+		"value": value,
+	}).Debug("Setting var")
 	a.evaluateTxCollection(r, tx, strings.ToLower(key), value)
 }
 
@@ -104,7 +106,7 @@ func (a *setvarFn) evaluateTxCollection(r *coraza.Rule, tx *coraza.Transaction, 
 		if len(value) > 1 {
 			sum, err = strconv.Atoi(value[1:])
 			if err != nil {
-				tx.Waf.Logger.Error("Invalid value for setvar", zap.String("value", value))
+				tx.Waf.Logger.WithField("value", value).Error("Invalid value for setvar")
 				return
 			}
 		}
@@ -112,7 +114,7 @@ func (a *setvarFn) evaluateTxCollection(r *coraza.Rule, tx *coraza.Transaction, 
 		if res != "" {
 			val, err = strconv.Atoi(res)
 			if err != nil {
-				tx.Waf.Logger.Error("Invalid value for setvar", zap.String("value", res))
+				tx.Waf.Logger.WithField("value", res).Error("Invalid value for setvar")
 				return
 			}
 		}

@@ -25,7 +25,6 @@ import (
 	"github.com/corazawaf/coraza/v2"
 	"github.com/corazawaf/coraza/v2/loggers"
 	"github.com/corazawaf/coraza/v2/types"
-	"go.uber.org/zap"
 )
 
 // DirectiveOptions contains the parsed options for a directive
@@ -71,9 +70,7 @@ func directiveSecAction(options *DirectiveOptions) error {
 	if err := options.Waf.Rules.Add(rule); err != nil {
 		return newCompileRuleError(err, options.Opts)
 	}
-	options.Waf.Logger.Debug("Added SecAction",
-		zap.String("rule", options.Opts),
-	)
+	options.Waf.Logger.WithField("rule", options.Opts).Debug("Added SecAction")
 	return nil
 }
 
@@ -89,20 +86,20 @@ func directiveSecRule(options *DirectiveOptions) error {
 	if err != nil && !ignoreErrors {
 		return newCompileRuleError(err, options.Opts)
 	} else if err != nil && ignoreErrors {
-		options.Waf.Logger.Debug("Ignoring rule compilation error",
-			zap.String("rule", options.Opts),
-			zap.Error(err),
-		)
+		options.Waf.Logger.WithFields(coraza.Fields{
+			"rule":  options.Opts,
+			"error": err,
+		}).Debug("Ignoring rule compilation error")
 		return nil
 	}
 	err = options.Waf.Rules.Add(rule)
 	if err != nil && !ignoreErrors {
 		return err
 	} else if err != nil && ignoreErrors {
-		options.Waf.Logger.Debug("Ignoring rule compilation error",
-			zap.String("rule", options.Opts),
-			zap.Error(err),
-		)
+		options.Waf.Logger.WithFields(coraza.Fields{
+			"rule":  options.Opts,
+			"error": err,
+		}).Debug("Ignoring rule compilation error")
 		return nil
 	}
 	return nil

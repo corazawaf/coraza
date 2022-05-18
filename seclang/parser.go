@@ -26,7 +26,6 @@ import (
 	"github.com/corazawaf/coraza/v2/types"
 
 	"github.com/corazawaf/coraza/v2"
-	"go.uber.org/zap"
 )
 
 // maxIncludeRecursion is used to avoid DDOS by including files that include
@@ -67,17 +66,13 @@ func (p *Parser) FromFile(profilePath string) error {
 		p.currentDir = filepath.Dir(profilePath)
 		file, err := os.ReadFile(profilePath)
 		if err != nil {
-			p.options.Waf.Logger.Error(err.Error(),
-				zap.String("path", profilePath),
-			)
+			p.options.Waf.Logger.WithField("path", profilePath).Error(err.Error())
 			return err
 		}
 
 		err = p.FromString(string(file))
 		if err != nil {
-			p.options.Waf.Logger.Error(err.Error(),
-				zap.String("path", profilePath),
-			)
+			p.options.Waf.Logger.WithField("path", profilePath).Error(err.Error())
 			return err
 		}
 		// restore the lastDir post processing all includes
@@ -122,9 +117,7 @@ func (p *Parser) evaluate(data string) error {
 	if len(spl) == 2 {
 		opts = spl[1]
 	}
-	p.options.Waf.Logger.Debug("parsing directive",
-		zap.String("directive", data),
-	)
+	p.options.Waf.Logger.WithField("directive", data).Debug("parsing directive")
 	directive := spl[0]
 
 	if len(opts) >= 3 && opts[0] == '"' && opts[len(opts)-1] == '"' {
@@ -156,9 +149,7 @@ func (p *Parser) evaluate(data string) error {
 
 func (p *Parser) log(msg string) error {
 	msg = fmt.Sprintf("[Parser] [Line %d] %s", p.currentLine, msg)
-	p.options.Waf.Logger.Error(msg,
-		zap.Int("line", p.currentLine),
-	)
+	p.options.Waf.Logger.WithField("line", p.currentLine).Error(msg)
 	return errors.New(msg)
 }
 

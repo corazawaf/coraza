@@ -22,7 +22,6 @@ import (
 	"github.com/corazawaf/coraza/v2/types"
 	"github.com/corazawaf/coraza/v2/types/variables"
 	"github.com/corazawaf/coraza/v2/utils/strings"
-	"go.uber.org/zap"
 )
 
 // RuleGroup is a collection of rules
@@ -113,11 +112,11 @@ func (rg *RuleGroup) Clear() {
 // Eval rules for the specified phase, between 1 and 5
 // Returns true if transaction is disrupted
 func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
-	tx.Waf.Logger.Debug("Evaluating phase",
-		zap.String("event", "EVALUATE_PHASE"),
-		zap.String("txid", tx.ID),
-		zap.Int("phase", int(phase)),
-	)
+	tx.Waf.Logger.WithFields(Fields{
+		"event": "EVALUATE_PHASE",
+		"txid":  tx.ID,
+		"phase": int(phase),
+	}).Debug("Evaluating phase")
 	tx.LastPhase = phase
 	usedRules := 0
 	ts := time.Now().UnixNano()
@@ -134,7 +133,10 @@ RulesLoop:
 		// we skip the rule in case it's in the excluded list
 		for _, trb := range tx.ruleRemoveByID {
 			if trb == r.ID {
-				tx.Waf.Logger.Debug("Skipping rule", zap.Int("rule", r.ID), zap.String("txid", tx.ID))
+				tx.Waf.Logger.WithFields(Fields{
+					"rule": r.ID,
+					"txid": tx.ID,
+				}).Debug("Skipping rule")
 				continue RulesLoop
 			}
 		}
@@ -142,17 +144,19 @@ RulesLoop:
 		// we always evaluate secmarkers
 		if tx.SkipAfter != "" {
 			if r.SecMark == tx.SkipAfter {
-				tx.Waf.Logger.Debug("SkipAfter was finished", zap.String("txid", tx.ID),
-					zap.String("secmark", r.SecMark),
-					zap.String("event", "FINISH_SECMARK"),
-				)
+				tx.Waf.Logger.WithFields(Fields{
+					"txid":    tx.ID,
+					"secmark": r.SecMark,
+					"event":   "FINISH_SECMARK",
+				}).Debug("SkipAfter was finished")
 				tx.SkipAfter = ""
 			} else {
-				tx.Waf.Logger.Debug("Skipping rule because of SkipAfter", zap.String("txid", tx.ID),
-					zap.Int("rule", r.ID),
-					zap.String("secmark", tx.SkipAfter),
-					zap.String("event", "SKIP_RULE_BY_SECMARK"),
-				)
+				tx.Waf.Logger.WithFields(Fields{
+					"txid":    tx.ID,
+					"rule":    r.ID,
+					"secmark": tx.SkipAfter,
+					"event":   "SKIP_RULE_BY_SECMARK",
+				}).Debug("Skipping rule because of SkipAfter")
 			}
 			continue
 		}
@@ -170,12 +174,12 @@ RulesLoop:
 		tx.Capture = false // we reset captures
 		usedRules++
 	}
-	tx.Waf.Logger.Debug("Finished phase",
-		zap.String("event", "FINISH_PHASE"),
-		zap.String("txid", tx.ID),
-		zap.Int("phase", int(phase)),
-		zap.Int("rules", usedRules),
-	)
+	tx.Waf.Logger.WithFields(Fields{
+		"event": "FINISH_PHASE",
+		"txid":  tx.ID,
+		"phase": int(phase),
+		"rules": usedRules,
+	}).Debug("Finished phase")
 	tx.stopWatches[phase] = time.Now().UnixNano() - ts
 	return tx.Interruption != nil
 }

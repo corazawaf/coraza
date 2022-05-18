@@ -141,7 +141,7 @@ type Waf struct {
 	ProducerConnectorVersion string
 
 	// Used for the debug logger
-	Logger *zap.Logger
+	Logger Logger
 
 	// Used to allow switching the debug level during runtime
 	// ctl cannot switch use it as it will update de lvl
@@ -252,7 +252,10 @@ func (w *Waf) NewTransaction() *Transaction {
 		env.Set(spl[0], []string{spl[1]})
 	}
 
-	w.Logger.Debug("new transaction created", zap.String("event", "NEW_TRANSACTION"), zap.String("txid", tx.ID))
+	w.Logger.WithFields(Fields{
+		"event": "NEW_TRANSACTION",
+		"txid":  "tx.ID",
+	}).Debug("new transaction created")
 
 	return tx
 }
@@ -274,7 +277,7 @@ func (w *Waf) SetDebugLogPath(path string) error {
 	if err != nil {
 		return err
 	}
-	w.Logger = logger
+	w.Logger = NewZapLogger(logger)
 	return nil
 }
 
