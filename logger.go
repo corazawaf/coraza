@@ -18,8 +18,10 @@ import (
 	"go.uber.org/zap"
 )
 
+// Fields defines a set of custom key-value pairs for log printing
 type Fields map[string]interface{}
 
+// Logger defines a generic log interface
 type Logger interface {
 	WithField(key string, val interface{}) Logger
 	WithFields(fields Fields) Logger
@@ -30,6 +32,7 @@ type Logger interface {
 	Debug(v ...interface{})
 }
 
+// NewEmptyLogger returns an empty logger
 func NewEmptyLogger() Logger {
 	return &emptyLogger{}
 }
@@ -43,6 +46,7 @@ func (l *emptyLogger) Warn(_ ...interface{})                    {}
 func (l *emptyLogger) Error(_ ...interface{})                   {}
 func (l *emptyLogger) Debug(_ ...interface{})                   {}
 
+// NewZapLogger returns a zap logger
 func NewZapLogger(entry *zap.Logger) Logger {
 	return &zapLogger{entry: entry.Sugar()}
 }
