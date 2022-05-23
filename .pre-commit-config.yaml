@@ -8,7 +8,8 @@ repos:
     - id: go-imports
 #    - id: go-cyclo
 #      args: [-over=37] # we must drop it down to 15
-    - id: golangci-lint
-    - id: go-critic
+# golanci-lint and go-critic disabled because of golang 1.18 lint issues, requires research
+#    - id: golangci-lint
+#    - id: go-critic
     - id: go-unit-tests
     - id: go-mod-tidy
