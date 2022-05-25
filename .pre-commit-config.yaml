@@ -6,8 +6,8 @@ repos:
     - id: go-vet
     - id: go-lint
     - id: go-imports
-    - id: go-cyclo
-      args: [-over=37] # we must drop it down to 15
+#    - id: go-cyclo
+#      args: [-over=37] # we must drop it down to 15
     - id: golangci-lint
     - id: go-critic
     - id: go-unit-tests
