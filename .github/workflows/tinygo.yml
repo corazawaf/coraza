@@ -1,4 +1,4 @@
-name: Regression Tests
+name: Tinygo tests
 
 on:
   push:
@@ -7,7 +7,7 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.16.x, 1.17.x, 1.18.x]
+        go-version: [1.16.x, 1.17.x]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -23,10 +23,4 @@ jobs:
     - name: Download vendored dependencies
       run: go mod vendor
     - name: Tests and coverage
-      run: go test -v -coverpkg=./... -coverprofile=coverage-waf.out ./...
-    - name: SonarCloud Scan
-      if: ${{ matrix.go-version == '1.17.x' && github.repository_owner == 'corazawaf' }}
-      uses: sonarsource/sonarcloud-github-action@master
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      run: go test -v --tags=tinygo ./...
