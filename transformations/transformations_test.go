@@ -16,7 +16,6 @@ package transformations
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -77,8 +76,8 @@ func TestTransformations(t *testing.T) {
 				t.Error(err)
 			}
 			if out != data.Output {
-				t.Error(fmt.Sprintf("Transformation %s:\nInput: %s\nExpected: %v\nGot: %v\nExpected String: %s\nGot String: %s",
-					data.Name, data.Input, []byte(data.Output), []byte(out), data.Output, out))
+				t.Errorf("Transformation %s:\nInput: %s\nExpected: %v\nGot: %v\nExpected String: %s\nGot String: %s",
+					data.Name, data.Input, []byte(data.Output), []byte(out), data.Output, out)
 			}
 		}
 	}
