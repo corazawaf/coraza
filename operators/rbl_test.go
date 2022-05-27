@@ -16,13 +16,7 @@ package operators
 
 import (
 	"testing"
-
-	"go.uber.org/goleak"
 )
-
-func TestMain(m *testing.M) {
-	goleak.VerifyTestMain(m)
-}
 
 func TestRbl(t *testing.T) {
 	rbl := &rbl{}
