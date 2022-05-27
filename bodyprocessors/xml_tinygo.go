@@ -1,5 +1,5 @@
-//go:build !tinygo
-// +build !tinygo
+//go:build tinygo
+// +build tinygo
 
 // Copyright 2022 The CorazaWAF Authors
 //
@@ -18,71 +18,24 @@
 package bodyprocessors
 
 import (
-	"encoding/xml"
+	"errors"
 	"io"
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-type xmlBodyProcessor struct {
-}
+type xmlBodyProcessor struct{}
 
 func (*xmlBodyProcessor) ProcessRequest(reader io.Reader, collections [types.VariablesCount]collection.Collection, options Options) error {
-	values, contents, err := readXML(reader)
-	if err != nil {
-		return err
-	}
-	col := collections[variables.RequestXML].(*collection.CollectionMap)
-	col.Set("//@*", values)
-	col.Set("/*", contents)
-	return nil
+	return errors.New("not implemented")
 }
 
 func (*xmlBodyProcessor) ProcessResponse(reader io.Reader, collections [types.VariablesCount]collection.Collection, options Options) error {
-
-	return nil
+	return errors.New("not implemented")
 }
 
-func readXML(reader io.Reader) (attrs []string, content []string, err error) {
-	dec := xml.NewDecoder(reader)
-	var n xmlNode
-	err = dec.Decode(&n)
-	if err != nil {
-		return
-	}
-	xmlWalk([]xmlNode{n}, func(n xmlNode) bool {
-		a := n.Attrs
-		for _, attr := range a {
-			attrs = append(attrs, attr.Value)
-		}
-		if len(n.Nodes) == 0 {
-			content = append(content, string(n.Content))
-		}
-		return true
-	})
-	return
-}
-
-func xmlWalk(nodes []xmlNode, f func(xmlNode) bool) {
-	for _, n := range nodes {
-		if f(n) {
-			xmlWalk(n.Nodes, f)
-		}
-	}
-}
-
-type xmlNode struct {
-	XMLName xml.Name
-	Attrs   []xml.Attr `xml:",any,attr"`
-	Content []byte     `xml:",innerxml"`
-	Nodes   []xmlNode  `xml:",any"`
-}
-
-var (
-	_ BodyProcessor = &xmlBodyProcessor{}
-)
+var _ BodyProcessor = &xmlBodyProcessor{}
 
 func init() {
 	Register("xml", func() BodyProcessor {
