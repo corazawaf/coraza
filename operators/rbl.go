@@ -24,6 +24,8 @@ import (
 	"github.com/corazawaf/coraza/v2/types/variables"
 )
 
+const timeout = 500 * time.Millisecond
+
 type rbl struct {
 	service string
 }
@@ -36,7 +38,7 @@ func (o *rbl) Init(data string) error {
 
 // https://github.com/mrichman/godnsbl
 // https://github.com/SpiderLabs/ModSecurity/blob/b66224853b4e9d30e0a44d16b29d5ed3842a6b11/src/operators/rbl.cc
-func (o *rbl) Evaluate(tx *coraza.Transaction, value string) bool {
+func (o *rbl) Evaluate(tx *coraza.Transaction, ipAddr string) bool {
 	// TODO validate address
 	resC := make(chan bool)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -46,9 +48,9 @@ func (o *rbl) Evaluate(tx *coraza.Transaction, value string) bool {
 		close(resC)
 	}()
 
-	addr := fmt.Sprintf("%s.%s", value, o.service)
+	addr := fmt.Sprintf("%s.%s", ipAddr, o.service)
 	captures := []string{}
-	go func() {
+	go func(ctx context.Context) {
 		res, err := net.DefaultResolver.LookupHost(ctx, addr)
 		if err != nil {
 			resC <- false
@@ -70,7 +72,7 @@ func (o *rbl) Evaluate(tx *coraza.Transaction, value string) bool {
 		}
 
 		resC <- true
-	}()
+	}(ctx)
 
 	select {
 	case res := <-resC:
@@ -78,8 +80,7 @@ func (o *rbl) Evaluate(tx *coraza.Transaction, value string) bool {
 			tx.CaptureField(0, captures[0])
 		}
 		return res
-	case <-time.After(200 * time.Millisecond):
-		// TIMEOUT
+	case <-time.After(timeout):
 		return false
 	}
 }
