@@ -16,7 +16,6 @@ package operators
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -100,7 +99,7 @@ func TestTransformations(t *testing.T) {
 				if data.Ret == 0 {
 					expected = "no match"
 				}
-				t.Error(fmt.Sprintf("Invalid operator result for @%s(%q, %q), %s expected", data.Name, data.Param, data.Input, expected))
+				t.Errorf("Invalid operator result for @%s(%q, %q), %s expected", data.Name, data.Param, data.Input, expected)
 			}
 		}
 	}

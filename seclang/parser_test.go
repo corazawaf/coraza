@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/corazawaf/coraza/v2"
@@ -65,6 +66,30 @@ func TestHardcodedIncludeDirective(t *testing.T) {
 	}
 	if err := p.FromString("Include unknown"); err == nil {
 		t.Error("Include directive should fail")
+	}
+}
+
+func TestHardcodedSubIncludeDirective(t *testing.T) {
+	waf := coraza.NewWaf()
+	p, _ := NewParser(waf)
+	if err := p.FromString("Include ../testdata/includes/parent.conf"); err != nil {
+		t.Error(err)
+	}
+	if waf.Rules.Count() != 3 {
+		t.Error("Expected 3 rules loaded using include directive. Found: ", waf.Rules.Count())
+	}
+}
+
+func TestHardcodedSubIncludeDirectiveAbsolutePath(t *testing.T) {
+	waf := coraza.NewWaf()
+	p, _ := NewParser(waf)
+	currentDir, _ := filepath.Abs("./")
+	ruleFile := filepath.Join(currentDir, "../testdata/includes/parent.conf")
+	if err := p.FromString("Include " + ruleFile); err != nil {
+		t.Error(err)
+	}
+	if waf.Rules.Count() != 3 {
+		t.Error("Expected 3 rules loaded using include directive. Found: ", waf.Rules.Count())
 	}
 }
 
