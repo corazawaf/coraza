@@ -16,10 +16,9 @@ jobs:
       image: tinygo/tinygo:0.23.0
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
-          lfs: true
-          fetch-depth: 0 # for better blame info
+          fetch-depth: 0
 
       - name: Install Go
         uses: actions/setup-go@v3
