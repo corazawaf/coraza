@@ -13,7 +13,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     container:
-      image: tinygo/tinygo:0.23.0
+      image: tinygo/tinygo:0.24.0
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -29,9 +29,4 @@ jobs:
         run: go mod vendor
 
       - name: Tests
-        run: |
-          tinygo test
-          github.com/corazawaf/coraza/v3/types
-          github.com/corazawaf/coraza/v3/types/variables
-          github.com/corazawaf/coraza/v3/utils/strings
-          github.com/corazawaf/coraza/v3/utils/url
+        run: tinygo test ./...
