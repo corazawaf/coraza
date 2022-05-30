@@ -4,6 +4,7 @@ run:
 linters:
   disable-all: true
   enable:
+    # Enabled by default, see https://golangci-lint.run/usage/linters#enabled-by-default
     - deadcode
     - errcheck
     - gosimple
@@ -14,6 +15,7 @@ linters:
     - typecheck
     - unused
     - varcheck
+    # Enabled by coraza
     - goimports
     - gofmt
     - gocritic
