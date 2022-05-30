@@ -28,5 +28,10 @@ jobs:
       - name: Download vendored dependencies
         run: go mod vendor
 
-      - name: Tests and coverage
-        run: tinygo test github.com/corazawaf/coraza/v2/types/variables
+      - name: Tests
+        run: |
+          tinygo test
+          github.com/corazawaf/coraza/v2/types
+          github.com/corazawaf/coraza/v2/types/variables
+          github.com/corazawaf/coraza/v2/utils/strings
+          github.com/corazawaf/coraza/v2/utils/url
