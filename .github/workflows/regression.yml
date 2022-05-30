@@ -2,7 +2,16 @@ name: Regression Tests
 
 on:
   push:
+    branches:
+      - v2/master
+    paths-ignore:
+      - "**/*.md"
+      - "LICENSE"
   pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - "LICENSE"
+
 jobs:
   test:
     strategy:
@@ -11,22 +20,22 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Install Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: ${{ matrix.go-version }}
-    - name: Checkout code
-      uses: actions/checkout@v2
-      with:
-        lfs: true
-        fetch-depth: 0 #for better blame info
-    - name: Download vendored dependencies
-      run: go mod vendor
-    - name: Tests and coverage
-      run: go test -v -coverpkg=./... -coverprofile=coverage-waf.out ./...
-    - name: SonarCloud Scan
-      if: ${{ matrix.go-version == '1.17.x' && github.repository_owner == 'corazawaf' }}
-      uses: sonarsource/sonarcloud-github-action@master
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          lfs: true
+          fetch-depth: 0 #for better blame info
+      - name: Download vendored dependencies
+        run: go mod vendor
+      - name: Tests and coverage
+        run: go test -v -coverpkg=./... -coverprofile=coverage-waf.out ./...
+      - name: SonarCloud Scan
+        if: ${{ matrix.go-version == '1.17.x' && github.event.pull_request.head.repo.full_name == github.repository }}
+        uses: sonarsource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
