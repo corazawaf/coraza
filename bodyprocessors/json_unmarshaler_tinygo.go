@@ -15,14 +15,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package operators
+package bodyprocessors
 
 import (
-	"github.com/corazawaf/coraza/v3"
+	"github.com/tidwall/gjson"
 )
 
-type rbl struct{}
-
-func (o *rbl) Init(_ coraza.RuleOperatorOptions) error { return nil }
-
-func (o *rbl) Evaluate(_ *coraza.Transaction, _ string) bool { return true }
+func jsonUnmarshal(data []byte) (interface{}, error) {
+	return gjson.Parse(string(data)).Value(), nil
+}

@@ -31,7 +31,7 @@ jobs:
       - name: Tests
         run: |
           tinygo test
-          github.com/corazawaf/coraza/v2/types
-          github.com/corazawaf/coraza/v2/types/variables
-          github.com/corazawaf/coraza/v2/utils/strings
-          github.com/corazawaf/coraza/v2/utils/url
+          github.com/corazawaf/coraza/v3/types
+          github.com/corazawaf/coraza/v3/types/variables
+          github.com/corazawaf/coraza/v3/utils/strings
+          github.com/corazawaf/coraza/v3/utils/url

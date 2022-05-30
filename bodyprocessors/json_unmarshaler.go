@@ -1,5 +1,5 @@
-//go:build tinygo
-// +build tinygo
+//go:build !tinygo
+// +build !tinygo
 
 // Copyright 2022 Juan Pablo Tosso
 //
@@ -15,14 +15,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package operators
+package bodyprocessors
 
-import (
-	"github.com/corazawaf/coraza/v3"
-)
+import "encoding/json"
 
-type rbl struct{}
+func jsonUnmarshal(data []byte) (interface{}, error) {
+	var result interface{}
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, err
+	}
 
-func (o *rbl) Init(_ coraza.RuleOperatorOptions) error { return nil }
-
-func (o *rbl) Evaluate(_ *coraza.Transaction, _ string) bool { return true }
+	return result, nil
+}

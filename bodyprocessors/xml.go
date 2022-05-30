@@ -41,7 +41,6 @@ func (*xmlBodyProcessor) ProcessRequest(reader io.Reader, collections [types.Var
 }
 
 func (*xmlBodyProcessor) ProcessResponse(reader io.Reader, collections [types.VariablesCount]collection.Collection, options Options) error {
-
 	return nil
 }
 
