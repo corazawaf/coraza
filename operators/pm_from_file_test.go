@@ -21,7 +21,7 @@ import (
 )
 
 func TestPmfm(t *testing.T) {
-	data := "abc\r\ndef\r\nghi"
+	data := "abc\r\ndef\r\nghi\njkl\ryhz"
 	p := &pmFromFile{}
 	if err := p.Init(data); err != nil {
 		t.Error(err)
@@ -30,5 +30,8 @@ func TestPmfm(t *testing.T) {
 	tx := waf.NewTransaction()
 	if !p.Evaluate(tx, "def") {
 		t.Error("failed to match pmFromFile")
+	}
+	if len(p.pm.dict) != 4 {
+		t.Error("failed to load pmFromFile")
 	}
 }

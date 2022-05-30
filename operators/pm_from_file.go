@@ -15,6 +15,7 @@
 package operators
 
 import (
+	"bufio"
 	"strings"
 
 	"github.com/cloudflare/ahocorasick"
@@ -26,17 +27,18 @@ type pmFromFile struct {
 }
 
 func (o *pmFromFile) Init(data string) error {
-	// Split the data by LF or CRLF
 	lines := []string{}
-	sp := strings.Split(data, "\n")
-	for _, l := range sp {
+	sc := bufio.NewScanner(strings.NewReader(data))
+	for sc.Scan() {
+		l := sc.Text()
+		l = strings.TrimSpace(l)
 		if len(l) == 0 {
 			continue
 		}
-		l = strings.ReplaceAll(l, "\r", "") // CLF
-		if l[0] != '#' {
-			lines = append(lines, strings.ToLower(l))
+		if l[0] == '#' {
+			continue
 		}
+		lines = append(lines, strings.ToLower(l))
 	}
 	o.pm = &pm{
 		dict:    lines,
