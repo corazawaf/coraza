@@ -8,11 +8,17 @@
 
 
 We are striving to support an open community for the Coraza Project. We support
-our contributors, please don't feel afraid or unsure of submitting feedback or asking a question.
+our contributors, please don't feel afraid or unsure of submitting feedback or
+asking a question.
+
+## Community
+
+* Get in touch via the [OWASP Slack Community](https://owasp.org/slack/invite) (#coraza)
+* Monthly Meetings: [Summaries](https://github.com/corazawaf/coraza/issues?q=is%3Aissue+label%3Ameeting)
+* Planning: [Github Projects](https://github.com/orgs/corazawaf/projects?type=beta)
 
 ## Contributions
 
-* Get in touch via the [OWASP Slack Community](https://owasp.org/slack/invite) (#coraza)
 * Provide feedback and report potential bugs
 * Suggest enhancements to the project
 * Perform tests and increase test coverage
@@ -30,11 +36,12 @@ our contributors, please don't feel afraid or unsure of submitting feedback or a
   Be sure to include as much relevant information as possible, a **code sample** or an **test case** demonstrating the fault helps us to reproduce your problem.
 
 ## Patches
+
 Did you write a patch that fixes a bug?
 
 * Open a new GitHub pull request which includes your changes.
 * Please include a description which clearly describes the change. Include the relevant issue number if applicable.
-* Before submitting, you can test your code using [pre-commit](https://pre-commit.com/) to validate your pull request will pass our set of tests.
+* We use the [pre-commit](https://pre-commit.com/) framework to perform quality tests before sending them for review. It is recommended you [install](https://pre-commit.com/#install) it and use it before sending any patches.
 
 ## Enhancements
 
@@ -48,9 +55,9 @@ Run from the repository root:
 egrep -Rin "TODO|FIXME" -R --exclude-dir=vendor *
 ```
 
-
 ## Questions
-Do you have questions about the source code? Ask any question about how to use Coraza in the [community](https://github.com/corazawaf/coraza/discussions/categories/q-a).
+
+Do you have questions about the source code? Ask any question about how to use Coraza in the community [Discussions](https://github.com/corazawaf/coraza/discussions/categories/q-a).
 
 ## Testing
 
@@ -60,19 +67,8 @@ Coraza uses Go's built-in test tool. Examples (run from the repository root):
 - `go test -v -race ` use to enable the built-in data race detector
 - `go test -run TestDefaultWriters -v ./loggers` run all tests loggers package with name substring `TestDefaultWriters`
 
-When a pull request is opened CI will run all tests to verify the change.
-Before submitting you can commit using [pre-commit](https://pre-commit.com) to
-validate your pull request passes our test set:
-
-```sh
-pip install pre-commit
-pre-commit run --all-files
-```
-
-You can also install the pre-commit git hook by running
-```sh
-pre-commit install
-```
+- `pre-commit run --all-files` run tests using pre-commit 
+- `pre-commit install` install the pre-commit git hook
 
 _________________
 

@@ -23,8 +23,8 @@ IMPROVEMENTS:
 NOTES:
 
 **Migrate from Corza v1**
-  * Rollback SecAuditLog to the legacy syntax (serial/concurrent)
-  * Attach an error log handler using ```waf.SetErrorLogCb(cb)``` (optional)
-  * the function Transaction.Clean() must be used to clear transaction data, files and take them back to the sync pool.
+  * Rollback `SecAuditLog` to the legacy syntax (serial/concurrent)
+  * Attach an error log handler using `waf.SetErrorLogCb(cb)` (optional)
+  * The function `Transaction.Clean()` must be used to clear transaction data, files and take them back to the sync pool.
   * If you are using low level APIs check the complete changelog as most of them were removed.
-  * OWASP CRS does not require any external dependency anymore
+  * OWASP CRS does not require external dependencies anymore
