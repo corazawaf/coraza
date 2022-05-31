@@ -17,6 +17,7 @@ package seclang
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -586,7 +587,7 @@ func Test941310(t *testing.T) {
 
 func TestArgumentsCaseSensitive(t *testing.T) {
 	waf := coraza.NewWaf()
-	rules := `SecRule ARGS:Test1 "123" "id:3, phase:2, log, deny"`
+	rules := `SecRule ARGS:Test1 "Xyz" "id:3, phase:2, log, deny"`
 	parser, err := NewParser(waf)
 	if err != nil {
 		t.Error(err)
@@ -600,7 +601,7 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 	}
 
 	tx := waf.NewTransaction()
-	tx.AddArgument("POST", "Test1", `123`)
+	tx.AddArgument("POST", "Test1", "Xyz")
 	it, err := tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -608,4 +609,231 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 	if it == nil {
 		t.Error("failed to test arguments case sensitive")
 	}
+
+	tx = waf.NewTransaction()
+	tx.AddArgument("POST", "TEST1", "Xyz")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it == nil {
+		t.Error("failed to test arguments case sensitive")
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddArgument("POST", "test1", "Xyz")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it == nil {
+		t.Error("failed to test arguments case sensitive")
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddArgument("POST", "test1", "xyz")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it != nil {
+		t.Error("failed to test arguments value case sensitive")
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddArgument("POST", "test1", "XYZ")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it != nil {
+		t.Error("failed to test arguments value case sensitive")
+	}
+}
+
+func TestCookiesCaseSensitive(t *testing.T) {
+	waf := coraza.NewWaf()
+	rules := `SecRule REQUEST_COOKIES:Test1 "Xyz" "id:3, phase:2, log, deny"`
+	parser, err := NewParser(waf)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = parser.FromString(rules)
+	if err != nil {
+		t.Error()
+		return
+	}
+
+	tx := waf.NewTransaction()
+	tx.AddRequestHeader("cookie", "Test1=Xyz")
+	it, err := tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it == nil {
+		t.Error("failed to test cookies case sensitive")
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddRequestHeader("cookie", "TEST1=Xyz")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it == nil {
+		t.Error("failed to test cookies case sensitive")
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddRequestHeader("cookie", "test1=Xyz")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it == nil {
+		t.Error("failed to test cookies case sensitive")
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddRequestHeader("cookie", "test1=xyz")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it != nil {
+		t.Error("failed to test cookies value case sensitive")
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddRequestHeader("cookie", "test1=XYZ")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it != nil {
+		t.Error("failed to test cookies value case sensitive")
+	}
+}
+
+func TestHeadersCaseSensitive(t *testing.T) {
+	waf := coraza.NewWaf()
+	rules := `SecRule REQUEST_HEADERS:Test1 "Xyz" "id:3, phase:2, log, deny"`
+	parser, err := NewParser(waf)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = parser.FromString(rules)
+	if err != nil {
+		t.Error()
+		return
+	}
+
+	tx := waf.NewTransaction()
+	tx.AddRequestHeader("Test1", "Xyz")
+	it, err := tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it == nil {
+		t.Error("failed to test cookies case sensitive")
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddRequestHeader("TEST1", "Xyz")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it == nil {
+		t.Error("failed to test cookies case sensitive")
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddRequestHeader("test1", "Xyz")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it == nil {
+		t.Error("failed to test cookies case sensitive")
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddRequestHeader("test1", "xyz")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it != nil {
+		t.Error("failed to test cookies value case sensitive")
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddRequestHeader("test1", "XYZ")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it != nil {
+		t.Error("failed to test cookies value case sensitive")
+	}
+}
+
+func TestParameterPollution(t *testing.T) {
+	waf := coraza.NewWaf()
+	rules := `SecRule Args:TESt1 "Xyz" "id:3, phase:2, log, pass"`
+	parser, err := NewParser(waf)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = parser.FromString(rules)
+	if err != nil {
+		t.Error()
+		return
+	}
+
+	tx := waf.NewTransaction()
+	tx.AddArgument("POST", "test1", "xyz")
+	tx.AddArgument("POST", "Test1", "Xyz")
+	tx.AddArgument("POST", "TEST1", "XYZ")
+	_, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(tx.MatchedRules) == 1 {
+		if len(tx.MatchedRules[0].MatchedDatas) != 1 {
+			fmt.Printf("%+v\n", tx.MatchedRules)
+			t.Error("failed to test arguments pollution. Found matches:",
+				len(tx.MatchedRules[0].MatchedDatas))
+		}
+	} else {
+		t.Error("failed to test arguments pollution")
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddArgument("POST", "test1", "xyz")
+	tx.AddArgument("POST", "Test1", "Xyz")
+	tx.AddArgument("POST", "tesT1", "Xyz")
+	tx.AddArgument("POST", "TEST1", "XYZ")
+	_, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if len(tx.MatchedRules) == 1 {
+		if len(tx.MatchedRules[0].MatchedDatas) != 2 {
+			fmt.Printf("%+v\n", tx.MatchedRules)
+			t.Error("failed to test arguments pollution. Found matches:",
+				len(tx.MatchedRules[0].MatchedDatas))
+		}
+	} else {
+		t.Error("failed to test arguments pollution")
+	}
+
 }
