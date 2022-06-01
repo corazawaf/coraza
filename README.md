@@ -16,9 +16,9 @@
 Coraza is an open source, enterprise-grade, high performance Web Application Firewall (WAF) ready to protect your beloved applications. It written in Go, supports ModSecurity SecLang rulesets and is 100% compatible with the OWASP Core Rule Set.
 
 * Website: https://coraza.io
-* Forum: [Github Discussions](https://github.com/corazawaf/coraza/issues)
+* Forum: [Github Discussions](https://github.com/corazawaf/coraza/discussions)
 * OWASP Slack Community (#coraza): https://owasp.org/slack/invite
-* Rule testing: [Coraza Playground](thttps://playground.coraza.io)
+* Rule testing: [Coraza Playground](https://playground.coraza.io)
 * Planning: [Github Projects](https://github.com/orgs/corazawaf/projects?type=beta)
 
 <br/>
