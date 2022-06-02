@@ -270,9 +270,13 @@ func (tx *Transaction) matchVariable(match MatchData) {
 	// Array of keys
 	matchedVarsNames := tx.GetCollection(variables.MatchedVarsNames)
 
+	// We add the key in lowercase for ease of lookup in chains
+	// This is similar to args handling
 	matchedVars.AddCS(varNamel.String(), varName.String(), match.Value)
 	matchedVar.SetIndexCS("", 0, varName.String(), match.Value)
 
+	// We add the key in lowercase for ease of lookup in chains
+	// This is similar to args handling
 	matchedVarsNames.AddCS(varNamel.String(), varName.String(), varName.String())
 	matchedVarName.SetIndexCS("", 0, varName.String(), varName.String())
 }
@@ -381,7 +385,8 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []MatchData {
 		for _, ex := range rv.Exceptions {
 			lkey := strings.ToLower(c.Key)
 			// in case it matches the regex or the keyStr
-			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || ex.KeyStr == lkey {
+			// Since keys are case sensitive we need to check with lower case
+			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || strings.ToLower(ex.KeyStr) == lkey {
 				tx.Waf.Logger.Debug("Variable exception triggered", zap.String("var", rv.Variable.Name()),
 					zap.String("key", ex.KeyStr), zap.String("txid", tx.ID), zap.String("match", c.Key),
 					zap.Bool("regex", ex.KeyRx != nil))
@@ -541,10 +546,12 @@ func (tx *Transaction) AddArgument(orig string, key string, value string) {
 	}
 	keyl := strings.ToLower(key)
 	tx.GetCollection(variables.Args).AddCS(keyl, key, value)
-	tx.GetCollection(variables.ArgsNames).AddCS(keyl, key, keyl)
+	// Do not change case for Names: Modsecurity compatibility
+	tx.GetCollection(variables.ArgsNames).Add(key, key)
 
 	tx.GetCollection(vals).AddCS(keyl, key, value)
-	tx.GetCollection(names).AddCS(keyl, key, keyl)
+	// Do not change case for Names: Modsecurity compatibility
+	tx.GetCollection(names).Add(key, key)
 
 	col := tx.GetCollection(variables.ArgsCombinedSize)
 	i := col.GetFirstInt64("") + int64(len(key)+len(value))

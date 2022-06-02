@@ -586,7 +586,7 @@ func Test941310(t *testing.T) {
 
 func TestArgumentNamesCaseSensitive(t *testing.T) {
 	waf := coraza.NewWaf()
-	rules := `SecRule ARGS_NAMES "test1" "id:3, phase:2, log, deny"`
+	rules := `SecRule ARGS_NAMES "Test1" "id:3, phase:2, log, deny"`
 	parser, err := NewParser(waf)
 	if err != nil {
 		t.Error(err)
@@ -606,7 +606,7 @@ func TestArgumentNamesCaseSensitive(t *testing.T) {
 		t.Error(err)
 	}
 	if it == nil {
-		t.Error("failed to test argument names case sensitive: same case")
+		t.Error("failed to test argument names case sensitive: same case nomatch")
 	}
 
 	tx = waf.NewTransaction()
@@ -615,8 +615,8 @@ func TestArgumentNamesCaseSensitive(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if it == nil {
-		t.Error("failed to test argument names case sensitive: Upper case argument name")
+	if it != nil {
+		t.Error("failed to test argument names case sensitive: Upper case argument name matched")
 	}
 
 	tx = waf.NewTransaction()
@@ -625,8 +625,8 @@ func TestArgumentNamesCaseSensitive(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if it == nil {
-		t.Error("failed to test argument names case sensitive: Lower case argument name")
+	if it != nil {
+		t.Error("failed to test argument names case sensitive: Lower case argument name matched")
 	}
 
 }
@@ -943,7 +943,7 @@ func TestURIQueryParamCaseSensitive(t *testing.T) {
 
 func TestURIQueryParamNameCaseSensitive(t *testing.T) {
 	waf := coraza.NewWaf()
-	rules := `SecRule ARGS_NAMES "test1" "id:3, phase:2, log, pass"`
+	rules := `SecRule ARGS_NAMES "Test1" "id:3, phase:2, log, pass"`
 	parser, err := NewParser(waf)
 	if err != nil {
 		t.Error(err)
@@ -965,7 +965,7 @@ func TestURIQueryParamNameCaseSensitive(t *testing.T) {
 
 	if len(tx.MatchedRules) == 1 {
 		if len(tx.MatchedRules[0].MatchedDatas) != 1 {
-			t.Errorf("failed to test uri query param. Found matches: %d, %+v\n",
+			t.Errorf("failed to test uri query param. Expected: 1, Found matches: %d, %+v\n",
 				len(tx.MatchedRules[0].MatchedDatas), tx.MatchedRules)
 		}
 		if !isMatchData(tx.MatchedRules[0].MatchedDatas, "Test1") {
@@ -985,8 +985,8 @@ func TestURIQueryParamNameCaseSensitive(t *testing.T) {
 
 	if len(tx.MatchedRules) == 1 {
 		tx.PrintLog()
-		if len(tx.MatchedRules[0].MatchedDatas) != 3 {
-			t.Errorf("Failed to test uri query param. Found matches: %d, %+v\n",
+		if len(tx.MatchedRules[0].MatchedDatas) != 1 {
+			t.Errorf("Failed to test uri query param. Expected: 1, Found matches: %d, %+v\n",
 				len(tx.MatchedRules[0].MatchedDatas), tx.MatchedRules)
 		}
 		if !isMatchData(tx.MatchedRules[0].MatchedDatas, "Test1") {

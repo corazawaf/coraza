@@ -119,7 +119,7 @@ func (c *Collection) GetFirstInt(key string) int {
 	return 0
 }
 
-// AddCS a value to some key
+// AddCS a value to some key with case sensitive vKey
 func (c *Collection) AddCS(key string, vKey string, vVal string) {
 	aVal := types.AnchoredVar{vKey, vVal}
 	c.data[key] = append(c.data[key], aVal)
@@ -131,6 +131,7 @@ func (c *Collection) Add(key string, value string) {
 }
 
 // AddUniqueCS will add a value to a key if it is not already there
+// with case sensitive vKey
 func (c *Collection) AddUniqueCS(key string, vKey string, vVal string) {
 	if c.data[key] == nil {
 		c.AddCS(key, vKey, vVal)
@@ -152,6 +153,7 @@ func (c *Collection) AddUnique(key string, value string) {
 
 // SetCS will replace the key's value with this slice
 // internally converts [] string to []types.AnchoredVar
+// with case sensitive vKey
 func (c *Collection) SetCS(key string, vKey string, values []string) {
 	c.data[key] = []types.AnchoredVar{}
 	for _, v := range values {
@@ -169,6 +171,7 @@ func (c *Collection) Set(key string, values []string) {
 // SetIndexCS will place the value under the index
 // If the index is higher than the current size of the collection
 // it will be appended
+// with case sensitive vKey
 func (c *Collection) SetIndexCS(key string, index int, vKey string, value string) {
 	if c.data[key] == nil {
 		c.data[key] = []types.AnchoredVar{{vKey, value}}
