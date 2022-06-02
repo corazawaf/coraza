@@ -126,18 +126,18 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 	if key == "" {
 		return
 	}
-	key = strings.ToLower(key)
-	tx.GetCollection(variables.RequestHeadersNames).AddUnique("", key)
-	tx.GetCollection(variables.RequestHeaders).Add(key, value)
+	keyl := strings.ToLower(key)
+	tx.GetCollection(variables.RequestHeadersNames).AddUniqueCS(keyl, key, keyl)
+	tx.GetCollection(variables.RequestHeaders).AddCS(keyl, key, value)
 
-	if key == "content-type" {
+	if keyl == "content-type" {
 		val := strings.ToLower(value)
 		if val == "application/x-www-form-urlencoded" {
 			tx.GetCollection(variables.ReqbodyProcessor).Set("", []string{"URLENCODED"})
 		} else if strings.HasPrefix(val, "multipart/form-data") {
 			tx.GetCollection(variables.ReqbodyProcessor).Set("", []string{"MULTIPART"})
 		}
-	} else if key == "cookie" {
+	} else if keyl == "cookie" {
 		// Cookies use the same syntax as GET params but with semicolon (;) separator
 		values, err := url2.ParseQuery(value, ";")
 		if err != nil {
@@ -147,10 +147,10 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 			return
 		}
 		for k, vr := range values {
-			k = strings.ToLower(k)
-			tx.GetCollection(variables.RequestCookiesNames).AddUnique("", k)
+			kl := strings.ToLower(k)
+			tx.GetCollection(variables.RequestCookiesNames).AddUniqueCS(kl, k, kl)
 			for _, v := range vr {
-				tx.GetCollection(variables.RequestCookies).Add(k, v)
+				tx.GetCollection(variables.RequestCookies).AddCS(kl, k, v)
 			}
 		}
 	}
@@ -163,12 +163,12 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 	if key == "" {
 		return
 	}
-	key = strings.ToLower(key)
-	tx.GetCollection(variables.ResponseHeadersNames).AddUnique("", key)
-	tx.GetCollection(variables.ResponseHeaders).Add(key, value)
+	keyl := strings.ToLower(key)
+	tx.GetCollection(variables.ResponseHeadersNames).AddUniqueCS(keyl, key, keyl)
+	tx.GetCollection(variables.ResponseHeaders).AddCS(keyl, key, value)
 
 	// Most headers can be managed like that
-	if key == "content-type" {
+	if keyl == "content-type" {
 		spl := strings.SplitN(value, ";", 2)
 		tx.GetCollection(variables.ResponseContentType).SetIndex("", 0, spl[0])
 	}
@@ -250,10 +250,14 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 // MATCHED_VARS, MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES
 func (tx *Transaction) matchVariable(match MatchData) {
 	varName := strings.Builder{}
+	varNamel := strings.Builder{}
 	varName.WriteString(match.VariableName)
+	varNamel.WriteString(match.VariableName)
 	if match.Key != "" {
 		varName.WriteByte(':')
 		varName.WriteString(match.Key)
+		varNamel.WriteByte(':')
+		varNamel.WriteString(strings.ToLower(match.Key))
 	}
 	// Array of values
 	matchedVars := tx.GetCollection(variables.MatchedVars)
@@ -266,11 +270,11 @@ func (tx *Transaction) matchVariable(match MatchData) {
 	// Array of keys
 	matchedVarsNames := tx.GetCollection(variables.MatchedVarsNames)
 
-	matchedVars.Add(varName.String(), match.Value)
-	matchedVar.SetIndex("", 0, match.Value)
+	matchedVars.AddCS(varNamel.String(), varName.String(), match.Value)
+	matchedVar.SetIndexCS("", 0, varName.String(), match.Value)
 
-	matchedVarsNames.Add(varName.String(), varName.String())
-	matchedVarName.SetIndex("", 0, varName.String())
+	matchedVarsNames.AddCS(varNamel.String(), varName.String(), varName.String())
+	matchedVarName.SetIndexCS("", 0, varName.String(), varName.String())
 }
 
 // MatchRule Matches a rule to be logged
@@ -375,8 +379,9 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []MatchData {
 	rmi := []int{}
 	for i, c := range matches {
 		for _, ex := range rv.Exceptions {
+			lkey := strings.ToLower(c.Key)
 			// in case it matches the regex or the keyStr
-			if (ex.KeyRx != nil && ex.KeyRx.MatchString(c.Key)) || ex.KeyStr == c.Key {
+			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || ex.KeyStr == lkey {
 				tx.Waf.Logger.Debug("Variable exception triggered", zap.String("var", rv.Variable.Name()),
 					zap.String("key", ex.KeyStr), zap.String("txid", tx.ID), zap.String("match", c.Key),
 					zap.Bool("regex", ex.KeyRx != nil))
@@ -534,12 +539,12 @@ func (tx *Transaction) AddArgument(orig string, key string, value string) {
 		vals = variables.ArgsPost
 		names = variables.ArgsPostNames
 	}
-	key = strings.ToLower(key)
-	tx.GetCollection(variables.Args).Add(key, value)
-	tx.GetCollection(variables.ArgsNames).Add(key, key)
+	keyl := strings.ToLower(key)
+	tx.GetCollection(variables.Args).AddCS(keyl, key, value)
+	tx.GetCollection(variables.ArgsNames).AddCS(keyl, key, keyl)
 
-	tx.GetCollection(vals).Add(key, value)
-	tx.GetCollection(names).Add(key, key)
+	tx.GetCollection(vals).AddCS(keyl, key, value)
+	tx.GetCollection(names).AddCS(keyl, key, keyl)
 
 	col := tx.GetCollection(variables.ArgsCombinedSize)
 	i := col.GetFirstInt64("") + int64(len(key)+len(value))
@@ -837,6 +842,22 @@ func (tx *Transaction) ProcessLogging() {
 // Interrupted will return true if the transaction was interrupted
 func (tx *Transaction) Interrupted() bool {
 	return tx.Interruption != nil
+}
+
+func (tx *Transaction) PrintLog() {
+	for _, mr := range tx.MatchedRules {
+		r := mr.Rule
+		fmt.Println("Rule:", r.ID, "Message:", mr.Message, "Data:", mr.Data)
+		for _, matchData := range mr.MatchedDatas {
+			fmt.Println(
+				"Variable:", matchData.Variable,
+				" Key:", matchData.Key,
+				" Value:", matchData.Value,
+				" Message:", matchData.Message,
+				" Data:", matchData.Data,
+			)
+		}
+	}
 }
 
 // AuditLog returns an AuditLog struct, used to write audit logs

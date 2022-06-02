@@ -21,7 +21,7 @@ import (
 )
 
 func TestEngine(t *testing.T) {
-	files, err := filepath.Glob("../testdata/engine/*.yaml")
+	files, err := filepath.Glob("../testdata/engine/chains.yaml")
 	if err != nil {
 		t.Error(err)
 	}

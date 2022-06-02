@@ -43,7 +43,7 @@ func TestAddUnique(t *testing.T) {
 	if len(col.data["test"]) != 1 {
 		t.Error("Failed to add unique")
 	}
-	if col.data["test"][0] != "test2" {
+	if col.data["test"][0].Value != "test2" {
 		t.Error("Failed to add unique")
 	}
 }

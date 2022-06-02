@@ -11,7 +11,7 @@
     -
       stage:
         input:
-            uri: /test.php?id=12345
+            uri: /test1.php?id=12345
         output:
           triggered_rules:
             - 1
@@ -22,7 +22,7 @@
             - 20
       stage:
         input:
-            uri: /test.php?var=prepayloadpost
+            uri: /test2.php?var=prepayloadpost
         output:
           triggered_rules:
             - 1
@@ -34,7 +34,7 @@
           log_contains: 'found within ARGS:var: prepayloadpost'
       stage:
         input:
-            uri: /test.php
+            uri: /test3.php
             headers:
               Host: attack20ing.com
         output:
@@ -48,7 +48,7 @@
           log_contains: 'FoundChain20 attacking.com in REQUEST_HEADERS:host'
       stage:
         input:
-            uri: /test.php
+            uri: /test4.php
             headers:
               Host: attack21ing.com
         output:
@@ -59,7 +59,7 @@
             - 20
             - 2
             - 1313
-          log_contains: 'FoundSubChain21 REQUEST_HEADERS:host in MATCHED_VARS_NAMES:REQUEST_HEADERS:host'
+          log_contains: 'FoundSubChain21 REQUEST_HEADERS:Host in MATCHED_VARS_NAMES:REQUEST_HEADERS:Host'
   rules: |
     SecAction "id: 1, log, chain"
       SecAction "chain"
@@ -71,7 +71,7 @@
       SecAction "chain"
       SecRule ARGS "@noMatch" ""
 
-    SecRule REQUEST_URI "@rx (\d+)" "id:1313, chain, log"
+    SecRule REQUEST_URI "@rx (\d\d+)" "id:1313, chain, log"
       SecRule REQUEST_METHOD "GET" ""
 
     SecRule ARGS "@rx prepayloadpost"  "id:200, phase:2, log, msg:'Rule Parent 200', \
@@ -96,11 +96,11 @@
       phase:1,\
       log,\
       chain"
-      SecRule MATCHED_VARS_NAMES "@rx host" \
+      SecRule MATCHED_VARS_NAMES "@rx (?i:host)" \
         "msg:'Sub Chain Rule',\
         logdata:'FoundSubChain21 %{MATCHED_VAR} in %{MATCHED_VAR_NAME}',\
         chain"
-        SecRule MATCHED_VAR_NAME "@rx MATCHED_VARS_NAMES:REQUEST_HEADERS:host" \
+        SecRule MATCHED_VAR_NAME "@rx MATCHED_VARS_NAMES:REQUEST_HEADERS:Host" \
         "msg:'Sub Sub Chain Rule',\
         logdata:'FoundSubSubChain21 %{MATCHED_VAR} in %{MATCHED_VAR_NAME}',\
         block"

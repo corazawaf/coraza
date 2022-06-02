@@ -17,11 +17,10 @@ package coraza
 import (
 	"regexp"
 	"strconv"
-
 	"strings"
 
+	"github.com/corazawaf/coraza/v2/types"
 	"github.com/corazawaf/coraza/v2/types/variables"
-	utils "github.com/corazawaf/coraza/v2/utils/strings"
 )
 
 // Collection are used to store VARIABLE data
@@ -29,14 +28,18 @@ import (
 // to store slices of data for keys
 // Important: Collections ARE NOT concurrent safe
 type Collection struct {
-	data     map[string][]string
+	data     map[string][]types.AnchoredVar
 	name     string
 	variable variables.RuleVariable
 }
 
 // Get returns a slice of strings for a key
 func (c *Collection) Get(key string) []string {
-	return c.data[strings.ToLower(key)]
+	values := []string{}
+	for _, a := range c.data[strings.ToLower(key)] {
+		values = append(values, a.Value)
+	}
+	return values
 }
 
 // FindRegex returns a slice of MatchData for the regex
@@ -48,8 +51,8 @@ func (c *Collection) FindRegex(key *regexp.Regexp) []MatchData {
 				result = append(result, MatchData{
 					VariableName: c.name,
 					Variable:     c.variable,
-					Key:          k,
-					Value:        d,
+					Key:          d.Name,
+					Value:        d.Value,
 				})
 			}
 		}
@@ -61,13 +64,13 @@ func (c *Collection) FindRegex(key *regexp.Regexp) []MatchData {
 func (c *Collection) FindString(key string) []MatchData {
 	result := []MatchData{}
 	if key == "" {
-		for k, data := range c.data {
+		for _, data := range c.data {
 			for _, d := range data {
 				result = append(result, MatchData{
 					VariableName: c.name,
 					Variable:     c.variable,
-					Key:          k,
-					Value:        d,
+					Key:          d.Name,
+					Value:        d.Value,
 				})
 			}
 		}
@@ -75,12 +78,12 @@ func (c *Collection) FindString(key string) []MatchData {
 	}
 	// if key is not empty
 	if e, ok := c.data[key]; ok {
-		for _, value := range e {
+		for _, aVar := range e {
 			result = append(result, MatchData{
 				VariableName: c.name,
 				Variable:     c.variable,
-				Key:          key,
-				Value:        value,
+				Key:          aVar.Name,
+				Value:        aVar.Value,
 			})
 		}
 	}
@@ -91,7 +94,7 @@ func (c *Collection) FindString(key string) []MatchData {
 // GetFirstString returns the first string occurrence of a key
 func (c *Collection) GetFirstString(key string) string {
 	if a, ok := c.data[key]; ok && len(a) > 0 {
-		return a[0]
+		return a[0].Value
 	}
 	return ""
 }
@@ -100,7 +103,7 @@ func (c *Collection) GetFirstString(key string) string {
 func (c *Collection) GetFirstInt64(key string) int64 {
 	a := c.data[key]
 	if len(a) > 0 {
-		i, _ := strconv.ParseInt(a[0], 10, 64)
+		i, _ := strconv.ParseInt(a[0].Value, 10, 64)
 		return i
 	}
 	return 0
@@ -110,46 +113,79 @@ func (c *Collection) GetFirstInt64(key string) int64 {
 func (c *Collection) GetFirstInt(key string) int {
 	a := c.data[key]
 	if len(a) > 0 {
-		i, _ := strconv.Atoi(a[0])
+		i, _ := strconv.Atoi(a[0].Value)
 		return i
 	}
 	return 0
 }
 
+// AddCS a value to some key
+func (c *Collection) AddCS(key string, vKey string, vVal string) {
+	aVal := types.AnchoredVar{vKey, vVal}
+	c.data[key] = append(c.data[key], aVal)
+}
+
 // Add a value to some key
 func (c *Collection) Add(key string, value string) {
-	c.data[key] = append(c.data[key], value)
+	c.AddCS(key, key, value)
+}
+
+// AddUniqueCS will add a value to a key if it is not already there
+func (c *Collection) AddUniqueCS(key string, vKey string, vVal string) {
+	if c.data[key] == nil {
+		c.AddCS(key, vKey, vVal)
+		return
+	}
+
+	for _, a := range c.data[key] {
+		if a.Value == vVal {
+			return
+		}
+	}
+	c.AddCS(key, vKey, vVal)
 }
 
 // AddUnique will add a value to a key if it is not already there
 func (c *Collection) AddUnique(key string, value string) {
-	if c.data[key] == nil {
-		c.Add(key, value)
-		return
+	c.AddUniqueCS(key, key, value)
+}
+
+// SetCS will replace the key's value with this slice
+// internally converts [] string to []types.AnchoredVar
+func (c *Collection) SetCS(key string, vKey string, values []string) {
+	c.data[key] = []types.AnchoredVar{}
+	for _, v := range values {
+		c.data[key] = append(c.data[key],
+			types.AnchoredVar{vKey, v})
 	}
-	if utils.InSlice(value, c.data[key]) {
-		return
-	}
-	c.Add(key, value)
 }
 
 // Set will replace the key's value with this slice
-func (c *Collection) Set(key string, value []string) {
-	c.data[key] = value
+// internally converts [] string to []types.AnchoredVar
+func (c *Collection) Set(key string, values []string) {
+	c.SetCS(key, key, values)
+}
+
+// SetIndexCS will place the value under the index
+// If the index is higher than the current size of the collection
+// it will be appended
+func (c *Collection) SetIndexCS(key string, index int, vKey string, value string) {
+	if c.data[key] == nil {
+		c.data[key] = []types.AnchoredVar{{vKey, value}}
+	}
+	vVal := types.AnchoredVar{vKey, value}
+	if len(c.data[key]) <= index {
+		c.data[key] = append(c.data[key], vVal)
+		return
+	}
+	c.data[key][index] = vVal
 }
 
 // SetIndex will place the value under the index
 // If the index is higher than the current size of the collection
 // it will be appended
 func (c *Collection) SetIndex(key string, index int, value string) {
-	if c.data[key] == nil {
-		c.data[key] = []string{}
-	}
-	if len(c.data[key]) <= index {
-		c.data[key] = append(c.data[key], value)
-		return
-	}
-	c.data[key][index] = value
+	c.SetIndexCS(key, index, key, value)
 }
 
 // Remove deletes the key from the collection
@@ -159,7 +195,14 @@ func (c *Collection) Remove(key string) {
 
 // Data returns the stored data
 func (c *Collection) Data() map[string][]string {
-	return c.data
+	cdata := make(map[string][]string)
+	for k, vals := range c.data {
+		cdata[k] = []string{}
+		for _, v := range vals {
+			cdata[k] = append(cdata[k], v.Value)
+		}
+	}
+	return cdata
 }
 
 // Name returns the name for the current collection
@@ -170,7 +213,14 @@ func (c *Collection) Name() string {
 // SetData replaces the data map with something else
 // Useful for persistent collections
 func (c *Collection) SetData(data map[string][]string) {
-	c.data = data
+	cdata := make(map[string][]types.AnchoredVar)
+	for k, vals := range data {
+		cdata[k] = []types.AnchoredVar{}
+		for _, v := range vals {
+			cdata[k] = append(cdata[k], types.AnchoredVar{k, v})
+		}
+	}
+	c.data = cdata
 }
 
 // Reset the current collection
@@ -180,7 +230,7 @@ func (c *Collection) Reset() {
 		return
 	}
 	c.data = nil
-	c.data = map[string][]string{
+	c.data = map[string][]types.AnchoredVar{
 		"": {},
 	}
 }
@@ -188,7 +238,7 @@ func (c *Collection) Reset() {
 // NewCollection Creates a new collection
 func NewCollection(variable variables.RuleVariable) *Collection {
 	col := &Collection{
-		data:     map[string][]string{},
+		data:     map[string][]types.AnchoredVar{},
 		name:     variable.Name(),
 		variable: variable,
 	}

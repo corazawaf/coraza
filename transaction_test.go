@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"testing"
@@ -302,10 +303,10 @@ func TestHeaderSetters(t *testing.T) {
 	if tx.GetCollection(variables.RequestHeaders).GetFirstString("cookie") != "abc=def;hij=klm" {
 		t.Error("failed to set request header")
 	}
-	if !utils.InSlice("cookie", tx.GetCollection(variables.RequestHeadersNames).Get("")) {
-		t.Error("failed to set header name")
+	if !utils.InSlice("cookie", tx.GetCollection(variables.RequestHeadersNames).Get("cookie")) {
+		t.Error("failed to set header name", tx.GetCollection(variables.RequestHeadersNames).Get("cookie"))
 	}
-	if !utils.InSlice("abc", tx.GetCollection(variables.RequestCookiesNames).Get("")) {
+	if !utils.InSlice("abc", tx.GetCollection(variables.RequestCookiesNames).Get("abc")) {
 		t.Error("failed to set cookie name")
 	}
 	if err := tx.Clean(); err != nil {
@@ -484,7 +485,7 @@ func TestVariablesMatch(t *testing.T) {
 
 	for k, v := range expect {
 		if m := tx.GetCollection(k).GetFirstString(""); m != v {
-			t.Errorf("failed to match variable %s, got %s", k.Name(), m)
+			t.Errorf("failed to match variable %s, Expected: %s, got: %s", k.Name(), v, m)
 		}
 	}
 
@@ -617,7 +618,7 @@ func validateMacroExpansion(tests map[string]string, tx *Transaction, t *testing
 		}
 		res := macro.Expand(tx)
 		if res != v {
-			t.Error("Failed set transaction for " + k + ", expected " + v + ", got " + res)
+			t.Error("Failed set transaction for "+k+", expected "+v+", got "+res, "\n", string(debug.Stack()))
 		}
 	}
 }
