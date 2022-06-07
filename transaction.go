@@ -851,6 +851,7 @@ func (tx *Transaction) Interrupted() bool {
 	return tx.Interruption != nil
 }
 
+// PrintLog prints the detection log for detection to stderr
 func (tx *Transaction) PrintLog() {
 	for _, mr := range tx.MatchedRules {
 		r := mr.Rule

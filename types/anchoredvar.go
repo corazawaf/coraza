@@ -1,16 +1,18 @@
 package types
 
+// AnchoredVar stores the case preserved Original name and value
+// of the variable
 type AnchoredVar struct {
 	Name  string
 	Value string
 }
 
-// Get returns the value
-func (v *AnchoredVar) getValue() string {
+// GetValue returns the value
+func (v *AnchoredVar) GetValue() string {
 	return v.Value
 }
 
-// getName returns the name
-func (v *AnchoredVar) getName() string {
+// GetName returns the name
+func (v *AnchoredVar) GetName() string {
 	return v.Name
 }

@@ -94,7 +94,7 @@ func (c *Collection) FindString(key string) []MatchData {
 // GetFirstString returns the first string occurrence of a key
 func (c *Collection) GetFirstString(key string) string {
 	if a, ok := c.data[key]; ok && len(a) > 0 {
-		return a[0].Value
+		return a[0].GetValue()
 	}
 	return ""
 }
@@ -121,7 +121,7 @@ func (c *Collection) GetFirstInt(key string) int {
 
 // AddCS a value to some key with case sensitive vKey
 func (c *Collection) AddCS(key string, vKey string, vVal string) {
-	aVal := types.AnchoredVar{vKey, vVal}
+	aVal := types.AnchoredVar{Name: vKey, Value: vVal}
 	c.data[key] = append(c.data[key], aVal)
 }
 
@@ -158,7 +158,7 @@ func (c *Collection) SetCS(key string, vKey string, values []string) {
 	c.data[key] = []types.AnchoredVar{}
 	for _, v := range values {
 		c.data[key] = append(c.data[key],
-			types.AnchoredVar{vKey, v})
+			types.AnchoredVar{Name: vKey, Value: v})
 	}
 }
 
@@ -174,9 +174,9 @@ func (c *Collection) Set(key string, values []string) {
 // with case sensitive vKey
 func (c *Collection) SetIndexCS(key string, index int, vKey string, value string) {
 	if c.data[key] == nil {
-		c.data[key] = []types.AnchoredVar{{vKey, value}}
+		c.data[key] = []types.AnchoredVar{{Name: vKey, Value: value}}
 	}
-	vVal := types.AnchoredVar{vKey, value}
+	vVal := types.AnchoredVar{Name: vKey, Value: value}
 	if len(c.data[key]) <= index {
 		c.data[key] = append(c.data[key], vVal)
 		return
@@ -220,7 +220,7 @@ func (c *Collection) SetData(data map[string][]string) {
 	for k, vals := range data {
 		cdata[k] = []types.AnchoredVar{}
 		for _, v := range vals {
-			cdata[k] = append(cdata[k], types.AnchoredVar{k, v})
+			cdata[k] = append(cdata[k], types.AnchoredVar{Name: k, Value: v})
 		}
 	}
 	c.data = cdata
