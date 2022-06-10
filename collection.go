@@ -94,7 +94,7 @@ func (c *Collection) FindString(key string) []MatchData {
 // GetFirstString returns the first string occurrence of a key
 func (c *Collection) GetFirstString(key string) string {
 	if a, ok := c.data[key]; ok && len(a) > 0 {
-		return a[0].GetValue()
+		return a[0].Value
 	}
 	return ""
 }
