@@ -583,3 +583,428 @@ func Test941310(t *testing.T) {
 		t.Error("non utf-8 rx test fails")
 	}
 }
+
+func TestArgumentNamesCaseSensitive(t *testing.T) {
+	waf := coraza.NewWaf()
+	rules := `SecRule ARGS_NAMES "Test1" "id:3, phase:2, log, deny"`
+	parser, err := NewParser(waf)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = parser.FromString(rules)
+	if err != nil {
+		t.Error()
+		return
+	}
+
+	tx := waf.NewTransaction()
+	tx.AddArgument("POST", "Test1", "Xyz")
+	it, err := tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it == nil {
+		t.Error("failed to test argument names case sensitive: same case nomatch")
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddArgument("POST", "TEST1", "Xyz")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it != nil {
+		t.Error("failed to test argument names case sensitive: Upper case argument name matched")
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddArgument("POST", "test1", "Xyz")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it != nil {
+		t.Error("failed to test argument names case sensitive: Lower case argument name matched")
+	}
+
+}
+
+func TestArgumentsCaseSensitive(t *testing.T) {
+	waf := coraza.NewWaf()
+	rules := `SecRule ARGS:Test1 "Xyz" "id:3, phase:2, log, deny"`
+	parser, err := NewParser(waf)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = parser.FromString(rules)
+	if err != nil {
+		t.Error()
+		return
+	}
+
+	tx := waf.NewTransaction()
+	tx.AddArgument("POST", "Test1", "Xyz")
+	it, err := tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it == nil {
+		t.Errorf("failed to test arguments value match: Same case argument name, %+v\n", tx.MatchedRules)
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddArgument("POST", "TEST1", "Xyz")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it == nil {
+		t.Errorf("failed to test arguments value match: Upper case argument name, %+v\n", tx.MatchedRules)
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddArgument("POST", "test1", "Xyz")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it == nil {
+		t.Errorf("failed to test arguments value match: Lower case argument name, %+v\n", tx.MatchedRules)
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddArgument("POST", "test1", "xyz")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it != nil {
+		t.Error("failed to test arguments value: different value case")
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddArgument("POST", "test1", "XYZ")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it != nil {
+		t.Error("failed to test arguments value: different value case")
+	}
+}
+
+func TestCookiesCaseSensitive(t *testing.T) {
+	waf := coraza.NewWaf()
+	rules := `SecRule REQUEST_COOKIES:Test1 "Xyz" "id:3, phase:2, log, deny"`
+	parser, err := NewParser(waf)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = parser.FromString(rules)
+	if err != nil {
+		t.Error()
+		return
+	}
+
+	tx := waf.NewTransaction()
+	tx.AddRequestHeader("cookie", "Test1=Xyz")
+	it, err := tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it == nil {
+		t.Error("failed to test cookies case sensitive")
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddRequestHeader("cookie", "TEST1=Xyz")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it == nil {
+		t.Error("failed to test cookies case sensitive")
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddRequestHeader("cookie", "test1=Xyz")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it == nil {
+		t.Error("failed to test cookies case sensitive")
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddRequestHeader("cookie", "test1=xyz")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it != nil {
+		t.Error("failed to test cookies value case sensitive")
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddRequestHeader("cookie", "test1=XYZ")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it != nil {
+		t.Error("failed to test cookies value case sensitive")
+	}
+}
+
+func TestHeadersCaseSensitive(t *testing.T) {
+	waf := coraza.NewWaf()
+	rules := `SecRule REQUEST_HEADERS:Test1 "Xyz" "id:3, phase:2, log, deny"`
+	parser, err := NewParser(waf)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = parser.FromString(rules)
+	if err != nil {
+		t.Error()
+		return
+	}
+
+	tx := waf.NewTransaction()
+	tx.AddRequestHeader("Test1", "Xyz")
+	it, err := tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it == nil {
+		t.Error("failed to test cookies case sensitive")
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddRequestHeader("TEST1", "Xyz")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it == nil {
+		t.Error("failed to test cookies case sensitive")
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddRequestHeader("test1", "Xyz")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it == nil {
+		t.Error("failed to test cookies case sensitive")
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddRequestHeader("test1", "xyz")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it != nil {
+		t.Error("failed to test cookies value case sensitive")
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddRequestHeader("test1", "XYZ")
+	it, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if it != nil {
+		t.Error("failed to test cookies value case sensitive")
+	}
+}
+
+func TestParameterPollution(t *testing.T) {
+	waf := coraza.NewWaf()
+	rules := `SecRule Args:TESt1 "Xyz" "id:3, phase:2, log, pass"`
+	parser, err := NewParser(waf)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = parser.FromString(rules)
+	if err != nil {
+		t.Error()
+		return
+	}
+
+	tx := waf.NewTransaction()
+	tx.AddArgument("POST", "test1", "xyz")
+	tx.AddArgument("POST", "Test1", "Xyz")
+	tx.AddArgument("POST", "TEST1", "XYZ")
+	_, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(tx.MatchedRules) == 1 {
+		if len(tx.MatchedRules[0].MatchedDatas) != 1 {
+			t.Errorf("failed to test arguments pollution. Found matches: %d, %+v\n",
+				len(tx.MatchedRules[0].MatchedDatas), tx.MatchedRules)
+		}
+	} else {
+		t.Errorf("failed to test arguments pollution: Single match fixed case: %d, %+v\n",
+			len(tx.MatchedRules), tx.MatchedRules)
+	}
+
+	tx = waf.NewTransaction()
+	tx.AddArgument("POST", "test1", "xyz")
+	tx.AddArgument("POST", "Test1", "Xyz")
+	tx.AddArgument("POST", "tesT1", "Xyz")
+	tx.AddArgument("POST", "TEST1", "XYZ")
+	_, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if len(tx.MatchedRules) == 1 {
+		if len(tx.MatchedRules[0].MatchedDatas) != 2 {
+			t.Errorf("failed to test arguments pollution. Found matches: %d, %+v\n",
+				len(tx.MatchedRules[0].MatchedDatas), tx.MatchedRules)
+		}
+	} else {
+		t.Errorf("failed to test arguments pollution: Multiple match mixed case: %d, %+v\n",
+			len(tx.MatchedRules), tx.MatchedRules)
+	}
+
+}
+
+func TestURIQueryParamCaseSensitive(t *testing.T) {
+	waf := coraza.NewWaf()
+	rules := `SecRule ARGS:Test1 "@contains SQLI" "id:3, phase:2, log, pass"`
+	parser, err := NewParser(waf)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = parser.FromString(rules)
+	if err != nil {
+		t.Error()
+		return
+	}
+
+	tx := waf.NewTransaction()
+	tx.ProcessURI("/url?Test1='SQLI", "POST", "HTTP/1.1")
+	_, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(tx.MatchedRules) == 1 {
+		if len(tx.MatchedRules[0].MatchedDatas) != 1 {
+			t.Errorf("failed to test uri query param. Found matches: %d, %+v\n",
+				len(tx.MatchedRules[0].MatchedDatas), tx.MatchedRules)
+		}
+		if !isMatchData(tx.MatchedRules[0].MatchedDatas, "Test1") {
+			t.Error("Key did not match: Test1 !=", tx.MatchedRules[0])
+		}
+	} else {
+		t.Errorf("failed to test uri query param: Same case arg name: %d, %+v\n",
+			len(tx.MatchedRules), tx.MatchedRules)
+	}
+
+	tx = waf.NewTransaction()
+	tx.ProcessURI("/test?test1='SQLI&Test1='SQLI&TEST1='SQLI", "POST", "HTTP/1.1")
+	_, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(tx.MatchedRules) == 1 {
+		tx.PrintLog()
+		if len(tx.MatchedRules[0].MatchedDatas) != 3 {
+			t.Errorf("failed to test uri query param. Found matches: %d, %+v\n",
+				len(tx.MatchedRules[0].MatchedDatas), tx.MatchedRules)
+		}
+		if !isMatchData(tx.MatchedRules[0].MatchedDatas, "Test1") {
+			t.Error("Key did not match: Test1 !=", tx.MatchedRules[0])
+		}
+	} else {
+		t.Errorf("failed to test qparam pollution: Multiple arg different case: %d, %+v\n",
+			len(tx.MatchedRules), tx.MatchedRules)
+	}
+}
+
+func TestURIQueryParamNameCaseSensitive(t *testing.T) {
+	waf := coraza.NewWaf()
+	rules := `SecRule ARGS_NAMES "Test1" "id:3, phase:2, log, pass"`
+	parser, err := NewParser(waf)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = parser.FromString(rules)
+	if err != nil {
+		t.Error()
+		return
+	}
+
+	tx := waf.NewTransaction()
+	tx.ProcessURI("/url?Test1='SQLI", "POST", "HTTP/1.1")
+	_, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(tx.MatchedRules) == 1 {
+		if len(tx.MatchedRules[0].MatchedDatas) != 1 {
+			t.Errorf("failed to test uri query param. Expected: 1, Found matches: %d, %+v\n",
+				len(tx.MatchedRules[0].MatchedDatas), tx.MatchedRules)
+		}
+		if !isMatchData(tx.MatchedRules[0].MatchedDatas, "Test1") {
+			t.Error("Key did not match: Test1 !=", tx.MatchedRules[0])
+		}
+	} else {
+		t.Errorf("failed to test uri query param: Same case arg name:%d, %+v\n",
+			len(tx.MatchedRules), tx.MatchedRules)
+	}
+
+	tx = waf.NewTransaction()
+	tx.ProcessURI("/test?test1='SQLI&Test1='SQLI&TEST1='SQLI", "POST", "HTTP/1.1")
+	_, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(tx.MatchedRules) == 1 {
+		tx.PrintLog()
+		if len(tx.MatchedRules[0].MatchedDatas) != 1 {
+			t.Errorf("Failed to test uri query param. Expected: 1, Found matches: %d, %+v\n",
+				len(tx.MatchedRules[0].MatchedDatas), tx.MatchedRules)
+		}
+		if !isMatchData(tx.MatchedRules[0].MatchedDatas, "Test1") {
+			t.Error("Key did not match: Test1 !=", tx.MatchedRules[0])
+		}
+	} else {
+		t.Error("failed to test qparam pollution: Multiple arg different case:",
+			len(tx.MatchedRules))
+	}
+}
+
+func isMatchData(mds []coraza.MatchData, key string) (result bool) {
+	result = false
+	for _, m := range mds {
+		if m.Key == key {
+			result = true
+			break
+		}
+	}
+	return result
+}
