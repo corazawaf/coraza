@@ -27,11 +27,13 @@ import (
 const timeout = 500 * time.Millisecond
 
 type rbl struct {
-	service string
+	service  string
+	resolver *net.Resolver
 }
 
 func (o *rbl) Init(data string) error {
 	o.service = data
+	o.resolver = net.DefaultResolver
 	// TODO validate hostname
 	return nil
 }
@@ -51,14 +53,15 @@ func (o *rbl) Evaluate(tx *coraza.Transaction, ipAddr string) bool {
 	addr := fmt.Sprintf("%s.%s", ipAddr, o.service)
 	captures := []string{}
 	go func(ctx context.Context) {
-		res, err := net.DefaultResolver.LookupHost(ctx, addr)
+		res, err := o.resolver.LookupHost(ctx, addr)
+
 		if err != nil {
 			resC <- false
 			return
 		}
 		// var status string
 		if len(res) > 0 {
-			txt, err := net.DefaultResolver.LookupTXT(ctx, addr)
+			txt, err := o.resolver.LookupTXT(ctx, addr)
 			if err != nil {
 				resC <- false
 				return
@@ -66,7 +69,7 @@ func (o *rbl) Evaluate(tx *coraza.Transaction, ipAddr string) bool {
 
 			if len(txt) > 0 {
 				status := txt[0]
-				captures = append(captures, txt[0])
+				captures = append(captures, status)
 				tx.GetCollection(variables.TX).Set("httpbl_msg", []string{status})
 			}
 		}
