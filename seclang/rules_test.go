@@ -1,4 +1,4 @@
-// Copyright 2022 Juan Pablo Tosso
+// Copyright 2022 The Coraza Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package seclang
 import (
 	"bufio"
 	"bytes"
+	"io"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -1007,4 +1008,67 @@ func isMatchData(mds []coraza.MatchData, key string) (result bool) {
 		}
 	}
 	return result
+}
+
+func Test930110_10(t *testing.T) {
+	waf := coraza.NewWaf()
+	rules := `
+SecRequestBodyAccess On
+SecRule REQUEST_URI|ARGS|REQUEST_HEADERS|!REQUEST_HEADERS:Referer|FILES|XML:/* "@rx (?:(?:^|[\x5c/])\.{2,3}[\x5c/]|[\x5c/]\.{2,3}(?:[\x5c/]|$))" \
+    "id:930110,\
+    phase:2,\
+    deny,\
+    capture,\
+    t:none,t:utf8toUnicode,t:urlDecodeUni,t:removeNulls,t:cmdLine,\
+    msg:'Path Traversal Attack (/../) or (/.../)',\
+    logdata:'Matched Data: %{TX.0} found within %{MATCHED_VAR_NAME}: %{MATCHED_VAR}',\
+    tag:'application-multi',\
+    tag:'language-multi',\
+    tag:'platform-multi',\
+    tag:'attack-lfi',\
+    tag:'paranoia-level/1',\
+    tag:'OWASP_CRS',\
+    tag:'capec/1000/255/153/126',\
+    ver:'OWASP_CRS/3.4.0-dev',\
+    severity:'CRITICAL',\
+    multiMatch,\
+    setvar:'tx.inbound_anomaly_score_pl1=+%{tx.critical_anomaly_score}',\
+    setvar:'tx.lfi_score=+%{tx.critical_anomaly_score}'"
+`
+
+	parser, err := NewParser(waf)
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+
+	err = parser.FromString(rules)
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+
+	tx := waf.NewTransaction()
+	tx.AddRequestHeader("Content-Type", "multipart/form-data; boundary=----WebKitFormBoundaryABCDEFGIJKLMNOPQ")
+
+	body := strings.NewReader(`
+------WebKitFormBoundaryABCDEFGIJKLMNOPQ
+Content-Disposition: form-data; name="file"; filename="../1.7z"
+Content-Type: application/octet-stream
+
+BINARYDATA
+------WebKitFormBoundaryABCDEFGIJKLMNOPQ--`)
+	_, err = io.Copy(tx.RequestBodyBuffer, body)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	it, err := tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if it == nil {
+		t.Error("failed test for rx captured")
+	}
 }

@@ -668,7 +668,9 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 				Action: "deny",
 			}
 			return tx.Interruption, nil
-		} else if tx.Waf.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
+		}
+
+		if tx.Waf.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
 			tx.GetCollection(variables.InboundErrorData).Set("", []string{"1"})
 			// we limit our reader to tx.RequestBodyLimit bytes
 			reader = io.LimitReader(reader, tx.RequestBodyLimit)
