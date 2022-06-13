@@ -56,10 +56,10 @@ func (mbp *multipartBodyProcessor) Read(reader io.Reader, options Options) error
 		if err != nil {
 			return err
 		}
-		// we create a temp file
 
 		// if is a file
-		if p.FileName() != "" {
+		filename := originFileName(p)
+		if filename != "" {
 			temp, err := os.CreateTemp(storagePath, "crzmp*")
 			if err != nil {
 				return err
@@ -69,7 +69,7 @@ func (mbp *multipartBodyProcessor) Read(reader io.Reader, options Options) error
 				return err
 			}
 			totalSize += sz
-			filesNames = append(filesNames, p.FileName())
+			filesNames = append(filesNames, filename)
 			fileList = append(fileList, temp.Name())
 			fileSizes = append(fileSizes, fmt.Sprintf("%d", sz))
 			filesArgNames = append(filesArgNames, p.FormName())
@@ -131,3 +131,18 @@ func (mbp *multipartBodyProcessor) VariableHook() variables.RuleVariable {
 var (
 	_ BodyProcessor = (*multipartBodyProcessor)(nil)
 )
+
+// OriginFileName returns the filename parameter of the Part's Content-Disposition header.
+// This function is based on (multipart.Part).parseContentDisposition,
+// See https://go.googlesource.com/go/+/refs/tags/go1.17.9/src/mime/multipart/multipart.go#87
+// for the current implementation and also notice this function hasn't change since go1.4, as in
+// https://go.googlesource.com/go/+/refs/tags/go1.4/src/mime/multipart/multipart.go#75
+func originFileName(p *multipart.Part) string {
+	v := p.Header.Get("Content-Disposition")
+	_, dispositionParams, err := mime.ParseMediaType(v)
+	if err != nil {
+		return ""
+	}
+
+	return dispositionParams["filename"]
+}
