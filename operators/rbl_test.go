@@ -16,25 +16,75 @@ package operators
 
 import (
 	"testing"
+
+	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v2/types/variables"
+	"github.com/foxcpp/go-mockdns"
 )
+
+type testLogger struct{ t *testing.T }
+
+func (l *testLogger) Printf(format string, v ...interface{}) {
+	l.t.Helper()
+	l.t.Logf(format, v...)
+}
 
 func TestRbl(t *testing.T) {
 	rbl := &rbl{}
 	if err := rbl.Init("xbl.spamhaus.org"); err != nil {
 		t.Error("Cannot init rbl operator")
 	}
-	// Twitter ip address
-	if rbl.Evaluate(nil, "199.16.156.5") {
-		t.Errorf("Invalid result for @rbl operator")
-	}
-	// Facebook ip address
-	if rbl.Evaluate(nil, "176.13.13.13") {
-		t.Errorf("Invalid result for @rbl operator")
-	}
-	/*
-	   // We dont have any permanently banned ip address :(
-	   if !rbl.Evaluate(nil, "71.6.158.166") {
-	       t.Errorf("Invalid result for @rbl operator, should be blacklisted")
-	   }
-	*/
+
+	logger := &testLogger{t}
+
+	srv, _ := mockdns.NewServerWithLogger(map[string]mockdns.Zone{
+		"valid_no_txt.xbl.spamhaus.org.": {
+			A: []string{"1.2.3.4"},
+		},
+		"valid_txt.xbl.spamhaus.org.": {
+			A:   []string{"1.2.3.5"},
+			TXT: []string{"not blocked"},
+		},
+		"blocked.xbl.spamhaus.org.": {
+			A:   []string{"1.2.3.6"},
+			TXT: []string{"blocked"},
+		},
+	}, logger, false)
+	defer srv.Close()
+
+	srv.PatchNet(rbl.resolver)
+	defer mockdns.UnpatchNet(rbl.resolver)
+
+	t.Run("Valid hostname with no TXT record", func(t *testing.T) {
+		if rbl.Evaluate(nil, "valid_no_txt") {
+			t.Errorf("Unexpected result for valid hostname with no TXT record")
+		}
+	})
+
+	t.Run("Valid hostname with TXT record", func(t *testing.T) {
+		tx := coraza.NewWaf().NewTransaction()
+		if !rbl.Evaluate(tx, "valid_txt") {
+			t.Errorf("Unexpected result for valid hostname")
+		}
+		if want, have := "not blocked", tx.GetCollection(variables.TX).Get("httpbl_msg")[0]; want != have {
+			t.Errorf("Unexpected result for valid hostname: want %q, have %q", want, have)
+		}
+	})
+
+	t.Run("Invalid hostname", func(t *testing.T) {
+		if rbl.Evaluate(nil, "invalid") {
+			t.Errorf("Unexpected result for invalid hostname")
+		}
+	})
+
+	t.Run("Blocked hostname", func(t *testing.T) {
+		tx := coraza.NewWaf().NewTransaction()
+		if !rbl.Evaluate(tx, "blocked") {
+			t.Fatal("Unexpected result for blocked hostname")
+		}
+		t.Log(tx.GetCollection(variables.TX).Get("httpbl_msg"))
+		if want, have := "blocked", tx.GetCollection(variables.TX).Get("httpbl_msg")[0]; want != have {
+			t.Errorf("Unexpected result for valid hostname: want %q, have %q", want, have)
+		}
+	})
 }

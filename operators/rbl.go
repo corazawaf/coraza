@@ -15,6 +15,7 @@
 package operators
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"time"
@@ -23,48 +24,66 @@ import (
 	"github.com/corazawaf/coraza/v2/types/variables"
 )
 
+const timeout = 500 * time.Millisecond
+
 type rbl struct {
-	service string
+	service  string
+	resolver *net.Resolver
 }
 
 func (o *rbl) Init(data string) error {
 	o.service = data
+	o.resolver = net.DefaultResolver
 	// TODO validate hostname
 	return nil
 }
 
 // https://github.com/mrichman/godnsbl
 // https://github.com/SpiderLabs/ModSecurity/blob/b66224853b4e9d30e0a44d16b29d5ed3842a6b11/src/operators/rbl.cc
-func (o *rbl) Evaluate(tx *coraza.Transaction, value string) bool {
+func (o *rbl) Evaluate(tx *coraza.Transaction, ipAddr string) bool {
 	// TODO validate address
-	c1 := make(chan bool)
-	captures := []string{}
+	resC := make(chan bool)
+	ctx, cancel := context.WithCancel(context.Background())
 
-	addr := fmt.Sprintf("%s.%s", value, o.service)
-	go func() {
-		res, err := net.LookupHost(addr)
+	defer func() {
+		cancel()
+		close(resC)
+	}()
+
+	addr := fmt.Sprintf("%s.%s", ipAddr, o.service)
+	captures := []string{}
+	go func(ctx context.Context) {
+		res, err := o.resolver.LookupHost(ctx, addr)
+
 		if err != nil {
-			c1 <- false
+			resC <- false
+			return
 		}
 		// var status string
 		if len(res) > 0 {
-			txt, _ := net.LookupTXT(addr)
+			txt, err := o.resolver.LookupTXT(ctx, addr)
+			if err != nil {
+				resC <- false
+				return
+			}
+
 			if len(txt) > 0 {
 				status := txt[0]
-				captures = append(captures, txt[0])
+				captures = append(captures, status)
 				tx.GetCollection(variables.TX).Set("httpbl_msg", []string{status})
 			}
 		}
-		c1 <- true
-	}()
+
+		resC <- true
+	}(ctx)
+
 	select {
-	case res := <-c1:
+	case res := <-resC:
 		if res && len(captures) > 0 {
 			tx.CaptureField(0, captures[0])
 		}
 		return res
-	case <-time.After(1):
-		// TIMEOUT
+	case <-time.After(timeout):
 		return false
 	}
 }
