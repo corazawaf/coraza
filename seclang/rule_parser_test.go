@@ -66,6 +66,62 @@ func TestVariableCases(t *testing.T) {
 	}
 }
 
+func TestSecRuleInlineVariableNegation(t *testing.T) {
+	waf := coraza.NewWaf()
+	p, _ := NewParser(waf)
+	err := p.FromString(`
+		SecRule REQUEST_URI|!REQUEST_COOKIES "abc" "id:7,phase:2"
+	`)
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = p.FromString(`
+		SecRule REQUEST_URI|!REQUEST_COOKIES:xyz "abc" "id:8,phase:2"
+	`)
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = p.FromString(`
+		SecRule REQUEST_URI|!REQUEST_COOKIES: "abc" "id:9,phase:2"
+	`)
+	if !strings.Contains(err.Error(), "failed to compile rule") {
+		t.Error("Error should be failed to compile rule, got ", err)
+	}
+}
+
+func TestSecRuleUpdateTargetVariableNegation(t *testing.T) {
+	waf := coraza.NewWaf()
+	p, _ := NewParser(waf)
+	err := p.FromString(`
+		SecRule REQUEST_URI|REQUEST_COOKIES "abc" "id:7,phase:2"
+		SecRuleUpdateTargetById 7 "!REQUEST_HEADERS:/xyz/"
+		SecRuleUpdateTargetById 7 "!REQUEST_COOKIES:/xyz/"
+	`)
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = p.FromString(`
+		SecRule REQUEST_URI|REQUEST_COOKIES "abc" "id:8,phase:2"
+		SecRuleUpdateTargetById 8 "!REQUEST_HEADERS:"
+	`)
+	if err.Error() != "unknown variable" {
+		t.Error("Error should be unknown variable, got ", err)
+	}
+
+	// Try to update undefined rule
+	err = p.FromString(`
+		SecRule REQUEST_URI|REQUEST_COOKIES "abc" "id:9,phase:2"
+		SecRuleUpdateTargetById 99 "!REQUEST_HEADERS:xyz"
+	`)
+	if err.Error() != "cannot create a variable exception for an undefined rule" {
+		t.Error("Error should be cannot create a variable exception for an undefined rule, got ",
+			err)
+	}
+}
+
 func TestErrorLine(t *testing.T) {
 	waf := coraza.NewWaf()
 	p, _ := NewParser(waf)
