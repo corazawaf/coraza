@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -262,13 +263,16 @@ func (w *Waf) NewTransaction() *Transaction {
 // note: this is not thread safe
 func (w *Waf) SetDebugLogPath(path string) error {
 	cfg := zap.NewProductionConfig()
-	// sampling would make us loose some debug logs
-	cfg.Sampling = nil
-	if path == "" {
-		cfg.OutputPaths = []string{}
-	} else {
+	if path != "" {
+		dir := filepath.Dir(path)
+		if err := os.MkdirAll(dir, os.ModeDir); err != nil {
+			return err
+		}
 		cfg.OutputPaths = []string{path}
 	}
+
+	// sampling would make us loose some debug logs
+	cfg.Sampling = nil
 	cfg.Level = *w.loggerAtomicLevel
 	logger, err := cfg.Build()
 	if err != nil {
