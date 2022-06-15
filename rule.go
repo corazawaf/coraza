@@ -449,7 +449,6 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 // OK: SecRule !ARGS:id "..."
 // ERROR: SecRule !ARGS: "..."
 func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
-	counter := 0
 	var re *regexp.Regexp
 	if len(key) > 2 && key[0] == '/' && key[len(key)-1] == '/' {
 		key = key[1 : len(key)-1]
@@ -463,7 +462,6 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 		if rv.Variable == v {
 			rv.Exceptions = append(rv.Exceptions, ruleVariableException{strings.ToLower(key), re})
 			r.variables[i] = rv
-			counter++
 		}
 	}
 	return nil
