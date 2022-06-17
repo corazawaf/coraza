@@ -441,28 +441,28 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 }
 
 // AddVariableNegation adds an exception to a variable
-// It returns an error if the variable is not used or
-// the selector is empty, for example:
+// It passes through if the variable is not used
+// It returns an error if the selector is empty,
+// or applied on an undefined rule
+// for example:
 // OK: SecRule ARGS|!ARGS:id "..."
-// ERROR: SecRule !ARGS:id "..."
+// OK: SecRule !ARGS:id "..."
 // ERROR: SecRule !ARGS: "..."
 func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
-	counter := 0
 	var re *regexp.Regexp
 	if len(key) > 2 && key[0] == '/' && key[len(key)-1] == '/' {
 		key = key[1 : len(key)-1]
 		re = regexp.MustCompile(key)
 	}
-
+	// Prevent sigsev
+	if r == nil {
+		return fmt.Errorf("cannot create a variable exception for an undefined rule")
+	}
 	for i, rv := range r.variables {
 		if rv.Variable == v {
 			rv.Exceptions = append(rv.Exceptions, ruleVariableException{strings.ToLower(key), re})
 			r.variables[i] = rv
-			counter++
 		}
-	}
-	if counter == 0 {
-		return fmt.Errorf("cannot create a variable exception is the variable %q is not used", v.Name())
 	}
 	return nil
 }
