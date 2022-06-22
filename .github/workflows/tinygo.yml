@@ -8,19 +8,29 @@ jobs:
     strategy:
       matrix:
         go-version: [1.16.x, 1.17.x]
+        tinygo-version: [0.23.0]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Install Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: ${{ matrix.go-version }}
-    - name: Checkout code
-      uses: actions/checkout@v2
-      with:
-        lfs: true
-        fetch-depth: 0 #for better blame info
-    - name: Download vendored dependencies
-      run: go mod vendor
-    - name: Tests and coverage
-      run: go test -v --tags=tinygo ./...
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Install TinyGo
+        run: |
+          wget https://github.com/tinygo-org/tinygo/releases/download/v${TINYGO_VERSION}/tinygo_${TINYGO_VERSION}_amd64.deb
+          sudo dpkg -i tinygo_${{ matrix.tinygo-version }}_amd64.deb
+          export PATH=$PATH:/usr/local/bin
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          lfs: true
+          fetch-depth: 0 #for better blame info
+
+      - name: Download vendored dependencies
+        run: go mod vendor
+
+      - name: Tests and coverage
+        run: go list ./... | xargs -I{} tinygo test {}
