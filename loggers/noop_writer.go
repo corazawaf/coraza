@@ -14,15 +14,15 @@
 
 package loggers
 
-import "testing"
+import (
+	"github.com/corazawaf/coraza/v2/types"
+)
 
-func TestDefaultWriters(t *testing.T) {
-	ws := []string{"serial", "concurrent"}
-	for _, writer := range ws {
-		if w, err := GetLogWriter(writer); err != nil {
-			t.Error(err)
-		} else if w == nil {
-			t.Errorf("invalid %s writer", writer)
-		}
-	}
-}
+// noopWriter is used to store logs in a single file
+type noopWriter struct{}
+
+func (noopWriter) Init(types.Config) error { return nil }
+func (noopWriter) Write(*AuditLog) error   { return nil }
+func (noopWriter) Close() error            { return nil }
+
+var _ LogWriter = (*noopWriter)(nil)
