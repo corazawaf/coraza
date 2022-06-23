@@ -265,7 +265,7 @@ func (w *Waf) SetDebugLogPath(path string) error {
 	cfg := zap.NewProductionConfig()
 	if path != "" {
 		dir := filepath.Dir(path)
-		if err := os.MkdirAll(dir, os.ModeDir); err != nil {
+		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 			return err
 		}
 		cfg.OutputPaths = []string{path}
