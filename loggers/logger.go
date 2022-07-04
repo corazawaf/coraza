@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/corazawaf/coraza/v2/types"
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 // LogFormatter is the interface for all log formatters

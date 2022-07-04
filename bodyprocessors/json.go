@@ -20,7 +20,7 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/corazawaf/coraza/v2/types/variables"
+	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 type jsonBodyProcessor struct {

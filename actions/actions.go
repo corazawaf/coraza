@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v3"
 )
 
 // ruleActionWrapper is used to wrap a RuleAction so that it can be registered

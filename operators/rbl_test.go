@@ -17,8 +17,8 @@ package operators
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v2"
-	"github.com/corazawaf/coraza/v2/types/variables"
+	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/types/variables"
 	"github.com/foxcpp/go-mockdns"
 )
 
@@ -31,13 +31,16 @@ func (l *testLogger) Printf(format string, v ...interface{}) {
 
 func TestRbl(t *testing.T) {
 	rbl := &rbl{}
-	if err := rbl.Init("xbl.spamhaus.org"); err != nil {
+	opts := coraza.RuleOperatorOptions{
+		Arguments: "xbl.spamhaus.org",
+	}
+	if err := rbl.Init(opts); err != nil {
 		t.Error("Cannot init rbl operator")
 	}
 
 	logger := &testLogger{t}
 
-	srv, _ := mockdns.NewServerWithLogger(map[string]mockdns.Zone{
+	srv, err := mockdns.NewServerWithLogger(map[string]mockdns.Zone{
 		"valid_no_txt.xbl.spamhaus.org.": {
 			A: []string{"1.2.3.4"},
 		},
@@ -50,6 +53,9 @@ func TestRbl(t *testing.T) {
 			TXT: []string{"blocked"},
 		},
 	}, logger, false)
+	if err != nil {
+		t.Error("Cannot start mockdns server")
+	}
 	defer srv.Close()
 
 	srv.PatchNet(rbl.resolver)

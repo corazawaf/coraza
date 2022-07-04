@@ -15,14 +15,16 @@
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v3"
 )
 
 type streq struct {
 	data coraza.Macro
 }
 
-func (o *streq) Init(data string) error {
+func (o *streq) Init(options coraza.RuleOperatorOptions) error {
+	data := options.Arguments
+
 	macro, err := coraza.NewMacro(data)
 	if err != nil {
 		return err

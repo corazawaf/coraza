@@ -17,8 +17,8 @@ package actions
 import (
 	"fmt"
 
-	"github.com/corazawaf/coraza/v2"
-	"github.com/corazawaf/coraza/v2/types"
+	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 // 0 nothing, 1 phase, 2 request

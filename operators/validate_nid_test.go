@@ -14,13 +14,20 @@
 
 package operators
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/corazawaf/coraza/v3"
+)
 
 func TestVaildateNid(t *testing.T) {
 	vn := &validateNid{}
 	notOk := []string{"cl11.111.111-1", "us16100407-2", "clc 12345", "uss 1234567"}
 	for _, no := range notOk {
-		err := vn.Init(no)
+		opts := coraza.RuleOperatorOptions{
+			Arguments: no,
+		}
+		err := vn.Init(opts)
 		if err == nil {
 			t.Errorf("Wrong valid data for %s", no)
 		}

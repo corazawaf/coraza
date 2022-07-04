@@ -3,7 +3,7 @@ name: Regression Tests
 on:
   push:
     branches:
-      - v2/master
+      - v3/*
     paths-ignore:
       - "**/*.md"
       - "LICENSE"

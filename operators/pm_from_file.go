@@ -19,14 +19,16 @@ import (
 	"strings"
 
 	"github.com/cloudflare/ahocorasick"
-	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v3"
 )
 
 type pmFromFile struct {
 	pm *pm
 }
 
-func (o *pmFromFile) Init(data string) error {
+func (o *pmFromFile) Init(options coraza.RuleOperatorOptions) error {
+	data := options.Arguments
+
 	lines := []string{}
 	sc := bufio.NewScanner(strings.NewReader(data))
 	for sc.Scan() {

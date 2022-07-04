@@ -9,7 +9,7 @@
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=coraza&metric=coverage)](https://sonarcloud.io/project/overview?id=coraza)
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 [![OWASP Lab Project](https://img.shields.io/badge/owasp-lab%20project-brightgreen)](https://owasp.org/www-project-coraza-web-application-firewall)
-[![GoDoc](https://godoc.org/github.com/corazawaf/coraza?status.svg)](https://godoc.org/github.com/corazawaf/coraza/v2)
+[![GoDoc](https://godoc.org/github.com/corazawaf/coraza?status.svg)](https://godoc.org/github.com/corazawaf/coraza/v3)
 
 
 
@@ -79,8 +79,8 @@ package main
 
 import(
 	"fmt"
-	"github.com/corazawaf/coraza/v2"
-	"github.com/corazawaf/coraza/v2/seclang"
+	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/seclang"
 )
 
 func main() {
@@ -113,19 +113,6 @@ func main() {
 * [Go FTW](https://github.com/fzipi/go-ftw): rule testing engine
 * [Coraza Playground](https://playground.coraza.io/): sandbox rule testing web interface
 * [OWASP Core Ruleset](https://github.com/coreruleset/coreruleset/): Awesome rule set, compatible with Coraza
-
-## Troubleshooting
-
-**Dependency issues**: 
-```
-go get: github.com/jptosso/coraza-waf/v2@v2.0.0-rc.3: parsing go.mod:
-	module declares its path as: github.com/corazawaf/coraza/v2
-	        but was required as: github.com/jptosso/coraza-waf/v2
-```
-Coraza was migrated from github.com/jptosso/coraza-waf to github.com/corazawaf/coraza. Most dependencies has already been updated to use the new repo, but you must make sure they all use v2.0.0-rc.3+. You may use the following command to fix the error:
-```sh
-go get -u github.com/corazawaf/coraza/v2@v2.0.0-rc.3
-```
 
 ## Contribute
 

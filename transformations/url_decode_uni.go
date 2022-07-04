@@ -15,7 +15,7 @@
 package transformations
 
 import (
-	"github.com/corazawaf/coraza/v2/utils/strings"
+	"github.com/corazawaf/coraza/v3/utils/strings"
 )
 
 func urlDecodeUni(data string) (string, error) {

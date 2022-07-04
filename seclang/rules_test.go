@@ -24,8 +24,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v2"
-	"github.com/corazawaf/coraza/v2/types/variables"
+	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 func TestRuleMatch(t *testing.T) {

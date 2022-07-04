@@ -19,14 +19,16 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v3"
 )
 
 type validateByteRange struct {
 	data [][]byte
 }
 
-func (o *validateByteRange) Init(data string) error {
+func (o *validateByteRange) Init(options coraza.RuleOperatorOptions) error {
+	data := options.Arguments
+
 	o.data = [][]byte{}
 	if data == "" {
 		return nil

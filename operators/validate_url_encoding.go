@@ -14,12 +14,14 @@
 
 package operators
 
-import "github.com/corazawaf/coraza/v2"
+import (
+	"github.com/corazawaf/coraza/v3"
+)
 
 type validateURLEncoding struct {
 }
 
-func (o *validateURLEncoding) Init(data string) error {
+func (o *validateURLEncoding) Init(options coraza.RuleOperatorOptions) error {
 	// Does not require initialization
 	return nil
 }

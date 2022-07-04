@@ -17,8 +17,8 @@ package testing
 import (
 	"os"
 
-	"github.com/corazawaf/coraza/v2"
-	"github.com/corazawaf/coraza/v2/seclang"
+	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/seclang"
 	"gopkg.in/yaml.v2"
 )
 

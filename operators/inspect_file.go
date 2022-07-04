@@ -19,14 +19,16 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v3"
 )
 
 type inspectFile struct {
 	path string
 }
 
-func (o *inspectFile) Init(data string) error {
+func (o *inspectFile) Init(options coraza.RuleOperatorOptions) error {
+	data := options.Arguments
+
 	o.path = data
 	return nil
 }

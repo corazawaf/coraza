@@ -23,7 +23,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v3"
 )
 
 type Test struct {
@@ -75,7 +75,7 @@ func TestTransformations(t *testing.T) {
 					t.Error("Cannot parse test case", err)
 				}
 			}
-			op, err := GetOperator(data.Name)
+			op, err := Get(data.Name)
 			if err != nil {
 				continue
 			}
@@ -88,7 +88,10 @@ func TestTransformations(t *testing.T) {
 				}
 				data.Param = string(d)
 			}
-			if err := op.Init(data.Param); err != nil {
+			opts := coraza.RuleOperatorOptions{
+				Arguments: data.Param,
+			}
+			if err := op.Init(opts); err != nil {
 				t.Error(err)
 			}
 			res := op.Evaluate(waf.NewTransaction(), data.Input)

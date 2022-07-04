@@ -17,17 +17,24 @@ package operators
 import (
 	_ "fmt"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3"
 )
 
 func TestInspectFile(t *testing.T) {
 	ipf := &inspectFile{}
-	if err := ipf.Init("/bin/echo"); err != nil {
+	opts := coraza.RuleOperatorOptions{
+		Arguments: "",
+	}
+	opts.Arguments = "/bin/echo"
+	if err := ipf.Init(opts); err != nil {
 		t.Error("cannot init inspectfile operator")
 	}
 	if !ipf.Evaluate(nil, "test") {
 		t.Errorf("/bin/echo returned exit code other than 0")
 	}
-	if err := ipf.Init("/bin/nonexistant"); err != nil {
+	opts.Arguments = "/bin/nonexistant"
+	if err := ipf.Init(opts); err != nil {
 		t.Error("cannot init inspectfile operator")
 	}
 	if ipf.Evaluate(nil, "test") {

@@ -21,8 +21,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/corazawaf/coraza/v2"
-	engine "github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v3"
+	engine "github.com/corazawaf/coraza/v3"
 )
 
 func TestInterruption(t *testing.T) {

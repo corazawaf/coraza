@@ -15,14 +15,14 @@
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/libinjection-go"
 )
 
 type detectSQLi struct {
 }
 
-func (o *detectSQLi) Init(data string) error {
+func (o *detectSQLi) Init(options coraza.RuleOperatorOptions) error {
 	return nil
 }
 

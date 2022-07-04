@@ -20,7 +20,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v2/types"
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 func TestBodyReaderMemory(t *testing.T) {

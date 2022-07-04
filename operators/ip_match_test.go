@@ -18,6 +18,8 @@ import (
 	_ "fmt"
 	"os"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3"
 )
 
 func TestOneAddress(t *testing.T) {
@@ -25,7 +27,10 @@ func TestOneAddress(t *testing.T) {
 	addrfail := "127.0.0.2"
 	cidr := "127.0.0.1/32"
 	ipm := &ipMatch{}
-	if err := ipm.Init(cidr); err != nil {
+	opts := coraza.RuleOperatorOptions{
+		Arguments: cidr,
+	}
+	if err := ipm.Init(opts); err != nil {
 		t.Error("Cannot init ipmatchtest operator")
 	}
 	if !ipm.Evaluate(nil, addrok) {
@@ -41,7 +46,10 @@ func TestMultipleAddress(t *testing.T) {
 	addrfail := []string{"127.0.0.2", "192.168.1.1"}
 	cidr := "127.0.0.1, 192.168.0.0/24"
 	ipm := &ipMatch{}
-	if err := ipm.Init(cidr); err != nil {
+	opts := coraza.RuleOperatorOptions{
+		Arguments: cidr,
+	}
+	if err := ipm.Init(opts); err != nil {
 		t.Error("Cannot init ipmatchtest operator")
 	}
 	for _, ok := range addrok {
@@ -66,7 +74,10 @@ func TestFromFile(t *testing.T) {
 	if err != nil {
 		t.Error("Cannot read test data", err)
 	}
-	if err := ipm.Init(string(data)); err != nil {
+	opts := coraza.RuleOperatorOptions{
+		Arguments: string(data),
+	}
+	if err := ipm.Init(opts); err != nil {
 		t.Error("Cannot init ipmatchfromfile operator")
 	}
 	for _, ok := range addrok {

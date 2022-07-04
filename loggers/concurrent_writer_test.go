@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/corazawaf/coraza/v2/types"
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 func TestCLogFileCreation(t *testing.T) {

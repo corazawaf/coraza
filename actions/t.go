@@ -15,9 +15,9 @@
 package actions
 
 import (
-	"github.com/corazawaf/coraza/v2"
-	transformations "github.com/corazawaf/coraza/v2/transformations"
-	"github.com/corazawaf/coraza/v2/types"
+	"github.com/corazawaf/coraza/v3"
+	transformations "github.com/corazawaf/coraza/v3/transformations"
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 type tFn struct{}

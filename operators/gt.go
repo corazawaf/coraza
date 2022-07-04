@@ -17,14 +17,16 @@ package operators
 import (
 	"strconv"
 
-	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v3"
 )
 
 type gt struct {
 	data coraza.Macro
 }
 
-func (o *gt) Init(data string) error {
+func (o *gt) Init(options coraza.RuleOperatorOptions) error {
+	data := options.Arguments
+
 	macro, err := coraza.NewMacro(data)
 	if err != nil {
 		return err

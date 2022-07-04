@@ -19,9 +19,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/corazawaf/coraza/v2/types"
-	"github.com/corazawaf/coraza/v2/types/variables"
-	"github.com/corazawaf/coraza/v2/utils/strings"
+	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/corazawaf/coraza/v3/utils/strings"
 	"go.uber.org/zap"
 )
 

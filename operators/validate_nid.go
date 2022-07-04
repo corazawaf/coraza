@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v3"
 )
 
 type validateNidFunction = func(input string) bool
@@ -30,7 +30,9 @@ type validateNid struct {
 	rgx string
 }
 
-func (o *validateNid) Init(data string) error {
+func (o *validateNid) Init(options coraza.RuleOperatorOptions) error {
+	data := options.Arguments
+
 	spl := strings.SplitN(data, " ", 2)
 	if len(spl) != 2 {
 		return fmt.Errorf("invalid @validateNid argument")

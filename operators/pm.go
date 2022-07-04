@@ -18,7 +18,7 @@ import (
 	"strings"
 
 	"github.com/cloudflare/ahocorasick"
-	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v3"
 )
 
 // TODO according to coraza researchs, re2 matching is faster than ahocorasick
@@ -30,7 +30,9 @@ type pm struct {
 	dict []string
 }
 
-func (o *pm) Init(data string) error {
+func (o *pm) Init(options coraza.RuleOperatorOptions) error {
+	data := options.Arguments
+
 	data = strings.ToLower(data)
 	o.dict = strings.Split(data, " ")
 	o.matcher = ahocorasick.NewStringMatcher(o.dict)

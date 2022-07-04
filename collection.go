@@ -19,8 +19,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v2/types"
-	"github.com/corazawaf/coraza/v2/types/variables"
+	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 // Collection are used to store VARIABLE data

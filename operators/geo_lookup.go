@@ -15,12 +15,12 @@
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v3"
 )
 
 type geoLookup struct{}
 
-func (o *geoLookup) Init(data string) error {
+func (o *geoLookup) Init(options coraza.RuleOperatorOptions) error {
 	return nil
 }
 

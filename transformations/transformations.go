@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v3"
 )
 
 var transformations = map[string]coraza.RuleTransformation{}

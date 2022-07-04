@@ -20,9 +20,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/corazawaf/coraza/v2"
-	"github.com/corazawaf/coraza/v2/loggers"
-	"github.com/corazawaf/coraza/v2/seclang"
+	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/loggers"
+	"github.com/corazawaf/coraza/v3/seclang"
 )
 
 func TestAuditLogMessages(t *testing.T) {

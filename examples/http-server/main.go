@@ -5,9 +5,9 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/corazawaf/coraza/v2"
-	"github.com/corazawaf/coraza/v2/seclang"
-	"github.com/corazawaf/coraza/v2/types"
+	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/seclang"
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 var waf *coraza.Waf

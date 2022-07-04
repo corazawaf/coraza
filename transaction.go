@@ -26,12 +26,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/corazawaf/coraza/v2/bodyprocessors"
-	"github.com/corazawaf/coraza/v2/loggers"
-	"github.com/corazawaf/coraza/v2/types"
-	"github.com/corazawaf/coraza/v2/types/variables"
-	utils "github.com/corazawaf/coraza/v2/utils/strings"
-	url2 "github.com/corazawaf/coraza/v2/utils/url"
+	"github.com/corazawaf/coraza/v3/bodyprocessors"
+	"github.com/corazawaf/coraza/v3/loggers"
+	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/types/variables"
+	utils "github.com/corazawaf/coraza/v3/utils/strings"
+	url2 "github.com/corazawaf/coraza/v3/utils/url"
 	"go.uber.org/zap"
 )
 

@@ -17,13 +17,16 @@ package operators
 import (
 	"testing"
 
-	engine "github.com/corazawaf/coraza/v2"
+	engine "github.com/corazawaf/coraza/v3"
 )
 
 func TestValidateByteRangeCase4(t *testing.T) {
 	ranges := "0-255"
 	op := &validateByteRange{}
-	if err := op.Init(ranges); err != nil {
+	opts := engine.RuleOperatorOptions{
+		Arguments: ranges,
+	}
+	if err := op.Init(opts); err != nil {
 		t.Error("Cannot init byte range operator")
 	}
 	tx := getTransaction()
@@ -35,7 +38,10 @@ func TestValidateByteRangeCase4(t *testing.T) {
 func TestValidateByteRangeCase5(t *testing.T) {
 	ranges := "9,10,13,32-126,128-255"
 	op := &validateByteRange{}
-	if err := op.Init(ranges); err != nil {
+	opts := engine.RuleOperatorOptions{
+		Arguments: ranges,
+	}
+	if err := op.Init(opts); err != nil {
 		t.Error("Cannot init byte range operator")
 	}
 	if len(op.data) != 5 || op.data[0][0] != 9 || op.data[1][0] != 10 || op.data[2][0] != 13 || op.data[3][0] != 32 || op.data[3][1] != 126 || op.data[4][0] != 128 || op.data[4][1] != 255 {

@@ -17,7 +17,7 @@ package coraza
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v2/types/variables"
+	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 func TestMacro(t *testing.T) {

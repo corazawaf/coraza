@@ -18,14 +18,17 @@ import (
 	"net"
 	"strings"
 
-	engine "github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v3"
+	engine "github.com/corazawaf/coraza/v3"
 )
 
 type ipMatch struct {
 	subnets []*net.IPNet
 }
 
-func (o *ipMatch) Init(data string) error {
+func (o *ipMatch) Init(options coraza.RuleOperatorOptions) error {
+	data := options.Arguments
+
 	o.subnets = []*net.IPNet{}
 	subnets := strings.Split(data, ",")
 	for _, sb := range subnets {

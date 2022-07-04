@@ -15,14 +15,14 @@
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/libinjection-go"
 )
 
 type detectXSS struct {
 }
 
-func (o *detectXSS) Init(data string) error {
+func (o *detectXSS) Init(options coraza.RuleOperatorOptions) error {
 	return nil
 }
 

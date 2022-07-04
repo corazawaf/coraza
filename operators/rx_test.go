@@ -17,13 +17,16 @@ package operators
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v2"
-	"github.com/corazawaf/coraza/v2/types/variables"
+	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 func TestRx1(t *testing.T) {
 	rx := &rx{}
-	if err := rx.Init("som(.*)ta"); err != nil {
+	opts := coraza.RuleOperatorOptions{
+		Arguments: "som(.*)ta",
+	}
+	if err := rx.Init(opts); err != nil {
 		t.Error(err)
 	}
 	waf := coraza.NewWaf()

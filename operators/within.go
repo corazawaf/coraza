@@ -17,14 +17,16 @@ package operators
 import (
 	"strings"
 
-	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v3"
 )
 
 type within struct {
 	data coraza.Macro
 }
 
-func (o *within) Init(data string) error {
+func (o *within) Init(options coraza.RuleOperatorOptions) error {
+	data := options.Arguments
+
 	macro, err := coraza.NewMacro(data)
 	if err != nil {
 		return err

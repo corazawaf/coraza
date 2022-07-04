@@ -17,12 +17,12 @@ package operators
 import (
 	"unicode/utf8"
 
-	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v3"
 )
 
 type validateUtf8Encoding struct{}
 
-func (o *validateUtf8Encoding) Init(data string) error {
+func (o *validateUtf8Encoding) Init(options coraza.RuleOperatorOptions) error {
 	return nil
 }
 

@@ -17,13 +17,16 @@ package operators
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v3"
 )
 
 func TestPmfm(t *testing.T) {
 	data := "abc\r\ndef\r\nghi\njkl\ryhz"
 	p := &pmFromFile{}
-	if err := p.Init(data); err != nil {
+	opts := coraza.RuleOperatorOptions{
+		Arguments: data,
+	}
+	if err := p.Init(opts); err != nil {
 		t.Error(err)
 	}
 	waf := coraza.NewWaf()

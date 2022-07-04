@@ -21,10 +21,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v2"
-	"github.com/corazawaf/coraza/v2/loggers"
-	"github.com/corazawaf/coraza/v2/types"
-	utils "github.com/corazawaf/coraza/v2/utils/strings"
+	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/loggers"
+	"github.com/corazawaf/coraza/v3/types"
+	utils "github.com/corazawaf/coraza/v3/utils/strings"
 )
 
 func Test_NonImplementedDirective(t *testing.T) {

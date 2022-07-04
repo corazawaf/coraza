@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/corazawaf/coraza/v2/utils/strings"
+	"github.com/corazawaf/coraza/v3/utils/strings"
 )
 
 func TestXMLAttribures(t *testing.T) {

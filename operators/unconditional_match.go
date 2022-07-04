@@ -14,11 +14,13 @@
 
 package operators
 
-import "github.com/corazawaf/coraza/v2"
+import (
+	"github.com/corazawaf/coraza/v3"
+)
 
 type unconditionalMatch struct{}
 
-func (o *unconditionalMatch) Init(data string) error {
+func (o *unconditionalMatch) Init(options coraza.RuleOperatorOptions) error {
 	return nil
 }
 

@@ -20,8 +20,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/corazawaf/coraza/v2"
-	"github.com/corazawaf/coraza/v2/types/variables"
+	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 const timeout = 500 * time.Millisecond
@@ -31,7 +31,9 @@ type rbl struct {
 	resolver *net.Resolver
 }
 
-func (o *rbl) Init(data string) error {
+func (o *rbl) Init(options coraza.RuleOperatorOptions) error {
+	data := options.Arguments
+
 	o.service = data
 	o.resolver = net.DefaultResolver
 	// TODO validate hostname

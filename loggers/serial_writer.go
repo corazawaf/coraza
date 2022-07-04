@@ -19,7 +19,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/corazawaf/coraza/v2/types"
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 // serialWriter is used to store logs in a single file

@@ -14,12 +14,14 @@
 
 package operators
 
-import "github.com/corazawaf/coraza/v2"
+import (
+	"github.com/corazawaf/coraza/v3"
+)
 
 type noMatch struct {
 }
 
-func (o *noMatch) Init(data string) error {
+func (o *noMatch) Init(options coraza.RuleOperatorOptions) error {
 	// No need to init
 	return nil
 }

@@ -18,14 +18,16 @@ import (
 	"bytes"
 	"regexp"
 
-	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v3"
 )
 
 type rx struct {
 	re *regexp.Regexp
 }
 
-func (o *rx) Init(data string) error {
+func (o *rx) Init(options coraza.RuleOperatorOptions) error {
+	data := options.Arguments
+
 	re, err := regexp.Compile(data)
 	o.re = re
 	return err

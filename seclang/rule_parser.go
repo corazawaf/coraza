@@ -22,12 +22,12 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/corazawaf/coraza/v2"
-	actionsmod "github.com/corazawaf/coraza/v2/actions"
-	operators "github.com/corazawaf/coraza/v2/operators"
-	"github.com/corazawaf/coraza/v2/types"
-	"github.com/corazawaf/coraza/v2/types/variables"
-	utils "github.com/corazawaf/coraza/v2/utils/strings"
+	"github.com/corazawaf/coraza/v3"
+	actionsmod "github.com/corazawaf/coraza/v3/actions"
+	operators "github.com/corazawaf/coraza/v3/operators"
+	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/types/variables"
+	utils "github.com/corazawaf/coraza/v3/utils/strings"
 )
 
 const defaultActionsPhase2 = "phase:2,log,auditlog,pass"
@@ -200,7 +200,7 @@ func (p *RuleParser) ParseOperator(operator string) error {
 		op = op[2:]
 	}
 
-	opfn, err := operators.GetOperator(op)
+	opfn, err := operators.Get(op)
 	if err != nil {
 		return err
 	}
@@ -219,7 +219,10 @@ func (p *RuleParser) ParseOperator(operator string) error {
 		opdata = tpath
 		data = content
 	}
-	err = opfn.Init(string(data))
+	opts := coraza.RuleOperatorOptions{
+		Arguments: string(data),
+	}
+	err = opfn.Init(opts)
 	if err != nil {
 		return err
 	}

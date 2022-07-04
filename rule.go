@@ -20,8 +20,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v2/types"
-	"github.com/corazawaf/coraza/v2/types/variables"
+	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/types/variables"
 	"go.uber.org/zap"
 )
 
@@ -57,11 +57,23 @@ type ruleActionParams struct {
 	Function RuleAction
 }
 
+// RuleOperatorOptions is used to store the options for a rule operator
+type RuleOperatorOptions struct {
+	// Arguments is used to store the operator args
+	Arguments string
+
+	// Path is used to store a list of possible data paths
+	Path []string
+
+	// Logger is used to provide access to logger
+	Logger *zap.Logger
+}
+
 // RuleOperator interface is used to define rule @operators
 type RuleOperator interface {
 	// Init is used during compilation to setup and cache
 	// the operator
-	Init(string) error
+	Init(RuleOperatorOptions) error
 	// Evaluate is used during the rule evaluation,
 	// it returns true if the operator succeeded against
 	// the input data for the transaction

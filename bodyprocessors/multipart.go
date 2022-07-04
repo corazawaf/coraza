@@ -23,7 +23,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/corazawaf/coraza/v2/types/variables"
+	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 type multipartBodyProcessor struct {
