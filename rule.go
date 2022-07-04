@@ -22,7 +22,6 @@ import (
 
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
-	"go.uber.org/zap"
 )
 
 // RuleTransformation is used to create transformation plugins
@@ -64,9 +63,6 @@ type RuleOperatorOptions struct {
 
 	// Path is used to store a list of possible data paths
 	Path []string
-
-	// Logger is used to provide access to logger
-	Logger *zap.Logger
 }
 
 // RuleOperator interface is used to define rule @operators
@@ -245,19 +241,8 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 
 	matchedValues := []MatchData{}
 	// we log if we are the parent rule
-	tx.Waf.Logger.Debug("Evaluating rule",
-		zap.Int("rule", rid),
-		zap.String("raw", r.Raw),
-		zap.String("tx", tx.ID),
-		zap.String("event", "EVALUATE_RULE"),
-		zap.Bool("is_chain", r.ParentID != 0),
-	)
-	defer tx.Waf.Logger.Debug("finished evaluating rule", zap.String("txid", tx.ID),
-		zap.Int("rule", rid),
-		zap.Int("matched_values", len(matchedValues)),
-		zap.String("event", "FINISH_RULE"),
-		zap.Bool("is_chain", r.ParentID != 0),
-	)
+	tx.Waf.Logger.Debug("[%s] [%d] Evaluating rule %d", tx.ID, rid, r.ID)
+	defer tx.Waf.Logger.Debug("[%s] [%d] Finish evaluating rule %d", tx.ID, rid, r.ID)
 	tx.GetCollection(variables.Rule).SetData(map[string][]string{
 		"id":       {strconv.Itoa(rid)},
 		"msg":      {r.Msg.String()},
@@ -267,10 +252,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	})
 	// SecMark and SecAction uses nil operator
 	if r.operator == nil {
-		tx.Waf.Logger.Debug("Forcing rule match", zap.String("txid", tx.ID),
-			zap.Int("rule", r.ID),
-			zap.String("event", "RULE_FORCE_MATCH"),
-		)
+		tx.Waf.Logger.Debug("[%s] [%d] Forcing rule %d to match", tx.ID, rid, r.ID)
 		md := MatchData{}
 		matchedValues = append(matchedValues, md)
 		r.matchVariable(tx, md)
@@ -286,18 +268,10 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 			}
 
 			values = tx.GetField(v)
-			tx.Waf.Logger.Debug("Expanding arguments",
-				zap.Int("rule", rid),
-				zap.String("tx", tx.ID),
-				zap.Int("count", len(values)),
-			)
+			tx.Waf.Logger.Debug("[%s] [%d] Expanding %d arguments for rule %d", tx.ID, rid, len(values), r.ID)
 			for _, arg := range values {
 				var args []string
-				tx.Waf.Logger.Debug("Transforming argument",
-					zap.Int("rule", rid),
-					zap.String("tx", tx.ID),
-					zap.String("argument", arg.Value),
-				)
+				tx.Waf.Logger.Debug("[%s] [%d] Transforming argument %s for rule %d", tx.ID, rid, arg.Value, r.ID)
 				var errs []error
 				if r.MultiMatch {
 					// TODO in the future, we don't need to run every transformation
@@ -309,18 +283,9 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 					errs = es
 				}
 				if len(errs) > 0 {
-					tx.Waf.Logger.Error("Error transforming argument",
-						zap.Int("rule", rid),
-						zap.String("tx", tx.ID),
-						zap.String("argument", arg.Value),
-						zap.Errors("errors", errs),
-					)
+					tx.Waf.Logger.Debug("[%s] [%d] Error transforming argument %s for rule %d: %v", tx.ID, rid, arg.Value, r.ID, errs)
 				}
-				tx.Waf.Logger.Debug("Arguments transformed",
-					zap.Int("rule", rid),
-					zap.String("tx", tx.ID),
-					zap.Strings("arguments", args),
-				)
+				tx.Waf.Logger.Debug("[%s] [%d] Arguments transformed for rule %d: %v", tx.ID, rid, r.ID, args)
 
 				// args represents the transformed variables
 				for _, carg := range args {
@@ -344,16 +309,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 							defer tx.resetCaptures()
 						}
 					}
-					tx.Waf.Logger.Debug("Evaluate rule operator", zap.String("txid", tx.ID),
-						zap.Int("rule", rid),
-						zap.String("event", "EVALUATE_RULE_OPERATOR"),
-						zap.String("operator", r.operator.Function), // TODO fix
-						zap.String("data", carg),
-						zap.String("variable", arg.Variable.Name()),
-						zap.String("key", arg.Key),
-						zap.String("value", carg),
-						zap.Bool("result", match),
-					)
+					tx.Waf.Logger.Debug("[%s] [%d] Evaluating operator \"@%s %s\" for rule %d", tx.ID, rid, r.operator.Function, "", r.ID)
 				}
 			}
 		}
@@ -367,7 +323,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	if r.ParentID == 0 {
 		// we only run the chains for the parent rule
 		for nr := r.Chain; nr != nil; {
-			tx.Waf.Logger.Debug("Evaluating rule chain", zap.Int("rule", rid), zap.String("raw", nr.Raw))
+			tx.Waf.Logger.Debug("[%s] [%d] Evaluating rule chain for %d", tx.ID, rid, r.ID)
 			matchedChainValues := nr.Evaluate(tx)
 			if len(matchedChainValues) == 0 {
 				return matchedChainValues
@@ -377,11 +333,10 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		}
 		// we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
 		if tx.RuleEngine != types.RuleEngineDetectionOnly {
-			tx.Waf.Logger.Debug("Detecting rule disruptive action", zap.String("txid", tx.ID), zap.Int("rule", r.ID))
+			tx.Waf.Logger.Debug("[%s] [%d] Disrupting transaction by rule %d", tx.ID, rid, r.ID)
 			for _, a := range r.actions {
 				if a.Function.Type() == types.ActionTypeDisruptive || a.Function.Type() == types.ActionTypeFlow {
-					tx.Waf.Logger.Debug("Evaluating action", zap.String("type", "disruptive or flow"),
-						zap.String("txid", tx.ID), zap.Int("rule", rid), zap.String("action", a.Name))
+					tx.Waf.Logger.Debug("[%s] [%d] Evaluating action %s for rule %d", tx.ID, rid, a.Name, r.ID)
 					a.Function.Evaluate(r, tx)
 				}
 			}
@@ -399,13 +354,7 @@ func (r *Rule) matchVariable(tx *Transaction, m MatchData) {
 		rid = r.ParentID
 	}
 	if !m.isNil() {
-		tx.Waf.Logger.Debug("Matching value", zap.String("txid", tx.ID),
-			zap.Int("rule", rid),
-			zap.String("event", "EVALUATE_RULE_OPERATOR"),
-			zap.Any("variable", m.VariableName),
-			zap.String("key", m.Key),
-			zap.String("value", m.Value),
-		)
+		tx.Waf.Logger.Debug("[%s] [%d] Matching rule %d %s:%s", tx.ID, rid, r.ID, m.VariableName, m.Key)
 	}
 	// we must match the vars before running the chains
 
@@ -413,8 +362,7 @@ func (r *Rule) matchVariable(tx *Transaction, m MatchData) {
 	tx.matchVariable(m)
 	for _, a := range r.actions {
 		if a.Function.Type() == types.ActionTypeNondisruptive {
-			tx.Waf.Logger.Debug("evaluating action", zap.String("type", "non_disruptive"),
-				zap.String("txid", tx.ID), zap.Int("rule", rid), zap.String("action", a.Name))
+			tx.Waf.Logger.Debug("[%s] [%d] Evaluating action %s for rule %d", tx.ID, rid, a.Name, r.ID)
 			a.Function.Evaluate(r, tx)
 		}
 	}

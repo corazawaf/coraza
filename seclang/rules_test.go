@@ -928,7 +928,6 @@ func TestURIQueryParamCaseSensitive(t *testing.T) {
 	}
 
 	if len(tx.MatchedRules) == 1 {
-		tx.PrintLog()
 		if len(tx.MatchedRules[0].MatchedDatas) != 3 {
 			t.Errorf("failed to test uri query param. Found matches: %d, %+v\n",
 				len(tx.MatchedRules[0].MatchedDatas), tx.MatchedRules)
@@ -985,7 +984,6 @@ func TestURIQueryParamNameCaseSensitive(t *testing.T) {
 	}
 
 	if len(tx.MatchedRules) == 1 {
-		tx.PrintLog()
 		if len(tx.MatchedRules[0].MatchedDatas) != 1 {
 			t.Errorf("Failed to test uri query param. Expected: 1, Found matches: %d, %+v\n",
 				len(tx.MatchedRules[0].MatchedDatas), tx.MatchedRules)

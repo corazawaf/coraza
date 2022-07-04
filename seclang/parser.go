@@ -122,9 +122,7 @@ func (p *Parser) evaluate(data string) error {
 	if len(spl) == 2 {
 		opts = spl[1]
 	}
-	p.options.Waf.Logger.Debug("parsing directive",
-		zap.String("directive", data),
-	)
+	p.options.Waf.Logger.Debug("parsing directive %q", data)
 	directive := spl[0]
 
 	if len(opts) >= 3 && opts[0] == '"' && opts[len(opts)-1] == '"' {

@@ -19,7 +19,6 @@ import (
 
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
-	"go.uber.org/zap"
 )
 
 type skipafterFn struct {
@@ -32,11 +31,7 @@ func (a *skipafterFn) Init(r *coraza.Rule, data string) error {
 }
 
 func (a *skipafterFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
-	tx.Waf.Logger.Debug("Starting secmarker",
-		zap.String("txid", tx.ID),
-		zap.String("event", "INIT_SECMARK"),
-		zap.String("secmark", a.data),
-	)
+	tx.Waf.Logger.Debug("[%s] Starting secmarker %q", tx.ID, a.data)
 	tx.SkipAfter = a.data
 }
 

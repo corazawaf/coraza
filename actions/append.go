@@ -17,7 +17,6 @@ package actions
 import (
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
-	"go.uber.org/zap"
 )
 
 type appendFn struct {
@@ -40,7 +39,7 @@ func (a *appendFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	}
 	data := a.data.Expand(tx)
 	if _, err := tx.ResponseBodyBuffer.Write([]byte(data)); err != nil {
-		tx.Waf.Logger.Error("append failed to write to response buffer", zap.Error(err))
+		tx.Waf.Logger.Error("append failed to write to response buffer %v", err)
 	}
 }
 

@@ -32,7 +32,6 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 	utils "github.com/corazawaf/coraza/v3/utils/strings"
 	url2 "github.com/corazawaf/coraza/v3/utils/url"
-	"go.uber.org/zap"
 )
 
 // Transaction is created from a WAF instance to handle web requests and responses,
@@ -177,15 +176,14 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 // CaptureField is used to set the TX:[index] variables by operators
 // that supports capture, like @rx
 func (tx *Transaction) CaptureField(index int, value string) {
-	tx.Waf.Logger.Debug("Capturing field", zap.String("txid", tx.ID),
-		zap.Int("index", index), zap.String("value", value))
+	tx.Waf.Logger.Debug("[%s] Capturing field %d with value %q", tx.ID, index, value)
 	i := strconv.Itoa(index)
 	tx.GetCollection(variables.TX).SetIndex(i, 0, value)
 }
 
 // this function is used to control which variables are reset after a new rule is evaluated
 func (tx *Transaction) resetCaptures() {
-	tx.Waf.Logger.Debug("Reseting captured variables", zap.String("txid", tx.ID))
+	tx.Waf.Logger.Debug("[%s] Reseting captured variables", tx.ID)
 	// We reset capture 0-9
 	ctx := tx.GetCollection(variables.TX)
 	// RUNE 48 = 0
@@ -283,7 +281,7 @@ func (tx *Transaction) matchVariable(match MatchData) {
 
 // MatchRule Matches a rule to be logged
 func (tx *Transaction) MatchRule(r *Rule, mds []MatchData) {
-	tx.Waf.Logger.Debug("rule matched", zap.String("txid", tx.ID), zap.Int("rule", r.ID))
+	tx.Waf.Logger.Debug("[%s] rule %d matched", tx.ID, r.ID)
 	// tx.MatchedRules = append(tx.MatchedRules, mr)
 
 	// If the rule is set to audit, we log the transaction to the audit log
@@ -296,7 +294,6 @@ func (tx *Transaction) MatchRule(r *Rule, mds []MatchData) {
 	maxSeverity, _ := types.ParseRuleSeverity(hs.GetFirstString(""))
 	if r.Severity > maxSeverity {
 		hs.SetIndex("", 0, strconv.Itoa(r.Severity.Int()))
-		tx.Waf.Logger.Debug("Set highest severity", zap.Int("severity", r.Severity.Int()))
 	}
 
 	mr := MatchedRule{
@@ -353,8 +350,7 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []MatchData {
 	if tx.bodyProcessor != nil && tx.bodyProcessor.VariableHook() == collection {
 		m, err := tx.bodyProcessor.Find(rv.KeyStr)
 		if err != nil {
-			tx.Waf.Logger.Error("error getting variable", zap.String("collection", collection.Name()),
-				zap.String("key", rv.KeyStr), zap.Error(err))
+			tx.Waf.Logger.Error("[%s] error getting variable %s:%s: %v", tx.ID, collection.Name(), rv.KeyStr, err)
 			return []MatchData{}
 		}
 		if len(m) == 0 {
@@ -387,9 +383,6 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []MatchData {
 			// in case it matches the regex or the keyStr
 			// Since keys are case sensitive we need to check with lower case
 			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || strings.ToLower(ex.KeyStr) == lkey {
-				tx.Waf.Logger.Debug("Variable exception triggered", zap.String("var", rv.Variable.Name()),
-					zap.String("key", ex.KeyStr), zap.String("txid", tx.ID), zap.String("match", c.Key),
-					zap.Bool("regex", ex.KeyRx != nil))
 				// we remove the exception from the list of values
 				// we tried with standard append, but it fails... let's do some hacking
 				// m2 := append(matches[:i], matches[i+1:]...)
@@ -416,8 +409,6 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []MatchData {
 				Value:        strconv.Itoa(count),
 			},
 		}
-		tx.Waf.Logger.Debug("Transforming match to count", zap.String("tx", tx.ID),
-			zap.String("count", matches[0].Value))
 	}
 	return matches
 }
@@ -686,8 +677,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		rbp = "URLENCODED"
 		tx.GetCollection(variables.ReqbodyProcessor).Set("", []string{rbp})
 	}
-	tx.Waf.Logger.Debug("Attempting to process request body", zap.String("txid", tx.ID),
-		zap.String("bodyprocessor", rbp))
+	tx.Waf.Logger.Debug("[%s] Attempting to process request body using %q", tx.ID, rbp)
 	rbp = strings.ToLower(rbp)
 	if rbp == "" {
 		// so there is no bodyprocessor, we don't want to generate an error
@@ -813,15 +803,13 @@ func (tx *Transaction) ProcessLogging() {
 
 	if tx.AuditEngine == types.AuditEngineOff {
 		// Audit engine disabled
-		tx.Waf.Logger.Debug("Transaction not marked for audit logging, AuditEngine is disabled",
-			zap.String("tx", tx.ID),
-		)
+		tx.Waf.Logger.Debug("[%s] Transaction not marked for audit logging, AuditEngine is disabled", tx.ID)
 		return
 	}
 
 	if tx.AuditEngine == types.AuditEngineRelevantOnly && !tx.audit {
 		// Transaction marked not for audit logging
-		tx.Waf.Logger.Debug("Transaction not marked for audit logging, AuditEngine is RelevantOnly and we got noauditlog")
+		tx.Waf.Logger.Debug("[%s] Transaction not marked for audit logging, AuditEngine is RelevantOnly and we got noauditlog", tx.ID)
 		return
 	}
 
@@ -830,16 +818,12 @@ func (tx *Transaction) ProcessLogging() {
 		status := tx.GetCollection(variables.ResponseStatus).GetFirstString("")
 		if re != nil && !re.Match([]byte(status)) {
 			// Not relevant status
-			tx.Waf.Logger.Debug("Transaction status not marked for audit logging",
-				zap.String("tx", tx.ID),
-			)
+			tx.Waf.Logger.Debug("[%s] Transaction status not marked for audit logging", tx.ID)
 			return
 		}
 	}
 
-	tx.Waf.Logger.Debug("Transaction marked for audit logging",
-		zap.String("tx", tx.ID),
-	)
+	tx.Waf.Logger.Debug("[%s] Transaction marked for audit logging", tx.ID)
 	if writer := tx.Waf.AuditLogWriter; writer != nil {
 		// we don't log if there is an empty audit logger
 		if err := writer.Write(tx.AuditLog()); err != nil {
@@ -851,23 +835,6 @@ func (tx *Transaction) ProcessLogging() {
 // Interrupted will return true if the transaction was interrupted
 func (tx *Transaction) Interrupted() bool {
 	return tx.Interruption != nil
-}
-
-// PrintLog prints the detection log for detection to stderr
-func (tx *Transaction) PrintLog() {
-	for _, mr := range tx.MatchedRules {
-		r := mr.Rule
-		fmt.Println("Rule:", r.ID, "Message:", mr.Message, "Data:", mr.Data)
-		for _, matchData := range mr.MatchedDatas {
-			fmt.Println(
-				"Variable:", matchData.Variable,
-				" Key:", matchData.Key,
-				" Value:", matchData.Value,
-				" Message:", matchData.Message,
-				" Data:", matchData.Data,
-			)
-		}
-	}
 }
 
 // AuditLog returns an AuditLog struct, used to write audit logs
@@ -979,7 +946,7 @@ func (tx *Transaction) Clean() error {
 	if err := tx.ResponseBodyBuffer.Close(); err != nil {
 		return err
 	}
-	tx.Waf.Logger.Debug("Transaction finished", zap.String("event", "FINISH_TRANSACTION"), zap.String("txid", tx.ID), zap.Bool("interrupted", tx.Interrupted()))
+	tx.Waf.Logger.Debug("[%s] Transaction finished, disrupted: %t", tx.ID, tx.Interrupted())
 	return nil
 }
 

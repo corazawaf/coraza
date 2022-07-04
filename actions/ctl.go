@@ -24,7 +24,6 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 	utils "github.com/corazawaf/coraza/v3/utils/strings"
-	"go.uber.org/zap"
 )
 
 type ctlFunctionType int
@@ -75,7 +74,7 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	case ctlRemoveTargetByID:
 		ran, err := a.rangeToInts(tx.Waf.Rules.GetRules(), a.value)
 		if err != nil {
-			tx.Waf.Logger.Error("invalid range", zap.Error(err))
+			tx.Waf.Logger.Error("[ctl REMOVE_TARGET_BY_ID] invalid range: %v", err)
 			return
 		}
 		for _, id := range ran {
@@ -107,7 +106,7 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 		tx.AuditLogParts = types.AuditLogParts(a.value)
 	case ctlForceRequestBodyVar:
 		val := strings.ToLower(a.value)
-		tx.Waf.Logger.Debug("Forcing request body var with CTL", zap.String("status", val))
+		tx.Waf.Logger.Debug("[ForceRequestBodyVar] Forcing request body var with CTL to %s", val)
 		if val == "on" {
 			tx.ForceRequestBodyVariable = true
 		} else if val == "off" {

@@ -17,6 +17,7 @@ package coraza
 import (
 	"fmt"
 	"io/fs"
+	"log"
 	"os"
 	"regexp"
 	"strconv"
@@ -28,8 +29,6 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 	utils "github.com/corazawaf/coraza/v3/utils/strings"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 // Initializing pool for transactions
@@ -136,17 +135,13 @@ type Waf struct {
 	// ProducerConnector is used by connectors to identify the producer
 	// on audit logs, for example, apache-modcoraza
 	ProducerConnector string
+
 	// ProducerConnectorVersion is used by connectors to identify the producer
 	// version on audit logs
 	ProducerConnectorVersion string
 
 	// Used for the debug logger
-	Logger *zap.Logger
-
-	// Used to allow switching the debug level during runtime
-	// ctl cannot switch use it as it will update de lvl
-	// for the whole Waf instance
-	loggerAtomicLevel *zap.AtomicLevel
+	Logger *DebugLogger
 
 	errorLogCb ErrorLogCallback
 
@@ -252,7 +247,7 @@ func (w *Waf) NewTransaction() *Transaction {
 		env.Set(spl[0], []string{spl[1]})
 	}
 
-	w.Logger.Debug("new transaction created", zap.String("event", "NEW_TRANSACTION"), zap.String("txid", tx.ID))
+	w.Logger.Debug("new transaction created with id %q", tx.ID)
 
 	return tx
 }
@@ -261,28 +256,27 @@ func (w *Waf) NewTransaction() *Transaction {
 // If the path is empty, the debug log will be disabled
 // note: this is not thread safe
 func (w *Waf) SetDebugLogPath(path string) error {
-	cfg := zap.NewProductionConfig()
-	// sampling would make us loose some debug logs
-	cfg.Sampling = nil
 	if path == "" {
-		cfg.OutputPaths = []string{}
-	} else {
-		cfg.OutputPaths = []string{path}
+		return nil
 	}
-	cfg.Level = *w.loggerAtomicLevel
-	logger, err := cfg.Build()
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		return err
+		w.Logger.Error("error opening file: %v", err)
 	}
-	w.Logger = logger
+	w.Logger.SetOutput(f)
 	return nil
 }
 
 // NewWaf creates a new WAF instance with default variables
 func NewWaf() *Waf {
-	atom := zap.NewAtomicLevel()
-	atom.SetLevel(zap.FatalLevel)
-	logWriter, _ := loggers.GetLogWriter("serial")
+	logger := &DebugLogger{
+		logger: &log.Logger{},
+		Level:  LogLevelInfo,
+	}
+	logWriter, err := loggers.GetLogWriter("serial")
+	if err != nil {
+		logger.Error("error creating serial log writer: %v", err)
+	}
 	waf := &Waf{
 		ArgumentSeparator:        "&",
 		AuditLogWriter:           logWriter,
@@ -296,9 +290,9 @@ func NewWaf() *Waf {
 		RuleEngine:               types.RuleEngineOn,
 		Rules:                    NewRuleGroup(),
 		TmpDir:                   "/tmp",
-		loggerAtomicLevel:        &atom,
 		AuditLogRelevantStatus:   regexp.MustCompile(`.*`),
 		RequestBodyAccess:        false,
+		Logger:                   logger,
 	}
 	// We initialize a basic audit log writer to /dev/null
 	if err := logWriter.Init(types.Config{}); err != nil {
@@ -314,22 +308,7 @@ func NewWaf() *Waf {
 // SetDebugLogLevel changes the debug level of the Waf instance
 func (w *Waf) SetDebugLogLevel(lvl int) error {
 	// setLevel is concurrent safe
-	switch lvl {
-	case 0:
-		w.loggerAtomicLevel.SetLevel(zapcore.FatalLevel)
-	case 1:
-		w.loggerAtomicLevel.SetLevel(zapcore.PanicLevel)
-	case 2:
-		w.loggerAtomicLevel.SetLevel(zapcore.ErrorLevel)
-	case 3:
-		w.loggerAtomicLevel.SetLevel(zapcore.WarnLevel)
-	case 4:
-		w.loggerAtomicLevel.SetLevel(zapcore.InfoLevel)
-	case 5:
-		w.loggerAtomicLevel.SetLevel(zapcore.DebugLevel)
-	default:
-		return fmt.Errorf("invalid SecDebugLogLevel value")
-	}
+	w.Logger.SetLevel(LogLevel(lvl))
 	return nil
 }
 

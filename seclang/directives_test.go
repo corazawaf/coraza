@@ -150,10 +150,14 @@ func Test_directive(t *testing.T) {
 
 func TestDebugDirectives(t *testing.T) {
 	waf := coraza.NewWaf()
-	tmpf, _ := ioutil.TempFile("/tmp", "*.log")
+	tmpf, err := ioutil.TempFile("/tmp", "*.log")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.Remove(tmpf.Name())
 	tmp := tmpf.Name()
 	p, _ := NewParser(waf)
-	err := directiveSecDebugLog(&DirectiveOptions{
+	err = directiveSecDebugLog(&DirectiveOptions{
 		Waf:  waf,
 		Opts: tmp,
 	})
@@ -167,9 +171,12 @@ func TestDebugDirectives(t *testing.T) {
 		t.Error(err)
 	}
 	p.options.Waf.Logger.Info("abc123")
-	data, _ := os.ReadFile(tmp)
+	data, err := os.ReadFile(tmp)
+	if err != nil {
+		t.Error(err)
+	}
 	if !strings.Contains(string(data), "abc123") {
-		t.Error("failed to write info log")
+		t.Errorf("failed to write info log, got %q", data)
 	}
 }
 
