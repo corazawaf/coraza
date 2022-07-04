@@ -26,7 +26,6 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 
 	"github.com/corazawaf/coraza/v3"
-	"go.uber.org/zap"
 )
 
 // maxIncludeRecursion is used to avoid DDOS by including files that include
@@ -67,17 +66,13 @@ func (p *Parser) FromFile(profilePath string) error {
 		p.currentDir = filepath.Dir(profilePath)
 		file, err := os.ReadFile(profilePath)
 		if err != nil {
-			p.options.Waf.Logger.Error(err.Error(),
-				zap.String("path", profilePath),
-			)
+			p.options.Waf.Logger.Error(err.Error())
 			return err
 		}
 
 		err = p.FromString(string(file))
 		if err != nil {
-			p.options.Waf.Logger.Error(err.Error(),
-				zap.String("path", profilePath),
-			)
+			p.options.Waf.Logger.Error(err.Error())
 			return err
 		}
 		// restore the lastDir post processing all includes
@@ -154,9 +149,7 @@ func (p *Parser) evaluate(data string) error {
 
 func (p *Parser) log(msg string) error {
 	msg = fmt.Sprintf("[Parser] [Line %d] %s", p.currentLine, msg)
-	p.options.Waf.Logger.Error(msg,
-		zap.Int("line", p.currentLine),
-	)
+	p.options.Waf.Logger.Error("[%d] %s", p.currentLine, msg)
 	return errors.New(msg)
 }
 
