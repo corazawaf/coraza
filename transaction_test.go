@@ -17,6 +17,7 @@ package coraza
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -57,7 +58,7 @@ func TestTxSetters(t *testing.T) {
 }
 
 func TestTxMultipart(t *testing.T) {
-	tx := wafi.NewTransaction()
+	tx := wafi.NewTransaction(context.Background())
 	body := []string{
 		"-----------------------------9051914041544843365972754266",
 		"Content-Disposition: form-data; name=\"text\"",
@@ -138,7 +139,7 @@ func TestTxGetField(t *testing.T) {
 func TestRequestBody(t *testing.T) {
 	urlencoded := "some=result&second=data"
 	// xml := "<test><content>test</content></test>"
-	tx := wafi.NewTransaction()
+	tx := wafi.NewTransaction(context.Background())
 	tx.RequestBodyAccess = true
 	tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
 	if _, err := tx.RequestBodyBuffer.Write([]byte(urlencoded)); err != nil {
@@ -157,7 +158,7 @@ func TestRequestBody(t *testing.T) {
 func TestResponseHeader(t *testing.T) {
 	tx := makeTransaction()
 	tx.AddResponseHeader("content-type", "test")
-	if tx.GetCollection(variables.ResponseContentType).GetFirstString("") != "test" {
+	if tx.GetCollection(variables.ResponseContentType).String() != "test" {
 		t.Error("invalid RESPONSE_CONTENT_TYPE after response headers")
 	}
 }
@@ -186,7 +187,7 @@ func TestResponseBody(t *testing.T) {
 	if _, err := tx.ProcessResponseBody(); err != nil {
 		t.Error("Failed to process response body")
 	}
-	if tx.GetCollection(variables.ResponseBody).GetFirstString("") != "test123" {
+	if tx.GetCollection(variables.ResponseBody).String() != "test123" {
 		t.Error("failed to set response body")
 	}
 	if err := tx.Clean(); err != nil {
@@ -201,7 +202,7 @@ func TestAuditLogFields(t *testing.T) {
 	tx.AddResponseHeader("test", "test")
 	rule := NewRule()
 	rule.ID = 131
-	tx.MatchRule(rule, []MatchData{
+	tx.MatchRule(rule, []types.MatchData{
 		{
 			VariableName: "UNIQUE_ID",
 			Variable:     variables.UniqueID,
@@ -228,11 +229,11 @@ func TestAuditLogFields(t *testing.T) {
 func TestRequestStruct(t *testing.T) {
 	req, _ := http.NewRequest("POST", "https://www.coraza.io/test", strings.NewReader("test=456"))
 	waf := NewWaf()
-	tx := waf.NewTransaction()
+	tx := waf.NewTransaction(context.Background())
 	if _, err := tx.ProcessRequest(req); err != nil {
 		t.Error(err)
 	}
-	if tx.GetCollection(variables.RequestMethod).GetFirstString("") != "POST" {
+	if tx.GetCollection(variables.RequestMethod).String() != "POST" {
 		t.Error("failed to set request from request object")
 	}
 	if err := tx.Clean(); err != nil {
@@ -244,11 +245,11 @@ func TestResetCapture(t *testing.T) {
 	tx := makeTransaction()
 	tx.Capture = true
 	tx.CaptureField(5, "test")
-	if tx.GetCollection(variables.TX).GetFirstString("5") != "test" {
+	if tx.GetCollection(variables.TX).String("5") != "test" {
 		t.Error("failed to set capture field from tx")
 	}
 	tx.resetCaptures()
-	if tx.GetCollection(variables.TX).GetFirstString("5") != "" {
+	if tx.GetCollection(variables.TX).String("5") != "" {
 		t.Error("failed to reset capture field from tx")
 	}
 	if err := tx.Clean(); err != nil {
@@ -272,12 +273,12 @@ func TestRelevantAuditLogging(t *testing.T) {
 func TestLogCallback(t *testing.T) {
 	waf := NewWaf()
 	buffer := ""
-	waf.errorLogCb = func(mr MatchedRule) {
+	waf.errorLogCb = func(mr types.MatchedRule) {
 		buffer = mr.ErrorLog(403)
 	}
-	tx := waf.NewTransaction()
+	tx := waf.NewTransaction(context.Background())
 	rule := NewRule()
-	tx.MatchRule(rule, []MatchData{
+	tx.MatchRule(rule, []types.MatchData{
 		{
 			VariableName: "UNIQUE_ID",
 			Variable:     variables.UniqueID,
@@ -293,14 +294,14 @@ func TestLogCallback(t *testing.T) {
 
 func TestHeaderSetters(t *testing.T) {
 	waf := NewWaf()
-	tx := waf.NewTransaction()
+	tx := waf.NewTransaction(context.Background())
 	tx.AddRequestHeader("cookie", "abc=def;hij=klm")
 	tx.AddRequestHeader("test1", "test2")
-	c := tx.GetCollection(variables.RequestCookies).GetFirstString("abc")
+	c := tx.GetCollection(variables.RequestCookies).String("abc")
 	if c != "def" {
 		t.Errorf("failed to set cookie, got %q", c)
 	}
-	if tx.GetCollection(variables.RequestHeaders).GetFirstString("cookie") != "abc=def;hij=klm" {
+	if tx.GetCollection(variables.RequestHeaders).String("cookie") != "abc=def;hij=klm" {
 		t.Error("failed to set request header")
 	}
 	if !utils.InSlice("cookie", tx.GetCollection(variables.RequestHeadersNames).Get("cookie")) {
@@ -316,7 +317,7 @@ func TestHeaderSetters(t *testing.T) {
 
 func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 	waf := NewWaf()
-	tx := waf.NewTransaction()
+	tx := waf.NewTransaction(context.Background())
 	tx.RuleEngine = types.RuleEngineOn
 	tx.RequestBodyAccess = true
 	tx.ForceRequestBodyVariable = true
@@ -328,7 +329,7 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error("failed to process request body")
 	}
-	if tx.GetCollection(variables.RequestBody).GetFirstString("") != "test123" {
+	if tx.GetCollection(variables.RequestBody).String() != "test123" {
 		t.Error("failed to set request body")
 	}
 	if err := tx.Clean(); err != nil {
@@ -435,13 +436,17 @@ func TestProcessRequestMultipart(t *testing.T) {
 
 func TestTransactionSyncPool(t *testing.T) {
 	waf := NewWaf()
-	tx := waf.NewTransaction()
-	tx.MatchedRules = append(tx.MatchedRules, MatchedRule{Rule: &Rule{ID: 1234}})
+	tx := waf.NewTransaction(context.Background())
+	tx.MatchedRules = append(tx.MatchedRules, types.MatchedRule{
+		Rule: types.RuleMetadata{
+			ID: 1234,
+		},
+	})
 	for i := 0; i < 1000; i++ {
 		if err := tx.Clean(); err != nil {
 			t.Error(err)
 		}
-		tx = waf.NewTransaction()
+		tx = waf.NewTransaction(context.Background())
 		if len(tx.MatchedRules) != 0 {
 			t.Errorf("failed to sync transaction pool, %d rules found after %d attempts", len(tx.MatchedRules), i+1)
 			return
@@ -451,7 +456,7 @@ func TestTransactionSyncPool(t *testing.T) {
 
 func TestTxPhase4Magic(t *testing.T) {
 	waf := NewWaf()
-	tx := waf.NewTransaction()
+	tx := waf.NewTransaction(context.Background())
 	tx.AddResponseHeader("content-type", "text/html")
 	tx.ResponseBodyAccess = true
 	tx.Waf.ResponseBodyLimit = 3
@@ -461,18 +466,18 @@ func TestTxPhase4Magic(t *testing.T) {
 	if _, err := tx.ProcessResponseBody(); err != nil {
 		t.Error(err)
 	}
-	if tx.GetCollection(variables.OutboundDataError).GetFirstString("") != "1" {
+	if tx.GetCollection(variables.OutboundDataError).String() != "1" {
 		t.Error("failed to set outbound data error")
 	}
-	if tx.GetCollection(variables.ResponseBody).GetFirstString("") != "mor" {
+	if tx.GetCollection(variables.ResponseBody).String() != "mor" {
 		t.Error("failed to set response body")
 	}
 }
 
 func TestVariablesMatch(t *testing.T) {
 	waf := NewWaf()
-	tx := waf.NewTransaction()
-	tx.matchVariable(MatchData{
+	tx := waf.NewTransaction(context.Background())
+	tx.matchVariable(types.MatchData{
 		VariableName: "ARGS_NAMES",
 		Variable:     variables.ArgsNames,
 		Key:          "sample",
@@ -484,19 +489,19 @@ func TestVariablesMatch(t *testing.T) {
 	}
 
 	for k, v := range expect {
-		if m := tx.GetCollection(k).GetFirstString(""); m != v {
+		if m := tx.GetCollection(k).String(); m != v {
 			t.Errorf("failed to match variable %s, Expected: %s, got: %s", k.Name(), v, m)
 		}
 	}
 
-	if v := tx.GetCollection(variables.MatchedVars).GetFirstString("ARGS_NAMES:sample"); v != "samplevalue" {
+	if v := tx.GetCollection(variables.MatchedVars).String("ARGS_NAMES:sample"); v != "samplevalue" {
 		t.Errorf("failed to match variable %s, got %s", variables.MatchedVars.Name(), v)
 	}
 }
 
 func TestTxReqBodyForce(t *testing.T) {
 	waf := NewWaf()
-	tx := waf.NewTransaction()
+	tx := waf.NewTransaction(context.Background())
 	tx.RequestBodyAccess = true
 	tx.ForceRequestBodyVariable = true
 	if _, err := tx.RequestBodyBuffer.Write([]byte("test")); err != nil {
@@ -505,14 +510,14 @@ func TestTxReqBodyForce(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error(err)
 	}
-	if tx.GetCollection(variables.RequestBody).GetFirstString("") != "test" {
+	if tx.GetCollection(variables.RequestBody).String() != "test" {
 		t.Error("failed to set request body")
 	}
 }
 
 func TestTxReqBodyForceNegative(t *testing.T) {
 	waf := NewWaf()
-	tx := waf.NewTransaction()
+	tx := waf.NewTransaction(context.Background())
 	tx.RequestBodyAccess = true
 	tx.ForceRequestBodyVariable = false
 	if _, err := tx.RequestBodyBuffer.Write([]byte("test")); err != nil {
@@ -521,7 +526,7 @@ func TestTxReqBodyForceNegative(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error(err)
 	}
-	if tx.GetCollection(variables.RequestBody).GetFirstString("") == "test" {
+	if tx.GetCollection(variables.RequestBody).String() == "test" {
 		t.Error("reqbody should not be there")
 	}
 }
@@ -559,7 +564,7 @@ func multipartRequest(req *http.Request) error {
 func BenchmarkTransactionCreation(b *testing.B) {
 	waf := NewWaf()
 	for i := 0; i < b.N; i++ {
-		waf.NewTransaction()
+		waf.NewTransaction(context.Background())
 	}
 }
 
@@ -593,7 +598,7 @@ func BenchmarkNewTxWithPool(b *testing.B) {
 }*/
 
 func makeTransaction() *Transaction {
-	tx := wafi.NewTransaction()
+	tx := wafi.NewTransaction(context.Background())
 	tx.RequestBodyAccess = true
 	ht := []string{
 		"POST /testurl.php?id=123&b=456 HTTP/1.1",

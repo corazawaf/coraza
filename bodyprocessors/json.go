@@ -20,14 +20,39 @@ import (
 	"io"
 	"strconv"
 
+	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 type jsonBodyProcessor struct {
-	collections CollectionsMap
 }
 
-func (js *jsonBodyProcessor) Read(reader io.Reader, _ Options) error {
+func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, collection [types.VariablesCount]collection.Collection, _ Options) error {
+	col := collection[variables.ArgsPost]
+	data, err := readJSON(reader)
+	if err != nil {
+		return err
+	}
+	for key, value := range data {
+		col.SetIndex(key, 0, value)
+	}
+	return nil
+}
+
+func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, collection [types.VariablesCount]collection.Collection, _ Options) error {
+	col := collection[variables.ResponseArgs]
+	data, err := readJSON(reader)
+	if err != nil {
+		return err
+	}
+	for key, value := range data {
+		col.SetIndex(key, 0, value)
+	}
+	return nil
+}
+
+func readJSON(reader io.Reader) (map[string]string, error) {
 	// dump reader to byte array
 	var data []byte
 	buf := make([]byte, 1024)
@@ -37,40 +62,15 @@ func (js *jsonBodyProcessor) Read(reader io.Reader, _ Options) error {
 			if err == io.EOF {
 				break
 			}
-			return err
+			return nil, err
 		}
 		data = append(data, buf[:n]...)
 	}
 	fields, err := jsonToMap(data)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	f := map[string][]string{}
-	names := []string{}
-	for key, value := range fields {
-		f[key] = []string{value}
-		names = append(names, key)
-	}
-	js.collections = CollectionsMap{
-		variables.Args:     f,
-		variables.ArgsPost: f,
-		variables.ArgsPostNames: map[string][]string{
-			"": names,
-		},
-	}
-	return nil
-}
-
-func (js *jsonBodyProcessor) Collections() CollectionsMap {
-	return js.collections
-}
-
-func (js *jsonBodyProcessor) Find(expr string) (map[string][]string, error) {
-	return nil, nil
-}
-
-func (js *jsonBodyProcessor) VariableHook() variables.RuleVariable {
-	return variables.JSON
+	return fields, nil
 }
 
 // Transform JSON to a map[string]string
@@ -188,3 +188,9 @@ func interfaceToMap(data map[string]interface{}) (map[string]string, error) {
 var (
 	_ BodyProcessor = &jsonBodyProcessor{}
 )
+
+func init() {
+	Register("json", func() BodyProcessor {
+		return &jsonBodyProcessor{}
+	})
+}

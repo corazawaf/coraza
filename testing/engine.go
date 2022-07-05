@@ -15,6 +15,7 @@
 package testing
 
 import (
+	"context"
 	b64 "encoding/base64"
 	"fmt"
 	"reflect"
@@ -22,8 +23,6 @@ import (
 	"strings"
 
 	engine "github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 // Test represents a unique transaction within
@@ -255,23 +254,6 @@ func (t *Test) String() string {
 		}
 		res += "\n"
 	}
-
-	res += "======DEBUG======\n"
-	for v := byte(1); v < types.VariablesCount; v++ {
-		vr := variables.RuleVariable(v)
-		if vr.Name() == "UNKNOWN" {
-			break
-		}
-		res += fmt.Sprintf("%s:\n", vr.Name())
-		data := tx.GetCollection(vr).Data()
-		for k, d := range data {
-			if k != "" {
-				res += fmt.Sprintf("-->%s: %s\n", k, strings.Join(d, ","))
-			} else {
-				res += fmt.Sprintf("-->%s\n", strings.Join(d, ","))
-			}
-		}
-	}
 	return res
 }
 
@@ -292,7 +274,7 @@ func (t *Test) Request() string {
 func NewTest(name string, waf *engine.Waf) *Test {
 	t := &Test{
 		Name:            name,
-		transaction:     waf.NewTransaction(),
+		transaction:     waf.NewTransaction(context.Background()),
 		RequestHeaders:  map[string]string{},
 		ResponseHeaders: map[string]string{},
 		RequestMethod:   "GET",

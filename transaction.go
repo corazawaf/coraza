@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/corazawaf/coraza/v3/bodyprocessors"
+	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -46,13 +47,13 @@ type Transaction struct {
 	ID string
 
 	// Contains the list of matched rules and associated match information
-	MatchedRules []MatchedRule
+	MatchedRules []types.MatchedRule
 
 	// True if the transaction has been disrupted by any rule
 	Interruption *types.Interruption
 
-	// Contains all collections, including persistent
-	collections [types.VariablesCount]*Collection
+	// Contains all Collections, including persistent
+	Collections [types.VariablesCount]collection.Collection
 
 	// This is used to store log messages
 	Logdata string
@@ -227,8 +228,11 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 	if it := tx.ProcessRequestHeaders(); it != nil {
 		return it, nil
 	}
-	ct := tx.GetCollection(variables.RequestHeaders).GetFirstString("content-type")
-	ct = strings.Split(ct, ";")[0]
+	ctcol := tx.GetCollection(variables.RequestHeaders).Get("content-type")
+	ct := ""
+	if len(ctcol) > 0 {
+		ct = strings.Split(ctcol[0], ";")[0]
+	}
 	for scanner.Scan() {
 
 		if _, err := tx.RequestBodyBuffer.Write(scanner.Bytes()); err != nil {
@@ -246,7 +250,7 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 
 // matchVariable Creates the MATCHED_ variables required by chains and macro expansion
 // MATCHED_VARS, MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES
-func (tx *Transaction) matchVariable(match MatchData) {
+func (tx *Transaction) matchVariable(match types.MatchData) {
 	varName := strings.Builder{}
 	varNamel := strings.Builder{}
 	varName.WriteString(match.VariableName)
@@ -280,7 +284,7 @@ func (tx *Transaction) matchVariable(match MatchData) {
 }
 
 // MatchRule Matches a rule to be logged
-func (tx *Transaction) MatchRule(r *Rule, mds []MatchData) {
+func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 	tx.Waf.Logger.Debug("[%s] rule %d matched", tx.ID, r.ID)
 	// tx.MatchedRules = append(tx.MatchedRules, mr)
 
@@ -291,17 +295,17 @@ func (tx *Transaction) MatchRule(r *Rule, mds []MatchData) {
 
 	// set highest_severity
 	hs := tx.GetCollection(variables.HighestSeverity)
-	maxSeverity, _ := types.ParseRuleSeverity(hs.GetFirstString(""))
+	maxSeverity, _ := types.ParseRuleSeverity(hs.String())
 	if r.Severity > maxSeverity {
 		hs.SetIndex("", 0, strconv.Itoa(r.Severity.Int()))
 	}
 
-	mr := MatchedRule{
-		URI:             tx.GetCollection(variables.RequestURI).GetFirstString(""),
+	mr := types.MatchedRule{
+		URI:             tx.GetCollection(variables.RequestURI).String(),
 		ID:              tx.ID,
-		ServerIPAddress: tx.GetCollection(variables.ServerAddr).GetFirstString(""),
-		ClientIPAddress: tx.GetCollection(variables.RemoteAddr).GetFirstString(""),
-		Rule:            r,
+		ServerIPAddress: tx.GetCollection(variables.ServerAddr).String(),
+		ClientIPAddress: tx.GetCollection(variables.RemoteAddr).String(),
+		Rule:            r.RuleMetadata,
 		MatchedDatas:    mds,
 	}
 
@@ -337,43 +341,19 @@ func (tx *Transaction) GetStopWatch() string {
 // GetField Retrieve data from collections applying exceptions
 // In future releases we may remove de exceptions slice and
 // make it easier to use
-func (tx *Transaction) GetField(rv ruleVariableParams) []MatchData {
+func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 	collection := rv.Variable
 	col := tx.GetCollection(collection)
 	if col == nil {
-		return []MatchData{}
+		return []types.MatchData{}
 	}
 
-	matches := []MatchData{}
-	// In this case we are going to use the bodyprocessor to get the data
-	// It requires the VariableHook() function to match the current variable
-	if tx.bodyProcessor != nil && tx.bodyProcessor.VariableHook() == collection {
-		m, err := tx.bodyProcessor.Find(rv.KeyStr)
-		if err != nil {
-			tx.Waf.Logger.Error("[%s] error getting variable %s:%s: %v", tx.ID, collection.Name(), rv.KeyStr, err)
-			return []MatchData{}
-		}
-		if len(m) == 0 {
-			return []MatchData{}
-		}
-		for key, values := range m {
-			for _, value := range values {
-				matches = append(matches, MatchData{
-					VariableName: collection.Name(),
-					Variable:     collection,
-					Key:          key,
-					Value:        value,
-				})
-			}
-		}
+	matches := []types.MatchData{}
+	// Now that we have access to the collection, we can apply the exceptions
+	if rv.KeyRx == nil {
+		matches = col.FindString(rv.KeyStr)
 	} else {
-		// in case we are not using a variable hook
-		// Now that we have access to the collection, we can apply the exceptions
-		if rv.KeyRx == nil {
-			matches = col.FindString(rv.KeyStr)
-		} else {
-			matches = col.FindRegex(rv.KeyRx)
-		}
+		matches = col.FindRegex(rv.KeyRx)
 	}
 
 	rmi := []int{}
@@ -401,7 +381,7 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []MatchData {
 	}
 	if rv.Count {
 		count := len(matches)
-		matches = []MatchData{
+		matches = []types.MatchData{
 			{
 				VariableName: collection.Name(),
 				Variable:     collection,
@@ -415,8 +395,8 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []MatchData {
 
 // GetCollection transforms a VARIABLE_ constant into a
 // *Collection used to get VARIABLES data
-func (tx *Transaction) GetCollection(variable variables.RuleVariable) *Collection {
-	return tx.collections[variable]
+func (tx *Transaction) GetCollection(variable variables.RuleVariable) collection.Collection {
+	return tx.Collections[variable]
 }
 
 // RemoveRuleTargetByID Removes the VARIABLE:KEY from the rule ID
@@ -545,7 +525,7 @@ func (tx *Transaction) AddArgument(orig string, key string, value string) {
 	tx.GetCollection(names).Add(key, key)
 
 	col := tx.GetCollection(variables.ArgsCombinedSize)
-	i := col.GetFirstInt64("") + int64(len(key)+len(value))
+	i := col.Int64() + int64(len(key)+len(value))
 	istr := strconv.FormatInt(i, 10)
 	col.Set("", []string{istr})
 }
@@ -668,7 +648,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		}
 	}
 
-	rbp := tx.GetCollection(variables.ReqbodyProcessor).GetFirstString("")
+	rbp := tx.GetCollection(variables.ReqbodyProcessor).String()
 
 	// Default variables.ReqbodyProcessor values
 	// XML and JSON must be forced with ctl:requestBodyProcessor=JSON
@@ -684,42 +664,19 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.Interruption, nil
 	}
-	bodyprocessor, err := bodyprocessors.GetBodyProcessor(rbp)
+	bodyprocessor, err := bodyprocessors.Get(rbp)
 	if err != nil {
 		tx.generateReqbodyError(err)
 		tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.Interruption, nil
 	}
-	if err := bodyprocessor.Read(reader, bodyprocessors.Options{
+	if err := bodyprocessor.ProcessRequest(reader, tx.Collections, bodyprocessors.Options{
 		Mime:        mime,
 		StoragePath: tx.Waf.UploadDir,
 	}); err != nil {
 		tx.generateReqbodyError(err)
 		tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.Interruption, nil
-	}
-	tx.bodyProcessor = bodyprocessor
-	// we insert the collections from the bodyprocessor into the collections map
-	for k, m := range tx.bodyProcessor.Collections() {
-		if k == variables.Args {
-			// for ARGS we make a different process, as ARGS are POST + GET and it requires ARGS_COMBINED_SIZE
-			size := 0
-			for _, vv := range m {
-				for _, v := range vv {
-					size += len(v)
-				}
-			}
-			tx.GetCollection(variables.ArgsCombinedSize).Set("", []string{strconv.Itoa(size)})
-			// in case we receive Args, we must add manually the args and argsnames, otherwise it will be overwritten
-			for kk, vv := range m {
-				tx.GetCollection(variables.Args).Set(kk, vv)
-				tx.GetCollection(variables.ArgsNames).AddUnique(kk, kk)
-			}
-		} else {
-			for mk, mv := range m {
-				tx.GetCollection(k).Set(mk, mv)
-			}
-		}
 	}
 
 	tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)
@@ -753,7 +710,7 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Int
 // directly to the client or write them to Coraza
 func (tx *Transaction) IsProcessableResponseBody() bool {
 	// TODO add more validations
-	ct := tx.GetCollection(variables.ResponseContentType).GetFirstString("")
+	ct := tx.GetCollection(variables.ResponseContentType).String()
 	return utils.InSlice(ct, tx.Waf.ResponseBodyMimeTypes)
 }
 
@@ -815,7 +772,7 @@ func (tx *Transaction) ProcessLogging() {
 
 	if tx.AuditEngine == types.AuditEngineRelevantOnly && tx.audit {
 		re := tx.Waf.AuditLogRelevantStatus
-		status := tx.GetCollection(variables.ResponseStatus).GetFirstString("")
+		status := tx.GetCollection(variables.ResponseStatus).String()
 		if re != nil && !re.Match([]byte(status)) {
 			// Not relevant status
 			tx.Waf.Logger.Debug("[%s] Transaction status not marked for audit logging", tx.ID)
@@ -848,31 +805,31 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 		Timestamp:     ts,
 		UnixTimestamp: tx.Timestamp,
 		ID:            tx.ID,
-		ClientIP:      tx.GetCollection(variables.RemoteAddr).GetFirstString(""),
-		ClientPort:    tx.GetCollection(variables.RemotePort).GetFirstInt(""),
-		HostIP:        tx.GetCollection(variables.ServerAddr).GetFirstString(""),
-		HostPort:      tx.GetCollection(variables.ServerPort).GetFirstInt(""),
-		ServerID:      tx.GetCollection(variables.ServerName).GetFirstString(""), // TODO check
+		ClientIP:      tx.GetCollection(variables.RemoteAddr).String(),
+		ClientPort:    tx.GetCollection(variables.RemotePort).Int(),
+		HostIP:        tx.GetCollection(variables.ServerAddr).String(),
+		HostPort:      tx.GetCollection(variables.ServerPort).Int(),
+		ServerID:      tx.GetCollection(variables.ServerName).String(), // TODO check
 		Request: loggers.AuditTransactionRequest{
-			Method:      tx.GetCollection(variables.RequestMethod).GetFirstString(""),
-			Protocol:    tx.GetCollection(variables.RequestProtocol).GetFirstString(""),
-			URI:         tx.GetCollection(variables.RequestURI).GetFirstString(""),
-			HTTPVersion: tx.GetCollection(variables.RequestProtocol).GetFirstString(""),
+			Method:      tx.GetCollection(variables.RequestMethod).String(),
+			Protocol:    tx.GetCollection(variables.RequestProtocol).String(),
+			URI:         tx.GetCollection(variables.RequestURI).String(),
+			HTTPVersion: tx.GetCollection(variables.RequestProtocol).String(),
 			// Body and headers are audit variables.RequestUriRaws
 		},
 		Response: loggers.AuditTransactionResponse{
-			Status: tx.GetCollection(variables.ResponseStatus).GetFirstInt(""),
+			Status: tx.GetCollection(variables.ResponseStatus).Int(),
 			// body and headers are audit parts
 		},
 	}
 	rengine := tx.RuleEngine.String()
 
-	al.Transaction.Request.Headers = tx.GetCollection(variables.RequestHeaders).Data()
-	al.Transaction.Request.Body = tx.GetCollection(variables.RequestBody).GetFirstString("")
+	// al.Transaction.Request.Headers = tx.GetCollection(variables.RequestHeaders).Data()
+	al.Transaction.Request.Body = tx.GetCollection(variables.RequestBody).String()
 	// TODO maybe change to:
 	// al.Transaction.Request.Body = tx.RequestBodyBuffer.String()
-	al.Transaction.Response.Headers = tx.GetCollection(variables.ResponseHeaders).Data()
-	al.Transaction.Response.Body = tx.GetCollection(variables.ResponseBody).GetFirstString("")
+	// al.Transaction.Response.Headers = tx.GetCollection(variables.ResponseHeaders).Data()
+	al.Transaction.Response.Body = tx.GetCollection(variables.ResponseBody).String()
 	al.Transaction.Producer = loggers.AuditTransactionProducer{
 		Connector:  tx.Waf.ProducerConnector,
 		Version:    tx.Waf.ProducerConnectorVersion,
@@ -937,8 +894,8 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 // It also allows caches the transaction back into the sync.Pool
 func (tx *Transaction) Clean() error {
 	defer transactionPool.Put(tx)
-	for k := range tx.collections {
-		tx.collections[k] = nil
+	for k := range tx.Collections {
+		tx.Collections[k] = nil
 	}
 	if err := tx.RequestBodyBuffer.Close(); err != nil {
 		return err

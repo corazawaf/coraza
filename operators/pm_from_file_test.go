@@ -15,6 +15,7 @@
 package operators
 
 import (
+	"context"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3"
@@ -30,7 +31,7 @@ func TestPmfm(t *testing.T) {
 		t.Error(err)
 	}
 	waf := coraza.NewWaf()
-	tx := waf.NewTransaction()
+	tx := waf.NewTransaction(context.Background())
 	if !p.Evaluate(tx, "def") {
 		t.Error("failed to match pmFromFile")
 	}

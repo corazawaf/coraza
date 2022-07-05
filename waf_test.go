@@ -15,6 +15,7 @@
 package coraza
 
 import (
+	"context"
 	"testing"
 )
 
@@ -29,7 +30,7 @@ func TestNewTransaction(t *testing.T) {
 	waf.RequestBodyAccess = true
 	waf.ResponseBodyAccess = true
 	waf.RequestBodyLimit = 1044
-	tx := waf.NewTransaction()
+	tx := waf.NewTransaction(context.Background())
 	if !tx.RequestBodyAccess {
 		t.Error("Request body access not enabled")
 	}

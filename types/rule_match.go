@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package coraza
+package types
 
 import (
 	"fmt"
@@ -21,6 +21,22 @@ import (
 
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
+
+type RuleMetadata struct {
+	ID       int
+	File     string
+	Line     int
+	Rev      string
+	Severity RuleSeverity
+	Version  string
+	Tags     []string
+	Maturity int
+	Accuracy int
+	Operator string
+	Phase    RulePhase
+	Raw      string
+	SecMark  string
+}
 
 // MatchData works like VariableKey but is used for logging,
 // so it contains the collection as a string, and it's value
@@ -40,7 +56,7 @@ type MatchData struct {
 }
 
 // // isNil is used to check whether the MatchData is empty
-func (m MatchData) isNil() bool {
+func (m MatchData) IsNil() bool {
 	return m == MatchData{}
 }
 
@@ -63,10 +79,8 @@ type MatchedRule struct {
 	ClientIPAddress string
 	// A slice of matched variables
 	MatchedDatas []MatchData
-	// Deprecated
-	MatchedData MatchData
-	// A reference to the triggered rule
-	Rule *Rule
+
+	Rule RuleMetadata
 }
 
 func (mr MatchedRule) details(matchData MatchData) string {
@@ -103,7 +117,7 @@ func (mr MatchedRule) matchData(matchData MatchData) string {
 		if len(value) > 200 {
 			value = value[:200]
 		}
-		if mr.Rule.operator != nil {
+		if mr.Rule.Operator != "" {
 			log.WriteString(fmt.Sprintf("Matched \"Operator %s matched %s at %s.",
 				"", value, v))
 		} else {

@@ -135,6 +135,7 @@ type ruleTransformationParams struct {
 // Rule is used to test a Transaction against certain operators
 // and execute actions
 type Rule struct {
+	types.RuleMetadata
 	// Contains a list of variables that will be compiled
 	// by a transaction
 	variables []ruleVariableParams
@@ -160,12 +161,6 @@ type Rule struct {
 	// to capture variables on TX:0-9
 	Capture bool
 
-	// Used to mark a rule as a secmarker and alter flows
-	SecMark string
-
-	// Contains the raw rule code
-	Raw string
-
 	// Contains the child rule to chain, nil if there are no chains
 	Chain *Rule
 
@@ -173,41 +168,10 @@ type Rule struct {
 	// by disruptive rules
 	DisruptiveStatus int
 
-	// Where is this rule stored
-	File string
-
-	// Line of the file where this rule was found
-	Line int
-
-	// METADATA
-	// Rule unique identifier, can be a an int
-	ID int
-
-	// Rule tag list
-	Tags []string
-
-	// Rule execution phase 1-5
-	Phase types.RulePhase
-
 	// Message text to be macro expanded and logged
 	// In future versions we might use a special type of string that
 	// supports cached macro expansions. For performance
 	Msg Macro
-
-	// Rule revision value
-	Rev string
-
-	// Rule maturity index
-	Maturity int
-
-	// RuleSet Version
-	Version string
-
-	// Rule accuracy
-	Accuracy int
-
-	// Rule severity
-	Severity types.RuleSeverity
 
 	// Rule logdata
 	LogData Macro
@@ -230,7 +194,7 @@ type Rule struct {
 // Evaluate will evaluate the current rule for the indicated transaction
 // If the operator matches, actions will be evaluated, and it will return
 // the matched variables, keys and values (MatchData)
-func (r *Rule) Evaluate(tx *Transaction) []MatchData {
+func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 	if r.Capture {
 		tx.Capture = true
 	}
@@ -239,27 +203,26 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		rid = r.ParentID
 	}
 
-	matchedValues := []MatchData{}
+	matchedValues := []types.MatchData{}
 	// we log if we are the parent rule
 	tx.Waf.Logger.Debug("[%s] [%d] Evaluating rule %d", tx.ID, rid, r.ID)
 	defer tx.Waf.Logger.Debug("[%s] [%d] Finish evaluating rule %d", tx.ID, rid, r.ID)
-	tx.GetCollection(variables.Rule).SetData(map[string][]string{
-		"id":       {strconv.Itoa(rid)},
-		"msg":      {r.Msg.String()},
-		"rev":      {r.Rev},
-		"logdata":  {r.LogData.String()},
-		"severity": {r.Severity.String()},
-	})
+	ruleCol := tx.GetCollection(variables.Rule)
+	ruleCol.SetIndex("id", 0, strconv.Itoa(rid))
+	ruleCol.SetIndex("msg", 0, r.Msg.String())
+	ruleCol.SetIndex("rev", 0, r.Rev)
+	ruleCol.SetIndex("logdata", 0, r.LogData.String())
+	ruleCol.SetIndex("severity", 0, r.Severity.String())
 	// SecMark and SecAction uses nil operator
 	if r.operator == nil {
 		tx.Waf.Logger.Debug("[%s] [%d] Forcing rule %d to match", tx.ID, rid, r.ID)
-		md := MatchData{}
+		md := types.MatchData{}
 		matchedValues = append(matchedValues, md)
 		r.matchVariable(tx, md)
 	} else {
 		ecol := tx.ruleRemoveTargetByID[r.ID]
 		for _, v := range r.variables {
-			var values []MatchData
+			var values []types.MatchData
 			for _, c := range ecol {
 				if c.Variable == v.Variable {
 					// TODO shall we check the pointer?
@@ -291,7 +254,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 				for _, carg := range args {
 					match := r.executeOperator(carg, tx)
 					if match {
-						mr := MatchData{
+						mr := types.MatchData{
 							VariableName: v.Variable.Name(),
 							Variable:     arg.Variable,
 							Key:          arg.Key,
@@ -348,12 +311,12 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	return matchedValues
 }
 
-func (r *Rule) matchVariable(tx *Transaction, m MatchData) {
+func (r *Rule) matchVariable(tx *Transaction, m types.MatchData) {
 	rid := r.ID
 	if rid == 0 {
 		rid = r.ParentID
 	}
-	if !m.isNil() {
+	if !m.IsNil() {
 		tx.Waf.Logger.Debug("[%s] [%d] Matching rule %d %s:%s", tx.ID, rid, r.ID, m.VariableName, m.Key)
 	}
 	// we must match the vars before running the chains
@@ -497,7 +460,9 @@ func (r *Rule) executeTransformations(value string) (string, []error) {
 // NewRule returns a new initialized rule
 func NewRule() *Rule {
 	return &Rule{
-		Phase: 2,
-		Tags:  []string{},
+		RuleMetadata: types.RuleMetadata{
+			Phase: 2,
+			Tags:  []string{},
+		},
 	}
 }

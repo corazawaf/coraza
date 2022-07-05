@@ -15,6 +15,7 @@
 package coraza
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"log"
@@ -25,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -41,7 +43,7 @@ var transactionPool = sync.Pool{
 // ErrorLogCallback is used to set a callback function to log errors
 // It is triggered when an error is raised by the WAF
 // It contains the severity so the cb can decide to log it or not
-type ErrorLogCallback = func(rule MatchedRule)
+type ErrorLogCallback = func(rule types.MatchedRule)
 
 // Waf instance is used to store configurations and rules
 // Every web application should have a different Waf instance,
@@ -150,12 +152,12 @@ type Waf struct {
 }
 
 // NewTransaction Creates a new initialized transaction for this WAF instance
-func (w *Waf) NewTransaction() *Transaction {
+func (w *Waf) NewTransaction(ctx context.Context) *Transaction {
 	tx := transactionPool.Get().(*Transaction)
 	tx.ID = utils.SafeRandom(19)
-	tx.MatchedRules = []MatchedRule{}
+	tx.MatchedRules = []types.MatchedRule{}
 	tx.Interruption = nil
-	tx.collections = [types.VariablesCount]*Collection{}
+	tx.Collections = [types.VariablesCount]collection.Collection{}
 	tx.Logdata = ""
 	tx.SkipAfter = ""
 	tx.AuditEngine = w.AuditEngine
@@ -187,9 +189,124 @@ func (w *Waf) NewTransaction() *Transaction {
 	tx.Timestamp = time.Now().UnixNano()
 	tx.audit = false
 
-	for i := range tx.collections {
-		tx.collections[i] = NewCollection(variables.RuleVariable(i))
-	}
+	tx.Collections[variables.UrlencodedError] = collection.NewCollectionSimple(variables.UrlencodedError)
+	tx.Collections[variables.ResponseContentType] = collection.NewCollectionSimple(variables.ResponseContentType)
+	tx.Collections[variables.UniqueID] = collection.NewCollectionSimple(variables.UniqueID)
+	tx.Collections[variables.ArgsCombinedSize] = collection.NewCollectionSimple(variables.ArgsCombinedSize)
+	tx.Collections[variables.AuthType] = collection.NewCollectionSimple(variables.AuthType)
+	tx.Collections[variables.FilesCombinedSize] = collection.NewCollectionSimple(variables.FilesCombinedSize)
+	tx.Collections[variables.FullRequest] = collection.NewCollectionSimple(variables.FullRequest)
+	tx.Collections[variables.FullRequestLength] = collection.NewCollectionSimple(variables.FullRequestLength)
+	tx.Collections[variables.InboundDataError] = collection.NewCollectionSimple(variables.InboundDataError)
+	tx.Collections[variables.MatchedVar] = collection.NewCollectionSimple(variables.MatchedVar)
+	tx.Collections[variables.MatchedVarName] = collection.NewCollectionSimple(variables.MatchedVarName)
+	tx.Collections[variables.MultipartBoundaryQuoted] = collection.NewCollectionSimple(variables.MultipartBoundaryQuoted)
+	tx.Collections[variables.MultipartBoundaryWhitespace] = collection.NewCollectionSimple(variables.MultipartBoundaryWhitespace)
+	tx.Collections[variables.MultipartCrlfLfLines] = collection.NewCollectionSimple(variables.MultipartCrlfLfLines)
+	tx.Collections[variables.MultipartDataAfter] = collection.NewCollectionSimple(variables.MultipartDataAfter)
+	tx.Collections[variables.MultipartDataBefore] = collection.NewCollectionSimple(variables.MultipartDataBefore)
+	tx.Collections[variables.MultipartFileLimitExceeded] = collection.NewCollectionSimple(variables.MultipartFileLimitExceeded)
+	tx.Collections[variables.MultipartHeaderFolding] = collection.NewCollectionSimple(variables.MultipartHeaderFolding)
+	tx.Collections[variables.MultipartInvalidHeaderFolding] = collection.NewCollectionSimple(variables.MultipartInvalidHeaderFolding)
+	tx.Collections[variables.MultipartInvalidPart] = collection.NewCollectionSimple(variables.MultipartInvalidPart)
+	tx.Collections[variables.MultipartInvalidQuoting] = collection.NewCollectionSimple(variables.MultipartInvalidQuoting)
+	tx.Collections[variables.MultipartLfLine] = collection.NewCollectionSimple(variables.MultipartLfLine)
+	tx.Collections[variables.MultipartMissingSemicolon] = collection.NewCollectionSimple(variables.MultipartMissingSemicolon)
+	tx.Collections[variables.MultipartStrictError] = collection.NewCollectionSimple(variables.MultipartStrictError)
+	tx.Collections[variables.MultipartUnmatchedBoundary] = collection.NewCollectionSimple(variables.MultipartUnmatchedBoundary)
+	tx.Collections[variables.OutboundDataError] = collection.NewCollectionSimple(variables.OutboundDataError)
+	tx.Collections[variables.PathInfo] = collection.NewCollectionSimple(variables.PathInfo)
+	tx.Collections[variables.QueryString] = collection.NewCollectionSimple(variables.QueryString)
+	tx.Collections[variables.RemoteAddr] = collection.NewCollectionSimple(variables.RemoteAddr)
+	tx.Collections[variables.RemoteHost] = collection.NewCollectionSimple(variables.RemoteHost)
+	tx.Collections[variables.RemotePort] = collection.NewCollectionSimple(variables.RemotePort)
+	tx.Collections[variables.ReqbodyError] = collection.NewCollectionSimple(variables.ReqbodyError)
+	tx.Collections[variables.ReqbodyErrorMsg] = collection.NewCollectionSimple(variables.ReqbodyErrorMsg)
+	tx.Collections[variables.ReqbodyProcessorError] = collection.NewCollectionSimple(variables.ReqbodyProcessorError)
+	tx.Collections[variables.ReqbodyProcessorErrorMsg] = collection.NewCollectionSimple(variables.ReqbodyProcessorErrorMsg)
+	tx.Collections[variables.ReqbodyProcessor] = collection.NewCollectionSimple(variables.ReqbodyProcessor)
+	tx.Collections[variables.RequestBasename] = collection.NewCollectionSimple(variables.RequestBasename)
+	tx.Collections[variables.RequestBody] = collection.NewCollectionSimple(variables.RequestBody)
+	tx.Collections[variables.RequestBodyLength] = collection.NewCollectionSimple(variables.RequestBodyLength)
+	tx.Collections[variables.RequestFilename] = collection.NewCollectionSimple(variables.RequestFilename)
+	tx.Collections[variables.RequestLine] = collection.NewCollectionSimple(variables.RequestLine)
+	tx.Collections[variables.RequestMethod] = collection.NewCollectionSimple(variables.RequestMethod)
+	tx.Collections[variables.RequestProtocol] = collection.NewCollectionSimple(variables.RequestProtocol)
+	tx.Collections[variables.RequestURI] = collection.NewCollectionSimple(variables.RequestURI)
+	tx.Collections[variables.RequestURIRaw] = collection.NewCollectionSimple(variables.RequestURIRaw)
+	tx.Collections[variables.ResponseBody] = collection.NewCollectionSimple(variables.ResponseBody)
+	tx.Collections[variables.ResponseContentLength] = collection.NewCollectionSimple(variables.ResponseContentLength)
+	tx.Collections[variables.ResponseProtocol] = collection.NewCollectionSimple(variables.ResponseProtocol)
+	tx.Collections[variables.ResponseStatus] = collection.NewCollectionSimple(variables.ResponseStatus)
+	tx.Collections[variables.ServerAddr] = collection.NewCollectionSimple(variables.ServerAddr)
+	tx.Collections[variables.ServerName] = collection.NewCollectionSimple(variables.ServerName)
+	tx.Collections[variables.ServerPort] = collection.NewCollectionSimple(variables.ServerPort)
+	tx.Collections[variables.Sessionid] = collection.NewCollectionSimple(variables.Sessionid)
+	tx.Collections[variables.HighestSeverity] = collection.NewCollectionSimple(variables.HighestSeverity)
+	tx.Collections[variables.StatusLine] = collection.NewCollectionSimple(variables.StatusLine)
+	tx.Collections[variables.InboundErrorData] = collection.NewCollectionSimple(variables.InboundErrorData)
+	tx.Collections[variables.Duration] = collection.NewCollectionSimple(variables.Duration)
+	tx.Collections[variables.ResponseHeadersNames] = collection.NewCollectionSimple(variables.ResponseHeadersNames)
+	tx.Collections[variables.RequestHeadersNames] = collection.NewCollectionSimple(variables.RequestHeadersNames)
+	tx.Collections[variables.Userid] = collection.NewCollectionSimple(variables.Userid)
+	tx.Collections[variables.ArgsGet] = collection.NewCollectionMap(variables.ArgsGet)
+	tx.Collections[variables.ArgsPost] = collection.NewCollectionMap(variables.ArgsPost)
+	tx.Collections[variables.Args] = collection.NewCollectionProxy(
+		variables.Args,
+		tx.Collections[variables.ArgsGet],
+		tx.Collections[variables.ArgsPost],
+	)
+	tx.Collections[variables.FilesSizes] = collection.NewCollectionMap(variables.FilesSizes)
+
+	tx.Collections[variables.Files] = collection.NewCollectionMap(variables.Files)
+	tx.Collections[variables.FilesNames] = collection.NewCollectionTranslationProxy(
+		variables.FilesNames,
+		tx.Collections[variables.Files],
+		nil,
+	)
+	tx.Collections[variables.FilesTmpContent] = collection.NewCollectionMap(variables.FilesTmpContent)
+	tx.Collections[variables.MultipartFilename] = collection.NewCollectionMap(variables.MultipartFilename)
+	tx.Collections[variables.MultipartName] = collection.NewCollectionMap(variables.MultipartName)
+	tx.Collections[variables.MatchedVars] = collection.NewCollectionMap(variables.MatchedVars)
+	tx.Collections[variables.MatchedVarsNames] = collection.NewCollectionTranslationProxy(
+		variables.MatchedVarsNames,
+		tx.Collections[variables.MatchedVars],
+		nil,
+	)
+	tx.Collections[variables.RequestCookies] = collection.NewCollectionMap(variables.RequestCookies)
+	tx.Collections[variables.RequestHeaders] = collection.NewCollectionMap(variables.RequestHeaders)
+	tx.Collections[variables.ResponseHeaders] = collection.NewCollectionMap(variables.ResponseHeaders)
+	tx.Collections[variables.Geo] = collection.NewCollectionMap(variables.Geo)
+	tx.Collections[variables.RequestCookiesNames] = collection.NewCollectionTranslationProxy(
+		variables.RequestCookiesNames,
+		tx.Collections[variables.RequestCookies],
+		nil,
+	)
+	tx.Collections[variables.FilesTmpNames] = collection.NewCollectionTranslationProxy(
+		variables.FilesTmpNames,
+		tx.Collections[variables.FilesTmpContent],
+		nil,
+	)
+	tx.Collections[variables.ArgsNames] = collection.NewCollectionTranslationProxy(
+		variables.ArgsNames,
+		tx.Collections[variables.ArgsGet],
+		tx.Collections[variables.ArgsPost],
+	)
+	tx.Collections[variables.ArgsGetNames] = collection.NewCollectionTranslationProxy(
+		variables.ArgsGetNames,
+		tx.Collections[variables.ArgsGet],
+		nil,
+	)
+	tx.Collections[variables.ArgsPostNames] = collection.NewCollectionTranslationProxy(
+		variables.ArgsPostNames,
+		tx.Collections[variables.ArgsPost],
+		nil,
+	)
+	tx.Collections[variables.TX] = collection.NewCollectionMap(variables.TX)
+	tx.Collections[variables.Rule] = collection.NewCollectionMap(variables.Rule)
+	tx.Collections[variables.XML] = collection.NewCollectionSimple(variables.XML)
+	tx.Collections[variables.Env] = collection.NewCollectionMap(variables.Env)
+	tx.Collections[variables.IP] = collection.NewCollectionMap(variables.IP)
 
 	// set capture variables
 	txvar := tx.GetCollection(variables.TX)
@@ -225,13 +342,6 @@ func (w *Waf) NewTransaction() *Transaction {
 		variables.HighestSeverity:               "0",
 		variables.ArgsCombinedSize:              "0",
 		variables.UniqueID:                      tx.ID,
-		// TODO single variables must be defaulted to empty string
-		variables.RemoteAddr:       "",
-		variables.ReqbodyProcessor: "",
-		variables.RequestBody:      "",
-		variables.ResponseBody:     "",
-		// TODO others
-		// variables.WebAppID: w.WebAppID, not implemented yet
 	}
 	for v, data := range defaults {
 		tx.GetCollection(v).Set("", []string{data})

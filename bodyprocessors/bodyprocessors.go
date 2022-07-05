@@ -19,14 +19,9 @@ import (
 	"io"
 	"io/fs"
 
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/types"
 )
-
-// CollectionsMap is used to store results for collections, example:
-// REQUEST_HEADERS:
-//   cookies: [cookie1: value1, cookie2: value2]
-//   user-agent: ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36"]
-type CollectionsMap map[variables.RuleVariable]map[string][]string
 
 // Options are used by BodyProcessors to provide some settings
 // like a path to store temporary files.
@@ -39,6 +34,8 @@ type Options struct {
 	StoragePath string
 	// FileMode is the mode of the file that will be created
 	FileMode fs.FileMode
+	// DirMode is the mode of the directory that will be created
+	DirMode fs.FileMode
 }
 
 // BodyProcessor interface is used to create
@@ -47,54 +44,26 @@ type Options struct {
 // Hook to some variable and return data based on special
 // expressions like XPATH, JQ, etc.
 type BodyProcessor interface {
-	// Read will process the body and initialize the body processor
-	// It will return an error if the body is not valid
-	Read(reader io.Reader, options Options) error
-	// Collections returns a map of collections, for example,
-	// the ARGS_POST variables from the REQUEST_BODY.
-	Collections() CollectionsMap
-	// Find returns the values in the body based on the input string
-	// A string might be an xpath, a regex, a variable name, etc
-	// The find function is responsible of transforming the input
-	// string into a valid usable expression
-	Find(string) (map[string][]string, error)
-	// VariableHook tells the transaction to hook a variable
-	// to the body processor, it will execute Find
-	// rather than read it from the collections map
-	VariableHook() variables.RuleVariable
+	ProcessRequest(reader io.Reader, collection [types.VariablesCount]collection.Collection, options Options) error
+	ProcessResponse(reader io.Reader, collection [types.VariablesCount]collection.Collection, options Options) error
 }
 
 type bodyProcessorWrapper = func() BodyProcessor
 
 var processors = map[string]bodyProcessorWrapper{}
 
-// RegisterPlugin registers a body processor
+// Register registers a body processor
 // by name. If the body processor is already registered,
 // it will be overwritten
-func RegisterPlugin(name string, fn func() BodyProcessor) {
+func Register(name string, fn func() BodyProcessor) {
 	processors[name] = fn
 }
 
-// GetBodyProcessor returns a body processor by name
+// Get returns a body processor by name
 // If the body processor is not found, it returns an error
-func GetBodyProcessor(name string) (BodyProcessor, error) {
+func Get(name string) (BodyProcessor, error) {
 	if fn, ok := processors[name]; ok {
 		return fn(), nil
 	}
 	return nil, fmt.Errorf("invalid bodyprocessor %q", name)
-}
-
-func init() {
-	RegisterPlugin("json", func() BodyProcessor {
-		return &jsonBodyProcessor{}
-	})
-	RegisterPlugin("urlencoded", func() BodyProcessor {
-		return &urlencodedBodyProcessor{}
-	})
-	RegisterPlugin("multipart", func() BodyProcessor {
-		return &multipartBodyProcessor{}
-	})
-	RegisterPlugin("xml", func() BodyProcessor {
-		return &xmlBodyProcessor{}
-	})
 }

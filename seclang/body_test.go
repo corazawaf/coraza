@@ -15,6 +15,7 @@
 package seclang
 
 import (
+	"context"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3"
@@ -30,7 +31,7 @@ func TestRequestBodyAccessOff(t *testing.T) {
 	`); err != nil {
 		t.Fatal(err)
 	}
-	tx := waf.NewTransaction()
+	tx := waf.NewTransaction(context.Background())
 	tx.ProcessURI("/", "POST", "http/1.1")
 	tx.RequestBodyBuffer.Write([]byte("test=123"))
 	tx.AddRequestHeader("Content-Type", "application/x-www-form-urlencoded")
@@ -49,7 +50,7 @@ func TestRequestBodyAccessOn(t *testing.T) {
 	`); err != nil {
 		t.Fatal(err)
 	}
-	tx := waf.NewTransaction()
+	tx := waf.NewTransaction(context.Background())
 	tx.ProcessURI("/", "POST", "http/1.1")
 	if _, err := tx.RequestBodyBuffer.Write([]byte("test=123")); err != nil {
 		t.Error(err)
@@ -59,7 +60,7 @@ func TestRequestBodyAccessOn(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error(err)
 	}
-	if len(tx.GetCollection(variables.ArgsPost).Data()) == 0 {
+	if len(tx.GetCollection(variables.ArgsPost).String()) == 0 {
 		t.Error("Should have args")
 	}
 }

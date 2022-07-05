@@ -94,7 +94,7 @@ func main() {
 	}
 
 	// Then we create a transaction and assign some variables
-	tx := waf.NewTransaction()
+	tx := waf.NewTransaction(context.Background())
 	defer func(){
 		tx.ProcessLogging()
 		tx.Clean()
