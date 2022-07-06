@@ -34,16 +34,57 @@ type CollectionTranslationProxy struct {
 
 // FindRegex returns a slice of MatchData for the regex
 func (c *CollectionTranslationProxy) FindRegex(key *regexp.Regexp) []types.MatchData {
-	r1 := c.data1.FindRegex(key)
-	r2 := c.data2.FindRegex(key)
-	return append(r1, r2...)
+	res := []types.MatchData{}
+	keys := c.data1.keysRx(key)
+	if c.data2 != nil {
+		keys = append(keys, c.data2.keysRx(key)...)
+	}
+	for _, k := range keys {
+		res = append(res, types.MatchData{
+			VariableName: c.name,
+			Variable:     c.variable,
+			Value:        k,
+		})
+	}
+	return res
 }
 
 // FindString returns a slice of MatchData for the string
 func (c *CollectionTranslationProxy) FindString(key string) []types.MatchData {
-	r1 := c.data1.FindString(key)
-	r2 := c.data2.FindString(key)
-	return append(r1, r2...)
+	c1 := len(c.data1.Get(key))
+	if c.data2 == nil && c1 == 0 {
+		return []types.MatchData{}
+	}
+	var c2 int
+	if c.data2 != nil {
+		c2 = len(c.data2.Get(key))
+	}
+	if c1+c2 > 0 {
+		return []types.MatchData{
+			{
+				VariableName: c.name,
+				Variable:     c.variable,
+				Value:        key,
+			},
+		}
+	}
+	return nil
+}
+
+func (c *CollectionTranslationProxy) FindAll() []types.MatchData {
+	keys := c.data1.keys()
+	if c.data2 != nil {
+		keys = append(keys, c.data2.keys()...)
+	}
+	res := []types.MatchData{}
+	for _, k := range keys {
+		res = append(res, types.MatchData{
+			VariableName: c.name,
+			Variable:     c.variable,
+			Value:        k,
+		})
+	}
+	return res
 }
 
 // Name returns the name for the current CollectionTranslationProxy
@@ -59,11 +100,10 @@ func (c *CollectionTranslationProxy) Reset() {
 var _ Collection = &CollectionTranslationProxy{}
 
 func NewCollectionTranslationProxy(variable variables.RuleVariable, c1 *CollectionMap, c2 *CollectionMap) *CollectionTranslationProxy {
-	res := &CollectionTranslationProxy{
+	return &CollectionTranslationProxy{
 		name:     variable.Name(),
 		variable: variable,
 		data1:    c1,
+		data2:    c2,
 	}
-	res.data2 = c2
-	return res
 }

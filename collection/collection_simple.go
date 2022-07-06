@@ -34,18 +34,20 @@ type CollectionSimple struct {
 
 // FindRegex returns a slice of MatchData for the regex
 func (c *CollectionSimple) FindRegex(key *regexp.Regexp) []types.MatchData {
-	return []types.MatchData{
-		{
-			Value: c.data,
-		},
-	}
+	return c.FindAll()
 }
 
 // FindString returns a slice of MatchData for the string
 func (c *CollectionSimple) FindString(key string) []types.MatchData {
+	return c.FindAll()
+}
+
+func (c *CollectionSimple) FindAll() []types.MatchData {
 	return []types.MatchData{
 		{
-			Value: c.data,
+			VariableName: c.name,
+			Variable:     c.variable,
+			Value:        c.data,
 		},
 	}
 }

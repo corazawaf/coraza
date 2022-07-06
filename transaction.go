@@ -347,10 +347,14 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 		return []types.MatchData{}
 	}
 
-	matches := []types.MatchData{}
+	var matches []types.MatchData
 	// Now that we have access to the collection, we can apply the exceptions
 	if rv.KeyRx == nil {
-		matches = col.FindString(rv.KeyStr)
+		if len(rv.KeyStr) == 0 {
+			matches = col.FindAll()
+		} else {
+			matches = col.FindString(rv.KeyStr)
+		}
 	} else {
 		matches = col.FindRegex(rv.KeyRx)
 	}

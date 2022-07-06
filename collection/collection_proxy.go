@@ -46,6 +46,11 @@ func (c *CollectionProxy) FindString(key string) []types.MatchData {
 	return append(r1, r2...)
 }
 
+func (c *CollectionProxy) FindAll() []types.MatchData {
+	r1 := c.data1.FindAll()
+	return append(r1, c.data2.FindAll()...)
+}
+
 // Name returns the name for the current CollectionProxy
 func (c *CollectionProxy) Name() string {
 	return c.name

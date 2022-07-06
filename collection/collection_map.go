@@ -87,19 +87,39 @@ func (c *CollectionMap) FindString(key string) []types.MatchData {
 		}
 	}
 	return result
-
 }
 
-func (c *CollectionMap) String() string {
-	return ""
+func (c *CollectionMap) FindAll() []types.MatchData {
+	result := []types.MatchData{}
+	for k, data := range c.data {
+		for _, d := range data {
+			result = append(result, types.MatchData{
+				VariableName: c.name,
+				Variable:     c.variable,
+				Key:          k,
+				Value:        d.Value,
+			})
+		}
+	}
+	return result
 }
 
-func (c *CollectionMap) Int64() int64 {
-	return 0
+func (c *CollectionMap) keysRx(rx *regexp.Regexp) []string {
+	keys := []string{}
+	for k := range c.data {
+		if rx.MatchString(k) {
+			keys = append(keys, k)
+		}
+	}
+	return keys
 }
 
-func (c *CollectionMap) Int() int {
-	return 0
+func (c *CollectionMap) keys() []string {
+	keys := []string{}
+	for k := range c.data {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 // AddCS a value to some key with case sensitive vKey

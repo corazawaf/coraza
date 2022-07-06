@@ -31,6 +31,9 @@ type Collection interface {
 	// FindString returns a slice of MatchData for the string
 	FindString(key string) []types.MatchData
 
+	// FindString returns a slice of MatchData for the string
+	FindAll() []types.MatchData
+
 	// Name returns the name for the current CollectionMap
 	Name() string
 
