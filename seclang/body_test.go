@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 /*
@@ -60,7 +59,7 @@ func TestRequestBodyAccessOn(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error(err)
 	}
-	if len(tx.GetCollection(variables.ArgsPost).String()) == 0 {
+	if len(tx.Variables.ArgsPost.String()) == 0 {
 		t.Error("Should have args")
 	}
 }

@@ -31,7 +31,7 @@ import (
 type multipartBodyProcessor struct {
 }
 
-func (_ *multipartBodyProcessor) ProcessRequest(reader io.Reader, collection [types.VariablesCount]collection.Collection, options Options) error {
+func (_ *multipartBodyProcessor) ProcessRequest(reader io.Reader, collections [types.VariablesCount]collection.Collection, options Options) error {
 	mimeType := options.Mime
 	storagePath := options.StoragePath
 	mediaType, params, err := mime.ParseMediaType(mimeType)
@@ -43,10 +43,11 @@ func (_ *multipartBodyProcessor) ProcessRequest(reader io.Reader, collection [ty
 	}
 	mr := multipart.NewReader(reader, params["boundary"])
 	totalSize := int64(0)
-	filesCol := collection[variables.Files]
-	filesTmpNamesCol := collection[variables.FilesTmpNames]
-	fileSizesCol := collection[variables.FilesSizes]
-	postCol := collection[variables.ArgsPost]
+	filesCol := (collections[variables.Files]).(*collection.CollectionMap)
+	filesTmpNamesCol := (collections[variables.FilesTmpNames]).(*collection.CollectionMap)
+	fileSizesCol := (collections[variables.FilesSizes]).(*collection.CollectionMap)
+	postCol := (collections[variables.ArgsPost]).(*collection.CollectionMap)
+	filesCombinedSizeCol := (collections[variables.FilesCombinedSize]).(*collection.CollectionSimple)
 	for {
 		p, err := mr.NextPart()
 		if err == io.EOF {
@@ -80,7 +81,7 @@ func (_ *multipartBodyProcessor) ProcessRequest(reader io.Reader, collection [ty
 			totalSize += int64(len(data))
 			postCol.Add(p.FormName(), string(data))
 		}
-		collection[variables.FilesCombinedSize].SetIndex("", 0, fmt.Sprintf("%d", totalSize))
+		filesCombinedSizeCol.Set(fmt.Sprintf("%d", totalSize))
 	}
 	return nil
 }

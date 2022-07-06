@@ -28,7 +28,7 @@ import (
 type urlencodedBodyProcessor struct {
 }
 
-func (_ *urlencodedBodyProcessor) ProcessRequest(reader io.Reader, collection [types.VariablesCount]collection.Collection, options Options) error {
+func (_ *urlencodedBodyProcessor) ProcessRequest(reader io.Reader, collections [types.VariablesCount]collection.Collection, options Options) error {
 	buf := new(strings.Builder)
 	if _, err := io.Copy(buf, reader); err != nil {
 		return err
@@ -37,14 +37,16 @@ func (_ *urlencodedBodyProcessor) ProcessRequest(reader io.Reader, collection [t
 	b := buf.String()
 	values, err := utils.ParseQuery(b, "&")
 	if err != nil {
-		collection[variables.UrlencodedError].SetIndex("", 0, err.Error())
+		col := (collections[variables.UrlencodedError]).(*collection.CollectionSimple)
+		col.Set(err.Error())
 		return nil
 	}
+	argsCol := (collections[variables.ArgsPost]).(*collection.CollectionMap)
 	for k, vs := range values {
-		collection[variables.ArgsPost].Set(k, vs)
+		argsCol.Set(k, vs)
 	}
-	collection[variables.RequestBody].SetIndex("", 0, b)
-	collection[variables.RequestBodyLength].SetIndex("", 0, strconv.Itoa(len(b)))
+	(collections[variables.RequestBody]).(*collection.CollectionSimple).Set(b)
+	(collections[variables.RequestBodyLength]).(*collection.CollectionSimple).Set(strconv.Itoa(len(b)))
 	return nil
 }
 

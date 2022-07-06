@@ -20,7 +20,6 @@ import (
 
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 func TestCtl(t *testing.T) {
@@ -86,7 +85,7 @@ func TestCtl(t *testing.T) {
 			t.Errorf("failed to init requestBodyProcessor %s", bp)
 		}
 		ctlf.Evaluate(r, tx)
-		if tx.GetCollection(variables.ReqbodyProcessor).String() != bp {
+		if tx.Variables.ReqbodyProcessor.String() != bp {
 			t.Error("failed to set RequestBodyProcessor " + bp)
 		}
 	}

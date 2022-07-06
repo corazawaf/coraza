@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -78,25 +79,25 @@ func (a *setvarFn) Type() types.RuleActionType {
 }
 
 func (a *setvarFn) evaluateTxCollection(r *coraza.Rule, tx *coraza.Transaction, key string, value string) {
-	collection := tx.GetCollection(a.collection)
-	if collection == nil {
+	col := (tx.Collections[a.collection]).(*collection.CollectionMap)
+	if col == nil {
 		// fmt.Println("Invalid Collection " + a.Collection) LOG error?
 		return
 	}
 
 	if a.isRemove {
-		collection.Remove(key)
+		col.Remove(key)
 		return
 	}
 	res := ""
-	if r := collection.Get(key); len(r) > 0 {
+	if r := col.Get(key); len(r) > 0 {
 		res = r[0]
 	}
 	var err error
 	switch {
 	case len(value) == 0:
 		// if nothing to input
-		collection.Set(key, []string{""})
+		col.Set(key, []string{""})
 	case value[0] == '+':
 		// if we want to sum
 		sum := 0
@@ -115,16 +116,16 @@ func (a *setvarFn) evaluateTxCollection(r *coraza.Rule, tx *coraza.Transaction, 
 				return
 			}
 		}
-		collection.Set(key, []string{strconv.Itoa(sum + val)})
+		col.Set(key, []string{strconv.Itoa(sum + val)})
 	case value[0] == '-':
 		me, _ := strconv.Atoi(value[1:])
 		txv, err := strconv.Atoi(res)
 		if err != nil {
 			return
 		}
-		collection.Set(key, []string{strconv.Itoa(txv - me)})
+		col.Set(key, []string{strconv.Itoa(txv - me)})
 	default:
-		collection.Set(key, []string{value})
+		col.Set(key, []string{value})
 	}
 }
 

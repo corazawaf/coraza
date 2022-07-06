@@ -32,22 +32,22 @@ type CollectionSimple struct {
 	variable variables.RuleVariable
 }
 
-// Get returns a slice of strings for a key
-func (c *CollectionSimple) Get(key string) []string {
-	// Not implemented
-	return nil
-}
-
 // FindRegex returns a slice of MatchData for the regex
 func (c *CollectionSimple) FindRegex(key *regexp.Regexp) []types.MatchData {
-	// Not implemented
-	return nil
+	return []types.MatchData{
+		{
+			Value: c.data,
+		},
+	}
 }
 
 // FindString returns a slice of MatchData for the string
 func (c *CollectionSimple) FindString(key string) []types.MatchData {
-	// Not implemented
-	return nil
+	return []types.MatchData{
+		{
+			Value: c.data,
+		},
+	}
 }
 
 // GetFirstString returns the first string occurrence of a key
@@ -57,69 +57,19 @@ func (c *CollectionSimple) String() string {
 
 // GetFirstInt64 returns the first int64 occurrence of a key
 func (c *CollectionSimple) Int64() int64 {
-	r, _ := strconv.ParseInt(c.data, 10, 64)
-	return r
+	return int64(c.Int())
 }
 
 // GetFirstInt returns the first int occurrence of a key
 func (c *CollectionSimple) Int() int {
-	return int(c.Int64())
-}
-
-// AddCS a value to some key with case sensitive vKey
-func (c *CollectionSimple) AddCS(key string, vKey string, vVal string) {
-	// we don't add the value if it was already there
-}
-
-// Add a value to some key
-func (c *CollectionSimple) Add(key string, value string) {
-	// we don't add the value if it was already there
-}
-
-// AddUniqueCS will add a value to a key if it is not already there
-// with case sensitive vKey
-func (c *CollectionSimple) AddUniqueCS(key string, vKey string, vVal string) {
-	// we don't add the value if it was already there
-}
-
-// AddUnique will add a value to a key if it is not already there
-func (c *CollectionSimple) AddUnique(key string, value string) {
-	// we don't add the value if it was already there
-}
-
-// SetCS will replace the key's value with this slice
-// internally converts [] string to []types.AnchoredVar
-// with case sensitive vKey
-func (c *CollectionSimple) SetCS(key string, vKey string, values []string) {
-	// we don't add the value if it was already there
+	r, _ := strconv.ParseInt(c.data, 10, 32)
+	return int(r)
 }
 
 // Set will replace the key's value with this slice
 // internally converts [] string to []types.AnchoredVar
-func (c *CollectionSimple) Set(key string, values []string) {
-	if len(values) > 0 {
-		c.data = values[0]
-	}
-}
-
-// SetIndexCS will place the value under the index
-// If the index is higher than the current size of the CollectionSimple
-// it will be appended
-// with case sensitive vKey
-func (c *CollectionSimple) SetIndexCS(key string, index int, vKey string, value string) {
-	// we don't add the value if it was already there
-}
-
-// SetIndex will place the value under the index
-// If the index is higher than the current size of the CollectionSimple
-// it will be appended
-func (c *CollectionSimple) SetIndex(key string, index int, value string) {
-	// we don't add the value if it was already there
-}
-
-// Remove deletes the key from the CollectionSimple
-func (c *CollectionSimple) Remove(key string) {
-	// we don't remove the key if it wasn't used, for performance reasons
+func (c *CollectionSimple) Set(value string) {
+	c.data = value
 }
 
 // Name returns the name for the current CollectionSimple
@@ -134,7 +84,7 @@ func (c *CollectionSimple) Reset() {
 
 var _ Collection = &CollectionSimple{}
 
-func NewCollectionSimple(variable variables.RuleVariable) Collection {
+func NewCollectionSimple(variable variables.RuleVariable) *CollectionSimple {
 	return &CollectionSimple{
 		variable: variable,
 		name:     variable.Name(),

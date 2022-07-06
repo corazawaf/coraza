@@ -28,8 +28,8 @@ import (
 type jsonBodyProcessor struct {
 }
 
-func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, collection [types.VariablesCount]collection.Collection, _ Options) error {
-	col := collection[variables.ArgsPost]
+func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, collections [types.VariablesCount]collection.Collection, _ Options) error {
+	col := (collections[variables.ArgsPost]).(*collection.CollectionMap)
 	data, err := readJSON(reader)
 	if err != nil {
 		return err
@@ -40,8 +40,8 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, collection [types.
 	return nil
 }
 
-func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, collection [types.VariablesCount]collection.Collection, _ Options) error {
-	col := collection[variables.ResponseArgs]
+func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, collections [types.VariablesCount]collection.Collection, _ Options) error {
+	col := (collections[variables.ResponseArgs]).(*collection.CollectionMap)
 	data, err := readJSON(reader)
 	if err != nil {
 		return err

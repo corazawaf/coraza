@@ -207,7 +207,7 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 	// we log if we are the parent rule
 	tx.Waf.Logger.Debug("[%s] [%d] Evaluating rule %d", tx.ID, rid, r.ID)
 	defer tx.Waf.Logger.Debug("[%s] [%d] Finish evaluating rule %d", tx.ID, rid, r.ID)
-	ruleCol := tx.GetCollection(variables.Rule)
+	ruleCol := tx.Variables.Rule
 	ruleCol.SetIndex("id", 0, strconv.Itoa(rid))
 	ruleCol.SetIndex("msg", 0, r.Msg.String())
 	ruleCol.SetIndex("rev", 0, r.Rev)

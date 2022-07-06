@@ -30,6 +30,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 	utils "github.com/corazawaf/coraza/v3/utils/strings"
@@ -149,7 +150,7 @@ func TestRequestBody(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error("Failed to process request body")
 	}
-	val := tx.GetCollection(variables.ArgsPost).Get("some")
+	val := tx.Variables.ArgsPost.Get("some")
 	if len(val) != 1 || val[0] != "result" {
 		t.Error("Failed to set url encoded post data")
 	}
@@ -158,7 +159,7 @@ func TestRequestBody(t *testing.T) {
 func TestResponseHeader(t *testing.T) {
 	tx := makeTransaction()
 	tx.AddResponseHeader("content-type", "test")
-	if tx.GetCollection(variables.ResponseContentType).String() != "test" {
+	if tx.Variables.ResponseContentType.String() != "test" {
 		t.Error("invalid RESPONSE_CONTENT_TYPE after response headers")
 	}
 }
@@ -187,7 +188,7 @@ func TestResponseBody(t *testing.T) {
 	if _, err := tx.ProcessResponseBody(); err != nil {
 		t.Error("Failed to process response body")
 	}
-	if tx.GetCollection(variables.ResponseBody).String() != "test123" {
+	if tx.Variables.ResponseBody.String() != "test123" {
 		t.Error("failed to set response body")
 	}
 	if err := tx.Clean(); err != nil {
@@ -233,7 +234,7 @@ func TestRequestStruct(t *testing.T) {
 	if _, err := tx.ProcessRequest(req); err != nil {
 		t.Error(err)
 	}
-	if tx.GetCollection(variables.RequestMethod).String() != "POST" {
+	if tx.Variables.RequestMethod.String() != "POST" {
 		t.Error("failed to set request from request object")
 	}
 	if err := tx.Clean(); err != nil {
@@ -245,11 +246,11 @@ func TestResetCapture(t *testing.T) {
 	tx := makeTransaction()
 	tx.Capture = true
 	tx.CaptureField(5, "test")
-	if tx.GetCollection(variables.TX).String("5") != "test" {
+	if tx.Variables.TX.Get("5")[0] != "test" {
 		t.Error("failed to set capture field from tx")
 	}
 	tx.resetCaptures()
-	if tx.GetCollection(variables.TX).String("5") != "" {
+	if tx.Variables.TX.Get("5")[0] != "" {
 		t.Error("failed to reset capture field from tx")
 	}
 	if err := tx.Clean(); err != nil {
@@ -260,7 +261,7 @@ func TestResetCapture(t *testing.T) {
 func TestRelevantAuditLogging(t *testing.T) {
 	tx := makeTransaction()
 	tx.Waf.AuditLogRelevantStatus = regexp.MustCompile(`(403)`)
-	tx.GetCollection(variables.ResponseStatus).Set("", []string{"403"})
+	tx.Variables.ResponseStatus.Set("403")
 	tx.AuditEngine = types.AuditEngineRelevantOnly
 	// tx.Waf.auditLogger = loggers.NewAuditLogger()
 	tx.ProcessLogging()
@@ -297,17 +298,17 @@ func TestHeaderSetters(t *testing.T) {
 	tx := waf.NewTransaction(context.Background())
 	tx.AddRequestHeader("cookie", "abc=def;hij=klm")
 	tx.AddRequestHeader("test1", "test2")
-	c := tx.GetCollection(variables.RequestCookies).String("abc")
+	c := tx.Variables.RequestCookies.Get("abc")[0]
 	if c != "def" {
 		t.Errorf("failed to set cookie, got %q", c)
 	}
-	if tx.GetCollection(variables.RequestHeaders).String("cookie") != "abc=def;hij=klm" {
+	if tx.Variables.RequestHeaders.Get("cookie")[0] != "abc=def;hij=klm" {
 		t.Error("failed to set request header")
 	}
-	if !utils.InSlice("cookie", tx.GetCollection(variables.RequestHeadersNames).Get("cookie")) {
-		t.Error("failed to set header name", tx.GetCollection(variables.RequestHeadersNames).Get("cookie"))
+	if !utils.InSlice("cookie", tx.Variables.RequestHeadersNames.Get("cookie")) {
+		t.Error("failed to set header name", tx.Variables.RequestHeadersNames.Get("cookie"))
 	}
-	if !utils.InSlice("abc", tx.GetCollection(variables.RequestCookiesNames).Get("abc")) {
+	if !utils.InSlice("abc", tx.Variables.RequestCookiesNames.Get("abc")) {
 		t.Error("failed to set cookie name")
 	}
 	if err := tx.Clean(); err != nil {
@@ -329,7 +330,7 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error("failed to process request body")
 	}
-	if tx.GetCollection(variables.RequestBody).String() != "test123" {
+	if tx.Variables.RequestBody.String() != "test123" {
 		t.Error("failed to set request body")
 	}
 	if err := tx.Clean(); err != nil {
@@ -466,10 +467,10 @@ func TestTxPhase4Magic(t *testing.T) {
 	if _, err := tx.ProcessResponseBody(); err != nil {
 		t.Error(err)
 	}
-	if tx.GetCollection(variables.OutboundDataError).String() != "1" {
+	if tx.Variables.OutboundDataError.String() != "1" {
 		t.Error("failed to set outbound data error")
 	}
-	if tx.GetCollection(variables.ResponseBody).String() != "mor" {
+	if tx.Variables.ResponseBody.String() != "mor" {
 		t.Error("failed to set response body")
 	}
 }
@@ -489,12 +490,12 @@ func TestVariablesMatch(t *testing.T) {
 	}
 
 	for k, v := range expect {
-		if m := tx.GetCollection(k).String(); m != v {
+		if m := (tx.Collections[k]).(*collection.CollectionSimple).String(); m != v {
 			t.Errorf("failed to match variable %s, Expected: %s, got: %s", k.Name(), v, m)
 		}
 	}
 
-	if v := tx.GetCollection(variables.MatchedVars).String("ARGS_NAMES:sample"); v != "samplevalue" {
+	if v := tx.Variables.MatchedVars.Get("ARGS_NAMES:sample")[0]; v != "samplevalue" {
 		t.Errorf("failed to match variable %s, got %s", variables.MatchedVars.Name(), v)
 	}
 }
@@ -510,7 +511,7 @@ func TestTxReqBodyForce(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error(err)
 	}
-	if tx.GetCollection(variables.RequestBody).String() != "test" {
+	if tx.Variables.RequestBody.String() != "test" {
 		t.Error("failed to set request body")
 	}
 }
@@ -526,7 +527,7 @@ func TestTxReqBodyForceNegative(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error(err)
 	}
-	if tx.GetCollection(variables.RequestBody).String() == "test" {
+	if tx.Variables.RequestBody.String() == "test" {
 		t.Error("reqbody should not be there")
 	}
 }

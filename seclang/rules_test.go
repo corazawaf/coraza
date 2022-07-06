@@ -27,7 +27,6 @@ import (
 
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 func TestRuleMatch(t *testing.T) {
@@ -71,9 +70,6 @@ func TestRuleMatchWithRegex(t *testing.T) {
 	tx := waf.NewTransaction(context.Background())
 	tx.AddArgument("GET", "id_test", "123")
 	tx.ProcessRequestHeaders()
-	if tx.GetCollection(variables.Args).String("id_test") != "123" {
-		t.Error("rule variable error")
-	}
 	if len(tx.MatchedRules) != 1 {
 		t.Errorf("failed to match rules with %d", len(tx.MatchedRules))
 	}
@@ -183,13 +179,6 @@ func TestRuleLogging(t *testing.T) {
 			t.Errorf("failed to log rule, got \n%s", logs[2])
 		}
 	}
-	txcol := tx.GetCollection(variables.TX)
-	if txcol.String("arg_123") != "123" || txcol.String("arg_456") != "456" {
-		t.Errorf("failed to match setvar from multiple match, got %q and %q", txcol.String("arg_test1"), txcol.String("arg_test2"))
-	}
-	if txcol.String("test") != "ok" {
-		t.Errorf("failed to match setvar from multiple match, got %q", txcol.String("test"))
-	}
 }
 
 func TestRuleChains(t *testing.T) {
@@ -213,12 +202,6 @@ func TestRuleChains(t *testing.T) {
 	tx.ProcessRequestHeaders()
 	if len(tx.MatchedRules) != 1 {
 		t.Errorf("failed to match rules with %d matches, expected 1", len(tx.MatchedRules))
-	}
-	if tx.GetCollection(variables.TX).String("test") != "ok" {
-		t.Error("failed to set var")
-	}
-	if tx.GetCollection(variables.TX).String("test2") == "fail" {
-		t.Error("failed to set var, it shouldn't be set")
 	}
 }
 

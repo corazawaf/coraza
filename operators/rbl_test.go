@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/types/variables"
 	"github.com/foxcpp/go-mockdns"
 )
 
@@ -73,7 +72,7 @@ func TestRbl(t *testing.T) {
 		if !rbl.Evaluate(tx, "valid_txt") {
 			t.Errorf("Unexpected result for valid hostname")
 		}
-		if want, have := "not blocked", tx.GetCollection(variables.TX).Get("httpbl_msg")[0]; want != have {
+		if want, have := "not blocked", tx.Variables.TX.Get("httpbl_msg")[0]; want != have {
 			t.Errorf("Unexpected result for valid hostname: want %q, have %q", want, have)
 		}
 	})
@@ -89,8 +88,8 @@ func TestRbl(t *testing.T) {
 		if !rbl.Evaluate(tx, "blocked") {
 			t.Fatal("Unexpected result for blocked hostname")
 		}
-		t.Log(tx.GetCollection(variables.TX).Get("httpbl_msg"))
-		if want, have := "blocked", tx.GetCollection(variables.TX).Get("httpbl_msg")[0]; want != have {
+		t.Log(tx.Variables.TX.Get("httpbl_msg"))
+		if want, have := "blocked", tx.Variables.TX.Get("httpbl_msg")[0]; want != have {
 			t.Errorf("Unexpected result for valid hostname: want %q, have %q", want, have)
 		}
 	})

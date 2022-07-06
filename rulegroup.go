@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
 	"github.com/corazawaf/coraza/v3/utils/strings"
 )
 
@@ -150,8 +149,8 @@ RulesLoop:
 		}
 		// TODO this lines are SUPER SLOW
 		// we reset matched_vars, matched_vars_names, etc
-		tx.GetCollection(variables.MatchedVars).Reset()
-		tx.GetCollection(variables.MatchedVarsNames).Reset()
+		tx.Variables.MatchedVars.Reset()
+		tx.Variables.MatchedVarsNames.Reset()
 
 		r.Evaluate(tx)
 		tx.Capture = false // we reset captures

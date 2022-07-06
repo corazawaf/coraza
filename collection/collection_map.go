@@ -198,7 +198,7 @@ func (c *CollectionMap) Reset() {
 
 var _ Collection = &CollectionMap{}
 
-func NewCollectionMap(variable variables.RuleVariable) Collection {
+func NewCollectionMap(variable variables.RuleVariable) *CollectionMap {
 	return &CollectionMap{
 		name:     variable.Name(),
 		variable: variable,
