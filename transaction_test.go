@@ -495,8 +495,8 @@ func TestVariablesMatch(t *testing.T) {
 		}
 	}
 
-	if v := tx.Variables.MatchedVars.Get("ARGS_NAMES:sample")[0]; v != "samplevalue" {
-		t.Errorf("failed to match variable %s, got %s", variables.MatchedVars.Name(), v)
+	if len(tx.Variables.MatchedVars.Get("ARGS_NAMES:sample")) == 0 {
+		t.Errorf("failed to match variable %s, got 0", variables.MatchedVars.Name())
 	}
 }
 

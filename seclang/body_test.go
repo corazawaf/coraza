@@ -59,7 +59,7 @@ func TestRequestBodyAccessOn(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error(err)
 	}
-	if len(tx.Variables.ArgsPost.String()) == 0 {
+	if len(tx.Variables.ArgsPost.FindAll()) == 0 {
 		t.Error("Should have args")
 	}
 }
