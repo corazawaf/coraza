@@ -18,11 +18,11 @@
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v3"
 )
 
 type inspectFile struct{}
 
-func (o *inspectFile) Init(data string) error { return nil }
+func (_ *inspectFile) Init(options coraza.RuleOperatorOptions) error { return nil }
 
-func (o *inspectFile) Evaluate(tx *coraza.Transaction, value string) bool { return true }
+func (_ *inspectFile) Evaluate(tx *coraza.Transaction, value string) bool { return true }

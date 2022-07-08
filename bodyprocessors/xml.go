@@ -79,9 +79,7 @@ type xmlNode struct {
 	Nodes   []xmlNode  `xml:",any"`
 }
 
-var (
-	_ BodyProcessor = &xmlBodyProcessor{}
-)
+var _ BodyProcessor = &xmlBodyProcessor{}
 
 func init() {
 	Register("xml", func() BodyProcessor {

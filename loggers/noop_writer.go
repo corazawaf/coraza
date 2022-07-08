@@ -15,7 +15,7 @@
 package loggers
 
 import (
-	"github.com/corazawaf/coraza/v2/types"
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 // noopWriter is used to store logs in a single file

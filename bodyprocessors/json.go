@@ -191,9 +191,7 @@ func interfaceToMap(data map[string]interface{}) (map[string]string, error) {
 	return result, nil
 }
 
-var (
-	_ BodyProcessor = &jsonBodyProcessor{}
-)
+var _ BodyProcessor = &jsonBodyProcessor{}
 
 func init() {
 	Register("json", func() BodyProcessor {
