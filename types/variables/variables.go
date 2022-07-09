@@ -172,6 +172,8 @@ const (
 	ArgsGet
 	// ArgsPost contains the POST (BODY) arguments
 	ArgsPost
+	// ArgsPath contains the url path parts
+	ArgsPath
 	// FilesSizes contains the sizes of the uploaded files
 	FilesSizes
 	// FilesNames contains the names of the uploaded files
@@ -296,6 +298,7 @@ var rulemap = map[RuleVariable]string{
 	Args:                          "ARGS",
 	ArgsGet:                       "ARGS_GET",
 	ArgsPost:                      "ARGS_POST",
+	ArgsPath:                      "ARGS_PATH",
 	FilesSizes:                    "FILES_SIZES",
 	FilesNames:                    "FILES_NAMES",
 	FilesTmpContent:               "FILES_TMP_CONTENT",
