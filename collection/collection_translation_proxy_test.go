@@ -11,31 +11,31 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-package operators
+package collection
 
 import (
-	"context"
+	"regexp"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-func TestPmfm(t *testing.T) {
-	data := "abc\r\ndef\r\nghi\njkl\ryhz"
-	p := &pmFromFile{}
-	opts := coraza.RuleOperatorOptions{
-		Arguments: data,
+func TestCollectionTranslationProxy(t *testing.T) {
+	c1 := NewCollectionMap(variables.ArgsPost)
+	c2 := NewCollectionMap(variables.ArgsGet)
+	proxy := NewCollectionTranslationProxy(variables.ArgsNames, c1, c2)
+
+	c1.Set("key1", []string{"value1"})
+	c1.Set("key2", []string{"value2"})
+	c2.Set("key3", []string{"value3"})
+
+	if len(proxy.FindAll()) != 3 {
+		t.Error("Error finding all")
 	}
-	if err := p.Init(opts); err != nil {
-		t.Error(err)
+	if len(proxy.FindString("key3")) == 0 {
+		t.Error("Error finding string")
 	}
-	waf := coraza.NewWaf()
-	tx := waf.NewTransaction(context.Background())
-	if !p.Evaluate(tx, "def") {
-		t.Error("failed to match pmFromFile")
-	}
-	if len(p.pm.dict) != 4 {
-		t.Error("failed to load pmFromFile")
+	if len(proxy.FindRegex(regexp.MustCompile("k.*"))) != 3 {
+		t.Error("Error finding regex")
 	}
 }

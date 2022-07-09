@@ -16,6 +16,7 @@ package seclang
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -31,7 +32,7 @@ func TestInterruption(t *testing.T) {
 	if err := p.FromString(`SecAction "id:1,deny,log,phase:1"`); err != nil {
 		t.Error("Could not create from string")
 	}
-	tx := waf.NewTransaction()
+	tx := waf.NewTransaction(context.Background())
 	if tx.ProcessRequestHeaders() == nil {
 		t.Error("Transaction not interrupted")
 	}

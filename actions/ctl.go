@@ -141,7 +141,7 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 			}
 		}
 	case ctlRequestBodyProcessor:
-		tx.GetCollection(variables.ReqbodyProcessor).Set("", []string{strings.ToUpper(a.value)})
+		tx.Variables.ReqbodyProcessor.Set(strings.ToUpper(a.value))
 	case ctlHashEngine:
 		// Not supported yet
 	case ctlHashEnforcement:

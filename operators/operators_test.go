@@ -15,6 +15,7 @@
 package operators
 
 import (
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"os"
@@ -94,7 +95,7 @@ func TestTransformations(t *testing.T) {
 			if err := op.Init(opts); err != nil {
 				t.Error(err)
 			}
-			res := op.Evaluate(waf.NewTransaction(), data.Input)
+			res := op.Evaluate(waf.NewTransaction(context.Background()), data.Input)
 			// 1 = expected true
 			// 0 = expected false
 			if (res && data.Ret != 1) || (!res && data.Ret == 1) {

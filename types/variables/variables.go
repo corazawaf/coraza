@@ -227,6 +227,8 @@ const (
 	// UrlencodedError equals 1 if we failed to parse de URL
 	// It applies for URL query part and urlencoded post body
 	UrlencodedError
+	// ResponseArgs contains the response parsed arguments
+	ResponseArgs
 )
 
 var rulemap = map[RuleVariable]string{

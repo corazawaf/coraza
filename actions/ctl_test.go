@@ -15,16 +15,16 @@
 package actions
 
 import (
+	"context"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 func TestCtl(t *testing.T) {
 	waf := coraza.NewWaf()
-	tx := waf.NewTransaction()
+	tx := waf.NewTransaction(context.Background())
 	r := coraza.NewRule()
 	ctlf := ctl()
 
@@ -85,7 +85,7 @@ func TestCtl(t *testing.T) {
 			t.Errorf("failed to init requestBodyProcessor %s", bp)
 		}
 		ctlf.Evaluate(r, tx)
-		if tx.GetCollection(variables.ReqbodyProcessor).GetFirstString("") != bp {
+		if tx.Variables.ReqbodyProcessor.String() != bp {
 			t.Error("failed to set RequestBodyProcessor " + bp)
 		}
 	}
@@ -95,10 +95,14 @@ func TestCtlParseRange(t *testing.T) {
 	a := &ctlFn{}
 	rules := []*coraza.Rule{
 		{
-			ID: 5,
+			RuleMetadata: types.RuleMetadata{
+				ID: 5,
+			},
 		},
 		{
-			ID: 15,
+			RuleMetadata: types.RuleMetadata{
+				ID: 15,
+			},
 		},
 	}
 	ints, err := a.rangeToInts(rules, "1-2")

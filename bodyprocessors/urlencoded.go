@@ -19,68 +19,47 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 	utils "github.com/corazawaf/coraza/v3/utils/url"
 )
 
 type urlencodedBodyProcessor struct {
-	collections *CollectionsMap
 }
 
-func (ubp *urlencodedBodyProcessor) Read(reader io.Reader, _ Options) error {
+func (_ *urlencodedBodyProcessor) ProcessRequest(reader io.Reader, collections [types.VariablesCount]collection.Collection, options Options) error {
 	buf := new(strings.Builder)
 	if _, err := io.Copy(buf, reader); err != nil {
 		return err
 	}
 
 	b := buf.String()
-	// TODO add url encode validation
-	// tx.GetCollection(VARIABLE_URLENCODED_ERROR).Set("", []string{err.Error()})
 	values, err := utils.ParseQuery(b, "&")
 	if err != nil {
-		ubp.collections = &CollectionsMap{
-			variables.UrlencodedError: map[string][]string{
-				"": {err.Error()},
-			},
-		}
+		col := (collections[variables.UrlencodedError]).(*collection.CollectionSimple)
+		col.Set(err.Error())
 		return nil
 	}
-	m := map[string][]string{}
-	keys := []string{}
+	argsCol := (collections[variables.ArgsPost]).(*collection.CollectionMap)
 	for k, vs := range values {
-		m[k] = vs
-		keys = append(keys, k)
+		argsCol.Set(k, vs)
 	}
-	pn := map[string][]string{}
-	for _, value := range keys {
-		pn[value] = []string{value}
-	}
-	ubp.collections = &CollectionsMap{
-		variables.ArgsPost:      m,
-		variables.ArgsPostNames: pn,
-		variables.Args:          m,
-		variables.RequestBody: map[string][]string{
-			"": {b},
-		},
-		variables.RequestBodyLength: map[string][]string{
-			"": {strconv.Itoa(len(b))},
-		},
-	}
+	(collections[variables.RequestBody]).(*collection.CollectionSimple).Set(b)
+	(collections[variables.RequestBodyLength]).(*collection.CollectionSimple).Set(strconv.Itoa(len(b)))
 	return nil
 }
 
-func (ubp *urlencodedBodyProcessor) Collections() CollectionsMap {
-	return *ubp.collections
-}
-
-func (ubp *urlencodedBodyProcessor) Find(expr string) (map[string][]string, error) {
-	return nil, nil
-}
-
-func (ubp *urlencodedBodyProcessor) VariableHook() variables.RuleVariable {
-	return variables.JSON
+func (_ *urlencodedBodyProcessor) ProcessResponse(reader io.Reader, collection [types.VariablesCount]collection.Collection, options Options) error {
+	return nil
 }
 
 var (
 	_ BodyProcessor = &urlencodedBodyProcessor{}
 )
+
+func init() {
+	Register("urlencoded", func() BodyProcessor {
+		return &urlencodedBodyProcessor{}
+	})
+}

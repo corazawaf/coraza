@@ -16,13 +16,11 @@ package coraza
 
 import (
 	"testing"
-
-	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 func TestMacro(t *testing.T) {
 	tx := makeTransaction()
-	tx.GetCollection(variables.TX).Set("some", []string{"secretly"})
+	tx.Variables.TX.Set("some", []string{"secretly"})
 	macro, err := NewMacro("%{unique_id}")
 	if err != nil {
 		t.Error(err)

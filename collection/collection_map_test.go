@@ -11,31 +11,29 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-package operators
+package collection
 
 import (
-	"context"
+	"regexp"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-func TestPmfm(t *testing.T) {
-	data := "abc\r\ndef\r\nghi\njkl\ryhz"
-	p := &pmFromFile{}
-	opts := coraza.RuleOperatorOptions{
-		Arguments: data,
+func TestCollectionMap(t *testing.T) {
+	c := NewCollectionMap(variables.ArgsPost)
+	c.SetIndex("key", 1, "value")
+	c.Set("key2", []string{"value2"})
+	if c.Get("key")[1] != "value" {
+		t.Error("Error setting index")
 	}
-	if err := p.Init(opts); err != nil {
-		t.Error(err)
+	if len(c.FindAll()) == 0 {
+		t.Error("Error finding all")
 	}
-	waf := coraza.NewWaf()
-	tx := waf.NewTransaction(context.Background())
-	if !p.Evaluate(tx, "def") {
-		t.Error("failed to match pmFromFile")
+	if len(c.FindString("a")) > 0 {
+		t.Error("Error should not find string")
 	}
-	if len(p.pm.dict) != 4 {
-		t.Error("failed to load pmFromFile")
+	if l := len(c.FindRegex(regexp.MustCompile("k.*"))); l != 3 {
+		t.Errorf("Error should find regex, got %d", l)
 	}
 }

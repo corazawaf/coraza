@@ -23,14 +23,15 @@ import (
 	"os"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 type multipartBodyProcessor struct {
-	collections *CollectionsMap
 }
 
-func (mbp *multipartBodyProcessor) Read(reader io.Reader, options Options) error {
+func (_ *multipartBodyProcessor) ProcessRequest(reader io.Reader, collections [types.VariablesCount]collection.Collection, options Options) error {
 	mimeType := options.Mime
 	storagePath := options.StoragePath
 	mediaType, params, err := mime.ParseMediaType(mimeType)
@@ -42,12 +43,11 @@ func (mbp *multipartBodyProcessor) Read(reader io.Reader, options Options) error
 	}
 	mr := multipart.NewReader(reader, params["boundary"])
 	totalSize := int64(0)
-	filesNames := []string{}
-	filesArgNames := []string{}
-	fileList := []string{}
-	fileSizes := []string{}
-	postNames := []string{}
-	postFields := map[string][]string{}
+	filesCol := (collections[variables.Files]).(*collection.CollectionMap)
+	filesTmpNamesCol := (collections[variables.FilesTmpNames]).(*collection.CollectionMap)
+	fileSizesCol := (collections[variables.FilesSizes]).(*collection.CollectionMap)
+	postCol := (collections[variables.ArgsPost]).(*collection.CollectionMap)
+	filesCombinedSizeCol := (collections[variables.FilesCombinedSize]).(*collection.CollectionSimple)
 	for {
 		p, err := mr.NextPart()
 		if err == io.EOF {
@@ -69,10 +69,9 @@ func (mbp *multipartBodyProcessor) Read(reader io.Reader, options Options) error
 				return err
 			}
 			totalSize += sz
-			filesNames = append(filesNames, filename)
-			fileList = append(fileList, temp.Name())
-			fileSizes = append(fileSizes, fmt.Sprintf("%d", sz))
-			filesArgNames = append(filesArgNames, p.FormName())
+			filesCol.Add("", filename)
+			filesTmpNamesCol.Add("", temp.Name())
+			fileSizesCol.SetIndex(filename, 0, fmt.Sprintf("%d", sz))
 		} else {
 			// if is a field
 			data, err := io.ReadAll(p)
@@ -80,52 +79,15 @@ func (mbp *multipartBodyProcessor) Read(reader io.Reader, options Options) error
 				return err
 			}
 			totalSize += int64(len(data))
-			postNames = append(postNames, p.FormName())
-			if _, ok := postFields[p.FormName()]; !ok {
-				postFields[p.FormName()] = []string{}
-			}
-			postFields[p.FormName()] = append(postFields[p.FormName()], string(data))
-
+			postCol.Add(p.FormName(), string(data))
 		}
+		filesCombinedSizeCol.Set(fmt.Sprintf("%d", totalSize))
 	}
-	pn := map[string][]string{}
-	for _, value := range postNames {
-		pn[value] = []string{value}
-	}
-	mbp.collections = &CollectionsMap{
-		variables.FilesNames: map[string][]string{
-			"": filesArgNames,
-		},
-		variables.FilesTmpNames: map[string][]string{
-			"": fileList,
-		},
-		variables.Files: map[string][]string{
-			"": filesNames,
-		},
-		variables.FilesSizes: map[string][]string{
-			"": fileSizes,
-		},
-		variables.ArgsPostNames: pn,
-		variables.ArgsPost:      postFields,
-		variables.Args:          postFields,
-		variables.FilesCombinedSize: map[string][]string{
-			"": {fmt.Sprintf("%d", totalSize)},
-		},
-	}
-
 	return nil
 }
 
-func (mbp *multipartBodyProcessor) Collections() CollectionsMap {
-	return *mbp.collections
-}
-
-func (mbp *multipartBodyProcessor) Find(expr string) (map[string][]string, error) {
-	return nil, nil
-}
-
-func (mbp *multipartBodyProcessor) VariableHook() variables.RuleVariable {
-	return variables.JSON
+func (_ *multipartBodyProcessor) ProcessResponse(reader io.Reader, collection [types.VariablesCount]collection.Collection, options Options) error {
+	return nil
 }
 
 var (
@@ -145,4 +107,10 @@ func originFileName(p *multipart.Part) string {
 	}
 
 	return dispositionParams["filename"]
+}
+
+func init() {
+	Register("multipart", func() BodyProcessor {
+		return &multipartBodyProcessor{}
+	})
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -42,7 +43,7 @@ func setupCoraza() error {
 }
 
 func corazaRequestHandler(h http.Handler) http.Handler {
-	tx := waf.NewTransaction()
+	tx := waf.NewTransaction(context.Background())
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			// We run phase 5 rules and create audit logs (if enabled)

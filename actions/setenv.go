@@ -21,7 +21,6 @@ import (
 
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 type setenvFn struct {
@@ -50,7 +49,7 @@ func (a *setenvFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 		tx.Waf.Logger.Error("[%s] Error setting env variable for rule %d: %v", tx.ID, r.ID, err)
 	}
 	// TODO is this ok?
-	tx.GetCollection(variables.Env).Set(a.key, []string{v})
+	tx.Variables.Env.Set(a.key, []string{v})
 
 }
 
