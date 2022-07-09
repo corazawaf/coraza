@@ -26,29 +26,35 @@ import (
 // to store slices of data for keys
 // Important: CollectionProxys ARE NOT concurrent safe
 type CollectionProxy struct {
-	data1    *CollectionMap
-	data2    *CollectionMap
+	data     []*CollectionMap
 	name     string
 	variable variables.RuleVariable
 }
 
 // FindRegex returns a slice of MatchData for the regex
 func (c *CollectionProxy) FindRegex(key *regexp.Regexp) []types.MatchData {
-	r1 := c.data1.FindRegex(key)
-	r2 := c.data2.FindRegex(key)
-	return append(r1, r2...)
+	res := []types.MatchData{}
+	for _, c := range c.data {
+		res = append(res, c.FindRegex(key)...)
+	}
+	return res
 }
 
 // FindString returns a slice of MatchData for the string
 func (c *CollectionProxy) FindString(key string) []types.MatchData {
-	r1 := c.data1.FindString(key)
-	r2 := c.data2.FindString(key)
-	return append(r1, r2...)
+	res := []types.MatchData{}
+	for _, c := range c.data {
+		res = append(res, c.FindString(key)...)
+	}
+	return res
 }
 
 func (c *CollectionProxy) FindAll() []types.MatchData {
-	r1 := c.data1.FindAll()
-	return append(r1, c.data2.FindAll()...)
+	res := []types.MatchData{}
+	for _, c := range c.data {
+		res = append(res, c.FindAll()...)
+	}
+	return res
 }
 
 // Name returns the name for the current CollectionProxy
@@ -62,11 +68,10 @@ func (c *CollectionProxy) Reset() {
 
 var _ Collection = &CollectionProxy{}
 
-func NewCollectionProxy(variable variables.RuleVariable, c1 *CollectionMap, c2 *CollectionMap) *CollectionProxy {
+func NewCollectionProxy(variable variables.RuleVariable, data ...*CollectionMap) *CollectionProxy {
 	return &CollectionProxy{
 		name:     variable.Name(),
 		variable: variable,
-		data1:    c1,
-		data2:    c2,
+		data:     data,
 	}
 }

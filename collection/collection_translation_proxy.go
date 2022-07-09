@@ -26,8 +26,7 @@ import (
 // to store slices of data for keys
 // Important: CollectionTranslationProxys ARE NOT concurrent safe
 type CollectionTranslationProxy struct {
-	data1    *CollectionMap
-	data2    *CollectionMap
+	data     []*CollectionMap
 	name     string
 	variable variables.RuleVariable
 }
@@ -35,9 +34,9 @@ type CollectionTranslationProxy struct {
 // FindRegex returns a slice of MatchData for the regex
 func (c *CollectionTranslationProxy) FindRegex(key *regexp.Regexp) []types.MatchData {
 	res := []types.MatchData{}
-	keys := c.data1.keysRx(key)
-	if c.data2 != nil {
-		keys = append(keys, c.data2.keysRx(key)...)
+	keys := []string{}
+	for _, c := range c.data {
+		keys = append(keys, c.keysRx(key)...)
 	}
 	for _, k := range keys {
 		res = append(res, types.MatchData{
@@ -51,30 +50,24 @@ func (c *CollectionTranslationProxy) FindRegex(key *regexp.Regexp) []types.Match
 
 // FindString returns a slice of MatchData for the string
 func (c *CollectionTranslationProxy) FindString(key string) []types.MatchData {
-	c1 := len(c.data1.Get(key))
-	if c.data2 == nil && c1 == 0 {
-		return []types.MatchData{}
-	}
-	var c2 int
-	if c.data2 != nil {
-		c2 = len(c.data2.Get(key))
-	}
-	if c1+c2 > 0 {
-		return []types.MatchData{
-			{
-				VariableName: c.name,
-				Variable:     c.variable,
-				Value:        key,
-			},
+	for _, c := range c.data {
+		if len(c.Get(key)) > 0 {
+			return []types.MatchData{
+				{
+					VariableName: c.name,
+					Variable:     c.variable,
+					Value:        key,
+				},
+			}
 		}
 	}
 	return nil
 }
 
 func (c *CollectionTranslationProxy) FindAll() []types.MatchData {
-	keys := c.data1.keys()
-	if c.data2 != nil {
-		keys = append(keys, c.data2.keys()...)
+	keys := []string{}
+	for _, c := range c.data {
+		keys = append(keys, c.keys()...)
 	}
 	res := []types.MatchData{}
 	for _, k := range keys {
@@ -99,11 +92,10 @@ func (c *CollectionTranslationProxy) Reset() {
 
 var _ Collection = &CollectionTranslationProxy{}
 
-func NewCollectionTranslationProxy(variable variables.RuleVariable, c1 *CollectionMap, c2 *CollectionMap) *CollectionTranslationProxy {
+func NewCollectionTranslationProxy(variable variables.RuleVariable, data ...*CollectionMap) *CollectionTranslationProxy {
 	return &CollectionTranslationProxy{
 		name:     variable.Name(),
 		variable: variable,
-		data1:    c1,
-		data2:    c2,
+		data:     data,
 	}
 }

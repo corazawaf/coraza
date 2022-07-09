@@ -532,6 +532,51 @@ func TestTxReqBodyForceNegative(t *testing.T) {
 	}
 }
 
+func TestTXProcessConnection(t *testing.T) {
+	waf := NewWaf()
+	tx := waf.NewTransaction(context.Background())
+	tx.ProcessConnection("127.0.0.1", 80, "127.0.0.2", 8080)
+	if tx.Variables.RemoteAddr.String() != "127.0.0.1" {
+		t.Error("failed to set client ip")
+	}
+	if tx.Variables.RemotePort.Int() != 80 {
+		t.Error("failed to set client port")
+	}
+}
+
+func TestTXGetField(t *testing.T) {
+	tx := makeTransaction()
+	rvp := ruleVariableParams{
+		Name:     "args",
+		Variable: variables.Args,
+	}
+	if f := tx.GetField(rvp); len(f) != 3 {
+		t.Errorf("failed to get field, expected 2, got %d", len(f))
+	}
+}
+
+func TestTXProcessURI(t *testing.T) {
+	waf := NewWaf()
+	tx := waf.NewTransaction(context.Background())
+	uri := "http://example.com/path/to/file.html?query=string&other=value"
+	tx.ProcessURI(uri, "GET", "HTTP/1.1")
+	if s := tx.Variables.RequestURI.String(); s != uri {
+		t.Errorf("failed to set request uri, got %s", s)
+	}
+	if s := tx.Variables.RequestBasename.String(); s != "file.html" {
+		t.Errorf("failed to set request path, got %s", s)
+	}
+	if tx.Variables.QueryString.String() != "query=string&other=value" {
+		t.Error("failed to set request query")
+	}
+	if v := tx.Variables.Args.FindAll(); len(v) != 2 {
+		t.Errorf("failed to set request args, got %d", len(v))
+	}
+	if v := tx.Variables.Args.FindString("other"); v[0].Value != "value" {
+		t.Errorf("failed to set request args, got %v", v)
+	}
+}
+
 func multipartRequest(req *http.Request) error {
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)

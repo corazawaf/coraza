@@ -93,11 +93,6 @@ func TestResponse(t *testing.T) {
 	if err := test.RunPhases(); err != nil {
 		t.Error(err)
 	}
-	/*
-		if s := test.Transaction().GetCollection(variables.ArgsPost).GetFirstString("someoutput"); s != "withvalue" {
-			t.Errorf("Expected someoutput=withvalue, got %s", s)
-		}
-	*/
 }
 
 func buildRequest(method, uri string) string {
