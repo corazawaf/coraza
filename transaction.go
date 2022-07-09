@@ -974,6 +974,7 @@ type TransactionVariables struct {
 	// Maps Variables
 	ArgsGet              *collection.CollectionMap
 	ArgsPost             *collection.CollectionMap
+	ArgsPath             *collection.CollectionMap
 	FilesTmpNames        *collection.CollectionMap
 	Geo                  *collection.CollectionMap
 	Files                *collection.CollectionMap

@@ -312,6 +312,8 @@ func (w *Waf) NewTransaction(ctx context.Context) *Transaction {
 	tx.Collections[variables.ArgsGet] = tx.Variables.ArgsGet
 	tx.Variables.ArgsPost = collection.NewCollectionMap(variables.ArgsPost)
 	tx.Collections[variables.ArgsPost] = tx.Variables.ArgsPost
+	tx.Variables.ArgsPath = collection.NewCollectionMap(variables.ArgsPath)
+	tx.Collections[variables.ArgsPath] = tx.Variables.ArgsPath
 	tx.Variables.FilesSizes = collection.NewCollectionMap(variables.FilesSizes)
 	tx.Collections[variables.FilesSizes] = tx.Variables.FilesSizes
 	tx.Variables.FilesTmpContent = collection.NewCollectionMap(variables.FilesTmpContent)
@@ -352,6 +354,7 @@ func (w *Waf) NewTransaction(ctx context.Context) *Transaction {
 		variables.Args,
 		tx.Variables.ArgsGet,
 		tx.Variables.ArgsPost,
+		tx.Variables.ArgsPath,
 	)
 	tx.Collections[variables.Args] = tx.Variables.Args
 
@@ -359,6 +362,7 @@ func (w *Waf) NewTransaction(ctx context.Context) *Transaction {
 		variables.ArgsNames,
 		tx.Variables.ArgsGet,
 		tx.Variables.ArgsPost,
+		tx.Variables.ArgsPath,
 	)
 	tx.Collections[variables.ArgsNames] = tx.Variables.ArgsNames
 	tx.Variables.ArgsGetNames = collection.NewCollectionTranslationProxy(
