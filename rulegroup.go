@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/corazawaf/coraza/v3/internal/utils/strings"
+	"github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 )
 

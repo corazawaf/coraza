@@ -31,7 +31,7 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/collection"
-	utils "github.com/corazawaf/coraza/v3/internal/utils/strings"
+	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )

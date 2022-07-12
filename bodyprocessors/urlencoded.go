@@ -19,8 +19,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3/bodyprocessors/internal/url"
 	"github.com/corazawaf/coraza/v3/collection"
-	utils "github.com/corazawaf/coraza/v3/internal/utils/url"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -28,14 +28,14 @@ import (
 type urlencodedBodyProcessor struct {
 }
 
-func (_ *urlencodedBodyProcessor) ProcessRequest(reader io.Reader, collections [types.VariablesCount]collection.Collection, options Options) error {
+func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, collections [types.VariablesCount]collection.Collection, options Options) error {
 	buf := new(strings.Builder)
 	if _, err := io.Copy(buf, reader); err != nil {
 		return err
 	}
 
 	b := buf.String()
-	values, err := utils.ParseQuery(b, "&")
+	values, err := url.ParseQuery(b, "&")
 	if err != nil {
 		col := (collections[variables.UrlencodedError]).(*collection.CollectionSimple)
 		col.Set(err.Error())
@@ -50,7 +50,7 @@ func (_ *urlencodedBodyProcessor) ProcessRequest(reader io.Reader, collections [
 	return nil
 }
 
-func (_ *urlencodedBodyProcessor) ProcessResponse(reader io.Reader, collection [types.VariablesCount]collection.Collection, options Options) error {
+func (*urlencodedBodyProcessor) ProcessResponse(reader io.Reader, collection [types.VariablesCount]collection.Collection, options Options) error {
 	return nil
 }
 

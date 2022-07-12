@@ -28,7 +28,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/collection"
-	utils "github.com/corazawaf/coraza/v3/internal/utils/strings"
+	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	url2 "github.com/corazawaf/coraza/v3/internal/utils/url"
 	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"

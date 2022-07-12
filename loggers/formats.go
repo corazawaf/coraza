@@ -36,7 +36,7 @@ import (
 	"fmt"
 	"strings"
 
-	utils "github.com/corazawaf/coraza/v3/internal/utils/strings"
+	utils "github.com/corazawaf/coraza/v3/internal/strings"
 )
 
 // Coraza format
