@@ -28,11 +28,11 @@ import (
 
 	"github.com/corazawaf/coraza/v3/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/collection"
+	utils "github.com/corazawaf/coraza/v3/internal/utils/strings"
+	url2 "github.com/corazawaf/coraza/v3/internal/utils/url"
 	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
-	utils "github.com/corazawaf/coraza/v3/utils/strings"
-	url2 "github.com/corazawaf/coraza/v3/utils/url"
 )
 
 // Transaction is created from a WAF instance to handle web requests and responses,

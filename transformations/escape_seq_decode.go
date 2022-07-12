@@ -17,7 +17,7 @@ package transformations
 import (
 	"strconv"
 
-	utils "github.com/corazawaf/coraza/v3/utils/strings"
+	utils "github.com/corazawaf/coraza/v3/internal/utils/strings"
 )
 
 func escapeSeqDecode(input string) (string, error) {

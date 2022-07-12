@@ -20,8 +20,8 @@ import (
 	"strings"
 	"testing"
 
+	utils "github.com/corazawaf/coraza/v3/internal/utils/strings"
 	"github.com/corazawaf/coraza/v3/types"
-	utils "github.com/corazawaf/coraza/v3/utils/strings"
 )
 
 func TestSerialLogger_Write(t *testing.T) {

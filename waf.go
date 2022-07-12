@@ -26,10 +26,10 @@ import (
 	"time"
 
 	"github.com/corazawaf/coraza/v3/collection"
+	utils "github.com/corazawaf/coraza/v3/internal/utils/strings"
 	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
-	utils "github.com/corazawaf/coraza/v3/utils/strings"
 )
 
 // Initializing pool for transactions
