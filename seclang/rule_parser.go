@@ -24,10 +24,10 @@ import (
 
 	"github.com/corazawaf/coraza/v3"
 	actionsmod "github.com/corazawaf/coraza/v3/actions"
+	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	operators "github.com/corazawaf/coraza/v3/operators"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
-	utils "github.com/corazawaf/coraza/v3/utils/strings"
 )
 
 const defaultActionsPhase2 = "phase:2,log,auditlog,pass"

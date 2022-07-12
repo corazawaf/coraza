@@ -31,9 +31,9 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/collection"
+	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
-	utils "github.com/corazawaf/coraza/v3/utils/strings"
 )
 
 var wafi = NewWaf()

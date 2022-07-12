@@ -19,8 +19,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/utils/strings"
 )
 
 // RuleGroup is a collection of rules

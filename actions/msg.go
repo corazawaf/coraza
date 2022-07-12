@@ -16,8 +16,8 @@ package actions
 
 import (
 	"github.com/corazawaf/coraza/v3"
+	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
-	utils "github.com/corazawaf/coraza/v3/utils/strings"
 )
 
 type msgFn struct {

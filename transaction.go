@@ -28,11 +28,11 @@ import (
 
 	"github.com/corazawaf/coraza/v3/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/collection"
+	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
+	urlutil "github.com/corazawaf/coraza/v3/internal/url"
 	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
-	utils "github.com/corazawaf/coraza/v3/utils/strings"
-	url2 "github.com/corazawaf/coraza/v3/utils/url"
 )
 
 // Transaction is created from a WAF instance to handle web requests and responses,
@@ -141,7 +141,7 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 		}
 	} else if keyl == "cookie" {
 		// Cookies use the same syntax as GET params but with semicolon (;) separator
-		values, err := url2.ParseQuery(value, ";")
+		values, err := urlutil.ParseQuery(value, ";")
 		if err != nil {
 			// if cookie parsing fails we create a urlencoded_error
 			// TODO maybe we should have another variable for this
@@ -487,7 +487,7 @@ func (tx *Transaction) ExtractArguments(orig string, uri string) {
 	if tx.Waf.ArgumentSeparator != "" {
 		sep = tx.Waf.ArgumentSeparator
 	}
-	data, err := url2.ParseQuery(uri, sep)
+	data, err := urlutil.ParseQuery(uri, sep)
 	// we create a URLENCODED_ERROR if we fail to parse the URL
 	if err != nil {
 		tx.Variables.UrlencodedError.Set(err.Error())
@@ -701,7 +701,7 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Int
 func (tx *Transaction) IsProcessableResponseBody() bool {
 	// TODO add more validations
 	ct := tx.Variables.ResponseContentType.String()
-	return utils.InSlice(ct, tx.Waf.ResponseBodyMimeTypes)
+	return stringsutil.InSlice(ct, tx.Waf.ResponseBodyMimeTypes)
 }
 
 // ProcessResponseBody Perform the request body (if any)
