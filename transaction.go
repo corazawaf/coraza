@@ -814,11 +814,11 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	}
 	rengine := tx.RuleEngine.String()
 
-	// al.Transaction.Request.Headers = tx.Variables.RequestHeaders).Data()
+	al.Transaction.Request.Headers = tx.Variables.RequestHeaders.Data()
 	al.Transaction.Request.Body = tx.Variables.RequestBody.String()
 	// TODO maybe change to:
 	// al.Transaction.Request.Body = tx.RequestBodyBuffer.String()
-	// al.Transaction.Response.Headers = tx.Variables.ResponseHeaders).Data()
+	al.Transaction.Response.Headers = tx.Variables.ResponseHeaders.Data()
 	al.Transaction.Response.Body = tx.Variables.ResponseBody.String()
 	al.Transaction.Producer = loggers.AuditTransactionProducer{
 		Connector:  tx.Waf.ProducerConnector,

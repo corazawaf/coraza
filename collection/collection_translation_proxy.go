@@ -90,6 +90,15 @@ func (c *CollectionTranslationProxy) Reset() {
 	// do nothing
 }
 
+func (c *CollectionTranslationProxy) Get(index int) string {
+	if index < len(c.data) {
+		if v := c.data[index].Get(""); len(v) > 0 {
+			return v[0]
+		}
+	}
+	return ""
+}
+
 var _ Collection = &CollectionTranslationProxy{}
 
 func NewCollectionTranslationProxy(variable variables.RuleVariable, data ...*CollectionMap) *CollectionTranslationProxy {

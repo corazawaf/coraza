@@ -16,7 +16,6 @@ package collection
 
 import (
 	"regexp"
-	"strings"
 
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -35,7 +34,7 @@ type CollectionMap struct {
 // Get returns a slice of strings for a key
 func (c *CollectionMap) Get(key string) []string {
 	values := []string{}
-	for _, a := range c.data[strings.ToLower(key)] {
+	for _, a := range c.data[key] {
 		values = append(values, a.Value)
 	}
 	return values
@@ -214,6 +213,18 @@ func (c *CollectionMap) Reset() {
 	c.data = map[string][]types.AnchoredVar{
 		"": {},
 	}
+}
+
+// Data returns all the data in the CollectionMap
+func (c *CollectionMap) Data() map[string][]string {
+	result := map[string][]string{}
+	for k, v := range c.data {
+		result[k] = []string{}
+		for _, a := range v {
+			result[k] = append(result[k], a.Value)
+		}
+	}
+	return result
 }
 
 var _ Collection = &CollectionMap{}

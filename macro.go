@@ -47,30 +47,28 @@ func (m *Macro) Expand(tx *Transaction) string {
 	for _, token := range m.tokens {
 		// now we place the in the index
 		if token.variable != nil {
-			if len(token.key) == 0 {
-				col, ok := (tx.Collections[*token.variable]).(*collection.CollectionSimple)
-				if !ok {
-					tx.Waf.Logger.Error("[%s] Macro: invalid collection type for %q", tx.ID, token.key)
+			switch col := tx.Collections[*token.variable].(type) {
+			case *collection.CollectionMap:
+				if c := col.Get(token.key); len(c) > 0 {
+					res.WriteString(c[0])
+				} else {
 					res.WriteString(token.text)
-					continue
 				}
+			case *collection.CollectionSimple:
 				res.WriteString(col.String())
-				continue
+			case *collection.CollectionProxy:
+				if c := col.Get(token.key); len(c) > 0 {
+					res.WriteString(c[0])
+				} else {
+					res.WriteString(token.text)
+				}
+			case *collection.CollectionTranslationProxy:
+				if c := col.Get(0); len(c) > 0 {
+					res.WriteString(c)
+				} else {
+					res.WriteString(token.text)
+				}
 			}
-
-			col, ok := (tx.Collections[*token.variable]).(*collection.CollectionMap)
-			if !ok {
-				tx.Waf.Logger.Error("[%s] Macro: invalid collection type for %q", tx.ID, token.key)
-				return m.original
-			}
-			// we get the key from the collection
-			// Get does not support regex
-			data := col.Get(token.key)
-			if len(data) == 0 {
-				res.WriteString(token.text)
-				continue
-			}
-			res.WriteString(data[0])
 		} else {
 			res.WriteString(token.text)
 		}

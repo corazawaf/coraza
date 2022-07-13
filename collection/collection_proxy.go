@@ -62,6 +62,15 @@ func (c *CollectionProxy) Name() string {
 	return c.name
 }
 
+// Get returns the data for the key
+func (c *CollectionProxy) Get(key string) []string {
+	res := []string{}
+	for _, c := range c.data {
+		res = append(res, c.Get(key)...)
+	}
+	return res
+}
+
 // Reset the current CollectionProxy
 func (c *CollectionProxy) Reset() {
 }

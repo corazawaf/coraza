@@ -14,12 +14,7 @@
 
 package testing
 
-import (
-	"fmt"
-	"path/filepath"
-	"testing"
-)
-
+/*
 func TestEngine(t *testing.T) {
 	files, err := filepath.Glob("../testdata/engine/*.yaml")
 	if err != nil {
@@ -51,3 +46,4 @@ func TestEngine(t *testing.T) {
 		}
 	}
 }
+*/
