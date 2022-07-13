@@ -324,8 +324,9 @@ type RuleOptions struct {
 	Data         string
 }
 
-// regex: "(?:[^"\\]|\\.)*"
-var r = regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
+// ruleTokenRegex splits the sections operator and actions.
+// e.g. &REQUEST_COOKIES_NAMES:'/^(?:phpMyAdminphp|MyAdmin_https)$/'|ARGS:test "id:3" => "id:3"
+var ruleTokenRegex = regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
 
 // ParseRule parses a rule from a string
 // The string must match the seclang format
@@ -357,7 +358,7 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 	actions := ""
 
 	if options.WithOperator {
-		matches := r.FindAllString(options.Data, -1)
+		matches := ruleTokenRegex.FindAllString(options.Data, -1)
 		if len(matches) == 0 {
 			return nil, fmt.Errorf("invalid rule with no transformation matches: %q", options.Data)
 		}
