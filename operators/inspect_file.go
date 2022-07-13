@@ -30,9 +30,7 @@ type inspectFile struct {
 }
 
 func (o *inspectFile) Init(options coraza.RuleOperatorOptions) error {
-	data := options.Arguments
-
-	o.path = data
+	o.path = options.Arguments
 	return nil
 }
 
