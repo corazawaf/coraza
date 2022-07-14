@@ -46,8 +46,8 @@ func TestDebug(t *testing.T) {
 	}
 	debug := test.String()
 	expected := []string{
-		"REQUEST_URI:\n-->/test",
-		"REQUEST_METHOD:\n-->OPTIONS",
+		"REQUEST_URI: /test",
+		"REQUEST_METHOD: OPTIONS",
 	}
 	for _, e := range expected {
 		if !strings.Contains(debug, e) {

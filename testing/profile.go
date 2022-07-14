@@ -58,14 +58,22 @@ type Profile struct {
 }
 
 type expectedOutput struct {
-	Headers           map[string]string `yaml:"headers,omitempty"`
-	Data              interface{}       `yaml:"data,omitempty"` // Accepts array or string
-	LogContains       string            `yaml:"log_contains,omitempty"`
-	NoLogContains     string            `yaml:"no_log_contains,omitempty"`
-	ExpectError       bool              `yaml:"expect_error,omitempty"`
-	TriggeredRules    []int             `yaml:"triggered_rules,omitempty"`
-	NonTriggeredRules []int             `yaml:"non_triggered_rules,omitempty"`
-	Status            interface{}       `yaml:"status,omitempty"`
+	Headers           map[string]string     `yaml:"headers,omitempty"`
+	Data              interface{}           `yaml:"data,omitempty"` // Accepts array or string
+	LogContains       string                `yaml:"log_contains,omitempty"`
+	NoLogContains     string                `yaml:"no_log_contains,omitempty"`
+	ExpectError       bool                  `yaml:"expect_error,omitempty"`
+	TriggeredRules    []int                 `yaml:"triggered_rules,omitempty"`
+	NonTriggeredRules []int                 `yaml:"non_triggered_rules,omitempty"`
+	Status            interface{}           `yaml:"status,omitempty"`
+	Interruption      *expectedInterruption `yaml:"interruption,omitempty"`
+}
+
+type expectedInterruption struct {
+	RuleID int    `yaml:"rule_id,omitempty"`
+	Action string `yaml:"action,omitempty"`
+	Status int    `yaml:"status,omitempty"`
+	Data   string `yaml:"data,omitempty"`
 }
 
 // TestList returns a list of tests created for a profile
