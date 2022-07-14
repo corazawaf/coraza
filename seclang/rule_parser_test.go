@@ -21,13 +21,25 @@ import (
 	"github.com/corazawaf/coraza/v3"
 )
 
-func TestMergeActions(t *testing.T) {
+func TestInvalidRule(t *testing.T) {
+	waf := coraza.NewWaf()
+	p, _ := NewParser(waf)
 
+	err := p.FromString("")
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	err = p.FromString("SecRule")
+	if err == nil {
+		t.Error("expected malformed rule error")
+	}
 }
 
 func TestVariables(t *testing.T) {
 	waf := coraza.NewWaf()
 	p, _ := NewParser(waf)
+
 	// single variable with key
 	err := p.FromString(`SecRule REQUEST_HEADERS:test "" "id:1"`)
 	if err != nil {

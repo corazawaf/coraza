@@ -327,11 +327,19 @@ type RuleOptions struct {
 	Data         string
 }
 
+// ruleTokenRegex splits the sections operator and actions.
+// e.g. &REQUEST_COOKIES_NAMES:'/^(?:phpMyAdminphp|MyAdmin_https)$/'|ARGS:test "id:3" => "id:3"
+var ruleTokenRegex = regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
+
 // ParseRule parses a rule from a string
 // The string must match the seclang format
 // In case WithOperator is false, the rule will be parsed without operator
 // This function is created for external plugin directives
 func ParseRule(options RuleOptions) (*coraza.Rule, error) {
+	if strings.Trim(options.Data, " ") == "" {
+		return nil, errors.New("empty rule")
+	}
+
 	var err error
 	rp := &RuleParser{
 		options:        options,
@@ -351,17 +359,19 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 		}
 	}
 	actions := ""
-	if options.WithOperator {
-		spl := strings.SplitN(options.Data, " ", 2)
-		vars := spl[0]
 
-		// regex: "(?:[^"\\]|\\.)*"
-		r := regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
-		matches := r.FindAllString(options.Data, -1)
+	if options.WithOperator {
+		matches := ruleTokenRegex.FindAllString(options.Data, -1)
+		if len(matches) == 0 {
+			return nil, fmt.Errorf("invalid rule with no transformation matches: %q", options.Data)
+		}
 		operator := utils.RemoveQuotes(matches[0])
 		if utils.InSlice(operator, disabledRuleOperators) {
 			return nil, fmt.Errorf("%s rule operator is disabled", operator)
 		}
+
+		rulePieces := strings.SplitN(options.Data, " ", 2)
+		vars := rulePieces[0]
 		err = rp.ParseVariables(vars)
 		if err != nil {
 			return nil, err

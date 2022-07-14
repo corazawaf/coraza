@@ -48,12 +48,14 @@ func (o *rbl) Evaluate(tx *coraza.Transaction, ipAddr string) bool {
 
 	defer func() {
 		cancel()
-		close(resC)
 	}()
 
 	addr := fmt.Sprintf("%s.%s", ipAddr, o.service)
 	captures := []string{}
 	go func(ctx context.Context) {
+		defer func() {
+			close(resC)
+		}()
 		res, err := o.resolver.LookupHost(ctx, addr)
 
 		if err != nil {
