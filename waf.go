@@ -368,13 +368,11 @@ func (w *Waf) NewTransaction(ctx context.Context) *Transaction {
 	tx.Variables.ArgsGetNames = collection.NewCollectionTranslationProxy(
 		variables.ArgsGetNames,
 		tx.Variables.ArgsGet,
-		nil,
 	)
 	tx.Collections[variables.ArgsGetNames] = tx.Variables.ArgsGetNames
 	tx.Variables.ArgsPostNames = collection.NewCollectionTranslationProxy(
 		variables.ArgsPostNames,
 		tx.Variables.ArgsPost,
-		nil,
 	)
 	tx.Collections[variables.ArgsPostNames] = tx.Variables.ArgsPostNames
 
