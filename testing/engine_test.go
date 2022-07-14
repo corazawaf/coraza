@@ -44,7 +44,7 @@ func TestDebug(t *testing.T) {
 	if err := test.RunPhases(); err != nil {
 		t.Error(err)
 	}
-	debug := test.String()
+	debug := test.transaction.Debug()
 	expected := []string{
 		"REQUEST_URI: /test",
 		"REQUEST_METHOD: OPTIONS",

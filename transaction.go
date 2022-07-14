@@ -656,7 +656,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	}
 	bodyprocessor, err := bodyprocessors.Get(rbp)
 	if err != nil {
-		tx.generateReqbodyError(err)
+		tx.generateReqbodyError(fmt.Errorf("Invalid body processor"))
 		tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.Interruption, nil
 	}
@@ -897,10 +897,59 @@ func (tx *Transaction) Clean() error {
 	return nil
 }
 
+// Debug will return a string with the transaction debug information
+func (tx *Transaction) Debug() string {
+	res := "\n\n----------------------- ERRORLOG ----------------------\n"
+	for _, mr := range tx.MatchedRules {
+		res += mr.ErrorLog(tx.Variables.ResponseStatus.Int())
+		res += "\n\n----------------------- MATCHDATA ---------------------\n"
+		for _, md := range mr.MatchedDatas {
+			res += fmt.Sprintf("%+v", md) + "\n"
+		}
+		res += "\n"
+	}
+
+	res += "\n------------------------ DEBUG ------------------------\n"
+	for v := byte(1); v < types.VariablesCount; v++ {
+		vr := variables.RuleVariable(v)
+		if vr.Name() == "UNKNOWN" {
+			continue
+		}
+		data := map[string][]string{}
+		switch col := tx.Collections[vr].(type) {
+		case *collection.CollectionSimple:
+			data[""] = []string{
+				col.String(),
+			}
+		case *collection.CollectionMap:
+			data = col.Data()
+		case *collection.CollectionProxy:
+			data = col.Data()
+		case *collection.CollectionTranslationProxy:
+			data[""] = col.Data()
+		}
+
+		if len(data) == 1 {
+			res += fmt.Sprintf("%s: ", vr.Name())
+		} else {
+			res += fmt.Sprintf("%s:\n", vr.Name())
+		}
+
+		for k, d := range data {
+			if k != "" {
+				res += fmt.Sprintf("    %s: %s\n", k, strings.Join(d, ","))
+			} else {
+				res += fmt.Sprintf("%s\n", strings.Join(d, ","))
+			}
+		}
+	}
+	return res
+}
+
 // generateReqbodyError generates all the error variables for the request body parser
 func (tx *Transaction) generateReqbodyError(err error) {
 	tx.Variables.ReqbodyError.Set("1")
-	tx.Variables.ReqbodyErrorMsg.Set(string(err.Error()))
+	tx.Variables.ReqbodyErrorMsg.Set(fmt.Sprintf("%s: %s", tx.Variables.ReqbodyProcessor.String(), err.Error()))
 	tx.Variables.ReqbodyProcessorError.Set("1")
 	tx.Variables.ReqbodyProcessorErrorMsg.Set(string(err.Error()))
 }
@@ -991,6 +1040,9 @@ type TransactionVariables struct {
 	ResponseHeadersNames *collection.CollectionMap
 	RequestHeadersNames  *collection.CollectionMap
 	RequestCookiesNames  *collection.CollectionMap
+	XML                  *collection.CollectionMap
+	RequestXML           *collection.CollectionMap
+	ResponseXML          *collection.CollectionMap
 	// Persistent variables
 	IP *collection.CollectionMap
 	// Translation Proxy Variables

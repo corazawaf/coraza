@@ -228,7 +228,7 @@ func TestAuditLogFields(t *testing.T) {
 }
 
 func TestRequestStruct(t *testing.T) {
-	req, _ := http.NewRequest("POST", "https://www.coraza.io/test", strings.NewReader("test=456"))
+	req, _ := http.NewRequest("POST", "https://www.io/test", strings.NewReader("test=456"))
 	waf := NewWaf()
 	tx := waf.NewTransaction(context.Background())
 	if _, err := tx.ProcessRequest(req); err != nil {
@@ -274,9 +274,9 @@ func TestRelevantAuditLogging(t *testing.T) {
 func TestLogCallback(t *testing.T) {
 	waf := NewWaf()
 	buffer := ""
-	waf.errorLogCb = func(mr types.MatchedRule) {
+	waf.SetErrorLogCb(func(mr types.MatchedRule) {
 		buffer = mr.ErrorLog(403)
-	}
+	})
 	tx := waf.NewTransaction(context.Background())
 	rule := NewRule()
 	tx.MatchRule(rule, []types.MatchData{
@@ -657,7 +657,10 @@ func makeTransaction() *Transaction {
 		"testfield=456",
 	}
 	data := strings.Join(ht, "\r\n")
-	_, _ = tx.ParseRequestReader(strings.NewReader(data))
+	_, err := tx.ParseRequestReader(strings.NewReader(data))
+	if err != nil {
+		panic(err)
+	}
 	return tx
 }
 
@@ -669,7 +672,11 @@ func validateMacroExpansion(tests map[string]string, tx *Transaction, t *testing
 		}
 		res := macro.Expand(tx)
 		if res != v {
-			t.Error("Failed set transaction for "+k+", expected "+v+", got "+res, "\n", string(debug.Stack()))
+			if testing.Verbose() {
+				fmt.Println(tx.Debug())
+				fmt.Println("===STACK===\n", string(debug.Stack())+"\n===STACK===")
+			}
+			t.Error("Failed set transaction for " + k + ", expected " + v + ", got " + res)
 		}
 	}
 }

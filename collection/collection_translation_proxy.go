@@ -80,6 +80,14 @@ func (c *CollectionTranslationProxy) FindAll() []types.MatchData {
 	return res
 }
 
+func (c *CollectionTranslationProxy) Data() []string {
+	res := []string{}
+	for _, c := range c.data {
+		res = append(res, c.keys()...)
+	}
+	return res
+}
+
 // Name returns the name for the current CollectionTranslationProxy
 func (c *CollectionTranslationProxy) Name() string {
 	return c.name

@@ -350,6 +350,13 @@ func (w *Waf) NewTransaction(ctx context.Context) *Transaction {
 	tx.Collections[variables.FilesTmpNames] = tx.Variables.FilesTmpNames
 	tx.Variables.RequestCookiesNames = collection.NewCollectionMap(variables.RequestCookiesNames)
 	tx.Collections[variables.RequestCookiesNames] = tx.Variables.RequestCookiesNames
+	tx.Variables.ResponseXML = collection.NewCollectionMap(variables.ResponseXML)
+	tx.Collections[variables.ResponseXML] = tx.Variables.ResponseXML
+	tx.Variables.RequestXML = collection.NewCollectionMap(variables.RequestXML)
+	tx.Collections[variables.RequestXML] = tx.Variables.RequestXML
+	// XML is a pointer to RequestXML
+	tx.Variables.XML = tx.Variables.RequestXML
+	tx.Collections[variables.XML] = tx.Variables.RequestXML
 	tx.Variables.Args = collection.NewCollectionProxy(
 		variables.Args,
 		tx.Variables.ArgsGet,

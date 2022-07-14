@@ -71,6 +71,17 @@ func (c *CollectionProxy) Get(key string) []string {
 	return res
 }
 
+// Data returns merged data from all CollectionMap
+func (c *CollectionProxy) Data() map[string][]string {
+	res := map[string][]string{}
+	for _, c := range c.data {
+		for k, v := range c.Data() {
+			res[k] = append(res[k], v...)
+		}
+	}
+	return res
+}
+
 // Reset the current CollectionProxy
 func (c *CollectionProxy) Reset() {
 }

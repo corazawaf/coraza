@@ -23,9 +23,6 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 // Test represents a unique transaction within
@@ -272,57 +269,6 @@ func (t *Test) LogContains(log string) bool {
 // Transaction returns the transaction
 func (t *Test) Transaction() *coraza.Transaction {
 	return t.transaction
-}
-
-// String returns a string representation of the test
-// for debugging
-func (t *Test) String() string {
-	tx := t.transaction
-	res := "\n\n----------------------- ERRORLOG ----------------------\n"
-	for _, mr := range tx.MatchedRules {
-		res += mr.ErrorLog(t.ResponseCode)
-		res += "\n\n----------------------- MATCHDATA ---------------------\n"
-		for _, md := range mr.MatchedDatas {
-			res += fmt.Sprintf("%+v", md) + "\n"
-		}
-		res += "\n"
-	}
-
-	res += "\n------------------------ DEBUG ------------------------\n"
-	for v := byte(1); v < types.VariablesCount; v++ {
-		vr := variables.RuleVariable(v)
-		if vr.Name() == "UNKNOWN" {
-			break
-		}
-		data := map[string][]string{}
-		switch col := tx.Collections[vr].(type) {
-		case *collection.CollectionSimple:
-			data[""] = []string{
-				col.String(),
-			}
-		case *collection.CollectionMap:
-			data = col.Data()
-		case *collection.CollectionProxy:
-			// data = col.Data()
-		case *collection.CollectionTranslationProxy:
-			// data = col.Data()
-		}
-
-		if len(data) == 1 {
-			res += fmt.Sprintf("%s: ", vr.Name())
-		} else {
-			res += fmt.Sprintf("%s:\n", vr.Name())
-		}
-
-		for k, d := range data {
-			if k != "" {
-				res += fmt.Sprintf("    %s: %s\n", k, strings.Join(d, ","))
-			} else {
-				res += fmt.Sprintf("%s\n", strings.Join(d, ","))
-			}
-		}
-	}
-	return res
 }
 
 // Request returns the raw request
