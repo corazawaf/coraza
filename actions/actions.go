@@ -60,6 +60,7 @@ func init() {
 	RegisterPlugin("pass", pass)
 	RegisterPlugin("phase", phase)
 	RegisterPlugin("prepend", prepend)
+	RegisterPlugin("redirect", redirect)
 	RegisterPlugin("rev", rev)
 	RegisterPlugin("setenv", setenv)
 	RegisterPlugin("setvar", setvar)
