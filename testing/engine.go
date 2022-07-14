@@ -22,16 +22,19 @@ import (
 	"strconv"
 	"strings"
 
-	engine "github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 // Test represents a unique transaction within
 // a WAF instance for a test case
 type Test struct {
 	// waf contains a waf instance pointer
-	waf *engine.Waf
+	waf *coraza.Waf
 	// transaction contains the current transaction
-	transaction *engine.Transaction
+	transaction *coraza.Transaction
 	magic       bool
 	Name        string
 	body        string
@@ -64,7 +67,7 @@ type Test struct {
 }
 
 // SetWaf sets the waf instance pointer
-func (t *Test) SetWaf(waf *engine.Waf) {
+func (t *Test) SetWaf(waf *coraza.Waf) {
 	t.waf = waf
 }
 
@@ -190,8 +193,38 @@ func (t *Test) RunPhases() error {
 	return nil
 }
 
-// OutputErrors returns a list of errors
-// that occurred during the test
+// OutputInterruptionErrors returns a list of errors
+// that occured when comparing the interruption result
+func (t *Test) OutputInterruptionErrors() []string {
+	var errors []string
+
+	if t.ExpectedOutput.Interruption != nil {
+		if t.ExpectedOutput.Interruption.Action != t.transaction.Interruption.Action {
+			errors = append(errors, fmt.Sprintf("Interruption.Action: expected: '%s', got: '%s'",
+				t.ExpectedOutput.Interruption.Action, t.transaction.Interruption.Action))
+		}
+
+		if t.ExpectedOutput.Interruption.Status != t.transaction.Interruption.Status {
+			errors = append(errors, fmt.Sprintf("Interruption.Status: expected: '%d', got: '%d'",
+				t.ExpectedOutput.Interruption.Status, t.transaction.Interruption.Status))
+		}
+
+		if t.ExpectedOutput.Interruption.Data != t.transaction.Interruption.Data {
+			errors = append(errors, fmt.Sprintf("Interruption.Data: expected: '%s', got: '%s'",
+				t.ExpectedOutput.Interruption.Data, t.transaction.Interruption.Data))
+		}
+
+		if t.ExpectedOutput.Interruption.RuleID != t.transaction.Interruption.RuleID {
+			errors = append(errors, fmt.Sprintf("Interruption.RuleID: expected: '%d', got: '%d'",
+				t.ExpectedOutput.Interruption.RuleID, t.transaction.Interruption.RuleID))
+		}
+	}
+
+	return errors
+}
+
+// OutputErrors returns a list of errors that occurred during
+// the test when comparing log and rule ids
 func (t *Test) OutputErrors() []string {
 	var errors []string
 	if lc := t.ExpectedOutput.LogContains; lc != "" {
@@ -237,7 +270,7 @@ func (t *Test) LogContains(log string) bool {
 }
 
 // Transaction returns the transaction
-func (t *Test) Transaction() *engine.Transaction {
+func (t *Test) Transaction() *coraza.Transaction {
 	return t.transaction
 }
 
@@ -245,14 +278,49 @@ func (t *Test) Transaction() *engine.Transaction {
 // for debugging
 func (t *Test) String() string {
 	tx := t.transaction
-	res := "\n======ERRORLOG======\n"
+	res := "\n\n----------------------- ERRORLOG ----------------------\n"
 	for _, mr := range tx.MatchedRules {
 		res += mr.ErrorLog(t.ResponseCode)
-		res += "======MatchData======\n"
+		res += "\n\n----------------------- MATCHDATA ---------------------\n"
 		for _, md := range mr.MatchedDatas {
 			res += fmt.Sprintf("%+v", md) + "\n"
 		}
 		res += "\n"
+	}
+
+	res += "\n------------------------ DEBUG ------------------------\n"
+	for v := byte(1); v < types.VariablesCount; v++ {
+		vr := variables.RuleVariable(v)
+		if vr.Name() == "UNKNOWN" {
+			break
+		}
+		data := map[string][]string{}
+		switch col := tx.Collections[vr].(type) {
+		case *collection.CollectionSimple:
+			data[""] = []string{
+				col.String(),
+			}
+		case *collection.CollectionMap:
+			data = col.Data()
+		case *collection.CollectionProxy:
+			// data = col.Data()
+		case *collection.CollectionTranslationProxy:
+			// data = col.Data()
+		}
+
+		if len(data) == 1 {
+			res += fmt.Sprintf("%s: ", vr.Name())
+		} else {
+			res += fmt.Sprintf("%s:\n", vr.Name())
+		}
+
+		for k, d := range data {
+			if k != "" {
+				res += fmt.Sprintf("    %s: %s\n", k, strings.Join(d, ","))
+			} else {
+				res += fmt.Sprintf("%s\n", strings.Join(d, ","))
+			}
+		}
 	}
 	return res
 }
@@ -271,7 +339,7 @@ func (t *Test) Request() string {
 }
 
 // NewTest creates a new test with default properties
-func NewTest(name string, waf *engine.Waf) *Test {
+func NewTest(name string, waf *coraza.Waf) *Test {
 	t := &Test{
 		Name:            name,
 		transaction:     waf.NewTransaction(context.Background()),

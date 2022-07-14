@@ -46,8 +46,8 @@ func TestDebug(t *testing.T) {
 	}
 	debug := test.String()
 	expected := []string{
-		"REQUEST_URI:\n-->/test",
-		"REQUEST_METHOD:\n-->OPTIONS",
+		"REQUEST_URI: /test",
+		"REQUEST_METHOD: OPTIONS",
 	}
 	for _, e := range expected {
 		if !strings.Contains(debug, e) {
@@ -93,6 +93,11 @@ func TestResponse(t *testing.T) {
 	if err := test.RunPhases(); err != nil {
 		t.Error(err)
 	}
+	/*
+		if s := test.Transaction().GetCollection(variables.ArgsPost).GetFirstString("someoutput"); s != "withvalue" {
+			t.Errorf("Expected someoutput=withvalue, got %s", s)
+		}
+	*/
 }
 
 func buildRequest(method, uri string) string {

@@ -38,16 +38,33 @@ func TestEngine(t *testing.T) {
 			t.Error(err)
 		}
 		for _, test := range tt {
-			if err := test.RunPhases(); err != nil {
-				t.Error(err)
-			}
-			for _, e := range test.OutputErrors() {
-				debug := ""
-				for _, mr := range test.transaction.MatchedRules {
-					debug += fmt.Sprintf(" %d", mr.Rule.ID)
+			testname := profile.Tests[0].Title
+
+			t.Run(testname, func(t *testing.T) {
+				if err := test.RunPhases(); err != nil {
+					t.Errorf("%s, ERROR: %s", test.Name, err)
 				}
-				t.Errorf("%s - %s: %s\nGot: %s\n%s\nREQUEST:\n%s", profile.Meta.Name, test.Name, e, debug, test.String(), test.Request())
-			}
+
+				for _, e := range test.OutputErrors() {
+					debug := ""
+					for _, mr := range test.transaction.MatchedRules {
+						debug += fmt.Sprintf(" %d", mr.Rule.ID)
+					}
+					if testing.Verbose() {
+						t.Errorf("\x1b[41m ERROR \x1b[0m: %s:%s: %s, got:%s\n%s\nREQUEST:\n%s", profile.Meta.Name, test.Name, e, debug, test.String(), test.Request())
+					} else {
+						t.Errorf("%s: ERROR: %s", test.Name, e)
+					}
+				}
+
+				for _, e := range test.OutputInterruptionErrors() {
+					if testing.Verbose() {
+						t.Errorf("\x1b[41m ERROR \x1b[0m: %s:%s: %s\n %s\nREQUEST:\n%s", profile.Meta.Name, test.Name, e, test.String(), test.Request())
+					} else {
+						t.Errorf("%s: ERROR: %s", test.Name, e)
+					}
+				}
+			})
 		}
 	}
 }

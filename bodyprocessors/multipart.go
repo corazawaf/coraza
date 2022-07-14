@@ -48,6 +48,7 @@ func (_ *multipartBodyProcessor) ProcessRequest(reader io.Reader, collections [t
 	fileSizesCol := (collections[variables.FilesSizes]).(*collection.CollectionMap)
 	postCol := (collections[variables.ArgsPost]).(*collection.CollectionMap)
 	filesCombinedSizeCol := (collections[variables.FilesCombinedSize]).(*collection.CollectionSimple)
+	filesNamesCol := (collections[variables.FilesNames]).(*collection.CollectionMap)
 	for {
 		p, err := mr.NextPart()
 		if err == io.EOF {
@@ -72,6 +73,7 @@ func (_ *multipartBodyProcessor) ProcessRequest(reader io.Reader, collections [t
 			filesCol.Add("", filename)
 			filesTmpNamesCol.Add("", temp.Name())
 			fileSizesCol.SetIndex(filename, 0, fmt.Sprintf("%d", sz))
+			filesNamesCol.Add("", p.FormName())
 		} else {
 			// if is a field
 			data, err := io.ReadAll(p)
