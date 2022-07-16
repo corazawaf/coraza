@@ -213,19 +213,6 @@ func (c *Collection) Name() string {
 	return c.name
 }
 
-// SetData replaces the data map with something else
-// Useful for persistent collections
-func (c *Collection) SetData(data map[string][]string) {
-	cdata := make(map[string][]types.AnchoredVar)
-	for k, vals := range data {
-		cdata[k] = []types.AnchoredVar{}
-		for _, v := range vals {
-			cdata[k] = append(cdata[k], types.AnchoredVar{Name: k, Value: v})
-		}
-	}
-	c.data = cdata
-}
-
 // Reset the current collection
 func (c *Collection) Reset() {
 	if len(c.data) == 1 && len(c.data[""]) == 0 {
