@@ -20,6 +20,7 @@
             - 2
             - 200
             - 20
+    -
       stage:
         input:
             uri: /test2.php?var=prepayloadpost
@@ -32,6 +33,7 @@
             - 1313
             - 20
           log_contains: 'found within ARGS:var: prepayloadpost'
+    -
       stage:
         input:
             uri: /test3.php
@@ -46,6 +48,7 @@
             - 1313
             - 21
           log_contains: 'FoundChain20 attacking.com in REQUEST_HEADERS:host'
+    -
       stage:
         input:
             uri: /test4.php
@@ -62,9 +65,9 @@
           log_contains: 'FoundSubChain21 REQUEST_HEADERS:Host in MATCHED_VARS_NAMES:REQUEST_HEADERS:Host'
   rules: |
     SecAction "id: 1, log, chain"
-      SecAction "chain"
-      SecAction "chain"
-      SecAction ""
+      SecAction "msg:'chain 2',chain"
+      SecAction "msg:'chain 3',chain"
+      SecAction "msg:'chain 4'"
       
     SecAction "id: 2, log, chain"
       SecAction "chain"

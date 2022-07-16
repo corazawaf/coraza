@@ -34,7 +34,14 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, collections [types
 	if err != nil {
 		return err
 	}
+	argsGetCol := (collections[variables.ArgsGet]).(*collection.CollectionMap)
 	for key, value := range data {
+		// TODO: This hack prevent GET variables from overriding POST variables
+		for k := range argsGetCol.Data() {
+			if k == key {
+				argsGetCol.Remove(k)
+			}
+		}
 		col.SetIndex(key, 0, value)
 	}
 	return nil

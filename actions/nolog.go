@@ -24,10 +24,12 @@ type nologFn struct {
 
 func (a *nologFn) Init(r *coraza.Rule, data string) error {
 	r.Log = false
+	r.Audit = false
 	return nil
 }
 
 func (a *nologFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+	r.Audit = false
 }
 
 func (a *nologFn) Type() types.RuleActionType {
