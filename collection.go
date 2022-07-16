@@ -243,7 +243,7 @@ func (c *Collection) Reset() {
 // NewCollection Creates a new collection
 func NewCollection(variable variables.RuleVariable) *Collection {
 	col := &Collection{
-		data:     map[string][]types.AnchoredVar{},
+		data:     make(map[string][]types.AnchoredVar),
 		name:     variable.Name(),
 		variable: variable,
 	}
