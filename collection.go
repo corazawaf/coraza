@@ -200,9 +200,9 @@ func (c *Collection) Remove(key string) {
 func (c *Collection) Data() map[string][]string {
 	cdata := make(map[string][]string, len(c.data))
 	for k, vals := range c.data {
-		cdata[k] = []string{}
-		for _, v := range vals {
-			cdata[k] = append(cdata[k], v.Value)
+		cdata[k] = make([]string, len(vals))
+		for i := range vals {
+			cdata[k][i] = vals[i].Value
 		}
 	}
 	return cdata
@@ -211,6 +211,20 @@ func (c *Collection) Data() map[string][]string {
 // Name returns the name for the current collection
 func (c *Collection) Name() string {
 	return c.name
+}
+
+// Deprecated: performance-consuming function
+// SetData replaces the data map with something else
+// Useful for persistent collections
+func (c *Collection) SetData(data map[string][]string) {
+	cdata := make(map[string][]types.AnchoredVar)
+	for k, vals := range data {
+		cdata[k] = []types.AnchoredVar{}
+		for _, v := range vals {
+			cdata[k] = append(cdata[k], types.AnchoredVar{Name: k, Value: v})
+		}
+	}
+	c.data = cdata
 }
 
 // Reset the current collection
