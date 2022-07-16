@@ -200,9 +200,8 @@ func (c *Collection) Remove(key string) {
 func (c *Collection) Data() map[string][]string {
 	cdata := make(map[string][]string, len(c.data))
 	for k, vals := range c.data {
-		cdata[k] = make([]string, len(vals))
-		for i := range vals {
-			cdata[k][i] = vals[i].Value
+		for _, v := range vals {
+			cdata[k] = append(cdata[k], v.Value)
 		}
 	}
 	return cdata
