@@ -39,11 +39,6 @@ type MatchData struct {
 	Data string
 }
 
-// // isNil is used to check whether the MatchData is empty
-func (m MatchData) isNil() bool {
-	return m == MatchData{}
-}
-
 // MatchedRule contains a list of macro expanded messages,
 // matched variables and a pointer to the rule
 type MatchedRule struct {
