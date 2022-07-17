@@ -84,8 +84,4 @@ func init() {
 	RegisterLogWriter("serial", func() LogWriter {
 		return &serialWriter{}
 	})
-
-	RegisterLogFormatter("json", jsonFormatter)
-	RegisterLogFormatter("jsonlegacy", legacyJSONFormatter)
-	RegisterLogFormatter("native", nativeFormatter)
 }

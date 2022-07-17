@@ -17,6 +17,8 @@ package loggers
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/corazawaf/coraza/v2/types"
 )
 
 /*
@@ -76,8 +78,38 @@ func TestLegacyFormatter(t *testing.T) {
 	}
 }
 
+func TestFlattenFormatter(t *testing.T) {
+	al := createAuditLog()
+	bts, err := flattenFormatter(al)
+	if err != nil {
+		t.Error(err)
+	}
+	data := map[string]interface{}{}
+	if err := json.Unmarshal(bts, &data); err != nil {
+		t.Error(err)
+	}
+
+	expected := map[string]interface{}{
+		"timestamp":                        float64(0),
+		"transaction.id":                   "123",
+		"transaction.request.uri":          "/test.php",
+		"transaction.request.method":       "GET",
+		"transaction.request.headers.some": "somedata",
+		"transaction.response.status":      float64(200),
+	}
+	for k, v := range expected {
+		if data[k] != v {
+			t.Errorf("failed to match flatten formatter, \ngot: %s\nexpected: %s", data[k], v)
+			if testing.Verbose() {
+				t.Logf("%#v", data)
+			}
+		}
+	}
+}
+
 func createAuditLog() *AuditLog {
 	return &AuditLog{
+		Parts: types.AuditLogParts([]types.AuditLogPart("ABCDEFGHIJKZ")),
 		Transaction: AuditTransaction{
 			Timestamp:     "02/Jan/2006:15:04:20 -0700",
 			UnixTimestamp: 0,

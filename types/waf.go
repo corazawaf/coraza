@@ -133,7 +133,7 @@ func ParseRequestBodyLimitAction(rbla string) (RequestBodyLimitAction, error) {
 	return -1, fmt.Errorf("invalid request body limit action: %s", rbla)
 }
 
-type auditLogPart byte
+type AuditLogPart byte
 
 // AuditLogParts represents the parts of the audit log
 // A: Audit log header (mandatory).
@@ -148,33 +148,72 @@ type auditLogPart byte
 // J: This part contains information about the files uploaded using multipart/form-data encoding.
 // K: This part contains a full list of every rule that matched (one per line)
 // Z: Final boundary, signifies the end of the entry (mandatory).
-type AuditLogParts []auditLogPart
+type AuditLogParts []AuditLogPart
+
+func (alp AuditLogParts) has(r rune) bool {
+	for _, p := range alp {
+		if p == AuditLogPart(r) {
+			return true
+		}
+	}
+	return false
+}
+
+// HasRequestHeaders returns true if the audit log contains the request headers
+func (alp AuditLogParts) HasRequestHeaders() bool {
+	return alp.has('B')
+}
+
+// HasRequestBody returns true if the audit log contains the request body
+func (alp AuditLogParts) HasRequestBody() bool {
+	return alp.has('C')
+}
+
+// HasFinalResponseHeaders returns true if the audit log contains the final response headers
+func (alp AuditLogParts) HasFinalResponseHeaders() bool {
+	return alp.has('F')
+}
+
+// HasAuditLogTrailer returns true if the audit log contains the audit log trailer
+func (alp AuditLogParts) HasAuditLogTrailer() bool {
+	return alp.has('H')
+}
+
+// HasFilesInfo returns true if the audit log contains the files info
+func (alp AuditLogParts) HasFilesInfo() bool {
+	return alp.has('J')
+}
+
+// HasRuleMatches returns true if the audit log contains the rule matches
+func (alp AuditLogParts) HasRuleMatches() bool {
+	return alp.has('K')
+}
 
 const (
 	// AuditLogPartAuditLogHeader is the mandatory header part
-	AuditLogPartAuditLogHeader auditLogPart = 'A'
+	AuditLogPartAuditLogHeader AuditLogPart = 'A'
 	// AuditLogPartRequestHeaders is the request headers part
-	AuditLogPartRequestHeaders auditLogPart = 'B'
+	AuditLogPartRequestHeaders AuditLogPart = 'B'
 	// AuditLogPartRequestBody is the request body part
-	AuditLogPartRequestBody auditLogPart = 'C'
+	AuditLogPartRequestBody AuditLogPart = 'C'
 	// AuditLogPartIntermediaryResponseHeaders is the intermediary response headers part
-	AuditLogPartIntermediaryResponseHeaders auditLogPart = 'D'
+	AuditLogPartIntermediaryResponseHeaders AuditLogPart = 'D'
 	// AuditLogPartIntermediaryResponseBody is the intermediary response body part
-	AuditLogPartIntermediaryResponseBody auditLogPart = 'E'
+	AuditLogPartIntermediaryResponseBody AuditLogPart = 'E'
 	// AuditLogPartResponseHeaders is the final response headers part
-	AuditLogPartResponseHeaders auditLogPart = 'F'
+	AuditLogPartResponseHeaders AuditLogPart = 'F'
 	// AuditLogPartResponseBody is the final response body part
-	AuditLogPartResponseBody auditLogPart = 'G'
+	AuditLogPartResponseBody AuditLogPart = 'G'
 	// AuditLogPartAuditLogTrailer is the audit log trailer part
-	AuditLogPartAuditLogTrailer auditLogPart = 'H'
+	AuditLogPartAuditLogTrailer AuditLogPart = 'H'
 	// AuditLogPartRequestBodyAlternative is the request body replaced part
-	AuditLogPartRequestBodyAlternative auditLogPart = 'I'
+	AuditLogPartRequestBodyAlternative AuditLogPart = 'I'
 	// AuditLogPartUploadedFiles is the uploaded files part
-	AuditLogPartUploadedFiles auditLogPart = 'J'
+	AuditLogPartUploadedFiles AuditLogPart = 'J'
 	// AuditLogPartRulesMatched is the matched rules part
-	AuditLogPartRulesMatched auditLogPart = 'K'
+	AuditLogPartRulesMatched AuditLogPart = 'K'
 	// AuditLogPartFinalBoundary is the mandatory final boundary part
-	AuditLogPartFinalBoundary auditLogPart = 'Z'
+	AuditLogPartFinalBoundary AuditLogPart = 'Z'
 )
 
 // Interruption is used to notify the Coraza implementation

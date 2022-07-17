@@ -151,8 +151,83 @@ func nativeFormatter(al *AuditLog) ([]byte, error) {
 	return []byte(data), nil
 }
 
+func flattenFormatter(al *AuditLog) ([]byte, error) {
+	res := map[string]interface{}{}
+	// Transaction
+	res["timestamp"] = al.Transaction.UnixTimestamp
+	res["transaction.id"] = al.Transaction.ID
+	res["transaction.client_ip"] = al.Transaction.ClientIP
+	res["transaction.client_port"] = al.Transaction.ClientPort
+	res["transaction.host_ip"] = al.Transaction.HostIP
+	res["transaction.host_port"] = al.Transaction.HostPort
+	res["transaction.server_id"] = al.Transaction.ServerID
+	res["transaction.request.method"] = al.Transaction.Request.Method
+	res["transaction.request.uri"] = al.Transaction.Request.URI
+	res["transaction.request.http_version"] = al.Transaction.Request.HTTPVersion
+	if al.Parts.HasRequestBody() {
+		res["transaction.request.body"] = al.Transaction.Request.Body
+	}
+	if al.Parts.HasRequestHeaders() {
+		flattenHeaders(al.Transaction.Request.Headers, res, "transaction.request.headers")
+	}
+	if al.Parts.HasFilesInfo() {
+		flattenFiles(al.Transaction.Request.Files, res)
+	}
+	res["transaction.response.status"] = al.Transaction.Response.Status
+	if al.Parts.HasFinalResponseHeaders() {
+		flattenHeaders(al.Transaction.Response.Headers, res, "transaction.response.headers")
+	}
+	if al.Parts.HasAuditLogTrailer() {
+		res["transaction.producer.connector"] = al.Transaction.Producer.Connector
+		res["transaction.producer.version"] = al.Transaction.Producer.Version
+		res["transaction.producer.server"] = al.Transaction.Producer.Server
+		res["transaction.producer.rule_engine"] = al.Transaction.Producer.RuleEngine
+		res["transaction.producer.stopwatch"] = al.Transaction.Producer.Stopwatch
+	}
+	if al.Parts.HasRuleMatches() {
+		for i, m := range al.Messages {
+			res[fmt.Sprintf("messages.%d.actionset", i)] = m.Actionset
+			res[fmt.Sprintf("messages.%d.message", i)] = m.Message
+			res[fmt.Sprintf("messages.%d.data.file", i)] = m.Data.File
+			res[fmt.Sprintf("messages.%d.data.line", i)] = m.Data.Line
+			res[fmt.Sprintf("messages.%d.data.id", i)] = m.Data.ID
+			res[fmt.Sprintf("messages.%d.data.rev", i)] = m.Data.Rev
+			res[fmt.Sprintf("messages.%d.data.msg", i)] = m.Data.Msg
+			res[fmt.Sprintf("messages.%d.data.data", i)] = m.Data.Data
+			res[fmt.Sprintf("messages.%d.data.severity", i)] = m.Data.Severity
+			res[fmt.Sprintf("messages.%d.data.ver", i)] = m.Data.Ver
+			res[fmt.Sprintf("messages.%d.data.maturity", i)] = m.Data.Maturity
+			res[fmt.Sprintf("messages.%d.data.accuracy", i)] = m.Data.Accuracy
+			res[fmt.Sprintf("messages.%d.data.tags", i)] = strings.Join(m.Data.Tags, ",")
+		}
+	}
+	return json.Marshal(res)
+}
+
+func flattenHeaders(m map[string][]string, out map[string]interface{}, prefix string) {
+	for k, vv := range m {
+		out[fmt.Sprintf("%s.%s", prefix, k)] = strings.Join(vv, ",")
+	}
+}
+
+func flattenFiles(m []AuditTransactionRequestFiles, out map[string]interface{}) {
+	for i, f := range m {
+		out[fmt.Sprintf("transaction.request.files.%d.name", i)] = f.Name
+		out[fmt.Sprintf("transaction.request.files.%d.size", i)] = f.Size
+		out[fmt.Sprintf("transaction.request.files.%d.mime", i)] = f.Mime
+	}
+}
+
 var (
 	_ LogFormatter = nativeFormatter
 	_ LogFormatter = jsonFormatter
 	_ LogFormatter = legacyJSONFormatter
+	_ LogFormatter = flattenFormatter
 )
+
+func init() {
+	RegisterLogFormatter("json", jsonFormatter)
+	RegisterLogFormatter("jsonlegacy", legacyJSONFormatter)
+	RegisterLogFormatter("native", nativeFormatter)
+	RegisterLogFormatter("flatten", flattenFormatter)
+}
