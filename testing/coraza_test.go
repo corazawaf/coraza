@@ -17,41 +17,48 @@ package testing
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
 func TestEngine(t *testing.T) {
 	files, err := filepath.Glob("../testdata/engine/*.yaml")
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+
 	if len(files) == 0 {
-		t.Error("failed to find test files")
+		t.Fatal("failed to find test files")
 	}
+
 	for _, f := range files {
 		profile, err := NewProfile(f)
 		if err != nil {
 			t.Error(err)
+			continue
 		}
+
 		tt, err := profile.TestList(nil)
 		if err != nil {
 			t.Error(err)
+			continue
 		}
-		for _, test := range tt {
+
+		for testKey, test := range tt {
 			testname := profile.Tests[0].Title
 
 			t.Run(testname, func(t *testing.T) {
 				if err := test.RunPhases(); err != nil {
-					t.Errorf("%s, ERROR: %s", test.Name, err)
+					t.Errorf("phase %s, ERROR: %s", test.Name, err)
 				}
 
 				for _, e := range test.OutputErrors() {
-					debug := ""
+					debugRules := make([]string, 0, len(test.transaction.MatchedRules))
 					for _, mr := range test.transaction.MatchedRules {
-						debug += fmt.Sprintf(" %d", mr.Rule.ID)
+						debugRules = append(debugRules, fmt.Sprintf("%d", mr.Rule.ID))
 					}
 					if testing.Verbose() {
-						t.Errorf("\x1b[41m ERROR \x1b[0m: %s:%s: %s, got:%s\n%s\nREQUEST:\n%s", profile.Meta.Name, test.Name, e, debug, test.transaction.Debug(), test.Request())
+						t.Errorf("\x1b[41m ERROR \x1b[0m: %s/%s[%d]: %s, matched rules: %s\n%s\nREQUEST:\n%s", profile.Meta.Name, test.Name, testKey, e, strings.Join(debugRules, ", "), test.transaction.Debug(), test.Request())
 					} else {
 						t.Errorf("%s: ERROR: %s", test.Name, e)
 					}
@@ -59,7 +66,7 @@ func TestEngine(t *testing.T) {
 
 				for _, e := range test.OutputInterruptionErrors() {
 					if testing.Verbose() {
-						t.Errorf("\x1b[41m ERROR \x1b[0m: %s:%s: %s\n %s\nREQUEST:\n%s", profile.Meta.Name, test.Name, e, test.transaction.Debug(), test.Request())
+						t.Errorf("\x1b[41m ERROR \x1b[0m: %s/%s[%d]: %s\n %s\nREQUEST:\n%s", profile.Meta.Name, test.Name, testKey, e, test.transaction.Debug(), test.Request())
 					} else {
 						t.Errorf("%s: ERROR: %s", test.Name, e)
 					}

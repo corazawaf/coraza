@@ -114,7 +114,11 @@ func (c *CollectionMap) keysRx(rx *regexp.Regexp) []string {
 }
 
 func (c *CollectionMap) keys() []string {
-	keys := []string{}
+	if c == nil {
+		return nil
+	}
+
+	keys := make([]string, 0, len(c.data))
 	for k := range c.data {
 		keys = append(keys, k)
 	}
