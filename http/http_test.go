@@ -25,13 +25,15 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3"
 )
 
 func TestRequestExtractionSuccess(t *testing.T) {
 	req, _ := http.NewRequest("POST", "https://www.coraza.io/test", strings.NewReader("test=456"))
-	waf := NewWaf()
+	waf := coraza.NewWaf()
 	tx := waf.NewTransaction(context.Background())
-	if _, err := tx.ProcessRequest(req); err != nil {
+	if _, err := ProcessRequest(tx, req); err != nil {
 		t.Fatal(err)
 	}
 	if tx.Variables.RequestMethod.String() != "POST" {
@@ -47,9 +49,9 @@ func TestProcessRequestMultipart(t *testing.T) {
 	if err := multipartRequest(req); err != nil {
 		t.Fatal(err)
 	}
-	tx := makeTransaction()
+	tx := makeTransaction(t)
 	tx.RequestBodyAccess = true
-	if _, err := tx.ProcessRequest(req); err != nil {
+	if _, err := ProcessRequest(tx, req); err != nil {
 		t.Fatal(err)
 	}
 	if req.Body == nil {
@@ -92,4 +94,23 @@ func multipartRequest(req *http.Request) error {
 	req.Header.Set("Content-Type", w.FormDataContentType())
 	req.Method = "POST"
 	return nil
+}
+
+func makeTransaction(t *testing.T) *coraza.Transaction {
+	t.Helper()
+	tx := coraza.NewWaf().NewTransaction(context.Background())
+	tx.RequestBodyAccess = true
+	ht := []string{
+		"POST /testurl.php?id=123&b=456 HTTP/1.1",
+		"Host: www.test.com:80",
+		"Cookie: test=123",
+		"Content-Type: application/x-www-form-urlencoded",
+		"X-Test-Header: test456",
+		"Content-Length: 13",
+		"",
+		"testfield=456",
+	}
+	data := strings.Join(ht, "\r\n")
+	_, _ = tx.ParseRequestReader(strings.NewReader(data))
+	return tx
 }
