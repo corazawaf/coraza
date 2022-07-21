@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3"
+	txhttp "github.com/corazawaf/coraza/v3/http"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -394,7 +395,7 @@ func TestDirectiveSecAuditLog(t *testing.T) {
 	if err != nil {
 		t.Errorf("Description HTTP request parsing failed")
 	}
-	_, err = tx.ProcessRequest(req)
+	_, err = txhttp.ProcessRequest(tx, req)
 	if err != nil {
 		t.Errorf("Failed to load the HTTP request")
 	}
