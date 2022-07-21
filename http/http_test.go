@@ -16,8 +16,13 @@ package http
 
 import (
 	"bufio"
+	"bytes"
 	"context"
+	"io"
+	"io/ioutil"
+	"mime/multipart"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 )
@@ -57,4 +62,34 @@ func TestProcessRequestMultipart(t *testing.T) {
 	if err := tx.Clean(); err != nil {
 		t.Error(err)
 	}
+}
+
+func multipartRequest(req *http.Request) error {
+	var b bytes.Buffer
+	w := multipart.NewWriter(&b)
+	tempfile, err := os.CreateTemp("/tmp", "tmpfile*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tempfile.Name())
+	for i := 0; i < 1024*5; i++ {
+		// this should create a 5mb file
+		if _, err := tempfile.Write([]byte(strings.Repeat("A", 1024))); err != nil {
+			return err
+		}
+	}
+	var fw io.Writer
+	if fw, err = w.CreateFormFile("fupload", tempfile.Name()); err != nil {
+		return err
+	}
+	if _, err := tempfile.Seek(0, 0); err != nil {
+		return err
+	}
+	if _, err = io.Copy(fw, tempfile); err != nil {
+		return err
+	}
+	req.Body = ioutil.NopCloser(&b)
+	req.Header.Set("Content-Type", w.FormDataContentType())
+	req.Method = "POST"
+	return nil
 }
