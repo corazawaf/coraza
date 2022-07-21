@@ -15,7 +15,6 @@
 package coraza
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -227,21 +226,6 @@ func TestAuditLogFields(t *testing.T) {
 	}
 }
 
-func TestRequestStruct(t *testing.T) {
-	req, _ := http.NewRequest("POST", "https://www.coraza.io/test", strings.NewReader("test=456"))
-	waf := NewWaf()
-	tx := waf.NewTransaction(context.Background())
-	if _, err := tx.ProcessRequest(req); err != nil {
-		t.Error(err)
-	}
-	if tx.Variables.RequestMethod.String() != "POST" {
-		t.Error("failed to set request from request object")
-	}
-	if err := tx.Clean(); err != nil {
-		t.Error(err)
-	}
-}
-
 func TestResetCapture(t *testing.T) {
 	tx := makeTransaction()
 	tx.Capture = true
@@ -411,28 +395,6 @@ func TestTxVariablesExceptions(t *testing.T) {
 
 func TestAuditLogMessages(t *testing.T) {
 
-}
-
-func TestProcessRequestMultipart(t *testing.T) {
-	req, _ := http.NewRequest("POST", "/some", nil)
-	if err := multipartRequest(req); err != nil {
-		t.Fatal(err)
-	}
-	tx := makeTransaction()
-	tx.RequestBodyAccess = true
-	if _, err := tx.ProcessRequest(req); err != nil {
-		t.Error(err)
-	}
-	if req.Body == nil {
-		t.Error("failed to process multipart request")
-	}
-	reader := bufio.NewReader(req.Body)
-	if _, err := reader.ReadString('\n'); err != nil {
-		t.Error("failed to read multipart request", err)
-	}
-	if err := tx.Clean(); err != nil {
-		t.Error(err)
-	}
 }
 
 func TestTransactionSyncPool(t *testing.T) {
