@@ -413,18 +413,15 @@ func TestTxPhase4Magic(t *testing.T) {
 	tx.AddResponseHeader("content-type", "text/html")
 	tx.ResponseBodyAccess = true
 	tx.Waf.ResponseBodyLimit = 3
-	if _, err := tx.ResponseBodyBuffer.Write([]byte("more bytes")); err != nil {
-		t.Error(err)
-	}
-	if _, err := tx.ProcessResponseBody(); err != nil {
-		t.Error(err)
-	}
-	if tx.GetCollection(variables.OutboundDataError).GetFirstString("") != "1" {
-		t.Error("failed to set outbound data error")
-	}
-	if tx.GetCollection(variables.ResponseBody).GetFirstString("") != "mor" {
-		t.Error("failed to set response body")
-	}
+
+	_, err := tx.ResponseBodyBuffer.Write([]byte("more bytes"))
+	require.NoError(t, err)
+
+	_, err = tx.ProcessResponseBody()
+	require.NoError(t, err)
+
+	assert.Equal(t, "1", tx.GetCollection(variables.OutboundDataError).GetFirstString(""), "failed to set outbound data error")
+	assert.Equal(t, "mor", tx.GetCollection(variables.ResponseBody).GetFirstString(""), "failed to set response body")
 }
 
 func TestVariablesMatch(t *testing.T) {
