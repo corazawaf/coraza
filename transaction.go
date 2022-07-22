@@ -248,7 +248,7 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 
 // matchVariable Creates the MATCHED_ variables required by chains and macro expansion
 // MATCHED_VARS, MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES
-func (tx *Transaction) matchVariable(match MatchData) {
+func (tx *Transaction) matchVariable(match *MatchData) {
 	varName := strings.Builder{}
 	varNamel := strings.Builder{}
 	varName.WriteString(match.VariableName)

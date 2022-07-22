@@ -161,7 +161,6 @@ RulesLoop:
 			// Skipping rule
 			continue
 		}
-		// TODO this lines are SUPER SLOW
 		// we reset matched_vars, matched_vars_names, etc
 		tx.GetCollection(variables.MatchedVars).Reset()
 		tx.GetCollection(variables.MatchedVarsNames).Reset()

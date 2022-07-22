@@ -472,7 +472,7 @@ func TestTxPhase4Magic(t *testing.T) {
 func TestVariablesMatch(t *testing.T) {
 	waf := NewWaf()
 	tx := waf.NewTransaction()
-	tx.matchVariable(MatchData{
+	tx.matchVariable(&MatchData{
 		VariableName: "ARGS_NAMES",
 		Variable:     variables.ArgsNames,
 		Key:          "sample",
