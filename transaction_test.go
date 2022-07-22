@@ -269,8 +269,8 @@ func TestLogCallback(t *testing.T) {
 		},
 	})
 	require.Empty(t, buffer)
-	//require.NotEmpty(t, buffer)
-	//require.Contains(t, buffer, tx.ID, "failed to call error log callback")
+	// require.NotEmpty(t, buffer)
+	// require.Contains(t, buffer, tx.ID, "failed to call error log callback")
 	require.NoError(t, tx.Clean())
 }
 
