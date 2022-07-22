@@ -570,7 +570,6 @@ func validateMacroExpansion(t *testing.T, tests map[string]string, tx *Transacti
 		macro, err := NewMacro(k)
 		assert.NoError(t, err)
 		res := macro.Expand(tx)
-		assert.Equalf(t, v, res,
-			"failed set transaction for %q, expected %q, got %s\n\n%s", k, v, res, string(debug.Stack()))
+		assert.Equalf(t, v, res, "failed set transaction for %q\n\n%s", k, string(debug.Stack()))
 	}
 }
