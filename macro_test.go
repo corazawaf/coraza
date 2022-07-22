@@ -21,7 +21,7 @@ import (
 )
 
 func TestMacro(t *testing.T) {
-	tx := makeTransaction()
+	tx := makeTransaction(t)
 	tx.GetCollection(variables.TX).Set("some", []string{"secretly"})
 	macro, err := NewMacro("%{unique_id}")
 	if err != nil {
