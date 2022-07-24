@@ -10,8 +10,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"runtime"
-	"runtime/pprof"
 	"strings"
 	"testing"
 
@@ -36,15 +34,6 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	go func() {
-		// we setup pprof
-		f, _ := os.Create("/tmp/profile.pb.gz")
-		defer f.Close()
-		runtime.GC()
-		if err := pprof.WriteHeapProfile(f); err != nil {
-			panic(err)
-		}
-	}()
 }
 
 func BenchmarkCRSCompilation(b *testing.B) {
