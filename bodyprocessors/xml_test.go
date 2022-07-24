@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v2/utils/strings"
+	"github.com/stretchr/testify/require"
 )
 
 func TestXMLAttribures(t *testing.T) {
@@ -37,9 +38,7 @@ func TestXMLAttribures(t *testing.T) {
 
 </bookstore>`
 	attrs, contents, err := readXML(bytes.NewReader([]byte(xmldoc)))
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	if len(attrs) != 3 {
 		t.Errorf("Expected 3 attributes, got %d", len(attrs))
 	}

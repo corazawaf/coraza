@@ -17,6 +17,8 @@ package loggers
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 /*
@@ -57,9 +59,7 @@ func TestModsecBoundary(t *testing.T) {
 func TestLegacyFormatter(t *testing.T) {
 	al := createAuditLog()
 	data, err := legacyJSONFormatter(al)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	var legacyAl auditLogLegacy
 	if err := json.Unmarshal(data, &legacyAl); err != nil {
 		t.Error(err)
