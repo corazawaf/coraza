@@ -15,15 +15,8 @@
 package coraza
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"mime/multipart"
-	"net/http"
-	"os"
 	"regexp"
 	"runtime/debug"
 	"strconv"
@@ -227,21 +220,6 @@ func TestAuditLogFields(t *testing.T) {
 	}
 }
 
-func TestRequestStruct(t *testing.T) {
-	req, _ := http.NewRequest("POST", "https://www.io/test", strings.NewReader("test=456"))
-	waf := NewWaf()
-	tx := waf.NewTransaction(context.Background())
-	if _, err := tx.ProcessRequest(req); err != nil {
-		t.Error(err)
-	}
-	if tx.Variables.RequestMethod.String() != "POST" {
-		t.Error("failed to set request from request object")
-	}
-	if err := tx.Clean(); err != nil {
-		t.Error(err)
-	}
-}
-
 func TestResetCapture(t *testing.T) {
 	tx := makeTransaction()
 	tx.Capture = true
@@ -413,28 +391,6 @@ func TestAuditLogMessages(t *testing.T) {
 
 }
 
-func TestProcessRequestMultipart(t *testing.T) {
-	req, _ := http.NewRequest("POST", "/some", nil)
-	if err := multipartRequest(req); err != nil {
-		t.Fatal(err)
-	}
-	tx := makeTransaction()
-	tx.RequestBodyAccess = true
-	if _, err := tx.ProcessRequest(req); err != nil {
-		t.Error(err)
-	}
-	if req.Body == nil {
-		t.Error("failed to process multipart request")
-	}
-	reader := bufio.NewReader(req.Body)
-	if _, err := reader.ReadString('\n'); err != nil {
-		t.Error("failed to read multipart request", err)
-	}
-	if err := tx.Clean(); err != nil {
-		t.Error(err)
-	}
-}
-
 func TestTransactionSyncPool(t *testing.T) {
 	waf := NewWaf()
 	tx := waf.NewTransaction(context.Background())
@@ -575,36 +531,6 @@ func TestTXProcessURI(t *testing.T) {
 	if v := tx.Variables.Args.FindString("other"); v[0].Value != "value" {
 		t.Errorf("failed to set request args, got %v", v)
 	}
-}
-
-func multipartRequest(req *http.Request) error {
-	var b bytes.Buffer
-	w := multipart.NewWriter(&b)
-	tempfile, err := os.CreateTemp("/tmp", "tmpfile*")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tempfile.Name())
-	for i := 0; i < 1024*5; i++ {
-		// this should create a 5mb file
-		if _, err := tempfile.Write([]byte(strings.Repeat("A", 1024))); err != nil {
-			return err
-		}
-	}
-	var fw io.Writer
-	if fw, err = w.CreateFormFile("fupload", tempfile.Name()); err != nil {
-		return err
-	}
-	if _, err := tempfile.Seek(0, 0); err != nil {
-		return err
-	}
-	if _, err = io.Copy(fw, tempfile); err != nil {
-		return err
-	}
-	req.Body = ioutil.NopCloser(&b)
-	req.Header.Set("Content-Type", w.FormDataContentType())
-	req.Method = "POST"
-	return nil
 }
 
 func BenchmarkTransactionCreation(b *testing.B) {
