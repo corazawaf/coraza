@@ -49,7 +49,7 @@ func init() {
 
 func BenchmarkCRSCompilation(b *testing.B) {
 	files := []string{
-		"../../coraza.conf-recommended",
+		"../coraza.conf-recommended",
 		path.Join(crspath, "crs-setup.conf.example"),
 		path.Join(crspath, "rules/", "*.conf"),
 	}
@@ -129,7 +129,7 @@ func BenchmarkCRSSimplePOST(b *testing.B) {
 
 func crsWAF() (*coraza.Waf, error) {
 	files := []string{
-		"../../coraza.conf-recommended",
+		"../coraza.conf-recommended",
 		path.Join(crspath, "crs-setup.conf.example"),
 		path.Join(crspath, "rules/", "*.conf"),
 	}
