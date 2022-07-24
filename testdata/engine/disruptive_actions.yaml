@@ -229,3 +229,4 @@
 
     SecDefaultAction phase:2,deny,status:501,log,logdata:'WOOOP_BLOCKED_BY_CORAZA_TEST'
     SecRule REQUEST_URI "/default/block" "id:103,block"
+    

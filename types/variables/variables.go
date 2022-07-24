@@ -218,8 +218,6 @@ const (
 	TX
 	// Rule contains rule metadata
 	Rule
-	// XML provides minimal XPATH support
-	XML
 	// JSON does not provide any data, might be removed
 	JSON
 	// Env contains the process environment variables
@@ -231,6 +229,12 @@ const (
 	UrlencodedError
 	// ResponseArgs contains the response parsed arguments
 	ResponseArgs
+	// ResponseXML contains the response parsed XML
+	ResponseXML
+	// RequestXML contains the request parsed XML
+	RequestXML
+	// XML is a pointer to ResponseXML
+	XML
 )
 
 var rulemap = map[RuleVariable]string{
@@ -322,6 +326,9 @@ var rulemap = map[RuleVariable]string{
 	JSON:                          "JSON",
 	Env:                           "ENV",
 	IP:                            "IP",
+	RequestXML:                    "REQUEST_XML",
+	ResponseXML:                   "RESPONSE_XML",
+	ResponseArgs:                  "RESPONSE_ARGS",
 }
 
 var rulemapRev = map[string]RuleVariable{}

@@ -34,11 +34,8 @@ func TestVariableToName(t *testing.T) {
 	}
 	for i := 0; i < len(rulemap); i++ {
 		v := RuleVariable(i)
-		if v.Name() != rulemap[v] {
-			t.Error("failed to test variable " + v.Name())
-		}
-		if rulemapRev[v.Name()] != v {
-			t.Error("failed to test variable " + v.Name())
+		if v.Name() != rulemap[v] || rulemapRev[v.Name()] != v {
+			t.Errorf("failed to test variable %s (%d)", v.Name(), v)
 		}
 	}
 }

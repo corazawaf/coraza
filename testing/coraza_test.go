@@ -51,7 +51,7 @@ func TestEngine(t *testing.T) {
 						debug += fmt.Sprintf(" %d", mr.Rule.ID)
 					}
 					if testing.Verbose() {
-						t.Errorf("\x1b[41m ERROR \x1b[0m: %s:%s: %s, got:%s\n%s\nREQUEST:\n%s", profile.Meta.Name, test.Name, e, debug, test.String(), test.Request())
+						t.Errorf("\x1b[41m ERROR \x1b[0m: %s:%s: %s, got:%s\n%s\nREQUEST:\n%s", profile.Meta.Name, test.Name, e, debug, test.transaction.Debug(), test.Request())
 					} else {
 						t.Errorf("%s: ERROR: %s", test.Name, e)
 					}
@@ -59,7 +59,7 @@ func TestEngine(t *testing.T) {
 
 				for _, e := range test.OutputInterruptionErrors() {
 					if testing.Verbose() {
-						t.Errorf("\x1b[41m ERROR \x1b[0m: %s:%s: %s\n %s\nREQUEST:\n%s", profile.Meta.Name, test.Name, e, test.String(), test.Request())
+						t.Errorf("\x1b[41m ERROR \x1b[0m: %s:%s: %s\n %s\nREQUEST:\n%s", profile.Meta.Name, test.Name, e, test.transaction.Debug(), test.Request())
 					} else {
 						t.Errorf("%s: ERROR: %s", test.Name, e)
 					}

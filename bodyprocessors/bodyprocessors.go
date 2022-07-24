@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"strings"
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/types"
@@ -62,7 +63,7 @@ func Register(name string, fn func() BodyProcessor) {
 // Get returns a body processor by name
 // If the body processor is not found, it returns an error
 func Get(name string) (BodyProcessor, error) {
-	if fn, ok := processors[name]; ok {
+	if fn, ok := processors[strings.ToLower(name)]; ok {
 		return fn(), nil
 	}
 	return nil, fmt.Errorf("invalid bodyprocessor %q", name)
