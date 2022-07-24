@@ -17,40 +17,49 @@ package operators
 import (
 	"strings"
 
-	"github.com/cloudflare/ahocorasick"
 	"github.com/corazawaf/coraza/v3"
+	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
 )
 
 // TODO according to coraza researchs, re2 matching is faster than ahocorasick
 // maybe we should switch in the future
 // pm is always lowercase
 type pm struct {
-	matcher *ahocorasick.Matcher
-	// dict is used for capturing
-	dict []string
+	matcher ahocorasick.AhoCorasick
 }
 
 func (o *pm) Init(options coraza.RuleOperatorOptions) error {
 	data := options.Arguments
 
 	data = strings.ToLower(data)
-	o.dict = strings.Split(data, " ")
-	o.matcher = ahocorasick.NewStringMatcher(o.dict)
+	dict := strings.Split(data, " ")
+	builder := ahocorasick.NewAhoCorasickBuilder(ahocorasick.Opts{
+		AsciiCaseInsensitive: true,
+		MatchOnlyWholeWords:  false,
+		MatchKind:            ahocorasick.LeftMostLongestMatch,
+		DFA:                  true,
+	})
+
 	// TODO this operator is supposed to support snort data syntax: "@pm A|42|C|44|F"
-	// TODO modsecurity uses mutex to queue ahocorasick, maybe its for a reason...
+	o.matcher = builder.Build(dict)
 	return nil
 }
 
 func (o *pm) Evaluate(tx *coraza.Transaction, value string) bool {
-	value = strings.ToLower(value)
-	matches := o.matcher.MatchThreadSafe([]byte(value))
-	for i := 0; i < len(matches); i++ {
-		if i == 10 {
-			return true
+	if tx.Capture {
+		matches := o.matcher.FindAll(value)
+		for i, match := range matches {
+			if i == 10 {
+				return true
+			}
+			tx.CaptureField(i, value[match.Start():match.End()])
 		}
-		tx.CaptureField(i, o.dict[matches[i]])
+		return len(matches) > 0
+	} else {
+		iter := o.matcher.Iter(value)
+		next := iter.Next()
+		return next != nil
 	}
-	return len(matches) > 0
 }
 
 var _ coraza.RuleOperator = (*pm)(nil)

@@ -1,5 +1,3 @@
-github.com/cloudflare/ahocorasick v0.0.0-20210425175752-730270c3e184 h1:8yL+85JpbwrIc6m+7N1iYrjn/22z68jwrTIBOJHNe4k=
-github.com/cloudflare/ahocorasick v0.0.0-20210425175752-730270c3e184/go.mod h1:tGWUZLZp9ajsxUOnHmFFLnqnlKXsCn6GReG4jAD59H0=
 github.com/corazawaf/libinjection-go v0.0.0-20220207031228-44e9c4250eb5 h1:SukhxLQRRBM3nJFEUF+ePG7l0JTWAvaxaG/o6X/FQVY=
 github.com/corazawaf/libinjection-go v0.0.0-20220207031228-44e9c4250eb5/go.mod h1:OP4TM7xdJ2skyXqNX1AN1wN5nNZEmJNuWbNPOItn7aw=
 github.com/foxcpp/go-mockdns v1.0.0 h1:7jBqxd3WDWwi/6WhDvacvH1XsN3rOLXyHM1uhvIx6FI=
@@ -11,6 +9,8 @@ github.com/kr/text v0.1.0 h1:45sCR5RtlFHMR4UwH9sdQ5TC8v0qDQCHnXt+kaKSTVE=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
 github.com/miekg/dns v1.1.25 h1:dFwPR6SfLtrSwgDcIq2bcU/gVutB4sNApq2HBdqcakg=
 github.com/miekg/dns v1.1.25/go.mod h1:bPDLeHnStXmXAq1m/Ch/hvfNHr14JKNPMBo3VZKjuso=
+github.com/petar-dambovaliev/aho-corasick v0.0.0-20211021192214-5ab2d9280aa9 h1:lL+y4Xv20pVlCGyLzNHRC0I0rIHhIL1lTvHizoS/dU8=
+github.com/petar-dambovaliev/aho-corasick v0.0.0-20211021192214-5ab2d9280aa9/go.mod h1:EHPiTAKtiFmrMldLUNswFwfZ2eJIYBHktdaUTZxYWRw=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20190923035154-9ee001bba392/go.mod h1:/lpIB1dKB+9EgE3H3cr1v9wB50oz8l4C4h62xy7jSTY=
 golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550 h1:ObdrDkeb4kJdCP557AjRjq69pTHfNouLtWZG7j9rPN8=
