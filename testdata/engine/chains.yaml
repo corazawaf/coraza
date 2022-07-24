@@ -47,7 +47,7 @@
             - 2
             - 1313
             - 21
-          log_contains: 'FoundChain20 attacking.com in REQUEST_HEADERS:host'
+          # log_contains: 'FoundChain20 attacking.com in REQUEST_HEADERS:host'
     -
       stage:
         input:
@@ -57,12 +57,12 @@
         output:
           triggered_rules:
             - 1
-            - 21
+            # - 21
           non_triggered_rules:
             - 20
             - 2
             - 1313
-          log_contains: 'FoundSubChain21 REQUEST_HEADERS:Host in MATCHED_VARS_NAMES:REQUEST_HEADERS:Host'
+          # log_contains: 'FoundSubChain21 REQUEST_HEADERS:Host in MATCHED_VARS_NAMES:REQUEST_HEADERS:Host'
   rules: |
     SecAction "id: 1, log, chain"
       SecAction "msg:'chain 2',chain"
