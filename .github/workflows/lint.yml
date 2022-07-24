@@ -1,4 +1,4 @@
-name: lint (pre-commit)
+name: Lint (pre-commit)
 
 on:
   pull_request:
