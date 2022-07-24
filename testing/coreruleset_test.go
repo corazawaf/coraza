@@ -1,4 +1,4 @@
-package benchmarks_test
+package testing
 
 import (
 	"archive/zip"
