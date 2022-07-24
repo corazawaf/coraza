@@ -246,13 +246,12 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		zap.String("event", "FINISH_RULE"),
 		zap.Bool("is_chain", r.ParentID != 0),
 	)
-	tx.GetCollection(variables.Rule).SetData(map[string][]string{
-		"id":       {strconv.Itoa(rid)},
-		"msg":      {r.Msg.String()},
-		"rev":      {r.Rev},
-		"logdata":  {r.LogData.String()},
-		"severity": {r.Severity.String()},
-	})
+	metaRule := tx.GetCollection(variables.Rule)
+	metaRule.Set("id", []string{strconv.Itoa(rid)})
+	metaRule.Set("msg", []string{r.Msg.String()})
+	metaRule.Set("rev", []string{r.Rev})
+	metaRule.Set("logdata", []string{r.LogData.String()})
+	metaRule.Set("severity", []string{r.Severity.String()})
 	// SecMark and SecAction uses nil operator
 	if r.operator == nil {
 		tx.Waf.Logger.Debug("Forcing rule match", zap.String("txid", tx.ID),
@@ -261,7 +260,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		)
 		md := MatchData{}
 		matchedValues = append(matchedValues, md)
-		r.matchVariable(tx, md)
+		r.matchVariable(tx, &md)
 	} else {
 		ecol := tx.ruleRemoveTargetByID[r.ID]
 		for _, v := range r.variables {
@@ -321,7 +320,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 							Value:        carg,
 						}
 						// Set the txn variables for expansions before usage
-						r.matchVariable(tx, mr)
+						r.matchVariable(tx, &mr)
 
 						mr.Message = r.Msg.Expand(tx)
 						mr.Data = r.LogData.Expand(tx)
@@ -381,12 +380,12 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	return matchedValues
 }
 
-func (r *Rule) matchVariable(tx *Transaction, m MatchData) {
+func (r *Rule) matchVariable(tx *Transaction, m *MatchData) {
 	rid := r.ID
 	if rid == 0 {
 		rid = r.ParentID
 	}
-	if !m.isNil() {
+	if m != nil {
 		tx.Waf.Logger.Debug("Matching value", zap.String("txid", tx.ID),
 			zap.Int("rule", rid),
 			zap.String("event", "EVALUATE_RULE_OPERATOR"),
@@ -441,28 +440,28 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 }
 
 // AddVariableNegation adds an exception to a variable
-// It returns an error if the variable is not used or
-// the selector is empty, for example:
+// It passes through if the variable is not used
+// It returns an error if the selector is empty,
+// or applied on an undefined rule
+// for example:
 // OK: SecRule ARGS|!ARGS:id "..."
-// ERROR: SecRule !ARGS:id "..."
+// OK: SecRule !ARGS:id "..."
 // ERROR: SecRule !ARGS: "..."
 func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
-	counter := 0
 	var re *regexp.Regexp
 	if len(key) > 2 && key[0] == '/' && key[len(key)-1] == '/' {
 		key = key[1 : len(key)-1]
 		re = regexp.MustCompile(key)
 	}
-
+	// Prevent sigsev
+	if r == nil {
+		return fmt.Errorf("cannot create a variable exception for an undefined rule")
+	}
 	for i, rv := range r.variables {
 		if rv.Variable == v {
 			rv.Exceptions = append(rv.Exceptions, ruleVariableException{strings.ToLower(key), re})
 			r.variables[i] = rv
-			counter++
 		}
-	}
-	if counter == 0 {
-		return fmt.Errorf("cannot create a variable exception is the variable %q is not used", v.Name())
 	}
 	return nil
 }

@@ -155,7 +155,7 @@ func (c *Collection) AddUnique(key string, value string) {
 // internally converts [] string to []types.AnchoredVar
 // with case sensitive vKey
 func (c *Collection) SetCS(key string, vKey string, values []string) {
-	c.data[key] = []types.AnchoredVar{}
+	c.data[key] = c.data[key][0:0]
 	for _, v := range values {
 		c.data[key] = append(c.data[key],
 			types.AnchoredVar{Name: vKey, Value: v})
@@ -198,9 +198,8 @@ func (c *Collection) Remove(key string) {
 
 // Data returns the stored data
 func (c *Collection) Data() map[string][]string {
-	cdata := make(map[string][]string)
+	cdata := make(map[string][]string, len(c.data))
 	for k, vals := range c.data {
-		cdata[k] = []string{}
 		for _, v := range vals {
 			cdata[k] = append(cdata[k], v.Value)
 		}
@@ -213,6 +212,7 @@ func (c *Collection) Name() string {
 	return c.name
 }
 
+// Deprecated: performance-consuming function
 // SetData replaces the data map with something else
 // Useful for persistent collections
 func (c *Collection) SetData(data map[string][]string) {
@@ -228,20 +228,21 @@ func (c *Collection) SetData(data map[string][]string) {
 
 // Reset the current collection
 func (c *Collection) Reset() {
-	// we don't reset the collection if it wasn't used, for performance reasons
 	if len(c.data) == 1 && len(c.data[""]) == 0 {
 		return
 	}
-	c.data = nil
-	c.data = map[string][]types.AnchoredVar{
-		"": {},
+
+	// compiler will use mapclear to optimize
+	for k := range c.data {
+		delete(c.data, k)
 	}
+	c.data[""] = []types.AnchoredVar{}
 }
 
 // NewCollection Creates a new collection
 func NewCollection(variable variables.RuleVariable) *Collection {
 	col := &Collection{
-		data:     map[string][]types.AnchoredVar{},
+		data:     make(map[string][]types.AnchoredVar),
 		name:     variable.Name(),
 		variable: variable,
 	}
