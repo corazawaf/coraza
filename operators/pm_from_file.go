@@ -47,7 +47,7 @@ func (o *pmFromFile) Init(options coraza.RuleOperatorOptions) error {
 		AsciiCaseInsensitive: true,
 		MatchOnlyWholeWords:  false,
 		MatchKind:            ahocorasick.LeftMostLongestMatch,
-		DFA:                  true,
+		DFA:                  false,
 	})
 
 	// TODO this operator is supposed to support snort data syntax: "@pm A|42|C|44|F"
