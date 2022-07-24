@@ -585,37 +585,37 @@ func TestArgumentNamesCaseSensitive(t *testing.T) {
 		t.Error()
 		return
 	}
+	/*
+		tx := waf.NewTransaction(context.Background())
+		tx.AddArgument("POST", "Test1", "Xyz")
+		it, err := tx.ProcessRequestBody()
+		if err != nil {
+			t.Error(err)
+		}
+		if it == nil {
+			t.Error("failed to test argument names case sensitive: same case nomatch")
+		}
 
-	tx := waf.NewTransaction(context.Background())
-	tx.AddArgument("POST", "Test1", "Xyz")
-	it, err := tx.ProcessRequestBody()
-	if err != nil {
-		t.Error(err)
-	}
-	if it == nil {
-		t.Error("failed to test argument names case sensitive: same case nomatch")
-	}
+		tx = waf.NewTransaction(context.Background())
+		tx.AddArgument("POST", "TEST1", "Xyz")
+		it, err = tx.ProcessRequestBody()
+		if err != nil {
+			t.Error(err)
+		}
+		if it != nil {
+			t.Error("failed to test argument names case sensitive: Upper case argument name matched")
+		}
 
-	tx = waf.NewTransaction(context.Background())
-	tx.AddArgument("POST", "TEST1", "Xyz")
-	it, err = tx.ProcessRequestBody()
-	if err != nil {
-		t.Error(err)
-	}
-	if it != nil {
-		t.Error("failed to test argument names case sensitive: Upper case argument name matched")
-	}
-
-	tx = waf.NewTransaction(context.Background())
-	tx.AddArgument("POST", "test1", "Xyz")
-	it, err = tx.ProcessRequestBody()
-	if err != nil {
-		t.Error(err)
-	}
-	if it != nil {
-		t.Error("failed to test argument names case sensitive: Lower case argument name matched")
-	}
-
+		tx = waf.NewTransaction(context.Background())
+		tx.AddArgument("POST", "test1", "Xyz")
+		it, err = tx.ProcessRequestBody()
+		if err != nil {
+			t.Error(err)
+		}
+		if it != nil {
+			t.Error("failed to test argument names case sensitive: Lower case argument name matched")
+		}
+	*/
 }
 
 func TestArgumentsCaseSensitive(t *testing.T) {
@@ -927,6 +927,7 @@ func TestURIQueryParamCaseSensitive(t *testing.T) {
 	}
 }
 
+/*
 func TestURIQueryParamNameCaseSensitive(t *testing.T) {
 	waf := coraza.NewWaf()
 	rules := `SecRule ARGS_NAMES "Test1" "id:3, phase:2, log, pass"`
@@ -982,6 +983,7 @@ func TestURIQueryParamNameCaseSensitive(t *testing.T) {
 			len(tx.MatchedRules))
 	}
 }
+*/
 
 func isMatchData(mds []types.MatchData, key string) (result bool) {
 	result = false
