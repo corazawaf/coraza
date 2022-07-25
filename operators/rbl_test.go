@@ -20,6 +20,7 @@ import (
 	"github.com/corazawaf/coraza/v2"
 	"github.com/corazawaf/coraza/v2/types/variables"
 	"github.com/foxcpp/go-mockdns"
+	"github.com/stretchr/testify/require"
 )
 
 type testLogger struct{ t *testing.T }
@@ -31,9 +32,9 @@ func (l *testLogger) Printf(format string, v ...interface{}) {
 
 func TestRbl(t *testing.T) {
 	rbl := &rbl{}
-	if err := rbl.Init("xbl.spamhaus.org"); err != nil {
-		t.Error("Cannot init rbl operator")
-	}
+
+	err := rbl.Init("xbl.spamhaus.org")
+	require.NoError(t, err, "cannot init rbl operator")
 
 	logger := &testLogger{t}
 
@@ -56,35 +57,23 @@ func TestRbl(t *testing.T) {
 	defer mockdns.UnpatchNet(rbl.resolver)
 
 	t.Run("Valid hostname with no TXT record", func(t *testing.T) {
-		if rbl.Evaluate(nil, "valid_no_txt") {
-			t.Errorf("Unexpected result for valid hostname with no TXT record")
-		}
+		require.False(t, rbl.Evaluate(nil, "valid_no_txt"), "unexpected result for valid hostname with no TXT record")
 	})
 
 	t.Run("Valid hostname with TXT record", func(t *testing.T) {
 		tx := coraza.NewWaf().NewTransaction()
-		if !rbl.Evaluate(tx, "valid_txt") {
-			t.Errorf("Unexpected result for valid hostname")
-		}
-		if want, have := "not blocked", tx.GetCollection(variables.TX).Get("httpbl_msg")[0]; want != have {
-			t.Errorf("Unexpected result for valid hostname: want %q, have %q", want, have)
-		}
+		require.True(t, rbl.Evaluate(tx, "valid_txt"), "unexpected result for valid hostname")
+		require.Equal(t, "not blocked", tx.GetCollection(variables.TX).Get("httpbl_msg")[0], "unexpected result for valid hostname")
 	})
 
 	t.Run("Invalid hostname", func(t *testing.T) {
-		if rbl.Evaluate(nil, "invalid") {
-			t.Errorf("Unexpected result for invalid hostname")
-		}
+		require.False(t, rbl.Evaluate(nil, "invalid"), "unexpected result for invalid hostname")
 	})
 
 	t.Run("Blocked hostname", func(t *testing.T) {
 		tx := coraza.NewWaf().NewTransaction()
-		if !rbl.Evaluate(tx, "blocked") {
-			t.Fatal("Unexpected result for blocked hostname")
-		}
+		require.True(t, rbl.Evaluate(tx, "blocked"), "unexpected result for blocked hostname")
 		t.Log(tx.GetCollection(variables.TX).Get("httpbl_msg"))
-		if want, have := "blocked", tx.GetCollection(variables.TX).Get("httpbl_msg")[0]; want != have {
-			t.Errorf("Unexpected result for valid hostname: want %q, have %q", want, have)
-		}
+		require.Equal(t, "blocked", tx.GetCollection(variables.TX).Get("httpbl_msg")[0], "unexpected result for valid hostname")
 	})
 }

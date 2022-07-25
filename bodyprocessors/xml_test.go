@@ -16,10 +16,10 @@ package bodyprocessors
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 
 	"github.com/corazawaf/coraza/v2/utils/strings"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -39,23 +39,17 @@ func TestXMLAttribures(t *testing.T) {
 </bookstore>`
 	attrs, contents, err := readXML(bytes.NewReader([]byte(xmldoc)))
 	require.NoError(t, err)
-	if len(attrs) != 3 {
-		t.Errorf("Expected 3 attributes, got %d", len(attrs))
-	}
-	if len(contents) != 4 {
-		t.Errorf("Expected 4 contents, got %d", len(contents))
-		fmt.Println(contents)
-	}
+
+	require.Len(t, attrs, 3)
+	require.Len(t, contents, 4)
+
 	eattrs := []string{"en", "value"}
 	econtent := []string{"Harry Potter", "29.99", "Learning XML", "39.95"}
 	for _, attr := range eattrs {
-		if !strings.InSlice(attr, attrs) {
-			t.Errorf("Expected attribute %s, got %v", attr, attrs)
-		}
+		assert.True(t, strings.InSlice(attr, attrs), "expected to contain attribute %q, got %v", attr, attrs)
 	}
+
 	for _, content := range econtent {
-		if !strings.InSlice(content, contents) {
-			t.Errorf("Expected content %s, got %v", content, contents)
-		}
+		assert.True(t, strings.InSlice(content, contents), "expected content %q, got %v", content, contents)
 	}
 }

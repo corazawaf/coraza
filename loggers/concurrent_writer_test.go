@@ -25,13 +25,13 @@ import (
 	"time"
 
 	"github.com/corazawaf/coraza/v2/types"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCLogFileCreation(t *testing.T) {
 	file, err := ioutil.TempFile("/tmp", "tmpaudir")
-	if err != nil {
-		t.Error("failed to create concurrent logger file")
-	}
+	require.NoError(t, err, "failed to create concurrent logger file")
+
 	config := types.Config{
 		"auditlog_file":      file.Name(),
 		"auditlog_dir":       "/tmp",
@@ -48,13 +48,14 @@ func TestCLogFileCreation(t *testing.T) {
 			Response:      AuditTransactionResponse{},
 		},
 	}
+
 	writer := &concurrentWriter{}
-	if err := writer.Init(config); err != nil {
-		t.Error("failed to init concurrent logger", err)
-	}
-	if err := writer.Write(al); err != nil {
-		t.Error("failed to write to logger: ", err)
-	}
+	err = writer.Init(config)
+	require.NoError(t, err, "failed to init concurrent logger")
+
+	err = writer.Write(al)
+	require.NoError(t, err, "failed to write to logger")
+
 	tt := time.Unix(0, ts)
 	p2 := fmt.Sprintf("/%s/%s/", tt.Format("20060102"), tt.Format("20060102-1504"))
 	logdir := path.Join("/tmp", p2)
@@ -63,12 +64,9 @@ func TestCLogFileCreation(t *testing.T) {
 	p := path.Join(logdir, fname)
 
 	data, err := os.ReadFile(p)
-	if err != nil {
-		t.Error("failed to create audit file for concurrent logger")
-		return
-	}
+	require.NoError(t, err, "failed to create audit file for concurrent logger")
+
 	al2 := &AuditLog{}
-	if json.Unmarshal(data, al2) != nil {
-		t.Error("failed to parse json from concurrent audit log", p)
-	}
+	err = json.Unmarshal(data, al2)
+	require.NoError(t, err, "failed to parse json from concurrent audit log")
 }

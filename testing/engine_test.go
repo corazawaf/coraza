@@ -48,7 +48,7 @@ func TestDebug(t *testing.T) {
 		"REQUEST_METHOD:\n-->OPTIONS",
 	}
 	for _, e := range expected {
-		assert.True(t, strings.Contains(debug, e))
+		assert.Contains(t, debug, e)
 	}
 }
 
@@ -68,7 +68,7 @@ func TestRequest(t *testing.T) {
 		"Host: www.example.com",
 	}
 	for _, e := range expected {
-		assert.True(t, strings.Contains(req, e))
+		assert.Contains(t, req, e)
 	}
 }
 

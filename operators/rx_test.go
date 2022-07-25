@@ -19,25 +19,22 @@ import (
 
 	"github.com/corazawaf/coraza/v2"
 	"github.com/corazawaf/coraza/v2/types/variables"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRx1(t *testing.T) {
 	rx := &rx{}
-	if err := rx.Init("som(.*)ta"); err != nil {
-		t.Error(err)
-	}
+
+	err := rx.Init("som(.*)ta")
+	require.NoError(t, err)
+
 	waf := coraza.NewWaf()
 	tx := waf.NewTransaction()
 	tx.Capture = true
 	res := rx.Evaluate(tx, "somedata")
-	if !res {
-		t.Error("rx1 failed")
-	}
+	require.True(t, res, "rx1 failed")
+
 	vars := tx.GetCollection(variables.TX).Data()
-	if vars["0"][0] != "somedata" {
-		t.Error("rx1 failed")
-	}
-	if vars["1"][0] != "eda" {
-		t.Error("rx1 failed")
-	}
+	require.Equal(t, "somedata", vars["0"][0], "rx1 failed")
+	require.Equal(t, "eda", vars["1"][0], "rx1 failed")
 }
