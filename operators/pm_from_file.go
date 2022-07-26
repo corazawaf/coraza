@@ -67,7 +67,8 @@ func (o *pmFromFile) Evaluate(tx *coraza.Transaction, value string) bool {
 		return len(matches) > 0
 	} else {
 		iter := o.matcher.Iter(value)
-		next := iter.Next()
-		return next != nil
+		return iter.Next() != nil
 	}
 }
+
+var _ coraza.RuleOperator = (*pmFromFile)(nil)
