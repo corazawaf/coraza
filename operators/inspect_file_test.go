@@ -17,20 +17,18 @@ package operators
 import (
 	_ "fmt"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestInspectFile(t *testing.T) {
 	ipf := &inspectFile{}
-	if err := ipf.Init("/bin/echo"); err != nil {
-		t.Error("cannot init inspectfile operator")
-	}
-	if !ipf.Evaluate(nil, "test") {
-		t.Errorf("/bin/echo returned exit code other than 0")
-	}
-	if err := ipf.Init("/bin/nonexistant"); err != nil {
-		t.Error("cannot init inspectfile operator")
-	}
-	if ipf.Evaluate(nil, "test") {
-		t.Errorf("/bin/nonexistant returned an invalid exit code")
-	}
+
+	err := ipf.Init("/bin/echo")
+	require.NoError(t, err, "cannot init inspectfile operator")
+	require.True(t, ipf.Evaluate(nil, "test"), "/bin/echo returned exit code other than 0")
+
+	err = ipf.Init("/bin/nonexistant")
+	require.NoError(t, err, "cannot init inspectfile operator")
+	require.False(t, ipf.Evaluate(nil, "test"), "/bin/nonexistant returned an invalid exit code")
 }

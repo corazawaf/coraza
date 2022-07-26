@@ -19,6 +19,7 @@ import (
 
 	"github.com/corazawaf/coraza/v2"
 	"github.com/corazawaf/coraza/v2/types"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSeverity(t *testing.T) {
@@ -49,12 +50,9 @@ func TestSeverity(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			rule := coraza.NewRule()
 			sev := severity()
-			if err := sev.Init(rule, tt.name); err != nil {
-				t.Error(err)
-			}
-			if got := rule.Severity; got != tt.want {
-				t.Errorf("Severity = %v, want %v", got, tt.want)
-			}
+			err := sev.Init(rule, tt.name)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, rule.Severity)
 		})
 	}
 }

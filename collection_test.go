@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v2/types/variables"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLocalCollection(t *testing.T) {
@@ -28,22 +29,14 @@ func TestLocalCollectionMatchData(t *testing.T) {
 	lc := NewCollection(variables.Args)
 	lc.Set("test2", []string{"test3"})
 	lc.Set("other4", []string{"test"})
-	if l := len(lc.FindRegex(regexp.MustCompile("test.*"))); l != 1 {
-		t.Errorf("failed to find regex, got %d", l)
-	}
-	if l := len(lc.FindString("other4")); l != 1 {
-		t.Errorf("failed to find string, got %d", l)
-	}
+	require.Len(t, lc.FindRegex(regexp.MustCompile("test.*")), 1, "failed to find regex")
+	require.Len(t, lc.FindString("other4"), 1, "failed to find string")
 }
 
 func TestAddUnique(t *testing.T) {
 	col := NewCollection(variables.Args)
 	col.AddUnique("test", "test2")
 	col.AddUnique("test", "test2")
-	if len(col.data["test"]) != 1 {
-		t.Error("Failed to add unique")
-	}
-	if col.data["test"][0].Value != "test2" {
-		t.Error("Failed to add unique")
-	}
+	require.Len(t, col.data["test"], 1, "failed to add unique")
+	require.Equal(t, "test2", col.data["test"][0].Value, "failed to add unique")
 }

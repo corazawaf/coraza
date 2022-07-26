@@ -17,20 +17,16 @@ package operators
 import (
 	_ "fmt"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestGe(t *testing.T) {
 	geo := &ge{}
-	if err := geo.Init("2500"); err != nil {
-		t.Error("Cannot init geo")
-	}
-	if !geo.Evaluate(nil, "2800") {
-		t.Errorf("Invalid result for @ge operator")
-	}
-	if !geo.Evaluate(nil, "2500") {
-		t.Errorf("Invalid result for @ge operator")
-	}
-	if geo.Evaluate(nil, "2400") {
-		t.Errorf("Invalid result for @ge operator")
-	}
+
+	err := geo.Init("2500")
+	require.NoError(t, err, "Cannot init geo")
+	require.True(t, geo.Evaluate(nil, "2800"), "Invalid result for @ge operator")
+	require.True(t, geo.Evaluate(nil, "2500"), "Invalid result for @ge operator")
+	require.False(t, geo.Evaluate(nil, "2400"), "Invalid result for @ge operator")
 }

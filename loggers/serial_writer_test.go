@@ -17,11 +17,11 @@ package loggers
 import (
 	"os"
 	"path"
-	"strings"
 	"testing"
 
 	"github.com/corazawaf/coraza/v2/types"
 	utils "github.com/corazawaf/coraza/v2/utils/strings"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSerialLogger_Write(t *testing.T) {
@@ -32,9 +32,10 @@ func TestSerialLogger_Write(t *testing.T) {
 		"auditlog_file":      tmp,
 		"auditlog_formatter": jsonFormatter,
 	}
-	if err := writer.Init(config); err != nil {
-		t.Error(err)
-	}
+
+	err := writer.Init(config)
+	require.NoError(t, err)
+
 	al := &AuditLog{
 		Transaction: AuditTransaction{
 			ID: "test123",
@@ -48,18 +49,11 @@ func TestSerialLogger_Write(t *testing.T) {
 			},
 		},
 	}
-	if err := writer.Write(al); err != nil {
-		t.Error("failed to write to serial logger")
-	}
+	err = writer.Write(al)
+	require.NoError(t, err, "failed to write to serial logger")
 
 	data, err := os.ReadFile(tmp)
-	if err != nil {
-		t.Error("failed to read serial logger file", err)
-	}
-	if !strings.Contains(string(data), "test123") {
-		t.Errorf("failed to parse log tx id from serial log: \n%q on file %q", string(data), tmp)
-	}
-	if !strings.Contains(string(data), "id:100") {
-		t.Errorf("failed to parse log rule id: \n%q on file %q", string(data), tmp)
-	}
+	require.NoError(t, err, "failed to read serial logger file")
+	require.Contains(t, string(data), "test123", "failed to parse log tx id from serial log")
+	require.Contains(t, string(data), "id:100", "failed to parse log rule id")
 }

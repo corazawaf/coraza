@@ -19,62 +19,56 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRawRequests(t *testing.T) {
 	waf := coraza.NewWaf()
 	test := NewTest("test", waf)
-	if err := test.SetRawRequest([]byte("OPTIONS /test HTTP/1.1\r\nHost: www.example.com\r\n\r\n")); err != nil {
-		t.Error(err)
-	}
-	if test.RequestMethod != "OPTIONS" {
-		t.Errorf("Expected OPTIONS, got %s", test.RequestMethod)
-	}
-	if test.RequestURI != "/test" {
-		t.Errorf("Expected /test, got %s", test.RequestURI)
-	}
+	err := test.SetRawRequest([]byte("OPTIONS /test HTTP/1.1\r\nHost: www.example.com\r\n\r\n"))
+	require.NoError(t, err)
+	require.Equal(t, "OPTIONS", test.RequestMethod)
+	require.Equal(t, "/test", test.RequestURI)
 }
 
 func TestDebug(t *testing.T) {
 	waf := coraza.NewWaf()
 	test := NewTest("test", waf)
-	if err := test.SetRawRequest([]byte("OPTIONS /test HTTP/1.1\r\nHost: www.example.com\r\n\r\n")); err != nil {
-		t.Error(err)
-	}
-	if err := test.RunPhases(); err != nil {
-		t.Error(err)
-	}
+
+	err := test.SetRawRequest([]byte("OPTIONS /test HTTP/1.1\r\nHost: www.example.com\r\n\r\n"))
+	require.NoError(t, err)
+
+	err = test.RunPhases()
+	require.NoError(t, err)
+
 	debug := test.String()
 	expected := []string{
 		"REQUEST_URI:\n-->/test",
 		"REQUEST_METHOD:\n-->OPTIONS",
 	}
 	for _, e := range expected {
-		if !strings.Contains(debug, e) {
-			t.Errorf("Expected %s, got %s", e, debug)
-		}
+		assert.Contains(t, debug, e)
 	}
 }
 
 func TestRequest(t *testing.T) {
 	waf := coraza.NewWaf()
 	test := NewTest("test", waf)
-	req := buildRequest("GET", "/test")
-	if err := test.SetRawRequest([]byte(req)); err != nil {
-		t.Error(err)
-	}
-	if err := test.RunPhases(); err != nil {
-		t.Error(err)
-	}
+	req := buildRequest(t, "GET", "/test")
+	err := test.SetRawRequest([]byte(req))
+	require.NoError(t, err)
+
+	err = test.RunPhases()
+	require.NoError(t, err)
+
 	req = test.Request()
 	expected := []string{
 		"GET /test HTTP/1.1",
 		"Host: www.example.com",
 	}
 	for _, e := range expected {
-		if !strings.Contains(req, e) {
-			t.Errorf("Expected %s, got %s", e, req)
-		}
+		assert.Contains(t, req, e)
 	}
 }
 
@@ -82,17 +76,17 @@ func TestResponse(t *testing.T) {
 	waf := coraza.NewWaf()
 	waf.ResponseBodyAccess = true
 	test := NewTest("test", waf)
-	req := buildRequest("POST", "/test")
-	if err := test.SetRawRequest([]byte(req)); err != nil {
-		t.Error(err)
-	}
+	req := buildRequest(t, "POST", "/test")
+
+	err := test.SetRawRequest([]byte(req))
+	require.NoError(t, err)
+
 	test.ResponseHeaders["content-type"] = "application/x-www-form-urlencoded"
-	if err := test.SetResponseBody("someoutput=withvalue"); err != nil {
-		t.Error(err)
-	}
-	if err := test.RunPhases(); err != nil {
-		t.Error(err)
-	}
+	err = test.SetResponseBody("someoutput=withvalue")
+	require.NoError(t, err)
+
+	err = test.RunPhases()
+	require.NoError(t, err)
 	/*
 		if s := test.Transaction().GetCollection(variables.ArgsPost).GetFirstString("someoutput"); s != "withvalue" {
 			t.Errorf("Expected someoutput=withvalue, got %s", s)
@@ -100,7 +94,8 @@ func TestResponse(t *testing.T) {
 	*/
 }
 
-func buildRequest(method, uri string) string {
+func buildRequest(t *testing.T, method, uri string) string {
+	t.Helper()
 	return strings.Join([]string{
 		method + " " + uri + " HTTP/1.1",
 		"Host: www.example.com",

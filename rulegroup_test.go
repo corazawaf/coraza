@@ -16,6 +16,8 @@ package coraza
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestRG(t *testing.T) {
@@ -28,24 +30,13 @@ func TestRG(t *testing.T) {
 	}
 
 	rg := NewRuleGroup()
-	if err := rg.Add(r); err != nil {
-		t.Error("Failed to add rule to rulegroup")
-	}
+	err := rg.Add(r)
 
-	if rg.Count() != 1 {
-		t.Error("Failed to add rule to rulegroup")
-	}
-
-	if len(rg.FindByMsg("test")) != 1 {
-		t.Error("Failed to find rules by msg")
-	}
-
-	if len(rg.FindByTag("test")) != 1 {
-		t.Error("Failed to find rules by tag")
-	}
+	require.NoError(t, err, "failed to add rule to rulegroup")
+	require.Equal(t, 1, rg.Count(), "Failed to add rule to rulegroup")
+	require.Len(t, rg.FindByMsg("test"), 1, "Failed to find rules by msg")
+	require.Len(t, rg.FindByTag("test"), 1, "Failed to find rules by tag")
 
 	rg.DeleteByID(1)
-	if rg.Count() != 0 {
-		t.Error("Failed to remove rule from rulegroup")
-	}
+	require.Equal(t, 0, rg.Count(), "Failed to remove rule from rulegroup")
 }

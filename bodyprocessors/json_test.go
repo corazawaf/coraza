@@ -16,6 +16,9 @@ package bodyprocessors
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Tests JSONToMap
@@ -99,9 +102,7 @@ func TestJSONToMap(t *testing.T) {
 		"json.f.0.0.0.z": "abc",
 	}
 	jsonMap, err := jsonToMap([]byte(jsonMapString))
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 
 	for k, v := range mapAsserts {
 		if jsonMap[k] != v {
@@ -122,12 +123,8 @@ func TestJSONToMap(t *testing.T) {
 		"json.1.f.0.0.0.z": "abc",
 	}
 	jsonArray, err := jsonToMap([]byte(jsonArrayString))
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	for k, v := range arrayAsserts {
-		if jsonArray[k] != v {
-			t.Errorf("Expected %s=%s", k, v)
-		}
+		assert.Equal(t, v, jsonArray[k])
 	}
 }

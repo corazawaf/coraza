@@ -16,20 +16,16 @@ package operators
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestLt(t *testing.T) {
 	lt := &lt{}
-	if err := lt.Init("2500"); err != nil {
-		t.Error("failed to init le operator")
-	}
-	if !lt.Evaluate(nil, "2400") {
-		t.Errorf("Invalid result for @lt operator")
-	}
-	if lt.Evaluate(nil, "2500") {
-		t.Errorf("Invalid result for @lt operator")
-	}
-	if lt.Evaluate(nil, "2800") {
-		t.Errorf("Invalid result for @lt operator")
-	}
+
+	err := lt.Init("2500")
+	require.NoError(t, err, "failed to init le operator")
+	require.True(t, lt.Evaluate(nil, "2400"), "invalid result for @lt operator")
+	require.False(t, lt.Evaluate(nil, "2500"), "invalid result for @lt operator")
+	require.False(t, lt.Evaluate(nil, "2800"), "invalid result for @lt operator")
 }
