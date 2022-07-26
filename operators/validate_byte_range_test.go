@@ -18,32 +18,36 @@ import (
 	"testing"
 
 	engine "github.com/corazawaf/coraza/v2"
+	"github.com/stretchr/testify/require"
 )
 
 func TestValidateByteRangeCase4(t *testing.T) {
 	ranges := "0-255"
 	op := &validateByteRange{}
-	if err := op.Init(ranges); err != nil {
-		t.Error("Cannot init byte range operator")
-	}
+	err := op.Init(ranges)
+	require.NoError(t, err, "cannot init byte range operator")
+
 	tx := getTransaction()
-	if op.Evaluate(tx, "\u00d0\u0090") {
-		t.Error("Invalid byte between ranges (negative)", []byte("\u00d0\u0090"))
-	}
+	require.False(t, op.Evaluate(tx, "\u00d0\u0090"), "invalid byte between ranges (negative)", []byte("\u00d0\u0090"))
 }
 
 func TestValidateByteRangeCase5(t *testing.T) {
 	ranges := "9,10,13,32-126,128-255"
 	op := &validateByteRange{}
-	if err := op.Init(ranges); err != nil {
-		t.Error("Cannot init byte range operator")
-	}
-	if len(op.data) != 5 || op.data[0][0] != 9 || op.data[1][0] != 10 || op.data[2][0] != 13 || op.data[3][0] != 32 || op.data[3][1] != 126 || op.data[4][0] != 128 || op.data[4][1] != 255 {
-		t.Error("Invalid range length", len(op.data))
-	}
-	if op.Evaluate(nil, "/\ufffdindex.html?test=test1") {
-		t.Error("Invalid byte between ranges (negative)", []byte("/\ufffdindex.html?test=test1"))
-	}
+
+	err := op.Init(ranges)
+	require.NoError(t, err, "Cannot init byte range operator")
+
+	require.Len(t, op.data, 5)
+	require.Equal(t, uint8(9), op.data[0][0], "invalid range length")
+	require.Equal(t, uint8(10), op.data[1][0], "invalid range length")
+	require.Equal(t, uint8(13), op.data[2][0], "invalid range length")
+	require.Equal(t, uint8(32), op.data[3][0], "invalid range length")
+	require.Equal(t, uint8(126), op.data[3][1], "invalid range length")
+	require.Equal(t, uint8(128), op.data[4][0], "invalid range length")
+	require.Equal(t, uint8(255), op.data[4][1], "invalid range length")
+
+	require.False(t, op.Evaluate(nil, "/\ufffdindex.html?test=test1"), "invalid byte between ranges (negative)", []byte("/\ufffdindex.html?test=test1"))
 }
 
 func getTransaction() *engine.Transaction {

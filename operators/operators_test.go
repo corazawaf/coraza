@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v2"
+	"github.com/stretchr/testify/require"
 )
 
 type Test struct {
@@ -37,71 +38,67 @@ type Test struct {
 //https://github.com/SpiderLabs/secrules-language-tests/
 func TestTransformations(t *testing.T) {
 	root := "../testdata/operators/"
-	files := [][]byte{}
-	if _, err := os.Stat(root); os.IsNotExist(err) {
-		t.Error("failed to find operator test files")
-	}
-	if err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	files := map[string][]byte{}
+
+	_, err := os.Stat(root)
+	require.False(t, os.IsNotExist(err), "failed to find operator test files")
+
+	err = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if strings.HasSuffix(path, ".json") {
 			data, _ := ioutil.ReadFile(path)
-			files = append(files, data)
+			files[path] = data
 		}
 		return nil
-	}); err != nil {
-		t.Error("failed to walk test files")
-	}
+	})
+	require.NoError(t, err, "failed to walk test files")
+
 	waf := coraza.NewWaf()
-	for _, f := range files {
+	for name, f := range files {
+		t.Run(name, func(t *testing.T) {
+			cases := []*Test{}
+			err := json.Unmarshal(f, &cases)
+			require.NoError(t, err, "cannot parse test case")
 
-		cases := []*Test{}
-		err := json.Unmarshal(f, &cases)
-		if err != nil {
-			t.Error("Cannot parse test case", err)
-		}
-		for _, data := range cases {
-			// UNMARSHALL does not transform \u0000 to binary
-			data.Input = strings.ReplaceAll(data.Input, `\u0000`, "\u0000")
-			data.Param = strings.ReplaceAll(data.Param, `\u0000`, "\u0000")
+			for _, data := range cases {
+				// UNMARSHALL does not transform \u0000 to binary
+				data.Input = strings.ReplaceAll(data.Input, `\u0000`, "\u0000")
+				data.Param = strings.ReplaceAll(data.Param, `\u0000`, "\u0000")
 
-			if strings.Contains(data.Input, `\x`) {
-				data.Input, err = strconv.Unquote(`"` + data.Input + `"`)
+				if strings.Contains(data.Input, `\x`) {
+					data.Input, err = strconv.Unquote(`"` + data.Input + `"`)
+					require.NoError(t, err, "cannot parse test case")
+				}
+				if strings.Contains(data.Param, `\x`) {
+					data.Param, err = strconv.Unquote(`"` + data.Param + `"`)
+					require.NoError(t, err, "cannot parse test case")
+				}
+				op, err := GetOperator(data.Name)
 				if err != nil {
-					t.Error("Cannot parse test case", err)
+					continue
+				}
+				if data.Name == "pmFromFile" || data.Name == "ipMatchFromFile" {
+					// read file
+					fname := root + "op/" + data.Param
+					d, err := os.ReadFile(fname)
+					require.NoErrorf(t, err, "cannot open file %s", data.Param)
+					data.Param = string(d)
+				}
+
+				err = op.Init(data.Param)
+				require.NoError(t, err)
+
+				res := op.Evaluate(waf.NewTransaction(), data.Input)
+				// 1 = expected true
+				// 0 = expected false
+				if (res && data.Ret != 1) || (!res && data.Ret == 1) {
+					expected := "match"
+					if data.Ret == 0 {
+						expected = "no match"
+					}
+					t.Errorf("Invalid operator result for @%s(%q, %q), %s expected", data.Name, data.Param, data.Input, expected)
 				}
 			}
-			if strings.Contains(data.Param, `\x`) {
-				data.Param, err = strconv.Unquote(`"` + data.Param + `"`)
-				if err != nil {
-					t.Error("Cannot parse test case", err)
-				}
-			}
-			op, err := GetOperator(data.Name)
-			if err != nil {
-				continue
-			}
-			if data.Name == "pmFromFile" || data.Name == "ipMatchFromFile" {
-				// read file
-				fname := root + "op/" + data.Param
-				d, err := os.ReadFile(fname)
-				if err != nil {
-					t.Errorf("Cannot open file %s", data.Param)
-				}
-				data.Param = string(d)
-			}
-			if err := op.Init(data.Param); err != nil {
-				t.Error(err)
-			}
-			res := op.Evaluate(waf.NewTransaction(), data.Input)
-			// 1 = expected true
-			// 0 = expected false
-			if (res && data.Ret != 1) || (!res && data.Ret == 1) {
-				expected := "match"
-				if data.Ret == 0 {
-					expected = "no match"
-				}
-				t.Errorf("Invalid operator result for @%s(%q, %q), %s expected", data.Name, data.Param, data.Input, expected)
-			}
-		}
+		})
 	}
 
 }
