@@ -16,7 +16,6 @@ package operators
 
 import (
 	"context"
-	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -26,14 +25,6 @@ import (
 
 	"github.com/corazawaf/coraza/v3"
 )
-
-type Test struct {
-	Input string `json:"input"`
-	Param string `json:"param"`
-	Name  string `json:"name"`
-	Ret   int    `json:"ret"`
-	Type  string `json:"type"`
-}
 
 //https://github.com/SpiderLabs/secrules-language-tests/
 func TestTransformations(t *testing.T) {
@@ -53,9 +44,8 @@ func TestTransformations(t *testing.T) {
 	}
 	waf := coraza.NewWaf()
 	for _, f := range files {
-
-		cases := []*Test{}
-		err := json.Unmarshal(f, &cases)
+		var cases tests
+		err := cases.UnmarshalJSON(f)
 		if err != nil {
 			t.Error("Cannot parse test case", err)
 		}
