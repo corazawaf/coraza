@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "author": "jptosso",
+    "description": "Test if the chain action works",
+    "enabled": true,
+    "name": "chains.yaml"
+  },
+  "rules": "SecAction \"id: 1, log, chain\"\n  SecAction \"msg:'chain 2',chain\"\n  SecAction \"msg:'chain 3',chain\"\n  SecAction \"msg:'chain 4'\"\n  \nSecAction \"id: 2, log, chain\"\n  SecAction \"chain\"\n  SecAction \"chain\"\n  SecRule ARGS \"@noMatch\" \"\"\n\nSecRule REQUEST_URI \"@rx (\\d\\d+)\" \"id:1313, chain, log\"\n  SecRule REQUEST_METHOD \"GET\" \"\"\n\nSecRule ARGS \"@rx prepayloadpost\"  \"id:200, phase:2, log, msg:'Rule Parent 200', \\\n  logdata:'Matched Data: %{TX.0} found within %{TX.200_MATCHED_VAR_NAME}: %{MATCHED_VAR}',\\\n  setvar:'tx.200_matched_var_name=%{MATCHED_VAR_NAME}',\\\n  chain\"\n  SecRule MATCHED_VAR \"@rx pre\" \"chain\"\n    SecRule MATCHED_VAR \"@rx post\"\n\nSecRule REQUEST_HEADERS \"@rx attack20\" \\\n  \"id:20,\\\n  phase:1,\\\n  log,\\\n  msg:'Chained rule Parent test',\\\n  logdata:'FoundChain20 %{MATCHED_VAR} in %{MATCHED_VAR_NAME}',\\\n  chain\"\n  SecRule MATCHED_VARS_NAMES \"@rx host\" \\\n    \"block\"\n\nSecRule REQUEST_HEADERS \"@rx attack21\" \\\n  \"id:21,\\\n  phase:1,\\\n  log,\\\n  chain\"\n  SecRule MATCHED_VARS_NAMES \"@rx (?i:host)\" \\\n    \"msg:'Sub Chain Rule',\\\n    logdata:'FoundSubChain21 %{MATCHED_VAR} in %{MATCHED_VAR_NAME}',\\\n    chain\"\n    SecRule MATCHED_VAR_NAME \"@rx MATCHED_VARS_NAMES:REQUEST_HEADERS:Host\" \\\n    \"msg:'Sub Sub Chain Rule',\\\n    logdata:'FoundSubSubChain21 %{MATCHED_VAR} in %{MATCHED_VAR_NAME}',\\\n    block\"",
+  "tests": [
+    {
+      "stages": [
+        {
+          "stage": {
+            "input": {
+              "uri": "/test1.php?id=12345"
+            },
+            "output": {
+              "non_triggered_rules": [
+                2,
+                200,
+                20
+              ],
+              "triggered_rules": [
+                1,
+                1313
+              ]
+            }
+          }
+        },
+        {
+          "stage": {
+            "input": {
+              "uri": "/test2.php?var=prepayloadpost"
+            },
+            "output": {
+              "log_contains": "found within ARGS:var: prepayloadpost",
+              "non_triggered_rules": [
+                2,
+                1313,
+                20
+              ],
+              "triggered_rules": [
+                1,
+                200
+              ]
+            }
+          }
+        },
+        {
+          "stage": {
+            "input": {
+              "headers": {
+                "Host": "attack20ing.com"
+              },
+              "uri": "/test3.php"
+            },
+            "output": {
+              "non_triggered_rules": [
+                2,
+                1313,
+                21
+              ],
+              "triggered_rules": [
+                1,
+                20
+              ]
+            }
+          }
+        },
+        {
+          "stage": {
+            "input": {
+              "headers": {
+                "Host": "attack21ing.com"
+              },
+              "uri": "/test4.php"
+            },
+            "output": {
+              "non_triggered_rules": [
+                20,
+                2,
+                1313
+              ],
+              "triggered_rules": [
+                1
+              ]
+            }
+          }
+        }
+      ],
+      "test_title": "chains"
+    }
+  ]
+}

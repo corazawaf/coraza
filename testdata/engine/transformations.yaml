@@ -12,9 +12,9 @@
       stage:
         input:
             uri: /unittests@coreruleset.org"%20sleep(10.to_i)%20
-            headers: 
-              test: 1234
-              test2: 456
+            headers:
+              test: "1234"
+              test2: "456"
         output:
           triggered_rules:
             - 777

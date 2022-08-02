@@ -4,11 +4,13 @@
     description: Test if the body processors work
     enabled: true
     name: postxml.yaml
+  # XML processing not supported on TinyGo yet.
+  tinygo_disable: true
   tests:
   -
     test_title: postxml
     stages:
-    -  
+    -
       stage:
         input:
             uri: /index.php?t1=aaa&t2=bbb&t3=ccc

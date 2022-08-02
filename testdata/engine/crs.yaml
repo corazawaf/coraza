@@ -18,7 +18,7 @@
               User-Agent: "ModSecurity CRS 3 Tests"
               Host: "localhost"
               Content-Type: "application/x-www-form-urlencoded"            
-              content-length: 4
+              content-length: "4"
               Range: "bytes=1-10,11-20,21-30,31-40,41-50,51-60"
             data: test
         output:

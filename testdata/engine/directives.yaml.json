@@ -1,0 +1,37 @@
+{
+  "meta": {
+    "author": "jptosso",
+    "description": "Test if the directives work",
+    "enabled": true,
+    "name": "directives.yaml"
+  },
+  "rules": "SecAction \"id: 1, log\"\nSecAction \"id: 2, nolog, skipAfter:test-mark\"\n\nSecAction \"id: 4, log\"\nSecAction \"id: 5,log\"\nSecAction \"id: 6\"\n\nSecMarker test-mark\nSecAction \"id: 7, log, skipAfter: test-mark3\"\n\nSecMarker test-mark2\nSecAction \"id: 8, log\"\nSecMarker test-mark3\nSecAction \"id: 9, log\"\n\nSecRule &TX:crs_exclusions_drupal|TX:crs_exclusions_drupal \"@eq 0\" \\\n\"id:9001000,\\\nphase:2,\\\nlog, \\\nskipAfter:END-DRUPAL-RULE-EXCLUSIONS\"\n\nSecAction \"id: 9001001, log, phase:2\"\n\nSecMarker END-DRUPAL-RULE-EXCLUSIONS\nSecAction \"id: 9001002, log, phase:2\"\n",
+  "tests": [
+    {
+      "stages": [
+        {
+          "stage": {
+            "output": {
+              "non_triggered_rules": [
+                4,
+                5,
+                6,
+                8,
+                9001001
+              ],
+              "triggered_rules": [
+                1,
+                2,
+                7,
+                9,
+                9001000,
+                9001002
+              ]
+            }
+          }
+        }
+      ],
+      "test_title": "directives"
+    }
+  ]
+}

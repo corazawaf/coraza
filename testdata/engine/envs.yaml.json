@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "author": "jptosso",
+    "description": "Test if the env work",
+    "enabled": true,
+    "name": "direcenvstives.yaml"
+  },
+  "rules": "SecAction \"id:1, phase:1, setenv:test=123, log\"\nSecRule ENV:test \"@eq 123\" \"id:2, phase:1, log\"\n",
+  "tests": [
+    {
+      "stages": [
+        {
+          "stage": {
+            "output": {
+              "non_triggered_rules": null,
+              "triggered_rules": [
+                1,
+                2
+              ]
+            }
+          }
+        }
+      ],
+      "test_title": "envs"
+    }
+  ]
+}

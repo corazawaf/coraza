@@ -21,7 +21,7 @@ import (
 )
 
 func TestEngine(t *testing.T) {
-	files, err := filepath.Glob("../testdata/engine/*.yaml")
+	files, err := filepath.Glob("../testdata/engine/*.json")
 	if err != nil {
 		t.Error(err)
 	}
@@ -31,7 +31,10 @@ func TestEngine(t *testing.T) {
 	for _, f := range files {
 		profile, err := NewProfile(f)
 		if err != nil {
-			t.Error(err)
+			t.Errorf("failed to parse profile %s: %s", f, err)
+		}
+		if profile.TinyGoDisable && IsTinyGo {
+			continue
 		}
 		tt, err := profile.TestList(nil)
 		if err != nil {

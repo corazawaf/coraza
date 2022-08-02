@@ -1,0 +1,39 @@
+{
+  "meta": {
+    "author": "jptosso",
+    "description": "Test if the actions work",
+    "enabled": true,
+    "name": "actions.yaml"
+  },
+  "rules": "SecRule REMOTE_ADDR \"@unconditionalMatch\" \"id: 3, ctl:ruleRemoveById=4, log\"\nSecAction \"id: 4, log, pass\"\nSecAction \"id: 5, log, pass\"\n\nSecAction \"id:6, pass, log, chain\"\n  SecRule REMOTE_ADDR \"1234\" \"\"\n\nSecAction \"id:7, pass, log, chain, skip:2\"\n  SecRule REMOTE_ADDR \"@unconditionalMatch\" \"\"\n\nSecAction \"id: 8, log, pass\"\nSecAction \"id: 9, log, pass\"\n\nSecAction \"id: 10, log, pass\"\n\nSecRule REQUEST_URI \"@validateByteRange 9,10,13,32-126,128-255\" \"id:920271,phase:2,log,block,t:none,t:urlDecodeUni\"\n",
+  "tests": [
+    {
+      "stages": [
+        {
+          "stage": {
+            "input": {
+              "uri": "/%FFindex.html?test=test1"
+            },
+            "output": {
+              "non_triggered_rules": [
+                2,
+                4,
+                6,
+                8,
+                9,
+                920271
+              ],
+              "triggered_rules": [
+                3,
+                5,
+                7,
+                10
+              ]
+            }
+          }
+        }
+      ],
+      "test_title": "actions"
+    }
+  ]
+}

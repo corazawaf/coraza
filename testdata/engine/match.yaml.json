@@ -1,0 +1,43 @@
+{
+  "meta": {
+    "author": "jptosso",
+    "description": "Test if the matchers works",
+    "enabled": true,
+    "name": "match.yaml"
+  },
+  "rules": "SecDebugLogLevel 5\nSecRule SERVER_ADDR \"! ^127\" \"id:1, phase:1, log\"\n\nSecRule SERVER_PORT \"!\" \"id:2, phase:1, log\"\n\nSecRule ARGS \"12345\" \"chain,block,id:26, log, phase: 2\"\n    SecRule MATCHED_VAR \"12345\" \"\"\n\nSecRule ARGS \"12345\" \"chain,block, id:28, log, phase:2\"\n  SecRule MATCHED_VAR_NAME \"ARGS:id\" \"\"      \n\nSecRule ARGS \"12345\" \"chain,block, id:30, log, phase:2\"\n  SecRule ARGS \"pineapple\" \"chain\"\n  SecRule MATCHED_VARS \"12345\" \"\" \n  #?\n\n\nSecRule ARGS \"12345\" \"chain,block, id:35, log, phase:2\"\n  SecRule ARGS \"pineapple\" \"chain\"\n  SecRule MATCHED_VARS_NAMES \"ARGS:id\" \"\" \n\n# This rule should not be triggered because MATCHED_VARS_NAMES was reset by tx.resetAfterRule()\nSecRule REQUEST_HEADERS \"123\" \"chain,block, id:40, log, phase:2\"\n  SecRule REQUEST_HEADERS \"456\" \"chain\"\n  SecRule MATCHED_VARS_NAMES \"ARGS:id\" \"\"",
+  "tests": [
+    {
+      "stages": [
+        {
+          "stage": {
+            "input": {
+              "dest_addr": "127.0.0.1",
+              "headers": {
+                "content-type": "application/x-www-form-urlencoded",
+                "test": "123",
+                "test2": "456"
+              },
+              "method": "GET",
+              "uri": "/test.php?id=12345&pizza=pineapple"
+            },
+            "output": {
+              "non_triggered_rules": [
+                1,
+                2,
+                40
+              ],
+              "triggered_rules": [
+                26,
+                28,
+                30,
+                35
+              ]
+            }
+          }
+        }
+      ],
+      "test_title": "actions"
+    }
+  ]
+}

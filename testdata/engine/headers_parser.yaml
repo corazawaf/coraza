@@ -13,7 +13,7 @@
         input:
           method: GET
           headers:
-            test: 456
+            test: "456"
             Transfer-Encoding: chunked
         output:
           triggered_rules: [1, 5, 920171]

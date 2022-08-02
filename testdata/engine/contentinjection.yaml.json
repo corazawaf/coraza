@@ -1,0 +1,24 @@
+{
+  "meta": {
+    "author": "jptosso",
+    "description": "Test if content injection works",
+    "enabled": true,
+    "name": "contentinjection.yaml"
+  },
+  "rules": "SecResponseBodyMimeType text/html\nSecRuleEngine On\nSecContentInjection On\nSecResponseBodyAccess On\nSecAction \"id:1, phase:3, append:abcdef, prepend:123\"\nSecRule RESPONSE_BODY \"123abcdef\" \"id:10101, phase:4, log\"\n",
+  "tests": [
+    {
+      "stages": [
+        {
+          "stage": {
+            "output": {
+              "non_triggered_rules": null,
+              "triggered_rules": null
+            }
+          }
+        }
+      ],
+      "test_title": "content injection"
+    }
+  ]
+}

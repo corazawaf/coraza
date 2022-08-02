@@ -19,61 +19,64 @@ import (
 
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/seclang"
-	"gopkg.in/yaml.v2"
 )
 
 // Profile represents a test profile
 // It contains metadata and instructions for a test
 // It requires more documentation
+//tinyjson:json
 type Profile struct {
-	Rules string `yaml:"rules,omitempty"`
+	Rules string `json:"rules,omitempty"`
 	Pass  bool
 	Meta  struct {
-		Author      string `yaml:"author,omitempty"`
-		Description string `yaml:"description,omitempty"`
-		Enabled     bool   `yaml:"enabled,omitempty"`
-		Name        string `yaml:"name,omitempty"`
-	} `yaml:"meta,omitempty"`
-	Tests []struct {
-		Title       string `yaml:"test_title,omitempty"`
-		Description string `yaml:"desc,omitempty"`
+		Author      string `json:"author,omitempty"`
+		Description string `json:"description,omitempty"`
+		Enabled     bool   `json:"enabled,omitempty"`
+		Name        string `json:"name,omitempty"`
+	} `json:"meta,omitempty"`
+	TinyGoDisable bool `json:"tinygo_disable,omitempty"`
+	Tests         []struct {
+		Title       string `json:"test_title,omitempty"`
+		Description string `json:"desc,omitempty"`
 		Stages      []struct {
 			Stage struct {
 				Input struct {
-					DestAddr       string            `yaml:"dest_addr,omitempty"`
-					Port           int               `yaml:"port,omitempty"`
-					Method         string            `yaml:"method,omitempty"`
-					URI            string            `yaml:"uri,omitempty"`
-					Version        string            `yaml:"version,omitempty"`
-					Data           interface{}       `yaml:"data,omitempty"` // Accepts array or string
-					Headers        map[string]string `yaml:"headers,omitempty"`
-					RawRequest     []byte            `yaml:"raw_request,omitempty"`
-					EncodedRequest string            `yaml:"encoded_request,omitempty"`
-					StopMagic      bool              `yaml:"stop_magic,omitempty"`
-				} `yaml:"input,omitempty"`
-				Output expectedOutput `yaml:"output,omitempty"`
-			} `yaml:"stage,omitempty"`
-		} `yaml:"stages,omitempty"`
-	} `yaml:"tests,omitempty"`
+					DestAddr       string            `json:"dest_addr,omitempty"`
+					Port           int               `json:"port,omitempty"`
+					Method         string            `json:"method,omitempty"`
+					URI            string            `json:"uri,omitempty"`
+					Version        string            `json:"version,omitempty"`
+					Data           string            `json:"data,omitempty"`
+					Headers        map[string]string `json:"headers,omitempty"`
+					RawRequest     []byte            `json:"raw_request,omitempty"`
+					EncodedRequest string            `json:"encoded_request,omitempty"`
+					StopMagic      bool              `json:"stop_magic,omitempty"`
+				} `json:"input,omitempty"`
+				Output expectedOutput `json:"output,omitempty"`
+			} `json:"stage,omitempty"`
+		} `json:"stages,omitempty"`
+	} `json:"tests,omitempty"`
 }
 
+//tinyjson:json
 type expectedOutput struct {
-	Headers           map[string]string     `yaml:"headers,omitempty"`
-	Data              interface{}           `yaml:"data,omitempty"` // Accepts array or string
-	LogContains       string                `yaml:"log_contains,omitempty"`
-	NoLogContains     string                `yaml:"no_log_contains,omitempty"`
-	ExpectError       bool                  `yaml:"expect_error,omitempty"`
-	TriggeredRules    []int                 `yaml:"triggered_rules,omitempty"`
-	NonTriggeredRules []int                 `yaml:"non_triggered_rules,omitempty"`
-	Status            interface{}           `yaml:"status,omitempty"`
-	Interruption      *expectedInterruption `yaml:"interruption,omitempty"`
+	Headers           map[string]string     `json:"headers,omitempty"`
+	Data              string                `json:"data,omitempty"`
+	LogContains       string                `json:"log_contains,omitempty"`
+	NoLogContains     string                `json:"no_log_contains,omitempty"`
+	ExpectError       bool                  `json:"expect_error,omitempty"`
+	TriggeredRules    []int                 `json:"triggered_rules,omitempty"`
+	NonTriggeredRules []int                 `json:"non_triggered_rules,omitempty"`
+	Status            interface{}           `json:"status,omitempty"`
+	Interruption      *expectedInterruption `json:"interruption,omitempty"`
 }
 
+//tinyjson:json
 type expectedInterruption struct {
-	RuleID int    `yaml:"rule_id,omitempty"`
-	Action string `yaml:"action,omitempty"`
-	Status int    `yaml:"status,omitempty"`
-	Data   string `yaml:"data,omitempty"`
+	RuleID int    `json:"rule_id,omitempty"`
+	Action string `json:"action,omitempty"`
+	Status int    `json:"status,omitempty"`
+	Data   string `json:"data,omitempty"`
 }
 
 // TestList returns a list of tests created for a profile
@@ -144,6 +147,6 @@ func NewProfile(path string) (*Profile, error) {
 		return nil, err
 	}
 	profile := new(Profile)
-	err = yaml.Unmarshal(f, profile)
+	err = profile.UnmarshalJSON(f)
 	return profile, err
 }

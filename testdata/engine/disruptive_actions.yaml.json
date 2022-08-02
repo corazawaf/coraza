@@ -1,0 +1,305 @@
+{
+  "meta": {
+    "author": "sts",
+    "description": "Test if disruptive actions trigger an interruption",
+    "enabled": true,
+    "name": "disruptive_actions.yaml"
+  },
+  "rules": "SecRule REQUEST_URI \"/redirect1$\" \"phase:1,id:1,log,status:302,redirect:https://www.example.com\"\nSecRule REQUEST_URI \"/deny1$\" \"phase:1,id:2,log,status:500,deny\"\nSecRule REQUEST_URI \"/drop1$\" \"phase:1,id:3,log,drop\"\n\nSecRule REQUEST_URI \"/redirect2$\" \"phase:2,id:21,log,status:302,redirect:https://www.example.com\"\nSecRule REQUEST_URI \"/deny2$\" \"phase:2,id:22,log,status:500,deny\"\nSecRule REQUEST_URI \"/drop2$\" \"phase:2,id:23,log,drop\"\n\nSecRule REQUEST_URI \"/redirect3$\" \"phase:3,id:31,log,status:302,redirect:https://www.example.com\"\nSecRule REQUEST_URI \"/deny3$\" \"phase:3,id:32,log,status:500,deny\"\nSecRule REQUEST_URI \"/drop3$\" \"phase:3,id:33,log,drop\"\n\nSecRule REQUEST_URI \"/redirect4$\" \"phase:4,id:41,log,status:302,redirect:https://www.example.com\"\nSecRule REQUEST_URI \"/deny4$\" \"phase:4,id:42,log,status:500,deny\"\nSecRule REQUEST_URI \"/drop4$\" \"phase:4,id:43,log,drop\"\n\nSecRule REQUEST_URI \"/redirect5$\" \"phase:5,id:51,log,status:302,redirect:https://www.example.com\"\nSecRule REQUEST_URI \"/deny5$\" \"phase:5,id:52,log,status:500,deny\"\nSecRule REQUEST_URI \"/drop5$\" \"phase:5,id:53,log,drop\"\n\nSecDefaultAction phase:2,deny,status:501,log,logdata:'WOOOP_BLOCKED_BY_CORAZA_TEST'\nSecRule REQUEST_URI \"/default/block\" \"id:103,block\"\n",
+  "tests": [
+    {
+      "stages": [
+        {
+          "stage": {
+            "input": {
+              "uri": "/redirect1"
+            },
+            "output": {
+              "interruption": {
+                "action": "redirect",
+                "data": "https://www.example.com",
+                "rule_id": 1,
+                "status": 302
+              },
+              "triggered_rules": [
+                1
+              ]
+            }
+          }
+        },
+        {
+          "stage": {
+            "input": {
+              "uri": "/deny1"
+            },
+            "output": {
+              "interruption": {
+                "action": "deny",
+                "data": "",
+                "rule_id": 2,
+                "status": 500
+              },
+              "triggered_rules": [
+                2
+              ]
+            }
+          }
+        },
+        {
+          "stage": {
+            "input": {
+              "uri": "/drop1"
+            },
+            "output": {
+              "interruption": {
+                "action": "drop",
+                "data": "",
+                "rule_id": 3,
+                "status": 0
+              },
+              "triggered_rules": [
+                3
+              ]
+            }
+          }
+        },
+        {
+          "stage": {
+            "input": {
+              "uri": "/redirect2"
+            },
+            "output": {
+              "interruption": {
+                "action": "redirect",
+                "data": "https://www.example.com",
+                "rule_id": 21,
+                "status": 302
+              },
+              "triggered_rules": [
+                21
+              ]
+            }
+          }
+        },
+        {
+          "stage": {
+            "input": {
+              "uri": "/deny2"
+            },
+            "output": {
+              "interruption": {
+                "action": "deny",
+                "data": null,
+                "rule_id": 22,
+                "status": 500
+              },
+              "triggered_rules": [
+                22
+              ]
+            }
+          }
+        },
+        {
+          "stage": {
+            "input": {
+              "uri": "/drop2"
+            },
+            "output": {
+              "interruption": {
+                "action": "drop",
+                "data": "",
+                "rule_id": 23,
+                "status": 0
+              },
+              "triggered_rules": [
+                23
+              ]
+            }
+          }
+        },
+        {
+          "stage": {
+            "input": {
+              "uri": "/redirect3"
+            },
+            "output": {
+              "interruption": {
+                "action": "redirect",
+                "data": "https://www.example.com",
+                "rule_id": 31,
+                "status": 302
+              },
+              "triggered_rules": [
+                31
+              ]
+            }
+          }
+        },
+        {
+          "stage": {
+            "input": {
+              "uri": "/deny3"
+            },
+            "output": {
+              "interruption": {
+                "action": "deny",
+                "data": null,
+                "rule_id": 32,
+                "status": 500
+              },
+              "triggered_rules": [
+                32
+              ]
+            }
+          }
+        },
+        {
+          "stage": {
+            "input": {
+              "uri": "/drop3"
+            },
+            "output": {
+              "interruption": {
+                "action": "drop",
+                "data": "",
+                "rule_id": 33,
+                "status": 0
+              },
+              "triggered_rules": [
+                33
+              ]
+            }
+          }
+        },
+        {
+          "stage": {
+            "input": {
+              "uri": "/redirect4"
+            },
+            "output": {
+              "interruption": {
+                "action": "redirect",
+                "data": "https://www.example.com",
+                "rule_id": 41,
+                "status": 302
+              },
+              "triggered_rules": [
+                41
+              ]
+            }
+          }
+        },
+        {
+          "stage": {
+            "input": {
+              "uri": "/deny4"
+            },
+            "output": {
+              "interruption": {
+                "action": "deny",
+                "data": null,
+                "rule_id": 42,
+                "status": 500
+              },
+              "triggered_rules": [
+                42
+              ]
+            }
+          }
+        },
+        {
+          "stage": {
+            "input": {
+              "uri": "/drop4"
+            },
+            "output": {
+              "interruption": {
+                "action": "drop",
+                "data": "",
+                "rule_id": 43,
+                "status": 0
+              },
+              "triggered_rules": [
+                43
+              ]
+            }
+          }
+        },
+        {
+          "stage": {
+            "input": {
+              "uri": "/redirect5"
+            },
+            "output": {
+              "interruption": {
+                "action": "redirect",
+                "data": "https://www.example.com",
+                "rule_id": 51,
+                "status": 302
+              },
+              "triggered_rules": [
+                51
+              ]
+            }
+          }
+        },
+        {
+          "stage": {
+            "input": {
+              "uri": "/deny5"
+            },
+            "output": {
+              "interruption": {
+                "action": "deny",
+                "data": null,
+                "rule_id": 52,
+                "status": 500
+              },
+              "triggered_rules": [
+                52
+              ]
+            }
+          }
+        },
+        {
+          "stage": {
+            "input": {
+              "uri": "/drop5"
+            },
+            "output": {
+              "interruption": {
+                "action": "drop",
+                "data": "",
+                "rule_id": 53,
+                "status": 0
+              },
+              "triggered_rules": [
+                53
+              ]
+            }
+          }
+        },
+        {
+          "stage": {
+            "input": {
+              "uri": "/default/block"
+            },
+            "output": {
+              "interruption": {
+                "action": "deny",
+                "data": "",
+                "rule_id": 103,
+                "status": 501
+              },
+              "log_contains": "WOOOP_BLOCKED_BY_CORAZA_TEST",
+              "triggered_rules": [
+                103
+              ]
+            }
+          }
+        }
+      ],
+      "test_title": "disruptive_actions"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "meta": {
+    "author": "jptosso",
+    "description": "Test if the setvar action work",
+    "enabled": true,
+    "name": "setvar.yaml"
+  },
+  "rules": "SecRule ARGS_NAMES \"@rx .\" \\\n    \"id:921170,\\\n    nolog,\\\n    setvar:'TX.paramcounter_%{MATCHED_VAR_NAME}=+1'\"\n\nSecRule TX:/paramcounter_/ \"@eq 2\" \"id:920271,log\"",
+  "tests": [
+    {
+      "stages": [
+        {
+          "stage": {
+            "input": {
+              "uri": "/fields?name=foo&var=foo&var=foo2"
+            },
+            "output": {
+              "triggered_rules": [
+                920271
+              ]
+            }
+          }
+        }
+      ],
+      "test_title": "setvar"
+    }
+  ]
+}

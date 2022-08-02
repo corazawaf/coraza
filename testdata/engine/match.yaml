@@ -16,8 +16,8 @@
             uri: /test.php?id=12345&pizza=pineapple
             headers:
               content-type: application/x-www-form-urlencoded
-              test: 123
-              test2: 456
+              test: "123"
+              test2: "456"
         output:
           triggered_rules:
             - 26

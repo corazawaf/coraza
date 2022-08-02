@@ -1,3 +1,8 @@
+// Audit logs are currently disabled for tinygo
+
+//go:build !tinygo
+// +build !tinygo
+
 // Copyright 2022 Juan Pablo Tosso
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,8 +21,8 @@ package testing
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"testing"
 
@@ -62,8 +67,12 @@ func TestAuditLogMessages(t *testing.T) {
 	if _, err := file.Seek(0, 0); err != nil {
 		t.Error(err)
 	}
-	var al2 loggers.AuditLog
-	if err := json.NewDecoder(file).Decode(&al2); err != nil {
+	al2 := loggers.AuditLog{}
+	data, err := io.ReadAll(file)
+	if err != nil {
+		t.Error(err)
+	}
+	if err := al2.UnmarshalJSON(data); err != nil {
 		t.Error(err)
 	}
 	if len(al2.Messages) != 1 {
@@ -104,9 +113,13 @@ func TestAuditLogRelevantOnly(t *testing.T) {
 		t.Error(err)
 	}
 	tx.ProcessLogging()
-	var al2 loggers.AuditLog
+	al2 := loggers.AuditLog{}
+	data, err := io.ReadAll(file)
+	if err != nil {
+		t.Error(err)
+	}
 	// this should fail, there should be no log
-	if err := json.NewDecoder(file).Decode(&al2); err == nil {
+	if err := al2.UnmarshalJSON(data); err == nil {
 		t.Error(err)
 	}
 }
@@ -141,9 +154,13 @@ func TestAuditLogRelevantOnlyOk(t *testing.T) {
 		t.Error(err)
 	}
 	tx.ProcessLogging()
-	var al2 loggers.AuditLog
+	al2 := loggers.AuditLog{}
+	data, err := io.ReadAll(file)
+	if err != nil {
+		t.Error(err)
+	}
 	// this should pass as it matches any status
-	if err := json.NewDecoder(file).Decode(&al2); err != nil {
+	if err := al2.UnmarshalJSON(data); err != nil {
 		t.Error(err)
 	}
 }
@@ -178,9 +195,13 @@ func TestAuditLogRelevantOnlyNoAuditlog(t *testing.T) {
 		t.Error(err)
 	}
 	tx.ProcessLogging()
-	var al2 loggers.AuditLog
+	al2 := loggers.AuditLog{}
+	data, err := io.ReadAll(file)
+	if err != nil {
+		t.Error(err)
+	}
 	// there should be no audit log because of noauditlog
-	if err := json.NewDecoder(file).Decode(&al2); err == nil {
+	if err := al2.UnmarshalJSON(data); err == nil {
 		t.Errorf("there should be no audit log, got %v", al2)
 	}
 }

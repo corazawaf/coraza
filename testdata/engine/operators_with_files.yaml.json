@@ -1,0 +1,37 @@
+{
+  "meta": {
+    "author": "jptosso",
+    "description": "Test if operators with files works",
+    "enabled": true,
+    "name": "operators_with_files.yaml"
+  },
+  "rules": "SecRule ARGS_NAMES \"@pmFromFile operators/op/pmFromFile-01.dat\" \"id:1,log\"\nSecRule REQUEST_COOKIES:def \"@pmFromFile operators/op/pmFromFile-01.dat\" \"id:3,log\"\nSecRule REQUEST_COOKIES_NAMES \"@pmFromFile operators/op/pmFromFile-01.dat\" \"id:5,log\"\nSecRule REQUEST_HEADERS_NAMES \"@pmFromFile operators/op/pmFromFile-01.dat\" \"id:10,log\"\n",
+  "tests": [
+    {
+      "stages": [
+        {
+          "debug": true,
+          "stage": {
+            "input": {
+              "headers": {
+                "cookie": "ghi=cfg;def=ghi",
+                "ghi": "pineapple"
+              },
+              "uri": "/?ghi=cdf"
+            },
+            "output": {
+              "non_triggered_rules": null,
+              "triggered_rules": [
+                1,
+                3,
+                5,
+                10
+              ]
+            }
+          }
+        }
+      ],
+      "test_title": "owf"
+    }
+  ]
+}

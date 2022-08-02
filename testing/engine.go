@@ -18,7 +18,6 @@ import (
 	"context"
 	b64 "encoding/base64"
 	"fmt"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -131,12 +130,7 @@ func (t *Test) SetRawRequest(request []byte) error {
 }
 
 // SetRequestBody sets the request body
-func (t *Test) SetRequestBody(body interface{}) error {
-	if body == nil {
-		return nil
-	}
-	data := bodyToString(body)
-
+func (t *Test) SetRequestBody(data string) error {
 	lbody := len(data)
 	if lbody == 0 {
 		return nil
@@ -152,12 +146,7 @@ func (t *Test) SetRequestBody(body interface{}) error {
 }
 
 // SetResponseBody sets the request body
-func (t *Test) SetResponseBody(body interface{}) error {
-	if body == nil {
-		return nil
-	}
-	data := bodyToString(body)
-
+func (t *Test) SetResponseBody(data string) error {
 	lbody := len(data)
 	if lbody == 0 {
 		return nil
@@ -176,16 +165,20 @@ func (t *Test) RunPhases() error {
 		t.transaction.AddRequestHeader(k, v)
 	}
 	t.transaction.ProcessRequestHeaders()
+
 	if _, err := t.transaction.ProcessRequestBody(); err != nil {
 		return err
 	}
 	for k, v := range t.ResponseHeaders {
 		t.transaction.AddResponseHeader(k, v)
 	}
+
 	t.transaction.ProcessResponseHeaders(t.ResponseCode, t.ResponseProtocol)
+
 	if _, err := t.transaction.ProcessResponseBody(); err != nil {
 		return err
 	}
+
 	t.transaction.ProcessLogging()
 	return nil
 }
@@ -300,21 +293,4 @@ func NewTest(name string, waf *coraza.Waf) *Test {
 	}
 	t.SetWaf(waf)
 	return t
-}
-
-func bodyToString(iface interface{}) string {
-	data := ""
-	v := reflect.ValueOf(iface)
-	switch v.Kind() {
-	case reflect.Slice:
-		for i := 0; i < v.Len(); i++ {
-			data += fmt.Sprintf("%s\r\n", v.Index(i))
-		}
-		data += "\r\n"
-	case reflect.String:
-		data = iface.(string)
-	default:
-		panic("Error: bodyToString() only accepts slices and strings")
-	}
-	return data
 }

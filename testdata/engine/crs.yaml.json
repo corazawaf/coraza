@@ -1,0 +1,39 @@
+{
+  "meta": {
+    "author": "jptosso",
+    "description": "This is a mix of many tests used to make fixes for CRS",
+    "enabled": true,
+    "name": "crs.yaml"
+  },
+  "rules": "SecRule REQUEST_METHOD \"@rx ^(?:GET|HEAD)$\" \\\n    \"id:920170,\\\n    phase:1,\\\n    log,\\\n    chain\"\n    SecRule REQUEST_HEADERS:Content-Length \"!@rx ^0?$\" \\\n        \"t:none,\\\n        setvar:'tx.anomaly_score_pl1=+%{tx.critical_anomaly_score}'\"\n\nSecRule REQUEST_HEADERS:Range|REQUEST_HEADERS:Request-Range \"@rx ^bytes=(?:(?:\\d+)?-(?:\\d+)?\\s*,?\\s*){6}\" \\\n    \"id:920200,\\\n    phase:1,\\\n    log,\\\n    chain\"\n    SecRule REQUEST_BASENAME \"!@endsWith .pdf\" \\\n        \"setvar:'tx.anomaly_score_pl2=+%{tx.warning_anomaly_score}'\"            ",
+  "tests": [
+    {
+      "stages": [
+        {
+          "stage": {
+            "debug": true,
+            "input": {
+              "data": "test",
+              "headers": {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Host": "localhost",
+                "Range": "bytes=1-10,11-20,21-30,31-40,41-50,51-60",
+                "User-Agent": "ModSecurity CRS 3 Tests",
+                "content-length": "4"
+              },
+              "method": "GET",
+              "uri": "/test.php?id=12345"
+            },
+            "output": {
+              "triggered_rules": [
+                920170,
+                920200
+              ]
+            }
+          }
+        }
+      ],
+      "test_title": "crs"
+    }
+  ]
+}

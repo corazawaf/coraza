@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "author": "jptosso",
+    "description": "Test if the response action works",
+    "enabled": true,
+    "name": "response.yaml"
+  },
+  "rules": "SecResponseBodyAccess On\nSecResponseBodyMimeType secret/mime\nSecRule RESPONSE_BODY \"@rx <\\?(?:=|php)?\\s+\" \\\n    \"id:953120,\\\n    phase:4,\\\n    block,\\\n    capture,\\\n    log\"",
+  "tests": [
+    {
+      "stages": [
+        {
+          "stage": {
+            "input": {
+              "uri": "/test.php?id=12345"
+            },
+            "output": {
+              "data": "<?php echo \"Hello World!\\n\" ?>",
+              "headers": {
+                "content-type": "secret/mime"
+              },
+              "triggered_rules": [
+                953120
+              ]
+            }
+          }
+        }
+      ],
+      "test_title": "response"
+    }
+  ]
+}

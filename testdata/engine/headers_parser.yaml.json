@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "author": "jptosso",
+    "description": "Test if the headers parsers work",
+    "enabled": true,
+    "name": "headers_parser.yaml"
+  },
+  "rules": "SecRule REQUEST_HEADERS:test \"456\" \"phase:1,t:none,log,id:1,msg:'test'\"\nSecRule REQUEST_HEADERS_NAMES \"test\" \"log,id:5\"\n\nSecRule REQUEST_METHOD \"@rx ^(?:GET|HEAD)$\" \"id:920171,phase:1, log,chain\"\n  SecRule &REQUEST_HEADERS:Transfer-Encoding \"!@eq 0\" \"\"",
+  "tests": [
+    {
+      "stages": [
+        {
+          "stage": {
+            "input": {
+              "headers": {
+                "Transfer-Encoding": "chunked",
+                "test": "456"
+              },
+              "method": "GET"
+            },
+            "output": {
+              "non_triggered_rules": null,
+              "triggered_rules": [
+                1,
+                5,
+                920171
+              ]
+            }
+          }
+        }
+      ],
+      "test_title": "envs"
+    }
+  ]
+}
