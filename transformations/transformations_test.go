@@ -15,7 +15,6 @@
 package transformations
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -23,14 +22,6 @@ import (
 	"strings"
 	"testing"
 )
-
-type Test struct {
-	Input  string `json:"input"`
-	Output string `json:"output"`
-	Name   string `json:"name"`
-	Ret    int    `json:"ret"`
-	Type   string `json:"type"`
-}
 
 //https://github.com/SpiderLabs/secrules-language-tests/
 func TestTransformations(t *testing.T) {
@@ -50,8 +41,8 @@ func TestTransformations(t *testing.T) {
 	}
 	for _, f := range files {
 
-		cases := []*Test{}
-		err := json.Unmarshal(f, &cases)
+		cases := tests{}
+		err := cases.UnmarshalJSON(f)
 		if err != nil {
 			t.Error("Cannot parse test case")
 		}
