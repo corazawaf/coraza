@@ -28,8 +28,5 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
 
-      - name: Download vendored dependencies
-        run: go mod vendor
-
       - name: Tests
-        run: go list ./... | xargs -I{} tinygo test {}
+        run: tinygo test ./...
