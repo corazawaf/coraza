@@ -22,14 +22,18 @@ import (
 	"github.com/corazawaf/coraza/v3"
 )
 
+type byteRange struct {
+	start byte
+	end   byte
+}
+
 type validateByteRange struct {
-	data [][]byte
+	data []byteRange
 }
 
 func (o *validateByteRange) Init(options coraza.RuleOperatorOptions) error {
 	data := options.Arguments
 
-	o.data = [][]byte{}
 	if data == "" {
 		return nil
 	}
@@ -79,7 +83,7 @@ func (o *validateByteRange) Evaluate(tx *coraza.Transaction, data string) bool {
 	matched := 0
 	for _, c := range input {
 		for _, r := range o.data {
-			if c >= r[0] && c <= r[1] {
+			if c >= r.start && c <= r.end {
 				matched++
 				break
 			}
@@ -95,6 +99,9 @@ func (o *validateByteRange) addRange(start uint64, end uint64) error {
 	if end > 255 {
 		return fmt.Errorf("invalid byte %d", end)
 	}
-	o.data = append(o.data, []byte{byte(start), byte(end)})
+	o.data = append(o.data, byteRange{
+		start: byte(start),
+		end:   byte(end),
+	})
 	return nil
 }
