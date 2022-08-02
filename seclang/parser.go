@@ -23,9 +23,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/types"
-
 	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 // maxIncludeRecursion is used to avoid DDOS by including files that include

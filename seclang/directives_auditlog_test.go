@@ -6,13 +6,14 @@
 package seclang
 
 import (
+	"os"
+	"strings"
+	"testing"
+
 	"github.com/corazawaf/coraza/v3"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
-	"os"
-	"strings"
-	"testing"
 )
 
 func TestSecAuditLogDirectivesConcurrent(t *testing.T) {

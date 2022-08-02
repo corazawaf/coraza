@@ -4,6 +4,7 @@ package testing
 
 import (
 	json "encoding/json"
+
 	tinyjson "github.com/CosmWasm/tinyjson"
 	jlexer "github.com/CosmWasm/tinyjson/jlexer"
 	jwriter "github.com/CosmWasm/tinyjson/jwriter"
