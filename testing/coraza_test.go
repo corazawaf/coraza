@@ -16,32 +16,28 @@ package testing
 
 import (
 	"fmt"
-	"path/filepath"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/seclang"
+	_ "github.com/corazawaf/coraza/v3/testdata/engine"
+	"github.com/corazawaf/coraza/v3/testing/profile"
 )
 
 func TestEngine(t *testing.T) {
-	files, err := filepath.Glob("../testdata/engine/*.json")
-	if err != nil {
-		t.Error(err)
+	if len(profile.Profiles) == 0 {
+		t.Error("failed to find tests")
 	}
-	if len(files) == 0 {
-		t.Error("failed to find test files")
-	}
-	for _, f := range files {
-		profile, err := NewProfile(f)
-		if err != nil {
-			t.Errorf("failed to parse profile %s: %s", f, err)
-		}
-		if profile.TinyGoDisable && IsTinyGo {
+	for _, p := range profile.Profiles {
+		if p.TinyGoDisable && IsTinyGo {
 			continue
 		}
-		tt, err := profile.TestList(nil)
+		tt, err := testList(&p, nil)
 		if err != nil {
 			t.Error(err)
 		}
 		for _, test := range tt {
-			testname := profile.Tests[0].Title
+			testname := p.Tests[0].Title
 
 			t.Run(testname, func(t *testing.T) {
 				if err := test.RunPhases(); err != nil {
@@ -54,7 +50,7 @@ func TestEngine(t *testing.T) {
 						debug += fmt.Sprintf(" %d", mr.Rule.ID)
 					}
 					if testing.Verbose() {
-						t.Errorf("\x1b[41m ERROR \x1b[0m: %s:%s: %s, got:%s\n%s\nREQUEST:\n%s", profile.Meta.Name, test.Name, e, debug, test.transaction.Debug(), test.Request())
+						t.Errorf("\x1b[41m ERROR \x1b[0m: %s:%s: %s, got:%s\n%s\nREQUEST:\n%s", p.Meta.Name, test.Name, e, debug, test.transaction.Debug(), test.Request())
 					} else {
 						t.Errorf("%s: ERROR: %s", test.Name, e)
 					}
@@ -62,7 +58,7 @@ func TestEngine(t *testing.T) {
 
 				for _, e := range test.OutputInterruptionErrors() {
 					if testing.Verbose() {
-						t.Errorf("\x1b[41m ERROR \x1b[0m: %s:%s: %s\n %s\nREQUEST:\n%s", profile.Meta.Name, test.Name, e, test.transaction.Debug(), test.Request())
+						t.Errorf("\x1b[41m ERROR \x1b[0m: %s:%s: %s\n %s\nREQUEST:\n%s", p.Meta.Name, test.Name, e, test.transaction.Debug(), test.Request())
 					} else {
 						t.Errorf("%s: ERROR: %s", test.Name, e)
 					}
@@ -70,4 +66,63 @@ func TestEngine(t *testing.T) {
 			})
 		}
 	}
+}
+
+func testList(p *profile.Profile, waf *coraza.Waf) ([]*Test, error) {
+	var tests []*Test
+	for _, t := range p.Tests {
+		name := t.Title
+		for _, stage := range t.Stages {
+			w := waf
+			if w == nil || p.Rules != "" {
+				w = coraza.NewWaf()
+				parser, _ := seclang.NewParser(w)
+				parser.SetCurrentDir("../testdata/")
+				if err := parser.FromString(p.Rules); err != nil {
+					return nil, err
+				}
+			}
+			test := NewTest(name, w)
+			test.ExpectedOutput = stage.Output
+			// test.RequestAddress =
+			// test.RequestPort =
+			if stage.Input.URI != "" {
+				test.RequestURI = stage.Input.URI
+			}
+			if stage.Input.Method != "" {
+				test.RequestMethod = stage.Input.Method
+			}
+			if stage.Input.Version != "" {
+				test.RequestProtocol = stage.Input.Version
+			}
+			if stage.Input.Headers != nil {
+				test.RequestHeaders = stage.Input.Headers
+			}
+			if stage.Output.Headers != nil {
+				test.ResponseHeaders = stage.Output.Headers
+			}
+			// test.ResponseHeaders = stage.Output.Headers
+			test.ResponseCode = 200
+			test.ResponseProtocol = "HTTP/1.1"
+			test.ServerAddress = stage.Input.DestAddr
+			test.ServerPort = stage.Input.Port
+			if stage.Input.StopMagic {
+				test.DisableMagic()
+			}
+			if err := test.SetEncodedRequest(stage.Input.EncodedRequest); err != nil {
+				return nil, err
+			}
+			if err := test.SetRawRequest(stage.Input.RawRequest); err != nil {
+				return nil, err
+			}
+			if err := test.SetRequestBody(stage.Input.Data); err != nil {
+				return nil, err
+			}
+			if err := test.SetResponseBody(stage.Output.Data); err != nil {
+				return nil, err
+			}
+			tests = append(tests, test)
+		}
+	}
+	return tests, nil
 }

@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/testing/profile"
 )
 
 // Test represents a unique transaction within
@@ -59,7 +60,7 @@ type Test struct {
 	// ServerPort contains the port of the server
 	ServerPort int
 	// Expected contains the expected result of the test
-	ExpectedOutput expectedOutput
+	ExpectedOutput profile.ExpectedOutput
 }
 
 // SetWaf sets the waf instance pointer
