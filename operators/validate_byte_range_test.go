@@ -45,7 +45,8 @@ func TestValidateByteRangeCase5(t *testing.T) {
 	if err := op.Init(opts); err != nil {
 		t.Error("Cannot init byte range operator")
 	}
-	if len(op.data) != 5 || op.data[0][0] != 9 || op.data[1][0] != 10 || op.data[2][0] != 13 || op.data[3][0] != 32 || op.data[3][1] != 126 || op.data[4][0] != 128 || op.data[4][1] != 255 {
+	if len(op.data) != 5 || op.data[0].start != 9 || op.data[1].start != 10 || op.data[2].start != 13 || op.data[3].start != 32 ||
+		op.data[3].end != 126 || op.data[4].start != 128 || op.data[4].end != 255 {
 		t.Error("Invalid range length", len(op.data))
 	}
 	if op.Evaluate(nil, "/\ufffdindex.html?test=test1") {
@@ -56,4 +57,19 @@ func TestValidateByteRangeCase5(t *testing.T) {
 func getTransaction() *engine.Transaction {
 	waf := engine.NewWaf()
 	return waf.NewTransaction(context.Background())
+}
+
+func BenchmarkValidateByteRange(b *testing.B) {
+	ranges := "9,10,13,32-126,128-255"
+	op := &validateByteRange{}
+	opts := engine.RuleOperatorOptions{
+		Arguments: ranges,
+	}
+	if err := op.Init(opts); err != nil {
+		b.Error("Cannot init byte range operator")
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		op.Evaluate(nil, "/\ufffdindex.html?test=test1")
+	}
 }

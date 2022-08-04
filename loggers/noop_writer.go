@@ -1,3 +1,7 @@
+// Currently only used with TinyGo
+//go:build tinygo
+// +build tinygo
+
 // Copyright 2022 Juan Pablo Tosso
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
