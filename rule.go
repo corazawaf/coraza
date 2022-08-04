@@ -204,7 +204,6 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 	}
 
 	captured := false
-
 	matchedValues := []types.MatchData{}
 	// we log if we are the parent rule
 	tx.Waf.Logger.Debug("[%s] [%d] Evaluating rule %d", tx.ID, rid, r.ID)
@@ -223,7 +222,6 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 		r.matchVariable(tx, md)
 	} else {
 		ecol := tx.ruleRemoveTargetByID[r.ID]
-		captured := false
 		for _, v := range r.variables {
 			var values []types.MatchData
 			for _, c := range ecol {
@@ -278,10 +276,6 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 					tx.Waf.Logger.Debug("[%s] [%d] Evaluating operator \"@%s %s\" for rule %d", tx.ID, rid, r.operator.Function, "", r.ID)
 				}
 			}
-		}
-
-		if captured {
-			defer tx.resetCaptures()
 		}
 	}
 
