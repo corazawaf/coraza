@@ -97,7 +97,7 @@ func TestHardcodedSubIncludeDirectiveAbsolutePath(t *testing.T) {
 func TestHardcodedIncludeDirectiveDDOS(t *testing.T) {
 	waf := coraza.NewWaf()
 	p, _ := NewParser(waf)
-	tmpFile, err := os.CreateTemp(os.TempDir(), "rand*.conf")
+	tmpFile, err := os.Create(filepath.Join(t.TempDir(), "rand.conf"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,11 +117,11 @@ func TestHardcodedIncludeDirectiveDDOS(t *testing.T) {
 func TestHardcodedIncludeDirectiveDDOS2(t *testing.T) {
 	waf := coraza.NewWaf()
 	p, _ := NewParser(waf)
-	tmpFile, err := os.CreateTemp(os.TempDir(), "rand1*.conf")
+	tmpFile, err := os.Create(filepath.Join(t.TempDir(), "rand1.conf"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	tmpFile2, err := os.CreateTemp(os.TempDir(), "rand2*.conf")
+	tmpFile2, err := os.Create(filepath.Join(t.TempDir(), "rand2.conf"))
 	if err != nil {
 		t.Fatal(err)
 	}
