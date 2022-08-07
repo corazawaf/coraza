@@ -28,7 +28,7 @@ import (
 )
 
 // maxIncludeRecursion is used to avoid DDOS by including files that include
-const maxIncludeRecursion = 500
+const maxIncludeRecursion = 100
 
 // Parser provides functions to evaluate (compile) SecLang directives
 type Parser struct {
