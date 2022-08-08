@@ -22,9 +22,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type Test struct {
@@ -39,54 +36,58 @@ type Test struct {
 func TestTransformations(t *testing.T) {
 	root := "../testdata/transformations/"
 	files := [][]byte{}
-
-	_, err := os.Stat(root)
-	require.False(t, os.IsNotExist(err), "failed to find transformation test files")
-
-	err = filepath.Walk(root, func(path string, _ os.FileInfo, _ error) error {
+	if _, err := os.Stat(root); os.IsNotExist(err) {
+		t.Error("failed to find transformation test files")
+	}
+	if err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if strings.HasSuffix(path, ".json") {
 			data, _ := ioutil.ReadFile(path)
 			files = append(files, data)
 		}
 		return nil
-	})
-	require.NoError(t, err, "error walking files")
-
+	}); err != nil {
+		t.Error("Error walking files")
+	}
 	for _, f := range files {
+
 		cases := []*Test{}
 		err := json.Unmarshal(f, &cases)
-		assert.NoError(t, err, "cannot parse test case")
-
+		if err != nil {
+			t.Error("Cannot parse test case")
+		}
 		for _, data := range cases {
-			t.Run(data.Name, func(t *testing.T) {
-				// UNMARSHALL does not transform \u0000 to binary
-				data.Input = strings.ReplaceAll(data.Input, `\u0000`, "\u0000")
-				data.Output = strings.ReplaceAll(data.Output, `\u0000`, "\u0000")
+			// UNMARSHALL does not transform \u0000 to binary
+			data.Input = strings.ReplaceAll(data.Input, `\u0000`, "\u0000")
+			data.Output = strings.ReplaceAll(data.Output, `\u0000`, "\u0000")
 
-				if strings.Contains(data.Input, `\x`) {
-					data.Input, _ = strconv.Unquote(`"` + data.Input + `"`)
-				}
-				if strings.Contains(data.Output, `\x`) {
-					data.Output, _ = strconv.Unquote(`"` + data.Output + `"`)
-				}
-				trans, err := GetTransformation(data.Name)
-				if err != nil {
-					// TODO(jcchavezs): figure out why error is ignored
-					// t.Error(err)
-					return
-				}
-				out, err := trans(data.Input)
-				assert.NoError(t, err)
-				assert.Equal(t, data.Output, out)
-			})
+			if strings.Contains(data.Input, `\x`) {
+				data.Input, _ = strconv.Unquote(`"` + data.Input + `"`)
+			}
+			if strings.Contains(data.Output, `\x`) {
+				data.Output, _ = strconv.Unquote(`"` + data.Output + `"`)
+			}
+			trans, err := GetTransformation(data.Name)
+			if err != nil {
+				// t.Error(err)
+				continue
+			}
+			out, err := trans(data.Input)
+			if err != nil {
+				t.Error(err)
+			}
+			if out != data.Output {
+				t.Errorf("Transformation %s:\nInput: %s\nExpected: %v\nGot: %v\nExpected String: %s\nGot String: %s",
+					data.Name, data.Input, []byte(data.Output), []byte(out), data.Output, out)
+			}
 		}
 	}
 }
 
 func TestTransformationsAreCaseInsensitive(t *testing.T) {
-	_, err := GetTransformation("cmdLine")
-	require.NoError(t, err)
-
-	_, err = GetTransformation("cmdline")
-	require.NoError(t, err)
+	if _, err := GetTransformation("cmdLine"); err != nil {
+		t.Error(err)
+	}
+	if _, err := GetTransformation("cmdline"); err != nil {
+		t.Error(err)
+	}
 }

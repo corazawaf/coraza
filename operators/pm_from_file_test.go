@@ -18,17 +18,17 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v2"
-	"github.com/stretchr/testify/require"
 )
 
 func TestPmfm(t *testing.T) {
 	data := "abc\r\ndef\r\nghi\njkl\ryhz"
 	p := &pmFromFile{}
-
-	err := p.Init(data)
-	require.NoError(t, err)
-
+	if err := p.Init(data); err != nil {
+		t.Error(err)
+	}
 	waf := coraza.NewWaf()
 	tx := waf.NewTransaction()
-	require.True(t, p.Evaluate(tx, "def"), "failed to match pmFromFile")
+	if !p.Evaluate(tx, "def") {
+		t.Error("failed to match pmFromFile")
+	}
 }

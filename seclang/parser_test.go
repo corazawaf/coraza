@@ -23,7 +23,6 @@ import (
 
 	"github.com/corazawaf/coraza/v2"
 	engine "github.com/corazawaf/coraza/v2"
-	"github.com/stretchr/testify/require"
 )
 
 func TestInterruption(t *testing.T) {
@@ -42,14 +41,18 @@ func TestDirectivesCaseInsensitive(t *testing.T) {
 	waf := engine.NewWaf()
 	p, _ := NewParser(waf)
 	err := p.FromString("seCwEbAppid 15")
-	require.NoError(t, err)
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func TestDefaultConfigurationFile(t *testing.T) {
 	waf := engine.NewWaf()
 	p, _ := NewParser(waf)
 	err := p.FromFile("../coraza.conf-recommended")
-	require.NoError(t, err)
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func TestHardcodedIncludeDirective(t *testing.T) {

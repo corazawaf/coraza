@@ -17,15 +17,17 @@ package operators
 import (
 	_ "fmt"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
 func TestGt(t *testing.T) {
 	gto := &gt{}
-
-	err := gto.Init("2500")
-	require.NoError(t, err, "cannot init gto operator")
-	require.True(t, gto.Evaluate(nil, "2800"), "invalid result for @gt operator")
-	require.False(t, gto.Evaluate(nil, "2400"), "Invalid result for @gt operator")
+	if err := gto.Init("2500"); err != nil {
+		t.Error("Cannot init gto operator")
+	}
+	if !gto.Evaluate(nil, "2800") {
+		t.Errorf("Invalid result for @gt operator")
+	}
+	if gto.Evaluate(nil, "2400") {
+		t.Errorf("Invalid result for @gt operator")
+	}
 }

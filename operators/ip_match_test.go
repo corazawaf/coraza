@@ -18,8 +18,6 @@ import (
 	_ "fmt"
 	"os"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
 func TestOneAddress(t *testing.T) {
@@ -27,11 +25,15 @@ func TestOneAddress(t *testing.T) {
 	addrfail := "127.0.0.2"
 	cidr := "127.0.0.1/32"
 	ipm := &ipMatch{}
-
-	err := ipm.Init(cidr)
-	require.NoError(t, err, "cannot init ipmatchtest operator")
-	require.True(t, ipm.Evaluate(nil, addrok), "invalid result for single CIDR IpMatch")
-	require.False(t, ipm.Evaluate(nil, addrfail), "invalid result for single CIDR IpMatch")
+	if err := ipm.Init(cidr); err != nil {
+		t.Error("Cannot init ipmatchtest operator")
+	}
+	if !ipm.Evaluate(nil, addrok) {
+		t.Errorf("Invalid result for single CIDR IpMatch")
+	}
+	if ipm.Evaluate(nil, addrfail) {
+		t.Errorf("Invalid result for single CIDR IpMatch")
+	}
 }
 
 func TestMultipleAddress(t *testing.T) {
@@ -39,20 +41,19 @@ func TestMultipleAddress(t *testing.T) {
 	addrfail := []string{"127.0.0.2", "192.168.1.1"}
 	cidr := "127.0.0.1, 192.168.0.0/24"
 	ipm := &ipMatch{}
-
-	err := ipm.Init(cidr)
-	require.NoError(t, err, "cannot init ipmatchtest operator")
-
+	if err := ipm.Init(cidr); err != nil {
+		t.Error("Cannot init ipmatchtest operator")
+	}
 	for _, ok := range addrok {
-		t.Run(ok, func(t *testing.T) {
-			require.True(t, ipm.Evaluate(nil, ok), "invalid result for single CIDR IpMatch")
-		})
+		if !ipm.Evaluate(nil, ok) {
+			t.Errorf("Invalid result for single CIDR IpMatch " + ok)
+		}
 	}
 
 	for _, fail := range addrfail {
-		t.Run(fail, func(t *testing.T) {
-			require.False(t, ipm.Evaluate(nil, fail), "invalid result for single CIDR IpMatch")
-		})
+		if ipm.Evaluate(nil, fail) {
+			t.Errorf("Invalid result for single CIDR IpMatch" + fail)
+		}
 	}
 }
 
@@ -62,20 +63,21 @@ func TestFromFile(t *testing.T) {
 
 	ipm := &ipMatchFromFile{}
 	data, err := os.ReadFile("../testdata/operators/op/netranges.dat")
-	require.NoError(t, err, "cannot read test data")
-
-	err = ipm.Init(string(data))
-	require.NoError(t, err, "cannot init ipmatchfromfile operator")
-
+	if err != nil {
+		t.Error("Cannot read test data", err)
+	}
+	if err := ipm.Init(string(data)); err != nil {
+		t.Error("Cannot init ipmatchfromfile operator")
+	}
 	for _, ok := range addrok {
-		t.Run(ok, func(t *testing.T) {
-			require.True(t, ipm.Evaluate(nil, ok), "invalid result for single CIDR IpMatchFromFile")
-		})
+		if !ipm.Evaluate(nil, ok) {
+			t.Errorf("Invalid result for single CIDR IpMatchFromFile " + ok)
+		}
 	}
 
 	for _, fail := range addrfail {
-		t.Run(fail, func(t *testing.T) {
-			require.False(t, ipm.Evaluate(nil, fail), "invalid result for single CIDR IpMatchFromFile")
-		})
+		if ipm.Evaluate(nil, fail) {
+			t.Errorf("Invalid result for single CIDR IpMatchFromFile" + fail)
+		}
 	}
 }

@@ -16,13 +16,11 @@ package coraza
 
 import (
 	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
 var waf *Waf
 
-func TestWAFInitialize(_ *testing.T) {
+func TestWAFInitialize(t *testing.T) {
 	waf = NewWaf()
 }
 
@@ -32,7 +30,13 @@ func TestNewTransaction(t *testing.T) {
 	waf.ResponseBodyAccess = true
 	waf.RequestBodyLimit = 1044
 	tx := waf.NewTransaction()
-	require.True(t, tx.RequestBodyAccess, "Request body access not enabled")
-	require.True(t, tx.ResponseBodyAccess, "Response body access not enabled")
-	require.Equal(t, int64(1044), tx.RequestBodyLimit, "Request body limit not set")
+	if !tx.RequestBodyAccess {
+		t.Error("Request body access not enabled")
+	}
+	if !tx.ResponseBodyAccess {
+		t.Error("Response body access not enabled")
+	}
+	if tx.RequestBodyLimit != 1044 {
+		t.Error("Request body limit not set")
+	}
 }
