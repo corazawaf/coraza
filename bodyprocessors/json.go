@@ -15,7 +15,6 @@
 package bodyprocessors
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"strconv"
@@ -92,7 +91,7 @@ func jsonToMap(data []byte) (map[string]string, error) {
 		m      map[string]string
 		err    error
 	)
-	if err = json.Unmarshal(data, &result); err != nil {
+	if result, err = jsonUnmarshal(data); err != nil {
 		return nil, err
 	}
 
@@ -192,9 +191,7 @@ func interfaceToMap(data map[string]interface{}) (map[string]string, error) {
 	return result, nil
 }
 
-var (
-	_ BodyProcessor = &jsonBodyProcessor{}
-)
+var _ BodyProcessor = &jsonBodyProcessor{}
 
 func init() {
 	Register("json", func() BodyProcessor {
