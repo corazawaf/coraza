@@ -48,7 +48,7 @@ jobs:
         go mod tidy
         go get ./...
         go get -u github.com/jptosso/coraza-pcre@593842e
-        go build -o caddybin caddy/main.go
+        go build -o caddybin main.go
         file caddybin
         sudo setcap CAP_NET_BIND_SERVICE=+eip $(pwd)/caddybin
     - name: Start Caddy server
