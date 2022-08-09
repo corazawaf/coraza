@@ -22,4 +22,4 @@ jobs:
         fetch-depth: 0 #for better blame info
     - name: Setup CRS
       run: |
-        go test --tags coreruleset ./...
+        go test --tags coreruleset ./... -v
