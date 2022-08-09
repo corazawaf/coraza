@@ -39,7 +39,7 @@ jobs:
       run: |
         go install github.com/fzipi/go-ftw@latest
         mkdir caddy
-        wget https://raw.githubusercontent.com/jptosso/coraza-caddy/master/caddy/main.go
+        wget https://gist.githubusercontent.com/jptosso/42dbde4835169371e54a351c95644370/raw/ca6f71573b1d7f1a295f452582951fd5d0724efd/main.go
         cp testdata/coreruleset/Caddyfile .
         ls -lh
         sed -i 's/\/\/ _ "github.com/_ "github.com/g' main.go
@@ -48,7 +48,7 @@ jobs:
         go mod tidy
         go get ./...
         go get -u github.com/jptosso/coraza-pcre@593842e
-        go build -o caddybin main.go
+        go build -o caddybin caddy/main.go
         file caddybin
         sudo setcap CAP_NET_BIND_SERVICE=+eip $(pwd)/caddybin
     - name: Start Caddy server
