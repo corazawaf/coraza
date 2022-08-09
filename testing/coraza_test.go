@@ -28,40 +28,43 @@ func TestEngine(t *testing.T) {
 	if len(profile.Profiles) == 0 {
 		t.Error("failed to find tests")
 	}
+	fmt.Printf("Loading %d profiles\n", len(profile.Profiles))
 	for _, p := range profile.Profiles {
-		tt, err := testList(&p, nil)
-		if err != nil {
-			t.Error(err)
-		}
-		for _, test := range tt {
-			testname := p.Tests[0].Title
+		t.Run(p.Meta.Name, func(t *testing.T) {
+			tt, err := testList(&p, nil)
+			if err != nil {
+				t.Error(err)
+			}
+			for _, test := range tt {
+				testname := p.Tests[0].Title
 
-			t.Run(testname, func(t *testing.T) {
-				if err := test.RunPhases(); err != nil {
-					t.Errorf("%s, ERROR: %s", test.Name, err)
-				}
+				t.Run(testname, func(t *testing.T) {
+					if err := test.RunPhases(); err != nil {
+						t.Errorf("%s, ERROR: %s", test.Name, err)
+					}
 
-				for _, e := range test.OutputErrors() {
-					debug := ""
-					for _, mr := range test.transaction.MatchedRules {
-						debug += fmt.Sprintf(" %d", mr.Rule.ID)
+					for _, e := range test.OutputErrors() {
+						debug := ""
+						for _, mr := range test.transaction.MatchedRules {
+							debug += fmt.Sprintf(" %d", mr.Rule.ID)
+						}
+						if testing.Verbose() {
+							t.Errorf("\x1b[41m ERROR \x1b[0m: %s:%s: %s, got:%s\n%s\nREQUEST:\n%s", p.Meta.Name, test.Name, e, debug, test.transaction.Debug(), test.Request())
+						} else {
+							t.Errorf("%s: ERROR: %s", test.Name, e)
+						}
 					}
-					if testing.Verbose() {
-						t.Errorf("\x1b[41m ERROR \x1b[0m: %s:%s: %s, got:%s\n%s\nREQUEST:\n%s", p.Meta.Name, test.Name, e, debug, test.transaction.Debug(), test.Request())
-					} else {
-						t.Errorf("%s: ERROR: %s", test.Name, e)
-					}
-				}
 
-				for _, e := range test.OutputInterruptionErrors() {
-					if testing.Verbose() {
-						t.Errorf("\x1b[41m ERROR \x1b[0m: %s:%s: %s\n %s\nREQUEST:\n%s", p.Meta.Name, test.Name, e, test.transaction.Debug(), test.Request())
-					} else {
-						t.Errorf("%s: ERROR: %s", test.Name, e)
+					for _, e := range test.OutputInterruptionErrors() {
+						if testing.Verbose() {
+							t.Errorf("\x1b[41m ERROR \x1b[0m: %s:%s: %s\n %s\nREQUEST:\n%s", p.Meta.Name, test.Name, e, test.transaction.Debug(), test.Request())
+						} else {
+							t.Errorf("%s: ERROR: %s", test.Name, e)
+						}
 					}
-				}
-			})
-		}
+				})
+			}
+		})
 	}
 }
 
