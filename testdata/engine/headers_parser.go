@@ -16,15 +16,17 @@ var _ = profile.RegisterProfile(profile.Profile{
 			Title: "envs",
 			Stages: []profile.ProfileStage{
 				{
-					Input: profile.ProfileStageInput{
-						Method: "GET",
-						Headers: map[string]string{
-							"test":              "456",
-							"Transfer-Encoding": "chunked",
+					Stage: profile.ProfileSubStage{
+						Input: profile.ProfileStageInput{
+							Method: "GET",
+							Headers: map[string]string{
+								"test":              "456",
+								"Transfer-Encoding": "chunked",
+							},
 						},
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{1, 5, 920171},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{1, 5, 920171},
+						},
 					},
 				},
 			},

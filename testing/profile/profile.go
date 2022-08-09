@@ -35,24 +35,28 @@ type ProfileStageInput struct {
 }
 
 type ProfileStage struct {
-	Input  ProfileStageInput
-	Output ExpectedOutput `yaml:"output,omitempty"`
+	Stage ProfileSubStage `yaml:"stage,omitempty"`
+}
+
+type ProfileSubStage struct {
+	Input  ProfileStageInput `yaml:"input,omitempty"`
+	Output ExpectedOutput    `yaml:"output,omitempty"`
 }
 
 type ProfileTest struct {
-	Title       string `yaml:"test_title,omitempty"`
-	Description string `yaml:"desc,omitempty"`
-	Stages      []ProfileStage
+	Title       string         `yaml:"test_title,omitempty"`
+	Description string         `yaml:"desc,omitempty"`
+	Stages      []ProfileStage `yaml:"stages,omitempty"`
 }
 
 // Profile represents a test profile
 // It contains metadata and instructions for a test
 // It requires more documentation
 type Profile struct {
-	Rules string `yaml:"rules,omitempty"`
-	Pass  bool
-	Meta  ProfileMeta
-	Tests []ProfileTest
+	Rules string        `yaml:"rules,omitempty"`
+	Pass  bool          `yaml:"pass,omitempty"`
+	Meta  ProfileMeta   `yaml:"meta,omitempty"`
+	Tests []ProfileTest `yaml:"tests,omitempty"`
 }
 
 type ExpectedOutput struct {

@@ -16,13 +16,14 @@ var _ = profile.RegisterProfile(profile.Profile{
 			Title: "multipart",
 			Stages: []profile.ProfileStage{
 				{
-					Input: profile.ProfileStageInput{
-						URI: "/test.php?id=12345",
-						Headers: map[string]string{
-							"Host":         "www.example.com",
-							"Content-Type": "multipart/form-data; boundary=--0000",
-						},
-						Data: `
+					Stage: profile.ProfileSubStage{
+						Input: profile.ProfileStageInput{
+							URI: "/test.php?id=12345",
+							Headers: map[string]string{
+								"Host":         "www.example.com",
+								"Content-Type": "multipart/form-data; boundary=--0000",
+							},
+							Data: `
 ----0000
 Content-Disposition: form-data; name="_msg_body"
 
@@ -36,10 +37,11 @@ Regards,
 airween
 ----0000--    
 `,
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules:    []int{100},
-						NonTriggeredRules: []int{150, 200002},
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{100},
+							NonTriggeredRules: []int{150, 200002},
+						},
 					},
 				},
 			},

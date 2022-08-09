@@ -1,5 +1,5 @@
-//go:build !tinygo
-// +build !tinygo
+//go:build coreruleset
+// +build coreruleset
 
 // Copyright 2022 Juan Pablo Tosso
 //
@@ -269,10 +269,12 @@ func prepareAdvancedTests() {
 		if err != nil {
 			panic(err)
 		}
-		var pf *profile.Profile
+		var pf profile.Profile
 		if err := yaml.Unmarshal(content, &pf); err != nil {
 			panic(err)
 		}
-		profile.RegisterProfile(*pf)
+		if pf.Meta.Name != "" {
+			profile.RegisterProfile(pf)
+		}
 	}
 }
