@@ -114,9 +114,25 @@ func main() {
 * [Coraza Playground](https://playground.coraza.io/): sandbox rule testing web interface
 * [OWASP Core Ruleset](https://github.com/coreruleset/coreruleset/): Awesome rule set, compatible with Coraza
 
+## Development
+
+Coraza only requires Go for development. You can run `mage.go` to issue development commands.
+
+See the list of commands
+
+```shell
+go run mage.go -l
+```
+
+For example, to format your code before submission, run
+
+```shell
+go run mage.go format
+```
+
 ## Contribute
 
-Contributions are welcome! Please refer to [CONTRIBUTING.md](https://github.com/corazawaf/coraza/blob/v2/master/CONTRIBUTING.md) for guidance.
+Contributions are welcome! Please refer to [CONTRIBUTING.md](./CONTRIBUTING.md) for guidance.
 
 ## Thanks
 
