@@ -3,10 +3,6 @@ name: Coreruleset Compatibility
 on:
   push:
   pull_request:
-  # Cron just in case the CRS team changed something and we are not compatible anymore
-  # At 06:00 on Monday, Wednesday, and Friday
-  schedule:
-    - cron: '0 6 * * 1,3,5'
 jobs:
   test:
     strategy:
