@@ -11,7 +11,7 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.17.x]
+        go-version: [1.18.x, 1.19.x]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -38,20 +38,21 @@ jobs:
     - name: Go code
       run: |
         mkdir caddy
-        wget https://raw.githubusercontent.com/jptosso/coraza-caddy/master/caddy/main.go
+        wget https://gist.githubusercontent.com/jptosso/42dbde4835169371e54a351c95644370/raw/ca6f71573b1d7f1a295f452582951fd5d0724efd/main.go
         cp testdata/coreruleset/Caddyfile .
         ls -lh
         sed -i 's/\/\/ _ "github.com/_ "github.com/g' main.go
         mv main.go caddy/main.go
-        go get github.com/jptosso/coraza-caddy@ffa1472
+        go get github.com/corazawaf/coraza-caddy@8ed5dd2
         go mod tidy
         go get ./...
         go get -u github.com/jptosso/coraza-pcre@593842e
-        go install caddy/main.go
-        sudo setcap CAP_NET_BIND_SERVICE=+eip $(which caddy)
+        go build -o caddybin caddy/main.go
+        file caddybin
+        sudo setcap CAP_NET_BIND_SERVICE=+eip $(pwd)/caddybin
     - name: Start Caddy server
       run: |
-        caddy start -adapter caddyfile -config ./Caddyfile
+        ./caddybin start -adapter caddyfile -config ./Caddyfile
     - name: Run go-ftw
       run: |
         go run github.com/fzipi/go-ftw@latest run -d /tmp/coreruleset/tests/regression --config testdata/coreruleset/.ftw.yml

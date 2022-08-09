@@ -14,6 +14,8 @@
 
 package transformations
 
+import "strings"
+
 var base64DecMap = []byte{
 	127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
 	127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
@@ -42,11 +44,13 @@ func base64decode(data string) (string, error) {
 	return res, nil
 }
 
-func doBase64decode(input string) string {
-	slen := len(input)
-	src := []byte(input)
+func doBase64decode(src string) string {
+	slen := len(src)
+	if slen == 0 {
+		return src
+	}
+
 	var j, x, i, n int
-	dst := make([]byte, slen)
 
 	/* First pass: check for validity and get output length */
 	for ; i < slen; i++ {
@@ -72,33 +76,33 @@ func doBase64decode(input string) string {
 
 		/* Space inside a line is an error */
 		if x != 0 {
-			return input
+			return src
 		}
 		if src[i] == '=' {
 			j++
 			if j > 2 {
 				// ERROR
-				return input
+				return src
 			}
 		}
 
 		if src[i] > 127 || base64DecMap[src[i]] == 127 {
 			// ERROR
-			return input
+			return src
 		}
 
 		if base64DecMap[src[i]] < 64 && j != 0 {
 			// ERROR
-			return input
+			return src
 		}
 		n++
 	}
 
 	n = ((n * 6) + 7) >> 3
 	n -= j
-	if len(dst) == 0 || slen < n {
+	if slen < n {
 		// ERROR
-		return input
+		return src
 	}
 
 	j = 3
@@ -106,7 +110,8 @@ func doBase64decode(input string) string {
 	x = 0
 	srcc := 0
 
-	dstc := 0
+	var dst strings.Builder
+	dst.Grow(slen)
 
 	for ; i > 0; i-- {
 		if src[srcc] == '\r' || src[srcc] == '\n' || src[srcc] == ' ' {
@@ -122,20 +127,17 @@ func doBase64decode(input string) string {
 		if n == 4 {
 			n = 0
 			if j > 0 {
-				dst[dstc] = byte(x >> 16)
-				dstc++
+				dst.WriteByte(byte(x >> 16))
 			}
 			if j > 1 {
-				dst[dstc] = byte(x >> 8)
-				dstc++
+				dst.WriteByte(byte(x >> 8))
 			}
 			if j > 2 {
-				dst[dstc] = byte(x)
-				dstc++
+				dst.WriteByte(byte(x))
 			}
 		}
 		srcc++
 	}
 
-	return string(dst[:dstc])
+	return dst.String()
 }
