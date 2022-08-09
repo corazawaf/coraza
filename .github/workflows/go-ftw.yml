@@ -49,6 +49,7 @@ jobs:
         go get ./...
         go get -u github.com/jptosso/coraza-pcre@593842e
         go install caddy/main.go
+        echo "Caddy Installed: $(which caddy)"
         sudo setcap CAP_NET_BIND_SERVICE=+eip $(which caddy)
     - name: Start Caddy server
       run: |
