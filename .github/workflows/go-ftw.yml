@@ -48,12 +48,12 @@ jobs:
         go mod tidy
         go get ./...
         go get -u github.com/jptosso/coraza-pcre@593842e
-        go build -o caddy caddy/main.go
-        file caddy
+        go build -o caddybin caddy/main.go
+        file caddybin
         sudo setcap CAP_NET_BIND_SERVICE=+eip $(pwd)/caddy
     - name: Start Caddy server
       run: |
-        ./caddy start -adapter caddyfile -config ./Caddyfile
+        ./caddybin start -adapter caddyfile -config ./Caddyfile
     - name: Run go-ftw
       run: |
         go-ftw run -d /tmp/coreruleset/tests/regression --config testdata/coreruleset/.ftw.yml
