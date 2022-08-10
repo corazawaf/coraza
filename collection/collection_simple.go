@@ -52,17 +52,17 @@ func (c *CollectionSimple) FindAll() []types.MatchData {
 	}
 }
 
-// GetFirstString returns the first string occurrence of a key
+// String returns the first string occurrence of a key
 func (c *CollectionSimple) String() string {
 	return c.data
 }
 
-// GetFirstInt64 returns the first int64 occurrence of a key
+// Int64 returns the first int64 occurrence of a key
 func (c *CollectionSimple) Int64() int64 {
 	return int64(c.Int())
 }
 
-// GetFirstInt returns the first int occurrence of a key
+// Int returns the first int occurrence of a key
 func (c *CollectionSimple) Int() int {
 	r, _ := strconv.ParseInt(c.data, 10, 32)
 	return int(r)
@@ -86,6 +86,7 @@ func (c *CollectionSimple) Reset() {
 
 var _ Collection = &CollectionSimple{}
 
+// NewCollectionSimple creates a new CollectionSimple
 func NewCollectionSimple(variable variables.RuleVariable) *CollectionSimple {
 	return &CollectionSimple{
 		variable: variable,
