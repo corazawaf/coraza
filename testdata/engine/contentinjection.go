@@ -16,11 +16,13 @@ var _ = profile.RegisterProfile(profile.Profile{
 			Title: "content injection",
 			Stages: []profile.ProfileStage{
 				{
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{
-							// It used to work but I´m not confident with the tests
-							// needs more testing
-							// 10101
+					Stage: profile.ProfileSubStage{
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								// It used to work but I´m not confident with the tests
+								// needs more testing
+								// 10101
+							},
 						},
 					},
 				},

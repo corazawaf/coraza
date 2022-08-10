@@ -16,12 +16,14 @@ var _ = profile.RegisterProfile(profile.Profile{
 			Title: "actions",
 			Stages: []profile.ProfileStage{
 				{
-					Input: profile.ProfileStageInput{
-						URI: "/%FFindex.html?test=test1",
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules:    []int{3, 5, 7, 10},
-						NonTriggeredRules: []int{2, 4, 6, 8, 9, 920271},
+					Stage: profile.ProfileSubStage{
+						Input: profile.ProfileStageInput{
+							URI: "/%FFindex.html?test=test1",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{3, 5, 7, 10},
+							NonTriggeredRules: []int{2, 4, 6, 8, 9, 920271},
+						},
 					},
 				},
 			},

@@ -16,19 +16,21 @@ var _ = profile.RegisterProfile(profile.Profile{
 			Title: "crs",
 			Stages: []profile.ProfileStage{
 				{
-					Input: profile.ProfileStageInput{
-						Method: "GET",
-						URI:    "/test.php?id=12345",
-						Headers: map[string]string{
-							"User-Agent":     "ModSecurity CRS 3 Tests",
-							"Host":           "localhost",
-							"Content-Type":   "application/x-www-form-urlencoded",
-							"content-length": "4",
-							"Range":          "bytes=1-10,11-20,21-30,31-40,41-50,51-60",
+					Stage: profile.ProfileSubStage{
+						Input: profile.ProfileStageInput{
+							Method: "GET",
+							URI:    "/test.php?id=12345",
+							Headers: map[string]string{
+								"User-Agent":     "ModSecurity CRS 3 Tests",
+								"Host":           "localhost",
+								"Content-Type":   "application/x-www-form-urlencoded",
+								"content-length": "4",
+								"Range":          "bytes=1-10,11-20,21-30,31-40,41-50,51-60",
+							},
 						},
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{920170, 920200},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{920170, 920200},
+						},
 					},
 				},
 			},
