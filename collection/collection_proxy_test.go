@@ -33,6 +33,18 @@ func TestCollectionProxy(t *testing.T) {
 	p := proxy.FindAll()
 	if len(p) != 3 {
 		t.Error("Error finding all")
+	} else {
+		p := proxy.FindAll()
+		m := false
+		for _, v := range p {
+			if v.Value == "value1" {
+				m = true
+				break
+			}
+		}
+		if !m {
+			t.Error("Error finding all")
+		}
 	}
 	var f []string
 	for _, r := range p {

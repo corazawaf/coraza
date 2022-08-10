@@ -534,40 +534,10 @@ func TestTXProcessURI(t *testing.T) {
 }
 
 func BenchmarkTransactionCreation(b *testing.B) {
-	waf := NewWaf()
 	for i := 0; i < b.N; i++ {
-		waf.NewTransaction(context.Background())
+		makeTransaction()
 	}
 }
-
-func BenchmarkNewTxWithoutPool(b *testing.B) {
-	var p *Transaction
-	waf := NewWaf()
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		for j := 0; j < 10000; j++ {
-			p = new(Transaction)
-			p.Waf = waf
-		}
-	}
-}
-
-/*
-Commented because go-critic hates it.
-func BenchmarkNewTxWithPool(b *testing.B) {
-	var p *Transaction
-	b.ReportAllocs()
-	b.ResetTimer()
-	waf := NewWaf()
-	for i := 0; i < b.N; i++ {
-		for j := 0; j < 10000; j++ {
-			p = transactionPool.Get().(*Transaction)
-			p.Waf = waf
-			transactionPool.Put(p)
-		}
-	}
-}*/
 
 func makeTransaction() *Transaction {
 	tx := wafi.NewTransaction(context.Background())

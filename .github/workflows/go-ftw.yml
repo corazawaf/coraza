@@ -37,7 +37,6 @@ jobs:
         cp testdata/coreruleset/postdirectives.conf /tmp/
     - name: Go code
       run: |
-        go install github.com/fzipi/go-ftw@latest
         mkdir caddy
         wget https://gist.githubusercontent.com/jptosso/42dbde4835169371e54a351c95644370/raw/ca6f71573b1d7f1a295f452582951fd5d0724efd/main.go
         cp testdata/coreruleset/Caddyfile .
@@ -56,4 +55,4 @@ jobs:
         ./caddybin start -adapter caddyfile -config ./Caddyfile
     - name: Run go-ftw
       run: |
-        go-ftw run -d /tmp/coreruleset/tests/regression --config testdata/coreruleset/.ftw.yml
+        go run github.com/fzipi/go-ftw@latest run -d /tmp/coreruleset/tests/regression --config testdata/coreruleset/.ftw.yml

@@ -1,7 +1,13 @@
 repos:
-  - repo: https://github.com/dnephin/pre-commit-golang
-    rev: v0.4.0
-    hooks:
-      - id: golangci-lint
-      - id: go-unit-tests
-      - id: go-mod-tidy
+- repo: https://github.com/dnephin/pre-commit-golang
+  rev: v0.4.0
+  hooks:
+    - id: go-fmt
+#    - id: go-vet
+#    - id: go-lint
+    - id: go-imports
+#    - id: go-cyclo
+#      args: [-over=37] # we must drop it down to 15
+#    - id: go-critic
+    - id: go-unit-tests
+    - id: go-mod-tidy
