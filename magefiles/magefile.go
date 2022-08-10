@@ -47,6 +47,10 @@ func Coverage() error {
 	return sh.RunV("go", "tool", "cover", "-html=build/coverage.txt", "-o", "build/coverage.html")
 }
 
+func Doc() error {
+	return sh.RunV("go", "run", "golang.org/x/tools/cmd/godoc@latest", "-http=:6060")
+}
+
 // Check runs tests and lint.
 func Check() {
 	mg.SerialDeps(Test, Lint)
