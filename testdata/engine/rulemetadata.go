@@ -16,8 +16,10 @@ var _ = profile.RegisterProfile(profile.Profile{
 			Title: "rulemetadata",
 			Stages: []profile.ProfileStage{
 				{
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{1, 2},
+					Stage: profile.ProfileSubStage{
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{1, 2},
+						},
 					},
 				},
 			},

@@ -16,39 +16,45 @@ var _ = profile.RegisterProfile(profile.Profile{
 			Title: "posturlencoded",
 			Stages: []profile.ProfileStage{
 				{
-					Input: profile.ProfileStageInput{
-						URI:    "/",
-						Method: "POST",
-						Headers: map[string]string{
-							"content-type": "application/x-www-form-urlencoded",
+					Stage: profile.ProfileSubStage{
+						Input: profile.ProfileStageInput{
+							URI:    "/",
+							Method: "POST",
+							Headers: map[string]string{
+								"content-type": "application/x-www-form-urlencoded",
+							},
+							Data: "test=123",
 						},
-						Data: "test=123",
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules:    []int{4445, 456},
-						NonTriggeredRules: []int{200002},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{4445, 456},
+							NonTriggeredRules: []int{200002},
+						},
 					},
 				},
 				{
-					Input: profile.ProfileStageInput{
-						URI:    "/",
-						Method: "GET",
-					},
-					Output: profile.ExpectedOutput{
-						NonTriggeredRules: []int{200002},
+					Stage: profile.ProfileSubStage{
+						Input: profile.ProfileStageInput{
+							URI:    "/",
+							Method: "GET",
+						},
+						Output: profile.ExpectedOutput{
+							NonTriggeredRules: []int{200002},
+						},
 					},
 				},
 				{
-					Input: profile.ProfileStageInput{
-						URI:    "/case2",
-						Method: "POST",
-						Headers: map[string]string{
-							"content-type": "application/x-www-form-urlencoded",
+					Stage: profile.ProfileSubStage{
+						Input: profile.ProfileStageInput{
+							URI:    "/case2",
+							Method: "POST",
+							Headers: map[string]string{
+								"content-type": "application/x-www-form-urlencoded",
+							},
+							Data: "var%3d%20@.%3d%20%28%20SELECT",
 						},
-						Data: "var%3d%20@.%3d%20%28%20SELECT",
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{100},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{100},
+						},
 					},
 				},
 			},

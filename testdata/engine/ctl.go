@@ -16,26 +16,28 @@ var _ = profile.RegisterProfile(profile.Profile{
 			Title: "actions",
 			Stages: []profile.ProfileStage{
 				{
-					Input: profile.ProfileStageInput{
-						Method: "POST",
-						URI:    "/test.php?id=1234",
-						Data:   "pineapple=pizza",
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{
-							1,
-							4,
-							100,
-							103,
-							105,
+					Stage: profile.ProfileSubStage{
+						Input: profile.ProfileStageInput{
+							Method: "POST",
+							URI:    "/test.php?id=1234",
+							Data:   "pineapple=pizza",
 						},
-						NonTriggeredRules: []int{
-							2,
-							3,
-							5,
-							6,
-							7,
-							444,
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								1,
+								4,
+								100,
+								103,
+								105,
+							},
+							NonTriggeredRules: []int{
+								2,
+								3,
+								5,
+								6,
+								7,
+								444,
+							},
 						},
 					},
 				},
