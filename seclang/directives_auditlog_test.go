@@ -6,6 +6,7 @@
 package seclang
 
 import (
+	"encoding/json"
 	"os"
 	"strings"
 	"testing"
@@ -55,8 +56,8 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 		t.Error("failed to write audit log")
 	}
 	// we test it is a valid json
-	j := loggers.AuditLog{}
-	if err := j.UnmarshalJSON(data); err != nil {
+	var j map[string]interface{}
+	if err := json.Unmarshal(data, &j); err != nil {
 		t.Error(err)
 	}
 }
