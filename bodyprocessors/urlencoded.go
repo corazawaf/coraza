@@ -49,7 +49,9 @@ func (*urlencodedBodyProcessor) ProcessResponse(reader io.Reader, collection [ty
 	return nil
 }
 
-var _ BodyProcessor = &urlencodedBodyProcessor{}
+var (
+	_ BodyProcessor = &urlencodedBodyProcessor{}
+)
 
 func init() {
 	Register("urlencoded", func() BodyProcessor {

@@ -1,7 +1,7 @@
 //go:build !tinygo
 // +build !tinygo
 
-// Copyright 2022 The CorazaWAF Authors
+// Copyright 2022 Juan Pablo Tosso
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,6 +41,7 @@ func (*xmlBodyProcessor) ProcessRequest(reader io.Reader, collections [types.Var
 }
 
 func (*xmlBodyProcessor) ProcessResponse(reader io.Reader, collections [types.VariablesCount]collection.Collection, options Options) error {
+
 	return nil
 }
 
@@ -79,7 +80,9 @@ type xmlNode struct {
 	Nodes   []xmlNode  `xml:",any"`
 }
 
-var _ BodyProcessor = &xmlBodyProcessor{}
+var (
+	_ BodyProcessor = &xmlBodyProcessor{}
+)
 
 func init() {
 	Register("xml", func() BodyProcessor {
