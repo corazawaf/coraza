@@ -13,7 +13,8 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.18.x, 1.19.x]
+        # TODO(anuraaga): Add 1.19.x after TinyGo adds support for it.
+        go-version: [1.18.x]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     container:
