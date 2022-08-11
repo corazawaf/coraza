@@ -221,7 +221,7 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 		r.matchVariable(tx, md)
 	} else {
 		ecol := tx.ruleRemoveTargetByID[r.ID]
-		captured := false
+		// captured := false
 		for _, v := range r.variables {
 			var values []types.MatchData
 			for _, c := range ecol {
@@ -235,7 +235,7 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 			tx.Waf.Logger.Debug("[%s] [%d] Expanding %d arguments for rule %d", tx.ID, rid, len(values), r.ID)
 			for _, arg := range values {
 				var args []string
-				tx.Waf.Logger.Debug("[%s] [%d] Transforming argument %s for rule %d", tx.ID, rid, arg.Value, r.ID)
+				tx.Waf.Logger.Debug("[%s] [%d] Transforming argument %q for rule %d", tx.ID, rid, arg.Value, r.ID)
 				var errs []error
 				if r.MultiMatch {
 					// TODO in the future, we don't need to run every transformation
@@ -247,7 +247,7 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 					errs = es
 				}
 				if len(errs) > 0 {
-					tx.Waf.Logger.Debug("[%s] [%d] Error transforming argument %s for rule %d: %v", tx.ID, rid, arg.Value, r.ID, errs)
+					tx.Waf.Logger.Debug("[%s] [%d] Error transforming argument %q for rule %d: %v", tx.ID, rid, arg.Value, r.ID, errs)
 				}
 				tx.Waf.Logger.Debug("[%s] [%d] Arguments transformed for rule %d: %v", tx.ID, rid, r.ID, args)
 
@@ -268,19 +268,33 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 						mr.Data = r.LogData.Expand(tx)
 						matchedValues = append(matchedValues, mr)
 
-						// we only capture when it matches
-						if r.Capture {
-							captured = true
-						}
+						tx.Waf.Logger.Debug("[%s] [%d] Evaluating operator \"%s %s\" against %q: MATCH",
+							tx.ID,
+							rid,
+							r.operator.Function,
+							r.operator.Data,
+							carg,
+						)
+					} else {
+
+						tx.Waf.Logger.Debug("[%s] [%d] Evaluating operator \"%s %s\" against %q: NO MATCH",
+							tx.ID,
+							rid,
+							r.operator.Function,
+							r.operator.Data,
+							carg,
+						)
 					}
-					tx.Waf.Logger.Debug("[%s] [%d] Evaluating operator \"@%s %s\" for rule %d", tx.ID, rid, r.operator.Function, "", r.ID)
 				}
 			}
 		}
-
-		if captured {
-			defer tx.resetCaptures()
-		}
+		/*
+			TODO: For some reason, it seems it's not necessary to reset captures,
+			it might lead to unexpected behavior in the future
+			if captured {
+				defer tx.resetCaptures()
+			}
+		*/
 	}
 
 	if len(matchedValues) == 0 {
@@ -311,7 +325,6 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 
 		}
 		tx.MatchRule(r, matchedValues)
-
 	}
 	return matchedValues
 }

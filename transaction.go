@@ -452,11 +452,6 @@ func (tx *Transaction) AddArgument(orig string, key string, value string) {
 	keyl := strings.ToLower(key)
 
 	vals.AddCS(keyl, key, value)
-
-	col := tx.Variables.ArgsCombinedSize
-	i := col.Int64() + int64(len(key)+len(value))
-	istr := strconv.FormatInt(i, 10)
-	col.Set(istr)
 }
 
 // ProcessURI Performs the analysis on the URI and all the query string variables.
@@ -655,16 +650,21 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		return tx.Interruption, nil
 	}
 	if !tx.ResponseBodyAccess || !tx.IsProcessableResponseBody() {
+		tx.Waf.Logger.Debug("[%s] Skipping response body processing (Access: %t)", tx.ID, tx.ResponseBodyAccess)
 		tx.Waf.Rules.Eval(types.PhaseResponseBody, tx)
 		return tx.Interruption, nil
 	}
+	tx.Waf.Logger.Debug("[%s] Attempting to process response body", tx.ID)
 	reader, err := tx.ResponseBodyBuffer.Reader()
 	if err != nil {
-		return nil, err
+		return tx.Interruption, err
 	}
 	reader = io.LimitReader(reader, tx.Waf.ResponseBodyLimit)
 	buf := new(strings.Builder)
-	length, _ := io.Copy(buf, reader)
+	length, err := io.Copy(buf, reader)
+	if err != nil {
+		return tx.Interruption, err
+	}
 
 	if tx.ResponseBodyBuffer.Size() >= tx.Waf.ResponseBodyLimit {
 		tx.Variables.OutboundDataError.Set("1")
@@ -899,7 +899,7 @@ type TransactionVariables struct {
 	UrlencodedError               *collection.CollectionSimple
 	ResponseContentType           *collection.CollectionSimple
 	UniqueID                      *collection.CollectionSimple
-	ArgsCombinedSize              *collection.CollectionSimple
+	ArgsCombinedSize              *collection.CollectionSizeProxy
 	AuthType                      *collection.CollectionSimple
 	FilesCombinedSize             *collection.CollectionSimple
 	FullRequest                   *collection.CollectionSimple

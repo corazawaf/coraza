@@ -194,8 +194,6 @@ func (w *Waf) NewTransaction(ctx context.Context) *Transaction {
 	tx.Collections[variables.ResponseContentType] = tx.Variables.ResponseContentType
 	tx.Variables.UniqueID = collection.NewCollectionSimple(variables.UniqueID)
 	tx.Collections[variables.UniqueID] = tx.Variables.UniqueID
-	tx.Variables.ArgsCombinedSize = collection.NewCollectionSimple(variables.ArgsCombinedSize)
-	tx.Collections[variables.ArgsCombinedSize] = tx.Variables.ArgsCombinedSize
 	tx.Variables.AuthType = collection.NewCollectionSimple(variables.AuthType)
 	tx.Collections[variables.AuthType] = tx.Variables.AuthType
 	tx.Variables.FilesCombinedSize = collection.NewCollectionSimple(variables.FilesCombinedSize)
@@ -354,6 +352,10 @@ func (w *Waf) NewTransaction(ctx context.Context) *Transaction {
 	tx.Collections[variables.ResponseXML] = tx.Variables.ResponseXML
 	tx.Variables.RequestXML = collection.NewCollectionMap(variables.RequestXML)
 	tx.Collections[variables.RequestXML] = tx.Variables.RequestXML
+
+	tx.Variables.ArgsCombinedSize = collection.NewCollectionSizeProxy(variables.ArgsCombinedSize, tx.Variables.ArgsGet, tx.Variables.ArgsPost)
+	tx.Collections[variables.ArgsCombinedSize] = tx.Variables.ArgsCombinedSize
+
 	// XML is a pointer to RequestXML
 	tx.Variables.XML = tx.Variables.RequestXML
 	tx.Collections[variables.XML] = tx.Variables.RequestXML
@@ -413,7 +415,6 @@ func (w *Waf) NewTransaction(ctx context.Context) *Transaction {
 	tx.Variables.RequestBodyLength.Set("0")
 	tx.Variables.Duration.Set("0")
 	tx.Variables.HighestSeverity.Set("0")
-	tx.Variables.ArgsCombinedSize.Set("0")
 	tx.Variables.UniqueID.Set(tx.ID)
 
 	w.Logger.Debug("new transaction created with id %q", tx.ID)

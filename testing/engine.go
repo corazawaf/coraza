@@ -288,10 +288,12 @@ func (t *Test) Request() string {
 // NewTest creates a new test with default properties
 func NewTest(name string, waf *coraza.Waf) *Test {
 	t := &Test{
-		Name:            name,
-		transaction:     waf.NewTransaction(context.Background()),
-		RequestHeaders:  map[string]string{},
-		ResponseHeaders: map[string]string{},
+		Name:           name,
+		transaction:    waf.NewTransaction(context.Background()),
+		RequestHeaders: map[string]string{},
+		ResponseHeaders: map[string]string{
+			"Content-Type": "text/html",
+		},
 		RequestMethod:   "GET",
 		RequestProtocol: "HTTP/1.1",
 		RequestURI:      "/",

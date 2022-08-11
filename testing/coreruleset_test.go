@@ -1,6 +1,3 @@
-//go:build coreruleset
-// +build coreruleset
-
 // Copyright 2022 Juan Pablo Tosso
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,8 +29,6 @@ import (
 
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/seclang"
-	"github.com/corazawaf/coraza/v3/testing/profile"
-	"gopkg.in/yaml.v3"
 )
 
 var crspath = ""
@@ -53,7 +48,6 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	prepareAdvancedTests()
 }
 
 func BenchmarkCRSCompilation(b *testing.B) {
@@ -218,63 +212,4 @@ func unzip(file string, dst string) error {
 		}
 	}
 	return nil
-}
-
-func prepareAdvancedTests() {
-	// wait until
-	waf := coraza.NewWaf()
-	parser, _ := seclang.NewParser(waf)
-	if err := parser.FromString(`SecAction "id:900005,\
-  phase:1,\
-  nolog,\
-  pass,\
-  ctl:ruleEngine=DetectionOnly,\
-  ctl:ruleRemoveById=910000,\
-  setvar:tx.paranoia_level=4,\
-  setvar:tx.crs_validate_utf8_encoding=1,\
-  setvar:tx.arg_name_length=100,\
-  setvar:tx.arg_length=400,\
-  setvar:tx.total_arg_length=64000,\
-  setvar:tx.max_num_args=255,\
-  setvar:tx.combined_file_sizes=65535"`); err != nil {
-		panic(err)
-	}
-	files := []string{
-		"../coraza.conf-recommended",
-		path.Join(crspath, "crs-setup.conf.example"),
-		path.Join(crspath, "rules/", "*.conf"),
-	}
-	for _, f := range files {
-		if err := parser.FromFile(f); err != nil {
-			panic(err)
-		}
-	}
-	files = []string{}
-	// we search for all .yaml files in crspath/tests/regression/tests/
-	if err := filepath.Walk(crspath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if strings.HasSuffix(path, ".yaml") {
-			files = append(files, path)
-		}
-		return nil
-	}); err != nil {
-		panic(err)
-	}
-	fmt.Printf("Got %d CRS test files\n", len(files))
-	for _, f := range files {
-		// we read the yaml files and parse them as profile.Profile
-		content, err := os.ReadFile(f)
-		if err != nil {
-			panic(err)
-		}
-		var pf profile.Profile
-		if err := yaml.Unmarshal(content, &pf); err != nil {
-			panic(err)
-		}
-		if pf.Meta.Name != "" {
-			profile.RegisterProfile(pf)
-		}
-	}
 }
