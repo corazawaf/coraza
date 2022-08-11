@@ -210,9 +210,8 @@ func (c *Map) Reset() {
 	if len(c.data) == 1 && len(c.data[""]) == 0 {
 		return
 	}
-	c.data = nil
-	c.data = map[string][]types.AnchoredVar{
-		"": {},
+	for k := range c.data {
+		delete(c.data, k)
 	}
 }
 

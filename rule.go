@@ -324,7 +324,10 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 			}
 
 		}
-		tx.MatchRule(r, matchedValues)
+		if r.ID != 0 {
+			// we avoid matching chains and secmarkers
+			tx.MatchRule(r, matchedValues)
+		}
 	}
 	return matchedValues
 }

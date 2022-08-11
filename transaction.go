@@ -246,15 +246,13 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 // matchVariable Creates the MATCHED_ variables required by chains and macro expansion
 // MATCHED_VARS, MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES
 func (tx *Transaction) matchVariable(match types.MatchData) {
-	varName := strings.Builder{}
-	varNamel := strings.Builder{}
-	varName.WriteString(match.VariableName)
-	varNamel.WriteString(match.VariableName)
+	var varName, varNamel string
 	if match.Key != "" {
-		varName.WriteByte(':')
-		varName.WriteString(match.Key)
-		varNamel.WriteByte(':')
-		varNamel.WriteString(strings.ToLower(match.Key))
+		varName = match.VariableName + ":" + match.Key
+		varNamel = match.VariableName + ":" + strings.ToLower(match.Key)
+	} else {
+		varName = match.VariableName
+		varNamel = match.VariableName
 	}
 	// Array of values
 	matchedVars := tx.Variables.MatchedVars
@@ -266,13 +264,13 @@ func (tx *Transaction) matchVariable(match types.MatchData) {
 
 	// We add the key in lowercase for ease of lookup in chains
 	// This is similar to args handling
-	matchedVars.AddCS(varNamel.String(), varName.String(), match.Value)
+	matchedVars.AddCS(varNamel, varName, match.Value)
 	tx.Variables.MatchedVar.Set(match.Value)
 
 	// We add the key in lowercase for ease of lookup in chains
 	// This is similar to args handling
-	matchedVarsNames.AddCS(varNamel.String(), varName.String(), varName.String())
-	matchedVarName.Set(varName.String())
+	matchedVarsNames.AddCS(varNamel, varName, varName)
+	matchedVarName.Set(varName)
 }
 
 // MatchRule Matches a rule to be logged
