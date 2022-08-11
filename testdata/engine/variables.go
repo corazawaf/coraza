@@ -5,19 +5,19 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if the variables work",
 		Enabled:     true,
 		Name:        "variables.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "variables",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI:    "/index.php?t1=aaa&t2=bbb&t3=ccc&a=test&jsessionid=74B0CB414BD77D17B5680A6386EF1666",
 							Method: "POST",
 							Headers: map[string]string{

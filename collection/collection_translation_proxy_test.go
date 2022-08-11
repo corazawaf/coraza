@@ -21,9 +21,9 @@ import (
 )
 
 func TestCollectionTranslationProxy(t *testing.T) {
-	c1 := NewCollectionMap(variables.ArgsPost)
-	c2 := NewCollectionMap(variables.ArgsGet)
-	proxy := NewCollectionTranslationProxy(variables.ArgsNames, c1, c2)
+	c1 := NewMap(variables.ArgsPost)
+	c2 := NewMap(variables.ArgsGet)
+	proxy := NewTranslationProxy(variables.ArgsNames, c1, c2)
 
 	c1.Set("key1", []string{"value1"})
 	c1.Set("key2", []string{"value2"})

@@ -33,7 +33,7 @@ func (*defaultResponseBodyProcessor) ProcessResponse(reader io.Reader, collectio
 	if err != nil {
 		return err
 	}
-	(collections[variables.ResponseBody]).(*collection.CollectionSimple).Set(string(bts))
+	(collections[variables.ResponseBody]).(*collection.Simple).Set(string(bts))
 	return nil
 }
 

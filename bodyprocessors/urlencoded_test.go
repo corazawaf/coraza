@@ -25,9 +25,9 @@ import (
 
 func TestURLEncode(t *testing.T) {
 	bp := &urlencodedBodyProcessor{}
-	argCol := collection.NewCollectionMap(variables.ArgsPost)
-	bodyCol := collection.NewCollectionSimple(variables.RequestBody)
-	bodyLenCol := collection.NewCollectionSimple(variables.RequestBodyLength)
+	argCol := collection.NewMap(variables.ArgsPost)
+	bodyCol := collection.NewSimple(variables.RequestBody)
+	bodyLenCol := collection.NewSimple(variables.RequestBodyLength)
 	cols := [types.VariablesCount]collection.Collection{
 		variables.ArgsPost:          argCol,
 		variables.RequestBody:       bodyCol,

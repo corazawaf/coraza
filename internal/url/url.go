@@ -44,6 +44,7 @@ func ParseQuery(query string, separator byte) map[string][]string {
 	return m
 }
 
+// QueryUnescape is a non-strict version of net/url.QueryUnescape.
 func QueryUnescape(input string) string {
 	ilen := len(input)
 	res := strings.Builder{}

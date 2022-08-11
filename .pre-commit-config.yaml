@@ -3,8 +3,8 @@ repos:
   rev: v0.4.0
   hooks:
     - id: go-fmt
-    - id: go-vet
-#    - id: go-lint
+#    - id: go-vet
+    - id: go-lint
     - id: go-imports
 #    - id: go-cyclo
 #      args: [-over=37] # we must drop it down to 15

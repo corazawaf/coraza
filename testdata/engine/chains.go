@@ -5,19 +5,19 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if the chain action works",
 		Enabled:     true,
 		Name:        "chains.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "chains",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI: "/test1.php?id=12345",
 						},
 						Output: profile.ExpectedOutput{
@@ -27,8 +27,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 					},
 				},
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI: "/test2.php?var=prepayloadpost",
 						},
 						Output: profile.ExpectedOutput{
@@ -39,8 +39,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 					},
 				},
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI: "/test3.php",
 							Headers: map[string]string{
 								"Host": "attack20ing.com",
@@ -54,8 +54,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 					},
 				},
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI: "/test4.php",
 							Headers: map[string]string{
 								"Host": "attack21ing.com",

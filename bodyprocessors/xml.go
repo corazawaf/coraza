@@ -34,7 +34,7 @@ func (*xmlBodyProcessor) ProcessRequest(reader io.Reader, collections [types.Var
 	if err != nil {
 		return err
 	}
-	col := collections[variables.RequestXML].(*collection.CollectionMap)
+	col := collections[variables.RequestXML].(*collection.Map)
 	col.Set("//@*", values)
 	col.Set("/*", contents)
 	return nil
