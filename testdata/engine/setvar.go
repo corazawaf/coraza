@@ -16,11 +16,13 @@ var _ = profile.RegisterProfile(profile.Profile{
 			Title: "setvar",
 			Stages: []profile.ProfileStage{
 				{
-					Input: profile.ProfileStageInput{
-						URI: "/fields?name=foo&var=foo&var=foo2",
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{920271},
+					Stage: profile.ProfileSubStage{
+						Input: profile.ProfileStageInput{
+							URI: "/fields?name=foo&var=foo&var=foo2",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{920271},
+						},
 					},
 				},
 			},

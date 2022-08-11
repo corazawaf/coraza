@@ -77,11 +77,11 @@ func (o *validateByteRange) Evaluate(tx *coraza.Transaction, data string) bool {
 	if data == "" && lenData > 0 {
 		return false
 	}
-	input := []byte(data)
 	// we must iterate each byte from input and check if it is in the range
 	// if every byte is within the range we return false
 	matched := 0
-	for _, c := range input {
+	for i := 0; i < len(data); i++ {
+		c := data[i]
 		for _, r := range o.data {
 			if c >= r.start && c <= r.end {
 				matched++
@@ -89,7 +89,7 @@ func (o *validateByteRange) Evaluate(tx *coraza.Transaction, data string) bool {
 			}
 		}
 	}
-	return len(input) != matched
+	return len(data) != matched
 }
 
 func (o *validateByteRange) addRange(start uint64, end uint64) error {

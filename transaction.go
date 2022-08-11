@@ -140,13 +140,7 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 		}
 	} else if keyl == "cookie" {
 		// Cookies use the same syntax as GET params but with semicolon (;) separator
-		values, err := urlutil.ParseQuery(value, ";")
-		if err != nil {
-			// if cookie parsing fails we create a urlencoded_error
-			// TODO maybe we should have another variable for this
-			tx.Variables.UrlencodedError.Set(err.Error())
-			return
-		}
+		values := urlutil.ParseQuery(value, ';')
 		for k, vr := range values {
 			kl := strings.ToLower(k)
 			tx.Variables.RequestCookiesNames.AddUniqueCS(kl, k, kl)
@@ -436,15 +430,7 @@ func (tx *Transaction) ProcessConnection(client string, cPort int, server string
 // ExtractArguments transforms an url encoded string to a map and creates
 // ARGS_POST|GET
 func (tx *Transaction) ExtractArguments(orig string, uri string) {
-	sep := "&"
-	if tx.Waf.ArgumentSeparator != "" {
-		sep = tx.Waf.ArgumentSeparator
-	}
-	data, err := urlutil.ParseQuery(uri, sep)
-	// we create a URLENCODED_ERROR if we fail to parse the URL
-	if err != nil {
-		tx.Variables.UrlencodedError.Set(err.Error())
-	}
+	data := urlutil.ParseQuery(uri, '&')
 	for k, vs := range data {
 		for _, v := range vs {
 			tx.AddArgument(orig, k, v)

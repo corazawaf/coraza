@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3"
@@ -35,7 +36,7 @@ func TestAuditLogMessages(t *testing.T) {
 	waf := coraza.NewWaf()
 	parser, _ := seclang.NewParser(waf)
 	// generate a random tmp file
-	file, err := os.CreateTemp("/tmp", "tmp*.log")
+	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -97,7 +98,7 @@ func TestAuditLogRelevantOnly(t *testing.T) {
 		t.Error(err)
 	}
 	// generate a random tmp file
-	file, err := os.CreateTemp("/tmp", "tmp*.log")
+	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -128,7 +129,7 @@ func TestAuditLogRelevantOnlyOk(t *testing.T) {
 	waf := coraza.NewWaf()
 	parser, _ := seclang.NewParser(waf)
 	// generate a random tmp file
-	file, err := os.CreateTemp("/tmp", "tmp*.log")
+	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -179,7 +180,7 @@ func TestAuditLogRelevantOnlyNoAuditlog(t *testing.T) {
 		t.Error(err)
 	}
 	// generate a random tmp file
-	file, err := os.CreateTemp("/tmp", "tmp*.log")
+	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
 	if err != nil {
 		t.Error(err)
 	}

@@ -16,9 +16,11 @@ var _ = profile.RegisterProfile(profile.Profile{
 			Title: "macroexpansions",
 			Stages: []profile.ProfileStage{
 				{
-					Output: profile.ExpectedOutput{
-						TriggeredRules:    []int{100, 150, 200},
-						NonTriggeredRules: []int{901500},
+					Stage: profile.ProfileSubStage{
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{100, 150, 200},
+							NonTriggeredRules: []int{901500},
+						},
 					},
 				},
 			},

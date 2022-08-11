@@ -27,6 +27,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -50,7 +51,7 @@ func TestRequestExtractionSuccess(t *testing.T) {
 
 func TestProcessRequestMultipart(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/some", nil)
-	if err := multipartRequest(req); err != nil {
+	if err := multipartRequest(t, req); err != nil {
 		t.Fatal(err)
 	}
 	tx := makeTransaction(t)
@@ -70,14 +71,15 @@ func TestProcessRequestMultipart(t *testing.T) {
 	}
 }
 
-func multipartRequest(req *http.Request) error {
+func multipartRequest(t *testing.T, req *http.Request) error {
+	t.Helper()
+
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)
-	tempfile, err := os.CreateTemp("/tmp", "tmpfile*")
+	tempfile, err := os.Create(filepath.Join(t.TempDir(), "tmpfile"))
 	if err != nil {
 		return err
 	}
-	defer os.Remove(tempfile.Name())
 	for i := 0; i < 1024*5; i++ {
 		// this should create a 5mb file
 		if _, err := tempfile.Write([]byte(strings.Repeat("A", 1024))); err != nil {

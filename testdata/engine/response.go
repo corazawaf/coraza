@@ -16,15 +16,17 @@ var _ = profile.RegisterProfile(profile.Profile{
 			Title: "response",
 			Stages: []profile.ProfileStage{
 				{
-					Input: profile.ProfileStageInput{
-						URI: "/test.php?id=12345",
-					},
-					Output: profile.ExpectedOutput{
-						Headers: map[string]string{
-							"content-type": "secret/mime",
+					Stage: profile.ProfileSubStage{
+						Input: profile.ProfileStageInput{
+							URI: "/test.php?id=12345",
 						},
-						Data:           `<?php echo "Hello World!\n" ?>`,
-						TriggeredRules: []int{953120},
+						Output: profile.ExpectedOutput{
+							Headers: map[string]string{
+								"content-type": "secret/mime",
+							},
+							Data:           `<?php echo "Hello World!\n" ?>`,
+							TriggeredRules: []int{953120},
+						},
 					},
 				},
 			},

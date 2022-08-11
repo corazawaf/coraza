@@ -16,15 +16,17 @@ var _ = profile.RegisterProfile(profile.Profile{
 			Title: "transformations",
 			Stages: []profile.ProfileStage{
 				{
-					Input: profile.ProfileStageInput{
-						URI: "/unittests@coreruleset.org\"%20sleep(10.to_i)%20",
-						Headers: map[string]string{
-							"test":  "1234",
-							"test2": "456",
+					Stage: profile.ProfileSubStage{
+						Input: profile.ProfileStageInput{
+							URI: "/unittests@coreruleset.org\"%20sleep(10.to_i)%20",
+							Headers: map[string]string{
+								"test":  "1234",
+								"test2": "456",
+							},
 						},
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{777, 778, 942101},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{777, 778, 942101},
+						},
 					},
 				},
 			},

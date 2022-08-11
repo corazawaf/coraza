@@ -16,21 +16,23 @@ var _ = profile.RegisterProfile(profile.Profile{
 			Title: "directives",
 			Stages: []profile.ProfileStage{
 				{
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{
-							1,
-							2,
-							7,
-							9,
-							9001000,
-							9001002,
-						},
-						NonTriggeredRules: []int{
-							4,
-							5,
-							6,
-							8,
-							9001001,
+					Stage: profile.ProfileSubStage{
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								1,
+								2,
+								7,
+								9,
+								9001000,
+								9001002,
+							},
+							NonTriggeredRules: []int{
+								4,
+								5,
+								6,
+								8,
+								9001001,
+							},
 						},
 					},
 				},

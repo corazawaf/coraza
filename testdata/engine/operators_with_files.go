@@ -16,15 +16,17 @@ var _ = profile.RegisterProfile(profile.Profile{
 			Title: "owf",
 			Stages: []profile.ProfileStage{
 				{
-					Input: profile.ProfileStageInput{
-						URI: "/?ghi=cdf",
-						Headers: map[string]string{
-							"ghi":    "pineapple",
-							"cookie": "ghi=cfg;def=ghi",
+					Stage: profile.ProfileSubStage{
+						Input: profile.ProfileStageInput{
+							URI: "/?ghi=cdf",
+							Headers: map[string]string{
+								"ghi":    "pineapple",
+								"cookie": "ghi=cfg;def=ghi",
+							},
 						},
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{1, 3, 5, 10},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{1, 3, 5, 10},
+						},
 					},
 				},
 			},

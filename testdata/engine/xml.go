@@ -1,3 +1,7 @@
+// XML currently disabled on TinyGo
+//go:build !tinygo
+// +build !tinygo
+
 package engine
 
 import (
@@ -11,23 +15,24 @@ var _ = profile.RegisterProfile(profile.Profile{
 		Enabled:     true,
 		Name:        "postxml.yaml",
 	},
-	TinyGoDisable: true,
 	Tests: []profile.ProfileTest{
 		{
 			Title: "postxml",
 			Stages: []profile.ProfileStage{
 				{
-					Input: profile.ProfileStageInput{
-						URI:    "/index.php?t1=aaa&t2=bbb&t3=ccc",
-						Method: "POST",
-						Headers: map[string]string{
-							"content-type": "application/xml",
+					Stage: profile.ProfileSubStage{
+						Input: profile.ProfileStageInput{
+							URI:    "/index.php?t1=aaa&t2=bbb&t3=ccc",
+							Method: "POST",
+							Headers: map[string]string{
+								"content-type": "application/xml",
+							},
+							Data: `<?xml version="1.0"?><xml><Cs7QAF attribute_name="attribute_value">test123</Cs7QAF></xml>`,
 						},
-						Data: `<?xml version="1.0"?><xml><Cs7QAF attribute_name="attribute_value">test123</Cs7QAF></xml>`,
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules:    []int{101, 102, 500},
-						NonTriggeredRules: []int{103},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{101, 102, 500},
+							NonTriggeredRules: []int{103},
+						},
 					},
 				},
 			},

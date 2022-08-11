@@ -32,6 +32,7 @@ type DirectiveOptions struct {
 	Waf    *coraza.Waf
 	Config types.Config
 	Opts   string
+	Path   []string
 }
 
 type directive = func(options *DirectiveOptions) error
