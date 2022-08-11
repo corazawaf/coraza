@@ -15,13 +15,14 @@
 package transformations
 
 import (
-	"github.com/tidwall/gjson"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/tidwall/gjson"
 )
 
 type Test struct {
