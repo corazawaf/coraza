@@ -24,10 +24,19 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3"
+	"github.com/tidwall/gjson"
 )
 
+type Test struct {
+	Input string
+	Param string
+	Name  string
+	Ret   int
+	Type  string
+}
+
 //https://github.com/SpiderLabs/secrules-language-tests/
-func TestTransformations(t *testing.T) {
+func TestOperators(t *testing.T) {
 	root := "../testdata/operators/"
 	files := [][]byte{}
 	if _, err := os.Stat(root); os.IsNotExist(err) {
@@ -44,27 +53,26 @@ func TestTransformations(t *testing.T) {
 	}
 	waf := coraza.NewWaf()
 	for _, f := range files {
-		var cases tests
-		err := cases.UnmarshalJSON(f)
-		if err != nil {
-			t.Error("Cannot parse test case", err)
-		}
+		cases := unmarshalTests(f)
 		for _, data := range cases {
 			// UNMARSHALL does not transform \u0000 to binary
 			data.Input = strings.ReplaceAll(data.Input, `\u0000`, "\u0000")
 			data.Param = strings.ReplaceAll(data.Param, `\u0000`, "\u0000")
 
 			if strings.Contains(data.Input, `\x`) {
-				data.Input, err = strconv.Unquote(`"` + data.Input + `"`)
+				in, err := strconv.Unquote(`"` + data.Input + `"`)
 				if err != nil {
 					t.Error("Cannot parse test case", err)
+				} else {
+					data.Input = in
 				}
 			}
 			if strings.Contains(data.Param, `\x`) {
-				data.Param, err = strconv.Unquote(`"` + data.Param + `"`)
+				p, err := strconv.Unquote(`"` + data.Param + `"`)
 				if err != nil {
 					t.Error("Cannot parse test case", err)
 				}
+				data.Param = p
 			}
 			op, err := Get(data.Name)
 			if err != nil {
@@ -97,4 +105,30 @@ func TestTransformations(t *testing.T) {
 			}
 		}
 	}
+}
+
+func unmarshalTests(json []byte) []Test {
+	var tests []Test
+	v := gjson.ParseBytes(json).Value()
+	for _, in := range v.([]interface{}) {
+		obj := in.(map[string]interface{})
+		t := Test{}
+		if s, ok := obj["input"]; ok {
+			t.Input = s.(string)
+		}
+		if s, ok := obj["param"]; ok {
+			t.Param = s.(string)
+		}
+		if s, ok := obj["name"]; ok {
+			t.Name = s.(string)
+		}
+		if s, ok := obj["ret"]; ok {
+			t.Ret = int(s.(float64))
+		}
+		if s, ok := obj["type"]; ok {
+			t.Type = s.(string)
+		}
+		tests = append(tests, t)
+	}
+	return tests
 }
