@@ -5,18 +5,18 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if the directives work",
 		Enabled:     true,
 		Name:        "directives.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "directives",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Stage: profile.ProfileSubStage{
+					Stage: profile.SubStage{
 						Output: profile.ExpectedOutput{
 							TriggeredRules: []int{
 								1,

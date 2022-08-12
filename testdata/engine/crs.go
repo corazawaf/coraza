@@ -5,19 +5,19 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "This is a mix of many tests used to make fixes for CRS",
 		Enabled:     true,
 		Name:        "crs.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "crs",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							Method: "GET",
 							URI:    "/test.php?id=12345",
 							Headers: map[string]string{

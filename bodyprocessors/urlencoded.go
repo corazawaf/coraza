@@ -36,12 +36,12 @@ func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, collections [ty
 
 	b := buf.String()
 	values := url.ParseQuery(b, '&')
-	argsCol := (collections[variables.ArgsPost]).(*collection.CollectionMap)
+	argsCol := (collections[variables.ArgsPost]).(*collection.Map)
 	for k, vs := range values {
 		argsCol.Set(k, vs)
 	}
-	(collections[variables.RequestBody]).(*collection.CollectionSimple).Set(b)
-	(collections[variables.RequestBodyLength]).(*collection.CollectionSimple).Set(strconv.Itoa(len(b)))
+	(collections[variables.RequestBody]).(*collection.Simple).Set(b)
+	(collections[variables.RequestBodyLength]).(*collection.Simple).Set(strconv.Itoa(len(b)))
 	return nil
 }
 

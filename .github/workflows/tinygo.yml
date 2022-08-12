@@ -2,7 +2,16 @@ name: Tinygo tests
 
 on:
   push:
+    branches:
+      - v3/dev
+      - v3/main
+    paths-ignore:
+      - "**/*.md"
+      - "LICENSE"
   pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - "LICENSE"
 jobs:
   test:
     strategy:

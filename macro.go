@@ -48,21 +48,21 @@ func (m *Macro) Expand(tx *Transaction) string {
 		// now we place the in the index
 		if token.variable != nil {
 			switch col := tx.Collections[*token.variable].(type) {
-			case *collection.CollectionMap:
+			case *collection.Map:
 				if c := col.Get(token.key); len(c) > 0 {
 					res.WriteString(c[0])
 				} else {
 					res.WriteString(token.text)
 				}
-			case *collection.CollectionSimple:
+			case *collection.Simple:
 				res.WriteString(col.String())
-			case *collection.CollectionProxy:
+			case *collection.Proxy:
 				if c := col.Get(token.key); len(c) > 0 {
 					res.WriteString(c[0])
 				} else {
 					res.WriteString(token.text)
 				}
-			case *collection.CollectionTranslationProxy:
+			case *collection.TranslationProxy:
 				if c := col.Get(0); len(c) > 0 {
 					res.WriteString(c)
 				} else {

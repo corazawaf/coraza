@@ -22,27 +22,28 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-// CollectionSimple are used to store VARIABLE data
+// Simple are used to store VARIABLE data
 // for transactions, this data structured is designed
 // to store slices of data for keys
 // Important: CollectionSimples ARE NOT concurrent safe
-type CollectionSimple struct {
+type Simple struct {
 	data     string
 	name     string
 	variable variables.RuleVariable
 }
 
 // FindRegex returns a slice of MatchData for the regex
-func (c *CollectionSimple) FindRegex(key *regexp.Regexp) []types.MatchData {
+func (c *Simple) FindRegex(key *regexp.Regexp) []types.MatchData {
 	return c.FindAll()
 }
 
 // FindString returns a slice of MatchData for the string
-func (c *CollectionSimple) FindString(key string) []types.MatchData {
+func (c *Simple) FindString(key string) []types.MatchData {
 	return c.FindAll()
 }
 
-func (c *CollectionSimple) FindAll() []types.MatchData {
+// FindAll returns a single MatchData for the current data
+func (c *Simple) FindAll() []types.MatchData {
 	return []types.MatchData{
 		{
 			VariableName: c.name,
@@ -53,42 +54,42 @@ func (c *CollectionSimple) FindAll() []types.MatchData {
 }
 
 // String returns the first string occurrence of a key
-func (c *CollectionSimple) String() string {
+func (c *Simple) String() string {
 	return c.data
 }
 
 // Int64 returns the first int64 occurrence of a key
-func (c *CollectionSimple) Int64() int64 {
+func (c *Simple) Int64() int64 {
 	return int64(c.Int())
 }
 
 // Int returns the first int occurrence of a key
-func (c *CollectionSimple) Int() int {
+func (c *Simple) Int() int {
 	r, _ := strconv.ParseInt(c.data, 10, 32)
 	return int(r)
 }
 
 // Set will replace the key's value with this slice
 // internally converts [] string to []types.AnchoredVar
-func (c *CollectionSimple) Set(value string) {
+func (c *Simple) Set(value string) {
 	c.data = value
 }
 
 // Name returns the name for the current CollectionSimple
-func (c *CollectionSimple) Name() string {
+func (c *Simple) Name() string {
 	return c.name
 }
 
 // Reset the current CollectionSimple
-func (c *CollectionSimple) Reset() {
+func (c *Simple) Reset() {
 	c.data = ""
 }
 
-var _ Collection = &CollectionSimple{}
+var _ Collection = &Simple{}
 
-// NewCollectionSimple creates a new CollectionSimple
-func NewCollectionSimple(variable variables.RuleVariable) *CollectionSimple {
-	return &CollectionSimple{
+// NewSimple creates a new CollectionSimple
+func NewSimple(variable variables.RuleVariable) *Simple {
+	return &Simple{
 		variable: variable,
 		name:     variable.Name(),
 	}

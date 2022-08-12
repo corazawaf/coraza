@@ -14,51 +14,21 @@
 package collection
 
 import (
-	"regexp"
-	"sort"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-func TestCollectionProxy(t *testing.T) {
+func TestCollectionSizeProxy(t *testing.T) {
 	c1 := NewMap(variables.ArgsPost)
 	c2 := NewMap(variables.ArgsGet)
-	proxy := NewProxy(variables.Args, c1, c2)
+	proxy := NewCollectionSizeProxy(variables.Args, c1, c2)
 
-	c1.Set("key1", []string{"value1"})
+	c1.Set("key1", []string{"value1", "value2"})
 	c1.Set("key2", []string{"value2"})
 	c2.Set("key3", []string{"value3"})
-
-	p := proxy.FindAll()
-	if len(p) != 3 {
-		t.Error("Error finding all")
-	} else {
-		p := proxy.FindAll()
-		m := false
-		for _, v := range p {
-			if v.Value == "value1" {
-				m = true
-				break
-			}
-		}
-		if !m {
-			t.Error("Error finding all")
-		}
-	}
-	var f []string
-	for _, r := range p {
-		f = append(f, r.Value)
-	}
-	sort.Strings(f)
-	if f[0] != "value1" || f[1] != "value2" || f[2] != "value3" {
-		t.Error("Error finding all")
+	if proxy.Size() != 24 {
+		t.Errorf("Error finding size for size proxy, got %d", proxy.Size())
 	}
 
-	if len(proxy.FindString("key3")) == 0 {
-		t.Error("Error finding string")
-	}
-	if len(proxy.FindRegex(regexp.MustCompile("k.*"))) != 3 {
-		t.Error("Error finding regex")
-	}
 }

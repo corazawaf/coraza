@@ -5,20 +5,20 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "sts",
 		Description: "Test if disruptive actions trigger an interruption",
 		Enabled:     true,
 		Name:        "disruptive_actions.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "disruptive_actions",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				// Phase 1
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI: "/redirect1",
 						},
 						Output: profile.ExpectedOutput{
@@ -33,8 +33,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 					},
 				},
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI: "/deny1",
 						},
 						Output: profile.ExpectedOutput{
@@ -49,8 +49,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 					},
 				},
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI: "/drop1",
 						},
 						Output: profile.ExpectedOutput{
@@ -66,8 +66,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 				},
 				// Phase 2
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI: "/redirect2",
 						},
 						Output: profile.ExpectedOutput{
@@ -82,8 +82,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 					},
 				},
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI: "/deny2",
 						},
 						Output: profile.ExpectedOutput{
@@ -98,8 +98,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 					},
 				},
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI: "/drop2",
 						},
 						Output: profile.ExpectedOutput{
@@ -115,8 +115,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 				},
 				// Phase 3
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI: "/redirect3",
 						},
 						Output: profile.ExpectedOutput{
@@ -131,8 +131,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 					},
 				},
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI: "/deny3",
 						},
 						Output: profile.ExpectedOutput{
@@ -147,8 +147,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 					},
 				},
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI: "/drop3",
 						},
 						Output: profile.ExpectedOutput{
@@ -164,8 +164,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 				},
 				// Phase 4
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI: "/redirect4",
 						},
 						Output: profile.ExpectedOutput{
@@ -180,8 +180,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 					},
 				},
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI: "/deny4",
 						},
 						Output: profile.ExpectedOutput{
@@ -196,8 +196,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 					},
 				},
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI: "/drop4",
 						},
 						Output: profile.ExpectedOutput{
@@ -213,8 +213,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 				},
 				// Phase 5
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI: "/redirect5",
 						},
 						Output: profile.ExpectedOutput{
@@ -229,8 +229,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 					},
 				},
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI: "/deny5",
 						},
 						Output: profile.ExpectedOutput{
@@ -245,8 +245,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 					},
 				},
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI: "/drop5",
 						},
 						Output: profile.ExpectedOutput{
@@ -261,8 +261,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 					},
 				},
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI: "/default/block",
 						},
 						Output: profile.ExpectedOutput{

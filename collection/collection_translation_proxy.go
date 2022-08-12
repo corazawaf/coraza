@@ -21,18 +21,18 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-// CollectionTranslationProxy are used to store VARIABLE data
+// TranslationProxy are used to store VARIABLE data
 // for transactions, this data structured is designed
 // to store slices of data for keys
 // Important: CollectionTranslationProxys ARE NOT concurrent safe
-type CollectionTranslationProxy struct {
-	data     []*CollectionMap
+type TranslationProxy struct {
+	data     []*Map
 	name     string
 	variable variables.RuleVariable
 }
 
 // FindRegex returns a slice of MatchData for the regex
-func (c *CollectionTranslationProxy) FindRegex(key *regexp.Regexp) []types.MatchData {
+func (c *TranslationProxy) FindRegex(key *regexp.Regexp) []types.MatchData {
 	res := []types.MatchData{}
 	keys := []string{}
 	for _, c := range c.data {
@@ -49,7 +49,7 @@ func (c *CollectionTranslationProxy) FindRegex(key *regexp.Regexp) []types.Match
 }
 
 // FindString returns a slice of MatchData for the string
-func (c *CollectionTranslationProxy) FindString(key string) []types.MatchData {
+func (c *TranslationProxy) FindString(key string) []types.MatchData {
 	for _, c := range c.data {
 		if len(c.Get(key)) > 0 {
 			return []types.MatchData{
@@ -64,7 +64,8 @@ func (c *CollectionTranslationProxy) FindString(key string) []types.MatchData {
 	return nil
 }
 
-func (c *CollectionTranslationProxy) FindAll() []types.MatchData {
+// FindAll returns all keys from Proxy Collections
+func (c *TranslationProxy) FindAll() []types.MatchData {
 	keys := []string{}
 	for _, c := range c.data {
 		keys = append(keys, c.keys()...)
@@ -80,7 +81,8 @@ func (c *CollectionTranslationProxy) FindAll() []types.MatchData {
 	return res
 }
 
-func (c *CollectionTranslationProxy) Data() []string {
+// Data returns the keys of all Proxy collections
+func (c *TranslationProxy) Data() []string {
 	res := []string{}
 	for _, c := range c.data {
 		res = append(res, c.keys()...)
@@ -89,16 +91,17 @@ func (c *CollectionTranslationProxy) Data() []string {
 }
 
 // Name returns the name for the current CollectionTranslationProxy
-func (c *CollectionTranslationProxy) Name() string {
+func (c *TranslationProxy) Name() string {
 	return c.name
 }
 
 // Reset the current CollectionTranslationProxy
-func (c *CollectionTranslationProxy) Reset() {
+func (c *TranslationProxy) Reset() {
 	// do nothing
 }
 
-func (c *CollectionTranslationProxy) Get(index int) string {
+// Get the value for the index
+func (c *TranslationProxy) Get(index int) string {
 	if index < len(c.data) {
 		if v := c.data[index].Get(""); len(v) > 0 {
 			return v[0]
@@ -107,10 +110,12 @@ func (c *CollectionTranslationProxy) Get(index int) string {
 	return ""
 }
 
-var _ Collection = &CollectionTranslationProxy{}
+var _ Collection = &TranslationProxy{}
 
-func NewCollectionTranslationProxy(variable variables.RuleVariable, data ...*CollectionMap) *CollectionTranslationProxy {
-	return &CollectionTranslationProxy{
+// NewTranslationProxy creates a translation proxy
+// Translation proxies are used to merge variable keys from multiple collections
+func NewTranslationProxy(variable variables.RuleVariable, data ...*Map) *TranslationProxy {
+	return &TranslationProxy{
 		name:     variable.Name(),
 		variable: variable,
 		data:     data,
