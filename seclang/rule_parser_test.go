@@ -30,7 +30,7 @@ func TestInvalidRule(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 
-	err = p.FromString("SecRule")
+	err = p.FromString("SecRule ")
 	if err == nil {
 		t.Error("expected malformed rule error")
 	}

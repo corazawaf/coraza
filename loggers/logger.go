@@ -76,16 +76,3 @@ func GetLogFormatter(name string) (LogFormatter, error) {
 	}
 	return formatter, nil
 }
-
-func init() {
-	RegisterLogWriter("concurrent", func() LogWriter {
-		return &concurrentWriter{}
-	})
-	RegisterLogWriter("serial", func() LogWriter {
-		return &serialWriter{}
-	})
-
-	RegisterLogFormatter("json", jsonFormatter)
-	RegisterLogFormatter("jsonlegacy", legacyJSONFormatter)
-	RegisterLogFormatter("native", nativeFormatter)
-}

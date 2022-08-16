@@ -15,15 +15,9 @@
 package seclang
 
 import (
-	"encoding/json"
-	"io/ioutil"
-	"os"
-	"strings"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3"
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -248,29 +242,6 @@ func TestSecRuleUpdateTargetBy(t *testing.T) {
 		t.Error(err)
 	}
 
-}
-
-// Find a file by name recursively containing some string
-func findFileContaining(path string, search string) (string, error) {
-	files, err := ioutil.ReadDir(path)
-	if err != nil {
-		return "", err
-	}
-	for _, file := range files {
-		if file.IsDir() {
-			fullpath := path + "/" + file.Name()
-			file, err := findFileContaining(fullpath, search)
-			if err != nil {
-				return "", err
-			}
-			if file != "" {
-				return file, nil
-			}
-		} else if strings.Contains(file.Name(), search) {
-			return path + "/" + file.Name(), nil
-		}
-	}
-	return "", nil
 }
 
 func TestInvalidBooleanForDirectives(t *testing.T) {

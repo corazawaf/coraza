@@ -1,3 +1,7 @@
+// tinygo does not support net.http so this package is not needed for it
+//go:build !tinygo
+// +build !tinygo
+
 // Copyright 2022 Juan Pablo Tosso
 //
 // Licensed under the Apache License, Version 2.0 (the "License");

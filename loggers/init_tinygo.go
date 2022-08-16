@@ -1,3 +1,6 @@
+//go:build tinygo
+// +build tinygo
+
 // Copyright 2022 Juan Pablo Tosso
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,15 +17,15 @@
 
 package loggers
 
-import "testing"
+func init() {
+	RegisterLogWriter("concurrent", func() LogWriter {
+		return noopWriter{}
+	})
+	RegisterLogWriter("serial", func() LogWriter {
+		return noopWriter{}
+	})
 
-func TestDefaultWriters(t *testing.T) {
-	ws := []string{"serial", "concurrent"}
-	for _, writer := range ws {
-		if w, err := GetLogWriter(writer); err != nil {
-			t.Error(err)
-		} else if w == nil {
-			t.Errorf("invalid %s writer", writer)
-		}
-	}
+	RegisterLogFormatter("json", noopFormater)
+	RegisterLogFormatter("jsonlegacy", noopFormater)
+	RegisterLogFormatter("native", noopFormater)
 }

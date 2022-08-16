@@ -1,3 +1,6 @@
+//go:build tinygo
+// +build tinygo
+
 // Copyright 2022 Juan Pablo Tosso
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,17 +15,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package loggers
+package operators
 
-import "testing"
+import (
+	"github.com/corazawaf/coraza/v3"
+)
 
-func TestDefaultWriters(t *testing.T) {
-	ws := []string{"serial", "concurrent"}
-	for _, writer := range ws {
-		if w, err := GetLogWriter(writer); err != nil {
-			t.Error(err)
-		} else if w == nil {
-			t.Errorf("invalid %s writer", writer)
-		}
-	}
-}
+type rbl struct{}
+
+func (o *rbl) Init(_ coraza.RuleOperatorOptions) error { return nil }
+
+func (o *rbl) Evaluate(_ *coraza.Transaction, _ string) bool { return true }
