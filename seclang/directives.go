@@ -530,7 +530,7 @@ var (
 // RegisterDirective registers a directive to the seclang processor.
 // All WAF instances will share the same directive map.
 func RegisterDirective(name string, directive Directive) {
-	directivesMap[name] = directive
+	directivesMap[strings.ToLower(name)] = directive
 }
 
 var directivesMap = map[string]Directive{
