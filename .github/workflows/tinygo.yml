@@ -9,6 +9,12 @@ on:
       - "**/*.md"
       - "LICENSE"
   pull_request:
+    branches:
+      - v3/dev
+      - v3/main
+    paths-ignore:
+      - "**/*.md"
+      - "LICENSE"
 
 jobs:
   test:
