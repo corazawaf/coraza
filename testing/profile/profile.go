@@ -69,7 +69,7 @@ type Profile struct {
 // ExpectedOutput contains the expected output results for a test
 type ExpectedOutput struct {
 	Headers           map[string]string     `yaml:"headers,omitempty"`
-	Data              string                `yaml:"data,omitempty"` // Accepts array or string
+	Data              interface{}           `yaml:"data,omitempty"` // Accepts array or string
 	LogContains       string                `yaml:"log_contains,omitempty"`
 	NoLogContains     string                `yaml:"no_log_contains,omitempty"`
 	ExpectError       bool                  `yaml:"expect_error,omitempty"`

@@ -131,7 +131,12 @@ func (t *Test) SetRawRequest(request []byte) error {
 }
 
 // SetRequestBody sets the request body
-func (t *Test) SetRequestBody(data string) error {
+func (t *Test) SetRequestBody(body interface{}) error {
+	if body == nil {
+		return nil
+	}
+	data := bodyToString(body)
+
 	lbody := len(data)
 	if lbody == 0 {
 		return nil
@@ -147,7 +152,12 @@ func (t *Test) SetRequestBody(data string) error {
 }
 
 // SetResponseBody sets the request body
-func (t *Test) SetResponseBody(data string) error {
+func (t *Test) SetResponseBody(body interface{}) error {
+	if body == nil {
+		return nil
+	}
+	data := bodyToString(body)
+
 	lbody := len(data)
 	if lbody == 0 {
 		return nil
@@ -296,4 +306,20 @@ func NewTest(name string, waf *coraza.Waf) *Test {
 	}
 	t.SetWaf(waf)
 	return t
+}
+
+func bodyToString(iface interface{}) string {
+	data := ""
+	switch v := iface.(type) {
+	case []string:
+		for i := 0; i < len(v); i++ {
+			data += fmt.Sprintf("%s\r\n", v[i])
+		}
+		data += "\r\n"
+	case string:
+		data = v
+	default:
+		panic("Error: bodyToString() only accepts slices and strings")
+	}
+	return data
 }
