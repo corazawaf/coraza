@@ -23,6 +23,6 @@ import (
 
 type inspectFile struct{}
 
-func (_ *inspectFile) Init(_ coraza.RuleOperatorOptions) error { return nil }
+func (*inspectFile) Init(coraza.RuleOperatorOptions) error { return nil }
 
-func (_ *inspectFile) Evaluate(_ *coraza.Transaction, _ string) bool { return true }
+func (*inspectFile) Evaluate(*coraza.Transaction, string) bool { return true }

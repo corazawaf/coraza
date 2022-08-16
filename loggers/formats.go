@@ -15,25 +15,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/*
-Package loggers implements a set of log formatters and writers
-for audit logging.
-
-The following log formats are supported:
-
-- JSON
-- Coraza
-- Native
-
-The following log writers are supported:
-
-- Serial
-- Concurrent
-
-More writers and formatters can be registered using the RegisterWriter and
-RegisterFormatter functions.
-*/
-
+// Package loggers implements a set of log formatters and writers
+// for audit logging.
+//
+// The following log formats are supported:
+//
+// - JSON
+// - Coraza
+// - Native
+//
+// The following log writers are supported:
+//
+// - Serial
+// - Concurrent
+//
+// More writers and formatters can be registered using the RegisterWriter and
+// RegisterFormatter functions.
 package loggers
 
 import (
