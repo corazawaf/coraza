@@ -5,19 +5,19 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if the body processors work",
 		Enabled:     true,
 		Name:        "posturlencoded.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "posturlencoded",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI:    "/",
 							Method: "POST",
 							Headers: map[string]string{
@@ -32,8 +32,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 					},
 				},
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI:    "/",
 							Method: "GET",
 						},
@@ -43,8 +43,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 					},
 				},
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI:    "/case2",
 							Method: "POST",
 							Headers: map[string]string{

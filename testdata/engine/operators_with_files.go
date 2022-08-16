@@ -5,19 +5,19 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if operators with files works",
 		Enabled:     true,
 		Name:        "operators_with_files.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "owf",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI: "/?ghi=cdf",
 							Headers: map[string]string{
 								"ghi":    "pineapple",

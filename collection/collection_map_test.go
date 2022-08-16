@@ -21,7 +21,7 @@ import (
 )
 
 func TestCollectionMap(t *testing.T) {
-	c := NewCollectionMap(variables.ArgsPost)
+	c := NewMap(variables.ArgsPost)
 	c.SetIndex("key", 1, "value")
 	c.Set("key2", []string{"value2"})
 	if c.Get("key")[1] != "value" {

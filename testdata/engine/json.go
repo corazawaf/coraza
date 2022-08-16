@@ -5,19 +5,19 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if the json request body work",
 		Enabled:     true,
 		Name:        "jsonyaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "json",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Stage: profile.ProfileSubStage{
-						Input: profile.ProfileStageInput{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI:    "/index.php?json.test=456",
 							Method: "POST",
 							Headers: map[string]string{

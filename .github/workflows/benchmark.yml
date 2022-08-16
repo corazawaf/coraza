@@ -1,8 +1,17 @@
 name: Performance Regression Check
 
 on:
-  pull_request:
   push:
+    branches:
+      - v3/dev
+      - v3/main
+    paths-ignore:
+      - "**/*.md"
+      - "LICENSE"
+  pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - "LICENSE"
 jobs:
   benchmark:
     name: Performance regression check
@@ -37,5 +46,5 @@ jobs:
           fail-on-alert: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
           comment-on-alert: true
-          alert-comment-cc-users: '@jptosso'          
+          alert-comment-cc-users: '@corazawaf/core-developers'          
       # Upload the updated cache file for the next job by actions/cache

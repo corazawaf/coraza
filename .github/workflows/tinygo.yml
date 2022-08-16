@@ -3,7 +3,8 @@ name: Tinygo tests
 on:
   push:
     branches:
-      - master
+      - v3/dev
+      - v3/main
     paths-ignore:
       - "**/*.md"
       - "LICENSE"

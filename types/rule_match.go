@@ -22,6 +22,8 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
+// RuleMetadata is used to store rule metadata
+// that can be used across packages
 type RuleMetadata struct {
 	ID       int
 	File     string
@@ -55,7 +57,7 @@ type MatchData struct {
 	Data string
 }
 
-// // isNil is used to check whether the MatchData is empty
+// IsNil is used to check whether the MatchData is empty
 func (m MatchData) IsNil() bool {
 	return m == MatchData{}
 }
