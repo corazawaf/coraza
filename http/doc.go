@@ -12,17 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package loggers
-
-import "testing"
-
-func TestDefaultWriters(t *testing.T) {
-	ws := []string{"serial", "concurrent"}
-	for _, writer := range ws {
-		if w, err := GetLogWriter(writer); err != nil {
-			t.Error(err)
-		} else if w == nil {
-			t.Errorf("invalid %s writer", writer)
-		}
-	}
-}
+// Package http allows populating a coraza transaction with information from an HTTP Request.
+package http

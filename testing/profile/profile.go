@@ -29,7 +29,7 @@ type StageInput struct {
 	Method         string            `yaml:"method,omitempty"`
 	URI            string            `yaml:"uri,omitempty"`
 	Version        string            `yaml:"version,omitempty"`
-	Data           interface{}       `yaml:"data,omitempty"` // Accepts array or string
+	Data           string            `yaml:"data,omitempty"` // Accepts array or string
 	Headers        map[string]string `yaml:"headers,omitempty"`
 	RawRequest     []byte            `yaml:"raw_request,omitempty"`
 	EncodedRequest string            `yaml:"encoded_request,omitempty"`

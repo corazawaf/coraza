@@ -1,3 +1,7 @@
+// Currently only used with TinyGo
+//go:build tinygo
+// +build tinygo
+
 // Copyright 2022 Juan Pablo Tosso
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,15 +18,15 @@
 
 package loggers
 
-import "testing"
+import (
+	"github.com/corazawaf/coraza/v3/types"
+)
 
-func TestDefaultWriters(t *testing.T) {
-	ws := []string{"serial", "concurrent"}
-	for _, writer := range ws {
-		if w, err := GetLogWriter(writer); err != nil {
-			t.Error(err)
-		} else if w == nil {
-			t.Errorf("invalid %s writer", writer)
-		}
-	}
-}
+// noopWriter is used to store logs in a single file
+type noopWriter struct{}
+
+func (noopWriter) Init(types.Config) error { return nil }
+func (noopWriter) Write(*AuditLog) error   { return nil }
+func (noopWriter) Close() error            { return nil }
+
+var _ LogWriter = (*noopWriter)(nil)
