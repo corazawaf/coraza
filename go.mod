@@ -3,6 +3,7 @@ module github.com/corazawaf/coraza/v3
 go 1.16
 
 require (
+	github.com/anuraaga/go-modsecurity v0.0.0-20220816070944-f36055ce7d5d
 	github.com/corazawaf/libinjection-go v0.0.0-20220207031228-44e9c4250eb5
 	github.com/foxcpp/go-mockdns v1.0.0
 	github.com/miekg/dns v1.1.50 // indirect

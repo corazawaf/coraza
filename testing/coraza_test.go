@@ -68,28 +68,6 @@ func TestEngine(t *testing.T) {
 	}
 }
 
-func BenchmarkEngine(b *testing.B) {
-	for _, p := range profile.Profiles {
-		b.Run(p.Meta.Name, func(b *testing.B) {
-			tt, err := testList(&p, nil)
-			if err != nil {
-				b.Error(err)
-			}
-			b.ResetTimer()
-			for _, test := range tt {
-				testname := p.Tests[0].Title
-				b.Run(testname, func(b *testing.B) {
-					for i := 0; i < b.N; i++ {
-						if err := test.RunPhases(); err != nil {
-							b.Error(err)
-						}
-					}
-				})
-			}
-		})
-	}
-}
-
 func testList(p *profile.Profile, waf *coraza.Waf) ([]*Test, error) {
 	var tests []*Test
 	for _, t := range p.Tests {
