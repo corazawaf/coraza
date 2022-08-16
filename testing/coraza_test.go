@@ -28,7 +28,7 @@ func TestEngine(t *testing.T) {
 	if len(profile.Profiles) == 0 {
 		t.Error("failed to find tests")
 	}
-	fmt.Printf("Loading %d profiles\n", len(profile.Profiles))
+	t.Logf("Loading %d profiles\n", len(profile.Profiles))
 	for _, p := range profile.Profiles {
 		t.Run(p.Meta.Name, func(t *testing.T) {
 			tt, err := testList(&p, nil)
@@ -37,7 +37,6 @@ func TestEngine(t *testing.T) {
 			}
 			for _, test := range tt {
 				testname := p.Tests[0].Title
-
 				t.Run(testname, func(t *testing.T) {
 					if err := test.RunPhases(); err != nil {
 						t.Errorf("%s, ERROR: %s", test.Name, err)

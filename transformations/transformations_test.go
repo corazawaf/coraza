@@ -15,24 +15,25 @@
 package transformations
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/tidwall/gjson"
 )
 
 type Test struct {
-	Input  string `json:"input"`
-	Output string `json:"output"`
-	Name   string `json:"name"`
-	Ret    int    `json:"ret"`
-	Type   string `json:"type"`
+	Input  string
+	Output string
+	Name   string
+	Ret    int
+	Type   string
 }
 
-//https://github.com/SpiderLabs/secrules-language-tests/
+// https://github.com/SpiderLabs/secrules-language-tests/
 func TestTransformations(t *testing.T) {
 	root := "../testdata/transformations/"
 	files := [][]byte{}
@@ -49,12 +50,7 @@ func TestTransformations(t *testing.T) {
 		t.Error("Error walking files")
 	}
 	for _, f := range files {
-
-		cases := []*Test{}
-		err := json.Unmarshal(f, &cases)
-		if err != nil {
-			t.Error("Cannot parse test case")
-		}
+		cases := unmarshalTests(f)
 		for _, data := range cases {
 			// UNMARSHALL does not transform \u0000 to binary
 			data.Input = strings.ReplaceAll(data.Input, `\u0000`, "\u0000")
@@ -90,4 +86,30 @@ func TestTransformationsAreCaseInsensitive(t *testing.T) {
 	if _, err := GetTransformation("cmdline"); err != nil {
 		t.Error(err)
 	}
+}
+
+func unmarshalTests(json []byte) []Test {
+	var tests []Test
+	v := gjson.ParseBytes(json).Value()
+	for _, in := range v.([]interface{}) {
+		obj := in.(map[string]interface{})
+		t := Test{}
+		if s, ok := obj["input"]; ok {
+			t.Input = s.(string)
+		}
+		if s, ok := obj["output"]; ok {
+			t.Output = s.(string)
+		}
+		if s, ok := obj["name"]; ok {
+			t.Name = s.(string)
+		}
+		if s, ok := obj["ret"]; ok {
+			t.Ret = int(s.(float64))
+		}
+		if s, ok := obj["type"]; ok {
+			t.Type = s.(string)
+		}
+		tests = append(tests, t)
+	}
+	return tests
 }

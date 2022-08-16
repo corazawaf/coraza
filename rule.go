@@ -221,7 +221,6 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 		r.matchVariable(tx, md)
 	} else {
 		ecol := tx.ruleRemoveTargetByID[r.ID]
-		// captured := false
 		for _, v := range r.variables {
 			var values []types.MatchData
 			for _, c := range ecol {
@@ -288,13 +287,6 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 				}
 			}
 		}
-		/*
-			TODO: For some reason, it seems it's not necessary to reset captures,
-			it might lead to unexpected behavior in the future
-			if captured {
-				defer tx.resetCaptures()
-			}
-		*/
 	}
 
 	if len(matchedValues) == 0 {

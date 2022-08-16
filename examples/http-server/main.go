@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/corazawaf/coraza/v3"
+	txhttp "github.com/corazawaf/coraza/v3/http"
 	"github.com/corazawaf/coraza/v3/seclang"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -62,7 +63,7 @@ func corazaRequestHandler(h http.Handler) http.Handler {
 			ProcessRequestHeaders and ProcessRequestBody.
 			It fails if any of these functions returns an error and it stops on interruption.
 		*/
-		if it, err := tx.ProcessRequest(r); err != nil {
+		if it, err := txhttp.ProcessRequest(tx, r); err != nil {
 			showCorazaError(w, 500, err.Error())
 			return
 		} else if it != nil {

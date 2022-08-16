@@ -19,8 +19,7 @@ import (
 	"github.com/corazawaf/libinjection-go"
 )
 
-type detectSQLi struct {
-}
+type detectSQLi struct{}
 
 func (o *detectSQLi) Init(options coraza.RuleOperatorOptions) error {
 	return nil
