@@ -139,7 +139,7 @@ func (p *Parser) evaluate(data string) error {
 		return p.log("Unsupported directive " + directive)
 	}
 
-	p.options.Opts = opts
+	p.options.Arguments = opts
 	p.options.Config.Set("last_profile_line", p.currentLine)
 	p.options.Config.Set("parser_config_file", p.currentFile)
 	p.options.Config.Set("parser_config_dir", p.currentDir)

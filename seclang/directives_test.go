@@ -158,15 +158,15 @@ func TestDebugDirectives(t *testing.T) {
 	tmp := tmpf.Name()
 	p, _ := NewParser(waf)
 	err = directiveSecDebugLog(&DirectiveOptions{
-		Waf:  waf,
-		Opts: tmp,
+		Waf:       waf,
+		Arguments: tmp,
 	})
 	if err != nil {
 		t.Error(err)
 	}
 	if err := directiveSecDebugLogLevel(&DirectiveOptions{
-		Waf:  waf,
-		Opts: "5",
+		Waf:       waf,
+		Arguments: "5",
 	}); err != nil {
 		t.Error(err)
 	}
@@ -242,8 +242,8 @@ func TestSecRuleUpdateTargetBy(t *testing.T) {
 		t.Error("Failed to add rule")
 	}
 	if err := directiveSecRuleUpdateTargetByID(&DirectiveOptions{
-		Waf:  waf,
-		Opts: "181 \"REQUEST_HEADERS\"",
+		Waf:       waf,
+		Arguments: "181 \"REQUEST_HEADERS\"",
 	}); err != nil {
 		t.Error(err)
 	}
@@ -296,5 +296,15 @@ func TestInvalidRulesWithIgnoredErrors(t *testing.T) {
 	p, _ = NewParser(waf)
 	if err := p.FromString(directives); err == nil {
 		t.Error("failed to error on invalid rule")
+	}
+}
+
+func TestRegisterDirective(t *testing.T) {
+	directive := func(options *DirectiveOptions) error {
+		return nil
+	}
+	RegisterDirective("test", directive)
+	if _, ok := directivesMap["test"]; !ok {
+		t.Error("failed to register directive")
 	}
 }

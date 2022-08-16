@@ -29,29 +29,30 @@ import (
 
 // DirectiveOptions contains the parsed options for a directive
 type DirectiveOptions struct {
-	Waf    *coraza.Waf
-	Config types.Config
-	Opts   string
-	Path   []string
+	Waf       *coraza.Waf
+	Config    types.Config
+	Arguments string
+	Path      []string
 }
 
-type directive = func(options *DirectiveOptions) error
+// Directive type is used to extend the secland directives
+type Directive = func(options *DirectiveOptions) error
 
 func directiveSecComponentSignature(options *DirectiveOptions) error {
-	options.Waf.ComponentNames = append(options.Waf.ComponentNames, options.Opts)
+	options.Waf.ComponentNames = append(options.Waf.ComponentNames, options.Arguments)
 	return nil
 }
 
 func directiveSecMarker(options *DirectiveOptions) error {
 	rule := coraza.NewRule()
-	rule.Raw = fmt.Sprintf("SecMarker %s", options.Opts)
-	rule.SecMark = options.Opts
+	rule.Raw = fmt.Sprintf("SecMarker %s", options.Arguments)
+	rule.SecMark = options.Arguments
 	rule.ID = 0
 	rule.Phase = 0
 	rule.Line = options.Config.Get("parser_last_line", 0).(int)
 	rule.File = options.Config.Get("parser_config_file", "").(string)
 	if err := options.Waf.Rules.Add(rule); err != nil {
-		return newCompileRuleError(err, options.Opts)
+		return newCompileRuleError(err, options.Arguments)
 	}
 	options.Waf.Logger.Debug("added secmark rule")
 	return nil
@@ -63,15 +64,15 @@ func directiveSecAction(options *DirectiveOptions) error {
 		Waf:          options.Waf,
 		Config:       options.Config,
 		Directive:    "SecAction",
-		Data:         options.Opts,
+		Data:         options.Arguments,
 	})
 	if err != nil {
-		return newCompileRuleError(err, options.Opts)
+		return newCompileRuleError(err, options.Arguments)
 	}
 	if err := options.Waf.Rules.Add(rule); err != nil {
-		return newCompileRuleError(err, options.Opts)
+		return newCompileRuleError(err, options.Arguments)
 	}
-	options.Waf.Logger.Debug("Added SecAction: %s", options.Opts)
+	options.Waf.Logger.Debug("Added SecAction: %s", options.Arguments)
 	return nil
 }
 
@@ -82,26 +83,26 @@ func directiveSecRule(options *DirectiveOptions) error {
 		Waf:          options.Waf,
 		Config:       options.Config,
 		Directive:    "SecRule",
-		Data:         options.Opts,
+		Data:         options.Arguments,
 	})
 	if err != nil && !ignoreErrors {
-		return newCompileRuleError(err, options.Opts)
+		return newCompileRuleError(err, options.Arguments)
 	} else if err != nil && ignoreErrors {
-		options.Waf.Logger.Debug("Ignoring rule compilation error for rule %s: %v", options.Opts, err)
+		options.Waf.Logger.Debug("Ignoring rule compilation error for rule %s: %v", options.Arguments, err)
 		return nil
 	}
 	err = options.Waf.Rules.Add(rule)
 	if err != nil && !ignoreErrors {
 		return err
 	} else if err != nil && ignoreErrors {
-		options.Waf.Logger.Debug("Ignoring rule compilation error for rule %s: %v", options.Opts, err)
+		options.Waf.Logger.Debug("Ignoring rule compilation error for rule %s: %v", options.Arguments, err)
 		return nil
 	}
 	return nil
 }
 
 func directiveSecResponseBodyAccess(options *DirectiveOptions) error {
-	b, err := parseBoolean(strings.ToLower(options.Opts))
+	b, err := parseBoolean(strings.ToLower(options.Arguments))
 	if err != nil {
 		return newDirectiveError(err, "SecResponseBodyAccess")
 	}
@@ -110,13 +111,13 @@ func directiveSecResponseBodyAccess(options *DirectiveOptions) error {
 }
 
 func directiveSecRequestBodyLimit(options *DirectiveOptions) error {
-	limit, _ := strconv.ParseInt(options.Opts, 10, 64)
+	limit, _ := strconv.ParseInt(options.Arguments, 10, 64)
 	options.Waf.RequestBodyLimit = limit
 	return nil
 }
 
 func directiveSecRequestBodyAccess(options *DirectiveOptions) error {
-	b, err := parseBoolean(strings.ToLower(options.Opts))
+	b, err := parseBoolean(strings.ToLower(options.Arguments))
 	if err != nil {
 		return newDirectiveError(err, "SecRequestBodyAccess")
 	}
@@ -125,7 +126,7 @@ func directiveSecRequestBodyAccess(options *DirectiveOptions) error {
 }
 
 func directiveSecRuleEngine(options *DirectiveOptions) error {
-	engine, err := types.ParseRuleEngineStatus(options.Opts)
+	engine, err := types.ParseRuleEngineStatus(options.Arguments)
 	options.Waf.RuleEngine = engine
 	return err
 }
@@ -135,36 +136,36 @@ func directiveUnsupported(options *DirectiveOptions) error {
 }
 
 func directiveSecWebAppID(options *DirectiveOptions) error {
-	options.Waf.WebAppID = options.Opts
+	options.Waf.WebAppID = options.Arguments
 	return nil
 }
 
 func directiveSecTmpDir(options *DirectiveOptions) error {
-	options.Waf.TmpDir = options.Opts
+	options.Waf.TmpDir = options.Arguments
 	return nil
 }
 
 func directiveSecServerSignature(options *DirectiveOptions) error {
-	options.Waf.ServerSignature = options.Opts
+	options.Waf.ServerSignature = options.Arguments
 	return nil
 }
 
 func directiveSecRuleRemoveByTag(options *DirectiveOptions) error {
-	for _, r := range options.Waf.Rules.FindByTag(options.Opts) {
+	for _, r := range options.Waf.Rules.FindByTag(options.Arguments) {
 		options.Waf.Rules.DeleteByID(r.ID)
 	}
 	return nil
 }
 
 func directiveSecRuleRemoveByMsg(options *DirectiveOptions) error {
-	for _, r := range options.Waf.Rules.FindByMsg(options.Opts) {
+	for _, r := range options.Waf.Rules.FindByMsg(options.Arguments) {
 		options.Waf.Rules.DeleteByID(r.ID)
 	}
 	return nil
 }
 
 func directiveSecRuleRemoveByID(options *DirectiveOptions) error {
-	id, _ := strconv.Atoi(options.Opts)
+	id, _ := strconv.Atoi(options.Arguments)
 	options.Waf.Rules.DeleteByID(id)
 	return nil
 }
@@ -175,33 +176,33 @@ func directiveSecResponseBodyMimeTypesClear(options *DirectiveOptions) error {
 }
 
 func directiveSecResponseBodyMimeType(options *DirectiveOptions) error {
-	options.Waf.ResponseBodyMimeTypes = strings.Split(options.Opts, " ")
+	options.Waf.ResponseBodyMimeTypes = strings.Split(options.Arguments, " ")
 	return nil
 }
 
 func directiveSecResponseBodyLimitAction(options *DirectiveOptions) error {
-	options.Waf.RejectOnResponseBodyLimit = strings.ToLower(options.Opts) == "reject"
+	options.Waf.RejectOnResponseBodyLimit = strings.ToLower(options.Arguments) == "reject"
 	return nil
 }
 
 func directiveSecResponseBodyLimit(options *DirectiveOptions) error {
 	var err error
-	options.Waf.ResponseBodyLimit, err = strconv.ParseInt(options.Opts, 10, 64)
+	options.Waf.ResponseBodyLimit, err = strconv.ParseInt(options.Arguments, 10, 64)
 	return err
 }
 
 func directiveSecRequestBodyLimitAction(options *DirectiveOptions) error {
-	options.Waf.RejectOnRequestBodyLimit = strings.ToLower(options.Opts) == "reject"
+	options.Waf.RejectOnRequestBodyLimit = strings.ToLower(options.Arguments) == "reject"
 	return nil
 }
 
 func directiveSecRequestBodyInMemoryLimit(options *DirectiveOptions) error {
-	options.Waf.RequestBodyInMemoryLimit, _ = strconv.ParseInt(options.Opts, 10, 64)
+	options.Waf.RequestBodyInMemoryLimit, _ = strconv.ParseInt(options.Arguments, 10, 64)
 	return nil
 }
 
 func directiveSecRemoteRulesFailAction(options *DirectiveOptions) error {
-	options.Waf.AbortOnRemoteRulesFail = strings.ToLower(options.Opts) == "abort"
+	options.Waf.AbortOnRemoteRulesFail = strings.ToLower(options.Arguments) == "abort"
 	return nil
 }
 
@@ -214,7 +215,7 @@ func directiveSecConnWriteStateLimit(options *DirectiveOptions) error {
 }
 
 func directiveSecSensorID(options *DirectiveOptions) error {
-	options.Waf.SensorID = options.Opts
+	options.Waf.SensorID = options.Arguments
 	return nil
 }
 
@@ -263,13 +264,13 @@ func directiveSecDefaultAction(options *DirectiveOptions) error {
 	if !ok {
 		da = []string{}
 	}
-	da = append(da, options.Opts)
+	da = append(da, options.Arguments)
 	options.Config.Set("rule_default_actions", da)
 	return nil
 }
 
 func directiveSecContentInjection(options *DirectiveOptions) error {
-	b, err := parseBoolean(options.Opts)
+	b, err := parseBoolean(options.Arguments)
 	if err != nil {
 		return newDirectiveError(err, "SecContentInjection")
 	}
@@ -301,10 +302,10 @@ func directiveSecCollectionTimeout(options *DirectiveOptions) error {
 }
 
 func directiveSecAuditLog(options *DirectiveOptions) error {
-	if len(options.Opts) == 0 {
+	if len(options.Arguments) == 0 {
 		return errors.New("syntax error: SecAuditLog /some/absolute/path.log")
 	}
-	options.Config.Set("auditlog_file", options.Opts)
+	options.Config.Set("auditlog_file", options.Arguments)
 	if err := options.Waf.AuditLogWriter.Init(options.Config); err != nil {
 		return err
 	}
@@ -312,10 +313,10 @@ func directiveSecAuditLog(options *DirectiveOptions) error {
 }
 
 func directiveSecAuditLogType(options *DirectiveOptions) error {
-	if len(options.Opts) == 0 {
+	if len(options.Arguments) == 0 {
 		return errors.New("syntax error: SecAuditLogType [concurrent/https/serial/...]")
 	}
-	writer, err := loggers.GetLogWriter(options.Opts)
+	writer, err := loggers.GetLogWriter(options.Arguments)
 	if err != nil {
 		return err
 	}
@@ -327,10 +328,10 @@ func directiveSecAuditLogType(options *DirectiveOptions) error {
 }
 
 func directiveSecAuditLogFormat(options *DirectiveOptions) error {
-	if len(options.Opts) == 0 {
+	if len(options.Arguments) == 0 {
 		return errors.New("syntax error: SecAuditLogFormat [json/native/...]")
 	}
-	formatter, err := loggers.GetLogFormatter(options.Opts)
+	formatter, err := loggers.GetLogFormatter(options.Arguments)
 	if err != nil {
 		return err
 	}
@@ -342,10 +343,10 @@ func directiveSecAuditLogFormat(options *DirectiveOptions) error {
 }
 
 func directiveSecAuditLogDir(options *DirectiveOptions) error {
-	if len(options.Opts) == 0 {
+	if len(options.Arguments) == 0 {
 		return errors.New("syntax error: SecAuditLogDir /some/absolute/path")
 	}
-	options.Config.Set("auditlog_dir", options.Opts)
+	options.Config.Set("auditlog_dir", options.Arguments)
 	if err := options.Waf.AuditLogWriter.Init(options.Config); err != nil {
 		return err
 	}
@@ -353,10 +354,10 @@ func directiveSecAuditLogDir(options *DirectiveOptions) error {
 }
 
 func directiveSecAuditLogDirMode(options *DirectiveOptions) error {
-	if len(options.Opts) == 0 {
+	if len(options.Arguments) == 0 {
 		return errors.New("syntax error: SecAuditLogDirMode [0777/0700/...]")
 	}
-	auditLogDirMode, err := strconv.ParseInt(options.Opts, 8, 32)
+	auditLogDirMode, err := strconv.ParseInt(options.Arguments, 8, 32)
 	if err != nil {
 		return err
 	}
@@ -368,10 +369,10 @@ func directiveSecAuditLogDirMode(options *DirectiveOptions) error {
 }
 
 func directiveSecAuditLogFileMode(options *DirectiveOptions) error {
-	if len(options.Opts) == 0 {
+	if len(options.Arguments) == 0 {
 		return errors.New("syntax error: SecAuditLogFileMode [0777/0700/...]")
 	}
-	auditLogFileMode, err := strconv.ParseInt(options.Opts, 8, 32)
+	auditLogFileMode, err := strconv.ParseInt(options.Arguments, 8, 32)
 	if err != nil {
 		return err
 	}
@@ -384,29 +385,29 @@ func directiveSecAuditLogFileMode(options *DirectiveOptions) error {
 
 func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 	var err error
-	options.Waf.AuditLogRelevantStatus, err = regexp.Compile(options.Opts)
+	options.Waf.AuditLogRelevantStatus, err = regexp.Compile(options.Arguments)
 	return err
 }
 
 func directiveSecAuditLogParts(options *DirectiveOptions) error {
-	options.Waf.AuditLogParts = types.AuditLogParts(options.Opts)
+	options.Waf.AuditLogParts = types.AuditLogParts(options.Arguments)
 	return nil
 }
 
 func directiveSecAuditEngine(options *DirectiveOptions) error {
-	au, err := types.ParseAuditEngineStatus(options.Opts)
+	au, err := types.ParseAuditEngineStatus(options.Arguments)
 	options.Waf.AuditEngine = au
 	return err
 }
 
 func directiveSecDataDir(options *DirectiveOptions) error {
 	// TODO validations
-	options.Waf.DataDir = options.Opts
+	options.Waf.DataDir = options.Arguments
 	return nil
 }
 
 func directiveSecUploadKeepFiles(options *DirectiveOptions) error {
-	b, err := parseBoolean(options.Opts)
+	b, err := parseBoolean(options.Arguments)
 	if err != nil {
 		return newDirectiveError(err, "SecUploadKeepFiles")
 	}
@@ -415,35 +416,35 @@ func directiveSecUploadKeepFiles(options *DirectiveOptions) error {
 }
 
 func directiveSecUploadFileMode(options *DirectiveOptions) error {
-	fm, err := strconv.ParseInt(options.Opts, 8, 32)
+	fm, err := strconv.ParseInt(options.Arguments, 8, 32)
 	options.Waf.UploadFileMode = fs.FileMode(fm)
 	return err
 }
 
 func directiveSecUploadFileLimit(options *DirectiveOptions) error {
 	var err error
-	options.Waf.UploadFileLimit, err = strconv.Atoi(options.Opts)
+	options.Waf.UploadFileLimit, err = strconv.Atoi(options.Arguments)
 	return err
 }
 
 func directiveSecUploadDir(options *DirectiveOptions) error {
 	// TODO validations
-	options.Waf.UploadDir = options.Opts
+	options.Waf.UploadDir = options.Arguments
 	return nil
 }
 
 func directiveSecRequestBodyNoFilesLimit(options *DirectiveOptions) error {
 	var err error
-	options.Waf.RequestBodyNoFilesLimit, err = strconv.ParseInt(options.Opts, 10, 64)
+	options.Waf.RequestBodyNoFilesLimit, err = strconv.ParseInt(options.Arguments, 10, 64)
 	return err
 }
 
 func directiveSecDebugLog(options *DirectiveOptions) error {
-	return options.Waf.SetDebugLogPath(options.Opts)
+	return options.Waf.SetDebugLogPath(options.Arguments)
 }
 
 func directiveSecDebugLogLevel(options *DirectiveOptions) error {
-	lvl, err := strconv.Atoi(options.Opts)
+	lvl, err := strconv.Atoi(options.Arguments)
 	if err != nil {
 		return err
 	}
@@ -451,7 +452,7 @@ func directiveSecDebugLogLevel(options *DirectiveOptions) error {
 }
 
 func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
-	spl := strings.SplitN(options.Opts, " ", 2)
+	spl := strings.SplitN(options.Arguments, " ", 2)
 	if len(spl) != 2 {
 		return errors.New("syntax error: SecRuleUpdateTargetById id \"VARIABLES\"")
 	}
@@ -469,7 +470,7 @@ func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
 }
 
 func directiveSecIgnoreRuleCompilationErrors(options *DirectiveOptions) error {
-	b, err := parseBoolean(options.Opts)
+	b, err := parseBoolean(options.Arguments)
 	if err != nil {
 		return newDirectiveError(err, "SecIgnoreRuleCompilationErrors")
 	}
@@ -502,31 +503,37 @@ func parseBoolean(data string) (bool, error) {
 }
 
 var (
-	_ directive = directiveSecAction
-	_ directive = directiveSecAuditEngine
-	_ directive = directiveSecAuditLog
-	_ directive = directiveSecAuditLogType
-	_ directive = directiveSecAuditLogFormat
-	_ directive = directiveSecAuditLogParts
-	_ directive = directiveSecAuditLogRelevantStatus
-	_ directive = directiveSecContentInjection
-	_ directive = directiveSecDataDir
-	_ directive = directiveSecDefaultAction
-	_ directive = directiveSecDebugLog
-	_ directive = directiveSecDebugLogLevel
-	_ directive = directiveSecHashEngine
-	_ directive = directiveSecHashKey
-	_ directive = directiveSecHashMethodPm
-	_ directive = directiveSecHashMethodRx
-	_ directive = directiveSecHashParam
-	_ directive = directiveSecHTTPBlKey
-	_ directive = directiveSecMarker
-	_ directive = directiveSecRemoteRules
-	_ directive = directiveSecSensorID
-	_ directive = directiveSecRuleUpdateTargetByID
+	_ Directive = directiveSecAction
+	_ Directive = directiveSecAuditEngine
+	_ Directive = directiveSecAuditLog
+	_ Directive = directiveSecAuditLogType
+	_ Directive = directiveSecAuditLogFormat
+	_ Directive = directiveSecAuditLogParts
+	_ Directive = directiveSecAuditLogRelevantStatus
+	_ Directive = directiveSecContentInjection
+	_ Directive = directiveSecDataDir
+	_ Directive = directiveSecDefaultAction
+	_ Directive = directiveSecDebugLog
+	_ Directive = directiveSecDebugLogLevel
+	_ Directive = directiveSecHashEngine
+	_ Directive = directiveSecHashKey
+	_ Directive = directiveSecHashMethodPm
+	_ Directive = directiveSecHashMethodRx
+	_ Directive = directiveSecHashParam
+	_ Directive = directiveSecHTTPBlKey
+	_ Directive = directiveSecMarker
+	_ Directive = directiveSecRemoteRules
+	_ Directive = directiveSecSensorID
+	_ Directive = directiveSecRuleUpdateTargetByID
 )
 
-var directivesMap = map[string]directive{
+// RegisterDirective registers a directive to the seclang processor.
+// All WAF instances will share the same directive map.
+func RegisterDirective(name string, directive Directive) {
+	directivesMap[name] = directive
+}
+
+var directivesMap = map[string]Directive{
 	"secwebappid":                    directiveSecWebAppID,
 	"secuploadkeepfiles":             directiveSecUploadKeepFiles,
 	"secuploadfilemode":              directiveSecUploadFileMode,
