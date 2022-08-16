@@ -35,7 +35,7 @@ type Test struct {
 	Type  string
 }
 
-//https://github.com/SpiderLabs/secrules-language-tests/
+// https://github.com/SpiderLabs/secrules-language-tests/
 func TestOperators(t *testing.T) {
 	root := "../testdata/operators/"
 	files := [][]byte{}
