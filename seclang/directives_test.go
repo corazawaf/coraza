@@ -15,9 +15,6 @@
 package seclang
 
 import (
-	"io/ioutil"
-	"os"
-	"strings"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3"
@@ -145,38 +142,6 @@ func Test_directive(t *testing.T) {
 	}
 }
 
-func TestDebugDirectives(t *testing.T) {
-	waf := coraza.NewWaf()
-	tmpf, err := ioutil.TempFile("/tmp", "*.log")
-	if err != nil {
-		t.Error(err)
-	}
-	defer os.Remove(tmpf.Name())
-	tmp := tmpf.Name()
-	p, _ := NewParser(waf)
-	err = directiveSecDebugLog(&DirectiveOptions{
-		Waf:  waf,
-		Opts: tmp,
-	})
-	if err != nil {
-		t.Error(err)
-	}
-	if err := directiveSecDebugLogLevel(&DirectiveOptions{
-		Waf:  waf,
-		Opts: "5",
-	}); err != nil {
-		t.Error(err)
-	}
-	p.options.Waf.Logger.Info("abc123")
-	data, err := os.ReadFile(tmp)
-	if err != nil {
-		t.Error(err)
-	}
-	if !strings.Contains(string(data), "abc123") {
-		t.Errorf("failed to write info log, got %q", data)
-	}
-}
-
 func TestSecRuleUpdateTargetBy(t *testing.T) {
 	waf := coraza.NewWaf()
 	rule, err := ParseRule(RuleOptions{
@@ -200,29 +165,6 @@ func TestSecRuleUpdateTargetBy(t *testing.T) {
 		t.Error(err)
 	}
 
-}
-
-// Find a file by name recursively containing some string
-func findFileContaining(path string, search string) (string, error) {
-	files, err := ioutil.ReadDir(path)
-	if err != nil {
-		return "", err
-	}
-	for _, file := range files {
-		if file.IsDir() {
-			fullpath := path + "/" + file.Name()
-			file, err := findFileContaining(fullpath, search)
-			if err != nil {
-				return "", err
-			}
-			if file != "" {
-				return file, nil
-			}
-		} else if strings.Contains(file.Name(), search) {
-			return path + "/" + file.Name(), nil
-		}
-	}
-	return "", nil
 }
 
 func TestInvalidBooleanForDirectives(t *testing.T) {

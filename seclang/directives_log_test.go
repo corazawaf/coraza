@@ -1,4 +1,4 @@
-// Audit logs are currently disabled for tinygo
+// Logs are currently disabled for tinygo
 
 //go:build !tinygo
 // +build !tinygo
@@ -7,7 +7,9 @@ package seclang
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -60,4 +62,54 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	if err := json.Unmarshal(data, &j); err != nil {
 		t.Error(err)
 	}
+}
+
+func TestDebugDirectives(t *testing.T) {
+	waf := coraza.NewWaf()
+	tmp := filepath.Join(t.TempDir(), "tmp.log")
+	p, _ := NewParser(waf)
+	err := directiveSecDebugLog(&DirectiveOptions{
+		Waf:  waf,
+		Opts: tmp,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	if err := directiveSecDebugLogLevel(&DirectiveOptions{
+		Waf:  waf,
+		Opts: "5",
+	}); err != nil {
+		t.Error(err)
+	}
+	p.options.Waf.Logger.Info("abc123")
+	data, err := os.ReadFile(tmp)
+	if err != nil {
+		t.Error(err)
+	}
+	if !strings.Contains(string(data), "abc123") {
+		t.Errorf("failed to write info log, got %q", data)
+	}
+}
+
+// Find a file by name recursively containing some string
+func findFileContaining(path string, search string) (string, error) {
+	files, err := ioutil.ReadDir(path)
+	if err != nil {
+		return "", err
+	}
+	for _, file := range files {
+		if file.IsDir() {
+			fullpath := path + "/" + file.Name()
+			file, err := findFileContaining(fullpath, search)
+			if err != nil {
+				return "", err
+			}
+			if file != "" {
+				return file, nil
+			}
+		} else if strings.Contains(file.Name(), search) {
+			return path + "/" + file.Name(), nil
+		}
+	}
+	return "", nil
 }
