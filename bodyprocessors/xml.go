@@ -1,3 +1,6 @@
+//go:build !tinygo
+// +build !tinygo
+
 // Copyright 2022 Juan Pablo Tosso
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,7 +34,7 @@ func (*xmlBodyProcessor) ProcessRequest(reader io.Reader, collections [types.Var
 	if err != nil {
 		return err
 	}
-	col := collections[variables.RequestXML].(*collection.CollectionMap)
+	col := collections[variables.RequestXML].(*collection.Map)
 	col.Set("//@*", values)
 	col.Set("/*", contents)
 	return nil

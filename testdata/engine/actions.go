@@ -5,23 +5,25 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if the actions work",
 		Enabled:     true,
 		Name:        "actions.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "actions",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Input: profile.ProfileStageInput{
-						URI: "/%FFindex.html?test=test1",
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules:    []int{3, 5, 7, 10},
-						NonTriggeredRules: []int{2, 4, 6, 8, 9, 920271},
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/%FFindex.html?test=test1",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{3, 5, 7, 10},
+							NonTriggeredRules: []int{2, 4, 6, 8, 9, 920271},
+						},
 					},
 				},
 			},

@@ -26,6 +26,3 @@ func TestDefaultWriters(t *testing.T) {
 		}
 	}
 }
-func TestWriterPlugins(t *testing.T) {
-
-}

@@ -5,26 +5,28 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if the response action works",
 		Enabled:     true,
 		Name:        "response.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "response",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Input: profile.ProfileStageInput{
-						URI: "/test.php?id=12345",
-					},
-					Output: profile.ExpectedOutput{
-						Headers: map[string]string{
-							"content-type": "secret/mime",
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/test.php?id=12345",
 						},
-						Data:           `<?php echo "Hello World!\n" ?>`,
-						TriggeredRules: []int{953120},
+						Output: profile.ExpectedOutput{
+							Headers: map[string]string{
+								"content-type": "secret/mime",
+							},
+							Data:           `<?php echo "Hello World!\n" ?>`,
+							TriggeredRules: []int{953120},
+						},
 					},
 				},
 			},

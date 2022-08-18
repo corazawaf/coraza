@@ -5,19 +5,21 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if the rule metadata",
 		Enabled:     true,
 		Name:        "rulemetadata.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "rulemetadata",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{1, 2},
+					Stage: profile.SubStage{
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{1, 2},
+						},
 					},
 				},
 			},

@@ -5,50 +5,56 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if the body processors work",
 		Enabled:     true,
 		Name:        "posturlencoded.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "posturlencoded",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Input: profile.ProfileStageInput{
-						URI:    "/",
-						Method: "POST",
-						Headers: map[string]string{
-							"content-type": "application/x-www-form-urlencoded",
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/",
+							Method: "POST",
+							Headers: map[string]string{
+								"content-type": "application/x-www-form-urlencoded",
+							},
+							Data: "test=123",
 						},
-						Data: "test=123",
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules:    []int{4445, 456},
-						NonTriggeredRules: []int{200002},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{4445, 456},
+							NonTriggeredRules: []int{200002},
+						},
 					},
 				},
 				{
-					Input: profile.ProfileStageInput{
-						URI:    "/",
-						Method: "GET",
-					},
-					Output: profile.ExpectedOutput{
-						NonTriggeredRules: []int{200002},
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/",
+							Method: "GET",
+						},
+						Output: profile.ExpectedOutput{
+							NonTriggeredRules: []int{200002},
+						},
 					},
 				},
 				{
-					Input: profile.ProfileStageInput{
-						URI:    "/case2",
-						Method: "POST",
-						Headers: map[string]string{
-							"content-type": "application/x-www-form-urlencoded",
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/case2",
+							Method: "POST",
+							Headers: map[string]string{
+								"content-type": "application/x-www-form-urlencoded",
+							},
+							Data: "var%3d%20@.%3d%20%28%20SELECT",
 						},
-						Data: "var%3d%20@.%3d%20%28%20SELECT",
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{100},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{100},
+						},
 					},
 				},
 			},

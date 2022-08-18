@@ -5,19 +5,21 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if the env work",
 		Enabled:     true,
 		Name:        "direcenvstives.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "envs",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{1, 2},
+					Stage: profile.SubStage{
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{1, 2},
+						},
 					},
 				},
 			},

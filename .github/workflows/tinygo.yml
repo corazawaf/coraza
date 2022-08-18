@@ -2,25 +2,40 @@ name: Tinygo tests
 
 on:
   push:
+    branches:
+      - v3/dev
+      - v3/main
+    paths-ignore:
+      - "**/*.md"
+      - "LICENSE"
   pull_request:
+    branches:
+      - v3/dev
+      - v3/main
+    paths-ignore:
+      - "**/*.md"
+      - "LICENSE"
+
 jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.18.x, 1.19.x]
+        # TODO(anuraaga): Add 1.19.x after TinyGo adds support for it.
+        go-version: [1.18.x]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
+    container:
+      image: tinygo/tinygo:0.24.0
     steps:
-    - name: Install Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: ${{ matrix.go-version }}
-    - name: Checkout code
-      uses: actions/checkout@v2
-      with:
-        lfs: true
-        fetch-depth: 0 #for better blame info
-    - name: Download vendored dependencies
-      run: go mod vendor
-    - name: Tests and coverage
-      run: go test -v --tags=tinygo ./...
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Tests
+        run: tinygo test ./...

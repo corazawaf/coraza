@@ -5,37 +5,39 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if the json request body work",
 		Enabled:     true,
 		Name:        "jsonyaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "json",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Input: profile.ProfileStageInput{
-						URI:    "/index.php?json.test=456",
-						Method: "POST",
-						Headers: map[string]string{
-							"content-type": "application/json",
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/index.php?json.test=456",
+							Method: "POST",
+							Headers: map[string]string{
+								"content-type": "application/json",
+							},
+							Data: `{"test":123, "test2": 456, "test3": [22, 44, 55]}`,
 						},
-						Data: `{"test":123, "test2": 456, "test3": [22, 44, 55]}`,
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{
-							100,
-							101,
-							1100,
-							1101,
-							1010,
-						},
-						NonTriggeredRules: []int{
-							1111,
-							1102,
-							103,
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								100,
+								101,
+								1100,
+								1101,
+								1010,
+							},
+							NonTriggeredRules: []int{
+								1111,
+								1102,
+								103,
+							},
 						},
 					},
 				},

@@ -5,32 +5,34 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if the default_actions work",
 		Enabled:     true,
 		Name:        "default_actions.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "default_actions",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Input: profile.ProfileStageInput{
-						URI: "/%FFindex.html?test=test1",
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{
-							1,
-							2,
-							3,
-							4,
-							5,
-							6,
-							7,
-							8,
-							9,
-							10,
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/%FFindex.html?test=test1",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								1,
+								2,
+								3,
+								4,
+								5,
+								6,
+								7,
+								8,
+								9,
+								10,
+							},
 						},
 					},
 				},

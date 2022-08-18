@@ -1,21 +1,6 @@
-/*
-Package loggers implements a set of log formatters and writers
-for audit logging.
+//go:build !tinygo
+// +build !tinygo
 
-The following log formats are supported:
-
-- JSON
-- Coraza
-- Native
-
-The following log writers are supported:
-
-- Serial
-- Concurrent
-
-More writers and formatters can be registered using the RegisterWriter and
-RegisterFormatter functions.
-*/
 // Copyright 2022 Juan Pablo Tosso
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,6 +14,23 @@ RegisterFormatter functions.
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+// Package loggers implements a set of log formatters and writers
+// for audit logging.
+//
+// The following log formats are supported:
+//
+// - JSON
+// - Coraza
+// - Native
+//
+// The following log writers are supported:
+//
+// - Serial
+// - Concurrent
+//
+// More writers and formatters can be registered using the RegisterWriter and
+// RegisterFormatter functions.
 package loggers
 
 import (

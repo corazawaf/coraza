@@ -21,18 +21,18 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-// CollectionProxy are used to store VARIABLE data
+// Proxy are used to store VARIABLE data
 // for transactions, this data structured is designed
 // to store slices of data for keys
 // Important: CollectionProxys ARE NOT concurrent safe
-type CollectionProxy struct {
-	data     []*CollectionMap
+type Proxy struct {
+	data     []*Map
 	name     string
 	variable variables.RuleVariable
 }
 
 // FindRegex returns a slice of MatchData for the regex
-func (c *CollectionProxy) FindRegex(key *regexp.Regexp) []types.MatchData {
+func (c *Proxy) FindRegex(key *regexp.Regexp) []types.MatchData {
 	res := []types.MatchData{}
 	for _, c := range c.data {
 		res = append(res, c.FindRegex(key)...)
@@ -41,7 +41,7 @@ func (c *CollectionProxy) FindRegex(key *regexp.Regexp) []types.MatchData {
 }
 
 // FindString returns a slice of MatchData for the string
-func (c *CollectionProxy) FindString(key string) []types.MatchData {
+func (c *Proxy) FindString(key string) []types.MatchData {
 	res := []types.MatchData{}
 	for _, c := range c.data {
 		res = append(res, c.FindString(key)...)
@@ -49,7 +49,8 @@ func (c *CollectionProxy) FindString(key string) []types.MatchData {
 	return res
 }
 
-func (c *CollectionProxy) FindAll() []types.MatchData {
+// FindAll returns all matches for all collections
+func (c *Proxy) FindAll() []types.MatchData {
 	res := []types.MatchData{}
 	for _, c := range c.data {
 		res = append(res, c.FindAll()...)
@@ -58,12 +59,12 @@ func (c *CollectionProxy) FindAll() []types.MatchData {
 }
 
 // Name returns the name for the current CollectionProxy
-func (c *CollectionProxy) Name() string {
+func (c *Proxy) Name() string {
 	return c.name
 }
 
 // Get returns the data for the key
-func (c *CollectionProxy) Get(key string) []string {
+func (c *Proxy) Get(key string) []string {
 	res := []string{}
 	for _, c := range c.data {
 		res = append(res, c.Get(key)...)
@@ -72,7 +73,7 @@ func (c *CollectionProxy) Get(key string) []string {
 }
 
 // Data returns merged data from all CollectionMap
-func (c *CollectionProxy) Data() map[string][]string {
+func (c *Proxy) Data() map[string][]string {
 	res := map[string][]string{}
 	for _, c := range c.data {
 		for k, v := range c.Data() {
@@ -83,13 +84,14 @@ func (c *CollectionProxy) Data() map[string][]string {
 }
 
 // Reset the current CollectionProxy
-func (c *CollectionProxy) Reset() {
+func (c *Proxy) Reset() {
 }
 
-var _ Collection = &CollectionProxy{}
+var _ Collection = &Proxy{}
 
-func NewCollectionProxy(variable variables.RuleVariable, data ...*CollectionMap) *CollectionProxy {
-	return &CollectionProxy{
+// NewProxy returns a Proxy collection that merges all collections
+func NewProxy(variable variables.RuleVariable, data ...*Map) *Proxy {
+	return &Proxy{
 		name:     variable.Name(),
 		variable: variable,
 		data:     data,

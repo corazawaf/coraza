@@ -15,7 +15,6 @@
 package bodyprocessors
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"strconv"
@@ -29,12 +28,12 @@ type jsonBodyProcessor struct {
 }
 
 func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, collections [types.VariablesCount]collection.Collection, _ Options) error {
-	col := (collections[variables.ArgsPost]).(*collection.CollectionMap)
+	col := (collections[variables.ArgsPost]).(*collection.Map)
 	data, err := readJSON(reader)
 	if err != nil {
 		return err
 	}
-	argsGetCol := (collections[variables.ArgsGet]).(*collection.CollectionMap)
+	argsGetCol := (collections[variables.ArgsGet]).(*collection.Map)
 	for key, value := range data {
 		// TODO: This hack prevent GET variables from overriding POST variables
 		for k := range argsGetCol.Data() {
@@ -48,7 +47,7 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, collections [types
 }
 
 func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, collections [types.VariablesCount]collection.Collection, _ Options) error {
-	col := (collections[variables.ResponseArgs]).(*collection.CollectionMap)
+	col := (collections[variables.ResponseArgs]).(*collection.Map)
 	data, err := readJSON(reader)
 	if err != nil {
 		return err
@@ -92,7 +91,7 @@ func jsonToMap(data []byte) (map[string]string, error) {
 		m      map[string]string
 		err    error
 	)
-	if err = json.Unmarshal(data, &result); err != nil {
+	if result, err = jsonUnmarshal(data); err != nil {
 		return nil, err
 	}
 
@@ -192,9 +191,7 @@ func interfaceToMap(data map[string]interface{}) (map[string]string, error) {
 	return result, nil
 }
 
-var (
-	_ BodyProcessor = &jsonBodyProcessor{}
-)
+var _ BodyProcessor = &jsonBodyProcessor{}
 
 func init() {
 	Register("json", func() BodyProcessor {

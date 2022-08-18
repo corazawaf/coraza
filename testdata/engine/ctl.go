@@ -5,37 +5,39 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if the ctl action works",
 		Enabled:     true,
 		Name:        "ctl.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "actions",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Input: profile.ProfileStageInput{
-						Method: "POST",
-						URI:    "/test.php?id=1234",
-						Data:   "pineapple=pizza",
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{
-							1,
-							4,
-							100,
-							103,
-							105,
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "POST",
+							URI:    "/test.php?id=1234",
+							Data:   "pineapple=pizza",
 						},
-						NonTriggeredRules: []int{
-							2,
-							3,
-							5,
-							6,
-							7,
-							444,
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								1,
+								4,
+								100,
+								103,
+								105,
+							},
+							NonTriggeredRules: []int{
+								2,
+								3,
+								5,
+								6,
+								7,
+								444,
+							},
 						},
 					},
 				},

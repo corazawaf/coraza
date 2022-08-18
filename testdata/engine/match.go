@@ -5,38 +5,41 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if the matchers works",
 		Enabled:     true,
 		Name:        "match.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "actions",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Input: profile.ProfileStageInput{
-						DestAddr: "127.0.0.1",
-						Method:   "GET",
-						URI:      "/test.php?id=12345&pizza=pineapple",
-						Headers: map[string]string{
-							"content-type": "application/x-www-form-urlencoded",
-							"test":         "123",
-							"test2":        "456",
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							DestAddr: "127.0.0.1",
+							Method:   "GET",
+							URI:      "/test.php?id=12345&pizza=pineapple",
+							Headers: map[string]string{
+								"content-type": "application/x-www-form-urlencoded",
+								"test":         "123",
+								"test2":        "456",
+							},
 						},
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{
-							26,
-							28,
-							30,
-							35,
-						},
-						NonTriggeredRules: []int{
-							1,
-							2,
-							40,
+
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								26,
+								28,
+								30,
+								35,
+							},
+							NonTriggeredRules: []int{
+								1,
+								2,
+								40,
+							},
 						},
 					},
 				},

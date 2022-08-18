@@ -5,22 +5,24 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if the setvar action work",
 		Enabled:     true,
 		Name:        "setvar.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "setvar",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Input: profile.ProfileStageInput{
-						URI: "/fields?name=foo&var=foo&var=foo2",
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{920271},
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/fields?name=foo&var=foo&var=foo2",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{920271},
+						},
 					},
 				},
 			},

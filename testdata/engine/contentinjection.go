@@ -5,22 +5,24 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if content injection works",
 		Enabled:     true,
 		Name:        "contentinjection.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "content injection",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{
-							// It used to work but I´m not confident with the tests
-							// needs more testing
-							// 10101
+					Stage: profile.SubStage{
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								// It used to work but I´m not confident with the tests
+								// needs more testing
+								// 10101
+							},
 						},
 					},
 				},

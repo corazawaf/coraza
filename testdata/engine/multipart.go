@@ -5,24 +5,25 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "airween",
 		Description: "Test against multipart payloads",
 		Enabled:     true,
 		Name:        "multipart.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "multipart",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Input: profile.ProfileStageInput{
-						URI: "/test.php?id=12345",
-						Headers: map[string]string{
-							"Host":         "www.example.com",
-							"Content-Type": "multipart/form-data; boundary=--0000",
-						},
-						Data: `
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/test.php?id=12345",
+							Headers: map[string]string{
+								"Host":         "www.example.com",
+								"Content-Type": "multipart/form-data; boundary=--0000",
+							},
+							Data: `
 ----0000
 Content-Disposition: form-data; name="_msg_body"
 
@@ -36,10 +37,11 @@ Regards,
 airween
 ----0000--    
 `,
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules:    []int{100},
-						NonTriggeredRules: []int{150, 200002},
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{100},
+							NonTriggeredRules: []int{150, 200002},
+						},
 					},
 				},
 			},

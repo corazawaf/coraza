@@ -5,20 +5,22 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if the macro expansions work",
 		Enabled:     true,
 		Name:        "macroexpansion.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "macroexpansions",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Output: profile.ExpectedOutput{
-						TriggeredRules:    []int{100, 150, 200},
-						NonTriggeredRules: []int{901500},
+					Stage: profile.SubStage{
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{100, 150, 200},
+							NonTriggeredRules: []int{901500},
+						},
 					},
 				},
 			},

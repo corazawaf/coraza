@@ -5,32 +5,34 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if the directives work",
 		Enabled:     true,
 		Name:        "directives.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "directives",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{
-							1,
-							2,
-							7,
-							9,
-							9001000,
-							9001002,
-						},
-						NonTriggeredRules: []int{
-							4,
-							5,
-							6,
-							8,
-							9001001,
+					Stage: profile.SubStage{
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								1,
+								2,
+								7,
+								9,
+								9001000,
+								9001002,
+							},
+							NonTriggeredRules: []int{
+								4,
+								5,
+								6,
+								8,
+								9001001,
+							},
 						},
 					},
 				},

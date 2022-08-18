@@ -140,13 +140,7 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 		}
 	} else if keyl == "cookie" {
 		// Cookies use the same syntax as GET params but with semicolon (;) separator
-		values, err := urlutil.ParseQuery(value, ";")
-		if err != nil {
-			// if cookie parsing fails we create a urlencoded_error
-			// TODO maybe we should have another variable for this
-			tx.Variables.UrlencodedError.Set(err.Error())
-			return
-		}
+		values := urlutil.ParseQuery(value, ';')
 		for k, vr := range values {
 			kl := strings.ToLower(k)
 			tx.Variables.RequestCookiesNames.AddUniqueCS(kl, k, kl)
@@ -252,15 +246,13 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 // matchVariable Creates the MATCHED_ variables required by chains and macro expansion
 // MATCHED_VARS, MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES
 func (tx *Transaction) matchVariable(match types.MatchData) {
-	varName := strings.Builder{}
-	varNamel := strings.Builder{}
-	varName.WriteString(match.VariableName)
-	varNamel.WriteString(match.VariableName)
+	var varName, varNamel string
 	if match.Key != "" {
-		varName.WriteByte(':')
-		varName.WriteString(match.Key)
-		varNamel.WriteByte(':')
-		varNamel.WriteString(strings.ToLower(match.Key))
+		varName = match.VariableName + ":" + match.Key
+		varNamel = match.VariableName + ":" + strings.ToLower(match.Key)
+	} else {
+		varName = match.VariableName
+		varNamel = match.VariableName
 	}
 	// Array of values
 	matchedVars := tx.Variables.MatchedVars
@@ -272,13 +264,13 @@ func (tx *Transaction) matchVariable(match types.MatchData) {
 
 	// We add the key in lowercase for ease of lookup in chains
 	// This is similar to args handling
-	matchedVars.AddCS(varNamel.String(), varName.String(), match.Value)
+	matchedVars.AddCS(varNamel, varName, match.Value)
 	tx.Variables.MatchedVar.Set(match.Value)
 
 	// We add the key in lowercase for ease of lookup in chains
 	// This is similar to args handling
-	matchedVarsNames.AddCS(varNamel.String(), varName.String(), varName.String())
-	matchedVarName.Set(varName.String())
+	matchedVarsNames.AddCS(varNamel, varName, varName)
+	matchedVarName.Set(varName)
 }
 
 // MatchRule Matches a rule to be logged
@@ -436,15 +428,7 @@ func (tx *Transaction) ProcessConnection(client string, cPort int, server string
 // ExtractArguments transforms an url encoded string to a map and creates
 // ARGS_POST|GET
 func (tx *Transaction) ExtractArguments(orig string, uri string) {
-	sep := "&"
-	if tx.Waf.ArgumentSeparator != "" {
-		sep = tx.Waf.ArgumentSeparator
-	}
-	data, err := urlutil.ParseQuery(uri, sep)
-	// we create a URLENCODED_ERROR if we fail to parse the URL
-	if err != nil {
-		tx.Variables.UrlencodedError.Set(err.Error())
-	}
+	data := urlutil.ParseQuery(uri, '&')
 	for k, vs := range data {
 		for _, v := range vs {
 			tx.AddArgument(orig, k, v)
@@ -457,7 +441,7 @@ func (tx *Transaction) ExtractArguments(orig string, uri string) {
 // ARGS_(GET|POST)_NAMES
 func (tx *Transaction) AddArgument(orig string, key string, value string) {
 	// TODO implement ARGS value limit using ArgumentsLimit
-	var vals *collection.CollectionMap
+	var vals *collection.Map
 	if orig == "GET" {
 		vals = tx.Variables.ArgsGet
 	} else {
@@ -466,11 +450,6 @@ func (tx *Transaction) AddArgument(orig string, key string, value string) {
 	keyl := strings.ToLower(key)
 
 	vals.AddCS(keyl, key, value)
-
-	col := tx.Variables.ArgsCombinedSize
-	i := col.Int64() + int64(len(key)+len(value))
-	istr := strconv.FormatInt(i, 10)
-	col.Set(istr)
 }
 
 // ProcessURI Performs the analysis on the URI and all the query string variables.
@@ -478,8 +457,10 @@ func (tx *Transaction) AddArgument(orig string, key string, value string) {
 // expected to be executed prior to the virtual host resolution, when the
 // connection arrives on the server.
 // note: There is no direct connection between this function and any phase of
-//       the SecLanguages phases. It is something that may occur between the
-//       SecLanguage phase 1 and 2.
+//
+//	the SecLanguages phases. It is something that may occur between the
+//	SecLanguage phase 1 and 2.
+//
 // note: This function won't add GET arguments, they must be added with AddArgument
 func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string) {
 	tx.Variables.RequestMethod.Set(method)
@@ -632,7 +613,6 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 // that the headers should be added prior to the execution of this function.
 //
 // note: Remember to check for a possible intervention.
-//
 func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Interruption {
 	c := strconv.Itoa(code)
 	tx.Variables.ResponseStatus.Set(c)
@@ -669,16 +649,21 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		return tx.Interruption, nil
 	}
 	if !tx.ResponseBodyAccess || !tx.IsProcessableResponseBody() {
+		tx.Waf.Logger.Debug("[%s] Skipping response body processing (Access: %t)", tx.ID, tx.ResponseBodyAccess)
 		tx.Waf.Rules.Eval(types.PhaseResponseBody, tx)
 		return tx.Interruption, nil
 	}
+	tx.Waf.Logger.Debug("[%s] Attempting to process response body", tx.ID)
 	reader, err := tx.ResponseBodyBuffer.Reader()
 	if err != nil {
-		return nil, err
+		return tx.Interruption, err
 	}
 	reader = io.LimitReader(reader, tx.Waf.ResponseBodyLimit)
 	buf := new(strings.Builder)
-	length, _ := io.Copy(buf, reader)
+	length, err := io.Copy(buf, reader)
+	if err != nil {
+		return tx.Interruption, err
+	}
 
 	if tx.ResponseBodyBuffer.Size() >= tx.Waf.ResponseBodyLimit {
 		tx.Variables.OutboundDataError.Set("1")
@@ -870,15 +855,15 @@ func (tx *Transaction) Debug() string {
 		}
 		data := map[string][]string{}
 		switch col := tx.Collections[vr].(type) {
-		case *collection.CollectionSimple:
+		case *collection.Simple:
 			data[""] = []string{
 				col.String(),
 			}
-		case *collection.CollectionMap:
+		case *collection.Map:
 			data = col.Data()
-		case *collection.CollectionProxy:
+		case *collection.Proxy:
 			data = col.Data()
-		case *collection.CollectionTranslationProxy:
+		case *collection.TranslationProxy:
 			data[""] = col.Data()
 		}
 
@@ -907,99 +892,100 @@ func (tx *Transaction) generateReqbodyError(err error) {
 	tx.Variables.ReqbodyProcessorErrorMsg.Set(string(err.Error()))
 }
 
+// TransactionVariables has pointers to all the variables of the transaction
 type TransactionVariables struct {
 	// Simple Variables
-	Userid                        *collection.CollectionSimple
-	UrlencodedError               *collection.CollectionSimple
-	ResponseContentType           *collection.CollectionSimple
-	UniqueID                      *collection.CollectionSimple
-	ArgsCombinedSize              *collection.CollectionSimple
-	AuthType                      *collection.CollectionSimple
-	FilesCombinedSize             *collection.CollectionSimple
-	FullRequest                   *collection.CollectionSimple
-	FullRequestLength             *collection.CollectionSimple
-	InboundDataError              *collection.CollectionSimple
-	MatchedVar                    *collection.CollectionSimple
-	MatchedVarName                *collection.CollectionSimple
-	MultipartBoundaryQuoted       *collection.CollectionSimple
-	MultipartBoundaryWhitespace   *collection.CollectionSimple
-	MultipartCrlfLfLines          *collection.CollectionSimple
-	MultipartDataAfter            *collection.CollectionSimple
-	MultipartDataBefore           *collection.CollectionSimple
-	MultipartFileLimitExceeded    *collection.CollectionSimple
-	MultipartHeaderFolding        *collection.CollectionSimple
-	MultipartInvalidHeaderFolding *collection.CollectionSimple
-	MultipartInvalidPart          *collection.CollectionSimple
-	MultipartInvalidQuoting       *collection.CollectionSimple
-	MultipartLfLine               *collection.CollectionSimple
-	MultipartMissingSemicolon     *collection.CollectionSimple
-	MultipartStrictError          *collection.CollectionSimple
-	MultipartUnmatchedBoundary    *collection.CollectionSimple
-	OutboundDataError             *collection.CollectionSimple
-	PathInfo                      *collection.CollectionSimple
-	QueryString                   *collection.CollectionSimple
-	RemoteAddr                    *collection.CollectionSimple
-	RemoteHost                    *collection.CollectionSimple
-	RemotePort                    *collection.CollectionSimple
-	ReqbodyError                  *collection.CollectionSimple
-	ReqbodyErrorMsg               *collection.CollectionSimple
-	ReqbodyProcessorError         *collection.CollectionSimple
-	ReqbodyProcessorErrorMsg      *collection.CollectionSimple
-	ReqbodyProcessor              *collection.CollectionSimple
-	RequestBasename               *collection.CollectionSimple
-	RequestBody                   *collection.CollectionSimple
-	RequestBodyLength             *collection.CollectionSimple
-	RequestFilename               *collection.CollectionSimple
-	RequestLine                   *collection.CollectionSimple
-	RequestMethod                 *collection.CollectionSimple
-	RequestProtocol               *collection.CollectionSimple
-	RequestURI                    *collection.CollectionSimple
-	RequestURIRaw                 *collection.CollectionSimple
-	ResponseBody                  *collection.CollectionSimple
-	ResponseContentLength         *collection.CollectionSimple
-	ResponseProtocol              *collection.CollectionSimple
-	ResponseStatus                *collection.CollectionSimple
-	ServerAddr                    *collection.CollectionSimple
-	ServerName                    *collection.CollectionSimple
-	ServerPort                    *collection.CollectionSimple
-	Sessionid                     *collection.CollectionSimple
-	HighestSeverity               *collection.CollectionSimple
-	StatusLine                    *collection.CollectionSimple
-	InboundErrorData              *collection.CollectionSimple
+	Userid                        *collection.Simple
+	UrlencodedError               *collection.Simple
+	ResponseContentType           *collection.Simple
+	UniqueID                      *collection.Simple
+	ArgsCombinedSize              *collection.SizeProxy
+	AuthType                      *collection.Simple
+	FilesCombinedSize             *collection.Simple
+	FullRequest                   *collection.Simple
+	FullRequestLength             *collection.Simple
+	InboundDataError              *collection.Simple
+	MatchedVar                    *collection.Simple
+	MatchedVarName                *collection.Simple
+	MultipartBoundaryQuoted       *collection.Simple
+	MultipartBoundaryWhitespace   *collection.Simple
+	MultipartCrlfLfLines          *collection.Simple
+	MultipartDataAfter            *collection.Simple
+	MultipartDataBefore           *collection.Simple
+	MultipartFileLimitExceeded    *collection.Simple
+	MultipartHeaderFolding        *collection.Simple
+	MultipartInvalidHeaderFolding *collection.Simple
+	MultipartInvalidPart          *collection.Simple
+	MultipartInvalidQuoting       *collection.Simple
+	MultipartLfLine               *collection.Simple
+	MultipartMissingSemicolon     *collection.Simple
+	MultipartStrictError          *collection.Simple
+	MultipartUnmatchedBoundary    *collection.Simple
+	OutboundDataError             *collection.Simple
+	PathInfo                      *collection.Simple
+	QueryString                   *collection.Simple
+	RemoteAddr                    *collection.Simple
+	RemoteHost                    *collection.Simple
+	RemotePort                    *collection.Simple
+	ReqbodyError                  *collection.Simple
+	ReqbodyErrorMsg               *collection.Simple
+	ReqbodyProcessorError         *collection.Simple
+	ReqbodyProcessorErrorMsg      *collection.Simple
+	ReqbodyProcessor              *collection.Simple
+	RequestBasename               *collection.Simple
+	RequestBody                   *collection.Simple
+	RequestBodyLength             *collection.Simple
+	RequestFilename               *collection.Simple
+	RequestLine                   *collection.Simple
+	RequestMethod                 *collection.Simple
+	RequestProtocol               *collection.Simple
+	RequestURI                    *collection.Simple
+	RequestURIRaw                 *collection.Simple
+	ResponseBody                  *collection.Simple
+	ResponseContentLength         *collection.Simple
+	ResponseProtocol              *collection.Simple
+	ResponseStatus                *collection.Simple
+	ServerAddr                    *collection.Simple
+	ServerName                    *collection.Simple
+	ServerPort                    *collection.Simple
+	Sessionid                     *collection.Simple
+	HighestSeverity               *collection.Simple
+	StatusLine                    *collection.Simple
+	InboundErrorData              *collection.Simple
 	// Custom
-	Env      *collection.CollectionMap
-	TX       *collection.CollectionMap
-	Rule     *collection.CollectionMap
-	Duration *collection.CollectionSimple
+	Env      *collection.Map
+	TX       *collection.Map
+	Rule     *collection.Map
+	Duration *collection.Simple
 	// Proxy Variables
-	Args *collection.CollectionProxy
+	Args *collection.Proxy
 	// Maps Variables
-	ArgsGet              *collection.CollectionMap
-	ArgsPost             *collection.CollectionMap
-	ArgsPath             *collection.CollectionMap
-	FilesTmpNames        *collection.CollectionMap
-	Geo                  *collection.CollectionMap
-	Files                *collection.CollectionMap
-	RequestCookies       *collection.CollectionMap
-	RequestHeaders       *collection.CollectionMap
-	ResponseHeaders      *collection.CollectionMap
-	MultipartName        *collection.CollectionMap
-	MatchedVarsNames     *collection.CollectionMap
-	MultipartFilename    *collection.CollectionMap
-	MatchedVars          *collection.CollectionMap
-	FilesSizes           *collection.CollectionMap
-	FilesNames           *collection.CollectionMap
-	FilesTmpContent      *collection.CollectionMap
-	ResponseHeadersNames *collection.CollectionMap
-	RequestHeadersNames  *collection.CollectionMap
-	RequestCookiesNames  *collection.CollectionMap
-	XML                  *collection.CollectionMap
-	RequestXML           *collection.CollectionMap
-	ResponseXML          *collection.CollectionMap
+	ArgsGet              *collection.Map
+	ArgsPost             *collection.Map
+	ArgsPath             *collection.Map
+	FilesTmpNames        *collection.Map
+	Geo                  *collection.Map
+	Files                *collection.Map
+	RequestCookies       *collection.Map
+	RequestHeaders       *collection.Map
+	ResponseHeaders      *collection.Map
+	MultipartName        *collection.Map
+	MatchedVarsNames     *collection.Map
+	MultipartFilename    *collection.Map
+	MatchedVars          *collection.Map
+	FilesSizes           *collection.Map
+	FilesNames           *collection.Map
+	FilesTmpContent      *collection.Map
+	ResponseHeadersNames *collection.Map
+	RequestHeadersNames  *collection.Map
+	RequestCookiesNames  *collection.Map
+	XML                  *collection.Map
+	RequestXML           *collection.Map
+	ResponseXML          *collection.Map
 	// Persistent variables
-	IP *collection.CollectionMap
+	IP *collection.Map
 	// Translation Proxy Variables
-	ArgsNames     *collection.CollectionTranslationProxy
-	ArgsGetNames  *collection.CollectionTranslationProxy
-	ArgsPostNames *collection.CollectionTranslationProxy
+	ArgsNames     *collection.TranslationProxy
+	ArgsGetNames  *collection.TranslationProxy
+	ArgsPostNames *collection.TranslationProxy
 }

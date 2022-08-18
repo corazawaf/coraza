@@ -18,7 +18,6 @@ import (
 	"context"
 	b64 "encoding/base64"
 	"fmt"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -177,16 +176,20 @@ func (t *Test) RunPhases() error {
 		t.transaction.AddRequestHeader(k, v)
 	}
 	t.transaction.ProcessRequestHeaders()
+
 	if _, err := t.transaction.ProcessRequestBody(); err != nil {
 		return err
 	}
 	for k, v := range t.ResponseHeaders {
 		t.transaction.AddResponseHeader(k, v)
 	}
+
 	t.transaction.ProcessResponseHeaders(t.ResponseCode, t.ResponseProtocol)
+
 	if _, err := t.transaction.ProcessResponseBody(); err != nil {
 		return err
 	}
+
 	t.transaction.ProcessLogging()
 	return nil
 }
@@ -288,10 +291,12 @@ func (t *Test) Request() string {
 // NewTest creates a new test with default properties
 func NewTest(name string, waf *coraza.Waf) *Test {
 	t := &Test{
-		Name:            name,
-		transaction:     waf.NewTransaction(context.Background()),
-		RequestHeaders:  map[string]string{},
-		ResponseHeaders: map[string]string{},
+		Name:           name,
+		transaction:    waf.NewTransaction(context.Background()),
+		RequestHeaders: map[string]string{},
+		ResponseHeaders: map[string]string{
+			"Content-Type": "text/html",
+		},
 		RequestMethod:   "GET",
 		RequestProtocol: "HTTP/1.1",
 		RequestURI:      "/",
@@ -305,15 +310,14 @@ func NewTest(name string, waf *coraza.Waf) *Test {
 
 func bodyToString(iface interface{}) string {
 	data := ""
-	v := reflect.ValueOf(iface)
-	switch v.Kind() {
-	case reflect.Slice:
-		for i := 0; i < v.Len(); i++ {
-			data += fmt.Sprintf("%s\r\n", v.Index(i))
+	switch v := iface.(type) {
+	case []string:
+		for i := 0; i < len(v); i++ {
+			data += fmt.Sprintf("%s\r\n", v[i])
 		}
 		data += "\r\n"
-	case reflect.String:
-		data = iface.(string)
+	case string:
+		data = v
 	default:
 		panic("Error: bodyToString() only accepts slices and strings")
 	}

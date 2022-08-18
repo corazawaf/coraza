@@ -5,26 +5,28 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if operators with files works",
 		Enabled:     true,
 		Name:        "operators_with_files.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "owf",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Input: profile.ProfileStageInput{
-						URI: "/?ghi=cdf",
-						Headers: map[string]string{
-							"ghi":    "pineapple",
-							"cookie": "ghi=cfg;def=ghi",
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/?ghi=cdf",
+							Headers: map[string]string{
+								"ghi":    "pineapple",
+								"cookie": "ghi=cfg;def=ghi",
+							},
 						},
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{1, 3, 5, 10},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{1, 3, 5, 10},
+						},
 					},
 				},
 			},

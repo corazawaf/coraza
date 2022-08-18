@@ -35,18 +35,13 @@ func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, collections [ty
 	}
 
 	b := buf.String()
-	values, err := url.ParseQuery(b, "&")
-	if err != nil {
-		col := (collections[variables.UrlencodedError]).(*collection.CollectionSimple)
-		col.Set("Failed to parse URLENCODED: " + err.Error())
-		return err
-	}
-	argsCol := (collections[variables.ArgsPost]).(*collection.CollectionMap)
+	values := url.ParseQuery(b, '&')
+	argsCol := (collections[variables.ArgsPost]).(*collection.Map)
 	for k, vs := range values {
 		argsCol.Set(k, vs)
 	}
-	(collections[variables.RequestBody]).(*collection.CollectionSimple).Set(b)
-	(collections[variables.RequestBodyLength]).(*collection.CollectionSimple).Set(strconv.Itoa(len(b)))
+	(collections[variables.RequestBody]).(*collection.Simple).Set(b)
+	(collections[variables.RequestBodyLength]).(*collection.Simple).Set(strconv.Itoa(len(b)))
 	return nil
 }
 

@@ -79,7 +79,7 @@ func (a *setvarFn) Type() types.RuleActionType {
 }
 
 func (a *setvarFn) evaluateTxCollection(r *coraza.Rule, tx *coraza.Transaction, key string, value string) {
-	col := (tx.Collections[a.collection]).(*collection.CollectionMap)
+	col := (tx.Collections[a.collection]).(*collection.Map)
 	if col == nil {
 		// fmt.Println("Invalid Collection " + a.Collection) LOG error?
 		return

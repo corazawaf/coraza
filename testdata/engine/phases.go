@@ -5,24 +5,26 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if the 5 transaction phase are being executed",
 		Enabled:     true,
 		Name:        "phases.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "phases",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{
-							2,
-							3,
-							4,
-							// 5,
-							6,
+					Stage: profile.SubStage{
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								2,
+								3,
+								4,
+								// 5,
+								6,
+							},
 						},
 					},
 				},

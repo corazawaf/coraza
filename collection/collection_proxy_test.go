@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,9 +22,9 @@ import (
 )
 
 func TestCollectionProxy(t *testing.T) {
-	c1 := NewCollectionMap(variables.ArgsPost)
-	c2 := NewCollectionMap(variables.ArgsGet)
-	proxy := NewCollectionProxy(variables.Args, c1, c2)
+	c1 := NewMap(variables.ArgsPost)
+	c2 := NewMap(variables.ArgsGet)
+	proxy := NewProxy(variables.Args, c1, c2)
 
 	c1.Set("key1", []string{"value1"})
 	c1.Set("key2", []string{"value2"})

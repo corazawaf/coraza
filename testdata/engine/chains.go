@@ -5,62 +5,70 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if the chain action works",
 		Enabled:     true,
 		Name:        "chains.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "chains",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Input: profile.ProfileStageInput{
-						URI: "/test1.php?id=12345",
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules:    []int{1, 1313},
-						NonTriggeredRules: []int{2, 200, 20},
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/test1.php?id=12345",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{1, 1313},
+							NonTriggeredRules: []int{2, 200, 20},
+						},
 					},
 				},
 				{
-					Input: profile.ProfileStageInput{
-						URI: "/test2.php?var=prepayloadpost",
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules:    []int{1, 200},
-						NonTriggeredRules: []int{2, 1313, 20},
-						LogContains:       "found within ARGS:var: prepayloadpost",
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/test2.php?var=prepayloadpost",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{1, 200},
+							NonTriggeredRules: []int{2, 1313, 20},
+							LogContains:       "found within ARGS:var: prepayloadpost",
+						},
 					},
 				},
 				{
-					Input: profile.ProfileStageInput{
-						URI: "/test3.php",
-						Headers: map[string]string{
-							"Host": "attack20ing.com",
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/test3.php",
+							Headers: map[string]string{
+								"Host": "attack20ing.com",
+							},
 						},
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules:    []int{1, 20},
-						NonTriggeredRules: []int{2, 1313, 21},
-						// LogContains: "FoundChain20 attacking.com in REQUEST_HEADERS:host",
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{1, 20},
+							NonTriggeredRules: []int{2, 1313, 21},
+							// LogContains: "FoundChain20 attacking.com in REQUEST_HEADERS:host",
+						},
 					},
 				},
 				{
-					Input: profile.ProfileStageInput{
-						URI: "/test4.php",
-						Headers: map[string]string{
-							"Host": "attack21ing.com",
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/test4.php",
+							Headers: map[string]string{
+								"Host": "attack21ing.com",
+							},
 						},
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{
-							1,
-							// 21
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								1,
+								// 21
+							},
+							NonTriggeredRules: []int{20, 2, 1313},
+							// LogContains: "FoundSubChain21 REQUEST_HEADERS:Host in MATCHED_VARS_NAMES:REQUEST_HEADERS:Host",
 						},
-						NonTriggeredRules: []int{20, 2, 1313},
-						// LogContains: "FoundSubChain21 REQUEST_HEADERS:Host in MATCHED_VARS_NAMES:REQUEST_HEADERS:Host",
 					},
 				},
 			},

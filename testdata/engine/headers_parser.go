@@ -5,26 +5,28 @@ import (
 )
 
 var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.ProfileMeta{
+	Meta: profile.Meta{
 		Author:      "jptosso",
 		Description: "Test if the headers parsers work",
 		Enabled:     true,
 		Name:        "headers_parser.yaml",
 	},
-	Tests: []profile.ProfileTest{
+	Tests: []profile.Test{
 		{
 			Title: "envs",
-			Stages: []profile.ProfileStage{
+			Stages: []profile.Stage{
 				{
-					Input: profile.ProfileStageInput{
-						Method: "GET",
-						Headers: map[string]string{
-							"test":              "456",
-							"Transfer-Encoding": "chunked",
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							Headers: map[string]string{
+								"test":              "456",
+								"Transfer-Encoding": "chunked",
+							},
 						},
-					},
-					Output: profile.ExpectedOutput{
-						TriggeredRules: []int{1, 5, 920171},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{1, 5, 920171},
+						},
 					},
 				},
 			},

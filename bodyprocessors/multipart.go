@@ -31,7 +31,7 @@ import (
 type multipartBodyProcessor struct {
 }
 
-func (_ *multipartBodyProcessor) ProcessRequest(reader io.Reader, collections [types.VariablesCount]collection.Collection, options Options) error {
+func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, collections [types.VariablesCount]collection.Collection, options Options) error {
 	mimeType := options.Mime
 	storagePath := options.StoragePath
 	mediaType, params, err := mime.ParseMediaType(mimeType)
@@ -43,12 +43,12 @@ func (_ *multipartBodyProcessor) ProcessRequest(reader io.Reader, collections [t
 	}
 	mr := multipart.NewReader(reader, params["boundary"])
 	totalSize := int64(0)
-	filesCol := (collections[variables.Files]).(*collection.CollectionMap)
-	filesTmpNamesCol := (collections[variables.FilesTmpNames]).(*collection.CollectionMap)
-	fileSizesCol := (collections[variables.FilesSizes]).(*collection.CollectionMap)
-	postCol := (collections[variables.ArgsPost]).(*collection.CollectionMap)
-	filesCombinedSizeCol := (collections[variables.FilesCombinedSize]).(*collection.CollectionSimple)
-	filesNamesCol := (collections[variables.FilesNames]).(*collection.CollectionMap)
+	filesCol := (collections[variables.Files]).(*collection.Map)
+	filesTmpNamesCol := (collections[variables.FilesTmpNames]).(*collection.Map)
+	fileSizesCol := (collections[variables.FilesSizes]).(*collection.Map)
+	postCol := (collections[variables.ArgsPost]).(*collection.Map)
+	filesCombinedSizeCol := (collections[variables.FilesCombinedSize]).(*collection.Simple)
+	filesNamesCol := (collections[variables.FilesNames]).(*collection.Map)
 	for {
 		p, err := mr.NextPart()
 		if err == io.EOF {
@@ -88,7 +88,7 @@ func (_ *multipartBodyProcessor) ProcessRequest(reader io.Reader, collections [t
 	return nil
 }
 
-func (_ *multipartBodyProcessor) ProcessResponse(reader io.Reader, collection [types.VariablesCount]collection.Collection, options Options) error {
+func (mbp *multipartBodyProcessor) ProcessResponse(reader io.Reader, collection [types.VariablesCount]collection.Collection, options Options) error {
 	return nil
 }
 
