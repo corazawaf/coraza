@@ -1,19 +1,8 @@
+// Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
+// SPDX-License-Identifier: Apache-2.0
+
 //go:build mage
 // +build mage
-
-// Copyright 2022 Juan Pablo Tosso
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 package main
 
@@ -40,7 +29,9 @@ func Format() error {
 	}
 	// addlicense strangely logs skipped files to stderr despite not being erroneous, so use the long sh.Exec form to
 	// discard stderr too.
-	if _, err := sh.Exec(map[string]string{}, io.Discard, io.Discard, "go", "run", fmt.Sprintf("github.com/google/addlicense@%s", addLicenseVersion), "-c", "Juan Pablo Tosso",
+	if _, err := sh.Exec(map[string]string{}, io.Discard, io.Discard, "go", "run", fmt.Sprintf("github.com/google/addlicense@%s", addLicenseVersion),
+		"-c", "Juan Pablo Tosso and the OWASP Coraza contributors",
+		"-s=only",
 		"-ignore", "**/*.yml",
 		"-ignore", "**/*.yaml",
 		"-ignore", "examples/**", "."); err != nil {
