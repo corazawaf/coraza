@@ -25,8 +25,6 @@ import (
 	"github.com/corazawaf/coraza/v2/loggers"
 	"github.com/corazawaf/coraza/v2/types"
 	utils "github.com/corazawaf/coraza/v2/utils/strings"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_NonImplementedDirective(t *testing.T) {
@@ -45,87 +43,109 @@ func Test_NonImplementedDirective(t *testing.T) {
 	w := coraza.NewWaf()
 	p, _ := NewParser(w)
 	for _, rule := range rules {
-		t.Run(rule, func(t *testing.T) {
-			err := p.FromString(rule)
-			assert.NoErrorf(t, err, "failed to set directive")
-		})
+		err := p.FromString(rule)
+		if err != nil {
+			t.Errorf("failed to set directive: %s", rule)
+		}
 	}
 }
 
 func Test_directive(t *testing.T) {
 	w := coraza.NewWaf()
 	p, _ := NewParser(w)
-
-	err := p.FromString("SecWebAppId test123")
-	require.NoError(t, err, "failed to set parser from string")
-	require.Equal(t, "test123", w.WebAppID, "failed to set SecWebAppId")
-
-	err = p.FromString("SecUploadKeepFiles On")
-	require.NoError(t, err, "failed to set parser from string")
-	require.True(t, w.UploadKeepFiles, "failed to set SecUploadKeepFiles")
-
-	err = p.FromString("SecUploadFileMode 0700")
-	require.NoError(t, err, "failed to set parser from string")
-
-	err = p.FromString("SecUploadFileLimit 1000")
-	require.NoError(t, err, "failed to set parser from string")
-	require.Equal(t, 1000, w.UploadFileLimit, "failed to set SecUploadFileLimit")
-
-	err = p.FromString("SecUploadDir /tmp")
-	require.NoError(t, err, "failed to set parser from string")
-	require.Equal(t, "/tmp", w.UploadDir, "failed to set SecUploadDir")
-
-	err = p.FromString("SecTmpDir /tmp")
-	require.NoError(t, err, "failed to set parser from string")
-	require.Equal(t, "/tmp", w.TmpDir, "failed to set SecTmpDir")
-
-	err = p.FromString("SecSensorId test")
-	require.NoError(t, err, "failed to set parser from string")
-	require.Equal(t, "test", w.SensorID, "failed to set SecSensorId")
-
-	err = p.FromString("SecRuleEngine DetectionOnly")
-	require.NoError(t, err, "failed to set parser from string")
-	require.Equal(t, types.RuleEngineDetectionOnly, w.RuleEngine, "failed to set SecRuleEngine")
-
-	err = p.FromString(`SecAction "id:1,tag:test"`)
-	require.NoError(t, err, "failed to set parser from string")
-
-	err = p.FromString("SecRuleRemoveByTag test")
-	require.NoError(t, err, "failed to set parser from string")
-	require.Zero(t, p.options.Waf.Rules.Count(), "failed to remove rule with SecRuleRemoveByTag")
-
-	err = p.FromString(`SecAction "id:1,msg:'test'"`)
-	require.NoError(t, err, "failed to set parser from string")
-
-	err = p.FromString("SecRuleRemoveByMsg test")
-	require.NoError(t, err, "failed to set parser from string")
-
-	require.Zero(t, p.options.Waf.Rules.Count(), "Failed to remove rule with SecRuleRemoveByMsg")
-
-	err = p.FromString(`SecAction "id:1"`)
-	require.NoError(t, err, "failed to set parser from string")
-
-	err = p.FromString("SecRuleRemoveById 1")
-	require.NoError(t, err, "failed to set parser from string")
-
-	require.Zero(t, p.options.Waf.Rules.Count(), "failed to remove rule with SecRuleRemoveById")
-
-	err = p.FromString("SecResponseBodyMimeTypesClear")
-	require.NoError(t, err, "failed to set parser from string")
-	require.Empty(t, p.options.Waf.ResponseBodyMimeTypes, "failed to set SecResponseBodyMimeTypesClear")
-
-	err = p.FromString("SecResponseBodyMimeType text/html")
-	require.NoError(t, err, "failed to set parser from string")
-	require.Equal(t, "text/html", p.options.Waf.ResponseBodyMimeTypes[0], "failed to set SecResponseBodyMimeType")
-
-	err = p.FromString(`SecServerSignature "Microsoft-IIS/6.0"`)
-	require.NoError(t, err, "failed to set directive: SecServerSignature")
-
-	err = p.FromString(`SecRequestBodyInMemoryLimit 131072`)
-	require.NoError(t, err, "failed to set directive: SecRequestBodyInMemoryLimit")
-
-	err = p.FromString(`SecRemoteRulesFailAction Abort`)
-	require.NoError(t, err, "failed to set directive: SecRemoteRulesFailAction")
+	if err := p.FromString("SecWebAppId test123"); err != nil {
+		t.Error("failed to set parser from string")
+	}
+	if w.WebAppID != "test123" {
+		t.Error("failed to set SecWebAppId")
+	}
+	if err := p.FromString("SecUploadKeepFiles On"); err != nil {
+		t.Error("failed to set parser from string")
+	}
+	if !w.UploadKeepFiles {
+		t.Error("failed to set SecUploadKeepFiles")
+	}
+	if err := p.FromString("SecUploadFileMode 0700"); err != nil {
+		t.Error("failed to set parser from string")
+	}
+	if err := p.FromString("SecUploadFileLimit 1000"); err != nil {
+		t.Error("failed to set parser from string")
+	}
+	if w.UploadFileLimit != 1000 {
+		t.Error("failed to set SecUploadFileLimit")
+	}
+	if err := p.FromString("SecUploadDir /tmp"); err != nil {
+		t.Error("failed to set parser from string")
+	}
+	if w.UploadDir != "/tmp" {
+		t.Error("failed to set SecUploadDir")
+	}
+	if err := p.FromString("SecTmpDir /tmp"); err != nil {
+		t.Error("failed to set parser from string")
+	}
+	if w.TmpDir != "/tmp" {
+		t.Error("failed to set SecTmpDir")
+	}
+	if err := p.FromString("SecSensorId test"); err != nil {
+		t.Error("failed to set parser from string")
+	}
+	if w.SensorID != "test" {
+		t.Error("failed to set SecSensorId")
+	}
+	if err := p.FromString("SecRuleEngine DetectionOnly"); err != nil {
+		t.Error("failed to set parser from string")
+	}
+	if w.RuleEngine != types.RuleEngineDetectionOnly {
+		t.Errorf("failed to set SecRuleEngine, got %s and expected %s", w.RuleEngine.String(), types.RuleEngineDetectionOnly.String())
+	}
+	if err := p.FromString(`SecAction "id:1,tag:test"`); err != nil {
+		t.Error("failed to set parser from string")
+	}
+	if err := p.FromString("SecRuleRemoveByTag test"); err != nil {
+		t.Error("failed to set parser from string")
+	}
+	if p.options.Waf.Rules.Count() != 0 {
+		t.Error("Failed to remove rule with SecRuleRemoveByTag")
+	}
+	if err := p.FromString(`SecAction "id:1,msg:'test'"`); err != nil {
+		t.Error("failed to set parser from string")
+	}
+	if err := p.FromString("SecRuleRemoveByMsg test"); err != nil {
+		t.Error("failed to set parser from string")
+	}
+	if p.options.Waf.Rules.Count() != 0 {
+		t.Error("Failed to remove rule with SecRuleRemoveByMsg")
+	}
+	if err := p.FromString(`SecAction "id:1"`); err != nil {
+		t.Error("failed to set parser from string")
+	}
+	if err := p.FromString("SecRuleRemoveById 1"); err != nil {
+		t.Error("failed to set parser from string")
+	}
+	if p.options.Waf.Rules.Count() != 0 {
+		t.Error("Failed to remove rule with SecRuleRemoveById")
+	}
+	if err := p.FromString("SecResponseBodyMimeTypesClear"); err != nil {
+		t.Error("failed to set parser from string")
+	}
+	if len(p.options.Waf.ResponseBodyMimeTypes) != 0 {
+		t.Error("failed to set SecResponseBodyMimeTypesClear")
+	}
+	if err := p.FromString("SecResponseBodyMimeType text/html"); err != nil {
+		t.Error("failed to set parser from string")
+	}
+	if p.options.Waf.ResponseBodyMimeTypes[0] != "text/html" {
+		t.Error("failed to set SecResponseBodyMimeType")
+	}
+	if err := p.FromString(`SecServerSignature "Microsoft-IIS/6.0"`); err != nil {
+		t.Error("failed to set directive: SecServerSignature")
+	}
+	if err := p.FromString(`SecRequestBodyInMemoryLimit 131072`); err != nil {
+		t.Error("failed to set directive: SecRequestBodyInMemoryLimit")
+	}
+	if err := p.FromString(`SecRemoteRulesFailAction Abort`); err != nil {
+		t.Error("failed to set directive: SecRemoteRulesFailAction")
+	}
 }
 
 func TestDebugDirectives(t *testing.T) {
@@ -137,55 +157,65 @@ func TestDebugDirectives(t *testing.T) {
 		Waf:  waf,
 		Opts: tmp,
 	})
-	require.NoError(t, err)
-
-	err = directiveSecDebugLogLevel(&DirectiveOptions{
+	if err != nil {
+		t.Error(err)
+	}
+	if err := directiveSecDebugLogLevel(&DirectiveOptions{
 		Waf:  waf,
 		Opts: "5",
-	})
-	require.NoError(t, err)
-
+	}); err != nil {
+		t.Error(err)
+	}
 	p.options.Waf.Logger.Info("abc123")
 	data, _ := os.ReadFile(tmp)
-	require.Contains(t, string(data), "abc123", "failed to write info log")
+	if !strings.Contains(string(data), "abc123") {
+		t.Error("failed to write info log")
+	}
 }
 
 func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	waf := coraza.NewWaf()
 	auditpath := "/tmp/"
 	parser, _ := NewParser(waf)
-	err := parser.FromString(`
+	if err := parser.FromString(`
 	SecAuditLog /tmp/audit.log
 	SecAuditLogFormat json
 	SecAuditLogDir /tmp
 	SecAuditLogDirMode 0777
 	SecAuditLogFileMode 0777
 	SecAuditLogType concurrent
-	`)
-	require.NoError(t, err)
-
+	`); err != nil {
+		t.Error(err)
+	}
 	id := utils.SafeRandom(10)
-	require.NotNil(t, waf.AuditLogWriter, "failed to create audit logger")
-
-	err = waf.AuditLogWriter.Write(&loggers.AuditLog{
+	if waf.AuditLogWriter == nil {
+		t.Error("Invalid audit logger (nil)")
+		return
+	}
+	if err := waf.AuditLogWriter.Write(&loggers.AuditLog{
 		Parts: types.AuditLogParts("ABCDEFGHIJKZ"),
 		Transaction: loggers.AuditTransaction{
 			ID: id,
 		},
-	})
-	require.NoError(t, err)
-
+	}); err != nil {
+		t.Error(err)
+	}
 	f, err := findFileContaining(auditpath, id)
-	require.NoError(t, err)
-
+	if err != nil {
+		t.Error(err)
+	}
 	data, err := ioutil.ReadFile(f)
-	require.NoError(t, err)
-	require.Contains(t, string(data), id, "failed to write audit log")
-
+	if err != nil {
+		t.Error(err)
+	}
+	if !strings.Contains(string(data), id) {
+		t.Error("failed to write audit log")
+	}
 	// we test it is a valid json
 	var j map[string]interface{}
-	err = json.Unmarshal(data, &j)
-	require.NoError(t, err)
+	if err := json.Unmarshal(data, &j); err != nil {
+		t.Error(err)
+	}
 }
 
 func TestSecRuleUpdateTargetBy(t *testing.T) {
@@ -195,17 +225,22 @@ func TestSecRuleUpdateTargetBy(t *testing.T) {
 		Waf:          waf,
 		WithOperator: true,
 	})
-	require.NoError(t, err)
-
-	err = waf.Rules.Add(rule)
-	require.NoError(t, err)
-	require.Equal(t, 1, waf.Rules.Count(), "failed to add rule")
-
-	err = directiveSecRuleUpdateTargetByID(&DirectiveOptions{
+	if err != nil {
+		t.Error(err)
+	}
+	if err := waf.Rules.Add(rule); err != nil {
+		t.Error(err)
+	}
+	if waf.Rules.Count() != 1 {
+		t.Error("Failed to add rule")
+	}
+	if err := directiveSecRuleUpdateTargetByID(&DirectiveOptions{
 		Waf:  waf,
 		Opts: "181 \"REQUEST_HEADERS\"",
-	})
-	require.NoError(t, err)
+	}); err != nil {
+		t.Error(err)
+	}
+
 }
 
 // Find a file by name recursively containing some string
@@ -234,8 +269,9 @@ func findFileContaining(path string, search string) (string, error) {
 func TestInvalidBooleanForDirectives(t *testing.T) {
 	waf := coraza.NewWaf()
 	p, _ := NewParser(waf)
-	err := p.FromString("SecIgnoreRuleCompilationErrors sure")
-	require.Error(t, err, "failed to error on invalid boolean")
+	if err := p.FromString("SecIgnoreRuleCompilationErrors sure"); err == nil {
+		t.Error("failed to error on invalid boolean")
+	}
 }
 
 func TestInvalidRulesWithIgnoredErrors(t *testing.T) {
@@ -246,13 +282,12 @@ func TestInvalidRulesWithIgnoredErrors(t *testing.T) {
 	`
 	waf := coraza.NewWaf()
 	p, _ := NewParser(waf)
-
-	err := p.FromString("secignorerulecompilationerrors On\n" + directives)
-	require.NoError(t, err)
-
+	if err := p.FromString("secignorerulecompilationerrors On\n" + directives); err != nil {
+		t.Error(err)
+	}
 	waf = coraza.NewWaf()
 	p, _ = NewParser(waf)
-
-	err = p.FromString(directives)
-	require.Error(t, err, "failed to error on invalid rule")
+	if err := p.FromString(directives); err == nil {
+		t.Error("failed to error on invalid rule")
+	}
 }

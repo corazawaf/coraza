@@ -18,44 +18,53 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v2/types/variables"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestRuleNegativeVariables(t *testing.T) {
 	rule := NewRule()
+	if err := rule.AddVariable(variables.Args, "", false); err != nil {
+		t.Error(err)
+	}
+	if rule.variables[0].Variable != variables.Args {
+		t.Error("Variable not added")
+	}
+	if rule.variables[0].KeyRx != nil {
+		t.Error("invalid key type for variable")
+	}
 
-	err := rule.AddVariable(variables.Args, "", false)
-	require.NoError(t, err)
-	assert.Equal(t, variables.Args, rule.variables[0].Variable, "Variable not added")
-	assert.Nil(t, rule.variables[0].KeyRx, "invalid key type for variable")
+	if err := rule.AddVariableNegation(variables.Args, "test"); err != nil {
+		t.Error(err)
+	}
 
-	err = rule.AddVariableNegation(variables.Args, "test")
-	require.NoError(t, err)
+	if len(rule.variables[0].Exceptions) != 1 || rule.variables[0].Exceptions[0].KeyStr != "test" {
+		t.Errorf("got %d exceptions", len(rule.variables[0].Exceptions))
+	}
 
-	require.Len(t, rule.variables[0].Exceptions, 1)
-	assert.Equal(t, "test", rule.variables[0].Exceptions[0].KeyStr)
+	if err := rule.AddVariable(variables.Args, "/test.*/", false); err != nil {
+		t.Error(err)
+	}
 
-	err = rule.AddVariable(variables.Args, "/test.*/", false)
-	require.NoError(t, err)
-
-	require.NotNil(t, rule.variables[1].KeyRx)
-	assert.Equal(t, "test.*", rule.variables[1].KeyRx.String())
+	if rule.variables[1].KeyRx == nil || rule.variables[1].KeyRx.String() != "test.*" {
+		t.Error("variable regex cannot be nil")
+	}
 }
 
 func TestVariableKeysAreCaseInsensitive(t *testing.T) {
 	rule := NewRule()
-
-	err := rule.AddVariable(variables.Args, "Som3ThinG", false)
-	require.NoError(t, err)
-	assert.Equal(t, "som3thing", rule.variables[0].KeyStr, "variable key is not case insensitive")
+	if err := rule.AddVariable(variables.Args, "Som3ThinG", false); err != nil {
+		t.Error(err)
+	}
+	if rule.variables[0].KeyStr != "som3thing" {
+		t.Error("variable key is not case insensitive")
+	}
 }
 
 func TestVariablesRxAreCaseSensitive(t *testing.T) {
 	rule := NewRule()
-
-	err := rule.AddVariable(variables.Args, "/Som3ThinG/", false)
-	require.NoError(t, err)
-
-	assert.Equal(t, "Som3ThinG", rule.variables[0].KeyRx.String(), "variable key is not case insensitive")
+	if err := rule.AddVariable(variables.Args, "/Som3ThinG/", false); err != nil {
+		t.Error(err)
+	}
+	if rule.variables[0].KeyRx.String() != "Som3ThinG" {
+		t.Error("variable key is not case insensitive")
+	}
 }

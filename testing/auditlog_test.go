@@ -23,7 +23,6 @@ import (
 	"github.com/corazawaf/coraza/v2"
 	"github.com/corazawaf/coraza/v2/loggers"
 	"github.com/corazawaf/coraza/v2/seclang"
-	"github.com/stretchr/testify/require"
 )
 
 func TestAuditLogMessages(t *testing.T) {
@@ -31,73 +30,84 @@ func TestAuditLogMessages(t *testing.T) {
 	parser, _ := seclang.NewParser(waf)
 	// generate a random tmp file
 	file, err := os.CreateTemp("/tmp", "tmp*.log")
-	require.NoError(t, err)
-
-	err = parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name()))
-	require.NoError(t, err)
-
-	err = parser.FromString(`
+	if err != nil {
+		t.Error(err)
+	}
+	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
+		t.Error(err)
+	}
+	if err := parser.FromString(`
 		SecRuleEngine DetectionOnly
 		SecAuditEngine On
 		SecAuditLogFormat json
 		SecAuditLogType serial
 		SecRule ARGS "@unconditionalMatch" "id:1,phase:1,log,msg:'unconditional match'"
-	`)
-	require.NoError(t, err)
-
+	`); err != nil {
+		t.Error(err)
+	}
 	defer os.Remove(file.Name())
 	tx := waf.NewTransaction()
 	tx.AddArgument("GET", "test", "test")
 	tx.ProcessRequestHeaders()
 	al := tx.AuditLog()
-	require.Len(t, al.Messages, 1, "unexpected number of messages")
-	require.Equal(t, "unconditional match", al.Messages[0].Message, "unexpected message")
-
+	if len(al.Messages) != 1 {
+		t.Errorf("Expected 1 message, got %d", len(al.Messages))
+	}
+	if al.Messages[0].Message != "unconditional match" {
+		t.Errorf("Expected message 'unconditional match', got '%s'", al.Messages[0].Message)
+	}
 	tx.ProcessLogging()
 	// now we read file
-	_, err = file.Seek(0, 0)
-	require.NoError(t, err)
-
+	if _, err := file.Seek(0, 0); err != nil {
+		t.Error(err)
+	}
 	var al2 loggers.AuditLog
-	err = json.NewDecoder(file).Decode(&al2)
-	require.NoError(t, err)
-	require.Len(t, al2.Messages, 1, "unexpected number of messages")
-	require.Equal(t, "unconditional match", al2.Messages[0].Message, "unexpected message")
+	if err := json.NewDecoder(file).Decode(&al2); err != nil {
+		t.Error(err)
+	}
+	if len(al2.Messages) != 1 {
+		t.Errorf("Expected 1 message, got %d", len(al2.Messages))
+	}
+	if al2.Messages[0].Message != "unconditional match" {
+		t.Errorf("Expected message %q, got %q", "unconditional match", al2.Messages[0].Message)
+	}
 }
 
 func TestAuditLogRelevantOnly(t *testing.T) {
 	waf := coraza.NewWaf()
 	parser, _ := seclang.NewParser(waf)
-	err := parser.FromString(`
+	if err := parser.FromString(`
 		SecRuleEngine DetectionOnly
 		SecAuditEngine RelevantOnly
 		SecAuditLogFormat json
 		SecAuditLogType serial
 		SecAuditLogRelevantStatus 401
 		SecRule ARGS "@unconditionalMatch" "id:1,phase:1,log,msg:'unconditional match'"
-	`)
-	require.NoError(t, err)
-
+	`); err != nil {
+		t.Error(err)
+	}
 	// generate a random tmp file
 	file, err := os.CreateTemp("/tmp", "tmp*.log")
-	require.NoError(t, err)
+	if err != nil {
+		t.Error(err)
+	}
 	defer os.Remove(file.Name())
-
-	err = parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name()))
-	require.NoError(t, err)
-
+	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
+		t.Error(err)
+	}
 	tx := waf.NewTransaction()
 	tx.AddArgument("GET", "test", "test")
 	tx.ProcessRequestHeaders()
 	// now we read file
-	_, err = file.Seek(0, 0)
-	require.NoError(t, err)
-
+	if _, err := file.Seek(0, 0); err != nil {
+		t.Error(err)
+	}
 	tx.ProcessLogging()
 	var al2 loggers.AuditLog
 	// this should fail, there should be no log
-	err = json.NewDecoder(file).Decode(&al2)
-	require.Error(t, err)
+	if err := json.NewDecoder(file).Decode(&al2); err == nil {
+		t.Error(err)
+	}
 }
 
 func TestAuditLogRelevantOnlyOk(t *testing.T) {
@@ -105,67 +115,71 @@ func TestAuditLogRelevantOnlyOk(t *testing.T) {
 	parser, _ := seclang.NewParser(waf)
 	// generate a random tmp file
 	file, err := os.CreateTemp("/tmp", "tmp*.log")
-	require.NoError(t, err)
+	if err != nil {
+		t.Error(err)
+	}
 	defer os.Remove(file.Name())
-
-	err = parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name()))
-	require.NoError(t, err)
-
-	err = parser.FromString(`
+	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
+		t.Error(err)
+	}
+	if err := parser.FromString(`
 		SecRuleEngine DetectionOnly
 		SecAuditEngine RelevantOnly
 		SecAuditLogFormat json
 		SecAuditLogType serial
 		SecAuditLogRelevantStatus ".*"
 		SecRule ARGS "@unconditionalMatch" "id:1,phase:1,log,msg:'unconditional match'"
-	`)
-	require.NoError(t, err)
-
+	`); err != nil {
+		t.Error(err)
+	}
 	tx := waf.NewTransaction()
 	tx.AddArgument("GET", "test", "test")
 	tx.ProcessRequestHeaders()
 	// now we read file
-	_, err = file.Seek(0, 0)
-	require.NoError(t, err)
-
+	if _, err := file.Seek(0, 0); err != nil {
+		t.Error(err)
+	}
 	tx.ProcessLogging()
 	var al2 loggers.AuditLog
 	// this should pass as it matches any status
-	err = json.NewDecoder(file).Decode(&al2)
-	require.NoError(t, err)
+	if err := json.NewDecoder(file).Decode(&al2); err != nil {
+		t.Error(err)
+	}
 }
 
 func TestAuditLogRelevantOnlyNoAuditlog(t *testing.T) {
 	waf := coraza.NewWaf()
 	parser, _ := seclang.NewParser(waf)
-	err := parser.FromString(`
+	if err := parser.FromString(`
 		SecRuleEngine DetectionOnly
 		SecAuditEngine RelevantOnly
 		SecAuditLogFormat json
 		SecAuditLogType serial
 		SecAuditLogRelevantStatus ".*"
 		SecRule ARGS "@unconditionalMatch" "id:1,phase:1,noauditlog,msg:'unconditional match'"
-	`)
-	require.NoError(t, err)
-
+	`); err != nil {
+		t.Error(err)
+	}
 	// generate a random tmp file
 	file, err := os.CreateTemp("/tmp", "tmp*.log")
-	require.NoError(t, err)
+	if err != nil {
+		t.Error(err)
+	}
 	defer os.Remove(file.Name())
-
-	err = parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name()))
-	require.NoError(t, err)
-
+	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
+		t.Error(err)
+	}
 	tx := waf.NewTransaction()
 	tx.AddArgument("GET", "test", "test")
 	tx.ProcessRequestHeaders()
 	// now we read file
-	_, err = file.Seek(0, 0)
-	require.NoError(t, err)
-
+	if _, err := file.Seek(0, 0); err != nil {
+		t.Error(err)
+	}
 	tx.ProcessLogging()
 	var al2 loggers.AuditLog
 	// there should be no audit log because of noauditlog
-	err = json.NewDecoder(file).Decode(&al2)
-	require.Error(t, err, "there should be no audit log")
+	if err := json.NewDecoder(file).Decode(&al2); err == nil {
+		t.Errorf("there should be no audit log, got %v", al2)
+	}
 }

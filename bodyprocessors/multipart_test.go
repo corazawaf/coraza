@@ -22,8 +22,6 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v2/types/variables"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMultipartProcessor(t *testing.T) {
@@ -47,26 +45,36 @@ Content-Type: text/html
 	payload = strings.ReplaceAll(payload, "\n", "\r\n")
 
 	p := multipartBodyProcessor{}
-	err := p.Read(strings.NewReader(payload), Options{
+	if err := p.Read(strings.NewReader(payload), Options{
 		Mime:        "multipart/form-data; boundary=---------------------------9051914041544843365972754266",
 		StoragePath: "/tmp",
-	})
-	require.NoError(t, err)
+	}); err != nil {
+		t.Error(err)
+	}
 
 	res := p.Collections()
-	require.Len(t, res[variables.FilesNames][""], 2, "unexpected number of files")
-	require.Len(t, res[variables.ArgsPostNames], 1, "unexpected number of args")
-
-	require.NotEmpty(t, res[variables.ArgsPost]["text"])
-	require.Equal(t, "text default", res[variables.ArgsPost]["text"][0], "Expected text3 to be 'some super text content 3', got %v", res[variables.ArgsPost])
-
-	require.Len(t, res[variables.FilesTmpNames][""], 2, "expected 2 files")
-
+	if len(res[variables.FilesNames][""]) != 2 {
+		t.Errorf("Expected 2 files, got %d", len(res[variables.FilesNames]))
+	}
+	if len(res[variables.ArgsPostNames]) != 1 {
+		t.Errorf("Expected 1 args, got %d", len(res[variables.ArgsPostNames]))
+	}
+	if len(res[variables.ArgsPost]["text"]) == 0 || res[variables.ArgsPost]["text"][0] != "text default" {
+		t.Errorf("Expected text3 to be 'some super text content 3', got %v", res[variables.ArgsPost])
+	}
+	if len(res[variables.FilesTmpNames][""]) != 2 {
+		t.Errorf("Expected 2 files, got %d", len(res[variables.FilesTmpNames]))
+	}
 	if len(res[variables.FilesTmpNames]) > 0 {
-		require.NotEmpty(t, res[variables.FilesTmpNames][""], "expected files")
-		fname := res[variables.FilesTmpNames][""][0]
-		_, err := os.Stat(fname)
-		require.NoErrorf(t, err, "expected file %q to exist", fname)
+		if len(res[variables.FilesTmpNames][""]) == 0 {
+			t.Errorf("Expected files, got %d", len(res[variables.FilesTmpNames][""]))
+		} else {
+			fname := res[variables.FilesTmpNames][""][0]
+			if _, err := os.Stat(fname); err != nil {
+				t.Errorf("Expected file %s to exist", fname)
+			}
+
+		}
 	}
 }
 
@@ -83,7 +91,9 @@ func TestOriginalFileName(t *testing.T) {
 					"Content-Disposition": []string{test[0]},
 				},
 			}
-			assert.Equal(t, test[1], originFileName(p))
+			if got, want := originFileName(p), test[1]; got != want {
+				t.Errorf("OriginFileName(%v) = %v, want %v", p, got, want)
+			}
 		})
 	}
 }
