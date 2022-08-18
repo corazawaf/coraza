@@ -142,7 +142,7 @@ type Waf struct {
 	ProducerConnectorVersion string
 
 	// Used for the debug logger
-	Logger *DebugLogger
+	Logger DebugLogger
 
 	errorLogCb ErrorLogCallback
 
@@ -439,7 +439,7 @@ func (w *Waf) SetDebugLogPath(path string) error {
 
 // NewWaf creates a new WAF instance with default variables
 func NewWaf() *Waf {
-	logger := &DebugLogger{
+	logger := &stdDebugLogger{
 		logger: &log.Logger{},
 		Level:  LogLevelInfo,
 	}
