@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
@@ -21,6 +22,7 @@ var golangCILintVer = "v1.48.0"  // https://github.com/golangci/golangci-lint/re
 var gosImportsVer = "v0.1.5"     // https://github.com/rinchsan/gosimports/releases/tag/v0.1.5
 
 var errCommitFormatting = errors.New("files not formatted, please commit formatting changes")
+var errNoGitDir = errors.New("no .git directory found")
 
 // Format formats code in this repository.
 func Format() error {
@@ -73,7 +75,21 @@ func Doc() error {
 	return sh.RunV("go", "run", "golang.org/x/tools/cmd/godoc@latest", "-http=:6060")
 }
 
-// Check runs tests and lint.
+// Precommit installs a git hook to run check when committing
+func Precommit() error {
+	if _, err := os.Stat(filepath.Join(".git", "hooks")); os.IsNotExist(err) {
+		return errNoGitDir
+	}
+
+	f, err := os.ReadFile(".pre-commit.hook")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(filepath.Join(".git", "hooks", "pre-commit"), f, 0755)
+}
+
+// Check runs lint and tests.
 func Check() {
-	mg.SerialDeps(Test, Lint)
+	mg.SerialDeps(Lint, Test)
 }
