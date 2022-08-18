@@ -39,13 +39,13 @@ func TestValidateByteRangeCase5(t *testing.T) {
 	require.NoError(t, err, "Cannot init byte range operator")
 
 	require.Len(t, op.data, 5)
-	require.Equal(t, uint8(9), op.data[0][0], "invalid range length")
-	require.Equal(t, uint8(10), op.data[1][0], "invalid range length")
-	require.Equal(t, uint8(13), op.data[2][0], "invalid range length")
-	require.Equal(t, uint8(32), op.data[3][0], "invalid range length")
-	require.Equal(t, uint8(126), op.data[3][1], "invalid range length")
-	require.Equal(t, uint8(128), op.data[4][0], "invalid range length")
-	require.Equal(t, uint8(255), op.data[4][1], "invalid range length")
+	require.Equal(t, uint8(9), op.data[0].start, "invalid range length")
+	require.Equal(t, uint8(10), op.data[1].start, "invalid range length")
+	require.Equal(t, uint8(13), op.data[2].start, "invalid range length")
+	require.Equal(t, uint8(32), op.data[3].start, "invalid range length")
+	require.Equal(t, uint8(126), op.data[3].end, "invalid range length")
+	require.Equal(t, uint8(128), op.data[4].start, "invalid range length")
+	require.Equal(t, uint8(255), op.data[4].end, "invalid range length")
 
 	require.False(t, op.Evaluate(nil, "/\ufffdindex.html?test=test1"), "invalid byte between ranges (negative)", []byte("/\ufffdindex.html?test=test1"))
 }
@@ -53,4 +53,17 @@ func TestValidateByteRangeCase5(t *testing.T) {
 func getTransaction() *engine.Transaction {
 	waf := engine.NewWaf()
 	return waf.NewTransaction()
+}
+
+func BenchmarkValidateByteRange(b *testing.B) {
+	ranges := "9,10,13,32-126,128-255"
+	op := &validateByteRange{}
+
+	err := op.Init(ranges)
+	require.NoError(b, err, "Cannot init byte range operator")
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		op.Evaluate(nil, "/\ufffdindex.html?test=test1")
+	}
 }
