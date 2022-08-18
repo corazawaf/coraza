@@ -16,10 +16,10 @@ package coraza
 
 import (
 	"bytes"
-	"github.com/corazawaf/coraza/v3/internal/environment"
 	"io"
 	"os"
 
+	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/types"
 )
 

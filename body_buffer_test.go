@@ -15,12 +15,12 @@
 package coraza
 
 import (
-	"github.com/corazawaf/coraza/v3/internal/environment"
 	"io"
 	"os"
 	"strings"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
