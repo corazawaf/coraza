@@ -17,4 +17,5 @@
 
 package environment
 
+// IsTinyGo indicates whether the build environment is TinyGo.
 var IsTinyGo = true
