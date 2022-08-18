@@ -15,6 +15,7 @@
 package coraza
 
 import (
+	"github.com/corazawaf/coraza/v3/internal/environment"
 	"io"
 	"os"
 	"strings"
@@ -46,6 +47,10 @@ func TestBodyReaderMemory(t *testing.T) {
 }
 
 func TestBodyReaderFile(t *testing.T) {
+	if environment.IsTinyGo {
+		t.Skip()
+	}
+
 	// body reader memory limit is 1 byte
 	br := NewBodyBuffer(types.BodyBufferOptions{
 		TmpPath:     "/tmp",

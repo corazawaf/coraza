@@ -16,6 +16,7 @@ package coraza
 
 import (
 	"bytes"
+	"github.com/corazawaf/coraza/v3/internal/environment"
 	"io"
 	"os"
 
@@ -37,7 +38,7 @@ type BodyBuffer struct {
 // You may dump io.Readers using io.Copy(br, reader)
 func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	l := int64(len(data)) + br.length
-	if l >= br.options.MemoryLimit {
+	if !environment.IsTinyGo && l >= br.options.MemoryLimit {
 		if br.writer == nil {
 			br.writer, err = os.CreateTemp(br.options.TmpPath, "body*")
 			if err != nil {
@@ -58,7 +59,7 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 
 // Reader Returns a working reader for the body buffer in memory or file
 func (br *BodyBuffer) Reader() (io.Reader, error) {
-	if br.writer == nil {
+	if environment.IsTinyGo || br.writer == nil {
 		return bytes.NewReader(br.buffer.Bytes()), nil
 	}
 	if _, err := br.writer.Seek(0, 0); err != nil {
@@ -76,7 +77,7 @@ func (br *BodyBuffer) Size() int64 {
 func (br *BodyBuffer) Close() error {
 	br.buffer.Reset()
 	br.buffer = nil
-	if br.writer != nil {
+	if !environment.IsTinyGo && br.writer != nil {
 		if err := br.writer.Close(); err != nil {
 			return err
 		}
