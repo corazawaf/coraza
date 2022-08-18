@@ -60,45 +60,63 @@ func (level LogLevel) Invalid() bool {
 	return level < LogLevelInfo || level > LogLevelTrace
 }
 
+// DebugLogger is used to log SecDebugLog messages
+type DebugLogger interface {
+	// Info logs an info message
+	Info(message string, args ...interface{})
+	// Warn logs a warning message
+	Warn(message string, args ...interface{})
+	// Error logs an error message
+	Error(message string, args ...interface{})
+	// Debug logs a debug message
+	Debug(message string, args ...interface{})
+	// Trace logs a trace message
+	Trace(message string, args ...interface{})
+	// SetLevel sets the log level
+	SetLevel(level LogLevel)
+	// SetOutput sets the output for the logger
+	SetOutput(w io.Writer)
+}
+
 // DebugLogger is a logger that logs to the standard logger
-type DebugLogger struct {
+type stdDebugLogger struct {
 	logger *log.Logger
 	Level  LogLevel
 }
 
-func (l *DebugLogger) formatLog(level LogLevel, message string, args ...interface{}) {
+func (l *stdDebugLogger) formatLog(level LogLevel, message string, args ...interface{}) {
 	if l.Level >= level {
 		l.logger.Printf("[%s] %s", level.String(), fmt.Sprintf(message, args...))
 	}
 }
 
 // Info logs an info message
-func (l *DebugLogger) Info(message string, args ...interface{}) {
+func (l *stdDebugLogger) Info(message string, args ...interface{}) {
 	l.formatLog(LogLevelInfo, message, args...)
 }
 
 // Warn logs a warning message
-func (l *DebugLogger) Warn(message string, args ...interface{}) {
+func (l *stdDebugLogger) Warn(message string, args ...interface{}) {
 	l.formatLog(LogLevelWarn, message, args...)
 }
 
 // Error logs an error message
-func (l *DebugLogger) Error(message string, args ...interface{}) {
+func (l *stdDebugLogger) Error(message string, args ...interface{}) {
 	l.formatLog(LogLevelError, message, args...)
 }
 
 // Debug logs a debug message
-func (l *DebugLogger) Debug(message string, args ...interface{}) {
+func (l *stdDebugLogger) Debug(message string, args ...interface{}) {
 	l.formatLog(LogLevelDebug, message, args...)
 }
 
 // Trace logs a trace message
-func (l *DebugLogger) Trace(message string, args ...interface{}) {
+func (l *stdDebugLogger) Trace(message string, args ...interface{}) {
 	l.formatLog(LogLevelTrace, message, args...)
 }
 
 // SetLevel sets the log level
-func (l *DebugLogger) SetLevel(level LogLevel) {
+func (l *stdDebugLogger) SetLevel(level LogLevel) {
 	if level.Invalid() {
 		l.Info("Invalid log level, defaulting to INFO")
 		level = LogLevelInfo
@@ -107,12 +125,12 @@ func (l *DebugLogger) SetLevel(level LogLevel) {
 }
 
 // SetOutput sets the output for the logger
-func (l *DebugLogger) SetOutput(w io.Writer) {
+func (l *stdDebugLogger) SetOutput(w io.Writer) {
 	l.logger.SetOutput(w)
 }
 
 // Close closes the logger
-func (l *DebugLogger) Close() error {
+func (l *stdDebugLogger) Close() error {
 	// TODO
 	return nil
 }
