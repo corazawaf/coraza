@@ -20,6 +20,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -46,6 +47,10 @@ func TestBodyReaderMemory(t *testing.T) {
 }
 
 func TestBodyReaderFile(t *testing.T) {
+	if environment.IsTinyGo {
+		return // t.Skip doesn't work on TinyGo
+	}
+
 	// body reader memory limit is 1 byte
 	br := NewBodyBuffer(types.BodyBufferOptions{
 		TmpPath:     "/tmp",
