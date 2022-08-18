@@ -18,3 +18,8 @@ linters:
     - goimports
     - gofmt
     - gocritic
+issues:
+  exclude-rules:
+    - path: magefile\.go
+      linters:
+        - deadcode
