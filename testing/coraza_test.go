@@ -37,17 +37,22 @@ func TestEngine(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		for _, test := range tt {
-			if err := test.RunPhases(); err != nil {
-				t.Error(err)
+
+		t.Run(profile.Meta.Name, func(t *testing.T) {
+			for _, test := range tt {
+				t.Run(test.Name, func(t *testing.T) {
+					if err := test.RunPhases(); err != nil {
+						t.Error(err)
+					}
+					for _, e := range test.OutputErrors() {
+						debug := ""
+						for _, mr := range test.transaction.MatchedRules {
+							debug += fmt.Sprintf(" %d", mr.Rule.ID)
+						}
+						t.Errorf("%s - %s: %s\nGot: %s\n%s\nREQUEST:\n%s", profile.Meta.Name, test.Name, e, debug, test.String(), test.Request())
+					}
+				})
 			}
-			for _, e := range test.OutputErrors() {
-				debug := ""
-				for _, mr := range test.transaction.MatchedRules {
-					debug += fmt.Sprintf(" %d", mr.Rule.ID)
-				}
-				t.Errorf("%s - %s: %s\nGot: %s\n%s\nREQUEST:\n%s", profile.Meta.Name, test.Name, e, debug, test.String(), test.Request())
-			}
-		}
+		})
 	}
 }
