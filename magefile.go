@@ -1,6 +1,3 @@
-// Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
-// SPDX-License-Identifier: Apache-2.0
-
 //go:build mage
 // +build mage
 
@@ -32,8 +29,7 @@ func Format() error {
 	// addlicense strangely logs skipped files to stderr despite not being erroneous, so use the long sh.Exec form to
 	// discard stderr too.
 	if _, err := sh.Exec(map[string]string{}, io.Discard, io.Discard, "go", "run", fmt.Sprintf("github.com/google/addlicense@%s", addLicenseVersion),
-		"-c", "Juan Pablo Tosso and the OWASP Coraza contributors",
-		"-s=only",
+		"-c", "Juan Pablo Tosso",
 		"-ignore", "**/*.yml",
 		"-ignore", "**/*.yaml",
 		"-ignore", "examples/**", "."); err != nil {
