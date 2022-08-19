@@ -10,7 +10,6 @@ package seclang
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -96,7 +95,7 @@ func TestDebugDirectives(t *testing.T) {
 
 // Find a file by name recursively containing some string
 func findFileContaining(path string, search string) (string, error) {
-	files, err := ioutil.ReadDir(path)
+	files, err := os.ReadDir(path)
 	if err != nil {
 		return "", err
 	}

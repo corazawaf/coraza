@@ -12,7 +12,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -147,7 +146,7 @@ func downloadCRS(version string) (string, error) {
 	}
 	defer res.Body.Close()
 	// create tmp file
-	tmpfile, err := ioutil.TempFile(os.TempDir(), "crs")
+	tmpfile, err := os.CreateTemp(os.TempDir(), "crs")
 	if err != nil {
 		return "", err
 	}
