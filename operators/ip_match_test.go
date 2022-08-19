@@ -55,7 +55,7 @@ func TestMultipleAddress(t *testing.T) {
 	for _, fail := range addrfail {
 		t.Run(fail, func(t *testing.T) {
 			if ipm.Evaluate(nil, fail) {
-				t.Errorf("Invalid result for single CIDR IpMatch" + fail)
+				t.Errorf("Invalid result for single CIDR IpMatch %q", fail)
 			}
 		})
 	}

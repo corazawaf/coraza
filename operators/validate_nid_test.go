@@ -33,7 +33,7 @@ func TestNidCl(t *testing.T) {
 	for _, o := range ok {
 		t.Run(o, func(t *testing.T) {
 			if !nidCl(o) {
-				t.Errorf("Invalid NID CL for %s", o)
+				t.Errorf("Invalid NID CL for %q", o)
 			}
 		})
 	}
@@ -41,7 +41,7 @@ func TestNidCl(t *testing.T) {
 	for _, o := range nok {
 		t.Run(o, func(t *testing.T) {
 			if nidCl(o) {
-				t.Errorf("Valid NID CL for %s", o)
+				t.Errorf("Valid NID CL for %q", o)
 			}
 		})
 	}

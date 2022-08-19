@@ -42,7 +42,7 @@ func TestEngine(t *testing.T) {
 			for _, test := range tt {
 				t.Run(test.Name, func(t *testing.T) {
 					if err := test.RunPhases(); err != nil {
-						t.Error(err)
+						t.Errorf("failed to run phases: %v", err)
 					}
 					for _, e := range test.OutputErrors() {
 						debug := ""

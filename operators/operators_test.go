@@ -66,13 +66,13 @@ func TestTransformations(t *testing.T) {
 				if strings.Contains(data.Input, `\x`) {
 					data.Input, err = strconv.Unquote(`"` + data.Input + `"`)
 					if err != nil {
-						t.Error("Cannot parse test case", err)
+						t.Errorf("Cannot parse test case: %v", err)
 					}
 				}
 				if strings.Contains(data.Param, `\x`) {
 					data.Param, err = strconv.Unquote(`"` + data.Param + `"`)
 					if err != nil {
-						t.Error("Cannot parse test case", err)
+						t.Errorf("Cannot parse test case: %v", err)
 					}
 				}
 				op, err := GetOperator(data.Name)
@@ -84,12 +84,12 @@ func TestTransformations(t *testing.T) {
 					fname := root + "op/" + data.Param
 					d, err := os.ReadFile(fname)
 					if err != nil {
-						t.Errorf("Cannot open file %s", data.Param)
+						t.Errorf("Cannot open file %q", data.Param)
 					}
 					data.Param = string(d)
 				}
 				if err := op.Init(data.Param); err != nil {
-					t.Error(err)
+					t.Errorf("failed to init: %v", err)
 				}
 				res := op.Evaluate(waf.NewTransaction(), data.Input)
 				// 1 = expected true
