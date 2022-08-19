@@ -12,7 +12,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -85,7 +84,7 @@ func multipartRequest(t *testing.T, req *http.Request) error {
 	if _, err = io.Copy(fw, tempfile); err != nil {
 		return err
 	}
-	req.Body = ioutil.NopCloser(&b)
+	req.Body = io.NopCloser(&b)
 	req.Header.Set("Content-Type", w.FormDataContentType())
 	req.Method = "POST"
 	return nil
