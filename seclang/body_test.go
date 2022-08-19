@@ -19,7 +19,6 @@ import (
 
 	"github.com/corazawaf/coraza/v2"
 	"github.com/corazawaf/coraza/v2/types/variables"
-	"github.com/stretchr/testify/require"
 )
 
 /*
@@ -45,20 +44,22 @@ func TestRequestBodyAccessOff(t *testing.T) {
 func TestRequestBodyAccessOn(t *testing.T) {
 	waf := coraza.NewWaf()
 	parser, _ := NewParser(waf)
-
-	err := parser.FromString(`
+	if err := parser.FromString(`
 	SecRequestBodyAccess On
-	`)
-	require.NoError(t, err)
-
+	`); err != nil {
+		t.Fatal(err)
+	}
 	tx := waf.NewTransaction()
 	tx.ProcessURI("/", "POST", "http/1.1")
-	_, err = tx.RequestBodyBuffer.Write([]byte("test=123"))
-	require.NoError(t, err)
-
+	if _, err := tx.RequestBodyBuffer.Write([]byte("test=123")); err != nil {
+		t.Error(err)
+	}
 	tx.AddRequestHeader("Content-Type", "application/x-www-form-urlencoded")
 	tx.ProcessRequestHeaders()
-	_, err = tx.ProcessRequestBody()
-	require.NoError(t, err)
-	require.NotEmpty(t, tx.GetCollection(variables.ArgsPost).Data(), "should have args")
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Error(err)
+	}
+	if len(tx.GetCollection(variables.ArgsPost).Data()) == 0 {
+		t.Error("Should have args")
+	}
 }

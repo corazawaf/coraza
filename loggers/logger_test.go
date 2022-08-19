@@ -14,20 +14,16 @@
 
 package loggers
 
-import (
-	"testing"
-
-	"github.com/stretchr/testify/require"
-)
+import "testing"
 
 func TestDefaultWriters(t *testing.T) {
 	ws := []string{"serial", "concurrent"}
 	for _, writer := range ws {
-		t.Run(writer, func(t *testing.T) {
-			w, err := GetLogWriter(writer)
-			require.NoError(t, err)
-			require.NotNil(t, w)
-		})
+		if w, err := GetLogWriter(writer); err != nil {
+			t.Error(err)
+		} else if w == nil {
+			t.Errorf("invalid %s writer", writer)
+		}
 	}
 }
 func TestWriterPlugins(t *testing.T) {

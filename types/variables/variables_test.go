@@ -16,105 +16,30 @@ package variables
 import (
 	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNameToVariable(t *testing.T) {
-	vars := []string{
-		"URLENCODED_ERROR",
-		"RESPONSE_CONTENT_TYPE",
-		"UNIQUE_ID",
-		"ARGS_COMBINED_SIZE",
-		"AUTH_TYPE",
-		"FILES_COMBINED_SIZE",
-		"FULL_REQUEST",
-		"FULL_REQUEST_LENGTH",
-		"INBOUND_DATA_ERROR",
-		"MATCHED_VAR",
-		"MATCHED_VAR_NAME",
-		"MULTIPART_BOUNDARY_QUOTED",
-		"MULTIPART_BOUNDARY_WHITESPACE",
-		"MULTIPART_CRLF_LF_LINES",
-		"MULTIPART_DATA_AFTER",
-		"MULTIPART_DATA_BEFORE",
-		"MULTIPART_FILE_LIMIT_EXCEEDED",
-		"MULTIPART_HEADER_FOLDING",
-		"MULTIPART_INVALID_HEADER_FOLDING",
-		"MULTIPART_INVALID_PART",
-		"MULTIPART_INVALID_QUOTING",
-		"MULTIPART_LF_LINE",
-		"MULTIPART_MISSING_SEMICOLON",
-		"MULTIPART_STRICT_ERROR",
-		"MULTIPART_UNMATCHED_BOUNDARY",
-		"OUTBOUND_DATA_ERROR",
-		"PATH_INFO",
-		"QUERY_STRING",
-		"REMOTE_ADDR",
-		"REMOTE_HOST",
-		"REMOTE_PORT",
-		"REQBODY_ERROR",
-		"REQBODY_ERROR_MSG",
-		"REQBODY_PROCESSOR_ERROR",
-		"REQBODY_PROCESSOR_ERROR_MSG",
-		"REQBODY_PROCESSOR",
-		"REQUEST_BASENAME",
-		"REQUEST_BODY",
-		"REQUEST_BODY_LENGTH",
-		"REQUEST_FILENAME",
-		"REQUEST_LINE",
-		"REQUEST_METHOD",
-		"REQUEST_PROTOCOL",
-		"REQUEST_URI",
-		"REQUEST_URI_RAW",
-		"RESPONSE_BODY",
-		"RESPONSE_CONTENT_LENGTH",
-		"RESPONSE_PROTOCOL",
-		"RESPONSE_STATUS",
-		"SERVER_ADDR",
-		"SERVER_NAME",
-		"SERVER_PORT",
-		"SESSIONID",
-		"RESPONSE_HEADERS_NAMES",
-		"REQUEST_HEADERS_NAMES",
-		"USERID",
-		"ARGS",
-		"ARGS_GET",
-		"ARGS_POST",
-		"FILES_SIZES",
-		"FILES_NAMES",
-		"FILES_TMP_CONTENT",
-		"MULTIPART_FILENAME",
-		"MULTIPART_NAME",
-		"MATCHED_VARS_NAMES",
-		"MATCHED_VARS",
-		"FILES",
-		"REQUEST_COOKIES",
-		"REQUEST_HEADERS",
-		"RESPONSE_HEADERS",
-		"GEO",
-		"REQUEST_COOKIES_NAMES",
-		"FILES_TMPNAMES",
-		"ARGS_NAMES",
-		"ARGS_GET_NAMES",
-		"ARGS_POST_NAMES",
-		"RULE",
-		"XML",
-		"TX",
-		"DURATION"}
+	vars := []string{"URLENCODED_ERROR", "RESPONSE_CONTENT_TYPE", "UNIQUE_ID", "ARGS_COMBINED_SIZE", "AUTH_TYPE", "FILES_COMBINED_SIZE", "FULL_REQUEST", "FULL_REQUEST_LENGTH", "INBOUND_DATA_ERROR", "MATCHED_VAR", "MATCHED_VAR_NAME", "MULTIPART_BOUNDARY_QUOTED", "MULTIPART_BOUNDARY_WHITESPACE", "MULTIPART_CRLF_LF_LINES", "MULTIPART_DATA_AFTER", "MULTIPART_DATA_BEFORE", "MULTIPART_FILE_LIMIT_EXCEEDED", "MULTIPART_HEADER_FOLDING", "MULTIPART_INVALID_HEADER_FOLDING", "MULTIPART_INVALID_PART", "MULTIPART_INVALID_QUOTING", "MULTIPART_LF_LINE", "MULTIPART_MISSING_SEMICOLON", "MULTIPART_STRICT_ERROR", "MULTIPART_UNMATCHED_BOUNDARY", "OUTBOUND_DATA_ERROR", "PATH_INFO", "QUERY_STRING", "REMOTE_ADDR", "REMOTE_HOST", "REMOTE_PORT", "REQBODY_ERROR", "REQBODY_ERROR_MSG", "REQBODY_PROCESSOR_ERROR", "REQBODY_PROCESSOR_ERROR_MSG", "REQBODY_PROCESSOR", "REQUEST_BASENAME", "REQUEST_BODY", "REQUEST_BODY_LENGTH", "REQUEST_FILENAME", "REQUEST_LINE", "REQUEST_METHOD", "REQUEST_PROTOCOL", "REQUEST_URI", "REQUEST_URI_RAW", "RESPONSE_BODY", "RESPONSE_CONTENT_LENGTH", "RESPONSE_PROTOCOL", "RESPONSE_STATUS", "SERVER_ADDR", "SERVER_NAME", "SERVER_PORT", "SESSIONID", "RESPONSE_HEADERS_NAMES", "REQUEST_HEADERS_NAMES", "USERID", "ARGS", "ARGS_GET", "ARGS_POST", "FILES_SIZES", "FILES_NAMES", "FILES_TMP_CONTENT", "MULTIPART_FILENAME", "MULTIPART_NAME", "MATCHED_VARS_NAMES", "MATCHED_VARS", "FILES", "REQUEST_COOKIES", "REQUEST_HEADERS", "RESPONSE_HEADERS", "GEO", "REQUEST_COOKIES_NAMES", "FILES_TMPNAMES", "ARGS_NAMES", "ARGS_GET_NAMES", "ARGS_POST_NAMES", "RULE", "XML", "TX", "DURATION"}
 	for _, v := range vars {
 		_, err := Parse(v)
-		assert.NoErrorf(t, err, "failed to test variable %q"+v)
+		if err != nil {
+			t.Error("failed to test variable " + v)
+		}
 	}
 }
 
 func TestVariableToName(t *testing.T) {
-	require.Equal(t, len(rulemap), len(rulemapRev), "rulemap and rulemapRev are not equal")
+	if len(rulemap) != len(rulemapRev) {
+		t.Error("rulemap and rulemapRev are not equal")
+	}
 	for i := 0; i < len(rulemap); i++ {
 		v := RuleVariable(i)
-		assert.Equal(t, rulemap[v], v.Name(), "failed to test variable")
-		assert.Equal(t, v, rulemapRev[v.Name()], "failed to test variable")
+		if v.Name() != rulemap[v] {
+			t.Error("failed to test variable " + v.Name())
+		}
+		if rulemapRev[v.Name()] != v {
+			t.Error("failed to test variable " + v.Name())
+		}
 	}
 }
 
@@ -127,7 +52,11 @@ func TestParseVariable(t *testing.T) {
 			name = strings.ToLower(name)
 		}
 		vv, err := Parse(name)
-		assert.NoErrorf(t, err, "failed to test variable %s", name)
-		assert.Equalf(t, v, vv, "failed to test variable %s", name)
+		if err != nil {
+			t.Errorf("failed to test variable %s", name)
+		}
+		if v != vv {
+			t.Errorf("failed to test variable %s", name)
+		}
 	}
 }

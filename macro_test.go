@@ -18,23 +18,32 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v2/types/variables"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMacro(t *testing.T) {
-	tx := makeTransaction(t)
+	tx := makeTransaction()
 	tx.GetCollection(variables.TX).Set("some", []string{"secretly"})
 	macro, err := NewMacro("%{unique_id}")
-	require.NoError(t, err)
-	require.Equal(t, tx.ID, macro.Expand(tx))
-
+	if err != nil {
+		t.Error(err)
+	}
+	if macro.Expand(tx) != tx.ID {
+		t.Errorf("%s != %s", macro.Expand(tx), tx.ID)
+	}
 	macro, err = NewMacro("some complex text %{tx.some} wrapped in macro")
-	require.NoError(t, err)
-	require.Equal(t, "some complex text secretly wrapped in macro", macro.Expand(tx))
+	if err != nil {
+		t.Error(err)
+	}
+	if macro.Expand(tx) != "some complex text secretly wrapped in macro" {
+		t.Errorf("failed to expand macro, got %s\n%v", macro.Expand(tx), macro.tokens)
+	}
 
 	macro, err = NewMacro("some complex text %{tx.some} wrapped in macro %{tx.some}")
-	require.NoError(t, err)
-	require.True(t, macro.IsExpandable())
-	require.Len(t, macro.tokens, 4)
-	require.Equal(t, "some complex text secretly wrapped in macro secretly", macro.Expand(tx))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if !macro.IsExpandable() || len(macro.tokens) != 4 || macro.Expand(tx) != "some complex text secretly wrapped in macro secretly" {
+		t.Errorf("failed to parse replacements %v", macro.tokens)
+	}
 }

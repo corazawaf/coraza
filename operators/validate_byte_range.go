@@ -32,10 +32,10 @@ type validateByteRange struct {
 }
 
 func (o *validateByteRange) Init(data string) error {
-	o.data = []byteRange{}
 	if data == "" {
 		return nil
 	}
+	o.data = []byteRange{}
 	ranges := strings.Split(data, ",")
 	spl := ranges
 	var err error
