@@ -32,7 +32,7 @@ type Test struct {
 	Type   string `json:"type"`
 }
 
-//https://github.com/SpiderLabs/secrules-language-tests/
+// https://github.com/SpiderLabs/secrules-language-tests/
 func TestTransformations(t *testing.T) {
 	root := "../testdata/transformations/"
 	files := [][]byte{}
