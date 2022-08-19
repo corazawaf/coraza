@@ -16,7 +16,6 @@ package operators
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -34,7 +33,7 @@ type Test struct {
 	Type  string `json:"type"`
 }
 
-//https://github.com/SpiderLabs/secrules-language-tests/
+// https://github.com/SpiderLabs/secrules-language-tests/
 func TestTransformations(t *testing.T) {
 	root := "../testdata/operators/"
 	files := [][]byte{}
@@ -43,7 +42,7 @@ func TestTransformations(t *testing.T) {
 	}
 	if err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if strings.HasSuffix(path, ".json") {
-			data, _ := ioutil.ReadFile(path)
+			data, _ := os.ReadFile(path)
 			files = append(files, data)
 		}
 		return nil

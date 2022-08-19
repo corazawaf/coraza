@@ -16,8 +16,8 @@ package seclang
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -150,7 +150,7 @@ func Test_directive(t *testing.T) {
 
 func TestDebugDirectives(t *testing.T) {
 	waf := coraza.NewWaf()
-	tmpf, _ := ioutil.TempFile("/tmp", "*.log")
+	tmpf, _ := os.Create(filepath.Join(t.TempDir(), "debug.log"))
 	tmp := tmpf.Name()
 	p, _ := NewParser(waf)
 	err := directiveSecDebugLog(&DirectiveOptions{
@@ -204,7 +204,7 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	data, err := ioutil.ReadFile(f)
+	data, err := os.ReadFile(f)
 	if err != nil {
 		t.Error(err)
 	}
@@ -245,7 +245,7 @@ func TestSecRuleUpdateTargetBy(t *testing.T) {
 
 // Find a file by name recursively containing some string
 func findFileContaining(path string, search string) (string, error) {
-	files, err := ioutil.ReadDir(path)
+	files, err := os.ReadDir(path)
 	if err != nil {
 		return "", err
 	}
