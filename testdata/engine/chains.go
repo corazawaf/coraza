@@ -52,7 +52,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 						Output: profile.ExpectedOutput{
 							TriggeredRules:    []int{1, 20},
 							NonTriggeredRules: []int{2, 1313, 21},
-							LogContains: "FoundChain20 attack20ing.com in REQUEST_HEADERS:Host",
+							LogContains:       "FoundChain20 attack20ing.com in REQUEST_HEADERS:Host",
 						},
 					},
 				},
@@ -65,9 +65,9 @@ var _ = profile.RegisterProfile(profile.Profile{
 							},
 						},
 						Output: profile.ExpectedOutput{
-							TriggeredRules: []int{1, 21},
+							TriggeredRules:    []int{1, 21},
 							NonTriggeredRules: []int{20, 2, 1313},
-							LogContains: "FoundSubChain21 REQUEST_HEADERS:Host in MATCHED_VARS_NAMES:REQUEST_HEADERS:Host",
+							LogContains:       "FoundSubChain21 REQUEST_HEADERS:Host in MATCHED_VARS_NAMES:REQUEST_HEADERS:Host",
 						},
 					},
 				},
