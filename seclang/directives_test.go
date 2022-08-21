@@ -43,10 +43,12 @@ func Test_NonImplementedDirective(t *testing.T) {
 	w := coraza.NewWaf()
 	p, _ := NewParser(w)
 	for _, rule := range rules {
-		err := p.FromString(rule)
-		if err != nil {
-			t.Errorf("failed to set directive: %s", rule)
-		}
+		t.Run(rule, func(t *testing.T) {
+			err := p.FromString(rule)
+			if err != nil {
+				t.Errorf("failed to set directive: %s", rule)
+			}
+		})
 	}
 }
 

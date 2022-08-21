@@ -36,71 +36,72 @@ type Test struct {
 // https://github.com/SpiderLabs/secrules-language-tests/
 func TestTransformations(t *testing.T) {
 	root := "../testdata/operators/"
-	files := [][]byte{}
+	files := map[string][]byte{}
 	if _, err := os.Stat(root); os.IsNotExist(err) {
 		t.Error("failed to find operator test files")
 	}
 	if err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if strings.HasSuffix(path, ".json") {
 			data, _ := os.ReadFile(path)
-			files = append(files, data)
+			files[path] = data
 		}
 		return nil
 	}); err != nil {
 		t.Error("failed to walk test files")
 	}
 	waf := coraza.NewWaf()
-	for _, f := range files {
-
-		cases := []*Test{}
-		err := json.Unmarshal(f, &cases)
-		if err != nil {
-			t.Error("Cannot parse test case", err)
-		}
-		for _, data := range cases {
-			// UNMARSHALL does not transform \u0000 to binary
-			data.Input = strings.ReplaceAll(data.Input, `\u0000`, "\u0000")
-			data.Param = strings.ReplaceAll(data.Param, `\u0000`, "\u0000")
-
-			if strings.Contains(data.Input, `\x`) {
-				data.Input, err = strconv.Unquote(`"` + data.Input + `"`)
-				if err != nil {
-					t.Error("Cannot parse test case", err)
-				}
-			}
-			if strings.Contains(data.Param, `\x`) {
-				data.Param, err = strconv.Unquote(`"` + data.Param + `"`)
-				if err != nil {
-					t.Error("Cannot parse test case", err)
-				}
-			}
-			op, err := GetOperator(data.Name)
+	for name, f := range files {
+		t.Run(name, func(t *testing.T) {
+			cases := []*Test{}
+			err := json.Unmarshal(f, &cases)
 			if err != nil {
-				continue
+				t.Error("Cannot parse test case", err)
 			}
-			if data.Name == "pmFromFile" || data.Name == "ipMatchFromFile" {
-				// read file
-				fname := root + "op/" + data.Param
-				d, err := os.ReadFile(fname)
+			for _, data := range cases {
+				// UNMARSHALL does not transform \u0000 to binary
+				data.Input = strings.ReplaceAll(data.Input, `\u0000`, "\u0000")
+				data.Param = strings.ReplaceAll(data.Param, `\u0000`, "\u0000")
+
+				if strings.Contains(data.Input, `\x`) {
+					data.Input, err = strconv.Unquote(`"` + data.Input + `"`)
+					if err != nil {
+						t.Errorf("Cannot parse test case: %v", err)
+					}
+				}
+				if strings.Contains(data.Param, `\x`) {
+					data.Param, err = strconv.Unquote(`"` + data.Param + `"`)
+					if err != nil {
+						t.Errorf("Cannot parse test case: %v", err)
+					}
+				}
+				op, err := GetOperator(data.Name)
 				if err != nil {
-					t.Errorf("Cannot open file %s", data.Param)
+					continue
 				}
-				data.Param = string(d)
-			}
-			if err := op.Init(data.Param); err != nil {
-				t.Error(err)
-			}
-			res := op.Evaluate(waf.NewTransaction(), data.Input)
-			// 1 = expected true
-			// 0 = expected false
-			if (res && data.Ret != 1) || (!res && data.Ret == 1) {
-				expected := "match"
-				if data.Ret == 0 {
-					expected = "no match"
+				if data.Name == "pmFromFile" || data.Name == "ipMatchFromFile" {
+					// read file
+					fname := root + "op/" + data.Param
+					d, err := os.ReadFile(fname)
+					if err != nil {
+						t.Errorf("Cannot open file %q", data.Param)
+					}
+					data.Param = string(d)
 				}
-				t.Errorf("Invalid operator result for @%s(%q, %q), %s expected", data.Name, data.Param, data.Input, expected)
+				if err := op.Init(data.Param); err != nil {
+					t.Errorf("failed to init: %v", err)
+				}
+				res := op.Evaluate(waf.NewTransaction(), data.Input)
+				// 1 = expected true
+				// 0 = expected false
+				if (res && data.Ret != 1) || (!res && data.Ret == 1) {
+					expected := "match"
+					if data.Ret == 0 {
+						expected = "no match"
+					}
+					t.Errorf("Invalid operator result for @%s(%q, %q), %s expected", data.Name, data.Param, data.Input, expected)
+				}
 			}
-		}
+		})
 	}
 
 }

@@ -55,29 +55,31 @@ func TestTransformations(t *testing.T) {
 			t.Error("Cannot parse test case")
 		}
 		for _, data := range cases {
-			// UNMARSHALL does not transform \u0000 to binary
-			data.Input = strings.ReplaceAll(data.Input, `\u0000`, "\u0000")
-			data.Output = strings.ReplaceAll(data.Output, `\u0000`, "\u0000")
+			t.Run(data.Name, func(t *testing.T) {
+				// UNMARSHALL does not transform \u0000 to binary
+				data.Input = strings.ReplaceAll(data.Input, `\u0000`, "\u0000")
+				data.Output = strings.ReplaceAll(data.Output, `\u0000`, "\u0000")
 
-			if strings.Contains(data.Input, `\x`) {
-				data.Input, _ = strconv.Unquote(`"` + data.Input + `"`)
-			}
-			if strings.Contains(data.Output, `\x`) {
-				data.Output, _ = strconv.Unquote(`"` + data.Output + `"`)
-			}
-			trans, err := GetTransformation(data.Name)
-			if err != nil {
-				// t.Error(err)
-				continue
-			}
-			out, err := trans(data.Input)
-			if err != nil {
-				t.Error(err)
-			}
-			if out != data.Output {
-				t.Errorf("Transformation %s:\nInput: %s\nExpected: %v\nGot: %v\nExpected String: %s\nGot String: %s",
-					data.Name, data.Input, []byte(data.Output), []byte(out), data.Output, out)
-			}
+				if strings.Contains(data.Input, `\x`) {
+					data.Input, _ = strconv.Unquote(`"` + data.Input + `"`)
+				}
+				if strings.Contains(data.Output, `\x`) {
+					data.Output, _ = strconv.Unquote(`"` + data.Output + `"`)
+				}
+				trans, err := GetTransformation(data.Name)
+				if err != nil {
+					// t.Error(err)
+					return
+				}
+				out, err := trans(data.Input)
+				if err != nil {
+					t.Error(err)
+				}
+				if out != data.Output {
+					t.Errorf("Transformation %s:\nInput: %s\nExpected: %v\nGot: %v\nExpected String: %s\nGot String: %s",
+						data.Name, data.Input, []byte(data.Output), []byte(out), data.Output, out)
+				}
+			})
 		}
 	}
 }

@@ -81,13 +81,16 @@ func TestCtl(t *testing.T) {
 
 	bodyprocessors := []string{"XML", "JSON", "URLENCODED", "MULTIPART"}
 	for _, bp := range bodyprocessors {
-		if err := ctlf.Init(r, "requestBodyProcessor="+bp); err != nil {
-			t.Errorf("failed to init requestBodyProcessor %s", bp)
-		}
-		ctlf.Evaluate(r, tx)
-		if tx.GetCollection(variables.ReqbodyProcessor).GetFirstString("") != bp {
-			t.Error("failed to set RequestBodyProcessor " + bp)
-		}
+		t.Run(bp, func(t *testing.T) {
+			if err := ctlf.Init(r, "requestBodyProcessor="+bp); err != nil {
+				t.Errorf("failed to init requestBodyProcessor %q", bp)
+			}
+
+			ctlf.Evaluate(r, tx)
+			if tx.GetCollection(variables.ReqbodyProcessor).GetFirstString("") != bp {
+				t.Errorf("failed to set RequestBodyProcessor %q", bp)
+			}
+		})
 	}
 }
 
