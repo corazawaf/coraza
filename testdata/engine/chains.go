@@ -32,12 +32,36 @@ var _ = profile.RegisterProfile(profile.Profile{
 				{
 					Stage: profile.SubStage{
 						Input: profile.StageInput{
-							URI: "/test2.php?var=prepayloadpost",
+							URI: "/test2.php?Var2=prepayloadpost",
 						},
 						Output: profile.ExpectedOutput{
 							TriggeredRules:    []int{1, 200},
 							NonTriggeredRules: []int{2, 1313, 20},
-							LogContains:       "found within ARGS:var: prepayloadpost",
+							LogContains:       "found within ARGS:Var2: prepayloadpost",
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/testcase3.php?Var3=pre3payloadpost",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{1, 300},
+							NonTriggeredRules: []int{2, 1313, 20},
+							LogContains:       "found within ARGS:Var3: pre3payloadpost",
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/testcase4.php?Var4=pre4payloadpost",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{1, 400},
+							NonTriggeredRules: []int{2, 1313, 20},
+							LogContains:       "found within ARGS:Var4: pre4payloadpost",
 						},
 					},
 				},
@@ -95,6 +119,20 @@ SecRule ARGS "@rx prepayloadpost"  "id:200, phase:2, log, msg:'Rule Parent 200',
   SecRule MATCHED_VAR "@rx pre" "chain"
     SecRule MATCHED_VAR "@rx post"
 
+SecRule ARGS:var3 "@rx pre3payloadpost"  "id:300, phase:2, log, msg:'Rule Parent 300', \
+  logdata:'Matched Data: %{TX.0} found within %{TX.300_MATCHED_VAR_NAME}: %{MATCHED_VAR}',\
+  setvar:'tx.300_matched_var_name=%{MATCHED_VAR_NAME}',\
+  chain"
+  SecRule MATCHED_VAR "@rx pre" "chain"
+    SecRule MATCHED_VAR "@rx post"
+
+SecRule ARGS:Var4 "@rx pre4payloadpost"  "id:400, phase:2, log, msg:'Rule Parent 400', \
+  logdata:'Matched Data: %{TX.0} found within %{TX.400_MATCHED_VAR_NAME}: %{MATCHED_VAR}',\
+  setvar:'tx.400_matched_var_name=%{MATCHED_VAR_NAME}',\
+  chain"
+  SecRule MATCHED_VAR "@rx pre" "chain"
+    SecRule MATCHED_VAR "@rx post"
+
 SecRule REQUEST_HEADERS "@rx attack20" \
   "id:20,\
   phase:1,\
@@ -103,9 +141,9 @@ SecRule REQUEST_HEADERS "@rx attack20" \
   logdata:'FoundChain20 %{MATCHED_VAR} in %{MATCHED_VAR_NAME}',\
   chain"
   SecRule MATCHED_VARS_NAMES "@rx Host" \
-	  "chain"
-		    SecRule REQUEST_HEADERS:Host "@rx attack20" \
-    		"block"
+    "chain"
+    SecRule REQUEST_HEADERS:Host "@rx attack20" \
+      "block"
 
 SecRule REQUEST_HEADERS "@rx attack21" \
   "id:21,\
