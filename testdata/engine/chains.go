@@ -52,7 +52,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 						Output: profile.ExpectedOutput{
 							TriggeredRules:    []int{1, 20},
 							NonTriggeredRules: []int{2, 1313, 21},
-							// LogContains: "FoundChain20 attacking.com in REQUEST_HEADERS:host",
+							LogContains: "FoundChain20 attack20ing.com in REQUEST_HEADERS:Host",
 						},
 					},
 				},
@@ -65,12 +65,9 @@ var _ = profile.RegisterProfile(profile.Profile{
 							},
 						},
 						Output: profile.ExpectedOutput{
-							TriggeredRules: []int{
-								1,
-								// 21
-							},
+							TriggeredRules: []int{1, 21},
 							NonTriggeredRules: []int{20, 2, 1313},
-							// LogContains: "FoundSubChain21 REQUEST_HEADERS:Host in MATCHED_VARS_NAMES:REQUEST_HEADERS:Host",
+							LogContains: "FoundSubChain21 REQUEST_HEADERS:Host in MATCHED_VARS_NAMES:REQUEST_HEADERS:Host",
 						},
 					},
 				},
@@ -105,8 +102,10 @@ SecRule REQUEST_HEADERS "@rx attack20" \
   msg:'Chained rule Parent test',\
   logdata:'FoundChain20 %{MATCHED_VAR} in %{MATCHED_VAR_NAME}',\
   chain"
-  SecRule MATCHED_VARS_NAMES "@rx host" \
-    "block"
+  SecRule MATCHED_VARS_NAMES "@rx Host" \
+	  "chain"
+		    SecRule REQUEST_HEADERS:Host "@rx attack20" \
+    		"block"
 
 SecRule REQUEST_HEADERS "@rx attack21" \
   "id:21,\

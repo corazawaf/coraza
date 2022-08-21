@@ -318,6 +318,9 @@ func (r *Rule) matchVariable(tx *Transaction, m types.MatchData) {
 	if rid == 0 {
 		rid = r.ParentID
 	}
+	// if r.ID != 0 {
+	//	fmt.Printf("MatchedVar %d :::\n %+v\n", r.ID, m)
+	// }
 	if !m.IsNil() {
 		tx.Waf.Logger.Debug("[%s] [%d] Matching rule %d %s:%s", tx.ID, rid, r.ID, m.VariableName, m.Key)
 	}
