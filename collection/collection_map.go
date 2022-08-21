@@ -80,12 +80,12 @@ func (c *Map) FindString(key string) []types.MatchData {
 // FindAll returns all the contained elements
 func (c *Map) FindAll() []types.MatchData {
 	result := []types.MatchData{}
-	for k, data := range c.data {
+	for _, data := range c.data {
 		for _, d := range data {
 			result = append(result, types.MatchData{
 				VariableName: c.name,
 				Variable:     c.variable,
-				Key:          k,
+				Key:          d.Name,
 				Value:        d.Value,
 			})
 		}
