@@ -179,9 +179,10 @@ const (
 
 // Interruption is used to notify the Coraza implementation
 // that the transaction must be disrupted, for example:
-// if it := tx.Interruption; it != nil {
-//	return show403()
-//}
+//
+//	if it := tx.Interruption; it != nil {
+//		return show403()
+//	}
 type Interruption struct {
 	// Rule that caused the interruption
 	RuleID int

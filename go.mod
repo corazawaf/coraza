@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/corazawaf/libinjection-go v0.0.0-20220207031228-44e9c4250eb5
 	github.com/foxcpp/go-mockdns v1.0.0
+	github.com/magefile/mage v1.13.0
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20211021192214-5ab2d9280aa9
 	go.uber.org/zap v1.22.0
 	golang.org/x/net v0.0.0-20220722155237-a158d28d115b
