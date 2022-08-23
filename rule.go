@@ -263,6 +263,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		r.matchVariable(tx, &md)
 	} else {
 		ecol := tx.ruleRemoveTargetByID[r.ID]
+		captured := false
 		for _, v := range r.variables {
 			var values []MatchData
 			for _, c := range ecol {
@@ -328,7 +329,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 
 						// we only capture when it matches
 						if r.Capture {
-							defer tx.resetCaptures()
+							captured = true
 						}
 					}
 					tx.Waf.Logger.Debug("Evaluate rule operator", zap.String("txid", tx.ID),
@@ -343,6 +344,10 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 					)
 				}
 			}
+		}
+
+		if captured {
+			defer tx.resetCaptures()
 		}
 	}
 
