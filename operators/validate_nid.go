@@ -15,8 +15,8 @@ import (
 type validateNidFunction = func(input string) bool
 
 type validateNid struct {
-	fn  validateNidFunction
-	rgx string
+	fn validateNidFunction
+	re *regexp.Regexp
 }
 
 func (o *validateNid) Init(options coraza.RuleOperatorOptions) error {
@@ -34,13 +34,16 @@ func (o *validateNid) Init(options coraza.RuleOperatorOptions) error {
 	default:
 		return fmt.Errorf("invalid @validateNid argument")
 	}
-	o.rgx = spl[1]
+	re, err := regexp.Compile(spl[1])
+	if err != nil {
+		return err
+	}
+	o.re = re
 	return nil
 }
 
 func (o *validateNid) Evaluate(tx *coraza.Transaction, value string) bool {
-	re, _ := regexp.Compile(o.rgx)
-	matches := re.FindAllStringSubmatch(value, -1)
+	matches := o.re.FindAllStringSubmatch(value, -1)
 
 	res := false
 	for i, m := range matches {
