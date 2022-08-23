@@ -20,13 +20,13 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
       - name: Install Go
         uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go-version }}
           cache: true
-      - name: Checkout code
-        uses: actions/checkout@v3
       - name: Tests and coverage
         run: go run mage.go coverage
       - name: SonarCloud Scan
