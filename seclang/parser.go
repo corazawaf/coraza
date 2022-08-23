@@ -23,9 +23,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/corazawaf/coraza/v2/types"
-
 	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v2/types"
 	"go.uber.org/zap"
 )
 
