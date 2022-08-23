@@ -34,9 +34,12 @@ func (o *validateNid) Init(options coraza.RuleOperatorOptions) error {
 	default:
 		return fmt.Errorf("invalid @validateNid argument")
 	}
-	var err error
-	o.re, err = regexp.Compile(spl[1])
-	return err
+	re, err := regexp.Compile(spl[1])
+	if err != nil { 
+		return err 
+	} 
+	o.re = re 
+	return nil
 }
 
 func (o *validateNid) Evaluate(tx *coraza.Transaction, value string) bool {
