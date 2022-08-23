@@ -41,7 +41,7 @@ Did you write a patch that fixes a bug?
 
 * Open a new GitHub pull request which includes your changes.
 * Please include a description which clearly describes the change. Include the relevant issue number if applicable.
-* We use the [pre-commit](https://pre-commit.com/) framework to perform quality tests before sending them for review. It is recommended you [install](https://pre-commit.com/#install) it and use it before sending any patches.
+* You may consider installing a pre-commit hook to automatically run required checks with `go run mage.go precommit`
 
 ## Enhancements
 
@@ -63,12 +63,14 @@ Do you have questions about the source code? Ask any question about how to use C
 
 Coraza uses Go's built-in test tool. Examples (run from the repository root):
 
-- `go test -v`
+- `go test -v` or `go run mage.go test`
 - `go test -v -race ` use to enable the built-in data race detector
 - `go test -run TestDefaultWriters -v ./loggers` run all tests loggers package with name substring `TestDefaultWriters`
 
-- `pre-commit run --all-files` run tests using pre-commit 
-- `pre-commit install` install the pre-commit git hook
+- `go run mage.go lint` run code style checks
+- `go run mage.go check` run tests and code style checks
+
+- `go run mage.go precommit` install the pre-commit git hook
 
 _________________
 

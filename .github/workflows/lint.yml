@@ -1,23 +1,16 @@
-name: lint (pre-commit)
+name: lint
 
 on:
   pull_request:
   push:
 jobs:
-  pre-commit:
+  lint:
     runs-on: ubuntu-latest
     steps:
     - name: Install Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v3
       with:
         go-version: v1.18.x
-    - name: Install dependencies
-      run: |
-        cd /tmp && go install github.com/go-critic/go-critic/cmd/gocritic@latest
-        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.46.2
-        go install golang.org/x/lint/golint@latest
-    - uses: actions/checkout@v2
-    - uses: actions/setup-python@v2
-    - uses: pre-commit/action@v2.0.3
-      with: 
-        extra_args: --all-files
+        cache: true
+    - uses: actions/checkout@v3
+    - run: go run mage.go lint
