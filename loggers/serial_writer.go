@@ -7,7 +7,6 @@
 package loggers
 
 import (
-	"bytes"
 	"io"
 	"io/fs"
 	"log"
@@ -39,7 +38,7 @@ func (sl *serialWriter) Init(c types.Config) error {
 	} else {
 		file = io.Discard
 		// Nothing to close so just set a no-op
-		sl.file = io.NopCloser(&bytes.Buffer{})
+		sl.file = noopCloser{}
 	}
 	sl.log.SetFlags(0)
 	sl.log.SetOutput(file)
@@ -61,3 +60,10 @@ func (sl *serialWriter) Close() error {
 }
 
 var _ LogWriter = (*serialWriter)(nil)
+
+type noopCloser struct {
+}
+
+func (nc noopCloser) Close() error {
+	return nil
+}
