@@ -16,7 +16,6 @@ package operators
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -43,7 +42,7 @@ func TestTransformations(t *testing.T) {
 	}
 	if err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if strings.HasSuffix(path, ".json") {
-			data, _ := ioutil.ReadFile(path)
+			data, _ := os.ReadFile(path)
 			files[path] = data
 		}
 		return nil
