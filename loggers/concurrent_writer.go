@@ -29,15 +29,22 @@ type concurrentWriter struct {
 }
 
 func (cl *concurrentWriter) Init(c types.Config) error {
-	fileName := c.Get("auditlog_file", "/dev/null").(string)
 	cl.auditFileMode = c.Get("auditlog_file_mode", fs.FileMode(0644)).(fs.FileMode)
 	cl.auditDir = c.Get("auditlog_dir", "").(string)
 	cl.auditDirMode = c.Get("auditlog_dir_mode", fs.FileMode(0755)).(fs.FileMode)
 	cl.formatter = c.Get("auditlog_formatter", nativeFormatter).(LogFormatter)
 	cl.mux = &sync.RWMutex{}
-	faudit, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, cl.auditFileMode)
-	if err != nil {
-		return err
+
+	fileName := c.Get("auditlog_file", "").(string)
+	var faudit io.Writer
+	if fileName != "" {
+		f, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, cl.auditFileMode)
+		if err != nil {
+			return err
+		}
+		faudit = f
+	} else {
+		faudit = io.Discard
 	}
 	mw := io.MultiWriter(faudit)
 	cl.auditlogger = log.New(mw, "", 0)
