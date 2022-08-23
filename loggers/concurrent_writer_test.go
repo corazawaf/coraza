@@ -18,9 +18,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -28,13 +28,14 @@ import (
 )
 
 func TestCLogFileCreation(t *testing.T) {
-	file, err := ioutil.TempFile("/tmp", "tmpaudir")
+	dir := t.TempDir()
+	file, err := os.Create(filepath.Join(dir, "audit.log"))
 	if err != nil {
 		t.Error("failed to create concurrent logger file")
 	}
 	config := types.Config{
 		"auditlog_file":      file.Name(),
-		"auditlog_dir":       "/tmp",
+		"auditlog_dir":       dir,
 		"auditlog_file_mode": fs.FileMode(0777),
 		"auditlog_dir_mode":  fs.FileMode(0777),
 		"auditlog_formatter": jsonFormatter,
@@ -57,7 +58,7 @@ func TestCLogFileCreation(t *testing.T) {
 	}
 	tt := time.Unix(0, ts)
 	p2 := fmt.Sprintf("/%s/%s/", tt.Format("20060102"), tt.Format("20060102-1504"))
-	logdir := path.Join("/tmp", p2)
+	logdir := path.Join(dir, p2)
 	// Append the filename
 	fname := fmt.Sprintf("/%s-%s", tt.Format("20060102-150405"), al.Transaction.ID)
 	p := path.Join(logdir, fname)
