@@ -35,10 +35,10 @@ func (o *validateNid) Init(options coraza.RuleOperatorOptions) error {
 		return fmt.Errorf("invalid @validateNid argument")
 	}
 	re, err := regexp.Compile(spl[1])
-	if err != nil { 
-		return err 
-	} 
-	o.re = re 
+	if err != nil {
+		return err
+	}
+	o.re = re
 	return nil
 }
 
