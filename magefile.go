@@ -44,13 +44,17 @@ func Format() error {
 
 // Lint verifies code quality.
 func Lint() error {
+	if err := sh.RunV("go", "run", fmt.Sprintf("github.com/golangci/golangci-lint/cmd/golangci-lint@%s", golangCILintVer), "run"); err != nil {
+		return err
+	}
+
 	mg.SerialDeps(Format)
 
 	if sh.Run("git", "diff", "--exit-code") != nil {
 		return errCommitFormatting
 	}
 
-	return sh.RunV("go", "run", fmt.Sprintf("github.com/golangci/golangci-lint/cmd/golangci-lint@%s", golangCILintVer), "run")
+	return nil
 }
 
 // Test runs all tests.
