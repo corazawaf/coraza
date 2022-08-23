@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -78,7 +77,7 @@ func (cl concurrentWriter) Write(al *AuditLog) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(filepath, []byte(jsdata), cl.auditFileMode)
+	err = os.WriteFile(filepath, []byte(jsdata), cl.auditFileMode)
 	if err != nil {
 		return err
 	}
