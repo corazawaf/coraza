@@ -15,7 +15,7 @@ import (
 
 func TestBodyReaderMemory(t *testing.T) {
 	br := NewBodyBuffer(types.BodyBufferOptions{
-		TmpPath:     "/tmp",
+		TmpPath:     t.TempDir(),
 		MemoryLimit: 500,
 	})
 	if _, err := br.Write([]byte("test")); err != nil {
@@ -42,7 +42,7 @@ func TestBodyReaderFile(t *testing.T) {
 
 	// body reader memory limit is 1 byte
 	br := NewBodyBuffer(types.BodyBufferOptions{
-		TmpPath:     "/tmp",
+		TmpPath:     t.TempDir(),
 		MemoryLimit: 1,
 	})
 	if _, err := br.Write([]byte("test")); err != nil {
@@ -72,7 +72,7 @@ func TestBodyReaderFile(t *testing.T) {
 
 func TestBodyReaderWriteFromReader(t *testing.T) {
 	br := NewBodyBuffer(types.BodyBufferOptions{
-		TmpPath:     "/tmp",
+		TmpPath:     t.TempDir(),
 		MemoryLimit: 5,
 	})
 	b := strings.NewReader("test")

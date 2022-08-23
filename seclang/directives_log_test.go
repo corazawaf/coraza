@@ -10,6 +10,7 @@ package seclang
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,16 +24,16 @@ import (
 
 func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	waf := coraza.NewWaf()
-	auditpath := "/tmp/"
+	auditpath := t.TempDir()
 	parser, _ := NewParser(waf)
-	if err := parser.FromString(`
-	SecAuditLog /tmp/audit.log
+	if err := parser.FromString(fmt.Sprintf(`
+	SecAuditLog %s
 	SecAuditLogFormat json
-	SecAuditLogDir /tmp
+	SecAuditLogDir %s
 	SecAuditLogDirMode 0777
 	SecAuditLogFileMode 0777
 	SecAuditLogType concurrent
-	`); err != nil {
+	`, filepath.Join(auditpath, "audit.log"), auditpath)); err != nil {
 		t.Error(err)
 	}
 	id := utils.SafeRandom(10)

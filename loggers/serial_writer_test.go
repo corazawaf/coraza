@@ -8,17 +8,15 @@ package loggers
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 func TestSerialLogger_Write(t *testing.T) {
-	tmp := path.Join("/tmp", utils.SafeRandom(10)+"-audit.log")
-	defer os.Remove(tmp)
+	tmp := filepath.Join(t.TempDir(), "audit.log")
 	writer := &serialWriter{}
 	config := types.Config{
 		"auditlog_file":      tmp,
