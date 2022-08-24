@@ -61,20 +61,20 @@ func BenchmarkModSecurityCRSSimpleGET(b *testing.B) {
 		b.Error(err)
 	}
 	for i := 0; i < b.N; i++ {
-		tx, err := rs.NewTransaction("127.0.0.1:8080", "127.0.0.1:8080")
+		tx, err := rs.NewTransaction("127.0.0.1", 8080, "127.0.0.1", 8080)
 		if err != nil {
 			b.Error(err)
 		}
 		if err := tx.ProcessUri("/some_path/with?parameters=and&other=Stuff", "GET", "1.1"); err != nil {
 			b.Error(err)
 		}
-		if err := tx.AddRequestHeader([]byte("Host"), []byte("localhost")); err != nil {
+		if err := tx.AddRequestHeader("Host", "localhost"); err != nil {
 			b.Error(err)
 		}
-		if err := tx.AddRequestHeader([]byte("User-Agent"), []byte("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36")); err != nil {
+		if err := tx.AddRequestHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36"); err != nil {
 			b.Error(err)
 		}
-		if err := tx.AddRequestHeader([]byte("Accept"), []byte("application/json")); err != nil {
+		if err := tx.AddRequestHeader("Accept", "application/json"); err != nil {
 			b.Error(err)
 		}
 		if err := tx.ProcessRequestHeaders(); err != nil {
@@ -83,7 +83,7 @@ func BenchmarkModSecurityCRSSimpleGET(b *testing.B) {
 		if err := tx.ProcessRequestBody(); err != nil {
 			b.Error(err)
 		}
-		if err := tx.AddResponseHeader([]byte("Content-Type"), []byte("application/json")); err != nil {
+		if err := tx.AddResponseHeader("Content-Type", "application/json"); err != nil {
 			b.Error(err)
 		}
 		if err := tx.ProcessResponseHeaders(200, "1.1"); err != nil {
@@ -106,28 +106,28 @@ func BenchmarkModSecurityCRSSimplePOST(b *testing.B) {
 		b.Error(err)
 	}
 	for i := 0; i < b.N; i++ {
-		tx, err := rs.NewTransaction("127.0.0.1:8080", "127.0.0.1:8080")
+		tx, err := rs.NewTransaction("127.0.0.1", 8080, "127.0.0.1", 8080)
 		if err != nil {
 			b.Error(err)
 		}
 		if err := tx.ProcessUri("/some_path/with?parameters=and&other=Stuff", "POST", "1.1"); err != nil {
 			b.Error(err)
 		}
-		if err := tx.AddRequestHeader([]byte("Host"), []byte("localhost")); err != nil {
+		if err := tx.AddRequestHeader("Host", "localhost"); err != nil {
 			b.Error(err)
 		}
-		if err := tx.AddRequestHeader([]byte("User-Agent"), []byte("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36")); err != nil {
+		if err := tx.AddRequestHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36"); err != nil {
 			b.Error(err)
 		}
-		if err := tx.AddRequestHeader([]byte("Accept"), []byte("application/json")); err != nil {
+		if err := tx.AddRequestHeader("Accept", "application/json"); err != nil {
 			b.Error(err)
 		}
-		if err := tx.AddRequestHeader([]byte("Content-Type"), []byte("application/x-www-form-urlencoded")); err != nil {
+		if err := tx.AddRequestHeader("Content-Type", "application/x-www-form-urlencoded"); err != nil {
 			b.Error(err)
 		}
 		body := []byte("parameters2=and&other2=Stuff")
 
-		if err := tx.AddRequestHeader([]byte("Content-Length"), []byte(strconv.Itoa(len(body)))); err != nil {
+		if err := tx.AddRequestHeader("Content-Length", strconv.Itoa(len(body))); err != nil {
 			b.Error(err)
 		}
 		if err := tx.ProcessRequestHeaders(); err != nil {
@@ -139,7 +139,7 @@ func BenchmarkModSecurityCRSSimplePOST(b *testing.B) {
 		if err := tx.ProcessRequestBody(); err != nil {
 			b.Error(err)
 		}
-		if err := tx.AddResponseHeader([]byte("Content-Type"), []byte("application/json")); err != nil {
+		if err := tx.AddResponseHeader("Content-Type", "application/json"); err != nil {
 			b.Error(err)
 		}
 		if err := tx.ProcessResponseHeaders(200, "1.1"); err != nil {
