@@ -1,5 +1,3 @@
-github.com/anuraaga/go-modsecurity v0.0.0-20220816070944-f36055ce7d5d h1:6MEruON1LI/62GV5Z6bh6eN1j7nN6np8dEoci7eMHwA=
-github.com/anuraaga/go-modsecurity v0.0.0-20220816070944-f36055ce7d5d/go.mod h1:7jguE759ADzy2EkxGRXigiC0ER1Yq2IFk2qNtwgzc7U=
 github.com/anuraaga/go-modsecurity v0.0.0-20220824035035-b9a4099778df h1:YWiVl53v0R8Knj/k+4slO0SXPL67Y4dXWiOIWNzrkew=
 github.com/anuraaga/go-modsecurity v0.0.0-20220824035035-b9a4099778df/go.mod h1:7jguE759ADzy2EkxGRXigiC0ER1Yq2IFk2qNtwgzc7U=
 github.com/corazawaf/libinjection-go v0.0.0-20220207031228-44e9c4250eb5 h1:SukhxLQRRBM3nJFEUF+ePG7l0JTWAvaxaG/o6X/FQVY=
