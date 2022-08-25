@@ -1,3 +1,6 @@
+// Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
+// SPDX-License-Identifier: Apache-2.0
+
 // Logs are currently disabled for tinygo
 
 //go:build !tinygo
@@ -7,7 +10,7 @@ package seclang
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,16 +24,16 @@ import (
 
 func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	waf := coraza.NewWaf()
-	auditpath := "/tmp/"
+	auditpath := t.TempDir()
 	parser, _ := NewParser(waf)
-	if err := parser.FromString(`
-	SecAuditLog /tmp/audit.log
+	if err := parser.FromString(fmt.Sprintf(`
+	SecAuditLog %s
 	SecAuditLogFormat json
-	SecAuditLogDir /tmp
+	SecAuditLogDir %s
 	SecAuditLogDirMode 0777
 	SecAuditLogFileMode 0777
 	SecAuditLogType concurrent
-	`); err != nil {
+	`, filepath.Join(auditpath, "audit.log"), auditpath)); err != nil {
 		t.Error(err)
 	}
 	id := utils.SafeRandom(10)
@@ -93,7 +96,7 @@ func TestDebugDirectives(t *testing.T) {
 
 // Find a file by name recursively containing some string
 func findFileContaining(path string, search string) (string, error) {
-	files, err := ioutil.ReadDir(path)
+	files, err := os.ReadDir(path)
 	if err != nil {
 		return "", err
 	}

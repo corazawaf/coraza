@@ -1,8 +1,10 @@
+// Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
+// SPDX-License-Identifier: Apache-2.0
+
 package io
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 )
@@ -15,13 +17,13 @@ func ReadFirstFile(directories []string, filename string) ([]byte, error) {
 	}
 	if filename[0] == '/' {
 		// filename is absolute
-		return ioutil.ReadFile(filename)
+		return os.ReadFile(filename)
 	}
 	for _, p := range directories {
 		f := path.Join(p, filename)
 		// if the file does exist we return it
 		if _, err := os.Stat(f); err == nil {
-			return ioutil.ReadFile(f)
+			return os.ReadFile(f)
 		}
 	}
 	return nil, fmt.Errorf("file %s not found", filename)

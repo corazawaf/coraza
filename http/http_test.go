@@ -1,20 +1,9 @@
+// Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
+// SPDX-License-Identifier: Apache-2.0
+
 // tinygo does not support net.http so this package is not needed for it
 //go:build !tinygo
 // +build !tinygo
-
-// Copyright 2022 Juan Pablo Tosso
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 package http
 
@@ -23,7 +12,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -96,7 +84,7 @@ func multipartRequest(t *testing.T, req *http.Request) error {
 	if _, err = io.Copy(fw, tempfile); err != nil {
 		return err
 	}
-	req.Body = ioutil.NopCloser(&b)
+	req.Body = io.NopCloser(&b)
 	req.Header.Set("Content-Type", w.FormDataContentType())
 	req.Method = "POST"
 	return nil

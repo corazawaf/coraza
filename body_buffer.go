@@ -1,16 +1,5 @@
-// Copyright 2022 Juan Pablo Tosso
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
+// SPDX-License-Identifier: Apache-2.0
 
 package coraza
 
@@ -19,6 +8,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -37,7 +27,7 @@ type BodyBuffer struct {
 // You may dump io.Readers using io.Copy(br, reader)
 func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	l := int64(len(data)) + br.length
-	if l >= br.options.MemoryLimit {
+	if !environment.IsTinyGo && l >= br.options.MemoryLimit {
 		if br.writer == nil {
 			br.writer, err = os.CreateTemp(br.options.TmpPath, "body*")
 			if err != nil {
@@ -58,7 +48,7 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 
 // Reader Returns a working reader for the body buffer in memory or file
 func (br *BodyBuffer) Reader() (io.Reader, error) {
-	if br.writer == nil {
+	if environment.IsTinyGo || br.writer == nil {
 		return bytes.NewReader(br.buffer.Bytes()), nil
 	}
 	if _, err := br.writer.Seek(0, 0); err != nil {
@@ -76,7 +66,7 @@ func (br *BodyBuffer) Size() int64 {
 func (br *BodyBuffer) Close() error {
 	br.buffer.Reset()
 	br.buffer = nil
-	if br.writer != nil {
+	if !environment.IsTinyGo && br.writer != nil {
 		if err := br.writer.Close(); err != nil {
 			return err
 		}
