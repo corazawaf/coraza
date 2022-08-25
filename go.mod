@@ -7,7 +7,7 @@ require (
 	github.com/foxcpp/go-mockdns v1.0.0
 	github.com/magefile/mage v1.13.0
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20211021192214-5ab2d9280aa9
-	go.uber.org/zap v1.22.0
+	go.uber.org/zap v1.23.0
 	golang.org/x/net v0.0.0-20220722155237-a158d28d115b
 	gopkg.in/yaml.v2 v2.4.0
 )
