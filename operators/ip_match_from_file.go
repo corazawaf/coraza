@@ -43,3 +43,5 @@ func (o *ipMatchFromFile) Init(options coraza.RuleOperatorOptions) error {
 func (o *ipMatchFromFile) Evaluate(tx *engine.Transaction, value string) bool {
 	return o.ip.Evaluate(tx, value)
 }
+
+var _ coraza.RuleOperator = (*ipMatchFromFile)(nil)
