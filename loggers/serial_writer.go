@@ -61,8 +61,9 @@ func (sl *serialWriter) Close() error {
 
 var _ LogWriter = (*serialWriter)(nil)
 
-type noopCloser struct {
-}
+type noopCloser struct{}
+
+var _ io.Closer = (*noopCloser)(nil)
 
 func (nc noopCloser) Close() error {
 	return nil

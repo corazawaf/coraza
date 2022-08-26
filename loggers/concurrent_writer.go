@@ -35,9 +35,8 @@ func (cl *concurrentWriter) Init(c types.Config) error {
 	cl.formatter = c.Get("auditlog_formatter", nativeFormatter).(LogFormatter)
 	cl.mux = &sync.RWMutex{}
 
-	fileName := c.Get("auditlog_file", "").(string)
 	faudit := io.Discard
-	if fileName != "" {
+	if fileName := c.Get("auditlog_file", "").(string); fileName != "" {
 		f, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, cl.auditFileMode)
 		if err != nil {
 			return err
