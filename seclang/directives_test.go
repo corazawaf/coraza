@@ -181,3 +181,19 @@ func TestInvalidRulesWithIgnoredErrors(t *testing.T) {
 		t.Error("failed to error on invalid rule")
 	}
 }
+
+func TestSecDataset(t *testing.T) {
+	waf := coraza.NewWaf()
+	p, _ := NewParser(waf)
+	if err := p.FromString("" +
+		"SecDataset test `\n123\n456\n`\n"); err != nil {
+		t.Error(err)
+	}
+	ds := p.options.Datasets["test"]
+	if len(ds) != 2 {
+		t.Errorf("failed to add dataset, got %d records", len(ds))
+	}
+	if ds[0] != "123" || ds[1] != "456" {
+		t.Error("failed to add dataset")
+	}
+}

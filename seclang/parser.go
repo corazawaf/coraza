@@ -76,19 +76,29 @@ func (p *Parser) FromString(data string) error {
 	scanner := bufio.NewScanner(strings.NewReader(data))
 	var linebuffer = ""
 	pattern := regexp.MustCompile(`\\(\s+)?$`)
+	inQuotes := false
 	for scanner.Scan() {
 		p.currentLine++
-		line := scanner.Text()
-		linebuffer += strings.TrimSpace(line)
+		line := strings.TrimSpace(scanner.Text())
+		if !inQuotes && len(line) > 0 && line[len(line)-1] == '`' {
+			inQuotes = true
+		} else if inQuotes && len(line) > 0 && line[0] == '`' {
+			inQuotes = false
+		}
+		if inQuotes {
+			linebuffer += line + "\n"
+		} else {
+			linebuffer += line
+		}
+
 		// Check if line ends with \
-		match := pattern.MatchString(line)
-		if !match {
+		if !pattern.MatchString(line) && !inQuotes {
 			err := p.evaluate(linebuffer)
 			if err != nil {
 				return err
 			}
 			linebuffer = ""
-		} else {
+		} else if !inQuotes {
 			linebuffer = strings.TrimSuffix(linebuffer, "\\")
 		}
 	}
@@ -158,8 +168,9 @@ func NewParser(waf *coraza.Waf) (*Parser, error) {
 	}
 	p := &Parser{
 		options: &DirectiveOptions{
-			Waf:    waf,
-			Config: make(types.Config),
+			Waf:      waf,
+			Config:   make(types.Config),
+			Datasets: make(map[string][]string),
 		},
 	}
 	return p, nil
