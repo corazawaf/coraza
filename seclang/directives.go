@@ -18,10 +18,11 @@ import (
 
 // DirectiveOptions contains the parsed options for a directive
 type DirectiveOptions struct {
-	Waf    *coraza.Waf
-	Config types.Config
-	Opts   string
-	Path   []string
+	Waf      *coraza.Waf
+	Config   types.Config
+	Opts     string
+	Path     []string
+	Datasets map[string][]string
 }
 
 type directive = func(options *DirectiveOptions) error
@@ -470,6 +471,28 @@ func directiveSecIgnoreRuleCompilationErrors(options *DirectiveOptions) error {
 	return nil
 }
 
+func directiveSecDataset(options *DirectiveOptions) error {
+	spl := strings.SplitN(options.Opts, " ", 2)
+	if len(spl) != 2 {
+		return errors.New("syntax error: SecDataset name `\n...\n`")
+	}
+	name := spl[0]
+	if _, ok := options.Datasets[name]; ok {
+		options.Waf.Logger.Warn("Dataset %s already exists, overwriting", name)
+	}
+	arr := []string{}
+	data := strings.Trim(spl[1], "`")
+	for _, s := range strings.Split(data, "\n") {
+		s = strings.TrimSpace(s)
+		if s == "" || s[0] == '#' {
+			continue
+		}
+		arr = append(arr, s)
+	}
+	options.Datasets[name] = arr
+	return nil
+}
+
 func newCompileRuleError(err error, opts string) error {
 	return fmt.Errorf("failed to compile rule (%s): %s", err, opts)
 }
@@ -573,6 +596,7 @@ var directivesMap = map[string]directive{
 	"secauditlogfilemode":            directiveSecAuditLogFileMode,
 	"secauditlogdirmode":             directiveSecAuditLogDirMode,
 	"secignorerulecompilationerrors": directiveSecIgnoreRuleCompilationErrors,
+	"secdataset":                     directiveSecDataset,
 
 	// Unsupported Directives
 	"secargumentseparator":     directiveUnsupported,

@@ -52,6 +52,9 @@ type RuleOperatorOptions struct {
 
 	// Path is used to store a list of possible data paths
 	Path []string
+
+	// Datasets contains input datasets or dictionaries
+	Datasets map[string][]string
 }
 
 // RuleOperator interface is used to define rule @operators
