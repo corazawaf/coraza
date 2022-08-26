@@ -37,3 +37,16 @@ func TestIpMatchFromDataset(t *testing.T) {
 		}
 	}
 }
+
+func TestIpMatchFromEmptyDataset(t *testing.T) {
+	ipm := &ipMatchFromDataset{}
+	opts := coraza.RuleOperatorOptions{
+		Arguments: "test_1",
+		Datasets: map[string][]string{
+			"test_1": {},
+		},
+	}
+	if err := ipm.Init(opts); err == nil {
+		t.Error("Empty dataset not checked")
+	}
+}
