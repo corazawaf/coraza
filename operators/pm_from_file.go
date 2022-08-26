@@ -39,7 +39,6 @@ func (o *pmFromFile) Init(options coraza.RuleOperatorOptions) error {
 		DFA:                  false,
 	})
 
-	// TODO this operator is supposed to support snort data syntax: "@pm A|42|C|44|F"
 	o.matcher = builder.Build(lines)
 	return nil
 }

@@ -30,7 +30,6 @@ func (o *pmFromDataset) Init(options coraza.RuleOperatorOptions) error {
 		DFA:                  true,
 	})
 
-	// TODO this operator is supposed to support snort data syntax: "@pmFromDataset A|42|C|44|F"
 	o.matcher = builder.Build(dataset)
 	return nil
 }
