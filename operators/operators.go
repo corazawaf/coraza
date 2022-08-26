@@ -33,6 +33,7 @@ func init() {
 	Register("streq", func() coraza.RuleOperator { return &streq{} })
 	Register("ipMatch", func() coraza.RuleOperator { return &ipMatch{} })
 	Register("ipMatchFromFile", func() coraza.RuleOperator { return &ipMatchFromFile{} })
+	Register("ipMatchFromDataset", func() coraza.RuleOperator { return &ipMatchFromDataset{} })
 	Register("rbl", func() coraza.RuleOperator { return &rbl{} })
 	Register("validateUtf8Encoding", func() coraza.RuleOperator { return &validateUtf8Encoding{} })
 	Register("noMatch", func() coraza.RuleOperator { return &noMatch{} })
