@@ -9,7 +9,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/seclang"
-	_ "github.com/corazawaf/coraza/v3/testdata/engine"
+	_ "github.com/corazawaf/coraza/v3/testing/engine"
 	"github.com/corazawaf/coraza/v3/testing/profile"
 )
 
@@ -65,7 +65,7 @@ func testList(p *profile.Profile, waf *coraza.Waf) ([]*Test, error) {
 			if w == nil || p.Rules != "" {
 				w = coraza.NewWaf()
 				parser, _ := seclang.NewParser(w)
-				parser.SetCurrentDir("../testdata/")
+				parser.SetCurrentDir("./testdata/")
 				if err := parser.FromString(p.Rules); err != nil {
 					return nil, err
 				}

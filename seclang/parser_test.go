@@ -62,7 +62,7 @@ func TestHardcodedIncludeDirective(t *testing.T) {
 func TestHardcodedSubIncludeDirective(t *testing.T) {
 	waf := coraza.NewWaf()
 	p, _ := NewParser(waf)
-	if err := p.FromString("Include ../testdata/includes/parent.conf"); err != nil {
+	if err := p.FromString("Include ./testdata/includes/parent.conf"); err != nil {
 		t.Error(err)
 	}
 	if waf.Rules.Count() != 3 {
@@ -74,7 +74,7 @@ func TestHardcodedSubIncludeDirectiveAbsolutePath(t *testing.T) {
 	waf := coraza.NewWaf()
 	p, _ := NewParser(waf)
 	currentDir, _ := filepath.Abs("./")
-	ruleFile := filepath.Join(currentDir, "../testdata/includes/parent.conf")
+	ruleFile := filepath.Join(currentDir, "./testdata/includes/parent.conf")
 	if err := p.FromString("Include " + ruleFile); err != nil {
 		t.Error(err)
 	}
