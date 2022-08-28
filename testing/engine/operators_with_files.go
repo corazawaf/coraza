@@ -36,9 +36,9 @@ var _ = profile.RegisterProfile(profile.Profile{
 		},
 	},
 	Rules: `
-SecRule ARGS_NAMES "@pmFromFile operators/op/pmFromFile-01.dat" "id:1,log"
-SecRule REQUEST_COOKIES:def "@pmFromFile operators/op/pmFromFile-01.dat" "id:3,log"
-SecRule REQUEST_COOKIES_NAMES "@pmFromFile operators/op/pmFromFile-01.dat" "id:5,log"
-SecRule REQUEST_HEADERS_NAMES "@pmFromFile operators/op/pmFromFile-01.dat" "id:10,log"
+SecRule ARGS_NAMES "@pmFromFile pmFromFile-01.dat" "id:1,log"
+SecRule REQUEST_COOKIES:def "@pmFromFile pmFromFile-01.dat" "id:3,log"
+SecRule REQUEST_COOKIES_NAMES "@pmFromFile pmFromFile-01.dat" "id:5,log"
+SecRule REQUEST_HEADERS_NAMES "@pmFromFile pmFromFile-01.dat" "id:10,log"
 `,
 })

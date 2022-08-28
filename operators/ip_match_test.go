@@ -59,7 +59,7 @@ func TestFromFile(t *testing.T) {
 	addrfail := []string{"127.0.0.2", "192.168.1.1"}
 
 	ipm := &ipMatchFromFile{}
-	data, err := os.ReadFile("../testdata/operators/op/netranges.dat")
+	data, err := os.ReadFile("./testdata/op/netranges.dat")
 	if err != nil {
 		t.Error("Cannot read test data", err)
 	}
