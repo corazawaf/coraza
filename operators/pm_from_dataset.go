@@ -4,46 +4,37 @@
 package operators
 
 import (
-	"bufio"
-	"strings"
+	"fmt"
 
 	"github.com/corazawaf/coraza/v3"
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
 )
 
-type pmFromFile struct {
+// TODO according to coraza researchs, re2 matching is faster than ahocorasick
+// maybe we should switch in the future
+// pmFromDataset is always lowercase
+type pmFromDataset struct {
 	matcher ahocorasick.AhoCorasick
 }
 
-func (o *pmFromFile) Init(options coraza.RuleOperatorOptions) error {
+func (o *pmFromDataset) Init(options coraza.RuleOperatorOptions) error {
 	data := options.Arguments
-
-	lines := []string{}
-	sc := bufio.NewScanner(strings.NewReader(data))
-	for sc.Scan() {
-		l := sc.Text()
-		l = strings.TrimSpace(l)
-		if len(l) == 0 {
-			continue
-		}
-		if l[0] == '#' {
-			continue
-		}
-		lines = append(lines, strings.ToLower(l))
+	dataset, ok := options.Datasets[data]
+	if !ok {
+		return fmt.Errorf("Dataset %q not found", data)
 	}
-
 	builder := ahocorasick.NewAhoCorasickBuilder(ahocorasick.Opts{
 		AsciiCaseInsensitive: true,
 		MatchOnlyWholeWords:  false,
 		MatchKind:            ahocorasick.LeftMostLongestMatch,
-		DFA:                  false,
+		DFA:                  true,
 	})
 
-	o.matcher = builder.Build(lines)
+	o.matcher = builder.Build(dataset)
 	return nil
 }
 
-func (o *pmFromFile) Evaluate(tx *coraza.Transaction, value string) bool {
+func (o *pmFromDataset) Evaluate(tx *coraza.Transaction, value string) bool {
 	if tx.Capture {
 		matches := o.matcher.FindAll(value)
 		for i, match := range matches {
@@ -58,4 +49,4 @@ func (o *pmFromFile) Evaluate(tx *coraza.Transaction, value string) bool {
 	return iter.Next() != nil
 }
 
-var _ coraza.RuleOperator = (*pmFromFile)(nil)
+var _ coraza.RuleOperator = (*pmFromDataset)(nil)
