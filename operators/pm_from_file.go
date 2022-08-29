@@ -5,6 +5,7 @@ package operators
 
 import (
 	"bufio"
+	"bytes"
 	"strings"
 
 	"github.com/corazawaf/coraza/v3"
@@ -16,10 +17,15 @@ type pmFromFile struct {
 }
 
 func (o *pmFromFile) Init(options coraza.RuleOperatorOptions) error {
-	data := options.Arguments
+	path := options.Arguments
+
+	data, err := loadFromFile(path, options.Path)
+	if err != nil {
+		return err
+	}
 
 	lines := []string{}
-	sc := bufio.NewScanner(strings.NewReader(data))
+	sc := bufio.NewScanner(bytes.NewReader(data))
 	for sc.Scan() {
 		l := sc.Text()
 		l = strings.TrimSpace(l)
