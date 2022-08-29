@@ -18,7 +18,10 @@ func getTestFile(t *testing.T) (string, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tmpFile.WriteString(fileContent)
+	_, err = tmpFile.WriteString(fileContent)
+	if err != nil {
+		t.Fatal(err)
+	}
 	return tmpDir, tmpFile.Name()
 }
 
