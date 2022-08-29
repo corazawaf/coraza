@@ -142,6 +142,12 @@ func (p *Parser) evaluate(data string) error {
 	p.options.Config.Set("last_profile_line", p.currentLine)
 	p.options.Config.Set("parser_config_file", p.currentFile)
 	p.options.Config.Set("parser_config_dir", p.currentDir)
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	p.options.Config.Set("working_dir", wd)
+
 	return d(p.options)
 }
 

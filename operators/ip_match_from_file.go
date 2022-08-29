@@ -5,6 +5,7 @@ package operators
 
 import (
 	"bufio"
+	"bytes"
 	"strings"
 
 	"github.com/corazawaf/coraza/v3"
@@ -12,14 +13,19 @@ import (
 )
 
 type ipMatchFromFile struct {
-	ip *ipMatch
+	ipMatcher *ipMatch
 }
 
 func (o *ipMatchFromFile) Init(options coraza.RuleOperatorOptions) error {
-	data := options.Arguments
+	path := options.Arguments
 
-	dataParsed := ""
-	sc := bufio.NewScanner(strings.NewReader(data))
+	data, err := loadFromFile(path, options.Path)
+	if err != nil {
+		return err
+	}
+
+	dataParsed := strings.Builder{}
+	sc := bufio.NewScanner(bytes.NewReader(data))
 	for sc.Scan() {
 		l := sc.Text()
 		l = strings.TrimSpace(l)
@@ -29,19 +35,19 @@ func (o *ipMatchFromFile) Init(options coraza.RuleOperatorOptions) error {
 		if l[0] == '#' {
 			continue
 		}
-		dataParsed += ","
-		dataParsed += l
+		dataParsed.WriteString(",")
+		dataParsed.WriteString(l)
 	}
 
-	o.ip = &ipMatch{}
+	o.ipMatcher = &ipMatch{}
 	opts := coraza.RuleOperatorOptions{
-		Arguments: dataParsed,
+		Arguments: dataParsed.String(),
 	}
-	return o.ip.Init(opts)
+	return o.ipMatcher.Init(opts)
 }
 
 func (o *ipMatchFromFile) Evaluate(tx *engine.Transaction, value string) bool {
-	return o.ip.Evaluate(tx, value)
+	return o.ipMatcher.Evaluate(tx, value)
 }
 
 var _ coraza.RuleOperator = (*ipMatchFromFile)(nil)

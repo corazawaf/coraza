@@ -5,7 +5,6 @@ package operators
 
 import (
 	_ "fmt"
-	"os"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3"
@@ -43,41 +42,13 @@ func TestMultipleAddress(t *testing.T) {
 	}
 	for _, ok := range addrok {
 		if !ipm.Evaluate(nil, ok) {
-			t.Errorf("Invalid result for single CIDR IpMatch " + ok)
+			t.Errorf("Invalid result for single CIDR IpMatch: %s", ok)
 		}
 	}
 
 	for _, fail := range addrfail {
 		if ipm.Evaluate(nil, fail) {
-			t.Errorf("Invalid result for single CIDR IpMatch" + fail)
-		}
-	}
-}
-
-func TestFromFile(t *testing.T) {
-	addrok := []string{"127.0.0.1", "192.168.0.1", "192.168.0.253"}
-	addrfail := []string{"127.0.0.2", "192.168.1.1"}
-
-	ipm := &ipMatchFromFile{}
-	data, err := os.ReadFile("./testdata/op/netranges.dat")
-	if err != nil {
-		t.Error("Cannot read test data", err)
-	}
-	opts := coraza.RuleOperatorOptions{
-		Arguments: string(data),
-	}
-	if err := ipm.Init(opts); err != nil {
-		t.Error("Cannot init ipmatchfromfile operator")
-	}
-	for _, ok := range addrok {
-		if !ipm.Evaluate(nil, ok) {
-			t.Errorf("Invalid result for single CIDR IpMatchFromFile " + ok)
-		}
-	}
-
-	for _, fail := range addrfail {
-		if ipm.Evaluate(nil, fail) {
-			t.Errorf("Invalid result for single CIDR IpMatchFromFile" + fail)
+			t.Errorf("Invalid result for single CIDR IpMatch: %s", fail)
 		}
 	}
 }

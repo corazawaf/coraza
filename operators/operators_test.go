@@ -6,7 +6,6 @@ package operators
 import (
 	"context"
 	"os"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -42,7 +41,7 @@ func TestOperators(t *testing.T) {
 	}
 	waf := coraza.NewWaf()
 	for _, f := range files {
-		cases := unmarshalTests(f)
+		cases := unmarshalTests(t, f)
 		for _, data := range cases {
 			t.Run(data.Name, func(t *testing.T) {
 				// UNMARSHALL does not transform \u0000 to binary
@@ -69,17 +68,10 @@ func TestOperators(t *testing.T) {
 					t.Logf("skipped error: %v", err)
 					return
 				}
-				if data.Name == "pmFromFile" || data.Name == "ipMatchFromFile" {
-					// read file
-					fname := path.Join(root, "op", data.Param)
-					d, err := os.ReadFile(fname)
-					if err != nil {
-						t.Errorf("Cannot open file %q", data.Param)
-					}
-					data.Param = string(d)
-				}
+
 				opts := coraza.RuleOperatorOptions{
 					Arguments: data.Param,
+					Path:      []string{"./testdata/op"},
 				}
 				if err := op.Init(opts); err != nil {
 					t.Error(err)
@@ -99,7 +91,8 @@ func TestOperators(t *testing.T) {
 	}
 }
 
-func unmarshalTests(json []byte) []Test {
+func unmarshalTests(t *testing.T, json []byte) []Test {
+	t.Helper()
 	var tests []Test
 	v := gjson.ParseBytes(json).Value()
 	for _, in := range v.([]interface{}) {
