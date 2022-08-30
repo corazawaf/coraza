@@ -4,7 +4,6 @@
 package operators
 
 import (
-	"errors"
 	"os"
 	"path"
 )
