@@ -824,11 +824,12 @@ func (tx *Transaction) Clean() error {
 
 	tx.Waf.Logger.Debug("[%s] Transaction finished, disrupted: %t", tx.ID, tx.Interrupted())
 
-	if len(errs) == 0 {
+	switch {
+	case len(errs) == 0:
 		return nil
-	} else if len(errs) == 1 {
+	case len(errs) == 1:
 		return fmt.Errorf("transaction clean failed: %s", errs[0].Error())
-	} else {
+	default:
 		return fmt.Errorf("transaction clean failed:\n- %s\n- %s", errs[0].Error(), errs[1].Error())
 	}
 }
