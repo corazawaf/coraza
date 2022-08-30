@@ -23,6 +23,13 @@ func getTestFile(t *testing.T) (string, string) {
 	return tmpDir, filename
 }
 
+func TestLoadFromFileNoPaths(t *testing.T) {
+	_, err := loadFromFile("non-existing-file", nil)
+	if err == nil {
+		t.Errorf("expected error: %s", errEmptyPaths.Error())
+	}
+}
+
 func TestLoadFromFileNoExist(t *testing.T) {
 	content, err := loadFromFile("non-existing-file", []string{t.TempDir()})
 	if err == nil {

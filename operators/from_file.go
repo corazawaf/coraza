@@ -4,13 +4,20 @@
 package operators
 
 import (
+	"errors"
 	"os"
 	"path"
 )
 
+var errEmptyPaths = errors.New("empty paths")
+
 func loadFromFile(filepath string, paths []string) ([]byte, error) {
 	if path.IsAbs(filepath) {
 		return os.ReadFile(filepath)
+	}
+
+	if len(paths) == 0 {
+		return nil, errEmptyPaths
 	}
 
 	// handling files by operators is hard because we must know the paths where we can
