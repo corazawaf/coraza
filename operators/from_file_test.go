@@ -5,6 +5,7 @@ package operators
 
 import (
 	"os"
+	"path"
 	"path/filepath"
 	"testing"
 )
@@ -14,15 +15,12 @@ const fileContent = "abc123"
 func getTestFile(t *testing.T) (string, string) {
 	t.Helper()
 	tmpDir := t.TempDir()
-	tmpFile, err := os.Create(filepath.Join(tmpDir, "tmpfile"))
+	filename := "tmpfile"
+	err := os.WriteFile(filepath.Join(tmpDir, filename), []byte(fileContent), 0755)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = tmpFile.WriteString(fileContent)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return tmpDir, tmpFile.Name()
+	return tmpDir, filename
 }
 
 func TestLoadFromFileNoExist(t *testing.T) {
@@ -37,13 +35,9 @@ func TestLoadFromFileNoExist(t *testing.T) {
 }
 
 func TestLoadFromFileAbsolutePath(t *testing.T) {
-	_, testFile := getTestFile(t)
-	absFilepath, err := filepath.Abs(testFile)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testDir, testFile := getTestFile(t)
 
-	content, err := loadFromFile(absFilepath, nil)
+	content, err := loadFromFile(path.Join(testDir, testFile), nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -58,7 +52,7 @@ func TestLoadFromFileRelativePath(t *testing.T) {
 
 	content, err := loadFromFile(testFile, []string{"/does-not-exist", testDir})
 	if err != nil {
-		t.Error(err)
+		t.Errorf("failed to load from file: %s", err)
 	}
 
 	if want, have := fileContent, string(content); want != have {

@@ -4,6 +4,7 @@
 package operators
 
 import (
+	"errors"
 	"os"
 	"path"
 )
@@ -29,7 +30,7 @@ func loadFromFile(filepath string, paths []string) ([]byte, error) {
 		absFilepath := path.Join(p, filepath)
 		content, err = os.ReadFile(absFilepath)
 		if err != nil {
-			if err == os.ErrNotExist {
+			if errors.Is(err, os.ErrNotExist) {
 				continue
 			} else {
 				return nil, err
