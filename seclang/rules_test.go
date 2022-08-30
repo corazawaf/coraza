@@ -305,7 +305,7 @@ func TestSampleRxRule(t *testing.T) {
 	}
 }
 
-func TestTXIssue147(t *testing.T) {
+func TestTxIssue147(t *testing.T) {
 	// https://github.com/corazawaf/coraza/issues/147
 	waf := coraza.NewWaf()
 	parser, _ := NewParser(waf)
