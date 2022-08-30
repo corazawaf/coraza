@@ -37,7 +37,7 @@ func TestOperators(t *testing.T) {
 		}
 		return nil
 	}); err != nil {
-		t.Error("failed to walk test files")
+		t.Errorf("failed to walk test files: %s", err.Error())
 	}
 	waf := coraza.NewWaf()
 	for _, f := range files {
@@ -51,7 +51,7 @@ func TestOperators(t *testing.T) {
 				if strings.Contains(data.Input, `\x`) {
 					in, err := strconv.Unquote(`"` + data.Input + `"`)
 					if err != nil {
-						t.Error("Cannot parse test case", err)
+						t.Errorf("Cannot parse test case: %s", err.Error())
 					} else {
 						data.Input = in
 					}
@@ -59,13 +59,13 @@ func TestOperators(t *testing.T) {
 				if strings.Contains(data.Param, `\x`) {
 					p, err := strconv.Unquote(`"` + data.Param + `"`)
 					if err != nil {
-						t.Error("Cannot parse test case", err)
+						t.Errorf("Cannot parse test case: %s", err.Error())
 					}
 					data.Param = p
 				}
 				op, err := Get(data.Name)
 				if err != nil {
-					t.Logf("skipped error: %v", err)
+					t.Logf("skipped error: %s", err.Error())
 					return
 				}
 

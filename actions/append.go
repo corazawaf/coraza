@@ -28,7 +28,7 @@ func (a *appendFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	}
 	data := a.data.Expand(tx)
 	if _, err := tx.ResponseBodyBuffer.Write([]byte(data)); err != nil {
-		tx.Waf.Logger.Error("append failed to write to response buffer %v", err)
+		tx.Waf.Logger.Error("append failed to write to response buffer: %s", err.Error())
 	}
 }
 

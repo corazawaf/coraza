@@ -63,7 +63,7 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	case ctlRemoveTargetByID:
 		ran, err := a.rangeToInts(tx.Waf.Rules.GetRules(), a.value)
 		if err != nil {
-			tx.Waf.Logger.Error("[ctl REMOVE_TARGET_BY_ID] invalid range: %v", err)
+			tx.Waf.Logger.Error("[ctl REMOVE_TARGET_BY_ID] invalid range: %s", err.Error())
 			return
 		}
 		for _, id := range ran {

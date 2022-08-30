@@ -35,7 +35,7 @@ func (a *setenvFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	v := a.value.Expand(tx)
 	// set env variable
 	if err := os.Setenv(a.key, v); err != nil {
-		tx.Waf.Logger.Error("[%s] Error setting env variable for rule %d: %v", tx.ID, r.ID, err)
+		tx.Waf.Logger.Error("[%s] Error setting env variable for rule %d: %s", tx.ID, r.ID, err.Error())
 	}
 	// TODO is this ok?
 	tx.Variables.Env.Set(a.key, []string{v})
