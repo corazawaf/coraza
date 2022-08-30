@@ -59,7 +59,7 @@ func TestLoadFromFileRelativePath(t *testing.T) {
 
 	content, err := loadFromFile(testFile, []string{"/does-not-exist", testDir})
 	if err != nil {
-		t.Errorf("failed to load from file: %s", err)
+		t.Errorf("failed to load from file: %s", err.Error())
 	}
 
 	if want, have := fileContent, string(content); want != have {
