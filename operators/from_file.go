@@ -30,7 +30,7 @@ func loadFromFile(filepath string, paths []string) ([]byte, error) {
 		absFilepath := path.Join(p, filepath)
 		content, err = os.ReadFile(absFilepath)
 		if err != nil {
-			if errors.Is(err, os.ErrNotExist) {
+			if os.IsNotExist(err) {
 				continue
 			} else {
 				return nil, err
