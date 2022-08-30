@@ -16,7 +16,7 @@ func TestInvalidRule(t *testing.T) {
 
 	err := p.FromString("")
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf("unexpected error: %s", err.Error())
 	}
 
 	err = p.FromString("SecRule ")
@@ -88,7 +88,7 @@ func TestSecRuleInlineVariableNegation(t *testing.T) {
 		SecRule REQUEST_URI|!REQUEST_COOKIES: "abc" "id:9,phase:2"
 	`)
 	if !strings.Contains(err.Error(), "failed to compile rule") {
-		t.Error("Error should be failed to compile rule, got ", err)
+		t.Errorf("Error should be failed to compile rule, got %s", err)
 	}
 }
 
@@ -109,7 +109,7 @@ func TestSecRuleUpdateTargetVariableNegation(t *testing.T) {
 		SecRuleUpdateTargetById 8 "!REQUEST_HEADERS:"
 	`)
 	if err.Error() != "unknown variable" {
-		t.Error("Error should be unknown variable, got ", err)
+		t.Errorf("Error should be unknown variable, got %s", err.Error())
 	}
 
 	// Try to update undefined rule
@@ -128,10 +128,10 @@ func TestErrorLine(t *testing.T) {
 	p, _ := NewParser(waf)
 	err := p.FromString("SecAction \"id:1\"\n#test\nSomefaulty")
 	if err == nil {
-		t.Error("that shouldn't happen o.o")
+		t.Error("expected error")
 	}
 	if !strings.Contains(err.Error(), "Line 3") {
-		t.Error("failed to find error line, got " + err.Error())
+		t.Errorf("failed to find error line, got %s", err.Error())
 	}
 }
 
@@ -142,7 +142,7 @@ func TestDefaultActionsForPhase2(t *testing.T) {
 	SecAction "id:1,phase:2"
 	SecAction "id:2,phase:1"`)
 	if err != nil {
-		t.Error("that shouldn't happen", err)
+		t.Errorf("unexpected error: %s", err.Error())
 	}
 	if waf.Rules.GetRules()[0].Log != true {
 		t.Error("failed to set log to true because of default actions")
