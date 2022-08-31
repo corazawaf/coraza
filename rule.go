@@ -267,7 +267,6 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 							carg,
 						)
 					} else {
-
 						tx.Waf.Logger.Debug("[%s] [%d] Evaluating operator \"%s %s\" against %q: NO MATCH",
 							tx.ID,
 							rid,
@@ -423,15 +422,12 @@ func (r *Rule) SetOperator(operator RuleOperator, functionName string, params st
 	}
 }
 
-func (r *Rule) executeOperator(data string, tx *Transaction) bool {
-	result := r.operator.Operator.Evaluate(tx, data)
-	if r.operator.Negation && result {
-		return false
+func (r *Rule) executeOperator(data string, tx *Transaction) (result bool) {
+	result = r.operator.Operator.Evaluate(tx, data)
+	if r.operator.Negation {
+		result = !result
 	}
-	if r.operator.Negation && !result {
-		return true
-	}
-	return result
+	return
 }
 
 func (r *Rule) executeTransformationsMultimatch(value string) ([]string, []error) {

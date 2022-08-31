@@ -116,21 +116,61 @@ func TestTxResponse(t *testing.T) {
 }
 
 func TestRequestBody(t *testing.T) {
-	urlencoded := "some=result&second=data"
-	// xml := "<test><content>test</content></test>"
-	tx := wafi.NewTransaction(context.Background())
-	tx.RequestBodyAccess = true
-	tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
-	if _, err := tx.RequestBodyBuffer.Write([]byte(urlencoded)); err != nil {
-		t.Error("Failed to write body buffer")
+	testCases := []struct {
+		name                   string
+		requestBodyLimit       int64
+		requestBodyLimitAction types.RequestBodyLimitAction
+		shouldInterrupt        bool
+	}{
+		{
+			name:                   "default",
+			requestBodyLimit:       200,
+			requestBodyLimitAction: types.RequestBodyLimitActionReject,
+		},
+		{
+			name:                   "limit rejects",
+			requestBodyLimit:       11,
+			requestBodyLimitAction: types.RequestBodyLimitActionReject,
+			shouldInterrupt:        true,
+		},
+		{
+			name:                   "limit partial processing",
+			requestBodyLimit:       11,
+			requestBodyLimitAction: types.RequestBodyLimitActionProcessPartial,
+		},
 	}
-	tx.ProcessRequestHeaders()
-	if _, err := tx.ProcessRequestBody(); err != nil {
-		t.Error("Failed to process request body")
-	}
-	val := tx.Variables.ArgsPost.Get("some")
-	if len(val) != 1 || val[0] != "result" {
-		t.Error("Failed to set url encoded post data")
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			urlencoded := "some=result&second=data"
+			// xml := "<test><content>test</content></test>"
+			tx := wafi.NewTransaction(context.Background())
+			tx.RequestBodyAccess = true
+			tx.RequestBodyLimit = testCase.requestBodyLimit
+			tx.Waf.RequestBodyLimitAction = testCase.requestBodyLimitAction
+
+			tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
+			if _, err := tx.RequestBodyBuffer.Write([]byte(urlencoded)); err != nil {
+				t.Errorf("Failed to write body buffer: %s", err.Error())
+			}
+			tx.ProcessRequestHeaders()
+			if _, err := tx.ProcessRequestBody(); err != nil {
+				t.Errorf("Failed to process request body: %s", err.Error())
+			}
+
+			if testCase.shouldInterrupt {
+				if tx.Interruption == nil {
+					t.Error("expected interruption")
+				}
+			} else {
+				val := tx.Variables.ArgsPost.Get("some")
+				if len(val) != 1 || val[0] != "result" {
+					t.Error("Failed to set url encoded post data")
+				}
+			}
+
+			tx.Clean()
+		})
 	}
 }
 
