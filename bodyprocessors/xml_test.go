@@ -8,7 +8,6 @@ package bodyprocessors
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/strings"
@@ -37,7 +36,6 @@ func TestXMLAttribures(t *testing.T) {
 	}
 	if len(contents) != 4 {
 		t.Errorf("Expected 4 contents, got %d", len(contents))
-		fmt.Println(contents)
 	}
 	eattrs := []string{"en", "value"}
 	econtent := []string{"Harry Potter", "29.99", "Learning XML", "39.95"}

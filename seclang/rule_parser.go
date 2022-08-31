@@ -6,8 +6,6 @@ package seclang
 import (
 	"errors"
 	"fmt"
-	"os"
-	"path"
 	"regexp"
 	"strings"
 
@@ -194,22 +192,13 @@ func (p *RuleParser) ParseOperator(operator string) error {
 		return err
 	}
 	data := []byte(opdata)
-	// handling files by operators is hard because we must know the paths where we can
-	// search, for example, the policy path or the binary path...
-	// CRS stores the .data files in the same directory as the directives
-	if strings.HasSuffix(op, "FromFile") {
-		// TODO make enhancements here
-		tpath := path.Join(p.options.Config.Get("parser_config_dir", "").(string), opdata)
-		var err error
-		content, err := os.ReadFile(tpath)
-		if err != nil {
-			return err
-		}
-		opdata = tpath
-		data = content
-	}
+
 	opts := coraza.RuleOperatorOptions{
 		Arguments: string(data),
+		Path: []string{
+			p.options.Config.Get("parser_config_dir", "").(string),
+			p.options.Config.Get("working_dir", "").(string),
+		},
 	}
 	err = opfn.Init(opts)
 	if err != nil {

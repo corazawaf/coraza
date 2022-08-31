@@ -77,14 +77,14 @@ func directiveSecRule(options *DirectiveOptions) error {
 	if err != nil && !ignoreErrors {
 		return newCompileRuleError(err, options.Opts)
 	} else if err != nil && ignoreErrors {
-		options.Waf.Logger.Debug("Ignoring rule compilation error for rule %s: %v", options.Opts, err)
+		options.Waf.Logger.Debug("Ignoring rule compilation error for rule %s: %s", options.Opts, err.Error())
 		return nil
 	}
 	err = options.Waf.Rules.Add(rule)
 	if err != nil && !ignoreErrors {
 		return err
 	} else if err != nil && ignoreErrors {
-		options.Waf.Logger.Debug("Ignoring rule compilation error for rule %s: %v", options.Opts, err)
+		options.Waf.Logger.Debug("Ignoring rule compilation error for rule %s: %s", options.Opts, err.Error())
 		return nil
 	}
 	return nil

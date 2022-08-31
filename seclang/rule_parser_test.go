@@ -12,11 +12,11 @@ import (
 
 func TestInvalidRule(t *testing.T) {
 	waf := coraza.NewWaf()
-	p, _ := NewParser(waf)
+	p := NewParser(waf)
 
 	err := p.FromString("")
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf("unexpected error: %s", err.Error())
 	}
 
 	err = p.FromString("SecRule ")
@@ -27,7 +27,7 @@ func TestInvalidRule(t *testing.T) {
 
 func TestVariables(t *testing.T) {
 	waf := coraza.NewWaf()
-	p, _ := NewParser(waf)
+	p := NewParser(waf)
 
 	// single variable with key
 	err := p.FromString(`SecRule REQUEST_HEADERS:test "" "id:1"`)
@@ -60,7 +60,7 @@ func TestVariables(t *testing.T) {
 
 func TestVariableCases(t *testing.T) {
 	waf := coraza.NewWaf()
-	p, _ := NewParser(waf)
+	p := NewParser(waf)
 	err := p.FromString(`SecRule REQUEST_COOKIES|!REQUEST_COOKIES:/__utm/|!REQUEST_COOKIES:/_pk_ref/|REQUEST_COOKIES_NAMES|ARGS_NAMES|ARGS|XML:/* "" "id:7,pass"`)
 	if err != nil {
 		t.Error(err)
@@ -69,7 +69,7 @@ func TestVariableCases(t *testing.T) {
 
 func TestSecRuleInlineVariableNegation(t *testing.T) {
 	waf := coraza.NewWaf()
-	p, _ := NewParser(waf)
+	p := NewParser(waf)
 	err := p.FromString(`
 		SecRule REQUEST_URI|!REQUEST_COOKIES "abc" "id:7,phase:2"
 	`)
@@ -88,13 +88,13 @@ func TestSecRuleInlineVariableNegation(t *testing.T) {
 		SecRule REQUEST_URI|!REQUEST_COOKIES: "abc" "id:9,phase:2"
 	`)
 	if !strings.Contains(err.Error(), "failed to compile rule") {
-		t.Error("Error should be failed to compile rule, got ", err)
+		t.Errorf("Error should be failed to compile rule, got %s", err)
 	}
 }
 
 func TestSecRuleUpdateTargetVariableNegation(t *testing.T) {
 	waf := coraza.NewWaf()
-	p, _ := NewParser(waf)
+	p := NewParser(waf)
 	err := p.FromString(`
 		SecRule REQUEST_URI|REQUEST_COOKIES "abc" "id:7,phase:2"
 		SecRuleUpdateTargetById 7 "!REQUEST_HEADERS:/xyz/"
@@ -109,7 +109,7 @@ func TestSecRuleUpdateTargetVariableNegation(t *testing.T) {
 		SecRuleUpdateTargetById 8 "!REQUEST_HEADERS:"
 	`)
 	if err.Error() != "unknown variable" {
-		t.Error("Error should be unknown variable, got ", err)
+		t.Errorf("Error should be unknown variable, got %s", err.Error())
 	}
 
 	// Try to update undefined rule
@@ -125,24 +125,24 @@ func TestSecRuleUpdateTargetVariableNegation(t *testing.T) {
 
 func TestErrorLine(t *testing.T) {
 	waf := coraza.NewWaf()
-	p, _ := NewParser(waf)
+	p := NewParser(waf)
 	err := p.FromString("SecAction \"id:1\"\n#test\nSomefaulty")
 	if err == nil {
-		t.Error("that shouldn't happen o.o")
+		t.Error("expected error")
 	}
 	if !strings.Contains(err.Error(), "Line 3") {
-		t.Error("failed to find error line, got " + err.Error())
+		t.Errorf("failed to find error line, got %s", err.Error())
 	}
 }
 
 func TestDefaultActionsForPhase2(t *testing.T) {
 	waf := coraza.NewWaf()
-	p, _ := NewParser(waf)
+	p := NewParser(waf)
 	err := p.FromString(`
 	SecAction "id:1,phase:2"
 	SecAction "id:2,phase:1"`)
 	if err != nil {
-		t.Error("that shouldn't happen", err)
+		t.Errorf("unexpected error: %s", err.Error())
 	}
 	if waf.Rules.GetRules()[0].Log != true {
 		t.Error("failed to set log to true because of default actions")

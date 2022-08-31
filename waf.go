@@ -422,7 +422,7 @@ func (w *Waf) SetDebugLogPath(path string) error {
 	}
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		w.Logger.Error("error opening file: %v", err)
+		w.Logger.Error("error opening file: %s", err.Error())
 	}
 	w.Logger.SetOutput(f)
 	return nil
@@ -436,7 +436,7 @@ func NewWaf() *Waf {
 	}
 	logWriter, err := loggers.GetLogWriter("serial")
 	if err != nil {
-		logger.Error("error creating serial log writer: %v", err)
+		logger.Error("error creating serial log writer: %s", err.Error())
 	}
 	waf := &Waf{
 		ArgumentSeparator:        "&",

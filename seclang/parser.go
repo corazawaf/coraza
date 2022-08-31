@@ -142,6 +142,12 @@ func (p *Parser) evaluate(data string) error {
 	p.options.Config.Set("last_profile_line", p.currentLine)
 	p.options.Config.Set("parser_config_file", p.currentFile)
 	p.options.Config.Set("parser_config_dir", p.currentDir)
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	p.options.Config.Set("working_dir", wd)
+
 	return d(p.options)
 }
 
@@ -162,10 +168,7 @@ func (p *Parser) SetCurrentDir(dir string) {
 // NewParser creates a new parser from a WAF instance
 // Rules and settings will be inserted into the WAF
 // rule container (RuleGroup).
-func NewParser(waf *coraza.Waf) (*Parser, error) {
-	if waf == nil {
-		return nil, errors.New("must use a valid waf instance")
-	}
+func NewParser(waf *coraza.Waf) *Parser {
 	p := &Parser{
 		options: &DirectiveOptions{
 			Waf:      waf,
@@ -173,5 +176,5 @@ func NewParser(waf *coraza.Waf) (*Parser, error) {
 			Datasets: make(map[string][]string),
 		},
 	}
-	return p, nil
+	return p
 }
