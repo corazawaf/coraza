@@ -168,10 +168,7 @@ func (p *Parser) SetCurrentDir(dir string) {
 // NewParser creates a new parser from a WAF instance
 // Rules and settings will be inserted into the WAF
 // rule container (RuleGroup).
-func NewParser(waf *coraza.Waf) (*Parser, error) {
-	if waf == nil {
-		return nil, errors.New("must use a valid waf instance")
-	}
+func NewParser(waf *coraza.Waf) *Parser {
 	p := &Parser{
 		options: &DirectiveOptions{
 			Waf:      waf,
@@ -179,5 +176,5 @@ func NewParser(waf *coraza.Waf) (*Parser, error) {
 			Datasets: make(map[string][]string),
 		},
 	}
-	return p, nil
+	return p
 }

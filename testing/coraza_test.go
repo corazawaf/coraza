@@ -64,7 +64,7 @@ func testList(p *profile.Profile, waf *coraza.Waf) ([]*Test, error) {
 			w := waf
 			if w == nil || p.Rules != "" {
 				w = coraza.NewWaf()
-				parser, _ := seclang.NewParser(w)
+				parser := seclang.NewParser(w)
 				parser.SetCurrentDir("./testdata")
 				if err := parser.FromString(p.Rules); err != nil {
 					return nil, err
