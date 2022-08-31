@@ -63,7 +63,7 @@ func (o *validateByteRange) Evaluate(tx *coraza.Transaction, data string) bool {
 	if lenData == 0 {
 		return true
 	}
-	if data == "" && lenData > 0 {
+	if data == "" {
 		return false
 	}
 	// we must iterate each byte from input and check if it is in the range

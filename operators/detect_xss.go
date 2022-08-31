@@ -8,12 +8,9 @@ import (
 	"github.com/corazawaf/libinjection-go"
 )
 
-type detectXSS struct {
-}
+type detectXSS struct{}
 
-func (o *detectXSS) Init(options coraza.RuleOperatorOptions) error {
-	return nil
-}
+func (o *detectXSS) Init(options coraza.RuleOperatorOptions) error { return nil }
 
 func (o *detectXSS) Evaluate(tx *coraza.Transaction, value string) bool {
 	return libinjection.IsXSS(value)

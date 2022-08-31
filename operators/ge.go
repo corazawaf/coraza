@@ -26,14 +26,7 @@ func (o *ge) Init(options coraza.RuleOperatorOptions) error {
 }
 
 func (o *ge) Evaluate(tx *engine.Transaction, value string) bool {
-	v, err := strconv.Atoi(value)
-	if err != nil {
-		v = 0
-	}
-	data := o.data.Expand(tx)
-	dataint, err := strconv.Atoi(data)
-	if err != nil {
-		dataint = 0
-	}
-	return v >= dataint
+	v, _ := strconv.Atoi(value)
+	data, _ := strconv.Atoi(o.data.Expand(tx))
+	return v >= data
 }

@@ -12,27 +12,27 @@ import (
 )
 
 type ipMatchFromDataset struct {
-	ip *ipMatch
+	matcher *ipMatch
 }
 
 func (o *ipMatchFromDataset) Init(options coraza.RuleOperatorOptions) error {
 	data := options.Arguments
 	dataset, ok := options.Datasets[data]
 	if !ok || len(dataset) == 0 {
-		return fmt.Errorf("Dataset %q not found", data)
+		return fmt.Errorf("dataset %q not found", data)
 	}
 
 	datasetParsed := strings.Join(dataset, ",")
 
-	o.ip = &ipMatch{}
+	o.matcher = &ipMatch{}
 	opts := coraza.RuleOperatorOptions{
 		Arguments: datasetParsed,
 	}
-	return o.ip.Init(opts)
+	return o.matcher.Init(opts)
 }
 
 func (o *ipMatchFromDataset) Evaluate(tx *engine.Transaction, value string) bool {
-	return o.ip.Evaluate(tx, value)
+	return o.matcher.Evaluate(tx, value)
 }
 
 var _ coraza.RuleOperator = (*ipMatchFromDataset)(nil)

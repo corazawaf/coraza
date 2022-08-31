@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3"
-	engine "github.com/corazawaf/coraza/v3"
 )
 
 type ipMatchFromFile struct {
@@ -46,7 +45,7 @@ func (o *ipMatchFromFile) Init(options coraza.RuleOperatorOptions) error {
 	return o.ipMatcher.Init(opts)
 }
 
-func (o *ipMatchFromFile) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *ipMatchFromFile) Evaluate(tx *coraza.Transaction, value string) bool {
 	return o.ipMatcher.Evaluate(tx, value)
 }
 
