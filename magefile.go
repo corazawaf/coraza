@@ -49,7 +49,11 @@ func Format() error {
 		"-ignore", "examples/**", "."); err != nil {
 		return err
 	}
-	return sh.RunV("go", "run", fmt.Sprintf("github.com/rinchsan/gosimports/cmd/gosimports@%s", gosImportsVer), "-w", ".")
+	return sh.RunV("go", "run", fmt.Sprintf("github.com/rinchsan/gosimports/cmd/gosimports@%s", gosImportsVer),
+		"-w",
+		"-local",
+		"github.com/corazawaf/coraza",
+		".")
 }
 
 // Lint verifies code quality.

@@ -19,10 +19,11 @@ import (
 	"sync"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/corazawaf/coraza/v2/types"
 	"github.com/corazawaf/coraza/v2/types/variables"
 	"github.com/corazawaf/coraza/v2/utils/strings"
-	"go.uber.org/zap"
 )
 
 // RuleGroup is a collection of rules

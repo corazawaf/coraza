@@ -17,8 +17,9 @@ package operators
 import (
 	"strings"
 
-	"github.com/corazawaf/coraza/v2"
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
+
+	"github.com/corazawaf/coraza/v2"
 )
 
 // TODO according to coraza researchs, re2 matching is faster than ahocorasick

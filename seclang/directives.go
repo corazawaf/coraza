@@ -22,10 +22,11 @@ import (
 	"strconv"
 	"strings"
 
+	"go.uber.org/zap"
+
 	"github.com/corazawaf/coraza/v2"
 	"github.com/corazawaf/coraza/v2/loggers"
 	"github.com/corazawaf/coraza/v2/types"
-	"go.uber.org/zap"
 )
 
 // DirectiveOptions contains the parsed options for a directive

@@ -20,11 +20,12 @@ import (
 	"strconv"
 	"strings"
 
+	"go.uber.org/zap"
+
 	"github.com/corazawaf/coraza/v2"
 	"github.com/corazawaf/coraza/v2/types"
 	"github.com/corazawaf/coraza/v2/types/variables"
 	utils "github.com/corazawaf/coraza/v2/utils/strings"
-	"go.uber.org/zap"
 )
 
 type ctlFunctionType int

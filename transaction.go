@@ -26,13 +26,14 @@ import (
 	"strings"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/corazawaf/coraza/v2/bodyprocessors"
 	"github.com/corazawaf/coraza/v2/loggers"
 	"github.com/corazawaf/coraza/v2/types"
 	"github.com/corazawaf/coraza/v2/types/variables"
 	utils "github.com/corazawaf/coraza/v2/utils/strings"
 	url2 "github.com/corazawaf/coraza/v2/utils/url"
-	"go.uber.org/zap"
 )
 
 // Transaction is created from a WAF instance to handle web requests and responses,
