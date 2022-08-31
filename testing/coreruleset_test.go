@@ -50,7 +50,7 @@ func BenchmarkCRSCompilation(b *testing.B) {
 	}
 	for i := 0; i < b.N; i++ {
 		waf := coraza.NewWaf()
-		parser, _ := seclang.NewParser(waf)
+		parser := seclang.NewParser(waf)
 		for _, f := range files {
 			if err := parser.FromFile(f); err != nil {
 				b.Error(err)
@@ -129,7 +129,7 @@ func crsWAF() (*coraza.Waf, error) {
 		path.Join(crspath, "rules/", "*.conf"),
 	}
 	waf := coraza.NewWaf()
-	parser, _ := seclang.NewParser(waf)
+	parser := seclang.NewParser(waf)
 	for _, f := range files {
 		if err := parser.FromFile(f); err != nil {
 			return nil, err

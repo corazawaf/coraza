@@ -42,7 +42,7 @@ func TestSeverity(t *testing.T) {
 				t.Error(err)
 			}
 			if got := rule.Severity; got != tt.want {
-				t.Errorf("Severity = %v, want %v", got, tt.want)
+				t.Errorf("Severity = %s, want %s", got.String(), tt.want.String())
 			}
 		})
 	}
