@@ -17,7 +17,7 @@ import (
 
 func TestInterruption(t *testing.T) {
 	waf := engine.NewWaf()
-	p, _ := NewParser(waf)
+	p := NewParser(waf)
 	if err := p.FromString(`SecAction "id:1,deny,log,phase:1"`); err != nil {
 		t.Error("Could not create from string")
 	}
@@ -29,7 +29,7 @@ func TestInterruption(t *testing.T) {
 
 func TestDirectivesCaseInsensitive(t *testing.T) {
 	waf := engine.NewWaf()
-	p, _ := NewParser(waf)
+	p := NewParser(waf)
 	err := p.FromString("seCwEbAppid 15")
 	if err != nil {
 		t.Error(err)
@@ -38,7 +38,7 @@ func TestDirectivesCaseInsensitive(t *testing.T) {
 
 func TestDefaultConfigurationFile(t *testing.T) {
 	waf := engine.NewWaf()
-	p, _ := NewParser(waf)
+	p := NewParser(waf)
 	err := p.FromFile("../coraza.conf-recommended")
 	if err != nil {
 		t.Error(err)
@@ -47,7 +47,7 @@ func TestDefaultConfigurationFile(t *testing.T) {
 
 func TestHardcodedIncludeDirective(t *testing.T) {
 	waf := coraza.NewWaf()
-	p, _ := NewParser(waf)
+	p := NewParser(waf)
 	if err := p.FromString("Include ../coraza.conf-recommended"); err != nil {
 		t.Error(err)
 	}
@@ -61,7 +61,7 @@ func TestHardcodedIncludeDirective(t *testing.T) {
 
 func TestHardcodedSubIncludeDirective(t *testing.T) {
 	waf := coraza.NewWaf()
-	p, _ := NewParser(waf)
+	p := NewParser(waf)
 	if err := p.FromString("Include ./testdata/includes/parent.conf"); err != nil {
 		t.Error(err)
 	}
@@ -72,7 +72,7 @@ func TestHardcodedSubIncludeDirective(t *testing.T) {
 
 func TestHardcodedSubIncludeDirectiveAbsolutePath(t *testing.T) {
 	waf := coraza.NewWaf()
-	p, _ := NewParser(waf)
+	p := NewParser(waf)
 	currentDir, _ := filepath.Abs("./")
 	ruleFile := filepath.Join(currentDir, "./testdata/includes/parent.conf")
 	if err := p.FromString("Include " + ruleFile); err != nil {
@@ -85,7 +85,7 @@ func TestHardcodedSubIncludeDirectiveAbsolutePath(t *testing.T) {
 
 func TestHardcodedIncludeDirectiveDDOS(t *testing.T) {
 	waf := coraza.NewWaf()
-	p, _ := NewParser(waf)
+	p := NewParser(waf)
 	tmpFile, err := os.Create(filepath.Join(t.TempDir(), "rand.conf"))
 	if err != nil {
 		t.Fatal(err)
@@ -105,7 +105,7 @@ func TestHardcodedIncludeDirectiveDDOS(t *testing.T) {
 
 func TestHardcodedIncludeDirectiveDDOS2(t *testing.T) {
 	waf := coraza.NewWaf()
-	p, _ := NewParser(waf)
+	p := NewParser(waf)
 	tmpFile, err := os.Create(filepath.Join(t.TempDir(), "rand1.conf"))
 	if err != nil {
 		t.Fatal(err)

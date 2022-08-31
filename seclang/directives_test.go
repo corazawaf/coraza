@@ -24,7 +24,7 @@ func Test_NonImplementedDirective(t *testing.T) {
 		`SecHashEngine On`,
 	}
 	w := coraza.NewWaf()
-	p, _ := NewParser(w)
+	p := NewParser(w)
 	for _, rule := range rules {
 		err := p.FromString(rule)
 		if err != nil {
@@ -35,7 +35,7 @@ func Test_NonImplementedDirective(t *testing.T) {
 
 func Test_directive(t *testing.T) {
 	w := coraza.NewWaf()
-	p, _ := NewParser(w)
+	p := NewParser(w)
 	if err := p.FromString("SecWebAppId test123"); err != nil {
 		t.Error("failed to set parser from string")
 	}
@@ -158,7 +158,7 @@ func TestSecRuleUpdateTargetBy(t *testing.T) {
 
 func TestInvalidBooleanForDirectives(t *testing.T) {
 	waf := coraza.NewWaf()
-	p, _ := NewParser(waf)
+	p := NewParser(waf)
 	if err := p.FromString("SecIgnoreRuleCompilationErrors sure"); err == nil {
 		t.Error("failed to error on invalid boolean")
 	}
@@ -171,12 +171,12 @@ func TestInvalidRulesWithIgnoredErrors(t *testing.T) {
 	SecRule REQUEST_URI "@rx ^/test" "id:181,tag:repeated-id"
 	`
 	waf := coraza.NewWaf()
-	p, _ := NewParser(waf)
+	p := NewParser(waf)
 	if err := p.FromString("secignorerulecompilationerrors On\n" + directives); err != nil {
 		t.Error(err)
 	}
 	waf = coraza.NewWaf()
-	p, _ = NewParser(waf)
+	p = NewParser(waf)
 	if err := p.FromString(directives); err == nil {
 		t.Error("failed to error on invalid rule")
 	}
@@ -184,7 +184,7 @@ func TestInvalidRulesWithIgnoredErrors(t *testing.T) {
 
 func TestSecDataset(t *testing.T) {
 	waf := coraza.NewWaf()
-	p, _ := NewParser(waf)
+	p := NewParser(waf)
 	if err := p.FromString("" +
 		"SecDataset test `\n123\n456\n`\n"); err != nil {
 		t.Error(err)

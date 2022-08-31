@@ -16,7 +16,7 @@ import (
 
 func TestRuleMatch(t *testing.T) {
 	waf := coraza.NewWaf()
-	parser, _ := NewParser(waf)
+	parser := NewParser(waf)
 	err := parser.FromString(`
 		SecRuleEngine On
 		SecDefaultAction "phase:1,deny,status:403,log"
@@ -43,7 +43,7 @@ func TestRuleMatch(t *testing.T) {
 
 func TestRuleMatchWithRegex(t *testing.T) {
 	waf := coraza.NewWaf()
-	parser, _ := NewParser(waf)
+	parser := NewParser(waf)
 	err := parser.FromString(`
 		SecRuleEngine On
 		SecDefaultAction "phase:1,deny,status:403,log"
@@ -67,7 +67,7 @@ func TestRuleMatchWithRegex(t *testing.T) {
 
 func TestSecMarkers(t *testing.T) {
 	waf := coraza.NewWaf()
-	parser, _ := NewParser(waf)
+	parser := NewParser(waf)
 	err := parser.FromString(`
 		SecRuleEngine On		
 		SecAction "phase:1, id:1,log,skipAfter:SoMe_TEST"
@@ -102,7 +102,7 @@ func TestSecMarkers(t *testing.T) {
 
 func TestSecAuditLogs(t *testing.T) {
 	waf := coraza.NewWaf()
-	parser, _ := NewParser(waf)
+	parser := NewParser(waf)
 	err := parser.FromString(`
 		SecAuditEngine On
 		SecAction "id:4482,log,auditlog, msg:'test'"
@@ -135,7 +135,7 @@ func TestRuleLogging(t *testing.T) {
 	waf.SetErrorLogCb(func(mr types.MatchedRule) {
 		logs = append(logs, mr.ErrorLog(403))
 	})
-	parser, _ := NewParser(waf)
+	parser := NewParser(waf)
 	err := parser.FromString(`
 		SecRule ARGS ".*" "phase:1, id:1,capture,log,setvar:'tx.arg_%{tx.0}=%{tx.0}'"
 		SecAction "id:2,phase:1,log,setvar:'tx.test=ok'"
@@ -168,7 +168,7 @@ func TestRuleLogging(t *testing.T) {
 
 func TestRuleChains(t *testing.T) {
 	waf := coraza.NewWaf()
-	parser, _ := NewParser(waf)
+	parser := NewParser(waf)
 	err := parser.FromString(`
 		SecRule ARGS "123" "id:1,phase:1,log,chain"
 			SecRule &ARGS "@gt 0" "chain"
@@ -196,7 +196,7 @@ func TestTagsAreNotPrintedTwice(t *testing.T) {
 	waf.SetErrorLogCb(func(mr types.MatchedRule) {
 		logs = append(logs, mr.ErrorLog(403))
 	})
-	parser, _ := NewParser(waf)
+	parser := NewParser(waf)
 	err := parser.FromString(`
 		SecRule ARGS ".*" "phase:1, id:1,log,tag:'some1',tag:'some2'"
 	`)
@@ -228,7 +228,7 @@ func TestStatusFromInterruptions(t *testing.T) {
 	waf.SetErrorLogCb(func(mr types.MatchedRule) {
 		logs = append(logs, mr.ErrorLog(403))
 	})
-	parser, _ := NewParser(waf)
+	parser := NewParser(waf)
 	err := parser.FromString(`
 		SecRule ARGS "123" "phase:1, id:1,log,deny,status:500"
 	`)
@@ -248,7 +248,7 @@ func TestStatusFromInterruptions(t *testing.T) {
 
 func TestChainWithUnconditionalMatch(t *testing.T) {
 	waf := coraza.NewWaf()
-	p, _ := NewParser(waf)
+	p := NewParser(waf)
 	if err := p.FromString(`
 	SecAction "id:7, pass, phase:1, log, chain, skip:2"
     SecRule REMOTE_ADDR "@unconditionalMatch" ""
@@ -266,7 +266,7 @@ func TestLogsAreNotPrintedManyTimes(t *testing.T) {
 	waf.SetErrorLogCb(func(mr types.MatchedRule) {
 		logs = append(logs, mr.ErrorLog(403))
 	})
-	parser, _ := NewParser(waf)
+	parser := NewParser(waf)
 	err := parser.FromString(`
 		SecRule ARGS|REQUEST_HEADERS|!ARGS:test1 ".*" "phase:1, id:1,log,tag:'some1',tag:'some2'"
 	`)
@@ -290,7 +290,7 @@ func TestLogsAreNotPrintedManyTimes(t *testing.T) {
 
 func TestSampleRxRule(t *testing.T) {
 	waf := coraza.NewWaf()
-	parser, _ := NewParser(waf)
+	parser := NewParser(waf)
 	err := parser.FromString(`
 	SecRule REQUEST_METHOD "@rx ^(?:GET|HEAD)$" "phase:1,id:1,log,deny,status:403,chain"
 	SecRule REQUEST_HEADERS:Content-Length "!@rx ^0?$"`)
@@ -308,7 +308,7 @@ func TestSampleRxRule(t *testing.T) {
 func TestTXIssue147(t *testing.T) {
 	// https://github.com/corazawaf/coraza/issues/147
 	waf := coraza.NewWaf()
-	parser, _ := NewParser(waf)
+	parser := NewParser(waf)
 	err := parser.FromString(`SecRule RESPONSE_BODY "@rx ^#!\s?/" "id:950140,phase:4,log,deny,status:403"`)
 	if err != nil {
 		t.Error(err.Error())
@@ -347,13 +347,9 @@ func TestTXIssue147(t *testing.T) {
 func TestIssue176(t *testing.T) {
 	waf := coraza.NewWaf()
 	rules := `SecRule REQUEST_COOKIES:sessionId "test" "id:1,phase:1,deny,log,msg:'test rule',logdata:'Matched %{MATCHED_VAR_NAME}'"`
-	parser, err := NewParser(waf)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	parser := NewParser(waf)
 
-	err = parser.FromString(rules)
+	err := parser.FromString(rules)
 	if err != nil {
 		t.Error()
 		return
@@ -427,13 +423,9 @@ func TestRxCapture(t *testing.T) {
             "t:lowercase,\
             ctl:forceRequestBodyVariable=On,\
             setvar:'tx.inbound_anomaly_score_pl1=+%{tx.critical_anomaly_score}'"`
-	parser, err := NewParser(waf)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	parser := NewParser(waf)
 
-	err = parser.FromString(rules)
+	err := parser.FromString(rules)
 	if err != nil {
 		t.Error()
 		return
@@ -472,13 +464,9 @@ func Test941310(t *testing.T) {
         ctl:auditLogParts=+E,\
         setvar:'tx.xss_score=+%{tx.critical_anomaly_score}',\
         setvar:'tx.inbound_anomaly_score_pl1=+%{tx.critical_anomaly_score}'"`
-	parser, err := NewParser(waf)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	parser := NewParser(waf)
 
-	err = parser.FromString(rules)
+	err := parser.FromString(rules)
 	if err != nil {
 		t.Error()
 		return
@@ -498,13 +486,9 @@ func Test941310(t *testing.T) {
 func TestArgumentNamesCaseSensitive(t *testing.T) {
 	waf := coraza.NewWaf()
 	rules := `SecRule ARGS_NAMES "Test1" "id:3, phase:2, log, deny"`
-	parser, err := NewParser(waf)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	parser := NewParser(waf)
 
-	err = parser.FromString(rules)
+	err := parser.FromString(rules)
 	if err != nil {
 		t.Error()
 		return
@@ -545,13 +529,9 @@ func TestArgumentNamesCaseSensitive(t *testing.T) {
 func TestArgumentsCaseSensitive(t *testing.T) {
 	waf := coraza.NewWaf()
 	rules := `SecRule ARGS:Test1 "Xyz" "id:3, phase:2, log, deny"`
-	parser, err := NewParser(waf)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	parser := NewParser(waf)
 
-	err = parser.FromString(rules)
+	err := parser.FromString(rules)
 	if err != nil {
 		t.Error()
 		return
@@ -611,13 +591,9 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 func TestCookiesCaseSensitive(t *testing.T) {
 	waf := coraza.NewWaf()
 	rules := `SecRule REQUEST_COOKIES:Test1 "Xyz" "id:3, phase:2, log, deny"`
-	parser, err := NewParser(waf)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	parser := NewParser(waf)
 
-	err = parser.FromString(rules)
+	err := parser.FromString(rules)
 	if err != nil {
 		t.Error()
 		return
@@ -677,13 +653,9 @@ func TestCookiesCaseSensitive(t *testing.T) {
 func TestHeadersCaseSensitive(t *testing.T) {
 	waf := coraza.NewWaf()
 	rules := `SecRule REQUEST_HEADERS:Test1 "Xyz" "id:3, phase:2, log, deny"`
-	parser, err := NewParser(waf)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	parser := NewParser(waf)
 
-	err = parser.FromString(rules)
+	err := parser.FromString(rules)
 	if err != nil {
 		t.Error()
 		return
@@ -743,13 +715,9 @@ func TestHeadersCaseSensitive(t *testing.T) {
 func TestParameterPollution(t *testing.T) {
 	waf := coraza.NewWaf()
 	rules := `SecRule Args:TESt1 "Xyz" "id:3, phase:2, log, pass"`
-	parser, err := NewParser(waf)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	parser := NewParser(waf)
 
-	err = parser.FromString(rules)
+	err := parser.FromString(rules)
 	if err != nil {
 		t.Error()
 		return
@@ -798,13 +766,9 @@ func TestParameterPollution(t *testing.T) {
 func TestURIQueryParamCaseSensitive(t *testing.T) {
 	waf := coraza.NewWaf()
 	rules := `SecRule ARGS:Test1 "@contains SQLI" "id:3, phase:2, log, pass"`
-	parser, err := NewParser(waf)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	parser := NewParser(waf)
 
-	err = parser.FromString(rules)
+	err := parser.FromString(rules)
 	if err != nil {
 		t.Error()
 		return
@@ -946,13 +910,9 @@ SecRule REQUEST_URI|ARGS|REQUEST_HEADERS|!REQUEST_HEADERS:Referer|FILES|XML:/* "
     setvar:'tx.lfi_score=+%{tx.critical_anomaly_score}'"
 `
 
-	parser, err := NewParser(waf)
-	if err != nil {
-		t.Fatal(err)
-		return
-	}
+	parser := NewParser(waf)
 
-	err = parser.FromString(rules)
+	err := parser.FromString(rules)
 	if err != nil {
 		t.Fatal(err)
 		return
