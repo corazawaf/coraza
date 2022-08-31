@@ -21,7 +21,7 @@ func (o *pmFromDataset) Init(options coraza.RuleOperatorOptions) error {
 	data := options.Arguments
 	dataset, ok := options.Datasets[data]
 	if !ok {
-		return fmt.Errorf("Dataset %q not found", data)
+		return fmt.Errorf("dataset %q not found", data)
 	}
 	builder := ahocorasick.NewAhoCorasickBuilder(ahocorasick.Opts{
 		AsciiCaseInsensitive: true,

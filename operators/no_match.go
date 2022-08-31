@@ -7,13 +7,9 @@ import (
 	"github.com/corazawaf/coraza/v3"
 )
 
-type noMatch struct {
-}
+type noMatch struct{}
 
-func (o *noMatch) Init(options coraza.RuleOperatorOptions) error {
-	// No need to init
-	return nil
-}
+func (o *noMatch) Init(options coraza.RuleOperatorOptions) error { return nil }
 
 func (o *noMatch) Evaluate(tx *coraza.Transaction, value string) bool {
 	return false

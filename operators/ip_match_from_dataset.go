@@ -19,7 +19,7 @@ func (o *ipMatchFromDataset) Init(options coraza.RuleOperatorOptions) error {
 	data := options.Arguments
 	dataset, ok := options.Datasets[data]
 	if !ok || len(dataset) == 0 {
-		return fmt.Errorf("Dataset %q not found", data)
+		return fmt.Errorf("dataset %q not found", data)
 	}
 
 	datasetParsed := strings.Join(dataset, ",")

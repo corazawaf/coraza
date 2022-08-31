@@ -41,12 +41,11 @@ func (o *validateURLEncoding) Evaluate(tx *coraza.Transaction, value string) boo
 }
 
 func validateURLEncodingInternal(input string, inputLen int) int {
-	var i int
-
 	if inputLen == 0 {
 		return -1
 	}
 
+	var i int
 	for i < inputLen {
 		if input[i] == '%' {
 			if i+2 >= inputLen {
