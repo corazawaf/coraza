@@ -30,7 +30,7 @@ func main() {
 
 func setupCoraza() error {
 	waf = coraza.NewWaf()
-	seclang, _ := seclang.NewParser(waf)
+	seclang := seclang.NewParser(waf)
 	if err := seclang.FromString(`
 		# This is a comment
 		SecRequestBodyAccess On

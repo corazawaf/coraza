@@ -25,7 +25,7 @@ import (
 func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	waf := coraza.NewWaf()
 	auditpath := t.TempDir()
-	parser, _ := NewParser(waf)
+	parser := NewParser(waf)
 	if err := parser.FromString(fmt.Sprintf(`
 	SecAuditLog %s
 	SecAuditLogFormat json
@@ -70,7 +70,7 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 func TestDebugDirectives(t *testing.T) {
 	waf := coraza.NewWaf()
 	tmp := filepath.Join(t.TempDir(), "tmp.log")
-	p, _ := NewParser(waf)
+	p := NewParser(waf)
 	err := directiveSecDebugLog(&DirectiveOptions{
 		Waf:  waf,
 		Opts: tmp,

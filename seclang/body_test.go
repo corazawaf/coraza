@@ -32,7 +32,7 @@ func TestRequestBodyAccessOff(t *testing.T) {
 
 func TestRequestBodyAccessOn(t *testing.T) {
 	waf := coraza.NewWaf()
-	parser, _ := NewParser(waf)
+	parser := NewParser(waf)
 	if err := parser.FromString(`
 	SecRequestBodyAccess On
 	`); err != nil {
