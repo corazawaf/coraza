@@ -6,6 +6,7 @@ package coraza
 import (
 	"context"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"os"
@@ -416,6 +417,7 @@ func (w *Waf) NewTransaction(ctx context.Context) *Transaction {
 // note: this is not thread safe
 func (w *Waf) SetDebugLogPath(path string) error {
 	if path == "" {
+		w.Logger.SetOutput(io.Discard)
 		return nil
 	}
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
@@ -453,11 +455,11 @@ func NewWaf() *Waf {
 		RequestBodyAccess:        false,
 		Logger:                   logger,
 	}
-	// We initialize a basic audit log writer to /dev/null
+	// We initialize a basic audit log writer that discards output
 	if err := logWriter.Init(types.Config{}); err != nil {
 		fmt.Println(err)
 	}
-	if err := waf.SetDebugLogPath("/dev/null"); err != nil {
+	if err := waf.SetDebugLogPath(""); err != nil {
 		fmt.Println(err)
 	}
 	waf.Logger.Debug("a new waf instance was created")
