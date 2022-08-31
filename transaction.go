@@ -814,14 +814,24 @@ func (tx *Transaction) Clean() error {
 	for k := range tx.Collections {
 		tx.Collections[k] = nil
 	}
+	errs := []error{}
 	if err := tx.RequestBodyBuffer.Close(); err != nil {
-		return err
+		errs = append(errs, err)
 	}
 	if err := tx.ResponseBodyBuffer.Close(); err != nil {
-		return err
+		errs = append(errs, err)
 	}
+
 	tx.Waf.Logger.Debug("[%s] Transaction finished, disrupted: %t", tx.ID, tx.Interrupted())
-	return nil
+
+	switch {
+	case len(errs) == 0:
+		return nil
+	case len(errs) == 1:
+		return fmt.Errorf("transaction clean failed: %s", errs[0].Error())
+	default:
+		return fmt.Errorf("transaction clean failed:\n- %s\n- %s", errs[0].Error(), errs[1].Error())
+	}
 }
 
 // Debug will return a string with the transaction debug information

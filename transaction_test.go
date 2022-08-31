@@ -115,10 +115,6 @@ func TestTxResponse(t *testing.T) {
 	*/
 }
 
-func TestTxGetField(t *testing.T) {
-	// GetField
-}
-
 func TestRequestBody(t *testing.T) {
 	urlencoded := "some=result&second=data"
 	// xml := "<test><content>test</content></test>"
@@ -477,7 +473,7 @@ func TestTxReqBodyForceNegative(t *testing.T) {
 	}
 }
 
-func TestTXProcessConnection(t *testing.T) {
+func TestTxProcessConnection(t *testing.T) {
 	waf := NewWaf()
 	tx := waf.NewTransaction(context.Background())
 	tx.ProcessConnection("127.0.0.1", 80, "127.0.0.2", 8080)
@@ -489,7 +485,7 @@ func TestTXProcessConnection(t *testing.T) {
 	}
 }
 
-func TestTXGetField(t *testing.T) {
+func TestTxGetField(t *testing.T) {
 	tx := makeTransaction()
 	rvp := ruleVariableParams{
 		Name:     "args",
@@ -500,7 +496,7 @@ func TestTXGetField(t *testing.T) {
 	}
 }
 
-func TestTXProcessURI(t *testing.T) {
+func TestTxProcessURI(t *testing.T) {
 	waf := NewWaf()
 	tx := waf.NewTransaction(context.Background())
 	uri := "http://example.com/path/to/file.html?query=string&other=value"
