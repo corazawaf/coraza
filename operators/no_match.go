@@ -11,6 +11,4 @@ type noMatch struct{}
 
 func (o *noMatch) Init(options coraza.RuleOperatorOptions) error { return nil }
 
-func (o *noMatch) Evaluate(tx *coraza.Transaction, value string) bool {
-	return false
-}
+func (o *noMatch) Evaluate(tx *coraza.Transaction, value string) bool { return false }

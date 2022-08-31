@@ -9,13 +9,9 @@ import (
 
 type geoLookup struct{}
 
-func (o *geoLookup) Init(options coraza.RuleOperatorOptions) error {
-	return nil
-}
+func (o *geoLookup) Init(options coraza.RuleOperatorOptions) error { return nil }
 
-func (o *geoLookup) Evaluate(tx *coraza.Transaction, value string) bool {
-	// kept for compatibility, it requires a plugin.
-	return true
-}
+// kept for compatibility, it requires a plugin.
+func (o *geoLookup) Evaluate(tx *coraza.Transaction, value string) bool { return true }
 
 var _ coraza.RuleOperator = &geoLookup{}

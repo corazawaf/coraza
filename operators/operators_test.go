@@ -28,65 +28,81 @@ func TestOperators(t *testing.T) {
 	root := "./testdata"
 	files := [][]byte{}
 	if _, err := os.Stat(root); os.IsNotExist(err) {
-		t.Error("failed to find operator test files")
+		t.Fatal("failed to find operator test files")
 	}
+
 	if err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if strings.HasSuffix(path, ".json") {
-			data, _ := os.ReadFile(path)
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
 			files = append(files, data)
 		}
 		return nil
 	}); err != nil {
-		t.Errorf("failed to walk test files: %s", err.Error())
+		t.Fatalf("failed to walk test files: %s", err.Error())
 	}
+
+	captureMatrix := map[string]bool{
+		"with capture":    true,
+		"without capture": false,
+	}
+
 	waf := coraza.NewWaf()
 	for _, f := range files {
 		cases := unmarshalTests(t, f)
 		for _, data := range cases {
-			t.Run(data.Name, func(t *testing.T) {
-				// UNMARSHALL does not transform \u0000 to binary
-				data.Input = strings.ReplaceAll(data.Input, `\u0000`, "\u0000")
-				data.Param = strings.ReplaceAll(data.Param, `\u0000`, "\u0000")
+			for capName, capVal := range captureMatrix {
+				t.Run(data.Name+" "+capName, func(t *testing.T) {
+					// UNMARSHALL does not transform \u0000 to binary
+					data.Input = strings.ReplaceAll(data.Input, `\u0000`, "\u0000")
+					data.Param = strings.ReplaceAll(data.Param, `\u0000`, "\u0000")
 
-				if strings.Contains(data.Input, `\x`) {
-					in, err := strconv.Unquote(`"` + data.Input + `"`)
-					if err != nil {
-						t.Errorf("Cannot parse test case: %s", err.Error())
-					} else {
-						data.Input = in
+					if strings.Contains(data.Input, `\x`) {
+						in, err := strconv.Unquote(`"` + data.Input + `"`)
+						if err != nil {
+							t.Errorf("Cannot parse test case: %s", err.Error())
+						} else {
+							data.Input = in
+						}
 					}
-				}
-				if strings.Contains(data.Param, `\x`) {
-					p, err := strconv.Unquote(`"` + data.Param + `"`)
-					if err != nil {
-						t.Errorf("Cannot parse test case: %s", err.Error())
-					}
-					data.Param = p
-				}
-				op, err := Get(data.Name)
-				if err != nil {
-					t.Logf("skipped error: %s", err.Error())
-					return
-				}
 
-				opts := coraza.RuleOperatorOptions{
-					Arguments: data.Param,
-					Path:      []string{"./testdata/op"},
-				}
-				if err := op.Init(opts); err != nil {
-					t.Error(err)
-				}
-				res := op.Evaluate(waf.NewTransaction(context.Background()), data.Input)
-				// 1 = expected true
-				// 0 = expected false
-				if (res && data.Ret != 1) || (!res && data.Ret == 1) {
-					expected := "match"
-					if data.Ret == 0 {
-						expected = "no match"
+					if strings.Contains(data.Param, `\x`) {
+						p, err := strconv.Unquote(`"` + data.Param + `"`)
+						if err != nil {
+							t.Errorf("Cannot parse test case: %s", err.Error())
+						}
+						data.Param = p
 					}
-					t.Errorf("Invalid operator result for @%s(%q, %q), %s expected", data.Name, data.Param, data.Input, expected)
-				}
-			})
+
+					op, err := Get(data.Name)
+					if err != nil {
+						t.Logf("skipped error: %s", err.Error())
+						return
+					}
+
+					opts := coraza.RuleOperatorOptions{
+						Arguments: data.Param,
+						Path:      []string{"./testdata/op"},
+					}
+					if err := op.Init(opts); err != nil {
+						t.Error(err)
+					}
+					tx := waf.NewTransaction(context.Background())
+					tx.Capture = capVal
+					res := op.Evaluate(tx, data.Input)
+					// 1 = expected true
+					// 0 = expected false
+					if (res && data.Ret != 1) || (!res && data.Ret == 1) {
+						expected := "match"
+						if data.Ret == 0 {
+							expected = "no match"
+						}
+						t.Errorf("Invalid operator result for @%s(%q, %q), %s expected", data.Name, data.Param, data.Input, expected)
+					}
+				})
+			}
 		}
 	}
 }
