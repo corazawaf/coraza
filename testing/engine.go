@@ -18,7 +18,7 @@ import (
 // a WAF instance for a test case
 type Test struct {
 	// waf contains a waf instance pointer
-	waf *coraza.Waf
+	waf *coraza.WAF
 	// transaction contains the current transaction
 	transaction *coraza.Transaction
 	magic       bool
@@ -52,8 +52,8 @@ type Test struct {
 	ExpectedOutput profile.ExpectedOutput
 }
 
-// SetWaf sets the waf instance pointer
-func (t *Test) SetWaf(waf *coraza.Waf) {
+// SetWAF sets the waf instance pointer
+func (t *Test) SetWAF(waf *coraza.WAF) {
 	t.waf = waf
 }
 
@@ -278,7 +278,7 @@ func (t *Test) Request() string {
 }
 
 // NewTest creates a new test with default properties
-func NewTest(name string, waf *coraza.Waf) *Test {
+func NewTest(name string, waf *coraza.WAF) *Test {
 	t := &Test{
 		Name:           name,
 		transaction:    waf.NewTransaction(context.Background()),
@@ -293,7 +293,7 @@ func NewTest(name string, waf *coraza.Waf) *Test {
 		RequestPort:     80,
 		magic:           true,
 	}
-	t.SetWaf(waf)
+	t.SetWAF(waf)
 	return t
 }
 

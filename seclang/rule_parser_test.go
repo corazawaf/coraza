@@ -11,7 +11,7 @@ import (
 )
 
 func TestInvalidRule(t *testing.T) {
-	waf := coraza.NewWaf()
+	waf := coraza.NewWAF()
 	p := NewParser(waf)
 
 	err := p.FromString("")
@@ -26,7 +26,7 @@ func TestInvalidRule(t *testing.T) {
 }
 
 func TestVariables(t *testing.T) {
-	waf := coraza.NewWaf()
+	waf := coraza.NewWAF()
 	p := NewParser(waf)
 
 	// single variable with key
@@ -59,7 +59,7 @@ func TestVariables(t *testing.T) {
 }
 
 func TestVariableCases(t *testing.T) {
-	waf := coraza.NewWaf()
+	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	err := p.FromString(`SecRule REQUEST_COOKIES|!REQUEST_COOKIES:/__utm/|!REQUEST_COOKIES:/_pk_ref/|REQUEST_COOKIES_NAMES|ARGS_NAMES|ARGS|XML:/* "" "id:7,pass"`)
 	if err != nil {
@@ -68,7 +68,7 @@ func TestVariableCases(t *testing.T) {
 }
 
 func TestSecRuleInlineVariableNegation(t *testing.T) {
-	waf := coraza.NewWaf()
+	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	err := p.FromString(`
 		SecRule REQUEST_URI|!REQUEST_COOKIES "abc" "id:7,phase:2"
@@ -93,7 +93,7 @@ func TestSecRuleInlineVariableNegation(t *testing.T) {
 }
 
 func TestSecRuleUpdateTargetVariableNegation(t *testing.T) {
-	waf := coraza.NewWaf()
+	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	err := p.FromString(`
 		SecRule REQUEST_URI|REQUEST_COOKIES "abc" "id:7,phase:2"
@@ -124,7 +124,7 @@ func TestSecRuleUpdateTargetVariableNegation(t *testing.T) {
 }
 
 func TestErrorLine(t *testing.T) {
-	waf := coraza.NewWaf()
+	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	err := p.FromString("SecAction \"id:1\"\n#test\nSomefaulty")
 	if err == nil {
@@ -136,7 +136,7 @@ func TestErrorLine(t *testing.T) {
 }
 
 func TestDefaultActionsForPhase2(t *testing.T) {
-	waf := coraza.NewWaf()
+	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	err := p.FromString(`
 	SecAction "id:1,phase:2"

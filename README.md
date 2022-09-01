@@ -78,6 +78,7 @@ Coraza can be used as a library for your Go program to implement a security midd
 package main
 
 import(
+	"context"
 	"fmt"
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/seclang"
@@ -85,8 +86,8 @@ import(
 
 func main() {
 	// First we initialize our waf and our seclang parser
-	waf := coraza.NewWaf()
-	parser, _ := seclang.NewParser(waf)
+	waf := coraza.NewWAF()
+	parser := seclang.NewParser(waf)
 
 	// Now we parse our rules
 	if err := parser.FromString(`SecRule REMOTE_ADDR "@rx .*" "id:1,phase:1,deny,status:403"`); err != nil {

@@ -18,7 +18,7 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-var wafi = NewWaf()
+var wafi = NewWAF()
 
 func TestTxSetters(t *testing.T) {
 	tx := makeTransaction()
@@ -223,10 +223,10 @@ func TestResetCapture(t *testing.T) {
 
 func TestRelevantAuditLogging(t *testing.T) {
 	tx := makeTransaction()
-	tx.Waf.AuditLogRelevantStatus = regexp.MustCompile(`(403)`)
+	tx.WAF.AuditLogRelevantStatus = regexp.MustCompile(`(403)`)
 	tx.Variables.ResponseStatus.Set("403")
 	tx.AuditEngine = types.AuditEngineRelevantOnly
-	// tx.Waf.auditLogger = loggers.NewAuditLogger()
+	// tx.WAF.auditLogger = loggers.NewAuditLogger()
 	tx.ProcessLogging()
 	// TODO how do we check if the log was writen?
 	if err := tx.Clean(); err != nil {
@@ -235,7 +235,7 @@ func TestRelevantAuditLogging(t *testing.T) {
 }
 
 func TestLogCallback(t *testing.T) {
-	waf := NewWaf()
+	waf := NewWAF()
 	buffer := ""
 	waf.SetErrorLogCb(func(mr types.MatchedRule) {
 		buffer = mr.ErrorLog(403)
@@ -257,7 +257,7 @@ func TestLogCallback(t *testing.T) {
 }
 
 func TestHeaderSetters(t *testing.T) {
-	waf := NewWaf()
+	waf := NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	tx.AddRequestHeader("cookie", "abc=def;hij=klm")
 	tx.AddRequestHeader("test1", "test2")
@@ -280,7 +280,7 @@ func TestHeaderSetters(t *testing.T) {
 }
 
 func TestRequestBodyProcessingAlgorithm(t *testing.T) {
-	waf := NewWaf()
+	waf := NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	tx.RuleEngine = types.RuleEngineOn
 	tx.RequestBodyAccess = true
@@ -377,7 +377,7 @@ func TestAuditLogMessages(t *testing.T) {
 }
 
 func TestTransactionSyncPool(t *testing.T) {
-	waf := NewWaf()
+	waf := NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	tx.MatchedRules = append(tx.MatchedRules, types.MatchedRule{
 		Rule: types.RuleMetadata{
@@ -397,11 +397,11 @@ func TestTransactionSyncPool(t *testing.T) {
 }
 
 func TestTxPhase4Magic(t *testing.T) {
-	waf := NewWaf()
+	waf := NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	tx.AddResponseHeader("content-type", "text/html")
 	tx.ResponseBodyAccess = true
-	tx.Waf.ResponseBodyLimit = 3
+	tx.WAF.ResponseBodyLimit = 3
 	if _, err := tx.ResponseBodyBuffer.Write([]byte("more bytes")); err != nil {
 		t.Error(err)
 	}
@@ -417,7 +417,7 @@ func TestTxPhase4Magic(t *testing.T) {
 }
 
 func TestVariablesMatch(t *testing.T) {
-	waf := NewWaf()
+	waf := NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	tx.matchVariable(types.MatchData{
 		VariableName: "ARGS_NAMES",
@@ -442,7 +442,7 @@ func TestVariablesMatch(t *testing.T) {
 }
 
 func TestTxReqBodyForce(t *testing.T) {
-	waf := NewWaf()
+	waf := NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	tx.RequestBodyAccess = true
 	tx.ForceRequestBodyVariable = true
@@ -458,7 +458,7 @@ func TestTxReqBodyForce(t *testing.T) {
 }
 
 func TestTxReqBodyForceNegative(t *testing.T) {
-	waf := NewWaf()
+	waf := NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	tx.RequestBodyAccess = true
 	tx.ForceRequestBodyVariable = false
@@ -474,7 +474,7 @@ func TestTxReqBodyForceNegative(t *testing.T) {
 }
 
 func TestTxProcessConnection(t *testing.T) {
-	waf := NewWaf()
+	waf := NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	tx.ProcessConnection("127.0.0.1", 80, "127.0.0.2", 8080)
 	if tx.Variables.RemoteAddr.String() != "127.0.0.1" {
@@ -497,7 +497,7 @@ func TestTxGetField(t *testing.T) {
 }
 
 func TestTxProcessURI(t *testing.T) {
-	waf := NewWaf()
+	waf := NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	uri := "http://example.com/path/to/file.html?query=string&other=value"
 	tx.ProcessURI(uri, "GET", "HTTP/1.1")
