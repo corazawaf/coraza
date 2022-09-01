@@ -26,14 +26,9 @@ jobs:
         with:
           files: ./coverage-normal.txt
           name: coraza-v3
-          flags: no-tinygo
+          flags: no-tinygo,overall
       - uses: codecov/codecov-action@v2
         with:
           files: ./coverage-tinygo.txt
           name: coraza-v3
-          flags: tinygo
-      - uses: codecov/codecov-action@v2
-        with:
-          files: ./coverage-tinygo.txt,./coverage-normal.txt
-          name: coraza-v3
-          flags: overall          
+          flags: tinygo,overall
