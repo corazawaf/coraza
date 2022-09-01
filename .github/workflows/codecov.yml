@@ -1,0 +1,39 @@
+name: Codecov
+on:
+  pull_request:
+  push:
+
+jobs:
+  codecov:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [1.19.x]
+        os: [ubuntu-latest]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Install Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
+      - name: Tests and coverage (No Tinygo)
+        run: go test -race -coverprofile=coverage-normal.txt -covermode=atomic ./...
+      - name: Tests and coverage (Tinygo)
+        run: go test -race -tags=tinygo -coverprofile=coverage-tinygo.txt -covermode=atomic ./...        
+      - uses: codecov/codecov-action@v2
+        with:
+          files: ./coverage-normal.txt
+          name: coraza-v3
+          flags: no-tinygo
+      - uses: codecov/codecov-action@v2
+        with:
+          files: ./coverage-tinygo.txt
+          name: coraza-v3
+          flags: tinygo
+      - uses: codecov/codecov-action@v2
+        with:
+          files: ./coverage-tinygo.txt,./coverage-normal.txt
+          name: coraza-v3
+          flags: overall
