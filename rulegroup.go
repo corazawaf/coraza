@@ -95,12 +95,12 @@ func (rg *RuleGroup) Clear() {
 // Eval rules for the specified phase, between 1 and 5
 // Returns true if transaction is disrupted
 func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
-	tx.Waf.Logger.Debug("[%s] Evaluating phase %d", tx.ID, int(phase))
+	tx.WAF.Logger.Debug("[%s] Evaluating phase %d", tx.ID, int(phase))
 	tx.LastPhase = phase
 	usedRules := 0
 	ts := time.Now().UnixNano()
 RulesLoop:
-	for _, r := range tx.Waf.Rules.GetRules() {
+	for _, r := range tx.WAF.Rules.GetRules() {
 		if tx.Interruption != nil && phase != types.PhaseLogging {
 			break RulesLoop
 		}
@@ -112,7 +112,7 @@ RulesLoop:
 		// we skip the rule in case it's in the excluded list
 		for _, trb := range tx.ruleRemoveByID {
 			if trb == r.ID {
-				tx.Waf.Logger.Debug("[%s] Skipping rule %d", tx.ID, r.ID)
+				tx.WAF.Logger.Debug("[%s] Skipping rule %d", tx.ID, r.ID)
 				continue RulesLoop
 			}
 		}
@@ -122,7 +122,7 @@ RulesLoop:
 			if r.SecMark == tx.SkipAfter {
 				tx.SkipAfter = ""
 			} else {
-				tx.Waf.Logger.Debug("[%s] Skipping rule %d because of SkipAfter, expecting %s and got: %q", tx.ID, r.ID, tx.SkipAfter, r.SecMark)
+				tx.WAF.Logger.Debug("[%s] Skipping rule %d because of SkipAfter, expecting %s and got: %q", tx.ID, r.ID, tx.SkipAfter, r.SecMark)
 			}
 			continue
 		}
@@ -140,7 +140,7 @@ RulesLoop:
 		tx.Capture = false // we reset captures
 		usedRules++
 	}
-	tx.Waf.Logger.Debug("[%s] Finished phase %d", tx.ID, int(phase))
+	tx.WAF.Logger.Debug("[%s] Finished phase %d", tx.ID, int(phase))
 	tx.stopWatches[phase] = time.Now().UnixNano() - ts
 	return tx.Interruption != nil
 }

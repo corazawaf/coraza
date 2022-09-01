@@ -26,14 +26,14 @@ func (a *initcolFn) Init(r *coraza.Rule, data string) error {
 }
 
 func (a *initcolFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
-	// tx.Waf.Logger.Error("initcol was used but it's not supported", zap.Int("rule", r.Id))
+	// tx.WAF.Logger.Error("initcol was used but it's not supported", zap.Int("rule", r.Id))
 	/*
 		key := tx.MacroExpansion(a.key)
-		data := tx.Waf.Persistence.Get(a.variable, key)
+		data := tx.WAF.Persistence.Get(a.variable, key)
 		if data == nil {
 			ts := time.Now().UnixNano()
 			tss := strconv.FormatInt(ts, 10)
-			tsstimeout := strconv.FormatInt(ts+(int64(tx.Waf.CollectionTimeout)*1000), 10)
+			tsstimeout := strconv.FormatInt(ts+(int64(tx.WAF.CollectionTimeout)*1000), 10)
 			data = map[string][]string{
 				"CREATE_TIME":      {tss},
 				"IS_NEW":           {"1"},

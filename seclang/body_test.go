@@ -12,7 +12,7 @@ import (
 
 /*
 func TestRequestBodyAccessOff(t *testing.T) {
-	waf := coraza.NewWaf()
+	waf := coraza.NewWAF()
 	parser, _ := NewParser(waf)
 	if err := parser.FromString(`
 	SecRequestBodyAccess Off
@@ -31,7 +31,7 @@ func TestRequestBodyAccessOff(t *testing.T) {
 }*/
 
 func TestRequestBodyAccessOn(t *testing.T) {
-	waf := coraza.NewWaf()
+	waf := coraza.NewWAF()
 	parser := NewParser(waf)
 	if err := parser.FromString(`
 	SecRequestBodyAccess On

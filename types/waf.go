@@ -11,7 +11,7 @@ import (
 // Config is used to store the configuration of the WAF
 // Internal configurations are not exported.
 // This is used to connect directives with audit loggers.
-// A Waf instance will share it's Config object with the
+// A WAF instance will share it's Config object with the
 // audit loggers.
 type Config map[string]interface{}
 

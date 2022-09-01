@@ -49,7 +49,7 @@ func TestOperators(t *testing.T) {
 		"without capture": false,
 	}
 
-	waf := coraza.NewWaf()
+	waf := coraza.NewWAF()
 	for _, f := range files {
 		cases := unmarshalTests(t, f)
 		for _, data := range cases {

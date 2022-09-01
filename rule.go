@@ -197,8 +197,8 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 
 	matchedValues := []types.MatchData{}
 	// we log if we are the parent rule
-	tx.Waf.Logger.Debug("[%s] [%d] Evaluating rule %d", tx.ID, rid, r.ID)
-	defer tx.Waf.Logger.Debug("[%s] [%d] Finish evaluating rule %d", tx.ID, rid, r.ID)
+	tx.WAF.Logger.Debug("[%s] [%d] Evaluating rule %d", tx.ID, rid, r.ID)
+	defer tx.WAF.Logger.Debug("[%s] [%d] Finish evaluating rule %d", tx.ID, rid, r.ID)
 	ruleCol := tx.Variables.Rule
 	ruleCol.SetIndex("id", 0, strconv.Itoa(rid))
 	ruleCol.SetIndex("msg", 0, r.Msg.String())
@@ -207,7 +207,7 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 	ruleCol.SetIndex("severity", 0, r.Severity.String())
 	// SecMark and SecAction uses nil operator
 	if r.operator == nil {
-		tx.Waf.Logger.Debug("[%s] [%d] Forcing rule %d to match", tx.ID, rid, r.ID)
+		tx.WAF.Logger.Debug("[%s] [%d] Forcing rule %d to match", tx.ID, rid, r.ID)
 		md := types.MatchData{}
 		matchedValues = append(matchedValues, md)
 		r.matchVariable(tx, md)
@@ -223,10 +223,10 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 			}
 
 			values = tx.GetField(v)
-			tx.Waf.Logger.Debug("[%s] [%d] Expanding %d arguments for rule %d", tx.ID, rid, len(values), r.ID)
+			tx.WAF.Logger.Debug("[%s] [%d] Expanding %d arguments for rule %d", tx.ID, rid, len(values), r.ID)
 			for _, arg := range values {
 				var args []string
-				tx.Waf.Logger.Debug("[%s] [%d] Transforming argument %q for rule %d", tx.ID, rid, arg.Value, r.ID)
+				tx.WAF.Logger.Debug("[%s] [%d] Transforming argument %q for rule %d", tx.ID, rid, arg.Value, r.ID)
 				var errs []error
 				if r.MultiMatch {
 					// TODO in the future, we don't need to run every transformation
@@ -238,9 +238,9 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 					errs = es
 				}
 				if len(errs) > 0 {
-					tx.Waf.Logger.Debug("[%s] [%d] Error transforming argument %q for rule %d: %v", tx.ID, rid, arg.Value, r.ID, errs)
+					tx.WAF.Logger.Debug("[%s] [%d] Error transforming argument %q for rule %d: %v", tx.ID, rid, arg.Value, r.ID, errs)
 				}
-				tx.Waf.Logger.Debug("[%s] [%d] Arguments transformed for rule %d: %v", tx.ID, rid, r.ID, args)
+				tx.WAF.Logger.Debug("[%s] [%d] Arguments transformed for rule %d: %v", tx.ID, rid, r.ID, args)
 
 				// args represents the transformed variables
 				for _, carg := range args {
@@ -259,7 +259,7 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 						mr.Data = r.LogData.Expand(tx)
 						matchedValues = append(matchedValues, mr)
 
-						tx.Waf.Logger.Debug("[%s] [%d] Evaluating operator \"%s %s\" against %q: MATCH",
+						tx.WAF.Logger.Debug("[%s] [%d] Evaluating operator \"%s %s\" against %q: MATCH",
 							tx.ID,
 							rid,
 							r.operator.Function,
@@ -268,7 +268,7 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 						)
 					} else {
 
-						tx.Waf.Logger.Debug("[%s] [%d] Evaluating operator \"%s %s\" against %q: NO MATCH",
+						tx.WAF.Logger.Debug("[%s] [%d] Evaluating operator \"%s %s\" against %q: NO MATCH",
 							tx.ID,
 							rid,
 							r.operator.Function,
@@ -289,7 +289,7 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 	if r.ParentID == 0 {
 		// we only run the chains for the parent rule
 		for nr := r.Chain; nr != nil; {
-			tx.Waf.Logger.Debug("[%s] [%d] Evaluating rule chain for %d", tx.ID, rid, r.ID)
+			tx.WAF.Logger.Debug("[%s] [%d] Evaluating rule chain for %d", tx.ID, rid, r.ID)
 			matchedChainValues := nr.Evaluate(tx)
 			if len(matchedChainValues) == 0 {
 				return matchedChainValues
@@ -299,10 +299,10 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 		}
 		// we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
 		if tx.RuleEngine != types.RuleEngineDetectionOnly {
-			tx.Waf.Logger.Debug("[%s] [%d] Disrupting transaction by rule %d", tx.ID, rid, r.ID)
+			tx.WAF.Logger.Debug("[%s] [%d] Disrupting transaction by rule %d", tx.ID, rid, r.ID)
 			for _, a := range r.actions {
 				if a.Function.Type() == types.ActionTypeDisruptive || a.Function.Type() == types.ActionTypeFlow {
-					tx.Waf.Logger.Debug("[%s] [%d] Evaluating action %s for rule %d", tx.ID, rid, a.Name, r.ID)
+					tx.WAF.Logger.Debug("[%s] [%d] Evaluating action %s for rule %d", tx.ID, rid, a.Name, r.ID)
 					a.Function.Evaluate(r, tx)
 				}
 			}
@@ -322,7 +322,7 @@ func (r *Rule) matchVariable(tx *Transaction, m types.MatchData) {
 		rid = r.ParentID
 	}
 	if !m.IsNil() {
-		tx.Waf.Logger.Debug("[%s] [%d] Matching rule %d %s:%s", tx.ID, rid, r.ID, m.VariableName, m.Key)
+		tx.WAF.Logger.Debug("[%s] [%d] Matching rule %d %s:%s", tx.ID, rid, r.ID, m.VariableName, m.Key)
 	}
 	// we must match the vars before running the chains
 
@@ -330,7 +330,7 @@ func (r *Rule) matchVariable(tx *Transaction, m types.MatchData) {
 	tx.matchVariable(m)
 	for _, a := range r.actions {
 		if a.Function.Type() == types.ActionTypeNondisruptive {
-			tx.Waf.Logger.Debug("[%s] [%d] Evaluating action %s for rule %d", tx.ID, rid, a.Name, r.ID)
+			tx.WAF.Logger.Debug("[%s] [%d] Evaluating action %s for rule %d", tx.ID, rid, a.Name, r.ID)
 			a.Function.Evaluate(r, tx)
 		}
 	}

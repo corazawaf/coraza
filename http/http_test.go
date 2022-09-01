@@ -24,7 +24,7 @@ import (
 
 func TestRequestExtractionSuccess(t *testing.T) {
 	req, _ := http.NewRequest("POST", "https://www.coraza.io/test", strings.NewReader("test=456"))
-	waf := coraza.NewWaf()
+	waf := coraza.NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	if _, err := ProcessRequest(tx, req); err != nil {
 		t.Fatal(err)
@@ -92,7 +92,7 @@ func multipartRequest(t *testing.T, req *http.Request) error {
 
 func makeTransaction(t *testing.T) *coraza.Transaction {
 	t.Helper()
-	tx := coraza.NewWaf().NewTransaction(context.Background())
+	tx := coraza.NewWAF().NewTransaction(context.Background())
 	tx.RequestBodyAccess = true
 	ht := []string{
 		"POST /testurl.php?id=123&b=456 HTTP/1.1",

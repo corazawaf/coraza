@@ -60,7 +60,7 @@ func TestRbl(t *testing.T) {
 	})
 
 	t.Run("Valid hostname with TXT record", func(t *testing.T) {
-		tx := coraza.NewWaf().NewTransaction(context.Background())
+		tx := coraza.NewWAF().NewTransaction(context.Background())
 		if !rbl.Evaluate(tx, "valid_txt") {
 			t.Errorf("Unexpected result for valid hostname")
 		}
@@ -76,7 +76,7 @@ func TestRbl(t *testing.T) {
 	})
 
 	t.Run("Blocked hostname", func(t *testing.T) {
-		tx := coraza.NewWaf().NewTransaction(context.Background())
+		tx := coraza.NewWAF().NewTransaction(context.Background())
 		if !rbl.Evaluate(tx, "blocked") {
 			t.Fatal("Unexpected result for blocked hostname")
 		}

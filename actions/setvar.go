@@ -59,7 +59,7 @@ func (a *setvarFn) Init(r *coraza.Rule, data string) error {
 func (a *setvarFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	key := a.key.Expand(tx)
 	value := a.value.Expand(tx)
-	tx.Waf.Logger.Debug("[%s] Setting var %q to %q by rule %d", tx.ID, key, value, r.ID)
+	tx.WAF.Logger.Debug("[%s] Setting var %q to %q by rule %d", tx.ID, key, value, r.ID)
 	a.evaluateTxCollection(r, tx, strings.ToLower(key), value)
 }
 
@@ -93,7 +93,7 @@ func (a *setvarFn) evaluateTxCollection(r *coraza.Rule, tx *coraza.Transaction, 
 		if len(value) > 1 {
 			sum, err = strconv.Atoi(value[1:])
 			if err != nil {
-				tx.Waf.Logger.Error("[%s] Invalid value for setvar %q on rule %d", tx.ID, value, r.ID)
+				tx.WAF.Logger.Error("[%s] Invalid value for setvar %q on rule %d", tx.ID, value, r.ID)
 				return
 			}
 		}
@@ -101,7 +101,7 @@ func (a *setvarFn) evaluateTxCollection(r *coraza.Rule, tx *coraza.Transaction, 
 		if res != "" {
 			val, err = strconv.Atoi(res)
 			if err != nil {
-				tx.Waf.Logger.Error("[%s] Invalid value for setvar %q on rule %d", tx.ID, res, r.ID)
+				tx.WAF.Logger.Error("[%s] Invalid value for setvar %q on rule %d", tx.ID, res, r.ID)
 				return
 			}
 		}

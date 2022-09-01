@@ -18,7 +18,7 @@ func TestRx1(t *testing.T) {
 	if err := rx.Init(opts); err != nil {
 		t.Error(err)
 	}
-	waf := coraza.NewWaf()
+	waf := coraza.NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	tx.Capture = true
 	res := rx.Evaluate(tx, "somedata")
