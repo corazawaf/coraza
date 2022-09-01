@@ -169,7 +169,7 @@ func TestRequestBody(t *testing.T) {
 				}
 			}
 
-			tx.Clean()
+			_ = tx.Clean()
 		})
 	}
 }
