@@ -18,7 +18,7 @@ import (
 
 // DirectiveOptions contains the parsed options for a directive
 type DirectiveOptions struct {
-	Waf      *coraza.Waf
+	WAF      *coraza.WAF
 	Config   types.Config
 	Opts     string
 	Path     []string
@@ -28,7 +28,7 @@ type DirectiveOptions struct {
 type directive = func(options *DirectiveOptions) error
 
 func directiveSecComponentSignature(options *DirectiveOptions) error {
-	options.Waf.ComponentNames = append(options.Waf.ComponentNames, options.Opts)
+	options.WAF.ComponentNames = append(options.WAF.ComponentNames, options.Opts)
 	return nil
 }
 
@@ -40,17 +40,17 @@ func directiveSecMarker(options *DirectiveOptions) error {
 	rule.Phase = 0
 	rule.Line = options.Config.Get("parser_last_line", 0).(int)
 	rule.File = options.Config.Get("parser_config_file", "").(string)
-	if err := options.Waf.Rules.Add(rule); err != nil {
+	if err := options.WAF.Rules.Add(rule); err != nil {
 		return newCompileRuleError(err, options.Opts)
 	}
-	options.Waf.Logger.Debug("added secmark rule")
+	options.WAF.Logger.Debug("added secmark rule")
 	return nil
 }
 
 func directiveSecAction(options *DirectiveOptions) error {
 	rule, err := ParseRule(RuleOptions{
 		WithOperator: false,
-		Waf:          options.Waf,
+		WAF:          options.WAF,
 		Config:       options.Config,
 		Directive:    "SecAction",
 		Data:         options.Opts,
@@ -58,10 +58,10 @@ func directiveSecAction(options *DirectiveOptions) error {
 	if err != nil {
 		return newCompileRuleError(err, options.Opts)
 	}
-	if err := options.Waf.Rules.Add(rule); err != nil {
+	if err := options.WAF.Rules.Add(rule); err != nil {
 		return newCompileRuleError(err, options.Opts)
 	}
-	options.Waf.Logger.Debug("Added SecAction: %s", options.Opts)
+	options.WAF.Logger.Debug("Added SecAction: %s", options.Opts)
 	return nil
 }
 
@@ -69,7 +69,7 @@ func directiveSecRule(options *DirectiveOptions) error {
 	ignoreErrors := options.Config.Get("ignore_rule_compilation_errors", false).(bool)
 	rule, err := ParseRule(RuleOptions{
 		WithOperator: true,
-		Waf:          options.Waf,
+		WAF:          options.WAF,
 		Config:       options.Config,
 		Directive:    "SecRule",
 		Data:         options.Opts,
@@ -77,14 +77,14 @@ func directiveSecRule(options *DirectiveOptions) error {
 	if err != nil && !ignoreErrors {
 		return newCompileRuleError(err, options.Opts)
 	} else if err != nil && ignoreErrors {
-		options.Waf.Logger.Debug("Ignoring rule compilation error for rule %s: %s", options.Opts, err.Error())
+		options.WAF.Logger.Debug("Ignoring rule compilation error for rule %s: %s", options.Opts, err.Error())
 		return nil
 	}
-	err = options.Waf.Rules.Add(rule)
+	err = options.WAF.Rules.Add(rule)
 	if err != nil && !ignoreErrors {
 		return err
 	} else if err != nil && ignoreErrors {
-		options.Waf.Logger.Debug("Ignoring rule compilation error for rule %s: %s", options.Opts, err.Error())
+		options.WAF.Logger.Debug("Ignoring rule compilation error for rule %s: %s", options.Opts, err.Error())
 		return nil
 	}
 	return nil
@@ -95,13 +95,13 @@ func directiveSecResponseBodyAccess(options *DirectiveOptions) error {
 	if err != nil {
 		return newDirectiveError(err, "SecResponseBodyAccess")
 	}
-	options.Waf.ResponseBodyAccess = b
+	options.WAF.ResponseBodyAccess = b
 	return nil
 }
 
 func directiveSecRequestBodyLimit(options *DirectiveOptions) error {
 	limit, _ := strconv.ParseInt(options.Opts, 10, 64)
-	options.Waf.RequestBodyLimit = limit
+	options.WAF.RequestBodyLimit = limit
 	return nil
 }
 
@@ -110,13 +110,13 @@ func directiveSecRequestBodyAccess(options *DirectiveOptions) error {
 	if err != nil {
 		return newDirectiveError(err, "SecRequestBodyAccess")
 	}
-	options.Waf.RequestBodyAccess = b
+	options.WAF.RequestBodyAccess = b
 	return nil
 }
 
 func directiveSecRuleEngine(options *DirectiveOptions) error {
 	engine, err := types.ParseRuleEngineStatus(options.Opts)
-	options.Waf.RuleEngine = engine
+	options.WAF.RuleEngine = engine
 	return err
 }
 
@@ -125,73 +125,73 @@ func directiveUnsupported(options *DirectiveOptions) error {
 }
 
 func directiveSecWebAppID(options *DirectiveOptions) error {
-	options.Waf.WebAppID = options.Opts
+	options.WAF.WebAppID = options.Opts
 	return nil
 }
 
 func directiveSecTmpDir(options *DirectiveOptions) error {
-	options.Waf.TmpDir = options.Opts
+	options.WAF.TmpDir = options.Opts
 	return nil
 }
 
 func directiveSecServerSignature(options *DirectiveOptions) error {
-	options.Waf.ServerSignature = options.Opts
+	options.WAF.ServerSignature = options.Opts
 	return nil
 }
 
 func directiveSecRuleRemoveByTag(options *DirectiveOptions) error {
-	for _, r := range options.Waf.Rules.FindByTag(options.Opts) {
-		options.Waf.Rules.DeleteByID(r.ID)
+	for _, r := range options.WAF.Rules.FindByTag(options.Opts) {
+		options.WAF.Rules.DeleteByID(r.ID)
 	}
 	return nil
 }
 
 func directiveSecRuleRemoveByMsg(options *DirectiveOptions) error {
-	for _, r := range options.Waf.Rules.FindByMsg(options.Opts) {
-		options.Waf.Rules.DeleteByID(r.ID)
+	for _, r := range options.WAF.Rules.FindByMsg(options.Opts) {
+		options.WAF.Rules.DeleteByID(r.ID)
 	}
 	return nil
 }
 
 func directiveSecRuleRemoveByID(options *DirectiveOptions) error {
 	id, _ := strconv.Atoi(options.Opts)
-	options.Waf.Rules.DeleteByID(id)
+	options.WAF.Rules.DeleteByID(id)
 	return nil
 }
 
 func directiveSecResponseBodyMimeTypesClear(options *DirectiveOptions) error {
-	options.Waf.ResponseBodyMimeTypes = []string{}
+	options.WAF.ResponseBodyMimeTypes = []string{}
 	return nil
 }
 
 func directiveSecResponseBodyMimeType(options *DirectiveOptions) error {
-	options.Waf.ResponseBodyMimeTypes = strings.Split(options.Opts, " ")
+	options.WAF.ResponseBodyMimeTypes = strings.Split(options.Opts, " ")
 	return nil
 }
 
 func directiveSecResponseBodyLimitAction(options *DirectiveOptions) error {
-	options.Waf.RejectOnResponseBodyLimit = strings.ToLower(options.Opts) == "reject"
+	options.WAF.RejectOnResponseBodyLimit = strings.ToLower(options.Opts) == "reject"
 	return nil
 }
 
 func directiveSecResponseBodyLimit(options *DirectiveOptions) error {
 	var err error
-	options.Waf.ResponseBodyLimit, err = strconv.ParseInt(options.Opts, 10, 64)
+	options.WAF.ResponseBodyLimit, err = strconv.ParseInt(options.Opts, 10, 64)
 	return err
 }
 
 func directiveSecRequestBodyLimitAction(options *DirectiveOptions) error {
-	options.Waf.RejectOnRequestBodyLimit = strings.ToLower(options.Opts) == "reject"
+	options.WAF.RejectOnRequestBodyLimit = strings.ToLower(options.Opts) == "reject"
 	return nil
 }
 
 func directiveSecRequestBodyInMemoryLimit(options *DirectiveOptions) error {
-	options.Waf.RequestBodyInMemoryLimit, _ = strconv.ParseInt(options.Opts, 10, 64)
+	options.WAF.RequestBodyInMemoryLimit, _ = strconv.ParseInt(options.Opts, 10, 64)
 	return nil
 }
 
 func directiveSecRemoteRulesFailAction(options *DirectiveOptions) error {
-	options.Waf.AbortOnRemoteRulesFail = strings.ToLower(options.Opts) == "abort"
+	options.WAF.AbortOnRemoteRulesFail = strings.ToLower(options.Opts) == "abort"
 	return nil
 }
 
@@ -204,7 +204,7 @@ func directiveSecConnWriteStateLimit(options *DirectiveOptions) error {
 }
 
 func directiveSecSensorID(options *DirectiveOptions) error {
-	options.Waf.SensorID = options.Opts
+	options.WAF.SensorID = options.Opts
 	return nil
 }
 
@@ -263,7 +263,7 @@ func directiveSecContentInjection(options *DirectiveOptions) error {
 	if err != nil {
 		return newDirectiveError(err, "SecContentInjection")
 	}
-	options.Waf.ContentInjection = b
+	options.WAF.ContentInjection = b
 	return nil
 }
 
@@ -295,7 +295,7 @@ func directiveSecAuditLog(options *DirectiveOptions) error {
 		return errors.New("syntax error: SecAuditLog /some/absolute/path.log")
 	}
 	options.Config.Set("auditlog_file", options.Opts)
-	if err := options.Waf.AuditLogWriter.Init(options.Config); err != nil {
+	if err := options.WAF.AuditLogWriter.Init(options.Config); err != nil {
 		return err
 	}
 	return nil
@@ -312,7 +312,7 @@ func directiveSecAuditLogType(options *DirectiveOptions) error {
 	if err := writer.Init(options.Config); err != nil {
 		return err
 	}
-	options.Waf.AuditLogWriter = writer
+	options.WAF.AuditLogWriter = writer
 	return nil
 }
 
@@ -325,7 +325,7 @@ func directiveSecAuditLogFormat(options *DirectiveOptions) error {
 		return err
 	}
 	options.Config.Set("auditlog_formatter", formatter)
-	if err := options.Waf.AuditLogWriter.Init(options.Config); err != nil {
+	if err := options.WAF.AuditLogWriter.Init(options.Config); err != nil {
 		return err
 	}
 	return nil
@@ -336,7 +336,7 @@ func directiveSecAuditLogDir(options *DirectiveOptions) error {
 		return errors.New("syntax error: SecAuditLogDir /some/absolute/path")
 	}
 	options.Config.Set("auditlog_dir", options.Opts)
-	if err := options.Waf.AuditLogWriter.Init(options.Config); err != nil {
+	if err := options.WAF.AuditLogWriter.Init(options.Config); err != nil {
 		return err
 	}
 	return nil
@@ -351,7 +351,7 @@ func directiveSecAuditLogDirMode(options *DirectiveOptions) error {
 		return err
 	}
 	options.Config.Set("auditlog_dir_mode", fs.FileMode(auditLogDirMode))
-	if err := options.Waf.AuditLogWriter.Init(options.Config); err != nil {
+	if err := options.WAF.AuditLogWriter.Init(options.Config); err != nil {
 		return err
 	}
 	return nil
@@ -366,7 +366,7 @@ func directiveSecAuditLogFileMode(options *DirectiveOptions) error {
 		return err
 	}
 	options.Config.Set("auditlog_file_mode", fs.FileMode(auditLogFileMode))
-	if err := options.Waf.AuditLogWriter.Init(options.Config); err != nil {
+	if err := options.WAF.AuditLogWriter.Init(options.Config); err != nil {
 		return err
 	}
 	return nil
@@ -374,24 +374,24 @@ func directiveSecAuditLogFileMode(options *DirectiveOptions) error {
 
 func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 	var err error
-	options.Waf.AuditLogRelevantStatus, err = regexp.Compile(options.Opts)
+	options.WAF.AuditLogRelevantStatus, err = regexp.Compile(options.Opts)
 	return err
 }
 
 func directiveSecAuditLogParts(options *DirectiveOptions) error {
-	options.Waf.AuditLogParts = types.AuditLogParts(options.Opts)
+	options.WAF.AuditLogParts = types.AuditLogParts(options.Opts)
 	return nil
 }
 
 func directiveSecAuditEngine(options *DirectiveOptions) error {
 	au, err := types.ParseAuditEngineStatus(options.Opts)
-	options.Waf.AuditEngine = au
+	options.WAF.AuditEngine = au
 	return err
 }
 
 func directiveSecDataDir(options *DirectiveOptions) error {
 	// TODO validations
-	options.Waf.DataDir = options.Opts
+	options.WAF.DataDir = options.Opts
 	return nil
 }
 
@@ -400,36 +400,36 @@ func directiveSecUploadKeepFiles(options *DirectiveOptions) error {
 	if err != nil {
 		return newDirectiveError(err, "SecUploadKeepFiles")
 	}
-	options.Waf.UploadKeepFiles = b
+	options.WAF.UploadKeepFiles = b
 	return nil
 }
 
 func directiveSecUploadFileMode(options *DirectiveOptions) error {
 	fm, err := strconv.ParseInt(options.Opts, 8, 32)
-	options.Waf.UploadFileMode = fs.FileMode(fm)
+	options.WAF.UploadFileMode = fs.FileMode(fm)
 	return err
 }
 
 func directiveSecUploadFileLimit(options *DirectiveOptions) error {
 	var err error
-	options.Waf.UploadFileLimit, err = strconv.Atoi(options.Opts)
+	options.WAF.UploadFileLimit, err = strconv.Atoi(options.Opts)
 	return err
 }
 
 func directiveSecUploadDir(options *DirectiveOptions) error {
 	// TODO validations
-	options.Waf.UploadDir = options.Opts
+	options.WAF.UploadDir = options.Opts
 	return nil
 }
 
 func directiveSecRequestBodyNoFilesLimit(options *DirectiveOptions) error {
 	var err error
-	options.Waf.RequestBodyNoFilesLimit, err = strconv.ParseInt(options.Opts, 10, 64)
+	options.WAF.RequestBodyNoFilesLimit, err = strconv.ParseInt(options.Opts, 10, 64)
 	return err
 }
 
 func directiveSecDebugLog(options *DirectiveOptions) error {
-	return options.Waf.SetDebugLogPath(options.Opts)
+	return options.WAF.SetDebugLogPath(options.Opts)
 }
 
 func directiveSecDebugLogLevel(options *DirectiveOptions) error {
@@ -437,7 +437,7 @@ func directiveSecDebugLogLevel(options *DirectiveOptions) error {
 	if err != nil {
 		return err
 	}
-	return options.Waf.SetDebugLogLevel(lvl)
+	return options.WAF.SetDebugLogLevel(lvl)
 }
 
 func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
@@ -449,7 +449,7 @@ func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
 	if err != nil {
 		return err
 	}
-	rule := options.Waf.Rules.FindByID(id)
+	rule := options.WAF.Rules.FindByID(id)
 	rp := &RuleParser{
 		rule:           rule,
 		options:        RuleOptions{},
@@ -464,7 +464,7 @@ func directiveSecIgnoreRuleCompilationErrors(options *DirectiveOptions) error {
 		return newDirectiveError(err, "SecIgnoreRuleCompilationErrors")
 	}
 	if b {
-		options.Waf.Logger.Warn(`Coraza is running in Compatibility Mode (SecIgnoreRuleCompilationErrors On)
+		options.WAF.Logger.Warn(`Coraza is running in Compatibility Mode (SecIgnoreRuleCompilationErrors On)
 		, which may cause unexpected behavior on faulty rules.`)
 	}
 	options.Config.Set("ignore_rule_compilation_errors", b)
@@ -478,7 +478,7 @@ func directiveSecDataset(options *DirectiveOptions) error {
 	}
 	name := spl[0]
 	if _, ok := options.Datasets[name]; ok {
-		options.Waf.Logger.Warn("Dataset %s already exists, overwriting", name)
+		options.WAF.Logger.Warn("Dataset %s already exists, overwriting", name)
 	}
 	arr := []string{}
 	data := strings.Trim(spl[1], "`")

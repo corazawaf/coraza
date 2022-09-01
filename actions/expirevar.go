@@ -32,7 +32,7 @@ func (a *expirevarFn) Init(r *coraza.Rule, data string) error {
 
 func (a *expirevarFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	// Not supported
-	// tx.Waf.Logger.Error("Expirevar was used but it's not supported", zap.Int("rule", r.Id))
+	// tx.WAF.Logger.Error("Expirevar was used but it's not supported", zap.Int("rule", r.Id))
 }
 
 func (a *expirevarFn) Type() types.RuleActionType {

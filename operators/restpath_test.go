@@ -11,7 +11,7 @@ import (
 )
 
 func TestRestPath(t *testing.T) {
-	waf := coraza.NewWaf()
+	waf := coraza.NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	exp := "/some-random/url-{id}/{name}"
 	path := "/some-random/url-123/juan"
