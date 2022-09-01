@@ -24,11 +24,6 @@ jobs:
         run: go test -tags=tinygo -coverprofile=coverage-normal.txt -covermode=atomic ./...        
       - uses: codecov/codecov-action@v2
         with:
-          files: ./coverage-normal.txt
+          files: ./coverage-normal.txt,./coverage-tinygo.txt
           name: coraza-v3
-          flags: normal
-      - uses: codecov/codecov-action@v2
-        with:
-          files: ./coverage-tinygo.txt
-          name: coraza-v3
-          flags: tinygo
+          flags: normal,tinygo
