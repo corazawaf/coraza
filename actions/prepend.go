@@ -24,27 +24,27 @@ func (a *prependFn) Init(r *coraza.Rule, data string) error {
 }
 
 func (a *prependFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
-	if !tx.Waf.ContentInjection {
-		tx.Waf.Logger.Debug("append rejected because of ContentInjection")
+	if !tx.WAF.ContentInjection {
+		tx.WAF.Logger.Debug("append rejected because of ContentInjection")
 		return
 	}
 	data := a.data.Expand(tx)
 	buf := coraza.NewBodyBuffer(types.BodyBufferOptions{
-		TmpPath:     tx.Waf.TmpDir,
-		MemoryLimit: tx.Waf.RequestBodyInMemoryLimit,
+		TmpPath:     tx.WAF.TmpDir,
+		MemoryLimit: tx.WAF.RequestBodyInMemoryLimit,
 	})
 
 	_, err := buf.Write([]byte(data))
 	if err != nil {
-		tx.Waf.Logger.Debug("failed to write buffer while evaluating prepend action")
+		tx.WAF.Logger.Debug("failed to write buffer while evaluating prepend action")
 	}
 	reader, err := tx.ResponseBodyBuffer.Reader()
 	if err != nil {
-		tx.Waf.Logger.Debug("failed to read response body while evaluating prepend action")
+		tx.WAF.Logger.Debug("failed to read response body while evaluating prepend action")
 	}
 	_, err = io.Copy(buf, reader)
 	if err != nil {
-		tx.Waf.Logger.Debug("failed to append response buffer while evaluating prepend action")
+		tx.WAF.Logger.Debug("failed to append response buffer while evaluating prepend action")
 	}
 	// We overwrite the response body buffer with the new buffer
 	*tx.ResponseBodyBuffer = *buf

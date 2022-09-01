@@ -23,7 +23,7 @@ func TestPmFromDataset(t *testing.T) {
 	if err := pm.Init(opts); err != nil {
 		t.Error(err)
 	}
-	waf := coraza.NewWaf()
+	waf := coraza.NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	tx.Capture = true
 	res := pm.Evaluate(tx, "test_1")

@@ -20,7 +20,7 @@ func (a *skipafterFn) Init(r *coraza.Rule, data string) error {
 }
 
 func (a *skipafterFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
-	tx.Waf.Logger.Debug("[%s] Starting secmarker %q", tx.ID, a.data)
+	tx.WAF.Logger.Debug("[%s] Starting secmarker %q", tx.ID, a.data)
 	tx.SkipAfter = a.data
 }
 

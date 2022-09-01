@@ -56,14 +56,14 @@ func TestEngine(t *testing.T) {
 	}
 }
 
-func testList(p *profile.Profile, waf *coraza.Waf) ([]*Test, error) {
+func testList(p *profile.Profile, waf *coraza.WAF) ([]*Test, error) {
 	var tests []*Test
 	for _, t := range p.Tests {
 		name := t.Title
 		for _, stage := range t.Stages {
 			w := waf
 			if w == nil || p.Rules != "" {
-				w = coraza.NewWaf()
+				w = coraza.NewWAF()
 				parser := seclang.NewParser(w)
 				parser.SetCurrentDir("./testdata")
 				if err := parser.FromString(p.Rules); err != nil {

@@ -8,14 +8,14 @@ import (
 	"testing"
 )
 
-var waf *Waf
+var waf *WAF
 
 func TestWAFInitialize(t *testing.T) {
-	waf = NewWaf()
+	waf = NewWAF()
 }
 
 func TestNewTransaction(t *testing.T) {
-	waf := NewWaf()
+	waf := NewWAF()
 	waf.RequestBodyAccess = true
 	waf.ResponseBodyAccess = true
 	waf.RequestBodyLimit = 1044

@@ -22,7 +22,7 @@ import (
 
 // from issue https://github.com/corazawaf/coraza/issues/159 @zpeasystart
 func TestDirectiveSecAuditLog(t *testing.T) {
-	waf := coraza.NewWaf()
+	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	if err := p.FromString(`
 	SecRule REQUEST_FILENAME "@unconditionalMatch" "id:100, phase:2, t:none, log, setvar:'tx.count=+1',chain"

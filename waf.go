@@ -34,16 +34,16 @@ var transactionPool = sync.Pool{
 // It contains the severity so the cb can decide to log it or not
 type ErrorLogCallback = func(rule types.MatchedRule)
 
-// Waf instance is used to store configurations and rules
-// Every web application should have a different Waf instance,
+// WAF instance is used to store configurations and rules
+// Every web application should have a different WAF instance,
 // but you can share an instance if you are ok with sharing
 // configurations, rules and logging.
-// Transactions and SecLang parser requires a Waf instance
-// You can use as many Waf instances as you want, and they are
+// Transactions and SecLang parser requires a WAF instance
+// You can use as many WAF instances as you want, and they are
 // concurrent safe
-// All Waf instance fields are immutable, if you update any
+// All WAF instance fields are immutable, if you update any
 // of them in runtime you might create concurrency issues
-type Waf struct {
+type WAF struct {
 	// ruleGroup object, contains all rules and helpers
 	Rules RuleGroup
 
@@ -141,7 +141,7 @@ type Waf struct {
 }
 
 // NewTransaction Creates a new initialized transaction for this WAF instance
-func (w *Waf) NewTransaction(ctx context.Context) *Transaction {
+func (w *WAF) NewTransaction(ctx context.Context) *Transaction {
 	tx := transactionPool.Get().(*Transaction)
 	tx.ID = utils.SafeRandom(19)
 	tx.MatchedRules = []types.MatchedRule{}
@@ -174,7 +174,7 @@ func (w *Waf) NewTransaction(ctx context.Context) *Transaction {
 	tx.Skip = 0
 	tx.Capture = false
 	tx.stopWatches = map[types.RulePhase]int64{}
-	tx.Waf = w
+	tx.WAF = w
 	tx.Timestamp = time.Now().UnixNano()
 	tx.audit = false
 
@@ -415,7 +415,7 @@ func (w *Waf) NewTransaction(ctx context.Context) *Transaction {
 // SetDebugLogPath sets the path for the debug log
 // If the path is empty, the debug log will be disabled
 // note: this is not thread safe
-func (w *Waf) SetDebugLogPath(path string) error {
+func (w *WAF) SetDebugLogPath(path string) error {
 	if path == "" {
 		w.Logger.SetOutput(io.Discard)
 		return nil
@@ -428,8 +428,8 @@ func (w *Waf) SetDebugLogPath(path string) error {
 	return nil
 }
 
-// NewWaf creates a new WAF instance with default variables
-func NewWaf() *Waf {
+// NewWAF creates a new WAF instance with default variables
+func NewWAF() *WAF {
 	logger := &stdDebugLogger{
 		logger: &log.Logger{},
 		Level:  LogLevelInfo,
@@ -438,7 +438,7 @@ func NewWaf() *Waf {
 	if err != nil {
 		logger.Error("error creating serial log writer: %s", err.Error())
 	}
-	waf := &Waf{
+	waf := &WAF{
 		ArgumentSeparator:        "&",
 		AuditLogWriter:           logWriter,
 		AuditEngine:              types.AuditEngineOff,
@@ -466,8 +466,8 @@ func NewWaf() *Waf {
 	return waf
 }
 
-// SetDebugLogLevel changes the debug level of the Waf instance
-func (w *Waf) SetDebugLogLevel(lvl int) error {
+// SetDebugLogLevel changes the debug level of the WAF instance
+func (w *WAF) SetDebugLogLevel(lvl int) error {
 	// setLevel is concurrent safe
 	w.Logger.SetLevel(LogLevel(lvl))
 	return nil
@@ -476,6 +476,6 @@ func (w *Waf) SetDebugLogLevel(lvl int) error {
 // SetErrorLogCb sets the callback function for error logging
 // The error callback receives all the error data and some
 // helpers to write modsecurity style logs
-func (w *Waf) SetErrorLogCb(cb ErrorLogCallback) {
+func (w *WAF) SetErrorLogCb(cb ErrorLogCallback) {
 	w.errorLogCb = cb
 }

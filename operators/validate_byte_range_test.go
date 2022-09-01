@@ -44,7 +44,7 @@ func TestValidateByteRangeCase5(t *testing.T) {
 }
 
 func getTransaction() *engine.Transaction {
-	waf := engine.NewWaf()
+	waf := engine.NewWAF()
 	return waf.NewTransaction(context.Background())
 }
 

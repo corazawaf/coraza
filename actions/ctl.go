@@ -61,23 +61,23 @@ func (a *ctlFn) Init(r *coraza.Rule, data string) error {
 func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	switch a.action {
 	case ctlRemoveTargetByID:
-		ran, err := a.rangeToInts(tx.Waf.Rules.GetRules(), a.value)
+		ran, err := a.rangeToInts(tx.WAF.Rules.GetRules(), a.value)
 		if err != nil {
-			tx.Waf.Logger.Error("[ctl REMOVE_TARGET_BY_ID] invalid range: %s", err.Error())
+			tx.WAF.Logger.Error("[ctl REMOVE_TARGET_BY_ID] invalid range: %s", err.Error())
 			return
 		}
 		for _, id := range ran {
 			tx.RemoveRuleTargetByID(id, a.collection, a.colKey)
 		}
 	case ctlRemoveTargetByTag:
-		rules := tx.Waf.Rules.GetRules()
+		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
 			if utils.InSlice(a.value, r.Tags) {
 				tx.RemoveRuleTargetByID(r.ID, a.collection, a.colKey)
 			}
 		}
 	case ctlRemoveTargetByMsg:
-		rules := tx.Waf.Rules.GetRules()
+		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
 			if r.Msg.String() == a.value {
 				tx.RemoveRuleTargetByID(r.ID, a.collection, a.colKey)
@@ -86,7 +86,7 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	case ctlAuditEngine:
 		ae, err := types.ParseAuditEngineStatus(a.value)
 		if err != nil {
-			tx.Waf.Logger.Error(err.Error())
+			tx.WAF.Logger.Error(err.Error())
 			return
 		}
 		tx.AuditEngine = ae
@@ -95,7 +95,7 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 		tx.AuditLogParts = types.AuditLogParts(a.value)
 	case ctlForceRequestBodyVar:
 		val := strings.ToLower(a.value)
-		tx.Waf.Logger.Debug("[ForceRequestBodyVar] Forcing request body var with CTL to %s", val)
+		tx.WAF.Logger.Debug("[ForceRequestBodyVar] Forcing request body var with CTL to %s", val)
 		if val == "on" {
 			tx.ForceRequestBodyVariable = true
 		} else if val == "off" {
@@ -109,21 +109,21 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 	case ctlRuleEngine:
 		re, err := types.ParseRuleEngineStatus(a.value)
 		if err != nil {
-			tx.Waf.Logger.Error(err.Error())
+			tx.WAF.Logger.Error(err.Error())
 		}
 		tx.RuleEngine = re
 	case ctlRuleRemoveByID:
 		id, _ := strconv.Atoi(a.value)
 		tx.RemoveRuleByID(id)
 	case ctlRuleRemoveByMsg:
-		rules := tx.Waf.Rules.GetRules()
+		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
 			if r.Msg.String() == a.value {
 				tx.RemoveRuleByID(r.ID)
 			}
 		}
 	case ctlRuleRemoveByTag:
-		rules := tx.Waf.Rules.GetRules()
+		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
 			if utils.InSlice(a.value, r.Tags) {
 				tx.RemoveRuleByID(r.ID)
@@ -139,7 +139,7 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 		// lvl, _ := strconv.Atoi(a.Value)
 		// TODO
 		// We cannot update the log level, it would affect the whole waf instance...
-		// tx.Waf.SetLogLevel(lvl)
+		// tx.WAF.SetLogLevel(lvl)
 	}
 
 }
