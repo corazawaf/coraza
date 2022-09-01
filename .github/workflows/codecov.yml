@@ -19,8 +19,16 @@ jobs:
           go-version: ${{ matrix.go-version }}
           cache: true
       - name: Tests and coverage (No Tinygo)
-        run: go test -coverprofile=coverage-normal.txt -covermode=atomic ./...     
+        run: go test -coverprofile=coverage-normal.txt -covermode=atomic ./...
+      - name: Tests and coverage (Tinygo)
+        run: go test -tags=tinygo -coverprofile=coverage-normal.txt -covermode=atomic ./...        
       - uses: codecov/codecov-action@v2
         with:
           files: ./coverage-normal.txt
-          name: coraza
+          name: coraza-v3
+          flags: normal
+      - uses: codecov/codecov-action@v2
+        with:
+          files: ./coverage-tinygo.txt
+          name: coraza-v3
+          flags: tinygo
