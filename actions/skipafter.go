@@ -17,9 +17,10 @@ package actions
 import (
 	"strings"
 
+	"go.uber.org/zap"
+
 	"github.com/corazawaf/coraza/v2"
 	"github.com/corazawaf/coraza/v2/types"
-	"go.uber.org/zap"
 )
 
 type skipafterFn struct {

@@ -24,12 +24,13 @@ import (
 	"sync"
 	"time"
 
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+
 	"github.com/corazawaf/coraza/v2/loggers"
 	"github.com/corazawaf/coraza/v2/types"
 	"github.com/corazawaf/coraza/v2/types/variables"
 	utils "github.com/corazawaf/coraza/v2/utils/strings"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 // Initializing pool for transactions

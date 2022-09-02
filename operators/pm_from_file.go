@@ -18,8 +18,9 @@ import (
 	"bufio"
 	"strings"
 
-	"github.com/corazawaf/coraza/v2"
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
+
+	"github.com/corazawaf/coraza/v2"
 )
 
 type pmFromFile struct {

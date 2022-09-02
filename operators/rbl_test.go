@@ -17,9 +17,10 @@ package operators
 import (
 	"testing"
 
+	"github.com/foxcpp/go-mockdns"
+
 	"github.com/corazawaf/coraza/v2"
 	"github.com/corazawaf/coraza/v2/types/variables"
-	"github.com/foxcpp/go-mockdns"
 )
 
 type testLogger struct{ t *testing.T }
