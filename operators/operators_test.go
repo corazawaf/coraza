@@ -11,8 +11,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
 	"github.com/tidwall/gjson"
+
+	"github.com/corazawaf/coraza/v3"
 )
 
 type Test struct {
