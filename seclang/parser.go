@@ -7,12 +7,14 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/io"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -25,6 +27,7 @@ type Parser struct {
 	currentLine  int
 	currentFile  string
 	currentDir   string
+	root         fs.FS
 	includeCount int
 }
 
@@ -52,7 +55,7 @@ func (p *Parser) FromFile(profilePath string) error {
 		p.currentFile = profilePath
 		lastDir := p.currentDir
 		p.currentDir = filepath.Dir(profilePath)
-		file, err := os.ReadFile(profilePath)
+		file, err := fs.ReadFile(p.root, profilePath)
 		if err != nil {
 			p.options.WAF.Logger.Error(err.Error())
 			return err
@@ -142,6 +145,7 @@ func (p *Parser) evaluate(data string) error {
 	p.options.Config.Set("last_profile_line", p.currentLine)
 	p.options.Config.Set("parser_config_file", p.currentFile)
 	p.options.Config.Set("parser_config_dir", p.currentDir)
+	p.options.Config.Set("parser_root", p.root)
 	wd, err := os.Getwd()
 	if err != nil {
 		return err
@@ -165,6 +169,14 @@ func (p *Parser) SetCurrentDir(dir string) {
 	p.currentDir = dir
 }
 
+// SetRoot sets the root of the filesystem for resolving paths. If not set, the OS's
+// filesystem is used. SetRoot with `embed.FS` can allow parsing Include and FromFile
+// directives for an embedded set of rules, or zip.Reader can be used to work with
+// an archive.
+func (p *Parser) SetRoot(root fs.FS) {
+	p.root = root
+}
+
 // NewParser creates a new parser from a WAF instance
 // Rules and settings will be inserted into the WAF
 // rule container (RuleGroup).
@@ -175,6 +187,7 @@ func NewParser(waf *coraza.WAF) *Parser {
 			Config:   make(types.Config),
 			Datasets: make(map[string][]string),
 		},
+		root: io.OSFS{},
 	}
 	return p
 }

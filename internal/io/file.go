@@ -5,6 +5,7 @@ package io
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path"
 )
@@ -27,4 +28,19 @@ func ReadFirstFile(directories []string, filename string) ([]byte, error) {
 		}
 	}
 	return nil, fmt.Errorf("file %s not found", filename)
+}
+
+// OSFS implements fs.FS using methods on os to read from the system.
+type OSFS struct{}
+
+func (o OSFS) Open(name string) (fs.File, error) {
+	return os.Open(name)
+}
+
+func (o OSFS) ReadFile(name string) ([]byte, error) {
+	return os.ReadFile(name)
+}
+
+func (o OSFS) ReadDir(name string) ([]fs.DirEntry, error) {
+	return os.ReadDir(name)
 }
