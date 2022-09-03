@@ -151,3 +151,13 @@ Contributions are welcome! Please refer to [CONTRIBUTING.md](./CONTRIBUTING.md) 
 ## Donations
 
 For donations, see [Donations site](https://owasp.org/donate/?reponame=www-project-coraza-web-application-firewall&title=OWASP+Coraza+Web+Application+Firewall)
+
+## Thanks to all the people who have contributed
+
+We could not have done this without you!
+
+<a href="https://github.com/corazawaf/coraza/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=corazawaf/coraza" />
+</a>
+
+Made with [contrib.rocks](https://contrib.rocks).
