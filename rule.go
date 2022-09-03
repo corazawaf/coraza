@@ -20,9 +20,10 @@ import (
 	"strconv"
 	"strings"
 
+	"go.uber.org/zap"
+
 	"github.com/corazawaf/coraza/v2/types"
 	"github.com/corazawaf/coraza/v2/types/variables"
-	"go.uber.org/zap"
 )
 
 // RuleTransformation is used to create transformation plugins
