@@ -21,7 +21,7 @@ func NewWAFWithConfig(config WAFConfig) (WAF, error) {
 	parser := seclang.NewParser(waf)
 
 	if c.fsRoot != nil {
-		parser.SetFSRoot(c.fsRoot)
+		parser.SetRoot(c.fsRoot)
 	}
 
 	for _, r := range c.rules {
@@ -107,6 +107,8 @@ type Transaction interface {
 	ProcessLogging()
 
 	Interrupted() bool
+	InterruptionNext() *types.Interruption
+	MatchedRulesNext() []types.MatchedRule
 
 	io.Closer
 }

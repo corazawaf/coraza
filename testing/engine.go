@@ -7,7 +7,7 @@ import (
 	"context"
 	b64 "encoding/base64"
 	"fmt"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3"
 	"strconv"
 	"strings"
 
@@ -18,9 +18,9 @@ import (
 // a WAF instance for a test case
 type Test struct {
 	// waf contains a waf instance pointer
-	waf *corazawaf.WAF
+	waf coraza.WAF
 	// transaction contains the current transaction
-	transaction *corazawaf.Transaction
+	transaction coraza.Transaction
 	magic       bool
 	Name        string
 	body        string
@@ -53,7 +53,7 @@ type Test struct {
 }
 
 // SetWAF sets the waf instance pointer
-func (t *Test) SetWAF(waf *corazawaf.WAF) {
+func (t *Test) SetWAF(waf coraza.WAF) {
 	t.waf = waf
 }
 
@@ -134,7 +134,7 @@ func (t *Test) SetRequestBody(body interface{}) error {
 	if t.magic {
 		t.RequestHeaders["content-length"] = strconv.Itoa(lbody)
 	}
-	if _, err := t.transaction.RequestBodyBuffer.Write([]byte(data)); err != nil {
+	if _, err := t.transaction.RequestBodyWriter().Write([]byte(data)); err != nil {
 		return err
 	}
 	return nil
@@ -151,7 +151,7 @@ func (t *Test) SetResponseBody(body interface{}) error {
 	if lbody == 0 {
 		return nil
 	}
-	if _, err := t.transaction.ResponseBodyBuffer.Write([]byte(data)); err != nil {
+	if _, err := t.transaction.ResponseBodyWriter().Write([]byte(data)); err != nil {
 		return err
 	}
 	return nil
@@ -189,24 +189,24 @@ func (t *Test) OutputInterruptionErrors() []string {
 	var errors []string
 
 	if t.ExpectedOutput.Interruption != nil {
-		if t.ExpectedOutput.Interruption.Action != t.transaction.Interruption.Action {
+		if t.ExpectedOutput.Interruption.Action != t.transaction.InterruptionNext().Action {
 			errors = append(errors, fmt.Sprintf("Interruption.Action: expected: '%s', got: '%s'",
-				t.ExpectedOutput.Interruption.Action, t.transaction.Interruption.Action))
+				t.ExpectedOutput.Interruption.Action, t.transaction.InterruptionNext().Action))
 		}
 
-		if t.ExpectedOutput.Interruption.Status != t.transaction.Interruption.Status {
+		if t.ExpectedOutput.Interruption.Status != t.transaction.InterruptionNext().Status {
 			errors = append(errors, fmt.Sprintf("Interruption.Status: expected: '%d', got: '%d'",
-				t.ExpectedOutput.Interruption.Status, t.transaction.Interruption.Status))
+				t.ExpectedOutput.Interruption.Status, t.transaction.InterruptionNext().Status))
 		}
 
-		if t.ExpectedOutput.Interruption.Data != t.transaction.Interruption.Data {
+		if t.ExpectedOutput.Interruption.Data != t.transaction.InterruptionNext().Data {
 			errors = append(errors, fmt.Sprintf("Interruption.Data: expected: '%s', got: '%s'",
-				t.ExpectedOutput.Interruption.Data, t.transaction.Interruption.Data))
+				t.ExpectedOutput.Interruption.Data, t.transaction.InterruptionNext().Data))
 		}
 
-		if t.ExpectedOutput.Interruption.RuleID != t.transaction.Interruption.RuleID {
+		if t.ExpectedOutput.Interruption.RuleID != t.transaction.InterruptionNext().RuleID {
 			errors = append(errors, fmt.Sprintf("Interruption.RuleID: expected: '%d', got: '%d'",
-				t.ExpectedOutput.Interruption.RuleID, t.transaction.Interruption.RuleID))
+				t.ExpectedOutput.Interruption.RuleID, t.transaction.InterruptionNext().RuleID))
 		}
 	}
 
@@ -251,7 +251,7 @@ func (t *Test) OutputErrors() []string {
 
 // LogContains checks if the log contains a string
 func (t *Test) LogContains(log string) bool {
-	for _, mr := range t.transaction.MatchedRules {
+	for _, mr := range t.transaction.MatchedRulesNext() {
 		if strings.Contains(mr.ErrorLog(t.ResponseCode), log) {
 			return true
 		}
@@ -260,7 +260,7 @@ func (t *Test) LogContains(log string) bool {
 }
 
 // Transaction returns the transaction
-func (t *Test) Transaction() *corazawaf.Transaction {
+func (t *Test) Transaction() coraza.Transaction {
 	return t.transaction
 }
 
@@ -278,7 +278,7 @@ func (t *Test) Request() string {
 }
 
 // NewTest creates a new test with default properties
-func NewTest(name string, waf *corazawaf.WAF) *Test {
+func NewTest(name string, waf coraza.WAF) *Test {
 	t := &Test{
 		Name:           name,
 		transaction:    waf.NewTransaction(context.Background()),

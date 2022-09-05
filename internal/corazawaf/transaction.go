@@ -719,6 +719,14 @@ func (tx *Transaction) Interrupted() bool {
 	return tx.Interruption != nil
 }
 
+func (tx *Transaction) InterruptionNext() *types.Interruption {
+	return tx.Interruption
+}
+
+func (tx *Transaction) MatchedRulesNext() []types.MatchedRule {
+	return tx.MatchedRules
+}
+
 // AuditLog returns an AuditLog struct, used to write audit logs
 func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	al := &loggers.AuditLog{}
@@ -844,6 +852,10 @@ func (tx *Transaction) Clean() error {
 
 func (tx *Transaction) Close() error {
 	return tx.Clean()
+}
+
+func (tx *Transaction) String() string {
+	return tx.Debug()
 }
 
 // Debug will return a string with the transaction debug information

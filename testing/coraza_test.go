@@ -6,8 +6,7 @@ package testing
 import (
 	"fmt"
 	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/internal/seclang"
+	"os"
 	"testing"
 
 	_ "github.com/corazawaf/coraza/v3/testing/engine"
@@ -21,7 +20,7 @@ func TestEngine(t *testing.T) {
 	t.Logf("Loading %d profiles\n", len(profile.Profiles))
 	for _, p := range profile.Profiles {
 		t.Run(p.Meta.Name, func(t *testing.T) {
-			tt, err := testList(&p, nil)
+			tt, err := testList(&p)
 			if err != nil {
 				t.Error(err)
 			}
@@ -34,11 +33,11 @@ func TestEngine(t *testing.T) {
 
 					for _, e := range test.OutputErrors() {
 						debug := ""
-						for _, mr := range test.transaction.MatchedRules {
+						for _, mr := range test.transaction.MatchedRulesNext() {
 							debug += fmt.Sprintf(" %d", mr.Rule.ID)
 						}
 						if testing.Verbose() {
-							t.Errorf("\x1b[41m ERROR \x1b[0m: %s:%s: %s, got:%s\n%s\nREQUEST:\n%s", p.Meta.Name, test.Name, e, debug, test.transaction.Debug(), test.Request())
+							t.Errorf("\x1b[41m ERROR \x1b[0m: %s:%s: %s, got:%s\n%s\nREQUEST:\n%s", p.Meta.Name, test.Name, e, debug, test.transaction, test.Request())
 						} else {
 							t.Errorf("%s: ERROR: %s", test.Name, e)
 						}
@@ -46,7 +45,7 @@ func TestEngine(t *testing.T) {
 
 					for _, e := range test.OutputInterruptionErrors() {
 						if testing.Verbose() {
-							t.Errorf("\x1b[41m ERROR \x1b[0m: %s:%s: %s\n %s\nREQUEST:\n%s", p.Meta.Name, test.Name, e, test.transaction.Debug(), test.Request())
+							t.Errorf("\x1b[41m ERROR \x1b[0m: %s:%s: %s\n %s\nREQUEST:\n%s", p.Meta.Name, test.Name, e, test.transaction, test.Request())
 						} else {
 							t.Errorf("%s: ERROR: %s", test.Name, e)
 						}
@@ -62,15 +61,11 @@ func testList(p *profile.Profile) ([]*Test, error) {
 	for _, t := range p.Tests {
 		name := t.Title
 		for _, stage := range t.Stages {
-			w, err := coraza.NewWAFWithConfig(coraza.NewWAFConfig().)
-			w := waf
-			if w == nil || p.Rules != "" {
-				w = corazawaf.NewWAF()
-				parser := seclang.NewParser(w)
-				parser.SetCurrentDir("./testdata")
-				if err := parser.FromString(p.Rules); err != nil {
-					return nil, err
-				}
+			w, err := coraza.NewWAFWithConfig(coraza.NewWAFConfig().
+				WithFSRoot(os.DirFS("testdata")).
+				WithRulesFromString(p.Rules))
+			if err != nil {
+				return nil, err
 			}
 			test := NewTest(name, w)
 			test.ExpectedOutput = stage.Stage.Output
