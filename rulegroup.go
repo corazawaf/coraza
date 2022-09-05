@@ -16,7 +16,6 @@ package coraza
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -32,7 +31,6 @@ import (
 // after compilation
 type RuleGroup struct {
 	rules []*Rule
-	mux   *sync.RWMutex
 }
 
 // Add a rule to the collection
@@ -51,10 +49,7 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 }
 
 // GetRules returns the slice of rules,
-// it's concurrent safe.
 func (rg *RuleGroup) GetRules() []*Rule {
-	rg.mux.RLock()
-	defer rg.mux.RUnlock()
 	return rg.rules
 }
 
@@ -187,6 +182,5 @@ RulesLoop:
 func NewRuleGroup() RuleGroup {
 	return RuleGroup{
 		rules: []*Rule{},
-		mux:   &sync.RWMutex{},
 	}
 }
