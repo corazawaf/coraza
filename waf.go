@@ -99,12 +99,14 @@ type Transaction interface {
 	ProcessRequestHeaders() *types.Interruption
 
 	RequestBodyWriter() io.Writer
+	RequestBodyReader() (io.Reader, error)
 	ProcessRequestBody() (*types.Interruption, error)
 
 	AddResponseHeader(key string, value string)
 	ProcessResponseHeaders(code int, proto string) *types.Interruption
 
 	ResponseBodyWriter() io.Writer
+	ResponseBodyReader() (io.Reader, error)
 	ProcessResponseBody() (*types.Interruption, error)
 
 	ProcessLogging()

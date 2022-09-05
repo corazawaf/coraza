@@ -107,6 +107,14 @@ type Transaction struct {
 	Variables TransactionVariables
 }
 
+func (tx *Transaction) ResponseBodyReader() (io.Reader, error) {
+	return tx.ResponseBodyBuffer.Reader()
+}
+
+func (tx *Transaction) RequestBodyReader() (io.Reader, error) {
+	return tx.RequestBodyBuffer.Reader()
+}
+
 // AddRequestHeader Adds a request header
 //
 // With this method it is possible to feed Coraza with a request header.
