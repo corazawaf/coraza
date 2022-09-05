@@ -11,6 +11,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -18,13 +19,11 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/corazawaf/coraza/v3"
 )
 
 func TestRequestExtractionSuccess(t *testing.T) {
 	req, _ := http.NewRequest("POST", "https://www.coraza.io/test", strings.NewReader("test=456"))
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	if _, err := ProcessRequest(tx, req); err != nil {
 		t.Fatal(err)
@@ -90,9 +89,9 @@ func multipartRequest(t *testing.T, req *http.Request) error {
 	return nil
 }
 
-func makeTransaction(t *testing.T) *coraza.Transaction {
+func makeTransaction(t *testing.T) *corazawaf.Transaction {
 	t.Helper()
-	tx := coraza.NewWAF().NewTransaction(context.Background())
+	tx := corazawaf.NewWAF().NewTransaction(context.Background())
 	tx.RequestBodyAccess = true
 	ht := []string{
 		"POST /testurl.php?id=123&b=456 HTTP/1.1",

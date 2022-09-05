@@ -5,23 +5,23 @@ package actions
 
 import (
 	"fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 type setvarFn struct {
-	key        coraza.Macro
-	value      coraza.Macro
+	key        corazawaf.Macro
+	value      corazawaf.Macro
 	collection variables.RuleVariable
 	isRemove   bool
 }
 
-func (a *setvarFn) Init(r *coraza.Rule, data string) error {
+func (a *setvarFn) Init(r *corazawaf.Rule, data string) error {
 	if data == "" {
 		return fmt.Errorf("setvar requires arguments")
 	}
@@ -40,14 +40,14 @@ func (a *setvarFn) Init(r *coraza.Rule, data string) error {
 		return err
 	}
 	if len(splcol) == 2 {
-		macro, err := coraza.NewMacro(splcol[1])
+		macro, err := corazawaf.NewMacro(splcol[1])
 		if err != nil {
 			return err
 		}
 		a.key = *macro
 	}
 	if len(spl) == 2 {
-		macro, err := coraza.NewMacro(spl[1])
+		macro, err := corazawaf.NewMacro(spl[1])
 		if err != nil {
 			return err
 		}
@@ -56,7 +56,7 @@ func (a *setvarFn) Init(r *coraza.Rule, data string) error {
 	return nil
 }
 
-func (a *setvarFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *setvarFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
 	key := a.key.Expand(tx)
 	value := a.value.Expand(tx)
 	tx.WAF.Logger.Debug("[%s] Setting var %q to %q by rule %d", tx.ID, key, value, r.ID)
@@ -67,7 +67,7 @@ func (a *setvarFn) Type() types.RuleActionType {
 	return types.ActionTypeNondisruptive
 }
 
-func (a *setvarFn) evaluateTxCollection(r *coraza.Rule, tx *coraza.Transaction, key string, value string) {
+func (a *setvarFn) evaluateTxCollection(r *corazawaf.Rule, tx *corazawaf.Transaction, key string, value string) {
 	col := (tx.Collections[a.collection]).(*collection.Map)
 	if col == nil {
 		// fmt.Println("Invalid Collection " + a.Collection) LOG error?
@@ -118,11 +118,11 @@ func (a *setvarFn) evaluateTxCollection(r *coraza.Rule, tx *coraza.Transaction, 
 	}
 }
 
-func setvar() coraza.RuleAction {
+func setvar() corazawaf.RuleAction {
 	return &setvarFn{}
 }
 
 var (
-	_ coraza.RuleAction = &setvarFn{}
-	_ ruleActionWrapper = setvar
+	_ corazawaf.RuleAction = &setvarFn{}
+	_ ruleActionWrapper    = setvar
 )

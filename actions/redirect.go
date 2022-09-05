@@ -16,8 +16,8 @@ package actions
 
 import (
 	"fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 
-	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -25,7 +25,7 @@ type redirectFn struct {
 	target string
 }
 
-func (a *redirectFn) Init(r *coraza.Rule, data string) error {
+func (a *redirectFn) Init(r *corazawaf.Rule, data string) error {
 	if data == "" {
 		return fmt.Errorf("redirect action requires a parameter")
 	}
@@ -35,7 +35,7 @@ func (a *redirectFn) Init(r *coraza.Rule, data string) error {
 	return nil
 }
 
-func (a *redirectFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *redirectFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
 	rid := r.ID
 	if rid == 0 {
 		rid = r.ParentID
@@ -54,11 +54,11 @@ func (a *redirectFn) Type() types.RuleActionType {
 	return types.ActionTypeDisruptive
 }
 
-func redirect() coraza.RuleAction {
+func redirect() corazawaf.RuleAction {
 	return &redirectFn{}
 }
 
 var (
-	_ coraza.RuleAction = &redirectFn{}
-	_ ruleActionWrapper = redirect
+	_ corazawaf.RuleAction = &redirectFn{}
+	_ ruleActionWrapper    = redirect
 )

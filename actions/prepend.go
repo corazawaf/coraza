@@ -4,18 +4,18 @@
 package actions
 
 import (
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"io"
 
-	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 type prependFn struct {
-	data coraza.Macro
+	data corazawaf.Macro
 }
 
-func (a *prependFn) Init(r *coraza.Rule, data string) error {
-	macro, err := coraza.NewMacro(data)
+func (a *prependFn) Init(r *corazawaf.Rule, data string) error {
+	macro, err := corazawaf.NewMacro(data)
 	if err != nil {
 		return err
 	}
@@ -23,13 +23,13 @@ func (a *prependFn) Init(r *coraza.Rule, data string) error {
 	return nil
 }
 
-func (a *prependFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *prependFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
 	if !tx.WAF.ContentInjection {
 		tx.WAF.Logger.Debug("append rejected because of ContentInjection")
 		return
 	}
 	data := a.data.Expand(tx)
-	buf := coraza.NewBodyBuffer(types.BodyBufferOptions{
+	buf := corazawaf.NewBodyBuffer(types.BodyBufferOptions{
 		TmpPath:     tx.WAF.TmpDir,
 		MemoryLimit: tx.WAF.RequestBodyInMemoryLimit,
 	})
@@ -55,11 +55,11 @@ func (a *prependFn) Type() types.RuleActionType {
 	return types.ActionTypeNondisruptive
 }
 
-func prepend() coraza.RuleAction {
+func prepend() corazawaf.RuleAction {
 	return &prependFn{}
 }
 
 var (
-	_ coraza.RuleAction = &prependFn{}
-	_ ruleActionWrapper = prepend
+	_ corazawaf.RuleAction = &prependFn{}
+	_ ruleActionWrapper    = prepend
 )

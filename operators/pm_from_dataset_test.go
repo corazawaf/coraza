@@ -6,14 +6,13 @@ package operators
 import (
 	"context"
 	"fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"testing"
-
-	"github.com/corazawaf/coraza/v3"
 )
 
 func TestPmFromDataset(t *testing.T) {
 	pm := &pmFromDataset{}
-	opts := coraza.RuleOperatorOptions{
+	opts := corazawaf.RuleOperatorOptions{
 		Arguments: "test_1",
 		Datasets: map[string][]string{
 			"test_1": {"test_1", "test_2"},
@@ -23,7 +22,7 @@ func TestPmFromDataset(t *testing.T) {
 	if err := pm.Init(opts); err != nil {
 		t.Error(err)
 	}
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	tx.Capture = true
 	res := pm.Evaluate(tx, "test_1")

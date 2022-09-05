@@ -5,18 +5,17 @@ package operators
 
 import (
 	"context"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"testing"
-
-	"github.com/corazawaf/coraza/v3"
 )
 
 func TestRestPath(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	exp := "/some-random/url-{id}/{name}"
 	path := "/some-random/url-123/juan"
 	rp := restpath{}
-	if err := rp.Init(coraza.RuleOperatorOptions{
+	if err := rp.Init(corazawaf.RuleOperatorOptions{
 		Arguments: exp,
 	}); err != nil {
 		t.Error(err)

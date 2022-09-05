@@ -8,9 +8,9 @@ package operators
 
 import (
 	"context"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
 	"github.com/foxcpp/go-mockdns"
 )
 
@@ -23,7 +23,7 @@ func (l *testLogger) Printf(format string, v ...interface{}) {
 
 func TestRbl(t *testing.T) {
 	rbl := &rbl{}
-	opts := coraza.RuleOperatorOptions{
+	opts := corazawaf.RuleOperatorOptions{
 		Arguments: "xbl.spamhaus.org",
 	}
 	if err := rbl.Init(opts); err != nil {
@@ -60,7 +60,7 @@ func TestRbl(t *testing.T) {
 	})
 
 	t.Run("Valid hostname with TXT record", func(t *testing.T) {
-		tx := coraza.NewWAF().NewTransaction(context.Background())
+		tx := corazawaf.NewWAF().NewTransaction(context.Background())
 		if !rbl.Evaluate(tx, "valid_txt") {
 			t.Errorf("Unexpected result for valid hostname")
 		}
@@ -76,7 +76,7 @@ func TestRbl(t *testing.T) {
 	})
 
 	t.Run("Blocked hostname", func(t *testing.T) {
-		tx := coraza.NewWAF().NewTransaction(context.Background())
+		tx := corazawaf.NewWAF().NewTransaction(context.Background())
 		if !rbl.Evaluate(tx, "blocked") {
 			t.Fatal("Unexpected result for blocked hostname")
 		}

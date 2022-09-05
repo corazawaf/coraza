@@ -4,14 +4,13 @@
 package testing
 
 import (
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"strings"
 	"testing"
-
-	"github.com/corazawaf/coraza/v3"
 )
 
 func TestRawRequests(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	test := NewTest("test", waf)
 	if err := test.SetRawRequest([]byte("OPTIONS /test HTTP/1.1\r\nHost: www.example.com\r\n\r\n")); err != nil {
 		t.Error(err)
@@ -25,7 +24,7 @@ func TestRawRequests(t *testing.T) {
 }
 
 func TestDebug(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	test := NewTest("test", waf)
 	if err := test.SetRawRequest([]byte("OPTIONS /test HTTP/1.1\r\nHost: www.example.com\r\n\r\n")); err != nil {
 		t.Error(err)
@@ -46,7 +45,7 @@ func TestDebug(t *testing.T) {
 }
 
 func TestRequest(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	test := NewTest("test", waf)
 	req := buildRequest("GET", "/test")
 	if err := test.SetRawRequest([]byte(req)); err != nil {
@@ -68,7 +67,7 @@ func TestRequest(t *testing.T) {
 }
 
 func TestResponse(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	waf.ResponseBodyAccess = true
 	test := NewTest("test", waf)
 	req := buildRequest("POST", "/test")

@@ -4,18 +4,18 @@
 package actions
 
 import (
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 type dropFn struct{}
 
-func (a *dropFn) Init(r *coraza.Rule, data string) error {
+func (a *dropFn) Init(r *corazawaf.Rule, data string) error {
 	r.Disruptive = true
 	return nil
 }
 
-func (a *dropFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *dropFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
 	rid := r.ID
 	if rid == 0 {
 		rid = r.ParentID
@@ -33,11 +33,11 @@ func (a *dropFn) Type() types.RuleActionType {
 	return types.ActionTypeDisruptive
 }
 
-func drop() coraza.RuleAction {
+func drop() corazawaf.RuleAction {
 	return &dropFn{}
 }
 
 var (
-	_ coraza.RuleAction = &dropFn{}
-	_ ruleActionWrapper = drop
+	_ corazawaf.RuleAction = &dropFn{}
+	_ ruleActionWrapper    = drop
 )

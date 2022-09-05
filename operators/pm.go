@@ -4,9 +4,9 @@
 package operators
 
 import (
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
 )
 
@@ -17,7 +17,7 @@ type pm struct {
 	matcher ahocorasick.AhoCorasick
 }
 
-func (o *pm) Init(options coraza.RuleOperatorOptions) error {
+func (o *pm) Init(options corazawaf.RuleOperatorOptions) error {
 	data := options.Arguments
 
 	data = strings.ToLower(data)
@@ -34,7 +34,7 @@ func (o *pm) Init(options coraza.RuleOperatorOptions) error {
 	return nil
 }
 
-func (o *pm) Evaluate(tx *coraza.Transaction, value string) bool {
+func (o *pm) Evaluate(tx *corazawaf.Transaction, value string) bool {
 	if tx.Capture {
 		matches := o.matcher.FindAll(value)
 		for i, match := range matches {
@@ -49,4 +49,4 @@ func (o *pm) Evaluate(tx *coraza.Transaction, value string) bool {
 	return iter.Next() != nil
 }
 
-var _ coraza.RuleOperator = (*pm)(nil)
+var _ corazawaf.RuleOperator = (*pm)(nil)

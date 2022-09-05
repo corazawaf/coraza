@@ -1,14 +1,13 @@
 package main
 
 import (
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"net/http"
-
-	"github.com/corazawaf/coraza/v3"
 )
 
 type interceptor struct {
 	origWriter  http.ResponseWriter
-	tx          *coraza.Transaction
+	tx          *corazawaf.Transaction
 	headersSent bool
 }
 

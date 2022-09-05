@@ -11,6 +11,8 @@ import (
 	"archive/zip"
 	"context"
 	"fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/internal/seclang"
 	"io"
 	"net/http"
 	"os"
@@ -18,9 +20,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/seclang"
 )
 
 var crspath = ""
@@ -49,7 +48,7 @@ func BenchmarkCRSCompilation(b *testing.B) {
 		path.Join(crspath, "rules/", "*.conf"),
 	}
 	for i := 0; i < b.N; i++ {
-		waf := coraza.NewWAF()
+		waf := corazawaf.NewWAF()
 		parser := seclang.NewParser(waf)
 		for _, f := range files {
 			if err := parser.FromFile(f); err != nil {
@@ -122,13 +121,13 @@ func BenchmarkCRSSimplePOST(b *testing.B) {
 	}
 }
 
-func crsWAF() (*coraza.WAF, error) {
+func crsWAF() (*corazawaf.WAF, error) {
 	files := []string{
 		"../coraza.conf-recommended",
 		path.Join(crspath, "crs-setup.conf.example"),
 		path.Join(crspath, "rules/", "*.conf"),
 	}
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	parser := seclang.NewParser(waf)
 	for _, f := range files {
 		if err := parser.FromFile(f); err != nil {

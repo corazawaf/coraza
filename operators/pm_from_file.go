@@ -6,9 +6,9 @@ package operators
 import (
 	"bufio"
 	"bytes"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
 )
 
@@ -16,7 +16,7 @@ type pmFromFile struct {
 	matcher ahocorasick.AhoCorasick
 }
 
-func (o *pmFromFile) Init(options coraza.RuleOperatorOptions) error {
+func (o *pmFromFile) Init(options corazawaf.RuleOperatorOptions) error {
 	path := options.Arguments
 
 	data, err := loadFromFile(path, options.Path)
@@ -49,7 +49,7 @@ func (o *pmFromFile) Init(options coraza.RuleOperatorOptions) error {
 	return nil
 }
 
-func (o *pmFromFile) Evaluate(tx *coraza.Transaction, value string) bool {
+func (o *pmFromFile) Evaluate(tx *corazawaf.Transaction, value string) bool {
 	if tx.Capture {
 		matches := o.matcher.FindAll(value)
 		for i, match := range matches {
@@ -64,4 +64,4 @@ func (o *pmFromFile) Evaluate(tx *coraza.Transaction, value string) bool {
 	return iter.Next() != nil
 }
 
-var _ coraza.RuleOperator = (*pmFromFile)(nil)
+var _ corazawaf.RuleOperator = (*pmFromFile)(nil)

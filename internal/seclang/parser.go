@@ -7,12 +7,12 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -168,7 +168,7 @@ func (p *Parser) SetCurrentDir(dir string) {
 // NewParser creates a new parser from a WAF instance
 // Rules and settings will be inserted into the WAF
 // rule container (RuleGroup).
-func NewParser(waf *coraza.WAF) *Parser {
+func NewParser(waf *corazawaf.WAF) *Parser {
 	p := &Parser{
 		options: &DirectiveOptions{
 			WAF:      waf,

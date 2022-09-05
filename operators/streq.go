@@ -4,17 +4,17 @@
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 type streq struct {
-	data coraza.Macro
+	data corazawaf.Macro
 }
 
-func (o *streq) Init(options coraza.RuleOperatorOptions) error {
+func (o *streq) Init(options corazawaf.RuleOperatorOptions) error {
 	data := options.Arguments
 
-	macro, err := coraza.NewMacro(data)
+	macro, err := corazawaf.NewMacro(data)
 	if err != nil {
 		return err
 	}
@@ -22,7 +22,7 @@ func (o *streq) Init(options coraza.RuleOperatorOptions) error {
 	return nil
 }
 
-func (o *streq) Evaluate(tx *coraza.Transaction, value string) bool {
+func (o *streq) Evaluate(tx *corazawaf.Transaction, value string) bool {
 	data := o.data.Expand(tx)
 	return data == value
 }

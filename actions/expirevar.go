@@ -5,10 +5,10 @@ package actions
 
 import (
 	"fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -18,7 +18,7 @@ type expirevarFn struct {
 	key        string
 }
 
-func (a *expirevarFn) Init(r *coraza.Rule, data string) error {
+func (a *expirevarFn) Init(r *corazawaf.Rule, data string) error {
 	spl := strings.SplitN(data, "=", 2)
 	a.ttl, _ = strconv.Atoi(spl[1])
 	spl = strings.SplitN(spl[0], ".", 2)
@@ -30,7 +30,7 @@ func (a *expirevarFn) Init(r *coraza.Rule, data string) error {
 	return nil
 }
 
-func (a *expirevarFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *expirevarFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
 	// Not supported
 	// tx.WAF.Logger.Error("Expirevar was used but it's not supported", zap.Int("rule", r.Id))
 }
@@ -39,11 +39,11 @@ func (a *expirevarFn) Type() types.RuleActionType {
 	return types.ActionTypeNondisruptive
 }
 
-func expirevar() coraza.RuleAction {
+func expirevar() corazawaf.RuleAction {
 	return &expirevarFn{}
 }
 
 var (
-	_ coraza.RuleAction = &expirevarFn{}
-	_ ruleActionWrapper = expirevar
+	_ corazawaf.RuleAction = &expirevarFn{}
+	_ ruleActionWrapper    = expirevar
 )

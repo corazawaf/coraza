@@ -5,11 +5,11 @@ package actions
 
 import (
 	"fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -46,7 +46,7 @@ type ctlFn struct {
 	colRx      *regexp.Regexp
 }
 
-func (a *ctlFn) Init(r *coraza.Rule, data string) error {
+func (a *ctlFn) Init(r *corazawaf.Rule, data string) error {
 	var err error
 	a.action, a.value, a.collection, a.colKey, err = a.parseCtl(data)
 	if len(a.colKey) > 2 && a.colKey[0] == '/' && a.colKey[len(a.colKey)-1] == '/' {
@@ -58,7 +58,7 @@ func (a *ctlFn) Init(r *coraza.Rule, data string) error {
 	return err
 }
 
-func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *ctlFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
 	switch a.action {
 	case ctlRemoveTargetByID:
 		ran, err := a.rangeToInts(tx.WAF.Rules.GetRules(), a.value)
@@ -211,7 +211,7 @@ func (a *ctlFn) parseCtl(data string) (ctlFunctionType, string, variables.RuleVa
 	return act, value, collection, strings.TrimSpace(colkey), nil
 }
 
-func (a *ctlFn) rangeToInts(rules []*coraza.Rule, input string) ([]int, error) {
+func (a *ctlFn) rangeToInts(rules []*corazawaf.Rule, input string) ([]int, error) {
 	ids := []int{}
 	spl := strings.SplitN(input, "-", 2)
 	var start, end int
@@ -240,11 +240,11 @@ func (a *ctlFn) rangeToInts(rules []*coraza.Rule, input string) ([]int, error) {
 	return ids, nil
 }
 
-func ctl() coraza.RuleAction {
+func ctl() corazawaf.RuleAction {
 	return &ctlFn{}
 }
 
 var (
-	_ coraza.RuleAction = &ctlFn{}
-	_ ruleActionWrapper = ctl
+	_ corazawaf.RuleAction = &ctlFn{}
+	_ ruleActionWrapper    = ctl
 )

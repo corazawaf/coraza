@@ -6,10 +6,10 @@ package seclang
 import (
 	"errors"
 	"fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"regexp"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
 	actionsmod "github.com/corazawaf/coraza/v3/actions"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	operators "github.com/corazawaf/coraza/v3/operators"
@@ -23,12 +23,12 @@ type ruleAction struct {
 	Key   string
 	Value string
 	Atype types.RuleActionType
-	F     coraza.RuleAction
+	F     corazawaf.RuleAction
 }
 
 // RuleParser is used to programatically create new rules using seclang formatted strings
 type RuleParser struct {
-	rule           *coraza.Rule
+	rule           *corazawaf.Rule
 	defaultActions map[types.RulePhase][]ruleAction
 	options        RuleOptions
 }
@@ -193,7 +193,7 @@ func (p *RuleParser) ParseOperator(operator string) error {
 	}
 	data := []byte(opdata)
 
-	opts := coraza.RuleOperatorOptions{
+	opts := corazawaf.RuleOperatorOptions{
 		Arguments: string(data),
 		Path: []string{
 			p.options.Config.Get("parser_config_dir", "").(string),
@@ -292,14 +292,14 @@ func (p *RuleParser) ParseActions(actions string) error {
 }
 
 // Rule returns the compiled rule
-func (p *RuleParser) Rule() *coraza.Rule {
+func (p *RuleParser) Rule() *corazawaf.Rule {
 	return p.rule
 }
 
 // RuleOptions contains the options used to compile a rule
 type RuleOptions struct {
 	WithOperator bool
-	WAF          *coraza.WAF
+	WAF          *corazawaf.WAF
 	Config       types.Config
 	Directive    string
 	Data         string
@@ -313,7 +313,7 @@ var ruleTokenRegex = regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
 // The string must match the seclang format
 // In case WithOperator is false, the rule will be parsed without operator
 // This function is created for external plugin directives
-func ParseRule(options RuleOptions) (*coraza.Rule, error) {
+func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 	if strings.Trim(options.Data, " ") == "" {
 		return nil, errors.New("empty rule")
 	}
@@ -321,7 +321,7 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 	var err error
 	rp := &RuleParser{
 		options:        options,
-		rule:           coraza.NewRule(),
+		rule:           corazawaf.NewRule(),
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
 
@@ -392,7 +392,7 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 	return rp.rule, nil
 }
 
-func getLastRuleExpectingChain(w *coraza.WAF) *coraza.Rule {
+func getLastRuleExpectingChain(w *corazawaf.WAF) *corazawaf.Rule {
 	rules := w.Rules.GetRules()
 	if len(rules) == 0 {
 		return nil

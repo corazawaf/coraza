@@ -4,9 +4,9 @@
 package actions
 
 import (
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -36,7 +36,7 @@ func TestSeverity(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rule := coraza.NewRule()
+			rule := corazawaf.NewRule()
 			sev := severity()
 			if err := sev.Init(rule, tt.name); err != nil {
 				t.Error(err)

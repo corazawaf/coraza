@@ -4,18 +4,18 @@
 package actions
 
 import (
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 type denyFn struct{}
 
-func (a *denyFn) Init(r *coraza.Rule, data string) error {
+func (a *denyFn) Init(r *corazawaf.Rule, data string) error {
 	r.Disruptive = true
 	return nil
 }
 
-func (a *denyFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *denyFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
 	rid := r.ID
 	if rid == 0 {
 		rid = r.ParentID
@@ -33,11 +33,11 @@ func (a *denyFn) Type() types.RuleActionType {
 	return types.ActionTypeDisruptive
 }
 
-func deny() coraza.RuleAction {
+func deny() corazawaf.RuleAction {
 	return &denyFn{}
 }
 
 var (
-	_ coraza.RuleAction = &denyFn{}
-	_ ruleActionWrapper = deny
+	_ corazawaf.RuleAction = &denyFn{}
+	_ ruleActionWrapper    = deny
 )

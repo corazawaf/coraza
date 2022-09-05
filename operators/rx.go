@@ -5,16 +5,15 @@ package operators
 
 import (
 	"bytes"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"regexp"
-
-	"github.com/corazawaf/coraza/v3"
 )
 
 type rx struct {
 	re *regexp.Regexp
 }
 
-func (o *rx) Init(options coraza.RuleOperatorOptions) error {
+func (o *rx) Init(options corazawaf.RuleOperatorOptions) error {
 	data := options.Arguments
 
 	re, err := regexp.Compile(data)
@@ -22,7 +21,7 @@ func (o *rx) Init(options coraza.RuleOperatorOptions) error {
 	return err
 }
 
-func (o *rx) Evaluate(tx *coraza.Transaction, value string) bool {
+func (o *rx) Evaluate(tx *corazawaf.Transaction, value string) bool {
 	match := o.re.FindAllSubmatch(o.convert(value), -1)
 	lcount := len(match)
 	if !tx.Capture && lcount > 0 {

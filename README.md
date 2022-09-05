@@ -77,11 +77,11 @@ Coraza can be used as a library for your Go program to implement a security midd
 ```go
 package main
 
-import(
+import (
 	"context"
 	"fmt"
 	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/seclang"
+	"github.com/corazawaf/coraza/v3/internal/seclang"
 )
 
 func main() {
@@ -96,7 +96,7 @@ func main() {
 
 	// Then we create a transaction and assign some variables
 	tx := waf.NewTransaction(context.Background())
-	defer func(){
+	defer func() {
 		tx.ProcessLogging()
 		tx.Clean()
 	}()

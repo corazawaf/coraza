@@ -7,10 +7,10 @@ import (
 	"context"
 	b64 "encoding/base64"
 	"fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/testing/profile"
 )
 
@@ -18,9 +18,9 @@ import (
 // a WAF instance for a test case
 type Test struct {
 	// waf contains a waf instance pointer
-	waf *coraza.WAF
+	waf *corazawaf.WAF
 	// transaction contains the current transaction
-	transaction *coraza.Transaction
+	transaction *corazawaf.Transaction
 	magic       bool
 	Name        string
 	body        string
@@ -53,7 +53,7 @@ type Test struct {
 }
 
 // SetWAF sets the waf instance pointer
-func (t *Test) SetWAF(waf *coraza.WAF) {
+func (t *Test) SetWAF(waf *corazawaf.WAF) {
 	t.waf = waf
 }
 
@@ -260,7 +260,7 @@ func (t *Test) LogContains(log string) bool {
 }
 
 // Transaction returns the transaction
-func (t *Test) Transaction() *coraza.Transaction {
+func (t *Test) Transaction() *corazawaf.Transaction {
 	return t.transaction
 }
 
@@ -278,7 +278,7 @@ func (t *Test) Request() string {
 }
 
 // NewTest creates a new test with default properties
-func NewTest(name string, waf *coraza.WAF) *Test {
+func NewTest(name string, waf *corazawaf.WAF) *Test {
 	t := &Test{
 		Name:           name,
 		transaction:    waf.NewTransaction(context.Background()),

@@ -4,16 +4,16 @@
 package actions
 
 import (
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 type appendFn struct {
-	data coraza.Macro
+	data corazawaf.Macro
 }
 
-func (a *appendFn) Init(r *coraza.Rule, data string) error {
-	macro, err := coraza.NewMacro(data)
+func (a *appendFn) Init(r *corazawaf.Rule, data string) error {
+	macro, err := corazawaf.NewMacro(data)
 	if err != nil {
 		return err
 	}
@@ -21,7 +21,7 @@ func (a *appendFn) Init(r *coraza.Rule, data string) error {
 	return nil
 }
 
-func (a *appendFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *appendFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
 	if !tx.WAF.ContentInjection {
 		tx.WAF.Logger.Debug("append rejected because of ContentInjection")
 		return
@@ -36,11 +36,11 @@ func (a *appendFn) Type() types.RuleActionType {
 	return types.ActionTypeNondisruptive
 }
 
-func append2() coraza.RuleAction {
+func append2() corazawaf.RuleAction {
 	return &appendFn{}
 }
 
 var (
-	_ coraza.RuleAction = &appendFn{}
-	_ ruleActionWrapper = append2
+	_ corazawaf.RuleAction = &appendFn{}
+	_ ruleActionWrapper    = append2
 )

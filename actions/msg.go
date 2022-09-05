@@ -4,7 +4,7 @@
 package actions
 
 import (
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -12,9 +12,9 @@ import (
 type msgFn struct {
 }
 
-func (a *msgFn) Init(r *coraza.Rule, data string) error {
+func (a *msgFn) Init(r *corazawaf.Rule, data string) error {
 	data = utils.RemoveQuotes(data)
-	msg, err := coraza.NewMacro(data)
+	msg, err := corazawaf.NewMacro(data)
 	if err != nil {
 		return err
 	}
@@ -22,7 +22,7 @@ func (a *msgFn) Init(r *coraza.Rule, data string) error {
 	return nil
 }
 
-func (a *msgFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *msgFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
 	// Not evaluated
 }
 
@@ -30,11 +30,11 @@ func (a *msgFn) Type() types.RuleActionType {
 	return types.ActionTypeMetadata
 }
 
-func msg() coraza.RuleAction {
+func msg() corazawaf.RuleAction {
 	return &msgFn{}
 }
 
 var (
-	_ coraza.RuleAction = &msgFn{}
-	_ ruleActionWrapper = msg
+	_ corazawaf.RuleAction = &msgFn{}
+	_ ruleActionWrapper    = msg
 )

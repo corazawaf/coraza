@@ -5,9 +5,8 @@ package operators
 
 import (
 	_ "fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"testing"
-
-	"github.com/corazawaf/coraza/v3"
 )
 
 func TestOneAddress(t *testing.T) {
@@ -15,7 +14,7 @@ func TestOneAddress(t *testing.T) {
 	addrfail := "127.0.0.2"
 	cidr := "127.0.0.1/32"
 	ipm := &ipMatch{}
-	opts := coraza.RuleOperatorOptions{
+	opts := corazawaf.RuleOperatorOptions{
 		Arguments: cidr,
 	}
 	if err := ipm.Init(opts); err != nil {
@@ -34,7 +33,7 @@ func TestMultipleAddress(t *testing.T) {
 	addrfail := []string{"127.0.0.2", "192.168.1.1"}
 	cidr := "127.0.0.1, 192.168.0.0/24"
 	ipm := &ipMatch{}
-	opts := coraza.RuleOperatorOptions{
+	opts := corazawaf.RuleOperatorOptions{
 		Arguments: cidr,
 	}
 	if err := ipm.Init(opts); err != nil {

@@ -4,14 +4,14 @@
 package actions
 
 import (
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	transformations "github.com/corazawaf/coraza/v3/transformations"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 type tFn struct{}
 
-func (a *tFn) Init(r *coraza.Rule, input string) error {
+func (a *tFn) Init(r *corazawaf.Rule, input string) error {
 	// TODO there is a chance that it won't work, it requires tests
 	// none is a special hardcoded transformation, it must remove previous transformations
 	if input == "none" {
@@ -26,7 +26,7 @@ func (a *tFn) Init(r *coraza.Rule, input string) error {
 	return r.AddTransformation(input, tt)
 }
 
-func (a *tFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *tFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
 	// Not evaluated
 }
 
@@ -34,11 +34,11 @@ func (a *tFn) Type() types.RuleActionType {
 	return types.ActionTypeNondisruptive
 }
 
-func t() coraza.RuleAction {
+func t() corazawaf.RuleAction {
 	return &tFn{}
 }
 
 var (
-	_ coraza.RuleAction = &tFn{}
-	_ ruleActionWrapper = t
+	_ corazawaf.RuleAction = &tFn{}
+	_ ruleActionWrapper    = t
 )

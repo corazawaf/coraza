@@ -5,9 +5,9 @@ package actions
 
 import (
 	"fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"strconv"
 
-	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -15,7 +15,7 @@ type skipFn struct {
 	data int
 }
 
-func (a *skipFn) Init(r *coraza.Rule, data string) error {
+func (a *skipFn) Init(r *corazawaf.Rule, data string) error {
 	i, err := strconv.Atoi(data)
 	if err != nil {
 		return fmt.Errorf("invalid value for skip")
@@ -27,7 +27,7 @@ func (a *skipFn) Init(r *coraza.Rule, data string) error {
 	return nil
 }
 
-func (a *skipFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *skipFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
 	tx.Skip = a.data
 }
 
@@ -35,11 +35,11 @@ func (a *skipFn) Type() types.RuleActionType {
 	return types.ActionTypeFlow
 }
 
-func skip() coraza.RuleAction {
+func skip() corazawaf.RuleAction {
 	return &skipFn{}
 }
 
 var (
-	_ coraza.RuleAction = &skipFn{}
-	_ ruleActionWrapper = skip
+	_ corazawaf.RuleAction = &skipFn{}
+	_ ruleActionWrapper    = skip
 )

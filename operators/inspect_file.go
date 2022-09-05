@@ -8,22 +8,21 @@ package operators
 
 import (
 	"context"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"os/exec"
 	"time"
-
-	"github.com/corazawaf/coraza/v3"
 )
 
 type inspectFile struct {
 	path string
 }
 
-func (o *inspectFile) Init(options coraza.RuleOperatorOptions) error {
+func (o *inspectFile) Init(options corazawaf.RuleOperatorOptions) error {
 	o.path = options.Arguments
 	return nil
 }
 
-func (o *inspectFile) Evaluate(tx *coraza.Transaction, value string) bool {
+func (o *inspectFile) Evaluate(tx *corazawaf.Transaction, value string) bool {
 	// TODO parametrize timeout
 	// TODO add relative path capabilities
 	// TODO add lua special support

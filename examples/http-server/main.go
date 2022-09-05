@@ -3,16 +3,16 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"io"
 	"net/http"
 
-	"github.com/corazawaf/coraza/v3"
 	txhttp "github.com/corazawaf/coraza/v3/http"
-	"github.com/corazawaf/coraza/v3/seclang"
+	"github.com/corazawaf/coraza/v3/internal/seclang"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
-var waf *coraza.WAF
+var waf *corazawaf.WAF
 
 func hello(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(w, "hello world, not disrupted.\n")
@@ -29,7 +29,7 @@ func main() {
 }
 
 func setupCoraza() error {
-	waf = coraza.NewWAF()
+	waf = corazawaf.NewWAF()
 	seclang := seclang.NewParser(waf)
 	if err := seclang.FromString(`
 		# This is a comment

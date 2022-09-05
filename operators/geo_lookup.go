@@ -4,14 +4,14 @@
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 type geoLookup struct{}
 
-func (o *geoLookup) Init(options coraza.RuleOperatorOptions) error { return nil }
+func (o *geoLookup) Init(options corazawaf.RuleOperatorOptions) error { return nil }
 
 // kept for compatibility, it requires a plugin.
-func (o *geoLookup) Evaluate(tx *coraza.Transaction, value string) bool { return true }
+func (o *geoLookup) Evaluate(tx *corazawaf.Transaction, value string) bool { return true }
 
-var _ coraza.RuleOperator = &geoLookup{}
+var _ corazawaf.RuleOperator = &geoLookup{}

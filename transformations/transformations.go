@@ -5,22 +5,21 @@ package transformations
 
 import (
 	"fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"strings"
-
-	"github.com/corazawaf/coraza/v3"
 )
 
-var transformations = map[string]coraza.RuleTransformation{}
+var transformations = map[string]corazawaf.RuleTransformation{}
 
 // RegisterPlugin registers a transformation by name
 // If the transformation is already registered, it will be overwritten
-func RegisterPlugin(name string, trans coraza.RuleTransformation) {
+func RegisterPlugin(name string, trans corazawaf.RuleTransformation) {
 	transformations[strings.ToLower(name)] = trans
 }
 
 // GetTransformation returns a transformation by name
 // If the transformation is not found, it returns an error
-func GetTransformation(name string) (coraza.RuleTransformation, error) {
+func GetTransformation(name string) (corazawaf.RuleTransformation, error) {
 	if t, ok := transformations[strings.ToLower(name)]; ok {
 		return t, nil
 	}

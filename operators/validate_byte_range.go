@@ -5,10 +5,9 @@ package operators
 
 import (
 	"fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"strconv"
 	"strings"
-
-	"github.com/corazawaf/coraza/v3"
 )
 
 type byteRange struct {
@@ -20,7 +19,7 @@ type validateByteRange struct {
 	data []byteRange
 }
 
-func (o *validateByteRange) Init(options coraza.RuleOperatorOptions) error {
+func (o *validateByteRange) Init(options corazawaf.RuleOperatorOptions) error {
 	data := options.Arguments
 
 	if data == "" {
@@ -58,7 +57,7 @@ func (o *validateByteRange) Init(options coraza.RuleOperatorOptions) error {
 	return nil
 }
 
-func (o *validateByteRange) Evaluate(tx *coraza.Transaction, data string) bool {
+func (o *validateByteRange) Evaluate(tx *corazawaf.Transaction, data string) bool {
 	lenData := len(o.data)
 	if lenData == 0 {
 		return true

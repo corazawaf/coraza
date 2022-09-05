@@ -5,16 +5,16 @@ package actions
 
 import (
 	"context"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 func TestCtl(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	tx := waf.NewTransaction(context.Background())
-	r := coraza.NewRule()
+	r := corazawaf.NewRule()
 	ctlf := ctl()
 
 	if err := ctlf.Init(r, "requestBodyProcessor=XML"); err != nil {
@@ -82,7 +82,7 @@ func TestCtl(t *testing.T) {
 
 func TestCtlParseRange(t *testing.T) {
 	a := &ctlFn{}
-	rules := []*coraza.Rule{
+	rules := []*corazawaf.Rule{
 		{
 			RuleMetadata: types.RuleMetadata{
 				ID: 5,

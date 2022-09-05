@@ -1,7 +1,7 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package coraza
+package corazawaf
 
 import (
 	"bufio"
@@ -298,8 +298,8 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 	}
 
 	tx.MatchedRules = append(tx.MatchedRules, mr)
-	if tx.WAF.errorLogCb != nil && r.Log {
-		tx.WAF.errorLogCb(mr)
+	if tx.WAF.ErrorLogCb != nil && r.Log {
+		tx.WAF.ErrorLogCb(mr)
 	}
 }
 
@@ -516,6 +516,10 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 	return tx.Interruption
 }
 
+func (tx *Transaction) RequestBodyWriter() io.Writer {
+	return tx.ResponseBodyBuffer
+}
+
 // ProcessRequestBody Performs the request body (if any)
 //
 // This method perform the analysis on the request body. It is optional to
@@ -624,6 +628,10 @@ func (tx *Transaction) IsProcessableResponseBody() bool {
 	// TODO add more validations
 	ct := tx.Variables.ResponseContentType.String()
 	return stringsutil.InSlice(ct, tx.WAF.ResponseBodyMimeTypes)
+}
+
+func (tx *Transaction) ResponseBodyWriter() io.Writer {
+	return tx.ResponseBodyBuffer
 }
 
 // ProcessResponseBody Perform the request body (if any)
@@ -832,6 +840,10 @@ func (tx *Transaction) Clean() error {
 	default:
 		return fmt.Errorf("transaction clean failed:\n- %s\n- %s", errs[0].Error(), errs[1].Error())
 	}
+}
+
+func (tx *Transaction) Close() error {
+	return tx.Clean()
 }
 
 // Debug will return a string with the transaction debug information

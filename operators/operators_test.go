@@ -5,13 +5,13 @@ package operators
 
 import (
 	"context"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
 	"github.com/tidwall/gjson"
 )
 
@@ -49,7 +49,7 @@ func TestOperators(t *testing.T) {
 		"without capture": false,
 	}
 
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	for _, f := range files {
 		cases := unmarshalTests(t, f)
 		for _, data := range cases {
@@ -82,7 +82,7 @@ func TestOperators(t *testing.T) {
 						return
 					}
 
-					opts := coraza.RuleOperatorOptions{
+					opts := corazawaf.RuleOperatorOptions{
 						Arguments: data.Param,
 						Path:      []string{"./testdata/op"},
 					}

@@ -5,9 +5,8 @@ package operators
 
 import (
 	_ "fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"testing"
-
-	"github.com/corazawaf/coraza/v3"
 )
 
 func TestIpMatchFromDataset(t *testing.T) {
@@ -15,7 +14,7 @@ func TestIpMatchFromDataset(t *testing.T) {
 	addrfail := []string{"127.0.0.2", "192.168.1.1"}
 
 	ipm := &ipMatchFromDataset{}
-	opts := coraza.RuleOperatorOptions{
+	opts := corazawaf.RuleOperatorOptions{
 		Arguments: "test_1",
 		Datasets: map[string][]string{
 			"test_1": {"127.0.0.1", "192.168.0.0/24"},
@@ -40,7 +39,7 @@ func TestIpMatchFromDataset(t *testing.T) {
 
 func TestIpMatchFromEmptyDataset(t *testing.T) {
 	ipm := &ipMatchFromDataset{}
-	opts := coraza.RuleOperatorOptions{
+	opts := corazawaf.RuleOperatorOptions{
 		Arguments: "test_1",
 		Datasets: map[string][]string{
 			"test_1": {},

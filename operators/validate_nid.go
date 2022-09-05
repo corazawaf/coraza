@@ -5,11 +5,10 @@ package operators
 
 import (
 	"fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/corazawaf/coraza/v3"
 )
 
 type validateNidFunction = func(input string) bool
@@ -19,7 +18,7 @@ type validateNid struct {
 	re *regexp.Regexp
 }
 
-func (o *validateNid) Init(options coraza.RuleOperatorOptions) error {
+func (o *validateNid) Init(options corazawaf.RuleOperatorOptions) error {
 	data := options.Arguments
 
 	spl := strings.SplitN(data, " ", 2)
@@ -42,7 +41,7 @@ func (o *validateNid) Init(options coraza.RuleOperatorOptions) error {
 	return nil
 }
 
-func (o *validateNid) Evaluate(tx *coraza.Transaction, value string) bool {
+func (o *validateNid) Evaluate(tx *corazawaf.Transaction, value string) bool {
 	matches := o.re.FindAllStringSubmatch(value, -1)
 
 	res := false
@@ -126,7 +125,7 @@ func nidUs(nid string) bool {
 }
 
 var (
-	_ coraza.RuleOperator = &validateNid{}
-	_ validateNidFunction = nidCl
+	_ corazawaf.RuleOperator = &validateNid{}
+	_ validateNidFunction    = nidCl
 	_ validateNidFunction = nidUs
 )

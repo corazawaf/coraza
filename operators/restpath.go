@@ -5,10 +5,9 @@ package operators
 
 import (
 	"fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"regexp"
 	"strings"
-
-	"github.com/corazawaf/coraza/v3"
 )
 
 var rePathTokenRe = regexp.MustCompile(`\{([^\}]+)\}`)
@@ -21,7 +20,7 @@ type restpath struct {
 	re *regexp.Regexp
 }
 
-func (o *restpath) Init(options coraza.RuleOperatorOptions) error {
+func (o *restpath) Init(options corazawaf.RuleOperatorOptions) error {
 	data := strings.ReplaceAll(options.Arguments, "/", "\\/")
 	for _, token := range rePathTokenRe.FindAllStringSubmatch(data, -1) {
 		data = strings.Replace(data, token[0], fmt.Sprintf("(?P<%s>.*)", token[1]), 1)
@@ -31,7 +30,7 @@ func (o *restpath) Init(options coraza.RuleOperatorOptions) error {
 	return err
 }
 
-func (o *restpath) Evaluate(tx *coraza.Transaction, value string) bool {
+func (o *restpath) Evaluate(tx *corazawaf.Transaction, value string) bool {
 	// we use the re regex to match the path and match named captured groups
 	// to the ARGS_PATH
 	match := o.re.FindStringSubmatch(value)
@@ -46,10 +45,10 @@ func (o *restpath) Evaluate(tx *coraza.Transaction, value string) bool {
 	return true
 }
 
-var _ coraza.RuleOperator = &restpath{}
+var _ corazawaf.RuleOperator = &restpath{}
 
 func init() {
-	Register("restpath", func() coraza.RuleOperator {
+	Register("restpath", func() corazawaf.RuleOperator {
 		return &restpath{}
 	})
 }

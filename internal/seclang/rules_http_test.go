@@ -11,18 +11,18 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"net/http"
 	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
 	txhttp "github.com/corazawaf/coraza/v3/http"
 )
 
 // from issue https://github.com/corazawaf/coraza/issues/159 @zpeasystart
 func TestDirectiveSecAuditLog(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	p := NewParser(waf)
 	if err := p.FromString(`
 	SecRule REQUEST_FILENAME "@unconditionalMatch" "id:100, phase:2, t:none, log, setvar:'tx.count=+1',chain"
@@ -70,7 +70,7 @@ func TestDirectiveSecAuditLog(t *testing.T) {
 		t.Errorf("failed to compile multiple chains, expected 3, got %d", c)
 	}
 	// Why is the number of matches 4
-	macro, err := coraza.NewMacro("%{tx.count}")
+	macro, err := corazawaf.NewMacro("%{tx.count}")
 	if err != nil {
 		t.Error(err)
 	}

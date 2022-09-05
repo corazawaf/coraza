@@ -5,25 +5,25 @@ package actions
 
 import (
 	"fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"os"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 type setenvFn struct {
 	key   string
-	value coraza.Macro
+	value corazawaf.Macro
 }
 
-func (a *setenvFn) Init(r *coraza.Rule, data string) error {
+func (a *setenvFn) Init(r *corazawaf.Rule, data string) error {
 	spl := strings.SplitN(data, "=", 2)
 	if len(spl) != 2 {
 		return fmt.Errorf("invalid key value for setvar")
 	}
 	a.key = spl[0]
-	macro, err := coraza.NewMacro(spl[1])
+	macro, err := corazawaf.NewMacro(spl[1])
 	if err != nil {
 		return err
 	}
@@ -31,7 +31,7 @@ func (a *setenvFn) Init(r *coraza.Rule, data string) error {
 	return nil
 }
 
-func (a *setenvFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *setenvFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
 	v := a.value.Expand(tx)
 	// set env variable
 	if err := os.Setenv(a.key, v); err != nil {
@@ -46,11 +46,11 @@ func (a *setenvFn) Type() types.RuleActionType {
 	return types.ActionTypeNondisruptive
 }
 
-func setenv() coraza.RuleAction {
+func setenv() corazawaf.RuleAction {
 	return &setenvFn{}
 }
 
 var (
-	_ coraza.RuleAction = &setenvFn{}
-	_ ruleActionWrapper = setenv
+	_ corazawaf.RuleAction = &setenvFn{}
+	_ ruleActionWrapper    = setenv
 )

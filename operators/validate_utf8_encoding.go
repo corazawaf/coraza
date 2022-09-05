@@ -4,15 +4,14 @@
 package operators
 
 import (
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"unicode/utf8"
-
-	"github.com/corazawaf/coraza/v3"
 )
 
 type validateUtf8Encoding struct{}
 
-func (o *validateUtf8Encoding) Init(options coraza.RuleOperatorOptions) error { return nil }
+func (o *validateUtf8Encoding) Init(options corazawaf.RuleOperatorOptions) error { return nil }
 
-func (o *validateUtf8Encoding) Evaluate(tx *coraza.Transaction, value string) bool {
+func (o *validateUtf8Encoding) Evaluate(tx *corazawaf.Transaction, value string) bool {
 	return utf8.ValidString(value)
 }

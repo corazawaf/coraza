@@ -5,8 +5,8 @@ package operators
 
 import (
 	"fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 
-	"github.com/corazawaf/coraza/v3"
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
 )
 
@@ -17,7 +17,7 @@ type pmFromDataset struct {
 	matcher ahocorasick.AhoCorasick
 }
 
-func (o *pmFromDataset) Init(options coraza.RuleOperatorOptions) error {
+func (o *pmFromDataset) Init(options corazawaf.RuleOperatorOptions) error {
 	data := options.Arguments
 	dataset, ok := options.Datasets[data]
 	if !ok {
@@ -34,7 +34,7 @@ func (o *pmFromDataset) Init(options coraza.RuleOperatorOptions) error {
 	return nil
 }
 
-func (o *pmFromDataset) Evaluate(tx *coraza.Transaction, value string) bool {
+func (o *pmFromDataset) Evaluate(tx *corazawaf.Transaction, value string) bool {
 	if tx.Capture {
 		matches := o.matcher.FindAll(value)
 		for i, match := range matches {
@@ -49,4 +49,4 @@ func (o *pmFromDataset) Evaluate(tx *coraza.Transaction, value string) bool {
 	return iter.Next() != nil
 }
 
-var _ coraza.RuleOperator = (*pmFromDataset)(nil)
+var _ corazawaf.RuleOperator = (*pmFromDataset)(nil)

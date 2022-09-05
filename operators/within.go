@@ -4,19 +4,18 @@
 package operators
 
 import (
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"strings"
-
-	"github.com/corazawaf/coraza/v3"
 )
 
 type within struct {
-	data coraza.Macro
+	data corazawaf.Macro
 }
 
-func (o *within) Init(options coraza.RuleOperatorOptions) error {
+func (o *within) Init(options corazawaf.RuleOperatorOptions) error {
 	data := options.Arguments
 
-	macro, err := coraza.NewMacro(data)
+	macro, err := corazawaf.NewMacro(data)
 	if err != nil {
 		return err
 	}
@@ -24,7 +23,7 @@ func (o *within) Init(options coraza.RuleOperatorOptions) error {
 	return nil
 }
 
-func (o *within) Evaluate(tx *coraza.Transaction, value string) bool {
+func (o *within) Evaluate(tx *corazawaf.Transaction, value string) bool {
 	data := o.data.Expand(tx)
 	return strings.Contains(data, value)
 }

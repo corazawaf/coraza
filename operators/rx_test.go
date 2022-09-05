@@ -5,20 +5,19 @@ package operators
 
 import (
 	"context"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"testing"
-
-	"github.com/corazawaf/coraza/v3"
 )
 
 func TestRx1(t *testing.T) {
 	rx := &rx{}
-	opts := coraza.RuleOperatorOptions{
+	opts := corazawaf.RuleOperatorOptions{
 		Arguments: "som(.*)ta",
 	}
 	if err := rx.Init(opts); err != nil {
 		t.Error(err)
 	}
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	tx.Capture = true
 	res := rx.Evaluate(tx, "somedata")

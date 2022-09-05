@@ -8,14 +8,13 @@ package operators
 
 import (
 	_ "fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"testing"
-
-	"github.com/corazawaf/coraza/v3"
 )
 
 func TestInspectFile(t *testing.T) {
 	ipf := &inspectFile{}
-	opts := coraza.RuleOperatorOptions{
+	opts := corazawaf.RuleOperatorOptions{
 		Arguments: "",
 	}
 	opts.Arguments = "/bin/echo"

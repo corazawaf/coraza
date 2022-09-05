@@ -8,12 +8,12 @@
 package http
 
 import (
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -22,7 +22,7 @@ import (
 // so this will implement all phase 0, 1 and 2 variables
 // Note: This function will stop after an interruption
 // Note: Do not manually fill any request variables
-func ProcessRequest(tx *coraza.Transaction, req *http.Request) (*types.Interruption, error) {
+func ProcessRequest(tx *corazawaf.Transaction, req *http.Request) (*types.Interruption, error) {
 	var client string
 	cport := 0
 	// IMPORTANT: Some http.Request.RemoteAddr implementations will not contain port or contain IPV6: [2001:db8::1]:8080

@@ -7,12 +7,10 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	engine "github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/corazawaf/coraza/v3"
-	engine "github.com/corazawaf/coraza/v3"
 )
 
 func TestInterruption(t *testing.T) {
@@ -46,7 +44,7 @@ func TestDefaultConfigurationFile(t *testing.T) {
 }
 
 func TestHardcodedIncludeDirective(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := engine.NewWAF()
 	p := NewParser(waf)
 	if err := p.FromString("Include ../coraza.conf-recommended"); err != nil {
 		t.Error(err)
@@ -60,7 +58,7 @@ func TestHardcodedIncludeDirective(t *testing.T) {
 }
 
 func TestHardcodedSubIncludeDirective(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := engine.NewWAF()
 	p := NewParser(waf)
 	if err := p.FromString("Include ./testdata/includes/parent.conf"); err != nil {
 		t.Error(err)
@@ -71,7 +69,7 @@ func TestHardcodedSubIncludeDirective(t *testing.T) {
 }
 
 func TestHardcodedSubIncludeDirectiveAbsolutePath(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := engine.NewWAF()
 	p := NewParser(waf)
 	currentDir, _ := filepath.Abs("./")
 	ruleFile := filepath.Join(currentDir, "./testdata/includes/parent.conf")
@@ -84,7 +82,7 @@ func TestHardcodedSubIncludeDirectiveAbsolutePath(t *testing.T) {
 }
 
 func TestHardcodedIncludeDirectiveDDOS(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := engine.NewWAF()
 	p := NewParser(waf)
 	tmpFile, err := os.Create(filepath.Join(t.TempDir(), "rand.conf"))
 	if err != nil {
@@ -104,7 +102,7 @@ func TestHardcodedIncludeDirectiveDDOS(t *testing.T) {
 }
 
 func TestHardcodedIncludeDirectiveDDOS2(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := engine.NewWAF()
 	p := NewParser(waf)
 	tmpFile, err := os.Create(filepath.Join(t.TempDir(), "rand1.conf"))
 	if err != nil {

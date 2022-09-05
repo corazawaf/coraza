@@ -4,19 +4,19 @@
 package actions
 
 import (
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 type verFn struct {
 }
 
-func (a *verFn) Init(r *coraza.Rule, data string) error {
+func (a *verFn) Init(r *corazawaf.Rule, data string) error {
 	r.Version = data
 	return nil
 }
 
-func (a *verFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *verFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
 	// Not evaluated
 }
 
@@ -24,11 +24,11 @@ func (a *verFn) Type() types.RuleActionType {
 	return types.ActionTypeMetadata
 }
 
-func ver() coraza.RuleAction {
+func ver() corazawaf.RuleAction {
 	return &verFn{}
 }
 
 var (
-	_ coraza.RuleAction = &verFn{}
-	_ ruleActionWrapper = ver
+	_ corazawaf.RuleAction = &verFn{}
+	_ ruleActionWrapper    = ver
 )

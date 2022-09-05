@@ -9,10 +9,9 @@ package operators
 import (
 	"context"
 	"fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"net"
 	"time"
-
-	"github.com/corazawaf/coraza/v3"
 )
 
 const timeout = 500 * time.Millisecond
@@ -22,7 +21,7 @@ type rbl struct {
 	resolver *net.Resolver
 }
 
-func (o *rbl) Init(options coraza.RuleOperatorOptions) error {
+func (o *rbl) Init(options corazawaf.RuleOperatorOptions) error {
 	data := options.Arguments
 
 	o.service = data
@@ -33,7 +32,7 @@ func (o *rbl) Init(options coraza.RuleOperatorOptions) error {
 
 // https://github.com/mrichman/godnsbl
 // https://github.com/SpiderLabs/ModSecurity/blob/b66224853b4e9d30e0a44d16b29d5ed3842a6b11/src/operators/rbl.cc
-func (o *rbl) Evaluate(tx *coraza.Transaction, ipAddr string) bool {
+func (o *rbl) Evaluate(tx *corazawaf.Transaction, ipAddr string) bool {
 	// TODO validate address
 	resC := make(chan bool)
 	ctx, cancel := context.WithCancel(context.Background())

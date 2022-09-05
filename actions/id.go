@@ -5,16 +5,16 @@ package actions
 
 import (
 	"fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"strconv"
 
-	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 type idFn struct {
 }
 
-func (a *idFn) Init(r *coraza.Rule, data string) error {
+func (a *idFn) Init(r *corazawaf.Rule, data string) error {
 	if data == "" {
 		return fmt.Errorf("id action requires a parameter")
 	}
@@ -32,7 +32,7 @@ func (a *idFn) Init(r *coraza.Rule, data string) error {
 	return nil
 }
 
-func (a *idFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *idFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
 	// Not evaluated
 }
 
@@ -40,11 +40,11 @@ func (a *idFn) Type() types.RuleActionType {
 	return types.ActionTypeMetadata
 }
 
-func id() coraza.RuleAction {
+func id() corazawaf.RuleAction {
 	return &idFn{}
 }
 
 var (
-	_ coraza.RuleAction = &idFn{}
-	_ ruleActionWrapper = id
+	_ corazawaf.RuleAction = &idFn{}
+	_ ruleActionWrapper    = id
 )

@@ -6,16 +6,15 @@ package operators
 import (
 	"bufio"
 	"bytes"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"strings"
-
-	"github.com/corazawaf/coraza/v3"
 )
 
 type ipMatchFromFile struct {
 	ipMatcher *ipMatch
 }
 
-func (o *ipMatchFromFile) Init(options coraza.RuleOperatorOptions) error {
+func (o *ipMatchFromFile) Init(options corazawaf.RuleOperatorOptions) error {
 	path := options.Arguments
 
 	data, err := loadFromFile(path, options.Path)
@@ -39,14 +38,14 @@ func (o *ipMatchFromFile) Init(options coraza.RuleOperatorOptions) error {
 	}
 
 	o.ipMatcher = &ipMatch{}
-	opts := coraza.RuleOperatorOptions{
+	opts := corazawaf.RuleOperatorOptions{
 		Arguments: dataParsed.String(),
 	}
 	return o.ipMatcher.Init(opts)
 }
 
-func (o *ipMatchFromFile) Evaluate(tx *coraza.Transaction, value string) bool {
+func (o *ipMatchFromFile) Evaluate(tx *corazawaf.Transaction, value string) bool {
 	return o.ipMatcher.Evaluate(tx, value)
 }
 
-var _ coraza.RuleOperator = (*ipMatchFromFile)(nil)
+var _ corazawaf.RuleOperator = (*ipMatchFromFile)(nil)

@@ -5,9 +5,8 @@ package seclang
 
 import (
 	"context"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"testing"
-
-	"github.com/corazawaf/coraza/v3"
 )
 
 /*
@@ -31,7 +30,7 @@ func TestRequestBodyAccessOff(t *testing.T) {
 }*/
 
 func TestRequestBodyAccessOn(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	parser := NewParser(waf)
 	if err := parser.FromString(`
 	SecRequestBodyAccess On

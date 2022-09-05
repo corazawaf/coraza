@@ -4,17 +4,17 @@
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/libinjection-go"
 )
 
 type detectSQLi struct{}
 
-func (o *detectSQLi) Init(options coraza.RuleOperatorOptions) error {
+func (o *detectSQLi) Init(options corazawaf.RuleOperatorOptions) error {
 	return nil
 }
 
-func (o *detectSQLi) Evaluate(tx *coraza.Transaction, value string) bool {
+func (o *detectSQLi) Evaluate(tx *corazawaf.Transaction, value string) bool {
 	res, fingerprint := libinjection.IsSQLi(value)
 	if !res {
 		return false

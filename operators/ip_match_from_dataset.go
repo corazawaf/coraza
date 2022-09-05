@@ -5,17 +5,15 @@ package operators
 
 import (
 	"fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"strings"
-
-	"github.com/corazawaf/coraza/v3"
-	engine "github.com/corazawaf/coraza/v3"
 )
 
 type ipMatchFromDataset struct {
 	matcher *ipMatch
 }
 
-func (o *ipMatchFromDataset) Init(options coraza.RuleOperatorOptions) error {
+func (o *ipMatchFromDataset) Init(options corazawaf.RuleOperatorOptions) error {
 	data := options.Arguments
 	dataset, ok := options.Datasets[data]
 	if !ok || len(dataset) == 0 {
@@ -25,14 +23,14 @@ func (o *ipMatchFromDataset) Init(options coraza.RuleOperatorOptions) error {
 	datasetParsed := strings.Join(dataset, ",")
 
 	o.matcher = &ipMatch{}
-	opts := coraza.RuleOperatorOptions{
+	opts := corazawaf.RuleOperatorOptions{
 		Arguments: datasetParsed,
 	}
 	return o.matcher.Init(opts)
 }
 
-func (o *ipMatchFromDataset) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *ipMatchFromDataset) Evaluate(tx *corazawaf.Transaction, value string) bool {
 	return o.matcher.Evaluate(tx, value)
 }
 
-var _ coraza.RuleOperator = (*ipMatchFromDataset)(nil)
+var _ corazawaf.RuleOperator = (*ipMatchFromDataset)(nil)
