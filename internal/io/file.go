@@ -38,14 +38,14 @@ func ReadFirstFile(directories []string, filename string) ([]byte, error) {
 // More context in: https://github.com/golang/go/issues/44279
 type OSFS struct{}
 
-func (o OSFS) Open(name string) (fs.File, error) {
+func (OSFS) Open(name string) (fs.File, error) {
 	return os.Open(name)
 }
 
-func (o OSFS) ReadFile(name string) ([]byte, error) {
+func (OSFS) ReadFile(name string) ([]byte, error) {
 	return os.ReadFile(name)
 }
 
-func (o OSFS) ReadDir(name string) ([]fs.DirEntry, error) {
+func (OSFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	return os.ReadDir(name)
 }
