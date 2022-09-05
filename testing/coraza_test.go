@@ -19,6 +19,9 @@ func TestEngine(t *testing.T) {
 	}
 	t.Logf("Loading %d profiles\n", len(profile.Profiles))
 	for _, p := range profile.Profiles {
+		if p.Meta.Name != "operators_with_files.yaml" {
+			continue
+		}
 		t.Run(p.Meta.Name, func(t *testing.T) {
 			tt, err := testList(&p)
 			if err != nil {

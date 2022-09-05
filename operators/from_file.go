@@ -30,10 +30,6 @@ func loadFromFile(filepath string, paths []string, root fs.FS) ([]byte, error) {
 	)
 
 	for _, p := range paths {
-		if p == "" {
-			continue
-		}
-
 		absFilepath := path.Join(p, filepath)
 		content, err = fs.ReadFile(root, absFilepath)
 		if err != nil {
