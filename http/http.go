@@ -8,12 +8,12 @@
 package http
 
 import (
-	"github.com/corazawaf/coraza/v3"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
 )
 

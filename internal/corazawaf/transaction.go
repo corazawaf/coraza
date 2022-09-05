@@ -525,7 +525,7 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 }
 
 func (tx *Transaction) RequestBodyWriter() io.Writer {
-	return tx.ResponseBodyBuffer
+	return tx.RequestBodyBuffer
 }
 
 // ProcessRequestBody Performs the request body (if any)

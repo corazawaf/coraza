@@ -59,7 +59,9 @@ func NewWAFWithConfig(config WAFConfig) (WAF, error) {
 		}
 	}
 
-	waf.ContentInjection = c.contentInjection
+	if c.contentInjection {
+		waf.ContentInjection = true
+	}
 
 	if r := c.requestBody; r != nil {
 		waf.RequestBodyAccess = true
