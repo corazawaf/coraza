@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"path/filepath"
 )
 
 // ReadFirstFile looks for the file in all available paths
@@ -48,4 +49,8 @@ func (OSFS) ReadFile(name string) ([]byte, error) {
 
 func (OSFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	return os.ReadDir(name)
+}
+
+func (OSFS) Glob(pattern string) ([]string, error) {
+	return filepath.Glob(pattern)
 }

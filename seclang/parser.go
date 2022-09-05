@@ -40,7 +40,7 @@ func (p *Parser) FromFile(profilePath string) error {
 	files := []string{}
 	if strings.Contains(profilePath, "*") {
 		var err error
-		files, err = filepath.Glob(profilePath)
+		files, err = fs.Glob(p.root, profilePath)
 		if err != nil {
 			return err
 		}
