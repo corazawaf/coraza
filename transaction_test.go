@@ -147,7 +147,7 @@ func TestRequestBody(t *testing.T) {
 			tx := wafi.NewTransaction(context.Background())
 			tx.RequestBodyAccess = true
 			tx.RequestBodyLimit = testCase.requestBodyLimit
-			tx.Waf.RequestBodyLimitAction = testCase.requestBodyLimitAction
+			tx.WAF.RequestBodyLimitAction = testCase.requestBodyLimitAction
 
 			tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
 			if _, err := tx.RequestBodyBuffer.Write([]byte(urlencoded)); err != nil {
@@ -267,7 +267,7 @@ func TestResetCapture(t *testing.T) {
 }
 
 func TestRelevantAuditLogging(t *testing.T) {
-	tx := makeTransaction()
+	tx := makeTransaction(t)
 	tx.WAF.AuditLogRelevantStatus = regexp.MustCompile(`(403)`)
 	tx.Variables.ResponseStatus.Set("403")
 	tx.AuditEngine = types.AuditEngineRelevantOnly
