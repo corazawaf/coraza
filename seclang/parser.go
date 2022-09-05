@@ -95,7 +95,7 @@ func (p *Parser) FromString(data string) error {
 		if pattern.MatchString(line) {
 			linebuffer = strings.TrimSuffix(linebuffer, "\\")
 		} else {
-			err := p.evaluate(linebuffer)
+			err := p.evaluateLine(linebuffer)
 			if err != nil {
 				return err
 			}
@@ -105,7 +105,7 @@ func (p *Parser) FromString(data string) error {
 	return nil
 }
 
-func (p *Parser) evaluate(data string) error {
+func (p *Parser) evaluateLine(data string) error {
 	if data == "" || data[0] == '#' {
 		return nil
 	}
