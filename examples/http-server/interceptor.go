@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"net/http"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 type interceptor struct {

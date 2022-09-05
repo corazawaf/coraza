@@ -8,9 +8,10 @@ package operators
 
 import (
 	"context"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"os/exec"
 	"time"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 type inspectFile struct {

@@ -5,9 +5,10 @@ package operators
 
 import (
 	"fmt"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"strconv"
 	"strings"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 type byteRange struct {

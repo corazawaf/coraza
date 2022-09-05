@@ -11,7 +11,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -19,6 +18,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 func TestRequestExtractionSuccess(t *testing.T) {

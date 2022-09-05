@@ -5,9 +5,10 @@ package testing
 
 import (
 	"fmt"
-	"github.com/corazawaf/coraza/v3"
 	"strings"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3"
 )
 
 func TestRawRequests(t *testing.T) {

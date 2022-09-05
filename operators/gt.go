@@ -4,8 +4,9 @@
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"strconv"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 type gt struct {

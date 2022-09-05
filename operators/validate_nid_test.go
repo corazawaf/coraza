@@ -4,8 +4,9 @@
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 func TestVaildateNid(t *testing.T) {

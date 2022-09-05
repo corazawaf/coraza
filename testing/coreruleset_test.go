@@ -11,8 +11,6 @@ import (
 	"archive/zip"
 	"context"
 	"fmt"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/internal/seclang"
 	"io"
 	"net/http"
 	"os"
@@ -20,6 +18,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/internal/seclang"
 )
 
 var crspath = ""

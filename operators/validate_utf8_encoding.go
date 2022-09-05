@@ -4,8 +4,9 @@
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"unicode/utf8"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 type validateUtf8Encoding struct{}

@@ -9,9 +9,10 @@ package operators
 import (
 	"context"
 	"fmt"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"net"
 	"time"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 const timeout = 500 * time.Millisecond

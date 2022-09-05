@@ -5,12 +5,12 @@ package seclang
 
 import (
 	"context"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"io"
 	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
 )
 

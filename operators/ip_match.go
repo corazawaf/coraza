@@ -4,9 +4,10 @@
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"net"
 	"strings"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 type ipMatch struct {

@@ -4,9 +4,10 @@
 package seclang
 
 import (
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"strings"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 func TestInvalidRule(t *testing.T) {

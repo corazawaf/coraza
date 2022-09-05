@@ -5,8 +5,9 @@ package operators
 
 import (
 	"bytes"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"regexp"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 type rx struct {

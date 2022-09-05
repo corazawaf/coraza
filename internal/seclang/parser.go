@@ -7,13 +7,13 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/io"
 	"github.com/corazawaf/coraza/v3/types"
 )

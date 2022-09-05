@@ -5,9 +5,9 @@ package actions
 
 import (
 	"fmt"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"strconv"
 
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
 )
 

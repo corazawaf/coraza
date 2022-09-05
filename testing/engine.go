@@ -7,10 +7,10 @@ import (
 	"context"
 	b64 "encoding/base64"
 	"fmt"
-	"github.com/corazawaf/coraza/v3"
 	"strconv"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/testing/profile"
 )
 

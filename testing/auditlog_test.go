@@ -12,12 +12,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/internal/seclang"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/internal/seclang"
 	"github.com/corazawaf/coraza/v3/loggers"
 )
 

@@ -6,8 +6,9 @@ package operators
 import (
 	"context"
 	"fmt"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 func TestPmFromDataset(t *testing.T) {

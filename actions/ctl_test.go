@@ -5,9 +5,9 @@ package actions
 
 import (
 	"context"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
 )
 

@@ -8,8 +8,9 @@ package operators
 
 import (
 	_ "fmt"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 func TestInspectFile(t *testing.T) {

@@ -5,10 +5,11 @@ package operators
 
 import (
 	"fmt"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 type validateNidFunction = func(input string) bool
@@ -127,5 +128,5 @@ func nidUs(nid string) bool {
 var (
 	_ corazawaf.RuleOperator = &validateNid{}
 	_ validateNidFunction    = nidCl
-	_ validateNidFunction = nidUs
+	_ validateNidFunction    = nidUs
 )

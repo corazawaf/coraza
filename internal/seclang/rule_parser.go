@@ -6,12 +6,12 @@ package seclang
 import (
 	"errors"
 	"fmt"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"io/fs"
 	"regexp"
 	"strings"
 
 	actionsmod "github.com/corazawaf/coraza/v3/actions"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/io"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	operators "github.com/corazawaf/coraza/v3/operators"

@@ -6,9 +6,9 @@ package operators
 import (
 	"bufio"
 	"bytes"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
 )
 

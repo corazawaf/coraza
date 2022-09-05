@@ -5,8 +5,8 @@ package operators
 
 import (
 	"fmt"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
 )
 

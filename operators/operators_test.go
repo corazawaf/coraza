@@ -5,13 +5,13 @@ package operators
 
 import (
 	"context"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/tidwall/gjson"
 )
 

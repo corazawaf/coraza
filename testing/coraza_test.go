@@ -5,10 +5,10 @@ package testing
 
 import (
 	"fmt"
-	"github.com/corazawaf/coraza/v3"
 	"os"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3"
 	_ "github.com/corazawaf/coraza/v3/testing/engine"
 	"github.com/corazawaf/coraza/v3/testing/profile"
 )

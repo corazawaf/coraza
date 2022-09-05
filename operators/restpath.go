@@ -5,9 +5,10 @@ package operators
 
 import (
 	"fmt"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"regexp"
 	"strings"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 var rePathTokenRe = regexp.MustCompile(`\{([^\}]+)\}`)

@@ -11,13 +11,13 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"net/http"
 	"strconv"
 	"strings"
 	"testing"
 
 	txhttp "github.com/corazawaf/coraza/v3/http"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 // from issue https://github.com/corazawaf/coraza/issues/159 @zpeasystart

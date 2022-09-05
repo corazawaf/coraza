@@ -5,8 +5,9 @@ package actions
 
 import (
 	"fmt"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"strings"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 // ruleActionWrapper is used to wrap a RuleAction so that it can be registered

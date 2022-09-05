@@ -5,8 +5,9 @@ package transformations
 
 import (
 	"fmt"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"strings"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 var transformations = map[string]corazawaf.RuleTransformation{}

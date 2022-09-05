@@ -8,11 +8,12 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	engine "github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
+
+	engine "github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 //go:embed testdata
