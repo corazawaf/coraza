@@ -6,6 +6,8 @@ package operators
 import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3/internal/io"
 )
 
 func TestFromFile(t *testing.T) {
@@ -16,6 +18,7 @@ func TestFromFile(t *testing.T) {
 	opts := corazawaf.RuleOperatorOptions{
 		Arguments: string("./testdata/op/netranges.dat"),
 		Path:      []string{"."},
+		Root:      io.OSFS{},
 	}
 	if err := ipm.Init(opts); err != nil {
 		t.Error("Cannot init ipmatchfromfile operator")

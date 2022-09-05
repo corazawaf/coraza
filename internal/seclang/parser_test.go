@@ -6,12 +6,17 @@ package seclang
 import (
 	"bufio"
 	"context"
+	"embed"
 	"fmt"
 	engine "github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
 )
+
+//go:embed testdata
+var testdata embed.FS
 
 func TestInterruption(t *testing.T) {
 	waf := engine.NewWAF()
@@ -63,8 +68,8 @@ func TestHardcodedSubIncludeDirective(t *testing.T) {
 	if err := p.FromString("Include ./testdata/includes/parent.conf"); err != nil {
 		t.Error(err)
 	}
-	if waf.Rules.Count() != 3 {
-		t.Error("Expected 3 rules loaded using include directive. Found: ", waf.Rules.Count())
+	if waf.Rules.Count() != 4 {
+		t.Error("Expected 4 rules loaded using include directive. Found: ", waf.Rules.Count())
 	}
 }
 
@@ -76,8 +81,8 @@ func TestHardcodedSubIncludeDirectiveAbsolutePath(t *testing.T) {
 	if err := p.FromString("Include " + ruleFile); err != nil {
 		t.Error(err)
 	}
-	if waf.Rules.Count() != 3 {
-		t.Error("Expected 3 rules loaded using include directive. Found: ", waf.Rules.Count())
+	if waf.Rules.Count() != 4 {
+		t.Error("Expected 4 rules loaded using include directive. Found: ", waf.Rules.Count())
 	}
 }
 
@@ -146,4 +151,20 @@ func TestChains(t *testing.T) {
 			if rules[0].Chain.Chain == nil {
 				t.Error("Chain over chain not created")
 			}*/
+}
+
+func TestEmbedFS(t *testing.T) {
+	waf := engine.NewWAF()
+	p := NewParser(waf)
+	root, err := fs.Sub(testdata, "testdata")
+	if err != nil {
+		t.Error(err)
+	}
+	p.SetRoot(root)
+	if err := p.FromString("Include includes/parent.conf"); err != nil {
+		t.Error(err)
+	}
+	if waf.Rules.Count() != 4 {
+		t.Error("Expected 4 rules loaded using include directive. Found: ", waf.Rules.Count())
+	}
 }

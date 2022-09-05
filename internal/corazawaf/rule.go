@@ -5,6 +5,7 @@ package corazawaf
 
 import (
 	"fmt"
+	"io/fs"
 	"regexp"
 	"strconv"
 	"strings"
@@ -52,6 +53,9 @@ type RuleOperatorOptions struct {
 
 	// Path is used to store a list of possible data paths
 	Path []string
+
+	// Root is the root to resolve Path from.
+	Root fs.FS
 
 	// Datasets contains input datasets or dictionaries
 	Datasets map[string][]string

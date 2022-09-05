@@ -17,7 +17,7 @@ type ipMatchFromFile struct {
 func (o *ipMatchFromFile) Init(options corazawaf.RuleOperatorOptions) error {
 	path := options.Arguments
 
-	data, err := loadFromFile(path, options.Path)
+	data, err := loadFromFile(path, options.Path, options.Root)
 	if err != nil {
 		return err
 	}
