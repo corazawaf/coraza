@@ -85,10 +85,9 @@ func (p *Parser) FromString(data string) error {
 		} else if inQuotes && len(line) > 0 && line[0] == '`' {
 			inQuotes = false
 		}
+		linebuffer += line
 		if inQuotes {
-			linebuffer += line + "\n"
-		} else {
-			linebuffer += line
+			linebuffer += "\n"
 		}
 
 		// Check if line ends with \

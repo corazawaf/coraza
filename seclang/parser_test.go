@@ -149,3 +149,17 @@ func TestChains(t *testing.T) {
 				t.Error("Chain over chain not created")
 			}*/
 }
+
+func BenchmarkParseFromString(b *testing.B) {
+	waf := coraza.NewWAF()
+	parser := NewParser(waf)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = parser.FromString(`
+		SecRuleEngine On
+		SecDefaultAction "phase:1,deny,status:403,log"
+		SecRule REMOTE_ADDR "^127.*" "id:1,phase:1"
+		SecRule REMOTE_ADDR "!@rx 127.0.0.1" "id:2,phase:1"
+	`)
+	}
+}
