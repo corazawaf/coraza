@@ -88,17 +88,18 @@ func (p *Parser) FromString(data string) error {
 		linebuffer += line
 		if inQuotes {
 			linebuffer += "\n"
+			continue
 		}
 
 		// Check if line ends with \
-		if !pattern.MatchString(line) && !inQuotes {
+		if pattern.MatchString(line) {
+			linebuffer = strings.TrimSuffix(linebuffer, "\\")
+		} else {
 			err := p.evaluate(linebuffer)
 			if err != nil {
 				return err
 			}
 			linebuffer = ""
-		} else if !inQuotes {
-			linebuffer = strings.TrimSuffix(linebuffer, "\\")
 		}
 	}
 	return nil
