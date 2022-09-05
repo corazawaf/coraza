@@ -5,6 +5,7 @@ package testing
 
 import (
 	"fmt"
+	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
 	"testing"
@@ -56,11 +57,12 @@ func TestEngine(t *testing.T) {
 	}
 }
 
-func testList(p *profile.Profile, waf *corazawaf.WAF) ([]*Test, error) {
+func testList(p *profile.Profile) ([]*Test, error) {
 	var tests []*Test
 	for _, t := range p.Tests {
 		name := t.Title
 		for _, stage := range t.Stages {
+			w, err := coraza.NewWAFWithConfig(coraza.NewWAFConfig().)
 			w := waf
 			if w == nil || p.Rules != "" {
 				w = corazawaf.NewWAF()

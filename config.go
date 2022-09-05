@@ -4,6 +4,7 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
+	"io/fs"
 )
 
 type WAFConfig interface {
@@ -20,6 +21,8 @@ type WAFConfig interface {
 
 	WithDebugLogger(logger corazawaf.DebugLogger) WAFConfig
 	WithErrorLogger(logger corazawaf.ErrorLogCallback) WAFConfig
+
+	WithFSRoot(fs fs.FS) WAFConfig
 }
 
 func NewWAFConfig() WAFConfig {
@@ -68,6 +71,7 @@ type wafConfig struct {
 	responseBody     *responseBodyConfig
 	debugLogger      corazawaf.DebugLogger
 	errorLogger      corazawaf.ErrorLogCallback
+	fsRoot           fs.FS
 }
 
 func (c *wafConfig) WithRule(rule *corazawaf.Rule) WAFConfig {
@@ -121,6 +125,12 @@ func (c *wafConfig) WithDebugLogger(logger corazawaf.DebugLogger) WAFConfig {
 func (c *wafConfig) WithErrorLogger(logger corazawaf.ErrorLogCallback) WAFConfig {
 	ret := c.clone()
 	ret.errorLogger = logger
+	return ret
+}
+
+func (c *wafConfig) WithFSRoot(fs fs.FS) WAFConfig {
+	ret := c.clone()
+	ret.fsRoot = fs
 	return ret
 }
 

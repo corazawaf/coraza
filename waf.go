@@ -20,6 +20,10 @@ func NewWAFWithConfig(config WAFConfig) (WAF, error) {
 	waf := corazawaf.NewWAF()
 	parser := seclang.NewParser(waf)
 
+	if c.fsRoot != nil {
+		parser.SetFSRoot(c.fsRoot)
+	}
+
 	for _, r := range c.rules {
 		switch {
 		case r.rule != nil:
