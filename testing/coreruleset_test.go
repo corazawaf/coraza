@@ -95,6 +95,7 @@ func BenchmarkCRSSimplePOST(b *testing.B) {
 	if err != nil {
 		b.Error(err)
 	}
+	b.ResetTimer() // only benchmark execution, not compilation
 	for i := 0; i < b.N; i++ {
 		tx := waf.NewTransaction(context.Background())
 		tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 8080)

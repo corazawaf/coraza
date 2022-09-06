@@ -4,36 +4,40 @@
 package strings
 
 import (
-	"crypto/rand"
+	"math/rand"
 	"strings"
-	"sync"
+	"time"
 )
 
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const (
-	randomBytes = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+	letterIdxBits = 6                    // 6 bits to represent a letter index
+	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
+	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
 )
 
-var mu sync.Mutex
+var src = rand.NewSource(time.Now().UnixNano())
 
-// SafeRandom returns a random string of length n
+// RandomString returns a random string of length n
 // It is safe to use this function in concurrent environments
-// If it fails, it will try again, it should fail more than once
-func SafeRandom(length int) string {
-	bytes := make([]byte, length)
-	// There is an entropy bug here with a lot of concurrency, so we need sync
-
-	mu.Lock()
-	_, err := rand.Read(bytes)
-	mu.Unlock()
-	if err != nil {
-		// TODO is it ok?
-		return SafeRandom(length)
+// Implementation from https://stackoverflow.com/a/31832326
+func RandomString(n int) string {
+	sb := strings.Builder{}
+	sb.Grow(n)
+	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
+	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
+		if remain == 0 {
+			cache, remain = src.Int63(), letterIdxMax
+		}
+		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
+			sb.WriteByte(letterBytes[idx])
+			i--
+		}
+		cache >>= letterIdxBits
+		remain--
 	}
 
-	for i, b := range bytes {
-		bytes[i] = randomBytes[b%byte(len(randomBytes))]
-	}
-	return string(bytes)
+	return sb.String()
 }
 
 // ValidHex returns true if the byte is a valid hex character
