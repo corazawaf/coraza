@@ -5,6 +5,7 @@ package testing
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3"
@@ -65,7 +66,7 @@ func testList(p *profile.Profile, waf *coraza.WAF) ([]*Test, error) {
 			if w == nil || p.Rules != "" {
 				w = coraza.NewWAF()
 				parser := seclang.NewParser(w)
-				parser.SetCurrentDir("./testdata")
+				parser.SetRoot(os.DirFS("testdata"))
 				if err := parser.FromString(p.Rules); err != nil {
 					return nil, err
 				}

@@ -37,7 +37,7 @@ type Parser struct {
 // If the path contains a *, it will be expanded to all
 // files in the directory matching the pattern
 func (p *Parser) FromFile(profilePath string) error {
-	files := []string{}
+	var files []string
 	if strings.Contains(profilePath, "*") {
 		var err error
 		files, err = fs.Glob(p.root, profilePath)
@@ -161,18 +161,12 @@ func (p *Parser) log(msg string) error {
 	return errors.New(msg)
 }
 
-// SetCurrentDir forces the current directory of the parser to dir
-// If FromFile was used, the file directory will be used instead unless
-// overwritten by this function
-// It is mostly used by operators that consumes relative paths
-func (p *Parser) SetCurrentDir(dir string) {
-	p.currentDir = dir
-}
-
 // SetRoot sets the root of the filesystem for resolving paths. If not set, the OS's
-// filesystem is used. SetRoot with `embed.FS` can allow parsing Include and FromFile
-// directives for an embedded set of rules, or zip.Reader can be used to work with
-// an archive.
+// filesystem is used. Some use cases for setting a root are
+//
+// - os.DirFS to set a path to resolve relative paths from.
+// - embed.FS to read rules from an embedded filesystem.
+// - zip.Reader to read rules from a zip file.
 func (p *Parser) SetRoot(root fs.FS) {
 	p.root = root
 }
