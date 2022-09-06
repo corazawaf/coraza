@@ -92,7 +92,7 @@ func legacyJSONFormatter(al *AuditLog) ([]byte, error) {
 }
 
 func nativeFormatter(al *AuditLog) ([]byte, error) {
-	boundary := utils.SafeRandom(10)
+	boundary := utils.RandomString(10)
 	parts := map[byte]string{}
 	// [27/Jul/2016:05:46:16 +0200] V5guiH8AAQEAADTeJ2wAAAAK 192.168.3.1 50084 192.168.3.111 80
 	parts['A'] = fmt.Sprintf("[%s] %s %s %d %s %d", al.Transaction.Timestamp, al.Transaction.ID,
