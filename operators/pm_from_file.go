@@ -8,8 +8,9 @@ import (
 	"bytes"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
+
+	"github.com/corazawaf/coraza/v3"
 )
 
 type pmFromFile struct {
