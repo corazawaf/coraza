@@ -458,6 +458,17 @@ func (r *Rule) executeTransformations(value string) (string, []error) {
 	return value, errs
 }
 
+func (r *Rule) Clone() *Rule {
+	clone := &Rule{
+		RuleMetadata:    r.RuleMetadata,
+		ParentID:        r.ParentID,
+		Chain:           r.Chain,
+		Msg:             r.Msg,
+		transformations: r.transformations,
+	}
+	return clone
+}
+
 // NewRule returns a new initialized rule
 func NewRule() *Rule {
 	return &Rule{

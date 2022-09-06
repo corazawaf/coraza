@@ -428,6 +428,32 @@ func (w *WAF) SetDebugLogPath(path string) error {
 	return nil
 }
 
+// Clone creates a deepy copy of the WAF
+// It include deep copies of all rules and settings
+func (w *WAF) Clone() *WAF {
+	waf := &WAF{
+		ArgumentSeparator:        w.ArgumentSeparator,
+		AuditLogWriter:           w.AuditLogWriter,
+		AuditEngine:              w.AuditEngine,
+		AuditLogParts:            types.AuditLogParts(w.AuditLogParts),
+		RequestBodyInMemoryLimit: w.RequestBodyInMemoryLimit,
+		RequestBodyLimit:         w.RequestBodyLimit,
+		ResponseBodyMimeTypes:    append([]string{}, w.ResponseBodyMimeTypes...),
+		ResponseBodyLimit:        w.ResponseBodyLimit,
+		ResponseBodyAccess:       w.ResponseBodyAccess,
+		RuleEngine:               w.RuleEngine,
+		Rules:                    NewRuleGroup(),
+		TmpDir:                   w.TmpDir,
+		AuditLogRelevantStatus:   regexp.MustCompile(w.AuditLogRelevantStatus.String()),
+		RequestBodyAccess:        w.RequestBodyAccess,
+		Logger:                   w.Logger,
+	}
+	for _, rule := range w.Rules.rules {
+		waf.Rules.Add(rule.Clone())
+	}
+	return waf
+}
+
 // NewWAF creates a new WAF instance with default variables
 func NewWAF() *WAF {
 	logger := &stdDebugLogger{
