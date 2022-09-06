@@ -71,7 +71,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, collections 
 				}
 				size = sz
 				// Didn't write a file but still need to populate a column.
-				filesTmpNamesCol.Add("", "")
+				filesTmpNamesCol.Add("", "unwritten")
 			}
 			totalSize += size
 			filesCol.Add("", filename)
