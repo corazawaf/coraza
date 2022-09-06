@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -50,18 +51,29 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, collections 
 		// if is a file
 		filename := originFileName(p)
 		if filename != "" {
-			temp, err := os.CreateTemp(storagePath, "crzmp*")
-			if err != nil {
-				return err
+			var size int64
+			if !environment.IsTinyGo {
+				// Only copy file to temp when not running in TinyGo
+				temp, err := os.CreateTemp(storagePath, "crzmp*")
+				if err != nil {
+					return err
+				}
+				sz, err := io.Copy(temp, p)
+				if err != nil {
+					return err
+				}
+				size = sz
+				filesTmpNamesCol.Add("", temp.Name())
+			} else {
+				sz, err := io.Copy(io.Discard, p)
+				if err != nil {
+					return err
+				}
+				size = sz
 			}
-			sz, err := io.Copy(temp, p)
-			if err != nil {
-				return err
-			}
-			totalSize += sz
+			totalSize += size
 			filesCol.Add("", filename)
-			filesTmpNamesCol.Add("", temp.Name())
-			fileSizesCol.SetIndex(filename, 0, fmt.Sprintf("%d", sz))
+			fileSizesCol.SetIndex(filename, 0, fmt.Sprintf("%d", size))
 			filesNamesCol.Add("", p.FormName())
 		} else {
 			// if is a field
