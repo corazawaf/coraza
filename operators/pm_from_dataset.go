@@ -6,8 +6,9 @@ package operators
 import (
 	"fmt"
 
-	"github.com/corazawaf/coraza/v3"
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
+
+	"github.com/corazawaf/coraza/v3"
 )
 
 // TODO according to coraza researchs, re2 matching is faster than ahocorasick
