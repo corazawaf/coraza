@@ -70,6 +70,8 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, collections 
 					return err
 				}
 				size = sz
+				// Didn't write a file but still need to populate a column.
+				filesTmpNamesCol.Add("", "")
 			}
 			totalSize += size
 			filesCol.Add("", filename)
