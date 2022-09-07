@@ -36,7 +36,7 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	`, filepath.Join(auditpath, "audit.log"), auditpath)); err != nil {
 		t.Error(err)
 	}
-	id := utils.SafeRandom(10)
+	id := utils.RandomString(10)
 	if waf.AuditLogWriter == nil {
 		t.Error("Invalid audit logger (nil)")
 		return
