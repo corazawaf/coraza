@@ -766,13 +766,16 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	// upload data
 	files := []loggers.AuditTransactionRequestFiles{}
 	al.Transaction.Request.Files = []loggers.AuditTransactionRequestFiles{}
-	for i, name := range tx.Variables.Files.Get("") {
-		// TODO we kind of assume there is a file_size for each file with the same index
-		size, _ := strconv.ParseInt(tx.Variables.FilesSizes.Get("")[i], 10, 64)
-		ext := filepath.Ext(name)
+	for _, file := range tx.Variables.Files.Get("") {
+		var size int64
+		if fs := tx.Variables.FilesSizes.Get(file); len(fs) > 0 {
+			size, _ = strconv.ParseInt(fs[0], 10, 64)
+			// we ignore the error as it defaults to 0
+		}
+		ext := filepath.Ext(file)
 		at := loggers.AuditTransactionRequestFiles{
 			Size: size,
-			Name: name,
+			Name: file,
 			Mime: mime.TypeByExtension(ext),
 		}
 		files = append(files, at)
