@@ -18,8 +18,8 @@ const (
 
 var src = rand.NewSource(time.Now().UnixNano())
 
-// RandomString returns a random string of length n
-// It is safe to use this function in concurrent environments
+// RandomString returns a pseudorandom string of length n.
+// It is safe to use this function in concurrent environments.
 // Implementation from https://stackoverflow.com/a/31832326
 func RandomString(n int) string {
 	sb := strings.Builder{}
