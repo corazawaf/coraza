@@ -37,6 +37,7 @@ func TestTxSetters(t *testing.T) {
 		"%{request_uri_raw}":               "/testurl.php?id=123&b=456",
 		"%{files_names}":                   "file1",
 		"%{files_combined_size}":           "72",
+		"%{files_sizes.a.txt}":             "19",
 	}
 
 	validateMacroExpansion(exp, tx, t)
