@@ -581,7 +581,7 @@ func makeTransaction(t *testing.T) *Transaction {
 		"Cookie: test=123",
 		"Content-Type: multipart/form-data; boundary=---------------------------9051914041544843365972754266",
 		"X-Test-Header: test456",
-		"Content-Length: 13",
+		"Content-Length: 545",
 		"",
 		`-----------------------------9051914041544843365972754266`,
 		`Content-Disposition: form-data; name="testfield"`,
