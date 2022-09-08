@@ -5,15 +5,16 @@ package operators
 
 import (
 	"errors"
+	"io/fs"
 	"os"
 	"path"
 )
 
 var errEmptyPaths = errors.New("empty paths")
 
-func loadFromFile(filepath string, paths []string) ([]byte, error) {
+func loadFromFile(filepath string, paths []string, root fs.FS) ([]byte, error) {
 	if path.IsAbs(filepath) {
-		return os.ReadFile(filepath)
+		return fs.ReadFile(root, filepath)
 	}
 
 	if len(paths) == 0 {
@@ -29,12 +30,8 @@ func loadFromFile(filepath string, paths []string) ([]byte, error) {
 	)
 
 	for _, p := range paths {
-		if p == "" {
-			continue
-		}
-
 		absFilepath := path.Join(p, filepath)
-		content, err = os.ReadFile(absFilepath)
+		content, err = fs.ReadFile(root, absFilepath)
 		if err != nil {
 			if os.IsNotExist(err) {
 				continue

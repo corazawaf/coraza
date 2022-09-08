@@ -7,12 +7,14 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/io"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -25,6 +27,7 @@ type Parser struct {
 	currentLine  int
 	currentFile  string
 	currentDir   string
+	root         fs.FS
 	includeCount int
 }
 
@@ -34,10 +37,10 @@ type Parser struct {
 // If the path contains a *, it will be expanded to all
 // files in the directory matching the pattern
 func (p *Parser) FromFile(profilePath string) error {
-	files := []string{}
+	var files []string
 	if strings.Contains(profilePath, "*") {
 		var err error
-		files, err = filepath.Glob(profilePath)
+		files, err = fs.Glob(p.root, profilePath)
 		if err != nil {
 			return err
 		}
@@ -52,7 +55,7 @@ func (p *Parser) FromFile(profilePath string) error {
 		p.currentFile = profilePath
 		lastDir := p.currentDir
 		p.currentDir = filepath.Dir(profilePath)
-		file, err := os.ReadFile(profilePath)
+		file, err := fs.ReadFile(p.root, profilePath)
 		if err != nil {
 			p.options.WAF.Logger.Error(err.Error())
 			return err
@@ -142,6 +145,7 @@ func (p *Parser) evaluate(data string) error {
 	p.options.Config.Set("last_profile_line", p.currentLine)
 	p.options.Config.Set("parser_config_file", p.currentFile)
 	p.options.Config.Set("parser_config_dir", p.currentDir)
+	p.options.Config.Set("parser_root", p.root)
 	wd, err := os.Getwd()
 	if err != nil {
 		return err
@@ -157,12 +161,14 @@ func (p *Parser) log(msg string) error {
 	return errors.New(msg)
 }
 
-// SetCurrentDir forces the current directory of the parser to dir
-// If FromFile was used, the file directory will be used instead unless
-// overwritten by this function
-// It is mostly used by operators that consumes relative paths
-func (p *Parser) SetCurrentDir(dir string) {
-	p.currentDir = dir
+// SetRoot sets the root of the filesystem for resolving paths. If not set, the OS's
+// filesystem is used. Some use cases for setting a root are
+//
+// - os.DirFS to set a path to resolve relative paths from.
+// - embed.FS to read rules from an embedded filesystem.
+// - zip.Reader to read rules from a zip file.
+func (p *Parser) SetRoot(root fs.FS) {
+	p.root = root
 }
 
 // NewParser creates a new parser from a WAF instance
@@ -175,6 +181,7 @@ func NewParser(waf *coraza.WAF) *Parser {
 			Config:   make(types.Config),
 			Datasets: make(map[string][]string),
 		},
+		root: io.OSFS{},
 	}
 	return p
 }
