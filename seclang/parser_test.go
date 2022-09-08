@@ -14,14 +14,13 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3"
-	engine "github.com/corazawaf/coraza/v3"
 )
 
 //go:embed testdata
 var testdata embed.FS
 
 func TestInterruption(t *testing.T) {
-	waf := engine.NewWAF()
+	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	if err := p.FromString(`SecAction "id:1,deny,log,phase:1"`); err != nil {
 		t.Error("Could not create from string")
@@ -33,7 +32,7 @@ func TestInterruption(t *testing.T) {
 }
 
 func TestDirectivesCaseInsensitive(t *testing.T) {
-	waf := engine.NewWAF()
+	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	err := p.FromString("seCwEbAppid 15")
 	if err != nil {
@@ -42,7 +41,7 @@ func TestDirectivesCaseInsensitive(t *testing.T) {
 }
 
 func TestDefaultConfigurationFile(t *testing.T) {
-	waf := engine.NewWAF()
+	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	err := p.FromFile("../coraza.conf-recommended")
 	if err != nil {
@@ -168,5 +167,17 @@ func TestEmbedFS(t *testing.T) {
 	}
 	if waf.Rules.Count() != 4 {
 		t.Error("Expected 4 rules loaded using include directive. Found: ", waf.Rules.Count())
+	}
+}
+
+//go:embed testdata/parserbenchmark.conf
+var parsingRule string
+
+func BenchmarkParseFromString(b *testing.B) {
+	waf := coraza.NewWAF()
+	parser := NewParser(waf)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = parser.FromString(parsingRule)
 	}
 }
