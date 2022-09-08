@@ -22,13 +22,13 @@ func (a *appendFn) Init(r *coraza.Rule, data string) error {
 }
 
 func (a *appendFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
-	if !tx.Waf.ContentInjection {
-		tx.Waf.Logger.Debug("append rejected because of ContentInjection")
+	if !tx.WAF.ContentInjection {
+		tx.WAF.Logger.Debug("append rejected because of ContentInjection")
 		return
 	}
 	data := a.data.Expand(tx)
 	if _, err := tx.ResponseBodyBuffer.Write([]byte(data)); err != nil {
-		tx.Waf.Logger.Error("append failed to write to response buffer %v", err)
+		tx.WAF.Logger.Error("append failed to write to response buffer: %s", err.Error())
 	}
 }
 

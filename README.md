@@ -11,7 +11,7 @@
 [![OWASP Lab Project](https://img.shields.io/badge/owasp-lab%20project-brightgreen)](https://owasp.org/www-project-coraza-web-application-firewall)
 [![GoDoc](https://godoc.org/github.com/corazawaf/coraza?status.svg)](https://godoc.org/github.com/corazawaf/coraza/v3)
 
-
+## Notice: Coraza v3 is on pre-alpha stage and APIs might change ! :warning:
 
 Coraza is an open source, enterprise-grade, high performance Web Application Firewall (WAF) ready to protect your beloved applications. It written in Go, supports ModSecurity SecLang rulesets and is 100% compatible with the OWASP Core Rule Set.
 
@@ -78,6 +78,7 @@ Coraza can be used as a library for your Go program to implement a security midd
 package main
 
 import(
+	"context"
 	"fmt"
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/seclang"
@@ -85,8 +86,8 @@ import(
 
 func main() {
 	// First we initialize our waf and our seclang parser
-	waf := coraza.NewWaf()
-	parser, _ := seclang.NewParser(waf)
+	waf := coraza.NewWAF()
+	parser := seclang.NewParser(waf)
 
 	// Now we parse our rules
 	if err := parser.FromString(`SecRule REMOTE_ADDR "@rx .*" "id:1,phase:1,deny,status:403"`); err != nil {
@@ -150,3 +151,13 @@ Contributions are welcome! Please refer to [CONTRIBUTING.md](./CONTRIBUTING.md) 
 ## Donations
 
 For donations, see [Donations site](https://owasp.org/donate/?reponame=www-project-coraza-web-application-firewall&title=OWASP+Coraza+Web+Application+Firewall)
+
+## Thanks to all the people who have contributed
+
+We could not have done this without you!
+
+<a href="https://github.com/corazawaf/coraza/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=corazawaf/coraza" />
+</a>
+
+Made with [contrib.rocks](https://contrib.rocks).

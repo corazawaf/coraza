@@ -4,27 +4,49 @@
 package operators
 
 import (
+	"bufio"
+	"bytes"
 	"strings"
 
 	"github.com/corazawaf/coraza/v3"
-	engine "github.com/corazawaf/coraza/v3"
 )
 
 type ipMatchFromFile struct {
-	ip *ipMatch
+	ipMatcher *ipMatch
 }
 
 func (o *ipMatchFromFile) Init(options coraza.RuleOperatorOptions) error {
-	data := options.Arguments
+	path := options.Arguments
 
-	o.ip = &ipMatch{}
-	subnets := strings.ReplaceAll(data, "\n", ",")
-	opts := coraza.RuleOperatorOptions{
-		Arguments: subnets,
+	data, err := loadFromFile(path, options.Path, options.Root)
+	if err != nil {
+		return err
 	}
-	return o.ip.Init(opts)
+
+	dataParsed := strings.Builder{}
+	sc := bufio.NewScanner(bytes.NewReader(data))
+	for sc.Scan() {
+		l := sc.Text()
+		l = strings.TrimSpace(l)
+		if len(l) == 0 {
+			continue
+		}
+		if l[0] == '#' {
+			continue
+		}
+		dataParsed.WriteString(",")
+		dataParsed.WriteString(l)
+	}
+
+	o.ipMatcher = &ipMatch{}
+	opts := coraza.RuleOperatorOptions{
+		Arguments: dataParsed.String(),
+	}
+	return o.ipMatcher.Init(opts)
 }
 
-func (o *ipMatchFromFile) Evaluate(tx *engine.Transaction, value string) bool {
-	return o.ip.Evaluate(tx, value)
+func (o *ipMatchFromFile) Evaluate(tx *coraza.Transaction, value string) bool {
+	return o.ipMatcher.Evaluate(tx, value)
 }
+
+var _ coraza.RuleOperator = (*ipMatchFromFile)(nil)

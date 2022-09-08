@@ -22,8 +22,8 @@ import (
 )
 
 func TestAuditLogMessages(t *testing.T) {
-	waf := coraza.NewWaf()
-	parser, _ := seclang.NewParser(waf)
+	waf := coraza.NewWAF()
+	parser := seclang.NewParser(waf)
 	// generate a random tmp file
 	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
 	if err != nil {
@@ -70,8 +70,8 @@ func TestAuditLogMessages(t *testing.T) {
 }
 
 func TestAuditLogRelevantOnly(t *testing.T) {
-	waf := coraza.NewWaf()
-	parser, _ := seclang.NewParser(waf)
+	waf := coraza.NewWAF()
+	parser := seclang.NewParser(waf)
 	if err := parser.FromString(`
 		SecRuleEngine DetectionOnly
 		SecAuditEngine RelevantOnly
@@ -107,8 +107,8 @@ func TestAuditLogRelevantOnly(t *testing.T) {
 }
 
 func TestAuditLogRelevantOnlyOk(t *testing.T) {
-	waf := coraza.NewWaf()
-	parser, _ := seclang.NewParser(waf)
+	waf := coraza.NewWAF()
+	parser := seclang.NewParser(waf)
 	// generate a random tmp file
 	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
 	if err != nil {
@@ -144,8 +144,8 @@ func TestAuditLogRelevantOnlyOk(t *testing.T) {
 }
 
 func TestAuditLogRelevantOnlyNoAuditlog(t *testing.T) {
-	waf := coraza.NewWaf()
-	parser, _ := seclang.NewParser(waf)
+	waf := coraza.NewWAF()
+	parser := seclang.NewParser(waf)
 	if err := parser.FromString(`
 		SecRuleEngine DetectionOnly
 		SecAuditEngine RelevantOnly

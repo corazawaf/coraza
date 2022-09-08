@@ -49,7 +49,7 @@ type Transaction struct {
 	// Rules will be skipped after a rule with this SecMarker is found
 	SkipAfter string
 
-	// Copies from the WafInstance that may be overwritten by the ctl action
+	// Copies from the WAF instance that may be overwritten by the ctl action
 	AuditEngine              types.AuditEngineStatus
 	AuditLogParts            types.AuditLogParts
 	ForceRequestBodyVariable bool
@@ -94,8 +94,8 @@ type Transaction struct {
 	// Contains duration in useconds per phase
 	stopWatches map[types.RulePhase]int64
 
-	// Contains a Waf instance for the current transaction
-	Waf *Waf
+	// Contains a WAF instance for the current transaction
+	WAF *WAF
 
 	// Timestamp of the request
 	Timestamp int64
@@ -161,14 +161,14 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 // CaptureField is used to set the TX:[index] variables by operators
 // that supports capture, like @rx
 func (tx *Transaction) CaptureField(index int, value string) {
-	tx.Waf.Logger.Debug("[%s] Capturing field %d with value %q", tx.ID, index, value)
+	tx.WAF.Logger.Debug("[%s] Capturing field %d with value %q", tx.ID, index, value)
 	i := strconv.Itoa(index)
 	tx.Variables.TX.SetIndex(i, 0, value)
 }
 
 // this function is used to control which variables are reset after a new rule is evaluated
 func (tx *Transaction) resetCaptures() {
-	tx.Waf.Logger.Debug("[%s] Reseting captured variables", tx.ID)
+	tx.WAF.Logger.Debug("[%s] Reseting captured variables", tx.ID)
 	// We reset capture 0-9
 	ctx := tx.Variables.TX
 	// RUNE 48 = 0
@@ -264,7 +264,7 @@ func (tx *Transaction) matchVariable(match types.MatchData) {
 
 // MatchRule Matches a rule to be logged
 func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
-	tx.Waf.Logger.Debug("[%s] rule %d matched", tx.ID, r.ID)
+	tx.WAF.Logger.Debug("[%s] rule %d matched", tx.ID, r.ID)
 	// tx.MatchedRules = append(tx.MatchedRules, mr)
 
 	// If the rule is set to audit, we log the transaction to the audit log
@@ -298,8 +298,8 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 	}
 
 	tx.MatchedRules = append(tx.MatchedRules, mr)
-	if tx.Waf.errorLogCb != nil && r.Log {
-		tx.Waf.errorLogCb(mr)
+	if tx.WAF.errorLogCb != nil && r.Log {
+		tx.WAF.errorLogCb(mr)
 	}
 }
 
@@ -512,7 +512,7 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 		// RUle engine is disabled
 		return nil
 	}
-	tx.Waf.Rules.Eval(types.PhaseRequestHeaders, tx)
+	tx.WAF.Rules.Eval(types.PhaseRequestHeaders, tx)
 	return tx.Interruption
 }
 
@@ -529,7 +529,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	}
 	// we won't process empty request bodies or disabled RequestBodyAccess
 	if !tx.RequestBodyAccess || tx.RequestBodyBuffer.Size() == 0 {
-		tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)
+		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.Interruption, nil
 	}
 	mime := ""
@@ -545,7 +545,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	// Chunked requests will always be written to a temporary file
 	if tx.RequestBodyBuffer.Size() >= tx.RequestBodyLimit {
 		tx.Variables.InboundErrorData.Set("1")
-		if tx.Waf.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
+		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
 			// We interrupt this transaction in case RequestBodyLimitAction is Reject
 			tx.Interruption = &types.Interruption{
 				Status: 403,
@@ -554,7 +554,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 			return tx.Interruption, nil
 		}
 
-		if tx.Waf.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
+		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
 			tx.Variables.InboundErrorData.Set("1")
 			// we limit our reader to tx.RequestBodyLimit bytes
 			reader = io.LimitReader(reader, tx.RequestBodyLimit)
@@ -570,29 +570,29 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		rbp = "URLENCODED"
 		tx.Variables.ReqbodyProcessor.Set(rbp)
 	}
-	tx.Waf.Logger.Debug("[%s] Attempting to process request body using %q", tx.ID, rbp)
+	tx.WAF.Logger.Debug("[%s] Attempting to process request body using %q", tx.ID, rbp)
 	rbp = strings.ToLower(rbp)
 	if rbp == "" {
 		// so there is no bodyprocessor, we don't want to generate an error
-		tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)
+		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.Interruption, nil
 	}
 	bodyprocessor, err := bodyprocessors.Get(rbp)
 	if err != nil {
 		tx.generateReqbodyError(fmt.Errorf("Invalid body processor"))
-		tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)
+		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.Interruption, nil
 	}
 	if err := bodyprocessor.ProcessRequest(reader, tx.Collections, bodyprocessors.Options{
 		Mime:        mime,
-		StoragePath: tx.Waf.UploadDir,
+		StoragePath: tx.WAF.UploadDir,
 	}); err != nil {
 		tx.generateReqbodyError(err)
-		tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)
+		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.Interruption, nil
 	}
 
-	tx.Waf.Rules.Eval(types.PhaseRequestBody, tx)
+	tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 	return tx.Interruption, nil
 }
 
@@ -611,7 +611,7 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Int
 		return nil
 	}
 
-	tx.Waf.Rules.Eval(types.PhaseResponseHeaders, tx)
+	tx.WAF.Rules.Eval(types.PhaseResponseHeaders, tx)
 	return tx.Interruption
 }
 
@@ -623,7 +623,7 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Int
 func (tx *Transaction) IsProcessableResponseBody() bool {
 	// TODO add more validations
 	ct := tx.Variables.ResponseContentType.String()
-	return stringsutil.InSlice(ct, tx.Waf.ResponseBodyMimeTypes)
+	return stringsutil.InSlice(ct, tx.WAF.ResponseBodyMimeTypes)
 }
 
 // ProcessResponseBody Perform the request body (if any)
@@ -638,29 +638,29 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		return tx.Interruption, nil
 	}
 	if !tx.ResponseBodyAccess || !tx.IsProcessableResponseBody() {
-		tx.Waf.Logger.Debug("[%s] Skipping response body processing (Access: %t)", tx.ID, tx.ResponseBodyAccess)
-		tx.Waf.Rules.Eval(types.PhaseResponseBody, tx)
+		tx.WAF.Logger.Debug("[%s] Skipping response body processing (Access: %t)", tx.ID, tx.ResponseBodyAccess)
+		tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
 		return tx.Interruption, nil
 	}
-	tx.Waf.Logger.Debug("[%s] Attempting to process response body", tx.ID)
+	tx.WAF.Logger.Debug("[%s] Attempting to process response body", tx.ID)
 	reader, err := tx.ResponseBodyBuffer.Reader()
 	if err != nil {
 		return tx.Interruption, err
 	}
-	reader = io.LimitReader(reader, tx.Waf.ResponseBodyLimit)
+	reader = io.LimitReader(reader, tx.WAF.ResponseBodyLimit)
 	buf := new(strings.Builder)
 	length, err := io.Copy(buf, reader)
 	if err != nil {
 		return tx.Interruption, err
 	}
 
-	if tx.ResponseBodyBuffer.Size() >= tx.Waf.ResponseBodyLimit {
+	if tx.ResponseBodyBuffer.Size() >= tx.WAF.ResponseBodyLimit {
 		tx.Variables.OutboundDataError.Set("1")
 	}
 
 	tx.Variables.ResponseContentLength.Set(strconv.FormatInt(length, 10))
 	tx.Variables.ResponseBody.Set(buf.String())
-	tx.Waf.Rules.Eval(types.PhaseResponseBody, tx)
+	tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
 	return tx.Interruption, nil
 }
 
@@ -673,35 +673,35 @@ func (tx *Transaction) ProcessLogging() {
 	// if tx.RuleEngine == RULE_ENGINE_OFF {
 	// 	return
 	// }
-	tx.Waf.Rules.Eval(types.PhaseLogging, tx)
+	tx.WAF.Rules.Eval(types.PhaseLogging, tx)
 
 	if tx.AuditEngine == types.AuditEngineOff {
 		// Audit engine disabled
-		tx.Waf.Logger.Debug("[%s] Transaction not marked for audit logging, AuditEngine is disabled", tx.ID)
+		tx.WAF.Logger.Debug("[%s] Transaction not marked for audit logging, AuditEngine is disabled", tx.ID)
 		return
 	}
 
 	if tx.AuditEngine == types.AuditEngineRelevantOnly && !tx.audit {
 		// Transaction marked not for audit logging
-		tx.Waf.Logger.Debug("[%s] Transaction not marked for audit logging, AuditEngine is RelevantOnly and we got noauditlog", tx.ID)
+		tx.WAF.Logger.Debug("[%s] Transaction not marked for audit logging, AuditEngine is RelevantOnly and we got noauditlog", tx.ID)
 		return
 	}
 
 	if tx.AuditEngine == types.AuditEngineRelevantOnly && tx.audit {
-		re := tx.Waf.AuditLogRelevantStatus
+		re := tx.WAF.AuditLogRelevantStatus
 		status := tx.Variables.ResponseStatus.String()
 		if re != nil && !re.Match([]byte(status)) {
 			// Not relevant status
-			tx.Waf.Logger.Debug("[%s] Transaction status not marked for audit logging", tx.ID)
+			tx.WAF.Logger.Debug("[%s] Transaction status not marked for audit logging", tx.ID)
 			return
 		}
 	}
 
-	tx.Waf.Logger.Debug("[%s] Transaction marked for audit logging", tx.ID)
-	if writer := tx.Waf.AuditLogWriter; writer != nil {
+	tx.WAF.Logger.Debug("[%s] Transaction marked for audit logging", tx.ID)
+	if writer := tx.WAF.AuditLogWriter; writer != nil {
 		// we don't log if there is an empty audit logger
 		if err := writer.Write(tx.AuditLog()); err != nil {
-			tx.Waf.Logger.Error(err.Error())
+			tx.WAF.Logger.Error(err.Error())
 		}
 	}
 }
@@ -748,12 +748,12 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	al.Transaction.Response.Headers = tx.Variables.ResponseHeaders.Data()
 	al.Transaction.Response.Body = tx.Variables.ResponseBody.String()
 	al.Transaction.Producer = loggers.AuditTransactionProducer{
-		Connector:  tx.Waf.ProducerConnector,
-		Version:    tx.Waf.ProducerConnectorVersion,
+		Connector:  tx.WAF.ProducerConnector,
+		Version:    tx.WAF.ProducerConnectorVersion,
 		Server:     "",
 		RuleEngine: rengine,
 		Stopwatch:  tx.GetStopWatch(),
-		Rulesets:   tx.Waf.ComponentNames,
+		Rulesets:   tx.WAF.ComponentNames,
 	}
 	/*
 	* TODO:
@@ -783,7 +783,7 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 		r := mr.Rule
 		for _, matchData := range mr.MatchedDatas {
 			mrs = append(mrs, loggers.AuditMessage{
-				Actionset: strings.Join(tx.Waf.ComponentNames, " "),
+				Actionset: strings.Join(tx.WAF.ComponentNames, " "),
 				Message:   matchData.Message,
 				Data: loggers.AuditMessageData{
 					File:     mr.Rule.File,
@@ -814,14 +814,24 @@ func (tx *Transaction) Clean() error {
 	for k := range tx.Collections {
 		tx.Collections[k] = nil
 	}
+	errs := []error{}
 	if err := tx.RequestBodyBuffer.Close(); err != nil {
-		return err
+		errs = append(errs, err)
 	}
 	if err := tx.ResponseBodyBuffer.Close(); err != nil {
-		return err
+		errs = append(errs, err)
 	}
-	tx.Waf.Logger.Debug("[%s] Transaction finished, disrupted: %t", tx.ID, tx.Interrupted())
-	return nil
+
+	tx.WAF.Logger.Debug("[%s] Transaction finished, disrupted: %t", tx.ID, tx.Interrupted())
+
+	switch {
+	case len(errs) == 0:
+		return nil
+	case len(errs) == 1:
+		return fmt.Errorf("transaction clean failed: %s", errs[0].Error())
+	default:
+		return fmt.Errorf("transaction clean failed:\n- %s\n- %s", errs[0].Error(), errs[1].Error())
+	}
 }
 
 // Debug will return a string with the transaction debug information

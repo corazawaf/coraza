@@ -11,8 +11,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
 	"github.com/tidwall/gjson"
+
+	"github.com/corazawaf/coraza/v3"
 )
 
 type Test struct {
@@ -25,77 +26,91 @@ type Test struct {
 
 // https://github.com/SpiderLabs/secrules-language-tests/
 func TestOperators(t *testing.T) {
-	root := "../testdata/operators/"
+	root := "./testdata"
 	files := [][]byte{}
 	if _, err := os.Stat(root); os.IsNotExist(err) {
-		t.Error("failed to find operator test files")
+		t.Fatal("failed to find operator test files")
 	}
+
 	if err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if strings.HasSuffix(path, ".json") {
-			data, _ := os.ReadFile(path)
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
 			files = append(files, data)
 		}
 		return nil
 	}); err != nil {
-		t.Error("failed to walk test files")
+		t.Fatalf("failed to walk test files: %s", err.Error())
 	}
-	waf := coraza.NewWaf()
-	for _, f := range files {
-		cases := unmarshalTests(f)
-		for _, data := range cases {
-			// UNMARSHALL does not transform \u0000 to binary
-			data.Input = strings.ReplaceAll(data.Input, `\u0000`, "\u0000")
-			data.Param = strings.ReplaceAll(data.Param, `\u0000`, "\u0000")
 
-			if strings.Contains(data.Input, `\x`) {
-				in, err := strconv.Unquote(`"` + data.Input + `"`)
-				if err != nil {
-					t.Error("Cannot parse test case", err)
-				} else {
-					data.Input = in
-				}
-			}
-			if strings.Contains(data.Param, `\x`) {
-				p, err := strconv.Unquote(`"` + data.Param + `"`)
-				if err != nil {
-					t.Error("Cannot parse test case", err)
-				}
-				data.Param = p
-			}
-			op, err := Get(data.Name)
-			if err != nil {
-				continue
-			}
-			if data.Name == "pmFromFile" || data.Name == "ipMatchFromFile" {
-				// read file
-				fname := root + "op/" + data.Param
-				d, err := os.ReadFile(fname)
-				if err != nil {
-					t.Errorf("Cannot open file %s", data.Param)
-				}
-				data.Param = string(d)
-			}
-			opts := coraza.RuleOperatorOptions{
-				Arguments: data.Param,
-			}
-			if err := op.Init(opts); err != nil {
-				t.Error(err)
-			}
-			res := op.Evaluate(waf.NewTransaction(context.Background()), data.Input)
-			// 1 = expected true
-			// 0 = expected false
-			if (res && data.Ret != 1) || (!res && data.Ret == 1) {
-				expected := "match"
-				if data.Ret == 0 {
-					expected = "no match"
-				}
-				t.Errorf("Invalid operator result for @%s(%q, %q), %s expected", data.Name, data.Param, data.Input, expected)
+	captureMatrix := map[string]bool{
+		"with capture":    true,
+		"without capture": false,
+	}
+
+	waf := coraza.NewWAF()
+	for _, f := range files {
+		cases := unmarshalTests(t, f)
+		for _, data := range cases {
+			for capName, capVal := range captureMatrix {
+				t.Run(data.Name+" "+capName, func(t *testing.T) {
+					// UNMARSHALL does not transform \u0000 to binary
+					data.Input = strings.ReplaceAll(data.Input, `\u0000`, "\u0000")
+					data.Param = strings.ReplaceAll(data.Param, `\u0000`, "\u0000")
+
+					if strings.Contains(data.Input, `\x`) {
+						in, err := strconv.Unquote(`"` + data.Input + `"`)
+						if err != nil {
+							t.Errorf("Cannot parse test case: %s", err.Error())
+						} else {
+							data.Input = in
+						}
+					}
+
+					if strings.Contains(data.Param, `\x`) {
+						p, err := strconv.Unquote(`"` + data.Param + `"`)
+						if err != nil {
+							t.Errorf("Cannot parse test case: %s", err.Error())
+						}
+						data.Param = p
+					}
+
+					op, err := Get(data.Name)
+					if err != nil {
+						t.Logf("skipped error: %s", err.Error())
+						return
+					}
+
+					opts := coraza.RuleOperatorOptions{
+						Arguments: data.Param,
+						Path:      []string{"op"},
+						Root:      os.DirFS("testdata"),
+					}
+					if err := op.Init(opts); err != nil {
+						t.Error(err)
+					}
+					tx := waf.NewTransaction(context.Background())
+					tx.Capture = capVal
+					res := op.Evaluate(tx, data.Input)
+					// 1 = expected true
+					// 0 = expected false
+					if (res && data.Ret != 1) || (!res && data.Ret == 1) {
+						expected := "match"
+						if data.Ret == 0 {
+							expected = "no match"
+						}
+						t.Errorf("Invalid operator result for @%s(%q, %q), %s expected", data.Name, data.Param, data.Input, expected)
+					}
+				})
 			}
 		}
 	}
 }
 
-func unmarshalTests(json []byte) []Test {
+func unmarshalTests(t *testing.T, json []byte) []Test {
+	t.Helper()
 	var tests []Test
 	v := gjson.ParseBytes(json).Value()
 	for _, in := range v.([]interface{}) {

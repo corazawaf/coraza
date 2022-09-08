@@ -6,13 +6,13 @@ package seclang
 import (
 	"errors"
 	"fmt"
-	"os"
-	"path"
+	"io/fs"
 	"regexp"
 	"strings"
 
 	"github.com/corazawaf/coraza/v3"
 	actionsmod "github.com/corazawaf/coraza/v3/actions"
+	"github.com/corazawaf/coraza/v3/internal/io"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	operators "github.com/corazawaf/coraza/v3/operators"
 	"github.com/corazawaf/coraza/v3/types"
@@ -194,22 +194,14 @@ func (p *RuleParser) ParseOperator(operator string) error {
 		return err
 	}
 	data := []byte(opdata)
-	// handling files by operators is hard because we must know the paths where we can
-	// search, for example, the policy path or the binary path...
-	// CRS stores the .data files in the same directory as the directives
-	if strings.HasSuffix(op, "FromFile") {
-		// TODO make enhancements here
-		tpath := path.Join(p.options.Config.Get("parser_config_dir", "").(string), opdata)
-		var err error
-		content, err := os.ReadFile(tpath)
-		if err != nil {
-			return err
-		}
-		opdata = tpath
-		data = content
-	}
+
 	opts := coraza.RuleOperatorOptions{
 		Arguments: string(data),
+		Path: []string{
+			p.options.Config.Get("parser_config_dir", "").(string),
+			p.options.Config.Get("working_dir", "").(string),
+		},
+		Root: p.options.Config.Get("parser_root", io.OSFS{}).(fs.FS),
 	}
 	err = opfn.Init(opts)
 	if err != nil {
@@ -310,7 +302,7 @@ func (p *RuleParser) Rule() *coraza.Rule {
 // RuleOptions contains the options used to compile a rule
 type RuleOptions struct {
 	WithOperator bool
-	Waf          *coraza.Waf
+	WAF          *coraza.WAF
 	Config       types.Config
 	Directive    string
 	Data         string
@@ -389,7 +381,7 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 	rule.File = options.Config.Get("parser_config_file", "").(string)
 	rule.Line = options.Config.Get("parser_last_line", 0).(int)
 
-	if parent := getLastRuleExpectingChain(options.Waf); parent != nil {
+	if parent := getLastRuleExpectingChain(options.WAF); parent != nil {
 		rule.ParentID = parent.ID
 		lastChain := parent
 		for lastChain.Chain != nil {
@@ -403,7 +395,7 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 	return rp.rule, nil
 }
 
-func getLastRuleExpectingChain(w *coraza.Waf) *coraza.Rule {
+func getLastRuleExpectingChain(w *coraza.WAF) *coraza.Rule {
 	rules := w.Rules.GetRules()
 	if len(rules) == 0 {
 		return nil

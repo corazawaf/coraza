@@ -7,13 +7,9 @@ import (
 	"github.com/corazawaf/coraza/v3"
 )
 
-type validateURLEncoding struct {
-}
+type validateURLEncoding struct{}
 
-func (o *validateURLEncoding) Init(options coraza.RuleOperatorOptions) error {
-	// Does not require initialization
-	return nil
-}
+func (o *validateURLEncoding) Init(options coraza.RuleOperatorOptions) error { return nil }
 
 func (o *validateURLEncoding) Evaluate(tx *coraza.Transaction, value string) bool {
 	if len(value) == 0 {
@@ -41,12 +37,11 @@ func (o *validateURLEncoding) Evaluate(tx *coraza.Transaction, value string) boo
 }
 
 func validateURLEncodingInternal(input string, inputLen int) int {
-	var i int
-
 	if inputLen == 0 {
 		return -1
 	}
 
+	var i int
 	for i < inputLen {
 		if input[i] == '%' {
 			if i+2 >= inputLen {

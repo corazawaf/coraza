@@ -23,8 +23,8 @@ func Test_NonImplementedDirective(t *testing.T) {
 		`SecHashKey "this_is_my_key" KeyOnly`,
 		`SecHashEngine On`,
 	}
-	w := coraza.NewWaf()
-	p, _ := NewParser(w)
+	w := coraza.NewWAF()
+	p := NewParser(w)
 	for _, rule := range rules {
 		err := p.FromString(rule)
 		if err != nil {
@@ -34,8 +34,8 @@ func Test_NonImplementedDirective(t *testing.T) {
 }
 
 func Test_directive(t *testing.T) {
-	w := coraza.NewWaf()
-	p, _ := NewParser(w)
+	w := coraza.NewWAF()
+	p := NewParser(w)
 	if err := p.FromString("SecWebAppId test123"); err != nil {
 		t.Error("failed to set parser from string")
 	}
@@ -87,7 +87,7 @@ func Test_directive(t *testing.T) {
 	if err := p.FromString("SecRuleRemoveByTag test"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if p.options.Waf.Rules.Count() != 0 {
+	if p.options.WAF.Rules.Count() != 0 {
 		t.Error("Failed to remove rule with SecRuleRemoveByTag")
 	}
 	if err := p.FromString(`SecAction "id:1,msg:'test'"`); err != nil {
@@ -96,7 +96,7 @@ func Test_directive(t *testing.T) {
 	if err := p.FromString("SecRuleRemoveByMsg test"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if p.options.Waf.Rules.Count() != 0 {
+	if p.options.WAF.Rules.Count() != 0 {
 		t.Error("Failed to remove rule with SecRuleRemoveByMsg")
 	}
 	if err := p.FromString(`SecAction "id:1"`); err != nil {
@@ -105,19 +105,19 @@ func Test_directive(t *testing.T) {
 	if err := p.FromString("SecRuleRemoveById 1"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if p.options.Waf.Rules.Count() != 0 {
+	if p.options.WAF.Rules.Count() != 0 {
 		t.Error("Failed to remove rule with SecRuleRemoveById")
 	}
 	if err := p.FromString("SecResponseBodyMimeTypesClear"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if len(p.options.Waf.ResponseBodyMimeTypes) != 0 {
+	if len(p.options.WAF.ResponseBodyMimeTypes) != 0 {
 		t.Error("failed to set SecResponseBodyMimeTypesClear")
 	}
 	if err := p.FromString("SecResponseBodyMimeType text/html"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if p.options.Waf.ResponseBodyMimeTypes[0] != "text/html" {
+	if p.options.WAF.ResponseBodyMimeTypes[0] != "text/html" {
 		t.Error("failed to set SecResponseBodyMimeType")
 	}
 	if err := p.FromString(`SecServerSignature "Microsoft-IIS/6.0"`); err != nil {
@@ -209,10 +209,10 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 }
 
 func TestSecRuleUpdateTargetBy(t *testing.T) {
-	waf := coraza.NewWaf()
+	waf := coraza.NewWAF()
 	rule, err := ParseRule(RuleOptions{
 		Data:         "REQUEST_URI \"^/test\" \"id:181,tag:test\"",
-		Waf:          waf,
+		WAF:          waf,
 		WithOperator: true,
 	})
 	if err != nil {
@@ -225,7 +225,7 @@ func TestSecRuleUpdateTargetBy(t *testing.T) {
 		t.Error("Failed to add rule")
 	}
 	if err := directiveSecRuleUpdateTargetByID(&DirectiveOptions{
-		Waf:       waf,
+		WAF:       waf,
 		Arguments: "181 \"REQUEST_HEADERS\"",
 	}); err != nil {
 		t.Error(err)
@@ -234,8 +234,8 @@ func TestSecRuleUpdateTargetBy(t *testing.T) {
 }
 
 func TestInvalidBooleanForDirectives(t *testing.T) {
-	waf := coraza.NewWaf()
-	p, _ := NewParser(waf)
+	waf := coraza.NewWAF()
+	p := NewParser(waf)
 	if err := p.FromString("SecIgnoreRuleCompilationErrors sure"); err == nil {
 		t.Error("failed to error on invalid boolean")
 	}
@@ -247,13 +247,13 @@ func TestInvalidRulesWithIgnoredErrors(t *testing.T) {
 	SecRule REQUEST_URI "@no_op ^/test" "id:200,tag:test,invalid:5"
 	SecRule REQUEST_URI "@rx ^/test" "id:181,tag:repeated-id"
 	`
-	waf := coraza.NewWaf()
-	p, _ := NewParser(waf)
+	waf := coraza.NewWAF()
+	p := NewParser(waf)
 	if err := p.FromString("secignorerulecompilationerrors On\n" + directives); err != nil {
 		t.Error(err)
 	}
-	waf = coraza.NewWaf()
-	p, _ = NewParser(waf)
+	waf = coraza.NewWAF()
+	p = NewParser(waf)
 	if err := p.FromString(directives); err == nil {
 		t.Error("failed to error on invalid rule")
 	}
@@ -266,5 +266,22 @@ func TestRegisterDirective(t *testing.T) {
 	RegisterDirective("test", directive)
 	if _, ok := directivesMap["test"]; !ok {
 		t.Error("failed to register directive")
+  }
+}
+
+
+func TestSecDataset(t *testing.T) {
+	waf := coraza.NewWAF()
+	p := NewParser(waf)
+	if err := p.FromString("" +
+		"SecDataset test `\n123\n456\n`\n"); err != nil {
+		t.Error(err)
+	}
+	ds := p.options.Datasets["test"]
+	if len(ds) != 2 {
+		t.Errorf("failed to add dataset, got %d records", len(ds))
+	}
+	if ds[0] != "123" || ds[1] != "456" {
+		t.Error("failed to add dataset")
 	}
 }

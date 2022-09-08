@@ -29,13 +29,21 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
       - name: Install Go
         uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go-version }}
+          cache: true
+
+      - name: Cache TinyGo build
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/tinygo
+          key: ${{ runner.os }}-tinygo-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-tinygo-
 
       - name: Tests
         run: tinygo test ./...

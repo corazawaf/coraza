@@ -7,6 +7,7 @@
 package loggers
 
 import (
+	"io"
 	"io/fs"
 	"log"
 	"os"
@@ -16,22 +17,31 @@ import (
 
 // serialWriter is used to store logs in a single file
 type serialWriter struct {
-	file      *os.File
+	file      io.Closer
 	log       log.Logger
 	formatter LogFormatter
 }
 
 func (sl *serialWriter) Init(c types.Config) error {
-	fileName := c.Get("auditlog_file", "/dev/null").(string)
 	fileMode := c.Get("auditlog_file_mode", fs.FileMode(0644)).(fs.FileMode)
 	sl.formatter = c.Get("auditlog_formatter", nativeFormatter).(LogFormatter)
-	var err error
-	sl.file, err = os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, fileMode)
-	if err != nil {
-		return err
+
+	fileName := c.Get("auditlog_file", "").(string)
+	var file io.Writer
+	if fileName != "" {
+		f, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, fileMode)
+		if err != nil {
+			return err
+		}
+		file = f
+		sl.file = f
+	} else {
+		file = io.Discard
+		// Nothing to close so just set a no-op
+		sl.file = noopCloser{}
 	}
 	sl.log.SetFlags(0)
-	sl.log.SetOutput(sl.file)
+	sl.log.SetOutput(file)
 	return nil
 }
 
@@ -50,3 +60,11 @@ func (sl *serialWriter) Close() error {
 }
 
 var _ LogWriter = (*serialWriter)(nil)
+
+type noopCloser struct{}
+
+var _ io.Closer = (*noopCloser)(nil)
+
+func (nc noopCloser) Close() error {
+	return nil
+}

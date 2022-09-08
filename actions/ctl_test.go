@@ -12,7 +12,7 @@ import (
 )
 
 func TestCtl(t *testing.T) {
-	waf := coraza.NewWaf()
+	waf := coraza.NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	r := coraza.NewRule()
 	ctlf := ctl()

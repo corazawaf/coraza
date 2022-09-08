@@ -18,10 +18,10 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-var wafi = NewWaf()
+var wafi = NewWAF()
 
 func TestTxSetters(t *testing.T) {
-	tx := makeTransaction()
+	tx := makeTransaction(t)
 	exp := map[string]string{
 		"%{request_headers.x-test-header}": "test456",
 		"%{request_method}":                "POST",
@@ -115,39 +115,80 @@ func TestTxResponse(t *testing.T) {
 	*/
 }
 
-func TestTxGetField(t *testing.T) {
-	// GetField
-}
-
 func TestRequestBody(t *testing.T) {
-	urlencoded := "some=result&second=data"
-	// xml := "<test><content>test</content></test>"
-	tx := wafi.NewTransaction(context.Background())
-	tx.RequestBodyAccess = true
-	tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
-	if _, err := tx.RequestBodyBuffer.Write([]byte(urlencoded)); err != nil {
-		t.Error("Failed to write body buffer")
+	testCases := []struct {
+		name                   string
+		requestBodyLimit       int64
+		requestBodyLimitAction types.RequestBodyLimitAction
+		shouldInterrupt        bool
+	}{
+		{
+			name:                   "default",
+			requestBodyLimit:       200,
+			requestBodyLimitAction: types.RequestBodyLimitActionReject,
+		},
+		{
+			name:                   "limit rejects",
+			requestBodyLimit:       11,
+			requestBodyLimitAction: types.RequestBodyLimitActionReject,
+			shouldInterrupt:        true,
+		},
+		{
+			name:                   "limit partial processing",
+			requestBodyLimit:       11,
+			requestBodyLimitAction: types.RequestBodyLimitActionProcessPartial,
+		},
 	}
-	tx.ProcessRequestHeaders()
-	if _, err := tx.ProcessRequestBody(); err != nil {
-		t.Error("Failed to process request body")
-	}
-	val := tx.Variables.ArgsPost.Get("some")
-	if len(val) != 1 || val[0] != "result" {
-		t.Error("Failed to set url encoded post data")
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			urlencoded := "some=result&second=data"
+			// xml := "<test><content>test</content></test>"
+			tx := wafi.NewTransaction(context.Background())
+			tx.RequestBodyAccess = true
+			tx.RequestBodyLimit = testCase.requestBodyLimit
+			tx.WAF.RequestBodyLimitAction = testCase.requestBodyLimitAction
+
+			tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
+			if _, err := tx.RequestBodyBuffer.Write([]byte(urlencoded)); err != nil {
+				t.Errorf("Failed to write body buffer: %s", err.Error())
+			}
+			tx.ProcessRequestHeaders()
+			if _, err := tx.ProcessRequestBody(); err != nil {
+				t.Errorf("Failed to process request body: %s", err.Error())
+			}
+
+			if testCase.shouldInterrupt {
+				if tx.Interruption == nil {
+					t.Error("expected interruption")
+				}
+			} else {
+				val := tx.Variables.ArgsPost.Get("some")
+				if len(val) != 1 || val[0] != "result" {
+					t.Error("Failed to set url encoded post data")
+				}
+			}
+
+			_ = tx.Clean()
+		})
 	}
 }
 
 func TestResponseHeader(t *testing.T) {
-	tx := makeTransaction()
+	tx := makeTransaction(t)
 	tx.AddResponseHeader("content-type", "test")
 	if tx.Variables.ResponseContentType.String() != "test" {
 		t.Error("invalid RESPONSE_CONTENT_TYPE after response headers")
 	}
+
+	interruption := tx.ProcessResponseHeaders(200, "OK")
+	if interruption != nil {
+		t.Error("expected interruption")
+	}
 }
 
 func TestAuditLog(t *testing.T) {
-	tx := makeTransaction()
+	tx := makeTransaction(t)
 	tx.AuditLogParts = types.AuditLogParts("ABCDEFGHIJK")
 	al := tx.AuditLog()
 	if al.Transaction.ID != tx.ID {
@@ -160,7 +201,7 @@ func TestAuditLog(t *testing.T) {
 }
 
 func TestResponseBody(t *testing.T) {
-	tx := makeTransaction()
+	tx := makeTransaction(t)
 	tx.ResponseBodyAccess = true
 	tx.RuleEngine = types.RuleEngineOn
 	tx.AddResponseHeader("content-type", "text/plain")
@@ -179,7 +220,7 @@ func TestResponseBody(t *testing.T) {
 }
 
 func TestAuditLogFields(t *testing.T) {
-	tx := makeTransaction()
+	tx := makeTransaction(t)
 	tx.AuditLogParts = types.AuditLogParts("ABCDEFGHIJK")
 	tx.AddRequestHeader("test", "test")
 	tx.AddResponseHeader("test", "test")
@@ -210,7 +251,7 @@ func TestAuditLogFields(t *testing.T) {
 }
 
 func TestResetCapture(t *testing.T) {
-	tx := makeTransaction()
+	tx := makeTransaction(t)
 	tx.Capture = true
 	tx.CaptureField(5, "test")
 	if tx.Variables.TX.Get("5")[0] != "test" {
@@ -226,11 +267,11 @@ func TestResetCapture(t *testing.T) {
 }
 
 func TestRelevantAuditLogging(t *testing.T) {
-	tx := makeTransaction()
-	tx.Waf.AuditLogRelevantStatus = regexp.MustCompile(`(403)`)
+	tx := makeTransaction(t)
+	tx.WAF.AuditLogRelevantStatus = regexp.MustCompile(`(403)`)
 	tx.Variables.ResponseStatus.Set("403")
 	tx.AuditEngine = types.AuditEngineRelevantOnly
-	// tx.Waf.auditLogger = loggers.NewAuditLogger()
+	// tx.WAF.auditLogger = loggers.NewAuditLogger()
 	tx.ProcessLogging()
 	// TODO how do we check if the log was writen?
 	if err := tx.Clean(); err != nil {
@@ -239,7 +280,7 @@ func TestRelevantAuditLogging(t *testing.T) {
 }
 
 func TestLogCallback(t *testing.T) {
-	waf := NewWaf()
+	waf := NewWAF()
 	buffer := ""
 	waf.SetErrorLogCb(func(mr types.MatchedRule) {
 		buffer = mr.ErrorLog(403)
@@ -261,7 +302,7 @@ func TestLogCallback(t *testing.T) {
 }
 
 func TestHeaderSetters(t *testing.T) {
-	waf := NewWaf()
+	waf := NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	tx.AddRequestHeader("cookie", "abc=def;hij=klm")
 	tx.AddRequestHeader("test1", "test2")
@@ -284,7 +325,7 @@ func TestHeaderSetters(t *testing.T) {
 }
 
 func TestRequestBodyProcessingAlgorithm(t *testing.T) {
-	waf := NewWaf()
+	waf := NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	tx.RuleEngine = types.RuleEngineOn
 	tx.RequestBodyAccess = true
@@ -306,7 +347,7 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 }
 
 func TestTxVariables(t *testing.T) {
-	tx := makeTransaction()
+	tx := makeTransaction(t)
 	rv := ruleVariableParams{
 		Name:     "REQUEST_HEADERS",
 		Variable: variables.RequestHeaders,
@@ -343,7 +384,7 @@ func TestTxVariables(t *testing.T) {
 }
 
 func TestTxVariablesExceptions(t *testing.T) {
-	tx := makeTransaction()
+	tx := makeTransaction(t)
 	rv := ruleVariableParams{
 		Name:     "REQUEST_HEADERS",
 		Variable: variables.RequestHeaders,
@@ -381,7 +422,7 @@ func TestAuditLogMessages(t *testing.T) {
 }
 
 func TestTransactionSyncPool(t *testing.T) {
-	waf := NewWaf()
+	waf := NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	tx.MatchedRules = append(tx.MatchedRules, types.MatchedRule{
 		Rule: types.RuleMetadata{
@@ -401,11 +442,11 @@ func TestTransactionSyncPool(t *testing.T) {
 }
 
 func TestTxPhase4Magic(t *testing.T) {
-	waf := NewWaf()
+	waf := NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	tx.AddResponseHeader("content-type", "text/html")
 	tx.ResponseBodyAccess = true
-	tx.Waf.ResponseBodyLimit = 3
+	tx.WAF.ResponseBodyLimit = 3
 	if _, err := tx.ResponseBodyBuffer.Write([]byte("more bytes")); err != nil {
 		t.Error(err)
 	}
@@ -421,7 +462,7 @@ func TestTxPhase4Magic(t *testing.T) {
 }
 
 func TestVariablesMatch(t *testing.T) {
-	waf := NewWaf()
+	waf := NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	tx.matchVariable(types.MatchData{
 		VariableName: "ARGS_NAMES",
@@ -446,7 +487,7 @@ func TestVariablesMatch(t *testing.T) {
 }
 
 func TestTxReqBodyForce(t *testing.T) {
-	waf := NewWaf()
+	waf := NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	tx.RequestBodyAccess = true
 	tx.ForceRequestBodyVariable = true
@@ -462,7 +503,7 @@ func TestTxReqBodyForce(t *testing.T) {
 }
 
 func TestTxReqBodyForceNegative(t *testing.T) {
-	waf := NewWaf()
+	waf := NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	tx.RequestBodyAccess = true
 	tx.ForceRequestBodyVariable = false
@@ -477,8 +518,8 @@ func TestTxReqBodyForceNegative(t *testing.T) {
 	}
 }
 
-func TestTXProcessConnection(t *testing.T) {
-	waf := NewWaf()
+func TestTxProcessConnection(t *testing.T) {
+	waf := NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	tx.ProcessConnection("127.0.0.1", 80, "127.0.0.2", 8080)
 	if tx.Variables.RemoteAddr.String() != "127.0.0.1" {
@@ -489,8 +530,8 @@ func TestTXProcessConnection(t *testing.T) {
 	}
 }
 
-func TestTXGetField(t *testing.T) {
-	tx := makeTransaction()
+func TestTxGetField(t *testing.T) {
+	tx := makeTransaction(t)
 	rvp := ruleVariableParams{
 		Name:     "args",
 		Variable: variables.Args,
@@ -500,8 +541,8 @@ func TestTXGetField(t *testing.T) {
 	}
 }
 
-func TestTXProcessURI(t *testing.T) {
-	waf := NewWaf()
+func TestTxProcessURI(t *testing.T) {
+	waf := NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	uri := "http://example.com/path/to/file.html?query=string&other=value"
 	tx.ProcessURI(uri, "GET", "HTTP/1.1")
@@ -524,11 +565,14 @@ func TestTXProcessURI(t *testing.T) {
 
 func BenchmarkTransactionCreation(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		makeTransaction()
+		makeTransaction(nil)
 	}
 }
 
-func makeTransaction() *Transaction {
+func makeTransaction(t *testing.T) *Transaction {
+	if t != nil {
+		t.Helper()
+	}
 	tx := wafi.NewTransaction(context.Background())
 	tx.RequestBodyAccess = true
 	ht := []string{

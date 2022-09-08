@@ -12,7 +12,7 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
-var waf *coraza.Waf
+var waf *coraza.WAF
 
 func hello(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(w, "hello world, not disrupted.\n")
@@ -29,8 +29,8 @@ func main() {
 }
 
 func setupCoraza() error {
-	waf = coraza.NewWaf()
-	seclang, _ := seclang.NewParser(waf)
+	waf = coraza.NewWAF()
+	seclang := seclang.NewParser(waf)
 	if err := seclang.FromString(`
 		# This is a comment
 		SecRequestBodyAccess On

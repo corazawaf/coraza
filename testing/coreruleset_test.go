@@ -49,8 +49,8 @@ func BenchmarkCRSCompilation(b *testing.B) {
 		path.Join(crspath, "rules/", "*.conf"),
 	}
 	for i := 0; i < b.N; i++ {
-		waf := coraza.NewWaf()
-		parser, _ := seclang.NewParser(waf)
+		waf := coraza.NewWAF()
+		parser := seclang.NewParser(waf)
 		for _, f := range files {
 			if err := parser.FromFile(f); err != nil {
 				b.Error(err)
@@ -95,6 +95,7 @@ func BenchmarkCRSSimplePOST(b *testing.B) {
 	if err != nil {
 		b.Error(err)
 	}
+	b.ResetTimer() // only benchmark execution, not compilation
 	for i := 0; i < b.N; i++ {
 		tx := waf.NewTransaction(context.Background())
 		tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 8080)
@@ -122,14 +123,14 @@ func BenchmarkCRSSimplePOST(b *testing.B) {
 	}
 }
 
-func crsWAF() (*coraza.Waf, error) {
+func crsWAF() (*coraza.WAF, error) {
 	files := []string{
 		"../coraza.conf-recommended",
 		path.Join(crspath, "crs-setup.conf.example"),
 		path.Join(crspath, "rules/", "*.conf"),
 	}
-	waf := coraza.NewWaf()
-	parser, _ := seclang.NewParser(waf)
+	waf := coraza.NewWAF()
+	parser := seclang.NewParser(waf)
 	for _, f := range files {
 		if err := parser.FromFile(f); err != nil {
 			return nil, err

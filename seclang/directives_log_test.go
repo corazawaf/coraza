@@ -23,9 +23,9 @@ import (
 )
 
 func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
-	waf := coraza.NewWaf()
+	waf := coraza.NewWAF()
 	auditpath := t.TempDir()
-	parser, _ := NewParser(waf)
+	parser := NewParser(waf)
 	if err := parser.FromString(fmt.Sprintf(`
 	SecAuditLog %s
 	SecAuditLogFormat json
@@ -36,7 +36,7 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	`, filepath.Join(auditpath, "audit.log"), auditpath)); err != nil {
 		t.Error(err)
 	}
-	id := utils.SafeRandom(10)
+	id := utils.RandomString(10)
 	if waf.AuditLogWriter == nil {
 		t.Error("Invalid audit logger (nil)")
 		return
@@ -68,23 +68,23 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 }
 
 func TestDebugDirectives(t *testing.T) {
-	waf := coraza.NewWaf()
+	waf := coraza.NewWAF()
 	tmp := filepath.Join(t.TempDir(), "tmp.log")
-	p, _ := NewParser(waf)
+	p := NewParser(waf)
 	err := directiveSecDebugLog(&DirectiveOptions{
-		Waf:  waf,
+		WAF:  waf,
 		Opts: tmp,
 	})
 	if err != nil {
 		t.Error(err)
 	}
 	if err := directiveSecDebugLogLevel(&DirectiveOptions{
-		Waf:  waf,
+		WAF:  waf,
 		Opts: "5",
 	}); err != nil {
 		t.Error(err)
 	}
-	p.options.Waf.Logger.Info("abc123")
+	p.options.WAF.Logger.Info("abc123")
 	data, err := os.ReadFile(tmp)
 	if err != nil {
 		t.Error(err)

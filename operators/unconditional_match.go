@@ -9,10 +9,6 @@ import (
 
 type unconditionalMatch struct{}
 
-func (o *unconditionalMatch) Init(options coraza.RuleOperatorOptions) error {
-	return nil
-}
+func (o *unconditionalMatch) Init(options coraza.RuleOperatorOptions) error { return nil }
 
-func (o *unconditionalMatch) Evaluate(tx *coraza.Transaction, value string) bool {
-	return true
-}
+func (o *unconditionalMatch) Evaluate(tx *coraza.Transaction, value string) bool { return true }

@@ -15,7 +15,7 @@ func TestRuleNegativeVariables(t *testing.T) {
 		t.Error(err)
 	}
 	if rule.variables[0].Variable != variables.Args {
-		t.Error("Variable not added")
+		t.Error("Variable ARGS was not added")
 	}
 	if rule.variables[0].KeyRx != nil {
 		t.Error("invalid key type for variable")
