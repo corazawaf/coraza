@@ -86,10 +86,6 @@ func (p *Parser) FromString(data string) error {
 			continue
 		}
 
-		if line[0] == '#' {
-			continue
-		}
-
 		if !inQuotes && line[lineLen-1] == '`' {
 			inQuotes = true
 		} else if inQuotes && line[0] == '`' {
@@ -99,6 +95,10 @@ func (p *Parser) FromString(data string) error {
 		if inQuotes {
 			linebuffer.WriteString(line)
 			linebuffer.WriteString("\n")
+			continue
+		}
+
+		if line[0] == '#' {
 			continue
 		}
 
