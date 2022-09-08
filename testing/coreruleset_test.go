@@ -29,16 +29,16 @@ func init() {
 	fmt.Println("Preparing CRS...")
 	crs, err := downloadCRS("32e6d80419d386a330ddaf5e60047a4a1c38a160")
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("failed to download CRS: %s", err.Error()))
 	}
 	crspath, err = os.MkdirTemp(os.TempDir(), "crs")
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("failed to create temp folder for CRS: %s", err.Error()))
 	}
 	fmt.Println("CRS PATH: " + crspath)
 	err = unzip(crs, crspath)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("failed to unzip CRS: %s", err.Error()))
 	}
 }
 
@@ -177,6 +177,7 @@ func unzip(file string, dst string) error {
 		if !strings.HasPrefix(filePath, filepath.Clean(dst)+string(os.PathSeparator)) {
 			return fmt.Errorf("%s: illegal file path", filePath)
 		}
+
 		if f.FileInfo().IsDir() {
 			if err := os.MkdirAll(filePath, os.ModePerm); err != nil {
 				return err
@@ -192,17 +193,20 @@ func unzip(file string, dst string) error {
 		if err != nil {
 			return err
 		}
-		defer dstFile.Close()
 
 		fileInArchive, err := f.Open()
 		if err != nil {
+			dstFile.Close()
 			return err
 		}
-		defer fileInArchive.Close()
 
 		if _, err := io.Copy(dstFile, fileInArchive); err != nil {
+			dstFile.Close()
+			fileInArchive.Close()
 			return err
 		}
+		dstFile.Close()
+		fileInArchive.Close()
 	}
 	return nil
 }
