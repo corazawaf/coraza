@@ -19,7 +19,33 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
-func TestCLogFileCreation(t *testing.T) {
+func TestConcurrentWriterNoop(t *testing.T) {
+	config := types.Config{}
+	writer := &concurrentWriter{}
+	if err := writer.Init(config); err != nil {
+		t.Errorf("unexpected error: %s", err.Error())
+	}
+
+	if err := writer.Close(); err != nil {
+		t.Errorf("unexpected error: %s", err.Error())
+	}
+}
+
+func TestConcurrentWriterFailsOnInit(t *testing.T) {
+	config := types.Config{
+		"auditlog_file":      "/unexisting.log",
+		"auditlog_dir":       t.TempDir(),
+		"auditlog_file_mode": fs.FileMode(0777),
+		"auditlog_dir_mode":  fs.FileMode(0777),
+		"auditlog_formatter": jsonFormatter,
+	}
+	writer := &concurrentWriter{}
+	if err := writer.Init(config); err == nil {
+		t.Error("expected error")
+	}
+}
+
+func TestConcurrentWriterWrites(t *testing.T) {
 	dir := t.TempDir()
 	file, err := os.Create(filepath.Join(dir, "audit.log"))
 	if err != nil {
@@ -63,5 +89,9 @@ func TestCLogFileCreation(t *testing.T) {
 	al2 := &AuditLog{}
 	if json.Unmarshal(data, al2) != nil {
 		t.Error("failed to parse json from concurrent audit log", p)
+	}
+
+	if err := writer.Close(); err != nil {
+		t.Errorf("unexpected error: %s", err.Error())
 	}
 }
