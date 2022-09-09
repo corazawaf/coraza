@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/magefile/mage/mg"
@@ -103,4 +104,25 @@ func Precommit() error {
 // Check runs lint and tests.
 func Check() {
 	mg.SerialDeps(Lint, Test)
+}
+
+// BuildExamples builds all the examples
+func BuildExamples() error {
+	err := filepath.WalkDir("./examples/", func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() && d.Name() != "examples" {
+			fmt.Printf("Building %s...\n", d.Name())
+			cmd := exec.Command("go", "build", ".")
+			cmd.Dir = "examples/" + d.Name()
+			out, err := cmd.CombinedOutput()
+			if err != nil {
+				fmt.Printf(string(out))
+				return err
+			}
+		}
+		return nil
+	})
+	return err
 }
