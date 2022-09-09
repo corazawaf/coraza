@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // These benchmarks don't currently compile with TinyGo
+//go:build !tinygo
+// +build !tinygo
 
 package testing
 
