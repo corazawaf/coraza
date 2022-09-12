@@ -218,7 +218,6 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 		ct = strings.Split(ctcol[0], ";")[0]
 	}
 	for scanner.Scan() {
-
 		if _, err := tx.RequestBodyBuffer.Write(scanner.Bytes()); err != nil {
 			return nil, fmt.Errorf("cannot write to request body to buffer")
 		}
