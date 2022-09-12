@@ -6,11 +6,13 @@ package seclang
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"regexp"
 	"strings"
 
 	"github.com/corazawaf/coraza/v3"
 	actionsmod "github.com/corazawaf/coraza/v3/actions"
+	"github.com/corazawaf/coraza/v3/internal/io"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	operators "github.com/corazawaf/coraza/v3/operators"
 	"github.com/corazawaf/coraza/v3/types"
@@ -199,6 +201,7 @@ func (p *RuleParser) ParseOperator(operator string) error {
 			p.options.Config.Get("parser_config_dir", "").(string),
 			p.options.Config.Get("working_dir", "").(string),
 		},
+		Root: p.options.Config.Get("parser_root", io.OSFS{}).(fs.FS),
 	}
 	err = opfn.Init(opts)
 	if err != nil {

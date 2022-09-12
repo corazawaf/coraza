@@ -118,8 +118,4 @@ func (l *stdDebugLogger) SetOutput(w io.Writer) {
 	l.logger.SetOutput(w)
 }
 
-// Close closes the logger
-func (l *stdDebugLogger) Close() error {
-	// TODO
-	return nil
-}
+var _ DebugLogger = (*stdDebugLogger)(nil)

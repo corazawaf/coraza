@@ -568,14 +568,12 @@ func TestTxProcessURI(t *testing.T) {
 
 func BenchmarkTransactionCreation(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		makeTransaction(nil)
+		makeTransaction(b)
 	}
 }
 
-func makeTransaction(t *testing.T) *Transaction {
-	if t != nil {
-		t.Helper()
-	}
+func makeTransaction(t testing.TB) *Transaction {
+	t.Helper()
 	tx := wafi.NewTransaction(context.Background())
 	tx.RequestBodyAccess = true
 	ht := []string{

@@ -1,7 +1,7 @@
 github.com/anuraaga/go-modsecurity v0.0.0-20220824035035-b9a4099778df h1:YWiVl53v0R8Knj/k+4slO0SXPL67Y4dXWiOIWNzrkew=
 github.com/anuraaga/go-modsecurity v0.0.0-20220824035035-b9a4099778df/go.mod h1:7jguE759ADzy2EkxGRXigiC0ER1Yq2IFk2qNtwgzc7U=
-github.com/corazawaf/libinjection-go v0.0.0-20220207031228-44e9c4250eb5 h1:SukhxLQRRBM3nJFEUF+ePG7l0JTWAvaxaG/o6X/FQVY=
-github.com/corazawaf/libinjection-go v0.0.0-20220207031228-44e9c4250eb5/go.mod h1:OP4TM7xdJ2skyXqNX1AN1wN5nNZEmJNuWbNPOItn7aw=
+github.com/corazawaf/libinjection-go v0.0.0-20220909190158-227e7e772cef h1:q9ty0pTOklSWgTasNL1N820pNVcn933BFz5w79DPbbo=
+github.com/corazawaf/libinjection-go v0.0.0-20220909190158-227e7e772cef/go.mod h1:OP4TM7xdJ2skyXqNX1AN1wN5nNZEmJNuWbNPOItn7aw=
 github.com/foxcpp/go-mockdns v1.0.0 h1:7jBqxd3WDWwi/6WhDvacvH1XsN3rOLXyHM1uhvIx6FI=
 github.com/foxcpp/go-mockdns v1.0.0/go.mod h1:lgRN6+KxQBawyIghpnl5CezHFGS9VLzvtVlwxvzXTQ4=
 github.com/magefile/mage v1.13.0 h1:XtLJl8bcCM7EFoO8FyH8XK3t7G5hQAeK+i4tq+veT9M=
