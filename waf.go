@@ -143,7 +143,7 @@ type WAF struct {
 // NewTransaction Creates a new initialized transaction for this WAF instance
 func (w *WAF) NewTransaction(ctx context.Context) *Transaction {
 	tx := transactionPool.Get().(*Transaction)
-	tx.ID = utils.SafeRandom(19)
+	tx.ID = utils.RandomString(19)
 	tx.MatchedRules = []types.MatchedRule{}
 	tx.Interruption = nil
 	tx.Collections = [types.VariablesCount]collection.Collection{}

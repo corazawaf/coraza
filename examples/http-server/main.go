@@ -30,6 +30,7 @@ func main() {
 
 func setupCoraza() error {
 	waf = coraza.NewWAF()
+	waf.SetDebugLogLevel(9)
 	seclang := seclang.NewParser(waf)
 	if err := seclang.FromString(`
 		# This is a comment
@@ -44,8 +45,8 @@ func setupCoraza() error {
 }
 
 func corazaRequestHandler(h http.Handler) http.Handler {
-	tx := waf.NewTransaction(context.Background())
 	fn := func(w http.ResponseWriter, r *http.Request) {
+		tx := waf.NewTransaction(context.Background())
 		defer func() {
 			// We run phase 5 rules and create audit logs (if enabled)
 			tx.ProcessLogging()

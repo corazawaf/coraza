@@ -23,22 +23,22 @@ import (
 	"github.com/corazawaf/coraza/v3/seclang"
 )
 
-var crspath = ""
+var crspath string
 
 func init() {
 	fmt.Println("Preparing CRS...")
 	crs, err := downloadCRS("32e6d80419d386a330ddaf5e60047a4a1c38a160")
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("failed to download CRS: %s", err.Error()))
 	}
-	crspath, err = os.MkdirTemp(os.TempDir(), "crs")
+	tmpPath, err := os.MkdirTemp(os.TempDir(), "crs")
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("failed to create temp folder for CRS: %s", err.Error()))
 	}
-	fmt.Println("CRS PATH: " + crspath)
-	err = unzip(crs, crspath)
+	fmt.Println("CRS PATH: " + tmpPath)
+	crspath, err = unzip(crs, tmpPath)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("failed to unzip CRS: %s", err.Error()))
 	}
 }
 
@@ -63,10 +63,9 @@ func BenchmarkCRSCompilation(b *testing.B) {
 }
 
 func BenchmarkCRSSimpleGET(b *testing.B) {
-	waf, err := crsWAF()
-	if err != nil {
-		b.Error(err)
-	}
+	waf := crsWAF(b)
+
+	b.ResetTimer() // only benchmark execution, not compilation
 	for i := 0; i < b.N; i++ {
 		tx := waf.NewTransaction(context.Background())
 		tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 8080)
@@ -91,10 +90,9 @@ func BenchmarkCRSSimpleGET(b *testing.B) {
 }
 
 func BenchmarkCRSSimplePOST(b *testing.B) {
-	waf, err := crsWAF()
-	if err != nil {
-		b.Error(err)
-	}
+	waf := crsWAF(b)
+
+	b.ResetTimer() // only benchmark execution, not compilation
 	for i := 0; i < b.N; i++ {
 		tx := waf.NewTransaction(context.Background())
 		tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 8080)
@@ -122,7 +120,8 @@ func BenchmarkCRSSimplePOST(b *testing.B) {
 	}
 }
 
-func crsWAF() (*coraza.WAF, error) {
+func crsWAF(t testing.TB) *coraza.WAF {
+	t.Helper()
 	files := []string{
 		"../coraza.conf-recommended",
 		path.Join(crspath, "crs-setup.conf.example"),
@@ -132,10 +131,10 @@ func crsWAF() (*coraza.WAF, error) {
 	parser := seclang.NewParser(waf)
 	for _, f := range files {
 		if err := parser.FromFile(f); err != nil {
-			return nil, err
+			t.Fatal(err)
 		}
 	}
-	return waf, nil
+	return waf
 }
 func downloadCRS(version string) (string, error) {
 	uri := fmt.Sprintf("https://github.com/coreruleset/coreruleset/archive/%s.zip", version)
@@ -158,50 +157,60 @@ func downloadCRS(version string) (string, error) {
 	return tmpfile.Name(), nil
 }
 
-func unzip(file string, dst string) error {
+func unzip(file string, dst string) (string, error) {
 	archive, err := zip.OpenReader(file)
 	if err != nil {
 		panic(err)
 	}
 	defer archive.Close()
 
+	crspath = dst
 	for i, f := range archive.File {
 		// we strip the first directory from f.Name
 		filePath := filepath.Join(dst, f.Name)
 		if i == 0 {
 			// get file basename
-			crspath = path.Join(crspath, filepath.Base(filePath))
+			crspath = path.Join(dst, filepath.Base(filePath))
 		}
 
 		if !strings.HasPrefix(filePath, filepath.Clean(dst)+string(os.PathSeparator)) {
-			return fmt.Errorf("%s: illegal file path", filePath)
-		}
-		if f.FileInfo().IsDir() {
-			if err := os.MkdirAll(filePath, os.ModePerm); err != nil {
-				return err
-			}
-			continue
+			return "", fmt.Errorf("%s: illegal file path", filePath)
 		}
 
-		if err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
-			return err
-		}
-
-		dstFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
-		if err != nil {
-			return err
-		}
-		defer dstFile.Close()
-
-		fileInArchive, err := f.Open()
-		if err != nil {
-			return err
-		}
-		defer fileInArchive.Close()
-
-		if _, err := io.Copy(dstFile, fileInArchive); err != nil {
-			return err
+		if err := unzipFile(filePath, f); err != nil {
+			return "", err
 		}
 	}
+	return crspath, nil
+}
+
+func unzipFile(filePath string, f *zip.File) error {
+	if f.FileInfo().IsDir() {
+		if err := os.MkdirAll(filePath, os.ModePerm); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
+		return err
+	}
+
+	dstFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+	if err != nil {
+		return err
+	}
+	defer dstFile.Close()
+
+	fileInArchive, err := f.Open()
+	if err != nil {
+		return err
+	}
+	defer fileInArchive.Close()
+
+	if _, err := io.Copy(dstFile, fileInArchive); err != nil {
+		return err
+	}
+
 	return nil
 }
