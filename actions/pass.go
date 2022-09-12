@@ -4,30 +4,29 @@
 package actions
 
 import (
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type passFn struct {
 }
 
-func (a *passFn) Init(r *corazawaf.Rule, data string) error {
+func (a *passFn) Init(r rules.Rule, data string) error {
 	return nil
 }
 
-func (a *passFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
+func (a *passFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
 	// Not evaluated
 }
 
-func (a *passFn) Type() types.RuleActionType {
-	return types.ActionTypeDisruptive
+func (a *passFn) Type() rules.ActionType {
+	return rules.ActionTypeDisruptive
 }
 
-func pass() corazawaf.RuleAction {
+func pass() rules.Action {
 	return &passFn{}
 }
 
 var (
-	_ corazawaf.RuleAction = &passFn{}
-	_ ruleActionWrapper    = pass
+	_ rules.Action      = &passFn{}
+	_ ruleActionWrapper = pass
 )

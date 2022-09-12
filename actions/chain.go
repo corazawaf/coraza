@@ -5,29 +5,30 @@ package actions
 
 import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type chainFn struct{}
 
-func (a *chainFn) Init(r *corazawaf.Rule, b1 string) error {
-	r.HasChain = true
+func (a *chainFn) Init(r rules.Rule, b1 string) error {
+	// TODO(anuraaga): Confirm this is internal implementation detail
+	r.(*corazawaf.Rule).HasChain = true
 	return nil
 }
 
-func (a *chainFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
+func (a *chainFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
 	// Not evaluated
 }
 
-func (a *chainFn) Type() types.RuleActionType {
-	return types.ActionTypeFlow
+func (a *chainFn) Type() rules.ActionType {
+	return rules.ActionTypeFlow
 }
 
-func chain() corazawaf.RuleAction {
+func chain() rules.Action {
 	return &chainFn{}
 }
 
 var (
-	_ corazawaf.RuleAction = &chainFn{}
-	_ ruleActionWrapper    = chain
+	_ rules.Action      = &chainFn{}
+	_ ruleActionWrapper = chain
 )

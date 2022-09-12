@@ -5,31 +5,34 @@ package actions
 
 import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type nologFn struct {
 }
 
-func (a *nologFn) Init(r *corazawaf.Rule, data string) error {
-	r.Log = false
-	r.Audit = false
+func (a *nologFn) Init(r rules.Rule, data string) error {
+	// TODO(anuraaga): Confirm this is internal implementation detail
+	r.(*corazawaf.Rule).Log = false
+	r.(*corazawaf.Rule).Audit = false
 	return nil
 }
 
-func (a *nologFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
-	r.Audit = false
+func (a *nologFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
+	// TODO(anuraaga): Confirm this is internal implementation detail
+	// TODO(anuraaga): Confirm this is actually needed.
+	r.(*corazawaf.Rule).Audit = false
 }
 
-func (a *nologFn) Type() types.RuleActionType {
-	return types.ActionTypeNondisruptive
+func (a *nologFn) Type() rules.ActionType {
+	return rules.ActionTypeNondisruptive
 }
 
-func nolog() corazawaf.RuleAction {
+func nolog() rules.Action {
 	return &nologFn{}
 }
 
 var (
-	_ corazawaf.RuleAction = &nologFn{}
-	_ ruleActionWrapper    = nolog
+	_ rules.Action      = &nologFn{}
+	_ ruleActionWrapper = nolog
 )

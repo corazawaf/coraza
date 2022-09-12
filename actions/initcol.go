@@ -6,8 +6,7 @@ package actions
 import (
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 // Initializes a persistent collection and add the data to the standard collections coraza.
@@ -17,7 +16,7 @@ type initcolFn struct {
 	key        string
 }
 
-func (a *initcolFn) Init(r *corazawaf.Rule, data string) error {
+func (a *initcolFn) Init(r rules.Rule, data string) error {
 	kv := strings.SplitN(data, "=", 2)
 	a.collection = kv[0]
 	a.key = kv[1]
@@ -25,7 +24,7 @@ func (a *initcolFn) Init(r *corazawaf.Rule, data string) error {
 	return nil
 }
 
-func (a *initcolFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
+func (a *initcolFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
 	// tx.WAF.Logger.Error("initcol was used but it's not supported", zap.Int("rule", r.Id))
 	/*
 		key := tx.MacroExpansion(a.key)
@@ -49,15 +48,15 @@ func (a *initcolFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
 	*/
 }
 
-func (a *initcolFn) Type() types.RuleActionType {
-	return types.ActionTypeNondisruptive
+func (a *initcolFn) Type() rules.ActionType {
+	return rules.ActionTypeNondisruptive
 }
 
-func initcol() corazawaf.RuleAction {
+func initcol() rules.Action {
 	return &initcolFn{}
 }
 
 var (
-	_ corazawaf.RuleAction = &initcolFn{}
-	_ ruleActionWrapper    = initcol
+	_ rules.Action      = &initcolFn{}
+	_ ruleActionWrapper = initcol
 )

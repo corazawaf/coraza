@@ -5,12 +5,14 @@ package corazawaf
 
 import (
 	"testing"
+
+	"github.com/corazawaf/coraza/v3/macro"
 )
 
 func TestRG(t *testing.T) {
 	r := NewRule()
-	macroMsg, _ := NewMacro("test")
-	r.Msg = *macroMsg
+	macroMsg, _ := macro.NewMacro("test")
+	r.Msg = macroMsg
 	r.ID = 1
 	r.Tags = []string{
 		"test",

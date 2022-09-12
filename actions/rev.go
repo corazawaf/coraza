@@ -5,30 +5,31 @@ package actions
 
 import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type revFn struct {
 }
 
-func (a *revFn) Init(r *corazawaf.Rule, data string) error {
-	r.Rev = data
+func (a *revFn) Init(r rules.Rule, data string) error {
+	// TODO(anuraaga): Confirm this is internal implementation detail
+	r.(*corazawaf.Rule).Rev = data
 	return nil
 }
 
-func (a *revFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
+func (a *revFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
 	// Not evaluated
 }
 
-func (a *revFn) Type() types.RuleActionType {
-	return types.ActionTypeMetadata
+func (a *revFn) Type() rules.ActionType {
+	return rules.ActionTypeMetadata
 }
 
-func rev() corazawaf.RuleAction {
+func rev() rules.Action {
 	return &revFn{}
 }
 
 var (
-	_ corazawaf.RuleAction = &revFn{}
-	_ ruleActionWrapper    = rev
+	_ rules.Action      = &revFn{}
+	_ ruleActionWrapper = rev
 )

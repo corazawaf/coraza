@@ -5,29 +5,30 @@ package actions
 
 import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type noauditlogFn struct {
 }
 
-func (a *noauditlogFn) Init(r *corazawaf.Rule, data string) error {
-	r.Audit = false
+func (a *noauditlogFn) Init(r rules.Rule, data string) error {
+	// TODO(anuraaga): Confirm this is internal implementation detail
+	r.(*corazawaf.Rule).Audit = false
 	return nil
 }
 
-func (a *noauditlogFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
+func (a *noauditlogFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
 }
 
-func (a *noauditlogFn) Type() types.RuleActionType {
-	return types.ActionTypeNondisruptive
+func (a *noauditlogFn) Type() rules.ActionType {
+	return rules.ActionTypeNondisruptive
 }
 
-func noauditlog() corazawaf.RuleAction {
+func noauditlog() rules.Action {
 	return &noauditlogFn{}
 }
 
 var (
-	_ corazawaf.RuleAction = &noauditlogFn{}
-	_ ruleActionWrapper    = noauditlog
+	_ rules.Action      = &noauditlogFn{}
+	_ ruleActionWrapper = noauditlog
 )

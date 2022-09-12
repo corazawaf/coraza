@@ -4,30 +4,29 @@
 package actions
 
 import (
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type execFn struct {
 }
 
-func (a *execFn) Init(r *corazawaf.Rule, data string) error {
+func (a *execFn) Init(r rules.Rule, data string) error {
 	return nil
 }
 
-func (a *execFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
+func (a *execFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
 	// Not implemented
 }
 
-func (a *execFn) Type() types.RuleActionType {
-	return types.ActionTypeNondisruptive
+func (a *execFn) Type() rules.ActionType {
+	return rules.ActionTypeNondisruptive
 }
 
-func exec() corazawaf.RuleAction {
+func exec() rules.Action {
 	return &execFn{}
 }
 
 var (
-	_ corazawaf.RuleAction = &execFn{}
-	_ ruleActionWrapper    = exec
+	_ rules.Action      = &execFn{}
+	_ ruleActionWrapper = exec
 )

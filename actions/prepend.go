@@ -7,23 +7,27 @@ import (
 	"io"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/macro"
+	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 type prependFn struct {
-	data corazawaf.Macro
+	data macro.Macro
 }
 
-func (a *prependFn) Init(r *corazawaf.Rule, data string) error {
-	macro, err := corazawaf.NewMacro(data)
+func (a *prependFn) Init(r rules.Rule, data string) error {
+	m, err := macro.NewMacro(data)
 	if err != nil {
 		return err
 	}
-	a.data = *macro
+	a.data = m
 	return nil
 }
 
-func (a *prependFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
+func (a *prependFn) Evaluate(r rules.Rule, txS rules.TransactionState) {
+	// TODO(anuraaga): This is quite complicated. Evaluate whether plugin API needs to support this.
+	tx := txS.(*corazawaf.Transaction)
 	if !tx.WAF.ContentInjection {
 		tx.WAF.Logger.Debug("append rejected because of ContentInjection")
 		return
@@ -51,15 +55,15 @@ func (a *prependFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
 	// Maybe in the future we could add the prepend function to the BodyBuffer
 }
 
-func (a *prependFn) Type() types.RuleActionType {
-	return types.ActionTypeNondisruptive
+func (a *prependFn) Type() rules.ActionType {
+	return rules.ActionTypeNondisruptive
 }
 
-func prepend() corazawaf.RuleAction {
+func prepend() rules.Action {
 	return &prependFn{}
 }
 
 var (
-	_ corazawaf.RuleAction = &prependFn{}
-	_ ruleActionWrapper    = prepend
+	_ rules.Action      = &prependFn{}
+	_ ruleActionWrapper = prepend
 )

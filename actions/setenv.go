@@ -8,49 +8,49 @@ import (
 	"os"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/macro"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type setenvFn struct {
 	key   string
-	value corazawaf.Macro
+	value macro.Macro
 }
 
-func (a *setenvFn) Init(r *corazawaf.Rule, data string) error {
+func (a *setenvFn) Init(r rules.Rule, data string) error {
 	spl := strings.SplitN(data, "=", 2)
 	if len(spl) != 2 {
 		return fmt.Errorf("invalid key value for setvar")
 	}
 	a.key = spl[0]
-	macro, err := corazawaf.NewMacro(spl[1])
+	m, err := macro.NewMacro(spl[1])
 	if err != nil {
 		return err
 	}
-	a.value = *macro
+	a.value = m
 	return nil
 }
 
-func (a *setenvFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
+func (a *setenvFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
 	v := a.value.Expand(tx)
 	// set env variable
 	if err := os.Setenv(a.key, v); err != nil {
-		tx.WAF.Logger.Error("[%s] Error setting env variable for rule %d: %s", tx.ID, r.ID, err.Error())
+		tx.DebugLogger().Error("[%s] Error setting env variable for rule %d: %s", tx.IDString(), r.IDString(), err.Error())
 	}
 	// TODO is this ok?
-	tx.Variables.Env.Set(a.key, []string{v})
+	tx.TXVariables().GetEnv().Set(a.key, []string{v})
 
 }
 
-func (a *setenvFn) Type() types.RuleActionType {
-	return types.ActionTypeNondisruptive
+func (a *setenvFn) Type() rules.ActionType {
+	return rules.ActionTypeNondisruptive
 }
 
-func setenv() corazawaf.RuleAction {
+func setenv() rules.Action {
 	return &setenvFn{}
 }
 
 var (
-	_ corazawaf.RuleAction = &setenvFn{}
-	_ ruleActionWrapper    = setenv
+	_ rules.Action      = &setenvFn{}
+	_ ruleActionWrapper = setenv
 )

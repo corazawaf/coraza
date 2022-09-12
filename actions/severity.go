@@ -5,34 +5,36 @@ package actions
 
 import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 type severityFn struct {
 }
 
-func (a *severityFn) Init(r *corazawaf.Rule, data string) error {
+func (a *severityFn) Init(r rules.Rule, data string) error {
 	sev, err := types.ParseRuleSeverity(data)
 	if err != nil {
 		return err
 	}
-	r.Severity = sev
+	// TODO(anuraaga): Confirm this is internal implementation detail
+	r.(*corazawaf.Rule).Severity = sev
 	return nil
 }
 
-func (a *severityFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
+func (a *severityFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
 	// Not evaluated
 }
 
-func (a *severityFn) Type() types.RuleActionType {
-	return types.ActionTypeMetadata
+func (a *severityFn) Type() rules.ActionType {
+	return rules.ActionTypeMetadata
 }
 
-func severity() corazawaf.RuleAction {
+func severity() rules.Action {
 	return &severityFn{}
 }
 
 var (
-	_ corazawaf.RuleAction = &severityFn{}
-	_ ruleActionWrapper    = severity
+	_ rules.Action      = &severityFn{}
+	_ ruleActionWrapper = severity
 )

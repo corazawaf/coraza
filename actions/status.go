@@ -7,33 +7,34 @@ import (
 	"strconv"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type statusFn struct {
 }
 
-func (a *statusFn) Init(r *corazawaf.Rule, b1 string) error {
+func (a *statusFn) Init(r rules.Rule, b1 string) error {
 	status, err := strconv.Atoi(b1)
 	if err != nil {
 		return err
 	}
-	r.DisruptiveStatus = status
+	// TODO(anuraaga): Confirm this is internal implementation detail
+	r.(*corazawaf.Rule).DisruptiveStatus = status
 	return nil
 }
 
-func (a *statusFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
+func (a *statusFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
 }
 
-func (a *statusFn) Type() types.RuleActionType {
-	return types.ActionTypeData
+func (a *statusFn) Type() rules.ActionType {
+	return rules.ActionTypeData
 }
 
-func status() corazawaf.RuleAction {
+func status() rules.Action {
 	return &statusFn{}
 }
 
 var (
-	_ corazawaf.RuleAction = &statusFn{}
-	_ ruleActionWrapper    = status
+	_ rules.Action      = &statusFn{}
+	_ ruleActionWrapper = status
 )

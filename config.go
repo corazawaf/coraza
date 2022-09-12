@@ -23,7 +23,7 @@ type WAFConfig interface {
 	WithRequestBodyAccess(config RequestBodyConfig) WAFConfig
 	WithResponseBodyAccess(config ResponseBodyConfig) WAFConfig
 
-	WithDebugLogger(logger corazawaf.DebugLogger) WAFConfig
+	WithDebugLogger(logger loggers.DebugLogger) WAFConfig
 	WithErrorLogger(logger corazawaf.ErrorLogCallback) WAFConfig
 
 	WithFSRoot(fs fs.FS) WAFConfig
@@ -73,7 +73,7 @@ type wafConfig struct {
 	contentInjection bool
 	requestBody      *requestBodyConfig
 	responseBody     *responseBodyConfig
-	debugLogger      corazawaf.DebugLogger
+	debugLogger      loggers.DebugLogger
 	errorLogger      corazawaf.ErrorLogCallback
 	fsRoot           fs.FS
 }
@@ -120,7 +120,7 @@ func (c *wafConfig) WithResponseBodyAccess(config ResponseBodyConfig) WAFConfig 
 	return ret
 }
 
-func (c *wafConfig) WithDebugLogger(logger corazawaf.DebugLogger) WAFConfig {
+func (c *wafConfig) WithDebugLogger(logger loggers.DebugLogger) WAFConfig {
 	ret := c.clone()
 	ret.debugLogger = logger
 	return ret

@@ -132,7 +132,7 @@ type WAF struct {
 	ProducerConnectorVersion string
 
 	// Used for the debug logger
-	Logger DebugLogger
+	Logger loggers.DebugLogger
 
 	ErrorLogCb ErrorLogCallback
 
@@ -432,7 +432,7 @@ func (w *WAF) SetDebugLogPath(path string) error {
 func NewWAF() *WAF {
 	logger := &stdDebugLogger{
 		logger: &log.Logger{},
-		Level:  LogLevelInfo,
+		Level:  loggers.LogLevelInfo,
 	}
 	logWriter, err := loggers.GetLogWriter("serial")
 	if err != nil {
@@ -469,7 +469,7 @@ func NewWAF() *WAF {
 // SetDebugLogLevel changes the debug level of the WAF instance
 func (w *WAF) SetDebugLogLevel(lvl int) error {
 	// setLevel is concurrent safe
-	w.Logger.SetLevel(LogLevel(lvl))
+	w.Logger.SetLevel(loggers.LogLevel(lvl))
 	return nil
 }
 

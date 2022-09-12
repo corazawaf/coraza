@@ -1,15 +1,31 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package corazawaf
+package macro
 
 import (
 	"fmt"
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
+
+type Macro interface {
+	Expand(tx rules.TransactionState) string
+	String() string
+}
+
+func NewMacro(data string) (Macro, error) {
+	macro := &macro{
+		tokens: []macroToken{},
+	}
+	if err := macro.compile(data); err != nil {
+		return nil, err
+	}
+	return macro, nil
+}
 
 type macroToken struct {
 	text     string
@@ -17,26 +33,26 @@ type macroToken struct {
 	key      string
 }
 
-// Macro is used to create tokenized strings that can be
+// macro is used to create tokenized strings that can be
 // "expanded" at high speed and concurrent-safe.
-// A Macro contains tokens for strings and expansions
+// A macro contains tokens for strings and expansions
 // For example: some string %{tx.var} some string
 // The previous example would create 3 tokens:
 // String token: some string
 // Variable token: Variable: TX, key: var
 // String token: some string
-type Macro struct {
+type macro struct {
 	original string
 	tokens   []macroToken
 }
 
 // Expand the pre-compiled macro expression into a string
-func (m *Macro) Expand(tx *Transaction) string {
+func (m *macro) Expand(tx rules.TransactionState) string {
 	res := strings.Builder{}
 	for _, token := range m.tokens {
 		// now we place the in the index
 		if token.variable != nil {
-			switch col := tx.Collections[*token.variable].(type) {
+			switch col := tx.Collection(*token.variable).(type) {
 			case *collection.Map:
 				if c := col.Get(token.key); len(c) > 0 {
 					res.WriteString(c[0])
@@ -65,16 +81,16 @@ func (m *Macro) Expand(tx *Transaction) string {
 	return res.String()
 }
 
-// Compile is used to parse the input and generate the corresponding token
+// compile is used to parse the input and generate the corresponding token
 // Example input: %{var.foo} and %{var.bar}
 // expected result:
 // [0] macroToken{text: "%{var.foo}", variable: &variables.Var, key: "foo"},
 // [1] macroToken{text: " and ", variable: nil, key: ""}
 // [2] macroToken{text: "%{var.bar}", variable: &variables.Var, key: "bar"}
-func (m *Macro) Compile(input string) error {
+func (m *macro) compile(input string) error {
 	currentToken := strings.Builder{}
 	m.original = input
-	isMacro := false
+	ismacro := false
 	for i := 0; i < len(input); i++ {
 		c := input[i]
 		if c == '%' && (i <= len(input) && input[i+1] == '{') {
@@ -88,14 +104,14 @@ func (m *Macro) Compile(input string) error {
 				})
 			}
 			currentToken.Reset()
-			isMacro = true
+			ismacro = true
 			i++
 			continue
 		}
-		if isMacro {
+		if ismacro {
 			if c == '}' {
 				// we close a macro
-				isMacro = false
+				ismacro = false
 				spl := strings.SplitN(currentToken.String(), ".", 2)
 				key := ""
 				if len(spl) == 2 {
@@ -134,22 +150,11 @@ func (m *Macro) Compile(input string) error {
 }
 
 // String returns the original string
-func (m *Macro) String() string {
+func (m *macro) String() string {
 	return m.original
 }
 
 // IsExpandable return true if there are macro expanadable tokens
-func (m *Macro) IsExpandable() bool {
+func (m *macro) IsExpandable() bool {
 	return len(m.tokens) > 1
-}
-
-// NewMacro creates a new macro
-func NewMacro(data string) (*Macro, error) {
-	macro := &Macro{
-		tokens: []macroToken{},
-	}
-	if err := macro.Compile(data); err != nil {
-		return nil, err
-	}
-	return macro, nil
 }

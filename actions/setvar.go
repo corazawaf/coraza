@@ -9,19 +9,19 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/macro"
+	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 type setvarFn struct {
-	key        corazawaf.Macro
-	value      corazawaf.Macro
+	key        macro.Macro
+	value      macro.Macro
 	collection variables.RuleVariable
 	isRemove   bool
 }
 
-func (a *setvarFn) Init(r *corazawaf.Rule, data string) error {
+func (a *setvarFn) Init(r rules.Rule, data string) error {
 	if data == "" {
 		return fmt.Errorf("setvar requires arguments")
 	}
@@ -40,35 +40,35 @@ func (a *setvarFn) Init(r *corazawaf.Rule, data string) error {
 		return err
 	}
 	if len(splcol) == 2 {
-		macro, err := corazawaf.NewMacro(splcol[1])
+		macro, err := macro.NewMacro(splcol[1])
 		if err != nil {
 			return err
 		}
-		a.key = *macro
+		a.key = macro
 	}
 	if len(spl) == 2 {
-		macro, err := corazawaf.NewMacro(spl[1])
+		macro, err := macro.NewMacro(spl[1])
 		if err != nil {
 			return err
 		}
-		a.value = *macro
+		a.value = macro
 	}
 	return nil
 }
 
-func (a *setvarFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
+func (a *setvarFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
 	key := a.key.Expand(tx)
 	value := a.value.Expand(tx)
-	tx.WAF.Logger.Debug("[%s] Setting var %q to %q by rule %d", tx.ID, key, value, r.ID)
+	tx.DebugLogger().Debug("[%s] Setting var %q to %q by rule %d", tx.IDString(), key, value, r.IDString())
 	a.evaluateTxCollection(r, tx, strings.ToLower(key), value)
 }
 
-func (a *setvarFn) Type() types.RuleActionType {
-	return types.ActionTypeNondisruptive
+func (a *setvarFn) Type() rules.ActionType {
+	return rules.ActionTypeNondisruptive
 }
 
-func (a *setvarFn) evaluateTxCollection(r *corazawaf.Rule, tx *corazawaf.Transaction, key string, value string) {
-	col := (tx.Collections[a.collection]).(*collection.Map)
+func (a *setvarFn) evaluateTxCollection(r rules.Rule, tx rules.TransactionState, key string, value string) {
+	col := (tx.Collection(a.collection)).(*collection.Map)
 	if col == nil {
 		// fmt.Println("Invalid Collection " + a.Collection) LOG error?
 		return
@@ -93,7 +93,7 @@ func (a *setvarFn) evaluateTxCollection(r *corazawaf.Rule, tx *corazawaf.Transac
 		if len(value) > 1 {
 			sum, err = strconv.Atoi(value[1:])
 			if err != nil {
-				tx.WAF.Logger.Error("[%s] Invalid value for setvar %q on rule %d", tx.ID, value, r.ID)
+				tx.DebugLogger().Error("[%s] Invalid value for setvar %q on rule %d", tx.IDString(), value, r.IDString())
 				return
 			}
 		}
@@ -101,7 +101,7 @@ func (a *setvarFn) evaluateTxCollection(r *corazawaf.Rule, tx *corazawaf.Transac
 		if res != "" {
 			val, err = strconv.Atoi(res)
 			if err != nil {
-				tx.WAF.Logger.Error("[%s] Invalid value for setvar %q on rule %d", tx.ID, res, r.ID)
+				tx.DebugLogger().Error("[%s] Invalid value for setvar %q on rule %d", tx.IDString(), res, r.IDString())
 				return
 			}
 		}
@@ -118,11 +118,11 @@ func (a *setvarFn) evaluateTxCollection(r *corazawaf.Rule, tx *corazawaf.Transac
 	}
 }
 
-func setvar() corazawaf.RuleAction {
+func setvar() rules.Action {
 	return &setvarFn{}
 }
 
 var (
-	_ corazawaf.RuleAction = &setvarFn{}
-	_ ruleActionWrapper    = setvar
+	_ rules.Action      = &setvarFn{}
+	_ ruleActionWrapper = setvar
 )

@@ -8,13 +8,13 @@ import (
 	"strconv"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type idFn struct {
 }
 
-func (a *idFn) Init(r *corazawaf.Rule, data string) error {
+func (a *idFn) Init(r rules.Rule, data string) error {
 	if data == "" {
 		return fmt.Errorf("id action requires a parameter")
 	}
@@ -22,29 +22,31 @@ func (a *idFn) Init(r *corazawaf.Rule, data string) error {
 	if err != nil {
 		return fmt.Errorf("invalid rule id %s", data)
 	}
-	r.ID = int(i)
-	if r.ID < 0 {
-		return fmt.Errorf("rule id (%d) cannot be negative", r.ID)
+	// TODO(anuraaga): Confirm this is internal implementation detail
+	rInt := r.(*corazawaf.Rule)
+	rInt.ID = int(i)
+	if rInt.ID < 0 {
+		return fmt.Errorf("rule id (%d) cannot be negative", rInt.ID)
 	}
-	if r.ID == 0 {
-		return fmt.Errorf("rule id (%d) cannot be zero", r.ID)
+	if rInt.ID == 0 {
+		return fmt.Errorf("rule id (%d) cannot be zero", rInt.ID)
 	}
 	return nil
 }
 
-func (a *idFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
+func (a *idFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
 	// Not evaluated
 }
 
-func (a *idFn) Type() types.RuleActionType {
-	return types.ActionTypeMetadata
+func (a *idFn) Type() rules.ActionType {
+	return rules.ActionTypeMetadata
 }
 
-func id() corazawaf.RuleAction {
+func id() rules.Action {
 	return &idFn{}
 }
 
 var (
-	_ corazawaf.RuleAction = &idFn{}
-	_ ruleActionWrapper    = id
+	_ rules.Action      = &idFn{}
+	_ ruleActionWrapper = id
 )

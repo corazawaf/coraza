@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3/macro"
+	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -30,7 +32,7 @@ type RuleAction interface {
 	Evaluate(*Rule, *Transaction)
 	// Type will return the rule type, it's used by Evaluate
 	// to choose when to evaluate each action
-	Type() types.RuleActionType
+	Type() rules.ActionType
 }
 
 // ruleActionParams is used as a wrapper to store the action name
@@ -43,7 +45,7 @@ type ruleActionParams struct {
 	Param string
 
 	// The action to be executed
-	Function RuleAction
+	Function rules.Action
 }
 
 // RuleOperatorOptions is used to store the options for a rule operator
@@ -167,10 +169,10 @@ type Rule struct {
 	// Message text to be macro expanded and logged
 	// In future versions we might use a special type of string that
 	// supports cached macro expansions. For performance
-	Msg Macro
+	Msg macro.Macro
 
 	// Rule logdata
-	LogData Macro
+	LogData macro.Macro
 
 	// If true, triggering this rule write to the error log
 	Log bool
@@ -185,6 +187,18 @@ type Rule struct {
 	Disruptive bool
 
 	HasChain bool
+}
+
+func (r *Rule) IDString() int {
+	return r.ID
+}
+
+func (r *Rule) ParentIDString() int {
+	return r.ParentID
+}
+
+func (r *Rule) Status() int {
+	return r.DisruptiveStatus
 }
 
 // Evaluate will evaluate the current rule for the indicated transaction
@@ -205,9 +219,13 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 	defer tx.WAF.Logger.Debug("[%s] [%d] Finish evaluating rule %d", tx.ID, rid, r.ID)
 	ruleCol := tx.Variables.Rule
 	ruleCol.SetIndex("id", 0, strconv.Itoa(rid))
-	ruleCol.SetIndex("msg", 0, r.Msg.String())
+	if r.Msg != nil {
+		ruleCol.SetIndex("msg", 0, r.Msg.String())
+	}
 	ruleCol.SetIndex("rev", 0, r.Rev)
-	ruleCol.SetIndex("logdata", 0, r.LogData.String())
+	if r.LogData != nil {
+		ruleCol.SetIndex("logdata", 0, r.LogData.String())
+	}
 	ruleCol.SetIndex("severity", 0, r.Severity.String())
 	// SecMark and SecAction uses nil operator
 	if r.operator == nil {
@@ -259,8 +277,12 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 						// Set the txn variables for expansions before usage
 						r.matchVariable(tx, mr)
 
-						mr.Message = r.Msg.Expand(tx)
-						mr.Data = r.LogData.Expand(tx)
+						if r.Msg != nil {
+							mr.Message = r.Msg.Expand(tx)
+						}
+						if r.LogData != nil {
+							mr.Data = r.LogData.Expand(tx)
+						}
 						matchedValues = append(matchedValues, mr)
 
 						tx.WAF.Logger.Debug("[%s] [%d] Evaluating operator \"%s %s\" against %q: MATCH",
@@ -305,7 +327,7 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 		if tx.RuleEngine != types.RuleEngineDetectionOnly {
 			tx.WAF.Logger.Debug("[%s] [%d] Disrupting transaction by rule %d", tx.ID, rid, r.ID)
 			for _, a := range r.actions {
-				if a.Function.Type() == types.ActionTypeDisruptive || a.Function.Type() == types.ActionTypeFlow {
+				if a.Function.Type() == rules.ActionTypeDisruptive || a.Function.Type() == rules.ActionTypeFlow {
 					tx.WAF.Logger.Debug("[%s] [%d] Evaluating action %s for rule %d", tx.ID, rid, a.Name, r.ID)
 					a.Function.Evaluate(r, tx)
 				}
@@ -333,7 +355,7 @@ func (r *Rule) matchVariable(tx *Transaction, m types.MatchData) {
 	// We run non-disruptive actions even if there is no chain match
 	tx.matchVariable(m)
 	for _, a := range r.actions {
-		if a.Function.Type() == types.ActionTypeNondisruptive {
+		if a.Function.Type() == rules.ActionTypeNondisruptive {
 			tx.WAF.Logger.Debug("[%s] [%d] Evaluating action %s for rule %d", tx.ID, rid, a.Name, r.ID)
 			a.Function.Evaluate(r, tx)
 		}
@@ -341,7 +363,7 @@ func (r *Rule) matchVariable(tx *Transaction, m types.MatchData) {
 }
 
 // AddAction adds an action to the rule
-func (r *Rule) AddAction(name string, action RuleAction) error {
+func (r *Rule) AddAction(name string, action rules.Action) error {
 	// TODO add more logic, like one persistent action per rule etc
 	r.actions = append(r.actions, ruleActionParams{
 		Name:     name,

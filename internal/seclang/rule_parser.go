@@ -15,6 +15,7 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/io"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	operators "github.com/corazawaf/coraza/v3/operators"
+	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -24,8 +25,8 @@ const defaultActionsPhase2 = "phase:2,log,auditlog,pass"
 type ruleAction struct {
 	Key   string
 	Value string
-	Atype types.RuleActionType
-	F     corazawaf.RuleAction
+	Atype rules.ActionType
+	F     rules.Action
 }
 
 // RuleParser is used to programatically create new rules using seclang formatted strings
@@ -233,7 +234,7 @@ func (p *RuleParser) ParseDefaultActions(actions string) error {
 			}
 			continue
 		}
-		if action.Atype == types.ActionTypeDisruptive {
+		if action.Atype == rules.ActionTypeDisruptive {
 			defaultDisruptive = action.Key
 		}
 	}
@@ -263,7 +264,7 @@ func (p *RuleParser) ParseActions(actions string) error {
 	}
 	// first we execute metadata rules
 	for _, a := range act {
-		if a.Atype == types.ActionTypeMetadata {
+		if a.Atype == rules.ActionTypeMetadata {
 			errs := a.F.Init(p.rule, a.Value)
 			if errs != nil {
 				return errs
@@ -280,7 +281,7 @@ func (p *RuleParser) ParseActions(actions string) error {
 
 	for _, action := range act {
 		// now we evaluate non-metadata actions
-		if action.Atype == types.ActionTypeMetadata {
+		if action.Atype == rules.ActionTypeMetadata {
 			continue
 		}
 		errs := action.F.Init(p.rule, action.Value)
@@ -493,18 +494,18 @@ func mergeActions(origin []ruleAction, defaults []ruleAction) []ruleAction {
 	res := []ruleAction{}
 	var da ruleAction // Disruptive action
 	for _, action := range defaults {
-		if action.Atype == types.ActionTypeDisruptive {
+		if action.Atype == rules.ActionTypeDisruptive {
 			da = action
 			continue
 		}
-		if action.Atype == types.ActionTypeMetadata {
+		if action.Atype == rules.ActionTypeMetadata {
 			continue
 		}
 		res = append(res, action)
 	}
 	hasDa := false
 	for _, action := range origin {
-		if action.Atype == types.ActionTypeDisruptive {
+		if action.Atype == rules.ActionTypeDisruptive {
 			if action.Key != "block" {
 				hasDa = true
 				// We add the default rule DA in case this is no block

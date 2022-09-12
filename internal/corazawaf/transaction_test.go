@@ -14,6 +14,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3/collection"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
+	"github.com/corazawaf/coraza/v3/macro"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -547,11 +548,11 @@ func makeTransaction() *Transaction {
 
 func validateMacroExpansion(tests map[string]string, tx *Transaction, t *testing.T) {
 	for k, v := range tests {
-		macro, err := NewMacro(k)
+		m, err := macro.NewMacro(k)
 		if err != nil {
 			t.Error(err)
 		}
-		res := macro.Expand(tx)
+		res := m.Expand(tx)
 		if res != v {
 			if testing.Verbose() {
 				fmt.Println(tx.Debug())
@@ -560,4 +561,33 @@ func validateMacroExpansion(tests map[string]string, tx *Transaction, t *testing
 			t.Error("Failed set transaction for " + k + ", expected " + v + ", got " + res)
 		}
 	}
+}
+
+func TestMacro(t *testing.T) {
+	tx := makeTransaction()
+	tx.Variables.TX.Set("some", []string{"secretly"})
+	m, err := macro.NewMacro("%{unique_id}")
+	if err != nil {
+		t.Error(err)
+	}
+	if m.Expand(tx) != tx.ID {
+		t.Errorf("%s != %s", m.Expand(tx), tx.ID)
+	}
+	m, err = macro.NewMacro("some complex text %{tx.some} wrapped in m")
+	if err != nil {
+		t.Error(err)
+	}
+	if m.Expand(tx) != "some complex text secretly wrapped in m" {
+		t.Errorf("failed to expand m, got %s\n%v", m.Expand(tx), m)
+	}
+
+	m, err = macro.NewMacro("some complex text %{tx.some} wrapped in m %{tx.some}")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	// TODO(anuraaga): Decouple this test from transaction implementation.
+	//if !macro.IsExpandable() || len(macro.tokens) != 4 || macro.Expand(tx) != "some complex text secretly wrapped in m secretly" {
+	//	t.Errorf("failed to parse replacements %v", macro.tokens)
+	//}
 }

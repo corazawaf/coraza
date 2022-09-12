@@ -5,33 +5,35 @@ package actions
 
 import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 type phaseFn struct{}
 
-func (a *phaseFn) Init(r *corazawaf.Rule, data string) error {
+func (a *phaseFn) Init(r rules.Rule, data string) error {
 	p, err := types.ParseRulePhase(data)
 	if err != nil {
 		return err
 	}
-	r.Phase = p
+	// TODO(anuraaga): Confirm this is internal implementation detail
+	r.(*corazawaf.Rule).Phase = p
 	return nil
 }
 
-func (a *phaseFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
+func (a *phaseFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
 	// Not evaluated
 }
 
-func (a *phaseFn) Type() types.RuleActionType {
-	return types.ActionTypeMetadata
+func (a *phaseFn) Type() rules.ActionType {
+	return rules.ActionTypeMetadata
 }
 
-func phase() corazawaf.RuleAction {
+func phase() rules.Action {
 	return &phaseFn{}
 }
 
 var (
-	_ corazawaf.RuleAction = &phaseFn{}
-	_ ruleActionWrapper    = phase
+	_ rules.Action      = &phaseFn{}
+	_ ruleActionWrapper = phase
 )

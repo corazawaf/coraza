@@ -7,32 +7,33 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type skipafterFn struct {
 	data string
 }
 
-func (a *skipafterFn) Init(r *corazawaf.Rule, data string) error {
+func (a *skipafterFn) Init(r rules.Rule, data string) error {
 	a.data = strings.Trim(data, `"`)
 	return nil
 }
 
-func (a *skipafterFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
-	tx.WAF.Logger.Debug("[%s] Starting secmarker %q", tx.ID, a.data)
-	tx.SkipAfter = a.data
+func (a *skipafterFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
+	tx.DebugLogger().Debug("[%s] Starting secmarker %q", tx.IDString(), a.data)
+	// TODO(anuraaga): Confirm this is internal implementation detail
+	tx.(*corazawaf.Transaction).SkipAfter = a.data
 }
 
-func (a *skipafterFn) Type() types.RuleActionType {
-	return types.ActionTypeFlow
+func (a *skipafterFn) Type() rules.ActionType {
+	return rules.ActionTypeFlow
 }
 
-func skipafter() corazawaf.RuleAction {
+func skipafter() rules.Action {
 	return &skipafterFn{}
 }
 
 var (
-	_ corazawaf.RuleAction = &skipafterFn{}
-	_ ruleActionWrapper    = skipafter
+	_ rules.Action      = &skipafterFn{}
+	_ ruleActionWrapper = skipafter
 )

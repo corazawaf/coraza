@@ -22,6 +22,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
+	"github.com/corazawaf/coraza/v3/macro"
 )
 
 func TestRequestExtractionSuccess(t *testing.T) {
@@ -161,11 +162,11 @@ func TestDirectiveSecAuditLog(t *testing.T) {
 		t.Errorf("failed to compile multiple chains, expected 3, got %d", c)
 	}
 	// Why is the number of matches 4
-	macro, err := corazawaf.NewMacro("%{tx.count}")
+	m, err := macro.NewMacro("%{tx.count}")
 	if err != nil {
 		t.Error(err)
 	}
-	c, _ = strconv.Atoi(macro.Expand(tx))
+	c, _ = strconv.Atoi(m.Expand(tx))
 	if c != 6 {
 		t.Errorf("Why is the number of matches %d", c)
 	}

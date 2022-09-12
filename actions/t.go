@@ -5,40 +5,41 @@ package actions
 
 import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 	transformations "github.com/corazawaf/coraza/v3/transformations"
-	"github.com/corazawaf/coraza/v3/types"
 )
 
 type tFn struct{}
 
-func (a *tFn) Init(r *corazawaf.Rule, input string) error {
+func (a *tFn) Init(r rules.Rule, input string) error {
 	// TODO there is a chance that it won't work, it requires tests
 	// none is a special hardcoded transformation, it must remove previous transformations
 	if input == "none" {
 		// remove elements
-		r.ClearTransformations()
+		// TODO(anuraaga): Confirm this is internal implementation detail
+		r.(*corazawaf.Rule).ClearTransformations()
 		return nil
 	}
 	tt, err := transformations.GetTransformation(input)
 	if err != nil {
 		return err
 	}
-	return r.AddTransformation(input, tt)
+	return r.(*corazawaf.Rule).AddTransformation(input, tt)
 }
 
-func (a *tFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
+func (a *tFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
 	// Not evaluated
 }
 
-func (a *tFn) Type() types.RuleActionType {
-	return types.ActionTypeNondisruptive
+func (a *tFn) Type() rules.ActionType {
+	return rules.ActionTypeNondisruptive
 }
 
-func t() corazawaf.RuleAction {
+func t() rules.Action {
 	return &tFn{}
 }
 
 var (
-	_ corazawaf.RuleAction = &tFn{}
-	_ ruleActionWrapper    = t
+	_ rules.Action      = &tFn{}
+	_ ruleActionWrapper = t
 )

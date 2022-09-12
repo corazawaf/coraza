@@ -6,8 +6,7 @@ package actions
 import (
 	"fmt"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 // 0 nothing, 1 phase, 2 request
@@ -15,7 +14,7 @@ type allowFn struct {
 	allow int
 }
 
-func (a *allowFn) Init(r *corazawaf.Rule, b1 string) error {
+func (a *allowFn) Init(r rules.Rule, b1 string) error {
 	switch b1 {
 	case "phase":
 		a.allow = 2 // skip current phase
@@ -29,7 +28,7 @@ func (a *allowFn) Init(r *corazawaf.Rule, b1 string) error {
 	return nil
 }
 
-func (a *allowFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
+func (a *allowFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
 	// TODO implement this:
 	/*
 		if a.allow == 1 {
@@ -42,15 +41,15 @@ func (a *allowFn) Evaluate(r *corazawaf.Rule, tx *corazawaf.Transaction) {
 	*/
 }
 
-func (a *allowFn) Type() types.RuleActionType {
-	return types.ActionTypeDisruptive
+func (a *allowFn) Type() rules.ActionType {
+	return rules.ActionTypeDisruptive
 }
 
-func allow() corazawaf.RuleAction {
+func allow() rules.Action {
 	return &allowFn{}
 }
 
 var (
-	_ corazawaf.RuleAction = (*allowFn)(nil)
-	_ ruleActionWrapper    = allow
+	_ rules.Action      = (*allowFn)(nil)
+	_ ruleActionWrapper = allow
 )
