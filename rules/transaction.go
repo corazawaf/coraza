@@ -14,7 +14,7 @@ import (
 
 type TransactionState interface {
 	// TODO(anuraaga): If only for logging, can be built into logger
-	IDString() string
+	GetID() string
 
 	TXVariables() TransactionVariables
 	Collection(idx variables.RuleVariable) collection.Collection

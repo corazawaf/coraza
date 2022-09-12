@@ -108,7 +108,7 @@ type Transaction struct {
 	Variables TransactionVariables
 }
 
-func (tx *Transaction) IDString() string {
+func (tx *Transaction) GetID() string {
 	return tx.ID
 }
 

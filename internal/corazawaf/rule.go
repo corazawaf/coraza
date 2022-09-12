@@ -189,11 +189,11 @@ type Rule struct {
 	HasChain bool
 }
 
-func (r *Rule) IDString() int {
+func (r *Rule) GetID() int {
 	return r.ID
 }
 
-func (r *Rule) ParentIDString() int {
+func (r *Rule) GetParentID() int {
 	return r.ParentID
 }
 

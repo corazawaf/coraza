@@ -4,7 +4,7 @@
 package rules
 
 type Rule interface {
-	IDString() int
-	ParentIDString() int
+	GetID() int
+	GetParentID() int
 	Status() int
 }

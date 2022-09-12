@@ -20,7 +20,7 @@ func (a *skipafterFn) Init(r rules.Rule, data string) error {
 }
 
 func (a *skipafterFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
-	tx.DebugLogger().Debug("[%s] Starting secmarker %q", tx.IDString(), a.data)
+	tx.DebugLogger().Debug("[%s] Starting secmarker %q", tx.GetID(), a.data)
 	// TODO(anuraaga): Confirm this is internal implementation detail
 	tx.(*corazawaf.Transaction).SkipAfter = a.data
 }

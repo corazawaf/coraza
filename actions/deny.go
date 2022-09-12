@@ -15,9 +15,9 @@ func (a *denyFn) Init(r rules.Rule, data string) error {
 }
 
 func (a *denyFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
-	rid := r.IDString()
+	rid := r.GetID()
 	if rid == 0 {
-		rid = r.ParentIDString()
+		rid = r.GetParentID()
 	}
 	tx.Interrupt(&types.Interruption{
 		Status: r.Status(),
