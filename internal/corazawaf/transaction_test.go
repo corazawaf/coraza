@@ -581,13 +581,13 @@ func TestMacro(t *testing.T) {
 		t.Errorf("failed to expand m, got %s\n%v", m.Expand(tx), m)
 	}
 
-	m, err = macro.NewMacro("some complex text %{tx.some} wrapped in m %{tx.some}")
+	_, err = macro.NewMacro("some complex text %{tx.some} wrapped in m %{tx.some}")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	// TODO(anuraaga): Decouple this test from transaction implementation.
-	//if !macro.IsExpandable() || len(macro.tokens) != 4 || macro.Expand(tx) != "some complex text secretly wrapped in m secretly" {
-	//	t.Errorf("failed to parse replacements %v", macro.tokens)
-	//}
+	// if !macro.IsExpandable() || len(macro.tokens) != 4 || macro.Expand(tx) != "some complex text secretly wrapped in m secretly" {
+	//   t.Errorf("failed to parse replacements %v", macro.tokens)
+	// }
 }
