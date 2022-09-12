@@ -317,7 +317,7 @@ var ruleTokenRegex = regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
 // In case WithOperator is false, the rule will be parsed without operator
 // This function is created for external plugin directives
 func ParseRule(options RuleOptions) (*coraza.Rule, error) {
-	if strings.Trim(options.Data, " ") == "" {
+	if strings.TrimSpace(options.Data) == "" {
 		return nil, errors.New("empty rule")
 	}
 
@@ -342,7 +342,7 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 	actions := ""
 
 	if options.WithOperator {
-		matches := ruleTokenRegex.FindAllString(options.Data, -1)
+		matches := ruleTokenRegex.FindAllString(options.Data, 3) // we use at most second match
 		if len(matches) == 0 {
 			return nil, fmt.Errorf("invalid rule with no transformation matches: %q", options.Data)
 		}
@@ -350,9 +350,7 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 		if utils.InSlice(operator, disabledRuleOperators) {
 			return nil, fmt.Errorf("%s rule operator is disabled", operator)
 		}
-
-		rulePieces := strings.SplitN(options.Data, " ", 2)
-		vars := rulePieces[0]
+		vars, _, _ := strings.Cut(options.Data, " ")
 		err = rp.ParseVariables(vars)
 		if err != nil {
 			return nil, err
