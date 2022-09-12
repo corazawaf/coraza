@@ -67,7 +67,26 @@ func Lint() error {
 
 // Test runs all tests.
 func Test() error {
-	return sh.RunV("go", "test", "./...")
+	err := sh.RunV("go", "test", "./...")
+	if err != nil {
+		return err
+	}
+	// Iterating over examples and running their tests
+	return filepath.WalkDir("./examples/", func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() && d.Name() != "examples" {
+			cmd := exec.Command("go", "test", "./...")
+			cmd.Dir = "examples/" + d.Name()
+			out, err := cmd.Output()
+			fmt.Printf(string(out))
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // Coverage runs tests with coverage and race detector enabled.
@@ -108,7 +127,7 @@ func Check() {
 
 // BuildExamples builds all the examples
 func BuildExamples() error {
-	err := filepath.WalkDir("./examples/", func(path string, d os.DirEntry, err error) error {
+	return filepath.WalkDir("./examples/", func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -124,5 +143,4 @@ func BuildExamples() error {
 		}
 		return nil
 	})
-	return err
 }

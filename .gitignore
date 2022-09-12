@@ -6,6 +6,7 @@
 *.dylib
 .DS_Store
 .idea
+examples/http-server/http-server
 # Test binary, built with `go test -c`
 *.test
 
