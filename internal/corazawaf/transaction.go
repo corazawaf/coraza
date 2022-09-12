@@ -121,7 +121,9 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 }
 
 func (tx *Transaction) Interrupt(interruption *types.Interruption) {
-	tx.Interruption = interruption
+	if tx.RuleEngine == types.RuleEngineOn {
+		tx.Interruption = interruption
+	}
 }
 
 func (tx *Transaction) ContentInjection() bool {
