@@ -1,9 +1,6 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build !tinygo
-// +build !tinygo
-
 // Package loggers implements a set of log formatters and writers
 // for audit logging.
 //
@@ -23,73 +20,10 @@
 package loggers
 
 import (
-	"encoding/json"
 	"fmt"
-	"strings"
 
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 )
-
-// Coraza format
-func jsonFormatter(al *AuditLog) ([]byte, error) {
-	jsdata, err := json.Marshal(al)
-	if err != nil {
-		return nil, err
-	}
-	return jsdata, nil
-}
-
-// Coraza legacy json format
-func legacyJSONFormatter(al *AuditLog) ([]byte, error) {
-	reqHeaders := map[string]string{}
-	for k, v := range al.Transaction.Request.Headers {
-		reqHeaders[k] = strings.Join(v, ", ")
-	}
-	resHeaders := map[string]string{}
-	for k, v := range al.Transaction.Response.Headers {
-		resHeaders[k] = strings.Join(v, ", ")
-	}
-	messages := []string{}
-	for _, m := range al.Messages {
-		messages = append(messages, m.Message)
-	}
-	producers := []string{}
-	if conn := al.Transaction.Producer.Connector; conn != "" {
-		producers = append(producers, conn)
-	}
-	producers = append(producers, al.Transaction.Producer.Rulesets...)
-	al2 := auditLogLegacy{
-		Transaction: auditLogLegacyTransaction{
-			Time:          al.Transaction.Timestamp,
-			TransactionID: al.Transaction.ID,
-			RemoteAddress: al.Transaction.ClientIP,
-			RemotePort:    al.Transaction.ClientPort,
-			LocalAddress:  al.Transaction.HostIP,
-			LocalPort:     al.Transaction.HostPort,
-		},
-		Request: auditLogLegacyRequest{
-			RequestLine: fmt.Sprintf("%s %s %s", al.Transaction.Request.Method, al.Transaction.Request.URI, al.Transaction.Request.HTTPVersion),
-			Headers:     reqHeaders,
-		},
-		Response: auditLogLegacyResponse{
-			Status:   al.Transaction.Response.Status,
-			Protocol: al.Transaction.Response.Protocol,
-			Headers:  resHeaders,
-		},
-		AuditData: auditLogLegacyData{
-			Stopwatch:  auditLogLegacyStopwatch{},
-			Messages:   messages,
-			Producer:   producers,
-			EngineMode: al.Transaction.Producer.RuleEngine,
-		},
-	}
-
-	jsdata, err := json.Marshal(al2)
-	if err != nil {
-		return nil, err
-	}
-	return jsdata, nil
-}
 
 func nativeFormatter(al *AuditLog) ([]byte, error) {
 	boundary := utils.RandomString(10)
@@ -144,6 +78,4 @@ func nativeFormatter(al *AuditLog) ([]byte, error) {
 
 var (
 	_ LogFormatter = nativeFormatter
-	_ LogFormatter = jsonFormatter
-	_ LogFormatter = legacyJSONFormatter
 )

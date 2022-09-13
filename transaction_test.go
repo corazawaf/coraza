@@ -587,7 +587,7 @@ func TestTxProcessURI(t *testing.T) {
 
 func BenchmarkTransactionCreation(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		makeTransaction(nil)
+		makeTransaction(b)
 	}
 }
 

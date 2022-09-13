@@ -6,17 +6,21 @@ package seclang
 import (
 	"bufio"
 	"context"
+	"embed"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3"
-	engine "github.com/corazawaf/coraza/v3"
 )
 
+//go:embed testdata
+var testdata embed.FS
+
 func TestInterruption(t *testing.T) {
-	waf := engine.NewWAF()
+	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	if err := p.FromString(`SecAction "id:1,deny,log,phase:1"`); err != nil {
 		t.Error("Could not create from string")
@@ -28,7 +32,7 @@ func TestInterruption(t *testing.T) {
 }
 
 func TestDirectivesCaseInsensitive(t *testing.T) {
-	waf := engine.NewWAF()
+	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	err := p.FromString("seCwEbAppid 15")
 	if err != nil {
@@ -37,7 +41,7 @@ func TestDirectivesCaseInsensitive(t *testing.T) {
 }
 
 func TestDefaultConfigurationFile(t *testing.T) {
-	waf := engine.NewWAF()
+	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	err := p.FromFile("../coraza.conf-recommended")
 	if err != nil {
@@ -65,8 +69,8 @@ func TestHardcodedSubIncludeDirective(t *testing.T) {
 	if err := p.FromString("Include ./testdata/includes/parent.conf"); err != nil {
 		t.Error(err)
 	}
-	if waf.Rules.Count() != 3 {
-		t.Error("Expected 3 rules loaded using include directive. Found: ", waf.Rules.Count())
+	if waf.Rules.Count() != 4 {
+		t.Error("Expected 4 rules loaded using include directive. Found: ", waf.Rules.Count())
 	}
 }
 
@@ -78,8 +82,8 @@ func TestHardcodedSubIncludeDirectiveAbsolutePath(t *testing.T) {
 	if err := p.FromString("Include " + ruleFile); err != nil {
 		t.Error(err)
 	}
-	if waf.Rules.Count() != 3 {
-		t.Error("Expected 3 rules loaded using include directive. Found: ", waf.Rules.Count())
+	if waf.Rules.Count() != 4 {
+		t.Error("Expected 4 rules loaded using include directive. Found: ", waf.Rules.Count())
 	}
 }
 
@@ -148,4 +152,32 @@ func TestChains(t *testing.T) {
 			if rules[0].Chain.Chain == nil {
 				t.Error("Chain over chain not created")
 			}*/
+}
+
+func TestEmbedFS(t *testing.T) {
+	waf := coraza.NewWAF()
+	p := NewParser(waf)
+	root, err := fs.Sub(testdata, "testdata")
+	if err != nil {
+		t.Error(err)
+	}
+	p.SetRoot(root)
+	if err := p.FromString("Include includes/parent.conf"); err != nil {
+		t.Error(err)
+	}
+	if waf.Rules.Count() != 4 {
+		t.Error("Expected 4 rules loaded using include directive. Found: ", waf.Rules.Count())
+	}
+}
+
+//go:embed testdata/parserbenchmark.conf
+var parsingRule string
+
+func BenchmarkParseFromString(b *testing.B) {
+	waf := coraza.NewWAF()
+	parser := NewParser(waf)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = parser.FromString(parsingRule)
+	}
 }

@@ -85,7 +85,8 @@ func TestOperators(t *testing.T) {
 
 					opts := coraza.RuleOperatorOptions{
 						Arguments: data.Param,
-						Path:      []string{"./testdata/op"},
+						Path:      []string{"op"},
+						Root:      os.DirFS("testdata"),
 					}
 					if err := op.Init(opts); err != nil {
 						t.Error(err)

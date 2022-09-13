@@ -16,5 +16,5 @@ func init() {
 
 	RegisterLogFormatter("json", noopFormater)
 	RegisterLogFormatter("jsonlegacy", noopFormater)
-	RegisterLogFormatter("native", noopFormater)
+	RegisterLogFormatter("native", nativeFormatter)
 }

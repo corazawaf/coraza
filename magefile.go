@@ -52,6 +52,9 @@ func Lint() error {
 		return err
 	}
 
+	sh.Run("git", "stash", "-k", "-u") // stash unstagged changes so they don't interfere with git diff below
+	defer sh.Run("git", "stash", "pop")
+
 	mg.SerialDeps(Format)
 
 	if sh.Run("git", "diff", "--exit-code") != nil {

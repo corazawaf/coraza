@@ -6,11 +6,13 @@ package seclang
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"regexp"
 	"strings"
 
 	"github.com/corazawaf/coraza/v3"
 	actionsmod "github.com/corazawaf/coraza/v3/actions"
+	"github.com/corazawaf/coraza/v3/internal/io"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	operators "github.com/corazawaf/coraza/v3/operators"
 	"github.com/corazawaf/coraza/v3/types"
@@ -199,6 +201,7 @@ func (p *RuleParser) ParseOperator(operator string) error {
 			p.options.Config.Get("parser_config_dir", "").(string),
 			p.options.Config.Get("working_dir", "").(string),
 		},
+		Root: p.options.Config.Get("parser_root", io.OSFS{}).(fs.FS),
 	}
 	err = opfn.Init(opts)
 	if err != nil {
@@ -314,7 +317,7 @@ var ruleTokenRegex = regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
 // In case WithOperator is false, the rule will be parsed without operator
 // This function is created for external plugin directives
 func ParseRule(options RuleOptions) (*coraza.Rule, error) {
-	if strings.Trim(options.Data, " ") == "" {
+	if strings.TrimSpace(options.Data) == "" {
 		return nil, errors.New("empty rule")
 	}
 
@@ -339,7 +342,7 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 	actions := ""
 
 	if options.WithOperator {
-		matches := ruleTokenRegex.FindAllString(options.Data, -1)
+		matches := ruleTokenRegex.FindAllString(options.Data, 3) // we use at most second match
 		if len(matches) == 0 {
 			return nil, fmt.Errorf("invalid rule with no transformation matches: %q", options.Data)
 		}
@@ -347,9 +350,7 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 		if utils.InSlice(operator, disabledRuleOperators) {
 			return nil, fmt.Errorf("%s rule operator is disabled", operator)
 		}
-
-		rulePieces := strings.SplitN(options.Data, " ", 2)
-		vars := rulePieces[0]
+		vars, _, _ := strings.Cut(options.Data, " ")
 		err = rp.ParseVariables(vars)
 		if err != nil {
 			return nil, err

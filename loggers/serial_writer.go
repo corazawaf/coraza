@@ -17,7 +17,7 @@ import (
 
 // serialWriter is used to store logs in a single file
 type serialWriter struct {
-	file      io.Closer
+	closer    func() error
 	log       log.Logger
 	formatter LogFormatter
 }
@@ -27,21 +27,20 @@ func (sl *serialWriter) Init(c types.Config) error {
 	sl.formatter = c.Get("auditlog_formatter", nativeFormatter).(LogFormatter)
 
 	fileName := c.Get("auditlog_file", "").(string)
-	var file io.Writer
+	var w io.Writer
 	if fileName != "" {
 		f, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, fileMode)
 		if err != nil {
 			return err
 		}
-		file = f
-		sl.file = f
+		w = f
+		sl.closer = f.Close
 	} else {
-		file = io.Discard
-		// Nothing to close so just set a no-op
-		sl.file = noopCloser{}
+		w = io.Discard
+		sl.closer = func() error { return nil }
 	}
 	sl.log.SetFlags(0)
-	sl.log.SetOutput(file)
+	sl.log.SetOutput(w)
 	return nil
 }
 
@@ -55,16 +54,7 @@ func (sl *serialWriter) Write(al *AuditLog) error {
 }
 
 func (sl *serialWriter) Close() error {
-	sl.file.Close()
-	return nil
+	return sl.closer()
 }
 
 var _ LogWriter = (*serialWriter)(nil)
-
-type noopCloser struct{}
-
-var _ io.Closer = (*noopCloser)(nil)
-
-func (nc noopCloser) Close() error {
-	return nil
-}
