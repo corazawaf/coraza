@@ -20,8 +20,8 @@ import (
 
 var wafi = NewWAF()
 
-func TestTxSetters(t *testing.T) {
-	tx := makeTransaction(t)
+func TestTxSettersMultipart(t *testing.T) {
+	tx := makeTransactionMultipart(t)
 	exp := map[string]string{
 		"%{request_headers.x-test-header}": "test456",
 		"%{request_method}":                "POST",
@@ -43,6 +43,25 @@ func TestTxSetters(t *testing.T) {
 	validateMacroExpansion(exp, tx, t)
 }
 
+func TestTxSetters(t *testing.T) {
+	tx := makeTransaction(t)
+	exp := map[string]string{
+		"%{request_headers.x-test-header}": "test456",
+		"%{request_method}":                "POST",
+		"%{ARGS_GET.id}":                   "123",
+		"%{request_cookies.test}":          "123",
+		"%{args_post.testfield}":           "456",
+		"%{args.testfield}":                "456",
+		"%{request_line}":                  "POST /testurl.php?id=123&b=456 HTTP/1.1",
+		"%{query_string}":                  "id=123&b=456",
+		"%{request_filename}":              "/testurl.php",
+		"%{request_protocol}":              "HTTP/1.1",
+		"%{request_uri}":                   "/testurl.php?id=123&b=456",
+		"%{request_uri_raw}":               "/testurl.php?id=123&b=456",
+	}
+
+	validateMacroExpansion(exp, tx, t)
+}
 func TestTxMultipart(t *testing.T) {
 	tx := wafi.NewTransaction(context.Background())
 	body := []string{
@@ -572,7 +591,29 @@ func BenchmarkTransactionCreation(b *testing.B) {
 	}
 }
 
-func makeTransaction(t *testing.T) *Transaction {
+func makeTransaction(t testing.TB) *Transaction {
+	t.Helper()
+	tx := wafi.NewTransaction(context.Background())
+	tx.RequestBodyAccess = true
+	ht := []string{
+		"POST /testurl.php?id=123&b=456 HTTP/1.1",
+		"Host: www.test.com:80",
+		"Cookie: test=123",
+		"Content-Type: application/x-www-form-urlencoded",
+		"X-Test-Header: test456",
+		"Content-Length: 13",
+		"",
+		"testfield=456",
+	}
+	data := strings.Join(ht, "\r\n")
+	_, err := tx.ParseRequestReader(strings.NewReader(data))
+	if err != nil {
+		panic(err)
+	}
+	return tx
+}
+
+func makeTransactionMultipart(t *testing.T) *Transaction {
 	if t != nil {
 		t.Helper()
 	}
