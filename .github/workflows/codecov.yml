@@ -1,7 +1,15 @@
 name: Codecov
 on:
-  pull_request:
   push:
+    paths-ignore:
+      - "**/*.md"
+      - "LICENSE"
+      - 'examples/**'
+  pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - "LICENSE"
+      - 'examples/**'
 
 jobs:
   codecov:
