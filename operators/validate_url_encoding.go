@@ -9,9 +9,11 @@ import (
 
 type validateURLEncoding struct{}
 
-func (o *validateURLEncoding) Init(options coraza.RuleOperatorOptions) error { return nil }
+var _ coraza.RuleOperator = (*validateURLEncoding)(nil)
 
-func (o *validateURLEncoding) Evaluate(tx *coraza.Transaction, value string) bool {
+func (o *validateURLEncoding) Init(coraza.RuleOperatorOptions) error { return nil }
+
+func (o *validateURLEncoding) Evaluate(_ *coraza.Transaction, value string) bool {
 	if len(value) == 0 {
 		return false
 	}

@@ -13,6 +13,8 @@ type endsWith struct {
 	data coraza.Macro
 }
 
+var _ coraza.RuleOperator = (*endsWith)(nil)
+
 func (o *endsWith) Init(options coraza.RuleOperatorOptions) error {
 	data := options.Arguments
 

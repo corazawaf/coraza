@@ -15,6 +15,8 @@ type ipMatch struct {
 	subnets []*net.IPNet
 }
 
+var _ coraza.RuleOperator = (*ipMatch)(nil)
+
 func (o *ipMatch) Init(options coraza.RuleOperatorOptions) error {
 	data := options.Arguments
 

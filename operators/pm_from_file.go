@@ -17,6 +17,8 @@ type pmFromFile struct {
 	matcher ahocorasick.AhoCorasick
 }
 
+var _ coraza.RuleOperator = (*pmFromFile)(nil)
+
 func (o *pmFromFile) Init(options coraza.RuleOperatorOptions) error {
 	path := options.Arguments
 
@@ -53,5 +55,3 @@ func (o *pmFromFile) Init(options coraza.RuleOperatorOptions) error {
 func (o *pmFromFile) Evaluate(tx *coraza.Transaction, value string) bool {
 	return pmEvaluate(o.matcher, tx, value)
 }
-
-var _ coraza.RuleOperator = (*pmFromFile)(nil)

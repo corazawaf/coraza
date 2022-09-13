@@ -18,6 +18,8 @@ type pmFromDataset struct {
 	matcher ahocorasick.AhoCorasick
 }
 
+var _ coraza.RuleOperator = (*pmFromDataset)(nil)
+
 func (o *pmFromDataset) Init(options coraza.RuleOperatorOptions) error {
 	data := options.Arguments
 	dataset, ok := options.Datasets[data]
@@ -38,5 +40,3 @@ func (o *pmFromDataset) Init(options coraza.RuleOperatorOptions) error {
 func (o *pmFromDataset) Evaluate(tx *coraza.Transaction, value string) bool {
 	return pmEvaluate(o.matcher, tx, value)
 }
-
-var _ coraza.RuleOperator = (*pmFromDataset)(nil)

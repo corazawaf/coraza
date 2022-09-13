@@ -19,6 +19,8 @@ type validateNid struct {
 	re *regexp.Regexp
 }
 
+var _ coraza.RuleOperator = (*validateNid)(nil)
+
 func (o *validateNid) Init(options coraza.RuleOperatorOptions) error {
 	data := options.Arguments
 
@@ -35,15 +37,12 @@ func (o *validateNid) Init(options coraza.RuleOperatorOptions) error {
 		return fmt.Errorf("invalid @validateNid argument")
 	}
 	re, err := regexp.Compile(spl[1])
-	if err != nil {
-		return err
-	}
 	o.re = re
-	return nil
+	return err
 }
 
 func (o *validateNid) Evaluate(tx *coraza.Transaction, value string) bool {
-	matches := o.re.FindAllStringSubmatch(value, -1)
+	matches := o.re.FindAllStringSubmatch(value, 11)
 
 	res := false
 	for i, m := range matches {
@@ -61,13 +60,14 @@ func (o *validateNid) Evaluate(tx *coraza.Transaction, value string) bool {
 	return res
 }
 
+var nonDigitOrK = regexp.MustCompile(`[^\dk]`)
+
 func nidCl(nid string) bool {
 	if len(nid) < 8 {
 		return false
 	}
-	re := regexp.MustCompile(`[^\dk]`)
 	nid = strings.ToLower(nid)
-	nid = re.ReplaceAllString(nid, "")
+	nid = nonDigitOrK.ReplaceAllString(nid, "")
 	rut, _ := strconv.Atoi(nid[:len(nid)-1])
 	dv := nid[len(nid)-1:]
 
@@ -83,21 +83,22 @@ func nidCl(nid string) bool {
 		}
 	}
 
-	val := 11 - (sum % 11)
+	val := sum % 11
 	switch val {
-	case 11:
+	case 0:
 		ndv = "0"
-	case 10:
+	case 1:
 		ndv = "k"
 	default:
-		ndv = strconv.Itoa(val)
+		ndv = strconv.Itoa(11 - val)
 	}
 	return ndv == dv
 }
 
+var nonDigit = regexp.MustCompile(`[^\d]`)
+
 func nidUs(nid string) bool {
-	re := regexp.MustCompile(`[^\d]`)
-	nid = re.ReplaceAllString(nid, "")
+	nid = nonDigit.ReplaceAllString(nid, "")
 	if len(nid) < 9 {
 		return false
 	}
