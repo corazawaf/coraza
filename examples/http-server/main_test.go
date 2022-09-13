@@ -1,51 +1,46 @@
 package main
 
 import (
-	"errors"
-	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"testing"
 )
 
-func corazaGetRequest(getPath string) (int, string) {
+func setupTestServer(t *testing.T) *httptest.Server {
+	t.Helper()
 	if err := setupCoraza(); err != nil {
 		panic(err)
 	}
-	testServer := httptest.NewServer(corazaRequestHandler(http.HandlerFunc(hello)))
-	defer testServer.Close()
+	return httptest.NewServer(corazaRequestHandler(http.HandlerFunc(hello)))
+}
 
-	// Performs a get request
-	resp, err := http.Get(testServer.URL + getPath)
+func doGetRequest(t *testing.T, getPath string) int {
+	t.Helper()
+	resp, err := http.Get(getPath)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	if resp.StatusCode == http.StatusOK {
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-		bodyString := string(bodyBytes)
-		return resp.StatusCode, bodyString
-	}
-	return resp.StatusCode, ""
+	defer resp.Body.Close()
+	return resp.StatusCode
 }
 
 func TestHttpServerTrueNegative(t *testing.T) {
+	testServer := setupTestServer(t)
+	defer testServer.Close()
 	expectedStatusCode := 200
-	statusCode, _ := corazaGetRequest("/hello")
+	statusCode := doGetRequest(t, testServer.URL+"/hello")
 	if statusCode != expectedStatusCode {
-		log.Fatalln(errors.New("Returned status code:" + fmt.Sprint(statusCode) + ". Expected: " + strconv.Itoa(expectedStatusCode)))
+		t.Errorf("Unexpected status code, want: %d, have: %d", statusCode, expectedStatusCode)
 	}
 }
 
 func TestHttpServerTruePositive(t *testing.T) {
+	testServer := setupTestServer(t)
+	defer testServer.Close()
 	expectedStatusCode := 403
-	statusCode, _ := corazaGetRequest("/hello?id=0")
+	statusCode := doGetRequest(t, testServer.URL+"/hello?id=0")
 	if statusCode != expectedStatusCode {
-		log.Fatalln(errors.New("Returned status code:" + fmt.Sprint(statusCode) + ". Expected: " + strconv.Itoa(expectedStatusCode)))
+		t.Errorf("Unexpected status code, want: %d, have: %d", statusCode, expectedStatusCode)
 	}
 }

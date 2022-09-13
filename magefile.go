@@ -67,11 +67,11 @@ func Lint() error {
 
 // Test runs all tests.
 func Test() error {
-	err := sh.RunV("go", "test", "./...")
-	if err != nil {
-		return err
-	}
-	// Iterating over examples and running their tests
+	return sh.RunV("go", "test", "./...")
+}
+
+// Test runs all example tests.
+func TestExamples() error {
 	return filepath.WalkDir("./examples/", func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err

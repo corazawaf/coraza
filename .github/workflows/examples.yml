@@ -19,4 +19,7 @@ jobs:
         with:
           go-version: v1.18.x
           cache: true
+      - name: Examples tests
+        run: go run mage.go testExamples
+      - name: Build examples
       - run: go run mage.go buildExamples
