@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/magefile/mage/mg"
@@ -66,7 +67,19 @@ func Lint() error {
 
 // Test runs all tests.
 func Test() error {
-	return sh.RunV("go", "test", "./...")
+	if err := sh.RunV("go", "test", "./..."); err != nil {
+		return err
+	}
+
+	cmd := exec.Command("go", "test", "./...")
+	cmd.Dir = "./testing"
+	if out, err := cmd.Output(); err != nil {
+		return err
+	} else {
+		fmt.Printf(string(out))
+	}
+
+	return nil
 }
 
 // Coverage runs tests with coverage and race detector enabled.
