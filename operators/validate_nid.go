@@ -114,9 +114,9 @@ func nidUs(nid string) bool {
 
 	sequence := true
 	equals := true
-	prev, _ := strconv.Atoi(string(nid[0]))
+	prev := int(nid[0] - '0')
 	for i := 1; i < len(nid); i++ {
-		curr, _ := strconv.Atoi(string(nid[i]))
+		curr := int(nid[i] - '0')
 		if prev != curr {
 			equals = false
 		}
