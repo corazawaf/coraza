@@ -4,7 +4,6 @@ go 1.18
 
 // Testing dependencies:
 // - go-mockdns
-// - go-modsecurity (optional)
 
 // Development dependencies:
 // - mage

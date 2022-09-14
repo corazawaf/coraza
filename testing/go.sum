@@ -1,5 +1,7 @@
 github.com/anuraaga/go-modsecurity v0.0.0-20220824035035-b9a4099778df h1:YWiVl53v0R8Knj/k+4slO0SXPL67Y4dXWiOIWNzrkew=
 github.com/anuraaga/go-modsecurity v0.0.0-20220824035035-b9a4099778df/go.mod h1:7jguE759ADzy2EkxGRXigiC0ER1Yq2IFk2qNtwgzc7U=
+github.com/corazawaf/coraza/v3 v3.0.0-20220914105525-52c6662efb62 h1:4d8MkEMN+I0kjk3ApZJ1lQOCCzIllV9wHkhs0vWz+hw=
+github.com/corazawaf/coraza/v3 v3.0.0-20220914105525-52c6662efb62/go.mod h1:LzAb8eojCKx3vCcs/pdIXMb/eGcVtZs6ySWq0qwfekQ=
 github.com/corazawaf/libinjection-go v0.0.0-20220909190158-227e7e772cef h1:q9ty0pTOklSWgTasNL1N820pNVcn933BFz5w79DPbbo=
 github.com/corazawaf/libinjection-go v0.0.0-20220909190158-227e7e772cef/go.mod h1:OP4TM7xdJ2skyXqNX1AN1wN5nNZEmJNuWbNPOItn7aw=
 github.com/foxcpp/go-mockdns v1.0.0 h1:7jBqxd3WDWwi/6WhDvacvH1XsN3rOLXyHM1uhvIx6FI=

@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/anuraaga/go-modsecurity v0.0.0-20220824035035-b9a4099778df
-	github.com/corazawaf/coraza/v3 v3.0.0-00010101000000-000000000000
+	github.com/corazawaf/coraza/v3 v3.0.0-20220914105525-52c6662efb62
 )
 
 require (
@@ -16,5 +16,3 @@ require (
 	github.com/tidwall/pretty v1.2.0 // indirect
 	golang.org/x/net v0.0.0-20220809184613-07c6da5e1ced // indirect
 )
-
-replace github.com/corazawaf/coraza/v3 => ../
