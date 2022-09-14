@@ -31,7 +31,7 @@ func (o *rx) Init(data string) error {
 }
 
 func (o *rx) Evaluate(tx *coraza.Transaction, value string) bool {
-	match := o.re.FindAllSubmatch([]byte(value), -1)
+	match := o.re.FindAllStringSubmatch(value, -1)
 	count := len(match)
 	if !tx.Capture && count > 0 {
 		return true
@@ -42,7 +42,7 @@ func (o *rx) Evaluate(tx *coraza.Transaction, value string) bool {
 			if i == 9 {
 				return true
 			}
-			tx.CaptureField(i, string(c))
+			tx.CaptureField(i, c)
 		}
 	}
 	return count > 0
