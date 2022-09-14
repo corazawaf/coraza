@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/fs"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/corazawaf/coraza/v3"
@@ -193,10 +194,16 @@ func (p *RuleParser) ParseOperator(operator string) error {
 	if err != nil {
 		return err
 	}
-	data := []byte(opdata)
+	u, err := strconv.Unquote(fmt.Sprintf(`"%s"`, opdata))
+	var data string
+	if err == nil {
+		data = u
+	} else {
+		data = opdata
+	}
 
 	opts := coraza.RuleOperatorOptions{
-		Arguments: string(data),
+		Arguments: data,
 		Path: []string{
 			p.options.Config.Get("parser_config_dir", "").(string),
 			p.options.Config.Get("working_dir", "").(string),
