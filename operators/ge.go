@@ -14,6 +14,8 @@ type ge struct {
 	data coraza.Macro
 }
 
+var _ coraza.RuleOperator = (*ge)(nil)
+
 func (o *ge) Init(options coraza.RuleOperatorOptions) error {
 	data := options.Arguments
 

@@ -18,6 +18,8 @@ type pmFromDataset struct {
 	matcher ahocorasick.AhoCorasick
 }
 
+var _ coraza.RuleOperator = (*pmFromDataset)(nil)
+
 func (o *pmFromDataset) Init(options coraza.RuleOperatorOptions) error {
 	data := options.Arguments
 	dataset, ok := options.Datasets[data]
@@ -36,18 +38,5 @@ func (o *pmFromDataset) Init(options coraza.RuleOperatorOptions) error {
 }
 
 func (o *pmFromDataset) Evaluate(tx *coraza.Transaction, value string) bool {
-	if tx.Capture {
-		matches := o.matcher.FindAll(value)
-		for i, match := range matches {
-			if i == 10 {
-				return true
-			}
-			tx.CaptureField(i, value[match.Start():match.End()])
-		}
-		return len(matches) > 0
-	}
-	iter := o.matcher.Iter(value)
-	return iter.Next() != nil
+	return pmEvaluate(o.matcher, tx, value)
 }
-
-var _ coraza.RuleOperator = (*pmFromDataset)(nil)
