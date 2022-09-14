@@ -114,9 +114,9 @@ func nidUs(nid string) bool {
 
 	sequence := true
 	equals := true
-	prev := int(nid[0] - '0')
+	prev := digitToInt(nid[0])
 	for i := 1; i < len(nid); i++ {
-		curr := int(nid[i] - '0')
+		curr := digitToInt(nid[i])
 		if prev != curr {
 			equals = false
 		}
@@ -127,6 +127,10 @@ func nidUs(nid string) bool {
 	}
 
 	return !(sequence || equals)
+}
+
+func digitToInt(d byte) int {
+	return int(d - '0')
 }
 
 var (

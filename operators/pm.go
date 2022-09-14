@@ -42,7 +42,6 @@ func (o *pm) Evaluate(tx *coraza.Transaction, value string) bool {
 }
 
 func pmEvaluate(matcher ahocorasick.AhoCorasick, tx *coraza.Transaction, value string) bool {
-	var numMatches int
 	iter := matcher.Iter(value)
 
 	if !tx.Capture {
@@ -50,6 +49,7 @@ func pmEvaluate(matcher ahocorasick.AhoCorasick, tx *coraza.Transaction, value s
 		return iter.Next() != nil
 	}
 
+	var numMatches int
 	for {
 		m := iter.Next()
 		if m == nil {
