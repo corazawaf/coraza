@@ -11,11 +11,11 @@ import (
 
 type detectSQLi struct{}
 
-func (o *detectSQLi) Init(options coraza.RuleOperatorOptions) error {
-	return nil
-}
+var _ coraza.RuleOperator = (*detectSQLi)(nil)
 
-func (o *detectSQLi) Evaluate(tx *coraza.Transaction, value string) bool {
+func (*detectSQLi) Init(coraza.RuleOperatorOptions) error { return nil }
+
+func (*detectSQLi) Evaluate(tx *coraza.Transaction, value string) bool {
 	res, fingerprint := libinjection.IsSQLi(value)
 	if !res {
 		return false

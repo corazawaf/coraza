@@ -15,6 +15,8 @@ type ipMatchFromFile struct {
 	ipMatcher *ipMatch
 }
 
+var _ coraza.RuleOperator = (*ipMatchFromFile)(nil)
+
 func (o *ipMatchFromFile) Init(options coraza.RuleOperatorOptions) error {
 	path := options.Arguments
 

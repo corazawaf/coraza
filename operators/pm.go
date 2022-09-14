@@ -18,6 +18,8 @@ type pm struct {
 	matcher ahocorasick.AhoCorasick
 }
 
+var _ coraza.RuleOperator = (*pm)(nil)
+
 func (o *pm) Init(options coraza.RuleOperatorOptions) error {
 	data := options.Arguments
 
@@ -39,25 +41,26 @@ func (o *pm) Evaluate(tx *coraza.Transaction, value string) bool {
 	return pmEvaluate(o.matcher, tx, value)
 }
 
-var _ coraza.RuleOperator = (*pm)(nil)
-
 func pmEvaluate(matcher ahocorasick.AhoCorasick, tx *coraza.Transaction, value string) bool {
-	var numMatches int
 	iter := matcher.Iter(value)
 
+	if !tx.Capture {
+		// Not capturing so just one match is enough.
+		return iter.Next() != nil
+	}
+
+	var numMatches int
 	for {
 		m := iter.Next()
 		if m == nil {
 			break
 		}
+
+		tx.CaptureField(numMatches, value[m.Start():m.End()])
+
 		numMatches++
-		if !tx.Capture {
-			// Not capturing so just one match is enough.
-			break
-		}
-		tx.CaptureField(numMatches-1, value[m.Start():m.End()])
 		if numMatches == 10 {
-			break
+			return true
 		}
 	}
 

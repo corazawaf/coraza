@@ -11,6 +11,8 @@ type streq struct {
 	data coraza.Macro
 }
 
+var _ coraza.RuleOperator = (*streq)(nil)
+
 func (o *streq) Init(options coraza.RuleOperatorOptions) error {
 	data := options.Arguments
 

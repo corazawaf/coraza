@@ -22,6 +22,8 @@ type rbl struct {
 	resolver *net.Resolver
 }
 
+var _ coraza.RuleOperator = (*rbl)(nil)
+
 func (o *rbl) Init(options coraza.RuleOperatorOptions) error {
 	data := options.Arguments
 
