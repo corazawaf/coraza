@@ -67,26 +67,30 @@ func Lint() error {
 
 // Test runs all tests.
 func Test() error {
-	return sh.RunV("go", "test", "./...")
-}
+	if err := sh.RunV("go", "test", "./..."); err != nil {
+		return err
+	}
 
-// Test runs all example tests.
-func TestExamples() error {
+	// Iterates over examples' tests
 	return filepath.WalkDir("./examples/", func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if d.IsDir() && d.Name() != "examples" {
-			cmd := exec.Command("go", "test", "./...")
-			cmd.Dir = "examples/" + d.Name()
-			out, err := cmd.Output()
-			fmt.Printf(string(out))
-			if err != nil {
-				return err
+		if d.IsDir() {
+			// Runs tests under all directories with a go.mod file
+			if _, err := os.Stat(filepath.Join(path, "go.mod")); err == nil {
+				cmd := exec.Command("go", "test", "./...")
+				cmd.Dir = "examples/" + d.Name()
+				out, err := cmd.Output()
+				fmt.Printf(string(out))
+				if err != nil {
+					return err
+				}
 			}
 		}
 		return nil
 	})
+
 }
 
 // Coverage runs tests with coverage and race detector enabled.
@@ -123,24 +127,4 @@ func Precommit() error {
 // Check runs lint and tests.
 func Check() {
 	mg.SerialDeps(Lint, Test)
-}
-
-// BuildExamples builds all the examples
-func BuildExamples() error {
-	return filepath.WalkDir("./examples/", func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() && d.Name() != "examples" {
-			fmt.Printf("Building %s...\n", d.Name())
-			cmd := exec.Command("go", "build", ".")
-			cmd.Dir = "examples/" + d.Name()
-			out, err := cmd.CombinedOutput()
-			if err != nil {
-				fmt.Printf(string(out))
-				return err
-			}
-		}
-		return nil
-	})
 }

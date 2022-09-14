@@ -41,7 +41,6 @@ func setupCoraza() error {
 	`); err != nil {
 		return err
 	}
-	fmt.Println("Coraza setup done.")
 	return nil
 }
 

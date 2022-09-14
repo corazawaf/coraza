@@ -4,12 +4,10 @@ on:
     paths-ignore:
       - "**/*.md"
       - "LICENSE"
-      - 'examples/**'
   pull_request:
     paths-ignore:
       - "**/*.md"
       - "LICENSE"
-      - 'examples/**'
 
 jobs:
   codecov:

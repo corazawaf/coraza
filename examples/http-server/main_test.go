@@ -25,22 +25,26 @@ func doGetRequest(t *testing.T, getPath string) int {
 	return resp.StatusCode
 }
 
-func TestHttpServerTrueNegative(t *testing.T) {
-	testServer := setupTestServer(t)
-	defer testServer.Close()
-	expectedStatusCode := 200
-	statusCode := doGetRequest(t, testServer.URL+"/hello")
-	if statusCode != expectedStatusCode {
-		t.Errorf("Unexpected status code, want: %d, have: %d", statusCode, expectedStatusCode)
+func TestHttpServer(t *testing.T) {
+	tests := []struct {
+		name      string
+		path      string
+		expStatus int
+	}{
+		{"negative", "/hello", 200},
+		{"positive", "/hello?id=0", 403},
 	}
-}
-
-func TestHttpServerTruePositive(t *testing.T) {
+	// Spin up the test server
 	testServer := setupTestServer(t)
 	defer testServer.Close()
-	expectedStatusCode := 403
-	statusCode := doGetRequest(t, testServer.URL+"/hello?id=0")
-	if statusCode != expectedStatusCode {
-		t.Errorf("Unexpected status code, want: %d, have: %d", statusCode, expectedStatusCode)
+	// Perform tests
+	for _, tc := range tests {
+		tt := tc
+		t.Run(tt.name, func(t *testing.T) {
+			statusCode := doGetRequest(t, testServer.URL+tt.path)
+			if statusCode != tt.expStatus {
+				t.Errorf("Unexpected status code, want: %d, have: %d", tt.expStatus, statusCode)
+			}
+		})
 	}
 }
