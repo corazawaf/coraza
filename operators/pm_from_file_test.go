@@ -31,7 +31,4 @@ func TestPmfm(t *testing.T) {
 	if !p.Evaluate(tx, "def") {
 		t.Error("failed to match pmFromFile")
 	}
-	if len(p.pm.dict) != 4 {
-		t.Error("failed to load pmFromFile")
-	}
 }

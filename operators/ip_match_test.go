@@ -45,15 +45,19 @@ func TestMultipleAddress(t *testing.T) {
 		t.Error("Cannot init ipmatchtest operator")
 	}
 	for _, ok := range addrok {
-		if !ipm.Evaluate(nil, ok) {
-			t.Errorf("Invalid result for single CIDR IpMatch " + ok)
-		}
+		t.Run(ok, func(t *testing.T) {
+			if !ipm.Evaluate(nil, ok) {
+				t.Errorf("Invalid result for single CIDR IpMatch " + ok)
+			}
+		})
 	}
 
 	for _, fail := range addrfail {
-		if ipm.Evaluate(nil, fail) {
-			t.Errorf("Invalid result for single CIDR IpMatch" + fail)
-		}
+		t.Run(fail, func(t *testing.T) {
+			if ipm.Evaluate(nil, fail) {
+				t.Errorf("Invalid result for single CIDR IpMatch %q", fail)
+			}
+		})
 	}
 }
 

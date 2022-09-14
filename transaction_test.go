@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -472,7 +471,7 @@ func TestTxPhase4Magic(t *testing.T) {
 func TestVariablesMatch(t *testing.T) {
 	waf := NewWaf()
 	tx := waf.NewTransaction()
-	tx.matchVariable(MatchData{
+	tx.matchVariable(&MatchData{
 		VariableName: "ARGS_NAMES",
 		Variable:     variables.ArgsNames,
 		Key:          "sample",
@@ -550,7 +549,7 @@ func multipartRequest(req *http.Request) error {
 	if _, err = io.Copy(fw, tempfile); err != nil {
 		return err
 	}
-	req.Body = ioutil.NopCloser(&b)
+	req.Body = io.NopCloser(&b)
 	req.Header.Set("Content-Type", w.FormDataContentType())
 	req.Method = "POST"
 	return nil

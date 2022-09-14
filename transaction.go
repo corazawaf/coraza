@@ -26,13 +26,14 @@ import (
 	"strings"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/corazawaf/coraza/v2/bodyprocessors"
 	"github.com/corazawaf/coraza/v2/loggers"
 	"github.com/corazawaf/coraza/v2/types"
 	"github.com/corazawaf/coraza/v2/types/variables"
 	utils "github.com/corazawaf/coraza/v2/utils/strings"
 	url2 "github.com/corazawaf/coraza/v2/utils/url"
-	"go.uber.org/zap"
 )
 
 // Transaction is created from a WAF instance to handle web requests and responses,
@@ -248,7 +249,7 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 
 // matchVariable Creates the MATCHED_ variables required by chains and macro expansion
 // MATCHED_VARS, MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES
-func (tx *Transaction) matchVariable(match MatchData) {
+func (tx *Transaction) matchVariable(match *MatchData) {
 	varName := strings.Builder{}
 	varNamel := strings.Builder{}
 	varName.WriteString(match.VariableName)
@@ -564,8 +565,10 @@ func (tx *Transaction) AddArgument(orig string, key string, value string) {
 // expected to be executed prior to the virtual host resolution, when the
 // connection arrives on the server.
 // note: There is no direct connection between this function and any phase of
-//       the SecLanguages phases. It is something that may occur between the
-//       SecLanguage phase 1 and 2.
+//
+//	the SecLanguages phases. It is something that may occur between the
+//	SecLanguage phase 1 and 2.
+//
 // note: This function won't add GET arguments, they must be added with AddArgument
 func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string) {
 	tx.GetCollection(variables.RequestMethod).SetIndex("", 0, method)
@@ -742,7 +745,6 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 // that the headers should be added prior to the execution of this function.
 //
 // note: Remember to check for a possible intervention.
-//
 func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Interruption {
 	c := strconv.Itoa(code)
 	tx.GetCollection(variables.ResponseStatus).Set("", []string{c})

@@ -12,21 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package operators
+//go:build ignore
+// +build ignore
+
+// Entrypoint to mage for running without needing to install the command.
+// https://magefile.org/zeroinstall/
+package main
 
 import (
-	"github.com/corazawaf/libinjection-go"
+	"os"
 
-	"github.com/corazawaf/coraza/v2"
+	"github.com/magefile/mage/mage"
 )
 
-type detectXSS struct {
-}
-
-func (o *detectXSS) Init(data string) error {
-	return nil
-}
-
-func (o *detectXSS) Evaluate(tx *coraza.Transaction, value string) bool {
-	return libinjection.IsXSS(value)
+func main() {
+	os.Exit(mage.Main())
 }

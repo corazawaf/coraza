@@ -18,12 +18,13 @@ import (
 	"bufio"
 	"strings"
 
-	"github.com/cloudflare/ahocorasick"
+	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
+
 	"github.com/corazawaf/coraza/v2"
 )
 
 type pmFromFile struct {
-	pm *pm
+	matcher ahocorasick.AhoCorasick
 }
 
 func (o *pmFromFile) Init(data string) error {
@@ -40,13 +41,34 @@ func (o *pmFromFile) Init(data string) error {
 		}
 		lines = append(lines, strings.ToLower(l))
 	}
-	o.pm = &pm{
-		dict:    lines,
-		matcher: ahocorasick.NewStringMatcher(lines),
-	}
+
+	builder := ahocorasick.NewAhoCorasickBuilder(ahocorasick.Opts{
+		AsciiCaseInsensitive: true,
+		MatchOnlyWholeWords:  false,
+		MatchKind:            ahocorasick.LeftMostLongestMatch,
+		DFA:                  false,
+	})
+
+	// TODO this operator is supposed to support snort data syntax: "@pm A|42|C|44|F"
+	o.matcher = builder.Build(lines)
 	return nil
 }
 
 func (o *pmFromFile) Evaluate(tx *coraza.Transaction, value string) bool {
-	return o.pm.Evaluate(tx, value)
+	if tx.Capture {
+		matches := o.matcher.FindAll(value)
+		for i, match := range matches {
+			if i == 10 {
+				return true
+			}
+			tx.CaptureField(i, value[match.Start():match.End()])
+		}
+		return len(matches) > 0
+	} else {
+		iter := o.matcher.Iter(value)
+		next := iter.Next()
+		return next != nil
+	}
 }
+
+var _ coraza.RuleOperator = (*pmFromFile)(nil)

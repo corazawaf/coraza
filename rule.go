@@ -20,9 +20,10 @@ import (
 	"strconv"
 	"strings"
 
+	"go.uber.org/zap"
+
 	"github.com/corazawaf/coraza/v2/types"
 	"github.com/corazawaf/coraza/v2/types/variables"
-	"go.uber.org/zap"
 )
 
 // RuleTransformation is used to create transformation plugins
@@ -246,13 +247,12 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		zap.String("event", "FINISH_RULE"),
 		zap.Bool("is_chain", r.ParentID != 0),
 	)
-	tx.GetCollection(variables.Rule).SetData(map[string][]string{
-		"id":       {strconv.Itoa(rid)},
-		"msg":      {r.Msg.String()},
-		"rev":      {r.Rev},
-		"logdata":  {r.LogData.String()},
-		"severity": {r.Severity.String()},
-	})
+	metaRule := tx.GetCollection(variables.Rule)
+	metaRule.Set("id", []string{strconv.Itoa(rid)})
+	metaRule.Set("msg", []string{r.Msg.String()})
+	metaRule.Set("rev", []string{r.Rev})
+	metaRule.Set("logdata", []string{r.LogData.String()})
+	metaRule.Set("severity", []string{r.Severity.String()})
 	// SecMark and SecAction uses nil operator
 	if r.operator == nil {
 		tx.Waf.Logger.Debug("Forcing rule match", zap.String("txid", tx.ID),
@@ -261,9 +261,10 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 		)
 		md := MatchData{}
 		matchedValues = append(matchedValues, md)
-		r.matchVariable(tx, md)
+		r.matchVariable(tx, &md)
 	} else {
 		ecol := tx.ruleRemoveTargetByID[r.ID]
+		captured := false
 		for _, v := range r.variables {
 			var values []MatchData
 			for _, c := range ecol {
@@ -321,7 +322,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 							Value:        carg,
 						}
 						// Set the txn variables for expansions before usage
-						r.matchVariable(tx, mr)
+						r.matchVariable(tx, &mr)
 
 						mr.Message = r.Msg.Expand(tx)
 						mr.Data = r.LogData.Expand(tx)
@@ -329,7 +330,7 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 
 						// we only capture when it matches
 						if r.Capture {
-							defer tx.resetCaptures()
+							captured = true
 						}
 					}
 					tx.Waf.Logger.Debug("Evaluate rule operator", zap.String("txid", tx.ID),
@@ -344,6 +345,10 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 					)
 				}
 			}
+		}
+
+		if captured {
+			defer tx.resetCaptures()
 		}
 	}
 
@@ -381,12 +386,12 @@ func (r *Rule) Evaluate(tx *Transaction) []MatchData {
 	return matchedValues
 }
 
-func (r *Rule) matchVariable(tx *Transaction, m MatchData) {
+func (r *Rule) matchVariable(tx *Transaction, m *MatchData) {
 	rid := r.ID
 	if rid == 0 {
 		rid = r.ParentID
 	}
-	if !m.isNil() {
+	if m != nil {
 		tx.Waf.Logger.Debug("Matching value", zap.String("txid", tx.ID),
 			zap.Int("rule", rid),
 			zap.String("event", "EVALUATE_RULE_OPERATOR"),

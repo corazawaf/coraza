@@ -24,8 +24,9 @@ import (
 
 // CollectionsMap is used to store results for collections, example:
 // REQUEST_HEADERS:
-//   cookies: [cookie1: value1, cookie2: value2]
-//   user-agent: ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36"]
+//
+//	cookies: [cookie1: value1, cookie2: value2]
+//	user-agent: ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36"]
 type CollectionsMap map[variables.RuleVariable]map[string][]string
 
 // Options are used by BodyProcessors to provide some settings

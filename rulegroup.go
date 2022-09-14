@@ -16,13 +16,13 @@ package coraza
 
 import (
 	"fmt"
-	"sync"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/corazawaf/coraza/v2/types"
 	"github.com/corazawaf/coraza/v2/types/variables"
 	"github.com/corazawaf/coraza/v2/utils/strings"
-	"go.uber.org/zap"
 )
 
 // RuleGroup is a collection of rules
@@ -31,7 +31,6 @@ import (
 // after compilation
 type RuleGroup struct {
 	rules []*Rule
-	mux   *sync.RWMutex
 }
 
 // Add a rule to the collection
@@ -50,10 +49,7 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 }
 
 // GetRules returns the slice of rules,
-// it's concurrent safe.
 func (rg *RuleGroup) GetRules() []*Rule {
-	rg.mux.RLock()
-	defer rg.mux.RUnlock()
 	return rg.rules
 }
 
@@ -161,7 +157,6 @@ RulesLoop:
 			// Skipping rule
 			continue
 		}
-		// TODO this lines are SUPER SLOW
 		// we reset matched_vars, matched_vars_names, etc
 		tx.GetCollection(variables.MatchedVars).Reset()
 		tx.GetCollection(variables.MatchedVarsNames).Reset()
@@ -187,6 +182,5 @@ RulesLoop:
 func NewRuleGroup() RuleGroup {
 	return RuleGroup{
 		rules: []*Rule{},
-		mux:   &sync.RWMutex{},
 	}
 }

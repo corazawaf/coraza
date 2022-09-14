@@ -127,6 +127,22 @@ Coraza was migrated from github.com/jptosso/coraza-waf to github.com/corazawaf/c
 go get -u github.com/corazawaf/coraza/v2@v2.0.0-rc.3
 ```
 
+## Development
+
+Coraza only requires Go for development. You can run `mage.go` to issue development commands.
+
+See the list of commands
+
+```shell
+go run mage.go -l
+```
+
+For example, to format your code before submission, run
+
+```shell
+go run mage.go format
+```
+
 ## Contribute
 
 Contributions are welcome! Please refer to [CONTRIBUTING.md](https://github.com/corazawaf/coraza/blob/v2/master/CONTRIBUTING.md) for guidance.
@@ -147,3 +163,13 @@ Contributions are welcome! Please refer to [CONTRIBUTING.md](https://github.com/
 ## Donations
 
 For donations, see [Donations site](https://owasp.org/donate/?reponame=www-project-coraza-web-application-firewall&title=OWASP+Coraza+Web+Application+Firewall)
+
+## Thanks to all the people who have contributed
+
+We could not have done this without you!
+
+<a href="https://github.com/corazawaf/coraza/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=corazawaf/coraza" />
+</a>
+
+Made with [contrib.rocks](https://contrib.rocks).

@@ -12,21 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package operators
+package transformations
 
-import (
-	"github.com/corazawaf/libinjection-go"
+import "testing"
 
-	"github.com/corazawaf/coraza/v2"
-)
+func BenchmarkB64Decode(b *testing.B) {
+	tests := []string{
+		"VGVzdENhc2U=",
+		"P.HNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==",
+		"VGVzdABDYXNl",
+	}
 
-type detectXSS struct {
-}
-
-func (o *detectXSS) Init(data string) error {
-	return nil
-}
-
-func (o *detectXSS) Evaluate(tx *coraza.Transaction, value string) bool {
-	return libinjection.IsXSS(value)
+	for _, tt := range tests {
+		b.Run(tt, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_, err := base64decode(tt)
+				if err != nil {
+					b.Error(err)
+				}
+			}
+		})
+	}
 }

@@ -23,10 +23,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/corazawaf/coraza/v2/types"
+	"go.uber.org/zap"
 
 	"github.com/corazawaf/coraza/v2"
-	"go.uber.org/zap"
+	"github.com/corazawaf/coraza/v2/types"
 )
 
 // maxIncludeRecursion is used to avoid DDOS by including files that include
