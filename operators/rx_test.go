@@ -6,8 +6,9 @@ package operators
 import (
 	"context"
 	"fmt"
-	"github.com/corazawaf/coraza/v3"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3"
 )
 
 func TestRx(t *testing.T) {
