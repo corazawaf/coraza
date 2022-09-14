@@ -9,6 +9,8 @@ import (
 
 type noMatch struct{}
 
-func (o *noMatch) Init(options coraza.RuleOperatorOptions) error { return nil }
+var _ coraza.RuleOperator = (*noMatch)(nil)
 
-func (o *noMatch) Evaluate(tx *coraza.Transaction, value string) bool { return false }
+func (*noMatch) Init(options coraza.RuleOperatorOptions) error { return nil }
+
+func (*noMatch) Evaluate(tx *coraza.Transaction, value string) bool { return false }

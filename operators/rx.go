@@ -13,6 +13,8 @@ type rx struct {
 	re *regexp.Regexp
 }
 
+var _ coraza.RuleOperator = (*rx)(nil)
+
 func (o *rx) Init(options coraza.RuleOperatorOptions) error {
 	data := options.Arguments
 
@@ -24,11 +26,11 @@ func (o *rx) Init(options coraza.RuleOperatorOptions) error {
 func (o *rx) Evaluate(tx *coraza.Transaction, value string) bool {
 	match := o.re.FindAllStringSubmatch(value, -1)
 	lcount := len(match)
-	if !tx.Capture && lcount > 0 {
-		return true
+	if lcount == 0 {
+		return false
 	}
 
-	if lcount > 0 && tx.Capture {
+	if tx.Capture {
 		for i, c := range match[0] {
 			if i == 9 {
 				return true
@@ -36,5 +38,6 @@ func (o *rx) Evaluate(tx *coraza.Transaction, value string) bool {
 			tx.CaptureField(i, c)
 		}
 	}
-	return lcount > 0
+
+	return true
 }
