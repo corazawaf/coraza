@@ -14,9 +14,9 @@ type ipMatchFromDataset struct {
 	matcher *ipMatch
 }
 
-var _ rules.RuleOperator = (*ipMatchFromDataset)(nil)
+var _ rules.Operator = (*ipMatchFromDataset)(nil)
 
-func (o *ipMatchFromDataset) Init(options rules.RuleOperatorOptions) error {
+func (o *ipMatchFromDataset) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 	dataset, ok := options.Datasets[data]
 	if !ok || len(dataset) == 0 {
@@ -26,7 +26,7 @@ func (o *ipMatchFromDataset) Init(options rules.RuleOperatorOptions) error {
 	datasetParsed := strings.Join(dataset, ",")
 
 	o.matcher = &ipMatch{}
-	opts := rules.RuleOperatorOptions{
+	opts := rules.OperatorOptions{
 		Arguments: datasetParsed,
 	}
 	return o.matcher.Init(opts)

@@ -14,9 +14,9 @@ type contains struct {
 	data macro.Macro
 }
 
-var _ rules.RuleOperator = (*contains)(nil)
+var _ rules.Operator = (*contains)(nil)
 
-func (o *contains) Init(options rules.RuleOperatorOptions) error {
+func (o *contains) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)

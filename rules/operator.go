@@ -5,8 +5,8 @@ package rules
 
 import "io/fs"
 
-// RuleOperatorOptions is used to store the options for a rule operator
-type RuleOperatorOptions struct {
+// OperatorOptions is used to store the options for a rule operator
+type OperatorOptions struct {
 	// Arguments is used to store the operator args
 	Arguments string
 
@@ -20,11 +20,11 @@ type RuleOperatorOptions struct {
 	Datasets map[string][]string
 }
 
-// RuleOperator interface is used to define rule @operators
-type RuleOperator interface {
+// Operator interface is used to define rule @operators
+type Operator interface {
 	// Init is used during compilation to setup and cache
 	// the operator
-	Init(RuleOperatorOptions) error
+	Init(OperatorOptions) error
 	// Evaluate is used during the rule evaluation,
 	// it returns true if the operator succeeded against
 	// the input data for the transaction

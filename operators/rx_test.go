@@ -13,7 +13,7 @@ import (
 
 func TestRx1(t *testing.T) {
 	rx := &rx{}
-	opts := rules.RuleOperatorOptions{
+	opts := rules.OperatorOptions{
 		Arguments: "som(.*)ta",
 	}
 	if err := rx.Init(opts); err != nil {

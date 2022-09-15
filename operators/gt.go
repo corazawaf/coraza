@@ -14,9 +14,9 @@ type gt struct {
 	data macro.Macro
 }
 
-var _ rules.RuleOperator = (*gt)(nil)
+var _ rules.Operator = (*gt)(nil)
 
-func (o *gt) Init(options rules.RuleOperatorOptions) error {
+func (o *gt) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)

@@ -13,6 +13,6 @@ import (
 
 type rbl struct{}
 
-func (o *rbl) Init(_ rules.RuleOperatorOptions) error { return nil }
+func (o *rbl) Init(_ rules.OperatorOptions) error { return nil }
 
 func (o *rbl) Evaluate(_ *corazawaf.Transaction, _ string) bool { return true }

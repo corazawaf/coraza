@@ -13,6 +13,6 @@ import (
 
 type inspectFile struct{}
 
-func (*inspectFile) Init(rules.RuleOperatorOptions) error { return nil }
+func (*inspectFile) Init(rules.OperatorOptions) error { return nil }
 
 func (*inspectFile) Evaluate(*corazawaf.Transaction, string) bool { return true }

@@ -14,7 +14,7 @@ type within struct {
 	data macro.Macro
 }
 
-func (o *within) Init(options rules.RuleOperatorOptions) error {
+func (o *within) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)

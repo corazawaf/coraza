@@ -15,7 +15,7 @@ func TestFromFile(t *testing.T) {
 	addrfail := []string{"127.0.0.2", "192.168.1.1"}
 
 	ipm := &ipMatchFromFile{}
-	opts := rules.RuleOperatorOptions{
+	opts := rules.OperatorOptions{
 		Arguments: "./testdata/op/netranges.dat",
 		Path:      []string{"."},
 		Root:      io.OSFS{},

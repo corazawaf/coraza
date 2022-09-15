@@ -15,7 +15,7 @@ func TestIpMatchFromDataset(t *testing.T) {
 	addrfail := []string{"127.0.0.2", "192.168.1.1"}
 
 	ipm := &ipMatchFromDataset{}
-	opts := rules.RuleOperatorOptions{
+	opts := rules.OperatorOptions{
 		Arguments: "test_1",
 		Datasets: map[string][]string{
 			"test_1": {"127.0.0.1", "192.168.0.0/24"},
@@ -40,7 +40,7 @@ func TestIpMatchFromDataset(t *testing.T) {
 
 func TestIpMatchFromEmptyDataset(t *testing.T) {
 	ipm := &ipMatchFromDataset{}
-	opts := rules.RuleOperatorOptions{
+	opts := rules.OperatorOptions{
 		Arguments: "test_1",
 		Datasets: map[string][]string{
 			"test_1": {},

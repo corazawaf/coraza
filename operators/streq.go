@@ -12,7 +12,7 @@ type streq struct {
 	data macro.Macro
 }
 
-func (o *streq) Init(options rules.RuleOperatorOptions) error {
+func (o *streq) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)

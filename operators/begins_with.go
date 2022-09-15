@@ -14,9 +14,9 @@ type beginsWith struct {
 	data macro.Macro
 }
 
-var _ rules.RuleOperator = (*beginsWith)(nil)
+var _ rules.Operator = (*beginsWith)(nil)
 
-func (o *beginsWith) Init(options rules.RuleOperatorOptions) error {
+func (o *beginsWith) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)

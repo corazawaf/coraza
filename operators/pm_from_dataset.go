@@ -18,9 +18,9 @@ type pmFromDataset struct {
 	matcher ahocorasick.AhoCorasick
 }
 
-var _ rules.RuleOperator = (*pmFromDataset)(nil)
+var _ rules.Operator = (*pmFromDataset)(nil)
 
-func (o *pmFromDataset) Init(options rules.RuleOperatorOptions) error {
+func (o *pmFromDataset) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 	dataset, ok := options.Datasets[data]
 	if !ok {

@@ -17,9 +17,9 @@ type pmFromFile struct {
 	matcher ahocorasick.AhoCorasick
 }
 
-var _ rules.RuleOperator = (*pmFromFile)(nil)
+var _ rules.Operator = (*pmFromFile)(nil)
 
-func (o *pmFromFile) Init(options rules.RuleOperatorOptions) error {
+func (o *pmFromFile) Init(options rules.OperatorOptions) error {
 	path := options.Arguments
 
 	data, err := loadFromFile(path, options.Path, options.Root)

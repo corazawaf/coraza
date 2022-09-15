@@ -14,9 +14,9 @@ type ge struct {
 	data macro.Macro
 }
 
-var _ rules.RuleOperator = (*ge)(nil)
+var _ rules.Operator = (*ge)(nil)
 
-func (o *ge) Init(options rules.RuleOperatorOptions) error {
+func (o *ge) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)

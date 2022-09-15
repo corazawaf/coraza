@@ -15,9 +15,9 @@ type ipMatchFromFile struct {
 	ipMatcher *ipMatch
 }
 
-var _ rules.RuleOperator = (*ipMatchFromFile)(nil)
+var _ rules.Operator = (*ipMatchFromFile)(nil)
 
-func (o *ipMatchFromFile) Init(options rules.RuleOperatorOptions) error {
+func (o *ipMatchFromFile) Init(options rules.OperatorOptions) error {
 	path := options.Arguments
 
 	data, err := loadFromFile(path, options.Path, options.Root)
@@ -41,7 +41,7 @@ func (o *ipMatchFromFile) Init(options rules.RuleOperatorOptions) error {
 	}
 
 	o.ipMatcher = &ipMatch{}
-	opts := rules.RuleOperatorOptions{
+	opts := rules.OperatorOptions{
 		Arguments: dataParsed.String(),
 	}
 	return o.ipMatcher.Init(opts)
@@ -51,4 +51,4 @@ func (o *ipMatchFromFile) Evaluate(tx rules.TransactionState, value string) bool
 	return o.ipMatcher.Evaluate(tx, value)
 }
 
-var _ rules.RuleOperator = (*ipMatchFromFile)(nil)
+var _ rules.Operator = (*ipMatchFromFile)(nil)

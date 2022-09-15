@@ -14,9 +14,9 @@ type eq struct {
 	data macro.Macro
 }
 
-var _ rules.RuleOperator = (*eq)(nil)
+var _ rules.Operator = (*eq)(nil)
 
-func (o *eq) Init(options rules.RuleOperatorOptions) error {
+func (o *eq) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)

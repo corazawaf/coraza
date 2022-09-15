@@ -20,9 +20,9 @@ type validateByteRange struct {
 	data []byteRange
 }
 
-var _ rules.RuleOperator = (*validateByteRange)(nil)
+var _ rules.Operator = (*validateByteRange)(nil)
 
-func (o *validateByteRange) Init(options rules.RuleOperatorOptions) error {
+func (o *validateByteRange) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 
 	if data == "" {

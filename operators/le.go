@@ -14,9 +14,9 @@ type le struct {
 	data macro.Macro
 }
 
-var _ rules.RuleOperator = (*le)(nil)
+var _ rules.Operator = (*le)(nil)
 
-func (o *le) Init(options rules.RuleOperatorOptions) error {
+func (o *le) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 	m, err := macro.NewMacro(data)
 	if err != nil {

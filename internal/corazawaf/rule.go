@@ -28,10 +28,10 @@ type ruleActionParams struct {
 	Function rules.Action
 }
 
-// RuleOperator is a container for an operator,
+// Operator is a container for an operator,
 type ruleOperatorParams struct {
 	// Operator to be used
-	Operator rules.RuleOperator
+	Operator rules.Operator
 
 	// Function name (ex @rx)
 	Function string
@@ -393,7 +393,7 @@ func (r *Rule) ClearTransformations() {
 // SetOperator sets the operator of the rule
 // There can be only one operator per rule
 // functionName and params are used for logging
-func (r *Rule) SetOperator(operator rules.RuleOperator, functionName string, params string) {
+func (r *Rule) SetOperator(operator rules.Operator, functionName string, params string) {
 	r.operator = &ruleOperatorParams{
 		Operator: operator,
 		Function: functionName,

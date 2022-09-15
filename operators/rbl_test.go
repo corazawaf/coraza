@@ -25,7 +25,7 @@ func (l *testLogger) Printf(format string, v ...interface{}) {
 
 func TestRbl(t *testing.T) {
 	rbl := &rbl{}
-	opts := rules.RuleOperatorOptions{
+	opts := rules.OperatorOptions{
 		Arguments: "xbl.spamhaus.org",
 	}
 	if err := rbl.Init(opts); err != nil {

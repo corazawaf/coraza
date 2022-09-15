@@ -17,7 +17,7 @@ func TestRestPath(t *testing.T) {
 	exp := "/some-random/url-{id}/{name}"
 	path := "/some-random/url-123/juan"
 	rp := restpath{}
-	if err := rp.Init(rules.RuleOperatorOptions{
+	if err := rp.Init(rules.OperatorOptions{
 		Arguments: exp,
 	}); err != nil {
 		t.Error(err)

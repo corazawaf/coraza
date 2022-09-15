@@ -18,9 +18,9 @@ type pm struct {
 	matcher ahocorasick.AhoCorasick
 }
 
-var _ rules.RuleOperator = (*pm)(nil)
+var _ rules.Operator = (*pm)(nil)
 
-func (o *pm) Init(options rules.RuleOperatorOptions) error {
+func (o *pm) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 
 	data = strings.ToLower(data)

@@ -18,9 +18,9 @@ type inspectFile struct {
 	path string
 }
 
-var _ rules.RuleOperator = (*inspectFile)(nil)
+var _ rules.Operator = (*inspectFile)(nil)
 
-func (o *inspectFile) Init(options rules.RuleOperatorOptions) error {
+func (o *inspectFile) Init(options rules.OperatorOptions) error {
 	o.path = options.Arguments
 	return nil
 }

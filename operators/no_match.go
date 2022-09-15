@@ -9,8 +9,8 @@ import (
 
 type noMatch struct{}
 
-var _ rules.RuleOperator = (*noMatch)(nil)
+var _ rules.Operator = (*noMatch)(nil)
 
-func (*noMatch) Init(options rules.RuleOperatorOptions) error { return nil }
+func (*noMatch) Init(options rules.OperatorOptions) error { return nil }
 
 func (*noMatch) Evaluate(tx rules.TransactionState, value string) bool { return false }

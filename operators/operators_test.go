@@ -84,7 +84,7 @@ func TestOperators(t *testing.T) {
 						return
 					}
 
-					opts := rules.RuleOperatorOptions{
+					opts := rules.OperatorOptions{
 						Arguments: data.Param,
 						Path:      []string{"op"},
 						Root:      os.DirFS("testdata"),

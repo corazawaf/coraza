@@ -15,7 +15,7 @@ import (
 
 func TestInspectFile(t *testing.T) {
 	ipf := &inspectFile{}
-	opts := rules.RuleOperatorOptions{
+	opts := rules.OperatorOptions{
 		Arguments: "",
 	}
 	opts.Arguments = "/bin/echo"

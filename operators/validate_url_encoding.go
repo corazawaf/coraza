@@ -9,9 +9,9 @@ import (
 
 type validateURLEncoding struct{}
 
-var _ rules.RuleOperator = (*validateURLEncoding)(nil)
+var _ rules.Operator = (*validateURLEncoding)(nil)
 
-func (o *validateURLEncoding) Init(rules.RuleOperatorOptions) error { return nil }
+func (o *validateURLEncoding) Init(rules.OperatorOptions) error { return nil }
 
 func (o *validateURLEncoding) Evaluate(_ rules.TransactionState, value string) bool {
 	if len(value) == 0 {

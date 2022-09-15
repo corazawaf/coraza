@@ -22,9 +22,9 @@ type rbl struct {
 	resolver *net.Resolver
 }
 
-var _ rules.RuleOperator = (*rbl)(nil)
+var _ rules.Operator = (*rbl)(nil)
 
-func (o *rbl) Init(options rules.RuleOperatorOptions) error {
+func (o *rbl) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 
 	o.service = data

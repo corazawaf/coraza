@@ -9,6 +9,6 @@ import (
 
 type unconditionalMatch struct{}
 
-func (*unconditionalMatch) Init(rules.RuleOperatorOptions) error { return nil }
+func (*unconditionalMatch) Init(rules.OperatorOptions) error { return nil }
 
 func (*unconditionalMatch) Evaluate(rules.TransactionState, string) bool { return true }

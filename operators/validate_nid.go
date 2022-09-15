@@ -19,9 +19,9 @@ type validateNid struct {
 	re *regexp.Regexp
 }
 
-var _ rules.RuleOperator = (*validateNid)(nil)
+var _ rules.Operator = (*validateNid)(nil)
 
-func (o *validateNid) Init(options rules.RuleOperatorOptions) error {
+func (o *validateNid) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 
 	spl := strings.SplitN(data, " ", 2)
@@ -132,7 +132,7 @@ func digitToInt(d byte) int {
 }
 
 var (
-	_ rules.RuleOperator  = &validateNid{}
+	_ rules.Operator      = &validateNid{}
 	_ validateNidFunction = nidCl
 	_ validateNidFunction = nidUs
 )

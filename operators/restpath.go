@@ -21,9 +21,9 @@ type restpath struct {
 	re *regexp.Regexp
 }
 
-var _ rules.RuleOperator = (*restpath)(nil)
+var _ rules.Operator = (*restpath)(nil)
 
-func (o *restpath) Init(options rules.RuleOperatorOptions) error {
+func (o *restpath) Init(options rules.OperatorOptions) error {
 	data := strings.ReplaceAll(options.Arguments, "/", "\\/")
 	for _, token := range rePathTokenRe.FindAllStringSubmatch(data, -1) {
 		data = strings.Replace(data, token[0], fmt.Sprintf("(?P<%s>.*)", token[1]), 1)
@@ -49,7 +49,7 @@ func (o *restpath) Evaluate(tx rules.TransactionState, value string) bool {
 }
 
 func init() {
-	Register("restpath", func() rules.RuleOperator {
+	Register("restpath", func() rules.Operator {
 		return &restpath{}
 	})
 }

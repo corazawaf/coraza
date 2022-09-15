@@ -11,9 +11,9 @@ import (
 
 type detectXSS struct{}
 
-var _ rules.RuleOperator = (*detectXSS)(nil)
+var _ rules.Operator = (*detectXSS)(nil)
 
-func (o *detectXSS) Init(rules.RuleOperatorOptions) error { return nil }
+func (o *detectXSS) Init(rules.OperatorOptions) error { return nil }
 
 func (o *detectXSS) Evaluate(_ rules.TransactionState, value string) bool {
 	return libinjection.IsXSS(value)

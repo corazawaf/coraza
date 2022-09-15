@@ -14,9 +14,9 @@ type rx struct {
 	re *regexp.Regexp
 }
 
-var _ rules.RuleOperator = (*rx)(nil)
+var _ rules.Operator = (*rx)(nil)
 
-func (o *rx) Init(options rules.RuleOperatorOptions) error {
+func (o *rx) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 
 	re, err := regexp.Compile(data)

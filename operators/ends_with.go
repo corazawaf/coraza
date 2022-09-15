@@ -14,9 +14,9 @@ type endsWith struct {
 	data macro.Macro
 }
 
-var _ rules.RuleOperator = (*endsWith)(nil)
+var _ rules.Operator = (*endsWith)(nil)
 
-func (o *endsWith) Init(options rules.RuleOperatorOptions) error {
+func (o *endsWith) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)

@@ -9,9 +9,9 @@ import (
 
 type geoLookup struct{}
 
-var _ rules.RuleOperator = (*geoLookup)(nil)
+var _ rules.Operator = (*geoLookup)(nil)
 
-func (*geoLookup) Init(rules.RuleOperatorOptions) error { return nil }
+func (*geoLookup) Init(rules.OperatorOptions) error { return nil }
 
 // kept for compatibility, it requires a plugin.
 func (*geoLookup) Evaluate(rules.TransactionState, string) bool { return true }

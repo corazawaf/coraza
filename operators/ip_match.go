@@ -14,9 +14,9 @@ type ipMatch struct {
 	subnets []*net.IPNet
 }
 
-var _ rules.RuleOperator = (*ipMatch)(nil)
+var _ rules.Operator = (*ipMatch)(nil)
 
-func (o *ipMatch) Init(options rules.RuleOperatorOptions) error {
+func (o *ipMatch) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 
 	o.subnets = []*net.IPNet{}

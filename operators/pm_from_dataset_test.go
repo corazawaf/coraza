@@ -14,7 +14,7 @@ import (
 
 func TestPmFromDataset(t *testing.T) {
 	pm := &pmFromDataset{}
-	opts := rules.RuleOperatorOptions{
+	opts := rules.OperatorOptions{
 		Arguments: "test_1",
 		Datasets: map[string][]string{
 			"test_1": {"test_1", "test_2"},
