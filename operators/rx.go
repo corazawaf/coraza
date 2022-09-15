@@ -25,8 +25,7 @@ func (o *rx) Init(options coraza.RuleOperatorOptions) error {
 
 func (o *rx) Evaluate(tx *coraza.Transaction, value string) bool {
 	match := o.re.FindStringSubmatch(value)
-	lcount := len(match)
-	if lcount == 0 {
+	if len(match) == 0 {
 		return false
 	}
 
