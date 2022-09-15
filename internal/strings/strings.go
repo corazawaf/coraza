@@ -86,7 +86,7 @@ func MaybeUnquote(s string) string {
 		return s
 	}
 
-	// Unquote characters, passing through illegal escape sequences because modsec rules commonly use them to make
+	// Unquote characters, passing through illegal escape sequences because seclang rules commonly use them to make
 	// regex more readable.
 	res := strings.Builder{}
 	tail := s[1 : len(s)-1]
