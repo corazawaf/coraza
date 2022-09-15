@@ -3,7 +3,9 @@
 
 package loggers
 
-import "github.com/corazawaf/coraza/v3/types"
+import (
+	"github.com/corazawaf/coraza/v3/types"
+)
 
 // AuditLog represents the main struct for audit log data
 type AuditLog struct {
