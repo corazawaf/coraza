@@ -15,25 +15,6 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-// RuleTransformation is used to create transformation plugins
-// See the documentation for more information
-// If a transformation fails to run it will return the same string
-// and an error, errors are only used for logging, it won't stop
-// the execution of the rule
-type RuleTransformation = func(input string) (string, error)
-
-// RuleAction is used to create Action plugins
-// See the documentation: https://www.coraza.io/docs/waf/actions
-type RuleAction interface {
-	// Init an action, will be done during compilation
-	Init(*Rule, string) error
-	// Evaluate will be done during rule evaluation
-	Evaluate(*Rule, *Transaction)
-	// Type will return the rule type, it's used by Evaluate
-	// to choose when to evaluate each action
-	Type() rules.ActionType
-}
-
 // ruleActionParams is used as a wrapper to store the action name
 // and parameters, basically for logging purposes.
 type ruleActionParams struct {
@@ -100,7 +81,7 @@ type ruleTransformationParams struct {
 	Name string
 
 	// The transformation function to be used
-	Function RuleTransformation
+	Function rules.Transformation
 }
 
 // Rule is used to test a Transaction against certain operators
@@ -395,7 +376,7 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 
 // AddTransformation adds a transformation to the rule
 // it fails if the transformation cannot be found
-func (r *Rule) AddTransformation(name string, t RuleTransformation) error {
+func (r *Rule) AddTransformation(name string, t rules.Transformation) error {
 	if t == nil || name == "" {
 		return fmt.Errorf("invalid transformation %q not found", name)
 	}
