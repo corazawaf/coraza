@@ -11,8 +11,10 @@ import (
 
 type validateUtf8Encoding struct{}
 
-func (o *validateUtf8Encoding) Init(options corazawaf.RuleOperatorOptions) error { return nil }
+var _ corazawaf.RuleOperator = (*validateUtf8Encoding)(nil)
 
-func (o *validateUtf8Encoding) Evaluate(tx *corazawaf.Transaction, value string) bool {
+func (o *validateUtf8Encoding) Init(corazawaf.RuleOperatorOptions) error { return nil }
+
+func (o *validateUtf8Encoding) Evaluate(_ *corazawaf.Transaction, value string) bool {
 	return utf8.ValidString(value)
 }

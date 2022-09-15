@@ -16,7 +16,7 @@ func TestFromFile(t *testing.T) {
 
 	ipm := &ipMatchFromFile{}
 	opts := corazawaf.RuleOperatorOptions{
-		Arguments: string("./testdata/op/netranges.dat"),
+		Arguments: "./testdata/op/netranges.dat",
 		Path:      []string{"."},
 		Root:      io.OSFS{},
 	}

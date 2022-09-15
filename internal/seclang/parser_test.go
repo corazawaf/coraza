@@ -13,14 +13,14 @@ import (
 	"path/filepath"
 	"testing"
 
-	engine "github.com/corazawaf/coraza/v3/internal/corazawaf"
+	coraza "github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 //go:embed testdata
 var testdata embed.FS
 
 func TestInterruption(t *testing.T) {
-	waf := engine.NewWAF()
+	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	if err := p.FromString(`SecAction "id:1,deny,log,phase:1"`); err != nil {
 		t.Error("Could not create from string")
@@ -32,7 +32,7 @@ func TestInterruption(t *testing.T) {
 }
 
 func TestDirectivesCaseInsensitive(t *testing.T) {
-	waf := engine.NewWAF()
+	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	err := p.FromString("seCwEbAppid 15")
 	if err != nil {
@@ -41,7 +41,7 @@ func TestDirectivesCaseInsensitive(t *testing.T) {
 }
 
 func TestDefaultConfigurationFile(t *testing.T) {
-	waf := engine.NewWAF()
+	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	err := p.FromFile("../../coraza.conf-recommended")
 	if err != nil {
@@ -50,7 +50,7 @@ func TestDefaultConfigurationFile(t *testing.T) {
 }
 
 func TestHardcodedIncludeDirective(t *testing.T) {
-	waf := engine.NewWAF()
+	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	if err := p.FromString("Include ../../coraza.conf-recommended"); err != nil {
 		t.Error(err)
@@ -64,7 +64,7 @@ func TestHardcodedIncludeDirective(t *testing.T) {
 }
 
 func TestHardcodedSubIncludeDirective(t *testing.T) {
-	waf := engine.NewWAF()
+	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	if err := p.FromString("Include ./testdata/includes/parent.conf"); err != nil {
 		t.Error(err)
@@ -75,7 +75,7 @@ func TestHardcodedSubIncludeDirective(t *testing.T) {
 }
 
 func TestHardcodedSubIncludeDirectiveAbsolutePath(t *testing.T) {
-	waf := engine.NewWAF()
+	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	currentDir, _ := filepath.Abs("./")
 	ruleFile := filepath.Join(currentDir, "./testdata/includes/parent.conf")
@@ -88,7 +88,7 @@ func TestHardcodedSubIncludeDirectiveAbsolutePath(t *testing.T) {
 }
 
 func TestHardcodedIncludeDirectiveDDOS(t *testing.T) {
-	waf := engine.NewWAF()
+	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	tmpFile, err := os.Create(filepath.Join(t.TempDir(), "rand.conf"))
 	if err != nil {
@@ -108,7 +108,7 @@ func TestHardcodedIncludeDirectiveDDOS(t *testing.T) {
 }
 
 func TestHardcodedIncludeDirectiveDDOS2(t *testing.T) {
-	waf := engine.NewWAF()
+	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	tmpFile, err := os.Create(filepath.Join(t.TempDir(), "rand1.conf"))
 	if err != nil {
@@ -135,7 +135,7 @@ func TestHardcodedIncludeDirectiveDDOS2(t *testing.T) {
 
 func TestChains(t *testing.T) {
 	/*
-		waf := engine.NewWAF()
+		waf := coraza.NewWAF()
 		p, _ := NewParser(waf)
 		if err := p.FromString(`
 		SecAction "id:1,deny,log,phase:1,chain"
@@ -155,7 +155,7 @@ func TestChains(t *testing.T) {
 }
 
 func TestEmbedFS(t *testing.T) {
-	waf := engine.NewWAF()
+	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	root, err := fs.Sub(testdata, "testdata")
 	if err != nil {
@@ -167,5 +167,17 @@ func TestEmbedFS(t *testing.T) {
 	}
 	if waf.Rules.Count() != 4 {
 		t.Error("Expected 4 rules loaded using include directive. Found: ", waf.Rules.Count())
+	}
+}
+
+//go:embed testdata/parserbenchmark.conf
+var parsingRule string
+
+func BenchmarkParseFromString(b *testing.B) {
+	waf := coraza.NewWAF()
+	parser := NewParser(waf)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = parser.FromString(parsingRule)
 	}
 }

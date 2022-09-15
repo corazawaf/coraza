@@ -8,13 +8,16 @@ import (
 	"bytes"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 type pmFromFile struct {
 	matcher ahocorasick.AhoCorasick
 }
+
+var _ corazawaf.RuleOperator = (*pmFromFile)(nil)
 
 func (o *pmFromFile) Init(options corazawaf.RuleOperatorOptions) error {
 	path := options.Arguments
@@ -50,18 +53,5 @@ func (o *pmFromFile) Init(options corazawaf.RuleOperatorOptions) error {
 }
 
 func (o *pmFromFile) Evaluate(tx *corazawaf.Transaction, value string) bool {
-	if tx.Capture {
-		matches := o.matcher.FindAll(value)
-		for i, match := range matches {
-			if i == 10 {
-				return true
-			}
-			tx.CaptureField(i, value[match.Start():match.End()])
-		}
-		return len(matches) > 0
-	}
-	iter := o.matcher.Iter(value)
-	return iter.Next() != nil
+	return pmEvaluate(o.matcher, tx, value)
 }
-
-var _ corazawaf.RuleOperator = (*pmFromFile)(nil)

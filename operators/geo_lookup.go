@@ -9,9 +9,9 @@ import (
 
 type geoLookup struct{}
 
-func (o *geoLookup) Init(options corazawaf.RuleOperatorOptions) error { return nil }
+var _ corazawaf.RuleOperator = (*geoLookup)(nil)
+
+func (*geoLookup) Init(corazawaf.RuleOperatorOptions) error { return nil }
 
 // kept for compatibility, it requires a plugin.
-func (o *geoLookup) Evaluate(tx *corazawaf.Transaction, value string) bool { return true }
-
-var _ corazawaf.RuleOperator = &geoLookup{}
+func (*geoLookup) Evaluate(*corazawaf.Transaction, string) bool { return true }

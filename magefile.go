@@ -39,7 +39,11 @@ func Format() error {
 		"-ignore", "examples/**", "."); err != nil {
 		return err
 	}
-	return sh.RunV("go", "run", fmt.Sprintf("github.com/rinchsan/gosimports/cmd/gosimports@%s", gosImportsVer), "-w", ".")
+	return sh.RunV("go", "run", fmt.Sprintf("github.com/rinchsan/gosimports/cmd/gosimports@%s", gosImportsVer),
+		"-w",
+		"-local",
+		"github.com/corazawaf/coraza",
+		".")
 }
 
 // Lint verifies code quality.
@@ -47,6 +51,9 @@ func Lint() error {
 	if err := sh.RunV("go", "run", fmt.Sprintf("github.com/golangci/golangci-lint/cmd/golangci-lint@%s", golangCILintVer), "run"); err != nil {
 		return err
 	}
+
+	sh.Run("git", "stash", "-k", "-u") // stash unstagged changes so they don't interfere with git diff below
+	defer sh.Run("git", "stash", "pop")
 
 	mg.SerialDeps(Format)
 

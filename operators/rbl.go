@@ -22,6 +22,8 @@ type rbl struct {
 	resolver *net.Resolver
 }
 
+var _ corazawaf.RuleOperator = (*rbl)(nil)
+
 func (o *rbl) Init(options corazawaf.RuleOperatorOptions) error {
 	data := options.Arguments
 

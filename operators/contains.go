@@ -14,6 +14,8 @@ type contains struct {
 	data macro.Macro
 }
 
+var _ corazawaf.RuleOperator = (*contains)(nil)
+
 func (o *contains) Init(options corazawaf.RuleOperatorOptions) error {
 	data := options.Arguments
 

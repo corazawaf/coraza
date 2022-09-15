@@ -14,6 +14,8 @@ type eq struct {
 	data macro.Macro
 }
 
+var _ corazawaf.RuleOperator = (*eq)(nil)
+
 func (o *eq) Init(options corazawaf.RuleOperatorOptions) error {
 	data := options.Arguments
 

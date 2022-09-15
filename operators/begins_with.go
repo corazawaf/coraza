@@ -14,6 +14,8 @@ type beginsWith struct {
 	data macro.Macro
 }
 
+var _ corazawaf.RuleOperator = (*beginsWith)(nil)
+
 func (o *beginsWith) Init(options corazawaf.RuleOperatorOptions) error {
 	data := options.Arguments
 

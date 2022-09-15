@@ -41,3 +41,13 @@ func TestNidCl(t *testing.T) {
 		t.Errorf("Valid NID CL for empty string")
 	}
 }
+
+func TestDigitToInt(t *testing.T) {
+	if want, have := 0, digitToInt('0'); want != have {
+		t.Errorf("unexpected conversion, want %d, have %d", want, have)
+	}
+
+	if want, have := 9, digitToInt('9'); want != have {
+		t.Errorf("unexpected conversion, want %d, have %d", want, have)
+	}
+}

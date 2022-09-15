@@ -9,9 +9,11 @@ import (
 
 type validateURLEncoding struct{}
 
-func (o *validateURLEncoding) Init(options corazawaf.RuleOperatorOptions) error { return nil }
+var _ corazawaf.RuleOperator = (*validateURLEncoding)(nil)
 
-func (o *validateURLEncoding) Evaluate(tx *corazawaf.Transaction, value string) bool {
+func (o *validateURLEncoding) Init(corazawaf.RuleOperatorOptions) error { return nil }
+
+func (o *validateURLEncoding) Evaluate(_ *corazawaf.Transaction, value string) bool {
 	if len(value) == 0 {
 		return false
 	}

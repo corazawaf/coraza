@@ -14,6 +14,8 @@ type le struct {
 	data macro.Macro
 }
 
+var _ corazawaf.RuleOperator = (*le)(nil)
+
 func (o *le) Init(options corazawaf.RuleOperatorOptions) error {
 	data := options.Arguments
 	m, err := macro.NewMacro(data)

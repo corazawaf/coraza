@@ -14,6 +14,8 @@ type endsWith struct {
 	data macro.Macro
 }
 
+var _ corazawaf.RuleOperator = (*endsWith)(nil)
+
 func (o *endsWith) Init(options corazawaf.RuleOperatorOptions) error {
 	data := options.Arguments
 

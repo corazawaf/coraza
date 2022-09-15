@@ -15,6 +15,8 @@ type ipMatchFromFile struct {
 	ipMatcher *ipMatch
 }
 
+var _ corazawaf.RuleOperator = (*ipMatchFromFile)(nil)
+
 func (o *ipMatchFromFile) Init(options corazawaf.RuleOperatorOptions) error {
 	path := options.Arguments
 

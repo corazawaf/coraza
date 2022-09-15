@@ -5,6 +5,7 @@ package corazawaf
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"os"
 
@@ -17,15 +18,26 @@ import (
 // It implements io.Copy(bodyBuffer, someReader) by inherit io.Writer
 type BodyBuffer struct {
 	io.Writer
-	options types.BodyBufferOptions
-	buffer  *bytes.Buffer
-	writer  *os.File
-	length  int64
+	options  types.BodyBufferOptions
+	buffer   *bytes.Buffer
+	writer   *os.File
+	length   int64
+	isClosed bool
 }
+
+var errAlreadyClosed = errors.New("buffer already closed")
 
 // Write appends data to the body buffer by chunks
 // You may dump io.Readers using io.Copy(br, reader)
 func (br *BodyBuffer) Write(data []byte) (n int, err error) {
+	if br.isClosed {
+		return 0, errAlreadyClosed
+	}
+
+	if len(data) == 0 {
+		return 0, nil
+	}
+
 	l := int64(len(data)) + br.length
 	if !environment.IsTinyGo && l >= br.options.MemoryLimit {
 		if br.writer == nil {
@@ -48,6 +60,10 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 
 // Reader Returns a working reader for the body buffer in memory or file
 func (br *BodyBuffer) Reader() (io.Reader, error) {
+	if br.isClosed {
+		return nil, errAlreadyClosed
+	}
+
 	if environment.IsTinyGo || br.writer == nil {
 		return bytes.NewReader(br.buffer.Bytes()), nil
 	}
@@ -59,11 +75,20 @@ func (br *BodyBuffer) Reader() (io.Reader, error) {
 
 // Size returns the current size of the body buffer
 func (br *BodyBuffer) Size() int64 {
+	if br.isClosed {
+		return 0
+	}
+
 	return br.length
 }
 
 // Close will close all readers and delete temporary files
 func (br *BodyBuffer) Close() error {
+	if br.isClosed {
+		return nil
+	}
+
+	br.isClosed = true
 	br.buffer.Reset()
 	br.buffer = nil
 	if !environment.IsTinyGo && br.writer != nil {
@@ -72,6 +97,7 @@ func (br *BodyBuffer) Close() error {
 		}
 		return os.Remove(br.writer.Name())
 	}
+
 	return nil
 }
 

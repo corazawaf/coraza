@@ -6,8 +6,9 @@ package operators
 import (
 	"fmt"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 // TODO according to coraza researchs, re2 matching is faster than ahocorasick
@@ -16,6 +17,8 @@ import (
 type pmFromDataset struct {
 	matcher ahocorasick.AhoCorasick
 }
+
+var _ corazawaf.RuleOperator = (*pmFromDataset)(nil)
 
 func (o *pmFromDataset) Init(options corazawaf.RuleOperatorOptions) error {
 	data := options.Arguments
@@ -35,18 +38,5 @@ func (o *pmFromDataset) Init(options corazawaf.RuleOperatorOptions) error {
 }
 
 func (o *pmFromDataset) Evaluate(tx *corazawaf.Transaction, value string) bool {
-	if tx.Capture {
-		matches := o.matcher.FindAll(value)
-		for i, match := range matches {
-			if i == 10 {
-				return true
-			}
-			tx.CaptureField(i, value[match.Start():match.End()])
-		}
-		return len(matches) > 0
-	}
-	iter := o.matcher.Iter(value)
-	return iter.Next() != nil
+	return pmEvaluate(o.matcher, tx, value)
 }
-
-var _ corazawaf.RuleOperator = (*pmFromDataset)(nil)

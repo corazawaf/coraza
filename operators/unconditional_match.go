@@ -9,6 +9,6 @@ import (
 
 type unconditionalMatch struct{}
 
-func (o *unconditionalMatch) Init(options corazawaf.RuleOperatorOptions) error { return nil }
+func (*unconditionalMatch) Init(corazawaf.RuleOperatorOptions) error { return nil }
 
-func (o *unconditionalMatch) Evaluate(tx *corazawaf.Transaction, value string) bool { return true }
+func (*unconditionalMatch) Evaluate(*corazawaf.Transaction, string) bool { return true }

@@ -7,6 +7,7 @@
 package loggers
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,7 +16,33 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
-func TestSerialLogger_Write(t *testing.T) {
+func TestSerialLoggerFailsOnInit(t *testing.T) {
+	config := types.Config{}
+	writer := &serialWriter{}
+	if err := writer.Init(config); err != nil {
+		t.Errorf("unexpected error: %s", err.Error())
+	}
+
+	if err := writer.Close(); err != nil {
+		t.Errorf("unexpected error: %s", err.Error())
+	}
+}
+
+func TestSerialWriterFailsOnInit(t *testing.T) {
+	config := types.Config{
+		"auditlog_file":      "/unexisting.log",
+		"auditlog_dir":       t.TempDir(),
+		"auditlog_file_mode": fs.FileMode(0777),
+		"auditlog_dir_mode":  fs.FileMode(0777),
+		"auditlog_formatter": jsonFormatter,
+	}
+	writer := &serialWriter{}
+	if err := writer.Init(config); err == nil {
+		t.Error("expected error")
+	}
+}
+
+func TestSerialWriterWrites(t *testing.T) {
 	tmp := filepath.Join(t.TempDir(), "audit.log")
 	writer := &serialWriter{}
 	config := types.Config{
@@ -51,5 +78,9 @@ func TestSerialLogger_Write(t *testing.T) {
 	}
 	if !strings.Contains(string(data), "id:100") {
 		t.Errorf("failed to parse log rule id: \n%q on file %q", string(data), tmp)
+	}
+
+	if err := writer.Close(); err != nil {
+		t.Errorf("unexpected error: %s", err.Error())
 	}
 }

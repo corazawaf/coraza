@@ -21,6 +21,8 @@ type restpath struct {
 	re *regexp.Regexp
 }
 
+var _ corazawaf.RuleOperator = (*restpath)(nil)
+
 func (o *restpath) Init(options corazawaf.RuleOperatorOptions) error {
 	data := strings.ReplaceAll(options.Arguments, "/", "\\/")
 	for _, token := range rePathTokenRe.FindAllStringSubmatch(data, -1) {
@@ -45,8 +47,6 @@ func (o *restpath) Evaluate(tx *corazawaf.Transaction, value string) bool {
 	}
 	return true
 }
-
-var _ corazawaf.RuleOperator = &restpath{}
 
 func init() {
 	Register("restpath", func() corazawaf.RuleOperator {

@@ -14,6 +14,8 @@ type rx struct {
 	re *regexp.Regexp
 }
 
+var _ corazawaf.RuleOperator = (*rx)(nil)
+
 func (o *rx) Init(options corazawaf.RuleOperatorOptions) error {
 	data := options.Arguments
 
@@ -23,13 +25,13 @@ func (o *rx) Init(options corazawaf.RuleOperatorOptions) error {
 }
 
 func (o *rx) Evaluate(tx *corazawaf.Transaction, value string) bool {
-	match := o.re.FindAllSubmatch(o.convert(value), -1)
+	match := o.re.FindAllSubmatch(o.convert(value), 1)
 	lcount := len(match)
-	if !tx.Capture && lcount > 0 {
-		return true
+	if lcount == 0 {
+		return false
 	}
 
-	if lcount > 0 && tx.Capture {
+	if tx.Capture {
 		for i, c := range match[0] {
 			if i == 9 {
 				return true
@@ -37,7 +39,8 @@ func (o *rx) Evaluate(tx *corazawaf.Transaction, value string) bool {
 			tx.CaptureField(i, string(c))
 		}
 	}
-	return lcount > 0
+
+	return true
 }
 
 func (o *rx) convert(src string) []byte {

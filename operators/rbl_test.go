@@ -10,8 +10,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/foxcpp/go-mockdns"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 type testLogger struct{ t *testing.T }

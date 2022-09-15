@@ -10,7 +10,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
@@ -37,7 +36,7 @@ type Parser struct {
 // If the path contains a *, it will be expanded to all
 // files in the directory matching the pattern
 func (p *Parser) FromFile(profilePath string) error {
-	files := []string{}
+	var files []string
 	if strings.Contains(profilePath, "*") {
 		var err error
 		files, err = fs.Glob(p.root, profilePath)
@@ -77,40 +76,50 @@ func (p *Parser) FromFile(profilePath string) error {
 // or arguments are invalid
 func (p *Parser) FromString(data string) error {
 	scanner := bufio.NewScanner(strings.NewReader(data))
-	var linebuffer = ""
-	pattern := regexp.MustCompile(`\\(\s+)?$`)
+	var linebuffer strings.Builder
 	inQuotes := false
 	for scanner.Scan() {
 		p.currentLine++
 		line := strings.TrimSpace(scanner.Text())
-		if !inQuotes && len(line) > 0 && line[len(line)-1] == '`' {
+		lineLen := len(line)
+		if lineLen == 0 {
+			continue
+		}
+
+		if !inQuotes && line[lineLen-1] == '`' {
 			inQuotes = true
-		} else if inQuotes && len(line) > 0 && line[0] == '`' {
+		} else if inQuotes && line[0] == '`' {
 			inQuotes = false
 		}
+
 		if inQuotes {
-			linebuffer += line + "\n"
-		} else {
-			linebuffer += line
+			linebuffer.WriteString(line)
+			linebuffer.WriteString("\n")
+			continue
+		}
+
+		if line[0] == '#' {
+			continue
 		}
 
 		// Check if line ends with \
-		if !pattern.MatchString(line) && !inQuotes {
-			err := p.evaluate(linebuffer)
+		if line[lineLen-1] == '\\' {
+			linebuffer.WriteString(strings.TrimSuffix(line, "\\"))
+		} else {
+			linebuffer.WriteString(line)
+			err := p.evaluateLine(linebuffer.String())
 			if err != nil {
 				return err
 			}
-			linebuffer = ""
-		} else if !inQuotes {
-			linebuffer = strings.TrimSuffix(linebuffer, "\\")
+			linebuffer.Reset()
 		}
 	}
 	return nil
 }
 
-func (p *Parser) evaluate(data string) error {
+func (p *Parser) evaluateLine(data string) error {
 	if data == "" || data[0] == '#' {
-		return nil
+		return errors.New("invalid lines")
 	}
 	// first we get the directive
 	spl := strings.SplitN(data, " ", 2)
@@ -119,12 +128,11 @@ func (p *Parser) evaluate(data string) error {
 		opts = spl[1]
 	}
 	p.options.WAF.Logger.Debug("parsing directive %q", data)
-	directive := spl[0]
+	directive := strings.ToLower(spl[0])
 
 	if len(opts) >= 3 && opts[0] == '"' && opts[len(opts)-1] == '"' {
 		opts = strings.Trim(opts, `"`)
 	}
-	directive = strings.ToLower(directive)
 	if directive == "include" {
 		// this is a special hardcoded case
 		// we cannot add it as a directive type because there are recursion issues
@@ -161,18 +169,12 @@ func (p *Parser) log(msg string) error {
 	return errors.New(msg)
 }
 
-// SetCurrentDir forces the current directory of the parser to dir
-// If FromFile was used, the file directory will be used instead unless
-// overwritten by this function
-// It is mostly used by operators that consumes relative paths
-func (p *Parser) SetCurrentDir(dir string) {
-	p.currentDir = dir
-}
-
 // SetRoot sets the root of the filesystem for resolving paths. If not set, the OS's
-// filesystem is used. SetRoot with `embed.FS` can allow parsing Include and FromFile
-// directives for an embedded set of rules, or zip.Reader can be used to work with
-// an archive.
+// filesystem is used. Some use cases for setting a root are
+//
+// - os.DirFS to set a path to resolve relative paths from.
+// - embed.FS to read rules from an embedded filesystem.
+// - zip.Reader to read rules from a zip file.
 func (p *Parser) SetRoot(root fs.FS) {
 	p.root = root
 }

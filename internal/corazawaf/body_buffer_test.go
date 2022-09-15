@@ -92,3 +92,26 @@ func TestBodyReaderWriteFromReader(t *testing.T) {
 	}
 	br.Close()
 }
+
+func TestBodyCloseIsIdempotent(t *testing.T) {
+	br := NewBodyBuffer(types.BodyBufferOptions{
+		TmpPath:     t.TempDir(),
+		MemoryLimit: 5,
+	})
+
+	if err := br.Close(); err != nil {
+		t.Errorf("unexpected error: %s", err.Error())
+	}
+
+	if err := br.Close(); err != nil {
+		t.Errorf("unexpected error: %s", err.Error())
+	}
+
+	if _, err := br.Write([]byte("abc")); err == nil || err != errAlreadyClosed {
+		t.Errorf("expected error: %s", errAlreadyClosed.Error())
+	}
+
+	if _, err := br.Reader(); err == nil || err != errAlreadyClosed {
+		t.Errorf("expected error: %s", errAlreadyClosed.Error())
+	}
+}

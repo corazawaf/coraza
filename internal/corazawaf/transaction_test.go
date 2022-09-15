@@ -21,8 +21,31 @@ import (
 
 var wafi = NewWAF()
 
+func TestTxSettersMultipart(t *testing.T) {
+	tx := makeTransactionMultipart(t)
+	exp := map[string]string{
+		"%{request_headers.x-test-header}": "test456",
+		"%{request_method}":                "POST",
+		"%{ARGS_GET.id}":                   "123",
+		"%{request_cookies.test}":          "123",
+		"%{args_post.testfield}":           "456",
+		"%{args.testfield}":                "456",
+		"%{request_line}":                  "POST /testurl.php?id=123&b=456 HTTP/1.1",
+		"%{query_string}":                  "id=123&b=456",
+		"%{request_filename}":              "/testurl.php",
+		"%{request_protocol}":              "HTTP/1.1",
+		"%{request_uri}":                   "/testurl.php?id=123&b=456",
+		"%{request_uri_raw}":               "/testurl.php?id=123&b=456",
+		"%{files_names}":                   "file1",
+		"%{files_combined_size}":           "72",
+		"%{files_sizes.a.txt}":             "19",
+	}
+
+	validateMacroExpansion(exp, tx, t)
+}
+
 func TestTxSetters(t *testing.T) {
-	tx := makeTransaction()
+	tx := makeTransaction(t)
 	exp := map[string]string{
 		"%{request_headers.x-test-header}": "test456",
 		"%{request_method}":                "POST",
@@ -40,7 +63,6 @@ func TestTxSetters(t *testing.T) {
 
 	validateMacroExpansion(exp, tx, t)
 }
-
 func TestTxMultipart(t *testing.T) {
 	tx := wafi.NewTransaction(context.Background())
 	body := []string{
@@ -117,34 +139,79 @@ func TestTxResponse(t *testing.T) {
 }
 
 func TestRequestBody(t *testing.T) {
-	urlencoded := "some=result&second=data"
-	// xml := "<test><content>test</content></test>"
-	tx := wafi.NewTransaction(context.Background())
-	tx.RequestBodyAccess = true
-	tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
-	if _, err := tx.RequestBodyBuffer.Write([]byte(urlencoded)); err != nil {
-		t.Error("Failed to write body buffer")
+	testCases := []struct {
+		name                   string
+		requestBodyLimit       int64
+		requestBodyLimitAction types.RequestBodyLimitAction
+		shouldInterrupt        bool
+	}{
+		{
+			name:                   "default",
+			requestBodyLimit:       200,
+			requestBodyLimitAction: types.RequestBodyLimitActionReject,
+		},
+		{
+			name:                   "limit rejects",
+			requestBodyLimit:       11,
+			requestBodyLimitAction: types.RequestBodyLimitActionReject,
+			shouldInterrupt:        true,
+		},
+		{
+			name:                   "limit partial processing",
+			requestBodyLimit:       11,
+			requestBodyLimitAction: types.RequestBodyLimitActionProcessPartial,
+		},
 	}
-	tx.ProcessRequestHeaders()
-	if _, err := tx.ProcessRequestBody(); err != nil {
-		t.Error("Failed to process request body")
-	}
-	val := tx.Variables.ArgsPost.Get("some")
-	if len(val) != 1 || val[0] != "result" {
-		t.Error("Failed to set url encoded post data")
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			urlencoded := "some=result&second=data"
+			// xml := "<test><content>test</content></test>"
+			tx := wafi.NewTransaction(context.Background())
+			tx.RequestBodyAccess = true
+			tx.RequestBodyLimit = testCase.requestBodyLimit
+			tx.WAF.RequestBodyLimitAction = testCase.requestBodyLimitAction
+
+			tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
+			if _, err := tx.RequestBodyBuffer.Write([]byte(urlencoded)); err != nil {
+				t.Errorf("Failed to write body buffer: %s", err.Error())
+			}
+			tx.ProcessRequestHeaders()
+			if _, err := tx.ProcessRequestBody(); err != nil {
+				t.Errorf("Failed to process request body: %s", err.Error())
+			}
+
+			if testCase.shouldInterrupt {
+				if tx.Interruption == nil {
+					t.Error("expected interruption")
+				}
+			} else {
+				val := tx.Variables.ArgsPost.Get("some")
+				if len(val) != 1 || val[0] != "result" {
+					t.Error("Failed to set url encoded post data")
+				}
+			}
+
+			_ = tx.Clean()
+		})
 	}
 }
 
 func TestResponseHeader(t *testing.T) {
-	tx := makeTransaction()
+	tx := makeTransaction(t)
 	tx.AddResponseHeader("content-type", "test")
 	if tx.Variables.ResponseContentType.String() != "test" {
 		t.Error("invalid RESPONSE_CONTENT_TYPE after response headers")
 	}
+
+	interruption := tx.ProcessResponseHeaders(200, "OK")
+	if interruption != nil {
+		t.Error("expected interruption")
+	}
 }
 
 func TestAuditLog(t *testing.T) {
-	tx := makeTransaction()
+	tx := makeTransaction(t)
 	tx.AuditLogParts = types.AuditLogParts("ABCDEFGHIJK")
 	al := tx.AuditLog()
 	if al.Transaction.ID != tx.ID {
@@ -157,7 +224,7 @@ func TestAuditLog(t *testing.T) {
 }
 
 func TestResponseBody(t *testing.T) {
-	tx := makeTransaction()
+	tx := makeTransaction(t)
 	tx.ResponseBodyAccess = true
 	tx.RuleEngine = types.RuleEngineOn
 	tx.AddResponseHeader("content-type", "text/plain")
@@ -176,7 +243,7 @@ func TestResponseBody(t *testing.T) {
 }
 
 func TestAuditLogFields(t *testing.T) {
-	tx := makeTransaction()
+	tx := makeTransaction(t)
 	tx.AuditLogParts = types.AuditLogParts("ABCDEFGHIJK")
 	tx.AddRequestHeader("test", "test")
 	tx.AddResponseHeader("test", "test")
@@ -207,7 +274,7 @@ func TestAuditLogFields(t *testing.T) {
 }
 
 func TestResetCapture(t *testing.T) {
-	tx := makeTransaction()
+	tx := makeTransaction(t)
 	tx.Capture = true
 	tx.CaptureField(5, "test")
 	if tx.Variables.TX.Get("5")[0] != "test" {
@@ -223,7 +290,7 @@ func TestResetCapture(t *testing.T) {
 }
 
 func TestRelevantAuditLogging(t *testing.T) {
-	tx := makeTransaction()
+	tx := makeTransaction(t)
 	tx.WAF.AuditLogRelevantStatus = regexp.MustCompile(`(403)`)
 	tx.Variables.ResponseStatus.Set("403")
 	tx.AuditEngine = types.AuditEngineRelevantOnly
@@ -303,7 +370,7 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 }
 
 func TestTxVariables(t *testing.T) {
-	tx := makeTransaction()
+	tx := makeTransaction(t)
 	rv := ruleVariableParams{
 		Name:     "REQUEST_HEADERS",
 		Variable: variables.RequestHeaders,
@@ -340,7 +407,7 @@ func TestTxVariables(t *testing.T) {
 }
 
 func TestTxVariablesExceptions(t *testing.T) {
-	tx := makeTransaction()
+	tx := makeTransaction(t)
 	rv := ruleVariableParams{
 		Name:     "REQUEST_HEADERS",
 		Variable: variables.RequestHeaders,
@@ -487,7 +554,7 @@ func TestTxProcessConnection(t *testing.T) {
 }
 
 func TestTxGetField(t *testing.T) {
-	tx := makeTransaction()
+	tx := makeTransaction(t)
 	rvp := ruleVariableParams{
 		Name:     "args",
 		Variable: variables.Args,
@@ -521,11 +588,12 @@ func TestTxProcessURI(t *testing.T) {
 
 func BenchmarkTransactionCreation(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		makeTransaction()
+		makeTransaction(b)
 	}
 }
 
-func makeTransaction() *Transaction {
+func makeTransaction(t testing.TB) *Transaction {
+	t.Helper()
 	tx := wafi.NewTransaction(context.Background())
 	tx.RequestBodyAccess = true
 	ht := []string{
@@ -537,6 +605,46 @@ func makeTransaction() *Transaction {
 		"Content-Length: 13",
 		"",
 		"testfield=456",
+	}
+	data := strings.Join(ht, "\r\n")
+	_, err := tx.ParseRequestReader(strings.NewReader(data))
+	if err != nil {
+		panic(err)
+	}
+	return tx
+}
+
+func makeTransactionMultipart(t *testing.T) *Transaction {
+	if t != nil {
+		t.Helper()
+	}
+	tx := wafi.NewTransaction(context.Background())
+	tx.RequestBodyAccess = true
+	ht := []string{
+		"POST /testurl.php?id=123&b=456 HTTP/1.1",
+		"Host: www.test.com:80",
+		"Cookie: test=123",
+		"Content-Type: multipart/form-data; boundary=---------------------------9051914041544843365972754266",
+		"X-Test-Header: test456",
+		"Content-Length: 545",
+		"",
+		`-----------------------------9051914041544843365972754266`,
+		`Content-Disposition: form-data; name="testfield"`,
+		``,
+		`456`,
+		`-----------------------------9051914041544843365972754266`,
+		`Content-Disposition: form-data; name="file1"; filename="a.txt"`,
+		`Content-Type: text/plain`,
+		``,
+		`Content of a.txt.`,
+		``,
+		`-----------------------------9051914041544843365972754266`,
+		`Content-Disposition: form-data; name="file2"; filename="a.html"`,
+		`Content-Type: text/html`,
+		``,
+		`<!DOCTYPE html><title>Content of a.html.</title>`,
+		``,
+		`-----------------------------9051914041544843365972754266--`,
 	}
 	data := strings.Join(ht, "\r\n")
 	_, err := tx.ParseRequestReader(strings.NewReader(data))
@@ -564,7 +672,7 @@ func validateMacroExpansion(tests map[string]string, tx *Transaction, t *testing
 }
 
 func TestMacro(t *testing.T) {
-	tx := makeTransaction()
+	tx := makeTransaction(t)
 	tx.Variables.TX.Set("some", []string{"secretly"})
 	m, err := macro.NewMacro("%{unique_id}")
 	if err != nil {

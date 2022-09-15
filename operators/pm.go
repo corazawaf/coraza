@@ -6,8 +6,9 @@ package operators
 import (
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 // TODO according to coraza researchs, re2 matching is faster than ahocorasick
@@ -16,6 +17,8 @@ import (
 type pm struct {
 	matcher ahocorasick.AhoCorasick
 }
+
+var _ corazawaf.RuleOperator = (*pm)(nil)
 
 func (o *pm) Init(options corazawaf.RuleOperatorOptions) error {
 	data := options.Arguments
@@ -35,18 +38,31 @@ func (o *pm) Init(options corazawaf.RuleOperatorOptions) error {
 }
 
 func (o *pm) Evaluate(tx *corazawaf.Transaction, value string) bool {
-	if tx.Capture {
-		matches := o.matcher.FindAll(value)
-		for i, match := range matches {
-			if i == 10 {
-				return true
-			}
-			tx.CaptureField(i, value[match.Start():match.End()])
-		}
-		return len(matches) > 0
-	}
-	iter := o.matcher.Iter(value)
-	return iter.Next() != nil
+	return pmEvaluate(o.matcher, tx, value)
 }
 
-var _ corazawaf.RuleOperator = (*pm)(nil)
+func pmEvaluate(matcher ahocorasick.AhoCorasick, tx *corazawaf.Transaction, value string) bool {
+	iter := matcher.Iter(value)
+
+	if !tx.Capture {
+		// Not capturing so just one match is enough.
+		return iter.Next() != nil
+	}
+
+	var numMatches int
+	for {
+		m := iter.Next()
+		if m == nil {
+			break
+		}
+
+		tx.CaptureField(numMatches, value[m.Start():m.End()])
+
+		numMatches++
+		if numMatches == 10 {
+			return true
+		}
+	}
+
+	return numMatches > 0
+}

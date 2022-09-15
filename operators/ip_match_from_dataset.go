@@ -14,6 +14,8 @@ type ipMatchFromDataset struct {
 	matcher *ipMatch
 }
 
+var _ corazawaf.RuleOperator = (*ipMatchFromDataset)(nil)
+
 func (o *ipMatchFromDataset) Init(options corazawaf.RuleOperatorOptions) error {
 	data := options.Arguments
 	dataset, ok := options.Datasets[data]
@@ -33,5 +35,3 @@ func (o *ipMatchFromDataset) Init(options corazawaf.RuleOperatorOptions) error {
 func (o *ipMatchFromDataset) Evaluate(tx *corazawaf.Transaction, value string) bool {
 	return o.matcher.Evaluate(tx, value)
 }
-
-var _ corazawaf.RuleOperator = (*ipMatchFromDataset)(nil)

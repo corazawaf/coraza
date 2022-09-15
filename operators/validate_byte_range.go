@@ -20,19 +20,22 @@ type validateByteRange struct {
 	data []byteRange
 }
 
+var _ corazawaf.RuleOperator = (*validateByteRange)(nil)
+
 func (o *validateByteRange) Init(options corazawaf.RuleOperatorOptions) error {
 	data := options.Arguments
 
 	if data == "" {
 		return nil
 	}
+
 	ranges := strings.Split(data, ",")
-	spl := ranges
 	var err error
-	for _, br := range spl {
+	for _, br := range ranges {
 		br = strings.TrimSpace(br)
+		spl := strings.SplitN(br, "-", 2)
+
 		var start, end uint64
-		spl := strings.Split(br, "-")
 		if len(spl) == 1 {
 			start, err = strconv.ParseUint(spl[0], 10, 8)
 			if err != nil {
@@ -83,10 +86,10 @@ func (o *validateByteRange) Evaluate(tx *corazawaf.Transaction, data string) boo
 
 func (o *validateByteRange) addRange(start uint64, end uint64) error {
 	if start > 255 {
-		return fmt.Errorf("invalid byte %d", start)
+		return fmt.Errorf("invalid start byte %d", start)
 	}
 	if end > 255 {
-		return fmt.Errorf("invalid byte %d", end)
+		return fmt.Errorf("invalid end byte %d", end)
 	}
 	o.data = append(o.data, byteRange{
 		start: byte(start),
