@@ -14,6 +14,7 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type Test struct {
@@ -83,7 +84,7 @@ func TestOperators(t *testing.T) {
 						return
 					}
 
-					opts := corazawaf.RuleOperatorOptions{
+					opts := rules.RuleOperatorOptions{
 						Arguments: data.Param,
 						Path:      []string{"op"},
 						Root:      os.DirFS("testdata"),

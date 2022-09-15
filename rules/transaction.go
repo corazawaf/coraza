@@ -27,6 +27,10 @@ type TransactionState interface {
 	// TODO(anuraaga): Should be resolved at Init time when WAF is truly immutable.
 	ContentInjection() bool
 	DebugLogger() loggers.DebugLogger
+
+	// TODO(anuraaga): Only needed in operators?
+	Capturing() bool
+	CaptureField(idx int, value string)
 }
 
 // TransactionVariables has pointers to all the variables of the transaction

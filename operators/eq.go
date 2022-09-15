@@ -6,17 +6,17 @@ package operators
 import (
 	"strconv"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/macro"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type eq struct {
 	data macro.Macro
 }
 
-var _ corazawaf.RuleOperator = (*eq)(nil)
+var _ rules.RuleOperator = (*eq)(nil)
 
-func (o *eq) Init(options corazawaf.RuleOperatorOptions) error {
+func (o *eq) Init(options rules.RuleOperatorOptions) error {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)
@@ -27,7 +27,7 @@ func (o *eq) Init(options corazawaf.RuleOperatorOptions) error {
 	return nil
 }
 
-func (o *eq) Evaluate(tx *corazawaf.Transaction, value string) bool {
+func (o *eq) Evaluate(tx rules.TransactionState, value string) bool {
 	d1, _ := strconv.Atoi(o.data.Expand(tx))
 	d2, _ := strconv.Atoi(value)
 	return d1 == d2

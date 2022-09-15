@@ -13,6 +13,7 @@ import (
 	"github.com/foxcpp/go-mockdns"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type testLogger struct{ t *testing.T }
@@ -24,7 +25,7 @@ func (l *testLogger) Printf(format string, v ...interface{}) {
 
 func TestRbl(t *testing.T) {
 	rbl := &rbl{}
-	opts := corazawaf.RuleOperatorOptions{
+	opts := rules.RuleOperatorOptions{
 		Arguments: "xbl.spamhaus.org",
 	}
 	if err := rbl.Init(opts); err != nil {

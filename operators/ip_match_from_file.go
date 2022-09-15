@@ -8,16 +8,16 @@ import (
 	"bytes"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type ipMatchFromFile struct {
 	ipMatcher *ipMatch
 }
 
-var _ corazawaf.RuleOperator = (*ipMatchFromFile)(nil)
+var _ rules.RuleOperator = (*ipMatchFromFile)(nil)
 
-func (o *ipMatchFromFile) Init(options corazawaf.RuleOperatorOptions) error {
+func (o *ipMatchFromFile) Init(options rules.RuleOperatorOptions) error {
 	path := options.Arguments
 
 	data, err := loadFromFile(path, options.Path, options.Root)
@@ -41,14 +41,14 @@ func (o *ipMatchFromFile) Init(options corazawaf.RuleOperatorOptions) error {
 	}
 
 	o.ipMatcher = &ipMatch{}
-	opts := corazawaf.RuleOperatorOptions{
+	opts := rules.RuleOperatorOptions{
 		Arguments: dataParsed.String(),
 	}
 	return o.ipMatcher.Init(opts)
 }
 
-func (o *ipMatchFromFile) Evaluate(tx *corazawaf.Transaction, value string) bool {
+func (o *ipMatchFromFile) Evaluate(tx rules.TransactionState, value string) bool {
 	return o.ipMatcher.Evaluate(tx, value)
 }
 
-var _ corazawaf.RuleOperator = (*ipMatchFromFile)(nil)
+var _ rules.RuleOperator = (*ipMatchFromFile)(nil)

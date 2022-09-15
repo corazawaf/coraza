@@ -4,16 +4,16 @@
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type validateURLEncoding struct{}
 
-var _ corazawaf.RuleOperator = (*validateURLEncoding)(nil)
+var _ rules.RuleOperator = (*validateURLEncoding)(nil)
 
-func (o *validateURLEncoding) Init(corazawaf.RuleOperatorOptions) error { return nil }
+func (o *validateURLEncoding) Init(rules.RuleOperatorOptions) error { return nil }
 
-func (o *validateURLEncoding) Evaluate(_ *corazawaf.Transaction, value string) bool {
+func (o *validateURLEncoding) Evaluate(_ rules.TransactionState, value string) bool {
 	if len(value) == 0 {
 		return false
 	}

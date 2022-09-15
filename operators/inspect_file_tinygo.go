@@ -8,10 +8,11 @@ package operators
 
 import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type inspectFile struct{}
 
-func (*inspectFile) Init(corazawaf.RuleOperatorOptions) error { return nil }
+func (*inspectFile) Init(rules.RuleOperatorOptions) error { return nil }
 
 func (*inspectFile) Evaluate(*corazawaf.Transaction, string) bool { return true }

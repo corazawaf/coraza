@@ -11,21 +11,21 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type inspectFile struct {
 	path string
 }
 
-var _ corazawaf.RuleOperator = (*inspectFile)(nil)
+var _ rules.RuleOperator = (*inspectFile)(nil)
 
-func (o *inspectFile) Init(options corazawaf.RuleOperatorOptions) error {
+func (o *inspectFile) Init(options rules.RuleOperatorOptions) error {
 	o.path = options.Arguments
 	return nil
 }
 
-func (o *inspectFile) Evaluate(tx *corazawaf.Transaction, value string) bool {
+func (o *inspectFile) Evaluate(tx rules.TransactionState, value string) bool {
 	// TODO parametrize timeout
 	// TODO add relative path capabilities
 	// TODO add lua special support

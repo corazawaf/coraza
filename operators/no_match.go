@@ -4,13 +4,13 @@
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type noMatch struct{}
 
-var _ corazawaf.RuleOperator = (*noMatch)(nil)
+var _ rules.RuleOperator = (*noMatch)(nil)
 
-func (*noMatch) Init(options corazawaf.RuleOperatorOptions) error { return nil }
+func (*noMatch) Init(options rules.RuleOperatorOptions) error { return nil }
 
-func (*noMatch) Evaluate(tx *corazawaf.Transaction, value string) bool { return false }
+func (*noMatch) Evaluate(tx rules.TransactionState, value string) bool { return false }

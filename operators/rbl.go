@@ -12,7 +12,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 const timeout = 500 * time.Millisecond
@@ -22,9 +22,9 @@ type rbl struct {
 	resolver *net.Resolver
 }
 
-var _ corazawaf.RuleOperator = (*rbl)(nil)
+var _ rules.RuleOperator = (*rbl)(nil)
 
-func (o *rbl) Init(options corazawaf.RuleOperatorOptions) error {
+func (o *rbl) Init(options rules.RuleOperatorOptions) error {
 	data := options.Arguments
 
 	o.service = data
@@ -35,7 +35,7 @@ func (o *rbl) Init(options corazawaf.RuleOperatorOptions) error {
 
 // https://github.com/mrichman/godnsbl
 // https://github.com/SpiderLabs/ModSecurity/blob/b66224853b4e9d30e0a44d16b29d5ed3842a6b11/src/operators/rbl.cc
-func (o *rbl) Evaluate(tx *corazawaf.Transaction, ipAddr string) bool {
+func (o *rbl) Evaluate(tx rules.TransactionState, ipAddr string) bool {
 	// TODO validate address
 	resC := make(chan bool)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -67,7 +67,7 @@ func (o *rbl) Evaluate(tx *corazawaf.Transaction, ipAddr string) bool {
 			if len(txt) > 0 {
 				status := txt[0]
 				captures = append(captures, status)
-				tx.Variables.TX.Set("httpbl_msg", []string{status})
+				tx.TXVariables().GetTX().Set("httpbl_msg", []string{status})
 			}
 		}
 

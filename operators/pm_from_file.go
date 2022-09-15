@@ -10,16 +10,16 @@ import (
 
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type pmFromFile struct {
 	matcher ahocorasick.AhoCorasick
 }
 
-var _ corazawaf.RuleOperator = (*pmFromFile)(nil)
+var _ rules.RuleOperator = (*pmFromFile)(nil)
 
-func (o *pmFromFile) Init(options corazawaf.RuleOperatorOptions) error {
+func (o *pmFromFile) Init(options rules.RuleOperatorOptions) error {
 	path := options.Arguments
 
 	data, err := loadFromFile(path, options.Path, options.Root)
@@ -52,6 +52,6 @@ func (o *pmFromFile) Init(options corazawaf.RuleOperatorOptions) error {
 	return nil
 }
 
-func (o *pmFromFile) Evaluate(tx *corazawaf.Transaction, value string) bool {
+func (o *pmFromFile) Evaluate(tx rules.TransactionState, value string) bool {
 	return pmEvaluate(o.matcher, tx, value)
 }

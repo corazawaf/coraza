@@ -193,12 +193,18 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 	}
 }
 
+func (tx *Transaction) Capturing() bool {
+	return tx.Capture
+}
+
 // CaptureField is used to set the TX:[index] variables by operators
 // that supports capture, like @rx
 func (tx *Transaction) CaptureField(index int, value string) {
-	tx.WAF.Logger.Debug("[%s] Capturing field %d with value %q", tx.ID, index, value)
-	i := strconv.Itoa(index)
-	tx.Variables.TX.SetIndex(i, 0, value)
+	if tx.Capture {
+		tx.WAF.Logger.Debug("[%s] Capturing field %d with value %q", tx.ID, index, value)
+		i := strconv.Itoa(index)
+		tx.Variables.TX.SetIndex(i, 0, value)
+	}
 }
 
 // this function is used to control which variables are reset after a new rule is evaluated

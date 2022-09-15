@@ -8,12 +8,13 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 func TestValidateByteRangeCase4(t *testing.T) {
 	ranges := "0-255"
 	op := &validateByteRange{}
-	opts := corazawaf.RuleOperatorOptions{
+	opts := rules.RuleOperatorOptions{
 		Arguments: ranges,
 	}
 	if err := op.Init(opts); err != nil {
@@ -28,7 +29,7 @@ func TestValidateByteRangeCase4(t *testing.T) {
 func TestValidateByteRangeCase5(t *testing.T) {
 	ranges := "9,10,13,32-126,128-255"
 	op := &validateByteRange{}
-	opts := corazawaf.RuleOperatorOptions{
+	opts := rules.RuleOperatorOptions{
 		Arguments: ranges,
 	}
 	if err := op.Init(opts); err != nil {
@@ -51,7 +52,7 @@ func getTransaction() *corazawaf.Transaction {
 func BenchmarkValidateByteRange(b *testing.B) {
 	ranges := "9,10,13,32-126,128-255"
 	op := &validateByteRange{}
-	opts := corazawaf.RuleOperatorOptions{
+	opts := rules.RuleOperatorOptions{
 		Arguments: ranges,
 	}
 	if err := op.Init(opts); err != nil {

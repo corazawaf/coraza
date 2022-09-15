@@ -5,7 +5,6 @@ package corazawaf
 
 import (
 	"fmt"
-	"io/fs"
 	"regexp"
 	"strconv"
 	"strings"
@@ -48,36 +47,10 @@ type ruleActionParams struct {
 	Function rules.Action
 }
 
-// RuleOperatorOptions is used to store the options for a rule operator
-type RuleOperatorOptions struct {
-	// Arguments is used to store the operator args
-	Arguments string
-
-	// Path is used to store a list of possible data paths
-	Path []string
-
-	// Root is the root to resolve Path from.
-	Root fs.FS
-
-	// Datasets contains input datasets or dictionaries
-	Datasets map[string][]string
-}
-
-// RuleOperator interface is used to define rule @operators
-type RuleOperator interface {
-	// Init is used during compilation to setup and cache
-	// the operator
-	Init(RuleOperatorOptions) error
-	// Evaluate is used during the rule evaluation,
-	// it returns true if the operator succeeded against
-	// the input data for the transaction
-	Evaluate(*Transaction, string) bool
-}
-
 // RuleOperator is a container for an operator,
 type ruleOperatorParams struct {
 	// Operator to be used
-	Operator RuleOperator
+	Operator rules.RuleOperator
 
 	// Function name (ex @rx)
 	Function string
@@ -439,7 +412,7 @@ func (r *Rule) ClearTransformations() {
 // SetOperator sets the operator of the rule
 // There can be only one operator per rule
 // functionName and params are used for logging
-func (r *Rule) SetOperator(operator RuleOperator, functionName string, params string) {
+func (r *Rule) SetOperator(operator rules.RuleOperator, functionName string, params string) {
 	r.operator = &ruleOperatorParams{
 		Operator: operator,
 		Function: functionName,

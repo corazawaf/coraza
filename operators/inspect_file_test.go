@@ -10,12 +10,12 @@ import (
 	_ "fmt"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 func TestInspectFile(t *testing.T) {
 	ipf := &inspectFile{}
-	opts := corazawaf.RuleOperatorOptions{
+	opts := rules.RuleOperatorOptions{
 		Arguments: "",
 	}
 	opts.Arguments = "/bin/echo"

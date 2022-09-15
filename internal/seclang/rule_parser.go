@@ -196,7 +196,7 @@ func (p *RuleParser) ParseOperator(operator string) error {
 	}
 	data := []byte(opdata)
 
-	opts := corazawaf.RuleOperatorOptions{
+	opts := rules.RuleOperatorOptions{
 		Arguments: string(data),
 		Path: []string{
 			p.options.Config.Get("parser_config_dir", "").(string),

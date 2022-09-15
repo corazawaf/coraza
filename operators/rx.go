@@ -7,16 +7,16 @@ import (
 	"bytes"
 	"regexp"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type rx struct {
 	re *regexp.Regexp
 }
 
-var _ corazawaf.RuleOperator = (*rx)(nil)
+var _ rules.RuleOperator = (*rx)(nil)
 
-func (o *rx) Init(options corazawaf.RuleOperatorOptions) error {
+func (o *rx) Init(options rules.RuleOperatorOptions) error {
 	data := options.Arguments
 
 	re, err := regexp.Compile(data)
@@ -24,14 +24,14 @@ func (o *rx) Init(options corazawaf.RuleOperatorOptions) error {
 	return err
 }
 
-func (o *rx) Evaluate(tx *corazawaf.Transaction, value string) bool {
+func (o *rx) Evaluate(tx rules.TransactionState, value string) bool {
 	match := o.re.FindAllSubmatch(o.convert(value), 1)
 	lcount := len(match)
 	if lcount == 0 {
 		return false
 	}
 
-	if tx.Capture {
+	if tx.Capturing() {
 		for i, c := range match[0] {
 			if i == 9 {
 				return true

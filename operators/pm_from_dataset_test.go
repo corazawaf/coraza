@@ -9,11 +9,12 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 func TestPmFromDataset(t *testing.T) {
 	pm := &pmFromDataset{}
-	opts := corazawaf.RuleOperatorOptions{
+	opts := rules.RuleOperatorOptions{
 		Arguments: "test_1",
 		Datasets: map[string][]string{
 			"test_1": {"test_1", "test_2"},

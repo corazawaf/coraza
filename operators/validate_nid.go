@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type validateNidFunction = func(input string) bool
@@ -19,9 +19,9 @@ type validateNid struct {
 	re *regexp.Regexp
 }
 
-var _ corazawaf.RuleOperator = (*validateNid)(nil)
+var _ rules.RuleOperator = (*validateNid)(nil)
 
-func (o *validateNid) Init(options corazawaf.RuleOperatorOptions) error {
+func (o *validateNid) Init(options rules.RuleOperatorOptions) error {
 	data := options.Arguments
 
 	spl := strings.SplitN(data, " ", 2)
@@ -44,7 +44,7 @@ func (o *validateNid) Init(options corazawaf.RuleOperatorOptions) error {
 	return err
 }
 
-func (o *validateNid) Evaluate(tx *corazawaf.Transaction, value string) bool {
+func (o *validateNid) Evaluate(tx rules.TransactionState, value string) bool {
 	matches := o.re.FindAllStringSubmatch(value, 11)
 
 	res := false
@@ -55,9 +55,7 @@ func (o *validateNid) Evaluate(tx *corazawaf.Transaction, value string) bool {
 		// should we capture more than one NID?
 		if o.fn(m[0]) {
 			res = true
-			if tx.Capture {
-				tx.CaptureField(i, m[0])
-			}
+			tx.CaptureField(i, m[0])
 		}
 	}
 	return res
@@ -134,7 +132,7 @@ func digitToInt(d byte) int {
 }
 
 var (
-	_ corazawaf.RuleOperator = &validateNid{}
-	_ validateNidFunction    = nidCl
-	_ validateNidFunction    = nidUs
+	_ rules.RuleOperator  = &validateNid{}
+	_ validateNidFunction = nidCl
+	_ validateNidFunction = nidUs
 )

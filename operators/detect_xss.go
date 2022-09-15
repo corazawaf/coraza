@@ -6,15 +6,15 @@ package operators
 import (
 	"github.com/corazawaf/libinjection-go"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type detectXSS struct{}
 
-var _ corazawaf.RuleOperator = (*detectXSS)(nil)
+var _ rules.RuleOperator = (*detectXSS)(nil)
 
-func (o *detectXSS) Init(corazawaf.RuleOperatorOptions) error { return nil }
+func (o *detectXSS) Init(rules.RuleOperatorOptions) error { return nil }
 
-func (o *detectXSS) Evaluate(_ *corazawaf.Transaction, value string) bool {
+func (o *detectXSS) Evaluate(_ rules.TransactionState, value string) bool {
 	return libinjection.IsXSS(value)
 }

@@ -6,17 +6,17 @@ package operators
 import (
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/macro"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type contains struct {
 	data macro.Macro
 }
 
-var _ corazawaf.RuleOperator = (*contains)(nil)
+var _ rules.RuleOperator = (*contains)(nil)
 
-func (o *contains) Init(options corazawaf.RuleOperatorOptions) error {
+func (o *contains) Init(options rules.RuleOperatorOptions) error {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)
@@ -27,7 +27,7 @@ func (o *contains) Init(options corazawaf.RuleOperatorOptions) error {
 	return nil
 }
 
-func (o *contains) Evaluate(tx *corazawaf.Transaction, value string) bool {
+func (o *contains) Evaluate(tx rules.TransactionState, value string) bool {
 	data := o.data.Expand(tx)
 	return strings.Contains(value, data)
 }

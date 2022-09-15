@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 func TestRestPath(t *testing.T) {
@@ -16,7 +17,7 @@ func TestRestPath(t *testing.T) {
 	exp := "/some-random/url-{id}/{name}"
 	path := "/some-random/url-123/juan"
 	rp := restpath{}
-	if err := rp.Init(corazawaf.RuleOperatorOptions{
+	if err := rp.Init(rules.RuleOperatorOptions{
 		Arguments: exp,
 	}); err != nil {
 		t.Error(err)
