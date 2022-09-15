@@ -8,12 +8,13 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3"
-	engine "github.com/corazawaf/coraza/v3"
 )
 
 type ipMatchFromDataset struct {
 	matcher *ipMatch
 }
+
+var _ coraza.RuleOperator = (*ipMatchFromDataset)(nil)
 
 func (o *ipMatchFromDataset) Init(options coraza.RuleOperatorOptions) error {
 	data := options.Arguments
@@ -31,7 +32,7 @@ func (o *ipMatchFromDataset) Init(options coraza.RuleOperatorOptions) error {
 	return o.matcher.Init(opts)
 }
 
-func (o *ipMatchFromDataset) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *ipMatchFromDataset) Evaluate(tx *coraza.Transaction, value string) bool {
 	return o.matcher.Evaluate(tx, value)
 }
 

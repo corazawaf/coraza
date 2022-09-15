@@ -18,6 +18,8 @@ type inspectFile struct {
 	path string
 }
 
+var _ coraza.RuleOperator = (*inspectFile)(nil)
+
 func (o *inspectFile) Init(options coraza.RuleOperatorOptions) error {
 	o.path = options.Arguments
 	return nil

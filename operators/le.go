@@ -13,6 +13,8 @@ type le struct {
 	data coraza.Macro
 }
 
+var _ coraza.RuleOperator = (*le)(nil)
+
 func (o *le) Init(options coraza.RuleOperatorOptions) error {
 	data := options.Arguments
 	macro, err := coraza.NewMacro(data)

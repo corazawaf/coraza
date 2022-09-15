@@ -13,6 +13,8 @@ type eq struct {
 	data coraza.Macro
 }
 
+var _ coraza.RuleOperator = (*eq)(nil)
+
 func (o *eq) Init(options coraza.RuleOperatorOptions) error {
 	data := options.Arguments
 

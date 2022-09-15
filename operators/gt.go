@@ -13,6 +13,8 @@ type gt struct {
 	data coraza.Macro
 }
 
+var _ coraza.RuleOperator = (*gt)(nil)
+
 func (o *gt) Init(options coraza.RuleOperatorOptions) error {
 	data := options.Arguments
 

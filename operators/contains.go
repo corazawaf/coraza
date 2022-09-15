@@ -13,6 +13,8 @@ type contains struct {
 	data coraza.Macro
 }
 
+var _ coraza.RuleOperator = (*contains)(nil)
+
 func (o *contains) Init(options coraza.RuleOperatorOptions) error {
 	data := options.Arguments
 
