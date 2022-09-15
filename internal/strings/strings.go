@@ -5,6 +5,7 @@ package strings
 
 import (
 	"math/rand"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -63,14 +64,44 @@ func X2c(what string) byte {
 	return digit
 }
 
-// RemoveQuotes removes quotes from a string
-func RemoveQuotes(s string) string {
+// MaybeUnquote unquotes a string if it is quoted, or returns it as-is if it isn't.
+func MaybeUnquote(s string) string {
 	if s == "" {
 		return ""
 	}
-	s = strings.Trim(s, `"`)
-	s = strings.Trim(s, `'`)
-	return s
+	// Single character cannot be a quoted string
+	if len(s) == 1 {
+		return s
+	}
+
+	var quote byte
+	if s[0] == '"' {
+		quote = '"'
+	} else if s[0] == '\'' {
+		quote = '\''
+	}
+
+	// Not a quoted string
+	if quote == 0 {
+		return s
+	}
+
+	// Unquote characters, passing through illegal escape sequences because modsec rules commonly use them to make
+	// regex more readable.
+	res := strings.Builder{}
+	tail := s[1 : len(s)-1]
+	for len(tail) > 0 {
+		c, _, t, err := strconv.UnquoteChar(tail, quote)
+		if err != nil {
+			res.WriteByte(tail[0])
+			tail = tail[1:]
+		} else {
+			res.WriteRune(c)
+			tail = t
+		}
+	}
+
+	return res.String()
 }
 
 // InSlice returns true if the string is in the slice

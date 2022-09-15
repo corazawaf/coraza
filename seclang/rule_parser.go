@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io/fs"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/corazawaf/coraza/v3"
@@ -194,16 +193,9 @@ func (p *RuleParser) ParseOperator(operator string) error {
 	if err != nil {
 		return err
 	}
-	u, err := strconv.Unquote(fmt.Sprintf(`"%s"`, opdata))
-	var data string
-	if err == nil {
-		data = u
-	} else {
-		data = opdata
-	}
 
 	opts := coraza.RuleOperatorOptions{
-		Arguments: data,
+		Arguments: opdata,
 		Path: []string{
 			p.options.Config.Get("parser_config_dir", "").(string),
 			p.options.Config.Get("working_dir", "").(string),
@@ -353,7 +345,7 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 		if len(matches) == 0 {
 			return nil, fmt.Errorf("invalid rule with no transformation matches: %q", options.Data)
 		}
-		operator := utils.RemoveQuotes(matches[0])
+		operator := utils.MaybeUnquote(matches[0])
 		if utils.InSlice(operator, disabledRuleOperators) {
 			return nil, fmt.Errorf("%s rule operator is disabled", operator)
 		}
@@ -367,7 +359,7 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 			return nil, err
 		}
 		if len(matches) > 1 {
-			actions = utils.RemoveQuotes(matches[1])
+			actions = utils.MaybeUnquote(matches[1])
 			err = rp.ParseActions(actions)
 			if err != nil {
 				return nil, err
@@ -375,7 +367,7 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 		}
 	} else {
 		// quoted actions separated by comma (,)
-		actions = utils.RemoveQuotes(options.Data)
+		actions = utils.MaybeUnquote(options.Data)
 		err = rp.ParseActions(actions)
 		if err != nil {
 			return nil, err
