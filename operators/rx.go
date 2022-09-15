@@ -24,14 +24,14 @@ func (o *rx) Init(options coraza.RuleOperatorOptions) error {
 }
 
 func (o *rx) Evaluate(tx *coraza.Transaction, value string) bool {
-	match := o.re.FindAllStringSubmatch(value, -1)
+	match := o.re.FindStringSubmatch(value)
 	lcount := len(match)
 	if lcount == 0 {
 		return false
 	}
 
 	if tx.Capture {
-		for i, c := range match[0] {
+		for i, c := range match {
 			if i == 9 {
 				return true
 			}
