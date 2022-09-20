@@ -3,8 +3,11 @@
 
 package rules
 
+import "github.com/corazawaf/coraza/v3/types"
+
 type Rule interface {
 	GetID() int
 	GetParentID() int
 	Status() int
+	Evaluate(state TransactionState) []types.MatchData
 }

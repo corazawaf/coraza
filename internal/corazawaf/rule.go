@@ -158,7 +158,11 @@ func (r *Rule) Status() int {
 // Evaluate will evaluate the current rule for the indicated transaction
 // If the operator matches, actions will be evaluated, and it will return
 // the matched variables, keys and values (MatchData)
-func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
+func (r *Rule) Evaluate(tx rules.TransactionState) []types.MatchData {
+	return r.doEvaluate(tx.(*Transaction))
+}
+
+func (r *Rule) doEvaluate(tx *Transaction) []types.MatchData {
 	if r.Capture {
 		tx.Capture = true
 	}
