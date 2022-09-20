@@ -13,7 +13,7 @@ import (
 type msgFn struct {
 }
 
-func (a *msgFn) Init(r rules.Rule, data string) error {
+func (a *msgFn) Init(r rules.RuleInfo, data string) error {
 	data = utils.RemoveQuotes(data)
 	msg, err := macro.NewMacro(data)
 	if err != nil {
@@ -24,7 +24,7 @@ func (a *msgFn) Init(r rules.Rule, data string) error {
 	return nil
 }
 
-func (a *msgFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
+func (a *msgFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
 	// Not evaluated
 }
 

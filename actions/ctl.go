@@ -47,7 +47,7 @@ type ctlFn struct {
 	colRx      *regexp.Regexp
 }
 
-func (a *ctlFn) Init(r rules.Rule, data string) error {
+func (a *ctlFn) Init(r rules.RuleInfo, data string) error {
 	var err error
 	a.action, a.value, a.collection, a.colKey, err = a.parseCtl(data)
 	if len(a.colKey) > 2 && a.colKey[0] == '/' && a.colKey[len(a.colKey)-1] == '/' {
@@ -59,7 +59,7 @@ func (a *ctlFn) Init(r rules.Rule, data string) error {
 	return err
 }
 
-func (a *ctlFn) Evaluate(r rules.Rule, txS rules.TransactionState) {
+func (a *ctlFn) Evaluate(r rules.RuleInfo, txS rules.TransactionState) {
 	// TODO(anuraaga): Confirm this is internal implementation detail
 	tx := txS.(*corazawaf.Transaction)
 	switch a.action {

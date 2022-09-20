@@ -11,13 +11,13 @@ import (
 type revFn struct {
 }
 
-func (a *revFn) Init(r rules.Rule, data string) error {
+func (a *revFn) Init(r rules.RuleInfo, data string) error {
 	// TODO(anuraaga): Confirm this is internal implementation detail
 	r.(*corazawaf.Rule).Rev = data
 	return nil
 }
 
-func (a *revFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
+func (a *revFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
 	// Not evaluated
 }
 

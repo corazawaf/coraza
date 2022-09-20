@@ -11,14 +11,14 @@ import (
 type logFn struct {
 }
 
-func (a *logFn) Init(r rules.Rule, data string) error {
+func (a *logFn) Init(r rules.RuleInfo, data string) error {
 	// TODO(anuraaga): Confirm this is internal implementation detail
 	r.(*corazawaf.Rule).Log = true
 	r.(*corazawaf.Rule).Audit = true
 	return nil
 }
 
-func (a *logFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
+func (a *logFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
 }
 
 func (a *logFn) Type() rules.ActionType {

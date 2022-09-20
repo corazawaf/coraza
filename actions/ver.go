@@ -11,13 +11,13 @@ import (
 type verFn struct {
 }
 
-func (a *verFn) Init(r rules.Rule, data string) error {
+func (a *verFn) Init(r rules.RuleInfo, data string) error {
 	// TODO(anuraaga): Confirm this is internal implementation detail
 	r.(*corazawaf.Rule).Version = data
 	return nil
 }
 
-func (a *verFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
+func (a *verFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
 	// Not evaluated
 }
 

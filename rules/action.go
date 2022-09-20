@@ -21,7 +21,7 @@ const (
 )
 
 type Action interface {
-	Init(Rule, string) error
-	Evaluate(Rule, TransactionState)
+	Init(RuleInfo, string) error
+	Evaluate(RuleInfo, TransactionState)
 	Type() ActionType
 }

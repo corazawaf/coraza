@@ -11,13 +11,13 @@ import (
 type tagFn struct {
 }
 
-func (a *tagFn) Init(r rules.Rule, data string) error {
+func (a *tagFn) Init(r rules.RuleInfo, data string) error {
 	// TODO(anuraaga): Confirm this is internal implementation detail
 	r.(*corazawaf.Rule).Tags = append(r.(*corazawaf.Rule).Tags, data)
 	return nil
 }
 
-func (a *tagFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
+func (a *tagFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
 	// Not evaluated
 }
 

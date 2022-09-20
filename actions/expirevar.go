@@ -17,7 +17,7 @@ type expirevarFn struct {
 	key        string
 }
 
-func (a *expirevarFn) Init(r rules.Rule, data string) error {
+func (a *expirevarFn) Init(r rules.RuleInfo, data string) error {
 	spl := strings.SplitN(data, "=", 2)
 	a.ttl, _ = strconv.Atoi(spl[1])
 	spl = strings.SplitN(spl[0], ".", 2)
@@ -29,7 +29,7 @@ func (a *expirevarFn) Init(r rules.Rule, data string) error {
 	return nil
 }
 
-func (a *expirevarFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
+func (a *expirevarFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
 	// Not supported
 	// tx.WAF.Logger.Error("Expirevar was used but it's not supported", zap.Int("rule", r.Id))
 }

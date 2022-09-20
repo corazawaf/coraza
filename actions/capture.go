@@ -10,14 +10,14 @@ import (
 
 type captureFn struct{}
 
-func (a *captureFn) Init(r rules.Rule, b1 string) error {
+func (a *captureFn) Init(r rules.RuleInfo, b1 string) error {
 	// this will capture only the current rule
 	// TODO(anuraaga): Confirm this is internal implementation detail
 	r.(*corazawaf.Rule).Capture = true
 	return nil
 }
 
-func (a *captureFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
+func (a *captureFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
 
 }
 

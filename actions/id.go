@@ -14,7 +14,7 @@ import (
 type idFn struct {
 }
 
-func (a *idFn) Init(r rules.Rule, data string) error {
+func (a *idFn) Init(r rules.RuleInfo, data string) error {
 	if data == "" {
 		return fmt.Errorf("id action requires a parameter")
 	}
@@ -34,7 +34,7 @@ func (a *idFn) Init(r rules.Rule, data string) error {
 	return nil
 }
 
-func (a *idFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
+func (a *idFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
 	// Not evaluated
 }
 

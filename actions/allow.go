@@ -14,7 +14,7 @@ type allowFn struct {
 	allow int
 }
 
-func (a *allowFn) Init(r rules.Rule, b1 string) error {
+func (a *allowFn) Init(r rules.RuleInfo, b1 string) error {
 	switch b1 {
 	case "phase":
 		a.allow = 2 // skip current phase
@@ -28,7 +28,7 @@ func (a *allowFn) Init(r rules.Rule, b1 string) error {
 	return nil
 }
 
-func (a *allowFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
+func (a *allowFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
 	// TODO implement this:
 	/*
 		if a.allow == 1 {

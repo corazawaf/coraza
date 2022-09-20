@@ -10,11 +10,11 @@ import (
 
 type dropFn struct{}
 
-func (a *dropFn) Init(r rules.Rule, data string) error {
+func (a *dropFn) Init(r rules.RuleInfo, data string) error {
 	return nil
 }
 
-func (a *dropFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
+func (a *dropFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
 	rid := r.GetID()
 	if rid == 0 {
 		rid = r.GetParentID()

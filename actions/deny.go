@@ -10,11 +10,11 @@ import (
 
 type denyFn struct{}
 
-func (a *denyFn) Init(r rules.Rule, data string) error {
+func (a *denyFn) Init(r rules.RuleInfo, data string) error {
 	return nil
 }
 
-func (a *denyFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
+func (a *denyFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
 	rid := r.GetID()
 	if rid == 0 {
 		rid = r.GetParentID()

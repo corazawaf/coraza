@@ -11,13 +11,13 @@ import (
 type multimatchFn struct {
 }
 
-func (a *multimatchFn) Init(r rules.Rule, data string) error {
+func (a *multimatchFn) Init(r rules.RuleInfo, data string) error {
 	// TODO(anuraaga): Confirm this is internal implementation detail
 	r.(*corazawaf.Rule).MultiMatch = true
 	return nil
 }
 
-func (a *multimatchFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
+func (a *multimatchFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
 	// Not evaluated
 }
 

@@ -16,7 +16,7 @@ type prependFn struct {
 	data macro.Macro
 }
 
-func (a *prependFn) Init(r rules.Rule, data string) error {
+func (a *prependFn) Init(r rules.RuleInfo, data string) error {
 	m, err := macro.NewMacro(data)
 	if err != nil {
 		return err
@@ -25,7 +25,7 @@ func (a *prependFn) Init(r rules.Rule, data string) error {
 	return nil
 }
 
-func (a *prependFn) Evaluate(r rules.Rule, txS rules.TransactionState) {
+func (a *prependFn) Evaluate(r rules.RuleInfo, txS rules.TransactionState) {
 	// TODO(anuraaga): This is quite complicated. Evaluate whether plugin API needs to support this.
 	tx := txS.(*corazawaf.Transaction)
 	if !tx.WAF.ContentInjection {

@@ -16,7 +16,7 @@ type initcolFn struct {
 	key        string
 }
 
-func (a *initcolFn) Init(r rules.Rule, data string) error {
+func (a *initcolFn) Init(r rules.RuleInfo, data string) error {
 	kv := strings.SplitN(data, "=", 2)
 	a.collection = kv[0]
 	a.key = kv[1]
@@ -24,7 +24,7 @@ func (a *initcolFn) Init(r rules.Rule, data string) error {
 	return nil
 }
 
-func (a *initcolFn) Evaluate(r rules.Rule, tx rules.TransactionState) {
+func (a *initcolFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
 	// tx.WAF.Logger.Error("initcol was used but it's not supported", zap.Int("rule", r.Id))
 	/*
 		key := tx.MacroExpansion(a.key)
