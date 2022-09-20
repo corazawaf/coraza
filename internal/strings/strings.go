@@ -66,18 +66,20 @@ func X2c(what string) byte {
 
 // MaybeUnquote unquotes a string if it is quoted, or returns it as-is if it isn't.
 func MaybeUnquote(s string) string {
-	if s == "" {
-		return ""
-	}
-	// Single character cannot be a quoted string
-	if len(s) == 1 {
+	if len(s) < 2 {
 		return s
 	}
 
 	var quote byte
 	if s[0] == '"' {
+		if s[len(s)-1] != '"' {
+			return s
+		}
 		quote = '"'
 	} else if s[0] == '\'' {
+		if s[len(s)-1] != '\'' {
+			return s
+		}
 		quote = '\''
 	}
 

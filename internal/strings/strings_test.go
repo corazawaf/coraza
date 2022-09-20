@@ -47,6 +47,22 @@ func TestMaybeUnquote(t *testing.T) {
 			want:  `hello "world`,
 		},
 		{
+			input: `"hello world'`,
+			want:  `"hello world'`,
+		},
+		{
+			input: `"hello world`,
+			want:  `"hello world`,
+		},
+		{
+			input: `'hello world"`,
+			want:  `'hello world"`,
+		},
+		{
+			input: `'hello world`,
+			want:  `'hello world`,
+		},
+		{
 			input: `"\u30cf\u30ed\u30fc world"`,
 			want:  `ハロー world`,
 		},
