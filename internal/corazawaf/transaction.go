@@ -759,11 +759,11 @@ func (tx *Transaction) Interrupted() bool {
 	return tx.Interruption != nil
 }
 
-func (tx *Transaction) InterruptionNext() *types.Interruption {
+func (tx *Transaction) GetInterruption() *types.Interruption {
 	return tx.Interruption
 }
 
-func (tx *Transaction) MatchedRulesNext() []types.MatchedRule {
+func (tx *Transaction) GetMatchedRules() []types.MatchedRule {
 	return tx.MatchedRules
 }
 

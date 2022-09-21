@@ -189,24 +189,24 @@ func (t *Test) OutputInterruptionErrors() []string {
 	var errors []string
 
 	if t.ExpectedOutput.Interruption != nil {
-		if t.ExpectedOutput.Interruption.Action != t.transaction.InterruptionNext().Action {
+		if t.ExpectedOutput.Interruption.Action != t.transaction.GetInterruption().Action {
 			errors = append(errors, fmt.Sprintf("Interruption.Action: expected: '%s', got: '%s'",
-				t.ExpectedOutput.Interruption.Action, t.transaction.InterruptionNext().Action))
+				t.ExpectedOutput.Interruption.Action, t.transaction.GetInterruption().Action))
 		}
 
-		if t.ExpectedOutput.Interruption.Status != t.transaction.InterruptionNext().Status {
+		if t.ExpectedOutput.Interruption.Status != t.transaction.GetInterruption().Status {
 			errors = append(errors, fmt.Sprintf("Interruption.Status: expected: '%d', got: '%d'",
-				t.ExpectedOutput.Interruption.Status, t.transaction.InterruptionNext().Status))
+				t.ExpectedOutput.Interruption.Status, t.transaction.GetInterruption().Status))
 		}
 
-		if t.ExpectedOutput.Interruption.Data != t.transaction.InterruptionNext().Data {
+		if t.ExpectedOutput.Interruption.Data != t.transaction.GetInterruption().Data {
 			errors = append(errors, fmt.Sprintf("Interruption.Data: expected: '%s', got: '%s'",
-				t.ExpectedOutput.Interruption.Data, t.transaction.InterruptionNext().Data))
+				t.ExpectedOutput.Interruption.Data, t.transaction.GetInterruption().Data))
 		}
 
-		if t.ExpectedOutput.Interruption.RuleID != t.transaction.InterruptionNext().RuleID {
+		if t.ExpectedOutput.Interruption.RuleID != t.transaction.GetInterruption().RuleID {
 			errors = append(errors, fmt.Sprintf("Interruption.RuleID: expected: '%d', got: '%d'",
-				t.ExpectedOutput.Interruption.RuleID, t.transaction.InterruptionNext().RuleID))
+				t.ExpectedOutput.Interruption.RuleID, t.transaction.GetInterruption().RuleID))
 		}
 	}
 
@@ -251,7 +251,7 @@ func (t *Test) OutputErrors() []string {
 
 // LogContains checks if the log contains a string
 func (t *Test) LogContains(log string) bool {
-	for _, mr := range t.transaction.MatchedRulesNext() {
+	for _, mr := range t.transaction.GetMatchedRules() {
 		if strings.Contains(mr.ErrorLog(t.ResponseCode), log) {
 			return true
 		}

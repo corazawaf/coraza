@@ -52,11 +52,11 @@ func ProcessRequest(tx coraza.Transaction, req *http.Request) (*types.Interrupti
 	if req.Body != nil {
 		_, err := io.Copy(tx.RequestBodyWriter(), req.Body)
 		if err != nil {
-			return tx.InterruptionNext(), err
+			return tx.GetInterruption(), err
 		}
 		reader, err := tx.RequestBodyReader()
 		if err != nil {
-			return tx.InterruptionNext(), err
+			return tx.GetInterruption(), err
 		}
 		req.Body = io.NopCloser(reader)
 	}
