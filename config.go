@@ -11,52 +11,88 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
+// WAFConfig controls the behavior of the WAF.
+//
+// Note: WAFConfig is immutable. Each WithXXX function returjns a new instance including the corresponding change.
 type WAFConfig interface {
+	// WithRule adds a rule to the WAF.
 	WithRule(rule *corazawaf.Rule) WAFConfig
-	WithRulesFromFile(path string) WAFConfig
-	WithRulesFromString(rules string) WAFConfig
 
+	// WithDirectives parses the directives from the given string and adds them to the WAF.
+	WithDirectives(rules string) WAFConfig
+
+	// WithDirectivesFromFile parses the directives from the given file and adds them to the WAF.
+	WithDirectivesFromFile(path string) WAFConfig
+
+	// WithAuditLog configures audit logging.
 	WithAuditLog(config AuditLogConfig) WAFConfig
 
+	// WithContentInjection enables content injection.
 	WithContentInjection() WAFConfig
 
+	// WithRequestBodyAccess configures access to the request body.
 	WithRequestBodyAccess(config RequestBodyConfig) WAFConfig
+
+	// WithResponseBodyAccess configures access to the response body.
 	WithResponseBodyAccess(config ResponseBodyConfig) WAFConfig
 
+	// WithDebugLogger configures a debug logger.
 	WithDebugLogger(logger loggers.DebugLogger) WAFConfig
+
+	// WithErrorLogger configures an error logger.
 	WithErrorLogger(logger corazawaf.ErrorLogCallback) WAFConfig
 
+	// WithFSRoot configures the root file system.
 	WithFSRoot(fs fs.FS) WAFConfig
 }
 
+// NewWAFConfig creates a new WAFConfig with the default settings.
 func NewWAFConfig() WAFConfig {
 	return &wafConfig{}
 }
 
+// RequestBodyConfig controls access to the request body.
 type RequestBodyConfig interface {
+	// WithLimit sets the maximum number of bytes that can be read from the request body. Bytes beyond that set
+	// in WithInMemoryLimit will be buffered to disk.
 	WithLimit(limit int) RequestBodyConfig
+
+	// WithInMemoryLimit sets the maximum number of bytes that can be read from the request body and buffered in memory.
 	WithInMemoryLimit(limit int) RequestBodyConfig
 }
 
+// NewRequestBodyConfig returns a new RequestBodyConfig with the default settings.
 func NewRequestBodyConfig() RequestBodyConfig {
 	return &requestBodyConfig{}
 }
 
+// ResponseBodyConfig controls access to the response body.
 type ResponseBodyConfig interface {
+	// WithLimit sets the maximum number of bytes that can be read from the response body and buffered in memory.
 	WithLimit(limit int) ResponseBodyConfig
+
+	// WithMimeTypes sets the mime types of responses that will be processed.
 	WithMimeTypes(mimeTypes []string) ResponseBodyConfig
 }
 
+// NewResponseBodyConfig returns a new ResponseBodyConfig with the default settings.
 func NewResponseBodyConfig() ResponseBodyConfig {
 	return &responseBodyConfig{}
 }
 
+// AuditLogConfig controls audit logging.
 type AuditLogConfig interface {
+	// LogRelevantOnly enables audit logging only for relevant events.
 	LogRelevantOnly() AuditLogConfig
+
+	// WithParts configures the parts of the request/response to be logged.
 	WithParts(parts types.AuditLogParts) AuditLogConfig
+
+	// WithLogger configures the loggers.LogWriter to write logs to.
 	WithLogger(logger loggers.LogWriter) AuditLogConfig
 }
 
+// NewAuditLogConfig returns a new AuditLogConfig with the default settings.
 func NewAuditLogConfig() AuditLogConfig {
 	return &auditLogConfig{}
 }
@@ -84,13 +120,13 @@ func (c *wafConfig) WithRule(rule *corazawaf.Rule) WAFConfig {
 	return ret
 }
 
-func (c *wafConfig) WithRulesFromFile(path string) WAFConfig {
+func (c *wafConfig) WithDirectivesFromFile(path string) WAFConfig {
 	ret := c.clone()
 	ret.rules = append(ret.rules, wafRule{file: path})
 	return ret
 }
 
-func (c *wafConfig) WithRulesFromString(rules string) WAFConfig {
+func (c *wafConfig) WithDirectives(rules string) WAFConfig {
 	ret := c.clone()
 	ret.rules = append(ret.rules, wafRule{str: rules})
 	return ret
