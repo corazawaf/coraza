@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -18,6 +19,7 @@ const (
 )
 
 var src = rand.NewSource(time.Now().UnixNano())
+var mu sync.Mutex
 
 // RandomString returns a pseudorandom string of length n.
 // It is safe to use this function in concurrent environments.
@@ -25,6 +27,8 @@ var src = rand.NewSource(time.Now().UnixNano())
 func RandomString(n int) string {
 	sb := strings.Builder{}
 	sb.Grow(n)
+
+	mu.Lock()
 	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
 	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
 		if remain == 0 {
@@ -37,6 +41,7 @@ func RandomString(n int) string {
 		cache >>= letterIdxBits
 		remain--
 	}
+	mu.Unlock()
 
 	return sb.String()
 }
