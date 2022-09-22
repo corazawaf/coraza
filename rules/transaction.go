@@ -12,24 +12,33 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
+// TransactionState tracks the state of a transaction for use in actions and operators.
 type TransactionState interface {
-	// TODO(anuraaga): If only for logging, can be built into logger
-	GetID() string
+	// GetID returns the ID of the transaction.
+	GetID() string // TODO(anuraaga): If only for logging, can be built into logger
 
-	TXVariables() TransactionVariables
+	// GetVariables returns the TransactionVariables of the transaction.
+	GetVariables() TransactionVariables
+
+	// Collection returns a collection from the transaction.
 	Collection(idx variables.RuleVariable) collection.Collection
 
+	// Interrupt interrupts the transaction.
 	Interrupt(interruption *types.Interruption)
 
-	RequestBodyWriter() io.Writer
+	// ResponseBodyWriter allows writing to the response body.
+	// TODO(anuraaga): Should this be combined with interruption? Any action writing anything to response can be dangerous.
 	ResponseBodyWriter() io.Writer
 
-	// TODO(anuraaga): Should be resolved at Init time when WAF is truly immutable.
-	ContentInjection() bool
+	// ContentInjection returns whether content injection is enabled for this transaction.
+	ContentInjection() bool // TODO(anuraaga): Should be resolved at Init time when WAF is truly immutable.
+	// DebugLogger returns the logger for this transaction.
 	DebugLogger() loggers.DebugLogger
 
-	// TODO(anuraaga): Only needed in operators?
-	Capturing() bool
+	// Capturing returns whether the transaction is capturing. CaptureField only works if capturing, this can be used
+	// as an optimization to avoid processing specific to capturing fields.
+	Capturing() bool // TODO(anuraaga): Only needed in operators?
+	// CaptureField captures a field.
 	CaptureField(idx int, value string)
 }
 

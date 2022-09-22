@@ -112,7 +112,7 @@ func (tx *Transaction) GetID() string {
 	return tx.ID
 }
 
-func (tx *Transaction) TXVariables() rules.TransactionVariables {
+func (tx *Transaction) GetVariables() rules.TransactionVariables {
 	return &tx.Variables
 }
 

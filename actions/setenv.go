@@ -38,7 +38,7 @@ func (a *setenvFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
 		tx.DebugLogger().Error("[%s] Error setting env variable for rule %d: %s", tx.GetID(), r.GetID(), err.Error())
 	}
 	// TODO is this ok?
-	tx.TXVariables().GetEnv().Set(a.key, []string{v})
+	tx.GetVariables().GetEnv().Set(a.key, []string{v})
 
 }
 

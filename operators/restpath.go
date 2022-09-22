@@ -42,7 +42,7 @@ func (o *restpath) Evaluate(tx rules.TransactionState, value string) bool {
 	}
 	for i, m := range o.re.SubexpNames() {
 		if i != 0 && m != "" {
-			tx.TXVariables().GetArgsPath().SetIndex(m, 0, match[i])
+			tx.GetVariables().GetArgsPath().SetIndex(m, 0, match[i])
 		}
 	}
 	return true

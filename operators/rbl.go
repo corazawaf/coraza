@@ -67,7 +67,7 @@ func (o *rbl) Evaluate(tx rules.TransactionState, ipAddr string) bool {
 			if len(txt) > 0 {
 				status := txt[0]
 				captures = append(captures, status)
-				tx.TXVariables().GetTX().Set("httpbl_msg", []string{status})
+				tx.GetVariables().GetTX().Set("httpbl_msg", []string{status})
 			}
 		}
 
