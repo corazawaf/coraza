@@ -45,7 +45,7 @@ type TransactionState interface {
 // TransactionVariables has pointers to all the variables of the transaction
 type TransactionVariables interface {
 	// Simple Variables
-	GetUserid() *collection.Simple
+	GetUserID() *collection.Simple
 	GetUrlencodedError() *collection.Simple
 	GetResponseContentType() *collection.Simple
 	GetUniqueID() *collection.Simple

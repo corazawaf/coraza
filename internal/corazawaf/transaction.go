@@ -1056,7 +1056,7 @@ type TransactionVariables struct {
 	ArgsPostNames *collection.TranslationProxy
 }
 
-func (v *TransactionVariables) GetUserid() *collection.Simple {
+func (v *TransactionVariables) GetUserID() *collection.Simple {
 	return v.Userid
 }
 
