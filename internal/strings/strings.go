@@ -5,7 +5,9 @@ package strings
 
 import (
 	"math/rand"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -17,6 +19,7 @@ const (
 )
 
 var src = rand.NewSource(time.Now().UnixNano())
+var mu sync.Mutex
 
 // RandomString returns a pseudorandom string of length n.
 // It is safe to use this function in concurrent environments.
@@ -24,6 +27,8 @@ var src = rand.NewSource(time.Now().UnixNano())
 func RandomString(n int) string {
 	sb := strings.Builder{}
 	sb.Grow(n)
+
+	mu.Lock()
 	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
 	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
 		if remain == 0 {
@@ -36,6 +41,7 @@ func RandomString(n int) string {
 		cache >>= letterIdxBits
 		remain--
 	}
+	mu.Unlock()
 
 	return sb.String()
 }
@@ -63,14 +69,46 @@ func X2c(what string) byte {
 	return digit
 }
 
-// RemoveQuotes removes quotes from a string
-func RemoveQuotes(s string) string {
-	if s == "" {
-		return ""
+// MaybeUnquote unquotes a string if it is quoted, or returns it as-is if it isn't.
+func MaybeUnquote(s string) string {
+	if len(s) < 2 {
+		return s
 	}
-	s = strings.Trim(s, `"`)
-	s = strings.Trim(s, `'`)
-	return s
+
+	var quote byte
+	if s[0] == '"' {
+		if s[len(s)-1] != '"' {
+			return s
+		}
+		quote = '"'
+	} else if s[0] == '\'' {
+		if s[len(s)-1] != '\'' {
+			return s
+		}
+		quote = '\''
+	}
+
+	// Not a quoted string
+	if quote == 0 {
+		return s
+	}
+
+	// Unquote characters, passing through illegal escape sequences because seclang rules commonly use them to make
+	// regex more readable.
+	res := strings.Builder{}
+	tail := s[1 : len(s)-1]
+	for len(tail) > 0 {
+		c, _, t, err := strconv.UnquoteChar(tail, quote)
+		if err != nil {
+			res.WriteByte(tail[0])
+			tail = tail[1:]
+		} else {
+			res.WriteRune(c)
+			tail = t
+		}
+	}
+
+	return res.String()
 }
 
 // InSlice returns true if the string is in the slice

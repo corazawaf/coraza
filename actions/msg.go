@@ -14,7 +14,7 @@ type msgFn struct {
 }
 
 func (a *msgFn) Init(r rules.RuleInfo, data string) error {
-	data = utils.RemoveQuotes(data)
+	data = utils.MaybeUnquote(data)
 	msg, err := macro.NewMacro(data)
 	if err != nil {
 		return err

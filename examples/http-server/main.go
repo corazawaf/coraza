@@ -24,7 +24,7 @@ func main() {
 	}
 	http.Handle("/hello", corazaRequestHandler(http.HandlerFunc(hello)))
 
-	fmt.Println("Server is running.")
+	fmt.Println("Server is running. Listening port: 8090")
 	panic(http.ListenAndServe(":8090", nil))
 }
 
