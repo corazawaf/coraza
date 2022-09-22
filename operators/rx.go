@@ -4,7 +4,6 @@
 package operators
 
 import (
-	"bytes"
 	"regexp"
 
 	"github.com/corazawaf/coraza/v3"
@@ -25,28 +24,19 @@ func (o *rx) Init(options coraza.RuleOperatorOptions) error {
 }
 
 func (o *rx) Evaluate(tx *coraza.Transaction, value string) bool {
-	match := o.re.FindAllSubmatch(o.convert(value), 1)
-	lcount := len(match)
-	if lcount == 0 {
+	match := o.re.FindStringSubmatch(value)
+	if len(match) == 0 {
 		return false
 	}
 
 	if tx.Capture {
-		for i, c := range match[0] {
+		for i, c := range match {
 			if i == 9 {
 				return true
 			}
-			tx.CaptureField(i, string(c))
+			tx.CaptureField(i, c)
 		}
 	}
 
 	return true
-}
-
-func (o *rx) convert(src string) []byte {
-	var buf bytes.Buffer
-	for i := range src {
-		buf.WriteRune(rune(src[i]))
-	}
-	return buf.Bytes()
 }

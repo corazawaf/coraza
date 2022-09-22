@@ -439,31 +439,9 @@ func TestRxCapture(t *testing.T) {
 	}
 }
 
-func Test941310(t *testing.T) {
+func TestUnicode(t *testing.T) {
 	waf := coraza.NewWAF()
-	rules := `SecRule REQUEST_COOKIES|!REQUEST_COOKIES:/__utm/|REQUEST_COOKIES_NAMES|ARGS_NAMES|ARGS|XML:/* "@rx \xbc[^\xbe>]*[\xbe>]|<[^\xbe]*\xbe" \
-    "id:941310,\
-    phase:2,\
-    deny,\
-    capture,\
-    t:none,t:lowercase,t:urlDecode,t:htmlEntityDecode,t:jsDecode,\
-    msg:'US-ASCII Malformed Encoding XSS Filter - Attack Detected',\
-    logdata:'Matched Data: %{TX.0} found within %{MATCHED_VAR_NAME}: %{MATCHED_VAR}',\
-    tag:'application-multi',\
-    tag:'language-multi',\
-    tag:'platform-tomcat',\
-    tag:'attack-xss',\
-    tag:'paranoia-level/1',\
-    tag:'OWASP_CRS',\
-    tag:'capec/1000/152/242',\
-    ver:'OWASP_CRS/3.4.0-dev',\
-    severity:'CRITICAL',\
-    chain"
-    SecRule REQUEST_COOKIES|!REQUEST_COOKIES:/__utm/|REQUEST_COOKIES_NAMES|ARGS_NAMES|ARGS|XML:/* "@rx (?:\xbc\s*/\s*[^\xbe>]*[\xbe>])|(?:<\s*/\s*[^\xbe]*\xbe)" \
-        "t:none,t:lowercase,t:urlDecode,t:htmlEntityDecode,t:jsDecode,\
-        ctl:auditLogParts=+E,\
-        setvar:'tx.xss_score=+%{tx.critical_anomaly_score}',\
-        setvar:'tx.inbound_anomaly_score_pl1=+%{tx.critical_anomaly_score}'"`
+	rules := `SecRule ARGS "@rx \u30cf\u30ed\u30fc" "id:101,phase:2,t:lowercase,deny"`
 	parser := NewParser(waf)
 
 	err := parser.FromString(rules)
@@ -473,7 +451,7 @@ func Test941310(t *testing.T) {
 	}
 
 	tx := waf.NewTransaction(context.Background())
-	tx.AddArgument("POST", "var", `\\xbcscript\\xbealert(\xa2XSS\xa2)\xbc/script\xbe`)
+	tx.AddArgument("POST", "var", `ハローワールド`)
 	it, err := tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -481,6 +459,58 @@ func Test941310(t *testing.T) {
 	if it == nil {
 		t.Error("non utf-8 rx test fails")
 	}
+}
+
+func Test941310(t *testing.T) {
+	// TODO(anuraaga): Go regex only supports utf8 strings. This means to match non-utf8 would require escaping the
+	// input into ASCII before matching. Just the presence of a non-utf8 matcher, like in CRS, would cause this escaping
+	// to be required on all input. This is probably not worth it performance-wise, as with Go few HTTP libraries would
+	// support non-utf8 anyways.
+
+	// not supported on TinyGo
+	// t.Skip("non-utf8 regex not supported")
+
+	// waf := coraza.NewWAF()
+	// rules := `SecRule REQUEST_COOKIES|!REQUEST_COOKIES:/__utm/|REQUEST_COOKIES_NAMES|ARGS_NAMES|ARGS|XML:/* "@rx \xbc[^\xbe>]*[\xbe>]|<[^\xbe]*\xbe" \
+	// "id:941310,\
+	// phase:2,\
+	// deny,\
+	// capture,\
+	// t:none,t:lowercase,t:urlDecode,t:htmlEntityDecode,t:jsDecode,\
+	// msg:'US-ASCII Malformed Encoding XSS Filter - Attack Detected',\
+	// logdata:'Matched Data: %{TX.0} found within %{MATCHED_VAR_NAME}: %{MATCHED_VAR}',\
+	// tag:'application-multi',\
+	// tag:'language-multi',\
+	// tag:'platform-tomcat',\
+	// tag:'attack-xss',\
+	// tag:'paranoia-level/1',\
+	// tag:'OWASP_CRS',\
+	// tag:'capec/1000/152/242',\
+	// ver:'OWASP_CRS/3.4.0-dev',\
+	// severity:'CRITICAL',\
+	// chain"
+	// SecRule REQUEST_COOKIES|!REQUEST_COOKIES:/__utm/|REQUEST_COOKIES_NAMES|ARGS_NAMES|ARGS|XML:/* "@rx (?:\xbc\s*/\s*[^\xbe>]*[\xbe>])|(?:<\s*/\s*[^\xbe]*\xbe)" \
+	//     "t:none,t:lowercase,t:urlDecode,t:htmlEntityDecode,t:jsDecode,\
+	//     ctl:auditLogParts=+E,\
+	//     setvar:'tx.xss_score=+%{tx.critical_anomaly_score}',\
+	//     setvar:'tx.inbound_anomaly_score_pl1=+%{tx.critical_anomaly_score}'"`
+	// parser := NewParser(waf)
+	//
+	// err := parser.FromString(rules)
+	// if err != nil {
+	// 	t.Error()
+	// 	return
+	// }
+	//
+	// tx := waf.NewTransaction(context.Background())
+	// tx.AddArgument("POST", "var", `\\xbcscript\\xbealert(\xa2XSS\xa2)\xbc/script\xbe`)
+	// it, err := tx.ProcessRequestBody()
+	// if err != nil {
+	// 	t.Error(err)
+	// }
+	// if it == nil {
+	// 	t.Error("non utf-8 rx test fails")
+	// }
 }
 
 func TestArgumentNamesCaseSensitive(t *testing.T) {
