@@ -117,7 +117,7 @@ func (p *Parser) FromString(data string) error {
 			linebuffer.Reset()
 		}
 	}
-	if inBackticks == true {
+	if inBackticks {
 		return errors.New("backticks left open")
 	}
 	return nil
