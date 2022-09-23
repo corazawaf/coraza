@@ -87,7 +87,7 @@ func (p *Parser) FromString(data string) error {
 		}
 
 		// Looks for a line like "SecDataset test `". The backtick starts an action list.
-		// A line starting with # is a comment, therefore must be able to start an action list.
+		// A line starting with # is a comment, therefore it must NOT be able to start an action list.
 		// The list will be closed only with a single "`" line.
 		if !inBackticks && line[0] != '#' && line[lineLen-1] == '`' {
 			inBackticks = true
