@@ -77,7 +77,7 @@ func (p *Parser) FromFile(profilePath string) error {
 func (p *Parser) FromString(data string) error {
 	scanner := bufio.NewScanner(strings.NewReader(data))
 	var linebuffer strings.Builder
-	inQuotes := false
+	inBackticks := false
 	for scanner.Scan() {
 		p.currentLine++
 		line := strings.TrimSpace(scanner.Text())
@@ -86,13 +86,16 @@ func (p *Parser) FromString(data string) error {
 			continue
 		}
 
-		if !inQuotes && line[lineLen-1] == '`' {
-			inQuotes = true
-		} else if inQuotes && line[0] == '`' {
-			inQuotes = false
+		// Looks for a line like "SecDataset test `". The backtick starts an action list.
+		// A line starting with # is a comment, therefore must be able to start an action list.
+		// The list will be closed only with a single "`" line.
+		if !inBackticks && line[0] != '#' && line[lineLen-1] == '`' {
+			inBackticks = true
+		} else if inBackticks && line[0] == '`' {
+			inBackticks = false
 		}
 
-		if inQuotes {
+		if inBackticks {
 			linebuffer.WriteString(line)
 			linebuffer.WriteString("\n")
 			continue
@@ -113,6 +116,9 @@ func (p *Parser) FromString(data string) error {
 			}
 			linebuffer.Reset()
 		}
+	}
+	if inBackticks == true {
+		return errors.New("backticks left open")
 	}
 	return nil
 }
