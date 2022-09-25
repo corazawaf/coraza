@@ -44,11 +44,19 @@ func TestCommentsWithBackticks(t *testing.T) {
 	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	err := p.FromString(
-		"# This comment has a trailing backtick:`" +
-			`
+		"# This comment has a trailing backtick `here`" + `
 		SecAction "id:1,deny,log,phase:1"
 		`)
 	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestErrorWithBackticks(t *testing.T) {
+	waf := coraza.NewWAF()
+	p := NewParser(waf)
+	err := p.FromString("SecDataset test `")
+	if err == nil {
 		t.Error(err)
 	}
 }

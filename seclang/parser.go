@@ -85,11 +85,14 @@ func (p *Parser) FromString(data string) error {
 		if lineLen == 0 {
 			continue
 		}
+		// As a first step, the parser has to ignore all the comments (lines starting with "#") in any circumstances.
+		if line[0] == '#' {
+			continue
+		}
 
 		// Looks for a line like "SecDataset test `". The backtick starts an action list.
-		// A line starting with # is a comment, therefore it must NOT be able to start an action list.
 		// The list will be closed only with a single "`" line.
-		if !inBackticks && line[0] != '#' && line[lineLen-1] == '`' {
+		if !inBackticks && line[lineLen-1] == '`' {
 			inBackticks = true
 		} else if inBackticks && line[0] == '`' {
 			inBackticks = false
@@ -98,10 +101,6 @@ func (p *Parser) FromString(data string) error {
 		if inBackticks {
 			linebuffer.WriteString(line)
 			linebuffer.WriteString("\n")
-			continue
-		}
-
-		if line[0] == '#' {
 			continue
 		}
 
