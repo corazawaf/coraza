@@ -8,7 +8,7 @@ package strings
 
 import "testing"
 
-func TestMaybeUnquote(t *testing.T) {
+func TestMaybeRemoveQuotes(t *testing.T) {
 	tests := []struct {
 		input string
 		want  string
@@ -39,7 +39,7 @@ func TestMaybeUnquote(t *testing.T) {
 		},
 		{
 			input: `'hello \'world'`,
-			want:  `hello 'world`,
+			want:  `hello \'world`,
 		},
 		{
 			input: `"hello 'world"`,
@@ -47,7 +47,7 @@ func TestMaybeUnquote(t *testing.T) {
 		},
 		{
 			input: `"hello \"world"`,
-			want:  `hello "world`,
+			want:  `hello \"world`,
 		},
 		{
 			input: `"hello world'`,
@@ -66,18 +66,18 @@ func TestMaybeUnquote(t *testing.T) {
 			want:  `'hello world`,
 		},
 		{
-			input: `"\u30cf\u30ed\u30fc world"`,
-			want:  `ハロー world`,
+			input: `"\x{30cf}\x{30ed}\x{30fc} world"`,
+			want:  `\x{30cf}\x{30ed}\x{30fc} world`,
 		},
 		{
-			input: `"\s\x5c\x5c.*"`,
-			want:  `\s\\.*`,
+			input: `"\s\x5c.*"`,
+			want:  `\s\x5c.*`,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			if got := MaybeUnquote(tt.input); got != tt.want {
-				t.Errorf("MaybeUnquote() = %s, want %s", got, tt.want)
+			if got := MaybeRemoveQuotes(tt.input); got != tt.want {
+				t.Errorf("MaybeRemoveQuotes() = %s, want %s", got, tt.want)
 			}
 		})
 	}

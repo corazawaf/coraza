@@ -441,7 +441,7 @@ func TestRxCapture(t *testing.T) {
 
 func TestUnicode(t *testing.T) {
 	waf := coraza.NewWAF()
-	rules := `SecRule ARGS "@rx \u30cf\u30ed\u30fc" "id:101,phase:2,t:lowercase,deny"`
+	rules := `SecRule ARGS "@rx \x{30cf}\x{30ed}\x{30fc}" "id:101,phase:2,t:lowercase,deny"`
 	parser := NewParser(waf)
 
 	err := parser.FromString(rules)
