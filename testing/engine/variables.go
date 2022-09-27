@@ -85,7 +85,7 @@ SecRule ARGS_GET_NAMES "t1" "id:400,log"
 
 SecRule ARGS_NAMES "jsessionid" "id: 500, log, phase:2"
 SecRule ARGS_NAMES "pineapple" "id: 600, log, phase:2"
-SecRule ARGS "(?:^|[^\\])\\[cdeghijklmpqwxyz123456789]" "id:700,log,phase:2"
+SecRule ARGS "(?:^|[^\x5c])\x5c[cdeghijklmpqwxyz123456789]" "id:700,log,phase:2"
 
 SecRule ARGS|!ARGS:t1 "aaa" "id:800,log,phase:1"
 

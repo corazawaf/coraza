@@ -6,6 +6,7 @@ package strings
 import (
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -17,6 +18,7 @@ const (
 )
 
 var src = rand.NewSource(time.Now().UnixNano())
+var mu sync.Mutex
 
 // RandomString returns a pseudorandom string of length n.
 // It is safe to use this function in concurrent environments.
@@ -24,6 +26,8 @@ var src = rand.NewSource(time.Now().UnixNano())
 func RandomString(n int) string {
 	sb := strings.Builder{}
 	sb.Grow(n)
+
+	mu.Lock()
 	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
 	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
 		if remain == 0 {
@@ -36,6 +40,7 @@ func RandomString(n int) string {
 		cache >>= letterIdxBits
 		remain--
 	}
+	mu.Unlock()
 
 	return sb.String()
 }
@@ -63,14 +68,26 @@ func X2c(what string) byte {
 	return digit
 }
 
-// RemoveQuotes removes quotes from a string
-func RemoveQuotes(s string) string {
-	if s == "" {
-		return ""
+// MaybeRemoveQuotes removes the quotes from the string if it begins and ends with them.
+func MaybeRemoveQuotes(s string) string {
+	if len(s) < 2 {
+		return s
 	}
-	s = strings.Trim(s, `"`)
-	s = strings.Trim(s, `'`)
-	return s
+
+	switch s[0] {
+	case '"':
+		if s[len(s)-1] != '"' {
+			return s
+		}
+	case '\'':
+		if s[len(s)-1] != '\'' {
+			return s
+		}
+	default:
+		return s
+	}
+
+	return s[1 : len(s)-1]
 }
 
 // InSlice returns true if the string is in the slice

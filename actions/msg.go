@@ -13,7 +13,7 @@ type msgFn struct {
 }
 
 func (a *msgFn) Init(r *coraza.Rule, data string) error {
-	data = utils.RemoveQuotes(data)
+	data = utils.MaybeRemoveQuotes(data)
 	msg, err := coraza.NewMacro(data)
 	if err != nil {
 		return err
