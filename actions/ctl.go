@@ -61,6 +61,7 @@ func (a *ctlFn) Init(r rules.RuleMetadata, data string) error {
 	return err
 }
 
+// parseOnOff turns a string value into a boolean equivalent on/off into true/false
 func parseOnOff(s string) (bool, bool, string) {
 	val := strings.ToLower(s)
 	switch val {
@@ -103,7 +104,7 @@ func (a *ctlFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
 	case ctlAuditEngine:
 		ae, err := types.ParseAuditEngineStatus(a.value)
 		if err != nil {
-			tx.WAF.Logger.Error(fmt.Sprintf("[ctl:AuditEngine] %s", err.Error()))
+			tx.WAF.Logger.Error("[ctl:AuditEngine] %s", err.Error())
 			return
 		}
 		tx.AuditEngine = ae
@@ -113,7 +114,7 @@ func (a *ctlFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
 	case ctlForceRequestBodyVariable:
 		val, ok, errMsg := parseOnOff(a.value)
 		if !ok {
-			tx.WAF.Logger.Error(fmt.Sprintf("[ctl:ForceRequestBodyVariable] %s", errMsg))
+			tx.WAF.Logger.Error("[ctl:ForceRequestBodyVariable] %s", errMsg)
 			return
 		}
 		tx.ForceRequestBodyVariable = val
@@ -121,7 +122,7 @@ func (a *ctlFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
 	case ctlRequestBodyAccess:
 		val, ok, errMsg := parseOnOff(a.value)
 		if !ok {
-			tx.WAF.Logger.Error(fmt.Sprintf("[ctl:RequestBodyAccess] %s", errMsg))
+			tx.WAF.Logger.Error("[ctl:RequestBodyAccess] %s", errMsg)
 			return
 		}
 		tx.RequestBodyAccess = val
@@ -135,14 +136,14 @@ func (a *ctlFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
 	case ctlRuleEngine:
 		re, err := types.ParseRuleEngineStatus(a.value)
 		if err != nil {
-			tx.WAF.Logger.Error(fmt.Sprintf("[ctl:RuleEngine] %s", err.Error()))
+			tx.WAF.Logger.Error("[ctl:RuleEngine] %s", err.Error())
 			return
 		}
 		tx.RuleEngine = re
 	case ctlRuleRemoveByID:
 		id, err := strconv.Atoi(a.value)
 		if err != nil {
-			tx.WAF.Logger.Error(fmt.Sprintf("[ctl:RuleRemoveByID] %s", err.Error()))
+			tx.WAF.Logger.Error("[ctl:RuleRemoveByID] %s", err.Error())
 			return
 		}
 		tx.RemoveRuleByID(id)
