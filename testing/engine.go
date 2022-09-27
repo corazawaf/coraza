@@ -12,6 +12,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/testing/profile"
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 // Test represents a unique transaction within
@@ -20,7 +21,7 @@ type Test struct {
 	// waf contains a waf instance pointer
 	waf coraza.WAF
 	// transaction contains the current transaction
-	transaction coraza.Transaction
+	transaction types.Transaction
 	magic       bool
 	Name        string
 	body        string
@@ -260,7 +261,7 @@ func (t *Test) LogContains(log string) bool {
 }
 
 // Transaction returns the transaction
-func (t *Test) Transaction() coraza.Transaction {
+func (t *Test) Transaction() types.Transaction {
 	return t.transaction
 }
 
