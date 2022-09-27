@@ -40,6 +40,34 @@ func TestDirectivesCaseInsensitive(t *testing.T) {
 	}
 }
 
+func TestCommentsWithBackticks(t *testing.T) {
+	waf := coraza.NewWAF()
+	p := NewParser(waf)
+	tCases := map[string]string{
+		"two backticks in comment": "# This comment has a trailing backtick `here`" + `
+		SecAction "id:1,deny,log,phase:1"
+		`,
+		"one backtick in comment": "# The rule 942510 is related to 942110 which catches a single ' or `",
+	}
+	for name, s := range tCases {
+		t.Run(name, func(t *testing.T) {
+			err := p.FromString(s)
+			if err != nil {
+				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestErrorWithBackticks(t *testing.T) {
+	waf := coraza.NewWAF()
+	p := NewParser(waf)
+	err := p.FromString("SecDataset test `")
+	if err == nil {
+		t.Error(err)
+	}
+}
+
 func TestDefaultConfigurationFile(t *testing.T) {
 	waf := coraza.NewWAF()
 	p := NewParser(waf)
