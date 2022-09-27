@@ -561,27 +561,28 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	}
 
 	rbp := tx.Variables.ReqbodyProcessor.String()
-
 	// Default variables.ReqbodyProcessor values
 	// XML and JSON must be forced with ctl:requestBodyProcessor=JSON
-	if tx.ForceRequestBodyVariable {
-		// We force URLENCODED if mime is x-www... or we have an empty RBP and ForceRequestBodyVariable
+	if rbp == "" {
+		if !tx.ForceRequestBodyVariable {
+			// so there is no bodyprocessor, we don't want to generate an error
+			tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
+			return tx.Interruption, nil
+		}
+
+		// We force URLENCODED if we have an empty RBP and ForceRequestBodyVariable
 		rbp = "URLENCODED"
 		tx.Variables.ReqbodyProcessor.Set(rbp)
 	}
 	tx.WAF.Logger.Debug("[%s] Attempting to process request body using %q", tx.ID, rbp)
-	rbp = strings.ToLower(rbp)
-	if rbp == "" {
-		// so there is no bodyprocessor, we don't want to generate an error
-		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
-		return tx.Interruption, nil
-	}
+
 	bodyprocessor, err := bodyprocessors.Get(rbp)
 	if err != nil {
-		tx.generateReqbodyError(fmt.Errorf("Invalid body processor"))
+		tx.generateReqbodyError(err)
 		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.Interruption, nil
 	}
+
 	if err := bodyprocessor.ProcessRequest(reader, tx.Collections, bodyprocessors.Options{
 		Mime:        mime,
 		StoragePath: tx.WAF.UploadDir,

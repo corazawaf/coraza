@@ -346,7 +346,7 @@ func TestHeaderSetters(t *testing.T) {
 	}
 }
 
-func TestRequestBodyProcessingAlgorithm(t *testing.T) {
+func TestRequestBodyProcessingIsAvailable(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	tx.RuleEngine = types.RuleEngineOn
@@ -360,8 +360,32 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error("failed to process request body")
 	}
+	if tx.Variables.ReqbodyProcessor.String() != "URLENCODED" {
+		t.Error("unexpected request body processor")
+	}
 	if tx.Variables.RequestBody.String() != "test123" {
 		t.Error("failed to set request body")
+	}
+	if err := tx.Clean(); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestRequestBodyProcessingIsntAvailable(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction(context.Background())
+	tx.RuleEngine = types.RuleEngineOn
+	tx.RequestBodyAccess = true
+	tx.Variables.ReqbodyProcessor.Set("AVRO")
+
+	if _, err := tx.RequestBodyBuffer.Write([]byte("test123")); err != nil {
+		t.Error("Failed to write request body buffer")
+	}
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Error("failed to process request body")
+	}
+	if tx.Variables.RequestBody.String() != "" {
+		t.Error("unexpected request body")
 	}
 	if err := tx.Clean(); err != nil {
 		t.Error(err)
