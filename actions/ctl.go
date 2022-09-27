@@ -61,7 +61,7 @@ func (a *ctlFn) Init(r rules.RuleMetadata, data string) error {
 	return err
 }
 
-func parseOnOff(prefix, s string) (bool, bool, string) {
+func parseOnOff(s string) (bool, bool, string) {
 	val := strings.ToLower(s)
 	switch val {
 	case "on":
@@ -69,7 +69,7 @@ func parseOnOff(prefix, s string) (bool, bool, string) {
 	case "off":
 		return false, true, ""
 	default:
-		return false, false, fmt.Sprintf("[%s] Unknown value %q", prefix, s)
+		return false, false, fmt.Sprintf("unknown value %q", s)
 	}
 }
 
@@ -111,17 +111,17 @@ func (a *ctlFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
 		// TODO lets switch it to a string
 		tx.AuditLogParts = types.AuditLogParts(a.value)
 	case ctlForceRequestBodyVariable:
-		val, ok, errMsg := parseOnOff("ctl:ForceRequestBodyVariable", a.value)
+		val, ok, errMsg := parseOnOff(a.value)
 		if !ok {
-			tx.WAF.Logger.Error(errMsg)
+			tx.WAF.Logger.Error(fmt.Sprintf("[ctl:ForceRequestBodyVariable] %s", errMsg))
 			return
 		}
 		tx.ForceRequestBodyVariable = val
 		tx.WAF.Logger.Debug("[ctl:ForceRequestBodyVariable] Forcing request body var with CTL to %s", val)
 	case ctlRequestBodyAccess:
-		val, ok, errMsg := parseOnOff("ctl:RequestBodyAccess", a.value)
+		val, ok, errMsg := parseOnOff(a.value)
 		if !ok {
-			tx.WAF.Logger.Error(errMsg)
+			tx.WAF.Logger.Error(fmt.Sprintf("[ctl:RequestBodyAccess] %s", errMsg))
 			return
 		}
 		tx.RequestBodyAccess = val
