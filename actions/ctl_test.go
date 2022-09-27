@@ -127,3 +127,31 @@ func TestCtlParseRange(t *testing.T) {
 		})
 	}
 }
+
+func TestParseOnOff(t *testing.T) {
+	tCases := []struct {
+		val         string
+		expectedVal bool
+		expectedOK  bool
+	}{
+		{"on", true, true},
+		{"ON", true, true},
+		{"On", true, true},
+		{"off", false, true},
+		{"OFF", false, true},
+		{"Off", false, true},
+		{"Whatever", false, false},
+	}
+
+	for _, tCase := range tCases {
+		t.Run(tCase.val, func(t *testing.T) {
+			val, ok, _ := parseOnOff("", tCase.val)
+			if want, have := tCase.expectedOK, ok; want != have {
+				t.Errorf("unexpected OK, want: %t, have: %t", want, have)
+			}
+			if want, have := tCase.expectedVal, val; want != have {
+				t.Errorf("unexpected value, want: %t, have: %t", want, have)
+			}
+		})
+	}
+}

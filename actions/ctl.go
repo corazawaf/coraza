@@ -136,10 +136,15 @@ func (a *ctlFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
 		re, err := types.ParseRuleEngineStatus(a.value)
 		if err != nil {
 			tx.WAF.Logger.Error(fmt.Sprintf("[ctl:RuleEngine] %s", err.Error()))
+			return
 		}
 		tx.RuleEngine = re
 	case ctlRuleRemoveByID:
-		id, _ := strconv.Atoi(a.value)
+		id, err := strconv.Atoi(a.value)
+		if err != nil {
+			tx.WAF.Logger.Error(fmt.Sprintf("[ctl:RuleRemoveByID] %s", err.Error()))
+			return
+		}
 		tx.RemoveRuleByID(id)
 	case ctlRuleRemoveByMsg:
 		rules := tx.WAF.Rules.GetRules()
