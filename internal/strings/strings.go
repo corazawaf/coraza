@@ -74,15 +74,16 @@ func MaybeRemoveQuotes(s string) string {
 		return s
 	}
 
-	if s[0] == '"' {
+	switch s[0] {
+	case '"':
 		if s[len(s)-1] != '"' {
 			return s
 		}
-	} else if s[0] == '\'' {
+	case '\'':
 		if s[len(s)-1] != '\'' {
 			return s
 		}
-	} else {
+	default:
 		return s
 	}
 
