@@ -61,7 +61,7 @@ func testList(p *profile.Profile) ([]*Test, error) {
 	for _, t := range p.Tests {
 		name := t.Title
 		for _, stage := range t.Stages {
-			w, err := coraza.NewWAFWithConfig(coraza.NewWAFConfig().
+			w, err := coraza.NewWAF(coraza.NewWAFConfig().
 				WithRootFS(os.DirFS("testdata")).
 				WithDirectives(p.Rules))
 			if err != nil {

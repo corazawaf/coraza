@@ -24,8 +24,8 @@ type WAF interface {
 	NewTransaction(ctx context.Context) types.Transaction
 }
 
-// NewWAFWithConfig creates a new WAF instance with the provided configuration.
-func NewWAFWithConfig(config WAFConfig) (WAF, error) {
+// NewWAF creates a new WAF instance with the provided configuration.
+func NewWAF(config WAFConfig) (WAF, error) {
 	c := config.(*wafConfig)
 
 	waf := corazawaf.NewWAF()

@@ -12,7 +12,7 @@ import (
 )
 
 func TestRawRequests(t *testing.T) {
-	waf, _ := coraza.NewWAFWithConfig(coraza.NewWAFConfig())
+	waf, _ := coraza.NewWAF(coraza.NewWAFConfig())
 	test := NewTest("test", waf)
 	if err := test.SetRawRequest([]byte("OPTIONS /test HTTP/1.1\r\nHost: www.example.com\r\n\r\n")); err != nil {
 		t.Error(err)
@@ -26,7 +26,7 @@ func TestRawRequests(t *testing.T) {
 }
 
 func TestDebug(t *testing.T) {
-	waf, _ := coraza.NewWAFWithConfig(coraza.NewWAFConfig())
+	waf, _ := coraza.NewWAF(coraza.NewWAFConfig())
 	test := NewTest("test", waf)
 	if err := test.SetRawRequest([]byte("OPTIONS /test HTTP/1.1\r\nHost: www.example.com\r\n\r\n")); err != nil {
 		t.Error(err)
@@ -47,7 +47,7 @@ func TestDebug(t *testing.T) {
 }
 
 func TestRequest(t *testing.T) {
-	waf, _ := coraza.NewWAFWithConfig(coraza.NewWAFConfig())
+	waf, _ := coraza.NewWAF(coraza.NewWAFConfig())
 	test := NewTest("test", waf)
 	req := buildRequest("GET", "/test")
 	if err := test.SetRawRequest([]byte(req)); err != nil {
@@ -69,7 +69,7 @@ func TestRequest(t *testing.T) {
 }
 
 func TestResponse(t *testing.T) {
-	waf, _ := coraza.NewWAFWithConfig(coraza.NewWAFConfig().
+	waf, _ := coraza.NewWAF(coraza.NewWAFConfig().
 		WithResponseBodyAccess(coraza.NewResponseBodyConfig()))
 	test := NewTest("test", waf)
 	req := buildRequest("POST", "/test")

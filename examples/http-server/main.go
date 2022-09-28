@@ -27,7 +27,7 @@ func main() {
 }
 
 func setupCoraza() (coraza.WAF, error) {
-	waf, err := coraza.NewWAFWithConfig(coraza.NewWAFConfig().
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
 		WithDirectives(`
 		# This is a comment
 		SecDebugLogLevel 9
