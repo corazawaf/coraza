@@ -145,7 +145,7 @@ func TestParseOnOff(t *testing.T) {
 
 	for _, tCase := range tCases {
 		t.Run(tCase.val, func(t *testing.T) {
-			val, ok, _ := parseOnOff(tCase.val)
+			val, ok := parseOnOff(tCase.val)
 			if want, have := tCase.expectedOK, ok; want != have {
 				t.Errorf("unexpected OK, want: %t, have: %t", want, have)
 			}
