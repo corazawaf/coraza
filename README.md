@@ -81,16 +81,14 @@ import (
 	"context"
 	"fmt"
 	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/internal/seclang"
 )
 
 func main() {
 	// First we initialize our waf and our seclang parser
-	waf := coraza.NewWAF()
-	parser := seclang.NewParser(waf)
-
+	waf, err := coraza.NewWAFWithConfig(coraza.NewWAFConfig().
+		WithDirectives(`SecRule REMOTE_ADDR "@rx .*" "id:1,phase:1,deny,status:403"`))
 	// Now we parse our rules
-	if err := parser.FromString(`SecRule REMOTE_ADDR "@rx .*" "id:1,phase:1,deny,status:403"`); err != nil {
+	if err != nil {
 		fmt.Println(err)
 	}
 
@@ -98,7 +96,7 @@ func main() {
 	tx := waf.NewTransaction(context.Background())
 	defer func() {
 		tx.ProcessLogging()
-		tx.Clean()
+		tx.Close()
 	}()
 	tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 12345)
 

@@ -426,7 +426,7 @@ actionLoop:
 			// skip whitespaces in key
 			continue actionLoop
 		case !quoted && c == ',':
-			f, err := actionsmod.GetAction(ckey)
+			f, err := actionsmod.Get(ckey)
 			if err != nil {
 				return nil, err
 			}
@@ -458,7 +458,7 @@ actionLoop:
 			ckey += string(c)
 		}
 		if i+1 == len(actions) {
-			f, err := actionsmod.GetAction(ckey)
+			f, err := actionsmod.Get(ckey)
 			if err != nil {
 				return nil, err
 			}

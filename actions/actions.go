@@ -62,9 +62,9 @@ func init() {
 	RegisterPlugin("ver", ver)
 }
 
-// GetAction returns an unwrapped RuleAction from the actionmap based on the name
+// Get returns an unwrapped RuleAction from the actionmap based on the name
 // If the action does not exist it returns an error
-func GetAction(name string) (rules.Action, error) {
+func Get(name string) (rules.Action, error) {
 	name = strings.ToLower(name)
 	if a, ok := actionmap[name]; ok {
 		return a(), nil
