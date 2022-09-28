@@ -85,7 +85,7 @@ import (
 
 func main() {
 	// First we initialize our waf and our seclang parser
-	waf, err := coraza.NewWAFWithConfig(coraza.NewWAFConfig().
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
 		WithDirectives(`SecRule REMOTE_ADDR "@rx .*" "id:1,phase:1,deny,status:403"`))
 	// Now we parse our rules
 	if err != nil {
