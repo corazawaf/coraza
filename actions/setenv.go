@@ -17,7 +17,7 @@ type setenvFn struct {
 	value macro.Macro
 }
 
-func (a *setenvFn) Init(r rules.RuleInfo, data string) error {
+func (a *setenvFn) Init(r rules.RuleMetadata, data string) error {
 	spl := strings.SplitN(data, "=", 2)
 	if len(spl) != 2 {
 		return fmt.Errorf("invalid key value for setvar")
@@ -31,7 +31,7 @@ func (a *setenvFn) Init(r rules.RuleInfo, data string) error {
 	return nil
 }
 
-func (a *setenvFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
+func (a *setenvFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	v := a.value.Expand(tx)
 	// set env variable
 	if err := os.Setenv(a.key, v); err != nil {

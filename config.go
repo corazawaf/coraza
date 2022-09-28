@@ -19,7 +19,7 @@ type WAFConfig interface {
 	WithRule(rule *corazawaf.Rule) WAFConfig
 
 	// WithDirectives parses the directives from the given string and adds them to the WAF.
-	WithDirectives(rules string) WAFConfig
+	WithDirectives(directives string) WAFConfig
 
 	// WithDirectivesFromFile parses the directives from the given file and adds them to the WAF.
 	WithDirectivesFromFile(path string) WAFConfig
@@ -42,8 +42,8 @@ type WAFConfig interface {
 	// WithErrorLogger configures an error logger.
 	WithErrorLogger(logger corazawaf.ErrorLogCallback) WAFConfig
 
-	// WithFSRoot configures the root file system.
-	WithFSRoot(fs fs.FS) WAFConfig
+	// WithRootFS configures the root file system.
+	WithRootFS(fs fs.FS) WAFConfig
 }
 
 // NewWAFConfig creates a new WAFConfig with the default settings.
@@ -126,9 +126,9 @@ func (c *wafConfig) WithDirectivesFromFile(path string) WAFConfig {
 	return ret
 }
 
-func (c *wafConfig) WithDirectives(rules string) WAFConfig {
+func (c *wafConfig) WithDirectives(directives string) WAFConfig {
 	ret := c.clone()
-	ret.rules = append(ret.rules, wafRule{str: rules})
+	ret.rules = append(ret.rules, wafRule{str: directives})
 	return ret
 }
 
@@ -168,7 +168,7 @@ func (c *wafConfig) WithErrorLogger(logger corazawaf.ErrorLogCallback) WAFConfig
 	return ret
 }
 
-func (c *wafConfig) WithFSRoot(fs fs.FS) WAFConfig {
+func (c *wafConfig) WithRootFS(fs fs.FS) WAFConfig {
 	ret := c.clone()
 	ret.fsRoot = fs
 	return ret

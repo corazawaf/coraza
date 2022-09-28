@@ -14,7 +14,7 @@ import (
 type maturityFn struct {
 }
 
-func (a *maturityFn) Init(r rules.RuleInfo, data string) error {
+func (a *maturityFn) Init(r rules.RuleMetadata, data string) error {
 	m, err := strconv.Atoi(data)
 	if err != nil {
 		return err
@@ -27,7 +27,7 @@ func (a *maturityFn) Init(r rules.RuleInfo, data string) error {
 	return nil
 }
 
-func (a *maturityFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
+func (a *maturityFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	// Not evaluated
 }
 

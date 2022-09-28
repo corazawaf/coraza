@@ -15,7 +15,7 @@ type skipFn struct {
 	data int
 }
 
-func (a *skipFn) Init(r rules.RuleInfo, data string) error {
+func (a *skipFn) Init(r rules.RuleMetadata, data string) error {
 	i, err := strconv.Atoi(data)
 	if err != nil {
 		return fmt.Errorf("invalid value for skip")
@@ -27,7 +27,7 @@ func (a *skipFn) Init(r rules.RuleInfo, data string) error {
 	return nil
 }
 
-func (a *skipFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
+func (a *skipFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	// TODO(anuraaga): Confirm this is internal implementation detail
 	tx.(*corazawaf.Transaction).Skip = a.data
 }

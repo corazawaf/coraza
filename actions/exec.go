@@ -10,11 +10,11 @@ import (
 type execFn struct {
 }
 
-func (a *execFn) Init(r rules.RuleInfo, data string) error {
+func (a *execFn) Init(r rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *execFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
+func (a *execFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	// Not implemented
 }
 

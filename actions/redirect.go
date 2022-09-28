@@ -25,7 +25,7 @@ type redirectFn struct {
 	target string
 }
 
-func (a *redirectFn) Init(r rules.RuleInfo, data string) error {
+func (a *redirectFn) Init(r rules.RuleMetadata, data string) error {
 	if data == "" {
 		return fmt.Errorf("redirect action requires a parameter")
 	}
@@ -34,7 +34,7 @@ func (a *redirectFn) Init(r rules.RuleInfo, data string) error {
 	return nil
 }
 
-func (a *redirectFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
+func (a *redirectFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	rid := r.GetID()
 	if rid == 0 {
 		rid = r.GetParentID()

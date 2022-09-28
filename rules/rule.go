@@ -11,8 +11,8 @@ type Rule interface {
 	Evaluate(state TransactionState) []types.MatchData
 }
 
-// RuleInfo is information about a rule parsed from directives.
-type RuleInfo interface {
+// RuleMetadata is information about a rule parsed from directives.
+type RuleMetadata interface {
 	// GetID returns the ID of the rule.
 	GetID() int
 

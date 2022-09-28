@@ -10,13 +10,13 @@ import (
 
 type chainFn struct{}
 
-func (a *chainFn) Init(r rules.RuleInfo, b1 string) error {
+func (a *chainFn) Init(r rules.RuleMetadata, b1 string) error {
 	// TODO(anuraaga): Confirm this is internal implementation detail
 	r.(*corazawaf.Rule).HasChain = true
 	return nil
 }
 
-func (a *chainFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
+func (a *chainFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	// Not evaluated
 }
 

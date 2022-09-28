@@ -21,7 +21,7 @@ type setvarFn struct {
 	isRemove   bool
 }
 
-func (a *setvarFn) Init(r rules.RuleInfo, data string) error {
+func (a *setvarFn) Init(r rules.RuleMetadata, data string) error {
 	if data == "" {
 		return fmt.Errorf("setvar requires arguments")
 	}
@@ -56,7 +56,7 @@ func (a *setvarFn) Init(r rules.RuleInfo, data string) error {
 	return nil
 }
 
-func (a *setvarFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
+func (a *setvarFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	key := a.key.Expand(tx)
 	value := a.value.Expand(tx)
 	tx.DebugLogger().Debug("[%s] Setting var %q to %q by rule %d", tx.GetID(), key, value, r.GetID())
@@ -67,7 +67,7 @@ func (a *setvarFn) Type() rules.ActionType {
 	return rules.ActionTypeNondisruptive
 }
 
-func (a *setvarFn) evaluateTxCollection(r rules.RuleInfo, tx rules.TransactionState, key string, value string) {
+func (a *setvarFn) evaluateTxCollection(r rules.RuleMetadata, tx rules.TransactionState, key string, value string) {
 	col := (tx.Collection(a.collection)).(*collection.Map)
 	if col == nil {
 		// fmt.Println("Invalid Collection " + a.Collection) LOG error?

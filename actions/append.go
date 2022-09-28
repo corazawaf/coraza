@@ -12,7 +12,7 @@ type appendFn struct {
 	data macro.Macro
 }
 
-func (a *appendFn) Init(r rules.RuleInfo, data string) error {
+func (a *appendFn) Init(r rules.RuleMetadata, data string) error {
 	macro, err := macro.NewMacro(data)
 	if err != nil {
 		return err
@@ -21,7 +21,7 @@ func (a *appendFn) Init(r rules.RuleInfo, data string) error {
 	return nil
 }
 
-func (a *appendFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
+func (a *appendFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	if !tx.ContentInjection() {
 		tx.DebugLogger().Debug("append rejected because of ContentInjection")
 		return

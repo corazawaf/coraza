@@ -12,7 +12,7 @@ import (
 type logdataFn struct {
 }
 
-func (a *logdataFn) Init(r rules.RuleInfo, data string) error {
+func (a *logdataFn) Init(r rules.RuleMetadata, data string) error {
 	m, err := macro.NewMacro(data)
 	if err != nil {
 		return err
@@ -22,7 +22,7 @@ func (a *logdataFn) Init(r rules.RuleInfo, data string) error {
 	return nil
 }
 
-func (a *logdataFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
+func (a *logdataFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	// TODO(anuraaga): Confirm this is internal implementation detail
 	tx.(*corazawaf.Transaction).Logdata = r.(*corazawaf.Rule).LogData.Expand(tx)
 }

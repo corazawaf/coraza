@@ -11,13 +11,13 @@ import (
 type noauditlogFn struct {
 }
 
-func (a *noauditlogFn) Init(r rules.RuleInfo, data string) error {
+func (a *noauditlogFn) Init(r rules.RuleMetadata, data string) error {
 	// TODO(anuraaga): Confirm this is internal implementation detail
 	r.(*corazawaf.Rule).Audit = false
 	return nil
 }
 
-func (a *noauditlogFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
+func (a *noauditlogFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 }
 
 func (a *noauditlogFn) Type() rules.ActionType {

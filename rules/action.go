@@ -23,10 +23,10 @@ const (
 // Action is an action that can be used within a rule.
 type Action interface {
 	// Init initializes the action.
-	Init(RuleInfo, string) error
+	Init(RuleMetadata, string) error
 
 	// Evaluate evaluates the action.
-	Evaluate(RuleInfo, TransactionState)
+	Evaluate(RuleMetadata, TransactionState)
 
 	// Type returns the type of action.
 	Type() ActionType

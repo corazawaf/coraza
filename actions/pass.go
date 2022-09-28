@@ -10,11 +10,11 @@ import (
 type passFn struct {
 }
 
-func (a *passFn) Init(r rules.RuleInfo, data string) error {
+func (a *passFn) Init(r rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *passFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
+func (a *passFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	// Not evaluated
 }
 

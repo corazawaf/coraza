@@ -11,7 +11,7 @@ import (
 
 type phaseFn struct{}
 
-func (a *phaseFn) Init(r rules.RuleInfo, data string) error {
+func (a *phaseFn) Init(r rules.RuleMetadata, data string) error {
 	p, err := types.ParseRulePhase(data)
 	if err != nil {
 		return err
@@ -21,7 +21,7 @@ func (a *phaseFn) Init(r rules.RuleInfo, data string) error {
 	return nil
 }
 
-func (a *phaseFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
+func (a *phaseFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	// Not evaluated
 }
 

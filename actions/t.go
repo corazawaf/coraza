@@ -11,7 +11,7 @@ import (
 
 type tFn struct{}
 
-func (a *tFn) Init(r rules.RuleInfo, input string) error {
+func (a *tFn) Init(r rules.RuleMetadata, input string) error {
 	// TODO there is a chance that it won't work, it requires tests
 	// none is a special hardcoded transformation, it must remove previous transformations
 	if input == "none" {
@@ -27,7 +27,7 @@ func (a *tFn) Init(r rules.RuleInfo, input string) error {
 	return r.(*corazawaf.Rule).AddTransformation(input, tt)
 }
 
-func (a *tFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
+func (a *tFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	// Not evaluated
 }
 

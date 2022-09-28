@@ -14,12 +14,12 @@ type skipafterFn struct {
 	data string
 }
 
-func (a *skipafterFn) Init(r rules.RuleInfo, data string) error {
+func (a *skipafterFn) Init(r rules.RuleMetadata, data string) error {
 	a.data = strings.Trim(data, `"`)
 	return nil
 }
 
-func (a *skipafterFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
+func (a *skipafterFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	tx.DebugLogger().Debug("[%s] Starting secmarker %q", tx.GetID(), a.data)
 	// TODO(anuraaga): Confirm this is internal implementation detail
 	tx.(*corazawaf.Transaction).SkipAfter = a.data

@@ -9,11 +9,11 @@ import (
 
 type blockFn struct{}
 
-func (a *blockFn) Init(r rules.RuleInfo, b1 string) error {
+func (a *blockFn) Init(r rules.RuleMetadata, b1 string) error {
 	return nil
 }
 
-func (a *blockFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
+func (a *blockFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	// This should never run
 }
 

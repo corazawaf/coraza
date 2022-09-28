@@ -11,14 +11,14 @@ import (
 type nologFn struct {
 }
 
-func (a *nologFn) Init(r rules.RuleInfo, data string) error {
+func (a *nologFn) Init(r rules.RuleMetadata, data string) error {
 	// TODO(anuraaga): Confirm this is internal implementation detail
 	r.(*corazawaf.Rule).Log = false
 	r.(*corazawaf.Rule).Audit = false
 	return nil
 }
 
-func (a *nologFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
+func (a *nologFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	// TODO(anuraaga): Confirm this is internal implementation detail
 	// TODO(anuraaga): Confirm this is actually needed.
 	r.(*corazawaf.Rule).Audit = false

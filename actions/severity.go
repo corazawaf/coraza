@@ -12,7 +12,7 @@ import (
 type severityFn struct {
 }
 
-func (a *severityFn) Init(r rules.RuleInfo, data string) error {
+func (a *severityFn) Init(r rules.RuleMetadata, data string) error {
 	sev, err := types.ParseRuleSeverity(data)
 	if err != nil {
 		return err
@@ -22,7 +22,7 @@ func (a *severityFn) Init(r rules.RuleInfo, data string) error {
 	return nil
 }
 
-func (a *severityFn) Evaluate(r rules.RuleInfo, tx rules.TransactionState) {
+func (a *severityFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	// Not evaluated
 }
 
