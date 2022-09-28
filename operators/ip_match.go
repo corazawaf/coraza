@@ -7,17 +7,16 @@ import (
 	"net"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
-	engine "github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type ipMatch struct {
 	subnets []*net.IPNet
 }
 
-var _ coraza.RuleOperator = (*ipMatch)(nil)
+var _ rules.Operator = (*ipMatch)(nil)
 
-func (o *ipMatch) Init(options coraza.RuleOperatorOptions) error {
+func (o *ipMatch) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 
 	o.subnets = []*net.IPNet{}
@@ -43,7 +42,7 @@ func (o *ipMatch) Init(options coraza.RuleOperatorOptions) error {
 	return nil
 }
 
-func (o *ipMatch) Evaluate(tx *engine.Transaction, value string) bool {
+func (o *ipMatch) Evaluate(tx rules.TransactionState, value string) bool {
 	ip := net.ParseIP(value)
 	for _, subnet := range o.subnets {
 		if subnet.Contains(ip) {

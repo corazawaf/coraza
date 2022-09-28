@@ -4,31 +4,32 @@
 package actions
 
 import (
-	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type captureFn struct{}
 
-func (a *captureFn) Init(r *coraza.Rule, b1 string) error {
+func (a *captureFn) Init(r rules.RuleMetadata, b1 string) error {
 	// this will capture only the current rule
-	r.Capture = true
+	// TODO(anuraaga): Confirm this is internal implementation detail
+	r.(*corazawaf.Rule).Capture = true
 	return nil
 }
 
-func (a *captureFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *captureFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 
 }
 
-func (a *captureFn) Type() types.RuleActionType {
-	return types.ActionTypeNondisruptive
+func (a *captureFn) Type() rules.ActionType {
+	return rules.ActionTypeNondisruptive
 }
 
-func capture() coraza.RuleAction {
+func capture() rules.Action {
 	return &captureFn{}
 }
 
 var (
-	_ coraza.RuleAction = &captureFn{}
+	_ rules.Action      = &captureFn{}
 	_ ruleActionWrapper = capture
 )

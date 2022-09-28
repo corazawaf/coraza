@@ -6,27 +6,28 @@ package operators
 import (
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/macro"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type beginsWith struct {
-	data coraza.Macro
+	data macro.Macro
 }
 
-var _ coraza.RuleOperator = (*beginsWith)(nil)
+var _ rules.Operator = (*beginsWith)(nil)
 
-func (o *beginsWith) Init(options coraza.RuleOperatorOptions) error {
+func (o *beginsWith) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 
-	macro, err := coraza.NewMacro(data)
+	m, err := macro.NewMacro(data)
 	if err != nil {
 		return err
 	}
-	o.data = *macro
+	o.data = m
 	return nil
 }
 
-func (o *beginsWith) Evaluate(tx *coraza.Transaction, value string) bool {
+func (o *beginsWith) Evaluate(tx rules.TransactionState, value string) bool {
 	data := o.data.Expand(tx)
 	return strings.HasPrefix(value, data)
 }

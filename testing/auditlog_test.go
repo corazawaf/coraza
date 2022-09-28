@@ -16,13 +16,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/internal/seclang"
 	"github.com/corazawaf/coraza/v3/loggers"
-	"github.com/corazawaf/coraza/v3/seclang"
 )
 
 func TestAuditLogMessages(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	parser := seclang.NewParser(waf)
 	// generate a random tmp file
 	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
@@ -70,7 +70,7 @@ func TestAuditLogMessages(t *testing.T) {
 }
 
 func TestAuditLogRelevantOnly(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	parser := seclang.NewParser(waf)
 	if err := parser.FromString(`
 		SecRuleEngine DetectionOnly
@@ -107,7 +107,7 @@ func TestAuditLogRelevantOnly(t *testing.T) {
 }
 
 func TestAuditLogRelevantOnlyOk(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	parser := seclang.NewParser(waf)
 	// generate a random tmp file
 	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
@@ -144,7 +144,7 @@ func TestAuditLogRelevantOnlyOk(t *testing.T) {
 }
 
 func TestAuditLogRelevantOnlyNoAuditlog(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	parser := seclang.NewParser(waf)
 	if err := parser.FromString(`
 		SecRuleEngine DetectionOnly

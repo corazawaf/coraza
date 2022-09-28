@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type byteRange struct {
@@ -20,9 +20,9 @@ type validateByteRange struct {
 	data []byteRange
 }
 
-var _ coraza.RuleOperator = (*validateByteRange)(nil)
+var _ rules.Operator = (*validateByteRange)(nil)
 
-func (o *validateByteRange) Init(options coraza.RuleOperatorOptions) error {
+func (o *validateByteRange) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 
 	if data == "" {
@@ -61,7 +61,7 @@ func (o *validateByteRange) Init(options coraza.RuleOperatorOptions) error {
 	return nil
 }
 
-func (o *validateByteRange) Evaluate(tx *coraza.Transaction, data string) bool {
+func (o *validateByteRange) Evaluate(tx rules.TransactionState, data string) bool {
 	lenData := len(o.data)
 	if lenData == 0 {
 		return true

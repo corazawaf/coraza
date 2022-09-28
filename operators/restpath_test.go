@@ -7,16 +7,17 @@ import (
 	"context"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 func TestRestPath(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	tx := waf.NewTransaction(context.Background())
 	exp := "/some-random/url-{id}/{name}"
 	path := "/some-random/url-123/juan"
 	rp := restpath{}
-	if err := rp.Init(coraza.RuleOperatorOptions{
+	if err := rp.Init(rules.OperatorOptions{
 		Arguments: exp,
 	}); err != nil {
 		t.Error(err)

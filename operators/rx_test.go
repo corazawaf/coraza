@@ -8,7 +8,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 func TestRx(t *testing.T) {
@@ -44,13 +45,13 @@ func TestRx(t *testing.T) {
 		t.Run(fmt.Sprintf("%s/%s", tt.pattern, tt.input), func(t *testing.T) {
 
 			rx := &rx{}
-			opts := coraza.RuleOperatorOptions{
+			opts := rules.OperatorOptions{
 				Arguments: tt.pattern,
 			}
 			if err := rx.Init(opts); err != nil {
 				t.Error(err)
 			}
-			waf := coraza.NewWAF()
+			waf := corazawaf.NewWAF()
 			tx := waf.NewTransaction(context.Background())
 			tx.Capture = true
 			res := rx.Evaluate(tx, tt.input)

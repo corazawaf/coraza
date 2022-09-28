@@ -7,16 +7,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type ipMatchFromDataset struct {
 	matcher *ipMatch
 }
 
-var _ coraza.RuleOperator = (*ipMatchFromDataset)(nil)
+var _ rules.Operator = (*ipMatchFromDataset)(nil)
 
-func (o *ipMatchFromDataset) Init(options coraza.RuleOperatorOptions) error {
+func (o *ipMatchFromDataset) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 	dataset, ok := options.Datasets[data]
 	if !ok || len(dataset) == 0 {
@@ -26,14 +26,12 @@ func (o *ipMatchFromDataset) Init(options coraza.RuleOperatorOptions) error {
 	datasetParsed := strings.Join(dataset, ",")
 
 	o.matcher = &ipMatch{}
-	opts := coraza.RuleOperatorOptions{
+	opts := rules.OperatorOptions{
 		Arguments: datasetParsed,
 	}
 	return o.matcher.Init(opts)
 }
 
-func (o *ipMatchFromDataset) Evaluate(tx *coraza.Transaction, value string) bool {
+func (o *ipMatchFromDataset) Evaluate(tx rules.TransactionState, value string) bool {
 	return o.matcher.Evaluate(tx, value)
 }
-
-var _ coraza.RuleOperator = (*ipMatchFromDataset)(nil)

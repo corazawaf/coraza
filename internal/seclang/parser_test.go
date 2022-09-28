@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
+	coraza "github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 //go:embed testdata
@@ -71,7 +71,7 @@ func TestErrorWithBackticks(t *testing.T) {
 func TestDefaultConfigurationFile(t *testing.T) {
 	waf := coraza.NewWAF()
 	p := NewParser(waf)
-	err := p.FromFile("../coraza.conf-recommended")
+	err := p.FromFile("../../coraza.conf-recommended")
 	if err != nil {
 		t.Error(err)
 	}
@@ -80,7 +80,7 @@ func TestDefaultConfigurationFile(t *testing.T) {
 func TestHardcodedIncludeDirective(t *testing.T) {
 	waf := coraza.NewWAF()
 	p := NewParser(waf)
-	if err := p.FromString("Include ../coraza.conf-recommended"); err != nil {
+	if err := p.FromString("Include ../../coraza.conf-recommended"); err != nil {
 		t.Error(err)
 	}
 	if waf.Rules.Count() == 0 {
@@ -163,7 +163,7 @@ func TestHardcodedIncludeDirectiveDDOS2(t *testing.T) {
 
 func TestChains(t *testing.T) {
 	/*
-		waf := engine.NewWAF()
+		waf := coraza.NewWAF()
 		p, _ := NewParser(waf)
 		if err := p.FromString(`
 		SecAction "id:1,deny,log,phase:1,chain"

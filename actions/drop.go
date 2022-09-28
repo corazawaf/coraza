@@ -4,40 +4,37 @@
 package actions
 
 import (
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 type dropFn struct{}
 
-func (a *dropFn) Init(r *coraza.Rule, data string) error {
-	r.Disruptive = true
+func (a *dropFn) Init(r rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *dropFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
-	rid := r.ID
+func (a *dropFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
+	rid := r.GetID()
 	if rid == 0 {
-		rid = r.ParentID
+		rid = r.GetParentID()
 	}
-	if tx.RuleEngine == types.RuleEngineOn {
-		tx.Interruption = &types.Interruption{
-			Status: r.DisruptiveStatus,
-			RuleID: rid,
-			Action: "drop",
-		}
-	}
+	tx.Interrupt(&types.Interruption{
+		Status: r.Status(),
+		RuleID: rid,
+		Action: "drop",
+	})
 }
 
-func (a *dropFn) Type() types.RuleActionType {
-	return types.ActionTypeDisruptive
+func (a *dropFn) Type() rules.ActionType {
+	return rules.ActionTypeDisruptive
 }
 
-func drop() coraza.RuleAction {
+func drop() rules.Action {
 	return &dropFn{}
 }
 
 var (
-	_ coraza.RuleAction = &dropFn{}
+	_ rules.Action      = &dropFn{}
 	_ ruleActionWrapper = drop
 )

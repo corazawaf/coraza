@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -22,7 +21,7 @@ import (
 // so this will implement all phase 0, 1 and 2 variables
 // Note: This function will stop after an interruption
 // Note: Do not manually fill any request variables
-func ProcessRequest(tx *coraza.Transaction, req *http.Request) (*types.Interruption, error) {
+func ProcessRequest(tx types.Transaction, req *http.Request) (*types.Interruption, error) {
 	var client string
 	cport := 0
 	// IMPORTANT: Some http.Request.RemoteAddr implementations will not contain port or contain IPV6: [2001:db8::1]:8080
@@ -50,13 +49,13 @@ func ProcessRequest(tx *coraza.Transaction, req *http.Request) (*types.Interrupt
 		return in, nil
 	}
 	if req.Body != nil {
-		_, err := io.Copy(tx.RequestBodyBuffer, req.Body)
+		_, err := io.Copy(tx.RequestBodyWriter(), req.Body)
 		if err != nil {
-			return tx.Interruption, err
+			return tx.GetInterruption(), err
 		}
-		reader, err := tx.RequestBodyBuffer.Reader()
+		reader, err := tx.RequestBodyReader()
 		if err != nil {
-			return tx.Interruption, err
+			return tx.GetInterruption(), err
 		}
 		req.Body = io.NopCloser(reader)
 	}

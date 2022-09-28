@@ -6,34 +6,35 @@ package actions
 import (
 	"strconv"
 
-	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type statusFn struct {
 }
 
-func (a *statusFn) Init(r *coraza.Rule, b1 string) error {
+func (a *statusFn) Init(r rules.RuleMetadata, b1 string) error {
 	status, err := strconv.Atoi(b1)
 	if err != nil {
 		return err
 	}
-	r.DisruptiveStatus = status
+	// TODO(anuraaga): Confirm this is internal implementation detail
+	r.(*corazawaf.Rule).DisruptiveStatus = status
 	return nil
 }
 
-func (a *statusFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *statusFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 }
 
-func (a *statusFn) Type() types.RuleActionType {
-	return types.ActionTypeData
+func (a *statusFn) Type() rules.ActionType {
+	return rules.ActionTypeData
 }
 
-func status() coraza.RuleAction {
+func status() rules.Action {
 	return &statusFn{}
 }
 
 var (
-	_ coraza.RuleAction = &statusFn{}
+	_ rules.Action      = &statusFn{}
 	_ ruleActionWrapper = status
 )

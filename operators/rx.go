@@ -6,16 +6,16 @@ package operators
 import (
 	"regexp"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type rx struct {
 	re *regexp.Regexp
 }
 
-var _ coraza.RuleOperator = (*rx)(nil)
+var _ rules.Operator = (*rx)(nil)
 
-func (o *rx) Init(options coraza.RuleOperatorOptions) error {
+func (o *rx) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 
 	re, err := regexp.Compile(data)
@@ -23,13 +23,13 @@ func (o *rx) Init(options coraza.RuleOperatorOptions) error {
 	return err
 }
 
-func (o *rx) Evaluate(tx *coraza.Transaction, value string) bool {
+func (o *rx) Evaluate(tx rules.TransactionState, value string) bool {
 	match := o.re.FindStringSubmatch(value)
 	if len(match) == 0 {
 		return false
 	}
 
-	if tx.Capture {
+	if tx.Capturing() {
 		for i, c := range match {
 			if i == 9 {
 				return true

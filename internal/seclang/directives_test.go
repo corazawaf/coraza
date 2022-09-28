@@ -6,7 +6,7 @@ package seclang
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -23,7 +23,7 @@ func Test_NonImplementedDirective(t *testing.T) {
 		`SecHashKey "this_is_my_key" KeyOnly`,
 		`SecHashEngine On`,
 	}
-	w := coraza.NewWAF()
+	w := corazawaf.NewWAF()
 	p := NewParser(w)
 	for _, rule := range rules {
 		err := p.FromString(rule)
@@ -34,7 +34,7 @@ func Test_NonImplementedDirective(t *testing.T) {
 }
 
 func Test_directive(t *testing.T) {
-	w := coraza.NewWAF()
+	w := corazawaf.NewWAF()
 	p := NewParser(w)
 	if err := p.FromString("SecWebAppId test123"); err != nil {
 		t.Error("failed to set parser from string")
@@ -132,7 +132,7 @@ func Test_directive(t *testing.T) {
 }
 
 func TestSecRuleUpdateTargetBy(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	rule, err := ParseRule(RuleOptions{
 		Data:         "REQUEST_URI \"^/test\" \"id:181,tag:test\"",
 		WAF:          waf,
@@ -157,7 +157,7 @@ func TestSecRuleUpdateTargetBy(t *testing.T) {
 }
 
 func TestInvalidBooleanForDirectives(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	p := NewParser(waf)
 	if err := p.FromString("SecIgnoreRuleCompilationErrors sure"); err == nil {
 		t.Error("failed to error on invalid boolean")
@@ -170,12 +170,12 @@ func TestInvalidRulesWithIgnoredErrors(t *testing.T) {
 	SecRule REQUEST_URI "@no_op ^/test" "id:200,tag:test,invalid:5"
 	SecRule REQUEST_URI "@rx ^/test" "id:181,tag:repeated-id"
 	`
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	p := NewParser(waf)
 	if err := p.FromString("secignorerulecompilationerrors On\n" + directives); err != nil {
 		t.Error(err)
 	}
-	waf = coraza.NewWAF()
+	waf = corazawaf.NewWAF()
 	p = NewParser(waf)
 	if err := p.FromString(directives); err == nil {
 		t.Error("failed to error on invalid rule")
@@ -183,7 +183,7 @@ func TestInvalidRulesWithIgnoredErrors(t *testing.T) {
 }
 
 func TestSecDataset(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	p := NewParser(waf)
 	if err := p.FromString("" +
 		"SecDataset test `\n123\n456\n`\n"); err != nil {

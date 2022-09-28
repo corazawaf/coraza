@@ -6,27 +6,28 @@ package operators
 import (
 	"strconv"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/macro"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type lt struct {
-	data coraza.Macro
+	data macro.Macro
 }
 
-var _ coraza.RuleOperator = (*lt)(nil)
+var _ rules.Operator = (*lt)(nil)
 
-func (o *lt) Init(options coraza.RuleOperatorOptions) error {
+func (o *lt) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 
-	macro, err := coraza.NewMacro(data)
+	m, err := macro.NewMacro(data)
 	if err != nil {
 		return err
 	}
-	o.data = *macro
+	o.data = m
 	return nil
 }
 
-func (o *lt) Evaluate(tx *coraza.Transaction, value string) bool {
+func (o *lt) Evaluate(tx rules.TransactionState, value string) bool {
 	vv := o.data.Expand(tx)
 	data, _ := strconv.Atoi(vv)
 	v, _ := strconv.Atoi(value)

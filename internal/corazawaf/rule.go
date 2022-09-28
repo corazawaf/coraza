@@ -1,37 +1,19 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package coraza
+package corazawaf
 
 import (
 	"fmt"
-	"io/fs"
 	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3/macro"
+	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
-
-// RuleTransformation is used to create transformation plugins
-// See the documentation for more information
-// If a transformation fails to run it will return the same string
-// and an error, errors are only used for logging, it won't stop
-// the execution of the rule
-type RuleTransformation = func(input string) (string, error)
-
-// RuleAction is used to create Action plugins
-// See the documentation: https://www.coraza.io/docs/waf/actions
-type RuleAction interface {
-	// Init an action, will be done during compilation
-	Init(*Rule, string) error
-	// Evaluate will be done during rule evaluation
-	Evaluate(*Rule, *Transaction)
-	// Type will return the rule type, it's used by Evaluate
-	// to choose when to evaluate each action
-	Type() types.RuleActionType
-}
 
 // ruleActionParams is used as a wrapper to store the action name
 // and parameters, basically for logging purposes.
@@ -43,39 +25,13 @@ type ruleActionParams struct {
 	Param string
 
 	// The action to be executed
-	Function RuleAction
+	Function rules.Action
 }
 
-// RuleOperatorOptions is used to store the options for a rule operator
-type RuleOperatorOptions struct {
-	// Arguments is used to store the operator args
-	Arguments string
-
-	// Path is used to store a list of possible data paths
-	Path []string
-
-	// Root is the root to resolve Path from.
-	Root fs.FS
-
-	// Datasets contains input datasets or dictionaries
-	Datasets map[string][]string
-}
-
-// RuleOperator interface is used to define rule @operators
-type RuleOperator interface {
-	// Init is used during compilation to setup and cache
-	// the operator
-	Init(RuleOperatorOptions) error
-	// Evaluate is used during the rule evaluation,
-	// it returns true if the operator succeeded against
-	// the input data for the transaction
-	Evaluate(*Transaction, string) bool
-}
-
-// RuleOperator is a container for an operator,
+// Operator is a container for an operator,
 type ruleOperatorParams struct {
 	// Operator to be used
-	Operator RuleOperator
+	Operator rules.Operator
 
 	// Function name (ex @rx)
 	Function string
@@ -125,7 +81,7 @@ type ruleTransformationParams struct {
 	Name string
 
 	// The transformation function to be used
-	Function RuleTransformation
+	Function rules.Transformation
 }
 
 // Rule is used to test a Transaction against certain operators
@@ -167,10 +123,10 @@ type Rule struct {
 	// Message text to be macro expanded and logged
 	// In future versions we might use a special type of string that
 	// supports cached macro expansions. For performance
-	Msg Macro
+	Msg macro.Macro
 
 	// Rule logdata
-	LogData Macro
+	LogData macro.Macro
 
 	// If true, triggering this rule write to the error log
 	Log bool
@@ -187,10 +143,26 @@ type Rule struct {
 	HasChain bool
 }
 
+func (r *Rule) GetID() int {
+	return r.ID
+}
+
+func (r *Rule) GetParentID() int {
+	return r.ParentID
+}
+
+func (r *Rule) Status() int {
+	return r.DisruptiveStatus
+}
+
 // Evaluate will evaluate the current rule for the indicated transaction
 // If the operator matches, actions will be evaluated, and it will return
 // the matched variables, keys and values (MatchData)
-func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
+func (r *Rule) Evaluate(tx rules.TransactionState) []types.MatchData {
+	return r.doEvaluate(tx.(*Transaction))
+}
+
+func (r *Rule) doEvaluate(tx *Transaction) []types.MatchData {
 	if r.Capture {
 		tx.Capture = true
 	}
@@ -205,9 +177,13 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 	defer tx.WAF.Logger.Debug("[%s] [%d] Finish evaluating rule %d", tx.ID, rid, r.ID)
 	ruleCol := tx.Variables.Rule
 	ruleCol.SetIndex("id", 0, strconv.Itoa(rid))
-	ruleCol.SetIndex("msg", 0, r.Msg.String())
+	if r.Msg != nil {
+		ruleCol.SetIndex("msg", 0, r.Msg.String())
+	}
 	ruleCol.SetIndex("rev", 0, r.Rev)
-	ruleCol.SetIndex("logdata", 0, r.LogData.String())
+	if r.LogData != nil {
+		ruleCol.SetIndex("logdata", 0, r.LogData.String())
+	}
 	ruleCol.SetIndex("severity", 0, r.Severity.String())
 	// SecMark and SecAction uses nil operator
 	if r.operator == nil {
@@ -259,8 +235,12 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 						// Set the txn variables for expansions before usage
 						r.matchVariable(tx, mr)
 
-						mr.Message = r.Msg.Expand(tx)
-						mr.Data = r.LogData.Expand(tx)
+						if r.Msg != nil {
+							mr.Message = r.Msg.Expand(tx)
+						}
+						if r.LogData != nil {
+							mr.Data = r.LogData.Expand(tx)
+						}
 						matchedValues = append(matchedValues, mr)
 
 						tx.WAF.Logger.Debug("[%s] [%d] Evaluating operator \"%s %s\" against %q: MATCH",
@@ -304,7 +284,7 @@ func (r *Rule) Evaluate(tx *Transaction) []types.MatchData {
 		if tx.RuleEngine != types.RuleEngineDetectionOnly {
 			tx.WAF.Logger.Debug("[%s] [%d] Disrupting transaction by rule %d", tx.ID, rid, r.ID)
 			for _, a := range r.actions {
-				if a.Function.Type() == types.ActionTypeDisruptive || a.Function.Type() == types.ActionTypeFlow {
+				if a.Function.Type() == rules.ActionTypeDisruptive || a.Function.Type() == rules.ActionTypeFlow {
 					tx.WAF.Logger.Debug("[%s] [%d] Evaluating action %s for rule %d", tx.ID, rid, a.Name, r.ID)
 					a.Function.Evaluate(r, tx)
 				}
@@ -332,7 +312,7 @@ func (r *Rule) matchVariable(tx *Transaction, m types.MatchData) {
 	// We run non-disruptive actions even if there is no chain match
 	tx.matchVariable(m)
 	for _, a := range r.actions {
-		if a.Function.Type() == types.ActionTypeNondisruptive {
+		if a.Function.Type() == rules.ActionTypeNondisruptive {
 			tx.WAF.Logger.Debug("[%s] [%d] Evaluating action %s for rule %d", tx.ID, rid, a.Name, r.ID)
 			a.Function.Evaluate(r, tx)
 		}
@@ -340,7 +320,7 @@ func (r *Rule) matchVariable(tx *Transaction, m types.MatchData) {
 }
 
 // AddAction adds an action to the rule
-func (r *Rule) AddAction(name string, action RuleAction) error {
+func (r *Rule) AddAction(name string, action rules.Action) error {
 	// TODO add more logic, like one persistent action per rule etc
 	r.actions = append(r.actions, ruleActionParams{
 		Name:     name,
@@ -400,7 +380,7 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 
 // AddTransformation adds a transformation to the rule
 // it fails if the transformation cannot be found
-func (r *Rule) AddTransformation(name string, t RuleTransformation) error {
+func (r *Rule) AddTransformation(name string, t rules.Transformation) error {
 	if t == nil || name == "" {
 		return fmt.Errorf("invalid transformation %q not found", name)
 	}
@@ -417,7 +397,7 @@ func (r *Rule) ClearTransformations() {
 // SetOperator sets the operator of the rule
 // There can be only one operator per rule
 // functionName and params are used for logging
-func (r *Rule) SetOperator(operator RuleOperator, functionName string, params string) {
+func (r *Rule) SetOperator(operator rules.Operator, functionName string, params string) {
 	r.operator = &ruleOperatorParams{
 		Operator: operator,
 		Function: functionName,

@@ -4,11 +4,11 @@
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type unconditionalMatch struct{}
 
-func (*unconditionalMatch) Init(coraza.RuleOperatorOptions) error { return nil }
+func (*unconditionalMatch) Init(rules.OperatorOptions) error { return nil }
 
-func (*unconditionalMatch) Evaluate(*coraza.Transaction, string) bool { return true }
+func (*unconditionalMatch) Evaluate(rules.TransactionState, string) bool { return true }

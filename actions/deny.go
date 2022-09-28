@@ -4,40 +4,37 @@
 package actions
 
 import (
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 type denyFn struct{}
 
-func (a *denyFn) Init(r *coraza.Rule, data string) error {
-	r.Disruptive = true
+func (a *denyFn) Init(r rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *denyFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
-	rid := r.ID
+func (a *denyFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
+	rid := r.GetID()
 	if rid == 0 {
-		rid = r.ParentID
+		rid = r.GetParentID()
 	}
-	if tx.RuleEngine == types.RuleEngineOn {
-		tx.Interruption = &types.Interruption{
-			Status: r.DisruptiveStatus,
-			RuleID: rid,
-			Action: "deny",
-		}
-	}
+	tx.Interrupt(&types.Interruption{
+		Status: r.Status(),
+		RuleID: rid,
+		Action: "deny",
+	})
 }
 
-func (a *denyFn) Type() types.RuleActionType {
-	return types.ActionTypeDisruptive
+func (a *denyFn) Type() rules.ActionType {
+	return rules.ActionTypeDisruptive
 }
 
-func deny() coraza.RuleAction {
+func deny() rules.Action {
 	return &denyFn{}
 }
 
 var (
-	_ coraza.RuleAction = &denyFn{}
+	_ rules.Action      = &denyFn{}
 	_ ruleActionWrapper = deny
 )

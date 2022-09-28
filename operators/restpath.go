@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 var rePathTokenRe = regexp.MustCompile(`\{([^\}]+)\}`)
@@ -21,9 +21,9 @@ type restpath struct {
 	re *regexp.Regexp
 }
 
-var _ coraza.RuleOperator = (*restpath)(nil)
+var _ rules.Operator = (*restpath)(nil)
 
-func (o *restpath) Init(options coraza.RuleOperatorOptions) error {
+func (o *restpath) Init(options rules.OperatorOptions) error {
 	data := strings.ReplaceAll(options.Arguments, "/", "\\/")
 	for _, token := range rePathTokenRe.FindAllStringSubmatch(data, -1) {
 		data = strings.Replace(data, token[0], fmt.Sprintf("(?P<%s>.*)", token[1]), 1)
@@ -33,7 +33,7 @@ func (o *restpath) Init(options coraza.RuleOperatorOptions) error {
 	return err
 }
 
-func (o *restpath) Evaluate(tx *coraza.Transaction, value string) bool {
+func (o *restpath) Evaluate(tx rules.TransactionState, value string) bool {
 	// we use the re regex to match the path and match named captured groups
 	// to the ARGS_PATH
 	match := o.re.FindStringSubmatch(value)
@@ -42,14 +42,14 @@ func (o *restpath) Evaluate(tx *coraza.Transaction, value string) bool {
 	}
 	for i, m := range o.re.SubexpNames() {
 		if i != 0 && m != "" {
-			tx.Variables.ArgsPath.SetIndex(m, 0, match[i])
+			tx.GetVariables().GetArgsPath().SetIndex(m, 0, match[i])
 		}
 	}
 	return true
 }
 
 func init() {
-	Register("restpath", func() coraza.RuleOperator {
+	Register("restpath", func() rules.Operator {
 		return &restpath{}
 	})
 }

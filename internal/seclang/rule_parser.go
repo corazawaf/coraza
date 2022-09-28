@@ -10,11 +10,12 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
 	actionsmod "github.com/corazawaf/coraza/v3/actions"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/io"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	operators "github.com/corazawaf/coraza/v3/operators"
+	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -24,13 +25,13 @@ const defaultActionsPhase2 = "phase:2,log,auditlog,pass"
 type ruleAction struct {
 	Key   string
 	Value string
-	Atype types.RuleActionType
-	F     coraza.RuleAction
+	Atype rules.ActionType
+	F     rules.Action
 }
 
 // RuleParser is used to programatically create new rules using seclang formatted strings
 type RuleParser struct {
-	rule           *coraza.Rule
+	rule           *corazawaf.Rule
 	defaultActions map[types.RulePhase][]ruleAction
 	options        RuleOptions
 }
@@ -194,7 +195,7 @@ func (p *RuleParser) ParseOperator(operator string) error {
 		return err
 	}
 
-	opts := coraza.RuleOperatorOptions{
+	opts := rules.OperatorOptions{
 		Arguments: opdata,
 		Path: []string{
 			p.options.Config.Get("parser_config_dir", "").(string),
@@ -232,7 +233,7 @@ func (p *RuleParser) ParseDefaultActions(actions string) error {
 			}
 			continue
 		}
-		if action.Atype == types.ActionTypeDisruptive {
+		if action.Atype == rules.ActionTypeDisruptive {
 			defaultDisruptive = action.Key
 		}
 	}
@@ -262,7 +263,7 @@ func (p *RuleParser) ParseActions(actions string) error {
 	}
 	// first we execute metadata rules
 	for _, a := range act {
-		if a.Atype == types.ActionTypeMetadata {
+		if a.Atype == rules.ActionTypeMetadata {
 			errs := a.F.Init(p.rule, a.Value)
 			if errs != nil {
 				return errs
@@ -279,7 +280,7 @@ func (p *RuleParser) ParseActions(actions string) error {
 
 	for _, action := range act {
 		// now we evaluate non-metadata actions
-		if action.Atype == types.ActionTypeMetadata {
+		if action.Atype == rules.ActionTypeMetadata {
 			continue
 		}
 		errs := action.F.Init(p.rule, action.Value)
@@ -294,14 +295,14 @@ func (p *RuleParser) ParseActions(actions string) error {
 }
 
 // Rule returns the compiled rule
-func (p *RuleParser) Rule() *coraza.Rule {
+func (p *RuleParser) Rule() *corazawaf.Rule {
 	return p.rule
 }
 
 // RuleOptions contains the options used to compile a rule
 type RuleOptions struct {
 	WithOperator bool
-	WAF          *coraza.WAF
+	WAF          *corazawaf.WAF
 	Config       types.Config
 	Directive    string
 	Data         string
@@ -315,7 +316,7 @@ var ruleTokenRegex = regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
 // The string must match the seclang format
 // In case WithOperator is false, the rule will be parsed without operator
 // This function is created for external plugin directives
-func ParseRule(options RuleOptions) (*coraza.Rule, error) {
+func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 	if strings.TrimSpace(options.Data) == "" {
 		return nil, errors.New("empty rule")
 	}
@@ -323,7 +324,7 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 	var err error
 	rp := &RuleParser{
 		options:        options,
-		rule:           coraza.NewRule(),
+		rule:           corazawaf.NewRule(),
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
 
@@ -392,7 +393,7 @@ func ParseRule(options RuleOptions) (*coraza.Rule, error) {
 	return rp.rule, nil
 }
 
-func getLastRuleExpectingChain(w *coraza.WAF) *coraza.Rule {
+func getLastRuleExpectingChain(w *corazawaf.WAF) *corazawaf.Rule {
 	rules := w.Rules.GetRules()
 	if len(rules) == 0 {
 		return nil
@@ -425,7 +426,7 @@ actionLoop:
 			// skip whitespaces in key
 			continue actionLoop
 		case !quoted && c == ',':
-			f, err := actionsmod.GetAction(ckey)
+			f, err := actionsmod.Get(ckey)
 			if err != nil {
 				return nil, err
 			}
@@ -457,7 +458,7 @@ actionLoop:
 			ckey += string(c)
 		}
 		if i+1 == len(actions) {
-			f, err := actionsmod.GetAction(ckey)
+			f, err := actionsmod.Get(ckey)
 			if err != nil {
 				return nil, err
 			}
@@ -490,18 +491,18 @@ func mergeActions(origin []ruleAction, defaults []ruleAction) []ruleAction {
 	res := []ruleAction{}
 	var da ruleAction // Disruptive action
 	for _, action := range defaults {
-		if action.Atype == types.ActionTypeDisruptive {
+		if action.Atype == rules.ActionTypeDisruptive {
 			da = action
 			continue
 		}
-		if action.Atype == types.ActionTypeMetadata {
+		if action.Atype == rules.ActionTypeMetadata {
 			continue
 		}
 		res = append(res, action)
 	}
 	hasDa := false
 	for _, action := range origin {
-		if action.Atype == types.ActionTypeDisruptive {
+		if action.Atype == rules.ActionTypeDisruptive {
 			if action.Key != "block" {
 				hasDa = true
 				// We add the default rule DA in case this is no block

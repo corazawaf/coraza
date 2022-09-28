@@ -8,49 +8,49 @@ import (
 	"os"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/macro"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type setenvFn struct {
 	key   string
-	value coraza.Macro
+	value macro.Macro
 }
 
-func (a *setenvFn) Init(r *coraza.Rule, data string) error {
+func (a *setenvFn) Init(r rules.RuleMetadata, data string) error {
 	spl := strings.SplitN(data, "=", 2)
 	if len(spl) != 2 {
 		return fmt.Errorf("invalid key value for setvar")
 	}
 	a.key = spl[0]
-	macro, err := coraza.NewMacro(spl[1])
+	m, err := macro.NewMacro(spl[1])
 	if err != nil {
 		return err
 	}
-	a.value = *macro
+	a.value = m
 	return nil
 }
 
-func (a *setenvFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *setenvFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	v := a.value.Expand(tx)
 	// set env variable
 	if err := os.Setenv(a.key, v); err != nil {
-		tx.WAF.Logger.Error("[%s] Error setting env variable for rule %d: %s", tx.ID, r.ID, err.Error())
+		tx.DebugLogger().Error("[%s] Error setting env variable for rule %d: %s", tx.GetID(), r.GetID(), err.Error())
 	}
 	// TODO is this ok?
-	tx.Variables.Env.Set(a.key, []string{v})
+	tx.GetVariables().GetEnv().Set(a.key, []string{v})
 
 }
 
-func (a *setenvFn) Type() types.RuleActionType {
-	return types.ActionTypeNondisruptive
+func (a *setenvFn) Type() rules.ActionType {
+	return rules.ActionTypeNondisruptive
 }
 
-func setenv() coraza.RuleAction {
+func setenv() rules.Action {
 	return &setenvFn{}
 }
 
 var (
-	_ coraza.RuleAction = &setenvFn{}
+	_ rules.Action      = &setenvFn{}
 	_ ruleActionWrapper = setenv
 )

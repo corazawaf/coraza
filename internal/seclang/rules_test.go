@@ -10,12 +10,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 func TestRuleMatch(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	parser := NewParser(waf)
 	err := parser.FromString(`
 		SecRuleEngine On
@@ -42,7 +42,7 @@ func TestRuleMatch(t *testing.T) {
 }
 
 func TestRuleMatchWithRegex(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	parser := NewParser(waf)
 	err := parser.FromString(`
 		SecRuleEngine On
@@ -66,7 +66,7 @@ func TestRuleMatchWithRegex(t *testing.T) {
 }
 
 func TestSecMarkers(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	parser := NewParser(waf)
 	err := parser.FromString(`
 		SecRuleEngine On		
@@ -101,7 +101,7 @@ func TestSecMarkers(t *testing.T) {
 }
 
 func TestSecAuditLogs(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	parser := NewParser(waf)
 	err := parser.FromString(`
 		SecAuditEngine On
@@ -130,7 +130,7 @@ func TestSecAuditLogs(t *testing.T) {
 }
 
 func TestRuleLogging(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	logs := []string{}
 	waf.SetErrorLogCb(func(mr types.MatchedRule) {
 		logs = append(logs, mr.ErrorLog(403))
@@ -167,7 +167,7 @@ func TestRuleLogging(t *testing.T) {
 }
 
 func TestRuleChains(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	parser := NewParser(waf)
 	err := parser.FromString(`
 		SecRule ARGS "123" "id:1,phase:1,log,chain"
@@ -191,7 +191,7 @@ func TestRuleChains(t *testing.T) {
 }
 
 func TestTagsAreNotPrintedTwice(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	logs := []string{}
 	waf.SetErrorLogCb(func(mr types.MatchedRule) {
 		logs = append(logs, mr.ErrorLog(403))
@@ -223,7 +223,7 @@ func TestTagsAreNotPrintedTwice(t *testing.T) {
 }
 
 func TestStatusFromInterruptions(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	logs := []string{}
 	waf.SetErrorLogCb(func(mr types.MatchedRule) {
 		logs = append(logs, mr.ErrorLog(403))
@@ -247,7 +247,7 @@ func TestStatusFromInterruptions(t *testing.T) {
 }
 
 func TestChainWithUnconditionalMatch(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	p := NewParser(waf)
 	if err := p.FromString(`
 	SecAction "id:7, pass, phase:1, log, chain, skip:2"
@@ -261,7 +261,7 @@ func TestChainWithUnconditionalMatch(t *testing.T) {
 }
 
 func TestLogsAreNotPrintedManyTimes(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	logs := []string{}
 	waf.SetErrorLogCb(func(mr types.MatchedRule) {
 		logs = append(logs, mr.ErrorLog(403))
@@ -289,7 +289,7 @@ func TestLogsAreNotPrintedManyTimes(t *testing.T) {
 }
 
 func TestSampleRxRule(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	parser := NewParser(waf)
 	err := parser.FromString(`
 	SecRule REQUEST_METHOD "@rx ^(?:GET|HEAD)$" "phase:1,id:1,log,deny,status:403,chain"
@@ -307,7 +307,7 @@ func TestSampleRxRule(t *testing.T) {
 
 func TestTxIssue147(t *testing.T) {
 	// https://github.com/corazawaf/coraza/issues/147
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	parser := NewParser(waf)
 	err := parser.FromString(`SecRule RESPONSE_BODY "@rx ^#!\s?/" "id:950140,phase:4,log,deny,status:403"`)
 	if err != nil {
@@ -345,7 +345,7 @@ func TestTxIssue147(t *testing.T) {
 }
 
 func TestIssue176(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	rules := `SecRule REQUEST_COOKIES:sessionId "test" "id:1,phase:1,deny,log,msg:'test rule',logdata:'Matched %{MATCHED_VAR_NAME}'"`
 	parser := NewParser(waf)
 
@@ -391,7 +391,7 @@ func TestIssue176(t *testing.T) {
 }
 
 func TestRxCapture(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	rules := `SecRule &TX:allowed_request_content_type_charset "@eq 0" \
         "id:901168,\
         phase:1,\
@@ -440,7 +440,7 @@ func TestRxCapture(t *testing.T) {
 }
 
 func TestUnicode(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	rules := `SecRule ARGS "@rx \x{30cf}\x{30ed}\x{30fc}" "id:101,phase:2,t:lowercase,deny"`
 	parser := NewParser(waf)
 
@@ -470,7 +470,7 @@ func Test941310(t *testing.T) {
 	// not supported on TinyGo
 	// t.Skip("non-utf8 regex not supported")
 
-	// waf := coraza.NewWAF()
+	// waf := corazawaf.NewWAF()
 	// rules := `SecRule REQUEST_COOKIES|!REQUEST_COOKIES:/__utm/|REQUEST_COOKIES_NAMES|ARGS_NAMES|ARGS|XML:/* "@rx \xbc[^\xbe>]*[\xbe>]|<[^\xbe]*\xbe" \
 	// "id:941310,\
 	// phase:2,\
@@ -514,7 +514,7 @@ func Test941310(t *testing.T) {
 }
 
 func TestArgumentNamesCaseSensitive(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	rules := `SecRule ARGS_NAMES "Test1" "id:3, phase:2, log, deny"`
 	parser := NewParser(waf)
 
@@ -557,7 +557,7 @@ func TestArgumentNamesCaseSensitive(t *testing.T) {
 }
 
 func TestArgumentsCaseSensitive(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	rules := `SecRule ARGS:Test1 "Xyz" "id:3, phase:2, log, deny"`
 	parser := NewParser(waf)
 
@@ -619,7 +619,7 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 }
 
 func TestCookiesCaseSensitive(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	rules := `SecRule REQUEST_COOKIES:Test1 "Xyz" "id:3, phase:2, log, deny"`
 	parser := NewParser(waf)
 
@@ -681,7 +681,7 @@ func TestCookiesCaseSensitive(t *testing.T) {
 }
 
 func TestHeadersCaseSensitive(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	rules := `SecRule REQUEST_HEADERS:Test1 "Xyz" "id:3, phase:2, log, deny"`
 	parser := NewParser(waf)
 
@@ -743,7 +743,7 @@ func TestHeadersCaseSensitive(t *testing.T) {
 }
 
 func TestParameterPollution(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	rules := `SecRule Args:TESt1 "Xyz" "id:3, phase:2, log, pass"`
 	parser := NewParser(waf)
 
@@ -794,7 +794,7 @@ func TestParameterPollution(t *testing.T) {
 }
 
 func TestURIQueryParamCaseSensitive(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	rules := `SecRule ARGS:Test1 "@contains SQLI" "id:3, phase:2, log, pass"`
 	parser := NewParser(waf)
 
@@ -915,7 +915,7 @@ func isMatchData(mds []types.MatchData, key string) (result bool) {
 }
 
 func Test930110_10(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	rules := `
 SecRequestBodyAccess On
 SecRule REQUEST_URI|ARGS|REQUEST_HEADERS|!REQUEST_HEADERS:Referer|FILES|XML:/* "@rx (?:(?:^|[\x5c/])\.{2,3}[\x5c/]|[\x5c/]\.{2,3}(?:[\x5c/]|$))" \

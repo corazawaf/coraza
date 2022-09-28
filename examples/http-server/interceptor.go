@@ -3,12 +3,12 @@ package main
 import (
 	"net/http"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 type interceptor struct {
 	origWriter  http.ResponseWriter
-	tx          *coraza.Transaction
+	tx          types.Transaction
 	headersSent bool
 }
 
@@ -30,7 +30,7 @@ func (i *interceptor) WriteHeader(rc int) {
 }
 
 func (i *interceptor) Write(b []byte) (int, error) {
-	return i.tx.ResponseBodyBuffer.Write(b)
+	return i.tx.ResponseBodyWriter().Write(b)
 }
 
 func (i *interceptor) Header() http.Header {

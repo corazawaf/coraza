@@ -17,7 +17,7 @@ package actions
 import (
 	"fmt"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -25,40 +25,37 @@ type redirectFn struct {
 	target string
 }
 
-func (a *redirectFn) Init(r *coraza.Rule, data string) error {
+func (a *redirectFn) Init(r rules.RuleMetadata, data string) error {
 	if data == "" {
 		return fmt.Errorf("redirect action requires a parameter")
 	}
 
 	a.target = data
-	r.Disruptive = true
 	return nil
 }
 
-func (a *redirectFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
-	rid := r.ID
+func (a *redirectFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
+	rid := r.GetID()
 	if rid == 0 {
-		rid = r.ParentID
+		rid = r.GetParentID()
 	}
-	if tx.RuleEngine == types.RuleEngineOn {
-		tx.Interruption = &types.Interruption{
-			Status: r.DisruptiveStatus,
-			RuleID: rid,
-			Action: "redirect",
-			Data:   a.target,
-		}
-	}
+	tx.Interrupt(&types.Interruption{
+		Status: r.Status(),
+		RuleID: rid,
+		Action: "redirect",
+		Data:   a.target,
+	})
 }
 
-func (a *redirectFn) Type() types.RuleActionType {
-	return types.ActionTypeDisruptive
+func (a *redirectFn) Type() rules.ActionType {
+	return rules.ActionTypeDisruptive
 }
 
-func redirect() coraza.RuleAction {
+func redirect() rules.Action {
 	return &redirectFn{}
 }
 
 var (
-	_ coraza.RuleAction = &redirectFn{}
+	_ rules.Action      = &redirectFn{}
 	_ ruleActionWrapper = redirect
 )

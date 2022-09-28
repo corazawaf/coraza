@@ -8,7 +8,7 @@ import (
 
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 // TODO according to coraza researchs, re2 matching is faster than ahocorasick
@@ -18,9 +18,9 @@ type pm struct {
 	matcher ahocorasick.AhoCorasick
 }
 
-var _ coraza.RuleOperator = (*pm)(nil)
+var _ rules.Operator = (*pm)(nil)
 
-func (o *pm) Init(options coraza.RuleOperatorOptions) error {
+func (o *pm) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 
 	data = strings.ToLower(data)
@@ -37,14 +37,14 @@ func (o *pm) Init(options coraza.RuleOperatorOptions) error {
 	return nil
 }
 
-func (o *pm) Evaluate(tx *coraza.Transaction, value string) bool {
+func (o *pm) Evaluate(tx rules.TransactionState, value string) bool {
 	return pmEvaluate(o.matcher, tx, value)
 }
 
-func pmEvaluate(matcher ahocorasick.AhoCorasick, tx *coraza.Transaction, value string) bool {
+func pmEvaluate(matcher ahocorasick.AhoCorasick, tx rules.TransactionState, value string) bool {
 	iter := matcher.Iter(value)
 
-	if !tx.Capture {
+	if !tx.Capturing() {
 		// Not capturing so just one match is enough.
 		return iter.Next() != nil
 	}

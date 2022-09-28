@@ -4,31 +4,32 @@
 package actions
 
 import (
-	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type multimatchFn struct {
 }
 
-func (a *multimatchFn) Init(r *coraza.Rule, data string) error {
-	r.MultiMatch = true
+func (a *multimatchFn) Init(r rules.RuleMetadata, data string) error {
+	// TODO(anuraaga): Confirm this is internal implementation detail
+	r.(*corazawaf.Rule).MultiMatch = true
 	return nil
 }
 
-func (a *multimatchFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *multimatchFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	// Not evaluated
 }
 
-func (a *multimatchFn) Type() types.RuleActionType {
-	return types.ActionTypeNondisruptive
+func (a *multimatchFn) Type() rules.ActionType {
+	return rules.ActionTypeNondisruptive
 }
 
-func multimatch() coraza.RuleAction {
+func multimatch() rules.Action {
 	return &multimatchFn{}
 }
 
 var (
-	_ coraza.RuleAction = &multimatchFn{}
+	_ rules.Action      = &multimatchFn{}
 	_ ruleActionWrapper = multimatch
 )
