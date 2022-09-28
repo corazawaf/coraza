@@ -9,10 +9,11 @@ import (
 
 func setupTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
-	if err := setupCoraza(); err != nil {
+	waf, err := setupCoraza()
+	if err != nil {
 		panic(err)
 	}
-	return httptest.NewServer(corazaRequestHandler(http.HandlerFunc(hello)))
+	return httptest.NewServer(corazaRequestHandler(waf, http.HandlerFunc(hello)))
 }
 
 func doGetRequest(t *testing.T, getPath string) int {

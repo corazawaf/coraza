@@ -6,52 +6,50 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/corazawaf/coraza/v3"
 	txhttp "github.com/corazawaf/coraza/v3/http"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/internal/seclang"
 	"github.com/corazawaf/coraza/v3/types"
 )
-
-var waf *corazawaf.WAF
 
 func hello(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(w, "hello world, not disrupted.\n")
 }
 
 func main() {
-	if err := setupCoraza(); err != nil {
+	waf, err := setupCoraza()
+	if err != nil {
 		panic(err)
 	}
-	http.Handle("/hello", corazaRequestHandler(http.HandlerFunc(hello)))
+	http.Handle("/hello", corazaRequestHandler(waf, http.HandlerFunc(hello)))
 
 	fmt.Println("Server is running. Listening port: 8090")
 	panic(http.ListenAndServe(":8090", nil))
 }
 
-func setupCoraza() error {
-	waf = corazawaf.NewWAF()
-	waf.SetDebugLogLevel(9)
-	seclang := seclang.NewParser(waf)
-	if err := seclang.FromString(`
+func setupCoraza() (coraza.WAF, error) {
+	waf, err := coraza.NewWAFWithConfig(coraza.NewWAFConfig().
+		WithDirectives(`
 		# This is a comment
+		SecDebugLogLevel 9
 		SecRequestBodyAccess On
 		SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
 		SecRule REQUEST_BODY "somecontent" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
 		SecRule RESPONSE_BODY "somecontent" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
-	`); err != nil {
-		return err
+	`))
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	return waf, err
 }
 
-func corazaRequestHandler(h http.Handler) http.Handler {
+func corazaRequestHandler(waf coraza.WAF, h http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		tx := waf.NewTransaction(context.Background())
 		defer func() {
 			// We run phase 5 rules and create audit logs (if enabled)
 			tx.ProcessLogging()
 			// we remove temporary files and free some memory
-			if err := tx.Clean(); err != nil {
+			if err := tx.Close(); err != nil {
 				fmt.Println(err)
 			}
 		}()
@@ -82,7 +80,7 @@ func corazaRequestHandler(h http.Handler) http.Handler {
 			return
 		}
 		// we release the buffer
-		reader, err := tx.ResponseBodyBuffer.Reader()
+		reader, err := tx.ResponseBodyReader()
 		if err != nil {
 			showCorazaError(w, 500, err.Error())
 			return
