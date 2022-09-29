@@ -1,7 +1,7 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-// Channels and goroutines are not going to work with tinygo
+// tinygo does not support net.http so this package is not needed for it
 //go:build !tinygo
 // +build !tinygo
 
@@ -40,20 +40,10 @@ func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
 			return
 		}
 
-		ri := &rwInterceptor{
-			w:  w,
-			tx: tx,
-		}
-
 		// We continue with the other middlewares by catching the response
-		h.ServeHTTP(ri.wrap(), r)
-		it := tx.ProcessResponseHeaders(ri.respStatus, ri.proto)
-		if it != nil {
-			processInterruption(w, it)
-			return
-		}
+		h.ServeHTTP(wrap(w, tx), r)
 
-		if it, err := tx.ProcessResponseBody(); err != nil {
+    if it, err := tx.ProcessResponseBody(); err != nil {
 			l("failed to process response body: %v", err)
 			return
 		} else if it != nil {
@@ -82,6 +72,7 @@ func processInterruption(w http.ResponseWriter, it *types.Interruption) {
 	if it.Status == 0 {
 		it.Status = 503
 	}
+
 	if it.Action == "deny" {
 		w.WriteHeader(it.Status)
 	}
