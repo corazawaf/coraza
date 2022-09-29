@@ -40,7 +40,7 @@ func TestHttpServer(t *testing.T) {
 	}{
 		"no blocking": {
 			reqURI:         "/hello",
-			expectedStatus: 200,
+			expectedStatus: 201,
 		},
 		"args blocking": {
 			reqURI:         "/hello?id=0",
@@ -64,6 +64,8 @@ func TestHttpServer(t *testing.T) {
 			// Spin up the test server
 			srv := httptest.NewServer(WrapHandler(createWAF(), t.Logf, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 				fmt.Fprintf(w, tCase.respBody)
+				w.Header().Add("coraza-middleware", "true")
+				w.WriteHeader(201)
 			})))
 			defer srv.Close()
 

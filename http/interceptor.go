@@ -46,6 +46,7 @@ func (i *rwInterceptor) Header() http.Header {
 	return i.w.Header()
 }
 
+// Heavily inspired in https://github.com/openzipkin/zipkin-go/blob/master/middleware/http/server.go#L218
 func (r *rwInterceptor) wrap() http.ResponseWriter { // nolint:gocyclo
 	var (
 		hj, i0 = r.w.(http.Hijacker)
