@@ -47,8 +47,7 @@ func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
 
 		// We continue with the other middlewares by catching the response
 		h.ServeHTTP(ri.wrap(), r)
-
-		it := tx.ProcessResponseHeaders(200, "HTTP/2.0")
+		it := tx.ProcessResponseHeaders(ri.respStatus, ri.proto)
 		if it != nil {
 			processInterruption(w, it)
 			return

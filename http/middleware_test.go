@@ -78,7 +78,7 @@ func createWAF(t *testing.T) coraza.WAF {
 		SecDebugLogLevel 5
 		SecRequestBodyAccess On
 		SecResponseBodyAccess On
-		SecResponseBodyMimeType text/plain text/html text/xml
+		SecResponseBodyMimeType text/plain
 		SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
 		SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
 		SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
@@ -110,7 +110,6 @@ func TestHttpServer(t *testing.T) {
 			reqBody:        "eval('cat /etc/passwd')",
 			expectedStatus: 403,
 		},
-		// TODO(jcchavezs): sort out why response body evaluation isn't happening despite "SecResponseBodyAccess On"
 		"response body not blocking": {
 			reqURI:           "/hello",
 			respBody:         "true negative response body",

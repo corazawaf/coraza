@@ -20,6 +20,8 @@ type rwInterceptor struct {
 	w           http.ResponseWriter
 	tx          types.Transaction
 	headersSent bool
+	proto       string
+	respStatus  int
 }
 
 func (i *rwInterceptor) WriteHeader(statusCode int) {
@@ -34,11 +36,11 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 	}
 
 	i.headersSent = true
-	if it := i.tx.ProcessResponseHeaders(statusCode, "http/1.1"); it != nil {
+	if it := i.tx.ProcessResponseHeaders(statusCode, i.proto); it != nil {
 		processInterruption(i.w, it)
 		return
 	}
-
+	i.respStatus = statusCode
 	i.w.WriteHeader(statusCode)
 }
 
@@ -58,6 +60,11 @@ func (r *rwInterceptor) wrap() http.ResponseWriter { // nolint:gocyclo
 		fl, i3 = r.w.(http.Flusher)
 		rf, i4 = r.w.(io.ReaderFrom)
 	)
+
+	r.proto = "HTTP/1.1"
+	if i2 {
+		r.proto = "HTTP/2.0"
+	}
 
 	switch {
 	case !i0 && !i2 && !i3 && !i4:
