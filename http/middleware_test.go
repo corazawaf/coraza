@@ -95,7 +95,7 @@ func TestHttpServer(t *testing.T) {
 		reqBody          string
 		respBody         string
 		expectedStatus   int
-		expectedrespBody string
+		expectedRespBody string
 	}{
 		"no blocking": {
 			reqURI:         "/hello",
@@ -115,13 +115,13 @@ func TestHttpServer(t *testing.T) {
 			reqURI:           "/hello",
 			respBody:         "true negative response body",
 			expectedStatus:   201,
-			expectedrespBody: "true negative response body",
+			expectedRespBody: "true negative response body",
 		},
 		"response body blocking": {
 			reqURI:           "/hello",
 			respBody:         "password=xxxx",
 			expectedStatus:   201,
-			expectedrespBody: "", //blocking at response body phase means returning it empty
+			expectedRespBody: "", // blocking at response body phase means returning it empty
 		},
 	}
 
@@ -133,8 +133,7 @@ func TestHttpServer(t *testing.T) {
 
 			// Spin up the test server
 			srv := httptest.NewServer(WrapHandler(createWAF(t), t.Logf, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-				// TODO add here the response headers
-				//req.Header.Add("content-type", "text/plain")
+				w.Header().Set("Content-Type", "text/plain")
 				_, err := w.Write([]byte(tCase.respBody))
 				if err != nil {
 					serverErrC <- err
@@ -165,7 +164,7 @@ func TestHttpServer(t *testing.T) {
 				t.Fatalf("unexpected error when reading the response body: %v", err)
 			}
 
-			if want, have := tCase.expectedrespBody, string(resBody); want != have {
+			if want, have := tCase.expectedRespBody, string(resBody); want != have {
 				t.Errorf("unexpected response body, want: %q, have %q", want, have)
 			}
 
