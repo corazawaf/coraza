@@ -21,7 +21,6 @@ type rwInterceptor struct {
 	tx          types.Transaction
 	headersSent bool
 	proto       string
-	respStatus  int
 }
 
 func (i *rwInterceptor) WriteHeader(statusCode int) {
@@ -40,7 +39,6 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 		processInterruption(i.w, it)
 		return
 	}
-	i.respStatus = statusCode
 	i.w.WriteHeader(statusCode)
 }
 
