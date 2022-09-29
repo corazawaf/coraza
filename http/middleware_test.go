@@ -23,7 +23,7 @@ func createWAF() coraza.WAF {
 		SecRequestBodyAccess On
 		SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
 		SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
-		SecRule RESPONSE_BODY "@contains dangerousstring" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
+		SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
 	`))
 	if err != nil {
 		log.Fatal(err)
@@ -48,12 +48,12 @@ func TestHttpServer(t *testing.T) {
 		},
 		"request body blocking": {
 			reqURI:         "/hello",
-			reqBody:        "Lorem ipsum denystring dolor sit",
+			reqBody:        "eval('cat /etc/passwd')",
 			expectedStatus: 403,
 		},
 		"response body blocking": {
 			reqURI:         "/hello",
-			respBody:       "Lorem ipsum dangerousstring dolor sit",
+			respBody:       "passord=xxxx",
 			expectedStatus: 403,
 		},
 	}
@@ -81,6 +81,15 @@ func TestHttpServer(t *testing.T) {
 
 			if want, have := tCase.expectedStatus, res.StatusCode; want != have {
 				t.Errorf("unexpected status code, want: %d, have: %d", want, have)
+			}
+
+			resBody, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Fatalf("unexpected error when reading the response body: %v", err)
+			}
+
+			if want, have := tCase.respBody, string(resBody); want != have {
+				t.Errorf("unexpected response body, want: %q, have %q", want, have)
 			}
 
 			err = res.Body.Close()
