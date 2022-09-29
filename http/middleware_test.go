@@ -4,6 +4,7 @@
 package http
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -12,19 +13,71 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/loggers"
+	"github.com/corazawaf/coraza/v3/types"
 )
 
-func createWAF() coraza.WAF {
+func errLogger(t *testing.T) func(rule types.MatchedRule) {
+	return func(rule types.MatchedRule) {
+		t.Log(rule.ErrorLog(0))
+	}
+}
+
+type debugLogger struct {
+	t     *testing.T
+	level loggers.LogLevel
+}
+
+func (l *debugLogger) Info(message string, args ...interface{}) {
+	if l.level >= loggers.LogLevelInfo {
+		l.t.Logf(message, args...)
+	}
+}
+
+func (l *debugLogger) Warn(message string, args ...interface{}) {
+	if l.level >= loggers.LogLevelWarn {
+		l.t.Logf(message, args...)
+	}
+}
+
+func (l *debugLogger) Error(message string, args ...interface{}) {
+	if l.level >= loggers.LogLevelError {
+		l.t.Logf(message, args...)
+	}
+}
+
+func (l *debugLogger) Debug(message string, args ...interface{}) {
+	if l.level >= loggers.LogLevelDebug {
+		l.t.Logf(message, args...)
+	}
+}
+
+func (l *debugLogger) Trace(message string, args ...interface{}) {
+	if l.level >= loggers.LogLevelTrace {
+		l.t.Logf(message, args...)
+	}
+}
+
+func (l *debugLogger) SetLevel(level loggers.LogLevel) {
+	l.level = level
+}
+
+func (l *debugLogger) SetOutput(w io.Writer) {
+	fmt.Println("ignoring SecDebugLog directive, debug logs are always routed to proxy logs")
+}
+
+func createWAF(t *testing.T) coraza.WAF {
+	t.Helper()
 	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
 		WithDirectives(`
 		# This is a comment
-		SecDebugLogLevel 9
+		SecDebugLogLevel 5
 		SecRequestBodyAccess On
 		SecResponseBodyAccess On
 		SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
 		SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
 		SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
-	`))
+	`).WithErrorLogger(errLogger(t)).WithDebugLogger(&debugLogger{t: t}))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -66,7 +119,7 @@ func TestHttpServer(t *testing.T) {
 			defer close(serverErrC)
 
 			// Spin up the test server
-			srv := httptest.NewServer(WrapHandler(createWAF(), t.Logf, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			srv := httptest.NewServer(WrapHandler(createWAF(t), t.Logf, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 				_, err := w.Write([]byte(tCase.respBody))
 				if err != nil {
 					serverErrC <- err
