@@ -1,6 +1,10 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+// tinygo does not support net.http so this package is not needed for it
+//go:build !tinygo
+// +build !tinygo
+
 package http
 
 import (
@@ -73,6 +77,7 @@ func processInterruption(w http.ResponseWriter, it *types.Interruption) {
 	if it.Status == 0 {
 		it.Status = 503
 	}
+
 	if it.Action == "deny" {
 		w.WriteHeader(it.Status)
 	}
