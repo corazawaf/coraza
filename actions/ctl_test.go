@@ -81,7 +81,6 @@ func TestCtl(t *testing.T) {
 }
 
 func TestCtlParseRange(t *testing.T) {
-	a := &ctlFn{}
 	rules := []*corazawaf.Rule{
 		{
 			RuleMetadata: types.RuleMetadata{
@@ -94,36 +93,65 @@ func TestCtlParseRange(t *testing.T) {
 			},
 		},
 	}
-	ints, err := a.rangeToInts(rules, "1-2")
-	if err != nil {
-		t.Error("Failed to parse range")
+
+	tCases := []struct {
+		_range              string
+		expectedNumberOfIds int
+		expectErr           bool
+	}{
+		{"1-2", 0, false},
+		{"4-5", 1, false},
+		{"4-15", 2, false},
+		{"5", 1, false},
+		{"", 0, true},
+		{"test", 0, true},
+		{"test-2", 0, true},
+		{"2-test", 0, true},
+		{"-", 0, true},
+		{"4-5-15", 0, true},
 	}
-	if len(ints) != 0 {
-		t.Error("Failed to parse range")
+	for _, tCase := range tCases {
+		t.Run(tCase._range, func(t *testing.T) {
+			ints, err := rangeToInts(rules, tCase._range)
+			if tCase.expectErr && err == nil {
+				t.Error("expected error for range")
+			}
+
+			if !tCase.expectErr && err != nil {
+				t.Errorf("unexpected error for range: %s", err.Error())
+			}
+
+			if !tCase.expectErr && len(ints) != tCase.expectedNumberOfIds {
+				t.Error("unexpected number of ids")
+			}
+		})
 	}
-	ints, err = a.rangeToInts(rules, "4-5")
-	if err != nil {
-		t.Error("Failed to parse range")
+}
+
+func TestParseOnOff(t *testing.T) {
+	tCases := []struct {
+		val         string
+		expectedVal bool
+		expectedOK  bool
+	}{
+		{"on", true, true},
+		{"ON", true, true},
+		{"On", true, true},
+		{"off", false, true},
+		{"OFF", false, true},
+		{"Off", false, true},
+		{"Whatever", false, false},
 	}
-	if len(ints) != 1 {
-		t.Error("Failed to parse range")
-	}
-	ints, err = a.rangeToInts(rules, "4-15")
-	if err != nil {
-		t.Error("Failed to parse range")
-	}
-	if len(ints) != 2 {
-		t.Error("Failed to parse range")
-	}
-	ints, err = a.rangeToInts(rules, "5")
-	if err != nil {
-		t.Error("Failed to parse range")
-	}
-	if len(ints) != 1 {
-		t.Error("Failed to parse range")
-	}
-	_, err = a.rangeToInts(rules, "test")
-	if err == nil {
-		t.Error("Failed to parse range")
+
+	for _, tCase := range tCases {
+		t.Run(tCase.val, func(t *testing.T) {
+			val, ok := parseOnOff(tCase.val)
+			if want, have := tCase.expectedOK, ok; want != have {
+				t.Errorf("unexpected OK, want: %t, have: %t", want, have)
+			}
+			if want, have := tCase.expectedVal, val; want != have {
+				t.Errorf("unexpected value, want: %t, have: %t", want, have)
+			}
+		})
 	}
 }
