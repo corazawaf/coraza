@@ -40,13 +40,8 @@ func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
 			return
 		}
 
-		ri := &rwInterceptor{
-			w:  w,
-			tx: tx,
-		}
-
 		// We continue with the other middlewares by catching the response
-		h.ServeHTTP(ri.wrap(), r)
+		h.ServeHTTP(wrap(w, tx), r)
 
 		if it, err := tx.ProcessResponseBody(); err != nil {
 			l("failed to process response body: %v", err)

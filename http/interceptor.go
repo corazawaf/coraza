@@ -20,6 +20,7 @@ type rwInterceptor struct {
 	w           http.ResponseWriter
 	tx          types.Transaction
 	headersSent bool
+	proto       string
 }
 
 func (i *rwInterceptor) WriteHeader(statusCode int) {
@@ -34,7 +35,7 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 	}
 
 	i.headersSent = true
-	if it := i.tx.ProcessResponseHeaders(statusCode, "http/1.1"); it != nil {
+	if it := i.tx.ProcessResponseHeaders(statusCode, i.proto); it != nil {
 		processInterruption(i.w, it)
 		return
 	}
@@ -50,115 +51,126 @@ func (i *rwInterceptor) Header() http.Header {
 	return i.w.Header()
 }
 
+// wrap wraps the interceptor into a response writer that also preserves
+// the http interfaces implemented by the original response writer to avoid
+// the observer effect.
 // Heavily inspired in https://github.com/openzipkin/zipkin-go/blob/master/middleware/http/server.go#L218
-func (r *rwInterceptor) wrap() http.ResponseWriter { // nolint:gocyclo
+func wrap(w http.ResponseWriter, tx types.Transaction) http.ResponseWriter { // nolint:gocyclo
+	i := &rwInterceptor{w: w, tx: tx}
+
 	var (
-		hj, i0 = r.w.(http.Hijacker)
-		pu, i2 = r.w.(http.Pusher)
-		fl, i3 = r.w.(http.Flusher)
-		rf, i4 = r.w.(io.ReaderFrom)
+		hijacker, isHijacker = i.w.(http.Hijacker)
+		pusher, isPusher     = i.w.(http.Pusher)
+		flusher, isFlusher   = i.w.(http.Flusher)
+		reader, isReader     = i.w.(io.ReaderFrom)
 	)
 
+	i.proto = "HTTP/1.1"
+	if isPusher {
+		// http.Pusher is only supported in HTTP/2 according to its documentation.
+		i.proto = "HTTP/2.0"
+	}
+
 	switch {
-	case !i0 && !i2 && !i3 && !i4:
+	case !isHijacker && !isPusher && !isFlusher && !isReader:
 		return struct {
 			http.ResponseWriter
-		}{r}
-	case !i0 && !i2 && !i3 && i4:
+		}{i}
+	case !isHijacker && !isPusher && !isFlusher && isReader:
 		return struct {
 			http.ResponseWriter
 			io.ReaderFrom
-		}{r, rf}
-	case !i0 && !i2 && i3 && !i4:
+		}{i, reader}
+	case !isHijacker && !isPusher && isFlusher && !isReader:
 		return struct {
 			http.ResponseWriter
 			http.Flusher
-		}{r, fl}
-	case !i0 && !i2 && i3 && i4:
+		}{i, flusher}
+	case !isHijacker && !isPusher && isFlusher && isReader:
 		return struct {
 			http.ResponseWriter
 			http.Flusher
 			io.ReaderFrom
-		}{r, fl, rf}
-	case !i0 && i2 && !i3 && !i4:
+		}{i, flusher, reader}
+	case !isHijacker && isPusher && !isFlusher && !isReader:
 		return struct {
 			http.ResponseWriter
 			http.Pusher
-		}{r, pu}
-	case !i0 && i2 && !i3 && i4:
+		}{i, pusher}
+	case !isHijacker && isPusher && !isFlusher && isReader:
 		return struct {
 			http.ResponseWriter
 			http.Pusher
 			io.ReaderFrom
-		}{r, pu, rf}
-	case !i0 && i2 && i3 && !i4:
-		return struct {
-			http.ResponseWriter
-			http.Pusher
-			http.Flusher
-		}{r, pu, fl}
-	case !i0 && i2 && i3 && i4:
+		}{i, pusher, reader}
+	case !isHijacker && isPusher && isFlusher && !isReader:
 		return struct {
 			http.ResponseWriter
 			http.Pusher
 			http.Flusher
+		}{i, pusher, flusher}
+	case !isHijacker && isPusher && isFlusher && isReader:
+		return struct {
+			http.ResponseWriter
+			http.Pusher
+			http.Flusher
 			io.ReaderFrom
-		}{r, pu, fl, rf}
-	case i0 && !i2 && !i3 && !i4:
+		}{i, pusher, flusher, reader}
+	case isHijacker && !isPusher && !isFlusher && !isReader:
 		return struct {
 			http.ResponseWriter
 			http.Hijacker
-		}{r, hj}
-	case i0 && !i2 && !i3 && i4:
+		}{i, hijacker}
+	case isHijacker && !isPusher && !isFlusher && isReader:
 		return struct {
 			http.ResponseWriter
 			http.Hijacker
 			io.ReaderFrom
-		}{r, hj, rf}
-	case i0 && !i2 && i3 && !i4:
+		}{i, hijacker, reader}
+	case isHijacker && !isPusher && isFlusher && !isReader:
 		return struct {
 			http.ResponseWriter
 			http.Hijacker
 			http.Flusher
-		}{r, hj, fl}
-	case i0 && !i2 && i3 && i4:
+		}{i, hijacker, flusher}
+	case isHijacker && !isPusher && isFlusher && isReader:
 		return struct {
 			http.ResponseWriter
 			http.Hijacker
 			http.Flusher
 			io.ReaderFrom
-		}{r, hj, fl, rf}
-	case i0 && i2 && !i3 && !i4:
+		}{i, hijacker, flusher, reader}
+	case isHijacker && isPusher && !isFlusher && !isReader:
 		return struct {
 			http.ResponseWriter
 			http.Hijacker
 			http.Pusher
-		}{r, hj, pu}
-	case i0 && i2 && !i3 && i4:
+		}{i, hijacker, pusher}
+	case isHijacker && isPusher && !isFlusher && isReader:
 		return struct {
 			http.ResponseWriter
 			http.Hijacker
 			http.Pusher
 			io.ReaderFrom
-		}{r, hj, pu, rf}
-	case i0 && i2 && i3 && !i4:
-		return struct {
-			http.ResponseWriter
-			http.Hijacker
-			http.Pusher
-			http.Flusher
-		}{r, hj, pu, fl}
-	case i0 && i2 && i3 && i4:
+		}{i, hijacker, pusher, reader}
+	case isHijacker && isPusher && isFlusher && !isReader:
 		return struct {
 			http.ResponseWriter
 			http.Hijacker
 			http.Pusher
 			http.Flusher
+		}{i, hijacker, pusher, flusher}
+	case isHijacker && isPusher && isFlusher && isReader:
+		return struct {
+			http.ResponseWriter
+			http.Hijacker
+			http.Pusher
+			http.Flusher
 			io.ReaderFrom
-		}{r, hj, pu, fl, rf}
+		}{i, hijacker, pusher, flusher, reader}
 	default:
 		return struct {
 			http.ResponseWriter
-		}{r}
+		}{i}
 	}
 }
