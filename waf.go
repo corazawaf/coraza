@@ -29,6 +29,11 @@ func NewWAF(config WAFConfig) (WAF, error) {
 	c := config.(*wafConfig)
 
 	waf := corazawaf.NewWAF()
+
+	if c.debugLogger != nil {
+		waf.Logger = c.debugLogger
+	}
+
 	parser := seclang.NewParser(waf)
 
 	if c.fsRoot != nil {
@@ -80,10 +85,6 @@ func NewWAF(config WAFConfig) (WAF, error) {
 	if r := c.responseBody; r != nil {
 		waf.ResponseBodyAccess = true
 		waf.ResponseBodyLimit = int64(r.limit)
-	}
-
-	if c.debugLogger != nil {
-		waf.Logger = c.debugLogger
 	}
 
 	if c.errorLogger != nil {
