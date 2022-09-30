@@ -699,3 +699,27 @@ func TestMacro(t *testing.T) {
 	//   t.Errorf("failed to parse replacements %v", macro.tokens)
 	// }
 }
+
+func BenchmarkMacro(b *testing.B) {
+	tests := []string{
+		"%{tx.a}",
+		"%{tx.a} %{tx.b}",
+		"goodbye world",
+	}
+
+	tx := makeTransaction(b)
+	tx.Variables.TX.Set("a", []string{"hello"})
+	tx.Variables.TX.Set("b", []string{"world"})
+
+	for _, tc := range tests {
+		m, err := macro.NewMacro(tc)
+		if err != nil {
+			b.Fatal(err)
+		}
+		b.Run(tc, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				m.Expand(tx)
+			}
+		})
+	}
+}
