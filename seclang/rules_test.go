@@ -538,6 +538,12 @@ func TestRxCapture(t *testing.T) {
 }
 
 func Test941310(t *testing.T) {
+	// TODO(anuraaga): Go regex only supports utf8 strings. This means to match non-utf8 would require escaping the
+	// input into ASCII before matching. Just the presence of a non-utf8 matcher, like in CRS, would cause this escaping
+	// to be required on all input. This is probably not worth it performance-wise, as with Go few HTTP libraries would
+	// support non-utf8 anyways.
+	t.Skip("non-utf8 regex not supported")
+
 	waf := coraza.NewWaf()
 	rules := `SecRule REQUEST_COOKIES|!REQUEST_COOKIES:/__utm/|REQUEST_COOKIES_NAMES|ARGS_NAMES|ARGS|XML:/* "@rx \xbc[^\xbe>]*[\xbe>]|<[^\xbe]*\xbe" \
     "id:941310,\
