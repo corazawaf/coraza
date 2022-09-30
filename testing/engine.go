@@ -180,7 +180,9 @@ func (t *Test) RunPhases() error {
 		return err
 	}
 
-	t.transaction.ProcessLogging()
+	if err := t.transaction.Close(); err != nil {
+		return err
+	}
 	return nil
 }
 

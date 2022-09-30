@@ -894,6 +894,7 @@ func (tx *Transaction) Clean() error {
 }
 
 func (tx *Transaction) Close() error {
+	tx.ProcessLogging()
 	return tx.Clean()
 }
 

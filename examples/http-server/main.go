@@ -46,9 +46,7 @@ func corazaRequestHandler(waf coraza.WAF, h http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		tx := waf.NewTransaction(context.Background())
 		defer func() {
-			// We run phase 5 rules and create audit logs (if enabled)
-			tx.ProcessLogging()
-			// we remove temporary files and free some memory
+			// We complete the transaction and free up temporarily files and some memory.
 			if err := tx.Close(); err != nil {
 				fmt.Println(err)
 			}

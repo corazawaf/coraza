@@ -95,12 +95,6 @@ type Transaction interface {
 	// note Remember to check for a possible intervention.
 	ProcessResponseBody() (*Interruption, error)
 
-	// ProcessLogging Logging all information relative to this transaction.
-	// An error log
-	// At this point there is not need to hold the connection, the response can be
-	// delivered prior to the execution of this method.
-	ProcessLogging()
-
 	// Interrupted will return true if the transaction was interrupted
 	Interrupted() bool
 
@@ -111,6 +105,7 @@ type Transaction interface {
 	// GetMatchedRules returns the rules that have matched the requests with associated information.
 	GetMatchedRules() []MatchedRule
 
-	// Closer closes the transaction and releases any resources associated with it such as request/response bodies.
+	// Closer finishes the transaction, processing final logging phases and releasing any resources associated with it
+	// such as request/response bodies.
 	io.Closer
 }

@@ -94,10 +94,7 @@ func main() {
 
 	// Then we create a transaction and assign some variables
 	tx := waf.NewTransaction(context.Background())
-	defer func() {
-		tx.ProcessLogging()
-		tx.Close()
-	}()
+	defer tx.Close()
 	tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 12345)
 
 	// Finally we process the request headers phase, which may return an interruption
