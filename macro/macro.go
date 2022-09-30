@@ -48,37 +48,38 @@ type macro struct {
 
 // Expand the pre-compiled macro expression into a string
 func (m *macro) Expand(tx rules.TransactionState) string {
+	if len(m.tokens) == 1 {
+		return expandToken(tx, m.tokens[0])
+	}
 	res := strings.Builder{}
 	for _, token := range m.tokens {
-		// now we place the in the index
-		if token.variable != nil {
-			switch col := tx.Collection(*token.variable).(type) {
-			case *collection.Map:
-				if c := col.Get(token.key); len(c) > 0 {
-					res.WriteString(c[0])
-				} else {
-					res.WriteString(token.text)
-				}
-			case *collection.Simple:
-				res.WriteString(col.String())
-			case *collection.Proxy:
-				if c := col.Get(token.key); len(c) > 0 {
-					res.WriteString(c[0])
-				} else {
-					res.WriteString(token.text)
-				}
-			case *collection.TranslationProxy:
-				if c := col.Get(0); len(c) > 0 {
-					res.WriteString(c)
-				} else {
-					res.WriteString(token.text)
-				}
-			}
-		} else {
-			res.WriteString(token.text)
-		}
+		res.WriteString(expandToken(tx, token))
 	}
 	return res.String()
+}
+
+func expandToken(tx rules.TransactionState, token macroToken) string {
+	if token.variable == nil {
+		return token.text
+	}
+	switch col := tx.Collection(*token.variable).(type) {
+	case *collection.Map:
+		if c := col.Get(token.key); len(c) > 0 {
+			return c[0]
+		}
+	case *collection.Simple:
+		return col.String()
+	case *collection.Proxy:
+		if c := col.Get(token.key); len(c) > 0 {
+			return c[0]
+		}
+	case *collection.TranslationProxy:
+		if c := col.Get(0); len(c) > 0 {
+			return c
+		}
+	}
+
+	return token.text
 }
 
 // compile is used to parse the input and generate the corresponding token
