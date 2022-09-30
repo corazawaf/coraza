@@ -409,7 +409,7 @@ func (w *WAF) NewTransaction(ctx context.Context) *Transaction {
 	tx.Variables.HighestSeverity.Set("0")
 	tx.Variables.UniqueID.Set(tx.ID)
 
-	w.Logger.Debug("new transaction created with id %q", tx.ID)
+	w.Logger.Debug("New transaction created with id %q", tx.ID)
 
 	return tx
 }
@@ -422,9 +422,15 @@ func (w *WAF) SetDebugLogPath(path string) error {
 		w.Logger.SetOutput(io.Discard)
 		return nil
 	}
+
+	if path == "/dev/stdout" {
+		w.Logger.SetOutput(os.Stdout)
+		return nil
+	}
+
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		w.Logger.Error("error opening file: %s", err.Error())
+		w.Logger.Error("failed to open the file: %s", err.Error())
 	}
 	w.Logger.SetOutput(f)
 	return nil
