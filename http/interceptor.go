@@ -39,7 +39,6 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 		processInterruption(i.w, it)
 		return
 	}
-
 	i.w.WriteHeader(statusCode)
 }
 

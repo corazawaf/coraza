@@ -65,6 +65,7 @@ func createWAF(t *testing.T) coraza.WAF {
 		SecDebugLogLevel 5
 		SecRequestBodyAccess On
 		SecResponseBodyAccess On
+		SecResponseBodyMimeType text/plain
 		SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
 		SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
 		SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
@@ -77,10 +78,11 @@ func createWAF(t *testing.T) coraza.WAF {
 
 func TestHttpServer(t *testing.T) {
 	tests := map[string]struct {
-		reqURI         string
-		reqBody        string
-		respBody       string
-		expectedStatus int
+		reqURI           string
+		reqBody          string
+		respBody         string
+		expectedStatus   int
+		expectedRespBody string
 	}{
 		"no blocking": {
 			reqURI:         "/hello",
@@ -95,12 +97,18 @@ func TestHttpServer(t *testing.T) {
 			reqBody:        "eval('cat /etc/passwd')",
 			expectedStatus: 403,
 		},
-		// TODO(jcchavezs): sort out why response body evaluation isn't happening despite "SecResponseBodyAccess On"
-		// "response body blocking": {
-		//	reqURI:         "/hello",
-		//	respBody:       "passord=xxxx",
-		//		expectedStatus: 403,
-		// },
+		"response body not blocking": {
+			reqURI:           "/hello",
+			respBody:         "true negative response body",
+			expectedStatus:   201,
+			expectedRespBody: "true negative response body",
+		},
+		"response body blocking": {
+			reqURI:           "/hello",
+			respBody:         "password=xxxx",
+			expectedStatus:   201,
+			expectedRespBody: "", // blocking at response body phase means returning it empty
+		},
 	}
 
 	// Perform tests
@@ -111,6 +119,7 @@ func TestHttpServer(t *testing.T) {
 
 			// Spin up the test server
 			srv := httptest.NewServer(WrapHandler(createWAF(t), t.Logf, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				w.Header().Set("Content-Type", "text/plain")
 				_, err := w.Write([]byte(tCase.respBody))
 				if err != nil {
 					serverErrC <- err
@@ -141,7 +150,7 @@ func TestHttpServer(t *testing.T) {
 				t.Fatalf("unexpected error when reading the response body: %v", err)
 			}
 
-			if want, have := tCase.respBody, string(resBody); want != have {
+			if want, have := tCase.expectedRespBody, string(resBody); want != have {
 				t.Errorf("unexpected response body, want: %q, have %q", want, have)
 			}
 
