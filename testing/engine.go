@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/testing/profile"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -180,9 +181,9 @@ func (t *Test) RunPhases() error {
 		return err
 	}
 
-	if err := t.transaction.Close(); err != nil {
-		return err
-	}
+	// The tests check the values in the transaction so we can't close it yet.
+	t.transaction.(*corazawaf.Transaction).ProcessLogging()
+
 	return nil
 }
 
