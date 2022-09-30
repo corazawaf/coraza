@@ -27,7 +27,7 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 		cport  int
 	)
 	// IMPORTANT: Some http.Request.RemoteAddr implementations will not contain port or contain IPV6: [2001:db8::1]:8080
-	idx := strings.LastIndex(req.RemoteAddr, ":")
+	idx := strings.LastIndexByte(req.RemoteAddr, ':')
 	if idx != -1 {
 		client = req.RemoteAddr[:idx]
 		cport, _ = strconv.Atoi(req.RemoteAddr[idx+1:])
