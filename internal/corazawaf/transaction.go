@@ -379,7 +379,7 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 		matches = col.FindRegex(rv.KeyRx)
 	}
 
-	rmi := []int{}
+	var rmi []int
 	for i, c := range matches {
 		for _, ex := range rv.Exceptions {
 			lkey := strings.ToLower(c.Key)
@@ -820,7 +820,7 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	* if you don’t want to have (often large) files stored in your audit logs.
 	 */
 	// upload data
-	files := []loggers.AuditTransactionRequestFiles{}
+	var files []loggers.AuditTransactionRequestFiles
 	al.Transaction.Request.Files = []loggers.AuditTransactionRequestFiles{}
 	for _, file := range tx.Variables.Files.Get("") {
 		var size int64
@@ -837,7 +837,7 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 		files = append(files, at)
 	}
 	al.Transaction.Request.Files = files
-	mrs := []loggers.AuditMessage{}
+	var mrs []loggers.AuditMessage
 	for _, mr := range tx.MatchedRules {
 		r := mr.Rule
 		for _, matchData := range mr.MatchedDatas {
@@ -873,7 +873,7 @@ func (tx *Transaction) Clean() error {
 	for k := range tx.Collections {
 		tx.Collections[k] = nil
 	}
-	errs := []error{}
+	var errs []error
 	if err := tx.RequestBodyBuffer.Close(); err != nil {
 		errs = append(errs, err)
 	}

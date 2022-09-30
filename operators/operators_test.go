@@ -28,7 +28,7 @@ type Test struct {
 // https://github.com/SpiderLabs/secrules-language-tests/
 func TestOperators(t *testing.T) {
 	root := "./testdata"
-	files := [][]byte{}
+	var files [][]byte
 	if _, err := os.Stat(root); os.IsNotExist(err) {
 		t.Fatal("failed to find operator test files")
 	}

@@ -24,7 +24,7 @@ type Test struct {
 // https://github.com/SpiderLabs/secrules-language-tests/
 func TestTransformations(t *testing.T) {
 	root := "./testdata"
-	files := [][]byte{}
+	var files [][]byte
 	if _, err := os.Stat(root); os.IsNotExist(err) {
 		t.Error("failed to find transformation test files")
 	}

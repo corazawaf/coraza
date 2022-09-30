@@ -50,8 +50,8 @@ func (p *RuleParser) ParseVariables(vars string) error {
 	curr := 0
 	isnegation := false
 	iscount := false
-	curvar := []byte{}
-	curkey := []byte{}
+	var curvar []byte
+	var curkey []byte
 	isescaped := false
 	isquoted := false
 	for i := 0; i < len(vars); i++ {
@@ -418,7 +418,7 @@ func parseActions(actions string) ([]ruleAction, error) {
 	ckey := ""
 	cval := ""
 	quoted := false
-	res := []ruleAction{}
+	var res []ruleAction
 actionLoop:
 	for i, c := range actions {
 		switch {
@@ -488,7 +488,7 @@ SecAction "id:1, phase:2, status:403, log, nolog, deny"
 In the future I shall optimize that redundant log and nolog, it won't actually change anything but would look cooler
 */
 func mergeActions(origin []ruleAction, defaults []ruleAction) []ruleAction {
-	res := []ruleAction{}
+	var res []ruleAction
 	var da ruleAction // Disruptive action
 	for _, action := range defaults {
 		if action.Atype == rules.ActionTypeDisruptive {

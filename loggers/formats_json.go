@@ -32,11 +32,11 @@ func legacyJSONFormatter(al *AuditLog) ([]byte, error) {
 	for k, v := range al.Transaction.Response.Headers {
 		resHeaders[k] = strings.Join(v, ", ")
 	}
-	messages := []string{}
+	var messages []string
 	for _, m := range al.Messages {
 		messages = append(messages, m.Message)
 	}
-	producers := []string{}
+	var producers []string
 	if conn := al.Transaction.Producer.Connector; conn != "" {
 		producers = append(producers, conn)
 	}

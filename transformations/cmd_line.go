@@ -22,7 +22,7 @@ transform all characters to lowercase
 */
 func cmdLine(data string) (string, error) {
 	space := false
-	ret := []byte{}
+	var ret []byte
 	for _, a := range data {
 		switch {
 		case a == '"' || a == '\'' || a == '\\' || a == '^':
