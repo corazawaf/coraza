@@ -171,7 +171,7 @@ func (r *Rule) doEvaluate(tx *Transaction) []types.MatchData {
 		rid = r.ParentID
 	}
 
-	matchedValues := []types.MatchData{}
+	var matchedValues []types.MatchData
 	// we log if we are the parent rule
 	tx.WAF.Logger.Debug("[%s] [%d] Evaluating rule %d", tx.ID, rid, r.ID)
 	defer tx.WAF.Logger.Debug("[%s] [%d] Finish evaluating rule %d", tx.ID, rid, r.ID)
@@ -416,7 +416,7 @@ func (r *Rule) executeOperator(data string, tx *Transaction) (result bool) {
 
 func (r *Rule) executeTransformationsMultimatch(value string) ([]string, []error) {
 	res := []string{value}
-	errs := []error{}
+	var errs []error
 	var err error
 	for _, t := range r.transformations {
 		value, err = t.Function(value)
@@ -430,7 +430,7 @@ func (r *Rule) executeTransformationsMultimatch(value string) ([]string, []error
 }
 
 func (r *Rule) executeTransformations(value string) (string, []error) {
-	errs := []error{}
+	var errs []error
 	for _, t := range r.transformations {
 		v, err := t.Function(value)
 		if err != nil {

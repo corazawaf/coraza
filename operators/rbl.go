@@ -45,7 +45,7 @@ func (o *rbl) Evaluate(tx rules.TransactionState, ipAddr string) bool {
 	}()
 
 	addr := fmt.Sprintf("%s.%s", ipAddr, o.service)
-	captures := []string{}
+	var captures []string
 	go func(ctx context.Context) {
 		defer func() {
 			close(resC)

@@ -8,7 +8,7 @@ import (
 )
 
 func compressWhitespace(value string) (string, error) {
-	a := []byte{}
+	var a []byte
 	i := 0
 	inWhiteSpace := false
 	length := len(value)

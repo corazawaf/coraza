@@ -131,7 +131,7 @@ func TestSecAuditLogs(t *testing.T) {
 
 func TestRuleLogging(t *testing.T) {
 	waf := corazawaf.NewWAF()
-	logs := []string{}
+	var logs []string
 	waf.SetErrorLogCb(func(mr types.MatchedRule) {
 		logs = append(logs, mr.ErrorLog(403))
 	})
@@ -192,7 +192,7 @@ func TestRuleChains(t *testing.T) {
 
 func TestTagsAreNotPrintedTwice(t *testing.T) {
 	waf := corazawaf.NewWAF()
-	logs := []string{}
+	var logs []string
 	waf.SetErrorLogCb(func(mr types.MatchedRule) {
 		logs = append(logs, mr.ErrorLog(403))
 	})
@@ -224,7 +224,7 @@ func TestTagsAreNotPrintedTwice(t *testing.T) {
 
 func TestStatusFromInterruptions(t *testing.T) {
 	waf := corazawaf.NewWAF()
-	logs := []string{}
+	var logs []string
 	waf.SetErrorLogCb(func(mr types.MatchedRule) {
 		logs = append(logs, mr.ErrorLog(403))
 	})
@@ -262,7 +262,7 @@ func TestChainWithUnconditionalMatch(t *testing.T) {
 
 func TestLogsAreNotPrintedManyTimes(t *testing.T) {
 	waf := corazawaf.NewWAF()
-	logs := []string{}
+	var logs []string
 	waf.SetErrorLogCb(func(mr types.MatchedRule) {
 		logs = append(logs, mr.ErrorLog(403))
 	})
