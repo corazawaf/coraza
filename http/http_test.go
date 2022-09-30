@@ -25,11 +25,11 @@ import (
 	"github.com/corazawaf/coraza/v3/macro"
 )
 
-func TestRequestExtractionSuccess(t *testing.T) {
+func TestProcessRequest(t *testing.T) {
 	req, _ := http.NewRequest("POST", "https://www.coraza.io/test", strings.NewReader("test=456"))
 	waf := corazawaf.NewWAF()
 	tx := waf.NewTransaction(context.Background())
-	if _, err := ProcessRequest(tx, req); err != nil {
+	if _, err := processRequest(tx, req); err != nil {
 		t.Fatal(err)
 	}
 	if tx.Variables.RequestMethod.String() != "POST" {
@@ -47,12 +47,14 @@ func TestProcessRequestMultipart(t *testing.T) {
 	}
 	tx := makeTransaction(t)
 	tx.RequestBodyAccess = true
-	if _, err := ProcessRequest(tx, req); err != nil {
+	if _, err := processRequest(tx, req); err != nil {
 		t.Fatal(err)
 	}
 	if req.Body == nil {
 		t.Error("failed to process multipart request")
 	}
+	defer req.Body.Close()
+
 	reader := bufio.NewReader(req.Body)
 	if _, err := reader.ReadString('\n'); err != nil {
 		t.Error("failed to read multipart request", err)
@@ -147,27 +149,29 @@ func TestDirectiveSecAuditLog(t *testing.T) {
 	if err != nil {
 		t.Errorf("Description HTTP request parsing failed")
 	}
-	_, err = ProcessRequest(tx, req)
+
+	_, err = processRequest(tx, req)
 	if err != nil {
 		t.Errorf("Failed to load the HTTP request")
 	}
-	// There is no problem loading the rules
-	c := 0
+
+	rulesCounter := 0
 	r := waf.Rules.FindByID(100)
 	for r != nil {
-		c++
+		rulesCounter++
 		r = r.Chain
 	}
-	if c != 3 {
-		t.Errorf("failed to compile multiple chains, expected 3, got %d", c)
+	if want, have := 3, rulesCounter; want != have {
+		t.Errorf("failed to compile multiple chains, want: %d, have: %d", want, have)
 	}
-	// Why is the number of matches 4
+
 	m, err := macro.NewMacro("%{tx.count}")
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("failed to initialize the macro: %v", err)
 	}
-	c, _ = strconv.Atoi(m.Expand(tx))
-	if c != 6 {
-		t.Errorf("Why is the number of matches %d", c)
+
+	txCount, _ := strconv.Atoi(m.Expand(tx))
+	if want, have := 6, txCount; want != have {
+		t.Errorf("incorrect counter, want %d, have %d", want, have)
 	}
 }

@@ -27,7 +27,7 @@ func (o *pmFromFile) Init(options rules.OperatorOptions) error {
 		return err
 	}
 
-	lines := []string{}
+	var lines []string
 	sc := bufio.NewScanner(bytes.NewReader(data))
 	for sc.Scan() {
 		l := sc.Text()

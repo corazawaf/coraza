@@ -16,20 +16,23 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
-// ProcessRequest fills all transaction variables from an http.Request object
+// processRequest fills all transaction variables from an http.Request object
 // Most implementations of Coraza will probably use http.Request objects
 // so this will implement all phase 0, 1 and 2 variables
 // Note: This function will stop after an interruption
 // Note: Do not manually fill any request variables
-func ProcessRequest(tx types.Transaction, req *http.Request) (*types.Interruption, error) {
-	var client string
-	cport := 0
+func processRequest(tx types.Transaction, req *http.Request) (*types.Interruption, error) {
+	var (
+		client string
+		cport  int
+	)
 	// IMPORTANT: Some http.Request.RemoteAddr implementations will not contain port or contain IPV6: [2001:db8::1]:8080
-	spl := strings.Split(req.RemoteAddr, ":")
-	if len(spl) > 1 {
-		client = strings.Join(spl[0:len(spl)-1], "")
-		cport, _ = strconv.Atoi(spl[len(spl)-1])
+	idx := strings.LastIndexByte(req.RemoteAddr, ':')
+	if idx != -1 {
+		client = req.RemoteAddr[:idx]
+		cport, _ = strconv.Atoi(req.RemoteAddr[idx+1:])
 	}
+
 	var in *types.Interruption
 	// There is no socket access in the request object so we don't know the server client or port
 	tx.ProcessConnection(client, cport, "", 0)
@@ -59,5 +62,6 @@ func ProcessRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 		}
 		req.Body = io.NopCloser(reader)
 	}
+
 	return tx.ProcessRequestBody()
 }

@@ -480,7 +480,7 @@ func directiveSecDataset(options *DirectiveOptions) error {
 	if _, ok := options.Datasets[name]; ok {
 		options.WAF.Logger.Warn("Dataset %s already exists, overwriting", name)
 	}
-	arr := []string{}
+	var arr []string
 	data := strings.Trim(spl[1], "`")
 	for _, s := range strings.Split(data, "\n") {
 		s = strings.TrimSpace(s)

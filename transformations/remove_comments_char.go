@@ -36,7 +36,7 @@ func removeCommentsChar(data string) (string, error) {
 
 func erase(str []byte, i int, count int) []byte {
 	// TODO There are better algorithms to do this but not today
-	res := []byte{}
+	var res []byte
 	res = append(res, str[0:i]...)
 	res = append(res, str[i+count:]...)
 	return res
