@@ -1,7 +1,7 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package coraza
+package corazawaf
 
 import (
 	"fmt"
@@ -62,7 +62,7 @@ func (rg *RuleGroup) DeleteByID(id int) {
 
 // FindByMsg returns a slice of rules that matches the msg
 func (rg *RuleGroup) FindByMsg(msg string) []*Rule {
-	rules := []*Rule{}
+	var rules []*Rule
 	for _, r := range rg.rules {
 		if r.Msg.String() == msg {
 			rules = append(rules, r)
@@ -73,7 +73,7 @@ func (rg *RuleGroup) FindByMsg(msg string) []*Rule {
 
 // FindByTag returns a slice of rules that matches the tag
 func (rg *RuleGroup) FindByTag(tag string) []*Rule {
-	rules := []*Rule{}
+	var rules []*Rule
 	for _, r := range rg.rules {
 		if strings.InSlice(tag, r.Tags) {
 			rules = append(rules, r)

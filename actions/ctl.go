@@ -4,13 +4,15 @@
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
+	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -18,24 +20,25 @@ import (
 type ctlFunctionType int
 
 const (
-	ctlRemoveTargetByID     ctlFunctionType = iota
-	ctlRemoveTargetByTag    ctlFunctionType = iota
-	ctlRemoveTargetByMsg    ctlFunctionType = iota
-	ctlAuditEngine          ctlFunctionType = iota
-	ctlAuditLogParts        ctlFunctionType = iota
-	ctlForceRequestBodyVar  ctlFunctionType = iota
-	ctlRequestBodyAccess    ctlFunctionType = iota
-	ctlRequestBodyLimit     ctlFunctionType = iota
-	ctlRuleEngine           ctlFunctionType = iota
-	ctlRuleRemoveByID       ctlFunctionType = iota
-	ctlRuleRemoveByMsg      ctlFunctionType = iota
-	ctlRuleRemoveByTag      ctlFunctionType = iota
-	ctlHashEngine           ctlFunctionType = iota
-	ctlHashEnforcement      ctlFunctionType = iota
-	ctlRequestBodyProcessor ctlFunctionType = iota
-	ctlResponseBodyAccess   ctlFunctionType = iota
-	ctlResponseBodyLimit    ctlFunctionType = iota
-	ctlDebugLogLevel        ctlFunctionType = iota
+	ctlUnknown                  ctlFunctionType = iota
+	ctlRuleRemoveTargetByID     ctlFunctionType = iota
+	ctlRuleRemoveTargetByTag    ctlFunctionType = iota
+	ctlRuleRemoveTargetByMsg    ctlFunctionType = iota
+	ctlAuditEngine              ctlFunctionType = iota
+	ctlAuditLogParts            ctlFunctionType = iota
+	ctlForceRequestBodyVariable ctlFunctionType = iota
+	ctlRequestBodyAccess        ctlFunctionType = iota
+	ctlRequestBodyLimit         ctlFunctionType = iota
+	ctlRuleEngine               ctlFunctionType = iota
+	ctlRuleRemoveByID           ctlFunctionType = iota
+	ctlRuleRemoveByMsg          ctlFunctionType = iota
+	ctlRuleRemoveByTag          ctlFunctionType = iota
+	ctlHashEngine               ctlFunctionType = iota
+	ctlHashEnforcement          ctlFunctionType = iota
+	ctlRequestBodyProcessor     ctlFunctionType = iota
+	ctlResponseBodyAccess       ctlFunctionType = iota
+	ctlResponseBodyLimit        ctlFunctionType = iota
+	ctlDebugLogLevel            ctlFunctionType = iota
 )
 
 type ctlFn struct {
@@ -46,9 +49,9 @@ type ctlFn struct {
 	colRx      *regexp.Regexp
 }
 
-func (a *ctlFn) Init(r *coraza.Rule, data string) error {
+func (a *ctlFn) Init(r rules.RuleMetadata, data string) error {
 	var err error
-	a.action, a.value, a.collection, a.colKey, err = a.parseCtl(data)
+	a.action, a.value, a.collection, a.colKey, err = parseCtl(data)
 	if len(a.colKey) > 2 && a.colKey[0] == '/' && a.colKey[len(a.colKey)-1] == '/' {
 		a.colRx, err = regexp.Compile(a.colKey[1 : len(a.colKey)-1])
 		if err != nil {
@@ -58,67 +61,96 @@ func (a *ctlFn) Init(r *coraza.Rule, data string) error {
 	return err
 }
 
-func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+// parseOnOff turns a string value into a boolean equivalent on/off into true/false
+func parseOnOff(s string) (bool, bool) {
+	val := strings.ToLower(s)
+	switch val {
+	case "on":
+		return true, true
+	case "off":
+		return false, true
+	default:
+		return false, false
+	}
+}
+
+func (a *ctlFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
+	// TODO(anuraaga): Confirm this is internal implementation detail
+	tx := txS.(*corazawaf.Transaction)
 	switch a.action {
-	case ctlRemoveTargetByID:
-		ran, err := a.rangeToInts(tx.WAF.Rules.GetRules(), a.value)
+	case ctlRuleRemoveTargetByID:
+		ran, err := rangeToInts(tx.WAF.Rules.GetRules(), a.value)
 		if err != nil {
-			tx.WAF.Logger.Error("[ctl REMOVE_TARGET_BY_ID] invalid range: %s", err.Error())
+			tx.WAF.Logger.Error("[ctl:RuleRemoveTargetByID] invalid range: %s", err.Error())
 			return
 		}
 		for _, id := range ran {
 			tx.RemoveRuleTargetByID(id, a.collection, a.colKey)
 		}
-	case ctlRemoveTargetByTag:
+	case ctlRuleRemoveTargetByTag:
 		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
 			if utils.InSlice(a.value, r.Tags) {
 				tx.RemoveRuleTargetByID(r.ID, a.collection, a.colKey)
 			}
 		}
-	case ctlRemoveTargetByMsg:
+	case ctlRuleRemoveTargetByMsg:
 		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
-			if r.Msg.String() == a.value {
+			if r.Msg != nil && r.Msg.String() == a.value {
 				tx.RemoveRuleTargetByID(r.ID, a.collection, a.colKey)
 			}
 		}
 	case ctlAuditEngine:
 		ae, err := types.ParseAuditEngineStatus(a.value)
 		if err != nil {
-			tx.WAF.Logger.Error(err.Error())
+			tx.WAF.Logger.Error("[ctl:AuditEngine] %s", err.Error())
 			return
 		}
 		tx.AuditEngine = ae
 	case ctlAuditLogParts:
 		// TODO lets switch it to a string
 		tx.AuditLogParts = types.AuditLogParts(a.value)
-	case ctlForceRequestBodyVar:
-		val := strings.ToLower(a.value)
-		tx.WAF.Logger.Debug("[ForceRequestBodyVar] Forcing request body var with CTL to %s", val)
-		if val == "on" {
-			tx.ForceRequestBodyVariable = true
-		} else if val == "off" {
-			tx.ForceRequestBodyVariable = false
+	case ctlForceRequestBodyVariable:
+		val, ok := parseOnOff(a.value)
+		if !ok {
+			tx.WAF.Logger.Error("[ctl:ForceRequestBodyVariable] unknown value %q", a.value)
+			return
 		}
+		tx.ForceRequestBodyVariable = val
+		tx.WAF.Logger.Debug("[ctl:ForceRequestBodyVariable] Forcing request body var with CTL to %s", val)
 	case ctlRequestBodyAccess:
-		tx.RequestBodyAccess = a.value == "on"
+		val, ok := parseOnOff(a.value)
+		if !ok {
+			tx.WAF.Logger.Error("[ctl:RequestBodyAccess] unknown value %q", a.value)
+			return
+		}
+		tx.RequestBodyAccess = val
 	case ctlRequestBodyLimit:
-		limit, _ := strconv.ParseInt(a.value, 10, 64)
+		limit, err := strconv.ParseInt(a.value, 10, 64)
+		if err != nil {
+			tx.WAF.Logger.Error("[ctl:RequestBodyLimit] Incorrect integer CTL value %q", a.value)
+			return
+		}
 		tx.RequestBodyLimit = limit
 	case ctlRuleEngine:
 		re, err := types.ParseRuleEngineStatus(a.value)
 		if err != nil {
-			tx.WAF.Logger.Error(err.Error())
+			tx.WAF.Logger.Error("[ctl:RuleEngine] %s", err.Error())
+			return
 		}
 		tx.RuleEngine = re
 	case ctlRuleRemoveByID:
-		id, _ := strconv.Atoi(a.value)
+		id, err := strconv.Atoi(a.value)
+		if err != nil {
+			tx.WAF.Logger.Error("[ctl:RuleRemoveByID] %s", err.Error())
+			return
+		}
 		tx.RemoveRuleByID(id)
 	case ctlRuleRemoveByMsg:
 		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
-			if r.Msg.String() == a.value {
+			if r.Msg != nil && r.Msg.String() == a.value {
 				tx.RemoveRuleByID(r.ID)
 			}
 		}
@@ -144,14 +176,14 @@ func (a *ctlFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
 
 }
 
-func (a *ctlFn) Type() types.RuleActionType {
-	return types.ActionTypeNondisruptive
+func (a *ctlFn) Type() rules.ActionType {
+	return rules.ActionTypeNondisruptive
 }
 
-func (a *ctlFn) parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, string, error) {
+func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, string, error) {
 	spl1 := strings.SplitN(data, "=", 2)
 	if len(spl1) != 2 {
-		return ctlRemoveTargetByID, "", 0, "", fmt.Errorf("invalid syntax")
+		return ctlUnknown, "", 0, "", errors.New("invalid syntax")
 	}
 	spl2 := strings.SplitN(spl1[1], ";", 2)
 	action := spl1[0]
@@ -176,7 +208,7 @@ func (a *ctlFn) parseCtl(data string) (ctlFunctionType, string, variables.RuleVa
 	case "auditLogParts":
 		act = ctlAuditLogParts
 	case "forceRequestBodyVariable":
-		act = ctlForceRequestBodyVar
+		act = ctlForceRequestBodyVariable
 	case "requestBodyAccess":
 		act = ctlRequestBodyAccess
 	case "requestBodyLimit":
@@ -196,33 +228,34 @@ func (a *ctlFn) parseCtl(data string) (ctlFunctionType, string, variables.RuleVa
 	case "ruleRemoveByTag":
 		act = ctlRuleRemoveByTag
 	case "ruleRemoveTargetById":
-		act = ctlRemoveTargetByID
+		act = ctlRuleRemoveTargetByID
 	case "ruleRemoveTargetByMsg":
-		act = ctlRemoveTargetByMsg
+		act = ctlRuleRemoveTargetByMsg
 	case "ruleRemoveTargetByTag":
-		act = ctlRemoveTargetByTag
+		act = ctlRuleRemoveTargetByTag
 	case "hashEngine":
 		act = ctlHashEngine
 	case "hashEnforcement":
 		act = ctlHashEnforcement
 	default:
-		return 0, "", 0x00, "", fmt.Errorf("invalid ctl action")
+		return ctlUnknown, "", 0x00, "", fmt.Errorf("unknown ctl action %q", action)
 	}
 	return act, value, collection, strings.TrimSpace(colkey), nil
 }
 
-func (a *ctlFn) rangeToInts(rules []*coraza.Rule, input string) ([]int, error) {
-	ids := []int{}
+func rangeToInts(rules []*corazawaf.Rule, input string) ([]int, error) {
+	if len(input) == 0 {
+		return nil, errors.New("empty input")
+	}
+
+	var (
+		ids        []int
+		start, end int
+		err        error
+	)
+
 	spl := strings.SplitN(input, "-", 2)
-	var start, end int
-	var err error
-	if len(spl) != 2 {
-		id, err := strconv.Atoi(input)
-		if err != nil {
-			return nil, err
-		}
-		start, end = id, id
-	} else {
+	if len(spl) == 2 {
 		start, err = strconv.Atoi(spl[0])
 		if err != nil {
 			return nil, err
@@ -231,7 +264,14 @@ func (a *ctlFn) rangeToInts(rules []*coraza.Rule, input string) ([]int, error) {
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		id, err := strconv.Atoi(input)
+		if err != nil {
+			return nil, err
+		}
+		start, end = id, id
 	}
+
 	for _, r := range rules {
 		if r.ID >= start && r.ID <= end {
 			ids = append(ids, r.ID)
@@ -240,11 +280,11 @@ func (a *ctlFn) rangeToInts(rules []*coraza.Rule, input string) ([]int, error) {
 	return ids, nil
 }
 
-func ctl() coraza.RuleAction {
+func ctl() rules.Action {
 	return &ctlFn{}
 }
 
 var (
-	_ coraza.RuleAction = &ctlFn{}
+	_ rules.Action      = &ctlFn{}
 	_ ruleActionWrapper = ctl
 )

@@ -7,13 +7,14 @@ import (
 	"context"
 	"testing"
 
-	engine "github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 func TestValidateByteRangeCase4(t *testing.T) {
 	ranges := "0-255"
 	op := &validateByteRange{}
-	opts := engine.RuleOperatorOptions{
+	opts := rules.OperatorOptions{
 		Arguments: ranges,
 	}
 	if err := op.Init(opts); err != nil {
@@ -28,7 +29,7 @@ func TestValidateByteRangeCase4(t *testing.T) {
 func TestValidateByteRangeCase5(t *testing.T) {
 	ranges := "9,10,13,32-126,128-255"
 	op := &validateByteRange{}
-	opts := engine.RuleOperatorOptions{
+	opts := rules.OperatorOptions{
 		Arguments: ranges,
 	}
 	if err := op.Init(opts); err != nil {
@@ -43,15 +44,15 @@ func TestValidateByteRangeCase5(t *testing.T) {
 	}
 }
 
-func getTransaction() *engine.Transaction {
-	waf := engine.NewWAF()
+func getTransaction() *corazawaf.Transaction {
+	waf := corazawaf.NewWAF()
 	return waf.NewTransaction(context.Background())
 }
 
 func BenchmarkValidateByteRange(b *testing.B) {
 	ranges := "9,10,13,32-126,128-255"
 	op := &validateByteRange{}
-	opts := engine.RuleOperatorOptions{
+	opts := rules.OperatorOptions{
 		Arguments: ranges,
 	}
 	if err := op.Init(opts); err != nil {

@@ -1,7 +1,7 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package coraza
+package corazawaf
 
 import (
 	"bufio"
@@ -19,6 +19,7 @@ import (
 	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 	urlutil "github.com/corazawaf/coraza/v3/internal/url"
 	"github.com/corazawaf/coraza/v3/loggers"
+	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -107,6 +108,40 @@ type Transaction struct {
 	Variables TransactionVariables
 }
 
+func (tx *Transaction) GetID() string {
+	return tx.ID
+}
+
+func (tx *Transaction) GetVariables() rules.TransactionVariables {
+	return &tx.Variables
+}
+
+func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collection {
+	return tx.Collections[idx]
+}
+
+func (tx *Transaction) Interrupt(interruption *types.Interruption) {
+	if tx.RuleEngine == types.RuleEngineOn {
+		tx.Interruption = interruption
+	}
+}
+
+func (tx *Transaction) ContentInjection() bool {
+	return tx.WAF.ContentInjection
+}
+
+func (tx *Transaction) DebugLogger() loggers.DebugLogger {
+	return tx.WAF.Logger
+}
+
+func (tx *Transaction) ResponseBodyReader() (io.Reader, error) {
+	return tx.ResponseBodyBuffer.Reader()
+}
+
+func (tx *Transaction) RequestBodyReader() (io.Reader, error) {
+	return tx.RequestBodyBuffer.Reader()
+}
+
 // AddRequestHeader Adds a request header
 //
 // With this method it is possible to feed Coraza with a request header.
@@ -158,12 +193,18 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 	}
 }
 
+func (tx *Transaction) Capturing() bool {
+	return tx.Capture
+}
+
 // CaptureField is used to set the TX:[index] variables by operators
 // that supports capture, like @rx
 func (tx *Transaction) CaptureField(index int, value string) {
-	tx.WAF.Logger.Debug("[%s] Capturing field %d with value %q", tx.ID, index, value)
-	i := strconv.Itoa(index)
-	tx.Variables.TX.SetIndex(i, 0, value)
+	if tx.Capture {
+		tx.WAF.Logger.Debug("[%s] Capturing field %d with value %q", tx.ID, index, value)
+		i := strconv.Itoa(index)
+		tx.Variables.TX.SetIndex(i, 0, value)
+	}
 }
 
 // this function is used to control which variables are reset after a new rule is evaluated
@@ -297,8 +338,8 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 	}
 
 	tx.MatchedRules = append(tx.MatchedRules, mr)
-	if tx.WAF.errorLogCb != nil && r.Log {
-		tx.WAF.errorLogCb(mr)
+	if tx.WAF.ErrorLogCb != nil && r.Log {
+		tx.WAF.ErrorLogCb(mr)
 	}
 }
 
@@ -338,7 +379,7 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 		matches = col.FindRegex(rv.KeyRx)
 	}
 
-	rmi := []int{}
+	var rmi []int
 	for i, c := range matches {
 		for _, ex := range rv.Exceptions {
 			lkey := strings.ToLower(c.Key)
@@ -515,6 +556,10 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 	return tx.Interruption
 }
 
+func (tx *Transaction) RequestBodyWriter() io.Writer {
+	return tx.RequestBodyBuffer
+}
+
 // ProcessRequestBody Performs the request body (if any)
 //
 // This method perform the analysis on the request body. It is optional to
@@ -625,6 +670,10 @@ func (tx *Transaction) IsProcessableResponseBody() bool {
 	return stringsutil.InSlice(ct, tx.WAF.ResponseBodyMimeTypes)
 }
 
+func (tx *Transaction) ResponseBodyWriter() io.Writer {
+	return tx.ResponseBodyBuffer
+}
+
 // ProcessResponseBody Perform the request body (if any)
 //
 // This method perform the analysis on the request body. It is optional to
@@ -710,6 +759,14 @@ func (tx *Transaction) Interrupted() bool {
 	return tx.Interruption != nil
 }
 
+func (tx *Transaction) GetInterruption() *types.Interruption {
+	return tx.Interruption
+}
+
+func (tx *Transaction) GetMatchedRules() []types.MatchedRule {
+	return tx.MatchedRules
+}
+
 // AuditLog returns an AuditLog struct, used to write audit logs
 func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	al := &loggers.AuditLog{}
@@ -763,7 +820,7 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	* if you don’t want to have (often large) files stored in your audit logs.
 	 */
 	// upload data
-	files := []loggers.AuditTransactionRequestFiles{}
+	var files []loggers.AuditTransactionRequestFiles
 	al.Transaction.Request.Files = []loggers.AuditTransactionRequestFiles{}
 	for _, file := range tx.Variables.Files.Get("") {
 		var size int64
@@ -780,7 +837,7 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 		files = append(files, at)
 	}
 	al.Transaction.Request.Files = files
-	mrs := []loggers.AuditMessage{}
+	var mrs []loggers.AuditMessage
 	for _, mr := range tx.MatchedRules {
 		r := mr.Rule
 		for _, matchData := range mr.MatchedDatas {
@@ -816,7 +873,7 @@ func (tx *Transaction) Clean() error {
 	for k := range tx.Collections {
 		tx.Collections[k] = nil
 	}
-	errs := []error{}
+	var errs []error
 	if err := tx.RequestBodyBuffer.Close(); err != nil {
 		errs = append(errs, err)
 	}
@@ -834,6 +891,14 @@ func (tx *Transaction) Clean() error {
 	default:
 		return fmt.Errorf("transaction clean failed:\n- %s\n- %s", errs[0].Error(), errs[1].Error())
 	}
+}
+
+func (tx *Transaction) Close() error {
+	return tx.Clean()
+}
+
+func (tx *Transaction) String() string {
+	return tx.Debug()
 }
 
 // Debug will return a string with the transaction debug information
@@ -989,4 +1054,356 @@ type TransactionVariables struct {
 	ArgsNames     *collection.TranslationProxy
 	ArgsGetNames  *collection.TranslationProxy
 	ArgsPostNames *collection.TranslationProxy
+}
+
+func (v *TransactionVariables) GetUserID() *collection.Simple {
+	return v.Userid
+}
+
+func (v *TransactionVariables) GetUrlencodedError() *collection.Simple {
+	return v.UrlencodedError
+}
+
+func (v *TransactionVariables) GetResponseContentType() *collection.Simple {
+	return v.ResponseContentType
+}
+
+func (v *TransactionVariables) GetUniqueID() *collection.Simple {
+	return v.UniqueID
+}
+
+func (v *TransactionVariables) GetArgsCombinedSize() *collection.SizeProxy {
+	return v.ArgsCombinedSize
+}
+
+func (v *TransactionVariables) GetAuthType() *collection.Simple {
+	return v.AuthType
+}
+
+func (v *TransactionVariables) GetFilesCombinedSize() *collection.Simple {
+	return v.FilesCombinedSize
+}
+
+func (v *TransactionVariables) GetFullRequest() *collection.Simple {
+	return v.FullRequest
+}
+
+func (v *TransactionVariables) GetFullRequestLength() *collection.Simple {
+	return v.FullRequestLength
+}
+
+func (v *TransactionVariables) GetInboundDataError() *collection.Simple {
+	return v.InboundDataError
+}
+
+func (v *TransactionVariables) GetMatchedVar() *collection.Simple {
+	return v.MatchedVar
+}
+
+func (v *TransactionVariables) GetMatchedVarName() *collection.Simple {
+	return v.MatchedVarName
+}
+
+func (v *TransactionVariables) GetMultipartBoundaryQuoted() *collection.Simple {
+	return v.MultipartBoundaryQuoted
+}
+
+func (v *TransactionVariables) GetMultipartBoundaryWhitespace() *collection.Simple {
+	return v.MultipartBoundaryWhitespace
+}
+
+func (v *TransactionVariables) GetMultipartCrlfLfLines() *collection.Simple {
+	return v.MultipartCrlfLfLines
+}
+
+func (v *TransactionVariables) GetMultipartDataAfter() *collection.Simple {
+	return v.MultipartDataAfter
+}
+
+func (v *TransactionVariables) GetMultipartDataBefore() *collection.Simple {
+	return v.MultipartDataBefore
+}
+
+func (v *TransactionVariables) GetMultipartFileLimitExceeded() *collection.Simple {
+	return v.MultipartFileLimitExceeded
+}
+
+func (v *TransactionVariables) GetMultipartHeaderFolding() *collection.Simple {
+	return v.MultipartHeaderFolding
+}
+
+func (v *TransactionVariables) GetMultipartInvalidHeaderFolding() *collection.Simple {
+	return v.MultipartInvalidHeaderFolding
+}
+
+func (v *TransactionVariables) GetMultipartInvalidPart() *collection.Simple {
+	return v.MultipartInvalidPart
+}
+
+func (v *TransactionVariables) GetMultipartInvalidQuoting() *collection.Simple {
+	return v.MultipartInvalidQuoting
+}
+
+func (v *TransactionVariables) GetMultipartLfLine() *collection.Simple {
+	return v.MultipartLfLine
+}
+
+func (v *TransactionVariables) GetMultipartMissingSemicolon() *collection.Simple {
+	return v.MultipartMissingSemicolon
+}
+
+func (v *TransactionVariables) GetMultipartStrictError() *collection.Simple {
+	return v.MultipartStrictError
+}
+
+func (v *TransactionVariables) GetMultipartUnmatchedBoundary() *collection.Simple {
+	return v.MultipartUnmatchedBoundary
+}
+
+func (v *TransactionVariables) GetOutboundDataError() *collection.Simple {
+	return v.OutboundDataError
+}
+
+func (v *TransactionVariables) GetPathInfo() *collection.Simple {
+	return v.PathInfo
+}
+
+func (v *TransactionVariables) GetQueryString() *collection.Simple {
+	return v.QueryString
+}
+
+func (v *TransactionVariables) GetRemoteAddr() *collection.Simple {
+	return v.RemoteAddr
+}
+
+func (v *TransactionVariables) GetRemoteHost() *collection.Simple {
+	return v.RemoteHost
+}
+
+func (v *TransactionVariables) GetRemotePort() *collection.Simple {
+	return v.RemotePort
+}
+
+func (v *TransactionVariables) GetReqbodyError() *collection.Simple {
+	return v.ReqbodyError
+}
+
+func (v *TransactionVariables) GetReqbodyErrorMsg() *collection.Simple {
+	return v.ReqbodyErrorMsg
+}
+
+func (v *TransactionVariables) GetReqbodyProcessorError() *collection.Simple {
+	return v.ReqbodyProcessorError
+}
+
+func (v *TransactionVariables) GetReqbodyProcessorErrorMsg() *collection.Simple {
+	return v.ReqbodyProcessorErrorMsg
+}
+
+func (v *TransactionVariables) GetReqbodyProcessor() *collection.Simple {
+	return v.ReqbodyProcessor
+}
+
+func (v *TransactionVariables) GetRequestBasename() *collection.Simple {
+	return v.RequestBasename
+}
+
+func (v *TransactionVariables) GetRequestBody() *collection.Simple {
+	return v.RequestBody
+}
+
+func (v *TransactionVariables) GetRequestBodyLength() *collection.Simple {
+	return v.RequestBodyLength
+}
+
+func (v *TransactionVariables) GetRequestFilename() *collection.Simple {
+	return v.RequestFilename
+}
+
+func (v *TransactionVariables) GetRequestLine() *collection.Simple {
+	return v.RequestLine
+}
+
+func (v *TransactionVariables) GetRequestMethod() *collection.Simple {
+	return v.RequestMethod
+}
+
+func (v *TransactionVariables) GetRequestProtocol() *collection.Simple {
+	return v.RequestProtocol
+}
+
+func (v *TransactionVariables) GetRequestURI() *collection.Simple {
+	return v.RequestURI
+}
+
+func (v *TransactionVariables) GetRequestURIRaw() *collection.Simple {
+	return v.RequestURIRaw
+}
+
+func (v *TransactionVariables) GetResponseBody() *collection.Simple {
+	return v.ResponseBody
+}
+
+func (v *TransactionVariables) GetResponseContentLength() *collection.Simple {
+	return v.ResponseContentLength
+}
+
+func (v *TransactionVariables) GetResponseProtocol() *collection.Simple {
+	return v.ResponseProtocol
+}
+
+func (v *TransactionVariables) GetResponseStatus() *collection.Simple {
+	return v.ResponseStatus
+}
+
+func (v *TransactionVariables) GetServerAddr() *collection.Simple {
+	return v.ServerAddr
+}
+
+func (v *TransactionVariables) GetServerName() *collection.Simple {
+	return v.ServerName
+}
+
+func (v *TransactionVariables) GetServerPort() *collection.Simple {
+	return v.ServerPort
+}
+
+func (v *TransactionVariables) GetSessionid() *collection.Simple {
+	return v.Sessionid
+}
+
+func (v *TransactionVariables) GetHighestSeverity() *collection.Simple {
+	return v.HighestSeverity
+}
+
+func (v *TransactionVariables) GetStatusLine() *collection.Simple {
+	return v.StatusLine
+}
+
+func (v *TransactionVariables) GetInboundErrorData() *collection.Simple {
+	return v.InboundErrorData
+}
+
+func (v *TransactionVariables) GetEnv() *collection.Map {
+	return v.Env
+}
+
+func (v *TransactionVariables) GetTX() *collection.Map {
+	return v.TX
+}
+
+func (v *TransactionVariables) GetRule() *collection.Map {
+	return v.Rule
+}
+
+func (v *TransactionVariables) GetDuration() *collection.Simple {
+	return v.Duration
+}
+
+func (v *TransactionVariables) GetArgs() *collection.Proxy {
+	return v.Args
+}
+
+func (v *TransactionVariables) GetArgsGet() *collection.Map {
+	return v.ArgsGet
+}
+
+func (v *TransactionVariables) GetArgsPost() *collection.Map {
+	return v.ArgsPost
+}
+
+func (v *TransactionVariables) GetArgsPath() *collection.Map {
+	return v.ArgsPath
+}
+
+func (v *TransactionVariables) GetFilesTmpNames() *collection.Map {
+	return v.FilesTmpNames
+}
+
+func (v *TransactionVariables) GetGeo() *collection.Map {
+	return v.Geo
+}
+
+func (v *TransactionVariables) GetFiles() *collection.Map {
+	return v.Files
+}
+
+func (v *TransactionVariables) GetRequestCookies() *collection.Map {
+	return v.RequestCookies
+}
+
+func (v *TransactionVariables) GetRequestHeaders() *collection.Map {
+	return v.RequestHeaders
+}
+
+func (v *TransactionVariables) GetResponseHeaders() *collection.Map {
+	return v.ResponseHeaders
+}
+
+func (v *TransactionVariables) GetMultipartName() *collection.Map {
+	return v.MultipartName
+}
+
+func (v *TransactionVariables) GetMatchedVarsNames() *collection.Map {
+	return v.MatchedVarsNames
+}
+
+func (v *TransactionVariables) GetMultipartFilename() *collection.Map {
+	return v.MultipartFilename
+}
+
+func (v *TransactionVariables) GetMatchedVars() *collection.Map {
+	return v.MatchedVars
+}
+
+func (v *TransactionVariables) GetFilesSizes() *collection.Map {
+	return v.FilesSizes
+}
+
+func (v *TransactionVariables) GetFilesNames() *collection.Map {
+	return v.FilesNames
+}
+
+func (v *TransactionVariables) GetFilesTmpContent() *collection.Map {
+	return v.FilesTmpContent
+}
+
+func (v *TransactionVariables) GetResponseHeadersNames() *collection.Map {
+	return v.ResponseHeadersNames
+}
+
+func (v *TransactionVariables) GetRequestHeadersNames() *collection.Map {
+	return v.RequestHeadersNames
+}
+
+func (v *TransactionVariables) GetRequestCookiesNames() *collection.Map {
+	return v.RequestCookiesNames
+}
+
+func (v *TransactionVariables) GetXML() *collection.Map {
+	return v.XML
+}
+
+func (v *TransactionVariables) GetRequestXML() *collection.Map {
+	return v.RequestXML
+}
+
+func (v *TransactionVariables) GetResponseXML() *collection.Map {
+	return v.ResponseXML
+}
+
+func (v *TransactionVariables) GetIP() *collection.Map {
+	return v.IP
+}
+
+func (v *TransactionVariables) GetArgsNames() *collection.TranslationProxy {
+	return v.ArgsNames
+}
+
+func (v *TransactionVariables) GetArgsGetNames() *collection.TranslationProxy {
+	return v.ArgsGetNames
+}
+
+func (v *TransactionVariables) GetArgsPostNames() *collection.TranslationProxy {
+	return v.ArgsPostNames
 }

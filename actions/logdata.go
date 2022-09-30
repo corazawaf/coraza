@@ -4,35 +4,38 @@
 package actions
 
 import (
-	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/macro"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type logdataFn struct {
 }
 
-func (a *logdataFn) Init(r *coraza.Rule, data string) error {
-	macro, err := coraza.NewMacro(data)
+func (a *logdataFn) Init(r rules.RuleMetadata, data string) error {
+	m, err := macro.NewMacro(data)
 	if err != nil {
 		return err
 	}
-	r.LogData = *macro
+	// TODO(anuraaga): Confirm this is internal implementation detail
+	r.(*corazawaf.Rule).LogData = m
 	return nil
 }
 
-func (a *logdataFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
-	tx.Logdata = r.LogData.Expand(tx)
+func (a *logdataFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
+	// TODO(anuraaga): Confirm this is internal implementation detail
+	tx.(*corazawaf.Transaction).Logdata = r.(*corazawaf.Rule).LogData.Expand(tx)
 }
 
-func (a *logdataFn) Type() types.RuleActionType {
-	return types.ActionTypeNondisruptive
+func (a *logdataFn) Type() rules.ActionType {
+	return rules.ActionTypeNondisruptive
 }
 
-func logdata() coraza.RuleAction {
+func logdata() rules.Action {
 	return &logdataFn{}
 }
 
 var (
-	_ coraza.RuleAction = &logdataFn{}
+	_ rules.Action      = &logdataFn{}
 	_ ruleActionWrapper = logdata
 )

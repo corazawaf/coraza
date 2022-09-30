@@ -7,11 +7,11 @@
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type inspectFile struct{}
 
-func (*inspectFile) Init(coraza.RuleOperatorOptions) error { return nil }
+func (*inspectFile) Init(rules.OperatorOptions) error { return nil }
 
-func (*inspectFile) Evaluate(*coraza.Transaction, string) bool { return true }
+func (*inspectFile) Evaluate(rules.TransactionState, string) bool { return true }

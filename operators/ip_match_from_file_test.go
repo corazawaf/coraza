@@ -6,8 +6,8 @@ package operators
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/internal/io"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 func TestFromFile(t *testing.T) {
@@ -15,7 +15,7 @@ func TestFromFile(t *testing.T) {
 	addrfail := []string{"127.0.0.2", "192.168.1.1"}
 
 	ipm := &ipMatchFromFile{}
-	opts := coraza.RuleOperatorOptions{
+	opts := rules.OperatorOptions{
 		Arguments: "./testdata/op/netranges.dat",
 		Path:      []string{"."},
 		Root:      io.OSFS{},

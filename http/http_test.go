@@ -16,17 +16,20 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/internal/seclang"
+	"github.com/corazawaf/coraza/v3/macro"
 )
 
-func TestRequestExtractionSuccess(t *testing.T) {
+func TestProcessRequest(t *testing.T) {
 	req, _ := http.NewRequest("POST", "https://www.coraza.io/test", strings.NewReader("test=456"))
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	tx := waf.NewTransaction(context.Background())
-	if _, err := ProcessRequest(tx, req); err != nil {
+	if _, err := processRequest(tx, req); err != nil {
 		t.Fatal(err)
 	}
 	if tx.Variables.RequestMethod.String() != "POST" {
@@ -44,12 +47,14 @@ func TestProcessRequestMultipart(t *testing.T) {
 	}
 	tx := makeTransaction(t)
 	tx.RequestBodyAccess = true
-	if _, err := ProcessRequest(tx, req); err != nil {
+	if _, err := processRequest(tx, req); err != nil {
 		t.Fatal(err)
 	}
 	if req.Body == nil {
 		t.Error("failed to process multipart request")
 	}
+	defer req.Body.Close()
+
 	reader := bufio.NewReader(req.Body)
 	if _, err := reader.ReadString('\n'); err != nil {
 		t.Error("failed to read multipart request", err)
@@ -90,9 +95,9 @@ func multipartRequest(t *testing.T, req *http.Request) error {
 	return nil
 }
 
-func makeTransaction(t *testing.T) *coraza.Transaction {
+func makeTransaction(t *testing.T) *corazawaf.Transaction {
 	t.Helper()
-	tx := coraza.NewWAF().NewTransaction(context.Background())
+	tx := corazawaf.NewWAF().NewTransaction(context.Background())
 	tx.RequestBodyAccess = true
 	ht := []string{
 		"POST /testurl.php?id=123&b=456 HTTP/1.1",
@@ -107,4 +112,66 @@ func makeTransaction(t *testing.T) *coraza.Transaction {
 	data := strings.Join(ht, "\r\n")
 	_, _ = tx.ParseRequestReader(strings.NewReader(data))
 	return tx
+}
+
+// from issue https://github.com/corazawaf/coraza/issues/159 @zpeasystart
+func TestDirectiveSecAuditLog(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	p := seclang.NewParser(waf)
+	if err := p.FromString(`
+	SecRule REQUEST_FILENAME "@unconditionalMatch" "id:100, phase:2, t:none, log, setvar:'tx.count=+1',chain"
+	SecRule ARGS:username "@unconditionalMatch" "t:none, setvar:'tx.count=+2',chain"
+	SecRule ARGS:password "@unconditionalMatch" "t:none, setvar:'tx.count=+3'"
+		`); err != nil {
+		t.Error(err)
+	}
+	tx := waf.NewTransaction(context.Background())
+	tx.RequestBodyAccess = true
+	tx.ForceRequestBodyVariable = true
+	// request
+	rdata := []string{
+		"POST /login HTTP/1.1",
+		"Accept: */*",
+		"Accept-Encoding: gzip, deflate",
+		"Connection: close",
+		"Origin: http://test.com",
+		"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36",
+		"Content-Type: application/x-www-form-urlencoded; charset=UTF-8",
+		"Referer: http://somehost.com/login.jsp",
+		"X-Requested-With: XMLHttpRequest",
+		"Content-Length: 59",
+		"Accept-Language: zh-CN,zh;q=0.9",
+		"",
+		"username=root&password=123&rememberMe=on&time=1644979180757",
+	}
+	data := bytes.NewBuffer([]byte(strings.Join(rdata, "\r\n")))
+	req, err := http.ReadRequest(bufio.NewReader(data))
+	if err != nil {
+		t.Errorf("Description HTTP request parsing failed")
+	}
+
+	_, err = processRequest(tx, req)
+	if err != nil {
+		t.Errorf("Failed to load the HTTP request")
+	}
+
+	rulesCounter := 0
+	r := waf.Rules.FindByID(100)
+	for r != nil {
+		rulesCounter++
+		r = r.Chain
+	}
+	if want, have := 3, rulesCounter; want != have {
+		t.Errorf("failed to compile multiple chains, want: %d, have: %d", want, have)
+	}
+
+	m, err := macro.NewMacro("%{tx.count}")
+	if err != nil {
+		t.Fatalf("failed to initialize the macro: %v", err)
+	}
+
+	txCount, _ := strconv.Atoi(m.Expand(tx))
+	if want, have := 6, txCount; want != have {
+		t.Errorf("incorrect counter, want %d, have %d", want, have)
+	}
 }

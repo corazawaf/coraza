@@ -7,11 +7,11 @@
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type rbl struct{}
 
-func (o *rbl) Init(_ coraza.RuleOperatorOptions) error { return nil }
+func (o *rbl) Init(_ rules.OperatorOptions) error { return nil }
 
-func (o *rbl) Evaluate(_ *coraza.Transaction, _ string) bool { return true }
+func (o *rbl) Evaluate(_ rules.TransactionState, _ string) bool { return true }

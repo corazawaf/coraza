@@ -22,7 +22,7 @@ type Map struct {
 
 // Get returns a slice of strings for a key
 func (c *Map) Get(key string) []string {
-	values := []string{}
+	var values []string
 	for _, a := range c.data[key] {
 		values = append(values, a.Value)
 	}
@@ -31,7 +31,7 @@ func (c *Map) Get(key string) []string {
 
 // FindRegex returns a slice of MatchData for the regex
 func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
-	result := []types.MatchData{}
+	var result []types.MatchData
 	for k, data := range c.data {
 		if key.MatchString(k) {
 			for _, d := range data {
@@ -49,7 +49,7 @@ func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
 
 // FindString returns a slice of MatchData for the string
 func (c *Map) FindString(key string) []types.MatchData {
-	result := []types.MatchData{}
+	var result []types.MatchData
 	if key == "" {
 		for _, data := range c.data {
 			for _, d := range data {
@@ -79,7 +79,7 @@ func (c *Map) FindString(key string) []types.MatchData {
 
 // FindAll returns all the contained elements
 func (c *Map) FindAll() []types.MatchData {
-	result := []types.MatchData{}
+	var result []types.MatchData
 	for _, data := range c.data {
 		for _, d := range data {
 			result = append(result, types.MatchData{
@@ -94,7 +94,7 @@ func (c *Map) FindAll() []types.MatchData {
 }
 
 func (c *Map) keysRx(rx *regexp.Regexp) []string {
-	keys := []string{}
+	var keys []string
 	for k := range c.data {
 		if rx.MatchString(k) {
 			keys = append(keys, k)
@@ -104,7 +104,7 @@ func (c *Map) keysRx(rx *regexp.Regexp) []string {
 }
 
 func (c *Map) keys() []string {
-	keys := []string{}
+	var keys []string
 	for k := range c.data {
 		keys = append(keys, k)
 	}

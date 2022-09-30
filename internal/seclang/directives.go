@@ -11,14 +11,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 // DirectiveOptions contains the parsed options for a directive
 type DirectiveOptions struct {
-	WAF      *coraza.WAF
+	WAF      *corazawaf.WAF
 	Config   types.Config
 	Opts     string
 	Path     []string
@@ -33,7 +33,7 @@ func directiveSecComponentSignature(options *DirectiveOptions) error {
 }
 
 func directiveSecMarker(options *DirectiveOptions) error {
-	rule := coraza.NewRule()
+	rule := corazawaf.NewRule()
 	rule.Raw = fmt.Sprintf("SecMarker %s", options.Opts)
 	rule.SecMark = options.Opts
 	rule.ID = 0
@@ -480,7 +480,7 @@ func directiveSecDataset(options *DirectiveOptions) error {
 	if _, ok := options.Datasets[name]; ok {
 		options.WAF.Logger.Warn("Dataset %s already exists, overwriting", name)
 	}
-	arr := []string{}
+	var arr []string
 	data := strings.Trim(spl[1], "`")
 	for _, s := range strings.Split(data, "\n") {
 		s = strings.TrimSpace(s)

@@ -5,14 +5,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	txhttp "github.com/corazawaf/coraza/v3/http"
 )
 
 func setupTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
-	if err := setupCoraza(); err != nil {
-		panic(err)
-	}
-	return httptest.NewServer(corazaRequestHandler(http.HandlerFunc(hello)))
+	waf := createWAF()
+	return httptest.NewServer(txhttp.WrapHandler(waf, t.Logf, http.HandlerFunc(hello)))
 }
 
 func doGetRequest(t *testing.T, getPath string) int {
@@ -21,7 +21,7 @@ func doGetRequest(t *testing.T, getPath string) int {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	defer resp.Body.Close()
+	resp.Body.Close()
 	return resp.StatusCode
 }
 
@@ -37,13 +37,14 @@ func TestHttpServer(t *testing.T) {
 	// Spin up the test server
 	testServer := setupTestServer(t)
 	defer testServer.Close()
+
 	// Perform tests
 	for _, tc := range tests {
 		tt := tc
 		t.Run(tt.name, func(t *testing.T) {
 			statusCode := doGetRequest(t, testServer.URL+tt.path)
-			if statusCode != tt.expStatus {
-				t.Errorf("Unexpected status code, want: %d, have: %d", tt.expStatus, statusCode)
+			if want, have := tt.expStatus, statusCode; want != have {
+				t.Errorf("Unexpected status code, want: %d, have: %d", want, have)
 			}
 		})
 	}

@@ -22,7 +22,7 @@ type Proxy struct {
 
 // FindRegex returns a slice of MatchData for the regex
 func (c *Proxy) FindRegex(key *regexp.Regexp) []types.MatchData {
-	res := []types.MatchData{}
+	var res []types.MatchData
 	for _, c := range c.data {
 		res = append(res, c.FindRegex(key)...)
 	}
@@ -31,7 +31,7 @@ func (c *Proxy) FindRegex(key *regexp.Regexp) []types.MatchData {
 
 // FindString returns a slice of MatchData for the string
 func (c *Proxy) FindString(key string) []types.MatchData {
-	res := []types.MatchData{}
+	var res []types.MatchData
 	for _, c := range c.data {
 		res = append(res, c.FindString(key)...)
 	}
@@ -40,7 +40,7 @@ func (c *Proxy) FindString(key string) []types.MatchData {
 
 // FindAll returns all matches for all collections
 func (c *Proxy) FindAll() []types.MatchData {
-	res := []types.MatchData{}
+	var res []types.MatchData
 	for _, c := range c.data {
 		res = append(res, c.FindAll()...)
 	}
@@ -54,7 +54,7 @@ func (c *Proxy) Name() string {
 
 // Get returns the data for the key
 func (c *Proxy) Get(key string) []string {
-	res := []string{}
+	var res []string
 	for _, c := range c.data {
 		res = append(res, c.Get(key)...)
 	}

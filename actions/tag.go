@@ -4,31 +4,32 @@
 package actions
 
 import (
-	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type tagFn struct {
 }
 
-func (a *tagFn) Init(r *coraza.Rule, data string) error {
-	r.Tags = append(r.Tags, data)
+func (a *tagFn) Init(r rules.RuleMetadata, data string) error {
+	// TODO(anuraaga): Confirm this is internal implementation detail
+	r.(*corazawaf.Rule).Tags = append(r.(*corazawaf.Rule).Tags, data)
 	return nil
 }
 
-func (a *tagFn) Evaluate(r *coraza.Rule, tx *coraza.Transaction) {
+func (a *tagFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	// Not evaluated
 }
 
-func (a *tagFn) Type() types.RuleActionType {
-	return types.ActionTypeMetadata
+func (a *tagFn) Type() rules.ActionType {
+	return rules.ActionTypeMetadata
 }
 
-func tag() coraza.RuleAction {
+func tag() rules.Action {
 	return &tagFn{}
 }
 
 var (
-	_ coraza.RuleAction = &tagFn{}
+	_ rules.Action      = &tagFn{}
 	_ ruleActionWrapper = tag
 )

@@ -10,16 +10,16 @@ import (
 
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type pmFromFile struct {
 	matcher ahocorasick.AhoCorasick
 }
 
-var _ coraza.RuleOperator = (*pmFromFile)(nil)
+var _ rules.Operator = (*pmFromFile)(nil)
 
-func (o *pmFromFile) Init(options coraza.RuleOperatorOptions) error {
+func (o *pmFromFile) Init(options rules.OperatorOptions) error {
 	path := options.Arguments
 
 	data, err := loadFromFile(path, options.Path, options.Root)
@@ -27,7 +27,7 @@ func (o *pmFromFile) Init(options coraza.RuleOperatorOptions) error {
 		return err
 	}
 
-	lines := []string{}
+	var lines []string
 	sc := bufio.NewScanner(bytes.NewReader(data))
 	for sc.Scan() {
 		l := sc.Text()
@@ -52,6 +52,6 @@ func (o *pmFromFile) Init(options coraza.RuleOperatorOptions) error {
 	return nil
 }
 
-func (o *pmFromFile) Evaluate(tx *coraza.Transaction, value string) bool {
+func (o *pmFromFile) Evaluate(tx rules.TransactionState, value string) bool {
 	return pmEvaluate(o.matcher, tx, value)
 }

@@ -13,7 +13,8 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type Test struct {
@@ -27,7 +28,7 @@ type Test struct {
 // https://github.com/SpiderLabs/secrules-language-tests/
 func TestOperators(t *testing.T) {
 	root := "./testdata"
-	files := [][]byte{}
+	var files [][]byte
 	if _, err := os.Stat(root); os.IsNotExist(err) {
 		t.Fatal("failed to find operator test files")
 	}
@@ -50,7 +51,7 @@ func TestOperators(t *testing.T) {
 		"without capture": false,
 	}
 
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	for _, f := range files {
 		cases := unmarshalTests(t, f)
 		for _, data := range cases {
@@ -83,7 +84,7 @@ func TestOperators(t *testing.T) {
 						return
 					}
 
-					opts := coraza.RuleOperatorOptions{
+					opts := rules.OperatorOptions{
 						Arguments: data.Param,
 						Path:      []string{"op"},
 						Root:      os.DirFS("testdata"),

@@ -7,7 +7,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 /*
@@ -31,7 +31,7 @@ func TestRequestBodyAccessOff(t *testing.T) {
 }*/
 
 func TestRequestBodyAccessOn(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	parser := NewParser(waf)
 	if err := parser.FromString(`
 	SecRequestBodyAccess On

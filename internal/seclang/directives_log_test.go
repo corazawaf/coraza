@@ -16,14 +16,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	auditpath := t.TempDir()
 	parser := NewParser(waf)
 	if err := parser.FromString(fmt.Sprintf(`
@@ -68,7 +68,7 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 }
 
 func TestDebugDirectives(t *testing.T) {
-	waf := coraza.NewWAF()
+	waf := corazawaf.NewWAF()
 	tmp := filepath.Join(t.TempDir(), "tmp.log")
 	p := NewParser(waf)
 	err := directiveSecDebugLog(&DirectiveOptions{
