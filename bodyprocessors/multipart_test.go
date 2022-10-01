@@ -48,10 +48,10 @@ Content-Type: text/html
 			t.Fatal("expected 2 headers for file2")
 		}
 		if h[0] != "Content-Disposition: form-data; name=\"file2\"; filename=\"a.html\"" {
-			t.Fatal("expected Content-Disposition header for file2")
+			t.Fatalf("expected Content-Disposition header for file2, got %s", h[0])
 		}
 		if h[1] != "Content-Type: text/html" {
-			t.Fatal("expected Content-Type header for file2")
+			t.Fatalf("expected Content-Type header for file2, got %s", h[1])
 		}
 	}
 }
