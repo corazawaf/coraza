@@ -39,6 +39,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, collections 
 	postCol := (collections[variables.ArgsPost]).(*collection.Map)
 	filesCombinedSizeCol := (collections[variables.FilesCombinedSize]).(*collection.Simple)
 	filesNamesCol := (collections[variables.FilesNames]).(*collection.Map)
+	headersNames := (collections[variables.MultipartPartHeaders]).(*collection.Map)
 	for {
 		p, err := mr.NextPart()
 		if err == io.EOF {
@@ -47,7 +48,13 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, collections 
 		if err != nil {
 			return err
 		}
-
+		partName := p.FormName()
+		for key, values := range p.Header {
+			for _, value := range values {
+				// TODO preallocate?
+				headersNames.Add(partName, fmt.Sprintf("%s: %s", key, value))
+			}
+		}
 		// if is a file
 		filename := originFileName(p)
 		if filename != "" {
