@@ -41,17 +41,16 @@ Content-Type: text/html
 	}
 	// first we validate we got the headers
 	headers := collections[variables.MultipartPartHeaders].(*collection.Map)
+	header1 := "Content-Disposition: form-data; name=\"file2\"; filename=\"a.html\""
+	header2 := "Content-Type: text/html"
 	if h := headers.Get("file2"); len(h) == 0 {
 		t.Fatal("expected headers for file2")
 	} else {
 		if len(h) != 2 {
 			t.Fatal("expected 2 headers for file2")
 		}
-		if h[0] != "Content-Disposition: form-data; name=\"file2\"; filename=\"a.html\"" {
-			t.Fatalf("expected Content-Disposition header for file2, got %s", h[0])
-		}
-		if h[1] != "Content-Type: text/html" {
-			t.Fatalf("expected Content-Type header for file2, got %s", h[1])
+		if (h[0] != header1 && h[0] != header2) || (h[1] != header1 && h[1] != header2) {
+			t.Fatalf("Got invalid multipart headers")
 		}
 	}
 }
