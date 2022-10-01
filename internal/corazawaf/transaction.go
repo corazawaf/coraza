@@ -1048,6 +1048,7 @@ type TransactionVariables struct {
 	XML                  *collection.Map
 	RequestXML           *collection.Map
 	ResponseXML          *collection.Map
+	MultipartPartHeaders *collection.Map
 	// Persistent variables
 	IP *collection.Map
 	// Translation Proxy Variables

@@ -342,6 +342,8 @@ func (w *WAF) NewTransaction(ctx context.Context) *Transaction {
 	tx.Collections[variables.ResponseXML] = tx.Variables.ResponseXML
 	tx.Variables.RequestXML = collection.NewMap(variables.RequestXML)
 	tx.Collections[variables.RequestXML] = tx.Variables.RequestXML
+	tx.Variables.MultipartPartHeaders = collection.NewMap(variables.MultipartPartHeaders)
+	tx.Collections[variables.MultipartPartHeaders] = tx.Variables.MultipartPartHeaders
 
 	tx.Variables.ArgsCombinedSize = collection.NewCollectionSizeProxy(variables.ArgsCombinedSize, tx.Variables.ArgsGet, tx.Variables.ArgsPost)
 	tx.Collections[variables.ArgsCombinedSize] = tx.Variables.ArgsCombinedSize
