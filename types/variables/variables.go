@@ -223,6 +223,8 @@ const (
 	RequestXML
 	// XML is a pointer to ResponseXML
 	XML
+	// MultipartPartHeaders contains the multipart headers
+	MultipartPartHeaders
 )
 
 var rulemap = map[RuleVariable]string{
@@ -317,6 +319,7 @@ var rulemap = map[RuleVariable]string{
 	RequestXML:                    "REQUEST_XML",
 	ResponseXML:                   "RESPONSE_XML",
 	ResponseArgs:                  "RESPONSE_ARGS",
+	MultipartPartHeaders:          "MULTIPART_PART_HEADERS",
 }
 
 var rulemapRev = map[string]RuleVariable{}

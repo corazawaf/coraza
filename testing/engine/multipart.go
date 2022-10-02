@@ -42,7 +42,7 @@ airween
 `,
 						},
 						Output: profile.ExpectedOutput{
-							TriggeredRules:    []int{100},
+							TriggeredRules:    []int{100, 200, 250, 300},
 							NonTriggeredRules: []int{150, 200002},
 						},
 					},
@@ -54,6 +54,9 @@ airween
 SecRequestBodyAccess On
 SecRule ARGS_POST:_msg_body "Hi" "id:100, phase:2,log"
 SecRule ARGS_GET:_msg_body "Hi" "id:150, phase:2,log"
+SecRule ARGS:_msg_body "@rx Hi Martin," "id:200, phase:2,log"
+SecRule MULTIPART_PART_HEADERS:_msg_body "Content-Disposition" "id:250, phase:2, log"
+SecRule MULTIPART_PART_HEADERS "Content-Disposition" "id:300, phase:2, log"
 SecRule REQBODY_ERROR "!@eq 0" \
   "id:'200002', phase:2,t:none,log,deny,status:400,msg:'Failed to parse request body.',logdata:'%{reqbody_error_msg}',severity:2"
 `,
