@@ -35,7 +35,7 @@ func TestProcessRequest(t *testing.T) {
 	if tx.Variables.RequestMethod.String() != "POST" {
 		t.Fatal("failed to set request from request object")
 	}
-	if err := tx.Clean(); err != nil {
+	if err := tx.Close(); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -59,7 +59,7 @@ func TestProcessRequestMultipart(t *testing.T) {
 	if _, err := reader.ReadString('\n'); err != nil {
 		t.Error("failed to read multipart request", err)
 	}
-	if err := tx.Clean(); err != nil {
+	if err := tx.Close(); err != nil {
 		t.Error(err)
 	}
 }

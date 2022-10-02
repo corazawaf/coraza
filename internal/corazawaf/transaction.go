@@ -865,10 +865,10 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	return al
 }
 
-// Clean the transaction after phase 5
+// clean the transaction after phase 5
 // This method helps the GC to clean up the transaction faster and release resources
 // It also allows caches the transaction back into the sync.Pool
-func (tx *Transaction) Clean() error {
+func (tx *Transaction) clean() error {
 	defer transactionPool.Put(tx)
 	for k := range tx.Collections {
 		tx.Collections[k] = nil
@@ -894,7 +894,7 @@ func (tx *Transaction) Clean() error {
 }
 
 func (tx *Transaction) Close() error {
-	return tx.Clean()
+	return tx.clean()
 }
 
 func (tx *Transaction) String() string {
