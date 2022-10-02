@@ -51,7 +51,6 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, collections 
 		partName := p.FormName()
 		for key, values := range p.Header {
 			for _, value := range values {
-				// TODO preallocate?
 				headersNames.Add(partName, fmt.Sprintf("%s: %s", key, value))
 			}
 		}
