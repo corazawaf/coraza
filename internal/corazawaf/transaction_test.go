@@ -192,7 +192,7 @@ func TestRequestBody(t *testing.T) {
 				}
 			}
 
-			_ = tx.clean()
+			_ = tx.Close()
 		})
 	}
 }
