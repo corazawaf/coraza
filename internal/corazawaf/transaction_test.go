@@ -421,7 +421,7 @@ func TestTxVariablesExceptions(t *testing.T) {
 	if len(fields) != 0 {
 		t.Errorf("REQUEST_HEADERS:host should not match, got %d matches, %v", len(fields), fields)
 	}
-	rv.Exceptions = []ruleVariableException{}
+	rv.Exceptions = nil
 	fields = tx.GetField(rv)
 	if len(fields) != 1 || fields[0].Value != "www.test.com:80" {
 		t.Errorf("failed to match rule variable REQUEST_HEADERS:host, %d matches, %v", len(fields), fields)

@@ -19,7 +19,6 @@ var _ rules.Operator = (*ipMatch)(nil)
 func (o *ipMatch) Init(options rules.OperatorOptions) error {
 	data := options.Arguments
 
-	o.subnets = []*net.IPNet{}
 	subnets := strings.Split(data, ",")
 	for _, sb := range subnets {
 		sb = strings.TrimSpace(sb)

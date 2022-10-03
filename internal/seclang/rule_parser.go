@@ -48,28 +48,28 @@ func (p *RuleParser) ParseVariables(vars string) error {
 	// 2 = inside regex
 	// 3 = inside xpath
 	curr := 0
-	isnegation := false
-	iscount := false
-	var curvar []byte
-	var curkey []byte
-	isescaped := false
+	isNegation := false
+	isCount := false
+	var curVar []byte
+	var curKey []byte
+	isEscaped := false
 	isquoted := false
 	for i := 0; i < len(vars); i++ {
 		c := vars[i]
-		if (c == '|' && curr != 2) || i+1 >= len(vars) || (curr == 2 && c == '/' && !isescaped) {
+		if (c == '|' && curr != 2) || i+1 >= len(vars) || (curr == 2 && c == '/' && !isEscaped) {
 			// if next variable or end
 			// if regex we ignore |
 			// we wont support pipe for xpath, maybe later
 			if c != '|' {
 				// we don't want to miss the last character
 				if curr == 0 {
-					curvar = append(curvar, c)
+					curVar = append(curVar, c)
 				} else if curr != 2 && c != '/' {
 					// we don't want the last slash if it's a regex
-					curkey = append(curkey, c)
+					curKey = append(curKey, c)
 				}
 			}
-			v, err := variables.Parse(string(curvar))
+			v, err := variables.Parse(string(curVar))
 			if err != nil {
 				return err
 			}
@@ -79,7 +79,7 @@ func (p *RuleParser) ParseVariables(vars string) error {
 				if len(vars) <= i+1 || vars[i+1] != '\'' {
 					if vars[i] != '\'' {
 						// TODO fix here
-						return fmt.Errorf("unclosed quote: " + string(curkey))
+						return fmt.Errorf("unclosed quote: " + string(curKey))
 					}
 				}
 				// we skip one additional character
@@ -89,23 +89,23 @@ func (p *RuleParser) ParseVariables(vars string) error {
 				i++
 			}
 
-			key := string(curkey)
+			key := string(curKey)
 			if curr == 2 {
 				// we are inside a regex
 				key = fmt.Sprintf("/%s/", key)
 			}
-			if isnegation {
+			if isNegation {
 				err = p.rule.AddVariableNegation(v, key)
 			} else {
-				err = p.rule.AddVariable(v, key, iscount)
+				err = p.rule.AddVariable(v, key, isCount)
 			}
 			if err != nil {
 				return err
 			}
-			curvar = []byte{}
-			curkey = []byte{}
-			iscount = false
-			isnegation = false
+			curVar = nil
+			curKey = nil
+			isCount = false
+			isNegation = false
 			curr = 0
 			continue
 		}
@@ -113,20 +113,20 @@ func (p *RuleParser) ParseVariables(vars string) error {
 		case 0:
 			switch c {
 			case '!':
-				isnegation = true
+				isNegation = true
 			case '&':
-				iscount = true
+				isCount = true
 			case ':':
 				curr = 1
 			default:
-				curvar = append(curvar, c)
+				curVar = append(curVar, c)
 			}
 		case 1:
 			switch {
-			case len(curkey) == 0 && (string(curvar) == "XML" || string(curvar) == "JSON"):
+			case len(curKey) == 0 && (string(curVar) == "XML" || string(curVar) == "JSON"):
 				// We are starting a XPATH
 				curr = 3
-				curkey = append(curkey, c)
+				curKey = append(curKey, c)
 			case c == '/':
 				// We are starting a regex
 				curr = 2
@@ -135,27 +135,23 @@ func (p *RuleParser) ParseVariables(vars string) error {
 				// we go back to the loop to find /
 				isquoted = true
 			default:
-				curkey = append(curkey, c)
+				curKey = append(curKey, c)
 			}
 		case 2:
 			// REGEX
 			switch {
-			case c == '/' && !isescaped:
+			case c == '/' && !isEscaped:
 				// unescaped / will stop the regex
 				curr = 1
 			case c == '\\':
-				curkey = append(curkey, '\\')
-				if isescaped {
-					isescaped = false
-				} else {
-					isescaped = true
-				}
+				curKey = append(curKey, '\\')
+				isEscaped = !isEscaped
 			default:
-				curkey = append(curkey, c)
+				curKey = append(curKey, c)
 			}
 		case 3:
 			// XPATH
-			curkey = append(curkey, c)
+			curKey = append(curKey, c)
 		}
 	}
 	return nil
@@ -166,12 +162,13 @@ func (p *RuleParser) ParseVariables(vars string) error {
 // will be used. Everything after the operator will be used as operator argument
 func (p *RuleParser) ParseOperator(operator string) error {
 	// default operator @RX
+	operatorLen := len(operator)
 	switch {
-	case len(operator) == 0 || operator[0] != '@' && operator[0] != '!':
+	case operatorLen == 0 || operator[0] != '@' && operator[0] != '!':
 		operator = "@rx " + operator
-	case len(operator) == 1 && operator == "!":
+	case operatorLen == 1 && operator == "!":
 		operator = "!@rx"
-	case len(operator) > 1 && operator[0] == '!' && operator[1] != '@':
+	case operatorLen > 1 && operator[0] == '!' && operator[1] != '@':
 		operator = "!@rx " + operator[1:]
 	}
 
@@ -182,6 +179,7 @@ func (p *RuleParser) ParseOperator(operator string) error {
 	if len(spl) == 2 {
 		opdata = strings.TrimSpace(spl[1])
 	}
+
 	if op[0] == '@' {
 		// we trim @
 		op = op[1:]
@@ -264,9 +262,8 @@ func (p *RuleParser) ParseActions(actions string) error {
 	// first we execute metadata rules
 	for _, a := range act {
 		if a.Atype == rules.ActionTypeMetadata {
-			errs := a.F.Init(p.rule, a.Value)
-			if errs != nil {
-				return errs
+			if err := a.F.Init(p.rule, a.Value); err != nil {
+				return err
 			}
 		}
 	}
@@ -283,9 +280,8 @@ func (p *RuleParser) ParseActions(actions string) error {
 		if action.Atype == rules.ActionTypeMetadata {
 			continue
 		}
-		errs := action.F.Init(p.rule, action.Value)
-		if errs != nil {
-			return errs
+		if err := action.F.Init(p.rule, action.Value); err != nil {
+			return err
 		}
 		if err := p.rule.AddAction(action.Key, action.F); err != nil {
 			return err
