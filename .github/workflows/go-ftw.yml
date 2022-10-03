@@ -15,15 +15,13 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
     - name: Install Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v3
       with:
         go-version: ${{ matrix.go-version }}
-    - name: Checkout code
-      uses: actions/checkout@v2
-      with:
-        lfs: true
-        fetch-depth: 0 #for better blame info
+        cache: true
     - name: Start httpbin
       run: docker run -p 8080:80 -d kennethreitz/httpbin
     - name: Setup CRS
