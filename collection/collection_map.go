@@ -147,10 +147,9 @@ func (c *Map) AddUnique(key string, value string) {
 // internally converts [] string to []types.AnchoredVar
 // with case sensitive vKey
 func (c *Map) SetCS(key string, vKey string, values []string) {
-	c.data[key] = []types.AnchoredVar{}
+	c.data[key] = make([]types.AnchoredVar, 0, len(values))
 	for _, v := range values {
-		c.data[key] = append(c.data[key],
-			types.AnchoredVar{Name: vKey, Value: v})
+		c.data[key] = append(c.data[key], types.AnchoredVar{Name: vKey, Value: v})
 	}
 }
 
@@ -208,7 +207,7 @@ func (c *Map) Reset() {
 func (c *Map) Data() map[string][]string {
 	result := map[string][]string{}
 	for k, v := range c.data {
-		result[k] = []string{}
+		result[k] = make([]string, 0, len(v))
 		for _, a := range v {
 			result[k] = append(result[k], a.Value)
 		}

@@ -770,7 +770,7 @@ func (tx *Transaction) GetMatchedRules() []types.MatchedRule {
 // AuditLog returns an AuditLog struct, used to write audit logs
 func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	al := &loggers.AuditLog{}
-	al.Messages = []loggers.AuditMessage{}
+	al.Messages = nil
 	// YYYY/MM/DD HH:mm:ss
 	ts := time.Unix(0, tx.Timestamp).Format("2006/01/02 15:04:05")
 	al.Parts = tx.AuditLogParts
@@ -821,7 +821,7 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	 */
 	// upload data
 	var files []loggers.AuditTransactionRequestFiles
-	al.Transaction.Request.Files = []loggers.AuditTransactionRequestFiles{}
+	al.Transaction.Request.Files = nil
 	for _, file := range tx.Variables.Files.Get("") {
 		var size int64
 		if fs := tx.Variables.FilesSizes.Get(file); len(fs) > 0 {

@@ -169,7 +169,7 @@ func (w *WAF) NewTransaction(ctx context.Context) *Transaction {
 		MemoryLimit: w.RequestBodyInMemoryLimit,
 	})
 	tx.bodyProcessor = nil
-	tx.ruleRemoveByID = []int{}
+	tx.ruleRemoveByID = nil
 	tx.ruleRemoveTargetByID = map[int][]ruleVariableParams{}
 	tx.Skip = 0
 	tx.Capture = false
