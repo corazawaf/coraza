@@ -160,7 +160,7 @@ func directiveSecRuleRemoveByID(options *DirectiveOptions) error {
 }
 
 func directiveSecResponseBodyMimeTypesClear(options *DirectiveOptions) error {
-	options.WAF.ResponseBodyMimeTypes = []string{}
+	options.WAF.ResponseBodyMimeTypes = nil
 	return nil
 }
 
@@ -249,10 +249,7 @@ func directiveSecHashEngine(options *DirectiveOptions) error {
 }
 
 func directiveSecDefaultAction(options *DirectiveOptions) error {
-	da, ok := options.Config.Get("rule_default_actions", []string{}).([]string)
-	if !ok {
-		da = []string{}
-	}
+	da, _ := options.Config.Get("rule_default_actions", []string{}).([]string)
 	da = append(da, options.Opts)
 	options.Config.Set("rule_default_actions", da)
 	return nil
