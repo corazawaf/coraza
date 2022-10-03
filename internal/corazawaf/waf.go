@@ -428,6 +428,11 @@ func (w *WAF) SetDebugLogPath(path string) error {
 		return nil
 	}
 
+	if path == "/dev/stderr" {
+		w.Logger.SetOutput(os.Stderr)
+		return nil
+	}
+
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		w.Logger.Error("failed to open the file: %s", err.Error())
