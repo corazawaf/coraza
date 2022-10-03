@@ -142,8 +142,17 @@ type WAF struct {
 
 // NewTransaction Creates a new initialized transaction for this WAF instance
 func (w *WAF) NewTransaction(ctx context.Context) *Transaction {
+	return w.NewTransactionWithID(ctx, utils.RandomString(19))
+}
+
+// NewTransactionWithID Creates a new initialized transaction for this WAF instance
+// Using the specified ID
+func (w *WAF) NewTransactionWithID(ctx context.Context, id string) *Transaction {
+	if len(id) == 0 {
+		id = utils.RandomString(19)
+	}
 	tx := transactionPool.Get().(*Transaction)
-	tx.ID = utils.RandomString(19)
+	tx.ID = id
 	tx.MatchedRules = []types.MatchedRule{}
 	tx.Interruption = nil
 	tx.Collections = [types.VariablesCount]collection.Collection{}
