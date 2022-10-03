@@ -83,7 +83,7 @@ func BenchmarkCRSSimpleGET(b *testing.B) {
 			b.Error(err)
 		}
 		tx.ProcessLogging()
-		if err := tx.Clean(); err != nil {
+		if err := tx.Close(); err != nil {
 			b.Error(err)
 		}
 	}
@@ -114,7 +114,7 @@ func BenchmarkCRSSimplePOST(b *testing.B) {
 			b.Error(err)
 		}
 		tx.ProcessLogging()
-		if err := tx.Clean(); err != nil {
+		if err := tx.Close(); err != nil {
 			b.Error(err)
 		}
 	}

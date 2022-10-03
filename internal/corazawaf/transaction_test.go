@@ -192,7 +192,7 @@ func TestRequestBody(t *testing.T) {
 				}
 			}
 
-			_ = tx.Clean()
+			_ = tx.Close()
 		})
 	}
 }
@@ -218,7 +218,7 @@ func TestAuditLog(t *testing.T) {
 		t.Error("invalid auditlog id")
 	}
 	// TODO more checks
-	if err := tx.Clean(); err != nil {
+	if err := tx.Close(); err != nil {
 		t.Error(err)
 	}
 }
@@ -237,7 +237,7 @@ func TestResponseBody(t *testing.T) {
 	if tx.Variables.ResponseBody.String() != "test123" {
 		t.Error("failed to set response body")
 	}
-	if err := tx.Clean(); err != nil {
+	if err := tx.Close(); err != nil {
 		t.Error(err)
 	}
 }
@@ -268,7 +268,7 @@ func TestAuditLogFields(t *testing.T) {
 	if al.Transaction.Response.Headers == nil || al.Transaction.Response.Headers["test"][0] != "test" {
 		t.Error("failed to add Response header to audit log")
 	}
-	if err := tx.Clean(); err != nil {
+	if err := tx.Close(); err != nil {
 		t.Error(err)
 	}
 }
@@ -284,7 +284,7 @@ func TestResetCapture(t *testing.T) {
 	if tx.Variables.TX.Get("5")[0] != "" {
 		t.Error("failed to reset capture field from tx")
 	}
-	if err := tx.Clean(); err != nil {
+	if err := tx.Close(); err != nil {
 		t.Error(err)
 	}
 }
@@ -297,7 +297,7 @@ func TestRelevantAuditLogging(t *testing.T) {
 	// tx.WAF.auditLogger = loggers.NewAuditLogger()
 	tx.ProcessLogging()
 	// TODO how do we check if the log was writen?
-	if err := tx.Clean(); err != nil {
+	if err := tx.Close(); err != nil {
 		t.Error(err)
 	}
 }
@@ -319,7 +319,7 @@ func TestLogCallback(t *testing.T) {
 	if buffer == "" && strings.Contains(buffer, tx.ID) {
 		t.Error("failed to call error log callback")
 	}
-	if err := tx.Clean(); err != nil {
+	if err := tx.Close(); err != nil {
 		t.Error(err)
 	}
 }
@@ -342,7 +342,7 @@ func TestHeaderSetters(t *testing.T) {
 	if !utils.InSlice("abc", tx.Variables.RequestCookiesNames.Get("abc")) {
 		t.Error("failed to set cookie name")
 	}
-	if err := tx.Clean(); err != nil {
+	if err := tx.Close(); err != nil {
 		t.Error(err)
 	}
 }
@@ -364,7 +364,7 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 	if tx.Variables.RequestBody.String() != "test123" {
 		t.Error("failed to set request body")
 	}
-	if err := tx.Clean(); err != nil {
+	if err := tx.Close(); err != nil {
 		t.Error(err)
 	}
 }
@@ -401,7 +401,7 @@ func TestTxVariables(t *testing.T) {
 	if count != 5 {
 		t.Errorf("failed to match rule variable REQUEST_HEADERS with count, %v", rv)
 	}
-	if err := tx.Clean(); err != nil {
+	if err := tx.Close(); err != nil {
 		t.Error(err)
 	}
 }
@@ -435,7 +435,7 @@ func TestTxVariablesExceptions(t *testing.T) {
 	if len(fields) != 0 {
 		t.Errorf("REQUEST_HEADERS:host should not match, got %d matches, %v", len(fields), fields)
 	}
-	if err := tx.Clean(); err != nil {
+	if err := tx.Close(); err != nil {
 		t.Error(err)
 	}
 }
@@ -453,7 +453,7 @@ func TestTransactionSyncPool(t *testing.T) {
 		},
 	})
 	for i := 0; i < 1000; i++ {
-		if err := tx.Clean(); err != nil {
+		if err := tx.Close(); err != nil {
 			t.Error(err)
 		}
 		tx = waf.NewTransaction(context.Background())
