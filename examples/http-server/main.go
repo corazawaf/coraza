@@ -24,15 +24,18 @@ func main() {
 }
 
 func createWAF() coraza.WAF {
-	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
-		WithDirectives(`
-		# This is a comment
-		SecDebugLogLevel 9
-		SecRequestBodyAccess On
-		SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
-		SecRule REQUEST_BODY "somecontent" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
-		SecRule RESPONSE_BODY "somecontent" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
-	`))
+	waf, err := coraza.NewWAF(
+		coraza.NewWAFConfig().
+			WithDirectives(`
+				# This is a comment
+				SecDebugLogLevel 5
+				SecRequestBodyAccess On
+				SecDebugLog /dev/stdout
+				SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
+				SecRule REQUEST_BODY "somecontent" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
+				SecRule RESPONSE_BODY "somecontent" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
+			`),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
