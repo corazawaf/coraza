@@ -5,14 +5,10 @@ package corazawaf
 
 import (
 	"context"
+	"io"
+	"os"
 	"testing"
 )
-
-var waf *WAF
-
-func TestWAFInitialize(t *testing.T) {
-	waf = NewWAF()
-}
 
 func TestNewTransaction(t *testing.T) {
 	waf := NewWAF()
@@ -28,5 +24,38 @@ func TestNewTransaction(t *testing.T) {
 	}
 	if tx.RequestBodyLimit != 1044 {
 		t.Error("Request body limit not set")
+	}
+}
+
+func TestSetDebugLogPath(t *testing.T) {
+	waf := NewWAF()
+
+	testCases := []struct {
+		path   string
+		writer io.Writer
+	}{
+		{
+			path:   "/dev/stdout",
+			writer: os.Stdout,
+		},
+		{
+			path:   "/dev/stderr",
+			writer: os.Stderr,
+		},
+	}
+
+	for _, tCase := range testCases {
+		t.Run(tCase.path, func(t *testing.T) {
+			err := waf.SetDebugLogPath(tCase.path)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			l := waf.Logger.(*stdDebugLogger)
+			if want, have := tCase.writer, l.logger.Writer(); want != have {
+				t.Error("unexpected logger writer")
+			}
+			_ = waf.SetDebugLogPath("")
+		})
 	}
 }

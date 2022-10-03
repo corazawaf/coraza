@@ -17,6 +17,8 @@ type stdDebugLogger struct {
 	Level  loggers.LogLevel
 }
 
+var _ loggers.DebugLogger = (*stdDebugLogger)(nil)
+
 func (l *stdDebugLogger) formatLog(level loggers.LogLevel, message string, args ...interface{}) {
 	if l.Level >= level {
 		l.logger.Printf("[%s] %s", level.String(), fmt.Sprintf(message, args...))
