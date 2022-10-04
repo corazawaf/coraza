@@ -15,7 +15,7 @@ func TestNewTransaction(t *testing.T) {
 	waf.RequestBodyAccess = true
 	waf.ResponseBodyAccess = true
 	waf.RequestBodyLimit = 1044
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransactionWithID(context.Background(), "test")
 	if !tx.RequestBodyAccess {
 		t.Error("Request body access not enabled")
 	}
@@ -24,6 +24,17 @@ func TestNewTransaction(t *testing.T) {
 	}
 	if tx.RequestBodyLimit != 1044 {
 		t.Error("Request body limit not set")
+	}
+	if tx.ID != "test" {
+		t.Error("ID not set")
+	}
+	tx = waf.NewTransactionWithID(context.Background(), "")
+	if tx.ID == "" {
+		t.Error("ID not set")
+	}
+	tx = waf.NewTransaction(context.Background())
+	if tx.ID == "" {
+		t.Error("ID not set")
 	}
 }
 
