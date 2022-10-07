@@ -232,7 +232,7 @@ func crsWAF(t testing.TB) coraza.WAF {
 
 	waf, err := coraza.NewWAF(conf)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	return waf
