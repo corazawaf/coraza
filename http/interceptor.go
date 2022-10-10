@@ -50,12 +50,25 @@ func (i *rwInterceptor) Header() http.Header {
 	return i.w.Header()
 }
 
+// Proto implements ResponseWriter.Proto.
+func (i *rwInterceptor) Proto() string {
+	return i.proto
+}
+
+// ResponseWriter adds Proto to http.ResponseWriter.
+type ResponseWriter interface {
+	http.ResponseWriter
+
+	// Proto returns the protocol of the current request.
+	Proto() string
+}
+
 // wrap wraps the interceptor into a response writer that also preserves
 // the http interfaces implemented by the original response writer to avoid
 // the observer effect.
 // Heavily inspired in https://github.com/openzipkin/zipkin-go/blob/master/middleware/http/server.go#L218
-func wrap(w http.ResponseWriter, tx types.Transaction) http.ResponseWriter { // nolint:gocyclo
-	i := &rwInterceptor{w: w, tx: tx}
+func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) http.ResponseWriter { // nolint:gocyclo
+	i := &rwInterceptor{w: w, tx: tx, proto: r.Proto}
 
 	var (
 		hijacker, isHijacker = i.w.(http.Hijacker)
@@ -64,104 +77,98 @@ func wrap(w http.ResponseWriter, tx types.Transaction) http.ResponseWriter { // 
 		reader, isReader     = i.w.(io.ReaderFrom)
 	)
 
-	i.proto = "HTTP/1.1"
-	if isPusher {
-		// http.Pusher is only supported in HTTP/2 according to its documentation.
-		i.proto = "HTTP/2.0"
-	}
-
 	switch {
 	case !isHijacker && !isPusher && !isFlusher && !isReader:
 		return struct {
-			http.ResponseWriter
+			ResponseWriter
 		}{i}
 	case !isHijacker && !isPusher && !isFlusher && isReader:
 		return struct {
-			http.ResponseWriter
+			ResponseWriter
 			io.ReaderFrom
 		}{i, reader}
 	case !isHijacker && !isPusher && isFlusher && !isReader:
 		return struct {
-			http.ResponseWriter
+			ResponseWriter
 			http.Flusher
 		}{i, flusher}
 	case !isHijacker && !isPusher && isFlusher && isReader:
 		return struct {
-			http.ResponseWriter
+			ResponseWriter
 			http.Flusher
 			io.ReaderFrom
 		}{i, flusher, reader}
 	case !isHijacker && isPusher && !isFlusher && !isReader:
 		return struct {
-			http.ResponseWriter
+			ResponseWriter
 			http.Pusher
 		}{i, pusher}
 	case !isHijacker && isPusher && !isFlusher && isReader:
 		return struct {
-			http.ResponseWriter
+			ResponseWriter
 			http.Pusher
 			io.ReaderFrom
 		}{i, pusher, reader}
 	case !isHijacker && isPusher && isFlusher && !isReader:
 		return struct {
-			http.ResponseWriter
+			ResponseWriter
 			http.Pusher
 			http.Flusher
 		}{i, pusher, flusher}
 	case !isHijacker && isPusher && isFlusher && isReader:
 		return struct {
-			http.ResponseWriter
+			ResponseWriter
 			http.Pusher
 			http.Flusher
 			io.ReaderFrom
 		}{i, pusher, flusher, reader}
 	case isHijacker && !isPusher && !isFlusher && !isReader:
 		return struct {
-			http.ResponseWriter
+			ResponseWriter
 			http.Hijacker
 		}{i, hijacker}
 	case isHijacker && !isPusher && !isFlusher && isReader:
 		return struct {
-			http.ResponseWriter
+			ResponseWriter
 			http.Hijacker
 			io.ReaderFrom
 		}{i, hijacker, reader}
 	case isHijacker && !isPusher && isFlusher && !isReader:
 		return struct {
-			http.ResponseWriter
+			ResponseWriter
 			http.Hijacker
 			http.Flusher
 		}{i, hijacker, flusher}
 	case isHijacker && !isPusher && isFlusher && isReader:
 		return struct {
-			http.ResponseWriter
+			ResponseWriter
 			http.Hijacker
 			http.Flusher
 			io.ReaderFrom
 		}{i, hijacker, flusher, reader}
 	case isHijacker && isPusher && !isFlusher && !isReader:
 		return struct {
-			http.ResponseWriter
+			ResponseWriter
 			http.Hijacker
 			http.Pusher
 		}{i, hijacker, pusher}
 	case isHijacker && isPusher && !isFlusher && isReader:
 		return struct {
-			http.ResponseWriter
+			ResponseWriter
 			http.Hijacker
 			http.Pusher
 			io.ReaderFrom
 		}{i, hijacker, pusher, reader}
 	case isHijacker && isPusher && isFlusher && !isReader:
 		return struct {
-			http.ResponseWriter
+			ResponseWriter
 			http.Hijacker
 			http.Pusher
 			http.Flusher
 		}{i, hijacker, pusher, flusher}
 	case isHijacker && isPusher && isFlusher && isReader:
 		return struct {
-			http.ResponseWriter
+			ResponseWriter
 			http.Hijacker
 			http.Pusher
 			http.Flusher
@@ -169,7 +176,7 @@ func wrap(w http.ResponseWriter, tx types.Transaction) http.ResponseWriter { // 
 		}{i, hijacker, pusher, flusher, reader}
 	default:
 		return struct {
-			http.ResponseWriter
+			ResponseWriter
 		}{i}
 	}
 }
