@@ -388,7 +388,7 @@ func TestRequestBodyProcessingIsntAvailable(t *testing.T) {
 	if tx.Variables.RequestBody.String() != "" {
 		t.Error("unexpected request body")
 	}
-	if err := tx.Clean(); err != nil {
+	if err := tx.Close(); err != nil {
 		t.Error(err)
 	}
 }
