@@ -3,4 +3,5 @@ go 1.18
 use (
 	.
 	./examples/http-server
+	./testing/coreruleset
 )

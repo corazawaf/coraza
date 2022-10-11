@@ -5,22 +5,33 @@
 //go:build !tinygo
 // +build !tinygo
 
-package testing
+package coreruleset
 
 import (
 	"archive/zip"
+	"bufio"
 	"context"
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
-	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/coreruleset/go-ftw/config"
+	"github.com/coreruleset/go-ftw/runner"
+	"github.com/coreruleset/go-ftw/test"
+	"github.com/rs/zerolog"
+
+	"github.com/corazawaf/coraza/v3"
+	txhttp "github.com/corazawaf/coraza/v3/http"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 var crspath string
@@ -44,9 +55,9 @@ func init() {
 
 func BenchmarkCRSCompilation(b *testing.B) {
 	files := []string{
-		"../coraza.conf-recommended",
-		path.Join(crspath, "crs-setup.conf.example"),
-		path.Join(crspath, "rules/", "*.conf"),
+		filepath.Join("..", "..", "coraza.conf-recommended"),
+		filepath.Join(crspath, "crs-setup.conf.example"),
+		filepath.Join(crspath, "rules", "*.conf"),
 	}
 	for i := 0; i < b.N; i++ {
 		waf := corazawaf.NewWAF()
@@ -102,7 +113,7 @@ func BenchmarkCRSSimplePOST(b *testing.B) {
 		tx.AddRequestHeader("Accept", "application/json")
 		tx.AddRequestHeader("Content-Type", "application/x-www-form-urlencoded")
 		tx.ProcessRequestHeaders()
-		if _, err := tx.RequestBodyBuffer.Write([]byte("parameters2=and&other2=Stuff")); err != nil {
+		if _, err := tx.ResponseBodyWriter().Write([]byte("parameters2=and&other2=Stuff")); err != nil {
 			b.Error(err)
 		}
 		if _, err := tx.ProcessRequestBody(); err != nil {
@@ -120,20 +131,110 @@ func BenchmarkCRSSimplePOST(b *testing.B) {
 	}
 }
 
-func crsWAF(t testing.TB) *corazawaf.WAF {
-	t.Helper()
+func TestFTW(t *testing.T) {
 	files := []string{
-		"../coraza.conf-recommended",
-		path.Join(crspath, "crs-setup.conf.example"),
-		path.Join(crspath, "rules/", "*.conf"),
+		filepath.Join("..", "..", "coraza.conf-recommended"),
+		filepath.Join(crspath, "crs-setup.conf.example"),
+		filepath.Join(crspath, "rules", "*.conf"),
 	}
-	waf := corazawaf.NewWAF()
-	parser := seclang.NewParser(waf)
+	conf := coraza.NewWAFConfig()
+
+	conf = conf.WithDirectives(`
+SecAction "id:900005,\
+  phase:1,\
+  nolog,\
+  pass,\
+  ctl:ruleEngine=DetectionOnly,\
+  ctl:ruleRemoveById=910000,\
+  # Interferes with ftw log scanning
+  ctl:ruleRemoveById=920250,\
+  setvar:tx.paranoia_level=4,\
+  setvar:tx.crs_validate_utf8_encoding=1,\
+  setvar:tx.arg_name_length=100,\
+  setvar:tx.arg_length=400,\
+  setvar:tx.total_arg_length=64000,\
+  setvar:tx.max_num_args=255,\
+  setvar:tx.combined_file_sizes=65535"
+
+# Write the value from the X-CRS-Test header as a marker to the log
+SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
+  "id:999999,\
+  phase:1,\
+  log,\
+  msg:'X-CRS-Test %{MATCHED_VAR}',\
+  pass,\
+  t:none"
+`)
+
 	for _, f := range files {
-		if err := parser.FromFile(f); err != nil {
+		conf = conf.WithDirectivesFromFile(f)
+	}
+
+	errorPath := filepath.Join(t.TempDir(), "error.log")
+	errorFile, err := os.Create(errorPath)
+	errorWriter := bufio.NewWriter(errorFile)
+	conf = conf.WithErrorLogger(func(rule types.MatchedRule) {
+		msg := rule.ErrorLog(0)
+		if _, err := io.WriteString(errorWriter, msg); err != nil {
 			t.Fatal(err)
 		}
+		if err := errorWriter.Flush(); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	waf, err := coraza.NewWAF(conf)
+	if err != nil {
+		t.Fatal(err)
 	}
+
+	s := httptest.NewServer(txhttp.WrapHandler(waf, t.Logf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "hello!")
+	})))
+
+	tests, err := test.GetTestsFromFiles(filepath.Join(crspath, "tests", "regression", "tests", "**", "*.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	u, _ := url.Parse(s.URL)
+	host := u.Hostname()
+	port, _ := strconv.Atoi(u.Port())
+	// TODO(anuraaga): Don't use global config for FTW for better support of programmatic.
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	_ = config.NewConfigFromFile(".ftw.yml")
+	config.FTWConfig.LogFile = errorPath
+	config.FTWConfig.TestOverride.Input.DestAddr = &host
+	config.FTWConfig.TestOverride.Input.Port = &port
+
+	res := runner.Run(tests, runner.Config{
+		ShowTime: false,
+		Quiet:    true,
+	})
+
+	if len(res.Stats.Failed) > 0 {
+		t.Errorf("failed tests: %v", res.Stats.Failed)
+	}
+}
+
+func crsWAF(t testing.TB) coraza.WAF {
+	t.Helper()
+	files := []string{
+		filepath.Join("..", "..", "coraza.conf-recommended"),
+		filepath.Join(crspath, "crs-setup.conf.example"),
+		filepath.Join(crspath, "rules", "*.conf"),
+	}
+	conf := coraza.NewWAFConfig()
+
+	for _, f := range files {
+		conf = conf.WithDirectivesFromFile(f)
+	}
+
+	waf, err := coraza.NewWAF(conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	return waf
 }
 func downloadCRS(version string) (string, error) {
@@ -170,7 +271,7 @@ func unzip(file string, dst string) (string, error) {
 		filePath := filepath.Join(dst, f.Name)
 		if i == 0 {
 			// get file basename
-			crspath = path.Join(dst, filepath.Base(filePath))
+			crspath = filepath.Join(dst, filepath.Base(filePath))
 		}
 
 		if !strings.HasPrefix(filePath, filepath.Clean(dst)+string(os.PathSeparator)) {
