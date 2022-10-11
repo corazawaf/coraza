@@ -16,5 +16,5 @@ var _ rules.Operator = (*validateUtf8Encoding)(nil)
 func (o *validateUtf8Encoding) Init(rules.OperatorOptions) error { return nil }
 
 func (o *validateUtf8Encoding) Evaluate(_ rules.TransactionState, value string) bool {
-	return utf8.ValidString(value)
+	return !utf8.ValidString(value)
 }
