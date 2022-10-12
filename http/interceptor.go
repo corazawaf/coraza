@@ -8,6 +8,7 @@
 package http
 
 import (
+	"bytes"
 	"io"
 	"net/http"
 
@@ -27,22 +28,19 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 	if i.headersSent {
 		return
 	}
-
-	for k, vv := range i.w.Header() {
-		for _, v := range vv {
-			i.tx.AddResponseHeader(k, v)
-		}
-	}
-
-	i.headersSent = true
-	if it := i.tx.ProcessResponseHeaders(statusCode, i.proto); it != nil {
-		processInterruption(i.w, it)
-		return
-	}
 	i.w.WriteHeader(statusCode)
 }
 
 func (i *rwInterceptor) Write(b []byte) (int, error) {
+	// Echoing the body request
+	buf := new(bytes.Buffer)
+	reqReader, err := i.tx.RequestBodyReader()
+	if err != nil {
+		_, er := buf.ReadFrom(reqReader)
+		if er != nil {
+			b = append(b, buf.Bytes()...)
+		}
+	}
 	return i.tx.ResponseBodyWriter().Write(b)
 }
 

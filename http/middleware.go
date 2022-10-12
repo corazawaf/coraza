@@ -11,6 +11,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
@@ -42,6 +43,18 @@ func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
 
 		// We continue with the other middlewares by catching the response
 		h.ServeHTTP(wrap(w, r, tx), r)
+
+		for k, vv := range w.Header() {
+			for _, v := range vv {
+				tx.AddResponseHeader(k, v)
+			}
+		}
+		status, _ := strconv.Atoi(w.Header().Get("status"))
+		proto := w.Header().Get("protocol")
+		if it := tx.ProcessResponseHeaders(status, proto); it != nil {
+			processInterruption(w, it)
+			return
+		}
 
 		if it, err := tx.ProcessResponseBody(); err != nil {
 			l("failed to process response body: %v", err)
