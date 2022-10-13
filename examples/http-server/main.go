@@ -15,7 +15,7 @@ func hello(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Status", "200")
 	w.Header().Set("Protocol", "HTTP/1.1")
 	w.Header().Set("Content-Type", "text/plain")
-	fmt.Fprintf(w, "Hello world, transaction not disrupted. Echoing request body:\n")
+	fmt.Fprintf(w, "Hello world, transaction not disrupted.\n")
 }
 
 func main() {
