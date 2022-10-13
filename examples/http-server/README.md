@@ -4,7 +4,13 @@ This example is intended to provide a straightforward way to spin up Coraza and 
 ```
 go run . 
 ```
-The server will be reachable at `http://localhost:8090`
+The server will be reachable at `http://localhost:8090`.
+```bash
+# True positive request (403 Forbidden)
+curl -i 'localhost:8090/hello?id=0'
+# True negative request (200 OK)
+curl -i 'localhost:8090/hello'
+```
 ### Customize WAF rules
 The configuration of the WAF is provided directly inside the code under [main.go](https://github.com/corazawaf/coraza/blob/v3/dev/examples/http-server/main.go#L35). Feel free to play with it.
 ### Customize server behaviour
