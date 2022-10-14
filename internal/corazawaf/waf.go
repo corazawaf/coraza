@@ -81,7 +81,7 @@ type WAF struct {
 	RejectOnRequestBodyLimit bool
 
 	// Responses will only be loaded if mime is listed here
-	ResponseBodyMimeTypes []string
+	ResponseBodyMimeTypes map[string]struct{}
 
 	// Web Application id, apps sharing the same id will share persistent collections
 	WebAppID string
@@ -467,7 +467,7 @@ func NewWAF() *WAF {
 		AuditLogParts:            types.AuditLogParts("ABCFHZ"),
 		RequestBodyInMemoryLimit: 131072,
 		RequestBodyLimit:         134217728, // 10mb
-		ResponseBodyMimeTypes:    []string{"text/html", "text/plain"},
+		ResponseBodyMimeTypes:    map[string]struct{}{"text/html": {}, "text/plain": {}},
 		ResponseBodyLimit:        524288,
 		ResponseBodyAccess:       false,
 		RuleEngine:               types.RuleEngineOn,

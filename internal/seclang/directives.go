@@ -165,7 +165,9 @@ func directiveSecResponseBodyMimeTypesClear(options *DirectiveOptions) error {
 }
 
 func directiveSecResponseBodyMimeType(options *DirectiveOptions) error {
-	options.WAF.ResponseBodyMimeTypes = strings.Split(options.Opts, " ")
+	for _, mType := range strings.Split(options.Opts, " ") {
+		options.WAF.ResponseBodyMimeTypes[mType] = struct{}{}
+	}
 	return nil
 }
 

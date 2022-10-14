@@ -16,7 +16,6 @@ import (
 
 	"github.com/corazawaf/coraza/v3/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/collection"
-	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 	urlutil "github.com/corazawaf/coraza/v3/internal/url"
 	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/rules"
@@ -667,7 +666,8 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Int
 func (tx *Transaction) IsProcessableResponseBody() bool {
 	// TODO add more validations
 	ct := tx.Variables.ResponseContentType.String()
-	return stringsutil.InSlice(ct, tx.WAF.ResponseBodyMimeTypes)
+	_, ok := tx.WAF.ResponseBodyMimeTypes[ct]
+	return ok
 }
 
 func (tx *Transaction) ResponseBodyWriter() io.Writer {

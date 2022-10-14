@@ -117,7 +117,7 @@ func Test_directive(t *testing.T) {
 	if err := p.FromString("SecResponseBodyMimeType text/html"); err != nil {
 		t.Error("failed to set parser from string")
 	}
-	if p.options.WAF.ResponseBodyMimeTypes[0] != "text/html" {
+	if _, ok := p.options.WAF.ResponseBodyMimeTypes["text/html"]; !ok {
 		t.Error("failed to set SecResponseBodyMimeType")
 	}
 	if err := p.FromString(`SecServerSignature "Microsoft-IIS/6.0"`); err != nil {
