@@ -873,6 +873,9 @@ func (tx *Transaction) Close() error {
 	for k := range tx.Collections {
 		tx.Collections[k] = nil
 	}
+
+	tx.Variables = TransactionVariables{}
+
 	var errs []error
 	if err := tx.RequestBodyBuffer.Close(); err != nil {
 		errs = append(errs, err)
