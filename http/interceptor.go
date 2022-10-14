@@ -20,6 +20,7 @@ type rwInterceptor struct {
 	w           http.ResponseWriter
 	tx          types.Transaction
 	headersSent bool
+	StatusCode  int
 	proto       string
 }
 
@@ -27,6 +28,7 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 	if i.headersSent {
 		return
 	}
+	i.StatusCode = statusCode
 	i.w.WriteHeader(statusCode)
 }
 
@@ -55,9 +57,7 @@ type ResponseWriter interface {
 // the http interfaces implemented by the original response writer to avoid
 // the observer effect.
 // Heavily inspired in https://github.com/openzipkin/zipkin-go/blob/master/middleware/http/server.go#L218
-func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) http.ResponseWriter { // nolint:gocyclo
-	i := &rwInterceptor{w: w, tx: tx, proto: r.Proto}
-
+func (i *rwInterceptor) wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) http.ResponseWriter { // nolint:gocyclo
 	var (
 		hijacker, isHijacker = i.w.(http.Hijacker)
 		pusher, isPusher     = i.w.(http.Pusher)

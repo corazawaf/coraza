@@ -12,8 +12,6 @@ import (
 
 func hello(w http.ResponseWriter, req *http.Request) {
 	// The server generates the response
-	w.Header().Set("Status", "200")
-	w.Header().Set("Protocol", "HTTP/1.1")
 	w.Header().Set("Content-Type", "text/plain")
 	fmt.Fprintf(w, "Hello world, transaction not disrupted.\n")
 }
