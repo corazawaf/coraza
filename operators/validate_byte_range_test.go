@@ -4,7 +4,6 @@
 package operators
 
 import (
-	"context"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
@@ -46,7 +45,7 @@ func TestValidateByteRangeCase5(t *testing.T) {
 
 func getTransaction() *corazawaf.Transaction {
 	waf := corazawaf.NewWAF()
-	return waf.NewTransaction(context.Background())
+	return waf.NewTransaction()
 }
 
 func BenchmarkValidateByteRange(b *testing.B) {

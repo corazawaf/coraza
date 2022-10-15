@@ -4,7 +4,6 @@
 package operators
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -25,7 +24,7 @@ func TestPmFromDataset(t *testing.T) {
 		t.Error(err)
 	}
 	waf := corazawaf.NewWAF()
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.Capture = true
 	res := pm.Evaluate(tx, "test_1")
 	if !res {

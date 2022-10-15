@@ -4,7 +4,6 @@
 package operators
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -52,7 +51,7 @@ func TestRx(t *testing.T) {
 				t.Error(err)
 			}
 			waf := corazawaf.NewWAF()
-			tx := waf.NewTransaction(context.Background())
+			tx := waf.NewTransaction()
 			tx.Capture = true
 			res := rx.Evaluate(tx, tt.input)
 			if res != tt.want {
