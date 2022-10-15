@@ -39,21 +39,28 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	}
 
 	l := int64(len(data)) + br.length
-	if !environment.IsTinyGo && l >= br.options.MemoryLimit {
-		if br.writer == nil {
-			br.writer, err = os.CreateTemp(br.options.TmpPath, "body*")
-			if err != nil {
-				return 0, err
+	if l > br.options.MemoryLimit {
+		if environment.IsTinyGo {
+			maxWritingDataLen := br.options.MemoryLimit - br.length
+			br.length = br.options.MemoryLimit
+			return br.buffer.Write(data[:maxWritingDataLen])
+		} else {
+			if br.writer == nil {
+				br.writer, err = os.CreateTemp(br.options.TmpPath, "body*")
+				if err != nil {
+					return 0, err
+				}
+				// we dump the previous buffer
+				if _, err := br.writer.Write(br.buffer.Bytes()); err != nil {
+					return 0, err
+				}
+				defer br.buffer.Reset()
 			}
-			// we dump the previous buffer
-			if _, err := br.writer.Write(br.buffer.Bytes()); err != nil {
-				return 0, err
-			}
-			defer br.buffer.Reset()
+			br.length = l
+			return br.writer.Write(data)
 		}
-		br.length = l
-		return br.writer.Write(data)
 	}
+
 	br.length = l
 	return br.buffer.Write(data)
 }
