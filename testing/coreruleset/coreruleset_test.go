@@ -171,6 +171,9 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 
 	errorPath := filepath.Join(t.TempDir(), "error.log")
 	errorFile, err := os.Create(errorPath)
+	if err != nil {
+		t.Fatalf("failed to create error log: %v", err)
+	}
 	errorWriter := bufio.NewWriter(errorFile)
 	conf = conf.WithErrorLogger(func(rule types.MatchedRule) {
 		msg := rule.ErrorLog(0)
@@ -190,6 +193,7 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	s := httptest.NewServer(txhttp.WrapHandler(waf, t.Logf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "hello!")
 	})))
+	defer s.Close()
 
 	tests, err := test.GetTestsFromFiles(filepath.Join(crspath, "tests", "regression", "tests", "**", "*.yaml"))
 	if err != nil {
