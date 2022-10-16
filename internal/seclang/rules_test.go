@@ -4,7 +4,6 @@
 package seclang
 
 import (
-	"context"
 	"io"
 	"regexp"
 	"strings"
@@ -26,7 +25,7 @@ func TestRuleMatch(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.ProcessConnection("127.0.0.1", 0, "", 0)
 	tx.ProcessRequestHeaders()
 	if len(tx.MatchedRules) != 1 {
@@ -52,7 +51,7 @@ func TestRuleMatchWithRegex(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.AddArgument("GET", "id_test", "123")
 	tx.ProcessRequestHeaders()
 	if len(tx.MatchedRules) != 1 {
@@ -85,7 +84,7 @@ func TestSecMarkers(t *testing.T) {
 		t.Error("failed to compile some rule.")
 	}
 
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	defer tx.ProcessLogging()
 	tx.ProcessRequestHeaders()
 	if tx.Interrupted() {
@@ -112,7 +111,7 @@ func TestSecAuditLogs(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.ProcessURI("/test.php?id=1", "get", "http/1.1")
 	tx.ProcessRequestHeaders()
 	if _, err := tx.ProcessRequestBody(); err != nil {
@@ -144,7 +143,7 @@ func TestRuleLogging(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.AddArgument("GET", "test1", "123")
 	tx.AddArgument("GET", "test2", "456")
 	tx.ProcessRequestHeaders()
@@ -181,7 +180,7 @@ func TestRuleChains(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.AddArgument("GET", "test1", "123")
 	tx.AddArgument("GET", "test2", "456")
 	tx.ProcessRequestHeaders()
@@ -203,7 +202,7 @@ func TestTagsAreNotPrintedTwice(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.AddArgument("GET", "test1", "123")
 	tx.AddArgument("GET", "test2", "456")
 	tx.ProcessRequestHeaders()
@@ -235,7 +234,7 @@ func TestStatusFromInterruptions(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.AddArgument("GET", "test1", "123")
 	tx.AddArgument("GET", "test2", "456")
 	it := tx.ProcessRequestHeaders()
@@ -273,7 +272,7 @@ func TestLogsAreNotPrintedManyTimes(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.AddArgument("GET", "test1", "123")
 	tx.AddArgument("GET", "test2", "456")
 	tx.AddArgument("GET", "test2", "789")
@@ -297,7 +296,7 @@ func TestSampleRxRule(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.ProcessURI("/test", "GET", "HTTP/1.1")
 	tx.AddRequestHeader("Content-Length", "15")
 	if it := tx.ProcessRequestHeaders(); it == nil {
@@ -313,7 +312,7 @@ func TestTxIssue147(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	// response body access is required
 	tx.ResponseBodyAccess = true
 	// we need a content-type header
@@ -355,7 +354,7 @@ func TestIssue176(t *testing.T) {
 		return
 	}
 
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.AddRequestHeader("Cookie", "sessionId=test")
 	it := tx.ProcessRequestHeaders()
 	if it == nil {
@@ -369,7 +368,7 @@ func TestIssue176(t *testing.T) {
 	//	if err != nil {
 	//		t.Error(err.Error())
 	//	}
-	//	tx = waf.NewTransaction(context.Background())
+	//	tx = waf.NewTransaction()
 	//	tx.AddArgument("GET", "Test1", "123")
 	//	it = tx.ProcessRequestHeaders()
 	//	if it == nil {
@@ -382,7 +381,7 @@ func TestIssue176(t *testing.T) {
 	//	if err != nil {
 	//		t.Error(err.Error())
 	//	}
-	//	tx = waf.NewTransaction(context.Background())
+	//	tx = waf.NewTransaction()
 	//	tx.AddArgument("GET", "Test2", "123")
 	//	it = tx.ProcessRequestHeaders()
 	//	if it != nil {
@@ -431,7 +430,7 @@ func TestRxCapture(t *testing.T) {
 		return
 	}
 
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.AddRequestHeader("Content-Type", "text/html; charset=utf-8")
 	it := tx.ProcessRequestHeaders()
 	if it != nil {
@@ -450,7 +449,7 @@ func TestUnicode(t *testing.T) {
 		return
 	}
 
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.AddArgument("POST", "var", `ハローワールド`)
 	it, err := tx.ProcessRequestBody()
 	if err != nil {
@@ -502,7 +501,7 @@ func Test941310(t *testing.T) {
 	// 	return
 	// }
 	//
-	// tx := waf.NewTransaction(context.Background())
+	// tx := waf.NewTransaction()
 	// tx.AddArgument("POST", "var", `\\xbcscript\\xbealert(\xa2XSS\xa2)\xbc/script\xbe`)
 	// it, err := tx.ProcessRequestBody()
 	// if err != nil {
@@ -524,7 +523,7 @@ func TestArgumentNamesCaseSensitive(t *testing.T) {
 		return
 	}
 	/*
-		tx := waf.NewTransaction(context.Background())
+		tx := waf.NewTransaction()
 		tx.AddArgument("POST", "Test1", "Xyz")
 		it, err := tx.ProcessRequestBody()
 		if err != nil {
@@ -534,7 +533,7 @@ func TestArgumentNamesCaseSensitive(t *testing.T) {
 			t.Error("failed to test argument names case sensitive: same case nomatch")
 		}
 
-		tx = waf.NewTransaction(context.Background())
+		tx = waf.NewTransaction()
 		tx.AddArgument("POST", "TEST1", "Xyz")
 		it, err = tx.ProcessRequestBody()
 		if err != nil {
@@ -544,7 +543,7 @@ func TestArgumentNamesCaseSensitive(t *testing.T) {
 			t.Error("failed to test argument names case sensitive: Upper case argument name matched")
 		}
 
-		tx = waf.NewTransaction(context.Background())
+		tx = waf.NewTransaction()
 		tx.AddArgument("POST", "test1", "Xyz")
 		it, err = tx.ProcessRequestBody()
 		if err != nil {
@@ -567,7 +566,7 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 		return
 	}
 
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.AddArgument("POST", "Test1", "Xyz")
 	it, err := tx.ProcessRequestBody()
 	if err != nil {
@@ -577,7 +576,7 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 		t.Errorf("failed to test arguments value match: Same case argument name, %+v\n", tx.MatchedRules)
 	}
 
-	tx = waf.NewTransaction(context.Background())
+	tx = waf.NewTransaction()
 	tx.AddArgument("POST", "TEST1", "Xyz")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
@@ -587,7 +586,7 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 		t.Errorf("failed to test arguments value match: Upper case argument name, %+v\n", tx.MatchedRules)
 	}
 
-	tx = waf.NewTransaction(context.Background())
+	tx = waf.NewTransaction()
 	tx.AddArgument("POST", "test1", "Xyz")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
@@ -597,7 +596,7 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 		t.Errorf("failed to test arguments value match: Lower case argument name, %+v\n", tx.MatchedRules)
 	}
 
-	tx = waf.NewTransaction(context.Background())
+	tx = waf.NewTransaction()
 	tx.AddArgument("POST", "test1", "xyz")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
@@ -607,7 +606,7 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 		t.Error("failed to test arguments value: different value case")
 	}
 
-	tx = waf.NewTransaction(context.Background())
+	tx = waf.NewTransaction()
 	tx.AddArgument("POST", "test1", "XYZ")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
@@ -629,7 +628,7 @@ func TestCookiesCaseSensitive(t *testing.T) {
 		return
 	}
 
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.AddRequestHeader("cookie", "Test1=Xyz")
 	it, err := tx.ProcessRequestBody()
 	if err != nil {
@@ -639,7 +638,7 @@ func TestCookiesCaseSensitive(t *testing.T) {
 		t.Error("failed to test cookies case sensitive")
 	}
 
-	tx = waf.NewTransaction(context.Background())
+	tx = waf.NewTransaction()
 	tx.AddRequestHeader("cookie", "TEST1=Xyz")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
@@ -649,7 +648,7 @@ func TestCookiesCaseSensitive(t *testing.T) {
 		t.Error("failed to test cookies case sensitive")
 	}
 
-	tx = waf.NewTransaction(context.Background())
+	tx = waf.NewTransaction()
 	tx.AddRequestHeader("cookie", "test1=Xyz")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
@@ -659,7 +658,7 @@ func TestCookiesCaseSensitive(t *testing.T) {
 		t.Error("failed to test cookies case sensitive")
 	}
 
-	tx = waf.NewTransaction(context.Background())
+	tx = waf.NewTransaction()
 	tx.AddRequestHeader("cookie", "test1=xyz")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
@@ -669,7 +668,7 @@ func TestCookiesCaseSensitive(t *testing.T) {
 		t.Error("failed to test cookies value case sensitive")
 	}
 
-	tx = waf.NewTransaction(context.Background())
+	tx = waf.NewTransaction()
 	tx.AddRequestHeader("cookie", "test1=XYZ")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
@@ -691,7 +690,7 @@ func TestHeadersCaseSensitive(t *testing.T) {
 		return
 	}
 
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.AddRequestHeader("Test1", "Xyz")
 	it, err := tx.ProcessRequestBody()
 	if err != nil {
@@ -701,7 +700,7 @@ func TestHeadersCaseSensitive(t *testing.T) {
 		t.Error("failed to test cookies case sensitive")
 	}
 
-	tx = waf.NewTransaction(context.Background())
+	tx = waf.NewTransaction()
 	tx.AddRequestHeader("TEST1", "Xyz")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
@@ -711,7 +710,7 @@ func TestHeadersCaseSensitive(t *testing.T) {
 		t.Error("failed to test cookies case sensitive")
 	}
 
-	tx = waf.NewTransaction(context.Background())
+	tx = waf.NewTransaction()
 	tx.AddRequestHeader("test1", "Xyz")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
@@ -721,7 +720,7 @@ func TestHeadersCaseSensitive(t *testing.T) {
 		t.Error("failed to test cookies case sensitive")
 	}
 
-	tx = waf.NewTransaction(context.Background())
+	tx = waf.NewTransaction()
 	tx.AddRequestHeader("test1", "xyz")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
@@ -731,7 +730,7 @@ func TestHeadersCaseSensitive(t *testing.T) {
 		t.Error("failed to test cookies value case sensitive")
 	}
 
-	tx = waf.NewTransaction(context.Background())
+	tx = waf.NewTransaction()
 	tx.AddRequestHeader("test1", "XYZ")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
@@ -753,7 +752,7 @@ func TestParameterPollution(t *testing.T) {
 		return
 	}
 
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.AddArgument("POST", "test1", "xyz")
 	tx.AddArgument("POST", "Test1", "Xyz")
 	tx.AddArgument("POST", "TEST1", "XYZ")
@@ -772,7 +771,7 @@ func TestParameterPollution(t *testing.T) {
 			len(tx.MatchedRules), tx.MatchedRules)
 	}
 
-	tx = waf.NewTransaction(context.Background())
+	tx = waf.NewTransaction()
 	tx.AddArgument("POST", "test1", "xyz")
 	tx.AddArgument("POST", "Test1", "Xyz")
 	tx.AddArgument("POST", "tesT1", "Xyz")
@@ -804,7 +803,7 @@ func TestURIQueryParamCaseSensitive(t *testing.T) {
 		return
 	}
 
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.ProcessURI("/url?Test1='SQLI", "POST", "HTTP/1.1")
 	_, err = tx.ProcessRequestBody()
 	if err != nil {
@@ -824,7 +823,7 @@ func TestURIQueryParamCaseSensitive(t *testing.T) {
 			len(tx.MatchedRules), tx.MatchedRules)
 	}
 
-	tx = waf.NewTransaction(context.Background())
+	tx = waf.NewTransaction()
 	tx.ProcessURI("/test?test1='SQLI&Test1='SQLI&TEST1='SQLI", "POST", "HTTP/1.1")
 	_, err = tx.ProcessRequestBody()
 	if err != nil {
@@ -861,7 +860,7 @@ func TestURIQueryParamNameCaseSensitive(t *testing.T) {
 		return
 	}
 
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.ProcessURI("/url?Test1='SQLI", "POST", "HTTP/1.1")
 	_, err = tx.ProcessRequestBody()
 	if err != nil {
@@ -881,7 +880,7 @@ func TestURIQueryParamNameCaseSensitive(t *testing.T) {
 			len(tx.MatchedRules), tx.MatchedRules)
 	}
 
-	tx = waf.NewTransaction(context.Background())
+	tx = waf.NewTransaction()
 	tx.ProcessURI("/test?test1='SQLI&Test1='SQLI&TEST1='SQLI", "POST", "HTTP/1.1")
 	_, err = tx.ProcessRequestBody()
 	if err != nil {
@@ -948,7 +947,7 @@ SecRule REQUEST_URI|ARGS|REQUEST_HEADERS|!REQUEST_HEADERS:Referer|FILES|XML:/* "
 		return
 	}
 
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.AddRequestHeader("Content-Type", "multipart/form-data; boundary=----WebKitFormBoundaryABCDEFGIJKLMNOPQ")
 
 	body := strings.NewReader(`

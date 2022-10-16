@@ -4,7 +4,6 @@
 package operators
 
 import (
-	"context"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
@@ -13,7 +12,7 @@ import (
 
 func TestRestPath(t *testing.T) {
 	waf := corazawaf.NewWAF()
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	exp := "/some-random/url-{id}/{name}"
 	path := "/some-random/url-123/juan"
 	rp := restpath{}

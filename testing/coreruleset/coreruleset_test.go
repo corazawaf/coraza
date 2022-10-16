@@ -10,7 +10,6 @@ package coreruleset
 import (
 	"archive/zip"
 	"bufio"
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -78,7 +77,7 @@ func BenchmarkCRSSimpleGET(b *testing.B) {
 
 	b.ResetTimer() // only benchmark execution, not compilation
 	for i := 0; i < b.N; i++ {
-		tx := waf.NewTransaction(context.Background())
+		tx := waf.NewTransaction()
 		tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 8080)
 		tx.ProcessURI("GET", "/some_path/with?parameters=and&other=Stuff", "HTTP/1.1")
 		tx.AddRequestHeader("Host", "localhost")
@@ -105,7 +104,7 @@ func BenchmarkCRSSimplePOST(b *testing.B) {
 
 	b.ResetTimer() // only benchmark execution, not compilation
 	for i := 0; i < b.N; i++ {
-		tx := waf.NewTransaction(context.Background())
+		tx := waf.NewTransaction()
 		tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 8080)
 		tx.ProcessURI("POST", "/some_path/with?parameters=and&other=Stuff", "HTTP/1.1")
 		tx.AddRequestHeader("Host", "localhost")

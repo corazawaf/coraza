@@ -4,7 +4,6 @@
 package actions
 
 import (
-	"context"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
@@ -13,7 +12,7 @@ import (
 
 func TestCtl(t *testing.T) {
 	waf := corazawaf.NewWAF()
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	r := corazawaf.NewRule()
 	ctlf := ctl()
 

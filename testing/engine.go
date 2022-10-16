@@ -4,7 +4,6 @@
 package testing
 
 import (
-	"context"
 	b64 "encoding/base64"
 	"fmt"
 	"strconv"
@@ -282,7 +281,7 @@ func (t *Test) Request() string {
 func NewTest(name string, waf coraza.WAF) *Test {
 	t := &Test{
 		Name:           name,
-		transaction:    waf.NewTransaction(context.Background()),
+		transaction:    waf.NewTransaction(),
 		RequestHeaders: map[string]string{},
 		ResponseHeaders: map[string]string{
 			"Content-Type": "text/html",

@@ -5,7 +5,6 @@ package seclang
 
 import (
 	"bufio"
-	"context"
 	"embed"
 	"fmt"
 	"io/fs"
@@ -25,7 +24,7 @@ func TestInterruption(t *testing.T) {
 	if err := p.FromString(`SecAction "id:1,deny,log,phase:1"`); err != nil {
 		t.Error("Could not create from string")
 	}
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	if tx.ProcessRequestHeaders() == nil {
 		t.Error("Transaction not interrupted")
 	}

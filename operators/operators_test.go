@@ -4,7 +4,6 @@
 package operators
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -92,7 +91,7 @@ func TestOperators(t *testing.T) {
 					if err := op.Init(opts); err != nil {
 						t.Error(err)
 					}
-					tx := waf.NewTransaction(context.Background())
+					tx := waf.NewTransaction()
 					tx.Capture = capVal
 					res := op.Evaluate(tx, data.Input)
 					// 1 = expected true

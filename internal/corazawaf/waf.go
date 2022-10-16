@@ -4,7 +4,6 @@
 package corazawaf
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"io/fs"
@@ -12,6 +11,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -141,16 +141,21 @@ type WAF struct {
 }
 
 // NewTransaction Creates a new initialized transaction for this WAF instance
-func (w *WAF) NewTransaction(ctx context.Context) *Transaction {
-	return w.NewTransactionWithID(ctx, utils.RandomString(19))
+func (w *WAF) NewTransaction() *Transaction {
+	return w.newTransactionWithID(utils.RandomString(19))
+}
+
+func (w *WAF) NewTransactionWithID(id string) *Transaction {
+	if len(strings.TrimSpace(id)) == 0 {
+		id = utils.RandomString(19)
+		w.Logger.Warn("Empty ID passed for new transaction")
+	}
+	return w.newTransactionWithID(id)
 }
 
 // NewTransactionWithID Creates a new initialized transaction for this WAF instance
 // Using the specified ID
-func (w *WAF) NewTransactionWithID(ctx context.Context, id string) *Transaction {
-	if len(id) == 0 {
-		id = utils.RandomString(19)
-	}
+func (w *WAF) newTransactionWithID(id string) *Transaction {
 	tx := transactionPool.Get().(*Transaction)
 	tx.ID = id
 	tx.MatchedRules = []types.MatchedRule{}
