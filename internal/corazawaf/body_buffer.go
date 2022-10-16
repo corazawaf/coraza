@@ -42,6 +42,9 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	if l > br.options.MemoryLimit {
 		if environment.IsTinyGo {
 			maxWritingDataLen := br.options.MemoryLimit - br.length
+			if maxWritingDataLen == 0 {
+				return 0, nil
+			}
 			br.length = br.options.MemoryLimit
 			return br.buffer.Write(data[:maxWritingDataLen])
 		} else {
