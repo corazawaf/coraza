@@ -132,7 +132,7 @@ func TestHttpServer(t *testing.T) {
 
 			// Spin up the test server
 			ts := httptest.NewUnstartedServer(WrapHandler(createWAF(t), t.Logf, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-				if want, have := tCase.expectedProto, w.(ResponseWriter).Proto(); want != have {
+				if want, have := tCase.expectedProto, req.Proto; want != have {
 					t.Errorf("unexpected proto, want: %s, have: %s", want, have)
 				}
 
