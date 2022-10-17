@@ -16,7 +16,7 @@ func TestWriteOverLimit(t *testing.T) {
 	br := NewBodyBuffer(types.BodyBufferOptions{
 		MemoryLimit: 2,
 	})
-	defer br.Close()
+	defer br.Reset()
 	n, err := br.Write([]byte{'a', 'b', 'c'})
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err.Error())

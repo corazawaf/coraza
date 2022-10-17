@@ -870,14 +870,16 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 // It also allows caches the transaction back into the sync.Pool
 func (tx *Transaction) Close() error {
 	defer transactionPool.Put(tx)
-	for k := range tx.Collections {
-		tx.Collections[k] = nil
+	for _, c := range tx.Collections {
+		if c != nil {
+			c.Reset()
+		}
 	}
 	var errs []error
-	if err := tx.RequestBodyBuffer.Close(); err != nil {
+	if err := tx.RequestBodyBuffer.Reset(); err != nil {
 		errs = append(errs, err)
 	}
-	if err := tx.ResponseBodyBuffer.Close(); err != nil {
+	if err := tx.ResponseBodyBuffer.Reset(); err != nil {
 		errs = append(errs, err)
 	}
 

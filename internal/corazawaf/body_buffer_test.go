@@ -32,7 +32,7 @@ func TestBodyReaderMemory(t *testing.T) {
 	if buf.String() != "test" {
 		t.Error("Failed to get BodyReader from memory")
 	}
-	br.Close()
+	_ = br.Reset()
 }
 
 func TestBodyReaderFile(t *testing.T) {
@@ -64,7 +64,7 @@ func TestBodyReaderFile(t *testing.T) {
 	if _, err := os.Stat(f.Name()); os.IsNotExist(err) {
 		t.Error("BodyReader's Tmp file does not exist")
 	}
-	br.Close()
+	_ = br.Reset()
 	if _, err := os.Stat(f.Name()); err == nil {
 		t.Error("BodyReader's Tmp file was not deleted")
 	}
@@ -90,28 +90,5 @@ func TestBodyReaderWriteFromReader(t *testing.T) {
 	if buf.String() != "test" {
 		t.Error("Failed to write bodyreader from io.Reader")
 	}
-	br.Close()
-}
-
-func TestBodyCloseIsIdempotent(t *testing.T) {
-	br := NewBodyBuffer(types.BodyBufferOptions{
-		TmpPath:     t.TempDir(),
-		MemoryLimit: 5,
-	})
-
-	if err := br.Close(); err != nil {
-		t.Errorf("unexpected error: %s", err.Error())
-	}
-
-	if err := br.Close(); err != nil {
-		t.Errorf("unexpected error: %s", err.Error())
-	}
-
-	if _, err := br.Write([]byte("abc")); err == nil || err != errAlreadyClosed {
-		t.Errorf("expected error: %s", errAlreadyClosed.Error())
-	}
-
-	if _, err := br.Reader(); err == nil || err != errAlreadyClosed {
-		t.Errorf("expected error: %s", errAlreadyClosed.Error())
-	}
+	_ = br.Reset()
 }
