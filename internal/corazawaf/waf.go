@@ -12,22 +12,18 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/corazawaf/coraza/v3/collection"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
+	"github.com/corazawaf/coraza/v3/internal/sync"
 	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 // Initializing pool for transactions
-var transactionPool = sync.Pool{
-	// New optionally specifies a function to generate
-	// a value when Get would otherwise return nil.
-	New: func() interface{} { return new(Transaction) },
-}
+var transactionPool = sync.NewPool(func() interface{} { return new(Transaction) })
 
 // ErrorLogCallback is used to set a callback function to log errors
 // It is triggered when an error is raised by the WAF
