@@ -31,6 +31,6 @@ func TestNewPool(t *testing.T) {
 	}
 
 	if want, have := 2, *(y.(*int)); want != have {
-		t.Error("unexpected pool value, want: %d, have: %d", want, have)
+		t.Errorf("unexpected pool value, want: %d, have: %d", want, have)
 	}
 }
