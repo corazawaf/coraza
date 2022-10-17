@@ -16,7 +16,8 @@ import (
 	"time"
 
 	"github.com/corazawaf/coraza/v3/collection"
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
+	ioutils "github.com/corazawaf/coraza/v3/internal/io"
+	stringutils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -142,12 +143,12 @@ type WAF struct {
 
 // NewTransaction Creates a new initialized transaction for this WAF instance
 func (w *WAF) NewTransaction() *Transaction {
-	return w.newTransactionWithID(utils.RandomString(19))
+	return w.newTransactionWithID(stringutils.RandomString(19))
 }
 
 func (w *WAF) NewTransactionWithID(id string) *Transaction {
 	if len(strings.TrimSpace(id)) == 0 {
-		id = utils.RandomString(19)
+		id = stringutils.RandomString(19)
 		w.Logger.Warn("Empty ID passed for new transaction")
 	}
 	return w.newTransactionWithID(id)
@@ -433,7 +434,7 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 // note: this is not thread safe
 func (w *WAF) SetDebugLogPath(path string) error {
 	if path == "" {
-		w.Logger.SetOutput(io.Discard)
+		w.Logger.SetOutput(ioutils.NopCloser(io.Discard))
 		return nil
 	}
 
@@ -451,7 +452,9 @@ func (w *WAF) SetDebugLogPath(path string) error {
 	if err != nil {
 		w.Logger.Error("failed to open the file: %s", err.Error())
 	}
+
 	w.Logger.SetOutput(f)
+
 	return nil
 }
 
