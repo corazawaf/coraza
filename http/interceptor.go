@@ -43,7 +43,7 @@ func (i *rwInterceptor) Header() http.Header {
 // the http interfaces implemented by the original response writer to avoid
 // the observer effect.
 // Heavily inspired in https://github.com/openzipkin/zipkin-go/blob/master/middleware/http/server.go#L218
-func (i *rwInterceptor) wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) http.ResponseWriter { // nolint:gocyclo
+func (i *rwInterceptor) wrap(w http.ResponseWriter, tx types.Transaction) http.ResponseWriter { // nolint:gocyclo
 	var (
 		hijacker, isHijacker = i.w.(http.Hijacker)
 		pusher, isPusher     = i.w.(http.Pusher)

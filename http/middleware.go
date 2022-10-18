@@ -42,7 +42,7 @@ func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
 
 		i := &rwInterceptor{w: w, tx: tx, StatusCode: 200}
 		// We continue with the other middlewares by catching the response
-		h.ServeHTTP(i.wrap(w, r, tx), r)
+		h.ServeHTTP(i.wrap(w, tx), r)
 
 		for k, vv := range w.Header() {
 			for _, v := range vv {
