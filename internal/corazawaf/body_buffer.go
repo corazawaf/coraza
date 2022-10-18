@@ -78,8 +78,10 @@ func (br *BodyBuffer) Size() int64 {
 
 // Reset will reset buffers and delete temporary files
 func (br *BodyBuffer) Reset() error {
-	br.buffer.Reset()
 	br.length = 0
+	if br.buffer != nil {
+		br.buffer.Reset()
+	}
 	if !environment.IsTinyGo && br.writer != nil {
 		w := br.writer
 		br.writer = nil
