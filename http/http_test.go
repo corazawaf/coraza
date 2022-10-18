@@ -125,6 +125,7 @@ func TestDirectiveSecAuditLog(t *testing.T) {
 		t.Error(err)
 	}
 	tx := waf.NewTransaction()
+	defer tx.Close()
 	tx.RequestBodyAccess = true
 	tx.ForceRequestBodyVariable = true
 	// request
