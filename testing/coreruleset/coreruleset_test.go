@@ -10,7 +10,6 @@ package coreruleset
 import (
 	"archive/zip"
 	"bufio"
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -78,7 +77,7 @@ func BenchmarkCRSSimpleGET(b *testing.B) {
 
 	b.ResetTimer() // only benchmark execution, not compilation
 	for i := 0; i < b.N; i++ {
-		tx := waf.NewTransaction(context.Background())
+		tx := waf.NewTransaction()
 		tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 8080)
 		tx.ProcessURI("GET", "/some_path/with?parameters=and&other=Stuff", "HTTP/1.1")
 		tx.AddRequestHeader("Host", "localhost")
@@ -105,7 +104,7 @@ func BenchmarkCRSSimplePOST(b *testing.B) {
 
 	b.ResetTimer() // only benchmark execution, not compilation
 	for i := 0; i < b.N; i++ {
-		tx := waf.NewTransaction(context.Background())
+		tx := waf.NewTransaction()
 		tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 8080)
 		tx.ProcessURI("POST", "/some_path/with?parameters=and&other=Stuff", "HTTP/1.1")
 		tx.AddRequestHeader("Host", "localhost")
@@ -172,6 +171,9 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 
 	errorPath := filepath.Join(t.TempDir(), "error.log")
 	errorFile, err := os.Create(errorPath)
+	if err != nil {
+		t.Fatalf("failed to create error log: %v", err)
+	}
 	errorWriter := bufio.NewWriter(errorFile)
 	conf = conf.WithErrorLogger(func(rule types.MatchedRule) {
 		msg := rule.ErrorLog(0)
@@ -191,6 +193,7 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	s := httptest.NewServer(txhttp.WrapHandler(waf, t.Logf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "hello!")
 	})))
+	defer s.Close()
 
 	tests, err := test.GetTestsFromFiles(filepath.Join(crspath, "tests", "regression", "tests", "**", "*.yaml"))
 	if err != nil {

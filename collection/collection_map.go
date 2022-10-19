@@ -194,10 +194,6 @@ func (c *Map) Name() string {
 
 // Reset the current CollectionMap
 func (c *Map) Reset() {
-	// we don't reset the CollectionMap if it wasn't used, for performance reasons
-	if len(c.data) == 1 && len(c.data[""]) == 0 {
-		return
-	}
 	for k := range c.data {
 		delete(c.data, k)
 	}

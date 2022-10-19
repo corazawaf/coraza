@@ -4,7 +4,6 @@
 package coraza
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
@@ -21,8 +20,8 @@ import (
 // concurrent safe
 type WAF interface {
 	// NewTransaction Creates a new initialized transaction for this WAF instance
-	NewTransaction(ctx context.Context) types.Transaction
-	NewTransactionWithID(ctx context.Context, id string) types.Transaction
+	NewTransaction() types.Transaction
+	NewTransactionWithID(id string) types.Transaction
 }
 
 // NewWAF creates a new WAF instance with the provided configuration.
@@ -100,11 +99,11 @@ type wafWrapper struct {
 }
 
 // NewTransaction implements the same method on WAF.
-func (w wafWrapper) NewTransaction(ctx context.Context) types.Transaction {
-	return w.waf.NewTransaction(ctx)
+func (w wafWrapper) NewTransaction() types.Transaction {
+	return w.waf.NewTransaction()
 }
 
 // NewTransactionWithID implements the same method on WAF.
-func (w wafWrapper) NewTransactionWithID(ctx context.Context, id string) types.Transaction {
-	return w.waf.NewTransactionWithID(ctx, id)
+func (w wafWrapper) NewTransactionWithID(id string) types.Transaction {
+	return w.waf.NewTransactionWithID(id)
 }
