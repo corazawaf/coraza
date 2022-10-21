@@ -53,7 +53,7 @@ func (l *debugLogger) SetLevel(level loggers.LogLevel) {
 	l.t.Logf("Setting level to %q", level.String())
 }
 
-func (l *debugLogger) SetOutput(w io.Writer) {
+func (l *debugLogger) SetOutput(w io.WriteCloser) {
 	l.t.Log("ignoring SecDebugLog directive, debug logs are always routed to proxy logs")
 }
 

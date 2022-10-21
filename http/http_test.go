@@ -10,7 +10,6 @@ package http
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -28,7 +27,7 @@ import (
 func TestProcessRequest(t *testing.T) {
 	req, _ := http.NewRequest("POST", "https://www.coraza.io/test", strings.NewReader("test=456"))
 	waf := corazawaf.NewWAF()
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	if _, err := processRequest(tx, req); err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +96,7 @@ func multipartRequest(t *testing.T, req *http.Request) error {
 
 func makeTransaction(t *testing.T) *corazawaf.Transaction {
 	t.Helper()
-	tx := corazawaf.NewWAF().NewTransaction(context.Background())
+	tx := corazawaf.NewWAF().NewTransaction()
 	tx.RequestBodyAccess = true
 	ht := []string{
 		"POST /testurl.php?id=123&b=456 HTTP/1.1",
@@ -125,7 +124,8 @@ func TestDirectiveSecAuditLog(t *testing.T) {
 		`); err != nil {
 		t.Error(err)
 	}
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
+	defer tx.Close()
 	tx.RequestBodyAccess = true
 	tx.ForceRequestBodyVariable = true
 	// request
