@@ -9,6 +9,7 @@ package bodyprocessors
 import (
 	"encoding/xml"
 	"io"
+	"strings"
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/types"
@@ -30,7 +31,6 @@ func (*xmlBodyProcessor) ProcessRequest(reader io.Reader, collections [types.Var
 }
 
 func (*xmlBodyProcessor) ProcessResponse(reader io.Reader, collections [types.VariablesCount]collection.Collection, options Options) error {
-
 	return nil
 }
 
@@ -46,8 +46,8 @@ func readXML(reader io.Reader) (attrs []string, content []string, err error) {
 		for _, attr := range a {
 			attrs = append(attrs, attr.Value)
 		}
-		if len(n.Nodes) == 0 {
-			content = append(content, string(n.Content))
+		if c := strings.TrimSpace(n.Content); len(c) > 0 {
+			content = append(content, c)
 		}
 		return true
 	})
@@ -65,7 +65,7 @@ func xmlWalk(nodes []xmlNode, f func(xmlNode) bool) {
 type xmlNode struct {
 	XMLName xml.Name
 	Attrs   []xml.Attr `xml:",any,attr"`
-	Content []byte     `xml:",innerxml"`
+	Content string     `xml:",chardata"`
 	Nodes   []xmlNode  `xml:",any"`
 }
 
