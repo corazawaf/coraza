@@ -9,14 +9,13 @@ import (
 	"strconv"
 
 	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 type jsonBodyProcessor struct {
 }
 
-func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, collections [types.VariablesCount]collection.Collection, _ Options) error {
+func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, collections []collection.Collection, _ Options) error {
 	col := (collections[variables.ArgsPost]).(*collection.Map)
 	data, err := readJSON(reader)
 	if err != nil {
@@ -35,7 +34,7 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, collections [types
 	return nil
 }
 
-func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, collections [types.VariablesCount]collection.Collection, _ Options) error {
+func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, collections []collection.Collection, _ Options) error {
 	col := (collections[variables.ResponseArgs]).(*collection.Map)
 	data, err := readJSON(reader)
 	if err != nil {

@@ -10,14 +10,13 @@ import (
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/url"
-	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 type urlencodedBodyProcessor struct {
 }
 
-func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, collections [types.VariablesCount]collection.Collection, options Options) error {
+func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, collections []collection.Collection, options Options) error {
 	buf := new(strings.Builder)
 	if _, err := io.Copy(buf, reader); err != nil {
 		return err
@@ -34,7 +33,7 @@ func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, collections [ty
 	return nil
 }
 
-func (*urlencodedBodyProcessor) ProcessResponse(reader io.Reader, collection [types.VariablesCount]collection.Collection, options Options) error {
+func (*urlencodedBodyProcessor) ProcessResponse(reader io.Reader, collection []collection.Collection, options Options) error {
 	return nil
 }
 

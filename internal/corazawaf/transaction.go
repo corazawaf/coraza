@@ -42,7 +42,7 @@ type Transaction struct {
 	Interruption *types.Interruption
 
 	// Contains all Collections, including persistent
-	Collections [types.VariablesCount]collection.Collection
+	Collections []collection.Collection
 
 	// This is used to store log messages
 	Logdata string
