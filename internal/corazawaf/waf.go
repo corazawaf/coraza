@@ -191,6 +191,7 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 			TmpPath:     w.TmpDir,
 			MemoryLimit: w.RequestBodyInMemoryLimit,
 		})
+		tx.Collections = make([]collection.Collection, types.VariablesCount)
 		tx.Variables.UrlencodedError = collection.NewSimple(variables.UrlencodedError)
 		tx.Collections[variables.UrlencodedError] = tx.Variables.UrlencodedError
 		tx.Variables.ResponseContentType = collection.NewSimple(variables.ResponseContentType)

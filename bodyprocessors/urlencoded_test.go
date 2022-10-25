@@ -17,11 +17,10 @@ func TestURLEncode(t *testing.T) {
 	argCol := collection.NewMap(variables.ArgsPost)
 	bodyCol := collection.NewSimple(variables.RequestBody)
 	bodyLenCol := collection.NewSimple(variables.RequestBodyLength)
-	cols := [types.VariablesCount]collection.Collection{
-		variables.ArgsPost:          argCol,
-		variables.RequestBody:       bodyCol,
-		variables.RequestBodyLength: bodyLenCol,
-	}
+	cols := make([]collection.Collection, types.VariablesCount)
+	cols[variables.ArgsPost] = argCol
+	cols[variables.RequestBody] = bodyCol
+	cols[variables.RequestBodyLength] = bodyLenCol
 	m := map[string]string{
 		"a": "1",
 		"b": "2",

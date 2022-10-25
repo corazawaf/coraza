@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/types"
 )
 
 // Options are used by BodyProcessors to provide some settings
@@ -34,8 +33,8 @@ type Options struct {
 // Hook to some variable and return data based on special
 // expressions like XPATH, JQ, etc.
 type BodyProcessor interface {
-	ProcessRequest(reader io.Reader, collection [types.VariablesCount]collection.Collection, options Options) error
-	ProcessResponse(reader io.Reader, collection [types.VariablesCount]collection.Collection, options Options) error
+	ProcessRequest(reader io.Reader, collection []collection.Collection, options Options) error
+	ProcessResponse(reader io.Reader, collection []collection.Collection, options Options) error
 }
 
 type bodyProcessorWrapper = func() BodyProcessor
