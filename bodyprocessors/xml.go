@@ -9,6 +9,7 @@ package bodyprocessors
 import (
 	"encoding/xml"
 	"io"
+	"strings"
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/types"
@@ -30,43 +31,33 @@ func (*xmlBodyProcessor) ProcessRequest(reader io.Reader, collections [types.Var
 }
 
 func (*xmlBodyProcessor) ProcessResponse(reader io.Reader, collections [types.VariablesCount]collection.Collection, options Options) error {
-
 	return nil
 }
 
-func readXML(reader io.Reader) (attrs []string, content []string, err error) {
+func readXML(reader io.Reader) ([]string, []string, error) {
+	var attrs []string
+	var content []string
 	dec := xml.NewDecoder(reader)
-	var n xmlNode
-	err = dec.Decode(&n)
-	if err != nil {
-		return
-	}
-	xmlWalk([]xmlNode{n}, func(n xmlNode) bool {
-		a := n.Attrs
-		for _, attr := range a {
-			attrs = append(attrs, attr.Value)
+	for {
+		token, err := dec.Token()
+		if err != nil && err != io.EOF {
+			return nil, nil, err
 		}
-		if len(n.Nodes) == 0 {
-			content = append(content, string(n.Content))
+		if token == nil {
+			break
 		}
-		return true
-	})
-	return
-}
-
-func xmlWalk(nodes []xmlNode, f func(xmlNode) bool) {
-	for _, n := range nodes {
-		if f(n) {
-			xmlWalk(n.Nodes, f)
+		switch tok := token.(type) {
+		case xml.StartElement:
+			for _, attr := range tok.Attr {
+				attrs = append(attrs, attr.Value)
+			}
+		case xml.CharData:
+			if c := strings.TrimSpace(string(tok)); c != "" {
+				content = append(content, c)
+			}
 		}
 	}
-}
-
-type xmlNode struct {
-	XMLName xml.Name
-	Attrs   []xml.Attr `xml:",any,attr"`
-	Content []byte     `xml:",innerxml"`
-	Nodes   []xmlNode  `xml:",any"`
+	return attrs, content, nil
 }
 
 var (
