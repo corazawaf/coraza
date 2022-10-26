@@ -12,7 +12,7 @@ import (
 	ctypes "github.com/corazawaf/coraza/v3/types"
 )
 
-func hello(w http.ResponseWriter, req *http.Request) {
+func exampleHandler(w http.ResponseWriter, req *http.Request) {
 	resBody := "Hello world, transaction not disrupted."
 	w.Header().Set("Content-Type", "text/plain")
 
@@ -32,7 +32,7 @@ func hello(w http.ResponseWriter, req *http.Request) {
 func main() {
 	waf := createWAF()
 
-	http.Handle("/", txhttp.WrapHandler(waf, txhttp.StdLogger, http.HandlerFunc(hello)))
+	http.Handle("/", txhttp.WrapHandler(waf, txhttp.StdLogger, http.HandlerFunc(exampleHandler)))
 
 	fmt.Println("Server is running. Listening port: 8090")
 
