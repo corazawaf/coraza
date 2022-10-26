@@ -24,7 +24,7 @@ func TestRestPath(t *testing.T) {
 	if !rp.Evaluate(tx, path) {
 		t.Errorf("Expected %s to match %s", exp, path)
 	}
-	if tx.Variables.ArgsPath.Get("id")[0] != "123" {
-		t.Errorf("Expected 123, got %s", tx.Variables.ArgsPath.Get("id"))
+	if tx.Variables().ArgsPath().Get("id")[0] != "123" {
+		t.Errorf("Expected 123, got %s", tx.Variables().ArgsPath().Get("id"))
 	}
 }

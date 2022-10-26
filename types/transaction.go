@@ -104,12 +104,12 @@ type Transaction interface {
 	// Interrupted will return true if the transaction was interrupted
 	Interrupted() bool
 
-	// GetInterruption returns the types.Interruption if the request was interrupted,
+	// Interruption returns the types.Interruption if the request was interrupted,
 	// or nil otherwise.
-	GetInterruption() *Interruption
+	Interruption() *Interruption
 
-	// GetMatchedRules returns the rules that have matched the requests with associated information.
-	GetMatchedRules() []MatchedRule
+	// MatchedRules returns the rules that have matched the requests with associated information.
+	MatchedRules() []MatchedRule
 
 	// Closer closes the transaction and releases any resources associated with it such as request/response bodies.
 	io.Closer
