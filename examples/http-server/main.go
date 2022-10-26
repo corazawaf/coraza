@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/corazawaf/coraza/v3"
 	txhttp "github.com/corazawaf/coraza/v3/http"
@@ -11,9 +13,19 @@ import (
 )
 
 func hello(w http.ResponseWriter, req *http.Request) {
-	// The server generates the response
+	resBody := "Hello world, transaction not disrupted."
+	if body := os.Getenv("RESPONSE_BODY"); body != "" {
+		resBody = body
+	}
+
 	w.Header().Set("Content-Type", "text/plain")
-	fmt.Fprintf(w, "Hello world, transaction not disrupted.\n")
+	if h := os.Getenv("RESPONSE_HEADERS"); h != "" {
+		kv := strings.Split(h, ":")
+		w.Header().Set(kv[0], kv[1])
+	}
+
+	// The server generates the response
+	w.Write([]byte(resBody))
 }
 
 func main() {
@@ -36,8 +48,8 @@ func createWAF() coraza.WAF {
 				SecResponseBodyAccess On
 				SecDebugLog /dev/stdout
 				SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
-				SecRule REQUEST_BODY "@contains somecontent" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
-				SecRule RESPONSE_BODY "@contains someothercontent" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
+				SecRule REQUEST_BODY "@contains password" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
+				SecRule RESPONSE_BODY "@contains creditcard" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
 			`),
 	)
 	if err != nil {

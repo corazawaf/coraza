@@ -10,10 +10,62 @@ package http
 import (
 	"io"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
 )
+
+// processRequest fills all transaction variables from an http.Request object
+// Most implementations of Coraza will probably use http.Request objects
+// so this will implement all phase 0, 1 and 2 variables
+// Note: This function will stop after an interruption
+// Note: Do not manually fill any request variables
+func processRequest(tx types.Transaction, req *http.Request) (*types.Interruption, error) {
+	var (
+		client string
+		cport  int
+	)
+	// IMPORTANT: Some http.Request.RemoteAddr implementations will not contain port or contain IPV6: [2001:db8::1]:8080
+	idx := strings.LastIndexByte(req.RemoteAddr, ':')
+	if idx != -1 {
+		client = req.RemoteAddr[:idx]
+		cport, _ = strconv.Atoi(req.RemoteAddr[idx+1:])
+	}
+
+	var in *types.Interruption
+	// There is no socket access in the request object, so we neither know the server client nor port.
+	tx.ProcessConnection(client, cport, "", 0)
+	tx.ProcessURI(req.URL.String(), req.Method, req.Proto)
+	for k, vr := range req.Header {
+		for _, v := range vr {
+			tx.AddRequestHeader(k, v)
+		}
+	}
+	// Host will always be removed from req.Headers(), so we manually add it
+	if req.Host != "" {
+		tx.AddRequestHeader("Host", req.Host)
+	}
+
+	in = tx.ProcessRequestHeaders()
+	if in != nil {
+		return in, nil
+	}
+	if req.Body != nil {
+		_, err := io.Copy(tx.RequestBodyWriter(), req.Body)
+		if err != nil {
+			return tx.GetInterruption(), err
+		}
+		reader, err := tx.RequestBodyReader()
+		if err != nil {
+			return tx.GetInterruption(), err
+		}
+		req.Body = io.NopCloser(reader)
+	}
+
+	return tx.ProcessRequestBody()
+}
 
 func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
@@ -32,16 +84,16 @@ func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
 		// It fails if any of these functions returns an error and it stops on interruption.
 		if it, err := processRequest(tx, r); err != nil {
 			l("failed to process request: %v", err)
-			h.ServeHTTP(w, r)
 			return
 		} else if it != nil {
 			processInterruption(w, it)
 			return
 		}
 
-		i := &rwInterceptor{w: w, tx: tx, StatusCode: 200}
+		ww := wrap(w, tx)
+
 		// We continue with the other middlewares by catching the response
-		h.ServeHTTP(i.wrap(w, tx), r)
+		h.ServeHTTP(ww, r)
 
 		for k, vv := range w.Header() {
 			for _, v := range vv {
@@ -49,7 +101,7 @@ func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
 			}
 		}
 
-		if it := tx.ProcessResponseHeaders(i.StatusCode, r.Proto); it != nil {
+		if it := tx.ProcessResponseHeaders(ww.StatusCode(), r.Proto); it != nil {
 			processInterruption(w, it)
 			return
 		}
@@ -70,9 +122,15 @@ func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
 			return
 		}
 
+		statusCode := ww.StatusCode()
+		if statusCode == 0 {
+			// If WriteHeader has not yet been called, Write calls
+			// WriteHeader(http.StatusOK) before writing the data
+			statusCode = http.StatusOK
+		}
+		w.WriteHeader(statusCode)
 		if _, err := io.Copy(w, reader); err != nil {
 			l("failed to copy the response body: %v", err)
-			w.WriteHeader(500)
 		}
 	}
 
