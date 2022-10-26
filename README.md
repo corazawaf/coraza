@@ -43,14 +43,14 @@ Key Features:
 
 The Coraza Project maintains implementations and plugins for the following servers: 
 
-* [Caddy Reverse Proxy and Webserver Plugin](https://github.com/corazawaf/coraza-caddy) (stable, needs a maintainer)
-* [HAProxy SPOE Plugin](https://github.com/corazawaf/coraza-spoa) (preview)
-* [Traefik Proxy Plugin](https://github.com/jptosso/coraza-traefik) (preview, needs maintainer)
-* [Gin Web Framework Middleware](https://github.com/jptosso/coraza-gin) (preview, needs maintainer)
-* [Apache HTTP Server](https://github.com/corazawaf/coraza-server) (experimental)
-* [Nginx](https://github.com/corazawaf/coraza-server) (experimental)
-* [Coraza C Library](https://github.com/corazawaf/libcoraza) (experimental)
-* Buffalo Web Framework Middleware (planned)
+* [Caddy Reverse Proxy and Webserver Plugin](https://github.com/corazawaf/coraza-caddy) - stable, needs a maintainer
+* [Proxy WASM extension](https://github.com/corazawaf/coraza) for proxies with proxy-wasm support (e.g. Envoy) - stable, still under development
+* [HAProxy SPOE Plugin](https://github.com/corazawaf/coraza-spoa) - preview
+* [Traefik Proxy Plugin](https://github.com/jptosso/coraza-traefik) - preview, needs maintainer
+* [Gin Web Framework Middleware](https://github.com/jptosso/coraza-gin) - preview, needs maintainer
+* [Apache HTTP Server](https://github.com/corazawaf/coraza-server) - experimental
+* [Nginx](https://github.com/corazawaf/coraza-server) - experimental
+* [Coraza C Library](https://github.com/corazawaf/libcoraza) - experimental
 
 ## Plugins
 
@@ -66,8 +66,8 @@ The Coraza Project maintains implementations and plugins for the following serve
 
 ## Prerequisites
 
-* Golang compiler v1.16+
-* Linux distribution (Debian or Centos recommended, Windows not supported yet)
+* Golang compiler v1.18+
+* Linux distribution (Debian or Centos recommended) or Mac. Windows not supported yet.
 
 
 ## Coraza Core Usage
