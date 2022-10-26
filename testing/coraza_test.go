@@ -33,7 +33,7 @@ func TestEngine(t *testing.T) {
 
 					for _, e := range test.OutputErrors() {
 						debug := ""
-						for _, mr := range test.transaction.GetMatchedRules() {
+						for _, mr := range test.transaction.MatchedRules() {
 							debug += fmt.Sprintf(" %d", mr.Rule.ID)
 						}
 						if testing.Verbose() {

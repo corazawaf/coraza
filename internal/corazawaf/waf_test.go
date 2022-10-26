@@ -24,15 +24,15 @@ func TestNewTransaction(t *testing.T) {
 	if tx.RequestBodyLimit != 1044 {
 		t.Error("Request body limit not set")
 	}
-	if tx.ID != "test" {
+	if tx.id != "test" {
 		t.Error("ID not set")
 	}
 	tx = waf.NewTransactionWithID("")
-	if tx.ID == "" {
+	if tx.id == "" {
 		t.Error("ID not set")
 	}
 	tx = waf.NewTransaction()
-	if tx.ID == "" {
+	if tx.id == "" {
 		t.Error("ID not set")
 	}
 }

@@ -181,11 +181,11 @@ func TestRequestBody(t *testing.T) {
 			}
 
 			if testCase.shouldInterrupt {
-				if tx.Interruption == nil {
+				if tx.interruption == nil {
 					t.Error("expected interruption")
 				}
 			} else {
-				val := tx.Variables.ArgsPost.Get("some")
+				val := tx.variables.argsPost.Get("some")
 				if len(val) != 1 || val[0] != "result" {
 					t.Error("Failed to set url encoded post data")
 				}
@@ -199,7 +199,7 @@ func TestRequestBody(t *testing.T) {
 func TestResponseHeader(t *testing.T) {
 	tx := makeTransaction(t)
 	tx.AddResponseHeader("content-type", "test")
-	if tx.Variables.ResponseContentType.String() != "test" {
+	if tx.variables.responseContentType.String() != "test" {
 		t.Error("invalid RESPONSE_CONTENT_TYPE after response headers")
 	}
 
@@ -213,7 +213,7 @@ func TestAuditLog(t *testing.T) {
 	tx := makeTransaction(t)
 	tx.AuditLogParts = types.AuditLogParts("ABCDEFGHIJK")
 	al := tx.AuditLog()
-	if al.Transaction.ID != tx.ID {
+	if al.Transaction.ID != tx.id {
 		t.Error("invalid auditlog id")
 	}
 	// TODO more checks
@@ -233,7 +233,7 @@ func TestResponseBody(t *testing.T) {
 	if _, err := tx.ProcessResponseBody(); err != nil {
 		t.Error("Failed to process response body")
 	}
-	if tx.Variables.ResponseBody.String() != "test123" {
+	if tx.variables.responseBody.String() != "test123" {
 		t.Error("failed to set response body")
 	}
 	if err := tx.Close(); err != nil {
@@ -254,7 +254,7 @@ func TestAuditLogFields(t *testing.T) {
 			Variable:     variables.UniqueID,
 		},
 	})
-	if len(tx.MatchedRules) == 0 || tx.MatchedRules[0].Rule.ID != rule.ID {
+	if len(tx.matchedRules) == 0 || tx.matchedRules[0].Rule.ID != rule.ID {
 		t.Error("failed to match rule for audit")
 	}
 	al := tx.AuditLog()
@@ -276,11 +276,11 @@ func TestResetCapture(t *testing.T) {
 	tx := makeTransaction(t)
 	tx.Capture = true
 	tx.CaptureField(5, "test")
-	if tx.Variables.TX.Get("5")[0] != "test" {
+	if tx.variables.tx.Get("5")[0] != "test" {
 		t.Error("failed to set capture field from tx")
 	}
 	tx.resetCaptures()
-	if tx.Variables.TX.Get("5")[0] != "" {
+	if tx.variables.tx.Get("5")[0] != "" {
 		t.Error("failed to reset capture field from tx")
 	}
 	if err := tx.Close(); err != nil {
@@ -291,7 +291,7 @@ func TestResetCapture(t *testing.T) {
 func TestRelevantAuditLogging(t *testing.T) {
 	tx := makeTransaction(t)
 	tx.WAF.AuditLogRelevantStatus = regexp.MustCompile(`(403)`)
-	tx.Variables.ResponseStatus.Set("403")
+	tx.variables.responseStatus.Set("403")
 	tx.AuditEngine = types.AuditEngineRelevantOnly
 	// tx.WAF.auditLogger = loggers.NewAuditLogger()
 	tx.ProcessLogging()
@@ -315,7 +315,7 @@ func TestLogCallback(t *testing.T) {
 			Variable:     variables.UniqueID,
 		},
 	})
-	if buffer == "" && strings.Contains(buffer, tx.ID) {
+	if buffer == "" && strings.Contains(buffer, tx.id) {
 		t.Error("failed to call error log callback")
 	}
 	if err := tx.Close(); err != nil {
@@ -328,17 +328,17 @@ func TestHeaderSetters(t *testing.T) {
 	tx := waf.NewTransaction()
 	tx.AddRequestHeader("cookie", "abc=def;hij=klm")
 	tx.AddRequestHeader("test1", "test2")
-	c := tx.Variables.RequestCookies.Get("abc")[0]
+	c := tx.variables.requestCookies.Get("abc")[0]
 	if c != "def" {
 		t.Errorf("failed to set cookie, got %q", c)
 	}
-	if tx.Variables.RequestHeaders.Get("cookie")[0] != "abc=def;hij=klm" {
+	if tx.variables.requestHeaders.Get("cookie")[0] != "abc=def;hij=klm" {
 		t.Error("failed to set request header")
 	}
-	if !utils.InSlice("cookie", tx.Variables.RequestHeadersNames.Get("cookie")) {
-		t.Error("failed to set header name", tx.Variables.RequestHeadersNames.Get("cookie"))
+	if !utils.InSlice("cookie", tx.variables.requestHeadersNames.Get("cookie")) {
+		t.Error("failed to set header name", tx.variables.requestHeadersNames.Get("cookie"))
 	}
-	if !utils.InSlice("abc", tx.Variables.RequestCookiesNames.Get("abc")) {
+	if !utils.InSlice("abc", tx.variables.requestCookiesNames.Get("abc")) {
 		t.Error("failed to set cookie name")
 	}
 	if err := tx.Close(); err != nil {
@@ -360,7 +360,7 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error("failed to process request body")
 	}
-	if tx.Variables.RequestBody.String() != "test123" {
+	if tx.variables.requestBody.String() != "test123" {
 		t.Error("failed to set request body")
 	}
 	if err := tx.Close(); err != nil {
@@ -446,7 +446,7 @@ func TestAuditLogMessages(t *testing.T) {
 func TestTransactionSyncPool(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
-	tx.MatchedRules = append(tx.MatchedRules, types.MatchedRule{
+	tx.matchedRules = append(tx.matchedRules, types.MatchedRule{
 		Rule: types.RuleMetadata{
 			ID: 1234,
 		},
@@ -456,8 +456,8 @@ func TestTransactionSyncPool(t *testing.T) {
 			t.Error(err)
 		}
 		tx = waf.NewTransaction()
-		if len(tx.MatchedRules) != 0 {
-			t.Errorf("failed to sync transaction pool, %d rules found after %d attempts", len(tx.MatchedRules), i+1)
+		if len(tx.matchedRules) != 0 {
+			t.Errorf("failed to sync transaction pool, %d rules found after %d attempts", len(tx.matchedRules), i+1)
 			return
 		}
 	}
@@ -475,10 +475,10 @@ func TestTxPhase4Magic(t *testing.T) {
 	if _, err := tx.ProcessResponseBody(); err != nil {
 		t.Error(err)
 	}
-	if tx.Variables.OutboundDataError.String() != "1" {
+	if tx.variables.outboundDataError.String() != "1" {
 		t.Error("failed to set outbound data error")
 	}
-	if tx.Variables.ResponseBody.String() != "mor" {
+	if tx.variables.responseBody.String() != "mor" {
 		t.Error("failed to set response body")
 	}
 }
@@ -503,7 +503,7 @@ func TestVariablesMatch(t *testing.T) {
 		}
 	}
 
-	if len(tx.Variables.MatchedVars.Get("ARGS_NAMES:sample")) == 0 {
+	if len(tx.variables.matchedVars.Get("ARGS_NAMES:sample")) == 0 {
 		t.Errorf("failed to match variable %s, got 0", variables.MatchedVars.Name())
 	}
 }
@@ -519,7 +519,7 @@ func TestTxReqBodyForce(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error(err)
 	}
-	if tx.Variables.RequestBody.String() != "test" {
+	if tx.variables.requestBody.String() != "test" {
 		t.Error("failed to set request body")
 	}
 }
@@ -535,7 +535,7 @@ func TestTxReqBodyForceNegative(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error(err)
 	}
-	if tx.Variables.RequestBody.String() == "test" {
+	if tx.variables.requestBody.String() == "test" {
 		t.Error("reqbody should not be there")
 	}
 }
@@ -544,10 +544,10 @@ func TestTxProcessConnection(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
 	tx.ProcessConnection("127.0.0.1", 80, "127.0.0.2", 8080)
-	if tx.Variables.RemoteAddr.String() != "127.0.0.1" {
+	if tx.variables.remoteAddr.String() != "127.0.0.1" {
 		t.Error("failed to set client ip")
 	}
-	if tx.Variables.RemotePort.Int() != 80 {
+	if tx.variables.remotePort.Int() != 80 {
 		t.Error("failed to set client port")
 	}
 }
@@ -568,19 +568,19 @@ func TestTxProcessURI(t *testing.T) {
 	tx := waf.NewTransaction()
 	uri := "http://example.com/path/to/file.html?query=string&other=value"
 	tx.ProcessURI(uri, "GET", "HTTP/1.1")
-	if s := tx.Variables.RequestURI.String(); s != uri {
+	if s := tx.variables.requestURI.String(); s != uri {
 		t.Errorf("failed to set request uri, got %s", s)
 	}
-	if s := tx.Variables.RequestBasename.String(); s != "file.html" {
+	if s := tx.variables.requestBasename.String(); s != "file.html" {
 		t.Errorf("failed to set request path, got %s", s)
 	}
-	if tx.Variables.QueryString.String() != "query=string&other=value" {
+	if tx.variables.queryString.String() != "query=string&other=value" {
 		t.Error("failed to set request query")
 	}
-	if v := tx.Variables.Args.FindAll(); len(v) != 2 {
+	if v := tx.variables.args.FindAll(); len(v) != 2 {
 		t.Errorf("failed to set request args, got %d", len(v))
 	}
-	if v := tx.Variables.Args.FindString("other"); v[0].Value != "value" {
+	if v := tx.variables.args.FindString("other"); v[0].Value != "value" {
 		t.Errorf("failed to set request args, got %v", v)
 	}
 }
@@ -672,13 +672,13 @@ func validateMacroExpansion(tests map[string]string, tx *Transaction, t *testing
 
 func TestMacro(t *testing.T) {
 	tx := makeTransaction(t)
-	tx.Variables.TX.Set("some", []string{"secretly"})
+	tx.variables.tx.Set("some", []string{"secretly"})
 	m, err := macro.NewMacro("%{unique_id}")
 	if err != nil {
 		t.Error(err)
 	}
-	if m.Expand(tx) != tx.ID {
-		t.Errorf("%s != %s", m.Expand(tx), tx.ID)
+	if m.Expand(tx) != tx.id {
+		t.Errorf("%s != %s", m.Expand(tx), tx.id)
 	}
 	m, err = macro.NewMacro("some complex text %{tx.some} wrapped in m")
 	if err != nil {
@@ -707,8 +707,8 @@ func BenchmarkMacro(b *testing.B) {
 	}
 
 	tx := makeTransaction(b)
-	tx.Variables.TX.Set("a", []string{"hello"})
-	tx.Variables.TX.Set("b", []string{"world"})
+	tx.variables.tx.Set("a", []string{"hello"})
+	tx.variables.tx.Set("b", []string{"world"})
 
 	for _, tc := range tests {
 		m, err := macro.NewMacro(tc)

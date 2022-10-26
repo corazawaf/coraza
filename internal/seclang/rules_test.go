@@ -28,14 +28,14 @@ func TestRuleMatch(t *testing.T) {
 	tx := waf.NewTransaction()
 	tx.ProcessConnection("127.0.0.1", 0, "", 0)
 	tx.ProcessRequestHeaders()
-	if len(tx.MatchedRules) != 1 {
-		t.Errorf("failed to match rules with %d", len(tx.MatchedRules))
+	if len(tx.MatchedRules()) != 1 {
+		t.Errorf("failed to match rules with %d", len(tx.MatchedRules()))
 	}
-	if tx.Interruption == nil {
+	if tx.Interruption() == nil {
 		t.Error("failed to interrupt transaction")
 	}
 
-	if tx.Interruption.RuleID != 1 {
+	if tx.Interruption().RuleID != 1 {
 		t.Error("failed to set interruption rule id")
 	}
 }
@@ -54,12 +54,12 @@ func TestRuleMatchWithRegex(t *testing.T) {
 	tx := waf.NewTransaction()
 	tx.AddArgument("GET", "id_test", "123")
 	tx.ProcessRequestHeaders()
-	if len(tx.MatchedRules) != 1 {
-		t.Errorf("failed to match rules with %d", len(tx.MatchedRules))
+	if len(tx.MatchedRules()) != 1 {
+		t.Errorf("failed to match rules with %d", len(tx.MatchedRules()))
 	}
-	if tx.Interruption == nil {
+	if tx.Interruption() == nil {
 		t.Error("failed to interrupt transaction")
-	} else if tx.Interruption.RuleID != 1 {
+	} else if tx.Interruption().RuleID != 1 {
 		t.Error("failed to set interruption rule id")
 	}
 }
@@ -94,7 +94,7 @@ func TestSecMarkers(t *testing.T) {
 	if interruption == nil || err != nil {
 		t.Error("failed to interrupt")
 	}
-	if len(tx.MatchedRules) == 1 {
+	if len(tx.MatchedRules()) == 1 {
 		t.Errorf("not matching any rule after secmark")
 	}
 }
@@ -119,7 +119,7 @@ func TestSecAuditLogs(t *testing.T) {
 	}
 	tx.ProcessLogging()
 
-	if len(tx.MatchedRules) == 0 {
+	if len(tx.MatchedRules()) == 0 {
 		t.Error("failed to match rules")
 	}
 
@@ -147,8 +147,8 @@ func TestRuleLogging(t *testing.T) {
 	tx.AddArgument("GET", "test1", "123")
 	tx.AddArgument("GET", "test2", "456")
 	tx.ProcessRequestHeaders()
-	if len(tx.MatchedRules) != 3 {
-		t.Errorf("failed to match rules with %d", len(tx.MatchedRules))
+	if len(tx.MatchedRules()) != 3 {
+		t.Errorf("failed to match rules with %d", len(tx.MatchedRules()))
 	}
 	// we expect 2 logs
 	if len(logs) != 2 {
@@ -184,8 +184,8 @@ func TestRuleChains(t *testing.T) {
 	tx.AddArgument("GET", "test1", "123")
 	tx.AddArgument("GET", "test2", "456")
 	tx.ProcessRequestHeaders()
-	if len(tx.MatchedRules) != 1 {
-		t.Errorf("failed to match rules with %d matches, expected 1", len(tx.MatchedRules))
+	if len(tx.MatchedRules()) != 1 {
+		t.Errorf("failed to match rules with %d matches, expected 1", len(tx.MatchedRules()))
 	}
 }
 
@@ -206,8 +206,8 @@ func TestTagsAreNotPrintedTwice(t *testing.T) {
 	tx.AddArgument("GET", "test1", "123")
 	tx.AddArgument("GET", "test2", "456")
 	tx.ProcessRequestHeaders()
-	if len(tx.MatchedRules) != 1 {
-		t.Errorf("failed to match rules with %d", len(tx.MatchedRules))
+	if len(tx.MatchedRules()) != 1 {
+		t.Errorf("failed to match rules with %d", len(tx.MatchedRules()))
 	}
 	// we expect 1 log
 	if len(logs) != 1 {
@@ -278,8 +278,8 @@ func TestLogsAreNotPrintedManyTimes(t *testing.T) {
 	tx.AddArgument("GET", "test2", "789")
 	tx.AddRequestHeader("test", "123")
 	tx.ProcessRequestHeaders()
-	if len(tx.MatchedRules) != 1 {
-		t.Errorf("failed to match rules with %d", len(tx.MatchedRules))
+	if len(tx.MatchedRules()) != 1 {
+		t.Errorf("failed to match rules with %d", len(tx.MatchedRules()))
 	}
 	// we expect 2 logs
 	if len(logs) != 1 {
@@ -327,12 +327,12 @@ func TestTxIssue147(t *testing.T) {
 		}
 		if it != nil {
 			httpOutMsg := ""
-			for _, res := range tx.MatchedRules {
+			for _, res := range tx.MatchedRules() {
 				httpOutMsg = httpOutMsg + res.MatchedDatas[0].Key + ":" + res.MatchedDatas[0].Value + "\n"
 				httpOutMsg = httpOutMsg + "Message:" + res.MatchedDatas[0].Message + "\n"
 
 			}
-			if len(httpOutMsg) == 0 || len(tx.MatchedRules) == 0 {
+			if len(httpOutMsg) == 0 || len(tx.MatchedRules()) == 0 {
 				t.Error("failed to log")
 			}
 		} else {
@@ -573,7 +573,7 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 		t.Error(err)
 	}
 	if it == nil {
-		t.Errorf("failed to test arguments value match: Same case argument name, %+v\n", tx.MatchedRules)
+		t.Errorf("failed to test arguments value match: Same case argument name, %+v\n", tx.MatchedRules())
 	}
 
 	tx = waf.NewTransaction()
@@ -583,7 +583,7 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 		t.Error(err)
 	}
 	if it == nil {
-		t.Errorf("failed to test arguments value match: Upper case argument name, %+v\n", tx.MatchedRules)
+		t.Errorf("failed to test arguments value match: Upper case argument name, %+v\n", tx.MatchedRules())
 	}
 
 	tx = waf.NewTransaction()
@@ -593,7 +593,7 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 		t.Error(err)
 	}
 	if it == nil {
-		t.Errorf("failed to test arguments value match: Lower case argument name, %+v\n", tx.MatchedRules)
+		t.Errorf("failed to test arguments value match: Lower case argument name, %+v\n", tx.MatchedRules())
 	}
 
 	tx = waf.NewTransaction()
@@ -761,14 +761,14 @@ func TestParameterPollution(t *testing.T) {
 		t.Error(err)
 	}
 
-	if len(tx.MatchedRules) == 1 {
-		if len(tx.MatchedRules[0].MatchedDatas) != 1 {
+	if len(tx.MatchedRules()) == 1 {
+		if len(tx.MatchedRules()[0].MatchedDatas) != 1 {
 			t.Errorf("failed to test arguments pollution. Found matches: %d, %+v\n",
-				len(tx.MatchedRules[0].MatchedDatas), tx.MatchedRules)
+				len(tx.MatchedRules()[0].MatchedDatas), tx.MatchedRules())
 		}
 	} else {
 		t.Errorf("failed to test arguments pollution: Single match fixed case: %d, %+v\n",
-			len(tx.MatchedRules), tx.MatchedRules)
+			len(tx.MatchedRules()), tx.MatchedRules())
 	}
 
 	tx = waf.NewTransaction()
@@ -780,14 +780,14 @@ func TestParameterPollution(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if len(tx.MatchedRules) == 1 {
-		if len(tx.MatchedRules[0].MatchedDatas) != 2 {
+	if len(tx.MatchedRules()) == 1 {
+		if len(tx.MatchedRules()[0].MatchedDatas) != 2 {
 			t.Errorf("failed to test arguments pollution. Found matches: %d, %+v\n",
-				len(tx.MatchedRules[0].MatchedDatas), tx.MatchedRules)
+				len(tx.MatchedRules()[0].MatchedDatas), tx.MatchedRules())
 		}
 	} else {
 		t.Errorf("failed to test arguments pollution: Multiple match mixed case: %d, %+v\n",
-			len(tx.MatchedRules), tx.MatchedRules)
+			len(tx.MatchedRules()), tx.MatchedRules())
 	}
 
 }
@@ -810,17 +810,17 @@ func TestURIQueryParamCaseSensitive(t *testing.T) {
 		t.Error(err)
 	}
 
-	if len(tx.MatchedRules) == 1 {
-		if len(tx.MatchedRules[0].MatchedDatas) != 1 {
+	if len(tx.MatchedRules()) == 1 {
+		if len(tx.MatchedRules()[0].MatchedDatas) != 1 {
 			t.Errorf("failed to test uri query param. Found matches: %d, %+v\n",
-				len(tx.MatchedRules[0].MatchedDatas), tx.MatchedRules)
+				len(tx.MatchedRules()[0].MatchedDatas), tx.MatchedRules())
 		}
-		if !isMatchData(tx.MatchedRules[0].MatchedDatas, "Test1") {
-			t.Error("Key did not match: Test1 !=", tx.MatchedRules[0])
+		if !isMatchData(tx.MatchedRules()[0].MatchedDatas, "Test1") {
+			t.Error("Key did not match: Test1 !=", tx.MatchedRules()[0])
 		}
 	} else {
 		t.Errorf("failed to test uri query param: Same case arg name: %d, %+v\n",
-			len(tx.MatchedRules), tx.MatchedRules)
+			len(tx.MatchedRules()), tx.MatchedRules())
 	}
 
 	tx = waf.NewTransaction()
@@ -830,17 +830,17 @@ func TestURIQueryParamCaseSensitive(t *testing.T) {
 		t.Error(err)
 	}
 
-	if len(tx.MatchedRules) == 1 {
-		if len(tx.MatchedRules[0].MatchedDatas) != 3 {
+	if len(tx.MatchedRules()) == 1 {
+		if len(tx.MatchedRules()[0].MatchedDatas) != 3 {
 			t.Errorf("failed to test uri query param. Found matches: %d, %+v\n",
-				len(tx.MatchedRules[0].MatchedDatas), tx.MatchedRules)
+				len(tx.MatchedRules()[0].MatchedDatas), tx.MatchedRules())
 		}
-		if !isMatchData(tx.MatchedRules[0].MatchedDatas, "Test1") {
-			t.Error("Key did not match: Test1 !=", tx.MatchedRules[0])
+		if !isMatchData(tx.MatchedRules()[0].MatchedDatas, "Test1") {
+			t.Error("Key did not match: Test1 !=", tx.MatchedRules()[0])
 		}
 	} else {
 		t.Errorf("failed to test qparam pollution: Multiple arg different case: %d, %+v\n",
-			len(tx.MatchedRules), tx.MatchedRules)
+			len(tx.MatchedRules()), tx.MatchedRules())
 	}
 }
 
@@ -867,17 +867,17 @@ func TestURIQueryParamNameCaseSensitive(t *testing.T) {
 		t.Error(err)
 	}
 
-	if len(tx.MatchedRules) == 1 {
-		if len(tx.MatchedRules[0].MatchedDatas) != 1 {
+	if len(tx.MatchedRules()) == 1 {
+		if len(tx.MatchedRules()[0].MatchedDatas) != 1 {
 			t.Errorf("failed to test uri query param. Expected: 1, Found matches: %d, %+v\n",
-				len(tx.MatchedRules[0].MatchedDatas), tx.MatchedRules)
+				len(tx.MatchedRules()[0].MatchedDatas), tx.MatchedRules())
 		}
-		if !isMatchData(tx.MatchedRules[0].MatchedDatas, "Test1") {
-			t.Error("Key did not match: Test1 !=", tx.MatchedRules[0])
+		if !isMatchData(tx.MatchedRules()[0].MatchedDatas, "Test1") {
+			t.Error("Key did not match: Test1 !=", tx.MatchedRules()[0])
 		}
 	} else {
 		t.Errorf("failed to test uri query param: Same case arg name:%d, %+v\n",
-			len(tx.MatchedRules), tx.MatchedRules)
+			len(tx.MatchedRules()), tx.MatchedRules())
 	}
 
 	tx = waf.NewTransaction()
@@ -887,17 +887,17 @@ func TestURIQueryParamNameCaseSensitive(t *testing.T) {
 		t.Error(err)
 	}
 
-	if len(tx.MatchedRules) == 1 {
-		if len(tx.MatchedRules[0].MatchedDatas) != 1 {
+	if len(tx.MatchedRules()) == 1 {
+		if len(tx.MatchedRules()[0].MatchedDatas) != 1 {
 			t.Errorf("Failed to test uri query param. Expected: 1, Found matches: %d, %+v\n",
-				len(tx.MatchedRules[0].MatchedDatas), tx.MatchedRules)
+				len(tx.MatchedRules()[0].MatchedDatas), tx.MatchedRules())
 		}
-		if !isMatchData(tx.MatchedRules[0].MatchedDatas, "Test1") {
-			t.Error("Key did not match: Test1 !=", tx.MatchedRules[0])
+		if !isMatchData(tx.MatchedRules()[0].MatchedDatas, "Test1") {
+			t.Error("Key did not match: Test1 !=", tx.MatchedRules()[0])
 		}
 	} else {
 		t.Error("failed to test qparam pollution: Multiple arg different case:",
-			len(tx.MatchedRules))
+			len(tx.MatchedRules()))
 	}
 }
 */

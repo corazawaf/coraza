@@ -91,14 +91,14 @@ func (a *ctlFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
 		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
 			if utils.InSlice(a.value, r.Tags) {
-				tx.RemoveRuleTargetByID(r.ID, a.collection, a.colKey)
+				tx.RemoveRuleTargetByID(r.GetID(), a.collection, a.colKey)
 			}
 		}
 	case ctlRuleRemoveTargetByMsg:
 		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
 			if r.Msg != nil && r.Msg.String() == a.value {
-				tx.RemoveRuleTargetByID(r.ID, a.collection, a.colKey)
+				tx.RemoveRuleTargetByID(r.GetID(), a.collection, a.colKey)
 			}
 		}
 	case ctlAuditEngine:
@@ -162,7 +162,7 @@ func (a *ctlFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
 			}
 		}
 	case ctlRequestBodyProcessor:
-		tx.Variables.ReqbodyProcessor.Set(strings.ToUpper(a.value))
+		tx.Variables().RequestBodyProcessor().Set(strings.ToUpper(a.value))
 	case ctlHashEngine:
 		// Not supported yet
 	case ctlHashEnforcement:

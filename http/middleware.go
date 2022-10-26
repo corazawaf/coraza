@@ -55,11 +55,11 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 	if req.Body != nil {
 		_, err := io.Copy(tx.RequestBodyWriter(), req.Body)
 		if err != nil {
-			return tx.GetInterruption(), err
+			return tx.Interruption(), err
 		}
 		reader, err := tx.RequestBodyReader()
 		if err != nil {
-			return tx.GetInterruption(), err
+			return tx.Interruption(), err
 		}
 		req.Body = io.NopCloser(reader)
 	}
