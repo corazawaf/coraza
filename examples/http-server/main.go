@@ -46,6 +46,7 @@ func createWAF() coraza.WAF {
 				SecDebugLogLevel 5
 				SecRequestBodyAccess On
 				SecResponseBodyAccess On
+				SecResponseBodyMimeType text/plain
 				SecDebugLog /dev/stdout
 				SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
 				SecRule REQUEST_BODY "@contains password" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
