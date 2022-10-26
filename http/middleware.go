@@ -128,6 +128,8 @@ func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
 			// WriteHeader(http.StatusOK) before writing the data
 			statusCode = http.StatusOK
 		}
+		// Interceptor never calls the WritHeader, hence we call it here reusing
+		// intercepted status code.
 		w.WriteHeader(statusCode)
 		if _, err := io.Copy(w, reader); err != nil {
 			l("failed to copy the response body: %v", err)
