@@ -4,7 +4,6 @@
 package corazawaf
 
 import (
-	"context"
 	"io"
 	"os"
 	"testing"
@@ -15,7 +14,7 @@ func TestNewTransaction(t *testing.T) {
 	waf.RequestBodyAccess = true
 	waf.ResponseBodyAccess = true
 	waf.RequestBodyLimit = 1044
-	tx := waf.NewTransactionWithID(context.Background(), "test")
+	tx := waf.NewTransactionWithID("test")
 	if !tx.RequestBodyAccess {
 		t.Error("Request body access not enabled")
 	}
@@ -28,11 +27,11 @@ func TestNewTransaction(t *testing.T) {
 	if tx.ID != "test" {
 		t.Error("ID not set")
 	}
-	tx = waf.NewTransactionWithID(context.Background(), "")
+	tx = waf.NewTransactionWithID("")
 	if tx.ID == "" {
 		t.Error("ID not set")
 	}
-	tx = waf.NewTransaction(context.Background())
+	tx = waf.NewTransaction()
 	if tx.ID == "" {
 		t.Error("ID not set")
 	}

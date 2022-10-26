@@ -53,7 +53,7 @@ func (l *debugLogger) SetLevel(level loggers.LogLevel) {
 	l.t.Logf("Setting level to %q", level.String())
 }
 
-func (l *debugLogger) SetOutput(w io.Writer) {
+func (l *debugLogger) SetOutput(w io.WriteCloser) {
 	l.t.Log("ignoring SecDebugLog directive, debug logs are always routed to proxy logs")
 }
 
@@ -78,34 +78,47 @@ func createWAF(t *testing.T) coraza.WAF {
 
 func TestHttpServer(t *testing.T) {
 	tests := map[string]struct {
+		http2            bool
 		reqURI           string
 		reqBody          string
 		respBody         string
+		expectedProto    string
 		expectedStatus   int
 		expectedRespBody string
 	}{
 		"no blocking": {
 			reqURI:         "/hello",
+			expectedProto:  "HTTP/1.1",
+			expectedStatus: 201,
+		},
+		"no blocking HTTP/2": {
+			http2:          true,
+			reqURI:         "/hello",
+			expectedProto:  "HTTP/2.0",
 			expectedStatus: 201,
 		},
 		"args blocking": {
 			reqURI:         "/hello?id=0",
+			expectedProto:  "HTTP/1.1",
 			expectedStatus: 403,
 		},
 		"request body blocking": {
 			reqURI:         "/hello",
 			reqBody:        "eval('cat /etc/passwd')",
+			expectedProto:  "HTTP/1.1",
 			expectedStatus: 403,
 		},
 		"response body not blocking": {
 			reqURI:           "/hello",
 			respBody:         "true negative response body",
+			expectedProto:    "HTTP/1.1",
 			expectedStatus:   201,
 			expectedRespBody: "true negative response body",
 		},
 		"response body blocking": {
 			reqURI:           "/hello",
 			respBody:         "password=xxxx",
+			expectedProto:    "HTTP/1.1",
 			expectedStatus:   201,
 			expectedRespBody: "", // blocking at response body phase means returning it empty
 		},
@@ -118,7 +131,11 @@ func TestHttpServer(t *testing.T) {
 			defer close(serverErrC)
 
 			// Spin up the test server
-			srv := httptest.NewServer(WrapHandler(createWAF(t), t.Logf, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			ts := httptest.NewUnstartedServer(WrapHandler(createWAF(t), t.Logf, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				if want, have := tCase.expectedProto, w.(ResponseWriter).Proto(); want != have {
+					t.Errorf("unexpected proto, want: %s, have: %s", want, have)
+				}
+
 				w.Header().Set("Content-Type", "text/plain")
 				_, err := w.Write([]byte(tCase.respBody))
 				if err != nil {
@@ -127,16 +144,22 @@ func TestHttpServer(t *testing.T) {
 				w.Header().Add("coraza-middleware", "true")
 				w.WriteHeader(201)
 			})))
-			defer srv.Close()
+			if tCase.http2 {
+				ts.EnableHTTP2 = true
+				ts.StartTLS()
+			} else {
+				ts.Start()
+			}
+			defer ts.Close()
 
 			var reqBody io.Reader
 			if tCase.reqBody != "" {
 				reqBody = strings.NewReader(tCase.reqBody)
 			}
-			req, _ := http.NewRequest("POST", srv.URL+tCase.reqURI, reqBody)
+			req, _ := http.NewRequest("POST", ts.URL+tCase.reqURI, reqBody)
 			// TODO(jcchavezs): Fix it once the discussion in https://github.com/corazawaf/coraza/issues/438 is settled
 			req.Header.Add("content-type", "application/x-www-form-urlencoded")
-			res, err := http.DefaultClient.Do(req)
+			res, err := ts.Client().Do(req)
 			if err != nil {
 				t.Fatalf("unexpected error when performing the request: %v", err)
 			}

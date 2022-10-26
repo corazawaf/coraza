@@ -9,7 +9,6 @@
 package testing
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -42,7 +41,7 @@ func TestAuditLogMessages(t *testing.T) {
 		t.Error(err)
 	}
 	defer os.Remove(file.Name())
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.AddArgument("GET", "test", "test")
 	tx.ProcessRequestHeaders()
 	al := tx.AuditLog()
@@ -91,7 +90,7 @@ func TestAuditLogRelevantOnly(t *testing.T) {
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
 		t.Error(err)
 	}
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.AddArgument("GET", "test", "test")
 	tx.ProcessRequestHeaders()
 	// now we read file
@@ -128,7 +127,7 @@ func TestAuditLogRelevantOnlyOk(t *testing.T) {
 	`); err != nil {
 		t.Error(err)
 	}
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.AddArgument("GET", "test", "test")
 	tx.ProcessRequestHeaders()
 	// now we read file
@@ -165,7 +164,7 @@ func TestAuditLogRelevantOnlyNoAuditlog(t *testing.T) {
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
 		t.Error(err)
 	}
-	tx := waf.NewTransaction(context.Background())
+	tx := waf.NewTransaction()
 	tx.AddArgument("GET", "test", "test")
 	tx.ProcessRequestHeaders()
 	// now we read file

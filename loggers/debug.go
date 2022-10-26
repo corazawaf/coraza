@@ -21,8 +21,9 @@ type DebugLogger interface {
 	Trace(message string, args ...interface{})
 	// SetLevel sets the log level
 	SetLevel(level LogLevel)
-	// SetOutput sets the output for the logger
-	SetOutput(w io.Writer)
+	// SetOutput sets the output for the logger and closes
+	// the former output if any.
+	SetOutput(w io.WriteCloser)
 }
 
 // LogLevel is the type of log level

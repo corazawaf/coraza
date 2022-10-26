@@ -13,6 +13,7 @@ import (
 
 // DebugLogger is a logger that logs to the standard logger
 type stdDebugLogger struct {
+	io.Closer
 	logger *log.Logger
 	Level  loggers.LogLevel
 }
@@ -60,12 +61,10 @@ func (l *stdDebugLogger) SetLevel(level loggers.LogLevel) {
 }
 
 // SetOutput sets the output for the logger
-func (l *stdDebugLogger) SetOutput(w io.Writer) {
+func (l *stdDebugLogger) SetOutput(w io.WriteCloser) {
+	if l.Closer != nil {
+		l.Closer.Close()
+	}
 	l.logger.SetOutput(w)
-}
-
-// Close closes the logger
-func (l *stdDebugLogger) Close() error {
-	// TODO
-	return nil
+	l.Closer = w
 }

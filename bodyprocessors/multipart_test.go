@@ -55,8 +55,8 @@ Content-Type: text/html
 	}
 }
 
-func createCollections() [types.VariablesCount]collection.Collection {
-	collections := [types.VariablesCount]collection.Collection{}
+func createCollections() []collection.Collection {
+	collections := make([]collection.Collection, types.VariablesCount)
 	collections[variables.Files] = collection.NewMap(variables.Files)
 	collections[variables.FilesTmpNames] = collection.NewMap(variables.FilesTmpNames)
 	collections[variables.FilesSizes] = collection.NewMap(variables.FilesSizes)

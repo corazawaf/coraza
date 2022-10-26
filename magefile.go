@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/magefile/mage/mg"
@@ -70,27 +69,14 @@ func Test() error {
 	if err := sh.RunV("go", "test", "./..."); err != nil {
 		return err
 	}
+	if err := sh.RunV("go", "test", "./examples/http-server"); err != nil {
+		return err
+	}
+	if err := sh.RunV("go", "test", "./testing/coreruleset"); err != nil {
+		return err
+	}
 
-	// Iterates over examples' tests
-	return filepath.WalkDir("./examples/", func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			// Runs tests under all directories with a go.mod file
-			if _, err := os.Stat(filepath.Join(path, "go.mod")); err == nil {
-				cmd := exec.Command("go", "test", "./...")
-				cmd.Dir = "examples/" + d.Name()
-				out, err := cmd.Output()
-				fmt.Printf(string(out))
-				if err != nil {
-					return err
-				}
-			}
-		}
-		return nil
-	})
-
+	return nil
 }
 
 // Coverage runs tests with coverage and race detector enabled.

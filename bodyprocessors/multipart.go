@@ -14,14 +14,13 @@ import (
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/environment"
-	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 type multipartBodyProcessor struct {
 }
 
-func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, collections [types.VariablesCount]collection.Collection, options Options) error {
+func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, collections []collection.Collection, options Options) error {
 	mimeType := options.Mime
 	storagePath := options.StoragePath
 	mediaType, params, err := mime.ParseMediaType(mimeType)
@@ -95,7 +94,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, collections 
 	return nil
 }
 
-func (mbp *multipartBodyProcessor) ProcessResponse(reader io.Reader, collection [types.VariablesCount]collection.Collection, options Options) error {
+func (mbp *multipartBodyProcessor) ProcessResponse(reader io.Reader, collection []collection.Collection, options Options) error {
 	return nil
 }
 
