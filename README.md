@@ -105,11 +105,12 @@ func main() {
 	}
 }
 ```
+[Examples/http-server](./examples/http-server/) provides an example to practice with Coraza.
 
 ## Tools
 
-* [Go FTW](https://github.com/fzipi/go-ftw): rule testing engine
-* [Coraza Playground](https://playground.coraza.io/): sandbox rule testing web interface
+* [Go FTW](https://github.com/coreruleset/go-ftw): Rule testing engine
+* [Coraza Playground](https://playground.coraza.io/): Sandbox rule testing web interface
 * [OWASP Core Ruleset](https://github.com/coreruleset/coreruleset/): Awesome rule set, compatible with Coraza
 
 ## Development

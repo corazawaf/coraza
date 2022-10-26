@@ -4,19 +4,35 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/corazawaf/coraza/v3"
 	txhttp "github.com/corazawaf/coraza/v3/http"
+	ctypes "github.com/corazawaf/coraza/v3/types"
 )
 
-func hello(w http.ResponseWriter, req *http.Request) {
-	fmt.Fprintf(w, "hello world, not disrupted.\n")
+func exampleHandler(w http.ResponseWriter, req *http.Request) {
+	resBody := "Hello world, transaction not disrupted."
+	w.Header().Set("Content-Type", "text/plain")
+
+	if body := os.Getenv("RESPONSE_BODY"); body != "" {
+		resBody = body
+	}
+
+	if h := os.Getenv("RESPONSE_HEADERS"); h != "" {
+		kv := strings.Split(h, ":")
+		w.Header().Set(kv[0], kv[1])
+	}
+
+	// The server generates the response
+	w.Write([]byte(resBody))
 }
 
 func main() {
 	waf := createWAF()
 
-	http.Handle("/hello", txhttp.WrapHandler(waf, txhttp.StdLogger, http.HandlerFunc(hello)))
+	http.Handle("/", txhttp.WrapHandler(waf, txhttp.StdLogger, http.HandlerFunc(exampleHandler)))
 
 	fmt.Println("Server is running. Listening port: 8090")
 
@@ -24,20 +40,23 @@ func main() {
 }
 
 func createWAF() coraza.WAF {
+	directivesFile := "./default.conf"
+	if s := os.Getenv("DIRECTIVES_FILE"); s != "" {
+		directivesFile = s
+	}
+
 	waf, err := coraza.NewWAF(
 		coraza.NewWAFConfig().
-			WithDirectives(`
-				# This is a comment
-				SecDebugLogLevel 5
-				SecRequestBodyAccess On
-				SecDebugLog /dev/stdout
-				SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
-				SecRule REQUEST_BODY "somecontent" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
-				SecRule RESPONSE_BODY "somecontent" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
-			`),
+			WithErrorLogger(logError).
+			WithDirectivesFromFile(directivesFile),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return waf
+}
+
+func logError(error ctypes.MatchedRule) {
+	msg := error.ErrorLog(0)
+	fmt.Printf("[logError][%s] %s", error.Rule.Severity, msg)
 }
