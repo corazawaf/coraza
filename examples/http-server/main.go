@@ -14,11 +14,12 @@ import (
 
 func hello(w http.ResponseWriter, req *http.Request) {
 	resBody := "Hello world, transaction not disrupted."
+	w.Header().Set("Content-Type", "text/plain")
+
 	if body := os.Getenv("RESPONSE_BODY"); body != "" {
 		resBody = body
 	}
 
-	w.Header().Set("Content-Type", "text/plain")
 	if h := os.Getenv("RESPONSE_HEADERS"); h != "" {
 		kv := strings.Split(h, ":")
 		w.Header().Set(kv[0], kv[1])
@@ -50,6 +51,7 @@ func createWAF() coraza.WAF {
 				SecDebugLog /dev/stdout
 				SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
 				SecRule REQUEST_BODY "@contains password" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
+				SecRule RESPONSE_HEADERS:Foo "@pm bar" "id:199,phase:3,deny,t:lowercase,deny, status:403,msg:'Invalid response header',log,auditlog"
 				SecRule RESPONSE_BODY "@contains creditcard" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
 			`),
 	)
