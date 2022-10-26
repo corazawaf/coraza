@@ -1,8 +1,8 @@
-## HTTP-Server with Coraza
+# HTTP-Server with Coraza
 
 This example is intended to provide a straightforward way to spin up Coraza and grasp its behaviour.
 
-### Run the example
+## Run the example
 
 ```bash
 go run . 
@@ -15,6 +15,12 @@ The server will be reachable at `http://localhost:8090`.
 curl -i 'localhost:8090/hello?id=0'
 # True negative request (200 OK)
 curl -i 'localhost:8090/hello'
+```
+
+You can customise the rules to be used by using the `DIRECTIVES_FILE` environment variable to load a directives file:
+
+```bash
+DIRECTIVES_FILE=my_directives.conf go run . 
 ```
 
 You can also customise response body and response headers by using `RESPONSE_HEADERS` and `RESPONSE_BODY` environment variables respectively:
@@ -30,11 +36,11 @@ And then
 curl -i 'localhost:8090/hello'
 ```
 
-### Customize WAF rules
+## Customize WAF rules
 
 The configuration of the WAF is provided directly inside the code under [main.go](https://github.com/corazawaf/coraza/blob/v3/dev/examples/http-server/main.go#L35). Feel free to play with it.
 
-### Customize server behaviour
+## Customize server behaviour
 
 Customizing as shown below the [interceptor logic](https://github.com/corazawaf/coraza/blob/v3/dev/http/interceptor.go#L33), it is possible to make the example capable of echoing the body request. It comes in handy for testing rules that match the response body.
 
