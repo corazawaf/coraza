@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/corazawaf/coraza/v3/types"
 	"log"
 	"net/http"
 	"os"
@@ -55,7 +56,7 @@ func createWAF() coraza.WAF {
 	return waf
 }
 
-func logError(error corazawaf.MatchedRule) {
+func logError(error types.MatchedRule) {
 	msg := error.ErrorLog(0)
-	fmt.Printf("[logError][%s] %s", error.Rule_.Severity_, msg)
+	fmt.Printf("[logError][%s] %s", error.Rule().Severity(), msg)
 }
