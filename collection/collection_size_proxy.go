@@ -20,12 +20,12 @@ type SizeProxy struct {
 }
 
 // FindRegex returns a slice of MatchData for the regex
-func (c *SizeProxy) FindRegex(key *regexp.Regexp) []types.MatchData {
+func (c *SizeProxy) FindRegex(*regexp.Regexp) []types.MatchData {
 	return c.FindAll()
 }
 
 // FindString returns a slice of MatchData for the string
-func (c *SizeProxy) FindString(key string) []types.MatchData {
+func (c *SizeProxy) FindString(string) []types.MatchData {
 	return c.FindAll()
 }
 
