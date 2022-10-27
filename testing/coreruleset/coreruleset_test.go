@@ -11,7 +11,6 @@ import (
 	"archive/zip"
 	"bufio"
 	"fmt"
-	"github.com/corazawaf/coraza/v3/types"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -31,6 +30,7 @@ import (
 	txhttp "github.com/corazawaf/coraza/v3/http"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 var crspath string
