@@ -28,9 +28,9 @@ import (
 
 	"github.com/corazawaf/coraza/v3"
 	txhttp "github.com/corazawaf/coraza/v3/http"
+	corazawaf2 "github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
-	"github.com/corazawaf/coraza/v3/types"
 )
 
 var crspath string
@@ -175,7 +175,7 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 		t.Fatalf("failed to create error log: %v", err)
 	}
 	errorWriter := bufio.NewWriter(errorFile)
-	conf = conf.WithErrorLogger(func(rule types.MatchedRule) {
+	conf = conf.WithErrorLogger(func(rule corazawaf2.MatchedRule) {
 		msg := rule.ErrorLog(0)
 		if _, err := io.WriteString(errorWriter, msg); err != nil {
 			t.Fatal(err)

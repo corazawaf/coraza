@@ -34,7 +34,7 @@ func TestEngine(t *testing.T) {
 					for _, e := range test.OutputErrors() {
 						debug := ""
 						for _, mr := range test.transaction.MatchedRules() {
-							debug += fmt.Sprintf(" %d", mr.Rule.ID)
+							debug += fmt.Sprintf(" %d", mr.Rule().ID())
 						}
 						if testing.Verbose() {
 							t.Errorf("\x1b[41m ERROR \x1b[0m: %s:%s: %s, got:%s\n%s\nREQUEST:\n%s", p.Meta.Name, test.Name, e, debug, test.transaction, test.Request())

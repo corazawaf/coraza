@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -32,10 +33,10 @@ func (c *SizeProxy) FindString(key string) []types.MatchData {
 // FindAll returns a slice of MatchData of all matches
 func (c *SizeProxy) FindAll() []types.MatchData {
 	return []types.MatchData{
-		{
-			VariableName: c.name,
-			Variable:     c.variable,
-			Value:        strconv.FormatInt(c.Size(), 10),
+		&corazarules.MatchData{
+			VariableName_: c.name,
+			Variable_:     c.variable,
+			Value_:        strconv.FormatInt(c.Size(), 10),
 		},
 	}
 }

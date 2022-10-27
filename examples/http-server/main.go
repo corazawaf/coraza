@@ -9,7 +9,6 @@ import (
 
 	"github.com/corazawaf/coraza/v3"
 	txhttp "github.com/corazawaf/coraza/v3/http"
-	ctypes "github.com/corazawaf/coraza/v3/types"
 )
 
 func exampleHandler(w http.ResponseWriter, req *http.Request) {
@@ -56,7 +55,7 @@ func createWAF() coraza.WAF {
 	return waf
 }
 
-func logError(error ctypes.MatchedRule) {
+func logError(error corazawaf.MatchedRule) {
 	msg := error.ErrorLog(0)
-	fmt.Printf("[logError][%s] %s", error.Rule.Severity, msg)
+	fmt.Printf("[logError][%s] %s", error.Rule_.Severity_, msg)
 }

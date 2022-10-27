@@ -27,8 +27,8 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 		return nil
 	}
 
-	if rg.FindByID(rule.ID) != nil && rule.ID != 0 {
-		return fmt.Errorf("there is a another rule with id %d", rule.ID)
+	if rg.FindByID(rule.ID_) != nil && rule.ID_ != 0 {
+		return fmt.Errorf("there is a another rule with id %d", rule.ID_)
 	}
 	rg.rules = append(rg.rules, rule)
 	return nil
@@ -42,7 +42,7 @@ func (rg *RuleGroup) GetRules() []*Rule {
 // FindByID return a Rule with the requested Id
 func (rg *RuleGroup) FindByID(id int) *Rule {
 	for _, r := range rg.rules {
-		if r.ID == id {
+		if r.ID_ == id {
 			return r
 		}
 	}
@@ -52,7 +52,7 @@ func (rg *RuleGroup) FindByID(id int) *Rule {
 // DeleteByID removes a rule by it's Id
 func (rg *RuleGroup) DeleteByID(id int) {
 	for i, r := range rg.rules {
-		if r != nil && r.ID == id {
+		if r != nil && r.ID_ == id {
 			copy(rg.rules[i:], rg.rules[i+1:])
 			rg.rules[len(rg.rules)-1] = nil
 			rg.rules = rg.rules[:len(rg.rules)-1]
@@ -75,7 +75,7 @@ func (rg *RuleGroup) FindByMsg(msg string) []*Rule {
 func (rg *RuleGroup) FindByTag(tag string) []*Rule {
 	var rules []*Rule
 	for _, r := range rg.rules {
-		if strings.InSlice(tag, r.Tags) {
+		if strings.InSlice(tag, r.Tags_) {
 			rules = append(rules, r)
 		}
 	}
@@ -105,24 +105,24 @@ RulesLoop:
 			break RulesLoop
 		}
 		// Rules with phase 0 will always run
-		if r.Phase != phase && r.Phase != 0 {
+		if r.Phase_ != phase && r.Phase_ != 0 {
 			continue
 		}
 
 		// we skip the rule in case it's in the excluded list
 		for _, trb := range tx.ruleRemoveByID {
-			if trb == r.ID {
-				tx.WAF.Logger.Debug("[%s] Skipping rule %d", tx.id, r.ID)
+			if trb == r.ID_ {
+				tx.WAF.Logger.Debug("[%s] Skipping rule %d", tx.id, r.ID_)
 				continue RulesLoop
 			}
 		}
 
 		// we always evaluate secmarkers
 		if tx.SkipAfter != "" {
-			if r.SecMark == tx.SkipAfter {
+			if r.SecMark_ == tx.SkipAfter {
 				tx.SkipAfter = ""
 			} else {
-				tx.WAF.Logger.Debug("[%s] Skipping rule %d because of SkipAfter, expecting %s and got: %q", tx.id, r.ID, tx.SkipAfter, r.SecMark)
+				tx.WAF.Logger.Debug("[%s] Skipping rule %d because of SkipAfter, expecting %s and got: %q", tx.id, r.ID_, tx.SkipAfter, r.SecMark_)
 			}
 			continue
 		}

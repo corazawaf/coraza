@@ -6,6 +6,7 @@ package collection
 import (
 	"regexp"
 
+	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -28,10 +29,10 @@ func (c *TranslationProxy) FindRegex(key *regexp.Regexp) []types.MatchData {
 		keys = append(keys, c.keysRx(key)...)
 	}
 	for _, k := range keys {
-		res = append(res, types.MatchData{
-			VariableName: c.name,
-			Variable:     c.variable,
-			Value:        k,
+		res = append(res, &corazarules.MatchData{
+			VariableName_: c.name,
+			Variable_:     c.variable,
+			Value_:        k,
 		})
 	}
 	return res
@@ -42,10 +43,10 @@ func (c *TranslationProxy) FindString(key string) []types.MatchData {
 	for _, c := range c.data {
 		if len(c.Get(key)) > 0 {
 			return []types.MatchData{
-				{
-					VariableName: c.name,
-					Variable:     c.variable,
-					Value:        key,
+				&corazarules.MatchData{
+					VariableName_: c.name,
+					Variable_:     c.variable,
+					Value_:        key,
 				},
 			}
 		}
@@ -61,10 +62,10 @@ func (c *TranslationProxy) FindAll() []types.MatchData {
 	}
 	var res []types.MatchData
 	for _, k := range keys {
-		res = append(res, types.MatchData{
-			VariableName: c.name,
-			Variable:     c.variable,
-			Value:        k,
+		res = append(res, &corazarules.MatchData{
+			VariableName_: c.name,
+			Variable_:     c.variable,
+			Value_:        k,
 		})
 	}
 	return res

@@ -34,12 +34,12 @@ func directiveSecComponentSignature(options *DirectiveOptions) error {
 
 func directiveSecMarker(options *DirectiveOptions) error {
 	rule := corazawaf.NewRule()
-	rule.Raw = fmt.Sprintf("SecMarker %s", options.Opts)
-	rule.SecMark = options.Opts
-	rule.ID = 0
-	rule.Phase = 0
-	rule.Line = options.Config.Get("parser_last_line", 0).(int)
-	rule.File = options.Config.Get("parser_config_file", "").(string)
+	rule.Raw_ = fmt.Sprintf("SecMarker %s", options.Opts)
+	rule.SecMark_ = options.Opts
+	rule.ID_ = 0
+	rule.Phase_ = 0
+	rule.Line_ = options.Config.Get("parser_last_line", 0).(int)
+	rule.File_ = options.Config.Get("parser_config_file", "").(string)
 	if err := options.WAF.Rules.Add(rule); err != nil {
 		return newCompileRuleError(err, options.Opts)
 	}
@@ -141,14 +141,14 @@ func directiveSecServerSignature(options *DirectiveOptions) error {
 
 func directiveSecRuleRemoveByTag(options *DirectiveOptions) error {
 	for _, r := range options.WAF.Rules.FindByTag(options.Opts) {
-		options.WAF.Rules.DeleteByID(r.ID)
+		options.WAF.Rules.DeleteByID(r.ID_)
 	}
 	return nil
 }
 
 func directiveSecRuleRemoveByMsg(options *DirectiveOptions) error {
 	for _, r := range options.WAF.Rules.FindByMsg(options.Opts) {
-		options.WAF.Rules.DeleteByID(r.ID)
+		options.WAF.Rules.DeleteByID(r.ID_)
 	}
 	return nil
 }

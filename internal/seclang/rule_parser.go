@@ -268,7 +268,7 @@ func (p *RuleParser) ParseActions(actions string) error {
 		}
 	}
 
-	phase := p.rule.Phase
+	phase := p.rule.Phase_
 
 	defaults := p.defaultActions[phase]
 	if defaults != nil {
@@ -371,18 +371,18 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 		}
 	}
 	rule := rp.Rule()
-	rule.Raw = fmt.Sprintf("%s %s", options.Directive, options.Data)
-	rule.File = options.Config.Get("parser_config_file", "").(string)
-	rule.Line = options.Config.Get("parser_last_line", 0).(int)
+	rule.Raw_ = fmt.Sprintf("%s %s", options.Directive, options.Data)
+	rule.File_ = options.Config.Get("parser_config_file", "").(string)
+	rule.Line_ = options.Config.Get("parser_last_line", 0).(int)
 
 	if parent := getLastRuleExpectingChain(options.WAF); parent != nil {
-		rule.ParentID = parent.ID
+		rule.ParentID = parent.ID_
 		lastChain := parent
 		for lastChain.Chain != nil {
 			lastChain = lastChain.Chain
 		}
 		// TODO we must remove defaultactions from chains
-		rule.Phase = 0
+		rule.Phase_ = 0
 		lastChain.Chain = rule
 		return nil, nil
 	}

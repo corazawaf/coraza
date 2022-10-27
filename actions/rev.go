@@ -13,7 +13,7 @@ type revFn struct {
 
 func (a *revFn) Init(r rules.RuleMetadata, data string) error {
 	// TODO(anuraaga): Confirm this is internal implementation detail
-	r.(*corazawaf.Rule).Rev = data
+	r.(*corazawaf.Rule).Rev_ = data
 	return nil
 }
 

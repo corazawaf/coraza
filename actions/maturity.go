@@ -23,7 +23,7 @@ func (a *maturityFn) Init(r rules.RuleMetadata, data string) error {
 		return fmt.Errorf("maturity must be between 1 and 9, not %d", m)
 	}
 	// TODO(anuraaga): Confirm this is internal implementation detail
-	r.(*corazawaf.Rule).Maturity = m
+	r.(*corazawaf.Rule).Maturity_ = m
 	return nil
 }
 

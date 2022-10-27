@@ -6,6 +6,7 @@ package actions
 import (
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -82,13 +83,13 @@ func TestCtl(t *testing.T) {
 func TestCtlParseRange(t *testing.T) {
 	rules := []*corazawaf.Rule{
 		{
-			RuleMetadata: types.RuleMetadata{
-				ID: 5,
+			RuleMetadata: corazarules.RuleMetadata{
+				ID_: 5,
 			},
 		},
 		{
-			RuleMetadata: types.RuleMetadata{
-				ID: 15,
+			RuleMetadata: corazarules.RuleMetadata{
+				ID_: 15,
 			},
 		},
 	}

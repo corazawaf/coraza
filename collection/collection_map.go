@@ -6,6 +6,7 @@ package collection
 import (
 	"regexp"
 
+	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -35,11 +36,11 @@ func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
 	for k, data := range c.data {
 		if key.MatchString(k) {
 			for _, d := range data {
-				result = append(result, types.MatchData{
-					VariableName: c.name,
-					Variable:     c.variable,
-					Key:          d.Name,
-					Value:        d.Value,
+				result = append(result, &corazarules.MatchData{
+					VariableName_: c.name,
+					Variable_:     c.variable,
+					Key_:          d.Name,
+					Value_:        d.Value,
 				})
 			}
 		}
@@ -53,11 +54,11 @@ func (c *Map) FindString(key string) []types.MatchData {
 	if key == "" {
 		for _, data := range c.data {
 			for _, d := range data {
-				result = append(result, types.MatchData{
-					VariableName: c.name,
-					Variable:     c.variable,
-					Key:          d.Name,
-					Value:        d.Value,
+				result = append(result, &corazarules.MatchData{
+					VariableName_: c.name,
+					Variable_:     c.variable,
+					Key_:          d.Name,
+					Value_:        d.Value,
 				})
 			}
 		}
@@ -66,11 +67,11 @@ func (c *Map) FindString(key string) []types.MatchData {
 	// if key is not empty
 	if e, ok := c.data[key]; ok {
 		for _, aVar := range e {
-			result = append(result, types.MatchData{
-				VariableName: c.name,
-				Variable:     c.variable,
-				Key:          aVar.Name,
-				Value:        aVar.Value,
+			result = append(result, &corazarules.MatchData{
+				VariableName_: c.name,
+				Variable_:     c.variable,
+				Key_:          aVar.Name,
+				Value_:        aVar.Value,
 			})
 		}
 	}
@@ -82,11 +83,11 @@ func (c *Map) FindAll() []types.MatchData {
 	var result []types.MatchData
 	for _, data := range c.data {
 		for _, d := range data {
-			result = append(result, types.MatchData{
-				VariableName: c.name,
-				Variable:     c.variable,
-				Key:          d.Name,
-				Value:        d.Value,
+			result = append(result, &corazarules.MatchData{
+				VariableName_: c.name,
+				Variable_:     c.variable,
+				Key_:          d.Name,
+				Value_:        d.Value,
 			})
 		}
 	}

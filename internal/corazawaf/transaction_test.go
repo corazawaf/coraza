@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/macro"
 	"github.com/corazawaf/coraza/v3/types"
@@ -247,18 +248,18 @@ func TestAuditLogFields(t *testing.T) {
 	tx.AddRequestHeader("test", "test")
 	tx.AddResponseHeader("test", "test")
 	rule := NewRule()
-	rule.ID = 131
+	rule.ID_ = 131
 	tx.MatchRule(rule, []types.MatchData{
-		{
-			VariableName: "UNIQUE_ID",
-			Variable:     variables.UniqueID,
+		&corazarules.MatchData{
+			VariableName_: "UNIQUE_ID",
+			Variable_:     variables.UniqueID,
 		},
 	})
-	if len(tx.matchedRules) == 0 || tx.matchedRules[0].Rule.ID != rule.ID {
+	if len(tx.matchedRules) == 0 || tx.matchedRules[0].Rule().ID() != rule.ID_ {
 		t.Error("failed to match rule for audit")
 	}
 	al := tx.AuditLog()
-	if len(al.Messages) == 0 || al.Messages[0].Data.ID != rule.ID {
+	if len(al.Messages) == 0 || al.Messages[0].Data.ID != rule.ID_ {
 		t.Error("failed to add rules to audit logs")
 	}
 	if al.Transaction.Request.Headers == nil || al.Transaction.Request.Headers["test"][0] != "test" {
@@ -310,9 +311,9 @@ func TestLogCallback(t *testing.T) {
 	tx := waf.NewTransaction()
 	rule := NewRule()
 	tx.MatchRule(rule, []types.MatchData{
-		{
-			VariableName: "UNIQUE_ID",
-			Variable:     variables.UniqueID,
+		&corazarules.MatchData{
+			VariableName_: "UNIQUE_ID",
+			Variable_:     variables.UniqueID,
 		},
 	})
 	if buffer == "" && strings.Contains(buffer, tx.id) {
@@ -376,11 +377,11 @@ func TestTxVariables(t *testing.T) {
 		KeyStr:   "ho.*",
 		KeyRx:    regexp.MustCompile("ho.*"),
 	}
-	if len(tx.GetField(rv)) != 1 || tx.GetField(rv)[0].Value != "www.test.com:80" {
+	if len(tx.GetField(rv)) != 1 || tx.GetField(rv)[0].Value() != "www.test.com:80" {
 		t.Errorf("failed to match rule variable REQUEST_HEADERS:host, %d matches, %v", len(tx.GetField(rv)), tx.GetField(rv))
 	}
 	rv.Count = true
-	if len(tx.GetField(rv)) == 0 || tx.GetField(rv)[0].Value != "1" {
+	if len(tx.GetField(rv)) == 0 || tx.GetField(rv)[0].Value() != "1" {
 		t.Errorf("failed to get count for regexp variable")
 	}
 	// now nil key
@@ -393,7 +394,7 @@ func TestTxVariables(t *testing.T) {
 	if len(f) == 0 {
 		t.Error("failed to count variable REQUEST_HEADERS ")
 	}
-	count, err := strconv.Atoi(f[0].Value)
+	count, err := strconv.Atoi(f[0].Value())
 	if err != nil {
 		t.Error(err)
 	}
@@ -422,7 +423,7 @@ func TestTxVariablesExceptions(t *testing.T) {
 	}
 	rv.Exceptions = nil
 	fields = tx.GetField(rv)
-	if len(fields) != 1 || fields[0].Value != "www.test.com:80" {
+	if len(fields) != 1 || fields[0].Value() != "www.test.com:80" {
 		t.Errorf("failed to match rule variable REQUEST_HEADERS:host, %d matches, %v", len(fields), fields)
 	}
 	rv.Exceptions = []ruleVariableException{
@@ -446,9 +447,9 @@ func TestAuditLogMessages(t *testing.T) {
 func TestTransactionSyncPool(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
-	tx.matchedRules = append(tx.matchedRules, types.MatchedRule{
-		Rule: types.RuleMetadata{
-			ID: 1234,
+	tx.matchedRules = append(tx.matchedRules, &corazarules.MatchedRule{
+		Rule_: &corazarules.RuleMetadata{
+			ID_: 1234,
 		},
 	})
 	for i := 0; i < 1000; i++ {
@@ -486,11 +487,11 @@ func TestTxPhase4Magic(t *testing.T) {
 func TestVariablesMatch(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
-	tx.matchVariable(types.MatchData{
-		VariableName: "ARGS_NAMES",
-		Variable:     variables.ArgsNames,
-		Key:          "sample",
-		Value:        "samplevalue",
+	tx.matchVariable(&corazarules.MatchData{
+		VariableName_: "ARGS_NAMES",
+		Variable_:     variables.ArgsNames,
+		Key_:          "sample",
+		Value_:        "samplevalue",
 	})
 	expect := map[variables.RuleVariable]string{
 		variables.MatchedVar:     "samplevalue",
@@ -580,7 +581,7 @@ func TestTxProcessURI(t *testing.T) {
 	if v := tx.variables.args.FindAll(); len(v) != 2 {
 		t.Errorf("failed to set request args, got %d", len(v))
 	}
-	if v := tx.variables.args.FindString("other"); v[0].Value != "value" {
+	if v := tx.variables.args.FindString("other"); v[0].Value() != "value" {
 		t.Errorf("failed to set request args, got %v", v)
 	}
 }

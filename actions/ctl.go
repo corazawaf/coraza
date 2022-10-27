@@ -90,7 +90,7 @@ func (a *ctlFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
 	case ctlRuleRemoveTargetByTag:
 		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
-			if utils.InSlice(a.value, r.Tags) {
+			if utils.InSlice(a.value, r.Tags_) {
 				tx.RemoveRuleTargetByID(r.GetID(), a.collection, a.colKey)
 			}
 		}
@@ -151,14 +151,14 @@ func (a *ctlFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
 		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
 			if r.Msg != nil && r.Msg.String() == a.value {
-				tx.RemoveRuleByID(r.ID)
+				tx.RemoveRuleByID(r.ID_)
 			}
 		}
 	case ctlRuleRemoveByTag:
 		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
-			if utils.InSlice(a.value, r.Tags) {
-				tx.RemoveRuleByID(r.ID)
+			if utils.InSlice(a.value, r.Tags_) {
+				tx.RemoveRuleByID(r.ID_)
 			}
 		}
 	case ctlRequestBodyProcessor:
@@ -273,8 +273,8 @@ func rangeToInts(rules []*corazawaf.Rule, input string) ([]int, error) {
 	}
 
 	for _, r := range rules {
-		if r.ID >= start && r.ID <= end {
-			ids = append(ids, r.ID)
+		if r.ID_ >= start && r.ID_ <= end {
+			ids = append(ids, r.ID_)
 		}
 	}
 	return ids, nil

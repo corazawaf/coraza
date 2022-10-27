@@ -16,6 +16,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 	urlutil "github.com/corazawaf/coraza/v3/internal/url"
 	"github.com/corazawaf/coraza/v3/loggers"
@@ -274,14 +275,14 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 
 // matchVariable Creates the MATCHED_ variables required by chains and macro expansion
 // MATCHED_VARS, MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES
-func (tx *Transaction) matchVariable(match types.MatchData) {
+func (tx *Transaction) matchVariable(match *corazarules.MatchData) {
 	var varName, varNamel string
-	if match.Key != "" {
-		varName = match.VariableName + ":" + match.Key
-		varNamel = match.VariableName + ":" + strings.ToLower(match.Key)
+	if match.Key_ != "" {
+		varName = match.VariableName_ + ":" + match.Key_
+		varNamel = match.VariableName_ + ":" + strings.ToLower(match.Key_)
 	} else {
-		varName = match.VariableName
-		varNamel = match.VariableName
+		varName = match.VariableName_
+		varNamel = match.VariableName_
 	}
 	// Array of values
 	matchedVars := tx.variables.matchedVars
@@ -293,8 +294,8 @@ func (tx *Transaction) matchVariable(match types.MatchData) {
 
 	// We add the key in lowercase for ease of lookup in chains
 	// This is similar to args handling
-	matchedVars.AddCS(varNamel, varName, match.Value)
-	tx.variables.matchedVar.Set(match.Value)
+	matchedVars.AddCS(varNamel, varName, match.Value_)
+	tx.variables.matchedVar.Set(match.Value_)
 
 	// We add the key in lowercase for ease of lookup in chains
 	// This is similar to args handling
@@ -304,7 +305,7 @@ func (tx *Transaction) matchVariable(match types.MatchData) {
 
 // MatchRule Matches a rule to be logged
 func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
-	tx.WAF.Logger.Debug("[%s] rule %d matched", tx.id, r.ID)
+	tx.WAF.Logger.Debug("[%s] rule %d matched", tx.id, r.ID_)
 	// tx.MatchedRules = append(tx.MatchedRules, mr)
 
 	// If the rule is set to audit, we log the transaction to the audit log
@@ -315,24 +316,24 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 	// set highest_severity
 	hs := tx.variables.highestSeverity
 	maxSeverity, _ := types.ParseRuleSeverity(hs.String())
-	if r.Severity > maxSeverity {
-		hs.Set(strconv.Itoa(r.Severity.Int()))
+	if r.Severity_ > maxSeverity {
+		hs.Set(strconv.Itoa(r.Severity_.Int()))
 	}
 
-	mr := types.MatchedRule{
-		URI:             tx.variables.requestURI.String(),
-		ID:              tx.id,
-		ServerIPAddress: tx.variables.serverAddr.String(),
-		ClientIPAddress: tx.variables.remoteAddr.String(),
-		Rule:            r.RuleMetadata,
-		MatchedDatas:    mds,
+	mr := &corazarules.MatchedRule{
+		URI_:             tx.variables.requestURI.String(),
+		ID_:              tx.id,
+		ServerIPAddress_: tx.variables.serverAddr.String(),
+		ClientIPAddress_: tx.variables.remoteAddr.String(),
+		Rule_:            &r.RuleMetadata,
+		MatchedDatas_:    mds,
 	}
 
 	for _, md := range mds {
 		// Use 1st set message of rule chain as message
-		if md.Message != "" {
-			mr.Message = md.Message
-			mr.Data = md.Data
+		if md.Message() != "" {
+			mr.Message_ = md.Message()
+			mr.Data_ = md.Data()
 			break
 		}
 	}
@@ -382,7 +383,7 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 	var rmi []int
 	for i, c := range matches {
 		for _, ex := range rv.Exceptions {
-			lkey := strings.ToLower(c.Key)
+			lkey := strings.ToLower(c.Key())
 			// in case it matches the regex or the keyStr
 			// Since keys are case sensitive we need to check with lower case
 			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || strings.ToLower(ex.KeyStr) == lkey {
@@ -405,11 +406,11 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 	if rv.Count {
 		count := len(matches)
 		matches = []types.MatchData{
-			{
-				VariableName: collection.Name(),
-				Variable:     collection,
-				Key:          rv.KeyStr,
-				Value:        strconv.Itoa(count),
+			&corazarules.MatchData{
+				VariableName_: collection.Name(),
+				Variable_:     collection,
+				Key_:          rv.KeyStr,
+				Value_:        strconv.Itoa(count),
 			},
 		}
 	}
@@ -839,24 +840,24 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	al.Transaction.Request.Files = files
 	var mrs []loggers.AuditMessage
 	for _, mr := range tx.matchedRules {
-		r := mr.Rule
-		for _, matchData := range mr.MatchedDatas {
+		r := mr.Rule()
+		for _, matchData := range mr.MatchedDatas() {
 			mrs = append(mrs, loggers.AuditMessage{
 				Actionset: strings.Join(tx.WAF.ComponentNames, " "),
-				Message:   matchData.Message,
+				Message:   matchData.Message(),
 				Data: loggers.AuditMessageData{
-					File:     mr.Rule.File,
-					Line:     mr.Rule.Line,
-					ID:       r.ID,
-					Rev:      r.Rev,
-					Msg:      matchData.Message,
-					Data:     matchData.Data,
-					Severity: r.Severity,
-					Ver:      r.Version,
-					Maturity: r.Maturity,
-					Accuracy: r.Accuracy,
-					Tags:     r.Tags,
-					Raw:      r.Raw,
+					File:     mr.Rule().File(),
+					Line:     mr.Rule().Line(),
+					ID:       r.ID(),
+					Rev:      r.Revision(),
+					Msg:      matchData.Message(),
+					Data:     matchData.Data(),
+					Severity: r.Severity(),
+					Ver:      r.Version(),
+					Maturity: r.Maturity(),
+					Accuracy: r.Accuracy(),
+					Tags:     r.Tags(),
+					Raw:      r.Raw(),
 				},
 			})
 		}
@@ -905,7 +906,7 @@ func (tx *Transaction) Debug() string {
 	for _, mr := range tx.matchedRules {
 		res += mr.ErrorLog(tx.variables.responseStatus.Int())
 		res += "\n\n----------------------- MATCHDATA ---------------------\n"
-		for _, md := range mr.MatchedDatas {
+		for _, md := range mr.MatchedDatas() {
 			res += fmt.Sprintf("%+v", md) + "\n"
 		}
 		res += "\n"
