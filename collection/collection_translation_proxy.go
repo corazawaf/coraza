@@ -23,16 +23,14 @@ type TranslationProxy struct {
 // FindRegex returns a slice of MatchData for the regex
 func (c *TranslationProxy) FindRegex(key *regexp.Regexp) []types.MatchData {
 	var res []types.MatchData
-	var keys []string
 	for _, c := range c.data {
-		keys = append(keys, c.keysRx(key)...)
-	}
-	for _, k := range keys {
-		res = append(res, types.MatchData{
-			VariableName: c.name,
-			Variable:     c.variable,
-			Value:        k,
-		})
+		for _, k := range c.keysRx(key) {
+			res = append(res, types.MatchData{
+				VariableName: c.name,
+				Variable:     c.variable,
+				Value:        k,
+			})
+		}
 	}
 	return res
 }
@@ -55,17 +53,15 @@ func (c *TranslationProxy) FindString(key string) []types.MatchData {
 
 // FindAll returns all keys from Proxy Collections
 func (c *TranslationProxy) FindAll() []types.MatchData {
-	var keys []string
-	for _, c := range c.data {
-		keys = append(keys, c.keys()...)
-	}
 	var res []types.MatchData
-	for _, k := range keys {
-		res = append(res, types.MatchData{
-			VariableName: c.name,
-			Variable:     c.variable,
-			Value:        k,
-		})
+	for _, c := range c.data {
+		for _, k := range c.keys() {
+			res = append(res, types.MatchData{
+				VariableName: c.name,
+				Variable:     c.variable,
+				Value:        k,
+			})
+		}
 	}
 	return res
 }
