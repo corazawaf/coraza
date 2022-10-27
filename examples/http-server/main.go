@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/corazawaf/coraza/v3/types"
 	"log"
 	"net/http"
 	"os"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3"
 	txhttp "github.com/corazawaf/coraza/v3/http"
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 func exampleHandler(w http.ResponseWriter, req *http.Request) {
