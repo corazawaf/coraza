@@ -1,25 +1,11 @@
-<<<<<<< Updated upstream
-package corazawaf
-
-import (
-	"fmt"
-	"github.com/corazawaf/coraza/v3/types/variables"
-	"strconv"
-	"strings"
-=======
-// Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
-// SPDX-License-Identifier: Apache-2.0
-
 package corazarules
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
-
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
->>>>>>> Stashed changes
+	"strconv"
+	"strings"
 )
 
 // MatchData works like VariableKey but is used for logging,
@@ -86,19 +72,6 @@ type MatchedRule struct {
 	// Client IP address
 	ClientIPAddress_ string
 	// A slice of matched variables
-<<<<<<< Updated upstream
-	MatchedDatas_ []MatchData
-
-	Rule_ RuleMetadata
-}
-
-func (mr MatchedRule) details(matchData MatchData) string {
-	log := &strings.Builder{}
-
-	resolvedIP := ""
-	msg := matchData.Message_
-	data := matchData.Data_
-=======
 	MatchedDatas_ []types.MatchData
 
 	Rule_ types.RuleMetadata
@@ -146,7 +119,6 @@ func (mr MatchedRule) details(matchData types.MatchData) string {
 	resolvedIP := ""
 	msg := matchData.Message()
 	data := matchData.Data()
->>>>>>> Stashed changes
 	if len(msg) > 200 {
 		msg = msg[:200]
 	}
@@ -154,15 +126,9 @@ func (mr MatchedRule) details(matchData types.MatchData) string {
 		data = data[:200]
 	}
 	log.WriteString(fmt.Sprintf("[file %q] [line %q] [id %q] [rev %q] [msg %q] [data %q] [severity %q] [ver %q] [maturity %q] [accuracy %q]",
-<<<<<<< Updated upstream
-		mr.Rule_.File_, strconv.Itoa(mr.Rule_.Line_), strconv.Itoa(mr.Rule_.ID_), mr.Rule_.Rev_, msg, data, mr.Rule_.Severity_.String(), mr.Rule_.Version_,
-		strconv.Itoa(mr.Rule_.Maturity_), strconv.Itoa(mr.Rule_.Accuracy_)))
-	for _, t := range mr.Rule_.Tags_ {
-=======
 		mr.Rule_.File(), strconv.Itoa(mr.Rule_.Line()), strconv.Itoa(mr.Rule_.ID()), mr.Rule_.Revision(), msg, data, mr.Rule_.Severity().String(), mr.Rule_.Version(),
 		strconv.Itoa(mr.Rule_.Maturity()), strconv.Itoa(mr.Rule_.Accuracy())))
 	for _, t := range mr.Rule_.Tags() {
->>>>>>> Stashed changes
 		log.WriteString(fmt.Sprintf(" [tag %q]", t))
 	}
 	log.WriteString(fmt.Sprintf(" [hostname %q] [uri %q] [unique_id %q]",
@@ -170,20 +136,6 @@ func (mr MatchedRule) details(matchData types.MatchData) string {
 	return log.String()
 }
 
-<<<<<<< Updated upstream
-func (mr MatchedRule) matchData(matchData MatchData) string {
-	log := &strings.Builder{}
-	for _, matchData := range mr.MatchedDatas_ {
-		v := matchData.Variable_.Name()
-		if matchData.Key_ != "" {
-			v += fmt.Sprintf(":%s", matchData.Key_)
-		}
-		value := matchData.Value_
-		if len(value) > 200 {
-			value = value[:200]
-		}
-		if mr.Rule_.Operator_ != "" {
-=======
 func (mr MatchedRule) matchData(matchData types.MatchData) string {
 	log := &strings.Builder{}
 	for _, matchData := range mr.MatchedDatas_ {
@@ -196,7 +148,6 @@ func (mr MatchedRule) matchData(matchData types.MatchData) string {
 			value = value[:200]
 		}
 		if mr.Rule_.Operator() != "" {
->>>>>>> Stashed changes
 			log.WriteString(fmt.Sprintf("Matched \"Operator %s matched %s at %s.",
 				"", value, v))
 		} else {
@@ -213,11 +164,7 @@ func (mr MatchedRule) AuditLog(code int) string {
 	for _, matchData := range mr.MatchedDatas_ {
 		log.WriteString(fmt.Sprintf("[client %q] ", mr.ClientIPAddress_))
 		if mr.Disruptive_ {
-<<<<<<< Updated upstream
-			log.WriteString(fmt.Sprintf("Coraza: Access denied with code %d (phase %d). ", code, mr.Rule_.Phase_))
-=======
 			log.WriteString(fmt.Sprintf("Coraza: Access denied with code %d (phase %d). ", code, mr.Rule_.Phase()))
->>>>>>> Stashed changes
 		} else {
 			log.WriteString("Coraza: Warning. ")
 		}
@@ -230,19 +177,11 @@ func (mr MatchedRule) AuditLog(code int) string {
 
 // ErrorLog returns the same as audit log but without matchData
 func (mr MatchedRule) ErrorLog(code int) string {
-<<<<<<< Updated upstream
-	msg := mr.MatchedDatas_[0].Message_
-	for _, md := range mr.MatchedDatas_ {
-		// Use 1st set message of rule chain as message
-		if md.Message_ != "" {
-			msg = md.Message_
-=======
 	msg := mr.MatchedDatas_[0].Message()
 	for _, md := range mr.MatchedDatas_ {
 		// Use 1st set message of rule chain as message
 		if md.Message() != "" {
 			msg = md.Message()
->>>>>>> Stashed changes
 			break
 		}
 	}
@@ -255,11 +194,7 @@ func (mr MatchedRule) ErrorLog(code int) string {
 	for _, matchData := range mr.MatchedDatas_ {
 		log.WriteString(fmt.Sprintf("[client %q] ", mr.ClientIPAddress_))
 		if mr.Disruptive_ {
-<<<<<<< Updated upstream
-			log.WriteString(fmt.Sprintf("Coraza: Access denied with code %d (phase %d). ", code, mr.Rule_.Phase_))
-=======
 			log.WriteString(fmt.Sprintf("Coraza: Access denied with code %d (phase %d). ", code, mr.Rule_.Phase()))
->>>>>>> Stashed changes
 		} else {
 			log.WriteString("Coraza: Warning. ")
 		}
