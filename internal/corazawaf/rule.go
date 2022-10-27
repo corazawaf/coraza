@@ -108,7 +108,7 @@ type Rule struct {
 
 	// Contains the Id of the parent rule if you are inside
 	// a chain. Otherwise, it will be 0
-	ParentID int
+	ParentID_ int
 
 	// Capture is used by the transaction to tell the operator
 	// to capture variables on TX:0-9
@@ -144,12 +144,8 @@ type Rule struct {
 	HasChain bool
 }
 
-func (r *Rule) GetID() int {
-	return r.ID_
-}
-
-func (r *Rule) GetParentID() int {
-	return r.ParentID
+func (r *Rule) ParentID() int {
+	return r.ParentID_
 }
 
 func (r *Rule) Status() int {
@@ -169,7 +165,7 @@ func (r *Rule) doEvaluate(tx *Transaction) []types.MatchData {
 	}
 	rid := r.ID_
 	if rid == 0 {
-		rid = r.ParentID
+		rid = r.ParentID_
 	}
 
 	var matchedValues []types.MatchData
@@ -270,7 +266,7 @@ func (r *Rule) doEvaluate(tx *Transaction) []types.MatchData {
 	}
 
 	// disruptive actions are only evaluated by parent rules
-	if r.ParentID == 0 {
+	if r.ParentID_ == 0 {
 		// we only run the chains for the parent rule
 		for nr := r.Chain; nr != nil; {
 			tx.WAF.Logger.Debug("[%s] [%d] Evaluating rule chain for %d", tx.id, rid, r.ID_)
@@ -303,7 +299,7 @@ func (r *Rule) doEvaluate(tx *Transaction) []types.MatchData {
 func (r *Rule) matchVariable(tx *Transaction, m *corazarules.MatchData) {
 	rid := r.ID_
 	if rid == 0 {
-		rid = r.ParentID
+		rid = r.ParentID_
 	}
 	if !m.IsNil() {
 		tx.WAF.Logger.Debug("[%s] [%d] Matching rule %d %s:%s", tx.id, rid, r.ID_, m.VariableName(), m.Key())

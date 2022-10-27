@@ -91,14 +91,14 @@ func (a *ctlFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
 		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
 			if utils.InSlice(a.value, r.Tags_) {
-				tx.RemoveRuleTargetByID(r.GetID(), a.collection, a.colKey)
+				tx.RemoveRuleTargetByID(r.ID(), a.collection, a.colKey)
 			}
 		}
 	case ctlRuleRemoveTargetByMsg:
 		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
 			if r.Msg != nil && r.Msg.String() == a.value {
-				tx.RemoveRuleTargetByID(r.GetID(), a.collection, a.colKey)
+				tx.RemoveRuleTargetByID(r.ID(), a.collection, a.colKey)
 			}
 		}
 	case ctlAuditEngine:

@@ -376,7 +376,7 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 	rule.Line_ = options.Config.Get("parser_last_line", 0).(int)
 
 	if parent := getLastRuleExpectingChain(options.WAF); parent != nil {
-		rule.ParentID = parent.ID_
+		rule.ParentID_ = parent.ID_
 		lastChain := parent
 		for lastChain.Chain != nil {
 			lastChain = lastChain.Chain
