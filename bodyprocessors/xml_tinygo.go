@@ -21,16 +21,16 @@ import (
 	"errors"
 	"io"
 
-	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type xmlBodyProcessor struct{}
 
-func (*xmlBodyProcessor) ProcessRequest(reader io.Reader, collections []collection.Collection, options Options) error {
+func (*xmlBodyProcessor) ProcessRequest(reader io.Reader, v rules.TransactionVariables, options Options) error {
 	return errors.New("not implemented")
 }
 
-func (*xmlBodyProcessor) ProcessResponse(reader io.Reader, collections []collection.Collection, options Options) error {
+func (*xmlBodyProcessor) ProcessResponse(reader io.Reader, v rules.TransactionVariables, options Options) error {
 	return errors.New("not implemented")
 }
 

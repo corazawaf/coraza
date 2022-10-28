@@ -498,7 +498,7 @@ func TestVariablesMatch(t *testing.T) {
 	}
 
 	for k, v := range expect {
-		if m := (tx.Collections[k]).(*collection.Simple).String(); m != v {
+		if m := (tx.Collection(k)).(*collection.Simple).String(); m != v {
 			t.Errorf("failed to match variable %s, Expected: %s, got: %s", k.Name(), v, m)
 		}
 	}

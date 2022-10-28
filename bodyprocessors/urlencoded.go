@@ -8,15 +8,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/url"
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type urlencodedBodyProcessor struct {
 }
 
-func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, collections []collection.Collection, options Options) error {
+func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, v rules.TransactionVariables, options Options) error {
 	buf := new(strings.Builder)
 	if _, err := io.Copy(buf, reader); err != nil {
 		return err
@@ -24,16 +23,16 @@ func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, collections []c
 
 	b := buf.String()
 	values := url.ParseQuery(b, '&')
-	argsCol := (collections[variables.ArgsPost]).(*collection.Map)
+	argsCol := v.ArgsPost()
 	for k, vs := range values {
 		argsCol.Set(k, vs)
 	}
-	(collections[variables.RequestBody]).(*collection.Simple).Set(b)
-	(collections[variables.RequestBodyLength]).(*collection.Simple).Set(strconv.Itoa(len(b)))
+	v.RequestBody().Set(b)
+	v.RequestBodyLength().Set(strconv.Itoa(len(b)))
 	return nil
 }
 
-func (*urlencodedBodyProcessor) ProcessResponse(reader io.Reader, collection []collection.Collection, options Options) error {
+func (*urlencodedBodyProcessor) ProcessResponse(reader io.Reader, v rules.TransactionVariables, options Options) error {
 	return nil
 }
 
