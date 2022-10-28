@@ -195,7 +195,7 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	}
 
 	s := httptest.NewServer(txhttp.WrapHandler(waf, t.Logf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Emulated http behaviour: /anything endpoint acts as an echo server, writing back the request body
+		// Emulated httpbin behaviour: /anything endpoint acts as an echo server, writing back the request body
 		if r.URL.Path == "/anything" {
 			var buf bytes.Buffer
 			_, err = io.Copy(&buf, r.Body)
