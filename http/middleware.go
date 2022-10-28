@@ -52,7 +52,7 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 	if in != nil {
 		return in, nil
 	}
-	if req.Body != nil {
+	if req.Body != nil && req.Body != http.NoBody {
 		_, err := io.Copy(tx.RequestBodyWriter(), req.Body)
 		if err != nil {
 			return tx.Interruption(), err
@@ -61,6 +61,8 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 		if err != nil {
 			return tx.Interruption(), err
 		}
+		// req.Body is transparently reinizialied with a new io.ReadCloser.
+		// The http handler will be able to read it
 		req.Body = io.NopCloser(reader)
 	}
 
