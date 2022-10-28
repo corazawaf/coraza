@@ -68,7 +68,7 @@ type MatchedRule struct {
 	// Full request uri unparsed
 	URI_ string
 	// Transaction id
-	ID_ string
+	TransactionID_ string
 	// Is disruptive
 	Disruptive_ bool
 	// Server IP address
@@ -93,8 +93,8 @@ func (mr *MatchedRule) URI() string {
 	return mr.URI_
 }
 
-func (mr *MatchedRule) ID() string {
-	return mr.ID_
+func (mr *MatchedRule) TransactionID() string {
+	return mr.TransactionID_
 }
 
 func (mr *MatchedRule) Disruptive() bool {
@@ -136,7 +136,7 @@ func (mr MatchedRule) details(matchData types.MatchData) string {
 		log.WriteString(fmt.Sprintf(" [tag %q]", t))
 	}
 	log.WriteString(fmt.Sprintf(" [hostname %q] [uri %q] [unique_id %q]",
-		resolvedIP, mr.URI_, mr.ID_))
+		resolvedIP, mr.URI_, mr.TransactionID_))
 	return log.String()
 }
 

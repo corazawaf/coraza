@@ -33,8 +33,8 @@ type MatchedRule interface {
 	Data() string
 	// URI is the full request uri unparsed
 	URI() string
-	// ID is the transaction ID
-	ID() string
+	// TransactionID is the transaction ID
+	TransactionID() string
 	// Disruptive is whether this rule will block the request
 	Disruptive() bool
 	// ServerIPAddress is the address of the server

@@ -506,7 +506,7 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 
 	mr := &corazarules.MatchedRule{
 		URI_:             tx.variables.requestURI.String(),
-		ID_:              tx.id,
+		TransactionID_:   tx.id,
 		ServerIPAddress_: tx.variables.serverAddr.String(),
 		ClientIPAddress_: tx.variables.remoteAddr.String(),
 		Rule_:            &r.RuleMetadata,
