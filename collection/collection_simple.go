@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -34,10 +35,10 @@ func (c *Simple) FindString(key string) []types.MatchData {
 // FindAll returns a single MatchData for the current data
 func (c *Simple) FindAll() []types.MatchData {
 	return []types.MatchData{
-		{
-			VariableName: c.name,
-			Variable:     c.variable,
-			Value:        c.data,
+		&corazarules.MatchData{
+			VariableName_: c.name,
+			Variable_:     c.variable,
+			Value_:        c.data,
 		},
 	}
 }

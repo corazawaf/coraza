@@ -37,7 +37,7 @@ func TestCollectionProxy(t *testing.T) {
 		p := proxy.FindAll()
 		m := false
 		for _, v := range p {
-			if v.Value == "value1" {
+			if v.Value() == "value1" {
 				m = true
 				break
 			}
@@ -48,7 +48,7 @@ func TestCollectionProxy(t *testing.T) {
 	}
 	var f []string
 	for _, r := range p {
-		f = append(f, r.Value)
+		f = append(f, r.Value())
 	}
 	sort.Strings(f)
 	if f[0] != "value1" || f[1] != "value2" || f[2] != "value3" {

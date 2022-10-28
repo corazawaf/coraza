@@ -18,7 +18,7 @@ func (a *severityFn) Init(r rules.RuleMetadata, data string) error {
 		return err
 	}
 	// TODO(anuraaga): Confirm this is internal implementation detail
-	r.(*corazawaf.Rule).Severity = sev
+	r.(*corazawaf.Rule).Severity_ = sev
 	return nil
 }
 

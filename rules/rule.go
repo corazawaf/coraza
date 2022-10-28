@@ -14,10 +14,10 @@ type Rule interface {
 // RuleMetadata is information about a rule parsed from directives.
 type RuleMetadata interface {
 	// GetID returns the ID of the rule.
-	GetID() int
+	ID() int
 
 	// GetParentID returns the ID of the parent of the rule for a chained rule.
-	GetParentID() int
+	ParentID() int
 
 	// Status returns the status to set if the rule matches.
 	Status() int

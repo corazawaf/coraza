@@ -13,7 +13,7 @@ type tagFn struct {
 
 func (a *tagFn) Init(r rules.RuleMetadata, data string) error {
 	// TODO(anuraaga): Confirm this is internal implementation detail
-	r.(*corazawaf.Rule).Tags = append(r.(*corazawaf.Rule).Tags, data)
+	r.(*corazawaf.Rule).Tags_ = append(r.(*corazawaf.Rule).Tags_, data)
 	return nil
 }
 

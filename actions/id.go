@@ -24,12 +24,12 @@ func (a *idFn) Init(r rules.RuleMetadata, data string) error {
 	}
 	// TODO(anuraaga): Confirm this is internal implementation detail
 	rInt := r.(*corazawaf.Rule)
-	rInt.ID = int(i)
-	if rInt.ID < 0 {
-		return fmt.Errorf("rule id (%d) cannot be negative", rInt.ID)
+	rInt.ID_ = int(i)
+	if rInt.ID_ < 0 {
+		return fmt.Errorf("rule id (%d) cannot be negative", rInt.ID_)
 	}
-	if rInt.ID == 0 {
-		return fmt.Errorf("rule id (%d) cannot be zero", rInt.ID)
+	if rInt.ID_ == 0 {
+		return fmt.Errorf("rule id (%d) cannot be zero", rInt.ID_)
 	}
 	return nil
 }

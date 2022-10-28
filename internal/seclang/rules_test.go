@@ -328,8 +328,8 @@ func TestTxIssue147(t *testing.T) {
 		if it != nil {
 			httpOutMsg := ""
 			for _, res := range tx.MatchedRules() {
-				httpOutMsg = httpOutMsg + res.MatchedDatas[0].Key + ":" + res.MatchedDatas[0].Value + "\n"
-				httpOutMsg = httpOutMsg + "Message:" + res.MatchedDatas[0].Message + "\n"
+				httpOutMsg = httpOutMsg + res.MatchedDatas()[0].Key() + ":" + res.MatchedDatas()[0].Value() + "\n"
+				httpOutMsg = httpOutMsg + "Message:" + res.MatchedDatas()[0].Message() + "\n"
 
 			}
 			if len(httpOutMsg) == 0 || len(tx.MatchedRules()) == 0 {
@@ -762,9 +762,9 @@ func TestParameterPollution(t *testing.T) {
 	}
 
 	if len(tx.MatchedRules()) == 1 {
-		if len(tx.MatchedRules()[0].MatchedDatas) != 1 {
+		if len(tx.MatchedRules()[0].MatchedDatas()) != 1 {
 			t.Errorf("failed to test arguments pollution. Found matches: %d, %+v\n",
-				len(tx.MatchedRules()[0].MatchedDatas), tx.MatchedRules())
+				len(tx.MatchedRules()[0].MatchedDatas()), tx.MatchedRules())
 		}
 	} else {
 		t.Errorf("failed to test arguments pollution: Single match fixed case: %d, %+v\n",
@@ -781,9 +781,9 @@ func TestParameterPollution(t *testing.T) {
 		t.Error(err)
 	}
 	if len(tx.MatchedRules()) == 1 {
-		if len(tx.MatchedRules()[0].MatchedDatas) != 2 {
+		if len(tx.MatchedRules()[0].MatchedDatas()) != 2 {
 			t.Errorf("failed to test arguments pollution. Found matches: %d, %+v\n",
-				len(tx.MatchedRules()[0].MatchedDatas), tx.MatchedRules())
+				len(tx.MatchedRules()[0].MatchedDatas()), tx.MatchedRules())
 		}
 	} else {
 		t.Errorf("failed to test arguments pollution: Multiple match mixed case: %d, %+v\n",
@@ -811,11 +811,11 @@ func TestURIQueryParamCaseSensitive(t *testing.T) {
 	}
 
 	if len(tx.MatchedRules()) == 1 {
-		if len(tx.MatchedRules()[0].MatchedDatas) != 1 {
+		if len(tx.MatchedRules()[0].MatchedDatas()) != 1 {
 			t.Errorf("failed to test uri query param. Found matches: %d, %+v\n",
-				len(tx.MatchedRules()[0].MatchedDatas), tx.MatchedRules())
+				len(tx.MatchedRules()[0].MatchedDatas()), tx.MatchedRules())
 		}
-		if !isMatchData(tx.MatchedRules()[0].MatchedDatas, "Test1") {
+		if !isMatchData(tx.MatchedRules()[0].MatchedDatas(), "Test1") {
 			t.Error("Key did not match: Test1 !=", tx.MatchedRules()[0])
 		}
 	} else {
@@ -831,11 +831,11 @@ func TestURIQueryParamCaseSensitive(t *testing.T) {
 	}
 
 	if len(tx.MatchedRules()) == 1 {
-		if len(tx.MatchedRules()[0].MatchedDatas) != 3 {
+		if len(tx.MatchedRules()[0].MatchedDatas()) != 3 {
 			t.Errorf("failed to test uri query param. Found matches: %d, %+v\n",
-				len(tx.MatchedRules()[0].MatchedDatas), tx.MatchedRules())
+				len(tx.MatchedRules()[0].MatchedDatas()), tx.MatchedRules())
 		}
-		if !isMatchData(tx.MatchedRules()[0].MatchedDatas, "Test1") {
+		if !isMatchData(tx.MatchedRules()[0].MatchedDatas(), "Test1") {
 			t.Error("Key did not match: Test1 !=", tx.MatchedRules()[0])
 		}
 	} else {
@@ -905,7 +905,7 @@ func TestURIQueryParamNameCaseSensitive(t *testing.T) {
 func isMatchData(mds []types.MatchData, key string) (result bool) {
 	result = false
 	for _, m := range mds {
-		if m.Key == key {
+		if m.Key() == key {
 			result = true
 			break
 		}
