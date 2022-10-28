@@ -13,8 +13,8 @@ func TestRG(t *testing.T) {
 	r := NewRule()
 	macroMsg, _ := macro.NewMacro("test")
 	r.Msg = macroMsg
-	r.ID = 1
-	r.Tags = []string{
+	r.ID_ = 1
+	r.Tags_ = []string{
 		"test",
 	}
 

@@ -3,7 +3,9 @@
 
 package types
 
-import "io"
+import (
+	"io"
+)
 
 // Transaction is created from a WAF instance to handle web requests and responses,
 // it contains a copy of most WAF configurations that can be safely changed.

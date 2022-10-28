@@ -35,10 +35,10 @@ func TestCollectionTranslationProxy(t *testing.T) {
 	if len(proxy.FindString("key3")) == 0 {
 		t.Error("Error finding string")
 	}
-	if proxy.FindString("key1")[0].Value != "key1" {
+	if proxy.FindString("key1")[0].Value() != "key1" {
 		t.Error("Error value findstring key1")
 	}
-	if proxy.FindString("key3")[0].Value != "key3" {
+	if proxy.FindString("key3")[0].Value() != "key3" {
 		t.Error("Error value findstring key3")
 	}
 	if len(proxy.FindRegex(regexp.MustCompile("k.*"))) != 3 {
