@@ -11,25 +11,24 @@ import (
 	"io"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type xmlBodyProcessor struct {
 }
 
-func (*xmlBodyProcessor) ProcessRequest(reader io.Reader, collections []collection.Collection, options Options) error {
+func (*xmlBodyProcessor) ProcessRequest(reader io.Reader, v rules.TransactionVariables, options Options) error {
 	values, contents, err := readXML(reader)
 	if err != nil {
 		return err
 	}
-	col := collections[variables.RequestXML].(*collection.Map)
+	col := v.RequestXML()
 	col.Set("//@*", values)
 	col.Set("/*", contents)
 	return nil
 }
 
-func (*xmlBodyProcessor) ProcessResponse(reader io.Reader, collections []collection.Collection, options Options) error {
+func (*xmlBodyProcessor) ProcessResponse(reader io.Reader, v rules.TransactionVariables, options Options) error {
 	return nil
 }
 

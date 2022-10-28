@@ -21,7 +21,7 @@ var addLicenseVersion = "v1.0.0" // https://github.com/google/addlicense
 var golangCILintVer = "v1.48.0"  // https://github.com/golangci/golangci-lint/releases
 var gosImportsVer = "v0.1.5"     // https://github.com/rinchsan/gosimports/releases/tag/v0.1.5
 
-var errCommitFormatting = errors.New("files not formatted, please commit formatting changes")
+var errRunGoModTidy = errors.New("go.mod/sum not formatted, commit changes")
 var errNoGitDir = errors.New("no .git directory found")
 
 // Format formats code in this repository.
@@ -52,13 +52,12 @@ func Lint() error {
 		return err
 	}
 
-	sh.Run("git", "stash", "-k", "-u") // stash unstagged changes so they don't interfere with git diff below
-	defer sh.Run("git", "stash", "pop")
+	if err := sh.RunV("go", "mod", "tidy"); err != nil {
+		return err
+	}
 
-	mg.SerialDeps(Format)
-
-	if sh.Run("git", "diff", "--exit-code") != nil {
-		return errCommitFormatting
+	if sh.Run("git", "diff", "--exit-code", "go.mod", "go.sum") != nil {
+		return errRunGoModTidy
 	}
 
 	return nil

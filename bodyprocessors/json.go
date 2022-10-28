@@ -8,20 +8,19 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type jsonBodyProcessor struct {
 }
 
-func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, collections []collection.Collection, _ Options) error {
-	col := (collections[variables.ArgsPost]).(*collection.Map)
+func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v rules.TransactionVariables, _ Options) error {
+	col := v.ArgsPost()
 	data, err := readJSON(reader)
 	if err != nil {
 		return err
 	}
-	argsGetCol := (collections[variables.ArgsGet]).(*collection.Map)
+	argsGetCol := v.ArgsGet()
 	for key, value := range data {
 		// TODO: This hack prevent GET variables from overriding POST variables
 		for k := range argsGetCol.Data() {
@@ -34,15 +33,7 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, collections []coll
 	return nil
 }
 
-func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, collections []collection.Collection, _ Options) error {
-	col := (collections[variables.ResponseArgs]).(*collection.Map)
-	data, err := readJSON(reader)
-	if err != nil {
-		return err
-	}
-	for key, value := range data {
-		col.SetIndex(key, 0, value)
-	}
+func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v rules.TransactionVariables, _ Options) error {
 	return nil
 }
 

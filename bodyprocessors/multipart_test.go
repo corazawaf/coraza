@@ -1,15 +1,14 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package bodyprocessors
+package bodyprocessors_test
 
 import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/corazawaf/coraza/v3/bodyprocessors"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 func TestMultipartPayload(t *testing.T) {
@@ -32,15 +31,18 @@ Content-Type: text/html
 
 -----------------------------9051914041544843365972754266--
 `)
-	mp := &multipartBodyProcessor{}
-	collections := createCollections()
-	if err := mp.ProcessRequest(strings.NewReader(payload), collections, Options{
+	mp, err := bodyprocessors.Get("multipart")
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := corazawaf.NewTransactionVariables()
+	if err := mp.ProcessRequest(strings.NewReader(payload), v, bodyprocessors.Options{
 		Mime: "multipart/form-data; boundary=---------------------------9051914041544843365972754266",
 	}); err != nil {
 		t.Fatal(err)
 	}
 	// first we validate we got the headers
-	headers := collections[variables.MultipartPartHeaders].(*collection.Map)
+	headers := v.MultipartPartHeaders()
 	header1 := "Content-Disposition: form-data; name=\"file2\"; filename=\"a.html\""
 	header2 := "Content-Type: text/html"
 	if h := headers.Get("file2"); len(h) == 0 {
@@ -53,16 +55,4 @@ Content-Type: text/html
 			t.Fatalf("Got invalid multipart headers")
 		}
 	}
-}
-
-func createCollections() []collection.Collection {
-	collections := make([]collection.Collection, types.VariablesCount)
-	collections[variables.Files] = collection.NewMap(variables.Files)
-	collections[variables.FilesTmpNames] = collection.NewMap(variables.FilesTmpNames)
-	collections[variables.FilesSizes] = collection.NewMap(variables.FilesSizes)
-	collections[variables.ArgsPost] = collection.NewMap(variables.ArgsPost)
-	collections[variables.FilesCombinedSize] = collection.NewSimple(variables.FilesCombinedSize)
-	collections[variables.FilesNames] = collection.NewMap(variables.FilesNames)
-	collections[variables.MultipartPartHeaders] = collection.NewMap(variables.MultipartPartHeaders)
-	return collections
 }

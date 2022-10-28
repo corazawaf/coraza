@@ -63,6 +63,7 @@ type TransactionVariables interface {
 	MultipartDataAfter() *collection.Simple
 	MultipartDataBefore() *collection.Simple
 	MultipartFileLimitExceeded() *collection.Simple
+	MultipartPartHeaders() *collection.Map
 	MultipartHeaderFolding() *collection.Simple
 	MultipartInvalidHeaderFolding() *collection.Simple
 	MultipartInvalidPart() *collection.Simple

@@ -12,15 +12,14 @@ import (
 	"os"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/environment"
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type multipartBodyProcessor struct {
 }
 
-func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, collections []collection.Collection, options Options) error {
+func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v rules.TransactionVariables, options Options) error {
 	mimeType := options.Mime
 	storagePath := options.StoragePath
 	mediaType, params, err := mime.ParseMediaType(mimeType)
@@ -32,13 +31,13 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, collections 
 	}
 	mr := multipart.NewReader(reader, params["boundary"])
 	totalSize := int64(0)
-	filesCol := (collections[variables.Files]).(*collection.Map)
-	filesTmpNamesCol := (collections[variables.FilesTmpNames]).(*collection.Map)
-	fileSizesCol := (collections[variables.FilesSizes]).(*collection.Map)
-	postCol := (collections[variables.ArgsPost]).(*collection.Map)
-	filesCombinedSizeCol := (collections[variables.FilesCombinedSize]).(*collection.Simple)
-	filesNamesCol := (collections[variables.FilesNames]).(*collection.Map)
-	headersNames := (collections[variables.MultipartPartHeaders]).(*collection.Map)
+	filesCol := v.Files()
+	filesTmpNamesCol := v.FilesTmpNames()
+	fileSizesCol := v.FilesSizes()
+	postCol := v.ArgsPost()
+	filesCombinedSizeCol := v.FilesCombinedSize()
+	filesNamesCol := v.FilesNames()
+	headersNames := v.MultipartPartHeaders()
 	for {
 		p, err := mr.NextPart()
 		if err == io.EOF {
@@ -94,7 +93,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, collections 
 	return nil
 }
 
-func (mbp *multipartBodyProcessor) ProcessResponse(reader io.Reader, collection []collection.Collection, options Options) error {
+func (mbp *multipartBodyProcessor) ProcessResponse(reader io.Reader, v rules.TransactionVariables, options Options) error {
 	return nil
 }
 

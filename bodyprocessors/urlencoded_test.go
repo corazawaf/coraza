@@ -1,26 +1,22 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package bodyprocessors
+package bodyprocessors_test
 
 import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/corazawaf/coraza/v3/bodyprocessors"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 func TestURLEncode(t *testing.T) {
-	bp := &urlencodedBodyProcessor{}
-	argCol := collection.NewMap(variables.ArgsPost)
-	bodyCol := collection.NewSimple(variables.RequestBody)
-	bodyLenCol := collection.NewSimple(variables.RequestBodyLength)
-	cols := make([]collection.Collection, types.VariablesCount)
-	cols[variables.ArgsPost] = argCol
-	cols[variables.RequestBody] = bodyCol
-	cols[variables.RequestBodyLength] = bodyLenCol
+	bp, err := bodyprocessors.Get("urlencoded")
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := corazawaf.NewTransactionVariables()
 	m := map[string]string{
 		"a": "1",
 		"b": "2",
@@ -32,18 +28,18 @@ func TestURLEncode(t *testing.T) {
 		body += k + "=" + v + "&"
 	}
 	body = strings.TrimSuffix(body, "&")
-	if err := bp.ProcessRequest(strings.NewReader(body), cols, Options{}); err != nil {
+	if err := bp.ProcessRequest(strings.NewReader(body), v, bodyprocessors.Options{}); err != nil {
 		t.Error(err)
 	}
-	if bodyCol.String() != body {
-		t.Errorf("Expected %s, got %s", body, bodyCol.String())
+	if v.RequestBody().String() != body {
+		t.Errorf("Expected %s, got %s", body, v.RequestBody().String())
 	}
-	if bodyLenCol.Int() != len(body) {
-		t.Errorf("Expected %d, got %s", len(body), bodyLenCol.String())
+	if v.RequestBodyLength().Int() != len(body) {
+		t.Errorf("Expected %d, got %s", len(body), v.RequestBodyLength().String())
 	}
-	for k, v := range m {
-		if argCol.Get(k)[0] != v {
-			t.Errorf("Expected %s, got %s", v, argCol.Get(k)[0])
+	for k, val := range m {
+		if v.ArgsPost().Get(k)[0] != val {
+			t.Errorf("Expected %s, got %s", val, v.ArgsPost().Get(k)[0])
 		}
 	}
 }

@@ -52,17 +52,7 @@ func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
 func (c *Map) FindString(key string) []types.MatchData {
 	var result []types.MatchData
 	if key == "" {
-		for _, data := range c.data {
-			for _, d := range data {
-				result = append(result, &corazarules.MatchData{
-					VariableName_: c.name,
-					Variable_:     c.variable,
-					Key_:          d.Name,
-					Value_:        d.Value,
-				})
-			}
-		}
-		return result
+		return c.FindAll()
 	}
 	// if key is not empty
 	if e, ok := c.data[key]; ok {
