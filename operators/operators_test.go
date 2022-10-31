@@ -4,7 +4,6 @@
 package operators
 
 import (
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -14,6 +13,7 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
