@@ -9,6 +9,8 @@ github.com/Masterminds/sprig v2.22.0+incompatible/go.mod h1:y6hNFY5UBTIWBxnzTeuN
 github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da/go.mod h1:Q73ZrmVTwzkszR9V5SSuryQ31EELlFMUz1kKyl939pY=
 github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310/go.mod h1:ufUuZ+zHj4x4TnLV4JWEpy2hxWSpsRywHrMgIH9cCH8=
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
+github.com/bmatcuk/doublestar/v4 v4.3.0 h1:Ct0GphHCZaXvUh2Gqtk37Mzj1qWvXcW9XnXQs1GL9S0=
+github.com/bmatcuk/doublestar/v4 v4.3.0/go.mod h1:xBQ8jztBU6kakFMg+8WGxn0c6z1fTSPVIjEY1Wr7jzc=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/corazawaf/coraza/v3 v3.0.0-20221004054810-060cedcb166d h1:e7nLsrnie6309FYWPZg2kY2yQWhHslmfkzZTPVnpeqg=
 github.com/corazawaf/coraza/v3 v3.0.0-20221004054810-060cedcb166d/go.mod h1:+ypLPFkX5j1GwKi+rqRZ57W3lSHReBdeVLh0o8qirI4=

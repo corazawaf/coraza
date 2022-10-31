@@ -10,17 +10,19 @@ package coreruleset
 import (
 	"archive/zip"
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"testing"
 
+	"github.com/bmatcuk/doublestar/v4"
 	"github.com/coreruleset/go-ftw/config"
 	"github.com/coreruleset/go-ftw/runner"
 	"github.com/coreruleset/go-ftw/test"
@@ -28,46 +30,38 @@ import (
 
 	"github.com/corazawaf/coraza/v3"
 	txhttp "github.com/corazawaf/coraza/v3/http"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/internal/seclang"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
-var crspath string
+var crsReader fs.FS
 
 func init() {
 	fmt.Println("Preparing CRS...")
-	crs, err := downloadCRS("32e6d80419d386a330ddaf5e60047a4a1c38a160")
-	if err != nil {
+	ver := "32e6d80419d386a330ddaf5e60047a4a1c38a160"
+	if crs, err := downloadCRS(ver); err != nil {
 		panic(fmt.Sprintf("failed to download CRS: %s", err.Error()))
-	}
-	tmpPath, err := os.MkdirTemp(os.TempDir(), "crs")
-	if err != nil {
-		panic(fmt.Sprintf("failed to create temp folder for CRS: %s", err.Error()))
-	}
-	fmt.Println("CRS PATH: " + tmpPath)
-	crspath, err = unzip(crs, tmpPath)
-	if err != nil {
-		panic(fmt.Sprintf("failed to unzip CRS: %s", err.Error()))
+	} else {
+		if f, err := fs.Sub(crs, fmt.Sprintf("coreruleset-%s", ver)); err != nil {
+			panic(err)
+		} else {
+			crsReader = f
+		}
 	}
 }
 
 func BenchmarkCRSCompilation(b *testing.B) {
-	files := []string{
-		filepath.Join("..", "..", "coraza.conf-recommended"),
-		filepath.Join(crspath, "crs-setup.conf.example"),
-		filepath.Join(crspath, "rules", "*.conf"),
+	rec, err := os.ReadFile(filepath.Join("..", "..", "coraza.conf-recommended"))
+	if err != nil {
+		b.Fatal(err)
 	}
 	for i := 0; i < b.N; i++ {
-		waf := corazawaf.NewWAF()
-		parser := seclang.NewParser(waf)
-		for _, f := range files {
-			if err := parser.FromFile(f); err != nil {
-				b.Error(err)
-			}
-		}
-		if waf.Rules.Count() < 500 {
-			b.Error("Not enough rules")
+		_, err := coraza.NewWAF(coraza.NewWAFConfig().
+			WithRootFS(crsReader).
+			WithDirectives(string(rec)).
+			WithDirectives("Include crs-setup.conf.example").
+			WithDirectives("Include rules/*.conf"))
+		if err != nil {
+			b.Fatal(err)
 		}
 	}
 }
@@ -131,11 +125,6 @@ func BenchmarkCRSSimplePOST(b *testing.B) {
 }
 
 func TestFTW(t *testing.T) {
-	files := []string{
-		filepath.Join("..", "..", "coraza.conf-recommended"),
-		filepath.Join(crspath, "crs-setup.conf.example"),
-		filepath.Join(crspath, "rules", "*.conf"),
-	}
 	conf := coraza.NewWAFConfig()
 
 	conf = conf.WithDirectives(`
@@ -165,9 +154,16 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
   t:none"
 `)
 
-	for _, f := range files {
-		conf = conf.WithDirectivesFromFile(f)
+	rec, err := os.ReadFile(filepath.Join("..", "..", "coraza.conf-recommended"))
+	if err != nil {
+		t.Fatal(err)
 	}
+
+	conf = conf.
+		WithRootFS(crsReader).
+		WithDirectives(string(rec)).
+		WithDirectives("Include crs-setup.conf.example").
+		WithDirectives("Include rules/*.conf")
 
 	errorPath := filepath.Join(t.TempDir(), "error.log")
 	errorFile, err := os.Create(errorPath)
@@ -195,7 +191,19 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	})))
 	defer s.Close()
 
-	tests, err := test.GetTestsFromFiles(filepath.Join(crspath, "tests", "regression", "tests", "**", "*.yaml"))
+	var tests []test.FTWTest
+	err = doublestar.GlobWalk(crsReader, "tests/regression/tests/**/*.yaml", func(path string, d os.DirEntry) error {
+		yaml, err := fs.ReadFile(crsReader, path)
+		if err != nil {
+			return err
+		}
+		t, err := test.GetTestFromYaml(yaml)
+		if err != nil {
+			return err
+		}
+		tests = append(tests, t)
+		return nil
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,16 +230,14 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 
 func crsWAF(t testing.TB) coraza.WAF {
 	t.Helper()
-	files := []string{
-		filepath.Join("..", "..", "coraza.conf-recommended"),
-		filepath.Join(crspath, "crs-setup.conf.example"),
-		filepath.Join(crspath, "rules", "*.conf"),
+	rec, err := os.ReadFile(filepath.Join("..", "..", "coraza.conf-recommended"))
+	if err != nil {
+		t.Fatal(err)
 	}
-	conf := coraza.NewWAFConfig()
-
-	for _, f := range files {
-		conf = conf.WithDirectivesFromFile(f)
-	}
+	conf := coraza.NewWAFConfig().
+		WithDirectives(string(rec)).
+		WithDirectives("Include crs-setup.conf.example").
+		WithDirectives("Include rules/*.conf")
 
 	waf, err := coraza.NewWAF(conf)
 	if err != nil {
@@ -240,81 +246,14 @@ func crsWAF(t testing.TB) coraza.WAF {
 
 	return waf
 }
-func downloadCRS(version string) (string, error) {
+func downloadCRS(version string) (*zip.Reader, error) {
 	uri := fmt.Sprintf("https://github.com/coreruleset/coreruleset/archive/%s.zip", version)
 	// download file from uri
 	res, err := http.Get(uri)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer res.Body.Close()
-	// create tmp file
-	tmpfile, err := os.CreateTemp(os.TempDir(), "crs")
-	if err != nil {
-		return "", err
-	}
-	// write file to tmp file
-	_, err = io.Copy(tmpfile, res.Body)
-	if err != nil {
-		return "", err
-	}
-	return tmpfile.Name(), nil
-}
-
-func unzip(file string, dst string) (string, error) {
-	archive, err := zip.OpenReader(file)
-	if err != nil {
-		panic(err)
-	}
-	defer archive.Close()
-
-	crspath = dst
-	for i, f := range archive.File {
-		// we strip the first directory from f.Name
-		filePath := filepath.Join(dst, f.Name)
-		if i == 0 {
-			// get file basename
-			crspath = filepath.Join(dst, filepath.Base(filePath))
-		}
-
-		if !strings.HasPrefix(filePath, filepath.Clean(dst)+string(os.PathSeparator)) {
-			return "", fmt.Errorf("%s: illegal file path", filePath)
-		}
-
-		if err := unzipFile(filePath, f); err != nil {
-			return "", err
-		}
-	}
-	return crspath, nil
-}
-
-func unzipFile(filePath string, f *zip.File) error {
-	if f.FileInfo().IsDir() {
-		if err := os.MkdirAll(filePath, os.ModePerm); err != nil {
-			return err
-		}
-		return nil
-	}
-
-	if err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
-		return err
-	}
-
-	dstFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
-	if err != nil {
-		return err
-	}
-	defer dstFile.Close()
-
-	fileInArchive, err := f.Open()
-	if err != nil {
-		return err
-	}
-	defer fileInArchive.Close()
-
-	if _, err := io.Copy(dstFile, fileInArchive); err != nil {
-		return err
-	}
-
-	return nil
+	crsZip, err := io.ReadAll(res.Body)
+	return zip.NewReader(bytes.NewReader(crsZip), int64(len(crsZip)))
 }
