@@ -10,7 +10,6 @@ package coreruleset
 import (
 	"archive/zip"
 	"bufio"
-	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -197,13 +196,11 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	s := httptest.NewServer(txhttp.WrapHandler(waf, t.Logf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Emulated httpbin behaviour: /anything endpoint acts as an echo server, writing back the request body
 		if r.URL.Path == "/anything" {
-			var buf bytes.Buffer
-			_, err = io.Copy(&buf, r.Body)
+			w.Header().Set("Content-Type", "text/plain")
+			_, err = io.Copy(w, r.Body)
 			if err != nil {
 				t.Fatalf("handler can not read request body: %v", err)
 			}
-			w.Header().Set("Content-Type", "text/plain")
-			w.Write(buf.Bytes())
 		} else {
 			fmt.Fprintf(w, "Hello!")
 		}
