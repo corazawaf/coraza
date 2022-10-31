@@ -54,6 +54,9 @@ func TestOperators(t *testing.T) {
 	for _, f := range files {
 		cases := unmarshalTests(t, f)
 		for _, data := range cases {
+			if data.Name == "containsWord" {
+				t.Skip("containsWord is not implemented")
+			}
 			for capName, capVal := range captureMatrix {
 				t.Run(data.Name+" "+capName, func(t *testing.T) {
 					// UNMARSHALL does not transform \u0000 to binary
@@ -77,18 +80,13 @@ func TestOperators(t *testing.T) {
 						data.Param = p
 					}
 
-					op, err := Get(data.Name)
-					if err != nil {
-						t.Logf("skipped error: %s", err.Error())
-						return
-					}
-
 					opts := rules.OperatorOptions{
 						Arguments: data.Param,
 						Path:      []string{"op"},
 						Root:      os.DirFS("testdata"),
 					}
-					if err := op.Init(opts); err != nil {
+					op, err := Get(data.Name, opts)
+					if err != nil {
 						t.Error(err)
 					}
 					tx := waf.NewTransaction()

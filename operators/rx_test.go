@@ -43,11 +43,11 @@ func TestRx(t *testing.T) {
 		tt := tc
 		t.Run(fmt.Sprintf("%s/%s", tt.pattern, tt.input), func(t *testing.T) {
 
-			rx := &rx{}
 			opts := rules.OperatorOptions{
 				Arguments: tt.pattern,
 			}
-			if err := rx.Init(opts); err != nil {
+			rx, err := newRX(opts)
+			if err != nil {
 				t.Error(err)
 			}
 			waf := corazawaf.NewWAF()

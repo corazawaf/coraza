@@ -10,8 +10,6 @@ import (
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
-type rbl struct{}
-
-func (o *rbl) Init(_ rules.OperatorOptions) error { return nil }
-
-func (o *rbl) Evaluate(_ rules.TransactionState, _ string) bool { return true }
+func newRBL(rules.OperatorOptions) (rules.Operator, error) {
+	return &unconditionalMatch{}, nil
+}

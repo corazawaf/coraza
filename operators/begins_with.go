@@ -16,15 +16,14 @@ type beginsWith struct {
 
 var _ rules.Operator = (*beginsWith)(nil)
 
-func (o *beginsWith) Init(options rules.OperatorOptions) error {
+func newBeginsWith(options rules.OperatorOptions) (rules.Operator, error) {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	o.data = m
-	return nil
+	return &beginsWith{data: m}, nil
 }
 
 func (o *beginsWith) Evaluate(tx rules.TransactionState, value string) bool {

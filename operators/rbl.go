@@ -24,13 +24,13 @@ type rbl struct {
 
 var _ rules.Operator = (*rbl)(nil)
 
-func (o *rbl) Init(options rules.OperatorOptions) error {
+func newRBL(options rules.OperatorOptions) (rules.Operator, error) {
 	data := options.Arguments
 
-	o.service = data
-	o.resolver = net.DefaultResolver
-	// TODO validate hostname
-	return nil
+	return &rbl{
+		service:  data,
+		resolver: net.DefaultResolver,
+	}, nil
 }
 
 // https://github.com/mrichman/godnsbl

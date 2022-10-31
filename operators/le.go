@@ -16,14 +16,13 @@ type le struct {
 
 var _ rules.Operator = (*le)(nil)
 
-func (o *le) Init(options rules.OperatorOptions) error {
+func newLE(options rules.OperatorOptions) (rules.Operator, error) {
 	data := options.Arguments
 	m, err := macro.NewMacro(data)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	o.data = m
-	return nil
+	return &le{data: m}, nil
 }
 
 func (o *le) Evaluate(tx rules.TransactionState, value string) bool {

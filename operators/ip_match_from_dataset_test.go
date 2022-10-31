@@ -14,7 +14,6 @@ func TestIpMatchFromDataset(t *testing.T) {
 	addrok := []string{"127.0.0.1", "192.168.0.1", "192.168.0.253"}
 	addrfail := []string{"127.0.0.2", "192.168.1.1"}
 
-	ipm := &ipMatchFromDataset{}
 	opts := rules.OperatorOptions{
 		Arguments: "test_1",
 		Datasets: map[string][]string{
@@ -22,7 +21,8 @@ func TestIpMatchFromDataset(t *testing.T) {
 		},
 	}
 
-	if err := ipm.Init(opts); err != nil {
+	ipm, err := newIPMatchFromDataset(opts)
+	if err != nil {
 		t.Error("Cannot init ipmatchfromfile operator")
 	}
 	for _, ok := range addrok {
@@ -39,14 +39,14 @@ func TestIpMatchFromDataset(t *testing.T) {
 }
 
 func TestIpMatchFromEmptyDataset(t *testing.T) {
-	ipm := &ipMatchFromDataset{}
 	opts := rules.OperatorOptions{
 		Arguments: "test_1",
 		Datasets: map[string][]string{
 			"test_1": {},
 		},
 	}
-	if err := ipm.Init(opts); err == nil {
+	_, err := newIPMatchFromDataset(opts)
+	if err == nil {
 		t.Error("Empty dataset not checked")
 	}
 }

@@ -16,15 +16,14 @@ type endsWith struct {
 
 var _ rules.Operator = (*endsWith)(nil)
 
-func (o *endsWith) Init(options rules.OperatorOptions) error {
+func newEndsWith(options rules.OperatorOptions) (rules.Operator, error) {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	o.data = m
-	return nil
+	return &endsWith{data: m}, nil
 }
 
 func (o *endsWith) Evaluate(tx rules.TransactionState, value string) bool {

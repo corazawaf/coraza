@@ -16,15 +16,14 @@ type eq struct {
 
 var _ rules.Operator = (*eq)(nil)
 
-func (o *eq) Init(options rules.OperatorOptions) error {
+func newEq(options rules.OperatorOptions) (rules.Operator, error) {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	o.data = m
-	return nil
+	return &eq{data: m}, nil
 }
 
 func (o *eq) Evaluate(tx rules.TransactionState, value string) bool {

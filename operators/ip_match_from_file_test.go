@@ -4,6 +4,7 @@
 package operators
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/io"
@@ -14,13 +15,13 @@ func TestFromFile(t *testing.T) {
 	addrok := []string{"127.0.0.1", "192.168.0.1", "192.168.0.253"}
 	addrfail := []string{"127.0.0.2", "192.168.1.1"}
 
-	ipm := &ipMatchFromFile{}
 	opts := rules.OperatorOptions{
-		Arguments: "./testdata/op/netranges.dat",
+		Arguments: filepath.Join("testdata", "op", "netranges.dat"),
 		Path:      []string{"."},
 		Root:      io.OSFS{},
 	}
-	if err := ipm.Init(opts); err != nil {
+	ipm, err := newIPMatchFromFile(opts)
+	if err != nil {
 		t.Error("Cannot init ipmatchfromfile operator")
 	}
 	for _, ok := range addrok {

@@ -16,15 +16,14 @@ type lt struct {
 
 var _ rules.Operator = (*lt)(nil)
 
-func (o *lt) Init(options rules.OperatorOptions) error {
+func newLT(options rules.OperatorOptions) (rules.Operator, error) {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	o.data = m
-	return nil
+	return &lt{data: m}, nil
 }
 
 func (o *lt) Evaluate(tx rules.TransactionState, value string) bool {

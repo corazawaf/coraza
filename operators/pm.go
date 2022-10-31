@@ -20,7 +20,7 @@ type pm struct {
 
 var _ rules.Operator = (*pm)(nil)
 
-func (o *pm) Init(options rules.OperatorOptions) error {
+func newPM(options rules.OperatorOptions) (rules.Operator, error) {
 	data := options.Arguments
 
 	data = strings.ToLower(data)
@@ -33,8 +33,7 @@ func (o *pm) Init(options rules.OperatorOptions) error {
 	})
 
 	// TODO this operator is supposed to support snort data syntax: "@pm A|42|C|44|F"
-	o.matcher = builder.Build(dict)
-	return nil
+	return &pm{matcher: builder.Build(dict)}, nil
 }
 
 func (o *pm) Evaluate(tx rules.TransactionState, value string) bool {

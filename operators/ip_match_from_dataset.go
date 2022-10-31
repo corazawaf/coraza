@@ -10,28 +10,17 @@ import (
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
-type ipMatchFromDataset struct {
-	matcher *ipMatch
-}
-
-var _ rules.Operator = (*ipMatchFromDataset)(nil)
-
-func (o *ipMatchFromDataset) Init(options rules.OperatorOptions) error {
+func newIPMatchFromDataset(options rules.OperatorOptions) (rules.Operator, error) {
 	data := options.Arguments
 	dataset, ok := options.Datasets[data]
 	if !ok || len(dataset) == 0 {
-		return fmt.Errorf("dataset %q not found", data)
+		return nil, fmt.Errorf("dataset %q not found", data)
 	}
 
 	datasetParsed := strings.Join(dataset, ",")
 
-	o.matcher = &ipMatch{}
 	opts := rules.OperatorOptions{
 		Arguments: datasetParsed,
 	}
-	return o.matcher.Init(opts)
-}
-
-func (o *ipMatchFromDataset) Evaluate(tx rules.TransactionState, value string) bool {
-	return o.matcher.Evaluate(tx, value)
+	return newIPMatch(opts)
 }

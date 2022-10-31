@@ -16,15 +16,14 @@ type ge struct {
 
 var _ rules.Operator = (*ge)(nil)
 
-func (o *ge) Init(options rules.OperatorOptions) error {
+func newGE(options rules.OperatorOptions) (rules.Operator, error) {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	o.data = m
-	return nil
+	return &ge{data: m}, nil
 }
 
 func (o *ge) Evaluate(tx rules.TransactionState, value string) bool {

@@ -11,7 +11,11 @@ import (
 
 type detectSQLi struct{}
 
-func (o *detectSQLi) Init(options rules.OperatorOptions) error { return nil }
+var _ rules.Operator = (*detectSQLi)(nil)
+
+func newDetectSQLi(rules.OperatorOptions) (rules.Operator, error) {
+	return &detectSQLi{}, nil
+}
 
 func (o *detectSQLi) Evaluate(tx rules.TransactionState, value string) bool {
 	res, fingerprint := libinjection.IsSQLi(value)
