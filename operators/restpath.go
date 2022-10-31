@@ -23,14 +23,16 @@ type restpath struct {
 
 var _ rules.Operator = (*restpath)(nil)
 
-func (o *restpath) Init(options rules.OperatorOptions) error {
+func newRESTPath(options rules.OperatorOptions) (rules.Operator, error) {
 	data := strings.ReplaceAll(options.Arguments, "/", "\\/")
 	for _, token := range rePathTokenRe.FindAllStringSubmatch(data, -1) {
 		data = strings.Replace(data, token[0], fmt.Sprintf("(?P<%s>.*)", token[1]), 1)
 	}
 	re, err := regexp.Compile(data)
-	o.re = re
-	return err
+	if err != nil {
+		return nil, err
+	}
+	return &restpath{re: re}, nil
 }
 
 func (o *restpath) Evaluate(tx rules.TransactionState, value string) bool {
@@ -46,10 +48,4 @@ func (o *restpath) Evaluate(tx rules.TransactionState, value string) bool {
 		}
 	}
 	return true
-}
-
-func init() {
-	Register("restpath", func() rules.Operator {
-		return &restpath{}
-	})
 }

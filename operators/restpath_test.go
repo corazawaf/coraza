@@ -15,10 +15,10 @@ func TestRestPath(t *testing.T) {
 	tx := waf.NewTransaction()
 	exp := "/some-random/url-{id}/{name}"
 	path := "/some-random/url-123/juan"
-	rp := restpath{}
-	if err := rp.Init(rules.OperatorOptions{
+	rp, err := newRESTPath(rules.OperatorOptions{
 		Arguments: exp,
-	}); err != nil {
+	})
+	if err != nil {
 		t.Error(err)
 	}
 	if !rp.Evaluate(tx, path) {

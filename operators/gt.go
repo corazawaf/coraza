@@ -16,15 +16,14 @@ type gt struct {
 
 var _ rules.Operator = (*gt)(nil)
 
-func (o *gt) Init(options rules.OperatorOptions) error {
+func newGT(options rules.OperatorOptions) (rules.Operator, error) {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	o.data = m
-	return nil
+	return &gt{data: m}, nil
 }
 
 func (o *gt) Evaluate(tx rules.TransactionState, value string) bool {

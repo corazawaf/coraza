@@ -23,11 +23,11 @@ func (l *testLogger) Printf(format string, v ...interface{}) {
 }
 
 func TestRbl(t *testing.T) {
-	rbl := &rbl{}
 	opts := rules.OperatorOptions{
 		Arguments: "xbl.spamhaus.org",
 	}
-	if err := rbl.Init(opts); err != nil {
+	op, err := newRBL(opts)
+	if err != nil {
 		t.Error("Cannot init rbl operator")
 	}
 
@@ -51,18 +51,18 @@ func TestRbl(t *testing.T) {
 	}
 	defer srv.Close()
 
-	srv.PatchNet(rbl.resolver)
-	defer mockdns.UnpatchNet(rbl.resolver)
+	srv.PatchNet(op.(*rbl).resolver)
+	defer mockdns.UnpatchNet(op.(*rbl).resolver)
 
 	t.Run("Valid hostname with no TXT record", func(t *testing.T) {
-		if rbl.Evaluate(nil, "valid_no_txt") {
+		if op.Evaluate(nil, "valid_no_txt") {
 			t.Errorf("Unexpected result for valid hostname with no TXT record")
 		}
 	})
 
 	t.Run("Valid hostname with TXT record", func(t *testing.T) {
 		tx := corazawaf.NewWAF().NewTransaction()
-		if !rbl.Evaluate(tx, "valid_txt") {
+		if !op.Evaluate(tx, "valid_txt") {
 			t.Errorf("Unexpected result for valid hostname")
 		}
 		if want, have := "not blocked", tx.Variables().TX().Get("httpbl_msg")[0]; want != have {
@@ -71,14 +71,14 @@ func TestRbl(t *testing.T) {
 	})
 
 	t.Run("Invalid hostname", func(t *testing.T) {
-		if rbl.Evaluate(nil, "invalid") {
+		if op.Evaluate(nil, "invalid") {
 			t.Errorf("Unexpected result for invalid hostname")
 		}
 	})
 
 	t.Run("Blocked hostname", func(t *testing.T) {
 		tx := corazawaf.NewWAF().NewTransaction()
-		if !rbl.Evaluate(tx, "blocked") {
+		if !op.Evaluate(tx, "blocked") {
 			t.Fatal("Unexpected result for blocked hostname")
 		}
 		t.Log(tx.Variables().TX().Get("httpbl_msg"))

@@ -15,12 +15,14 @@ type rx struct {
 
 var _ rules.Operator = (*rx)(nil)
 
-func (o *rx) Init(options rules.OperatorOptions) error {
+func newRX(options rules.OperatorOptions) (rules.Operator, error) {
 	data := options.Arguments
 
 	re, err := regexp.Compile(data)
-	o.re = re
-	return err
+	if err != nil {
+		return nil, err
+	}
+	return &rx{re: re}, nil
 }
 
 func (o *rx) Evaluate(tx rules.TransactionState, value string) bool {

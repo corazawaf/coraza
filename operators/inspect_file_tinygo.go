@@ -12,6 +12,6 @@ import (
 
 type inspectFile struct{}
 
-func (*inspectFile) Init(rules.OperatorOptions) error { return nil }
-
-func (*inspectFile) Evaluate(rules.TransactionState, string) bool { return true }
+func newInspectFile(rules.OperatorOptions) (rules.Operator, error) {
+	return &unconditionalMatch{}, nil
+}

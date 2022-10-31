@@ -20,9 +20,8 @@ type inspectFile struct {
 
 var _ rules.Operator = (*inspectFile)(nil)
 
-func (o *inspectFile) Init(options rules.OperatorOptions) error {
-	o.path = options.Arguments
-	return nil
+func newInspectFile(options rules.OperatorOptions) (rules.Operator, error) {
+	return &inspectFile{path: options.Arguments}, nil
 }
 
 func (o *inspectFile) Evaluate(tx rules.TransactionState, value string) bool {

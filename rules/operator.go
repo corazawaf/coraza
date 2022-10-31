@@ -22,11 +22,10 @@ type OperatorOptions struct {
 
 // Operator interface is used to define rule @operators
 type Operator interface {
-	// Init is used during compilation to setup and cache
-	// the operator
-	Init(OperatorOptions) error
 	// Evaluate is used during the rule evaluation,
 	// it returns true if the operator succeeded against
 	// the input data for the transaction
 	Evaluate(TransactionState, string) bool
 }
+
+type OperatorFactory func(options OperatorOptions) (Operator, error)

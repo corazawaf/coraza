@@ -16,15 +16,14 @@ type contains struct {
 
 var _ rules.Operator = (*contains)(nil)
 
-func (o *contains) Init(options rules.OperatorOptions) error {
+func newContains(options rules.OperatorOptions) (rules.Operator, error) {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	o.data = m
-	return nil
+	return &contains{data: m}, nil
 }
 
 func (o *contains) Evaluate(tx rules.TransactionState, value string) bool {

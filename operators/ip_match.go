@@ -11,16 +11,16 @@ import (
 )
 
 type ipMatch struct {
-	subnets []*net.IPNet
+	subnets []net.IPNet
 }
 
 var _ rules.Operator = (*ipMatch)(nil)
 
-func (o *ipMatch) Init(options rules.OperatorOptions) error {
+func newIPMatch(options rules.OperatorOptions) (rules.Operator, error) {
 	data := options.Arguments
 
-	subnets := strings.Split(data, ",")
-	for _, sb := range subnets {
+	var subnets []net.IPNet
+	for _, sb := range strings.Split(data, ",") {
 		sb = strings.TrimSpace(sb)
 		if sb == "" {
 			continue
@@ -36,9 +36,9 @@ func (o *ipMatch) Init(options rules.OperatorOptions) error {
 		if err != nil {
 			continue
 		}
-		o.subnets = append(o.subnets, subnet)
+		subnets = append(subnets, *subnet)
 	}
-	return nil
+	return &ipMatch{subnets: subnets}, nil
 }
 
 func (o *ipMatch) Evaluate(tx rules.TransactionState, value string) bool {

@@ -11,6 +11,8 @@ type noMatch struct{}
 
 var _ rules.Operator = (*noMatch)(nil)
 
-func (*noMatch) Init(options rules.OperatorOptions) error { return nil }
+func newNoMatch(options rules.OperatorOptions) (rules.Operator, error) {
+	return &noMatch{}, nil
+}
 
 func (*noMatch) Evaluate(tx rules.TransactionState, value string) bool { return false }

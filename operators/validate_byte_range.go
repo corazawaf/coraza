@@ -22,16 +22,16 @@ type validateByteRange struct {
 
 var _ rules.Operator = (*validateByteRange)(nil)
 
-func (o *validateByteRange) Init(options rules.OperatorOptions) error {
+func newValidateByteRange(options rules.OperatorOptions) (rules.Operator, error) {
 	data := options.Arguments
 
 	if data == "" {
-		return nil
+		return &validateByteRange{}, nil
 	}
 
-	ranges := strings.Split(data, ",")
+	var ranges []byteRange
 	var err error
-	for _, br := range ranges {
+	for _, br := range strings.Split(data, ",") {
 		br = strings.TrimSpace(br)
 		spl := strings.SplitN(br, "-", 2)
 
@@ -39,26 +39,26 @@ func (o *validateByteRange) Init(options rules.OperatorOptions) error {
 		if len(spl) == 1 {
 			start, err = strconv.ParseUint(spl[0], 10, 8)
 			if err != nil {
-				return err
+				return nil, err
 			}
-			if err := o.addRange(start, start); err != nil {
-				return err
+			if ranges, err = addRange(ranges, start, start); err != nil {
+				return nil, err
 			}
 			continue
 		}
 		start, err = strconv.ParseUint(spl[0], 10, 8)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		end, err = strconv.ParseUint(spl[1], 10, 8)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		if err := o.addRange(start, end); err != nil {
-			return err
+		if ranges, err = addRange(ranges, start, end); err != nil {
+			return nil, err
 		}
 	}
-	return nil
+	return &validateByteRange{data: ranges}, nil
 }
 
 func (o *validateByteRange) Evaluate(tx rules.TransactionState, data string) bool {
@@ -84,16 +84,15 @@ func (o *validateByteRange) Evaluate(tx rules.TransactionState, data string) boo
 	return len(data) != matched
 }
 
-func (o *validateByteRange) addRange(start uint64, end uint64) error {
+func addRange(ranges []byteRange, start uint64, end uint64) ([]byteRange, error) {
 	if start > 255 {
-		return fmt.Errorf("invalid start byte %d", start)
+		return nil, fmt.Errorf("invalid start byte %d", start)
 	}
 	if end > 255 {
-		return fmt.Errorf("invalid end byte %d", end)
+		return nil, fmt.Errorf("invalid end byte %d", end)
 	}
-	o.data = append(o.data, byteRange{
+	return append(ranges, byteRange{
 		start: byte(start),
 		end:   byte(end),
-	})
-	return nil
+	}), nil
 }
