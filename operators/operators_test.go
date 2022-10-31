@@ -4,6 +4,7 @@
 package operators
 
 import (
+	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -45,6 +46,15 @@ func TestOperators(t *testing.T) {
 		t.Fatalf("failed to walk test files: %s", err.Error())
 	}
 
+	notImplemented := []string{
+		"containsWord",
+		"strmatch",
+		"verifyCC",
+		"verifycpf",
+		"verifyssn",
+		"verifysvnr",
+	}
+
 	captureMatrix := map[string]bool{
 		"with capture":    true,
 		"without capture": false,
@@ -54,8 +64,8 @@ func TestOperators(t *testing.T) {
 	for _, f := range files {
 		cases := unmarshalTests(t, f)
 		for _, data := range cases {
-			if data.Name == "containsWord" {
-				t.Skip("containsWord is not implemented")
+			if utils.InSlice("containsWord", notImplemented) {
+				continue
 			}
 			for capName, capVal := range captureMatrix {
 				t.Run(data.Name+" "+capName, func(t *testing.T) {
@@ -88,6 +98,7 @@ func TestOperators(t *testing.T) {
 					op, err := Get(data.Name, opts)
 					if err != nil {
 						t.Error(err)
+						return
 					}
 					tx := waf.NewTransaction()
 					tx.Capture = capVal
