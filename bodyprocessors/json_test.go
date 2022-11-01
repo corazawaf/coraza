@@ -7,10 +7,14 @@ import (
 	"testing"
 )
 
-// Tests JSONToMap
-func TestJSONToMap(t *testing.T) {
-	var (
-		jsonMapString = `
+var jsonTests = []struct {
+	name string
+	json string
+	want map[string]string
+}{
+	{
+		name: "map",
+		json: `
 {
   "a": 1,
   "b": 2,
@@ -35,8 +39,26 @@ func TestJSONToMap(t *testing.T) {
 	  ]
   ]
 }
-	`
-		jsonArrayString = `
+	`,
+		want: map[string]string{
+			"json.a":         "1",
+			"json.b":         "2",
+			"json.c":         "3",
+			"json.c.0":       "1",
+			"json.c.1":       "2",
+			"json.c.2":       "3",
+			"json.d.a.b":     "1",
+			"json.e":         "1",
+			"json.e.0.a":     "1",
+			"json.f":         "1",
+			"json.f.0":       "1",
+			"json.f.0.0":     "1",
+			"json.f.0.0.0.z": "abc",
+		},
+	},
+	{
+		name: "array",
+		json: `
 [
     [
         [
@@ -73,50 +95,63 @@ func TestJSONToMap(t *testing.T) {
             ]
         ]
     }
-]
-`
-	)
-	mapAsserts := map[string]string{
-		"json.a":         "1",
-		"json.b":         "2",
-		"json.c":         "3",
-		"json.c.0":       "1",
-		"json.c.1":       "2",
-		"json.c.2":       "3",
-		"json.d.a.b":     "1",
-		"json.e.0.a":     "1",
-		"json.f.0.0.0.z": "abc",
-	}
-	jsonMap, err := jsonToMap([]byte(jsonMapString))
-	if err != nil {
-		t.Error(err)
-	}
+]`,
+		want: map[string]string{
+			"json.0.0.0.q":     "1",
+			"json.1.a":         "1",
+			"json.1.b":         "2",
+			"json.1.c":         "3",
+			"json.1.c.0":       "1",
+			"json.1.c.1":       "2",
+			"json.1.c.2":       "3",
+			"json.1.d.a.b":     "1",
+			"json.1.e":         "1",
+			"json.1.e.0.a":     "1",
+			"json.1.f":         "1",
+			"json.1.f.0":       "1",
+			"json.1.f.0.0":     "1",
+			"json.1.f.0.0.0.z": "abc",
+		},
+	},
+}
 
-	for k, v := range mapAsserts {
-		if jsonMap[k] != v {
-			t.Errorf("Expected %s=%s", k, v)
-		}
+// Tests JSONToMap
+func TestJSONToMap(t *testing.T) {
+	for _, tc := range jsonTests {
+		tt := tc
+		t.Run(tt.name, func(t *testing.T) {
+			jsonMap, err := jsonToMap([]byte(tt.json))
+			if err != nil {
+				t.Error(err)
+			}
+			for k, want := range tt.want {
+				if have, ok := jsonMap[k]; ok {
+					if want != have {
+						t.Errorf("key=%s, want %s, have %s", k, want, have)
+					}
+				} else {
+					t.Errorf("missing key: %s", k)
+				}
+			}
+			for k := range jsonMap {
+				if _, ok := tt.want[k]; !ok {
+					t.Errorf("unexpected key: %s", k)
+				}
+			}
+		})
 	}
+}
 
-	arrayAsserts := map[string]string{
-		"json.0.0.0.q":     "1",
-		"json.1.a":         "1",
-		"json.1.b":         "2",
-		"json.1.c":         "3",
-		"json.1.c.0":       "1",
-		"json.1.c.1":       "2",
-		"json.1.c.2":       "3",
-		"json.1.d.a.b":     "1",
-		"json.1.e.0.a":     "1",
-		"json.1.f.0.0.0.z": "abc",
-	}
-	jsonArray, err := jsonToMap([]byte(jsonArrayString))
-	if err != nil {
-		t.Error(err)
-	}
-	for k, v := range arrayAsserts {
-		if jsonArray[k] != v {
-			t.Errorf("Expected %s=%s", k, v)
-		}
+func BenchmarkJSONToMap(b *testing.B) {
+	for _, tc := range jsonTests {
+		tt := tc
+		b.Run(tt.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_, err := jsonToMap([]byte(tt.json))
+				if err != nil {
+					b.Error(err)
+				}
+			}
+		})
 	}
 }
