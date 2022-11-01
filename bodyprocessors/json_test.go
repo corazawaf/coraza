@@ -4,6 +4,7 @@
 package bodyprocessors
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -97,6 +98,9 @@ var jsonTests = []struct {
     }
 ]`,
 		want: map[string]string{
+			"json":             "2",
+			"json.0":           "1",
+			"json.0.0":         "1",
 			"json.0.0.0.q":     "1",
 			"json.1.a":         "1",
 			"json.1.b":         "2",
@@ -115,12 +119,11 @@ var jsonTests = []struct {
 	},
 }
 
-// Tests JSONToMap
-func TestJSONToMap(t *testing.T) {
+func TestReadJSON(t *testing.T) {
 	for _, tc := range jsonTests {
 		tt := tc
 		t.Run(tt.name, func(t *testing.T) {
-			jsonMap, err := jsonToMap([]byte(tt.json))
+			jsonMap, err := readJSON(strings.NewReader(tt.json))
 			if err != nil {
 				t.Error(err)
 			}
@@ -142,12 +145,12 @@ func TestJSONToMap(t *testing.T) {
 	}
 }
 
-func BenchmarkJSONToMap(b *testing.B) {
+func BenchmarkReadJSON(b *testing.B) {
 	for _, tc := range jsonTests {
 		tt := tc
 		b.Run(tt.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				_, err := jsonToMap([]byte(tt.json))
+				_, err := readJSON(strings.NewReader(tt.json))
 				if err != nil {
 					b.Error(err)
 				}
