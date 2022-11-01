@@ -1,6 +1,8 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !coraza.disabled_operators.endsWith
+
 package operators
 
 import (
@@ -29,4 +31,8 @@ func newEndsWith(options rules.OperatorOptions) (rules.Operator, error) {
 func (o *endsWith) Evaluate(tx rules.TransactionState, value string) bool {
 	data := o.data.Expand(tx)
 	return strings.HasSuffix(value, data)
+}
+
+func init() {
+	Register("endsWith", newEndsWith)
 }

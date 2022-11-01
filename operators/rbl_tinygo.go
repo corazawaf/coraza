@@ -13,3 +13,7 @@ import (
 func newRBL(rules.OperatorOptions) (rules.Operator, error) {
 	return &unconditionalMatch{}, nil
 }
+
+func init() {
+	Register("rbl", newRBL)
+}

@@ -15,3 +15,7 @@ type inspectFile struct{}
 func newInspectFile(rules.OperatorOptions) (rules.Operator, error) {
 	return &unconditionalMatch{}, nil
 }
+
+func init() {
+	Register("inspectFile", newInspectFile)
+}

@@ -1,6 +1,8 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !coraza.disabled_operators.pm
+
 package operators
 
 import (
@@ -64,4 +66,8 @@ func pmEvaluate(matcher ahocorasick.AhoCorasick, tx rules.TransactionState, valu
 	}
 
 	return numMatches > 0
+}
+
+func init() {
+	Register("pm", newPM)
 }
