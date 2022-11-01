@@ -27,6 +27,7 @@ require (
 )
 
 require (
+	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/miekg/dns v1.1.50 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
