@@ -6,6 +6,7 @@ package bodyprocessors
 import (
 	"io"
 	"strconv"
+	"strings"
 
 	"github.com/tidwall/gjson"
 
@@ -39,12 +40,13 @@ func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v rules.Transacti
 }
 
 func readJSON(reader io.Reader) (map[string]string, error) {
-	data, err := io.ReadAll(reader)
+	s := strings.Builder{}
+	_, err := io.Copy(&s, reader)
 	if err != nil {
 		return nil, err
 	}
 
-	json := gjson.ParseBytes(data)
+	json := gjson.Parse(s.String())
 	res := make(map[string]string)
 	readItems(json, "json", res)
 	return res, nil
