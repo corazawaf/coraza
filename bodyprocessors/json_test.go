@@ -97,6 +97,9 @@ var jsonTests = []struct {
     }
 ]`,
 		want: map[string]string{
+			"json":             "2",
+			"json.0":           "1",
+			"json.0.0":         "1",
 			"json.0.0.0.q":     "1",
 			"json.1.a":         "1",
 			"json.1.b":         "2",

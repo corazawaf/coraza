@@ -4,9 +4,11 @@
 package bodyprocessors
 
 import (
-	"fmt"
+	"errors"
 	"io"
 	"strconv"
+
+	"github.com/buger/jsonparser"
 
 	"github.com/corazawaf/coraza/v3/rules"
 )
@@ -65,109 +67,73 @@ func readJSON(reader io.Reader) (map[string]string, error) {
 // Example output: map[string]string{"json.0.data.name": "John", "json.0.data.age": "30", "json.0.items.0": "1", "json.0.items.1": "2", "json.0.items.2": "3"}
 // TODO add some anti DOS protection
 func jsonToMap(data []byte) (map[string]string, error) {
-	var (
-		result interface{}
-		m      map[string]string
-		err    error
-	)
-	if result, err = jsonUnmarshal(data); err != nil {
-		return nil, err
-	}
-
-	switch result := result.(type) {
-	case map[string]interface{}:
-		m, err = interfaceToMap(result)
-		if err != nil {
-			return nil, err
-		}
-	case []interface{}:
-		m, err = arrayToMap(result)
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, fmt.Errorf("invalid JSON")
-	}
-
 	res := make(map[string]string)
-	for key, value := range m {
-		res["json."+key] = value
+	err := readObject(data, "json", res)
+	if errors.Is(err, jsonparser.MalformedObjectError) {
+		err = readArray(data, "json", res)
+	}
+	if err != nil {
+		return nil, err
 	}
 	return res, nil
 }
 
-// Transform []interface{} into map[string]string recursively
-func arrayToMap(data []interface{}) (map[string]string, error) {
-	result := make(map[string]string)
-	for index, value := range data {
-		switch value := value.(type) {
-		case map[string]interface{}:
-			m, err := interfaceToMap(value)
-			if err != nil {
-				return nil, err
-			}
-			for k, v := range m {
-				result[fmt.Sprintf("%d.%s", index, k)] = v
-			}
-		case []interface{}:
-			subMap, err := arrayToMap(value)
-			if err != nil {
-				return nil, err
-			}
-			for k, v := range subMap {
-				result[fmt.Sprintf("%d.%s", index, k)] = v
-			}
+func readObject(data []byte, parentKey string, res map[string]string) error {
+	return jsonparser.ObjectEach(data, func(key []byte, value []byte, dataType jsonparser.ValueType, offset int) error {
+		objkey := parentKey + "." + string(key)
+		switch dataType {
+		case jsonparser.Object:
+			return readObject(value, objkey, res)
+		case jsonparser.Array:
+			return readArray(value, objkey, res)
 		default:
-			return nil, fmt.Errorf("invalid JSON")
+			res[objkey] = readValue(value, dataType)
 		}
-	}
-	return result, nil
+		return nil
+	})
 }
 
-// Transform map[string]interface{} into map[string]string recursively
-func interfaceToMap(data map[string]interface{}) (map[string]string, error) {
-	result := make(map[string]string)
-	for key, value := range data {
-		switch value := value.(type) {
-		case []interface{}:
-			m := map[string]interface{}{}
-			for i, v := range value {
-				m[strconv.Itoa(i)] = v
+func readArray(data []byte, parentKey string, res map[string]string) error {
+	idx := 0
+	var err error
+	_, err = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, _ int, _ error) {
+		objkey := parentKey + "." + strconv.Itoa(idx)
+		switch dataType {
+		case jsonparser.Object:
+			// Workaround https://github.com/buger/jsonparser/issues/255
+			if localErr := readObject(value, objkey, res); localErr != nil {
+				err = localErr
 			}
-			// we set the parent key to count the number of items
-			result[key] = strconv.Itoa(len(m))
-
-			m2, err := interfaceToMap(m)
-			if err != nil {
-				return nil, err
-			}
-			for k, v := range m2 {
-				result[fmt.Sprintf("%s.%s", key, k)] = v
-			}
-		case string:
-			result[key] = value
-		case int:
-			result[key] = strconv.Itoa(value)
-		case nil:
-			// TODO check if we ignore this or let it pass
-			result[key] = ""
-		case float64:
-			result[key] = strconv.FormatFloat(value, 'f', -1, 64)
-		case bool:
-			result[key] = strconv.FormatBool(value)
-		case map[string]interface{}:
-			subMap, err := interfaceToMap(value)
-			if err != nil {
-				return nil, err
-			}
-			for k, v := range subMap {
-				result[fmt.Sprintf("%s.%s", key, k)] = v
+		case jsonparser.Array:
+			if localErr := readArray(value, objkey, res); localErr != nil {
+				err = localErr
 			}
 		default:
-			return nil, fmt.Errorf("failed to unmarshall %s", value)
+			res[objkey] = readValue(value, dataType)
 		}
+		idx++
+	})
+	if err != nil {
+		return err
 	}
-	return result, nil
+	res[parentKey] = strconv.Itoa(idx)
+	return nil
+}
+
+func readValue(value []byte, dataType jsonparser.ValueType) string {
+	switch dataType {
+	case jsonparser.String:
+		if s, err := jsonparser.ParseString(value); err == nil {
+			return s
+		} else {
+			// Fallback to original string if any illegal escape sequences
+			return string(value)
+		}
+	case jsonparser.Null:
+		return ""
+	}
+	// String representation is same as JSON representation for all other types
+	return string(value)
 }
 
 var _ BodyProcessor = &jsonBodyProcessor{}

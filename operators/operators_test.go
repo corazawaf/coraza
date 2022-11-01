@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tidwall/gjson"
+	"github.com/buger/jsonparser"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
@@ -120,27 +120,36 @@ func TestOperators(t *testing.T) {
 
 func unmarshalTests(t *testing.T, json []byte) []Test {
 	t.Helper()
+	var err error
 	var tests []Test
-	v := gjson.ParseBytes(json).Value()
-	for _, in := range v.([]interface{}) {
-		obj := in.(map[string]interface{})
-		t := Test{}
-		if s, ok := obj["input"]; ok {
-			t.Input = s.(string)
+	_, err = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, _ int, _ error) {
+		test := Test{}
+		err = jsonparser.ObjectEach(value, func(key []byte, value []byte, dataType jsonparser.ValueType, _ int) error {
+			switch string(key) {
+			case "input":
+				test.Input, _ = jsonparser.ParseString(value)
+			case "param":
+				test.Param, _ = jsonparser.ParseString(value)
+			case "name":
+				test.Name, _ = jsonparser.ParseString(value)
+			case "ret":
+				test.Ret, err = strconv.Atoi(string(value))
+				if err != nil {
+					t.Fatal(err)
+				}
+			case "type":
+				test.Type, _ = jsonparser.ParseString(value)
+			}
+
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
 		}
-		if s, ok := obj["param"]; ok {
-			t.Param = s.(string)
-		}
-		if s, ok := obj["name"]; ok {
-			t.Name = s.(string)
-		}
-		if s, ok := obj["ret"]; ok {
-			t.Ret = int(s.(float64))
-		}
-		if s, ok := obj["type"]; ok {
-			t.Type = s.(string)
-		}
-		tests = append(tests, t)
+		tests = append(tests, test)
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 	return tests
 }
