@@ -13,11 +13,6 @@ import (
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
-type byteRange struct {
-	start byte
-	end   byte
-}
-
 type validateByteRange struct {
 	validBytes [256]bool // array, not slice, so don't pass as-is to functions
 }
