@@ -1,6 +1,8 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !coraza.disabled_operators.validateByteRange
+
 package operators
 
 import (
@@ -95,4 +97,8 @@ func addRange(ranges []byteRange, start uint64, end uint64) ([]byteRange, error)
 		start: byte(start),
 		end:   byte(end),
 	}), nil
+}
+
+func init() {
+	Register("validateByteRange", newValidateByteRange)
 }
