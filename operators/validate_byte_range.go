@@ -75,14 +75,13 @@ func (o *validateByteRange) Evaluate(tx rules.TransactionState, data string) boo
 	}
 	// we must iterate each byte from input and check if it is in the range
 	// if every byte is within the range we return false
-	matched := 0
 	for i := 0; i < len(data); i++ {
 		c := data[i]
-		if o.validBytes[c] {
-			matched++
+		if !o.validBytes[c] {
+			return true
 		}
 	}
-	return len(data) != matched
+	return false
 }
 
 func init() {
