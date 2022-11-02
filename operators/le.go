@@ -1,6 +1,8 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !coraza.disabled_operators.le
+
 package operators
 
 import (
@@ -29,4 +31,8 @@ func (o *le) Evaluate(tx rules.TransactionState, value string) bool {
 	d, _ := strconv.Atoi(o.data.Expand(tx))
 	v, _ := strconv.Atoi(value)
 	return v <= d
+}
+
+func init() {
+	Register("le", newLE)
 }

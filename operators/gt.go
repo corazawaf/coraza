@@ -1,6 +1,8 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !coraza.disabled_operators.gt
+
 package operators
 
 import (
@@ -30,4 +32,8 @@ func (o *gt) Evaluate(tx rules.TransactionState, value string) bool {
 	v, _ := strconv.Atoi(value)
 	k, _ := strconv.Atoi(o.data.Expand(tx))
 	return k < v
+}
+
+func init() {
+	Register("gt", newGT)
 }

@@ -1,8 +1,8 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build !tinygo
-// +build !tinygo
+//go:build !tinygo && !coraza.disabled_operators.inspectFile
+// +build !tinygo,!coraza.disabled_operators.inspectFile
 
 package operators
 
@@ -37,4 +37,8 @@ func (o *inspectFile) Evaluate(tx rules.TransactionState, value string) bool {
 		return false
 	}
 	return true
+}
+
+func init() {
+	Register("inspectFile", newInspectFile)
 }

@@ -1,8 +1,8 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build !tinygo
-// +build !tinygo
+//go:build !tinygo && !coraza.disabled_operators.rbl
+// +build !tinygo,!coraza.disabled_operators.rbl
 
 package operators
 
@@ -83,4 +83,8 @@ func (o *rbl) Evaluate(tx rules.TransactionState, ipAddr string) bool {
 	case <-time.After(timeout):
 		return false
 	}
+}
+
+func init() {
+	Register("rbl", newRBL)
 }

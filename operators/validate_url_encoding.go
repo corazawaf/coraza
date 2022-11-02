@@ -1,6 +1,8 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !coraza.disabled_operators.validateUrlEncoding
+
 package operators
 
 import (
@@ -69,4 +71,8 @@ func validateURLEncodingInternal(input string, inputLen int) int {
 		}
 	}
 	return 1
+}
+
+func init() {
+	Register("validateUrlEncoding", newValidateURLEncoding)
 }

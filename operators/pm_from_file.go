@@ -1,6 +1,8 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !coraza.disabled_operators.pmFromFile
+
 package operators
 
 import (
@@ -43,4 +45,8 @@ func newPMFromFile(options rules.OperatorOptions) (rules.Operator, error) {
 	})
 
 	return &pm{matcher: builder.Build(lines)}, nil
+}
+
+func init() {
+	Register("pmFromFile", newPMFromFile)
 }
