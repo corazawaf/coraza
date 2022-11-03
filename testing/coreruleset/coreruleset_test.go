@@ -126,13 +126,13 @@ func BenchmarkCRSSimplePOST(b *testing.B) {
 
 func TestFTW(t *testing.T) {
 	conf := coraza.NewWAFConfig()
-  
-  rec, err := os.ReadFile(filepath.Join("..", "..", "coraza.conf-recommended"))
+
+	rec, err := os.ReadFile(filepath.Join("..", "..", "coraza.conf-recommended"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	
-  customTestingConfig = `
+
+	customTestingConfig := `
 SecResponseBodyMimeType text/plain
 SecDefaultAction "phase:3,log,auditlog,pass"
 SecDefaultAction "phase:4,log,auditlog,pass"
@@ -162,8 +162,8 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
   msg:'X-CRS-Test %{MATCHED_VAR}',\
   pass,\
   t:none"
-`)
-  // Configs are loaded with a precise order:
+`
+	// Configs are loaded with a precise order:
 	// 1. Coraza config
 	// 2. Custom Rules for testing and eventually overrides of the basic Coraza config
 	// 3. CRS basic config
@@ -171,7 +171,7 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	conf = conf.
 		WithRootFS(crsReader).
 		WithDirectives(string(rec)).
-    WithDirectives(customTestingConfig).
+		WithDirectives(customTestingConfig).
 		WithDirectives("Include crs-setup.conf.example").
 		WithDirectives("Include rules/*.conf")
 
