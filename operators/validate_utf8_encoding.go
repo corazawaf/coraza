@@ -1,6 +1,8 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !coraza.disabled_operators.validateUtf8Encoding
+
 package operators
 
 import (
@@ -13,8 +15,14 @@ type validateUtf8Encoding struct{}
 
 var _ rules.Operator = (*validateUtf8Encoding)(nil)
 
-func (o *validateUtf8Encoding) Init(rules.OperatorOptions) error { return nil }
+func newValidateUTF8Encoding(rules.OperatorOptions) (rules.Operator, error) {
+	return &validateUtf8Encoding{}, nil
+}
 
 func (o *validateUtf8Encoding) Evaluate(_ rules.TransactionState, value string) bool {
 	return !utf8.ValidString(value)
+}
+
+func init() {
+	Register("validateUtf8Encoding", newValidateUTF8Encoding)
 }

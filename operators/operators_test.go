@@ -13,6 +13,7 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
@@ -45,6 +46,15 @@ func TestOperators(t *testing.T) {
 		t.Fatalf("failed to walk test files: %s", err.Error())
 	}
 
+	notImplemented := []string{
+		"containsWord",
+		"strmatch",
+		"verifyCC",
+		"verifycpf",
+		"verifyssn",
+		"verifysvnr",
+	}
+
 	captureMatrix := map[string]bool{
 		"with capture":    true,
 		"without capture": false,
@@ -54,6 +64,9 @@ func TestOperators(t *testing.T) {
 	for _, f := range files {
 		cases := unmarshalTests(t, f)
 		for _, data := range cases {
+			if utils.InSlice("containsWord", notImplemented) {
+				continue
+			}
 			for capName, capVal := range captureMatrix {
 				t.Run(data.Name+" "+capName, func(t *testing.T) {
 					// UNMARSHALL does not transform \u0000 to binary
@@ -77,19 +90,15 @@ func TestOperators(t *testing.T) {
 						data.Param = p
 					}
 
-					op, err := Get(data.Name)
-					if err != nil {
-						t.Logf("skipped error: %s", err.Error())
-						return
-					}
-
 					opts := rules.OperatorOptions{
 						Arguments: data.Param,
 						Path:      []string{"op"},
 						Root:      os.DirFS("testdata"),
 					}
-					if err := op.Init(opts); err != nil {
+					op, err := Get(data.Name, opts)
+					if err != nil {
 						t.Error(err)
+						return
 					}
 					tx := waf.NewTransaction()
 					tx.Capture = capVal

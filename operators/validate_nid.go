@@ -1,6 +1,8 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !coraza.disabled_operators.validateNid
+
 package operators
 
 import (
@@ -21,27 +23,27 @@ type validateNid struct {
 
 var _ rules.Operator = (*validateNid)(nil)
 
-func (o *validateNid) Init(options rules.OperatorOptions) error {
+func newValidateNID(options rules.OperatorOptions) (rules.Operator, error) {
 	data := options.Arguments
 
 	spl := strings.SplitN(data, " ", 2)
 	if len(spl) != 2 {
-		return fmt.Errorf("invalid @validateNid argument")
+		return nil, fmt.Errorf("invalid @validateNid argument")
 	}
+	var fn validateNidFunction
 	switch spl[0] {
 	case "cl":
-		o.fn = nidCl
+		fn = nidCl
 	case "us":
-		o.fn = nidUs
+		fn = nidUs
 	default:
-		return fmt.Errorf("invalid @validateNid argument")
+		return nil, fmt.Errorf("invalid @validateNid argument")
 	}
 	re, err := regexp.Compile(spl[1])
 	if err != nil {
-		return err
+		return nil, err
 	}
-	o.re = re
-	return err
+	return &validateNid{fn: fn, re: re}, nil
 }
 
 func (o *validateNid) Evaluate(tx rules.TransactionState, value string) bool {
@@ -136,3 +138,7 @@ var (
 	_ validateNidFunction = nidCl
 	_ validateNidFunction = nidUs
 )
+
+func init() {
+	Register("validateNid", newValidateNID)
+}

@@ -188,11 +188,6 @@ func (p *RuleParser) ParseOperator(operator string) error {
 		op = op[2:]
 	}
 
-	opfn, err := operators.Get(op)
-	if err != nil {
-		return err
-	}
-
 	opts := rules.OperatorOptions{
 		Arguments: opdata,
 		Path: []string{
@@ -201,7 +196,7 @@ func (p *RuleParser) ParseOperator(operator string) error {
 		},
 		Root: p.options.Config.Get("parser_root", io.OSFS{}).(fs.FS),
 	}
-	err = opfn.Init(opts)
+	opfn, err := operators.Get(op, opts)
 	if err != nil {
 		return err
 	}

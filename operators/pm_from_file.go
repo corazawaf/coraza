@@ -1,6 +1,8 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !coraza.disabled_operators.pmFromFile
+
 package operators
 
 import (
@@ -13,18 +15,12 @@ import (
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
-type pmFromFile struct {
-	matcher ahocorasick.AhoCorasick
-}
-
-var _ rules.Operator = (*pmFromFile)(nil)
-
-func (o *pmFromFile) Init(options rules.OperatorOptions) error {
+func newPMFromFile(options rules.OperatorOptions) (rules.Operator, error) {
 	path := options.Arguments
 
 	data, err := loadFromFile(path, options.Path, options.Root)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var lines []string
@@ -48,10 +44,9 @@ func (o *pmFromFile) Init(options rules.OperatorOptions) error {
 		DFA:                  false,
 	})
 
-	o.matcher = builder.Build(lines)
-	return nil
+	return &pm{matcher: builder.Build(lines)}, nil
 }
 
-func (o *pmFromFile) Evaluate(tx rules.TransactionState, value string) bool {
-	return pmEvaluate(o.matcher, tx, value)
+func init() {
+	Register("pmFromFile", newPMFromFile)
 }

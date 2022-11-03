@@ -1,6 +1,8 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !coraza.disabled_operators.ipMatchFromFile
+
 package operators
 
 import (
@@ -11,18 +13,12 @@ import (
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
-type ipMatchFromFile struct {
-	ipMatcher *ipMatch
-}
-
-var _ rules.Operator = (*ipMatchFromFile)(nil)
-
-func (o *ipMatchFromFile) Init(options rules.OperatorOptions) error {
+func newIPMatchFromFile(options rules.OperatorOptions) (rules.Operator, error) {
 	path := options.Arguments
 
 	data, err := loadFromFile(path, options.Path, options.Root)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	dataParsed := strings.Builder{}
@@ -40,15 +36,12 @@ func (o *ipMatchFromFile) Init(options rules.OperatorOptions) error {
 		dataParsed.WriteString(l)
 	}
 
-	o.ipMatcher = &ipMatch{}
 	opts := rules.OperatorOptions{
 		Arguments: dataParsed.String(),
 	}
-	return o.ipMatcher.Init(opts)
+	return newIPMatch(opts)
 }
 
-func (o *ipMatchFromFile) Evaluate(tx rules.TransactionState, value string) bool {
-	return o.ipMatcher.Evaluate(tx, value)
+func init() {
+	Register("ipMatchFromFile", newIPMatchFromFile)
 }
-
-var _ rules.Operator = (*ipMatchFromFile)(nil)

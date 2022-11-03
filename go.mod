@@ -12,8 +12,6 @@ go 1.18
 // Build dependencies:
 // - libinjection-go
 // - aho-corasick
-
-// Tinygo dependencies:
 // - gjson
 
 require (

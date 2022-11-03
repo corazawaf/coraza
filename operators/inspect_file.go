@@ -1,8 +1,8 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build !tinygo
-// +build !tinygo
+//go:build !tinygo && !coraza.disabled_operators.inspectFile
+// +build !tinygo,!coraza.disabled_operators.inspectFile
 
 package operators
 
@@ -20,9 +20,8 @@ type inspectFile struct {
 
 var _ rules.Operator = (*inspectFile)(nil)
 
-func (o *inspectFile) Init(options rules.OperatorOptions) error {
-	o.path = options.Arguments
-	return nil
+func newInspectFile(options rules.OperatorOptions) (rules.Operator, error) {
+	return &inspectFile{path: options.Arguments}, nil
 }
 
 func (o *inspectFile) Evaluate(tx rules.TransactionState, value string) bool {
@@ -38,4 +37,8 @@ func (o *inspectFile) Evaluate(tx rules.TransactionState, value string) bool {
 		return false
 	}
 	return true
+}
+
+func init() {
+	Register("inspectFile", newInspectFile)
 }

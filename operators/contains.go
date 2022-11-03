@@ -1,6 +1,8 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !coraza.disabled_operators.contains
+
 package operators
 
 import (
@@ -16,18 +18,21 @@ type contains struct {
 
 var _ rules.Operator = (*contains)(nil)
 
-func (o *contains) Init(options rules.OperatorOptions) error {
+func newContains(options rules.OperatorOptions) (rules.Operator, error) {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	o.data = m
-	return nil
+	return &contains{data: m}, nil
 }
 
 func (o *contains) Evaluate(tx rules.TransactionState, value string) bool {
 	data := o.data.Expand(tx)
 	return strings.Contains(value, data)
+}
+
+func init() {
+	Register("contains", newContains)
 }
