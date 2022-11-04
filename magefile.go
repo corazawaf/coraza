@@ -86,10 +86,10 @@ func Coverage() error {
 	if err := sh.RunV("go", "test", "-race", "-coverprofile=build/coverage.txt", "-covermode=atomic", "-coverpkg=./...", "./..."); err != nil {
 		return err
 	}
-	if err := sh.RunV("go", "test", "-race", "-coverprofile=build/coverage.txt", "-covermode=atomic", "-coverpkg=./...", "./examples/http-server"); err != nil {
+	if err := sh.RunV("go", "test", "-race", "-coverprofile=build/coverage-examples.txt", "-covermode=atomic", "-coverpkg=./...", "./examples/http-server"); err != nil {
 		return err
 	}
-	if err := sh.RunV("go", "test", "-coverprofile=build/coverage.txt", "-covermode=atomic", "-coverpkg=./...", "./testing/coreruleset"); err != nil {
+	if err := sh.RunV("go", "test", "-coverprofile=build/coverage-ftw.txt", "-covermode=atomic", "-coverpkg=./...", "./testing/coreruleset"); err != nil {
 		return err
 	}
 	// This is not actually running tests with tinygo, but with the tag that includes its code so we can calculate coverage
