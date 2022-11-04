@@ -74,6 +74,7 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 		// - https://tip.golang.org/doc/go1.19#minor_library_changes
 		// This avoid errors like "failed to process request: malformed chunked encoding" when
 		// using io.Copy
+                 // In Go 1.19 we just do `req.Body = io.NopCloser(reader)`
 		if rwt, ok := reader.(io.WriterTo); ok {
 			req.Body = struct {
 				io.Reader
