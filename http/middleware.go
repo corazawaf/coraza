@@ -17,6 +17,15 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
+// Backport to Go 1.18 implementation of WriterTo in ReadCloser if readers have it.
+// Ref: https://github.com/golang/go/blob/master/src/io/io.go#L665
+type nopCloserWriterTo struct{ io.Reader }
+
+func (nopCloserWriterTo) Close() error { return nil }
+func (c nopCloserWriterTo) WriteTo(w io.Writer) (n int64, err error) {
+	return c.Reader.(io.WriterTo).WriteTo(w)
+}
+
 // processRequest fills all transaction variables from an http.Request object
 // Most implementations of Coraza will probably use http.Request objects
 // so this will implement all phase 0, 1 and 2 variables
@@ -64,6 +73,17 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 		// req.Body is transparently reinizialied with a new io.ReadCloser.
 		// The http handler will be able to read it
 		req.Body = io.NopCloser(reader)
+
+		// Prior to Go 1.19 NopCloser does not implement WriterTo if the reader implements it.
+		// Ref: https://github.com/golang/go/issues/51566
+		// Ref: https://tip.golang.org/doc/go1.19#minor_library_changes
+		// Checking if it is not implemented (Go<1.19 or reader does not have it)
+		if _, ok := req.Body.(io.WriterTo); !ok {
+			// Checking if reader implements WriterTo
+			if _, ok := reader.(io.WriterTo); ok {
+				req.Body = nopCloserWriterTo{reader}
+			}
+		}
 	}
 
 	return tx.ProcessRequestBody()
