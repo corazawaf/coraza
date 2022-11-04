@@ -44,7 +44,7 @@ Key Features:
 The Coraza Project maintains implementations and plugins for the following servers: 
 
 * [Caddy Reverse Proxy and Webserver Plugin](https://github.com/corazawaf/coraza-caddy) - stable, needs a maintainer
-* [Proxy WASM extension](https://github.com/corazawaf/coraza) for proxies with proxy-wasm support (e.g. Envoy) - stable, still under development
+* [Proxy WASM extension](https://github.com/corazawaf/coraza-proxy-wasm) for proxies with proxy-wasm support (e.g. Envoy) - stable, still under development
 * [HAProxy SPOE Plugin](https://github.com/corazawaf/coraza-spoa) - preview
 * [Traefik Proxy Plugin](https://github.com/jptosso/coraza-traefik) - preview, needs maintainer
 * [Gin Web Framework Middleware](https://github.com/jptosso/coraza-gin) - preview, needs maintainer
