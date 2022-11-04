@@ -17,6 +17,10 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
+type nopCloser struct{}
+
+func (nopCloser) Close() error { return nil }
+
 // processRequest fills all transaction variables from an http.Request object
 // Most implementations of Coraza will probably use http.Request objects
 // so this will implement all phase 0, 1 and 2 variables
@@ -57,13 +61,32 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 		if err != nil {
 			return tx.Interruption(), err
 		}
+		_ = req.Body.Close()
+
 		reader, err := tx.RequestBodyReader()
 		if err != nil {
 			return tx.Interruption(), err
 		}
 		// req.Body is transparently reinizialied with a new io.ReadCloser.
-		// The http handler will be able to read it
-		req.Body = io.NopCloser(reader)
+		// The http handler will be able to read it.
+		// Prior to Go 1.19 NopCloser does not implement WriterTo if the reader implements it.
+		// - https://github.com/golang/go/issues/51566
+		// - https://tip.golang.org/doc/go1.19#minor_library_changes
+		// This avoid errors like "failed to process request: malformed chunked encoding" when
+		// using io.Copy
+		// In Go 1.19 we just do `req.Body = io.NopCloser(reader)`
+		if rwt, ok := reader.(io.WriterTo); ok {
+			req.Body = struct {
+				io.Reader
+				io.WriterTo
+				io.Closer
+			}{reader, rwt, nopCloser{}}
+		} else {
+			req.Body = struct {
+				io.Reader
+				io.Closer
+			}{reader, nopCloser{}}
+		}
 	}
 
 	return tx.ProcessRequestBody()
