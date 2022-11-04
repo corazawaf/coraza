@@ -57,6 +57,8 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 		if err != nil {
 			return tx.Interruption(), err
 		}
+		_ = req.Body.Close()
+
 		reader, err := tx.RequestBodyReader()
 		if err != nil {
 			return tx.Interruption(), err

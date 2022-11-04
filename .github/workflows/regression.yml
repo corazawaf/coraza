@@ -51,7 +51,7 @@ jobs:
           files: build/coverage-tinygo.txt
           flags: tinygo
       - name: SonarCloud Scan
-        if: ${{ matrix.go-version == '1.17.x' && github.event.pull_request.head.repo.full_name == github.repository }}
+        if: ${{ matrix.go-version == '1.19.x' && github.event.pull_request.head.repo.full_name == github.repository }}
         uses: sonarsource/sonarcloud-github-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
