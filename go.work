@@ -3,5 +3,6 @@ go 1.18
 use (
 	.
 	./examples/http-server
+	./examples/plugins/operator-jwt
 	./testing/coreruleset
 )
