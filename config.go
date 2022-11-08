@@ -176,6 +176,9 @@ func (c *wafConfig) WithRootFS(fs fs.FS) WAFConfig {
 
 func (c *wafConfig) clone() *wafConfig {
 	ret := *c // copy
+	rules := make([]wafRule, len(c.rules))
+	copy(rules, c.rules)
+	ret.rules = rules
 	return &ret
 }
 
