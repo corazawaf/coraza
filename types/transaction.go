@@ -103,6 +103,12 @@ type Transaction interface {
 	// delivered prior to the execution of this method.
 	ProcessLogging()
 
+	// RequestBodyAccessible will return true if RequestBody access has been enabled by RequestBodyAccess
+	RequestBodyAccessible() bool
+
+	// ResponseBodyAccessible will return true if ResponseBody access has been enabled by ResponseBodyAccess
+	ResponseBodyAccessible() bool
+
 	// Interrupted will return true if the transaction was interrupted
 	Interrupted() bool
 

@@ -939,6 +939,16 @@ func (tx *Transaction) ProcessLogging() {
 	}
 }
 
+// RequestBodyAccessible will return true if RequestBody access has been enabled by RequestBodyAccess
+func (tx *Transaction) RequestBodyAccessible() bool {
+	return tx.RequestBodyAccess
+}
+
+// ResponseBodyAccessible will return true if ResponseBody access has been enabled by ResponseBodyAccess
+func (tx *Transaction) ResponseBodyAccessible() bool {
+	return tx.ResponseBodyAccess
+}
+
 // Interrupted will return true if the transaction was interrupted
 func (tx *Transaction) Interrupted() bool {
 	return tx.interruption != nil
