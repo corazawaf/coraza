@@ -939,6 +939,11 @@ func (tx *Transaction) ProcessLogging() {
 	}
 }
 
+// RuleEngineStatus returns the status of the rule engine for the transaction
+func (tx *Transaction) RuleEngineStatus() types.RuleEngineStatus {
+	return tx.RuleEngine
+}
+
 // RequestBodyAccessible will return true if RequestBody access has been enabled by RequestBodyAccess
 func (tx *Transaction) RequestBodyAccessible() bool {
 	return tx.RequestBodyAccess

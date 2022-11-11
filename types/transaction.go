@@ -103,6 +103,9 @@ type Transaction interface {
 	// delivered prior to the execution of this method.
 	ProcessLogging()
 
+	// RuleEngineStatus returns the status of the rule engine for the transaction
+	RuleEngineStatus() RuleEngineStatus
+
 	// RequestBodyAccessible will return true if RequestBody access has been enabled by RequestBodyAccess
 	RequestBodyAccessible() bool
 
