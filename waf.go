@@ -76,13 +76,24 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		waf.ContentInjection = true
 	}
 
-	if r := c.requestBody; r != nil {
-		waf.RequestBodyLimit = int64(r.limit)
-		waf.RequestBodyInMemoryLimit = int64(r.inMemoryLimit)
+	if c.requestBodyAccess {
+		waf.RequestBodyAccess = true
 	}
 
-	if r := c.responseBody; r != nil {
-		waf.ResponseBodyLimit = int64(r.limit)
+	if c.requestBodyLimit != 0 {
+		waf.RequestBodyLimit = int64(c.requestBodyLimit)
+	}
+
+	if c.requestBodyInMemoryLimit != 0 {
+		waf.RequestBodyInMemoryLimit = int64(c.requestBodyInMemoryLimit)
+	}
+
+	if c.responseBodyAccess {
+		waf.ResponseBodyAccess = true
+	}
+
+	if c.responseBodyLimit != 0 {
+		waf.ResponseBodyLimit = int64(c.requestBodyLimit)
 	}
 
 	if c.errorLogger != nil {
