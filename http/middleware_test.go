@@ -43,6 +43,22 @@ func TestProcessRequest(t *testing.T) {
 	}
 }
 
+func TestProcessRequestEngineOff(t *testing.T) {
+	req, _ := http.NewRequest("POST", "https://www.coraza.io/test", strings.NewReader("test=456"))
+	waf := corazawaf.NewWAF()
+	waf.RuleEngine = types.RuleEngineOff
+	tx := waf.NewTransaction()
+	if _, err := processRequest(tx, req); err != nil {
+		t.Fatal(err)
+	}
+	if tx.Variables().RequestMethod().String() != "POST" {
+		t.Fatal("failed to set request from request object")
+	}
+	if err := tx.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestProcessRequestMultipart(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/some", nil)
 	if err := multipartRequest(t, req); err != nil {

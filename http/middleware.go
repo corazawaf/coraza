@@ -89,6 +89,18 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 		}
 	}
 
+	// Calling tx.RuleEngineStatus() and tx.RequestBodyAccessible() is possible to
+	// anticipate some checks performed inside ProcessRequestBody(), avoiding
+	// to call the latter if no inspections are going to happen.
+	// It is performed here as a matter of example. It is recommended to avoid doing it
+	// if not strictly needed for server/proxy side actions.
+	switch {
+	case tx.RuleEngineStatus() == types.RuleEngineOff:
+		return nil, nil
+	case !tx.RequestBodyAccessible():
+		return tx.Interruption(), nil
+	}
+
 	return tx.ProcessRequestBody()
 }
 
