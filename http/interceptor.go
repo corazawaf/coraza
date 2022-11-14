@@ -25,25 +25,7 @@ type rwInterceptor struct {
 	hasStatusCode bool
 }
 
-func checkWriteHeaderCode(code int) {
-	// Issue 22880: require valid WriteHeader status codes.
-	// For now we only enforce that it's three digits.
-	// In the future we might block things over 599 (600 and above aren't defined
-	// at https://httpwg.org/specs/rfc7231.html#status.codes).
-	// But for now any three digits.
-	//
-	// We used to send "HTTP/1.1 000 0" on the wire in responses but there's
-	// no equivalent bogus thing we can realistically send in HTTP/2,
-	// so we'll consistently panic instead and help people find their bugs
-	// early. (We can't return an error from WriteHeader even if we wanted to.)
-	if code < 100 || code > 999 {
-		panic(fmt.Sprintf("invalid WriteHeader code %v", code))
-	}
-}
-
 func (i *rwInterceptor) WriteHeader(statusCode int) {
-	checkWriteHeaderCode(statusCode)
-
 	if i.hasStatusCode {
 		return
 	}
@@ -57,7 +39,7 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 	i.hasStatusCode = true
 	i.statusCode = statusCode
 	if it := i.tx.ProcessResponseHeaders(statusCode, i.proto); it != nil {
-		i.statusCode = obtainStatusCodeFromInterruption(it, i.statusCode)
+		i.statusCode = obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode)
 	}
 }
 
@@ -113,7 +95,7 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 				w.WriteHeader(http.StatusInternalServerError)
 				return err
 			} else if it != nil {
-				w.WriteHeader(obtainStatusCodeFromInterruption(it, i.statusCode))
+				w.WriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode))
 				return nil
 			}
 

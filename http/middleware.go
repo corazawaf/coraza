@@ -119,7 +119,7 @@ func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
 			l("failed to process request: %v", err)
 			return
 		} else if it != nil {
-			w.WriteHeader(obtainStatusCodeFromInterruption(it, http.StatusOK))
+			w.WriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, http.StatusOK))
 			return
 		}
 
@@ -137,9 +137,9 @@ func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
 	return http.HandlerFunc(fn)
 }
 
-// obtainStatusCodeFromInterruption returns the desired status code derived from the interruption
+// obtainStatusCodeFromInterruptionOrDefault returns the desired status code derived from the interruption
 // on a "deny" action or a default value.
-func obtainStatusCodeFromInterruption(it *types.Interruption, defaultStatusCode int) int {
+func obtainStatusCodeFromInterruptionOrDefault(it *types.Interruption, defaultStatusCode int) int {
 	if it.Action == "deny" {
 		statusCode := it.Status
 		if statusCode == 0 {
