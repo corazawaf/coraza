@@ -219,6 +219,7 @@ func createWAF(t *testing.T) coraza.WAF {
 		SecResponseBodyMimeType text/plain
 		SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
 		SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
+		SecRule RESPONSE_HEADERS:Foo "@pm bar" "id:199,phase:3,deny,t:lowercase,deny, status:401,msg:'Invalid response header',log,auditlog"
 		SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
 	`).WithErrorLogger(errLogger(t)).WithDebugLogger(&debugLogger{t: t}))
 	if err != nil {
@@ -232,6 +233,7 @@ func TestHttpServer(t *testing.T) {
 		http2            bool
 		reqURI           string
 		reqBody          string
+		respHeaders      map[string]string
 		respBody         string
 		expectedProto    string
 		expectedStatus   int
@@ -258,6 +260,12 @@ func TestHttpServer(t *testing.T) {
 			reqBody:        "eval('cat /etc/passwd')",
 			expectedProto:  "HTTP/1.1",
 			expectedStatus: 403,
+		},
+		"response headers blocking": {
+			reqURI:         "/hello",
+			respHeaders:    map[string]string{"foo": "bar"},
+			expectedProto:  "HTTP/1.1",
+			expectedStatus: 401,
 		},
 		"response body not blocking": {
 			reqURI:           "/hello",
@@ -288,12 +296,15 @@ func TestHttpServer(t *testing.T) {
 				}
 
 				w.Header().Set("Content-Type", "text/plain")
+				w.Header().Add("coraza-middleware", "true")
+				for k, v := range tCase.respHeaders {
+					w.Header().Set(k, v)
+				}
+				w.WriteHeader(201)
 				_, err := w.Write([]byte(tCase.respBody))
 				if err != nil {
 					serverErrC <- err
 				}
-				w.Header().Add("coraza-middleware", "true")
-				w.WriteHeader(201)
 			})))
 			if tCase.http2 {
 				ts.EnableHTTP2 = true

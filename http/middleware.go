@@ -56,40 +56,48 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 	if in != nil {
 		return in, nil
 	}
-	if req.Body != nil && req.Body != http.NoBody {
-		_, err := io.Copy(tx.RequestBodyWriter(), req.Body)
-		if err != nil {
-			return tx.Interruption(), err
-		}
-		_ = req.Body.Close()
 
-		reader, err := tx.RequestBodyReader()
-		if err != nil {
-			return tx.Interruption(), err
+	if tx.RequestBodyAccessible() {
+		// We only do body buffering if the transaction requires request
+		// body inspection, otherwise we just let the request follow its
+		// regular flow.
+		if req.Body != nil && req.Body != http.NoBody {
+			_, err := io.Copy(tx.RequestBodyWriter(), req.Body)
+			if err != nil {
+				return tx.Interruption(), err
+			}
+			_ = req.Body.Close()
+
+			reader, err := tx.RequestBodyReader()
+			if err != nil {
+				return tx.Interruption(), err
+			}
+			// req.Body is transparently reinizialied with a new io.ReadCloser.
+			// The http handler will be able to read it.
+			// Prior to Go 1.19 NopCloser does not implement WriterTo if the reader implements it.
+			// - https://github.com/golang/go/issues/51566
+			// - https://tip.golang.org/doc/go1.19#minor_library_changes
+			// This avoid errors like "failed to process request: malformed chunked encoding" when
+			// using io.Copy.
+			// In Go 1.19 we just do `req.Body = io.NopCloser(reader)`
+			if rwt, ok := reader.(io.WriterTo); ok {
+				req.Body = struct {
+					io.Reader
+					io.WriterTo
+					io.Closer
+				}{reader, rwt, nopCloser{}}
+			} else {
+				req.Body = struct {
+					io.Reader
+					io.Closer
+				}{reader, nopCloser{}}
+			}
 		}
-		// req.Body is transparently reinizialied with a new io.ReadCloser.
-		// The http handler will be able to read it.
-		// Prior to Go 1.19 NopCloser does not implement WriterTo if the reader implements it.
-		// - https://github.com/golang/go/issues/51566
-		// - https://tip.golang.org/doc/go1.19#minor_library_changes
-		// This avoid errors like "failed to process request: malformed chunked encoding" when
-		// using io.Copy
-		// In Go 1.19 we just do `req.Body = io.NopCloser(reader)`
-		if rwt, ok := reader.(io.WriterTo); ok {
-			req.Body = struct {
-				io.Reader
-				io.WriterTo
-				io.Closer
-			}{reader, rwt, nopCloser{}}
-		} else {
-			req.Body = struct {
-				io.Reader
-				io.Closer
-			}{reader, nopCloser{}}
-		}
+
+		return tx.ProcessRequestBody()
 	}
 
-	return tx.ProcessRequestBody()
+	return nil, nil
 }
 
 func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
@@ -111,65 +119,35 @@ func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
 			l("failed to process request: %v", err)
 			return
 		} else if it != nil {
-			processInterruption(w, it)
+			w.WriteHeader(obtainStatusCodeFromInterruption(it, http.StatusOK))
 			return
 		}
 
-		ww := wrap(w, tx)
+		ww, processResponse := wrap(w, r, tx)
 
 		// We continue with the other middlewares by catching the response
 		h.ServeHTTP(ww, r)
 
-		for k, vv := range w.Header() {
-			for _, v := range vv {
-				tx.AddResponseHeader(k, v)
-			}
-		}
-
-		if it := tx.ProcessResponseHeaders(ww.StatusCode(), r.Proto); it != nil {
-			processInterruption(w, it)
+		if err := processResponse(tx, r); err != nil {
+			l("failed to process response: %v", err)
 			return
-		}
-
-		if it, err := tx.ProcessResponseBody(); err != nil {
-			l("failed to process response body: %v", err)
-			return
-		} else if it != nil {
-			processInterruption(w, it)
-			return
-		}
-
-		// we release the buffer
-		reader, err := tx.ResponseBodyReader()
-		if err != nil {
-			l("failed to release the response body reader: %v", err)
-			w.WriteHeader(500)
-			return
-		}
-
-		statusCode := ww.StatusCode()
-		if statusCode == 0 {
-			// If WriteHeader has not yet been called, Write calls
-			// WriteHeader(http.StatusOK) before writing the data
-			statusCode = http.StatusOK
-		}
-		// Interceptor never calls the WritHeader, hence we call it here reusing
-		// intercepted status code.
-		w.WriteHeader(statusCode)
-		if _, err := io.Copy(w, reader); err != nil {
-			l("failed to copy the response body: %v", err)
 		}
 	}
 
 	return http.HandlerFunc(fn)
 }
 
-func processInterruption(w http.ResponseWriter, it *types.Interruption) {
-	if it.Status == 0 {
-		it.Status = 503
+// obtainStatusCodeFromInterruption returns the desired status code derived from the interruption
+// on a "deny" action or a default value.
+func obtainStatusCodeFromInterruption(it *types.Interruption, defaultStatusCode int) int {
+	if it.Action == "deny" {
+		statusCode := it.Status
+		if statusCode == 0 {
+			statusCode = 503
+		}
+
+		return statusCode
 	}
 
-	if it.Action == "deny" {
-		w.WriteHeader(it.Status)
-	}
+	return defaultStatusCode
 }
