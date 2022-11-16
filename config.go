@@ -61,7 +61,11 @@ type WAFConfig interface {
 
 // NewWAFConfig creates a new WAFConfig with the default settings.
 func NewWAFConfig() WAFConfig {
-	return &wafConfig{}
+	return &wafConfig{
+		requestBodyLimit:         -1,
+		requestBodyInMemoryLimit: -1,
+		responseBodyLimit:        -1,
+	}
 }
 
 // AuditLogConfig controls audit logging.
