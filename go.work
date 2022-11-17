@@ -4,5 +4,6 @@ use (
 	.
 	./examples/http-server
 	./examples/plugins/operator-jwt
+	./examples/plugins/bodyprocessor-csv
 	./testing/coreruleset
 )
