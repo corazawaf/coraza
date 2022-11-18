@@ -235,6 +235,7 @@ func createWAF(t *testing.T) coraza.WAF {
 		SecResponseBodyMimeType text/plain
 		SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
 		SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
+		SecRule RESPONSE_HEADERS:Foo "@pm bar" "id:199,phase:3,deny,t:lowercase,deny, status:401,msg:'Invalid response header',log,auditlog"
 		SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
 	`).WithErrorLogger(errLogger(t)).WithDebugLogger(&debugLogger{t: t}))
 	if err != nil {
@@ -248,6 +249,7 @@ func TestHttpServer(t *testing.T) {
 		http2            bool
 		reqURI           string
 		reqBody          string
+		respHeaders      map[string]string
 		respBody         string
 		expectedProto    string
 		expectedStatus   int
@@ -274,6 +276,12 @@ func TestHttpServer(t *testing.T) {
 			reqBody:        "eval('cat /etc/passwd')",
 			expectedProto:  "HTTP/1.1",
 			expectedStatus: 403,
+		},
+		"response headers blocking": {
+			reqURI:         "/hello",
+			respHeaders:    map[string]string{"foo": "bar"},
+			expectedProto:  "HTTP/1.1",
+			expectedStatus: 401,
 		},
 		"response body not blocking": {
 			reqURI:           "/hello",
@@ -304,12 +312,15 @@ func TestHttpServer(t *testing.T) {
 				}
 
 				w.Header().Set("Content-Type", "text/plain")
+				w.Header().Add("coraza-middleware", "true")
+				for k, v := range tCase.respHeaders {
+					w.Header().Set(k, v)
+				}
+				w.WriteHeader(201)
 				_, err := w.Write([]byte(tCase.respBody))
 				if err != nil {
 					serverErrC <- err
 				}
-				w.Header().Add("coraza-middleware", "true")
-				w.WriteHeader(201)
 			})))
 			if tCase.http2 {
 				ts.EnableHTTP2 = true
@@ -354,6 +365,42 @@ func TestHttpServer(t *testing.T) {
 				t.Errorf("unexpected error from server when writing response body: %v", err)
 			default:
 				return
+			}
+		})
+	}
+}
+
+func TestObtainStatusCodeFromInterruptionOrDefault(t *testing.T) {
+	tCases := map[string]struct {
+		interruptionCode   int
+		interruptionAction string
+		defaultCode        int
+		expectedCode       int
+	}{
+		"action deny with no code": {
+			interruptionAction: "deny",
+			expectedCode:       503,
+		},
+		"action deny with code": {
+			interruptionAction: "deny",
+			interruptionCode:   202,
+			expectedCode:       202,
+		},
+		"default code": {
+			defaultCode:  204,
+			expectedCode: 204,
+		},
+	}
+
+	for name, tCase := range tCases {
+		t.Run(name, func(t *testing.T) {
+			want := tCase.expectedCode
+			have := obtainStatusCodeFromInterruptionOrDefault(&types.Interruption{
+				Status: tCase.interruptionCode,
+				Action: tCase.interruptionAction,
+			}, tCase.defaultCode)
+			if want != have {
+				t.Errorf("unexpected status code, want %d, have %d", want, have)
 			}
 		})
 	}
