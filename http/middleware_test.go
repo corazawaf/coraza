@@ -353,3 +353,39 @@ func TestHttpServer(t *testing.T) {
 		})
 	}
 }
+
+func TestObtainStatusCodeFromInterruptionOrDefault(t *testing.T) {
+	tCases := map[string]struct {
+		interruptionCode   int
+		interruptionAction string
+		defaultCode        int
+		expectedCode       int
+	}{
+		"action deny with no code": {
+			interruptionAction: "deny",
+			expectedCode:       503,
+		},
+		"action deny with code": {
+			interruptionAction: "deny",
+			interruptionCode:   202,
+			expectedCode:       202,
+		},
+		"default code": {
+			defaultCode:  204,
+			expectedCode: 204,
+		},
+	}
+
+	for name, tCase := range tCases {
+		t.Run(name, func(t *testing.T) {
+			want := tCase.expectedCode
+			have := obtainStatusCodeFromInterruptionOrDefault(&types.Interruption{
+				Status: tCase.interruptionCode,
+				Action: tCase.interruptionAction,
+			}, tCase.defaultCode)
+			if want != have {
+				t.Errorf("unexpected status code, want %d, have %d", want, have)
+			}
+		})
+	}
+}

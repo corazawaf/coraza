@@ -16,30 +16,30 @@ import (
 )
 
 func TestWriteHeader(t *testing.T) {
-	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
-		WithDirectives(`
-		# This is a comment
-		SecResponseBodyAccess Off
-		SecResponseBodyMimeType text/plain
-		SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
-	`).WithErrorLogger(errLogger(t)).WithDebugLogger(&debugLogger{t: t}))
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig())
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	tx := waf.NewTransaction()
 	req, _ := http.NewRequest("GET", "", nil)
 	res := httptest.NewRecorder()
-	rw, rp := wrap(res, req, tx)
+	rw, responseProcessor := wrap(res, req, tx)
 	rw.WriteHeader(204)
+	rw.WriteHeader(205)
+	// although we called WriteHeader, status code should be applied until
+	// responseProcessor is called.
 	if unwanted, have := 204, res.Code; unwanted == have {
 		t.Errorf("unexpected status code %d", have)
 	}
 
-	err = rp(tx, req)
+	err = responseProcessor(tx, req)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 
+	// although we called a second time with 205, status code should remain the first
+	// value.
 	if want, have := 204, res.Code; want != have {
 		t.Errorf("unexpected status code, want %d, have %d", want, have)
 	}
