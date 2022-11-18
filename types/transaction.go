@@ -103,13 +103,25 @@ type Transaction interface {
 	// delivered prior to the execution of this method.
 	ProcessLogging()
 
-	// RuleEngineStatus returns the status of the rule engine for the transaction
-	RuleEngineStatus() RuleEngineStatus
+	// IsEngineRuleOff will return true if RuleEngine is set to Off
+	IsEngineRuleOff() bool
 
 	// RequestBodyAccessible will return true if RequestBody access has been enabled by RequestBodyAccess
+	//
+	// This can be used to perform checks just before calling request body related functions.
+	// In order to avoid any risk of performing wrong early assumptions, perform early checks on this value
+	// only if the API consumer requires them for specific server/proxy actions
+	// (such as avoiding proxy side buffering).
+	// Note: it returns the current status, later rules may still change it via ctl actions.
 	RequestBodyAccessible() bool
 
 	// ResponseBodyAccessible will return true if ResponseBody access has been enabled by ResponseBodyAccess
+	//
+	// This can be used to perform checks just before calling response body related functions.
+	// In order to avoid any risk of performing wrong early assumptions, perform early checks on this value
+	// only if the API consumer requires them for specific server/proxy actions
+	// (such as avoiding proxy side buffering).
+	// Note: it returns the current status, later rules may still change it via ctl actions.
 	ResponseBodyAccessible() bool
 
 	// Interrupted will return true if the transaction was interrupted

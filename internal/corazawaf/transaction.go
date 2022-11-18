@@ -939,40 +939,17 @@ func (tx *Transaction) ProcessLogging() {
 	}
 }
 
-// RuleEngineStatus returns the status of the rule engine for the transaction
-//
-// It is suggested to perform early checks on the status only if the API consumer
-// requires it for specific server/proxy actions (such as avoiding proxy side buffering).
-// Otherwise do not use this method in order to avoid any risk of performing wrong early assumptions.
-//
-// Three values can be returned:
-// types.RuleEngineOn: no early assumptions have to be made at all
-// types.RuleEngineDetectionOnly: it may be possible to assume that no disruptive actions will be performed
-// types.RuleEngineOff: it is safe to assume that no rules will be processed
-//
-// Note that it returns the current status of the engine, later rules may still change it via ctl actions
-func (tx *Transaction) RuleEngineStatus() types.RuleEngineStatus {
-	return tx.RuleEngine
+// IsEngineRuleOff will return true if RuleEngine is set to Off
+func (tx *Transaction) IsEngineRuleOff() bool {
+	return tx.RuleEngine == types.RuleEngineOff
 }
 
 // RequestBodyAccessible will return true if RequestBody access has been enabled by RequestBodyAccess
-//
-// It is suggested to perform early checks only if the API consumer requires them for specific
-// server/proxy actions (such as avoiding proxy side buffering).
-// Otherwise do not use this method in order to avoid any risk of performing wrong early assumptions.
-//
-// Note that it returns the current status, later rules may still change it via ctl actions
 func (tx *Transaction) RequestBodyAccessible() bool {
 	return tx.RequestBodyAccess
 }
 
 // ResponseBodyAccessible will return true if ResponseBody access has been enabled by ResponseBodyAccess
-//
-// It is suggested to perform early checks only if the API consumer requires them for specific
-// server/proxy actions (such as avoiding proxy side buffering).
-// Otherwise do not use this method in order to avoid any risk of performing wrong early assumptions.
-//
-// Note that it returns the current status, later rules may still change it via ctl actions.
 func (tx *Transaction) ResponseBodyAccessible() bool {
 	return tx.ResponseBodyAccess
 }
