@@ -939,8 +939,8 @@ func (tx *Transaction) ProcessLogging() {
 	}
 }
 
-// IsEngineRuleOff will return true if RuleEngine is set to Off
-func (tx *Transaction) IsEngineRuleOff() bool {
+// IsRuleEngineOff will return true if RuleEngine is set to Off
+func (tx *Transaction) IsRuleEngineOff() bool {
 	return tx.RuleEngine == types.RuleEngineOff
 }
 

@@ -103,8 +103,8 @@ type Transaction interface {
 	// delivered prior to the execution of this method.
 	ProcessLogging()
 
-	// IsEngineRuleOff will return true if RuleEngine is set to Off
-	IsEngineRuleOff() bool
+	// IsRuleEngineOff will return true if RuleEngine is set to Off
+	IsRuleEngineOff() bool
 
 	// RequestBodyAccessible will return true if RequestBody access has been enabled by RequestBodyAccess
 	//

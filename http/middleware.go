@@ -112,6 +112,11 @@ func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
 			}
 		}()
 
+		// Early return, Coraza is not going to process any rule
+		if tx.IsRuleEngineOff() {
+			return
+		}
+
 		// ProcessRequest is just a wrapper around ProcessConnection, ProcessURI,
 		// ProcessRequestHeaders and ProcessRequestBody.
 		// It fails if any of these functions returns an error and it stops on interruption.
