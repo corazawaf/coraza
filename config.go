@@ -13,7 +13,7 @@ import (
 
 // WAFConfig controls the behavior of the WAF.
 //
-// Note: WAFConfig is immutable. Each WithXXX function returjns a new instance including the corresponding change.
+// Note: WAFConfig is immutable. Each WithXXX function returns a new instance including the corresponding change.
 type WAFConfig interface {
 	// WithRules adds rules to the WAF.
 	WithRules(rules ...*corazawaf.Rule) WAFConfig
