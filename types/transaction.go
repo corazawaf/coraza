@@ -57,6 +57,13 @@ type Transaction interface {
 	// within the Transaction while also passing it further in an HTTP framework.
 	RequestBodyReader() (io.Reader, error)
 
+	// AddArgument Add arguments GET or POST
+	// This will set ARGS_(GET|POST), ARGS, ARGS_NAMES, ARGS_COMBINED_SIZE and
+	// ARGS_(GET|POST)_NAMES
+	// With this method it is possible to feed Coraza with a GET or POST argument
+	// providing granual control over the arguments.
+	AddArgument(orig string, key string, value string)
+
 	// ProcessRequestBody Performs the request body (if any)
 	//
 	// This method perform the analysis on the request body. It is optional to
