@@ -79,6 +79,7 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 	http.ResponseWriter,
 	func(types.Transaction, *http.Request) error,
 ) { // nolint:gocyclo
+
 	i := &rwInterceptor{w: w, tx: tx, proto: r.Proto}
 
 	responseProcessor := func(tx types.Transaction, r *http.Request) error {

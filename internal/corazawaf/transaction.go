@@ -939,6 +939,11 @@ func (tx *Transaction) ProcessLogging() {
 	}
 }
 
+// IsRuleEngineOff will return true if RuleEngine is set to Off
+func (tx *Transaction) IsRuleEngineOff() bool {
+	return tx.RuleEngine == types.RuleEngineOff
+}
+
 // RequestBodyAccessible will return true if RequestBody access has been enabled by RequestBodyAccess
 func (tx *Transaction) RequestBodyAccessible() bool {
 	return tx.RequestBodyAccess
