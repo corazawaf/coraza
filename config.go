@@ -13,10 +13,10 @@ import (
 
 // WAFConfig controls the behavior of the WAF.
 //
-// Note: WAFConfig is immutable. Each WithXXX function returjns a new instance including the corresponding change.
+// Note: WAFConfig is immutable. Each WithXXX function returns a new instance including the corresponding change.
 type WAFConfig interface {
-	// WithRule adds a rule to the WAF.
-	WithRule(rule *corazawaf.Rule) WAFConfig
+	// WithRules adds rules to the WAF.
+	WithRules(rules ...*corazawaf.Rule) WAFConfig
 
 	// WithDirectives parses the directives from the given string and adds them to the WAF.
 	WithDirectives(directives string) WAFConfig
@@ -114,9 +114,15 @@ type wafConfig struct {
 	fsRoot           fs.FS
 }
 
-func (c *wafConfig) WithRule(rule *corazawaf.Rule) WAFConfig {
+func (c *wafConfig) WithRules(rules ...*corazawaf.Rule) WAFConfig {
+	if len(rules) == 0 {
+		return c
+	}
+
 	ret := c.clone()
-	ret.rules = append(ret.rules, wafRule{rule: rule})
+	for _, r := range rules {
+		ret.rules = append(ret.rules, wafRule{rule: r})
+	}
 	return ret
 }
 
