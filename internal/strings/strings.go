@@ -99,3 +99,39 @@ func InSlice(a string, list []string) bool {
 	}
 	return false
 }
+
+// FastLower returns a lower case version of the string
+// This function is faster than strings.ToLower
+func FastLower(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, c := range s {
+		if c >= 'A' && c <= 'Z' {
+			b.WriteByte(byte(c + 32))
+		} else {
+			b.WriteByte(byte(c))
+		}
+	}
+	return b.String()
+}
+
+// FastEqualFold returns true if the strings are equal ignoring case
+// This function is faster than strings.EqualFold
+func FastEqualFold(a, b string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := 0; i < len(a); i++ {
+		if a[i] == b[i] {
+			continue
+		}
+		if a[i] >= 'A' && a[i] <= 'Z' && a[i]+32 == b[i] {
+			continue
+		}
+		if b[i] >= 'A' && b[i] <= 'Z' && b[i]+32 == a[i] {
+			continue
+		}
+		return false
+	}
+	return true
+}

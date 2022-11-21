@@ -4,8 +4,6 @@
 package collection
 
 import (
-	"regexp"
-
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -14,14 +12,8 @@ import (
 // to store slices of data for keys
 // Important: CollectionMaps ARE NOT concurrent safe
 type Collection interface {
-	// FindRegex returns a slice of MatchData for the regex
-	FindRegex(key *regexp.Regexp) []types.MatchData
-
-	// FindString returns a slice of MatchData for the string
-	FindString(key string) []types.MatchData
-
-	// FindString returns a slice of MatchData for the string
-	FindAll() []types.MatchData
+	// Find returns a slice of MatchData for the query
+	Find(*Query) []types.MatchData
 
 	// Name returns the name for the current CollectionMap
 	Name() string

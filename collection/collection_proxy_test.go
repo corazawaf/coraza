@@ -22,19 +22,19 @@ import (
 )
 
 func TestCollectionProxy(t *testing.T) {
-	c1 := NewMap(variables.ArgsPost)
-	c2 := NewMap(variables.ArgsGet)
+	c1 := NewMap(variables.ArgsPost, false)
+	c2 := NewMap(variables.ArgsGet, false)
 	proxy := NewProxy(variables.Args, c1, c2)
 
 	c1.Set("key1", []string{"value1"})
 	c1.Set("key2", []string{"value2"})
 	c2.Set("key3", []string{"value3"})
 
-	p := proxy.FindAll()
+	p := proxy.Find(NewQueryAll())
 	if len(p) != 3 {
 		t.Error("Error finding all")
 	} else {
-		p := proxy.FindAll()
+		p := proxy.Find(NewQueryAll())
 		m := false
 		for _, v := range p {
 			if v.Value() == "value1" {
@@ -55,10 +55,10 @@ func TestCollectionProxy(t *testing.T) {
 		t.Error("Error finding all")
 	}
 
-	if len(proxy.FindString("key3")) == 0 {
+	if len(proxy.Find(NewQueryEquals("key3"))) == 0 {
 		t.Error("Error finding string")
 	}
-	if len(proxy.FindRegex(regexp.MustCompile("k.*"))) != 3 {
+	if len(proxy.Find(NewQueryRegex(regexp.MustCompile("k.*")))) != 3 {
 		t.Error("Error finding regex")
 	}
 }

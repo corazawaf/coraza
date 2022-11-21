@@ -20,20 +20,39 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-func TestCollectionMap(t *testing.T) {
-	c := NewMap(variables.ArgsPost)
-	c.SetIndex("key", 1, "value")
-	c.Set("key2", []string{"value2"})
-	if c.Get("key")[1] != "value" {
+func TestCollectionMapCaseInsensitive(t *testing.T) {
+	c := NewMap(variables.ArgsPost, false)
+	c.Set("key", []string{"value2"})
+	c.SetIndex("key", 0, "value")
+	c.Add("key2", "value3")
+	if c.Get("key")[0] != "value" {
 		t.Error("Error setting index")
 	}
-	if len(c.FindAll()) == 0 {
+	if len(c.Find(NewQueryAll())) == 0 {
 		t.Error("Error finding all")
 	}
-	if len(c.FindString("a")) > 0 {
+	if len(c.Find(NewQueryEquals("a"))) > 0 {
 		t.Error("Error should not find string")
 	}
-	if l := len(c.FindRegex(regexp.MustCompile("k.*"))); l != 3 {
+	if l := len(c.Find(NewQueryRegex(regexp.MustCompile("k.*")))); l != 2 {
+		t.Errorf("Error should find regex, got %d", l)
+	}
+}
+
+func TestCollectionMapCaseSensitive(t *testing.T) {
+	c := NewMap(variables.RequestHeaders, true)
+	c.Set("kEy", []string{"value2"})
+	c.SetIndex("key2", 5, "value")
+	if c.Get("key")[0] != "value2" {
+		t.Error("Error setting index")
+	}
+	if len(c.Find(NewQueryAll())) == 0 {
+		t.Error("Error finding all")
+	}
+	if len(c.Find(NewQueryEquals("a"))) > 0 {
+		t.Error("Error should not find string")
+	}
+	if l := len(c.Find(NewQueryRegex(regexp.MustCompile("k.*")))); l != 2 {
 		t.Errorf("Error should find regex, got %d", l)
 	}
 }

@@ -4,7 +4,6 @@
 package collection
 
 import (
-	"regexp"
 	"strconv"
 
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
@@ -20,18 +19,8 @@ type SizeProxy struct {
 	variable variables.RuleVariable
 }
 
-// FindRegex returns a slice of MatchData for the regex
-func (c *SizeProxy) FindRegex(*regexp.Regexp) []types.MatchData {
-	return c.FindAll()
-}
-
-// FindString returns a slice of MatchData for the string
-func (c *SizeProxy) FindString(string) []types.MatchData {
-	return c.FindAll()
-}
-
 // FindAll returns a slice of MatchData of all matches
-func (c *SizeProxy) FindAll() []types.MatchData {
+func (c *SizeProxy) Find(_ *Query) []types.MatchData {
 	return []types.MatchData{
 		&corazarules.MatchData{
 			VariableName_: c.name,

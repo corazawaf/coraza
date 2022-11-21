@@ -4,8 +4,6 @@
 package collection
 
 import (
-	"regexp"
-
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -20,29 +18,10 @@ type Proxy struct {
 	variable variables.RuleVariable
 }
 
-// FindRegex returns a slice of MatchData for the regex
-func (c *Proxy) FindRegex(key *regexp.Regexp) []types.MatchData {
+func (c *Proxy) Find(query *Query) []types.MatchData {
 	var res []types.MatchData
 	for _, c := range c.data {
-		res = append(res, c.FindRegex(key)...)
-	}
-	return res
-}
-
-// FindString returns a slice of MatchData for the string
-func (c *Proxy) FindString(key string) []types.MatchData {
-	var res []types.MatchData
-	for _, c := range c.data {
-		res = append(res, c.FindString(key)...)
-	}
-	return res
-}
-
-// FindAll returns all matches for all collections
-func (c *Proxy) FindAll() []types.MatchData {
-	var res []types.MatchData
-	for _, c := range c.data {
-		res = append(res, c.FindAll()...)
+		res = append(res, c.Find(query)...)
 	}
 	return res
 }

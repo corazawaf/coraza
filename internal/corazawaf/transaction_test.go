@@ -578,10 +578,10 @@ func TestTxProcessURI(t *testing.T) {
 	if tx.variables.queryString.String() != "query=string&other=value" {
 		t.Error("failed to set request query")
 	}
-	if v := tx.variables.args.FindAll(); len(v) != 2 {
+	if v := tx.variables.args.Find(collection.NewQueryAll()); len(v) != 2 {
 		t.Errorf("failed to set request args, got %d", len(v))
 	}
-	if v := tx.variables.args.FindString("other"); v[0].Value() != "value" {
+	if v := tx.variables.args.Find(collection.NewQueryEquals("other")); v[0].Value() != "value" {
 		t.Errorf("failed to set request args, got %v", v)
 	}
 }

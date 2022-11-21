@@ -20,8 +20,8 @@ import (
 )
 
 func TestCollectionSizeProxy(t *testing.T) {
-	c1 := NewMap(variables.ArgsPost)
-	c2 := NewMap(variables.ArgsGet)
+	c1 := NewMap(variables.ArgsPost, false)
+	c2 := NewMap(variables.ArgsGet, false)
 	proxy := NewCollectionSizeProxy(variables.Args, c1, c2)
 
 	c1.Set("key1", []string{"value1", "value2"})

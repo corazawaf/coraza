@@ -21,8 +21,20 @@ type TranslationProxy struct {
 	variable variables.RuleVariable
 }
 
-// FindRegex returns a slice of MatchData for the regex
-func (c *TranslationProxy) FindRegex(key *regexp.Regexp) []types.MatchData {
+func (c *TranslationProxy) Find(query *Query) []types.MatchData {
+	switch query.queryType {
+	case queryTypeAll:
+		return c.findAll()
+	case queryTypeRegex:
+		return c.findRegex(query.regex)
+	case queryTypeEquals:
+		return c.findString(query.exactMatch)
+	}
+	return nil
+}
+
+// findRegex returns a slice of MatchData for the regex
+func (c *TranslationProxy) findRegex(key *regexp.Regexp) []types.MatchData {
 	var res []types.MatchData
 	for _, c := range c.data {
 		for _, k := range c.keysRx(key) {
@@ -36,8 +48,8 @@ func (c *TranslationProxy) FindRegex(key *regexp.Regexp) []types.MatchData {
 	return res
 }
 
-// FindString returns a slice of MatchData for the string
-func (c *TranslationProxy) FindString(key string) []types.MatchData {
+// findString returns a slice of MatchData for the string
+func (c *TranslationProxy) findString(key string) []types.MatchData {
 	for _, c := range c.data {
 		if len(c.Get(key)) > 0 {
 			return []types.MatchData{
@@ -52,8 +64,8 @@ func (c *TranslationProxy) FindString(key string) []types.MatchData {
 	return nil
 }
 
-// FindAll returns all keys from Proxy Collections
-func (c *TranslationProxy) FindAll() []types.MatchData {
+// findAll returns all keys from Proxy Collections
+func (c *TranslationProxy) findAll() []types.MatchData {
 	var res []types.MatchData
 	for _, c := range c.data {
 		for _, k := range c.keys() {

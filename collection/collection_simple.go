@@ -4,7 +4,6 @@
 package collection
 
 import (
-	"regexp"
 	"strconv"
 
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
@@ -22,18 +21,7 @@ type Simple struct {
 	variable variables.RuleVariable
 }
 
-// FindRegex returns a slice of MatchData for the regex
-func (c *Simple) FindRegex(key *regexp.Regexp) []types.MatchData {
-	return c.FindAll()
-}
-
-// FindString returns a slice of MatchData for the string
-func (c *Simple) FindString(key string) []types.MatchData {
-	return c.FindAll()
-}
-
-// FindAll returns a single MatchData for the current data
-func (c *Simple) FindAll() []types.MatchData {
+func (c *Simple) Find(_ *Query) []types.MatchData {
 	return []types.MatchData{
 		&corazarules.MatchData{
 			VariableName_: c.name,

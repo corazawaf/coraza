@@ -7,31 +7,60 @@ import (
 	"regexp"
 
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
+	"github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
+
+// anchoredVar stores the case preserved Original name and value
+// of the variable
+type anchoredVar struct {
+	// Name is the Key sensitive name
+	Name  string
+	Value string
+}
 
 // Map are used to store VARIABLE data
 // for transactions, this data structured is designed
 // to store slices of data for keys
 // Important: CollectionMaps ARE NOT concurrent safe
 type Map struct {
-	data     map[string][]types.AnchoredVar
-	name     string
-	variable variables.RuleVariable
+	data              map[string][]anchoredVar
+	name              string
+	variable          variables.RuleVariable
+	caseSensitiveKeys bool
 }
 
 // Get returns a slice of strings for a key
+// Get is always case-insensitive
 func (c *Map) Get(key string) []string {
 	var values []string
-	for _, a := range c.data[key] {
-		values = append(values, a.Value)
+	for k, a := range c.data {
+		if strings.FastEqualFold(key, k) {
+			values = make([]string, 0, len(a))
+			for _, v := range a {
+				values = append(values, v.Value)
+			}
+			return values
+		}
 	}
 	return values
 }
 
+func (c *Map) Find(query *Query) []types.MatchData {
+	switch query.queryType {
+	case queryTypeAll:
+		return c.findAll()
+	case queryTypeRegex:
+		return c.findRegex(query.regex)
+	case queryTypeEquals:
+		return c.findString(query.exactMatch)
+	}
+	return nil
+}
+
 // FindRegex returns a slice of MatchData for the regex
-func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
+func (c *Map) findRegex(key *regexp.Regexp) []types.MatchData {
 	var result []types.MatchData
 	for k, data := range c.data {
 		if key.MatchString(k) {
@@ -48,11 +77,11 @@ func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
 	return result
 }
 
-// FindString returns a slice of MatchData for the string
-func (c *Map) FindString(key string) []types.MatchData {
+// findString returns a slice of MatchData for the string
+func (c *Map) findString(key string) []types.MatchData {
 	var result []types.MatchData
 	if key == "" {
-		return c.FindAll()
+		return c.findAll()
 	}
 	// if key is not empty
 	if e, ok := c.data[key]; ok {
@@ -69,7 +98,7 @@ func (c *Map) FindString(key string) []types.MatchData {
 }
 
 // FindAll returns all the contained elements
-func (c *Map) FindAll() []types.MatchData {
+func (c *Map) findAll() []types.MatchData {
 	var result []types.MatchData
 	for _, data := range c.data {
 		for _, d := range data {
@@ -102,22 +131,23 @@ func (c *Map) keys() []string {
 	return keys
 }
 
-// AddCS a value to some key with case sensitive vKey
-func (c *Map) AddCS(key string, vKey string, vVal string) {
-	aVal := types.AnchoredVar{Name: vKey, Value: vVal}
+// Add a value to some key
+func (c *Map) Add(key string, value string) {
+	aVal := anchoredVar{Name: key, Value: value}
+	if c.caseSensitiveKeys {
+		key = strings.FastLower(key)
+	}
 	c.data[key] = append(c.data[key], aVal)
 }
 
-// Add a value to some key
-func (c *Map) Add(key string, value string) {
-	c.AddCS(key, key, value)
-}
-
-// AddUniqueCS will add a value to a key if it is not already there
-// with case sensitive vKey
-func (c *Map) AddUniqueCS(key string, vKey string, vVal string) {
-	if c.data[key] == nil {
-		c.AddCS(key, vKey, vVal)
+// AddUnique will add a value to a key if it is not already there
+func (c *Map) AddUnique(key string, vVal string) {
+	ckey := key
+	if c.caseSensitiveKeys {
+		ckey = strings.FastLower(key)
+	}
+	if c.data[ckey] == nil {
+		c.Add(key, vVal)
 		return
 	}
 
@@ -126,51 +156,40 @@ func (c *Map) AddUniqueCS(key string, vKey string, vVal string) {
 			return
 		}
 	}
-	c.AddCS(key, vKey, vVal)
-}
-
-// AddUnique will add a value to a key if it is not already there
-func (c *Map) AddUnique(key string, value string) {
-	c.AddUniqueCS(key, key, value)
-}
-
-// SetCS will replace the key's value with this slice
-// internally converts [] string to []types.AnchoredVar
-// with case sensitive vKey
-func (c *Map) SetCS(key string, vKey string, values []string) {
-	c.data[key] = make([]types.AnchoredVar, 0, len(values))
-	for _, v := range values {
-		c.data[key] = append(c.data[key], types.AnchoredVar{Name: vKey, Value: v})
-	}
+	c.Add(key, vVal)
 }
 
 // Set will replace the key's value with this slice
-// internally converts [] string to []types.AnchoredVar
+// internally converts [] string to []anchoredVar
 func (c *Map) Set(key string, values []string) {
-	c.SetCS(key, key, values)
-}
-
-// SetIndexCS will place the value under the index
-// If the index is higher than the current size of the CollectionMap
-// it will be appended
-// with case sensitive vKey
-func (c *Map) SetIndexCS(key string, index int, vKey string, value string) {
-	if c.data[key] == nil {
-		c.data[key] = []types.AnchoredVar{{Name: vKey, Value: value}}
+	c.data[key] = make([]anchoredVar, 0, len(values))
+	ckey := key
+	if c.caseSensitiveKeys {
+		ckey = strings.FastLower(key)
 	}
-	vVal := types.AnchoredVar{Name: vKey, Value: value}
-	if len(c.data[key]) <= index {
-		c.data[key] = append(c.data[key], vVal)
-		return
+	for _, v := range values {
+		c.data[ckey] = append(c.data[ckey], anchoredVar{Name: key, Value: v})
 	}
-	c.data[key][index] = vVal
 }
 
 // SetIndex will place the value under the index
 // If the index is higher than the current size of the CollectionMap
 // it will be appended
 func (c *Map) SetIndex(key string, index int, value string) {
-	c.SetIndexCS(key, index, key, value)
+	cKey := key
+	if c.caseSensitiveKeys {
+		cKey = strings.FastLower(key)
+	}
+	vVal := anchoredVar{Name: key, Value: value}
+	if c.data[cKey] == nil {
+		c.data[cKey] = []anchoredVar{vVal}
+		return
+	}
+	if len(c.data[cKey]) <= index {
+		c.data[cKey] = append(c.data[cKey], vVal)
+		return
+	}
+	c.data[cKey][index] = vVal
 }
 
 // Remove deletes the key from the CollectionMap
@@ -205,10 +224,12 @@ func (c *Map) Data() map[string][]string {
 var _ Collection = &Map{}
 
 // NewMap returns a collection of key->[]values
-func NewMap(variable variables.RuleVariable) *Map {
+// If caseSensitiveKeys is false, the keys will be converted to lower case
+func NewMap(variable variables.RuleVariable, caseSensitiveKeys bool) *Map {
 	return &Map{
-		name:     variable.Name(),
-		variable: variable,
-		data:     map[string][]types.AnchoredVar{},
+		name:              variable.Name(),
+		variable:          variable,
+		data:              map[string][]anchoredVar{},
+		caseSensitiveKeys: caseSensitiveKeys,
 	}
 }

@@ -21,27 +21,27 @@ import (
 )
 
 func TestCollectionTranslationProxy(t *testing.T) {
-	c1 := NewMap(variables.ArgsPost)
-	c2 := NewMap(variables.ArgsGet)
+	c1 := NewMap(variables.ArgsPost, false)
+	c2 := NewMap(variables.ArgsGet, false)
 	proxy := NewTranslationProxy(variables.ArgsNames, c1, c2)
 
-	c1.SetCS("key1", "key1", []string{"value1"})
+	c1.Set("key1", []string{"value1"})
 	c1.Set("key2", []string{"value2"})
-	c2.SetCS("key3", "Key3", []string{"value3"})
+	c2.Set("key3", []string{"value3"})
 
-	if len(proxy.FindAll()) != 3 {
+	if len(proxy.Find(NewQueryAll())) != 3 {
 		t.Error("Error finding all")
 	}
-	if len(proxy.FindString("key3")) == 0 {
+	if len(proxy.Find(NewQueryEquals("key3"))) == 0 {
 		t.Error("Error finding string")
 	}
-	if proxy.FindString("key1")[0].Value() != "key1" {
+	if proxy.Find(NewQueryEquals("key1"))[0].Value() != "key1" {
 		t.Error("Error value findstring key1")
 	}
-	if proxy.FindString("key3")[0].Value() != "key3" {
+	if proxy.Find(NewQueryEquals("key3"))[0].Value() != "key3" {
 		t.Error("Error value findstring key3")
 	}
-	if len(proxy.FindRegex(regexp.MustCompile("k.*"))) != 3 {
+	if len(proxy.Find(NewQueryRegex(regexp.MustCompile("k.*")))) != 3 {
 		t.Error("Error finding regex")
 	}
 }

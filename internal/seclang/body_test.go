@@ -6,6 +6,7 @@ package seclang
 import (
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
@@ -47,7 +48,7 @@ func TestRequestBodyAccessOn(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error(err)
 	}
-	if len(tx.Variables().ArgsPost().FindAll()) == 0 {
+	if len(tx.Variables().ArgsPost().Find(collection.NewQueryAll())) == 0 {
 		t.Error("Should have args")
 	}
 }
