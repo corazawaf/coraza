@@ -244,17 +244,19 @@ func createWAF(t *testing.T) coraza.WAF {
 	return waf
 }
 
+type httpTest struct {
+	http2            bool
+	reqURI           string
+	reqBody          string
+	respHeaders      map[string]string
+	respBody         string
+	expectedProto    string
+	expectedStatus   int
+	expectedRespBody string
+}
+
 func TestHttpServer(t *testing.T) {
-	tests := map[string]struct {
-		http2            bool
-		reqURI           string
-		reqBody          string
-		respHeaders      map[string]string
-		respBody         string
-		expectedProto    string
-		expectedStatus   int
-		expectedRespBody string
-	}{
+	tests := map[string]httpTest{
 		"no blocking": {
 			reqURI:         "/hello",
 			expectedProto:  "HTTP/1.1",
@@ -302,71 +304,120 @@ func TestHttpServer(t *testing.T) {
 	// Perform tests
 	for name, tCase := range tests {
 		t.Run(name, func(t *testing.T) {
-			serverErrC := make(chan error, 1)
-			defer close(serverErrC)
+			runAgainstWaf(t, tCase, createWAF(t))
 
-			// Spin up the test server
-			ts := httptest.NewUnstartedServer(WrapHandler(createWAF(t), t.Logf, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-				if want, have := tCase.expectedProto, req.Proto; want != have {
-					t.Errorf("unexpected proto, want: %s, have: %s", want, have)
-				}
-
-				w.Header().Set("Content-Type", "text/plain")
-				w.Header().Add("coraza-middleware", "true")
-				for k, v := range tCase.respHeaders {
-					w.Header().Set(k, v)
-				}
-				w.WriteHeader(201)
-				_, err := w.Write([]byte(tCase.respBody))
-				if err != nil {
-					serverErrC <- err
-				}
-			})))
-			if tCase.http2 {
-				ts.EnableHTTP2 = true
-				ts.StartTLS()
-			} else {
-				ts.Start()
-			}
-			defer ts.Close()
-
-			var reqBody io.Reader
-			if tCase.reqBody != "" {
-				reqBody = strings.NewReader(tCase.reqBody)
-			}
-			req, _ := http.NewRequest("POST", ts.URL+tCase.reqURI, reqBody)
-			// TODO(jcchavezs): Fix it once the discussion in https://github.com/corazawaf/coraza/issues/438 is settled
-			req.Header.Add("content-type", "application/x-www-form-urlencoded")
-			res, err := ts.Client().Do(req)
-			if err != nil {
-				t.Fatalf("unexpected error when performing the request: %v", err)
-			}
-
-			if want, have := tCase.expectedStatus, res.StatusCode; want != have {
-				t.Errorf("unexpected status code, want: %d, have: %d", want, have)
-			}
-
-			resBody, err := io.ReadAll(res.Body)
-			if err != nil {
-				t.Fatalf("unexpected error when reading the response body: %v", err)
-			}
-
-			if want, have := tCase.expectedRespBody, string(resBody); want != have {
-				t.Errorf("unexpected response body, want: %q, have %q", want, have)
-			}
-
-			err = res.Body.Close()
-			if err != nil {
-				t.Errorf("failed to close the body: %v", err)
-			}
-
-			select {
-			case err = <-serverErrC:
-				t.Errorf("unexpected error from server when writing response body: %v", err)
-			default:
-				return
-			}
 		})
+	}
+}
+
+func TestHttpServerWithRuleEngineOff(t *testing.T) {
+	tests := map[string]httpTest{
+		"no blocking true negative": {
+			reqURI:           "/hello",
+			expectedProto:    "HTTP/1.1",
+			expectedStatus:   201,
+			respBody:         "Hello!",
+			expectedRespBody: "Hello!",
+		},
+		"no blocking true positive header phase": {
+			reqURI:           "/hello?id=0",
+			expectedProto:    "HTTP/1.1",
+			expectedStatus:   201,
+			respBody:         "Downstream works!",
+			expectedRespBody: "Downstream works!",
+		},
+		"no blocking true positive body phase": {
+			reqURI:           "/hello",
+			reqBody:          "eval('cat /etc/passwd')",
+			expectedProto:    "HTTP/1.1",
+			expectedStatus:   201,
+			respBody:         "Waf is Off!",
+			expectedRespBody: "Waf is Off!",
+		},
+	}
+	// Perform tests
+	for name, tCase := range tests {
+		t.Run(name, func(t *testing.T) {
+			waf, err := coraza.NewWAF(coraza.NewWAFConfig().
+				WithDirectives(`
+			SecRuleEngine Off
+			SecRequestBodyAccess On
+			SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
+			SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
+			`).WithErrorLogger(errLogger(t)).WithDebugLogger(&debugLogger{t: t}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			runAgainstWaf(t, tCase, waf)
+		})
+	}
+}
+
+func runAgainstWaf(t *testing.T, tCase httpTest, waf coraza.WAF) {
+	t.Helper()
+	serverErrC := make(chan error, 1)
+	defer close(serverErrC)
+
+	// Spin up the test server
+	ts := httptest.NewUnstartedServer(WrapHandler(waf, t.Logf, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if want, have := tCase.expectedProto, req.Proto; want != have {
+			t.Errorf("unexpected proto, want: %s, have: %s", want, have)
+		}
+
+		w.Header().Set("Content-Type", "text/plain")
+		w.Header().Add("coraza-middleware", "true")
+		for k, v := range tCase.respHeaders {
+			w.Header().Set(k, v)
+		}
+		w.WriteHeader(201)
+		_, err := w.Write([]byte(tCase.respBody))
+		if err != nil {
+			serverErrC <- err
+		}
+	})))
+	if tCase.http2 {
+		ts.EnableHTTP2 = true
+		ts.StartTLS()
+	} else {
+		ts.Start()
+	}
+	defer ts.Close()
+
+	var reqBody io.Reader
+	if tCase.reqBody != "" {
+		reqBody = strings.NewReader(tCase.reqBody)
+	}
+	req, _ := http.NewRequest("POST", ts.URL+tCase.reqURI, reqBody)
+	// TODO(jcchavezs): Fix it once the discussion in https://github.com/corazawaf/coraza/issues/438 is settled
+	req.Header.Add("content-type", "application/x-www-form-urlencoded")
+	res, err := ts.Client().Do(req)
+	if err != nil {
+		t.Fatalf("unexpected error when performing the request: %v", err)
+	}
+
+	if want, have := tCase.expectedStatus, res.StatusCode; want != have {
+		t.Errorf("unexpected status code, want: %d, have: %d", want, have)
+	}
+
+	resBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatalf("unexpected error when reading the response body: %v", err)
+	}
+
+	if want, have := tCase.expectedRespBody, string(resBody); want != have {
+		t.Errorf("unexpected response body, want: %q, have %q", want, have)
+	}
+
+	err = res.Body.Close()
+	if err != nil {
+		t.Errorf("failed to close the body: %v", err)
+	}
+
+	select {
+	case err = <-serverErrC:
+		t.Errorf("unexpected error from server when writing response body: %v", err)
+	default:
+		return
 	}
 }
 

@@ -101,6 +101,7 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 }
 
 func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
+
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		tx := waf.NewTransaction()
 		defer func() {
@@ -114,6 +115,9 @@ func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
 
 		// Early return, Coraza is not going to process any rule
 		if tx.IsRuleEngineOff() {
+			// response writer is not going to be wrapped, but used as-is
+			// to generate the response
+			h.ServeHTTP(w, r)
 			return
 		}
 
