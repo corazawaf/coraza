@@ -35,16 +35,16 @@ type WAFConfig interface {
 
 	// WithRequestBodyLimit sets the maximum number of bytes that can be read from the request body. Bytes beyond that set
 	// in WithInMemoryLimit will be buffered to disk.
-	WithRequestBodyLimit(limit int) WAFConfig
+	WithRequestBodyBytesLimit(limit int64) WAFConfig
 
 	// WithRequestBodyInMemoryLimit sets the maximum number of bytes that can be read from the request body and buffered in memory.
-	WithRequestBodyInMemoryLimit(limit int) WAFConfig
+	WithRequestBodyInMemoryBytesLimit(limit int64) WAFConfig
 
 	// WithResponseBodyAccess enables access to the response body.
 	WithResponseBodyAccess() WAFConfig
 
 	// WithResponseBodyLimit sets the maximum number of bytes that can be read from the response body and buffered in memory.
-	WithResponseBodyLimit(limit int) WAFConfig
+	WithResponseBodyBytesLimit(limit int64) WAFConfig
 
 	// WithResponseBodyMimeTypes sets the mime types of responses that will be processed.
 	WithResponseBodyMimeTypes(mimeTypes []string) WAFConfig
@@ -96,10 +96,10 @@ type wafConfig struct {
 	auditLog                 *auditLogConfig
 	contentInjection         bool
 	requestBodyAccess        bool
-	requestBodyLimit         int
-	requestBodyInMemoryLimit int
+	requestBodyLimit         int64
+	requestBodyInMemoryLimit int64
 	responseBodyAccess       bool
-	responseBodyLimit        int
+	responseBodyLimit        int64
 	responseBodyMimeTypes    []string
 	debugLogger              loggers.DebugLogger
 	errorLogger              corazawaf.ErrorLogCallback
@@ -180,19 +180,19 @@ func (c *wafConfig) clone() *wafConfig {
 	return &ret
 }
 
-func (c *wafConfig) WithRequestBodyLimit(limit int) WAFConfig {
+func (c *wafConfig) WithRequestBodyBytesLimit(limit int64) WAFConfig {
 	ret := c.clone()
 	ret.requestBodyLimit = limit
 	return ret
 }
 
-func (c *wafConfig) WithRequestBodyInMemoryLimit(limit int) WAFConfig {
+func (c *wafConfig) WithRequestBodyInMemoryBytesLimit(limit int64) WAFConfig {
 	ret := c.clone()
 	ret.requestBodyInMemoryLimit = limit
 	return ret
 }
 
-func (c *wafConfig) WithResponseBodyLimit(limit int) WAFConfig {
+func (c *wafConfig) WithResponseBodyBytesLimit(limit int64) WAFConfig {
 	ret := c.clone()
 	ret.responseBodyLimit = limit
 	return ret

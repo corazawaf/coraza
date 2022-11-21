@@ -81,11 +81,11 @@ func NewWAF(config WAFConfig) (WAF, error) {
 	}
 
 	if c.requestBodyLimit != -1 {
-		waf.RequestBodyLimit = int64(c.requestBodyLimit)
+		waf.RequestBodyLimit = c.requestBodyLimit
 	}
 
 	if c.requestBodyInMemoryLimit != -1 {
-		waf.RequestBodyInMemoryLimit = int64(c.requestBodyInMemoryLimit)
+		waf.RequestBodyInMemoryLimit = c.requestBodyInMemoryLimit
 	}
 
 	if c.responseBodyAccess {
@@ -93,7 +93,7 @@ func NewWAF(config WAFConfig) (WAF, error) {
 	}
 
 	if c.responseBodyLimit != -1 {
-		waf.ResponseBodyLimit = int64(c.requestBodyLimit)
+		waf.ResponseBodyLimit = c.requestBodyLimit
 	}
 
 	if c.errorLogger != nil {
