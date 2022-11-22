@@ -124,6 +124,8 @@ type Transaction interface {
 	// Note: it returns the current status, later rules may still change it via ctl actions.
 	ResponseBodyAccessible() bool
 
+	IsProcessableResponseBody() bool
+
 	// Interrupted will return true if the transaction was interrupted
 	Interrupted() bool
 
