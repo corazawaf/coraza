@@ -20,7 +20,7 @@ require (
 	github.com/foxcpp/go-mockdns v1.0.0
 	github.com/magefile/mage v1.14.0
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20211021192214-5ab2d9280aa9
-	github.com/tidwall/gjson v1.14.3
+	github.com/tidwall/gjson v1.14.4
 	golang.org/x/net v0.0.0-20221002022538-bcab6841153b
 )
 
