@@ -36,7 +36,7 @@ type Map struct {
 func (c *Map) Get(key string) []string {
 	var values []string
 	for k, a := range c.data {
-		if strings.FastEqualFold(key, k) {
+		if strings.AsciiEqualFold(key, k) {
 			values = make([]string, 0, len(a))
 			for _, v := range a {
 				values = append(values, v.Value)
@@ -135,7 +135,7 @@ func (c *Map) keys() []string {
 func (c *Map) Add(key string, value string) {
 	aVal := anchoredVar{Name: key, Value: value}
 	if c.caseSensitiveKeys {
-		key = strings.FastLower(key)
+		key = strings.AsciiLower(key)
 	}
 	c.data[key] = append(c.data[key], aVal)
 }
@@ -144,7 +144,7 @@ func (c *Map) Add(key string, value string) {
 func (c *Map) AddUnique(key string, vVal string) {
 	ckey := key
 	if c.caseSensitiveKeys {
-		ckey = strings.FastLower(key)
+		ckey = strings.AsciiLower(key)
 	}
 	if c.data[ckey] == nil {
 		c.Add(key, vVal)
@@ -165,7 +165,7 @@ func (c *Map) Set(key string, values []string) {
 	c.data[key] = make([]anchoredVar, 0, len(values))
 	ckey := key
 	if c.caseSensitiveKeys {
-		ckey = strings.FastLower(key)
+		ckey = strings.AsciiLower(key)
 	}
 	for _, v := range values {
 		c.data[ckey] = append(c.data[ckey], anchoredVar{Name: key, Value: v})
@@ -178,7 +178,7 @@ func (c *Map) Set(key string, values []string) {
 func (c *Map) SetIndex(key string, index int, value string) {
 	cKey := key
 	if c.caseSensitiveKeys {
-		cKey = strings.FastLower(key)
+		cKey = strings.AsciiLower(key)
 	}
 	vVal := anchoredVar{Name: key, Value: value}
 	if c.data[cKey] == nil {

@@ -100,9 +100,9 @@ func InSlice(a string, list []string) bool {
 	return false
 }
 
-// FastLower returns a lower case version of the string
+// AsciiLower returns a lower case version of the string
 // This function is faster than strings.ToLower
-func FastLower(s string) string {
+func AsciiLower(s string) string {
 	var b strings.Builder
 	b.Grow(len(s))
 	for _, c := range s {
@@ -115,9 +115,9 @@ func FastLower(s string) string {
 	return b.String()
 }
 
-// FastEqualFold returns true if the strings are equal ignoring case
+// AsciiEqualFold returns true if the strings are equal ignoring case
 // This function is faster than strings.EqualFold
-func FastEqualFold(a, b string) bool {
+func AsciiEqualFold(a, b string) bool {
 	if len(a) != len(b) {
 		return false
 	}

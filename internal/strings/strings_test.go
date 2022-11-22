@@ -108,7 +108,7 @@ func TestFastEqualFold(t *testing.T) {
 		{"aAA", "aa", false},
 	}
 	for _, c := range cases {
-		if FastEqualFold(c.a, c.b) != c.c {
+		if AsciiEqualFold(c.a, c.b) != c.c {
 			t.Errorf("FastEqualFold(%s, %s) != %t", c.a, c.b, c.c)
 		}
 	}
@@ -116,13 +116,13 @@ func TestFastEqualFold(t *testing.T) {
 
 func BenchmarkEqualFold(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		FastEqualFold("a", "A")
+		AsciiEqualFold("a", "A")
 	}
 }
 
 func BenchmarkLowerFast(b *testing.B) {
 	str := "aaabbb....,,,cccdddeFFFeeeGGGIIIlllOOOppppnnnaaa!!!"
 	for i := 0; i < b.N; i++ {
-		FastLower(str)
+		AsciiLower(str)
 	}
 }
