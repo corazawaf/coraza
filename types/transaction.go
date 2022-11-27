@@ -124,6 +124,11 @@ type Transaction interface {
 	// Note: it returns the current status, later rules may still change it via ctl actions.
 	ResponseBodyAccessible() bool
 
+	// IsProcessableResponseBody returns true if the response body meets the
+	// criteria to be processed, response headers must be set before this.
+	// The content-type response header must be in the SecResponseBodyMimeType
+	// This is used by webservers to choose whether to stream response buffers
+	// directly to the client or write them to Coraza's buffer.
 	IsProcessableResponseBody() bool
 
 	// Interrupted will return true if the transaction was interrupted
