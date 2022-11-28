@@ -954,7 +954,7 @@ func (tx *Transaction) IsResponseBodyAccessible() bool {
 	return tx.ResponseBodyAccess
 }
 
-// Interrupted will return true if the transaction was interrupted
+// IsInterrupted will return true if the transaction was interrupted
 func (tx *Transaction) IsInterrupted() bool {
 	return tx.interruption != nil
 }

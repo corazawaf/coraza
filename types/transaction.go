@@ -131,7 +131,7 @@ type Transaction interface {
 	// directly to the client or write them to Coraza's buffer.
 	IsResponseBodyProcessable() bool
 
-	// Interrupted will return true if the transaction was interrupted
+	// IsInterrupted will return true if the transaction was interrupted
 	IsInterrupted() bool
 
 	// Interruption returns the types.Interruption if the request was interrupted,
