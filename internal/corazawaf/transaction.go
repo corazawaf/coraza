@@ -846,9 +846,9 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Int
 
 // IsProcessableResponseBody returns true if the response body meets the
 // criteria to be processed, response headers must be set before this.
-// The content-type response header must be in the SecRequestBodyMime
-// This is used by webservers to choose whether tostream response buffers
-// directly to the client or write them to Coraza
+// The content-type response header must be in the SecResponseBodyMimeType
+// This is used by webservers to choose whether to stream response buffers
+// directly to the client or write them to Coraza's buffer.
 func (tx *Transaction) IsProcessableResponseBody() bool {
 	// TODO add more validations
 	ct := tx.variables.responseContentType.String()

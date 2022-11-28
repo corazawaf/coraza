@@ -91,7 +91,7 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 			return nil
 		}
 
-		if tx.ResponseBodyAccessible() {
+		if tx.ResponseBodyAccessible() && tx.IsProcessableResponseBody() {
 			if it, err := tx.ProcessResponseBody(); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return err
