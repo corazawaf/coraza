@@ -57,7 +57,7 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 		return in, nil
 	}
 
-	if tx.RequestBodyAccessible() {
+	if tx.IsRequestBodyAccessible() {
 		// We only do body buffering if the transaction requires request
 		// body inspection, otherwise we just let the request follow its
 		// regular flow.

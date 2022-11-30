@@ -106,26 +106,33 @@ type Transaction interface {
 	// IsRuleEngineOff will return true if RuleEngine is set to Off
 	IsRuleEngineOff() bool
 
-	// RequestBodyAccessible will return true if RequestBody access has been enabled by RequestBodyAccess
+	// IsRequestBodyAccessible will return true if RequestBody access has been enabled by RequestBodyAccess
 	//
 	// This can be used to perform checks just before calling request body related functions.
 	// In order to avoid any risk of performing wrong early assumptions, perform early checks on this value
 	// only if the API consumer requires them for specific server/proxy actions
 	// (such as avoiding proxy side buffering).
 	// Note: it returns the current status, later rules may still change it via ctl actions.
-	RequestBodyAccessible() bool
+	IsRequestBodyAccessible() bool
 
-	// ResponseBodyAccessible will return true if ResponseBody access has been enabled by ResponseBodyAccess
+	// IsResponseBodyAccessible will return true if ResponseBody access has been enabled by ResponseBodyAccess
 	//
 	// This can be used to perform checks just before calling response body related functions.
 	// In order to avoid any risk of performing wrong early assumptions, perform early checks on this value
 	// only if the API consumer requires them for specific server/proxy actions
 	// (such as avoiding proxy side buffering).
 	// Note: it returns the current status, later rules may still change it via ctl actions.
-	ResponseBodyAccessible() bool
+	IsResponseBodyAccessible() bool
 
-	// Interrupted will return true if the transaction was interrupted
-	Interrupted() bool
+	// IsResponseBodyProcessable returns true if the response body meets the
+	// criteria to be processed, response headers must be set before this.
+	// The content-type response header must be in the SecResponseBodyMimeType
+	// This is used by webservers to choose whether to stream response buffers
+	// directly to the client or write them to Coraza's buffer.
+	IsResponseBodyProcessable() bool
+
+	// IsInterrupted will return true if the transaction was interrupted
+	IsInterrupted() bool
 
 	// Interruption returns the types.Interruption if the request was interrupted,
 	// or nil otherwise.

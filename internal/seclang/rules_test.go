@@ -87,7 +87,7 @@ func TestSecMarkers(t *testing.T) {
 	tx := waf.NewTransaction()
 	defer tx.ProcessLogging()
 	tx.ProcessRequestHeaders()
-	if tx.Interrupted() {
+	if tx.IsInterrupted() {
 		t.Error("transaction failed to skipAfter")
 	}
 	interruption, err := tx.ProcessRequestBody()
@@ -317,7 +317,7 @@ func TestTxIssue147(t *testing.T) {
 	tx.ResponseBodyAccess = true
 	// we need a content-type header
 	tx.AddResponseHeader("Content-Type", "text/html")
-	if tx.IsProcessableResponseBody() {
+	if tx.IsResponseBodyProcessable() {
 		if _, err := tx.ResponseBodyBuffer.Write([]byte("#!/usr/bin/python")); err != nil {
 			t.Error(err)
 		}
