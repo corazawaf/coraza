@@ -22,6 +22,7 @@ type WAF interface {
 	// NewTransaction Creates a new initialized transaction for this WAF instance
 	NewTransaction() types.Transaction
 	NewTransactionWithID(id string) types.Transaction
+	ToConfig() WAFConfig
 }
 
 // NewWAF creates a new WAF instance with the provided configuration.
@@ -91,11 +92,15 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		waf.ErrorLogCb = c.errorLogger
 	}
 
-	return wafWrapper{waf: waf}, nil
+	return wafWrapper{
+		waf:    waf,
+		config: config,
+	}, nil
 }
 
 type wafWrapper struct {
-	waf *corazawaf.WAF
+	waf    *corazawaf.WAF
+	config WAFConfig
 }
 
 // NewTransaction implements the same method on WAF.
@@ -106,4 +111,9 @@ func (w wafWrapper) NewTransaction() types.Transaction {
 // NewTransactionWithID implements the same method on WAF.
 func (w wafWrapper) NewTransactionWithID(id string) types.Transaction {
 	return w.waf.NewTransactionWithID(id)
+}
+
+// ToConfig returns a config copy of the WAF instance
+func (w wafWrapper) ToConfig() WAFConfig {
+	return w.config
 }
