@@ -844,12 +844,12 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Int
 	return tx.interruption
 }
 
-// IsProcessableResponseBody returns true if the response body meets the
+// IsResponseBodyProcessable returns true if the response body meets the
 // criteria to be processed, response headers must be set before this.
-// The content-type response header must be in the SecRequestBodyMime
-// This is used by webservers to choose whether tostream response buffers
-// directly to the client or write them to Coraza
-func (tx *Transaction) IsProcessableResponseBody() bool {
+// The content-type response header must be in the SecResponseBodyMimeType
+// This is used by webservers to choose whether to stream response buffers
+// directly to the client or write them to Coraza's buffer.
+func (tx *Transaction) IsResponseBodyProcessable() bool {
 	// TODO add more validations
 	ct := tx.variables.responseContentType.String()
 	return stringsutil.InSlice(ct, tx.WAF.ResponseBodyMimeTypes)
@@ -870,7 +870,7 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
 		return tx.interruption, nil
 	}
-	if !tx.ResponseBodyAccess || !tx.IsProcessableResponseBody() {
+	if !tx.ResponseBodyAccess || !tx.IsResponseBodyProcessable() {
 		tx.WAF.Logger.Debug("[%s] Skipping response body processing (Access: %t)", tx.id, tx.ResponseBodyAccess)
 		tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
 		return tx.interruption, nil
@@ -944,18 +944,18 @@ func (tx *Transaction) IsRuleEngineOff() bool {
 	return tx.RuleEngine == types.RuleEngineOff
 }
 
-// RequestBodyAccessible will return true if RequestBody access has been enabled by RequestBodyAccess
-func (tx *Transaction) RequestBodyAccessible() bool {
+// IsRequestBodyAccessible will return true if RequestBody access has been enabled by RequestBodyAccess
+func (tx *Transaction) IsRequestBodyAccessible() bool {
 	return tx.RequestBodyAccess
 }
 
-// ResponseBodyAccessible will return true if ResponseBody access has been enabled by ResponseBodyAccess
-func (tx *Transaction) ResponseBodyAccessible() bool {
+// IsResponseBodyAccessible will return true if ResponseBody access has been enabled by ResponseBodyAccess
+func (tx *Transaction) IsResponseBodyAccessible() bool {
 	return tx.ResponseBodyAccess
 }
 
-// Interrupted will return true if the transaction was interrupted
-func (tx *Transaction) Interrupted() bool {
+// IsInterrupted will return true if the transaction was interrupted
+func (tx *Transaction) IsInterrupted() bool {
 	return tx.interruption != nil
 }
 
@@ -1079,7 +1079,7 @@ func (tx *Transaction) Close() error {
 		errs = append(errs, err)
 	}
 
-	tx.WAF.Logger.Debug("[%s] Transaction finished, disrupted: %t", tx.id, tx.Interrupted())
+	tx.WAF.Logger.Debug("[%s] Transaction finished, disrupted: %t", tx.id, tx.IsInterrupted())
 
 	switch {
 	case len(errs) == 0:
