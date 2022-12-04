@@ -131,8 +131,6 @@ type TransactionVariables interface {
 	RequestHeadersNames() *collection.Map
 	RequestCookiesNames() *collection.Map
 	XML() *collection.Map
-	RequestXML() *collection.Map
-	ResponseXML() *collection.Map
 	// Persistent variables
 	IP() *collection.Map
 	// Translation Proxy Variables

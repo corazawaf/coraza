@@ -217,10 +217,6 @@ const (
 	UrlencodedError
 	// ResponseArgs contains the response parsed arguments
 	ResponseArgs
-	// ResponseXML contains the response parsed XML
-	ResponseXML
-	// RequestXML contains the request parsed XML
-	RequestXML
 	// XML is a pointer to ResponseXML
 	XML
 	// MultipartPartHeaders contains the multipart headers
@@ -316,8 +312,6 @@ var rulemap = map[RuleVariable]string{
 	JSON:                          "JSON",
 	Env:                           "ENV",
 	IP:                            "IP",
-	RequestXML:                    "REQUEST_XML",
-	ResponseXML:                   "RESPONSE_XML",
 	ResponseArgs:                  "RESPONSE_ARGS",
 	MultipartPartHeaders:          "MULTIPART_PART_HEADERS",
 }

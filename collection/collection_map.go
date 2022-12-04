@@ -28,7 +28,7 @@ type Map struct {
 	data              map[string][]anchoredVar
 	name              string
 	variable          variables.RuleVariable
-	caseSensitiveKeys bool
+	isKeySensitiveKey bool
 }
 
 // Get returns a slice of strings for a key
@@ -134,7 +134,7 @@ func (c *Map) keys() []string {
 // Add a value to some key
 func (c *Map) Add(key string, value string) {
 	aVal := anchoredVar{Name: key, Value: value}
-	if c.caseSensitiveKeys {
+	if !c.isKeySensitiveKey {
 		key = strings.AsciiLower(key)
 	}
 	c.data[key] = append(c.data[key], aVal)
@@ -143,7 +143,7 @@ func (c *Map) Add(key string, value string) {
 // AddUnique will add a value to a key if it is not already there
 func (c *Map) AddUnique(key string, vVal string) {
 	ckey := key
-	if c.caseSensitiveKeys {
+	if !c.isKeySensitiveKey {
 		ckey = strings.AsciiLower(key)
 	}
 	if c.data[ckey] == nil {
@@ -164,7 +164,7 @@ func (c *Map) AddUnique(key string, vVal string) {
 func (c *Map) Set(key string, values []string) {
 	c.data[key] = make([]anchoredVar, 0, len(values))
 	ckey := key
-	if c.caseSensitiveKeys {
+	if !c.isKeySensitiveKey {
 		ckey = strings.AsciiLower(key)
 	}
 	for _, v := range values {
@@ -177,7 +177,7 @@ func (c *Map) Set(key string, values []string) {
 // it will be appended
 func (c *Map) SetIndex(key string, index int, value string) {
 	cKey := key
-	if c.caseSensitiveKeys {
+	if !c.isKeySensitiveKey {
 		cKey = strings.AsciiLower(key)
 	}
 	vVal := anchoredVar{Name: key, Value: value}
@@ -225,11 +225,15 @@ var _ Collection = &Map{}
 
 // NewMap returns a collection of key->[]values
 // If caseSensitiveKeys is false, the keys will be converted to lower case
-func NewMap(variable variables.RuleVariable, caseSensitiveKeys bool) *Map {
+// Some keys must be stored using lower case keys, like HTTP headers.
+// Other maps like ARGS are case sensitive, "User != user"
+// But a query will always return the original case sensitive key,
+// regarding of isCaseSensitiveKey
+func NewMap(variable variables.RuleVariable, isCaseSensitiveKey bool) *Map {
 	return &Map{
 		name:              variable.Name(),
 		variable:          variable,
 		data:              map[string][]anchoredVar{},
-		caseSensitiveKeys: caseSensitiveKeys,
+		isKeySensitiveKey: isCaseSensitiveKey,
 	}
 }

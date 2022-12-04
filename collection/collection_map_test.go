@@ -43,9 +43,6 @@ func TestCollectionMapCaseSensitive(t *testing.T) {
 	c := NewMap(variables.RequestHeaders, true)
 	c.Set("kEy", []string{"value2"})
 	c.SetIndex("key2", 5, "value")
-	if c.Get("key")[0] != "value2" {
-		t.Error("Error setting index")
-	}
 	if len(c.Find(NewQueryAll())) == 0 {
 		t.Error("Error finding all")
 	}

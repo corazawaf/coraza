@@ -292,10 +292,6 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 	case variables.ResponseArgs:
 		// TODO(anuraaga): This collection seems to be missing.
 		return nil
-	case variables.ResponseXML:
-		return tx.variables.responseXML
-	case variables.RequestXML:
-		return tx.variables.requestXML
 	case variables.XML:
 		return tx.variables.xml
 	case variables.MultipartPartHeaders:
@@ -1237,8 +1233,6 @@ type TransactionVariables struct {
 	requestHeadersNames  *collection.Map
 	requestCookiesNames  *collection.Map
 	xml                  *collection.Map
-	requestXML           *collection.Map
-	responseXML          *collection.Map
 	multipartPartHeaders *collection.Map
 	// Persistent variables
 	ip *collection.Map
@@ -1306,21 +1300,21 @@ func NewTransactionVariables() *TransactionVariables {
 	v.statusLine = collection.NewSimple(variables.StatusLine)
 	v.inboundErrorData = collection.NewSimple(variables.InboundErrorData)
 	v.duration = collection.NewSimple(variables.Duration)
-	v.responseHeadersNames = collection.NewMap(variables.ResponseHeadersNames, true)
-	v.requestHeadersNames = collection.NewMap(variables.RequestHeadersNames, true)
+	v.responseHeadersNames = collection.NewMap(variables.ResponseHeadersNames, false)
+	v.requestHeadersNames = collection.NewMap(variables.RequestHeadersNames, false)
 	v.userID = collection.NewSimple(variables.Userid)
 
 	v.argsGet = collection.NewMap(variables.ArgsGet, false)
 	v.argsPost = collection.NewMap(variables.ArgsPost, false)
 	v.argsPath = collection.NewMap(variables.ArgsPath, false)
 	v.filesSizes = collection.NewMap(variables.FilesSizes, false)
-	v.filesTmpContent = collection.NewMap(variables.FilesTmpContent, true)
-	v.multipartFilename = collection.NewMap(variables.MultipartFilename, true)
-	v.multipartName = collection.NewMap(variables.MultipartName, true)
+	v.filesTmpContent = collection.NewMap(variables.FilesTmpContent, false)
+	v.multipartFilename = collection.NewMap(variables.MultipartFilename, false)
+	v.multipartName = collection.NewMap(variables.MultipartName, false)
 	v.matchedVars = collection.NewMap(variables.MatchedVars, false)
-	v.requestCookies = collection.NewMap(variables.RequestCookies, true)
-	v.requestHeaders = collection.NewMap(variables.RequestHeaders, true)
-	v.responseHeaders = collection.NewMap(variables.ResponseHeaders, true)
+	v.requestCookies = collection.NewMap(variables.RequestCookies, false)
+	v.requestHeaders = collection.NewMap(variables.RequestHeaders, false)
+	v.responseHeaders = collection.NewMap(variables.ResponseHeaders, false)
 	v.geo = collection.NewMap(variables.Geo, false)
 	v.tx = collection.NewMap(variables.TX, false)
 	v.rule = collection.NewMap(variables.Rule, false)
@@ -1330,15 +1324,11 @@ func NewTransactionVariables() *TransactionVariables {
 	v.matchedVarsNames = collection.NewMap(variables.MatchedVarsNames, false)
 	v.filesNames = collection.NewMap(variables.FilesNames, false)
 	v.filesTmpNames = collection.NewMap(variables.FilesTmpNames, false)
-	v.requestCookiesNames = collection.NewMap(variables.RequestCookiesNames, true)
-	v.responseXML = collection.NewMap(variables.ResponseXML, false)
-	v.requestXML = collection.NewMap(variables.RequestXML, false)
+	v.requestCookiesNames = collection.NewMap(variables.RequestCookiesNames, false)
 	v.multipartPartHeaders = collection.NewMap(variables.MultipartPartHeaders, false)
 
 	v.argsCombinedSize = collection.NewCollectionSizeProxy(variables.ArgsCombinedSize, v.argsGet, v.argsPost)
-
-	// XML is a pointer to RequestXML
-	v.xml = v.requestXML
+	v.xml = collection.NewMap(variables.MultipartPartHeaders, false)
 	v.args = collection.NewProxy(
 		variables.Args,
 		v.argsGet,
@@ -1695,14 +1685,6 @@ func (v *TransactionVariables) XML() *collection.Map {
 	return v.xml
 }
 
-func (v *TransactionVariables) RequestXML() *collection.Map {
-	return v.requestXML
-}
-
-func (v *TransactionVariables) ResponseXML() *collection.Map {
-	return v.responseXML
-}
-
 func (v *TransactionVariables) IP() *collection.Map {
 	return v.ip
 }
@@ -1802,8 +1784,6 @@ func (v *TransactionVariables) reset() {
 	v.requestHeadersNames.Reset()
 	v.requestCookiesNames.Reset()
 	v.xml.Reset()
-	v.requestXML.Reset()
-	v.responseXML.Reset()
 	v.multipartPartHeaders.Reset()
 	v.ip.Reset()
 	v.argsNames.Reset()

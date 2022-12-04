@@ -22,7 +22,7 @@ func (*xmlBodyProcessor) ProcessRequest(reader io.Reader, v rules.TransactionVar
 	if err != nil {
 		return err
 	}
-	col := v.RequestXML()
+	col := v.XML()
 	col.Set("//@*", values)
 	col.Set("/*", contents)
 	return nil
