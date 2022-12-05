@@ -20,7 +20,7 @@ type BodyBuffer struct {
 	options types.BodyBufferOptions
 	buffer  *bytes.Buffer
 	writer  *os.File
-	length  int64
+	length  int
 }
 
 // Write appends data to the body buffer by chunks
@@ -30,7 +30,7 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 		return 0, nil
 	}
 
-	l := int64(len(data)) + br.length
+	l := len(data) + br.length
 	if l > br.options.MemoryLimit {
 		if environment.IsTinyGo {
 			maxWritingDataLen := br.options.MemoryLimit - br.length
@@ -72,7 +72,7 @@ func (br *BodyBuffer) Reader() (io.Reader, error) {
 }
 
 // Size returns the current size of the body buffer
-func (br *BodyBuffer) Size() int64 {
+func (br *BodyBuffer) Size() int {
 	return br.length
 }
 

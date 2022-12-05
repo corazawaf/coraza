@@ -49,13 +49,16 @@ type Transaction struct {
 	SkipAfter string
 
 	// Copies from the WAF instance that may be overwritten by the ctl action
+	// For usability purposes body limits are enforced as int (and not int64)
+	// int is a signed integer type that is at least 32 bits in size (platform-dependent size).
+	// We still basically assume 64-bit usage where int are big sizes.
 	AuditEngine              types.AuditEngineStatus
 	AuditLogParts            types.AuditLogParts
 	ForceRequestBodyVariable bool
 	RequestBodyAccess        bool
-	RequestBodyLimit         int64
+	RequestBodyLimit         int
 	ResponseBodyAccess       bool
-	ResponseBodyLimit        int64
+	ResponseBodyLimit        int
 	RuleEngine               types.RuleEngineStatus
 	HashEngine               bool
 	HashEnforcement          bool
@@ -786,7 +789,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
 			tx.variables.inboundErrorData.Set("1")
 			// we limit our reader to tx.RequestBodyLimit bytes
-			reader = io.LimitReader(reader, tx.RequestBodyLimit)
+			reader = io.LimitReader(reader, int64(tx.RequestBodyLimit))
 		}
 	}
 
@@ -880,7 +883,7 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 	if err != nil {
 		return tx.interruption, err
 	}
-	reader = io.LimitReader(reader, tx.WAF.ResponseBodyLimit)
+	reader = io.LimitReader(reader, int64(tx.WAF.ResponseBodyLimit))
 	buf := new(strings.Builder)
 	length, err := io.Copy(buf, reader)
 	if err != nil {

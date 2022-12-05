@@ -141,7 +141,7 @@ func TestTxResponse(t *testing.T) {
 func TestRequestBody(t *testing.T) {
 	testCases := []struct {
 		name                   string
-		requestBodyLimit       int64
+		requestBodyLimit       int
 		requestBodyLimitAction types.RequestBodyLimitAction
 		shouldInterrupt        bool
 	}{

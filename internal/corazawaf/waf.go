@@ -55,16 +55,16 @@ type WAF struct {
 	RequestBodyAccess bool
 
 	// Request body page file limit
-	RequestBodyLimit int64
+	RequestBodyLimit int
 
 	// Request body in memory limit
-	RequestBodyInMemoryLimit int64
+	RequestBodyInMemoryLimit int
 
 	// If true, transactions will have access to the response body
 	ResponseBodyAccess bool
 
 	// Response body memory limit
-	ResponseBodyLimit int64
+	ResponseBodyLimit int
 
 	// Defines if rules are going to be evaluated
 	RuleEngine types.RuleEngineStatus
@@ -112,7 +112,8 @@ type WAF struct {
 	// UploadDir is the directory where the uploaded files will be stored
 	UploadDir string
 
-	RequestBodyNoFilesLimit int64
+	// Request body in memory limit excluding the size of any files being transported in the request.
+	RequestBodyNoFilesLimit int
 
 	RequestBodyLimitAction types.RequestBodyLimitAction
 

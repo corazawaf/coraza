@@ -192,5 +192,5 @@ type BodyBufferOptions struct {
 	TmpPath string
 	// MemoryLimit is the maximum amount of memory to be stored in memory
 	// Once the limit is reached, the file will be stored on disk
-	MemoryLimit int64
+	MemoryLimit int
 }

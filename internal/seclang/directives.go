@@ -100,9 +100,9 @@ func directiveSecResponseBodyAccess(options *DirectiveOptions) error {
 }
 
 func directiveSecRequestBodyLimit(options *DirectiveOptions) error {
-	limit, _ := strconv.ParseInt(options.Opts, 10, 64)
-	options.WAF.RequestBodyLimit = limit
-	return nil
+	var err error
+	options.WAF.RequestBodyLimit, err = strconv.Atoi(options.Opts)
+	return err
 }
 
 func directiveSecRequestBodyAccess(options *DirectiveOptions) error {
@@ -176,7 +176,7 @@ func directiveSecResponseBodyLimitAction(options *DirectiveOptions) error {
 
 func directiveSecResponseBodyLimit(options *DirectiveOptions) error {
 	var err error
-	options.WAF.ResponseBodyLimit, err = strconv.ParseInt(options.Opts, 10, 64)
+	options.WAF.ResponseBodyLimit, err = strconv.Atoi(options.Opts)
 	return err
 }
 
@@ -186,7 +186,7 @@ func directiveSecRequestBodyLimitAction(options *DirectiveOptions) error {
 }
 
 func directiveSecRequestBodyInMemoryLimit(options *DirectiveOptions) error {
-	options.WAF.RequestBodyInMemoryLimit, _ = strconv.ParseInt(options.Opts, 10, 64)
+	options.WAF.RequestBodyInMemoryLimit, _ = strconv.Atoi(options.Opts)
 	return nil
 }
 
@@ -421,7 +421,7 @@ func directiveSecUploadDir(options *DirectiveOptions) error {
 
 func directiveSecRequestBodyNoFilesLimit(options *DirectiveOptions) error {
 	var err error
-	options.WAF.RequestBodyNoFilesLimit, err = strconv.ParseInt(options.Opts, 10, 64)
+	options.WAF.RequestBodyNoFilesLimit, err = strconv.Atoi(options.Opts)
 	return err
 }
 

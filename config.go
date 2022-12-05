@@ -35,16 +35,25 @@ type WAFConfig interface {
 
 	// WithRequestBodyLimit sets the maximum number of bytes that can be read from the request body. Bytes beyond that set
 	// in WithInMemoryLimit will be buffered to disk.
-	WithRequestBodyBytesLimit(limit int64) WAFConfig
+	// For usability purposes body limits are enforced as int (and not int64)
+	// int is a signed integer type that is at least 32 bits in size (platform-dependent size).
+	// The settable upper limit for 32-bit machines is 2147483647 bytes (2GiB)
+	WithRequestBodyBytesLimit(limit int) WAFConfig
 
 	// WithRequestBodyInMemoryLimit sets the maximum number of bytes that can be read from the request body and buffered in memory.
-	WithRequestBodyInMemoryBytesLimit(limit int64) WAFConfig
+	// For usability purposes body limits are enforced as int (and not int64)
+	// int is a signed integer type that is at least 32 bits in size (platform-dependent size).
+	// The settable upper limit for 32-bit machines is 2147483647 bytes (2GiB)
+	WithRequestBodyInMemoryBytesLimit(limit int) WAFConfig
 
 	// WithResponseBodyAccess enables access to the response body.
 	WithResponseBodyAccess() WAFConfig
 
 	// WithResponseBodyLimit sets the maximum number of bytes that can be read from the response body and buffered in memory.
-	WithResponseBodyBytesLimit(limit int64) WAFConfig
+	// For usability purposes body limits are enforced as int (and not int64)
+	// int is a signed integer type that is at least 32 bits in size (platform-dependent size).
+	// The settable upper limit for 32-bit machines is 2147483647 bytes (2GiB)
+	WithResponseBodyBytesLimit(limit int) WAFConfig
 
 	// WithResponseBodyMimeTypes sets the mime types of responses that will be processed.
 	WithResponseBodyMimeTypes(mimeTypes []string) WAFConfig
@@ -93,15 +102,18 @@ type wafRule struct {
 	file string
 }
 
+// For usability purposes body limits are enforced as int (and not int64)
+// int is a signed integer type that is at least 32 bits in size (platform-dependent size).
+// 32-bit machines limit will be equal to 2GiB (2147483647 bytes)
 type wafConfig struct {
 	rules                    []wafRule
 	auditLog                 *auditLogConfig
 	contentInjection         bool
 	requestBodyAccess        bool
-	requestBodyLimit         int64
-	requestBodyInMemoryLimit int64
+	requestBodyLimit         int
+	requestBodyInMemoryLimit int
 	responseBodyAccess       bool
-	responseBodyLimit        int64
+	responseBodyLimit        int
 	responseBodyMimeTypes    []string
 	debugLogger              loggers.DebugLogger
 	errorLogger              corazawaf.ErrorLogCallback
@@ -182,19 +194,19 @@ func (c *wafConfig) clone() *wafConfig {
 	return &ret
 }
 
-func (c *wafConfig) WithRequestBodyBytesLimit(limit int64) WAFConfig {
+func (c *wafConfig) WithRequestBodyBytesLimit(limit int) WAFConfig {
 	ret := c.clone()
 	ret.requestBodyLimit = limit
 	return ret
 }
 
-func (c *wafConfig) WithRequestBodyInMemoryBytesLimit(limit int64) WAFConfig {
+func (c *wafConfig) WithRequestBodyInMemoryBytesLimit(limit int) WAFConfig {
 	ret := c.clone()
 	ret.requestBodyInMemoryLimit = limit
 	return ret
 }
 
-func (c *wafConfig) WithResponseBodyBytesLimit(limit int64) WAFConfig {
+func (c *wafConfig) WithResponseBodyBytesLimit(limit int) WAFConfig {
 	ret := c.clone()
 	ret.responseBodyLimit = limit
 	return ret
