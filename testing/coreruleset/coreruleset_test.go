@@ -208,7 +208,7 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 		case r.URL.Path == "/anything":
 			// Emulated httpbin behaviour: /anything endpoint acts as an echo server, writing back the request body
 			if r.Header.Get("Content-Type") == "application/x-www-form-urlencoded" {
-				// Tests 954120-1 and 954120-2are are the only two calling /anything with a POST and payload is urlencoded
+				// Tests 954120-1 and 954120-2 are the only two calling /anything with a POST and payload is urlencoded
 				body, _ := io.ReadAll(r.Body)
 				if err != nil {
 					t.Fatalf("handler can not read request body: %v", err)
