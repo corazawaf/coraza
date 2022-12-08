@@ -234,12 +234,15 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	port, _ := strconv.Atoi(u.Port())
 	// TODO(anuraaga): Don't use global config for FTW for better support of programmatic.
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	_ = config.NewConfigFromFile(".ftw.yml")
-	config.FTWConfig.LogFile = errorPath
-	config.FTWConfig.TestOverride.Input.DestAddr = &host
-	config.FTWConfig.TestOverride.Input.Port = &port
+	cfg, err := config.NewConfigFromFile(".ftw.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.WithLogfile(errorPath)
+	cfg.TestOverride.Input.DestAddr = &host
+	cfg.TestOverride.Input.Port = &port
 
-	res, err := runner.Run(tests, runner.Config{
+	res, err := runner.Run(cfg, tests, runner.RunnerConfig{
 		ShowTime: false,
 	}, output.NewOutput("quiet", os.Stdout))
 	if err != nil {
