@@ -51,6 +51,9 @@ type Transaction struct {
 	// Rules will be skipped after a rule with this SecMarker is found
 	SkipAfter string
 
+	// AllowType is used by the allow disruptive action to skip evaluating rules after being allowed
+	AllowType types.AllowType
+
 	// Copies from the WAF instance that may be overwritten by the ctl action
 	AuditEngine              types.AuditEngineStatus
 	AuditLogParts            types.AuditLogParts

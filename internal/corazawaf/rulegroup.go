@@ -152,7 +152,19 @@ RulesLoop:
 			// Skipping rule
 			continue
 		}
-		// TODO this lines are SUPER SLOW
+		switch tx.AllowType {
+		case types.AllowTypeUnset:
+			break
+		case types.AllowTypePhase:
+			tx.AllowType = types.AllowTypeUnset
+			continue RulesLoop
+		case types.AllowTypeRequest:
+			tx.AllowType = types.AllowTypeUnset
+			break RulesLoop
+		case types.AllowTypeAll:
+			break RulesLoop
+		}
+		// TODO these lines are SUPER SLOW
 		// we reset matched_vars, matched_vars_names, etc
 		tx.variables.matchedVars.Reset()
 		tx.variables.matchedVarsNames.Reset()
