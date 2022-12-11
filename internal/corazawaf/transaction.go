@@ -737,7 +737,7 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 // note: Remember to check for a possible intervention.
 func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 	if tx.RuleEngine == types.RuleEngineOff {
-		// RUle engine is disabled
+		// Rule engine is disabled
 		return nil
 	}
 	tx.WAF.Rules.Eval(types.PhaseRequestHeaders, tx)
@@ -905,11 +905,12 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 // At this point there is not need to hold the connection, the response can be
 // delivered prior to the execution of this method.
 func (tx *Transaction) ProcessLogging() {
-	// I'm not sure why but modsecurity won't log if RuleEngine is disabled
-	// if tx.RuleEngine == RULE_ENGINE_OFF {
-	// 	return
-	// }
-	tx.WAF.Rules.Eval(types.PhaseLogging, tx)
+	// If Rule engine is disabled, Log phase rules are not going to be evaluated.
+	// This avoids trying to rely on variables not set by previous rules that
+	// have not been executed
+	if tx.RuleEngine != types.RuleEngineOff {
+		tx.WAF.Rules.Eval(types.PhaseLogging, tx)
+	}
 
 	if tx.AuditEngine == types.AuditEngineOff {
 		// Audit engine disabled
@@ -935,7 +936,7 @@ func (tx *Transaction) ProcessLogging() {
 
 	tx.WAF.Logger.Debug("[%s] Transaction marked for audit logging", tx.id)
 	if writer := tx.WAF.AuditLogWriter; writer != nil {
-		// we don't log if there is an empty audit logger
+		// We don't log if there is an empty audit logger
 		if err := writer.Write(tx.AuditLog()); err != nil {
 			tx.WAF.Logger.Error(err.Error())
 		}

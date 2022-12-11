@@ -206,7 +206,61 @@ func TestResponseHeader(t *testing.T) {
 
 	interruption := tx.ProcessResponseHeaders(200, "OK")
 	if interruption != nil {
-		t.Error("expected interruption")
+		t.Error("unexpected interruption")
+	}
+}
+
+func TestProcessRequestHeadersEngineOff(t *testing.T) {
+	tx := wafi.NewTransaction()
+	tx.RuleEngine = types.RuleEngineOff
+
+	if !tx.IsRuleEngineOff() {
+		t.Error("expected Engine off")
+	}
+
+	_ = tx.ProcessRequestHeaders()
+	if tx.LastPhase != 0 { // 0 means no phases have been evaluated
+		t.Error("unexpected rule evaluation")
+	}
+}
+
+func TestProcessRequestBodyEngineOff(t *testing.T) {
+	tx := wafi.NewTransaction()
+	tx.RuleEngine = types.RuleEngineOff
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Error("failed to process request body")
+	}
+	if tx.LastPhase != 0 {
+		t.Error("unexpected rule evaluation")
+	}
+}
+
+func TestProcessResponseHeadersEngineOff(t *testing.T) {
+	tx := wafi.NewTransaction()
+	tx.RuleEngine = types.RuleEngineOff
+	_ = tx.ProcessResponseHeaders(200, "OK")
+	if tx.LastPhase != 0 {
+		t.Error("unexpected rule evaluation")
+	}
+}
+
+func TestProcessResponseBodyEngineOff(t *testing.T) {
+	tx := wafi.NewTransaction()
+	tx.RuleEngine = types.RuleEngineOff
+	if _, err := tx.ProcessResponseBody(); err != nil {
+		t.Error("Failed to process response body")
+	}
+	if tx.LastPhase != 0 {
+		t.Error("unexpected rule evaluation")
+	}
+}
+
+func TestProcessLoggingEngineOff(t *testing.T) {
+	tx := wafi.NewTransaction()
+	tx.RuleEngine = types.RuleEngineOff
+	tx.ProcessLogging()
+	if tx.LastPhase != 0 {
+		t.Error("unexpected rule evaluation")
 	}
 }
 
