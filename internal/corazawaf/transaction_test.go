@@ -210,7 +210,7 @@ func TestResponseHeader(t *testing.T) {
 	}
 }
 
-func TestProcessRequestHeadersEngineOff(t *testing.T) {
+func TestProcessRequestHeadersDoesNoEvaluationOnEngineOff(t *testing.T) {
 	tx := wafi.NewTransaction()
 	tx.RuleEngine = types.RuleEngineOff
 
@@ -224,7 +224,7 @@ func TestProcessRequestHeadersEngineOff(t *testing.T) {
 	}
 }
 
-func TestProcessRequestBodyEngineOff(t *testing.T) {
+func TestProcessRequestBodyDoesNoEvaluationOnEngineOff(t *testing.T) {
 	tx := wafi.NewTransaction()
 	tx.RuleEngine = types.RuleEngineOff
 	if _, err := tx.ProcessRequestBody(); err != nil {
@@ -235,7 +235,7 @@ func TestProcessRequestBodyEngineOff(t *testing.T) {
 	}
 }
 
-func TestProcessResponseHeadersEngineOff(t *testing.T) {
+func TestProcessResponseHeadersDoesNoEvaluationOnEngineOff(t *testing.T) {
 	tx := wafi.NewTransaction()
 	tx.RuleEngine = types.RuleEngineOff
 	_ = tx.ProcessResponseHeaders(200, "OK")
@@ -244,7 +244,7 @@ func TestProcessResponseHeadersEngineOff(t *testing.T) {
 	}
 }
 
-func TestProcessResponseBodyEngineOff(t *testing.T) {
+func TestProcessResponseBodyDoesNoEvaluationOnEngineOff(t *testing.T) {
 	tx := wafi.NewTransaction()
 	tx.RuleEngine = types.RuleEngineOff
 	if _, err := tx.ProcessResponseBody(); err != nil {
@@ -255,7 +255,7 @@ func TestProcessResponseBodyEngineOff(t *testing.T) {
 	}
 }
 
-func TestProcessLoggingEngineOff(t *testing.T) {
+func TestProcessLoggingDoesNoEvaluationOnEngineOff(t *testing.T) {
 	tx := wafi.NewTransaction()
 	tx.RuleEngine = types.RuleEngineOff
 	tx.ProcessLogging()
