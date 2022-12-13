@@ -40,7 +40,7 @@ var crsReader fs.FS
 
 func init() {
 	fmt.Println("Preparing CRS...")
-	ver := "121d6e6bb99acda2f4766ce55d1a22387cc71b50"
+	ver := "752a1b24e68ad4f4625509b67341c7c8590e6d0b"
 	if crs, err := downloadCRS(ver); err != nil {
 		panic(fmt.Sprintf("failed to download CRS: %s", err.Error()))
 	} else {
@@ -146,8 +146,6 @@ SecAction "id:900005,\
   pass,\
   ctl:ruleEngine=DetectionOnly,\
   ctl:ruleRemoveById=910000,\
-  # Interferes with ftw log scanning
-  ctl:ruleRemoveById=920250,\
   setvar:tx.paranoia_level=4,\
   setvar:tx.crs_validate_utf8_encoding=1,\
   setvar:tx.arg_name_length=100,\

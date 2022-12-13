@@ -38,8 +38,3 @@ testoverride:
     944200-1: ''
     980170-1: ''
     980170-2: ''
-    920250-1: 'Seems that @validateUtf8Encoding evaluation is not called'
-    920250-2: ''
-    920250-3: ''
-    920250-4: ''
-    941180-7: 'New CRS pattern based on ctl:ruleRemoveTargetById maybe not working the list of rules 941100-941999'
