@@ -93,7 +93,7 @@ func NewWAF(config WAFConfig) (WAF, error) {
 	}
 
 	if c.responseBodyLimit != UnsetLimit {
-		waf.ResponseBodyLimit = c.requestBodyLimit
+		waf.ResponseBodyLimit = c.responseBodyLimit
 	}
 
 	if c.errorLogger != nil {
