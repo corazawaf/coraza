@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/bodyprocessors"
+	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 

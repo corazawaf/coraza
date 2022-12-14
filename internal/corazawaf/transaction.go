@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/corazawaf/coraza/v3/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/loggers"
 	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
