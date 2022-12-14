@@ -201,8 +201,6 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 		defer r.Body.Close()
 		w.Header().Set("Content-Type", "text/plain")
 		switch {
-		case r.URL.Path == "/status/200":
-			fmt.Fprintf(w, "Hello!")
 		case r.URL.Path == "/anything":
 			// Emulated httpbin behaviour: /anything endpoint acts as an echo server, writing back the request body
 			if r.Header.Get("Content-Type") == "application/x-www-form-urlencoded" {
@@ -228,6 +226,7 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 			}
 			fmt.Fprintf(w, string(b64Decoded))
 		default:
+			// Common path "/status/200" defaults here
 			fmt.Fprintf(w, "Hello!")
 		}
 	})))
