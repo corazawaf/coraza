@@ -91,7 +91,12 @@ func escapeSeqDecode(input string) (string, error) {
 				i += 2
 			} else {
 				/* Converted the encoding. */
-				data[d] = byte(c)
+				if c >= 0 && c <= 255 {
+					data[d] = byte(c)
+				} else {
+					// This shouldn't happen, but just in case:
+					data[d] = 0
+				}
 				d++
 				count++
 			}
