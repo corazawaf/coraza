@@ -48,13 +48,13 @@ func (i *rwInterceptor) Write(b []byte) (int, error) {
 		i.WriteHeader(http.StatusOK)
 	}
 
-	if i.tx.Interrupted() {
+	if i.tx.IsInterrupted() {
 		// if there is an interruption it must be from phase 4 and hence
 		// we won't write anything to either the body or the buffer.
 		return 0, nil
 	}
 
-	if i.tx.ResponseBodyAccessible() {
+	if i.tx.IsResponseBodyAccessible() {
 		// we only buffer the response body if we are going to access
 		// to it, otherwise we just send it to the response writer.
 		return i.tx.ResponseBodyWriter().Write(b)
@@ -85,13 +85,13 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 	responseProcessor := func(tx types.Transaction, r *http.Request) error {
 		// We look for interruptions determined at phase 4 (response headers)
 		// as body hasn't being analized yet.
-		if tx.Interrupted() {
+		if tx.IsInterrupted() {
 			// phase 4 interruption stops execution
 			w.WriteHeader(i.statusCode)
 			return nil
 		}
 
-		if tx.ResponseBodyAccessible() {
+		if tx.IsResponseBodyAccessible() && tx.IsResponseBodyProcessable() {
 			if it, err := tx.ProcessResponseBody(); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return err

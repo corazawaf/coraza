@@ -24,6 +24,7 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/coreruleset/go-ftw/config"
+	"github.com/coreruleset/go-ftw/output"
 	"github.com/coreruleset/go-ftw/runner"
 	"github.com/coreruleset/go-ftw/test"
 	"github.com/rs/zerolog"
@@ -233,15 +234,20 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	port, _ := strconv.Atoi(u.Port())
 	// TODO(anuraaga): Don't use global config for FTW for better support of programmatic.
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	_ = config.NewConfigFromFile(".ftw.yml")
-	config.FTWConfig.LogFile = errorPath
-	config.FTWConfig.TestOverride.Input.DestAddr = &host
-	config.FTWConfig.TestOverride.Input.Port = &port
+	cfg, err := config.NewConfigFromFile(".ftw.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.WithLogfile(errorPath)
+	cfg.TestOverride.Input.DestAddr = &host
+	cfg.TestOverride.Input.Port = &port
 
-	res := runner.Run(tests, runner.Config{
+	res, err := runner.Run(cfg, tests, runner.RunnerConfig{
 		ShowTime: false,
-		Quiet:    true,
-	})
+	}, output.NewOutput("quiet", os.Stdout))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if len(res.Stats.Failed) > 0 {
 		t.Errorf("failed tests: %v", res.Stats.Failed)
