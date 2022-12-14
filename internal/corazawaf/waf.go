@@ -15,9 +15,9 @@ import (
 	"time"
 
 	ioutils "github.com/corazawaf/coraza/v3/internal/io"
+	"github.com/corazawaf/coraza/v3/internal/loggers"
 	stringutils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/internal/sync"
-	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 )
 

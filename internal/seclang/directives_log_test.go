@@ -17,8 +17,8 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/internal/loggers"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 )
 

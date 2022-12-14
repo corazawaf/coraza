@@ -8,7 +8,7 @@ import (
 	"io"
 	"log"
 
-	"github.com/corazawaf/coraza/v3/loggers"
+	"github.com/corazawaf/coraza/v3/internal/loggers"
 )
 
 // DebugLogger is a logger that logs to the standard logger

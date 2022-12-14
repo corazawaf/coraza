@@ -7,7 +7,7 @@ import (
 	"io"
 
 	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/loggers"
+	"github.com/corazawaf/coraza/v3/internal/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )

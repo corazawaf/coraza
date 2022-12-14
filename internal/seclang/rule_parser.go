@@ -10,11 +10,11 @@ import (
 	"regexp"
 	"strings"
 
-	actionsmod "github.com/corazawaf/coraza/v3/actions"
+	actionsmod "github.com/corazawaf/coraza/v3/internal/actions"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/io"
+	operators "github.com/corazawaf/coraza/v3/internal/operators"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	operators "github.com/corazawaf/coraza/v3/operators"
 	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
