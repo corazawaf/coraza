@@ -24,7 +24,7 @@ func TestCollectionMapCaseInsensitive(t *testing.T) {
 	c := NewMap(variables.ArgsPost, false)
 	c.Set("key", []string{"value2"})
 	c.SetIndex("key", 0, "value")
-	c.Add("key2", "value3")
+	c.Add("keY2", "value3")
 	if c.Get("key")[0] != "value" {
 		t.Error("Error setting index")
 	}
@@ -33,6 +33,9 @@ func TestCollectionMapCaseInsensitive(t *testing.T) {
 	}
 	if len(c.Find(NewQueryEquals("a"))) > 0 {
 		t.Error("Error should not find string")
+	}
+	if len(c.Find(NewQueryEquals("key2"))) != 1 {
+		t.Error("Error should find string")
 	}
 	if l := len(c.Find(NewQueryRegex(regexp.MustCompile("k.*")))); l != 2 {
 		t.Errorf("Error should find regex, got %d", l)
@@ -43,10 +46,17 @@ func TestCollectionMapCaseSensitive(t *testing.T) {
 	c := NewMap(variables.RequestHeaders, true)
 	c.Set("kEy", []string{"value2"})
 	c.SetIndex("key2", 5, "value")
+	c.Set("Keeey", []string{"value3"})
 	if len(c.Find(NewQueryAll())) == 0 {
 		t.Error("Error finding all")
 	}
 	if len(c.Find(NewQueryEquals("a"))) > 0 {
+		t.Error("Error should not find string")
+	}
+	if len(c.Find(NewQueryEquals("kEy"))) != 1 {
+		t.Error("Error should find string")
+	}
+	if len(c.Find(NewQueryEquals("key"))) != 0 {
 		t.Error("Error should not find string")
 	}
 	if l := len(c.Find(NewQueryRegex(regexp.MustCompile("k.*")))); l != 2 {

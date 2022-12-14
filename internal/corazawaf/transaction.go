@@ -1320,7 +1320,7 @@ func NewTransactionVariables() *TransactionVariables {
 	v.rule = collection.NewMap(variables.Rule, false)
 	v.env = collection.NewMap(variables.Env, false)
 	v.ip = collection.NewMap(variables.IP, false)
-	v.files = collection.NewMap(variables.Files, true)
+	v.files = collection.NewMap(variables.Files, false)
 	v.matchedVarsNames = collection.NewMap(variables.MatchedVarsNames, false)
 	v.filesNames = collection.NewMap(variables.FilesNames, false)
 	v.filesTmpNames = collection.NewMap(variables.FilesTmpNames, false)

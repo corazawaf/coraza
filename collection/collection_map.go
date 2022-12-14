@@ -12,20 +12,12 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-// anchoredVar stores the case preserved Original name and value
-// of the variable
-type anchoredVar struct {
-	// Name is the Key sensitive name
-	Name  string
-	Value string
-}
-
 // Map are used to store VARIABLE data
 // for transactions, this data structured is designed
 // to store slices of data for keys
 // Important: CollectionMaps ARE NOT concurrent safe
 type Map struct {
-	data              map[string][]anchoredVar
+	data              map[string][]string
 	name              string
 	variable          variables.RuleVariable
 	isKeySensitiveKey bool
@@ -39,7 +31,7 @@ func (c *Map) Get(key string) []string {
 		if strings.AsciiEqualFold(key, k) {
 			values = make([]string, 0, len(a))
 			for _, v := range a {
-				values = append(values, v.Value)
+				values = append(values, v)
 			}
 			return values
 		}
@@ -68,8 +60,8 @@ func (c *Map) findRegex(key *regexp.Regexp) []types.MatchData {
 				result = append(result, &corazarules.MatchData{
 					VariableName_: c.name,
 					Variable_:     c.variable,
-					Key_:          d.Name,
-					Value_:        d.Value,
+					Key_:          k,
+					Value_:        d,
 				})
 			}
 		}
@@ -83,15 +75,16 @@ func (c *Map) findString(key string) []types.MatchData {
 	if key == "" {
 		return c.findAll()
 	}
-	// if key is not empty
-	if e, ok := c.data[key]; ok {
-		for _, aVar := range e {
-			result = append(result, &corazarules.MatchData{
-				VariableName_: c.name,
-				Variable_:     c.variable,
-				Key_:          aVar.Name,
-				Value_:        aVar.Value,
-			})
+	for cKey, aVar := range c.data {
+		if (!c.isKeySensitiveKey && strings.AsciiEqualFold(cKey, key)) || (c.isKeySensitiveKey && cKey == key) {
+			for _, v := range aVar {
+				result = append(result, &corazarules.MatchData{
+					VariableName_: c.name,
+					Variable_:     c.variable,
+					Key_:          key,
+					Value_:        v,
+				})
+			}
 		}
 	}
 	return result
@@ -100,13 +93,13 @@ func (c *Map) findString(key string) []types.MatchData {
 // FindAll returns all the contained elements
 func (c *Map) findAll() []types.MatchData {
 	var result []types.MatchData
-	for _, data := range c.data {
+	for key, data := range c.data {
 		for _, d := range data {
 			result = append(result, &corazarules.MatchData{
 				VariableName_: c.name,
 				Variable_:     c.variable,
-				Key_:          d.Name,
-				Value_:        d.Value,
+				Key_:          key,
+				Value_:        d,
 			})
 		}
 	}
@@ -133,26 +126,19 @@ func (c *Map) keys() []string {
 
 // Add a value to some key
 func (c *Map) Add(key string, value string) {
-	aVal := anchoredVar{Name: key, Value: value}
-	if !c.isKeySensitiveKey {
-		key = strings.AsciiLower(key)
-	}
-	c.data[key] = append(c.data[key], aVal)
+	c.data[key] = append(c.data[key], value)
 }
 
 // AddUnique will add a value to a key if it is not already there
 func (c *Map) AddUnique(key string, vVal string) {
 	ckey := key
-	if !c.isKeySensitiveKey {
-		ckey = strings.AsciiLower(key)
-	}
 	if c.data[ckey] == nil {
 		c.Add(key, vVal)
 		return
 	}
 
 	for _, a := range c.data[key] {
-		if a.Value == vVal {
+		if a == vVal {
 			return
 		}
 	}
@@ -162,13 +148,13 @@ func (c *Map) AddUnique(key string, vVal string) {
 // Set will replace the key's value with this slice
 // internally converts [] string to []anchoredVar
 func (c *Map) Set(key string, values []string) {
-	c.data[key] = make([]anchoredVar, 0, len(values))
+	c.data[key] = make([]string, 0, len(values))
 	ckey := key
 	if !c.isKeySensitiveKey {
 		ckey = strings.AsciiLower(key)
 	}
 	for _, v := range values {
-		c.data[ckey] = append(c.data[ckey], anchoredVar{Name: key, Value: v})
+		c.data[ckey] = append(c.data[ckey], v)
 	}
 }
 
@@ -180,16 +166,15 @@ func (c *Map) SetIndex(key string, index int, value string) {
 	if !c.isKeySensitiveKey {
 		cKey = strings.AsciiLower(key)
 	}
-	vVal := anchoredVar{Name: key, Value: value}
 	if c.data[cKey] == nil {
-		c.data[cKey] = []anchoredVar{vVal}
+		c.data[cKey] = []string{value}
 		return
 	}
 	if len(c.data[cKey]) <= index {
-		c.data[cKey] = append(c.data[cKey], vVal)
+		c.data[cKey] = append(c.data[cKey], value)
 		return
 	}
-	c.data[cKey][index] = vVal
+	c.data[cKey][index] = value
 }
 
 // Remove deletes the key from the CollectionMap
@@ -215,7 +200,7 @@ func (c *Map) Data() map[string][]string {
 	for k, v := range c.data {
 		result[k] = make([]string, 0, len(v))
 		for _, a := range v {
-			result[k] = append(result[k], a.Value)
+			result[k] = append(result[k], a)
 		}
 	}
 	return result
@@ -233,7 +218,7 @@ func NewMap(variable variables.RuleVariable, isCaseSensitiveKey bool) *Map {
 	return &Map{
 		name:              variable.Name(),
 		variable:          variable,
-		data:              map[string][]anchoredVar{},
+		data:              map[string][]string{},
 		isKeySensitiveKey: isCaseSensitiveKey,
 	}
 }

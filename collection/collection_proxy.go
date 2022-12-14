@@ -21,7 +21,11 @@ type Proxy struct {
 func (c *Proxy) Find(query *Query) []types.MatchData {
 	var res []types.MatchData
 	for _, c := range c.data {
+		// we use a small hack to force the query to be case insensitive
+		cs := c.isKeySensitiveKey
+		c.isKeySensitiveKey = false
 		res = append(res, c.Find(query)...)
+		c.isKeySensitiveKey = cs
 	}
 	return res
 }

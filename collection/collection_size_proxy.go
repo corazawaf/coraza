@@ -37,7 +37,7 @@ func (c *SizeProxy) Size() int64 {
 		// we iterate over d
 		for _, data := range d.data {
 			for _, v := range data {
-				i += len(v.Value)
+				i += len(v)
 			}
 		}
 	}
