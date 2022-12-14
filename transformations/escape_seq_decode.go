@@ -75,7 +75,7 @@ func escapeSeqDecode(input string) (string, error) {
 						buf = buf[:j]
 
 						if j > 0 {
-							bc, _ := strconv.ParseInt(string(buf), 8, 32)
+							bc, _ := strconv.ParseInt(string(buf), 8, 8)
 							c = int(bc)
 							i += 1 + j
 						}
@@ -91,12 +91,7 @@ func escapeSeqDecode(input string) (string, error) {
 				i += 2
 			} else {
 				/* Converted the encoding. */
-				if c >= 0 && c <= 255 {
-					data[d] = byte(c)
-				} else {
-					// This shouldn't happen, but just in case:
-					data[d] = 0
-				}
+				data[d] = 0
 				d++
 				count++
 			}
