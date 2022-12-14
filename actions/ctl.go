@@ -196,7 +196,7 @@ func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, str
 			colname = spl3[0]
 			colkey = spl3[1]
 		} else {
-			colkey = spl3[0]
+			colname = spl3[0]
 		}
 	}
 	collection, _ := variables.Parse(strings.TrimSpace(colname))
