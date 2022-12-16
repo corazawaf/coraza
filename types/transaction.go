@@ -7,6 +7,21 @@ import (
 	"io"
 )
 
+// ArgumentType is used to define types of argument for transactions
+// There are three supported types: POST, GET and PATH
+type ArgumentType int
+
+const (
+	// ArgumentInvalid is used to define invalid argument types
+	ArgumentInvalid ArgumentType = iota
+	// ArgumentGET is used to define GET arguments
+	ArgumentGET
+	// ArgumentPOST is used to define POST arguments
+	ArgumentPOST
+	// ArgumentPATH is used to define PATH arguments
+	ArgumentPATH
+)
+
 // Transaction is created from a WAF instance to handle web requests and responses,
 // it contains a copy of most WAF configurations that can be safely changed.
 // Transactions are used to store all data like URLs, request and response
@@ -62,7 +77,7 @@ type Transaction interface {
 	// ARGS_(GET|POST)_NAMES
 	// With this method it is possible to feed Coraza with a GET or POST argument
 	// providing granual control over the arguments.
-	AddArgument(orig string, key string, value string)
+	AddArgument(orig ArgumentType, key string, value string)
 
 	// ProcessRequestBody Performs the request body (if any)
 	//
