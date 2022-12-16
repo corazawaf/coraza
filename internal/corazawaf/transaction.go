@@ -641,7 +641,7 @@ func (tx *Transaction) ProcessConnection(client string, cPort int, server string
 
 // ExtractArguments transforms an url encoded string to a map and creates
 // ARGS_POST|GET
-func (tx *Transaction) ExtractArguments(orig string, uri string) {
+func (tx *Transaction) ExtractArguments(orig types.ArgumentType, uri string) {
 	data := urlutil.ParseQuery(uri, '&')
 	for k, vs := range data {
 		for _, v := range vs {
@@ -653,13 +653,18 @@ func (tx *Transaction) ExtractArguments(orig string, uri string) {
 // AddArgument Add arguments GET or POST
 // This will set ARGS_(GET|POST), ARGS, ARGS_NAMES, ARGS_COMBINED_SIZE and
 // ARGS_(GET|POST)_NAMES
-func (tx *Transaction) AddArgument(orig string, key string, value string) {
+func (tx *Transaction) AddArgument(argType types.ArgumentType, key string, value string) {
 	// TODO implement ARGS value limit using ArgumentsLimit
 	var vals *collection.Map
-	if orig == "GET" {
+	switch argType {
+	case types.ArgumentGET:
 		vals = tx.variables.argsGet
-	} else {
+	case types.ArgumentPOST:
 		vals = tx.variables.argsPost
+	case types.ArgumentPATH:
+		vals = tx.variables.argsPath
+	default:
+		return
 	}
 	keyl := strings.ToLower(key)
 
@@ -710,7 +715,7 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 			tx.Variables.RequestUri.Set(uri)
 		*/
 	} else {
-		tx.ExtractArguments("GET", parsedURL.RawQuery)
+		tx.ExtractArguments(types.ArgumentGET, parsedURL.RawQuery)
 		tx.variables.requestURI.Set(parsedURL.String())
 		path = parsedURL.Path
 		query = parsedURL.RawQuery
