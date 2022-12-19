@@ -193,4 +193,6 @@ type BodyBufferOptions struct {
 	// MemoryLimit is the maximum amount of memory to be stored in memory
 	// Once the limit is reached, the file will be stored on disk
 	MemoryLimit int64
+	// Limit is the overall maximum amount of memory to be stored
+	Limit int64
 }

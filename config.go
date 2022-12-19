@@ -71,6 +71,9 @@ type ResponseBodyConfig interface {
 	// WithLimit sets the maximum number of bytes that can be read from the response body and buffered in memory.
 	WithLimit(limit int) ResponseBodyConfig
 
+	// WithInMemoryLimit is not implemented for ResponseBody. The body will be just buffered in memory,
+	// therefore WithLimit already sets the in memory threshold
+
 	// WithMimeTypes sets the mime types of responses that will be processed.
 	WithMimeTypes(mimeTypes []string) ResponseBodyConfig
 }
