@@ -4,6 +4,7 @@
 package coraza
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
@@ -44,15 +45,15 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		switch {
 		case r.rule != nil:
 			if err := waf.Rules.Add(r.rule); err != nil {
-				return nil, fmt.Errorf("invalid WAF config: %w", err)
+				return nil, fmt.Errorf("invalid WAF config: %s", err.Error())
 			}
 		case r.str != "":
 			if err := parser.FromString(r.str); err != nil {
-				return nil, fmt.Errorf("invalid WAF config: %w", err)
+				return nil, fmt.Errorf("invalid WAF config: %s", err.Error())
 			}
 		case r.file != "":
 			if err := parser.FromFile(r.file); err != nil {
-				return nil, fmt.Errorf("invalid WAF config: %w", err)
+				return nil, fmt.Errorf("invalid WAF config: %s", err.Error())
 			}
 		}
 	}
@@ -77,6 +78,9 @@ func NewWAF(config WAFConfig) (WAF, error) {
 	}
 
 	if r := c.requestBody; r != nil {
+		if r.limit < r.inMemoryLimit {
+			return nil, errors.New("request body limit limit should be at least the memory limit")
+		}
 		waf.RequestBodyAccess = true
 		waf.RequestBodyLimit = int64(r.limit)
 		waf.RequestBodyInMemoryLimit = int64(r.inMemoryLimit)

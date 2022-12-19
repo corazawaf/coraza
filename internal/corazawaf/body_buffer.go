@@ -49,7 +49,7 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 				if _, err := br.writer.Write(br.buffer.Bytes()); err != nil {
 					return 0, err
 				}
-				defer br.buffer.Reset()
+				br.buffer.Reset()
 			}
 			br.length = l
 			return br.writer.Write(data)

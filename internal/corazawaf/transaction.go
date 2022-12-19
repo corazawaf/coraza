@@ -445,12 +445,12 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 	}
 	for scanner.Scan() {
 		if _, err := tx.RequestBodyBuffer.Write(scanner.Bytes()); err != nil {
-			return nil, fmt.Errorf("cannot write to request body to buffer")
+			return nil, fmt.Errorf("cannot write to request body to buffer: %s", err.Error())
 		}
 		// urlencoded cannot end with CRLF
 		if ct != "application/x-www-form-urlencoded" {
 			if _, err := tx.RequestBodyBuffer.Write([]byte{'\r', '\n'}); err != nil {
-				return nil, fmt.Errorf("cannot write to request body to buffer")
+				return nil, fmt.Errorf("cannot write to request body to buffer: %s", err.Error())
 			}
 		}
 	}
