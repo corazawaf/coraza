@@ -30,9 +30,13 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 		return 0, nil
 	}
 
-	l := int64(len(data)) + br.length
-	if l > br.options.MemoryLimit {
+	l := br.length + int64(len(data))
+
+	// Check if memory limits are reached or if l is overflown
+	// TODO write about real limit even if programmatically the overflow is checked.
+	if l > br.options.MemoryLimit || l < 0 {
 		if environment.IsTinyGo {
+			// TinyGo: Bytes beyond MemoryLimit are not written
 			maxWritingDataLen := br.options.MemoryLimit - br.length
 			if maxWritingDataLen == 0 {
 				return 0, nil
@@ -40,19 +44,31 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 			br.length = br.options.MemoryLimit
 			return br.buffer.Write(data[:maxWritingDataLen])
 		} else {
-			if br.writer == nil {
-				br.writer, err = os.CreateTemp(br.options.TmpPath, "body*")
-				if err != nil {
-					return 0, err
+			// Default: The total limit is checked
+			if l > br.options.Limit {
+				// If exceeded, bytes beyond Limit are not written
+				maxWritingDataLen := br.options.Limit - br.length
+				if maxWritingDataLen == 0 {
+					return 0, nil
 				}
-				// we dump the previous buffer
-				if _, err := br.writer.Write(br.buffer.Bytes()); err != nil {
-					return 0, err
+				br.length = br.options.Limit
+				return br.buffer.Write(data[:maxWritingDataLen])
+			} else {
+				// If not exceeded, bytes beyond MemoryLimit are buffered to disk
+				if br.writer == nil {
+					br.writer, err = os.CreateTemp(br.options.TmpPath, "body*")
+					if err != nil {
+						return 0, err
+					}
+					// we dump the previous buffer
+					if _, err := br.writer.Write(br.buffer.Bytes()); err != nil {
+						return 0, err
+					}
+					defer br.buffer.Reset()
 				}
-				defer br.buffer.Reset()
+				br.length = l
+				return br.writer.Write(data)
 			}
-			br.length = l
-			return br.writer.Write(data)
 		}
 	}
 
