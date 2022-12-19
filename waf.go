@@ -79,7 +79,7 @@ func NewWAF(config WAFConfig) (WAF, error) {
 
 	if r := c.requestBody; r != nil {
 		if r.limit < r.inMemoryLimit {
-			return nil, errors.New("request body limit limit should be at least the memory limit")
+			return nil, errors.New("request body limit should be at least the memory limit")
 		}
 		waf.RequestBodyAccess = true
 		waf.RequestBodyLimit = int64(r.limit)
