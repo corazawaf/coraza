@@ -73,10 +73,7 @@ func TestRx(t *testing.T) {
 
 func BenchmarkRxSubstringVsMatch(b *testing.B) {
 	str := "hello world; heelloo Woorld; hello; heeeelloooo wooooooorld;hello world; heelloo Woorld; hello; heeeelloooo wooooooorld;hello world; heelloo Woorld; hello; heeeelloooo wooooooorld;hello world; heelloo Woorld; hello; heeeelloooo wooooooorld;hello world; heelloo Woorld; hello; heeeelloooo wooooooorld;hello world; heelloo Woorld; hello; heeeelloooo wooooooorld;hello world; heelloo Woorld; hello; heeeelloooo wooooooorld;"
-	rx, err := regexp.Compile("((h.*e.*l.*l.*o.*)|\\d+)")
-	if err != nil {
-		b.Error(err)
-	}
+	rx := regexp.MustCompile("((h.*e.*l.*l.*o.*)|\\d+)")
 	b.Run("Find all RX", func(b *testing.B) {
 		rx.FindStringSubmatch(str)
 	})
