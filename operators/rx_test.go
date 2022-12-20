@@ -73,7 +73,7 @@ func TestRx(t *testing.T) {
 
 func BenchmarkRxSubstringVsMatch(b *testing.B) {
 	str := "hello world; heelloo Woorld; hello; heeeelloooo wooooooorld;hello world; heelloo Woorld; hello; heeeelloooo wooooooorld;hello world; heelloo Woorld; hello; heeeelloooo wooooooorld;hello world; heelloo Woorld; hello; heeeelloooo wooooooorld;hello world; heelloo Woorld; hello; heeeelloooo wooooooorld;hello world; heelloo Woorld; hello; heeeelloooo wooooooorld;hello world; heelloo Woorld; hello; heeeelloooo wooooooorld;"
-	rx, err := regexp.Compile("(h.*e.*l.*l.*o.*)")
+	rx, err := regexp.Compile("((h.*e.*l.*l.*o.*)|\\d+)")
 	if err != nil {
 		b.Error(err)
 	}
