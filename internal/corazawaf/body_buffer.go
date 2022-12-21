@@ -6,6 +6,7 @@ package corazawaf
 import (
 	"bytes"
 	"io"
+	"math"
 	"os"
 
 	"github.com/corazawaf/coraza/v3/internal/environment"
@@ -23,6 +24,8 @@ type BodyBuffer struct {
 	length  int64
 }
 
+const NotOverflow = int64(-1)
+
 // Write appends data to the body buffer by chunks
 // You may dump io.Readers using io.Copy(br, reader)
 func (br *BodyBuffer) Write(data []byte) (n int, err error) {
@@ -30,11 +33,26 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 		return 0, nil
 	}
 
-	l := br.length + int64(len(data))
+	// If overflow already reached do not write anything.
+	if br.length == math.MaxInt64 {
+		return 0, nil
+	}
 
-	// Check if memory limits are reached or if l is overflown
-	// TODO write about real limit even if programmatically the overflow is checked.
-	if l > br.options.MemoryLimit || l < 0 {
+	maxWritingDataLenBeforeOverflow := NotOverflow
+	var l int64
+
+	// Overflow check
+	// TODO write about real limit even if programmatically the overflow is checked
+	if br.length > (math.MaxInt64 - int64(len(data))) {
+		// Overflow, buffer length will always be at most MaxInt
+		l = math.MaxInt64
+		maxWritingDataLenBeforeOverflow = math.MaxInt64 - br.length
+	} else {
+		// No Overflow
+		l = br.length + int64(len(data))
+	}
+	// Check if memory or disk limits are reached
+	if l > br.options.MemoryLimit {
 		if environment.IsTinyGo {
 			// TinyGo: Bytes beyond MemoryLimit are not written
 			maxWritingDataLen := br.options.MemoryLimit - br.length
@@ -44,36 +62,45 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 			br.length = br.options.MemoryLimit
 			return br.buffer.Write(data[:maxWritingDataLen])
 		} else {
-			// Default: The total limit is checked
+			// Default: bytes are buffered to disk
+			if br.writer == nil {
+				br.writer, err = os.CreateTemp(br.options.TmpPath, "body*")
+				if err != nil {
+					return 0, err
+				}
+				// We dump the previous buffer
+				if _, err := br.writer.Write(br.buffer.Bytes()); err != nil {
+					return 0, err
+				}
+				br.buffer.Reset()
+			}
+			// Total (disk) limit is checked
 			if l > br.options.Limit {
-				// If exceeded, bytes beyond Limit are not written
+				// Total limit exceeded, bytes beyond Limit are not buffered
 				maxWritingDataLen := br.options.Limit - br.length
 				if maxWritingDataLen == 0 {
 					return 0, nil
 				}
 				br.length = br.options.Limit
-				return br.buffer.Write(data[:maxWritingDataLen])
+				return br.writer.Write(data[:maxWritingDataLen])
 			} else {
-				// If not exceeded, bytes beyond MemoryLimit are buffered to disk
-				if br.writer == nil {
-					br.writer, err = os.CreateTemp(br.options.TmpPath, "body*")
-					if err != nil {
-						return 0, err
-					}
-					// we dump the previous buffer
-					if _, err := br.writer.Write(br.buffer.Bytes()); err != nil {
-						return 0, err
-					}
-					defer br.buffer.Reset()
-				}
+				// Total limit not exceeded, bytes are buffered to disk
 				br.length = l
-				return br.writer.Write(data)
+				if maxWritingDataLenBeforeOverflow == NotOverflow {
+					return br.writer.Write(data)
+				} else {
+					return br.writer.Write(data[:maxWritingDataLenBeforeOverflow])
+				}
 			}
 		}
 	}
 
 	br.length = l
-	return br.buffer.Write(data)
+	if maxWritingDataLenBeforeOverflow == NotOverflow {
+		return br.buffer.Write(data)
+	} else {
+		return br.buffer.Write(data[:maxWritingDataLenBeforeOverflow])
+	}
 }
 
 // Reader Returns a working reader for the body buffer in memory or file
