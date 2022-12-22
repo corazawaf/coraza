@@ -44,7 +44,6 @@ func TestBodyReaderFile(t *testing.T) {
 	br := NewBodyBuffer(types.BodyBufferOptions{
 		TmpPath:     t.TempDir(),
 		MemoryLimit: 1,
-		Limit:       50,
 	})
 	if _, err := br.Write([]byte("test")); err != nil {
 		t.Error(err)
@@ -90,38 +89,6 @@ func TestBodyReaderWriteFromReader(t *testing.T) {
 	}
 	if buf.String() != "test" {
 		t.Error("Failed to write bodyreader from io.Reader")
-	}
-	_ = br.Reset()
-}
-
-func TestWriteOverLimit(t *testing.T) {
-	if environment.IsTinyGo {
-		return // t.Skip doesn't work on TinyGo
-	}
-	br := NewBodyBuffer(types.BodyBufferOptions{
-		TmpPath:     t.TempDir(),
-		MemoryLimit: 0,
-		Limit:       2,
-	})
-	n, err := br.Write([]byte{'a', 'b', 'c', 'd', 'e'})
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
-	}
-
-	if want, have := 2, n; want != have {
-		t.Errorf("unexpected number of bytes in write, want: %d, have: %d", want, have)
-	}
-
-	reader, err := br.Reader()
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
-	}
-	buf, err := io.ReadAll(reader)
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
-	}
-	if want, have := "ab", string(buf); want != have {
-		t.Errorf("unexpected body in file, want: %s, have: %s", want, have)
 	}
 	_ = br.Reset()
 }

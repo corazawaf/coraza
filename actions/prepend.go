@@ -36,7 +36,6 @@ func (a *prependFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
 	buf := corazawaf.NewBodyBuffer(types.BodyBufferOptions{
 		TmpPath:     tx.WAF.TmpDir,
 		MemoryLimit: tx.WAF.RequestBodyInMemoryLimit,
-		Limit:       tx.WAF.RequestBodyLimit,
 	})
 
 	_, err := buf.Write([]byte(data))
