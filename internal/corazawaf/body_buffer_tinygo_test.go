@@ -12,7 +12,7 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
-func TestWriteOverLimit(t *testing.T) {
+func TestTinyGoWriteOverLimit(t *testing.T) {
 	br := NewBodyBuffer(types.BodyBufferOptions{
 		MemoryLimit: 2,
 	})
