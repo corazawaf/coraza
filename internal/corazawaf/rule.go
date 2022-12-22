@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/macro"
@@ -102,7 +103,7 @@ type Rule struct {
 	// action itself, not sure yet
 	transformations []ruleTransformationParams
 
-	transformationsID string
+	transformationsID int
 
 	// Slice of initialized actions to be evaluated during
 	// the rule evaluation process
@@ -402,6 +403,27 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 	return nil
 }
 
+var transformationIDToName = []string{""}
+var transformationNameToID = map[string]int{"": 0}
+var transformationIDsLock = sync.Mutex{}
+
+func transformationID(currentID int, transformationName string) int {
+	transformationIDsLock.Lock()
+	defer transformationIDsLock.Unlock()
+
+	currName := transformationIDToName[currentID]
+	nextName := fmt.Sprintf("%s+%s", currName, transformationName)
+	if id, ok := transformationNameToID[nextName]; ok {
+		return id
+	}
+
+	id := len(transformationIDToName)
+	transformationIDToName = append(transformationIDToName, nextName)
+	transformationIDToName[id] = nextName
+	transformationNameToID[nextName] = id
+	return id
+}
+
 // AddTransformation adds a transformation to the rule
 // it fails if the transformation cannot be found
 func (r *Rule) AddTransformation(name string, t rules.Transformation) error {
@@ -409,8 +431,7 @@ func (r *Rule) AddTransformation(name string, t rules.Transformation) error {
 		return fmt.Errorf("invalid transformation %q not found", name)
 	}
 	r.transformations = append(r.transformations, ruleTransformationParams{name, t})
-	// TODO: smarter fingerprints than name concatenation
-	r.transformationsID += name
+	r.transformationsID = transformationID(r.transformationsID, name)
 	return nil
 }
 

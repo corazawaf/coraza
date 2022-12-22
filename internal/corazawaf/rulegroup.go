@@ -164,7 +164,7 @@ type transformationKey struct {
 	argKey            string
 	argIndex          int
 	argVariable       variables.RuleVariable
-	transformationsID string
+	transformationsID int
 }
 
 type transformationValue struct {
