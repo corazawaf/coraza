@@ -21,7 +21,7 @@ Coraza adds initial support for TinyGo to allow compiling to Web Assembly (WASM)
 * **FEATURE: SecDatasets & operators** - [#361](https://github.com/corazawaf/coraza/pull/361) -
 SecDatasets are added as replacement for .data files. WASM support is an essential feature of Coraza v3, but users cannot fully enjoy its potential because of file reading limitations. For this reason, SecDataset is a decent replacement for .data files. It's also easier to watch files for reloading on .conf files.
 
-  Two new SecLang operators are added which can be used to query datasets. `pmFromDataset` and `IpMatchFromDataset` [#75e8217](https://github.com/corazawaf/coraza/commit/75e821700de9fbfafde6c763f474c7add8dab319) can be used instead of their file based equivalents.
+  Two new SecLang operators are added which can be used to query datasets. `pmFromDataset` and `IpMatchFromDataset` [#75e8217](https://github.com/corazawaf/coraza/commit/75e821700de9fbfafde6c763f474c7add8dab319) can be used instead of their file based equivalents for those environments which can't access the filesystem.
 
 
 ```apache
