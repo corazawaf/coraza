@@ -79,33 +79,19 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 				}
 				br.buffer.Reset()
 			}
-			// Total (disk) limit is checked
-			if l > br.options.Limit {
-				// Total limit exceeded, bytes beyond Limit are not buffered
-				maxWritingDataLen := br.options.Limit - br.length
-				if maxWritingDataLen == 0 {
-					return 0, nil
-				}
-				br.length = br.options.Limit
-				return br.writer.Write(data[:maxWritingDataLen])
-			} else {
-				// Total limit not exceeded, bytes are buffered to disk
-				br.length = l
-				if maxWritingDataLenBeforeOverflow == NotOverflow {
-					return br.writer.Write(data)
-				} else {
-					return br.writer.Write(data[:maxWritingDataLenBeforeOverflow])
-				}
+			// Bytes are buffered to disk
+			br.length = l
+			if maxWritingDataLenBeforeOverflow != NotOverflow {
+				return br.writer.Write(data[:maxWritingDataLenBeforeOverflow])
 			}
+			return br.writer.Write(data)
 		}
 	}
-
 	br.length = l
-	if maxWritingDataLenBeforeOverflow == NotOverflow {
-		return br.buffer.Write(data)
-	} else {
+	if maxWritingDataLenBeforeOverflow != NotOverflow {
 		return br.buffer.Write(data[:maxWritingDataLenBeforeOverflow])
 	}
+	return br.buffer.Write(data)
 }
 
 // Reader Returns a working reader for the body buffer in memory or file
