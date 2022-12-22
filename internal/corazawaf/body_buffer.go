@@ -42,7 +42,6 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	var l int64
 
 	// Overflow check
-	// TODO write about real limit even if programmatically the overflow is checked
 	if br.length > (math.MaxInt64 - int64(len(data))) {
 		// Overflow, buffer length will always be at most MaxInt
 		l = math.MaxInt64
@@ -52,6 +51,12 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 		l = br.length + int64(len(data))
 	}
 	// Check if memory or disk limits are reached
+	// Even if Overflow is explicitly checked, MemoryLimit real limits are below maxInt and machine dependenent.
+	// bytes.Buffer growth is platform dependent with a growth rate capped at 2x. If the buffer can't grow it will panic with ErrTooLarge.
+	// See https://github.com/golang/go/blob/go1.19.4/src/bytes/buffer.go#L117 and https://go-review.googlesource.com/c/go/+/349994
+	// Local tests show these buffer limits:
+	// 32-bit machine: 2147483647 (2^30, 1GiB)
+	// 64-bit machine: 34359738368 (2^35, 32GiB) (Not reached the ErrTooLarge panic, the OS triggered an oom)
 	if l > br.options.MemoryLimit {
 		if environment.IsTinyGo {
 			// TinyGo: Bytes beyond MemoryLimit are not written
