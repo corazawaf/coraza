@@ -281,6 +281,7 @@ func crsWAF(t testing.TB) coraza.WAF {
 		t.Fatal(err)
 	}
 	conf := coraza.NewWAFConfig().
+		WithRootFS(crsReader).
 		WithDirectives(string(rec)).
 		WithDirectives("Include crs-setup.conf.example").
 		WithDirectives("Include rules/*.conf")
