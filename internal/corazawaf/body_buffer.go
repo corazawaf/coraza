@@ -42,8 +42,8 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	var l int64
 
 	// Overflow check
-	if br.length > (math.MaxInt64 - int64(len(data))) {
-		// Overflow, buffer length will always be at most MaxInt
+	if br.length >= (math.MaxInt64 - int64(len(data))) {
+		// Overflow, buffer length will always be at most MaxInt64
 		l = math.MaxInt64
 		maxWritingDataLenBeforeOverflow = math.MaxInt64 - br.length
 	} else {

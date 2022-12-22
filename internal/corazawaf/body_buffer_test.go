@@ -112,16 +112,16 @@ func TestWriteOverLimit(t *testing.T) {
 		t.Errorf("unexpected number of bytes in write, want: %d, have: %d", want, have)
 	}
 
-	buf := new(strings.Builder)
 	reader, err := br.Reader()
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("unexpected error: %s", err.Error())
 	}
-	if _, err := io.Copy(buf, reader); err != nil {
-		t.Error(err)
+	buf, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
 	}
-	if buf.String() != "ab" {
-		t.Error("Failed to get BodyReader from file")
+	if want, have := "ab", string(buf); want != have {
+		t.Errorf("unexpected body in file, want: %s, have: %s", want, have)
 	}
 	_ = br.Reset()
 }
