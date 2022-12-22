@@ -403,7 +403,7 @@ func (r *Rule) AddTransformation(name string, t rules.Transformation) error {
 	}
 	r.transformations = append(r.transformations, ruleTransformationParams{name, t})
 	// TODO: smarter fingerprints than name concatenation
-	r.transformationsID += name + "|"
+	r.transformationsID += name
 	return nil
 }
 
