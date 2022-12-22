@@ -5,6 +5,7 @@ package corazawaf
 
 import (
 	"fmt"
+	"github.com/corazawaf/coraza/v3/types/variables"
 	"time"
 
 	"github.com/corazawaf/coraza/v3/internal/strings"
@@ -99,6 +100,8 @@ func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	tx.LastPhase = phase
 	usedRules := 0
 	ts := time.Now().UnixNano()
+	// Caches transformations across the rules
+	transformationCache := map[transformationKey]string{}
 RulesLoop:
 	for _, r := range tx.WAF.Rules.GetRules() {
 		if tx.interruption != nil && phase != types.PhaseLogging {
@@ -136,7 +139,7 @@ RulesLoop:
 		tx.variables.matchedVars.Reset()
 		tx.variables.matchedVarsNames.Reset()
 
-		r.Evaluate(tx)
+		r.Evaluate(tx, transformationCache)
 		tx.Capture = false // we reset captures
 		usedRules++
 	}
@@ -153,4 +156,10 @@ func NewRuleGroup() RuleGroup {
 	return RuleGroup{
 		rules: []*Rule{},
 	}
+}
+
+type transformationKey struct {
+	argKey            string
+	argVariable       variables.RuleVariable
+	transformationsID string
 }

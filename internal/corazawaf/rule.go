@@ -102,6 +102,8 @@ type Rule struct {
 	// action itself, not sure yet
 	transformations []ruleTransformationParams
 
+	transformationsID string
+
 	// Slice of initialized actions to be evaluated during
 	// the rule evaluation process
 	actions []ruleActionParams
@@ -155,11 +157,11 @@ func (r *Rule) Status() int {
 // Evaluate will evaluate the current rule for the indicated transaction
 // If the operator matches, actions will be evaluated, and it will return
 // the matched variables, keys and values (MatchData)
-func (r *Rule) Evaluate(tx rules.TransactionState) []types.MatchData {
-	return r.doEvaluate(tx.(*Transaction))
+func (r *Rule) Evaluate(tx rules.TransactionState, cache map[transformationKey]string) []types.MatchData {
+	return r.doEvaluate(tx.(*Transaction), cache)
 }
 
-func (r *Rule) doEvaluate(tx *Transaction) []types.MatchData {
+func (r *Rule) doEvaluate(tx *Transaction, cache map[transformationKey]string) []types.MatchData {
 	if r.Capture {
 		tx.Capture = true
 	}
@@ -210,9 +212,27 @@ func (r *Rule) doEvaluate(tx *Transaction) []types.MatchData {
 					// We could try for each until found
 					args, errs = r.executeTransformationsMultimatch(arg.Value())
 				} else {
-					ars, es := r.executeTransformations(arg.Value())
-					args = []string{ars}
-					errs = es
+					if len(r.transformations) == 0 {
+						args = []string{arg.Value()}
+					} else if arg.VariableName() == "TX" {
+						// no cache for TX
+						ars, es := r.executeTransformations(arg.Value())
+						args = []string{ars}
+						errs = es
+					} else {
+						key := transformationKey{
+							argKey:            arg.Value(),
+							transformationsID: r.transformationsID,
+						}
+						if cached, ok := cache[key]; ok {
+							args = []string{cached}
+						} else {
+							ars, es := r.executeTransformations(arg.Value())
+							args = []string{ars}
+							errs = es
+							cache[key] = ars
+						}
+					}
 				}
 				if len(errs) > 0 {
 					tx.WAF.Logger.Debug("[%s] [%d] Error transforming argument %q for rule %d: %v", tx.id, rid, arg.Value(), r.ID_, errs)
@@ -270,7 +290,7 @@ func (r *Rule) doEvaluate(tx *Transaction) []types.MatchData {
 		// we only run the chains for the parent rule
 		for nr := r.Chain; nr != nil; {
 			tx.WAF.Logger.Debug("[%s] [%d] Evaluating rule chain for %d", tx.id, rid, r.ID_)
-			matchedChainValues := nr.Evaluate(tx)
+			matchedChainValues := nr.Evaluate(tx, cache)
 			if len(matchedChainValues) == 0 {
 				return matchedChainValues
 			}
@@ -382,6 +402,8 @@ func (r *Rule) AddTransformation(name string, t rules.Transformation) error {
 		return fmt.Errorf("invalid transformation %q not found", name)
 	}
 	r.transformations = append(r.transformations, ruleTransformationParams{name, t})
+	// TODO: smarter fingerprints than name concatenation
+	r.transformationsID += name + "|"
 	return nil
 }
 
