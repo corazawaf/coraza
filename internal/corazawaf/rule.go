@@ -157,11 +157,11 @@ func (r *Rule) Status() int {
 // Evaluate will evaluate the current rule for the indicated transaction
 // If the operator matches, actions will be evaluated, and it will return
 // the matched variables, keys and values (MatchData)
-func (r *Rule) Evaluate(tx rules.TransactionState, cache map[transformationKey]string) []types.MatchData {
+func (r *Rule) Evaluate(tx rules.TransactionState, cache map[transformationKey]transformationValue) []types.MatchData {
 	return r.doEvaluate(tx.(*Transaction), cache)
 }
 
-func (r *Rule) doEvaluate(tx *Transaction, cache map[transformationKey]string) []types.MatchData {
+func (r *Rule) doEvaluate(tx *Transaction, cache map[transformationKey]transformationValue) []types.MatchData {
 	if r.Capture {
 		tx.Capture = true
 	}
@@ -203,7 +203,7 @@ func (r *Rule) doEvaluate(tx *Transaction, cache map[transformationKey]string) [
 
 			values = tx.GetField(v)
 			tx.WAF.Logger.Debug("[%s] [%d] Expanding %d arguments for rule %d", tx.id, rid, len(values), r.ID_)
-			for _, arg := range values {
+			for i, arg := range values {
 				var args []string
 				tx.WAF.Logger.Debug("[%s] [%d] Transforming argument %q for rule %d", tx.id, rid, arg.Value(), r.ID_)
 				var errs []error
@@ -221,16 +221,22 @@ func (r *Rule) doEvaluate(tx *Transaction, cache map[transformationKey]string) [
 						errs = es
 					} else {
 						key := transformationKey{
-							argKey:            arg.Value(),
+							argKey:            arg.Key(),
+							argIndex:          i,
+							argVariable:       arg.Variable(),
 							transformationsID: r.transformationsID,
 						}
 						if cached, ok := cache[key]; ok {
-							args = []string{cached}
+							args = cached.args
+							errs = cached.errs
 						} else {
 							ars, es := r.executeTransformations(arg.Value())
 							args = []string{ars}
 							errs = es
-							cache[key] = ars
+							cache[key] = transformationValue{
+								args: args,
+								errs: es,
+							}
 						}
 					}
 				}

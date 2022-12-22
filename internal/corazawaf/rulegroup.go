@@ -5,7 +5,6 @@ package corazawaf
 
 import (
 	"fmt"
-	"github.com/corazawaf/coraza/v3/internal/sync"
 	"github.com/corazawaf/coraza/v3/types/variables"
 	"time"
 
@@ -94,10 +93,6 @@ func (rg *RuleGroup) Clear() {
 	rg.rules = []*Rule{}
 }
 
-var transformationCachePool = sync.NewPool(func() interface{} {
-	return map[transformationKey]string{}
-})
-
 // Eval rules for the specified phase, between 1 and 5
 // Returns true if transaction is disrupted
 func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
@@ -105,9 +100,7 @@ func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	tx.LastPhase = phase
 	usedRules := 0
 	ts := time.Now().UnixNano()
-	// Caches transformations across the rules
-	transformationCache := transformationCachePool.Get().(map[transformationKey]string)
-	defer transformationCachePool.Put(transformationCache)
+	transformationCache := tx.transformationCache
 	for k := range transformationCache {
 		delete(transformationCache, k)
 	}
@@ -169,6 +162,12 @@ func NewRuleGroup() RuleGroup {
 
 type transformationKey struct {
 	argKey            string
+	argIndex          int
 	argVariable       variables.RuleVariable
 	transformationsID string
+}
+
+type transformationValue struct {
+	args []string
+	errs []error
 }
