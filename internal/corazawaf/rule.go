@@ -212,14 +212,15 @@ func (r *Rule) doEvaluate(tx *Transaction, cache map[transformationKey]transform
 					// We could try for each until found
 					args, errs = r.executeTransformationsMultimatch(arg.Value())
 				} else {
-					if len(r.transformations) == 0 {
+					switch {
+					case len(r.transformations) == 0:
 						args = []string{arg.Value()}
-					} else if arg.VariableName() == "TX" {
+					case arg.VariableName() == "TX":
 						// no cache for TX
 						ars, es := r.executeTransformations(arg.Value())
 						args = []string{ars}
 						errs = es
-					} else {
+					default:
 						key := transformationKey{
 							argKey:            arg.Key(),
 							argIndex:          i,
