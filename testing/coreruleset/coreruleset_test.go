@@ -99,6 +99,7 @@ func BenchmarkCRSSimpleGET(b *testing.B) {
 func BenchmarkCRSSimplePOST(b *testing.B) {
 	waf := crsWAF(b)
 
+	b.ReportAllocs()
 	b.ResetTimer() // only benchmark execution, not compilation
 	for i := 0; i < b.N; i++ {
 		tx := waf.NewTransaction()
@@ -280,9 +281,30 @@ func crsWAF(t testing.TB) coraza.WAF {
 	if err != nil {
 		t.Fatal(err)
 	}
+	customTestingConfig := `
+SecResponseBodyMimeType text/plain
+SecDefaultAction "phase:3,log,auditlog,pass"
+SecDefaultAction "phase:4,log,auditlog,pass"
+
+SecAction "id:900005,\
+  phase:1,\
+  nolog,\
+  pass,\
+  ctl:ruleEngine=DetectionOnly,\
+  ctl:ruleRemoveById=910000,\
+  setvar:tx.paranoia_level=4,\
+  setvar:tx.crs_validate_utf8_encoding=1,\
+  setvar:tx.arg_name_length=100,\
+  setvar:tx.arg_length=400,\
+  setvar:tx.total_arg_length=64000,\
+  setvar:tx.max_num_args=255,\
+  setvar:tx.max_file_size=64100,\
+  setvar:tx.combined_file_sizes=65535"
+`
 	conf := coraza.NewWAFConfig().
 		WithRootFS(crsReader).
 		WithDirectives(string(rec)).
+		WithDirectives(customTestingConfig).
 		WithDirectives("Include crs-setup.conf.example").
 		WithDirectives("Include rules/*.conf")
 
