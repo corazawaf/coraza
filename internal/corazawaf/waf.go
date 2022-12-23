@@ -21,9 +21,6 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
-// Initializing pool for transactions
-var transactionPool = sync.NewPool(func() interface{} { return new(Transaction) })
-
 // ErrorLogCallback is used to set a callback function to log errors
 // It is triggered when an error is raised by the WAF
 // It contains the severity so the cb can decide to log it or not
@@ -39,6 +36,7 @@ type ErrorLogCallback = func(rule types.MatchedRule)
 // All WAF instance fields are immutable, if you update any
 // of them in runtime you might create concurrency issues
 type WAF struct {
+	transactionPool sync.Pool
 	// ruleGroup object, contains all rules and helpers
 	Rules RuleGroup
 
@@ -114,7 +112,7 @@ type WAF struct {
 
 	RequestBodyNoFilesLimit int64
 
-	RequestBodyLimitAction types.RequestBodyLimitAction
+	RequestBodyLimitAction types.BodyLimitAction
 
 	ArgumentSeparator string
 
@@ -151,7 +149,7 @@ func (w *WAF) NewTransactionWithID(id string) *Transaction {
 // NewTransactionWithID Creates a new initialized transaction for this WAF instance
 // Using the specified ID
 func (w *WAF) newTransactionWithID(id string) *Transaction {
-	tx := transactionPool.Get().(*Transaction)
+	tx := w.transactionPool.Get().(*Transaction)
 	tx.id = id
 	tx.matchedRules = []types.MatchedRule{}
 	tx.interruption = nil
@@ -182,13 +180,17 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	// based on the presence of RequestBodyBuffer.
 	if tx.RequestBodyBuffer == nil {
 		tx.RequestBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
-			TmpPath:     w.TmpDir,
-			MemoryLimit: w.RequestBodyInMemoryLimit,
+			TmpPath:            w.TmpDir,
+			MemoryLimit:        w.RequestBodyInMemoryLimit,
+			Limit:              tx.WAF.RequestBodyLimit,
+			DiscardOnBodyLimit: w.RejectOnRequestBodyLimit && tx.RuleEngine == types.RuleEngineOn,
 		})
 		tx.ResponseBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
 			TmpPath: w.TmpDir,
 			// the response body is just buffered in memory. Therefore, Limit and MemoryLimit are equal.
-			MemoryLimit: w.ResponseBodyLimit,
+			MemoryLimit:        w.ResponseBodyLimit,
+			Limit:              w.ResponseBodyLimit,
+			DiscardOnBodyLimit: w.RejectOnResponseBodyLimit && tx.RuleEngine == types.RuleEngineOn,
 		})
 		tx.variables = *NewTransactionVariables()
 		tx.transformationCache = map[transformationKey]*transformationValue{}
@@ -271,6 +273,7 @@ func NewWAF() *WAF {
 		logger.Error("error creating serial log writer: %s", err.Error())
 	}
 	waf := &WAF{
+		transactionPool:          sync.NewPool(func() interface{} { return new(Transaction) }),
 		ArgumentSeparator:        "&",
 		AuditLogWriter:           logWriter,
 		AuditEngine:              types.AuditEngineOff,

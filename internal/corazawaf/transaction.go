@@ -5,6 +5,7 @@ package corazawaf
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -764,7 +765,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		return nil, nil
 	}
 	// we won't process empty request bodies or disabled RequestBodyAccess
-	if !tx.RequestBodyAccess || tx.RequestBodyBuffer.Size() == 0 {
+	if !tx.RequestBodyAccess || tx.RequestBodyBuffer.IsEmpty() {
 		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.interruption, nil
 	}
@@ -779,9 +780,9 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	}
 
 	// Check if the RequestBodyLimit is reached
-	if tx.RequestBodyBuffer.Size() >= tx.RequestBodyLimit {
+	if tx.RequestBodyBuffer.IsBeyondLimit() {
 		tx.variables.inboundErrorData.Set("1")
-		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
+		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			// We interrupt this transaction in case RequestBodyLimitAction is Reject
 			tx.interruption = &types.Interruption{
 				Status: 403,
@@ -790,7 +791,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 			return tx.interruption, nil
 		}
 
-		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
+		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
 			tx.variables.inboundErrorData.Set("1")
 			// we limit our reader to tx.RequestBodyLimit bytes
 			reader = io.LimitReader(reader, tx.RequestBodyLimit)
@@ -815,7 +816,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	}
 	bodyprocessor, err := bodyprocessors.Get(rbp)
 	if err != nil {
-		tx.generateReqbodyError(fmt.Errorf("Invalid body processor"))
+		tx.generateReqbodyError(errors.New("invalid body processor"))
 		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.interruption, nil
 	}
@@ -894,7 +895,7 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		return tx.interruption, err
 	}
 
-	if tx.ResponseBodyBuffer.Size() >= tx.WAF.ResponseBodyLimit {
+	if tx.ResponseBodyBuffer.IsBeyondLimit() {
 		tx.variables.outboundDataError.Set("1")
 	}
 
@@ -1077,7 +1078,7 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 // This method helps the GC to clean up the transaction faster and release resources
 // It also allows caches the transaction back into the sync.Pool
 func (tx *Transaction) Close() error {
-	defer transactionPool.Put(tx)
+	defer tx.WAF.transactionPool.Put(tx)
 	tx.variables.reset()
 	var errs []error
 	if err := tx.RequestBodyBuffer.Reset(); err != nil {
