@@ -16,13 +16,33 @@ package transformations
 
 import (
 	"fmt"
-	"strings"
+	"unicode/utf8"
+
+	"github.com/corazawaf/coraza/v3/internal/strings"
 )
 
 func utf8ToUnicode(str string) (string, error) {
-	str = fmt.Sprintf("%+q", str)
-	if len(str) > 2 {
-		str = str[1 : len(str)-1]
+	for i, c := range str {
+		if c >= utf8.RuneSelf {
+			return doUTF8ToUnicode(str, i), nil
+		}
 	}
-	return strings.ReplaceAll(str, "\\\"", "\""), nil
+	return str, nil
+}
+
+func doUTF8ToUnicode(input string, pos int) string {
+	// Preallocate to length of input, the encoded string will be at least
+	// as long.
+	res := make([]byte, pos, len(input))
+	copy(res, input[0:pos])
+
+	for _, c := range input[pos:] {
+		if c < utf8.RuneSelf {
+			res = append(res, byte(c))
+		} else {
+			res = fmt.Appendf(res, "%%u%4x", c)
+		}
+	}
+
+	return strings.WrapUnsafe(res)
 }
