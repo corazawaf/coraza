@@ -5,8 +5,9 @@ package transformations
 
 import (
 	"crypto/md5"
-	"github.com/corazawaf/coraza/v3/internal/strings"
 	"io"
+
+	"github.com/corazawaf/coraza/v3/internal/strings"
 )
 
 var emptyMD5 string
