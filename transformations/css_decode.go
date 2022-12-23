@@ -138,7 +138,7 @@ func cssDecodeInplace(input string, pos int) string {
 	/* Terminate output string. */
 	d = d[:c]
 
-	return string(d)
+	return utils.WrapUnsafe(d)
 }
 
 /**
