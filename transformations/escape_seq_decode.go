@@ -112,7 +112,7 @@ func doEscapeSeqDecode(input string, pos int) string {
 			i++
 		}
 	}
-	return string(data[:d])
+	return utils.WrapUnsafe(data[:d])
 }
 
 func isODigit(c byte) bool {
