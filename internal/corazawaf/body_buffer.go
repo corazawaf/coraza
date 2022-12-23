@@ -5,6 +5,7 @@ package corazawaf
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"math"
 	"os"
@@ -17,14 +18,12 @@ import (
 // It will handle memory usage for buffering and processing
 // It implements io.Copy(bodyBuffer, someReader) by inherit io.Writer
 type BodyBuffer struct {
-	io.Writer
-	options types.BodyBufferOptions
-	buffer  *bytes.Buffer
-	writer  *os.File
-	length  int64
+	options             types.BodyBufferOptions
+	buffer              *bytes.Buffer
+	writer              *os.File
+	length              int64
+	lengthIsBeyondLimit bool
 }
-
-const NotOverflow = int64(-1)
 
 // Write appends data to the body buffer by chunks
 // You may dump io.Readers using io.Copy(br, reader)
@@ -33,23 +32,23 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 		return 0, nil
 	}
 
-	// If overflow already reached do not write anything.
-	if br.length == math.MaxInt64 {
+	if br.lengthIsBeyondLimit && br.options.DiscardOnBodyLimit {
+		// if we are beyond the limit and the directive is to reject
+		// the request, we don't record the body anymore.
 		return 0, nil
 	}
 
-	maxWritingDataLenBeforeOverflow := NotOverflow
-	var l int64
-
+	var targetLen int64
 	// Overflow check
-	if br.length >= (math.MaxInt64 - int64(len(data))) {
-		// Overflow, buffer length will always be at most MaxInt64
-		l = math.MaxInt64
-		maxWritingDataLenBeforeOverflow = math.MaxInt64 - br.length
+	if br.length == math.MaxInt64 || br.length >= (math.MaxInt64-int64(len(data))) {
+		// Overflow, buffer length will always be at most MaxInt
+		targetLen = math.MaxInt64
 	} else {
 		// No Overflow
-		l = br.length + int64(len(data))
+		targetLen = br.length + int64(len(data))
 	}
+	fmt.Println(targetLen, br.options.MemoryLimit)
+
 	// Check if memory or disk limits are reached
 	// Even if Overflow is explicitly checked, MemoryLimit real limits are below maxInt and machine dependenent.
 	// bytes.Buffer growth is platform dependent with a growth rate capped at 2x. If the buffer can't grow it will panic with ErrTooLarge.
@@ -57,7 +56,7 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	// Local tests show these buffer limits:
 	// 32-bit machine: 2147483647 (2^30, 1GiB)
 	// 64-bit machine: 34359738368 (2^35, 32GiB) (Not reached the ErrTooLarge panic, the OS triggered an oom)
-	if l > br.options.MemoryLimit {
+	if targetLen > br.options.MemoryLimit {
 		if environment.IsTinyGo {
 			// TinyGo: Bytes beyond MemoryLimit are not written
 			maxWritingDataLen := br.options.MemoryLimit - br.length
@@ -69,6 +68,7 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 		} else {
 			// Default: bytes are buffered to disk
 			if br.writer == nil {
+				defer br.buffer.Reset()
 				br.writer, err = os.CreateTemp(br.options.TmpPath, "body*")
 				if err != nil {
 					return 0, err
@@ -77,20 +77,27 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 				if _, err := br.writer.Write(br.buffer.Bytes()); err != nil {
 					return 0, err
 				}
-				br.buffer.Reset()
 			}
-			// Bytes are buffered to disk
-			br.length = l
-			if maxWritingDataLenBeforeOverflow != NotOverflow {
-				return br.writer.Write(data[:maxWritingDataLenBeforeOverflow])
+
+			// Total limit is checked
+			if targetLen >= br.options.Limit {
+				fmt.Println(targetLen, br.options.Limit)
+				br.lengthIsBeyondLimit = true
+				if br.options.DiscardOnBodyLimit {
+					return 0, nil
+				} else {
+					return br.writer.Write(data)
+				}
+			} else {
+				// Total limit not exceeded, bytes are sent to disk
+				br.length = targetLen
+				return br.writer.Write(data)
 			}
 			return br.writer.Write(data)
 		}
 	}
-	br.length = l
-	if maxWritingDataLenBeforeOverflow != NotOverflow {
-		return br.buffer.Write(data[:maxWritingDataLenBeforeOverflow])
-	}
+
+	br.length = targetLen
 	return br.buffer.Write(data)
 }
 
@@ -105,9 +112,12 @@ func (br *BodyBuffer) Reader() (io.Reader, error) {
 	return br.writer, nil
 }
 
-// Size returns the current size of the body buffer
-func (br *BodyBuffer) Size() int64 {
-	return br.length
+func (br *BodyBuffer) IsEmpty() bool {
+	return br.length == 0 && !br.lengthIsBeyondLimit
+}
+
+func (br *BodyBuffer) IsBeyondLimit() bool {
+	return br.lengthIsBeyondLimit
 }
 
 // Reset will reset buffers and delete temporary files

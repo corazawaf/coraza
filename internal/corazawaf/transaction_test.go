@@ -19,8 +19,6 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-var wafi = NewWAF()
-
 func TestTxSettersMultipart(t *testing.T) {
 	tx := makeTransactionMultipart(t)
 	exp := map[string]string{
@@ -64,7 +62,7 @@ func TestTxSetters(t *testing.T) {
 	validateMacroExpansion(exp, tx, t)
 }
 func TestTxMultipart(t *testing.T) {
-	tx := wafi.NewTransaction()
+	tx := NewWAF().NewTransaction()
 	body := []string{
 		"-----------------------------9051914041544843365972754266",
 		"Content-Disposition: form-data; name=\"text\"",
@@ -109,7 +107,7 @@ func TestTxMultipart(t *testing.T) {
 
 func TestTxResponse(t *testing.T) {
 	/*
-		tx := wafi.NewTransaction()
+		tx := NewWAF().NewTransaction()
 		ht := []string{
 			"HTTP/1.1 200 OK",
 			"Content-Type: text/html",
@@ -139,43 +137,73 @@ func TestTxResponse(t *testing.T) {
 }
 
 func TestRequestBody(t *testing.T) {
+	const (
+		urlencodedBody    = "some=result&second=data"
+		urlencodedBodyLen = len(urlencodedBody)
+	)
+
 	testCases := []struct {
 		name                   string
-		requestBodyLimit       int64
-		requestBodyLimitAction types.RequestBodyLimitAction
+		requestBodyLimit       int
+		requestBodyMemoryLimit int
+		requestBodyLimitAction types.BodyLimitAction
 		shouldInterrupt        bool
 	}{
 		{
-			name:                   "default",
-			requestBodyLimit:       200,
-			requestBodyLimitAction: types.RequestBodyLimitActionReject,
+			name:                   "no memory buffer and limit not reach",
+			requestBodyMemoryLimit: 0,
+			requestBodyLimit:       urlencodedBodyLen + 1,
+			requestBodyLimitAction: types.BodyLimitActionReject,
 		},
 		{
-			name:                   "limit rejects",
-			requestBodyLimit:       11,
-			requestBodyLimitAction: types.RequestBodyLimitActionReject,
+			name:                   "memory buffer and limit not reach",
+			requestBodyMemoryLimit: urlencodedBodyLen / 2,
+			requestBodyLimit:       urlencodedBodyLen + 2,
+			requestBodyLimitAction: types.BodyLimitActionReject,
+		},
+		{
+			name:                   "no memory buffer and limit rejects",
+			requestBodyMemoryLimit: 0,
+			requestBodyLimit:       urlencodedBodyLen - 5,
+			requestBodyLimitAction: types.BodyLimitActionReject,
 			shouldInterrupt:        true,
 		},
 		{
-			name:                   "limit partial processing",
-			requestBodyLimit:       11,
-			requestBodyLimitAction: types.RequestBodyLimitActionProcessPartial,
+			name:                   "memory buffer and limit rejects",
+			requestBodyMemoryLimit: urlencodedBodyLen / 2,
+			requestBodyLimit:       urlencodedBodyLen - 5,
+			requestBodyLimitAction: types.BodyLimitActionReject,
+			shouldInterrupt:        true,
+		},
+		{
+			name:                   "no memory buffer and limit partial processing",
+			requestBodyMemoryLimit: 0,
+			requestBodyLimit:       urlencodedBodyLen - 1,
+			requestBodyLimitAction: types.BodyLimitActionProcessPartial,
+		},
+		{
+			name:                   "no memory buffer and limit partial processing",
+			requestBodyMemoryLimit: urlencodedBodyLen / 2,
+			requestBodyLimit:       urlencodedBodyLen - 1,
+			requestBodyLimitAction: types.BodyLimitActionProcessPartial,
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			urlencoded := "some=result&second=data"
-			// xml := "<test><content>test</content></test>"
-			tx := wafi.NewTransaction()
-			tx.RequestBodyAccess = true
-			tx.RequestBodyLimit = testCase.requestBodyLimit
-			tx.WAF.RequestBodyLimitAction = testCase.requestBodyLimitAction
+			waf := NewWAF()
+			waf.RuleEngine = types.RuleEngineOn
+			waf.RequestBodyAccess = true
+			waf.RequestBodyLimit = int64(testCase.requestBodyLimit)
+			waf.RequestBodyInMemoryLimit = int64(testCase.requestBodyMemoryLimit)
+			waf.RequestBodyLimitAction = testCase.requestBodyLimitAction
 
+			tx := waf.NewTransaction()
 			tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
-			if _, err := tx.RequestBodyBuffer.Write([]byte(urlencoded)); err != nil {
+			if _, err := tx.RequestBodyBuffer.Write([]byte(urlencodedBody)); err != nil {
 				t.Errorf("Failed to write body buffer: %s", err.Error())
 			}
+
 			tx.ProcessRequestHeaders()
 			if _, err := tx.ProcessRequestBody(); err != nil {
 				t.Errorf("Failed to process request body: %s", err.Error())
@@ -183,7 +211,7 @@ func TestRequestBody(t *testing.T) {
 
 			if testCase.shouldInterrupt {
 				if tx.interruption == nil {
-					t.Error("expected interruption")
+					t.Error("Expected interruption, got nil")
 				}
 			} else {
 				val := tx.variables.argsPost.Get("some")
@@ -211,7 +239,7 @@ func TestResponseHeader(t *testing.T) {
 }
 
 func TestProcessRequestHeadersDoesNoEvaluationOnEngineOff(t *testing.T) {
-	tx := wafi.NewTransaction()
+	tx := NewWAF().NewTransaction()
 	tx.RuleEngine = types.RuleEngineOff
 
 	if !tx.IsRuleEngineOff() {
@@ -225,7 +253,7 @@ func TestProcessRequestHeadersDoesNoEvaluationOnEngineOff(t *testing.T) {
 }
 
 func TestProcessRequestBodyDoesNoEvaluationOnEngineOff(t *testing.T) {
-	tx := wafi.NewTransaction()
+	tx := NewWAF().NewTransaction()
 	tx.RuleEngine = types.RuleEngineOff
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error("failed to process request body")
@@ -236,7 +264,7 @@ func TestProcessRequestBodyDoesNoEvaluationOnEngineOff(t *testing.T) {
 }
 
 func TestProcessResponseHeadersDoesNoEvaluationOnEngineOff(t *testing.T) {
-	tx := wafi.NewTransaction()
+	tx := NewWAF().NewTransaction()
 	tx.RuleEngine = types.RuleEngineOff
 	_ = tx.ProcessResponseHeaders(200, "OK")
 	if tx.LastPhase != 0 {
@@ -245,7 +273,7 @@ func TestProcessResponseHeadersDoesNoEvaluationOnEngineOff(t *testing.T) {
 }
 
 func TestProcessResponseBodyDoesNoEvaluationOnEngineOff(t *testing.T) {
-	tx := wafi.NewTransaction()
+	tx := NewWAF().NewTransaction()
 	tx.RuleEngine = types.RuleEngineOff
 	if _, err := tx.ProcessResponseBody(); err != nil {
 		t.Error("Failed to process response body")
@@ -256,7 +284,7 @@ func TestProcessResponseBodyDoesNoEvaluationOnEngineOff(t *testing.T) {
 }
 
 func TestProcessLoggingDoesNoEvaluationOnEngineOff(t *testing.T) {
-	tx := wafi.NewTransaction()
+	tx := NewWAF().NewTransaction()
 	tx.RuleEngine = types.RuleEngineOff
 	tx.ProcessLogging()
 	if tx.LastPhase != 0 {
@@ -520,10 +548,10 @@ func TestTransactionSyncPool(t *testing.T) {
 
 func TestTxPhase4Magic(t *testing.T) {
 	waf := NewWAF()
+	waf.ResponseBodyAccess = true
+	waf.ResponseBodyLimit = 3
 	tx := waf.NewTransaction()
 	tx.AddResponseHeader("content-type", "text/html")
-	tx.ResponseBodyAccess = true
-	tx.WAF.ResponseBodyLimit = 3
 	if _, err := tx.ResponseBodyBuffer.Write([]byte("more bytes")); err != nil {
 		t.Error(err)
 	}
@@ -666,7 +694,7 @@ func BenchmarkTransactionCreation(b *testing.B) {
 
 func makeTransaction(t testing.TB) *Transaction {
 	t.Helper()
-	tx := wafi.NewTransaction()
+	tx := NewWAF().NewTransaction()
 	tx.RequestBodyAccess = true
 	ht := []string{
 		"POST /testurl.php?id=123&b=456 HTTP/1.1",
@@ -690,7 +718,7 @@ func makeTransactionMultipart(t *testing.T) *Transaction {
 	if t != nil {
 		t.Helper()
 	}
-	tx := wafi.NewTransaction()
+	tx := NewWAF().NewTransaction()
 	tx.RequestBodyAccess = true
 	ht := []string{
 		"POST /testurl.php?id=123&b=456 HTTP/1.1",

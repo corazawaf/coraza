@@ -92,3 +92,37 @@ func TestBodyReaderWriteFromReader(t *testing.T) {
 	}
 	_ = br.Reset()
 }
+
+func TestWriteOverLimitWhenRejecting(t *testing.T) {
+	if environment.IsTinyGo {
+		return // t.Skip doesn't work on TinyGo
+	}
+	br := NewBodyBuffer(types.BodyBufferOptions{
+		TmpPath:            t.TempDir(),
+		MemoryLimit:        1,
+		Limit:              2,
+		DiscardOnBodyLimit: true,
+	})
+	n, err := br.Write([]byte{'a', 'b', 'c', 'd', 'e'})
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+
+	if want, have := 0, n; want != have {
+		t.Errorf("unexpected number of bytes in write, want: %d, have: %d", want, have)
+	}
+
+	r, err := br.Reader()
+	if err != nil {
+		t.Error(err)
+	}
+
+	b, err := io.ReadAll(r)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if want, have := "", string(b); want != have {
+		t.Errorf("unexpected non empty body: %q", have)
+	}
+}
