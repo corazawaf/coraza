@@ -15,7 +15,7 @@
 package transformations
 
 import (
-	"fmt"
+	"strconv"
 	"unicode/utf8"
 
 	"github.com/corazawaf/coraza/v3/internal/strings"
@@ -37,11 +37,19 @@ func doUTF8ToUnicode(input string, pos int) string {
 	copy(res, input[0:pos])
 
 	for _, c := range input[pos:] {
-		if c < utf8.RuneSelf {
+		cBytes := utf8.RuneLen(c)
+		if cBytes == 1 {
 			res = append(res, byte(c))
-		} else {
-			res = fmt.Appendf(res, "%%u%4x", c)
+			continue
 		}
+		// 2 hex per byte
+		cHexLen := cBytes * 2
+		res = append(res, '%', 'u')
+		// Pad to 4 characters
+		for i := 0; i < 4-cHexLen; i++ {
+			res = append(res, '0')
+		}
+		res = strconv.AppendUint(res, uint64(c), 16)
 	}
 
 	return strings.WrapUnsafe(res)
