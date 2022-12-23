@@ -280,8 +280,8 @@ func NewWAF() *WAF {
 		ResponseBodyAccess:       false,
 		RuleEngine:               types.RuleEngineOn,
 		Rules:                    NewRuleGroup(),
-		TmpDir:                   "/tmp",
-		AuditLogRelevantStatus:   regexp.MustCompile(`.*`),
+		TmpDir:                   os.TempDir(),
+		AuditLogRelevantStatus:   regexp.MustCompile(".*"),
 		RequestBodyAccess:        false,
 		Logger:                   logger,
 	}
