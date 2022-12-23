@@ -5,7 +5,6 @@ package corazawaf
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"math"
 	"os"
@@ -47,7 +46,6 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 		// No Overflow
 		targetLen = br.length + int64(len(data))
 	}
-	fmt.Println(targetLen, br.options.MemoryLimit)
 
 	// Check if memory or disk limits are reached
 	// Even if Overflow is explicitly checked, MemoryLimit real limits are below maxInt and machine dependenent.
@@ -81,7 +79,6 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 
 			// Total limit is checked
 			if targetLen >= br.options.Limit {
-				fmt.Println(targetLen, br.options.Limit)
 				br.lengthIsBeyondLimit = true
 				if br.options.DiscardOnBodyLimit {
 					return 0, nil
@@ -93,7 +90,6 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 				br.length = targetLen
 				return br.writer.Write(data)
 			}
-			return br.writer.Write(data)
 		}
 	}
 
