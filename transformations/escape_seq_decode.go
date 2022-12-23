@@ -5,14 +5,26 @@ package transformations
 
 import (
 	"strconv"
+	"strings"
 
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 )
 
 func escapeSeqDecode(input string) (string, error) {
-	var i, count, d int
+	if i := strings.IndexByte(input, '\\'); i != -1 {
+		// TODO: This will transform even if the backslash isn't followed by an escape,
+		// but keep it simple for now.
+		return doEscapeSeqDecode(input, i), nil
+	}
+	return input, nil
+}
+
+func doEscapeSeqDecode(input string, pos int) string {
 	inputLen := len(input)
 	data := []byte(input)
+
+	d := pos
+	i := pos
 
 	for i < inputLen {
 		if (input[i] == '\\') && (i+1 < inputLen) {
@@ -87,23 +99,20 @@ func escapeSeqDecode(input string) (string, error) {
 				/* Didn't recognise encoding, copy raw bytes. */
 				data[d] = input[i+1]
 				d++
-				count++
 				i += 2
 			} else {
 				/* Converted the encoding. */
 				data[d] = byte(c)
 				d++
-				count++
 			}
 		} else {
 			/* Input character not a backslash, copy it. */
 			data[d] = input[i]
 			d++
 			i++
-			count++
 		}
 	}
-	return string(data[:count]), nil
+	return string(data[:d])
 }
 
 func isODigit(c byte) bool {
