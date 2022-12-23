@@ -37,13 +37,11 @@ func doUTF8ToUnicode(input string, pos int) string {
 	copy(res, input[0:pos])
 
 	for _, c := range input[pos:] {
-		cBytes := utf8.RuneLen(c)
-		if cBytes == 1 {
+		if c < utf8.RuneSelf {
 			res = append(res, byte(c))
 			continue
 		}
-		// 2 hex per byte
-		cHexLen := cBytes * 2
+		cHexLen := numHexDigits(c)
 		res = append(res, '%', 'u')
 		// Pad to 4 characters
 		for i := 0; i < 4-cHexLen; i++ {
@@ -53,4 +51,16 @@ func doUTF8ToUnicode(input string, pos int) string {
 	}
 
 	return strings.WrapUnsafe(res)
+}
+
+func numHexDigits(c rune) int {
+	switch {
+	case c <= 0xf:
+		return 1
+	case c <= 0xff:
+		return 2
+	case c <= 0xfff:
+		return 3
+	}
+	return 4
 }

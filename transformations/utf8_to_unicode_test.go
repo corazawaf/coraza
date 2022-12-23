@@ -26,6 +26,10 @@ func TestUTF8ToUnicode(t *testing.T) {
 			input: "Hello ハローワールド world",
 			want:  "Hello %u30cf%u30ed%u30fc%u30ef%u30fc%u30eb%u30c9 world",
 		},
+		{
+			input: "ĤéllŌ wŏrld",
+			want:  "%u0124%u00e9ll%u014c w%u014frld",
+		},
 	}
 
 	for _, tc := range tests {
