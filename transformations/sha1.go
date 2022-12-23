@@ -10,9 +10,11 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/strings"
 )
 
+var emptySHA1 string
+
 func sha1T(data string) (string, error) {
 	if len(data) == 0 {
-		return "", nil
+		return emptySHA1, nil
 	}
 	h := sha1.New()
 	_, err := io.WriteString(h, data)
@@ -20,4 +22,9 @@ func sha1T(data string) (string, error) {
 		return data, err
 	}
 	return strings.WrapUnsafe(h.Sum(nil)), nil
+}
+
+func init() {
+	buf := sha1.Sum(nil)
+	emptySHA1 = string(buf[:])
 }
