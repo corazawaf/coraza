@@ -205,43 +205,8 @@ func (r *Rule) doEvaluate(tx *Transaction, cache map[transformationKey]transform
 			values = tx.GetField(v)
 			tx.WAF.Logger.Debug("[%s] [%d] Expanding %d arguments for rule %d", tx.id, rid, len(values), r.ID_)
 			for i, arg := range values {
-				var args []string
 				tx.WAF.Logger.Debug("[%s] [%d] Transforming argument %q for rule %d", tx.id, rid, arg.Value(), r.ID_)
-				var errs []error
-				if r.MultiMatch {
-					// TODO in the future, we don't need to run every transformation
-					// We could try for each until found
-					args, errs = r.executeTransformationsMultimatch(arg.Value())
-				} else {
-					switch {
-					case len(r.transformations) == 0:
-						args = []string{arg.Value()}
-					case arg.VariableName() == "TX":
-						// no cache for TX
-						ars, es := r.executeTransformations(arg.Value())
-						args = []string{ars}
-						errs = es
-					default:
-						key := transformationKey{
-							argKey:            arg.Key(),
-							argIndex:          i,
-							argVariable:       arg.Variable(),
-							transformationsID: r.transformationsID,
-						}
-						if cached, ok := cache[key]; ok {
-							args = cached.args
-							errs = cached.errs
-						} else {
-							ars, es := r.executeTransformations(arg.Value())
-							args = []string{ars}
-							errs = es
-							cache[key] = transformationValue{
-								args: args,
-								errs: es,
-							}
-						}
-					}
-				}
+				args, errs := r.transformArg(arg, i, cache)
 				if len(errs) > 0 {
 					tx.WAF.Logger.Debug("[%s] [%d] Error transforming argument %q for rule %d: %v", tx.id, rid, arg.Value(), r.ID_, errs)
 				}
@@ -322,6 +287,42 @@ func (r *Rule) doEvaluate(tx *Transaction, cache map[transformationKey]transform
 		}
 	}
 	return matchedValues
+}
+
+func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transformationKey]transformationValue) ([]string, []error) {
+	if r.MultiMatch {
+		// TODO in the future, we don't need to run every transformation
+		// We could try for each until found
+		return r.executeTransformationsMultimatch(arg.Value())
+	} else {
+		switch {
+		case len(r.transformations) == 0:
+			return []string{arg.Value()}, nil
+		case arg.VariableName() == "TX":
+			// no cache for TX
+			arg, errs := r.executeTransformations(arg.Value())
+			return []string{arg}, errs
+		default:
+			key := transformationKey{
+				argKey:            arg.Key(),
+				argIndex:          argIdx,
+				argVariable:       arg.Variable(),
+				transformationsID: r.transformationsID,
+			}
+			if cached, ok := cache[key]; ok {
+				return cached.args, cached.errs
+			} else {
+				ars, es := r.executeTransformations(arg.Value())
+				args := []string{ars}
+				errs := es
+				cache[key] = transformationValue{
+					args: args,
+					errs: es,
+				}
+				return args, errs
+			}
+		}
+	}
 }
 
 func (r *Rule) matchVariable(tx *Transaction, m *corazarules.MatchData) {
@@ -419,7 +420,6 @@ func transformationID(currentID int, transformationName string) int {
 
 	id := len(transformationIDToName)
 	transformationIDToName = append(transformationIDToName, nextName)
-	transformationIDToName[id] = nextName
 	transformationNameToID[nextName] = id
 	return id
 }
