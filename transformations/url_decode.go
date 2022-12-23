@@ -62,6 +62,6 @@ func doURLDecode(input string, d []byte, pos int) string {
 		}
 	}
 
-	return string(d[0:c])
+	return strings.WrapUnsafe(d[0:c])
 
 }
