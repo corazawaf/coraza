@@ -6,13 +6,18 @@ package transformations
 import (
 	"crypto/md5"
 	"io"
+
+	"github.com/corazawaf/coraza/v3/internal/strings"
 )
 
 func md5T(data string) (string, error) {
+	if len(data) == 0 {
+		return "", nil
+	}
 	h := md5.New()
 	_, err := io.WriteString(h, data)
 	if err != nil {
 		return data, err
 	}
-	return string(h.Sum(nil)), nil
+	return strings.WrapUnsafe(h.Sum(nil)), nil
 }
