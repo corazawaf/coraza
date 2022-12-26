@@ -5,6 +5,7 @@ package operators
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
@@ -68,4 +69,18 @@ func TestRx(t *testing.T) {
 			*/
 		})
 	}
+}
+
+func BenchmarkRxSubstringVsMatch(b *testing.B) {
+	str := "hello world; heelloo Woorld; hello; heeeelloooo wooooooorld;hello world; heelloo Woorld; hello; heeeelloooo wooooooorld;hello world; heelloo Woorld; hello; heeeelloooo wooooooorld;hello world; heelloo Woorld; hello; heeeelloooo wooooooorld;hello world; heelloo Woorld; hello; heeeelloooo wooooooorld;hello world; heelloo Woorld; hello; heeeelloooo wooooooorld;hello world; heelloo Woorld; hello; heeeelloooo wooooooorld;"
+	rx := regexp.MustCompile(`((h.*e.*l.*l.*o.*)|\d+)`)
+	b.Run("Find all RX", func(b *testing.B) {
+		rx.FindStringSubmatch(str)
+	})
+	b.Run("Find only first", func(b *testing.B) {
+		rx.MatchString(str)
+	})
+	b.Run("Find only N", func(b *testing.B) {
+		rx.FindAllString(str, 3)
+	})
 }
