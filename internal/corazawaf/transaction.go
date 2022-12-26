@@ -104,8 +104,6 @@ type Transaction struct {
 	audit bool
 
 	variables TransactionVariables
-
-	transformationCache map[transformationKey]transformationValue
 }
 
 func (tx *Transaction) ID() string {

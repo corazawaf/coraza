@@ -9,7 +9,6 @@ import (
 
 	"github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 // RuleGroup is a collection of rules
@@ -100,10 +99,6 @@ func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	tx.LastPhase = phase
 	usedRules := 0
 	ts := time.Now().UnixNano()
-	transformationCache := tx.transformationCache
-	for k := range transformationCache {
-		delete(transformationCache, k)
-	}
 RulesLoop:
 	for _, r := range tx.WAF.Rules.GetRules() {
 		if tx.interruption != nil && phase != types.PhaseLogging {
@@ -141,7 +136,7 @@ RulesLoop:
 		tx.variables.matchedVars.Reset()
 		tx.variables.matchedVarsNames.Reset()
 
-		r.Evaluate(tx, transformationCache)
+		r.Evaluate(tx)
 		tx.Capture = false // we reset captures
 		usedRules++
 	}
@@ -158,16 +153,4 @@ func NewRuleGroup() RuleGroup {
 	return RuleGroup{
 		rules: []*Rule{},
 	}
-}
-
-type transformationKey struct {
-	argKey            string
-	argIndex          int
-	argVariable       variables.RuleVariable
-	transformationsID int
-}
-
-type transformationValue struct {
-	args []string
-	errs []error
 }

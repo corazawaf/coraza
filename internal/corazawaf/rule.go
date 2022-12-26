@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/macro"
@@ -103,8 +102,6 @@ type Rule struct {
 	// action itself, not sure yet
 	transformations []ruleTransformationParams
 
-	transformationsID int
-
 	// Slice of initialized actions to be evaluated during
 	// the rule evaluation process
 	actions []ruleActionParams
@@ -158,11 +155,11 @@ func (r *Rule) Status() int {
 // Evaluate will evaluate the current rule for the indicated transaction
 // If the operator matches, actions will be evaluated, and it will return
 // the matched variables, keys and values (MatchData)
-func (r *Rule) Evaluate(tx rules.TransactionState, cache map[transformationKey]transformationValue) []types.MatchData {
-	return r.doEvaluate(tx.(*Transaction), cache)
+func (r *Rule) Evaluate(tx rules.TransactionState) []types.MatchData {
+	return r.doEvaluate(tx.(*Transaction))
 }
 
-func (r *Rule) doEvaluate(tx *Transaction, cache map[transformationKey]transformationValue) []types.MatchData {
+func (r *Rule) doEvaluate(tx *Transaction) []types.MatchData {
 	if r.Capture {
 		tx.Capture = true
 	}
@@ -204,9 +201,19 @@ func (r *Rule) doEvaluate(tx *Transaction, cache map[transformationKey]transform
 
 			values = tx.GetField(v)
 			tx.WAF.Logger.Debug("[%s] [%d] Expanding %d arguments for rule %d", tx.id, rid, len(values), r.ID_)
-			for i, arg := range values {
+			for _, arg := range values {
+				var args []string
 				tx.WAF.Logger.Debug("[%s] [%d] Transforming argument %q for rule %d", tx.id, rid, arg.Value(), r.ID_)
-				args, errs := r.transformArg(arg, i, cache)
+				var errs []error
+				if r.MultiMatch {
+					// TODO in the future, we don't need to run every transformation
+					// We could try for each until found
+					args, errs = r.executeTransformationsMultimatch(arg.Value())
+				} else {
+					ars, es := r.executeTransformations(arg.Value())
+					args = []string{ars}
+					errs = es
+				}
 				if len(errs) > 0 {
 					tx.WAF.Logger.Debug("[%s] [%d] Error transforming argument %q for rule %d: %v", tx.id, rid, arg.Value(), r.ID_, errs)
 				}
@@ -263,7 +270,7 @@ func (r *Rule) doEvaluate(tx *Transaction, cache map[transformationKey]transform
 		// we only run the chains for the parent rule
 		for nr := r.Chain; nr != nil; {
 			tx.WAF.Logger.Debug("[%s] [%d] Evaluating rule chain for %d", tx.id, rid, r.ID_)
-			matchedChainValues := nr.Evaluate(tx, cache)
+			matchedChainValues := nr.Evaluate(tx)
 			if len(matchedChainValues) == 0 {
 				return matchedChainValues
 			}
@@ -287,42 +294,6 @@ func (r *Rule) doEvaluate(tx *Transaction, cache map[transformationKey]transform
 		}
 	}
 	return matchedValues
-}
-
-func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transformationKey]transformationValue) ([]string, []error) {
-	if r.MultiMatch {
-		// TODO in the future, we don't need to run every transformation
-		// We could try for each until found
-		return r.executeTransformationsMultimatch(arg.Value())
-	} else {
-		switch {
-		case len(r.transformations) == 0:
-			return []string{arg.Value()}, nil
-		case arg.VariableName() == "TX":
-			// no cache for TX
-			arg, errs := r.executeTransformations(arg.Value())
-			return []string{arg}, errs
-		default:
-			key := transformationKey{
-				argKey:            arg.Key(),
-				argIndex:          argIdx,
-				argVariable:       arg.Variable(),
-				transformationsID: r.transformationsID,
-			}
-			if cached, ok := cache[key]; ok {
-				return cached.args, cached.errs
-			} else {
-				ars, es := r.executeTransformations(arg.Value())
-				args := []string{ars}
-				errs := es
-				cache[key] = transformationValue{
-					args: args,
-					errs: es,
-				}
-				return args, errs
-			}
-		}
-	}
 }
 
 func (r *Rule) matchVariable(tx *Transaction, m *corazarules.MatchData) {
@@ -404,26 +375,6 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 	return nil
 }
 
-var transformationIDToName = []string{""}
-var transformationNameToID = map[string]int{"": 0}
-var transformationIDsLock = sync.Mutex{}
-
-func transformationID(currentID int, transformationName string) int {
-	transformationIDsLock.Lock()
-	defer transformationIDsLock.Unlock()
-
-	currName := transformationIDToName[currentID]
-	nextName := fmt.Sprintf("%s+%s", currName, transformationName)
-	if id, ok := transformationNameToID[nextName]; ok {
-		return id
-	}
-
-	id := len(transformationIDToName)
-	transformationIDToName = append(transformationIDToName, nextName)
-	transformationNameToID[nextName] = id
-	return id
-}
-
 // AddTransformation adds a transformation to the rule
 // it fails if the transformation cannot be found
 func (r *Rule) AddTransformation(name string, t rules.Transformation) error {
@@ -431,7 +382,6 @@ func (r *Rule) AddTransformation(name string, t rules.Transformation) error {
 		return fmt.Errorf("invalid transformation %q not found", name)
 	}
 	r.transformations = append(r.transformations, ruleTransformationParams{name, t})
-	r.transformationsID = transformationID(r.transformationsID, name)
 	return nil
 }
 

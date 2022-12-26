@@ -190,7 +190,6 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 			MemoryLimit: w.RequestBodyInMemoryLimit,
 		})
 		tx.variables = *NewTransactionVariables()
-		tx.transformationCache = map[transformationKey]transformationValue{}
 	}
 
 	// set capture variables

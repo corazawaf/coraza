@@ -99,7 +99,6 @@ func BenchmarkCRSSimpleGET(b *testing.B) {
 func BenchmarkCRSSimplePOST(b *testing.B) {
 	waf := crsWAF(b)
 
-	b.ReportAllocs()
 	b.ResetTimer() // only benchmark execution, not compilation
 	for i := 0; i < b.N; i++ {
 		tx := waf.NewTransaction()
@@ -110,41 +109,7 @@ func BenchmarkCRSSimplePOST(b *testing.B) {
 		tx.AddRequestHeader("Accept", "application/json")
 		tx.AddRequestHeader("Content-Type", "application/x-www-form-urlencoded")
 		tx.ProcessRequestHeaders()
-		if _, err := tx.RequestBodyWriter().Write([]byte("parameters2=and&other2=Stuff")); err != nil {
-			b.Error(err)
-		}
-		if _, err := tx.ProcessRequestBody(); err != nil {
-			b.Error(err)
-		}
-		tx.AddResponseHeader("Content-Type", "application/json")
-		tx.ProcessResponseHeaders(200, "OK")
-		if _, err := tx.ProcessResponseBody(); err != nil {
-			b.Error(err)
-		}
-		tx.ProcessLogging()
-		if err := tx.Close(); err != nil {
-			b.Error(err)
-		}
-	}
-}
-
-func BenchmarkCRSLargePOST(b *testing.B) {
-	waf := crsWAF(b)
-
-	postPayload := []byte(fmt.Sprintf("parameters2=and&other2=%s", strings.Repeat("a", 10000)))
-
-	b.ReportAllocs()
-	b.ResetTimer() // only benchmark execution, not compilation
-	for i := 0; i < b.N; i++ {
-		tx := waf.NewTransaction()
-		tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 8080)
-		tx.ProcessURI("POST", "/some_path/with?parameters=and&other=Stuff", "HTTP/1.1")
-		tx.AddRequestHeader("Host", "localhost")
-		tx.AddRequestHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36")
-		tx.AddRequestHeader("Accept", "application/json")
-		tx.AddRequestHeader("Content-Type", "application/x-www-form-urlencoded")
-		tx.ProcessRequestHeaders()
-		if _, err := tx.RequestBodyWriter().Write(postPayload); err != nil {
+		if _, err := tx.ResponseBodyWriter().Write([]byte("parameters2=and&other2=Stuff")); err != nil {
 			b.Error(err)
 		}
 		if _, err := tx.ProcessRequestBody(); err != nil {
@@ -315,30 +280,8 @@ func crsWAF(t testing.TB) coraza.WAF {
 	if err != nil {
 		t.Fatal(err)
 	}
-	customTestingConfig := `
-SecResponseBodyMimeType text/plain
-SecDefaultAction "phase:3,log,auditlog,pass"
-SecDefaultAction "phase:4,log,auditlog,pass"
-
-SecAction "id:900005,\
-  phase:1,\
-  nolog,\
-  pass,\
-  ctl:ruleEngine=DetectionOnly,\
-  ctl:ruleRemoveById=910000,\
-  setvar:tx.paranoia_level=4,\
-  setvar:tx.crs_validate_utf8_encoding=1,\
-  setvar:tx.arg_name_length=100,\
-  setvar:tx.arg_length=400,\
-  setvar:tx.total_arg_length=64000,\
-  setvar:tx.max_num_args=255,\
-  setvar:tx.max_file_size=64100,\
-  setvar:tx.combined_file_sizes=65535"
-`
 	conf := coraza.NewWAFConfig().
-		WithRootFS(crsReader).
 		WithDirectives(string(rec)).
-		WithDirectives(customTestingConfig).
 		WithDirectives("Include crs-setup.conf.example").
 		WithDirectives("Include rules/*.conf")
 
