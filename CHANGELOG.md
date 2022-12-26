@@ -11,17 +11,17 @@ Coraza v3 is fully compatible with the OWASP Core Rule Set v4. Support for Core 
 
   CRS further moved away from its dependency on old Regexp::Assemble to the new crs-toolchain helper to prevent rules incompatible with Coraza.
 
-* **FEATURE: TinyGo & WASM support & Envoy Proxy Connector** - [#254](https://github.com/corazawaf/coraza/pull/254) -
-Coraza adds initial support for TinyGo to allow compiling to Web Assembly (WASM). Compatible directives are marked with `Tinygo Compatibility` in the documentation.
+* **FEATURE: TinyGo & WASM support & Proxy-WASM Connector** - [#254](https://github.com/corazawaf/coraza/pull/254) -
+Coraza adds initial support for TinyGo to allow compiling to Web Assembly (WASM). Compatible directives are marked with *Tinygo Compatibility* in the documentation.
 
   Based on contributions sponsored by the Tetrate.io team, a new [coraza-proxy-wasm connector](https://github.com/corazawaf/coraza-proxy-wasm) is developed which can be loaded in [Envoy Proxy](https://www.envoyproxy.io) or as Istio plugin.
 
   Special thanks to the Tetrate team, Anuraag Agrawal, Matteo Pace and José Carlos Chávez. This greatly enhances our coverage, as now we support Envoy proxy and any WASM-proxy compatible system.
 
 * **FEATURE: SecDatasets & operators** - [#361](https://github.com/corazawaf/coraza/pull/361) -
-SecDatasets are added as replacement for .data files. WASM support is an essential feature of Coraza v3, but users cannot fully enjoy its potential because of file reading limitations. For this reason, SecDataset is a decent replacement for .data files. It's also easier to watch files for reloading on .conf files.
+SecDatasets are added as replacement for .data files. WASM support is an essential feature of Coraza v3, but users cannot fully enjoy its potential because of file reading limitations. For this reason, SecDataset is a decent replacement for .data files.
 
-  Two new SecLang operators are added which can be used to query datasets. `pmFromDataset` and `IpMatchFromDataset` [#75e8217](https://github.com/corazawaf/coraza/commit/75e821700de9fbfafde6c763f474c7add8dab319) can be used instead of their file based equivalents for those environments which can't access the filesystem.
+  Two new SecLang operators are added which can be used to query datasets. `pmFromDataset`  [#361](https://github.com/corazawaf/coraza/pull/361) and `ipMatchFromDataset` [#75e8217](https://github.com/corazawaf/coraza/commit/75e821700de9fbfafde6c763f474c7add8dab319) which can be used instead of their file based equivalents for those environments which can't access the filesystem.
 
 
 ```apache
@@ -41,14 +41,16 @@ SecRule ARGS_PATH:id "!@eq %{user:session_id}" "deny"
 ```
 
 * **FEATURE: Redirect Operator** - [#290](https://github.com/corazawaf/coraza/pull/290) -
-Redirect takes a status and an url as parameter to return as an action. 
+Redirect takes a status code and url as parameter and based on this information returns an http redirect to the client. 
 
 ```apache
 SecRule REQUEST_URI "/redirect"  "phase:1,id:1,status:302,redirect:http://www.example.com
 ```
 
-* **Better Multipart Support** - [#452](https://github.com/corazawaf/coraza/pull/452) -
-Support for reading variables from multipart/form-data requests. This adds the MULTIPART_PART_HEADERS variable which is a collection of all part headers found within the request body with Content-Type: multipart/form-data. The key of each item in the collection is the name of the part in which it was found, while the value is the entire part-header line - including both the part-header name and the part-header value.
+* **Enhanced Multipart Support** - [#452](https://github.com/corazawaf/coraza/pull/452) -
+Pick up the MULTIPART_PART_HEADERS support found in ModSecurity [reference](https://github.com/SpiderLabs/ModSecurity/wiki/Reference-Manual-(v2.x)-Variables#MULTIPART_PART_HEADERS).
+
+> This variable is a collection of all part headers found within the request body with Content-Type multipart/form-data. The key of each item in the collection is the name of the part in which it was found, while the value is the entire part-header line -- including both the part-header name and the part-header value.
 
 ```apache
 SecRule ARGS:_msg_body "@rx Hi Martin," "id:200, phase:2,log"
@@ -56,26 +58,25 @@ SecRule MULTIPART_PART_HEADERS:_msg_body "Content-Disposition" "id:250, phase:2,
 SecRule MULTIPART_PART_HEADERS "Content-Disposition" "id:300, phase:2, log"
 ```
 
-
 ### Performance Optimizations
 
 Similar performance to modsecurity is archived, we are faster or slower, depending on the payload. Usually, big payloads work better in Coraza. Coraza v3 is ~50% faster than Coraza v2.0.1, more than 200% faster than Coraza v2.0.0.
 
 - Replace the Aho Corasick string matching implementation used internally with Petar Dambovaliev’s implementation (60% less memory consumption and 233% faster execution time) [#302](https://github.com/corazawaf/coraza/pull/302)
-- Optimize validateNID operator #30e5b56 [#348](https://github.com/corazawaf/coraza/pull/348)
+- Optimize validateNID operator [#30e5b56](https://github.com/corazawaf/coraza/commit/30e5b564d4d7c6688fb819c97b0891e097570a2e) [#348](https://github.com/corazawaf/coraza/pull/348)
 - Use io.Discard instead of /dev/null to save a syscall when debug log output should be discarded [#354](https://github.com/corazawaf/coraza/pull/354)
 - Optimize Body Buffering [#505](https://github.com/corazawaf/coraza/pull/505)
 - Remove unused mutex in RuleGroup [#381](https://github.com/corazawaf/coraza/pull/381)
 - Speed up random string generation by switching to a pseudorandom generator [#403](https://github.com/corazawaf/coraza/pull/403)
 - Improve SecLang parser performance [#412](https://github.com/corazawaf/coraza/pull/412) 
-- Use strings.Builder to avoid copy string input to bytes in `urlencode` #320 and `base64decode` [#319](https://github.com/corazawaf/coraza/pull/319) 
+- Use strings.Builder to avoid copy string input to bytes in `urlencode` [#320]((https://github.com/corazawaf/coraza/pull/320) and `base64decode` [#319](https://github.com/corazawaf/coraza/pull/319) 
 - Use lookup table for byte range validation in `validateByteRange` [#490](https://github.com/corazawaf/coraza/pull/490)
 
 ### API Changes
 
 A lot of effort was added to optimize and clean up the Coraza API which resulted in a couple of breaking API changes.
 
-- **New Variables Engine** - [#277](https://github.com/corazawaf/coraza/pull/277) - Implements a new Variables Engine similar to modsecurity. Variables have two pointers `tx.Collections[]` and `tx.Variables.*` which either allow programmatic access using the proper collection mechanism or using dynamic variable names.
+- **New Variables Engine** - [#277](https://github.com/corazawaf/coraza/pull/277) - Implements a new Variables Engine similar to modsecurity. Variables have two pointers `tx.Collections[]` and `tx.variables.*` which either allow programmatic access using the proper collection mechanism or using dynamic variable names.
 
   There are multiple variable types (Simple, Map, Proxy, Translation) with different helpers and generic helpers. Each type has its own variable (string, map, proxy, etc.)  https://github.com/corazawaf/coraza/tree/v3/dev/collection 
 
