@@ -40,15 +40,15 @@ func (a *prependFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
 
 	_, err := buf.Write([]byte(data))
 	if err != nil {
-		tx.WAF.Logger.Debug("failed to write buffer while evaluating prepend action: %w", err.Error())
+		tx.WAF.Logger.Debug("failed to write buffer while evaluating prepend action: %w", err)
 	}
 	reader, err := tx.ResponseBodyBuffer.Reader()
 	if err != nil {
-		tx.WAF.Logger.Debug("failed to read response body while evaluating prepend action: %w", err.Error())
+		tx.WAF.Logger.Debug("failed to read response body while evaluating prepend action: %w", err)
 	}
 	_, err = io.Copy(buf, reader)
 	if err != nil {
-		tx.WAF.Logger.Debug("failed to append response buffer while evaluating prepend action: %w", err.Error())
+		tx.WAF.Logger.Debug("failed to append response buffer while evaluating prepend action: %w", err)
 	}
 	// We overwrite the response body buffer with the new buffer
 	*tx.ResponseBodyBuffer = *buf

@@ -45,15 +45,15 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		switch {
 		case r.rule != nil:
 			if err := waf.Rules.Add(r.rule); err != nil {
-				return nil, fmt.Errorf("invalid WAF config: %s", err.Error())
+				return nil, fmt.Errorf("invalid WAF config: %w", err)
 			}
 		case r.str != "":
 			if err := parser.FromString(r.str); err != nil {
-				return nil, fmt.Errorf("invalid WAF config: %s", err.Error())
+				return nil, fmt.Errorf("invalid WAF config: %w", err)
 			}
 		case r.file != "":
 			if err := parser.FromFile(r.file); err != nil {
-				return nil, fmt.Errorf("invalid WAF config: %s", err.Error())
+				return nil, fmt.Errorf("invalid WAF config: %w", err)
 			}
 		}
 	}
