@@ -161,7 +161,14 @@ func NewRuleGroup() RuleGroup {
 }
 
 type transformationKey struct {
-	argKey            string
+	// TODO(anuraaga): This is a big hack to support performance on TinyGo. TinyGo
+	// cannot efficiently compute a hashcode for a struct if it has embedded non-fixed
+	// size fields, for example string as we'd prefer to use here. A pointer is usable,
+	// and it works for us since we know that the arg key string is populated once per
+	// transaction phase and we would never have different string pointers with the same
+	// content, or more problematically same pointer for different content, as the strings
+	// will be alive throughout the phase.
+	argKey            uintptr
 	argIndex          int
 	argVariable       variables.RuleVariable
 	transformationsID int

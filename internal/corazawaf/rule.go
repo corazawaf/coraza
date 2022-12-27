@@ -5,10 +5,12 @@ package corazawaf
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
+	"unsafe"
 
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/macro"
@@ -303,8 +305,11 @@ func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transform
 			arg, errs := r.executeTransformations(arg.Value())
 			return []string{arg}, errs
 		default:
+			// NOTE: See comment on transformationKey struct to understand this hacky code
+			argKey := arg.Key()
+			argKeyPtr := (*reflect.StringHeader)(unsafe.Pointer(&argKey)).Data
 			key := transformationKey{
-				argKey:            arg.Key(),
+				argKey:            argKeyPtr,
 				argIndex:          argIdx,
 				argVariable:       arg.Variable(),
 				transformationsID: r.transformationsID,
