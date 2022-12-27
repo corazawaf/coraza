@@ -4,7 +4,7 @@
 package transformations
 
 import (
-	"unicode"
+	"github.com/corazawaf/coraza/v3/internal/strings"
 )
 
 /*
@@ -21,9 +21,23 @@ replacing all multiple spaces (including tab, newline, etc.) into one space
 transform all characters to lowercase
 */
 func cmdLine(data string) (string, error) {
+	for i := 0; i < len(data); i++ {
+		if needsTransform(data[i]) {
+			return doCMDLine(data, i), nil
+		}
+	}
+	return data, nil
+}
+
+func doCMDLine(input string, pos int) string {
+	// Some characters will be removed so the result is likely smaller than the input,
+	// but it shouldn't be much so preallocate to that anyways.
+	ret := make([]byte, pos, len(input))
+	copy(ret, input[:pos])
+
 	space := false
-	var ret []byte
-	for _, a := range data {
+	for i := pos; i < len(input); i++ {
+		a := input[i]
 		switch {
 		case a == '"' || a == '\'' || a == '\\' || a == '^':
 			/* remove some characters */
@@ -40,12 +54,22 @@ func cmdLine(data string) (string, error) {
 			}
 			space = false
 
-			ret = append(ret, byte(a))
+			ret = append(ret, a)
 		default:
-			b := unicode.ToLower(a)
-			ret = append(ret, byte(b))
+			// Copied from unicode.ToLower
+			if 'A' <= a && a <= 'Z' {
+				a += 'a' - 'A'
+			}
+			ret = append(ret, a)
 			space = false
 		}
 	}
-	return string(ret), nil
+	return strings.WrapUnsafe(ret)
+}
+
+func needsTransform(c byte) bool {
+	if c >= 'A' && c <= 'Z' {
+		return true
+	}
+	return c == '"' || c == '\'' || c == '\\' || c == '^' || c == ' ' || c == ',' || c == ';' || c == '\t' || c == '\r' || c == '\n' || c == '/' || c == '('
 }
