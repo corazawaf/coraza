@@ -150,13 +150,13 @@ func TestRequestBody(t *testing.T) {
 		shouldInterrupt        bool
 	}{
 		{
-			name:                   "no memory buffer and limit not reach",
+			name:                   "no memory buffer and limit not reached",
 			requestBodyMemoryLimit: 0,
 			requestBodyLimit:       urlencodedBodyLen + 1,
 			requestBodyLimitAction: types.BodyLimitActionReject,
 		},
 		{
-			name:                   "memory buffer and limit not reach",
+			name:                   "memory buffer and limit not reached",
 			requestBodyMemoryLimit: urlencodedBodyLen / 2,
 			requestBodyLimit:       urlencodedBodyLen + 2,
 			requestBodyLimitAction: types.BodyLimitActionReject,
