@@ -160,11 +160,11 @@ func (r *Rule) Status() int {
 // Evaluate will evaluate the current rule for the indicated transaction
 // If the operator matches, actions will be evaluated, and it will return
 // the matched variables, keys and values (MatchData)
-func (r *Rule) Evaluate(tx rules.TransactionState, cache map[transformationKey]transformationValue) []types.MatchData {
+func (r *Rule) Evaluate(tx rules.TransactionState, cache map[transformationKey]*transformationValue) []types.MatchData {
 	return r.doEvaluate(tx.(*Transaction), cache)
 }
 
-func (r *Rule) doEvaluate(tx *Transaction, cache map[transformationKey]transformationValue) []types.MatchData {
+func (r *Rule) doEvaluate(tx *Transaction, cache map[transformationKey]*transformationValue) []types.MatchData {
 	if r.Capture {
 		tx.Capture = true
 	}
@@ -291,7 +291,7 @@ func (r *Rule) doEvaluate(tx *Transaction, cache map[transformationKey]transform
 	return matchedValues
 }
 
-func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transformationKey]transformationValue) ([]string, []error) {
+func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transformationKey]*transformationValue) ([]string, []error) {
 	if r.MultiMatch {
 		// TODO in the future, we don't need to run every transformation
 		// We could try for each until found
@@ -320,7 +320,7 @@ func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transform
 				ars, es := r.executeTransformations(arg.Value())
 				args := []string{ars}
 				errs := es
-				cache[key] = transformationValue{
+				cache[key] = &transformationValue{
 					args: args,
 					errs: es,
 				}
