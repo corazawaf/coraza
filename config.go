@@ -193,6 +193,8 @@ type requestBodyConfig struct {
 	inMemoryLimit int
 }
 
+var _ RequestBodyConfig = (*requestBodyConfig)(nil)
+
 func (c *requestBodyConfig) WithLimit(limit int) RequestBodyConfig {
 	ret := c.clone()
 	ret.limit = limit
