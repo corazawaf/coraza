@@ -105,7 +105,7 @@ type Transaction struct {
 
 	variables TransactionVariables
 
-	transformationCache map[transformationKey]transformationValue
+	transformationCache map[transformationKey]*transformationValue
 }
 
 func (tx *Transaction) ID() string {
