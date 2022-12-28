@@ -216,7 +216,7 @@ func TestRequestBody(t *testing.T) {
 			} else {
 				val := tx.variables.argsPost.Get("some")
 				if len(val) != 1 || val[0] != "result" {
-					t.Error("Failed to set url encoded post data")
+					t.Errorf("Failed to set urlencoded POST data with arguments: \"%s\"", strings.Join(val, "\", \""))
 				}
 			}
 
