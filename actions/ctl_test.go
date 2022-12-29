@@ -9,6 +9,7 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 func TestCtl(t *testing.T) {
@@ -17,11 +18,16 @@ func TestCtl(t *testing.T) {
 	r := corazawaf.NewRule()
 	ctlf := ctl()
 
-	if err := ctlf.Init(r, "requestBodyProcessor=XML"); err != nil {
-		t.Error("Failed to init requestBodyProcessor=XML")
+	bodyprocessors := []string{"XML", "JSON", "URLENCODED", "MULTIPART"}
+	for _, bp := range bodyprocessors {
+		if err := ctlf.Init(r, "requestBodyProcessor="+bp); err != nil {
+			t.Errorf("failed to init requestBodyProcessor %s", bp)
+		}
+		ctlf.Evaluate(r, tx)
+		if tx.Variables().RequestBodyProcessor().String() != bp {
+			t.Error("failed to set RequestBodyProcessor " + bp)
+		}
 	}
-	ctlf.Evaluate(r, tx)
-	// Not implemented yet
 
 	if err := ctlf.Init(r, "ruleRemoveTargetById=981260;ARGS:user"); err != nil {
 		t.Error("failed to init ruleRemoveTargetById=981260;ARGS:user")
@@ -67,19 +73,42 @@ func TestCtl(t *testing.T) {
 	if tx.RequestBodyLimit != 12345 {
 		t.Error("Failed to set request body limit")
 	}
-
-	bodyprocessors := []string{"XML", "JSON", "URLENCODED", "MULTIPART"}
-	for _, bp := range bodyprocessors {
-		if err := ctlf.Init(r, "requestBodyProcessor="+bp); err != nil {
-			t.Errorf("failed to init requestBodyProcessor %s", bp)
-		}
-		ctlf.Evaluate(r, tx)
-		if tx.Variables().RequestBodyProcessor().String() != bp {
-			t.Error("failed to set RequestBodyProcessor " + bp)
-		}
-	}
 }
 
+func TestParseCtl(t *testing.T) {
+	tCases := []struct {
+		input            string
+		expectAction     ctlFunctionType
+		expectValue      string
+		expectCollection variables.RuleVariable
+		expectKey        string
+	}{
+		{"ruleRemoveTargetByTag=MY_TAG;ARGS:user", ctlRuleRemoveTargetByTag, "MY_TAG", variables.Args, "user"},
+		{"ruleRemoveTargetById=2;REQUEST_FILENAME:", ctlRuleRemoveTargetByID, "2", variables.RequestFilename, ""},
+		{"ruleRemoveTargetById=8888;REMOTE_PORT", ctlRuleRemoveTargetByID, "8888", variables.RemotePort, ""},
+	}
+	for _, tCase := range tCases {
+		t.Run(tCase.input, func(t *testing.T) {
+			action, value, collection, colKey, err := parseCtl(tCase.input)
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err.Error())
+			}
+			if action != tCase.expectAction {
+				t.Errorf("unexpected action, want: %d, have: %d", tCase.expectAction, action)
+			}
+			if value != tCase.expectValue {
+				t.Errorf("unexpected value, want: %s, have: %s", tCase.expectValue, value)
+			}
+			if collection != tCase.expectCollection {
+				t.Errorf("unexpected collection, want: %s, have: %s", tCase.expectCollection.Name(), collection.Name())
+			}
+			if colKey != tCase.expectKey {
+				t.Errorf("unexpected key, want: %s, have: %s", tCase.expectKey, colKey)
+			}
+		})
+	}
+
+}
 func TestCtlParseRange(t *testing.T) {
 	rules := []*corazawaf.Rule{
 		{

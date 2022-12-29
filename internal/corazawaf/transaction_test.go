@@ -206,7 +206,61 @@ func TestResponseHeader(t *testing.T) {
 
 	interruption := tx.ProcessResponseHeaders(200, "OK")
 	if interruption != nil {
-		t.Error("expected interruption")
+		t.Error("unexpected interruption")
+	}
+}
+
+func TestProcessRequestHeadersDoesNoEvaluationOnEngineOff(t *testing.T) {
+	tx := wafi.NewTransaction()
+	tx.RuleEngine = types.RuleEngineOff
+
+	if !tx.IsRuleEngineOff() {
+		t.Error("expected Engine off")
+	}
+
+	_ = tx.ProcessRequestHeaders()
+	if tx.LastPhase != 0 { // 0 means no phases have been evaluated
+		t.Error("unexpected rule evaluation")
+	}
+}
+
+func TestProcessRequestBodyDoesNoEvaluationOnEngineOff(t *testing.T) {
+	tx := wafi.NewTransaction()
+	tx.RuleEngine = types.RuleEngineOff
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Error("failed to process request body")
+	}
+	if tx.LastPhase != 0 {
+		t.Error("unexpected rule evaluation")
+	}
+}
+
+func TestProcessResponseHeadersDoesNoEvaluationOnEngineOff(t *testing.T) {
+	tx := wafi.NewTransaction()
+	tx.RuleEngine = types.RuleEngineOff
+	_ = tx.ProcessResponseHeaders(200, "OK")
+	if tx.LastPhase != 0 {
+		t.Error("unexpected rule evaluation")
+	}
+}
+
+func TestProcessResponseBodyDoesNoEvaluationOnEngineOff(t *testing.T) {
+	tx := wafi.NewTransaction()
+	tx.RuleEngine = types.RuleEngineOff
+	if _, err := tx.ProcessResponseBody(); err != nil {
+		t.Error("Failed to process response body")
+	}
+	if tx.LastPhase != 0 {
+		t.Error("unexpected rule evaluation")
+	}
+}
+
+func TestProcessLoggingDoesNoEvaluationOnEngineOff(t *testing.T) {
+	tx := wafi.NewTransaction()
+	tx.RuleEngine = types.RuleEngineOff
+	tx.ProcessLogging()
+	if tx.LastPhase != 0 {
+		t.Error("unexpected rule evaluation")
 	}
 }
 
@@ -550,6 +604,24 @@ func TestTxProcessConnection(t *testing.T) {
 	}
 	if tx.variables.remotePort.Int() != 80 {
 		t.Error("failed to set client port")
+	}
+}
+
+func TestTxAddArgument(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	tx.ProcessConnection("127.0.0.1", 80, "127.0.0.2", 8080)
+	tx.AddArgument(types.ArgumentGET, "test", "testvalue")
+	if tx.variables.argsGet.Get("test")[0] != "testvalue" {
+		t.Error("failed to set args get")
+	}
+	tx.AddArgument(types.ArgumentPOST, "ptest", "ptestvalue")
+	if tx.variables.argsPost.Get("ptest")[0] != "ptestvalue" {
+		t.Error("failed to set args post")
+	}
+	tx.AddArgument(types.ArgumentPATH, "ptest2", "ptestvalue")
+	if tx.variables.argsPath.Get("ptest2")[0] != "ptestvalue" {
+		t.Error("failed to set args post")
 	}
 }
 

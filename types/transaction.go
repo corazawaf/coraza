@@ -7,6 +7,21 @@ import (
 	"io"
 )
 
+// ArgumentType is used to define types of argument for transactions
+// There are three supported types: POST, GET and PATH
+type ArgumentType int
+
+const (
+	// ArgumentInvalid is used to define invalid argument types
+	ArgumentInvalid ArgumentType = iota
+	// ArgumentGET is used to define GET arguments
+	ArgumentGET
+	// ArgumentPOST is used to define POST arguments
+	ArgumentPOST
+	// ArgumentPATH is used to define PATH arguments
+	ArgumentPATH
+)
+
 // Transaction is created from a WAF instance to handle web requests and responses,
 // it contains a copy of most WAF configurations that can be safely changed.
 // Transactions are used to store all data like URLs, request and response
@@ -57,6 +72,13 @@ type Transaction interface {
 	// within the Transaction while also passing it further in an HTTP framework.
 	RequestBodyReader() (io.Reader, error)
 
+	// AddArgument Add arguments GET or POST
+	// This will set ARGS_(GET|POST), ARGS, ARGS_NAMES, ARGS_COMBINED_SIZE and
+	// ARGS_(GET|POST)_NAMES
+	// With this method it is possible to feed Coraza with a GET or POST argument
+	// providing granual control over the arguments.
+	AddArgument(orig ArgumentType, key string, value string)
+
 	// ProcessRequestBody Performs the request body (if any)
 	//
 	// This method perform the analysis on the request body. It is optional to
@@ -106,26 +128,33 @@ type Transaction interface {
 	// IsRuleEngineOff will return true if RuleEngine is set to Off
 	IsRuleEngineOff() bool
 
-	// RequestBodyAccessible will return true if RequestBody access has been enabled by RequestBodyAccess
+	// IsRequestBodyAccessible will return true if RequestBody access has been enabled by RequestBodyAccess
 	//
 	// This can be used to perform checks just before calling request body related functions.
 	// In order to avoid any risk of performing wrong early assumptions, perform early checks on this value
 	// only if the API consumer requires them for specific server/proxy actions
 	// (such as avoiding proxy side buffering).
 	// Note: it returns the current status, later rules may still change it via ctl actions.
-	RequestBodyAccessible() bool
+	IsRequestBodyAccessible() bool
 
-	// ResponseBodyAccessible will return true if ResponseBody access has been enabled by ResponseBodyAccess
+	// IsResponseBodyAccessible will return true if ResponseBody access has been enabled by ResponseBodyAccess
 	//
 	// This can be used to perform checks just before calling response body related functions.
 	// In order to avoid any risk of performing wrong early assumptions, perform early checks on this value
 	// only if the API consumer requires them for specific server/proxy actions
 	// (such as avoiding proxy side buffering).
 	// Note: it returns the current status, later rules may still change it via ctl actions.
-	ResponseBodyAccessible() bool
+	IsResponseBodyAccessible() bool
 
-	// Interrupted will return true if the transaction was interrupted
-	Interrupted() bool
+	// IsResponseBodyProcessable returns true if the response body meets the
+	// criteria to be processed, response headers must be set before this.
+	// The content-type response header must be in the SecResponseBodyMimeType
+	// This is used by webservers to choose whether to stream response buffers
+	// directly to the client or write them to Coraza's buffer.
+	IsResponseBodyProcessable() bool
+
+	// IsInterrupted will return true if the transaction was interrupted
+	IsInterrupted() bool
 
 	// Interruption returns the types.Interruption if the request was interrupted,
 	// or nil otherwise.

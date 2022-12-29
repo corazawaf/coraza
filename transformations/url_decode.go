@@ -8,18 +8,20 @@ import (
 )
 
 func urlDecode(data string) (string, error) {
-	res, _, _ := doURLDecode(data)
-	// TODO add error?
-	return res, nil
+	for i := 0; i < len(data); i++ {
+		if data[i] == '%' || data[i] == '+' {
+			// TODO add error?
+			return doURLDecode(data, []byte(data), i), nil
+		}
+	}
+	return data, nil
 }
 
 // extracted from https://github.com/senghoo/modsecurity-go/blob/master/utils/urlencode.go
-func doURLDecode(input string) (string, bool, int) {
-	d := []byte(input)
+func doURLDecode(input string, d []byte, pos int) string {
 	inputLen := len(d)
-	var i, count, invalidCount, c int
-
-	changed := false
+	i := pos
+	c := pos
 
 	for i < inputLen {
 		if input[i] == '%' {
@@ -34,40 +36,32 @@ func doURLDecode(input string) (string, bool, int) {
 
 					d[c] = uni
 					c++
-					count++
 					i += 3
-					changed = true
 				} else {
 					/* Not a valid encoding, skip this % */
 					d[c] = input[i]
 					c++
 					i++
-					count++
-					invalidCount++
 				}
 			} else {
 				/* Not enough bytes available, copy the raw bytes. */
 				d[c] = input[i]
 				c++
 				i++
-				count++
-				invalidCount++
 			}
 		} else {
 			/* Character is not a percent sign. */
 			if input[i] == '+' {
 				d[c] = ' '
 				c++
-				changed = true
 			} else {
 				d[c] = input[i]
 				c++
 			}
-			count++
 			i++
 		}
 	}
 
-	return string(d[0:c]), changed, invalidCount
+	return strings.WrapUnsafe(d[0:c])
 
 }

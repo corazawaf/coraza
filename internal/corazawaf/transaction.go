@@ -104,6 +104,8 @@ type Transaction struct {
 	audit bool
 
 	variables TransactionVariables
+
+	transformationCache map[transformationKey]*transformationValue
 }
 
 func (tx *Transaction) ID() string {
@@ -445,12 +447,12 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 	}
 	for scanner.Scan() {
 		if _, err := tx.RequestBodyBuffer.Write(scanner.Bytes()); err != nil {
-			return nil, fmt.Errorf("cannot write to request body to buffer")
+			return nil, fmt.Errorf("cannot write to request body to buffer: %s", err.Error())
 		}
 		// urlencoded cannot end with CRLF
 		if ct != "application/x-www-form-urlencoded" {
 			if _, err := tx.RequestBodyBuffer.Write([]byte{'\r', '\n'}); err != nil {
-				return nil, fmt.Errorf("cannot write to request body to buffer")
+				return nil, fmt.Errorf("cannot write to request body to buffer: %s", err.Error())
 			}
 		}
 	}
@@ -641,7 +643,7 @@ func (tx *Transaction) ProcessConnection(client string, cPort int, server string
 
 // ExtractArguments transforms an url encoded string to a map and creates
 // ARGS_POST|GET
-func (tx *Transaction) ExtractArguments(orig string, uri string) {
+func (tx *Transaction) ExtractArguments(orig types.ArgumentType, uri string) {
 	data := urlutil.ParseQuery(uri, '&')
 	for k, vs := range data {
 		for _, v := range vs {
@@ -653,13 +655,18 @@ func (tx *Transaction) ExtractArguments(orig string, uri string) {
 // AddArgument Add arguments GET or POST
 // This will set ARGS_(GET|POST), ARGS, ARGS_NAMES, ARGS_COMBINED_SIZE and
 // ARGS_(GET|POST)_NAMES
-func (tx *Transaction) AddArgument(orig string, key string, value string) {
+func (tx *Transaction) AddArgument(argType types.ArgumentType, key string, value string) {
 	// TODO implement ARGS value limit using ArgumentsLimit
 	var vals *collection.Map
-	if orig == "GET" {
+	switch argType {
+	case types.ArgumentGET:
 		vals = tx.variables.argsGet
-	} else {
+	case types.ArgumentPOST:
 		vals = tx.variables.argsPost
+	case types.ArgumentPATH:
+		vals = tx.variables.argsPath
+	default:
+		return
 	}
 	keyl := strings.ToLower(key)
 
@@ -710,7 +717,7 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 			tx.Variables.RequestUri.Set(uri)
 		*/
 	} else {
-		tx.ExtractArguments("GET", parsedURL.RawQuery)
+		tx.ExtractArguments(types.ArgumentGET, parsedURL.RawQuery)
 		tx.variables.requestURI.Set(parsedURL.String())
 		path = parsedURL.Path
 		query = parsedURL.RawQuery
@@ -734,7 +741,7 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 // note: Remember to check for a possible intervention.
 func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 	if tx.RuleEngine == types.RuleEngineOff {
-		// RUle engine is disabled
+		// Rule engine is disabled
 		return nil
 	}
 	tx.WAF.Rules.Eval(types.PhaseRequestHeaders, tx)
@@ -844,12 +851,12 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Int
 	return tx.interruption
 }
 
-// IsProcessableResponseBody returns true if the response body meets the
+// IsResponseBodyProcessable returns true if the response body meets the
 // criteria to be processed, response headers must be set before this.
-// The content-type response header must be in the SecRequestBodyMime
-// This is used by webservers to choose whether tostream response buffers
-// directly to the client or write them to Coraza
-func (tx *Transaction) IsProcessableResponseBody() bool {
+// The content-type response header must be in the SecResponseBodyMimeType
+// This is used by webservers to choose whether to stream response buffers
+// directly to the client or write them to Coraza's buffer.
+func (tx *Transaction) IsResponseBodyProcessable() bool {
 	// TODO add more validations
 	ct := tx.variables.responseContentType.String()
 	return stringsutil.InSlice(ct, tx.WAF.ResponseBodyMimeTypes)
@@ -870,7 +877,7 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
 		return tx.interruption, nil
 	}
-	if !tx.ResponseBodyAccess || !tx.IsProcessableResponseBody() {
+	if !tx.ResponseBodyAccess || !tx.IsResponseBodyProcessable() {
 		tx.WAF.Logger.Debug("[%s] Skipping response body processing (Access: %t)", tx.id, tx.ResponseBodyAccess)
 		tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
 		return tx.interruption, nil
@@ -902,11 +909,12 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 // At this point there is not need to hold the connection, the response can be
 // delivered prior to the execution of this method.
 func (tx *Transaction) ProcessLogging() {
-	// I'm not sure why but modsecurity won't log if RuleEngine is disabled
-	// if tx.RuleEngine == RULE_ENGINE_OFF {
-	// 	return
-	// }
-	tx.WAF.Rules.Eval(types.PhaseLogging, tx)
+	// If Rule engine is disabled, Log phase rules are not going to be evaluated.
+	// This avoids trying to rely on variables not set by previous rules that
+	// have not been executed
+	if tx.RuleEngine != types.RuleEngineOff {
+		tx.WAF.Rules.Eval(types.PhaseLogging, tx)
+	}
 
 	if tx.AuditEngine == types.AuditEngineOff {
 		// Audit engine disabled
@@ -932,7 +940,7 @@ func (tx *Transaction) ProcessLogging() {
 
 	tx.WAF.Logger.Debug("[%s] Transaction marked for audit logging", tx.id)
 	if writer := tx.WAF.AuditLogWriter; writer != nil {
-		// we don't log if there is an empty audit logger
+		// We don't log if there is an empty audit logger
 		if err := writer.Write(tx.AuditLog()); err != nil {
 			tx.WAF.Logger.Error(err.Error())
 		}
@@ -944,18 +952,18 @@ func (tx *Transaction) IsRuleEngineOff() bool {
 	return tx.RuleEngine == types.RuleEngineOff
 }
 
-// RequestBodyAccessible will return true if RequestBody access has been enabled by RequestBodyAccess
-func (tx *Transaction) RequestBodyAccessible() bool {
+// IsRequestBodyAccessible will return true if RequestBody access has been enabled by RequestBodyAccess
+func (tx *Transaction) IsRequestBodyAccessible() bool {
 	return tx.RequestBodyAccess
 }
 
-// ResponseBodyAccessible will return true if ResponseBody access has been enabled by ResponseBodyAccess
-func (tx *Transaction) ResponseBodyAccessible() bool {
+// IsResponseBodyAccessible will return true if ResponseBody access has been enabled by ResponseBodyAccess
+func (tx *Transaction) IsResponseBodyAccessible() bool {
 	return tx.ResponseBodyAccess
 }
 
-// Interrupted will return true if the transaction was interrupted
-func (tx *Transaction) Interrupted() bool {
+// IsInterrupted will return true if the transaction was interrupted
+func (tx *Transaction) IsInterrupted() bool {
 	return tx.interruption != nil
 }
 
@@ -1079,7 +1087,7 @@ func (tx *Transaction) Close() error {
 		errs = append(errs, err)
 	}
 
-	tx.WAF.Logger.Debug("[%s] Transaction finished, disrupted: %t", tx.id, tx.Interrupted())
+	tx.WAF.Logger.Debug("[%s] Transaction finished, disrupted: %t", tx.id, tx.IsInterrupted())
 
 	switch {
 	case len(errs) == 0:
