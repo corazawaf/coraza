@@ -3,12 +3,8 @@
 
 package transformations
 
+import "strings"
+
 func replaceNulls(data string) (string, error) {
-	value := []byte(data)
-	for i := 0; i < len(value); i++ {
-		if value[i] == '\x00' {
-			value[i] = ' '
-		}
-	}
-	return string(value), nil
+	return strings.ReplaceAll(data, "\x00", " "), nil
 }
