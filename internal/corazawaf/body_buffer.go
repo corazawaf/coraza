@@ -24,6 +24,8 @@ type BodyBuffer struct {
 	lengthIsBeyondLimit bool
 }
 
+const NotOverflow = int64(-1)
+
 // Write appends data to the body buffer by chunks
 // You may dump io.Readers using io.Copy(br, reader)
 func (br *BodyBuffer) Write(data []byte) (n int, err error) {
@@ -31,7 +33,7 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 		return 0, nil
 	}
 
-	if br.lengthIsBeyondLimit && br.options.DiscardOnBodyLimit {
+if br.lengthIsBeyondLimit && br.options.DiscardOnBodyLimit {
 		// if we are beyond the limit and the directive is to reject
 		// the request, we don't record the body anymore.
 		return 0, nil
@@ -47,7 +49,7 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 		targetLen = br.length + int64(len(data))
 	}
 
-	// Check if memory or disk limits are reached
+// Check if memory or disk limits are reached
 	// Even if Overflow is explicitly checked, MemoryLimit real limits are below maxInt and machine dependenent.
 	// bytes.Buffer growth is platform dependent with a growth rate capped at 2x. If the buffer can't grow it will panic with ErrTooLarge.
 	// See https://github.com/golang/go/blob/go1.19.4/src/bytes/buffer.go#L117 and https://go-review.googlesource.com/c/go/+/349994
@@ -94,7 +96,8 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	}
 
 	br.length = targetLen
-	return br.buffer.Write(data)
+
+  return br.buffer.Write(data)
 }
 
 // Reader Returns a working reader for the body buffer in memory or file
