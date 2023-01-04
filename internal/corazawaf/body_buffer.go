@@ -53,16 +53,23 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	// See https://github.com/golang/go/blob/go1.19.4/src/bytes/buffer.go#L117 and https://go-review.googlesource.com/c/go/+/349994
 	// Local tests show these buffer limits:
 	// 32-bit machine: 2147483647 (2^30, 1GiB)
-	// 64-bit machine: 34359738368 (2^35, 32GiB) (Not reached the ErrTooLarge panic, the OS triggered an oom)
+	// 64-bit machine: 34359738368 (2^35, 32GiB) (Not reached the ErrTooLarge panic, the OS triggered an OOM)
 	if targetLen > br.options.MemoryLimit {
 		if environment.IsTinyGo {
-			// TinyGo: Bytes beyond MemoryLimit are not written
+			br.lengthIsBeyondLimit = true
 			maxWritingDataLen := br.options.MemoryLimit - br.length
 			if maxWritingDataLen == 0 {
 				return 0, nil
 			}
 			br.length = br.options.MemoryLimit
-			return br.buffer.Write(data[:maxWritingDataLen])
+			if br.options.DiscardOnBodyLimit {
+				return 0, nil
+			} else {
+				// TinyGo: If Bytes are beyond MemoryLimit, and DiscardOnBodyLimit is not enable,
+				// we still have to buffer them (Connectors rely on Coraza buffering the request)
+				return br.buffer.Write(data)
+				// return br.buffer.Write(data[:maxWritingDataLen])
+			}
 		} else {
 			// Default: bytes are buffered to disk
 			if br.writer == nil {
@@ -83,6 +90,8 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 				if br.options.DiscardOnBodyLimit {
 					return 0, nil
 				} else {
+					// Connectors rely on Coraza buffering the whole request, therefore,
+					// if ProcessPartial is set, bytes beyond Limit are still buffered
 					return br.writer.Write(data)
 				}
 			} else {

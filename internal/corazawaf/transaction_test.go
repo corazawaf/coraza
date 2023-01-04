@@ -13,6 +13,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
+	"github.com/corazawaf/coraza/v3/internal/environment"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/macro"
 	"github.com/corazawaf/coraza/v3/types"
@@ -136,7 +137,7 @@ func TestTxResponse(t *testing.T) {
 	*/
 }
 
-func TestRequestBody(t *testing.T) {
+func TestRequestBodyNoTinyGo(t *testing.T) {
 	const (
 		urlencodedBody    = "some=result&second=data"
 		urlencodedBodyLen = len(urlencodedBody)
@@ -182,11 +183,15 @@ func TestRequestBody(t *testing.T) {
 			requestBodyLimitAction: types.BodyLimitActionProcessPartial,
 		},
 		{
-			name:                   "no memory buffer and limit partial processing",
+			name:                   "memory buffer and limit partial processing",
 			requestBodyMemoryLimit: urlencodedBodyLen / 2,
 			requestBodyLimit:       urlencodedBodyLen - 1,
 			requestBodyLimitAction: types.BodyLimitActionProcessPartial,
 		},
+	}
+	// in TinyGo requestBodyLimit is always equal to Memorylimit
+	if environment.IsTinyGo {
+		return // t.Skip doesn't work on TinyGo
 	}
 
 	for _, testCase := range testCases {
