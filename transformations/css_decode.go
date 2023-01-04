@@ -4,18 +4,25 @@
 package transformations
 
 import (
+	"strings"
+
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 )
 
 func cssDecode(data string) (string, error) {
-	return cssDecodeInplace(data), nil
+	if i := strings.IndexByte(data, '\\'); i != -1 {
+		// TODO: This will transform even if the backslash isn't followed by hex,
+		// but keep it simple for now.
+		return cssDecodeInplace(data, i), nil
+	}
+	return data, nil
 }
 
-func cssDecodeInplace(input string) string {
-	// TODO the following shall be int64?
-	var c, i, j, count int
+func cssDecodeInplace(input string, pos int) string {
 	d := []byte(input)
 	inputLen := len(d)
+	i := pos
+	c := pos
 
 	for i < inputLen {
 		/* Is the character a backslash? */
@@ -25,7 +32,7 @@ func cssDecodeInplace(input string) string {
 				i++ /* We are not going to need the backslash. */
 
 				/* Check for 1-6 hex characters following the backslash */
-				j = 0
+				j := 0
 				for (j < 6) && (i+j < inputLen) && (utils.ValidHex(input[i+j])) {
 					j++
 				}
@@ -100,7 +107,6 @@ func cssDecodeInplace(input string) string {
 					}
 
 					/* Move over. */
-					count++
 					i += j
 				case input[i] == '\n':
 					/* No hexadecimal digits after backslash */
@@ -113,7 +119,6 @@ func cssDecodeInplace(input string) string {
 					d[c] = input[i]
 					i++
 					c++
-					count++
 				}
 			} else {
 				/* No characters after backslash. */
@@ -127,14 +132,13 @@ func cssDecodeInplace(input string) string {
 			d[c] = input[i]
 			c++
 			i++
-			count++
 		}
 	}
 
 	/* Terminate output string. */
 	d = d[:c]
 
-	return string(d)
+	return utils.WrapUnsafe(d)
 }
 
 /**

@@ -188,16 +188,9 @@ func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, str
 	spl2 := strings.SplitN(spl1[1], ";", 2)
 	action := spl1[0]
 	value := spl2[0]
-	colname := ""
-	colkey := ""
+	var colkey, colname string
 	if len(spl2) == 2 {
-		spl3 := strings.SplitN(spl2[1], ":", 2)
-		if len(spl3) == 2 {
-			colname = spl3[0]
-			colkey = spl3[1]
-		} else {
-			colname = spl3[0]
-		}
+		colname, colkey, _ = strings.Cut(spl2[1], ":")
 	}
 	collection, _ := variables.Parse(strings.TrimSpace(colname))
 	colkey = strings.ToLower(colkey)

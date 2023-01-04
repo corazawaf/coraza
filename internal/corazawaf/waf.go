@@ -191,6 +191,7 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 			MemoryLimit: w.ResponseBodyLimit,
 		})
 		tx.variables = *NewTransactionVariables()
+		tx.transformationCache = map[transformationKey]*transformationValue{}
 	}
 
 	// set capture variables
