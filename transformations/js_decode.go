@@ -5,19 +5,27 @@ package transformations
 
 import (
 	"strconv"
+	"strings"
 
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 )
 
 func jsDecode(data string) (string, error) {
-	//https://github.com/SpiderLabs/ModSecurity/blob/b66224853b4e9d30e0a44d16b29d5ed3842a6b11/src/actions/transformations/js_decode.cc
-	return doJsDecode(data), nil
+	if i := strings.IndexByte(data, '\\'); i != -1 {
+		// TODO: This will transform even if the backslash isn't followed by an escape,
+		// but keep it simple for now.
+		return doJsDecode(data, i), nil
+	}
+	return data, nil
 }
 
-func doJsDecode(input string) string {
+// https://github.com/SpiderLabs/ModSecurity/blob/b66224853b4e9d30e0a44d16b29d5ed3842a6b11/src/actions/transformations/js_decode.cc
+func doJsDecode(input string, pos int) string {
 	d := []byte(input)
 	inputLen := len(input)
-	var i, c int
+
+	i := pos
+	c := pos
 
 	for i < inputLen {
 		if input[i] == '\\' {
@@ -109,7 +117,7 @@ func doJsDecode(input string) string {
 		}
 	}
 
-	return string(d[:c])
+	return utils.WrapUnsafe(d[:c])
 
 }
 
