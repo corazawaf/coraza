@@ -40,7 +40,10 @@ type WAFConfig interface {
 	WithDebugLogger(logger loggers.DebugLogger) WAFConfig
 
 	// WithErrorLogger configures an error logger.
-	WithErrorLogger(logger corazawaf.ErrorLogCallback) WAFConfig
+	// It is used to set a callback function to log errors
+	// triggered when an error is raised by the WAF.
+	// It contains the severity so the cb can decide to log it or not
+	WithErrorLogger(logger func(rule types.MatchedRule)) WAFConfig
 
 	// WithRootFS configures the root file system.
 	WithRootFS(fs fs.FS) WAFConfig
@@ -110,7 +113,7 @@ type wafConfig struct {
 	requestBody      *requestBodyConfig
 	responseBody     *responseBodyConfig
 	debugLogger      loggers.DebugLogger
-	errorLogger      corazawaf.ErrorLogCallback
+	errorLogger      func(rule types.MatchedRule)
 	fsRoot           fs.FS
 }
 
@@ -168,7 +171,7 @@ func (c *wafConfig) WithDebugLogger(logger loggers.DebugLogger) WAFConfig {
 	return ret
 }
 
-func (c *wafConfig) WithErrorLogger(logger corazawaf.ErrorLogCallback) WAFConfig {
+func (c *wafConfig) WithErrorLogger(logger func(rule types.MatchedRule)) WAFConfig {
 	ret := c.clone()
 	ret.errorLogger = logger
 	return ret
