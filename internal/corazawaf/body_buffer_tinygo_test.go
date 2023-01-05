@@ -12,10 +12,9 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
-func TestTinyGoWriteOverLimitWhenRejecting(t *testing.T) {
+func TestTinyGoWriteOverLimit(t *testing.T) {
 	br := NewBodyBuffer(types.BodyBufferOptions{
-		MemoryLimit:        2,
-		DiscardOnBodyLimit: true,
+		MemoryLimit: 2,
 	})
 	defer br.Reset()
 	n, err := br.Write([]byte{'a', 'b', 'c'})
@@ -23,11 +22,11 @@ func TestTinyGoWriteOverLimitWhenRejecting(t *testing.T) {
 		t.Fatalf("unexpected error: %s", err.Error())
 	}
 
-	if want, have := 0, n; want != have {
+	if want, have := 2, n; want != have {
 		t.Errorf("unexpected number of bytes in write, want: %d, have: %d", want, have)
 	}
 
-	if want, have := "", br.buffer.String(); want != have {
+	if want, have := "ab", br.buffer.String(); want != have {
 		t.Errorf("unexpected writen bytes, want: %q, have: %q", want, have)
 	}
 }
