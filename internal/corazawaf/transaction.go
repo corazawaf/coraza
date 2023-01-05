@@ -1077,7 +1077,7 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 // This method helps the GC to clean up the transaction faster and release resources
 // It also allows caches the transaction back into the sync.Pool
 func (tx *Transaction) Close() error {
-	defer transactionPool.Put(tx)
+	defer tx.WAF.txPool.Put(tx)
 	tx.variables.reset()
 	var errs []error
 	if err := tx.RequestBodyBuffer.Reset(); err != nil {
