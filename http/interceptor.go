@@ -57,7 +57,20 @@ func (i *rwInterceptor) Write(b []byte) (int, error) {
 	if i.tx.IsResponseBodyAccessible() {
 		// we only buffer the response body if we are going to access
 		// to it, otherwise we just send it to the response writer.
-		return i.tx.ResponseBodyWriter().Write(b)
+		writtenBytes, err := i.tx.ResponseBodyWriter().Write(b)
+		if err != nil {
+			return 0, err
+		}
+		if writtenBytes < len(b) { // Coraza response body limit reached, triggering ProcessBody
+			it, err := i.tx.ProcessResponseBody()
+			if err != nil {
+				return 0, err
+			}
+			if it != nil {
+				i.w.WriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode))
+			}
+		}
+		return writtenBytes, err
 	}
 
 	return i.w.Write(b)
@@ -103,7 +116,7 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 			// we release the buffer
 			reader, err := tx.ResponseBodyReader()
 			if err != nil {
-				i.w.WriteHeader(http.StatusInternalServerError)
+				w.WriteHeader(http.StatusInternalServerError)
 				return fmt.Errorf("failed to release the response body reader: %v", err)
 			}
 
@@ -112,11 +125,11 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 			// response status code.)
 			i.w.WriteHeader(i.statusCode)
 			if _, err := io.Copy(w, reader); err != nil {
-				i.w.WriteHeader(http.StatusInternalServerError)
+				w.WriteHeader(http.StatusInternalServerError)
 				return fmt.Errorf("failed to copy the response body: %v", err)
 			}
 		} else {
-			i.w.WriteHeader(i.statusCode)
+			w.WriteHeader(i.statusCode)
 		}
 
 		return nil

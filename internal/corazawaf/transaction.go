@@ -790,12 +790,6 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 			}
 			return tx.interruption, nil
 		}
-
-		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
-			tx.variables.inboundErrorData.Set("1")
-			// we limit our reader to tx.RequestBodyLimit bytes
-			reader = io.LimitReader(reader, tx.RequestBodyLimit)
-		}
 	}
 
 	rbp := tx.variables.reqbodyProcessor.String()
@@ -867,11 +861,11 @@ func (tx *Transaction) ResponseBodyWriter() io.Writer {
 	return tx.ResponseBodyBuffer
 }
 
-// ProcessResponseBody Perform the request body (if any)
-//
-// This method perform the analysis on the request body. It is optional to
+// ProcessResponseBody Perform the request body (if any)al to
 // call that method. If this API consumer already know that there isn't a
 // body for inspect it is recommended to skip this step.
+//
+// This method perform the analysis on the request body. It is option
 //
 // note Remember to check for a possible intervention.
 func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
@@ -895,8 +889,17 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		return tx.interruption, err
 	}
 
+	// Check if the ResponseBodyLimit is reached
 	if tx.ResponseBodyBuffer.IsBeyondLimit() {
 		tx.variables.outboundDataError.Set("1")
+		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionReject {
+			// We interrupt this transaction in case RequestBodyLimitAction is Reject
+			tx.interruption = &types.Interruption{
+				Status: 403,
+				Action: "deny",
+			}
+			return tx.interruption, nil
+		}
 	}
 
 	tx.variables.responseContentLength.Set(strconv.FormatInt(length, 10))

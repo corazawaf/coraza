@@ -44,6 +44,7 @@ func TestBodyReaderFile(t *testing.T) {
 	br := NewBodyBuffer(types.BodyBufferOptions{
 		TmpPath:     t.TempDir(),
 		MemoryLimit: 1,
+		Limit:       100, // Disk limit is big enough
 	})
 	if _, err := br.Write([]byte("test")); err != nil {
 		t.Error(err)
@@ -93,36 +94,58 @@ func TestBodyReaderWriteFromReader(t *testing.T) {
 	_ = br.Reset()
 }
 
-func TestWriteOverLimitWhenRejecting(t *testing.T) {
+func TestWriteOverLimit(t *testing.T) {
+	testCases := []struct {
+		name               string
+		wantedWrittenBytes string
+		discardOnBodyLimit bool
+	}{
+		{
+			name:               "when Rejecting",
+			wantedWrittenBytes: "",
+			discardOnBodyLimit: true,
+		},
+		{
+			name:               "when Process Partial",
+			wantedWrittenBytes: "ab",
+			discardOnBodyLimit: false,
+		},
+	}
+
 	if environment.IsTinyGo {
 		return // t.Skip doesn't work on TinyGo
 	}
-	br := NewBodyBuffer(types.BodyBufferOptions{
-		TmpPath:            t.TempDir(),
-		MemoryLimit:        1,
-		Limit:              2,
-		DiscardOnBodyLimit: true,
-	})
-	n, err := br.Write([]byte{'a', 'b', 'c', 'd', 'e'})
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
-	}
 
-	if want, have := 0, n; want != have {
-		t.Errorf("unexpected number of bytes in write, want: %d, have: %d", want, have)
-	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			br := NewBodyBuffer(types.BodyBufferOptions{
+				TmpPath:            t.TempDir(),
+				MemoryLimit:        1,
+				Limit:              2,
+				DiscardOnBodyLimit: testCase.discardOnBodyLimit,
+			})
+			n, err := br.Write([]byte{'a', 'b', 'c', 'd', 'e'})
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err.Error())
+			}
 
-	r, err := br.Reader()
-	if err != nil {
-		t.Error(err)
-	}
+			if want, have := len(testCase.wantedWrittenBytes), n; want != have {
+				t.Errorf("unexpected number of bytes in write, want: %d, have: %d", want, have)
+			}
 
-	b, err := io.ReadAll(r)
-	if err != nil {
-		t.Error(err)
-	}
+			r, err := br.Reader()
+			if err != nil {
+				t.Error(err)
+			}
 
-	if want, have := "", string(b); want != have {
-		t.Errorf("unexpected non empty body: %q", have)
+			b, err := io.ReadAll(r)
+			if err != nil {
+				t.Error(err)
+			}
+
+			if want, have := testCase.wantedWrittenBytes, string(b); want != have {
+				t.Errorf("unexpected writen bytes, want: %q, have: %q", want, have)
+			}
+		})
 	}
 }

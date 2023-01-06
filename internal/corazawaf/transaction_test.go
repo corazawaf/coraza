@@ -555,6 +555,7 @@ func TestTxPhase4Magic(t *testing.T) {
 	waf := NewWAF()
 	waf.ResponseBodyAccess = true
 	waf.ResponseBodyLimit = 3
+	waf.ResponseBodyLimitAction = types.BodyLimitActionProcessPartial
 	tx := waf.NewTransaction()
 	tx.AddResponseHeader("content-type", "text/html")
 	if _, err := tx.ResponseBodyBuffer.Write([]byte("more bytes")); err != nil {

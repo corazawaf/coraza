@@ -5,6 +5,7 @@ package corazawaf
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"math"
 	"os"
@@ -32,9 +33,11 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	}
 
 	if br.lengthIsBeyondLimit && br.options.DiscardOnBodyLimit {
-		// if we are beyond the limit and the directive is to reject
-		// the request, we don't record the body anymore.
-		return 0, nil
+		// If we are beyond the limit and the directive is to reject the request,
+		// we don't record the body anymore.
+		// // This point should never be reached if the connector is properly
+		// implemented (runs ProcessBody and stops writing once limit is reached)
+		return 0, errors.New("buffer limit already rached")
 	}
 
 	var targetLen int64
@@ -56,6 +59,7 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	// 64-bit machine: 34359738368 (2^35, 32GiB) (Not reached the ErrTooLarge panic, the OS triggered an OOM)
 	if targetLen > br.options.MemoryLimit {
 		if environment.IsTinyGo {
+			// TinyGo: Bytes beyond MemoryLimit are not written (no disk buffer)
 			br.lengthIsBeyondLimit = true
 			maxWritingDataLen := br.options.MemoryLimit - br.length
 			if maxWritingDataLen == 0 {
@@ -65,13 +69,20 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 			if br.options.DiscardOnBodyLimit {
 				return 0, nil
 			} else {
-				// TinyGo: If Bytes are beyond MemoryLimit, and DiscardOnBodyLimit is not enable,
-				// we still have to buffer them (Connectors rely on Coraza buffering the request)
-				return br.buffer.Write(data)
-				// return br.buffer.Write(data[:maxWritingDataLen])
+				// Writing up to MemoryLimit (equals to Limit for TinyGo)
+				return br.buffer.Write(data[:maxWritingDataLen])
 			}
 		} else {
-			// Default: bytes are buffered to disk
+			// Default: bytes are buffered to disk until Limit is reached
+			// First, total limit is checked
+			if targetLen >= br.options.Limit {
+				br.lengthIsBeyondLimit = true
+				if br.options.DiscardOnBodyLimit {
+					// Request is going to be discarded, no need to allocate disk buffer
+					return 0, nil
+				}
+			}
+			// A disk writer is needed: Process partial or total limit not exceeded
 			if br.writer == nil {
 				defer br.buffer.Reset()
 				br.writer, err = os.CreateTemp(br.options.TmpPath, "body*")
@@ -83,25 +94,17 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 					return 0, err
 				}
 			}
-
-			// Total limit is checked
 			if targetLen >= br.options.Limit {
-				br.lengthIsBeyondLimit = true
-				if br.options.DiscardOnBodyLimit {
-					return 0, nil
-				} else {
-					// Connectors rely on Coraza buffering the whole request, therefore,
-					// if ProcessPartial is set, bytes beyond Limit are still buffered
-					return br.writer.Write(data)
-				}
-			} else {
-				// Total limit not exceeded, bytes are sent to disk
-				br.length = targetLen
-				return br.writer.Write(data)
+				// Writing up to Limit
+				maxWritingDataLen := br.options.Limit - br.length
+				br.length = br.options.Limit
+				return br.writer.Write(data[:maxWritingDataLen])
 			}
+			// Limit not reached, writing the whole data
+			br.length = targetLen
+			return br.writer.Write(data)
 		}
 	}
-
 	br.length = targetLen
 	return br.buffer.Write(data)
 }

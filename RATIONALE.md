@@ -2,12 +2,12 @@
 
 This document contains some rationale around certain decisions or explain potential failure modes in Coraza.
 
-## Why limits should be chosen very carefuly
+## Why limits should be chosen very carefully
 
 Coraza can inspect a request body and resolve its legitimacy before it reaches upstream by buffering the body payload, analyzing it, and then sending it upstream if no threads are detected. The main issue with buffering is that it can become a potential attack door by itself if not handled correctly. The buffering process occurs as follows:
 
 1. First, Coraza attempts to buffer the body in memory up to a limit defined by the directive `SecRequestBodyMemoryLimit`, by default Coraza sets `131072`.
-2. If the body payload is bigger than the memory limit, Coraza moves off the memory buffering and buffers the body in disk.
+2. If the body payload is bigger than the memory limit, Coraza moves off the memory buffering and buffers the body in the disk, up to the limit defined by the directive `SecRequestBodyLimit`. By default Coraza sets this limit to `13107200`.
 
 Both actions represent a risk when the configuration isn't defensive enough:
 
