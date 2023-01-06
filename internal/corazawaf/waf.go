@@ -21,9 +21,6 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
-// Initializing pool for transactions
-var transactionPool = sync.NewPool(func() interface{} { return new(Transaction) })
-
 // ErrorLogCallback is used to set a callback function to log errors
 // It is triggered when an error is raised by the WAF
 // It contains the severity so the cb can decide to log it or not
@@ -39,6 +36,8 @@ type ErrorLogCallback = func(rule types.MatchedRule)
 // All WAF instance fields are immutable, if you update any
 // of them in runtime you might create concurrency issues
 type WAF struct {
+	txPool sync.Pool
+
 	// ruleGroup object, contains all rules and helpers
 	Rules RuleGroup
 
@@ -151,7 +150,7 @@ func (w *WAF) NewTransactionWithID(id string) *Transaction {
 // NewTransactionWithID Creates a new initialized transaction for this WAF instance
 // Using the specified ID
 func (w *WAF) newTransactionWithID(id string) *Transaction {
-	tx := transactionPool.Get().(*Transaction)
+	tx := w.txPool.Get().(*Transaction)
 	tx.id = id
 	tx.matchedRules = []types.MatchedRule{}
 	tx.interruption = nil
@@ -270,6 +269,8 @@ func NewWAF() *WAF {
 		logger.Error("error creating serial log writer: %s", err.Error())
 	}
 	waf := &WAF{
+		// Initializing pool for transactions
+		txPool:                   sync.NewPool(func() interface{} { return new(Transaction) }),
 		ArgumentSeparator:        "&",
 		AuditLogWriter:           logWriter,
 		AuditEngine:              types.AuditEngineOff,
