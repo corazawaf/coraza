@@ -196,14 +196,12 @@ func TestRequestBodyNoTinyGo(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			waf := NewWAF()
-			waf.RuleEngine = types.RuleEngineOn
-			waf.RequestBodyAccess = true
-			waf.RequestBodyLimit = int64(testCase.requestBodyLimit)
-			waf.RequestBodyInMemoryLimit = int64(testCase.requestBodyMemoryLimit)
-			waf.RequestBodyLimitAction = testCase.requestBodyLimitAction
-
-			tx := waf.NewTransaction()
+			urlencoded := "some=result&second=data"
+			// xml := "<test><content>test</content></test>"
+			tx := NewWAF().NewTransaction()
+			tx.RequestBodyAccess = true
+			tx.RequestBodyLimit = testCase.requestBodyLimit
+			tx.WAF.RequestBodyLimitAction = testCase.requestBodyLimitAction
 			tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
 			if _, err := tx.RequestBodyBuffer.Write([]byte(urlencodedBody)); err != nil {
 				t.Errorf("Failed to write body buffer: %s", err.Error())
