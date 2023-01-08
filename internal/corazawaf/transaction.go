@@ -764,6 +764,51 @@ func (tx *Transaction) RequestBodyWriter() io.Writer {
 	return tx.RequestBodyBuffer
 }
 
+type Lenger interface {
+	Len() int
+}
+
+// ProcessRequestBodySize sets the maximum number of bytes that can be read from the
+// request body.
+func (tx *Transaction) AppendRequestBody(r io.Reader) (*types.Interruption, int, error) {
+	if tx.RuleEngine == types.RuleEngineOff {
+		return nil, 0, nil
+	}
+
+	if l, ok := r.(Lenger); ok {
+		if int64(l.Len()) >= tx.RequestBodyLimit {
+			tx.variables.inboundErrorData.Set("1")
+			if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
+				// We interrupt this transaction in case RequestBodyLimitAction is Reject
+				tx.interruption = &types.Interruption{
+					Status: 403,
+					Action: "deny",
+				}
+				return tx.interruption, 0, nil
+			}
+		}
+	}
+
+	w, err := io.CopyN(tx.RequestBodyBuffer, r, tx.RequestBodyLimit)
+	if err != nil && err != io.EOF {
+		return nil, 0, err
+	}
+
+	if w == tx.RequestBodyLimit {
+		tx.variables.inboundErrorData.Set("1")
+		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
+			// We interrupt this transaction in case RequestBodyLimitAction is Reject
+			tx.interruption = &types.Interruption{
+				Status: 403,
+				Action: "deny",
+			}
+			return tx.interruption, int(w), nil
+		}
+	}
+
+	return nil, int(w), nil
+}
+
 // ProcessRequestBody Performs the request body (if any)
 //
 // This method perform the analysis on the request body. It is optional to
@@ -815,7 +860,6 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		}
 
 		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
-			tx.variables.inboundErrorData.Set("1")
 			// we limit our reader to tx.RequestBodyLimit bytes
 			reader = io.LimitReader(reader, tx.RequestBodyLimit)
 		}
