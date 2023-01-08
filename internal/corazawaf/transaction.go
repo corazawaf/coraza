@@ -771,10 +771,6 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 	return tx.interruption
 }
 
-type Lenger interface {
-	Len() int
-}
-
 func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
 		return nil, 0, nil
@@ -815,6 +811,10 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 	}
 
 	return nil, int(w), nil
+}
+
+type Lenger interface {
+	Len() int
 }
 
 // ReadRequestBodyFrom writes bytes from a reader into the request body

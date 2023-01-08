@@ -45,6 +45,7 @@ func (br *BodyBuffer) WriteTo(w io.Writer) (int64, error) {
 
 // Write appends data to the body buffer by chunks
 // You may dump io.Readers using io.Copy(br, reader)
+// TODO(jcchavezs): Stop writing beyond the limit
 func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	if len(data) == 0 {
 		return 0, nil
