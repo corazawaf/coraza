@@ -10,12 +10,12 @@ package http
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
+	"net/textproto"
 	"strconv"
 	"strings"
 	"testing"
@@ -60,77 +60,69 @@ func TestProcessRequestEngineOff(t *testing.T) {
 }
 
 func TestProcessRequestMultipart(t *testing.T) {
-	req, _ := http.NewRequest("POST", "/some", nil)
-	if err := multipartRequest(t, req); err != nil {
+	waf := corazawaf.NewWAF()
+	waf.RequestBodyAccess = true
+
+	tx := waf.NewTransaction()
+	tx.RequestBodyAccess = true
+
+	req, err := multipartRequest(t)
+	if err != nil {
 		t.Fatal(err)
 	}
-	tx := makeTransaction(t)
-	tx.RequestBodyAccess = true
+
 	if _, err := processRequest(tx, req); err != nil {
 		t.Fatal(err)
 	}
+
 	if req.Body == nil {
-		t.Error("failed to process multipart request")
+		t.Error("failed to process multipart request: nil body")
 	}
 	defer req.Body.Close()
 
 	reader := bufio.NewReader(req.Body)
 	if _, err := reader.ReadString('\n'); err != nil {
-		t.Error("failed to read multipart request", err)
+		t.Errorf("failed to read multipart request: %s", err)
 	}
-	if err := tx.Close(); err != nil {
-		t.Error(err)
-	}
+
+	_ = tx.Close()
 }
 
-func multipartRequest(t *testing.T, req *http.Request) error {
+func multipartRequest(t *testing.T) (*http.Request, error) {
 	t.Helper()
 
-	var b bytes.Buffer
-	w := multipart.NewWriter(&b)
-	tempfile, err := os.Create(filepath.Join(t.TempDir(), "tmpfile"))
+	metadata := `{"name": "photo-sample.jpeg"}`
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	metadataHeader := textproto.MIMEHeader{}
+	metadataHeader.Set("Content-Type", "application/json; charset=UTF-8")
+
+	part, err := writer.CreatePart(metadataHeader)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	for i := 0; i < 1024*5; i++ {
-		// this should create a 5mb file
-		if _, err := tempfile.Write([]byte(strings.Repeat("A", 1024))); err != nil {
-			return err
-		}
-	}
-	var fw io.Writer
-	if fw, err = w.CreateFormFile("fupload", tempfile.Name()); err != nil {
-		return err
-	}
-	if _, err := tempfile.Seek(0, 0); err != nil {
-		return err
-	}
-	if _, err = io.Copy(fw, tempfile); err != nil {
-		return err
-	}
-	req.Body = io.NopCloser(&b)
-	req.Header.Set("Content-Type", w.FormDataContentType())
-	req.Method = "POST"
-	return nil
-}
+	_, _ = part.Write([]byte(metadata))
 
-func makeTransaction(t *testing.T) *corazawaf.Transaction {
-	t.Helper()
-	tx := corazawaf.NewWAF().NewTransaction()
-	tx.RequestBodyAccess = true
-	ht := []string{
-		"POST /testurl.php?id=123&b=456 HTTP/1.1",
-		"Host: www.test.com:80",
-		"Cookie: test=123",
-		"Content-Type: application/x-www-form-urlencoded",
-		"X-Test-Header: test456",
-		"Content-Length: 13",
-		"",
-		"testfield=456",
+	mediaHeader := textproto.MIMEHeader{}
+	mediaHeader.Set("Content-Type", "image/jpeg")
+
+	mediaPart, err := writer.CreatePart(mediaHeader)
+	if err != nil {
+		return nil, err
 	}
-	data := strings.Join(ht, "\r\n")
-	_, _ = tx.ParseRequestReader(strings.NewReader(data))
-	return tx
+	_, _ = io.Copy(mediaPart, bytes.NewReader([]byte{1, 2, 3}))
+
+	writer.Close()
+
+	req, err := http.NewRequest("POST", "/some", body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("Content-Length", fmt.Sprintf("%d", body.Len()))
+
+	return req, nil
 }
 
 // from issue https://github.com/corazawaf/coraza/issues/159 @zpeasystart
