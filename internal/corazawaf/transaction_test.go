@@ -19,8 +19,6 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-var wafi = NewWAF()
-
 func TestTxSettersMultipart(t *testing.T) {
 	tx := makeTransactionMultipart(t)
 	exp := map[string]string{
@@ -64,7 +62,7 @@ func TestTxSetters(t *testing.T) {
 	validateMacroExpansion(exp, tx, t)
 }
 func TestTxMultipart(t *testing.T) {
-	tx := wafi.NewTransaction()
+	tx := NewWAF().NewTransaction()
 	body := []string{
 		"-----------------------------9051914041544843365972754266",
 		"Content-Disposition: form-data; name=\"text\"",
@@ -109,7 +107,7 @@ func TestTxMultipart(t *testing.T) {
 
 func TestTxResponse(t *testing.T) {
 	/*
-		tx := wafi.NewTransaction()
+		tx := NewWAF().NewTransaction()
 		ht := []string{
 			"HTTP/1.1 200 OK",
 			"Content-Type: text/html",
@@ -167,7 +165,7 @@ func TestRequestBody(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			urlencoded := "some=result&second=data"
 			// xml := "<test><content>test</content></test>"
-			tx := wafi.NewTransaction()
+			tx := NewWAF().NewTransaction()
 			tx.RequestBodyAccess = true
 			tx.RequestBodyLimit = testCase.requestBodyLimit
 			tx.WAF.RequestBodyLimitAction = testCase.requestBodyLimitAction
@@ -211,7 +209,7 @@ func TestResponseHeader(t *testing.T) {
 }
 
 func TestProcessRequestHeadersDoesNoEvaluationOnEngineOff(t *testing.T) {
-	tx := wafi.NewTransaction()
+	tx := NewWAF().NewTransaction()
 	tx.RuleEngine = types.RuleEngineOff
 
 	if !tx.IsRuleEngineOff() {
@@ -225,7 +223,7 @@ func TestProcessRequestHeadersDoesNoEvaluationOnEngineOff(t *testing.T) {
 }
 
 func TestProcessRequestBodyDoesNoEvaluationOnEngineOff(t *testing.T) {
-	tx := wafi.NewTransaction()
+	tx := NewWAF().NewTransaction()
 	tx.RuleEngine = types.RuleEngineOff
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error("failed to process request body")
@@ -236,7 +234,7 @@ func TestProcessRequestBodyDoesNoEvaluationOnEngineOff(t *testing.T) {
 }
 
 func TestProcessResponseHeadersDoesNoEvaluationOnEngineOff(t *testing.T) {
-	tx := wafi.NewTransaction()
+	tx := NewWAF().NewTransaction()
 	tx.RuleEngine = types.RuleEngineOff
 	_ = tx.ProcessResponseHeaders(200, "OK")
 	if tx.LastPhase != 0 {
@@ -245,7 +243,7 @@ func TestProcessResponseHeadersDoesNoEvaluationOnEngineOff(t *testing.T) {
 }
 
 func TestProcessResponseBodyDoesNoEvaluationOnEngineOff(t *testing.T) {
-	tx := wafi.NewTransaction()
+	tx := NewWAF().NewTransaction()
 	tx.RuleEngine = types.RuleEngineOff
 	if _, err := tx.ProcessResponseBody(); err != nil {
 		t.Error("Failed to process response body")
@@ -256,7 +254,7 @@ func TestProcessResponseBodyDoesNoEvaluationOnEngineOff(t *testing.T) {
 }
 
 func TestProcessLoggingDoesNoEvaluationOnEngineOff(t *testing.T) {
-	tx := wafi.NewTransaction()
+	tx := NewWAF().NewTransaction()
 	tx.RuleEngine = types.RuleEngineOff
 	tx.ProcessLogging()
 	if tx.LastPhase != 0 {
@@ -666,7 +664,7 @@ func BenchmarkTransactionCreation(b *testing.B) {
 
 func makeTransaction(t testing.TB) *Transaction {
 	t.Helper()
-	tx := wafi.NewTransaction()
+	tx := NewWAF().NewTransaction()
 	tx.RequestBodyAccess = true
 	ht := []string{
 		"POST /testurl.php?id=123&b=456 HTTP/1.1",
@@ -690,7 +688,7 @@ func makeTransactionMultipart(t *testing.T) *Transaction {
 	if t != nil {
 		t.Helper()
 	}
-	tx := wafi.NewTransaction()
+	tx := NewWAF().NewTransaction()
 	tx.RequestBodyAccess = true
 	ht := []string{
 		"POST /testurl.php?id=123&b=456 HTTP/1.1",
