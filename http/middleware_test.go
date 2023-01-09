@@ -65,7 +65,6 @@ func TestProcessRequestMultipart(t *testing.T) {
 
 	tx := waf.NewTransaction()
 	tx.RequestBodyAccess = true
-	defer tx.Close()
 
 	req := createMultipartRequest(t)
 
@@ -81,6 +80,10 @@ func TestProcessRequestMultipart(t *testing.T) {
 	reader := bufio.NewReader(req.Body)
 	if _, err := reader.ReadString('\n'); err != nil {
 		t.Errorf("failed to read multipart request: %s", err.Error())
+	}
+
+	if err := tx.Close(); err != nil {
+		t.Errorf("failed to close the transaction: %s", err.Error())
 	}
 }
 
