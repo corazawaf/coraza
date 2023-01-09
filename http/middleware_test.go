@@ -65,11 +65,9 @@ func TestProcessRequestMultipart(t *testing.T) {
 
 	tx := waf.NewTransaction()
 	tx.RequestBodyAccess = true
+	defer tx.Close()
 
-	req, err := multipartRequest(t)
-	if err != nil {
-		t.Fatal(err)
-	}
+	req := createMultipartRequest(t)
 
 	if _, err := processRequest(tx, req); err != nil {
 		t.Fatal(err)
@@ -82,13 +80,11 @@ func TestProcessRequestMultipart(t *testing.T) {
 
 	reader := bufio.NewReader(req.Body)
 	if _, err := reader.ReadString('\n'); err != nil {
-		t.Errorf("failed to read multipart request: %s", err)
+		t.Errorf("failed to read multipart request: %s", err.Error())
 	}
-
-	_ = tx.Close()
 }
 
-func multipartRequest(t *testing.T) (*http.Request, error) {
+func createMultipartRequest(t *testing.T) *http.Request {
 	t.Helper()
 
 	metadata := `{"name": "photo-sample.jpeg"}`
@@ -99,7 +95,7 @@ func multipartRequest(t *testing.T) (*http.Request, error) {
 
 	part, err := writer.CreatePart(metadataHeader)
 	if err != nil {
-		return nil, err
+		t.Fatal(err)
 	}
 	_, _ = part.Write([]byte(metadata))
 
@@ -108,21 +104,21 @@ func multipartRequest(t *testing.T) (*http.Request, error) {
 
 	mediaPart, err := writer.CreatePart(mediaHeader)
 	if err != nil {
-		return nil, err
+		t.Fatal(err)
 	}
-	_, _ = io.Copy(mediaPart, bytes.NewReader([]byte{1, 2, 3}))
+	_, _ = io.Copy(mediaPart, bytes.NewReader([]byte{255, 1, 2}))
 
 	writer.Close()
 
 	req, err := http.NewRequest("POST", "/some", body)
 	if err != nil {
-		return nil, err
+		t.Fatal(err)
 	}
 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	req.Header.Set("Content-Length", fmt.Sprintf("%d", body.Len()))
 
-	return req, nil
+	return req
 }
 
 // from issue https://github.com/corazawaf/coraza/issues/159 @zpeasystart
