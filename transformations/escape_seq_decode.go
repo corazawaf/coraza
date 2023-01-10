@@ -5,18 +5,30 @@ package transformations
 
 import (
 	"strconv"
+	"strings"
 
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 )
 
 func escapeSeqDecode(input string) (string, error) {
-	var i, count, d int
+	if i := strings.IndexByte(input, '\\'); i != -1 {
+		// TODO: This will transform even if the backslash isn't followed by an escape,
+		// but keep it simple for now.
+		return doEscapeSeqDecode(input, i), nil
+	}
+	return input, nil
+}
+
+func doEscapeSeqDecode(input string, pos int) string {
 	inputLen := len(input)
 	data := []byte(input)
 
+	d := pos
+	i := pos
+
 	for i < inputLen {
 		if (input[i] == '\\') && (i+1 < inputLen) {
-			c := -1
+			c := int8(-1)
 
 			switch input[i+1] {
 			case 'a':
@@ -53,7 +65,7 @@ func escapeSeqDecode(input string) (string, error) {
 					/* Hexadecimal. */
 					if (i+3 < inputLen) && (utils.ValidHex((input[i+2]))) && (utils.ValidHex((input[i+3]))) {
 						/* Two digits. */
-						c = int(utils.X2c(input[i+2:]))
+						c = int8(utils.X2c(input[i+2:]))
 						i += 4
 					}
 					/* Else Invalid encoding, do nothing. */
@@ -75,8 +87,8 @@ func escapeSeqDecode(input string) (string, error) {
 						buf = buf[:j]
 
 						if j > 0 {
-							bc, _ := strconv.ParseInt(string(buf), 8, 32)
-							c = int(bc)
+							bc, _ := strconv.ParseUint(string(buf), 8, 8)
+							c = int8(bc)
 							i += 1 + j
 						}
 					}
@@ -87,23 +99,20 @@ func escapeSeqDecode(input string) (string, error) {
 				/* Didn't recognise encoding, copy raw bytes. */
 				data[d] = input[i+1]
 				d++
-				count++
 				i += 2
 			} else {
 				/* Converted the encoding. */
 				data[d] = byte(c)
 				d++
-				count++
 			}
 		} else {
 			/* Input character not a backslash, copy it. */
 			data[d] = input[i]
 			d++
 			i++
-			count++
 		}
 	}
-	return string(data[:count]), nil
+	return utils.WrapUnsafe(data[:d])
 }
 
 func isODigit(c byte) bool {
