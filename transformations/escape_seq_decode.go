@@ -28,7 +28,7 @@ func doEscapeSeqDecode(input string, pos int) string {
 
 	for i < inputLen {
 		if (input[i] == '\\') && (i+1 < inputLen) {
-			c := -1
+			c := int8(-1)
 
 			switch input[i+1] {
 			case 'a':
@@ -65,7 +65,7 @@ func doEscapeSeqDecode(input string, pos int) string {
 					/* Hexadecimal. */
 					if (i+3 < inputLen) && (utils.ValidHex((input[i+2]))) && (utils.ValidHex((input[i+3]))) {
 						/* Two digits. */
-						c = int(utils.X2c(input[i+2:]))
+						c = int8(utils.X2c(input[i+2:]))
 						i += 4
 					}
 					/* Else Invalid encoding, do nothing. */
@@ -94,7 +94,7 @@ func doEscapeSeqDecode(input string, pos int) string {
 							if bc > 255 {
 								bc = 255
 							}
-							c = int(bc)
+							c = int8(bc)
 							i += 1 + j
 						}
 					}
