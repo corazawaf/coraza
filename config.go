@@ -39,10 +39,9 @@ type WAFConfig interface {
 	// WithDebugLogger configures a debug logger.
 	WithDebugLogger(logger loggers.DebugLogger) WAFConfig
 
-	// WithErrorCallback configures an error logger.
-	// It is used to set a callback function to log errors
-	// triggered when an error is raised by the WAF.
-	// It contains the severity so the cb can decide to log it or not
+	// WithErrorCallback configures an error callback that can be used
+	// to log errors triggered by the WAF.
+	// It contains the severity so the cb can decide to skip it or not
 	WithErrorCallback(logger func(rule types.MatchedRule)) WAFConfig
 
 	// WithRootFS configures the root file system.
