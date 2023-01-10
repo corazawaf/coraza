@@ -60,12 +60,12 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 		if req.Body != nil && req.Body != http.NoBody {
 			_, err := io.Copy(tx.RequestBodyWriter(), req.Body)
 			if err != nil {
-				return tx.Interruption(), err
+				return nil, err
 			}
 
 			reader, err := tx.RequestBodyReader()
 			if err != nil {
-				return tx.Interruption(), err
+				return nil, err
 			}
 			reader = io.MultiReader(reader, req.Body)
 			// req.Body is transparently reinizialied with a new io.ReadCloser.
@@ -97,7 +97,6 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 }
 
 func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
-
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		tx := waf.NewTransaction()
 		defer func() {
