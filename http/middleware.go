@@ -66,12 +66,12 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 			if err != nil {
 				return tx.Interruption(), err
 			}
-			_ = req.Body.Close()
 
 			reader, err := tx.RequestBodyReader()
 			if err != nil {
 				return tx.Interruption(), err
 			}
+			reader = io.MultiReader(reader, req.Body)
 			// req.Body is transparently reinizialied with a new io.ReadCloser.
 			// The http handler will be able to read it.
 			// Prior to Go 1.19 NopCloser does not implement WriterTo if the reader implements it.
@@ -85,12 +85,12 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 					io.Reader
 					io.WriterTo
 					io.Closer
-				}{reader, rwt, nopCloser{}}
+				}{reader, rwt, req.Body}
 			} else {
 				req.Body = struct {
 					io.Reader
 					io.Closer
-				}{reader, nopCloser{}}
+				}{reader, req.Body}
 			}
 		}
 
