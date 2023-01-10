@@ -64,13 +64,13 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 		if req.Body != nil && req.Body != http.NoBody {
 			_, err := io.Copy(tx.RequestBodyWriter(), req.Body)
 			if err != nil {
-				return tx.Interruption(), err
+				return nil, err
 			}
 			_ = req.Body.Close()
 
 			reader, err := tx.RequestBodyReader()
 			if err != nil {
-				return tx.Interruption(), err
+				return nil, err
 			}
 			// req.Body is transparently reinizialied with a new io.ReadCloser.
 			// The http handler will be able to read it.

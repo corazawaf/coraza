@@ -4,6 +4,7 @@
 package bodyprocessors
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -16,18 +17,17 @@ import (
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
-type multipartBodyProcessor struct {
-}
+type multipartBodyProcessor struct{}
 
 func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v rules.TransactionVariables, options Options) error {
 	mimeType := options.Mime
 	storagePath := options.StoragePath
 	mediaType, params, err := mime.ParseMediaType(mimeType)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to parse media type: %s", err.Error())
 	}
 	if !strings.HasPrefix(mediaType, "multipart/") {
-		return fmt.Errorf("not a multipart body")
+		return errors.New("not a multipart body")
 	}
 	mr := multipart.NewReader(reader, params["boundary"])
 	totalSize := int64(0)
@@ -93,7 +93,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v rules.Tran
 	return nil
 }
 
-func (mbp *multipartBodyProcessor) ProcessResponse(reader io.Reader, v rules.TransactionVariables, options Options) error {
+func (mbp *multipartBodyProcessor) ProcessResponse(_ io.Reader, _ rules.TransactionVariables, options Options) error {
 	return nil
 }
 
