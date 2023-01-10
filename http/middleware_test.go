@@ -224,30 +224,12 @@ func (l *debugLogger) SetOutput(w io.WriteCloser) {
 	l.t.Log("ignoring SecDebugLog directive, debug logs are always routed to proxy logs")
 }
 
-func createWAF(t *testing.T) coraza.WAF {
-	t.Helper()
-	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
-		WithDirectives(`
-		# This is a comment
-		SecDebugLogLevel 5
-		SecRequestBodyAccess On
-		SecResponseBodyAccess On
-		SecResponseBodyMimeType text/plain
-		SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
-		SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
-		SecRule RESPONSE_HEADERS:Foo "@pm bar" "id:199,phase:3,deny,t:lowercase,deny, status:401,msg:'Invalid response header',log,auditlog"
-		SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
-	`).WithErrorLogger(errLogger(t)).WithDebugLogger(&debugLogger{t: t}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	return waf
-}
-
 type httpTest struct {
 	http2            bool
 	reqURI           string
 	reqBody          string
+	echoReqBody      bool
+	reqBodyLimit     int
 	respHeaders      map[string]string
 	respBody         string
 	expectedProto    string
@@ -279,6 +261,16 @@ func TestHttpServer(t *testing.T) {
 			expectedProto:  "HTTP/1.1",
 			expectedStatus: 403,
 		},
+		"request body larger than limit": {
+			reqURI:      "/hello",
+			reqBody:     "eval('cat /etc/passwd')",
+			echoReqBody: true,
+			// Coraza only sees eva, not eval
+			reqBodyLimit:     3,
+			expectedProto:    "HTTP/1.1",
+			expectedStatus:   201,
+			expectedRespBody: "eval('cat /etc/passwd')",
+		},
 		"response headers blocking": {
 			reqURI:         "/hello",
 			respHeaders:    map[string]string{"foo": "bar"},
@@ -304,8 +296,26 @@ func TestHttpServer(t *testing.T) {
 	// Perform tests
 	for name, tCase := range tests {
 		t.Run(name, func(t *testing.T) {
-			runAgainstWaf(t, tCase, createWAF(t))
-
+			conf := coraza.NewWAFConfig().
+				WithDirectives(`
+		# This is a comment
+		SecDebugLogLevel 5
+		SecRequestBodyAccess On
+		SecResponseBodyAccess On
+		SecResponseBodyMimeType text/plain
+		SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
+		SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
+		SecRule RESPONSE_HEADERS:Foo "@pm bar" "id:199,phase:3,deny,t:lowercase,deny, status:401,msg:'Invalid response header',log,auditlog"
+		SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
+	`).WithErrorLogger(errLogger(t)).WithDebugLogger(&debugLogger{t: t})
+			if l := tCase.reqBodyLimit; l > 0 {
+				conf = conf.WithRequestBodyAccess(coraza.NewRequestBodyConfig().WithLimit(l).WithInMemoryLimit(l))
+			}
+			waf, err := coraza.NewWAF(conf)
+			if err != nil {
+				t.Fatal(err)
+			}
+			runAgainstWaf(t, tCase, waf)
 		})
 	}
 }
@@ -370,9 +380,18 @@ func runAgainstWaf(t *testing.T, tCase httpTest, waf coraza.WAF) {
 			w.Header().Set(k, v)
 		}
 		w.WriteHeader(201)
-		_, err := w.Write([]byte(tCase.respBody))
-		if err != nil {
-			serverErrC <- err
+		if tCase.echoReqBody {
+			buf, err := io.ReadAll(req.Body)
+			if err != nil {
+				serverErrC <- err
+			}
+			if _, err := w.Write(buf); err != nil {
+				serverErrC <- err
+			}
+		} else {
+			if _, err := w.Write([]byte(tCase.respBody)); err != nil {
+				serverErrC <- err
+			}
 		}
 	})))
 	if tCase.http2 {
