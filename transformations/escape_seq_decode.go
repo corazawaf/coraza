@@ -87,7 +87,7 @@ func doEscapeSeqDecode(input string, pos int) string {
 						buf = buf[:j]
 
 						if j > 0 {
-							bc, _ := strconv.ParseInt(string(buf), 8, 8)
+							bc, _ := strconv.ParseUint(string(buf), 8, 8)
 							c = int8(bc)
 							i += 1 + j
 						}
