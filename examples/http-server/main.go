@@ -47,7 +47,7 @@ func createWAF() coraza.WAF {
 
 	waf, err := coraza.NewWAF(
 		coraza.NewWAFConfig().
-			WithErrorLogger(logError).
+			WithErrorCallback(logError).
 			WithDirectivesFromFile(directivesFile),
 	)
 	if err != nil {
