@@ -91,8 +91,8 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		waf.ResponseBodyLimit = int64(r.limit)
 	}
 
-	if c.errorLogger != nil {
-		waf.ErrorLogCb = c.errorLogger
+	if c.errorCallback != nil {
+		waf.ErrorLogCb = c.errorCallback
 	}
 
 	return wafWrapper{waf: waf}, nil

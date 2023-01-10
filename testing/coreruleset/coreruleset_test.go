@@ -217,7 +217,7 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 		t.Fatalf("failed to create error log: %v", err)
 	}
 	errorWriter := bufio.NewWriter(errorFile)
-	conf = conf.WithErrorLogger(func(rule types.MatchedRule) {
+	conf = conf.WithErrorCallback(func(rule types.MatchedRule) {
 		msg := rule.ErrorLog(0)
 		if _, err := io.WriteString(errorWriter, msg); err != nil {
 			t.Fatal(err)

@@ -357,7 +357,7 @@ func TestRelevantAuditLogging(t *testing.T) {
 func TestLogCallback(t *testing.T) {
 	waf := NewWAF()
 	buffer := ""
-	waf.SetErrorLogCb(func(mr types.MatchedRule) {
+	waf.SetErrorCallback(func(mr types.MatchedRule) {
 		buffer = mr.ErrorLog(403)
 	})
 	tx := waf.NewTransaction()
