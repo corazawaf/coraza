@@ -17,10 +17,6 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
-type nopCloser struct{}
-
-func (nopCloser) Close() error { return nil }
-
 // processRequest fills all transaction variables from an http.Request object
 // Most implementations of Coraza will probably use http.Request objects
 // so this will implement all phase 0, 1 and 2 variables
