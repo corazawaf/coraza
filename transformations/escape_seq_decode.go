@@ -87,13 +87,7 @@ func doEscapeSeqDecode(input string, pos int) string {
 						buf = buf[:j]
 
 						if j > 0 {
-							bc, _ := strconv.ParseInt(string(buf), 8, 32)
-							// We scan up to 3 octal digits which can represent a number up to 511,
-							// more than a byte. An octal escape sequence is defined to be a single
-							// byte so truncate if the value is larger for some reason.
-							if bc > 255 {
-								bc = 255
-							}
+							bc, _ := strconv.ParseInt(string(buf), 8, 8)
 							c = int8(bc)
 							i += 1 + j
 						}
