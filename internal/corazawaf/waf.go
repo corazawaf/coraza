@@ -21,9 +21,6 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
-// Initializing pool for transactions
-var transactionPool = sync.NewPool(func() interface{} { return new(Transaction) })
-
 // WAF instance is used to store configurations and rules
 // Every web application should have a different WAF instance,
 // but you can share an instance if you are ok with sharing
