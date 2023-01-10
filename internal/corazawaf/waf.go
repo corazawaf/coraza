@@ -303,9 +303,9 @@ func (w *WAF) SetDebugLogLevel(lvl int) error {
 	return nil
 }
 
-// SetErrorLogCb sets the callback function for error logging
+// SetErrorCallback sets the callback function for error logging
 // The error callback receives all the error data and some
 // helpers to write modsecurity style logs
-func (w *WAF) SetErrorLogCb(cb func(rule types.MatchedRule)) {
+func (w *WAF) SetErrorCallback(cb func(rule types.MatchedRule)) {
 	w.ErrorLogCb = cb
 }
