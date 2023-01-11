@@ -31,6 +31,17 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 	if rg.FindByID(rule.ID_) != nil && rule.ID_ != 0 {
 		return fmt.Errorf("there is a another rule with id %d", rule.ID_)
 	}
+
+	numInferred := 0
+	rule.inferredPhases[rule.Phase_] = true
+	for _, v := range rule.variables {
+		min := minPhase(v.Variable)
+		if min != 0 {
+			rule.inferredPhases[min] = true
+			numInferred++
+		}
+	}
+
 	rg.rules = append(rg.rules, rule)
 	return nil
 }
@@ -110,8 +121,10 @@ RulesLoop:
 			break RulesLoop
 		}
 		// Rules with phase 0 will always run
-		if r.Phase_ != phase && r.Phase_ != 0 {
-			continue
+		if r.Phase_ != 0 && r.Phase_ != phase {
+			if !multiphaseEvaluation || !r.inferredPhases[phase] {
+				continue
+			}
 		}
 
 		// we skip the rule in case it's in the excluded list
@@ -141,7 +154,7 @@ RulesLoop:
 		tx.variables.matchedVars.Reset()
 		tx.variables.matchedVarsNames.Reset()
 
-		r.Evaluate(tx, transformationCache)
+		r.Evaluate(phase, tx, transformationCache)
 		tx.Capture = false // we reset captures
 		usedRules++
 	}

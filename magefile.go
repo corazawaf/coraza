@@ -74,6 +74,10 @@ func Test() error {
 	if err := sh.RunV("go", "test", "./testing/coreruleset"); err != nil {
 		return err
 	}
+	// Execute FTW tests with multiphase evaluation enabled as well
+	if err := sh.RunV("go", "test", "-tags=coraza.rule.multiphase_evaluation", "./testing/coreruleset"); err != nil {
+		return err
+	}
 
 	return nil
 }

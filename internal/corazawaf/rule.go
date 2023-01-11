@@ -147,6 +147,10 @@ type Rule struct {
 	Disruptive bool
 
 	HasChain bool
+
+	// inferredPhases is the inferred phases the rule is relevant for
+	// based on the processed variables.
+	inferredPhases [types.PhaseLogging + 1]bool
 }
 
 func (r *Rule) ParentID() int {
@@ -160,11 +164,11 @@ func (r *Rule) Status() int {
 // Evaluate will evaluate the current rule for the indicated transaction
 // If the operator matches, actions will be evaluated, and it will return
 // the matched variables, keys and values (MatchData)
-func (r *Rule) Evaluate(tx rules.TransactionState, cache map[transformationKey]*transformationValue) []types.MatchData {
-	return r.doEvaluate(tx.(*Transaction), cache)
+func (r *Rule) Evaluate(phase types.RulePhase, tx rules.TransactionState, cache map[transformationKey]*transformationValue) []types.MatchData {
+	return r.doEvaluate(phase, tx.(*Transaction), cache)
 }
 
-func (r *Rule) doEvaluate(tx *Transaction, cache map[transformationKey]*transformationValue) []types.MatchData {
+func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[transformationKey]*transformationValue) []types.MatchData {
 	if r.Capture {
 		tx.Capture = true
 	}
@@ -196,6 +200,13 @@ func (r *Rule) doEvaluate(tx *Transaction, cache map[transformationKey]*transfor
 	} else {
 		ecol := tx.ruleRemoveTargetByID[r.ID_]
 		for _, v := range r.variables {
+			// TODO(anuraaga): Support skipping variables based on phase for rule chains too.
+			if multiphaseEvaluation && !r.HasChain && r.ParentID_ == 0 {
+				min := minPhase(v.Variable)
+				if min != types.PhaseUnknown && min != phase {
+					continue
+				}
+			}
 			var values []types.MatchData
 			for _, c := range ecol {
 				if c.Variable == v.Variable {
@@ -265,7 +276,7 @@ func (r *Rule) doEvaluate(tx *Transaction, cache map[transformationKey]*transfor
 		// we only run the chains for the parent rule
 		for nr := r.Chain; nr != nil; {
 			tx.WAF.Logger.Debug("[%s] [%d] Evaluating rule chain for %d", tx.id, rid, r.ID_)
-			matchedChainValues := nr.Evaluate(tx, cache)
+			matchedChainValues := nr.Evaluate(phase, tx, cache)
 			if len(matchedChainValues) == 0 {
 				return matchedChainValues
 			}
@@ -502,4 +513,237 @@ func NewRule() *Rule {
 			Tags_:  []string{},
 		},
 	}
+}
+
+// minPhase returns the earliest phase a variable may be populated.
+// NOTE: variables.Args and variables.ArgsNames should ideally be evaluated
+// both in phase 1 and 2, but rules can set state in the transaction, e.g. a
+// counter, which prevents evaluating any variable multiple times.
+func minPhase(v variables.RuleVariable) types.RulePhase {
+	switch v {
+	case variables.ResponseContentType:
+		return types.PhaseResponseHeaders
+	case variables.UniqueID:
+		return types.PhaseRequestHeaders
+	case variables.ArgsCombinedSize:
+		// Size changes between phase 1 and 2 so evaluate both times
+		return types.PhaseRequestHeaders
+	case variables.AuthType:
+		// Not populated by Coraza, but should generally be in headers
+		return types.PhaseRequestHeaders
+	case variables.FilesCombinedSize:
+		return types.PhaseRequestBody
+	case variables.FullRequest:
+		// Not populated by Coraza
+		return types.PhaseRequestBody
+	case variables.FullRequestLength:
+		// Not populated by Coraza
+		return types.PhaseRequestBody
+	case variables.InboundDataError:
+		// Not populated by Coraza
+		return types.PhaseRequestBody
+	case variables.MatchedVar:
+		// MatchedVar is only for logging, not evaluation
+		return types.PhaseUnknown
+	case variables.MatchedVarName:
+		// MatchedVar is only for logging, not evaluation
+		return types.PhaseUnknown
+	case variables.MultipartBoundaryQuoted:
+		// Not populated by Coraza
+		return types.PhaseRequestBody
+	// MultipartBoundaryWhitespace kept for compatibility
+	case variables.MultipartBoundaryWhitespace:
+		// Not populated by Coraza
+		return types.PhaseRequestBody
+	case variables.MultipartCrlfLfLines:
+		// Not populated by Coraza
+		return types.PhaseRequestBody
+	case variables.MultipartDataAfter:
+		// Not populated by Coraza
+		return types.PhaseRequestBody
+	case variables.MultipartDataBefore:
+		// Not populated by Coraza
+		return types.PhaseRequestBody
+	case variables.MultipartFileLimitExceeded:
+		// Not populated by Coraza
+		return types.PhaseRequestBody
+	case variables.MultipartHeaderFolding:
+		// Not populated by Coraza
+		return types.PhaseRequestBody
+	case variables.MultipartInvalidHeaderFolding:
+		// Not populated by Coraza
+		return types.PhaseRequestBody
+	case variables.MultipartInvalidPart:
+		// Not populated by Coraza
+		return types.PhaseRequestBody
+	case variables.MultipartInvalidQuoting:
+		// Not populated by Coraza
+		return types.PhaseRequestBody
+	case variables.MultipartLfLine:
+		// Not populated by Coraza
+		return types.PhaseRequestBody
+	case variables.MultipartMissingSemicolon:
+		// Not populated by Coraza
+		return types.PhaseRequestBody
+	case variables.MultipartStrictError:
+		// Not populated by Coraza
+		return types.PhaseRequestBody
+	case variables.MultipartUnmatchedBoundary:
+		// Not populated by Coraza
+		return types.PhaseRequestBody
+	case variables.OutboundDataError:
+		return types.PhaseResponseBody
+	case variables.PathInfo:
+		// Not populated by Coraza
+		return types.PhaseRequestHeaders
+	case variables.QueryString:
+		return types.PhaseRequestHeaders
+	case variables.RemoteAddr:
+		return types.PhaseRequestHeaders
+	case variables.RemoteHost:
+		// Not implemented
+		return types.PhaseRequestHeaders
+	case variables.RemotePort:
+		return types.PhaseRequestHeaders
+	case variables.ReqbodyError:
+		return types.PhaseRequestBody
+	case variables.ReqbodyErrorMsg:
+		return types.PhaseRequestBody
+	case variables.ReqbodyProcessorError:
+		return types.PhaseRequestBody
+	case variables.ReqbodyProcessorErrorMsg:
+		return types.PhaseRequestBody
+	case variables.ReqbodyProcessor:
+		// Configuration of Coraza itself, though shouldn't be used in phases
+		return types.PhaseUnknown
+	case variables.RequestBasename:
+		return types.PhaseRequestHeaders
+	case variables.RequestBody:
+		return types.PhaseRequestBody
+	case variables.RequestBodyLength:
+		return types.PhaseRequestBody
+	case variables.RequestFilename:
+		return types.PhaseRequestHeaders
+	case variables.RequestLine:
+		return types.PhaseRequestHeaders
+	case variables.RequestMethod:
+		return types.PhaseRequestHeaders
+	case variables.RequestProtocol:
+		return types.PhaseRequestHeaders
+	case variables.RequestURI:
+		return types.PhaseRequestHeaders
+	case variables.RequestURIRaw:
+		return types.PhaseRequestHeaders
+	case variables.ResponseBody:
+		return types.PhaseResponseBody
+	case variables.ResponseContentLength:
+		return types.PhaseResponseBody
+	case variables.ResponseProtocol:
+		return types.PhaseResponseHeaders
+	case variables.ResponseStatus:
+		return types.PhaseResponseHeaders
+	case variables.ServerAddr:
+		// Configuration of the server itself
+		return types.PhaseRequestHeaders
+	case variables.ServerName:
+		// Configuration of the server itself
+		return types.PhaseRequestHeaders
+	case variables.ServerPort:
+		// Configuration of the server itself
+		return types.PhaseRequestHeaders
+	case variables.Sessionid:
+		// Not populated by Coraza
+		return types.PhaseRequestHeaders
+	case variables.HighestSeverity:
+		// Result of matching, not used in phaes
+		return types.PhaseUnknown
+	case variables.StatusLine:
+		return types.PhaseResponseHeaders
+	case variables.InboundErrorData:
+		return types.PhaseRequestBody
+	case variables.Duration:
+		// If used in matching, would need to be defined for multiple inferredPhases to make sense
+		return types.PhaseUnknown
+	case variables.ResponseHeadersNames:
+		return types.PhaseResponseHeaders
+	case variables.RequestHeadersNames:
+		return types.PhaseRequestHeaders
+	case variables.Userid:
+		// Not populated by Coraza
+		return types.PhaseRequestHeaders
+	case variables.Args:
+		// Updated between headers and body
+		return types.PhaseRequestBody
+	case variables.ArgsGet:
+		return types.PhaseRequestHeaders
+	case variables.ArgsPost:
+		return types.PhaseRequestBody
+	case variables.ArgsPath:
+		return types.PhaseRequestHeaders
+	case variables.FilesSizes:
+		return types.PhaseRequestBody
+	case variables.FilesNames:
+		return types.PhaseRequestBody
+	case variables.FilesTmpContent:
+		// Not populated by Coraza
+		return types.PhaseRequestBody
+	case variables.MultipartFilename:
+		return types.PhaseRequestBody
+	case variables.MultipartName:
+		return types.PhaseRequestBody
+	case variables.MatchedVarsNames:
+		// Result of execution, not used in inferredPhases
+		return types.PhaseUnknown
+	case variables.MatchedVars:
+		// Result of execution, not used in inferredPhases
+		return types.PhaseUnknown
+	case variables.Files:
+		return types.PhaseRequestBody
+	case variables.RequestCookies:
+		return types.PhaseRequestHeaders
+	case variables.RequestHeaders:
+		return types.PhaseRequestHeaders
+	case variables.ResponseHeaders:
+		return types.PhaseResponseHeaders
+	case variables.Geo:
+		// Not populated by Coraza
+		return types.PhaseRequestHeaders
+	case variables.RequestCookiesNames:
+		return types.PhaseRequestHeaders
+	case variables.FilesTmpNames:
+		return types.PhaseRequestBody
+	case variables.ArgsNames:
+		// Updated between headers and body
+		return types.PhaseRequestBody
+	case variables.ArgsGetNames:
+		return types.PhaseRequestHeaders
+	case variables.ArgsPostNames:
+		return types.PhaseRequestBody
+	case variables.TX:
+		return types.PhaseUnknown
+	case variables.Rule:
+		// Shouldn't be used in phases
+		return types.PhaseUnknown
+	case variables.JSON:
+		return types.PhaseRequestBody
+	case variables.Env:
+		return types.PhaseRequestHeaders
+	case variables.IP:
+		// Not populated by Coraza
+		return types.PhaseRequestHeaders
+	case variables.UrlencodedError:
+		return types.PhaseRequestHeaders
+	case variables.ResponseArgs:
+		return types.PhaseResponseBody
+	case variables.ResponseXML:
+		return types.PhaseResponseBody
+	case variables.RequestXML:
+		return types.PhaseRequestBody
+	case variables.XML:
+		return types.PhaseRequestBody
+	case variables.MultipartPartHeaders:
+		return types.PhaseRequestBody
+	}
+
+	return types.PhaseUnknown
 }
