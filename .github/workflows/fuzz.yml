@@ -16,3 +16,9 @@ jobs:
         with:
           go-version: '>=1.18.0'
       - run: go run mage.go fuzz
+      - run: |
+          gh issue create --title "$GITHUB_WORKFLOW #$GITHUB_RUN_NUMBER failed" \
+                          --body "See [$GITHUB_WORKFLOW #$GITHUB_RUN_NUMBER](https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)."
+        if: failure() && github.run_attempt == 1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
