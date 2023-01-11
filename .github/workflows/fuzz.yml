@@ -1,0 +1,18 @@
+name: Fuzz tests
+
+on:
+  schedule:
+    # https://crontab.guru/#05_14_*_*_*
+    - cron: '05 14 * * *'
+  workflow_dispatch:
+
+jobs:
+  fuzz:
+    name: Fuzz tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v1
+        with:
+          go-version: '>=1.18.0'
+      - run: go run mage.go fuzz
