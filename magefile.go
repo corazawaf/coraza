@@ -96,6 +96,10 @@ func Coverage() error {
 	if err := sh.RunV("go", "test", "-coverprofile=build/coverage-ftw.txt", "-covermode=atomic", "-coverpkg=./...", "./testing/coreruleset"); err != nil {
 		return err
 	}
+	// Execute FTW tests with multiphase evaluation enabled as well
+	if err := sh.RunV("go", "test", "-coverprofile=build/coverage-ftw-multiphase.txt", "-covermode=atomic", "-coverpkg=./...", "-tags=coraza.rule.multiphase_evaluation", "./testing/coreruleset"); err != nil {
+		return err
+	}
 	// This is not actually running tests with tinygo, but with the tag that includes its code so we can calculate coverage
 	// for it.
 	if err := sh.RunV("go", "test", "-race", "-tags=tinygo", "-coverprofile=build/coverage-tinygo.txt", "-covermode=atomic", "-coverpkg=./...", "./..."); err != nil {
