@@ -203,6 +203,9 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 			// TODO(anuraaga): Support skipping variables based on phase for rule chains too.
 			if multiphaseEvaluation && !r.HasChain && r.ParentID_ == 0 {
 				min := minPhase(v.Variable)
+				// When multiphase evaluation is enabled, any variable is evaluated at its
+				// earliest possible phase, so we skip it if the rule refers to other phases
+				// to avoid double-evaluation.
 				if min != types.PhaseUnknown && min != phase {
 					continue
 				}
