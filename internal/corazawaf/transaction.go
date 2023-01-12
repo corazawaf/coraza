@@ -66,7 +66,7 @@ type Transaction struct {
 	LastPhase types.RulePhase
 
 	// Handles request body buffers
-	RequestBodyBuffer *BodyBuffer
+	requestBodyBuffer *BodyBuffer
 
 	// Handles response body buffers
 	ResponseBodyBuffer *BodyBuffer
@@ -327,7 +327,7 @@ func (tx *Transaction) ResponseBodyReader() (io.Reader, error) {
 }
 
 func (tx *Transaction) RequestBodyReader() (io.Reader, error) {
-	return tx.RequestBodyBuffer.Reader()
+	return tx.requestBodyBuffer.Reader()
 }
 
 // AddRequestHeader Adds a request header
@@ -447,12 +447,12 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 		ct, _, _ = strings.Cut(ctcol[0], ";")
 	}
 	for scanner.Scan() {
-		if _, err := tx.RequestBodyBuffer.Write(scanner.Bytes()); err != nil {
+		if _, err := tx.requestBodyBuffer.Write(scanner.Bytes()); err != nil {
 			return nil, fmt.Errorf("cannot write to request body to buffer: %s", err.Error())
 		}
 		// urlencoded cannot end with CRLF
 		if ct != "application/x-www-form-urlencoded" {
-			if _, err := tx.RequestBodyBuffer.Write([]byte{'\r', '\n'}); err != nil {
+			if _, err := tx.requestBodyBuffer.Write([]byte{'\r', '\n'}); err != nil {
 				return nil, fmt.Errorf("cannot write to request body to buffer: %s", err.Error())
 			}
 		}
@@ -760,23 +760,51 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 	return tx.interruption
 }
 
-func (tx *Transaction) RequestBodyWriter() io.Writer {
-	return tx.RequestBodyBuffer
-}
-
 type Lenger interface {
 	Len() int
 }
 
-// ProcessRequestBodySize sets the maximum number of bytes that can be read from the
-// request body.
-func (tx *Transaction) AppendRequestBody(r io.Reader) (*types.Interruption, int, error) {
+func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
 		return nil, 0, nil
 	}
 
+	writingBytes := int64(len(b))
+	if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
+		tx.variables.inboundErrorData.Set("1")
+		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
+			// We interrupt this transaction in case RequestBodyLimitAction is Reject
+			tx.interruption = &types.Interruption{
+				Status: 403,
+				Action: "deny",
+			}
+			return tx.interruption, 0, nil
+		}
+
+		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
+			writingBytes = tx.RequestBodyLimit - tx.requestBodyBuffer.length
+		}
+	}
+
+	w, err := tx.requestBodyBuffer.Write(b[:writingBytes])
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return nil, int(w), nil
+}
+
+// ProcessRequestBodySize sets the maximum number of bytes that can be read from the
+// request body.
+func (tx *Transaction) WriteRequestBodyFrom(r io.Reader) (*types.Interruption, int, error) {
+	if tx.RuleEngine == types.RuleEngineOff {
+		return nil, 0, nil
+	}
+
+	var writingBytes int64
 	if l, ok := r.(Lenger); ok {
-		if int64(l.Len()) >= tx.RequestBodyLimit {
+		writingBytes = int64(l.Len())
+		if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
 			tx.variables.inboundErrorData.Set("1")
 			if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
 				// We interrupt this transaction in case RequestBodyLimitAction is Reject
@@ -786,24 +814,18 @@ func (tx *Transaction) AppendRequestBody(r io.Reader) (*types.Interruption, int,
 				}
 				return tx.interruption, 0, nil
 			}
+
+			if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
+				writingBytes = tx.RequestBodyLimit - tx.requestBodyBuffer.length
+			}
 		}
+	} else {
+		writingBytes = tx.RequestBodyLimit - tx.requestBodyBuffer.length
 	}
 
-	w, err := io.CopyN(tx.RequestBodyBuffer, r, tx.RequestBodyLimit)
+	w, err := io.CopyN(tx.requestBodyBuffer, r, writingBytes)
 	if err != nil && err != io.EOF {
 		return nil, 0, err
-	}
-
-	if w == tx.RequestBodyLimit {
-		tx.variables.inboundErrorData.Set("1")
-		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
-			// We interrupt this transaction in case RequestBodyLimitAction is Reject
-			tx.interruption = &types.Interruption{
-				Status: 403,
-				Action: "deny",
-			}
-			return tx.interruption, int(w), nil
-		}
 	}
 
 	return nil, int(w), nil
@@ -833,7 +855,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	}
 
 	// we won't process empty request bodies or disabled RequestBodyAccess
-	if !tx.RequestBodyAccess || tx.RequestBodyBuffer.Size() == 0 {
+	if !tx.RequestBodyAccess || tx.requestBodyBuffer.length == 0 {
 		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.interruption, nil
 	}
@@ -842,13 +864,13 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		mime = m[0]
 	}
 
-	reader, err := tx.RequestBodyBuffer.Reader()
+	reader, err := tx.requestBodyBuffer.Reader()
 	if err != nil {
 		return nil, err
 	}
 
 	// Chunked requests will always be written to a temporary file
-	if tx.RequestBodyBuffer.Size() >= tx.RequestBodyLimit {
+	if tx.requestBodyBuffer.length >= tx.RequestBodyLimit {
 		tx.variables.inboundErrorData.Set("1")
 		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
 			// We interrupt this transaction in case RequestBodyLimitAction is Reject
@@ -860,8 +882,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		}
 
 		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
-			// we limit our reader to tx.RequestBodyLimit bytes
-			reader = io.LimitReader(reader, tx.RequestBodyLimit)
+			// We do nothing as requestBodyBuffer is not bigger than the limit
 		}
 	}
 
@@ -1171,7 +1192,7 @@ func (tx *Transaction) Close() error {
 	defer tx.WAF.txPool.Put(tx)
 	tx.variables.reset()
 	var errs []error
-	if err := tx.RequestBodyBuffer.Reset(); err != nil {
+	if err := tx.requestBodyBuffer.Reset(); err != nil {
 		errs = append(errs, err)
 	}
 	if err := tx.ResponseBodyBuffer.Reset(); err != nil {

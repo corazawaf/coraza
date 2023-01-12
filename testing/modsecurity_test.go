@@ -133,7 +133,7 @@ func BenchmarkModSecurityCRSSimplePOST(b *testing.B) {
 		if err := tx.ProcessRequestHeaders(); err != nil {
 			b.Error(err)
 		}
-		if err := tx.AppendRequestBody(body); err != nil {
+		if err := tx.WriteRequestBodyFrom(body); err != nil {
 			b.Error(err)
 		}
 		if err := tx.ProcessRequestBody(); err != nil {

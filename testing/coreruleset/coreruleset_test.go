@@ -110,7 +110,7 @@ func BenchmarkCRSSimplePOST(b *testing.B) {
 		tx.AddRequestHeader("Accept", "application/json")
 		tx.AddRequestHeader("Content-Type", "application/x-www-form-urlencoded")
 		tx.ProcessRequestHeaders()
-		if _, err := tx.RequestBodyWriter().Write([]byte("parameters2=and&other2=Stuff")); err != nil {
+		if _, _, err := tx.WriteRequestBody([]byte("parameters2=and&other2=Stuff")); err != nil {
 			b.Error(err)
 		}
 		if _, err := tx.ProcessRequestBody(); err != nil {
@@ -144,7 +144,7 @@ func BenchmarkCRSLargePOST(b *testing.B) {
 		tx.AddRequestHeader("Accept", "application/json")
 		tx.AddRequestHeader("Content-Type", "application/x-www-form-urlencoded")
 		tx.ProcessRequestHeaders()
-		if _, err := tx.RequestBodyWriter().Write(postPayload); err != nil {
+		if _, _, err := tx.WriteRequestBody(postPayload); err != nil {
 			b.Error(err)
 		}
 		if _, err := tx.ProcessRequestBody(); err != nil {

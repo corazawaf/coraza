@@ -82,7 +82,9 @@ func TestProcessRequestMultipart(t *testing.T) {
 		t.Errorf("failed to read multipart request: %s", err.Error())
 	}
 
-	_ = tx.Close()
+	if err := tx.Close(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func createMultipartRequest(t *testing.T) *http.Request {
@@ -213,26 +215,6 @@ func (l *debugLogger) SetOutput(w io.WriteCloser) {
 	l.t.Log("ignoring SecDebugLog directive, debug logs are always routed to proxy logs")
 }
 
-func createWAF(t *testing.T) coraza.WAF {
-	t.Helper()
-	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
-		WithDirectives(`
-		# This is a comment
-		SecDebugLogLevel 5
-		SecRequestBodyAccess On
-		SecResponseBodyAccess On
-		SecResponseBodyMimeType text/plain
-		SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
-		SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
-		SecRule RESPONSE_HEADERS:Foo "@pm bar" "id:199,phase:3,deny,t:lowercase,deny, status:401,msg:'Invalid response header',log,auditlog"
-		SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
-	`).WithErrorCallback(errLogger(t)).WithDebugLogger(&debugLogger{t: t}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	return waf
-}
-
 type httpTest struct {
 	http2            bool
 	reqURI           string
@@ -305,7 +287,26 @@ func TestHttpServer(t *testing.T) {
 	// Perform tests
 	for name, tCase := range tests {
 		t.Run(name, func(t *testing.T) {
-			runAgainstWAF(t, tCase, createWAF(t))
+			conf := coraza.NewWAFConfig().
+				WithDirectives(`
+	# This is a comment
+	SecDebugLogLevel 5
+	SecRequestBodyAccess On
+	SecResponseBodyAccess On
+	SecResponseBodyMimeType text/plain
+	SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
+	SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
+	SecRule RESPONSE_HEADERS:Foo "@pm bar" "id:199,phase:3,deny,t:lowercase,deny, status:401,msg:'Invalid response header',log,auditlog"
+	SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
+`).WithErrorCallback(errLogger(t)).WithDebugLogger(&debugLogger{t: t})
+			if l := tCase.reqBodyLimit; l > 0 {
+				conf = conf.WithRequestBodyAccess(coraza.NewRequestBodyConfig().WithLimit(l).WithInMemoryLimit(l))
+			}
+			waf, err := coraza.NewWAF(conf)
+			if err != nil {
+				t.Fatal(err)
+			}
+			runAgainstWAF(t, tCase, waf)
 		})
 	}
 }

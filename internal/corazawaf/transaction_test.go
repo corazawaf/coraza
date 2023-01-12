@@ -13,6 +13,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
+	"github.com/corazawaf/coraza/v3/internal/environment"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/macro"
@@ -137,57 +138,103 @@ func TestTxResponse(t *testing.T) {
 	*/
 }
 
-func TestRequestBody(t *testing.T) {
+func TestRequestBodyNoTinyGo(t *testing.T) {
+	// in TinyGo requestBodyLimit is always equal to Memorylimit
+	if environment.IsTinyGo {
+		return // t.Skip doesn't work on TinyGo
+	}
+
+	const (
+		urlencodedBody    = "some=result&second=data"
+		urlencodedBodyLen = len(urlencodedBody)
+	)
+
 	testCases := []struct {
 		name                   string
-		requestBodyLimit       int64
+		requestBodyLimit       int
+		requestBodyMemoryLimit int
 		requestBodyLimitAction types.RequestBodyLimitAction
 		shouldInterrupt        bool
 	}{
 		{
-			name:                   "default",
-			requestBodyLimit:       200,
+			name:                   "no memory buffer and limit not reached",
+			requestBodyMemoryLimit: 0,
+			requestBodyLimit:       urlencodedBodyLen + 1,
 			requestBodyLimitAction: types.RequestBodyLimitActionReject,
 		},
 		{
-			name:                   "limit rejects",
-			requestBodyLimit:       11,
+			name:                   "memory buffer and limit not reached",
+			requestBodyMemoryLimit: urlencodedBodyLen / 2,
+			requestBodyLimit:       urlencodedBodyLen + 2,
+			requestBodyLimitAction: types.RequestBodyLimitActionReject,
+		},
+		{
+			name:                   "no memory buffer and limit rejects",
+			requestBodyMemoryLimit: 0,
+			requestBodyLimit:       urlencodedBodyLen - 5,
 			requestBodyLimitAction: types.RequestBodyLimitActionReject,
 			shouldInterrupt:        true,
 		},
 		{
-			name:                   "limit partial processing",
-			requestBodyLimit:       11,
+			name:                   "memory buffer and limit rejects",
+			requestBodyMemoryLimit: urlencodedBodyLen / 2,
+			requestBodyLimit:       urlencodedBodyLen - 5,
+			requestBodyLimitAction: types.RequestBodyLimitActionReject,
+			shouldInterrupt:        true,
+		},
+		{
+			name:                   "no memory buffer and limit partial processing",
+			requestBodyMemoryLimit: 0,
+			requestBodyLimit:       urlencodedBodyLen - 1,
+			requestBodyLimitAction: types.RequestBodyLimitActionProcessPartial,
+		},
+		{
+			name:                   "memory buffer and limit partial processing",
+			requestBodyMemoryLimit: urlencodedBodyLen / 2,
+			requestBodyLimit:       urlencodedBodyLen - 1,
 			requestBodyLimitAction: types.RequestBodyLimitActionProcessPartial,
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			urlencoded := "some=result&second=data"
-			// xml := "<test><content>test</content></test>"
-			tx := NewWAF().NewTransaction()
-			tx.RequestBodyAccess = true
-			tx.RequestBodyLimit = testCase.requestBodyLimit
-			tx.WAF.RequestBodyLimitAction = testCase.requestBodyLimitAction
+			waf := NewWAF()
+			waf.RuleEngine = types.RuleEngineOn
+			waf.RequestBodyAccess = true
+			waf.RequestBodyLimit = int64(testCase.requestBodyLimit)
+			waf.RequestBodyInMemoryLimit = int64(testCase.requestBodyMemoryLimit)
+			waf.RequestBodyLimitAction = testCase.requestBodyLimitAction
 
+			tx := waf.NewTransaction()
 			tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
-			if _, err := tx.RequestBodyBuffer.Write([]byte(urlencoded)); err != nil {
-				t.Errorf("Failed to write body buffer: %s", err.Error())
+
+			it := tx.ProcessRequestHeaders()
+			if it != nil {
+				t.Fatal("Unexpected interruption on headers")
 			}
-			tx.ProcessRequestHeaders()
-			if _, err := tx.ProcessRequestBody(); err != nil {
-				t.Errorf("Failed to process request body: %s", err.Error())
+
+			var err error
+			if it, _, err = tx.WriteRequestBody([]byte(urlencodedBody)); err != nil {
+				t.Errorf("Failed to write body buffer: %s", err.Error())
 			}
 
 			if testCase.shouldInterrupt {
-				if tx.interruption == nil {
-					t.Error("expected interruption")
+				if it == nil {
+					t.Fatal("Expected interruption, got nil")
 				}
 			} else {
+				it, err := tx.ProcessRequestBody()
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if it != nil {
+					t.Fatalf("Unexpected interruption")
+				}
+
 				val := tx.variables.argsPost.Get("some")
 				if len(val) != 1 || val[0] != "result" {
-					t.Error("Failed to set url encoded post data")
+					t.Errorf("Failed to set urlencoded POST data with arguments: \"%s\"", strings.Join(val, "\", \""))
 				}
 			}
 
@@ -408,7 +455,7 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 	tx.ForceRequestBodyVariable = true
 	tx.AddRequestHeader("content-type", "text/plain")
 	tx.AddRequestHeader("content-length", "7")
-	if _, err := tx.RequestBodyBuffer.Write([]byte("test123")); err != nil {
+	if _, err := tx.requestBodyBuffer.Write([]byte("test123")); err != nil {
 		t.Error("Failed to write request body buffer")
 	}
 	if _, err := tx.ProcessRequestBody(); err != nil {
@@ -563,7 +610,7 @@ func TestTxReqBodyForce(t *testing.T) {
 	tx := waf.NewTransaction()
 	tx.RequestBodyAccess = true
 	tx.ForceRequestBodyVariable = true
-	if _, err := tx.RequestBodyBuffer.Write([]byte("test")); err != nil {
+	if _, err := tx.requestBodyBuffer.Write([]byte("test")); err != nil {
 		t.Error(err)
 	}
 	if _, err := tx.ProcessRequestBody(); err != nil {
@@ -579,7 +626,7 @@ func TestTxReqBodyForceNegative(t *testing.T) {
 	tx := waf.NewTransaction()
 	tx.RequestBodyAccess = true
 	tx.ForceRequestBodyVariable = false
-	if _, err := tx.RequestBodyBuffer.Write([]byte("test")); err != nil {
+	if _, err := tx.requestBodyBuffer.Write([]byte("test")); err != nil {
 		t.Error(err)
 	}
 	if _, err := tx.ProcessRequestBody(); err != nil {
