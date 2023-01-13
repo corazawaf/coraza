@@ -956,7 +956,7 @@ Content-Type: application/octet-stream
 
 BINARYDATA
 ------WebKitFormBoundaryABCDEFGIJKLMNOPQ--`)
-	it, _, err := tx.WriteRequestBodyFrom(body)
+	it, _, err := tx.ReadRequestBodyFrom(body)
 	if err != nil {
 		t.Error(err)
 		return

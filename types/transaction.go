@@ -84,7 +84,7 @@ type Transaction interface {
 	// Remember to check for a possible intervention.
 	ProcessRequestBody() (*Interruption, error)
 
-	// WriteRequestBodyFrom attempts to write data into the body up to the buffer limit and
+	// ReadRequestBodyFrom attempts to write data into the body up to the buffer limit and
 	// returns an interruption if the body is bigger than the limit and the action is to
 	// reject. This is specially convenient to resolve an interruption before copying
 	// the body into the request body buffer.
@@ -92,13 +92,13 @@ type Transaction interface {
 	// It returns the corresponding interruption, the number of bytes written an error if any.
 	WriteRequestBody(b []byte) (*Interruption, int, error)
 
-	// WriteRequestBodyFrom attempts to write data into the body up to the buffer limit and
+	// ReadRequestBodyFrom attempts to write data into the body up to the buffer limit and
 	// returns an interruption if the body is bigger than the limit and the action is to
 	// reject. This is specially convenient to resolve an interruption before copying
 	// the body into the request body buffer.
 	//
 	// It returns the corresponding interruption, the number of bytes written an error if any.
-	WriteRequestBodyFrom(io.Reader) (*Interruption, int, error)
+	ReadRequestBodyFrom(io.Reader) (*Interruption, int, error)
 
 	// AddResponseHeader Adds a response header variable
 	//

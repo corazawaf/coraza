@@ -59,7 +59,7 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 		// body inspection, otherwise we just let the request follow its
 		// regular flow.
 		if req.Body != nil && req.Body != http.NoBody {
-			in, _, err := tx.WriteRequestBodyFrom(req.Body)
+			in, _, err := tx.ReadRequestBodyFrom(req.Body)
 			if err != nil {
 				return nil, fmt.Errorf("failed to append request body: %s", err.Error())
 			}

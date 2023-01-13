@@ -447,13 +447,24 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 		ct, _, _ = strings.Cut(ctcol[0], ";")
 	}
 	for scanner.Scan() {
-		if _, err := tx.requestBodyBuffer.Write(scanner.Bytes()); err != nil {
+		it, _, err := tx.WriteRequestBody(scanner.Bytes())
+		if err != nil {
 			return nil, fmt.Errorf("cannot write to request body to buffer: %s", err.Error())
 		}
+
+		if it != nil {
+			return it, nil
+		}
+
 		// urlencoded cannot end with CRLF
 		if ct != "application/x-www-form-urlencoded" {
-			if _, err := tx.requestBodyBuffer.Write([]byte{'\r', '\n'}); err != nil {
+			it, _, err := tx.WriteRequestBody([]byte{'\r', '\n'})
+			if err != nil {
 				return nil, fmt.Errorf("cannot write to request body to buffer: %s", err.Error())
+			}
+
+			if it != nil {
+				return it, nil
 			}
 		}
 	}
@@ -770,6 +781,8 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 	}
 
 	if tx.RequestBodyLimit == tx.requestBodyBuffer.length {
+		// tx.RequestBodyLimit will never be zero so if this happened, we have an
+		// interruption for sure.
 		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
 			return tx.interruption, 0, nil
 		}
@@ -804,9 +817,9 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 	return nil, int(w), nil
 }
 
-// ProcessRequestBodySize sets the maximum number of bytes that can be read from the
-// request body.
-func (tx *Transaction) WriteRequestBodyFrom(r io.Reader) (*types.Interruption, int, error) {
+// ReadRequestBodyFrom writes bytes from a reader into the request body
+// it returns an interuption if the writing bytes go beyond the request body limit
+func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, int, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
 		return nil, 0, nil
 	}
@@ -846,6 +859,18 @@ func (tx *Transaction) WriteRequestBodyFrom(r io.Reader) (*types.Interruption, i
 	w, err := io.CopyN(tx.requestBodyBuffer, r, writingBytes)
 	if err != nil && err != io.EOF {
 		return nil, 0, err
+	}
+
+	if tx.requestBodyBuffer.length == tx.RequestBodyLimit {
+		tx.variables.inboundErrorData.Set("1")
+		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
+			// We interrupt this transaction in case RequestBodyLimitAction is Reject
+			tx.interruption = &types.Interruption{
+				Status: 403,
+				Action: "deny",
+			}
+			return tx.interruption, 0, nil
+		}
 	}
 
 	return nil, int(w), nil
