@@ -769,6 +769,16 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 		return nil, 0, nil
 	}
 
+	if tx.RequestBodyLimit == tx.requestBodyBuffer.length {
+		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
+			return tx.interruption, 0, nil
+		}
+
+		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
+			return nil, 0, nil
+		}
+	}
+
 	writingBytes := int64(len(b))
 	if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
 		tx.variables.inboundErrorData.Set("1")
@@ -799,6 +809,16 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 func (tx *Transaction) WriteRequestBodyFrom(r io.Reader) (*types.Interruption, int, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
 		return nil, 0, nil
+	}
+
+	if tx.RequestBodyLimit == tx.requestBodyBuffer.length {
+		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
+			return tx.interruption, 0, nil
+		}
+
+		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
+			return nil, 0, nil
+		}
 	}
 
 	var writingBytes int64
@@ -879,10 +899,6 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 				Action: "deny",
 			}
 			return tx.interruption, nil
-		}
-
-		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
-			// We do nothing as requestBodyBuffer is not bigger than the limit
 		}
 	}
 
