@@ -343,14 +343,15 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 	tx.variables.requestHeadersNames.AddUniqueCS(keyl, key, keyl)
 	tx.variables.requestHeaders.AddCS(keyl, key, value)
 
-	if keyl == "content-type" {
+	switch keyl {
+	case "content-type":
 		val := strings.ToLower(value)
 		if val == "application/x-www-form-urlencoded" {
 			tx.variables.reqbodyProcessor.Set("URLENCODED")
 		} else if strings.HasPrefix(val, "multipart/form-data") {
 			tx.variables.reqbodyProcessor.Set("MULTIPART")
 		}
-	} else if keyl == "cookie" {
+	case "cookie":
 		// Cookies use the same syntax as GET params but with semicolon (;) separator
 		values := urlutil.ParseQuery(value, ';')
 		for k, vr := range values {
@@ -360,6 +361,9 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 				tx.variables.requestCookies.AddCS(kl, k, v)
 			}
 		}
+	case "host":
+		// Retrieving from the host header the virtual host to populate serverName
+		tx.variables.serverName.Set(strings.Split(value, ":")[0])
 	}
 }
 
