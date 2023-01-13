@@ -14,6 +14,7 @@ import (
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
+	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/macro"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -492,10 +493,6 @@ func TestTxVariablesExceptions(t *testing.T) {
 	}
 }
 
-func TestAuditLogMessages(t *testing.T) {
-
-}
-
 func TestTransactionSyncPool(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
@@ -792,4 +789,82 @@ func BenchmarkMacro(b *testing.B) {
 			}
 		})
 	}
+}
+
+type inspectableLogger struct {
+	entries []string
+}
+
+func (l *inspectableLogger) Write(p []byte) (n int, err error) {
+	l.entries = append(l.entries, string(p))
+	return len(p), nil
+}
+
+func (l *inspectableLogger) Close() error {
+	l.entries = nil
+	return nil
+}
+
+func TestProcessorsIdempotency(t *testing.T) {
+	l := &inspectableLogger{}
+
+	waf := NewWAF()
+	waf.Logger.SetOutput(l)
+	waf.Logger.SetLevel(loggers.LogLevelError)
+
+	expectedInterruption := &types.Interruption{
+		RuleID: 123,
+	}
+
+	tx := waf.NewTransaction()
+	tx.interruption = expectedInterruption
+
+	testCases := map[string]func(tx *Transaction) *types.Interruption{
+		"ProcessRequestHeaders": func(tx *Transaction) *types.Interruption {
+			return tx.ProcessRequestHeaders()
+		},
+		"ProcessRequestBody": func(tx *Transaction) *types.Interruption {
+			it, err := tx.ProcessRequestBody()
+			if err != nil {
+				t.Fatal("unexpected error when processing request body")
+			}
+			return it
+		},
+		"ProcessResponseHeaders": func(tx *Transaction) *types.Interruption {
+			return tx.ProcessResponseHeaders(200, "HTTP/1")
+		},
+		"ProcessResponseBody": func(tx *Transaction) *types.Interruption {
+			it, err := tx.ProcessResponseBody()
+			if err != nil {
+				t.Fatal("unexpected error when processing response body")
+			}
+			return it
+		},
+	}
+
+	for processor, tCase := range testCases {
+		t.Run(processor, func(t *testing.T) {
+			it := tCase(tx)
+			if it == nil {
+				t.Fatal("expected interruption")
+			}
+
+			if it != expectedInterruption {
+				t.Fatal("unexpected interruption")
+			}
+
+			if want, have := 1, len(l.entries); want != have {
+				t.Fatalf("unexpected number of log entries, want %d, have %d", want, have)
+			}
+
+			expectedMessage := fmt.Sprintf("[ERROR] Calling %s but there is a prexisting interruption\n", processor)
+
+			if want, have := expectedMessage, l.entries[0]; want != have {
+				t.Fatalf("unexpected message, want %q, have %q", want, have)
+			}
+
+			l.Close()
+		})
+	}
+
 }
