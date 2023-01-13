@@ -84,7 +84,7 @@ type Transaction interface {
 	// Remember to check for a possible intervention.
 	ProcessRequestBody() (*Interruption, error)
 
-	// ReadRequestBodyFrom attempts to write data into the body up to the buffer limit and
+	// WriteRequestBody attempts to write data into the body up to the buffer limit and
 	// returns an interruption if the body is bigger than the limit and the action is to
 	// reject. This is specially convenient to resolve an interruption before copying
 	// the body into the request body buffer.
