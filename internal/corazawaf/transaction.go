@@ -747,7 +747,7 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 	}
 
 	if tx.interruption != nil {
-		tx.WAF.Logger.Error("Calling ProcessRequestHeaders but there is a prexisting interruption")
+		tx.WAF.Logger.Error("Calling ProcessRequestHeaders but there is a preexisting interruption")
 		return tx.interruption
 	}
 
@@ -772,7 +772,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	}
 
 	if tx.interruption != nil {
-		tx.WAF.Logger.Error("Calling ProcessRequestBody but there is a prexisting interruption")
+		tx.WAF.Logger.Error("Calling ProcessRequestBody but there is a preexisting interruption")
 		return tx.interruption, nil
 	}
 
@@ -857,7 +857,7 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Int
 	}
 
 	if tx.interruption != nil {
-		tx.WAF.Logger.Error("Calling ProcessResponseHeaders but there is a prexisting interruption")
+		tx.WAF.Logger.Error("Calling ProcessResponseHeaders but there is a preexisting interruption")
 		return tx.interruption
 	}
 
@@ -897,7 +897,7 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 	}
 
 	if tx.interruption != nil {
-		tx.WAF.Logger.Error("Calling ProcessResponseBody but there is a prexisting interruption")
+		tx.WAF.Logger.Error("Calling ProcessResponseBody but there is a preexisting interruption")
 		return tx.interruption, nil
 	}
 

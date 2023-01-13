@@ -857,7 +857,7 @@ func TestProcessorsIdempotency(t *testing.T) {
 				t.Fatalf("unexpected number of log entries, want %d, have %d", want, have)
 			}
 
-			expectedMessage := fmt.Sprintf("[ERROR] Calling %s but there is a prexisting interruption\n", processor)
+			expectedMessage := fmt.Sprintf("[ERROR] Calling %s but there is a preexisting interruption\n", processor)
 
 			if want, have := expectedMessage, l.entries[0]; want != have {
 				t.Fatalf("unexpected message, want %q, have %q", want, have)
