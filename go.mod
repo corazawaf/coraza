@@ -32,3 +32,5 @@ require (
 	golang.org/x/sys v0.0.0-20220913175220-63ea55921009 // indirect
 	golang.org/x/tools v0.1.12 // indirect
 )
+
+replace github.com/corazawaf/libinjection-go => github.com/anuraaga/libinjection-go v0.0.0-20230113045242-08ebd556b8eb

@@ -104,14 +104,32 @@ func Coverage() error {
 // Fuzz runs fuzz tests
 func Fuzz() error {
 	// Go must be run once per test when fuzzing
-	transformationTests := []string{
-		"FuzzB64Decode",
-		"FuzzCMDLine",
+	tests := []struct {
+		pkg   string
+		tests []string
+	}{
+		{
+			pkg: "./operators",
+			tests: []string{
+				"FuzzSQLi",
+				"FuzzXSS",
+			},
+		},
+		{
+			pkg: "./transformations",
+			tests: []string{
+				"FuzzB64Decode",
+				"FuzzCMDLine",
+			},
+		},
 	}
-	for _, test := range transformationTests {
-		fmt.Println("Running", test)
-		if err := sh.RunV("go", "test", "-fuzz="+test, "-fuzztime=2m", "./transformations"); err != nil {
-			return err
+
+	for _, pkgTests := range tests {
+		for _, test := range pkgTests.tests {
+			fmt.Println("Running", test)
+			if err := sh.RunV("go", "test", "-fuzz="+test, "-fuzztime=2m", pkgTests.pkg); err != nil {
+				return err
+			}
 		}
 	}
 
