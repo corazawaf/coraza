@@ -745,8 +745,11 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 		// Rule engine is disabled
 		return nil
 	}
-
-	if tx.interruption != nil {
+	if tx.LastPhase >= types.PhaseRequestHeaders {
+		// Phase already evaluated
+		tx.WAF.Logger.Error("ProcessRequestHeaders has already been called")
+		return tx.interruption
+	} else if tx.interruption != nil {
 		tx.WAF.Logger.Error("Calling ProcessRequestHeaders but there is a preexisting interruption")
 		return tx.interruption
 	}
@@ -771,7 +774,11 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		return nil, nil
 	}
 
-	if tx.interruption != nil {
+	if tx.LastPhase >= types.PhaseRequestBody {
+		// Phase already evaluated
+		tx.WAF.Logger.Error("ProcessRequestBody has already been called")
+		return tx.interruption, nil
+	} else if tx.interruption != nil {
 		tx.WAF.Logger.Error("Calling ProcessRequestBody but there is a preexisting interruption")
 		return tx.interruption, nil
 	}
@@ -856,7 +863,11 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Int
 		return nil
 	}
 
-	if tx.interruption != nil {
+	if tx.LastPhase >= types.PhaseResponseHeaders {
+		// Phase already evaluated
+		tx.WAF.Logger.Error("ProcessResponseHeaders has already been called")
+		return tx.interruption
+	} else if tx.interruption != nil {
 		tx.WAF.Logger.Error("Calling ProcessResponseHeaders but there is a preexisting interruption")
 		return tx.interruption
 	}
@@ -896,7 +907,11 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		return nil, nil
 	}
 
-	if tx.interruption != nil {
+	if tx.LastPhase >= types.PhaseResponseBody {
+		// Phase already evaluated
+		tx.WAF.Logger.Error("ProcessResponseBody has already been called")
+		return tx.interruption, nil
+	} else if tx.interruption != nil {
 		tx.WAF.Logger.Error("Calling ProcessResponseBody but there is a preexisting interruption")
 		return tx.interruption, nil
 	}
