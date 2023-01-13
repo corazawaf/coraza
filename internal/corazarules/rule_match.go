@@ -120,7 +120,6 @@ func (mr *MatchedRule) Rule() types.RuleMetadata {
 func (mr MatchedRule) details(matchData types.MatchData) string {
 	log := &strings.Builder{}
 
-	resolvedIP := ""
 	msg := matchData.Message()
 	data := matchData.Data()
 	if len(msg) > 200 {
@@ -136,7 +135,7 @@ func (mr MatchedRule) details(matchData types.MatchData) string {
 		log.WriteString(fmt.Sprintf(" [tag %q]", t))
 	}
 	log.WriteString(fmt.Sprintf(" [hostname %q] [uri %q] [unique_id %q]",
-		resolvedIP, mr.URI_, mr.TransactionID_))
+		mr.ServerIPAddress_, mr.URI_, mr.TransactionID_))
 	return log.String()
 }
 
