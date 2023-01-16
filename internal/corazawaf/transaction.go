@@ -750,7 +750,7 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 		tx.WAF.Logger.Error("ProcessRequestHeaders has already been called")
 		return tx.interruption
 	}
-	
+
 	if tx.interruption != nil {
 		tx.WAF.Logger.Error("Calling ProcessRequestHeaders but there is a preexisting interruption")
 		return tx.interruption
@@ -781,7 +781,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		tx.WAF.Logger.Error("ProcessRequestBody has already been called")
 		return tx.interruption, nil
 	}
-	
+
 	if tx.interruption != nil {
 		tx.WAF.Logger.Error("Calling ProcessRequestBody but there is a preexisting interruption")
 		return tx.interruption, nil
@@ -871,8 +871,8 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Int
 		// Phase already evaluated
 		tx.WAF.Logger.Error("ProcessResponseHeaders has already been called")
 		return tx.interruption
-	} 
-	
+	}
+
 	if tx.interruption != nil {
 		tx.WAF.Logger.Error("Calling ProcessResponseHeaders but there is a preexisting interruption")
 		return tx.interruption
@@ -918,7 +918,7 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		tx.WAF.Logger.Error("ProcessResponseBody has already been called")
 		return tx.interruption, nil
 	}
-	
+
 	if tx.interruption != nil {
 		tx.WAF.Logger.Error("Calling ProcessResponseBody but there is a preexisting interruption")
 		return tx.interruption, nil
