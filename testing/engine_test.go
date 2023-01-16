@@ -69,8 +69,15 @@ func TestRequest(t *testing.T) {
 }
 
 func TestResponse(t *testing.T) {
-	waf, _ := coraza.NewWAF(coraza.NewWAFConfig().
-		WithResponseBodyAccess(coraza.NewResponseBodyConfig()))
+	waf, err := coraza.NewWAF(
+		coraza.NewWAFConfig().
+			WithResponseBodyAccess(
+				coraza.NewResponseBodyConfig().WithLimit(10),
+			),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
 	test := NewTest("test", waf)
 	req := buildRequest("POST", "/test")
 	if err := test.SetRawRequest([]byte(req)); err != nil {
