@@ -780,8 +780,15 @@ func setAndReturnBodyLimitInterruption(tx *Transaction) (*types.Interruption, in
 	return tx.interruption, 0, nil
 }
 
+// WriteRequestBody writes bytes from a slice of bytes into the request body,
+// it returns an interuption if the writing bytes go beyond the request body limit.
+// It won't copy the bytes if the body access isn't accesible.
 func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
+		return nil, 0, nil
+	}
+
+	if !tx.RequestBodyAccess {
 		return nil, 0, nil
 	}
 
@@ -825,14 +832,20 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 	return tx.interruption, int(w), err
 }
 
-type Lenger interface {
+// ByteLenger returns the length in bytes of a data stream.
+type ByteLenger interface {
 	Len() int
 }
 
 // ReadRequestBodyFrom writes bytes from a reader into the request body
-// it returns an interuption if the writing bytes go beyond the request body limit
+// it returns an interuption if the writing bytes go beyond the request body limit.
+// It won't read the reader if the body access isn't accesible.
 func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, int, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
+		return nil, 0, nil
+	}
+
+	if !tx.RequestBodyAccess {
 		return nil, 0, nil
 	}
 
@@ -850,7 +863,7 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 		writingBytes          int64
 		runProcessRequestBody = false
 	)
-	if l, ok := r.(Lenger); ok {
+	if l, ok := r.(ByteLenger); ok {
 		writingBytes = int64(l.Len())
 		if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
 			if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
