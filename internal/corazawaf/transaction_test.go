@@ -5,6 +5,7 @@ package corazawaf
 
 import (
 	"fmt"
+	"io"
 	"regexp"
 	"runtime/debug"
 	"strconv"
@@ -137,12 +138,17 @@ func TestTxResponse(t *testing.T) {
 	*/
 }
 
-var bodyWriters = map[string]func(tx *Transaction, body string) (*types.Interruption, int, error){
+var requestBodyWriters = map[string]func(tx *Transaction, body string) (*types.Interruption, int, error){
 	"WriteRequestBody": func(tx *Transaction, body string) (*types.Interruption, int, error) {
 		return tx.WriteRequestBody([]byte(body))
 	},
-	"ReadRequestBodyFrom": func(tx *Transaction, body string) (*types.Interruption, int, error) {
+	"ReadRequestBodyFromKnownLen": func(tx *Transaction, body string) (*types.Interruption, int, error) {
 		return tx.ReadRequestBodyFrom(strings.NewReader(body))
+	},
+	"ReadRequestBodyFromUnknownLen": func(tx *Transaction, body string) (*types.Interruption, int, error) {
+		return tx.ReadRequestBodyFrom(struct{ io.Reader }{
+			strings.NewReader(body),
+		})
 	},
 }
 
@@ -159,68 +165,82 @@ func TestWriteRequestBody(t *testing.T) {
 		shouldInterrupt        bool
 	}{
 		{
-			name:                   "limit not reached",
+			name:                   "LimitNotReached",
 			requestBodyLimit:       urlencodedBodyLen + 2,
 			requestBodyLimitAction: types.RequestBodyLimitAction(-1),
 		},
 		{
-			name:                   "limit reached and rejects",
+			name:                   "LimitReachedAndRejects",
 			requestBodyLimit:       urlencodedBodyLen - 3,
 			requestBodyLimitAction: types.RequestBodyLimitActionReject,
 			shouldInterrupt:        true,
 		},
 		{
-			name:                   "limit reached and partial processing",
+			name:                   "LimitReachedAndPartialProcessing",
 			requestBodyLimit:       urlencodedBodyLen - 3,
 			requestBodyLimitAction: types.RequestBodyLimitActionProcessPartial,
 		},
 	}
 
+	urlencodedBodyLenThird := urlencodedBodyLen / 3
+	bodyChunks := map[string][]string{
+		"BodyInOneShot":     {urlencodedBody},
+		"BodyInThreeChunks": {urlencodedBody[0:urlencodedBodyLenThird], urlencodedBody[urlencodedBodyLenThird : 2*urlencodedBodyLenThird], urlencodedBody[2*urlencodedBodyLenThird:]},
+	}
+
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			for name, w := range bodyWriters {
+			for name, writeRequestBody := range requestBodyWriters {
 				t.Run(name, func(t *testing.T) {
-					waf := NewWAF()
-					waf.RuleEngine = types.RuleEngineOn
-					waf.RequestBodyAccess = true
-					waf.RequestBodyLimit = int64(testCase.requestBodyLimit)
-					waf.RequestBodyInMemoryLimit = int64(testCase.requestBodyLimit)
-					waf.RequestBodyLimitAction = testCase.requestBodyLimitAction
+					for name, chunks := range bodyChunks {
+						t.Run(name, func(t *testing.T) {
+							waf := NewWAF()
+							waf.RuleEngine = types.RuleEngineOn
+							waf.RequestBodyAccess = true
+							waf.RequestBodyLimit = int64(testCase.requestBodyLimit)
+							waf.RequestBodyInMemoryLimit = int64(testCase.requestBodyLimit)
+							waf.RequestBodyLimitAction = testCase.requestBodyLimitAction
 
-					tx := waf.NewTransaction()
-					tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
+							tx := waf.NewTransaction()
+							tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
 
-					it := tx.ProcessRequestHeaders()
-					if it != nil {
-						t.Fatal("Unexpected interruption on headers")
+							it := tx.ProcessRequestHeaders()
+							if it != nil {
+								t.Fatal("Unexpected interruption on headers")
+							}
+
+							var err error
+
+							for _, c := range chunks {
+								if it, _, err = writeRequestBody(tx, c); err != nil {
+									t.Errorf("Failed to write body buffer: %s", err.Error())
+								}
+							}
+
+							if testCase.shouldInterrupt {
+								if it == nil {
+									t.Fatal("Expected interruption, got nil")
+								}
+							} else {
+								it, err := tx.ProcessRequestBody()
+								if err != nil {
+									t.Fatal(err)
+								}
+
+								if it != nil {
+									t.Fatalf("Unexpected interruption")
+								}
+
+								val := tx.variables.argsPost.Get("some")
+								if len(val) != 1 || val[0] != "result" {
+									t.Errorf("Failed to set urlencoded POST data with arguments: \"%s\"", strings.Join(val, "\", \""))
+								}
+							}
+
+							_ = tx.Close()
+						})
 					}
 
-					var err error
-					if it, _, err = w(tx, urlencodedBody); err != nil {
-						t.Errorf("Failed to write body buffer: %s", err.Error())
-					}
-
-					if testCase.shouldInterrupt {
-						if it == nil {
-							t.Fatal("Expected interruption, got nil")
-						}
-					} else {
-						it, err := tx.ProcessRequestBody()
-						if err != nil {
-							t.Fatal(err)
-						}
-
-						if it != nil {
-							t.Fatalf("Unexpected interruption")
-						}
-
-						val := tx.variables.argsPost.Get("some")
-						if len(val) != 1 || val[0] != "result" {
-							t.Errorf("Failed to set urlencoded POST data with arguments: \"%s\"", strings.Join(val, "\", \""))
-						}
-					}
-
-					_ = tx.Close()
 				})
 			}
 
@@ -253,14 +273,13 @@ func TestWriteRequestBodyOnLimitReached(t *testing.T) {
 		waf.RequestBodyLimitAction = tCase.requestBodyLimitAction
 
 		t.Run(tName, func(t *testing.T) {
-			for wName, writer := range bodyWriters {
+			for wName, writer := range requestBodyWriters {
 				t.Run(wName, func(t *testing.T) {
 					tx := waf.NewTransaction()
 					_, err := tx.requestBodyBuffer.Write([]byte("ab"))
 					if err != nil {
 						t.Fatalf("unexpected error when writing to body buffer directly: %s", err.Error())
 					}
-
 					tx.interruption = tCase.preexistingInterruption
 
 					it, n, err := writer(tx, "c")
@@ -953,5 +972,4 @@ func TestProcessorsIdempotency(t *testing.T) {
 			l.Close()
 		})
 	}
-
 }

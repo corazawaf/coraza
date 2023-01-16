@@ -771,6 +771,15 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 	return tx.interruption
 }
 
+func setAndReturnBodyLimitInterruption(tx *Transaction) (*types.Interruption, int, error) {
+	tx.variables.inboundErrorData.Set("1")
+	tx.interruption = &types.Interruption{
+		Status: 403,
+		Action: "deny",
+	}
+	return tx.interruption, 0, nil
+}
+
 func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
 		return nil, 0, nil
@@ -788,20 +797,20 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 		}
 	}
 
-	writingBytes := int64(len(b))
+	var (
+		writingBytes          = int64(len(b))
+		runProcessRequestBody = false
+	)
+
 	if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
-		tx.variables.inboundErrorData.Set("1")
 		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
 			// We interrupt this transaction in case RequestBodyLimitAction is Reject
-			tx.interruption = &types.Interruption{
-				Status: 403,
-				Action: "deny",
-			}
-			return tx.interruption, 0, nil
+			return setAndReturnBodyLimitInterruption(tx)
 		}
 
 		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
 			writingBytes = tx.RequestBodyLimit - tx.requestBodyBuffer.length
+			runProcessRequestBody = true
 		}
 	}
 
@@ -810,7 +819,10 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 		return nil, 0, err
 	}
 
-	return nil, int(w), nil
+	if runProcessRequestBody {
+		_, err = tx.ProcessRequestBody()
+	}
+	return tx.interruption, int(w), err
 }
 
 type Lenger interface {
@@ -834,22 +846,20 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 		}
 	}
 
-	var writingBytes int64
+	var (
+		writingBytes          int64
+		runProcessRequestBody = false
+	)
 	if l, ok := r.(Lenger); ok {
 		writingBytes = int64(l.Len())
 		if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
-			tx.variables.inboundErrorData.Set("1")
 			if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
-				// We interrupt this transaction in case RequestBodyLimitAction is Reject
-				tx.interruption = &types.Interruption{
-					Status: 403,
-					Action: "deny",
-				}
-				return tx.interruption, 0, nil
+				return setAndReturnBodyLimitInterruption(tx)
 			}
 
 			if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
 				writingBytes = tx.RequestBodyLimit - tx.requestBodyBuffer.length
+				runProcessRequestBody = true
 			}
 		}
 	} else {
@@ -858,22 +868,24 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 
 	w, err := io.CopyN(tx.requestBodyBuffer, r, writingBytes)
 	if err != nil && err != io.EOF {
-		return nil, 0, err
+		return nil, int(w), err
 	}
 
 	if tx.requestBodyBuffer.length == tx.RequestBodyLimit {
-		tx.variables.inboundErrorData.Set("1")
 		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
-			// We interrupt this transaction in case RequestBodyLimitAction is Reject
-			tx.interruption = &types.Interruption{
-				Status: 403,
-				Action: "deny",
-			}
-			return tx.interruption, 0, nil
+			return setAndReturnBodyLimitInterruption(tx)
+		}
+
+		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
+			runProcessRequestBody = true
 		}
 	}
 
-	return nil, int(w), nil
+	err = nil
+	if runProcessRequestBody {
+		_, err = tx.ProcessRequestBody()
+	}
+	return tx.interruption, int(w), err
 }
 
 // ProcessRequestBody Performs the request body (if any)
@@ -912,19 +924,6 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	reader, err := tx.requestBodyBuffer.Reader()
 	if err != nil {
 		return nil, err
-	}
-
-	// Chunked requests will always be written to a temporary file
-	if tx.requestBodyBuffer.length >= tx.RequestBodyLimit {
-		tx.variables.inboundErrorData.Set("1")
-		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
-			// We interrupt this transaction in case RequestBodyLimitAction is Reject
-			tx.interruption = &types.Interruption{
-				Status: 403,
-				Action: "deny",
-			}
-			return tx.interruption, nil
-		}
 	}
 
 	rbp := tx.variables.reqbodyProcessor.String()
