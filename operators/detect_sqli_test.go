@@ -1,8 +1,12 @@
+// Copyright 2023 Juan Pablo Tosso and the OWASP Coraza contributors
+// SPDX-License-Identifier: Apache-2.0
+
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 var sqliTests = []string{
