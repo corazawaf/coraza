@@ -18,14 +18,14 @@ type expirevarFn struct {
 }
 
 func (a *expirevarFn) Init(r rules.RuleMetadata, data string) error {
-	spl := strings.SplitN(data, "=", 2)
-	a.ttl, _ = strconv.Atoi(spl[1])
-	spl = strings.SplitN(spl[0], ".", 2)
-	if len(spl) != 2 {
+	v, ttl, _ := strings.Cut(data, "=")
+	col, key, ok := strings.Cut(v, ".")
+	if !ok {
 		return fmt.Errorf("expirevar must contain key and value (syntax expirevar:key=value)")
 	}
-	a.collection = spl[0]
-	a.key = spl[1]
+	a.ttl, _ = strconv.Atoi(ttl)
+	a.collection = col
+	a.key = key
 	return nil
 }
 
