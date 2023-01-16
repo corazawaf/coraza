@@ -18,15 +18,15 @@ type setenvFn struct {
 }
 
 func (a *setenvFn) Init(r rules.RuleMetadata, data string) error {
-	spl := strings.SplitN(data, "=", 2)
-	if len(spl) != 2 {
+	key, val, ok := strings.Cut(data, "=")
+	if !ok {
 		return fmt.Errorf("invalid key value for setvar")
 	}
-	a.key = spl[0]
-	m, err := macro.NewMacro(spl[1])
+	m, err := macro.NewMacro(val)
 	if err != nil {
 		return err
 	}
+	a.key = key
 	a.value = m
 	return nil
 }
