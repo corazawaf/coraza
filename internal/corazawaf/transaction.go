@@ -5,6 +5,7 @@ package corazawaf
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -744,6 +745,12 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 		// Rule engine is disabled
 		return nil
 	}
+
+	if tx.interruption != nil {
+		tx.WAF.Logger.Error("Calling ProcessRequestHeaders but there is a preexisting interruption")
+		return tx.interruption
+	}
+
 	tx.WAF.Rules.Eval(types.PhaseRequestHeaders, tx)
 	return tx.interruption
 }
@@ -763,6 +770,12 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
 		return nil, nil
 	}
+
+	if tx.interruption != nil {
+		tx.WAF.Logger.Error("Calling ProcessRequestBody but there is a preexisting interruption")
+		return tx.interruption, nil
+	}
+
 	// we won't process empty request bodies or disabled RequestBodyAccess
 	if !tx.RequestBodyAccess || tx.RequestBodyBuffer.Size() == 0 {
 		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
@@ -815,7 +828,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	}
 	bodyprocessor, err := bodyprocessors.Get(rbp)
 	if err != nil {
-		tx.generateReqbodyError(fmt.Errorf("Invalid body processor"))
+		tx.generateReqbodyError(errors.New("invalid body processor"))
 		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.interruption, nil
 	}
@@ -839,13 +852,18 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 //
 // note: Remember to check for a possible intervention.
 func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Interruption {
-	c := strconv.Itoa(code)
-	tx.variables.responseStatus.Set(c)
-	tx.variables.responseProtocol.Set(proto)
-
 	if tx.RuleEngine == types.RuleEngineOff {
 		return nil
 	}
+
+	if tx.interruption != nil {
+		tx.WAF.Logger.Error("Calling ProcessResponseHeaders but there is a preexisting interruption")
+		return tx.interruption
+	}
+
+	c := strconv.Itoa(code)
+	tx.variables.responseStatus.Set(c)
+	tx.variables.responseProtocol.Set(proto)
 
 	tx.WAF.Rules.Eval(types.PhaseResponseHeaders, tx)
 	return tx.interruption
@@ -875,8 +893,14 @@ func (tx *Transaction) ResponseBodyWriter() io.Writer {
 // note Remember to check for a possible intervention.
 func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
+		return nil, nil
+	}
+
+	if tx.interruption != nil {
+		tx.WAF.Logger.Error("Calling ProcessResponseBody but there is a preexisting interruption")
 		return tx.interruption, nil
 	}
+
 	if !tx.ResponseBodyAccess || !tx.IsResponseBodyProcessable() {
 		tx.WAF.Logger.Debug("[%s] Skipping response body processing (Access: %t)", tx.id, tx.ResponseBodyAccess)
 		tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
