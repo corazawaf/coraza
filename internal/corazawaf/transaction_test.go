@@ -295,11 +295,58 @@ func TestWriteRequestBodyOnLimitReached(t *testing.T) {
 						t.Fatalf("unexpected number of bytes written")
 					}
 
+					_ = tx.Close()
 				})
 			}
 		})
 	}
+}
 
+func TestWriteRequestBodyIsNopWhenBodyIsNotAccesible(t *testing.T) {
+	testCases := []struct {
+		ruleEngine        types.RuleEngineStatus
+		requestBodyAccess bool
+	}{
+		{
+			ruleEngine: types.RuleEngineOff,
+		},
+		{
+			ruleEngine:        types.RuleEngineOn,
+			requestBodyAccess: false,
+		},
+	}
+
+	for _, tCase := range testCases {
+		t.Run(fmt.Sprintf(
+			"ruleEngine = %s and requestBodyAccess = %t",
+			tCase.ruleEngine.String(),
+			tCase.requestBodyAccess,
+		), func(t *testing.T) {
+			waf := NewWAF()
+			waf.RuleEngine = tCase.ruleEngine
+			waf.RequestBodyAccess = tCase.requestBodyAccess
+
+			for wName, writer := range requestBodyWriters {
+				t.Run(wName, func(t *testing.T) {
+					tx := waf.NewTransaction()
+					it, n, err := writer(tx, "abc")
+					if err != nil {
+						t.Fatalf("unexpected error: %s", err.Error())
+					}
+
+					if it != nil {
+						t.Fatalf("unexpected interruption")
+					}
+
+					if n != 0 {
+						t.Fatalf("unexpected number of bytes written")
+					}
+
+					_ = tx.Close()
+				})
+			}
+		})
+	}
 }
 
 func TestResponseHeader(t *testing.T) {
