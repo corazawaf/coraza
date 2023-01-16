@@ -376,8 +376,8 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 
 	// Most headers can be managed like that
 	if keyl == "content-type" {
-		spl := strings.SplitN(value, ";", 2)
-		tx.variables.responseContentType.Set(spl[0])
+		name, _, _ := strings.Cut(value, ";")
+		tx.variables.responseContentType.Set(name)
 	}
 }
 
@@ -430,12 +430,12 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 			// It should mean we are now in the request body...
 			break
 		}
-		spl := strings.SplitN(l, ":", 2)
-		if len(spl) != 2 {
+		key, val, ok := strings.Cut(l, ":")
+		if !ok {
 			return nil, fmt.Errorf("invalid request header")
 		}
-		k := strings.Trim(spl[0], " ")
-		v := strings.Trim(spl[1], " ")
+		k := strings.Trim(key, " ")
+		v := strings.Trim(val, " ")
 		tx.AddRequestHeader(k, v)
 	}
 	if it := tx.ProcessRequestHeaders(); it != nil {
@@ -444,7 +444,7 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 	ctcol := tx.variables.requestHeaders.Get("content-type")
 	ct := ""
 	if len(ctcol) > 0 {
-		ct = strings.Split(ctcol[0], ";")[0]
+		ct, _, _ = strings.Cut(ctcol[0], ";")
 	}
 	for scanner.Scan() {
 		if _, err := tx.RequestBodyBuffer.Write(scanner.Bytes()); err != nil {

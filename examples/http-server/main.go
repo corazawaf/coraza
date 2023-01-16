@@ -21,8 +21,8 @@ func exampleHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if h := os.Getenv("RESPONSE_HEADERS"); h != "" {
-		kv := strings.Split(h, ":")
-		w.Header().Set(kv[0], kv[1])
+		key, val, _ := strings.Cut(h, ":")
+		w.Header().Set(key, val)
 	}
 
 	// The server generates the response
