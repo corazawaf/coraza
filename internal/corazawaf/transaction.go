@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"mime"
+	"net"
 	"net/url"
 	"path/filepath"
 	"strconv"
@@ -361,9 +362,18 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 				tx.variables.requestCookies.AddCS(kl, k, v)
 			}
 		}
-	case "host":
-		// Retrieving from the host header the virtual host to populate serverName
-		tx.variables.serverName.Set(strings.Split(value, ":")[0])
+	case "host", ":authority":
+		// Retrieving the virtual host from the host header to populate serverName
+		host, _, err := net.SplitHostPort(value)
+		if err != nil {
+			// Missing port or bad format, anyways serverName is populated with value
+			tx.WAF.Logger.Debug("failed to parse %s header: %v", keyl, err)
+			host = value
+		}
+		if tx.variables.serverName.String() != "" && tx.variables.serverName.String() != host {
+			tx.WAF.Logger.Error("Setting serverName, but it was already populated")
+		}
+		tx.variables.serverName.Set(host)
 	}
 }
 
