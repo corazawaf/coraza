@@ -73,7 +73,7 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 				return nil, fmt.Errorf("failed to get the request body: %s", err.Error())
 			}
 
-      // Add any remaining bytes beyond the coraza limit to its buffer
+			// Add any remaining bytes beyond the coraza limit to its buffer
 			// It means that the body has been partially processed and did not trigger an interruption
 			body := io.MultiReader(rbr, req.Body)
 			// req.Body is transparently reinizialied with a new io.ReadCloser.
