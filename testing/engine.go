@@ -134,7 +134,7 @@ func (t *Test) SetRequestBody(body interface{}) error {
 	if t.magic {
 		t.RequestHeaders["content-length"] = strconv.Itoa(lbody)
 	}
-	if _, err := t.transaction.RequestBodyWriter().Write([]byte(data)); err != nil {
+	if _, _, err := t.transaction.WriteRequestBody([]byte(data)); err != nil {
 		return err
 	}
 	return nil

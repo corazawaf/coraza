@@ -16,11 +16,31 @@ import (
 // It will handle memory usage for buffering and processing
 // It implements io.Copy(bodyBuffer, someReader) by inherit io.Writer
 type BodyBuffer struct {
-	io.Writer
 	options types.BodyBufferOptions
 	buffer  *bytes.Buffer
 	writer  *os.File
 	length  int64
+}
+
+var (
+	_ io.WriterTo = (*BodyBuffer)(nil)
+	_ io.Writer   = (*BodyBuffer)(nil)
+)
+
+func (br *BodyBuffer) WriteTo(w io.Writer) (int64, error) {
+	if br.writer == nil {
+		return br.buffer.WriteTo(w)
+	}
+
+	b := make([]byte, br.length)
+
+	n, err := br.writer.Read(b)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err = w.Write(b[:n])
+	return int64(n), err
 }
 
 // Write appends data to the body buffer by chunks

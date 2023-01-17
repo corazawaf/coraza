@@ -20,7 +20,7 @@ func TestRequestBodyAccessOff(t *testing.T) {
 	}
 	tx := waf.NewTransaction()
 	tx.ProcessURI("/", "POST", "http/1.1")
-	tx.RequestBodyBuffer.Write([]byte("test=123"))
+	tx.requestBodyBuffer.Write([]byte("test=123"))
 	tx.AddRequestHeader("Content-Type", "application/x-www-form-urlencoded")
 	tx.ProcessRequestHeaders()
 	tx.ProcessRequestBody()
@@ -39,7 +39,7 @@ func TestRequestBodyAccessOn(t *testing.T) {
 	}
 	tx := waf.NewTransaction()
 	tx.ProcessURI("/", "POST", "http/1.1")
-	if _, err := tx.RequestBodyBuffer.Write([]byte("test=123")); err != nil {
+	if _, _, err := tx.WriteRequestBody([]byte("test=123")); err != nil {
 		t.Error(err)
 	}
 	tx.AddRequestHeader("Content-Type", "application/x-www-form-urlencoded")
