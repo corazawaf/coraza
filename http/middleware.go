@@ -8,7 +8,6 @@
 package http
 
 import (
-	"bytes"
 	"io"
 	"net/http"
 	"strconv"
@@ -63,28 +62,21 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 		// body inspection, otherwise we just let the request follow its
 		// regular flow.
 		if req.Body != nil && req.Body != http.NoBody {
-			body, err := io.ReadAll(req.Body)
+			_, err := io.Copy(tx.RequestBodyWriter(), req.Body)
 			if err != nil {
 				return tx.Interruption(), err
 			}
 			_ = req.Body.Close()
-			writtenBytes, err := tx.RequestBodyWriter().Write(body)
-			if err != nil {
-				return tx.Interruption(), err
-			}
-			if writtenBytes < len(body) { // Coraza body limit reached, triggering ProcessBody
-				it, err := tx.ProcessRequestBody()
-				if err != nil || it != nil {
-					return it, nil
-				}
-			}
+
 			reader, err := tx.RequestBodyReader()
 			if err != nil {
 				return tx.Interruption(), err
 			}
+
+			// TODO: add multiReader
 			// Add any remaining bytes beyond the coraza limit to its buffer
 			// It means that the body has been partially processed and did not trigger an interruption
-			reader = io.MultiReader(reader, bytes.NewReader(body[writtenBytes:]))
+
 			// req.Body is transparently reinizialied with a new io.ReadCloser.
 			// The http handler will be able to read it.
 			// Prior to Go 1.19 NopCloser does not implement WriterTo if the reader implements it.

@@ -57,20 +57,8 @@ func (i *rwInterceptor) Write(b []byte) (int, error) {
 	if i.tx.IsResponseBodyAccessible() {
 		// we only buffer the response body if we are going to access
 		// to it, otherwise we just send it to the response writer.
-		writtenBytes, err := i.tx.ResponseBodyWriter().Write(b)
-		if err != nil {
-			return 0, err
-		}
-		if writtenBytes < len(b) { // Coraza response body limit reached, triggering ProcessBody
-			it, err := i.tx.ProcessResponseBody()
-			if err != nil {
-				return 0, err
-			}
-			if it != nil {
-				i.w.WriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode))
-			}
-		}
-		return writtenBytes, err
+		// TODO: rely on tx.ReadResponseBodyFrom
+		return i.tx.ResponseBodyWriter().Write(b)
 	}
 
 	return i.w.Write(b)

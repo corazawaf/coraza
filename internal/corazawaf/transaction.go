@@ -765,7 +765,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		return nil, nil
 	}
 	// we won't process empty request bodies or disabled RequestBodyAccess
-	if !tx.RequestBodyAccess || tx.RequestBodyBuffer.IsEmpty() {
+	if !tx.RequestBodyAccess || tx.RequestBodyBuffer.Size() == 0 {
 		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.interruption, nil
 	}
@@ -780,7 +780,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	}
 
 	// Check if the RequestBodyLimit is reached
-	if tx.RequestBodyBuffer.IsBeyondLimit() {
+	if tx.RequestBodyBuffer.Size() >= tx.RequestBodyLimit {
 		tx.variables.inboundErrorData.Set("1")
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			// We interrupt this transaction in case RequestBodyLimitAction is Reject
@@ -789,6 +789,12 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 				Action: "deny",
 			}
 			return tx.interruption, nil
+		}
+
+		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
+			tx.variables.inboundErrorData.Set("1")
+			// we limit our reader to tx.RequestBodyLimit bytes
+			reader = io.LimitReader(reader, tx.RequestBodyLimit)
 		}
 	}
 
@@ -861,17 +867,29 @@ func (tx *Transaction) ResponseBodyWriter() io.Writer {
 	return tx.ResponseBodyBuffer
 }
 
-// ProcessResponseBody Perform the request body (if any)al to
+// ProcessResponseBody Perform the response body (if any)
+//
+// This method perform the analysis on the request body. It is optional to
 // call that method. If this API consumer already know that there isn't a
 // body for inspect it is recommended to skip this step.
-//
-// This method perform the analysis on the request body. It is option
 //
 // note Remember to check for a possible intervention.
 func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
+		return nil, nil
+	}
+
+	if tx.LastPhase >= types.PhaseResponseBody {
+		// Phase already evaluated
+		tx.WAF.Logger.Error("ProcessResponseBody has already been called")
 		return tx.interruption, nil
 	}
+
+	if tx.interruption != nil {
+		tx.WAF.Logger.Error("Calling ProcessResponseBody but there is a preexisting interruption")
+		return tx.interruption, nil
+	}
+
 	if !tx.ResponseBodyAccess || !tx.IsResponseBodyProcessable() {
 		tx.WAF.Logger.Debug("[%s] Skipping response body processing (Access: %t)", tx.id, tx.ResponseBodyAccess)
 		tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
@@ -889,17 +907,8 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		return tx.interruption, err
 	}
 
-	// Check if the ResponseBodyLimit is reached
-	if tx.ResponseBodyBuffer.IsBeyondLimit() {
+	if tx.ResponseBodyBuffer.Size() >= tx.WAF.ResponseBodyLimit {
 		tx.variables.outboundDataError.Set("1")
-		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionReject {
-			// We interrupt this transaction in case RequestBodyLimitAction is Reject
-			tx.interruption = &types.Interruption{
-				Status: 403,
-				Action: "deny",
-			}
-			return tx.interruption, nil
-		}
 	}
 
 	tx.variables.responseContentLength.Set(strconv.FormatInt(length, 10))

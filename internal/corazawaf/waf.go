@@ -177,17 +177,13 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	// based on the presence of RequestBodyBuffer.
 	if tx.RequestBodyBuffer == nil {
 		tx.RequestBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
-			TmpPath:            w.TmpDir,
-			MemoryLimit:        w.RequestBodyInMemoryLimit,
-			Limit:              w.RequestBodyLimit,
-			DiscardOnBodyLimit: w.RequestBodyLimitAction == types.BodyLimitActionReject && tx.RuleEngine == types.RuleEngineOn,
+			TmpPath:     w.TmpDir,
+			MemoryLimit: w.RequestBodyInMemoryLimit,
 		})
 		tx.ResponseBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
 			TmpPath: w.TmpDir,
 			// the response body is just buffered in memory. Therefore, Limit and MemoryLimit are equal.
-			MemoryLimit:        w.ResponseBodyLimit,
-			Limit:              w.ResponseBodyLimit,
-			DiscardOnBodyLimit: w.ResponseBodyLimitAction == types.BodyLimitActionReject && tx.RuleEngine == types.RuleEngineOn,
+			MemoryLimit: w.ResponseBodyLimit,
 		})
 		tx.variables = *NewTransactionVariables()
 		tx.transformationCache = map[transformationKey]*transformationValue{}
