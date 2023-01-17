@@ -23,6 +23,27 @@ type BodyBuffer struct {
 	length  int64
 }
 
+var (
+	_ io.WriterTo = (*BodyBuffer)(nil)
+	_ io.Writer   = (*BodyBuffer)(nil)
+)
+
+func (br *BodyBuffer) WriteTo(w io.Writer) (int64, error) {
+	if br.writer == nil {
+		return br.buffer.WriteTo(w)
+	}
+
+	b := make([]byte, br.length)
+
+	n, err := br.writer.Read(b)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err = w.Write(b[:n])
+	return int64(n), err
+}
+
 // Write appends data to the body buffer by chunks
 // You may dump io.Readers using io.Copy(br, reader)
 func (br *BodyBuffer) Write(data []byte) (n int, err error) {
@@ -69,15 +90,36 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	return br.buffer.Write(data)
 }
 
+type bodyBufferReader struct {
+	pos int
+	br  *BodyBuffer
+}
+
+func (b *bodyBufferReader) Read(p []byte) (n int, err error) {
+	if environment.IsTinyGo || b.br.writer == nil {
+		buf := b.br.buffer.Bytes()
+		n = len(p)
+		if b.pos+n > len(buf) {
+			n = len(buf) - b.pos
+		}
+		if n == 0 {
+			return 0, io.EOF
+		}
+		copy(p, buf[b.pos:b.pos+n])
+		b.pos += n
+		return
+	}
+
+	n, err = b.br.writer.ReadAt(p, int64(b.pos))
+	b.pos += n
+	return
+}
+
 // Reader Returns a working reader for the body buffer in memory or file
 func (br *BodyBuffer) Reader() (io.Reader, error) {
-	if environment.IsTinyGo || br.writer == nil {
-		return bytes.NewReader(br.buffer.Bytes()), nil
-	}
-	if _, err := br.writer.Seek(0, 0); err != nil {
-		return nil, err
-	}
-	return br.writer, nil
+	return &bodyBufferReader{
+		br: br,
+	}, nil
 }
 
 // Size returns the current size of the body buffer

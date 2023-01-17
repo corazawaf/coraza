@@ -4,7 +4,6 @@
 package seclang
 
 import (
-	"io"
 	"regexp"
 	"strings"
 	"testing"
@@ -131,7 +130,7 @@ func TestSecAuditLogs(t *testing.T) {
 func TestRuleLogging(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	var logs []string
-	waf.SetErrorLogCb(func(mr types.MatchedRule) {
+	waf.SetErrorCallback(func(mr types.MatchedRule) {
 		logs = append(logs, mr.ErrorLog(403))
 	})
 	parser := NewParser(waf)
@@ -192,7 +191,7 @@ func TestRuleChains(t *testing.T) {
 func TestTagsAreNotPrintedTwice(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	var logs []string
-	waf.SetErrorLogCb(func(mr types.MatchedRule) {
+	waf.SetErrorCallback(func(mr types.MatchedRule) {
 		logs = append(logs, mr.ErrorLog(403))
 	})
 	parser := NewParser(waf)
@@ -224,7 +223,7 @@ func TestTagsAreNotPrintedTwice(t *testing.T) {
 func TestStatusFromInterruptions(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	var logs []string
-	waf.SetErrorLogCb(func(mr types.MatchedRule) {
+	waf.SetErrorCallback(func(mr types.MatchedRule) {
 		logs = append(logs, mr.ErrorLog(403))
 	})
 	parser := NewParser(waf)
@@ -262,7 +261,7 @@ func TestChainWithUnconditionalMatch(t *testing.T) {
 func TestLogsAreNotPrintedManyTimes(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	var logs []string
-	waf.SetErrorLogCb(func(mr types.MatchedRule) {
+	waf.SetErrorCallback(func(mr types.MatchedRule) {
 		logs = append(logs, mr.ErrorLog(403))
 	})
 	parser := NewParser(waf)
@@ -957,12 +956,17 @@ Content-Type: application/octet-stream
 
 BINARYDATA
 ------WebKitFormBoundaryABCDEFGIJKLMNOPQ--`)
-	_, err = io.Copy(tx.RequestBodyBuffer, body)
+	it, _, err := tx.ReadRequestBodyFrom(body)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	it, err := tx.ProcessRequestBody()
+
+	if it != nil {
+		t.Fatal(err)
+	}
+
+	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
 		return

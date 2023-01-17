@@ -32,22 +32,22 @@ func (a *setvarFn) Init(r rules.RuleMetadata, data string) error {
 	}
 
 	var err error
-	spl := strings.SplitN(data, "=", 2)
+	key, val, valOk := strings.Cut(data, "=")
 
-	splcol := strings.SplitN(spl[0], ".", 2)
-	a.collection, err = variables.Parse(splcol[0])
+	colKey, colVal, colOk := strings.Cut(key, ".")
+	a.collection, err = variables.Parse(colKey)
 	if err != nil {
 		return err
 	}
-	if len(splcol) == 2 {
-		macro, err := macro.NewMacro(splcol[1])
+	if colOk {
+		macro, err := macro.NewMacro(colVal)
 		if err != nil {
 			return err
 		}
 		a.key = macro
 	}
-	if len(spl) == 2 {
-		macro, err := macro.NewMacro(spl[1])
+	if valOk {
+		macro, err := macro.NewMacro(val)
 		if err != nil {
 			return err
 		}

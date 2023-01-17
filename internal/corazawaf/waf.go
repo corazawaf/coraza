@@ -21,11 +21,6 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
-// ErrorLogCallback is used to set a callback function to log errors
-// It is triggered when an error is raised by the WAF
-// It contains the severity so the cb can decide to log it or not
-type ErrorLogCallback = func(rule types.MatchedRule)
-
 // WAF instance is used to store configurations and rules
 // Every web application should have a different WAF instance,
 // but you can share an instance if you are ok with sharing
@@ -124,7 +119,7 @@ type WAF struct {
 	// Used for the debug logger
 	Logger loggers.DebugLogger
 
-	ErrorLogCb ErrorLogCallback
+	ErrorLogCb func(rule types.MatchedRule)
 
 	// AuditLogWriter is used to write audit logs
 	AuditLogWriter loggers.LogWriter
@@ -175,8 +170,8 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 
 	// Always non-nil if buffers / collections were already initialized so we don't do any of them
 	// based on the presence of RequestBodyBuffer.
-	if tx.RequestBodyBuffer == nil {
-		tx.RequestBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
+	if tx.requestBodyBuffer == nil {
+		tx.requestBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
 			TmpPath:     w.TmpDir,
 			MemoryLimit: w.RequestBodyInMemoryLimit,
 		})
@@ -304,9 +299,9 @@ func (w *WAF) SetDebugLogLevel(lvl int) error {
 	return nil
 }
 
-// SetErrorLogCb sets the callback function for error logging
+// SetErrorCallback sets the callback function for error logging
 // The error callback receives all the error data and some
 // helpers to write modsecurity style logs
-func (w *WAF) SetErrorLogCb(cb ErrorLogCallback) {
+func (w *WAF) SetErrorCallback(cb func(rule types.MatchedRule)) {
 	w.ErrorLogCb = cb
 }

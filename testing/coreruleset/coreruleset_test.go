@@ -110,7 +110,7 @@ func BenchmarkCRSSimplePOST(b *testing.B) {
 		tx.AddRequestHeader("Accept", "application/json")
 		tx.AddRequestHeader("Content-Type", "application/x-www-form-urlencoded")
 		tx.ProcessRequestHeaders()
-		if _, err := tx.RequestBodyWriter().Write([]byte("parameters2=and&other2=Stuff")); err != nil {
+		if _, _, err := tx.WriteRequestBody([]byte("parameters2=and&other2=Stuff")); err != nil {
 			b.Error(err)
 		}
 		if _, err := tx.ProcessRequestBody(); err != nil {
@@ -144,7 +144,7 @@ func BenchmarkCRSLargePOST(b *testing.B) {
 		tx.AddRequestHeader("Accept", "application/json")
 		tx.AddRequestHeader("Content-Type", "application/x-www-form-urlencoded")
 		tx.ProcessRequestHeaders()
-		if _, err := tx.RequestBodyWriter().Write(postPayload); err != nil {
+		if _, _, err := tx.WriteRequestBody(postPayload); err != nil {
 			b.Error(err)
 		}
 		if _, err := tx.ProcessRequestBody(); err != nil {
@@ -217,7 +217,7 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 		t.Fatalf("failed to create error log: %v", err)
 	}
 	errorWriter := bufio.NewWriter(errorFile)
-	conf = conf.WithErrorLogger(func(rule types.MatchedRule) {
+	conf = conf.WithErrorCallback(func(rule types.MatchedRule) {
 		msg := rule.ErrorLog(0)
 		if _, err := io.WriteString(errorWriter, msg); err != nil {
 			t.Fatal(err)
@@ -237,10 +237,10 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 		w.Header().Set("Content-Type", "text/plain")
 		switch {
 		case r.URL.Path == "/anything":
+			body, err := io.ReadAll(r.Body)
 			// Emulated httpbin behaviour: /anything endpoint acts as an echo server, writing back the request body
 			if r.Header.Get("Content-Type") == "application/x-www-form-urlencoded" {
 				// Tests 954120-1 and 954120-2 are the only two calling /anything with a POST and payload is urlencoded
-				body, _ := io.ReadAll(r.Body)
 				if err != nil {
 					t.Fatalf("handler can not read request body: %v", err)
 				}
@@ -250,7 +250,7 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 				}
 				fmt.Fprintf(w, urldecodedBody)
 			} else {
-				_, err = io.Copy(w, r.Body)
+				_, err = w.Write(body)
 			}
 
 		case strings.HasPrefix(r.URL.Path, "/base64/"):

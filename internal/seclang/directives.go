@@ -452,11 +452,11 @@ func directiveSecDebugLogLevel(options *DirectiveOptions) error {
 }
 
 func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
-	spl := strings.SplitN(options.Opts, " ", 2)
-	if len(spl) != 2 {
+	idStr, v, ok := strings.Cut(options.Opts, " ")
+	if !ok {
 		return errors.New("syntax error: SecRuleUpdateTargetById id \"VARIABLES\"")
 	}
-	id, err := strconv.Atoi(spl[0])
+	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		return err
 	}
@@ -466,7 +466,7 @@ func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
 		options:        RuleOptions{},
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
-	return rp.ParseVariables(strings.Trim(spl[1], "\""))
+	return rp.ParseVariables(strings.Trim(v, "\""))
 }
 
 func directiveSecIgnoreRuleCompilationErrors(options *DirectiveOptions) error {
@@ -483,16 +483,15 @@ func directiveSecIgnoreRuleCompilationErrors(options *DirectiveOptions) error {
 }
 
 func directiveSecDataset(options *DirectiveOptions) error {
-	spl := strings.SplitN(options.Opts, " ", 2)
-	if len(spl) != 2 {
+	name, d, ok := strings.Cut(options.Opts, " ")
+	if !ok {
 		return errors.New("syntax error: SecDataset name `\n...\n`")
 	}
-	name := spl[0]
 	if _, ok := options.Datasets[name]; ok {
 		options.WAF.Logger.Warn("Dataset %s already exists, overwriting", name)
 	}
 	var arr []string
-	data := strings.Trim(spl[1], "`")
+	data := strings.Trim(d, "`")
 	for _, s := range strings.Split(data, "\n") {
 		s = strings.TrimSpace(s)
 		if s == "" || s[0] == '#' {
