@@ -127,13 +127,9 @@ func (p *Parser) evaluateLine(data string) error {
 		return errors.New("invalid lines")
 	}
 	// first we get the directive
-	spl := strings.SplitN(data, " ", 2)
-	opts := ""
-	if len(spl) == 2 {
-		opts = spl[1]
-	}
+	dir, opts, _ := strings.Cut(data, " ")
 	p.options.WAF.Logger.Debug("parsing directive %q", data)
-	directive := strings.ToLower(spl[0])
+	directive := strings.ToLower(dir)
 
 	if len(opts) >= 3 && opts[0] == '"' && opts[len(opts)-1] == '"' {
 		opts = strings.Trim(opts, `"`)

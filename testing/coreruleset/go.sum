@@ -40,8 +40,7 @@ github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGX
 github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
 github.com/corazawaf/coraza/v3 v3.0.0-20221004054810-060cedcb166d h1:e7nLsrnie6309FYWPZg2kY2yQWhHslmfkzZTPVnpeqg=
 github.com/corazawaf/coraza/v3 v3.0.0-20221004054810-060cedcb166d/go.mod h1:+ypLPFkX5j1GwKi+rqRZ57W3lSHReBdeVLh0o8qirI4=
-github.com/corazawaf/libinjection-go v0.1.1 h1:N/SMuy9Q4wPL72pU/OsoYjIIjfvUbsVwHf8A3tWMLKg=
-github.com/corazawaf/libinjection-go v0.1.1/go.mod h1:OP4TM7xdJ2skyXqNX1AN1wN5nNZEmJNuWbNPOItn7aw=
+github.com/corazawaf/libinjection-go v0.1.2 h1:oeiV9pc5rvJ+2oqOqXEAMJousPpGiup6f7Y3nZj5GoM=
 github.com/coreos/go-semver v0.3.0/go.mod h1:nnelYz7RCh+5ahJtPPxZlU+153eP4D4r3EedlOD2RNk=
 github.com/coreos/go-systemd/v22 v22.3.2/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
 github.com/coreos/go-systemd/v22 v22.3.3-0.20220203105225-a9a7ef127534/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=

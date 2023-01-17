@@ -172,13 +172,9 @@ func (p *RuleParser) ParseOperator(operator string) error {
 		operator = "!@rx " + operator[1:]
 	}
 
-	spl := strings.SplitN(operator, " ", 2)
-	op := strings.TrimSpace(spl[0])
-
-	opdata := ""
-	if len(spl) == 2 {
-		opdata = strings.TrimSpace(spl[1])
-	}
+	opRaw, opdataRaw, _ := strings.Cut(operator, " ")
+	op := strings.TrimSpace(opRaw)
+	opdata := strings.TrimSpace(opdataRaw)
 
 	if op[0] == '@' {
 		// we trim @
@@ -200,7 +196,7 @@ func (p *RuleParser) ParseOperator(operator string) error {
 	if err != nil {
 		return err
 	}
-	p.rule.SetOperator(opfn, spl[0], opdata)
+	p.rule.SetOperator(opfn, opRaw, opdata)
 	return nil
 }
 

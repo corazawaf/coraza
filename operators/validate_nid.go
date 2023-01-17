@@ -26,12 +26,12 @@ var _ rules.Operator = (*validateNid)(nil)
 func newValidateNID(options rules.OperatorOptions) (rules.Operator, error) {
 	data := options.Arguments
 
-	spl := strings.SplitN(data, " ", 2)
-	if len(spl) != 2 {
+	typ, expr, ok := strings.Cut(data, " ")
+	if !ok {
 		return nil, fmt.Errorf("invalid @validateNid argument")
 	}
 	var fn validateNidFunction
-	switch spl[0] {
+	switch typ {
 	case "cl":
 		fn = nidCl
 	case "us":
@@ -39,7 +39,7 @@ func newValidateNID(options rules.OperatorOptions) (rules.Operator, error) {
 	default:
 		return nil, fmt.Errorf("invalid @validateNid argument")
 	}
-	re, err := regexp.Compile(spl[1])
+	re, err := regexp.Compile(expr)
 	if err != nil {
 		return nil, err
 	}
