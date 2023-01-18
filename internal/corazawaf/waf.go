@@ -174,8 +174,8 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 
 	// Always non-nil if buffers / collections were already initialized so we don't do any of them
 	// based on the presence of RequestBodyBuffer.
-	if tx.RequestBodyBuffer == nil {
-		tx.RequestBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
+	if tx.requestBodyBuffer == nil {
+		tx.requestBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
 			TmpPath:     w.TmpDir,
 			MemoryLimit: w.RequestBodyInMemoryLimit,
 		})

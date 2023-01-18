@@ -8,6 +8,7 @@
 package http
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -58,16 +59,21 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 		// body inspection, otherwise we just let the request follow its
 		// regular flow.
 		if req.Body != nil && req.Body != http.NoBody {
-			_, err := io.Copy(tx.RequestBodyWriter(), req.Body)
+			it, _, err := tx.ReadRequestBodyFrom(req.Body)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to append request body: %s", err.Error())
 			}
 
-			reader, err := tx.RequestBodyReader()
-			if err != nil {
-				return nil, err
+			if it != nil {
+				return it, nil
 			}
-			reader = io.MultiReader(reader, req.Body)
+
+			rbr, err := tx.RequestBodyReader()
+			if err != nil {
+				return nil, fmt.Errorf("failed to get the request body: %s", err.Error())
+			}
+
+			body := io.MultiReader(rbr, req.Body)
 			// req.Body is transparently reinizialied with a new io.ReadCloser.
 			// The http handler will be able to read it.
 			// Prior to Go 1.19 NopCloser does not implement WriterTo if the reader implements it.
@@ -76,24 +82,22 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 			// This avoid errors like "failed to process request: malformed chunked encoding" when
 			// using io.Copy.
 			// In Go 1.19 we just do `req.Body = io.NopCloser(reader)`
-			if rwt, ok := reader.(io.WriterTo); ok {
+			if rwt, ok := body.(io.WriterTo); ok {
 				req.Body = struct {
 					io.Reader
 					io.WriterTo
 					io.Closer
-				}{reader, rwt, req.Body}
+				}{body, rwt, req.Body}
 			} else {
 				req.Body = struct {
 					io.Reader
 					io.Closer
-				}{reader, req.Body}
+				}{body, req.Body}
 			}
 		}
-
-		return tx.ProcessRequestBody()
 	}
 
-	return nil, nil
+	return tx.ProcessRequestBody()
 }
 
 func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {

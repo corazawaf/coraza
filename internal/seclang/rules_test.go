@@ -4,7 +4,6 @@
 package seclang
 
 import (
-	"io"
 	"regexp"
 	"strings"
 	"testing"
@@ -957,12 +956,17 @@ Content-Type: application/octet-stream
 
 BINARYDATA
 ------WebKitFormBoundaryABCDEFGIJKLMNOPQ--`)
-	_, err = io.Copy(tx.RequestBodyBuffer, body)
+	it, _, err := tx.ReadRequestBodyFrom(body)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	it, err := tx.ProcessRequestBody()
+
+	if it != nil {
+		t.Fatal(err)
+	}
+
+	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
 		return

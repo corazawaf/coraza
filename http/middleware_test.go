@@ -83,7 +83,7 @@ func TestProcessRequestMultipart(t *testing.T) {
 	}
 
 	if err := tx.Close(); err != nil {
-		t.Errorf("failed to close the transaction: %s", err.Error())
+		t.Fatal(err)
 	}
 }
 
@@ -289,16 +289,16 @@ func TestHttpServer(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			conf := coraza.NewWAFConfig().
 				WithDirectives(`
-		# This is a comment
-		SecDebugLogLevel 5
-		SecRequestBodyAccess On
-		SecResponseBodyAccess On
-		SecResponseBodyMimeType text/plain
-		SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
-		SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
-		SecRule RESPONSE_HEADERS:Foo "@pm bar" "id:199,phase:3,deny,t:lowercase,deny, status:401,msg:'Invalid response header',log,auditlog"
-		SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
-	`).WithErrorCallback(errLogger(t)).WithDebugLogger(&debugLogger{t: t})
+	# This is a comment
+	SecDebugLogLevel 5
+	SecRequestBodyAccess On
+	SecResponseBodyAccess On
+	SecResponseBodyMimeType text/plain
+	SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
+	SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
+	SecRule RESPONSE_HEADERS:Foo "@pm bar" "id:199,phase:3,deny,t:lowercase,deny, status:401,msg:'Invalid response header',log,auditlog"
+	SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
+`).WithErrorCallback(errLogger(t)).WithDebugLogger(&debugLogger{t: t})
 			if l := tCase.reqBodyLimit; l > 0 {
 				conf = conf.WithRequestBodyAccess(coraza.NewRequestBodyConfig().WithLimit(l).WithInMemoryLimit(l))
 			}
@@ -306,7 +306,7 @@ func TestHttpServer(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			runAgainstWaf(t, tCase, waf)
+			runAgainstWAF(t, tCase, waf)
 		})
 	}
 }
@@ -349,12 +349,12 @@ func TestHttpServerWithRuleEngineOff(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			runAgainstWaf(t, tCase, waf)
+			runAgainstWAF(t, tCase, waf)
 		})
 	}
 }
 
-func runAgainstWaf(t *testing.T, tCase httpTest, waf coraza.WAF) {
+func runAgainstWAF(t *testing.T, tCase httpTest, waf coraza.WAF) {
 	t.Helper()
 	serverErrC := make(chan error, 1)
 	defer close(serverErrC)

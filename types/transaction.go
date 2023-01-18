@@ -63,12 +63,8 @@ type Transaction interface {
 	// note: Remember to check for a possible intervention.
 	ProcessRequestHeaders() *Interruption
 
-	// RequestBodyWriter returns a io.Writer for writing the request body to.
-	// Contents will be buffered until the transaction is closed.
-	RequestBodyWriter() io.Writer
-
 	// RequestBodyReader returns a reader for content that has been written by
-	// RequestBodyWriter. This can be useful for buffering the request body
+	// request body buffer. This can be useful for buffering the request body
 	// within the Transaction while also passing it further in an HTTP framework.
 	RequestBodyReader() (io.Reader, error)
 
@@ -87,6 +83,22 @@ type Transaction interface {
 	//
 	// Remember to check for a possible intervention.
 	ProcessRequestBody() (*Interruption, error)
+
+	// WriteRequestBody attempts to write data into the body up to the buffer limit and
+	// returns an interruption if the body is bigger than the limit and the action is to
+	// reject. This is specially convenient to resolve an interruption before copying
+	// the body into the request body buffer.
+	//
+	// It returns the corresponding interruption, the number of bytes written an error if any.
+	WriteRequestBody(b []byte) (*Interruption, int, error)
+
+	// ReadRequestBodyFrom attempts to write data into the body up to the buffer limit and
+	// returns an interruption if the body is bigger than the limit and the action is to
+	// reject. This is specially convenient to resolve an interruption before copying
+	// the body into the request body buffer.
+	//
+	// It returns the corresponding interruption, the number of bytes written an error if any.
+	ReadRequestBodyFrom(io.Reader) (*Interruption, int, error)
 
 	// AddResponseHeader Adds a response header variable
 	//
