@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"mime"
 	"net/url"
 	"path/filepath"
@@ -808,9 +809,19 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 	var (
 		writingBytes          = int64(len(b))
 		runProcessRequestBody = false
+		targetLen             int64
 	)
 
-	if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
+	// Overflow check
+	if tx.requestBodyBuffer.length == math.MaxInt64 || tx.requestBodyBuffer.length >= (math.MaxInt64-writingBytes) {
+		// Overflow, buffer length will always be at most MaxInt
+		targetLen = math.MaxInt64
+	} else {
+		// No Overflow
+		targetLen = tx.requestBodyBuffer.length + writingBytes
+	}
+
+	if targetLen >= tx.RequestBodyLimit {
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			// We interrupt this transaction in case RequestBodyLimitAction is Reject
 			return setAndReturnBodyLimitInterruption(tx)
@@ -866,10 +877,20 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 	var (
 		writingBytes          int64
 		runProcessRequestBody = false
+		targetLen             int64
 	)
 	if l, ok := r.(ByteLenger); ok {
 		writingBytes = int64(l.Len())
-		if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
+		// Overflow check
+		if tx.requestBodyBuffer.length == math.MaxInt64 || tx.requestBodyBuffer.length >= (math.MaxInt64-writingBytes) {
+			// Overflow, buffer length will always be at most MaxInt
+			targetLen = math.MaxInt64
+		} else {
+			// No Overflow
+			targetLen = tx.requestBodyBuffer.length + writingBytes
+		}
+
+		if targetLen >= tx.RequestBodyLimit {
 			if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 				return setAndReturnBodyLimitInterruption(tx)
 			}
