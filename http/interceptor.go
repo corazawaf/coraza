@@ -88,23 +88,23 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 		// as body hasn't being analized yet.
 		if tx.IsInterrupted() {
 			// phase 4 interruption stops execution
-			w.WriteHeader(i.statusCode)
+			i.w.WriteHeader(i.statusCode)
 			return nil
 		}
 
 		if tx.IsResponseBodyAccessible() && tx.IsResponseBodyProcessable() {
 			if it, err := tx.ProcessResponseBody(); err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
+				i.w.WriteHeader(http.StatusInternalServerError)
 				return err
 			} else if it != nil {
-				w.WriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode))
+				i.w.WriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode))
 				return nil
 			}
 
 			// we release the buffer
 			reader, err := tx.ResponseBodyReader()
 			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
+				i.w.WriteHeader(http.StatusInternalServerError)
 				return fmt.Errorf("failed to release the response body reader: %v", err)
 			}
 
@@ -113,11 +113,11 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 			// response status code.)
 			i.w.WriteHeader(i.statusCode)
 			if _, err := io.Copy(w, reader); err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
+				i.w.WriteHeader(http.StatusInternalServerError)
 				return fmt.Errorf("failed to copy the response body: %v", err)
 			}
 		} else {
-			w.WriteHeader(i.statusCode)
+			i.w.WriteHeader(i.statusCode)
 		}
 
 		return nil

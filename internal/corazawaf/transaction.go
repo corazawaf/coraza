@@ -773,6 +773,7 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 
 func setAndReturnBodyLimitInterruption(tx *Transaction) (*types.Interruption, int, error) {
 	tx.variables.inboundErrorData.Set("1")
+	tx.DebugLogger().Warn("Disrupting transaction with body size above the configured limit (Action Reject)")
 	tx.interruption = &types.Interruption{
 		Status: 403,
 		Action: "deny",
@@ -781,8 +782,8 @@ func setAndReturnBodyLimitInterruption(tx *Transaction) (*types.Interruption, in
 }
 
 // WriteRequestBody writes bytes from a slice of bytes into the request body,
-// it returns an interuption if the writing bytes go beyond the request body limit.
-// It won't copy the bytes if the body access isn't accesible.
+// it returns an interruption if the writing bytes go beyond the request body limit.
+// It won't copy the bytes if the body access isn't accessible.
 func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
 		return nil, 0, nil
@@ -794,7 +795,7 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 
 	if tx.RequestBodyLimit == tx.requestBodyBuffer.length {
 		// tx.RequestBodyLimit will never be zero so if this happened, we have an
-		// interruption for sure.
+		// interruption (that has been previously raised, but ignored by the connector) for sure.
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			return tx.interruption, 0, nil
 		}
@@ -827,6 +828,7 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 	}
 
 	if runProcessRequestBody {
+		tx.DebugLogger().Warn("Processing request body whose size reached the configured limit (Action ProcessPartial)")
 		_, err = tx.ProcessRequestBody()
 	}
 	return tx.interruption, int(w), err
@@ -839,7 +841,7 @@ type ByteLenger interface {
 
 // ReadRequestBodyFrom writes bytes from a reader into the request body
 // it returns an interuption if the writing bytes go beyond the request body limit.
-// It won't read the reader if the body access isn't accesible.
+// It won't read the reader if the body access isn't accessible.
 func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, int, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
 		return nil, 0, nil
@@ -850,6 +852,8 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 	}
 
 	if tx.RequestBodyLimit == tx.requestBodyBuffer.length {
+		// tx.RequestBodyLimit will never be zero so if this happened, we have an
+		// interruption (that has been previously raised, but ignored by the connector) for sure.
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			return tx.interruption, 0, nil
 		}
@@ -896,6 +900,7 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 
 	err = nil
 	if runProcessRequestBody {
+		tx.DebugLogger().Warn("Processing request body whose size reached the configured limit (Action ProcessPartial)")
 		_, err = tx.ProcessRequestBody()
 	}
 	return tx.interruption, int(w), err
@@ -915,7 +920,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 
 	if tx.LastPhase >= types.PhaseRequestBody {
 		// Phase already evaluated
-		tx.WAF.Logger.Error("ProcessRequestBody has already been called")
+		tx.WAF.Logger.Warn("ProcessRequestBody has already been called")
 		return tx.interruption, nil
 	}
 
@@ -1033,7 +1038,7 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 
 	if tx.LastPhase >= types.PhaseResponseBody {
 		// Phase already evaluated
-		tx.WAF.Logger.Error("ProcessResponseBody has already been called")
+		tx.WAF.Logger.Warn("ProcessResponseBody has already been called")
 		return tx.interruption, nil
 	}
 
