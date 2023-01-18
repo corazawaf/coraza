@@ -56,7 +56,7 @@ func NewWAFConfig() WAFConfig {
 // RequestBodyConfig controls access to the request body.
 type RequestBodyConfig interface {
 	// WithLimit sets the maximum number of bytes that can be read from the request body.
-	// A request going beyond WithInMemoryLimit will result in buffering to disk.
+	// A request body going beyond WithInMemoryLimit will result in being buffered to disk.
 	WithLimit(limit int) RequestBodyConfig
 
 	// WithInMemoryLimit sets the maximum number of bytes that can be read from the request body and buffered in memory.

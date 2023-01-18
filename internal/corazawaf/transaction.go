@@ -840,7 +840,7 @@ type ByteLenger interface {
 }
 
 // ReadRequestBodyFrom writes bytes from a reader into the request body
-// it returns an interuption if the writing bytes go beyond the request body limit.
+// it returns an interruption if the writing bytes go beyond the request body limit.
 // It won't read the reader if the body access isn't accessible.
 func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, int, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
