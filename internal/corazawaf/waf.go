@@ -63,12 +63,6 @@ type WAF struct {
 	// Defines if rules are going to be evaluated
 	RuleEngine types.RuleEngineStatus
 
-	// If true, transaction will fail if response size is bigger than the page limit
-	RejectOnResponseBodyLimit bool
-
-	// If true, transaction will fail if request size is bigger than the page limit
-	RejectOnRequestBodyLimit bool
-
 	// Responses will only be loaded if mime is listed here
 	ResponseBodyMimeTypes []string
 
@@ -108,7 +102,9 @@ type WAF struct {
 
 	RequestBodyNoFilesLimit int64
 
-	RequestBodyLimitAction types.RequestBodyLimitAction
+	RequestBodyLimitAction types.BodyLimitAction
+
+	ResponseBodyLimitAction types.BodyLimitAction
 
 	ArgumentSeparator string
 
@@ -270,16 +266,18 @@ func NewWAF() *WAF {
 		AuditLogWriter:           logWriter,
 		AuditEngine:              types.AuditEngineOff,
 		AuditLogParts:            types.AuditLogParts("ABCFHZ"),
+		RequestBodyAccess:        false,
 		RequestBodyInMemoryLimit: 131072,
 		RequestBodyLimit:         134217728, // 10mb
+		RequestBodyLimitAction:   types.BodyLimitActionReject,
+		ResponseBodyAccess:       false,
 		ResponseBodyMimeTypes:    []string{"text/html", "text/plain"},
 		ResponseBodyLimit:        524288,
-		ResponseBodyAccess:       false,
+		ResponseBodyLimitAction:  types.BodyLimitActionReject,
 		RuleEngine:               types.RuleEngineOn,
 		Rules:                    NewRuleGroup(),
 		TmpDir:                   "/tmp",
 		AuditLogRelevantStatus:   regexp.MustCompile(`.*`),
-		RequestBodyAccess:        false,
 		Logger:                   logger,
 	}
 	// We initialize a basic audit log writer that discards output

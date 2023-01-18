@@ -16,10 +16,10 @@ import (
 // It will handle memory usage for buffering and processing
 // It implements io.Copy(bodyBuffer, someReader) by inherit io.Writer
 type BodyBuffer struct {
-	options types.BodyBufferOptions
-	buffer  *bytes.Buffer
-	writer  *os.File
-	length  int64
+	options      types.BodyBufferOptions
+	memoryBuffer *bytes.Buffer
+	fileBuffer   *os.File
+	length       int64
 }
 
 var (
@@ -28,13 +28,13 @@ var (
 )
 
 func (br *BodyBuffer) WriteTo(w io.Writer) (int64, error) {
-	if br.writer == nil {
-		return br.buffer.WriteTo(w)
+	if br.fileBuffer == nil {
+		return br.memoryBuffer.WriteTo(w)
 	}
 
 	b := make([]byte, br.length)
 
-	n, err := br.writer.Read(b)
+	n, err := br.fileBuffer.Read(b)
 	if err != nil {
 		return 0, err
 	}
@@ -58,26 +58,26 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 				return 0, nil
 			}
 			br.length = br.options.MemoryLimit
-			return br.buffer.Write(data[:maxWritingDataLen])
+			return br.memoryBuffer.Write(data[:maxWritingDataLen])
 		} else {
-			if br.writer == nil {
-				br.writer, err = os.CreateTemp(br.options.TmpPath, "body*")
+			if br.fileBuffer == nil {
+				br.fileBuffer, err = os.CreateTemp(br.options.TmpPath, "body*")
 				if err != nil {
 					return 0, err
 				}
 				// we dump the previous buffer
-				if _, err := br.writer.Write(br.buffer.Bytes()); err != nil {
+				if _, err := br.fileBuffer.Write(br.memoryBuffer.Bytes()); err != nil {
 					return 0, err
 				}
-				br.buffer.Reset()
+				br.memoryBuffer.Reset()
 			}
 			br.length = l
-			return br.writer.Write(data)
+			return br.fileBuffer.Write(data)
 		}
 	}
 
 	br.length = l
-	return br.buffer.Write(data)
+	return br.memoryBuffer.Write(data)
 }
 
 type bodyBufferReader struct {
@@ -86,8 +86,8 @@ type bodyBufferReader struct {
 }
 
 func (b *bodyBufferReader) Read(p []byte) (n int, err error) {
-	if environment.IsTinyGo || b.br.writer == nil {
-		buf := b.br.buffer.Bytes()
+	if environment.IsTinyGo || b.br.fileBuffer == nil {
+		buf := b.br.memoryBuffer.Bytes()
 		n = len(p)
 		if b.pos+n > len(buf) {
 			n = len(buf) - b.pos
@@ -100,7 +100,7 @@ func (b *bodyBufferReader) Read(p []byte) (n int, err error) {
 		return
 	}
 
-	n, err = b.br.writer.ReadAt(p, int64(b.pos))
+	n, err = b.br.fileBuffer.ReadAt(p, int64(b.pos))
 	b.pos += n
 	return
 }
@@ -119,11 +119,11 @@ func (br *BodyBuffer) Size() int64 {
 
 // Reset will reset buffers and delete temporary files
 func (br *BodyBuffer) Reset() error {
-	br.buffer.Reset()
+	br.memoryBuffer.Reset()
 	br.length = 0
-	if !environment.IsTinyGo && br.writer != nil {
-		w := br.writer
-		br.writer = nil
+	if !environment.IsTinyGo && br.fileBuffer != nil {
+		w := br.fileBuffer
+		br.fileBuffer = nil
 		if err := w.Close(); err != nil {
 			return err
 		}
@@ -139,7 +139,7 @@ func (br *BodyBuffer) Reset() error {
 // Temporary files will be written to tmpDir
 func NewBodyBuffer(options types.BodyBufferOptions) *BodyBuffer {
 	return &BodyBuffer{
-		options: options,
-		buffer:  &bytes.Buffer{},
+		options:      options,
+		memoryBuffer: &bytes.Buffer{},
 	}
 }

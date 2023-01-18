@@ -795,11 +795,11 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 	if tx.RequestBodyLimit == tx.requestBodyBuffer.length {
 		// tx.RequestBodyLimit will never be zero so if this happened, we have an
 		// interruption for sure.
-		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
+		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			return tx.interruption, 0, nil
 		}
 
-		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
+		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
 			return nil, 0, nil
 		}
 	}
@@ -810,12 +810,12 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 	)
 
 	if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
-		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
+		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			// We interrupt this transaction in case RequestBodyLimitAction is Reject
 			return setAndReturnBodyLimitInterruption(tx)
 		}
 
-		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
+		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
 			writingBytes = tx.RequestBodyLimit - tx.requestBodyBuffer.length
 			runProcessRequestBody = true
 		}
@@ -850,11 +850,11 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 	}
 
 	if tx.RequestBodyLimit == tx.requestBodyBuffer.length {
-		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
+		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			return tx.interruption, 0, nil
 		}
 
-		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
+		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
 			return nil, 0, nil
 		}
 	}
@@ -866,11 +866,11 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 	if l, ok := r.(ByteLenger); ok {
 		writingBytes = int64(l.Len())
 		if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
-			if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
+			if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 				return setAndReturnBodyLimitInterruption(tx)
 			}
 
-			if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
+			if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
 				writingBytes = tx.RequestBodyLimit - tx.requestBodyBuffer.length
 				runProcessRequestBody = true
 			}
@@ -885,11 +885,11 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 	}
 
 	if tx.requestBodyBuffer.length == tx.RequestBodyLimit {
-		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
+		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			return setAndReturnBodyLimitInterruption(tx)
 		}
 
-		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
+		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
 			runProcessRequestBody = true
 		}
 	}
@@ -1019,9 +1019,9 @@ func (tx *Transaction) ResponseBodyWriter() io.Writer {
 	return tx.ResponseBodyBuffer
 }
 
-// ProcessResponseBody Perform the request body (if any)
+// ProcessResponseBody Perform the response body (if any)
 //
-// This method perform the analysis on the request body. It is optional to
+// This method perform the analysis on the response body. It is optional to
 // call that method. If this API consumer already know that there isn't a
 // body for inspect it is recommended to skip this step.
 //

@@ -33,7 +33,7 @@ func Test_NonImplementedDirective(t *testing.T) {
 	}
 }
 
-func Test_directive(t *testing.T) {
+func TestDirectiveParsing(t *testing.T) {
 	w := corazawaf.NewWAF()
 	p := NewParser(w)
 	if err := p.FromString("SecWebAppId test123"); err != nil {
@@ -128,6 +128,12 @@ func Test_directive(t *testing.T) {
 	}
 	if err := p.FromString(`SecRemoteRulesFailAction Abort`); err != nil {
 		t.Error("failed to set directive: SecRemoteRulesFailAction")
+	}
+	if err := p.FromString(`SecRequestBodyLimitAction Reject`); err != nil {
+		t.Error("failed to set directive: SecRequestBodyLimitAction")
+	}
+	if err := p.FromString(`SecResponseBodyLimitAction ProcessPartial`); err != nil {
+		t.Error("failed to set directive: SecResponseBodyLimitAction")
 	}
 }
 

@@ -114,6 +114,26 @@ func directiveSecRequestBodyAccess(options *DirectiveOptions) error {
 	return nil
 }
 
+func resolveSecBodyLimitAction(options *DirectiveOptions) (types.BodyLimitAction, bool) {
+	switch strings.ToLower(options.Opts) {
+	case "reject":
+		return types.BodyLimitActionReject, true
+	case "processpartial":
+		return types.BodyLimitActionProcessPartial, true
+	default:
+		return -1, false
+	}
+}
+
+func directiveSecRequestBodyLimitAction(options *DirectiveOptions) error {
+	var ok bool
+	if options.WAF.RequestBodyLimitAction, ok = resolveSecBodyLimitAction(options); ok {
+		return nil
+	}
+
+	return errors.New("syntax error: SecRequestBodyLimitAction [reject/processPartial]")
+}
+
 func directiveSecRuleEngine(options *DirectiveOptions) error {
 	engine, err := types.ParseRuleEngineStatus(options.Opts)
 	options.WAF.RuleEngine = engine
@@ -169,25 +189,24 @@ func directiveSecResponseBodyMimeType(options *DirectiveOptions) error {
 	return nil
 }
 
-func directiveSecResponseBodyLimitAction(options *DirectiveOptions) error {
-	options.WAF.RejectOnResponseBodyLimit = strings.ToLower(options.Opts) == "reject"
-	return nil
-}
-
 func directiveSecResponseBodyLimit(options *DirectiveOptions) error {
 	var err error
 	options.WAF.ResponseBodyLimit, err = strconv.ParseInt(options.Opts, 10, 64)
 	return err
 }
 
-func directiveSecRequestBodyLimitAction(options *DirectiveOptions) error {
-	options.WAF.RejectOnRequestBodyLimit = strings.ToLower(options.Opts) == "reject"
-	return nil
-}
-
 func directiveSecRequestBodyInMemoryLimit(options *DirectiveOptions) error {
 	options.WAF.RequestBodyInMemoryLimit, _ = strconv.ParseInt(options.Opts, 10, 64)
 	return nil
+}
+
+func directiveSecResponseBodyLimitAction(options *DirectiveOptions) error {
+	var ok bool
+	if options.WAF.ResponseBodyLimitAction, ok = resolveSecBodyLimitAction(options); ok {
+		return nil
+	}
+
+	return errors.New("syntax error: SecResponseBodyLimitAction [reject/processPartial]")
 }
 
 func directiveSecRemoteRulesFailAction(options *DirectiveOptions) error {

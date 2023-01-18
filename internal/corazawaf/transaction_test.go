@@ -161,24 +161,24 @@ func TestWriteRequestBody(t *testing.T) {
 	testCases := []struct {
 		name                   string
 		requestBodyLimit       int
-		requestBodyLimitAction types.RequestBodyLimitAction
+		requestBodyLimitAction types.BodyLimitAction
 		shouldInterrupt        bool
 	}{
 		{
 			name:                   "LimitNotReached",
 			requestBodyLimit:       urlencodedBodyLen + 2,
-			requestBodyLimitAction: types.RequestBodyLimitAction(-1),
+			requestBodyLimitAction: types.BodyLimitAction(-1),
 		},
 		{
 			name:                   "LimitReachedAndRejects",
 			requestBodyLimit:       urlencodedBodyLen - 3,
-			requestBodyLimitAction: types.RequestBodyLimitActionReject,
+			requestBodyLimitAction: types.BodyLimitActionReject,
 			shouldInterrupt:        true,
 		},
 		{
 			name:                   "LimitReachedAndPartialProcessing",
 			requestBodyLimit:       urlencodedBodyLen - 3,
-			requestBodyLimitAction: types.RequestBodyLimitActionProcessPartial,
+			requestBodyLimitAction: types.BodyLimitActionProcessPartial,
 		},
 	}
 
@@ -250,17 +250,17 @@ func TestWriteRequestBody(t *testing.T) {
 
 func TestWriteRequestBodyOnLimitReached(t *testing.T) {
 	testCases := map[string]struct {
-		requestBodyLimitAction  types.RequestBodyLimitAction
+		requestBodyLimitAction  types.BodyLimitAction
 		preexistingInterruption *types.Interruption
 	}{
 		"reject": {
-			requestBodyLimitAction: types.RequestBodyLimitActionReject,
+			requestBodyLimitAction: types.BodyLimitActionReject,
 			preexistingInterruption: &types.Interruption{
 				RuleID: 123,
 			},
 		},
 		"partial processing": {
-			requestBodyLimitAction: types.RequestBodyLimitActionProcessPartial,
+			requestBodyLimitAction: types.BodyLimitActionProcessPartial,
 		},
 	}
 
