@@ -14,7 +14,6 @@ import (
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
-	"github.com/corazawaf/coraza/v3/internal/environment"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/macro"
@@ -181,10 +180,6 @@ func TestWriteRequestBody(t *testing.T) {
 			requestBodyLimit:       urlencodedBodyLen - 3,
 			requestBodyLimitAction: types.BodyLimitActionProcessPartial,
 		},
-	}
-	// in TinyGo requestBodyLimit is always equal to Memorylimit
-	if environment.IsTinyGo {
-		return // t.Skip doesn't work on TinyGo
 	}
 
 	urlencodedBodyLenThird := urlencodedBodyLen / 3
