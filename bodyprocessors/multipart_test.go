@@ -11,6 +11,27 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
+func multipartProcessor(t *testing.T) bodyprocessors.BodyProcessor {
+	t.Helper()
+	mp, err := bodyprocessors.Get("multipart")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return mp
+}
+
+func TestProcessRequestFailsDueToIncorrectMimeType(t *testing.T) {
+	mp := multipartProcessor(t)
+
+	expectedError := "not a multipart body"
+
+	if err := mp.ProcessRequest(strings.NewReader(""), corazawaf.NewTransactionVariables(), bodyprocessors.Options{
+		Mime: "application/json",
+	}); err == nil || err.Error() != expectedError {
+		t.Fatal("expected error")
+	}
+}
+
 func TestMultipartPayload(t *testing.T) {
 	payload := strings.TrimSpace(`
 -----------------------------9051914041544843365972754266
@@ -31,10 +52,9 @@ Content-Type: text/html
 
 -----------------------------9051914041544843365972754266--
 `)
-	mp, err := bodyprocessors.Get("multipart")
-	if err != nil {
-		t.Fatal(err)
-	}
+
+	mp := multipartProcessor(t)
+
 	v := corazawaf.NewTransactionVariables()
 	if err := mp.ProcessRequest(strings.NewReader(payload), v, bodyprocessors.Options{
 		Mime: "multipart/form-data; boundary=---------------------------9051914041544843365972754266",

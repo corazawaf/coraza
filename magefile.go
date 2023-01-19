@@ -101,6 +101,41 @@ func Coverage() error {
 	return sh.RunV("go", "tool", "cover", "-html=build/coverage.txt", "-o", "build/coverage.html")
 }
 
+// Fuzz runs fuzz tests
+func Fuzz() error {
+	// Go must be run once per test when fuzzing
+	tests := []struct {
+		pkg   string
+		tests []string
+	}{
+		{
+			pkg: "./operators",
+			tests: []string{
+				"FuzzSQLi",
+				"FuzzXSS",
+			},
+		},
+		{
+			pkg: "./transformations",
+			tests: []string{
+				"FuzzB64Decode",
+				"FuzzCMDLine",
+			},
+		},
+	}
+
+	for _, pkgTests := range tests {
+		for _, test := range pkgTests.tests {
+			fmt.Println("Running", test)
+			if err := sh.RunV("go", "test", "-fuzz="+test, "-fuzztime=2m", pkgTests.pkg); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 // Doc runs godoc, access at http://localhost:6060
 func Doc() error {
 	return sh.RunV("go", "run", "golang.org/x/tools/cmd/godoc@latest", "-http=:6060")

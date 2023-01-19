@@ -8,17 +8,22 @@ import (
 )
 
 func urlDecodeUni(data string) (string, error) {
-	return inplaceUniDecode(data), nil
+	for i := 0; i < len(data); i++ {
+		if data[i] == '%' || data[i] == '+' {
+			return inplaceUniDecode(data, []byte(data), i), nil
+		}
+	}
+	return data, nil
 }
 
-func inplaceUniDecode(input string) string {
-	d := []byte(input)
+func inplaceUniDecode(input string, d []byte, pos int) string {
 	inputLen := len(d)
-	var i, count, c int
+	i := pos
+	c := pos
 	hmap := -1
 
 	for i < inputLen {
-		if input[i] == '%' {
+		if d[i] == '%' {
 			if (i+1 < inputLen) && ((input[i+1] == 'u') || (input[i+1] == 'U')) {
 				/* Character is a percent sign. */
 				/* IIS-specific %u encoding. */
@@ -62,7 +67,6 @@ func inplaceUniDecode(input string) string {
 							}
 						}
 						c++
-						count++
 						i += 6
 					} else {
 						/* Invalid data, skip %u. */
@@ -72,7 +76,6 @@ func inplaceUniDecode(input string) string {
 						d[c] = input[i]
 						c++
 						i++
-						count += 2
 					}
 				} else {
 					/* Not enough bytes (4 data bytes), skip %u. */
@@ -82,7 +85,6 @@ func inplaceUniDecode(input string) string {
 					d[c] = input[i]
 					i++
 					c++
-					count += 2
 				}
 			} else {
 				/* Standard URL encoding. */
@@ -98,21 +100,18 @@ func inplaceUniDecode(input string) string {
 					if strings.ValidHex(c1) && strings.ValidHex(c2) {
 						d[c] = strings.X2c(input[i+1:])
 						c++
-						count++
 						i += 3
 					} else {
 						/* Not a valid encoding, skip this % */
 						d[c] = input[i]
 						i++
 						c++
-						count++
 					}
 				} else {
 					/* Not enough bytes available, skip this % */
 					d[c] = input[i]
 					i++
 					c++
-					count++
 				}
 			}
 		} else {
@@ -125,10 +124,9 @@ func inplaceUniDecode(input string) string {
 				c++
 			}
 
-			count++
 			i++
 		}
 	}
 
-	return string(d[0:c])
+	return strings.WrapUnsafe(d[0:c])
 }

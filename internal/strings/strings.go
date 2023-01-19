@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unsafe"
 )
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -134,4 +135,10 @@ func AsciiEqualFold(a, b string) bool {
 		return false
 	}
 	return true
+}
+
+// WrapUnsafe wraps the provided buffer as a string. The buffer
+// must not be mutated after calling this function.
+func WrapUnsafe(buf []byte) string {
+	return *(*string)(unsafe.Pointer(&buf))
 }

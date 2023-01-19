@@ -17,9 +17,9 @@ type initcolFn struct {
 }
 
 func (a *initcolFn) Init(r rules.RuleMetadata, data string) error {
-	kv := strings.SplitN(data, "=", 2)
-	a.collection = kv[0]
-	a.key = kv[1]
+	col, key, _ := strings.Cut(data, "=")
+	a.collection = col
+	a.key = key
 	a.variable = 0x0
 	return nil
 }

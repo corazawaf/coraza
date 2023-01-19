@@ -105,11 +105,11 @@ func (t *Test) SetRawRequest(request []byte) error {
 		if spl[i] == "" {
 			break
 		}
-		header := strings.Split(spl[i], ":")
-		if len(header) != 2 {
+		key, val, ok := strings.Cut(spl[i], ":")
+		if !ok {
 			return fmt.Errorf("invalid header")
 		}
-		t.RequestHeaders[strings.TrimSpace(header[0])] = strings.TrimSpace(header[1])
+		t.RequestHeaders[strings.TrimSpace(key)] = strings.TrimSpace(val)
 	}
 	// parse body
 	if i < len(spl) {
@@ -134,7 +134,7 @@ func (t *Test) SetRequestBody(body interface{}) error {
 	if t.magic {
 		t.RequestHeaders["content-length"] = strconv.Itoa(lbody)
 	}
-	if _, err := t.transaction.RequestBodyWriter().Write([]byte(data)); err != nil {
+	if _, _, err := t.transaction.WriteRequestBody([]byte(data)); err != nil {
 		return err
 	}
 	return nil
