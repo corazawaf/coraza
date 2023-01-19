@@ -179,6 +179,9 @@ type Transaction interface {
 	// MatchedRules returns the rules that have matched the requests with associated information.
 	MatchedRules() []MatchedRule
 
+	// ID returns the transaction ID.
+	ID() string
+
 	// Closer closes the transaction and releases any resources associated with it such as request/response bodies.
 	io.Closer
 }
