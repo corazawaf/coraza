@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"math"
 	"os"
 
 	"github.com/corazawaf/coraza/v3/internal/environment"
@@ -52,19 +51,10 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 		return 0, nil
 	}
 
-	var targetLen int64
-	// Overflow check
-	if br.length == math.MaxInt64 || br.length >= (math.MaxInt64-int64(len(data))) {
-		// Overflow, buffer length will always be at most MaxInt
-		targetLen = math.MaxInt64
-	} else {
-		// No Overflow
-		targetLen = br.length + int64(len(data))
-	}
-
-	if targetLen >= br.options.Limit {
+	if br.length == br.options.Limit || br.length >= (br.options.Limit-int64(len(data))) {
 		return 0, errors.New("Limit reached while writing")
 	}
+	targetLen := br.length + int64(len(data))
 
 	// Check if memory limits are reached
 	// Even if Overflow is explicitly checked, MemoryLimit real limits are below maxInt and machine dependenent.
