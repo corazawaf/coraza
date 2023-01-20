@@ -12,6 +12,8 @@ import (
 type RulePhase int
 
 const (
+	// PhaseUnknown represents a phase unrecognized by Coraza
+	PhaseUnknown RulePhase = 0
 	// PhaseRequestHeaders will process once the request headers are received
 	PhaseRequestHeaders RulePhase = 1
 	// PhaseRequestBody will process once the request body is received
@@ -43,7 +45,7 @@ func ParseRulePhase(phase string) (RulePhase, error) {
 		i, _ = strconv.Atoi(phase)
 	}
 	if i > 5 || i < 1 {
-		return 0, fmt.Errorf("invalid phase %s", phase)
+		return PhaseUnknown, fmt.Errorf("invalid phase %s", phase)
 	}
 	return RulePhase(i), nil
 }
