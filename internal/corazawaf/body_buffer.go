@@ -6,6 +6,7 @@ package corazawaf
 import (
 	"bytes"
 	"io"
+	"math"
 	"os"
 
 	"github.com/corazawaf/coraza/v3/internal/environment"
@@ -45,13 +46,20 @@ func (br *BodyBuffer) WriteTo(w io.Writer) (int64, error) {
 
 // Write appends data to the body buffer by chunks
 // You may dump io.Readers using io.Copy(br, reader)
-// Note: remember to check overflow before calling Write
 func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	if len(data) == 0 {
 		return 0, nil
 	}
 
-	targetLen := br.length + int64(len(data))
+	var targetLen int64
+	// Overflow check
+	if br.length == math.MaxInt64 || br.length >= (math.MaxInt64-int64(len(data))) {
+		// Overflow, buffer length will always be at most MaxInt
+		targetLen = math.MaxInt64
+	} else {
+		// No Overflow
+		targetLen = br.length + int64(len(data))
+	}
 
 	// Check if memory limits are reached
 	// Even if Overflow is explicitly checked, MemoryLimit real limits are below maxInt and machine dependenent.

@@ -115,10 +115,6 @@ type Transaction interface {
 
 	// ResponseBodyWriter returns a io.Writer for writing the response body to.
 	// Contents will be buffered until the transaction is closed.
-	// Note that the Write function returns the number of written bytes. This
-	// value has to compared with the len() of the input. If lower, Coraza reached
-	// its buffer limit, therefore it is recommended to anticipate ProcessRequestBody()
-	// at this point
 	ResponseBodyWriter() io.Writer
 
 	// ResponseBodyReader returns a reader for content that has been written by
