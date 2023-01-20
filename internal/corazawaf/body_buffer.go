@@ -5,6 +5,7 @@ package corazawaf
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"math"
 	"os"
@@ -61,6 +62,10 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 		targetLen = br.length + int64(len(data))
 	}
 
+	if targetLen >= br.options.Limit {
+		return 0, errors.New("Limit reached while writing")
+	}
+
 	// Check if memory limits are reached
 	// Even if Overflow is explicitly checked, MemoryLimit real limits are below maxInt and machine dependenent.
 	// bytes.Buffer growth is platform dependent with a growth rate capped at 2x. If the buffer can't grow it will panic with ErrTooLarge.
@@ -77,6 +82,9 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 			br.length = br.options.MemoryLimit
 			return br.buffer.Write(data[:maxWritingDataLen])
 		} else {
+			// Write has been called without checking the Limit, raising an error, it should never happend.
+			// The buffers are private and populated only by WriteRequestBody, ReadRequestBodyFrom, and similar functions
+			// that have to perform limit checks before calling Write()
 			if br.writer == nil {
 				br.writer, err = os.CreateTemp(br.options.TmpPath, "body*")
 				if err != nil {
