@@ -58,6 +58,7 @@ func (p *Parser) FromFile(profilePath string) error {
 		p.currentDir = filepath.Dir(profilePath)
 		file, err := fs.ReadFile(p.root, profilePath)
 		if err != nil {
+			// we don't use defer for this as tinygo does not seem to like it
 			p.currentDir = originalDir
 			p.currentFile = ""
 			p.options.WAF.Logger.Error(err.Error())
@@ -66,6 +67,7 @@ func (p *Parser) FromFile(profilePath string) error {
 
 		err = p.FromString(string(file))
 		if err != nil {
+			// we don't use defer for this as tinygo does not seem to like it
 			p.currentDir = originalDir
 			p.currentFile = ""
 			p.options.WAF.Logger.Error(err.Error())
@@ -74,6 +76,7 @@ func (p *Parser) FromFile(profilePath string) error {
 		// restore the lastDir post processing all includes
 		p.currentDir = lastDir
 	}
+	// we don't use defer for this as tinygo does not seem to like it
 	p.currentDir = originalDir
 	p.currentFile = ""
 
