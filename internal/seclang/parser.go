@@ -36,12 +36,14 @@ type Parser struct {
 // If the path contains a *, it will be expanded to all
 // files in the directory matching the pattern
 func (p *Parser) FromFile(profilePath string) error {
+	originalDir := p.currentDir
+
 	var files []string
 	if strings.Contains(profilePath, "*") {
 		var err error
 		files, err = fs.Glob(p.root, profilePath)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to glob: %s", err.Error())
 		}
 	} else {
 		files = append(files, profilePath)
@@ -56,18 +58,28 @@ func (p *Parser) FromFile(profilePath string) error {
 		p.currentDir = filepath.Dir(profilePath)
 		file, err := fs.ReadFile(p.root, profilePath)
 		if err != nil {
+			// we don't use defer for this as tinygo does not seem to like it
+			p.currentDir = originalDir
+			p.currentFile = ""
 			p.options.WAF.Logger.Error(err.Error())
-			return err
+			return fmt.Errorf("failed to readfile: %s", err.Error())
 		}
 
 		err = p.FromString(string(file))
 		if err != nil {
+			// we don't use defer for this as tinygo does not seem to like it
+			p.currentDir = originalDir
+			p.currentFile = ""
 			p.options.WAF.Logger.Error(err.Error())
-			return err
+			return fmt.Errorf("failed to parse string: %s", err.Error())
 		}
 		// restore the lastDir post processing all includes
 		p.currentDir = lastDir
 	}
+	// we don't use defer for this as tinygo does not seem to like it
+	p.currentDir = originalDir
+	p.currentFile = ""
+
 	return nil
 }
 
@@ -127,13 +139,9 @@ func (p *Parser) evaluateLine(data string) error {
 		return errors.New("invalid lines")
 	}
 	// first we get the directive
-	spl := strings.SplitN(data, " ", 2)
-	opts := ""
-	if len(spl) == 2 {
-		opts = spl[1]
-	}
+	dir, opts, _ := strings.Cut(data, " ")
 	p.options.WAF.Logger.Debug("parsing directive %q", data)
-	directive := strings.ToLower(spl[0])
+	directive := strings.ToLower(dir)
 
 	if len(opts) >= 3 && opts[0] == '"' && opts[len(opts)-1] == '"' {
 		opts = strings.Trim(opts, `"`)

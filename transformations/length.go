@@ -5,9 +5,8 @@ package transformations
 
 import (
 	"strconv"
-	"unicode/utf8"
 )
 
 func length(data string) (string, error) {
-	return strconv.Itoa(utf8.RuneCountInString(data)), nil
+	return strconv.Itoa(len(data)), nil
 }

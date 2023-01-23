@@ -4,30 +4,46 @@
 package transformations
 
 import (
-	"unicode"
+	"github.com/corazawaf/coraza/v3/internal/strings"
 )
 
 func compressWhitespace(value string) (string, error) {
-	var a []byte
-	i := 0
-	inWhiteSpace := false
-	length := len(value)
+	for i := 0; i < len(value); i++ {
+		if isLatinSpace(value[i]) {
+			return doCompressWhitespace(value, i), nil
+		}
+	}
+	return value, nil
+}
 
-	for i < length {
-		if unicode.IsSpace(rune(value[i])) {
+func doCompressWhitespace(input string, pos int) string {
+	// The output may be significantly different length than input, so we don't preallocate
+	ret := []byte(input[0:pos])
+
+	inWhiteSpace := false
+	for i := pos; i < len(input); {
+		if isLatinSpace(input[i]) {
 			if inWhiteSpace {
 				i++
 				continue
 			} else {
 				inWhiteSpace = true
-				a = append(a, ' ')
+				ret = append(ret, ' ')
 			}
 		} else {
 			inWhiteSpace = false
-			a = append(a, value[i])
+			ret = append(ret, input[i])
 		}
 		i++
 	}
 
-	return string(a), nil
+	return strings.WrapUnsafe(ret)
+}
+
+func isLatinSpace(c byte) bool { // copied from unicode.IsSpace
+	switch c {
+	case '\t', '\n', '\v', '\f', '\r', ' ', 0x85, 0xA0:
+		return true
+	}
+	return false
 }

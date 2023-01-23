@@ -18,13 +18,13 @@ charLoop:
 			case (input[i] == '/') && (i+1 < inputLen) && (input[i+1] == '*'):
 				incomment = true
 				i += 2
-			case (input[i] == '<') && (i+1 < inputLen) && (input[i+1] == '!') && (i+2 < inputLen) && (input[i+2] == '-') && (i+3 < inputLen) && (input[i+3] == '-') && !incomment:
+			case (input[i] == '<') && (i+3 < inputLen) && (input[i+1] == '!') && (input[i+2] == '-') && (input[i+3] == '-'):
 				incomment = true
 				i += 4
-			case (input[i] == '-') && (i+1 < inputLen) && (input[i+1] == '-') && !incomment:
+			case (input[i] == '-') && (i+1 < inputLen) && (input[i+1] == '-'):
 				input[i] = ' '
 				break charLoop
-			case input[i] == '#' && !incomment:
+			case input[i] == '#':
 				input[i] = ' '
 				break charLoop
 			default:
@@ -40,7 +40,7 @@ charLoop:
 				input[j] = input[i]
 				i++
 				j++
-			case (input[i] == '-') && (i+1 < inputLen) && (input[i+1] == '-') && (i+2 < inputLen) && (input[i+2] == '>'):
+			case (input[i] == '-') && (i+2 < inputLen) && (input[i+1] == '-') && (input[i+2] == '>'):
 				incomment = false
 				i += 3
 				input[j] = input[i]

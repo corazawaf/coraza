@@ -67,12 +67,22 @@ func TestErrorWithBackticks(t *testing.T) {
 	}
 }
 
-func TestDefaultConfigurationFile(t *testing.T) {
+func TestLoadConfigurationFile(t *testing.T) {
 	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	err := p.FromFile("../../coraza.conf-recommended")
 	if err != nil {
-		t.Error(err)
+		t.Errorf("unexpected error: %s", err.Error())
+	}
+
+	err = p.FromFile("../doesnotexist.conf")
+	if err == nil {
+		t.Error("expected not found error")
+	}
+
+	err = p.FromFile("./testdata/glob/*.conf")
+	if err != nil {
+		t.Errorf("unexpected error: %s", err.Error())
 	}
 }
 

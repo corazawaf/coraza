@@ -7,6 +7,21 @@ import (
 	"io"
 )
 
+// ArgumentType is used to define types of argument for transactions
+// There are three supported types: POST, GET and PATH
+type ArgumentType int
+
+const (
+	// ArgumentInvalid is used to define invalid argument types
+	ArgumentInvalid ArgumentType = iota
+	// ArgumentGET is used to define GET arguments
+	ArgumentGET
+	// ArgumentPOST is used to define POST arguments
+	ArgumentPOST
+	// ArgumentPATH is used to define PATH arguments
+	ArgumentPATH
+)
+
 // Transaction is created from a WAF instance to handle web requests and responses,
 // it contains a copy of most WAF configurations that can be safely changed.
 // Transactions are used to store all data like URLs, request and response
@@ -48,14 +63,17 @@ type Transaction interface {
 	// note: Remember to check for a possible intervention.
 	ProcessRequestHeaders() *Interruption
 
-	// RequestBodyWriter returns a io.Writer for writing the request body to.
-	// Contents will be buffered until the transaction is closed.
-	RequestBodyWriter() io.Writer
-
 	// RequestBodyReader returns a reader for content that has been written by
-	// RequestBodyWriter. This can be useful for buffering the request body
+	// request body buffer. This can be useful for buffering the request body
 	// within the Transaction while also passing it further in an HTTP framework.
 	RequestBodyReader() (io.Reader, error)
+
+	// AddArgument Add arguments GET or POST
+	// This will set ARGS_(GET|POST), ARGS, ARGS_NAMES, ARGS_COMBINED_SIZE and
+	// ARGS_(GET|POST)_NAMES
+	// With this method it is possible to feed Coraza with a GET or POST argument
+	// providing granual control over the arguments.
+	AddArgument(orig ArgumentType, key string, value string)
 
 	// ProcessRequestBody Performs the request body (if any)
 	//
@@ -65,6 +83,22 @@ type Transaction interface {
 	//
 	// Remember to check for a possible intervention.
 	ProcessRequestBody() (*Interruption, error)
+
+	// WriteRequestBody attempts to write data into the body up to the buffer limit and
+	// returns an interruption if the body is bigger than the limit and the action is to
+	// reject. This is specially convenient to resolve an interruption before copying
+	// the body into the request body buffer.
+	//
+	// It returns the corresponding interruption, the number of bytes written an error if any.
+	WriteRequestBody(b []byte) (*Interruption, int, error)
+
+	// ReadRequestBodyFrom attempts to write data into the body up to the buffer limit and
+	// returns an interruption if the body is bigger than the limit and the action is to
+	// reject. This is specially convenient to resolve an interruption before copying
+	// the body into the request body buffer.
+	//
+	// It returns the corresponding interruption, the number of bytes written an error if any.
+	ReadRequestBodyFrom(io.Reader) (*Interruption, int, error)
 
 	// AddResponseHeader Adds a response header variable
 	//
@@ -140,6 +174,9 @@ type Transaction interface {
 
 	// MatchedRules returns the rules that have matched the requests with associated information.
 	MatchedRules() []MatchedRule
+
+	// ID returns the transaction ID.
+	ID() string
 
 	// Closer closes the transaction and releases any resources associated with it such as request/response bodies.
 	io.Closer
