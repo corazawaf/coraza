@@ -52,6 +52,9 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	}
 
 	if br.length == br.options.Limit || br.length >= (br.options.Limit-int64(len(data))) {
+		// Write has been called without checking the Limit, it should never happend. Raising an error.
+		// The buffers are private and populated only by WriteRequestBody, ReadRequestBodyFrom, and similar functions
+		// that have to perform limit checks before calling Write()
 		return 0, errors.New("Limit reached while writing")
 	}
 	targetLen := br.length + int64(len(data))
@@ -65,16 +68,9 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	// 64-bit machine: 34359738368 (2^35, 32GiB) (Not reached the ErrTooLarge panic, the OS triggered an OOM)
 	if targetLen > br.options.MemoryLimit {
 		if environment.IsTinyGo {
-			maxWritingDataLen := br.options.MemoryLimit - br.length
-			if maxWritingDataLen == 0 {
-				return 0, nil
-			}
-			br.length = br.options.MemoryLimit
-			return br.buffer.Write(data[:maxWritingDataLen])
+			// TinyGo MemoryLimit should be equal to Limit. Therefore, Write function has been called without Limit check.
+			return 0, errors.New("MemoryLimit reached while writing")
 		} else {
-			// Write has been called without checking the Limit, raising an error, it should never happend.
-			// The buffers are private and populated only by WriteRequestBody, ReadRequestBodyFrom, and similar functions
-			// that have to perform limit checks before calling Write()
 			if br.writer == nil {
 				br.writer, err = os.CreateTemp(br.options.TmpPath, "body*")
 				if err != nil {

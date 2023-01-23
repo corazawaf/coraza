@@ -809,19 +809,15 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 	var (
 		writingBytes          = int64(len(b))
 		runProcessRequestBody = false
-		targetLen             int64
 	)
-
 	// Overflow check
 	if tx.requestBodyBuffer.length == math.MaxInt64 || tx.requestBodyBuffer.length >= (math.MaxInt64-writingBytes) {
-		// Overflow, buffer length will always be at most MaxInt
-		targetLen = math.MaxInt64
-	} else {
-		// No Overflow
-		targetLen = tx.requestBodyBuffer.length + writingBytes
+		// Overflow, failing. MaxInt64 is not a realistic payload size. Furthermore, it has been tested that
+		// bytes.Buffer does not work with this kind of sizes. See comments in BodyBuffer Write(data []byte)
+		return nil, 0, errors.New("Overflow reached while writing request body")
 	}
 
-	if targetLen >= tx.RequestBodyLimit {
+	if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			// We interrupt this transaction in case RequestBodyLimitAction is Reject
 			return setAndReturnBodyLimitInterruption(tx)
@@ -877,20 +873,16 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 	var (
 		writingBytes          int64
 		runProcessRequestBody = false
-		targetLen             int64
 	)
 	if l, ok := r.(ByteLenger); ok {
 		writingBytes = int64(l.Len())
 		// Overflow check
 		if tx.requestBodyBuffer.length == math.MaxInt64 || tx.requestBodyBuffer.length >= (math.MaxInt64-writingBytes) {
-			// Overflow, buffer length will always be at most MaxInt
-			targetLen = math.MaxInt64
-		} else {
-			// No Overflow
-			targetLen = tx.requestBodyBuffer.length + writingBytes
+			// Overflow, failing. MaxInt64 is not a realistic payload size. Furthermore, it has been tested that
+			// bytes.Buffer does not work with this kind of sizes. See comments in BodyBuffer Write(data []byte)
+			return nil, 0, errors.New("Overflow reached while writing request body")
 		}
-
-		if targetLen >= tx.RequestBodyLimit {
+		if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
 			if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 				return setAndReturnBodyLimitInterruption(tx)
 			}
