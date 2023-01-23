@@ -127,12 +127,12 @@ func (a *ctlFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
 		}
 		tx.RequestBodyAccess = val
 	case ctlRequestBodyLimit:
-		limit, err := strconv.Atoi(a.value)
+		limit, err := strconv.ParseInt(a.value, 10, 64)
 		if err != nil {
 			tx.WAF.Logger.Error("[ctl:RequestBodyLimit] Incorrect integer CTL value %q", a.value)
 			return
 		}
-		tx.RequestBodyLimit = int64(limit)
+		tx.RequestBodyLimit = limit
 	case ctlRuleEngine:
 		re, err := types.ParseRuleEngineStatus(a.value)
 		if err != nil {

@@ -436,7 +436,7 @@ func directiveSecUploadDir(options *DirectiveOptions) error {
 
 func directiveSecRequestBodyNoFilesLimit(options *DirectiveOptions) error {
 	var err error
-	options.WAF.RequestBodyNoFilesLimit, err = strconv.Atoi(options.Opts)
+	options.WAF.RequestBodyNoFilesLimit, err = strconv.ParseInt(options.Opts, 10, 64)
 	return err
 }
 

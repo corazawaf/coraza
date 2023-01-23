@@ -1073,7 +1073,7 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 	if err != nil {
 		return tx.interruption, err
 	}
-	reader = io.LimitReader(reader, int64(tx.WAF.ResponseBodyLimit))
+	reader = io.LimitReader(reader, tx.WAF.ResponseBodyLimit)
 	buf := new(strings.Builder)
 	length, err := io.Copy(buf, reader)
 	if err != nil {

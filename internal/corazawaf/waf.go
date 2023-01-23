@@ -101,7 +101,7 @@ type WAF struct {
 	UploadDir string
 
 	// Request body in memory limit excluding the size of any files being transported in the request.
-	RequestBodyNoFilesLimit int
+	RequestBodyNoFilesLimit int64
 
 	RequestBodyLimitAction types.BodyLimitAction
 
