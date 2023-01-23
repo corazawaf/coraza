@@ -811,7 +811,7 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 		runProcessRequestBody = false
 	)
 	// Overflow check
-	if tx.requestBodyBuffer.length == math.MaxInt64 || tx.requestBodyBuffer.length >= (math.MaxInt64-writingBytes) {
+	if tx.requestBodyBuffer.length >= (math.MaxInt64-writingBytes) {
 		// Overflow, failing. MaxInt64 is not a realistic payload size. Furthermore, it has been tested that
 		// bytes.Buffer does not work with this kind of sizes. See comments in BodyBuffer Write(data []byte)
 		return nil, 0, errors.New("Overflow reached while writing request body")
@@ -877,7 +877,7 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 	if l, ok := r.(ByteLenger); ok {
 		writingBytes = int64(l.Len())
 		// Overflow check
-		if tx.requestBodyBuffer.length == math.MaxInt64 || tx.requestBodyBuffer.length >= (math.MaxInt64-writingBytes) {
+		if tx.requestBodyBuffer.length >= (math.MaxInt64-writingBytes) {
 			// Overflow, failing. MaxInt64 is not a realistic payload size. Furthermore, it has been tested that
 			// bytes.Buffer does not work with this kind of sizes. See comments in BodyBuffer Write(data []byte)
 			return nil, 0, errors.New("Overflow reached while writing request body")
