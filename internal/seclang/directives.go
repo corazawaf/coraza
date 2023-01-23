@@ -170,7 +170,14 @@ func directiveSecResponseBodyMimeType(options *DirectiveOptions) error {
 }
 
 func directiveSecResponseBodyLimitAction(options *DirectiveOptions) error {
-	options.WAF.RejectOnResponseBodyLimit = strings.ToLower(options.Opts) == "reject"
+	switch strings.ToLower(options.Opts) {
+	case "reject":
+		options.WAF.ResponseBodyLimitAction = types.BodyLimitActionReject
+	case "processpartial":
+		options.WAF.ResponseBodyLimitAction = types.BodyLimitActionProcessPartial
+	default:
+		return errors.New("syntax error: SecResponseBodyLimitAction [Reject/ProcessPartial]")
+	}
 	return nil
 }
 
@@ -181,7 +188,14 @@ func directiveSecResponseBodyLimit(options *DirectiveOptions) error {
 }
 
 func directiveSecRequestBodyLimitAction(options *DirectiveOptions) error {
-	options.WAF.RejectOnRequestBodyLimit = strings.ToLower(options.Opts) == "reject"
+	switch strings.ToLower(options.Opts) {
+	case "reject":
+		options.WAF.RequestBodyLimitAction = types.BodyLimitActionReject
+	case "processpartial":
+		options.WAF.RequestBodyLimitAction = types.BodyLimitActionProcessPartial
+	default:
+		return errors.New("syntax error: SecRequestBodyLimitAction [Reject/ProcessPartial]")
+	}
 	return nil
 }
 

@@ -55,8 +55,8 @@ func NewWAFConfig() WAFConfig {
 
 // RequestBodyConfig controls access to the request body.
 type RequestBodyConfig interface {
-	// WithLimit sets the maximum number of bytes that can be read from the request body. Bytes beyond that set
-	// in WithInMemoryLimit will be buffered to disk.
+	// WithLimit sets the maximum number of bytes that can be read from the request body.
+	// A request body going beyond WithInMemoryLimit will result in being buffered to disk.
 	WithLimit(limit int) RequestBodyConfig
 
 	// WithInMemoryLimit sets the maximum number of bytes that can be read from the request body and buffered in memory.
@@ -71,7 +71,12 @@ func NewRequestBodyConfig() RequestBodyConfig {
 // ResponseBodyConfig controls access to the response body.
 type ResponseBodyConfig interface {
 	// WithLimit sets the maximum number of bytes that can be read from the response body and buffered in memory.
+	// Keep in mind your machine architecture and memory/swap limits while setting it.
+	// E.g. 32-bit machine tested limit: 1073741824 (1GiB)
 	WithLimit(limit int) ResponseBodyConfig
+
+	// WithInMemoryLimit is not implemented for ResponseBody. The body will be just buffered in memory,
+	// therefore WithLimit already sets the in memory threshold
 
 	// WithMimeTypes sets the mime types of responses that will be processed.
 	WithMimeTypes(mimeTypes []string) ResponseBodyConfig

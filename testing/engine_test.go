@@ -72,7 +72,7 @@ func TestResponse(t *testing.T) {
 	waf, err := coraza.NewWAF(
 		coraza.NewWAFConfig().
 			WithResponseBodyAccess(
-				coraza.NewResponseBodyConfig().WithLimit(10),
+				coraza.NewResponseBodyConfig().WithLimit(21),
 			),
 	)
 	if err != nil {
