@@ -51,9 +51,6 @@ type Transaction struct {
 	SkipAfter string
 
 	// Copies from the WAF instance that may be overwritten by the ctl action
-	// For usability purposes body limits are enforced as int (and not int64)
-	// int is a signed integer type that is at least 32 bits in size (platform-dependent size).
-	// We still basically assume 64-bit usage where int are big sizes.
 	AuditEngine              types.AuditEngineStatus
 	AuditLogParts            types.AuditLogParts
 	ForceRequestBodyVariable bool

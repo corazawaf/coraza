@@ -38,13 +38,15 @@ type WAFConfig interface {
 	// in WithInMemoryLimit will be buffered to disk.
 	// For usability purposes body limits are enforced as int (and not int64)
 	// int is a signed integer type that is at least 32 bits in size (platform-dependent size).
-	// The settable upper limit for 32-bit machines is 2147483647 bytes (2GiB)
+	// While, the theoretical settable upper limit for 32-bit machines is 2GiB,
+	// it is recommended to keep this value as low as possible.
 	WithRequestBodyBytesLimit(limit int) WAFConfig
 
 	// WithRequestBodyInMemoryLimit sets the maximum number of bytes that can be read from the request body and buffered in memory.
 	// For usability purposes body limits are enforced as int (and not int64)
 	// int is a signed integer type that is at least 32 bits in size (platform-dependent size).
-	// The settable upper limit for 32-bit machines is 2147483647 bytes (2GiB)
+	// While, the theoretical settable upper limit for 32-bit machines is 2GiB,
+	// it is recommended to keep this value as low as possible.
 	WithRequestBodyInMemoryBytesLimit(limit int) WAFConfig
 
 	// WithResponseBodyAccess enables access to the response body.
@@ -53,7 +55,8 @@ type WAFConfig interface {
 	// WithResponseBodyLimit sets the maximum number of bytes that can be read from the response body and buffered in memory.
 	// For usability purposes body limits are enforced as int (and not int64)
 	// int is a signed integer type that is at least 32 bits in size (platform-dependent size).
-	// The settable upper limit for 32-bit machines is 2147483647 bytes (2GiB)
+	// While, the theoretical settable upper limit for 32-bit machines is 2GiB,
+	// it is recommended to keep this value as low as possible.
 	WithResponseBodyBytesLimit(limit int) WAFConfig
 
 	// WithResponseBodyMimeTypes sets the mime types of responses that will be processed.
@@ -107,7 +110,7 @@ type wafRule struct {
 
 // For usability purposes body limits are enforced as int (and not int64)
 // int is a signed integer type that is at least 32 bits in size (platform-dependent size).
-// 32-bit machines limit will be equal to 2GiB (2147483647 bytes)
+// We still basically assume 64-bit usage where int are big sizes.
 type wafConfig struct {
 	rules                    []wafRule
 	auditLog                 *auditLogConfig
