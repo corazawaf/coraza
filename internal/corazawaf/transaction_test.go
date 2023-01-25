@@ -671,26 +671,26 @@ func TestTransactionSyncPool(t *testing.T) {
 // directly calling Write, otherwise error "Limit reached while writing" is raised and the body is not
 // partially written like this test expects.
 
-// func TestTxPhase4Magic(t *testing.T) {
-// 	waf := NewWAF()
-// 	waf.ResponseBodyAccess = true
-// 	waf.ResponseBodyLimit = 3
-// 	waf.ResponseBodyLimitAction = types.BodyLimitActionProcessPartial
-// 	tx := waf.NewTransaction()
-// 	tx.AddResponseHeader("content-type", "text/html")
-// 	if _, err := tx.ResponseBodyBuffer.Write([]byte("more bytes")); err != nil {
-// 		t.Error(err)
-// 	}
-// 	if _, err := tx.ProcessResponseBody(); err != nil {
-// 		t.Error(err)
-// 	}
-// 	if tx.variables.outboundDataError.String() != "1" {
-// 		t.Error("failed to set outbound data error")
-// 	}
-// 	if tx.variables.responseBody.String() != "mor" {
-// 		t.Error("failed to set response body")
-// 	}
-// }
+func TestTxPhase4Magic(t *testing.T) {
+	waf := NewWAF()
+	waf.ResponseBodyAccess = true
+	waf.ResponseBodyLimit = 3
+	waf.ResponseBodyLimitAction = types.BodyLimitActionProcessPartial
+	tx := waf.NewTransaction()
+	tx.AddResponseHeader("content-type", "text/html")
+	if it, _, err := tx.WriteResponseBody([]byte("more bytes")); it != nil || err != nil {
+		t.Error(err)
+	}
+	if _, err := tx.ProcessResponseBody(); err != nil {
+		t.Error(err)
+	}
+	if tx.variables.outboundDataError.String() != "1" {
+		t.Error("failed to set outbound data error")
+	}
+	if tx.variables.responseBody.String() != "mor" {
+		t.Error("failed to set response body")
+	}
+}
 
 func TestVariablesMatch(t *testing.T) {
 	waf := NewWAF()

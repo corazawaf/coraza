@@ -135,7 +135,7 @@ type Transaction interface {
 	// It returns the corresponding interruption, the number of bytes written an error if any.
 	WriteResponseBody(b []byte) (*Interruption, int, error)
 
-	// ReadRequestBodyFrom attempts to write data into the body up to the buffer limit and
+	// ReadResponseBodyFrom attempts to write data into the body up to the buffer limit and
 	// returns an interruption if the body is bigger than the limit and the action is to
 	// reject. This is specially convenient to resolve an interruption before copying
 	// the body into the response body buffer.

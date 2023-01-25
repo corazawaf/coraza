@@ -773,12 +773,6 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 }
 
 func setAndReturnBodyLimitInterruption(tx *Transaction) (*types.Interruption, int, error) {
-	if tx.LastPhase <= types.PhaseRequestBody {
-		tx.variables.inboundErrorData.Set("1")
-	} else {
-		// TODO: figure out ErrorData vs DataError: https://github.com/corazawaf/coraza/issues/564
-		tx.variables.outboundDataError.Set("1")
-	}
 	tx.DebugLogger().Warn("Disrupting transaction with body size above the configured limit (Action Reject)")
 	tx.interruption = &types.Interruption{
 		Status: 403,
@@ -822,7 +816,8 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 		return nil, 0, errors.New("Overflow reached while writing request body")
 	}
 
-	if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
+	if tx.requestBodyBuffer.length+writingBytes > tx.RequestBodyLimit {
+		tx.variables.inboundErrorData.Set("1")
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			// We interrupt this transaction in case RequestBodyLimitAction is Reject
 			return setAndReturnBodyLimitInterruption(tx)
@@ -887,7 +882,8 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 			// bytes.Buffer does not work with this kind of sizes. See comments in BodyBuffer Write(data []byte)
 			return nil, 0, errors.New("Overflow reached while writing request body")
 		}
-		if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
+		if tx.requestBodyBuffer.length+writingBytes > tx.RequestBodyLimit {
+			tx.variables.inboundErrorData.Set("1")
 			if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 				return setAndReturnBodyLimitInterruption(tx)
 			}
@@ -1066,7 +1062,9 @@ func (tx *Transaction) WriteResponseBody(b []byte) (*types.Interruption, int, er
 		writingBytes           = int64(len(b))
 		runProcessResponseBody = false
 	)
-	if tx.responseBodyBuffer.length+writingBytes >= tx.ResponseBodyLimit {
+	if tx.responseBodyBuffer.length+writingBytes > tx.ResponseBodyLimit {
+		// TODO: figure out ErrorData vs DataError: https://github.com/corazawaf/coraza/issues/564
+		tx.variables.outboundDataError.Set("1")
 		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionReject {
 			// We interrupt this transaction in case ResponseBodyLimitAction is Reject
 			return setAndReturnBodyLimitInterruption(tx)
@@ -1116,7 +1114,9 @@ func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, i
 	)
 	if l, ok := r.(ByteLenger); ok {
 		writingBytes = int64(l.Len())
-		if tx.responseBodyBuffer.length+writingBytes >= tx.ResponseBodyLimit {
+		if tx.responseBodyBuffer.length+writingBytes > tx.ResponseBodyLimit {
+			// TODO: figure out ErrorData vs DataError: https://github.com/corazawaf/coraza/issues/564
+			tx.variables.outboundDataError.Set("1")
 			if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionReject {
 				return setAndReturnBodyLimitInterruption(tx)
 			}
