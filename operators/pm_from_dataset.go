@@ -7,8 +7,8 @@ package operators
 
 import (
 	"fmt"
-
-	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
+	"regexp"
+	"strings"
 
 	"github.com/corazawaf/coraza/v3/rules"
 )
@@ -19,12 +19,7 @@ func newPMFromDataset(options rules.OperatorOptions) (rules.Operator, error) {
 	if !ok {
 		return nil, fmt.Errorf("dataset %q not found", data)
 	}
-	builder := ahocorasick.NewAhoCorasickBuilder(ahocorasick.Opts{
-		AsciiCaseInsensitive: true,
-		MatchOnlyWholeWords:  false,
-		MatchKind:            ahocorasick.LeftMostLongestMatch,
-		DFA:                  true,
-	})
+	patterns := strings.Join(dataset[:], "|")
 
-	return &pm{matcher: builder.Build(dataset)}, nil
+	return &pm{matcher: regexp.MustCompile(patterns)}, nil
 }

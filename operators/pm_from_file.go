@@ -8,9 +8,8 @@ package operators
 import (
 	"bufio"
 	"bytes"
+	"regexp"
 	"strings"
-
-	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
 
 	"github.com/corazawaf/coraza/v3/rules"
 )
@@ -37,14 +36,9 @@ func newPMFromFile(options rules.OperatorOptions) (rules.Operator, error) {
 		lines = append(lines, strings.ToLower(l))
 	}
 
-	builder := ahocorasick.NewAhoCorasickBuilder(ahocorasick.Opts{
-		AsciiCaseInsensitive: true,
-		MatchOnlyWholeWords:  false,
-		MatchKind:            ahocorasick.LeftMostLongestMatch,
-		DFA:                  false,
-	})
+	patterns := strings.Join(lines[:], "|")
 
-	return &pm{matcher: builder.Build(lines)}, nil
+	return &pm{matcher: regexp.MustCompile(patterns)}, nil
 }
 
 func init() {
