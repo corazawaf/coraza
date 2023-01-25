@@ -12,9 +12,6 @@ import (
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
-// TODO according to coraza researchs, re2 matching is faster than ahocorasick
-// maybe we should switch in the future
-// pm is always lowercase
 type pm struct {
 	matcher *regexp.Regexp
 }
