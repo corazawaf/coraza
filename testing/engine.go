@@ -151,7 +151,7 @@ func (t *Test) SetResponseBody(body interface{}) error {
 	if lbody == 0 {
 		return nil
 	}
-	if _, err := t.transaction.ResponseBodyWriter().Write([]byte(data)); err != nil {
+	if it, _, err := t.transaction.WriteResponseBody([]byte(data)); it != nil || err != nil {
 		return err
 	}
 	return nil

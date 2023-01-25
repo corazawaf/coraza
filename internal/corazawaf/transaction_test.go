@@ -434,7 +434,7 @@ func TestResponseBody(t *testing.T) {
 	tx.ResponseBodyAccess = true
 	tx.RuleEngine = types.RuleEngineOn
 	tx.AddResponseHeader("content-type", "text/plain")
-	if _, err := tx.ResponseBodyBuffer.Write([]byte("test123")); err != nil {
+	if it, _, err := tx.WriteResponseBody([]byte("test123")); it != nil || err != nil {
 		t.Error("Failed to write response body buffer")
 	}
 	if _, err := tx.ProcessResponseBody(); err != nil {

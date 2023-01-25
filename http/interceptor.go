@@ -27,6 +27,10 @@ type rwInterceptor struct {
 
 func (i *rwInterceptor) WriteHeader(statusCode int) {
 	if i.hasStatusCode {
+		if i.tx.IsInterrupted() {
+			// If we already set a status code, but phase4 raised an interruption, let's change it
+			i.statusCode = statusCode
+		}
 		return
 	}
 
@@ -47,7 +51,6 @@ func (i *rwInterceptor) Write(b []byte) (int, error) {
 	if !i.hasStatusCode {
 		i.WriteHeader(http.StatusOK)
 	}
-
 	if i.tx.IsInterrupted() {
 		// if there is an interruption it must be from phase 4 and hence
 		// we won't write anything to either the body or the buffer.
@@ -57,10 +60,13 @@ func (i *rwInterceptor) Write(b []byte) (int, error) {
 	if i.tx.IsResponseBodyAccessible() {
 		// we only buffer the response body if we are going to access
 		// to it, otherwise we just send it to the response writer.
-		// TODO: rely on tx.ReadResponseBodyFrom
-		return i.tx.ResponseBodyWriter().Write(b)
+		it, n, err := i.tx.WriteResponseBody(b)
+		if it != nil {
+			i.WriteHeader(http.StatusForbidden)
+			return 0, nil
+		}
+		return n, err
 	}
-
 	return i.w.Write(b)
 }
 

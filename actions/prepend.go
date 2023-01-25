@@ -35,15 +35,15 @@ func (a *prependFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
 	data := a.data.Expand(tx)
 	buf := corazawaf.NewBodyBuffer(types.BodyBufferOptions{
 		TmpPath:     tx.WAF.TmpDir,
-		MemoryLimit: tx.WAF.RequestBodyInMemoryLimit,
-		Limit:       tx.WAF.RequestBodyLimit,
+		MemoryLimit: tx.WAF.ResponseBodyLimit,
+		Limit:       tx.WAF.ResponseBodyLimit,
 	})
 
 	_, err := buf.Write([]byte(data))
 	if err != nil {
 		tx.WAF.Logger.Debug("failed to write buffer while evaluating prepend action: %s", err.Error())
 	}
-	reader, err := tx.ResponseBodyBuffer.Reader()
+	reader, err := tx.ResponseBodyReader()
 	if err != nil {
 		tx.WAF.Logger.Debug("failed to read response body while evaluating prepend action: %s", err.Error())
 	}
@@ -51,8 +51,11 @@ func (a *prependFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
 	if err != nil {
 		tx.WAF.Logger.Debug("failed to append response buffer while evaluating prepend action: %s", err.Error())
 	}
+	// TODO: elaborate on ContentInjection actions considering that the WAF may NOT buffer the whole response
 	// We overwrite the response body buffer with the new buffer
-	*tx.ResponseBodyBuffer = *buf
+	// TODO: implement the swap
+	// *tx.ResponseBodyBuffer = *buf
+
 	// Maybe in the future we could add the prepend function to the BodyBuffer
 }
 

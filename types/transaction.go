@@ -72,7 +72,7 @@ type Transaction interface {
 	// This will set ARGS_(GET|POST), ARGS, ARGS_NAMES, ARGS_COMBINED_SIZE and
 	// ARGS_(GET|POST)_NAMES
 	// With this method it is possible to feed Coraza with a GET or POST argument
-	// providing granual control over the arguments.
+	// providing granular control over the arguments.
 	AddArgument(orig ArgumentType, key string, value string)
 
 	// ProcessRequestBody Performs the request body (if any)
@@ -113,12 +113,8 @@ type Transaction interface {
 	// note: Remember to check for a possible intervention.
 	ProcessResponseHeaders(code int, proto string) *Interruption
 
-	// ResponseBodyWriter returns a io.Writer for writing the response body to.
-	// Contents will be buffered until the transaction is closed.
-	ResponseBodyWriter() io.Writer
-
 	// ResponseBodyReader returns a reader for content that has been written by
-	// ResponseBodyWriter. This can be useful for buffering the response body
+	// response body buffer. This can be useful for buffering the response body
 	// within the Transaction while also passing it further in an HTTP framework.
 	ResponseBodyReader() (io.Reader, error)
 
@@ -130,6 +126,22 @@ type Transaction interface {
 	//
 	// note Remember to check for a possible intervention.
 	ProcessResponseBody() (*Interruption, error)
+
+	// WriteResponseBody attempts to write data into the body up to the buffer limit and
+	// returns an interruption if the body is bigger than the limit and the action is to
+	// reject. This is specially convenient to resolve an interruption before copying
+	// the body into the response body buffer.
+	//
+	// It returns the corresponding interruption, the number of bytes written an error if any.
+	WriteResponseBody(b []byte) (*Interruption, int, error)
+
+	// ReadRequestBodyFrom attempts to write data into the body up to the buffer limit and
+	// returns an interruption if the body is bigger than the limit and the action is to
+	// reject. This is specially convenient to resolve an interruption before copying
+	// the body into the response body buffer.
+	//
+	// It returns the corresponding interruption, the number of bytes written an error if any.
+	ReadResponseBodyFrom(io.Reader) (*Interruption, int, error)
 
 	// ProcessLogging Logging all information relative to this transaction.
 	// An error log

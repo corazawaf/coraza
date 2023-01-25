@@ -27,7 +27,8 @@ func (a *appendFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 		return
 	}
 	data := a.data.Expand(tx)
-	if _, err := tx.ResponseBodyWriter().Write([]byte(data)); err != nil {
+	// TODO: elaborate on ContentInjection actions considering that the WAF may NOT buffer the whole response
+	if it, _, err := tx.WriteResponseBody([]byte(data)); it != nil || err != nil {
 		tx.DebugLogger().Error("append failed to write to response buffer: %s", err.Error())
 	}
 }

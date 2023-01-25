@@ -76,17 +76,16 @@ func TestHttpServer(t *testing.T) {
 			},
 			[]byte("beyond the limit script"),
 		},
-		// TODO(M4tteoP) uncomment after merging WriteRsponseBody logic
-		// {
-		// 	"positive for response body limit reject",
-		// 	"/",
-		// 	403,
-		// 	map[string]string{
-		// 		"DIRECTIVES_FILE": "./testdata/response-body-limits-reject.conf",
-		// 		"RESPONSE_BODY":   "response body beyond the limit",
-		// 	},
-		// 	nil,
-		// },
+		{
+			"positive for response body limit reject",
+			"/",
+			403,
+			map[string]string{
+				"DIRECTIVES_FILE": "./testdata/response-body-limits-reject.conf",
+				"RESPONSE_BODY":   "response body beyond the limit",
+			},
+			nil,
+		},
 	}
 	// Perform tests
 	for _, tc := range tests {
