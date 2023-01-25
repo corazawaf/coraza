@@ -100,6 +100,7 @@ type WAF struct {
 	// UploadDir is the directory where the uploaded files will be stored
 	UploadDir string
 
+	// Request body in memory limit excluding the size of any files being transported in the request.
 	RequestBodyNoFilesLimit int64
 
 	RequestBodyLimitAction types.BodyLimitAction

@@ -100,9 +100,9 @@ func directiveSecResponseBodyAccess(options *DirectiveOptions) error {
 }
 
 func directiveSecRequestBodyLimit(options *DirectiveOptions) error {
-	limit, _ := strconv.ParseInt(options.Opts, 10, 64)
-	options.WAF.RequestBodyLimit = limit
-	return nil
+	var err error
+	options.WAF.RequestBodyLimit, err = strconv.ParseInt(options.Opts, 10, 64)
+	return err
 }
 
 func directiveSecRequestBodyAccess(options *DirectiveOptions) error {
@@ -200,8 +200,9 @@ func directiveSecRequestBodyLimitAction(options *DirectiveOptions) error {
 }
 
 func directiveSecRequestBodyInMemoryLimit(options *DirectiveOptions) error {
-	options.WAF.RequestBodyInMemoryLimit, _ = strconv.ParseInt(options.Opts, 10, 64)
-	return nil
+	var err error
+	options.WAF.RequestBodyInMemoryLimit, err = strconv.ParseInt(options.Opts, 10, 64)
+	return err
 }
 
 func directiveSecRemoteRulesFailAction(options *DirectiveOptions) error {
