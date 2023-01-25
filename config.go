@@ -5,7 +5,6 @@ package coraza
 
 import (
 	"io/fs"
-	"math"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/loggers"
@@ -74,14 +73,14 @@ type WAFConfig interface {
 	WithRootFS(fs fs.FS) WAFConfig
 }
 
-const UnsetLimit = math.MinInt
+const unsetLimit = -1
 
 // NewWAFConfig creates a new WAFConfig with the default settings.
 func NewWAFConfig() WAFConfig {
 	return &wafConfig{
-		requestBodyLimit:         UnsetLimit,
-		requestBodyInMemoryLimit: UnsetLimit,
-		responseBodyLimit:        UnsetLimit,
+		requestBodyLimit:         unsetLimit,
+		requestBodyInMemoryLimit: unsetLimit,
+		responseBodyLimit:        unsetLimit,
 	}
 }
 

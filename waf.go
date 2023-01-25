@@ -81,7 +81,7 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		waf.RequestBodyAccess = true
 	}
 
-	if c.requestBodyLimit != UnsetLimit {
+	if c.requestBodyLimit != unsetLimit {
 		if c.requestBodyLimit <= 0 {
 			return nil, errors.New("request body limit should be bigger than 0")
 		}
@@ -92,7 +92,7 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		waf.RequestBodyLimit = int64(c.requestBodyLimit)
 	}
 
-	if c.requestBodyInMemoryLimit != UnsetLimit {
+	if c.requestBodyInMemoryLimit != unsetLimit {
 		if c.requestBodyInMemoryLimit <= 0 {
 			return nil, errors.New("request body memory limit should be bigger than 0")
 		}
@@ -103,7 +103,7 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		waf.ResponseBodyAccess = true
 	}
 
-	if c.responseBodyLimit != UnsetLimit {
+	if c.responseBodyLimit != unsetLimit {
 		if c.responseBodyLimit <= 0 {
 			return nil, errors.New("response body limit should be bigger than 0")
 		}
