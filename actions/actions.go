@@ -27,7 +27,6 @@ func RegisterPlugin(name string, a func() rules.Action) {
 
 func init() {
 	RegisterPlugin("allow", allow)
-	RegisterPlugin("append", append2)
 	RegisterPlugin("auditlog", auditlog)
 	RegisterPlugin("block", block)
 	RegisterPlugin("capture", capture)
@@ -48,7 +47,6 @@ func init() {
 	RegisterPlugin("nolog", nolog)
 	RegisterPlugin("pass", pass)
 	RegisterPlugin("phase", phase)
-	RegisterPlugin("prepend", prepend)
 	RegisterPlugin("redirect", redirect)
 	RegisterPlugin("rev", rev)
 	RegisterPlugin("setenv", setenv)

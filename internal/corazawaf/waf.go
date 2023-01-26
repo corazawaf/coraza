@@ -42,9 +42,6 @@ type WAF struct {
 	// Array of logging parts to be used
 	AuditLogParts types.AuditLogParts
 
-	// Status of the content injection for responses and requests
-	ContentInjection bool
-
 	// If true, transactions will have access to the request body
 	RequestBodyAccess bool
 
