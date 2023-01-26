@@ -75,7 +75,7 @@ type Transaction interface {
 	// providing granular control over the arguments.
 	AddArgument(orig ArgumentType, key string, value string)
 
-	// ProcessRequestBody Performs the request body (if any)
+	// ProcessRequestBody Performs the analysis of the request body (if any)
 	//
 	// This method perform the analysis on the request body. It is optional to
 	// call that function. If this API consumer already know that there isn't a
@@ -118,9 +118,9 @@ type Transaction interface {
 	// within the Transaction while also passing it further in an HTTP framework.
 	ResponseBodyReader() (io.Reader, error)
 
-	// ProcessResponseBody Perform the request body (if any)
+	// ProcessResponseBody Perform the analysis of the response body (if any)
 	//
-	// This method perform the analysis on the request body. It is optional to
+	// This method perform the analysis on the response body. It is optional to
 	// call that method. If this API consumer already know that there isn't a
 	// body for inspect it is recommended to skip this step.
 	//

@@ -920,10 +920,10 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 	return tx.interruption, int(w), err
 }
 
-// ProcessRequestBody Performs the request body (if any)
+// ProcessRequestBody Performs the analysis of the request body (if any)
 //
 // This method perform the analysis on the request body. It is optional to
-// call that function. If this API consumer already know that there isn't a
+// call that function. If this API consumer already knows that there isn't a
 // body for inspect it is recommended to skip this step.
 //
 // Remember to check for a possible intervention.
@@ -1035,8 +1035,8 @@ func (tx *Transaction) IsResponseBodyProcessable() bool {
 }
 
 // WriteResponseBody writes bytes from a slice of bytes into the response body,
-// it returns an interuption if the writing bytes go beyond the response body limit.
-// It won't copy the bytes if the body access isn't accesible.
+// it returns an interruption if the writing bytes go beyond the response body limit.
+// It won't copy the bytes if the body access isn't accessible.
 func (tx *Transaction) WriteResponseBody(b []byte) (*types.Interruption, int, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
 		return nil, 0, nil
@@ -1087,8 +1087,8 @@ func (tx *Transaction) WriteResponseBody(b []byte) (*types.Interruption, int, er
 }
 
 // ReadResponseBodyFrom writes bytes from a reader into the response body
-// it returns an interuption if the writing bytes go beyond the response body limit.
-// It won't read the reader if the body access isn't accesible.
+// it returns an interruption if the writing bytes go beyond the response body limit.
+// It won't read the reader if the body access isn't accessible.
 func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, int, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
 		return nil, 0, nil
@@ -1098,12 +1098,12 @@ func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, i
 		return nil, 0, nil
 	}
 
-	if tx.ResponseBodyLimit == tx.requestBodyBuffer.length {
-		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
+	if tx.ResponseBodyLimit == tx.responseBodyBuffer.length {
+		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionReject {
 			return tx.interruption, 0, nil
 		}
 
-		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
+		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionProcessPartial {
 			return nil, 0, nil
 		}
 	}
@@ -1152,10 +1152,10 @@ func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, i
 	return tx.interruption, int(w), err
 }
 
-// ProcessResponseBody Perform the response body (if any)
+// ProcessResponseBody Perform the analysis of the the response body (if any)
 //
-// This method perform the analysis on the request body. It is optional to
-// call that method. If this API consumer already know that there isn't a
+// This method perform the analysis on the response body. It is optional to
+// call that method. If this API consumer already knows that there isn't a
 // body for inspect it is recommended to skip this step.
 //
 // note Remember to check for a possible intervention.
