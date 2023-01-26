@@ -7,26 +7,32 @@ import "testing"
 
 func TestNewWAFLimits(t *testing.T) {
 	testCases := map[string]struct {
-		expectedErr string
-		cfg         requestBodyConfig
+		expectedErr   string
+		limit         int
+		inMemoryLimit int
 	}{
 		"empty limit": {
-			cfg:         requestBodyConfig{},
-			expectedErr: "request body limit should be bigger than 0",
+			expectedErr:   "request body limit should be bigger than 0",
+			limit:         0,
+			inMemoryLimit: 2,
+		},
+		"empty memory limit": {
+			expectedErr:   "request body memory limit should be bigger than 0",
+			limit:         2,
+			inMemoryLimit: 0,
 		},
 		"memory limit bigger than limit": {
-			cfg: requestBodyConfig{
-				limit:         5,
-				inMemoryLimit: 9,
-			},
-			expectedErr: "request body limit should be at least the memory limit",
+			limit:         5,
+			inMemoryLimit: 9,
+			expectedErr:   "request body limit should be at least the memory limit",
 		},
 	}
 
 	for name, tCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			_, err := NewWAF(&wafConfig{
-				requestBody: &tCase.cfg,
+				requestBodyLimit:         tCase.limit,
+				requestBodyInMemoryLimit: tCase.inMemoryLimit,
 			})
 
 			if tCase.expectedErr != "" {

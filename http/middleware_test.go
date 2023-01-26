@@ -294,13 +294,14 @@ func TestHttpServer(t *testing.T) {
 	SecRequestBodyAccess On
 	SecResponseBodyAccess On
 	SecResponseBodyMimeType text/plain
+	SecRequestBodyLimitAction ProcessPartial
 	SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
 	SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
 	SecRule RESPONSE_HEADERS:Foo "@pm bar" "id:199,phase:3,deny,t:lowercase,deny, status:401,msg:'Invalid response header',log,auditlog"
 	SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
 `).WithErrorCallback(errLogger(t)).WithDebugLogger(&debugLogger{t: t})
 			if l := tCase.reqBodyLimit; l > 0 {
-				conf = conf.WithRequestBodyAccess(coraza.NewRequestBodyConfig().WithLimit(l).WithInMemoryLimit(l))
+				conf = conf.WithRequestBodyAccess().WithRequestBodyLimit(l).WithRequestBodyInMemoryLimit(l)
 			}
 			waf, err := coraza.NewWAF(conf)
 			if err != nil {

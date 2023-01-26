@@ -17,6 +17,7 @@ func TestBodyReaderMemory(t *testing.T) {
 	br := NewBodyBuffer(types.BodyBufferOptions{
 		TmpPath:     t.TempDir(),
 		MemoryLimit: 500,
+		Limit:       500,
 	})
 	if _, err := br.Write([]byte("test")); err != nil {
 		t.Error(err)
@@ -44,6 +45,7 @@ func TestBodyReaderFile(t *testing.T) {
 	br := NewBodyBuffer(types.BodyBufferOptions{
 		TmpPath:     t.TempDir(),
 		MemoryLimit: 1,
+		Limit:       100,
 	})
 	if _, err := br.Write([]byte("test")); err != nil {
 		t.Error(err)
@@ -74,6 +76,7 @@ func TestBodyReaderWriteFromReader(t *testing.T) {
 	br := NewBodyBuffer(types.BodyBufferOptions{
 		TmpPath:     t.TempDir(),
 		MemoryLimit: 5,
+		Limit:       5,
 	})
 	b := strings.NewReader("test")
 	if _, err := io.Copy(br, b); err != nil {
@@ -89,6 +92,18 @@ func TestBodyReaderWriteFromReader(t *testing.T) {
 	}
 	if buf.String() != "test" {
 		t.Error("Failed to write bodyreader from io.Reader")
+	}
+	_ = br.Reset()
+}
+
+func TestWriteOverLimit(t *testing.T) {
+	br := NewBodyBuffer(types.BodyBufferOptions{
+		MemoryLimit: 0,
+		Limit:       2,
+	})
+	_, err := br.Write([]byte{'a', 'b', 'c'})
+	if err == nil {
+		t.Error("unexpected successful Write above Limit")
 	}
 	_ = br.Reset()
 }

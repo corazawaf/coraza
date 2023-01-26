@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"mime"
 	"net/url"
 	"path/filepath"
@@ -781,6 +782,7 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 
 func setAndReturnBodyLimitInterruption(tx *Transaction) (*types.Interruption, int, error) {
 	tx.variables.inboundErrorData.Set("1")
+	tx.DebugLogger().Warn("Disrupting transaction with body size above the configured limit (Action Reject)")
 	tx.interruption = &types.Interruption{
 		Status: 403,
 		Action: "deny",
@@ -789,8 +791,8 @@ func setAndReturnBodyLimitInterruption(tx *Transaction) (*types.Interruption, in
 }
 
 // WriteRequestBody writes bytes from a slice of bytes into the request body,
-// it returns an interuption if the writing bytes go beyond the request body limit.
-// It won't copy the bytes if the body access isn't accesible.
+// it returns an interruption if the writing bytes go beyond the request body limit.
+// It won't copy the bytes if the body access isn't accessible.
 func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
 		return nil, 0, nil
@@ -802,12 +804,12 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 
 	if tx.RequestBodyLimit == tx.requestBodyBuffer.length {
 		// tx.RequestBodyLimit will never be zero so if this happened, we have an
-		// interruption for sure.
-		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
+		// interruption (that has been previously raised, but ignored by the connector) for sure.
+		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			return tx.interruption, 0, nil
 		}
 
-		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
+		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
 			return nil, 0, nil
 		}
 	}
@@ -816,14 +818,20 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 		writingBytes          = int64(len(b))
 		runProcessRequestBody = false
 	)
+	// Overflow check
+	if tx.requestBodyBuffer.length >= (math.MaxInt64 - writingBytes) {
+		// Overflow, failing. MaxInt64 is not a realistic payload size. Furthermore, it has been tested that
+		// bytes.Buffer does not work with this kind of sizes. See comments in BodyBuffer Write(data []byte)
+		return nil, 0, errors.New("Overflow reached while writing request body")
+	}
 
 	if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
-		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
+		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			// We interrupt this transaction in case RequestBodyLimitAction is Reject
 			return setAndReturnBodyLimitInterruption(tx)
 		}
 
-		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
+		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
 			writingBytes = tx.RequestBodyLimit - tx.requestBodyBuffer.length
 			runProcessRequestBody = true
 		}
@@ -835,6 +843,7 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 	}
 
 	if runProcessRequestBody {
+		tx.DebugLogger().Warn("Processing request body whose size reached the configured limit (Action ProcessPartial)")
 		_, err = tx.ProcessRequestBody()
 	}
 	return tx.interruption, int(w), err
@@ -846,8 +855,8 @@ type ByteLenger interface {
 }
 
 // ReadRequestBodyFrom writes bytes from a reader into the request body
-// it returns an interuption if the writing bytes go beyond the request body limit.
-// It won't read the reader if the body access isn't accesible.
+// it returns an interruption if the writing bytes go beyond the request body limit.
+// It won't read the reader if the body access isn't accessible.
 func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, int, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
 		return nil, 0, nil
@@ -858,11 +867,13 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 	}
 
 	if tx.RequestBodyLimit == tx.requestBodyBuffer.length {
-		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
+		// tx.RequestBodyLimit will never be zero so if this happened, we have an
+		// interruption (that has been previously raised, but ignored by the connector) for sure.
+		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			return tx.interruption, 0, nil
 		}
 
-		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
+		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
 			return nil, 0, nil
 		}
 	}
@@ -873,12 +884,18 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 	)
 	if l, ok := r.(ByteLenger); ok {
 		writingBytes = int64(l.Len())
+		// Overflow check
+		if tx.requestBodyBuffer.length >= (math.MaxInt64 - writingBytes) {
+			// Overflow, failing. MaxInt64 is not a realistic payload size. Furthermore, it has been tested that
+			// bytes.Buffer does not work with this kind of sizes. See comments in BodyBuffer Write(data []byte)
+			return nil, 0, errors.New("Overflow reached while writing request body")
+		}
 		if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
-			if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
+			if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 				return setAndReturnBodyLimitInterruption(tx)
 			}
 
-			if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
+			if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
 				writingBytes = tx.RequestBodyLimit - tx.requestBodyBuffer.length
 				runProcessRequestBody = true
 			}
@@ -893,17 +910,18 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 	}
 
 	if tx.requestBodyBuffer.length == tx.RequestBodyLimit {
-		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionReject {
+		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			return setAndReturnBodyLimitInterruption(tx)
 		}
 
-		if tx.WAF.RequestBodyLimitAction == types.RequestBodyLimitActionProcessPartial {
+		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
 			runProcessRequestBody = true
 		}
 	}
 
 	err = nil
 	if runProcessRequestBody {
+		tx.DebugLogger().Warn("Processing request body whose size reached the configured limit (Action ProcessPartial)")
 		_, err = tx.ProcessRequestBody()
 	}
 	return tx.interruption, int(w), err
@@ -923,7 +941,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 
 	if tx.LastPhase >= types.PhaseRequestBody {
 		// Phase already evaluated
-		tx.WAF.Logger.Error("ProcessRequestBody has already been called")
+		tx.WAF.Logger.Warn("ProcessRequestBody has already been called")
 		return tx.interruption, nil
 	}
 
@@ -1027,7 +1045,7 @@ func (tx *Transaction) ResponseBodyWriter() io.Writer {
 	return tx.ResponseBodyBuffer
 }
 
-// ProcessResponseBody Perform the request body (if any)
+// ProcessResponseBody Perform the response body (if any)
 //
 // This method perform the analysis on the request body. It is optional to
 // call that method. If this API consumer already know that there isn't a
@@ -1041,7 +1059,7 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 
 	if tx.LastPhase >= types.PhaseResponseBody {
 		// Phase already evaluated
-		tx.WAF.Logger.Error("ProcessResponseBody has already been called")
+		tx.WAF.Logger.Warn("ProcessResponseBody has already been called")
 		return tx.interruption, nil
 	}
 

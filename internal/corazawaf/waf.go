@@ -63,12 +63,6 @@ type WAF struct {
 	// Defines if rules are going to be evaluated
 	RuleEngine types.RuleEngineStatus
 
-	// If true, transaction will fail if response size is bigger than the page limit
-	RejectOnResponseBodyLimit bool
-
-	// If true, transaction will fail if request size is bigger than the page limit
-	RejectOnRequestBodyLimit bool
-
 	// Responses will only be loaded if mime is listed here
 	ResponseBodyMimeTypes []string
 
@@ -106,9 +100,12 @@ type WAF struct {
 	// UploadDir is the directory where the uploaded files will be stored
 	UploadDir string
 
+	// Request body in memory limit excluding the size of any files being transported in the request.
 	RequestBodyNoFilesLimit int64
 
-	RequestBodyLimitAction types.RequestBodyLimitAction
+	RequestBodyLimitAction types.BodyLimitAction
+
+	ResponseBodyLimitAction types.BodyLimitAction
 
 	ArgumentSeparator string
 
@@ -178,10 +175,13 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 		tx.requestBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
 			TmpPath:     w.TmpDir,
 			MemoryLimit: w.RequestBodyInMemoryLimit,
+			Limit:       w.ResponseBodyLimit,
 		})
 		tx.ResponseBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
-			TmpPath:     w.TmpDir,
-			MemoryLimit: w.RequestBodyInMemoryLimit,
+			TmpPath: w.TmpDir,
+			// the response body is just buffered in memory. Therefore, Limit and MemoryLimit are equal.
+			MemoryLimit: w.ResponseBodyLimit,
+			Limit:       w.ResponseBodyLimit,
 		})
 		tx.variables = *NewTransactionVariables()
 		tx.transformationCache = map[transformationKey]*transformationValue{}
@@ -270,16 +270,18 @@ func NewWAF() *WAF {
 		AuditLogWriter:           logWriter,
 		AuditEngine:              types.AuditEngineOff,
 		AuditLogParts:            types.AuditLogParts("ABCFHZ"),
+		RequestBodyAccess:        false,
 		RequestBodyInMemoryLimit: 131072,
 		RequestBodyLimit:         134217728, // 10mb
+		RequestBodyLimitAction:   types.BodyLimitActionReject,
 		ResponseBodyMimeTypes:    []string{"text/html", "text/plain"},
 		ResponseBodyLimit:        524288,
+		ResponseBodyLimitAction:  types.BodyLimitActionReject,
 		ResponseBodyAccess:       false,
 		RuleEngine:               types.RuleEngineOn,
 		Rules:                    NewRuleGroup(),
 		TmpDir:                   "/tmp",
 		AuditLogRelevantStatus:   regexp.MustCompile(`.*`),
-		RequestBodyAccess:        false,
 		Logger:                   logger,
 	}
 	// We initialize a basic audit log writer that discards output

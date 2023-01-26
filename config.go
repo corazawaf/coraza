@@ -30,11 +30,36 @@ type WAFConfig interface {
 	// WithContentInjection enables content injection.
 	WithContentInjection() WAFConfig
 
-	// WithRequestBodyAccess configures access to the request body.
-	WithRequestBodyAccess(config RequestBodyConfig) WAFConfig
+	// WithRequestBodyAccess enables access to the request body.
+	WithRequestBodyAccess() WAFConfig
 
-	// WithResponseBodyAccess configures access to the response body.
-	WithResponseBodyAccess(config ResponseBodyConfig) WAFConfig
+	// WithRequestBodyLimit sets the maximum number of bytes that can be read from the request body. Bytes beyond that set
+	// in WithInMemoryLimit will be buffered to disk.
+	// For usability purposes body limits are enforced as int (and not int64)
+	// int is a signed integer type that is at least 32 bits in size (platform-dependent size).
+	// While, the theoretical settable upper limit for 32-bit machines is 2GiB,
+	// it is recommended to keep this value as low as possible.
+	WithRequestBodyLimit(limit int) WAFConfig
+
+	// WithRequestBodyInMemoryLimit sets the maximum number of bytes that can be read from the request body and buffered in memory.
+	// For usability purposes body limits are enforced as int (and not int64)
+	// int is a signed integer type that is at least 32 bits in size (platform-dependent size).
+	// While, the theoretical settable upper limit for 32-bit machines is 2GiB,
+	// it is recommended to keep this value as low as possible.
+	WithRequestBodyInMemoryLimit(limit int) WAFConfig
+
+	// WithResponseBodyAccess enables access to the response body.
+	WithResponseBodyAccess() WAFConfig
+
+	// WithResponseBodyLimit sets the maximum number of bytes that can be read from the response body and buffered in memory.
+	// For usability purposes body limits are enforced as int (and not int64)
+	// int is a signed integer type that is at least 32 bits in size (platform-dependent size).
+	// While, the theoretical settable upper limit for 32-bit machines is 2GiB,
+	// it is recommended to keep this value as low as possible.
+	WithResponseBodyLimit(limit int) WAFConfig
+
+	// WithResponseBodyMimeTypes sets the mime types of responses that will be processed.
+	WithResponseBodyMimeTypes(mimeTypes []string) WAFConfig
 
 	// WithDebugLogger configures a debug logger.
 	WithDebugLogger(logger loggers.DebugLogger) WAFConfig
@@ -48,38 +73,15 @@ type WAFConfig interface {
 	WithRootFS(fs fs.FS) WAFConfig
 }
 
+const unsetLimit = -1
+
 // NewWAFConfig creates a new WAFConfig with the default settings.
 func NewWAFConfig() WAFConfig {
-	return &wafConfig{}
-}
-
-// RequestBodyConfig controls access to the request body.
-type RequestBodyConfig interface {
-	// WithLimit sets the maximum number of bytes that can be read from the request body. Bytes beyond that set
-	// in WithInMemoryLimit will be buffered to disk.
-	WithLimit(limit int) RequestBodyConfig
-
-	// WithInMemoryLimit sets the maximum number of bytes that can be read from the request body and buffered in memory.
-	WithInMemoryLimit(limit int) RequestBodyConfig
-}
-
-// NewRequestBodyConfig returns a new RequestBodyConfig with the default settings.
-func NewRequestBodyConfig() RequestBodyConfig {
-	return &requestBodyConfig{}
-}
-
-// ResponseBodyConfig controls access to the response body.
-type ResponseBodyConfig interface {
-	// WithLimit sets the maximum number of bytes that can be read from the response body and buffered in memory.
-	WithLimit(limit int) ResponseBodyConfig
-
-	// WithMimeTypes sets the mime types of responses that will be processed.
-	WithMimeTypes(mimeTypes []string) ResponseBodyConfig
-}
-
-// NewResponseBodyConfig returns a new ResponseBodyConfig with the default settings.
-func NewResponseBodyConfig() ResponseBodyConfig {
-	return &responseBodyConfig{}
+	return &wafConfig{
+		requestBodyLimit:         unsetLimit,
+		requestBodyInMemoryLimit: unsetLimit,
+		responseBodyLimit:        unsetLimit,
+	}
 }
 
 // AuditLogConfig controls audit logging.
@@ -105,15 +107,22 @@ type wafRule struct {
 	file string
 }
 
+// For usability purposes body limits are enforced as int (and not int64)
+// int is a signed integer type that is at least 32 bits in size (platform-dependent size).
+// We still basically assume 64-bit usage where int are big sizes.
 type wafConfig struct {
-	rules            []wafRule
-	auditLog         *auditLogConfig
-	contentInjection bool
-	requestBody      *requestBodyConfig
-	responseBody     *responseBodyConfig
-	debugLogger      loggers.DebugLogger
-	errorCallback    func(rule types.MatchedRule)
-	fsRoot           fs.FS
+	rules                    []wafRule
+	auditLog                 *auditLogConfig
+	contentInjection         bool
+	requestBodyAccess        bool
+	requestBodyLimit         int
+	requestBodyInMemoryLimit int
+	responseBodyAccess       bool
+	responseBodyLimit        int
+	responseBodyMimeTypes    []string
+	debugLogger              loggers.DebugLogger
+	errorCallback            func(rule types.MatchedRule)
+	fsRoot                   fs.FS
 }
 
 func (c *wafConfig) WithRules(rules ...*corazawaf.Rule) WAFConfig {
@@ -152,15 +161,15 @@ func (c *wafConfig) WithContentInjection() WAFConfig {
 	return ret
 }
 
-func (c *wafConfig) WithRequestBodyAccess(config RequestBodyConfig) WAFConfig {
+func (c *wafConfig) WithRequestBodyAccess() WAFConfig {
 	ret := c.clone()
-	ret.requestBody = config.(*requestBodyConfig)
+	ret.requestBodyAccess = true
 	return ret
 }
 
-func (c *wafConfig) WithResponseBodyAccess(config ResponseBodyConfig) WAFConfig {
+func (c *wafConfig) WithResponseBodyAccess() WAFConfig {
 	ret := c.clone()
-	ret.responseBody = config.(*responseBodyConfig)
+	ret.responseBodyAccess = true
 	return ret
 }
 
@@ -190,57 +199,28 @@ func (c *wafConfig) clone() *wafConfig {
 	return &ret
 }
 
-type requestBodyConfig struct {
-	limit         int
-	inMemoryLimit int
-}
-
-var _ RequestBodyConfig = (*requestBodyConfig)(nil)
-
-func (c *requestBodyConfig) WithLimit(limit int) RequestBodyConfig {
+func (c *wafConfig) WithRequestBodyLimit(limit int) WAFConfig {
 	ret := c.clone()
-	ret.limit = limit
+	ret.requestBodyLimit = limit
 	return ret
 }
 
-func (c *requestBodyConfig) WithInMemoryLimit(limit int) RequestBodyConfig {
+func (c *wafConfig) WithRequestBodyInMemoryLimit(limit int) WAFConfig {
 	ret := c.clone()
-	ret.inMemoryLimit = limit
+	ret.requestBodyInMemoryLimit = limit
 	return ret
 }
 
-func (c *requestBodyConfig) clone() *requestBodyConfig {
-	ret := *c // copy
-	return &ret
-}
-
-type responseBodyConfig struct {
-	limit         int
-	inMemoryLimit int
-	mimeTypes     []string
-}
-
-func (c *responseBodyConfig) WithLimit(limit int) ResponseBodyConfig {
+func (c *wafConfig) WithResponseBodyLimit(limit int) WAFConfig {
 	ret := c.clone()
-	ret.limit = limit
+	ret.responseBodyLimit = limit
 	return ret
 }
 
-func (c *responseBodyConfig) WithInMemoryLimit(limit int) ResponseBodyConfig {
+func (c *wafConfig) WithResponseBodyMimeTypes(mimeTypes []string) WAFConfig {
 	ret := c.clone()
-	ret.inMemoryLimit = limit
+	ret.responseBodyMimeTypes = mimeTypes
 	return ret
-}
-
-func (c *responseBodyConfig) WithMimeTypes(mimeTypes []string) ResponseBodyConfig {
-	ret := c.clone()
-	ret.mimeTypes = mimeTypes
-	return ret
-}
-
-func (c *responseBodyConfig) clone() *responseBodyConfig {
-	ret := *c // copy
-	return &ret
 }
 
 type auditLogConfig struct {

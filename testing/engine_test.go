@@ -71,9 +71,7 @@ func TestRequest(t *testing.T) {
 func TestResponse(t *testing.T) {
 	waf, err := coraza.NewWAF(
 		coraza.NewWAFConfig().
-			WithResponseBodyAccess(
-				coraza.NewResponseBodyConfig().WithLimit(10),
-			),
+			WithResponseBodyAccess().WithResponseBodyLimit(21),
 	)
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err.Error())

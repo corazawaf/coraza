@@ -5,6 +5,7 @@ package corazawaf
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"os"
 
@@ -50,15 +51,25 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 		return 0, nil
 	}
 
-	l := int64(len(data)) + br.length
-	if l > br.options.MemoryLimit {
+	if br.length == br.options.Limit || br.length >= (br.options.Limit-int64(len(data))) {
+		// Write has been called without checking the Limit, it should never happend. Raising an error.
+		// The buffers are private and populated only by WriteRequestBody, ReadRequestBodyFrom, and similar functions
+		// that have to perform limit checks before calling Write()
+		return 0, errors.New("Limit reached while writing")
+	}
+	targetLen := br.length + int64(len(data))
+
+	// Check if memory limits are reached
+	// Even if Overflow is explicitly checked, MemoryLimit real limits are below maxInt and machine dependenent.
+	// bytes.Buffer growth is platform dependent with a growth rate capped at 2x. If the buffer can't grow it will panic with ErrTooLarge.
+	// See https://github.com/golang/go/blob/go1.19.4/src/bytes/buffer.go#L117 and https://go-review.googlesource.com/c/go/+/349994
+	// Local tests show these buffer limits:
+	// 32-bit machine: 1073741824 (2^30, 1GiB)
+	// 64-bit machine: 34359738368 (2^35, 32GiB) (Not reached the ErrTooLarge panic, the OS triggered an OOM)
+	if targetLen > br.options.MemoryLimit {
 		if environment.IsTinyGo {
-			maxWritingDataLen := br.options.MemoryLimit - br.length
-			if maxWritingDataLen == 0 {
-				return 0, nil
-			}
-			br.length = br.options.MemoryLimit
-			return br.buffer.Write(data[:maxWritingDataLen])
+			// TinyGo MemoryLimit should be equal to Limit. Therefore, Write function has been called without Limit check.
+			return 0, errors.New("MemoryLimit reached while writing")
 		} else {
 			if br.writer == nil {
 				br.writer, err = os.CreateTemp(br.options.TmpPath, "body*")
@@ -71,12 +82,12 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 				}
 				br.buffer.Reset()
 			}
-			br.length = l
+			br.length = targetLen
 			return br.writer.Write(data)
 		}
 	}
 
-	br.length = l
+	br.length = targetLen
 	return br.buffer.Write(data)
 }
 
