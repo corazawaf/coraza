@@ -78,7 +78,7 @@ type Transaction interface {
 	// ProcessRequestBody Performs the analysis of the request body (if any)
 	//
 	// This method perform the analysis on the request body. It is optional to
-	// call that function. If this API consumer already know that there isn't a
+	// call that function. If this API consumer already knows that there isn't a
 	// body for inspect it is recommended to skip this step.
 	//
 	// Remember to check for a possible intervention.
@@ -121,7 +121,7 @@ type Transaction interface {
 	// ProcessResponseBody Perform the analysis of the response body (if any)
 	//
 	// This method perform the analysis on the response body. It is optional to
-	// call that method. If this API consumer already know that there isn't a
+	// call that method. If this API consumer already knows that there isn't a
 	// body for inspect it is recommended to skip this step.
 	//
 	// note Remember to check for a possible intervention.
