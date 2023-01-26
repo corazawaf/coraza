@@ -3,5 +3,7 @@ go 1.18
 use (
 	.
 	./examples/http-server
+	./plugins/wasilibs
+	./plugins/wasilibs/wafbench
 	./testing/coreruleset
 )
