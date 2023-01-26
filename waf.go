@@ -77,25 +77,37 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		waf.ContentInjection = true
 	}
 
-	if r := c.requestBody; r != nil {
-		if r.limit <= 0 {
+	if c.requestBodyAccess {
+		waf.RequestBodyAccess = true
+	}
+
+	if c.requestBodyLimit != unsetLimit {
+		if c.requestBodyLimit <= 0 {
 			return nil, errors.New("request body limit should be bigger than 0")
 		}
 
-		if r.limit < r.inMemoryLimit {
+		if c.requestBodyLimit < c.requestBodyInMemoryLimit {
 			return nil, errors.New("request body limit should be at least the memory limit")
 		}
-		waf.RequestBodyAccess = true
-		waf.RequestBodyLimit = int64(r.limit)
-		waf.RequestBodyInMemoryLimit = int64(r.inMemoryLimit)
+		waf.RequestBodyLimit = int64(c.requestBodyLimit)
 	}
 
-	if r := c.responseBody; r != nil {
-		if r.limit <= 0 {
+	if c.requestBodyInMemoryLimit != unsetLimit {
+		if c.requestBodyInMemoryLimit <= 0 {
+			return nil, errors.New("request body memory limit should be bigger than 0")
+		}
+		waf.RequestBodyInMemoryLimit = int64(c.requestBodyInMemoryLimit)
+	}
+
+	if c.responseBodyAccess {
+		waf.ResponseBodyAccess = true
+	}
+
+	if c.responseBodyLimit != unsetLimit {
+		if c.responseBodyLimit <= 0 {
 			return nil, errors.New("response body limit should be bigger than 0")
 		}
-		waf.ResponseBodyAccess = true
-		waf.ResponseBodyLimit = int64(r.limit)
+		waf.ResponseBodyLimit = int64(c.responseBodyLimit)
 	}
 
 	if c.errorCallback != nil {

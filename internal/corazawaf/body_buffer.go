@@ -64,7 +64,7 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	// bytes.Buffer growth is platform dependent with a growth rate capped at 2x. If the buffer can't grow it will panic with ErrTooLarge.
 	// See https://github.com/golang/go/blob/go1.19.4/src/bytes/buffer.go#L117 and https://go-review.googlesource.com/c/go/+/349994
 	// Local tests show these buffer limits:
-	// 32-bit machine: 2147483647 (2^30, 1GiB)
+	// 32-bit machine: 1073741824 (2^30, 1GiB)
 	// 64-bit machine: 34359738368 (2^35, 32GiB) (Not reached the ErrTooLarge panic, the OS triggered an OOM)
 	if targetLen > br.options.MemoryLimit {
 		if environment.IsTinyGo {

@@ -301,7 +301,7 @@ func TestHttpServer(t *testing.T) {
 	SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
 `).WithErrorCallback(errLogger(t)).WithDebugLogger(&debugLogger{t: t})
 			if l := tCase.reqBodyLimit; l > 0 {
-				conf = conf.WithRequestBodyAccess(coraza.NewRequestBodyConfig().WithLimit(l).WithInMemoryLimit(l))
+				conf = conf.WithRequestBodyAccess().WithRequestBodyLimit(l).WithRequestBodyInMemoryLimit(l)
 			}
 			waf, err := coraza.NewWAF(conf)
 			if err != nil {
