@@ -33,7 +33,6 @@ type Transaction interface {
 	// ProcessConnection should be called at very beginning of a request process, it is
 	// expected to be executed prior to the virtual host resolution, when the
 	// connection arrives on the server.
-	// Important: Remember to check for a possible intervention.
 	ProcessConnection(client string, cPort int, server string, sPort int)
 
 	// ProcessURI Performs the analysis on the URI and all the query string variables.
@@ -47,6 +46,12 @@ type Transaction interface {
 	//
 	// note: This function won't add GET arguments, they must be added with AddArgument
 	ProcessURI(uri string, method string, httpVersion string)
+
+	// ProcessServerName allows to set server name details.
+	// The API consumer is in charge of retrieving the value (e.g. from the host header)
+	// before providing it to this method.
+	// It is expected to be executed before calling ProcessRequestHeaders.
+	ProcessServerName(serverName string)
 
 	// AddRequestHeader Adds a request header
 	//

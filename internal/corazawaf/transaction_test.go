@@ -535,7 +535,6 @@ func TestHeaderSetters(t *testing.T) {
 	tx := waf.NewTransaction()
 	tx.AddRequestHeader("cookie", "abc=def;hij=klm")
 	tx.AddRequestHeader("test1", "test2")
-	tx.AddRequestHeader("host", "coraza.io")
 	c := tx.variables.requestCookies.Get("abc")[0]
 	if c != "def" {
 		t.Errorf("failed to set cookie, got %q", c)
@@ -548,9 +547,6 @@ func TestHeaderSetters(t *testing.T) {
 	}
 	if !utils.InSlice("abc", tx.variables.requestCookiesNames.Get("abc")) {
 		t.Error("failed to set cookie name")
-	}
-	if tx.variables.serverName.String() != "coraza.io" {
-		t.Error("failed to set serverName from host header")
 	}
 	if err := tx.Close(); err != nil {
 		t.Error(err)
@@ -756,6 +752,15 @@ func TestTxProcessConnection(t *testing.T) {
 	}
 	if tx.variables.remotePort.Int() != 80 {
 		t.Error("failed to set client port")
+	}
+}
+
+func TestTxProcessServerName(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	tx.ProcessServerName("coraza.io")
+	if tx.variables.serverName.String() != "coraza.io" {
+		t.Error("failed to set server name")
 	}
 }
 

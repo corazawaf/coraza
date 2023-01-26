@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"mime"
-	"net"
 	"net/url"
 	"path/filepath"
 	"strconv"
@@ -362,18 +361,6 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 				tx.variables.requestCookies.AddCS(kl, k, v)
 			}
 		}
-	case "host", ":authority":
-		// Retrieving the virtual host from the host header to populate serverName
-		host, _, err := net.SplitHostPort(value)
-		if err != nil {
-			// Missing port or bad format, anyways serverName is populated with value
-			tx.WAF.Logger.Debug("failed to parse %s header: %v", keyl, err)
-			host = value
-		}
-		if tx.variables.serverName.String() != "" && tx.variables.serverName.String() != host {
-			tx.WAF.Logger.Error("Setting serverName, but it was already populated")
-		}
-		tx.variables.serverName.Set(host)
 	}
 }
 
@@ -648,7 +635,6 @@ func (tx *Transaction) RemoveRuleByID(id int) {
 // ProcessConnection should be called at very beginning of a request process, it is
 // expected to be executed prior to the virtual host resolution, when the
 // connection arrives on the server.
-// Important: Remember to check for a possible intervention.
 func (tx *Transaction) ProcessConnection(client string, cPort int, server string, sPort int) {
 	p := strconv.Itoa(cPort)
 	p2 := strconv.Itoa(sPort)
@@ -757,6 +743,14 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 	tx.variables.requestFilename.Set(path)
 
 	tx.variables.queryString.Set(query)
+}
+
+// ProcessServerName allows to set server name details.
+//
+// The API consumer is in charge of retrieving the value (e.g. from the host header).
+// It is expected to be executed before calling ProcessRequestHeaders.
+func (tx *Transaction) ProcessServerName(serverName string) {
+	tx.variables.serverName.Set(serverName)
 }
 
 // ProcessRequestHeaders Performs the analysis on the request readers.
