@@ -50,7 +50,8 @@ type Transaction interface {
 	// SetServerName allows to set server name details.
 	// The API consumer is in charge of retrieving the value (e.g. from the host header)
 	// before providing it to this method.
-	// It is expected to be executed before calling ProcessRequestHeaders.
+	// In order to be able to check SERVER_NAME variable since phase 1, it is expected
+	// to execute SetServerName before calling ProcessRequestHeaders.
 	SetServerName(serverName string)
 
 	// AddRequestHeader Adds a request header
