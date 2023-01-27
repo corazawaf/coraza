@@ -470,7 +470,7 @@ func directiveSecCollectionTimeout(options *DirectiveOptions) error {
 //
 // Example:
 // ```apache
-// SecAuditLog "/path/to/audit.log
+// SecAuditLog "/path/to/audit.log"
 // ```
 //
 // Note: This audit log file is opened on startup when the server typically still runs
@@ -630,15 +630,14 @@ func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 //
 // A: Audit log header (mandatory).
 // B: Request headers.
-// C: Request body (present only if the request body exists and ModSecurity is configured
+// C: Request body (present only if the request body exists and Coraza is configured
 // to intercept it. This would require SecRequestBodyAccess to be set to on).
 // D: Reserved for intermediary response headers; not implemented yet.
-// E: Intermediary response body (present only if ModSecurity is configured to intercept
+// E: Intermediary response body (present only if Coraza is configured to intercept
 // response bodies, and if the audit log engine is configured to record it. Intercepting
 // response bodies requires SecResponseBodyAccess to be enabled). Intermediary response
-// body is the same as the actual response body unless ModSecurity intercepts the intermediary
-// response body, in which case the actual response body will contain the error message (either
-// the Apache default error message, or the ErrorDocument page).
+// body is the same as the actual response body unless Coraza intercepts the intermediary
+// response body, in which case the actual response body will contain the error message.
 // F: Final response headers.
 // G: Reserved for the actual response body; not implemented yet.
 // H: Audit log trailer.
@@ -660,9 +659,7 @@ func directiveSecAuditLogParts(options *DirectiveOptions) error {
 // Default: Off
 // ---
 // The SecAuditEngine directive is used to configure the audit engine, which logs complete
-// transactions. ModSecurity is currently able to log most, but not all transactions.
-// Transactions involving errors (e.g., 400 and 404 transactions) use a different execution
-// path, which ModSecurity does not support.
+// transactions.
 //
 // The possible values for the audit log engine are as follows:
 //   - On: log all transactions
