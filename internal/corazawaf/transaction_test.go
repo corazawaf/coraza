@@ -429,22 +429,212 @@ func TestAuditLog(t *testing.T) {
 	}
 }
 
-func TestResponseBody(t *testing.T) {
-	tx := makeTransaction(t)
-	tx.ResponseBodyAccess = true
-	tx.RuleEngine = types.RuleEngineOn
-	tx.AddResponseHeader("content-type", "text/plain")
-	if _, err := tx.ResponseBodyBuffer.Write([]byte("test123")); err != nil {
-		t.Error("Failed to write response body buffer")
+var responseBodyWriters = map[string]func(tx *Transaction, body string) (*types.Interruption, int, error){
+	"WriteResponsequestBody": func(tx *Transaction, body string) (*types.Interruption, int, error) {
+		return tx.WriteResponseBody([]byte(body))
+	},
+	"ReadResponseBodyFromKnownLen": func(tx *Transaction, body string) (*types.Interruption, int, error) {
+		return tx.ReadResponseBodyFrom(strings.NewReader(body))
+	},
+	"ReadResponseBodyFromUnknownLen": func(tx *Transaction, body string) (*types.Interruption, int, error) {
+		return tx.ReadResponseBodyFrom(struct{ io.Reader }{
+			strings.NewReader(body),
+		})
+	},
+}
+
+func TestWriteResponseBody(t *testing.T) {
+	const (
+		urlencodedBody    = "some=result&second=data"
+		urlencodedBodyLen = len(urlencodedBody)
+	)
+
+	testCases := []struct {
+		name                    string
+		responseBodyLimit       int
+		responseBodyLimitAction types.BodyLimitAction
+		shouldInterrupt         bool
+	}{
+		{
+			name:                    "LimitNotReached",
+			responseBodyLimit:       urlencodedBodyLen + 2,
+			responseBodyLimitAction: types.BodyLimitAction(-1),
+		},
+		{
+			name:                    "LimitReachedAndRejects",
+			responseBodyLimit:       urlencodedBodyLen - 3,
+			responseBodyLimitAction: types.BodyLimitActionReject,
+			shouldInterrupt:         true,
+		},
+		{
+			name:                    "LimitReachedAndPartialProcessing",
+			responseBodyLimit:       urlencodedBodyLen - 3,
+			responseBodyLimitAction: types.BodyLimitActionProcessPartial,
+		},
 	}
-	if _, err := tx.ProcessResponseBody(); err != nil {
-		t.Error("Failed to process response body")
+
+	urlencodedBodyLenThird := urlencodedBodyLen / 3
+	bodyChunks := map[string][]string{
+		"BodyInOneShot":     {urlencodedBody},
+		"BodyInThreeChunks": {urlencodedBody[0:urlencodedBodyLenThird], urlencodedBody[urlencodedBodyLenThird : 2*urlencodedBodyLenThird], urlencodedBody[2*urlencodedBodyLenThird:]},
 	}
-	if tx.variables.responseBody.String() != "test123" {
-		t.Error("failed to set response body")
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			for name, writeResponseBody := range responseBodyWriters {
+				t.Run(name, func(t *testing.T) {
+					for name, chunks := range bodyChunks {
+						t.Run(name, func(t *testing.T) {
+							waf := NewWAF()
+							waf.RuleEngine = types.RuleEngineOn
+							waf.ResponseBodyAccess = true
+							waf.ResponseBodyLimit = int64(testCase.responseBodyLimit)
+							waf.ResponseBodyLimitAction = testCase.responseBodyLimitAction
+
+							tx := waf.NewTransaction()
+							tx.AddResponseHeader("content-type", "text/plain")
+
+							it := tx.ProcessResponseHeaders(200, "HTTP/1")
+							if it != nil {
+								t.Fatal("Unexpected interruption on headers")
+							}
+
+							var err error
+
+							for _, c := range chunks {
+								if it, _, err = writeResponseBody(tx, c); err != nil {
+									t.Errorf("Failed to write body buffer: %s", err.Error())
+								}
+							}
+
+							if testCase.shouldInterrupt {
+								if it == nil {
+									t.Fatal("Expected interruption, got nil")
+								}
+							} else {
+								it, err := tx.ProcessResponseBody()
+								if err != nil {
+									t.Fatal(err)
+								}
+
+								if it != nil {
+									t.Fatalf("Unexpected interruption")
+								}
+								// checking if the body has been populated up to the first POST arg
+								index := strings.Index(urlencodedBody, "&")
+								if tx.variables.responseBody.String()[:index] != urlencodedBody[:index] {
+									t.Error("failed to set response body")
+								}
+							}
+
+							_ = tx.Close()
+						})
+					}
+
+				})
+			}
+
+		})
 	}
-	if err := tx.Close(); err != nil {
-		t.Error(err)
+}
+
+func TestWriteResponseBodyOnLimitReached(t *testing.T) {
+	testCases := map[string]struct {
+		responseBodyLimitAction types.BodyLimitAction
+		preexistingInterruption *types.Interruption
+	}{
+		"reject": {
+			responseBodyLimitAction: types.BodyLimitActionReject,
+			preexistingInterruption: &types.Interruption{
+				RuleID: 123,
+			},
+		},
+		"partial processing": {
+			responseBodyLimitAction: types.BodyLimitActionProcessPartial,
+		},
+	}
+
+	for tName, tCase := range testCases {
+		waf := NewWAF()
+		waf.RuleEngine = types.RuleEngineOn
+		waf.ResponseBodyAccess = true
+		waf.ResponseBodyLimit = 2
+		waf.ResponseBodyLimitAction = tCase.responseBodyLimitAction
+
+		t.Run(tName, func(t *testing.T) {
+			for wName, writer := range responseBodyWriters {
+				t.Run(wName, func(t *testing.T) {
+					tx := waf.NewTransaction()
+					_, err := tx.responseBodyBuffer.Write([]byte("ab"))
+					if err != nil {
+						t.Fatalf("unexpected error when writing to body buffer directly: %s", err.Error())
+					}
+					tx.interruption = tCase.preexistingInterruption
+
+					it, n, err := writer(tx, "c")
+					if err != nil {
+						t.Fatalf("unexpected error: %s", err.Error())
+					}
+
+					if it != tCase.preexistingInterruption {
+						t.Fatalf("unexpected interruption")
+					}
+
+					if n != 0 {
+						t.Fatalf("unexpected number of bytes written")
+					}
+
+					_ = tx.Close()
+				})
+			}
+		})
+	}
+}
+
+func TestWriteResponseBodyIsNopWhenBodyIsNotAccesible(t *testing.T) {
+	testCases := []struct {
+		ruleEngine         types.RuleEngineStatus
+		responseBodyAccess bool
+	}{
+		{
+			ruleEngine: types.RuleEngineOff,
+		},
+		{
+			ruleEngine:         types.RuleEngineOn,
+			responseBodyAccess: false,
+		},
+	}
+
+	for _, tCase := range testCases {
+		t.Run(fmt.Sprintf(
+			"ruleEngine = %s and responseBodyAccess = %t",
+			tCase.ruleEngine.String(),
+			tCase.responseBodyAccess,
+		), func(t *testing.T) {
+			waf := NewWAF()
+			waf.RuleEngine = tCase.ruleEngine
+			waf.ResponseBodyAccess = tCase.responseBodyAccess
+
+			for wName, writer := range responseBodyWriters {
+				t.Run(wName, func(t *testing.T) {
+					tx := waf.NewTransaction()
+					it, n, err := writer(tx, "abc")
+					if err != nil {
+						t.Fatalf("unexpected error: %s", err.Error())
+					}
+
+					if it != nil {
+						t.Fatalf("unexpected interruption")
+					}
+
+					if n != 0 {
+						t.Fatalf("unexpected number of bytes written")
+					}
+
+					_ = tx.Close()
+				})
+			}
+		})
 	}
 }
 
@@ -666,31 +856,26 @@ func TestTransactionSyncPool(t *testing.T) {
 	}
 }
 
-// TODO: enable again after implemeting tx.ReadResponseBodyFrom
-// Adding Limit check inside body_buffer, we have to rely on tx.ReadResponseBodyFrom instead of
-// directly calling Write, otherwise error "Limit reached while writing" is raised and the body is not
-// partially written like this test expects.
-
-// func TestTxPhase4Magic(t *testing.T) {
-// 	waf := NewWAF()
-// 	waf.ResponseBodyAccess = true
-// 	waf.ResponseBodyLimit = 3
-// 	waf.ResponseBodyLimitAction = types.BodyLimitActionProcessPartial
-// 	tx := waf.NewTransaction()
-// 	tx.AddResponseHeader("content-type", "text/html")
-// 	if _, err := tx.ResponseBodyBuffer.Write([]byte("more bytes")); err != nil {
-// 		t.Error(err)
-// 	}
-// 	if _, err := tx.ProcessResponseBody(); err != nil {
-// 		t.Error(err)
-// 	}
-// 	if tx.variables.outboundDataError.String() != "1" {
-// 		t.Error("failed to set outbound data error")
-// 	}
-// 	if tx.variables.responseBody.String() != "mor" {
-// 		t.Error("failed to set response body")
-// 	}
-// }
+func TestTxPhase4Magic(t *testing.T) {
+	waf := NewWAF()
+	waf.ResponseBodyAccess = true
+	waf.ResponseBodyLimit = 3
+	waf.ResponseBodyLimitAction = types.BodyLimitActionProcessPartial
+	tx := waf.NewTransaction()
+	tx.AddResponseHeader("content-type", "text/html")
+	if it, _, err := tx.WriteResponseBody([]byte("more bytes")); it != nil || err != nil {
+		t.Error(err)
+	}
+	if _, err := tx.ProcessResponseBody(); err != nil {
+		t.Error(err)
+	}
+	if tx.variables.outboundDataError.String() != "1" {
+		t.Error("failed to set outbound data error")
+	}
+	if tx.variables.responseBody.String() != "mor" {
+		t.Error("failed to set response body")
+	}
+}
 
 func TestVariablesMatch(t *testing.T) {
 	waf := NewWAF()

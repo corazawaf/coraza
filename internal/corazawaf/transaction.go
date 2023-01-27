@@ -70,7 +70,7 @@ type Transaction struct {
 	requestBodyBuffer *BodyBuffer
 
 	// Handles response body buffers
-	ResponseBodyBuffer *BodyBuffer
+	responseBodyBuffer *BodyBuffer
 
 	// Body processor used to parse JSON, XML, etc
 	bodyProcessor bodyprocessors.BodyProcessor
@@ -324,7 +324,7 @@ func (tx *Transaction) DebugLogger() loggers.DebugLogger {
 }
 
 func (tx *Transaction) ResponseBodyReader() (io.Reader, error) {
-	return tx.ResponseBodyBuffer.Reader()
+	return tx.responseBodyBuffer.Reader()
 }
 
 func (tx *Transaction) RequestBodyReader() (io.Reader, error) {
@@ -773,7 +773,6 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 }
 
 func setAndReturnBodyLimitInterruption(tx *Transaction) (*types.Interruption, int, error) {
-	tx.variables.inboundErrorData.Set("1")
 	tx.DebugLogger().Warn("Disrupting transaction with body size above the configured limit (Action Reject)")
 	tx.interruption = &types.Interruption{
 		Status: 403,
@@ -818,6 +817,7 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 	}
 
 	if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
+		tx.variables.inboundErrorData.Set("1")
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			// We interrupt this transaction in case RequestBodyLimitAction is Reject
 			return setAndReturnBodyLimitInterruption(tx)
@@ -883,6 +883,7 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 			return nil, 0, errors.New("Overflow reached while writing request body")
 		}
 		if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
+			tx.variables.inboundErrorData.Set("1")
 			if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 				return setAndReturnBodyLimitInterruption(tx)
 			}
@@ -919,10 +920,10 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 	return tx.interruption, int(w), err
 }
 
-// ProcessRequestBody Performs the request body (if any)
+// ProcessRequestBody Performs the analysis of the request body (if any)
 //
 // This method perform the analysis on the request body. It is optional to
-// call that function. If this API consumer already know that there isn't a
+// call that function. If this API consumer already knows that there isn't a
 // body for inspect it is recommended to skip this step.
 //
 // Remember to check for a possible intervention.
@@ -1033,14 +1034,128 @@ func (tx *Transaction) IsResponseBodyProcessable() bool {
 	return stringsutil.InSlice(ct, tx.WAF.ResponseBodyMimeTypes)
 }
 
-func (tx *Transaction) ResponseBodyWriter() io.Writer {
-	return tx.ResponseBodyBuffer
+// WriteResponseBody writes bytes from a slice of bytes into the response body,
+// it returns an interruption if the writing bytes go beyond the response body limit.
+// It won't copy the bytes if the body access isn't accessible.
+func (tx *Transaction) WriteResponseBody(b []byte) (*types.Interruption, int, error) {
+	if tx.RuleEngine == types.RuleEngineOff {
+		return nil, 0, nil
+	}
+
+	if !tx.ResponseBodyAccess {
+		return nil, 0, nil
+	}
+
+	if tx.ResponseBodyLimit == tx.responseBodyBuffer.length {
+		// tx.ResponseBodyLimit will never be zero so if this happened, we have an
+		// interruption for sure.
+		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionReject {
+			return tx.interruption, 0, nil
+		}
+
+		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionProcessPartial {
+			return nil, 0, nil
+		}
+	}
+
+	var (
+		writingBytes           = int64(len(b))
+		runProcessResponseBody = false
+	)
+	if tx.responseBodyBuffer.length+writingBytes >= tx.ResponseBodyLimit {
+		// TODO: figure out ErrorData vs DataError: https://github.com/corazawaf/coraza/issues/564
+		tx.variables.outboundDataError.Set("1")
+		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionReject {
+			// We interrupt this transaction in case ResponseBodyLimitAction is Reject
+			return setAndReturnBodyLimitInterruption(tx)
+		}
+
+		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionProcessPartial {
+			writingBytes = tx.ResponseBodyLimit - tx.responseBodyBuffer.length
+			runProcessResponseBody = true
+		}
+	}
+	w, err := tx.responseBodyBuffer.Write(b[:writingBytes])
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if runProcessResponseBody {
+		_, err = tx.ProcessResponseBody()
+	}
+	return tx.interruption, int(w), err
 }
 
-// ProcessResponseBody Perform the response body (if any)
+// ReadResponseBodyFrom writes bytes from a reader into the response body
+// it returns an interruption if the writing bytes go beyond the response body limit.
+// It won't read the reader if the body access isn't accessible.
+func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, int, error) {
+	if tx.RuleEngine == types.RuleEngineOff {
+		return nil, 0, nil
+	}
+
+	if !tx.ResponseBodyAccess {
+		return nil, 0, nil
+	}
+
+	if tx.ResponseBodyLimit == tx.responseBodyBuffer.length {
+		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionReject {
+			return tx.interruption, 0, nil
+		}
+
+		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionProcessPartial {
+			return nil, 0, nil
+		}
+	}
+
+	var (
+		writingBytes           int64
+		runProcessResponseBody = false
+	)
+	if l, ok := r.(ByteLenger); ok {
+		writingBytes = int64(l.Len())
+		if tx.responseBodyBuffer.length+writingBytes >= tx.ResponseBodyLimit {
+			// TODO: figure out ErrorData vs DataError: https://github.com/corazawaf/coraza/issues/564
+			tx.variables.outboundDataError.Set("1")
+			if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionReject {
+				return setAndReturnBodyLimitInterruption(tx)
+			}
+
+			if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionProcessPartial {
+				writingBytes = tx.ResponseBodyLimit - tx.responseBodyBuffer.length
+				runProcessResponseBody = true
+			}
+		}
+	} else {
+		writingBytes = tx.ResponseBodyLimit - tx.responseBodyBuffer.length
+	}
+
+	w, err := io.CopyN(tx.responseBodyBuffer, r, writingBytes)
+	if err != nil && err != io.EOF {
+		return nil, int(w), err
+	}
+
+	if tx.responseBodyBuffer.length == tx.ResponseBodyLimit {
+		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionReject {
+			return setAndReturnBodyLimitInterruption(tx)
+		}
+
+		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionProcessPartial {
+			runProcessResponseBody = true
+		}
+	}
+
+	err = nil
+	if runProcessResponseBody {
+		_, err = tx.ProcessResponseBody()
+	}
+	return tx.interruption, int(w), err
+}
+
+// ProcessResponseBody Perform the analysis of the the response body (if any)
 //
-// This method perform the analysis on the request body. It is optional to
-// call that method. If this API consumer already know that there isn't a
+// This method perform the analysis on the response body. It is optional to
+// call that method. If this API consumer already knows that there isn't a
 // body for inspect it is recommended to skip this step.
 //
 // note Remember to check for a possible intervention.
@@ -1066,19 +1181,15 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		return tx.interruption, nil
 	}
 	tx.WAF.Logger.Debug("[%s] Attempting to process response body", tx.id)
-	reader, err := tx.ResponseBodyBuffer.Reader()
-	if err != nil {
-		return tx.interruption, err
-	}
-	reader = io.LimitReader(reader, tx.WAF.ResponseBodyLimit)
-	buf := new(strings.Builder)
-	length, err := io.Copy(buf, reader)
+	reader, err := tx.responseBodyBuffer.Reader()
 	if err != nil {
 		return tx.interruption, err
 	}
 
-	if tx.ResponseBodyBuffer.Size() >= tx.WAF.ResponseBodyLimit {
-		tx.variables.outboundDataError.Set("1")
+	buf := new(strings.Builder)
+	length, err := io.Copy(buf, reader)
+	if err != nil {
+		return tx.interruption, err
 	}
 
 	tx.variables.responseContentLength.Set(strconv.FormatInt(length, 10))
@@ -1266,7 +1377,7 @@ func (tx *Transaction) Close() error {
 	if err := tx.requestBodyBuffer.Reset(); err != nil {
 		errs = append(errs, err)
 	}
-	if err := tx.ResponseBodyBuffer.Reset(); err != nil {
+	if err := tx.responseBodyBuffer.Reset(); err != nil {
 		errs = append(errs, err)
 	}
 
