@@ -30,10 +30,15 @@ type DirectiveOptions struct {
 type directive = func(options *DirectiveOptions) error
 
 // Description: Include and evaluate a file or file pattern.
-// Version Compatibility: v2.1+
-// Syntax: Include /path/coreruleset/rules/*.conf
+// Syntax: Include [PATH_TO_CONF_FILES]
 // ---
 // Include loads a file or a list of files from the filesystem using golang Glob syntax.
+//
+// Example:
+// ```apache
+// Include /path/coreruleset/rules/*.conf
+// ```
+//
 // Quoting [Glob documentation](https://pkg.go.dev/path/filepath#Glob):
 // > The syntax of patterns is the same as in Match. The pattern may describe hierarchical
 // > names such as /usr/*/bin/ed (assuming the Separator is ‘/’).
