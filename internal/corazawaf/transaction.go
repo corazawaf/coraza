@@ -746,11 +746,14 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 	tx.variables.queryString.Set(query)
 }
 
-// ProcessServerName allows to set server name details.
+// SetServerName allows to set server name details.
 //
 // The API consumer is in charge of retrieving the value (e.g. from the host header).
 // It is expected to be executed before calling ProcessRequestHeaders.
-func (tx *Transaction) ProcessServerName(serverName string) {
+func (tx *Transaction) SetServerName(serverName string) {
+	if tx.LastPhase >= types.PhaseRequestHeaders {
+		tx.WAF.Logger.Warn("SetServerName has been called after ProcessRequestHeaders")
+	}
 	tx.variables.serverName.Set(serverName)
 }
 

@@ -47,11 +47,11 @@ type Transaction interface {
 	// note: This function won't add GET arguments, they must be added with AddArgument
 	ProcessURI(uri string, method string, httpVersion string)
 
-	// ProcessServerName allows to set server name details.
+	// SetServerName allows to set server name details.
 	// The API consumer is in charge of retrieving the value (e.g. from the host header)
 	// before providing it to this method.
 	// It is expected to be executed before calling ProcessRequestHeaders.
-	ProcessServerName(serverName string)
+	SetServerName(serverName string)
 
 	// AddRequestHeader Adds a request header
 	//
