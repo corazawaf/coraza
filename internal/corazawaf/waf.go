@@ -42,9 +42,6 @@ type WAF struct {
 	// Array of logging parts to be used
 	AuditLogParts types.AuditLogParts
 
-	// Status of the content injection for responses and requests
-	ContentInjection bool
-
 	// If true, transactions will have access to the request body
 	RequestBodyAccess bool
 
@@ -177,7 +174,7 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 			MemoryLimit: w.RequestBodyInMemoryLimit,
 			Limit:       w.ResponseBodyLimit,
 		})
-		tx.ResponseBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
+		tx.responseBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
 			TmpPath: w.TmpDir,
 			// the response body is just buffered in memory. Therefore, Limit and MemoryLimit are equal.
 			MemoryLimit: w.ResponseBodyLimit,

@@ -27,9 +27,6 @@ type WAFConfig interface {
 	// WithAuditLog configures audit logging.
 	WithAuditLog(config AuditLogConfig) WAFConfig
 
-	// WithContentInjection enables content injection.
-	WithContentInjection() WAFConfig
-
 	// WithRequestBodyAccess enables access to the request body.
 	WithRequestBodyAccess() WAFConfig
 
@@ -113,7 +110,6 @@ type wafRule struct {
 type wafConfig struct {
 	rules                    []wafRule
 	auditLog                 *auditLogConfig
-	contentInjection         bool
 	requestBodyAccess        bool
 	requestBodyLimit         int
 	requestBodyInMemoryLimit int
@@ -152,12 +148,6 @@ func (c *wafConfig) WithDirectives(directives string) WAFConfig {
 func (c *wafConfig) WithAuditLog(config AuditLogConfig) WAFConfig {
 	ret := c.clone()
 	ret.auditLog = config.(*auditLogConfig)
-	return ret
-}
-
-func (c *wafConfig) WithContentInjection() WAFConfig {
-	ret := c.clone()
-	ret.contentInjection = true
 	return ret
 }
 
