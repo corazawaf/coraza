@@ -159,7 +159,7 @@ func (p *Parser) evaluateLine(data string) error {
 	}
 	d, ok := directivesMap[directive]
 	if !ok || d == nil {
-		return p.log("Unsupported directive " + directive)
+		return p.log("Unknown directive " + directive)
 	}
 
 	p.options.Opts = opts
