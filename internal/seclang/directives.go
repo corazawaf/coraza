@@ -1,7 +1,7 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:generate
+//go:generate go run generator/main.go
 
 package seclang
 
@@ -41,6 +41,8 @@ type directive = func(options *DirectiveOptions) error
 func directiveInclude(_ *DirectiveOptions) error {
 	return errors.New("not implemented")
 }
+
+var _ directive = directiveInclude
 
 func directiveSecComponentSignature(options *DirectiveOptions) error {
 	options.WAF.ComponentNames = append(options.WAF.ComponentNames, options.Opts)
@@ -629,25 +631,24 @@ func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 // A: Audit log header (mandatory).
 // B: Request headers.
 // C: Request body (present only if the request body exists and ModSecurity is configured
-//    to intercept it. This would require SecRequestBodyAccess to be set to on).
+// to intercept it. This would require SecRequestBodyAccess to be set to on).
 // D: Reserved for intermediary response headers; not implemented yet.
 // E: Intermediary response body (present only if ModSecurity is configured to intercept
-//    response bodies, and if the audit log engine is configured to record it. Intercepting
-//    response bodies requires SecResponseBodyAccess to be enabled). Intermediary response
-//    body is the same as the actual response body unless ModSecurity intercepts the intermediary
-//    response body, in which case the actual response body will contain the error message (either
-//    the Apache default error message, or the ErrorDocument page).
-// F: Final response headers (excluding the Date and Server headers, which are always added by
-//    Apache in the late stage of content delivery).
+// response bodies, and if the audit log engine is configured to record it. Intercepting
+// response bodies requires SecResponseBodyAccess to be enabled). Intermediary response
+// body is the same as the actual response body unless ModSecurity intercepts the intermediary
+// response body, in which case the actual response body will contain the error message (either
+// the Apache default error message, or the ErrorDocument page).
+// F: Final response headers.
 // G: Reserved for the actual response body; not implemented yet.
 // H: Audit log trailer.
 // I: This part is a replacement for part C. It will log the same data as C in all cases except when
-//    multipart/form-data encoding in used. In this case, it will log a fake application/x-www-form-urlencoded
-//    body that contains the information about parameters but not about the files. This is handy if
-//    you don’t want to have (often large) files stored in your audit logs.
+// multipart/form-data encoding in used. In this case, it will log a fake application/x-www-form-urlencoded
+// body that contains the information about parameters but not about the files. This is handy if
+// you don’t want to have (often large) files stored in your audit logs.
 // J: This part contains information about the files uploaded using multipart/form-data encoding.
 // K: This part contains a full list of every rule that matched (one per line) in the order they were
-//    matched. The rules are fully qualified and will thus show inherited actions and default operators.
+// matched. The rules are fully qualified and will thus show inherited actions and default operators.
 // Z: Final boundary, signifies the end of the entry (mandatory).
 func directiveSecAuditLogParts(options *DirectiveOptions) error {
 	options.WAF.AuditLogParts = types.AuditLogParts(options.Opts)
@@ -664,11 +665,11 @@ func directiveSecAuditLogParts(options *DirectiveOptions) error {
 // path, which ModSecurity does not support.
 //
 // The possible values for the audit log engine are as follows:
-// - On: log all transactions
-// - Off: do not log any transactions
-// - RelevantOnly: only the log transactions that have triggered a warning or an error, or have
-//   a status code that is considered to be relevant (as determined by the SecAuditLogRelevantStatus
-//   directive)
+//   - On: log all transactions
+//   - Off: do not log any transactions
+//   - RelevantOnly: only the log transactions that have triggered a warning or an error, or have
+//     a status code that is considered to be relevant (as determined by the SecAuditLogRelevantStatus
+//     directive)
 //
 // Note: If you need to change the audit log engine configuration on a per-transaction basis (e.g.,
 // in response to some transaction data), use the ctl action.
@@ -845,102 +846,4 @@ func parseBoolean(data string) (bool, error) {
 	default:
 		return false, errors.New("syntax error: [on/off]")
 	}
-}
-
-var (
-	_ directive = directiveInclude
-	_ directive = directiveSecAction
-	_ directive = directiveSecAuditEngine
-	_ directive = directiveSecAuditLog
-	_ directive = directiveSecAuditLogType
-	_ directive = directiveSecAuditLogFormat
-	_ directive = directiveSecAuditLogParts
-	_ directive = directiveSecAuditLogRelevantStatus
-	_ directive = directiveSecContentInjection
-	_ directive = directiveSecDataDir
-	_ directive = directiveSecDefaultAction
-	_ directive = directiveSecDebugLog
-	_ directive = directiveSecDebugLogLevel
-	_ directive = directiveSecHashEngine
-	_ directive = directiveSecHashKey
-	_ directive = directiveSecHashMethodPm
-	_ directive = directiveSecHashMethodRx
-	_ directive = directiveSecHashParam
-	_ directive = directiveSecHTTPBlKey
-	_ directive = directiveSecMarker
-	_ directive = directiveSecRemoteRules
-	_ directive = directiveSecSensorID
-	_ directive = directiveSecRuleUpdateTargetByID
-)
-
-var directivesMap = map[string]directive{
-	"secwebappid":                    directiveSecWebAppID,
-	"secuploadkeepfiles":             directiveSecUploadKeepFiles,
-	"secuploadfilemode":              directiveSecUploadFileMode,
-	"secuploadfilelimit":             directiveSecUploadFileLimit,
-	"secuploaddir":                   directiveSecUploadDir,
-	"sectmpdir":                      directiveSecTmpDir,
-	"secserversignature":             directiveSecServerSignature,
-	"secsensorid":                    directiveSecSensorID,
-	"secruleremovebytag":             directiveSecRuleRemoveByTag,
-	"secruleremovebymsg":             directiveSecRuleRemoveByMsg,
-	"secruleremovebyid":              directiveSecRuleRemoveByID,
-	"secruleengine":                  directiveSecRuleEngine,
-	"secrule":                        directiveSecRule,
-	"secresponsebodymimetypesclear":  directiveSecResponseBodyMimeTypesClear,
-	"secresponsebodymimetype":        directiveSecResponseBodyMimeType,
-	"secresponsebodylimitaction":     directiveSecResponseBodyLimitAction,
-	"secresponsebodylimit":           directiveSecResponseBodyLimit,
-	"secresponsebodyaccess":          directiveSecResponseBodyAccess,
-	"secrequestbodynofileslimit":     directiveSecRequestBodyNoFilesLimit,
-	"secrequestbodylimitaction":      directiveSecRequestBodyLimitAction,
-	"secrequestbodylimit":            directiveSecRequestBodyLimit,
-	"secrequestbodyinmemorylimit":    directiveSecRequestBodyInMemoryLimit,
-	"secrequestbodyaccess":           directiveSecRequestBodyAccess,
-	"secremoterulesfailaction":       directiveSecRemoteRulesFailAction,
-	"secremoterules":                 directiveSecRemoteRules,
-	"secpcrematchlimitrecursion":     directiveSecPcreMatchLimitRecursion,
-	"secpcrematchlimit":              directiveSecPcreMatchLimit,
-	"secmarker":                      directiveSecMarker,
-	"sechttpblkey":                   directiveSecHTTPBlKey,
-	"sechashparam":                   directiveSecHashParam,
-	"sechashmethodrx":                directiveSecHashMethodRx,
-	"sechashmethodpm":                directiveSecHashMethodPm,
-	"sechashkey":                     directiveSecHashKey,
-	"sechashengine":                  directiveSecHashEngine,
-	"secgsblookupdb":                 directiveSecGsbLookupDb,
-	"secdefaultaction":               directiveSecDefaultAction,
-	"secdatadir":                     directiveSecDataDir,
-	"seccontentinjection":            directiveSecContentInjection,
-	"secconnwritestatelimit":         directiveSecConnWriteStateLimit,
-	"secconnreadstatelimit":          directiveSecConnReadStateLimit,
-	"secconnengine":                  directiveSecConnEngine,
-	"seccomponentsignature":          directiveSecComponentSignature,
-	"seccollectiontimeout":           directiveSecCollectionTimeout,
-	"secauditlogrelevantstatus":      directiveSecAuditLogRelevantStatus,
-	"secauditlogparts":               directiveSecAuditLogParts,
-	"secauditlogdir":                 directiveSecAuditLogDir,
-	"secauditlogstoragedir":          directiveSecAuditLogDir,
-	"secauditlog":                    directiveSecAuditLog,
-	"secauditengine":                 directiveSecAuditEngine,
-	"secaction":                      directiveSecAction,
-	"secdebuglog":                    directiveSecDebugLog,
-	"secdebugloglevel":               directiveSecDebugLogLevel,
-	"secauditlogformat":              directiveSecAuditLogFormat,
-	"secauditlogtype":                directiveSecAuditLogType,
-	"secauditlogfilemode":            directiveSecAuditLogFileMode,
-	"secauditlogdirmode":             directiveSecAuditLogDirMode,
-	"secignorerulecompilationerrors": directiveSecIgnoreRuleCompilationErrors,
-	"secdataset":                     directiveSecDataset,
-
-	// Unsupported Directives
-	"secargumentseparator":     directiveUnsupported,
-	"seccookieformat":          directiveUnsupported,
-	"secruleupdatetargetbytag": directiveUnsupported,
-	"secruleupdatetargetbymsg": directiveUnsupported,
-	"secruleupdatetargetbyid":  directiveSecRuleUpdateTargetByID,
-	"secruleupdateactionbyid":  directiveUnsupported,
-	"secrulescript":            directiveUnsupported,
-	"secruleperftime":          directiveUnsupported,
-	"SecUnicodeMap":            directiveUnsupported,
 }
