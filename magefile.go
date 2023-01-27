@@ -23,6 +23,7 @@ var gosImportsVer = "v0.1.5"     // https://github.com/rinchsan/gosimports/relea
 
 var errRunGoModTidy = errors.New("go.mod/sum not formatted, commit changes")
 var errNoGitDir = errors.New("no .git directory found")
+var errUpdateGeneratedFiles = errors.New("generated files need to be updated")
 
 // Format formats code in this repository.
 func Format() error {
@@ -54,6 +55,10 @@ func Format() error {
 func Lint() error {
 	if err := sh.RunV("go", "generate", "./..."); err != nil {
 		return err
+	}
+
+	if sh.Run("git", "diff", "--exit-code") != nil {
+		return errUpdateGeneratedFiles
 	}
 
 	if err := sh.RunV("go", "run", fmt.Sprintf("github.com/golangci/golangci-lint/cmd/golangci-lint@%s", golangCILintVer), "run"); err != nil {

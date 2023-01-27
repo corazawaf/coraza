@@ -315,10 +315,6 @@ func (tx *Transaction) Interrupt(interruption *types.Interruption) {
 	}
 }
 
-func (tx *Transaction) ContentInjection() bool {
-	return tx.WAF.ContentInjection
-}
-
 func (tx *Transaction) DebugLogger() loggers.DebugLogger {
 	return tx.WAF.Logger
 }

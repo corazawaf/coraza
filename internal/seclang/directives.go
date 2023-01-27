@@ -434,15 +434,6 @@ func directiveSecDefaultAction(options *DirectiveOptions) error {
 	return nil
 }
 
-func directiveSecContentInjection(options *DirectiveOptions) error {
-	b, err := parseBoolean(options.Opts)
-	if err != nil {
-		return newDirectiveError(err, "SecContentInjection")
-	}
-	options.WAF.ContentInjection = b
-	return nil
-}
-
 func directiveSecConnEngine(options *DirectiveOptions) error {
 	/*
 		switch opts{
