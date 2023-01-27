@@ -97,17 +97,16 @@ func (re RuleEngineStatus) String() string {
 	return "unknown"
 }
 
-// BodyLimitAction represents the action
-// to take when the request body size exceeds
-// the configured limit.
+// BodyLimitAction represents the action to take when
+// the body size exceeds the configured limit.
 type BodyLimitAction int
 
 const (
-	// BodyLimitActionProcessPartial will process the request body
-	// up to the limit and then reject the request
+	// BodyLimitActionProcessPartial will process the body
+	// up to the limit and then ignores the remaining body bytes
 	BodyLimitActionProcessPartial BodyLimitAction = 0
-	// BodyLimitActionReject will reject the request in case
-	// the request body size exceeds the configured limit
+	// BodyLimitActionReject will reject the connection in case
+	// the body size exceeds the configured limit
 	BodyLimitActionReject BodyLimitAction = 1
 )
 
