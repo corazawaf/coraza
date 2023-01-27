@@ -26,6 +26,10 @@ var errNoGitDir = errors.New("no .git directory found")
 
 // Format formats code in this repository.
 func Format() error {
+	if err := sh.RunV("go", "generate", "./..."); err != nil {
+		return err
+	}
+
 	if err := sh.RunV("go", "mod", "tidy"); err != nil {
 		return err
 	}
@@ -48,6 +52,10 @@ func Format() error {
 
 // Lint verifies code quality.
 func Lint() error {
+	if err := sh.RunV("go", "generate", "./..."); err != nil {
+		return err
+	}
+
 	if err := sh.RunV("go", "run", fmt.Sprintf("github.com/golangci/golangci-lint/cmd/golangci-lint@%s", golangCILintVer), "run"); err != nil {
 		return err
 	}
