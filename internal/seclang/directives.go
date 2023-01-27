@@ -1,6 +1,8 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:generate
+
 package seclang
 
 import (
@@ -94,11 +96,11 @@ func directiveSecMarker(options *DirectiveOptions) error {
 // Description: Unconditionally processes the action list it receives as the first and only parameter.
 // Syntax: SecAction "action1,action2,action3,..."
 // ----
-// This directive is commonly used to set variables and initialize persistent collections using the initcol action.
-// The syntax of the parameter is identical to that of the third parameter of SecRule. For example:
+// This directive is commonly used to set variables and initialize persistent collections using the
+// initcol action. The syntax of the parameter is identical to that of the third parameter of SecRule.
 //
 // Example:
-// ```
+// ```apache
 // SecAction "nolog,phase:1,initcol:RESOURCE=%{REQUEST_FILENAME}"
 // ```
 func directiveSecAction(options *DirectiveOptions) error {
@@ -123,14 +125,17 @@ func directiveSecAction(options *DirectiveOptions) error {
 // the selected operator.
 // Syntax: SecRule VARIABLES OPERATOR [ACTIONS]
 // ---
-// Example: SecRule ARGS "@rx attack" "phase:1,log,deny,id:1"
-//
 // Every rule must provide one or more variables along with the operator that should
 // be used to inspect them. If no actions are provided, the default list will be used.
 // (There is always a default list, even if one was not explicitly set with SecDefaultAction.)
 // If there are actions specified in a rule, they will be merged with the default list
 // to form the final actions that will be used. (The actions in the rule will overwrite
 // those in the default list.) Refer to SecDefaultAction for more information.
+//
+// Example:
+// ```apache
+// SecRule ARGS "@rx attack" "phase:1,log,deny,id:1"
+// ```
 func directiveSecRule(options *DirectiveOptions) error {
 	ignoreErrors := options.Config.Get("ignore_rule_compilation_errors", false).(bool)
 	rule, err := ParseRule(RuleOptions{
@@ -159,6 +164,7 @@ func directiveSecRule(options *DirectiveOptions) error {
 // Description: Configures whether response bodies are to be buffered.
 // Syntax: SecResponseBodyAccess On|Off
 // Default: Off
+// ---
 // This directive is required if you plan to inspect HTML responses and implement
 // response blocking. Possible values are:
 // - On: buffer response bodies (but only if the response MIME type matches the list
@@ -175,7 +181,7 @@ func directiveSecResponseBodyAccess(options *DirectiveOptions) error {
 
 // Description: Configures the maximum request body size Coraza will accept for buffering.
 // Default: 134217728 (131072 KB)
-// Syntax: SecRequestBodyLimit 134217728
+// Syntax: SecRequestBodyLimit [LIMIT_IN_BYTES]
 // ---
 // Anything over the limit will be rejected with status code 413 (Request Entity Too Large).
 // There is a hard limit of 1 GB.
@@ -186,8 +192,8 @@ func directiveSecRequestBodyLimit(options *DirectiveOptions) error {
 }
 
 // Description: Configures whether request bodies will be buffered and processed by Coraza.
-// Default: Off
 // Syntax: SecRequestBodyAccess On|Off
+// Default: Off
 // ---
 // This directive is required if you want to inspect the data transported request bodies
 // (e.g., POST parameters). Request buffering is also required in order to make reliable
@@ -312,8 +318,10 @@ func directiveSecResponseBodyLimit(options *DirectiveOptions) error {
 // Description: Controls what happens once a request body limit, configured with
 // SecRequestBodyLimit, is encountered
 // Syntax: SecRequestBodyLimitAction Reject|ProcessPartial
+// Default: Reject
 // ---
-// By default, Coraza will reject a request body that is longer than specified.
+// By default, Coraza will reject a request body that is longer than specified to
+// avoid OOM issues while buffering the request body prior the inspection.
 func directiveSecRequestBodyLimitAction(options *DirectiveOptions) error {
 	switch strings.ToLower(options.Opts) {
 	case "reject":
@@ -453,15 +461,15 @@ func directiveSecCollectionTimeout(options *DirectiveOptions) error {
 
 // Description: Defines the path to the main audit log file (serial logging format)
 // or the concurrent logging index file (concurrent logging format).
-// Syntax: SecAuditLog /path/to/audit.log
+// Syntax: SecAuditLog [ABSOLUTE_PATH_TO_LOG_FILE]
 // ---
 // When used in combination with mlogc (only possible with concurrent logging), this
 // directive defines the mlogc location and command line.
 //
+// Example:
 // ```apache
-// SecAuditLog "|/path/to/mlogc /path/to/mlogc.conf"
+// SecAuditLog "/path/to/audit.log
 // ```
-// Note: Writing to programs using pipe (|) is not implemented yet.
 //
 // Note: This audit log file is opened on startup when the server typically still runs
 // as root. You should not allow non-root users to have write privileges for this file
@@ -529,6 +537,7 @@ func directiveSecAuditLogDir(options *DirectiveOptions) error {
 // ---
 // The default mode for new audit log directories (0600) only grants read/write access
 // to the owner.
+//
 // Example:
 // ```apache
 // SecAuditLogDirMode 02750
@@ -585,7 +594,7 @@ func directiveSecAuditLogFileMode(options *DirectiveOptions) error {
 // ```
 // SecAuditLogRelevantStatus "^(?:5|40[1235])"
 // ```
-// The example provided would log all 5xx and 4xx level status codes,
+// This example would log all 5xx and 4xx level status codes,
 // except for 404s. Although you could achieve the same effect with a rule in phase 5,
 // SecAuditLogRelevantStatus is sometimes better, because it continues to work even when SecRuleEngine
 // is disabled.
@@ -607,9 +616,11 @@ func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 // Syntax: SecAuditLogParts [PARTLETTERS]
 // Default: ABCFHZ Note
 // ---
-// The format of the audit log format is documented in detail in the Audit Log Data Format Documentation.
+// The format of the audit log format is documented in detail in the Audit Log Data
+// Format Documentation.
+//
 // Example:
-// ```
+// ```apache
 // SecAuditLogParts ABCFHZ
 // ```
 //
@@ -617,15 +628,26 @@ func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 //
 // A: Audit log header (mandatory).
 // B: Request headers.
-// C: Request body (present only if the request body exists and ModSecurity is configured to intercept it. This would require SecRequestBodyAccess to be set to on).
+// C: Request body (present only if the request body exists and ModSecurity is configured
+//    to intercept it. This would require SecRequestBodyAccess to be set to on).
 // D: Reserved for intermediary response headers; not implemented yet.
-// E: Intermediary response body (present only if ModSecurity is configured to intercept response bodies, and if the audit log engine is configured to record it. Intercepting response bodies requires SecResponseBodyAccess to be enabled). Intermediary response body is the same as the actual response body unless ModSecurity intercepts the intermediary response body, in which case the actual response body will contain the error message (either the Apache default error message, or the ErrorDocument page).
-// F: Final response headers (excluding the Date and Server headers, which are always added by Apache in the late stage of content delivery).
+// E: Intermediary response body (present only if ModSecurity is configured to intercept
+//    response bodies, and if the audit log engine is configured to record it. Intercepting
+//    response bodies requires SecResponseBodyAccess to be enabled). Intermediary response
+//    body is the same as the actual response body unless ModSecurity intercepts the intermediary
+//    response body, in which case the actual response body will contain the error message (either
+//    the Apache default error message, or the ErrorDocument page).
+// F: Final response headers (excluding the Date and Server headers, which are always added by
+//    Apache in the late stage of content delivery).
 // G: Reserved for the actual response body; not implemented yet.
 // H: Audit log trailer.
-// I: This part is a replacement for part C. It will log the same data as C in all cases except when multipart/form-data encoding in used. In this case, it will log a fake application/x-www-form-urlencoded body that contains the information about parameters but not about the files. This is handy if you don’t want to have (often large) files stored in your audit logs.
+// I: This part is a replacement for part C. It will log the same data as C in all cases except when
+//    multipart/form-data encoding in used. In this case, it will log a fake application/x-www-form-urlencoded
+//    body that contains the information about parameters but not about the files. This is handy if
+//    you don’t want to have (often large) files stored in your audit logs.
 // J: This part contains information about the files uploaded using multipart/form-data encoding.
-// K: This part contains a full list of every rule that matched (one per line) in the order they were matched. The rules are fully qualified and will thus show inherited actions and default operators. Supported as of v2.5.0.
+// K: This part contains a full list of every rule that matched (one per line) in the order they were
+//    matched. The rules are fully qualified and will thus show inherited actions and default operators.
 // Z: Final boundary, signifies the end of the entry (mandatory).
 func directiveSecAuditLogParts(options *DirectiveOptions) error {
 	options.WAF.AuditLogParts = types.AuditLogParts(options.Opts)
@@ -636,14 +658,21 @@ func directiveSecAuditLogParts(options *DirectiveOptions) error {
 // Syntax: SecAuditEngine RelevantOnly
 // Default: Off
 // ---
-// The SecAuditEngine directive is used to configure the audit engine, which logs complete transactions. ModSecurity is currently able to log most, but not all transactions. Transactions involving errors (e.g., 400 and 404 transactions) use a different execution path, which ModSecurity does not support.
+// The SecAuditEngine directive is used to configure the audit engine, which logs complete
+// transactions. ModSecurity is currently able to log most, but not all transactions.
+// Transactions involving errors (e.g., 400 and 404 transactions) use a different execution
+// path, which ModSecurity does not support.
 //
 // The possible values for the audit log engine are as follows:
 // - On: log all transactions
 // - Off: do not log any transactions
-// - RelevantOnly: only the log transactions that have triggered a warning or an error, or have a status code that is considered to be relevant (as determined by the SecAuditLogRelevantStatus directive)
+// - RelevantOnly: only the log transactions that have triggered a warning or an error, or have
+//   a status code that is considered to be relevant (as determined by the SecAuditLogRelevantStatus
+//   directive)
 //
-// Note: If you need to change the audit log engine configuration on a per-transaction basis (e.g., in response to some transaction data), use the ctl action.
+// Note: If you need to change the audit log engine configuration on a per-transaction basis (e.g.,
+// in response to some transaction data), use the ctl action.
+//
 // The following example demonstrates how SecAuditEngine is used:
 // ```apache
 // SecAuditEngine RelevantOnly
