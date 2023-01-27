@@ -41,7 +41,6 @@ var (
 	_ directive = directiveSecHashKey
 	_ directive = directiveSecHashEngine
 	_ directive = directiveSecDefaultAction
-	_ directive = directiveSecContentInjection
 	_ directive = directiveSecConnEngine
 	_ directive = directiveSecCollectionTimeout
 	_ directive = directiveSecAuditLog
@@ -102,7 +101,6 @@ var directivesMap = map[string]directive{
 	"sechashkey":                     directiveSecHashKey,
 	"sechashengine":                  directiveSecHashEngine,
 	"secdefaultaction":               directiveSecDefaultAction,
-	"seccontentinjection":            directiveSecContentInjection,
 	"secconnengine":                  directiveSecConnEngine,
 	"seccollectiontimeout":           directiveSecCollectionTimeout,
 	"secauditlog":                    directiveSecAuditLog,
