@@ -24,7 +24,7 @@ func (o *detectSQLi) Evaluate(tx rules.TransactionState, value string) bool {
 	if !res {
 		return false
 	}
-	tx.CaptureField(0, string(fingerprint))
+	tx.CaptureField(0, fingerprint)
 	return true
 }
 

@@ -4,7 +4,6 @@
 package seclang
 
 import (
-	"io"
 	"regexp"
 	"strings"
 	"testing"
@@ -52,7 +51,7 @@ func TestRuleMatchWithRegex(t *testing.T) {
 		t.Error(err.Error())
 	}
 	tx := waf.NewTransaction()
-	tx.AddArgument("GET", "id_test", "123")
+	tx.AddArgument(types.ArgumentGET, "id_test", "123")
 	tx.ProcessRequestHeaders()
 	if len(tx.MatchedRules()) != 1 {
 		t.Errorf("failed to match rules with %d", len(tx.MatchedRules()))
@@ -131,7 +130,7 @@ func TestSecAuditLogs(t *testing.T) {
 func TestRuleLogging(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	var logs []string
-	waf.SetErrorLogCb(func(mr types.MatchedRule) {
+	waf.SetErrorCallback(func(mr types.MatchedRule) {
 		logs = append(logs, mr.ErrorLog(403))
 	})
 	parser := NewParser(waf)
@@ -144,8 +143,8 @@ func TestRuleLogging(t *testing.T) {
 		t.Error(err.Error())
 	}
 	tx := waf.NewTransaction()
-	tx.AddArgument("GET", "test1", "123")
-	tx.AddArgument("GET", "test2", "456")
+	tx.AddArgument(types.ArgumentGET, "test1", "123")
+	tx.AddArgument(types.ArgumentGET, "test2", "456")
 	tx.ProcessRequestHeaders()
 	if len(tx.MatchedRules()) != 3 {
 		t.Errorf("failed to match rules with %d", len(tx.MatchedRules()))
@@ -181,8 +180,8 @@ func TestRuleChains(t *testing.T) {
 		t.Error(err.Error())
 	}
 	tx := waf.NewTransaction()
-	tx.AddArgument("GET", "test1", "123")
-	tx.AddArgument("GET", "test2", "456")
+	tx.AddArgument(types.ArgumentGET, "test1", "123")
+	tx.AddArgument(types.ArgumentGET, "test2", "456")
 	tx.ProcessRequestHeaders()
 	if len(tx.MatchedRules()) != 1 {
 		t.Errorf("failed to match rules with %d matches, expected 1", len(tx.MatchedRules()))
@@ -192,7 +191,7 @@ func TestRuleChains(t *testing.T) {
 func TestTagsAreNotPrintedTwice(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	var logs []string
-	waf.SetErrorLogCb(func(mr types.MatchedRule) {
+	waf.SetErrorCallback(func(mr types.MatchedRule) {
 		logs = append(logs, mr.ErrorLog(403))
 	})
 	parser := NewParser(waf)
@@ -203,8 +202,8 @@ func TestTagsAreNotPrintedTwice(t *testing.T) {
 		t.Error(err.Error())
 	}
 	tx := waf.NewTransaction()
-	tx.AddArgument("GET", "test1", "123")
-	tx.AddArgument("GET", "test2", "456")
+	tx.AddArgument(types.ArgumentGET, "test1", "123")
+	tx.AddArgument(types.ArgumentGET, "test2", "456")
 	tx.ProcessRequestHeaders()
 	if len(tx.MatchedRules()) != 1 {
 		t.Errorf("failed to match rules with %d", len(tx.MatchedRules()))
@@ -224,7 +223,7 @@ func TestTagsAreNotPrintedTwice(t *testing.T) {
 func TestStatusFromInterruptions(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	var logs []string
-	waf.SetErrorLogCb(func(mr types.MatchedRule) {
+	waf.SetErrorCallback(func(mr types.MatchedRule) {
 		logs = append(logs, mr.ErrorLog(403))
 	})
 	parser := NewParser(waf)
@@ -235,8 +234,8 @@ func TestStatusFromInterruptions(t *testing.T) {
 		t.Error(err.Error())
 	}
 	tx := waf.NewTransaction()
-	tx.AddArgument("GET", "test1", "123")
-	tx.AddArgument("GET", "test2", "456")
+	tx.AddArgument(types.ArgumentGET, "test1", "123")
+	tx.AddArgument(types.ArgumentGET, "test2", "456")
 	it := tx.ProcessRequestHeaders()
 	if it == nil {
 		t.Error("failed to interrupt")
@@ -262,7 +261,7 @@ func TestChainWithUnconditionalMatch(t *testing.T) {
 func TestLogsAreNotPrintedManyTimes(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	var logs []string
-	waf.SetErrorLogCb(func(mr types.MatchedRule) {
+	waf.SetErrorCallback(func(mr types.MatchedRule) {
 		logs = append(logs, mr.ErrorLog(403))
 	})
 	parser := NewParser(waf)
@@ -273,9 +272,9 @@ func TestLogsAreNotPrintedManyTimes(t *testing.T) {
 		t.Error(err.Error())
 	}
 	tx := waf.NewTransaction()
-	tx.AddArgument("GET", "test1", "123")
-	tx.AddArgument("GET", "test2", "456")
-	tx.AddArgument("GET", "test2", "789")
+	tx.AddArgument(types.ArgumentGET, "test1", "123")
+	tx.AddArgument(types.ArgumentGET, "test2", "456")
+	tx.AddArgument(types.ArgumentGET, "test2", "789")
 	tx.AddRequestHeader("test", "123")
 	tx.ProcessRequestHeaders()
 	if len(tx.MatchedRules()) != 1 {
@@ -318,9 +317,10 @@ func TestTxIssue147(t *testing.T) {
 	// we need a content-type header
 	tx.AddResponseHeader("Content-Type", "text/html")
 	if tx.IsResponseBodyProcessable() {
-		if _, err := tx.ResponseBodyBuffer.Write([]byte("#!/usr/bin/python")); err != nil {
+		if it, _, err := tx.WriteResponseBody([]byte("#!/usr/bin/python")); it != nil || err != nil {
 			t.Error(err)
 		}
+
 		it, err := tx.ProcessResponseBody()
 		if err != nil {
 			t.Error(err)
@@ -369,7 +369,7 @@ func TestIssue176(t *testing.T) {
 	//		t.Error(err.Error())
 	//	}
 	//	tx = waf.NewTransaction()
-	//	tx.AddArgument("GET", "Test1", "123")
+	//	tx.AddArgument(types.ArgumentGET, "Test1", "123")
 	//	it = tx.ProcessRequestHeaders()
 	//	if it == nil {
 	//		t.Error("failed to test argument case-sensitive")
@@ -382,7 +382,7 @@ func TestIssue176(t *testing.T) {
 	//		t.Error(err.Error())
 	//	}
 	//	tx = waf.NewTransaction()
-	//	tx.AddArgument("GET", "Test2", "123")
+	//	tx.AddArgument(types.ArgumentGET, "Test2", "123")
 	//	it = tx.ProcessRequestHeaders()
 	//	if it != nil {
 	//		t.Error("failed to test argument case-sensitive")
@@ -450,7 +450,7 @@ func TestUnicode(t *testing.T) {
 	}
 
 	tx := waf.NewTransaction()
-	tx.AddArgument("POST", "var", `ハローワールド`)
+	tx.AddArgument(types.ArgumentPOST, "var", `ハローワールド`)
 	it, err := tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -502,7 +502,7 @@ func Test941310(t *testing.T) {
 	// }
 	//
 	// tx := waf.NewTransaction()
-	// tx.AddArgument("POST", "var", `\\xbcscript\\xbealert(\xa2XSS\xa2)\xbc/script\xbe`)
+	// tx.AddArgument(types.ArgumentPOST, "var", `\\xbcscript\\xbealert(\xa2XSS\xa2)\xbc/script\xbe`)
 	// it, err := tx.ProcessRequestBody()
 	// if err != nil {
 	// 	t.Error(err)
@@ -524,7 +524,7 @@ func TestArgumentNamesCaseSensitive(t *testing.T) {
 	}
 	/*
 		tx := waf.NewTransaction()
-		tx.AddArgument("POST", "Test1", "Xyz")
+		tx.AddArgument(types.ArgumentPOST, "Test1", "Xyz")
 		it, err := tx.ProcessRequestBody()
 		if err != nil {
 			t.Error(err)
@@ -534,7 +534,7 @@ func TestArgumentNamesCaseSensitive(t *testing.T) {
 		}
 
 		tx = waf.NewTransaction()
-		tx.AddArgument("POST", "TEST1", "Xyz")
+		tx.AddArgument(types.ArgumentPOST, "TEST1", "Xyz")
 		it, err = tx.ProcessRequestBody()
 		if err != nil {
 			t.Error(err)
@@ -544,7 +544,7 @@ func TestArgumentNamesCaseSensitive(t *testing.T) {
 		}
 
 		tx = waf.NewTransaction()
-		tx.AddArgument("POST", "test1", "Xyz")
+		tx.AddArgument(types.ArgumentPOST, "test1", "Xyz")
 		it, err = tx.ProcessRequestBody()
 		if err != nil {
 			t.Error(err)
@@ -567,7 +567,7 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 	}
 
 	tx := waf.NewTransaction()
-	tx.AddArgument("POST", "Test1", "Xyz")
+	tx.AddArgument(types.ArgumentPOST, "Test1", "Xyz")
 	it, err := tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -577,7 +577,7 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 	}
 
 	tx = waf.NewTransaction()
-	tx.AddArgument("POST", "TEST1", "Xyz")
+	tx.AddArgument(types.ArgumentPOST, "TEST1", "Xyz")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -587,7 +587,7 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 	}
 
 	tx = waf.NewTransaction()
-	tx.AddArgument("POST", "test1", "Xyz")
+	tx.AddArgument(types.ArgumentPOST, "test1", "Xyz")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -597,7 +597,7 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 	}
 
 	tx = waf.NewTransaction()
-	tx.AddArgument("POST", "test1", "xyz")
+	tx.AddArgument(types.ArgumentPOST, "test1", "xyz")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -607,7 +607,7 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 	}
 
 	tx = waf.NewTransaction()
-	tx.AddArgument("POST", "test1", "XYZ")
+	tx.AddArgument(types.ArgumentPOST, "test1", "XYZ")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -753,9 +753,9 @@ func TestParameterPollution(t *testing.T) {
 	}
 
 	tx := waf.NewTransaction()
-	tx.AddArgument("POST", "test1", "xyz")
-	tx.AddArgument("POST", "Test1", "Xyz")
-	tx.AddArgument("POST", "TEST1", "XYZ")
+	tx.AddArgument(types.ArgumentPOST, "test1", "xyz")
+	tx.AddArgument(types.ArgumentPOST, "Test1", "Xyz")
+	tx.AddArgument(types.ArgumentPOST, "TEST1", "XYZ")
 	_, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -772,10 +772,10 @@ func TestParameterPollution(t *testing.T) {
 	}
 
 	tx = waf.NewTransaction()
-	tx.AddArgument("POST", "test1", "xyz")
-	tx.AddArgument("POST", "Test1", "Xyz")
-	tx.AddArgument("POST", "tesT1", "Xyz")
-	tx.AddArgument("POST", "TEST1", "XYZ")
+	tx.AddArgument(types.ArgumentPOST, "test1", "xyz")
+	tx.AddArgument(types.ArgumentPOST, "Test1", "Xyz")
+	tx.AddArgument(types.ArgumentPOST, "tesT1", "Xyz")
+	tx.AddArgument(types.ArgumentPOST, "TEST1", "XYZ")
 	_, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -957,12 +957,17 @@ Content-Type: application/octet-stream
 
 BINARYDATA
 ------WebKitFormBoundaryABCDEFGIJKLMNOPQ--`)
-	_, err = io.Copy(tx.RequestBodyBuffer, body)
+	it, _, err := tx.ReadRequestBodyFrom(body)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	it, err := tx.ProcessRequestBody()
+
+	if it != nil {
+		t.Fatal(err)
+	}
+
+	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
 		return

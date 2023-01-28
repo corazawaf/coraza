@@ -97,30 +97,18 @@ func (re RuleEngineStatus) String() string {
 	return "unknown"
 }
 
-// RequestBodyLimitAction represents the action
-// to take when the request body size exceeds
-// the configured limit.
-type RequestBodyLimitAction int
+// BodyLimitAction represents the action to take when
+// the body size exceeds the configured limit.
+type BodyLimitAction int
 
 const (
-	// RequestBodyLimitActionProcessPartial will process the request body
-	// up to the limit and then reject the request
-	RequestBodyLimitActionProcessPartial RequestBodyLimitAction = 0
-	// RequestBodyLimitActionReject will reject the request in case
-	// the request body size exceeds the configured limit
-	RequestBodyLimitActionReject RequestBodyLimitAction = 1
+	// BodyLimitActionProcessPartial will process the body
+	// up to the limit and then ignores the remaining body bytes
+	BodyLimitActionProcessPartial BodyLimitAction = 0
+	// BodyLimitActionReject will reject the connection in case
+	// the body size exceeds the configured limit
+	BodyLimitActionReject BodyLimitAction = 1
 )
-
-// ParseRequestBodyLimitAction parses the request body limit action
-func ParseRequestBodyLimitAction(rbla string) (RequestBodyLimitAction, error) {
-	switch strings.ToLower(rbla) {
-	case "processpartial":
-		return RequestBodyLimitActionProcessPartial, nil
-	case "reject":
-		return RequestBodyLimitActionReject, nil
-	}
-	return -1, fmt.Errorf("invalid request body limit action: %s", rbla)
-}
 
 type auditLogPart byte
 
@@ -193,4 +181,6 @@ type BodyBufferOptions struct {
 	// MemoryLimit is the maximum amount of memory to be stored in memory
 	// Once the limit is reached, the file will be stored on disk
 	MemoryLimit int64
+	// Limit is the overall maximum amount of memory to be buffered
+	Limit int64
 }

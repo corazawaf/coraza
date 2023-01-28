@@ -129,6 +129,12 @@ func Test_directive(t *testing.T) {
 	if err := p.FromString(`SecRemoteRulesFailAction Abort`); err != nil {
 		t.Error("failed to set directive: SecRemoteRulesFailAction")
 	}
+	if err := p.FromString(`SecRequestBodyLimitAction Reject`); err != nil {
+		t.Error("failed to set directive: SecRequestBodyLimitAction")
+	}
+	if err := p.FromString(`SecResponseBodyLimitAction ProcessPartial`); err != nil {
+		t.Error("failed to set directive: SecResponseBodyLimitAction")
+	}
 }
 
 func TestSecRuleUpdateTargetBy(t *testing.T) {
