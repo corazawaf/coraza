@@ -7,6 +7,21 @@ import (
 	"io"
 )
 
+// ArgumentType is used to define types of argument for transactions
+// There are three supported types: POST, GET and PATH
+type ArgumentType int
+
+const (
+	// ArgumentInvalid is used to define invalid argument types
+	ArgumentInvalid ArgumentType = iota
+	// ArgumentGET is used to define GET arguments
+	ArgumentGET
+	// ArgumentPOST is used to define POST arguments
+	ArgumentPOST
+	// ArgumentPATH is used to define PATH arguments
+	ArgumentPATH
+)
+
 // Transaction is created from a WAF instance to handle web requests and responses,
 // it contains a copy of most WAF configurations that can be safely changed.
 // Transactions are used to store all data like URLs, request and response
@@ -48,23 +63,42 @@ type Transaction interface {
 	// note: Remember to check for a possible intervention.
 	ProcessRequestHeaders() *Interruption
 
-	// RequestBodyWriter returns a io.Writer for writing the request body to.
-	// Contents will be buffered until the transaction is closed.
-	RequestBodyWriter() io.Writer
-
 	// RequestBodyReader returns a reader for content that has been written by
-	// RequestBodyWriter. This can be useful for buffering the request body
+	// request body buffer. This can be useful for buffering the request body
 	// within the Transaction while also passing it further in an HTTP framework.
 	RequestBodyReader() (io.Reader, error)
 
-	// ProcessRequestBody Performs the request body (if any)
+	// AddArgument Add arguments GET or POST
+	// This will set ARGS_(GET|POST), ARGS, ARGS_NAMES, ARGS_COMBINED_SIZE and
+	// ARGS_(GET|POST)_NAMES
+	// With this method it is possible to feed Coraza with a GET or POST argument
+	// providing granular control over the arguments.
+	AddArgument(orig ArgumentType, key string, value string)
+
+	// ProcessRequestBody Performs the analysis of the request body (if any)
 	//
 	// This method perform the analysis on the request body. It is optional to
-	// call that function. If this API consumer already know that there isn't a
+	// call that function. If this API consumer already knows that there isn't a
 	// body for inspect it is recommended to skip this step.
 	//
 	// Remember to check for a possible intervention.
 	ProcessRequestBody() (*Interruption, error)
+
+	// WriteRequestBody attempts to write data into the body up to the buffer limit and
+	// returns an interruption if the body is bigger than the limit and the action is to
+	// reject. This is specially convenient to resolve an interruption before copying
+	// the body into the request body buffer.
+	//
+	// It returns the corresponding interruption, the number of bytes written an error if any.
+	WriteRequestBody(b []byte) (*Interruption, int, error)
+
+	// ReadRequestBodyFrom attempts to write data into the body up to the buffer limit and
+	// returns an interruption if the body is bigger than the limit and the action is to
+	// reject. This is specially convenient to resolve an interruption before copying
+	// the body into the request body buffer.
+	//
+	// It returns the corresponding interruption, the number of bytes written an error if any.
+	ReadRequestBodyFrom(io.Reader) (*Interruption, int, error)
 
 	// AddResponseHeader Adds a response header variable
 	//
@@ -79,23 +113,35 @@ type Transaction interface {
 	// note: Remember to check for a possible intervention.
 	ProcessResponseHeaders(code int, proto string) *Interruption
 
-	// ResponseBodyWriter returns a io.Writer for writing the response body to.
-	// Contents will be buffered until the transaction is closed.
-	ResponseBodyWriter() io.Writer
-
 	// ResponseBodyReader returns a reader for content that has been written by
-	// ResponseBodyWriter. This can be useful for buffering the response body
+	// response body buffer. This can be useful for buffering the response body
 	// within the Transaction while also passing it further in an HTTP framework.
 	ResponseBodyReader() (io.Reader, error)
 
-	// ProcessResponseBody Perform the request body (if any)
+	// ProcessResponseBody Perform the analysis of the response body (if any)
 	//
-	// This method perform the analysis on the request body. It is optional to
-	// call that method. If this API consumer already know that there isn't a
+	// This method perform the analysis on the response body. It is optional to
+	// call that method. If this API consumer already knows that there isn't a
 	// body for inspect it is recommended to skip this step.
 	//
 	// note Remember to check for a possible intervention.
 	ProcessResponseBody() (*Interruption, error)
+
+	// WriteResponseBody attempts to write data into the body up to the buffer limit and
+	// returns an interruption if the body is bigger than the limit and the action is to
+	// reject. This is specially convenient to resolve an interruption before copying
+	// the body into the response body buffer.
+	//
+	// It returns the corresponding interruption, the number of bytes written an error if any.
+	WriteResponseBody(b []byte) (*Interruption, int, error)
+
+	// ReadResponseBodyFrom attempts to write data into the body up to the buffer limit and
+	// returns an interruption if the body is bigger than the limit and the action is to
+	// reject. This is specially convenient to resolve an interruption before copying
+	// the body into the response body buffer.
+	//
+	// It returns the corresponding interruption, the number of bytes written an error if any.
+	ReadResponseBodyFrom(io.Reader) (*Interruption, int, error)
 
 	// ProcessLogging Logging all information relative to this transaction.
 	// An error log
@@ -103,14 +149,36 @@ type Transaction interface {
 	// delivered prior to the execution of this method.
 	ProcessLogging()
 
-	// RequestBodyAccessible will return true if RequestBody access has been enabled by RequestBodyAccess
-	RequestBodyAccessible() bool
+	// IsRuleEngineOff will return true if RuleEngine is set to Off
+	IsRuleEngineOff() bool
 
-	// ResponseBodyAccessible will return true if ResponseBody access has been enabled by ResponseBodyAccess
-	ResponseBodyAccessible() bool
+	// IsRequestBodyAccessible will return true if RequestBody access has been enabled by RequestBodyAccess
+	//
+	// This can be used to perform checks just before calling request body related functions.
+	// In order to avoid any risk of performing wrong early assumptions, perform early checks on this value
+	// only if the API consumer requires them for specific server/proxy actions
+	// (such as avoiding proxy side buffering).
+	// Note: it returns the current status, later rules may still change it via ctl actions.
+	IsRequestBodyAccessible() bool
 
-	// Interrupted will return true if the transaction was interrupted
-	Interrupted() bool
+	// IsResponseBodyAccessible will return true if ResponseBody access has been enabled by ResponseBodyAccess
+	//
+	// This can be used to perform checks just before calling response body related functions.
+	// In order to avoid any risk of performing wrong early assumptions, perform early checks on this value
+	// only if the API consumer requires them for specific server/proxy actions
+	// (such as avoiding proxy side buffering).
+	// Note: it returns the current status, later rules may still change it via ctl actions.
+	IsResponseBodyAccessible() bool
+
+	// IsResponseBodyProcessable returns true if the response body meets the
+	// criteria to be processed, response headers must be set before this.
+	// The content-type response header must be in the SecResponseBodyMimeType
+	// This is used by webservers to choose whether to stream response buffers
+	// directly to the client or write them to Coraza's buffer.
+	IsResponseBodyProcessable() bool
+
+	// IsInterrupted will return true if the transaction was interrupted
+	IsInterrupted() bool
 
 	// Interruption returns the types.Interruption if the request was interrupted,
 	// or nil otherwise.
@@ -118,6 +186,9 @@ type Transaction interface {
 
 	// MatchedRules returns the rules that have matched the requests with associated information.
 	MatchedRules() []MatchedRule
+
+	// ID returns the transaction ID.
+	ID() string
 
 	// Closer closes the transaction and releases any resources associated with it such as request/response bodies.
 	io.Closer

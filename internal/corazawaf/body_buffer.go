@@ -5,6 +5,7 @@ package corazawaf
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"os"
 
@@ -16,11 +17,31 @@ import (
 // It will handle memory usage for buffering and processing
 // It implements io.Copy(bodyBuffer, someReader) by inherit io.Writer
 type BodyBuffer struct {
-	io.Writer
 	options types.BodyBufferOptions
 	buffer  *bytes.Buffer
 	writer  *os.File
 	length  int64
+}
+
+var (
+	_ io.WriterTo = (*BodyBuffer)(nil)
+	_ io.Writer   = (*BodyBuffer)(nil)
+)
+
+func (br *BodyBuffer) WriteTo(w io.Writer) (int64, error) {
+	if br.writer == nil {
+		return br.buffer.WriteTo(w)
+	}
+
+	b := make([]byte, br.length)
+
+	n, err := br.writer.Read(b)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err = w.Write(b[:n])
+	return int64(n), err
 }
 
 // Write appends data to the body buffer by chunks
@@ -30,15 +51,27 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 		return 0, nil
 	}
 
-	l := int64(len(data)) + br.length
-	if l > br.options.MemoryLimit {
+	// Checks if the limit has been already reached and if the new data will exceed it.
+	// if br.length == br.options.Limit the error will be always raised because len(data) at this point will always be >=1
+	if br.length > (br.options.Limit - int64(len(data))) {
+		// Write has been called without checking the Limit, it should never happend. Raising an error.
+		// The buffers are private and populated only by WriteRequestBody, ReadRequestBodyFrom, and similar functions
+		// that have to perform limit checks before calling Write()
+		return 0, errors.New("Limit reached while writing")
+	}
+	targetLen := br.length + int64(len(data))
+
+	// Check if memory limits are reached
+	// Even if Overflow is explicitly checked, MemoryLimit real limits are below maxInt and machine dependenent.
+	// bytes.Buffer growth is platform dependent with a growth rate capped at 2x. If the buffer can't grow it will panic with ErrTooLarge.
+	// See https://github.com/golang/go/blob/go1.19.4/src/bytes/buffer.go#L117 and https://go-review.googlesource.com/c/go/+/349994
+	// Local tests show these buffer limits:
+	// 32-bit machine: 1073741824 (2^30, 1GiB)
+	// 64-bit machine: 34359738368 (2^35, 32GiB) (Not reached the ErrTooLarge panic, the OS triggered an OOM)
+	if targetLen > br.options.MemoryLimit {
 		if environment.IsTinyGo {
-			maxWritingDataLen := br.options.MemoryLimit - br.length
-			if maxWritingDataLen == 0 {
-				return 0, nil
-			}
-			br.length = br.options.MemoryLimit
-			return br.buffer.Write(data[:maxWritingDataLen])
+			// TinyGo MemoryLimit should be equal to Limit. Therefore, Write function has been called without Limit check.
+			return 0, errors.New("MemoryLimit reached while writing")
 		} else {
 			if br.writer == nil {
 				br.writer, err = os.CreateTemp(br.options.TmpPath, "body*")
@@ -49,26 +82,47 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 				if _, err := br.writer.Write(br.buffer.Bytes()); err != nil {
 					return 0, err
 				}
-				defer br.buffer.Reset()
+				br.buffer.Reset()
 			}
-			br.length = l
+			br.length = targetLen
 			return br.writer.Write(data)
 		}
 	}
 
-	br.length = l
+	br.length = targetLen
 	return br.buffer.Write(data)
+}
+
+type bodyBufferReader struct {
+	pos int
+	br  *BodyBuffer
+}
+
+func (b *bodyBufferReader) Read(p []byte) (n int, err error) {
+	if environment.IsTinyGo || b.br.writer == nil {
+		buf := b.br.buffer.Bytes()
+		n = len(p)
+		if b.pos+n > len(buf) {
+			n = len(buf) - b.pos
+		}
+		if n == 0 {
+			return 0, io.EOF
+		}
+		copy(p, buf[b.pos:b.pos+n])
+		b.pos += n
+		return
+	}
+
+	n, err = b.br.writer.ReadAt(p, int64(b.pos))
+	b.pos += n
+	return
 }
 
 // Reader Returns a working reader for the body buffer in memory or file
 func (br *BodyBuffer) Reader() (io.Reader, error) {
-	if environment.IsTinyGo || br.writer == nil {
-		return bytes.NewReader(br.buffer.Bytes()), nil
-	}
-	if _, err := br.writer.Seek(0, 0); err != nil {
-		return nil, err
-	}
-	return br.writer, nil
+	return &bodyBufferReader{
+		br: br,
+	}, nil
 }
 
 // Size returns the current size of the body buffer

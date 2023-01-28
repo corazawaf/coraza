@@ -13,10 +13,10 @@ import (
 
 // WAFConfig controls the behavior of the WAF.
 //
-// Note: WAFConfig is immutable. Each WithXXX function returjns a new instance including the corresponding change.
+// Note: WAFConfig is immutable. Each WithXXX function returns a new instance including the corresponding change.
 type WAFConfig interface {
-	// WithRule adds a rule to the WAF.
-	WithRule(rule *corazawaf.Rule) WAFConfig
+	// WithRules adds rules to the WAF.
+	WithRules(rules ...*corazawaf.Rule) WAFConfig
 
 	// WithDirectives parses the directives from the given string and adds them to the WAF.
 	WithDirectives(directives string) WAFConfig
@@ -27,57 +27,58 @@ type WAFConfig interface {
 	// WithAuditLog configures audit logging.
 	WithAuditLog(config AuditLogConfig) WAFConfig
 
-	// WithContentInjection enables content injection.
-	WithContentInjection() WAFConfig
+	// WithRequestBodyAccess enables access to the request body.
+	WithRequestBodyAccess() WAFConfig
 
-	// WithRequestBodyAccess configures access to the request body.
-	WithRequestBodyAccess(config RequestBodyConfig) WAFConfig
+	// WithRequestBodyLimit sets the maximum number of bytes that can be read from the request body. Bytes beyond that set
+	// in WithInMemoryLimit will be buffered to disk.
+	// For usability purposes body limits are enforced as int (and not int64)
+	// int is a signed integer type that is at least 32 bits in size (platform-dependent size).
+	// While, the theoretical settable upper limit for 32-bit machines is 2GiB,
+	// it is recommended to keep this value as low as possible.
+	WithRequestBodyLimit(limit int) WAFConfig
 
-	// WithResponseBodyAccess configures access to the response body.
-	WithResponseBodyAccess(config ResponseBodyConfig) WAFConfig
+	// WithRequestBodyInMemoryLimit sets the maximum number of bytes that can be read from the request body and buffered in memory.
+	// For usability purposes body limits are enforced as int (and not int64)
+	// int is a signed integer type that is at least 32 bits in size (platform-dependent size).
+	// While, the theoretical settable upper limit for 32-bit machines is 2GiB,
+	// it is recommended to keep this value as low as possible.
+	WithRequestBodyInMemoryLimit(limit int) WAFConfig
+
+	// WithResponseBodyAccess enables access to the response body.
+	WithResponseBodyAccess() WAFConfig
+
+	// WithResponseBodyLimit sets the maximum number of bytes that can be read from the response body and buffered in memory.
+	// For usability purposes body limits are enforced as int (and not int64)
+	// int is a signed integer type that is at least 32 bits in size (platform-dependent size).
+	// While, the theoretical settable upper limit for 32-bit machines is 2GiB,
+	// it is recommended to keep this value as low as possible.
+	WithResponseBodyLimit(limit int) WAFConfig
+
+	// WithResponseBodyMimeTypes sets the mime types of responses that will be processed.
+	WithResponseBodyMimeTypes(mimeTypes []string) WAFConfig
 
 	// WithDebugLogger configures a debug logger.
 	WithDebugLogger(logger loggers.DebugLogger) WAFConfig
 
-	// WithErrorLogger configures an error logger.
-	WithErrorLogger(logger corazawaf.ErrorLogCallback) WAFConfig
+	// WithErrorCallback configures an error callback that can be used
+	// to log errors triggered by the WAF.
+	// It contains the severity so the cb can decide to skip it or not
+	WithErrorCallback(logger func(rule types.MatchedRule)) WAFConfig
 
 	// WithRootFS configures the root file system.
 	WithRootFS(fs fs.FS) WAFConfig
 }
 
+const unsetLimit = -1
+
 // NewWAFConfig creates a new WAFConfig with the default settings.
 func NewWAFConfig() WAFConfig {
-	return &wafConfig{}
-}
-
-// RequestBodyConfig controls access to the request body.
-type RequestBodyConfig interface {
-	// WithLimit sets the maximum number of bytes that can be read from the request body. Bytes beyond that set
-	// in WithInMemoryLimit will be buffered to disk.
-	WithLimit(limit int) RequestBodyConfig
-
-	// WithInMemoryLimit sets the maximum number of bytes that can be read from the request body and buffered in memory.
-	WithInMemoryLimit(limit int) RequestBodyConfig
-}
-
-// NewRequestBodyConfig returns a new RequestBodyConfig with the default settings.
-func NewRequestBodyConfig() RequestBodyConfig {
-	return &requestBodyConfig{}
-}
-
-// ResponseBodyConfig controls access to the response body.
-type ResponseBodyConfig interface {
-	// WithLimit sets the maximum number of bytes that can be read from the response body and buffered in memory.
-	WithLimit(limit int) ResponseBodyConfig
-
-	// WithMimeTypes sets the mime types of responses that will be processed.
-	WithMimeTypes(mimeTypes []string) ResponseBodyConfig
-}
-
-// NewResponseBodyConfig returns a new ResponseBodyConfig with the default settings.
-func NewResponseBodyConfig() ResponseBodyConfig {
-	return &responseBodyConfig{}
+	return &wafConfig{
+		requestBodyLimit:         unsetLimit,
+		requestBodyInMemoryLimit: unsetLimit,
+		responseBodyLimit:        unsetLimit,
+	}
 }
 
 // AuditLogConfig controls audit logging.
@@ -103,20 +104,32 @@ type wafRule struct {
 	file string
 }
 
+// For usability purposes body limits are enforced as int (and not int64)
+// int is a signed integer type that is at least 32 bits in size (platform-dependent size).
+// We still basically assume 64-bit usage where int are big sizes.
 type wafConfig struct {
-	rules            []wafRule
-	auditLog         *auditLogConfig
-	contentInjection bool
-	requestBody      *requestBodyConfig
-	responseBody     *responseBodyConfig
-	debugLogger      loggers.DebugLogger
-	errorLogger      corazawaf.ErrorLogCallback
-	fsRoot           fs.FS
+	rules                    []wafRule
+	auditLog                 *auditLogConfig
+	requestBodyAccess        bool
+	requestBodyLimit         int
+	requestBodyInMemoryLimit int
+	responseBodyAccess       bool
+	responseBodyLimit        int
+	responseBodyMimeTypes    []string
+	debugLogger              loggers.DebugLogger
+	errorCallback            func(rule types.MatchedRule)
+	fsRoot                   fs.FS
 }
 
-func (c *wafConfig) WithRule(rule *corazawaf.Rule) WAFConfig {
+func (c *wafConfig) WithRules(rules ...*corazawaf.Rule) WAFConfig {
+	if len(rules) == 0 {
+		return c
+	}
+
 	ret := c.clone()
-	ret.rules = append(ret.rules, wafRule{rule: rule})
+	for _, r := range rules {
+		ret.rules = append(ret.rules, wafRule{rule: r})
+	}
 	return ret
 }
 
@@ -138,21 +151,15 @@ func (c *wafConfig) WithAuditLog(config AuditLogConfig) WAFConfig {
 	return ret
 }
 
-func (c *wafConfig) WithContentInjection() WAFConfig {
+func (c *wafConfig) WithRequestBodyAccess() WAFConfig {
 	ret := c.clone()
-	ret.contentInjection = true
+	ret.requestBodyAccess = true
 	return ret
 }
 
-func (c *wafConfig) WithRequestBodyAccess(config RequestBodyConfig) WAFConfig {
+func (c *wafConfig) WithResponseBodyAccess() WAFConfig {
 	ret := c.clone()
-	ret.requestBody = config.(*requestBodyConfig)
-	return ret
-}
-
-func (c *wafConfig) WithResponseBodyAccess(config ResponseBodyConfig) WAFConfig {
-	ret := c.clone()
-	ret.responseBody = config.(*responseBodyConfig)
+	ret.responseBodyAccess = true
 	return ret
 }
 
@@ -162,9 +169,9 @@ func (c *wafConfig) WithDebugLogger(logger loggers.DebugLogger) WAFConfig {
 	return ret
 }
 
-func (c *wafConfig) WithErrorLogger(logger corazawaf.ErrorLogCallback) WAFConfig {
+func (c *wafConfig) WithErrorCallback(logger func(rule types.MatchedRule)) WAFConfig {
 	ret := c.clone()
-	ret.errorLogger = logger
+	ret.errorCallback = logger
 	return ret
 }
 
@@ -182,55 +189,28 @@ func (c *wafConfig) clone() *wafConfig {
 	return &ret
 }
 
-type requestBodyConfig struct {
-	limit         int
-	inMemoryLimit int
-}
-
-func (c *requestBodyConfig) WithLimit(limit int) RequestBodyConfig {
+func (c *wafConfig) WithRequestBodyLimit(limit int) WAFConfig {
 	ret := c.clone()
-	ret.limit = limit
+	ret.requestBodyLimit = limit
 	return ret
 }
 
-func (c *requestBodyConfig) WithInMemoryLimit(limit int) RequestBodyConfig {
+func (c *wafConfig) WithRequestBodyInMemoryLimit(limit int) WAFConfig {
 	ret := c.clone()
-	ret.inMemoryLimit = limit
+	ret.requestBodyInMemoryLimit = limit
 	return ret
 }
 
-func (c *requestBodyConfig) clone() *requestBodyConfig {
-	ret := *c // copy
-	return &ret
-}
-
-type responseBodyConfig struct {
-	limit         int
-	inMemoryLimit int
-	mimeTypes     []string
-}
-
-func (c *responseBodyConfig) WithLimit(limit int) ResponseBodyConfig {
+func (c *wafConfig) WithResponseBodyLimit(limit int) WAFConfig {
 	ret := c.clone()
-	ret.limit = limit
+	ret.responseBodyLimit = limit
 	return ret
 }
 
-func (c *responseBodyConfig) WithInMemoryLimit(limit int) ResponseBodyConfig {
+func (c *wafConfig) WithResponseBodyMimeTypes(mimeTypes []string) WAFConfig {
 	ret := c.clone()
-	ret.inMemoryLimit = limit
+	ret.responseBodyMimeTypes = mimeTypes
 	return ret
-}
-
-func (c *responseBodyConfig) WithMimeTypes(mimeTypes []string) ResponseBodyConfig {
-	ret := c.clone()
-	ret.mimeTypes = mimeTypes
-	return ret
-}
-
-func (c *responseBodyConfig) clone() *responseBodyConfig {
-	ret := *c // copy
-	return &ret
 }
 
 type auditLogConfig struct {

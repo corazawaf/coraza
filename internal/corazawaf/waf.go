@@ -21,14 +21,6 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
-// Initializing pool for transactions
-var transactionPool = sync.NewPool(func() interface{} { return new(Transaction) })
-
-// ErrorLogCallback is used to set a callback function to log errors
-// It is triggered when an error is raised by the WAF
-// It contains the severity so the cb can decide to log it or not
-type ErrorLogCallback = func(rule types.MatchedRule)
-
 // WAF instance is used to store configurations and rules
 // Every web application should have a different WAF instance,
 // but you can share an instance if you are ok with sharing
@@ -39,6 +31,8 @@ type ErrorLogCallback = func(rule types.MatchedRule)
 // All WAF instance fields are immutable, if you update any
 // of them in runtime you might create concurrency issues
 type WAF struct {
+	txPool sync.Pool
+
 	// ruleGroup object, contains all rules and helpers
 	Rules RuleGroup
 
@@ -47,9 +41,6 @@ type WAF struct {
 
 	// Array of logging parts to be used
 	AuditLogParts types.AuditLogParts
-
-	// Status of the content injection for responses and requests
-	ContentInjection bool
 
 	// If true, transactions will have access to the request body
 	RequestBodyAccess bool
@@ -68,12 +59,6 @@ type WAF struct {
 
 	// Defines if rules are going to be evaluated
 	RuleEngine types.RuleEngineStatus
-
-	// If true, transaction will fail if response size is bigger than the page limit
-	RejectOnResponseBodyLimit bool
-
-	// If true, transaction will fail if request size is bigger than the page limit
-	RejectOnRequestBodyLimit bool
 
 	// Responses will only be loaded if mime is listed here
 	ResponseBodyMimeTypes []string
@@ -112,9 +97,12 @@ type WAF struct {
 	// UploadDir is the directory where the uploaded files will be stored
 	UploadDir string
 
+	// Request body in memory limit excluding the size of any files being transported in the request.
 	RequestBodyNoFilesLimit int64
 
-	RequestBodyLimitAction types.RequestBodyLimitAction
+	RequestBodyLimitAction types.BodyLimitAction
+
+	ResponseBodyLimitAction types.BodyLimitAction
 
 	ArgumentSeparator string
 
@@ -129,7 +117,7 @@ type WAF struct {
 	// Used for the debug logger
 	Logger loggers.DebugLogger
 
-	ErrorLogCb ErrorLogCallback
+	ErrorLogCb func(rule types.MatchedRule)
 
 	// AuditLogWriter is used to write audit logs
 	AuditLogWriter loggers.LogWriter
@@ -151,7 +139,7 @@ func (w *WAF) NewTransactionWithID(id string) *Transaction {
 // NewTransactionWithID Creates a new initialized transaction for this WAF instance
 // Using the specified ID
 func (w *WAF) newTransactionWithID(id string) *Transaction {
-	tx := transactionPool.Get().(*Transaction)
+	tx := w.txPool.Get().(*Transaction)
 	tx.id = id
 	tx.matchedRules = []types.MatchedRule{}
 	tx.interruption = nil
@@ -180,16 +168,20 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 
 	// Always non-nil if buffers / collections were already initialized so we don't do any of them
 	// based on the presence of RequestBodyBuffer.
-	if tx.RequestBodyBuffer == nil {
-		tx.RequestBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
+	if tx.requestBodyBuffer == nil {
+		tx.requestBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
 			TmpPath:     w.TmpDir,
 			MemoryLimit: w.RequestBodyInMemoryLimit,
+			Limit:       w.ResponseBodyLimit,
 		})
-		tx.ResponseBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
-			TmpPath:     w.TmpDir,
-			MemoryLimit: w.RequestBodyInMemoryLimit,
+		tx.responseBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
+			TmpPath: w.TmpDir,
+			// the response body is just buffered in memory. Therefore, Limit and MemoryLimit are equal.
+			MemoryLimit: w.ResponseBodyLimit,
+			Limit:       w.ResponseBodyLimit,
 		})
 		tx.variables = *NewTransactionVariables()
+		tx.transformationCache = map[transformationKey]*transformationValue{}
 	}
 
 	// set capture variables
@@ -269,20 +261,24 @@ func NewWAF() *WAF {
 		logger.Error("error creating serial log writer: %s", err.Error())
 	}
 	waf := &WAF{
+		// Initializing pool for transactions
+		txPool:                   sync.NewPool(func() interface{} { return new(Transaction) }),
 		ArgumentSeparator:        "&",
 		AuditLogWriter:           logWriter,
 		AuditEngine:              types.AuditEngineOff,
 		AuditLogParts:            types.AuditLogParts("ABCFHZ"),
+		RequestBodyAccess:        false,
 		RequestBodyInMemoryLimit: 131072,
 		RequestBodyLimit:         134217728, // 10mb
+		RequestBodyLimitAction:   types.BodyLimitActionReject,
 		ResponseBodyMimeTypes:    []string{"text/html", "text/plain"},
 		ResponseBodyLimit:        524288,
+		ResponseBodyLimitAction:  types.BodyLimitActionReject,
 		ResponseBodyAccess:       false,
 		RuleEngine:               types.RuleEngineOn,
 		Rules:                    NewRuleGroup(),
 		TmpDir:                   "/tmp",
 		AuditLogRelevantStatus:   regexp.MustCompile(`.*`),
-		RequestBodyAccess:        false,
 		Logger:                   logger,
 	}
 	// We initialize a basic audit log writer that discards output
@@ -303,9 +299,9 @@ func (w *WAF) SetDebugLogLevel(lvl int) error {
 	return nil
 }
 
-// SetErrorLogCb sets the callback function for error logging
+// SetErrorCallback sets the callback function for error logging
 // The error callback receives all the error data and some
 // helpers to write modsecurity style logs
-func (w *WAF) SetErrorLogCb(cb ErrorLogCallback) {
+func (w *WAF) SetErrorCallback(cb func(rule types.MatchedRule)) {
 	w.ErrorLogCb = cb
 }

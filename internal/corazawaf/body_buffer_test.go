@@ -17,6 +17,7 @@ func TestBodyReaderMemory(t *testing.T) {
 	br := NewBodyBuffer(types.BodyBufferOptions{
 		TmpPath:     t.TempDir(),
 		MemoryLimit: 500,
+		Limit:       500,
 	})
 	if _, err := br.Write([]byte("test")); err != nil {
 		t.Error(err)
@@ -44,6 +45,7 @@ func TestBodyReaderFile(t *testing.T) {
 	br := NewBodyBuffer(types.BodyBufferOptions{
 		TmpPath:     t.TempDir(),
 		MemoryLimit: 1,
+		Limit:       100,
 	})
 	if _, err := br.Write([]byte("test")); err != nil {
 		t.Error(err)
@@ -74,6 +76,7 @@ func TestBodyReaderWriteFromReader(t *testing.T) {
 	br := NewBodyBuffer(types.BodyBufferOptions{
 		TmpPath:     t.TempDir(),
 		MemoryLimit: 5,
+		Limit:       5,
 	})
 	b := strings.NewReader("test")
 	if _, err := io.Copy(br, b); err != nil {
@@ -91,4 +94,50 @@ func TestBodyReaderWriteFromReader(t *testing.T) {
 		t.Error("Failed to write bodyreader from io.Reader")
 	}
 	_ = br.Reset()
+}
+
+func TestWriteLimit(t *testing.T) {
+	testCases := map[string]struct {
+		initialBytes      []byte
+		toBeWrittenBytes  []byte
+		bodyBufferLimit   int64
+		shouldReturnError bool
+	}{
+		"last byte written": {
+			toBeWrittenBytes:  []byte("abc"),
+			bodyBufferLimit:   3,
+			shouldReturnError: false,
+		},
+		"over limit": {
+			toBeWrittenBytes:  []byte("abc"),
+			bodyBufferLimit:   2,
+			shouldReturnError: true,
+		},
+		"over limit when limit already reached": {
+			initialBytes:      []byte("abc"), // buffer will reach its limit
+			toBeWrittenBytes:  []byte("a"),
+			bodyBufferLimit:   3,
+			shouldReturnError: true,
+		},
+	}
+	for name, tCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			br := NewBodyBuffer(types.BodyBufferOptions{
+				MemoryLimit: tCase.bodyBufferLimit,
+				Limit:       tCase.bodyBufferLimit,
+			})
+			_, err := br.Write(tCase.initialBytes)
+			if err != nil {
+				t.Fatalf("unexpected error writing initial buffer: %s", err.Error())
+			}
+			writtenBytes, err := br.Write(tCase.toBeWrittenBytes)
+			if tCase.shouldReturnError && err == nil {
+				t.Fatal("expected error when writing above the limit")
+			}
+			if !tCase.shouldReturnError && writtenBytes != len(tCase.toBeWrittenBytes) {
+				t.Fatalf("unexpected number of bytes written, want: %d, have: %d", len(tCase.toBeWrittenBytes), writtenBytes)
+			}
+			_ = br.Reset()
+		})
+	}
 }

@@ -26,12 +26,13 @@ type TransactionState interface {
 	// Interrupt interrupts the transaction.
 	Interrupt(interruption *types.Interruption)
 
+	// TODO: elaborate while addressing ContentInjection actions
 	// ResponseBodyWriter allows writing to the response body.
 	// TODO(anuraaga): Should this be combined with interruption? Any action writing anything to response can be dangerous.
-	ResponseBodyWriter() io.Writer
+	// ResponseBodyWriter() io.Writer
+	WriteResponseBody(b []byte) (*types.Interruption, int, error)
+	ReadResponseBodyFrom(io.Reader) (*types.Interruption, int, error)
 
-	// ContentInjection returns whether content injection is enabled for this transaction.
-	ContentInjection() bool // TODO(anuraaga): Should be resolved at Init time when WAF is truly immutable.
 	// DebugLogger returns the logger for this transaction.
 	DebugLogger() loggers.DebugLogger
 

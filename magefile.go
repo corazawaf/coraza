@@ -23,9 +23,14 @@ var gosImportsVer = "v0.1.5"     // https://github.com/rinchsan/gosimports/relea
 
 var errRunGoModTidy = errors.New("go.mod/sum not formatted, commit changes")
 var errNoGitDir = errors.New("no .git directory found")
+var errUpdateGeneratedFiles = errors.New("generated files need to be updated")
 
 // Format formats code in this repository.
 func Format() error {
+	if err := sh.RunV("go", "generate", "./..."); err != nil {
+		return err
+	}
+
 	if err := sh.RunV("go", "mod", "tidy"); err != nil {
 		return err
 	}
@@ -48,6 +53,14 @@ func Format() error {
 
 // Lint verifies code quality.
 func Lint() error {
+	if err := sh.RunV("go", "generate", "./..."); err != nil {
+		return err
+	}
+
+	if sh.Run("git", "diff", "--exit-code") != nil {
+		return errUpdateGeneratedFiles
+	}
+
 	if err := sh.RunV("go", "run", fmt.Sprintf("github.com/golangci/golangci-lint/cmd/golangci-lint@%s", golangCILintVer), "run"); err != nil {
 		return err
 	}
@@ -74,6 +87,10 @@ func Test() error {
 	if err := sh.RunV("go", "test", "./testing/coreruleset"); err != nil {
 		return err
 	}
+	// Execute FTW tests with multiphase evaluation enabled as well
+	if err := sh.RunV("go", "test", "-tags=coraza.rule.multiphase_evaluation", "./testing/coreruleset"); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -92,6 +109,10 @@ func Coverage() error {
 	if err := sh.RunV("go", "test", "-coverprofile=build/coverage-ftw.txt", "-covermode=atomic", "-coverpkg=./...", "./testing/coreruleset"); err != nil {
 		return err
 	}
+	// Execute FTW tests with multiphase evaluation enabled as well
+	if err := sh.RunV("go", "test", "-coverprofile=build/coverage-ftw-multiphase.txt", "-covermode=atomic", "-coverpkg=./...", "-tags=coraza.rule.multiphase_evaluation", "./testing/coreruleset"); err != nil {
+		return err
+	}
 	// This is not actually running tests with tinygo, but with the tag that includes its code so we can calculate coverage
 	// for it.
 	if err := sh.RunV("go", "test", "-race", "-tags=tinygo", "-coverprofile=build/coverage-tinygo.txt", "-covermode=atomic", "-coverpkg=./...", "./..."); err != nil {
@@ -99,6 +120,41 @@ func Coverage() error {
 	}
 
 	return sh.RunV("go", "tool", "cover", "-html=build/coverage.txt", "-o", "build/coverage.html")
+}
+
+// Fuzz runs fuzz tests
+func Fuzz() error {
+	// Go must be run once per test when fuzzing
+	tests := []struct {
+		pkg   string
+		tests []string
+	}{
+		{
+			pkg: "./operators",
+			tests: []string{
+				"FuzzSQLi",
+				"FuzzXSS",
+			},
+		},
+		{
+			pkg: "./transformations",
+			tests: []string{
+				"FuzzB64Decode",
+				"FuzzCMDLine",
+			},
+		},
+	}
+
+	for _, pkgTests := range tests {
+		for _, test := range pkgTests.tests {
+			fmt.Println("Running", test)
+			if err := sh.RunV("go", "test", "-fuzz="+test, "-fuzztime=2m", pkgTests.pkg); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // Doc runs godoc, access at http://localhost:6060

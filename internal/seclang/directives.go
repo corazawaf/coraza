@@ -1,6 +1,8 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:generate go run generator/main.go
+
 package seclang
 
 import (
@@ -27,11 +29,62 @@ type DirectiveOptions struct {
 
 type directive = func(options *DirectiveOptions) error
 
+// Description: Include and evaluate a file or file pattern.
+// Syntax: Include [PATH_TO_CONF_FILES]
+// ---
+// Include loads a file or a list of files from the filesystem using golang Glob syntax.
+//
+// Example:
+// ```apache
+// Include /path/coreruleset/rules/*.conf
+// ```
+//
+// Quoting [Glob documentation](https://pkg.go.dev/path/filepath#Glob):
+// > The syntax of patterns is the same as in Match. The pattern may describe hierarchical
+// > names such as /usr/*/bin/ed (assuming the Separator is ‘/’).
+// > Glob ignores file system errors such as I/O errors reading directories. The only possible returned error is ErrBadPattern, when pattern is malformed.
+func directiveInclude(_ *DirectiveOptions) error {
+	return errors.New("not implemented")
+}
+
+var _ directive = directiveInclude
+
 func directiveSecComponentSignature(options *DirectiveOptions) error {
 	options.WAF.ComponentNames = append(options.WAF.ComponentNames, options.Opts)
 	return nil
 }
 
+// Description: Adds a fixed rule marker that can be used as a target in a skipAfter action.
+// A SecMarker directive essentially creates a rule that does nothing and whose only purpose
+// is to carry the given ID.
+// Syntax: SecMarker [ID|TEXT]
+// ---
+// The value can be either a number or a text string. The SecMarker directive is available to
+// allow you to choose the best way to implement a skip-over. Here is an example used from the
+// Core Rule Set:
+//
+// ```
+// SecMarker BEGIN_HOST_CHECK
+//
+//	SecRule &REQUEST_HEADERS:Host "@eq 0" \
+//		   "id:'960008',skipAfter:END_HOST_CHECK,phase:2,rev:'2.1.1',\
+//		   t:none,block,msg:'Request Missing a Host Header',\
+//		   tag:'PROTOCOL_VIOLATION/MISSING_HEADER_HOST',tag:'WASCTC/WASC-21',\
+//		   tag:'OWASP_TOP_10/A7',tag:'PCI/6.5.10',\
+//		   severity:'5',setvar:'tx.msg=%{rule.msg}',setvar:tx.anomaly_score=+%{tx.notice_anomaly_score},\
+//		   setvar:tx.protocol_violation_score=+%{tx.notice_anomaly_score},\
+//		   setvar:tx.%{rule.id}-PROTOCOL_VIOLATION/MISSING_HEADER-%{matched_var_name}=%{matched_var}"
+//
+//	SecRule REQUEST_HEADERS:Host "^$" \
+//		   "id:'960008',phase:2,rev:'2.1.1',t:none,block,msg:'Request Missing a Host Header',\
+//		   tag:'PROTOCOL_VIOLATION/MISSING_HEADER_HOST',tag:'WASCTC/WASC-21',\
+//		   tag:'OWASP_TOP_10/A7',tag:'PCI/6.5.10',severity:'5',\
+//		   setvar:'tx.msg=%{rule.msg}',setvar:tx.anomaly_score=+%{tx.notice_anomaly_score},\
+//		   setvar:tx.protocol_violation_score=+%{tx.notice_anomaly_score},\
+//		   setvar:tx.%{rule.id}-PROTOCOL_VIOLATION/MISSING_HEADER-%{matched_var_name}=%{matched_var}"
+//
+// SecMarker END_HOST_CHECK
+// ```
 func directiveSecMarker(options *DirectiveOptions) error {
 	rule := corazawaf.NewRule()
 	rule.Raw_ = fmt.Sprintf("SecMarker %s", options.Opts)
@@ -47,6 +100,16 @@ func directiveSecMarker(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Unconditionally processes the action list it receives as the first and only parameter.
+// Syntax: SecAction "action1,action2,action3,..."
+// ----
+// This directive is commonly used to set variables and initialize persistent collections using the
+// initcol action. The syntax of the parameter is identical to that of the third parameter of SecRule.
+//
+// Example:
+// ```apache
+// SecAction "nolog,phase:1,initcol:RESOURCE=%{REQUEST_FILENAME}"
+// ```
 func directiveSecAction(options *DirectiveOptions) error {
 	rule, err := ParseRule(RuleOptions{
 		WithOperator: false,
@@ -65,6 +128,21 @@ func directiveSecAction(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Creates a rule that will analyze the selected variables using
+// the selected operator.
+// Syntax: SecRule VARIABLES OPERATOR [ACTIONS]
+// ---
+// Every rule must provide one or more variables along with the operator that should
+// be used to inspect them. If no actions are provided, the default list will be used.
+// (There is always a default list, even if one was not explicitly set with SecDefaultAction.)
+// If there are actions specified in a rule, they will be merged with the default list
+// to form the final actions that will be used. (The actions in the rule will overwrite
+// those in the default list.) Refer to SecDefaultAction for more information.
+//
+// Example:
+// ```apache
+// SecRule ARGS "@rx attack" "phase:1,log,deny,id:1"
+// ```
 func directiveSecRule(options *DirectiveOptions) error {
 	ignoreErrors := options.Config.Get("ignore_rule_compilation_errors", false).(bool)
 	rule, err := ParseRule(RuleOptions{
@@ -90,6 +168,15 @@ func directiveSecRule(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Configures whether response bodies are to be buffered.
+// Syntax: SecResponseBodyAccess On|Off
+// Default: Off
+// ---
+// This directive is required if you plan to inspect HTML responses and implement
+// response blocking. Possible values are:
+// - On: buffer response bodies (but only if the response MIME type matches the list
+// configured with SecResponseBodyMimeType).
+// - Off: do not buffer response bodies.
 func directiveSecResponseBodyAccess(options *DirectiveOptions) error {
 	b, err := parseBoolean(strings.ToLower(options.Opts))
 	if err != nil {
@@ -99,12 +186,27 @@ func directiveSecResponseBodyAccess(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Configures the maximum request body size Coraza will accept for buffering.
+// Default: 134217728 (131072 KB)
+// Syntax: SecRequestBodyLimit [LIMIT_IN_BYTES]
+// ---
+// Anything over the limit will be rejected with status code 413 (Request Entity Too Large).
+// There is a hard limit of 1 GB.
 func directiveSecRequestBodyLimit(options *DirectiveOptions) error {
-	limit, _ := strconv.ParseInt(options.Opts, 10, 64)
-	options.WAF.RequestBodyLimit = limit
-	return nil
+	var err error
+	options.WAF.RequestBodyLimit, err = strconv.ParseInt(options.Opts, 10, 64)
+	return err
 }
 
+// Description: Configures whether request bodies will be buffered and processed by Coraza.
+// Syntax: SecRequestBodyAccess On|Off
+// Default: Off
+// ---
+// This directive is required if you want to inspect the data transported request bodies
+// (e.g., POST parameters). Request buffering is also required in order to make reliable
+// blocking possible. The possible values are:
+// - On: buffer request bodies
+// - Off: do not buffer request bodies
 func directiveSecRequestBodyAccess(options *DirectiveOptions) error {
 	b, err := parseBoolean(strings.ToLower(options.Opts))
 	if err != nil {
@@ -114,6 +216,15 @@ func directiveSecRequestBodyAccess(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Configures the rules engine.
+// Syntax: SecRuleEngine On|Off|DetectionOnly
+// Default: Off
+// ---
+// The possible values are:
+// - On: process rules
+// - Off: do not process rules
+// - DetectionOnly: process rules but never executes any disruptive actions
+// (block, deny, drop, allow, proxy and redirect)
 func directiveSecRuleEngine(options *DirectiveOptions) error {
 	engine, err := types.ParseRuleEngineStatus(options.Opts)
 	options.WAF.RuleEngine = engine
@@ -169,25 +280,77 @@ func directiveSecResponseBodyMimeType(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Controls what happens once a response body limit, configured with
+// SecResponseBodyLimit, is encountered.
+// Syntax: SecResponseBodyLimitAction Reject|ProcessPartial
+// ---
+// By default, Coraza will reject a response body that is longer than specified.
+// Some web sites, however, will produce very long responses, making it difficult
+// to come up with a reasonable limit. Such sites would have to raise the limit
+// significantly to function properly, defying the purpose of having the limit in
+// the first place (to control memory consumption). With the ability to choose what
+// happens once a limit is reached, site administrators can choose to inspect only
+// the first part of the response, the part that can fit into the desired limit, and
+// let the rest through. Some could argue that allowing parts of responses to go
+// uninspected is a weakness. This is true in theory, but applies only to cases in
+// which the attacker controls the output (e.g., can make it arbitrary long). In such
+// cases, however, it is not possible to prevent leakage anyway. The attacker could
+// compress, obfuscate, or even encrypt data before it is sent back, and therefore
+// bypass any monitoring device.
 func directiveSecResponseBodyLimitAction(options *DirectiveOptions) error {
-	options.WAF.RejectOnResponseBodyLimit = strings.ToLower(options.Opts) == "reject"
+	switch strings.ToLower(options.Opts) {
+	case "reject":
+		options.WAF.ResponseBodyLimitAction = types.BodyLimitActionReject
+	case "processpartial":
+		options.WAF.ResponseBodyLimitAction = types.BodyLimitActionProcessPartial
+	default:
+		return errors.New("syntax error: SecResponseBodyLimitAction [Reject/ProcessPartial]")
+	}
 	return nil
 }
 
+// Description: Configures the maximum response body size that will be accepted for buffering.
+// Syntax: SecResponseBodyLimit [LIMIT_IN_BYTES]
+// Default: 524288 (512 KB)
+// ---
+// Anything over this limit will be rejected with status code 500 (Internal Server Error).
+// This setting will not affect the responses with MIME types that are not selected for
+// buffering. There is a hard limit of 1 GB.
 func directiveSecResponseBodyLimit(options *DirectiveOptions) error {
 	var err error
 	options.WAF.ResponseBodyLimit, err = strconv.ParseInt(options.Opts, 10, 64)
 	return err
 }
 
+// Description: Controls what happens once a request body limit, configured with
+// SecRequestBodyLimit, is encountered
+// Syntax: SecRequestBodyLimitAction Reject|ProcessPartial
+// Default: Reject
+// ---
+// By default, Coraza will reject a request body that is longer than specified to
+// avoid OOM issues while buffering the request body prior the inspection.
 func directiveSecRequestBodyLimitAction(options *DirectiveOptions) error {
-	options.WAF.RejectOnRequestBodyLimit = strings.ToLower(options.Opts) == "reject"
+	switch strings.ToLower(options.Opts) {
+	case "reject":
+		options.WAF.RequestBodyLimitAction = types.BodyLimitActionReject
+	case "processpartial":
+		options.WAF.RequestBodyLimitAction = types.BodyLimitActionProcessPartial
+	default:
+		return errors.New("syntax error: SecRequestBodyLimitAction [Reject/ProcessPartial]")
+	}
 	return nil
 }
 
+// Description: Configures the maximum request body size that Coraza will store in memory.
+// Default: 131072 (128 KB)
+// Syntax: SecRequestBodyInMemoryLimit [LIMIT_IN_BYTES]
+// ---
+// When a multipart/form-data request is being processed, once the in-memory limit is reached,
+// the request body will start to be streamed into a temporary file on disk.
 func directiveSecRequestBodyInMemoryLimit(options *DirectiveOptions) error {
-	options.WAF.RequestBodyInMemoryLimit, _ = strconv.ParseInt(options.Opts, 10, 64)
-	return nil
+	var err error
+	options.WAF.RequestBodyInMemoryLimit, err = strconv.ParseInt(options.Opts, 10, 64)
+	return err
 }
 
 func directiveSecRemoteRulesFailAction(options *DirectiveOptions) error {
@@ -248,19 +411,26 @@ func directiveSecHashEngine(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Defines the default list of actions, which will be inherited
+// by the rules in the same configuration context.
+// Default: phase:2,log,auditlog,pass
+// Syntax: SecDefaultAction "phase:2,log,auditlog,deny,status:403,tag:'SLA 24/7'"
+// ---
+// Every rule following a previous SecDefaultAction directive in the same configuration
+// context will inherit its settings unless more specific actions are used.
+//
+// Rulesets like OWASP Core Ruleset uses this to define operation modes:
+//
+// - You can set the default disruptive action to block for phases 1 and 2 and you can force
+// a phase 3 rule to be disrupted if the thread score is high.
+// - You can set the default disruptive action to deny and each risky rule will interrupt
+// the connection.
+//
+// Important: Every SecDefaultAction directive must specify a disruptive action and a processing phase and cannot contain metadata actions.
 func directiveSecDefaultAction(options *DirectiveOptions) error {
 	da, _ := options.Config.Get("rule_default_actions", []string{}).([]string)
 	da = append(da, options.Opts)
 	options.Config.Set("rule_default_actions", da)
-	return nil
-}
-
-func directiveSecContentInjection(options *DirectiveOptions) error {
-	b, err := parseBoolean(options.Opts)
-	if err != nil {
-		return newDirectiveError(err, "SecContentInjection")
-	}
-	options.WAF.ContentInjection = b
 	return nil
 }
 
@@ -287,6 +457,21 @@ func directiveSecCollectionTimeout(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Defines the path to the main audit log file (serial logging format)
+// or the concurrent logging index file (concurrent logging format).
+// Syntax: SecAuditLog [ABSOLUTE_PATH_TO_LOG_FILE]
+// ---
+// When used in combination with mlogc (only possible with concurrent logging), this
+// directive defines the mlogc location and command line.
+//
+// Example:
+// ```apache
+// SecAuditLog "/path/to/audit.log"
+// ```
+//
+// Note: This audit log file is opened on startup when the server typically still runs
+// as root. You should not allow non-root users to have write privileges for this file
+// or for the directory.
 func directiveSecAuditLog(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errors.New("syntax error: SecAuditLog /some/absolute/path.log")
@@ -313,6 +498,10 @@ func directiveSecAuditLogType(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Select the output format of the AuditLogs. The format can be either
+// the native AuditLogs format or JSON.
+// Syntax: SecAuditLogFormat JSON|Native
+// Default: Native
 func directiveSecAuditLogFormat(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errors.New("syntax error: SecAuditLogFormat [json/native/...]")
@@ -339,6 +528,18 @@ func directiveSecAuditLogDir(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Configures the mode (permissions) of any directories created for the
+// concurrent audit logs, using an octal mode value as parameter (as used in chmod).
+// Syntax: SecAuditLogDirMode octal_mode|"default"
+// Default: 0600
+// ---
+// The default mode for new audit log directories (0600) only grants read/write access
+// to the owner.
+//
+// Example:
+// ```apache
+// SecAuditLogDirMode 02750
+// ```
 func directiveSecAuditLogDirMode(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errors.New("syntax error: SecAuditLogDirMode [0777/0700/...]")
@@ -354,6 +555,16 @@ func directiveSecAuditLogDirMode(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Configures the mode (permissions) of any files created for concurrent
+// audit logs using an octal mode (as used in chmod). See SecAuditLogDirMode for
+// controlling the mode of created audit log directories.
+// Syntax: SecAuditLogFileMode octal_mode|"default"
+// Default: 0600
+// ---
+// Example:
+// ```apache
+// SecAuditLogFileMode 00640
+// ```
 func directiveSecAuditLogFileMode(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errors.New("syntax error: SecAuditLogFileMode [0777/0700/...]")
@@ -369,17 +580,102 @@ func directiveSecAuditLogFileMode(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Configures which response status code is to be considered relevant
+// for the purpose of audit logging.
+// Syntax: SecAuditLogRelevantStatus [REGEX]
+// ---
+// The main purpose of this directive is to allow you to configure audit logging for
+// only the transactions that have the status code that matches the supplied regular
+// expression.
+//
+// Example:
+// ```
+// SecAuditLogRelevantStatus "^(?:5|40[1235])"
+// ```
+// This example would log all 5xx and 4xx level status codes,
+// except for 404s. Although you could achieve the same effect with a rule in phase 5,
+// SecAuditLogRelevantStatus is sometimes better, because it continues to work even when SecRuleEngine
+// is disabled.
+//
+// Note: Must have SecAuditEngine set to RelevantOnly. Additionally, the auditlog action
+// is present by default in rules, this will make the engine bypass the SecAuditLogRelevantStatus
+// and send rule matches to the audit log regardless of status. You must specify noauditlog in the
+// rules manually or set it in SecDefaultAction.
 func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 	var err error
 	options.WAF.AuditLogRelevantStatus, err = regexp.Compile(options.Opts)
 	return err
 }
 
+// Description: Defines which parts of each transaction are going to be recorded
+// in the audit log. Each part is assigned a single letter; when a letter appears
+// in the list then the equivalent part will be recorded. See below for the list of
+// all parts.
+// Syntax: SecAuditLogParts [PARTLETTERS]
+// Default: ABCFHZ Note
+// ---
+// The format of the audit log format is documented in detail in the Audit Log Data
+// Format Documentation.
+//
+// Example:
+// ```apache
+// SecAuditLogParts ABCFHZ
+// ```
+//
+// Available audit log parts:
+//
+// A: Audit log header (mandatory).
+// B: Request headers.
+// C: Request body (present only if the request body exists and Coraza is configured
+// to intercept it. This would require SecRequestBodyAccess to be set to on).
+// D: Reserved for intermediary response headers; not implemented yet.
+// E: Intermediary response body (present only if Coraza is configured to intercept
+// response bodies, and if the audit log engine is configured to record it. Intercepting
+// response bodies requires SecResponseBodyAccess to be enabled). Intermediary response
+// body is the same as the actual response body unless Coraza intercepts the intermediary
+// response body, in which case the actual response body will contain the error message.
+// F: Final response headers.
+// G: Reserved for the actual response body; not implemented yet.
+// H: Audit log trailer.
+// I: This part is a replacement for part C. It will log the same data as C in all cases except when
+// multipart/form-data encoding in used. In this case, it will log a fake application/x-www-form-urlencoded
+// body that contains the information about parameters but not about the files. This is handy if
+// you don’t want to have (often large) files stored in your audit logs.
+// J: This part contains information about the files uploaded using multipart/form-data encoding.
+// K: This part contains a full list of every rule that matched (one per line) in the order they were
+// matched. The rules are fully qualified and will thus show inherited actions and default operators.
+// Z: Final boundary, signifies the end of the entry (mandatory).
 func directiveSecAuditLogParts(options *DirectiveOptions) error {
 	options.WAF.AuditLogParts = types.AuditLogParts(options.Opts)
 	return nil
 }
 
+// Description: Configures the audit logging engine.
+// Syntax: SecAuditEngine RelevantOnly
+// Default: Off
+// ---
+// The SecAuditEngine directive is used to configure the audit engine, which logs complete
+// transactions.
+//
+// The possible values for the audit log engine are as follows:
+//   - On: log all transactions
+//   - Off: do not log any transactions
+//   - RelevantOnly: only the log transactions that have triggered a warning or an error, or have
+//     a status code that is considered to be relevant (as determined by the SecAuditLogRelevantStatus
+//     directive)
+//
+// Note: If you need to change the audit log engine configuration on a per-transaction basis (e.g.,
+// in response to some transaction data), use the ctl action.
+//
+// The following example demonstrates how SecAuditEngine is used:
+// ```apache
+// SecAuditEngine RelevantOnly
+// SecAuditLog logs/audit/audit.log
+// SecAuditLogParts ABCFHZ
+// SecAuditLogType concurrent
+// SecAuditLogStorageDir logs/audit
+// SecAuditLogRelevantStatus ^(?:5|4(?!04))
+// ```
 func directiveSecAuditEngine(options *DirectiveOptions) error {
 	au, err := types.ParseAuditEngineStatus(options.Opts)
 	options.WAF.AuditEngine = au
@@ -419,16 +715,52 @@ func directiveSecUploadDir(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Configures the maximum request body size Coraza will accept for
+// buffering, excluding the size of any files being transported in the request.
+// This directive is useful to reduce susceptibility to DoS attacks when someone is
+// sending request bodies of very large sizes. Web applications that require file uploads
+// must configure SecRequestBodyLimit to a high value, but because large files are streamed
+// to disk, file uploads will not increase memory consumption. However, it’s still possible
+// for someone to take advantage of a large request body limit and send non-upload requests
+// with large body sizes. This directive eliminates that loophole.
+// Default: 1048576 (1 MB)
+// Syntax: SecRequestBodyNoFilesLimit 131072
+// ---
+// Generally speaking, the default value is not small enough. For most applications, you
+// should be able to reduce it down to 128 KB or lower. Anything over the limit will be
+// rejected with status code 413 (Request Entity Too Large). There is a hard limit of 1 GB.
 func directiveSecRequestBodyNoFilesLimit(options *DirectiveOptions) error {
 	var err error
 	options.WAF.RequestBodyNoFilesLimit, err = strconv.ParseInt(options.Opts, 10, 64)
 	return err
 }
 
+// Description: Path to the Coraza debug log file.
+// Syntax: SecDebugLog [ABSOLUTE_PATH_TO_DEBUG_LOG]
+// ---
+// Logs will be written to this file. Make sure the process user has write access to the
+// directory.
 func directiveSecDebugLog(options *DirectiveOptions) error {
 	return options.WAF.SetDebugLogPath(options.Opts)
 }
 
+// Description: Configures the verboseness of the debug log data.
+// Default: 2
+// Syntax: SecDebugLogLevel [LOG_LEVEL]
+// ---
+// Depending on the implementation, errors ranging from 1 to 2 might be directly
+// logged to the connector error log. For example, level 2 (error) logs will be
+// written to caddy server error logs.
+// The possible values for the debug log level are:
+//
+// 0: Fatal
+// 1: Panic
+// 2: Error
+// 3: Warning
+// 4: details of how transactions are handled
+// 5: log everything, including very detailed debugging information
+//
+// All levels over 5 will be considered as 5.
 func directiveSecDebugLogLevel(options *DirectiveOptions) error {
 	lvl, err := strconv.Atoi(options.Opts)
 	if err != nil {
@@ -438,11 +770,11 @@ func directiveSecDebugLogLevel(options *DirectiveOptions) error {
 }
 
 func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
-	spl := strings.SplitN(options.Opts, " ", 2)
-	if len(spl) != 2 {
+	idStr, v, ok := strings.Cut(options.Opts, " ")
+	if !ok {
 		return errors.New("syntax error: SecRuleUpdateTargetById id \"VARIABLES\"")
 	}
-	id, err := strconv.Atoi(spl[0])
+	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		return err
 	}
@@ -452,7 +784,7 @@ func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
 		options:        RuleOptions{},
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
-	return rp.ParseVariables(strings.Trim(spl[1], "\""))
+	return rp.ParseVariables(strings.Trim(v, "\""))
 }
 
 func directiveSecIgnoreRuleCompilationErrors(options *DirectiveOptions) error {
@@ -469,16 +801,15 @@ func directiveSecIgnoreRuleCompilationErrors(options *DirectiveOptions) error {
 }
 
 func directiveSecDataset(options *DirectiveOptions) error {
-	spl := strings.SplitN(options.Opts, " ", 2)
-	if len(spl) != 2 {
+	name, d, ok := strings.Cut(options.Opts, " ")
+	if !ok {
 		return errors.New("syntax error: SecDataset name `\n...\n`")
 	}
-	name := spl[0]
 	if _, ok := options.Datasets[name]; ok {
 		options.WAF.Logger.Warn("Dataset %s already exists, overwriting", name)
 	}
 	var arr []string
-	data := strings.Trim(spl[1], "`")
+	data := strings.Trim(d, "`")
 	for _, s := range strings.Split(data, "\n") {
 		s = strings.TrimSpace(s)
 		if s == "" || s[0] == '#' {
@@ -508,101 +839,4 @@ func parseBoolean(data string) (bool, error) {
 	default:
 		return false, errors.New("syntax error: [on/off]")
 	}
-}
-
-var (
-	_ directive = directiveSecAction
-	_ directive = directiveSecAuditEngine
-	_ directive = directiveSecAuditLog
-	_ directive = directiveSecAuditLogType
-	_ directive = directiveSecAuditLogFormat
-	_ directive = directiveSecAuditLogParts
-	_ directive = directiveSecAuditLogRelevantStatus
-	_ directive = directiveSecContentInjection
-	_ directive = directiveSecDataDir
-	_ directive = directiveSecDefaultAction
-	_ directive = directiveSecDebugLog
-	_ directive = directiveSecDebugLogLevel
-	_ directive = directiveSecHashEngine
-	_ directive = directiveSecHashKey
-	_ directive = directiveSecHashMethodPm
-	_ directive = directiveSecHashMethodRx
-	_ directive = directiveSecHashParam
-	_ directive = directiveSecHTTPBlKey
-	_ directive = directiveSecMarker
-	_ directive = directiveSecRemoteRules
-	_ directive = directiveSecSensorID
-	_ directive = directiveSecRuleUpdateTargetByID
-)
-
-var directivesMap = map[string]directive{
-	"secwebappid":                    directiveSecWebAppID,
-	"secuploadkeepfiles":             directiveSecUploadKeepFiles,
-	"secuploadfilemode":              directiveSecUploadFileMode,
-	"secuploadfilelimit":             directiveSecUploadFileLimit,
-	"secuploaddir":                   directiveSecUploadDir,
-	"sectmpdir":                      directiveSecTmpDir,
-	"secserversignature":             directiveSecServerSignature,
-	"secsensorid":                    directiveSecSensorID,
-	"secruleremovebytag":             directiveSecRuleRemoveByTag,
-	"secruleremovebymsg":             directiveSecRuleRemoveByMsg,
-	"secruleremovebyid":              directiveSecRuleRemoveByID,
-	"secruleengine":                  directiveSecRuleEngine,
-	"secrule":                        directiveSecRule,
-	"secresponsebodymimetypesclear":  directiveSecResponseBodyMimeTypesClear,
-	"secresponsebodymimetype":        directiveSecResponseBodyMimeType,
-	"secresponsebodylimitaction":     directiveSecResponseBodyLimitAction,
-	"secresponsebodylimit":           directiveSecResponseBodyLimit,
-	"secresponsebodyaccess":          directiveSecResponseBodyAccess,
-	"secrequestbodynofileslimit":     directiveSecRequestBodyNoFilesLimit,
-	"secrequestbodylimitaction":      directiveSecRequestBodyLimitAction,
-	"secrequestbodylimit":            directiveSecRequestBodyLimit,
-	"secrequestbodyinmemorylimit":    directiveSecRequestBodyInMemoryLimit,
-	"secrequestbodyaccess":           directiveSecRequestBodyAccess,
-	"secremoterulesfailaction":       directiveSecRemoteRulesFailAction,
-	"secremoterules":                 directiveSecRemoteRules,
-	"secpcrematchlimitrecursion":     directiveSecPcreMatchLimitRecursion,
-	"secpcrematchlimit":              directiveSecPcreMatchLimit,
-	"secmarker":                      directiveSecMarker,
-	"sechttpblkey":                   directiveSecHTTPBlKey,
-	"sechashparam":                   directiveSecHashParam,
-	"sechashmethodrx":                directiveSecHashMethodRx,
-	"sechashmethodpm":                directiveSecHashMethodPm,
-	"sechashkey":                     directiveSecHashKey,
-	"sechashengine":                  directiveSecHashEngine,
-	"secgsblookupdb":                 directiveSecGsbLookupDb,
-	"secdefaultaction":               directiveSecDefaultAction,
-	"secdatadir":                     directiveSecDataDir,
-	"seccontentinjection":            directiveSecContentInjection,
-	"secconnwritestatelimit":         directiveSecConnWriteStateLimit,
-	"secconnreadstatelimit":          directiveSecConnReadStateLimit,
-	"secconnengine":                  directiveSecConnEngine,
-	"seccomponentsignature":          directiveSecComponentSignature,
-	"seccollectiontimeout":           directiveSecCollectionTimeout,
-	"secauditlogrelevantstatus":      directiveSecAuditLogRelevantStatus,
-	"secauditlogparts":               directiveSecAuditLogParts,
-	"secauditlogdir":                 directiveSecAuditLogDir,
-	"secauditlogstoragedir":          directiveSecAuditLogDir,
-	"secauditlog":                    directiveSecAuditLog,
-	"secauditengine":                 directiveSecAuditEngine,
-	"secaction":                      directiveSecAction,
-	"secdebuglog":                    directiveSecDebugLog,
-	"secdebugloglevel":               directiveSecDebugLogLevel,
-	"secauditlogformat":              directiveSecAuditLogFormat,
-	"secauditlogtype":                directiveSecAuditLogType,
-	"secauditlogfilemode":            directiveSecAuditLogFileMode,
-	"secauditlogdirmode":             directiveSecAuditLogDirMode,
-	"secignorerulecompilationerrors": directiveSecIgnoreRuleCompilationErrors,
-	"secdataset":                     directiveSecDataset,
-
-	// Unsupported Directives
-	"secargumentseparator":     directiveUnsupported,
-	"seccookieformat":          directiveUnsupported,
-	"secruleupdatetargetbytag": directiveUnsupported,
-	"secruleupdatetargetbymsg": directiveUnsupported,
-	"secruleupdatetargetbyid":  directiveSecRuleUpdateTargetByID,
-	"secruleupdateactionbyid":  directiveUnsupported,
-	"secrulescript":            directiveUnsupported,
-	"secruleperftime":          directiveUnsupported,
-	"SecUnicodeMap":            directiveUnsupported,
 }

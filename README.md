@@ -107,6 +107,16 @@ func main() {
 ```
 [Examples/http-server](./examples/http-server/) provides an example to practice with Coraza.
 
+### Build tags
+
+Go build tags can tweak certain functionality at compile-time. These are for advanced use cases only and do not
+have compatibility guarantees across minor versions - use with care.
+
+- coraza.disabled_operators.* - excludes the specified operator from compilation. Particularly useful if overriding
+the operator with `operators.Register` to reduce binary size / startup overhead.
+- `coraza.rule.multiphase_valuation` - enables evaluation of rule variables in the phases that they are ready, not
+only the phase the rule is defined for.
+
 ## Tools
 
 * [Go FTW](https://github.com/coreruleset/go-ftw): Rule testing engine
