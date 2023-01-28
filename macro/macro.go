@@ -113,16 +113,10 @@ func (m *macro) compile(input string) error {
 			if c == '}' {
 				// we close a macro
 				ismacro = false
-				spl := strings.SplitN(currentToken.String(), ".", 2)
-				key := ""
-				if len(spl) == 2 {
-					key = spl[1]
-				} else if len(spl) == 0 {
-					return fmt.Errorf("invalid macro %s", currentToken.String())
-				}
-				v, err := variables.Parse(spl[0])
+				varName, key, _ := strings.Cut(currentToken.String(), ".")
+				v, err := variables.Parse(varName)
 				if err != nil {
-					return fmt.Errorf("invalid variable %s", spl[0])
+					return fmt.Errorf("invalid variable %s", varName)
 				}
 				// we add the variable token
 				m.tokens = append(m.tokens, macroToken{

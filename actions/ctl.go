@@ -181,23 +181,14 @@ func (a *ctlFn) Type() rules.ActionType {
 }
 
 func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, string, error) {
-	spl1 := strings.SplitN(data, "=", 2)
-	if len(spl1) != 2 {
+	action, ctlVal, ok := strings.Cut(data, "=")
+	if !ok {
 		return ctlUnknown, "", 0, "", errors.New("invalid syntax")
 	}
-	spl2 := strings.SplitN(spl1[1], ";", 2)
-	action := spl1[0]
-	value := spl2[0]
-	colname := ""
-	colkey := ""
-	if len(spl2) == 2 {
-		spl3 := strings.SplitN(spl2[1], ":", 2)
-		if len(spl3) == 2 {
-			colname = spl3[0]
-			colkey = spl3[1]
-		} else {
-			colname = spl3[0]
-		}
+	value, col, ok := strings.Cut(ctlVal, ";")
+	var colkey, colname string
+	if ok {
+		colname, colkey, _ = strings.Cut(col, ":")
 	}
 	collection, _ := variables.Parse(strings.TrimSpace(colname))
 	colkey = strings.ToLower(colkey)
@@ -254,13 +245,12 @@ func rangeToInts(rules []*corazawaf.Rule, input string) ([]int, error) {
 		err        error
 	)
 
-	spl := strings.SplitN(input, "-", 2)
-	if len(spl) == 2 {
-		start, err = strconv.Atoi(spl[0])
+	if in0, in1, ok := strings.Cut(input, "-"); ok {
+		start, err = strconv.Atoi(in0)
 		if err != nil {
 			return nil, err
 		}
-		end, err = strconv.Atoi(spl[1])
+		end, err = strconv.Atoi(in1)
 		if err != nil {
 			return nil, err
 		}

@@ -146,7 +146,7 @@ IMPROVEMENTS:
 
 NOTES:
 
-**Migrate from Corza v1**
+**Migrate from Coraza v1**
 
 * Rollback `SecAuditLog` to the legacy syntax (serial/concurrent)
 * Attach an error log handler using `waf.SetErrorLogCb(cb)` (optional)
