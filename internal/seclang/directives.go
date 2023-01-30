@@ -558,7 +558,7 @@ func directiveSecAuditLogDirMode(options *DirectiveOptions) error {
 }
 
 // Description: Configures the mode (permissions) of any files created for concurrent
-// audit logs using an octal mode (as used in chmod). See `SecAuditLogDirMode` for
+// audit logs using an octal mode (as used in `chmod`). See `SecAuditLogDirMode` for
 // controlling the mode of created audit log directories.
 // Syntax: SecAuditLogFileMode octal_mode|"default"
 // Default: 0600
