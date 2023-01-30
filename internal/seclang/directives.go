@@ -138,7 +138,7 @@ func directiveSecAction(options *DirectiveOptions) error {
 // (There is always a default list, even if one was not explicitly set with `SecDefaultAction`.)
 // If there are actions specified in a rule, they will be merged with the default list
 // to form the final actions that will be used. (The actions in the rule will overwrite
-// those in the default list.) Refer to SecDefaultAction for more information.
+// those in the default list.) Refer to `SecDefaultAction` for more information.
 //
 // Example:
 // ```apache
