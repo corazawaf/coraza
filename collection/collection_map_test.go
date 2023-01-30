@@ -24,7 +24,7 @@ func TestCollectionMap(t *testing.T) {
 	c := NewMap(variables.ArgsPost)
 	c.SetIndex("key", 1, "value")
 	c.Set("key2", []string{"value2"})
-	if c.Get("key")[1] != "value" {
+	if c.Get("key")[0] != "value" {
 		t.Error("Error setting index")
 	}
 	if len(c.FindAll()) == 0 {
