@@ -33,7 +33,7 @@ func TestCollectionMap(t *testing.T) {
 	if len(c.FindString("a")) > 0 {
 		t.Error("Error should not find string")
 	}
-	if l := len(c.FindRegex(regexp.MustCompile("k.*"))); l != 3 {
+	if l := len(c.FindRegex(regexp.MustCompile("k.*"))); l != 2 {
 		t.Errorf("Error should find regex, got %d", l)
 	}
 }

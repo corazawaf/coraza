@@ -64,16 +64,20 @@ var _ Collection = &caseInsensitiveMap{}
 // NewMap returns a collection of key->[]values. Keys in queries will be matched in a
 // case-sensitive way.
 func NewMap(variable variables.RuleVariable) Map {
-	m := newCaseSensitiveMap(variable)
-	return &m
+	return &caseSensitiveMap{
+		name:     variable.Name(),
+		variable: variable,
+		data:     map[string][]string{},
+	}
 }
 
 // NewCaseInsensitiveMap returns a collection of key->[]values. Keys in queries will be matched in a
 // case-insensitive way.
 func NewCaseInsensitiveMap(variable variables.RuleVariable) Map {
 	return &caseInsensitiveMap{
-		caseSensitiveMap: newCaseSensitiveMap(variable),
-		origKeys:         map[string]string{},
+		name:     variable.Name(),
+		variable: variable,
+		data:     map[string][]keyVal{},
 	}
 }
 
@@ -208,7 +212,7 @@ func (c *caseSensitiveMap) size() int {
 	sz := 0
 	for _, v := range c.data {
 		for _, vv := range v {
-			sz = len(vv)
+			sz += len(vv)
 		}
 	}
 	return sz
@@ -219,54 +223,159 @@ func (c *caseSensitiveMap) variable_() variables.RuleVariable {
 }
 
 type caseInsensitiveMap struct {
-	caseSensitiveMap
-	origKeys map[string]string
+	data     map[string][]keyVal
+	name     string
+	variable variables.RuleVariable
+}
+
+func (c *caseInsensitiveMap) Data() map[string][]string {
+	result := map[string][]string{}
+	for k, v := range c.data {
+		result[k] = make([]string, 0, len(v))
+		for _, a := range v {
+			result[k] = append(result[k], a.val)
+		}
+	}
+	return result
+}
+
+func (c *caseInsensitiveMap) keysRx(rx *regexp.Regexp) []string {
+	var keys []string
+	for k := range c.data {
+		if rx.MatchString(k) {
+			keys = append(keys, k)
+		}
+	}
+	return keys
+}
+
+func (c *caseInsensitiveMap) keys() []string {
+	var keys []string
+	for k := range c.data {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+func (c *caseInsensitiveMap) size() int {
+	sz := 0
+	for _, v := range c.data {
+		for _, vv := range v {
+			sz += len(vv.val)
+		}
+	}
+	return sz
+}
+
+func (c *caseInsensitiveMap) variable_() variables.RuleVariable {
+	return c.variable
+}
+
+type keyVal struct {
+	key string
+	val string
 }
 
 func (c *caseInsensitiveMap) Get(key string) []string {
-	return c.caseSensitiveMap.Get(strings.ToLower(key))
+	keyL := strings.ToLower(key)
+	var values []string
+	for _, a := range c.data[keyL] {
+		values = append(values, a.val)
+	}
+	return values
 }
 
 func (c *caseInsensitiveMap) FindRegex(key *regexp.Regexp) []types.MatchData {
-	// TODO(anuraaga): Behavior is same for key-sensitive/insensitive map but should it?
-	return c.caseSensitiveMap.FindRegex(key)
+	var result []types.MatchData
+	for k, data := range c.data {
+		if key.MatchString(k) {
+			for _, d := range data {
+				result = append(result, &corazarules.MatchData{
+					VariableName_: c.name,
+					Variable_:     c.variable,
+					Key_:          d.key,
+					Value_:        d.val,
+				})
+			}
+		}
+	}
+	return result
 }
 
 func (c *caseInsensitiveMap) FindString(key string) []types.MatchData {
-	return c.remapMatches(c.caseSensitiveMap.FindString(strings.ToLower(key)))
+	keyL := strings.ToLower(key)
+	var result []types.MatchData
+	if key == "" {
+		return c.FindAll()
+	}
+	// if key is not empty
+	if e, ok := c.data[keyL]; ok {
+		for _, aVar := range e {
+			result = append(result, &corazarules.MatchData{
+				VariableName_: c.name,
+				Variable_:     c.variable,
+				Key_:          aVar.key,
+				Value_:        aVar.val,
+			})
+		}
+	}
+	return result
 }
 
 func (c *caseInsensitiveMap) FindAll() []types.MatchData {
-	return c.remapMatches(c.caseSensitiveMap.FindAll())
-}
-
-func (c *caseInsensitiveMap) remapMatches(matches []types.MatchData) []types.MatchData {
-	for _, m := range matches {
-		m.(*corazarules.MatchData).Key_ = c.origKeys[m.Key()]
+	var result []types.MatchData
+	for _, data := range c.data {
+		for _, d := range data {
+			result = append(result, &corazarules.MatchData{
+				VariableName_: c.name,
+				Variable_:     c.variable,
+				Key_:          d.key,
+				Value_:        d.val,
+			})
+		}
 	}
-	return matches
+	return result
 }
 
 func (c *caseInsensitiveMap) Add(key string, value string) {
 	keyL := strings.ToLower(key)
-	c.origKeys[keyL] = key
-	c.caseSensitiveMap.Add(keyL, value)
+	c.data[keyL] = append(c.data[keyL], keyVal{key, value})
 }
 
 func (c *caseInsensitiveMap) Set(key string, values []string) {
+	var kv []keyVal
+	for _, v := range values {
+		kv = append(kv, keyVal{key, v})
+	}
 	keyL := strings.ToLower(key)
-	c.origKeys[keyL] = key
-	c.caseSensitiveMap.Set(keyL, values)
+	c.data[keyL] = kv
 }
 
 func (c *caseInsensitiveMap) SetIndex(key string, index int, value string) {
 	keyL := strings.ToLower(key)
-	c.origKeys[keyL] = key
-	c.caseSensitiveMap.SetIndex(keyL, index, value)
+	d := c.data[keyL]
+	switch {
+	case d == nil:
+		c.Set(key, []string{value})
+	case len(d) <= index:
+		c.Add(key, value)
+	default:
+		d[index].key = key
+		d[index].val = value
+	}
 }
 
 func (c *caseInsensitiveMap) Remove(key string) {
 	keyL := strings.ToLower(key)
-	delete(c.origKeys, keyL)
-	c.caseSensitiveMap.Remove(keyL)
+	delete(c.data, keyL)
+}
+
+func (c *caseInsensitiveMap) Name() string {
+	return c.name
+}
+
+func (c *caseInsensitiveMap) Reset() {
+	for k := range c.data {
+		delete(c.data, k)
+	}
 }

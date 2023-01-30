@@ -1614,9 +1614,9 @@ func NewTransactionVariables() *TransactionVariables {
 	v.requestHeadersNames = collection.NewCaseInsensitiveMap(variables.RequestHeadersNames)
 	v.userID = collection.NewSimple(variables.Userid)
 
-	v.argsGet = collection.NewCaseInsensitiveMap(variables.ArgsGet)
-	v.argsPost = collection.NewCaseInsensitiveMap(variables.ArgsPost)
-	v.argsPath = collection.NewCaseInsensitiveMap(variables.ArgsPath)
+	v.argsGet = collection.NewMap(variables.ArgsGet)
+	v.argsPost = collection.NewMap(variables.ArgsPost)
+	v.argsPath = collection.NewMap(variables.ArgsPath)
 	v.filesSizes = collection.NewMap(variables.FilesSizes)
 	v.filesTmpContent = collection.NewMap(variables.FilesTmpContent)
 	v.multipartFilename = collection.NewMap(variables.MultipartFilename)

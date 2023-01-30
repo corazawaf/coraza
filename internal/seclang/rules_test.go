@@ -361,7 +361,7 @@ func TestIssue176(t *testing.T) {
 		t.Error("error test for github issue #176")
 	}
 
-	// 	Test for argument case-sensitive
+	// 	Test for argument case-sensitives
 	//	err = parser.FromString(`
 	//		SecRule ARGS:Test1 "123" "id:3,phase:1,log,deny"
 	//	`)
@@ -582,7 +582,7 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if it == nil {
+	if it != nil {
 		t.Errorf("failed to test arguments value match: Upper case argument name, %+v\n", tx.MatchedRules())
 	}
 
@@ -592,7 +592,7 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if it == nil {
+	if it != nil {
 		t.Errorf("failed to test arguments value match: Lower case argument name, %+v\n", tx.MatchedRules())
 	}
 

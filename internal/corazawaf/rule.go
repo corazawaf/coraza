@@ -389,7 +389,7 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 		Name:       v.Name(),
 		Count:      iscount,
 		Variable:   v,
-		KeyStr:     strings.ToLower(key),
+		KeyStr:     key,
 		KeyRx:      re,
 		Exceptions: []ruleVariableException{},
 	})
