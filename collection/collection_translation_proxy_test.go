@@ -25,9 +25,7 @@ func TestCollectionTranslationProxy(t *testing.T) {
 	c2 := NewMap(variables.ArgsGet)
 	proxy := NewTranslationProxy(variables.ArgsNames, c1, c2)
 
-	c1.SetCS("key1", "key1", []string{"value1"})
 	c1.Set("key2", []string{"value2"})
-	c2.SetCS("key3", "Key3", []string{"value3"})
 
 	if len(proxy.FindAll()) != 3 {
 		t.Error("Error finding all")

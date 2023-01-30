@@ -45,12 +45,7 @@ func (c *SizeProxy) FindAll() []types.MatchData {
 func (c *SizeProxy) Size() int64 {
 	i := 0
 	for _, d := range c.data {
-		// we iterate over d
-		for _, data := range d.rawData() {
-			for _, v := range data {
-				i += len(v.Value)
-			}
-		}
+		i += d.size()
 	}
 	return int64(i)
 }

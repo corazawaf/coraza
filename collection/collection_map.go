@@ -5,66 +5,106 @@ package collection
 
 import (
 	"regexp"
+	"strings"
 
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-type Map interface {
-	Get(key string) []string
-	FindRegex(key *regexp.Regexp) []types.MatchData
-	FindString(key string) []types.MatchData
-	FindAll() []types.MatchData
-	keysRx(rx *regexp.Regexp) []string
-	keys() []string
-	AddCS(key string, vKey string, vVal string)
-	Add(key string, value string)
-	AddUniqueCS(key string, vKey string, vVal string)
-	AddUnique(key string, value string)
-	SetCS(key string, vKey string, values []string)
-	Set(key string, values []string)
-	SetIndexCS(key string, index int, vKey string, value string)
-	SetIndex(key string, index int, value string)
-	Remove(key string)
-	Name() string
-	Reset()
-	Data() map[string][]string
-
-	rawData() map[string][]types.AnchoredVar
-	variable_() variables.RuleVariable
-}
-
 // Map are used to store VARIABLE data
 // for transactions, this data structured is designed
 // to store slices of data for keys
 // Important: CollectionMaps ARE NOT concurrent safe
+type Map interface {
+	// Get returns a slice of strings for a key
+	Get(key string) []string
+
+	// FindRegex returns a slice of MatchData for the regex
+	FindRegex(key *regexp.Regexp) []types.MatchData
+
+	// FindString returns a slice of MatchData for the string
+	FindString(key string) []types.MatchData
+
+	// FindAll returns all the contained elements
+	FindAll() []types.MatchData
+
+	// Add a value to some key
+	Add(key string, value string)
+
+	// Set will replace the key's value with this slice
+	Set(key string, values []string)
+
+	// SetIndex will place the value under the index
+	// If the index is higher than the current size of the CollectionMap
+	// it will be appended
+	SetIndex(key string, index int, value string)
+
+	// Remove deletes the key from the CollectionMap
+	Remove(key string)
+
+	// Name returns the name for the current CollectionMap
+	Name() string
+
+	// Reset the current CollectionMap
+	Reset()
+
+	// Data returns all the data in the CollectionMap
+	Data() map[string][]string
+
+	keysRx(rx *regexp.Regexp) []string
+	keys() []string
+	size() int
+	variable_() variables.RuleVariable
+}
+
+var _ Collection = &caseSensitiveMap{}
+var _ Collection = &caseInsensitiveMap{}
+
+// NewMap returns a collection of key->[]values. Keys in queries will be matched in a
+// case-sensitive way.
+func NewMap(variable variables.RuleVariable) Map {
+	m := newCaseSensitiveMap(variable)
+	return &m
+}
+
+// NewCaseInsensitiveMap returns a collection of key->[]values. Keys in queries will be matched in a
+// case-insensitive way.
+func NewCaseInsensitiveMap(variable variables.RuleVariable) Map {
+	return &caseInsensitiveMap{
+		caseSensitiveMap: newCaseSensitiveMap(variable),
+		origKeys:         map[string]string{},
+	}
+}
+
+func newCaseSensitiveMap(variable variables.RuleVariable) caseSensitiveMap {
+	return caseSensitiveMap{
+		name:     variable.Name(),
+		variable: variable,
+		data:     map[string][]string{},
+	}
+}
+
 type caseSensitiveMap struct {
-	data     map[string][]types.AnchoredVar
+	data     map[string][]string
 	name     string
 	variable variables.RuleVariable
 }
 
-// Get returns a slice of strings for a key
 func (c *caseSensitiveMap) Get(key string) []string {
-	var values []string
-	for _, a := range c.data[key] {
-		values = append(values, a.Value)
-	}
-	return values
+	return c.data[key]
 }
 
-// FindRegex returns a slice of MatchData for the regex
 func (c *caseSensitiveMap) FindRegex(key *regexp.Regexp) []types.MatchData {
 	var result []types.MatchData
 	for k, data := range c.data {
 		if key.MatchString(k) {
-			for _, d := range data {
+			for _, val := range data {
 				result = append(result, &corazarules.MatchData{
 					VariableName_: c.name,
 					Variable_:     c.variable,
-					Key_:          d.Name,
-					Value_:        d.Value,
+					Key_:          k,
+					Value_:        val,
 				})
 			}
 		}
@@ -72,7 +112,6 @@ func (c *caseSensitiveMap) FindRegex(key *regexp.Regexp) []types.MatchData {
 	return result
 }
 
-// FindString returns a slice of MatchData for the string
 func (c *caseSensitiveMap) FindString(key string) []types.MatchData {
 	var result []types.MatchData
 	if key == "" {
@@ -80,28 +119,27 @@ func (c *caseSensitiveMap) FindString(key string) []types.MatchData {
 	}
 	// if key is not empty
 	if e, ok := c.data[key]; ok {
-		for _, aVar := range e {
+		for _, val := range e {
 			result = append(result, &corazarules.MatchData{
 				VariableName_: c.name,
 				Variable_:     c.variable,
-				Key_:          aVar.Name,
-				Value_:        aVar.Value,
+				Key_:          key,
+				Value_:        val,
 			})
 		}
 	}
 	return result
 }
 
-// FindAll returns all the contained elements
 func (c *caseSensitiveMap) FindAll() []types.MatchData {
 	var result []types.MatchData
-	for _, data := range c.data {
-		for _, d := range data {
+	for k, data := range c.data {
+		for _, val := range data {
 			result = append(result, &corazarules.MatchData{
 				VariableName_: c.name,
 				Variable_:     c.variable,
-				Key_:          d.Name,
-				Value_:        d.Value,
+				Key_:          k,
+				Value_:        val,
 			})
 		}
 	}
@@ -126,121 +164,109 @@ func (c *caseSensitiveMap) keys() []string {
 	return keys
 }
 
-// AddCS a value to some key with case sensitive vKey
-func (c *caseSensitiveMap) AddCS(key string, vKey string, vVal string) {
-	aVal := types.AnchoredVar{Name: vKey, Value: vVal}
-	c.data[key] = append(c.data[key], aVal)
-}
-
-// Add a value to some key
 func (c *caseSensitiveMap) Add(key string, value string) {
-	c.AddCS(key, key, value)
+	c.data[key] = append(c.data[key], value)
 }
 
-// AddUniqueCS will add a value to a key if it is not already there
-// with case sensitive vKey
-func (c *caseSensitiveMap) AddUniqueCS(key string, vKey string, vVal string) {
-	if c.data[key] == nil {
-		c.AddCS(key, vKey, vVal)
-		return
-	}
-
-	for _, a := range c.data[key] {
-		if a.Value == vVal {
-			return
-		}
-	}
-	c.AddCS(key, vKey, vVal)
-}
-
-// AddUnique will add a value to a key if it is not already there
-func (c *caseSensitiveMap) AddUnique(key string, value string) {
-	c.AddUniqueCS(key, key, value)
-}
-
-// SetCS will replace the key's value with this slice
-// internally converts [] string to []types.AnchoredVar
-// with case sensitive vKey
-func (c *caseSensitiveMap) SetCS(key string, vKey string, values []string) {
-	c.data[key] = make([]types.AnchoredVar, 0, len(values))
-	for _, v := range values {
-		c.data[key] = append(c.data[key], types.AnchoredVar{Name: vKey, Value: v})
-	}
-}
-
-// Set will replace the key's value with this slice
-// internally converts [] string to []types.AnchoredVar
 func (c *caseSensitiveMap) Set(key string, values []string) {
-	c.SetCS(key, key, values)
+	c.data[key] = values
 }
 
-// SetIndexCS will place the value under the index
-// If the index is higher than the current size of the CollectionMap
-// it will be appended
-// with case sensitive vKey
-func (c *caseSensitiveMap) SetIndexCS(key string, index int, vKey string, value string) {
+func (c *caseSensitiveMap) SetIndex(key string, index int, value string) {
 	if c.data[key] == nil {
-		c.data[key] = []types.AnchoredVar{{Name: vKey, Value: value}}
-	}
-	vVal := types.AnchoredVar{Name: vKey, Value: value}
-	if len(c.data[key]) <= index {
-		c.data[key] = append(c.data[key], vVal)
+		c.data[key] = []string{value}
 		return
 	}
-	c.data[key][index] = vVal
+
+	if len(c.data[key]) <= index {
+		c.data[key] = append(c.data[key], value)
+		return
+	}
+
+	c.data[key][index] = value
 }
 
-// SetIndex will place the value under the index
-// If the index is higher than the current size of the CollectionMap
-// it will be appended
-func (c *caseSensitiveMap) SetIndex(key string, index int, value string) {
-	c.SetIndexCS(key, index, key, value)
-}
-
-// Remove deletes the key from the CollectionMap
 func (c *caseSensitiveMap) Remove(key string) {
 	delete(c.data, key)
 }
 
-// Name returns the name for the current CollectionMap
 func (c *caseSensitiveMap) Name() string {
 	return c.name
 }
 
-// Reset the current CollectionMap
 func (c *caseSensitiveMap) Reset() {
 	for k := range c.data {
 		delete(c.data, k)
 	}
 }
 
-// Data returns all the data in the CollectionMap
 func (c *caseSensitiveMap) Data() map[string][]string {
-	result := map[string][]string{}
-	for k, v := range c.data {
-		result[k] = make([]string, 0, len(v))
-		for _, a := range v {
-			result[k] = append(result[k], a.Value)
-		}
-	}
-	return result
+	return c.data
 }
 
-func (c *caseSensitiveMap) rawData() map[string][]types.AnchoredVar {
-	return c.data
+func (c *caseSensitiveMap) size() int {
+	sz := 0
+	for _, v := range c.data {
+		for _, vv := range v {
+			sz = len(vv)
+		}
+	}
+	return sz
 }
 
 func (c *caseSensitiveMap) variable_() variables.RuleVariable {
 	return c.variable
 }
 
-var _ Collection = &caseSensitiveMap{}
+type caseInsensitiveMap struct {
+	caseSensitiveMap
+	origKeys map[string]string
+}
 
-// NewMap returns a collection of key->[]values
-func NewMap(variable variables.RuleVariable) Map {
-	return &caseSensitiveMap{
-		name:     variable.Name(),
-		variable: variable,
-		data:     map[string][]types.AnchoredVar{},
+func (c *caseInsensitiveMap) Get(key string) []string {
+	return c.caseSensitiveMap.Get(strings.ToLower(key))
+}
+
+func (c *caseInsensitiveMap) FindRegex(key *regexp.Regexp) []types.MatchData {
+	// TODO(anuraaga): Behavior is same for key-sensitive/insensitive map but should it?
+	return c.caseSensitiveMap.FindRegex(key)
+}
+
+func (c *caseInsensitiveMap) FindString(key string) []types.MatchData {
+	return c.remapMatches(c.caseSensitiveMap.FindString(strings.ToLower(key)))
+}
+
+func (c *caseInsensitiveMap) FindAll() []types.MatchData {
+	return c.remapMatches(c.caseSensitiveMap.FindAll())
+}
+
+func (c *caseInsensitiveMap) remapMatches(matches []types.MatchData) []types.MatchData {
+	for _, m := range matches {
+		m.(*corazarules.MatchData).Key_ = c.origKeys[m.Key()]
 	}
+	return matches
+}
+
+func (c *caseInsensitiveMap) Add(key string, value string) {
+	keyL := strings.ToLower(key)
+	c.origKeys[keyL] = key
+	c.caseSensitiveMap.Add(keyL, value)
+}
+
+func (c *caseInsensitiveMap) Set(key string, values []string) {
+	keyL := strings.ToLower(key)
+	c.origKeys[keyL] = key
+	c.caseSensitiveMap.Set(keyL, values)
+}
+
+func (c *caseInsensitiveMap) SetIndex(key string, index int, value string) {
+	keyL := strings.ToLower(key)
+	c.origKeys[keyL] = key
+	c.caseSensitiveMap.SetIndex(keyL, index, value)
+}
+
+func (c *caseInsensitiveMap) Remove(key string) {
+	keyL := strings.ToLower(key)
+	delete(c.origKeys, keyL)
+	c.caseSensitiveMap.Remove(keyL)
 }

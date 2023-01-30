@@ -337,8 +337,10 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 		return
 	}
 	keyl := strings.ToLower(key)
-	tx.variables.requestHeadersNames.AddUniqueCS(keyl, key, keyl)
-	tx.variables.requestHeaders.AddCS(keyl, key, value)
+	if len(tx.variables.requestHeadersNames.Get(key)) == 0 {
+		tx.variables.requestHeadersNames.Add(key, keyl)
+	}
+	tx.variables.requestHeaders.Add(key, value)
 
 	if keyl == "content-type" {
 		val := strings.ToLower(value)
@@ -352,9 +354,11 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 		values := urlutil.ParseQuery(value, ';')
 		for k, vr := range values {
 			kl := strings.ToLower(k)
-			tx.variables.requestCookiesNames.AddUniqueCS(kl, k, kl)
+			if len(tx.variables.requestCookiesNames.Get(k)) == 0 {
+				tx.variables.requestCookiesNames.Add(k, kl)
+			}
 			for _, v := range vr {
-				tx.variables.requestCookies.AddCS(kl, k, v)
+				tx.variables.requestCookies.Add(k, v)
 			}
 		}
 	}
@@ -368,8 +372,10 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 		return
 	}
 	keyl := strings.ToLower(key)
-	tx.variables.responseHeadersNames.AddUniqueCS(keyl, key, keyl)
-	tx.variables.responseHeaders.AddCS(keyl, key, value)
+	if len(tx.variables.responseHeadersNames.Get(key)) == 0 {
+		tx.variables.responseHeadersNames.Add(key, keyl)
+	}
+	tx.variables.responseHeaders.Add(key, value)
 
 	// Most headers can be managed like that
 	if keyl == "content-type" {
@@ -471,13 +477,11 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 // matchVariable Creates the MATCHED_ variables required by chains and macro expansion
 // MATCHED_VARS, MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES
 func (tx *Transaction) matchVariable(match *corazarules.MatchData) {
-	var varName, varNamel string
+	var varName string
 	if match.Key_ != "" {
 		varName = match.VariableName_ + ":" + match.Key_
-		varNamel = match.VariableName_ + ":" + strings.ToLower(match.Key_)
 	} else {
 		varName = match.VariableName_
-		varNamel = match.VariableName_
 	}
 	// Array of values
 	matchedVars := tx.variables.matchedVars
@@ -489,12 +493,12 @@ func (tx *Transaction) matchVariable(match *corazarules.MatchData) {
 
 	// We add the key in lowercase for ease of lookup in chains
 	// This is similar to args handling
-	matchedVars.AddCS(varNamel, varName, match.Value_)
+	matchedVars.Add(varName, match.Value_)
 	tx.variables.matchedVar.Set(match.Value_)
 
 	// We add the key in lowercase for ease of lookup in chains
 	// This is similar to args handling
-	matchedVarsNames.AddCS(varNamel, varName, varName)
+	matchedVarsNames.Add(varName, varName)
 	matchedVarName.Set(varName)
 }
 
@@ -677,9 +681,8 @@ func (tx *Transaction) AddArgument(argType types.ArgumentType, key string, value
 	default:
 		return
 	}
-	keyl := strings.ToLower(key)
 
-	vals.AddCS(keyl, key, value)
+	vals.Add(key, value)
 }
 
 // ProcessURI Performs the analysis on the URI and all the query string variables.
@@ -1607,28 +1610,28 @@ func NewTransactionVariables() *TransactionVariables {
 	v.statusLine = collection.NewSimple(variables.StatusLine)
 	v.inboundErrorData = collection.NewSimple(variables.InboundErrorData)
 	v.duration = collection.NewSimple(variables.Duration)
-	v.responseHeadersNames = collection.NewMap(variables.ResponseHeadersNames)
-	v.requestHeadersNames = collection.NewMap(variables.RequestHeadersNames)
+	v.responseHeadersNames = collection.NewCaseInsensitiveMap(variables.ResponseHeadersNames)
+	v.requestHeadersNames = collection.NewCaseInsensitiveMap(variables.RequestHeadersNames)
 	v.userID = collection.NewSimple(variables.Userid)
 
-	v.argsGet = collection.NewMap(variables.ArgsGet)
-	v.argsPost = collection.NewMap(variables.ArgsPost)
-	v.argsPath = collection.NewMap(variables.ArgsPath)
+	v.argsGet = collection.NewCaseInsensitiveMap(variables.ArgsGet)
+	v.argsPost = collection.NewCaseInsensitiveMap(variables.ArgsPost)
+	v.argsPath = collection.NewCaseInsensitiveMap(variables.ArgsPath)
 	v.filesSizes = collection.NewMap(variables.FilesSizes)
 	v.filesTmpContent = collection.NewMap(variables.FilesTmpContent)
 	v.multipartFilename = collection.NewMap(variables.MultipartFilename)
 	v.multipartName = collection.NewMap(variables.MultipartName)
-	v.matchedVars = collection.NewMap(variables.MatchedVars)
-	v.requestCookies = collection.NewMap(variables.RequestCookies)
-	v.requestHeaders = collection.NewMap(variables.RequestHeaders)
-	v.responseHeaders = collection.NewMap(variables.ResponseHeaders)
+	v.matchedVars = collection.NewCaseInsensitiveMap(variables.MatchedVars)
+	v.requestCookies = collection.NewCaseInsensitiveMap(variables.RequestCookies)
+	v.requestHeaders = collection.NewCaseInsensitiveMap(variables.RequestHeaders)
+	v.responseHeaders = collection.NewCaseInsensitiveMap(variables.ResponseHeaders)
 	v.geo = collection.NewMap(variables.Geo)
 	v.tx = collection.NewMap(variables.TX)
 	v.rule = collection.NewMap(variables.Rule)
 	v.env = collection.NewMap(variables.Env)
 	v.ip = collection.NewMap(variables.IP)
 	v.files = collection.NewMap(variables.Files)
-	v.matchedVarsNames = collection.NewMap(variables.MatchedVarsNames)
+	v.matchedVarsNames = collection.NewCaseInsensitiveMap(variables.MatchedVarsNames)
 	v.filesNames = collection.NewMap(variables.FilesNames)
 	v.filesTmpNames = collection.NewMap(variables.FilesTmpNames)
 	v.requestCookiesNames = collection.NewMap(variables.RequestCookiesNames)
