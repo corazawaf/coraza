@@ -666,7 +666,7 @@ func (tx *Transaction) ExtractArguments(orig types.ArgumentType, uri string) {
 // ARGS_(GET|POST)_NAMES
 func (tx *Transaction) AddArgument(argType types.ArgumentType, key string, value string) {
 	// TODO implement ARGS value limit using ArgumentsLimit
-	var vals *collection.Map
+	var vals collection.Map
 	switch argType {
 	case types.ArgumentGET:
 		vals = tx.variables.argsGet
@@ -1417,7 +1417,7 @@ func (tx *Transaction) Debug() string {
 			data[""] = []string{
 				col.String(),
 			}
-		case *collection.Map:
+		case collection.Map:
 			data = col.Data()
 		case *collection.Proxy:
 			data = col.Data()
@@ -1511,38 +1511,38 @@ type TransactionVariables struct {
 	statusLine                    *collection.Simple
 	inboundErrorData              *collection.Simple
 	// Custom
-	env      *collection.Map
-	tx       *collection.Map
-	rule     *collection.Map
+	env      collection.Map
+	tx       collection.Map
+	rule     collection.Map
 	duration *collection.Simple
 	// Proxy Variables
 	args *collection.Proxy
 	// Maps Variables
-	argsGet              *collection.Map
-	argsPost             *collection.Map
-	argsPath             *collection.Map
-	filesTmpNames        *collection.Map
-	geo                  *collection.Map
-	files                *collection.Map
-	requestCookies       *collection.Map
-	requestHeaders       *collection.Map
-	responseHeaders      *collection.Map
-	multipartName        *collection.Map
-	matchedVarsNames     *collection.Map
-	multipartFilename    *collection.Map
-	matchedVars          *collection.Map
-	filesSizes           *collection.Map
-	filesNames           *collection.Map
-	filesTmpContent      *collection.Map
-	responseHeadersNames *collection.Map
-	requestHeadersNames  *collection.Map
-	requestCookiesNames  *collection.Map
-	xml                  *collection.Map
-	requestXML           *collection.Map
-	responseXML          *collection.Map
-	multipartPartHeaders *collection.Map
+	argsGet              collection.Map
+	argsPost             collection.Map
+	argsPath             collection.Map
+	filesTmpNames        collection.Map
+	geo                  collection.Map
+	files                collection.Map
+	requestCookies       collection.Map
+	requestHeaders       collection.Map
+	responseHeaders      collection.Map
+	multipartName        collection.Map
+	matchedVarsNames     collection.Map
+	multipartFilename    collection.Map
+	matchedVars          collection.Map
+	filesSizes           collection.Map
+	filesNames           collection.Map
+	filesTmpContent      collection.Map
+	responseHeadersNames collection.Map
+	requestHeadersNames  collection.Map
+	requestCookiesNames  collection.Map
+	xml                  collection.Map
+	requestXML           collection.Map
+	responseXML          collection.Map
+	multipartPartHeaders collection.Map
 	// Persistent variables
-	ip *collection.Map
+	ip collection.Map
 	// Translation Proxy Variables
 	argsNames     *collection.TranslationProxy
 	argsGetNames  *collection.TranslationProxy
@@ -1760,7 +1760,7 @@ func (v *TransactionVariables) MultipartMissingSemicolon() *collection.Simple {
 	return v.multipartMissingSemicolon
 }
 
-func (v *TransactionVariables) MultipartPartHeaders() *collection.Map {
+func (v *TransactionVariables) MultipartPartHeaders() collection.Map {
 	return v.multipartPartHeaders
 }
 
@@ -1896,15 +1896,15 @@ func (v *TransactionVariables) InboundErrorData() *collection.Simple {
 	return v.inboundErrorData
 }
 
-func (v *TransactionVariables) Env() *collection.Map {
+func (v *TransactionVariables) Env() collection.Map {
 	return v.env
 }
 
-func (v *TransactionVariables) TX() *collection.Map {
+func (v *TransactionVariables) TX() collection.Map {
 	return v.tx
 }
 
-func (v *TransactionVariables) Rule() *collection.Map {
+func (v *TransactionVariables) Rule() collection.Map {
 	return v.rule
 }
 
@@ -1916,95 +1916,95 @@ func (v *TransactionVariables) Args() *collection.Proxy {
 	return v.args
 }
 
-func (v *TransactionVariables) ArgsGet() *collection.Map {
+func (v *TransactionVariables) ArgsGet() collection.Map {
 	return v.argsGet
 }
 
-func (v *TransactionVariables) ArgsPost() *collection.Map {
+func (v *TransactionVariables) ArgsPost() collection.Map {
 	return v.argsPost
 }
 
-func (v *TransactionVariables) ArgsPath() *collection.Map {
+func (v *TransactionVariables) ArgsPath() collection.Map {
 	return v.argsPath
 }
 
-func (v *TransactionVariables) FilesTmpNames() *collection.Map {
+func (v *TransactionVariables) FilesTmpNames() collection.Map {
 	return v.filesTmpNames
 }
 
-func (v *TransactionVariables) Geo() *collection.Map {
+func (v *TransactionVariables) Geo() collection.Map {
 	return v.geo
 }
 
-func (v *TransactionVariables) Files() *collection.Map {
+func (v *TransactionVariables) Files() collection.Map {
 	return v.files
 }
 
-func (v *TransactionVariables) RequestCookies() *collection.Map {
+func (v *TransactionVariables) RequestCookies() collection.Map {
 	return v.requestCookies
 }
 
-func (v *TransactionVariables) RequestHeaders() *collection.Map {
+func (v *TransactionVariables) RequestHeaders() collection.Map {
 	return v.requestHeaders
 }
 
-func (v *TransactionVariables) ResponseHeaders() *collection.Map {
+func (v *TransactionVariables) ResponseHeaders() collection.Map {
 	return v.responseHeaders
 }
 
-func (v *TransactionVariables) MultipartName() *collection.Map {
+func (v *TransactionVariables) MultipartName() collection.Map {
 	return v.multipartName
 }
 
-func (v *TransactionVariables) MatchedVarsNames() *collection.Map {
+func (v *TransactionVariables) MatchedVarsNames() collection.Map {
 	return v.matchedVarsNames
 }
 
-func (v *TransactionVariables) MultipartFilename() *collection.Map {
+func (v *TransactionVariables) MultipartFilename() collection.Map {
 	return v.multipartFilename
 }
 
-func (v *TransactionVariables) MatchedVars() *collection.Map {
+func (v *TransactionVariables) MatchedVars() collection.Map {
 	return v.matchedVars
 }
 
-func (v *TransactionVariables) FilesSizes() *collection.Map {
+func (v *TransactionVariables) FilesSizes() collection.Map {
 	return v.filesSizes
 }
 
-func (v *TransactionVariables) FilesNames() *collection.Map {
+func (v *TransactionVariables) FilesNames() collection.Map {
 	return v.filesNames
 }
 
-func (v *TransactionVariables) FilesTmpContent() *collection.Map {
+func (v *TransactionVariables) FilesTmpContent() collection.Map {
 	return v.filesTmpContent
 }
 
-func (v *TransactionVariables) ResponseHeadersNames() *collection.Map {
+func (v *TransactionVariables) ResponseHeadersNames() collection.Map {
 	return v.responseHeadersNames
 }
 
-func (v *TransactionVariables) RequestHeadersNames() *collection.Map {
+func (v *TransactionVariables) RequestHeadersNames() collection.Map {
 	return v.requestHeadersNames
 }
 
-func (v *TransactionVariables) RequestCookiesNames() *collection.Map {
+func (v *TransactionVariables) RequestCookiesNames() collection.Map {
 	return v.requestCookiesNames
 }
 
-func (v *TransactionVariables) XML() *collection.Map {
+func (v *TransactionVariables) XML() collection.Map {
 	return v.xml
 }
 
-func (v *TransactionVariables) RequestXML() *collection.Map {
+func (v *TransactionVariables) RequestXML() collection.Map {
 	return v.requestXML
 }
 
-func (v *TransactionVariables) ResponseXML() *collection.Map {
+func (v *TransactionVariables) ResponseXML() collection.Map {
 	return v.responseXML
 }
 
-func (v *TransactionVariables) IP() *collection.Map {
+func (v *TransactionVariables) IP() collection.Map {
 	return v.ip
 }
 

@@ -15,7 +15,7 @@ import (
 // to store slices of data for keys
 // Important: CollectionProxys ARE NOT concurrent safe
 type Proxy struct {
-	data     []*Map
+	data     []Map
 	name     string
 	variable variables.RuleVariable
 }
@@ -79,7 +79,7 @@ func (c *Proxy) Reset() {
 var _ Collection = &Proxy{}
 
 // NewProxy returns a Proxy collection that merges all collections
-func NewProxy(variable variables.RuleVariable, data ...*Map) *Proxy {
+func NewProxy(variable variables.RuleVariable, data ...Map) *Proxy {
 	return &Proxy{
 		name:     variable.Name(),
 		variable: variable,

@@ -16,7 +16,7 @@ import (
 // to store slices of data for keys
 // Important: CollectionTranslationProxys ARE NOT concurrent safe
 type TranslationProxy struct {
-	data     []*Map
+	data     []Map
 	name     string
 	variable variables.RuleVariable
 }
@@ -27,8 +27,8 @@ func (c *TranslationProxy) FindRegex(key *regexp.Regexp) []types.MatchData {
 	for _, c := range c.data {
 		for _, k := range c.keysRx(key) {
 			res = append(res, &corazarules.MatchData{
-				VariableName_: c.name,
-				Variable_:     c.variable,
+				VariableName_: c.Name(),
+				Variable_:     c.variable_(),
 				Value_:        k,
 			})
 		}
@@ -42,8 +42,8 @@ func (c *TranslationProxy) FindString(key string) []types.MatchData {
 		if len(c.Get(key)) > 0 {
 			return []types.MatchData{
 				&corazarules.MatchData{
-					VariableName_: c.name,
-					Variable_:     c.variable,
+					VariableName_: c.Name(),
+					Variable_:     c.variable_(),
 					Value_:        key,
 				},
 			}
@@ -58,8 +58,8 @@ func (c *TranslationProxy) FindAll() []types.MatchData {
 	for _, c := range c.data {
 		for _, k := range c.keys() {
 			res = append(res, &corazarules.MatchData{
-				VariableName_: c.name,
-				Variable_:     c.variable,
+				VariableName_: c.Name(),
+				Variable_:     c.variable_(),
 				Value_:        k,
 			})
 		}
@@ -100,7 +100,7 @@ var _ Collection = &TranslationProxy{}
 
 // NewTranslationProxy creates a translation proxy
 // Translation proxies are used to merge variable keys from multiple collections
-func NewTranslationProxy(variable variables.RuleVariable, data ...*Map) *TranslationProxy {
+func NewTranslationProxy(variable variables.RuleVariable, data ...Map) *TranslationProxy {
 	return &TranslationProxy{
 		name:     variable.Name(),
 		variable: variable,

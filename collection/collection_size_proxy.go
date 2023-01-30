@@ -15,7 +15,7 @@ import (
 // SizeProxy are used to connect the size
 // of many collection map values and return the sum
 type SizeProxy struct {
-	data     []*Map
+	data     []Map
 	name     string
 	variable variables.RuleVariable
 }
@@ -46,7 +46,7 @@ func (c *SizeProxy) Size() int64 {
 	i := 0
 	for _, d := range c.data {
 		// we iterate over d
-		for _, data := range d.data {
+		for _, data := range d.rawData() {
 			for _, v := range data {
 				i += len(v.Value)
 			}
@@ -69,7 +69,7 @@ var _ Collection = &SizeProxy{}
 
 // NewCollectionSizeProxy returns a collection that
 // only returns the total sum of all the collections values
-func NewCollectionSizeProxy(variable variables.RuleVariable, data ...*Map) *SizeProxy {
+func NewCollectionSizeProxy(variable variables.RuleVariable, data ...Map) *SizeProxy {
 	return &SizeProxy{
 		name:     variable.Name(),
 		variable: variable,
