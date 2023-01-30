@@ -63,27 +63,28 @@ func directiveSecComponentSignature(options *DirectiveOptions) error {
 // allow you to choose the best way to implement a skip-over. Here is an example used from the
 // Core Rule Set:
 //
-// ```
-// SecMarker BEGIN_HOST_CHECK
+// ```apache
+//
+//	SecMarker BEGIN_HOST_CHECK
 //
 //	SecRule &REQUEST_HEADERS:Host "@eq 0" \
-//		   "id:'960008',skipAfter:END_HOST_CHECK,phase:2,rev:'2.1.1',\
-//		   t:none,block,msg:'Request Missing a Host Header',\
-//		   tag:'PROTOCOL_VIOLATION/MISSING_HEADER_HOST',tag:'WASCTC/WASC-21',\
-//		   tag:'OWASP_TOP_10/A7',tag:'PCI/6.5.10',\
-//		   severity:'5',setvar:'tx.msg=%{rule.msg}',setvar:tx.anomaly_score=+%{tx.notice_anomaly_score},\
-//		   setvar:tx.protocol_violation_score=+%{tx.notice_anomaly_score},\
-//		   setvar:tx.%{rule.id}-PROTOCOL_VIOLATION/MISSING_HEADER-%{matched_var_name}=%{matched_var}"
-//
+//			   "id:'960008',skipAfter:END_HOST_CHECK,phase:2,rev:'2.1.1',\
+//			   t:none,block,msg:'Request Missing a Host Header',\
+//			   tag:'PROTOCOL_VIOLATION/MISSING_HEADER_HOST',tag:'WASCTC/WASC-21',\
+//			   tag:'OWASP_TOP_10/A7',tag:'PCI/6.5.10',\
+//			   severity:'5',setvar:'tx.msg=%{rule.msg}',setvar:tx.anomaly_score=+%{tx.notice_anomaly_score},\
+//			   setvar:tx.protocol_violation_score=+%{tx.notice_anomaly_score},\
+//			   setvar:tx.%{rule.id}-PROTOCOL_VIOLATION/MISSING_HEADER-%{matched_var_name}=%{matched_var}"
 //	SecRule REQUEST_HEADERS:Host "^$" \
-//		   "id:'960008',phase:2,rev:'2.1.1',t:none,block,msg:'Request Missing a Host Header',\
-//		   tag:'PROTOCOL_VIOLATION/MISSING_HEADER_HOST',tag:'WASCTC/WASC-21',\
-//		   tag:'OWASP_TOP_10/A7',tag:'PCI/6.5.10',severity:'5',\
-//		   setvar:'tx.msg=%{rule.msg}',setvar:tx.anomaly_score=+%{tx.notice_anomaly_score},\
-//		   setvar:tx.protocol_violation_score=+%{tx.notice_anomaly_score},\
-//		   setvar:tx.%{rule.id}-PROTOCOL_VIOLATION/MISSING_HEADER-%{matched_var_name}=%{matched_var}"
+//			   "id:'960008',phase:2,rev:'2.1.1',t:none,block,msg:'Request Missing a Host Header',\
+//			   tag:'PROTOCOL_VIOLATION/MISSING_HEADER_HOST',tag:'WASCTC/WASC-21',\
+//			   tag:'OWASP_TOP_10/A7',tag:'PCI/6.5.10',severity:'5',\
+//			   setvar:'tx.msg=%{rule.msg}',setvar:tx.anomaly_score=+%{tx.notice_anomaly_score},\
+//			   setvar:tx.protocol_violation_score=+%{tx.notice_anomaly_score},\
+//			   setvar:tx.%{rule.id}-PROTOCOL_VIOLATION/MISSING_HEADER-%{matched_var_name}=%{matched_var}"
 //
-// SecMarker END_HOST_CHECK
+//	SecMarker END_HOST_CHECK
+//
 // ```
 func directiveSecMarker(options *DirectiveOptions) error {
 	rule := corazawaf.NewRule()
@@ -612,7 +613,7 @@ func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 // in the list then the equivalent part will be recorded. See below for the list of
 // all parts.
 // Syntax: SecAuditLogParts [PARTLETTERS]
-// Default: ABCFHZ Note
+// Default: ABCFHZ
 // ---
 // The format of the audit log format is documented in detail in the Audit Log Data
 // Format Documentation.
@@ -624,27 +625,27 @@ func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 //
 // Available audit log parts:
 //
-// A: Audit log header (mandatory).
-// B: Request headers.
-// C: Request body (present only if the request body exists and Coraza is configured
+// - A: Audit log header (mandatory).
+// - B: Request headers.
+// - C: Request body (present only if the request body exists and Coraza is configured
 // to intercept it. This would require SecRequestBodyAccess to be set to on).
-// D: Reserved for intermediary response headers; not implemented yet.
-// E: Intermediary response body (present only if Coraza is configured to intercept
+// - D: Reserved for intermediary response headers; not implemented yet.
+// - E: Intermediary response body (present only if Coraza is configured to intercept
 // response bodies, and if the audit log engine is configured to record it. Intercepting
 // response bodies requires SecResponseBodyAccess to be enabled). Intermediary response
 // body is the same as the actual response body unless Coraza intercepts the intermediary
 // response body, in which case the actual response body will contain the error message.
-// F: Final response headers.
-// G: Reserved for the actual response body; not implemented yet.
-// H: Audit log trailer.
-// I: This part is a replacement for part C. It will log the same data as C in all cases except when
+// - F: Final response headers.
+// - G: Reserved for the actual response body; not implemented yet.
+// - H: Audit log trailer.
+// - I: This part is a replacement for part C. It will log the same data as C in all cases except when
 // multipart/form-data encoding in used. In this case, it will log a fake application/x-www-form-urlencoded
 // body that contains the information about parameters but not about the files. This is handy if
 // you don’t want to have (often large) files stored in your audit logs.
-// J: This part contains information about the files uploaded using multipart/form-data encoding.
-// K: This part contains a full list of every rule that matched (one per line) in the order they were
+// - J: This part contains information about the files uploaded using multipart/form-data encoding.
+// - K: This part contains a full list of every rule that matched (one per line) in the order they were
 // matched. The rules are fully qualified and will thus show inherited actions and default operators.
-// Z: Final boundary, signifies the end of the entry (mandatory).
+// - Z: Final boundary, signifies the end of the entry (mandatory).
 func directiveSecAuditLogParts(options *DirectiveOptions) error {
 	options.WAF.AuditLogParts = types.AuditLogParts(options.Opts)
 	return nil
@@ -753,12 +754,12 @@ func directiveSecDebugLog(options *DirectiveOptions) error {
 // written to caddy server error logs.
 // The possible values for the debug log level are:
 //
-// 0: Fatal
-// 1: Panic
-// 2: Error
-// 3: Warning
-// 4: details of how transactions are handled
-// 5: log everything, including very detailed debugging information
+// - 0: Fatal
+// - 1: Panic
+// - 2: Error
+// - 3: Warning
+// - 4: details of how transactions are handled
+// - 5: log everything, including very detailed debugging information
 //
 // All levels over 5 will be considered as 5.
 func directiveSecDebugLogLevel(options *DirectiveOptions) error {
