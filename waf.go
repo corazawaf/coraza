@@ -25,6 +25,8 @@ type WAF interface {
 	NewTransactionWithID(id string) types.Transaction
 }
 
+const _1gb = 1073741824
+
 // NewWAF creates a new WAF instance with the provided configuration.
 func NewWAF(config WAFConfig) (WAF, error) {
 	c := config.(*wafConfig)
@@ -82,7 +84,7 @@ func NewWAF(config WAFConfig) (WAF, error) {
 			return nil, errors.New("request body limit should be bigger than 0")
 		}
 
-		if c.requestBodyLimit > 1073741824 {
+		if c.requestBodyLimit > _1gb {
 			return nil, errors.New("request body limit should be at most 1GB")
 		}
 
@@ -111,7 +113,7 @@ func NewWAF(config WAFConfig) (WAF, error) {
 			return nil, errors.New("response body limit should be bigger than 0")
 		}
 
-		if c.responseBodyLimit > 1073741824 {
+		if c.responseBodyLimit > _1gb {
 			return nil, errors.New("response body limit should be at most 1GB")
 		}
 
