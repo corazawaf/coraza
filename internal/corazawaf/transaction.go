@@ -771,7 +771,7 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 func setAndReturnBodyLimitInterruption(tx *Transaction) (*types.Interruption, int, error) {
 	tx.DebugLogger().Warn("Disrupting transaction with body size above the configured limit (Action Reject)")
 	tx.interruption = &types.Interruption{
-		Status: 403,
+		Status: 413,
 		Action: "deny",
 	}
 	return tx.interruption, 0, nil
