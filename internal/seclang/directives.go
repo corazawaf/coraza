@@ -417,7 +417,7 @@ func directiveSecHashEngine(options *DirectiveOptions) error {
 // Default: phase:2,log,auditlog,pass
 // Syntax: SecDefaultAction "phase:2,log,auditlog,deny,status:403,tag:'SLA 24/7'"
 // ---
-// Every rule following a previous SecDefaultAction directive in the same configuration
+// Every rule following a previous `SecDefaultAction` directive in the same configuration
 // context will inherit its settings unless more specific actions are used.
 //
 // Rulesets like OWASP Core Ruleset uses this to define operation modes:
@@ -427,7 +427,7 @@ func directiveSecHashEngine(options *DirectiveOptions) error {
 // - You can set the default disruptive action to deny and each risky rule will interrupt
 // the connection.
 //
-// Important: Every SecDefaultAction directive must specify a disruptive action and a processing
+// Important: Every `SecDefaultAction` directive must specify a disruptive action and a processing
 // phase and cannot contain metadata actions.
 func directiveSecDefaultAction(options *DirectiveOptions) error {
 	da, _ := options.Config.Get("rule_default_actions", []string{}).([]string)
@@ -558,7 +558,7 @@ func directiveSecAuditLogDirMode(options *DirectiveOptions) error {
 }
 
 // Description: Configures the mode (permissions) of any files created for concurrent
-// audit logs using an octal mode (as used in chmod). See SecAuditLogDirMode for
+// audit logs using an octal mode (as used in chmod). See `SecAuditLogDirMode` for
 // controlling the mode of created audit log directories.
 // Syntax: SecAuditLogFileMode octal_mode|"default"
 // Default: 0600
@@ -669,7 +669,7 @@ func directiveSecAuditLogParts(options *DirectiveOptions) error {
 // Note: If you need to change the audit log engine configuration on a per-transaction basis (e.g.,
 // in response to some transaction data), use the `ctl` action.
 //
-// The following example demonstrates how SecAuditEngine is used:
+// The following example demonstrates how `SecAuditEngine` is used:
 // ```apache
 // SecAuditEngine RelevantOnly
 // SecAuditLog logs/audit/audit.log
