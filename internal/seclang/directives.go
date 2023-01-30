@@ -54,8 +54,8 @@ func directiveSecComponentSignature(options *DirectiveOptions) error {
 	return nil
 }
 
-// Description: Adds a fixed rule marker that can be used as a target in a skipAfter action.
-// A SecMarker directive essentially creates a rule that does nothing and whose only purpose
+// Description: Adds a fixed rule marker that can be used as a target in a `skipAfter` action.
+// A `SecMarker` directive essentially creates a rule that does nothing and whose only purpose
 // is to carry the given ID.
 // Syntax: SecMarker [ID|TEXT]
 // ---
@@ -68,20 +68,20 @@ func directiveSecComponentSignature(options *DirectiveOptions) error {
 //	SecMarker BEGIN_HOST_CHECK
 //
 //	SecRule &REQUEST_HEADERS:Host "@eq 0" \
-//			   "id:'960008',skipAfter:END_HOST_CHECK,phase:2,rev:'2.1.1',\
-//			   t:none,block,msg:'Request Missing a Host Header',\
-//			   tag:'PROTOCOL_VIOLATION/MISSING_HEADER_HOST',tag:'WASCTC/WASC-21',\
-//			   tag:'OWASP_TOP_10/A7',tag:'PCI/6.5.10',\
-//			   severity:'5',setvar:'tx.msg=%{rule.msg}',setvar:tx.anomaly_score=+%{tx.notice_anomaly_score},\
-//			   setvar:tx.protocol_violation_score=+%{tx.notice_anomaly_score},\
-//			   setvar:tx.%{rule.id}-PROTOCOL_VIOLATION/MISSING_HEADER-%{matched_var_name}=%{matched_var}"
+//		"id:'960008',skipAfter:END_HOST_CHECK,phase:2,rev:'2.1.1',\
+//		t:none,block,msg:'Request Missing a Host Header',\
+//		tag:'PROTOCOL_VIOLATION/MISSING_HEADER_HOST',tag:'WASCTC/WASC-21',\
+//		tag:'OWASP_TOP_10/A7',tag:'PCI/6.5.10',\
+//		severity:'5',setvar:'tx.msg=%{rule.msg}',setvar:tx.anomaly_score=+%{tx.notice_anomaly_score},\
+//		setvar:tx.protocol_violation_score=+%{tx.notice_anomaly_score},\
+//		setvar:tx.%{rule.id}-PROTOCOL_VIOLATION/MISSING_HEADER-%{matched_var_name}=%{matched_var}"
 //	SecRule REQUEST_HEADERS:Host "^$" \
-//			   "id:'960008',phase:2,rev:'2.1.1',t:none,block,msg:'Request Missing a Host Header',\
-//			   tag:'PROTOCOL_VIOLATION/MISSING_HEADER_HOST',tag:'WASCTC/WASC-21',\
-//			   tag:'OWASP_TOP_10/A7',tag:'PCI/6.5.10',severity:'5',\
-//			   setvar:'tx.msg=%{rule.msg}',setvar:tx.anomaly_score=+%{tx.notice_anomaly_score},\
-//			   setvar:tx.protocol_violation_score=+%{tx.notice_anomaly_score},\
-//			   setvar:tx.%{rule.id}-PROTOCOL_VIOLATION/MISSING_HEADER-%{matched_var_name}=%{matched_var}"
+//		"id:'960008',phase:2,rev:'2.1.1',t:none,block,msg:'Request Missing a Host Header',\
+//		tag:'PROTOCOL_VIOLATION/MISSING_HEADER_HOST',tag:'WASCTC/WASC-21',\
+//		tag:'OWASP_TOP_10/A7',tag:'PCI/6.5.10',severity:'5',\
+//		setvar:'tx.msg=%{rule.msg}',setvar:tx.anomaly_score=+%{tx.notice_anomaly_score},\
+//		setvar:tx.protocol_violation_score=+%{tx.notice_anomaly_score},\
+//		setvar:tx.%{rule.id}-PROTOCOL_VIOLATION/MISSING_HEADER-%{matched_var_name}=%{matched_var}"
 //
 //	SecMarker END_HOST_CHECK
 //
@@ -105,7 +105,7 @@ func directiveSecMarker(options *DirectiveOptions) error {
 // Syntax: SecAction "action1,action2,action3,..."
 // ----
 // This directive is commonly used to set variables and initialize persistent collections using the
-// initcol action. The syntax of the parameter is identical to that of the third parameter of SecRule.
+// `initcol` action. The syntax of the parameter is identical to that of the third parameter of `SecRule`.
 //
 // Example:
 // ```apache
@@ -135,10 +135,10 @@ func directiveSecAction(options *DirectiveOptions) error {
 // ---
 // Every rule must provide one or more variables along with the operator that should
 // be used to inspect them. If no actions are provided, the default list will be used.
-// (There is always a default list, even if one was not explicitly set with SecDefaultAction.)
+// (There is always a default list, even if one was not explicitly set with `SecDefaultAction`.)
 // If there are actions specified in a rule, they will be merged with the default list
 // to form the final actions that will be used. (The actions in the rule will overwrite
-// those in the default list.) Refer to SecDefaultAction for more information.
+// those in the default list.) Refer to `SecDefaultAction` for more information.
 //
 // Example:
 // ```apache
@@ -176,7 +176,7 @@ func directiveSecRule(options *DirectiveOptions) error {
 // This directive is required if you plan to inspect HTML responses and implement
 // response blocking. Possible values are:
 // - On: buffer response bodies (but only if the response MIME type matches the list
-// configured with SecResponseBodyMimeType).
+// configured with `SecResponseBodyMimeType`).
 // - Off: do not buffer response bodies.
 func directiveSecResponseBodyAccess(options *DirectiveOptions) error {
 	b, err := parseBoolean(strings.ToLower(options.Opts))
@@ -282,7 +282,7 @@ func directiveSecResponseBodyMimeType(options *DirectiveOptions) error {
 }
 
 // Description: Controls what happens once a response body limit, configured with
-// SecResponseBodyLimit, is encountered.
+// `SecResponseBodyLimit`, is encountered.
 // Syntax: SecResponseBodyLimitAction Reject|ProcessPartial
 // ---
 // By default, Coraza will reject a response body that is longer than specified.
@@ -346,7 +346,7 @@ func directiveSecRequestBodyLimitAction(options *DirectiveOptions) error {
 // Default: 131072 (128 KB)
 // Syntax: SecRequestBodyInMemoryLimit [LIMIT_IN_BYTES]
 // ---
-// When a multipart/form-data request is being processed, once the in-memory limit is reached,
+// When a `multipart/form-data` request is being processed, once the in-memory limit is reached,
 // the request body will start to be streamed into a temporary file on disk.
 func directiveSecRequestBodyInMemoryLimit(options *DirectiveOptions) error {
 	var err error
@@ -417,7 +417,7 @@ func directiveSecHashEngine(options *DirectiveOptions) error {
 // Default: phase:2,log,auditlog,pass
 // Syntax: SecDefaultAction "phase:2,log,auditlog,deny,status:403,tag:'SLA 24/7'"
 // ---
-// Every rule following a previous SecDefaultAction directive in the same configuration
+// Every rule following a previous `SecDefaultAction` directive in the same configuration
 // context will inherit its settings unless more specific actions are used.
 //
 // Rulesets like OWASP Core Ruleset uses this to define operation modes:
@@ -427,7 +427,8 @@ func directiveSecHashEngine(options *DirectiveOptions) error {
 // - You can set the default disruptive action to deny and each risky rule will interrupt
 // the connection.
 //
-// Important: Every SecDefaultAction directive must specify a disruptive action and a processing phase and cannot contain metadata actions.
+// Important: Every `SecDefaultAction` directive must specify a disruptive action and a processing
+// phase and cannot contain metadata actions.
 func directiveSecDefaultAction(options *DirectiveOptions) error {
 	da, _ := options.Config.Get("rule_default_actions", []string{}).([]string)
 	da = append(da, options.Opts)
@@ -557,7 +558,7 @@ func directiveSecAuditLogDirMode(options *DirectiveOptions) error {
 }
 
 // Description: Configures the mode (permissions) of any files created for concurrent
-// audit logs using an octal mode (as used in chmod). See SecAuditLogDirMode for
+// audit logs using an octal mode (as used in `chmod`). See `SecAuditLogDirMode` for
 // controlling the mode of created audit log directories.
 // Syntax: SecAuditLogFileMode octal_mode|"default"
 // Default: 0600
@@ -595,13 +596,13 @@ func directiveSecAuditLogFileMode(options *DirectiveOptions) error {
 // ```
 // This example would log all 5xx and 4xx level status codes,
 // except for 404s. Although you could achieve the same effect with a rule in phase 5,
-// SecAuditLogRelevantStatus is sometimes better, because it continues to work even when SecRuleEngine
-// is disabled.
+// `SecAuditLogRelevantStatus` is sometimes better, because it continues to work even when
+// `SecRuleEngine` is disabled.
 //
-// Note: Must have SecAuditEngine set to RelevantOnly. Additionally, the auditlog action
-// is present by default in rules, this will make the engine bypass the SecAuditLogRelevantStatus
+// Note: Must have `SecAuditEngine` set to `RelevantOnly`. Additionally, the auditlog action
+// is present by default in rules, this will make the engine bypass the `SecAuditLogRelevantStatus`
 // and send rule matches to the audit log regardless of status. You must specify noauditlog in the
-// rules manually or set it in SecDefaultAction.
+// rules manually or set it in `SecDefaultAction`.
 func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 	var err error
 	options.WAF.AuditLogRelevantStatus, err = regexp.Compile(options.Opts)
@@ -628,21 +629,21 @@ func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 // - A: Audit log header (mandatory).
 // - B: Request headers.
 // - C: Request body (present only if the request body exists and Coraza is configured
-// to intercept it. This would require SecRequestBodyAccess to be set to on).
+// to intercept it. This would require `SecRequestBodyAccess` to be set to on).
 // - D: Reserved for intermediary response headers; not implemented yet.
 // - E: Intermediary response body (present only if Coraza is configured to intercept
 // response bodies, and if the audit log engine is configured to record it. Intercepting
-// response bodies requires SecResponseBodyAccess to be enabled). Intermediary response
+// response bodies requires `SecResponseBodyAccess` to be enabled). Intermediary response
 // body is the same as the actual response body unless Coraza intercepts the intermediary
 // response body, in which case the actual response body will contain the error message.
 // - F: Final response headers.
 // - G: Reserved for the actual response body; not implemented yet.
 // - H: Audit log trailer.
 // - I: This part is a replacement for part C. It will log the same data as C in all cases except when
-// multipart/form-data encoding in used. In this case, it will log a fake application/x-www-form-urlencoded
+// `multipart/form-data` encoding in used. In this case, it will log a fake `application/x-www-form-urlencoded`
 // body that contains the information about parameters but not about the files. This is handy if
 // you don’t want to have (often large) files stored in your audit logs.
-// - J: This part contains information about the files uploaded using multipart/form-data encoding.
+// - J: This part contains information about the files uploaded using `multipart/form-data` encoding.
 // - K: This part contains a full list of every rule that matched (one per line) in the order they were
 // matched. The rules are fully qualified and will thus show inherited actions and default operators.
 // - Z: Final boundary, signifies the end of the entry (mandatory).
@@ -655,20 +656,20 @@ func directiveSecAuditLogParts(options *DirectiveOptions) error {
 // Syntax: SecAuditEngine RelevantOnly
 // Default: Off
 // ---
-// The SecAuditEngine directive is used to configure the audit engine, which logs complete
+// The `SecAuditEngine` directive is used to configure the audit engine, which logs complete
 // transactions.
 //
 // The possible values for the audit log engine are as follows:
 //   - On: log all transactions
 //   - Off: do not log any transactions
 //   - RelevantOnly: only the log transactions that have triggered a warning or an error, or have
-//     a status code that is considered to be relevant (as determined by the SecAuditLogRelevantStatus
+//     a status code that is considered to be relevant (as determined by the `SecAuditLogRelevantStatus`
 //     directive)
 //
 // Note: If you need to change the audit log engine configuration on a per-transaction basis (e.g.,
-// in response to some transaction data), use the ctl action.
+// in response to some transaction data), use the `ctl` action.
 //
-// The following example demonstrates how SecAuditEngine is used:
+// The following example demonstrates how `SecAuditEngine` is used:
 // ```apache
 // SecAuditEngine RelevantOnly
 // SecAuditLog logs/audit/audit.log
@@ -720,7 +721,7 @@ func directiveSecUploadDir(options *DirectiveOptions) error {
 // buffering, excluding the size of any files being transported in the request.
 // This directive is useful to reduce susceptibility to DoS attacks when someone is
 // sending request bodies of very large sizes. Web applications that require file uploads
-// must configure SecRequestBodyLimit to a high value, but because large files are streamed
+// must configure `SecRequestBodyLimit` to a high value, but because large files are streamed
 // to disk, file uploads will not increase memory consumption. However, it’s still possible
 // for someone to take advantage of a large request body limit and send non-upload requests
 // with large body sizes. This directive eliminates that loophole.
