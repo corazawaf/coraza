@@ -23,6 +23,7 @@ type rwInterceptor struct {
 	statusCode    int
 	proto         string
 	hasStatusCode bool
+	wWroteHeader  bool
 }
 
 func (i *rwInterceptor) WriteHeader(statusCode int) {
@@ -40,33 +41,37 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 		}
 	}
 
-	i.hasStatusCode = true
 	i.statusCode = statusCode
 	if it := i.tx.ProcessResponseHeaders(statusCode, i.proto); it != nil {
 		i.statusCode = obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode)
 	}
+	i.hasStatusCode = true
 }
 
 func (i *rwInterceptor) Write(b []byte) (int, error) {
-	if !i.hasStatusCode {
-		i.WriteHeader(http.StatusOK)
-	}
 	if i.tx.IsInterrupted() {
 		// if there is an interruption it must be from phase 4 and hence
 		// we won't write anything to either the body or the buffer.
 		return 0, nil
 	}
 
-	if i.tx.IsResponseBodyAccessible() {
+	if !i.hasStatusCode {
+		i.WriteHeader(http.StatusOK)
+	}
+
+	if i.tx.IsResponseBodyAccessible() && i.tx.IsResponseBodyProcessable() {
 		// we only buffer the response body if we are going to access
 		// to it, otherwise we just send it to the response writer.
 		it, n, err := i.tx.WriteResponseBody(b)
 		if it != nil {
-			i.WriteHeader(http.StatusForbidden)
+			i.WriteHeader(it.Status)
 			return 0, nil
 		}
 		return n, err
 	}
+
+	i.w.WriteHeader(i.statusCode)
+	i.wWroteHeader = true
 	return i.w.Write(b)
 }
 
@@ -94,16 +99,21 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 		// as body hasn't being analized yet.
 		if tx.IsInterrupted() {
 			// phase 4 interruption stops execution
-			i.w.WriteHeader(i.statusCode)
+			if !i.wWroteHeader {
+				i.w.WriteHeader(i.statusCode)
+				i.wWroteHeader = true
+			}
 			return nil
 		}
 
 		if tx.IsResponseBodyAccessible() && tx.IsResponseBodyProcessable() {
 			if it, err := tx.ProcessResponseBody(); err != nil {
 				i.w.WriteHeader(http.StatusInternalServerError)
+				i.wWroteHeader = true
 				return err
 			} else if it != nil {
 				i.w.WriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode))
+				i.wWroteHeader = true
 				return nil
 			}
 
@@ -111,6 +121,7 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 			reader, err := tx.ResponseBodyReader()
 			if err != nil {
 				i.w.WriteHeader(http.StatusInternalServerError)
+				i.wWroteHeader = true
 				return fmt.Errorf("failed to release the response body reader: %v", err)
 			}
 
@@ -122,7 +133,8 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 				i.w.WriteHeader(http.StatusInternalServerError)
 				return fmt.Errorf("failed to copy the response body: %v", err)
 			}
-		} else {
+			i.wWroteHeader = true
+		} else if !i.wWroteHeader {
 			i.w.WriteHeader(i.statusCode)
 		}
 
