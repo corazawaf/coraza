@@ -27,6 +27,8 @@ type rwInterceptor struct {
 	wroteHeader        bool
 }
 
+// WriteHeader records the status code to be sent right before the moment
+// the body is being written.
 func (i *rwInterceptor) WriteHeader(statusCode int) {
 	if i.wroteHeader {
 		log.Println("http: superfluous response.WriteHeader call")
@@ -49,10 +51,12 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 	i.wroteHeader = true
 }
 
+// overrideWriteHeader overrides the recorded status code
 func (i *rwInterceptor) overrideWriteHeader(statusCode int) {
 	i.statusCode = statusCode
 }
 
+// flushWriteHeader sends the status code to the delegate writers
 func (i *rwInterceptor) flushWriteHeader() {
 	if !i.isWriteHeaderFlush {
 		i.w.WriteHeader(i.statusCode)
@@ -60,6 +64,11 @@ func (i *rwInterceptor) flushWriteHeader() {
 	}
 }
 
+// Write buffers the response body until the request body limit is reach or an
+// interruption is triggered, this buffer is later used to analyse the body in
+// the response processor.
+// If the body isn't accessible or the mime type isn't processable, the response
+// body is being writen to the delegate response writer directly.
 func (i *rwInterceptor) Write(b []byte) (int, error) {
 	if i.tx.IsInterrupted() {
 		// if there is an interruption it must be from at least phase 4 and hence
@@ -69,6 +78,7 @@ func (i *rwInterceptor) Write(b []byte) (int, error) {
 	}
 
 	if !i.wroteHeader {
+		// if no header has been wrote at this point we aim to return 200
 		i.WriteHeader(http.StatusOK)
 	}
 
@@ -84,6 +94,9 @@ func (i *rwInterceptor) Write(b []byte) (int, error) {
 		}
 		return n, err
 	}
+
+	// flush the status code before writing
+	i.flushWriteHeader()
 
 	// if response body isn't accesible or processable we write the response bytes
 	// directly to the caller.
@@ -143,7 +156,7 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 			if _, err := io.Copy(w, reader); err != nil {
 				return fmt.Errorf("failed to copy the response body: %v", err)
 			}
-		} else if !i.isWriteHeaderFlush {
+		} else {
 			i.flushWriteHeader()
 		}
 

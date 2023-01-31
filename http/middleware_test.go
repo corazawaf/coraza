@@ -12,7 +12,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -485,23 +484,80 @@ func TestObtainStatusCodeFromInterruptionOrDefault(t *testing.T) {
 }
 
 func TestHandlerAPI(t *testing.T) {
-	testCases := map[string]http.HandlerFunc{
-		"": func(w http.ResponseWriter, r *http.Request) {},
+	testCases := map[string]struct {
+		handler            http.HandlerFunc
+		expectedStatusCode int
+	}{
+		"empty handler": {
+			handler:            func(w http.ResponseWriter, r *http.Request) {},
+			expectedStatusCode: 200,
+		},
+		"read the request body": {
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				b, err := io.ReadAll(r.Body)
+				if err != nil {
+					panic(err)
+				}
+				if string(b) != "the payload" {
+					panic("unexpected payload")
+				}
+			},
+			expectedStatusCode: 200,
+		},
+		"status code but no body": {
+			handler:            func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(201) },
+			expectedStatusCode: 201,
+		},
+		"double status code but no body": {
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(201)
+				w.WriteHeader(202)
+			},
+			expectedStatusCode: 201,
+		},
+		"no status code and body": {
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				_, _ = w.Write([]byte{1, 2, 3})
+			},
+			expectedStatusCode: 200,
+		},
+		"status code and body": {
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(201)
+				_, _ = w.Write([]byte{1, 2, 3})
+			},
+			expectedStatusCode: 201,
+		},
+		"status code and multiwrite body": {
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(201)
+				_, _ = w.Write([]byte{1, 2, 3})
+				_, _ = w.Write([]byte{4, 5, 6})
+			},
+			expectedStatusCode: 201,
+		},
 	}
 
-	waf, _ := coraza.NewWAF(coraza.NewWAFConfig())
+	waf, _ := coraza.NewWAF(coraza.NewWAFConfig().WithRequestBodyLimit(3))
 	for name, tCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			srv := httptest.NewServer(WrapHandler(waf, t.Logf, tCase))
+			srv := httptest.NewServer(WrapHandler(waf, t.Logf, tCase.handler))
 			defer srv.Close()
 
-			res, err := http.Get(srv.URL)
+			res, err := http.Post(srv.URL, "application/json", bytes.NewBufferString("the payload"))
 			if err != nil {
-				t.Error(err)
+				t.Fatalf("unexpected error while performing the request: %s", err.Error())
 			}
 			defer res.Body.Close()
 
-			ioutil.ReadAll(res.Body)
+			if want, have := tCase.expectedStatusCode, res.StatusCode; want != have {
+				t.Fatalf("unexpected status code, want: %d, have: %d", want, have)
+			}
+
+			_, err = io.ReadAll(res.Body)
+			if err != nil {
+				t.Fatalf("unexpected error while reading the body: %s", err.Error())
+			}
 		})
 	}
 }
