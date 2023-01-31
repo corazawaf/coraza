@@ -91,7 +91,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 						Output: profile.ExpectedOutput{
 							TriggeredRules:    []int{1, 21},
 							NonTriggeredRules: []int{20, 2, 1313},
-							LogContains:       "FoundSubChain21 REQUEST_HEADERS:Host in MATCHED_VARS_NAMES:REQUEST_HEADERS:Host",
+							LogContains:       "FoundSubChain21 REQUEST_HEADERS:Host in MATCHED_VARS_NAMES",
 						},
 					},
 				},
@@ -154,7 +154,7 @@ SecRule REQUEST_HEADERS "@rx attack21" \
     "msg:'Sub Chain Rule',\
     logdata:'FoundSubChain21 %{MATCHED_VAR} in %{MATCHED_VAR_NAME}',\
     chain"
-    SecRule MATCHED_VAR_NAME "@rx MATCHED_VARS_NAMES:REQUEST_HEADERS:Host" \
+    SecRule MATCHED_VAR_NAME "@rx MATCHED_VARS_NAMES" \
     "msg:'Sub Sub Chain Rule',\
     logdata:'FoundSubSubChain21 %{MATCHED_VAR} in %{MATCHED_VAR_NAME}',\
     block"

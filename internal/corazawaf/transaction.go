@@ -483,8 +483,6 @@ func (tx *Transaction) matchVariable(match *corazarules.MatchData) {
 	matchedVars.Add(varName, match.Value_)
 	tx.variables.matchedVar.Set(match.Value_)
 
-	// We add the key in lowercase for ease of lookup in chains
-	// This is similar to args handling
 	matchedVarName.Set(varName)
 }
 
