@@ -44,9 +44,13 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 			tx.AddRequestHeader(k, v)
 		}
 	}
-	// Host will always be removed from req.Headers(), so we manually add it
+
+	// Host will always be removed from req.Headers() and promoted to the
+	// Request.Host field, so we manually add it
 	if req.Host != "" {
 		tx.AddRequestHeader("Host", req.Host)
+		// This connector relies on the host header (now host field) to populate ServerName
+		tx.SetServerName(req.Host)
 	}
 
 	in = tx.ProcessRequestHeaders()
