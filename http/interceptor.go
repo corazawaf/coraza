@@ -10,6 +10,7 @@ package http
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 
 	"github.com/corazawaf/coraza/v3/types"
@@ -18,20 +19,17 @@ import (
 // rwInterceptor intercepts the ResponseWriter, so it can track response size
 // and returned status code.
 type rwInterceptor struct {
-	w             http.ResponseWriter
-	tx            types.Transaction
-	statusCode    int
-	proto         string
-	hasStatusCode bool
-	wWroteHeader  bool
+	w                  http.ResponseWriter
+	tx                 types.Transaction
+	statusCode         int
+	proto              string
+	isWriteHeaderFlush bool
+	wroteHeader        bool
 }
 
 func (i *rwInterceptor) WriteHeader(statusCode int) {
-	if i.hasStatusCode {
-		if i.tx.IsInterrupted() {
-			// If we already set a status code, but phase4 raised an interruption, let's change it
-			i.statusCode = statusCode
-		}
+	if i.wroteHeader {
+		log.Println("http: superfluous response.WriteHeader call")
 		return
 	}
 
@@ -44,18 +42,33 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 	i.statusCode = statusCode
 	if it := i.tx.ProcessResponseHeaders(statusCode, i.proto); it != nil {
 		i.statusCode = obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode)
+		i.flushWriteHeader()
+		return
 	}
-	i.hasStatusCode = true
+
+	i.wroteHeader = true
+}
+
+func (i *rwInterceptor) overrideWriteHeader(statusCode int) {
+	i.statusCode = statusCode
+}
+
+func (i *rwInterceptor) flushWriteHeader() {
+	if !i.isWriteHeaderFlush {
+		i.w.WriteHeader(i.statusCode)
+		i.isWriteHeaderFlush = true
+	}
 }
 
 func (i *rwInterceptor) Write(b []byte) (int, error) {
 	if i.tx.IsInterrupted() {
-		// if there is an interruption it must be from phase 4 and hence
-		// we won't write anything to either the body or the buffer.
+		// if there is an interruption it must be from at least phase 4 and hence
+		// WriteHeader or Write should have been called and hence the status code
+		// has been flushed to the delegated response writer.
 		return 0, nil
 	}
 
-	if !i.hasStatusCode {
+	if !i.wroteHeader {
 		i.WriteHeader(http.StatusOK)
 	}
 
@@ -64,14 +77,16 @@ func (i *rwInterceptor) Write(b []byte) (int, error) {
 		// to it, otherwise we just send it to the response writer.
 		it, n, err := i.tx.WriteResponseBody(b)
 		if it != nil {
-			i.WriteHeader(it.Status)
+			i.overrideWriteHeader(it.Status)
+			// We only flush the status code after an interruption.
+			i.flushWriteHeader()
 			return 0, nil
 		}
 		return n, err
 	}
 
-	i.w.WriteHeader(i.statusCode)
-	i.wWroteHeader = true
+	// if response body isn't accesible or processable we write the response bytes
+	// directly to the caller.
 	return i.w.Write(b)
 }
 
@@ -92,50 +107,44 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 	func(types.Transaction, *http.Request) error,
 ) { // nolint:gocyclo
 
-	i := &rwInterceptor{w: w, tx: tx, proto: r.Proto}
+	i := &rwInterceptor{w: w, tx: tx, proto: r.Proto, statusCode: 200}
 
 	responseProcessor := func(tx types.Transaction, r *http.Request) error {
-		// We look for interruptions determined at phase 4 (response headers)
-		// as body hasn't being analized yet.
+		// We look for interruptions triggered at phase 4 (response headers)
+		// and during writing the response body. If so, response status code
+		// has been sent over the flush already.
 		if tx.IsInterrupted() {
-			// phase 4 interruption stops execution
-			if !i.wWroteHeader {
-				i.w.WriteHeader(i.statusCode)
-				i.wWroteHeader = true
-			}
 			return nil
 		}
 
 		if tx.IsResponseBodyAccessible() && tx.IsResponseBodyProcessable() {
 			if it, err := tx.ProcessResponseBody(); err != nil {
-				i.w.WriteHeader(http.StatusInternalServerError)
-				i.wWroteHeader = true
+				i.overrideWriteHeader(http.StatusInternalServerError)
+				i.flushWriteHeader()
 				return err
 			} else if it != nil {
-				i.w.WriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode))
-				i.wWroteHeader = true
+				i.overrideWriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode))
+				i.flushWriteHeader()
 				return nil
 			}
 
 			// we release the buffer
 			reader, err := tx.ResponseBodyReader()
 			if err != nil {
-				i.w.WriteHeader(http.StatusInternalServerError)
-				i.wWroteHeader = true
+				i.overrideWriteHeader(http.StatusInternalServerError)
+				i.flushWriteHeader()
 				return fmt.Errorf("failed to release the response body reader: %v", err)
 			}
 
 			// this is the last opportunity we have to report the resolved status code
 			// as next step is write into the response writer (triggering a 200 in the
 			// response status code.)
-			i.w.WriteHeader(i.statusCode)
+			i.flushWriteHeader()
 			if _, err := io.Copy(w, reader); err != nil {
-				i.w.WriteHeader(http.StatusInternalServerError)
 				return fmt.Errorf("failed to copy the response body: %v", err)
 			}
-			i.wWroteHeader = true
-		} else if !i.wWroteHeader {
-			i.w.WriteHeader(i.statusCode)
+		} else if !i.isWriteHeaderFlush {
+			i.flushWriteHeader()
 		}
 
 		return nil
