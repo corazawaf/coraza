@@ -24,7 +24,7 @@ func TestCollectionMap(t *testing.T) {
 	c := NewMap(variables.ArgsPost)
 	c.SetIndex("key", 1, "value")
 	c.Set("key2", []string{"value2"})
-	if c.Get("key")[1] != "value" {
+	if c.Get("key")[0] != "value" {
 		t.Error("Error setting index")
 	}
 	if len(c.FindAll()) == 0 {
@@ -33,7 +33,7 @@ func TestCollectionMap(t *testing.T) {
 	if len(c.FindString("a")) > 0 {
 		t.Error("Error should not find string")
 	}
-	if l := len(c.FindRegex(regexp.MustCompile("k.*"))); l != 3 {
+	if l := len(c.FindRegex(regexp.MustCompile("k.*"))); l != 2 {
 		t.Errorf("Error should find regex, got %d", l)
 	}
 }

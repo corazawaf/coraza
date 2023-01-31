@@ -5,6 +5,7 @@ package collection
 
 import (
 	"regexp"
+	"strings"
 
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/types"
@@ -15,23 +16,65 @@ import (
 // for transactions, this data structured is designed
 // to store slices of data for keys
 // Important: CollectionMaps ARE NOT concurrent safe
-type Map struct {
+type Map interface {
+	// Get returns a slice of strings for a key
+	Get(key string) []string
+
+	// FindRegex returns a slice of MatchData for the regex
+	FindRegex(key *regexp.Regexp) []types.MatchData
+
+	// FindString returns a slice of MatchData for the string
+	FindString(key string) []types.MatchData
+
+	// FindAll returns all the contained elements
+	FindAll() []types.MatchData
+
+	// Add a value to some key
+	Add(key string, value string)
+
+	// Set will replace the key's value with this slice
+	Set(key string, values []string)
+
+	// SetIndex will place the value under the index
+	// If the index is higher than the current size of the CollectionMap
+	// it will be appended
+	SetIndex(key string, index int, value string)
+
+	// Remove deletes the key from the CollectionMap
+	Remove(key string)
+
+	// Name returns the name for the current CollectionMap
+	Name() string
+
+	// Reset the current CollectionMap
+	Reset()
+
+	// Data returns all the data in the CollectionMap
+	Data() map[string][]string
+}
+
+// Map are used to store VARIABLE data
+// for transactions, this data structured is designed
+// to store slices of data for keys
+// Important: CollectionMaps ARE NOT concurrent safe
+type defaultMap struct {
 	data     map[string][]types.AnchoredVar
 	name     string
 	variable variables.RuleVariable
 }
 
 // Get returns a slice of strings for a key
-func (c *Map) Get(key string) []string {
+func (c *defaultMap) Get(key string) []string {
+	keyL := strings.ToLower(key)
 	var values []string
-	for _, a := range c.data[key] {
+	for _, a := range c.data[keyL] {
 		values = append(values, a.Value)
 	}
 	return values
 }
 
 // FindRegex returns a slice of MatchData for the regex
-func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
+func (c *defaultMap) FindRegex(key *regexp.Regexp) []types.MatchData {
 	var result []types.MatchData
 	for k, data := range c.data {
 		if key.MatchString(k) {
@@ -49,13 +92,14 @@ func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
 }
 
 // FindString returns a slice of MatchData for the string
-func (c *Map) FindString(key string) []types.MatchData {
+func (c *defaultMap) FindString(key string) []types.MatchData {
 	var result []types.MatchData
 	if key == "" {
 		return c.FindAll()
 	}
+	keyL := strings.ToLower(key)
 	// if key is not empty
-	if e, ok := c.data[key]; ok {
+	if e, ok := c.data[keyL]; ok {
 		for _, aVar := range e {
 			result = append(result, &corazarules.MatchData{
 				VariableName_: c.name,
@@ -69,7 +113,7 @@ func (c *Map) FindString(key string) []types.MatchData {
 }
 
 // FindAll returns all the contained elements
-func (c *Map) FindAll() []types.MatchData {
+func (c *defaultMap) FindAll() []types.MatchData {
 	var result []types.MatchData
 	for _, data := range c.data {
 		for _, d := range data {
@@ -84,114 +128,61 @@ func (c *Map) FindAll() []types.MatchData {
 	return result
 }
 
-func (c *Map) keysRx(rx *regexp.Regexp) []string {
-	var keys []string
-	for k := range c.data {
-		if rx.MatchString(k) {
-			keys = append(keys, k)
-		}
-	}
-	return keys
-}
-
-func (c *Map) keys() []string {
-	var keys []string
-	for k := range c.data {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
-// AddCS a value to some key with case sensitive vKey
-func (c *Map) AddCS(key string, vKey string, vVal string) {
-	aVal := types.AnchoredVar{Name: vKey, Value: vVal}
-	c.data[key] = append(c.data[key], aVal)
-}
-
 // Add a value to some key
-func (c *Map) Add(key string, value string) {
-	c.AddCS(key, key, value)
-}
-
-// AddUniqueCS will add a value to a key if it is not already there
-// with case sensitive vKey
-func (c *Map) AddUniqueCS(key string, vKey string, vVal string) {
-	if c.data[key] == nil {
-		c.AddCS(key, vKey, vVal)
-		return
-	}
-
-	for _, a := range c.data[key] {
-		if a.Value == vVal {
-			return
-		}
-	}
-	c.AddCS(key, vKey, vVal)
-}
-
-// AddUnique will add a value to a key if it is not already there
-func (c *Map) AddUnique(key string, value string) {
-	c.AddUniqueCS(key, key, value)
-}
-
-// SetCS will replace the key's value with this slice
-// internally converts [] string to []types.AnchoredVar
-// with case sensitive vKey
-func (c *Map) SetCS(key string, vKey string, values []string) {
-	c.data[key] = make([]types.AnchoredVar, 0, len(values))
-	for _, v := range values {
-		c.data[key] = append(c.data[key], types.AnchoredVar{Name: vKey, Value: v})
-	}
+func (c *defaultMap) Add(key string, value string) {
+	keyL := strings.ToLower(key)
+	aVal := types.AnchoredVar{Name: key, Value: value}
+	c.data[keyL] = append(c.data[keyL], aVal)
 }
 
 // Set will replace the key's value with this slice
 // internally converts [] string to []types.AnchoredVar
-func (c *Map) Set(key string, values []string) {
-	c.SetCS(key, key, values)
-}
-
-// SetIndexCS will place the value under the index
-// If the index is higher than the current size of the CollectionMap
-// it will be appended
-// with case sensitive vKey
-func (c *Map) SetIndexCS(key string, index int, vKey string, value string) {
-	if c.data[key] == nil {
-		c.data[key] = []types.AnchoredVar{{Name: vKey, Value: value}}
+func (c *defaultMap) Set(key string, values []string) {
+	keyL := strings.ToLower(key)
+	c.data[keyL] = make([]types.AnchoredVar, 0, len(values))
+	for _, v := range values {
+		c.data[keyL] = append(c.data[keyL], types.AnchoredVar{Name: key, Value: v})
 	}
-	vVal := types.AnchoredVar{Name: vKey, Value: value}
-	if len(c.data[key]) <= index {
-		c.data[key] = append(c.data[key], vVal)
-		return
-	}
-	c.data[key][index] = vVal
 }
 
 // SetIndex will place the value under the index
 // If the index is higher than the current size of the CollectionMap
 // it will be appended
-func (c *Map) SetIndex(key string, index int, value string) {
-	c.SetIndexCS(key, index, key, value)
+func (c *defaultMap) SetIndex(key string, index int, value string) {
+	keyL := strings.ToLower(key)
+	values := c.data[keyL]
+	av := types.AnchoredVar{Name: key, Value: value}
+
+	switch {
+	case len(values) == 0:
+		c.data[keyL] = []types.AnchoredVar{av}
+	case len(values) <= index:
+		c.data[keyL] = append(c.data[keyL], av)
+	default:
+		c.data[keyL][index] = av
+	}
 }
 
 // Remove deletes the key from the CollectionMap
-func (c *Map) Remove(key string) {
-	delete(c.data, key)
+func (c *defaultMap) Remove(key string) {
+	keyL := strings.ToLower(key)
+	delete(c.data, keyL)
 }
 
 // Name returns the name for the current CollectionMap
-func (c *Map) Name() string {
+func (c *defaultMap) Name() string {
 	return c.name
 }
 
 // Reset the current CollectionMap
-func (c *Map) Reset() {
+func (c *defaultMap) Reset() {
 	for k := range c.data {
 		delete(c.data, k)
 	}
 }
 
 // Data returns all the data in the CollectionMap
-func (c *Map) Data() map[string][]string {
+func (c *defaultMap) Data() map[string][]string {
 	result := map[string][]string{}
 	for k, v := range c.data {
 		result[k] = make([]string, 0, len(v))
@@ -202,11 +193,11 @@ func (c *Map) Data() map[string][]string {
 	return result
 }
 
-var _ Collection = &Map{}
+var _ Collection = &defaultMap{}
 
 // NewMap returns a collection of key->[]values
-func NewMap(variable variables.RuleVariable) *Map {
-	return &Map{
+func NewMap(variable variables.RuleVariable) Map {
+	return &defaultMap{
 		name:     variable.Name(),
 		variable: variable,
 		data:     map[string][]types.AnchoredVar{},
