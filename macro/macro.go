@@ -29,7 +29,7 @@ func NewMacro(data string) (Macro, error) {
 
 type macroToken struct {
 	text     string
-	variable *variables.RuleVariable
+	variable variables.RuleVariable
 	key      string
 }
 
@@ -59,10 +59,10 @@ func (m *macro) Expand(tx rules.TransactionState) string {
 }
 
 func expandToken(tx rules.TransactionState, token macroToken) string {
-	if token.variable == nil {
+	if token.variable == variables.Unknown {
 		return token.text
 	}
-	switch col := tx.Collection(*token.variable).(type) {
+	switch col := tx.Collection(token.variable).(type) {
 	case *collection.Map:
 		if c := col.Get(token.key); len(c) > 0 {
 			return c[0]
@@ -100,7 +100,7 @@ func (m *macro) compile(input string) error {
 				// we add the text token
 				m.tokens = append(m.tokens, macroToken{
 					text:     currentToken.String(),
-					variable: nil,
+					variable: variables.Unknown,
 					key:      "",
 				})
 			}
@@ -121,7 +121,7 @@ func (m *macro) compile(input string) error {
 				// we add the variable token
 				m.tokens = append(m.tokens, macroToken{
 					text:     currentToken.String(),
-					variable: &v,
+					variable: v,
 					key:      strings.ToLower(key),
 				})
 				currentToken.Reset()
@@ -137,7 +137,7 @@ func (m *macro) compile(input string) error {
 	if currentToken.Len() > 0 {
 		m.tokens = append(m.tokens, macroToken{
 			text:     currentToken.String(),
-			variable: nil,
+			variable: variables.Unknown,
 			key:      "",
 		})
 	}
