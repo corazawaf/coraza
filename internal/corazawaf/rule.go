@@ -143,9 +143,6 @@ type Rule struct {
 	// If true, the transformations will be multi matched
 	MultiMatch bool
 
-	// Used for error logging
-	Disruptive bool
-
 	HasChain bool
 
 	// inferredPhases is the inferred phases the rule is relevant for
@@ -164,8 +161,8 @@ func (r *Rule) Status() int {
 // Evaluate will evaluate the current rule for the indicated transaction
 // If the operator matches, actions will be evaluated, and it will return
 // the matched variables, keys and values (MatchData)
-func (r *Rule) Evaluate(phase types.RulePhase, tx rules.TransactionState, cache map[transformationKey]*transformationValue) []types.MatchData {
-	return r.doEvaluate(phase, tx.(*Transaction), cache)
+func (r *Rule) Evaluate(phase types.RulePhase, tx rules.TransactionState, cache map[transformationKey]*transformationValue) {
+	r.doEvaluate(phase, tx.(*Transaction), cache)
 }
 
 func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[transformationKey]*transformationValue) []types.MatchData {
@@ -279,7 +276,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 		// we only run the chains for the parent rule
 		for nr := r.Chain; nr != nil; {
 			tx.WAF.Logger.Debug("[%s] [%d] Evaluating rule chain for %d", tx.id, rid, r.ID_)
-			matchedChainValues := nr.Evaluate(phase, tx, cache)
+			matchedChainValues := nr.doEvaluate(phase, tx, cache)
 			if len(matchedChainValues) == 0 {
 				return matchedChainValues
 			}
