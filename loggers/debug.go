@@ -70,7 +70,7 @@ func (level LogLevel) String() string {
 	return "UNKNOWN"
 }
 
-// Invalid returns returns true if the log level is invalid
+// Invalid returns true if the log level is invalid
 func (level LogLevel) Invalid() bool {
 	return level < LogLevelNoLog || level > maxLogLevel
 }
