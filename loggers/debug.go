@@ -31,8 +31,10 @@ type LogLevel int
 
 const (
 	// LogLevelUnknown is a default value for unknown log level
-	LogLevelUnknown LogLevel = iota
-	// LogLevelError is the lowest level of logging, only errors are logged
+	LogLevelUnknown LogLevel = iota - 1
+	// LogLevelNoLog is the lowest level of logging, no logs are generated
+	LogLevelNoLog
+	// LogLevelError is the level of logging only for errors
 	LogLevelError
 	// LogLevelWarn is the level of logging for warnings
 	LogLevelWarn
@@ -40,28 +42,35 @@ const (
 	LogLevelInfo
 	// LogLevelDebug is the level of logging for debug messages
 	LogLevelDebug
+	// Maintaining ModSec compatibility. levels 4-5 will be Debug level
+	_
 	// LogLevelTrace is the highest level of logging
 	LogLevelTrace
 )
 
+// Maintaining ModSec compatibility. levels 6-9 will be Trace level.
+const maxLogLevel = 9
+
 // String returns the string representation of the log level
 func (level LogLevel) String() string {
-	switch level {
-	case LogLevelError:
+	switch {
+	case level == LogLevelNoLog:
+		return "NOLOG"
+	case level == LogLevelError:
 		return "ERROR"
-	case LogLevelWarn:
+	case level == LogLevelWarn:
 		return "WARN"
-	case LogLevelInfo:
+	case level == LogLevelInfo:
 		return "INFO"
-	case LogLevelDebug:
+	case level >= LogLevelDebug && level < LogLevelTrace:
 		return "DEBUG"
-	case LogLevelTrace:
+	case level >= LogLevelTrace && level <= maxLogLevel:
 		return "TRACE"
 	}
 	return "UNKNOWN"
 }
 
-// Invalid returns true if the log level is invalid
+// Invalid returns returns true if the log level is invalid
 func (level LogLevel) Invalid() bool {
-	return level < LogLevelError || level > LogLevelTrace
+	return level < LogLevelNoLog || level > maxLogLevel
 }
