@@ -65,6 +65,9 @@ type defaultMap struct {
 
 // Get returns a slice of strings for a key
 func (c *defaultMap) Get(key string) []string {
+	if len(c.data) == 0 {
+		return nil
+	}
 	keyL := strings.ToLower(key)
 	var values []string
 	for _, a := range c.data[keyL] {
@@ -96,6 +99,9 @@ func (c *defaultMap) FindString(key string) []types.MatchData {
 	var result []types.MatchData
 	if key == "" {
 		return c.FindAll()
+	}
+	if len(c.data) == 0 {
+		return nil
 	}
 	keyL := strings.ToLower(key)
 	// if key is not empty
@@ -165,6 +171,9 @@ func (c *defaultMap) SetIndex(key string, index int, value string) {
 
 // Remove deletes the key from the CollectionMap
 func (c *defaultMap) Remove(key string) {
+	if len(c.data) == 0 {
+		return
+	}
 	keyL := strings.ToLower(key)
 	delete(c.data, keyL)
 }
