@@ -12,28 +12,28 @@ import (
 func TestLoggerLogLevels(t *testing.T) {
 	waf := NewWAF()
 	testCases := map[string]struct {
-		logFunction                 func(message string, args ...interface{})
-		expectedLowestPrintedLevels int
+		logFunction                func(message string, args ...interface{})
+		expectedLowestPrintedLevel int
 	}{
 		"Trace": {
-			logFunction:                 waf.Logger.Trace,
-			expectedLowestPrintedLevels: 6,
+			logFunction:                waf.Logger.Trace,
+			expectedLowestPrintedLevel: 6,
 		},
 		"Debug": {
-			logFunction:                 waf.Logger.Debug,
-			expectedLowestPrintedLevels: 4,
+			logFunction:                waf.Logger.Debug,
+			expectedLowestPrintedLevel: 4,
 		},
 		"Info": {
-			logFunction:                 waf.Logger.Info,
-			expectedLowestPrintedLevels: 3,
+			logFunction:                waf.Logger.Info,
+			expectedLowestPrintedLevel: 3,
 		},
 		"Warn": {
-			logFunction:                 waf.Logger.Warn,
-			expectedLowestPrintedLevels: 2,
+			logFunction:                waf.Logger.Warn,
+			expectedLowestPrintedLevel: 2,
 		},
 		"Error": {
-			logFunction:                 waf.Logger.Error,
-			expectedLowestPrintedLevels: 1,
+			logFunction:                waf.Logger.Error,
+			expectedLowestPrintedLevel: 1,
 		},
 	}
 
@@ -45,10 +45,10 @@ func TestLoggerLogLevels(t *testing.T) {
 				waf.Logger.SetLevel(loggers.LogLevel(settedLevel))
 				tCase.logFunction("this is a log")
 
-				if settedLevel >= tCase.expectedLowestPrintedLevels && len(l.entries) != 1 {
+				if settedLevel >= tCase.expectedLowestPrintedLevel && len(l.entries) != 1 {
 					t.Fatalf("Missing expected log. Level: %d, Function: %s", settedLevel, name)
 				}
-				if settedLevel < tCase.expectedLowestPrintedLevels && len(l.entries) == 1 {
+				if settedLevel < tCase.expectedLowestPrintedLevel && len(l.entries) == 1 {
 					t.Fatalf("Unexpected log. Level: %d, Function: %s", settedLevel, name)
 				}
 			}
