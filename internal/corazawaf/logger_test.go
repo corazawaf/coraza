@@ -17,7 +17,7 @@ func TestLoggerLogLevels(t *testing.T) {
 	}{
 		"Trace": {
 			logFunction:                waf.Logger.Trace,
-			expectedLowestPrintedLevel: 6,
+			expectedLowestPrintedLevel: 9,
 		},
 		"Debug": {
 			logFunction:                waf.Logger.Debug,

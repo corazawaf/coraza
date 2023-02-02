@@ -42,14 +42,11 @@ const (
 	LogLevelInfo
 	// LogLevelDebug is the level of logging for debug messages
 	LogLevelDebug
-	// Maintaining ModSec compatibility. levels 4-5 will be Debug level
-	_
+	// ModSecurity compatibility, levels 4-8 will be Debug level
+	_ = iota + 2
 	// LogLevelTrace is the highest level of logging
 	LogLevelTrace
 )
-
-// Maintaining ModSec compatibility. levels 6-9 will be Trace level.
-const maxLogLevel = 9
 
 // String returns the string representation of the log level
 func (level LogLevel) String() string {
@@ -64,7 +61,7 @@ func (level LogLevel) String() string {
 		return "INFO"
 	case level >= LogLevelDebug && level < LogLevelTrace:
 		return "DEBUG"
-	case level >= LogLevelTrace && level <= maxLogLevel:
+	case level == LogLevelTrace:
 		return "TRACE"
 	}
 	return "UNKNOWN"
@@ -72,5 +69,5 @@ func (level LogLevel) String() string {
 
 // Invalid returns true if the log level is invalid
 func (level LogLevel) Invalid() bool {
-	return level < LogLevelNoLog || level > maxLogLevel
+	return level < LogLevelNoLog || level > LogLevelTrace
 }
