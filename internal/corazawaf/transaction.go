@@ -340,14 +340,15 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 	keyl := strings.ToLower(key)
 	tx.variables.requestHeaders.Add(key, value)
 
-	if keyl == "content-type" {
+	switch keyl {
+	case "content-type":
 		val := strings.ToLower(value)
 		if val == "application/x-www-form-urlencoded" {
 			tx.variables.reqbodyProcessor.Set("URLENCODED")
 		} else if strings.HasPrefix(val, "multipart/form-data") {
 			tx.variables.reqbodyProcessor.Set("MULTIPART")
 		}
-	} else if keyl == "cookie" {
+	case "cookie":
 		// Cookies use the same syntax as GET params but with semicolon (;) separator
 		values := urlutil.ParseQuery(value, ';')
 		for k, vr := range values {
@@ -619,7 +620,6 @@ func (tx *Transaction) RemoveRuleByID(id int) {
 // ProcessConnection should be called at very beginning of a request process, it is
 // expected to be executed prior to the virtual host resolution, when the
 // connection arrives on the server.
-// Important: Remember to check for a possible intervention.
 func (tx *Transaction) ProcessConnection(client string, cPort int, server string, sPort int) {
 	p := strconv.Itoa(cPort)
 	p2 := strconv.Itoa(sPort)
@@ -727,6 +727,17 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 	tx.variables.requestFilename.Set(path)
 
 	tx.variables.queryString.Set(query)
+}
+
+// SetServerName allows to set server name details.
+//
+// The API consumer is in charge of retrieving the value (e.g. from the host header).
+// It is expected to be executed before calling ProcessRequestHeaders.
+func (tx *Transaction) SetServerName(serverName string) {
+	if tx.LastPhase >= types.PhaseRequestHeaders {
+		tx.WAF.Logger.Warn("SetServerName has been called after ProcessRequestHeaders")
+	}
+	tx.variables.serverName.Set(serverName)
 }
 
 // ProcessRequestHeaders Performs the analysis on the request readers.

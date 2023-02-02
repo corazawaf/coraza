@@ -955,6 +955,28 @@ func TestTxProcessConnection(t *testing.T) {
 	}
 }
 
+func TestTxSetServerName(t *testing.T) {
+
+	l := &inspectableLogger{}
+	waf := NewWAF()
+	waf.Logger.SetOutput(l)
+	waf.Logger.SetLevel(loggers.LogLevelWarn)
+	tx := waf.NewTransaction()
+	tx.LastPhase = types.PhaseRequestHeaders
+	tx.SetServerName("coraza.io")
+	if tx.variables.serverName.String() != "coraza.io" {
+		t.Error("failed to set server name")
+	}
+	if want, have := 1, len(l.entries); want != have {
+		t.Fatalf("unexpected number of log entries, want %d, have %d", want, have)
+	}
+
+	if want, have := "SetServerName has been called after ProcessRequestHeaders", l.entries[0]; !strings.Contains(have, want) {
+		t.Fatalf("unexpected message, want %q, have %q", want, have)
+	}
+
+}
+
 func TestTxAddArgument(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
