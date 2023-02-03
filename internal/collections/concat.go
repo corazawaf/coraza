@@ -4,11 +4,12 @@
 package collections
 
 import (
+	"regexp"
+	"strings"
+
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
-	"regexp"
-	"strings"
 )
 
 // ConcatCollection is a collection view over multiple sollections.
