@@ -732,15 +732,24 @@ func TestHeaderSetters(t *testing.T) {
 	if tx.variables.requestHeaders.Get("cookie")[0] != "abc=def;hij=klm" {
 		t.Error("failed to set request header")
 	}
-	if !utils.InSlice("cookie", tx.variables.requestHeadersNames.Get("cookie")) {
-		t.Error("failed to set header name", tx.variables.requestHeadersNames.Get("cookie"))
+	if !utils.InSlice("cookie", collectionValues(t, tx.variables.requestHeadersNames)) {
+		t.Error("failed to set header name", collectionValues(t, tx.variables.requestHeadersNames))
 	}
-	if !utils.InSlice("abc", tx.variables.requestCookiesNames.Get("abc")) {
+	if !utils.InSlice("abc", collectionValues(t, tx.variables.requestCookiesNames)) {
 		t.Error("failed to set cookie name")
 	}
 	if err := tx.Close(); err != nil {
 		t.Error(err)
 	}
+}
+
+func collectionValues(t *testing.T, col collection.Collection) []string {
+	t.Helper()
+	var values []string
+	for _, v := range col.FindAll() {
+		values = append(values, v.Value())
+	}
+	return values
 }
 
 func TestRequestBodyProcessingAlgorithm(t *testing.T) {

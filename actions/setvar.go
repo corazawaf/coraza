@@ -68,7 +68,7 @@ func (a *setvarFn) Type() rules.ActionType {
 }
 
 func (a *setvarFn) evaluateTxCollection(r rules.RuleMetadata, tx rules.TransactionState, key string, value string) {
-	col := (tx.Collection(a.collection)).(*collection.Map)
+	col := (tx.Collection(a.collection)).(collection.Map)
 	if col == nil {
 		// fmt.Println("Invalid Collection " + a.Collection) LOG error?
 		return

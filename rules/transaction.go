@@ -50,7 +50,7 @@ type TransactionVariables interface {
 	UrlencodedError() *collection.Simple
 	ResponseContentType() *collection.Simple
 	UniqueID() *collection.Simple
-	ArgsCombinedSize() *collection.SizeProxy
+	ArgsCombinedSize() collection.Collection
 	AuthType() *collection.Simple
 	FilesCombinedSize() *collection.Simple
 	FullRequest() *collection.Simple
@@ -64,7 +64,7 @@ type TransactionVariables interface {
 	MultipartDataAfter() *collection.Simple
 	MultipartDataBefore() *collection.Simple
 	MultipartFileLimitExceeded() *collection.Simple
-	MultipartPartHeaders() *collection.Map
+	MultipartPartHeaders() collection.Map
 	MultipartHeaderFolding() *collection.Simple
 	MultipartInvalidHeaderFolding() *collection.Simple
 	MultipartInvalidPart() *collection.Simple
@@ -104,40 +104,35 @@ type TransactionVariables interface {
 	HighestSeverity() *collection.Simple
 	StatusLine() *collection.Simple
 	InboundErrorData() *collection.Simple
-	// Custom
-	Env() *collection.Map
-	TX() *collection.Map
-	Rule() *collection.Map
+	Env() collection.Map
+	TX() collection.Map
+	Rule() collection.Map
 	Duration() *collection.Simple
-	// Proxy Variables
-	Args() *collection.Proxy
-	// Maps Variables
-	ArgsGet() *collection.Map
-	ArgsPost() *collection.Map
-	ArgsPath() *collection.Map
-	FilesTmpNames() *collection.Map
-	Geo() *collection.Map
-	Files() *collection.Map
-	RequestCookies() *collection.Map
-	RequestHeaders() *collection.Map
-	ResponseHeaders() *collection.Map
-	MultipartName() *collection.Map
-	MatchedVarsNames() *collection.Map
-	MultipartFilename() *collection.Map
-	MatchedVars() *collection.Map
-	FilesSizes() *collection.Map
-	FilesNames() *collection.Map
-	FilesTmpContent() *collection.Map
-	ResponseHeadersNames() *collection.Map
-	RequestHeadersNames() *collection.Map
-	RequestCookiesNames() *collection.Map
-	XML() *collection.Map
-	RequestXML() *collection.Map
-	ResponseXML() *collection.Map
-	// Persistent variables
-	IP() *collection.Map
-	// Translation Proxy Variables
-	ArgsNames() *collection.TranslationProxy
-	ArgsGetNames() *collection.TranslationProxy
-	ArgsPostNames() *collection.TranslationProxy
+	Args() collection.Collection
+	ArgsGet() collection.Map
+	ArgsPost() collection.Map
+	ArgsPath() collection.Map
+	FilesTmpNames() collection.Map
+	Geo() collection.Map
+	Files() collection.Map
+	RequestCookies() collection.Map
+	RequestHeaders() collection.Map
+	ResponseHeaders() collection.Map
+	MultipartName() collection.Map
+	MatchedVarsNames() collection.Collection
+	MultipartFilename() collection.Map
+	MatchedVars() collection.Map
+	FilesSizes() collection.Map
+	FilesNames() collection.Map
+	FilesTmpContent() collection.Map
+	ResponseHeadersNames() collection.Collection
+	RequestHeadersNames() collection.Collection
+	RequestCookiesNames() collection.Collection
+	XML() collection.Map
+	RequestXML() collection.Map
+	ResponseXML() collection.Map
+	IP() collection.Map
+	ArgsNames() collection.Collection
+	ArgsGetNames() collection.Collection
+	ArgsPostNames() collection.Collection
 }
