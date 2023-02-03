@@ -18,7 +18,7 @@ type Single struct {
 
 var _ collection.Single = &Single{}
 
-// NewSingle creates a new CollectionSimple
+// NewSingle creates a new Single.
 func NewSingle(variable variables.RuleVariable) *Single {
 	return &Single{
 		variable: variable,
