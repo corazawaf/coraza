@@ -759,8 +759,8 @@ func directiveSecDebugLog(options *DirectiveOptions) error {
 // - 1:   Error
 // - 2:   Warn
 // - 3:   Info
-// - 4-5: Debug
-// - 6-9: Trace (most verbose)
+// - 4-8: Debug
+// - 9:   Trace (most verbose)
 //
 // Levels outside the 0-9 range will default to level 3 (Info)
 func directiveSecDebugLogLevel(options *DirectiveOptions) error {
