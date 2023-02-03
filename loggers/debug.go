@@ -9,12 +9,12 @@ import (
 
 // DebugLogger is used to log SecDebugLog messages
 type DebugLogger interface {
-	// Info logs an info message
-	Info(message string, args ...interface{})
-	// Warn logs a warning message
-	Warn(message string, args ...interface{})
 	// Error logs an error message
 	Error(message string, args ...interface{})
+	// Warn logs a warning message
+	Warn(message string, args ...interface{})
+	// Info logs an info message
+	Info(message string, args ...interface{})
 	// Debug logs a debug message
 	Debug(message string, args ...interface{})
 	// Trace logs a trace message
@@ -31,31 +31,37 @@ type LogLevel int
 
 const (
 	// LogLevelUnknown is a default value for unknown log level
-	LogLevelUnknown LogLevel = iota
-	// LogLevelInfo is the lowest level of logging
-	LogLevelInfo
+	LogLevelUnknown LogLevel = iota - 1
+	// LogLevelNoLog is the lowest level of logging, no logs are generated
+	LogLevelNoLog
+	// LogLevelError is the level of logging only for errors
+	LogLevelError
 	// LogLevelWarn is the level of logging for warnings
 	LogLevelWarn
-	// LogLevelError is the level of logging for errors
-	LogLevelError
+	// LogLevelInfo is the lowest of logging for informational messages
+	LogLevelInfo
 	// LogLevelDebug is the level of logging for debug messages
 	LogLevelDebug
+	// ModSecurity compatibility, levels 4-8 will be Debug level
+	_ = iota + 2
 	// LogLevelTrace is the highest level of logging
 	LogLevelTrace
 )
 
 // String returns the string representation of the log level
 func (level LogLevel) String() string {
-	switch level {
-	case LogLevelInfo:
-		return "INFO"
-	case LogLevelWarn:
-		return "WARN"
-	case LogLevelError:
+	switch {
+	case level == LogLevelNoLog:
+		return "NOLOG"
+	case level == LogLevelError:
 		return "ERROR"
-	case LogLevelDebug:
+	case level == LogLevelWarn:
+		return "WARN"
+	case level == LogLevelInfo:
+		return "INFO"
+	case level >= LogLevelDebug && level < LogLevelTrace:
 		return "DEBUG"
-	case LogLevelTrace:
+	case level == LogLevelTrace:
 		return "TRACE"
 	}
 	return "UNKNOWN"
@@ -63,5 +69,5 @@ func (level LogLevel) String() string {
 
 // Invalid returns true if the log level is invalid
 func (level LogLevel) Invalid() bool {
-	return level < LogLevelInfo || level > LogLevelTrace
+	return level < LogLevelNoLog || level > LogLevelTrace
 }
