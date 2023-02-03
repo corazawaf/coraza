@@ -168,7 +168,7 @@ func (a *ctlFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
 	case ctlHashEnforcement:
 		// Not supported yet
 	case ctlDebugLogLevel:
-		// lvl, _ := strconv.Atoi(a.Value)
+		// lvl, _ := strconv.Atoi(a.value)
 		// TODO
 		// We cannot update the log level, it would affect the whole waf instance...
 		// tx.WAF.SetLogLevel(lvl)

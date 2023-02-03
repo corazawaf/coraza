@@ -499,16 +499,16 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 
 	// set highest_severity
 	hs := tx.variables.highestSeverity
-	maxSeverity, _ := types.ParseRuleSeverity(hs.String())
+	maxSeverity, _ := types.ParseRuleSeverity(hs.Get())
 	if r.Severity_ > maxSeverity {
 		hs.Set(strconv.Itoa(r.Severity_.Int()))
 	}
 
 	mr := &corazarules.MatchedRule{
-		URI_:             tx.variables.requestURI.String(),
+		URI_:             tx.variables.requestURI.Get(),
 		TransactionID_:   tx.id,
-		ServerIPAddress_: tx.variables.serverAddr.String(),
-		ClientIPAddress_: tx.variables.remoteAddr.String(),
+		ServerIPAddress_: tx.variables.serverAddr.Get(),
+		ClientIPAddress_: tx.variables.remoteAddr.Get(),
 		Rule_:            &r.RuleMetadata,
 		MatchedDatas_:    mds,
 	}
@@ -546,7 +546,6 @@ func (tx *Transaction) GetStopWatch() string {
 // In future releases we may remove de exceptions slice and
 // make it easier to use
 func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
-	collection := rv.Variable
 	col := tx.Collection(rv.Variable)
 	if col == nil {
 		return []types.MatchData{}
@@ -554,14 +553,21 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 
 	var matches []types.MatchData
 	// Now that we have access to the collection, we can apply the exceptions
-	if rv.KeyRx == nil {
-		if len(rv.KeyStr) == 0 {
-			matches = col.FindAll()
+	switch {
+	case rv.KeyRx != nil:
+		if m, ok := col.(collection.Keyed); ok {
+			matches = m.FindRegex(rv.KeyRx)
 		} else {
-			matches = col.FindString(rv.KeyStr)
+			panic("attempted to use regex with non-selectable collection: " + rv.Variable.Name())
 		}
-	} else {
-		matches = col.FindRegex(rv.KeyRx)
+	case rv.KeyStr != "":
+		if m, ok := col.(collection.Keyed); ok {
+			matches = m.FindString(rv.KeyStr)
+		} else {
+			panic("attempted to use string with non-selectable collection: " + rv.Variable.Name())
+		}
+	default:
+		matches = col.FindAll()
 	}
 
 	var rmi []int
@@ -591,8 +597,8 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 		count := len(matches)
 		matches = []types.MatchData{
 			&corazarules.MatchData{
-				VariableName_: collection.Name(),
-				Variable_:     collection,
+				VariableName_: rv.Variable.Name(),
+				Variable_:     rv.Variable,
 				Key_:          rv.KeyStr,
 				Value_:        strconv.Itoa(count),
 			},
@@ -952,7 +958,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		return nil, err
 	}
 
-	rbp := tx.variables.reqbodyProcessor.String()
+	rbp := tx.variables.reqbodyProcessor.Get()
 
 	// Default variables.ReqbodyProcessor values
 	// XML and JSON must be forced with ctl:requestBodyProcessor=JSON
@@ -1024,7 +1030,7 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Int
 // directly to the client or write them to Coraza's buffer.
 func (tx *Transaction) IsResponseBodyProcessable() bool {
 	// TODO add more validations
-	ct := tx.variables.responseContentType.String()
+	ct := tx.variables.responseContentType.Get()
 	return stringsutil.InSlice(ct, tx.WAF.ResponseBodyMimeTypes)
 }
 
@@ -1218,7 +1224,7 @@ func (tx *Transaction) ProcessLogging() {
 
 	if tx.AuditEngine == types.AuditEngineRelevantOnly && tx.audit {
 		re := tx.WAF.AuditLogRelevantStatus
-		status := tx.variables.responseStatus.String()
+		status := tx.variables.responseStatus.Get()
 		if re != nil && !re.Match([]byte(status)) {
 			// Not relevant status
 			tx.WAF.Logger.Debug("[%s] Transaction status not marked for audit logging", tx.id)
@@ -1270,35 +1276,38 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	// YYYY/MM/DD HH:mm:ss
 	ts := time.Unix(0, tx.Timestamp).Format("2006/01/02 15:04:05")
 	al.Parts = tx.AuditLogParts
+	clientPort, _ := strconv.Atoi(tx.variables.remotePort.Get())
+	hostPort, _ := strconv.Atoi(tx.variables.serverPort.Get())
+	status, _ := strconv.Atoi(tx.variables.responseStatus.Get())
 	al.Transaction = loggers.AuditTransaction{
 		Timestamp:     ts,
 		UnixTimestamp: tx.Timestamp,
 		ID:            tx.id,
-		ClientIP:      tx.variables.remoteAddr.String(),
-		ClientPort:    tx.variables.remotePort.Int(),
-		HostIP:        tx.variables.serverAddr.String(),
-		HostPort:      tx.variables.serverPort.Int(),
-		ServerID:      tx.variables.serverName.String(), // TODO check
+		ClientIP:      tx.variables.remoteAddr.Get(),
+		ClientPort:    clientPort,
+		HostIP:        tx.variables.serverAddr.Get(),
+		HostPort:      hostPort,
+		ServerID:      tx.variables.serverName.Get(), // TODO check
 		Request: loggers.AuditTransactionRequest{
-			Method:      tx.variables.requestMethod.String(),
-			Protocol:    tx.variables.requestProtocol.String(),
-			URI:         tx.variables.requestURI.String(),
-			HTTPVersion: tx.variables.requestProtocol.String(),
+			Method:      tx.variables.requestMethod.Get(),
+			Protocol:    tx.variables.requestProtocol.Get(),
+			URI:         tx.variables.requestURI.Get(),
+			HTTPVersion: tx.variables.requestProtocol.Get(),
 			// Body and headers are audit variables.RequestUriRaws
 		},
 		Response: loggers.AuditTransactionResponse{
-			Status: tx.variables.responseStatus.Int(),
+			Status: status,
 			// body and headers are audit parts
 		},
 	}
 	rengine := tx.RuleEngine.String()
 
 	al.Transaction.Request.Headers = tx.variables.requestHeaders.Data()
-	al.Transaction.Request.Body = tx.variables.requestBody.String()
+	al.Transaction.Request.Body = tx.variables.requestBody.Get()
 	// TODO maybe change to:
 	// al.Transaction.Request.Body = tx.RequestBodyBuffer.String()
 	al.Transaction.Response.Headers = tx.variables.responseHeaders.Data()
-	al.Transaction.Response.Body = tx.variables.responseBody.String()
+	al.Transaction.Response.Body = tx.variables.responseBody.Get()
 	al.Transaction.Producer = loggers.AuditTransactionProducer{
 		Connector:  tx.WAF.ProducerConnector,
 		Version:    tx.WAF.ProducerConnectorVersion,
@@ -1395,7 +1404,8 @@ func (tx *Transaction) String() string {
 func (tx *Transaction) Debug() string {
 	res := "\n\n----------------------- ERRORLOG ----------------------\n"
 	for _, mr := range tx.matchedRules {
-		res += mr.ErrorLog(tx.variables.responseStatus.Int())
+		status, _ := strconv.Atoi(tx.variables.responseStatus.Get())
+		res += mr.ErrorLog(status)
 		res += "\n\n----------------------- MATCHDATA ---------------------\n"
 		for _, md := range mr.MatchedDatas() {
 			res += fmt.Sprintf("%+v", md) + "\n"
@@ -1411,9 +1421,9 @@ func (tx *Transaction) Debug() string {
 		}
 		data := map[string][]string{}
 		switch col := tx.Collection(vr).(type) {
-		case *collection.Simple:
+		case *collections.Single:
 			data[""] = []string{
-				col.String(),
+				col.Get(),
 			}
 		case collection.Map:
 			data = col.Data()
@@ -1439,77 +1449,77 @@ func (tx *Transaction) Debug() string {
 // generateReqbodyError generates all the error variables for the request body parser
 func (tx *Transaction) generateReqbodyError(err error) {
 	tx.variables.reqbodyError.Set("1")
-	tx.variables.reqbodyErrorMsg.Set(fmt.Sprintf("%s: %s", tx.variables.reqbodyProcessor.String(), err.Error()))
+	tx.variables.reqbodyErrorMsg.Set(fmt.Sprintf("%s: %s", tx.variables.reqbodyProcessor.Get(), err.Error()))
 	tx.variables.reqbodyProcessorError.Set("1")
 	tx.variables.reqbodyProcessorErrorMsg.Set(string(err.Error()))
 }
 
 // TransactionVariables has pointers to all the variables of the transaction
 type TransactionVariables struct {
-	// Simple Variables
-	userID                        *collection.Simple
-	urlencodedError               *collection.Simple
-	responseContentType           *collection.Simple
-	uniqueID                      *collection.Simple
+	// Single Variables
+	userID                        *collections.Single
+	urlencodedError               *collections.Single
+	responseContentType           *collections.Single
+	uniqueID                      *collections.Single
 	argsCombinedSize              *collections.SizeCollection
-	authType                      *collection.Simple
-	filesCombinedSize             *collection.Simple
-	fullRequest                   *collection.Simple
-	fullRequestLength             *collection.Simple
-	inboundDataError              *collection.Simple
-	matchedVar                    *collection.Simple
-	matchedVarName                *collection.Simple
-	multipartBoundaryQuoted       *collection.Simple
-	multipartBoundaryWhitespace   *collection.Simple
-	multipartCrlfLfLines          *collection.Simple
-	multipartDataAfter            *collection.Simple
-	multipartDataBefore           *collection.Simple
-	multipartFileLimitExceeded    *collection.Simple
-	multipartHeaderFolding        *collection.Simple
-	multipartInvalidHeaderFolding *collection.Simple
-	multipartInvalidPart          *collection.Simple
-	multipartInvalidQuoting       *collection.Simple
-	multipartLfLine               *collection.Simple
-	multipartMissingSemicolon     *collection.Simple
-	multipartStrictError          *collection.Simple
-	multipartUnmatchedBoundary    *collection.Simple
-	outboundDataError             *collection.Simple
-	pathInfo                      *collection.Simple
-	queryString                   *collection.Simple
-	remoteAddr                    *collection.Simple
-	remoteHost                    *collection.Simple
-	remotePort                    *collection.Simple
-	reqbodyError                  *collection.Simple
-	reqbodyErrorMsg               *collection.Simple
-	reqbodyProcessorError         *collection.Simple
-	reqbodyProcessorErrorMsg      *collection.Simple
-	reqbodyProcessor              *collection.Simple
-	requestBasename               *collection.Simple
-	requestBody                   *collection.Simple
-	requestBodyLength             *collection.Simple
-	requestFilename               *collection.Simple
-	requestLine                   *collection.Simple
-	requestMethod                 *collection.Simple
-	requestProtocol               *collection.Simple
-	requestURI                    *collection.Simple
-	requestURIRaw                 *collection.Simple
-	responseBody                  *collection.Simple
-	responseContentLength         *collection.Simple
-	responseProtocol              *collection.Simple
-	responseStatus                *collection.Simple
-	serverAddr                    *collection.Simple
-	serverName                    *collection.Simple
-	serverPort                    *collection.Simple
-	sessionID                     *collection.Simple
-	highestSeverity               *collection.Simple
-	statusLine                    *collection.Simple
-	inboundErrorData              *collection.Simple
+	authType                      *collections.Single
+	filesCombinedSize             *collections.Single
+	fullRequest                   *collections.Single
+	fullRequestLength             *collections.Single
+	inboundDataError              *collections.Single
+	matchedVar                    *collections.Single
+	matchedVarName                *collections.Single
+	multipartBoundaryQuoted       *collections.Single
+	multipartBoundaryWhitespace   *collections.Single
+	multipartCrlfLfLines          *collections.Single
+	multipartDataAfter            *collections.Single
+	multipartDataBefore           *collections.Single
+	multipartFileLimitExceeded    *collections.Single
+	multipartHeaderFolding        *collections.Single
+	multipartInvalidHeaderFolding *collections.Single
+	multipartInvalidPart          *collections.Single
+	multipartInvalidQuoting       *collections.Single
+	multipartLfLine               *collections.Single
+	multipartMissingSemicolon     *collections.Single
+	multipartStrictError          *collections.Single
+	multipartUnmatchedBoundary    *collections.Single
+	outboundDataError             *collections.Single
+	pathInfo                      *collections.Single
+	queryString                   *collections.Single
+	remoteAddr                    *collections.Single
+	remoteHost                    *collections.Single
+	remotePort                    *collections.Single
+	reqbodyError                  *collections.Single
+	reqbodyErrorMsg               *collections.Single
+	reqbodyProcessorError         *collections.Single
+	reqbodyProcessorErrorMsg      *collections.Single
+	reqbodyProcessor              *collections.Single
+	requestBasename               *collections.Single
+	requestBody                   *collections.Single
+	requestBodyLength             *collections.Single
+	requestFilename               *collections.Single
+	requestLine                   *collections.Single
+	requestMethod                 *collections.Single
+	requestProtocol               *collections.Single
+	requestURI                    *collections.Single
+	requestURIRaw                 *collections.Single
+	responseBody                  *collections.Single
+	responseContentLength         *collections.Single
+	responseProtocol              *collections.Single
+	responseStatus                *collections.Single
+	serverAddr                    *collections.Single
+	serverName                    *collections.Single
+	serverPort                    *collections.Single
+	sessionID                     *collections.Single
+	highestSeverity               *collections.Single
+	statusLine                    *collections.Single
+	inboundErrorData              *collections.Single
 	// Custom
 	env                  collection.Map
 	tx                   collection.Map
 	rule                 collection.Map
-	duration             *collection.Simple
-	args                 *collections.ConcatCollection
+	duration             *collections.Single
+	args                 *collections.ConcatKeyed
 	argsGet              *collections.NamedCollection
 	argsGetNames         collection.Collection
 	argsPost             *collections.NamedCollection
@@ -1542,68 +1552,68 @@ type TransactionVariables struct {
 
 func NewTransactionVariables() *TransactionVariables {
 	v := &TransactionVariables{}
-	v.urlencodedError = collection.NewSimple(variables.UrlencodedError)
-	v.responseContentType = collection.NewSimple(variables.ResponseContentType)
-	v.uniqueID = collection.NewSimple(variables.UniqueID)
-	v.authType = collection.NewSimple(variables.AuthType)
-	v.filesCombinedSize = collection.NewSimple(variables.FilesCombinedSize)
-	v.fullRequest = collection.NewSimple(variables.FullRequest)
-	v.fullRequestLength = collection.NewSimple(variables.FullRequestLength)
-	v.inboundDataError = collection.NewSimple(variables.InboundDataError)
-	v.matchedVar = collection.NewSimple(variables.MatchedVar)
-	v.matchedVarName = collection.NewSimple(variables.MatchedVarName)
-	v.multipartBoundaryQuoted = collection.NewSimple(variables.MultipartBoundaryQuoted)
-	v.multipartBoundaryWhitespace = collection.NewSimple(variables.MultipartBoundaryWhitespace)
-	v.multipartCrlfLfLines = collection.NewSimple(variables.MultipartCrlfLfLines)
-	v.multipartDataAfter = collection.NewSimple(variables.MultipartDataAfter)
-	v.multipartDataBefore = collection.NewSimple(variables.MultipartDataBefore)
-	v.multipartFileLimitExceeded = collection.NewSimple(variables.MultipartFileLimitExceeded)
-	v.multipartHeaderFolding = collection.NewSimple(variables.MultipartHeaderFolding)
-	v.multipartInvalidHeaderFolding = collection.NewSimple(variables.MultipartInvalidHeaderFolding)
-	v.multipartInvalidPart = collection.NewSimple(variables.MultipartInvalidPart)
-	v.multipartInvalidQuoting = collection.NewSimple(variables.MultipartInvalidQuoting)
-	v.multipartLfLine = collection.NewSimple(variables.MultipartLfLine)
-	v.multipartMissingSemicolon = collection.NewSimple(variables.MultipartMissingSemicolon)
-	v.multipartStrictError = collection.NewSimple(variables.MultipartStrictError)
-	v.multipartUnmatchedBoundary = collection.NewSimple(variables.MultipartUnmatchedBoundary)
-	v.outboundDataError = collection.NewSimple(variables.OutboundDataError)
-	v.pathInfo = collection.NewSimple(variables.PathInfo)
-	v.queryString = collection.NewSimple(variables.QueryString)
-	v.remoteAddr = collection.NewSimple(variables.RemoteAddr)
-	v.remoteHost = collection.NewSimple(variables.RemoteHost)
-	v.remotePort = collection.NewSimple(variables.RemotePort)
-	v.reqbodyError = collection.NewSimple(variables.ReqbodyError)
-	v.reqbodyErrorMsg = collection.NewSimple(variables.ReqbodyErrorMsg)
-	v.reqbodyProcessorError = collection.NewSimple(variables.ReqbodyProcessorError)
-	v.reqbodyProcessorErrorMsg = collection.NewSimple(variables.ReqbodyProcessorErrorMsg)
-	v.reqbodyProcessor = collection.NewSimple(variables.ReqbodyProcessor)
-	v.requestBasename = collection.NewSimple(variables.RequestBasename)
-	v.requestBody = collection.NewSimple(variables.RequestBody)
-	v.requestBodyLength = collection.NewSimple(variables.RequestBodyLength)
-	v.requestFilename = collection.NewSimple(variables.RequestFilename)
-	v.requestLine = collection.NewSimple(variables.RequestLine)
-	v.requestMethod = collection.NewSimple(variables.RequestMethod)
-	v.requestProtocol = collection.NewSimple(variables.RequestProtocol)
-	v.requestURI = collection.NewSimple(variables.RequestURI)
-	v.requestURIRaw = collection.NewSimple(variables.RequestURIRaw)
-	v.responseBody = collection.NewSimple(variables.ResponseBody)
-	v.responseContentLength = collection.NewSimple(variables.ResponseContentLength)
-	v.responseProtocol = collection.NewSimple(variables.ResponseProtocol)
-	v.responseStatus = collection.NewSimple(variables.ResponseStatus)
-	v.serverAddr = collection.NewSimple(variables.ServerAddr)
-	v.serverName = collection.NewSimple(variables.ServerName)
-	v.serverPort = collection.NewSimple(variables.ServerPort)
-	v.sessionID = collection.NewSimple(variables.Sessionid)
-	v.highestSeverity = collection.NewSimple(variables.HighestSeverity)
-	v.statusLine = collection.NewSimple(variables.StatusLine)
-	v.inboundErrorData = collection.NewSimple(variables.InboundErrorData)
-	v.duration = collection.NewSimple(variables.Duration)
-	v.userID = collection.NewSimple(variables.Userid)
+	v.urlencodedError = collections.NewSingle(variables.UrlencodedError)
+	v.responseContentType = collections.NewSingle(variables.ResponseContentType)
+	v.uniqueID = collections.NewSingle(variables.UniqueID)
+	v.authType = collections.NewSingle(variables.AuthType)
+	v.filesCombinedSize = collections.NewSingle(variables.FilesCombinedSize)
+	v.fullRequest = collections.NewSingle(variables.FullRequest)
+	v.fullRequestLength = collections.NewSingle(variables.FullRequestLength)
+	v.inboundDataError = collections.NewSingle(variables.InboundDataError)
+	v.matchedVar = collections.NewSingle(variables.MatchedVar)
+	v.matchedVarName = collections.NewSingle(variables.MatchedVarName)
+	v.multipartBoundaryQuoted = collections.NewSingle(variables.MultipartBoundaryQuoted)
+	v.multipartBoundaryWhitespace = collections.NewSingle(variables.MultipartBoundaryWhitespace)
+	v.multipartCrlfLfLines = collections.NewSingle(variables.MultipartCrlfLfLines)
+	v.multipartDataAfter = collections.NewSingle(variables.MultipartDataAfter)
+	v.multipartDataBefore = collections.NewSingle(variables.MultipartDataBefore)
+	v.multipartFileLimitExceeded = collections.NewSingle(variables.MultipartFileLimitExceeded)
+	v.multipartHeaderFolding = collections.NewSingle(variables.MultipartHeaderFolding)
+	v.multipartInvalidHeaderFolding = collections.NewSingle(variables.MultipartInvalidHeaderFolding)
+	v.multipartInvalidPart = collections.NewSingle(variables.MultipartInvalidPart)
+	v.multipartInvalidQuoting = collections.NewSingle(variables.MultipartInvalidQuoting)
+	v.multipartLfLine = collections.NewSingle(variables.MultipartLfLine)
+	v.multipartMissingSemicolon = collections.NewSingle(variables.MultipartMissingSemicolon)
+	v.multipartStrictError = collections.NewSingle(variables.MultipartStrictError)
+	v.multipartUnmatchedBoundary = collections.NewSingle(variables.MultipartUnmatchedBoundary)
+	v.outboundDataError = collections.NewSingle(variables.OutboundDataError)
+	v.pathInfo = collections.NewSingle(variables.PathInfo)
+	v.queryString = collections.NewSingle(variables.QueryString)
+	v.remoteAddr = collections.NewSingle(variables.RemoteAddr)
+	v.remoteHost = collections.NewSingle(variables.RemoteHost)
+	v.remotePort = collections.NewSingle(variables.RemotePort)
+	v.reqbodyError = collections.NewSingle(variables.ReqbodyError)
+	v.reqbodyErrorMsg = collections.NewSingle(variables.ReqbodyErrorMsg)
+	v.reqbodyProcessorError = collections.NewSingle(variables.ReqbodyProcessorError)
+	v.reqbodyProcessorErrorMsg = collections.NewSingle(variables.ReqbodyProcessorErrorMsg)
+	v.reqbodyProcessor = collections.NewSingle(variables.ReqbodyProcessor)
+	v.requestBasename = collections.NewSingle(variables.RequestBasename)
+	v.requestBody = collections.NewSingle(variables.RequestBody)
+	v.requestBodyLength = collections.NewSingle(variables.RequestBodyLength)
+	v.requestFilename = collections.NewSingle(variables.RequestFilename)
+	v.requestLine = collections.NewSingle(variables.RequestLine)
+	v.requestMethod = collections.NewSingle(variables.RequestMethod)
+	v.requestProtocol = collections.NewSingle(variables.RequestProtocol)
+	v.requestURI = collections.NewSingle(variables.RequestURI)
+	v.requestURIRaw = collections.NewSingle(variables.RequestURIRaw)
+	v.responseBody = collections.NewSingle(variables.ResponseBody)
+	v.responseContentLength = collections.NewSingle(variables.ResponseContentLength)
+	v.responseProtocol = collections.NewSingle(variables.ResponseProtocol)
+	v.responseStatus = collections.NewSingle(variables.ResponseStatus)
+	v.serverAddr = collections.NewSingle(variables.ServerAddr)
+	v.serverName = collections.NewSingle(variables.ServerName)
+	v.serverPort = collections.NewSingle(variables.ServerPort)
+	v.sessionID = collections.NewSingle(variables.Sessionid)
+	v.highestSeverity = collections.NewSingle(variables.HighestSeverity)
+	v.statusLine = collections.NewSingle(variables.StatusLine)
+	v.inboundErrorData = collections.NewSingle(variables.InboundErrorData)
+	v.duration = collections.NewSingle(variables.Duration)
+	v.userID = collections.NewSingle(variables.Userid)
 
-	v.filesSizes = collection.NewMap(variables.FilesSizes)
-	v.filesTmpContent = collection.NewMap(variables.FilesTmpContent)
-	v.multipartFilename = collection.NewMap(variables.MultipartFilename)
-	v.multipartName = collection.NewMap(variables.MultipartName)
+	v.filesSizes = collections.NewMap(variables.FilesSizes)
+	v.filesTmpContent = collections.NewMap(variables.FilesTmpContent)
+	v.multipartFilename = collections.NewMap(variables.MultipartFilename)
+	v.multipartName = collections.NewMap(variables.MultipartName)
 	v.matchedVars = collections.NewNamedCollection(variables.MatchedVars)
 	v.matchedVarsNames = v.matchedVars.Names(variables.MatchedVarsNames)
 	v.requestCookies = collections.NewNamedCollection(variables.RequestCookies)
@@ -1612,17 +1622,17 @@ func NewTransactionVariables() *TransactionVariables {
 	v.requestHeadersNames = v.requestHeaders.Names(variables.RequestHeadersNames)
 	v.responseHeaders = collections.NewNamedCollection(variables.ResponseHeaders)
 	v.responseHeadersNames = v.responseHeaders.Names(variables.ResponseHeadersNames)
-	v.geo = collection.NewMap(variables.Geo)
-	v.tx = collection.NewMap(variables.TX)
-	v.rule = collection.NewMap(variables.Rule)
-	v.env = collection.NewMap(variables.Env)
-	v.ip = collection.NewMap(variables.IP)
-	v.files = collection.NewMap(variables.Files)
-	v.filesNames = collection.NewMap(variables.FilesNames)
-	v.filesTmpNames = collection.NewMap(variables.FilesTmpNames)
-	v.responseXML = collection.NewMap(variables.ResponseXML)
-	v.requestXML = collection.NewMap(variables.RequestXML)
-	v.multipartPartHeaders = collection.NewMap(variables.MultipartPartHeaders)
+	v.geo = collections.NewMap(variables.Geo)
+	v.tx = collections.NewMap(variables.TX)
+	v.rule = collections.NewMap(variables.Rule)
+	v.env = collections.NewMap(variables.Env)
+	v.ip = collections.NewMap(variables.IP)
+	v.files = collections.NewMap(variables.Files)
+	v.filesNames = collections.NewMap(variables.FilesNames)
+	v.filesTmpNames = collections.NewMap(variables.FilesTmpNames)
+	v.responseXML = collections.NewMap(variables.ResponseXML)
+	v.requestXML = collections.NewMap(variables.RequestXML)
+	v.multipartPartHeaders = collections.NewMap(variables.MultipartPartHeaders)
 
 	// XML is a pointer to RequestXML
 	v.xml = v.requestXML
@@ -1633,7 +1643,7 @@ func NewTransactionVariables() *TransactionVariables {
 	v.argsPostNames = v.argsPost.Names(variables.ArgsPostNames)
 	v.argsPath = collections.NewNamedCollection(variables.ArgsPath)
 	v.argsCombinedSize = collections.NewSizeCollection(variables.ArgsCombinedSize, v.argsGet, v.argsPost)
-	v.args = collections.NewConcatCollection(
+	v.args = collections.NewConcatKeyed(
 		variables.Args,
 		v.argsGet,
 		v.argsPost,
@@ -1649,19 +1659,19 @@ func NewTransactionVariables() *TransactionVariables {
 	return v
 }
 
-func (v *TransactionVariables) UserID() *collection.Simple {
+func (v *TransactionVariables) UserID() collection.Single {
 	return v.userID
 }
 
-func (v *TransactionVariables) UrlencodedError() *collection.Simple {
+func (v *TransactionVariables) UrlencodedError() collection.Single {
 	return v.urlencodedError
 }
 
-func (v *TransactionVariables) ResponseContentType() *collection.Simple {
+func (v *TransactionVariables) ResponseContentType() collection.Single {
 	return v.responseContentType
 }
 
-func (v *TransactionVariables) UniqueID() *collection.Simple {
+func (v *TransactionVariables) UniqueID() collection.Single {
 	return v.uniqueID
 }
 
@@ -1669,79 +1679,79 @@ func (v *TransactionVariables) ArgsCombinedSize() collection.Collection {
 	return v.argsCombinedSize
 }
 
-func (v *TransactionVariables) AuthType() *collection.Simple {
+func (v *TransactionVariables) AuthType() collection.Single {
 	return v.authType
 }
 
-func (v *TransactionVariables) FilesCombinedSize() *collection.Simple {
+func (v *TransactionVariables) FilesCombinedSize() collection.Single {
 	return v.filesCombinedSize
 }
 
-func (v *TransactionVariables) FullRequest() *collection.Simple {
+func (v *TransactionVariables) FullRequest() collection.Single {
 	return v.fullRequest
 }
 
-func (v *TransactionVariables) FullRequestLength() *collection.Simple {
+func (v *TransactionVariables) FullRequestLength() collection.Single {
 	return v.fullRequestLength
 }
 
-func (v *TransactionVariables) InboundDataError() *collection.Simple {
+func (v *TransactionVariables) InboundDataError() collection.Single {
 	return v.inboundDataError
 }
 
-func (v *TransactionVariables) MatchedVar() *collection.Simple {
+func (v *TransactionVariables) MatchedVar() collection.Single {
 	return v.matchedVar
 }
 
-func (v *TransactionVariables) MatchedVarName() *collection.Simple {
+func (v *TransactionVariables) MatchedVarName() collection.Single {
 	return v.matchedVarName
 }
 
-func (v *TransactionVariables) MultipartBoundaryQuoted() *collection.Simple {
+func (v *TransactionVariables) MultipartBoundaryQuoted() collection.Single {
 	return v.multipartBoundaryQuoted
 }
 
-func (v *TransactionVariables) MultipartBoundaryWhitespace() *collection.Simple {
+func (v *TransactionVariables) MultipartBoundaryWhitespace() collection.Single {
 	return v.multipartBoundaryWhitespace
 }
 
-func (v *TransactionVariables) MultipartCrlfLfLines() *collection.Simple {
+func (v *TransactionVariables) MultipartCrlfLfLines() collection.Single {
 	return v.multipartCrlfLfLines
 }
 
-func (v *TransactionVariables) MultipartDataAfter() *collection.Simple {
+func (v *TransactionVariables) MultipartDataAfter() collection.Single {
 	return v.multipartDataAfter
 }
 
-func (v *TransactionVariables) MultipartDataBefore() *collection.Simple {
+func (v *TransactionVariables) MultipartDataBefore() collection.Single {
 	return v.multipartDataBefore
 }
 
-func (v *TransactionVariables) MultipartFileLimitExceeded() *collection.Simple {
+func (v *TransactionVariables) MultipartFileLimitExceeded() collection.Single {
 	return v.multipartFileLimitExceeded
 }
 
-func (v *TransactionVariables) MultipartHeaderFolding() *collection.Simple {
+func (v *TransactionVariables) MultipartHeaderFolding() collection.Single {
 	return v.multipartHeaderFolding
 }
 
-func (v *TransactionVariables) MultipartInvalidHeaderFolding() *collection.Simple {
+func (v *TransactionVariables) MultipartInvalidHeaderFolding() collection.Single {
 	return v.multipartInvalidHeaderFolding
 }
 
-func (v *TransactionVariables) MultipartInvalidPart() *collection.Simple {
+func (v *TransactionVariables) MultipartInvalidPart() collection.Single {
 	return v.multipartInvalidPart
 }
 
-func (v *TransactionVariables) MultipartInvalidQuoting() *collection.Simple {
+func (v *TransactionVariables) MultipartInvalidQuoting() collection.Single {
 	return v.multipartInvalidQuoting
 }
 
-func (v *TransactionVariables) MultipartLfLine() *collection.Simple {
+func (v *TransactionVariables) MultipartLfLine() collection.Single {
 	return v.multipartLfLine
 }
 
-func (v *TransactionVariables) MultipartMissingSemicolon() *collection.Simple {
+func (v *TransactionVariables) MultipartMissingSemicolon() collection.Single {
 	return v.multipartMissingSemicolon
 }
 
@@ -1749,135 +1759,135 @@ func (v *TransactionVariables) MultipartPartHeaders() collection.Map {
 	return v.multipartPartHeaders
 }
 
-func (v *TransactionVariables) MultipartStrictError() *collection.Simple {
+func (v *TransactionVariables) MultipartStrictError() collection.Single {
 	return v.multipartStrictError
 }
 
-func (v *TransactionVariables) MultipartUnmatchedBoundary() *collection.Simple {
+func (v *TransactionVariables) MultipartUnmatchedBoundary() collection.Single {
 	return v.multipartUnmatchedBoundary
 }
 
-func (v *TransactionVariables) OutboundDataError() *collection.Simple {
+func (v *TransactionVariables) OutboundDataError() collection.Single {
 	return v.outboundDataError
 }
 
-func (v *TransactionVariables) PathInfo() *collection.Simple {
+func (v *TransactionVariables) PathInfo() collection.Single {
 	return v.pathInfo
 }
 
-func (v *TransactionVariables) QueryString() *collection.Simple {
+func (v *TransactionVariables) QueryString() collection.Single {
 	return v.queryString
 }
 
-func (v *TransactionVariables) RemoteAddr() *collection.Simple {
+func (v *TransactionVariables) RemoteAddr() collection.Single {
 	return v.remoteAddr
 }
 
-func (v *TransactionVariables) RemoteHost() *collection.Simple {
+func (v *TransactionVariables) RemoteHost() collection.Single {
 	return v.remoteHost
 }
 
-func (v *TransactionVariables) RemotePort() *collection.Simple {
+func (v *TransactionVariables) RemotePort() collection.Single {
 	return v.remotePort
 }
 
-func (v *TransactionVariables) RequestBodyError() *collection.Simple {
+func (v *TransactionVariables) RequestBodyError() collection.Single {
 	return v.reqbodyError
 }
 
-func (v *TransactionVariables) RequestBodyErrorMsg() *collection.Simple {
+func (v *TransactionVariables) RequestBodyErrorMsg() collection.Single {
 	return v.reqbodyErrorMsg
 }
 
-func (v *TransactionVariables) RequestBodyProcessorError() *collection.Simple {
+func (v *TransactionVariables) RequestBodyProcessorError() collection.Single {
 	return v.reqbodyProcessorError
 }
 
-func (v *TransactionVariables) RequestBodyProcessorErrorMsg() *collection.Simple {
+func (v *TransactionVariables) RequestBodyProcessorErrorMsg() collection.Single {
 	return v.reqbodyProcessorErrorMsg
 }
 
-func (v *TransactionVariables) RequestBodyProcessor() *collection.Simple {
+func (v *TransactionVariables) RequestBodyProcessor() collection.Single {
 	return v.reqbodyProcessor
 }
 
-func (v *TransactionVariables) RequestBasename() *collection.Simple {
+func (v *TransactionVariables) RequestBasename() collection.Single {
 	return v.requestBasename
 }
 
-func (v *TransactionVariables) RequestBody() *collection.Simple {
+func (v *TransactionVariables) RequestBody() collection.Single {
 	return v.requestBody
 }
 
-func (v *TransactionVariables) RequestBodyLength() *collection.Simple {
+func (v *TransactionVariables) RequestBodyLength() collection.Single {
 	return v.requestBodyLength
 }
 
-func (v *TransactionVariables) RequestFilename() *collection.Simple {
+func (v *TransactionVariables) RequestFilename() collection.Single {
 	return v.requestFilename
 }
 
-func (v *TransactionVariables) RequestLine() *collection.Simple {
+func (v *TransactionVariables) RequestLine() collection.Single {
 	return v.requestLine
 }
 
-func (v *TransactionVariables) RequestMethod() *collection.Simple {
+func (v *TransactionVariables) RequestMethod() collection.Single {
 	return v.requestMethod
 }
 
-func (v *TransactionVariables) RequestProtocol() *collection.Simple {
+func (v *TransactionVariables) RequestProtocol() collection.Single {
 	return v.requestProtocol
 }
 
-func (v *TransactionVariables) RequestURI() *collection.Simple {
+func (v *TransactionVariables) RequestURI() collection.Single {
 	return v.requestURI
 }
 
-func (v *TransactionVariables) RequestURIRaw() *collection.Simple {
+func (v *TransactionVariables) RequestURIRaw() collection.Single {
 	return v.requestURIRaw
 }
 
-func (v *TransactionVariables) ResponseBody() *collection.Simple {
+func (v *TransactionVariables) ResponseBody() collection.Single {
 	return v.responseBody
 }
 
-func (v *TransactionVariables) ResponseContentLength() *collection.Simple {
+func (v *TransactionVariables) ResponseContentLength() collection.Single {
 	return v.responseContentLength
 }
 
-func (v *TransactionVariables) ResponseProtocol() *collection.Simple {
+func (v *TransactionVariables) ResponseProtocol() collection.Single {
 	return v.responseProtocol
 }
 
-func (v *TransactionVariables) ResponseStatus() *collection.Simple {
+func (v *TransactionVariables) ResponseStatus() collection.Single {
 	return v.responseStatus
 }
 
-func (v *TransactionVariables) ServerAddr() *collection.Simple {
+func (v *TransactionVariables) ServerAddr() collection.Single {
 	return v.serverAddr
 }
 
-func (v *TransactionVariables) ServerName() *collection.Simple {
+func (v *TransactionVariables) ServerName() collection.Single {
 	return v.serverName
 }
 
-func (v *TransactionVariables) ServerPort() *collection.Simple {
+func (v *TransactionVariables) ServerPort() collection.Single {
 	return v.serverPort
 }
 
-func (v *TransactionVariables) SessionID() *collection.Simple {
+func (v *TransactionVariables) SessionID() collection.Single {
 	return v.sessionID
 }
 
-func (v *TransactionVariables) HighestSeverity() *collection.Simple {
+func (v *TransactionVariables) HighestSeverity() collection.Single {
 	return v.highestSeverity
 }
 
-func (v *TransactionVariables) StatusLine() *collection.Simple {
+func (v *TransactionVariables) StatusLine() collection.Single {
 	return v.statusLine
 }
 
-func (v *TransactionVariables) InboundErrorData() *collection.Simple {
+func (v *TransactionVariables) InboundErrorData() collection.Single {
 	return v.inboundErrorData
 }
 
@@ -1893,11 +1903,11 @@ func (v *TransactionVariables) Rule() collection.Map {
 	return v.rule
 }
 
-func (v *TransactionVariables) Duration() *collection.Simple {
+func (v *TransactionVariables) Duration() collection.Single {
 	return v.duration
 }
 
-func (v *TransactionVariables) Args() collection.Collection {
+func (v *TransactionVariables) Args() collection.Keyed {
 	return v.args
 }
 

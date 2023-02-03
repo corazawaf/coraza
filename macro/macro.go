@@ -63,14 +63,14 @@ func expandToken(tx rules.TransactionState, token macroToken) string {
 		return token.text
 	}
 	switch col := tx.Collection(token.variable).(type) {
-	case collection.Map:
-		if c := col.Get(token.key); len(c) > 0 {
-			return c[0]
-		}
-	case *collection.Simple:
-		return col.String()
-	case collection.Collection:
+	case collection.Keyed:
 		if c := col.FindString(token.key); len(c) > 0 {
+			return c[0].Value()
+		}
+	case collection.Single:
+		return col.Get()
+	default:
+		if c := col.FindAll(); len(c) > 0 {
 			return c[0].Value()
 		}
 	}
