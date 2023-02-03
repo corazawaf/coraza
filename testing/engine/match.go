@@ -50,7 +50,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 		},
 	},
 	Rules: `
-SecDebugLogLevel 5
+SecDebugLogLevel 9
 SecRule SERVER_ADDR "! ^127" "id:1, phase:1, log"
 
 SecRule SERVER_PORT "!" "id:2, phase:1, log"
