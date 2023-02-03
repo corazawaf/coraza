@@ -39,6 +39,9 @@ type Single interface {
 type Keyed interface {
 	Collection
 
+	// Get returns a slice of strings for a key
+	Get(key string) []string
+
 	// FindRegex returns a slice of MatchData for the regex
 	FindRegex(key *regexp.Regexp) []types.MatchData
 
@@ -52,15 +55,6 @@ type Keyed interface {
 // Important: CollectionMaps ARE NOT concurrent safe
 type Map interface {
 	Keyed
-
-	// Get returns a slice of strings for a key
-	Get(key string) []string
-
-	// FindRegex returns a slice of MatchData for the regex
-	FindRegex(key *regexp.Regexp) []types.MatchData
-
-	// FindString returns a slice of MatchData for the string
-	FindString(key string) []types.MatchData
 
 	// Add a value to some key
 	Add(key string, value string)

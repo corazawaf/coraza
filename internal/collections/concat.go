@@ -4,11 +4,11 @@
 package collections
 
 import (
-	"regexp"
-
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
+	"regexp"
+	"strings"
 )
 
 // ConcatCollection is a collection view over multiple sollections.
@@ -61,6 +61,15 @@ func NewConcatKeyed(variable variables.RuleVariable, data ...collection.Keyed) *
 		name:     variable.Name(),
 		variable: variable,
 	}
+}
+
+func (c *ConcatKeyed) Get(key string) []string {
+	keyL := strings.ToLower(key)
+	var res []string
+	for _, c := range c.data {
+		res = append(res, c.Get(keyL)...)
+	}
+	return res
 }
 
 // FindRegex returns a slice of MatchData for the regex
