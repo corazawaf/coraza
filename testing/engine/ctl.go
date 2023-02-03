@@ -48,7 +48,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 		},
 	},
 	Rules: `
-SecDebugLogLevel 5
+SecDebugLogLevel 9
 SecRequestBodyAccess On
 SecAction "id:1, phase:1, ctl:ruleRemoveByTag=test, \
 	ctl:ruleRemoveById=444, \

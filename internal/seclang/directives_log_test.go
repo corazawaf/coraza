@@ -80,7 +80,7 @@ func TestDebugDirectives(t *testing.T) {
 	}
 	if err := directiveSecDebugLogLevel(&DirectiveOptions{
 		WAF:  waf,
-		Opts: "5",
+		Opts: "3",
 	}); err != nil {
 		t.Error(err)
 	}
