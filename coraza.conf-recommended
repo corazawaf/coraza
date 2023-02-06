@@ -205,12 +205,12 @@ SecDataDir /tmp/
 
 # Default debug log path
 # Debug levels:
-# 1: fatal
-# 2: panic
-# 3: error
-# 4: warn
-# 5: info
-# 6: debug
+# 0:   No logging (least verbose)
+# 1:   Error
+# 2:   Warn
+# 3:   Info
+# 4-8: Debug
+# 9:   Trace (most verbose)
 # Most logging has not been implemented because it will be replaced with
 # advanced rule profiling options
 #SecDebugLog /opt/coraza/var/log/debug.log

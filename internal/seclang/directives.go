@@ -747,22 +747,22 @@ func directiveSecDebugLog(options *DirectiveOptions) error {
 }
 
 // Description: Configures the verboseness of the debug log data.
-// Default: 2
+// Default: 3
 // Syntax: SecDebugLogLevel [LOG_LEVEL]
 // ---
 // Depending on the implementation, errors ranging from 1 to 2 might be directly
-// logged to the connector error log. For example, level 2 (error) logs will be
+// logged to the connector error log. For example, level 1 (error) logs will be
 // written to caddy server error logs.
 // The possible values for the debug log level are:
 //
-// - 0: Fatal
-// - 1: Panic
-// - 2: Error
-// - 3: Warning
-// - 4: details of how transactions are handled
-// - 5: log everything, including very detailed debugging information
+// - 0:   No logging (least verbose)
+// - 1:   Error
+// - 2:   Warn
+// - 3:   Info
+// - 4-8: Debug
+// - 9:   Trace (most verbose)
 //
-// All levels over 5 will be considered as 5.
+// Levels outside the 0-9 range will default to level 3 (Info)
 func directiveSecDebugLogLevel(options *DirectiveOptions) error {
 	lvl, err := strconv.Atoi(options.Opts)
 	if err != nil {

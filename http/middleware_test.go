@@ -305,7 +305,7 @@ func TestHttpServer(t *testing.T) {
 			conf := coraza.NewWAFConfig().
 				WithDirectives(`
 	# This is a comment
-	SecDebugLogLevel 5
+	SecDebugLogLevel 9
 	SecRequestBodyAccess On
 	SecResponseBodyAccess On
 	SecResponseBodyMimeType text/plain
