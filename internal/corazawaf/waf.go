@@ -302,7 +302,7 @@ func (w *WAF) Validate() error {
 
 	if w.RequestBodyLimit != UnsetLimit {
 		if w.RequestBodyLimit < w.RequestBodyInMemoryLimit {
-			return fmt.Errorf("request body limit should be at least the memory limit: %d < %d", w.RequestBodyLimit, w.RequestBodyInMemoryLimit)
+			return fmt.Errorf("request body limit should be at least the memory limit")
 		}
 	}
 
