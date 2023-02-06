@@ -4,7 +4,6 @@
 package coraza
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
@@ -24,8 +23,6 @@ type WAF interface {
 	NewTransaction() types.Transaction
 	NewTransactionWithID(id string) types.Transaction
 }
-
-const _1gb = 1073741824
 
 // NewWAF creates a new WAF instance with the provided configuration.
 func NewWAF(config WAFConfig) (WAF, error) {
@@ -79,28 +76,11 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		waf.RequestBodyAccess = true
 	}
 
-	if c.requestBodyLimit != unsetLimit {
-		if c.requestBodyLimit <= 0 {
-			return nil, errors.New("request body limit should be bigger than 0")
-		}
-
-		if c.requestBodyLimit > _1gb {
-			return nil, errors.New("request body limit should be at most 1GB")
-		}
-
+	if c.requestBodyLimit != corazawaf.UnsetLimit {
 		waf.RequestBodyLimit = int64(c.requestBodyLimit)
 	}
 
-	if c.requestBodyInMemoryLimit != unsetLimit {
-		if c.requestBodyLimit != unsetLimit {
-			if c.requestBodyLimit < c.requestBodyInMemoryLimit {
-				return nil, errors.New("request body limit should be at least the memory limit")
-			}
-		}
-
-		if c.requestBodyInMemoryLimit <= 0 {
-			return nil, errors.New("request body memory limit should be bigger than 0")
-		}
+	if c.requestBodyInMemoryLimit != corazawaf.UnsetLimit {
 		waf.RequestBodyInMemoryLimit = int64(c.requestBodyInMemoryLimit)
 	}
 
@@ -108,20 +88,16 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		waf.ResponseBodyAccess = true
 	}
 
-	if c.responseBodyLimit != unsetLimit {
-		if c.responseBodyLimit <= 0 {
-			return nil, errors.New("response body limit should be bigger than 0")
-		}
-
-		if c.responseBodyLimit > _1gb {
-			return nil, errors.New("response body limit should be at most 1GB")
-		}
-
+	if c.responseBodyLimit != corazawaf.UnsetLimit {
 		waf.ResponseBodyLimit = int64(c.responseBodyLimit)
 	}
 
 	if c.errorCallback != nil {
 		waf.ErrorLogCb = c.errorCallback
+	}
+
+	if err := waf.Validate(); err != nil {
+		return nil, err
 	}
 
 	return wafWrapper{waf: waf}, nil

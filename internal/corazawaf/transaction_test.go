@@ -487,9 +487,14 @@ func TestWriteResponseBody(t *testing.T) {
 						t.Run(name, func(t *testing.T) {
 							waf := NewWAF()
 							waf.RuleEngine = types.RuleEngineOn
+							waf.ResponseBodyMimeTypes = []string{"text/plain"}
 							waf.ResponseBodyAccess = true
 							waf.ResponseBodyLimit = int64(testCase.responseBodyLimit)
 							waf.ResponseBodyLimitAction = testCase.responseBodyLimitAction
+
+							if err := waf.Validate(); err != nil {
+								t.Fatalf("failed to validate the WAF: %s", err.Error())
+							}
 
 							tx := waf.NewTransaction()
 							tx.AddResponseHeader("content-type", "text/plain")
@@ -861,6 +866,7 @@ func TestTxPhase4Magic(t *testing.T) {
 	waf.ResponseBodyAccess = true
 	waf.ResponseBodyLimit = 3
 	waf.ResponseBodyLimitAction = types.BodyLimitActionProcessPartial
+	waf.ResponseBodyMimeTypes = []string{"text/html"}
 	tx := waf.NewTransaction()
 	tx.AddResponseHeader("content-type", "text/html")
 	if it, _, err := tx.WriteResponseBody([]byte("more bytes")); it != nil || err != nil {

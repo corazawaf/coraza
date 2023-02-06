@@ -538,7 +538,11 @@ func TestHandlerAPI(t *testing.T) {
 		},
 	}
 
-	waf, _ := coraza.NewWAF(coraza.NewWAFConfig().WithRequestBodyLimit(3))
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithRequestBodyLimit(3).WithRequestBodyInMemoryLimit(3))
+	if err != nil {
+		t.Fatalf("unexpected error while creating the WAF: %s", err.Error())
+	}
+
 	for name, tCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			srv := httptest.NewServer(WrapHandler(waf, t.Logf, tCase.handler))

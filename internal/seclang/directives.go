@@ -459,6 +459,17 @@ func directiveSecCollectionTimeout(options *DirectiveOptions) error {
 	return nil
 }
 
+func initAuditLogWriter(options *DirectiveOptions) error {
+	if options.WAF.AuditLogWriter == nil {
+		logger, err := loggers.GetLogWriter("serial")
+		if err != nil {
+			return err
+		}
+		options.WAF.AuditLogWriter = logger
+	}
+	return nil
+}
+
 // Description: Defines the path to the main audit log file (serial logging format)
 // or the concurrent logging index file (concurrent logging format).
 // Syntax: SecAuditLog [ABSOLUTE_PATH_TO_LOG_FILE]
@@ -478,6 +489,11 @@ func directiveSecAuditLog(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errors.New("syntax error: SecAuditLog /some/absolute/path.log")
 	}
+
+	if err := initAuditLogWriter(options); err != nil {
+		return err
+	}
+
 	options.Config.Set("auditlog_file", options.Opts)
 	if err := options.WAF.AuditLogWriter.Init(options.Config); err != nil {
 		return err
@@ -513,6 +529,11 @@ func directiveSecAuditLogFormat(options *DirectiveOptions) error {
 		return err
 	}
 	options.Config.Set("auditlog_formatter", formatter)
+
+	if err := initAuditLogWriter(options); err != nil {
+		return err
+	}
+
 	if err := options.WAF.AuditLogWriter.Init(options.Config); err != nil {
 		return err
 	}
