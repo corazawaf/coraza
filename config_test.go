@@ -5,7 +5,23 @@ package coraza
 
 import (
 	"testing"
+
+	"github.com/corazawaf/coraza/v3/types"
 )
+
+func TestRecommendedDirectives(t *testing.T) {
+	c := NewWAFConfig().
+		WithRecommendedDirectives()
+
+	waf, err := NewWAF(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want, have := types.RuleEngineDetectionOnly, waf.(wafWrapper).waf.RuleEngine; want != have {
+		t.Errorf("unexpected rule engine, want %d, have %d", want, have)
+	}
+}
 
 func TestConfigRulesImmutable(t *testing.T) {
 	// Add enough directives so there is enough slice capacity to reuse the array for next append.

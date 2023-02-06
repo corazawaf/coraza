@@ -6,6 +6,8 @@ package coraza
 import (
 	"io/fs"
 
+	_ "embed"
+
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
@@ -17,6 +19,9 @@ import (
 type WAFConfig interface {
 	// WithRules adds rules to the WAF.
 	WithRules(rules ...*corazawaf.Rule) WAFConfig
+
+	// WithRecommendedDirectives adds the directives from the coraza.conf-recommended file
+	WithRecommendedDirectives() WAFConfig
 
 	// WithDirectives parses the directives from the given string and adds them to the WAF.
 	WithDirectives(directives string) WAFConfig
@@ -131,6 +136,13 @@ func (c *wafConfig) WithRules(rules ...*corazawaf.Rule) WAFConfig {
 		ret.rules = append(ret.rules, wafRule{rule: r})
 	}
 	return ret
+}
+
+//go:embed coraza.conf-recommended
+var recommendedConf string
+
+func (c *wafConfig) WithRecommendedDirectives() WAFConfig {
+	return c.WithDirectives(recommendedConf)
 }
 
 func (c *wafConfig) WithDirectivesFromFile(path string) WAFConfig {
