@@ -109,7 +109,7 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
 	if waf == nil {
 		l("nil WAF passed to the handler wrapper")
-		//return h
+		return h
 	}
 
 	fn := func(w http.ResponseWriter, r *http.Request) {
