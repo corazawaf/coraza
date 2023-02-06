@@ -45,6 +45,10 @@ func (sl *serialWriter) Init(c types.Config) error {
 }
 
 func (sl *serialWriter) Write(al *AuditLog) error {
+	if sl.formatter == nil {
+		return nil
+	}
+
 	bts, err := sl.formatter(al)
 	if err != nil {
 		return err

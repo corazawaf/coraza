@@ -257,12 +257,19 @@ func NewWAF() *WAF {
 		logger: &log.Logger{},
 		Level:  loggers.LogLevelInfo,
 	}
+
+	logWriter, err := loggers.GetLogWriter("serial")
+	if err != nil {
+		logger.Error("error creating serial log writer: %s", err.Error())
+	}
+
 	waf := &WAF{
 		// Initializing pool for transactions
 		txPool:                   sync.NewPool(func() interface{} { return new(Transaction) }),
 		RequestBodyLimit:         _1gb,
 		RequestBodyInMemoryLimit: _1gb,
 		ResponseBodyLimit:        _1gb,
+		AuditLogWriter:           logWriter,
 		Logger:                   logger,
 	}
 	if err := waf.SetDebugLogPath(""); err != nil {
