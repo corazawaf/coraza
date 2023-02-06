@@ -14,8 +14,6 @@ import (
 // A LogFormatter receives an auditlog and generates "readable" audit log
 type LogFormatter = func(al *AuditLog) ([]byte, error)
 
-var nopLogFormatter = func(al *AuditLog) ([]byte, error) { return nil, nil }
-
 // LogWriter is the interface for all log writers
 // A LogWriter receives an auditlog and writes it to the output stream
 // An output stream may be a file, a socket, an http request, etc
