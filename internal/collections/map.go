@@ -22,7 +22,7 @@ type Map struct {
 
 var _ collection.Map = &Map{}
 
-func NewMap(variable variables.RuleVariable) collection.Map {
+func NewMap(variable variables.RuleVariable) *Map {
 	return &Map{
 		name:     variable.Name(),
 		variable: variable,
@@ -144,15 +144,23 @@ func (c *Map) Reset() {
 	}
 }
 
-func (c *Map) Data() map[string][]string {
-	result := map[string][]string{}
+func (c *Map) String() string {
+	res := strings.Builder{}
+	res.WriteString(c.name)
+	res.WriteString(":\n")
 	for k, v := range c.data {
-		result[k] = make([]string, 0, len(v))
-		for _, a := range v {
-			result[k] = append(result[k], a.value)
+		res.WriteString("    ")
+		res.WriteString(k)
+		res.WriteString(": ")
+		for i, vv := range v {
+			if i > 0 {
+				res.WriteString(",")
+			}
+			res.WriteString(vv.value)
 		}
+		res.WriteByte('\n')
 	}
-	return result
+	return res.String()
 }
 
 // keyValue stores the case preserved original key and value

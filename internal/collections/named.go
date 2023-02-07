@@ -4,7 +4,9 @@
 package collections
 
 import (
+	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
@@ -14,7 +16,7 @@ import (
 
 // NamedCollection is a Collection that also keeps track of unique names.
 type NamedCollection struct {
-	collection.Map
+	*Map
 	names []string
 }
 
@@ -57,6 +59,18 @@ func (c *NamedCollection) Remove(key string) {
 	}
 }
 
+// Data is an internal method used for serializing to JSON
+func (c *NamedCollection) Data() map[string][]string {
+	result := map[string][]string{}
+	for k, v := range c.data {
+		result[k] = make([]string, 0, len(v))
+		for _, a := range v {
+			result[k] = append(result[k], a.value)
+		}
+	}
+	return result
+}
+
 // Name returns the name for the current CollectionMap
 func (c *NamedCollection) Name() string {
 	return c.Map.Name()
@@ -67,16 +81,16 @@ func (c *NamedCollection) Reset() {
 	c.names = nil
 }
 
-func (c *NamedCollection) Data() map[string][]string {
-	return c.Map.Data()
-}
-
 func (c *NamedCollection) Names(rv variables.RuleVariable) collection.Collection {
 	return &NamedCollectionNames{
 		name:       rv.Name(),
 		variable:   rv,
 		collection: c,
 	}
+}
+
+func (c *NamedCollection) String() string {
+	return fmt.Sprint(c.Map)
 }
 
 func (c *NamedCollection) addName(key string) {
@@ -119,4 +133,17 @@ func (c *NamedCollectionNames) Name() string {
 }
 
 func (c *NamedCollectionNames) Reset() {
+}
+
+func (c *NamedCollectionNames) String() string {
+	res := strings.Builder{}
+	res.WriteString(c.name)
+	res.WriteString(": ")
+	for i, k := range c.collection.names {
+		if i > 0 {
+			res.WriteString(",")
+		}
+		res.WriteString(k)
+	}
+	return res.String()
 }

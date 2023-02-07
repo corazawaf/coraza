@@ -4,6 +4,7 @@
 package collections
 
 import (
+	"fmt"
 	"regexp"
 	"testing"
 
@@ -28,6 +29,13 @@ func TestNamedCollection(t *testing.T) {
 	if l := len(c.FindRegex(regexp.MustCompile("k.*"))); l != 2 {
 		t.Errorf("Error should find regex, got %d", l)
 	}
+	wantStr := `ARGS_POST:
+    key: value
+    key2: value2
+`
+	if have := fmt.Sprint(c); have != wantStr {
+		t.Errorf("String() = %q, want %q", have, wantStr)
+	}
 
 	// Now test names
 
@@ -37,12 +45,24 @@ func TestNamedCollection(t *testing.T) {
 	}
 
 	assertValuesMatch(t, names.FindAll(), "key", "key2")
+	if want, have := "ARGS_POST_NAMES: key,key2", fmt.Sprint(names); want != have {
+		t.Errorf("want %q, have %q", want, have)
+	}
 	c.Add("key", "value2")
 	assertValuesMatch(t, names.FindAll(), "key", "key2")
+	if want, have := "ARGS_POST_NAMES: key,key2", fmt.Sprint(names); want != have {
+		t.Errorf("want %q, have %q", want, have)
+	}
 	// While selection operators will treat this as case-insensitive, names should have all names
 	// as-is.
 	c.Add("Key", "value3")
 	assertValuesMatch(t, names.FindAll(), "key", "key2", "Key")
+	if want, have := "ARGS_POST_NAMES: key,key2,Key", fmt.Sprint(names); want != have {
+		t.Errorf("want %q, have %q", want, have)
+	}
 	c.Remove("key2")
 	assertValuesMatch(t, names.FindAll(), "key", "Key")
+	if want, have := "ARGS_POST_NAMES: key,Key", fmt.Sprint(names); want != have {
+		t.Errorf("want %q, have %q", want, have)
+	}
 }

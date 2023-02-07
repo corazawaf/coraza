@@ -69,7 +69,4 @@ type Map interface {
 
 	// Remove deletes the key from the CollectionMap
 	Remove(key string)
-
-	// Data returns all the data in the CollectionMap
-	Data() map[string][]string
 }

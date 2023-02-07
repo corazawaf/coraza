@@ -14,6 +14,7 @@
 package collections
 
 import (
+	"fmt"
 	"regexp"
 	"testing"
 
@@ -35,5 +36,16 @@ func TestMap(t *testing.T) {
 	}
 	if l := len(c.FindRegex(regexp.MustCompile("k.*"))); l != 2 {
 		t.Errorf("Error should find regex, got %d", l)
+	}
+
+	c.Add("key2", "value3")
+
+	wantStr := `ARGS_POST:
+    key: value
+    key2: value2,value3
+`
+
+	if have := fmt.Sprint(c); have != wantStr {
+		t.Errorf("String() = %q, want %q", have, wantStr)
 	}
 }
