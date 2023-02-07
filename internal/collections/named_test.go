@@ -34,7 +34,14 @@ func TestNamedCollection(t *testing.T) {
     key2: value2
 `
 	if have := fmt.Sprint(c); have != wantStr {
-		t.Errorf("String() = %q, want %q", have, wantStr)
+		// Map order is not guaranteed, not pretty but checking twice is the simplest for now.
+		wantStr = `ARGS_POST:
+    key2: value2
+    key: value
+`
+		if have := fmt.Sprint(c); have != wantStr {
+			t.Errorf("String() = %q, want %q", have, wantStr)
+		}
 	}
 
 	// Now test names
