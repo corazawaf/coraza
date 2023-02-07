@@ -265,9 +265,13 @@ func NewWAF() *WAF {
 
 	waf := &WAF{
 		// Initializing pool for transactions
-		txPool:                   sync.NewPool(func() interface{} { return new(Transaction) }),
+		txPool: sync.NewPool(func() interface{} { return new(Transaction) }),
+		// These defaults are unavoidable as they are zero values for the variables
+		RuleEngine:               types.RuleEngineOn,
+		RequestBodyAccess:        false,
 		RequestBodyLimit:         _1gb,
 		RequestBodyInMemoryLimit: _1gb,
+		ResponseBodyAccess:       false,
 		ResponseBodyLimit:        _1gb,
 		AuditLogWriter:           logWriter,
 		Logger:                   logger,
