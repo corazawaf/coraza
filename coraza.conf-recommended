@@ -42,6 +42,9 @@ SecRule REQUEST_HEADERS:Content-Type "^application/json" \
 # low as practical.
 #
 SecRequestBodyLimit 13107200
+
+SecRequestBodyInMemoryLimit 131072
+
 SecRequestBodyNoFilesLimit 131072
 
 # What to do if the request body size is above our configured limit.

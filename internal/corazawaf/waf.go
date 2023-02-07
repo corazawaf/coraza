@@ -4,6 +4,7 @@
 package corazawaf
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -256,34 +257,24 @@ func NewWAF() *WAF {
 		logger: &log.Logger{},
 		Level:  loggers.LogLevelInfo,
 	}
+
 	logWriter, err := loggers.GetLogWriter("serial")
 	if err != nil {
 		logger.Error("error creating serial log writer: %s", err.Error())
 	}
+
 	waf := &WAF{
 		// Initializing pool for transactions
-		txPool:                   sync.NewPool(func() interface{} { return new(Transaction) }),
-		ArgumentSeparator:        "&",
-		AuditLogWriter:           logWriter,
-		AuditEngine:              types.AuditEngineOff,
-		AuditLogParts:            types.AuditLogParts("ABCFHZ"),
-		RequestBodyAccess:        false,
-		RequestBodyInMemoryLimit: 131072,
-		RequestBodyLimit:         134217728, // 10mb
-		RequestBodyLimitAction:   types.BodyLimitActionReject,
-		ResponseBodyMimeTypes:    []string{"text/html", "text/plain"},
-		ResponseBodyLimit:        524288,
-		ResponseBodyLimitAction:  types.BodyLimitActionReject,
-		ResponseBodyAccess:       false,
+		txPool: sync.NewPool(func() interface{} { return new(Transaction) }),
+		// These defaults are unavoidable as they are zero values for the variables
 		RuleEngine:               types.RuleEngineOn,
-		Rules:                    NewRuleGroup(),
-		TmpDir:                   "/tmp",
-		AuditLogRelevantStatus:   regexp.MustCompile(`.*`),
+		RequestBodyAccess:        false,
+		RequestBodyLimit:         _1gb,
+		RequestBodyInMemoryLimit: _1gb,
+		ResponseBodyAccess:       false,
+		ResponseBodyLimit:        _1gb,
+		AuditLogWriter:           logWriter,
 		Logger:                   logger,
-	}
-	// We initialize a basic audit log writer that discards output
-	if err := logWriter.Init(types.Config{}); err != nil {
-		fmt.Println(err)
 	}
 	if err := waf.SetDebugLogPath(""); err != nil {
 		fmt.Println(err)
@@ -304,4 +295,39 @@ func (w *WAF) SetDebugLogLevel(lvl int) error {
 // helpers to write modsecurity style logs
 func (w *WAF) SetErrorCallback(cb func(rule types.MatchedRule)) {
 	w.ErrorLogCb = cb
+}
+
+const (
+	_1gb       = 1073741824
+	UnsetLimit = -1
+)
+
+func (w *WAF) Validate() error {
+	if w.RequestBodyLimit <= 0 {
+		return errors.New("request body limit should be bigger than 0")
+	}
+
+	if w.RequestBodyLimit > _1gb {
+		return errors.New("request body limit should be at most 1GB")
+	}
+
+	if w.RequestBodyLimit != UnsetLimit {
+		if w.RequestBodyLimit < w.RequestBodyInMemoryLimit {
+			return fmt.Errorf("request body limit should be at least the memory limit")
+		}
+	}
+
+	if w.RequestBodyInMemoryLimit <= 0 {
+		return errors.New("request body memory limit should be bigger than 0")
+	}
+
+	if w.ResponseBodyLimit <= 0 {
+		return errors.New("response body limit should be bigger than 0")
+	}
+
+	if w.ResponseBodyLimit > _1gb {
+		return errors.New("response body limit should be at most 1GB")
+	}
+
+	return nil
 }

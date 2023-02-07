@@ -70,14 +70,12 @@ type WAFConfig interface {
 	WithRootFS(fs fs.FS) WAFConfig
 }
 
-const unsetLimit = -1
-
 // NewWAFConfig creates a new WAFConfig with the default settings.
 func NewWAFConfig() WAFConfig {
 	return &wafConfig{
-		requestBodyLimit:         unsetLimit,
-		requestBodyInMemoryLimit: unsetLimit,
-		responseBodyLimit:        unsetLimit,
+		requestBodyLimit:         corazawaf.UnsetLimit,
+		requestBodyInMemoryLimit: corazawaf.UnsetLimit,
+		responseBodyLimit:        corazawaf.UnsetLimit,
 	}
 }
 

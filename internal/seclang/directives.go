@@ -478,6 +478,7 @@ func directiveSecAuditLog(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errors.New("syntax error: SecAuditLog /some/absolute/path.log")
 	}
+
 	options.Config.Set("auditlog_file", options.Opts)
 	if err := options.WAF.AuditLogWriter.Init(options.Config); err != nil {
 		return err
@@ -513,6 +514,7 @@ func directiveSecAuditLogFormat(options *DirectiveOptions) error {
 		return err
 	}
 	options.Config.Set("auditlog_formatter", formatter)
+
 	if err := options.WAF.AuditLogWriter.Init(options.Config); err != nil {
 		return err
 	}
