@@ -1112,7 +1112,7 @@ func validateMacroExpansion(tests map[string]string, tx *Transaction, t *testing
 		res := m.Expand(tx)
 		if res != v {
 			if testing.Verbose() {
-				fmt.Println(tx.Debug())
+				fmt.Println(tx)
 				fmt.Println("===STACK===\n", string(debug.Stack())+"\n===STACK===")
 			}
 			t.Error("Failed set transaction for " + k + ", expected " + v + ", got " + res)

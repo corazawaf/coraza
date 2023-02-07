@@ -34,7 +34,7 @@ func TestDebug(t *testing.T) {
 	if err := test.RunPhases(); err != nil {
 		t.Error(err)
 	}
-	debug := fmt.Sprintf("%s", test.transaction)
+	debug := fmt.Sprint(test.transaction)
 	expected := []string{
 		"REQUEST_URI: /test",
 		"REQUEST_METHOD: OPTIONS",

@@ -1396,54 +1396,27 @@ func (tx *Transaction) Close() error {
 	}
 }
 
+// String will return a string with the transaction debug information
 func (tx *Transaction) String() string {
-	return tx.Debug()
-}
-
-// Debug will return a string with the transaction debug information
-func (tx *Transaction) Debug() string {
-	res := "\n\n----------------------- ERRORLOG ----------------------\n"
+	res := strings.Builder{}
+	res.WriteString("\n\n----------------------- ERRORLOG ----------------------\n")
 	for _, mr := range tx.matchedRules {
 		status, _ := strconv.Atoi(tx.variables.responseStatus.Get())
-		res += mr.ErrorLog(status)
-		res += "\n\n----------------------- MATCHDATA ---------------------\n"
+		res.WriteString(mr.ErrorLog(status))
+		res.WriteString("\n\n----------------------- MATCHDATA ---------------------\n")
 		for _, md := range mr.MatchedDatas() {
-			res += fmt.Sprintf("%+v", md) + "\n"
+			fmt.Fprintf(&res, "%+v\n", md)
 		}
-		res += "\n"
+		res.WriteByte('\n')
 	}
 
-	res += "\n------------------------ DEBUG ------------------------\n"
+	res.WriteString("\n------------------------ DEBUG ------------------------\n")
 	for v := byte(1); v < types.VariablesCount; v++ {
 		vr := variables.RuleVariable(v)
-		if vr.Name() == "UNKNOWN" {
-			continue
-		}
-		data := map[string][]string{}
-		switch col := tx.Collection(vr).(type) {
-		case *collections.Single:
-			data[""] = []string{
-				col.Get(),
-			}
-		case collection.Map:
-			data = col.Data()
-		}
-
-		if len(data) == 1 {
-			res += fmt.Sprintf("%s: ", vr.Name())
-		} else {
-			res += fmt.Sprintf("%s:\n", vr.Name())
-		}
-
-		for k, d := range data {
-			if k != "" {
-				res += fmt.Sprintf("    %s: %s\n", k, strings.Join(d, ","))
-			} else {
-				res += fmt.Sprintf("%s\n", strings.Join(d, ","))
-			}
-		}
+		col := tx.Collection(vr)
+		fmt.Fprint(&res, col)
 	}
-	return res
+	return res.String()
 }
 
 // generateReqbodyError generates all the error variables for the request body parser

@@ -4,6 +4,8 @@
 package collections
 
 import (
+	"fmt"
+
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/types"
@@ -50,4 +52,8 @@ func (c *Single) Name() string {
 
 func (c *Single) Reset() {
 	c.data = ""
+}
+
+func (c *Single) String() string {
+	return fmt.Sprintf("%s: %s", c.name, c.data)
 }

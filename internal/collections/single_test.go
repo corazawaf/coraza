@@ -20,11 +20,19 @@ func TestSingle(t *testing.T) {
 		t.Errorf("want %s, have %s", want, have)
 	}
 
+	if want, have := "ARGS_PATH: ", c.String(); want != have {
+		t.Errorf("want %s, have %s", want, have)
+	}
+
 	assertValuesMatch(t, c.FindAll())
 
 	c.Set("bear")
 
 	if want, have := "bear", c.Get(); want != have {
+		t.Errorf("want %s, have %s", want, have)
+	}
+
+	if want, have := "ARGS_PATH: bear", c.String(); want != have {
 		t.Errorf("want %s, have %s", want, have)
 	}
 

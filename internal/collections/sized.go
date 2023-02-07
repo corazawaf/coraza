@@ -4,6 +4,7 @@
 package collections
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 
@@ -62,14 +63,18 @@ func (c *SizeCollection) Reset() {
 	// do nothing
 }
 
+func (c *SizeCollection) String() string {
+	return fmt.Sprintf("%s: %d", c.name, c.size())
+}
+
 // Size returns the size of all the collections values
 func (c *SizeCollection) size() int {
 	i := 0
 	for _, d := range c.data {
 		// we iterate over d
-		for _, data := range d.Data() {
+		for _, data := range d.data {
 			for _, v := range data {
-				i += len(v)
+				i += len(v.value)
 			}
 		}
 	}
