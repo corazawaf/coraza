@@ -51,7 +51,7 @@ func TestMap(t *testing.T) {
     key2: value2,value3
     key: value
 `
-		if have := fmt.Sprint(c); have != wantStr {
+		if have != wantStr {
 			t.Errorf("String() = %q, want %q", have, wantStr)
 		}
 	}
