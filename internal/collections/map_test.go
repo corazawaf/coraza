@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package collection
+package collections
 
 import (
 	"regexp"
@@ -20,7 +20,7 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-func TestCollectionMap(t *testing.T) {
+func TestMap(t *testing.T) {
 	c := NewMap(variables.ArgsPost)
 	c.SetIndex("key", 1, "value")
 	c.Set("key2", []string{"value2"})

@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/loggers"
@@ -352,7 +353,7 @@ func TestWriteRequestBodyIsNopWhenBodyIsNotAccesible(t *testing.T) {
 func TestResponseHeader(t *testing.T) {
 	tx := makeTransaction(t)
 	tx.AddResponseHeader("content-type", "test")
-	if tx.variables.responseContentType.String() != "test" {
+	if tx.variables.responseContentType.Get() != "test" {
 		t.Error("invalid RESPONSE_CONTENT_TYPE after response headers")
 	}
 
@@ -522,7 +523,7 @@ func TestWriteResponseBody(t *testing.T) {
 								}
 								// checking if the body has been populated up to the first POST arg
 								index := strings.Index(urlencodedBody, "&")
-								if tx.variables.responseBody.String()[:index] != urlencodedBody[:index] {
+								if tx.variables.responseBody.Get()[:index] != urlencodedBody[:index] {
 									t.Error("failed to set response body")
 								}
 							}
@@ -766,7 +767,7 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error("failed to process request body")
 	}
-	if tx.variables.requestBody.String() != "test123" {
+	if tx.variables.requestBody.Get() != "test123" {
 		t.Error("failed to set request body")
 	}
 	if err := tx.Close(); err != nil {
@@ -878,10 +879,10 @@ func TestTxPhase4Magic(t *testing.T) {
 	if _, err := tx.ProcessResponseBody(); err != nil {
 		t.Error(err)
 	}
-	if tx.variables.outboundDataError.String() != "1" {
+	if tx.variables.outboundDataError.Get() != "1" {
 		t.Error("failed to set outbound data error")
 	}
-	if tx.variables.responseBody.String() != "mor" {
+	if tx.variables.responseBody.Get() != "mor" {
 		t.Error("failed to set response body")
 	}
 }
@@ -901,7 +902,7 @@ func TestVariablesMatch(t *testing.T) {
 	}
 
 	for k, v := range expect {
-		if m := (tx.Collection(k)).(*collection.Simple).String(); m != v {
+		if m := (tx.Collection(k)).(*collections.Single).Get(); m != v {
 			t.Errorf("failed to match variable %s, Expected: %s, got: %s", k.Name(), v, m)
 		}
 	}
@@ -922,7 +923,7 @@ func TestTxReqBodyForce(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error(err)
 	}
-	if tx.variables.requestBody.String() != "test" {
+	if tx.variables.requestBody.Get() != "test" {
 		t.Error("failed to set request body")
 	}
 }
@@ -938,7 +939,7 @@ func TestTxReqBodyForceNegative(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error(err)
 	}
-	if tx.variables.requestBody.String() == "test" {
+	if tx.variables.requestBody.Get() == "test" {
 		t.Error("reqbody should not be there")
 	}
 }
@@ -947,10 +948,10 @@ func TestTxProcessConnection(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
 	tx.ProcessConnection("127.0.0.1", 80, "127.0.0.2", 8080)
-	if tx.variables.remoteAddr.String() != "127.0.0.1" {
+	if tx.variables.remoteAddr.Get() != "127.0.0.1" {
 		t.Error("failed to set client ip")
 	}
-	if tx.variables.remotePort.Int() != 80 {
+	if rp, _ := strconv.Atoi(tx.variables.remotePort.Get()); rp != 80 {
 		t.Error("failed to set client port")
 	}
 }
@@ -964,7 +965,7 @@ func TestTxSetServerName(t *testing.T) {
 	tx := waf.NewTransaction()
 	tx.LastPhase = types.PhaseRequestHeaders
 	tx.SetServerName("coraza.io")
-	if tx.variables.serverName.String() != "coraza.io" {
+	if tx.variables.serverName.Get() != "coraza.io" {
 		t.Error("failed to set server name")
 	}
 	if want, have := 1, len(l.entries); want != have {
@@ -1011,13 +1012,13 @@ func TestTxProcessURI(t *testing.T) {
 	tx := waf.NewTransaction()
 	uri := "http://example.com/path/to/file.html?query=string&other=value"
 	tx.ProcessURI(uri, "GET", "HTTP/1.1")
-	if s := tx.variables.requestURI.String(); s != uri {
+	if s := tx.variables.requestURI.Get(); s != uri {
 		t.Errorf("failed to set request uri, got %s", s)
 	}
-	if s := tx.variables.requestBasename.String(); s != "file.html" {
+	if s := tx.variables.requestBasename.Get(); s != "file.html" {
 		t.Errorf("failed to set request path, got %s", s)
 	}
-	if tx.variables.queryString.String() != "query=string&other=value" {
+	if tx.variables.queryString.Get() != "query=string&other=value" {
 		t.Error("failed to set request query")
 	}
 	if v := tx.variables.args.FindAll(); len(v) != 2 {

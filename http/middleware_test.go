@@ -35,7 +35,7 @@ func TestProcessRequest(t *testing.T) {
 	if _, err := processRequest(tx, req); err != nil {
 		t.Fatal(err)
 	}
-	if tx.Variables().RequestMethod().String() != "POST" {
+	if tx.Variables().RequestMethod().Get() != "POST" {
 		t.Fatal("failed to set request from request object")
 	}
 	if err := tx.Close(); err != nil {
@@ -51,7 +51,7 @@ func TestProcessRequestEngineOff(t *testing.T) {
 	if _, err := processRequest(tx, req); err != nil {
 		t.Fatal(err)
 	}
-	if tx.Variables().RequestMethod().String() != "POST" {
+	if tx.Variables().RequestMethod().Get() != "POST" {
 		t.Fatal("failed to set request from request object")
 	}
 	if err := tx.Close(); err != nil {

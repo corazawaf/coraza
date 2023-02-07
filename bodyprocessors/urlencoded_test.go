@@ -4,6 +4,7 @@
 package bodyprocessors_test
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 
@@ -31,11 +32,11 @@ func TestURLEncode(t *testing.T) {
 	if err := bp.ProcessRequest(strings.NewReader(body), v, bodyprocessors.Options{}); err != nil {
 		t.Error(err)
 	}
-	if v.RequestBody().String() != body {
-		t.Errorf("Expected %s, got %s", body, v.RequestBody().String())
+	if v.RequestBody().Get() != body {
+		t.Errorf("Expected %s, got %s", body, v.RequestBody().Get())
 	}
-	if v.RequestBodyLength().Int() != len(body) {
-		t.Errorf("Expected %d, got %s", len(body), v.RequestBodyLength().String())
+	if rbl, _ := strconv.Atoi(v.RequestBodyLength().Get()); rbl != len(body) {
+		t.Errorf("Expected %d, got %s", len(body), v.RequestBodyLength().Get())
 	}
 	for k, val := range m {
 		if v.ArgsPost().Get(k)[0] != val {

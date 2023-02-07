@@ -8,17 +8,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-func TestConcatCollection(t *testing.T) {
-	c1 := collection.NewMap(variables.ArgsGet)
-	c2 := collection.NewMap(variables.ArgsPost)
-	c3 := collection.NewMap(variables.ArgsPath)
+func TestConcatKeyed(t *testing.T) {
+	c1 := NewMap(variables.ArgsGet)
+	c2 := NewMap(variables.ArgsPost)
+	c3 := NewMap(variables.ArgsPath)
 
-	c := NewConcatCollection(variables.Args, c1, c2, c3)
+	c := NewConcatKeyed(variables.Args, c1, c2, c3)
 
 	re1 := regexp.MustCompile("anim")
 	re2 := regexp.MustCompile("pla")
@@ -52,6 +51,32 @@ func TestConcatCollection(t *testing.T) {
 	assertValuesMatch(t, c.FindString("plant"), "palm")
 	assertValuesMatch(t, c.FindRegex(re1), "cat", "dog")
 	assertValuesMatch(t, c.FindRegex(re2), "palm")
+}
+
+func TestConcatCollection(t *testing.T) {
+	c1 := NewMap(variables.ArgsGet)
+	c2 := NewMap(variables.ArgsPost)
+	c3 := NewMap(variables.ArgsPath)
+
+	c := NewConcatCollection(variables.Args, c1, c2, c3)
+
+	if want, have := "ARGS", c.Name(); want != have {
+		t.Errorf("want %q, have %q", want, have)
+	}
+
+	assertValuesMatch(t, c.FindAll())
+
+	c1.Add("animal", "cat")
+
+	assertValuesMatch(t, c.FindAll(), "cat")
+
+	c2.Add("animal", "dog")
+
+	assertValuesMatch(t, c.FindAll(), "cat", "dog")
+
+	c3.Add("plant", "palm")
+
+	assertValuesMatch(t, c.FindAll(), "cat", "dog", "palm")
 }
 
 func assertValuesMatch(t *testing.T, matches []types.MatchData, wantValues ...string) {

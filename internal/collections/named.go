@@ -22,7 +22,7 @@ var _ collection.Map = &NamedCollection{}
 
 func NewNamedCollection(rv variables.RuleVariable) *NamedCollection {
 	return &NamedCollection{
-		Map: collection.NewMap(rv),
+		Map: NewMap(rv),
 	}
 }
 
@@ -72,7 +72,7 @@ func (c *NamedCollection) Data() map[string][]string {
 }
 
 func (c *NamedCollection) Names(rv variables.RuleVariable) collection.Collection {
-	return &namedCollectionNames{
+	return &NamedCollectionNames{
 		name:       rv.Name(),
 		variable:   rv,
 		collection: c,
@@ -88,21 +88,21 @@ func (c *NamedCollection) addName(key string) {
 	c.names = append(c.names, key)
 }
 
-type namedCollectionNames struct {
+type NamedCollectionNames struct {
 	name       string
 	variable   variables.RuleVariable
 	collection *NamedCollection
 }
 
-func (c *namedCollectionNames) FindRegex(key *regexp.Regexp) []types.MatchData {
+func (c *NamedCollectionNames) FindRegex(key *regexp.Regexp) []types.MatchData {
 	panic("selection operator not supported")
 }
 
-func (c *namedCollectionNames) FindString(key string) []types.MatchData {
+func (c *NamedCollectionNames) FindString(key string) []types.MatchData {
 	panic("selection operator not supported")
 }
 
-func (c *namedCollectionNames) FindAll() []types.MatchData {
+func (c *NamedCollectionNames) FindAll() []types.MatchData {
 	var res []types.MatchData
 	for _, k := range c.collection.names {
 		res = append(res, &corazarules.MatchData{
@@ -114,9 +114,9 @@ func (c *namedCollectionNames) FindAll() []types.MatchData {
 	return res
 }
 
-func (c *namedCollectionNames) Name() string {
+func (c *NamedCollectionNames) Name() string {
 	return c.name
 }
 
-func (c *namedCollectionNames) Reset() {
+func (c *NamedCollectionNames) Reset() {
 }
