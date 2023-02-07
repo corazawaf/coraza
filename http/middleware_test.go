@@ -483,6 +483,14 @@ func TestObtainStatusCodeFromInterruptionOrDefault(t *testing.T) {
 	}
 }
 
+func TestHandlerWithNilWAF(t *testing.T) {
+	delegateHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+	wrappedHandler := WrapHandler(nil, t.Logf, delegateHandler).(http.HandlerFunc)
+	if want, have := fmt.Sprintf("%v", delegateHandler), fmt.Sprintf("%v", wrappedHandler); want != have {
+		t.Errorf("unexpected wrapped handler")
+	}
+}
+
 func TestHandlerAPI(t *testing.T) {
 	testCases := map[string]struct {
 		handler            http.HandlerFunc
