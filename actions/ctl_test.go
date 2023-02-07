@@ -24,7 +24,7 @@ func TestCtl(t *testing.T) {
 			t.Errorf("failed to init requestBodyProcessor %s", bp)
 		}
 		ctlf.Evaluate(r, tx)
-		if tx.Variables().RequestBodyProcessor().String() != bp {
+		if tx.Variables().RequestBodyProcessor().Get() != bp {
 			t.Error("failed to set RequestBodyProcessor " + bp)
 		}
 	}
