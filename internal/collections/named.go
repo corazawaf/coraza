@@ -94,11 +94,11 @@ func (c *NamedCollection) String() string {
 }
 
 func (c *NamedCollection) addName(key string) {
-	for _, n := range c.names {
-		if n == key {
-			return
-		}
-	}
+	// for _, n := range c.names {
+	// 	if n == key {
+	// 		return
+	// 	}
+	// }
 	c.names = append(c.names, key)
 }
 
@@ -122,6 +122,7 @@ func (c *NamedCollectionNames) FindAll() []types.MatchData {
 		res = append(res, &corazarules.MatchData{
 			VariableName_: c.name,
 			Variable_:     c.variable,
+			Key_:          k,
 			Value_:        k,
 		})
 	}
