@@ -50,7 +50,7 @@ type WAF struct {
 	RequestBodyLimit int64
 
 	// Request body in memory limit
-	RequestBodyInMemoryLimit int64
+	requestBodyInMemoryLimit *int64
 
 	// If true, transactions will have access to the response body
 	ResponseBodyAccess bool
@@ -150,9 +150,9 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	tx.AuditLogParts = w.AuditLogParts
 	tx.ForceRequestBodyVariable = false
 	tx.RequestBodyAccess = w.RequestBodyAccess
-	tx.RequestBodyLimit = w.RequestBodyLimit
+	tx.RequestBodyLimit = int64(w.RequestBodyLimit)
 	tx.ResponseBodyAccess = w.ResponseBodyAccess
-	tx.ResponseBodyLimit = w.ResponseBodyLimit
+	tx.ResponseBodyLimit = int64(w.ResponseBodyLimit)
 	tx.RuleEngine = w.RuleEngine
 	tx.HashEngine = false
 	tx.HashEnforcement = false
@@ -172,7 +172,7 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	if tx.requestBodyBuffer == nil {
 		tx.requestBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
 			TmpPath:     w.TmpDir,
-			MemoryLimit: w.RequestBodyInMemoryLimit,
+			MemoryLimit: int64(*w.requestBodyInMemoryLimit),
 			Limit:       w.ResponseBodyLimit,
 		})
 		tx.responseBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
@@ -243,13 +243,15 @@ func (w *WAF) SetDebugLogPath(path string) error {
 
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		w.Logger.Error("failed to open the file: %s", err.Error())
+		w.Logger.Error("failed to open the debug log file: %s", err.Error())
 	}
 
 	w.Logger.SetOutput(f)
 
 	return nil
 }
+
+const _1gb = 1073741824
 
 // NewWAF creates a new WAF instance with default variables
 func NewWAF() *WAF {
@@ -267,15 +269,18 @@ func NewWAF() *WAF {
 		// Initializing pool for transactions
 		txPool: sync.NewPool(func() interface{} { return new(Transaction) }),
 		// These defaults are unavoidable as they are zero values for the variables
-		RuleEngine:               types.RuleEngineOn,
-		RequestBodyAccess:        false,
-		RequestBodyLimit:         _1gb,
-		RequestBodyInMemoryLimit: _1gb,
-		ResponseBodyAccess:       false,
-		ResponseBodyLimit:        _1gb,
-		AuditLogWriter:           logWriter,
-		Logger:                   logger,
+		RuleEngine:         types.RuleEngineOn,
+		RequestBodyAccess:  false,
+		RequestBodyLimit:   _1gb,
+		ResponseBodyAccess: false,
+		ResponseBodyLimit:  _1gb,
+		AuditLogWriter:     logWriter,
+		Logger:             logger,
+		TmpDir:             os.TempDir(),
 	}
+
+	waf.requestBodyInMemoryLimit = &(waf.RequestBodyLimit)
+
 	if err := waf.SetDebugLogPath(""); err != nil {
 		fmt.Println(err)
 	}
@@ -297,10 +302,9 @@ func (w *WAF) SetErrorCallback(cb func(rule types.MatchedRule)) {
 	w.ErrorLogCb = cb
 }
 
-const (
-	_1gb       = 1073741824
-	UnsetLimit = -1
-)
+func (w *WAF) SetRequestBodyInMemoryLimit(limit int64) {
+	w.requestBodyInMemoryLimit = &limit
+}
 
 func (w *WAF) Validate() error {
 	if w.RequestBodyLimit <= 0 {
@@ -311,14 +315,14 @@ func (w *WAF) Validate() error {
 		return errors.New("request body limit should be at most 1GB")
 	}
 
-	if w.RequestBodyLimit != UnsetLimit {
-		if w.RequestBodyLimit < w.RequestBodyInMemoryLimit {
+	if w.requestBodyInMemoryLimit != &w.RequestBodyLimit {
+		if *w.requestBodyInMemoryLimit <= 0 {
+			return errors.New("request body memory limit should be bigger than 0")
+		}
+
+		if w.RequestBodyLimit < *w.requestBodyInMemoryLimit {
 			return fmt.Errorf("request body limit should be at least the memory limit")
 		}
-	}
-
-	if w.RequestBodyInMemoryLimit <= 0 {
-		return errors.New("request body memory limit should be bigger than 0")
 	}
 
 	if w.ResponseBodyLimit <= 0 {

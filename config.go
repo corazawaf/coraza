@@ -72,11 +72,7 @@ type WAFConfig interface {
 
 // NewWAFConfig creates a new WAFConfig with the default settings.
 func NewWAFConfig() WAFConfig {
-	return &wafConfig{
-		requestBodyLimit:         corazawaf.UnsetLimit,
-		requestBodyInMemoryLimit: corazawaf.UnsetLimit,
-		responseBodyLimit:        corazawaf.UnsetLimit,
-	}
+	return &wafConfig{}
 }
 
 // AuditLogConfig controls audit logging.
@@ -109,10 +105,10 @@ type wafConfig struct {
 	rules                    []wafRule
 	auditLog                 *auditLogConfig
 	requestBodyAccess        bool
-	requestBodyLimit         int
-	requestBodyInMemoryLimit int
+	requestBodyLimit         *int
+	requestBodyInMemoryLimit *int
 	responseBodyAccess       bool
-	responseBodyLimit        int
+	responseBodyLimit        *int
 	responseBodyMimeTypes    []string
 	debugLogger              loggers.DebugLogger
 	errorCallback            func(rule types.MatchedRule)
@@ -189,19 +185,19 @@ func (c *wafConfig) clone() *wafConfig {
 
 func (c *wafConfig) WithRequestBodyLimit(limit int) WAFConfig {
 	ret := c.clone()
-	ret.requestBodyLimit = limit
+	ret.requestBodyLimit = &limit
 	return ret
 }
 
 func (c *wafConfig) WithRequestBodyInMemoryLimit(limit int) WAFConfig {
 	ret := c.clone()
-	ret.requestBodyInMemoryLimit = limit
+	ret.requestBodyInMemoryLimit = &limit
 	return ret
 }
 
 func (c *wafConfig) WithResponseBodyLimit(limit int) WAFConfig {
 	ret := c.clone()
-	ret.responseBodyLimit = limit
+	ret.responseBodyLimit = &limit
 	return ret
 }
 
