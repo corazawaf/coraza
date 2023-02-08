@@ -279,6 +279,13 @@ func NewWAF() *WAF {
 		TmpDir:             os.TempDir(),
 	}
 
+	// Here we link the request body in memory limit with the request body limit,
+	// hence it changes accordingly unless the user sets the memory limit to differ.
+	// This allows the WAF object to be valid despite wether the request body in memory
+	// limit is set or not and only perform the comparisons when the value is set by the
+	// user. For example, the test could require the requestBodyLimit to be 3 and no need
+	// to worry about the requestBodyInMemoryLimit but the WAF sill be invalid and the
+	// validation will fail.
 	waf.requestBodyInMemoryLimit = &(waf.RequestBodyLimit)
 
 	if err := waf.SetDebugLogPath(""); err != nil {
