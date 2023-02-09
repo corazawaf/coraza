@@ -71,7 +71,7 @@ func TestSetDebugLogPath(t *testing.T) {
 	}
 }
 
-func TestValidate(t *testing.T) {
+func TestValidateAndBackfill(t *testing.T) {
 	testCases := map[string]struct {
 		customizer func(*WAF)
 		expectErr  bool
@@ -112,7 +112,7 @@ func TestValidate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			waf := NewWAF()
 			tCase.customizer(waf)
-			err := waf.Validate()
+			err := waf.ValidateAndBackfill()
 			if tCase.expectErr {
 				if err == nil {
 					t.Fatalf("expected error: %s", err.Error())
