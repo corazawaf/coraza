@@ -289,7 +289,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 		for nr := r.Chain; nr != nil; {
 			tx.WAF.Logger.Debug("[%s] [%d] Evaluating rule chain for %d", tx.id, rid, r.ID_)
 			matchedChainValues := nr.doEvaluate(phase, tx, cache)
-			if len(matchedChainValues) != 0 {
+			if len(matchedChainValues) == 0 {
 				return matchedChainValues
 			}
 			matchedValues = append(matchedValues, matchedChainValues...)
