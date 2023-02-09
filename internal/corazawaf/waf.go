@@ -170,10 +170,16 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	// Always non-nil if buffers / collections were already initialized so we don't do any of them
 	// based on the presence of RequestBodyBuffer.
 	if tx.requestBodyBuffer == nil {
+		// if no requestBodyInMemoryLimit has been set we default to the
+		var requestBodyInMemoryLimit int64 = w.RequestBodyLimit
+		if w.requestBodyInMemoryLimit != nil {
+			requestBodyInMemoryLimit = int64(*w.requestBodyInMemoryLimit)
+		}
+
 		tx.requestBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
 			TmpPath:     w.TmpDir,
-			MemoryLimit: int64(*w.requestBodyInMemoryLimit),
-			Limit:       w.ResponseBodyLimit,
+			MemoryLimit: requestBodyInMemoryLimit,
+			Limit:       w.RequestBodyLimit,
 		})
 		tx.responseBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
 			TmpPath: w.TmpDir,
@@ -304,8 +310,8 @@ func (w *WAF) SetRequestBodyInMemoryLimit(limit int64) {
 	w.requestBodyInMemoryLimit = &limit
 }
 
-// ValidateAndBackfill
-func (w *WAF) ValidateAndBackfill() error {
+// Validate validates the waf after all the settings have been set.
+func (w *WAF) Validate() error {
 	if w.RequestBodyLimit <= 0 {
 		return errors.New("request body limit should be bigger than 0")
 	}
@@ -314,9 +320,7 @@ func (w *WAF) ValidateAndBackfill() error {
 		return errors.New("request body limit should be at most 1GB")
 	}
 
-	if w.requestBodyInMemoryLimit == nil {
-		w.requestBodyInMemoryLimit = &w.RequestBodyLimit
-	} else {
+	if w.requestBodyInMemoryLimit != nil {
 		if *w.requestBodyInMemoryLimit <= 0 {
 			return errors.New("request body memory limit should be bigger than 0")
 		}

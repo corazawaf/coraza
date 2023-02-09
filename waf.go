@@ -96,7 +96,7 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		waf.ErrorLogCb = c.errorCallback
 	}
 
-	if err := waf.ValidateAndBackfill(); err != nil {
+	if err := waf.Validate(); err != nil {
 		return nil, err
 	}
 

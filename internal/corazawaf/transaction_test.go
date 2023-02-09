@@ -491,7 +491,7 @@ func TestWriteResponseBody(t *testing.T) {
 							waf.ResponseBodyLimit = int64(testCase.responseBodyLimit)
 							waf.ResponseBodyLimitAction = testCase.responseBodyLimitAction
 
-							if err := waf.ValidateAndBackfill(); err != nil {
+							if err := waf.Validate(); err != nil {
 								t.Fatalf("failed to validate the WAF: %s", err.Error())
 							}
 
