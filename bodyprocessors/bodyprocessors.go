@@ -25,6 +25,8 @@ type Options struct {
 	FileMode fs.FileMode
 	// DirMode is the mode of the directory that will be created
 	DirMode fs.FileMode
+	// Strict use strict parsing for XML or others body processors
+	Strict bool
 }
 
 // BodyProcessor interface is used to create

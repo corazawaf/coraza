@@ -18,7 +18,7 @@ type xmlBodyProcessor struct {
 }
 
 func (*xmlBodyProcessor) ProcessRequest(reader io.Reader, v rules.TransactionVariables, options Options) error {
-	values, contents, err := readXML(reader)
+	values, contents, err := readXML(reader, options.Strict)
 	if err != nil {
 		return err
 	}
@@ -32,10 +32,15 @@ func (*xmlBodyProcessor) ProcessResponse(reader io.Reader, v rules.TransactionVa
 	return nil
 }
 
-func readXML(reader io.Reader) ([]string, []string, error) {
+func readXML(reader io.Reader, strict bool) ([]string, []string, error) {
 	var attrs []string
 	var content []string
 	dec := xml.NewDecoder(reader)
+	if !strict {
+		dec.Strict = false
+		dec.AutoClose = xml.HTMLAutoClose
+		dec.Entity = xml.HTMLEntity
+	}
 	for {
 		token, err := dec.Token()
 		if err != nil && err != io.EOF {
