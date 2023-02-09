@@ -357,8 +357,9 @@ func directiveSecRequestBodyLimitAction(options *DirectiveOptions) error {
 func directiveSecRequestBodyInMemoryLimit(options *DirectiveOptions) error {
 	limit, err := strconv.ParseInt(options.Opts, 10, 64)
 	if err != nil {
-		options.WAF.SetRequestBodyInMemoryLimit(limit)
+		return err
 	}
+	options.WAF.SetRequestBodyInMemoryLimit(limit)
 	return nil
 }
 
@@ -711,8 +712,11 @@ func directiveSecUploadKeepFiles(options *DirectiveOptions) error {
 
 func directiveSecUploadFileMode(options *DirectiveOptions) error {
 	fm, err := strconv.ParseInt(options.Opts, 8, 32)
+	if err != nil {
+		return err
+	}
 	options.WAF.UploadFileMode = fs.FileMode(fm)
-	return err
+	return nil
 }
 
 func directiveSecUploadFileLimit(options *DirectiveOptions) error {

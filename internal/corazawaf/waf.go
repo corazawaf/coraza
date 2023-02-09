@@ -310,6 +310,10 @@ func (w *WAF) SetRequestBodyInMemoryLimit(limit int64) {
 	w.requestBodyInMemoryLimit = &limit
 }
 
+func (w *WAF) RequestBodyInMemoryLimit() *int64 {
+	return w.requestBodyInMemoryLimit
+}
+
 // Validate validates the waf after all the settings have been set.
 func (w *WAF) Validate() error {
 	if w.RequestBodyLimit <= 0 {
