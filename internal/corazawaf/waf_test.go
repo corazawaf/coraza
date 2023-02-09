@@ -70,3 +70,59 @@ func TestSetDebugLogPath(t *testing.T) {
 		})
 	}
 }
+
+func TestValidate(t *testing.T) {
+	testCases := map[string]struct {
+		customizer func(*WAF)
+		expectErr  bool
+	}{
+		"default": {
+			expectErr:  false,
+			customizer: func(w *WAF) {},
+		},
+		"request body limit less than zero": {
+			expectErr:  true,
+			customizer: func(w *WAF) { w.RequestBodyLimit = -1 },
+		},
+		"request body limit greater than 1gb": {
+			expectErr:  true,
+			customizer: func(w *WAF) { w.RequestBodyLimit = _1gb + 1 },
+		},
+		"request body in memory limit less than zero": {
+			expectErr:  true,
+			customizer: func(w *WAF) { w.SetRequestBodyInMemoryLimit(-1) },
+		},
+		"request body limit less than request body in memory limit": {
+			expectErr: true,
+			customizer: func(w *WAF) {
+				w.RequestBodyLimit = 10
+				w.SetRequestBodyInMemoryLimit(11)
+			}},
+		"response body limit less than zero": {
+			expectErr:  true,
+			customizer: func(w *WAF) { w.ResponseBodyLimit = -1 },
+		},
+		"response body limit greater than 1gb": {
+			expectErr:  true,
+			customizer: func(w *WAF) { w.ResponseBodyLimit = _1gb + 1 },
+		},
+	}
+
+	for name, tCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			waf := NewWAF()
+			tCase.customizer(waf)
+			err := waf.Validate()
+			if tCase.expectErr {
+				if err == nil {
+					t.Fatalf("expected error: %s", err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %s", err.Error())
+				}
+			}
+
+		})
+	}
+}
