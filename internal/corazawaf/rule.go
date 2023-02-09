@@ -273,11 +273,23 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 
 	// disruptive actions are only evaluated by parent rules
 	if r.ParentID_ == 0 {
+		if multiphaseEvaluation {
+			for _, matched := range tx.matchedRules {
+				if matched.Rule().ID() == r.ID_ {
+					// Rule already triggered at an earlier phase, so we avoid double evaluation and just
+					// add the new matches for auditing.
+					m := matched.(*corazarules.MatchedRule)
+					m.MatchedDatas_ = append(m.MatchedDatas_, matchedValues...)
+					return matchedValues
+				}
+			}
+		}
+
 		// we only run the chains for the parent rule
 		for nr := r.Chain; nr != nil; {
 			tx.WAF.Logger.Debug("[%s] [%d] Evaluating rule chain for %d", tx.id, rid, r.ID_)
 			matchedChainValues := nr.doEvaluate(phase, tx, cache)
-			if len(matchedChainValues) == 0 {
+			if len(matchedChainValues) != 0 {
 				return matchedChainValues
 			}
 			matchedValues = append(matchedValues, matchedChainValues...)
@@ -295,7 +307,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 
 		}
 		if r.ID_ != 0 {
-			// we avoid matching chains and secmarkers
+			// we avoid matching secmarkers
 			tx.MatchRule(r, matchedValues)
 		}
 	}
