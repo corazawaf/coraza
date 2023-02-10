@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/corazawaf/coraza/v3/internal/environment"
 	ioutils "github.com/corazawaf/coraza/v3/internal/io"
 	stringutils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/internal/sync"
@@ -177,16 +178,18 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 		}
 
 		tx.requestBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
-			TmpPath:     w.TmpDir,
+			TmpPath:     tx.WAF.TmpDir,
 			MemoryLimit: requestBodyInMemoryLimit,
 			Limit:       w.RequestBodyLimit,
 		})
+
 		tx.responseBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
-			TmpPath: w.TmpDir,
+			TmpPath: tx.WAF.TmpDir,
 			// the response body is just buffered in memory. Therefore, Limit and MemoryLimit are equal.
 			MemoryLimit: w.ResponseBodyLimit,
 			Limit:       w.ResponseBodyLimit,
 		})
+
 		tx.variables = *NewTransactionVariables()
 		tx.transformationCache = map[transformationKey]*transformationValue{}
 	}
@@ -282,13 +285,16 @@ func NewWAF() *WAF {
 		ResponseBodyLimit:  _1gb,
 		AuditLogWriter:     logWriter,
 		Logger:             logger,
-		TmpDir:             os.TempDir(),
+	}
+
+	if environment.HasAccessToFS {
+		waf.TmpDir = os.TempDir()
 	}
 
 	if err := waf.SetDebugLogPath(""); err != nil {
 		fmt.Println(err)
 	}
-	waf.Logger.Debug("a new waf instance was created")
+	waf.Logger.Debug("a new WAF instance was created")
 	return waf
 }
 
