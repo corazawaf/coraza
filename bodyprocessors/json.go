@@ -32,6 +32,14 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v rules.Transactio
 }
 
 func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v rules.TransactionVariables, _ Options) error {
+	col := v.ResponseArgs()
+	data, err := readJSON(reader)
+	if err != nil {
+		return err
+	}
+	for key, value := range data {
+		col.SetIndex(key, 0, value)
+	}
 	return nil
 }
 
