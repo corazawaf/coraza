@@ -168,14 +168,6 @@ SecResponseBodyLimitAction ProcessPartial
 
 # -- Filesystem configuration ------------------------------------------------
 
-# The location where Coraza stores temporary files (for example, when
-# it needs to handle a file upload that is larger than the configured limit).
-# 
-# This default setting is chosen due to all systems have /tmp available however, 
-# this is less than ideal. It is recommended that you specify a location that's private.
-#
-SecTmpDir /tmp/
-
 # The location where Coraza will keep its persistent data.  This default setting 
 # is chosen due to all systems have /tmp available however, it
 # too should be updated to a place that other users can't access.

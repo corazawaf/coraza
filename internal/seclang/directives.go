@@ -278,15 +278,6 @@ func directiveSecWebAppID(options *DirectiveOptions) error {
 	return nil
 }
 
-func directiveSecTmpDir(options *DirectiveOptions) error {
-	if len(options.Opts) == 0 {
-		return errEmptyOptions
-	}
-
-	options.WAF.TmpDir = options.Opts
-	return nil
-}
-
 func directiveSecServerSignature(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
