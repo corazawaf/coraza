@@ -5,9 +5,9 @@ package corazawaf
 
 import (
 	"fmt"
-	"github.com/corazawaf/coraza/v3/internal/corazatypes"
 	"time"
 
+	"github.com/corazawaf/coraza/v3/internal/corazatypes"
 	"github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
