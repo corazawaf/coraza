@@ -6,6 +6,7 @@ package corazawaf
 import (
 	"errors"
 	"fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazatypes"
 	"io"
 	"io/fs"
 	"log"
@@ -161,7 +162,7 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	tx.ruleRemoveByID = nil
 	tx.ruleRemoveTargetByID = map[int][]ruleVariableParams{}
 	tx.Skip = 0
-	tx.AllowType = 0
+	tx.AllowType = corazatypes.AllowTypeUnset
 	tx.Capture = false
 	tx.stopWatches = map[types.RulePhase]int64{}
 	tx.WAF = w
