@@ -18,7 +18,7 @@ type xmlBodyProcessor struct {
 }
 
 func (*xmlBodyProcessor) ProcessRequest(reader io.Reader, v rules.TransactionVariables, options Options) error {
-	values, contents, err := readXML(reader, options.Strict)
+	values, contents, err := readXML(reader, false)
 	if err != nil {
 		return err
 	}
