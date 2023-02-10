@@ -141,10 +141,6 @@ func TestDirectives(t *testing.T) {
 			{"", expectErrorOnDirective},
 			{"/tmp", func(w *corazawaf.WAF) bool { return w.UploadDir == "/tmp" }},
 		},
-		"SecTmpDir": {
-			{"", expectErrorOnDirective},
-			{"/tmp", func(w *corazawaf.WAF) bool { return w.TmpDir == "/tmp" }},
-		},
 		"SecSensorId": {
 			{"", expectErrorOnDirective},
 			{"test", func(w *corazawaf.WAF) bool { return w.SensorID == "test" }},
