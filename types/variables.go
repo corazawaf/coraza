@@ -5,4 +5,4 @@ package types
 
 // VariablesCount contains the number of variables handled by the variables package
 // It is used to create arrays of the correct size
-const VariablesCount = 92
+const VariablesCount = 91

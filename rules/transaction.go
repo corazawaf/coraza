@@ -129,10 +129,10 @@ type TransactionVariables interface {
 	RequestHeadersNames() collection.Collection
 	RequestCookiesNames() collection.Collection
 	XML() collection.Map
-	RequestXML() collection.Map
-	ResponseXML() collection.Map
 	IP() collection.Map
 	ArgsNames() collection.Collection
 	ArgsGetNames() collection.Collection
 	ArgsPostNames() collection.Collection
+	ResponseArgs() collection.Map
+	ResponseArgsNames() collection.Collection
 }

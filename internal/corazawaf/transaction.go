@@ -295,12 +295,9 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 	case variables.UrlencodedError:
 		return tx.variables.urlencodedError
 	case variables.ResponseArgs:
-		// TODO(anuraaga): This collection seems to be missing.
-		return nil
-	case variables.ResponseXML:
-		return tx.variables.responseXML
-	case variables.RequestXML:
-		return tx.variables.requestXML
+		return tx.variables.responseArgs
+	case variables.ResponseArgsNames:
+		return tx.variables.responseArgsNames
 	case variables.XML:
 		return tx.variables.xml
 	case variables.MultipartPartHeaders:
@@ -650,15 +647,15 @@ func (tx *Transaction) ExtractArguments(orig types.ArgumentType, uri string) {
 	data := urlutil.ParseQuery(uri, '&')
 	for k, vs := range data {
 		for _, v := range vs {
-			tx.AddArgument(orig, k, v)
+			tx.AddRequestArgument(orig, k, v)
 		}
 	}
 }
 
-// AddArgument Add arguments GET or POST
+// AddRequestArgument Add request arguments GET or POST
 // This will set ARGS_(GET|POST), ARGS, ARGS_NAMES, ARGS_COMBINED_SIZE and
 // ARGS_(GET|POST)_NAMES
-func (tx *Transaction) AddArgument(argType types.ArgumentType, key string, value string) {
+func (tx *Transaction) AddRequestArgument(argType types.ArgumentType, key string, value string) {
 	// TODO implement ARGS value limit using ArgumentsLimit
 	var vals collection.Map
 	switch argType {
@@ -684,7 +681,7 @@ func (tx *Transaction) AddArgument(argType types.ArgumentType, key string, value
 //	the SecLanguages phases. It is something that may occur between the
 //	SecLanguage phase 1 and 2.
 //
-// note: This function won't add GET arguments, they must be added with AddArgument
+// note: This function won't add GET arguments, they must be added with Request
 func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string) {
 	tx.variables.requestMethod.Set(method)
 	tx.variables.requestProtocol.Set(httpVersion)
@@ -1370,6 +1367,11 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	return al
 }
 
+// AddRequestArgument adds a new argument to the response
+func (tx *Transaction) AddResponseArgument(key string, value string) {
+	tx.variables.responseArgs.Add(key, value)
+}
+
 // Close closes the transaction after phase 5
 // This method helps the GC to clean up the transaction faster and release resources
 // It also allows caches the transaction back into the sync.Pool
@@ -1516,8 +1518,8 @@ type TransactionVariables struct {
 	filesNames           collection.Map
 	filesTmpContent      collection.Map
 	xml                  collection.Map
-	requestXML           collection.Map
-	responseXML          collection.Map
+	responseArgs         *collections.NamedCollection
+	responseArgsNames    collection.Collection
 	multipartPartHeaders collection.Map
 	// Persistent variables
 	ip collection.Map
@@ -1603,12 +1605,10 @@ func NewTransactionVariables() *TransactionVariables {
 	v.files = collections.NewMap(variables.Files)
 	v.filesNames = collections.NewMap(variables.FilesNames)
 	v.filesTmpNames = collections.NewMap(variables.FilesTmpNames)
-	v.responseXML = collections.NewMap(variables.ResponseXML)
-	v.requestXML = collections.NewMap(variables.RequestXML)
 	v.multipartPartHeaders = collections.NewMap(variables.MultipartPartHeaders)
 
 	// XML is a pointer to RequestXML
-	v.xml = v.requestXML
+	v.xml = collections.NewMap(variables.RequestXML)
 
 	v.argsGet = collections.NewNamedCollection(variables.ArgsGet)
 	v.argsGetNames = v.argsGet.Names(variables.ArgsGetNames)
@@ -1629,6 +1629,9 @@ func NewTransactionVariables() *TransactionVariables {
 		// Only used in a concatenating collection so variable name doesn't matter.
 		v.argsPath.Names(variables.Unknown),
 	)
+	v.responseArgs = collections.NewNamedCollection(variables.ResponseArgs)
+	v.responseArgsNames = v.responseArgs.Names(variables.ResponseArgsNames)
+
 	return v
 }
 
@@ -1964,14 +1967,6 @@ func (v *TransactionVariables) XML() collection.Map {
 	return v.xml
 }
 
-func (v *TransactionVariables) RequestXML() collection.Map {
-	return v.requestXML
-}
-
-func (v *TransactionVariables) ResponseXML() collection.Map {
-	return v.responseXML
-}
-
 func (v *TransactionVariables) IP() collection.Map {
 	return v.ip
 }
@@ -1986,6 +1981,14 @@ func (v *TransactionVariables) ArgsGetNames() collection.Collection {
 
 func (v *TransactionVariables) ArgsPostNames() collection.Collection {
 	return v.argsPostNames
+}
+
+func (v *TransactionVariables) ResponseArgs() collection.Map {
+	return v.responseArgs
+}
+
+func (v *TransactionVariables) ResponseArgsNames() collection.Collection {
+	return v.responseArgsNames
 }
 
 func (v *TransactionVariables) reset() {
@@ -2071,11 +2074,13 @@ func (v *TransactionVariables) reset() {
 	v.requestHeadersNames.Reset()
 	v.requestCookiesNames.Reset()
 	v.xml.Reset()
-	v.requestXML.Reset()
-	v.responseXML.Reset()
+	v.responseArgsNames.Reset()
+	v.responseArgs.Reset()
 	v.multipartPartHeaders.Reset()
 	v.ip.Reset()
 	v.argsNames.Reset()
 	v.argsGetNames.Reset()
 	v.argsPostNames.Reset()
 }
+
+var _ types.Transaction = &Transaction{}

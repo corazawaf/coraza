@@ -217,6 +217,8 @@ const (
 	UrlencodedError
 	// ResponseArgs contains the response parsed arguments
 	ResponseArgs
+	// ResponseArgsNames contains the response parsed arguments names
+	ResponseArgsNames
 	// ResponseXML contains the response parsed XML
 	ResponseXML
 	// RequestXML contains the request parsed XML
@@ -319,6 +321,7 @@ var rulemap = map[RuleVariable]string{
 	RequestXML:                    "REQUEST_XML",
 	ResponseXML:                   "RESPONSE_XML",
 	ResponseArgs:                  "RESPONSE_ARGS",
+	ResponseArgsNames:             "RESPONSE_ARGS_NAMES",
 	MultipartPartHeaders:          "MULTIPART_PART_HEADERS",
 }
 

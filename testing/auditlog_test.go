@@ -43,7 +43,7 @@ func TestAuditLogMessages(t *testing.T) {
 	}
 	defer os.Remove(file.Name())
 	tx := waf.NewTransaction()
-	tx.AddArgument(types.ArgumentGET, "test", "test")
+	tx.AddRequestArgument(types.ArgumentGET, "test", "test")
 	tx.ProcessRequestHeaders()
 	al := tx.AuditLog()
 	if len(al.Messages) != 1 {
@@ -92,7 +92,7 @@ func TestAuditLogRelevantOnly(t *testing.T) {
 		t.Error(err)
 	}
 	tx := waf.NewTransaction()
-	tx.AddArgument(types.ArgumentGET, "test", "test")
+	tx.AddRequestArgument(types.ArgumentGET, "test", "test")
 	tx.ProcessRequestHeaders()
 	// now we read file
 	if _, err := file.Seek(0, 0); err != nil {
@@ -129,7 +129,7 @@ func TestAuditLogRelevantOnlyOk(t *testing.T) {
 		t.Error(err)
 	}
 	tx := waf.NewTransaction()
-	tx.AddArgument(types.ArgumentGET, "test", "test")
+	tx.AddRequestArgument(types.ArgumentGET, "test", "test")
 	tx.ProcessRequestHeaders()
 	// now we read file
 	if _, err := file.Seek(0, 0); err != nil {
@@ -166,7 +166,7 @@ func TestAuditLogRelevantOnlyNoAuditlog(t *testing.T) {
 		t.Error(err)
 	}
 	tx := waf.NewTransaction()
-	tx.AddArgument(types.ArgumentGET, "test", "test")
+	tx.AddRequestArgument(types.ArgumentGET, "test", "test")
 	tx.ProcessRequestHeaders()
 	// now we read file
 	if _, err := file.Seek(0, 0); err != nil {

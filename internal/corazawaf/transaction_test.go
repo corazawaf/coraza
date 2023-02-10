@@ -986,15 +986,15 @@ func TestTxAddArgument(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
 	tx.ProcessConnection("127.0.0.1", 80, "127.0.0.2", 8080)
-	tx.AddArgument(types.ArgumentGET, "test", "testvalue")
+	tx.AddRequestArgument(types.ArgumentGET, "test", "testvalue")
 	if tx.variables.argsGet.Get("test")[0] != "testvalue" {
 		t.Error("failed to set args get")
 	}
-	tx.AddArgument(types.ArgumentPOST, "ptest", "ptestvalue")
+	tx.AddRequestArgument(types.ArgumentPOST, "ptest", "ptestvalue")
 	if tx.variables.argsPost.Get("ptest")[0] != "ptestvalue" {
 		t.Error("failed to set args post")
 	}
-	tx.AddArgument(types.ArgumentPATH, "ptest2", "ptestvalue")
+	tx.AddRequestArgument(types.ArgumentPATH, "ptest2", "ptestvalue")
 	if tx.variables.argsPath.Get("ptest2")[0] != "ptestvalue" {
 		t.Error("failed to set args post")
 	}
