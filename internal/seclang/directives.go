@@ -436,7 +436,14 @@ func directiveSecRemoteRulesFailAction(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	options.WAF.AbortOnRemoteRulesFail = strings.ToLower(options.Opts) == "abort"
+	switch strings.ToLower(options.Opts) {
+	case "abort":
+		options.WAF.AbortOnRemoteRulesFail = true
+	case "warn":
+		options.WAF.AbortOnRemoteRulesFail = false
+	default:
+		return errors.New("unknown option")
+	}
 	return nil
 }
 

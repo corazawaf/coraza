@@ -109,6 +109,15 @@ func TestDirectives(t *testing.T) {
 		check func(*corazawaf.WAF) bool
 	}
 	directiveCases := map[string][]directiveCase{
+		"SecComponentSignature": {
+			{"", expectErrorOnDirective},
+			{"name", func(w *corazawaf.WAF) bool { return len(w.ComponentNames) == 1 }},
+		},
+		"SecMarker": {
+			{"", expectErrorOnDirective},
+			{"999", func(w *corazawaf.WAF) bool { return w.Rules.Count() == 1 }},
+			{"MY_TEXT", func(w *corazawaf.WAF) bool { return w.Rules.Count() == 1 }},
+		},
 		"SecWebAppId": {
 			{"", expectErrorOnDirective},
 			{"test123", func(w *corazawaf.WAF) bool { return w.WebAppID == "test123" }},
@@ -192,11 +201,34 @@ func TestDirectives(t *testing.T) {
 			{"Reject", func(w *corazawaf.WAF) bool { return w.RequestBodyLimitAction == types.BodyLimitActionReject }},
 			{"ProcessPartial", func(w *corazawaf.WAF) bool { return w.RequestBodyLimitAction == types.BodyLimitActionProcessPartial }},
 		},
+		"SecRequestBodyAccess": {
+			{"", expectErrorOnDirective},
+			{"What?", expectErrorOnDirective},
+			{"On", func(w *corazawaf.WAF) bool { return w.RequestBodyAccess }},
+			{"Off", func(w *corazawaf.WAF) bool { return !w.RequestBodyAccess }},
+		},
 		"SecResponseBodyLimitAction": {
 			{"", expectErrorOnDirective},
 			{"What?", expectErrorOnDirective},
 			{"Reject", func(w *corazawaf.WAF) bool { return w.ResponseBodyLimitAction == types.BodyLimitActionReject }},
 			{"ProcessPartial", func(w *corazawaf.WAF) bool { return w.ResponseBodyLimitAction == types.BodyLimitActionProcessPartial }},
+		},
+		"SecResponseBodyAccess": {
+			{"", expectErrorOnDirective},
+			{"What?", expectErrorOnDirective},
+			{"On", func(w *corazawaf.WAF) bool { return w.ResponseBodyAccess }},
+			{"Off", func(w *corazawaf.WAF) bool { return !w.ResponseBodyAccess }},
+		},
+		"SecRemoteRulesFailAction": {
+			{"", expectErrorOnDirective},
+			{"What?", expectErrorOnDirective},
+			{"Abort", func(w *corazawaf.WAF) bool { return w.AbortOnRemoteRulesFail }},
+		},
+		"SecDefaultAction": {
+			{"", expectErrorOnDirective},
+		},
+		"SecAuditLog": {
+			{"", expectErrorOnDirective},
 		},
 	}
 
