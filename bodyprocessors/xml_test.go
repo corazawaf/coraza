@@ -27,7 +27,7 @@ func TestXMLAttribures(t *testing.T) {
 </book>
 
 </bookstore>`
-	attrs, contents, err := readXML(bytes.NewReader([]byte(xmldoc)), false)
+	attrs, contents, err := readXML(bytes.NewReader([]byte(xmldoc)))
 	if err != nil {
 		t.Error(err)
 	}
@@ -58,7 +58,7 @@ func TestXMLPayloadFlexibility(t *testing.T) {
 			<heading>Reminder</heading>
 			<body>Don't forget me this weekend!
 		</note>`
-	_, contents, err := readXML(bytes.NewReader([]byte(xmldoc)), false)
+	_, contents, err := readXML(bytes.NewReader([]byte(xmldoc)))
 	if err != nil {
 		t.Error(err)
 	}
@@ -69,9 +69,5 @@ func TestXMLPayloadFlexibility(t *testing.T) {
 	}
 	if len(contents) != 4 {
 		t.Errorf("Expected 4 contents, got %d", len(contents))
-	}
-	_, _, err = readXML(bytes.NewReader([]byte(xmldoc)), true)
-	if err == nil {
-		t.Errorf("Processor should fail: %v", err)
 	}
 }
