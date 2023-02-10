@@ -29,6 +29,13 @@ func (*xmlBodyProcessor) ProcessRequest(reader io.Reader, v rules.TransactionVar
 }
 
 func (*xmlBodyProcessor) ProcessResponse(reader io.Reader, v rules.TransactionVariables, options Options) error {
+	values, contents, err := readXML(reader)
+	if err != nil {
+		return err
+	}
+	col := v.ResponseXML()
+	col.Set("//@*", values)
+	col.Set("/*", contents)
 	return nil
 }
 
