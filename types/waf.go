@@ -80,7 +80,7 @@ func ParseRuleEngineStatus(re string) (RuleEngineStatus, error) {
 	case "off":
 		return RuleEngineOff, nil
 	}
-	return -1, fmt.Errorf("invalid rule engine status: %s", re)
+	return -1, fmt.Errorf("invalid rule engine status: %q", re)
 }
 
 // String returns the string representation of the
@@ -88,11 +88,11 @@ func ParseRuleEngineStatus(re string) (RuleEngineStatus, error) {
 func (re RuleEngineStatus) String() string {
 	switch re {
 	case RuleEngineOn:
-		return "on"
+		return "On"
 	case RuleEngineDetectionOnly:
 		return "DetectionOnly"
 	case RuleEngineOff:
-		return "off"
+		return "Off"
 	}
 	return "unknown"
 }
