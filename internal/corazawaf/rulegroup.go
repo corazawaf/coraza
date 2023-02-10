@@ -108,6 +108,8 @@ func (rg *RuleGroup) Clear() {
 }
 
 // Eval rules for the specified phase, between 1 and 5
+// Rules are evaluated in syntactic order and the evaluation finishes
+// as soon as an interruption has been triggered.
 // Returns true if transaction is disrupted
 func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	tx.WAF.Logger.Debug("[%s] Evaluating phase %d", tx.id, int(phase))
@@ -120,6 +122,8 @@ func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	}
 RulesLoop:
 	for _, r := range tx.WAF.Rules.GetRules() {
+		// if there is already an interruption and the phase isn't logging
+		// we break the loop
 		if tx.interruption != nil && phase != types.PhaseLogging {
 			break RulesLoop
 		}
