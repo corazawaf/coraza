@@ -982,7 +982,7 @@ func TestTxSetServerName(t *testing.T) {
 
 }
 
-func TestTxAddArgument(t *testing.T) {
+func TestTxAddRequestArgument(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
 	tx.ProcessConnection("127.0.0.1", 80, "127.0.0.2", 8080)
@@ -997,6 +997,26 @@ func TestTxAddArgument(t *testing.T) {
 	tx.AddRequestArgument(types.ArgumentPATH, "ptest2", "ptestvalue")
 	if tx.variables.argsPath.Get("ptest2")[0] != "ptestvalue" {
 		t.Error("failed to set args post")
+	}
+}
+
+func TestTxAddResponseArgument(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	tx.AddResponseArgument("test", "testvalue")
+	tx.AddResponseArgument("test", "testvalue2")
+	tx.AddResponseArgument("test2", "testvalue")
+	if tx.variables.responseArgs.Get("test")[0] != "testvalue" {
+		t.Error("failed to set response headers")
+	}
+	if tx.variables.responseArgs.Get("test")[1] != "testvalue2" {
+		t.Error("failed to set response headers")
+	}
+	if tx.variables.responseArgs.Get("test2")[0] != "testvalue" {
+		t.Error("failed to set response headers")
+	}
+	if tx.variables.responseArgsNames.FindAll()[0].Value() != "test" {
+		t.Error("failed to set response headers names")
 	}
 }
 
