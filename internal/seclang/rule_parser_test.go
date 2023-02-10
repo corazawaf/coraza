@@ -4,6 +4,7 @@
 package seclang
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -87,8 +88,9 @@ func TestSecRuleInlineVariableNegation(t *testing.T) {
 	err = p.FromString(`
 		SecRule REQUEST_URI|!REQUEST_COOKIES: "abc" "id:9,phase:2"
 	`)
-	if !strings.Contains(err.Error(), "failed to compile rule") {
-		t.Errorf("Error should be failed to compile rule, got %s", err)
+	expectedErr := "failed to compile the directive"
+	if !strings.Contains(err.Error(), expectedErr) {
+		t.Errorf("unexpected error, want %q, got %q", expectedErr, err.Error())
 	}
 }
 
@@ -108,8 +110,9 @@ func TestSecRuleUpdateTargetVariableNegation(t *testing.T) {
 		SecRule REQUEST_URI|REQUEST_COOKIES "abc" "id:8,phase:2"
 		SecRuleUpdateTargetById 8 "!REQUEST_HEADERS:"
 	`)
-	if err.Error() != "unknown variable" {
-		t.Errorf("Error should be unknown variable, got %s", err.Error())
+	expectedErr := errors.New("unknown variable")
+	if errors.Unwrap(err).Error() != expectedErr.Error() {
+		t.Fatalf("unexpexted error, want %q, have %q", expectedErr, errors.Unwrap(err).Error())
 	}
 
 	// Try to update undefined rule
@@ -117,9 +120,9 @@ func TestSecRuleUpdateTargetVariableNegation(t *testing.T) {
 		SecRule REQUEST_URI|REQUEST_COOKIES "abc" "id:9,phase:2"
 		SecRuleUpdateTargetById 99 "!REQUEST_HEADERS:xyz"
 	`)
-	if err.Error() != "cannot create a variable exception for an undefined rule" {
-		t.Error("Error should be cannot create a variable exception for an undefined rule, got ",
-			err)
+	expectedErr = errors.New("cannot create a variable exception for an undefined rule")
+	if errors.Unwrap(err).Error() != expectedErr.Error() {
+		t.Fatalf("unexpected error, want %q, have %q", expectedErr, errors.Unwrap(err).Error())
 	}
 }
 
