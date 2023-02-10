@@ -42,8 +42,8 @@ func TestRequestBodyLimit(t *testing.T) {
 	for name, tCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			cfg := NewWAFConfig().(*wafConfig)
-			cfg.requestBodyLimit = tCase.limit
-			cfg.requestBodyInMemoryLimit = tCase.inMemoryLimit
+			cfg.requestBodyLimit = &tCase.limit
+			cfg.requestBodyInMemoryLimit = &tCase.inMemoryLimit
 
 			_, err := NewWAF(cfg)
 			if tCase.expectedErr == nil {
@@ -84,7 +84,7 @@ func TestResponseBodyLimit(t *testing.T) {
 	for name, tCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			cfg := NewWAFConfig().(*wafConfig)
-			cfg.responseBodyLimit = tCase.limit
+			cfg.responseBodyLimit = &tCase.limit
 
 			_, err := NewWAF(cfg)
 			if tCase.expectedErr == nil {

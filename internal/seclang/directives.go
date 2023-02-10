@@ -194,9 +194,12 @@ func directiveSecResponseBodyAccess(options *DirectiveOptions) error {
 // Anything over the limit will be rejected with status code 413 (Request Entity Too Large).
 // There is a hard limit of 1 GB.
 func directiveSecRequestBodyLimit(options *DirectiveOptions) error {
-	var err error
-	options.WAF.RequestBodyLimit, err = strconv.ParseInt(options.Opts, 10, 64)
-	return err
+	limit, err := strconv.ParseInt(options.Opts, 10, 64)
+	if err != nil {
+		return err
+	}
+	options.WAF.RequestBodyLimit = limit
+	return nil
 }
 
 // Description: Configures whether request bodies will be buffered and processed by Coraza.
@@ -318,9 +321,12 @@ func directiveSecResponseBodyLimitAction(options *DirectiveOptions) error {
 // This setting will not affect the responses with MIME types that are not selected for
 // buffering. There is a hard limit of 1 GB.
 func directiveSecResponseBodyLimit(options *DirectiveOptions) error {
-	var err error
-	options.WAF.ResponseBodyLimit, err = strconv.ParseInt(options.Opts, 10, 64)
-	return err
+	limit, err := strconv.ParseInt(options.Opts, 10, 64)
+	if err != nil {
+		return err
+	}
+	options.WAF.ResponseBodyLimit = limit
+	return nil
 }
 
 // Description: Controls what happens once a request body limit, configured with
@@ -349,9 +355,12 @@ func directiveSecRequestBodyLimitAction(options *DirectiveOptions) error {
 // When a `multipart/form-data` request is being processed, once the in-memory limit is reached,
 // the request body will start to be streamed into a temporary file on disk.
 func directiveSecRequestBodyInMemoryLimit(options *DirectiveOptions) error {
-	var err error
-	options.WAF.RequestBodyInMemoryLimit, err = strconv.ParseInt(options.Opts, 10, 64)
-	return err
+	limit, err := strconv.ParseInt(options.Opts, 10, 64)
+	if err != nil {
+		return err
+	}
+	options.WAF.SetRequestBodyInMemoryLimit(limit)
+	return nil
 }
 
 func directiveSecRemoteRulesFailAction(options *DirectiveOptions) error {
@@ -703,8 +712,11 @@ func directiveSecUploadKeepFiles(options *DirectiveOptions) error {
 
 func directiveSecUploadFileMode(options *DirectiveOptions) error {
 	fm, err := strconv.ParseInt(options.Opts, 8, 32)
+	if err != nil {
+		return err
+	}
 	options.WAF.UploadFileMode = fs.FileMode(fm)
-	return err
+	return nil
 }
 
 func directiveSecUploadFileLimit(options *DirectiveOptions) error {
