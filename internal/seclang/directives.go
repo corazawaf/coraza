@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -291,7 +292,7 @@ func directiveSecServerSignature(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	options.WAF.ServerSignature = options.Opts
+	options.WAF.ServerSignature = utils.MaybeRemoveQuotes(options.Opts)
 	return nil
 }
 
@@ -318,12 +319,18 @@ func directiveSecRuleRemoveByMsg(options *DirectiveOptions) error {
 }
 
 func directiveSecRuleRemoveByID(options *DirectiveOptions) error {
-	id, _ := strconv.Atoi(options.Opts)
+	id, err := strconv.Atoi(options.Opts)
+	if err != nil {
+		return err
+	}
 	options.WAF.Rules.DeleteByID(id)
 	return nil
 }
 
 func directiveSecResponseBodyMimeTypesClear(options *DirectiveOptions) error {
+	if len(options.Opts) > 0 {
+		return errors.New("unexpected options")
+	}
 	options.WAF.ResponseBodyMimeTypes = nil
 	return nil
 }
