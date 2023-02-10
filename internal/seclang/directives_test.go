@@ -4,6 +4,7 @@
 package seclang
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
@@ -201,5 +202,59 @@ func TestSecDataset(t *testing.T) {
 	}
 	if ds[0] != "123" || ds[1] != "456" {
 		t.Error("failed to add dataset")
+	}
+}
+
+var expectErrorOnDirective func(*corazawaf.WAF) bool = nil
+
+func TestDirectives(t *testing.T) {
+	type directiveCase struct {
+		opts  string
+		check func(*corazawaf.WAF) bool
+	}
+	directiveCases := map[string][]directiveCase{
+		"SecRequestBodyLimit": {
+			{"x", expectErrorOnDirective},
+			{"123", func(w *corazawaf.WAF) bool { return w.RequestBodyLimit == 123 }},
+		},
+		"SecResponseBodyLimit": {
+			{"y", expectErrorOnDirective},
+			{"123", func(w *corazawaf.WAF) bool { return w.ResponseBodyLimit == 123 }},
+		},
+		"SecRequestBodyInMemoryLimit": {
+			{"z", expectErrorOnDirective},
+			{"123", func(w *corazawaf.WAF) bool { return *(w.RequestBodyInMemoryLimit()) == 123 }},
+		},
+	}
+
+	for name, dCases := range directiveCases {
+		t.Run(name, func(t *testing.T) {
+			for _, tCase := range dCases {
+				d := directivesMap[strings.ToLower(name)]
+
+				t.Run(tCase.opts, func(t *testing.T) {
+					waf := corazawaf.NewWAF()
+
+					err := d(&DirectiveOptions{
+						Opts: tCase.opts,
+						WAF:  waf,
+					})
+
+					if tCase.check == nil {
+						if err == nil {
+							t.Error("expected error")
+						}
+					} else {
+						if err != nil {
+							t.Errorf("unexpected error: %s", err.Error())
+						}
+
+						if !tCase.check(waf) {
+							t.Errorf("check failed")
+						}
+					}
+				})
+			}
+		})
 	}
 }
