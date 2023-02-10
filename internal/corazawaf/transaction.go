@@ -20,6 +20,7 @@ import (
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
+	corazatypes "github.com/corazawaf/coraza/v3/internal/corazatypes"
 	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 	urlutil "github.com/corazawaf/coraza/v3/internal/url"
 	"github.com/corazawaf/coraza/v3/loggers"
@@ -52,7 +53,7 @@ type Transaction struct {
 	SkipAfter string
 
 	// AllowType is used by the allow disruptive action to skip evaluating rules after being allowed
-	AllowType types.AllowType
+	AllowType corazatypes.AllowType
 
 	// Copies from the WAF instance that may be overwritten by the ctl action
 	AuditEngine              types.AuditEngineStatus

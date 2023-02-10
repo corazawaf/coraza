@@ -5,25 +5,25 @@ package actions
 
 import (
 	"fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazatypes"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/rules"
-	"github.com/corazawaf/coraza/v3/types"
 )
 
 // 0 nothing, 1 phase, 2 request
 type allowFn struct {
-	allow types.AllowType
+	allow corazatypes.AllowType
 }
 
 func (a *allowFn) Init(r rules.RuleMetadata, b1 string) error {
 	switch b1 {
 	case "phase":
-		a.allow = types.AllowTypePhase // skip current phase
+		a.allow = corazatypes.AllowTypePhase // skip current phase
 	case "request":
-		a.allow = types.AllowTypeRequest // skip phases until RESPONSE_HEADERS
+		a.allow = corazatypes.AllowTypeRequest // skip phases until RESPONSE_HEADERS
 	case "":
-		a.allow = types.AllowTypeAll // skip all phases
+		a.allow = corazatypes.AllowTypeAll // skip all phases
 	default:
 		return fmt.Errorf("invalid argument %s for allow", b1)
 	}

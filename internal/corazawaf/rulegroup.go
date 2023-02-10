@@ -5,6 +5,7 @@ package corazawaf
 
 import (
 	"fmt"
+	"github.com/corazawaf/coraza/v3/internal/corazatypes"
 	"time"
 
 	"github.com/corazawaf/coraza/v3/internal/strings"
@@ -153,15 +154,15 @@ RulesLoop:
 			continue
 		}
 		switch tx.AllowType {
-		case types.AllowTypeUnset:
+		case corazatypes.AllowTypeUnset:
 			break
-		case types.AllowTypePhase:
-			tx.AllowType = types.AllowTypeUnset
+		case corazatypes.AllowTypePhase:
+			tx.AllowType = corazatypes.AllowTypeUnset
 			continue RulesLoop
-		case types.AllowTypeRequest:
-			tx.AllowType = types.AllowTypeUnset
+		case corazatypes.AllowTypeRequest:
+			tx.AllowType = corazatypes.AllowTypeUnset
 			break RulesLoop
-		case types.AllowTypeAll:
+		case corazatypes.AllowTypeAll:
 			break RulesLoop
 		}
 		// TODO these lines are SUPER SLOW
