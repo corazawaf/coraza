@@ -51,7 +51,7 @@ func TestXMLAttribures(t *testing.T) {
 	}
 }
 
-func TestXMLPayload(t *testing.T) {
+func TestXMLPayloadFlexibility(t *testing.T) {
 	xmldoc := `<note>
 			<to>Tove</to>
 			<from>Jani</from>
