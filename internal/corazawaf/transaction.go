@@ -1429,35 +1429,37 @@ func (tx *Transaction) generateReqbodyError(err error) {
 
 // TransactionVariables has pointers to all the variables of the transaction
 type TransactionVariables struct {
+	// Noop
+	noop *collections.Noop
 	// Single Variables
-	userID                        *collections.Single
+	userID                        *collections.Noop
 	urlencodedError               *collections.Single
 	responseContentType           *collections.Single
 	uniqueID                      *collections.Single
 	argsCombinedSize              *collections.SizeCollection
-	authType                      *collections.Single
+	authType                      *collections.Noop
 	filesCombinedSize             *collections.Single
-	fullRequest                   *collections.Single
+	fullRequest                   *collections.Noop
 	fullRequestLength             *collections.Single
 	inboundDataError              *collections.Single
 	matchedVar                    *collections.Single
 	matchedVarName                *collections.Single
-	multipartBoundaryQuoted       *collections.Single
-	multipartBoundaryWhitespace   *collections.Single
-	multipartCrlfLfLines          *collections.Single
+	multipartBoundaryQuoted       *collections.Noop
+	multipartBoundaryWhitespace   *collections.Noop
+	multipartCrlfLfLines          *collections.Noop
 	multipartDataAfter            *collections.Single
-	multipartDataBefore           *collections.Single
-	multipartFileLimitExceeded    *collections.Single
-	multipartHeaderFolding        *collections.Single
-	multipartInvalidHeaderFolding *collections.Single
-	multipartInvalidPart          *collections.Single
-	multipartInvalidQuoting       *collections.Single
-	multipartLfLine               *collections.Single
-	multipartMissingSemicolon     *collections.Single
-	multipartStrictError          *collections.Single
-	multipartUnmatchedBoundary    *collections.Single
+	multipartDataBefore           *collections.Noop
+	multipartFileLimitExceeded    *collections.Noop
+	multipartHeaderFolding        *collections.Noop
+	multipartInvalidHeaderFolding *collections.Noop
+	multipartInvalidPart          *collections.Noop
+	multipartInvalidQuoting       *collections.Noop
+	multipartLfLine               *collections.Noop
+	multipartMissingSemicolon     *collections.Noop
+	multipartStrictError          *collections.Noop
+	multipartUnmatchedBoundary    *collections.Noop
 	outboundDataError             *collections.Single
-	pathInfo                      *collections.Single
+	pathInfo                      *collections.Noop
 	queryString                   *collections.Single
 	remoteAddr                    *collections.Single
 	remoteHost                    *collections.Single
@@ -1483,7 +1485,7 @@ type TransactionVariables struct {
 	serverAddr                    *collections.Single
 	serverName                    *collections.Single
 	serverPort                    *collections.Single
-	sessionID                     *collections.Single
+	sessionID                     *collections.Noop
 	highestSeverity               *collections.Single
 	statusLine                    *collections.Single
 	inboundErrorData              *collections.Single
@@ -1520,37 +1522,38 @@ type TransactionVariables struct {
 	responseXML          collection.Map
 	multipartPartHeaders collection.Map
 	// Persistent variables
-	ip collection.Map
+	ip collection.Noop
 }
 
 func NewTransactionVariables() *TransactionVariables {
 	v := &TransactionVariables{}
+	v.noop = collections.NewNoop()
 	v.urlencodedError = collections.NewSingle(variables.UrlencodedError)
 	v.responseContentType = collections.NewSingle(variables.ResponseContentType)
 	v.uniqueID = collections.NewSingle(variables.UniqueID)
-	v.authType = collections.NewSingle(variables.AuthType)
+	v.authType = collections.NewNoop()
 	v.filesCombinedSize = collections.NewSingle(variables.FilesCombinedSize)
-	v.fullRequest = collections.NewSingle(variables.FullRequest)
+	v.fullRequest = collections.NewNoop()
 	v.fullRequestLength = collections.NewSingle(variables.FullRequestLength)
 	v.inboundDataError = collections.NewSingle(variables.InboundDataError)
 	v.matchedVar = collections.NewSingle(variables.MatchedVar)
 	v.matchedVarName = collections.NewSingle(variables.MatchedVarName)
-	v.multipartBoundaryQuoted = collections.NewSingle(variables.MultipartBoundaryQuoted)
-	v.multipartBoundaryWhitespace = collections.NewSingle(variables.MultipartBoundaryWhitespace)
-	v.multipartCrlfLfLines = collections.NewSingle(variables.MultipartCrlfLfLines)
+	v.multipartBoundaryQuoted = collections.NewNoop()
+	v.multipartBoundaryWhitespace = collections.NewNoop()
+	v.multipartCrlfLfLines = collections.NewNoop()
 	v.multipartDataAfter = collections.NewSingle(variables.MultipartDataAfter)
-	v.multipartDataBefore = collections.NewSingle(variables.MultipartDataBefore)
-	v.multipartFileLimitExceeded = collections.NewSingle(variables.MultipartFileLimitExceeded)
-	v.multipartHeaderFolding = collections.NewSingle(variables.MultipartHeaderFolding)
-	v.multipartInvalidHeaderFolding = collections.NewSingle(variables.MultipartInvalidHeaderFolding)
-	v.multipartInvalidPart = collections.NewSingle(variables.MultipartInvalidPart)
-	v.multipartInvalidQuoting = collections.NewSingle(variables.MultipartInvalidQuoting)
-	v.multipartLfLine = collections.NewSingle(variables.MultipartLfLine)
-	v.multipartMissingSemicolon = collections.NewSingle(variables.MultipartMissingSemicolon)
-	v.multipartStrictError = collections.NewSingle(variables.MultipartStrictError)
-	v.multipartUnmatchedBoundary = collections.NewSingle(variables.MultipartUnmatchedBoundary)
+	v.multipartDataBefore = collections.NewNoop()
+	v.multipartFileLimitExceeded = collections.NewNoop()
+	v.multipartHeaderFolding = collections.NewNoop()
+	v.multipartInvalidHeaderFolding = collections.NewNoop()
+	v.multipartInvalidPart = collections.NewNoop()
+	v.multipartInvalidQuoting = collections.NewNoop()
+	v.multipartLfLine = collections.NewNoop()
+	v.multipartMissingSemicolon = collections.NewNoop()
+	v.multipartStrictError = collections.NewNoop()
+	v.multipartUnmatchedBoundary = collections.NewNoop()
 	v.outboundDataError = collections.NewSingle(variables.OutboundDataError)
-	v.pathInfo = collections.NewSingle(variables.PathInfo)
+	v.pathInfo = collections.NewNoop()
 	v.queryString = collections.NewSingle(variables.QueryString)
 	v.remoteAddr = collections.NewSingle(variables.RemoteAddr)
 	v.remoteHost = collections.NewSingle(variables.RemoteHost)
@@ -1576,12 +1579,12 @@ func NewTransactionVariables() *TransactionVariables {
 	v.serverAddr = collections.NewSingle(variables.ServerAddr)
 	v.serverName = collections.NewSingle(variables.ServerName)
 	v.serverPort = collections.NewSingle(variables.ServerPort)
-	v.sessionID = collections.NewSingle(variables.Sessionid)
+	v.sessionID = collections.NewNoop()
 	v.highestSeverity = collections.NewSingle(variables.HighestSeverity)
 	v.statusLine = collections.NewSingle(variables.StatusLine)
 	v.inboundErrorData = collections.NewSingle(variables.InboundErrorData)
 	v.duration = collections.NewSingle(variables.Duration)
-	v.userID = collections.NewSingle(variables.Userid)
+	v.userID = collections.NewNoop()
 
 	v.filesSizes = collections.NewMap(variables.FilesSizes)
 	v.filesTmpContent = collections.NewMap(variables.FilesTmpContent)
@@ -1599,7 +1602,7 @@ func NewTransactionVariables() *TransactionVariables {
 	v.tx = collections.NewMap(variables.TX)
 	v.rule = collections.NewMap(variables.Rule)
 	v.env = collections.NewMap(variables.Env)
-	v.ip = collections.NewMap(variables.IP)
+	v.ip = collections.NewNoop()
 	v.files = collections.NewMap(variables.Files)
 	v.filesNames = collections.NewMap(variables.FilesNames)
 	v.filesTmpNames = collections.NewMap(variables.FilesTmpNames)
@@ -1632,8 +1635,8 @@ func NewTransactionVariables() *TransactionVariables {
 	return v
 }
 
-func (v *TransactionVariables) UserID() collection.Single {
-	return v.userID
+func (v *TransactionVariables) UserID() collection.Noop {
+	return v.noop
 }
 
 func (v *TransactionVariables) UrlencodedError() collection.Single {
@@ -1652,16 +1655,16 @@ func (v *TransactionVariables) ArgsCombinedSize() collection.Collection {
 	return v.argsCombinedSize
 }
 
-func (v *TransactionVariables) AuthType() collection.Single {
-	return v.authType
+func (v *TransactionVariables) AuthType() collection.Noop {
+	return v.noop
 }
 
 func (v *TransactionVariables) FilesCombinedSize() collection.Single {
 	return v.filesCombinedSize
 }
 
-func (v *TransactionVariables) FullRequest() collection.Single {
-	return v.fullRequest
+func (v *TransactionVariables) FullRequest() collection.Noop {
+	return v.noop
 }
 
 func (v *TransactionVariables) FullRequestLength() collection.Single {
@@ -1680,72 +1683,72 @@ func (v *TransactionVariables) MatchedVarName() collection.Single {
 	return v.matchedVarName
 }
 
-func (v *TransactionVariables) MultipartBoundaryQuoted() collection.Single {
-	return v.multipartBoundaryQuoted
+func (v *TransactionVariables) MultipartBoundaryQuoted() collection.Noop {
+	return v.noop
 }
 
-func (v *TransactionVariables) MultipartBoundaryWhitespace() collection.Single {
-	return v.multipartBoundaryWhitespace
+func (v *TransactionVariables) MultipartBoundaryWhitespace() collection.Noop {
+	return v.noop
 }
 
-func (v *TransactionVariables) MultipartCrlfLfLines() collection.Single {
-	return v.multipartCrlfLfLines
+func (v *TransactionVariables) MultipartCrlfLfLines() collection.Noop {
+	return v.noop
 }
 
 func (v *TransactionVariables) MultipartDataAfter() collection.Single {
 	return v.multipartDataAfter
 }
 
-func (v *TransactionVariables) MultipartDataBefore() collection.Single {
+func (v *TransactionVariables) MultipartDataBefore() collection.Noop {
 	return v.multipartDataBefore
 }
 
-func (v *TransactionVariables) MultipartFileLimitExceeded() collection.Single {
-	return v.multipartFileLimitExceeded
+func (v *TransactionVariables) MultipartFileLimitExceeded() collection.Noop {
+	return v.noop
 }
 
-func (v *TransactionVariables) MultipartHeaderFolding() collection.Single {
-	return v.multipartHeaderFolding
+func (v *TransactionVariables) MultipartHeaderFolding() collection.Noop {
+	return v.noop
 }
 
-func (v *TransactionVariables) MultipartInvalidHeaderFolding() collection.Single {
-	return v.multipartInvalidHeaderFolding
+func (v *TransactionVariables) MultipartInvalidHeaderFolding() collection.Noop {
+	return v.noop
 }
 
-func (v *TransactionVariables) MultipartInvalidPart() collection.Single {
-	return v.multipartInvalidPart
+func (v *TransactionVariables) MultipartInvalidPart() collection.Noop {
+	return v.noop
 }
 
-func (v *TransactionVariables) MultipartInvalidQuoting() collection.Single {
-	return v.multipartInvalidQuoting
+func (v *TransactionVariables) MultipartInvalidQuoting() collection.Noop {
+	return v.noop
 }
 
-func (v *TransactionVariables) MultipartLfLine() collection.Single {
-	return v.multipartLfLine
+func (v *TransactionVariables) MultipartLfLine() collection.Noop {
+	return v.noop
 }
 
-func (v *TransactionVariables) MultipartMissingSemicolon() collection.Single {
-	return v.multipartMissingSemicolon
+func (v *TransactionVariables) MultipartMissingSemicolon() collection.Noop {
+	return v.noop
 }
 
 func (v *TransactionVariables) MultipartPartHeaders() collection.Map {
 	return v.multipartPartHeaders
 }
 
-func (v *TransactionVariables) MultipartStrictError() collection.Single {
-	return v.multipartStrictError
+func (v *TransactionVariables) MultipartStrictError() collection.Noop {
+	return v.noop
 }
 
-func (v *TransactionVariables) MultipartUnmatchedBoundary() collection.Single {
-	return v.multipartUnmatchedBoundary
+func (v *TransactionVariables) MultipartUnmatchedBoundary() collection.Noop {
+	return v.noop
 }
 
 func (v *TransactionVariables) OutboundDataError() collection.Single {
 	return v.outboundDataError
 }
 
-func (v *TransactionVariables) PathInfo() collection.Single {
-	return v.pathInfo
+func (v *TransactionVariables) PathInfo() collection.Noop {
+	return v.noop
 }
 
 func (v *TransactionVariables) QueryString() collection.Single {
@@ -1848,8 +1851,8 @@ func (v *TransactionVariables) ServerPort() collection.Single {
 	return v.serverPort
 }
 
-func (v *TransactionVariables) SessionID() collection.Single {
-	return v.sessionID
+func (v *TransactionVariables) SessionID() collection.Noop {
+	return v.noop
 }
 
 func (v *TransactionVariables) HighestSeverity() collection.Single {
@@ -1972,8 +1975,8 @@ func (v *TransactionVariables) ResponseXML() collection.Map {
 	return v.responseXML
 }
 
-func (v *TransactionVariables) IP() collection.Map {
-	return v.ip
+func (v *TransactionVariables) IP() collection.Noop {
+	return v.noop
 }
 
 func (v *TransactionVariables) ArgsNames() collection.Collection {

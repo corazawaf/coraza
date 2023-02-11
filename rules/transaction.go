@@ -46,35 +46,35 @@ type TransactionState interface {
 // TransactionVariables has pointers to all the variables of the transaction
 type TransactionVariables interface {
 	// Simple Variables
-	UserID() collection.Single
+	UserID() collection.Noop
 	UrlencodedError() collection.Single
 	ResponseContentType() collection.Single
 	UniqueID() collection.Single
 	ArgsCombinedSize() collection.Collection
-	AuthType() collection.Single
+	AuthType() collection.Noop
 	FilesCombinedSize() collection.Single
-	FullRequest() collection.Single
+	FullRequest() collection.Noop
 	FullRequestLength() collection.Single
 	InboundDataError() collection.Single
 	MatchedVar() collection.Single
 	MatchedVarName() collection.Single
-	MultipartBoundaryQuoted() collection.Single
-	MultipartBoundaryWhitespace() collection.Single
-	MultipartCrlfLfLines() collection.Single
+	MultipartBoundaryQuoted() collection.Noop
+	MultipartBoundaryWhitespace() collection.Noop
+	MultipartCrlfLfLines() collection.Noop
 	MultipartDataAfter() collection.Single
-	MultipartDataBefore() collection.Single
-	MultipartFileLimitExceeded() collection.Single
+	MultipartDataBefore() collection.Noop
+	MultipartFileLimitExceeded() collection.Noop
 	MultipartPartHeaders() collection.Map
-	MultipartHeaderFolding() collection.Single
-	MultipartInvalidHeaderFolding() collection.Single
-	MultipartInvalidPart() collection.Single
-	MultipartInvalidQuoting() collection.Single
-	MultipartLfLine() collection.Single
-	MultipartMissingSemicolon() collection.Single
-	MultipartStrictError() collection.Single
-	MultipartUnmatchedBoundary() collection.Single
+	MultipartHeaderFolding() collection.Noop
+	MultipartInvalidHeaderFolding() collection.Noop
+	MultipartInvalidPart() collection.Noop
+	MultipartInvalidQuoting() collection.Noop
+	MultipartLfLine() collection.Noop
+	MultipartMissingSemicolon() collection.Noop
+	MultipartStrictError() collection.Noop
+	MultipartUnmatchedBoundary() collection.Noop
 	OutboundDataError() collection.Single
-	PathInfo() collection.Single
+	PathInfo() collection.Noop
 	QueryString() collection.Single
 	RemoteAddr() collection.Single
 	RemoteHost() collection.Single
@@ -100,7 +100,7 @@ type TransactionVariables interface {
 	ServerAddr() collection.Single
 	ServerName() collection.Single
 	ServerPort() collection.Single
-	SessionID() collection.Single
+	SessionID() collection.Noop
 	HighestSeverity() collection.Single
 	StatusLine() collection.Single
 	InboundErrorData() collection.Single
@@ -131,7 +131,7 @@ type TransactionVariables interface {
 	XML() collection.Map
 	RequestXML() collection.Map
 	ResponseXML() collection.Map
-	IP() collection.Map
+	IP() collection.Noop
 	ArgsNames() collection.Collection
 	ArgsGetNames() collection.Collection
 	ArgsPostNames() collection.Collection
