@@ -7,11 +7,6 @@
 // Variables are created as bytes and they have a string representation
 package variables
 
-import (
-	"errors"
-	"strings"
-)
-
 // This file repeats the same content many times in order to make access
 // efficient for seclang and transactions
 
@@ -228,27 +223,3 @@ const (
 	// MultipartPartHeaders contains the multipart headers
 	MultipartPartHeaders
 )
-
-var rulemap = map[RuleVariable]string{}
-var rulemapRev = map[string]RuleVariable{}
-
-// Name transforms a VARIABLE representation
-// into a string, it's used for audit and logging
-func (v RuleVariable) Name() string {
-	if name, ok := rulemap[v]; ok {
-		return name
-	}
-	return "INVALID_VARIABLE"
-}
-
-var errUnknownVariable = errors.New("unknown variable")
-
-// Parse returns the byte interpretation
-// of a variable from a string
-// Returns error if there is no representation
-func Parse(v string) (RuleVariable, error) {
-	if v, ok := rulemapRev[strings.ToUpper(v)]; ok {
-		return v, nil
-	}
-	return 0, errUnknownVariable
-}

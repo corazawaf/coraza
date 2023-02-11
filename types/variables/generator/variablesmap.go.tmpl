@@ -5,14 +5,31 @@
 
 package variables
 
-func init() {
-    rulemap = map[RuleVariable]string{
-        {{range .}}{{ .Key }}: "{{ .Value }}",
+// Name transforms a VARIABLE representation
+// into a string, it's used for audit and logging
+func (v RuleVariable) Name() string {
+    switch v {
+        {{range .}}case {{ .Key }}:
+            return "{{ .Value }}"
         {{end}}
+        default:
+            return "INVALID_VARIABLE"
     }
+}
 
-    // we fill the rulemapRev with the reverse of rulemap
-	for k, v := range rulemap {
-		rulemapRev[v] = k
+var rulemapRev = map[string]RuleVariable{
+    {{range .}}"{{ .Value }}": {{ .Key }},
+    {{end}}
+}
+
+var errUnknownVariable = errors.New("unknown variable")
+
+// Parse returns the byte interpretation
+// of a variable from a string
+// Returns error if there is no representation
+func Parse(v string) (RuleVariable, error) {
+	if v, ok := rulemapRev[strings.ToUpper(v)]; ok {
+		return v, nil
 	}
+	return Unknown, errUnknownVariable
 }
