@@ -1,14 +1,11 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:generate go run generator/main.go
+
 // Package variables contains the representation of the variables used in the rules
 // Variables are created as bytes and they have a string representation
 package variables
-
-import (
-	"errors"
-	"strings"
-)
 
 // This file repeats the same content many times in order to make access
 // efficient for seclang and transactions
@@ -226,128 +223,3 @@ const (
 	// MultipartPartHeaders contains the multipart headers
 	MultipartPartHeaders
 )
-
-var rulemap = map[RuleVariable]string{
-	Unknown:                       "UNKNOWN",
-	UrlencodedError:               "URLENCODED_ERROR",
-	ResponseContentType:           "RESPONSE_CONTENT_TYPE",
-	UniqueID:                      "UNIQUE_ID",
-	ArgsCombinedSize:              "ARGS_COMBINED_SIZE",
-	AuthType:                      "AUTH_TYPE",
-	FilesCombinedSize:             "FILES_COMBINED_SIZE",
-	FullRequest:                   "FULL_REQUEST",
-	FullRequestLength:             "FULL_REQUEST_LENGTH",
-	InboundDataError:              "INBOUND_DATA_ERROR",
-	MatchedVar:                    "MATCHED_VAR",
-	MatchedVarName:                "MATCHED_VAR_NAME",
-	MultipartBoundaryQuoted:       "MULTIPART_BOUNDARY_QUOTED",
-	MultipartBoundaryWhitespace:   "MULTIPART_BOUNDARY_WHITESPACE",
-	MultipartCrlfLfLines:          "MULTIPART_CRLF_LF_LINES",
-	MultipartDataAfter:            "MULTIPART_DATA_AFTER",
-	MultipartDataBefore:           "MULTIPART_DATA_BEFORE",
-	MultipartFileLimitExceeded:    "MULTIPART_FILE_LIMIT_EXCEEDED",
-	MultipartHeaderFolding:        "MULTIPART_HEADER_FOLDING",
-	MultipartInvalidHeaderFolding: "MULTIPART_INVALID_HEADER_FOLDING",
-	MultipartInvalidPart:          "MULTIPART_INVALID_PART",
-	MultipartInvalidQuoting:       "MULTIPART_INVALID_QUOTING",
-	MultipartLfLine:               "MULTIPART_LF_LINE",
-	MultipartMissingSemicolon:     "MULTIPART_MISSING_SEMICOLON",
-	MultipartStrictError:          "MULTIPART_STRICT_ERROR",
-	MultipartUnmatchedBoundary:    "MULTIPART_UNMATCHED_BOUNDARY",
-	OutboundDataError:             "OUTBOUND_DATA_ERROR",
-	PathInfo:                      "PATH_INFO",
-	QueryString:                   "QUERY_STRING",
-	RemoteAddr:                    "REMOTE_ADDR",
-	RemoteHost:                    "REMOTE_HOST",
-	RemotePort:                    "REMOTE_PORT",
-	ReqbodyError:                  "REQBODY_ERROR",
-	ReqbodyErrorMsg:               "REQBODY_ERROR_MSG",
-	ReqbodyProcessorError:         "REQBODY_PROCESSOR_ERROR",
-	ReqbodyProcessorErrorMsg:      "REQBODY_PROCESSOR_ERROR_MSG",
-	ReqbodyProcessor:              "REQBODY_PROCESSOR",
-	RequestBasename:               "REQUEST_BASENAME",
-	RequestBody:                   "REQUEST_BODY",
-	RequestBodyLength:             "REQUEST_BODY_LENGTH",
-	RequestFilename:               "REQUEST_FILENAME",
-	RequestLine:                   "REQUEST_LINE",
-	RequestMethod:                 "REQUEST_METHOD",
-	RequestProtocol:               "REQUEST_PROTOCOL",
-	RequestURI:                    "REQUEST_URI",
-	RequestURIRaw:                 "REQUEST_URI_RAW",
-	ResponseBody:                  "RESPONSE_BODY",
-	ResponseContentLength:         "RESPONSE_CONTENT_LENGTH",
-	ResponseProtocol:              "RESPONSE_PROTOCOL",
-	ResponseStatus:                "RESPONSE_STATUS",
-	ServerAddr:                    "SERVER_ADDR",
-	ServerName:                    "SERVER_NAME",
-	ServerPort:                    "SERVER_PORT",
-	Sessionid:                     "SESSIONID",
-	HighestSeverity:               "HIGHEST_SEVERITY",
-	StatusLine:                    "STATUS_LINE",
-	InboundErrorData:              "INBOUND_ERROR_DATA",
-	Duration:                      "DURATION",
-	ResponseHeadersNames:          "RESPONSE_HEADERS_NAMES",
-	RequestHeadersNames:           "REQUEST_HEADERS_NAMES",
-	Userid:                        "USERID",
-	Args:                          "ARGS",
-	ArgsGet:                       "ARGS_GET",
-	ArgsPost:                      "ARGS_POST",
-	ArgsPath:                      "ARGS_PATH",
-	FilesSizes:                    "FILES_SIZES",
-	FilesNames:                    "FILES_NAMES",
-	FilesTmpContent:               "FILES_TMP_CONTENT",
-	MultipartFilename:             "MULTIPART_FILENAME",
-	MultipartName:                 "MULTIPART_NAME",
-	MatchedVarsNames:              "MATCHED_VARS_NAMES",
-	MatchedVars:                   "MATCHED_VARS",
-	Files:                         "FILES",
-	RequestCookies:                "REQUEST_COOKIES",
-	RequestHeaders:                "REQUEST_HEADERS",
-	ResponseHeaders:               "RESPONSE_HEADERS",
-	Geo:                           "GEO",
-	RequestCookiesNames:           "REQUEST_COOKIES_NAMES",
-	FilesTmpNames:                 "FILES_TMPNAMES",
-	ArgsNames:                     "ARGS_NAMES",
-	ArgsGetNames:                  "ARGS_GET_NAMES",
-	ArgsPostNames:                 "ARGS_POST_NAMES",
-	TX:                            "TX",
-	Rule:                          "RULE",
-	XML:                           "XML",
-	JSON:                          "JSON",
-	Env:                           "ENV",
-	IP:                            "IP",
-	RequestXML:                    "REQUEST_XML",
-	ResponseXML:                   "RESPONSE_XML",
-	ResponseArgs:                  "RESPONSE_ARGS",
-	MultipartPartHeaders:          "MULTIPART_PART_HEADERS",
-}
-
-var rulemapRev = map[string]RuleVariable{}
-
-// Name transforms a VARIABLE representation
-// into a string, it's used for audit and logging
-func (v RuleVariable) Name() string {
-	if name, ok := rulemap[v]; ok {
-		return name
-	}
-	return "INVALID_VARIABLE"
-}
-
-var errUnknownVariable = errors.New("unknown variable")
-
-// Parse returns the byte interpretation
-// of a variable from a string
-// Returns error if there is no representation
-func Parse(v string) (RuleVariable, error) {
-	if v, ok := rulemapRev[strings.ToUpper(v)]; ok {
-		return v, nil
-	}
-	return 0, errUnknownVariable
-}
-
-func init() {
-	// we fill the rulemapRev with the reverse of rulemap
-	for k, v := range rulemap {
-		rulemapRev[v] = k
-	}
-}

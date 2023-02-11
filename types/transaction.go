@@ -7,12 +7,12 @@ import (
 	"io"
 )
 
-// ArgumentType is used to define types of argument for transactions
-// There are three supported types: POST, GET and PATH
+// ArgumentType is used to define corazatypes of argument for transactions
+// There are three supported corazatypes: POST, GET and PATH
 type ArgumentType int
 
 const (
-	// ArgumentInvalid is used to define invalid argument types
+	// ArgumentInvalid is used to define invalid argument corazatypes
 	ArgumentInvalid ArgumentType = iota
 	// ArgumentGET is used to define GET arguments
 	ArgumentGET
