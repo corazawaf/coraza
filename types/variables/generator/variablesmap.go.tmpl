@@ -5,6 +5,11 @@
 
 package variables
 
+import (
+    "errors"
+    "strings"
+)
+
 // Name transforms a VARIABLE representation
 // into a string, it's used for audit and logging
 func (v RuleVariable) Name() string {
