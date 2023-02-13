@@ -8,7 +8,7 @@ import (
 )
 
 func TestNoop(t *testing.T) {
-	c := NewNoop()
+	c := Noop
 
 	if c.Name() != "" {
 		t.Error("noop name failed")

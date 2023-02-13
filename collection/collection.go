@@ -70,8 +70,3 @@ type Map interface {
 	// Remove deletes the key from the CollectionMap
 	Remove(key string)
 }
-
-// Noop is a dummy Collection.
-type Noop interface {
-	Collection
-}

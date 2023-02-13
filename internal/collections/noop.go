@@ -8,21 +8,16 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
-type Noop struct{}
+var Noop collection.Collection = &noop{}
 
-var _ collection.Noop = &Noop{}
+type noop struct{}
 
-// NewNoop creates a new Noop.
-func NewNoop() *Noop {
-	return &Noop{}
+func (c *noop) FindAll() []types.MatchData {
+	return nil
 }
 
-func (c *Noop) FindAll() []types.MatchData {
-	return []types.MatchData{}
-}
-
-func (c *Noop) Name() string {
+func (c *noop) Name() string {
 	return ""
 }
 
-func (c *Noop) Reset() {}
+func (c *noop) Reset() {}
