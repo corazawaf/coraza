@@ -294,6 +294,16 @@ func TestHttpServer(t *testing.T) {
 			expectedStatus:   403,
 			expectedRespBody: "", // blocking at response body phase means returning it empty
 		},
+		"allow": {
+			reqURI:         "/allow_me",
+			expectedProto:  "HTTP/1.1",
+			expectedStatus: 201,
+		},
+		"deny passes over allow due to ordering": {
+			reqURI:         "/allow_me?id=0",
+			expectedProto:  "HTTP/1.1",
+			expectedStatus: 403,
+		},
 	}
 
 	// Perform tests
@@ -311,10 +321,11 @@ func TestHttpServer(t *testing.T) {
 	SecResponseBodyAccess On
 	SecResponseBodyMimeType text/plain
 	SecRequestBodyLimitAction ` + limitAction + `
-	SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
+	SecRule ARGS:id "@eq 0" "id:10, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
 	SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
 	SecRule RESPONSE_HEADERS:Foo "@pm bar" "id:199,phase:3,deny,t:lowercase,deny, status:401,msg:'Invalid response header',log,auditlog"
 	SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
+	SecRule REQUEST_URI "/allow_me" "id:9,phase:1,allow,msg:'ALLOWED'"
 `).WithErrorCallback(errLogger(t)).WithDebugLogger(&debugLogger{t: t})
 			if l := tCase.reqBodyLimit; l > 0 {
 				conf = conf.WithRequestBodyAccess().WithRequestBodyLimit(l).WithRequestBodyInMemoryLimit(l)
