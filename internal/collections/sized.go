@@ -58,11 +58,6 @@ func (c *SizeCollection) Name() string {
 	return c.name
 }
 
-// Reset the current CollectionSizeProxy
-func (c *SizeCollection) Reset() {
-	// do nothing
-}
-
 func (c *SizeCollection) String() string {
 	return fmt.Sprintf("%s: %d", c.name, c.size())
 }
