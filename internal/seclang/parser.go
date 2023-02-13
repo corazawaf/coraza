@@ -140,6 +140,7 @@ func (p *Parser) evaluateLine(data string) error {
 	}
 	// first we get the directive
 	dir, opts, _ := strings.Cut(data, " ")
+
 	p.options.WAF.Logger.Debug("parsing directive %q", data)
 	directive := strings.ToLower(dir)
 
@@ -152,14 +153,14 @@ func (p *Parser) evaluateLine(data string) error {
 		// note a user might still include another file that includes the original file
 		// generating a DDOS attack
 		if p.includeCount >= maxIncludeRecursion {
-			return fmt.Errorf("cannot include more than %d files", maxIncludeRecursion)
+			return p.log(fmt.Sprintf("cannot include more than %d files", maxIncludeRecursion))
 		}
 		p.includeCount++
 		return p.FromFile(opts)
 	}
 	d, ok := directivesMap[directive]
 	if !ok || d == nil {
-		return p.log("Unknown directive " + directive)
+		return p.log(fmt.Sprintf("unknown directive %q", directive))
 	}
 
 	p.options.Opts = opts
@@ -173,7 +174,11 @@ func (p *Parser) evaluateLine(data string) error {
 	}
 	p.options.Config.Set("working_dir", wd)
 
-	return d(p.options)
+	if err := d(p.options); err != nil {
+		return fmt.Errorf("failed to compile the directive %q: %w", directive, err)
+	}
+
+	return nil
 }
 
 func (p *Parser) log(msg string) error {

@@ -133,9 +133,6 @@ func (c *NamedCollectionNames) Name() string {
 	return c.name
 }
 
-func (c *NamedCollectionNames) Reset() {
-}
-
 func (c *NamedCollectionNames) String() string {
 	res := strings.Builder{}
 	res.WriteString(c.name)
