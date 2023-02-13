@@ -172,7 +172,6 @@ RulesLoop:
 		// TODO these lines are SUPER SLOW
 		// we reset matched_vars, matched_vars_names, etc
 		tx.variables.matchedVars.Reset()
-		tx.variables.matchedVarsNames.Reset()
 
 		r.Evaluate(phase, tx, transformationCache)
 		tx.Capture = false // we reset captures

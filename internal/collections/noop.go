@@ -19,5 +19,3 @@ func (c *noop) FindAll() []types.MatchData {
 func (c *noop) Name() string {
 	return ""
 }
-
-func (c *noop) Reset() {}
