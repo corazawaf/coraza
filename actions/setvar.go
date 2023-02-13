@@ -21,7 +21,7 @@ type setvarFn struct {
 	isRemove   bool
 }
 
-func (a *setvarFn) Init(r rules.RuleMetadata, data string) error {
+func (a *setvarFn) Init(_ rules.RuleMetadata, data string) error {
 	if data == "" {
 		return fmt.Errorf("setvar requires arguments")
 	}

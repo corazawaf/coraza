@@ -14,7 +14,7 @@ type skipafterFn struct {
 	data string
 }
 
-func (a *skipafterFn) Init(r rules.RuleMetadata, data string) error {
+func (a *skipafterFn) Init(_ rules.RuleMetadata, data string) error {
 	a.data = strings.Trim(data, `"`)
 	return nil
 }

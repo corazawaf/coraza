@@ -10,11 +10,10 @@ import (
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
-type statusFn struct {
-}
+type statusFn struct{}
 
-func (a *statusFn) Init(r rules.RuleMetadata, b1 string) error {
-	status, err := strconv.Atoi(b1)
+func (a *statusFn) Init(r rules.RuleMetadata, data string) error {
+	status, err := strconv.Atoi(data)
 	if err != nil {
 		return err
 	}
@@ -23,8 +22,7 @@ func (a *statusFn) Init(r rules.RuleMetadata, b1 string) error {
 	return nil
 }
 
-func (a *statusFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-}
+func (a *statusFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
 
 func (a *statusFn) Type() rules.ActionType {
 	return rules.ActionTypeData

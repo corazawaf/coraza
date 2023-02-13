@@ -9,12 +9,14 @@ import (
 
 type blockFn struct{}
 
-func (a *blockFn) Init(r rules.RuleMetadata, b1 string) error {
+func (a *blockFn) Init(_ rules.RuleMetadata, _ string) error {
+	// TODO(jcchavezs): Shall we return an error if data is not empty?
 	return nil
 }
 
-func (a *blockFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
+func (a *blockFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {
 	// This should never run
+	// TODO(jcchavezs): check if we return a panic
 }
 
 func (a *blockFn) Type() rules.ActionType {

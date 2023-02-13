@@ -9,8 +9,7 @@ import (
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
-type logdataFn struct {
-}
+type logdataFn struct{}
 
 func (a *logdataFn) Init(r rules.RuleMetadata, data string) error {
 	m, err := macro.NewMacro(data)

@@ -10,16 +10,15 @@ import (
 
 type captureFn struct{}
 
-func (a *captureFn) Init(r rules.RuleMetadata, b1 string) error {
+func (a *captureFn) Init(r rules.RuleMetadata, _ string) error {
 	// this will capture only the current rule
+	// TODO(jcchavezs): Shall we return an error if data is not empty?
 	// TODO(anuraaga): Confirm this is internal implementation detail
 	r.(*corazawaf.Rule).Capture = true
 	return nil
 }
 
-func (a *captureFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-
-}
+func (a *captureFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
 
 func (a *captureFn) Type() rules.ActionType {
 	return rules.ActionTypeNondisruptive

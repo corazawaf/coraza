@@ -8,8 +8,7 @@ import (
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
-type verFn struct {
-}
+type verFn struct{}
 
 func (a *verFn) Init(r rules.RuleMetadata, data string) error {
 	// TODO(anuraaga): Confirm this is internal implementation detail
@@ -17,9 +16,7 @@ func (a *verFn) Init(r rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *verFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-	// Not evaluated
-}
+func (a *verFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
 
 func (a *verFn) Type() rules.ActionType {
 	return rules.ActionTypeMetadata

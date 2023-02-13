@@ -15,7 +15,7 @@ type skipFn struct {
 	data int
 }
 
-func (a *skipFn) Init(r rules.RuleMetadata, data string) error {
+func (a *skipFn) Init(_ rules.RuleMetadata, data string) error {
 	i, err := strconv.Atoi(data)
 	if err != nil {
 		return fmt.Errorf("invalid value for skip")

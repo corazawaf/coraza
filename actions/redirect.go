@@ -25,7 +25,7 @@ type redirectFn struct {
 	target string
 }
 
-func (a *redirectFn) Init(r rules.RuleMetadata, data string) error {
+func (a *redirectFn) Init(_ rules.RuleMetadata, data string) error {
 	if data == "" {
 		return fmt.Errorf("redirect action requires a parameter")
 	}

@@ -8,18 +8,17 @@ import (
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
-type logFn struct {
-}
+type logFn struct{}
 
-func (a *logFn) Init(r rules.RuleMetadata, data string) error {
+func (a *logFn) Init(r rules.RuleMetadata, _ string) error {
+	// TODO(jcchavezs): Shall we return an error if data is not empty?
 	// TODO(anuraaga): Confirm this is internal implementation detail
 	r.(*corazawaf.Rule).Log = true
 	r.(*corazawaf.Rule).Audit = true
 	return nil
 }
 
-func (a *logFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-}
+func (a *logFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
 
 func (a *logFn) Type() rules.ActionType {
 	return rules.ActionTypeNondisruptive

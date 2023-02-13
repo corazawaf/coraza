@@ -17,7 +17,7 @@ type setenvFn struct {
 	value macro.Macro
 }
 
-func (a *setenvFn) Init(r rules.RuleMetadata, data string) error {
+func (a *setenvFn) Init(_ rules.RuleMetadata, data string) error {
 	key, val, ok := strings.Cut(data, "=")
 	if !ok {
 		return fmt.Errorf("invalid key value for setvar")

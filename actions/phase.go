@@ -21,9 +21,7 @@ func (a *phaseFn) Init(r rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *phaseFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-	// Not evaluated
-}
+func (a *phaseFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
 
 func (a *phaseFn) Type() rules.ActionType {
 	return rules.ActionTypeMetadata

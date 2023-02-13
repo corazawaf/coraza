@@ -22,9 +22,7 @@ func (a *severityFn) Init(r rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *severityFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-	// Not evaluated
-}
+func (a *severityFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
 
 func (a *severityFn) Type() rules.ActionType {
 	return rules.ActionTypeMetadata

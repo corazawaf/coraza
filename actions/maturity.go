@@ -11,8 +11,7 @@ import (
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
-type maturityFn struct {
-}
+type maturityFn struct{}
 
 func (a *maturityFn) Init(r rules.RuleMetadata, data string) error {
 	m, err := strconv.Atoi(data)
@@ -27,9 +26,7 @@ func (a *maturityFn) Init(r rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *maturityFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-	// Not evaluated
-}
+func (a *maturityFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
 
 func (a *maturityFn) Type() rules.ActionType {
 	return rules.ActionTypeMetadata

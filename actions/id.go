@@ -34,9 +34,7 @@ func (a *idFn) Init(r rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *idFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-	// Not evaluated
-}
+func (a *idFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
 
 func (a *idFn) Type() rules.ActionType {
 	return rules.ActionTypeMetadata

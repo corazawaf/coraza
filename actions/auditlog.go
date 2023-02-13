@@ -10,15 +10,14 @@ import (
 
 type auditlogFn struct{}
 
-func (a *auditlogFn) Init(r rules.RuleMetadata, data string) error {
+func (a *auditlogFn) Init(r rules.RuleMetadata, _ string) error {
+	// TODO(jcchavezs): Shall we return an error if data is not empty?
 	// TODO(anuraaga): Confirm this is internal implementation detail
 	r.(*corazawaf.Rule).Audit = true
 	return nil
 }
 
-func (a *auditlogFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-	// Nothing here
-}
+func (a *auditlogFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
 
 func (a *auditlogFn) Type() rules.ActionType {
 	return rules.ActionTypeNondisruptive
