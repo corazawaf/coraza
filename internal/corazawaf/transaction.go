@@ -475,9 +475,9 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 func (tx *Transaction) matchVariable(match *corazarules.MatchData) {
 	var varName string
 	if match.Key_ != "" {
-		varName = match.VariableName_ + ":" + match.Key_
+		varName = match.Variable().Name() + ":" + match.Key_
 	} else {
-		varName = match.VariableName_
+		varName = match.Variable().Name()
 	}
 	// Array of values
 	matchedVars := tx.variables.matchedVars
@@ -601,10 +601,9 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 		count := len(matches)
 		matches = []types.MatchData{
 			&corazarules.MatchData{
-				VariableName_: rv.Variable.Name(),
-				Variable_:     rv.Variable,
-				Key_:          rv.KeyStr,
-				Value_:        strconv.Itoa(count),
+				Variable_: rv.Variable,
+				Key_:      rv.KeyStr,
+				Value_:    strconv.Itoa(count),
 			},
 		}
 	}
@@ -1418,7 +1417,7 @@ func (tx *Transaction) String() string {
 	for v := byte(1); v < types.VariablesCount; v++ {
 		vr := variables.RuleVariable(v)
 		col := tx.Collection(vr)
-		fmt.Fprint(&res, col)
+		fmt.Fprintln(&res, col)
 	}
 	return res.String()
 }

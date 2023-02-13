@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -15,7 +16,6 @@ import (
 // ConcatCollection is a collection view over multiple sollections.
 type ConcatCollection struct {
 	data     []collection.Collection
-	name     string
 	variable variables.RuleVariable
 }
 
@@ -24,7 +24,6 @@ var _ collection.Collection = &ConcatCollection{}
 func NewConcatCollection(variable variables.RuleVariable, data ...collection.Collection) *ConcatCollection {
 	return &ConcatCollection{
 		data:     data,
-		name:     variable.Name(),
 		variable: variable,
 	}
 }
@@ -32,15 +31,15 @@ func NewConcatCollection(variable variables.RuleVariable, data ...collection.Col
 // FindAll returns all matches for all collections
 func (c *ConcatCollection) FindAll() []types.MatchData {
 	var res []types.MatchData
-	for _, c := range c.data {
-		res = append(res, c.FindAll()...)
+	for _, d := range c.data {
+		res = append(res, replaceVariable(c.variable, d.FindAll())...)
 	}
 	return res
 }
 
 // Name returns the name for the current CollectionconcatCollection
 func (c *ConcatCollection) Name() string {
-	return c.name
+	return c.variable.Name()
 }
 
 // Reset the current ConcatMap
@@ -50,7 +49,6 @@ func (c *ConcatCollection) Reset() {
 // ConcatKeyed is a collection view over multiple keyed collections.
 type ConcatKeyed struct {
 	data     []collection.Keyed
-	name     string
 	variable variables.RuleVariable
 }
 
@@ -59,7 +57,6 @@ var _ collection.Keyed = &ConcatKeyed{}
 func NewConcatKeyed(variable variables.RuleVariable, data ...collection.Keyed) *ConcatKeyed {
 	return &ConcatKeyed{
 		data:     data,
-		name:     variable.Name(),
 		variable: variable,
 	}
 }
@@ -76,8 +73,8 @@ func (c *ConcatKeyed) Get(key string) []string {
 // FindRegex returns a slice of MatchData for the regex
 func (c *ConcatKeyed) FindRegex(key *regexp.Regexp) []types.MatchData {
 	var res []types.MatchData
-	for _, c := range c.data {
-		res = append(res, c.FindRegex(key)...)
+	for _, d := range c.data {
+		res = append(res, replaceVariable(c.variable, d.FindRegex(key))...)
 	}
 	return res
 }
@@ -85,8 +82,8 @@ func (c *ConcatKeyed) FindRegex(key *regexp.Regexp) []types.MatchData {
 // FindString returns a slice of MatchData for the string
 func (c *ConcatKeyed) FindString(key string) []types.MatchData {
 	var res []types.MatchData
-	for _, c := range c.data {
-		res = append(res, c.FindString(key)...)
+	for _, d := range c.data {
+		res = append(res, replaceVariable(c.variable, d.FindString(key))...)
 	}
 	return res
 }
@@ -94,17 +91,26 @@ func (c *ConcatKeyed) FindString(key string) []types.MatchData {
 // FindAll returns all matches for all collections
 func (c *ConcatKeyed) FindAll() []types.MatchData {
 	var res []types.MatchData
-	for _, c := range c.data {
-		res = append(res, c.FindAll()...)
+	for _, d := range c.data {
+		res = append(res, replaceVariable(c.variable, d.FindAll())...)
 	}
 	return res
 }
 
 // Name returns the name for the current CollectionconcatCollection
 func (c *ConcatKeyed) Name() string {
-	return c.name
+	return c.variable.Name()
 }
 
 // Reset the current ConcatMap
 func (c *ConcatKeyed) Reset() {
+}
+
+// replaceVariable ensures a returned match references the variable of a concatenated variable,
+// not original one.
+func replaceVariable(v variables.RuleVariable, md []types.MatchData) []types.MatchData {
+	for _, m := range md {
+		m.(*corazarules.MatchData).Variable_ = v
+	}
+	return md
 }

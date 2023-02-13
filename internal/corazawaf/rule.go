@@ -230,10 +230,9 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 					match := r.executeOperator(carg, tx)
 					if match {
 						mr := &corazarules.MatchData{
-							VariableName_: v.Variable.Name(),
-							Variable_:     arg.Variable(),
-							Key_:          arg.Key(),
-							Value_:        carg,
+							Variable_: arg.Variable(),
+							Key_:      arg.Key(),
+							Value_:    carg,
 						}
 						// Set the txn variables for expansions before usage
 						r.matchVariable(tx, mr)
@@ -311,7 +310,7 @@ func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transform
 		switch {
 		case len(r.transformations) == 0:
 			return []string{arg.Value()}, nil
-		case arg.VariableName() == "TX":
+		case arg.Variable().Name() == "TX":
 			// no cache for TX
 			arg, errs := r.executeTransformations(arg.Value())
 			return []string{arg}, errs
@@ -347,7 +346,7 @@ func (r *Rule) matchVariable(tx *Transaction, m *corazarules.MatchData) {
 		rid = r.ParentID_
 	}
 	if !m.IsNil() {
-		tx.WAF.Logger.Debug("[%s] [%d] Matching rule %d %s:%s", tx.id, rid, r.ID_, m.VariableName(), m.Key())
+		tx.WAF.Logger.Debug("[%s] [%d] Matching rule %d %s:%s", tx.id, rid, r.ID_, m.Variable().Name(), m.Key())
 	}
 	// we must match the vars before running the chains
 
