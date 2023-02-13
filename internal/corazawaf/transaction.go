@@ -1473,9 +1473,9 @@ type TransactionVariables struct {
 	statusLine               *collections.Single
 	inboundErrorData         *collections.Single
 	// Custom
-	env                  collection.Map
-	tx                   collection.Map
-	rule                 collection.Map
+	env                  *collections.Map
+	tx                   *collections.Map
+	rule                 *collections.Map
 	duration             *collections.Single
 	args                 *collections.ConcatKeyed
 	argsGet              *collections.NamedCollection
@@ -1484,26 +1484,26 @@ type TransactionVariables struct {
 	argsPostNames        collection.Collection
 	argsPath             *collections.NamedCollection
 	argsNames            *collections.ConcatCollection
-	filesTmpNames        collection.Map
-	geo                  collection.Map
-	files                collection.Map
+	filesTmpNames        *collections.Map
+	geo                  *collections.Map
+	files                *collections.Map
 	requestCookies       *collections.NamedCollection
 	requestCookiesNames  collection.Collection
 	requestHeaders       *collections.NamedCollection
 	responseHeadersNames collection.Collection
 	responseHeaders      *collections.NamedCollection
 	requestHeadersNames  collection.Collection
-	multipartName        collection.Map
-	multipartFilename    collection.Map
+	multipartName        *collections.Map
+	multipartFilename    *collections.Map
 	matchedVars          *collections.NamedCollection
 	matchedVarsNames     collection.Collection
-	filesSizes           collection.Map
-	filesNames           collection.Map
-	filesTmpContent      collection.Map
-	xml                  collection.Map
-	requestXML           collection.Map
-	responseXML          collection.Map
-	multipartPartHeaders collection.Map
+	filesSizes           *collections.Map
+	filesNames           *collections.Map
+	filesTmpContent      *collections.Map
+	xml                  *collections.Map
+	requestXML           *collections.Map
+	responseXML          *collections.Map
+	multipartPartHeaders *collections.Map
 }
 
 func NewTransactionVariables() *TransactionVariables {
@@ -1956,7 +1956,6 @@ func (v *TransactionVariables) reset() {
 	v.urlencodedError.Reset()
 	v.responseContentType.Reset()
 	v.uniqueID.Reset()
-	v.argsCombinedSize.Reset()
 	v.filesCombinedSize.Reset()
 	v.fullRequestLength.Reset()
 	v.inboundDataError.Reset()
@@ -1996,7 +1995,6 @@ func (v *TransactionVariables) reset() {
 	v.tx.Reset()
 	v.rule.Reset()
 	v.duration.Reset()
-	v.args.Reset()
 	v.argsGet.Reset()
 	v.argsPost.Reset()
 	v.argsPath.Reset()
@@ -2007,20 +2005,13 @@ func (v *TransactionVariables) reset() {
 	v.requestHeaders.Reset()
 	v.responseHeaders.Reset()
 	v.multipartName.Reset()
-	v.matchedVarsNames.Reset()
 	v.multipartFilename.Reset()
 	v.matchedVars.Reset()
 	v.filesSizes.Reset()
 	v.filesNames.Reset()
 	v.filesTmpContent.Reset()
-	v.responseHeadersNames.Reset()
-	v.requestHeadersNames.Reset()
-	v.requestCookiesNames.Reset()
 	v.xml.Reset()
 	v.requestXML.Reset()
 	v.responseXML.Reset()
 	v.multipartPartHeaders.Reset()
-	v.argsNames.Reset()
-	v.argsGetNames.Reset()
-	v.argsPostNames.Reset()
 }
