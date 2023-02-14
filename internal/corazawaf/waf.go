@@ -178,13 +178,13 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 		}
 
 		tx.requestBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
-			TmpPath:     tx.WAF.TmpDir,
+			TmpPath:     w.TmpDir,
 			MemoryLimit: requestBodyInMemoryLimit,
 			Limit:       w.RequestBodyLimit,
 		})
 
 		tx.responseBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
-			TmpPath: tx.WAF.TmpDir,
+			TmpPath: w.TmpDir,
 			// the response body is just buffered in memory. Therefore, Limit and MemoryLimit are equal.
 			MemoryLimit: w.ResponseBodyLimit,
 			Limit:       w.ResponseBodyLimit,
