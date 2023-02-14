@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/corazawaf/coraza/v3/internal/corazatypes"
 	"github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -107,6 +108,8 @@ func (rg *RuleGroup) Clear() {
 }
 
 // Eval rules for the specified phase, between 1 and 5
+// Rules are evaluated in syntactic order and the evaluation finishes
+// as soon as an interruption has been triggered.
 // Returns true if transaction is disrupted
 func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	tx.WAF.Logger.Debug("[%s] Evaluating phase %d", tx.id, int(phase))
@@ -119,6 +122,8 @@ func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	}
 RulesLoop:
 	for _, r := range tx.WAF.Rules.GetRules() {
+		// if there is already an interruption and the phase isn't logging
+		// we break the loop
 		if tx.interruption != nil && phase != types.PhaseLogging {
 			break RulesLoop
 		}
@@ -152,7 +157,19 @@ RulesLoop:
 			// Skipping rule
 			continue
 		}
-		// TODO this lines are SUPER SLOW
+		switch tx.AllowType {
+		case corazatypes.AllowTypeUnset:
+			break
+		case corazatypes.AllowTypePhase:
+			tx.AllowType = corazatypes.AllowTypeUnset
+			continue RulesLoop
+		case corazatypes.AllowTypeRequest:
+			tx.AllowType = corazatypes.AllowTypeUnset
+			break RulesLoop
+		case corazatypes.AllowTypeAll:
+			break RulesLoop
+		}
+		// TODO these lines are SUPER SLOW
 		// we reset matched_vars, matched_vars_names, etc
 		tx.variables.matchedVars.Reset()
 		tx.variables.matchedVarsNames.Reset()
