@@ -527,13 +527,7 @@ func minPhase(v variables.RuleVariable) types.RulePhase {
 	case variables.ArgsCombinedSize:
 		// Size changes between phase 1 and 2 so evaluate both times
 		return types.PhaseRequestHeaders
-	case variables.AuthType:
-		// Not populated by Coraza, but should generally be in headers
-		return types.PhaseRequestHeaders
 	case variables.FilesCombinedSize:
-		return types.PhaseRequestBody
-	case variables.FullRequest:
-		// Not populated by Coraza
 		return types.PhaseRequestBody
 	case variables.FullRequestLength:
 		// Not populated by Coraza
@@ -547,54 +541,12 @@ func minPhase(v variables.RuleVariable) types.RulePhase {
 	case variables.MatchedVarName:
 		// MatchedVar is only for logging, not evaluation
 		return types.PhaseUnknown
-	case variables.MultipartBoundaryQuoted:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
 	// MultipartBoundaryWhitespace kept for compatibility
-	case variables.MultipartBoundaryWhitespace:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MultipartCrlfLfLines:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
 	case variables.MultipartDataAfter:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MultipartDataBefore:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MultipartFileLimitExceeded:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MultipartHeaderFolding:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MultipartInvalidHeaderFolding:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MultipartInvalidPart:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MultipartInvalidQuoting:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MultipartLfLine:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MultipartMissingSemicolon:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MultipartStrictError:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MultipartUnmatchedBoundary:
 		// Not populated by Coraza
 		return types.PhaseRequestBody
 	case variables.OutboundDataError:
 		return types.PhaseResponseBody
-	case variables.PathInfo:
-		// Not populated by Coraza
-		return types.PhaseRequestHeaders
 	case variables.QueryString:
 		return types.PhaseRequestHeaders
 	case variables.RemoteAddr:
@@ -650,9 +602,6 @@ func minPhase(v variables.RuleVariable) types.RulePhase {
 	case variables.ServerPort:
 		// Configuration of the server itself
 		return types.PhaseRequestHeaders
-	case variables.Sessionid:
-		// Not populated by Coraza
-		return types.PhaseRequestHeaders
 	case variables.HighestSeverity:
 		// Result of matching, not used in phaes
 		return types.PhaseUnknown
@@ -666,9 +615,6 @@ func minPhase(v variables.RuleVariable) types.RulePhase {
 	case variables.ResponseHeadersNames:
 		return types.PhaseResponseHeaders
 	case variables.RequestHeadersNames:
-		return types.PhaseRequestHeaders
-	case variables.Userid:
-		// Not populated by Coraza
 		return types.PhaseRequestHeaders
 	case variables.Args:
 		// Updated between headers and body
@@ -726,9 +672,6 @@ func minPhase(v variables.RuleVariable) types.RulePhase {
 	case variables.JSON:
 		return types.PhaseRequestBody
 	case variables.Env:
-		return types.PhaseRequestHeaders
-	case variables.IP:
-		// Not populated by Coraza
 		return types.PhaseRequestHeaders
 	case variables.UrlencodedError:
 		return types.PhaseRequestHeaders
