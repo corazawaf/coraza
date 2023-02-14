@@ -1,8 +1,8 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build tinygo.wasm || (js && wasm)
-// +build tinygo.wasm js,wasm
+//go:build no_fs_access
+// +build no_fs_access
 
 package environment
 
