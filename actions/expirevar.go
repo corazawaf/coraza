@@ -4,6 +4,7 @@
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -18,18 +19,26 @@ type expirevarFn struct {
 }
 
 func (a *expirevarFn) Init(_ rules.RuleMetadata, data string) error {
-	v, ttl, _ := strings.Cut(data, "=")
-	col, key, ok := strings.Cut(v, ".")
+	k, ttl, ok := strings.Cut(data, "=")
 	if !ok {
-		return fmt.Errorf("expirevar must contain key and value (syntax expirevar:key=value)")
+		return errors.New("invalid argument for expirevar, requires key and value (syntax expirevar:key=value)")
 	}
 
-	var err error
-	a.ttl, err = strconv.Atoi(ttl)
+	col, key, ok := strings.Cut(k, ".")
+	if !ok {
+		return errors.New("invalid argument key for expirevar, requires a collection (syntax collection.name} ")
+	}
+
+	ittl, err := strconv.Atoi(ttl)
 	if err != nil {
-		return fmt.Errorf("failed to parse TTL: %s", err.Error())
+		return fmt.Errorf("invalid TTL argument for expirevar: %s", err.Error())
 	}
 
+	if ittl < int(1) {
+		return errors.New("invalid TTL argument for expirevar, requires TTL to be greater than 1")
+	}
+
+	a.ttl = ittl
 	a.collection = col
 	a.key = key
 	return nil

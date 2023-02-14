@@ -33,23 +33,22 @@ func (a *setvarFn) Init(_ rules.RuleMetadata, data string) error {
 
 	var err error
 	key, val, valOk := strings.Cut(data, "=")
-
 	colKey, colVal, colOk := strings.Cut(key, ".")
 	a.collection, err = variables.Parse(colKey)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid argument for setvar: %s", err.Error())
 	}
 	if colOk {
 		macro, err := macro.NewMacro(colVal)
 		if err != nil {
-			return err
+			return fmt.Errorf("invalid argument for setvar: %s", err.Error())
 		}
 		a.key = macro
 	}
 	if valOk {
 		macro, err := macro.NewMacro(val)
 		if err != nil {
-			return err
+			return fmt.Errorf("invalid argument for setvar: %s", err.Error())
 		}
 		a.value = macro
 	}

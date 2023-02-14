@@ -4,6 +4,8 @@
 package actions
 
 import (
+	"fmt"
+
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/rules"
 	transformations "github.com/corazawaf/coraza/v3/transformations"
@@ -16,13 +18,13 @@ func (a *tFn) Init(r rules.RuleMetadata, data string) error {
 	// none is a special hardcoded transformation, it must remove previous transformations
 	if data == "none" {
 		// remove elements
-		// TODO(anuraaga): Confirm this is internal implementation detail
 		r.(*corazawaf.Rule).ClearTransformations()
 		return nil
 	}
+
 	tt, err := transformations.GetTransformation(data)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid argument for t: %s", err.Error())
 	}
 	return r.(*corazawaf.Rule).AddTransformation(data, tt)
 }

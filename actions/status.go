@@ -4,6 +4,7 @@
 package actions
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
@@ -13,11 +14,11 @@ import (
 type statusFn struct{}
 
 func (a *statusFn) Init(r rules.RuleMetadata, data string) error {
+	// TODO(jcchavezs): Shall we validate valid status e.g. >200 && < 600?
 	status, err := strconv.Atoi(data)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid argument for status: %s", err.Error())
 	}
-	// TODO(anuraaga): Confirm this is internal implementation detail
 	r.(*corazawaf.Rule).DisruptiveStatus = status
 	return nil
 }

@@ -11,26 +11,23 @@ import (
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
-type idFn struct {
-}
+type idFn struct{}
 
 func (a *idFn) Init(r rules.RuleMetadata, data string) error {
 	if data == "" {
-		return fmt.Errorf("id action requires a parameter")
+		return fmt.Errorf("id requires a argument")
 	}
 	i, err := strconv.Atoi(data)
 	if err != nil {
-		return fmt.Errorf("invalid rule id %s", data)
+		return fmt.Errorf("invalid argument for id %q, requires an integer", data)
 	}
-	// TODO(anuraaga): Confirm this is internal implementation detail
-	rInt := r.(*corazawaf.Rule)
-	rInt.ID_ = int(i)
-	if rInt.ID_ < 0 {
-		return fmt.Errorf("rule id (%d) cannot be negative", rInt.ID_)
+
+	if i <= 0 {
+		return fmt.Errorf("invalid argument for rule id, %d must be positive", i)
 	}
-	if rInt.ID_ == 0 {
-		return fmt.Errorf("rule id (%d) cannot be zero", rInt.ID_)
-	}
+
+	cr := r.(*corazawaf.Rule)
+	cr.ID_ = int(i)
 	return nil
 }
 

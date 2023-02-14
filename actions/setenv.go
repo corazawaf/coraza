@@ -18,10 +18,15 @@ type setenvFn struct {
 }
 
 func (a *setenvFn) Init(_ rules.RuleMetadata, data string) error {
+	if data == "" {
+		return fmt.Errorf("setenv requires arguments")
+	}
+
 	key, val, ok := strings.Cut(data, "=")
 	if !ok {
-		return fmt.Errorf("invalid key value for setvar")
+		return fmt.Errorf("invalid argument for setenv (syntax setenv:key=value)")
 	}
+
 	m, err := macro.NewMacro(val)
 	if err != nil {
 		return err

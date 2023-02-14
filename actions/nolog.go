@@ -11,7 +11,6 @@ import (
 type nologFn struct{}
 
 func (a *nologFn) Init(r rules.RuleMetadata, data string) error {
-	// TODO(anuraaga): Confirm this is internal implementation detail
 	r.(*corazawaf.Rule).Log = false
 	r.(*corazawaf.Rule).Audit = false
 	return nil

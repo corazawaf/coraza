@@ -55,7 +55,7 @@ func (a *ctlFn) Init(_ rules.RuleMetadata, data string) error {
 	if len(a.colKey) > 2 && a.colKey[0] == '/' && a.colKey[len(a.colKey)-1] == '/' {
 		a.colRx, err = regexp.Compile(a.colKey[1 : len(a.colKey)-1])
 		if err != nil {
-			return err
+			return fmt.Errorf("invalid argument for ctl: %s", err.Error())
 		}
 	}
 	return err
@@ -75,7 +75,6 @@ func parseOnOff(s string) (bool, bool) {
 }
 
 func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
-	// TODO(anuraaga): Confirm this is internal implementation detail
 	tx := txS.(*corazawaf.Transaction)
 	switch a.action {
 	case ctlRuleRemoveTargetByID:

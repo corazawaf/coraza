@@ -18,17 +18,16 @@ type skipFn struct {
 func (a *skipFn) Init(_ rules.RuleMetadata, data string) error {
 	i, err := strconv.Atoi(data)
 	if err != nil {
-		return fmt.Errorf("invalid value for skip")
+		return fmt.Errorf("invalid argument for skip: %s", err.Error())
 	}
 	if i < 1 {
-		return fmt.Errorf("skip cannot be less than 1, got %d", i)
+		return fmt.Errorf("invalid argument for skip, requires %d to be greater than 1", i)
 	}
 	a.data = i
 	return nil
 }
 
 func (a *skipFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-	// TODO(anuraaga): Confirm this is internal implementation detail
 	tx.(*corazawaf.Transaction).Skip = a.data
 }
 

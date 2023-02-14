@@ -13,7 +13,6 @@ type captureFn struct{}
 func (a *captureFn) Init(r rules.RuleMetadata, _ string) error {
 	// this will capture only the current rule
 	// TODO(jcchavezs): Shall we return an error if data is not empty?
-	// TODO(anuraaga): Confirm this is internal implementation detail
 	r.(*corazawaf.Rule).Capture = true
 	return nil
 }

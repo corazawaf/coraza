@@ -4,6 +4,7 @@
 package actions
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/rules"
@@ -17,7 +18,11 @@ type initcolFn struct {
 }
 
 func (a *initcolFn) Init(_ rules.RuleMetadata, data string) error {
-	col, key, _ := strings.Cut(data, "=")
+	col, key, ok := strings.Cut(data, "=")
+	if !ok {
+		return errors.New("invalid argument for initcol, requires key and value (syntax initcol:key=value)")
+	}
+
 	a.collection = col
 	a.key = key
 	a.variable = 0x0

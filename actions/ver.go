@@ -11,7 +11,6 @@ import (
 type verFn struct{}
 
 func (a *verFn) Init(r rules.RuleMetadata, data string) error {
-	// TODO(anuraaga): Confirm this is internal implementation detail
 	r.(*corazawaf.Rule).Version_ = data
 	return nil
 }

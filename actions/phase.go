@@ -16,7 +16,6 @@ func (a *phaseFn) Init(r rules.RuleMetadata, data string) error {
 	if err != nil {
 		return err
 	}
-	// TODO(anuraaga): Confirm this is internal implementation detail
 	r.(*corazawaf.Rule).Phase_ = p
 	return nil
 }

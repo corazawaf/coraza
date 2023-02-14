@@ -16,7 +16,7 @@ type allowFn struct {
 	allow corazatypes.AllowType
 }
 
-func (a *allowFn) Init(r rules.RuleMetadata, data string) error {
+func (a *allowFn) Init(_ rules.RuleMetadata, data string) error {
 	switch data {
 	case "phase":
 		a.allow = corazatypes.AllowTypePhase // skip current phase
