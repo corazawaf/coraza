@@ -54,7 +54,7 @@ func main() {
 		log.Fatal(err) // type error
 	}
 
-	directives := []VariablesMap{}
+	var directives []VariablesMap
 	ast.Inspect(f, func(n ast.Node) bool {
 		switch decl := n.(type) {
 		case *ast.GenDecl:
