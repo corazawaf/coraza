@@ -117,7 +117,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	vc, err := os.Create("../variablescount.gen.go")
+	vc, err := os.Create("./variablescount.gen.go")
 	if err != nil {
 		log.Fatal(err)
 	}
