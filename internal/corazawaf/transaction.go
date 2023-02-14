@@ -1377,11 +1377,7 @@ func (tx *Transaction) String() string {
 	}
 
 	res.WriteString("\n------------------------ DEBUG ------------------------\n")
-	for v := byte(1); v < types.VariablesCount; v++ {
-		vr := variables.RuleVariable(v)
-		col := tx.Collection(vr)
-		fmt.Fprint(&res, col)
-	}
+	tx.variables.format(&res)
 	return res.String()
 }
 
@@ -1395,17 +1391,35 @@ func (tx *Transaction) generateReqbodyError(err error) {
 
 // TransactionVariables has pointers to all the variables of the transaction
 type TransactionVariables struct {
-	// Single Variables
-	urlencodedError          *collections.Single
-	responseContentType      *collections.Single
-	uniqueID                 *collections.Single
+	args                     *collections.ConcatKeyed
 	argsCombinedSize         *collections.SizeCollection
+	argsGet                  *collections.NamedCollection
+	argsGetNames             collection.Collection
+	argsNames                *collections.ConcatCollection
+	argsPath                 *collections.NamedCollection
+	argsPost                 *collections.NamedCollection
+	argsPostNames            collection.Collection
+	duration                 *collections.Single
+	env                      *collections.Map
+	files                    *collections.Map
 	filesCombinedSize        *collections.Single
+	filesNames               *collections.Map
+	filesSizes               *collections.Map
+	filesTmpContent          *collections.Map
+	filesTmpNames            *collections.Map
 	fullRequestLength        *collections.Single
+	geo                      *collections.Map
+	highestSeverity          *collections.Single
 	inboundDataError         *collections.Single
+	inboundErrorData         *collections.Single
 	matchedVar               *collections.Single
 	matchedVarName           *collections.Single
+	matchedVars              *collections.NamedCollection
+	matchedVarsNames         collection.Collection
 	multipartDataAfter       *collections.Single
+	multipartFilename        *collections.Map
+	multipartName            *collections.Map
+	multipartPartHeaders     *collections.Map
 	outboundDataError        *collections.Single
 	queryString              *collections.Single
 	remoteAddr               *collections.Single
@@ -1413,60 +1427,40 @@ type TransactionVariables struct {
 	remotePort               *collections.Single
 	reqbodyError             *collections.Single
 	reqbodyErrorMsg          *collections.Single
+	reqbodyProcessor         *collections.Single
 	reqbodyProcessorError    *collections.Single
 	reqbodyProcessorErrorMsg *collections.Single
-	reqbodyProcessor         *collections.Single
 	requestBasename          *collections.Single
 	requestBody              *collections.Single
 	requestBodyLength        *collections.Single
+	requestCookies           *collections.NamedCollection
+	requestCookiesNames      collection.Collection
 	requestFilename          *collections.Single
+	requestHeaders           *collections.NamedCollection
+	requestHeadersNames      collection.Collection
 	requestLine              *collections.Single
 	requestMethod            *collections.Single
 	requestProtocol          *collections.Single
 	requestURI               *collections.Single
 	requestURIRaw            *collections.Single
+	requestXML               *collections.Map
 	responseBody             *collections.Single
 	responseContentLength    *collections.Single
+	responseContentType      *collections.Single
+	responseHeaders          *collections.NamedCollection
+	responseHeadersNames     collection.Collection
 	responseProtocol         *collections.Single
 	responseStatus           *collections.Single
+	responseXML              *collections.Map
+	rule                     *collections.Map
 	serverAddr               *collections.Single
 	serverName               *collections.Single
 	serverPort               *collections.Single
-	highestSeverity          *collections.Single
 	statusLine               *collections.Single
-	inboundErrorData         *collections.Single
-	// Custom
-	env                  *collections.Map
-	tx                   *collections.Map
-	rule                 *collections.Map
-	duration             *collections.Single
-	args                 *collections.ConcatKeyed
-	argsGet              *collections.NamedCollection
-	argsGetNames         collection.Collection
-	argsPost             *collections.NamedCollection
-	argsPostNames        collection.Collection
-	argsPath             *collections.NamedCollection
-	argsNames            *collections.ConcatCollection
-	filesTmpNames        *collections.Map
-	geo                  *collections.Map
-	files                *collections.Map
-	requestCookies       *collections.NamedCollection
-	requestCookiesNames  collection.Collection
-	requestHeaders       *collections.NamedCollection
-	responseHeadersNames collection.Collection
-	responseHeaders      *collections.NamedCollection
-	requestHeadersNames  collection.Collection
-	multipartName        *collections.Map
-	multipartFilename    *collections.Map
-	matchedVars          *collections.NamedCollection
-	matchedVarsNames     collection.Collection
-	filesSizes           *collections.Map
-	filesNames           *collections.Map
-	filesTmpContent      *collections.Map
-	xml                  *collections.Map
-	requestXML           *collections.Map
-	responseXML          *collections.Map
-	multipartPartHeaders *collections.Map
+	tx                       *collections.Map
+	uniqueID                 *collections.Single
+	urlencodedError          *collections.Single
+	xml                      *collections.Map
 }
 
 func NewTransactionVariables() *TransactionVariables {
@@ -1839,16 +1833,106 @@ func (v *TransactionVariables) ArgsPostNames() collection.Collection {
 	return v.argsPostNames
 }
 
+func (v *TransactionVariables) format(res *strings.Builder) {
+	// TODO(anuraaga): Optimize this, currently each println allocates a string that is then
+	// written to res, we should create a function independent from fmt.Stringer interface
+	// that accepts a res to write to.
+	fmt.Fprintln(res, v.args)
+	fmt.Fprintln(res, v.argsCombinedSize)
+	fmt.Fprintln(res, v.argsGet)
+	fmt.Fprintln(res, v.argsGetNames)
+	fmt.Fprintln(res, v.argsNames)
+	fmt.Fprintln(res, v.argsPath)
+	fmt.Fprintln(res, v.argsPost)
+	fmt.Fprintln(res, v.argsPostNames)
+	fmt.Fprintln(res, v.duration)
+	fmt.Fprintln(res, v.env)
+	fmt.Fprintln(res, v.files)
+	fmt.Fprintln(res, v.filesCombinedSize)
+	fmt.Fprintln(res, v.filesNames)
+	fmt.Fprintln(res, v.filesSizes)
+	fmt.Fprintln(res, v.filesTmpContent)
+	fmt.Fprintln(res, v.filesTmpNames)
+	fmt.Fprintln(res, v.fullRequestLength)
+	fmt.Fprintln(res, v.geo)
+	fmt.Fprintln(res, v.highestSeverity)
+	fmt.Fprintln(res, v.inboundDataError)
+	fmt.Fprintln(res, v.inboundErrorData)
+	fmt.Fprintln(res, v.matchedVar)
+	fmt.Fprintln(res, v.matchedVarName)
+	fmt.Fprintln(res, v.matchedVars)
+	fmt.Fprintln(res, v.matchedVarsNames)
+	fmt.Fprintln(res, v.multipartDataAfter)
+	fmt.Fprintln(res, v.multipartFilename)
+	fmt.Fprintln(res, v.multipartName)
+	fmt.Fprintln(res, v.multipartPartHeaders)
+	fmt.Fprintln(res, v.outboundDataError)
+	fmt.Fprintln(res, v.queryString)
+	fmt.Fprintln(res, v.remoteAddr)
+	fmt.Fprintln(res, v.remoteHost)
+	fmt.Fprintln(res, v.remotePort)
+	fmt.Fprintln(res, v.reqbodyError)
+	fmt.Fprintln(res, v.reqbodyErrorMsg)
+	fmt.Fprintln(res, v.reqbodyProcessor)
+	fmt.Fprintln(res, v.reqbodyProcessorError)
+	fmt.Fprintln(res, v.reqbodyProcessorErrorMsg)
+	fmt.Fprintln(res, v.requestBasename)
+	fmt.Fprintln(res, v.requestBody)
+	fmt.Fprintln(res, v.requestBodyLength)
+	fmt.Fprintln(res, v.requestCookies)
+	fmt.Fprintln(res, v.requestCookiesNames)
+	fmt.Fprintln(res, v.requestFilename)
+	fmt.Fprintln(res, v.requestHeaders)
+	fmt.Fprintln(res, v.requestHeadersNames)
+	fmt.Fprintln(res, v.requestLine)
+	fmt.Fprintln(res, v.requestMethod)
+	fmt.Fprintln(res, v.requestProtocol)
+	fmt.Fprintln(res, v.requestURI)
+	fmt.Fprintln(res, v.requestURIRaw)
+	fmt.Fprintln(res, v.requestXML)
+	fmt.Fprintln(res, v.responseBody)
+	fmt.Fprintln(res, v.responseContentLength)
+	fmt.Fprintln(res, v.responseContentType)
+	fmt.Fprintln(res, v.responseHeaders)
+	fmt.Fprintln(res, v.responseHeadersNames)
+	fmt.Fprintln(res, v.responseProtocol)
+	fmt.Fprintln(res, v.responseStatus)
+	fmt.Fprintln(res, v.responseXML)
+	fmt.Fprintln(res, v.rule)
+	fmt.Fprintln(res, v.serverAddr)
+	fmt.Fprintln(res, v.serverName)
+	fmt.Fprintln(res, v.serverPort)
+	fmt.Fprintln(res, v.statusLine)
+	fmt.Fprintln(res, v.tx)
+	fmt.Fprintln(res, v.uniqueID)
+	fmt.Fprintln(res, v.urlencodedError)
+	fmt.Fprintln(res, v.xml)
+}
+
 func (v *TransactionVariables) reset() {
-	v.urlencodedError.Reset()
-	v.responseContentType.Reset()
-	v.uniqueID.Reset()
+	v.argsGet.Reset()
+	v.argsPath.Reset()
+	v.argsPost.Reset()
+	v.duration.Reset()
+	v.env.Reset()
+	v.files.Reset()
 	v.filesCombinedSize.Reset()
+	v.filesNames.Reset()
+	v.filesSizes.Reset()
+	v.filesTmpContent.Reset()
+	v.filesTmpNames.Reset()
 	v.fullRequestLength.Reset()
+	v.geo.Reset()
+	v.highestSeverity.Reset()
 	v.inboundDataError.Reset()
+	v.inboundErrorData.Reset()
 	v.matchedVar.Reset()
 	v.matchedVarName.Reset()
+	v.matchedVars.Reset()
 	v.multipartDataAfter.Reset()
+	v.multipartFilename.Reset()
+	v.multipartName.Reset()
+	v.multipartPartHeaders.Reset()
 	v.outboundDataError.Reset()
 	v.queryString.Reset()
 	v.remoteAddr.Reset()
@@ -1856,49 +1940,35 @@ func (v *TransactionVariables) reset() {
 	v.remotePort.Reset()
 	v.reqbodyError.Reset()
 	v.reqbodyErrorMsg.Reset()
+	v.reqbodyProcessor.Reset()
 	v.reqbodyProcessorError.Reset()
 	v.reqbodyProcessorErrorMsg.Reset()
-	v.reqbodyProcessor.Reset()
 	v.requestBasename.Reset()
 	v.requestBody.Reset()
 	v.requestBodyLength.Reset()
+	v.requestCookies.Reset()
 	v.requestFilename.Reset()
+	v.requestHeaders.Reset()
 	v.requestLine.Reset()
 	v.requestMethod.Reset()
 	v.requestProtocol.Reset()
 	v.requestURI.Reset()
 	v.requestURIRaw.Reset()
+	v.requestXML.Reset()
 	v.responseBody.Reset()
 	v.responseContentLength.Reset()
+	v.responseContentType.Reset()
+	v.responseHeaders.Reset()
 	v.responseProtocol.Reset()
 	v.responseStatus.Reset()
+	v.responseXML.Reset()
+	v.rule.Reset()
 	v.serverAddr.Reset()
 	v.serverName.Reset()
 	v.serverPort.Reset()
-	v.highestSeverity.Reset()
 	v.statusLine.Reset()
-	v.inboundErrorData.Reset()
-	v.env.Reset()
 	v.tx.Reset()
-	v.rule.Reset()
-	v.duration.Reset()
-	v.argsGet.Reset()
-	v.argsPost.Reset()
-	v.argsPath.Reset()
-	v.filesTmpNames.Reset()
-	v.geo.Reset()
-	v.files.Reset()
-	v.requestCookies.Reset()
-	v.requestHeaders.Reset()
-	v.responseHeaders.Reset()
-	v.multipartName.Reset()
-	v.multipartFilename.Reset()
-	v.matchedVars.Reset()
-	v.filesSizes.Reset()
-	v.filesNames.Reset()
-	v.filesTmpContent.Reset()
+	v.uniqueID.Reset()
+	v.urlencodedError.Reset()
 	v.xml.Reset()
-	v.requestXML.Reset()
-	v.responseXML.Reset()
-	v.multipartPartHeaders.Reset()
 }
