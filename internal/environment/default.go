@@ -1,10 +1,10 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build !tinygo
-// +build !tinygo
+//go:build !no_fs_access
+// +build !no_fs_access
 
 package environment
 
-// IsTinyGo indicates whether the build environment is TinyGo.
-var IsTinyGo = false
+// HasAccessToFS indicates whether the build environment is TinyGo.
+var HasAccessToFS = true
