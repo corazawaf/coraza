@@ -43,10 +43,6 @@ func (c *ConcatCollection) Name() string {
 	return c.name
 }
 
-// Reset the current ConcatMap
-func (c *ConcatCollection) Reset() {
-}
-
 // ConcatKeyed is a collection view over multiple keyed collections.
 type ConcatKeyed struct {
 	data     []collection.Keyed
@@ -103,8 +99,4 @@ func (c *ConcatKeyed) FindAll() []types.MatchData {
 // Name returns the name for the current CollectionconcatCollection
 func (c *ConcatKeyed) Name() string {
 	return c.name
-}
-
-// Reset the current ConcatMap
-func (c *ConcatKeyed) Reset() {
 }

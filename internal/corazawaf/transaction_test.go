@@ -199,7 +199,6 @@ func TestWriteRequestBody(t *testing.T) {
 							waf.RuleEngine = types.RuleEngineOn
 							waf.RequestBodyAccess = true
 							waf.RequestBodyLimit = int64(testCase.requestBodyLimit)
-							waf.RequestBodyInMemoryLimit = int64(testCase.requestBodyLimit)
 							waf.RequestBodyLimitAction = testCase.requestBodyLimitAction
 
 							tx := waf.NewTransaction()
@@ -270,7 +269,6 @@ func TestWriteRequestBodyOnLimitReached(t *testing.T) {
 		waf.RuleEngine = types.RuleEngineOn
 		waf.RequestBodyAccess = true
 		waf.RequestBodyLimit = 2
-		waf.RequestBodyInMemoryLimit = 2
 		waf.RequestBodyLimitAction = tCase.requestBodyLimitAction
 
 		t.Run(tName, func(t *testing.T) {

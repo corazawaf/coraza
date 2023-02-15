@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/corazawaf/coraza/v3/internal/environment"
 	ioutils "github.com/corazawaf/coraza/v3/internal/io"
 	stringutils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/internal/sync"
@@ -50,7 +51,7 @@ type WAF struct {
 	RequestBodyLimit int64
 
 	// Request body in memory limit
-	RequestBodyInMemoryLimit int64
+	requestBodyInMemoryLimit *int64
 
 	// If true, transactions will have access to the response body
 	ResponseBodyAccess bool
@@ -150,9 +151,9 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	tx.AuditLogParts = w.AuditLogParts
 	tx.ForceRequestBodyVariable = false
 	tx.RequestBodyAccess = w.RequestBodyAccess
-	tx.RequestBodyLimit = w.RequestBodyLimit
+	tx.RequestBodyLimit = int64(w.RequestBodyLimit)
 	tx.ResponseBodyAccess = w.ResponseBodyAccess
-	tx.ResponseBodyLimit = w.ResponseBodyLimit
+	tx.ResponseBodyLimit = int64(w.ResponseBodyLimit)
 	tx.RuleEngine = w.RuleEngine
 	tx.HashEngine = false
 	tx.HashEnforcement = false
@@ -161,6 +162,7 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	tx.ruleRemoveByID = nil
 	tx.ruleRemoveTargetByID = map[int][]ruleVariableParams{}
 	tx.Skip = 0
+	tx.AllowType = 0
 	tx.Capture = false
 	tx.stopWatches = map[types.RulePhase]int64{}
 	tx.WAF = w
@@ -170,17 +172,25 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	// Always non-nil if buffers / collections were already initialized so we don't do any of them
 	// based on the presence of RequestBodyBuffer.
 	if tx.requestBodyBuffer == nil {
+		// if no requestBodyInMemoryLimit has been set we default to the
+		var requestBodyInMemoryLimit int64 = w.RequestBodyLimit
+		if w.requestBodyInMemoryLimit != nil {
+			requestBodyInMemoryLimit = int64(*w.requestBodyInMemoryLimit)
+		}
+
 		tx.requestBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
 			TmpPath:     w.TmpDir,
-			MemoryLimit: w.RequestBodyInMemoryLimit,
-			Limit:       w.ResponseBodyLimit,
+			MemoryLimit: requestBodyInMemoryLimit,
+			Limit:       w.RequestBodyLimit,
 		})
+
 		tx.responseBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
 			TmpPath: w.TmpDir,
 			// the response body is just buffered in memory. Therefore, Limit and MemoryLimit are equal.
 			MemoryLimit: w.ResponseBodyLimit,
 			Limit:       w.ResponseBodyLimit,
 		})
+
 		tx.variables = *NewTransactionVariables()
 		tx.transformationCache = map[transformationKey]*transformationValue{}
 	}
@@ -195,20 +205,7 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	tx.variables.filesCombinedSize.Set("0")
 	tx.variables.urlencodedError.Set("0")
 	tx.variables.fullRequestLength.Set("0")
-	tx.variables.multipartBoundaryQuoted.Set("0")
-	tx.variables.multipartBoundaryWhitespace.Set("0")
-	tx.variables.multipartCrlfLfLines.Set("0")
 	tx.variables.multipartDataAfter.Set("0")
-	tx.variables.multipartDataBefore.Set("0")
-	tx.variables.multipartFileLimitExceeded.Set("0")
-	tx.variables.multipartHeaderFolding.Set("0")
-	tx.variables.multipartInvalidHeaderFolding.Set("0")
-	tx.variables.multipartInvalidPart.Set("0")
-	tx.variables.multipartInvalidQuoting.Set("0")
-	tx.variables.multipartLfLine.Set("0")
-	tx.variables.multipartMissingSemicolon.Set("0")
-	tx.variables.multipartStrictError.Set("0")
-	tx.variables.multipartUnmatchedBoundary.Set("0")
 	tx.variables.outboundDataError.Set("0")
 	tx.variables.reqbodyError.Set("0")
 	tx.variables.reqbodyProcessorError.Set("0")
@@ -243,13 +240,15 @@ func (w *WAF) SetDebugLogPath(path string) error {
 
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		w.Logger.Error("failed to open the file: %s", err.Error())
+		w.Logger.Error("failed to open the debug log file: %s", err.Error())
 	}
 
 	w.Logger.SetOutput(f)
 
 	return nil
 }
+
+const _1gb = 1073741824
 
 // NewWAF creates a new WAF instance with default variables
 func NewWAF() *WAF {
@@ -267,19 +266,23 @@ func NewWAF() *WAF {
 		// Initializing pool for transactions
 		txPool: sync.NewPool(func() interface{} { return new(Transaction) }),
 		// These defaults are unavoidable as they are zero values for the variables
-		RuleEngine:               types.RuleEngineOn,
-		RequestBodyAccess:        false,
-		RequestBodyLimit:         _1gb,
-		RequestBodyInMemoryLimit: _1gb,
-		ResponseBodyAccess:       false,
-		ResponseBodyLimit:        _1gb,
-		AuditLogWriter:           logWriter,
-		Logger:                   logger,
+		RuleEngine:         types.RuleEngineOn,
+		RequestBodyAccess:  false,
+		RequestBodyLimit:   _1gb,
+		ResponseBodyAccess: false,
+		ResponseBodyLimit:  _1gb,
+		AuditLogWriter:     logWriter,
+		Logger:             logger,
 	}
+
+	if environment.HasAccessToFS {
+		waf.TmpDir = os.TempDir()
+	}
+
 	if err := waf.SetDebugLogPath(""); err != nil {
 		fmt.Println(err)
 	}
-	waf.Logger.Debug("a new waf instance was created")
+	waf.Logger.Debug("a new WAF instance was created")
 	return waf
 }
 
@@ -297,11 +300,15 @@ func (w *WAF) SetErrorCallback(cb func(rule types.MatchedRule)) {
 	w.ErrorLogCb = cb
 }
 
-const (
-	_1gb       = 1073741824
-	UnsetLimit = -1
-)
+func (w *WAF) SetRequestBodyInMemoryLimit(limit int64) {
+	w.requestBodyInMemoryLimit = &limit
+}
 
+func (w *WAF) RequestBodyInMemoryLimit() *int64 {
+	return w.requestBodyInMemoryLimit
+}
+
+// Validate validates the waf after all the settings have been set.
 func (w *WAF) Validate() error {
 	if w.RequestBodyLimit <= 0 {
 		return errors.New("request body limit should be bigger than 0")
@@ -311,14 +318,14 @@ func (w *WAF) Validate() error {
 		return errors.New("request body limit should be at most 1GB")
 	}
 
-	if w.RequestBodyLimit != UnsetLimit {
-		if w.RequestBodyLimit < w.RequestBodyInMemoryLimit {
+	if w.requestBodyInMemoryLimit != nil {
+		if *w.requestBodyInMemoryLimit <= 0 {
+			return errors.New("request body memory limit should be bigger than 0")
+		}
+
+		if w.RequestBodyLimit < *w.requestBodyInMemoryLimit {
 			return fmt.Errorf("request body limit should be at least the memory limit")
 		}
-	}
-
-	if w.RequestBodyInMemoryLimit <= 0 {
-		return errors.New("request body memory limit should be bigger than 0")
 	}
 
 	if w.ResponseBodyLimit <= 0 {

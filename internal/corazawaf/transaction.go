@@ -20,6 +20,7 @@ import (
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
+	corazatypes "github.com/corazawaf/coraza/v3/internal/corazatypes"
 	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 	urlutil "github.com/corazawaf/coraza/v3/internal/url"
 	"github.com/corazawaf/coraza/v3/loggers"
@@ -50,6 +51,9 @@ type Transaction struct {
 
 	// Rules will be skipped after a rule with this SecMarker is found
 	SkipAfter string
+
+	// AllowType is used by the allow disruptive action to skip evaluating rules after being allowed
+	AllowType corazatypes.AllowType
 
 	// Copies from the WAF instance that may be overwritten by the ctl action
 	AuditEngine              types.AuditEngineStatus
@@ -127,12 +131,8 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.uniqueID
 	case variables.ArgsCombinedSize:
 		return tx.variables.argsCombinedSize
-	case variables.AuthType:
-		return tx.variables.authType
 	case variables.FilesCombinedSize:
 		return tx.variables.filesCombinedSize
-	case variables.FullRequest:
-		return tx.variables.fullRequest
 	case variables.FullRequestLength:
 		return tx.variables.fullRequestLength
 	case variables.InboundDataError:
@@ -141,38 +141,10 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.matchedVar
 	case variables.MatchedVarName:
 		return tx.variables.matchedVarName
-	case variables.MultipartBoundaryQuoted:
-		return tx.variables.multipartBoundaryQuoted
-	case variables.MultipartBoundaryWhitespace:
-		return tx.variables.multipartBoundaryWhitespace
-	case variables.MultipartCrlfLfLines:
-		return tx.variables.multipartCrlfLfLines
 	case variables.MultipartDataAfter:
 		return tx.variables.multipartDataAfter
-	case variables.MultipartDataBefore:
-		return tx.variables.multipartDataBefore
-	case variables.MultipartFileLimitExceeded:
-		return tx.variables.multipartFileLimitExceeded
-	case variables.MultipartHeaderFolding:
-		return tx.variables.multipartHeaderFolding
-	case variables.MultipartInvalidHeaderFolding:
-		return tx.variables.multipartInvalidHeaderFolding
-	case variables.MultipartInvalidPart:
-		return tx.variables.multipartInvalidPart
-	case variables.MultipartInvalidQuoting:
-		return tx.variables.multipartInvalidQuoting
-	case variables.MultipartLfLine:
-		return tx.variables.multipartLfLine
-	case variables.MultipartMissingSemicolon:
-		return tx.variables.multipartMissingSemicolon
-	case variables.MultipartStrictError:
-		return tx.variables.multipartStrictError
-	case variables.MultipartUnmatchedBoundary:
-		return tx.variables.multipartUnmatchedBoundary
 	case variables.OutboundDataError:
 		return tx.variables.outboundDataError
-	case variables.PathInfo:
-		return tx.variables.pathInfo
 	case variables.QueryString:
 		return tx.variables.queryString
 	case variables.RemoteAddr:
@@ -223,8 +195,6 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.serverName
 	case variables.ServerPort:
 		return tx.variables.serverPort
-	case variables.Sessionid:
-		return tx.variables.sessionID
 	case variables.HighestSeverity:
 		return tx.variables.highestSeverity
 	case variables.StatusLine:
@@ -237,8 +207,6 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.responseHeadersNames
 	case variables.RequestHeadersNames:
 		return tx.variables.requestHeadersNames
-	case variables.Userid:
-		return tx.variables.userID
 	case variables.Args:
 		return tx.variables.args
 	case variables.ArgsGet:
@@ -290,8 +258,6 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return nil
 	case variables.Env:
 		return tx.variables.env
-	case variables.IP:
-		return tx.variables.ip
 	case variables.UrlencodedError:
 		return tx.variables.urlencodedError
 	case variables.ResponseArgs:
@@ -307,7 +273,7 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.multipartPartHeaders
 	}
 
-	return nil
+	return collections.Noop
 }
 
 func (tx *Transaction) Interrupt(interruption *types.Interruption) {
@@ -1430,67 +1396,49 @@ func (tx *Transaction) generateReqbodyError(err error) {
 // TransactionVariables has pointers to all the variables of the transaction
 type TransactionVariables struct {
 	// Single Variables
-	userID                        *collections.Single
-	urlencodedError               *collections.Single
-	responseContentType           *collections.Single
-	uniqueID                      *collections.Single
-	argsCombinedSize              *collections.SizeCollection
-	authType                      *collections.Single
-	filesCombinedSize             *collections.Single
-	fullRequest                   *collections.Single
-	fullRequestLength             *collections.Single
-	inboundDataError              *collections.Single
-	matchedVar                    *collections.Single
-	matchedVarName                *collections.Single
-	multipartBoundaryQuoted       *collections.Single
-	multipartBoundaryWhitespace   *collections.Single
-	multipartCrlfLfLines          *collections.Single
-	multipartDataAfter            *collections.Single
-	multipartDataBefore           *collections.Single
-	multipartFileLimitExceeded    *collections.Single
-	multipartHeaderFolding        *collections.Single
-	multipartInvalidHeaderFolding *collections.Single
-	multipartInvalidPart          *collections.Single
-	multipartInvalidQuoting       *collections.Single
-	multipartLfLine               *collections.Single
-	multipartMissingSemicolon     *collections.Single
-	multipartStrictError          *collections.Single
-	multipartUnmatchedBoundary    *collections.Single
-	outboundDataError             *collections.Single
-	pathInfo                      *collections.Single
-	queryString                   *collections.Single
-	remoteAddr                    *collections.Single
-	remoteHost                    *collections.Single
-	remotePort                    *collections.Single
-	reqbodyError                  *collections.Single
-	reqbodyErrorMsg               *collections.Single
-	reqbodyProcessorError         *collections.Single
-	reqbodyProcessorErrorMsg      *collections.Single
-	reqbodyProcessor              *collections.Single
-	requestBasename               *collections.Single
-	requestBody                   *collections.Single
-	requestBodyLength             *collections.Single
-	requestFilename               *collections.Single
-	requestLine                   *collections.Single
-	requestMethod                 *collections.Single
-	requestProtocol               *collections.Single
-	requestURI                    *collections.Single
-	requestURIRaw                 *collections.Single
-	responseBody                  *collections.Single
-	responseContentLength         *collections.Single
-	responseProtocol              *collections.Single
-	responseStatus                *collections.Single
-	serverAddr                    *collections.Single
-	serverName                    *collections.Single
-	serverPort                    *collections.Single
-	sessionID                     *collections.Single
-	highestSeverity               *collections.Single
-	statusLine                    *collections.Single
-	inboundErrorData              *collections.Single
+	urlencodedError          *collections.Single
+	responseContentType      *collections.Single
+	uniqueID                 *collections.Single
+	argsCombinedSize         *collections.SizeCollection
+	filesCombinedSize        *collections.Single
+	fullRequestLength        *collections.Single
+	inboundDataError         *collections.Single
+	matchedVar               *collections.Single
+	matchedVarName           *collections.Single
+	multipartDataAfter       *collections.Single
+	outboundDataError        *collections.Single
+	queryString              *collections.Single
+	remoteAddr               *collections.Single
+	remoteHost               *collections.Single
+	remotePort               *collections.Single
+	reqbodyError             *collections.Single
+	reqbodyErrorMsg          *collections.Single
+	reqbodyProcessorError    *collections.Single
+	reqbodyProcessorErrorMsg *collections.Single
+	reqbodyProcessor         *collections.Single
+	requestBasename          *collections.Single
+	requestBody              *collections.Single
+	requestBodyLength        *collections.Single
+	requestFilename          *collections.Single
+	requestLine              *collections.Single
+	requestMethod            *collections.Single
+	requestProtocol          *collections.Single
+	requestURI               *collections.Single
+	requestURIRaw            *collections.Single
+	responseBody             *collections.Single
+	responseContentLength    *collections.Single
+	responseProtocol         *collections.Single
+	responseStatus           *collections.Single
+	serverAddr               *collections.Single
+	serverName               *collections.Single
+	serverPort               *collections.Single
+	highestSeverity          *collections.Single
+	statusLine               *collections.Single
+	inboundErrorData         *collections.Single
 	// Custom
-	env                  collection.Map
-	tx                   collection.Map
-	rule                 collection.Map
+	env                  *collections.Map
+	tx                   *collections.Map
+	rule                 *collections.Map
 	duration             *collections.Single
 	args                 *collections.ConcatKeyed
 	argsGet              *collections.NamedCollection
@@ -1499,28 +1447,26 @@ type TransactionVariables struct {
 	argsPostNames        collection.Collection
 	argsPath             *collections.NamedCollection
 	argsNames            *collections.ConcatCollection
-	filesTmpNames        collection.Map
-	geo                  collection.Map
-	files                collection.Map
+	filesTmpNames        *collections.Map
+	geo                  *collections.Map
+	files                *collections.Map
 	requestCookies       *collections.NamedCollection
 	requestCookiesNames  collection.Collection
 	requestHeaders       *collections.NamedCollection
 	responseHeadersNames collection.Collection
 	responseHeaders      *collections.NamedCollection
 	requestHeadersNames  collection.Collection
-	multipartName        collection.Map
-	multipartFilename    collection.Map
+	multipartName        *collections.Map
+	multipartFilename    *collections.Map
 	matchedVars          *collections.NamedCollection
 	matchedVarsNames     collection.Collection
-	filesSizes           collection.Map
-	filesNames           collection.Map
-	filesTmpContent      collection.Map
-	xml                  collection.Map
-	requestXML           collection.Map
-	responseXML          collection.Map
-	multipartPartHeaders collection.Map
-	// Persistent variables
-	ip collection.Map
+	filesSizes           *collections.Map
+	filesNames           *collections.Map
+	filesTmpContent      *collections.Map
+	xml                  *collections.Map
+	requestXML           *collections.Map
+	responseXML          *collections.Map
+	multipartPartHeaders *collections.Map
 }
 
 func NewTransactionVariables() *TransactionVariables {
@@ -1528,29 +1474,13 @@ func NewTransactionVariables() *TransactionVariables {
 	v.urlencodedError = collections.NewSingle(variables.UrlencodedError)
 	v.responseContentType = collections.NewSingle(variables.ResponseContentType)
 	v.uniqueID = collections.NewSingle(variables.UniqueID)
-	v.authType = collections.NewSingle(variables.AuthType)
 	v.filesCombinedSize = collections.NewSingle(variables.FilesCombinedSize)
-	v.fullRequest = collections.NewSingle(variables.FullRequest)
 	v.fullRequestLength = collections.NewSingle(variables.FullRequestLength)
 	v.inboundDataError = collections.NewSingle(variables.InboundDataError)
 	v.matchedVar = collections.NewSingle(variables.MatchedVar)
 	v.matchedVarName = collections.NewSingle(variables.MatchedVarName)
-	v.multipartBoundaryQuoted = collections.NewSingle(variables.MultipartBoundaryQuoted)
-	v.multipartBoundaryWhitespace = collections.NewSingle(variables.MultipartBoundaryWhitespace)
-	v.multipartCrlfLfLines = collections.NewSingle(variables.MultipartCrlfLfLines)
 	v.multipartDataAfter = collections.NewSingle(variables.MultipartDataAfter)
-	v.multipartDataBefore = collections.NewSingle(variables.MultipartDataBefore)
-	v.multipartFileLimitExceeded = collections.NewSingle(variables.MultipartFileLimitExceeded)
-	v.multipartHeaderFolding = collections.NewSingle(variables.MultipartHeaderFolding)
-	v.multipartInvalidHeaderFolding = collections.NewSingle(variables.MultipartInvalidHeaderFolding)
-	v.multipartInvalidPart = collections.NewSingle(variables.MultipartInvalidPart)
-	v.multipartInvalidQuoting = collections.NewSingle(variables.MultipartInvalidQuoting)
-	v.multipartLfLine = collections.NewSingle(variables.MultipartLfLine)
-	v.multipartMissingSemicolon = collections.NewSingle(variables.MultipartMissingSemicolon)
-	v.multipartStrictError = collections.NewSingle(variables.MultipartStrictError)
-	v.multipartUnmatchedBoundary = collections.NewSingle(variables.MultipartUnmatchedBoundary)
 	v.outboundDataError = collections.NewSingle(variables.OutboundDataError)
-	v.pathInfo = collections.NewSingle(variables.PathInfo)
 	v.queryString = collections.NewSingle(variables.QueryString)
 	v.remoteAddr = collections.NewSingle(variables.RemoteAddr)
 	v.remoteHost = collections.NewSingle(variables.RemoteHost)
@@ -1576,12 +1506,10 @@ func NewTransactionVariables() *TransactionVariables {
 	v.serverAddr = collections.NewSingle(variables.ServerAddr)
 	v.serverName = collections.NewSingle(variables.ServerName)
 	v.serverPort = collections.NewSingle(variables.ServerPort)
-	v.sessionID = collections.NewSingle(variables.Sessionid)
 	v.highestSeverity = collections.NewSingle(variables.HighestSeverity)
 	v.statusLine = collections.NewSingle(variables.StatusLine)
 	v.inboundErrorData = collections.NewSingle(variables.InboundErrorData)
 	v.duration = collections.NewSingle(variables.Duration)
-	v.userID = collections.NewSingle(variables.Userid)
 
 	v.filesSizes = collections.NewMap(variables.FilesSizes)
 	v.filesTmpContent = collections.NewMap(variables.FilesTmpContent)
@@ -1599,7 +1527,6 @@ func NewTransactionVariables() *TransactionVariables {
 	v.tx = collections.NewMap(variables.TX)
 	v.rule = collections.NewMap(variables.Rule)
 	v.env = collections.NewMap(variables.Env)
-	v.ip = collections.NewMap(variables.IP)
 	v.files = collections.NewMap(variables.Files)
 	v.filesNames = collections.NewMap(variables.FilesNames)
 	v.filesTmpNames = collections.NewMap(variables.FilesTmpNames)
@@ -1632,10 +1559,6 @@ func NewTransactionVariables() *TransactionVariables {
 	return v
 }
 
-func (v *TransactionVariables) UserID() collection.Single {
-	return v.userID
-}
-
 func (v *TransactionVariables) UrlencodedError() collection.Single {
 	return v.urlencodedError
 }
@@ -1652,16 +1575,8 @@ func (v *TransactionVariables) ArgsCombinedSize() collection.Collection {
 	return v.argsCombinedSize
 }
 
-func (v *TransactionVariables) AuthType() collection.Single {
-	return v.authType
-}
-
 func (v *TransactionVariables) FilesCombinedSize() collection.Single {
 	return v.filesCombinedSize
-}
-
-func (v *TransactionVariables) FullRequest() collection.Single {
-	return v.fullRequest
 }
 
 func (v *TransactionVariables) FullRequestLength() collection.Single {
@@ -1680,72 +1595,16 @@ func (v *TransactionVariables) MatchedVarName() collection.Single {
 	return v.matchedVarName
 }
 
-func (v *TransactionVariables) MultipartBoundaryQuoted() collection.Single {
-	return v.multipartBoundaryQuoted
-}
-
-func (v *TransactionVariables) MultipartBoundaryWhitespace() collection.Single {
-	return v.multipartBoundaryWhitespace
-}
-
-func (v *TransactionVariables) MultipartCrlfLfLines() collection.Single {
-	return v.multipartCrlfLfLines
-}
-
 func (v *TransactionVariables) MultipartDataAfter() collection.Single {
 	return v.multipartDataAfter
-}
-
-func (v *TransactionVariables) MultipartDataBefore() collection.Single {
-	return v.multipartDataBefore
-}
-
-func (v *TransactionVariables) MultipartFileLimitExceeded() collection.Single {
-	return v.multipartFileLimitExceeded
-}
-
-func (v *TransactionVariables) MultipartHeaderFolding() collection.Single {
-	return v.multipartHeaderFolding
-}
-
-func (v *TransactionVariables) MultipartInvalidHeaderFolding() collection.Single {
-	return v.multipartInvalidHeaderFolding
-}
-
-func (v *TransactionVariables) MultipartInvalidPart() collection.Single {
-	return v.multipartInvalidPart
-}
-
-func (v *TransactionVariables) MultipartInvalidQuoting() collection.Single {
-	return v.multipartInvalidQuoting
-}
-
-func (v *TransactionVariables) MultipartLfLine() collection.Single {
-	return v.multipartLfLine
-}
-
-func (v *TransactionVariables) MultipartMissingSemicolon() collection.Single {
-	return v.multipartMissingSemicolon
 }
 
 func (v *TransactionVariables) MultipartPartHeaders() collection.Map {
 	return v.multipartPartHeaders
 }
 
-func (v *TransactionVariables) MultipartStrictError() collection.Single {
-	return v.multipartStrictError
-}
-
-func (v *TransactionVariables) MultipartUnmatchedBoundary() collection.Single {
-	return v.multipartUnmatchedBoundary
-}
-
 func (v *TransactionVariables) OutboundDataError() collection.Single {
 	return v.outboundDataError
-}
-
-func (v *TransactionVariables) PathInfo() collection.Single {
-	return v.pathInfo
 }
 
 func (v *TransactionVariables) QueryString() collection.Single {
@@ -1846,10 +1705,6 @@ func (v *TransactionVariables) ServerName() collection.Single {
 
 func (v *TransactionVariables) ServerPort() collection.Single {
 	return v.serverPort
-}
-
-func (v *TransactionVariables) SessionID() collection.Single {
-	return v.sessionID
 }
 
 func (v *TransactionVariables) HighestSeverity() collection.Single {
@@ -1972,10 +1827,6 @@ func (v *TransactionVariables) ResponseXML() collection.Map {
 	return v.responseXML
 }
 
-func (v *TransactionVariables) IP() collection.Map {
-	return v.ip
-}
-
 func (v *TransactionVariables) ArgsNames() collection.Collection {
 	return v.argsNames
 }
@@ -1989,34 +1840,16 @@ func (v *TransactionVariables) ArgsPostNames() collection.Collection {
 }
 
 func (v *TransactionVariables) reset() {
-	v.userID.Reset()
 	v.urlencodedError.Reset()
 	v.responseContentType.Reset()
 	v.uniqueID.Reset()
-	v.argsCombinedSize.Reset()
-	v.authType.Reset()
 	v.filesCombinedSize.Reset()
-	v.fullRequest.Reset()
 	v.fullRequestLength.Reset()
 	v.inboundDataError.Reset()
 	v.matchedVar.Reset()
 	v.matchedVarName.Reset()
-	v.multipartBoundaryQuoted.Reset()
-	v.multipartBoundaryWhitespace.Reset()
-	v.multipartCrlfLfLines.Reset()
 	v.multipartDataAfter.Reset()
-	v.multipartDataBefore.Reset()
-	v.multipartFileLimitExceeded.Reset()
-	v.multipartHeaderFolding.Reset()
-	v.multipartInvalidHeaderFolding.Reset()
-	v.multipartInvalidPart.Reset()
-	v.multipartInvalidQuoting.Reset()
-	v.multipartLfLine.Reset()
-	v.multipartMissingSemicolon.Reset()
-	v.multipartStrictError.Reset()
-	v.multipartUnmatchedBoundary.Reset()
 	v.outboundDataError.Reset()
-	v.pathInfo.Reset()
 	v.queryString.Reset()
 	v.remoteAddr.Reset()
 	v.remoteHost.Reset()
@@ -2042,7 +1875,6 @@ func (v *TransactionVariables) reset() {
 	v.serverAddr.Reset()
 	v.serverName.Reset()
 	v.serverPort.Reset()
-	v.sessionID.Reset()
 	v.highestSeverity.Reset()
 	v.statusLine.Reset()
 	v.inboundErrorData.Reset()
@@ -2050,7 +1882,6 @@ func (v *TransactionVariables) reset() {
 	v.tx.Reset()
 	v.rule.Reset()
 	v.duration.Reset()
-	v.args.Reset()
 	v.argsGet.Reset()
 	v.argsPost.Reset()
 	v.argsPath.Reset()
@@ -2061,21 +1892,13 @@ func (v *TransactionVariables) reset() {
 	v.requestHeaders.Reset()
 	v.responseHeaders.Reset()
 	v.multipartName.Reset()
-	v.matchedVarsNames.Reset()
 	v.multipartFilename.Reset()
 	v.matchedVars.Reset()
 	v.filesSizes.Reset()
 	v.filesNames.Reset()
 	v.filesTmpContent.Reset()
-	v.responseHeadersNames.Reset()
-	v.requestHeadersNames.Reset()
-	v.requestCookiesNames.Reset()
 	v.xml.Reset()
 	v.requestXML.Reset()
 	v.responseXML.Reset()
 	v.multipartPartHeaders.Reset()
-	v.ip.Reset()
-	v.argsNames.Reset()
-	v.argsGetNames.Reset()
-	v.argsPostNames.Reset()
 }

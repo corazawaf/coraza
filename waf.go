@@ -44,15 +44,15 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		switch {
 		case r.rule != nil:
 			if err := waf.Rules.Add(r.rule); err != nil {
-				return nil, fmt.Errorf("invalid WAF config: %w", err)
+				return nil, fmt.Errorf("invalid WAF config from rule: %w", err)
 			}
 		case r.str != "":
 			if err := parser.FromString(r.str); err != nil {
-				return nil, fmt.Errorf("invalid WAF config: %w", err)
+				return nil, fmt.Errorf("invalid WAF config from string: %w", err)
 			}
 		case r.file != "":
 			if err := parser.FromFile(r.file); err != nil {
-				return nil, fmt.Errorf("invalid WAF config: %w", err)
+				return nil, fmt.Errorf("invalid WAF config from file: %w", err)
 			}
 		}
 	}
@@ -76,20 +76,20 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		waf.RequestBodyAccess = true
 	}
 
-	if c.requestBodyLimit != corazawaf.UnsetLimit {
-		waf.RequestBodyLimit = int64(c.requestBodyLimit)
+	if c.requestBodyLimit != nil {
+		waf.RequestBodyLimit = int64(*c.requestBodyLimit)
 	}
 
-	if c.requestBodyInMemoryLimit != corazawaf.UnsetLimit {
-		waf.RequestBodyInMemoryLimit = int64(c.requestBodyInMemoryLimit)
+	if c.requestBodyInMemoryLimit != nil {
+		waf.SetRequestBodyInMemoryLimit(int64(*c.requestBodyInMemoryLimit))
 	}
 
 	if c.responseBodyAccess {
 		waf.ResponseBodyAccess = true
 	}
 
-	if c.responseBodyLimit != corazawaf.UnsetLimit {
-		waf.ResponseBodyLimit = int64(c.responseBodyLimit)
+	if c.responseBodyLimit != nil {
+		waf.ResponseBodyLimit = int64(*c.responseBodyLimit)
 	}
 
 	if c.errorCallback != nil {

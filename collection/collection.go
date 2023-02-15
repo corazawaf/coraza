@@ -19,9 +19,6 @@ type Collection interface {
 
 	// Name returns the name for the current CollectionMap
 	Name() string
-
-	// Reset the current Collection
-	Reset()
 }
 
 // Single is a Collection with a single element.

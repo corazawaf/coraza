@@ -30,8 +30,8 @@ import (
 
 func TestProcessRequest(t *testing.T) {
 	req, _ := http.NewRequest("POST", "https://www.coraza.io/test", strings.NewReader("test=456"))
-	waf := corazawaf.NewWAF()
-	tx := waf.NewTransaction()
+	waf, _ := coraza.NewWAF(coraza.NewWAFConfig())
+	tx := waf.NewTransaction().(*corazawaf.Transaction)
 	if _, err := processRequest(tx, req); err != nil {
 		t.Fatal(err)
 	}
@@ -45,9 +45,9 @@ func TestProcessRequest(t *testing.T) {
 
 func TestProcessRequestEngineOff(t *testing.T) {
 	req, _ := http.NewRequest("POST", "https://www.coraza.io/test", strings.NewReader("test=456"))
-	waf := corazawaf.NewWAF()
-	waf.RuleEngine = types.RuleEngineOff
-	tx := waf.NewTransaction()
+	// TODO(jcchavezs): Shall we make RuleEngine a first class method in WAF config?
+	waf, _ := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives("SecRuleEngine OFF"))
+	tx := waf.NewTransaction().(*corazawaf.Transaction)
 	if _, err := processRequest(tx, req); err != nil {
 		t.Fatal(err)
 	}
@@ -60,11 +60,9 @@ func TestProcessRequestEngineOff(t *testing.T) {
 }
 
 func TestProcessRequestMultipart(t *testing.T) {
-	waf := corazawaf.NewWAF()
-	waf.RequestBodyAccess = true
+	waf, _ := coraza.NewWAF(coraza.NewWAFConfig().WithRequestBodyAccess())
 
 	tx := waf.NewTransaction()
-	tx.RequestBodyAccess = true
 
 	req := createMultipartRequest(t)
 
@@ -127,17 +125,20 @@ func createMultipartRequest(t *testing.T) *http.Request {
 // from issue https://github.com/corazawaf/coraza/issues/159 @zpeasystart
 func TestDirectiveSecAuditLog(t *testing.T) {
 	waf := corazawaf.NewWAF()
-	p := seclang.NewParser(waf)
-	if err := p.FromString(`
+	waf.RequestBodyAccess = true
+	if err := seclang.NewParser(waf).FromString(`
 	SecRule REQUEST_FILENAME "@unconditionalMatch" "id:100, phase:2, t:none, log, setvar:'tx.count=+1',chain"
 	SecRule ARGS:username "@unconditionalMatch" "t:none, setvar:'tx.count=+2',chain"
 	SecRule ARGS:password "@unconditionalMatch" "t:none, setvar:'tx.count=+3'"
 		`); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	if err := waf.Validate(); err != nil {
+		t.Fatal(err)
+	}
+
 	tx := waf.NewTransaction()
 	defer tx.Close()
-	tx.RequestBodyAccess = true
 	tx.ForceRequestBodyVariable = true
 	// request
 	rdata := []string{
@@ -293,6 +294,16 @@ func TestHttpServer(t *testing.T) {
 			expectedStatus:   403,
 			expectedRespBody: "", // blocking at response body phase means returning it empty
 		},
+		"allow": {
+			reqURI:         "/allow_me",
+			expectedProto:  "HTTP/1.1",
+			expectedStatus: 201,
+		},
+		"deny passes over allow due to ordering": {
+			reqURI:         "/allow_me?id=0",
+			expectedProto:  "HTTP/1.1",
+			expectedStatus: 403,
+		},
 	}
 
 	// Perform tests
@@ -310,10 +321,11 @@ func TestHttpServer(t *testing.T) {
 	SecResponseBodyAccess On
 	SecResponseBodyMimeType text/plain
 	SecRequestBodyLimitAction ` + limitAction + `
-	SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
+	SecRule ARGS:id "@eq 0" "id:10, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
 	SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
 	SecRule RESPONSE_HEADERS:Foo "@pm bar" "id:199,phase:3,deny,t:lowercase,deny, status:401,msg:'Invalid response header',log,auditlog"
 	SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
+	SecRule REQUEST_URI "/allow_me" "id:9,phase:1,allow,msg:'ALLOWED'"
 `).WithErrorCallback(errLogger(t)).WithDebugLogger(&debugLogger{t: t})
 			if l := tCase.reqBodyLimit; l > 0 {
 				conf = conf.WithRequestBodyAccess().WithRequestBodyLimit(l).WithRequestBodyInMemoryLimit(l)
@@ -546,7 +558,7 @@ func TestHandlerAPI(t *testing.T) {
 		},
 	}
 
-	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithRequestBodyLimit(3).WithRequestBodyInMemoryLimit(3))
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithRequestBodyLimit(3))
 	if err != nil {
 		t.Fatalf("unexpected error while creating the WAF: %s", err.Error())
 	}

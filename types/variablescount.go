@@ -3,6 +3,10 @@
 
 package types
 
+import (
+	"github.com/corazawaf/coraza/v3/internal/variables"
+)
+
 // VariablesCount contains the number of variables handled by the variables package
 // It is used to create arrays of the correct size
-const VariablesCount = 92
+const VariablesCount = variables.VariablesCount
