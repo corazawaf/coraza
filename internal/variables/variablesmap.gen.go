@@ -22,12 +22,8 @@ func (v RuleVariable) Name() string {
 		return "UNIQUE_ID"
 	case ArgsCombinedSize:
 		return "ARGS_COMBINED_SIZE"
-	case AuthType:
-		return "AUTH_TYPE"
 	case FilesCombinedSize:
 		return "FILES_COMBINED_SIZE"
-	case FullRequest:
-		return "FULL_REQUEST"
 	case FullRequestLength:
 		return "FULL_REQUEST_LENGTH"
 	case InboundDataError:
@@ -36,38 +32,10 @@ func (v RuleVariable) Name() string {
 		return "MATCHED_VAR"
 	case MatchedVarName:
 		return "MATCHED_VAR_NAME"
-	case MultipartBoundaryQuoted:
-		return "MULTIPART_BOUNDARY_QUOTED"
-	case MultipartBoundaryWhitespace:
-		return "MULTIPART_BOUNDARY_WHITESPACE"
-	case MultipartCrlfLfLines:
-		return "MULTIPART_CRLF_LF_LINES"
 	case MultipartDataAfter:
 		return "MULTIPART_DATA_AFTER"
-	case MultipartDataBefore:
-		return "MULTIPART_DATA_BEFORE"
-	case MultipartFileLimitExceeded:
-		return "MULTIPART_FILE_LIMIT_EXCEEDED"
-	case MultipartHeaderFolding:
-		return "MULTIPART_HEADER_FOLDING"
-	case MultipartInvalidHeaderFolding:
-		return "MULTIPART_INVALID_HEADER_FOLDING"
-	case MultipartInvalidPart:
-		return "MULTIPART_INVALID_PART"
-	case MultipartInvalidQuoting:
-		return "MULTIPART_INVALID_QUOTING"
-	case MultipartLfLine:
-		return "MULTIPART_LF_LINE"
-	case MultipartMissingSemicolon:
-		return "MULTIPART_MISSING_SEMICOLON"
-	case MultipartStrictError:
-		return "MULTIPART_STRICT_ERROR"
-	case MultipartUnmatchedBoundary:
-		return "MULTIPART_UNMATCHED_BOUNDARY"
 	case OutboundDataError:
 		return "OUTBOUND_DATA_ERROR"
-	case PathInfo:
-		return "PATH_INFO"
 	case QueryString:
 		return "QUERY_STRING"
 	case RemoteAddr:
@@ -118,8 +86,6 @@ func (v RuleVariable) Name() string {
 		return "SERVER_NAME"
 	case ServerPort:
 		return "SERVER_PORT"
-	case Sessionid:
-		return "SESSIONID"
 	case HighestSeverity:
 		return "HIGHEST_SEVERITY"
 	case StatusLine:
@@ -132,8 +98,6 @@ func (v RuleVariable) Name() string {
 		return "RESPONSE_HEADERS_NAMES"
 	case RequestHeadersNames:
 		return "REQUEST_HEADERS_NAMES"
-	case Userid:
-		return "USERID"
 	case Args:
 		return "ARGS"
 	case ArgsGet:
@@ -184,8 +148,6 @@ func (v RuleVariable) Name() string {
 		return "JSON"
 	case Env:
 		return "ENV"
-	case IP:
-		return "IP"
 	case UrlencodedError:
 		return "URLENCODED_ERROR"
 	case ResponseArgs:
@@ -198,6 +160,44 @@ func (v RuleVariable) Name() string {
 		return "XML"
 	case MultipartPartHeaders:
 		return "MULTIPART_PART_HEADERS"
+	case AuthType:
+		return "AUTH_TYPE"
+	case FullRequest:
+		return "FULL_REQUEST"
+	case MultipartBoundaryQuoted:
+		return "MULTIPART_BOUNDARY_QUOTED"
+	case MultipartBoundaryWhitespace:
+		return "MULTIPART_BOUNDARY_WHITESPACE"
+	case MultipartCrlfLfLines:
+		return "MULTIPART_CRLF_LF_LINES"
+	case MultipartDataBefore:
+		return "MULTIPART_DATA_BEFORE"
+	case MultipartFileLimitExceeded:
+		return "MULTIPART_FILE_LIMIT_EXCEEDED"
+	case MultipartHeaderFolding:
+		return "MULTIPART_HEADER_FOLDING"
+	case MultipartInvalidHeaderFolding:
+		return "MULTIPART_INVALID_HEADER_FOLDING"
+	case MultipartInvalidPart:
+		return "MULTIPART_INVALID_PART"
+	case MultipartInvalidQuoting:
+		return "MULTIPART_INVALID_QUOTING"
+	case MultipartLfLine:
+		return "MULTIPART_LF_LINE"
+	case MultipartMissingSemicolon:
+		return "MULTIPART_MISSING_SEMICOLON"
+	case MultipartStrictError:
+		return "MULTIPART_STRICT_ERROR"
+	case MultipartUnmatchedBoundary:
+		return "MULTIPART_UNMATCHED_BOUNDARY"
+	case PathInfo:
+		return "PATH_INFO"
+	case Sessionid:
+		return "SESSIONID"
+	case Userid:
+		return "USERID"
+	case IP:
+		return "IP"
 
 	default:
 		return "INVALID_VARIABLE"
@@ -209,29 +209,13 @@ var rulemapRev = map[string]RuleVariable{
 	"RESPONSE_CONTENT_TYPE":            ResponseContentType,
 	"UNIQUE_ID":                        UniqueID,
 	"ARGS_COMBINED_SIZE":               ArgsCombinedSize,
-	"AUTH_TYPE":                        AuthType,
 	"FILES_COMBINED_SIZE":              FilesCombinedSize,
-	"FULL_REQUEST":                     FullRequest,
 	"FULL_REQUEST_LENGTH":              FullRequestLength,
 	"INBOUND_DATA_ERROR":               InboundDataError,
 	"MATCHED_VAR":                      MatchedVar,
 	"MATCHED_VAR_NAME":                 MatchedVarName,
-	"MULTIPART_BOUNDARY_QUOTED":        MultipartBoundaryQuoted,
-	"MULTIPART_BOUNDARY_WHITESPACE":    MultipartBoundaryWhitespace,
-	"MULTIPART_CRLF_LF_LINES":          MultipartCrlfLfLines,
 	"MULTIPART_DATA_AFTER":             MultipartDataAfter,
-	"MULTIPART_DATA_BEFORE":            MultipartDataBefore,
-	"MULTIPART_FILE_LIMIT_EXCEEDED":    MultipartFileLimitExceeded,
-	"MULTIPART_HEADER_FOLDING":         MultipartHeaderFolding,
-	"MULTIPART_INVALID_HEADER_FOLDING": MultipartInvalidHeaderFolding,
-	"MULTIPART_INVALID_PART":           MultipartInvalidPart,
-	"MULTIPART_INVALID_QUOTING":        MultipartInvalidQuoting,
-	"MULTIPART_LF_LINE":                MultipartLfLine,
-	"MULTIPART_MISSING_SEMICOLON":      MultipartMissingSemicolon,
-	"MULTIPART_STRICT_ERROR":           MultipartStrictError,
-	"MULTIPART_UNMATCHED_BOUNDARY":     MultipartUnmatchedBoundary,
 	"OUTBOUND_DATA_ERROR":              OutboundDataError,
-	"PATH_INFO":                        PathInfo,
 	"QUERY_STRING":                     QueryString,
 	"REMOTE_ADDR":                      RemoteAddr,
 	"REMOTE_HOST":                      RemoteHost,
@@ -257,14 +241,12 @@ var rulemapRev = map[string]RuleVariable{
 	"SERVER_ADDR":                      ServerAddr,
 	"SERVER_NAME":                      ServerName,
 	"SERVER_PORT":                      ServerPort,
-	"SESSIONID":                        Sessionid,
 	"HIGHEST_SEVERITY":                 HighestSeverity,
 	"STATUS_LINE":                      StatusLine,
 	"INBOUND_ERROR_DATA":               InboundErrorData,
 	"DURATION":                         Duration,
 	"RESPONSE_HEADERS_NAMES":           ResponseHeadersNames,
 	"REQUEST_HEADERS_NAMES":            RequestHeadersNames,
-	"USERID":                           Userid,
 	"ARGS":                             Args,
 	"ARGS_GET":                         ArgsGet,
 	"ARGS_POST":                        ArgsPost,
@@ -290,13 +272,31 @@ var rulemapRev = map[string]RuleVariable{
 	"RULE":                             Rule,
 	"JSON":                             JSON,
 	"ENV":                              Env,
-	"IP":                               IP,
 	"URLENCODED_ERROR":                 UrlencodedError,
 	"RESPONSE_ARGS":                    ResponseArgs,
 	"RESPONSE_XML":                     ResponseXML,
 	"REQUEST_XML":                      RequestXML,
 	"XML":                              XML,
 	"MULTIPART_PART_HEADERS":           MultipartPartHeaders,
+	"AUTH_TYPE":                        AuthType,
+	"FULL_REQUEST":                     FullRequest,
+	"MULTIPART_BOUNDARY_QUOTED":        MultipartBoundaryQuoted,
+	"MULTIPART_BOUNDARY_WHITESPACE":    MultipartBoundaryWhitespace,
+	"MULTIPART_CRLF_LF_LINES":          MultipartCrlfLfLines,
+	"MULTIPART_DATA_BEFORE":            MultipartDataBefore,
+	"MULTIPART_FILE_LIMIT_EXCEEDED":    MultipartFileLimitExceeded,
+	"MULTIPART_HEADER_FOLDING":         MultipartHeaderFolding,
+	"MULTIPART_INVALID_HEADER_FOLDING": MultipartInvalidHeaderFolding,
+	"MULTIPART_INVALID_PART":           MultipartInvalidPart,
+	"MULTIPART_INVALID_QUOTING":        MultipartInvalidQuoting,
+	"MULTIPART_LF_LINE":                MultipartLfLine,
+	"MULTIPART_MISSING_SEMICOLON":      MultipartMissingSemicolon,
+	"MULTIPART_STRICT_ERROR":           MultipartStrictError,
+	"MULTIPART_UNMATCHED_BOUNDARY":     MultipartUnmatchedBoundary,
+	"PATH_INFO":                        PathInfo,
+	"SESSIONID":                        Sessionid,
+	"USERID":                           Userid,
+	"IP":                               IP,
 }
 
 var errUnknownVariable = errors.New("unknown variable")
