@@ -1833,215 +1833,215 @@ func (v *TransactionVariables) ArgsPostNames() collection.Collection {
 	return v.argsPostNames
 }
 
-func (v *TransactionVariables) All(f func(col collection.Collection) bool) {
-	if !f(v.args) {
+func (v *TransactionVariables) All(f func(v variables.RuleVariable, col collection.Collection) bool) {
+	if !f(variables.Args, v.args) {
 		return
 	}
-	if !f(v.argsCombinedSize) {
+	if !f(variables.ArgsCombinedSize, v.argsCombinedSize) {
 		return
 	}
-	if !f(v.argsGet) {
+	if !f(variables.ArgsGet, v.argsGet) {
 		return
 	}
-	if !f(v.argsGetNames) {
+	if !f(variables.ArgsGetNames, v.argsGetNames) {
 		return
 	}
-	if !f(v.argsNames) {
+	if !f(variables.ArgsNames, v.argsNames) {
 		return
 	}
-	if !f(v.argsPath) {
+	if !f(variables.ArgsPath, v.argsPath) {
 		return
 	}
-	if !f(v.argsPost) {
+	if !f(variables.ArgsPost, v.argsPost) {
 		return
 	}
-	if !f(v.argsPostNames) {
+	if !f(variables.ArgsPostNames, v.argsPostNames) {
 		return
 	}
-	if !f(v.duration) {
+	if !f(variables.Duration, v.duration) {
 		return
 	}
-	if !f(v.env) {
+	if !f(variables.Env, v.env) {
 		return
 	}
-	if !f(v.files) {
+	if !f(variables.Files, v.files) {
 		return
 	}
-	if !f(v.filesCombinedSize) {
+	if !f(variables.FilesCombinedSize, v.filesCombinedSize) {
 		return
 	}
-	if !f(v.filesNames) {
+	if !f(variables.FilesNames, v.filesNames) {
 		return
 	}
-	if !f(v.filesSizes) {
+	if !f(variables.FilesSizes, v.filesSizes) {
 		return
 	}
-	if !f(v.filesTmpContent) {
+	if !f(variables.FilesTmpContent, v.filesTmpContent) {
 		return
 	}
-	if !f(v.filesTmpNames) {
+	if !f(variables.FilesTmpNames, v.filesTmpNames) {
 		return
 	}
-	if !f(v.fullRequestLength) {
+	if !f(variables.FullRequestLength, v.fullRequestLength) {
 		return
 	}
-	if !f(v.geo) {
+	if !f(variables.Geo, v.geo) {
 		return
 	}
-	if !f(v.highestSeverity) {
+	if !f(variables.HighestSeverity, v.highestSeverity) {
 		return
 	}
-	if !f(v.inboundDataError) {
+	if !f(variables.InboundDataError, v.inboundDataError) {
 		return
 	}
-	if !f(v.inboundErrorData) {
+	if !f(variables.InboundErrorData, v.inboundErrorData) {
 		return
 	}
-	if !f(v.matchedVar) {
+	if !f(variables.MatchedVar, v.matchedVar) {
 		return
 	}
-	if !f(v.matchedVarName) {
+	if !f(variables.MatchedVarName, v.matchedVarName) {
 		return
 	}
-	if !f(v.matchedVars) {
+	if !f(variables.MatchedVars, v.matchedVars) {
 		return
 	}
-	if !f(v.matchedVarsNames) {
+	if !f(variables.MatchedVarsNames, v.matchedVarsNames) {
 		return
 	}
-	if !f(v.multipartDataAfter) {
+	if !f(variables.MultipartDataAfter, v.multipartDataAfter) {
 		return
 	}
-	if !f(v.multipartFilename) {
+	if !f(variables.MultipartFilename, v.multipartFilename) {
 		return
 	}
-	if !f(v.multipartName) {
+	if !f(variables.MultipartName, v.multipartName) {
 		return
 	}
-	if !f(v.multipartPartHeaders) {
+	if !f(variables.MultipartPartHeaders, v.multipartPartHeaders) {
 		return
 	}
-	if !f(v.outboundDataError) {
+	if !f(variables.OutboundDataError, v.outboundDataError) {
 		return
 	}
-	if !f(v.queryString) {
+	if !f(variables.QueryString, v.queryString) {
 		return
 	}
-	if !f(v.remoteAddr) {
+	if !f(variables.RemoteAddr, v.remoteAddr) {
 		return
 	}
-	if !f(v.remoteHost) {
+	if !f(variables.RemoteHost, v.remoteHost) {
 		return
 	}
-	if !f(v.remotePort) {
+	if !f(variables.RemotePort, v.remotePort) {
 		return
 	}
-	if !f(v.reqbodyError) {
+	if !f(variables.ReqbodyError, v.reqbodyError) {
 		return
 	}
-	if !f(v.reqbodyErrorMsg) {
+	if !f(variables.ReqbodyErrorMsg, v.reqbodyErrorMsg) {
 		return
 	}
-	if !f(v.reqbodyProcessor) {
+	if !f(variables.ReqbodyProcessor, v.reqbodyProcessor) {
 		return
 	}
-	if !f(v.reqbodyProcessorError) {
+	if !f(variables.ReqbodyProcessorError, v.reqbodyProcessorError) {
 		return
 	}
-	if !f(v.reqbodyProcessorErrorMsg) {
+	if !f(variables.ReqbodyProcessorErrorMsg, v.reqbodyProcessorErrorMsg) {
 		return
 	}
-	if !f(v.requestBasename) {
+	if !f(variables.RequestBasename, v.requestBasename) {
 		return
 	}
-	if !f(v.requestBody) {
+	if !f(variables.RequestBody, v.requestBody) {
 		return
 	}
-	if !f(v.requestBodyLength) {
+	if !f(variables.RequestBodyLength, v.requestBodyLength) {
 		return
 	}
-	if !f(v.requestCookies) {
+	if !f(variables.RequestCookies, v.requestCookies) {
 		return
 	}
-	if !f(v.requestCookiesNames) {
+	if !f(variables.RequestCookiesNames, v.requestCookiesNames) {
 		return
 	}
-	if !f(v.requestFilename) {
+	if !f(variables.RequestFilename, v.requestFilename) {
 		return
 	}
-	if !f(v.requestHeaders) {
+	if !f(variables.RequestHeaders, v.requestHeaders) {
 		return
 	}
-	if !f(v.requestHeadersNames) {
+	if !f(variables.RequestHeadersNames, v.requestHeadersNames) {
 		return
 	}
-	if !f(v.requestLine) {
+	if !f(variables.RequestLine, v.requestLine) {
 		return
 	}
-	if !f(v.requestMethod) {
+	if !f(variables.RequestMethod, v.requestMethod) {
 		return
 	}
-	if !f(v.requestProtocol) {
+	if !f(variables.RequestProtocol, v.requestProtocol) {
 		return
 	}
-	if !f(v.requestURI) {
+	if !f(variables.RequestURI, v.requestURI) {
 		return
 	}
-	if !f(v.requestURIRaw) {
+	if !f(variables.RequestURIRaw, v.requestURIRaw) {
 		return
 	}
-	if !f(v.requestXML) {
+	if !f(variables.RequestXML, v.requestXML) {
 		return
 	}
-	if !f(v.responseBody) {
+	if !f(variables.ResponseBody, v.responseBody) {
 		return
 	}
-	if !f(v.responseContentLength) {
+	if !f(variables.ResponseContentLength, v.responseContentLength) {
 		return
 	}
-	if !f(v.responseContentType) {
+	if !f(variables.ResponseContentType, v.responseContentType) {
 		return
 	}
-	if !f(v.responseHeaders) {
+	if !f(variables.ResponseHeaders, v.responseHeaders) {
 		return
 	}
-	if !f(v.responseHeadersNames) {
+	if !f(variables.ResponseHeadersNames, v.responseHeadersNames) {
 		return
 	}
-	if !f(v.responseProtocol) {
+	if !f(variables.ResponseProtocol, v.responseProtocol) {
 		return
 	}
-	if !f(v.responseStatus) {
+	if !f(variables.ResponseStatus, v.responseStatus) {
 		return
 	}
-	if !f(v.responseXML) {
+	if !f(variables.ResponseXML, v.responseXML) {
 		return
 	}
-	if !f(v.rule) {
+	if !f(variables.Rule, v.rule) {
 		return
 	}
-	if !f(v.serverAddr) {
+	if !f(variables.ServerAddr, v.serverAddr) {
 		return
 	}
-	if !f(v.serverName) {
+	if !f(variables.ServerName, v.serverName) {
 		return
 	}
-	if !f(v.serverPort) {
+	if !f(variables.ServerPort, v.serverPort) {
 		return
 	}
-	if !f(v.statusLine) {
+	if !f(variables.StatusLine, v.statusLine) {
 		return
 	}
-	if !f(v.tx) {
+	if !f(variables.TX, v.tx) {
 		return
 	}
-	if !f(v.uniqueID) {
+	if !f(variables.UniqueID, v.uniqueID) {
 		return
 	}
-	if !f(v.urlencodedError) {
+	if !f(variables.UrlencodedError, v.urlencodedError) {
 		return
 	}
-	if !f(v.xml) {
+	if !f(variables.XML, v.xml) {
 		return
 	}
 }
@@ -2051,7 +2051,7 @@ func (v *TransactionVariables) format(res *strings.Builder) {
 	// written to res, we should create a function independent from fmt.Stringer interface
 	// that accepts a res to write to.
 
-	v.All(func(col collection.Collection) bool {
+	v.All(func(_ variables.RuleVariable, col collection.Collection) bool {
 		fmt.Fprintln(res, col)
 		return true
 	})
@@ -2062,7 +2062,7 @@ type resettable interface {
 }
 
 func (v *TransactionVariables) reset() {
-	v.All(func(col collection.Collection) bool {
+	v.All(func(_ variables.RuleVariable, col collection.Collection) bool {
 		if r, ok := col.(resettable); ok {
 			r.Reset()
 		}

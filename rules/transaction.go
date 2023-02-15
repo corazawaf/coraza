@@ -47,7 +47,7 @@ type TransactionState interface {
 type TransactionVariables interface {
 	// All iterates over all the variables in this TransactionVariables, invoking f for each.
 	// If f returns false, iteration stops.
-	All(f func(col collection.Collection) bool)
+	All(f func(v variables.RuleVariable, col collection.Collection) bool)
 
 	// Simple Variables
 	UrlencodedError() collection.Single
