@@ -18,6 +18,7 @@ type Macro interface {
 }
 
 func NewMacro(data string) (Macro, error) {
+	// TODO(jcchavezs): shall we fail if data is empty?
 	macro := &macro{
 		tokens: []macroToken{},
 	}
@@ -85,12 +86,17 @@ func expandToken(tx rules.TransactionState, token macroToken) string {
 // [1] macroToken{text: " and ", variable: nil, key: ""}
 // [2] macroToken{text: "%{var.bar}", variable: &variables.Var, key: "bar"}
 func (m *macro) compile(input string) error {
+	l := len(input)
+	if l == 0 {
+		return fmt.Errorf("empty macro")
+	}
+
 	currentToken := strings.Builder{}
 	m.original = input
-	ismacro := false
-	for i := 0; i < len(input); i++ {
+	isMacro := false
+	for i := 0; i < l; i++ {
 		c := input[i]
-		if c == '%' && (i <= len(input) && input[i+1] == '{') {
+		if c == '%' && (i <= l && input[i+1] == '{') {
 			// we have a macro
 			if currentToken.Len() > 0 {
 				// we add the text token
@@ -101,14 +107,16 @@ func (m *macro) compile(input string) error {
 				})
 			}
 			currentToken.Reset()
-			ismacro = true
+			isMacro = true
 			i++
 			continue
 		}
-		if ismacro {
+
+		if isMacro {
 			if c == '}' {
 				// we close a macro
-				ismacro = false
+				isMacro = false
+				// TODO(jcchavezs): can key be empty? e.g. %{var}
 				varName, key, _ := strings.Cut(currentToken.String(), ".")
 				v, err := variables.Parse(varName)
 				if err != nil {
@@ -124,6 +132,16 @@ func (m *macro) compile(input string) error {
 				continue
 			}
 			currentToken.WriteByte(c)
+
+			if i+1 == l {
+				// macro won't be closed, we add it as a text
+				m.tokens = append(m.tokens, macroToken{
+					text:     "%{" + currentToken.String(),
+					variable: variables.Unknown,
+					key:      "",
+				})
+				return nil
+			}
 			continue
 		}
 		// we have a normal character
@@ -146,6 +164,7 @@ func (m *macro) String() string {
 }
 
 // IsExpandable return true if there are macro expanadable tokens
+// TODO(jcchavezs): this is used only in a commented out section
 func (m *macro) IsExpandable() bool {
 	return len(m.tokens) > 1
 }
