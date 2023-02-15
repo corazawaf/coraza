@@ -1244,3 +1244,38 @@ func TestProcessorsIdempotency(t *testing.T) {
 		})
 	}
 }
+
+func TestIterationStops(t *testing.T) {
+	// This is a valid test of iteration mechanics but is really overkill. We mostly do it for
+	// code coverage.
+
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+
+	// Order doesn't matter, iterate once without stopping to know the order
+	var allVars []variables.RuleVariable
+	tx.Variables().All(func(v variables.RuleVariable, _ collection.Collection) bool {
+		allVars = append(allVars, v)
+		return true
+	})
+
+	for i, stopV := range allVars {
+		t.Run(stopV.Name(), func(t *testing.T) {
+			var haveVars []variables.RuleVariable
+			tx.Variables().All(func(v variables.RuleVariable, _ collection.Collection) bool {
+				haveVars = append(haveVars, v)
+				return v != stopV
+			})
+
+			if want, have := i+1, len(haveVars); want != have {
+				t.Errorf("stopped with unexpected number of variables, want %d, have %d", want, have)
+			}
+
+			for j, v := range haveVars {
+				if want, have := allVars[j], v; want != have {
+					t.Errorf("unexpected variable at index %d, want %s, have %s", j, want.Name(), have.Name())
+				}
+			}
+		})
+	}
+}

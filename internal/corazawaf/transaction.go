@@ -1376,11 +1376,7 @@ func (tx *Transaction) String() string {
 	}
 
 	res.WriteString("\n------------------------ DEBUG ------------------------\n")
-	for v := byte(1); v < types.VariablesCount; v++ {
-		vr := variables.RuleVariable(v)
-		col := tx.Collection(vr)
-		fmt.Fprintln(&res, col)
-	}
+	tx.variables.format(&res)
 	return res.String()
 }
 
@@ -1394,17 +1390,35 @@ func (tx *Transaction) generateReqbodyError(err error) {
 
 // TransactionVariables has pointers to all the variables of the transaction
 type TransactionVariables struct {
-	// Single Variables
-	urlencodedError          *collections.Single
-	responseContentType      *collections.Single
-	uniqueID                 *collections.Single
+	args                     *collections.ConcatKeyed
 	argsCombinedSize         *collections.SizeCollection
+	argsGet                  *collections.NamedCollection
+	argsGetNames             collection.Collection
+	argsNames                *collections.ConcatCollection
+	argsPath                 *collections.NamedCollection
+	argsPost                 *collections.NamedCollection
+	argsPostNames            collection.Collection
+	duration                 *collections.Single
+	env                      *collections.Map
+	files                    *collections.Map
 	filesCombinedSize        *collections.Single
+	filesNames               *collections.Map
+	filesSizes               *collections.Map
+	filesTmpContent          *collections.Map
+	filesTmpNames            *collections.Map
 	fullRequestLength        *collections.Single
+	geo                      *collections.Map
+	highestSeverity          *collections.Single
 	inboundDataError         *collections.Single
+	inboundErrorData         *collections.Single
 	matchedVar               *collections.Single
 	matchedVarName           *collections.Single
+	matchedVars              *collections.NamedCollection
+	matchedVarsNames         collection.Collection
 	multipartDataAfter       *collections.Single
+	multipartFilename        *collections.Map
+	multipartName            *collections.Map
+	multipartPartHeaders     *collections.Map
 	outboundDataError        *collections.Single
 	queryString              *collections.Single
 	remoteAddr               *collections.Single
@@ -1412,60 +1426,40 @@ type TransactionVariables struct {
 	remotePort               *collections.Single
 	reqbodyError             *collections.Single
 	reqbodyErrorMsg          *collections.Single
+	reqbodyProcessor         *collections.Single
 	reqbodyProcessorError    *collections.Single
 	reqbodyProcessorErrorMsg *collections.Single
-	reqbodyProcessor         *collections.Single
 	requestBasename          *collections.Single
 	requestBody              *collections.Single
 	requestBodyLength        *collections.Single
+	requestCookies           *collections.NamedCollection
+	requestCookiesNames      collection.Collection
 	requestFilename          *collections.Single
+	requestHeaders           *collections.NamedCollection
+	requestHeadersNames      collection.Collection
 	requestLine              *collections.Single
 	requestMethod            *collections.Single
 	requestProtocol          *collections.Single
 	requestURI               *collections.Single
 	requestURIRaw            *collections.Single
+	requestXML               *collections.Map
 	responseBody             *collections.Single
 	responseContentLength    *collections.Single
+	responseContentType      *collections.Single
+	responseHeaders          *collections.NamedCollection
+	responseHeadersNames     collection.Collection
 	responseProtocol         *collections.Single
 	responseStatus           *collections.Single
+	responseXML              *collections.Map
+	rule                     *collections.Map
 	serverAddr               *collections.Single
 	serverName               *collections.Single
 	serverPort               *collections.Single
-	highestSeverity          *collections.Single
 	statusLine               *collections.Single
-	inboundErrorData         *collections.Single
-	// Custom
-	env                  *collections.Map
-	tx                   *collections.Map
-	rule                 *collections.Map
-	duration             *collections.Single
-	args                 *collections.ConcatKeyed
-	argsGet              *collections.NamedCollection
-	argsGetNames         collection.Collection
-	argsPost             *collections.NamedCollection
-	argsPostNames        collection.Collection
-	argsPath             *collections.NamedCollection
-	argsNames            *collections.ConcatCollection
-	filesTmpNames        *collections.Map
-	geo                  *collections.Map
-	files                *collections.Map
-	requestCookies       *collections.NamedCollection
-	requestCookiesNames  collection.Collection
-	requestHeaders       *collections.NamedCollection
-	responseHeadersNames collection.Collection
-	responseHeaders      *collections.NamedCollection
-	requestHeadersNames  collection.Collection
-	multipartName        *collections.Map
-	multipartFilename    *collections.Map
-	matchedVars          *collections.NamedCollection
-	matchedVarsNames     collection.Collection
-	filesSizes           *collections.Map
-	filesNames           *collections.Map
-	filesTmpContent      *collections.Map
-	xml                  *collections.Map
-	requestXML           *collections.Map
-	responseXML          *collections.Map
-	multipartPartHeaders *collections.Map
+	tx                       *collections.Map
+	uniqueID                 *collections.Single
+	urlencodedError          *collections.Single
+	xml                      *collections.Map
 }
 
 func NewTransactionVariables() *TransactionVariables {
@@ -1838,66 +1832,243 @@ func (v *TransactionVariables) ArgsPostNames() collection.Collection {
 	return v.argsPostNames
 }
 
+// All iterates over the variables. We return both variable and its collection, i.e. key/value, to follow
+// general range iteration in Go which always has a key and value (key is int index for slices). Notably,
+// this is consistent with discussions for custom iterable types in a future language version
+// https://github.com/golang/go/discussions/56413
+func (v *TransactionVariables) All(f func(v variables.RuleVariable, col collection.Collection) bool) {
+	if !f(variables.Args, v.args) {
+		return
+	}
+	if !f(variables.ArgsCombinedSize, v.argsCombinedSize) {
+		return
+	}
+	if !f(variables.ArgsGet, v.argsGet) {
+		return
+	}
+	if !f(variables.ArgsGetNames, v.argsGetNames) {
+		return
+	}
+	if !f(variables.ArgsNames, v.argsNames) {
+		return
+	}
+	if !f(variables.ArgsPath, v.argsPath) {
+		return
+	}
+	if !f(variables.ArgsPost, v.argsPost) {
+		return
+	}
+	if !f(variables.ArgsPostNames, v.argsPostNames) {
+		return
+	}
+	if !f(variables.Duration, v.duration) {
+		return
+	}
+	if !f(variables.Env, v.env) {
+		return
+	}
+	if !f(variables.Files, v.files) {
+		return
+	}
+	if !f(variables.FilesCombinedSize, v.filesCombinedSize) {
+		return
+	}
+	if !f(variables.FilesNames, v.filesNames) {
+		return
+	}
+	if !f(variables.FilesSizes, v.filesSizes) {
+		return
+	}
+	if !f(variables.FilesTmpContent, v.filesTmpContent) {
+		return
+	}
+	if !f(variables.FilesTmpNames, v.filesTmpNames) {
+		return
+	}
+	if !f(variables.FullRequestLength, v.fullRequestLength) {
+		return
+	}
+	if !f(variables.Geo, v.geo) {
+		return
+	}
+	if !f(variables.HighestSeverity, v.highestSeverity) {
+		return
+	}
+	if !f(variables.InboundDataError, v.inboundDataError) {
+		return
+	}
+	if !f(variables.InboundErrorData, v.inboundErrorData) {
+		return
+	}
+	if !f(variables.MatchedVar, v.matchedVar) {
+		return
+	}
+	if !f(variables.MatchedVarName, v.matchedVarName) {
+		return
+	}
+	if !f(variables.MatchedVars, v.matchedVars) {
+		return
+	}
+	if !f(variables.MatchedVarsNames, v.matchedVarsNames) {
+		return
+	}
+	if !f(variables.MultipartDataAfter, v.multipartDataAfter) {
+		return
+	}
+	if !f(variables.MultipartFilename, v.multipartFilename) {
+		return
+	}
+	if !f(variables.MultipartName, v.multipartName) {
+		return
+	}
+	if !f(variables.MultipartPartHeaders, v.multipartPartHeaders) {
+		return
+	}
+	if !f(variables.OutboundDataError, v.outboundDataError) {
+		return
+	}
+	if !f(variables.QueryString, v.queryString) {
+		return
+	}
+	if !f(variables.RemoteAddr, v.remoteAddr) {
+		return
+	}
+	if !f(variables.RemoteHost, v.remoteHost) {
+		return
+	}
+	if !f(variables.RemotePort, v.remotePort) {
+		return
+	}
+	if !f(variables.ReqbodyError, v.reqbodyError) {
+		return
+	}
+	if !f(variables.ReqbodyErrorMsg, v.reqbodyErrorMsg) {
+		return
+	}
+	if !f(variables.ReqbodyProcessor, v.reqbodyProcessor) {
+		return
+	}
+	if !f(variables.ReqbodyProcessorError, v.reqbodyProcessorError) {
+		return
+	}
+	if !f(variables.ReqbodyProcessorErrorMsg, v.reqbodyProcessorErrorMsg) {
+		return
+	}
+	if !f(variables.RequestBasename, v.requestBasename) {
+		return
+	}
+	if !f(variables.RequestBody, v.requestBody) {
+		return
+	}
+	if !f(variables.RequestBodyLength, v.requestBodyLength) {
+		return
+	}
+	if !f(variables.RequestCookies, v.requestCookies) {
+		return
+	}
+	if !f(variables.RequestCookiesNames, v.requestCookiesNames) {
+		return
+	}
+	if !f(variables.RequestFilename, v.requestFilename) {
+		return
+	}
+	if !f(variables.RequestHeaders, v.requestHeaders) {
+		return
+	}
+	if !f(variables.RequestHeadersNames, v.requestHeadersNames) {
+		return
+	}
+	if !f(variables.RequestLine, v.requestLine) {
+		return
+	}
+	if !f(variables.RequestMethod, v.requestMethod) {
+		return
+	}
+	if !f(variables.RequestProtocol, v.requestProtocol) {
+		return
+	}
+	if !f(variables.RequestURI, v.requestURI) {
+		return
+	}
+	if !f(variables.RequestURIRaw, v.requestURIRaw) {
+		return
+	}
+	if !f(variables.RequestXML, v.requestXML) {
+		return
+	}
+	if !f(variables.ResponseBody, v.responseBody) {
+		return
+	}
+	if !f(variables.ResponseContentLength, v.responseContentLength) {
+		return
+	}
+	if !f(variables.ResponseContentType, v.responseContentType) {
+		return
+	}
+	if !f(variables.ResponseHeaders, v.responseHeaders) {
+		return
+	}
+	if !f(variables.ResponseHeadersNames, v.responseHeadersNames) {
+		return
+	}
+	if !f(variables.ResponseProtocol, v.responseProtocol) {
+		return
+	}
+	if !f(variables.ResponseStatus, v.responseStatus) {
+		return
+	}
+	if !f(variables.ResponseXML, v.responseXML) {
+		return
+	}
+	if !f(variables.Rule, v.rule) {
+		return
+	}
+	if !f(variables.ServerAddr, v.serverAddr) {
+		return
+	}
+	if !f(variables.ServerName, v.serverName) {
+		return
+	}
+	if !f(variables.ServerPort, v.serverPort) {
+		return
+	}
+	if !f(variables.StatusLine, v.statusLine) {
+		return
+	}
+	if !f(variables.TX, v.tx) {
+		return
+	}
+	if !f(variables.UniqueID, v.uniqueID) {
+		return
+	}
+	if !f(variables.UrlencodedError, v.urlencodedError) {
+		return
+	}
+	if !f(variables.XML, v.xml) {
+		return
+	}
+}
+
+func (v *TransactionVariables) format(res *strings.Builder) {
+	// TODO(anuraaga): Optimize this, currently each println allocates a string that is then
+	// written to res, we should create a function independent from fmt.Stringer interface
+	// that accepts a res to write to.
+
+	v.All(func(_ variables.RuleVariable, col collection.Collection) bool {
+		fmt.Fprintln(res, col)
+		return true
+	})
+}
+
+type resettable interface {
+	Reset()
+}
+
 func (v *TransactionVariables) reset() {
-	v.urlencodedError.Reset()
-	v.responseContentType.Reset()
-	v.uniqueID.Reset()
-	v.filesCombinedSize.Reset()
-	v.fullRequestLength.Reset()
-	v.inboundDataError.Reset()
-	v.matchedVar.Reset()
-	v.matchedVarName.Reset()
-	v.multipartDataAfter.Reset()
-	v.outboundDataError.Reset()
-	v.queryString.Reset()
-	v.remoteAddr.Reset()
-	v.remoteHost.Reset()
-	v.remotePort.Reset()
-	v.reqbodyError.Reset()
-	v.reqbodyErrorMsg.Reset()
-	v.reqbodyProcessorError.Reset()
-	v.reqbodyProcessorErrorMsg.Reset()
-	v.reqbodyProcessor.Reset()
-	v.requestBasename.Reset()
-	v.requestBody.Reset()
-	v.requestBodyLength.Reset()
-	v.requestFilename.Reset()
-	v.requestLine.Reset()
-	v.requestMethod.Reset()
-	v.requestProtocol.Reset()
-	v.requestURI.Reset()
-	v.requestURIRaw.Reset()
-	v.responseBody.Reset()
-	v.responseContentLength.Reset()
-	v.responseProtocol.Reset()
-	v.responseStatus.Reset()
-	v.serverAddr.Reset()
-	v.serverName.Reset()
-	v.serverPort.Reset()
-	v.highestSeverity.Reset()
-	v.statusLine.Reset()
-	v.inboundErrorData.Reset()
-	v.env.Reset()
-	v.tx.Reset()
-	v.rule.Reset()
-	v.duration.Reset()
-	v.argsGet.Reset()
-	v.argsPost.Reset()
-	v.argsPath.Reset()
-	v.filesTmpNames.Reset()
-	v.geo.Reset()
-	v.files.Reset()
-	v.requestCookies.Reset()
-	v.requestHeaders.Reset()
-	v.responseHeaders.Reset()
-	v.multipartName.Reset()
-	v.multipartFilename.Reset()
-	v.matchedVars.Reset()
-	v.filesSizes.Reset()
-	v.filesNames.Reset()
-	v.filesTmpContent.Reset()
-	v.xml.Reset()
-	v.requestXML.Reset()
-	v.responseXML.Reset()
-	v.multipartPartHeaders.Reset()
+	v.All(func(_ variables.RuleVariable, col collection.Collection) bool {
+		if r, ok := col.(resettable); ok {
+			r.Reset()
+		}
+		return true
+	})
 }
