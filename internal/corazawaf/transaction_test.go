@@ -1267,10 +1267,7 @@ func TestIterationStops(t *testing.T) {
 			var haveVars []variables.RuleVariable
 			tx.Variables().All(func(v variables.RuleVariable, _ collection.Collection) bool {
 				haveVars = append(haveVars, v)
-				if v == stopV {
-					return false
-				}
-				return true
+				return v != stopV
 			})
 
 			if want, have := i+1, len(haveVars); want != have {
