@@ -1833,142 +1833,239 @@ func (v *TransactionVariables) ArgsPostNames() collection.Collection {
 	return v.argsPostNames
 }
 
+func (v *TransactionVariables) All(f func(col collection.Collection) bool) {
+	if !f(v.args) {
+		return
+	}
+	if !f(v.argsCombinedSize) {
+		return
+	}
+	if !f(v.argsGet) {
+		return
+	}
+	if !f(v.argsGetNames) {
+		return
+	}
+	if !f(v.argsNames) {
+		return
+	}
+	if !f(v.argsPath) {
+		return
+	}
+	if !f(v.argsPost) {
+		return
+	}
+	if !f(v.argsPostNames) {
+		return
+	}
+	if !f(v.duration) {
+		return
+	}
+	if !f(v.env) {
+		return
+	}
+	if !f(v.files) {
+		return
+	}
+	if !f(v.filesCombinedSize) {
+		return
+	}
+	if !f(v.filesNames) {
+		return
+	}
+	if !f(v.filesSizes) {
+		return
+	}
+	if !f(v.filesTmpContent) {
+		return
+	}
+	if !f(v.filesTmpNames) {
+		return
+	}
+	if !f(v.fullRequestLength) {
+		return
+	}
+	if !f(v.geo) {
+		return
+	}
+	if !f(v.highestSeverity) {
+		return
+	}
+	if !f(v.inboundDataError) {
+		return
+	}
+	if !f(v.inboundErrorData) {
+		return
+	}
+	if !f(v.matchedVar) {
+		return
+	}
+	if !f(v.matchedVarName) {
+		return
+	}
+	if !f(v.matchedVars) {
+		return
+	}
+	if !f(v.matchedVarsNames) {
+		return
+	}
+	if !f(v.multipartDataAfter) {
+		return
+	}
+	if !f(v.multipartFilename) {
+		return
+	}
+	if !f(v.multipartName) {
+		return
+	}
+	if !f(v.multipartPartHeaders) {
+		return
+	}
+	if !f(v.outboundDataError) {
+		return
+	}
+	if !f(v.queryString) {
+		return
+	}
+	if !f(v.remoteAddr) {
+		return
+	}
+	if !f(v.remoteHost) {
+		return
+	}
+	if !f(v.remotePort) {
+		return
+	}
+	if !f(v.reqbodyError) {
+		return
+	}
+	if !f(v.reqbodyErrorMsg) {
+		return
+	}
+	if !f(v.reqbodyProcessor) {
+		return
+	}
+	if !f(v.reqbodyProcessorError) {
+		return
+	}
+	if !f(v.reqbodyProcessorErrorMsg) {
+		return
+	}
+	if !f(v.requestBasename) {
+		return
+	}
+	if !f(v.requestBody) {
+		return
+	}
+	if !f(v.requestBodyLength) {
+		return
+	}
+	if !f(v.requestCookies) {
+		return
+	}
+	if !f(v.requestCookiesNames) {
+		return
+	}
+	if !f(v.requestFilename) {
+		return
+	}
+	if !f(v.requestHeaders) {
+		return
+	}
+	if !f(v.requestHeadersNames) {
+		return
+	}
+	if !f(v.requestLine) {
+		return
+	}
+	if !f(v.requestMethod) {
+		return
+	}
+	if !f(v.requestProtocol) {
+		return
+	}
+	if !f(v.requestURI) {
+		return
+	}
+	if !f(v.requestURIRaw) {
+		return
+	}
+	if !f(v.requestXML) {
+		return
+	}
+	if !f(v.responseBody) {
+		return
+	}
+	if !f(v.responseContentLength) {
+		return
+	}
+	if !f(v.responseContentType) {
+		return
+	}
+	if !f(v.responseHeaders) {
+		return
+	}
+	if !f(v.responseHeadersNames) {
+		return
+	}
+	if !f(v.responseProtocol) {
+		return
+	}
+	if !f(v.responseStatus) {
+		return
+	}
+	if !f(v.responseXML) {
+		return
+	}
+	if !f(v.rule) {
+		return
+	}
+	if !f(v.serverAddr) {
+		return
+	}
+	if !f(v.serverName) {
+		return
+	}
+	if !f(v.serverPort) {
+		return
+	}
+	if !f(v.statusLine) {
+		return
+	}
+	if !f(v.tx) {
+		return
+	}
+	if !f(v.uniqueID) {
+		return
+	}
+	if !f(v.urlencodedError) {
+		return
+	}
+	if !f(v.xml) {
+		return
+	}
+}
+
 func (v *TransactionVariables) format(res *strings.Builder) {
 	// TODO(anuraaga): Optimize this, currently each println allocates a string that is then
 	// written to res, we should create a function independent from fmt.Stringer interface
 	// that accepts a res to write to.
-	fmt.Fprintln(res, v.args)
-	fmt.Fprintln(res, v.argsCombinedSize)
-	fmt.Fprintln(res, v.argsGet)
-	fmt.Fprintln(res, v.argsGetNames)
-	fmt.Fprintln(res, v.argsNames)
-	fmt.Fprintln(res, v.argsPath)
-	fmt.Fprintln(res, v.argsPost)
-	fmt.Fprintln(res, v.argsPostNames)
-	fmt.Fprintln(res, v.duration)
-	fmt.Fprintln(res, v.env)
-	fmt.Fprintln(res, v.files)
-	fmt.Fprintln(res, v.filesCombinedSize)
-	fmt.Fprintln(res, v.filesNames)
-	fmt.Fprintln(res, v.filesSizes)
-	fmt.Fprintln(res, v.filesTmpContent)
-	fmt.Fprintln(res, v.filesTmpNames)
-	fmt.Fprintln(res, v.fullRequestLength)
-	fmt.Fprintln(res, v.geo)
-	fmt.Fprintln(res, v.highestSeverity)
-	fmt.Fprintln(res, v.inboundDataError)
-	fmt.Fprintln(res, v.inboundErrorData)
-	fmt.Fprintln(res, v.matchedVar)
-	fmt.Fprintln(res, v.matchedVarName)
-	fmt.Fprintln(res, v.matchedVars)
-	fmt.Fprintln(res, v.matchedVarsNames)
-	fmt.Fprintln(res, v.multipartDataAfter)
-	fmt.Fprintln(res, v.multipartFilename)
-	fmt.Fprintln(res, v.multipartName)
-	fmt.Fprintln(res, v.multipartPartHeaders)
-	fmt.Fprintln(res, v.outboundDataError)
-	fmt.Fprintln(res, v.queryString)
-	fmt.Fprintln(res, v.remoteAddr)
-	fmt.Fprintln(res, v.remoteHost)
-	fmt.Fprintln(res, v.remotePort)
-	fmt.Fprintln(res, v.reqbodyError)
-	fmt.Fprintln(res, v.reqbodyErrorMsg)
-	fmt.Fprintln(res, v.reqbodyProcessor)
-	fmt.Fprintln(res, v.reqbodyProcessorError)
-	fmt.Fprintln(res, v.reqbodyProcessorErrorMsg)
-	fmt.Fprintln(res, v.requestBasename)
-	fmt.Fprintln(res, v.requestBody)
-	fmt.Fprintln(res, v.requestBodyLength)
-	fmt.Fprintln(res, v.requestCookies)
-	fmt.Fprintln(res, v.requestCookiesNames)
-	fmt.Fprintln(res, v.requestFilename)
-	fmt.Fprintln(res, v.requestHeaders)
-	fmt.Fprintln(res, v.requestHeadersNames)
-	fmt.Fprintln(res, v.requestLine)
-	fmt.Fprintln(res, v.requestMethod)
-	fmt.Fprintln(res, v.requestProtocol)
-	fmt.Fprintln(res, v.requestURI)
-	fmt.Fprintln(res, v.requestURIRaw)
-	fmt.Fprintln(res, v.requestXML)
-	fmt.Fprintln(res, v.responseBody)
-	fmt.Fprintln(res, v.responseContentLength)
-	fmt.Fprintln(res, v.responseContentType)
-	fmt.Fprintln(res, v.responseHeaders)
-	fmt.Fprintln(res, v.responseHeadersNames)
-	fmt.Fprintln(res, v.responseProtocol)
-	fmt.Fprintln(res, v.responseStatus)
-	fmt.Fprintln(res, v.responseXML)
-	fmt.Fprintln(res, v.rule)
-	fmt.Fprintln(res, v.serverAddr)
-	fmt.Fprintln(res, v.serverName)
-	fmt.Fprintln(res, v.serverPort)
-	fmt.Fprintln(res, v.statusLine)
-	fmt.Fprintln(res, v.tx)
-	fmt.Fprintln(res, v.uniqueID)
-	fmt.Fprintln(res, v.urlencodedError)
-	fmt.Fprintln(res, v.xml)
+
+	v.All(func(col collection.Collection) bool {
+		fmt.Fprintln(res, col)
+		return true
+	})
+}
+
+type resettable interface {
+	Reset()
 }
 
 func (v *TransactionVariables) reset() {
-	v.argsGet.Reset()
-	v.argsPath.Reset()
-	v.argsPost.Reset()
-	v.duration.Reset()
-	v.env.Reset()
-	v.files.Reset()
-	v.filesCombinedSize.Reset()
-	v.filesNames.Reset()
-	v.filesSizes.Reset()
-	v.filesTmpContent.Reset()
-	v.filesTmpNames.Reset()
-	v.fullRequestLength.Reset()
-	v.geo.Reset()
-	v.highestSeverity.Reset()
-	v.inboundDataError.Reset()
-	v.inboundErrorData.Reset()
-	v.matchedVar.Reset()
-	v.matchedVarName.Reset()
-	v.matchedVars.Reset()
-	v.multipartDataAfter.Reset()
-	v.multipartFilename.Reset()
-	v.multipartName.Reset()
-	v.multipartPartHeaders.Reset()
-	v.outboundDataError.Reset()
-	v.queryString.Reset()
-	v.remoteAddr.Reset()
-	v.remoteHost.Reset()
-	v.remotePort.Reset()
-	v.reqbodyError.Reset()
-	v.reqbodyErrorMsg.Reset()
-	v.reqbodyProcessor.Reset()
-	v.reqbodyProcessorError.Reset()
-	v.reqbodyProcessorErrorMsg.Reset()
-	v.requestBasename.Reset()
-	v.requestBody.Reset()
-	v.requestBodyLength.Reset()
-	v.requestCookies.Reset()
-	v.requestFilename.Reset()
-	v.requestHeaders.Reset()
-	v.requestLine.Reset()
-	v.requestMethod.Reset()
-	v.requestProtocol.Reset()
-	v.requestURI.Reset()
-	v.requestURIRaw.Reset()
-	v.requestXML.Reset()
-	v.responseBody.Reset()
-	v.responseContentLength.Reset()
-	v.responseContentType.Reset()
-	v.responseHeaders.Reset()
-	v.responseProtocol.Reset()
-	v.responseStatus.Reset()
-	v.responseXML.Reset()
-	v.rule.Reset()
-	v.serverAddr.Reset()
-	v.serverName.Reset()
-	v.serverPort.Reset()
-	v.statusLine.Reset()
-	v.tx.Reset()
-	v.uniqueID.Reset()
-	v.urlencodedError.Reset()
-	v.xml.Reset()
+	v.All(func(col collection.Collection) bool {
+		if r, ok := col.(resettable); ok {
+			r.Reset()
+		}
+		return true
+	})
 }
