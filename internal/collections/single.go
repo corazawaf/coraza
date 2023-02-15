@@ -14,7 +14,6 @@ import (
 
 type Single struct {
 	data     string
-	name     string
 	variable variables.RuleVariable
 }
 
@@ -24,16 +23,14 @@ var _ collection.Single = &Single{}
 func NewSingle(variable variables.RuleVariable) *Single {
 	return &Single{
 		variable: variable,
-		name:     variable.Name(),
 	}
 }
 
 func (c *Single) FindAll() []types.MatchData {
 	return []types.MatchData{
 		&corazarules.MatchData{
-			VariableName_: c.name,
-			Variable_:     c.variable,
-			Value_:        c.data,
+			Variable_: c.variable,
+			Value_:    c.data,
 		},
 	}
 }
@@ -47,7 +44,7 @@ func (c *Single) Set(value string) {
 }
 
 func (c *Single) Name() string {
-	return c.name
+	return c.variable.Name()
 }
 
 func (c *Single) Reset() {
@@ -55,5 +52,5 @@ func (c *Single) Reset() {
 }
 
 func (c *Single) String() string {
-	return fmt.Sprintf("%s: %s", c.name, c.data)
+	return fmt.Sprintf("%s: %s", c.variable.Name(), c.data)
 }

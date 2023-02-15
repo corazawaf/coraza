@@ -83,7 +83,6 @@ func (c *NamedCollection) Reset() {
 
 func (c *NamedCollection) Names(rv variables.RuleVariable) collection.Collection {
 	return &NamedCollectionNames{
-		name:       rv.Name(),
 		variable:   rv,
 		collection: c,
 	}
@@ -103,7 +102,6 @@ func (c *NamedCollection) addName(key string) {
 }
 
 type NamedCollectionNames struct {
-	name       string
 	variable   variables.RuleVariable
 	collection *NamedCollection
 }
@@ -120,21 +118,20 @@ func (c *NamedCollectionNames) FindAll() []types.MatchData {
 	var res []types.MatchData
 	for _, k := range c.collection.names {
 		res = append(res, &corazarules.MatchData{
-			VariableName_: c.name,
-			Variable_:     c.variable,
-			Value_:        k,
+			Variable_: c.variable,
+			Value_:    k,
 		})
 	}
 	return res
 }
 
 func (c *NamedCollectionNames) Name() string {
-	return c.name
+	return c.variable.Name()
 }
 
 func (c *NamedCollectionNames) String() string {
 	res := strings.Builder{}
-	res.WriteString(c.name)
+	res.WriteString(c.variable.Name())
 	res.WriteString(": ")
 	for i, k := range c.collection.names {
 		if i > 0 {
