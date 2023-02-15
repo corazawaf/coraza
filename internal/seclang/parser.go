@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/internal/io"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -136,7 +137,8 @@ func (p *Parser) FromString(data string) error {
 
 func (p *Parser) evaluateLine(data string) error {
 	if data == "" || data[0] == '#' {
-		return errors.New("invalid lines")
+		// at this point we should not receive an empty line or a commented line
+		return errors.New("invalid line")
 	}
 	// first we get the directive
 	dir, opts, _ := strings.Cut(data, " ")
@@ -168,11 +170,13 @@ func (p *Parser) evaluateLine(data string) error {
 	p.options.Config.Set("parser_config_file", p.currentFile)
 	p.options.Config.Set("parser_config_dir", p.currentDir)
 	p.options.Config.Set("parser_root", p.root)
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
+	if environment.HasAccessToFS {
+		wd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		p.options.Config.Set("working_dir", wd)
 	}
-	p.options.Config.Set("working_dir", wd)
 
 	if err := d(p.options); err != nil {
 		return fmt.Errorf("failed to compile the directive %q: %w", directive, err)

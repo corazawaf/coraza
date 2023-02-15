@@ -69,7 +69,7 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	// 32-bit machine: 1073741824 (2^30, 1GiB)
 	// 64-bit machine: 34359738368 (2^35, 32GiB) (Not reached the ErrTooLarge panic, the OS triggered an OOM)
 	if targetLen > br.options.MemoryLimit {
-		if environment.IsTinyGo {
+		if !environment.HasAccessToFS {
 			// TinyGo MemoryLimit should be equal to Limit. Therefore, Write function has been called without Limit check.
 			return 0, errors.New("MemoryLimit reached while writing")
 		} else {
@@ -99,7 +99,7 @@ type bodyBufferReader struct {
 }
 
 func (b *bodyBufferReader) Read(p []byte) (n int, err error) {
-	if environment.IsTinyGo || b.br.writer == nil {
+	if !environment.HasAccessToFS || b.br.writer == nil {
 		buf := b.br.buffer.Bytes()
 		n = len(p)
 		if b.pos+n > len(buf) {
@@ -134,7 +134,7 @@ func (br *BodyBuffer) Size() int64 {
 func (br *BodyBuffer) Reset() error {
 	br.buffer.Reset()
 	br.length = 0
-	if !environment.IsTinyGo && br.writer != nil {
+	if environment.HasAccessToFS && br.writer != nil {
 		w := br.writer
 		br.writer = nil
 		if err := w.Close(); err != nil {
