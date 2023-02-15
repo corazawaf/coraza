@@ -5,6 +5,8 @@ package coraza
 
 import (
 	"testing"
+
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 func TestConfigRulesImmutable(t *testing.T) {
@@ -56,5 +58,52 @@ func TestConfigRulesImmutable(t *testing.T) {
 
 	if waf1.(wafWrapper).waf.ResponseBodyAccess {
 		t.Errorf("waf1: expected response body access to be disabled")
+	}
+}
+
+func TestConfigSetters(t *testing.T) {
+	changed := false
+	c := func(_ types.MatchedRule) {
+		changed = true
+	}
+	cfg := NewWAFConfig().
+		WithRequestBodyAccess().
+		WithResponseBodyAccess().
+		WithErrorCallback(c).
+		WithRequestBodyLimit(200).
+		WithRequestBodyInMemoryLimit(100).
+		WithResponseBodyMimeTypes([]string{"text/html"}).
+		WithDirectives(`
+		SecRule REQUEST_URI "@unconditionalMatch" "phase:1,id:1,log,msg:'ok'"
+		SecRule RESPONSE_BODY "aaa" "phase:4,id:40,log,msg:'ok'"
+		`)
+	alCfg := NewAuditLogConfig()
+	waf, err := NewWAF(cfg.WithAuditLog(alCfg))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx := waf.NewTransaction()
+	tx.ProcessRequestHeaders()
+	tx.AddResponseHeader("Content-Type", "text/html")
+	tx.ProcessResponseHeaders(200, "http/1.1")
+	tx.WriteResponseBody([]byte("aaa"))
+	tx.ProcessResponseBody()
+	if !changed {
+		t.Errorf("error callback not called")
+	}
+	if !tx.IsResponseBodyProcessable() {
+		t.Errorf("response body should be processable")
+	}
+	expectedMatches := []int{1, 40}
+	for _, id := range expectedMatches {
+		ok := false
+		for _, m := range tx.MatchedRules() {
+			if m.Rule().ID() == id {
+				ok = true
+			}
+		}
+		if !ok {
+			t.Errorf("expected rule %d to match", id)
+		}
 	}
 }

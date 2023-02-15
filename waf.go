@@ -92,6 +92,10 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		waf.ResponseBodyLimit = int64(*c.responseBodyLimit)
 	}
 
+	if c.responseBodyMimeTypes != nil {
+		waf.ResponseBodyMimeTypes = c.responseBodyMimeTypes
+	}
+
 	if c.errorCallback != nil {
 		waf.ErrorLogCb = c.errorCallback
 	}
