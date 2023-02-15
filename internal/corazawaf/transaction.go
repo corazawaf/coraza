@@ -1833,6 +1833,10 @@ func (v *TransactionVariables) ArgsPostNames() collection.Collection {
 	return v.argsPostNames
 }
 
+// All iterates over the variables. We return both variable and its collection, i.e. key/value, to follow
+// general range iteration in Go which always has a key and value (key is int index for slices). Notably,
+// this is consistent with discussions for custom iterable types in a future language version
+// https://github.com/golang/go/discussions/56413
 func (v *TransactionVariables) All(f func(v variables.RuleVariable, col collection.Collection) bool) {
 	if !f(variables.Args, v.args) {
 		return
