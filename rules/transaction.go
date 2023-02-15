@@ -45,36 +45,23 @@ type TransactionState interface {
 
 // TransactionVariables has pointers to all the variables of the transaction
 type TransactionVariables interface {
+	// All iterates over all the variables in this TransactionVariables, invoking f for each.
+	// Results are passed in no defined order. If f returns false, iteration stops.
+	All(f func(v variables.RuleVariable, col collection.Collection) bool)
+
 	// Simple Variables
-	UserID() collection.Single
 	UrlencodedError() collection.Single
 	ResponseContentType() collection.Single
 	UniqueID() collection.Single
 	ArgsCombinedSize() collection.Collection
-	AuthType() collection.Single
 	FilesCombinedSize() collection.Single
-	FullRequest() collection.Single
 	FullRequestLength() collection.Single
 	InboundDataError() collection.Single
 	MatchedVar() collection.Single
 	MatchedVarName() collection.Single
-	MultipartBoundaryQuoted() collection.Single
-	MultipartBoundaryWhitespace() collection.Single
-	MultipartCrlfLfLines() collection.Single
 	MultipartDataAfter() collection.Single
-	MultipartDataBefore() collection.Single
-	MultipartFileLimitExceeded() collection.Single
 	MultipartPartHeaders() collection.Map
-	MultipartHeaderFolding() collection.Single
-	MultipartInvalidHeaderFolding() collection.Single
-	MultipartInvalidPart() collection.Single
-	MultipartInvalidQuoting() collection.Single
-	MultipartLfLine() collection.Single
-	MultipartMissingSemicolon() collection.Single
-	MultipartStrictError() collection.Single
-	MultipartUnmatchedBoundary() collection.Single
 	OutboundDataError() collection.Single
-	PathInfo() collection.Single
 	QueryString() collection.Single
 	RemoteAddr() collection.Single
 	RemoteHost() collection.Single
@@ -100,7 +87,6 @@ type TransactionVariables interface {
 	ServerAddr() collection.Single
 	ServerName() collection.Single
 	ServerPort() collection.Single
-	SessionID() collection.Single
 	HighestSeverity() collection.Single
 	StatusLine() collection.Single
 	InboundErrorData() collection.Single
@@ -131,7 +117,6 @@ type TransactionVariables interface {
 	XML() collection.Map
 	RequestXML() collection.Map
 	ResponseXML() collection.Map
-	IP() collection.Map
 	ArgsNames() collection.Collection
 	ArgsGetNames() collection.Collection
 	ArgsPostNames() collection.Collection

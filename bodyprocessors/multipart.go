@@ -56,7 +56,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v rules.Tran
 		filename := originFileName(p)
 		if filename != "" {
 			var size int64
-			if !environment.IsTinyGo {
+			if environment.HasAccessToFS {
 				// Only copy file to temp when not running in TinyGo
 				temp, err := os.CreateTemp(storagePath, "crzmp*")
 				if err != nil {

@@ -80,7 +80,7 @@ func ParseRuleEngineStatus(re string) (RuleEngineStatus, error) {
 	case "off":
 		return RuleEngineOff, nil
 	}
-	return -1, fmt.Errorf("invalid rule engine status: %s", re)
+	return -1, fmt.Errorf("invalid rule engine status: %q", re)
 }
 
 // String returns the string representation of the
@@ -88,11 +88,11 @@ func ParseRuleEngineStatus(re string) (RuleEngineStatus, error) {
 func (re RuleEngineStatus) String() string {
 	switch re {
 	case RuleEngineOn:
-		return "on"
+		return "On"
 	case RuleEngineDetectionOnly:
 		return "DetectionOnly"
 	case RuleEngineOff:
-		return "off"
+		return "Off"
 	}
 	return "unknown"
 }
@@ -110,7 +110,7 @@ const (
 	BodyLimitActionReject BodyLimitAction = 1
 )
 
-type auditLogPart byte
+type AuditLogPart byte
 
 // AuditLogParts represents the parts of the audit log
 // A: Audit log header (mandatory).
@@ -125,33 +125,33 @@ type auditLogPart byte
 // J: This part contains information about the files uploaded using multipart/form-data encoding.
 // K: This part contains a full list of every rule that matched (one per line)
 // Z: Final boundary, signifies the end of the entry (mandatory).
-type AuditLogParts []auditLogPart
+type AuditLogParts []AuditLogPart
 
 const (
 	// AuditLogPartAuditLogHeader is the mandatory header part
-	AuditLogPartAuditLogHeader auditLogPart = 'A'
+	AuditLogPartAuditLogHeader AuditLogPart = 'A'
 	// AuditLogPartRequestHeaders is the request headers part
-	AuditLogPartRequestHeaders auditLogPart = 'B'
+	AuditLogPartRequestHeaders AuditLogPart = 'B'
 	// AuditLogPartRequestBody is the request body part
-	AuditLogPartRequestBody auditLogPart = 'C'
+	AuditLogPartRequestBody AuditLogPart = 'C'
 	// AuditLogPartIntermediaryResponseHeaders is the intermediary response headers part
-	AuditLogPartIntermediaryResponseHeaders auditLogPart = 'D'
+	AuditLogPartIntermediaryResponseHeaders AuditLogPart = 'D'
 	// AuditLogPartIntermediaryResponseBody is the intermediary response body part
-	AuditLogPartIntermediaryResponseBody auditLogPart = 'E'
+	AuditLogPartIntermediaryResponseBody AuditLogPart = 'E'
 	// AuditLogPartResponseHeaders is the final response headers part
-	AuditLogPartResponseHeaders auditLogPart = 'F'
+	AuditLogPartResponseHeaders AuditLogPart = 'F'
 	// AuditLogPartResponseBody is the final response body part
-	AuditLogPartResponseBody auditLogPart = 'G'
+	AuditLogPartResponseBody AuditLogPart = 'G'
 	// AuditLogPartAuditLogTrailer is the audit log trailer part
-	AuditLogPartAuditLogTrailer auditLogPart = 'H'
+	AuditLogPartAuditLogTrailer AuditLogPart = 'H'
 	// AuditLogPartRequestBodyAlternative is the request body replaced part
-	AuditLogPartRequestBodyAlternative auditLogPart = 'I'
+	AuditLogPartRequestBodyAlternative AuditLogPart = 'I'
 	// AuditLogPartUploadedFiles is the uploaded files part
-	AuditLogPartUploadedFiles auditLogPart = 'J'
+	AuditLogPartUploadedFiles AuditLogPart = 'J'
 	// AuditLogPartRulesMatched is the matched rules part
-	AuditLogPartRulesMatched auditLogPart = 'K'
+	AuditLogPartRulesMatched AuditLogPart = 'K'
 	// AuditLogPartFinalBoundary is the mandatory final boundary part
-	AuditLogPartFinalBoundary auditLogPart = 'Z'
+	AuditLogPartFinalBoundary AuditLogPart = 'Z'
 )
 
 // Interruption is used to notify the Coraza implementation

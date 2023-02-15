@@ -188,10 +188,14 @@ func (p *RuleParser) ParseOperator(operator string) error {
 		Arguments: opdata,
 		Path: []string{
 			p.options.Config.Get("parser_config_dir", "").(string),
-			p.options.Config.Get("working_dir", "").(string),
 		},
 		Root: p.options.Config.Get("parser_root", io.OSFS{}).(fs.FS),
 	}
+
+	if wd := p.options.Config.Get("working_dir", "").(string); wd != "" {
+		opts.Path = append(opts.Path, wd)
+	}
+
 	opfn, err := operators.Get(op, opts)
 	if err != nil {
 		return err

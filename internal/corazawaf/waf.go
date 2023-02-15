@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/corazawaf/coraza/v3/internal/environment"
 	ioutils "github.com/corazawaf/coraza/v3/internal/io"
 	stringutils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/internal/sync"
@@ -161,6 +162,7 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	tx.ruleRemoveByID = nil
 	tx.ruleRemoveTargetByID = map[int][]ruleVariableParams{}
 	tx.Skip = 0
+	tx.AllowType = 0
 	tx.Capture = false
 	tx.stopWatches = map[types.RulePhase]int64{}
 	tx.WAF = w
@@ -181,12 +183,14 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 			MemoryLimit: requestBodyInMemoryLimit,
 			Limit:       w.RequestBodyLimit,
 		})
+
 		tx.responseBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
 			TmpPath: w.TmpDir,
 			// the response body is just buffered in memory. Therefore, Limit and MemoryLimit are equal.
 			MemoryLimit: w.ResponseBodyLimit,
 			Limit:       w.ResponseBodyLimit,
 		})
+
 		tx.variables = *NewTransactionVariables()
 		tx.transformationCache = map[transformationKey]*transformationValue{}
 	}
@@ -201,20 +205,7 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	tx.variables.filesCombinedSize.Set("0")
 	tx.variables.urlencodedError.Set("0")
 	tx.variables.fullRequestLength.Set("0")
-	tx.variables.multipartBoundaryQuoted.Set("0")
-	tx.variables.multipartBoundaryWhitespace.Set("0")
-	tx.variables.multipartCrlfLfLines.Set("0")
 	tx.variables.multipartDataAfter.Set("0")
-	tx.variables.multipartDataBefore.Set("0")
-	tx.variables.multipartFileLimitExceeded.Set("0")
-	tx.variables.multipartHeaderFolding.Set("0")
-	tx.variables.multipartInvalidHeaderFolding.Set("0")
-	tx.variables.multipartInvalidPart.Set("0")
-	tx.variables.multipartInvalidQuoting.Set("0")
-	tx.variables.multipartLfLine.Set("0")
-	tx.variables.multipartMissingSemicolon.Set("0")
-	tx.variables.multipartStrictError.Set("0")
-	tx.variables.multipartUnmatchedBoundary.Set("0")
 	tx.variables.outboundDataError.Set("0")
 	tx.variables.reqbodyError.Set("0")
 	tx.variables.reqbodyProcessorError.Set("0")
@@ -282,13 +273,16 @@ func NewWAF() *WAF {
 		ResponseBodyLimit:  _1gb,
 		AuditLogWriter:     logWriter,
 		Logger:             logger,
-		TmpDir:             os.TempDir(),
+	}
+
+	if environment.HasAccessToFS {
+		waf.TmpDir = os.TempDir()
 	}
 
 	if err := waf.SetDebugLogPath(""); err != nil {
 		fmt.Println(err)
 	}
-	waf.Logger.Debug("a new waf instance was created")
+	waf.Logger.Debug("a new WAF instance was created")
 	return waf
 }
 

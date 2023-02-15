@@ -15,7 +15,6 @@ var (
 	_ directive = directiveSecRequestBodyAccess
 	_ directive = directiveSecRuleEngine
 	_ directive = directiveSecWebAppID
-	_ directive = directiveSecTmpDir
 	_ directive = directiveSecServerSignature
 	_ directive = directiveSecRuleRemoveByTag
 	_ directive = directiveSecRuleRemoveByMsg
@@ -75,7 +74,6 @@ var directivesMap = map[string]directive{
 	"secrequestbodyaccess":           directiveSecRequestBodyAccess,
 	"secruleengine":                  directiveSecRuleEngine,
 	"secwebappid":                    directiveSecWebAppID,
-	"sectmpdir":                      directiveSecTmpDir,
 	"secserversignature":             directiveSecServerSignature,
 	"secruleremovebytag":             directiveSecRuleRemoveByTag,
 	"secruleremovebymsg":             directiveSecRuleRemoveByMsg,
@@ -132,5 +130,6 @@ var directivesMap = map[string]directive{
 	"secruleupdateactionbyid":  directiveUnsupported,
 	"secrulescript":            directiveUnsupported,
 	"secruleperftime":          directiveUnsupported,
-	"Secunicodemap":            directiveUnsupported,
+	"secunicodemap":            directiveUnsupported,
+	"sectmpdir":                directiveUnsupported,
 }
