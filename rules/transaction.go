@@ -31,6 +31,7 @@ type TransactionState interface {
 	// TODO(anuraaga): Should this be combined with interruption? Any action writing anything to response can be dangerous.
 	// ResponseBodyWriter() io.Writer
 	WriteResponseBody(b []byte) (*types.Interruption, int, error)
+
 	ReadResponseBodyFrom(io.Reader) (*types.Interruption, int, error)
 
 	// DebugLogger returns the logger for this transaction.
