@@ -8,7 +8,12 @@ import (
 )
 
 func TestNewMacro(t *testing.T) {
-	_, err := NewMacro("some string")
+	_, err := NewMacro("")
+	if err == nil {
+		t.Errorf("expected error: %s", errEmptyData.Error())
+	}
+
+	_, err = NewMacro("some string")
 	if err != nil {
 		t.Errorf("unexpected error: %s", err.Error())
 	}

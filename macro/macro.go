@@ -18,7 +18,13 @@ type Macro interface {
 	String() string
 }
 
+var errEmptyData = errors.New("empty data")
+
 func NewMacro(data string) (Macro, error) {
+	if len(data) == 0 {
+		return nil, errEmptyData
+	}
+
 	// TODO(jcchavezs): shall we fail if data is empty?
 	macro := &macro{
 		tokens: []macroToken{},
@@ -117,7 +123,7 @@ func (m *macro) compile(input string) error {
 			if c == '}' {
 				// we close a macro
 				isMacro = false
-				// TODO(jcchavezs): can key be empty? e.g. %{var}
+				// TODO(jcchavezs): key should only be empty in single collections
 				varName, key, _ := strings.Cut(currentToken.String(), ".")
 				v, err := variables.Parse(varName)
 				if err != nil {
