@@ -188,6 +188,14 @@ const (
 	XML = variables.XML
 	// MultipartPartHeaders contains the multipart headers
 	MultipartPartHeaders = variables.MultipartPartHeaders
+	// ResBodyError is 1 if the response body processor failed
+	ResBodyError = variables.ResBodyError
+	// ResBodyErrorMsg contains the error message if the response body processor failed
+	ResBodyErrorMsg = variables.ResBodyErrorMsg
+	// ResBodyProcessorError is 1 if the response body processor failed
+	ResBodyProcessorError = variables.ResBodyProcessorError
+	// ResBodyProcessorErrorMsg contains the error message if the response body processor failed
+	ResBodyProcessorErrorMsg = variables.ResBodyProcessorErrorMsg
 )
 
 // Parse returns the byte interpretation

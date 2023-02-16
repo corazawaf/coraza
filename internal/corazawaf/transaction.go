@@ -77,9 +77,6 @@ type Transaction struct {
 	// Handles response body buffers
 	responseBodyBuffer *BodyBuffer
 
-	// Body processor used to parse JSON, XML, etc
-	bodyProcessor bodyprocessors.BodyProcessor
-
 	// Rules with this id are going to be skipped while processing a phase
 	ruleRemoveByID []int
 
@@ -1156,22 +1153,25 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		return tx.interruption, err
 	}
 
-	buf := new(strings.Builder)
-	length, err := io.Copy(buf, reader)
-	if err != nil {
-		return tx.interruption, err
-	}
-
-	if bp := tx.variables.resBodyProcessor.String(); bp != "" {
+	if bp := tx.variables.resBodyProcessor.Get(); bp != "" {
 		b, err := bodyprocessors.Get(bp)
 		if err != nil {
 			tx.generateResbodyError(errors.New("invalid body processor"))
 			tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
 			return tx.interruption, err
 		}
+		if err := b.ProcessResponse(reader, tx.Variables(), bodyprocessors.Options{}); err != nil {
+			tx.generateResbodyError(err)
+		}
+	} else {
+		buf := new(strings.Builder)
+		length, err := io.Copy(buf, reader)
+		if err != nil {
+			return tx.interruption, err
+		}
+		tx.variables.responseContentLength.Set(strconv.FormatInt(length, 10))
+		tx.variables.responseBody.Set(buf.String())
 	}
-	tx.variables.responseContentLength.Set(strconv.FormatInt(length, 10))
-	tx.variables.responseBody.Set(buf.String())
 	tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
 	return tx.interruption, nil
 }
@@ -1483,6 +1483,10 @@ type TransactionVariables struct {
 	uniqueID                 *collections.Single
 	urlencodedError          *collections.Single
 	xml                      *collections.Map
+	resBodyError             *collections.Single
+	resBodyErrorMsg          *collections.Single
+	resBodyProcessorError    *collections.Single
+	resBodyProcessorErrorMsg *collections.Single
 }
 
 func NewTransactionVariables() *TransactionVariables {
@@ -1527,6 +1531,10 @@ func NewTransactionVariables() *TransactionVariables {
 	v.statusLine = collections.NewSingle(variables.StatusLine)
 	v.inboundErrorData = collections.NewSingle(variables.InboundErrorData)
 	v.duration = collections.NewSingle(variables.Duration)
+	v.resBodyError = collections.NewSingle(variables.ResBodyError)
+	v.resBodyErrorMsg = collections.NewSingle(variables.ResBodyErrorMsg)
+	v.resBodyProcessorError = collections.NewSingle(variables.ResBodyProcessorError)
+	v.resBodyProcessorErrorMsg = collections.NewSingle(variables.ResBodyProcessorErrorMsg)
 
 	v.filesSizes = collections.NewMap(variables.FilesSizes)
 	v.filesTmpContent = collections.NewMap(variables.FilesTmpContent)
@@ -1849,7 +1857,7 @@ func (v *TransactionVariables) ResponseXML() collection.Map {
 	return v.responseXML
 }
 
-func (v *TransactionVariables) ResBodyProcessor() collection.Single {
+func (v *TransactionVariables) ResponseBodyProcessor() collection.Single {
 	return v.resBodyProcessor
 }
 
@@ -1863,6 +1871,22 @@ func (v *TransactionVariables) ArgsGetNames() collection.Collection {
 
 func (v *TransactionVariables) ArgsPostNames() collection.Collection {
 	return v.argsPostNames
+}
+
+func (v *TransactionVariables) ResBodyError() collection.Single {
+	return v.resBodyError
+}
+
+func (v *TransactionVariables) ResBodyErrorMsg() collection.Single {
+	return v.resBodyErrorMsg
+}
+
+func (v *TransactionVariables) ResBodyProcessorError() collection.Single {
+	return v.resBodyProcessorError
+}
+
+func (v *TransactionVariables) ResBodyProcessorErrorMsg() collection.Single {
+	return v.resBodyProcessorErrorMsg
 }
 
 // All iterates over the variables. We return both variable and its collection, i.e. key/value, to follow

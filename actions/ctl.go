@@ -164,7 +164,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 	case ctlRequestBodyProcessor:
 		tx.Variables().RequestBodyProcessor().Set(strings.ToUpper(a.value))
 	case ctlResponseBodyProcessor:
-		tx.Variables().ResBodyProcessor().Set(strings.ToUpper(a.value))
+		tx.Variables().ResponseBodyProcessor().Set(strings.ToUpper(a.value))
 	case ctlHashEngine:
 		// Not supported yet
 	case ctlHashEnforcement:
@@ -208,6 +208,8 @@ func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, str
 		act = ctlRequestBodyLimit
 	case "requestBodyProcessor":
 		act = ctlRequestBodyProcessor
+	case "responseBodyProcessor":
+		act = ctlResponseBodyProcessor
 	case "responseBodyAccess":
 		act = ctlResponseBodyAccess
 	case "responseBodyLimit":
