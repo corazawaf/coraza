@@ -26,7 +26,7 @@ func (a *expirevarFn) Init(_ rules.RuleMetadata, data string) error {
 
 	col, key, ok := strings.Cut(k, ".")
 	if !ok {
-		return errors.New("invalid argument key for expirevar, requires a collection (syntax collection.name} ")
+		return errors.New("invalid arguments, expected syntax {collection}.{key}={ttl}")
 	}
 
 	ittl, err := strconv.Atoi(ttl)

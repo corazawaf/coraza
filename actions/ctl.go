@@ -58,10 +58,6 @@ func (a *ctlFn) Init(_ rules.RuleMetadata, data string) error {
 			return err
 		}
 	}
-	if err == nil {
-		return nil
-	}
-
 	return err
 }
 

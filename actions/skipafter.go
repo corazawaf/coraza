@@ -18,6 +18,7 @@ func (a *skipafterFn) Init(_ rules.RuleMetadata, data string) error {
 	if len(data) == 0 {
 		return ErrMissingArguments
 	}
+	a.data = data
 	return nil
 }
 

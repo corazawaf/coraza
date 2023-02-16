@@ -27,6 +27,10 @@ func (a *setenvFn) Init(_ rules.RuleMetadata, data string) error {
 		return ErrInvalidKVArguments
 	}
 
+	if len(key) == 0 {
+		return errors.New("missing env key")
+	}
+
 	if len(val) == 0 {
 		return errors.New("missing env value")
 	}

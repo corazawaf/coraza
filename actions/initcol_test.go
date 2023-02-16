@@ -11,7 +11,7 @@ func TestInitcolInit(t *testing.T) {
 		}
 	})
 
-	t.Run("valid argument", func(t *testing.T) {
+	t.Run("passing argument", func(t *testing.T) {
 		initcol := initcol()
 		err := initcol.Init(nil, "foo=bar")
 		if err != nil {

@@ -14,10 +14,14 @@ import (
 type statusFn struct{}
 
 func (a *statusFn) Init(r rules.RuleMetadata, data string) error {
-	// TODO(jcchavezs): Shall we validate valid status e.g. >200 && < 600?
+	if len(data) == 0 {
+		return ErrMissingArguments
+	}
+
+	// TODO(jcchavezs): Shall we validate valid status e.g. >200 && <600?
 	status, err := strconv.Atoi(data)
 	if err != nil {
-		return fmt.Errorf("invalid argument for status: %s", err.Error())
+		return fmt.Errorf("invalid argument: %s", err.Error())
 	}
 	r.(*corazawaf.Rule).DisruptiveStatus = status
 	return nil

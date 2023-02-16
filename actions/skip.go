@@ -16,6 +16,10 @@ type skipFn struct {
 }
 
 func (a *skipFn) Init(_ rules.RuleMetadata, data string) error {
+	if len(data) == 0 {
+		return ErrMissingArguments
+	}
+
 	i, err := strconv.Atoi(data)
 	if err != nil {
 		return err

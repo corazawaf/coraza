@@ -7,9 +7,9 @@ import (
 )
 
 func TestLogInit(t *testing.T) {
-	action := log()
+	a := log()
 	r := &corazawaf.Rule{}
-	err := action.Init(r, "")
+	err := a.Init(r, "")
 	if err != nil {
 		t.Errorf("unexpected error: %s", err.Error())
 	}

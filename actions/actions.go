@@ -14,7 +14,7 @@ import (
 var (
 	ErrUnexpectedArguments = errors.New("unexpected arguments")
 	ErrMissingArguments    = errors.New("missing arguments")
-	ErrInvalidKVArguments  = errors.New("invalid arguments, expected syntax action:key=value")
+	ErrInvalidKVArguments  = errors.New("invalid arguments, expected syntax {action}:{key}={value}")
 )
 
 // ruleActionWrapper is used to wrap a RuleAction so that it can be registered

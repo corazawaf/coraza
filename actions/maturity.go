@@ -19,7 +19,7 @@ func (a *maturityFn) Init(r rules.RuleMetadata, data string) error {
 		return err
 	}
 	if m < 1 || m > 9 {
-		return fmt.Errorf("invalid argument for maturity, %d should be between 1 and 9", m)
+		return fmt.Errorf("invalid argument, %d should be between 1 and 9", m)
 	}
 	r.(*corazawaf.Rule).Maturity_ = m
 	return nil

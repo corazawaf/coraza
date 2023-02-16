@@ -4,7 +4,6 @@
 package actions
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -22,8 +21,8 @@ type setvarFn struct {
 }
 
 func (a *setvarFn) Init(_ rules.RuleMetadata, data string) error {
-	if data == "" {
-		return fmt.Errorf("setvar requires arguments")
+	if len(data) == 0 {
+		return ErrMissingArguments
 	}
 
 	if data[0] == '!' {
@@ -36,19 +35,20 @@ func (a *setvarFn) Init(_ rules.RuleMetadata, data string) error {
 	colKey, colVal, colOk := strings.Cut(key, ".")
 	a.collection, err = variables.Parse(colKey)
 	if err != nil {
-		return fmt.Errorf("invalid argument for setvar: %s", err.Error())
+		return err
 	}
 	if colOk {
 		macro, err := macro.NewMacro(colVal)
 		if err != nil {
-			return fmt.Errorf("invalid argument for setvar: %s", err.Error())
+			return err
 		}
 		a.key = macro
 	}
+
 	if valOk {
 		macro, err := macro.NewMacro(val)
 		if err != nil {
-			return fmt.Errorf("invalid argument for setvar: %s", err.Error())
+			return err
 		}
 		a.value = macro
 	}

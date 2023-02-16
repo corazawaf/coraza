@@ -258,7 +258,7 @@ func (p *RuleParser) ParseActions(actions string) error {
 	for _, a := range act {
 		if a.Atype == rules.ActionTypeMetadata {
 			if err := a.F.Init(p.rule, a.Value); err != nil {
-				return fmt.Errorf("failed to init %s: %s", a.Key, err.Error())
+				return fmt.Errorf("failed to init action %s: %s", a.Key, err.Error())
 			}
 		}
 	}
