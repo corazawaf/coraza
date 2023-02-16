@@ -82,6 +82,7 @@ type TransactionVariables interface {
 	RequestURI() collection.Single
 	RequestURIRaw() collection.Single
 	ResponseBody() collection.Single
+	ResponseArgs() collection.Map
 	ResponseContentLength() collection.Single
 	ResponseProtocol() collection.Single
 	ResponseStatus() collection.Single
