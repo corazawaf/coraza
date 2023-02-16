@@ -96,6 +96,8 @@ const (
 	ResponseProtocol = variables.ResponseProtocol
 	// ResponseStatus is the status code of the response
 	ResponseStatus = variables.ResponseStatus
+	// ResBodyProcessor contains the name of the response body processor used, no default
+	ResBodyProcessor = variables.ResBodyProcessor
 	// ServerAddr is the address of the server
 	ServerAddr = variables.ServerAddr
 	// ServerName is the name of the server

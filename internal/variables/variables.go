@@ -153,6 +153,9 @@ const (
 	// ResponseHeaders can be used as either a collection of all of the response
 	// headers or can be used to inspect selected headers
 	ResponseHeaders
+	// ReseBodyProcessor contains the name of the response body processor used,
+	// no default
+	ResBodyProcessor
 	// Geo contains the location information of the client
 	Geo
 	// RequestCookiesNames contains the names of the request cookies
