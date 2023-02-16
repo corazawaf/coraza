@@ -6,6 +6,7 @@ package coraza
 import (
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -109,5 +110,34 @@ func TestConfigSetters(t *testing.T) {
 		if !ok {
 			t.Errorf("expected rule %d to match", id)
 		}
+	}
+}
+
+func TestConfigLogger(t *testing.T) {
+	logger, err := loggers.GetLogWriter("concurrent")
+	if err != nil {
+		t.Fatal(err)
+	}
+	logCfg := NewAuditLogConfig().
+		LogRelevantOnly().
+		WithLogger(logger).
+		WithParts([]types.AuditLogPart("abcdedf"))
+	cfg := NewWAFConfig().WithAuditLog(logCfg)
+	waf, err := NewWAF(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := waf.(wafWrapper)
+	// TODO(jptosso): this is not working, but there is a comment in the code
+	/*
+		if w.waf.AuditEngine != types.AuditEngineRelevantOnly {
+			t.Errorf("expected audit engine to be relevant only")
+		}
+	*/
+	if w.waf.AuditLogWriter == nil {
+		t.Errorf("expected audit log writer to be set")
+	}
+	if w.waf.AuditLogParts == nil {
+		t.Errorf("expected audit log parts to be set")
 	}
 }
