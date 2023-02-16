@@ -4,7 +4,7 @@
 package actions
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"strings"
 
@@ -18,13 +18,17 @@ type setenvFn struct {
 }
 
 func (a *setenvFn) Init(_ rules.RuleMetadata, data string) error {
-	if data == "" {
-		return fmt.Errorf("setenv requires arguments")
+	if len(data) == 0 {
+		return ErrMissingArguments
 	}
 
 	key, val, ok := strings.Cut(data, "=")
 	if !ok {
-		return fmt.Errorf("invalid argument for setenv (syntax setenv:key=value)")
+		return ErrInvalidKVArguments
+	}
+
+	if len(val) == 0 {
+		return errors.New("missing env value")
 	}
 
 	m, err := macro.NewMacro(val)

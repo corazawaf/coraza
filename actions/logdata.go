@@ -4,9 +4,6 @@
 package actions
 
 import (
-	"errors"
-	"fmt"
-
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/macro"
 	"github.com/corazawaf/coraza/v3/rules"
@@ -16,13 +13,12 @@ type logdataFn struct{}
 
 func (a *logdataFn) Init(r rules.RuleMetadata, data string) error {
 	if len(data) == 0 {
-		return errors.New("logdata requires an argument")
+		return ErrMissingArguments
 	}
 
-	// TODO(jcchavezs): makes macro fail if data is empty
 	m, err := macro.NewMacro(data)
 	if err != nil {
-		return fmt.Errorf("invalid argument for logdata: %s", err.Error())
+		return err
 	}
 	r.(*corazawaf.Rule).LogData = m
 	return nil

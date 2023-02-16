@@ -10,8 +10,10 @@ import (
 
 type multimatchFn struct{}
 
-func (a *multimatchFn) Init(r rules.RuleMetadata, _ string) error {
-	// TODO(jcchavezs): Shall we return an error if data is not empty?
+func (a *multimatchFn) Init(r rules.RuleMetadata, data string) error {
+	if len(data) > 0 {
+		return ErrUnexpectedArguments
+	}
 	r.(*corazawaf.Rule).MultiMatch = true
 	return nil
 }

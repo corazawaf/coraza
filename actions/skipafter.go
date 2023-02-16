@@ -4,9 +4,8 @@
 package actions
 
 import (
-	"strings"
-
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
@@ -15,7 +14,10 @@ type skipafterFn struct {
 }
 
 func (a *skipafterFn) Init(_ rules.RuleMetadata, data string) error {
-	a.data = strings.Trim(data, `"`)
+	data = utils.MaybeRemoveQuotes(data)
+	if len(data) == 0 {
+		return ErrMissingArguments
+	}
 	return nil
 }
 

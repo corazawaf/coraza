@@ -21,7 +21,7 @@ type expirevarFn struct {
 func (a *expirevarFn) Init(_ rules.RuleMetadata, data string) error {
 	k, ttl, ok := strings.Cut(data, "=")
 	if !ok {
-		return errors.New("invalid argument for expirevar, requires key and value (syntax expirevar:key=value)")
+		return ErrInvalidKVArguments
 	}
 
 	col, key, ok := strings.Cut(k, ".")
@@ -31,11 +31,11 @@ func (a *expirevarFn) Init(_ rules.RuleMetadata, data string) error {
 
 	ittl, err := strconv.Atoi(ttl)
 	if err != nil {
-		return fmt.Errorf("invalid TTL argument for expirevar: %s", err.Error())
+		return fmt.Errorf("invalid TTL argument %q: %s", ttl, err.Error())
 	}
 
 	if ittl < int(1) {
-		return errors.New("invalid TTL argument for expirevar, requires TTL to be greater than 1")
+		return fmt.Errorf("invalid TTL argument, %d must be greater than 1", ittl)
 	}
 
 	a.ttl = ittl

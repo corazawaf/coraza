@@ -4,8 +4,6 @@
 package actions
 
 import (
-	"fmt"
-
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
@@ -14,9 +12,13 @@ import (
 type severityFn struct{}
 
 func (a *severityFn) Init(r rules.RuleMetadata, data string) error {
+	if len(data) == 0 {
+		return ErrMissingArguments
+	}
+
 	sev, err := types.ParseRuleSeverity(data)
 	if err != nil {
-		return fmt.Errorf("invalid argument for severity: %s", err.Error())
+		return err
 	}
 	r.(*corazawaf.Rule).Severity_ = sev
 	return nil

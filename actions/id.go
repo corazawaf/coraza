@@ -14,16 +14,16 @@ import (
 type idFn struct{}
 
 func (a *idFn) Init(r rules.RuleMetadata, data string) error {
-	if data == "" {
-		return fmt.Errorf("id requires a argument")
+	if len(data) == 0 {
+		return ErrMissingArguments
 	}
 	i, err := strconv.Atoi(data)
 	if err != nil {
-		return fmt.Errorf("invalid argument for id %q, requires an integer", data)
+		return err
 	}
 
 	if i <= 0 {
-		return fmt.Errorf("invalid argument for rule id, %d must be positive", i)
+		return fmt.Errorf("invalid id argument, %d must be positive", i)
 	}
 
 	cr := r.(*corazawaf.Rule)

@@ -11,6 +11,9 @@ import (
 type revFn struct{}
 
 func (a *revFn) Init(r rules.RuleMetadata, data string) error {
+	if len(data) == 0 {
+		return ErrMissingArguments
+	}
 	r.(*corazawaf.Rule).Rev_ = data
 	return nil
 }

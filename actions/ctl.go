@@ -55,9 +55,13 @@ func (a *ctlFn) Init(_ rules.RuleMetadata, data string) error {
 	if len(a.colKey) > 2 && a.colKey[0] == '/' && a.colKey[len(a.colKey)-1] == '/' {
 		a.colRx, err = regexp.Compile(a.colKey[1 : len(a.colKey)-1])
 		if err != nil {
-			return fmt.Errorf("invalid argument for ctl: %s", err.Error())
+			return err
 		}
 	}
+	if err == nil {
+		return nil
+	}
+
 	return err
 }
 

@@ -12,6 +12,10 @@ import (
 type phaseFn struct{}
 
 func (a *phaseFn) Init(r rules.RuleMetadata, data string) error {
+	if len(data) == 0 {
+		return ErrMissingArguments
+	}
+
 	p, err := types.ParseRulePhase(data)
 	if err != nil {
 		return err

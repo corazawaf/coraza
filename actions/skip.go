@@ -18,10 +18,10 @@ type skipFn struct {
 func (a *skipFn) Init(_ rules.RuleMetadata, data string) error {
 	i, err := strconv.Atoi(data)
 	if err != nil {
-		return fmt.Errorf("invalid argument for skip: %s", err.Error())
+		return err
 	}
 	if i < 1 {
-		return fmt.Errorf("invalid argument for skip, requires %d to be greater than 1", i)
+		return fmt.Errorf("invalid argument, %d must be greater than 1", i)
 	}
 	a.data = i
 	return nil

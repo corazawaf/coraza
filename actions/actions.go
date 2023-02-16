@@ -4,10 +4,17 @@
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/rules"
+)
+
+var (
+	ErrUnexpectedArguments = errors.New("unexpected arguments")
+	ErrMissingArguments    = errors.New("missing arguments")
+	ErrInvalidKVArguments  = errors.New("invalid arguments, expected syntax action:key=value")
 )
 
 // ruleActionWrapper is used to wrap a RuleAction so that it can be registered

@@ -10,8 +10,11 @@ import (
 
 type chainFn struct{}
 
-func (a *chainFn) Init(r rules.RuleMetadata, _ string) error {
-	// TODO(jcchavezs): Shall we return an error if data is not empty?
+func (a *chainFn) Init(r rules.RuleMetadata, data string) error {
+	if len(data) > 0 {
+		return ErrUnexpectedArguments
+	}
+
 	r.(*corazawaf.Rule).HasChain = true
 	return nil
 }

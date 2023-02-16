@@ -11,6 +11,10 @@ import (
 type nologFn struct{}
 
 func (a *nologFn) Init(r rules.RuleMetadata, data string) error {
+	if len(data) > 0 {
+		return ErrUnexpectedArguments
+	}
+
 	r.(*corazawaf.Rule).Log = false
 	r.(*corazawaf.Rule).Audit = false
 	return nil

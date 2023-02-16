@@ -25,7 +25,7 @@ func (a *allowFn) Init(_ rules.RuleMetadata, data string) error {
 	case "":
 		a.allow = corazatypes.AllowTypeAll // skip all phases
 	default:
-		return fmt.Errorf("invalid argument %q for allow", data)
+		return fmt.Errorf("invalid argument %q", data)
 	}
 	return nil
 }

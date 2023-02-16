@@ -15,8 +15,6 @@
 package actions
 
 import (
-	"errors"
-
 	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -26,8 +24,8 @@ type redirectFn struct {
 }
 
 func (a *redirectFn) Init(_ rules.RuleMetadata, data string) error {
-	if data == "" {
-		return errors.New("redirect requires an argument")
+	if len(data) == 0 {
+		return ErrMissingArguments
 	}
 
 	a.target = data

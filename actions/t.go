@@ -4,8 +4,6 @@
 package actions
 
 import (
-	"fmt"
-
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/rules"
 	transformations "github.com/corazawaf/coraza/v3/transformations"
@@ -24,7 +22,7 @@ func (a *tFn) Init(r rules.RuleMetadata, data string) error {
 
 	tt, err := transformations.GetTransformation(data)
 	if err != nil {
-		return fmt.Errorf("invalid argument for t: %s", err.Error())
+		return err
 	}
 	return r.(*corazawaf.Rule).AddTransformation(data, tt)
 }

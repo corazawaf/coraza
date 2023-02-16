@@ -4,8 +4,6 @@
 package actions
 
 import (
-	"fmt"
-
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/macro"
@@ -16,9 +14,13 @@ type msgFn struct{}
 
 func (a *msgFn) Init(r rules.RuleMetadata, data string) error {
 	data = utils.MaybeRemoveQuotes(data)
+	if len(data) == 0 {
+		return ErrMissingArguments
+	}
+
 	msg, err := macro.NewMacro(data)
 	if err != nil {
-		return fmt.Errorf("invalid argument for msg: %s", err.Error())
+		return err
 	}
 	r.(*corazawaf.Rule).Msg = msg
 	return nil

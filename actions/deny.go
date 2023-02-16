@@ -10,8 +10,10 @@ import (
 
 type denyFn struct{}
 
-func (a *denyFn) Init(_ rules.RuleMetadata, _ string) error {
-	// TODO(jcchavezs): Shall we return an error if data is not empty?
+func (a *denyFn) Init(_ rules.RuleMetadata, data string) error {
+	if len(data) > 0 {
+		return ErrUnexpectedArguments
+	}
 	return nil
 }
 

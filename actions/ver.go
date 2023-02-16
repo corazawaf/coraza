@@ -11,6 +11,9 @@ import (
 type verFn struct{}
 
 func (a *verFn) Init(r rules.RuleMetadata, data string) error {
+	if len(data) == 0 {
+		return ErrMissingArguments
+	}
 	r.(*corazawaf.Rule).Version_ = data
 	return nil
 }

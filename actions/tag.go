@@ -11,6 +11,9 @@ import (
 type tagFn struct{}
 
 func (a *tagFn) Init(r rules.RuleMetadata, data string) error {
+	if len(data) == 0 {
+		return ErrMissingArguments
+	}
 	r.(*corazawaf.Rule).Tags_ = append(r.(*corazawaf.Rule).Tags_, data)
 	return nil
 }
