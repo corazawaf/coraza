@@ -35,12 +35,17 @@ var _ = profile.RegisterProfile(profile.Profile{
 								1100,
 								1101,
 								1010,
+								1011,
 							},
 							NonTriggeredRules: []int{
 								1111,
 								1102,
 								103,
 							},
+							Headers: map[string]string{
+								"Content-Type": "application/json",
+							},
+							Data: `{"test":123, "test2": 456, "test3": [22, 44, 55], "test4": 3}`,
 						},
 					},
 				},
@@ -49,6 +54,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 	},
 	Rules: `
 SecRequestBodyAccess On
+SecResponseBodyAccess On
+SecResponseBodyMimeType application/json
 SecRule REQUEST_HEADERS:content-type "application/json" "id: 100, phase:1, pass, log, ctl:requestBodyProcessor=JSON"
 SecRule REQBODY_PROCESSOR "JSON" "id: 101,phase:2,log,block"
 
@@ -62,5 +69,6 @@ SecRule ARGS:json.test3.2 "@eq 55" "id:1101, phase:2, log, block"
 SecRule ARGS:json.test "@eq 456" "id:1102, phase:2, log, block"
 
 SecRule ARGS:json.test3 "@eq 3" "id: 1010, phase:2, log, block"
+SecRule RESPONSE_BODY:json.test4 "@eq 4" "id: 1011, phase:4, log, block"
 `,
 })

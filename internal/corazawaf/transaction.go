@@ -249,6 +249,8 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.argsGetNames
 	case variables.ArgsPostNames:
 		return tx.variables.argsPostNames
+	case variables.ResBodyProcessor:
+		return tx.variables.resBodyProcessor
 	case variables.TX:
 		return tx.variables.tx
 	case variables.Rule:
@@ -1160,6 +1162,14 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		return tx.interruption, err
 	}
 
+	if bp := tx.variables.resBodyProcessor.String(); bp != "" {
+		b, err := bodyprocessors.Get(bp)
+		if err != nil {
+			tx.generateResbodyError(errors.New("invalid body processor"))
+			tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
+			return tx.interruption, err
+		}
+	}
 	tx.variables.responseContentLength.Set(strconv.FormatInt(length, 10))
 	tx.variables.responseBody.Set(buf.String())
 	tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
@@ -1391,6 +1401,14 @@ func (tx *Transaction) generateReqbodyError(err error) {
 	tx.variables.reqbodyProcessorErrorMsg.Set(string(err.Error()))
 }
 
+// generateResbodyError generates all the error variables for the request body parser
+func (tx *Transaction) generateResbodyError(err error) {
+	tx.variables.resBodyError.Set("1")
+	tx.variables.resBodyErrorMsg.Set(fmt.Sprintf("%s: %s", tx.variables.resBodyProcessor.Get(), err.Error()))
+	tx.variables.resBodyProcessorError.Set("1")
+	tx.variables.resBodyProcessorErrorMsg.Set(string(err.Error()))
+}
+
 // TransactionVariables has pointers to all the variables of the transaction
 type TransactionVariables struct {
 	args                     *collections.ConcatKeyed
@@ -1455,6 +1473,7 @@ type TransactionVariables struct {
 	responseStatus           *collections.Single
 	responseXML              *collections.Map
 	responseArgs             *collections.Map
+	resBodyProcessor         *collections.Single
 	rule                     *collections.Map
 	serverAddr               *collections.Single
 	serverName               *collections.Single
@@ -1521,6 +1540,7 @@ func NewTransactionVariables() *TransactionVariables {
 	v.requestHeadersNames = v.requestHeaders.Names(variables.RequestHeadersNames)
 	v.responseHeaders = collections.NewNamedCollection(variables.ResponseHeaders)
 	v.responseHeadersNames = v.responseHeaders.Names(variables.ResponseHeadersNames)
+	v.resBodyProcessor = collections.NewSingle(variables.ResBodyProcessor)
 	v.geo = collections.NewMap(variables.Geo)
 	v.tx = collections.NewMap(variables.TX)
 	v.rule = collections.NewMap(variables.Rule)
@@ -1829,6 +1849,10 @@ func (v *TransactionVariables) ResponseXML() collection.Map {
 	return v.responseXML
 }
 
+func (v *TransactionVariables) ResBodyProcessor() collection.Single {
+	return v.resBodyProcessor
+}
+
 func (v *TransactionVariables) ArgsNames() collection.Collection {
 	return v.argsNames
 }
@@ -2030,6 +2054,9 @@ func (v *TransactionVariables) All(f func(v variables.RuleVariable, col collecti
 		return
 	}
 	if !f(variables.ResponseArgs, v.responseArgs) {
+		return
+	}
+	if !f(variables.ResBodyProcessor, v.resBodyProcessor) {
 		return
 	}
 	if !f(variables.Rule, v.rule) {

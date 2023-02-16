@@ -36,6 +36,7 @@ const (
 	ctlHashEngine               ctlFunctionType = iota
 	ctlHashEnforcement          ctlFunctionType = iota
 	ctlRequestBodyProcessor     ctlFunctionType = iota
+	ctlResponseBodyProcessor    ctlFunctionType = iota
 	ctlResponseBodyAccess       ctlFunctionType = iota
 	ctlResponseBodyLimit        ctlFunctionType = iota
 	ctlDebugLogLevel            ctlFunctionType = iota
@@ -165,6 +166,8 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 		// too ambitious as plugins might register their own at some point in the
 		// lifecycle which does not have to happen before this.
 		tx.Variables().RequestBodyProcessor().Set(strings.ToUpper(a.value))
+	case ctlResponseBodyProcessor:
+		tx.Variables().ResBodyProcessor().Set(strings.ToUpper(a.value))
 	case ctlHashEngine:
 		// Not supported yet
 	case ctlHashEnforcement:
