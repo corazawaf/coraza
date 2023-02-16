@@ -25,7 +25,6 @@ func NewMacro(data string) (Macro, error) {
 		return nil, errEmptyData
 	}
 
-	// TODO(jcchavezs): shall we fail if data is empty?
 	macro := &macro{
 		tokens: []macroToken{},
 	}
