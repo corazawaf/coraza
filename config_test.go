@@ -86,8 +86,12 @@ func TestConfigSetters(t *testing.T) {
 	tx.ProcessRequestHeaders()
 	tx.AddResponseHeader("Content-Type", "text/html")
 	tx.ProcessResponseHeaders(200, "http/1.1")
-	tx.WriteResponseBody([]byte("aaa"))
-	tx.ProcessResponseBody()
+	if _, _, err := tx.WriteResponseBody([]byte("aaa")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.ProcessResponseBody(); err != nil {
+		t.Fatal(err)
+	}
 	if !changed {
 		t.Errorf("error callback not called")
 	}
