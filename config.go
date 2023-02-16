@@ -15,9 +15,6 @@ import (
 //
 // Note: WAFConfig is immutable. Each WithXXX function returns a new instance including the corresponding change.
 type WAFConfig interface {
-	// WithRules adds rules to the WAF.
-	WithRules(rules ...*corazawaf.Rule) WAFConfig
-
 	// WithDirectives parses the directives from the given string and adds them to the WAF.
 	WithDirectives(directives string) WAFConfig
 
