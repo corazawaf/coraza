@@ -1454,6 +1454,7 @@ type TransactionVariables struct {
 	responseProtocol         *collections.Single
 	responseStatus           *collections.Single
 	responseXML              *collections.Map
+	responseArgs             *collections.Map
 	rule                     *collections.Map
 	serverAddr               *collections.Single
 	serverName               *collections.Single
@@ -1499,6 +1500,7 @@ func NewTransactionVariables() *TransactionVariables {
 	v.responseContentLength = collections.NewSingle(variables.ResponseContentLength)
 	v.responseProtocol = collections.NewSingle(variables.ResponseProtocol)
 	v.responseStatus = collections.NewSingle(variables.ResponseStatus)
+	v.responseArgs = collections.NewMap(variables.ResponseArgs)
 	v.serverAddr = collections.NewSingle(variables.ServerAddr)
 	v.serverName = collections.NewSingle(variables.ServerName)
 	v.serverPort = collections.NewSingle(variables.ServerPort)
@@ -1803,6 +1805,10 @@ func (v *TransactionVariables) ResponseHeadersNames() collection.Collection {
 	return v.responseHeadersNames
 }
 
+func (v *TransactionVariables) ResponseArgs() collection.Map {
+	return v.responseArgs
+}
+
 func (v *TransactionVariables) RequestHeadersNames() collection.Collection {
 	return v.requestHeadersNames
 }
@@ -2021,6 +2027,9 @@ func (v *TransactionVariables) All(f func(v variables.RuleVariable, col collecti
 		return
 	}
 	if !f(variables.ResponseXML, v.responseXML) {
+		return
+	}
+	if !f(variables.ResponseArgs, v.responseArgs) {
 		return
 	}
 	if !f(variables.Rule, v.rule) {
