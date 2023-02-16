@@ -86,7 +86,7 @@ type TransactionVariables interface {
 	ResponseContentLength() collection.Single
 	ResponseProtocol() collection.Single
 	ResponseStatus() collection.Single
-	ResBodyProcessor() collection.Single
+	ResponseBodyProcessor() collection.Single
 	ServerAddr() collection.Single
 	ServerName() collection.Single
 	ServerPort() collection.Single

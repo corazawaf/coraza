@@ -230,4 +230,12 @@ const (
 	Userid
 	// IP is kept for compatibility
 	IP
+	// ResBodyError
+	ResBodyError
+	// ResBodyErrorMsg
+	ResBodyErrorMsg
+	// ResBodyProcessorError
+	ResBodyProcessorError
+	// ResBodyProcessorErrorMsg
+	ResBodyProcessorErrorMsg
 )
