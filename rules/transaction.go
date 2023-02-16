@@ -31,6 +31,7 @@ type TransactionState interface {
 	// TODO(anuraaga): Should this be combined with interruption? Any action writing anything to response can be dangerous.
 	// ResponseBodyWriter() io.Writer
 	WriteResponseBody(b []byte) (*types.Interruption, int, error)
+
 	ReadResponseBodyFrom(io.Reader) (*types.Interruption, int, error)
 
 	// DebugLogger returns the logger for this transaction.
@@ -45,36 +46,23 @@ type TransactionState interface {
 
 // TransactionVariables has pointers to all the variables of the transaction
 type TransactionVariables interface {
+	// All iterates over all the variables in this TransactionVariables, invoking f for each.
+	// Results are passed in no defined order. If f returns false, iteration stops.
+	All(f func(v variables.RuleVariable, col collection.Collection) bool)
+
 	// Simple Variables
-	UserID() collection.Collection
 	UrlencodedError() collection.Single
 	ResponseContentType() collection.Single
 	UniqueID() collection.Single
 	ArgsCombinedSize() collection.Collection
-	AuthType() collection.Collection
 	FilesCombinedSize() collection.Single
-	FullRequest() collection.Collection
 	FullRequestLength() collection.Single
 	InboundDataError() collection.Single
 	MatchedVar() collection.Single
 	MatchedVarName() collection.Single
-	MultipartBoundaryQuoted() collection.Collection
-	MultipartBoundaryWhitespace() collection.Collection
-	MultipartCrlfLfLines() collection.Collection
 	MultipartDataAfter() collection.Single
-	MultipartDataBefore() collection.Collection
-	MultipartFileLimitExceeded() collection.Collection
 	MultipartPartHeaders() collection.Map
-	MultipartHeaderFolding() collection.Collection
-	MultipartInvalidHeaderFolding() collection.Collection
-	MultipartInvalidPart() collection.Collection
-	MultipartInvalidQuoting() collection.Collection
-	MultipartLfLine() collection.Collection
-	MultipartMissingSemicolon() collection.Collection
-	MultipartStrictError() collection.Collection
-	MultipartUnmatchedBoundary() collection.Collection
 	OutboundDataError() collection.Single
-	PathInfo() collection.Collection
 	QueryString() collection.Single
 	RemoteAddr() collection.Single
 	RemoteHost() collection.Single
@@ -100,7 +88,6 @@ type TransactionVariables interface {
 	ServerAddr() collection.Single
 	ServerName() collection.Single
 	ServerPort() collection.Single
-	SessionID() collection.Collection
 	HighestSeverity() collection.Single
 	StatusLine() collection.Single
 	InboundErrorData() collection.Single
@@ -131,7 +118,6 @@ type TransactionVariables interface {
 	XML() collection.Map
 	RequestXML() collection.Map
 	ResponseXML() collection.Map
-	IP() collection.Collection
 	ArgsNames() collection.Collection
 	ArgsGetNames() collection.Collection
 	ArgsPostNames() collection.Collection

@@ -37,7 +37,7 @@ func TestBodyReaderMemory(t *testing.T) {
 }
 
 func TestBodyReaderFile(t *testing.T) {
-	if environment.IsTinyGo {
+	if !environment.HasAccessToFS {
 		return // t.Skip doesn't work on TinyGo
 	}
 

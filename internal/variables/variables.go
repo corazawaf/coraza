@@ -1,196 +1,230 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:generate go run generator/main.go
+
 // Package variables contains the representation of the variables used in the rules
 // Variables are created as bytes and they have a string representation
 package variables
 
-import (
-	"github.com/corazawaf/coraza/v3/internal/variables"
-)
-
-// This file repeats the same content many times in order to make access
-// efficient for seclang and transactions
+// This internal file contains all variables supported by handling of SecLang, such as
+// the parser and actions like setvar. Several of these variables are no-op and not
+// supported by Coraza - the public variables package only exposes the set of supported
+// variables for programmatic access.
 
 // RuleVariable is used to identify information from a transaction
-type RuleVariable = variables.RuleVariable
+type RuleVariable byte
 
 const (
 	// Unknown is used as placeholder for errors
-	Unknown = variables.Unknown
+	Unknown RuleVariable = iota
 	// ResponseContentType is the content type of the response
-	ResponseContentType = variables.ResponseContentType
+	ResponseContentType
 	// UniqueID is the unique id of the transaction
-	UniqueID = variables.UniqueID
+	UniqueID
 	// ArgsCombinedSize is the combined size of the arguments
-	ArgsCombinedSize = variables.ArgsCombinedSize
+	ArgsCombinedSize
 	// FilesCombinedSize is the combined size of the uploaded files
-	FilesCombinedSize = variables.FilesCombinedSize
+	FilesCombinedSize
 	// FullRequestLength is the length of the full request
-	FullRequestLength = variables.FullRequestLength
+	FullRequestLength
 	// InboundDataError represents errors for inbound data
-	InboundDataError = variables.InboundDataError
+	InboundDataError
 	// MatchedVar is the value of the matched variable
-	MatchedVar = variables.MatchedVar
+	MatchedVar
 	// MatchedVarName is the name of the matched variable
-	MatchedVarName = variables.MatchedVarName
+	MatchedVarName
 	// MultipartDataAfter kept for compatibility
-	MultipartDataAfter = variables.MultipartDataAfter
+	MultipartDataAfter
 	// OutboundDataError will be set to 1 when the response body size
 	// is above the setting configured by SecResponseBodyLimit
-	OutboundDataError = variables.OutboundDataError
+	OutboundDataError
 	// QueryString contains the raw query string part of a request URI
-	QueryString = variables.QueryString
+	QueryString
 	// RemoteAddr is the remote address of the connection
-	RemoteAddr = variables.RemoteAddr
+	RemoteAddr
 	// RemoteHost is the remote host of the connection, not implemented
-	RemoteHost = variables.RemoteHost
+	RemoteHost
 	// RemotePort is the remote port of the connection
-	RemotePort = variables.RemotePort
+	RemotePort
 	// ReqbodyError contains the status of the request body processor used
 	// for request body parsing, 0 means no error, 1 means error
-	ReqbodyError = variables.ReqbodyError
+	ReqbodyError
 	// ReqbodyErrorMsg contains the error message of the request body processor error
-	ReqbodyErrorMsg = variables.ReqbodyErrorMsg
+	ReqbodyErrorMsg
 	// ReqbodyProcessorError is the same as ReqbodyErrr ?
-	ReqbodyProcessorError = variables.ReqbodyProcessorError
+	ReqbodyProcessorError
 	// ReqbodyProcessorErrorMsg is the same as ReqbodyErrorMsg ?
-	ReqbodyProcessorErrorMsg = variables.ReqbodyProcessorErrorMsg
+	ReqbodyProcessorErrorMsg
 	// ReqbodyProcessor contains the name of the request body processor used, default
 	// ones are: URLENCODED, MULTIPART, and XML. They can be extended using plugins.
-	ReqbodyProcessor = variables.ReqbodyProcessor
+	ReqbodyProcessor
 	// RequestBasename contains the name after the last slash in the request URI
 	// It does not pass through any anti-evasion, use with transformations
-	RequestBasename = variables.RequestBasename
+	RequestBasename
 	// RequestBody contains the full request body, it will only be available
 	// For urlencoded requests. It is possible to force it's presence by using
 	// the ctl:forceRequestBodyVariable action
-	RequestBody = variables.RequestBody
+	RequestBody
 	// RequestBodyLength contains the length of the request body in bytes calculated from
 	// the BodyBuffer, not from the content-type header
-	RequestBodyLength = variables.RequestBodyLength
+	RequestBodyLength
 	// RequestFilename holds the relative request URL without the query string part.
 	// Anti-evasion transformations are not used by default
-	RequestFilename = variables.RequestFilename
+	RequestFilename
 	// RequestLine This variable holds the complete request line sent to the server
 	// (including the request method and HTTP version information).
-	RequestLine = variables.RequestLine
+	RequestLine
 	// RequestMethod is the request method
-	RequestMethod = variables.RequestMethod
+	RequestMethod
 	// RequestProtocol is the protocol used in the request
-	RequestProtocol = variables.RequestProtocol
+	RequestProtocol
 	// RequestURI holds the full request URL including the query string data without
 	// the domain name
-	RequestURI = variables.RequestURI
+	RequestURI
 	// RequestURIRaw is the same as RequestURI but with the domain name in case
 	// it was provided in the request line
-	RequestURIRaw = variables.RequestURIRaw
+	RequestURIRaw
 	// ResponseBody contains the full response body, it will only be available if
 	// responseBodyAccess is set to on and the response mime matches the configured
 	// processable mime types
-	ResponseBody = variables.ResponseBody
+	ResponseBody
 	// ResponseContentLength contains the length of the response body in bytes calculated from
 	// the BodyBuffer, not from the content-type header
-	ResponseContentLength = variables.ResponseContentLength
+	ResponseContentLength
 	// ResponseProtocol is the protocol used in the response
-	ResponseProtocol = variables.ResponseProtocol
+	ResponseProtocol
 	// ResponseStatus is the status code of the response
-	ResponseStatus = variables.ResponseStatus
+	ResponseStatus
 	// ServerAddr is the address of the server
-	ServerAddr = variables.ServerAddr
+	ServerAddr
 	// ServerName is the name of the server
-	ServerName = variables.ServerName
+	ServerName
 	// ServerPort is the port of the server
-	ServerPort = variables.ServerPort
+	ServerPort
 	// HighestSeverity is the highest severity from all matched rules
-	HighestSeverity = variables.HighestSeverity
+	HighestSeverity
 	// StatusLine is the status line of the response, including the request method
 	// and HTTP version information
-	StatusLine = variables.StatusLine
+	StatusLine
 	// InboundErrorData will be set to 1 when the request body size
 	// is above the setting configured by SecRequesteBodyLimit
-	InboundErrorData = variables.InboundErrorData
+	InboundErrorData
 	// Duration contains the time in miliseconds from
 	// the beginning of the transaction until this point
-	Duration = variables.Duration
+	Duration
 	// ResponseHeadersNames contains the names of the response headers
-	ResponseHeadersNames = variables.ResponseHeadersNames
+	ResponseHeadersNames
 	// RequestHeadersNames contains the names of the request headers
-	RequestHeadersNames = variables.RequestHeadersNames
+	RequestHeadersNames
 	// Args contains copies of ArgsGet and ArgsPost
-	Args = variables.Args
+	Args
 	// ArgsGet contains the GET (URL) arguments
-	ArgsGet = variables.ArgsGet
+	ArgsGet
 	// ArgsPost contains the POST (BODY) arguments
-	ArgsPost = variables.ArgsPost
+	ArgsPost
 	// ArgsPath contains the url path parts
-	ArgsPath = variables.ArgsPath
+	ArgsPath
 	// FilesSizes contains the sizes of the uploaded files
-	FilesSizes = variables.FilesSizes
+	FilesSizes
 	// FilesNames contains the names of the uploaded files
-	FilesNames = variables.FilesNames
+	FilesNames
 	// FilesTmpContent is not supported
-	FilesTmpContent = variables.FilesTmpContent
+	FilesTmpContent
 	// MultipartFilename contains the multipart data from field FILENAME
-	MultipartFilename = variables.MultipartFilename
+	MultipartFilename
 	// MultipartName contains the multipart data from field NAME.
-	MultipartName = variables.MultipartName
+	MultipartName
 	// MatchedVarsNames is similar to MATCHED_VAR_NAME except that it is
 	// a collection of all matches for the current operator check.
-	MatchedVarsNames = variables.MatchedVarsNames
+	MatchedVarsNames
 	// MatchedVars is similar to MATCHED_VAR except that it is a collection
 	// of all matches for the current operator check
-	MatchedVars = variables.MatchedVars
+	MatchedVars
 	// Files contains a collection of original file names
 	// (as they were called on the remote user’s filesys- tem).
 	// Available only on inspected multipart/form-data requests.
-	Files = variables.Files
+	Files
 	// RequestCookies is a collection of all of request cookies (values only
-	RequestCookies = variables.RequestCookies
+	RequestCookies
 	// RequestHeaders can be used as either a collection of all of the request
 	// headers or can be used to inspect selected headers
-	RequestHeaders = variables.RequestHeaders
+	RequestHeaders
 	// ResponseHeaders can be used as either a collection of all of the response
 	// headers or can be used to inspect selected headers
-	ResponseHeaders = variables.ResponseHeaders
+	ResponseHeaders
 	// Geo contains the location information of the client
-	Geo = variables.Geo
+	Geo
 	// RequestCookiesNames contains the names of the request cookies
-	RequestCookiesNames = variables.RequestCookiesNames
+	RequestCookiesNames
 	// FilesTmpNames contains the names of the uploaded temporal files
-	FilesTmpNames = variables.FilesTmpNames
+	FilesTmpNames
 	// ArgsNames contains the names of the arguments (POST and GET)
-	ArgsNames = variables.ArgsNames
+	ArgsNames
 	// ArgsGetNames contains the names of the GET arguments
-	ArgsGetNames = variables.ArgsGetNames
+	ArgsGetNames
 	// ArgsPostNames contains the names of the POST arguments
-	ArgsPostNames = variables.ArgsPostNames
+	ArgsPostNames
 	// TX contains transaction specific variables created with setvar
-	TX = variables.TX
+	TX
 	// Rule contains rule metadata
-	Rule = variables.Rule
+	Rule
 	// JSON does not provide any data, might be removed
-	JSON = variables.JSON
+	JSON
 	// Env contains the process environment variables
-	Env = variables.Env
+	Env
 	// UrlencodedError equals 1 if we failed to parse de URL
 	// It applies for URL query part and urlencoded post body
-	UrlencodedError = variables.UrlencodedError
+	UrlencodedError
 	// ResponseArgs contains the response parsed arguments
-	ResponseArgs = variables.ResponseArgs
+	ResponseArgs
 	// ResponseXML contains the response parsed XML
-	ResponseXML = variables.ResponseXML
+	ResponseXML
 	// RequestXML contains the request parsed XML
-	RequestXML = variables.RequestXML
+	RequestXML
 	// XML is a pointer to ResponseXML
-	XML = variables.XML
+	XML
 	// MultipartPartHeaders contains the multipart headers
-	MultipartPartHeaders = variables.MultipartPartHeaders
-)
+	MultipartPartHeaders
 
-// Parse returns the byte interpretation
-// of a variable from a string
-// Returns error if there is no representation
-func Parse(v string) (RuleVariable, error) {
-	return variables.Parse(v)
-}
+	// Unsupported variables
+
+	// AuthType is the authentication type
+	AuthType
+	// FullRequest is the full request
+	FullRequest
+	// MultipartBoundaryQuoted kept for compatibility
+	MultipartBoundaryQuoted
+	// MultipartBoundaryWhitespace kept for compatibility
+	MultipartBoundaryWhitespace
+	// MultipartCrlfLfLines kept for compatibility
+	MultipartCrlfLfLines
+	// MultipartDataBefore kept for compatibility
+	MultipartDataBefore
+	// MultipartFileLimitExceeded kept for compatibility
+	MultipartFileLimitExceeded
+	// MultipartHeaderFolding kept for compatibility
+	MultipartHeaderFolding
+	// MultipartInvalidHeaderFolding kept for compatibility
+	MultipartInvalidHeaderFolding
+	// MultipartInvalidPart kept for compatibility
+	MultipartInvalidPart
+	// MultipartInvalidQuoting kept for compatibility
+	MultipartInvalidQuoting
+	// MultipartLfLine kept for compatibility
+	MultipartLfLine
+	// MultipartMissingSemicolon kept for compatibility
+	MultipartMissingSemicolon
+	// MultipartStrictError kept for compatibility
+	MultipartStrictError
+	// MultipartUnmatchedBoundary kept for compatibility
+	MultipartUnmatchedBoundary
+	// PathInfo is kept for compatibility
+	PathInfo
+	// Sessionid is not supported
+	Sessionid
+	// Userid is not supported
+	Userid
+	// IP is kept for compatibility
+	IP
+)
