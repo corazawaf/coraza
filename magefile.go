@@ -17,9 +17,9 @@ import (
 	"github.com/magefile/mage/sh"
 )
 
-var addLicenseVersion = "v1.1.1" // https://github.com/google/addlicense
+var addLicenseVersion = "v1.0.0" // https://github.com/google/addlicense
 var golangCILintVer = "v1.51.1"  // https://github.com/golangci/golangci-lint/releases
-var gosImportsVer = "v0.3.5"     // https://github.com/rinchsan/gosimports/releases/tag/v0.1.5
+var gosImportsVer = "v0.1.5"     // https://github.com/rinchsan/gosimports/releases/tag/v0.1.5
 
 var errRunGoModTidy = errors.New("go.mod/sum not formatted, commit changes")
 var errNoGitDir = errors.New("no .git directory found")
