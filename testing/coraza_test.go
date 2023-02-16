@@ -17,6 +17,7 @@ func TestEngine(t *testing.T) {
 	if len(profile.Profiles) == 0 {
 		t.Error("failed to find tests")
 	}
+
 	t.Logf("Loading %d profiles\n", len(profile.Profiles))
 	for _, p := range profile.Profiles {
 		t.Run(p.Meta.Name, func(t *testing.T) {

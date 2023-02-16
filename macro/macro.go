@@ -4,6 +4,7 @@
 package macro
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -39,9 +40,9 @@ type macroToken struct {
 // A macro contains tokens for strings and expansions
 // For example: some string %{tx.var} some string
 // The previous example would create 3 tokens:
-// String token: some string
-// Variable token: Variable: TX, key: var
-// String token: some string
+// - String token: some string
+// - Variable token: Variable: TX, key: var
+// - String token: some string
 type macro struct {
 	original string
 	tokens   []macroToken
@@ -120,7 +121,7 @@ func (m *macro) compile(input string) error {
 				varName, key, _ := strings.Cut(currentToken.String(), ".")
 				v, err := variables.Parse(varName)
 				if err != nil {
-					return fmt.Errorf("invalid variable %s", varName)
+					return fmt.Errorf("unknown variable %q", varName)
 				}
 				// we add the variable token
 				m.tokens = append(m.tokens, macroToken{
@@ -131,16 +132,22 @@ func (m *macro) compile(input string) error {
 				currentToken.Reset()
 				continue
 			}
+
+			// 48: 0
+			// 57: 9
+			// 65: A
+			// 90: Z
+			// 97: a
+			// 122: z
+			if !(c == '.' || c == '_' || c == '-' || (c >= 48 && c <= 57) || (c >= 65 && c <= 90) || (c >= 97 && c <= 122)) {
+				currentToken.WriteByte(c)
+				return fmt.Errorf("malformed variable starting with %q", "%{"+currentToken.String())
+			}
+
 			currentToken.WriteByte(c)
 
 			if i+1 == l {
-				// macro won't be closed, we add it as a text
-				m.tokens = append(m.tokens, macroToken{
-					text:     "%{" + currentToken.String(),
-					variable: variables.Unknown,
-					key:      "",
-				})
-				return nil
+				return errors.New("malformed variable: no closing braces")
 			}
 			continue
 		}
