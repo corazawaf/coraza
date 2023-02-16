@@ -1,6 +1,5 @@
 name: "CodeQL 2"
 on:
-  push:
   pull_request:
   schedule:
     - cron: '0 6 * * 6'

@@ -6,7 +6,6 @@ package main
 import (
 	"bytes"
 	_ "embed"
-	"fmt"
 	"go/ast"
 	"go/format"
 	"go/importer"
@@ -22,9 +21,6 @@ import (
 
 //go:embed variablesmap.go.tmpl
 var variablesMapTmpl string
-
-//go:embed variablescount.go.tmpl
-var variablesCountTmpl string
 
 type VariablesMap struct {
 	Key   string
@@ -58,7 +54,7 @@ func main() {
 		log.Fatal(err) // type error
 	}
 
-	directives := []VariablesMap{}
+	var directives []VariablesMap
 	ast.Inspect(f, func(n ast.Node) bool {
 		switch decl := n.(type) {
 		case *ast.GenDecl:
@@ -113,26 +109,6 @@ func main() {
 	}
 
 	err = dm.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	vc, err := os.Create("../variablescount.gen.go")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	_, err = vc.WriteString(strings.Replace(
-		variablesCountTmpl,
-		"{{ . }}",
-		fmt.Sprintf("%d", len(directives)),
-		1,
-	))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = vc.Close()
 	if err != nil {
 		log.Fatal(err)
 	}
