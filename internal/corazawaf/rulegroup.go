@@ -113,7 +113,7 @@ func (rg *RuleGroup) Clear() {
 // Returns true if transaction is disrupted
 func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	tx.WAF.Logger.Debug("[%s] Evaluating phase %d", tx.id, int(phase))
-	tx.LastPhase = phase
+	tx.lastPhase = phase
 	usedRules := 0
 	ts := time.Now().UnixNano()
 	transformationCache := tx.transformationCache

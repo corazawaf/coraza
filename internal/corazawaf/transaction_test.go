@@ -370,7 +370,7 @@ func TestProcessRequestHeadersDoesNoEvaluationOnEngineOff(t *testing.T) {
 	}
 
 	_ = tx.ProcessRequestHeaders()
-	if tx.LastPhase != 0 { // 0 means no phases have been evaluated
+	if tx.lastPhase != 0 { // 0 means no phases have been evaluated
 		t.Error("unexpected rule evaluation")
 	}
 }
@@ -381,7 +381,7 @@ func TestProcessRequestBodyDoesNoEvaluationOnEngineOff(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error("failed to process request body")
 	}
-	if tx.LastPhase != 0 {
+	if tx.lastPhase != 0 {
 		t.Error("unexpected rule evaluation")
 	}
 }
@@ -390,7 +390,7 @@ func TestProcessResponseHeadersDoesNoEvaluationOnEngineOff(t *testing.T) {
 	tx := NewWAF().NewTransaction()
 	tx.RuleEngine = types.RuleEngineOff
 	_ = tx.ProcessResponseHeaders(200, "OK")
-	if tx.LastPhase != 0 {
+	if tx.lastPhase != 0 {
 		t.Error("unexpected rule evaluation")
 	}
 }
@@ -401,7 +401,7 @@ func TestProcessResponseBodyDoesNoEvaluationOnEngineOff(t *testing.T) {
 	if _, err := tx.ProcessResponseBody(); err != nil {
 		t.Error("Failed to process response body")
 	}
-	if tx.LastPhase != 0 {
+	if tx.lastPhase != 0 {
 		t.Error("unexpected rule evaluation")
 	}
 }
@@ -410,7 +410,7 @@ func TestProcessLoggingDoesNoEvaluationOnEngineOff(t *testing.T) {
 	tx := NewWAF().NewTransaction()
 	tx.RuleEngine = types.RuleEngineOff
 	tx.ProcessLogging()
-	if tx.LastPhase != 0 {
+	if tx.lastPhase != 0 {
 		t.Error("unexpected rule evaluation")
 	}
 }
@@ -964,7 +964,7 @@ func TestTxSetServerName(t *testing.T) {
 	waf.Logger.SetOutput(l)
 	waf.Logger.SetLevel(loggers.LogLevelWarn)
 	tx := waf.NewTransaction()
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.lastPhase = types.PhaseRequestHeaders
 	tx.SetServerName("coraza.io")
 	if tx.variables.serverName.Get() != "coraza.io" {
 		t.Error("failed to set server name")

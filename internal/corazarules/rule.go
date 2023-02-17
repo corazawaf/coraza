@@ -3,7 +3,9 @@
 
 package corazarules
 
-import "github.com/corazawaf/coraza/v3/types"
+import (
+	"github.com/corazawaf/coraza/v3/types"
+)
 
 // RuleMetadata is used to store rule metadata
 // that can be used across packages

@@ -21,7 +21,7 @@ func TestEngine(t *testing.T) {
 	t.Logf("Loading %d profiles\n", len(profile.Profiles))
 	for _, p := range profile.Profiles {
 		t.Run(p.Meta.Name, func(t *testing.T) {
-			tt, err := testList(&p)
+			tt, err := testList(t, &p)
 			if err != nil {
 				t.Error(err)
 			}
@@ -57,14 +57,15 @@ func TestEngine(t *testing.T) {
 	}
 }
 
-func testList(p *profile.Profile) ([]*Test, error) {
+func testList(t *testing.T, p *profile.Profile) ([]*Test, error) {
+	t.Helper()
 	var tests []*Test
-	for _, t := range p.Tests {
-		name := t.Title
-		for _, stage := range t.Stages {
+	for _, test := range p.Tests {
+		name := test.Title
+		for _, stage := range test.Stages {
 			w, err := coraza.NewWAF(coraza.NewWAFConfig().
 				WithRootFS(os.DirFS("testdata")).
-				WithDirectives(p.Rules))
+				WithDirectives(p.Rules).WithDebugLogger(debugLogger{t}))
 			if err != nil {
 				return nil, err
 			}
