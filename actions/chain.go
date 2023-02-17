@@ -10,15 +10,16 @@ import (
 
 type chainFn struct{}
 
-func (a *chainFn) Init(r rules.RuleMetadata, b1 string) error {
-	// TODO(anuraaga): Confirm this is internal implementation detail
+func (a *chainFn) Init(r rules.RuleMetadata, data string) error {
+	if len(data) > 0 {
+		return ErrUnexpectedArguments
+	}
+
 	r.(*corazawaf.Rule).HasChain = true
 	return nil
 }
 
-func (a *chainFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-	// Not evaluated
-}
+func (a *chainFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
 
 func (a *chainFn) Type() rules.ActionType {
 	return rules.ActionTypeFlow

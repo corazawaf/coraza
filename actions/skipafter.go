@@ -4,9 +4,8 @@
 package actions
 
 import (
-	"strings"
-
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
@@ -14,14 +13,17 @@ type skipafterFn struct {
 	data string
 }
 
-func (a *skipafterFn) Init(r rules.RuleMetadata, data string) error {
-	a.data = strings.Trim(data, `"`)
+func (a *skipafterFn) Init(_ rules.RuleMetadata, data string) error {
+	data = utils.MaybeRemoveQuotes(data)
+	if len(data) == 0 {
+		return ErrMissingArguments
+	}
+	a.data = data
 	return nil
 }
 
 func (a *skipafterFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	tx.DebugLogger().Debug("[%s] Starting secmarker %q", tx.ID(), a.data)
-	// TODO(anuraaga): Confirm this is internal implementation detail
 	tx.(*corazawaf.Transaction).SkipAfter = a.data
 }
 

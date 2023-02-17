@@ -9,12 +9,17 @@ import (
 
 type blockFn struct{}
 
-func (a *blockFn) Init(r rules.RuleMetadata, b1 string) error {
+func (a *blockFn) Init(_ rules.RuleMetadata, data string) error {
+	if len(data) > 0 {
+		return ErrUnexpectedArguments
+	}
+
 	return nil
 }
 
-func (a *blockFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
+func (a *blockFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {
 	// This should never run
+	// TODO(jcchavezs): check if we return a panic
 }
 
 func (a *blockFn) Type() rules.ActionType {

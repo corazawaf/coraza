@@ -49,7 +49,7 @@ type ctlFn struct {
 	colRx      *regexp.Regexp
 }
 
-func (a *ctlFn) Init(r rules.RuleMetadata, data string) error {
+func (a *ctlFn) Init(_ rules.RuleMetadata, data string) error {
 	var err error
 	a.action, a.value, a.collection, a.colKey, err = parseCtl(data)
 	if len(a.colKey) > 2 && a.colKey[0] == '/' && a.colKey[len(a.colKey)-1] == '/' {
@@ -74,8 +74,7 @@ func parseOnOff(s string) (bool, bool) {
 	}
 }
 
-func (a *ctlFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
-	// TODO(anuraaga): Confirm this is internal implementation detail
+func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 	tx := txS.(*corazawaf.Transaction)
 	switch a.action {
 	case ctlRuleRemoveTargetByID:

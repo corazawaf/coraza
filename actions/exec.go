@@ -7,16 +7,16 @@ import (
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
-type execFn struct {
-}
+type execFn struct{}
 
-func (a *execFn) Init(r rules.RuleMetadata, data string) error {
+func (a *execFn) Init(_ rules.RuleMetadata, data string) error {
+	if len(data) > 0 {
+		return ErrUnexpectedArguments
+	}
 	return nil
 }
 
-func (a *execFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-	// Not implemented
-}
+func (a *execFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
 
 func (a *execFn) Type() rules.ActionType {
 	return rules.ActionTypeNondisruptive

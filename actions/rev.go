@@ -8,18 +8,17 @@ import (
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
-type revFn struct {
-}
+type revFn struct{}
 
 func (a *revFn) Init(r rules.RuleMetadata, data string) error {
-	// TODO(anuraaga): Confirm this is internal implementation detail
+	if len(data) == 0 {
+		return ErrMissingArguments
+	}
 	r.(*corazawaf.Rule).Rev_ = data
 	return nil
 }
 
-func (a *revFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-	// Not evaluated
-}
+func (a *revFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
 
 func (a *revFn) Type() rules.ActionType {
 	return rules.ActionTypeMetadata

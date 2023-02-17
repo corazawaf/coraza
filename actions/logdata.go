@@ -9,21 +9,22 @@ import (
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
-type logdataFn struct {
-}
+type logdataFn struct{}
 
 func (a *logdataFn) Init(r rules.RuleMetadata, data string) error {
+	if len(data) == 0 {
+		return ErrMissingArguments
+	}
+
 	m, err := macro.NewMacro(data)
 	if err != nil {
 		return err
 	}
-	// TODO(anuraaga): Confirm this is internal implementation detail
 	r.(*corazawaf.Rule).LogData = m
 	return nil
 }
 
 func (a *logdataFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-	// TODO(anuraaga): Confirm this is internal implementation detail
 	tx.(*corazawaf.Transaction).Logdata = r.(*corazawaf.Rule).LogData.Expand(tx)
 }
 

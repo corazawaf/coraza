@@ -12,18 +12,19 @@ import (
 type phaseFn struct{}
 
 func (a *phaseFn) Init(r rules.RuleMetadata, data string) error {
+	if len(data) == 0 {
+		return ErrMissingArguments
+	}
+
 	p, err := types.ParseRulePhase(data)
 	if err != nil {
 		return err
 	}
-	// TODO(anuraaga): Confirm this is internal implementation detail
 	r.(*corazawaf.Rule).Phase_ = p
 	return nil
 }
 
-func (a *phaseFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-	// Not evaluated
-}
+func (a *phaseFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
 
 func (a *phaseFn) Type() rules.ActionType {
 	return rules.ActionTypeMetadata

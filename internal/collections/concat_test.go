@@ -36,6 +36,10 @@ func TestConcatKeyed(t *testing.T) {
 	assertValuesMatch(t, c.FindRegex(re1), "cat")
 	assertValuesMatch(t, c.FindRegex(re2))
 
+	if want, have := variables.Args, c.FindAll()[0].Variable(); want != have {
+		t.Errorf("want %q, have %q", want, have)
+	}
+
 	c2.Add("animal", "dog")
 
 	assertValuesMatch(t, c.FindAll(), "cat", "dog")

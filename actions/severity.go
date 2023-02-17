@@ -9,22 +9,22 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
-type severityFn struct {
-}
+type severityFn struct{}
 
 func (a *severityFn) Init(r rules.RuleMetadata, data string) error {
+	if len(data) == 0 {
+		return ErrMissingArguments
+	}
+
 	sev, err := types.ParseRuleSeverity(data)
 	if err != nil {
 		return err
 	}
-	// TODO(anuraaga): Confirm this is internal implementation detail
 	r.(*corazawaf.Rule).Severity_ = sev
 	return nil
 }
 
-func (a *severityFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-	// Not evaluated
-}
+func (a *severityFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
 
 func (a *severityFn) Type() rules.ActionType {
 	return rules.ActionTypeMetadata

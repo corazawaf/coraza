@@ -16,23 +16,23 @@ func TestCtl(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	tx := waf.NewTransaction()
 	r := corazawaf.NewRule()
-	ctlf := ctl()
+	a := ctl()
 
 	bodyprocessors := []string{"XML", "JSON", "URLENCODED", "MULTIPART"}
 	for _, bp := range bodyprocessors {
-		if err := ctlf.Init(r, "requestBodyProcessor="+bp); err != nil {
+		if err := a.Init(r, "requestBodyProcessor="+bp); err != nil {
 			t.Errorf("failed to init requestBodyProcessor %s", bp)
 		}
-		ctlf.Evaluate(r, tx)
+		a.Evaluate(r, tx)
 		if tx.Variables().RequestBodyProcessor().Get() != bp {
 			t.Error("failed to set RequestBodyProcessor " + bp)
 		}
 	}
 
-	if err := ctlf.Init(r, "ruleRemoveTargetById=981260;ARGS:user"); err != nil {
+	if err := a.Init(r, "ruleRemoveTargetById=981260;ARGS:user"); err != nil {
 		t.Error("failed to init ruleRemoveTargetById=981260;ARGS:user")
 	}
-	ctlf.Evaluate(r, tx)
+	a.Evaluate(r, tx)
 	/*
 		TODO
 		if tx.ruleRemoveTargetById[981260] == nil {
@@ -47,28 +47,28 @@ func TestCtl(t *testing.T) {
 		}
 	*/
 
-	if err := ctlf.Init(r, "auditEngine=Off"); err != nil {
+	if err := a.Init(r, "auditEngine=Off"); err != nil {
 		t.Error("failed to init ctl with auditEngine=Off")
 	}
-	ctlf.Evaluate(r, tx)
+	a.Evaluate(r, tx)
 
 	if tx.AuditEngine != types.AuditEngineOff {
 		t.Error("Failed to disable audit log")
 	}
 
-	if err := ctlf.Init(r, "ruleEngine=Off"); err != nil {
+	if err := a.Init(r, "ruleEngine=Off"); err != nil {
 		t.Error("failed to init ctl using ruleEngine=Off")
 	}
-	ctlf.Evaluate(r, tx)
+	a.Evaluate(r, tx)
 
 	if tx.RuleEngine != types.RuleEngineOff {
 		t.Errorf("Failed to disable rule engine, got %s", tx.RuleEngine.String())
 	}
 
-	if err := ctlf.Init(r, "requestBodyLimit=12345"); err != nil {
+	if err := a.Init(r, "requestBodyLimit=12345"); err != nil {
 		t.Error("failed to init ctl with requestBodyLimit=12345")
 	}
-	ctlf.Evaluate(r, tx)
+	a.Evaluate(r, tx)
 
 	if tx.RequestBodyLimit != 12345 {
 		t.Error("Failed to set request body limit")
