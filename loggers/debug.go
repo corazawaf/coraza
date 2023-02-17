@@ -5,6 +5,8 @@ package loggers
 
 import (
 	"io"
+
+	"github.com/rs/zerolog"
 )
 
 // DebugLogger is used to log SecDebugLog messages
@@ -24,6 +26,8 @@ type DebugLogger interface {
 	// SetOutput sets the output for the logger and closes
 	// the former output if any.
 	SetOutput(w io.WriteCloser)
+	// Get Logger
+	GetLogger() *zerolog.Logger
 }
 
 // LogLevel is the type of log level

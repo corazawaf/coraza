@@ -455,7 +455,7 @@ func (tx *Transaction) matchVariable(match *corazarules.MatchData) {
 
 // MatchRule Matches a rule to be logged
 func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
-	tx.WAF.Logger.Debug("[%s] rule %d matched", tx.id, r.ID_)
+	tx.WAF.Logger.GetLogger().Debug().Str("tx", tx.id).Int("Rule", r.ID_).Msg("Rule Matched")
 	// tx.MatchedRules = append(tx.MatchedRules, mr)
 
 	// If the rule is set to audit, we log the transaction to the audit log

@@ -63,7 +63,7 @@ func TestSetDebugLogPath(t *testing.T) {
 			}
 
 			l := waf.Logger.(*stdDebugLogger)
-			if want, have := tCase.writer, l.logger.Writer(); want != have {
+			if want, have := tCase.writer, l.Writer(); want != have {
 				t.Error("unexpected logger writer")
 			}
 			_ = waf.SetDebugLogPath("")

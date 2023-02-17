@@ -8,14 +8,16 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	log "github.com/rs/zerolog"
+
 	"github.com/corazawaf/coraza/v3/internal/environment"
+
 	ioutils "github.com/corazawaf/coraza/v3/internal/io"
 	stringutils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/internal/sync"
@@ -252,8 +254,10 @@ const _1gb = 1073741824
 
 // NewWAF creates a new WAF instance with default variables
 func NewWAF() *WAF {
+	zeroLogger := log.New(nil).With().Timestamp().Logger()
+	log.SetGlobalLevel(log.InfoLevel)
 	logger := &stdDebugLogger{
-		logger: &log.Logger{},
+		logger: &zeroLogger,
 		Level:  loggers.LogLevelInfo,
 	}
 

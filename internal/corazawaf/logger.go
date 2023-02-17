@@ -6,7 +6,8 @@ package corazawaf
 import (
 	"fmt"
 	"io"
-	"log"
+
+	"github.com/rs/zerolog"
 
 	"github.com/corazawaf/coraza/v3/loggers"
 )
@@ -14,7 +15,7 @@ import (
 // DebugLogger is a logger that logs to the standard logger
 type stdDebugLogger struct {
 	io.Closer
-	logger *log.Logger
+	logger *zerolog.Logger
 	Level  loggers.LogLevel
 }
 
@@ -58,6 +59,7 @@ func (l *stdDebugLogger) SetLevel(level loggers.LogLevel) {
 		level = loggers.LogLevelInfo
 	}
 	l.Level = level
+	zerolog.SetGlobalLevel(getZeroLogLevel(level))
 }
 
 // SetOutput sets the output for the logger
@@ -65,6 +67,34 @@ func (l *stdDebugLogger) SetOutput(w io.WriteCloser) {
 	if l.Closer != nil {
 		l.Closer.Close()
 	}
-	l.logger.SetOutput(w)
+	updateLogger := l.logger.Output(w)
+	l.logger = &updateLogger
 	l.Closer = w
+}
+
+func (l *stdDebugLogger) GetLogger() *zerolog.Logger {
+	return l.logger
+}
+
+func (l *stdDebugLogger) Writer() io.Writer {
+	return *(l.logger)
+}
+
+func getZeroLogLevel(level loggers.LogLevel) zerolog.Level {
+	switch level {
+	case loggers.LogLevelNoLog:
+		return zerolog.NoLevel
+	case loggers.LogLevelError:
+		return zerolog.ErrorLevel
+	case loggers.LogLevelWarn:
+		return zerolog.WarnLevel
+	case loggers.LogLevelInfo:
+		return zerolog.InfoLevel
+	case loggers.LogLevelDebug:
+		return zerolog.DebugLevel
+	case loggers.LogLevelTrace:
+		return zerolog.TraceLevel
+	default:
+		return zerolog.InfoLevel
+	}
 }
