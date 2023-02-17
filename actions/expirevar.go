@@ -4,6 +4,7 @@
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -17,20 +18,35 @@ type expirevarFn struct {
 	key        string
 }
 
-func (a *expirevarFn) Init(r rules.RuleMetadata, data string) error {
-	v, ttl, _ := strings.Cut(data, "=")
-	col, key, ok := strings.Cut(v, ".")
+func (a *expirevarFn) Init(_ rules.RuleMetadata, data string) error {
+	k, ttl, ok := strings.Cut(data, "=")
 	if !ok {
-		return fmt.Errorf("expirevar must contain key and value (syntax expirevar:key=value)")
+		return ErrInvalidKVArguments
 	}
-	a.ttl, _ = strconv.Atoi(ttl)
+
+	col, key, ok := strings.Cut(k, ".")
+	if !ok {
+		return errors.New("invalid arguments, expected syntax {collection}.{key}={ttl}")
+	}
+
+	ittl, err := strconv.Atoi(ttl)
+	if err != nil {
+		return fmt.Errorf("invalid TTL argument %q: %s", ttl, err.Error())
+	}
+
+	if ittl < int(1) {
+		return fmt.Errorf("invalid TTL argument, %d must be greater than 1", ittl)
+	}
+
+	a.ttl = ittl
 	a.collection = col
 	a.key = key
 	return nil
 }
 
-func (a *expirevarFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
+func (a *expirevarFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {
 	// Not supported
+	// TODO(jcchavezs): Shall we log a message?
 	// tx.WAF.Logger.Error("Expirevar was used but it's not supported", zap.Int("rule", r.Id))
 }
 

@@ -4,7 +4,6 @@
 package actions
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -21,9 +20,9 @@ type setvarFn struct {
 	isRemove   bool
 }
 
-func (a *setvarFn) Init(r rules.RuleMetadata, data string) error {
-	if data == "" {
-		return fmt.Errorf("setvar requires arguments")
+func (a *setvarFn) Init(_ rules.RuleMetadata, data string) error {
+	if len(data) == 0 {
+		return ErrMissingArguments
 	}
 
 	if data[0] == '!' {
@@ -33,7 +32,6 @@ func (a *setvarFn) Init(r rules.RuleMetadata, data string) error {
 
 	var err error
 	key, val, valOk := strings.Cut(data, "=")
-
 	colKey, colVal, colOk := strings.Cut(key, ".")
 	a.collection, err = variables.Parse(colKey)
 	if err != nil {
@@ -46,6 +44,7 @@ func (a *setvarFn) Init(r rules.RuleMetadata, data string) error {
 		}
 		a.key = macro
 	}
+
 	if valOk {
 		macro, err := macro.NewMacro(val)
 		if err != nil {

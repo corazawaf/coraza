@@ -11,14 +11,15 @@ import (
 type auditlogFn struct{}
 
 func (a *auditlogFn) Init(r rules.RuleMetadata, data string) error {
-	// TODO(anuraaga): Confirm this is internal implementation detail
+	if len(data) > 0 {
+		return ErrUnexpectedArguments
+	}
+
 	r.(*corazawaf.Rule).Audit = true
 	return nil
 }
 
-func (a *auditlogFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-	// Nothing here
-}
+func (a *auditlogFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
 
 func (a *auditlogFn) Type() rules.ActionType {
 	return rules.ActionTypeNondisruptive

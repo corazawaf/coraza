@@ -8,18 +8,17 @@ import (
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
-type multimatchFn struct {
-}
+type multimatchFn struct{}
 
 func (a *multimatchFn) Init(r rules.RuleMetadata, data string) error {
-	// TODO(anuraaga): Confirm this is internal implementation detail
+	if len(data) > 0 {
+		return ErrUnexpectedArguments
+	}
 	r.(*corazawaf.Rule).MultiMatch = true
 	return nil
 }
 
-func (a *multimatchFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-	// Not evaluated
-}
+func (a *multimatchFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
 
 func (a *multimatchFn) Type() rules.ActionType {
 	return rules.ActionTypeNondisruptive
