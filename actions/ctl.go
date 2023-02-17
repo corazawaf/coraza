@@ -165,7 +165,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 		tx.Variables().RequestBodyProcessor().Set(strings.ToUpper(a.value))
 	case ctlResponseBodyProcessor:
 		if tx.LastPhase() <= types.PhaseResponseHeaders {
-			// We are still in tome to set the response body processor
+			// We are still in time to set the response body processor
 			// TODO(jcchavezs): who should hold this knowledge?
 			tx.Variables().ResponseBodyProcessor().Set(strings.ToUpper(a.value))
 		} else {
