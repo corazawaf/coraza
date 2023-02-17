@@ -18,7 +18,6 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
 	"github.com/corazawaf/coraza/v3/loggers"
-	"github.com/corazawaf/coraza/v3/types"
 )
 
 func TestAuditLogMessages(t *testing.T) {
@@ -43,7 +42,7 @@ func TestAuditLogMessages(t *testing.T) {
 	}
 	defer os.Remove(file.Name())
 	tx := waf.NewTransaction()
-	tx.AddArgument(types.ArgumentGET, "test", "test")
+	tx.AddGetRequestArgument("test", "test")
 	tx.ProcessRequestHeaders()
 	al := tx.AuditLog()
 	if len(al.Messages) != 1 {
@@ -92,7 +91,7 @@ func TestAuditLogRelevantOnly(t *testing.T) {
 		t.Error(err)
 	}
 	tx := waf.NewTransaction()
-	tx.AddArgument(types.ArgumentGET, "test", "test")
+	tx.AddGetRequestArgument("test", "test")
 	tx.ProcessRequestHeaders()
 	// now we read file
 	if _, err := file.Seek(0, 0); err != nil {
@@ -129,7 +128,7 @@ func TestAuditLogRelevantOnlyOk(t *testing.T) {
 		t.Error(err)
 	}
 	tx := waf.NewTransaction()
-	tx.AddArgument(types.ArgumentGET, "test", "test")
+	tx.AddGetRequestArgument("test", "test")
 	tx.ProcessRequestHeaders()
 	// now we read file
 	if _, err := file.Seek(0, 0); err != nil {
@@ -166,7 +165,7 @@ func TestAuditLogRelevantOnlyNoAuditlog(t *testing.T) {
 		t.Error(err)
 	}
 	tx := waf.NewTransaction()
-	tx.AddArgument(types.ArgumentGET, "test", "test")
+	tx.AddGetRequestArgument("test", "test")
 	tx.ProcessRequestHeaders()
 	// now we read file
 	if _, err := file.Seek(0, 0); err != nil {
