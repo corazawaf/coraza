@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/plugins"
 	"github.com/tidwall/gjson"
 )
 
@@ -51,7 +52,7 @@ func TestTransformations(t *testing.T) {
 				if strings.Contains(data.Output, `\x`) {
 					data.Output, _ = strconv.Unquote(`"` + data.Output + `"`)
 				}
-				trans, err := GetTransformation(data.Name)
+				trans, err := plugins.GetTransformation(data.Name)
 				if err != nil {
 					// Cannot use t.Skip for TinyGo support
 					return
@@ -70,10 +71,10 @@ func TestTransformations(t *testing.T) {
 }
 
 func TestTransformationsAreCaseInsensitive(t *testing.T) {
-	if _, err := GetTransformation("cmdLine"); err != nil {
+	if _, err := plugins.GetTransformation("cmdLine"); err != nil {
 		t.Error(err)
 	}
-	if _, err := GetTransformation("cmdline"); err != nil {
+	if _, err := plugins.GetTransformation("cmdline"); err != nil {
 		t.Error(err)
 	}
 }

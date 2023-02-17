@@ -5,8 +5,9 @@ package actions
 
 import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	_ "github.com/corazawaf/coraza/v3/internal/transformations"
+	"github.com/corazawaf/coraza/v3/plugins"
 	"github.com/corazawaf/coraza/v3/rules"
-	transformations "github.com/corazawaf/coraza/v3/transformations"
 )
 
 type tFn struct{}
@@ -20,7 +21,7 @@ func (a *tFn) Init(r rules.RuleMetadata, data string) error {
 		return nil
 	}
 
-	tt, err := transformations.GetTransformation(data)
+	tt, err := plugins.GetTransformation(data)
 	if err != nil {
 		return err
 	}
