@@ -118,7 +118,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 			return
 		}
 		tx.ForceRequestBodyVariable = val
-		tx.WAF.Logger.Debug("[ctl:ForceRequestBodyVariable] Forcing request body var with CTL to %s", val)
+		tx.WAF.Logger.Debug("[ctl:ForceRequestBodyVariable] forcing request body var with CTL to %s", val)
 	case ctlRequestBodyAccess:
 		val, ok := parseOnOff(a.value)
 		if !ok {
@@ -164,7 +164,14 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 	case ctlRequestBodyProcessor:
 		tx.Variables().RequestBodyProcessor().Set(strings.ToUpper(a.value))
 	case ctlResponseBodyProcessor:
-		tx.Variables().ResponseBodyProcessor().Set(strings.ToUpper(a.value))
+		if tx.LastPhase() <= types.PhaseResponseHeaders {
+			// We are still in tome to set the response body processor
+			// TODO(jcchavezs): who should hold this knowledge?
+			tx.Variables().ResponseBodyProcessor().Set(strings.ToUpper(a.value))
+		} else {
+			tx.WAF.Logger.Warn("[ctl:ResponseBodyProcessor] should happen before response body phase")
+			return
+		}
 	case ctlHashEngine:
 		// Not supported yet
 	case ctlHashEnforcement:

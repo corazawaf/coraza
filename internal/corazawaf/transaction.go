@@ -69,7 +69,7 @@ type Transaction struct {
 
 	// Stores the last phase that was evaluated
 	// Used by allow to skip phases
-	LastPhase types.RulePhase
+	lastPhase types.RulePhase
 
 	// Handles request body buffers
 	requestBodyBuffer *BodyBuffer
@@ -260,8 +260,7 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 	case variables.UrlencodedError:
 		return tx.variables.urlencodedError
 	case variables.ResponseArgs:
-		// TODO(anuraaga): This collection seems to be missing.
-		return nil
+		return tx.variables.responseArgs
 	case variables.ResponseXML:
 		return tx.variables.responseXML
 	case variables.RequestXML:
@@ -707,7 +706,7 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 // The API consumer is in charge of retrieving the value (e.g. from the host header).
 // It is expected to be executed before calling ProcessRequestHeaders.
 func (tx *Transaction) SetServerName(serverName string) {
-	if tx.LastPhase >= types.PhaseRequestHeaders {
+	if tx.lastPhase >= types.PhaseRequestHeaders {
 		tx.WAF.Logger.Warn("SetServerName has been called after ProcessRequestHeaders")
 	}
 	tx.variables.serverName.Set(serverName)
@@ -724,7 +723,7 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 		// Rule engine is disabled
 		return nil
 	}
-	if tx.LastPhase >= types.PhaseRequestHeaders {
+	if tx.lastPhase >= types.PhaseRequestHeaders {
 		// Phase already evaluated
 		tx.WAF.Logger.Error("ProcessRequestHeaders has already been called")
 		return tx.interruption
@@ -899,7 +898,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		return nil, nil
 	}
 
-	if tx.LastPhase >= types.PhaseRequestBody {
+	if tx.lastPhase >= types.PhaseRequestBody {
 		// Phase already evaluated
 		tx.WAF.Logger.Warn("ProcessRequestBody has already been called")
 		return tx.interruption, nil
@@ -971,7 +970,7 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Int
 		return nil
 	}
 
-	if tx.LastPhase >= types.PhaseResponseHeaders {
+	if tx.lastPhase >= types.PhaseResponseHeaders {
 		// Phase already evaluated
 		tx.WAF.Logger.Error("ProcessResponseHeaders has already been called")
 		return tx.interruption
@@ -1131,7 +1130,7 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		return nil, nil
 	}
 
-	if tx.LastPhase >= types.PhaseResponseBody {
+	if tx.lastPhase >= types.PhaseResponseBody {
 		// Phase already evaluated
 		tx.WAF.Logger.Warn("ProcessResponseBody has already been called")
 		return tx.interruption, nil
@@ -1245,6 +1244,10 @@ func (tx *Transaction) Interruption() *types.Interruption {
 
 func (tx *Transaction) MatchedRules() []types.MatchedRule {
 	return tx.matchedRules
+}
+
+func (tx *Transaction) LastPhase() types.RulePhase {
+	return tx.lastPhase
 }
 
 // AuditLog returns an AuditLog struct, used to write audit logs

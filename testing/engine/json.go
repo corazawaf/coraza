@@ -58,7 +58,7 @@ SecRequestBodyAccess On
 SecResponseBodyAccess On
 SecResponseBodyMimeType application/json
 SecRule REQUEST_HEADERS:content-type "application/json" "id: 100, phase:1, pass, log, ctl:requestBodyProcessor=JSON"
-SecRule RESPONSE_HEADERS:content-type "application/json" "id:1000, phase:4, pass, log, ctl:responseBodyProcessor=JSON"
+SecRule RESPONSE_HEADERS:content-type "application/json" "id:1000, phase:3, pass, log, ctl:responseBodyProcessor=JSON"
 SecRule REQBODY_PROCESSOR "JSON" "id: 101,phase:2,log,block"
 
 SecRule REQBODY_ERROR "!@eq 0" "id:1111, phase:2, log, block"
@@ -71,6 +71,6 @@ SecRule ARGS:json.test3.2 "@eq 55" "id:1101, phase:2, log, block"
 SecRule ARGS:json.test "@eq 456" "id:1102, phase:2, log, block"
 
 SecRule ARGS:json.test3 "@eq 3" "id: 1010, phase:2, log, block"
-SecRule RESPONSE_ARGS:json.test4 "@eq 4" "id: 1011, phase:4, log, block"
+SecRule RESPONSE_ARGS:json.test4 "@eq 3" "id: 1011, phase:4, log, block"
 `,
 })

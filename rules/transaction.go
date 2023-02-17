@@ -42,6 +42,8 @@ type TransactionState interface {
 	Capturing() bool // TODO(anuraaga): Only needed in operators?
 	// CaptureField captures a field.
 	CaptureField(idx int, value string)
+
+	LastPhase() types.RulePhase
 }
 
 // TransactionVariables has pointers to all the variables of the transaction
