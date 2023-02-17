@@ -5,8 +5,14 @@
 //go:build tinygo
 // +build tinygo
 
-package loggers
+package auditlog
+
+import "github.com/corazawaf/coraza/v3/plugins"
 
 func noopFormater(al *AuditLog) ([]byte, error) {
 	return nil, nil
+}
+
+func init() {
+	plugins.RegisterAuditLogFormatter("noop", noopFormater)
 }

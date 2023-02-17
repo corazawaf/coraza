@@ -1,11 +1,13 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package loggers
+package auditlog
 
 import (
 	"bytes"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3/auditlog"
 )
 
 func TestNativeFormatter(t *testing.T) {
@@ -20,13 +22,13 @@ func TestNativeFormatter(t *testing.T) {
 	}
 }
 
-func createAuditLog() *AuditLog {
-	return &AuditLog{
-		Transaction: AuditTransaction{
+func createAuditLog() *auditlog.AuditLog {
+	return &auditlog.AuditLog{
+		Transaction: auditlog.AuditTransaction{
 			Timestamp:     "02/Jan/2006:15:04:20 -0700",
 			UnixTimestamp: 0,
 			ID:            "123",
-			Request: AuditTransactionRequest{
+			Request: auditlog.AuditTransactionRequest{
 				URI:    "/test.php",
 				Method: "GET",
 				Headers: map[string][]string{
@@ -35,7 +37,7 @@ func createAuditLog() *AuditLog {
 					},
 				},
 			},
-			Response: AuditTransactionResponse{
+			Response: auditlog.AuditTransactionResponse{
 				Status: 200,
 				Headers: map[string][]string{
 					"some": {
@@ -44,10 +46,10 @@ func createAuditLog() *AuditLog {
 				},
 			},
 		},
-		Messages: []AuditMessage{
+		Messages: []auditlog.AuditMessage{
 			{
 				Message: "some message",
-				Data: AuditMessageData{
+				Data: auditlog.AuditMessageData{
 					Msg: "some message",
 					Raw: "SecAction \"id:100\"",
 				},

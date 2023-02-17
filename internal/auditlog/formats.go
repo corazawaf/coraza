@@ -17,15 +17,17 @@
 //
 // More writers and formatters can be registered using the RegisterWriter and
 // RegisterFormatter functions.
-package loggers
+package auditlog
 
 import (
 	"fmt"
 
+	"github.com/corazawaf/coraza/v3/auditlog"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
+	"github.com/corazawaf/coraza/v3/plugins"
 )
 
-func nativeFormatter(al *AuditLog) ([]byte, error) {
+func nativeFormatter(al *auditlog.AuditLog) ([]byte, error) {
 	boundary := utils.RandomString(10)
 	parts := map[byte]string{}
 	// [27/Jul/2016:05:46:16 +0200] V5guiH8AAQEAADTeJ2wAAAAK 192.168.3.1 50084 192.168.3.111 80
@@ -76,6 +78,10 @@ func nativeFormatter(al *AuditLog) ([]byte, error) {
 	return []byte(data), nil
 }
 
+func init() {
+	plugins.RegisterAuditLogFormatter("native", nativeFormatter)
+}
+
 var (
-	_ LogFormatter = nativeFormatter
+	_ auditlog.Formatter = nativeFormatter
 )

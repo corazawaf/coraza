@@ -21,9 +21,9 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/debug"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
-	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/macro"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -208,7 +208,7 @@ func (l debugLogger) Debug(message string, args ...interface{}) { l.t.Logf(messa
 
 func (l debugLogger) Trace(message string, args ...interface{}) { l.t.Logf(message, args...) }
 
-func (l debugLogger) SetLevel(level loggers.LogLevel) {
+func (l debugLogger) SetLevel(level debug.Level) {
 	l.t.Logf("Setting level to %q", level.String())
 }
 

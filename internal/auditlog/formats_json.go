@@ -5,16 +5,19 @@
 //go:build !tinygo
 // +build !tinygo
 
-package loggers
+package auditlog
 
 import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/corazawaf/coraza/v3/auditlog"
+	"github.com/corazawaf/coraza/v3/plugins"
 )
 
 // Coraza format
-func jsonFormatter(al *AuditLog) ([]byte, error) {
+func jsonFormatter(al *auditlog.AuditLog) ([]byte, error) {
 	jsdata, err := json.Marshal(al)
 	if err != nil {
 		return nil, err
@@ -23,7 +26,7 @@ func jsonFormatter(al *AuditLog) ([]byte, error) {
 }
 
 // Coraza legacy json format
-func legacyJSONFormatter(al *AuditLog) ([]byte, error) {
+func legacyJSONFormatter(al *auditlog.AuditLog) ([]byte, error) {
 	reqHeaders := map[string]string{}
 	for k, v := range al.Transaction.Request.Headers {
 		reqHeaders[k] = strings.Join(v, ", ")
@@ -74,7 +77,12 @@ func legacyJSONFormatter(al *AuditLog) ([]byte, error) {
 	return jsdata, nil
 }
 
+func init() {
+	plugins.RegisterAuditLogFormatter("json", jsonFormatter)
+	plugins.RegisterAuditLogFormatter("legacyjson", legacyJSONFormatter)
+}
+
 var (
-	_ LogFormatter = jsonFormatter
-	_ LogFormatter = legacyJSONFormatter
+	_ auditlog.Formatter = jsonFormatter
+	_ auditlog.Formatter = legacyJSONFormatter
 )

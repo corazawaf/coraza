@@ -4,7 +4,7 @@
 //go:build !tinygo
 // +build !tinygo
 
-package loggers
+package auditlog
 
 import (
 	"encoding/json"
@@ -25,7 +25,7 @@ func TestFormatters(t *testing.T) {
 	}
 
 	for format, cases := range cases {
-		f, err := getLogFormatter(format)
+		f, err := getauditlog.Formatter(format)
 		if err != nil {
 			t.Error(err)
 		}

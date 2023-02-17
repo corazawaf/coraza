@@ -4,7 +4,7 @@
 //go:build !tinygo
 // +build !tinygo
 
-package loggers
+package auditlog
 
 import (
 	"encoding/json"
@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/corazawaf/coraza/v3/auditlog"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -59,12 +60,12 @@ func TestConcurrentWriterWrites(t *testing.T) {
 		"auditlog_formatter": jsonFormatter,
 	}
 	ts := time.Now().UnixNano()
-	al := &AuditLog{
-		Transaction: AuditTransaction{
+	al := &auditlog.AuditLog{
+		Transaction: auditlog.AuditTransaction{
 			UnixTimestamp: ts,
 			ID:            "123",
-			Request:       AuditTransactionRequest{},
-			Response:      AuditTransactionResponse{},
+			Request:       auditlog.AuditTransactionRequest{},
+			Response:      auditlog.AuditTransactionResponse{},
 		},
 	}
 	writer := &concurrentWriter{}
@@ -86,7 +87,7 @@ func TestConcurrentWriterWrites(t *testing.T) {
 		t.Error("failed to create audit file for concurrent logger")
 		return
 	}
-	al2 := &AuditLog{}
+	al2 := &auditlog.AuditLog{}
 	if json.Unmarshal(data, al2) != nil {
 		t.Error("failed to parse json from concurrent audit log", p)
 	}

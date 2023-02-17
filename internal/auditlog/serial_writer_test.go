@@ -4,7 +4,7 @@
 //go:build !tinygo
 // +build !tinygo
 
-package loggers
+package auditlog
 
 import (
 	"io/fs"
@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/auditlog"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -52,13 +53,13 @@ func TestSerialWriterWrites(t *testing.T) {
 	if err := writer.Init(config); err != nil {
 		t.Error(err)
 	}
-	al := &AuditLog{
-		Transaction: AuditTransaction{
+	al := &auditlog.AuditLog{
+		Transaction: auditlog.AuditTransaction{
 			ID: "test123",
 		},
-		Messages: []AuditMessage{
+		Messages: []auditlog.AuditMessage{
 			{
-				Data: AuditMessageData{
+				Data: auditlog.AuditMessageData{
 					ID:  100,
 					Raw: "SecAction \"id:100\"",
 				},

@@ -4,7 +4,7 @@
 //go:build !tinygo
 // +build !tinygo
 
-package loggers
+package auditlog
 
 import (
 	"io"
@@ -12,6 +12,8 @@ import (
 	"log"
 	"os"
 
+	"github.com/corazawaf/coraza/v3/auditlog"
+	"github.com/corazawaf/coraza/v3/plugins"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -19,12 +21,12 @@ import (
 type serialWriter struct {
 	closer    func() error
 	log       log.Logger
-	formatter LogFormatter
+	formatter auditlog.Formatter
 }
 
 func (sl *serialWriter) Init(c types.Config) error {
 	fileMode := c.Get("auditlog_file_mode", fs.FileMode(0644)).(fs.FileMode)
-	sl.formatter = c.Get("auditlog_formatter", nativeFormatter).(LogFormatter)
+	sl.formatter = c.Get("auditlog_formatter", nativeFormatter).(auditlog.Formatter)
 
 	fileName := c.Get("auditlog_file", "").(string)
 	var w io.Writer
@@ -44,7 +46,7 @@ func (sl *serialWriter) Init(c types.Config) error {
 	return nil
 }
 
-func (sl *serialWriter) Write(al *AuditLog) error {
+func (sl *serialWriter) Write(al *auditlog.AuditLog) error {
 	if sl.formatter == nil {
 		return nil
 	}
@@ -61,4 +63,10 @@ func (sl *serialWriter) Close() error {
 	return sl.closer()
 }
 
-var _ LogWriter = (*serialWriter)(nil)
+func init() {
+	plugins.RegisterAuditLogWriter("serial", func() auditlog.Writer {
+		return &serialWriter{}
+	})
+}
+
+var _ auditlog.Writer = (*serialWriter)(nil)
