@@ -8,6 +8,7 @@
 package auditlog
 
 import (
+	"github.com/corazawaf/coraza/v3/auditlog"
 	"github.com/corazawaf/coraza/v3/plugins"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -22,5 +23,5 @@ func (noopWriter) Close() error                   { return nil }
 var _ LogWriter = (*noopWriter)(nil)
 
 func init() {
-	plugins.RegisterAuditLogWriter("noop", func() LogWriter { return &noopWriter{} })
+	plugins.RegisterAuditLogWriter("noop", func() auditlog.Writer { return &noopWriter{} })
 }
