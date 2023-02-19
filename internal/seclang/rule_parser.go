@@ -10,11 +10,12 @@ import (
 	"regexp"
 	"strings"
 
-	actionsmod "github.com/corazawaf/coraza/v3/actions"
+	_ "github.com/corazawaf/coraza/v3/internal/actions"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/io"
+	_ "github.com/corazawaf/coraza/v3/internal/operators"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	operators "github.com/corazawaf/coraza/v3/operators"
+	"github.com/corazawaf/coraza/v3/plugins"
 	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -196,7 +197,7 @@ func (p *RuleParser) ParseOperator(operator string) error {
 		opts.Path = append(opts.Path, wd)
 	}
 
-	opfn, err := operators.Get(op, opts)
+	opfn, err := plugins.GetOperator(op, opts)
 	if err != nil {
 		return err
 	}
@@ -417,7 +418,7 @@ actionLoop:
 			// skip whitespaces in key
 			continue actionLoop
 		case !quoted && c == ',':
-			f, err := actionsmod.Get(ckey)
+			f, err := plugins.GetAction(ckey)
 			if err != nil {
 				return nil, err
 			}
@@ -449,7 +450,7 @@ actionLoop:
 			ckey += string(c)
 		}
 		if i+1 == len(actions) {
-			f, err := actionsmod.Get(ckey)
+			f, err := plugins.GetAction(ckey)
 			if err != nil {
 				return nil, err
 			}

@@ -6,6 +6,7 @@ package seclang
 import (
 	"testing"
 
+	_ "github.com/corazawaf/coraza/v3/internal/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 

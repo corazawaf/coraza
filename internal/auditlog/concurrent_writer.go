@@ -1,0 +1,101 @@
+// Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
+// SPDX-License-Identifier: Apache-2.0
+
+//go:build !tinygo
+// +build !tinygo
+
+package auditlog
+
+import (
+	"fmt"
+	"io"
+	"io/fs"
+	"log"
+	"os"
+	"path"
+	"sync"
+	"time"
+
+	"github.com/corazawaf/coraza/v3/auditlog"
+	"github.com/corazawaf/coraza/v3/plugins"
+	"github.com/corazawaf/coraza/v3/types"
+)
+
+type concurrentWriter struct {
+	mux           *sync.RWMutex
+	auditlogger   *log.Logger
+	auditDir      string
+	auditDirMode  fs.FileMode
+	auditFileMode fs.FileMode
+	formatter     auditlog.Formatter
+	closer        func() error
+}
+
+func (cl *concurrentWriter) Init(c types.Config) error {
+	cl.auditFileMode = c.Get("auditlog_file_mode", fs.FileMode(0644)).(fs.FileMode)
+	cl.auditDir = c.Get("auditlog_dir", "").(string)
+	cl.auditDirMode = c.Get("auditlog_dir_mode", fs.FileMode(0755)).(fs.FileMode)
+	cl.formatter = c.Get("auditlog_formatter", nativeFormatter).(auditlog.Formatter)
+	cl.mux = &sync.RWMutex{}
+
+	w := io.Discard
+	if fileName := c.Get("auditlog_file", "").(string); fileName != "" {
+		f, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, cl.auditFileMode)
+		if err != nil {
+			return err
+		}
+		w = f
+		cl.closer = f.Close
+	} else {
+		cl.closer = func() error { return nil }
+	}
+	cl.auditlogger = log.New(w, "", 0)
+	return nil
+}
+
+func (cl concurrentWriter) Write(al *auditlog.AuditLog) error {
+	// 192.168.3.130 192.168.3.1 - - [22/Aug/2009:13:24:20 +0100] "GET / HTTP/1.1" 200 56 "-" "-" SojdH8AAQEAAAugAQAAAAAA "-" /20090822/20090822-1324/20090822-132420-SojdH8AAQEAAAugAQAAAAAA 0 1248
+	t := time.Unix(0, al.Transaction.UnixTimestamp)
+
+	// append the two directories
+	p2 := fmt.Sprintf("/%s/%s/", t.Format("20060102"), t.Format("20060102-1504"))
+	logdir := path.Join(cl.auditDir, p2)
+	// Append the filename
+	fname := fmt.Sprintf("/%s-%s", t.Format("20060102-150405"), al.Transaction.ID)
+	filepath := path.Join(logdir, fname)
+	str := fmt.Sprintf("%s %s - - [%s] %q %d %d %q %q %s %q %s %d %d",
+		al.Transaction.ClientIP, al.Transaction.HostIP, al.Transaction.Timestamp,
+		fmt.Sprintf("%s %s %s", al.Transaction.Request.Method, al.Transaction.Request.URI,
+			al.Transaction.Request.HTTPVersion),
+		al.Transaction.Response.Status, 0 /*response length*/, "-", "-", al.Transaction.ID,
+		"-", filepath, 0, 0 /*request length*/)
+	err := os.MkdirAll(logdir, cl.auditDirMode)
+	if err != nil {
+		return err
+	}
+
+	jsdata, err := cl.formatter(al)
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(filepath, []byte(jsdata), cl.auditFileMode)
+	if err != nil {
+		return err
+	}
+	cl.mux.Lock()
+	defer cl.mux.Unlock()
+	cl.auditlogger.Println(str)
+	return nil
+}
+
+func (cl *concurrentWriter) Close() error {
+	return cl.closer()
+}
+
+var _ auditlog.Writer = (*concurrentWriter)(nil)
+
+func init() {
+	plugins.RegisterAuditLogWriter("concurrent", func() auditlog.Writer {
+		return &concurrentWriter{}
+	})
+}

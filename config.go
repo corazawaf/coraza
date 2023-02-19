@@ -6,8 +6,10 @@ package coraza
 import (
 	"io/fs"
 
+	"github.com/corazawaf/coraza/v3/auditlog"
+	"github.com/corazawaf/coraza/v3/debug"
+	_ "github.com/corazawaf/coraza/v3/internal/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -56,7 +58,7 @@ type WAFConfig interface {
 	WithResponseBodyMimeTypes(mimeTypes []string) WAFConfig
 
 	// WithDebugLogger configures a debug logger.
-	WithDebugLogger(logger loggers.DebugLogger) WAFConfig
+	WithDebugLogger(logger debug.Logger) WAFConfig
 
 	// WithErrorCallback configures an error callback that can be used
 	// to log errors triggered by the WAF.
@@ -81,7 +83,7 @@ type AuditLogConfig interface {
 	WithParts(parts types.AuditLogParts) AuditLogConfig
 
 	// WithLogger configures the loggers.LogWriter to write logs to.
-	WithLogger(logger loggers.LogWriter) AuditLogConfig
+	WithLogger(logger auditlog.Writer) AuditLogConfig
 }
 
 // NewAuditLogConfig returns a new AuditLogConfig with the default settings.
@@ -107,7 +109,7 @@ type wafConfig struct {
 	responseBodyAccess       bool
 	responseBodyLimit        *int
 	responseBodyMimeTypes    []string
-	debugLogger              loggers.DebugLogger
+	debugLogger              debug.Logger
 	errorCallback            func(rule types.MatchedRule)
 	fsRoot                   fs.FS
 }
@@ -154,7 +156,7 @@ func (c *wafConfig) WithResponseBodyAccess() WAFConfig {
 	return ret
 }
 
-func (c *wafConfig) WithDebugLogger(logger loggers.DebugLogger) WAFConfig {
+func (c *wafConfig) WithDebugLogger(logger debug.Logger) WAFConfig {
 	ret := c.clone()
 	ret.debugLogger = logger
 	return ret
@@ -207,7 +209,7 @@ func (c *wafConfig) WithResponseBodyMimeTypes(mimeTypes []string) WAFConfig {
 type auditLogConfig struct {
 	relevantOnly bool
 	parts        types.AuditLogParts
-	logger       loggers.LogWriter
+	logger       auditlog.Writer
 }
 
 func (c *auditLogConfig) LogRelevantOnly() AuditLogConfig {
@@ -222,7 +224,7 @@ func (c *auditLogConfig) WithParts(parts types.AuditLogParts) AuditLogConfig {
 	return ret
 }
 
-func (c *auditLogConfig) WithLogger(logger loggers.LogWriter) AuditLogConfig {
+func (c *auditLogConfig) WithLogger(logger auditlog.Writer) AuditLogConfig {
 	ret := c.clone()
 	ret.logger = logger
 	return ret
