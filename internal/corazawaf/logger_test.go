@@ -6,8 +6,7 @@ package corazawaf
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/debug"
-	_ "github.com/corazawaf/coraza/v3/internal/auditlog"
+	"github.com/corazawaf/coraza/v3/loggers"
 )
 
 func TestLoggerLogLevels(t *testing.T) {
@@ -43,7 +42,7 @@ func TestLoggerLogLevels(t *testing.T) {
 			for settedLevel := 0; settedLevel <= 9; settedLevel++ {
 				l := &inspectableLogger{}
 				waf.Logger.SetOutput(l)
-				waf.Logger.SetLevel(debug.Level(settedLevel))
+				waf.Logger.SetLevel(loggers.LogLevel(settedLevel))
 				tCase.logFunction("this is a log")
 
 				if settedLevel >= tCase.expectedLowestPrintedLevel && len(l.entries) != 1 {
@@ -60,8 +59,8 @@ func TestLoggerLogLevels(t *testing.T) {
 
 func TestLoggerLevelDefaultsToInfo(t *testing.T) {
 	waf := NewWAF()
-	waf.Logger.SetLevel(debug.Level(10))
-	if waf.Logger.(*stdDebugLogger).Level != debug.LevelInfo {
-		t.Fatalf("Unexpected log level: %d. It should default to Info (%s)", waf.Logger.(*stdDebugLogger).Level, debug.LevelInfo)
+	waf.Logger.SetLevel(loggers.LogLevel(10))
+	if waf.Logger.(*stdDebugLogger).Level != loggers.LogLevelInfo {
+		t.Fatalf("Unexpected log level: %d. It should default to Info (%s)", waf.Logger.(*stdDebugLogger).Level, loggers.LogLevelInfo)
 	}
 }

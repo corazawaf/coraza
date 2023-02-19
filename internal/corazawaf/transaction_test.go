@@ -7,16 +7,16 @@ import (
 	"fmt"
 	"io"
 	"regexp"
-	rtdebug "runtime/debug"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/debug"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
+	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/macro"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -962,7 +962,7 @@ func TestTxSetServerName(t *testing.T) {
 	l := &inspectableLogger{}
 	waf := NewWAF()
 	waf.Logger.SetOutput(l)
-	waf.Logger.SetLevel(debug.LevelWarn)
+	waf.Logger.SetLevel(loggers.LogLevelWarn)
 	tx := waf.NewTransaction()
 	tx.LastPhase = types.PhaseRequestHeaders
 	tx.SetServerName("coraza.io")
@@ -1108,7 +1108,7 @@ func validateMacroExpansion(tests map[string]string, tx *Transaction, t *testing
 		if res != v {
 			if testing.Verbose() {
 				fmt.Println(tx)
-				fmt.Println("===STACK===\n", string(rtdebug.Stack())+"\n===STACK===")
+				fmt.Println("===STACK===\n", string(debug.Stack())+"\n===STACK===")
 			}
 			t.Error("Failed set transaction for " + k + ", expected " + v + ", got " + res)
 		}
@@ -1187,7 +1187,7 @@ func TestProcessorsIdempotency(t *testing.T) {
 
 	waf := NewWAF()
 	waf.Logger.SetOutput(l)
-	waf.Logger.SetLevel(debug.LevelError)
+	waf.Logger.SetLevel(loggers.LogLevelError)
 
 	expectedInterruption := &types.Interruption{
 		RuleID: 123,
