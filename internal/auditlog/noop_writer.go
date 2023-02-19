@@ -20,7 +20,7 @@ func (noopWriter) Init(types.Config) error        { return nil }
 func (noopWriter) Write(*auditlog.AuditLog) error { return nil }
 func (noopWriter) Close() error                   { return nil }
 
-var _ LogWriter = (*noopWriter)(nil)
+var _ auditlog.Writer = (*noopWriter)(nil)
 
 func init() {
 	plugins.RegisterAuditLogWriter("noop", func() auditlog.Writer { return &noopWriter{} })
