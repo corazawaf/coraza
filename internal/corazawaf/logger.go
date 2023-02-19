@@ -8,19 +8,19 @@ import (
 	"io"
 	"log"
 
-	"github.com/corazawaf/coraza/v3/debug"
+	"github.com/corazawaf/coraza/v3/loggers"
 )
 
 // DebugLogger is a logger that logs to the standard logger
 type stdDebugLogger struct {
 	io.Closer
 	logger *log.Logger
-	Level  debug.Level
+	Level  loggers.LogLevel
 }
 
-var _ debug.Logger = (*stdDebugLogger)(nil)
+var _ loggers.DebugLogger = (*stdDebugLogger)(nil)
 
-func (l *stdDebugLogger) formatLog(level debug.Level, message string, args ...interface{}) {
+func (l *stdDebugLogger) formatLog(level loggers.LogLevel, message string, args ...interface{}) {
 	if l.Level >= level {
 		l.logger.Printf("[%s] %s", level.String(), fmt.Sprintf(message, args...))
 	}
@@ -28,34 +28,34 @@ func (l *stdDebugLogger) formatLog(level debug.Level, message string, args ...in
 
 // Info logs an info message
 func (l *stdDebugLogger) Info(message string, args ...interface{}) {
-	l.formatLog(debug.LevelInfo, message, args...)
+	l.formatLog(loggers.LogLevelInfo, message, args...)
 }
 
 // Warn logs a warning message
 func (l *stdDebugLogger) Warn(message string, args ...interface{}) {
-	l.formatLog(debug.LevelWarn, message, args...)
+	l.formatLog(loggers.LogLevelWarn, message, args...)
 }
 
 // Error logs an error message
 func (l *stdDebugLogger) Error(message string, args ...interface{}) {
-	l.formatLog(debug.LevelError, message, args...)
+	l.formatLog(loggers.LogLevelError, message, args...)
 }
 
 // Debug logs a debug message
 func (l *stdDebugLogger) Debug(message string, args ...interface{}) {
-	l.formatLog(debug.LevelDebug, message, args...)
+	l.formatLog(loggers.LogLevelDebug, message, args...)
 }
 
 // Trace logs a trace message
 func (l *stdDebugLogger) Trace(message string, args ...interface{}) {
-	l.formatLog(debug.LevelTrace, message, args...)
+	l.formatLog(loggers.LogLevelTrace, message, args...)
 }
 
 // SetLevel sets the log level
-func (l *stdDebugLogger) SetLevel(level debug.Level) {
+func (l *stdDebugLogger) SetLevel(level loggers.LogLevel) {
 	if level.Invalid() {
 		l.Info("Invalid log level, defaulting to INFO")
-		level = debug.LevelInfo
+		level = loggers.LogLevelInfo
 	}
 	l.Level = level
 }

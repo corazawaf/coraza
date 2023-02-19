@@ -15,9 +15,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
+	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -57,7 +57,7 @@ func TestAuditLogMessages(t *testing.T) {
 	if _, err := file.Seek(0, 0); err != nil {
 		t.Error(err)
 	}
-	var al2 auditlog.AuditLog
+	var al2 loggers.AuditLog
 	if err := json.NewDecoder(file).Decode(&al2); err != nil {
 		t.Error(err)
 	}
@@ -99,7 +99,7 @@ func TestAuditLogRelevantOnly(t *testing.T) {
 		t.Error(err)
 	}
 	tx.ProcessLogging()
-	var al2 auditlog.AuditLog
+	var al2 loggers.AuditLog
 	// this should fail, there should be no log
 	if err := json.NewDecoder(file).Decode(&al2); err == nil {
 		t.Error(err)
@@ -136,7 +136,7 @@ func TestAuditLogRelevantOnlyOk(t *testing.T) {
 		t.Error(err)
 	}
 	tx.ProcessLogging()
-	var al2 auditlog.AuditLog
+	var al2 loggers.AuditLog
 	// this should pass as it matches any status
 	if err := json.NewDecoder(file).Decode(&al2); err != nil {
 		t.Error(err)
@@ -173,7 +173,7 @@ func TestAuditLogRelevantOnlyNoAuditlog(t *testing.T) {
 		t.Error(err)
 	}
 	tx.ProcessLogging()
-	var al2 auditlog.AuditLog
+	var al2 loggers.AuditLog
 	// there should be no audit log because of noauditlog
 	if err := json.NewDecoder(file).Decode(&al2); err == nil {
 		t.Errorf("there should be no audit log, got %v", al2)

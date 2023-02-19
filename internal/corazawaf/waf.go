@@ -15,13 +15,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/corazawaf/coraza/v3/auditlog"
-	"github.com/corazawaf/coraza/v3/debug"
 	"github.com/corazawaf/coraza/v3/internal/environment"
 	ioutils "github.com/corazawaf/coraza/v3/internal/io"
 	stringutils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/internal/sync"
-	"github.com/corazawaf/coraza/v3/plugins"
+	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -119,12 +117,12 @@ type WAF struct {
 	ProducerConnectorVersion string
 
 	// Used for the debug logger
-	Logger debug.Logger
+	Logger loggers.DebugLogger
 
 	ErrorLogCb func(rule types.MatchedRule)
 
 	// AuditLogWriter is used to write audit logs
-	AuditLogWriter auditlog.Writer
+	AuditLogWriter loggers.LogWriter
 }
 
 // NewTransaction Creates a new initialized transaction for this WAF instance
@@ -256,10 +254,10 @@ const _1gb = 1073741824
 func NewWAF() *WAF {
 	logger := &stdDebugLogger{
 		logger: &log.Logger{},
-		Level:  debug.LevelInfo,
+		Level:  loggers.LogLevelInfo,
 	}
 
-	logWriter, err := plugins.GetAuditLogWriter("serial")
+	logWriter, err := loggers.GetLogWriter("serial")
 	if err != nil {
 		logger.Error("error creating serial log writer: %s", err.Error())
 	}
@@ -291,7 +289,7 @@ func NewWAF() *WAF {
 // SetDebugLogLevel changes the debug level of the WAF instance
 func (w *WAF) SetDebugLogLevel(lvl int) error {
 	// setLevel is concurrent safe
-	w.Logger.SetLevel(debug.Level(lvl))
+	w.Logger.SetLevel(loggers.LogLevel(lvl))
 	return nil
 }
 
