@@ -105,7 +105,7 @@ func (b *bodyBufferReader) Read(p []byte) (n int, err error) {
 		if b.pos+n > len(buf) {
 			n = len(buf) - b.pos
 		}
-		if n == 0 {
+		if n <= 0 {
 			return 0, io.EOF
 		}
 		copy(p, buf[b.pos:b.pos+n])
