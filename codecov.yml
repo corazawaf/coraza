@@ -1,2 +1,5 @@
 ignore:
   - "**/generator/main.go" # generator tools usually involves writing files
+fixes:
+  # Apparently using build/ as prefix is not enough to ignore the directory
+  - "build/::" 
