@@ -1,2 +1,6 @@
 ignore:
   - "**/generator/main.go" # generator tools usually involves writing files
+fixes:
+  # Apparently using build/ as prefix is not enough to ignore the directory
+  # Reference: https://community.codecov.com/t/codecov-website-can-not-show-line-by-line-coverage/3809
+  - "build/::" 
