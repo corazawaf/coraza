@@ -8,18 +8,17 @@ import (
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
-type tagFn struct {
-}
+type tagFn struct{}
 
 func (a *tagFn) Init(r rules.RuleMetadata, data string) error {
-	// TODO(anuraaga): Confirm this is internal implementation detail
+	if len(data) == 0 {
+		return ErrMissingArguments
+	}
 	r.(*corazawaf.Rule).Tags_ = append(r.(*corazawaf.Rule).Tags_, data)
 	return nil
 }
 
-func (a *tagFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-	// Not evaluated
-}
+func (a *tagFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
 
 func (a *tagFn) Type() rules.ActionType {
 	return rules.ActionTypeMetadata

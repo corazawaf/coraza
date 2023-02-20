@@ -16,7 +16,6 @@ import (
 // Map is a default collection.Map.
 type Map struct {
 	data     map[string][]keyValue
-	name     string
 	variable variables.RuleVariable
 }
 
@@ -24,7 +23,6 @@ var _ collection.Map = &Map{}
 
 func NewMap(variable variables.RuleVariable) *Map {
 	return &Map{
-		name:     variable.Name(),
 		variable: variable,
 		data:     map[string][]keyValue{},
 	}
@@ -48,10 +46,9 @@ func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
 		if key.MatchString(k) {
 			for _, d := range data {
 				result = append(result, &corazarules.MatchData{
-					VariableName_: c.name,
-					Variable_:     c.variable,
-					Key_:          d.key,
-					Value_:        d.value,
+					Variable_: c.variable,
+					Key_:      d.key,
+					Value_:    d.value,
 				})
 			}
 		}
@@ -72,10 +69,9 @@ func (c *Map) FindString(key string) []types.MatchData {
 	if e, ok := c.data[keyL]; ok {
 		for _, aVar := range e {
 			result = append(result, &corazarules.MatchData{
-				VariableName_: c.name,
-				Variable_:     c.variable,
-				Key_:          aVar.key,
-				Value_:        aVar.value,
+				Variable_: c.variable,
+				Key_:      aVar.key,
+				Value_:    aVar.value,
 			})
 		}
 	}
@@ -87,10 +83,9 @@ func (c *Map) FindAll() []types.MatchData {
 	for _, data := range c.data {
 		for _, d := range data {
 			result = append(result, &corazarules.MatchData{
-				VariableName_: c.name,
-				Variable_:     c.variable,
-				Key_:          d.key,
-				Value_:        d.value,
+				Variable_: c.variable,
+				Key_:      d.key,
+				Value_:    d.value,
 			})
 		}
 	}
@@ -135,7 +130,7 @@ func (c *Map) Remove(key string) {
 }
 
 func (c *Map) Name() string {
-	return c.name
+	return c.variable.Name()
 }
 
 func (c *Map) Reset() {
@@ -146,7 +141,7 @@ func (c *Map) Reset() {
 
 func (c *Map) String() string {
 	res := strings.Builder{}
-	res.WriteString(c.name)
+	res.WriteString(c.variable.Name())
 	res.WriteString(":\n")
 	for k, v := range c.data {
 		res.WriteString("    ")

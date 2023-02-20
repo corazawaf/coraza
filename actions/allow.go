@@ -16,8 +16,8 @@ type allowFn struct {
 	allow corazatypes.AllowType
 }
 
-func (a *allowFn) Init(r rules.RuleMetadata, b1 string) error {
-	switch b1 {
+func (a *allowFn) Init(_ rules.RuleMetadata, data string) error {
+	switch data {
 	case "phase":
 		a.allow = corazatypes.AllowTypePhase // skip current phase
 	case "request":
@@ -25,7 +25,7 @@ func (a *allowFn) Init(r rules.RuleMetadata, b1 string) error {
 	case "":
 		a.allow = corazatypes.AllowTypeAll // skip all phases
 	default:
-		return fmt.Errorf("invalid argument %s for allow", b1)
+		return fmt.Errorf("invalid argument %q", data)
 	}
 	return nil
 }

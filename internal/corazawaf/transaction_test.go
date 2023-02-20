@@ -651,8 +651,7 @@ func TestAuditLogFields(t *testing.T) {
 	rule.ID_ = 131
 	tx.MatchRule(rule, []types.MatchData{
 		&corazarules.MatchData{
-			VariableName_: "UNIQUE_ID",
-			Variable_:     variables.UniqueID,
+			Variable_: variables.UniqueID,
 		},
 	})
 	if len(tx.matchedRules) == 0 || tx.matchedRules[0].Rule().ID() != rule.ID_ {
@@ -712,8 +711,7 @@ func TestLogCallback(t *testing.T) {
 	rule := NewRule()
 	tx.MatchRule(rule, []types.MatchData{
 		&corazarules.MatchData{
-			VariableName_: "UNIQUE_ID",
-			Variable_:     variables.UniqueID,
+			Variable_: variables.UniqueID,
 		},
 	})
 	if buffer == "" && strings.Contains(buffer, tx.id) {
@@ -895,10 +893,9 @@ func TestVariablesMatch(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
 	tx.matchVariable(&corazarules.MatchData{
-		VariableName_: "ARGS_NAMES",
-		Variable_:     variables.ArgsNames,
-		Key_:          "sample",
-		Value_:        "samplevalue",
+		Variable_: variables.ArgsNames,
+		Key_:      "sample",
+		Value_:    "samplevalue",
 	})
 	expect := map[variables.RuleVariable]string{
 		variables.MatchedVar:     "samplevalue",

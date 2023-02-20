@@ -11,25 +11,23 @@ import (
 
 type tFn struct{}
 
-func (a *tFn) Init(r rules.RuleMetadata, input string) error {
+func (a *tFn) Init(r rules.RuleMetadata, data string) error {
 	// TODO there is a chance that it won't work, it requires tests
 	// none is a special hardcoded transformation, it must remove previous transformations
-	if input == "none" {
+	if data == "none" {
 		// remove elements
-		// TODO(anuraaga): Confirm this is internal implementation detail
 		r.(*corazawaf.Rule).ClearTransformations()
 		return nil
 	}
-	tt, err := transformations.GetTransformation(input)
+
+	tt, err := transformations.GetTransformation(data)
 	if err != nil {
 		return err
 	}
-	return r.(*corazawaf.Rule).AddTransformation(input, tt)
+	return r.(*corazawaf.Rule).AddTransformation(data, tt)
 }
 
-func (a *tFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-	// Not evaluated
-}
+func (a *tFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
 
 func (a *tFn) Type() rules.ActionType {
 	return rules.ActionTypeNondisruptive

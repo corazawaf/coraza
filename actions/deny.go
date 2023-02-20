@@ -10,7 +10,10 @@ import (
 
 type denyFn struct{}
 
-func (a *denyFn) Init(r rules.RuleMetadata, data string) error {
+func (a *denyFn) Init(_ rules.RuleMetadata, data string) error {
+	if len(data) > 0 {
+		return ErrUnexpectedArguments
+	}
 	return nil
 }
 

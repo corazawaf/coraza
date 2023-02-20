@@ -8,17 +8,18 @@ import (
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
-type noauditlogFn struct {
-}
+type noauditlogFn struct{}
 
 func (a *noauditlogFn) Init(r rules.RuleMetadata, data string) error {
-	// TODO(anuraaga): Confirm this is internal implementation detail
+	if len(data) > 0 {
+		return ErrUnexpectedArguments
+	}
+
 	r.(*corazawaf.Rule).Audit = false
 	return nil
 }
 
-func (a *noauditlogFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-}
+func (a *noauditlogFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
 
 func (a *noauditlogFn) Type() rules.ActionType {
 	return rules.ActionTypeNondisruptive

@@ -4,6 +4,7 @@
 package macro
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -17,7 +18,13 @@ type Macro interface {
 	String() string
 }
 
+var errEmptyData = errors.New("empty data")
+
 func NewMacro(data string) (Macro, error) {
+	if len(data) == 0 {
+		return nil, errEmptyData
+	}
+
 	macro := &macro{
 		tokens: []macroToken{},
 	}
@@ -38,9 +45,9 @@ type macroToken struct {
 // A macro contains tokens for strings and expansions
 // For example: some string %{tx.var} some string
 // The previous example would create 3 tokens:
-// String token: some string
-// Variable token: Variable: TX, key: var
-// String token: some string
+// - String token: some string
+// - Variable token: Variable: TX, key: var
+// - String token: some string
 type macro struct {
 	original string
 	tokens   []macroToken
@@ -85,12 +92,17 @@ func expandToken(tx rules.TransactionState, token macroToken) string {
 // [1] macroToken{text: " and ", variable: nil, key: ""}
 // [2] macroToken{text: "%{var.bar}", variable: &variables.Var, key: "bar"}
 func (m *macro) compile(input string) error {
+	l := len(input)
+	if l == 0 {
+		return fmt.Errorf("empty macro")
+	}
+
 	currentToken := strings.Builder{}
 	m.original = input
-	ismacro := false
-	for i := 0; i < len(input); i++ {
+	isMacro := false
+	for i := 0; i < l; i++ {
 		c := input[i]
-		if c == '%' && (i <= len(input) && input[i+1] == '{') {
+		if c == '%' && (i <= l && input[i+1] == '{') {
 			// we have a macro
 			if currentToken.Len() > 0 {
 				// we add the text token
@@ -101,18 +113,20 @@ func (m *macro) compile(input string) error {
 				})
 			}
 			currentToken.Reset()
-			ismacro = true
+			isMacro = true
 			i++
 			continue
 		}
-		if ismacro {
+
+		if isMacro {
 			if c == '}' {
 				// we close a macro
-				ismacro = false
+				isMacro = false
+				// TODO(jcchavezs): key should only be empty in single collections
 				varName, key, _ := strings.Cut(currentToken.String(), ".")
 				v, err := variables.Parse(varName)
 				if err != nil {
-					return fmt.Errorf("invalid variable %s", varName)
+					return fmt.Errorf("unknown variable %q", varName)
 				}
 				// we add the variable token
 				m.tokens = append(m.tokens, macroToken{
@@ -123,7 +137,23 @@ func (m *macro) compile(input string) error {
 				currentToken.Reset()
 				continue
 			}
+
+			// 48: 0
+			// 57: 9
+			// 65: A
+			// 90: Z
+			// 97: a
+			// 122: z
+			if !(c == '.' || c == '_' || c == '-' || (c >= 48 && c <= 57) || (c >= 65 && c <= 90) || (c >= 97 && c <= 122)) {
+				currentToken.WriteByte(c)
+				return fmt.Errorf("malformed variable starting with %q", "%{"+currentToken.String())
+			}
+
 			currentToken.WriteByte(c)
+
+			if i+1 == l {
+				return errors.New("malformed variable: no closing braces")
+			}
 			continue
 		}
 		// we have a normal character
@@ -146,6 +176,7 @@ func (m *macro) String() string {
 }
 
 // IsExpandable return true if there are macro expanadable tokens
+// TODO(jcchavezs): this is used only in a commented out section
 func (m *macro) IsExpandable() bool {
 	return len(m.tokens) > 1
 }
