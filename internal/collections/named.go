@@ -100,9 +100,9 @@ func (c *NamedCollectionNames) FindAll() []types.MatchData {
 	// but it is still also the key of the pair and it is needed to print the matched var name)
 	for _, k := range c.collection.Map.FindAll() {
 		res = append(res, &corazarules.MatchData{
-			Variable_:     c.variable,
-			Key_:          k.Key(),
-			Value_:        k.Key(),
+			Variable_: c.variable,
+			Key_:      k.Key(),
+			Value_:    k.Key(),
 		})
 	}
 	return res

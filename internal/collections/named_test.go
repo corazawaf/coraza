@@ -51,30 +51,30 @@ func TestNamedCollection(t *testing.T) {
 		t.Errorf("want %q, have %q", want, have)
 	}
 
-	assertValuesMatch(t, names.FindAll(), "key", "key2")
+	assertUnorderedValuesMatch(t, names.FindAll(), "key", "key2")
 	if want, have := "ARGS_POST_NAMES: key,key2", fmt.Sprint(names); want != have {
-		if want, have := "ARGS_POST_NAMES: key2,key", fmt.Sprint(names); want != have {
+		if want := "ARGS_POST_NAMES: key2,key"; want != have {
 			t.Errorf("want %q, have %q", want, have)
 		}
 	}
 	c.Add("key", "value2")
-	assertValuesMatch(t, names.FindAll(), "key", "key", "key2")
+	assertUnorderedValuesMatch(t, names.FindAll(), "key", "key", "key2")
 	if want, have := "ARGS_POST_NAMES: key,key,key2", fmt.Sprint(names); want != have {
-		if want, have := "ARGS_POST_NAMES: key2,key,key", fmt.Sprint(names); want != have {
+		if want := "ARGS_POST_NAMES: key2,key,key"; want != have {
 			t.Errorf("want %q, have %q", want, have)
 		}
 	}
 	// While selection operators will treat this as case-insensitive, names should have all names
 	// as-is.
 	c.Add("Key", "value3")
-	assertValuesMatch(t, names.FindAll(), "key", "key", "Key", "key2")
+	assertUnorderedValuesMatch(t, names.FindAll(), "key", "key", "Key", "key2")
 	if want, have := "ARGS_POST_NAMES: key2,key,key,Key", fmt.Sprint(names); want != have {
-		if want, have := "ARGS_POST_NAMES: key,key,Key,key2", fmt.Sprint(names); want != have {
+		if want := "ARGS_POST_NAMES: key,key,Key,key2"; want != have {
 			t.Errorf("want %q, have %q", want, have)
 		}
 	}
 	c.Remove("key2")
-	assertValuesMatch(t, names.FindAll(), "key", "key", "Key")
+	assertUnorderedValuesMatch(t, names.FindAll(), "key", "key", "Key")
 	if want, have := "ARGS_POST_NAMES: key,key,Key", fmt.Sprint(names); want != have {
 		t.Errorf("want %q, have %q", want, have)
 	}
