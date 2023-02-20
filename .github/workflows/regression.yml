@@ -30,27 +30,27 @@ jobs:
           cache: true
       - name: Tests and coverage
         run: go run mage.go coverage
-      - uses: codecov/codecov-action@v2
+      - uses: codecov/codecov-action@v3
         if: ${{ matrix.go-version == '1.19.x' }}
         with:
           files: build/coverage.txt
           flags: default
-      - uses: codecov/codecov-action@v2
+      - uses: codecov/codecov-action@v3
         if: ${{ matrix.go-version == '1.19.x' }}
         with:
           files: build/coverage-examples.txt
           flags: examples
-      - uses: codecov/codecov-action@v2
+      - uses: codecov/codecov-action@v3
         if: ${{ matrix.go-version == '1.19.x' }}
         with:
           files: build/coverage-ftw.txt
           flags: ftw
-      - uses: codecov/codecov-action@v2
+      - uses: codecov/codecov-action@v3
         if: ${{ matrix.go-version == '1.19.x' }}
         with:
           files: build/coverage-ftw-multiphase.txt
           flags: ftw-multiphase
-      - uses: codecov/codecov-action@v2
+      - uses: codecov/codecov-action@v3
         if: ${{ matrix.go-version == '1.19.x' }}
         with:
           files: build/coverage-tinygo.txt
