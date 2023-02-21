@@ -118,11 +118,15 @@ func (c *NamedCollectionNames) String() string {
 	res := strings.Builder{}
 	res.WriteString(c.variable.Name())
 	res.WriteString(": ")
-	for i, k := range c.collection.Map.FindAll() {
-		if i > 0 {
-			res.WriteString(",")
+	firstOccurrence := true
+	for _, data := range c.collection.Map.data {
+		for _, d := range data {
+			if !firstOccurrence {
+				res.WriteString(",")
+			}
+			firstOccurrence = false
+			res.WriteString(d.key)
 		}
-		res.WriteString(k.Key())
 	}
 	return res.String()
 }
