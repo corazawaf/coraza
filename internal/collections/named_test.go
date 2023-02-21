@@ -13,6 +13,9 @@ import (
 
 func TestNamedCollection(t *testing.T) {
 	c := NewNamedCollection(variables.ArgsPost)
+	if c.Name() != "ARGS_POST" {
+		t.Error("Error getting name")
+	}
 
 	// Same as collection_map_test
 	c.SetIndex("key", 1, "value")
