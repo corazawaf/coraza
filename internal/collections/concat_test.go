@@ -95,3 +95,25 @@ func assertValuesMatch(t *testing.T, matches []types.MatchData, wantValues ...st
 		t.Errorf("want %q, have %q", want, have)
 	}
 }
+
+// assertUnorderedValuesMatch function comes in handy for comparing map values, where the order is not guaranteed
+func assertUnorderedValuesMatch(t *testing.T, matches []types.MatchData, wantValues ...string) {
+	t.Helper()
+	if len(matches) != len(wantValues) {
+		t.Errorf("want %d matches, have %d", len(wantValues), len(matches))
+	}
+	foundSlice := make([]bool, len(wantValues))
+	for _, want := range wantValues {
+		found := false
+		for i, have := range matches {
+			if want == have.Value() && !foundSlice[i] {
+				found = true
+				foundSlice[i] = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("want %q, have %q", want, matches)
+		}
+	}
+}
