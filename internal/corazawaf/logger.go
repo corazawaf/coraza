@@ -1,63 +1,42 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:generate go run ./logger/generator/main.go
+
 package corazawaf
 
 import (
-	"fmt"
 	"io"
 	"log"
 
+	"github.com/corazawaf/coraza/v3/internal/corazawaf/internal/logger"
 	"github.com/corazawaf/coraza/v3/loggers"
 )
 
-// DebugLogger is a logger that logs to the standard logger
 type stdDebugLogger struct {
 	io.Closer
-	logger *log.Logger
-	Level  loggers.LogLevel
+	logger.DelegateLogger
+	l *log.Logger
 }
 
 var _ loggers.DebugLogger = (*stdDebugLogger)(nil)
 
-func (l *stdDebugLogger) formatLog(level loggers.LogLevel, message string, args ...interface{}) {
-	if l.Level >= level {
-		l.logger.Printf("[%s] %s", level.String(), fmt.Sprintf(message, args...))
+func newStdDebugLogger() loggers.DebugLogger {
+	l := &log.Logger{}
+	return &stdDebugLogger{
+		DelegateLogger: logger.CreateLogger(int(loggers.LogLevelInfo), l),
+		l:              l,
 	}
-}
-
-// Info logs an info message
-func (l *stdDebugLogger) Info(message string, args ...interface{}) {
-	l.formatLog(loggers.LogLevelInfo, message, args...)
-}
-
-// Warn logs a warning message
-func (l *stdDebugLogger) Warn(message string, args ...interface{}) {
-	l.formatLog(loggers.LogLevelWarn, message, args...)
-}
-
-// Error logs an error message
-func (l *stdDebugLogger) Error(message string, args ...interface{}) {
-	l.formatLog(loggers.LogLevelError, message, args...)
-}
-
-// Debug logs a debug message
-func (l *stdDebugLogger) Debug(message string, args ...interface{}) {
-	l.formatLog(loggers.LogLevelDebug, message, args...)
-}
-
-// Trace logs a trace message
-func (l *stdDebugLogger) Trace(message string, args ...interface{}) {
-	l.formatLog(loggers.LogLevelTrace, message, args...)
 }
 
 // SetLevel sets the log level
 func (l *stdDebugLogger) SetLevel(level loggers.LogLevel) {
 	if level.Invalid() {
+		l.DelegateLogger = logger.CreateLogger(int(loggers.LogLevelInfo), l.l)
 		l.Info("Invalid log level, defaulting to INFO")
-		level = loggers.LogLevelInfo
+		return
 	}
-	l.Level = level
+	l.DelegateLogger = logger.CreateLogger(int(level), l.l)
 }
 
 // SetOutput sets the output for the logger
@@ -65,6 +44,6 @@ func (l *stdDebugLogger) SetOutput(w io.WriteCloser) {
 	if l.Closer != nil {
 		l.Closer.Close()
 	}
-	l.logger.SetOutput(w)
+	l.DelegateLogger.SetOutput(w)
 	l.Closer = w
 }

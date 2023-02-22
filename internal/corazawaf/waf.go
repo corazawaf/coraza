@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"os"
 	"regexp"
 	"strconv"
@@ -252,14 +251,11 @@ const _1gb = 1073741824
 
 // NewWAF creates a new WAF instance with default variables
 func NewWAF() *WAF {
-	logger := &stdDebugLogger{
-		logger: &log.Logger{},
-		Level:  loggers.LogLevelInfo,
-	}
+	logger := newStdDebugLogger()
 
 	logWriter, err := loggers.GetLogWriter("serial")
 	if err != nil {
-		logger.Error("error creating serial log writer: %s", err.Error())
+		logger.Error(fmt.Sprintf("Failed to create serial log writer: %s", err.Error()))
 	}
 
 	waf := &WAF{

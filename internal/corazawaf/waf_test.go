@@ -7,6 +7,8 @@ import (
 	"io"
 	"os"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3/internal/corazawaf/internal/logger"
 )
 
 func TestNewTransaction(t *testing.T) {
@@ -63,7 +65,7 @@ func TestSetDebugLogPath(t *testing.T) {
 			}
 
 			l := waf.Logger.(*stdDebugLogger)
-			if want, have := tCase.writer, l.logger.Writer(); want != have {
+			if want, have := tCase.writer, l.DelegateLogger.(*logger.InfoLogger).Logger.Writer(); want != have {
 				t.Error("unexpected logger writer")
 			}
 			_ = waf.SetDebugLogPath("")

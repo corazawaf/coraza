@@ -6,6 +6,7 @@ package corazawaf
 import (
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/internal/corazawaf/internal/logger"
 	"github.com/corazawaf/coraza/v3/loggers"
 )
 
@@ -60,7 +61,7 @@ func TestLoggerLogLevels(t *testing.T) {
 func TestLoggerLevelDefaultsToInfo(t *testing.T) {
 	waf := NewWAF()
 	waf.Logger.SetLevel(loggers.LogLevel(10))
-	if waf.Logger.(*stdDebugLogger).Level != loggers.LogLevelInfo {
-		t.Fatalf("Unexpected log level: %d. It should default to Info (%s)", waf.Logger.(*stdDebugLogger).Level, loggers.LogLevelInfo)
+	if _, ok := waf.Logger.(*stdDebugLogger).DelegateLogger.(*logger.InfoLogger); !ok {
+		t.Fatal("Unexpected log level, it should default to Info")
 	}
 }
