@@ -139,8 +139,7 @@ func (c *Map) Reset() {
 	}
 }
 
-func (c *Map) String() string {
-	res := strings.Builder{}
+func (c *Map) Format(res *strings.Builder) {
 	res.WriteString(c.variable.Name())
 	res.WriteString(":\n")
 	for k, v := range c.data {
@@ -155,6 +154,11 @@ func (c *Map) String() string {
 		}
 		res.WriteByte('\n')
 	}
+}
+
+func (c *Map) String() string {
+	res := strings.Builder{}
+	c.Format(&res)
 	return res.String()
 }
 
