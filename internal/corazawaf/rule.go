@@ -345,7 +345,7 @@ func (r *Rule) matchVariable(tx *Transaction, m *corazarules.MatchData) {
 	if rid == 0 {
 		rid = r.ParentID_
 	}
-	if !m.IsNil() {
+	if m.Variable() != variables.Unknown {
 		tx.WAF.Logger.Debug("[%s] [%d] Matching rule %d %s:%s", tx.id, rid, r.ID_, m.Variable().Name(), m.Key())
 	}
 	// we must match the vars before running the chains
