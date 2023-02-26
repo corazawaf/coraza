@@ -15,7 +15,6 @@ import (
 
 func TestCtl(t *testing.T) {
 	tests := []struct {
-		rules []corazawaf.Rule
 		input string
 		check func(t *testing.T, tx *corazawaf.Transaction)
 	}{
@@ -116,9 +115,12 @@ func TestCtl(t *testing.T) {
 			if test.check == nil {
 				// TODO(jcchavezs): for some tests we can't do any assertion
 				// without going too deep into the implementation details.
-				t.SkipNow()
+				// t.SkipNow() can't be used because tinygo doesn't support it.
+				// https://github.com/tinygo-org/tinygo/blob/release/src/testing/testing.go#L246
+				return
+			} else {
+				test.check(t, tx)
 			}
-			test.check(t, tx)
 		})
 	}
 }
