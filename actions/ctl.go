@@ -175,7 +175,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 	case ctlResponseBodyProcessor:
 		if tx.LastPhase() <= types.PhaseResponseHeaders {
 			// We are still in time to set the response body processor
-			// TODO(jcchavezs): who should hold this knowledge?
+			// TODO(jcchavezs): Who should hold this knowledge?
 			// TODO(jcchavezs): Shall we validate such body processor exists or is it
 			// too ambitious as plugins might register their own at some point in the
 			// lifecycle which does not have to happen before this.
