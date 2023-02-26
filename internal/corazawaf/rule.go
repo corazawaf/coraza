@@ -216,7 +216,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 			}
 
 			values = tx.GetField(v)
-			tx.WAF.Logger.Debug("[%s] [%d] Expanding %d arguments for rule %d", tx.id, rid, len(values), r.ID_)
+			tx.WAF.Logger.Debug("[%s] [%d] Expanding %d arguments for rule %d and variable %s", tx.id, rid, len(values), r.ID_, v.Variable.Name())
 			for i, arg := range values {
 				tx.WAF.Logger.Debug("[%s] [%d] Transforming argument %q for rule %d", tx.id, rid, arg.Value(), r.ID_)
 				args, errs := r.transformArg(arg, i, cache)

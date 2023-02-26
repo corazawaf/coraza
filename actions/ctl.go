@@ -20,26 +20,27 @@ import (
 type ctlFunctionType int
 
 const (
-	ctlUnknown                  ctlFunctionType = iota
-	ctlRuleRemoveTargetByID     ctlFunctionType = iota
-	ctlRuleRemoveTargetByTag    ctlFunctionType = iota
-	ctlRuleRemoveTargetByMsg    ctlFunctionType = iota
-	ctlAuditEngine              ctlFunctionType = iota
-	ctlAuditLogParts            ctlFunctionType = iota
-	ctlForceRequestBodyVariable ctlFunctionType = iota
-	ctlRequestBodyAccess        ctlFunctionType = iota
-	ctlRequestBodyLimit         ctlFunctionType = iota
-	ctlRuleEngine               ctlFunctionType = iota
-	ctlRuleRemoveByID           ctlFunctionType = iota
-	ctlRuleRemoveByMsg          ctlFunctionType = iota
-	ctlRuleRemoveByTag          ctlFunctionType = iota
-	ctlHashEngine               ctlFunctionType = iota
-	ctlHashEnforcement          ctlFunctionType = iota
-	ctlRequestBodyProcessor     ctlFunctionType = iota
-	ctlResponseBodyProcessor    ctlFunctionType = iota
-	ctlResponseBodyAccess       ctlFunctionType = iota
-	ctlResponseBodyLimit        ctlFunctionType = iota
-	ctlDebugLogLevel            ctlFunctionType = iota
+	ctlUnknown                   ctlFunctionType = iota
+	ctlRuleRemoveTargetByID      ctlFunctionType = iota
+	ctlRuleRemoveTargetByTag     ctlFunctionType = iota
+	ctlRuleRemoveTargetByMsg     ctlFunctionType = iota
+	ctlAuditEngine               ctlFunctionType = iota
+	ctlAuditLogParts             ctlFunctionType = iota
+	ctlForceRequestBodyVariable  ctlFunctionType = iota
+	ctlRequestBodyAccess         ctlFunctionType = iota
+	ctlRequestBodyLimit          ctlFunctionType = iota
+	ctlRuleEngine                ctlFunctionType = iota
+	ctlRuleRemoveByID            ctlFunctionType = iota
+	ctlRuleRemoveByMsg           ctlFunctionType = iota
+	ctlRuleRemoveByTag           ctlFunctionType = iota
+	ctlHashEngine                ctlFunctionType = iota
+	ctlHashEnforcement           ctlFunctionType = iota
+	ctlRequestBodyProcessor      ctlFunctionType = iota
+	ctlForceResponseBodyVariable ctlFunctionType = iota
+	ctlResponseBodyProcessor     ctlFunctionType = iota
+	ctlResponseBodyAccess        ctlFunctionType = iota
+	ctlResponseBodyLimit         ctlFunctionType = iota
+	ctlDebugLogLevel             ctlFunctionType = iota
 )
 
 type ctlFn struct {
@@ -133,6 +134,8 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 			return
 		}
 		tx.RequestBodyLimit = limit
+	case ctlRequestBodyProcessor:
+		tx.Variables().RequestBodyProcessor().Set(strings.ToUpper(a.value))
 	case ctlRuleEngine:
 		re, err := types.ParseRuleEngineStatus(a.value)
 		if err != nil {
@@ -161,8 +164,14 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 				tx.RemoveRuleByID(r.ID_)
 			}
 		}
-	case ctlRequestBodyProcessor:
-		tx.Variables().RequestBodyProcessor().Set(strings.ToUpper(a.value))
+	case ctlForceResponseBodyVariable:
+		val, ok := parseOnOff(a.value)
+		if !ok {
+			tx.WAF.Logger.Error("[ctl:ForceResponseBodyVariable] unknown value %q", a.value)
+			return
+		}
+		tx.ForceResponseBodyVariable = val
+		tx.WAF.Logger.Debug("[ctl:ForceResponseBodyVariable] Forcing response body var with CTL to %s", val)
 	case ctlResponseBodyProcessor:
 		if tx.LastPhase() <= types.PhaseResponseHeaders {
 			// We are still in time to set the response body processor
