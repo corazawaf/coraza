@@ -96,7 +96,8 @@ func TestCtl(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.input, func(t *testing.T) {
+		testName, _, _ := strings.Cut(test.input, "=")
+		t.Run(testName, func(t *testing.T) {
 			waf := corazawaf.NewWAF()
 			r := corazawaf.NewRule()
 			err := waf.Rules.Add(r)
