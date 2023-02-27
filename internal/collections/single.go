@@ -5,6 +5,7 @@ package collections
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
@@ -49,6 +50,12 @@ func (c *Single) Name() string {
 
 func (c *Single) Reset() {
 	c.data = ""
+}
+
+func (c *Single) Format(res *strings.Builder) {
+	res.WriteString(c.variable.Name())
+	res.WriteString(": ")
+	res.WriteString(c.data)
 }
 
 func (c *Single) String() string {
