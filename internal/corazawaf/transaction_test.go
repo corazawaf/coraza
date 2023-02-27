@@ -1185,7 +1185,7 @@ func (l *inspectableLogger) Close() error {
 	return nil
 }
 
-func TestProcessorsIdempotency(t *testing.T) {
+func TestProcessorsIdempotencyWithAlreadyRaisedInterruption(t *testing.T) {
 	l := &inspectableLogger{}
 
 	waf := NewWAF()
@@ -1204,7 +1204,6 @@ func TestProcessorsIdempotency(t *testing.T) {
 			return tx.ProcessRequestHeaders()
 		},
 		"ProcessRequestBody": func(tx *Transaction) *types.Interruption {
-			tx.LastPhase = types.PhaseRequestHeaders
 			it, err := tx.ProcessRequestBody()
 			if err != nil {
 				t.Fatal("unexpected error when processing request body")
@@ -1215,7 +1214,6 @@ func TestProcessorsIdempotency(t *testing.T) {
 			return tx.ProcessResponseHeaders(200, "HTTP/1")
 		},
 		"ProcessResponseBody": func(tx *Transaction) *types.Interruption {
-			tx.LastPhase = types.PhaseResponseHeaders
 			it, err := tx.ProcessResponseBody()
 			if err != nil {
 				t.Fatal("unexpected error when processing response body")
