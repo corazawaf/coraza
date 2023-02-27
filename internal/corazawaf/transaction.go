@@ -906,6 +906,11 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		return tx.interruption, nil
 	}
 
+	if tx.LastPhase != types.PhaseRequestHeaders {
+		tx.WAF.Logger.Warn("Skipping request body processing, anomalous call before request headers evaluation")
+		return tx.interruption, nil
+	}
+
 	if tx.interruption != nil {
 		tx.WAF.Logger.Error("Calling ProcessRequestBody but there is a preexisting interruption")
 		return tx.interruption, nil
@@ -1135,6 +1140,14 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 	if tx.LastPhase >= types.PhaseResponseBody {
 		// Phase already evaluated
 		tx.WAF.Logger.Warn("ProcessResponseBody has already been called")
+		return tx.interruption, nil
+	}
+
+	if tx.LastPhase != types.PhaseResponseHeaders {
+		// Prevents evaluating response body rules if last phase has not been response headers. It may happen
+		// when a server returns an error prior to evaluating WAF rules, but ResponseBody is still called at
+		// the end of http stream
+		tx.WAF.Logger.Warn("Skipping response body processing, anomalous call before response headers evaluation")
 		return tx.interruption, nil
 	}
 

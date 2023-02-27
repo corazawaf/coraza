@@ -762,6 +762,7 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 	tx.ForceRequestBodyVariable = true
 	tx.AddRequestHeader("content-type", "text/plain")
 	tx.AddRequestHeader("content-length", "7")
+	tx.LastPhase = types.PhaseRequestHeaders
 	if _, err := tx.requestBodyBuffer.Write([]byte("test123")); err != nil {
 		t.Error("Failed to write request body buffer")
 	}
@@ -875,6 +876,7 @@ func TestTxPhase4Magic(t *testing.T) {
 	waf.ResponseBodyMimeTypes = []string{"text/html"}
 	tx := waf.NewTransaction()
 	tx.AddResponseHeader("content-type", "text/html")
+	tx.LastPhase = types.PhaseResponseHeaders
 	if it, _, err := tx.WriteResponseBody([]byte("more bytes")); it != nil || err != nil {
 		t.Error(err)
 	}
@@ -916,6 +918,7 @@ func TestVariablesMatch(t *testing.T) {
 func TestTxReqBodyForce(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
+	tx.LastPhase = types.PhaseRequestHeaders
 	tx.RequestBodyAccess = true
 	tx.ForceRequestBodyVariable = true
 	if _, err := tx.requestBodyBuffer.Write([]byte("test")); err != nil {
@@ -1201,6 +1204,7 @@ func TestProcessorsIdempotency(t *testing.T) {
 			return tx.ProcessRequestHeaders()
 		},
 		"ProcessRequestBody": func(tx *Transaction) *types.Interruption {
+			tx.LastPhase = types.PhaseRequestHeaders
 			it, err := tx.ProcessRequestBody()
 			if err != nil {
 				t.Fatal("unexpected error when processing request body")
@@ -1211,6 +1215,7 @@ func TestProcessorsIdempotency(t *testing.T) {
 			return tx.ProcessResponseHeaders(200, "HTTP/1")
 		},
 		"ProcessResponseBody": func(tx *Transaction) *types.Interruption {
+			tx.LastPhase = types.PhaseResponseHeaders
 			it, err := tx.ProcessResponseBody()
 			if err != nil {
 				t.Fatal("unexpected error when processing response body")
