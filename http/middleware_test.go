@@ -24,7 +24,6 @@ import (
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
-	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/macro"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/rs/zerolog"
@@ -196,31 +195,13 @@ func errLogger(t *testing.T) func(rule types.MatchedRule) {
 	}
 }
 
-type debugLogger struct {
-	t      *testing.T
-	logger *zerolog.Logger
+type debugLogOutput struct {
+	t *testing.T
 }
 
-func (l debugLogger) Info(message string, args ...interface{}) { l.t.Logf(message, args...) }
-
-func (l debugLogger) Warn(message string, args ...interface{}) { l.t.Logf(message, args...) }
-
-func (l debugLogger) Error(message string, args ...interface{}) { l.t.Logf(message, args...) }
-
-func (l debugLogger) Debug(message string, args ...interface{}) { l.t.Logf(message, args...) }
-
-func (l debugLogger) Trace(message string, args ...interface{}) { l.t.Logf(message, args...) }
-
-func (l debugLogger) SetLevel(level loggers.LogLevel) {
-	l.t.Logf("Setting level to %q", level.String())
-}
-
-func (l debugLogger) SetOutput(w io.WriteCloser) {
-	l.t.Log("ignoring SecDebugLog directive, debug logs are always routed to proxy logs")
-}
-
-func (l *debugLogger) GetLogger() *zerolog.Logger {
-	return l.logger
+func (l debugLogOutput) Write(p []byte) (int, error) {
+	l.t.Log(string(p))
+	return len(p), nil
 }
 
 type httpTest struct {
@@ -336,7 +317,7 @@ func TestHttpServer(t *testing.T) {
 	SecRule RESPONSE_HEADERS:Foo "@pm bar" "id:199,phase:3,deny,t:lowercase,deny, status:401,msg:'Invalid response header',log,auditlog"
 	SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
 	SecRule REQUEST_URI "/allow_me" "id:9,phase:1,allow,msg:'ALLOWED'"
-`).WithErrorCallback(errLogger(t)).WithDebugLogger(&debugLogger{t: t, logger: &zeroLogger})
+`).WithErrorCallback(errLogger(t)).WithDebugLogger(&zeroLogger)
 			if l := tCase.reqBodyLimit; l > 0 {
 				conf = conf.WithRequestBodyAccess().WithRequestBodyLimit(l).WithRequestBodyInMemoryLimit(l)
 			}
@@ -374,7 +355,7 @@ func TestHttpServerWithRuleEngineOff(t *testing.T) {
 			expectedRespBody: "Waf is Off!",
 		},
 	}
-	zeroLogger := zerolog.New(os.Stderr).With().Timestamp().Logger()
+	l := zerolog.New(debugLogOutput{t: t}).With().Timestamp().Logger()
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
 	// Perform tests
@@ -386,7 +367,7 @@ func TestHttpServerWithRuleEngineOff(t *testing.T) {
 			SecRequestBodyAccess On
 			SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
 			SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
-			`).WithErrorCallback(errLogger(t)).WithDebugLogger(&debugLogger{t: t, logger: &zeroLogger}))
+			`).WithErrorCallback(errLogger(t)).WithDebugLogger(&l))
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -48,7 +48,12 @@ func (a *setenvFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	v := a.value.Expand(tx)
 	// set env variable
 	if err := os.Setenv(a.key, v); err != nil {
-		tx.DebugLogger().Error("[%s] Error setting env variable for rule %d: %s", tx.ID(), r.ID(), err.Error())
+		tx.DebugLogger().
+			Error().
+			Str("tx_id", tx.ID()).
+			Int("rule_id", r.ID()).
+			Err(err).
+			Msg("Failed to set the env variable for rule")
 	}
 	// TODO is this ok?
 	tx.Variables().Env().Set(a.key, []string{v})

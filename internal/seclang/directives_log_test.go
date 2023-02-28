@@ -83,7 +83,7 @@ func TestDebugDirectives(t *testing.T) {
 	}); err != nil {
 		t.Error(err)
 	}
-	p.options.WAF.Logger.Info("abc123")
+	p.options.WAF.Logger.Info().Msg("abc123")
 	data, err := os.ReadFile(tmp)
 	if err != nil {
 		t.Error(err)

@@ -58,7 +58,11 @@ func (a *setvarFn) Init(_ rules.RuleMetadata, data string) error {
 func (a *setvarFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	key := a.key.Expand(tx)
 	value := a.value.Expand(tx)
-	tx.DebugLogger().Debug("[%s] Setting var %q to %q by rule %d", tx.ID(), key, value, r.ID())
+	tx.DebugLogger().Debug().
+		Str("tx_id", tx.ID()).
+		Str("var_key", key).
+		Str("var_value", value).
+		Int("rule_id", r.ID())
 	a.evaluateTxCollection(r, tx, strings.ToLower(key), value)
 }
 
@@ -92,7 +96,11 @@ func (a *setvarFn) evaluateTxCollection(r rules.RuleMetadata, tx rules.Transacti
 		if len(value) > 1 {
 			sum, err = strconv.Atoi(value[1:])
 			if err != nil {
-				tx.DebugLogger().Error("[%s] Invalid value for setvar %q on rule %d", tx.ID(), value, r.ID())
+				tx.DebugLogger().Error().
+					Str("tx_id", tx.ID()).
+					Str("var_value", value).
+					Int("rule_id", r.ID()).
+					Err(err)
 				return
 			}
 		}
@@ -100,7 +108,11 @@ func (a *setvarFn) evaluateTxCollection(r rules.RuleMetadata, tx rules.Transacti
 		if res != "" {
 			val, err = strconv.Atoi(res)
 			if err != nil {
-				tx.DebugLogger().Error("[%s] Invalid value for setvar %q on rule %d", tx.ID(), res, r.ID())
+				tx.DebugLogger().Error().
+					Str("tx_id", tx.ID()).
+					Str("var_key", res).
+					Int("rule_id", r.ID()).
+					Err(err)
 				return
 			}
 		}

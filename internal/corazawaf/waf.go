@@ -18,7 +18,6 @@ import (
 
 	"github.com/corazawaf/coraza/v3/internal/environment"
 
-	ioutils "github.com/corazawaf/coraza/v3/internal/io"
 	stringutils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/internal/sync"
 	"github.com/corazawaf/coraza/v3/loggers"
@@ -135,7 +134,7 @@ func (w *WAF) NewTransaction() *Transaction {
 func (w *WAF) NewTransactionWithID(id string) *Transaction {
 	if len(strings.TrimSpace(id)) == 0 {
 		id = stringutils.RandomString(19)
-		w.Logger.Warn("Empty ID passed for new transaction")
+		w.Logger.Warn().Msg("Empty ID passed for new transaction")
 	}
 	return w.newTransactionWithID(id)
 }
@@ -216,37 +215,39 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	tx.variables.highestSeverity.Set("0")
 	tx.variables.uniqueID.Set(tx.id)
 
-	w.Logger.Debug("New transaction created with id %q", tx.id)
+	w.Logger.Debug().
+		Str("tx_id", tx.id).
+		Msg("New transaction created")
 
 	return tx
+}
+
+func resolveLogPath(path string) (io.Writer, error) {
+	if path == "" {
+		return io.Discard, nil
+	}
+
+	if path == "/dev/stdout" {
+		return os.Stdout, nil
+	}
+
+	if path == "/dev/stderr" {
+		return os.Stderr, nil
+	}
+
+	return os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 }
 
 // SetDebugLogPath sets the path for the debug log
 // If the path is empty, the debug log will be disabled
 // note: this is not thread safe
 func (w *WAF) SetDebugLogPath(path string) error {
-	if path == "" {
-		w.Logger.SetOutput(ioutils.NopCloser(io.Discard))
-		return nil
-	}
-
-	if path == "/dev/stdout" {
-		w.Logger.SetOutput(os.Stdout)
-		return nil
-	}
-
-	if path == "/dev/stderr" {
-		w.Logger.SetOutput(os.Stderr)
-		return nil
-	}
-
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	o, err := resolveLogPath(path)
 	if err != nil {
-		w.Logger.Error("failed to open the debug log file: %s", err.Error())
+		return err
 	}
 
-	w.Logger.SetOutput(f)
-
+	w.SetDebugLogOutput(o)
 	return nil
 }
 
@@ -254,16 +255,14 @@ const _1gb = 1073741824
 
 // NewWAF creates a new WAF instance with default variables
 func NewWAF() *WAF {
-	zeroLogger := log.New(nil).With().Timestamp().Logger()
+	logger := log.New(nil).With().Timestamp().Logger()
 	log.SetGlobalLevel(log.InfoLevel)
-	logger := &stdDebugLogger{
-		logger: &zeroLogger,
-		Level:  loggers.LogLevelInfo,
-	}
 
 	logWriter, err := loggers.GetLogWriter("serial")
 	if err != nil {
-		logger.Error("error creating serial log writer: %s", err.Error())
+		logger.Error().
+			Err(err).
+			Msg("error creating serial log writer")
 	}
 
 	waf := &WAF{
@@ -276,7 +275,7 @@ func NewWAF() *WAF {
 		ResponseBodyAccess: false,
 		ResponseBodyLimit:  _1gb,
 		AuditLogWriter:     logWriter,
-		Logger:             logger,
+		Logger:             &logger,
 	}
 
 	if environment.HasAccessToFS {
@@ -286,14 +285,46 @@ func NewWAF() *WAF {
 	if err := waf.SetDebugLogPath(""); err != nil {
 		fmt.Println(err)
 	}
-	waf.Logger.Debug("a new WAF instance was created")
+	waf.Logger.Debug().Msg("A new WAF instance was created")
 	return waf
 }
 
+func translateLogLevel(lvl loggers.LogLevel) log.Level {
+	switch lvl {
+	case loggers.LogLevelNoLog:
+		return log.Disabled
+	case loggers.LogLevelError:
+		return log.ErrorLevel
+	case loggers.LogLevelWarn:
+		return log.WarnLevel
+	case loggers.LogLevelInfo:
+		return log.InfoLevel
+	case loggers.LogLevelDebug:
+		return log.DebugLevel
+	case loggers.LogLevelTrace:
+		return log.TraceLevel
+	default:
+		return log.NoLevel
+	}
+}
+
+func (w *WAF) SetDebugLogOutput(wr io.Writer) {
+	l := w.Logger.Output(wr)
+	w.Logger = &l
+}
+
 // SetDebugLogLevel changes the debug level of the WAF instance
-func (w *WAF) SetDebugLogLevel(lvl int) error {
-	// setLevel is concurrent safe
-	w.Logger.SetLevel(loggers.LogLevel(lvl))
+func (w *WAF) SetDebugLogLevel(lvl loggers.LogLevel) error {
+	if lvl.Invalid() {
+		l := w.Logger.Level(log.DebugLevel)
+		l.Warn().Msg("Invalid log level, defaulting to debug")
+		w.Logger = &l
+		return nil
+	}
+
+	l := w.Logger.Level(translateLogLevel(lvl))
+	w.Logger = &l
+
 	return nil
 }
 

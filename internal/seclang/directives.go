@@ -107,7 +107,7 @@ func directiveSecMarker(options *DirectiveOptions) error {
 	if err := options.WAF.Rules.Add(rule); err != nil {
 		return err
 	}
-	options.WAF.Logger.Debug("added secmark rule")
+	options.WAF.Logger.Debug().Msg("Added secmark rule")
 	return nil
 }
 
@@ -139,7 +139,9 @@ func directiveSecAction(options *DirectiveOptions) error {
 	if err := options.WAF.Rules.Add(rule); err != nil {
 		return err
 	}
-	options.WAF.Logger.Debug("Added SecAction: %s", options.Opts)
+	options.WAF.Logger.Debug().
+		Str("actions", options.Opts).
+		Msg("Added SecAction")
 	return nil
 }
 
@@ -174,14 +176,20 @@ func directiveSecRule(options *DirectiveOptions) error {
 	if err != nil && !ignoreErrors {
 		return err
 	} else if err != nil && ignoreErrors {
-		options.WAF.Logger.Debug("Ignoring rule compilation error for rule %s: %s", options.Opts, err.Error())
+		options.WAF.Logger.Debug().
+			Str("rule", options.Opts).
+			Err(err).
+			Msg("Ignoring rule compilation error")
 		return nil
 	}
 	err = options.WAF.Rules.Add(rule)
 	if err != nil && !ignoreErrors {
 		return err
 	} else if err != nil && ignoreErrors {
-		options.WAF.Logger.Debug("Ignoring rule compilation error for rule %s: %s", options.Opts, err.Error())
+		options.WAF.Logger.Debug().
+			Str("rule", options.Opts).
+			Err(err).
+			Msg("Ignoring rule compilation error for rule %s: %s")
 		return nil
 	}
 	return nil
@@ -900,7 +908,7 @@ func directiveSecDebugLogLevel(options *DirectiveOptions) error {
 	if err != nil {
 		return err
 	}
-	return options.WAF.SetDebugLogLevel(lvl)
+	return options.WAF.SetDebugLogLevel(loggers.LogLevel(lvl))
 }
 
 func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
@@ -927,8 +935,9 @@ func directiveSecIgnoreRuleCompilationErrors(options *DirectiveOptions) error {
 		return err
 	}
 	if b {
-		options.WAF.Logger.Warn(`Coraza is running in Compatibility Mode (SecIgnoreRuleCompilationErrors On)
-		, which may cause unexpected behavior on faulty rules.`)
+		options.WAF.Logger.Warn().
+			Msg(`Running in Compatibility Mode (SecIgnoreRuleCompilationErrors On), 
+			which may cause unexpected behavior on faulty rules.`)
 	}
 	options.Config.Set("ignore_rule_compilation_errors", b)
 	return nil
@@ -944,7 +953,9 @@ func directiveSecDataset(options *DirectiveOptions) error {
 		return errors.New("syntax error: SecDataset name `\n...\n`")
 	}
 	if _, ok := options.Datasets[name]; ok {
-		options.WAF.Logger.Warn("Dataset %s already exists, overwriting", name)
+		options.WAF.Logger.Warn().
+			Str("dataset_name", name).
+			Msg("Dataset already exists, overwriting")
 	}
 	var arr []string
 	data := strings.Trim(d, "`")

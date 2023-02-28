@@ -4,34 +4,14 @@
 package loggers
 
 import (
-	"io"
-
 	"github.com/rs/zerolog"
 )
 
 // DebugLogger is used to log SecDebugLog messages
-type DebugLogger interface {
-	// Error logs an error message
-	Error(message string, args ...interface{})
-	// Warn logs a warning message
-	Warn(message string, args ...interface{})
-	// Info logs an info message
-	Info(message string, args ...interface{})
-	// Debug logs a debug message
-	Debug(message string, args ...interface{})
-	// Trace logs a trace message
-	Trace(message string, args ...interface{})
-	// SetLevel sets the log level
-	SetLevel(level LogLevel)
-	// SetOutput sets the output for the logger and closes
-	// the former output if any.
-	SetOutput(w io.WriteCloser)
-	// Get Logger
-	GetLogger() *zerolog.Logger
-}
+type DebugLogger = *zerolog.Logger
 
 // LogLevel is the type of log level
-type LogLevel int
+type LogLevel int8
 
 const (
 	// LogLevelUnknown is a default value for unknown log level

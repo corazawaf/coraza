@@ -47,7 +47,7 @@ func (a *expirevarFn) Init(_ rules.RuleMetadata, data string) error {
 func (a *expirevarFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {
 	// Not supported
 	// TODO(jcchavezs): Shall we log a message?
-	// tx.WAF.Logger.Error("Expirevar was used but it's not supported", zap.Int("rule", r.Id))
+	// tx.WAF.Logger.Error().Msg("Expirevar was used but it's not supported", zap.Int("rule", r.Id))
 }
 
 func (a *expirevarFn) Type() rules.ActionType {
