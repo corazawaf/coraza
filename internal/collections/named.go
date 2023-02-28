@@ -77,6 +77,10 @@ func (c *NamedCollection) Names(rv variables.RuleVariable) collection.Collection
 	}
 }
 
+func (c *NamedCollection) Format(res *strings.Builder) {
+	c.Map.Format(res)
+}
+
 func (c *NamedCollection) String() string {
 	return fmt.Sprint(c.Map)
 }

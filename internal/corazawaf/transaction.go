@@ -2116,13 +2116,17 @@ func (v *TransactionVariables) All(f func(v variables.RuleVariable, col collecti
 	}
 }
 
-func (v *TransactionVariables) format(res *strings.Builder) {
-	// TODO(anuraaga): Optimize this, currently each println allocates a string that is then
-	// written to res, we should create a function independent from fmt.Stringer interface
-	// that accepts a res to write to.
+type formattable interface {
+	Format(res *strings.Builder)
+}
 
+func (v *TransactionVariables) format(res *strings.Builder) {
 	v.All(func(_ variables.RuleVariable, col collection.Collection) bool {
-		fmt.Fprintln(res, col)
+		if f, ok := col.(formattable); ok {
+			f.Format(res)
+		} else {
+			fmt.Fprintln(res, col)
+		}
 		return true
 	})
 }
