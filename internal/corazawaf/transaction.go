@@ -905,14 +905,13 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		return tx.interruption, nil
 	}
 
-	if tx.LastPhase >= types.PhaseRequestBody {
-		// Phase already evaluated
-		tx.WAF.Logger.Warn("ProcessRequestBody should have already been called")
-		return nil, nil
-	}
-
 	if tx.LastPhase != types.PhaseRequestHeaders {
-		tx.WAF.Logger.Warn("Skipping request body processing, anomalous call before request headers evaluation")
+		if tx.LastPhase >= types.PhaseRequestBody {
+			// Phase already evaluated or skipped
+			tx.WAF.Logger.Warn("ProcessRequestBody should have already been called")
+		} else {
+			tx.WAF.Logger.Warn("Skipping request body processing, anomalous call before request headers evaluation")
+		}
 		return nil, nil
 	}
 
@@ -1142,17 +1141,16 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		return tx.interruption, nil
 	}
 
-	if tx.LastPhase >= types.PhaseResponseBody {
-		// Phase already evaluated
-		tx.WAF.Logger.Warn("ProcessResponseBody should have already been called")
-		return nil, nil
-	}
-
 	if tx.LastPhase != types.PhaseResponseHeaders {
-		// Prevents evaluating response body rules if last phase has not been response headers. It may happen
-		// when a server returns an error prior to evaluating WAF rules, but ResponseBody is still called at
-		// the end of http stream
-		tx.WAF.Logger.Warn("Skipping response body processing, anomalous call before response headers evaluation")
+		if tx.LastPhase >= types.PhaseResponseBody {
+			// Phase already evaluated or skipped
+			tx.WAF.Logger.Warn("ProcessResponseBody should have already been called")
+		} else {
+			// Prevents evaluating response body rules if last phase has not been response headers. It may happen
+			// when a server returns an error prior to evaluating WAF rules, but ResponseBody is still called at
+			// the end of http stream
+			tx.WAF.Logger.Warn("Skipping response body processing, anomalous call before response headers evaluation")
+		}
 		return nil, nil
 	}
 
