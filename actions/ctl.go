@@ -121,21 +121,36 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 		tx.ForceRequestBodyVariable = val
 		tx.WAF.Logger.Debug("[ctl:ForceRequestBodyVariable] forcing request body var with CTL to %s", val)
 	case ctlRequestBodyAccess:
-		val, ok := parseOnOff(a.value)
-		if !ok {
-			tx.WAF.Logger.Error("[ctl:RequestBodyAccess] unknown value %q", a.value)
+		if tx.LastPhase() <= types.PhaseRequestHeaders {
+			val, ok := parseOnOff(a.value)
+			if !ok {
+				tx.WAF.Logger.Error("[ctl:RequestBodyAccess] unknown value %q", a.value)
+				return
+			}
+			tx.RequestBodyAccess = val
+		} else {
+			tx.WAF.Logger.Error("[ctl:RequestBodyAccess] cannot change request body access after request headers phase")
 			return
 		}
-		tx.RequestBodyAccess = val
 	case ctlRequestBodyLimit:
-		limit, err := strconv.ParseInt(a.value, 10, 64)
-		if err != nil {
-			tx.WAF.Logger.Error("[ctl:RequestBodyLimit] Incorrect integer CTL value %q", a.value)
+		if tx.LastPhase() <= types.PhaseRequestHeaders {
+			limit, err := strconv.ParseInt(a.value, 10, 64)
+			if err != nil {
+				tx.WAF.Logger.Error("[ctl:RequestBodyLimit] Incorrect integer CTL value %q", a.value)
+				return
+			}
+			tx.RequestBodyLimit = limit
+		} else {
+			tx.WAF.Logger.Error("[ctl:RequestBodyLimit] cannot change request body limit after request headers phase")
 			return
 		}
-		tx.RequestBodyLimit = limit
 	case ctlRequestBodyProcessor:
-		tx.Variables().RequestBodyProcessor().Set(strings.ToUpper(a.value))
+		if tx.LastPhase() <= types.PhaseRequestHeaders {
+			tx.Variables().RequestBodyProcessor().Set(strings.ToUpper(a.value))
+		} else {
+			tx.WAF.Logger.Error("[ctl:RequestBodyProcessor] cannot change request body processor after request headers phase")
+			return
+		}
 	case ctlRuleEngine:
 		re, err := types.ParseRuleEngineStatus(a.value)
 		if err != nil {
@@ -164,6 +179,30 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 				tx.RemoveRuleByID(r.ID_)
 			}
 		}
+	case ctlResponseBodyAccess:
+		if tx.LastPhase() <= types.PhaseResponseHeaders {
+			val, ok := parseOnOff(a.value)
+			if !ok {
+				tx.WAF.Logger.Error("[ctl:ResponseBodyAccess] unknown value %q", a.value)
+				return
+			}
+			tx.ResponseBodyAccess = val
+		} else {
+			tx.WAF.Logger.Error("[ctl:ResponseBodyAccess] cannot change response body access after response headers phase")
+			return
+		}
+	case ctlResponseBodyLimit:
+		if tx.LastPhase() <= types.PhaseResponseHeaders {
+			limit, err := strconv.ParseInt(a.value, 10, 64)
+			if err != nil {
+				tx.WAF.Logger.Error("[ctl:ResponseBodyLimit] Incorrect integer CTL value %q", a.value)
+				return
+			}
+			tx.ResponseBodyLimit = limit
+		} else {
+			tx.WAF.Logger.Error("[ctl:ResponseBodyLimit] cannot change response body limit after response headers phase")
+			return
+		}
 	case ctlForceResponseBodyVariable:
 		val, ok := parseOnOff(a.value)
 		if !ok {
@@ -181,9 +220,10 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 			// lifecycle which does not have to happen before this.
 			tx.Variables().ResponseBodyProcessor().Set(strings.ToUpper(a.value))
 		} else {
-			tx.WAF.Logger.Warn("[ctl:ResponseBodyProcessor] should happen before response body phase")
+			tx.WAF.Logger.Error("[ctl:ResponseBodyProcessor] cannot change response body processor after response headers phase")
 			return
 		}
+
 	case ctlHashEngine:
 		// Not supported yet
 	case ctlHashEnforcement:
@@ -219,20 +259,22 @@ func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, str
 		act = ctlAuditEngine
 	case "auditLogParts":
 		act = ctlAuditLogParts
-	case "forceRequestBodyVariable":
-		act = ctlForceRequestBodyVariable
 	case "requestBodyAccess":
 		act = ctlRequestBodyAccess
 	case "requestBodyLimit":
 		act = ctlRequestBodyLimit
 	case "requestBodyProcessor":
 		act = ctlRequestBodyProcessor
+	case "forceRequestBodyVariable":
+		act = ctlForceRequestBodyVariable
 	case "responseBodyProcessor":
 		act = ctlResponseBodyProcessor
 	case "responseBodyAccess":
 		act = ctlResponseBodyAccess
 	case "responseBodyLimit":
 		act = ctlResponseBodyLimit
+	case "forceResponseBodyVariable":
+		act = ctlForceResponseBodyVariable
 	case "ruleEngine":
 		act = ctlRuleEngine
 	case "ruleRemoveById":
