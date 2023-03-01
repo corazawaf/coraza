@@ -16,7 +16,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/textproto"
-	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -24,9 +23,9 @@ import (
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
+	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/macro"
 	"github.com/corazawaf/coraza/v3/types"
-	"github.com/rs/zerolog"
 )
 
 func TestProcessRequest(t *testing.T) {
@@ -195,11 +194,11 @@ func errLogger(t *testing.T) func(rule types.MatchedRule) {
 	}
 }
 
-type debugLogOutput struct {
+type testLogOutput struct {
 	t *testing.T
 }
 
-func (l debugLogOutput) Write(p []byte) (int, error) {
+func (l testLogOutput) Write(p []byte) (int, error) {
 	l.t.Log(string(p))
 	return len(p), nil
 }
@@ -294,8 +293,9 @@ func TestHttpServer(t *testing.T) {
 		},
 	}
 
-	zeroLogger := zerolog.New(os.Stderr).With().Timestamp().Logger()
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	logger := loggers.Default().
+		WithOutput(testLogOutput{t}).
+		WithLevel(loggers.LogLevelInfo)
 
 	// Perform tests
 	for name, tCase := range tests {
@@ -317,7 +317,7 @@ func TestHttpServer(t *testing.T) {
 	SecRule RESPONSE_HEADERS:Foo "@pm bar" "id:199,phase:3,deny,t:lowercase,deny, status:401,msg:'Invalid response header',log,auditlog"
 	SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
 	SecRule REQUEST_URI "/allow_me" "id:9,phase:1,allow,msg:'ALLOWED'"
-`).WithErrorCallback(errLogger(t)).WithDebugLogger(&zeroLogger)
+`).WithErrorCallback(errLogger(t)).WithDebugLogger(logger)
 			if l := tCase.reqBodyLimit; l > 0 {
 				conf = conf.WithRequestBodyAccess().WithRequestBodyLimit(l).WithRequestBodyInMemoryLimit(l)
 			}
@@ -355,8 +355,9 @@ func TestHttpServerWithRuleEngineOff(t *testing.T) {
 			expectedRespBody: "Waf is Off!",
 		},
 	}
-	l := zerolog.New(debugLogOutput{t: t}).With().Timestamp().Logger()
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	logger := loggers.Default().
+		WithOutput(testLogOutput{t}).
+		WithLevel(loggers.LogLevelInfo)
 
 	// Perform tests
 	for name, tCase := range tests {
@@ -367,7 +368,7 @@ func TestHttpServerWithRuleEngineOff(t *testing.T) {
 			SecRequestBodyAccess On
 			SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
 			SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
-			`).WithErrorCallback(errLogger(t)).WithDebugLogger(&l))
+			`).WithErrorCallback(errLogger(t)).WithDebugLogger(logger))
 			if err != nil {
 				t.Fatal(err)
 			}

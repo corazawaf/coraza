@@ -14,8 +14,6 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/rs/zerolog"
-
 	"github.com/corazawaf/coraza/v3/internal/environment"
 
 	stringutils "github.com/corazawaf/coraza/v3/internal/strings"
@@ -255,8 +253,7 @@ const _1gb = 1073741824
 
 // NewWAF creates a new WAF instance with default variables
 func NewWAF() *WAF {
-	logger := log.New(nil).With().Timestamp().Logger()
-	log.SetGlobalLevel(log.InfoLevel)
+	logger := loggers.Nop()
 
 	logWriter, err := loggers.GetLogWriter("serial")
 	if err != nil {
@@ -275,56 +272,30 @@ func NewWAF() *WAF {
 		ResponseBodyAccess: false,
 		ResponseBodyLimit:  _1gb,
 		AuditLogWriter:     logWriter,
-		Logger:             &logger,
+		Logger:             logger,
 	}
 
 	if environment.HasAccessToFS {
 		waf.TmpDir = os.TempDir()
 	}
 
-	if err := waf.SetDebugLogPath(""); err != nil {
-		fmt.Println(err)
-	}
 	waf.Logger.Debug().Msg("A new WAF instance was created")
 	return waf
 }
 
-func translateLogLevel(lvl loggers.LogLevel) log.Level {
-	switch lvl {
-	case loggers.LogLevelNoLog:
-		return log.Disabled
-	case loggers.LogLevelError:
-		return log.ErrorLevel
-	case loggers.LogLevelWarn:
-		return log.WarnLevel
-	case loggers.LogLevelInfo:
-		return log.InfoLevel
-	case loggers.LogLevelDebug:
-		return log.DebugLevel
-	case loggers.LogLevelTrace:
-		return log.TraceLevel
-	default:
-		return log.NoLevel
-	}
-}
-
 func (w *WAF) SetDebugLogOutput(wr io.Writer) {
-	l := w.Logger.Output(wr)
-	w.Logger = &l
+	w.Logger = w.Logger.WithOutput(wr)
 }
 
 // SetDebugLogLevel changes the debug level of the WAF instance
 func (w *WAF) SetDebugLogLevel(lvl loggers.LogLevel) error {
 	if lvl.Invalid() {
-		l := w.Logger.Level(log.DebugLevel)
-		l.Warn().Msg("Invalid log level, defaulting to debug")
-		w.Logger = &l
+		w.Logger = w.Logger.WithLevel(loggers.LogLevelInfo)
+		w.Logger.Warn().Msg("Invalid log level, defaulting to info")
 		return nil
 	}
 
-	l := w.Logger.Level(translateLogLevel(lvl))
-	w.Logger = &l
-
+	w.Logger = w.Logger.WithLevel(lvl)
 	return nil
 }
 

@@ -20,14 +20,11 @@ require (
 	github.com/foxcpp/go-mockdns v1.0.0
 	github.com/magefile/mage v1.14.0
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20211021192214-5ab2d9280aa9
-	github.com/rs/zerolog v1.29.0
 	github.com/tidwall/gjson v1.14.4
 	golang.org/x/net v0.7.0
 )
 
 require (
-	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/miekg/dns v1.1.50 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect

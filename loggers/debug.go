@@ -4,11 +4,53 @@
 package loggers
 
 import (
-	"github.com/rs/zerolog"
+	"fmt"
+	"io"
 )
 
+type Event interface {
+	// Msg sends the Event with msg added as the message field if not empty.
+	Msg(msg string)
+	// Str adds the field key with val as a string to the Event.
+	Str(key, val string) Event
+	// Err adds the field "error" with serialized err to the Event.
+	// If err is nil, no field is added.
+	Err(err error) Event
+	// Bool adds the field key with val as a bool to the Event.
+	Bool(key string, b bool) Event
+	// Int adds the field key with i as a int to the Event.
+	Int(key string, i int) Event
+	// Uint adds the field key with i as a uint to the Event.
+	Uint(key string, i uint) Event
+	// Stringer adds the field key with val.String() (or null if val is nil)
+	// to the Event.
+	Stringer(key string, val fmt.Stringer) Event
+}
+
+type NopEvent struct{}
+
+func (NopEvent) Msg(msg string)                                {}
+func (e NopEvent) Str(key, val string) Event                   { return e }
+func (e NopEvent) Err(err error) Event                         { return e }
+func (e NopEvent) Bool(key string, b bool) Event               { return e }
+func (e NopEvent) Int(key string, i int) Event                 { return e }
+func (e NopEvent) Uint(key string, i uint) Event               { return e }
+func (e NopEvent) Stringer(key string, val fmt.Stringer) Event { return e }
+
 // DebugLogger is used to log SecDebugLog messages
-type DebugLogger = *zerolog.Logger
+type DebugLogger interface {
+	WithOutput(w io.Writer) DebugLogger
+	WithLevel(lvl LogLevel) DebugLogger
+	Trace() Event
+	Debug() Event
+	Info() Event
+	Warn() Event
+	Error() Event
+}
+
+func Nop() DebugLogger {
+	return defaultLogger{level: LogLevelNoLog}
+}
 
 // LogLevel is the type of log level
 type LogLevel int8
