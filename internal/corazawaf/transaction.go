@@ -462,7 +462,7 @@ func (tx *Transaction) matchVariable(match *corazarules.MatchData) {
 
 // MatchRule Matches a rule to be logged
 func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
-	tx.WAF.Logger.Debug().Str("tx", tx.id).Int("Rule", r.ID_).Msg("Rule Matched")
+	tx.WAF.Logger.Debug().Str("tx_id", tx.id).Int("rule_id", r.ID_).Msg("Rule Matched")
 	// tx.MatchedRules = append(tx.MatchedRules, mr)
 
 	// If the rule is set to audit, we log the transaction to the audit log
@@ -855,7 +855,7 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 		if tx.requestBodyBuffer.length >= (math.MaxInt64 - writingBytes) {
 			// Overflow, failing. MaxInt64 is not a realistic payload size. Furthermore, it has been tested that
 			// bytes.Buffer does not work with this kind of sizes. See comments in BodyBuffer Write(data []byte)
-			return nil, 0, errors.New("Overflow reached while writing request body")
+			return nil, 0, errors.New("overflow reached while writing request body")
 		}
 		if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
 			tx.variables.inboundErrorData.Set("1")

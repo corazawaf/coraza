@@ -176,8 +176,8 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 
 	var matchedValues []types.MatchData
 	// we log if we are the parent rule
-	tx.WAF.Logger.Debug().Str("tx", tx.id).Int("Rule", rid).Msg("Evaluating rule")
-	defer tx.WAF.Logger.Debug().Str("tx", tx.id).Int("Rule", rid).Msg("Finish evaluating rule")
+	tx.WAF.Logger.Debug().Str("tx_id", tx.id).Int("rule_id", rid).Msg("Evaluating rule")
+	defer tx.WAF.Logger.Debug().Str("tx_id", tx.id).Int("rule_id", rid).Msg("Finish evaluating rule")
 	ruleCol := tx.variables.rule
 	ruleCol.SetIndex("id", 0, strconv.Itoa(rid))
 	if r.Msg != nil {
@@ -190,7 +190,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 	ruleCol.SetIndex("severity", 0, r.Severity_.String())
 	// SecMark and SecAction uses nil operator
 	if r.operator == nil {
-		tx.WAF.Logger.Debug().Str("tx", tx.id).Int("Rule", rid).Msg("Forcing rule to match")
+		tx.WAF.Logger.Debug().Str("tx_id", tx.id).Int("rule_id", rid).Msg("Forcing rule to match")
 		md := &corazarules.MatchData{}
 		matchedValues = append(matchedValues, md)
 		r.matchVariable(tx, md)
@@ -216,14 +216,14 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 			}
 
 			values = tx.GetField(v)
-			tx.WAF.Logger.Debug().Str("tx", tx.id).Int("Rule", rid).Msg("Expanding arguments for rule")
+			tx.WAF.Logger.Debug().Str("tx_id", tx.id).Int("rule_id", rid).Msg("Expanding arguments for rule")
 			for i, arg := range values {
-				tx.WAF.Logger.Debug().Str("tx", tx.id).Int("Rule", rid).Msg("Transforming argument for rule")
+				tx.WAF.Logger.Debug().Str("tx_id", tx.id).Int("rule_id", rid).Msg("Transforming argument for rule")
 				args, errs := r.transformArg(arg, i, cache)
 				if len(errs) > 0 {
-					tx.WAF.Logger.Debug().Str("tx", tx.id).Int("Rule", rid).Msg("Error transforming argument for rule")
+					tx.WAF.Logger.Debug().Str("tx_id", tx.id).Int("rule_id", rid).Msg("Error transforming argument for rule")
 				}
-				tx.WAF.Logger.Debug().Str("tx", tx.id).Int("Rule", rid).Msg("Arguments transformed for rule")
+				tx.WAF.Logger.Debug().Str("tx_id", tx.id).Int("rule_id", rid).Msg("Arguments transformed for rule")
 
 				// args represents the transformed variables
 				for _, carg := range args {
@@ -245,19 +245,20 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 						}
 						matchedValues = append(matchedValues, mr)
 						tx.WAF.Logger.Debug().
-							Str("tx", tx.id).
-							Int("Rule", rid).
-							Str("operator function", r.operator.Function).
-							Str("operator data", r.operator.Data).
-							Str("Arg", carg).
-							Msg("Evaluating operator : MATCH")
+							Str("tx_id", tx.id).
+							Int("rule_id", rid).
+							Str("operator_function", r.operator.Function).
+							Str("operator_data", r.operator.Data).
+							Str("arg", carg).
+							Msg("Evaluating operator: MATCH")
 					} else {
 						tx.WAF.Logger.Debug().
-							Str("tx", tx.id).Int("Rule", rid).
-							Str("operator function", r.operator.Function).
-							Str("operator data", r.operator.Data).
-							Str("Arg", carg).
-							Msg("Evaluating operator : NO MATCH")
+							Str("tx_id", tx.id).
+							Int("rule_id", rid).
+							Str("operator_function", r.operator.Function).
+							Str("operator_data", r.operator.Data).
+							Str("arg", carg).
+							Msg("Evaluating operator: NO MATCH")
 					}
 				}
 			}
@@ -272,7 +273,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 	if r.ParentID_ == 0 {
 		// we only run the chains for the parent rule
 		for nr := r.Chain; nr != nil; {
-			tx.WAF.Logger.Debug().Str("tx", tx.id).Int("Rule", rid).Msg("Evaluating rule chain")
+			tx.WAF.Logger.Debug().Str("tx_id", tx.id).Int("rule_id", rid).Msg("Evaluating rule chain")
 			matchedChainValues := nr.doEvaluate(phase, tx, cache)
 			if len(matchedChainValues) == 0 {
 				return matchedChainValues
@@ -282,10 +283,10 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 		}
 		// we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
 		if tx.RuleEngine != types.RuleEngineDetectionOnly {
-			tx.WAF.Logger.Debug().Str("tx", tx.id).Int("Rule", rid).Msg("Disrupting transaction by rule")
+			tx.WAF.Logger.Debug().Str("tx_id", tx.id).Int("rule_id", rid).Msg("Disrupting transaction by rule")
 			for _, a := range r.actions {
 				if a.Function.Type() == rules.ActionTypeDisruptive || a.Function.Type() == rules.ActionTypeFlow {
-					tx.WAF.Logger.Debug().Str("tx", tx.id).Int("Rule", rid).Str("action", a.Name).Msg("Evaluating action for rule")
+					tx.WAF.Logger.Debug().Str("tx_id", tx.id).Int("rule_id", rid).Str("action", a.Name).Msg("Evaluating action for rule")
 					a.Function.Evaluate(r, tx)
 				}
 			}
@@ -345,7 +346,7 @@ func (r *Rule) matchVariable(tx *Transaction, m *corazarules.MatchData) {
 	}
 	if m.Variable() != variables.Unknown {
 		tx.WAF.Logger.Debug().
-			Str("tx", tx.id).Int("Rule", rid).Str("VariableName", m.Variable().Name()).Str("Key", m.Key()).
+			Str("tx", tx.id).Int("rule_id", rid).Str("variable_name", m.Variable().Name()).Str("key", m.Key()).
 			Msg("Matching rule")
 	}
 	// we must match the vars before running the chains

@@ -109,7 +109,8 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 			tx.WAF.Logger.Error().
 				Str("ctl", "AuditEngine").
 				Str("value", a.value).
-				Err(err)
+				Err(err).
+				Msg("Invalid value")
 			return
 		}
 		tx.AuditEngine = ae
@@ -122,7 +123,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 			tx.WAF.Logger.Error().
 				Str("ctl", "ForceRequestBodyVariable").
 				Str("value", a.value).
-				Msg("unknown value")
+				Msg("Unknown value")
 			return
 		}
 		tx.ForceRequestBodyVariable = val

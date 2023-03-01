@@ -178,7 +178,7 @@ func directiveSecRule(options *DirectiveOptions) error {
 		return err
 	} else if err != nil && ignoreErrors {
 		options.WAF.Logger.Debug().
-			Str("rule", options.Opts).
+			Str("rule_id", options.Opts).
 			Err(err).
 			Msg("Ignoring rule compilation error")
 		return nil
@@ -188,9 +188,9 @@ func directiveSecRule(options *DirectiveOptions) error {
 		return err
 	} else if err != nil && ignoreErrors {
 		options.WAF.Logger.Debug().
-			Str("rule", options.Opts).
+			Str("rule_id", options.Opts).
 			Err(err).
-			Msg("Ignoring rule compilation error for rule %s: %s")
+			Msg("Ignoring rule compilation error")
 		return nil
 	}
 	return nil

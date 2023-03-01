@@ -141,7 +141,7 @@ func (p *Parser) evaluateLine(l string) error {
 	// first we get the directive
 	dir, opts, _ := strings.Cut(l, " ")
 
-	p.options.WAF.Logger.Debug().Str("line", l).Msg("parsing directive")
+	p.options.WAF.Logger.Debug().Str("line", l).Msg("Parsing directive")
 	directive := strings.ToLower(dir)
 
 	if len(opts) >= 3 && opts[0] == '"' && opts[len(opts)-1] == '"' {

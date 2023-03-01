@@ -63,7 +63,7 @@ func (a *setvarFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 		Str("var_key", key).
 		Str("var_value", value).
 		Int("rule_id", r.ID()).
-		Msg("action evaluated")
+		Msg("Action evaluated")
 	a.evaluateTxCollection(r, tx, strings.ToLower(key), value)
 }
 
