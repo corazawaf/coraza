@@ -155,6 +155,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 		if err != nil {
 			tx.WAF.Logger.Error().
 				Str("ctl", "RuleEngine").
+				Str("value", a.value).
 				Err(err)
 			return
 		}
@@ -164,6 +165,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 		if err != nil {
 			tx.WAF.Logger.Error().
 				Str("ctl", "RuleRemoveByID").
+				Str("value", a.value).
 				Err(err)
 			return
 		}

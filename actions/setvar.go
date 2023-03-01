@@ -62,7 +62,8 @@ func (a *setvarFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 		Str("tx_id", tx.ID()).
 		Str("var_key", key).
 		Str("var_value", value).
-		Int("rule_id", r.ID())
+		Int("rule_id", r.ID()).
+		Msg("action evaluated")
 	a.evaluateTxCollection(r, tx, strings.ToLower(key), value)
 }
 
@@ -100,7 +101,8 @@ func (a *setvarFn) evaluateTxCollection(r rules.RuleMetadata, tx rules.Transacti
 					Str("tx_id", tx.ID()).
 					Str("var_value", value).
 					Int("rule_id", r.ID()).
-					Err(err)
+					Err(err).
+					Msg("Invalid value")
 				return
 			}
 		}
@@ -112,7 +114,8 @@ func (a *setvarFn) evaluateTxCollection(r rules.RuleMetadata, tx rules.Transacti
 					Str("tx_id", tx.ID()).
 					Str("var_key", res).
 					Int("rule_id", r.ID()).
-					Err(err)
+					Err(err).
+					Msg("Invalid value")
 				return
 			}
 		}

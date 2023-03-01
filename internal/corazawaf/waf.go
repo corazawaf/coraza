@@ -290,9 +290,7 @@ func (w *WAF) SetDebugLogOutput(wr io.Writer) {
 // SetDebugLogLevel changes the debug level of the WAF instance
 func (w *WAF) SetDebugLogLevel(lvl loggers.LogLevel) error {
 	if lvl.Invalid() {
-		w.Logger = w.Logger.WithLevel(loggers.LogLevelInfo)
-		w.Logger.Warn().Msg("Invalid log level, defaulting to info")
-		return nil
+		return errors.New("invalid log level")
 	}
 
 	w.Logger = w.Logger.WithLevel(lvl)
