@@ -18,6 +18,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/debuglogger"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	corazatypes "github.com/corazawaf/coraza/v3/internal/corazatypes"
@@ -282,7 +283,7 @@ func (tx *Transaction) Interrupt(interruption *types.Interruption) {
 	}
 }
 
-func (tx *Transaction) DebugLogger() loggers.DebugLogger {
+func (tx *Transaction) DebugLogger() debuglogger.Logger {
 	return tx.WAF.Logger
 }
 

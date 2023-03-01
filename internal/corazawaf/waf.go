@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/corazawaf/coraza/v3/debuglogger"
 	"github.com/corazawaf/coraza/v3/internal/environment"
 
 	stringutils "github.com/corazawaf/coraza/v3/internal/strings"
@@ -116,7 +117,7 @@ type WAF struct {
 	ProducerConnectorVersion string
 
 	// Used for the debug logger
-	Logger loggers.DebugLogger
+	Logger debuglogger.Logger
 
 	ErrorLogCb func(rule types.MatchedRule)
 
@@ -253,7 +254,7 @@ const _1gb = 1073741824
 
 // NewWAF creates a new WAF instance with default variables
 func NewWAF() *WAF {
-	logger := loggers.Nop()
+	logger := debuglogger.Nop()
 
 	logWriter, err := loggers.GetLogWriter("serial")
 	if err != nil {
@@ -288,8 +289,8 @@ func (w *WAF) SetDebugLogOutput(wr io.Writer) {
 }
 
 // SetDebugLogLevel changes the debug level of the WAF instance
-func (w *WAF) SetDebugLogLevel(lvl loggers.LogLevel) error {
-	if lvl.Invalid() {
+func (w *WAF) SetDebugLogLevel(lvl debuglogger.LogLevel) error {
+	if !lvl.Valid() {
 		return errors.New("invalid log level")
 	}
 

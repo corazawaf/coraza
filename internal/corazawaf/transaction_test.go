@@ -13,10 +13,10 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/debuglogger"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/macro"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -962,7 +962,7 @@ func TestTxSetServerName(t *testing.T) {
 
 	waf := NewWAF()
 	waf.SetDebugLogOutput(l)
-	_ = waf.SetDebugLogLevel(loggers.LogLevelWarn)
+	_ = waf.SetDebugLogLevel(debuglogger.LogLevelWarn)
 
 	tx := waf.NewTransaction()
 	tx.LastPhase = types.PhaseRequestHeaders
@@ -1188,7 +1188,7 @@ func TestProcessorsIdempotency(t *testing.T) {
 
 	waf := NewWAF()
 	waf.SetDebugLogOutput(l)
-	_ = waf.SetDebugLogLevel(loggers.LogLevelError)
+	_ = waf.SetDebugLogLevel(debuglogger.LogLevelError)
 
 	expectedInterruption := &types.Interruption{
 		RuleID: 123,

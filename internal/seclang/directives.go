@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3/debuglogger"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/loggers"
@@ -908,7 +909,7 @@ func directiveSecDebugLogLevel(options *DirectiveOptions) error {
 	if err != nil {
 		return err
 	}
-	return options.WAF.SetDebugLogLevel(loggers.LogLevel(lvl))
+	return options.WAF.SetDebugLogLevel(debuglogger.LogLevel(lvl))
 }
 
 func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
