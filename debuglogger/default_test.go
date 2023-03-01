@@ -91,6 +91,7 @@ func TestMsg(t *testing.T) {
 
 		expected := "[ERROR] my message a=true b=-1 c=1 d=x e=y error=\"my error\"\n"
 
+		// [20:] Skips the timestamp.
 		if want, have := expected, buf.String()[20:]; want != have {
 			t.Fatalf("unexpected message, want %q, have %q", want, have)
 		}
