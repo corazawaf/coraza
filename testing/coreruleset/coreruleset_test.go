@@ -174,14 +174,16 @@ func TestFTW(t *testing.T) {
 SecResponseBodyMimeType text/plain
 SecDefaultAction "phase:3,log,auditlog,pass"
 SecDefaultAction "phase:4,log,auditlog,pass"
+SecDefaultAction "phase:5,log,auditlog,pass"
 
+# Rule 900005 from https://github.com/coreruleset/coreruleset/blob/v4.0/dev/tests/regression/README.md#requirements
 SecAction "id:900005,\
   phase:1,\
   nolog,\
   pass,\
   ctl:ruleEngine=DetectionOnly,\
   ctl:ruleRemoveById=910000,\
-  setvar:tx.paranoia_level=4,\
+  setvar:tx.blocking_paranoia_level=4,\
   setvar:tx.crs_validate_utf8_encoding=1,\
   setvar:tx.arg_name_length=100,\
   setvar:tx.arg_length=400,\
@@ -320,13 +322,14 @@ SecResponseBodyMimeType text/plain
 SecDefaultAction "phase:3,log,auditlog,pass"
 SecDefaultAction "phase:4,log,auditlog,pass"
 
+# Rule 900005 from https://github.com/coreruleset/coreruleset/blob/v4.0/dev/tests/regression/README.md#requirements
 SecAction "id:900005,\
   phase:1,\
   nolog,\
   pass,\
   ctl:ruleEngine=DetectionOnly,\
   ctl:ruleRemoveById=910000,\
-  setvar:tx.paranoia_level=4,\
+  setvar:tx.blocking_paranoia_level=4,\
   setvar:tx.crs_validate_utf8_encoding=1,\
   setvar:tx.arg_name_length=100,\
   setvar:tx.arg_length=400,\

@@ -192,6 +192,12 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 	if r.operator == nil {
 		tx.WAF.Logger.Debug("[%s] [%d] Forcing rule %d to match", tx.id, rid, r.ID_)
 		md := &corazarules.MatchData{}
+		if r.Msg != nil {
+			md.Message_ = r.Msg.Expand(tx)
+		}
+		if r.LogData != nil {
+			md.Data_ = r.LogData.Expand(tx)
+		}
 		matchedValues = append(matchedValues, md)
 		r.matchVariable(tx, md)
 	} else {
@@ -270,7 +276,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 		return matchedValues
 	}
 
-	// disruptive actions are only evaluated by parent rules
+	// disruptive actions and rules affecting the rule flow are only evaluated by parent rules
 	if r.ParentID_ == 0 {
 		// we only run the chains for the parent rule
 		for nr := r.Chain; nr != nil; {
@@ -282,12 +288,19 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 			matchedValues = append(matchedValues, matchedChainValues...)
 			nr = nr.Chain
 		}
+		// Flow actions are evaluated also if the rule engine is set to DetectionOnly
+		for _, a := range r.actions {
+			if a.Function.Type() == rules.ActionTypeFlow {
+				tx.WAF.Logger.Debug("[%s] [%d] Evaluating flow action %s for rule %d", tx.id, rid, a.Name, r.ID_)
+				a.Function.Evaluate(r, tx)
+			}
+		}
 		// we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
 		if tx.RuleEngine != types.RuleEngineDetectionOnly {
 			tx.WAF.Logger.Debug("[%s] [%d] Disrupting transaction by rule %d", tx.id, rid, r.ID_)
 			for _, a := range r.actions {
-				if a.Function.Type() == rules.ActionTypeDisruptive || a.Function.Type() == rules.ActionTypeFlow {
-					tx.WAF.Logger.Debug("[%s] [%d] Evaluating action %s for rule %d", tx.id, rid, a.Name, r.ID_)
+				if a.Function.Type() == rules.ActionTypeDisruptive {
+					tx.WAF.Logger.Debug("[%s] [%d] Evaluating disruptive action %s for rule %d", tx.id, rid, a.Name, r.ID_)
 					a.Function.Evaluate(r, tx)
 				}
 			}
