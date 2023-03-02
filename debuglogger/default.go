@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 	"strconv"
-	"strings"
 )
 
 type defaultEvent struct {
@@ -29,11 +28,7 @@ func (e *defaultEvent) Str(key, val string) Event {
 	e.fields = append(e.fields, ' ')
 	e.fields = append(e.fields, key...)
 	e.fields = append(e.fields, '=')
-	if strings.Contains(val, " ") {
-		e.fields = append(e.fields, strconv.Quote(val)...)
-	} else {
-		e.fields = append(e.fields, val...)
-	}
+	e.fields = append(e.fields, strconv.Quote(val)...)
 
 	return e
 }

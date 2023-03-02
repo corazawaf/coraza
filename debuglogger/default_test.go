@@ -89,7 +89,7 @@ func TestMsg(t *testing.T) {
 			Err(errors.New("my error")).
 			Msg("my message")
 
-		expected := "[ERROR] my message a=true b=-1 c=1 d=x e=\"y & z\" error=\"my error\"\n"
+		expected := "[ERROR] my message a=true b=-1 c=1 d=\"x\" e=\"y & z\" error=\"my error\"\n"
 
 		// [20:] Skips the timestamp.
 		if want, have := expected, buf.String()[20:]; want != have {

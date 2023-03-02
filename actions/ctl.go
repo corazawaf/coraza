@@ -111,7 +111,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 				Str("ctl", "AuditEngine").
 				Str("value", a.value).
 				Err(err).
-				Msg("Invalid value")
+				Msg("Invalid status")
 			return
 		}
 		tx.AuditEngine = ae
@@ -124,7 +124,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 			tx.DebugLogger().Error().
 				Str("ctl", "ForceRequestBodyVariable").
 				Str("value", a.value).
-				Msg("Unknown value")
+				Msg("Unknown toggle")
 			return
 		}
 		tx.ForceRequestBodyVariable = val
@@ -138,7 +138,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 			tx.DebugLogger().Error().
 				Str("ctl", "RequestBodyAccess").
 				Str("value", a.value).
-				Msg("Unknown value")
+				Msg("Unknown toggle")
 			return
 		}
 		tx.RequestBodyAccess = val
@@ -149,7 +149,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 				Str("ctl", "RequestBodyLimit").
 				Str("value", a.value).
 				Err(err).
-				Msg("Invalid value")
+				Msg("Invalid limit")
 			return
 		}
 		tx.RequestBodyLimit = limit
@@ -160,7 +160,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 				Str("ctl", "RuleEngine").
 				Str("value", a.value).
 				Err(err).
-				Msg("Invalid value")
+				Msg("Invalid status")
 			return
 		}
 		tx.RuleEngine = re
@@ -171,7 +171,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 				Str("ctl", "RuleRemoveByID").
 				Str("value", a.value).
 				Err(err).
-				Msg("Invalid value")
+				Msg("Invalid rule ID")
 			return
 		}
 		tx.RemoveRuleByID(id)
@@ -205,7 +205,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 				Str("ctl", "DebugLogLevel").
 				Str("value", a.value).
 				Err(err).
-				Msg("Invalid value")
+				Msg("Invalid log level")
 			return
 		}
 
@@ -265,6 +265,8 @@ func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, str
 		act = ctlHashEngine
 	case "hashEnforcement":
 		act = ctlHashEnforcement
+	case "debugLogLevel":
+		act = ctlDebugLogLevel
 	default:
 		return ctlUnknown, "", 0x00, "", fmt.Errorf("unknown ctl action %q", action)
 	}

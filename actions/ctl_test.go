@@ -80,7 +80,7 @@ func TestCtl(t *testing.T) {
 					t.Error("Failed to set forceRequestBodyVariable")
 				}
 
-				if wantToContain, have := "Unknown value", logEntry; !strings.Contains(have, wantToContain) {
+				if wantToContain, have := "Unknown toggle", logEntry; !strings.Contains(have, wantToContain) {
 					t.Errorf("unexpected log entry: want to contain %q, have %q", wantToContain, logEntry)
 				}
 			},
@@ -100,7 +100,7 @@ func TestCtl(t *testing.T) {
 					t.Error("Failed to set requestBodyAccess")
 				}
 
-				if wantToContain, have := "Unknown value", logEntry; !strings.Contains(have, wantToContain) {
+				if wantToContain, have := "Unknown toggle", logEntry; !strings.Contains(have, wantToContain) {
 					t.Errorf("unexpected log entry: want to contain %q, have %q", wantToContain, logEntry)
 				}
 			},
@@ -135,6 +135,17 @@ func TestCtl(t *testing.T) {
 			check: func(t *testing.T, logEntry string, tx *corazawaf.Transaction) {
 				if want, have := tx.Variables().RequestBodyProcessor().Get(), "XML"; want != have {
 					t.Errorf("failed to set requestBodyProcessor, want %s, have %s", want, have)
+				}
+			},
+		},
+		{
+			input: "debugLogLevel=1",
+		},
+		{
+			input: "debugLogLevel=A",
+			check: func(t *testing.T, logEntry string, tx *corazawaf.Transaction) {
+				if wantToContain, have := "Invalid log level", logEntry; !strings.Contains(have, wantToContain) {
+					t.Errorf("unexpected log entry: want to contain %q, have %q", wantToContain, logEntry)
 				}
 			},
 		},
