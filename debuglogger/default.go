@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 	"strconv"
-	"strings"
 )
 
 type defaultEvent struct {
@@ -22,14 +21,7 @@ func (e *defaultEvent) Msg(msg string) {
 		return
 	}
 
-	s := strings.Builder{}
-	s.WriteString("[")
-	s.WriteString(e.level.String())
-	s.WriteString("] ")
-	s.WriteString(msg)
-	s.Write(e.fields)
-
-	e.logger.Println(s.String())
+	e.logger.Print("[", e.level.String(), "] ", msg, string(e.fields))
 }
 
 func (e *defaultEvent) Str(key, val string) Event {
@@ -111,7 +103,7 @@ func (l defaultLogger) WithLevel(lvl LogLevel) Logger {
 }
 
 func (l defaultLogger) Trace() Event {
-	if l.level < LogLevelTrace || l.Logger == nil {
+	if l.level < LogLevelTrace {
 		return NopEvent{}
 	}
 
@@ -119,7 +111,7 @@ func (l defaultLogger) Trace() Event {
 }
 
 func (l defaultLogger) Debug() Event {
-	if l.level < LogLevelDebug || l.Logger == nil {
+	if l.level < LogLevelDebug {
 		return NopEvent{}
 	}
 
@@ -127,7 +119,7 @@ func (l defaultLogger) Debug() Event {
 }
 
 func (l defaultLogger) Info() Event {
-	if l.level < LogLevelInfo || l.Logger == nil {
+	if l.level < LogLevelInfo {
 		return NopEvent{}
 	}
 
@@ -135,7 +127,7 @@ func (l defaultLogger) Info() Event {
 }
 
 func (l defaultLogger) Warn() Event {
-	if l.level < LogLevelWarn || l.Logger == nil {
+	if l.level < LogLevelWarn {
 		return NopEvent{}
 	}
 
@@ -143,7 +135,7 @@ func (l defaultLogger) Warn() Event {
 }
 
 func (l defaultLogger) Error() Event {
-	if l.level < LogLevelError || l.Logger == nil {
+	if l.level < LogLevelError {
 		return NopEvent{}
 	}
 

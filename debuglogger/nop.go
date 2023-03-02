@@ -3,7 +3,11 @@
 
 package debuglogger
 
-import "fmt"
+import (
+	"fmt"
+	"io"
+	"log"
+)
 
 type NopEvent struct{}
 
@@ -16,5 +20,8 @@ func (e NopEvent) Uint(string, uint) Event             { return e }
 func (e NopEvent) Stringer(string, fmt.Stringer) Event { return e }
 
 func Nop() Logger {
-	return defaultLogger{level: LogLevelNoLog}
+	return defaultLogger{
+		Logger: log.New(io.Discard, "", log.LstdFlags),
+		level:  LogLevelNoLog,
+	}
 }
