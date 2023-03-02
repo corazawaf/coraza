@@ -23,6 +23,10 @@ func (a *skipafterFn) Init(_ rules.RuleMetadata, data string) error {
 }
 
 func (a *skipafterFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
+	tx.DebugLogger().Debug().
+		Str("tx_id", tx.ID()).
+		Str("value", a.data).
+		Msg("Starting secmarker")
 	tx.(*corazawaf.Transaction).SkipAfter = a.data
 }
 
