@@ -1401,7 +1401,7 @@ type TransactionVariables struct {
 	argsPath                 *collections.NamedCollection
 	argsPost                 *collections.NamedCollection
 	argsPostNames            collection.Collection
-	duration                 *collections.Single
+	duration                 *collections.Duration
 	env                      *collections.Map
 	files                    *collections.Map
 	filesCombinedSize        *collections.Single
@@ -1505,7 +1505,7 @@ func NewTransactionVariables() *TransactionVariables {
 	v.highestSeverity = collections.NewSingle(variables.HighestSeverity)
 	v.statusLine = collections.NewSingle(variables.StatusLine)
 	v.inboundErrorData = collections.NewSingle(variables.InboundErrorData)
-	v.duration = collections.NewSingle(variables.Duration)
+	v.duration = collections.NewDuration()
 
 	v.filesSizes = collections.NewMap(variables.FilesSizes)
 	v.filesTmpContent = collections.NewMap(variables.FilesTmpContent)
