@@ -24,6 +24,14 @@ func TestCtl(t *testing.T) {
 			input: "ruleRemoveTargetById=123",
 		},
 		{
+			input: "ruleRemoveTargetById=A",
+			check: func(t *testing.T, logEntry string, tx *corazawaf.Transaction) {
+				if wantToContain, have := "Invalid range", logEntry; !strings.Contains(have, wantToContain) {
+					t.Errorf("unexpected log entry: want to contain %q, have %q", wantToContain, logEntry)
+				}
+			},
+		},
+		{
 			input: "ruleRemoveTargetByTag=tag1",
 		},
 		{
