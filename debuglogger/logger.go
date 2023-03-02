@@ -18,6 +18,8 @@ type Event interface {
 	// Err adds the field "error" with serialized err to the Event.
 	// If err is nil, no field is added.
 	Err(err error) Event
+	// Errs adds the field "error" with a serialized array of err to the Event.
+	Errs(errs ...error) Event
 	// Bool adds the field key with val as a bool to the Event.
 	Bool(key string, b bool) Event
 	// Int adds the field key with i as a int to the Event.

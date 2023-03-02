@@ -221,7 +221,11 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 				tx.WAF.Logger.Debug().Str("tx_id", tx.id).Int("rule_id", rid).Msg("Transforming argument for rule")
 				args, errs := r.transformArg(arg, i, cache)
 				if len(errs) > 0 {
-					tx.WAF.Logger.Debug().Str("tx_id", tx.id).Int("rule_id", rid).Msg("Error transforming argument for rule")
+					tx.WAF.Logger.Debug().
+						Str("tx_id", tx.id).
+						Int("rule_id", rid).
+						Errs(errs...).
+						Msg("Error transforming argument for rule")
 				}
 				tx.WAF.Logger.Debug().Str("tx_id", tx.id).Int("rule_id", rid).Msg("Arguments transformed for rule")
 

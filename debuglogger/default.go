@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"strconv"
+	"strings"
 )
 
 type defaultEvent struct {
@@ -28,7 +29,12 @@ func (e *defaultEvent) Str(key, val string) Event {
 	e.fields = append(e.fields, ' ')
 	e.fields = append(e.fields, key...)
 	e.fields = append(e.fields, '=')
-	e.fields = append(e.fields, val...)
+	if strings.Contains(val, " ") {
+		e.fields = append(e.fields, strconv.Quote(val)...)
+	} else {
+		e.fields = append(e.fields, val...)
+	}
+
 	return e
 }
 
@@ -40,6 +46,20 @@ func (e *defaultEvent) Err(err error) Event {
 	e.fields = append(e.fields, " error=\""...)
 	e.fields = append(e.fields, err.Error()...)
 	e.fields = append(e.fields, '"')
+	return e
+}
+
+func (e *defaultEvent) Errs(errs ...error) Event {
+	for i, err := range errs {
+		if err == nil {
+			continue
+		}
+		e.fields = append(e.fields, " errors["...)
+		e.fields = append(e.fields, strconv.Itoa(i)...)
+		e.fields = append(e.fields, "]=\""...)
+		e.fields = append(e.fields, err.Error()...)
+		e.fields = append(e.fields, '"')
+	}
 	return e
 }
 
@@ -72,11 +92,7 @@ func (e *defaultEvent) Uint(key string, i uint) Event {
 }
 
 func (e *defaultEvent) Stringer(key string, val fmt.Stringer) Event {
-	e.fields = append(e.fields, ' ')
-	e.fields = append(e.fields, key...)
-	e.fields = append(e.fields, '=')
-	e.fields = append(e.fields, val.String()...)
-	return e
+	return e.Str(key, val.String())
 }
 
 type defaultLogger struct {
