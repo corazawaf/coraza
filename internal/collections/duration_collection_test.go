@@ -20,10 +20,8 @@ func TestDuration(t *testing.T) {
 	}
 	if v, err := strconv.Atoi(d.Get()); err != nil {
 		t.Errorf("Duration is not a number, got %d", v)
-	} else {
-		if v < 0 {
-			t.Error("Duration is negative")
-		}
+	} else if v < 0 {
+		t.Error("Duration is negative")
 	}
 	// set should be noop
 	d.Set("test")
