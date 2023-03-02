@@ -44,7 +44,7 @@ func (level LogLevel) String() string {
 	return "UNKNOWN"
 }
 
-// Valid returns true if the log level is invalid
+// Valid returns true if the log level is valid
 func (level LogLevel) Valid() bool {
 	return level >= LogLevelNoLog && level <= LogLevelTrace
 }
