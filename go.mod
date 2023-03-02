@@ -13,6 +13,7 @@ go 1.18
 // - libinjection-go
 // - aho-corasick
 // - gjson
+// - xmlquery
 
 require (
 	github.com/anuraaga/go-modsecurity v0.0.0-20220824035035-b9a4099778df
@@ -25,10 +26,14 @@ require (
 )
 
 require (
+	github.com/antchfx/xmlquery v1.3.15 // indirect
+	github.com/antchfx/xpath v1.2.3 // indirect
+	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/miekg/dns v1.1.50 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/text v0.7.0 // indirect
 	golang.org/x/tools v0.1.12 // indirect
 )

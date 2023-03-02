@@ -1445,7 +1445,7 @@ type TransactionVariables struct {
 	requestProtocol          *collections.Single
 	requestURI               *collections.Single
 	requestURIRaw            *collections.Single
-	requestXML               *collections.Map
+	requestXML               *collections.XML
 	responseBody             *collections.Single
 	responseContentLength    *collections.Single
 	responseContentType      *collections.Single
@@ -1453,7 +1453,7 @@ type TransactionVariables struct {
 	responseHeadersNames     collection.Collection
 	responseProtocol         *collections.Single
 	responseStatus           *collections.Single
-	responseXML              *collections.Map
+	responseXML              *collections.XML
 	rule                     *collections.Map
 	serverAddr               *collections.Single
 	serverName               *collections.Single
@@ -1462,7 +1462,7 @@ type TransactionVariables struct {
 	tx                       *collections.Map
 	uniqueID                 *collections.Single
 	urlencodedError          *collections.Single
-	xml                      *collections.Map
+	xml                      *collections.XML
 }
 
 func NewTransactionVariables() *TransactionVariables {
@@ -1526,8 +1526,8 @@ func NewTransactionVariables() *TransactionVariables {
 	v.files = collections.NewMap(variables.Files)
 	v.filesNames = collections.NewMap(variables.FilesNames)
 	v.filesTmpNames = collections.NewMap(variables.FilesTmpNames)
-	v.responseXML = collections.NewMap(variables.ResponseXML)
-	v.requestXML = collections.NewMap(variables.RequestXML)
+	v.responseXML = collections.NewXML(variables.ResponseXML)
+	v.requestXML = collections.NewXML(variables.RequestXML)
 	v.multipartPartHeaders = collections.NewMap(variables.MultipartPartHeaders)
 
 	// XML is a pointer to RequestXML

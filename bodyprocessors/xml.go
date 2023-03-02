@@ -9,56 +9,50 @@ package bodyprocessors
 import (
 	"encoding/xml"
 	"io"
-	"strings"
 
+	"github.com/antchfx/xmlquery"
+	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/rules"
 )
+
+var xmlOptions = xmlquery.DecoderOptions{
+	Strict:    false,
+	AutoClose: xml.HTMLAutoClose,
+	Entity:    xml.HTMLEntity,
+}
 
 type xmlBodyProcessor struct {
 }
 
 func (*xmlBodyProcessor) ProcessRequest(reader io.Reader, v rules.TransactionVariables, options Options) error {
-	values, contents, err := readXML(reader)
+	x := v.RequestXML().(*collections.XML)
+	doc, err := decodeXML(reader)
 	if err != nil {
 		return err
 	}
-	col := v.RequestXML()
-	col.Set("//@*", values)
-	col.Set("/*", contents)
+	x.SetDoc(doc)
 	return nil
 }
 
 func (*xmlBodyProcessor) ProcessResponse(reader io.Reader, v rules.TransactionVariables, options Options) error {
+	x := v.ResponseXML().(*collections.XML)
+	doc, err := decodeXML(reader)
+	if err != nil {
+		return err
+	}
+	x.SetDoc(doc)
 	return nil
 }
 
-func readXML(reader io.Reader) ([]string, []string, error) {
-	var attrs []string
-	var content []string
-	dec := xml.NewDecoder(reader)
-	dec.Strict = false
-	dec.AutoClose = xml.HTMLAutoClose
-	dec.Entity = xml.HTMLEntity
-	for {
-		token, err := dec.Token()
-		if err != nil && err != io.EOF {
-			return nil, nil, err
-		}
-		if token == nil {
-			break
-		}
-		switch tok := token.(type) {
-		case xml.StartElement:
-			for _, attr := range tok.Attr {
-				attrs = append(attrs, attr.Value)
-			}
-		case xml.CharData:
-			if c := strings.TrimSpace(string(tok)); c != "" {
-				content = append(content, c)
-			}
-		}
+func decodeXML(reader io.Reader) (*xmlquery.Node, error) {
+	opts := xmlquery.ParserOptions{
+		Decoder: &xmlOptions,
 	}
-	return attrs, content, nil
+	doc, err := xmlquery.ParseWithOptions(reader, opts)
+	if err != nil {
+		return nil, err
+	}
+	return doc, nil
 }
 
 var (
