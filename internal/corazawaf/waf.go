@@ -166,6 +166,7 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	tx.Capture = false
 	tx.stopWatches = map[types.RulePhase]int64{}
 	tx.WAF = w
+	tx.debugLogger = w.Logger
 	tx.Timestamp = time.Now().UnixNano()
 	tx.audit = false
 

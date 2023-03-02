@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3/debuglogger"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/rules"
@@ -80,7 +81,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 	case ctlRuleRemoveTargetByID:
 		ran, err := rangeToInts(tx.WAF.Rules.GetRules(), a.value)
 		if err != nil {
-			tx.WAF.Logger.Error().
+			tx.DebugLogger().Error().
 				Str("ctl", "RuleRemoveTargetByID").
 				Err(err).
 				Msg("Invalid range")
@@ -106,7 +107,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 	case ctlAuditEngine:
 		ae, err := types.ParseAuditEngineStatus(a.value)
 		if err != nil {
-			tx.WAF.Logger.Error().
+			tx.DebugLogger().Error().
 				Str("ctl", "AuditEngine").
 				Str("value", a.value).
 				Err(err).
@@ -120,21 +121,21 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 	case ctlForceRequestBodyVariable:
 		val, ok := parseOnOff(a.value)
 		if !ok {
-			tx.WAF.Logger.Error().
+			tx.DebugLogger().Error().
 				Str("ctl", "ForceRequestBodyVariable").
 				Str("value", a.value).
 				Msg("Unknown value")
 			return
 		}
 		tx.ForceRequestBodyVariable = val
-		tx.WAF.Logger.Debug().
+		tx.DebugLogger().Debug().
 			Str("ctl", "ForceRequestBodyVariable").
 			Bool("value", val).
 			Msg("Forcing request body var")
 	case ctlRequestBodyAccess:
 		val, ok := parseOnOff(a.value)
 		if !ok {
-			tx.WAF.Logger.Error().
+			tx.DebugLogger().Error().
 				Str("ctl", "RequestBodyAccess").
 				Str("value", a.value).
 				Msg("Unknown value")
@@ -144,7 +145,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 	case ctlRequestBodyLimit:
 		limit, err := strconv.ParseInt(a.value, 10, 64)
 		if err != nil {
-			tx.WAF.Logger.Error().
+			tx.DebugLogger().Error().
 				Str("ctl", "RequestBodyLimit").
 				Str("value", a.value).
 				Err(err).
@@ -155,7 +156,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 	case ctlRuleEngine:
 		re, err := types.ParseRuleEngineStatus(a.value)
 		if err != nil {
-			tx.WAF.Logger.Error().
+			tx.DebugLogger().Error().
 				Str("ctl", "RuleEngine").
 				Str("value", a.value).
 				Err(err).
@@ -166,7 +167,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 	case ctlRuleRemoveByID:
 		id, err := strconv.Atoi(a.value)
 		if err != nil {
-			tx.WAF.Logger.Error().
+			tx.DebugLogger().Error().
 				Str("ctl", "RuleRemoveByID").
 				Str("value", a.value).
 				Err(err).
@@ -198,10 +199,17 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 	case ctlHashEnforcement:
 		// Not supported yet
 	case ctlDebugLogLevel:
-		// lvl, _ := strconv.Atoi(a.value)
-		// TODO
-		// We cannot update the log level, it would affect the whole waf instance...
-		// tx.WAF.SetLogLevel(lvl)
+		lvl, err := strconv.ParseInt(a.value, 10, 8)
+		if err != nil {
+			tx.DebugLogger().Error().
+				Str("ctl", "DebugLogLevel").
+				Str("value", a.value).
+				Err(err).
+				Msg("Invalid value")
+			return
+		}
+
+		tx.SetDebugLogLevel(debuglogger.LogLevel(lvl))
 	}
 }
 

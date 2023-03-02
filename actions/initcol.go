@@ -29,7 +29,7 @@ func (a *initcolFn) Init(_ rules.RuleMetadata, data string) error {
 }
 
 func (a *initcolFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {
-	// tx.WAF.Logger.Error().Msg("initcol was used but it's not supported", zap.Int("rule", r.Id))
+	// tx.DebugLogger().Error().Msg("initcol was used but it's not supported", zap.Int("rule", r.Id))
 	/*
 		key := tx.MacroExpansion(a.key)
 		data := tx.WAF.Persistence.Get(a.variable, key)

@@ -112,7 +112,7 @@ func (rg *RuleGroup) Clear() {
 // as soon as an interruption has been triggered.
 // Returns true if transaction is disrupted
 func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
-	tx.WAF.Logger.Debug().
+	tx.DebugLogger().Debug().
 		Str("tx_id", tx.id).
 		Int("phase", int(phase)).
 		Msg("Evaluating phase")
@@ -142,7 +142,7 @@ RulesLoop:
 		// we skip the rule in case it's in the excluded list
 		for _, trb := range tx.ruleRemoveByID {
 			if trb == r.ID_ {
-				tx.WAF.Logger.Debug().
+				tx.DebugLogger().Debug().
 					Str("tx_id", tx.id).
 					Int("rule_id", r.ID_).
 					Msg("Skipping rule")
@@ -156,7 +156,7 @@ RulesLoop:
 			if r.SecMark_ == tx.SkipAfter {
 				tx.SkipAfter = ""
 			} else {
-				tx.WAF.Logger.Debug().
+				tx.DebugLogger().Debug().
 					Str("tx_id", tx.id).
 					Int("rule_id", r.ID_).
 					Str("skip_after", tx.SkipAfter).
@@ -190,7 +190,7 @@ RulesLoop:
 		tx.Capture = false // we reset captures
 		usedRules++
 	}
-	tx.WAF.Logger.Debug().
+	tx.DebugLogger().Debug().
 		Str("tx_id", tx.id).
 		Int("phase", int(phase)).
 		Msg("Finished phase")
