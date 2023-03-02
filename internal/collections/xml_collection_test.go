@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"unsafe"
 
 	"github.com/antchfx/xmlquery"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -56,11 +57,14 @@ func TestXMLPayload(t *testing.T) {
 		t.Error(err)
 	}
 	col.SetDoc(doc)
-	/*
-		md := col.FindString("//@*")
-		if len(md) > 0 {
-			t.Error("Expected more than one match")
-		}*/
+	md := col.FindString("//@*")
+	if len(md) == 0 {
+		t.Error("Expected more than one match")
+	}
+	md2 := col.FindString("//@*")
+	if unsafe.Pointer(&md[0]) != unsafe.Pointer(&md2[0]) {
+		t.Error("Expected same pointer because of cache")
+	}
 
 }
 
@@ -73,7 +77,7 @@ func TestSmallXMLPayloda(t *testing.T) {
 	}
 	col.SetDoc(doc)
 	md := col.FindString("//@*")
-	md = append(md, col.FindString("//*")...)
+	md = append(md, col.FindString("/*")...)
 	rx := regexp.MustCompile(`java\.lang\.(?:runtime|processbuilder)`)
 	matches := 0
 	for _, m := range md {
