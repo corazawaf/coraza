@@ -147,7 +147,8 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 			tx.WAF.Logger.Error().
 				Str("ctl", "RequestBodyLimit").
 				Str("value", a.value).
-				Err(err)
+				Err(err).
+				Msg("Invalid value")
 			return
 		}
 		tx.RequestBodyLimit = limit
@@ -157,7 +158,8 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 			tx.WAF.Logger.Error().
 				Str("ctl", "RuleEngine").
 				Str("value", a.value).
-				Err(err)
+				Err(err).
+				Msg("Invalid value")
 			return
 		}
 		tx.RuleEngine = re
@@ -167,7 +169,8 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 			tx.WAF.Logger.Error().
 				Str("ctl", "RuleRemoveByID").
 				Str("value", a.value).
-				Err(err)
+				Err(err).
+				Msg("Invalid value")
 			return
 		}
 		tx.RemoveRuleByID(id)
@@ -200,7 +203,6 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 		// We cannot update the log level, it would affect the whole waf instance...
 		// tx.WAF.SetLogLevel(lvl)
 	}
-
 }
 
 func (a *ctlFn) Type() rules.ActionType {

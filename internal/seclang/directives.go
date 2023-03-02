@@ -905,7 +905,7 @@ func directiveSecDebugLog(options *DirectiveOptions) error {
 //
 // Levels outside the 0-9 range will default to level 3 (Info)
 func directiveSecDebugLogLevel(options *DirectiveOptions) error {
-	lvl, err := strconv.Atoi(options.Opts)
+	lvl, err := strconv.ParseInt(options.Opts, 10, 8)
 	if err != nil {
 		return err
 	}
