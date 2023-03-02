@@ -22,7 +22,7 @@ func (e *defaultEvent) Msg(msg string) {
 		return
 	}
 
-	e.logger.Print("[", e.level.String(), "] ", msg, string(e.fields))
+	e.logger.Printf("[%s] %s%s", e.level.String(), msg, string(e.fields))
 }
 
 func (e *defaultEvent) Str(key, val string) Event {
