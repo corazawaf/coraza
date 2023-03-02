@@ -46,22 +46,28 @@ func (c *XML) FindRegex(key *regexp.Regexp) []types.MatchData {
 	return nil
 }
 
-func (c *XML) FindString(key string) []types.MatchData {
+func (c *XML) FindString(xpath string) []types.MatchData {
 	if c.root == nil {
 		// XML not initialized
 		return []types.MatchData{}
 	}
-	if _, ok := c.resultsCache[key]; ok {
-		return c.resultsCache[key]
+	if _, ok := c.resultsCache[xpath]; ok {
+		return c.resultsCache[xpath]
 	}
 	md := []types.MatchData{}
 	/*
 		From CRS samples:
-		- //@* returns all attributes, the key for each element should be the element name?
-		  The value should be the inner content? (attribute="value")
-		- //* returns all elements, the key for each element should be the element name?
+		- //@* returns all attributes, the key for each element should be the element name
+		  The value should be the inner content (attribute="value")
+		- //* returns all elements, the key for each element should be the element name
 	*/
-	xmlquery.FindEach(c.root, key, func(i int, n *xmlquery.Node) {
+	results, err := xmlquery.QueryAll(c.root, xpath)
+	if err != nil {
+		// invalid xpath expression, we don't have any way of logging here
+		c.resultsCache[xpath] = md
+		return md
+	}
+	for _, n := range results {
 		switch n.Type {
 		case xmlquery.ElementNode:
 			// Value should be inner content
@@ -78,9 +84,9 @@ func (c *XML) FindString(key string) []types.MatchData {
 				Value_:    fmt.Sprintf("%s=%q", n.Data, n.InnerText()),
 			})
 		}
-	})
+	}
 	// we store the cache
-	c.resultsCache[key] = md
+	c.resultsCache[xpath] = md
 	return md
 }
 
@@ -114,7 +120,7 @@ func (c *XML) Remove(key string) {
 }
 
 func (c *XML) Name() string {
-	return "XML"
+	return c.variable.Name()
 }
 
 func (c *XML) Reset() {

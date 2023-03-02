@@ -60,7 +60,7 @@ func (c *XML) Remove(key string) {
 }
 
 func (c *XML) Name() string {
-	return "XML"
+	return c.variable.Name()
 }
 
 func (c *XML) Reset() {

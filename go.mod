@@ -16,6 +16,7 @@ go 1.18
 // - xmlquery
 
 require (
+	github.com/antchfx/xmlquery v1.3.15
 	github.com/anuraaga/go-modsecurity v0.0.0-20220824035035-b9a4099778df
 	github.com/corazawaf/libinjection-go v0.1.2
 	github.com/foxcpp/go-mockdns v1.0.0
@@ -26,7 +27,6 @@ require (
 )
 
 require (
-	github.com/antchfx/xmlquery v1.3.15 // indirect
 	github.com/antchfx/xpath v1.2.3 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/miekg/dns v1.1.50 // indirect
