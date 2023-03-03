@@ -44,20 +44,6 @@ func (e *defaultEvent) Err(err error) Event {
 	return e
 }
 
-func (e *defaultEvent) Errs(errs ...error) Event {
-	for i, err := range errs {
-		if err == nil {
-			continue
-		}
-		e.fields = append(e.fields, " errors["...)
-		e.fields = append(e.fields, strconv.Itoa(i)...)
-		e.fields = append(e.fields, "]=\""...)
-		e.fields = append(e.fields, err.Error()...)
-		e.fields = append(e.fields, '"')
-	}
-	return e
-}
-
 func (e *defaultEvent) Bool(key string, b bool) Event {
 	e.fields = append(e.fields, ' ')
 	e.fields = append(e.fields, key...)
@@ -88,6 +74,10 @@ func (e *defaultEvent) Uint(key string, i uint) Event {
 
 func (e *defaultEvent) Stringer(key string, val fmt.Stringer) Event {
 	return e.Str(key, val.String())
+}
+
+func (defaultEvent) IsEnabled() bool {
+	return true
 }
 
 type defaultLogger struct {

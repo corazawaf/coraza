@@ -97,21 +97,6 @@ func TestMsg(t *testing.T) {
 			t.Fatalf("unexpected message, want %q, have %q", want, have)
 		}
 	})
-
-	t.Run("message with Errs", func(t *testing.T) {
-		buf := bytes.Buffer{}
-		l := Default().WithOutput(&buf).WithLevel(LogLevelInfo)
-		l.Info().
-			Errs(errors.New("my error a"), errors.New("my error b")).
-			Msg("my message")
-
-		expected := "[ERROR] my message errors[0]=\"my error a\" errors[1]=\"my error b\"\n"
-
-		// [20:] Skips the timestamp.
-		if want, have := expected, buf.String()[20:]; want != have {
-			t.Fatalf("unexpected message, want %q, have %q", want, have)
-		}
-	})
 }
 
 func TestWithLogger(t *testing.T) {

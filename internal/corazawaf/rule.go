@@ -221,10 +221,14 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 				tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Transforming argument for rule")
 				args, errs := r.transformArg(arg, i, cache)
 				if len(errs) > 0 {
-					tx.DebugLogger().Debug().
-						Int("rule_id", rid).
-						Errs(errs...).
-						Msg("Error transforming argument for rule")
+					log := tx.DebugLogger().Debug()
+					if log.IsEnabled() {
+						log.Int("rule_id", rid)
+						for i, err := range errs {
+							log = log.Str(fmt.Sprintf("errors[%d]", i), err.Error())
+						}
+						log.Msg("Error transforming argument for rule")
+					}
 				}
 				tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Arguments transformed for rule")
 
