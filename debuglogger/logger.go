@@ -28,6 +28,8 @@ type Event interface {
 	// to the Event.
 	Stringer(key string, val fmt.Stringer) Event
 	// IsEnabled returns true if the Event is enabled for the given log level
+	// It is helpful when you want to avoid expensive operations on formatting
+	// the log fields.
 	IsEnabled() bool
 }
 
