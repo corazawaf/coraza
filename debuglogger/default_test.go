@@ -48,6 +48,10 @@ func TestLoggerLogLevels(t *testing.T) {
 					if _, ok := event.(NopEvent); ok {
 						t.Fatalf("Missing expected log. Level: %s, Function: %s", LogLevel(settedLevel).String(), name)
 					}
+
+					if !event.IsEnabled() {
+						t.Fatalf("Unexpected event, wanted to be enabled")
+					}
 				}
 				if settedLevel < tCase.expectedLowestPrintedLevel {
 					if _, ok := event.(NopEvent); !ok {

@@ -7,13 +7,14 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"strconv"
 )
 
 type defaultEvent struct {
-	level  LogLevel
-	logger *log.Logger
-	fields []byte
+	level   LogLevel
+	printer Printer
+	fields  []byte
 }
 
 func (e *defaultEvent) Msg(msg string) {
@@ -21,7 +22,13 @@ func (e *defaultEvent) Msg(msg string) {
 		return
 	}
 
-	e.logger.Printf("[%s] %s%s", e.level.String(), msg, string(e.fields))
+	if len(e.fields) == 0 {
+		e.printer(e.level.String(), msg, "")
+	} else {
+		// if event has fields, there serialization starts with a
+		// trailing space.
+		e.printer(e.level.String(), msg, string(e.fields[1:]))
+	}
 }
 
 func (e *defaultEvent) Str(key, val string) Event {
@@ -81,27 +88,28 @@ func (defaultEvent) IsEnabled() bool {
 }
 
 type defaultLogger struct {
-	*log.Logger
+	printer       Printer
+	factory       PrinterFactory
 	level         LogLevel
 	defaultFields []byte
 }
 
 func (l defaultLogger) WithOutput(w io.Writer) Logger {
-	if l.Logger == nil {
-		return defaultLogger{
-			Logger: log.New(w, "", log.LstdFlags),
-			level:  l.level,
-		}
-	}
-
 	return defaultLogger{
-		Logger: log.New(w, l.Logger.Prefix(), l.Logger.Flags()),
-		level:  l.level,
+		printer:       l.factory(w),
+		factory:       l.factory,
+		level:         l.level,
+		defaultFields: l.defaultFields,
 	}
 }
 
 func (l defaultLogger) WithLevel(lvl LogLevel) Logger {
-	return defaultLogger{Logger: l.Logger, level: lvl}
+	return defaultLogger{
+		printer:       l.printer,
+		factory:       l.factory,
+		level:         lvl,
+		defaultFields: l.defaultFields,
+	}
 }
 
 func (l defaultLogger) With(fs ...ContextField) Logger {
@@ -110,7 +118,8 @@ func (l defaultLogger) With(fs ...ContextField) Logger {
 		e = f(e)
 	}
 	return defaultLogger{
-		Logger:        l.Logger,
+		printer:       l.printer,
+		factory:       l.factory,
 		level:         l.level,
 		defaultFields: append(l.defaultFields, e.(*defaultEvent).fields...),
 	}
@@ -121,7 +130,7 @@ func (l defaultLogger) Trace() Event {
 		return NopEvent{}
 	}
 
-	return &defaultEvent{logger: l.Logger, level: LogLevelError, fields: l.defaultFields}
+	return &defaultEvent{printer: l.printer, level: LogLevelError, fields: l.defaultFields}
 }
 
 func (l defaultLogger) Debug() Event {
@@ -129,7 +138,7 @@ func (l defaultLogger) Debug() Event {
 		return NopEvent{}
 	}
 
-	return &defaultEvent{logger: l.Logger, level: LogLevelError, fields: l.defaultFields}
+	return &defaultEvent{printer: l.printer, level: LogLevelError, fields: l.defaultFields}
 }
 
 func (l defaultLogger) Info() Event {
@@ -137,7 +146,7 @@ func (l defaultLogger) Info() Event {
 		return NopEvent{}
 	}
 
-	return &defaultEvent{logger: l.Logger, level: LogLevelError, fields: l.defaultFields}
+	return &defaultEvent{printer: l.printer, level: LogLevelError, fields: l.defaultFields}
 }
 
 func (l defaultLogger) Warn() Event {
@@ -145,7 +154,7 @@ func (l defaultLogger) Warn() Event {
 		return NopEvent{}
 	}
 
-	return &defaultEvent{logger: l.Logger, level: LogLevelWarn, fields: l.defaultFields}
+	return &defaultEvent{printer: l.printer, level: LogLevelWarn, fields: l.defaultFields}
 }
 
 func (l defaultLogger) Error() Event {
@@ -153,13 +162,31 @@ func (l defaultLogger) Error() Event {
 		return NopEvent{}
 	}
 
-	return &defaultEvent{logger: l.Logger, level: LogLevelError, fields: l.defaultFields}
+	return &defaultEvent{printer: l.printer, level: LogLevelError, fields: l.defaultFields}
 }
 
 // Default returns a default logger that writes to stderr.
 func Default() Logger {
+	return DefaultWithPrinterFactory(defaultPrinterFactory)
+}
+
+type Printer func(levelName, message, fields string)
+
+type PrinterFactory func(w io.Writer) Printer
+
+var defaultPrinterFactory = func(w io.Writer) Printer {
+	l := log.New(w, "", log.LstdFlags)
+	return func(levelName, message, fields string) {
+		l.Printf("[%s] %s %s", levelName, message, fields)
+	}
+}
+
+// DefaultWithPrinterFactory returns a default logger that writes to stderr with a given
+// printer factory. It is useful when you need to abstract the printer.
+func DefaultWithPrinterFactory(f PrinterFactory) Logger {
 	return defaultLogger{
-		Logger: log.Default(),
-		level:  LogLevelInfo,
+		printer: f(os.Stderr),
+		factory: f,
+		level:   LogLevelInfo,
 	}
 }

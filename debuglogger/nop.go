@@ -5,8 +5,6 @@ package debuglogger
 
 import (
 	"fmt"
-	"io"
-	"log"
 )
 
 type NopEvent struct{}
@@ -22,7 +20,8 @@ func (e NopEvent) IsEnabled() bool                     { return false }
 
 func Nop() Logger {
 	return defaultLogger{
-		Logger: log.New(io.Discard, "", log.LstdFlags),
-		level:  LogLevelNoLog,
+		printer: func(_, _, _ string) {},
+		factory: defaultPrinterFactory,
+		level:   LogLevelNoLog,
 	}
 }
