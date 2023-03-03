@@ -31,6 +31,38 @@ type Event interface {
 	Stringer(key string, val fmt.Stringer) Event
 }
 
+type ContextField func(Event) Event
+
+func Str(key, val string) ContextField {
+	return func(e Event) Event {
+		return e.Str(key, val)
+	}
+}
+
+func Bool(key string, b bool) ContextField {
+	return func(e Event) Event {
+		return e.Bool(key, b)
+	}
+}
+
+func Int(key string, i int) ContextField {
+	return func(e Event) Event {
+		return e.Int(key, i)
+	}
+}
+
+func Uint(key string, i uint) ContextField {
+	return func(e Event) Event {
+		return e.Uint(key, i)
+	}
+}
+
+func Stringer(key string, val fmt.Stringer) ContextField {
+	return func(e Event) Event {
+		return e.Stringer(key, val)
+	}
+}
+
 // Logger is used to log SecDebugLog messages
 // This interface is highly inspired in github.com/rs/zerolog logger and the aim
 // is to avoid allocations while logging.
@@ -40,6 +72,9 @@ type Logger interface {
 
 	// Level creates a child logger with the minimum accepted level set to level.
 	WithLevel(lvl LogLevel) Logger
+
+	// WithOutput duplicates the current logger and adds context fields to it.
+	With(...ContextField) Logger
 
 	// Trace starts a new message with trace level.
 	// You must call Msg on the returned event in order to send the event.

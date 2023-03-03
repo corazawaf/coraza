@@ -86,10 +86,11 @@ func TestMsg(t *testing.T) {
 			Uint("c", 1).
 			Str("d", "x").
 			Stringer("e", bytes.NewBufferString("y & z")).
+			Bool("f", false).
 			Err(errors.New("my error")).
 			Msg("my message")
 
-		expected := "[ERROR] my message a=true b=-1 c=1 d=\"x\" e=\"y & z\" error=\"my error\"\n"
+		expected := "[ERROR] my message a=true b=-1 c=1 d=\"x\" e=\"y & z\" f=false error=\"my error\"\n"
 
 		// [20:] Skips the timestamp.
 		if want, have := expected, buf.String()[20:]; want != have {
@@ -111,4 +112,59 @@ func TestMsg(t *testing.T) {
 			t.Fatalf("unexpected message, want %q, have %q", want, have)
 		}
 	})
+}
+
+func TestWithLogger(t *testing.T) {
+	buf := bytes.Buffer{}
+	l := Default().WithOutput(&buf).WithLevel(LogLevelInfo)
+	l2 := l.
+		With(
+			Bool("a", true),
+			Int("b", -1),
+			Uint("c", 1),
+			Str("d", "x"),
+			Stringer("e", bytes.NewBufferString("y & z")),
+			Bool("f", false),
+		)
+	l2.Info().
+		Str("g", "w").
+		Msg("my message")
+
+	expected := "[ERROR] my message a=true b=-1 c=1 d=\"x\" e=\"y & z\" f=false g=\"w\"\n"
+
+	// [20:] Skips the timestamp.
+	if want, have := expected, buf.String()[20:]; want != have {
+		t.Fatalf("unexpected message, want %q, have %q", want, have)
+	}
+
+	// Check that the original log hasn't been modified.
+	buf2 := bytes.Buffer{}
+	l = l.WithOutput(&buf2)
+	l.Info().
+		Str("g", "w").
+		Msg("my message")
+
+	expected = "[ERROR] my message g=\"w\"\n"
+
+	// [20:] Skips the timestamp.
+	if want, have := expected, buf2.String()[20:]; want != have {
+		t.Fatalf("unexpected message, want %q, have %q", want, have)
+	}
+}
+
+func TestWithLoggerAccumulative(t *testing.T) {
+	buf := bytes.Buffer{}
+	l := Default().WithOutput(&buf).WithLevel(LogLevelInfo)
+	l2 := l.With(Bool("a", true))
+	l3 := l2.With(Int("b", -1))
+	l3.Info().
+		Str("g", "w").
+		Msg("my message")
+
+	expected := "[ERROR] my message a=true b=-1 g=\"w\"\n"
+
+	// [20:] Skips the timestamp.
+	if want, have := expected, buf.String()[20:]; want != have {
+		t.Fatalf("unexpected message, want %q, have %q", want, have)
+	}
 }

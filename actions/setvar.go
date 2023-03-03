@@ -59,7 +59,6 @@ func (a *setvarFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	key := a.key.Expand(tx)
 	value := a.value.Expand(tx)
 	tx.DebugLogger().Debug().
-		Str("tx_id", tx.ID()).
 		Str("var_key", key).
 		Str("var_value", value).
 		Int("rule_id", r.ID()).
@@ -98,7 +97,6 @@ func (a *setvarFn) evaluateTxCollection(r rules.RuleMetadata, tx rules.Transacti
 			sum, err = strconv.Atoi(value[1:])
 			if err != nil {
 				tx.DebugLogger().Error().
-					Str("tx_id", tx.ID()).
 					Str("var_value", value).
 					Int("rule_id", r.ID()).
 					Err(err).
@@ -111,7 +109,6 @@ func (a *setvarFn) evaluateTxCollection(r rules.RuleMetadata, tx rules.Transacti
 			val, err = strconv.Atoi(res)
 			if err != nil {
 				tx.DebugLogger().Error().
-					Str("tx_id", tx.ID()).
 					Str("var_key", res).
 					Int("rule_id", r.ID()).
 					Err(err).

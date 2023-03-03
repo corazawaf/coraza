@@ -166,7 +166,7 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	tx.Capture = false
 	tx.stopWatches = map[types.RulePhase]int64{}
 	tx.WAF = w
-	tx.debugLogger = w.Logger
+	tx.debugLogger = w.Logger.With(debuglogger.Str("tx_id", tx.id))
 	tx.Timestamp = time.Now().UnixNano()
 	tx.audit = false
 
@@ -215,9 +215,7 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	tx.variables.highestSeverity.Set("0")
 	tx.variables.uniqueID.Set(tx.id)
 
-	w.Logger.Debug().
-		Str("tx_id", tx.id).
-		Msg("New transaction created")
+	w.Logger.Debug().Msg("New transaction created")
 
 	return tx
 }

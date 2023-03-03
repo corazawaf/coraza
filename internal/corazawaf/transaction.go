@@ -358,7 +358,6 @@ func (tx *Transaction) Capturing() bool {
 func (tx *Transaction) CaptureField(index int, value string) {
 	if tx.Capture {
 		tx.debugLogger.Debug().
-			Str("tx_id", tx.id).
 			Int("field", index).
 			Str("value", value).
 			Msg("Capturing field")
@@ -370,7 +369,6 @@ func (tx *Transaction) CaptureField(index int, value string) {
 // this function is used to control which variables are reset after a new rule is evaluated
 func (tx *Transaction) resetCaptures() {
 	tx.debugLogger.Debug().
-		Str("tx_id", tx.id).
 		Msg("Reseting captured variables")
 	// We reset capture 0-9
 	ctx := tx.variables.tx
@@ -468,7 +466,7 @@ func (tx *Transaction) matchVariable(match *corazarules.MatchData) {
 
 // MatchRule Matches a rule to be logged
 func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
-	tx.debugLogger.Debug().Str("tx_id", tx.id).Int("rule_id", r.ID_).Msg("Rule Matched")
+	tx.debugLogger.Debug().Int("rule_id", r.ID_).Msg("Rule matched")
 	// tx.MatchedRules = append(tx.MatchedRules, mr)
 
 	// If the rule is set to audit, we log the transaction to the audit log
@@ -949,7 +947,6 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		tx.variables.reqbodyProcessor.Set(rbp)
 	}
 	tx.debugLogger.Debug().
-		Str("tx_id", tx.id).
 		Str("body_processor", rbp).
 		Msg("Attempting to process request body using")
 	rbp = strings.ToLower(rbp)
@@ -1161,14 +1158,12 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 
 	if !tx.ResponseBodyAccess || !tx.IsResponseBodyProcessable() {
 		tx.debugLogger.Debug().
-			Str("tx_id", tx.id).
 			Bool("response_body_access", tx.ResponseBodyAccess).
 			Msg("Skipping response body processing")
 		tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
 		return tx.interruption, nil
 	}
 	tx.debugLogger.Debug().
-		Str("tx_id", tx.id).
 		Msg("Attempting to process response body")
 	reader, err := tx.responseBodyBuffer.Reader()
 	if err != nil {
@@ -1202,7 +1197,6 @@ func (tx *Transaction) ProcessLogging() {
 	if tx.AuditEngine == types.AuditEngineOff {
 		// Audit engine disabled
 		tx.debugLogger.Debug().
-			Str("tx_id", tx.id).
 			Msg("Transaction not marked for audit logging, AuditEngine is disabled")
 		return
 	}
@@ -1210,7 +1204,6 @@ func (tx *Transaction) ProcessLogging() {
 	if tx.AuditEngine == types.AuditEngineRelevantOnly && !tx.audit {
 		// Transaction marked not for audit logging
 		tx.debugLogger.Debug().
-			Str("tx_id", tx.id).
 			Msg("Transaction not marked for audit logging, AuditEngine is RelevantOnly and we got noauditlog")
 		return
 	}
@@ -1221,14 +1214,12 @@ func (tx *Transaction) ProcessLogging() {
 		if re != nil && !re.Match([]byte(status)) {
 			// Not relevant status
 			tx.debugLogger.Debug().
-				Str("tx_id", tx.id).
 				Msg("Transaction status not marked for audit logging")
 			return
 		}
 	}
 
 	tx.debugLogger.Debug().
-		Str("tx_id", tx.id).
 		Msg("Transaction marked for audit logging")
 
 	if writer := tx.WAF.AuditLogWriter; writer != nil {
@@ -1385,7 +1376,6 @@ func (tx *Transaction) Close() error {
 	}
 
 	tx.debugLogger.Debug().
-		Str("tx_id", tx.id).
 		Bool("is_interrupted", tx.IsInterrupted()).
 		Msg("Transaction finished")
 

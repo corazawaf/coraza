@@ -113,7 +113,6 @@ func (rg *RuleGroup) Clear() {
 // Returns true if transaction is disrupted
 func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	tx.DebugLogger().Debug().
-		Str("tx_id", tx.id).
 		Int("phase", int(phase)).
 		Msg("Evaluating phase")
 
@@ -143,7 +142,6 @@ RulesLoop:
 		for _, trb := range tx.ruleRemoveByID {
 			if trb == r.ID_ {
 				tx.DebugLogger().Debug().
-					Str("tx_id", tx.id).
 					Int("rule_id", r.ID_).
 					Msg("Skipping rule")
 
@@ -157,7 +155,6 @@ RulesLoop:
 				tx.SkipAfter = ""
 			} else {
 				tx.DebugLogger().Debug().
-					Str("tx_id", tx.id).
 					Int("rule_id", r.ID_).
 					Str("skip_after", tx.SkipAfter).
 					Str("secmarker", r.SecMark_).
@@ -191,7 +188,6 @@ RulesLoop:
 		usedRules++
 	}
 	tx.DebugLogger().Debug().
-		Str("tx_id", tx.id).
 		Int("phase", int(phase)).
 		Msg("Finished phase")
 

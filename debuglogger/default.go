@@ -92,7 +92,8 @@ func (e *defaultEvent) Stringer(key string, val fmt.Stringer) Event {
 
 type defaultLogger struct {
 	*log.Logger
-	level LogLevel
+	level         LogLevel
+	defaultFields []byte
 }
 
 func (l defaultLogger) WithOutput(w io.Writer) Logger {
@@ -113,12 +114,24 @@ func (l defaultLogger) WithLevel(lvl LogLevel) Logger {
 	return defaultLogger{Logger: l.Logger, level: lvl}
 }
 
+func (l defaultLogger) With(fs ...ContextField) Logger {
+	var e Event = &defaultEvent{}
+	for _, f := range fs {
+		e = f(e)
+	}
+	return defaultLogger{
+		Logger:        l.Logger,
+		level:         l.level,
+		defaultFields: append(l.defaultFields, e.(*defaultEvent).fields...),
+	}
+}
+
 func (l defaultLogger) Trace() Event {
 	if l.level < LogLevelTrace {
 		return NopEvent{}
 	}
 
-	return &defaultEvent{logger: l.Logger, level: LogLevelError}
+	return &defaultEvent{logger: l.Logger, level: LogLevelError, fields: l.defaultFields}
 }
 
 func (l defaultLogger) Debug() Event {
@@ -126,7 +139,7 @@ func (l defaultLogger) Debug() Event {
 		return NopEvent{}
 	}
 
-	return &defaultEvent{logger: l.Logger, level: LogLevelError}
+	return &defaultEvent{logger: l.Logger, level: LogLevelError, fields: l.defaultFields}
 }
 
 func (l defaultLogger) Info() Event {
@@ -134,7 +147,7 @@ func (l defaultLogger) Info() Event {
 		return NopEvent{}
 	}
 
-	return &defaultEvent{logger: l.Logger, level: LogLevelError}
+	return &defaultEvent{logger: l.Logger, level: LogLevelError, fields: l.defaultFields}
 }
 
 func (l defaultLogger) Warn() Event {
@@ -142,7 +155,7 @@ func (l defaultLogger) Warn() Event {
 		return NopEvent{}
 	}
 
-	return &defaultEvent{logger: l.Logger, level: LogLevelError}
+	return &defaultEvent{logger: l.Logger, level: LogLevelWarn, fields: l.defaultFields}
 }
 
 func (l defaultLogger) Error() Event {
@@ -150,7 +163,7 @@ func (l defaultLogger) Error() Event {
 		return NopEvent{}
 	}
 
-	return &defaultEvent{logger: l.Logger, level: LogLevelError}
+	return &defaultEvent{logger: l.Logger, level: LogLevelError, fields: l.defaultFields}
 }
 
 // Default returns a default logger that writes to stderr.
