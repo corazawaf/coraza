@@ -23,8 +23,8 @@ import (
 	"fmt"
 
 	"github.com/corazawaf/coraza/v3/auditlog"
+	"github.com/corazawaf/coraza/v3/experimental/plugins"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/plugins"
 )
 
 func nativeFormatter(al *auditlog.AuditLog) ([]byte, error) {

@@ -6,8 +6,8 @@
 package operators
 
 import (
+	"github.com/corazawaf/coraza/v3/experimental/plugins"
 	"github.com/corazawaf/coraza/v3/macro"
-	"github.com/corazawaf/coraza/v3/plugins"
 	"github.com/corazawaf/coraza/v3/rules"
 )
 

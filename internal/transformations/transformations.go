@@ -3,7 +3,7 @@
 
 package transformations
 
-import "github.com/corazawaf/coraza/v3/plugins"
+import "github.com/corazawaf/coraza/v3/experimental/plugins"
 
 func init() {
 	plugins.RegisterTransformation("base64Decode", base64decode)

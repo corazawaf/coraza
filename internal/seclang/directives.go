@@ -13,9 +13,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3/experimental/plugins"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/plugins"
 	"github.com/corazawaf/coraza/v3/types"
 )
 

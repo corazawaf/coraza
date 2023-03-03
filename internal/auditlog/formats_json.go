@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/auditlog"
-	"github.com/corazawaf/coraza/v3/plugins"
+	"github.com/corazawaf/coraza/v3/experimental/plugins"
 )
 
 // Coraza format
