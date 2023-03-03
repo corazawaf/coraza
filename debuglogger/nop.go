@@ -20,7 +20,7 @@ func (e NopEvent) IsEnabled() bool                     { return false }
 
 func Nop() Logger {
 	return defaultLogger{
-		printer: func(_, _, _ string) {},
+		printer: func(LogLevel, string, string) {},
 		factory: defaultPrinterFactory,
 		level:   LogLevelNoLog,
 	}

@@ -23,11 +23,11 @@ func (e *defaultEvent) Msg(msg string) {
 	}
 
 	if len(e.fields) == 0 {
-		e.printer(e.level.String(), msg, "")
+		e.printer(e.level, msg, "")
 	} else {
 		// if event has fields, there serialization starts with a
 		// trailing space.
-		e.printer(e.level.String(), msg, string(e.fields[1:]))
+		e.printer(e.level, msg, string(e.fields[1:]))
 	}
 }
 
@@ -170,14 +170,14 @@ func Default() Logger {
 	return DefaultWithPrinterFactory(defaultPrinterFactory)
 }
 
-type Printer func(levelName, message, fields string)
+type Printer func(lvl LogLevel, message, fields string)
 
 type PrinterFactory func(w io.Writer) Printer
 
 var defaultPrinterFactory = func(w io.Writer) Printer {
 	l := log.New(w, "", log.LstdFlags)
-	return func(levelName, message, fields string) {
-		l.Printf("[%s] %s %s", levelName, message, fields)
+	return func(lvl LogLevel, message, fields string) {
+		l.Printf("[%s] %s %s", lvl.String(), message, fields)
 	}
 }
 
