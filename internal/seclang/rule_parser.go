@@ -401,6 +401,8 @@ func getLastRuleExpectingChain(w *corazawaf.WAF) *corazawaf.Rule {
 	return nil
 }
 
+const unset = -1
+
 // parseActions will assign the function name, arguments and
 // function (pkg.actions) for each action split by comma (,)
 // Action arguments are allowed to wrap values between colons(”)
@@ -413,6 +415,7 @@ func parseActions(actions string) ([]ruleAction, error) {
 
 	quoted := false
 	var res []ruleAction
+	disruptiveActionIndex := unset
 actionLoop:
 	for i, c := range actions {
 		switch {
@@ -424,12 +427,27 @@ actionLoop:
 			if err != nil {
 				return nil, err
 			}
-			res = append(res, ruleAction{
-				Key:   ckey.String(),
-				Value: cval.String(),
-				F:     f,
-				Atype: f.Type(),
-			})
+			if f.Type() == rules.ActionTypeDisruptive && disruptiveActionIndex != unset {
+				// There can only be one disruptive action per rule (if there are multiple disruptive
+				// actions present, or inherited, only the last one will take effect).
+				// Therefore, if we encounter another disruptive action, we replace the previous one.
+				res[disruptiveActionIndex] = ruleAction{
+					Key:   ckey.String(),
+					Value: cval.String(),
+					F:     f,
+					Atype: f.Type(),
+				}
+			} else {
+				if f.Type() == rules.ActionTypeDisruptive {
+					disruptiveActionIndex = len(res)
+				}
+				res = append(res, ruleAction{
+					Key:   ckey.String(),
+					Value: cval.String(),
+					F:     f,
+					Atype: f.Type(),
+				})
+			}
 			ckey.Reset()
 			cval.Reset()
 			iskey = true
@@ -456,12 +474,27 @@ actionLoop:
 			if err != nil {
 				return nil, err
 			}
-			res = append(res, ruleAction{
-				Key:   ckey.String(),
-				Value: cval.String(),
-				F:     f,
-				Atype: f.Type(),
-			})
+			if f.Type() == rules.ActionTypeDisruptive && disruptiveActionIndex != unset {
+				// There can only be one disruptive action per rule (if there are multiple disruptive
+				// actions present, or inherited, only the last one will take effect).
+				// Therefore, if we encounter another disruptive action, we replace the previous one.
+				res[disruptiveActionIndex] = ruleAction{
+					Key:   ckey.String(),
+					Value: cval.String(),
+					F:     f,
+					Atype: f.Type(),
+				}
+			} else {
+				if f.Type() == rules.ActionTypeDisruptive {
+					disruptiveActionIndex = len(res)
+				}
+				res = append(res, ruleAction{
+					Key:   ckey.String(),
+					Value: cval.String(),
+					F:     f,
+					Atype: f.Type(),
+				})
+			}
 		}
 	}
 	return res, nil

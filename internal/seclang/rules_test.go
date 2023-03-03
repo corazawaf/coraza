@@ -31,7 +31,7 @@ func TestRuleMatch(t *testing.T) {
 		t.Errorf("failed to match rules with %d", len(tx.MatchedRules()))
 	}
 	if tx.Interruption() == nil {
-		t.Error("failed to interrupt transaction")
+		t.Fatal("failed to interrupt transaction")
 	}
 
 	if tx.Interruption().RuleID != 1 {
@@ -95,6 +95,31 @@ func TestSecMarkers(t *testing.T) {
 	}
 	if len(tx.MatchedRules()) == 1 {
 		t.Errorf("not matching any rule after secmark")
+	}
+}
+
+// There can only be one disruptive action per rule (if there are multiple disruptive
+// actions present, or inherited, only the last one will take effect).
+// The parser enforces it, keeping only one disruptive action per rule.
+func TestOnlyLastDisruptiveActionEnforced(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	parser := NewParser(waf)
+	// Both deny and allow are disruptive actions, so only allow should be enforced
+	err := parser.FromString(`
+		SecRuleEngine On
+		SecDefaultAction "phase:1,deny,status:403,log"
+		SecRule REQUEST_URI "@unconditionalMatch" "id:1, phase:1,deny,allow,log,auditlog"
+	`)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	tx := waf.NewTransaction()
+	tx.ProcessRequestHeaders()
+	if len(tx.MatchedRules()) != 1 {
+		t.Errorf("failed to match rules with %d", len(tx.MatchedRules()))
+	}
+	if tx.Interruption() != nil {
+		t.Fatal("unexpected interruption, deny action has been enforced instead of allow")
 	}
 }
 

@@ -288,23 +288,18 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 			matchedValues = append(matchedValues, matchedChainValues...)
 			nr = nr.Chain
 		}
-		// Flow actions are evaluated also if the rule engine is set to DetectionOnly
+
 		for _, a := range r.actions {
 			if a.Function.Type() == rules.ActionTypeFlow {
+				// Flow actions are evaluated also if the rule engine is set to DetectionOnly
 				tx.WAF.Logger.Debug("[%s] [%d] Evaluating flow action %s for rule %d", tx.id, rid, a.Name, r.ID_)
 				a.Function.Evaluate(r, tx)
+			} else if a.Function.Type() == rules.ActionTypeDisruptive && tx.RuleEngine == types.RuleEngineOn {
+				// We need to add disruptive actions in the end, otherwise they would be triggered without their chains.
+				// The parser enforces that the disruptive action is just one per rule (if more than one, only the last one is kept)
+				tx.WAF.Logger.Debug("[%s] [%d] Executing disruptive action %s for rule %d", tx.id, rid, a.Name, r.ID_)
+				a.Function.Evaluate(r, tx)
 			}
-		}
-		// we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
-		if tx.RuleEngine != types.RuleEngineDetectionOnly {
-			tx.WAF.Logger.Debug("[%s] [%d] Disrupting transaction by rule %d", tx.id, rid, r.ID_)
-			for _, a := range r.actions {
-				if a.Function.Type() == rules.ActionTypeDisruptive {
-					tx.WAF.Logger.Debug("[%s] [%d] Evaluating disruptive action %s for rule %d", tx.id, rid, a.Name, r.ID_)
-					a.Function.Evaluate(r, tx)
-				}
-			}
-
 		}
 		if r.ID_ != 0 {
 			// we avoid matching chains and secmarkers
