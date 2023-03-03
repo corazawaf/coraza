@@ -406,8 +406,11 @@ func getLastRuleExpectingChain(w *corazawaf.WAF) *corazawaf.Rule {
 // Action arguments are allowed to wrap values between colons(”)
 func parseActions(actions string) ([]ruleAction, error) {
 	iskey := true
-	ckey := ""
-	cval := ""
+	var ckey strings.Builder
+	var cval strings.Builder
+	ckey.Reset()
+	cval.Reset()
+
 	quoted := false
 	var res []ruleAction
 actionLoop:
@@ -417,18 +420,18 @@ actionLoop:
 			// skip whitespaces in key
 			continue actionLoop
 		case !quoted && c == ',':
-			f, err := actionsmod.Get(ckey)
+			f, err := actionsmod.Get(ckey.String())
 			if err != nil {
 				return nil, err
 			}
 			res = append(res, ruleAction{
-				Key:   ckey,
-				Value: cval,
+				Key:   ckey.String(),
+				Value: cval.String(),
 				F:     f,
 				Atype: f.Type(),
 			})
-			ckey = ""
-			cval = ""
+			ckey.Reset()
+			cval.Reset()
 			iskey = true
 		case iskey && c == ':':
 			iskey = false
@@ -444,18 +447,18 @@ actionLoop:
 				// skip unquoted whitespaces
 				continue actionLoop
 			}
-			cval += string(c)
+			cval.WriteRune(c)
 		case iskey:
-			ckey += string(c)
+			ckey.WriteRune(c)
 		}
 		if i+1 == len(actions) {
-			f, err := actionsmod.Get(ckey)
+			f, err := actionsmod.Get(ckey.String())
 			if err != nil {
 				return nil, err
 			}
 			res = append(res, ruleAction{
-				Key:   ckey,
-				Value: cval,
+				Key:   ckey.String(),
+				Value: cval.String(),
 				F:     f,
 				Atype: f.Type(),
 			})
