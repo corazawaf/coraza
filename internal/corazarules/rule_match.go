@@ -47,11 +47,6 @@ func (m *MatchData) Data() string {
 	return m.Data_
 }
 
-// IsNil is used to check whether the MatchData is empty
-func (m MatchData) IsNil() bool {
-	return m == MatchData{}
-}
-
 // MatchedRule contains a list of macro expanded messages,
 // matched variables and a pointer to the rule
 type MatchedRule struct {

@@ -13,7 +13,7 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-// ConcatCollection is a collection view over multiple sollections.
+// ConcatCollection is a collection view over multiple collections.
 type ConcatCollection struct {
 	data     []collection.Collection
 	variable variables.RuleVariable

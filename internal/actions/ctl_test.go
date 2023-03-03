@@ -4,6 +4,7 @@
 package actions
 
 import (
+	"strings"
 	"testing"
 
 	_ "github.com/corazawaf/coraza/v3/internal/auditlog"
@@ -14,69 +15,129 @@ import (
 )
 
 func TestCtl(t *testing.T) {
-	waf := corazawaf.NewWAF()
-	tx := waf.NewTransaction()
-	r := corazawaf.NewRule()
-	a := ctl()
-
-	bodyprocessors := []string{"XML", "JSON", "URLENCODED", "MULTIPART"}
-	for _, bp := range bodyprocessors {
-		if err := a.Init(r, "requestBodyProcessor="+bp); err != nil {
-			t.Errorf("failed to init requestBodyProcessor %s", bp)
-		}
-		a.Evaluate(r, tx)
-		if tx.Variables().RequestBodyProcessor().Get() != bp {
-			t.Error("failed to set RequestBodyProcessor " + bp)
-		}
+	tests := []struct {
+		input string
+		check func(t *testing.T, tx *corazawaf.Transaction)
+	}{
+		{
+			input: "ruleRemoveTargetById=123",
+		},
+		{
+			input: "ruleRemoveTargetByTag=tag1",
+		},
+		{
+			input: "ruleRemoveTargetByMsg=somethingWentWrong",
+		},
+		{
+			input: "auditEngine=Off",
+			check: func(t *testing.T, tx *corazawaf.Transaction) {
+				if tx.AuditEngine != types.AuditEngineOff {
+					t.Error("Failed to disable audit log")
+				}
+			},
+		},
+		{
+			input: "auditLogParts=A",
+			check: func(t *testing.T, tx *corazawaf.Transaction) {
+				if want, have := types.AuditLogPartAuditLogHeader, tx.AuditLogParts[0]; want != have {
+					t.Errorf("Failed to set audit log parts, want %s, have %s", string(want), string(have))
+				}
+			},
+		},
+		{
+			input: "forceRequestBodyVariable=On",
+			check: func(t *testing.T, tx *corazawaf.Transaction) {
+				if want, have := true, tx.ForceRequestBodyVariable; want != have {
+					t.Errorf("Failed to set forceRequestBodyVariable, want %t, have %t", want, have)
+				}
+			},
+		},
+		{
+			input: "requestBodyAccess=Off",
+			check: func(t *testing.T, tx *corazawaf.Transaction) {
+				if want, have := false, tx.RequestBodyAccess; want != have {
+					t.Errorf("Failed to set requestBodyAccess, want %t, have %t", want, have)
+				}
+			},
+		},
+		{
+			input: "requestBodyLimit=12345",
+			check: func(t *testing.T, tx *corazawaf.Transaction) {
+				if tx.RequestBodyLimit != 12345 {
+					t.Error("Failed to set request body limit")
+				}
+			},
+		},
+		{
+			input: "ruleEngine=Off",
+			check: func(t *testing.T, tx *corazawaf.Transaction) {
+				if tx.RuleEngine != types.RuleEngineOff {
+					t.Errorf("Failed to disable rule engine, got %s", tx.RuleEngine.String())
+				}
+			},
+		},
+		{
+			input: "ruleRemoveById=123",
+		},
+		{
+			input: "ruleRemoveByMsg=somethingWentWrong",
+		},
+		{
+			input: "ruleRemoveByTag=tag1",
+		},
+		{
+			input: "requestBodyProcessor=XML",
+			check: func(t *testing.T, tx *corazawaf.Transaction) {
+				if want, have := tx.Variables().RequestBodyProcessor().Get(), "XML"; want != have {
+					t.Errorf("failed to set requestBodyProcessor, want %s, have %s", want, have)
+				}
+			},
+		},
 	}
 
-	if err := a.Init(r, "ruleRemoveTargetById=981260;ARGS:user"); err != nil {
-		t.Error("failed to init ruleRemoveTargetById=981260;ARGS:user")
-	}
-	a.Evaluate(r, tx)
-	/*
-		TODO
-		if tx.ruleRemoveTargetById[981260] == nil {
-			t.Error("Failed to create ruleRemoveTargetById")
-		} else {
-			if tx.ruleRemoveTargetById[981260][0].Collection != coraza.VARIABLE_ARGS {
-				t.Error("Failed to create ruleRemoveTargetById, invalid Collection")
+	for _, test := range tests {
+		testName, _, _ := strings.Cut(test.input, "=")
+		t.Run(testName, func(t *testing.T) {
+			waf := corazawaf.NewWAF()
+			r := corazawaf.NewRule()
+			err := waf.Rules.Add(r)
+			if err != nil {
+				t.Fatalf("failed to add rule: %s", err.Error())
 			}
-			if tx.ruleRemoveTargetById[981260][0].Key != "user" {
-				t.Error("Failed to create ruleRemoveTargetById, invalid Key")
+
+			tx := waf.NewTransaction()
+			a := ctl()
+			if err := a.Init(r, test.input); err != nil {
+				t.Fatalf("failed to init ctl: %s", err.Error())
 			}
-		}
-	*/
 
-	if err := a.Init(r, "auditEngine=Off"); err != nil {
-		t.Error("failed to init ctl with auditEngine=Off")
-	}
-	a.Evaluate(r, tx)
+			a.Evaluate(r, tx)
 
-	if tx.AuditEngine != types.AuditEngineOff {
-		t.Error("Failed to disable audit log")
-	}
-
-	if err := a.Init(r, "ruleEngine=Off"); err != nil {
-		t.Error("failed to init ctl using ruleEngine=Off")
-	}
-	a.Evaluate(r, tx)
-
-	if tx.RuleEngine != types.RuleEngineOff {
-		t.Errorf("Failed to disable rule engine, got %s", tx.RuleEngine.String())
-	}
-
-	if err := a.Init(r, "requestBodyLimit=12345"); err != nil {
-		t.Error("failed to init ctl with requestBodyLimit=12345")
-	}
-	a.Evaluate(r, tx)
-
-	if tx.RequestBodyLimit != 12345 {
-		t.Error("Failed to set request body limit")
+			if test.check == nil {
+				// TODO(jcchavezs): for some tests we can't do any assertion
+				// without going too deep into the implementation details.
+				// t.SkipNow() can't be used because tinygo doesn't support it.
+				// https://github.com/tinygo-org/tinygo/blob/release/src/testing/testing.go#L246
+				return
+			} else {
+				test.check(t, tx)
+			}
+		})
 	}
 }
 
 func TestParseCtl(t *testing.T) {
+	t.Run("invalid ctl", func(t *testing.T) {
+		ctl, _, _, _, err := parseCtl("invalid")
+		if err == nil {
+			t.Errorf("expected error, got nil")
+		}
+
+		if ctl != ctlUnknown {
+			t.Errorf("expected ctlUnknown, got %d", ctl)
+		}
+	})
+
 	tCases := []struct {
 		input            string
 		expectAction     ctlFunctionType
@@ -84,12 +145,24 @@ func TestParseCtl(t *testing.T) {
 		expectCollection variables.RuleVariable
 		expectKey        string
 	}{
-		{"ruleRemoveTargetByTag=MY_TAG;ARGS:user", ctlRuleRemoveTargetByTag, "MY_TAG", variables.Args, "user"},
+		{"auditEngine=On", ctlAuditEngine, "On", variables.Unknown, ""},
+		{"auditLogParts=A", ctlAuditLogParts, "A", variables.Unknown, ""},
+		{"forceRequestBodyVariable=On", ctlForceRequestBodyVariable, "On", variables.Unknown, ""},
+		{"requestBodyAccess=On", ctlRequestBodyAccess, "On", variables.Unknown, ""},
+		{"requestBodyLimit=100", ctlRequestBodyLimit, "100", variables.Unknown, ""},
+		{"requestBodyProcessor=JSON", ctlRequestBodyProcessor, "JSON", variables.Unknown, ""},
+		{"responseBodyAccess=On", ctlResponseBodyAccess, "On", variables.Unknown, ""},
+		{"responseBodyLimit=100", ctlResponseBodyLimit, "100", variables.Unknown, ""},
+		{"ruleEngine=On", ctlRuleEngine, "On", variables.Unknown, ""},
+		{"ruleRemoveById=1", ctlRuleRemoveByID, "1", variables.Unknown, ""},
+		{"ruleRemoveByMsg=MY_MSG", ctlRuleRemoveByMsg, "MY_MSG", variables.Unknown, ""},
+		{"ruleRemoveByTag=MY_TAG", ctlRuleRemoveByTag, "MY_TAG", variables.Unknown, ""},
+		{"ruleRemoveTargetByMsg=MY_MSG;ARGS:user", ctlRuleRemoveTargetByMsg, "MY_MSG", variables.Args, "user"},
 		{"ruleRemoveTargetById=2;REQUEST_FILENAME:", ctlRuleRemoveTargetByID, "2", variables.RequestFilename, ""},
-		{"ruleRemoveTargetById=8888;REMOTE_PORT", ctlRuleRemoveTargetByID, "8888", variables.RemotePort, ""},
 	}
 	for _, tCase := range tCases {
-		t.Run(tCase.input, func(t *testing.T) {
+		testName, _, _ := strings.Cut(tCase.input, "=")
+		t.Run(testName, func(t *testing.T) {
 			action, value, collection, colKey, err := parseCtl(tCase.input)
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err.Error())

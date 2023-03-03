@@ -40,7 +40,7 @@ var crsReader fs.FS
 
 func init() {
 	fmt.Println("Preparing CRS...")
-	ver := "752a1b24e68ad4f4625509b67341c7c8590e6d0b"
+	ver := "072bb07571183e0ca5c449bac3ea966360aacc54"
 	if crs, err := downloadCRS(ver); err != nil {
 		panic(fmt.Sprintf("failed to download CRS: %s", err.Error()))
 	} else {

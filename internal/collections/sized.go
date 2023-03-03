@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
@@ -53,6 +54,12 @@ func (c *SizeCollection) FindAll() []types.MatchData {
 // Name returns the name for the current CollectionSizeProxy
 func (c *SizeCollection) Name() string {
 	return c.variable.Name()
+}
+
+func (c *SizeCollection) Format(res *strings.Builder) {
+	res.WriteString(c.variable.Name())
+	res.WriteString(": ")
+	res.WriteString(strconv.Itoa(c.size()))
 }
 
 func (c *SizeCollection) String() string {

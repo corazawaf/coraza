@@ -161,6 +161,9 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 			}
 		}
 	case ctlRequestBodyProcessor:
+		// TODO(jcchavezs): Shall we validate such body processor exists or is it
+		// too ambitious as plugins might register their own at some point in the
+		// lifecycle which does not have to happen before this.
 		tx.Variables().RequestBodyProcessor().Set(strings.ToUpper(a.value))
 	case ctlHashEngine:
 		// Not supported yet

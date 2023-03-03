@@ -610,35 +610,38 @@ func (tx *Transaction) ProcessConnection(client string, cPort int, server string
 	tx.variables.serverPort.Set(p2)
 }
 
-// ExtractArguments transforms an url encoded string to a map and creates
-// ARGS_POST|GET
-func (tx *Transaction) ExtractArguments(orig types.ArgumentType, uri string) {
+// ExtractGetArguments transforms an url encoded string to a map and creates ARGS_GET
+func (tx *Transaction) ExtractGetArguments(uri string) {
 	data := urlutil.ParseQuery(uri, '&')
 	for k, vs := range data {
 		for _, v := range vs {
-			tx.AddArgument(orig, k, v)
+			tx.AddGetRequestArgument(k, v)
 		}
 	}
 }
 
-// AddArgument Add arguments GET or POST
-// This will set ARGS_(GET|POST), ARGS, ARGS_NAMES, ARGS_COMBINED_SIZE and
-// ARGS_(GET|POST)_NAMES
-func (tx *Transaction) AddArgument(argType types.ArgumentType, key string, value string) {
+// AddGetRequestArgument
+func (tx *Transaction) AddGetRequestArgument(key string, value string) {
 	// TODO implement ARGS value limit using ArgumentsLimit
-	var vals collection.Map
-	switch argType {
-	case types.ArgumentGET:
-		vals = tx.variables.argsGet
-	case types.ArgumentPOST:
-		vals = tx.variables.argsPost
-	case types.ArgumentPATH:
-		vals = tx.variables.argsPath
-	default:
-		return
-	}
+	tx.variables.argsGet.Add(key, value)
+}
 
-	vals.Add(key, value)
+// AddPostRequestArgument
+func (tx *Transaction) AddPostRequestArgument(key string, value string) {
+	// TODO implement ARGS value limit using ArgumentsLimit
+	tx.variables.argsPost.Add(key, value)
+}
+
+// AddPathRequestArgument
+func (tx *Transaction) AddPathRequestArgument(key string, value string) {
+	// TODO implement ARGS value limit using ArgumentsLimit
+	tx.variables.argsPath.Add(key, value)
+}
+
+// AddResponseArgument
+func (tx *Transaction) AddResponseArgument(key string, value string) {
+	// TODO implement ARGS value limit using ArgumentsLimit
+	// tx.variables.argsResponse.Add(key, value)
 }
 
 // ProcessURI Performs the analysis on the URI and all the query string variables.
@@ -685,7 +688,7 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 			tx.Variables.RequestUri.Set(uri)
 		*/
 	} else {
-		tx.ExtractArguments(types.ArgumentGET, parsedURL.RawQuery)
+		tx.ExtractGetArguments(parsedURL.RawQuery)
 		tx.variables.requestURI.Set(parsedURL.String())
 		path = parsedURL.Path
 		query = parsedURL.RawQuery
@@ -2050,13 +2053,17 @@ func (v *TransactionVariables) All(f func(v variables.RuleVariable, col collecti
 	}
 }
 
-func (v *TransactionVariables) format(res *strings.Builder) {
-	// TODO(anuraaga): Optimize this, currently each println allocates a string that is then
-	// written to res, we should create a function independent from fmt.Stringer interface
-	// that accepts a res to write to.
+type formattable interface {
+	Format(res *strings.Builder)
+}
 
+func (v *TransactionVariables) format(res *strings.Builder) {
 	v.All(func(_ variables.RuleVariable, col collection.Collection) bool {
-		fmt.Fprintln(res, col)
+		if f, ok := col.(formattable); ok {
+			f.Format(res)
+		} else {
+			fmt.Fprintln(res, col)
+		}
 		return true
 	})
 }

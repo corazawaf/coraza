@@ -18,8 +18,6 @@ type MatchData interface {
 	Message() string
 	// Data is the expanded logdata of the macro
 	Data() string
-	// IsNil is used to check whether the MatchData is empty
-	IsNil() bool
 }
 
 // MatchedRule contains a list of macro expanded messages,

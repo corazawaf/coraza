@@ -14,10 +14,9 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-// NamedCollection is a Collection that also keeps track of unique names.
+// NamedCollection is a Collection that also keeps track of names.
 type NamedCollection struct {
 	*Map
-	names []string
 }
 
 var _ collection.Map = &NamedCollection{}
@@ -31,13 +30,11 @@ func NewNamedCollection(rv variables.RuleVariable) *NamedCollection {
 // Add a value to some key
 func (c *NamedCollection) Add(key string, value string) {
 	c.Map.Add(key, value)
-	c.addName(key)
 }
 
 // Set will replace the key's value with this slice
 func (c *NamedCollection) Set(key string, values []string) {
 	c.Map.Set(key, values)
-	c.addName(key)
 }
 
 // SetIndex will place the value under the index
@@ -45,18 +42,11 @@ func (c *NamedCollection) Set(key string, values []string) {
 // it will be appended
 func (c *NamedCollection) SetIndex(key string, index int, value string) {
 	c.Map.SetIndex(key, index, value)
-	c.addName(key)
 }
 
 // Remove deletes the key from the CollectionMap
 func (c *NamedCollection) Remove(key string) {
 	c.Map.Remove(key)
-	for i, n := range c.names {
-		if n == key {
-			c.names = append(c.names[:i], c.names[i+1:]...)
-			return
-		}
-	}
 }
 
 // Data is an internal method used for serializing to JSON
@@ -78,7 +68,6 @@ func (c *NamedCollection) Name() string {
 
 func (c *NamedCollection) Reset() {
 	c.Map.Reset()
-	c.names = nil
 }
 
 func (c *NamedCollection) Names(rv variables.RuleVariable) collection.Collection {
@@ -88,17 +77,12 @@ func (c *NamedCollection) Names(rv variables.RuleVariable) collection.Collection
 	}
 }
 
-func (c *NamedCollection) String() string {
-	return fmt.Sprint(c.Map)
+func (c *NamedCollection) Format(res *strings.Builder) {
+	c.Map.Format(res)
 }
 
-func (c *NamedCollection) addName(key string) {
-	for _, n := range c.names {
-		if n == key {
-			return
-		}
-	}
-	c.names = append(c.names, key)
+func (c *NamedCollection) String() string {
+	return fmt.Sprint(c.Map)
 }
 
 type NamedCollectionNames struct {
@@ -116,11 +100,16 @@ func (c *NamedCollectionNames) FindString(key string) []types.MatchData {
 
 func (c *NamedCollectionNames) FindAll() []types.MatchData {
 	var res []types.MatchData
-	for _, k := range c.collection.names {
-		res = append(res, &corazarules.MatchData{
-			Variable_: c.variable,
-			Value_:    k,
-		})
+	// Iterates over all the data in the map and adds the key element also to the Key field (The key value may be the value
+	//  that is matched, but it is still also the key of the pair and it is needed to print the matched var name)
+	for _, data := range c.collection.Map.data {
+		for _, d := range data {
+			res = append(res, &corazarules.MatchData{
+				Variable_: c.variable,
+				Key_:      d.key,
+				Value_:    d.key,
+			})
+		}
 	}
 	return res
 }
@@ -133,11 +122,15 @@ func (c *NamedCollectionNames) String() string {
 	res := strings.Builder{}
 	res.WriteString(c.variable.Name())
 	res.WriteString(": ")
-	for i, k := range c.collection.names {
-		if i > 0 {
-			res.WriteString(",")
+	firstOccurrence := true
+	for _, data := range c.collection.Map.data {
+		for _, d := range data {
+			if !firstOccurrence {
+				res.WriteString(",")
+			}
+			firstOccurrence = false
+			res.WriteString(d.key)
 		}
-		res.WriteString(k)
 	}
 	return res.String()
 }
