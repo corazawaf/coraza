@@ -415,6 +415,7 @@ func parseActions(actions string) ([]ruleAction, error) {
 
 	quoted := false
 	var res []ruleAction
+	var err error
 	disruptiveActionIndex := unset
 actionLoop:
 	for i, c := range actions {
@@ -423,30 +424,9 @@ actionLoop:
 			// skip whitespaces in key
 			continue actionLoop
 		case !quoted && c == ',':
-			f, err := actionsmod.Get(ckey.String())
+			res, disruptiveActionIndex, err = appendRuleAction(res, &ckey, &cval, disruptiveActionIndex)
 			if err != nil {
 				return nil, err
-			}
-			if f.Type() == rules.ActionTypeDisruptive && disruptiveActionIndex != unset {
-				// There can only be one disruptive action per rule (if there are multiple disruptive
-				// actions present, or inherited, only the last one will take effect).
-				// Therefore, if we encounter another disruptive action, we replace the previous one.
-				res[disruptiveActionIndex] = ruleAction{
-					Key:   ckey.String(),
-					Value: cval.String(),
-					F:     f,
-					Atype: f.Type(),
-				}
-			} else {
-				if f.Type() == rules.ActionTypeDisruptive {
-					disruptiveActionIndex = len(res)
-				}
-				res = append(res, ruleAction{
-					Key:   ckey.String(),
-					Value: cval.String(),
-					F:     f,
-					Atype: f.Type(),
-				})
 			}
 			ckey.Reset()
 			cval.Reset()
@@ -470,34 +450,43 @@ actionLoop:
 			ckey.WriteRune(c)
 		}
 		if i+1 == len(actions) {
-			f, err := actionsmod.Get(ckey.String())
+			// last action, returned disruptiveActionIndex is not needed
+			res, _, err = appendRuleAction(res, &ckey, &cval, disruptiveActionIndex)
 			if err != nil {
 				return nil, err
-			}
-			if f.Type() == rules.ActionTypeDisruptive && disruptiveActionIndex != unset {
-				// There can only be one disruptive action per rule (if there are multiple disruptive
-				// actions present, or inherited, only the last one will take effect).
-				// Therefore, if we encounter another disruptive action, we replace the previous one.
-				res[disruptiveActionIndex] = ruleAction{
-					Key:   ckey.String(),
-					Value: cval.String(),
-					F:     f,
-					Atype: f.Type(),
-				}
-			} else {
-				if f.Type() == rules.ActionTypeDisruptive {
-					disruptiveActionIndex = len(res)
-				}
-				res = append(res, ruleAction{
-					Key:   ckey.String(),
-					Value: cval.String(),
-					F:     f,
-					Atype: f.Type(),
-				})
 			}
 		}
 	}
 	return res, nil
+}
+
+func appendRuleAction(res []ruleAction, ckey *strings.Builder, cval *strings.Builder, disruptiveActionIndex int) ([]ruleAction, int, error) {
+	f, err := actionsmod.Get(ckey.String())
+	if err != nil {
+		return res, unset, err
+	}
+	if f.Type() == rules.ActionTypeDisruptive && disruptiveActionIndex != unset {
+		// There can only be one disruptive action per rule (if there are multiple disruptive
+		// actions present, or inherited, only the last one will take effect).
+		// Therefore, if we encounter another disruptive action, we replace the previous one.
+		res[disruptiveActionIndex] = ruleAction{
+			Key:   ckey.String(),
+			Value: cval.String(),
+			F:     f,
+			Atype: f.Type(),
+		}
+	} else {
+		if f.Type() == rules.ActionTypeDisruptive {
+			disruptiveActionIndex = len(res)
+		}
+		res = append(res, ruleAction{
+			Key:   ckey.String(),
+			Value: cval.String(),
+			F:     f,
+			Atype: f.Type(),
+		})
+	}
+	return res, disruptiveActionIndex, nil
 }
 
 /*
