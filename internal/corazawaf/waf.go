@@ -8,15 +8,15 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/corazawaf/coraza/v3/debuglogger"
 	"github.com/corazawaf/coraza/v3/internal/environment"
-	ioutils "github.com/corazawaf/coraza/v3/internal/io"
+
 	stringutils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/internal/sync"
 	"github.com/corazawaf/coraza/v3/loggers"
@@ -117,7 +117,7 @@ type WAF struct {
 	ProducerConnectorVersion string
 
 	// Used for the debug logger
-	Logger loggers.DebugLogger
+	Logger debuglogger.Logger
 
 	ErrorLogCb func(rule types.MatchedRule)
 
@@ -133,7 +133,7 @@ func (w *WAF) NewTransaction() *Transaction {
 func (w *WAF) NewTransactionWithID(id string) *Transaction {
 	if len(strings.TrimSpace(id)) == 0 {
 		id = stringutils.RandomString(19)
-		w.Logger.Warn("Empty ID passed for new transaction")
+		w.Logger.Warn().Msg("Empty ID passed for new transaction")
 	}
 	return w.newTransactionWithID(id)
 }
@@ -166,6 +166,7 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	tx.Capture = false
 	tx.stopWatches = map[types.RulePhase]int64{}
 	tx.WAF = w
+	tx.debugLogger = w.Logger.With(debuglogger.Str("tx_id", tx.id))
 	tx.Timestamp = time.Now().UnixNano()
 	tx.audit = false
 
@@ -214,37 +215,37 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	tx.variables.highestSeverity.Set("0")
 	tx.variables.uniqueID.Set(tx.id)
 
-	w.Logger.Debug("New transaction created with id %q", tx.id)
+	w.Logger.Debug().Msg("New transaction created")
 
 	return tx
+}
+
+func resolveLogPath(path string) (io.Writer, error) {
+	if path == "" {
+		return io.Discard, nil
+	}
+
+	if path == "/dev/stdout" {
+		return os.Stdout, nil
+	}
+
+	if path == "/dev/stderr" {
+		return os.Stderr, nil
+	}
+
+	return os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 }
 
 // SetDebugLogPath sets the path for the debug log
 // If the path is empty, the debug log will be disabled
 // note: this is not thread safe
 func (w *WAF) SetDebugLogPath(path string) error {
-	if path == "" {
-		w.Logger.SetOutput(ioutils.NopCloser(io.Discard))
-		return nil
-	}
-
-	if path == "/dev/stdout" {
-		w.Logger.SetOutput(os.Stdout)
-		return nil
-	}
-
-	if path == "/dev/stderr" {
-		w.Logger.SetOutput(os.Stderr)
-		return nil
-	}
-
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	o, err := resolveLogPath(path)
 	if err != nil {
-		w.Logger.Error("failed to open the debug log file: %s", err.Error())
+		return err
 	}
 
-	w.Logger.SetOutput(f)
-
+	w.SetDebugLogOutput(o)
 	return nil
 }
 
@@ -252,14 +253,13 @@ const _1gb = 1073741824
 
 // NewWAF creates a new WAF instance with default variables
 func NewWAF() *WAF {
-	logger := &stdDebugLogger{
-		logger: &log.Logger{},
-		Level:  loggers.LogLevelInfo,
-	}
+	logger := debuglogger.Nop()
 
 	logWriter, err := loggers.GetLogWriter("serial")
 	if err != nil {
-		logger.Error("error creating serial log writer: %s", err.Error())
+		logger.Error().
+			Err(err).
+			Msg("error creating serial log writer")
 	}
 
 	waf := &WAF{
@@ -279,17 +279,21 @@ func NewWAF() *WAF {
 		waf.TmpDir = os.TempDir()
 	}
 
-	if err := waf.SetDebugLogPath(""); err != nil {
-		fmt.Println(err)
-	}
-	waf.Logger.Debug("a new WAF instance was created")
+	waf.Logger.Debug().Msg("A new WAF instance was created")
 	return waf
 }
 
+func (w *WAF) SetDebugLogOutput(wr io.Writer) {
+	w.Logger = w.Logger.WithOutput(wr)
+}
+
 // SetDebugLogLevel changes the debug level of the WAF instance
-func (w *WAF) SetDebugLogLevel(lvl int) error {
-	// setLevel is concurrent safe
-	w.Logger.SetLevel(loggers.LogLevel(lvl))
+func (w *WAF) SetDebugLogLevel(lvl debuglogger.LogLevel) error {
+	if !lvl.Valid() {
+		return errors.New("invalid log level")
+	}
+
+	w.Logger = w.Logger.WithLevel(lvl)
 	return nil
 }
 
