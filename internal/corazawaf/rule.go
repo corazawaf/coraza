@@ -12,7 +12,6 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/corazawaf/coraza/v3/debuglogger"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/macro"
 	"github.com/corazawaf/coraza/v3/rules"
@@ -175,12 +174,10 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 		rid = r.ParentID_
 	}
 
-	logger := tx.DebugLogger().With(debuglogger.Int("rule_id", rid))
-
 	var matchedValues []types.MatchData
 	// we log if we are the parent rule
-	logger.Debug().Msg("Evaluating rule")
-	defer logger.Debug().Msg("Finish evaluating rule")
+	tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Evaluating rule")
+	defer tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Finish evaluating rule")
 	ruleCol := tx.variables.rule
 	ruleCol.SetIndex("id", 0, strconv.Itoa(rid))
 	if r.Msg != nil {
@@ -193,7 +190,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 	ruleCol.SetIndex("severity", 0, r.Severity_.String())
 	// SecMark and SecAction uses nil operator
 	if r.operator == nil {
-		logger.Debug().Msg("Forcing rule to match")
+		tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Forcing rule to match")
 		md := &corazarules.MatchData{}
 		matchedValues = append(matchedValues, md)
 		r.matchVariable(tx, md)
@@ -219,12 +216,12 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 			}
 
 			values = tx.GetField(v)
-			logger.Debug().Msg("Expanding arguments for rule")
+			tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Expanding arguments for rule")
 			for i, arg := range values {
-				logger.Debug().Msg("Transforming argument for rule")
+				tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Transforming argument for rule")
 				args, errs := r.transformArg(arg, i, cache)
 				if len(errs) > 0 {
-					log := logger.Debug()
+					log := tx.DebugLogger().Debug().Int("rule_id", rid)
 					if log.IsEnabled() {
 						for i, err := range errs {
 							log = log.Str(fmt.Sprintf("errors[%d]", i), err.Error())
@@ -232,7 +229,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 						log.Msg("Error transforming argument for rule")
 					}
 				}
-				logger.Debug().Msg("Arguments transformed for rule")
+				tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Arguments transformed for rule")
 
 				// args represents the transformed variables
 				for _, carg := range args {
@@ -253,13 +250,15 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 							mr.Data_ = r.LogData.Expand(tx)
 						}
 						matchedValues = append(matchedValues, mr)
-						logger.Debug().
+						tx.DebugLogger().Debug().
+							Int("rule_id", rid).
 							Str("operator_function", r.operator.Function).
 							Str("operator_data", r.operator.Data).
 							Str("arg", carg).
 							Msg("Evaluating operator: MATCH")
 					} else {
-						logger.Debug().
+						tx.DebugLogger().Debug().
+							Int("rule_id", rid).
 							Str("operator_function", r.operator.Function).
 							Str("operator_data", r.operator.Data).
 							Str("arg", carg).
@@ -278,7 +277,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 	if r.ParentID_ == 0 {
 		// we only run the chains for the parent rule
 		for nr := r.Chain; nr != nil; {
-			logger.Debug().Msg("Evaluating rule chain")
+			tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Evaluating rule chain")
 			matchedChainValues := nr.doEvaluate(phase, tx, cache)
 			if len(matchedChainValues) == 0 {
 				return matchedChainValues
@@ -288,10 +287,10 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 		}
 		// we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
 		if tx.RuleEngine != types.RuleEngineDetectionOnly {
-			logger.Debug().Msg("Disrupting transaction by rule")
+			tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Disrupting transaction by rule")
 			for _, a := range r.actions {
 				if a.Function.Type() == rules.ActionTypeDisruptive || a.Function.Type() == rules.ActionTypeFlow {
-					logger.Debug().Str("action", a.Name).Msg("Evaluating action for rule")
+					tx.DebugLogger().Debug().Int("rule_id", rid).Str("action", a.Name).Msg("Evaluating action for rule")
 					a.Function.Evaluate(r, tx)
 				}
 			}
