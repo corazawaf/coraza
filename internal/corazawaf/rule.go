@@ -292,14 +292,14 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 			nr = nr.Chain
 		}
 
-    for _, a := range r.actions {
+		for _, a := range r.actions {
 			if a.Function.Type() == rules.ActionTypeFlow {
 				// Flow actions are evaluated also if the rule engine is set to DetectionOnly
-        tx.DebugLogger().Debug().Int("rule_id", rid).Str("action", a.Name).Msg("Evaluating flow action for rule")
+				tx.DebugLogger().Debug().Int("rule_id", rid).Str("action", a.Name).Msg("Evaluating flow action for rule")
 				a.Function.Evaluate(r, tx)
 			} else if a.Function.Type() == rules.ActionTypeDisruptive && tx.RuleEngine == types.RuleEngineOn {
 				// The parser enforces that the disruptive action is just one per rule (if more than one, only the last one is kept)
-        tx.DebugLogger().Debug().Int("rule_id", rid).Str("action", a.Name).Msg("Executing disruptive action for rule")
+				tx.DebugLogger().Debug().Int("rule_id", rid).Str("action", a.Name).Msg("Executing disruptive action for rule")
 				a.Function.Evaluate(r, tx)
 			}
 		}
