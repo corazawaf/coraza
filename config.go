@@ -6,6 +6,7 @@ package coraza
 import (
 	"io/fs"
 
+	"github.com/corazawaf/coraza/v3/debuglogger"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
@@ -56,7 +57,7 @@ type WAFConfig interface {
 	WithResponseBodyMimeTypes(mimeTypes []string) WAFConfig
 
 	// WithDebugLogger configures a debug logger.
-	WithDebugLogger(logger loggers.DebugLogger) WAFConfig
+	WithDebugLogger(logger debuglogger.Logger) WAFConfig
 
 	// WithErrorCallback configures an error callback that can be used
 	// to log errors triggered by the WAF.
@@ -107,7 +108,7 @@ type wafConfig struct {
 	responseBodyAccess       bool
 	responseBodyLimit        *int
 	responseBodyMimeTypes    []string
-	debugLogger              loggers.DebugLogger
+	debugLogger              debuglogger.Logger
 	errorCallback            func(rule types.MatchedRule)
 	fsRoot                   fs.FS
 }
@@ -154,7 +155,7 @@ func (c *wafConfig) WithResponseBodyAccess() WAFConfig {
 	return ret
 }
 
-func (c *wafConfig) WithDebugLogger(logger loggers.DebugLogger) WAFConfig {
+func (c *wafConfig) WithDebugLogger(logger debuglogger.Logger) WAFConfig {
 	ret := c.clone()
 	ret.debugLogger = logger
 	return ret

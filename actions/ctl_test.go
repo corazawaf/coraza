@@ -4,9 +4,11 @@
 package actions
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/debuglogger"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
@@ -16,10 +18,18 @@ import (
 func TestCtl(t *testing.T) {
 	tests := []struct {
 		input string
-		check func(t *testing.T, tx *corazawaf.Transaction)
+		check func(t *testing.T, logEntry string, tx *corazawaf.Transaction)
 	}{
 		{
 			input: "ruleRemoveTargetById=123",
+		},
+		{
+			input: "ruleRemoveTargetById=A",
+			check: func(t *testing.T, logEntry string, tx *corazawaf.Transaction) {
+				if wantToContain, have := "Invalid range", logEntry; !strings.Contains(have, wantToContain) {
+					t.Errorf("unexpected log entry: want to contain %q, have %q", wantToContain, logEntry)
+				}
+			},
 		},
 		{
 			input: "ruleRemoveTargetByTag=tag1",
@@ -29,39 +39,75 @@ func TestCtl(t *testing.T) {
 		},
 		{
 			input: "auditEngine=Off",
-			check: func(t *testing.T, tx *corazawaf.Transaction) {
+			check: func(t *testing.T, logEntry string, tx *corazawaf.Transaction) {
 				if tx.AuditEngine != types.AuditEngineOff {
-					t.Error("Failed to disable audit log")
+					t.Error("Failed to set auditEngine")
+				}
+			},
+		},
+		{
+			input: "auditEngine=In",
+			check: func(t *testing.T, logEntry string, tx *corazawaf.Transaction) {
+				if tx.AuditEngine != types.AuditEngineOn {
+					t.Error("Failed to set auditEngine")
+				}
+
+				if wantToContain, have := "invalid audit engine status: In", logEntry; !strings.Contains(have, wantToContain) {
+					t.Errorf("unexpected log entry: want to contain %q, have %q", wantToContain, logEntry)
 				}
 			},
 		},
 		{
 			input: "auditLogParts=A",
-			check: func(t *testing.T, tx *corazawaf.Transaction) {
+			check: func(t *testing.T, logEntry string, tx *corazawaf.Transaction) {
 				if want, have := types.AuditLogPartAuditLogHeader, tx.AuditLogParts[0]; want != have {
-					t.Errorf("Failed to set audit log parts, want %s, have %s", string(want), string(have))
+					t.Errorf("Failed to set auditLogParts, want %s, have %s", string(want), string(have))
 				}
 			},
 		},
 		{
 			input: "forceRequestBodyVariable=On",
-			check: func(t *testing.T, tx *corazawaf.Transaction) {
+			check: func(t *testing.T, logEntry string, tx *corazawaf.Transaction) {
 				if want, have := true, tx.ForceRequestBodyVariable; want != have {
 					t.Errorf("Failed to set forceRequestBodyVariable, want %t, have %t", want, have)
 				}
 			},
 		},
 		{
+			input: "forceRequestBodyVariable=In",
+			check: func(t *testing.T, logEntry string, tx *corazawaf.Transaction) {
+				if tx.ForceRequestBodyVariable != false {
+					t.Error("Failed to set forceRequestBodyVariable")
+				}
+
+				if wantToContain, have := "Unknown toggle", logEntry; !strings.Contains(have, wantToContain) {
+					t.Errorf("unexpected log entry: want to contain %q, have %q", wantToContain, logEntry)
+				}
+			},
+		},
+		{
 			input: "requestBodyAccess=Off",
-			check: func(t *testing.T, tx *corazawaf.Transaction) {
+			check: func(t *testing.T, logEntry string, tx *corazawaf.Transaction) {
 				if want, have := false, tx.RequestBodyAccess; want != have {
 					t.Errorf("Failed to set requestBodyAccess, want %t, have %t", want, have)
 				}
 			},
 		},
 		{
+			input: "requestBodyAccess=In",
+			check: func(t *testing.T, logEntry string, tx *corazawaf.Transaction) {
+				if tx.RequestBodyAccess != false {
+					t.Error("Failed to set requestBodyAccess")
+				}
+
+				if wantToContain, have := "Unknown toggle", logEntry; !strings.Contains(have, wantToContain) {
+					t.Errorf("unexpected log entry: want to contain %q, have %q", wantToContain, logEntry)
+				}
+			},
+		},
+		{
 			input: "requestBodyLimit=12345",
-			check: func(t *testing.T, tx *corazawaf.Transaction) {
+			check: func(t *testing.T, logEntry string, tx *corazawaf.Transaction) {
 				if tx.RequestBodyLimit != 12345 {
 					t.Error("Failed to set request body limit")
 				}
@@ -69,7 +115,7 @@ func TestCtl(t *testing.T) {
 		},
 		{
 			input: "ruleEngine=Off",
-			check: func(t *testing.T, tx *corazawaf.Transaction) {
+			check: func(t *testing.T, logEntry string, tx *corazawaf.Transaction) {
 				if tx.RuleEngine != types.RuleEngineOff {
 					t.Errorf("Failed to disable rule engine, got %s", tx.RuleEngine.String())
 				}
@@ -86,9 +132,20 @@ func TestCtl(t *testing.T) {
 		},
 		{
 			input: "requestBodyProcessor=XML",
-			check: func(t *testing.T, tx *corazawaf.Transaction) {
+			check: func(t *testing.T, logEntry string, tx *corazawaf.Transaction) {
 				if want, have := tx.Variables().RequestBodyProcessor().Get(), "XML"; want != have {
 					t.Errorf("failed to set requestBodyProcessor, want %s, have %s", want, have)
+				}
+			},
+		},
+		{
+			input: "debugLogLevel=1",
+		},
+		{
+			input: "debugLogLevel=A",
+			check: func(t *testing.T, logEntry string, tx *corazawaf.Transaction) {
+				if wantToContain, have := "Invalid log level", logEntry; !strings.Contains(have, wantToContain) {
+					t.Errorf("unexpected log entry: want to contain %q, have %q", wantToContain, logEntry)
 				}
 			},
 		},
@@ -97,7 +154,9 @@ func TestCtl(t *testing.T) {
 	for _, test := range tests {
 		testName, _, _ := strings.Cut(test.input, "=")
 		t.Run(testName, func(t *testing.T) {
+			logs := &bytes.Buffer{}
 			waf := corazawaf.NewWAF()
+			waf.Logger = debuglogger.Default().WithOutput(logs)
 			r := corazawaf.NewRule()
 			err := waf.Rules.Add(r)
 			if err != nil {
@@ -119,7 +178,7 @@ func TestCtl(t *testing.T) {
 				// https://github.com/tinygo-org/tinygo/blob/release/src/testing/testing.go#L246
 				return
 			} else {
-				test.check(t, tx)
+				test.check(t, logs.String(), tx)
 			}
 		})
 	}
