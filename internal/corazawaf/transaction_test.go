@@ -777,6 +777,44 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 	}
 }
 
+func TestProcessBodiesSkippedIfHeadersPhasesNotReached(t *testing.T) {
+	l := &inspectableLogger{}
+	waf := NewWAF()
+	waf.Logger.SetOutput(l)
+	tx := waf.NewTransaction()
+	// setting log level after creating the transaction in order to log only the two errors that we expect
+	waf.Logger.SetLevel(loggers.LogLevelDebug)
+	tx.RuleEngine = types.RuleEngineOn
+	tx.RequestBodyAccess = true
+	// Current phase is PhaseUnknown (ProcessRequestHeaders has not been called)
+	it, err := tx.ProcessRequestBody()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if it != nil {
+		t.Fatal("Unexpected interruption")
+	}
+	it, err = tx.ProcessResponseBody()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if it != nil {
+		t.Fatal("Unexpected interruption")
+	}
+	if want, have := 2, len(l.entries); want != have {
+		t.Fatalf("unexpected number of log entries, want %d, have %d", want, have)
+	}
+	if want, have := "anomalous call before request headers evaluation", l.entries[0]; !strings.Contains(have, want) {
+		t.Fatalf("unexpected message, want %q, have %q", want, have)
+	}
+	if want, have := "anomalous call before response headers evaluation", l.entries[1]; !strings.Contains(have, want) {
+		t.Fatalf("unexpected message, want %q, have %q", want, have)
+	}
+	if err := tx.Close(); err != nil {
+		t.Error(err)
+	}
+}
+
 func TestTxVariables(t *testing.T) {
 	tx := makeTransaction(t)
 	rv := ruleVariableParams{
