@@ -295,7 +295,6 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 				tx.WAF.Logger.Debug("[%s] [%d] Evaluating flow action %s for rule %d", tx.id, rid, a.Name, r.ID_)
 				a.Function.Evaluate(r, tx)
 			} else if a.Function.Type() == rules.ActionTypeDisruptive && tx.RuleEngine == types.RuleEngineOn {
-				// We need to add disruptive actions in the end, otherwise they would be triggered without their chains.
 				// The parser enforces that the disruptive action is just one per rule (if more than one, only the last one is kept)
 				tx.WAF.Logger.Debug("[%s] [%d] Executing disruptive action %s for rule %d", tx.id, rid, a.Name, r.ID_)
 				a.Function.Evaluate(r, tx)
