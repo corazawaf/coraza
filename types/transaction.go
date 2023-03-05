@@ -6,7 +6,7 @@ package types
 import (
 	"io"
 
-	"github.com/corazawaf/coraza/v3/debuglogger"
+	"github.com/corazawaf/coraza/v3/debuglog"
 )
 
 // Transaction is created from a WAF instance to handle web requests and responses,
@@ -189,7 +189,7 @@ type Transaction interface {
 	MatchedRules() []MatchedRule
 
 	// DebugLogger returns the debug logger for this transaction.
-	DebugLogger() debuglogger.Logger
+	DebugLogger() debuglog.Logger
 
 	// ID returns the transaction ID.
 	ID() string

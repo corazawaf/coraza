@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/debuglogger"
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
 	"github.com/corazawaf/coraza/v3/macro"
@@ -293,9 +293,9 @@ func TestHttpServer(t *testing.T) {
 		},
 	}
 
-	logger := debuglogger.Default().
+	logger := debuglog.Default().
 		WithOutput(testLogOutput{t}).
-		WithLevel(debuglogger.LogLevelInfo)
+		WithLevel(debuglog.LogLevelInfo)
 
 	// Perform tests
 	for name, tCase := range tests {
@@ -355,9 +355,9 @@ func TestHttpServerWithRuleEngineOff(t *testing.T) {
 			expectedRespBody: "Waf is Off!",
 		},
 	}
-	logger := debuglogger.Default().
+	logger := debuglog.Default().
 		WithOutput(testLogOutput{t}).
-		WithLevel(debuglogger.LogLevelInfo)
+		WithLevel(debuglog.LogLevelInfo)
 
 	// Perform tests
 	for name, tCase := range tests {

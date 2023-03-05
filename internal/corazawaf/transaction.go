@@ -19,7 +19,7 @@ import (
 	"github.com/corazawaf/coraza/v3/auditlog"
 	"github.com/corazawaf/coraza/v3/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/debuglogger"
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/corazatypes"
@@ -104,7 +104,7 @@ type Transaction struct {
 	// Contains a WAF instance for the current transaction
 	WAF *WAF
 
-	debugLogger debuglogger.Logger
+	debugLogger debuglog.Logger
 
 	// Timestamp of the request
 	Timestamp int64
@@ -285,11 +285,11 @@ func (tx *Transaction) Interrupt(interruption *types.Interruption) {
 	}
 }
 
-func (tx *Transaction) DebugLogger() debuglogger.Logger {
+func (tx *Transaction) DebugLogger() debuglog.Logger {
 	return tx.debugLogger
 }
 
-func (tx *Transaction) SetDebugLogLevel(lvl debuglogger.LogLevel) {
+func (tx *Transaction) SetDebugLogLevel(lvl debuglog.LogLevel) {
 	tx.debugLogger = tx.debugLogger.WithLevel(lvl)
 }
 
