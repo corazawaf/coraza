@@ -693,7 +693,7 @@ func TestRelevantAuditLogging(t *testing.T) {
 	tx.WAF.AuditLogRelevantStatus = regexp.MustCompile(`(403)`)
 	tx.variables.responseStatus.Set("403")
 	tx.AuditEngine = types.AuditEngineRelevantOnly
-	// tx.WAF.auditLogger = loggers.NewAuditLogger()
+	// tx.WAF.auditLogger = auditlog.NewAuditLogger()
 	tx.ProcessLogging()
 	// TODO how do we check if the log was writen?
 	if err := tx.Close(); err != nil {

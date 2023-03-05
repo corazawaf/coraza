@@ -5,7 +5,7 @@
 //go:build tinygo
 // +build tinygo
 
-package loggers
+package auditlog
 
 import (
 	"github.com/corazawaf/coraza/v3/types"
@@ -15,7 +15,7 @@ import (
 type noopWriter struct{}
 
 func (noopWriter) Init(types.Config) error { return nil }
-func (noopWriter) Write(*AuditLog) error   { return nil }
+func (noopWriter) Write(*Log) error        { return nil }
 func (noopWriter) Close() error            { return nil }
 
 var _ LogWriter = (*noopWriter)(nil)

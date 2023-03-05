@@ -14,12 +14,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/corazawaf/coraza/v3/auditlog"
 	"github.com/corazawaf/coraza/v3/debuglogger"
 	"github.com/corazawaf/coraza/v3/internal/environment"
-
 	stringutils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/internal/sync"
-	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -122,7 +121,7 @@ type WAF struct {
 	ErrorLogCb func(rule types.MatchedRule)
 
 	// AuditLogWriter is used to write audit logs
-	AuditLogWriter loggers.LogWriter
+	AuditLogWriter auditlog.LogWriter
 }
 
 // NewTransaction Creates a new initialized transaction for this WAF instance
@@ -255,7 +254,7 @@ const _1gb = 1073741824
 func NewWAF() *WAF {
 	logger := debuglogger.Nop()
 
-	logWriter, err := loggers.GetLogWriter("serial")
+	logWriter, err := auditlog.GetLogWriter("serial")
 	if err != nil {
 		logger.Error().
 			Err(err).

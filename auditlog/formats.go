@@ -1,7 +1,7 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package loggers implements a set of log formatters and writers
+// Package auditlog implements a set of log formatters and writers
 // for audit logging.
 //
 // The following log formats are supported:
@@ -17,7 +17,7 @@
 //
 // More writers and formatters can be registered using the RegisterWriter and
 // RegisterFormatter functions.
-package loggers
+package auditlog
 
 import (
 	"fmt"
@@ -25,7 +25,7 @@ import (
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 )
 
-func nativeFormatter(al *AuditLog) ([]byte, error) {
+func nativeFormatter(al *Log) ([]byte, error) {
 	boundary := utils.RandomString(10)
 	parts := map[byte]string{}
 	// [27/Jul/2016:05:46:16 +0200] V5guiH8AAQEAADTeJ2wAAAAK 192.168.3.1 50084 192.168.3.111 80

@@ -4,7 +4,7 @@
 //go:build !tinygo
 // +build !tinygo
 
-package loggers
+package auditlog
 
 import (
 	"io/fs"
@@ -52,13 +52,13 @@ func TestSerialWriterWrites(t *testing.T) {
 	if err := writer.Init(config); err != nil {
 		t.Error(err)
 	}
-	al := &AuditLog{
-		Transaction: AuditTransaction{
+	al := &Log{
+		Transaction: Transaction{
 			ID: "test123",
 		},
-		Messages: []AuditMessage{
+		Messages: []Message{
 			{
-				Data: AuditMessageData{
+				Data: MessageData{
 					ID:  100,
 					Raw: "SecAction \"id:100\"",
 				},

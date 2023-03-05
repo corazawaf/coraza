@@ -4,7 +4,7 @@
 //go:build !tinygo
 // +build !tinygo
 
-package loggers
+package auditlog
 
 import (
 	"io"
@@ -44,7 +44,7 @@ func (sl *serialWriter) Init(c types.Config) error {
 	return nil
 }
 
-func (sl *serialWriter) Write(al *AuditLog) error {
+func (sl *serialWriter) Write(al *Log) error {
 	if sl.formatter == nil {
 		return nil
 	}

@@ -6,9 +6,9 @@ package coraza
 import (
 	"io/fs"
 
+	"github.com/corazawaf/coraza/v3/auditlog"
 	"github.com/corazawaf/coraza/v3/debuglogger"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -81,8 +81,8 @@ type AuditLogConfig interface {
 	// WithParts configures the parts of the request/response to be logged.
 	WithParts(parts types.AuditLogParts) AuditLogConfig
 
-	// WithLogger configures the loggers.LogWriter to write logs to.
-	WithLogger(logger loggers.LogWriter) AuditLogConfig
+	// WithLogger configures the auditlog.LogWriter to write logs to.
+	WithLogger(logger auditlog.LogWriter) AuditLogConfig
 }
 
 // NewAuditLogConfig returns a new AuditLogConfig with the default settings.
@@ -208,7 +208,7 @@ func (c *wafConfig) WithResponseBodyMimeTypes(mimeTypes []string) WAFConfig {
 type auditLogConfig struct {
 	relevantOnly bool
 	parts        types.AuditLogParts
-	logger       loggers.LogWriter
+	logger       auditlog.LogWriter
 }
 
 func (c *auditLogConfig) LogRelevantOnly() AuditLogConfig {
@@ -223,7 +223,7 @@ func (c *auditLogConfig) WithParts(parts types.AuditLogParts) AuditLogConfig {
 	return ret
 }
 
-func (c *auditLogConfig) WithLogger(logger loggers.LogWriter) AuditLogConfig {
+func (c *auditLogConfig) WithLogger(logger auditlog.LogWriter) AuditLogConfig {
 	ret := c.clone()
 	ret.logger = logger
 	return ret
