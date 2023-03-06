@@ -658,10 +658,9 @@ func (tx *Transaction) AddResponseArgument(key string, value string) {
 // This method should be called at very beginning of a request process, it is
 // expected to be executed prior to the virtual host resolution, when the
 // connection arrives on the server.
-// note: There is no direct connection between this function and any phase of
-//
-//	the SecLanguages phases. It is something that may occur between the
-//	SecLanguage phase 1 and 2.
+// note: There is no direct connection between this function and any phase of the
+// SecLanguages phases. It is something that may occur between the SecLanguage
+// phase 1 and 2.
 //
 // note: This function won't add GET arguments, they must be added with AddArgument
 func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string) {
