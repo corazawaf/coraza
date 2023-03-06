@@ -14,12 +14,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/corazawaf/coraza/v3/debuglogger"
+	"github.com/corazawaf/coraza/v3/auditlog"
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/environment"
-
 	stringutils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/internal/sync"
-	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -117,12 +116,12 @@ type WAF struct {
 	ProducerConnectorVersion string
 
 	// Used for the debug logger
-	Logger debuglogger.Logger
+	Logger debuglog.Logger
 
 	ErrorLogCb func(rule types.MatchedRule)
 
 	// AuditLogWriter is used to write audit logs
-	AuditLogWriter loggers.LogWriter
+	AuditLogWriter auditlog.LogWriter
 }
 
 // NewTransaction Creates a new initialized transaction for this WAF instance
@@ -166,7 +165,7 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	tx.Capture = false
 	tx.stopWatches = map[types.RulePhase]int64{}
 	tx.WAF = w
-	tx.debugLogger = w.Logger.With(debuglogger.Str("tx_id", tx.id))
+	tx.debugLogger = w.Logger.With(debuglog.Str("tx_id", tx.id))
 	tx.Timestamp = time.Now().UnixNano()
 	tx.audit = false
 
@@ -253,9 +252,9 @@ const _1gb = 1073741824
 
 // NewWAF creates a new WAF instance with default variables
 func NewWAF() *WAF {
-	logger := debuglogger.Nop()
+	logger := debuglog.Nop()
 
-	logWriter, err := loggers.GetLogWriter("serial")
+	logWriter, err := auditlog.GetLogWriter("serial")
 	if err != nil {
 		logger.Error().
 			Err(err).
@@ -288,7 +287,7 @@ func (w *WAF) SetDebugLogOutput(wr io.Writer) {
 }
 
 // SetDebugLogLevel changes the debug level of the WAF instance
-func (w *WAF) SetDebugLogLevel(lvl debuglogger.LogLevel) error {
+func (w *WAF) SetDebugLogLevel(lvl debuglog.LogLevel) error {
 	if !lvl.Valid() {
 		return errors.New("invalid log level")
 	}
