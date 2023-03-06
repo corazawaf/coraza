@@ -13,10 +13,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/debuglogger"
+	"github.com/corazawaf/coraza/v3/auditlog"
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -587,7 +587,7 @@ func directiveSecAuditLogType(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	writer, err := loggers.GetLogWriter(options.Opts)
+	writer, err := auditlog.GetLogWriter(options.Opts)
 	if err != nil {
 		return err
 	}
@@ -607,7 +607,7 @@ func directiveSecAuditLogFormat(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	formatter, err := loggers.GetLogFormatter(options.Opts)
+	formatter, err := auditlog.GetLogFormatter(options.Opts)
 	if err != nil {
 		return err
 	}
@@ -909,7 +909,7 @@ func directiveSecDebugLogLevel(options *DirectiveOptions) error {
 	if err != nil {
 		return err
 	}
-	return options.WAF.SetDebugLogLevel(debuglogger.LogLevel(lvl))
+	return options.WAF.SetDebugLogLevel(debuglog.LogLevel(lvl))
 }
 
 func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {

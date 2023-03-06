@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/debuglogger"
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
@@ -156,7 +156,7 @@ func TestCtl(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			logs := &bytes.Buffer{}
 			waf := corazawaf.NewWAF()
-			waf.Logger = debuglogger.Default().WithOutput(logs)
+			waf.Logger = debuglog.Default().WithOutput(logs)
 			r := corazawaf.NewRule()
 			err := waf.Rules.Add(r)
 			if err != nil {

@@ -1,7 +1,7 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package debuglogger
+package debuglog
 
 // LogLevel is the type of log level
 type LogLevel int8

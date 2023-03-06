@@ -4,7 +4,7 @@
 //go:build !tinygo
 // +build !tinygo
 
-package loggers
+package auditlog
 
 import (
 	"encoding/json"
@@ -59,12 +59,12 @@ func TestConcurrentWriterWrites(t *testing.T) {
 		"auditlog_formatter": jsonFormatter,
 	}
 	ts := time.Now().UnixNano()
-	al := &AuditLog{
-		Transaction: AuditTransaction{
+	al := &Log{
+		Transaction: Transaction{
 			UnixTimestamp: ts,
 			ID:            "123",
-			Request:       AuditTransactionRequest{},
-			Response:      AuditTransactionResponse{},
+			Request:       TransactionRequest{},
+			Response:      TransactionResponse{},
 		},
 	}
 	writer := &concurrentWriter{}
@@ -86,7 +86,7 @@ func TestConcurrentWriterWrites(t *testing.T) {
 		t.Error("failed to create audit file for concurrent logger")
 		return
 	}
-	al2 := &AuditLog{}
+	al2 := &Log{}
 	if json.Unmarshal(data, al2) != nil {
 		t.Error("failed to parse json from concurrent audit log", p)
 	}

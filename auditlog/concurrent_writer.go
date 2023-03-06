@@ -4,7 +4,7 @@
 //go:build !tinygo
 // +build !tinygo
 
-package loggers
+package auditlog
 
 import (
 	"fmt"
@@ -51,7 +51,7 @@ func (cl *concurrentWriter) Init(c types.Config) error {
 	return nil
 }
 
-func (cl concurrentWriter) Write(al *AuditLog) error {
+func (cl concurrentWriter) Write(al *Log) error {
 	// 192.168.3.130 192.168.3.1 - - [22/Aug/2009:13:24:20 +0100] "GET / HTTP/1.1" 200 56 "-" "-" SojdH8AAQEAAAugAQAAAAAA "-" /20090822/20090822-1324/20090822-132420-SojdH8AAQEAAAugAQAAAAAA 0 1248
 	t := time.Unix(0, al.Transaction.UnixTimestamp)
 
