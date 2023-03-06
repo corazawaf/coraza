@@ -16,7 +16,6 @@ import (
 
 	"github.com/corazawaf/coraza/v3/debuglogger"
 	"github.com/corazawaf/coraza/v3/internal/environment"
-
 	stringutils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/internal/sync"
 	"github.com/corazawaf/coraza/v3/loggers"
