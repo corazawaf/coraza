@@ -267,6 +267,9 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	if err != nil {
 		t.Fatal(err)
 	}
+	if len(tests) == 0 {
+		t.Fatal("no tests found")
+	}
 
 	u, _ := url.Parse(s.URL)
 	host := u.Hostname()
