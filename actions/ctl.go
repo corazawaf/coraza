@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/debuglogger"
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/rules"
@@ -209,7 +209,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 			return
 		}
 
-		tx.SetDebugLogLevel(debuglogger.LogLevel(lvl))
+		tx.SetDebugLogLevel(debuglog.LogLevel(lvl))
 	}
 }
 

@@ -16,15 +16,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/corazawaf/coraza/v3/auditlog"
 	"github.com/corazawaf/coraza/v3/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/debuglogger"
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
-	corazatypes "github.com/corazawaf/coraza/v3/internal/corazatypes"
+	"github.com/corazawaf/coraza/v3/internal/corazatypes"
 	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 	urlutil "github.com/corazawaf/coraza/v3/internal/url"
-	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -104,7 +104,7 @@ type Transaction struct {
 	// Contains a WAF instance for the current transaction
 	WAF *WAF
 
-	debugLogger debuglogger.Logger
+	debugLogger debuglog.Logger
 
 	// Timestamp of the request
 	Timestamp int64
@@ -285,11 +285,11 @@ func (tx *Transaction) Interrupt(interruption *types.Interruption) {
 	}
 }
 
-func (tx *Transaction) DebugLogger() debuglogger.Logger {
+func (tx *Transaction) DebugLogger() debuglog.Logger {
 	return tx.debugLogger
 }
 
-func (tx *Transaction) SetDebugLogLevel(lvl debuglogger.LogLevel) {
+func (tx *Transaction) SetDebugLogLevel(lvl debuglog.LogLevel) {
 	tx.debugLogger = tx.debugLogger.WithLevel(lvl)
 }
 
@@ -1261,8 +1261,8 @@ func (tx *Transaction) MatchedRules() []types.MatchedRule {
 }
 
 // AuditLog returns an AuditLog struct, used to write audit logs
-func (tx *Transaction) AuditLog() *loggers.AuditLog {
-	al := &loggers.AuditLog{}
+func (tx *Transaction) AuditLog() *auditlog.Log {
+	al := &auditlog.Log{}
 	al.Messages = nil
 	// YYYY/MM/DD HH:mm:ss
 	ts := time.Unix(0, tx.Timestamp).Format("2006/01/02 15:04:05")
@@ -1270,7 +1270,7 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	clientPort, _ := strconv.Atoi(tx.variables.remotePort.Get())
 	hostPort, _ := strconv.Atoi(tx.variables.serverPort.Get())
 	status, _ := strconv.Atoi(tx.variables.responseStatus.Get())
-	al.Transaction = loggers.AuditTransaction{
+	al.Transaction = auditlog.Transaction{
 		Timestamp:     ts,
 		UnixTimestamp: tx.Timestamp,
 		ID:            tx.id,
@@ -1279,14 +1279,14 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 		HostIP:        tx.variables.serverAddr.Get(),
 		HostPort:      hostPort,
 		ServerID:      tx.variables.serverName.Get(), // TODO check
-		Request: loggers.AuditTransactionRequest{
+		Request: auditlog.TransactionRequest{
 			Method:      tx.variables.requestMethod.Get(),
 			Protocol:    tx.variables.requestProtocol.Get(),
 			URI:         tx.variables.requestURI.Get(),
 			HTTPVersion: tx.variables.requestProtocol.Get(),
 			// Body and headers are audit variables.RequestUriRaws
 		},
-		Response: loggers.AuditTransactionResponse{
+		Response: auditlog.TransactionResponse{
 			Status: status,
 			// body and headers are audit parts
 		},
@@ -1299,7 +1299,7 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	// al.Transaction.Request.Body = tx.RequestBodyBuffer.String()
 	al.Transaction.Response.Headers = tx.variables.responseHeaders.Data()
 	al.Transaction.Response.Body = tx.variables.responseBody.Get()
-	al.Transaction.Producer = loggers.AuditTransactionProducer{
+	al.Transaction.Producer = auditlog.TransactionProducer{
 		Connector:  tx.WAF.ProducerConnector,
 		Version:    tx.WAF.ProducerConnectorVersion,
 		Server:     "",
@@ -1316,7 +1316,7 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	* if you don’t want to have (often large) files stored in your audit logs.
 	 */
 	// upload data
-	var files []loggers.AuditTransactionRequestFiles
+	var files []auditlog.TransactionRequestFiles
 	al.Transaction.Request.Files = nil
 	for _, file := range tx.variables.files.Get("") {
 		var size int64
@@ -1325,7 +1325,7 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 			// we ignore the error as it defaults to 0
 		}
 		ext := filepath.Ext(file)
-		at := loggers.AuditTransactionRequestFiles{
+		at := auditlog.TransactionRequestFiles{
 			Size: size,
 			Name: file,
 			Mime: mime.TypeByExtension(ext),
@@ -1333,14 +1333,14 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 		files = append(files, at)
 	}
 	al.Transaction.Request.Files = files
-	var mrs []loggers.AuditMessage
+	var mrs []auditlog.Message
 	for _, mr := range tx.matchedRules {
 		r := mr.Rule()
 		for _, matchData := range mr.MatchedDatas() {
-			mrs = append(mrs, loggers.AuditMessage{
+			mrs = append(mrs, auditlog.Message{
 				Actionset: strings.Join(tx.WAF.ComponentNames, " "),
 				Message:   matchData.Message(),
-				Data: loggers.AuditMessageData{
+				Data: auditlog.MessageData{
 					File:     mr.Rule().File(),
 					Line:     mr.Rule().Line(),
 					ID:       r.ID(),
