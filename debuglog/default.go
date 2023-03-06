@@ -130,7 +130,7 @@ func (l defaultLogger) Trace() Event {
 		return NopEvent{}
 	}
 
-	return &defaultEvent{printer: l.printer, level: LogLevelError, fields: l.defaultFields}
+	return &defaultEvent{printer: l.printer, level: LogLevelTrace, fields: l.defaultFields}
 }
 
 func (l defaultLogger) Debug() Event {
@@ -138,7 +138,7 @@ func (l defaultLogger) Debug() Event {
 		return NopEvent{}
 	}
 
-	return &defaultEvent{printer: l.printer, level: LogLevelError, fields: l.defaultFields}
+	return &defaultEvent{printer: l.printer, level: LogLevelDebug, fields: l.defaultFields}
 }
 
 func (l defaultLogger) Info() Event {
@@ -146,7 +146,7 @@ func (l defaultLogger) Info() Event {
 		return NopEvent{}
 	}
 
-	return &defaultEvent{printer: l.printer, level: LogLevelError, fields: l.defaultFields}
+	return &defaultEvent{printer: l.printer, level: LogLevelInfo, fields: l.defaultFields}
 }
 
 func (l defaultLogger) Warn() Event {
