@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"strings"
 	"testing"
 )
 
@@ -94,13 +95,36 @@ func TestMsg(t *testing.T) {
 			Err(errors.New("my error")).
 			Msg("my message")
 
-		expected := "[ERROR] my message a=true b=-1 c=1 d=\"x\" e=\"y & z\" f=false error=\"my error\"\n"
+		expected := "[INFO] my message a=true b=-1 c=1 d=\"x\" e=\"y & z\" f=false error=\"my error\"\n"
 
 		// [20:] Skips the timestamp.
 		if want, have := expected, buf.String()[20:]; want != have {
 			t.Fatalf("unexpected message, want %q, have %q", want, have)
 		}
 	})
+}
+
+func TestLogMessagePrefixes(t *testing.T) {
+	buf := bytes.Buffer{}
+	l := Default().WithOutput(&buf).WithLevel(LogLevelTrace)
+	testCases := map[string]struct {
+		logPrintEvent Event
+	}{
+		"Trace": {l.Trace()},
+		"Debug": {l.Debug()},
+		"Info":  {l.Info()},
+		"Warn":  {l.Warn()},
+		"Error": {l.Error()},
+	}
+	for name, tCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			buf.Reset()
+			tCase.logPrintEvent.Msg("message")
+			if wantToContain, have := strings.ToUpper(name), buf.String(); !strings.Contains(have, wantToContain) {
+				t.Errorf("unexpected log entry: want to contain %q, have %q", wantToContain, have)
+			}
+		})
+	}
 }
 
 func TestWithLogger(t *testing.T) {
@@ -119,7 +143,7 @@ func TestWithLogger(t *testing.T) {
 		Str("g", "w").
 		Msg("my message")
 
-	expected := "[ERROR] my message a=true b=-1 c=1 d=\"x\" e=\"y & z\" f=false g=\"w\"\n"
+	expected := "[INFO] my message a=true b=-1 c=1 d=\"x\" e=\"y & z\" f=false g=\"w\"\n"
 
 	// [20:] Skips the timestamp.
 	if want, have := expected, buf.String()[20:]; want != have {
@@ -133,7 +157,7 @@ func TestWithLogger(t *testing.T) {
 		Str("g", "w").
 		Msg("my message")
 
-	expected = "[ERROR] my message g=\"w\"\n"
+	expected = "[INFO] my message g=\"w\"\n"
 
 	// [20:] Skips the timestamp.
 	if want, have := expected, buf2.String()[20:]; want != have {
@@ -150,7 +174,7 @@ func TestWithLoggerAccumulative(t *testing.T) {
 		Str("g", "w").
 		Msg("my message")
 
-	expected := "[ERROR] my message a=true b=-1 g=\"w\"\n"
+	expected := "[INFO] my message a=true b=-1 g=\"w\"\n"
 
 	// [20:] Skips the timestamp.
 	if want, have := expected, buf.String()[20:]; want != have {
