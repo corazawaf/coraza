@@ -8,9 +8,7 @@
 package coreruleset
 
 import (
-	"archive/zip"
 	"bufio"
-	"bytes"
 	b64 "encoding/base64"
 	"fmt"
 	"io"
@@ -31,26 +29,12 @@ import (
 	"github.com/coreruleset/go-ftw/test"
 	"github.com/rs/zerolog"
 
+	coreruleset "github.com/corazawaf/coraza-coreruleset"
+	crstests "github.com/corazawaf/coraza-coreruleset/tests"
 	"github.com/corazawaf/coraza/v3"
 	txhttp "github.com/corazawaf/coraza/v3/http"
 	"github.com/corazawaf/coraza/v3/types"
 )
-
-var crsReader fs.FS
-
-func init() {
-	fmt.Println("Preparing CRS...")
-	ver := "072bb07571183e0ca5c449bac3ea966360aacc54"
-	if crs, err := downloadCRS(ver); err != nil {
-		panic(fmt.Sprintf("failed to download CRS: %s", err.Error()))
-	} else {
-		if f, err := fs.Sub(crs, fmt.Sprintf("coreruleset-%s", ver)); err != nil {
-			panic(err)
-		} else {
-			crsReader = f
-		}
-	}
-}
 
 func BenchmarkCRSCompilation(b *testing.B) {
 	rec, err := os.ReadFile(filepath.Join("..", "..", "coraza.conf-recommended"))
@@ -59,10 +43,10 @@ func BenchmarkCRSCompilation(b *testing.B) {
 	}
 	for i := 0; i < b.N; i++ {
 		_, err := coraza.NewWAF(coraza.NewWAFConfig().
-			WithRootFS(crsReader).
+			WithRootFS(coreruleset.FS).
 			WithDirectives(string(rec)).
-			WithDirectives("Include crs-setup.conf.example").
-			WithDirectives("Include rules/*.conf"))
+			WithDirectives("Include @crs-setup.conf.example").
+			WithDirectives("Include @owasp_crs/*.conf"))
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -207,11 +191,11 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	// 3. CRS basic config
 	// 4. CRS rules (on top of which are applied the previously defined SecDefaultAction)
 	conf = conf.
-		WithRootFS(crsReader).
+		WithRootFS(coreruleset.FS).
 		WithDirectives(string(rec)).
 		WithDirectives(customTestingConfig).
-		WithDirectives("Include crs-setup.conf.example").
-		WithDirectives("Include rules/*.conf")
+		WithDirectives("Include @crs-setup.conf.example").
+		WithDirectives("Include @owasp_crs/*.conf")
 
 	errorPath := filepath.Join(t.TempDir(), "error.log")
 	errorFile, err := os.Create(errorPath)
@@ -270,8 +254,8 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	defer s.Close()
 
 	var tests []test.FTWTest
-	err = doublestar.GlobWalk(crsReader, "tests/regression/tests/**/*.yaml", func(path string, d os.DirEntry) error {
-		yaml, err := fs.ReadFile(crsReader, path)
+	err = doublestar.GlobWalk(crstests.FS, "**/*.yaml", func(path string, d os.DirEntry) error {
+		yaml, err := fs.ReadFile(crstests.FS, path)
 		if err != nil {
 			return err
 		}
@@ -284,6 +268,9 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	if len(tests) == 0 {
+		t.Fatal("no tests found")
 	}
 
 	u, _ := url.Parse(s.URL)
@@ -339,11 +326,11 @@ SecAction "id:900005,\
   setvar:tx.combined_file_sizes=65535"
 `
 	conf := coraza.NewWAFConfig().
-		WithRootFS(crsReader).
+		WithRootFS(coreruleset.FS).
 		WithDirectives(string(rec)).
 		WithDirectives(customTestingConfig).
-		WithDirectives("Include crs-setup.conf.example").
-		WithDirectives("Include rules/*.conf")
+		WithDirectives("Include @crs-setup.conf.example").
+		WithDirectives("Include @owasp_crs/*.conf")
 
 	waf, err := coraza.NewWAF(conf)
 	if err != nil {
@@ -351,15 +338,4 @@ SecAction "id:900005,\
 	}
 
 	return waf
-}
-func downloadCRS(version string) (*zip.Reader, error) {
-	uri := fmt.Sprintf("https://github.com/coreruleset/coreruleset/archive/%s.zip", version)
-	// download file from uri
-	res, err := http.Get(uri)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-	crsZip, err := io.ReadAll(res.Body)
-	return zip.NewReader(bytes.NewReader(crsZip), int64(len(crsZip)))
 }
