@@ -13,10 +13,10 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/macro"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -693,7 +693,7 @@ func TestRelevantAuditLogging(t *testing.T) {
 	tx.WAF.AuditLogRelevantStatus = regexp.MustCompile(`(403)`)
 	tx.variables.responseStatus.Set("403")
 	tx.AuditEngine = types.AuditEngineRelevantOnly
-	// tx.WAF.auditLogger = loggers.NewAuditLogger()
+	// tx.WAF.auditLogger = auditlog.NewAuditLogger()
 	tx.ProcessLogging()
 	// TODO how do we check if the log was writen?
 	if err := tx.Close(); err != nil {
@@ -999,11 +999,12 @@ func TestTxProcessConnection(t *testing.T) {
 }
 
 func TestTxSetServerName(t *testing.T) {
-
 	l := &inspectableLogger{}
+
 	waf := NewWAF()
-	waf.Logger.SetOutput(l)
-	waf.Logger.SetLevel(loggers.LogLevelWarn)
+	waf.SetDebugLogOutput(l)
+	_ = waf.SetDebugLogLevel(debuglog.LogLevelWarn)
+
 	tx := waf.NewTransaction()
 	tx.LastPhase = types.PhaseRequestHeaders
 	tx.SetServerName("coraza.io")
@@ -1227,8 +1228,8 @@ func TestProcessorsIdempotencyWithAlreadyRaisedInterruption(t *testing.T) {
 	l := &inspectableLogger{}
 
 	waf := NewWAF()
-	waf.Logger.SetOutput(l)
-	waf.Logger.SetLevel(loggers.LogLevelError)
+	waf.SetDebugLogOutput(l)
+	_ = waf.SetDebugLogLevel(debuglog.LogLevelError)
 
 	expectedInterruption := &types.Interruption{
 		RuleID: 123,
@@ -1275,10 +1276,10 @@ func TestProcessorsIdempotencyWithAlreadyRaisedInterruption(t *testing.T) {
 				t.Fatalf("unexpected number of log entries, want %d, have %d", want, have)
 			}
 
-			expectedMessage := fmt.Sprintf("[ERROR] Calling %s but there is a preexisting interruption\n", processor)
+			expectedMessage := fmt.Sprintf("Calling %s but there is a preexisting interruption", processor)
 
-			if want, have := expectedMessage, l.entries[0]; want != have {
-				t.Fatalf("unexpected message, want %q, have %q", want, have)
+			if want, have := expectedMessage, l.entries[0]; !strings.Contains(have, want) {
+				t.Fatalf("unexpected message, want to contain %q in %q", want, have)
 			}
 
 			l.Close()

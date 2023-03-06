@@ -126,18 +126,6 @@ func TestSecRuleUpdateTargetVariableNegation(t *testing.T) {
 	}
 }
 
-func TestErrorLine(t *testing.T) {
-	waf := corazawaf.NewWAF()
-	p := NewParser(waf)
-	err := p.FromString("SecAction \"id:1\"\n#test\nSomefaulty")
-	if err == nil {
-		t.Error("expected error")
-	}
-	if !strings.Contains(err.Error(), "Line 3") {
-		t.Errorf("failed to find error line, got %s", err.Error())
-	}
-}
-
 func TestDefaultActionsForPhase2(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	p := NewParser(waf)

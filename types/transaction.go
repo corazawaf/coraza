@@ -5,6 +5,8 @@ package types
 
 import (
 	"io"
+
+	"github.com/corazawaf/coraza/v3/debuglog"
 )
 
 // Transaction is created from a WAF instance to handle web requests and responses,
@@ -185,6 +187,9 @@ type Transaction interface {
 
 	// MatchedRules returns the rules that have matched the requests with associated information.
 	MatchedRules() []MatchedRule
+
+	// DebugLogger returns the debug logger for this transaction.
+	DebugLogger() debuglog.Logger
 
 	// ID returns the transaction ID.
 	ID() string

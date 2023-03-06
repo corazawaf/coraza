@@ -7,7 +7,7 @@ import (
 	"io"
 
 	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/loggers"
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -35,7 +35,7 @@ type TransactionState interface {
 	ReadResponseBodyFrom(io.Reader) (*types.Interruption, int, error)
 
 	// DebugLogger returns the logger for this transaction.
-	DebugLogger() loggers.DebugLogger
+	DebugLogger() debuglog.Logger
 
 	// Capturing returns whether the transaction is capturing. CaptureField only works if capturing, this can be used
 	// as an optimization to avoid processing specific to capturing fields.

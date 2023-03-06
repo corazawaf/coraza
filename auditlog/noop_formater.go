@@ -5,8 +5,8 @@
 //go:build tinygo
 // +build tinygo
 
-package loggers
+package auditlog
 
-func noopFormater(al *AuditLog) ([]byte, error) {
+func noopFormater(al *Log) ([]byte, error) {
 	return nil, nil
 }

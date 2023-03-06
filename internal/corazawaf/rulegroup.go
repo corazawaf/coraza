@@ -112,7 +112,10 @@ func (rg *RuleGroup) Clear() {
 // as soon as an interruption has been triggered.
 // Returns true if transaction is disrupted
 func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
-	tx.WAF.Logger.Debug("[%s] Evaluating phase %d", tx.id, int(phase))
+	tx.DebugLogger().Debug().
+		Int("phase", int(phase)).
+		Msg("Evaluating phase")
+
 	tx.LastPhase = phase
 	usedRules := 0
 	ts := time.Now().UnixNano()
@@ -138,7 +141,10 @@ RulesLoop:
 		// we skip the rule in case it's in the excluded list
 		for _, trb := range tx.ruleRemoveByID {
 			if trb == r.ID_ {
-				tx.WAF.Logger.Debug("[%s] Skipping rule %d", tx.id, r.ID_)
+				tx.DebugLogger().Debug().
+					Int("rule_id", r.ID_).
+					Msg("Skipping rule")
+
 				continue RulesLoop
 			}
 		}
@@ -148,7 +154,11 @@ RulesLoop:
 			if r.SecMark_ == tx.SkipAfter {
 				tx.SkipAfter = ""
 			} else {
-				tx.WAF.Logger.Debug("[%s] Skipping rule %d because of SkipAfter, expecting %s and got: %q", tx.id, r.ID_, tx.SkipAfter, r.SecMark_)
+				tx.DebugLogger().Debug().
+					Int("rule_id", r.ID_).
+					Str("skip_after", tx.SkipAfter).
+					Str("secmarker", r.SecMark_).
+					Msg("Skipping rule because of SkipAfter")
 			}
 			continue
 		}
@@ -177,7 +187,10 @@ RulesLoop:
 		tx.Capture = false // we reset captures
 		usedRules++
 	}
-	tx.WAF.Logger.Debug("[%s] Finished phase %d", tx.id, int(phase))
+	tx.DebugLogger().Debug().
+		Int("phase", int(phase)).
+		Msg("Finished phase")
+
 	tx.stopWatches[phase] = time.Now().UnixNano() - ts
 	return tx.interruption != nil
 }

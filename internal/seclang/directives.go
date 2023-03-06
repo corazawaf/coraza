@@ -13,9 +13,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3/auditlog"
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -107,7 +108,7 @@ func directiveSecMarker(options *DirectiveOptions) error {
 	if err := options.WAF.Rules.Add(rule); err != nil {
 		return err
 	}
-	options.WAF.Logger.Debug("added secmark rule")
+	options.WAF.Logger.Debug().Msg("Added secmark rule")
 	return nil
 }
 
@@ -139,7 +140,9 @@ func directiveSecAction(options *DirectiveOptions) error {
 	if err := options.WAF.Rules.Add(rule); err != nil {
 		return err
 	}
-	options.WAF.Logger.Debug("Added SecAction: %s", options.Opts)
+	options.WAF.Logger.Debug().
+		Str("actions", options.Opts).
+		Msg("Added SecAction")
 	return nil
 }
 
@@ -174,14 +177,20 @@ func directiveSecRule(options *DirectiveOptions) error {
 	if err != nil && !ignoreErrors {
 		return err
 	} else if err != nil && ignoreErrors {
-		options.WAF.Logger.Debug("Ignoring rule compilation error for rule %s: %s", options.Opts, err.Error())
+		options.WAF.Logger.Debug().
+			Str("rule_id", options.Opts).
+			Err(err).
+			Msg("Ignoring rule compilation error")
 		return nil
 	}
 	err = options.WAF.Rules.Add(rule)
 	if err != nil && !ignoreErrors {
 		return err
 	} else if err != nil && ignoreErrors {
-		options.WAF.Logger.Debug("Ignoring rule compilation error for rule %s: %s", options.Opts, err.Error())
+		options.WAF.Logger.Debug().
+			Str("rule_id", options.Opts).
+			Err(err).
+			Msg("Ignoring rule compilation error")
 		return nil
 	}
 	return nil
@@ -578,7 +587,7 @@ func directiveSecAuditLogType(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	writer, err := loggers.GetLogWriter(options.Opts)
+	writer, err := auditlog.GetLogWriter(options.Opts)
 	if err != nil {
 		return err
 	}
@@ -598,7 +607,7 @@ func directiveSecAuditLogFormat(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	formatter, err := loggers.GetLogFormatter(options.Opts)
+	formatter, err := auditlog.GetLogFormatter(options.Opts)
 	if err != nil {
 		return err
 	}
@@ -896,11 +905,11 @@ func directiveSecDebugLog(options *DirectiveOptions) error {
 //
 // Levels outside the 0-9 range will default to level 3 (Info)
 func directiveSecDebugLogLevel(options *DirectiveOptions) error {
-	lvl, err := strconv.Atoi(options.Opts)
+	lvl, err := strconv.ParseInt(options.Opts, 10, 8)
 	if err != nil {
 		return err
 	}
-	return options.WAF.SetDebugLogLevel(lvl)
+	return options.WAF.SetDebugLogLevel(debuglog.LogLevel(lvl))
 }
 
 func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
@@ -927,8 +936,9 @@ func directiveSecIgnoreRuleCompilationErrors(options *DirectiveOptions) error {
 		return err
 	}
 	if b {
-		options.WAF.Logger.Warn(`Coraza is running in Compatibility Mode (SecIgnoreRuleCompilationErrors On)
-		, which may cause unexpected behavior on faulty rules.`)
+		options.WAF.Logger.Warn().
+			Msg(`Running in Compatibility Mode (SecIgnoreRuleCompilationErrors On), 
+			which may cause unexpected behavior on faulty rules.`)
 	}
 	options.Config.Set("ignore_rule_compilation_errors", b)
 	return nil
@@ -944,7 +954,9 @@ func directiveSecDataset(options *DirectiveOptions) error {
 		return errors.New("syntax error: SecDataset name `\n...\n`")
 	}
 	if _, ok := options.Datasets[name]; ok {
-		options.WAF.Logger.Warn("Dataset %s already exists, overwriting", name)
+		options.WAF.Logger.Warn().
+			Str("dataset_name", name).
+			Msg("Dataset already exists, overwriting")
 	}
 	var arr []string
 	data := strings.Trim(d, "`")
