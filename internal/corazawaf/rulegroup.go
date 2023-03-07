@@ -33,15 +33,13 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 		return fmt.Errorf("there is a another rule with id %d", rule.ID_)
 	}
 
-	numInferred := 0
 	rule.inferredPhases[rule.Phase_] = true
 	for _, v := range rule.variables {
 		min := minPhase(v.Variable)
-		if min != 0 {
+		if min != types.PhaseUnknown {
 			// We infer the earliest phase a variable used by the rule may be evaluated for use when
 			// multiphase evaluation is enabled
 			rule.inferredPhases[min] = true
-			numInferred++
 		}
 	}
 
