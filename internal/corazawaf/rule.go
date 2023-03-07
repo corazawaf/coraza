@@ -139,6 +139,12 @@ type Rule struct {
 	// inferredPhases is the inferred phases the rule is relevant for
 	// based on the processed variables.
 	inferredPhases [types.PhaseLogging + 1]bool
+
+	// chainMinPhase is the minimum phase among all chain variables.
+	// We do not eagerly evaluate variables in multiphase evaluation
+	// if they would be earlier than chained rules as they could never
+	// match.
+	chainMinPhase types.RulePhase
 }
 
 func (r *Rule) ParentID() int {
@@ -163,6 +169,25 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 	rid := r.ID_
 	if rid == 0 {
 		rid = r.ParentID_
+	}
+
+	// TODO(anuraaga): This is effectively lazily computing the min phase of a rule with chain the first
+	// time we evaluate the rule. Instead, we should do this at parse time, but this will require a
+	// large-ish refactoring of the parser, which adds parent rules to a rule group before preparing
+	// the child rules. In the meantime, only evaluating this once should allow performance to be fine.
+	if r.ParentID_ == 0 && r.HasChain && r.chainMinPhase == types.PhaseUnknown {
+		for c := r.Chain; c != nil; c = c.Chain {
+			for _, v := range c.variables {
+				min := minPhase(v.Variable)
+				if min != types.PhaseUnknown {
+					if r.chainMinPhase == types.PhaseUnknown {
+						r.chainMinPhase = min
+					} else if min < r.chainMinPhase {
+						r.chainMinPhase = min
+					}
+				}
+			}
+		}
 	}
 
 	var matchedValues []types.MatchData
@@ -194,14 +219,31 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 	} else {
 		ecol := tx.ruleRemoveTargetByID[r.ID_]
 		for _, v := range r.variables {
-			// TODO(anuraaga): Support skipping variables based on phase for rule chains too.
-			if multiphaseEvaluation && !r.HasChain && r.ParentID_ == 0 {
+			if multiphaseEvaluation && r.ParentID_ == 0 && (!r.HasChain || phase >= r.chainMinPhase) {
 				min := minPhase(v.Variable)
 				// When multiphase evaluation is enabled, any variable is evaluated at its
-				// earliest possible phase, so we skip it if the rule refers to other phases
-				// to avoid double-evaluation.
-				if min != types.PhaseUnknown && min != phase {
-					continue
+				// earliest possible phase, so we make sure to skip in other phases.
+				if min != types.PhaseUnknown {
+					if !r.HasChain {
+						// For rules that have no chains, we know the variable is evaluated in its
+						// min phase and no other phase.
+						if min != phase {
+							continue
+						}
+					} else {
+						if min < r.chainMinPhase {
+							// The variable was previously available but not evaluated yet because the
+							// chain wasn't available. We evaluate once during the chainMinPhase and
+							// skip the rest.
+							if phase != r.chainMinPhase {
+								continue
+							}
+						} else if min != phase {
+							// Chain is available, and variable gets evaluated in its phase and skip
+							// the rest.
+							continue
+						}
+					}
 				}
 			}
 			var values []types.MatchData
