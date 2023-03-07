@@ -762,6 +762,7 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 	tx.ForceRequestBodyVariable = true
 	tx.AddRequestHeader("content-type", "text/plain")
 	tx.AddRequestHeader("content-length", "7")
+	tx.LastPhase = types.PhaseRequestHeaders
 	if _, err := tx.requestBodyBuffer.Write([]byte("test123")); err != nil {
 		t.Error("Failed to write request body buffer")
 	}
@@ -770,6 +771,47 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 	}
 	if tx.variables.requestBody.Get() != "test123" {
 		t.Error("failed to set request body")
+	}
+	if err := tx.Close(); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestProcessBodiesSkippedIfHeadersPhasesNotReached(t *testing.T) {
+	l := &inspectableLogger{}
+	waf := NewWAF()
+	waf.SetDebugLogOutput(l)
+	_ = waf.SetDebugLogLevel(debuglog.LogLevelDebug)
+	tx := waf.NewTransaction()
+	tx.RuleEngine = types.RuleEngineOn
+	tx.RequestBodyAccess = true
+	// Current phase is PhaseUnknown (ProcessRequestHeaders has not been called)
+	it, err := tx.ProcessRequestBody()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if it != nil {
+		t.Fatal("Unexpected interruption")
+	}
+	it, err = tx.ProcessResponseBody()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if it != nil {
+		t.Fatal("Unexpected interruption")
+	}
+	// At this point we are expecting three log entries:
+	// [0] New transaction log
+	// [1] Anomalous call before request headers evaluation
+	// [2] Anomalous call before response headers evaluation
+	if want, have := 3, len(l.entries); want != have {
+		t.Fatalf("unexpected number of log entries, want %d, have %d", want, have)
+	}
+	if want, have := "anomalous call before request headers evaluation", l.entries[1]; !strings.Contains(have, want) {
+		t.Fatalf("unexpected message, want %q, have %q", want, have)
+	}
+	if want, have := "anomalous call before response headers evaluation", l.entries[2]; !strings.Contains(have, want) {
+		t.Fatalf("unexpected message, want %q, have %q", want, have)
 	}
 	if err := tx.Close(); err != nil {
 		t.Error(err)
@@ -875,6 +917,7 @@ func TestTxPhase4Magic(t *testing.T) {
 	waf.ResponseBodyMimeTypes = []string{"text/html"}
 	tx := waf.NewTransaction()
 	tx.AddResponseHeader("content-type", "text/html")
+	tx.LastPhase = types.PhaseResponseHeaders
 	if it, _, err := tx.WriteResponseBody([]byte("more bytes")); it != nil || err != nil {
 		t.Error(err)
 	}
@@ -916,6 +959,7 @@ func TestVariablesMatch(t *testing.T) {
 func TestTxReqBodyForce(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
+	tx.LastPhase = types.PhaseRequestHeaders
 	tx.RequestBodyAccess = true
 	tx.ForceRequestBodyVariable = true
 	if _, err := tx.requestBodyBuffer.Write([]byte("test")); err != nil {
@@ -1183,7 +1227,7 @@ func (l *inspectableLogger) Close() error {
 	return nil
 }
 
-func TestProcessorsIdempotency(t *testing.T) {
+func TestProcessorsIdempotencyWithAlreadyRaisedInterruption(t *testing.T) {
 	l := &inspectableLogger{}
 
 	waf := NewWAF()

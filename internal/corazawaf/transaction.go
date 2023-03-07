@@ -658,10 +658,9 @@ func (tx *Transaction) AddResponseArgument(key string, value string) {
 // This method should be called at very beginning of a request process, it is
 // expected to be executed prior to the virtual host resolution, when the
 // connection arrives on the server.
-// note: There is no direct connection between this function and any phase of
-//
-//	the SecLanguages phases. It is something that may occur between the
-//	SecLanguage phase 1 and 2.
+// note: There is no direct connection between this function and any phase of the
+// SecLanguages phases. It is something that may occur between the SecLanguage
+// phase 1 and 2.
 //
 // note: This function won't add GET arguments, they must be added with AddArgument
 func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string) {
@@ -911,15 +910,19 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		return nil, nil
 	}
 
-	if tx.LastPhase >= types.PhaseRequestBody {
-		// Phase already evaluated
-		tx.debugLogger.Warn().Msg("ProcessRequestBody has already been called")
-		return tx.interruption, nil
-	}
-
 	if tx.interruption != nil {
 		tx.debugLogger.Error().Msg("Calling ProcessRequestBody but there is a preexisting interruption")
 		return tx.interruption, nil
+	}
+
+	if tx.LastPhase != types.PhaseRequestHeaders {
+		if tx.LastPhase >= types.PhaseRequestBody {
+			// Phase already evaluated or skipped
+			tx.debugLogger.Warn().Msg("ProcessRequestBody should have already been called")
+		} else {
+			tx.debugLogger.Debug().Msg("Skipping request body processing, anomalous call before request headers evaluation")
+		}
+		return nil, nil
 	}
 
 	// we won't process empty request bodies or disabled RequestBodyAccess
@@ -1145,15 +1148,22 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		return nil, nil
 	}
 
-	if tx.LastPhase >= types.PhaseResponseBody {
-		// Phase already evaluated
-		tx.debugLogger.Warn().Msg("ProcessResponseBody has already been called")
-		return tx.interruption, nil
-	}
-
 	if tx.interruption != nil {
 		tx.debugLogger.Error().Msg("Calling ProcessResponseBody but there is a preexisting interruption")
 		return tx.interruption, nil
+	}
+
+	if tx.LastPhase != types.PhaseResponseHeaders {
+		if tx.LastPhase >= types.PhaseResponseBody {
+			// Phase already evaluated or skipped
+			tx.debugLogger.Warn().Msg("ProcessResponseBody should have already been called")
+		} else {
+			// Prevents evaluating response body rules if last phase has not been response headers. It may happen
+			// when a server returns an error prior to evaluating WAF rules, but ResponseBody is still called at
+			// the end of http stream
+			tx.debugLogger.Debug().Msg("Skipping response body processing, anomalous call before response headers evaluation")
+		}
+		return nil, nil
 	}
 
 	if !tx.ResponseBodyAccess || !tx.IsResponseBodyProcessable() {

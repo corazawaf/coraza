@@ -192,6 +192,12 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 	if r.operator == nil {
 		tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Forcing rule to match")
 		md := &corazarules.MatchData{}
+		if r.Msg != nil {
+			md.Message_ = r.Msg.Expand(tx)
+		}
+		if r.LogData != nil {
+			md.Data_ = r.LogData.Expand(tx)
+		}
 		matchedValues = append(matchedValues, md)
 		r.matchVariable(tx, md)
 	} else {
@@ -273,7 +279,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 		return matchedValues
 	}
 
-	// disruptive actions are only evaluated by parent rules
+	// disruptive actions and rules affecting the rule flow are only evaluated by parent rules
 	if r.ParentID_ == 0 {
 		// we only run the chains for the parent rule
 		for nr := r.Chain; nr != nil; {
@@ -285,16 +291,17 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 			matchedValues = append(matchedValues, matchedChainValues...)
 			nr = nr.Chain
 		}
-		// we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
-		if tx.RuleEngine != types.RuleEngineDetectionOnly {
-			tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Disrupting transaction by rule")
-			for _, a := range r.actions {
-				if a.Function.Type() == rules.ActionTypeDisruptive || a.Function.Type() == rules.ActionTypeFlow {
-					tx.DebugLogger().Debug().Int("rule_id", rid).Str("action", a.Name).Msg("Evaluating action for rule")
-					a.Function.Evaluate(r, tx)
-				}
-			}
 
+		for _, a := range r.actions {
+			if a.Function.Type() == rules.ActionTypeFlow {
+				// Flow actions are evaluated also if the rule engine is set to DetectionOnly
+				tx.DebugLogger().Debug().Int("rule_id", rid).Str("action", a.Name).Msg("Evaluating flow action for rule")
+				a.Function.Evaluate(r, tx)
+			} else if a.Function.Type() == rules.ActionTypeDisruptive && tx.RuleEngine == types.RuleEngineOn {
+				// The parser enforces that the disruptive action is just one per rule (if more than one, only the last one is kept)
+				tx.DebugLogger().Debug().Int("rule_id", rid).Str("action", a.Name).Msg("Executing disruptive action for rule")
+				a.Function.Evaluate(r, tx)
+			}
 		}
 		if r.ID_ != 0 {
 			// we avoid matching chains and secmarkers

@@ -6,8 +6,32 @@ package corazawaf
 import (
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/macro"
+	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
+
+func TestSecActionMessagePropagationInMatchData(t *testing.T) {
+	r := NewRule()
+	r.Msg, _ = macro.NewMacro("Message")
+	r.LogData, _ = macro.NewMacro("Data Message")
+	r.ID_ = 1
+	// SecAction uses nil operator
+	r.operator = nil
+	tx := NewWAF().NewTransaction()
+	transformationCache := tx.transformationCache
+	matchdata := r.doEvaluate(types.PhaseLogging, tx, transformationCache)
+	if len(matchdata) != 1 {
+		t.Errorf("expected 1 matchdata from a SecActions rule, got %d", len(matchdata))
+	}
+
+	if want, have := r.Msg.String(), matchdata[0].Message(); want != have {
+		t.Fatalf("unexpected Message: want %q, have %q", want, have)
+	}
+	if want, have := r.LogData.String(), matchdata[0].Data(); want != have {
+		t.Fatalf("unexpected LogData: want %q, have %q", want, have)
+	}
+}
 
 func TestRuleNegativeVariables(t *testing.T) {
 	rule := NewRule()
