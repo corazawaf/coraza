@@ -316,7 +316,9 @@ func TestTxIssue147(t *testing.T) {
 	tx.ResponseBodyAccess = true
 	tx.WAF.ResponseBodyMimeTypes = []string{"text/html"}
 	tx.AddResponseHeader("Content-Type", "text/html")
-	tx.LastPhase = types.PhaseResponseHeaders
+	tx.ProcessRequestHeaders()
+	_, _ = tx.ProcessRequestBody()
+	tx.ProcessResponseHeaders(200, "HTTP/1.1")
 
 	if tx.IsResponseBodyProcessable() {
 		if it, _, err := tx.WriteResponseBody([]byte("#!/usr/bin/python")); it != nil || err != nil {
@@ -452,7 +454,7 @@ func TestUnicode(t *testing.T) {
 	}
 
 	tx := waf.NewTransaction()
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.ProcessRequestHeaders()
 	tx.AddPostRequestArgument("var", `ハローワールド`)
 	it, err := tx.ProcessRequestBody()
 	if err != nil {
@@ -570,7 +572,7 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 	}
 
 	tx := waf.NewTransaction()
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.ProcessRequestHeaders()
 	tx.AddPostRequestArgument("Test1", "Xyz")
 	it, err := tx.ProcessRequestBody()
 	if err != nil {
@@ -581,7 +583,7 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 	}
 
 	tx = waf.NewTransaction()
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.ProcessRequestHeaders()
 	tx.AddPostRequestArgument("TEST1", "Xyz")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
@@ -592,7 +594,7 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 	}
 
 	tx = waf.NewTransaction()
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.ProcessRequestHeaders()
 	tx.AddPostRequestArgument("test1", "Xyz")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
@@ -603,7 +605,7 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 	}
 
 	tx = waf.NewTransaction()
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.ProcessRequestHeaders()
 	tx.AddPostRequestArgument("test1", "xyz")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
@@ -614,7 +616,7 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 	}
 
 	tx = waf.NewTransaction()
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.ProcessRequestHeaders()
 	tx.AddPostRequestArgument("test1", "XYZ")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
@@ -638,7 +640,7 @@ func TestCookiesCaseSensitive(t *testing.T) {
 
 	tx := waf.NewTransaction()
 	tx.AddRequestHeader("cookie", "Test1=Xyz")
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.ProcessRequestHeaders()
 	it, err := tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -649,7 +651,7 @@ func TestCookiesCaseSensitive(t *testing.T) {
 
 	tx = waf.NewTransaction()
 	tx.AddRequestHeader("cookie", "TEST1=Xyz")
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.ProcessRequestHeaders()
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -660,7 +662,7 @@ func TestCookiesCaseSensitive(t *testing.T) {
 
 	tx = waf.NewTransaction()
 	tx.AddRequestHeader("cookie", "test1=Xyz")
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.ProcessRequestHeaders()
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -671,7 +673,7 @@ func TestCookiesCaseSensitive(t *testing.T) {
 
 	tx = waf.NewTransaction()
 	tx.AddRequestHeader("cookie", "test1=xyz")
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.ProcessRequestHeaders()
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -682,7 +684,7 @@ func TestCookiesCaseSensitive(t *testing.T) {
 
 	tx = waf.NewTransaction()
 	tx.AddRequestHeader("cookie", "test1=XYZ")
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.ProcessRequestHeaders()
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -705,7 +707,7 @@ func TestHeadersCaseSensitive(t *testing.T) {
 
 	tx := waf.NewTransaction()
 	tx.AddRequestHeader("Test1", "Xyz")
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.ProcessRequestHeaders()
 	it, err := tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -716,7 +718,7 @@ func TestHeadersCaseSensitive(t *testing.T) {
 
 	tx = waf.NewTransaction()
 	tx.AddRequestHeader("TEST1", "Xyz")
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.ProcessRequestHeaders()
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -727,7 +729,7 @@ func TestHeadersCaseSensitive(t *testing.T) {
 
 	tx = waf.NewTransaction()
 	tx.AddRequestHeader("test1", "Xyz")
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.ProcessRequestHeaders()
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -738,7 +740,7 @@ func TestHeadersCaseSensitive(t *testing.T) {
 
 	tx = waf.NewTransaction()
 	tx.AddRequestHeader("test1", "xyz")
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.ProcessRequestHeaders()
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -749,7 +751,7 @@ func TestHeadersCaseSensitive(t *testing.T) {
 
 	tx = waf.NewTransaction()
 	tx.AddRequestHeader("test1", "XYZ")
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.ProcessRequestHeaders()
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -771,7 +773,7 @@ func TestParameterPollution(t *testing.T) {
 	}
 
 	tx := waf.NewTransaction()
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.ProcessRequestHeaders()
 	tx.AddPostRequestArgument("test1", "xyz")
 	tx.AddPostRequestArgument("Test1", "Xyz")
 	tx.AddPostRequestArgument("TEST1", "XYZ")
@@ -791,7 +793,7 @@ func TestParameterPollution(t *testing.T) {
 	}
 
 	tx = waf.NewTransaction()
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.ProcessRequestHeaders()
 	tx.AddPostRequestArgument("test1", "xyz")
 	tx.AddPostRequestArgument("Test1", "Xyz")
 	tx.AddPostRequestArgument("tesT1", "Xyz")
@@ -825,7 +827,7 @@ func TestURIQueryParamCaseSensitive(t *testing.T) {
 
 	tx := waf.NewTransaction()
 	tx.ProcessURI("/url?Test1='SQLI", "POST", "HTTP/1.1")
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.ProcessRequestHeaders()
 	_, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -846,7 +848,7 @@ func TestURIQueryParamCaseSensitive(t *testing.T) {
 
 	tx = waf.NewTransaction()
 	tx.ProcessURI("/test?test1='SQLI&Test1='SQLI&TEST1='SQLI", "POST", "HTTP/1.1")
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.ProcessRequestHeaders()
 	_, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)

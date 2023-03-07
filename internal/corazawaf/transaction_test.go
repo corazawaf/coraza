@@ -370,7 +370,7 @@ func TestProcessRequestHeadersDoesNoEvaluationOnEngineOff(t *testing.T) {
 	}
 
 	_ = tx.ProcessRequestHeaders()
-	if tx.LastPhase != 0 { // 0 means no phases have been evaluated
+	if tx.lastPhase != 0 { // 0 means no phases have been evaluated
 		t.Error("unexpected rule evaluation")
 	}
 }
@@ -381,7 +381,7 @@ func TestProcessRequestBodyDoesNoEvaluationOnEngineOff(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error("failed to process request body")
 	}
-	if tx.LastPhase != 0 {
+	if tx.lastPhase != 0 {
 		t.Error("unexpected rule evaluation")
 	}
 }
@@ -390,7 +390,7 @@ func TestProcessResponseHeadersDoesNoEvaluationOnEngineOff(t *testing.T) {
 	tx := NewWAF().NewTransaction()
 	tx.RuleEngine = types.RuleEngineOff
 	_ = tx.ProcessResponseHeaders(200, "OK")
-	if tx.LastPhase != 0 {
+	if tx.lastPhase != 0 {
 		t.Error("unexpected rule evaluation")
 	}
 }
@@ -401,7 +401,7 @@ func TestProcessResponseBodyDoesNoEvaluationOnEngineOff(t *testing.T) {
 	if _, err := tx.ProcessResponseBody(); err != nil {
 		t.Error("Failed to process response body")
 	}
-	if tx.LastPhase != 0 {
+	if tx.lastPhase != 0 {
 		t.Error("unexpected rule evaluation")
 	}
 }
@@ -410,7 +410,7 @@ func TestProcessLoggingDoesNoEvaluationOnEngineOff(t *testing.T) {
 	tx := NewWAF().NewTransaction()
 	tx.RuleEngine = types.RuleEngineOff
 	tx.ProcessLogging()
-	if tx.LastPhase != 0 {
+	if tx.lastPhase != 0 {
 		t.Error("unexpected rule evaluation")
 	}
 }
@@ -762,7 +762,7 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 	tx.ForceRequestBodyVariable = true
 	tx.AddRequestHeader("content-type", "text/plain")
 	tx.AddRequestHeader("content-length", "7")
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.ProcessRequestHeaders()
 	if _, err := tx.requestBodyBuffer.Write([]byte("test123")); err != nil {
 		t.Error("Failed to write request body buffer")
 	}
@@ -917,7 +917,9 @@ func TestTxPhase4Magic(t *testing.T) {
 	waf.ResponseBodyMimeTypes = []string{"text/html"}
 	tx := waf.NewTransaction()
 	tx.AddResponseHeader("content-type", "text/html")
-	tx.LastPhase = types.PhaseResponseHeaders
+	tx.ProcessRequestHeaders()
+	_, _ = tx.ProcessRequestBody()
+	tx.ProcessResponseHeaders(200, "HTTP/1.1")
 	if it, _, err := tx.WriteResponseBody([]byte("more bytes")); it != nil || err != nil {
 		t.Error(err)
 	}
@@ -959,7 +961,7 @@ func TestVariablesMatch(t *testing.T) {
 func TestTxReqBodyForce(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.ProcessRequestHeaders()
 	tx.RequestBodyAccess = true
 	tx.ForceRequestBodyVariable = true
 	if _, err := tx.requestBodyBuffer.Write([]byte("test")); err != nil {
@@ -1009,7 +1011,7 @@ func TestTxSetServerName(t *testing.T) {
 	_ = waf.SetDebugLogLevel(debuglog.LogLevelWarn)
 
 	tx := waf.NewTransaction()
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.lastPhase = types.PhaseRequestHeaders
 	tx.SetServerName("coraza.io")
 	if tx.variables.serverName.Get() != "coraza.io" {
 		t.Error("failed to set server name")
