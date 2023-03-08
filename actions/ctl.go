@@ -240,7 +240,8 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 				tx.DebugLogger().Error().
 					Str("ctl", "ResponseBodyLimit").
 					Str("value", a.value).
-					Msg("Incorrect integer value")
+					Err(err).
+					Msg("Invalid limit")
 				return
 			}
 			tx.ResponseBodyLimit = limit

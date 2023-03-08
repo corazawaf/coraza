@@ -256,7 +256,7 @@ func TestCtl(t *testing.T) {
 		"responseBodyLimit incorrect": {
 			input: "responseBodyLimit=a",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if wantToContain, have := "[ERROR] Incorrect integer value", logEntry; !strings.Contains(have, wantToContain) {
+				if wantToContain, have := "[ERROR] Invalid limit", logEntry; !strings.Contains(have, wantToContain) {
 					t.Errorf("Failed to log entry, want to contain %q, have %q", wantToContain, have)
 				}
 			},
