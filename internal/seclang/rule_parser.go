@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"regexp"
 	"strings"
 
 	actionsmod "github.com/corazawaf/coraza/v3/actions"
@@ -299,10 +298,6 @@ type RuleOptions struct {
 	Data         string
 }
 
-// ruleTokenRegex splits the sections operator and actions.
-// e.g. &REQUEST_COOKIES_NAMES:'/^(?:phpMyAdminphp|MyAdmin_https)$/'|ARGS:test "id:3" => "id:3"
-var ruleTokenRegex = regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
-
 // ParseRule parses a rule from a string
 // The string must match the seclang format
 // In case WithOperator is false, the rule will be parsed without operator
@@ -333,27 +328,21 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 	actions := ""
 
 	if options.WithOperator {
-		matches := ruleTokenRegex.FindAllString(options.Data, 3) // we use at most second match
-		if len(matches) == 0 {
-			return nil, fmt.Errorf("invalid rule with no transformation matches: %q", options.Data)
+		vars, operator, acts, err := parseActionOperator(options.Data)
+		if err != nil {
+			return nil, err
 		}
-		operator := utils.MaybeRemoveQuotes(matches[0])
 		if utils.InSlice(operator, disabledRuleOperators) {
 			return nil, fmt.Errorf("%s rule operator is disabled", operator)
 		}
-		vars, _, _ := strings.Cut(options.Data, " ")
-		err = rp.ParseVariables(vars)
-		if err != nil {
+		if err := rp.ParseVariables(vars); err != nil {
 			return nil, err
 		}
-		err = rp.ParseOperator(operator)
-		if err != nil {
+		if err := rp.ParseOperator(operator); err != nil {
 			return nil, err
 		}
-		if len(matches) > 1 {
-			actions = utils.MaybeRemoveQuotes(matches[1])
-			err = rp.ParseActions(actions)
-			if err != nil {
+		if acts != "" {
+			if err := rp.ParseActions(acts); err != nil {
 				return nil, err
 			}
 		}
@@ -382,6 +371,60 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 		return nil, nil
 	}
 	return rp.rule, nil
+}
+
+func parseActionOperator(data string) (vars string, op string, actions string, err error) {
+	// So only need to TrimLeft below
+	data = strings.Trim(data, " ")
+	vars, rest, ok := strings.Cut(data, " ")
+	if !ok {
+		return "", "", "", fmt.Errorf("invalid format for rule with operator: %q", data)
+	}
+
+	rest = strings.TrimLeft(rest, " ")
+
+	if len(rest) == 0 || rest[0] != '"' {
+		return "", "", "", fmt.Errorf("invalid operator for rule with operator: %q", data)
+	}
+
+	op, rest, err = cutQuotedString(rest)
+	if err != nil {
+		return
+	}
+	op = utils.MaybeRemoveQuotes(op)
+
+	rest = strings.TrimLeft(rest, " ")
+	if len(rest) == 0 {
+		// No actions
+		return
+	}
+
+	if len(rest) < 2 || rest[0] != '"' || rest[len(rest)-1] != '"' {
+		return "", "", "", fmt.Errorf("invalid actions for rule with operator: %q", data)
+	}
+	actions = utils.MaybeRemoveQuotes(rest)
+
+	return
+}
+
+func cutQuotedString(s string) (string, string, error) {
+	if len(s) == 0 || s[0] != '"' {
+		return "", "", fmt.Errorf("expected quoted string: %q", s)
+	}
+
+	for i := 1; i < len(s); i++ {
+		// Search until first quote that isn't part of an escape sequence.
+		if s[i] != '"' {
+			continue
+		}
+		if s[i-1] == '\\' {
+			continue
+		}
+
+		return s[:i+1], s[i+1:], nil
+	}
+
+	return "", "", fmt.Errorf("expected terminating quote: %q", s)
 }
 
 func getLastRuleExpectingChain(w *corazawaf.WAF) *corazawaf.Rule {
