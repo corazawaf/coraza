@@ -315,7 +315,7 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 	}
 
 	var err error
-	rp := &RuleParser{
+	rp := RuleParser{
 		options:        options,
 		rule:           corazawaf.NewRule(),
 		defaultActions: map[types.RulePhase][]ruleAction{},
@@ -383,7 +383,7 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 		lastChain.Chain = rule
 		return nil, nil
 	}
-	return rp.rule, nil
+	return rule, nil
 }
 
 func getLastRuleExpectingChain(w *corazawaf.WAF) *corazawaf.Rule {
