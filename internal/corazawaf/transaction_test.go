@@ -4,6 +4,7 @@
 package corazawaf
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"regexp"
@@ -778,9 +779,9 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 }
 
 func TestProcessBodiesSkippedIfHeadersPhasesNotReached(t *testing.T) {
-	l := &inspectableLogger{}
+	logBuffer := &bytes.Buffer{}
 	waf := NewWAF()
-	waf.SetDebugLogOutput(l)
+	waf.SetDebugLogOutput(logBuffer)
 	_ = waf.SetDebugLogLevel(debuglog.LogLevelDebug)
 	tx := waf.NewTransaction()
 	tx.RuleEngine = types.RuleEngineOn
@@ -800,17 +801,18 @@ func TestProcessBodiesSkippedIfHeadersPhasesNotReached(t *testing.T) {
 	if it != nil {
 		t.Fatal("Unexpected interruption")
 	}
+	logEntries := strings.Split(strings.TrimSpace(logBuffer.String()), "\n")
 	// At this point we are expecting three log entries:
 	// [0] New transaction log
 	// [1] Anomalous call before request headers evaluation
 	// [2] Anomalous call before response headers evaluation
-	if want, have := 3, len(l.entries); want != have {
+	if want, have := 3, len(logEntries); want != have {
 		t.Fatalf("unexpected number of log entries, want %d, have %d", want, have)
 	}
-	if want, have := "anomalous call before request headers evaluation", l.entries[1]; !strings.Contains(have, want) {
+	if want, have := "anomalous call before request headers evaluation", logEntries[1]; !strings.Contains(have, want) {
 		t.Fatalf("unexpected message, want %q, have %q", want, have)
 	}
-	if want, have := "anomalous call before response headers evaluation", l.entries[2]; !strings.Contains(have, want) {
+	if want, have := "anomalous call before response headers evaluation", logEntries[2]; !strings.Contains(have, want) {
 		t.Fatalf("unexpected message, want %q, have %q", want, have)
 	}
 	if err := tx.Close(); err != nil {
@@ -1004,10 +1006,10 @@ func TestTxProcessConnection(t *testing.T) {
 }
 
 func TestTxSetServerName(t *testing.T) {
-	l := &inspectableLogger{}
+	logBuffer := &bytes.Buffer{}
 
 	waf := NewWAF()
-	waf.SetDebugLogOutput(l)
+	waf.SetDebugLogOutput(logBuffer)
 	_ = waf.SetDebugLogLevel(debuglog.LogLevelWarn)
 
 	tx := waf.NewTransaction()
@@ -1016,11 +1018,12 @@ func TestTxSetServerName(t *testing.T) {
 	if tx.variables.serverName.Get() != "coraza.io" {
 		t.Error("failed to set server name")
 	}
-	if want, have := 1, len(l.entries); want != have {
+	logEntries := strings.Split(strings.TrimSpace(logBuffer.String()), "\n")
+	if want, have := 1, len(logEntries); want != have {
 		t.Fatalf("unexpected number of log entries, want %d, have %d", want, have)
 	}
 
-	if want, have := "SetServerName has been called after ProcessRequestHeaders", l.entries[0]; !strings.Contains(have, want) {
+	if want, have := "SetServerName has been called after ProcessRequestHeaders", logEntries[0]; !strings.Contains(have, want) {
 		t.Fatalf("unexpected message, want %q, have %q", want, have)
 	}
 
@@ -1215,25 +1218,11 @@ func BenchmarkMacro(b *testing.B) {
 	}
 }
 
-type inspectableLogger struct {
-	entries []string
-}
-
-func (l *inspectableLogger) Write(p []byte) (n int, err error) {
-	l.entries = append(l.entries, string(p))
-	return len(p), nil
-}
-
-func (l *inspectableLogger) Close() error {
-	l.entries = nil
-	return nil
-}
-
 func TestProcessorsIdempotencyWithAlreadyRaisedInterruption(t *testing.T) {
-	l := &inspectableLogger{}
+	logBuffer := &bytes.Buffer{}
 
 	waf := NewWAF()
-	waf.SetDebugLogOutput(l)
+	waf.SetDebugLogOutput(logBuffer)
 	_ = waf.SetDebugLogLevel(debuglog.LogLevelError)
 
 	expectedInterruption := &types.Interruption{
@@ -1268,6 +1257,8 @@ func TestProcessorsIdempotencyWithAlreadyRaisedInterruption(t *testing.T) {
 
 	for processor, tCase := range testCases {
 		t.Run(processor, func(t *testing.T) {
+			logBuffer.Reset()
+
 			it := tCase(tx)
 			if it == nil {
 				t.Fatal("expected interruption")
@@ -1277,17 +1268,16 @@ func TestProcessorsIdempotencyWithAlreadyRaisedInterruption(t *testing.T) {
 				t.Fatal("unexpected interruption")
 			}
 
-			if want, have := 1, len(l.entries); want != have {
+			logEntries := strings.Split(strings.TrimSpace(logBuffer.String()), "\n")
+			if want, have := 1, len(logEntries); want != have {
 				t.Fatalf("unexpected number of log entries, want %d, have %d", want, have)
 			}
 
 			expectedMessage := fmt.Sprintf("Calling %s but there is a preexisting interruption", processor)
 
-			if want, have := expectedMessage, l.entries[0]; !strings.Contains(have, want) {
+			if want, have := expectedMessage, logEntries[0]; !strings.Contains(have, want) {
 				t.Fatalf("unexpected message, want to contain %q in %q", want, have)
 			}
-
-			l.Close()
 		})
 	}
 }
