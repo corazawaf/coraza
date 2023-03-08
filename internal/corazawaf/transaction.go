@@ -1446,7 +1446,7 @@ func (tx *Transaction) generateRequestBodyError(err error) {
 	tx.variables.reqbodyProcessorErrorMsg.Set(err.Error())
 }
 
-// generateResponseBodyError generates all the error variables for the request body parser
+// generateResponseBodyError generates all the error variables for the response body parser
 func (tx *Transaction) generateResponseBodyError(err error) {
 	tx.variables.resBodyError.Set("1")
 	tx.variables.resBodyErrorMsg.Set(fmt.Sprintf("%s: %s", tx.variables.resBodyProcessor.Get(), err.Error()))
