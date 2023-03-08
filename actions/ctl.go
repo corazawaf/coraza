@@ -222,7 +222,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 				tx.DebugLogger().Error().
 					Str("ctl", "ResponseBodyAccess").
 					Str("value", a.value).
-					Msg("Unknown value")
+					Msg("Unknown toggle")
 				return
 			}
 			tx.ResponseBodyAccess = val
@@ -257,7 +257,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 			tx.DebugLogger().Error().
 				Str("ctl", "ForceResponseBodyVariable").
 				Str("value", a.value).
-				Msg("Unknown value")
+				Msg("Unknown toggle")
 			return
 		}
 		tx.ForceResponseBodyVariable = val
