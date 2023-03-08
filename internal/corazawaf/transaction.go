@@ -57,29 +57,27 @@ type Transaction struct {
 	AllowType corazatypes.AllowType
 
 	// Copies from the WAF instance that may be overwritten by the ctl action
-	AuditEngine              types.AuditEngineStatus
-	AuditLogParts            types.AuditLogParts
-	ForceRequestBodyVariable bool
-	RequestBodyAccess        bool
-	RequestBodyLimit         int64
-	ResponseBodyAccess       bool
-	ResponseBodyLimit        int64
-	RuleEngine               types.RuleEngineStatus
-	HashEngine               bool
-	HashEnforcement          bool
+	AuditEngine               types.AuditEngineStatus
+	AuditLogParts             types.AuditLogParts
+	ForceRequestBodyVariable  bool
+	RequestBodyAccess         bool
+	RequestBodyLimit          int64
+	ForceResponseBodyVariable bool
+	ResponseBodyAccess        bool
+	ResponseBodyLimit         int64
+	RuleEngine                types.RuleEngineStatus
+	HashEngine                bool
+	HashEnforcement           bool
 
 	// Stores the last phase that was evaluated
 	// Used by allow to skip phases
-	LastPhase types.RulePhase
+	lastPhase types.RulePhase
 
 	// Handles request body buffers
 	requestBodyBuffer *BodyBuffer
 
 	// Handles response body buffers
 	responseBodyBuffer *BodyBuffer
-
-	// Body processor used to parse JSON, XML, etc
-	bodyProcessor bodyprocessors.BodyProcessor
 
 	// Rules with this id are going to be skipped while processing a phase
 	ruleRemoveByID []int
@@ -252,6 +250,8 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.argsGetNames
 	case variables.ArgsPostNames:
 		return tx.variables.argsPostNames
+	case variables.ResBodyProcessor:
+		return tx.variables.resBodyProcessor
 	case variables.TX:
 		return tx.variables.tx
 	case variables.Rule:
@@ -264,8 +264,7 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 	case variables.UrlencodedError:
 		return tx.variables.urlencodedError
 	case variables.ResponseArgs:
-		// TODO(anuraaga): This collection seems to be missing.
-		return nil
+		return tx.variables.responseArgs
 	case variables.ResponseXML:
 		return tx.variables.responseXML
 	case variables.RequestXML:
@@ -718,7 +717,7 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 // The API consumer is in charge of retrieving the value (e.g. from the host header).
 // It is expected to be executed before calling ProcessRequestHeaders.
 func (tx *Transaction) SetServerName(serverName string) {
-	if tx.LastPhase >= types.PhaseRequestHeaders {
+	if tx.lastPhase >= types.PhaseRequestHeaders {
 		tx.debugLogger.Warn().Msg("SetServerName has been called after ProcessRequestHeaders")
 	}
 	tx.variables.serverName.Set(serverName)
@@ -735,7 +734,7 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 		// Rule engine is disabled
 		return nil
 	}
-	if tx.LastPhase >= types.PhaseRequestHeaders {
+	if tx.lastPhase >= types.PhaseRequestHeaders {
 		// Phase already evaluated
 		tx.debugLogger.Error().Msg("ProcessRequestHeaders has already been called")
 		return tx.interruption
@@ -915,8 +914,8 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		return tx.interruption, nil
 	}
 
-	if tx.LastPhase != types.PhaseRequestHeaders {
-		if tx.LastPhase >= types.PhaseRequestBody {
+	if tx.lastPhase != types.PhaseRequestHeaders {
+		if tx.lastPhase >= types.PhaseRequestBody {
 			// Phase already evaluated or skipped
 			tx.debugLogger.Warn().Msg("ProcessRequestBody should have already been called")
 		} else {
@@ -949,9 +948,6 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		rbp = "URLENCODED"
 		tx.variables.reqbodyProcessor.Set(rbp)
 	}
-	tx.debugLogger.Debug().
-		Str("body_processor", rbp).
-		Msg("Attempting to process request body using")
 	rbp = strings.ToLower(rbp)
 	if rbp == "" {
 		// so there is no bodyprocessor, we don't want to generate an error
@@ -960,15 +956,21 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	}
 	bodyprocessor, err := bodyprocessors.Get(rbp)
 	if err != nil {
-		tx.generateReqbodyError(errors.New("invalid body processor"))
+		tx.generateRequestBodyError(errors.New("invalid body processor"))
 		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.interruption, nil
 	}
+
+	tx.debugLogger.Debug().
+		Str("body_processor", rbp).
+		Msg("Attempting to process request body")
+
 	if err := bodyprocessor.ProcessRequest(reader, tx.Variables(), bodyprocessors.Options{
 		Mime:        mime,
 		StoragePath: tx.WAF.UploadDir,
 	}); err != nil {
-		tx.generateReqbodyError(err)
+		tx.debugLogger.Error().Err(err).Msg("Failed to process request body")
+		tx.generateRequestBodyError(err)
 		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.interruption, nil
 	}
@@ -988,7 +990,7 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Int
 		return nil
 	}
 
-	if tx.LastPhase >= types.PhaseResponseHeaders {
+	if tx.lastPhase >= types.PhaseResponseHeaders {
 		// Phase already evaluated
 		tx.debugLogger.Error().Msg("ProcessResponseHeaders has already been called")
 		return tx.interruption
@@ -1153,8 +1155,8 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		return tx.interruption, nil
 	}
 
-	if tx.LastPhase != types.PhaseResponseHeaders {
-		if tx.LastPhase >= types.PhaseResponseBody {
+	if tx.lastPhase != types.PhaseResponseHeaders {
+		if tx.lastPhase >= types.PhaseResponseBody {
 			// Phase already evaluated or skipped
 			tx.debugLogger.Warn().Msg("ProcessResponseBody should have already been called")
 		} else {
@@ -1173,21 +1175,35 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
 		return tx.interruption, nil
 	}
-	tx.debugLogger.Debug().
-		Msg("Attempting to process response body")
+
 	reader, err := tx.responseBodyBuffer.Reader()
 	if err != nil {
 		return tx.interruption, err
 	}
 
-	buf := new(strings.Builder)
-	length, err := io.Copy(buf, reader)
-	if err != nil {
-		return tx.interruption, err
-	}
+	if bp := tx.variables.resBodyProcessor.Get(); bp != "" {
+		b, err := bodyprocessors.Get(bp)
+		if err != nil {
+			tx.generateResponseBodyError(errors.New("invalid body processor"))
+			tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
+			return tx.interruption, err
+		}
 
-	tx.variables.responseContentLength.Set(strconv.FormatInt(length, 10))
-	tx.variables.responseBody.Set(buf.String())
+		tx.debugLogger.Debug().Str("body_processor", bp).Msg("Attempting to process response body")
+
+		if err := b.ProcessResponse(reader, tx.Variables(), bodyprocessors.Options{}); err != nil {
+			tx.debugLogger.Error().Err(err).Msg("Failed to process response body")
+			tx.generateResponseBodyError(err)
+		}
+	} else {
+		buf := new(strings.Builder)
+		length, err := io.Copy(buf, reader)
+		if err != nil {
+			return tx.interruption, err
+		}
+		tx.variables.responseContentLength.Set(strconv.FormatInt(length, 10))
+		tx.variables.responseBody.Set(buf.String())
+	}
 	tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
 	return tx.interruption, nil
 }
@@ -1268,6 +1284,10 @@ func (tx *Transaction) Interruption() *types.Interruption {
 
 func (tx *Transaction) MatchedRules() []types.MatchedRule {
 	return tx.matchedRules
+}
+
+func (tx *Transaction) LastPhase() types.RulePhase {
+	return tx.lastPhase
 }
 
 // AuditLog returns an AuditLog struct, used to write audit logs
@@ -1418,12 +1438,20 @@ func (tx *Transaction) String() string {
 	return res.String()
 }
 
-// generateReqbodyError generates all the error variables for the request body parser
-func (tx *Transaction) generateReqbodyError(err error) {
+// generateRequestBodyError generates all the error variables for the request body parser
+func (tx *Transaction) generateRequestBodyError(err error) {
 	tx.variables.reqbodyError.Set("1")
 	tx.variables.reqbodyErrorMsg.Set(fmt.Sprintf("%s: %s", tx.variables.reqbodyProcessor.Get(), err.Error()))
 	tx.variables.reqbodyProcessorError.Set("1")
-	tx.variables.reqbodyProcessorErrorMsg.Set(string(err.Error()))
+	tx.variables.reqbodyProcessorErrorMsg.Set(err.Error())
+}
+
+// generateResponseBodyError generates all the error variables for the response body parser
+func (tx *Transaction) generateResponseBodyError(err error) {
+	tx.variables.resBodyError.Set("1")
+	tx.variables.resBodyErrorMsg.Set(fmt.Sprintf("%s: %s", tx.variables.resBodyProcessor.Get(), err.Error()))
+	tx.variables.resBodyProcessorError.Set("1")
+	tx.variables.resBodyProcessorErrorMsg.Set(err.Error())
 }
 
 // TransactionVariables has pointers to all the variables of the transaction
@@ -1489,6 +1517,8 @@ type TransactionVariables struct {
 	responseProtocol         *collections.Single
 	responseStatus           *collections.Single
 	responseXML              *collections.Map
+	responseArgs             *collections.Map
+	resBodyProcessor         *collections.Single
 	rule                     *collections.Map
 	serverAddr               *collections.Single
 	serverName               *collections.Single
@@ -1498,6 +1528,10 @@ type TransactionVariables struct {
 	uniqueID                 *collections.Single
 	urlencodedError          *collections.Single
 	xml                      *collections.Map
+	resBodyError             *collections.Single
+	resBodyErrorMsg          *collections.Single
+	resBodyProcessorError    *collections.Single
+	resBodyProcessorErrorMsg *collections.Single
 }
 
 func NewTransactionVariables() *TransactionVariables {
@@ -1534,6 +1568,7 @@ func NewTransactionVariables() *TransactionVariables {
 	v.responseContentLength = collections.NewSingle(variables.ResponseContentLength)
 	v.responseProtocol = collections.NewSingle(variables.ResponseProtocol)
 	v.responseStatus = collections.NewSingle(variables.ResponseStatus)
+	v.responseArgs = collections.NewMap(variables.ResponseArgs)
 	v.serverAddr = collections.NewSingle(variables.ServerAddr)
 	v.serverName = collections.NewSingle(variables.ServerName)
 	v.serverPort = collections.NewSingle(variables.ServerPort)
@@ -1541,6 +1576,10 @@ func NewTransactionVariables() *TransactionVariables {
 	v.statusLine = collections.NewSingle(variables.StatusLine)
 	v.inboundErrorData = collections.NewSingle(variables.InboundErrorData)
 	v.duration = collections.NewSingle(variables.Duration)
+	v.resBodyError = collections.NewSingle(variables.ResBodyError)
+	v.resBodyErrorMsg = collections.NewSingle(variables.ResBodyErrorMsg)
+	v.resBodyProcessorError = collections.NewSingle(variables.ResBodyProcessorError)
+	v.resBodyProcessorErrorMsg = collections.NewSingle(variables.ResBodyProcessorErrorMsg)
 
 	v.filesSizes = collections.NewMap(variables.FilesSizes)
 	v.filesTmpContent = collections.NewMap(variables.FilesTmpContent)
@@ -1554,6 +1593,7 @@ func NewTransactionVariables() *TransactionVariables {
 	v.requestHeadersNames = v.requestHeaders.Names(variables.RequestHeadersNames)
 	v.responseHeaders = collections.NewNamedCollection(variables.ResponseHeaders)
 	v.responseHeadersNames = v.responseHeaders.Names(variables.ResponseHeadersNames)
+	v.resBodyProcessor = collections.NewSingle(variables.ResBodyProcessor)
 	v.geo = collections.NewMap(variables.Geo)
 	v.tx = collections.NewMap(variables.TX)
 	v.rule = collections.NewMap(variables.Rule)
@@ -1838,6 +1878,10 @@ func (v *TransactionVariables) ResponseHeadersNames() collection.Collection {
 	return v.responseHeadersNames
 }
 
+func (v *TransactionVariables) ResponseArgs() collection.Map {
+	return v.responseArgs
+}
+
 func (v *TransactionVariables) RequestHeadersNames() collection.Collection {
 	return v.requestHeadersNames
 }
@@ -1858,6 +1902,10 @@ func (v *TransactionVariables) ResponseXML() collection.Map {
 	return v.responseXML
 }
 
+func (v *TransactionVariables) ResponseBodyProcessor() collection.Single {
+	return v.resBodyProcessor
+}
+
 func (v *TransactionVariables) ArgsNames() collection.Collection {
 	return v.argsNames
 }
@@ -1868,6 +1916,22 @@ func (v *TransactionVariables) ArgsGetNames() collection.Collection {
 
 func (v *TransactionVariables) ArgsPostNames() collection.Collection {
 	return v.argsPostNames
+}
+
+func (v *TransactionVariables) ResBodyError() collection.Single {
+	return v.resBodyError
+}
+
+func (v *TransactionVariables) ResBodyErrorMsg() collection.Single {
+	return v.resBodyErrorMsg
+}
+
+func (v *TransactionVariables) ResBodyProcessorError() collection.Single {
+	return v.resBodyProcessorError
+}
+
+func (v *TransactionVariables) ResBodyProcessorErrorMsg() collection.Single {
+	return v.resBodyProcessorErrorMsg
 }
 
 // All iterates over the variables. We return both variable and its collection, i.e. key/value, to follow
@@ -2056,6 +2120,12 @@ func (v *TransactionVariables) All(f func(v variables.RuleVariable, col collecti
 		return
 	}
 	if !f(variables.ResponseXML, v.responseXML) {
+		return
+	}
+	if !f(variables.ResponseArgs, v.responseArgs) {
+		return
+	}
+	if !f(variables.ResBodyProcessor, v.resBodyProcessor) {
 		return
 	}
 	if !f(variables.Rule, v.rule) {

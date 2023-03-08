@@ -96,6 +96,8 @@ const (
 	ResponseProtocol = variables.ResponseProtocol
 	// ResponseStatus is the status code of the response
 	ResponseStatus = variables.ResponseStatus
+	// ResBodyProcessor contains the name of the response body processor used, no default
+	ResBodyProcessor = variables.ResBodyProcessor
 	// ServerAddr is the address of the server
 	ServerAddr = variables.ServerAddr
 	// ServerName is the name of the server
@@ -186,6 +188,14 @@ const (
 	XML = variables.XML
 	// MultipartPartHeaders contains the multipart headers
 	MultipartPartHeaders = variables.MultipartPartHeaders
+	// ResBodyError is 1 if the response body processor failed
+	ResBodyError = variables.ResBodyError
+	// ResBodyErrorMsg contains the error message if the response body processor failed
+	ResBodyErrorMsg = variables.ResBodyErrorMsg
+	// ResBodyProcessorError is 1 if the response body processor failed
+	ResBodyProcessorError = variables.ResBodyProcessorError
+	// ResBodyProcessorErrorMsg contains the error message if the response body processor failed
+	ResBodyProcessorErrorMsg = variables.ResBodyProcessorErrorMsg
 )
 
 // Parse returns the byte interpretation

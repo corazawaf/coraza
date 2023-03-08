@@ -128,6 +128,8 @@ func (v RuleVariable) Name() string {
 		return "REQUEST_HEADERS"
 	case ResponseHeaders:
 		return "RESPONSE_HEADERS"
+	case ResBodyProcessor:
+		return "RES_BODY_PROCESSOR"
 	case Geo:
 		return "GEO"
 	case RequestCookiesNames:
@@ -198,6 +200,14 @@ func (v RuleVariable) Name() string {
 		return "USERID"
 	case IP:
 		return "IP"
+	case ResBodyError:
+		return "RES_BODY_ERROR"
+	case ResBodyErrorMsg:
+		return "RES_BODY_ERROR_MSG"
+	case ResBodyProcessorError:
+		return "RES_BODY_PROCESSOR_ERROR"
+	case ResBodyProcessorErrorMsg:
+		return "RES_BODY_PROCESSOR_ERROR_MSG"
 
 	default:
 		return "INVALID_VARIABLE"
@@ -262,6 +272,7 @@ var rulemapRev = map[string]RuleVariable{
 	"REQUEST_COOKIES":                  RequestCookies,
 	"REQUEST_HEADERS":                  RequestHeaders,
 	"RESPONSE_HEADERS":                 ResponseHeaders,
+	"RES_BODY_PROCESSOR":               ResBodyProcessor,
 	"GEO":                              Geo,
 	"REQUEST_COOKIES_NAMES":            RequestCookiesNames,
 	"FILES_TMPNAMES":                   FilesTmpNames,
@@ -297,6 +308,10 @@ var rulemapRev = map[string]RuleVariable{
 	"SESSIONID":                        Sessionid,
 	"USERID":                           Userid,
 	"IP":                               IP,
+	"RES_BODY_ERROR":                   ResBodyError,
+	"RES_BODY_ERROR_MSG":               ResBodyErrorMsg,
+	"RES_BODY_PROCESSOR_ERROR":         ResBodyProcessorError,
+	"RES_BODY_PROCESSOR_ERROR_MSG":     ResBodyProcessorErrorMsg,
 }
 
 var errUnknownVariable = errors.New("unknown variable")

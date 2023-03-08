@@ -222,7 +222,10 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 			}
 
 			values = tx.GetField(v)
-			tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Expanding arguments for rule")
+			tx.DebugLogger().Debug().
+				Int("rule_id", rid).
+				Str("variable", v.Variable.Name()).
+				Msg("Expanding arguments for rule")
 			for i, arg := range values {
 				tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Transforming argument for rule")
 				args, errs := r.transformArg(arg, i, cache)
