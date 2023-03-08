@@ -25,9 +25,6 @@ type ruleActionParams struct {
 	// The name of the action, used for logging
 	Name string
 
-	// Parameters used by the action
-	Param string
-
 	// The action to be executed
 	Function rules.Action
 }
@@ -59,9 +56,6 @@ type ruleVariableException struct {
 // to get values from the transaction's variables
 // It supports xml, regex, exceptions and many more features
 type ruleVariableParams struct {
-	// We store the name for performance
-	Name string
-
 	// If true, the count of results will be returned
 	Count bool
 
@@ -81,9 +75,6 @@ type ruleVariableParams struct {
 }
 
 type ruleTransformationParams struct {
-	// The transformation to be used, used for logging
-	Name string
-
 	// The transformation function to be used
 	Function rules.Transformation
 }
@@ -396,7 +387,6 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 	}
 
 	r.variables = append(r.variables, ruleVariableParams{
-		Name:       v.Name(),
 		Count:      iscount,
 		Variable:   v,
 		KeyStr:     strings.ToLower(key),
@@ -459,7 +449,7 @@ func (r *Rule) AddTransformation(name string, t rules.Transformation) error {
 	if t == nil || name == "" {
 		return fmt.Errorf("invalid transformation %q not found", name)
 	}
-	r.transformations = append(r.transformations, ruleTransformationParams{name, t})
+	r.transformations = append(r.transformations, ruleTransformationParams{Function: t})
 	r.transformationsID = transformationID(r.transformationsID, name)
 	return nil
 }

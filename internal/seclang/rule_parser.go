@@ -173,8 +173,10 @@ func (p *RuleParser) ParseOperator(operator string) error {
 	}
 
 	opRaw, opdataRaw, _ := strings.Cut(operator, " ")
+	opRaw = strings.Clone(opRaw)
 	op := strings.TrimSpace(opRaw)
 	opdata := strings.TrimSpace(opdataRaw)
+	opdata = strings.Clone(opdata)
 
 	if op[0] == '@' {
 		// we trim @

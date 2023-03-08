@@ -821,7 +821,6 @@ func TestProcessBodiesSkippedIfHeadersPhasesNotReached(t *testing.T) {
 func TestTxVariables(t *testing.T) {
 	tx := makeTransaction(t)
 	rv := ruleVariableParams{
-		Name:     "REQUEST_HEADERS",
 		Variable: variables.RequestHeaders,
 		KeyStr:   "ho.*",
 		KeyRx:    regexp.MustCompile("ho.*"),
@@ -858,7 +857,6 @@ func TestTxVariables(t *testing.T) {
 func TestTxVariablesExceptions(t *testing.T) {
 	tx := makeTransaction(t)
 	rv := ruleVariableParams{
-		Name:     "REQUEST_HEADERS",
 		Variable: variables.RequestHeaders,
 		KeyStr:   "ho.*",
 		KeyRx:    regexp.MustCompile("ho.*"),
@@ -1045,7 +1043,6 @@ func TestTxAddArgument(t *testing.T) {
 func TestTxGetField(t *testing.T) {
 	tx := makeTransaction(t)
 	rvp := ruleVariableParams{
-		Name:     "args",
 		Variable: variables.Args,
 	}
 	if f := tx.GetField(rvp); len(f) != 3 {

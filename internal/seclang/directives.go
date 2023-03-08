@@ -922,7 +922,7 @@ func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
 		return err
 	}
 	rule := options.WAF.Rules.FindByID(id)
-	rp := &RuleParser{
+	rp := RuleParser{
 		rule:           rule,
 		options:        RuleOptions{},
 		defaultActions: map[types.RulePhase][]ruleAction{},
