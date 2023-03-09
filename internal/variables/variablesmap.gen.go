@@ -90,8 +90,6 @@ func (v RuleVariable) Name() string {
 		return "HIGHEST_SEVERITY"
 	case StatusLine:
 		return "STATUS_LINE"
-	case InboundErrorData:
-		return "INBOUND_ERROR_DATA"
 	case Duration:
 		return "DURATION"
 	case ResponseHeadersNames:
@@ -253,7 +251,6 @@ var rulemapRev = map[string]RuleVariable{
 	"SERVER_PORT":                      ServerPort,
 	"HIGHEST_SEVERITY":                 HighestSeverity,
 	"STATUS_LINE":                      StatusLine,
-	"INBOUND_ERROR_DATA":               InboundErrorData,
 	"DURATION":                         Duration,
 	"RESPONSE_HEADERS_NAMES":           ResponseHeadersNames,
 	"REQUEST_HEADERS_NAMES":            RequestHeadersNames,

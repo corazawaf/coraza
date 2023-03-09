@@ -94,7 +94,6 @@ type TransactionVariables interface {
 	ServerPort() collection.Single
 	HighestSeverity() collection.Single
 	StatusLine() collection.Single
-	InboundErrorData() collection.Single
 	Env() collection.Map
 	TX() collection.Map
 	Rule() collection.Map
