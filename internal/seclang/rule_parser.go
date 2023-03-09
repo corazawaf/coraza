@@ -172,9 +172,13 @@ func (p *RuleParser) ParseOperator(operator string) error {
 		operator = "!@rx " + operator[1:]
 	}
 
+	// We clone strings to ensure a slice into larger rule definition isn't kept in
+	// memory just to store operator information.
 	opRaw, opdataRaw, _ := strings.Cut(operator, " ")
+	opRaw = strings.Clone(opRaw)
 	op := strings.TrimSpace(opRaw)
 	opdata := strings.TrimSpace(opdataRaw)
+	opdata = strings.Clone(opdata)
 
 	if op[0] == '@' {
 		// we trim @
@@ -313,7 +317,7 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 	}
 
 	var err error
-	rp := &RuleParser{
+	rp := RuleParser{
 		options:        options,
 		rule:           corazawaf.NewRule(),
 		defaultActions: map[types.RulePhase][]ruleAction{},
@@ -381,7 +385,7 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 		lastChain.Chain = rule
 		return nil, nil
 	}
-	return rp.rule, nil
+	return rule, nil
 }
 
 func getLastRuleExpectingChain(w *corazawaf.WAF) *corazawaf.Rule {
