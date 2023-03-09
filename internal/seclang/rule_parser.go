@@ -422,13 +422,14 @@ func parseActions(actions string) ([]ruleAction, error) {
 	var err error
 	disruptiveActionIndex := unset
 actionLoop:
-	for i, c := range actions {
+	for i := 0; i < len(actions); i++ {
+		c := actions[i]
 		switch {
 		case iskey && c == ' ':
 			// skip whitespaces in key
 			continue actionLoop
 		case !quoted && c == ',':
-			res, disruptiveActionIndex, err = appendRuleAction(res, &ckey, &cval, disruptiveActionIndex)
+			res, disruptiveActionIndex, err = appendRuleAction(res, ckey.String(), cval.String(), disruptiveActionIndex)
 			if err != nil {
 				return nil, err
 			}
@@ -449,13 +450,13 @@ actionLoop:
 				// skip unquoted whitespaces
 				continue actionLoop
 			}
-			cval.WriteRune(c)
+			cval.WriteByte(c)
 		case iskey:
-			ckey.WriteRune(c)
+			ckey.WriteByte(c)
 		}
 		if i+1 == len(actions) {
 			// last action, returned disruptiveActionIndex is not needed
-			res, _, err = appendRuleAction(res, &ckey, &cval, disruptiveActionIndex)
+			res, _, err = appendRuleAction(res, ckey.String(), cval.String(), disruptiveActionIndex)
 			if err != nil {
 				return nil, err
 			}
@@ -464,8 +465,8 @@ actionLoop:
 	return res, nil
 }
 
-func appendRuleAction(res []ruleAction, ckey *strings.Builder, cval *strings.Builder, disruptiveActionIndex int) ([]ruleAction, int, error) {
-	f, err := actionsmod.Get(ckey.String())
+func appendRuleAction(res []ruleAction, ckey string, cval string, disruptiveActionIndex int) ([]ruleAction, int, error) {
+	f, err := actionsmod.Get(ckey)
 	if err != nil {
 		return res, unset, err
 	}
@@ -474,8 +475,8 @@ func appendRuleAction(res []ruleAction, ckey *strings.Builder, cval *strings.Bui
 		// actions present, or inherited, only the last one will take effect).
 		// Therefore, if we encounter another disruptive action, we replace the previous one.
 		res[disruptiveActionIndex] = ruleAction{
-			Key:   ckey.String(),
-			Value: cval.String(),
+			Key:   ckey,
+			Value: cval,
 			F:     f,
 			Atype: f.Type(),
 		}
@@ -484,8 +485,8 @@ func appendRuleAction(res []ruleAction, ckey *strings.Builder, cval *strings.Bui
 			disruptiveActionIndex = len(res)
 		}
 		res = append(res, ruleAction{
-			Key:   ckey.String(),
-			Value: cval.String(),
+			Key:   ckey,
+			Value: cval,
 			F:     f,
 			Atype: f.Type(),
 		})
