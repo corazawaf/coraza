@@ -172,6 +172,8 @@ func (p *RuleParser) ParseOperator(operator string) error {
 		operator = "!@rx " + operator[1:]
 	}
 
+	// We clone strings to ensure a slice into larger rule definition isn't kept in
+	// memory just to store operator information.
 	opRaw, opdataRaw, _ := strings.Cut(operator, " ")
 	opRaw = strings.Clone(opRaw)
 	op := strings.TrimSpace(opRaw)
