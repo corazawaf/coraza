@@ -146,6 +146,27 @@ func TestDefaultActionsForPhase2(t *testing.T) {
 		t.Error("phase 1 rules shouldn't have log set by default actions")
 	}
 }
+
+func TestInvalidOperatorRuleData(t *testing.T) {
+	tests := []string{
+		`ARGS`,
+		`ARGS `,
+		`ARGS notquoted "deny"`,
+		`Args "op`,
+		`ARGS "op" notquoted`,
+		`Args "op" "`,
+		`Args "op" "deny`,
+	}
+	for _, tc := range tests {
+		tt := tc
+		t.Run(tt, func(t *testing.T) {
+			if _, _, _, err := parseActionOperator(tt); err == nil {
+				t.Error("expected error")
+			}
+		})
+	}
+}
+
 func BenchmarkParseActions(b *testing.B) {
 	actionsToBeParsed := "id:980170,phase:5,pass,t:none,noauditlog,msg:'Anomaly Scores:Inbound Scores - Outbound Scores',tag:test"
 	for i := 0; i < b.N; i++ {
