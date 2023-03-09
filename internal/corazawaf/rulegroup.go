@@ -116,7 +116,7 @@ func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 		Int("phase", int(phase)).
 		Msg("Evaluating phase")
 
-	tx.LastPhase = phase
+	tx.lastPhase = phase
 	usedRules := 0
 	ts := time.Now().UnixNano()
 	transformationCache := tx.transformationCache
