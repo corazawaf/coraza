@@ -1293,101 +1293,112 @@ func (tx *Transaction) LastPhase() types.RulePhase {
 // AuditLog returns an AuditLog struct, used to write audit logs
 func (tx *Transaction) AuditLog() *auditlog.Log {
 	al := &auditlog.Log{}
-	al.Messages = nil
-	// YYYY/MM/DD HH:mm:ss
-	ts := time.Unix(0, tx.Timestamp).Format("2006/01/02 15:04:05")
 	al.Parts = tx.AuditLogParts
-	clientPort, _ := strconv.Atoi(tx.variables.remotePort.Get())
-	hostPort, _ := strconv.Atoi(tx.variables.serverPort.Get())
-	status, _ := strconv.Atoi(tx.variables.responseStatus.Get())
-	al.Transaction = auditlog.Transaction{
-		Timestamp:     ts,
-		UnixTimestamp: tx.Timestamp,
-		ID:            tx.id,
-		ClientIP:      tx.variables.remoteAddr.Get(),
-		ClientPort:    clientPort,
-		HostIP:        tx.variables.serverAddr.Get(),
-		HostPort:      hostPort,
-		ServerID:      tx.variables.serverName.Get(), // TODO check
-		Request: auditlog.TransactionRequest{
-			Method:      tx.variables.requestMethod.Get(),
-			Protocol:    tx.variables.requestProtocol.Get(),
-			URI:         tx.variables.requestURI.Get(),
-			HTTPVersion: tx.variables.requestProtocol.Get(),
-			// Body and headers are audit variables.RequestUriRaws
-		},
-		Response: auditlog.TransactionResponse{
-			Status: status,
-			// body and headers are audit parts
-		},
-	}
-	rengine := tx.RuleEngine.String()
 
-	al.Transaction.Request.Headers = tx.variables.requestHeaders.Data()
-	al.Transaction.Request.Body = tx.variables.requestBody.Get()
-	// TODO maybe change to:
-	// al.Transaction.Request.Body = tx.RequestBodyBuffer.String()
-	al.Transaction.Response.Headers = tx.variables.responseHeaders.Data()
-	al.Transaction.Response.Body = tx.variables.responseBody.Get()
-	al.Transaction.Producer = auditlog.TransactionProducer{
-		Connector:  tx.WAF.ProducerConnector,
-		Version:    tx.WAF.ProducerConnectorVersion,
-		Server:     "",
-		RuleEngine: rengine,
-		Stopwatch:  tx.GetStopWatch(),
-		Rulesets:   tx.WAF.ComponentNames,
-	}
-	/*
-	* TODO:
-	* This part is a replacement for part C. It will log the same data as C in
-	* all cases except when multipart/form-data encoding in used. In this case,
-	* it will log a fake application/x-www-form-urlencoded body that contains
-	* the information about parameters but not about the files. This is handy
-	* if you don’t want to have (often large) files stored in your audit logs.
-	 */
-	// upload data
-	var files []auditlog.TransactionRequestFiles
-	al.Transaction.Request.Files = nil
-	for _, file := range tx.variables.files.Get("") {
-		var size int64
-		if fs := tx.variables.filesSizes.Get(file); len(fs) > 0 {
-			size, _ = strconv.ParseInt(fs[0], 10, 64)
-			// we ignore the error as it defaults to 0
+	for _, part := range tx.AuditLogParts {
+		switch part {
+		case types.AuditLogPartAuditLogHeader:
+			clientPort, _ := strconv.Atoi(tx.variables.remotePort.Get())
+			hostPort, _ := strconv.Atoi(tx.variables.serverPort.Get())
+			// YYYY/MM/DD HH:mm:ss
+			ts := time.Unix(0, tx.Timestamp).Format("2006/01/02 15:04:05")
+			al.Transaction = auditlog.Transaction{
+				Timestamp:     ts,
+				UnixTimestamp: tx.Timestamp,
+				ID:            tx.id,
+				ClientIP:      tx.variables.remoteAddr.Get(),
+				ClientPort:    clientPort,
+				HostIP:        tx.variables.serverAddr.Get(),
+				HostPort:      hostPort,
+				ServerID:      tx.variables.serverName.Get(), // TODO check
+			}
+		case types.AuditLogPartRequestHeaders:
+			if al.Transaction.Request == nil {
+				al.Transaction.Request = &auditlog.TransactionRequest{}
+			}
+			al.Transaction.Request.Headers = tx.variables.requestHeaders.Data()
+		case types.AuditLogPartRequestBody:
+			if al.Transaction.Request == nil {
+				al.Transaction.Request = &auditlog.TransactionRequest{}
+			}
+			// TODO maybe change to:
+			// al.Transaction.Request.Body = tx.RequestBodyBuffer.String()
+			al.Transaction.Request.Body = tx.variables.requestBody.Get()
+
+			/*
+			* TODO:
+			* This part is a replacement for part C. It will log the same data as C in
+			* all cases except when multipart/form-data encoding in used. In this case,
+			* it will log a fake application/x-www-form-urlencoded body that contains
+			* the information about parameters but not about the files. This is handy
+			* if you don’t want to have (often large) files stored in your audit logs.
+			 */
+			// upload data
+			var files []auditlog.TransactionRequestFiles
+			al.Transaction.Request.Files = nil
+			for _, file := range tx.variables.files.Get("") {
+				var size int64
+				if fs := tx.variables.filesSizes.Get(file); len(fs) > 0 {
+					size, _ = strconv.ParseInt(fs[0], 10, 64)
+					// we ignore the error as it defaults to 0
+				}
+				ext := filepath.Ext(file)
+				at := auditlog.TransactionRequestFiles{
+					Size: size,
+					Name: file,
+					Mime: mime.TypeByExtension(ext),
+				}
+				files = append(files, at)
+			}
+			al.Transaction.Request.Files = files
+		case types.AuditLogPartIntermediaryResponseBody:
+			if al.Transaction.Response == nil {
+				al.Transaction.Response = &auditlog.TransactionResponse{}
+			}
+			al.Transaction.Response.Body = tx.variables.responseBody.Get()
+		case types.AuditLogPartResponseHeaders:
+			if al.Transaction.Response == nil {
+				al.Transaction.Response = &auditlog.TransactionResponse{}
+			}
+			status, _ := strconv.Atoi(tx.variables.responseStatus.Get())
+			al.Transaction.Response.Status = status
+			al.Transaction.Response.Headers = tx.variables.responseHeaders.Data()
+		case types.AuditLogPartAuditLogTrailer:
+			al.Transaction.Producer = &auditlog.TransactionProducer{
+				Connector:  tx.WAF.ProducerConnector,
+				Version:    tx.WAF.ProducerConnectorVersion,
+				Server:     "",
+				RuleEngine: tx.RuleEngine.String(),
+				Stopwatch:  tx.GetStopWatch(),
+				Rulesets:   tx.WAF.ComponentNames,
+			}
+		case types.AuditLogPartRulesMatched:
+			for _, mr := range tx.matchedRules {
+				r := mr.Rule()
+				for _, matchData := range mr.MatchedDatas() {
+					al.Messages = append(al.Messages, auditlog.Message{
+						Actionset: strings.Join(tx.WAF.ComponentNames, " "),
+						Message:   matchData.Message(),
+						Data: auditlog.MessageData{
+							File:     mr.Rule().File(),
+							Line:     mr.Rule().Line(),
+							ID:       r.ID(),
+							Rev:      r.Revision(),
+							Msg:      matchData.Message(),
+							Data:     matchData.Data(),
+							Severity: r.Severity(),
+							Ver:      r.Version(),
+							Maturity: r.Maturity(),
+							Accuracy: r.Accuracy(),
+							Tags:     r.Tags(),
+							Raw:      r.Raw(),
+						},
+					})
+				}
+			}
 		}
-		ext := filepath.Ext(file)
-		at := auditlog.TransactionRequestFiles{
-			Size: size,
-			Name: file,
-			Mime: mime.TypeByExtension(ext),
-		}
-		files = append(files, at)
 	}
-	al.Transaction.Request.Files = files
-	var mrs []auditlog.Message
-	for _, mr := range tx.matchedRules {
-		r := mr.Rule()
-		for _, matchData := range mr.MatchedDatas() {
-			mrs = append(mrs, auditlog.Message{
-				Actionset: strings.Join(tx.WAF.ComponentNames, " "),
-				Message:   matchData.Message(),
-				Data: auditlog.MessageData{
-					File:     mr.Rule().File(),
-					Line:     mr.Rule().Line(),
-					ID:       r.ID(),
-					Rev:      r.Revision(),
-					Msg:      matchData.Message(),
-					Data:     matchData.Data(),
-					Severity: r.Severity(),
-					Ver:      r.Version(),
-					Maturity: r.Maturity(),
-					Accuracy: r.Accuracy(),
-					Tags:     r.Tags(),
-					Raw:      r.Raw(),
-				},
-			})
-		}
-	}
-	al.Messages = mrs
+
 	return al
 }
 

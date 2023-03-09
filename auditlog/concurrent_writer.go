@@ -61,12 +61,6 @@ func (cl concurrentWriter) Write(al *Log) error {
 	// Append the filename
 	fname := fmt.Sprintf("/%s-%s", t.Format("20060102-150405"), al.Transaction.ID)
 	filepath := path.Join(logdir, fname)
-	str := fmt.Sprintf("%s %s - - [%s] %q %d %d %q %q %s %q %s %d %d",
-		al.Transaction.ClientIP, al.Transaction.HostIP, al.Transaction.Timestamp,
-		fmt.Sprintf("%s %s %s", al.Transaction.Request.Method, al.Transaction.Request.URI,
-			al.Transaction.Request.HTTPVersion),
-		al.Transaction.Response.Status, 0 /*response length*/, "-", "-", al.Transaction.ID,
-		"-", filepath, 0, 0 /*request length*/)
 	err := os.MkdirAll(logdir, cl.auditDirMode)
 	if err != nil {
 		return err
@@ -76,13 +70,21 @@ func (cl concurrentWriter) Write(al *Log) error {
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(filepath, []byte(jsdata), cl.auditFileMode)
+	err = os.WriteFile(filepath, jsdata, cl.auditFileMode)
 	if err != nil {
 		return err
 	}
 	cl.mux.Lock()
 	defer cl.mux.Unlock()
-	cl.auditlogger.Println(str)
+
+	cl.auditlogger.Printf("%s %s - - [%s]", al.Transaction.ClientIP, al.Transaction.HostIP, al.Transaction.Timestamp)
+	if al.Transaction.Request != nil {
+		cl.auditlogger.Printf(` "%s %s %s"`, al.Transaction.Request.Method, al.Transaction.Request.URI, al.Transaction.Request.HTTPVersion)
+	}
+	if al.Transaction.Response != nil {
+		cl.auditlogger.Printf(` %d`, al.Transaction.Response.Status)
+	}
+	cl.auditlogger.Printf("%s - %s\n", al.Transaction.ID, filepath)
 	return nil
 }
 

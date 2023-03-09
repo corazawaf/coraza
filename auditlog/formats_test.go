@@ -26,7 +26,7 @@ func createAuditLog() *Log {
 			Timestamp:     "02/Jan/2006:15:04:20 -0700",
 			UnixTimestamp: 0,
 			ID:            "123",
-			Request: TransactionRequest{
+			Request: &TransactionRequest{
 				URI:    "/test.php",
 				Method: "GET",
 				Headers: map[string][]string{
@@ -35,7 +35,7 @@ func createAuditLog() *Log {
 					},
 				},
 			},
-			Response: TransactionResponse{
+			Response: &TransactionResponse{
 				Status: 200,
 				Headers: map[string][]string{
 					"some": {

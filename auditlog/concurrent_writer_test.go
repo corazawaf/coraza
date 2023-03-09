@@ -63,8 +63,6 @@ func TestConcurrentWriterWrites(t *testing.T) {
 		Transaction: Transaction{
 			UnixTimestamp: ts,
 			ID:            "123",
-			Request:       TransactionRequest{},
-			Response:      TransactionResponse{},
 		},
 	}
 	writer := &concurrentWriter{}
