@@ -206,8 +206,8 @@ RulesLoop:
 		Msg("Finished phase")
 
 	// Reset AllowType if meant to allow only this specific phase. It is particuarly needed
-	// to reset it at this point for allow:phase action enforced by the last rule of the phase.
-	// In this case, it must not have any impact on the next phase.
+	// to reset it at this point, in case of an allow:phase action enforced by the last rule of the phase.
+	// In this case, allow:phase must not have any impact on the next phase.
 	if tx.AllowType == corazatypes.AllowTypePhase {
 		tx.AllowType = corazatypes.AllowTypeUnset
 	}
