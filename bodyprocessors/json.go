@@ -13,8 +13,9 @@ import (
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
-type jsonBodyProcessor struct {
-}
+type jsonBodyProcessor struct{}
+
+var _ BodyProcessor = &jsonBodyProcessor{}
 
 func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v rules.TransactionVariables, _ Options) error {
 	col := v.ArgsPost()
@@ -32,6 +33,14 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v rules.Transactio
 }
 
 func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v rules.TransactionVariables, _ Options) error {
+	col := v.ResponseArgs()
+	data, err := readJSON(reader)
+	if err != nil {
+		return err
+	}
+	for key, value := range data {
+		col.SetIndex(key, 0, value)
+	}
 	return nil
 }
 
@@ -92,8 +101,6 @@ func readItems(json gjson.Result, objKey []byte, res map[string]string) {
 		res[string(objKey)] = strconv.Itoa(arrayLen)
 	}
 }
-
-var _ BodyProcessor = &jsonBodyProcessor{}
 
 func init() {
 	Register("json", func() BodyProcessor {

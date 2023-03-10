@@ -10,7 +10,7 @@ import (
 var _ = profile.RegisterProfile(profile.Profile{
 	Meta: profile.Meta{
 		Author:      "jptosso",
-		Description: "Test if the json request body work",
+		Description: "Test if the JSON request/response body work",
 		Enabled:     true,
 		Name:        "jsonyaml",
 	},
@@ -35,12 +35,18 @@ var _ = profile.RegisterProfile(profile.Profile{
 								1100,
 								1101,
 								1010,
+								1000,
+								1011,
 							},
 							NonTriggeredRules: []int{
 								1111,
 								1102,
 								103,
 							},
+							Headers: map[string]string{
+								"Content-Type": "application/json",
+							},
+							Data: `{"test":123, "test2": 456, "test3": [22, 44, 55], "test4": 3}`,
 						},
 					},
 				},
@@ -49,7 +55,10 @@ var _ = profile.RegisterProfile(profile.Profile{
 	},
 	Rules: `
 SecRequestBodyAccess On
+SecResponseBodyAccess On
+SecResponseBodyMimeType application/json
 SecRule REQUEST_HEADERS:content-type "application/json" "id: 100, phase:1, pass, log, ctl:requestBodyProcessor=JSON"
+SecRule RESPONSE_HEADERS:content-type "application/json" "id:1000, phase:3, pass, log, ctl:responseBodyProcessor=JSON"
 SecRule REQBODY_PROCESSOR "JSON" "id: 101,phase:2,log,block"
 
 SecRule REQBODY_ERROR "!@eq 0" "id:1111, phase:2, log, block"
@@ -62,5 +71,6 @@ SecRule ARGS:json.test3.2 "@eq 55" "id:1101, phase:2, log, block"
 SecRule ARGS:json.test "@eq 456" "id:1102, phase:2, log, block"
 
 SecRule ARGS:json.test3 "@eq 3" "id: 1010, phase:2, log, block"
+SecRule RESPONSE_ARGS:json.test4 "@eq 3" "id: 1011, phase:4, log, block"
 `,
 })

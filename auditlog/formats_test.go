@@ -6,6 +6,8 @@ package auditlog
 import (
 	"bytes"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 func TestNativeFormatter(t *testing.T) {
@@ -22,6 +24,15 @@ func TestNativeFormatter(t *testing.T) {
 
 func createAuditLog() *Log {
 	return &Log{
+		Parts: []types.AuditLogPart{
+			types.AuditLogPartAuditLogHeader,
+			types.AuditLogPartRequestHeaders,
+			types.AuditLogPartRequestBody,
+			types.AuditLogPartIntermediaryResponseBody,
+			types.AuditLogPartResponseHeaders,
+			types.AuditLogPartAuditLogTrailer,
+			types.AuditLogPartRulesMatched,
+		},
 		Transaction: Transaction{
 			Timestamp:     "02/Jan/2006:15:04:20 -0700",
 			UnixTimestamp: 0,

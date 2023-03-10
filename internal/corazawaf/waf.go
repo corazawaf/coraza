@@ -156,8 +156,7 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	tx.RuleEngine = w.RuleEngine
 	tx.HashEngine = false
 	tx.HashEnforcement = false
-	tx.LastPhase = 0
-	tx.bodyProcessor = nil
+	tx.lastPhase = 0
 	tx.ruleRemoveByID = nil
 	tx.ruleRemoveTargetByID = map[int][]ruleVariableParams{}
 	tx.Skip = 0
