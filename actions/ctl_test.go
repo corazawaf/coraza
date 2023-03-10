@@ -318,7 +318,7 @@ func TestCtl(t *testing.T) {
 			defer logsBuf.Reset()
 
 			logger := debuglog.Default().
-				WithLevel(debuglog.LogLevelWarn).
+				WithLevel(debuglog.LevelWarn).
 				WithOutput(logsBuf)
 
 			waf := corazawaf.NewWAF()
