@@ -184,10 +184,13 @@ RulesLoop:
 			tx.DebugLogger().Debug().
 				Int("phase", int(phase)).
 				Msg("Skipping phase because of allow request action")
-			if phase == types.PhaseRequestHeaders || phase == types.PhaseRequestBody {
-				if phase == types.PhaseRequestBody {
-					tx.AllowType = corazatypes.AllowTypeUnset
-				}
+			if phase == types.PhaseRequestHeaders {
+				// tx.AllowType is not resetted because another request phase might be called
+				break RulesLoop
+			}
+			if phase == types.PhaseRequestBody {
+				// // tx.AllowType is resetted, currently PhaseRequestBody is the last request phase
+				tx.AllowType = corazatypes.AllowTypeUnset
 				break RulesLoop
 			}
 		case corazatypes.AllowTypeAll:
