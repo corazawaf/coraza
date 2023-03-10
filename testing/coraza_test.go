@@ -61,7 +61,7 @@ func TestEngine(t *testing.T) {
 func testList(t *testing.T, p *profile.Profile) ([]*Test, error) {
 	t.Helper()
 	logger := debuglog.Default().
-		WithLevel(debuglog.LogLevelDebug).
+		WithLevel(debuglog.LevelDebug).
 		WithOutput(testLogOutput{t})
 	var tests []*Test
 	for _, test := range p.Tests {

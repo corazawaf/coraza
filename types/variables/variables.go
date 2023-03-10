@@ -28,7 +28,8 @@ const (
 	FilesCombinedSize = variables.FilesCombinedSize
 	// FullRequestLength is the length of the full request
 	FullRequestLength = variables.FullRequestLength
-	// InboundDataError represents errors for inbound data
+	// InboundDataError will be set to 1 when the request body size
+	// is above the setting configured by SecRequesteBodyLimit
 	InboundDataError = variables.InboundDataError
 	// MatchedVar is the value of the matched variable
 	MatchedVar = variables.MatchedVar
@@ -109,9 +110,6 @@ const (
 	// StatusLine is the status line of the response, including the request method
 	// and HTTP version information
 	StatusLine = variables.StatusLine
-	// InboundErrorData will be set to 1 when the request body size
-	// is above the setting configured by SecRequesteBodyLimit
-	InboundErrorData = variables.InboundErrorData
 	// Duration contains the time in miliseconds from
 	// the beginning of the transaction until this point
 	Duration = variables.Duration

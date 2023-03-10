@@ -614,8 +614,6 @@ func minPhase(v variables.RuleVariable) types.RulePhase {
 		return types.PhaseUnknown
 	case variables.StatusLine:
 		return types.PhaseResponseHeaders
-	case variables.InboundErrorData:
-		return types.PhaseRequestBody
 	case variables.Duration:
 		// If used in matching, would need to be defined for multiple inferredPhases to make sense
 		return types.PhaseUnknown

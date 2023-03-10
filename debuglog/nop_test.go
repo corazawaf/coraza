@@ -9,8 +9,8 @@ import (
 )
 
 func TestNop(t *testing.T) {
-	l := Nop().(defaultLogger)
-	if want, have := l.level, LogLevelNoLog; want != have {
+	l := Noop().(defaultLogger)
+	if want, have := l.level, LevelNoLog; want != have {
 		t.Fatalf("unexpected log level when nop")
 	}
 

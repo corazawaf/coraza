@@ -909,7 +909,7 @@ func directiveSecDebugLogLevel(options *DirectiveOptions) error {
 	if err != nil {
 		return err
 	}
-	return options.WAF.SetDebugLogLevel(debuglog.LogLevel(lvl))
+	return options.WAF.SetDebugLogLevel(debuglog.Level(lvl))
 }
 
 func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {

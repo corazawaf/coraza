@@ -200,8 +200,6 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.highestSeverity
 	case variables.StatusLine:
 		return tx.variables.statusLine
-	case variables.InboundErrorData:
-		return tx.variables.inboundErrorData
 	case variables.Duration:
 		return tx.variables.duration
 	case variables.ResponseHeadersNames:
@@ -288,7 +286,7 @@ func (tx *Transaction) DebugLogger() debuglog.Logger {
 	return tx.debugLogger
 }
 
-func (tx *Transaction) SetDebugLogLevel(lvl debuglog.LogLevel) {
+func (tx *Transaction) SetDebugLogLevel(lvl debuglog.Level) {
 	tx.debugLogger = tx.debugLogger.WithLevel(lvl)
 }
 
@@ -790,11 +788,11 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 	if tx.requestBodyBuffer.length >= (math.MaxInt64 - writingBytes) {
 		// Overflow, failing. MaxInt64 is not a realistic payload size. Furthermore, it has been tested that
 		// bytes.Buffer does not work with this kind of sizes. See comments in BodyBuffer Write(data []byte)
-		return nil, 0, errors.New("Overflow reached while writing request body")
+		return nil, 0, errors.New("overflow reached while writing request body")
 	}
 
 	if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
-		tx.variables.inboundErrorData.Set("1")
+		tx.variables.inboundDataError.Set("1")
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			// We interrupt this transaction in case RequestBodyLimitAction is Reject
 			return setAndReturnBodyLimitInterruption(tx)
@@ -860,7 +858,7 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 			return nil, 0, errors.New("overflow reached while writing request body")
 		}
 		if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
-			tx.variables.inboundErrorData.Set("1")
+			tx.variables.inboundDataError.Set("1")
 			if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 				return setAndReturnBodyLimitInterruption(tx)
 			}
@@ -1487,7 +1485,6 @@ type TransactionVariables struct {
 	geo                      *collections.Map
 	highestSeverity          *collections.Single
 	inboundDataError         *collections.Single
-	inboundErrorData         *collections.Single
 	matchedVar               *collections.Single
 	matchedVarName           *collections.Single
 	matchedVars              *collections.NamedCollection
@@ -1585,7 +1582,6 @@ func NewTransactionVariables() *TransactionVariables {
 	v.serverPort = collections.NewSingle(variables.ServerPort)
 	v.highestSeverity = collections.NewSingle(variables.HighestSeverity)
 	v.statusLine = collections.NewSingle(variables.StatusLine)
-	v.inboundErrorData = collections.NewSingle(variables.InboundErrorData)
 	v.duration = collections.NewSingle(variables.Duration)
 	v.resBodyError = collections.NewSingle(variables.ResBodyError)
 	v.resBodyErrorMsg = collections.NewSingle(variables.ResBodyErrorMsg)
@@ -1797,10 +1793,6 @@ func (v *TransactionVariables) StatusLine() collection.Single {
 	return v.statusLine
 }
 
-func (v *TransactionVariables) InboundErrorData() collection.Single {
-	return v.inboundErrorData
-}
-
 func (v *TransactionVariables) Env() collection.Map {
 	return v.env
 }
@@ -2008,9 +2000,6 @@ func (v *TransactionVariables) All(f func(v variables.RuleVariable, col collecti
 		return
 	}
 	if !f(variables.InboundDataError, v.inboundDataError) {
-		return
-	}
-	if !f(variables.InboundErrorData, v.inboundErrorData) {
 		return
 	}
 	if !f(variables.MatchedVar, v.matchedVar) {
