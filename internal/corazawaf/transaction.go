@@ -286,7 +286,7 @@ func (tx *Transaction) DebugLogger() debuglog.Logger {
 	return tx.debugLogger
 }
 
-func (tx *Transaction) SetDebugLogLevel(lvl debuglog.LogLevel) {
+func (tx *Transaction) SetDebugLogLevel(lvl debuglog.Level) {
 	tx.debugLogger = tx.debugLogger.WithLevel(lvl)
 }
 

@@ -43,11 +43,11 @@ func TestLoggerLogLevels(t *testing.T) {
 			buf := bytes.Buffer{}
 			Default().WithOutput(&buf)
 			for settedLevel := 0; settedLevel <= 9; settedLevel++ {
-				l := Default().WithOutput(io.Discard).WithLevel(LogLevel(settedLevel))
+				l := Default().WithOutput(io.Discard).WithLevel(Level(settedLevel))
 				event := tCase.logFunction(l)()
 				if settedLevel >= tCase.expectedLowestPrintedLevel {
-					if _, ok := event.(NopEvent); ok {
-						t.Fatalf("Missing expected log. Level: %s, Function: %s", LogLevel(settedLevel).String(), name)
+					if _, ok := event.(noopEvent); ok {
+						t.Fatalf("Missing expected log. Level: %s, Function: %s", Level(settedLevel).String(), name)
 					}
 
 					if !event.IsEnabled() {
@@ -55,7 +55,7 @@ func TestLoggerLogLevels(t *testing.T) {
 					}
 				}
 				if settedLevel < tCase.expectedLowestPrintedLevel {
-					if _, ok := event.(NopEvent); !ok {
+					if _, ok := event.(noopEvent); !ok {
 						t.Fatalf("Unexpected log. Level: %d, Function: %s", settedLevel, name)
 					}
 				}
@@ -66,7 +66,7 @@ func TestLoggerLogLevels(t *testing.T) {
 
 func TestMsg(t *testing.T) {
 	t.Run("empty error", func(t *testing.T) {
-		l := Default().WithOutput(io.Discard).WithLevel(LogLevelInfo)
+		l := Default().WithOutput(io.Discard).WithLevel(LevelInfo)
 		fields := l.Info().Err(nil).(*defaultEvent).fields
 		if want, have := 0, len(fields); want != have {
 			t.Fatalf("unexpected number of fields, want %d, have %d", want, have)
@@ -75,7 +75,7 @@ func TestMsg(t *testing.T) {
 
 	t.Run("empty message", func(t *testing.T) {
 		buf := bytes.Buffer{}
-		l := Default().WithOutput(&buf).WithLevel(LogLevelInfo)
+		l := Default().WithOutput(&buf).WithLevel(LevelInfo)
 		l.Info().Msg("")
 		if want, have := 0, buf.Len(); want != have {
 			t.Fatalf("unexpected message length, want %d, have %d", want, have)
@@ -84,7 +84,7 @@ func TestMsg(t *testing.T) {
 
 	t.Run("message", func(t *testing.T) {
 		buf := bytes.Buffer{}
-		l := Default().WithOutput(&buf).WithLevel(LogLevelInfo)
+		l := Default().WithOutput(&buf).WithLevel(LevelInfo)
 		l.Info().
 			Bool("a", true).
 			Int("b", -1).
@@ -106,7 +106,7 @@ func TestMsg(t *testing.T) {
 
 func TestLogMessagePrefixes(t *testing.T) {
 	buf := bytes.Buffer{}
-	l := Default().WithOutput(&buf).WithLevel(LogLevelTrace)
+	l := Default().WithOutput(&buf).WithLevel(LevelTrace)
 	testCases := map[string]struct {
 		logPrintEvent Event
 	}{
@@ -129,7 +129,7 @@ func TestLogMessagePrefixes(t *testing.T) {
 
 func TestWithLogger(t *testing.T) {
 	buf := bytes.Buffer{}
-	l := Default().WithOutput(&buf).WithLevel(LogLevelInfo)
+	l := Default().WithOutput(&buf).WithLevel(LevelInfo)
 	l2 := l.
 		With(
 			Bool("a", true),
@@ -167,7 +167,7 @@ func TestWithLogger(t *testing.T) {
 
 func TestWithLoggerAccumulative(t *testing.T) {
 	buf := bytes.Buffer{}
-	l := Default().WithOutput(&buf).WithLevel(LogLevelInfo)
+	l := Default().WithOutput(&buf).WithLevel(LevelInfo)
 	l2 := l.With(Bool("a", true))
 	l3 := l2.With(Int("b", -1))
 	l3.Info().
