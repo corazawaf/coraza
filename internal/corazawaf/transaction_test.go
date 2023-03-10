@@ -782,7 +782,7 @@ func TestProcessBodiesSkippedIfHeadersPhasesNotReached(t *testing.T) {
 	logBuffer := &bytes.Buffer{}
 	waf := NewWAF()
 	waf.SetDebugLogOutput(logBuffer)
-	_ = waf.SetDebugLogLevel(debuglog.LogLevelDebug)
+	_ = waf.SetDebugLogLevel(debuglog.LevelDebug)
 	tx := waf.NewTransaction()
 	tx.RuleEngine = types.RuleEngineOn
 	tx.RequestBodyAccess = true
@@ -1008,7 +1008,7 @@ func TestTxSetServerName(t *testing.T) {
 
 	waf := NewWAF()
 	waf.SetDebugLogOutput(logBuffer)
-	_ = waf.SetDebugLogLevel(debuglog.LogLevelWarn)
+	_ = waf.SetDebugLogLevel(debuglog.LevelWarn)
 
 	tx := waf.NewTransaction()
 	tx.lastPhase = types.PhaseRequestHeaders
@@ -1220,7 +1220,7 @@ func TestProcessorsIdempotencyWithAlreadyRaisedInterruption(t *testing.T) {
 
 	waf := NewWAF()
 	waf.SetDebugLogOutput(logBuffer)
-	_ = waf.SetDebugLogLevel(debuglog.LogLevelError)
+	_ = waf.SetDebugLogLevel(debuglog.LevelError)
 
 	expectedInterruption := &types.Interruption{
 		RuleID: 123,

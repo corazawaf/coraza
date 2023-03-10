@@ -7,21 +7,22 @@ import (
 	"fmt"
 )
 
-type NopEvent struct{}
+type noopEvent struct{}
 
-func (NopEvent) Msg(string)                            {}
-func (e NopEvent) Str(string, string) Event            { return e }
-func (e NopEvent) Err(error) Event                     { return e }
-func (e NopEvent) Bool(string, bool) Event             { return e }
-func (e NopEvent) Int(string, int) Event               { return e }
-func (e NopEvent) Uint(string, uint) Event             { return e }
-func (e NopEvent) Stringer(string, fmt.Stringer) Event { return e }
-func (e NopEvent) IsEnabled() bool                     { return false }
+func (noopEvent) Msg(string)                            {}
+func (e noopEvent) Str(string, string) Event            { return e }
+func (e noopEvent) Err(error) Event                     { return e }
+func (e noopEvent) Bool(string, bool) Event             { return e }
+func (e noopEvent) Int(string, int) Event               { return e }
+func (e noopEvent) Uint(string, uint) Event             { return e }
+func (e noopEvent) Stringer(string, fmt.Stringer) Event { return e }
+func (e noopEvent) IsEnabled() bool                     { return false }
 
-func Nop() Logger {
+// Noop returns a Logger which does no logging.
+func Noop() Logger {
 	return defaultLogger{
-		printer: func(LogLevel, string, string) {},
+		printer: func(Level, string, string) {},
 		factory: defaultPrinterFactory,
-		level:   LogLevelNoLog,
+		level:   LevelNoLog,
 	}
 }

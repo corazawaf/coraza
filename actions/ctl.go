@@ -295,7 +295,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 			return
 		}
 
-		tx.SetDebugLogLevel(debuglog.LogLevel(lvl))
+		tx.SetDebugLogLevel(debuglog.Level(lvl))
 	}
 }
 

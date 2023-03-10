@@ -73,7 +73,7 @@ type Logger interface {
 	WithOutput(w io.Writer) Logger
 
 	// Level creates a child logger with the minimum accepted level set to level.
-	WithLevel(lvl LogLevel) Logger
+	WithLevel(lvl Level) Logger
 
 	// WithOutput duplicates the current logger and adds context fields to it.
 	With(...ContextField) Logger
