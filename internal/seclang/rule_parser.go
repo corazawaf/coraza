@@ -454,61 +454,70 @@ const unset = -1
 // function (pkg.actions) for each action split by comma (,)
 // Action arguments are allowed to wrap values between colons(”)
 func parseActions(actions string) ([]ruleAction, error) {
-	iskey := true
-	var key strings.Builder
-	var val strings.Builder
-	key.Reset()
-	val.Reset()
-
-	quoted := false
 	var res []ruleAction
 	var err error
 	disruptiveActionIndex := unset
-actionLoop:
-	for i := 0; i < len(actions); i++ {
+
+	beforeKey := -1 // index before first char of key
+	afterKey := -1  // index after last char of key and before first char of value
+
+	inQuotes := false
+
+	for i := 1; i < len(actions); i++ {
 		c := actions[i]
-		switch {
-		case iskey && c == ' ':
-			// skip whitespaces in key
-			continue actionLoop
-		case !quoted && c == ',':
-			res, disruptiveActionIndex, err = appendRuleAction(res, key.String(), val.String(), disruptiveActionIndex)
-			if err != nil {
-				return nil, err
+		if actions[i-1] == '\\' {
+			// Escaped character, no need to process
+			continue
+		}
+		if c == '\'' {
+			inQuotes = !inQuotes
+			continue
+		}
+		if inQuotes {
+			// Inside quotes, no need to process
+			continue
+		}
+		switch c {
+		case ':':
+			if afterKey != -1 {
+				// Reading value, no need to process
+				continue
 			}
-			key.Reset()
-			val.Reset()
-			iskey = true
-		case iskey && c == ':':
-			iskey = false
-		case !iskey && c == '\'' && actions[i-1] != '\\':
-			if quoted {
-				quoted = false
-				iskey = true
+			afterKey = i
+		case ',':
+			var val string
+			if afterKey == -1 {
+				// No value, we only have a key
+				afterKey = i
 			} else {
-				quoted = true
+				val = actions[afterKey+1 : i]
 			}
-		case !iskey:
-			if c == ' ' && !quoted {
-				// skip unquoted whitespaces
-				continue actionLoop
-			}
-			val.WriteByte(c)
-		case iskey:
-			key.WriteByte(c)
-		}
-		if i+1 == len(actions) {
-			// last action, returned disruptiveActionIndex is not needed
-			res, _, err = appendRuleAction(res, key.String(), val.String(), disruptiveActionIndex)
+			res, disruptiveActionIndex, err = appendRuleAction(res, actions[beforeKey+1:afterKey], val, disruptiveActionIndex)
 			if err != nil {
 				return nil, err
 			}
+			beforeKey = i
+			afterKey = -1
 		}
+	}
+	var val string
+	if afterKey == -1 {
+		// No value, we only have a key
+		afterKey = len(actions)
+	} else {
+		val = actions[afterKey+1:]
+	}
+	res, _, err = appendRuleAction(res, actions[beforeKey+1:afterKey], val, disruptiveActionIndex)
+	if err != nil {
+		return nil, err
 	}
 	return res, nil
 }
 
 func appendRuleAction(res []ruleAction, key string, val string, disruptiveActionIndex int) ([]ruleAction, int, error) {
+	key = strings.TrimSpace(key)
+	val = strings.TrimSpace(val)
+	val = utils.MaybeRemoveQuotes(val)
 	f, err := actionsmod.Get(key)
 	if err != nil {
 		return res, unset, err
