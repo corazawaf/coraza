@@ -8,11 +8,8 @@ package auditlog
 
 import (
 	"io"
-	"io/fs"
 	"log"
 	"os"
-
-	"github.com/corazawaf/coraza/v3/types"
 )
 
 // serialWriter is used to store logs in a single file
@@ -22,14 +19,13 @@ type serialWriter struct {
 	formatter LogFormatter
 }
 
-func (sl *serialWriter) Init(c types.Config) error {
-	fileMode := c.Get("auditlog_file_mode", fs.FileMode(0644)).(fs.FileMode)
-	sl.formatter = c.Get("auditlog_formatter", nativeFormatter).(LogFormatter)
+func (sl *serialWriter) Init(c Config) error {
+	fileMode := c.FileMode
+	sl.formatter = c.Formatter
 
-	fileName := c.Get("auditlog_file", "").(string)
 	var w io.Writer
-	if fileName != "" {
-		f, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, fileMode)
+	if c.File != "" {
+		f, err := os.OpenFile(c.File, os.O_APPEND|os.O_CREATE|os.O_WRONLY, fileMode)
 		if err != nil {
 			return err
 		}
