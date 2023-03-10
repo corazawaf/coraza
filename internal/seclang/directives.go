@@ -909,7 +909,7 @@ func directiveSecDebugLogLevel(options *DirectiveOptions) error {
 	if err != nil {
 		return err
 	}
-	return options.WAF.SetDebugLogLevel(debuglog.LogLevel(lvl))
+	return options.WAF.SetDebugLogLevel(debuglog.Level(lvl))
 }
 
 func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
@@ -922,7 +922,7 @@ func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
 		return err
 	}
 	rule := options.WAF.Rules.FindByID(id)
-	rp := &RuleParser{
+	rp := RuleParser{
 		rule:           rule,
 		options:        RuleOptions{},
 		defaultActions: map[types.RulePhase][]ruleAction{},

@@ -12,7 +12,7 @@ import (
 )
 
 type defaultEvent struct {
-	level   LogLevel
+	level   Level
 	printer Printer
 	fields  []byte
 }
@@ -90,7 +90,7 @@ func (defaultEvent) IsEnabled() bool {
 type defaultLogger struct {
 	printer       Printer
 	factory       PrinterFactory
-	level         LogLevel
+	level         Level
 	defaultFields []byte
 }
 
@@ -103,7 +103,7 @@ func (l defaultLogger) WithOutput(w io.Writer) Logger {
 	}
 }
 
-func (l defaultLogger) WithLevel(lvl LogLevel) Logger {
+func (l defaultLogger) WithLevel(lvl Level) Logger {
 	return defaultLogger{
 		printer:       l.printer,
 		factory:       l.factory,
@@ -126,43 +126,43 @@ func (l defaultLogger) With(fs ...ContextField) Logger {
 }
 
 func (l defaultLogger) Trace() Event {
-	if l.level < LogLevelTrace {
-		return NopEvent{}
+	if l.level < LevelTrace {
+		return noopEvent{}
 	}
 
-	return &defaultEvent{printer: l.printer, level: LogLevelTrace, fields: l.defaultFields}
+	return &defaultEvent{printer: l.printer, level: LevelTrace, fields: l.defaultFields}
 }
 
 func (l defaultLogger) Debug() Event {
-	if l.level < LogLevelDebug {
-		return NopEvent{}
+	if l.level < LevelDebug {
+		return noopEvent{}
 	}
 
-	return &defaultEvent{printer: l.printer, level: LogLevelDebug, fields: l.defaultFields}
+	return &defaultEvent{printer: l.printer, level: LevelDebug, fields: l.defaultFields}
 }
 
 func (l defaultLogger) Info() Event {
-	if l.level < LogLevelInfo {
-		return NopEvent{}
+	if l.level < LevelInfo {
+		return noopEvent{}
 	}
 
-	return &defaultEvent{printer: l.printer, level: LogLevelInfo, fields: l.defaultFields}
+	return &defaultEvent{printer: l.printer, level: LevelInfo, fields: l.defaultFields}
 }
 
 func (l defaultLogger) Warn() Event {
-	if l.level < LogLevelWarn {
-		return NopEvent{}
+	if l.level < LevelWarn {
+		return noopEvent{}
 	}
 
-	return &defaultEvent{printer: l.printer, level: LogLevelWarn, fields: l.defaultFields}
+	return &defaultEvent{printer: l.printer, level: LevelWarn, fields: l.defaultFields}
 }
 
 func (l defaultLogger) Error() Event {
-	if l.level < LogLevelError {
-		return NopEvent{}
+	if l.level < LevelError {
+		return noopEvent{}
 	}
 
-	return &defaultEvent{printer: l.printer, level: LogLevelError, fields: l.defaultFields}
+	return &defaultEvent{printer: l.printer, level: LevelError, fields: l.defaultFields}
 }
 
 // Default returns a default logger that writes to stderr.
@@ -170,13 +170,13 @@ func Default() Logger {
 	return DefaultWithPrinterFactory(defaultPrinterFactory)
 }
 
-type Printer func(lvl LogLevel, message, fields string)
+type Printer func(lvl Level, message, fields string)
 
 type PrinterFactory func(w io.Writer) Printer
 
 var defaultPrinterFactory = func(w io.Writer) Printer {
 	l := log.New(w, "", log.LstdFlags)
-	return func(lvl LogLevel, message, fields string) {
+	return func(lvl Level, message, fields string) {
 		l.Printf("[%s] %s %s", lvl.String(), message, fields)
 	}
 }
@@ -187,6 +187,6 @@ func DefaultWithPrinterFactory(f PrinterFactory) Logger {
 	return defaultLogger{
 		printer: f(os.Stderr),
 		factory: f,
-		level:   LogLevelInfo,
+		level:   LevelInfo,
 	}
 }

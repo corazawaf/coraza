@@ -295,7 +295,7 @@ func TestHttpServer(t *testing.T) {
 
 	logger := debuglog.Default().
 		WithOutput(testLogOutput{t}).
-		WithLevel(debuglog.LogLevelInfo)
+		WithLevel(debuglog.LevelInfo)
 
 	// Perform tests
 	for name, tCase := range tests {
@@ -357,7 +357,7 @@ func TestHttpServerWithRuleEngineOff(t *testing.T) {
 	}
 	logger := debuglog.Default().
 		WithOutput(testLogOutput{t}).
-		WithLevel(debuglog.LogLevelInfo)
+		WithLevel(debuglog.LevelInfo)
 
 	// Perform tests
 	for name, tCase := range tests {

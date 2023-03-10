@@ -28,7 +28,8 @@ const (
 	FilesCombinedSize
 	// FullRequestLength is the length of the full request
 	FullRequestLength
-	// InboundDataError represents errors for inbound data
+	// InboundDataError will be set to 1 when the request body size
+	// is above the setting configured by SecRequesteBodyLimit
 	InboundDataError
 	// MatchedVar is the value of the matched variable
 	MatchedVar
@@ -107,9 +108,6 @@ const (
 	// StatusLine is the status line of the response, including the request method
 	// and HTTP version information
 	StatusLine
-	// InboundErrorData will be set to 1 when the request body size
-	// is above the setting configured by SecRequesteBodyLimit
-	InboundErrorData
 	// Duration contains the time in miliseconds from
 	// the beginning of the transaction until this point
 	Duration
@@ -153,6 +151,9 @@ const (
 	// ResponseHeaders can be used as either a collection of all of the response
 	// headers or can be used to inspect selected headers
 	ResponseHeaders
+	// ReseBodyProcessor contains the name of the response body processor used,
+	// no default
+	ResBodyProcessor
 	// Geo contains the location information of the client
 	Geo
 	// RequestCookiesNames contains the names of the request cookies
@@ -227,4 +228,12 @@ const (
 	Userid
 	// IP is kept for compatibility
 	IP
+	// ResBodyError
+	ResBodyError
+	// ResBodyErrorMsg
+	ResBodyErrorMsg
+	// ResBodyProcessorError
+	ResBodyProcessorError
+	// ResBodyProcessorErrorMsg
+	ResBodyProcessorErrorMsg
 )
