@@ -130,11 +130,17 @@ func TestDefaultActionsErrors(t *testing.T) {
 	testCases := map[string]struct {
 		rules string
 	}{
+		"SecDefaultAction with bad actions": {
+			rules: `SecDefaultAction "logauditlog,pass"`,
+		},
 		"Missing phase": {
 			rules: `SecDefaultAction "log,auditlog,pass"`,
 		},
 		"Bad phase": {
 			rules: `SecDefaultAction "phase:A,log,auditlog,pass"`,
+		},
+		"Missing disruptive action": {
+			rules: `SecDefaultAction "phase:1,log,auditlog"`,
 		},
 		"SecDefaultAction with metadata action": {
 			rules: `SecDefaultAction "phase:1,log,auditlog,pass,msg:'metadata action'"`,
