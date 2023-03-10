@@ -20,13 +20,19 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
-// DirectiveOptions contains the parsed options for a directive
+// DirectiveOptions contains the parsed options for a directive. It is mutable and propagated
+// across multiple directives, to support collecting the options for audit logs for example.
+// TODO(anuraaga): Propagation of config probably should be separated from a directive's options.
 type DirectiveOptions struct {
 	WAF      *corazawaf.WAF
 	Config   types.Config
 	Opts     string
 	Path     []string
 	Datasets map[string][]string
+
+	// AuditLog is configuration of audit logging, populated by multiple directives and consumed by
+	// SecAuditLog.
+	AuditLog auditlog.Config
 }
 
 type directive = func(options *DirectiveOptions) error
@@ -575,8 +581,8 @@ func directiveSecAuditLog(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	options.Config.Set("auditlog_file", options.Opts)
-	if err := options.WAF.AuditLogWriter.Init(options.Config); err != nil {
+	options.AuditLog.File = options.Opts
+	if err := options.WAF.AuditLogWriter.Init(options.AuditLog); err != nil {
 		return err
 	}
 	return nil
@@ -591,7 +597,7 @@ func directiveSecAuditLogType(options *DirectiveOptions) error {
 	if err != nil {
 		return err
 	}
-	if err := writer.Init(options.Config); err != nil {
+	if err := writer.Init(options.AuditLog); err != nil {
 		return err
 	}
 	options.WAF.AuditLogWriter = writer
@@ -611,9 +617,9 @@ func directiveSecAuditLogFormat(options *DirectiveOptions) error {
 	if err != nil {
 		return err
 	}
-	options.Config.Set("auditlog_formatter", formatter)
+	options.AuditLog.Formatter = formatter
 
-	if err := options.WAF.AuditLogWriter.Init(options.Config); err != nil {
+	if err := options.WAF.AuditLogWriter.Init(options.AuditLog); err != nil {
 		return err
 	}
 	return nil
@@ -624,8 +630,8 @@ func directiveSecAuditLogDir(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	options.Config.Set("auditlog_dir", options.Opts)
-	if err := options.WAF.AuditLogWriter.Init(options.Config); err != nil {
+	options.AuditLog.Dir = options.Opts
+	if err := options.WAF.AuditLogWriter.Init(options.AuditLog); err != nil {
 		return err
 	}
 	return nil
@@ -652,8 +658,8 @@ func directiveSecAuditLogDirMode(options *DirectiveOptions) error {
 	if err != nil {
 		return err
 	}
-	options.Config.Set("auditlog_dir_mode", fs.FileMode(auditLogDirMode))
-	if err := options.WAF.AuditLogWriter.Init(options.Config); err != nil {
+	options.AuditLog.DirMode = fs.FileMode(auditLogDirMode)
+	if err := options.WAF.AuditLogWriter.Init(options.AuditLog); err != nil {
 		return err
 	}
 	return nil
@@ -678,8 +684,8 @@ func directiveSecAuditLogFileMode(options *DirectiveOptions) error {
 	if err != nil {
 		return err
 	}
-	options.Config.Set("auditlog_file_mode", fs.FileMode(auditLogFileMode))
-	if err := options.WAF.AuditLogWriter.Init(options.Config); err != nil {
+	options.AuditLog.FileMode = fs.FileMode(auditLogFileMode)
+	if err := options.WAF.AuditLogWriter.Init(options.AuditLog); err != nil {
 		return err
 	}
 	return nil

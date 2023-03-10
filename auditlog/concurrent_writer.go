@@ -15,8 +15,6 @@ import (
 	"path"
 	"sync"
 	"time"
-
-	"github.com/corazawaf/coraza/v3/types"
 )
 
 type concurrentWriter struct {
@@ -29,16 +27,16 @@ type concurrentWriter struct {
 	closer        func() error
 }
 
-func (cl *concurrentWriter) Init(c types.Config) error {
-	cl.auditFileMode = c.Get("auditlog_file_mode", fs.FileMode(0644)).(fs.FileMode)
-	cl.auditDir = c.Get("auditlog_dir", "").(string)
-	cl.auditDirMode = c.Get("auditlog_dir_mode", fs.FileMode(0755)).(fs.FileMode)
-	cl.formatter = c.Get("auditlog_formatter", nativeFormatter).(LogFormatter)
+func (cl *concurrentWriter) Init(c Config) error {
+	cl.auditFileMode = c.FileMode
+	cl.auditDir = c.Dir
+	cl.auditDirMode = c.DirMode
+	cl.formatter = c.Formatter
 	cl.mux = &sync.RWMutex{}
 
 	w := io.Discard
-	if fileName := c.Get("auditlog_file", "").(string); fileName != "" {
-		f, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, cl.auditFileMode)
+	if c.File != "" {
+		f, err := os.OpenFile(c.File, os.O_CREATE|os.O_WRONLY|os.O_APPEND, cl.auditFileMode)
 		if err != nil {
 			return err
 		}
