@@ -232,12 +232,23 @@ func (p *RuleParser) ParseDefaultActions(actions string) error {
 		if action.Atype == rules.ActionTypeDisruptive {
 			defaultDisruptive = action.Key
 		}
+		// SecDefaultActions can not contain metadata actions
+		if action.Atype == rules.ActionTypeMetadata {
+			return errors.New("SecDefaultAction must not contain metadata actions: " + actions)
+		}
+		// The transformation none is not suitable to be part of the SecDefaultActions
+		if action.Key == "t" && strings.ToLower(action.Value) == "none" {
+			return errors.New("SecDefaultAction must not contain t:none transformation: " + actions)
+		}
 	}
 	if phase == 0 {
 		return errors.New("SecDefaultAction must contain a phase")
 	}
 	if defaultDisruptive == "" {
 		return errors.New("SecDefaultAction must contain a disruptive action: " + actions)
+	}
+	if p.defaultActions[types.RulePhase(phase)] != nil {
+		return errors.New("SecDefaultAction already defined for this phase: " + actions)
 	}
 	p.defaultActions[types.RulePhase(phase)] = act
 	return nil
@@ -266,6 +277,7 @@ func (p *RuleParser) ParseActions(actions string) error {
 		}
 	}
 
+	// if the rule is missing the phase, the default phase assigned is phase 2 (See NewRule())
 	phase := p.rule.Phase_
 
 	defaults := p.defaultActions[phase]
@@ -317,14 +329,19 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 		rule:           corazawaf.NewRule(),
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
-
-	defaultActions := options.Config.Get("rule_default_actions", []string{
-		defaultActionsPhase2,
-	}).([]string)
+	// Default actions are persisted only inside the waf options, therefore they are parsed every time a rule is parsed
+	// and not just once when the SecDefaultAction is read.
+	defaultActionsRaw := options.Config.Get("rule_default_actions", []string{}).([]string)
 	disabledRuleOperators := options.Config.Get("disabled_rule_operators", []string{}).([]string)
-
-	for _, da := range defaultActions {
+	for _, da := range defaultActionsRaw {
 		err = rp.ParseDefaultActions(da)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// If no default actions for phase 2 are defined, defaultActionsPhase2 (hardcoded default actions for phase 2) is used.
+	if rp.defaultActions[types.RulePhase(2)] == nil {
+		err = rp.ParseDefaultActions(defaultActionsPhase2)
 		if err != nil {
 			return nil, err
 		}
@@ -515,8 +532,8 @@ func parseActions(actions string) ([]ruleAction, error) {
 }
 
 func appendRuleAction(res []ruleAction, key string, val string, disruptiveActionIndex int) ([]ruleAction, int, error) {
-	key = strings.TrimSpace(key)
-	val = strings.TrimSpace(val)
+	key = strings.ToLower(strings.TrimSpace(key))
+	val = strings.TrimSpace(val) // We may want to keep case sensitive values (e.g. Messages)
 	val = utils.MaybeRemoveQuotes(val)
 	f, err := actionsmod.Get(key)
 	if err != nil {

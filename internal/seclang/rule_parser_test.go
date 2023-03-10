@@ -126,10 +126,77 @@ func TestSecRuleUpdateTargetVariableNegation(t *testing.T) {
 	}
 }
 
+func TestDefaultActionsErrors(t *testing.T) {
+	testCases := map[string]struct {
+		rules string
+	}{
+		"Missing phase": {
+			rules: `SecDefaultAction "log,auditlog,pass"`,
+		},
+		"Bad phase": {
+			rules: `SecDefaultAction "phase:A,log,auditlog,pass"`,
+		},
+		"SecDefaultAction with metadata action": {
+			rules: `SecDefaultAction "phase:1,log,auditlog,pass,msg:'metadata action'"`,
+		},
+		"SecDefaultAction with t:none": {
+			rules: `SecDefaultAction "phase:1,log,auditlog,pass,t:none"`,
+		},
+		"SecDefaultAction with t:none uppercase": {
+			rules: `SecDefaultAction "phase:1,log,auditlog,pass,T:NoNe"`,
+		},
+		"Multiple SecDefaultAction for the same phase": {
+			rules: `SecDefaultAction "phase:1,log,auditlog,pass"
+			SecDefaultAction "phase:1,nolog,noauditlog,pass"`,
+		},
+	}
+	for name, tCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			dummySecAction := `
+			SecAction "id:1,phase:1" `
+			waf := corazawaf.NewWAF()
+			p := NewParser(waf)
+			// SecDefaultActions are parsed only when a rule is parsed, thus we add a dummy SecAction
+			err := p.FromString(tCase.rules + dummySecAction)
+			if err == nil {
+				t.Error("expected error")
+			}
+		})
+	}
+}
+
+func TestDefaultActionsForPhase2Overridable(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	p := NewParser(waf)
+	// A SecDefaultAction at phase:2 defined by the user has to override the hardcoded defaultActionsPhase2
+	err := p.FromString(`
+	SecDefaultAction "phase:2,nolog,noauditlog,pass"
+	SecAction "id:1,noauditlog"
+	SecAction "id:2,phase:1"`)
+	if err != nil {
+		t.Errorf("unexpected error: %s", err.Error())
+	}
+	if waf.Rules.GetRules()[0].Log != false {
+		t.Error("failed to set log to false")
+	}
+	if waf.Rules.GetRules()[0].Audit != false {
+		t.Error("failed to set audit to false")
+	}
+	if waf.Rules.GetRules()[1].Log != false {
+		t.Error("phase 1 rules shouldn't have log set by default actions of different phases")
+	}
+	if waf.Rules.GetRules()[1].Audit != false {
+		t.Error("phase 1 rules shouldn't have log set by default actions of different phases")
+	}
+}
+
 func TestDefaultActionsForPhase2(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	p := NewParser(waf)
+	// Via defaultActionsPhase2 variable, the default actions for phase 2 are hardcoded in Coraza.
+	// Only a SecDefaultAction of the same phase should override it.
 	err := p.FromString(`
+	SecDefaultAction "phase:3,log,auditlog,pass"
 	SecAction "id:1,phase:2"
 	SecAction "id:2,phase:1"`)
 	if err != nil {
@@ -143,7 +210,7 @@ func TestDefaultActionsForPhase2(t *testing.T) {
 	}
 
 	if waf.Rules.GetRules()[1].Log || waf.Rules.GetRules()[1].Audit {
-		t.Error("phase 1 rules shouldn't have log set by default actions")
+		t.Error("phase 1 rules shouldn't have log set by default actions of different phases")
 	}
 }
 
