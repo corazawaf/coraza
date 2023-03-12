@@ -1407,6 +1407,7 @@ func (tx *Transaction) Close() error {
 		tx.debugLogger.Debug().
 			Bool("is_interrupted", tx.IsInterrupted()).
 			Int("status", tx.interruption.Status).
+			Int("rule_id", tx.interruption.RuleID).
 			Msg("Transaction finished")
 	} else {
 		tx.debugLogger.Debug().
