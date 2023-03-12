@@ -1405,6 +1405,7 @@ func (tx *Transaction) Close() error {
 
 	tx.debugLogger.Debug().
 		Bool("is_interrupted", tx.IsInterrupted()).
+		Int("status", tx.interruption.Status).
 		Msg("Transaction finished")
 
 	switch {
