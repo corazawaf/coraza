@@ -15,9 +15,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -40,9 +40,9 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 		t.Error("Invalid audit logger (nil)")
 		return
 	}
-	if err := waf.AuditLogWriter.Write(&loggers.AuditLog{
+	if err := waf.AuditLogWriter.Write(&auditlog.Log{
 		Parts: types.AuditLogParts("ABCDEFGHIJKZ"),
-		Transaction: loggers.AuditTransaction{
+		Transaction: auditlog.Transaction{
 			ID: id,
 		},
 	}); err != nil {
@@ -83,7 +83,7 @@ func TestDebugDirectives(t *testing.T) {
 	}); err != nil {
 		t.Error(err)
 	}
-	p.options.WAF.Logger.Info("abc123")
+	p.options.WAF.Logger.Info().Msg("abc123")
 	data, err := os.ReadFile(tmp)
 	if err != nil {
 		t.Error(err)

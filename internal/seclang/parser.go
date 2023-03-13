@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/internal/io"
@@ -62,7 +63,6 @@ func (p *Parser) FromFile(profilePath string) error {
 			// we don't use defer for this as tinygo does not seem to like it
 			p.currentDir = originalDir
 			p.currentFile = ""
-			p.options.WAF.Logger.Error(err.Error())
 			return fmt.Errorf("failed to readfile: %s", err.Error())
 		}
 
@@ -71,7 +71,6 @@ func (p *Parser) FromFile(profilePath string) error {
 			// we don't use defer for this as tinygo does not seem to like it
 			p.currentDir = originalDir
 			p.currentFile = ""
-			p.options.WAF.Logger.Error(err.Error())
 			return fmt.Errorf("failed to parse string: %s", err.Error())
 		}
 		// restore the lastDir post processing all includes
@@ -135,15 +134,15 @@ func (p *Parser) FromString(data string) error {
 	return nil
 }
 
-func (p *Parser) evaluateLine(data string) error {
-	if data == "" || data[0] == '#' {
+func (p *Parser) evaluateLine(l string) error {
+	if l == "" || l[0] == '#' {
 		// at this point we should not receive an empty line or a commented line
 		return errors.New("invalid line")
 	}
 	// first we get the directive
-	dir, opts, _ := strings.Cut(data, " ")
+	dir, opts, _ := strings.Cut(l, " ")
 
-	p.options.WAF.Logger.Debug("parsing directive %q", data)
+	p.options.WAF.Logger.Debug().Str("line", l).Msg("Parsing directive")
 	directive := strings.ToLower(dir)
 
 	if len(opts) >= 3 && opts[0] == '"' && opts[len(opts)-1] == '"' {
@@ -186,8 +185,7 @@ func (p *Parser) evaluateLine(data string) error {
 }
 
 func (p *Parser) log(msg string) error {
-	msg = fmt.Sprintf("[Parser] [Line %d] %s", p.currentLine, msg)
-	p.options.WAF.Logger.Error("[%d] %s", p.currentLine, msg)
+	p.options.WAF.Logger.Error().Int("line", p.currentLine).Msg(msg)
 	return errors.New(msg)
 }
 
@@ -210,6 +208,7 @@ func NewParser(waf *corazawaf.WAF) *Parser {
 			WAF:      waf,
 			Config:   make(types.Config),
 			Datasets: make(map[string][]string),
+			AuditLog: auditlog.NewConfig(),
 		},
 		root: io.OSFS{},
 	}

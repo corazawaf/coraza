@@ -4,7 +4,7 @@
 //go:build !tinygo
 // +build !tinygo
 
-package loggers
+package auditlog
 
 import (
 	"fmt"
@@ -15,8 +15,6 @@ import (
 	"path"
 	"sync"
 	"time"
-
-	"github.com/corazawaf/coraza/v3/types"
 )
 
 type concurrentWriter struct {
@@ -29,16 +27,16 @@ type concurrentWriter struct {
 	closer        func() error
 }
 
-func (cl *concurrentWriter) Init(c types.Config) error {
-	cl.auditFileMode = c.Get("auditlog_file_mode", fs.FileMode(0644)).(fs.FileMode)
-	cl.auditDir = c.Get("auditlog_dir", "").(string)
-	cl.auditDirMode = c.Get("auditlog_dir_mode", fs.FileMode(0755)).(fs.FileMode)
-	cl.formatter = c.Get("auditlog_formatter", nativeFormatter).(LogFormatter)
+func (cl *concurrentWriter) Init(c Config) error {
+	cl.auditFileMode = c.FileMode
+	cl.auditDir = c.Dir
+	cl.auditDirMode = c.DirMode
+	cl.formatter = c.Formatter
 	cl.mux = &sync.RWMutex{}
 
 	w := io.Discard
-	if fileName := c.Get("auditlog_file", "").(string); fileName != "" {
-		f, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, cl.auditFileMode)
+	if c.File != "" {
+		f, err := os.OpenFile(c.File, os.O_CREATE|os.O_WRONLY|os.O_APPEND, cl.auditFileMode)
 		if err != nil {
 			return err
 		}
@@ -51,7 +49,7 @@ func (cl *concurrentWriter) Init(c types.Config) error {
 	return nil
 }
 
-func (cl concurrentWriter) Write(al *AuditLog) error {
+func (cl concurrentWriter) Write(al *Log) error {
 	// 192.168.3.130 192.168.3.1 - - [22/Aug/2009:13:24:20 +0100] "GET / HTTP/1.1" 200 56 "-" "-" SojdH8AAQEAAAugAQAAAAAA "-" /20090822/20090822-1324/20090822-132420-SojdH8AAQEAAAugAQAAAAAA 0 1248
 	t := time.Unix(0, al.Transaction.UnixTimestamp)
 

@@ -1,30 +1,58 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package loggers
+package auditlog
 
 import (
 	"fmt"
+	"io/fs"
 	"strings"
-
-	"github.com/corazawaf/coraza/v3/types"
 )
+
+// Config is the configuration of a LogWriter.
+type Config struct {
+	// File is the path to the file to write the raw audit log to.
+	File string
+
+	// FileMode is the mode to use when creating File.
+	FileMode fs.FileMode
+
+	// Dir is the path to the directory to write formatted audit logs to.
+	Dir string
+
+	// DirMode is the mode to use when creating Dir.
+	DirMode fs.FileMode
+
+	// Formatter is the formatter to use when writing formatted audit logs.
+	Formatter LogFormatter
+}
+
+// NewConfig returns a Config with default values.
+func NewConfig() Config {
+	return Config{
+		File:      "",
+		FileMode:  0644,
+		Dir:       "",
+		DirMode:   0755,
+		Formatter: nativeFormatter,
+	}
+}
 
 // LogFormatter is the interface for all log formatters
 // A LogFormatter receives an auditlog and generates "readable" audit log
-type LogFormatter = func(al *AuditLog) ([]byte, error)
+type LogFormatter = func(al *Log) ([]byte, error)
 
 // LogWriter is the interface for all log writers
 // A LogWriter receives an auditlog and writes it to the output stream
 // An output stream may be a file, a socket, an http request, etc
 type LogWriter interface {
 	// Init the writer requires previous preparations
-	Init(types.Config) error
+	Init(Config) error
 	// Write the audit log
 	// Using the LogFormatter is mandatory to generate a "readable" audit log
 	// It is not sent as a bslice because some writers may require some Audit
 	// metadata.
-	Write(*AuditLog) error
+	Write(*Log) error
 	// Close the writer if required
 	Close() error
 }
@@ -52,7 +80,7 @@ func GetLogWriter(name string) (LogWriter, error) {
 
 // RegisterLogFormatter registers a new logger format
 // it can be used for plugins
-func RegisterLogFormatter(name string, f func(al *AuditLog) ([]byte, error)) {
+func RegisterLogFormatter(name string, f func(al *Log) ([]byte, error)) {
 	formatters[name] = f
 }
 

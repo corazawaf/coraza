@@ -4,7 +4,7 @@
 //go:build !tinygo
 // +build !tinygo
 
-package loggers
+package auditlog
 
 import (
 	"encoding/json"
@@ -15,7 +15,7 @@ import (
 func TestFormatters(t *testing.T) {
 	al := createAuditLog()
 	type tcase struct {
-		AuditLog AuditLog
+		Log Log
 		Output   string
 	}
 	cases := map[string][]tcase{
@@ -30,7 +30,7 @@ func TestFormatters(t *testing.T) {
 			t.Error(err)
 		}
 		for _, c := range cases {
-			if out, err := f(c.AuditLog); err != nil {
+			if out, err := f(c.Log); err != nil {
 				t.Error(err)
 			} else if string(out) != c.Output {
 				//TODO, as the result is a map, it is not ordered and anything can happen :(
@@ -52,7 +52,7 @@ func TestLegacyFormatter(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	var legacyAl auditLogLegacy
+	var legacyAl logLegacy
 	if err := json.Unmarshal(data, &legacyAl); err != nil {
 		t.Error(err)
 	}

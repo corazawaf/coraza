@@ -16,14 +16,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/corazawaf/coraza/v3/auditlog"
 	"github.com/corazawaf/coraza/v3/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
-	corazatypes "github.com/corazawaf/coraza/v3/internal/corazatypes"
+	"github.com/corazawaf/coraza/v3/internal/corazatypes"
 	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 	urlutil "github.com/corazawaf/coraza/v3/internal/url"
-	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -56,29 +57,27 @@ type Transaction struct {
 	AllowType corazatypes.AllowType
 
 	// Copies from the WAF instance that may be overwritten by the ctl action
-	AuditEngine              types.AuditEngineStatus
-	AuditLogParts            types.AuditLogParts
-	ForceRequestBodyVariable bool
-	RequestBodyAccess        bool
-	RequestBodyLimit         int64
-	ResponseBodyAccess       bool
-	ResponseBodyLimit        int64
-	RuleEngine               types.RuleEngineStatus
-	HashEngine               bool
-	HashEnforcement          bool
+	AuditEngine               types.AuditEngineStatus
+	AuditLogParts             types.AuditLogParts
+	ForceRequestBodyVariable  bool
+	RequestBodyAccess         bool
+	RequestBodyLimit          int64
+	ForceResponseBodyVariable bool
+	ResponseBodyAccess        bool
+	ResponseBodyLimit         int64
+	RuleEngine                types.RuleEngineStatus
+	HashEngine                bool
+	HashEnforcement           bool
 
 	// Stores the last phase that was evaluated
 	// Used by allow to skip phases
-	LastPhase types.RulePhase
+	lastPhase types.RulePhase
 
 	// Handles request body buffers
 	requestBodyBuffer *BodyBuffer
 
 	// Handles response body buffers
 	responseBodyBuffer *BodyBuffer
-
-	// Body processor used to parse JSON, XML, etc
-	bodyProcessor bodyprocessors.BodyProcessor
 
 	// Rules with this id are going to be skipped while processing a phase
 	ruleRemoveByID []int
@@ -102,6 +101,8 @@ type Transaction struct {
 
 	// Contains a WAF instance for the current transaction
 	WAF *WAF
+
+	debugLogger debuglog.Logger
 
 	// Timestamp of the request
 	Timestamp int64
@@ -199,8 +200,6 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.highestSeverity
 	case variables.StatusLine:
 		return tx.variables.statusLine
-	case variables.InboundErrorData:
-		return tx.variables.inboundErrorData
 	case variables.Duration:
 		return tx.variables.duration
 	case variables.ResponseHeadersNames:
@@ -249,6 +248,8 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.argsGetNames
 	case variables.ArgsPostNames:
 		return tx.variables.argsPostNames
+	case variables.ResBodyProcessor:
+		return tx.variables.resBodyProcessor
 	case variables.TX:
 		return tx.variables.tx
 	case variables.Rule:
@@ -261,8 +262,7 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 	case variables.UrlencodedError:
 		return tx.variables.urlencodedError
 	case variables.ResponseArgs:
-		// TODO(anuraaga): This collection seems to be missing.
-		return nil
+		return tx.variables.responseArgs
 	case variables.ResponseXML:
 		return tx.variables.responseXML
 	case variables.RequestXML:
@@ -282,8 +282,12 @@ func (tx *Transaction) Interrupt(interruption *types.Interruption) {
 	}
 }
 
-func (tx *Transaction) DebugLogger() loggers.DebugLogger {
-	return tx.WAF.Logger
+func (tx *Transaction) DebugLogger() debuglog.Logger {
+	return tx.debugLogger
+}
+
+func (tx *Transaction) SetDebugLogLevel(lvl debuglog.Level) {
+	tx.debugLogger = tx.debugLogger.WithLevel(lvl)
 }
 
 func (tx *Transaction) ResponseBodyReader() (io.Reader, error) {
@@ -350,7 +354,10 @@ func (tx *Transaction) Capturing() bool {
 // that supports capture, like @rx
 func (tx *Transaction) CaptureField(index int, value string) {
 	if tx.Capture {
-		tx.WAF.Logger.Debug("[%s] Capturing field %d with value %q", tx.id, index, value)
+		tx.debugLogger.Debug().
+			Int("field", index).
+			Str("value", value).
+			Msg("Capturing field")
 		i := strconv.Itoa(index)
 		tx.variables.tx.SetIndex(i, 0, value)
 	}
@@ -358,7 +365,8 @@ func (tx *Transaction) CaptureField(index int, value string) {
 
 // this function is used to control which variables are reset after a new rule is evaluated
 func (tx *Transaction) resetCaptures() {
-	tx.WAF.Logger.Debug("[%s] Reseting captured variables", tx.id)
+	tx.debugLogger.Debug().
+		Msg("Reseting captured variables")
 	// We reset capture 0-9
 	ctx := tx.variables.tx
 	// RUNE 48 = 0
@@ -455,7 +463,7 @@ func (tx *Transaction) matchVariable(match *corazarules.MatchData) {
 
 // MatchRule Matches a rule to be logged
 func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
-	tx.WAF.Logger.Debug("[%s] rule %d matched", tx.id, r.ID_)
+	tx.debugLogger.Debug().Int("rule_id", r.ID_).Msg("Rule matched")
 	// tx.MatchedRules = append(tx.MatchedRules, mr)
 
 	// If the rule is set to audit, we log the transaction to the audit log
@@ -647,10 +655,9 @@ func (tx *Transaction) AddResponseArgument(key string, value string) {
 // This method should be called at very beginning of a request process, it is
 // expected to be executed prior to the virtual host resolution, when the
 // connection arrives on the server.
-// note: There is no direct connection between this function and any phase of
-//
-//	the SecLanguages phases. It is something that may occur between the
-//	SecLanguage phase 1 and 2.
+// note: There is no direct connection between this function and any phase of the
+// SecLanguages phases. It is something that may occur between the SecLanguage
+// phase 1 and 2.
 //
 // note: This function won't add GET arguments, they must be added with AddArgument
 func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string) {
@@ -708,8 +715,8 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 // The API consumer is in charge of retrieving the value (e.g. from the host header).
 // It is expected to be executed before calling ProcessRequestHeaders.
 func (tx *Transaction) SetServerName(serverName string) {
-	if tx.LastPhase >= types.PhaseRequestHeaders {
-		tx.WAF.Logger.Warn("SetServerName has been called after ProcessRequestHeaders")
+	if tx.lastPhase >= types.PhaseRequestHeaders {
+		tx.debugLogger.Warn().Msg("SetServerName has been called after ProcessRequestHeaders")
 	}
 	tx.variables.serverName.Set(serverName)
 }
@@ -725,14 +732,14 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 		// Rule engine is disabled
 		return nil
 	}
-	if tx.LastPhase >= types.PhaseRequestHeaders {
+	if tx.lastPhase >= types.PhaseRequestHeaders {
 		// Phase already evaluated
-		tx.WAF.Logger.Error("ProcessRequestHeaders has already been called")
+		tx.debugLogger.Error().Msg("ProcessRequestHeaders has already been called")
 		return tx.interruption
 	}
 
 	if tx.interruption != nil {
-		tx.WAF.Logger.Error("Calling ProcessRequestHeaders but there is a preexisting interruption")
+		tx.debugLogger.Error().Msg("Calling ProcessRequestHeaders but there is a preexisting interruption")
 		return tx.interruption
 	}
 
@@ -741,7 +748,7 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 }
 
 func setAndReturnBodyLimitInterruption(tx *Transaction) (*types.Interruption, int, error) {
-	tx.DebugLogger().Warn("Disrupting transaction with body size above the configured limit (Action Reject)")
+	tx.debugLogger.Warn().Msg("Disrupting transaction with body size above the configured limit (Action Reject)")
 	tx.interruption = &types.Interruption{
 		Status: 413,
 		Action: "deny",
@@ -781,11 +788,11 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 	if tx.requestBodyBuffer.length >= (math.MaxInt64 - writingBytes) {
 		// Overflow, failing. MaxInt64 is not a realistic payload size. Furthermore, it has been tested that
 		// bytes.Buffer does not work with this kind of sizes. See comments in BodyBuffer Write(data []byte)
-		return nil, 0, errors.New("Overflow reached while writing request body")
+		return nil, 0, errors.New("overflow reached while writing request body")
 	}
 
 	if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
-		tx.variables.inboundErrorData.Set("1")
+		tx.variables.inboundDataError.Set("1")
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			// We interrupt this transaction in case RequestBodyLimitAction is Reject
 			return setAndReturnBodyLimitInterruption(tx)
@@ -803,7 +810,7 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 	}
 
 	if runProcessRequestBody {
-		tx.DebugLogger().Warn("Processing request body whose size reached the configured limit (Action ProcessPartial)")
+		tx.debugLogger.Warn().Msg("Processing request body whose size reached the configured limit (Action ProcessPartial)")
 		_, err = tx.ProcessRequestBody()
 	}
 	return tx.interruption, int(w), err
@@ -848,10 +855,10 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 		if tx.requestBodyBuffer.length >= (math.MaxInt64 - writingBytes) {
 			// Overflow, failing. MaxInt64 is not a realistic payload size. Furthermore, it has been tested that
 			// bytes.Buffer does not work with this kind of sizes. See comments in BodyBuffer Write(data []byte)
-			return nil, 0, errors.New("Overflow reached while writing request body")
+			return nil, 0, errors.New("overflow reached while writing request body")
 		}
 		if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
-			tx.variables.inboundErrorData.Set("1")
+			tx.variables.inboundDataError.Set("1")
 			if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 				return setAndReturnBodyLimitInterruption(tx)
 			}
@@ -882,7 +889,7 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 
 	err = nil
 	if runProcessRequestBody {
-		tx.DebugLogger().Warn("Processing request body whose size reached the configured limit (Action ProcessPartial)")
+		tx.debugLogger.Warn().Msg("Processing request body whose size reached the configured limit (Action ProcessPartial)")
 		_, err = tx.ProcessRequestBody()
 	}
 	return tx.interruption, int(w), err
@@ -900,15 +907,19 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		return nil, nil
 	}
 
-	if tx.LastPhase >= types.PhaseRequestBody {
-		// Phase already evaluated
-		tx.WAF.Logger.Warn("ProcessRequestBody has already been called")
+	if tx.interruption != nil {
+		tx.debugLogger.Error().Msg("Calling ProcessRequestBody but there is a preexisting interruption")
 		return tx.interruption, nil
 	}
 
-	if tx.interruption != nil {
-		tx.WAF.Logger.Error("Calling ProcessRequestBody but there is a preexisting interruption")
-		return tx.interruption, nil
+	if tx.lastPhase != types.PhaseRequestHeaders {
+		if tx.lastPhase >= types.PhaseRequestBody {
+			// Phase already evaluated or skipped
+			tx.debugLogger.Warn().Msg("ProcessRequestBody should have already been called")
+		} else {
+			tx.debugLogger.Debug().Msg("Skipping request body processing, anomalous call before request headers evaluation")
+		}
+		return nil, nil
 	}
 
 	// we won't process empty request bodies or disabled RequestBodyAccess
@@ -935,7 +946,6 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		rbp = "URLENCODED"
 		tx.variables.reqbodyProcessor.Set(rbp)
 	}
-	tx.WAF.Logger.Debug("[%s] Attempting to process request body using %q", tx.id, rbp)
 	rbp = strings.ToLower(rbp)
 	if rbp == "" {
 		// so there is no bodyprocessor, we don't want to generate an error
@@ -944,15 +954,21 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	}
 	bodyprocessor, err := bodyprocessors.Get(rbp)
 	if err != nil {
-		tx.generateReqbodyError(errors.New("invalid body processor"))
+		tx.generateRequestBodyError(errors.New("invalid body processor"))
 		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.interruption, nil
 	}
+
+	tx.debugLogger.Debug().
+		Str("body_processor", rbp).
+		Msg("Attempting to process request body")
+
 	if err := bodyprocessor.ProcessRequest(reader, tx.Variables(), bodyprocessors.Options{
 		Mime:        mime,
 		StoragePath: tx.WAF.UploadDir,
 	}); err != nil {
-		tx.generateReqbodyError(err)
+		tx.debugLogger.Error().Err(err).Msg("Failed to process request body")
+		tx.generateRequestBodyError(err)
 		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.interruption, nil
 	}
@@ -972,14 +988,14 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Int
 		return nil
 	}
 
-	if tx.LastPhase >= types.PhaseResponseHeaders {
+	if tx.lastPhase >= types.PhaseResponseHeaders {
 		// Phase already evaluated
-		tx.WAF.Logger.Error("ProcessResponseHeaders has already been called")
+		tx.debugLogger.Error().Msg("ProcessResponseHeaders has already been called")
 		return tx.interruption
 	}
 
 	if tx.interruption != nil {
-		tx.WAF.Logger.Error("Calling ProcessResponseHeaders but there is a preexisting interruption")
+		tx.debugLogger.Error().Msg("Calling ProcessResponseHeaders but there is a preexisting interruption")
 		return tx.interruption
 	}
 
@@ -1132,36 +1148,60 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		return nil, nil
 	}
 
-	if tx.LastPhase >= types.PhaseResponseBody {
-		// Phase already evaluated
-		tx.WAF.Logger.Warn("ProcessResponseBody has already been called")
+	if tx.interruption != nil {
+		tx.debugLogger.Error().Msg("Calling ProcessResponseBody but there is a preexisting interruption")
 		return tx.interruption, nil
 	}
 
-	if tx.interruption != nil {
-		tx.WAF.Logger.Error("Calling ProcessResponseBody but there is a preexisting interruption")
-		return tx.interruption, nil
+	if tx.lastPhase != types.PhaseResponseHeaders {
+		if tx.lastPhase >= types.PhaseResponseBody {
+			// Phase already evaluated or skipped
+			tx.debugLogger.Warn().Msg("ProcessResponseBody should have already been called")
+		} else {
+			// Prevents evaluating response body rules if last phase has not been response headers. It may happen
+			// when a server returns an error prior to evaluating WAF rules, but ResponseBody is still called at
+			// the end of http stream
+			tx.debugLogger.Debug().Msg("Skipping response body processing, anomalous call before response headers evaluation")
+		}
+		return nil, nil
 	}
 
 	if !tx.ResponseBodyAccess || !tx.IsResponseBodyProcessable() {
-		tx.WAF.Logger.Debug("[%s] Skipping response body processing (Access: %t)", tx.id, tx.ResponseBodyAccess)
+		tx.debugLogger.Debug().
+			Bool("response_body_access", tx.ResponseBodyAccess).
+			Msg("Skipping response body processing")
 		tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
 		return tx.interruption, nil
 	}
-	tx.WAF.Logger.Debug("[%s] Attempting to process response body", tx.id)
+
 	reader, err := tx.responseBodyBuffer.Reader()
 	if err != nil {
 		return tx.interruption, err
 	}
 
-	buf := new(strings.Builder)
-	length, err := io.Copy(buf, reader)
-	if err != nil {
-		return tx.interruption, err
-	}
+	if bp := tx.variables.resBodyProcessor.Get(); bp != "" {
+		b, err := bodyprocessors.Get(bp)
+		if err != nil {
+			tx.generateResponseBodyError(errors.New("invalid body processor"))
+			tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
+			return tx.interruption, err
+		}
 
-	tx.variables.responseContentLength.Set(strconv.FormatInt(length, 10))
-	tx.variables.responseBody.Set(buf.String())
+		tx.debugLogger.Debug().Str("body_processor", bp).Msg("Attempting to process response body")
+
+		if err := b.ProcessResponse(reader, tx.Variables(), bodyprocessors.Options{}); err != nil {
+			tx.debugLogger.Error().Err(err).Msg("Failed to process response body")
+			tx.generateResponseBodyError(err)
+		}
+	} else {
+		buf := new(strings.Builder)
+		length, err := io.Copy(buf, reader)
+		if err != nil {
+			return tx.interruption, err
+		}
+		tx.variables.responseContentLength.Set(strconv.FormatInt(length, 10))
+		tx.variables.responseBody.Set(buf.String())
+	}
 	tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
 	return tx.interruption, nil
 }
@@ -1180,13 +1220,15 @@ func (tx *Transaction) ProcessLogging() {
 
 	if tx.AuditEngine == types.AuditEngineOff {
 		// Audit engine disabled
-		tx.WAF.Logger.Debug("[%s] Transaction not marked for audit logging, AuditEngine is disabled", tx.id)
+		tx.debugLogger.Debug().
+			Msg("Transaction not marked for audit logging, AuditEngine is disabled")
 		return
 	}
 
 	if tx.AuditEngine == types.AuditEngineRelevantOnly && !tx.audit {
 		// Transaction marked not for audit logging
-		tx.WAF.Logger.Debug("[%s] Transaction not marked for audit logging, AuditEngine is RelevantOnly and we got noauditlog", tx.id)
+		tx.debugLogger.Debug().
+			Msg("Transaction not marked for audit logging, AuditEngine is RelevantOnly and we got noauditlog")
 		return
 	}
 
@@ -1195,16 +1237,21 @@ func (tx *Transaction) ProcessLogging() {
 		status := tx.variables.responseStatus.Get()
 		if re != nil && !re.Match([]byte(status)) {
 			// Not relevant status
-			tx.WAF.Logger.Debug("[%s] Transaction status not marked for audit logging", tx.id)
+			tx.debugLogger.Debug().
+				Msg("Transaction status not marked for audit logging")
 			return
 		}
 	}
 
-	tx.WAF.Logger.Debug("[%s] Transaction marked for audit logging", tx.id)
+	tx.debugLogger.Debug().
+		Msg("Transaction marked for audit logging")
+
 	if writer := tx.WAF.AuditLogWriter; writer != nil {
 		// We don't log if there is an empty audit logger
 		if err := writer.Write(tx.AuditLog()); err != nil {
-			tx.WAF.Logger.Error(err.Error())
+			tx.debugLogger.Error().
+				Err(err).
+				Msg("Failed to write audit log")
 		}
 	}
 }
@@ -1237,9 +1284,13 @@ func (tx *Transaction) MatchedRules() []types.MatchedRule {
 	return tx.matchedRules
 }
 
+func (tx *Transaction) LastPhase() types.RulePhase {
+	return tx.lastPhase
+}
+
 // AuditLog returns an AuditLog struct, used to write audit logs
-func (tx *Transaction) AuditLog() *loggers.AuditLog {
-	al := &loggers.AuditLog{}
+func (tx *Transaction) AuditLog() *auditlog.Log {
+	al := &auditlog.Log{}
 	al.Messages = nil
 	// YYYY/MM/DD HH:mm:ss
 	ts := time.Unix(0, tx.Timestamp).Format("2006/01/02 15:04:05")
@@ -1247,7 +1298,7 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	clientPort, _ := strconv.Atoi(tx.variables.remotePort.Get())
 	hostPort, _ := strconv.Atoi(tx.variables.serverPort.Get())
 	status, _ := strconv.Atoi(tx.variables.responseStatus.Get())
-	al.Transaction = loggers.AuditTransaction{
+	al.Transaction = auditlog.Transaction{
 		Timestamp:     ts,
 		UnixTimestamp: tx.Timestamp,
 		ID:            tx.id,
@@ -1256,14 +1307,14 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 		HostIP:        tx.variables.serverAddr.Get(),
 		HostPort:      hostPort,
 		ServerID:      tx.variables.serverName.Get(), // TODO check
-		Request: loggers.AuditTransactionRequest{
+		Request: auditlog.TransactionRequest{
 			Method:      tx.variables.requestMethod.Get(),
 			Protocol:    tx.variables.requestProtocol.Get(),
 			URI:         tx.variables.requestURI.Get(),
 			HTTPVersion: tx.variables.requestProtocol.Get(),
 			// Body and headers are audit variables.RequestUriRaws
 		},
-		Response: loggers.AuditTransactionResponse{
+		Response: auditlog.TransactionResponse{
 			Status: status,
 			// body and headers are audit parts
 		},
@@ -1276,7 +1327,7 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	// al.Transaction.Request.Body = tx.RequestBodyBuffer.String()
 	al.Transaction.Response.Headers = tx.variables.responseHeaders.Data()
 	al.Transaction.Response.Body = tx.variables.responseBody.Get()
-	al.Transaction.Producer = loggers.AuditTransactionProducer{
+	al.Transaction.Producer = auditlog.TransactionProducer{
 		Connector:  tx.WAF.ProducerConnector,
 		Version:    tx.WAF.ProducerConnectorVersion,
 		Server:     "",
@@ -1293,7 +1344,7 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 	* if you don’t want to have (often large) files stored in your audit logs.
 	 */
 	// upload data
-	var files []loggers.AuditTransactionRequestFiles
+	var files []auditlog.TransactionRequestFiles
 	al.Transaction.Request.Files = nil
 	for _, file := range tx.variables.files.Get("") {
 		var size int64
@@ -1302,7 +1353,7 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 			// we ignore the error as it defaults to 0
 		}
 		ext := filepath.Ext(file)
-		at := loggers.AuditTransactionRequestFiles{
+		at := auditlog.TransactionRequestFiles{
 			Size: size,
 			Name: file,
 			Mime: mime.TypeByExtension(ext),
@@ -1310,14 +1361,14 @@ func (tx *Transaction) AuditLog() *loggers.AuditLog {
 		files = append(files, at)
 	}
 	al.Transaction.Request.Files = files
-	var mrs []loggers.AuditMessage
+	var mrs []auditlog.Message
 	for _, mr := range tx.matchedRules {
 		r := mr.Rule()
 		for _, matchData := range mr.MatchedDatas() {
-			mrs = append(mrs, loggers.AuditMessage{
+			mrs = append(mrs, auditlog.Message{
 				Actionset: strings.Join(tx.WAF.ComponentNames, " "),
 				Message:   matchData.Message(),
-				Data: loggers.AuditMessageData{
+				Data: auditlog.MessageData{
 					File:     mr.Rule().File(),
 					Line:     mr.Rule().Line(),
 					ID:       r.ID(),
@@ -1352,7 +1403,17 @@ func (tx *Transaction) Close() error {
 		errs = append(errs, err)
 	}
 
-	tx.WAF.Logger.Debug("[%s] Transaction finished, disrupted: %t", tx.id, tx.IsInterrupted())
+	if tx.IsInterrupted() {
+		tx.debugLogger.Debug().
+			Bool("is_interrupted", tx.IsInterrupted()).
+			Int("status", tx.interruption.Status).
+			Int("rule_id", tx.interruption.RuleID).
+			Msg("Transaction finished")
+	} else {
+		tx.debugLogger.Debug().
+			Bool("is_interrupted", false).
+			Msg("Transaction finished")
+	}
 
 	switch {
 	case len(errs) == 0:
@@ -1383,12 +1444,20 @@ func (tx *Transaction) String() string {
 	return res.String()
 }
 
-// generateReqbodyError generates all the error variables for the request body parser
-func (tx *Transaction) generateReqbodyError(err error) {
+// generateRequestBodyError generates all the error variables for the request body parser
+func (tx *Transaction) generateRequestBodyError(err error) {
 	tx.variables.reqbodyError.Set("1")
 	tx.variables.reqbodyErrorMsg.Set(fmt.Sprintf("%s: %s", tx.variables.reqbodyProcessor.Get(), err.Error()))
 	tx.variables.reqbodyProcessorError.Set("1")
-	tx.variables.reqbodyProcessorErrorMsg.Set(string(err.Error()))
+	tx.variables.reqbodyProcessorErrorMsg.Set(err.Error())
+}
+
+// generateResponseBodyError generates all the error variables for the response body parser
+func (tx *Transaction) generateResponseBodyError(err error) {
+	tx.variables.resBodyError.Set("1")
+	tx.variables.resBodyErrorMsg.Set(fmt.Sprintf("%s: %s", tx.variables.resBodyProcessor.Get(), err.Error()))
+	tx.variables.resBodyProcessorError.Set("1")
+	tx.variables.resBodyProcessorErrorMsg.Set(err.Error())
 }
 
 // TransactionVariables has pointers to all the variables of the transaction
@@ -1413,7 +1482,6 @@ type TransactionVariables struct {
 	geo                      *collections.Map
 	highestSeverity          *collections.Single
 	inboundDataError         *collections.Single
-	inboundErrorData         *collections.Single
 	matchedVar               *collections.Single
 	matchedVarName           *collections.Single
 	matchedVars              *collections.NamedCollection
@@ -1454,6 +1522,8 @@ type TransactionVariables struct {
 	responseProtocol         *collections.Single
 	responseStatus           *collections.Single
 	responseXML              *collections.Map
+	responseArgs             *collections.Map
+	resBodyProcessor         *collections.Single
 	rule                     *collections.Map
 	serverAddr               *collections.Single
 	serverName               *collections.Single
@@ -1463,6 +1533,10 @@ type TransactionVariables struct {
 	uniqueID                 *collections.Single
 	urlencodedError          *collections.Single
 	xml                      *collections.Map
+	resBodyError             *collections.Single
+	resBodyErrorMsg          *collections.Single
+	resBodyProcessorError    *collections.Single
+	resBodyProcessorErrorMsg *collections.Single
 }
 
 func NewTransactionVariables() *TransactionVariables {
@@ -1499,13 +1573,17 @@ func NewTransactionVariables() *TransactionVariables {
 	v.responseContentLength = collections.NewSingle(variables.ResponseContentLength)
 	v.responseProtocol = collections.NewSingle(variables.ResponseProtocol)
 	v.responseStatus = collections.NewSingle(variables.ResponseStatus)
+	v.responseArgs = collections.NewMap(variables.ResponseArgs)
 	v.serverAddr = collections.NewSingle(variables.ServerAddr)
 	v.serverName = collections.NewSingle(variables.ServerName)
 	v.serverPort = collections.NewSingle(variables.ServerPort)
 	v.highestSeverity = collections.NewSingle(variables.HighestSeverity)
 	v.statusLine = collections.NewSingle(variables.StatusLine)
-	v.inboundErrorData = collections.NewSingle(variables.InboundErrorData)
 	v.duration = collections.NewSingle(variables.Duration)
+	v.resBodyError = collections.NewSingle(variables.ResBodyError)
+	v.resBodyErrorMsg = collections.NewSingle(variables.ResBodyErrorMsg)
+	v.resBodyProcessorError = collections.NewSingle(variables.ResBodyProcessorError)
+	v.resBodyProcessorErrorMsg = collections.NewSingle(variables.ResBodyProcessorErrorMsg)
 
 	v.filesSizes = collections.NewMap(variables.FilesSizes)
 	v.filesTmpContent = collections.NewMap(variables.FilesTmpContent)
@@ -1519,6 +1597,7 @@ func NewTransactionVariables() *TransactionVariables {
 	v.requestHeadersNames = v.requestHeaders.Names(variables.RequestHeadersNames)
 	v.responseHeaders = collections.NewNamedCollection(variables.ResponseHeaders)
 	v.responseHeadersNames = v.responseHeaders.Names(variables.ResponseHeadersNames)
+	v.resBodyProcessor = collections.NewSingle(variables.ResBodyProcessor)
 	v.geo = collections.NewMap(variables.Geo)
 	v.tx = collections.NewMap(variables.TX)
 	v.rule = collections.NewMap(variables.Rule)
@@ -1711,10 +1790,6 @@ func (v *TransactionVariables) StatusLine() collection.Single {
 	return v.statusLine
 }
 
-func (v *TransactionVariables) InboundErrorData() collection.Single {
-	return v.inboundErrorData
-}
-
 func (v *TransactionVariables) Env() collection.Map {
 	return v.env
 }
@@ -1803,6 +1878,10 @@ func (v *TransactionVariables) ResponseHeadersNames() collection.Collection {
 	return v.responseHeadersNames
 }
 
+func (v *TransactionVariables) ResponseArgs() collection.Map {
+	return v.responseArgs
+}
+
 func (v *TransactionVariables) RequestHeadersNames() collection.Collection {
 	return v.requestHeadersNames
 }
@@ -1823,6 +1902,10 @@ func (v *TransactionVariables) ResponseXML() collection.Map {
 	return v.responseXML
 }
 
+func (v *TransactionVariables) ResponseBodyProcessor() collection.Single {
+	return v.resBodyProcessor
+}
+
 func (v *TransactionVariables) ArgsNames() collection.Collection {
 	return v.argsNames
 }
@@ -1833,6 +1916,22 @@ func (v *TransactionVariables) ArgsGetNames() collection.Collection {
 
 func (v *TransactionVariables) ArgsPostNames() collection.Collection {
 	return v.argsPostNames
+}
+
+func (v *TransactionVariables) ResBodyError() collection.Single {
+	return v.resBodyError
+}
+
+func (v *TransactionVariables) ResBodyErrorMsg() collection.Single {
+	return v.resBodyErrorMsg
+}
+
+func (v *TransactionVariables) ResBodyProcessorError() collection.Single {
+	return v.resBodyProcessorError
+}
+
+func (v *TransactionVariables) ResBodyProcessorErrorMsg() collection.Single {
+	return v.resBodyProcessorErrorMsg
 }
 
 // All iterates over the variables. We return both variable and its collection, i.e. key/value, to follow
@@ -1898,9 +1997,6 @@ func (v *TransactionVariables) All(f func(v variables.RuleVariable, col collecti
 		return
 	}
 	if !f(variables.InboundDataError, v.inboundDataError) {
-		return
-	}
-	if !f(variables.InboundErrorData, v.inboundErrorData) {
 		return
 	}
 	if !f(variables.MatchedVar, v.matchedVar) {
@@ -2021,6 +2117,12 @@ func (v *TransactionVariables) All(f func(v variables.RuleVariable, col collecti
 		return
 	}
 	if !f(variables.ResponseXML, v.responseXML) {
+		return
+	}
+	if !f(variables.ResponseArgs, v.responseArgs) {
+		return
+	}
+	if !f(variables.ResBodyProcessor, v.resBodyProcessor) {
 		return
 	}
 	if !f(variables.Rule, v.rule) {
