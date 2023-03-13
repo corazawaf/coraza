@@ -6,7 +6,7 @@ package coraza
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/loggers"
+	"github.com/corazawaf/coraza/v3/auditlog"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -114,7 +114,7 @@ func TestConfigSetters(t *testing.T) {
 }
 
 func TestConfigLogger(t *testing.T) {
-	logger, err := loggers.GetLogWriter("concurrent")
+	logger, err := auditlog.GetLogWriter("concurrent")
 	if err != nil {
 		t.Fatal(err)
 	}

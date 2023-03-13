@@ -56,14 +56,6 @@ The Coraza Project maintains implementations and plugins for the following serve
 
 * [Coraza GeoIP](https://github.com/corazawaf/coraza-geoip) (preview)
 
-## Roadmap
-
-* WASM scripts support
-* New rule language
-* GraphQL body processor
-* TinyGo support
-* libcoraza C exports
-
 ## Prerequisites
 
 * Golang compiler v1.18+

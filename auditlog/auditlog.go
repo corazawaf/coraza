@@ -1,27 +1,27 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package loggers
+package auditlog
 
 import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
-// AuditLog represents the main struct for audit log data
-type AuditLog struct {
+// Log represents the main struct for audit log data
+type Log struct {
 	// Parts contains the parts of the audit log
 	Parts types.AuditLogParts `json:"-"`
 
 	// Transaction contains the transaction information
-	Transaction AuditTransaction `json:"transaction"`
+	Transaction Transaction `json:"transaction"`
 
 	// Messages contains the triggered rules information
-	Messages []AuditMessage `json:"messages"`
+	Messages []Message `json:"messages"`
 }
 
-// AuditTransaction contains transaction specific
+// Transaction contains transaction specific
 // information
-type AuditTransaction struct {
+type Transaction struct {
 	// Timestamp "02/Jan/2006:15:04:20 -0700" format
 	Timestamp     string `json:"timestamp"`
 	UnixTimestamp int64  `json:"unix_timestamp"`
@@ -32,27 +32,27 @@ type AuditTransaction struct {
 	// Client IP Address string representation
 	ClientIP string `json:"client_ip"`
 
-	ClientPort int                      `json:"client_port"`
-	HostIP     string                   `json:"host_ip"`
-	HostPort   int                      `json:"host_port"`
-	ServerID   string                   `json:"server_id"`
-	Request    AuditTransactionRequest  `json:"request"`
-	Response   AuditTransactionResponse `json:"response"`
-	Producer   AuditTransactionProducer `json:"producer"`
+	ClientPort int                 `json:"client_port"`
+	HostIP     string              `json:"host_ip"`
+	HostPort   int                 `json:"host_port"`
+	ServerID   string              `json:"server_id"`
+	Request    TransactionRequest  `json:"request"`
+	Response   TransactionResponse `json:"response"`
+	Producer   TransactionProducer `json:"producer"`
 }
 
-// AuditTransactionResponse contains response specific
+// TransactionResponse contains response specific
 // information
-type AuditTransactionResponse struct {
+type TransactionResponse struct {
 	Protocol string              `json:"protocol"`
 	Status   int                 `json:"status"`
 	Headers  map[string][]string `json:"headers"`
 	Body     string              `json:"body"`
 }
 
-// AuditTransactionProducer contains producer specific
+// TransactionProducer contains producer specific
 // information for debugging
-type AuditTransactionProducer struct {
+type TransactionProducer struct {
 	Connector  string   `json:"connector"`
 	Version    string   `json:"version"`
 	Server     string   `json:"server"`
@@ -61,37 +61,37 @@ type AuditTransactionProducer struct {
 	Rulesets   []string `json:"rulesets"`
 }
 
-// AuditTransactionRequest contains request specific
+// TransactionRequest contains request specific
 // information
-type AuditTransactionRequest struct {
-	Method      string                         `json:"method"`
-	Protocol    string                         `json:"protocol"`
-	URI         string                         `json:"uri"`
-	HTTPVersion string                         `json:"http_version"`
-	Headers     map[string][]string            `json:"headers"`
-	Body        string                         `json:"body"`
-	Files       []AuditTransactionRequestFiles `json:"files"`
+type TransactionRequest struct {
+	Method      string                    `json:"method"`
+	Protocol    string                    `json:"protocol"`
+	URI         string                    `json:"uri"`
+	HTTPVersion string                    `json:"http_version"`
+	Headers     map[string][]string       `json:"headers"`
+	Body        string                    `json:"body"`
+	Files       []TransactionRequestFiles `json:"files"`
 }
 
-// AuditTransactionRequestFiles contains information
+// TransactionRequestFiles contains information
 // for the uploaded files using multipart forms
-type AuditTransactionRequestFiles struct {
+type TransactionRequestFiles struct {
 	Name string `json:"name"`
 	Size int64  `json:"size"`
 	Mime string `json:"mime"`
 }
 
-// AuditMessage contains information about the triggered
+// Message contains information about the triggered
 // rules
-type AuditMessage struct {
-	Actionset string           `json:"actionset"`
-	Message   string           `json:"message"`
-	Data      AuditMessageData `json:"data"`
+type Message struct {
+	Actionset string      `json:"actionset"`
+	Message   string      `json:"message"`
+	Data      MessageData `json:"data"`
 }
 
-// AuditMessageData contains information about the triggered
+// MessageData contains information about the triggered
 // rules in detail
-type AuditMessageData struct {
+type MessageData struct {
 	File     string             `json:"file"`
 	Line     int                `json:"line"`
 	ID       int                `json:"id"`
@@ -109,24 +109,24 @@ type AuditMessageData struct {
 // LEGACY FORMAT
 
 // Main struct for audit log data
-type auditLogLegacy struct {
+type logLegacy struct {
 	// Section A
-	Transaction auditLogLegacyTransaction `json:"transaction"`
+	Transaction logLegacyTransaction `json:"transaction"`
 
 	// Section B or C
-	Request auditLogLegacyRequest `json:"request"`
+	Request logLegacyRequest `json:"request"`
 
 	// Section J (File Uploads)
 	// TBI
 
 	// Section E and F
-	Response auditLogLegacyResponse `json:"response"`
+	Response logLegacyResponse `json:"response"`
 
 	// Section H
-	AuditData auditLogLegacyData `json:"audit_data"`
+	AuditData logLegacyData `json:"audit_data"`
 }
 
-type auditLogLegacyTransaction struct {
+type logLegacyTransaction struct {
 	// Time format 03/Dec/2021:01:13:44.468137 +0000
 	Time          string `json:"time"`
 	TransactionID string `json:"transaction_id"`
@@ -136,31 +136,31 @@ type auditLogLegacyTransaction struct {
 	LocalPort     int    `json:"local_port"`
 }
 
-type auditLogLegacyRequest struct {
+type logLegacyRequest struct {
 	RequestLine string `json:"request_line"`
 	// Headers should be a map of slices but in this case they are
 	// joined by comma (,)
 	Headers map[string]string `json:"headers"`
 }
 
-type auditLogLegacyResponse struct {
+type logLegacyResponse struct {
 	Status   int               `json:"status"`
 	Protocol string            `json:"protocol"`
 	Headers  map[string]string `json:"headers"`
 }
 
-type auditLogLegacyData struct {
-	Messages              []string                `json:"messages"`
-	ErrorMessages         []string                `json:"error_messages"`
-	Handler               string                  `json:"handler"`
-	Stopwatch             auditLogLegacyStopwatch `json:"stopwatch"`
-	ResponseBodyDechunked bool                    `json:"response_body_dechunked"`
-	Producer              []string                `json:"producer"`
-	Server                string                  `json:"server"`
-	EngineMode            string                  `json:"engine_mode"`
+type logLegacyData struct {
+	Messages              []string           `json:"messages"`
+	ErrorMessages         []string           `json:"error_messages"`
+	Handler               string             `json:"handler"`
+	Stopwatch             logLegacyStopwatch `json:"stopwatch"`
+	ResponseBodyDechunked bool               `json:"response_body_dechunked"`
+	Producer              []string           `json:"producer"`
+	Server                string             `json:"server"`
+	EngineMode            string             `json:"engine_mode"`
 }
 
-type auditLogLegacyStopwatch struct {
+type logLegacyStopwatch struct {
 	Combined int64 // Combined processing time
 	P1       int64 // Processing time for the Request Headers phase
 	P2       int64 // Processing time for the Request Body phase
