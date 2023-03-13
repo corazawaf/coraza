@@ -234,21 +234,21 @@ func (p *RuleParser) ParseDefaultActions(actions string) error {
 		}
 		// SecDefaultActions can not contain metadata actions
 		if action.Atype == rules.ActionTypeMetadata {
-			return errors.New("SecDefaultAction must not contain metadata actions: " + actions)
+			return fmt.Errorf("SecDefaultAction must not contain metadata actions: %s", actions)
 		}
 		// The transformation none is not suitable to be part of the SecDefaultActions
 		if action.Key == "t" && strings.ToLower(action.Value) == "none" {
-			return errors.New("SecDefaultAction must not contain t:none transformation: " + actions)
+			return fmt.Errorf("SecDefaultAction must not contain t:none transformation: %s", actions)
 		}
 	}
 	if phase == 0 {
-		return errors.New("SecDefaultAction must contain a phase")
+		return fmt.Errorf("SecDefaultAction must contain a phase")
 	}
 	if defaultDisruptive == "" {
-		return errors.New("SecDefaultAction must contain a disruptive action: " + actions)
+		return fmt.Errorf("SecDefaultAction must contain a disruptive action: %s", actions)
 	}
 	if p.defaultActions[types.RulePhase(phase)] != nil {
-		return errors.New("SecDefaultAction already defined for this phase: " + actions)
+		return fmt.Errorf("SecDefaultAction already defined for this phase: %s", actions)
 	}
 	p.defaultActions[types.RulePhase(phase)] = act
 	return nil
@@ -339,8 +339,8 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 			return nil, err
 		}
 	}
-	// If no default actions for phase 2 are defined, defaultActionsPhase2 (hardcoded default actions for phase 2) is used.
-	if rp.defaultActions[types.RulePhase(2)] == nil {
+	// If no default actions for phase 2 are defined, defaultActionsPhase2 variable (hardcoded default actions for phase 2) is used.
+	if rp.defaultActions[types.PhaseRequestBody] == nil {
 		err = rp.ParseDefaultActions(defaultActionsPhase2)
 		if err != nil {
 			return nil, err
