@@ -1,0 +1,10 @@
+// Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
+// SPDX-License-Identifier: Apache-2.0
+
+package transformations
+
+import "strings"
+
+func trim(data string) (string, error) {
+	return strings.Trim(data, " \t\n\r"), nil
+}
