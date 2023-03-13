@@ -14,7 +14,7 @@ import (
 func setupTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
 	waf := createWAF()
-	return httptest.NewServer(txhttp.WrapHandler(waf, t.Logf, http.HandlerFunc(exampleHandler)))
+	return httptest.NewServer(txhttp.WrapHandler(waf, http.HandlerFunc(exampleHandler)))
 }
 
 func doGetRequest(t *testing.T, getPath string) int {
