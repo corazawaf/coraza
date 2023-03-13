@@ -6,5 +6,5 @@ package transformations
 import "strings"
 
 func trimRight(data string) (string, error) {
-	return strings.TrimRight(data, " \t\n\r"), nil
+	return strings.TrimRight(data, trimSpaces), nil
 }
