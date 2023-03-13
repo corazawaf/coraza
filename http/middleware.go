@@ -106,9 +106,8 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 	return tx.ProcessRequestBody()
 }
 
-func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
+func WrapHandler(waf coraza.WAF, h http.Handler) http.Handler {
 	if waf == nil {
-		l("nil WAF passed to the handler wrapper")
 		return h
 	}
 
@@ -119,7 +118,7 @@ func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
 			tx.ProcessLogging()
 			// we remove temporary files and free some memory
 			if err := tx.Close(); err != nil {
-				l("failed to close the transaction: %v", err)
+				tx.DebugLogger().Error().Err(err).Msg("Failed to close the transaction")
 			}
 		}()
 
@@ -135,7 +134,7 @@ func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
 		// ProcessRequestHeaders and ProcessRequestBody.
 		// It fails if any of these functions returns an error and it stops on interruption.
 		if it, err := processRequest(tx, r); err != nil {
-			l("failed to process request: %v", err)
+			tx.DebugLogger().Error().Err(err).Msg("Failed to process request")
 			return
 		} else if it != nil {
 			w.WriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, http.StatusOK))
@@ -148,7 +147,7 @@ func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
 		h.ServeHTTP(ww, r)
 
 		if err := processResponse(tx, r); err != nil {
-			l("failed to process response: %v", err)
+			tx.DebugLogger().Error().Err(err).Msg("Failed to close the response")
 			return
 		}
 	}
