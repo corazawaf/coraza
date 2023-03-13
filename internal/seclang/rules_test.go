@@ -39,6 +39,10 @@ func TestRuleMatch(t *testing.T) {
 	}
 }
 
+// TODO(MultiPhase)[ARGS_forced_phased2]: Via minPhase we are forcing that ARGS has to be evaluated in phase 2.
+// This tests expects that ARGS is evaluated in phase 1, and a matched rule already happens right after ProcessRequestHeaders
+// Solution: minPhase (or the check) should also look at the inferredPhases slice. Phase 1 is true, so pick the minimal between
+// Inferred and minPhase.
 func TestRuleMatchWithRegex(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	parser := NewParser(waf)
@@ -152,6 +156,7 @@ func TestSecAuditLogs(t *testing.T) {
 	}
 }
 
+// TODO(MultiPhase)[ARGS_forced_phased2]
 func TestRuleLogging(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	var logs []string
@@ -189,6 +194,7 @@ func TestRuleLogging(t *testing.T) {
 	}
 }
 
+// TODO(MultiPhase)[ARGS_forced_phased2]
 func TestRuleChains(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	parser := NewParser(waf)
@@ -196,7 +202,7 @@ func TestRuleChains(t *testing.T) {
 		SecRule ARGS "123" "id:1,phase:1,log,chain"
 			SecRule &ARGS "@gt 0" "chain"
 			SecRule ARGS "456" "setvar:'tx.test=ok'"
-		
+
 		SecRule ARGS "123" "id:2,phase:1,log,chain"
 			SecRule &ARGS "@gt 100" "chain"
 			SecRule ARGS "456" "setvar:'tx.test2=fail'"
@@ -213,6 +219,7 @@ func TestRuleChains(t *testing.T) {
 	}
 }
 
+// TODO(MultiPhase)[ARGS_forced_phased2]
 func TestTagsAreNotPrintedTwice(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	var logs []string
@@ -245,6 +252,7 @@ func TestTagsAreNotPrintedTwice(t *testing.T) {
 	}
 }
 
+// TODO(MultiPhase)[ARGS_forced_phased2]
 func TestStatusFromInterruptions(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	var logs []string

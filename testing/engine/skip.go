@@ -118,6 +118,9 @@ var _ = profile.RegisterProfile(profile.Profile{
 			},
 		},
 	},
+	// TODO(MultiPhase)[[MovingSkipAndSkipAfterRules] Similar to MovingAllowingRules, being actions that alter the these in which they are triggered,
+	// anticipating them can lead to wrong flows. Possible solution: do not permit to anticipate rules with Skip and SkipAfter. It also would permit
+	// to be safe with rules with multiple targets and relative actions that I think would be executed twice
 	Rules: `
 SecDebugLogLevel 5
 SecRequestBodyAccess On

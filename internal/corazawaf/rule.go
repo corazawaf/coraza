@@ -245,6 +245,10 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 						}
 					}
 				}
+			} else if multiphaseEvaluation && (r.HasChain && phase < r.chainMinPhase) {
+				// When multiphase evaluation is enabled, if the variable is available, but the whole chain is not,
+				// we don't evaluate tue rule yet.
+				continue
 			}
 			var values []types.MatchData
 			for _, c := range ecol {

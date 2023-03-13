@@ -123,14 +123,14 @@ func createMultipartRequest(t *testing.T) *http.Request {
 }
 
 // from issue https://github.com/corazawaf/coraza/issues/159 @zpeasystart
-func TestDirectiveSecAuditLog(t *testing.T) {
+func TestChainEvaluation(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	waf.RequestBodyAccess = true
 	if err := seclang.NewParser(waf).FromString(`
 	SecRule REQUEST_FILENAME "@unconditionalMatch" "id:100, phase:2, t:none, log, setvar:'tx.count=+1',chain"
-	SecRule ARGS:username "@unconditionalMatch" "t:none, setvar:'tx.count=+2',chain"
-	SecRule ARGS:password "@unconditionalMatch" "t:none, setvar:'tx.count=+3'"
-		`); err != nil {
+		SecRule ARGS:username "@unconditionalMatch" "t:none, setvar:'tx.count=+2',chain"
+			SecRule ARGS:password "@unconditionalMatch" "t:none, setvar:'tx.count=+3'"
+	`); err != nil {
 		t.Fatal(err)
 	}
 	if err := waf.Validate(); err != nil {
@@ -286,6 +286,7 @@ func TestHttpServer(t *testing.T) {
 			expectedProto:  "HTTP/1.1",
 			expectedStatus: 201,
 		},
+		// TODO(MultiPhase)[ARGS_forced_phased2]: rule 10 has ARGS:id, therefore it is evaluated only at phase 2.
 		"deny passes over allow due to ordering": {
 			reqURI:         "/allow_me?id=0",
 			expectedProto:  "HTTP/1.1",
