@@ -114,7 +114,7 @@ func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 		Int("phase", int(phase)).
 		Msg("Evaluating phase")
 
-	tx.LastPhase = phase
+	tx.lastPhase = phase
 	usedRules := 0
 	ts := time.Now().UnixNano()
 	transformationCache := tx.transformationCache
@@ -169,11 +169,28 @@ RulesLoop:
 		case corazatypes.AllowTypeUnset:
 			break
 		case corazatypes.AllowTypePhase:
-			tx.AllowType = corazatypes.AllowTypeUnset
-			continue RulesLoop
-		case corazatypes.AllowTypeRequest:
-			tx.AllowType = corazatypes.AllowTypeUnset
+			// Allow phase requires skipping all rules of the current phase.
+			// It is done by breaking the loop and resetting AllowType for the next phase right after the loop.
+			tx.DebugLogger().Debug().
+				Int("phase", int(phase)).
+				Msg("Skipping phase because of allow phase action")
 			break RulesLoop
+		case corazatypes.AllowTypeRequest:
+			// Allow request requires skipping all rules of any request phase.
+			// It is done by breaking the loop only if in a request phase (1 or 2)
+			// and resetting AllowType once the request phases are over (after request body phase)
+			tx.DebugLogger().Debug().
+				Int("phase", int(phase)).
+				Msg("Skipping phase because of allow request action")
+			if phase == types.PhaseRequestHeaders {
+				// tx.AllowType is not resetted because another request phase might be called
+				break RulesLoop
+			}
+			if phase == types.PhaseRequestBody {
+				// // tx.AllowType is resetted, currently PhaseRequestBody is the last request phase
+				tx.AllowType = corazatypes.AllowTypeUnset
+				break RulesLoop
+			}
 		case corazatypes.AllowTypeAll:
 			break RulesLoop
 		}
@@ -188,6 +205,13 @@ RulesLoop:
 	tx.DebugLogger().Debug().
 		Int("phase", int(phase)).
 		Msg("Finished phase")
+
+	// Reset AllowType if meant to allow only this specific phase. It is particuarly needed
+	// to reset it at this point, in case of an allow:phase action enforced by the last rule of the phase.
+	// In this case, allow:phase must not have any impact on the next phase.
+	if tx.AllowType == corazatypes.AllowTypePhase {
+		tx.AllowType = corazatypes.AllowTypeUnset
+	}
 
 	tx.stopWatches[phase] = time.Now().UnixNano() - ts
 	return tx.interruption != nil

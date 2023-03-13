@@ -10,17 +10,17 @@ import (
 
 func TestLevelString(t *testing.T) {
 	var tests = []struct {
-		level LogLevel
+		level Level
 		want  string
 	}{
-		{LogLevelNoLog, "NOLOG"},
-		{LogLevelError, "ERROR"},
-		{LogLevelWarn, "WARN"},
-		{LogLevelInfo, "INFO"},
-		{LogLevelDebug, "DEBUG"},
-		{LogLevelTrace, "TRACE"},
-		{LogLevelUnknown, "UNKNOWN"},
-		{LogLevel(11), "UNKNOWN"},
+		{LevelNoLog, "NOLOG"},
+		{LevelError, "ERROR"},
+		{LevelWarn, "WARN"},
+		{LevelInfo, "INFO"},
+		{LevelDebug, "DEBUG"},
+		{LevelTrace, "TRACE"},
+		{LevelUnknown, "UNKNOWN"},
+		{Level(11), "UNKNOWN"},
 	}
 
 	for _, test := range tests {
@@ -34,17 +34,17 @@ func TestLevelString(t *testing.T) {
 
 func TestLevelValid(t *testing.T) {
 	var tests = []struct {
-		level   LogLevel
+		level   Level
 		isValid bool
 	}{
-		{LogLevelUnknown, false},
-		{LogLevelNoLog, true},
-		{LogLevelError, true},
-		{LogLevelWarn, true},
-		{LogLevelInfo, true},
-		{LogLevelDebug, true},
-		{LogLevelTrace, true},
-		{LogLevel(11), false},
+		{LevelUnknown, false},
+		{LevelNoLog, true},
+		{LevelError, true},
+		{LevelWarn, true},
+		{LevelInfo, true},
+		{LevelDebug, true},
+		{LevelTrace, true},
+		{Level(11), false},
 	}
 
 	for _, test := range tests {

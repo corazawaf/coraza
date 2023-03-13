@@ -156,8 +156,7 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	tx.RuleEngine = w.RuleEngine
 	tx.HashEngine = false
 	tx.HashEnforcement = false
-	tx.LastPhase = 0
-	tx.bodyProcessor = nil
+	tx.lastPhase = 0
 	tx.ruleRemoveByID = nil
 	tx.ruleRemoveTargetByID = map[int][]ruleVariableParams{}
 	tx.Skip = 0
@@ -252,7 +251,7 @@ const _1gb = 1073741824
 
 // NewWAF creates a new WAF instance with default variables
 func NewWAF() *WAF {
-	logger := debuglog.Nop()
+	logger := debuglog.Noop()
 
 	logWriter, err := auditlog.GetLogWriter("serial")
 	if err != nil {
@@ -287,7 +286,7 @@ func (w *WAF) SetDebugLogOutput(wr io.Writer) {
 }
 
 // SetDebugLogLevel changes the debug level of the WAF instance
-func (w *WAF) SetDebugLogLevel(lvl debuglog.LogLevel) error {
+func (w *WAF) SetDebugLogLevel(lvl debuglog.Level) error {
 	if !lvl.Valid() {
 		return errors.New("invalid log level")
 	}
