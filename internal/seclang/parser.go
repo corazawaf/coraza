@@ -12,10 +12,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/internal/io"
-	"github.com/corazawaf/coraza/v3/types"
 )
 
 // maxIncludeRecursion is used to avoid DDOS by including files that include
@@ -164,16 +164,16 @@ func (p *Parser) evaluateLine(l string) error {
 	}
 
 	p.options.Opts = opts
-	p.options.Config.Set("last_profile_line", p.currentLine)
-	p.options.Config.Set("parser_config_file", p.currentFile)
-	p.options.Config.Set("parser_config_dir", p.currentDir)
-	p.options.Config.Set("parser_root", p.root)
+	p.options.Parser.LastLine = p.currentLine
+	p.options.Parser.ConfigFile = p.currentFile
+	p.options.Parser.ConfigDir = p.currentDir
+	p.options.Parser.Root = p.root
 	if environment.HasAccessToFS {
 		wd, err := os.Getwd()
 		if err != nil {
 			return err
 		}
-		p.options.Config.Set("working_dir", wd)
+		p.options.Parser.WorkingDir = wd
 	}
 
 	if err := d(p.options); err != nil {
@@ -205,10 +205,23 @@ func NewParser(waf *corazawaf.WAF) *Parser {
 	p := &Parser{
 		options: &DirectiveOptions{
 			WAF:      waf,
-			Config:   make(types.Config),
 			Datasets: make(map[string][]string),
+			AuditLog: auditlog.NewConfig(),
 		},
 		root: io.OSFS{},
 	}
 	return p
+}
+
+type ParserConfig struct {
+	DisabledRuleActions         []string
+	DisabledRuleOperators       []string
+	RuleDefaultActions          []string
+	HasRuleDefaultActions       bool
+	IgnoreRuleCompilationErrors bool
+	LastLine                    int
+	ConfigFile                  string
+	ConfigDir                   string
+	Root                        fs.FS
+	WorkingDir                  string
 }

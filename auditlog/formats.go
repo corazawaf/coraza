@@ -97,5 +97,5 @@ func nativeFormatter(al *Log) ([]byte, error) {
 }
 
 var (
-	_ LogFormatter = nativeFormatter
+	_ Formatter = nativeFormatter
 )

@@ -1414,9 +1414,17 @@ func (tx *Transaction) Close() error {
 		errs = append(errs, err)
 	}
 
-	tx.debugLogger.Debug().
-		Bool("is_interrupted", tx.IsInterrupted()).
-		Msg("Transaction finished")
+	if tx.IsInterrupted() {
+		tx.debugLogger.Debug().
+			Bool("is_interrupted", tx.IsInterrupted()).
+			Int("status", tx.interruption.Status).
+			Int("rule_id", tx.interruption.RuleID).
+			Msg("Transaction finished")
+	} else {
+		tx.debugLogger.Debug().
+			Bool("is_interrupted", false).
+			Msg("Transaction finished")
+	}
 
 	switch {
 	case len(errs) == 0:

@@ -6,7 +6,6 @@ package actions
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -49,18 +48,11 @@ type ctlFn struct {
 	value      string
 	collection variables.RuleVariable
 	colKey     string
-	colRx      *regexp.Regexp
 }
 
 func (a *ctlFn) Init(_ rules.RuleMetadata, data string) error {
 	var err error
 	a.action, a.value, a.collection, a.colKey, err = parseCtl(data)
-	if len(a.colKey) > 2 && a.colKey[0] == '/' && a.colKey[len(a.colKey)-1] == '/' {
-		a.colRx, err = regexp.Compile(a.colKey[1 : len(a.colKey)-1])
-		if err != nil {
-			return err
-		}
-	}
 	return err
 }
 

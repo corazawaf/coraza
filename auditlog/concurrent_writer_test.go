@@ -15,12 +15,10 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
-
-	"github.com/corazawaf/coraza/v3/types"
 )
 
 func TestConcurrentWriterNoop(t *testing.T) {
-	config := types.Config{}
+	config := NewConfig()
 	writer := &concurrentWriter{}
 	if err := writer.Init(config); err != nil {
 		t.Errorf("unexpected error: %s", err.Error())
@@ -32,13 +30,13 @@ func TestConcurrentWriterNoop(t *testing.T) {
 }
 
 func TestConcurrentWriterFailsOnInit(t *testing.T) {
-	config := types.Config{
-		"auditlog_file":      "/unexisting.log",
-		"auditlog_dir":       t.TempDir(),
-		"auditlog_file_mode": fs.FileMode(0777),
-		"auditlog_dir_mode":  fs.FileMode(0777),
-		"auditlog_formatter": jsonFormatter,
-	}
+	config := NewConfig()
+	config.File = "/unexisting.log"
+	config.Dir = t.TempDir()
+	config.FileMode = fs.FileMode(0777)
+	config.DirMode = fs.FileMode(0777)
+	config.Formatter = jsonFormatter
+
 	writer := &concurrentWriter{}
 	if err := writer.Init(config); err == nil {
 		t.Error("expected error")
@@ -51,12 +49,12 @@ func TestConcurrentWriterWrites(t *testing.T) {
 	if err != nil {
 		t.Error("failed to create concurrent logger file")
 	}
-	config := types.Config{
-		"auditlog_file":      file.Name(),
-		"auditlog_dir":       dir,
-		"auditlog_file_mode": fs.FileMode(0777),
-		"auditlog_dir_mode":  fs.FileMode(0777),
-		"auditlog_formatter": jsonFormatter,
+	config := Config{
+		File:      file.Name(),
+		Dir:       dir,
+		FileMode:  fs.FileMode(0777),
+		DirMode:   fs.FileMode(0777),
+		Formatter: jsonFormatter,
 	}
 	ts := time.Now().UnixNano()
 	al := &Log{

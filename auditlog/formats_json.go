@@ -86,6 +86,6 @@ func legacyJSONFormatter(al *Log) ([]byte, error) {
 }
 
 var (
-	_ LogFormatter = jsonFormatter
-	_ LogFormatter = legacyJSONFormatter
+	_ Formatter = jsonFormatter
+	_ Formatter = legacyJSONFormatter
 )
