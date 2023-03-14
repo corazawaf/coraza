@@ -4,7 +4,6 @@
 package bodyprocessors
 
 import (
-	"encoding/xml"
 	"io"
 
 	"github.com/antchfx/xmlquery"
@@ -13,9 +12,9 @@ import (
 )
 
 var xmlOptions = xmlquery.DecoderOptions{
-	Strict:    false,
-	AutoClose: xml.HTMLAutoClose,
-	Entity:    xml.HTMLEntity,
+	Strict: false,
+	// AutoClose: xml.HTMLAutoClose,
+	// Entity:    xml.HTMLEntity,
 }
 
 type xmlBodyProcessor struct {
