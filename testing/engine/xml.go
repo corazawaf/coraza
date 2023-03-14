@@ -44,7 +44,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 	Rules: `
 SecRequestBodyAccess On
 SecRule REQUEST_HEADERS:content-type "application/xml" "id: 100, phase:1, pass, log, ctl:requestBodyProcessor=XML"
-SecRule REQBODY_PROCESSOR "XML" "id: 101,phase:2,log,block"
+SecRule REQBODY_PROCESSOR "XML" "id: 101,phase:1,log,block"
 SecRule XML:/*|XML://@* "test123" "id:102, phase:2,log,block"
 #REQUEST_BODY must be empty for XML body processor
 SecRule XML:/* "test123" "id:500, log"
@@ -84,8 +84,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 	},
 	Rules: `
 SecRequestBodyAccess On
-SecRule REQUEST_HEADERS:content-type "application/xml" "id: 100, phase:2, pass, log, ctl:requestBodyProcessor=XML"
-SecRule REQBODY_PROCESSOR "XML" "id: 101,phase:2,log,block"
+SecRule REQUEST_HEADERS:content-type "application/xml" "id: 100, phase:1, pass, log, ctl:requestBodyProcessor=XML"
+SecRule REQBODY_PROCESSOR "XML" "id: 101,phase:1,log,block"
 SecRule XML:/*|XML://@* \
     "@rx (?:cnVudGltZQ|HJ1bnRpbWU|BydW50aW1l|cHJvY2Vzc2J1aWxkZXI|HByb2Nlc3NidWlsZGVy|Bwcm9jZXNzYnVpbGRlcg|Y2xvbmV0cmFuc2Zvcm1lcg|GNsb25ldHJhbnNmb3JtZXI|BjbG9uZXRyYW5zZm9ybWVy|Zm9yY2xvc3VyZQ|GZvcmNsb3N1cmU|Bmb3JjbG9zdXJl|aW5zdGFudGlhdGVmYWN0b3J5|Gluc3RhbnRpYXRlZmFjdG9yeQ|BpbnN0YW50aWF0ZWZhY3Rvcnk|aW5zdGFudGlhdGV0cmFuc2Zvcm1lcg|Gluc3RhbnRpYXRldHJhbnNmb3JtZXI|BpbnN0YW50aWF0ZXRyYW5zZm9ybWVy|aW52b2tlcnRyYW5zZm9ybWVy|Gludm9rZXJ0cmFuc2Zvcm1lcg|BpbnZva2VydHJhbnNmb3JtZXI|cHJvdG90eXBlY2xvbmVmYWN0b3J5|HByb3RvdHlwZWNsb25lZmFjdG9yeQ|Bwcm90b3R5cGVjbG9uZWZhY3Rvcnk|cHJvdG90eXBlc2VyaWFsaXphdGlvbmZhY3Rvcnk|HByb3RvdHlwZXNlcmlhbGl6YXRpb25mYWN0b3J5|Bwcm90b3R5cGVzZXJpYWxpemF0aW9uZmFjdG9yeQ|d2hpbGVjbG9zdXJl|HdoaWxlY2xvc3VyZQ|B3aGlsZWNsb3N1cmU)" \
     "id:944300,\
