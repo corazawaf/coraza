@@ -1,11 +1,11 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-// JSON loggers not supported on TinyGo yet.
+// JSON auditlog not supported on TinyGo yet.
 //go:build !tinygo
 // +build !tinygo
 
-package loggers
+package auditlog
 
 import (
 	"encoding/json"
@@ -14,7 +14,7 @@ import (
 )
 
 // Coraza format
-func jsonFormatter(al *AuditLog) ([]byte, error) {
+func jsonFormatter(al *Log) ([]byte, error) {
 	jsdata, err := json.Marshal(al)
 	if err != nil {
 		return nil, err
@@ -23,7 +23,7 @@ func jsonFormatter(al *AuditLog) ([]byte, error) {
 }
 
 // Coraza legacy json format
-func legacyJSONFormatter(al *AuditLog) ([]byte, error) {
+func legacyJSONFormatter(al *Log) ([]byte, error) {
 	reqHeaders := map[string]string{}
 	for k, v := range al.Transaction.Request.Headers {
 		reqHeaders[k] = strings.Join(v, ", ")
@@ -41,8 +41,8 @@ func legacyJSONFormatter(al *AuditLog) ([]byte, error) {
 		producers = append(producers, conn)
 	}
 	producers = append(producers, al.Transaction.Producer.Rulesets...)
-	al2 := auditLogLegacy{
-		Transaction: auditLogLegacyTransaction{
+	al2 := logLegacy{
+		Transaction: logLegacyTransaction{
 			Time:          al.Transaction.Timestamp,
 			TransactionID: al.Transaction.ID,
 			RemoteAddress: al.Transaction.ClientIP,
@@ -50,17 +50,17 @@ func legacyJSONFormatter(al *AuditLog) ([]byte, error) {
 			LocalAddress:  al.Transaction.HostIP,
 			LocalPort:     al.Transaction.HostPort,
 		},
-		Request: auditLogLegacyRequest{
+		Request: logLegacyRequest{
 			RequestLine: fmt.Sprintf("%s %s %s", al.Transaction.Request.Method, al.Transaction.Request.URI, al.Transaction.Request.HTTPVersion),
 			Headers:     reqHeaders,
 		},
-		Response: auditLogLegacyResponse{
+		Response: logLegacyResponse{
 			Status:   al.Transaction.Response.Status,
 			Protocol: al.Transaction.Response.Protocol,
 			Headers:  resHeaders,
 		},
-		AuditData: auditLogLegacyData{
-			Stopwatch:  auditLogLegacyStopwatch{},
+		AuditData: logLegacyData{
+			Stopwatch:  logLegacyStopwatch{},
 			Messages:   messages,
 			Producer:   producers,
 			EngineMode: al.Transaction.Producer.RuleEngine,

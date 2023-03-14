@@ -28,7 +28,8 @@ const (
 	FilesCombinedSize = variables.FilesCombinedSize
 	// FullRequestLength is the length of the full request
 	FullRequestLength = variables.FullRequestLength
-	// InboundDataError represents errors for inbound data
+	// InboundDataError will be set to 1 when the request body size
+	// is above the setting configured by SecRequesteBodyLimit
 	InboundDataError = variables.InboundDataError
 	// MatchedVar is the value of the matched variable
 	MatchedVar = variables.MatchedVar
@@ -96,6 +97,8 @@ const (
 	ResponseProtocol = variables.ResponseProtocol
 	// ResponseStatus is the status code of the response
 	ResponseStatus = variables.ResponseStatus
+	// ResBodyProcessor contains the name of the response body processor used, no default
+	ResBodyProcessor = variables.ResBodyProcessor
 	// ServerAddr is the address of the server
 	ServerAddr = variables.ServerAddr
 	// ServerName is the name of the server
@@ -107,9 +110,6 @@ const (
 	// StatusLine is the status line of the response, including the request method
 	// and HTTP version information
 	StatusLine = variables.StatusLine
-	// InboundErrorData will be set to 1 when the request body size
-	// is above the setting configured by SecRequesteBodyLimit
-	InboundErrorData = variables.InboundErrorData
 	// Duration contains the time in miliseconds from
 	// the beginning of the transaction until this point
 	Duration = variables.Duration
@@ -186,6 +186,14 @@ const (
 	XML = variables.XML
 	// MultipartPartHeaders contains the multipart headers
 	MultipartPartHeaders = variables.MultipartPartHeaders
+	// ResBodyError is 1 if the response body processor failed
+	ResBodyError = variables.ResBodyError
+	// ResBodyErrorMsg contains the error message if the response body processor failed
+	ResBodyErrorMsg = variables.ResBodyErrorMsg
+	// ResBodyProcessorError is 1 if the response body processor failed
+	ResBodyProcessorError = variables.ResBodyProcessorError
+	// ResBodyProcessorErrorMsg contains the error message if the response body processor failed
+	ResBodyProcessorErrorMsg = variables.ResBodyProcessorErrorMsg
 )
 
 // Parse returns the byte interpretation

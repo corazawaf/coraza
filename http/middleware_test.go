@@ -21,9 +21,9 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
-	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/macro"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -194,26 +194,13 @@ func errLogger(t *testing.T) func(rule types.MatchedRule) {
 	}
 }
 
-type debugLogger struct {
+type testLogOutput struct {
 	t *testing.T
 }
 
-func (l debugLogger) Info(message string, args ...interface{}) { l.t.Logf(message, args...) }
-
-func (l debugLogger) Warn(message string, args ...interface{}) { l.t.Logf(message, args...) }
-
-func (l debugLogger) Error(message string, args ...interface{}) { l.t.Logf(message, args...) }
-
-func (l debugLogger) Debug(message string, args ...interface{}) { l.t.Logf(message, args...) }
-
-func (l debugLogger) Trace(message string, args ...interface{}) { l.t.Logf(message, args...) }
-
-func (l debugLogger) SetLevel(level loggers.LogLevel) {
-	l.t.Logf("Setting level to %q", level.String())
-}
-
-func (l debugLogger) SetOutput(w io.WriteCloser) {
-	l.t.Log("ignoring SecDebugLog directive, debug logs are always routed to proxy logs")
+func (l testLogOutput) Write(p []byte) (int, error) {
+	l.t.Log(string(p))
+	return len(p), nil
 }
 
 type httpTest struct {
@@ -306,6 +293,10 @@ func TestHttpServer(t *testing.T) {
 		},
 	}
 
+	logger := debuglog.Default().
+		WithOutput(testLogOutput{t}).
+		WithLevel(debuglog.LevelInfo)
+
 	// Perform tests
 	for name, tCase := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -326,7 +317,7 @@ func TestHttpServer(t *testing.T) {
 	SecRule RESPONSE_HEADERS:Foo "@pm bar" "id:199,phase:3,deny,t:lowercase,deny, status:401,msg:'Invalid response header',log,auditlog"
 	SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
 	SecRule REQUEST_URI "/allow_me" "id:9,phase:1,allow,msg:'ALLOWED'"
-`).WithErrorCallback(errLogger(t)).WithDebugLogger(&debugLogger{t: t})
+`).WithErrorCallback(errLogger(t)).WithDebugLogger(logger)
 			if l := tCase.reqBodyLimit; l > 0 {
 				conf = conf.WithRequestBodyAccess().WithRequestBodyLimit(l).WithRequestBodyInMemoryLimit(l)
 			}
@@ -364,6 +355,10 @@ func TestHttpServerWithRuleEngineOff(t *testing.T) {
 			expectedRespBody: "Waf is Off!",
 		},
 	}
+	logger := debuglog.Default().
+		WithOutput(testLogOutput{t}).
+		WithLevel(debuglog.LevelInfo)
+
 	// Perform tests
 	for name, tCase := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -373,7 +368,7 @@ func TestHttpServerWithRuleEngineOff(t *testing.T) {
 			SecRequestBodyAccess On
 			SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
 			SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
-			`).WithErrorCallback(errLogger(t)).WithDebugLogger(&debugLogger{t: t}))
+			`).WithErrorCallback(errLogger(t)).WithDebugLogger(logger))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -388,7 +383,7 @@ func runAgainstWAF(t *testing.T, tCase httpTest, waf coraza.WAF) {
 	defer close(serverErrC)
 
 	// Spin up the test server
-	ts := httptest.NewUnstartedServer(WrapHandler(waf, t.Logf, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	ts := httptest.NewUnstartedServer(WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if want, have := tCase.expectedProto, req.Proto; want != have {
 			t.Errorf("unexpected proto, want: %s, have: %s", want, have)
 		}
@@ -497,7 +492,7 @@ func TestObtainStatusCodeFromInterruptionOrDefault(t *testing.T) {
 
 func TestHandlerWithNilWAF(t *testing.T) {
 	delegateHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	wrappedHandler := WrapHandler(nil, t.Logf, delegateHandler).(http.HandlerFunc)
+	wrappedHandler := WrapHandler(nil, delegateHandler).(http.HandlerFunc)
 	if want, have := fmt.Sprintf("%v", delegateHandler), fmt.Sprintf("%v", wrappedHandler); want != have {
 		t.Errorf("unexpected wrapped handler")
 	}
@@ -565,7 +560,7 @@ func TestHandlerAPI(t *testing.T) {
 
 	for name, tCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			srv := httptest.NewServer(WrapHandler(waf, t.Logf, tCase.handler))
+			srv := httptest.NewServer(WrapHandler(waf, tCase.handler))
 			defer srv.Close()
 
 			res, err := http.Post(srv.URL, "application/json", bytes.NewBufferString("the payload"))

@@ -4,7 +4,7 @@
 //go:build !tinygo
 // +build !tinygo
 
-package loggers
+package auditlog
 
 func init() {
 	RegisterLogWriter("concurrent", func() LogWriter {

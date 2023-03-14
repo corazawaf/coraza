@@ -4,6 +4,7 @@
 package corazawaf
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"regexp"
@@ -13,10 +14,10 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/macro"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -370,7 +371,7 @@ func TestProcessRequestHeadersDoesNoEvaluationOnEngineOff(t *testing.T) {
 	}
 
 	_ = tx.ProcessRequestHeaders()
-	if tx.LastPhase != 0 { // 0 means no phases have been evaluated
+	if tx.lastPhase != 0 { // 0 means no phases have been evaluated
 		t.Error("unexpected rule evaluation")
 	}
 }
@@ -381,7 +382,7 @@ func TestProcessRequestBodyDoesNoEvaluationOnEngineOff(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error("failed to process request body")
 	}
-	if tx.LastPhase != 0 {
+	if tx.lastPhase != 0 {
 		t.Error("unexpected rule evaluation")
 	}
 }
@@ -390,7 +391,7 @@ func TestProcessResponseHeadersDoesNoEvaluationOnEngineOff(t *testing.T) {
 	tx := NewWAF().NewTransaction()
 	tx.RuleEngine = types.RuleEngineOff
 	_ = tx.ProcessResponseHeaders(200, "OK")
-	if tx.LastPhase != 0 {
+	if tx.lastPhase != 0 {
 		t.Error("unexpected rule evaluation")
 	}
 }
@@ -401,7 +402,7 @@ func TestProcessResponseBodyDoesNoEvaluationOnEngineOff(t *testing.T) {
 	if _, err := tx.ProcessResponseBody(); err != nil {
 		t.Error("Failed to process response body")
 	}
-	if tx.LastPhase != 0 {
+	if tx.lastPhase != 0 {
 		t.Error("unexpected rule evaluation")
 	}
 }
@@ -410,7 +411,7 @@ func TestProcessLoggingDoesNoEvaluationOnEngineOff(t *testing.T) {
 	tx := NewWAF().NewTransaction()
 	tx.RuleEngine = types.RuleEngineOff
 	tx.ProcessLogging()
-	if tx.LastPhase != 0 {
+	if tx.lastPhase != 0 {
 		t.Error("unexpected rule evaluation")
 	}
 }
@@ -693,7 +694,7 @@ func TestRelevantAuditLogging(t *testing.T) {
 	tx.WAF.AuditLogRelevantStatus = regexp.MustCompile(`(403)`)
 	tx.variables.responseStatus.Set("403")
 	tx.AuditEngine = types.AuditEngineRelevantOnly
-	// tx.WAF.auditLogger = loggers.NewAuditLogger()
+	// tx.WAF.auditLogger = auditlog.NewAuditLogger()
 	tx.ProcessLogging()
 	// TODO how do we check if the log was writen?
 	if err := tx.Close(); err != nil {
@@ -762,6 +763,7 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 	tx.ForceRequestBodyVariable = true
 	tx.AddRequestHeader("content-type", "text/plain")
 	tx.AddRequestHeader("content-length", "7")
+	tx.ProcessRequestHeaders()
 	if _, err := tx.requestBodyBuffer.Write([]byte("test123")); err != nil {
 		t.Error("Failed to write request body buffer")
 	}
@@ -776,10 +778,51 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 	}
 }
 
+func TestProcessBodiesSkippedIfHeadersPhasesNotReached(t *testing.T) {
+	logBuffer := &bytes.Buffer{}
+	waf := NewWAF()
+	waf.SetDebugLogOutput(logBuffer)
+	_ = waf.SetDebugLogLevel(debuglog.LevelDebug)
+	tx := waf.NewTransaction()
+	tx.RuleEngine = types.RuleEngineOn
+	tx.RequestBodyAccess = true
+	// Current phase is PhaseUnknown (ProcessRequestHeaders has not been called)
+	it, err := tx.ProcessRequestBody()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if it != nil {
+		t.Fatal("Unexpected interruption")
+	}
+	it, err = tx.ProcessResponseBody()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if it != nil {
+		t.Fatal("Unexpected interruption")
+	}
+	logEntries := strings.Split(strings.TrimSpace(logBuffer.String()), "\n")
+	// At this point we are expecting three log entries:
+	// [0] New transaction log
+	// [1] Anomalous call before request headers evaluation
+	// [2] Anomalous call before response headers evaluation
+	if want, have := 3, len(logEntries); want != have {
+		t.Fatalf("unexpected number of log entries, want %d, have %d", want, have)
+	}
+	if want, have := "anomalous call before request headers evaluation", logEntries[1]; !strings.Contains(have, want) {
+		t.Fatalf("unexpected message, want %q, have %q", want, have)
+	}
+	if want, have := "anomalous call before response headers evaluation", logEntries[2]; !strings.Contains(have, want) {
+		t.Fatalf("unexpected message, want %q, have %q", want, have)
+	}
+	if err := tx.Close(); err != nil {
+		t.Error(err)
+	}
+}
+
 func TestTxVariables(t *testing.T) {
 	tx := makeTransaction(t)
 	rv := ruleVariableParams{
-		Name:     "REQUEST_HEADERS",
 		Variable: variables.RequestHeaders,
 		KeyStr:   "ho.*",
 		KeyRx:    regexp.MustCompile("ho.*"),
@@ -816,7 +859,6 @@ func TestTxVariables(t *testing.T) {
 func TestTxVariablesExceptions(t *testing.T) {
 	tx := makeTransaction(t)
 	rv := ruleVariableParams{
-		Name:     "REQUEST_HEADERS",
 		Variable: variables.RequestHeaders,
 		KeyStr:   "ho.*",
 		KeyRx:    regexp.MustCompile("ho.*"),
@@ -875,6 +917,9 @@ func TestTxPhase4Magic(t *testing.T) {
 	waf.ResponseBodyMimeTypes = []string{"text/html"}
 	tx := waf.NewTransaction()
 	tx.AddResponseHeader("content-type", "text/html")
+	tx.ProcessRequestHeaders()
+	_, _ = tx.ProcessRequestBody()
+	tx.ProcessResponseHeaders(200, "HTTP/1.1")
 	if it, _, err := tx.WriteResponseBody([]byte("more bytes")); it != nil || err != nil {
 		t.Error(err)
 	}
@@ -916,6 +961,7 @@ func TestVariablesMatch(t *testing.T) {
 func TestTxReqBodyForce(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
+	tx.ProcessRequestHeaders()
 	tx.RequestBodyAccess = true
 	tx.ForceRequestBodyVariable = true
 	if _, err := tx.requestBodyBuffer.Write([]byte("test")); err != nil {
@@ -958,22 +1004,24 @@ func TestTxProcessConnection(t *testing.T) {
 }
 
 func TestTxSetServerName(t *testing.T) {
+	logBuffer := &bytes.Buffer{}
 
-	l := &inspectableLogger{}
 	waf := NewWAF()
-	waf.Logger.SetOutput(l)
-	waf.Logger.SetLevel(loggers.LogLevelWarn)
+	waf.SetDebugLogOutput(logBuffer)
+	_ = waf.SetDebugLogLevel(debuglog.LevelWarn)
+
 	tx := waf.NewTransaction()
-	tx.LastPhase = types.PhaseRequestHeaders
+	tx.lastPhase = types.PhaseRequestHeaders
 	tx.SetServerName("coraza.io")
 	if tx.variables.serverName.Get() != "coraza.io" {
 		t.Error("failed to set server name")
 	}
-	if want, have := 1, len(l.entries); want != have {
+	logEntries := strings.Split(strings.TrimSpace(logBuffer.String()), "\n")
+	if want, have := 1, len(logEntries); want != have {
 		t.Fatalf("unexpected number of log entries, want %d, have %d", want, have)
 	}
 
-	if want, have := "SetServerName has been called after ProcessRequestHeaders", l.entries[0]; !strings.Contains(have, want) {
+	if want, have := "SetServerName has been called after ProcessRequestHeaders", logEntries[0]; !strings.Contains(have, want) {
 		t.Fatalf("unexpected message, want %q, have %q", want, have)
 	}
 
@@ -1000,7 +1048,6 @@ func TestTxAddArgument(t *testing.T) {
 func TestTxGetField(t *testing.T) {
 	tx := makeTransaction(t)
 	rvp := ruleVariableParams{
-		Name:     "args",
 		Variable: variables.Args,
 	}
 	if f := tx.GetField(rvp); len(f) != 3 {
@@ -1168,26 +1215,12 @@ func BenchmarkMacro(b *testing.B) {
 	}
 }
 
-type inspectableLogger struct {
-	entries []string
-}
-
-func (l *inspectableLogger) Write(p []byte) (n int, err error) {
-	l.entries = append(l.entries, string(p))
-	return len(p), nil
-}
-
-func (l *inspectableLogger) Close() error {
-	l.entries = nil
-	return nil
-}
-
-func TestProcessorsIdempotency(t *testing.T) {
-	l := &inspectableLogger{}
+func TestProcessorsIdempotencyWithAlreadyRaisedInterruption(t *testing.T) {
+	logBuffer := &bytes.Buffer{}
 
 	waf := NewWAF()
-	waf.Logger.SetOutput(l)
-	waf.Logger.SetLevel(loggers.LogLevelError)
+	waf.SetDebugLogOutput(logBuffer)
+	_ = waf.SetDebugLogLevel(debuglog.LevelError)
 
 	expectedInterruption := &types.Interruption{
 		RuleID: 123,
@@ -1221,6 +1254,8 @@ func TestProcessorsIdempotency(t *testing.T) {
 
 	for processor, tCase := range testCases {
 		t.Run(processor, func(t *testing.T) {
+			logBuffer.Reset()
+
 			it := tCase(tx)
 			if it == nil {
 				t.Fatal("expected interruption")
@@ -1230,17 +1265,16 @@ func TestProcessorsIdempotency(t *testing.T) {
 				t.Fatal("unexpected interruption")
 			}
 
-			if want, have := 1, len(l.entries); want != have {
+			logEntries := strings.Split(strings.TrimSpace(logBuffer.String()), "\n")
+			if want, have := 1, len(logEntries); want != have {
 				t.Fatalf("unexpected number of log entries, want %d, have %d", want, have)
 			}
 
-			expectedMessage := fmt.Sprintf("[ERROR] Calling %s but there is a preexisting interruption\n", processor)
+			expectedMessage := fmt.Sprintf("Calling %s but there is a preexisting interruption", processor)
 
-			if want, have := expectedMessage, l.entries[0]; want != have {
-				t.Fatalf("unexpected message, want %q, have %q", want, have)
+			if want, have := expectedMessage, logEntries[0]; !strings.Contains(have, want) {
+				t.Fatalf("unexpected message, want to contain %q in %q", want, have)
 			}
-
-			l.Close()
 		})
 	}
 }

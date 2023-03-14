@@ -39,34 +39,25 @@ func TestNewTransaction(t *testing.T) {
 }
 
 func TestSetDebugLogPath(t *testing.T) {
-	waf := NewWAF()
-
-	testCases := []struct {
-		path   string
-		writer io.Writer
+	tests := map[string]struct {
+		path string
+		w    io.Writer
 	}{
-		{
-			path:   "/dev/stdout",
-			writer: os.Stdout,
-		},
-		{
-			path:   "/dev/stderr",
-			writer: os.Stderr,
-		},
+		"empty path": {path: "", w: io.Discard},
+		"stdout":     {path: "/dev/stdout", w: os.Stdout},
+		"stderr":     {path: "/dev/stderr", w: os.Stderr},
 	}
 
-	for _, tCase := range testCases {
-		t.Run(tCase.path, func(t *testing.T) {
-			err := waf.SetDebugLogPath(tCase.path)
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			w, err := resolveLogPath(test.path)
 			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
+				t.Errorf("unexpected error: %s", err.Error())
 			}
 
-			l := waf.Logger.(*stdDebugLogger)
-			if want, have := tCase.writer, l.logger.Writer(); want != have {
-				t.Error("unexpected logger writer")
+			if w != test.w {
+				t.Errorf("expected io.Discard, got %T", w)
 			}
-			_ = waf.SetDebugLogPath("")
 		})
 	}
 }
@@ -122,7 +113,6 @@ func TestValidate(t *testing.T) {
 					t.Fatalf("unexpected error: %s", err.Error())
 				}
 			}
-
 		})
 	}
 }
