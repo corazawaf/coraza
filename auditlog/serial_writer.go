@@ -16,7 +16,7 @@ import (
 type serialWriter struct {
 	closer    func() error
 	log       log.Logger
-	formatter LogFormatter
+	formatter Formatter
 }
 
 func (sl *serialWriter) Init(c Config) error {
@@ -57,4 +57,4 @@ func (sl *serialWriter) Close() error {
 	return sl.closer()
 }
 
-var _ LogWriter = (*serialWriter)(nil)
+var _ Writer = (*serialWriter)(nil)

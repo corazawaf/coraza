@@ -34,13 +34,13 @@ var _ = profile.RegisterProfile(profile.Profile{
 								101,
 								1100,
 								1101,
+								1102,
 								1010,
 								1000,
 								1011,
 							},
 							NonTriggeredRules: []int{
 								1111,
-								1102,
 								103,
 							},
 							Headers: map[string]string{
@@ -67,7 +67,7 @@ SecRule REQUEST_BODY "456" "id:103, phase:2, log"
 SecRule ARGS:json.test "@eq 123" "id:1100, phase:2, log, block"
 SecRule ARGS:json.test3.2 "@eq 55" "id:1101, phase:2, log, block"
 
-# We test for some vulnerability
+# Both GET and POST can be matched for the same key
 SecRule ARGS:json.test "@eq 456" "id:1102, phase:2, log, block"
 
 SecRule ARGS:json.test3 "@eq 3" "id: 1010, phase:2, log, block"

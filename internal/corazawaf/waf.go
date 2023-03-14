@@ -121,7 +121,7 @@ type WAF struct {
 	ErrorLogCb func(rule types.MatchedRule)
 
 	// AuditLogWriter is used to write audit logs
-	AuditLogWriter auditlog.LogWriter
+	AuditLogWriter auditlog.Writer
 }
 
 // NewTransaction Creates a new initialized transaction for this WAF instance
@@ -253,7 +253,7 @@ const _1gb = 1073741824
 func NewWAF() *WAF {
 	logger := debuglog.Noop()
 
-	logWriter, err := auditlog.GetLogWriter("serial")
+	logWriter, err := auditlog.GetWriter("serial")
 	if err != nil {
 		logger.Error().
 			Err(err).
