@@ -14,4 +14,4 @@ func (noopWriter) Init(Config) error { return nil }
 func (noopWriter) Write(*Log) error  { return nil }
 func (noopWriter) Close() error      { return nil }
 
-var _ LogWriter = (*noopWriter)(nil)
+var _ Writer = (*noopWriter)(nil)

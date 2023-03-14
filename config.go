@@ -81,8 +81,8 @@ type AuditLogConfig interface {
 	// WithParts configures the parts of the request/response to be logged.
 	WithParts(parts types.AuditLogParts) AuditLogConfig
 
-	// WithLogger configures the auditlog.LogWriter to write logs to.
-	WithLogger(logger auditlog.LogWriter) AuditLogConfig
+	// WithLogger configures the auditlog.Writer to write logs to.
+	WithLogger(logger auditlog.Writer) AuditLogConfig
 }
 
 // NewAuditLogConfig returns a new AuditLogConfig with the default settings.
@@ -208,7 +208,7 @@ func (c *wafConfig) WithResponseBodyMimeTypes(mimeTypes []string) WAFConfig {
 type auditLogConfig struct {
 	relevantOnly bool
 	parts        types.AuditLogParts
-	logger       auditlog.LogWriter
+	logger       auditlog.Writer
 }
 
 func (c *auditLogConfig) LogRelevantOnly() AuditLogConfig {
@@ -223,7 +223,7 @@ func (c *auditLogConfig) WithParts(parts types.AuditLogParts) AuditLogConfig {
 	return ret
 }
 
-func (c *auditLogConfig) WithLogger(logger auditlog.LogWriter) AuditLogConfig {
+func (c *auditLogConfig) WithLogger(logger auditlog.Writer) AuditLogConfig {
 	ret := c.clone()
 	ret.logger = logger
 	return ret

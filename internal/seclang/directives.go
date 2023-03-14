@@ -593,7 +593,7 @@ func directiveSecAuditLogType(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	writer, err := auditlog.GetLogWriter(options.Opts)
+	writer, err := auditlog.GetWriter(options.Opts)
 	if err != nil {
 		return err
 	}
@@ -613,7 +613,7 @@ func directiveSecAuditLogFormat(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	formatter, err := auditlog.GetLogFormatter(options.Opts)
+	formatter, err := auditlog.GetFormatter(options.Opts)
 	if err != nil {
 		return err
 	}
