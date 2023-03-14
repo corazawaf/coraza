@@ -54,6 +54,10 @@ func createAuditLog() *Log {
 					},
 				},
 			},
+			Producer: &TransactionProducer{
+				Connector: "some connector",
+				Version:   "1.2.3",
+			},
 		},
 		Messages: []Message{
 			{
