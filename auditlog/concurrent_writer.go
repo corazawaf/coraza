@@ -7,7 +7,6 @@
 package auditlog
 
 import (
-	"fmt"
 	"io"
 	"io/fs"
 	"log"
@@ -53,20 +52,12 @@ func (cl concurrentWriter) Write(al *Log) error {
 	// 192.168.3.130 192.168.3.1 - - [22/Aug/2009:13:24:20 +0100] "GET / HTTP/1.1" 200 56 "-" "-" SojdH8AAQEAAAugAQAAAAAA "-" /20090822/20090822-1324/20090822-132420-SojdH8AAQEAAAugAQAAAAAA 0 1248
 	t := time.Unix(0, al.Transaction.UnixTimestamp)
 
-	// append the two directories
-	p2 := fmt.Sprintf("/%s/%s/", t.Format("20060102"), t.Format("20060102-1504"))
-	logdir := path.Join(cl.auditDir, p2)
-	// Append the filename
-	fname := fmt.Sprintf("/%s-%s", t.Format("20060102-150405"), al.Transaction.ID)
-	filepath := path.Join(logdir, fname)
-	str := fmt.Sprintf("%s %s - - [%s] %q %d %d %q %q %s %q %s %d %d",
-		al.Transaction.ClientIP, al.Transaction.HostIP, al.Transaction.Timestamp,
-		fmt.Sprintf("%s %s %s", al.Transaction.Request.Method, al.Transaction.Request.URI,
-			al.Transaction.Request.HTTPVersion),
-		al.Transaction.Response.Status, 0 /*response length*/, "-", "-", al.Transaction.ID,
-		"-", filepath, 0, 0 /*request length*/)
-	err := os.MkdirAll(logdir, cl.auditDirMode)
-	if err != nil {
+	ymd := t.Format("20060102")
+	ymdhm := ymd + t.Format("-1504")
+	filename := ymdhm + t.Format("05") + "-" + al.Transaction.ID
+
+	logdir := path.Join(cl.auditDir, ymd, ymdhm)
+	if err := os.MkdirAll(logdir, cl.auditDirMode); err != nil {
 		return err
 	}
 
@@ -74,13 +65,24 @@ func (cl concurrentWriter) Write(al *Log) error {
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(filepath, []byte(jsdata), cl.auditFileMode)
-	if err != nil {
+
+	filepath := path.Join(logdir, filename)
+	if err = os.WriteFile(filepath, jsdata, cl.auditFileMode); err != nil {
 		return err
 	}
+
 	cl.mux.Lock()
 	defer cl.mux.Unlock()
-	cl.auditlogger.Println(str)
+
+	cl.auditlogger.Printf("%s %s - - [%s]", al.Transaction.ClientIP, al.Transaction.HostIP, al.Transaction.Timestamp)
+	if al.Transaction.Request != nil {
+		cl.auditlogger.Printf(` "%s %s %s"`, al.Transaction.Request.Method, al.Transaction.Request.URI, al.Transaction.Request.HTTPVersion)
+	}
+	if al.Transaction.Response != nil {
+		cl.auditlogger.Printf(` %d`, al.Transaction.Response.Status)
+	}
+	cl.auditlogger.Printf("%s - %s\n", al.Transaction.ID, filepath)
+
 	return nil
 }
 
