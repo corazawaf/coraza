@@ -34,5 +34,6 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	golang.org/x/mod v0.8.0 // indirect
 	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/text v0.8.0 // indirect
 	golang.org/x/tools v0.6.0 // indirect
 )
