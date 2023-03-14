@@ -25,7 +25,6 @@ import (
 // TODO(anuraaga): Propagation of config probably should be separated from a directive's options.
 type DirectiveOptions struct {
 	WAF      *corazawaf.WAF
-	Config   types.Config
 	Opts     string
 	Path     []string
 	Datasets map[string][]string
@@ -33,6 +32,10 @@ type DirectiveOptions struct {
 	// AuditLog is configuration of audit logging, populated by multiple directives and consumed by
 	// SecAuditLog.
 	AuditLog auditlog.Config
+
+	// Parser is configuration of the parser, populated by multiple directives and consumed by
+	// directives that parse.
+	Parser ParserConfig
 }
 
 type directive = func(options *DirectiveOptions) error
@@ -109,8 +112,8 @@ func directiveSecMarker(options *DirectiveOptions) error {
 	rule.SecMark_ = options.Opts
 	rule.ID_ = 0
 	rule.Phase_ = 0
-	rule.Line_ = options.Config.Get("parser_last_line", 0).(int)
-	rule.File_ = options.Config.Get("parser_config_file", "").(string)
+	rule.Line_ = options.Parser.LastLine
+	rule.File_ = options.Parser.ConfigFile
 	if err := options.WAF.Rules.Add(rule); err != nil {
 		return err
 	}
@@ -136,7 +139,7 @@ func directiveSecAction(options *DirectiveOptions) error {
 	rule, err := ParseRule(RuleOptions{
 		WithOperator: false,
 		WAF:          options.WAF,
-		Config:       options.Config,
+		ParserConfig: options.Parser,
 		Directive:    "SecAction",
 		Data:         options.Opts,
 	})
@@ -172,11 +175,11 @@ func directiveSecRule(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	ignoreErrors := options.Config.Get("ignore_rule_compilation_errors", false).(bool)
+	ignoreErrors := options.Parser.IgnoreRuleCompilationErrors
 	rule, err := ParseRule(RuleOptions{
 		WithOperator: true,
 		WAF:          options.WAF,
-		Config:       options.Config,
+		ParserConfig: options.Parser,
 		Directive:    "SecRule",
 		Data:         options.Opts,
 	})
@@ -532,9 +535,8 @@ func directiveSecDefaultAction(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	da, _ := options.Config.Get("rule_default_actions", []string{}).([]string)
-	da = append(da, options.Opts)
-	options.Config.Set("rule_default_actions", da)
+	options.Parser.RuleDefaultActions = append(options.Parser.RuleDefaultActions, options.Opts)
+	options.Parser.HasRuleDefaultActions = true
 	return nil
 }
 
@@ -946,7 +948,7 @@ func directiveSecIgnoreRuleCompilationErrors(options *DirectiveOptions) error {
 			Msg(`Running in Compatibility Mode (SecIgnoreRuleCompilationErrors On), 
 			which may cause unexpected behavior on faulty rules.`)
 	}
-	options.Config.Set("ignore_rule_compilation_errors", b)
+	options.Parser.IgnoreRuleCompilationErrors = b
 	return nil
 }
 
