@@ -3,7 +3,10 @@
 
 package auditlog
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func TestDefaultWriters(t *testing.T) {
 	ws := []string{"serial", "concurrent"}
@@ -14,4 +17,25 @@ func TestDefaultWriters(t *testing.T) {
 			t.Errorf("invalid %s writer", writer)
 		}
 	}
+}
+
+func TestGetFormatters(t *testing.T) {
+	t.Run("missing formatter", func(t *testing.T) {
+		if _, err := GetFormatter("missing"); err == nil {
+			t.Error("expected error")
+		}
+	})
+
+	t.Run("existing formatter", func(t *testing.T) {
+		expectedFn := func(al *Log) ([]byte, error) { return nil, nil }
+		RegisterFormatter("test", expectedFn)
+		actualFn, err := GetFormatter("TeSt")
+		if err != nil {
+			t.Errorf("unexpected error: %s", err.Error())
+		}
+
+		if want, have := reflect.ValueOf(expectedFn), reflect.ValueOf(actualFn); want.Pointer() != have.Pointer() {
+			t.Errorf("unexpected formatter function")
+		}
+	})
 }
