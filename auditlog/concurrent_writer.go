@@ -23,7 +23,7 @@ type concurrentWriter struct {
 	auditDir      string
 	auditDirMode  fs.FileMode
 	auditFileMode fs.FileMode
-	formatter     LogFormatter
+	formatter     Formatter
 	closer        func() error
 }
 
@@ -88,4 +88,4 @@ func (cl *concurrentWriter) Close() error {
 	return cl.closer()
 }
 
-var _ LogWriter = (*concurrentWriter)(nil)
+var _ Writer = (*concurrentWriter)(nil)
