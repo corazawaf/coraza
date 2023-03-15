@@ -120,6 +120,10 @@ type WAF struct {
 
 	ErrorLogCb func(rule types.MatchedRule)
 
+	// AuditLogConfig is configuration of audit logging, populated by multiple directives and consumed by
+	// SecAuditLog.
+	AuditLogConfig auditlog.Config
+
 	// AuditLogWriter is used to write audit logs
 	AuditLogWriter auditlog.Writer
 }
@@ -270,6 +274,7 @@ func NewWAF() *WAF {
 		ResponseBodyAccess: false,
 		ResponseBodyLimit:  _1gb,
 		AuditLogWriter:     logWriter,
+		AuditLogConfig:     auditlog.NewConfig(),
 		Logger:             logger,
 	}
 

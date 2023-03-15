@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/internal/io"
@@ -206,7 +205,6 @@ func NewParser(waf *corazawaf.WAF) *Parser {
 		options: &DirectiveOptions{
 			WAF:      waf,
 			Datasets: make(map[string][]string),
-			AuditLog: auditlog.NewConfig(),
 		},
 		root: io.OSFS{},
 	}

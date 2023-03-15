@@ -29,10 +29,6 @@ type DirectiveOptions struct {
 	Path     []string
 	Datasets map[string][]string
 
-	// AuditLog is configuration of audit logging, populated by multiple directives and consumed by
-	// SecAuditLog.
-	AuditLog auditlog.Config
-
 	// Parser is configuration of the parser, populated by multiple directives and consumed by
 	// directives that parse.
 	Parser ParserConfig
@@ -583,10 +579,8 @@ func directiveSecAuditLog(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	options.AuditLog.File = options.Opts
-	if err := options.WAF.AuditLogWriter.Init(options.AuditLog); err != nil {
-		return err
-	}
+	options.WAF.AuditLogConfig.File = options.Opts
+
 	return nil
 }
 
@@ -599,10 +593,8 @@ func directiveSecAuditLogType(options *DirectiveOptions) error {
 	if err != nil {
 		return err
 	}
-	if err := writer.Init(options.AuditLog); err != nil {
-		return err
-	}
 	options.WAF.AuditLogWriter = writer
+
 	return nil
 }
 
@@ -619,11 +611,8 @@ func directiveSecAuditLogFormat(options *DirectiveOptions) error {
 	if err != nil {
 		return err
 	}
-	options.AuditLog.Formatter = formatter
+	options.WAF.AuditLogConfig.Formatter = formatter
 
-	if err := options.WAF.AuditLogWriter.Init(options.AuditLog); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -632,10 +621,8 @@ func directiveSecAuditLogDir(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	options.AuditLog.Dir = options.Opts
-	if err := options.WAF.AuditLogWriter.Init(options.AuditLog); err != nil {
-		return err
-	}
+	options.WAF.AuditLogConfig.Dir = options.Opts
+
 	return nil
 }
 
@@ -660,10 +647,8 @@ func directiveSecAuditLogDirMode(options *DirectiveOptions) error {
 	if err != nil {
 		return err
 	}
-	options.AuditLog.DirMode = fs.FileMode(auditLogDirMode)
-	if err := options.WAF.AuditLogWriter.Init(options.AuditLog); err != nil {
-		return err
-	}
+	options.WAF.AuditLogConfig.DirMode = fs.FileMode(auditLogDirMode)
+
 	return nil
 }
 
@@ -686,10 +671,8 @@ func directiveSecAuditLogFileMode(options *DirectiveOptions) error {
 	if err != nil {
 		return err
 	}
-	options.AuditLog.FileMode = fs.FileMode(auditLogFileMode)
-	if err := options.WAF.AuditLogWriter.Init(options.AuditLog); err != nil {
-		return err
-	}
+	options.WAF.AuditLogConfig.FileMode = fs.FileMode(auditLogFileMode)
+
 	return nil
 }
 

@@ -23,8 +23,9 @@ import (
 
 func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	waf := corazawaf.NewWAF()
-	auditpath := t.TempDir()
 	parser := NewParser(waf)
+
+	auditpath := t.TempDir()
 	if err := parser.FromString(fmt.Sprintf(`
 	SecAuditLog %s
 	SecAuditLogFormat json
@@ -33,20 +34,27 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	SecAuditLogFileMode 0777
 	SecAuditLogType concurrent
 	`, filepath.Join(auditpath, "audit.log"), auditpath)); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+
+	if err := waf.AuditLogWriter.Init(waf.AuditLogConfig); err != nil {
+		t.Fatal(err)
+	}
+
 	id := utils.RandomString(10)
+
 	if waf.AuditLogWriter == nil {
-		t.Error("Invalid audit logger (nil)")
+		t.Fatal("Missing audit log writer")
 		return
 	}
+
 	if err := waf.AuditLogWriter.Write(&auditlog.Log{
 		Parts: types.AuditLogParts("ABCDEFGHIJKZ"),
 		Transaction: auditlog.Transaction{
 			ID: id,
 		},
 	}); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	f, err := findFileContaining(auditpath, id)
 	if err != nil {
