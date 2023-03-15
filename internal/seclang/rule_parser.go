@@ -234,9 +234,9 @@ func (p *RuleParser) ParseDefaultActions(actions string) error {
 		if action.Atype == rules.ActionTypeMetadata {
 			return fmt.Errorf("SecDefaultAction must not contain metadata actions: %s", actions)
 		}
-		// The transformation none is not suitable to be part of the SecDefaultActions
-		if action.Key == "t" && strings.ToLower(action.Value) == "none" {
-			return fmt.Errorf("SecDefaultAction must not contain t:none transformation: %s", actions)
+		// Transformations are not suitable to be part of the default actions defined by SecDefaultActions
+		if action.Key == "t" {
+			return fmt.Errorf("SecDefaultAction must not contain transformation actions: %s", actions)
 		}
 	}
 	if phase == 0 {
