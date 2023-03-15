@@ -25,6 +25,7 @@ import (
 // TODO(anuraaga): Propagation of config probably should be separated from a directive's options.
 type DirectiveOptions struct {
 	WAF      *corazawaf.WAF
+	Raw      string
 	Opts     string
 	Path     []string
 	Datasets map[string][]string
@@ -140,6 +141,7 @@ func directiveSecAction(options *DirectiveOptions) error {
 		WithOperator: false,
 		WAF:          options.WAF,
 		ParserConfig: options.Parser,
+		Raw:          options.Raw,
 		Directive:    "SecAction",
 		Data:         options.Opts,
 	})
@@ -180,6 +182,7 @@ func directiveSecRule(options *DirectiveOptions) error {
 		WithOperator: true,
 		WAF:          options.WAF,
 		ParserConfig: options.Parser,
+		Raw:          options.Raw,
 		Directive:    "SecRule",
 		Data:         options.Opts,
 	})
