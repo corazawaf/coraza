@@ -17,7 +17,7 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-var defaultActionsPhase2 = []string{"phase:2,log,auditlog,pass"}
+var defaultActionsPhase2 = "phase:2,log,auditlog,pass"
 
 type ruleAction struct {
 	Key   string
@@ -327,13 +327,14 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 		rule:           corazawaf.NewRule(),
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
+	var defaultActionsRaw []string
 	// Default actions are persisted only inside the ParserConfig, therefore they are parsed every time a rule is parsed
 	// and not just once when the SecDefaultAction is read.
 	if options.ParserConfig.HasRuleDefaultActions {
 		defaultActionsRaw = options.ParserConfig.RuleDefaultActions
 	}
 	disabledRuleOperators := options.ParserConfig.DisabledRuleOperators
-  for _, da := range defaultActionsRaw {
+	for _, da := range defaultActionsRaw {
 
 		err = rp.ParseDefaultActions(da)
 		if err != nil {
