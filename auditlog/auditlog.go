@@ -16,7 +16,7 @@ type Log struct {
 	Transaction Transaction `json:"transaction"`
 
 	// Messages contains the triggered rules information
-	Messages []Message `json:"messages"`
+	Messages []Message `json:"messages,omitempty"`
 }
 
 // Transaction contains transaction specific
@@ -32,13 +32,13 @@ type Transaction struct {
 	// Client IP Address string representation
 	ClientIP string `json:"client_ip"`
 
-	ClientPort int                 `json:"client_port"`
-	HostIP     string              `json:"host_ip"`
-	HostPort   int                 `json:"host_port"`
-	ServerID   string              `json:"server_id"`
-	Request    TransactionRequest  `json:"request"`
-	Response   TransactionResponse `json:"response"`
-	Producer   TransactionProducer `json:"producer"`
+	ClientPort int                  `json:"client_port"`
+	HostIP     string               `json:"host_ip"`
+	HostPort   int                  `json:"host_port"`
+	ServerID   string               `json:"server_id"`
+	Request    *TransactionRequest  `json:"request,omitempty"`
+	Response   *TransactionResponse `json:"response,omitempty"`
+	Producer   *TransactionProducer `json:"producer,omitempty"`
 }
 
 // TransactionResponse contains response specific
@@ -114,16 +114,16 @@ type logLegacy struct {
 	Transaction logLegacyTransaction `json:"transaction"`
 
 	// Section B or C
-	Request logLegacyRequest `json:"request"`
+	Request *logLegacyRequest `json:"request,omitempty"`
 
 	// Section J (File Uploads)
 	// TBI
 
 	// Section E and F
-	Response logLegacyResponse `json:"response"`
+	Response *logLegacyResponse `json:"response,omitempty"`
 
 	// Section H
-	AuditData logLegacyData `json:"audit_data"`
+	AuditData *logLegacyData `json:"audit_data,omitempty"`
 }
 
 type logLegacyTransaction struct {
@@ -140,7 +140,7 @@ type logLegacyRequest struct {
 	RequestLine string `json:"request_line"`
 	// Headers should be a map of slices but in this case they are
 	// joined by comma (,)
-	Headers map[string]string `json:"headers"`
+	Headers map[string]string `json:"headers,omitempty"`
 }
 
 type logLegacyResponse struct {

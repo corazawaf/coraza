@@ -6,12 +6,10 @@ package seclang
 import (
 	"errors"
 	"fmt"
-	"io/fs"
 	"strings"
 
 	actionsmod "github.com/corazawaf/coraza/v3/actions"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/internal/io"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	operators "github.com/corazawaf/coraza/v3/operators"
 	"github.com/corazawaf/coraza/v3/rules"
@@ -19,7 +17,7 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-const defaultActionsPhase2 = "phase:2,log,auditlog,pass"
+var defaultActionsPhase2 = []string{"phase:2,log,auditlog,pass"}
 
 type ruleAction struct {
 	Key   string
@@ -190,12 +188,12 @@ func (p *RuleParser) ParseOperator(operator string) error {
 	opts := rules.OperatorOptions{
 		Arguments: opdata,
 		Path: []string{
-			p.options.Config.Get("parser_config_dir", "").(string),
+			p.options.ParserConfig.ConfigDir,
 		},
-		Root: p.options.Config.Get("parser_root", io.OSFS{}).(fs.FS),
+		Root: p.options.ParserConfig.Root,
 	}
 
-	if wd := p.options.Config.Get("working_dir", "").(string); wd != "" {
+	if wd := p.options.ParserConfig.WorkingDir; wd != "" {
 		opts.Path = append(opts.Path, wd)
 	}
 
@@ -257,7 +255,7 @@ func (p *RuleParser) ParseDefaultActions(actions string) error {
 // ParseActions parses a comma separated list of actions:arguments
 // Arguments can be wrapper inside quotes
 func (p *RuleParser) ParseActions(actions string) error {
-	disabledActions := p.options.Config.Get("disabled_rule_actions", []string{}).([]string)
+	disabledActions := p.options.ParserConfig.DisabledRuleActions
 	act, err := parseActions(actions)
 	if err != nil {
 		return err
@@ -309,7 +307,7 @@ func (p *RuleParser) Rule() *corazawaf.Rule {
 type RuleOptions struct {
 	WithOperator bool
 	WAF          *corazawaf.WAF
-	Config       types.Config
+	ParserConfig ParserConfig
 	Directive    string
 	Data         string
 }
@@ -329,11 +327,14 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 		rule:           corazawaf.NewRule(),
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
-	// Default actions are persisted only inside the waf options, therefore they are parsed every time a rule is parsed
+	// Default actions are persisted only inside the ParserConfig, therefore they are parsed every time a rule is parsed
 	// and not just once when the SecDefaultAction is read.
-	defaultActionsRaw := options.Config.Get("rule_default_actions", []string{}).([]string)
-	disabledRuleOperators := options.Config.Get("disabled_rule_operators", []string{}).([]string)
-	for _, da := range defaultActionsRaw {
+	if options.ParserConfig.HasRuleDefaultActions {
+		defaultActionsRaw = options.ParserConfig.RuleDefaultActions
+	}
+	disabledRuleOperators := options.ParserConfig.DisabledRuleOperators
+  for _, da := range defaultActionsRaw {
+
 		err = rp.ParseDefaultActions(da)
 		if err != nil {
 			return nil, err
@@ -377,8 +378,8 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 	}
 	rule := rp.Rule()
 	rule.Raw_ = fmt.Sprintf("%s %s", options.Directive, options.Data)
-	rule.File_ = options.Config.Get("parser_config_file", "").(string)
-	rule.Line_ = options.Config.Get("parser_last_line", 0).(int)
+	rule.File_ = options.ParserConfig.ConfigFile
+	rule.Line_ = options.ParserConfig.LastLine
 
 	if parent := getLastRuleExpectingChain(options.WAF); parent != nil {
 		rule.ParentID_ = parent.ID_

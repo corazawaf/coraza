@@ -114,7 +114,7 @@ func TestConfigSetters(t *testing.T) {
 }
 
 func TestConfigLogger(t *testing.T) {
-	logger, err := auditlog.GetLogWriter("concurrent")
+	logger, err := auditlog.GetWriter("concurrent")
 	if err != nil {
 		t.Fatal(err)
 	}

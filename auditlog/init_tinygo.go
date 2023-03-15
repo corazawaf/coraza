@@ -7,14 +7,14 @@
 package auditlog
 
 func init() {
-	RegisterLogWriter("concurrent", func() LogWriter {
+	RegisterWriter("concurrent", func() Writer {
 		return noopWriter{}
 	})
-	RegisterLogWriter("serial", func() LogWriter {
+	RegisterWriter("serial", func() Writer {
 		return noopWriter{}
 	})
 
-	RegisterLogFormatter("json", noopFormater)
-	RegisterLogFormatter("jsonlegacy", noopFormater)
-	RegisterLogFormatter("native", nativeFormatter)
+	RegisterFormatter("json", noopFormater)
+	RegisterFormatter("jsonlegacy", noopFormater)
+	RegisterFormatter("native", nativeFormatter)
 }

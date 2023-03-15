@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -56,40 +57,44 @@ func TestConcurrentWriterWrites(t *testing.T) {
 		DirMode:   fs.FileMode(0777),
 		Formatter: jsonFormatter,
 	}
-	ts := time.Now().UnixNano()
-	al := &Log{
+	ts := time.Now()
+	expectedLog := &Log{
 		Transaction: Transaction{
-			UnixTimestamp: ts,
+			UnixTimestamp: ts.UnixNano(),
 			ID:            "123",
-			Request:       TransactionRequest{},
-			Response:      TransactionResponse{},
+			Request: &TransactionRequest{
+				Method:      "GET",
+				URI:         "/test",
+				HTTPVersion: "HTTP/1.1",
+			},
+			Response: &TransactionResponse{
+				Status: 201,
+			},
 		},
 	}
 	writer := &concurrentWriter{}
 	if err := writer.Init(config); err != nil {
 		t.Error("failed to init concurrent logger", err)
 	}
-	if err := writer.Write(al); err != nil {
+	if err := writer.Write(expectedLog); err != nil {
 		t.Error("failed to write to logger: ", err)
 	}
-	tt := time.Unix(0, ts)
-	p2 := fmt.Sprintf("/%s/%s/", tt.Format("20060102"), tt.Format("20060102-1504"))
-	logdir := path.Join(dir, p2)
-	// Append the filename
-	fname := fmt.Sprintf("/%s-%s", tt.Format("20060102-150405"), al.Transaction.ID)
-	p := path.Join(logdir, fname)
 
-	data, err := os.ReadFile(p)
+	fileName := fmt.Sprintf("/%s-%s", ts.Format("20060102-150405"), expectedLog.Transaction.ID)
+	logFile := path.Join(dir, ts.Format("20060102"), ts.Format("20060102-1504"), fileName)
+
+	logData, err := os.ReadFile(logFile)
 	if err != nil {
 		t.Error("failed to create audit file for concurrent logger")
 		return
 	}
-	al2 := &Log{}
-	if json.Unmarshal(data, al2) != nil {
-		t.Error("failed to parse json from concurrent audit log", p)
+	actualLog := &Log{}
+	if err := json.Unmarshal(logData, actualLog); err != nil {
+		t.Errorf("failed to parse json from concurrent audit log: %s", err.Error())
 	}
 
-	if err := writer.Close(); err != nil {
-		t.Errorf("unexpected error: %s", err.Error())
+	if !reflect.DeepEqual(expectedLog, actualLog) {
+		expectedLogStr, _ := json.Marshal(expectedLog)
+		t.Errorf("unexpected log entry, want:\n%s, have:\n%s", expectedLogStr, logData)
 	}
 }

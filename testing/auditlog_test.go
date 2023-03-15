@@ -36,6 +36,7 @@ func TestAuditLogMessages(t *testing.T) {
 		SecAuditEngine On
 		SecAuditLogFormat json
 		SecAuditLogType serial
+		SecAuditLogParts ABCDEFGHIJKZ
 		SecRule ARGS "@unconditionalMatch" "id:1,phase:1,log,msg:'unconditional match'"
 	`); err != nil {
 		t.Error(err)
