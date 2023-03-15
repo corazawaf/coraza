@@ -145,10 +145,10 @@ func TestDefaultActionsErrors(t *testing.T) {
 		"SecDefaultAction with metadata action": {
 			rules: `SecDefaultAction "phase:1,log,auditlog,pass,msg:'metadata action'"`,
 		},
-		"SecDefaultAction with t:none": {
+		"SecDefaultAction with a transformation": {
 			rules: `SecDefaultAction "phase:1,log,auditlog,pass,t:none"`,
 		},
-		"SecDefaultAction with t:none uppercase": {
+		"SecDefaultAction with a transformation uppercase": {
 			rules: `SecDefaultAction "phase:1,log,auditlog,pass,T:NoNe"`,
 		},
 		"Multiple SecDefaultAction for the same phase": {
