@@ -172,10 +172,8 @@ func (p *RuleParser) ParseOperator(operator string) error {
 	// We clone strings to ensure a slice into larger rule definition isn't kept in
 	// memory just to store operator information.
 	opRaw, opdataRaw, _ := strings.Cut(operator, " ")
-	opRaw = strings.Clone(opRaw)
 	op := strings.TrimSpace(opRaw)
 	opdata := strings.TrimSpace(opdataRaw)
-	opdata = strings.Clone(opdata)
 
 	if op[0] == '@' {
 		// we trim @
@@ -296,6 +294,7 @@ type RuleOptions struct {
 	WithOperator bool
 	WAF          *corazawaf.WAF
 	ParserConfig ParserConfig
+	Raw          string
 	Directive    string
 	Data         string
 }
@@ -358,7 +357,7 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 		}
 	}
 	rule := rp.Rule()
-	rule.Raw_ = fmt.Sprintf("%s %s", options.Directive, options.Data)
+	rule.Raw_ = options.Raw
 	rule.File_ = options.ParserConfig.ConfigFile
 	rule.Line_ = options.ParserConfig.LastLine
 
