@@ -214,6 +214,8 @@ RulesLoop:
 	if tx.AllowType == corazatypes.AllowTypePhase {
 		tx.AllowType = corazatypes.AllowTypeUnset
 	}
+	// // Reset Skip counter at the end of each phase. Skip actions work only within the current processing phase
+	tx.Skip = 0
 
 	tx.stopWatches[phase] = time.Now().UnixNano() - ts
 	return tx.interruption != nil
