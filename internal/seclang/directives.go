@@ -313,9 +313,7 @@ func directiveSecRuleRemoveByTag(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	for _, r := range options.WAF.Rules.FindByTag(options.Opts) {
-		options.WAF.Rules.DeleteByID(r.ID_)
-	}
+	options.WAF.Rules.DeleteByTag(options.Opts)
 	return nil
 }
 
@@ -324,9 +322,7 @@ func directiveSecRuleRemoveByMsg(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	for _, r := range options.WAF.Rules.FindByMsg(options.Opts) {
-		options.WAF.Rules.DeleteByID(r.ID_)
-	}
+	options.WAF.Rules.DeleteByMsg(options.Opts)
 	return nil
 }
 
