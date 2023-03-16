@@ -304,7 +304,9 @@ SecRule REQUEST_URI "/redirect5$" "phase:5,id:51,log,status:302,redirect:https:/
 SecRule REQUEST_URI "/deny5$" "phase:5,id:52,log,status:500,deny"
 SecRule REQUEST_URI "/drop5$" "phase:5,id:53,log,drop"
 
-SecDefaultAction phase:2,deny,status:501,log,logdata:'WOOOP_BLOCKED_BY_CORAZA_TEST'
-SecRule REQUEST_URI "/default/block" "id:103,block"
+# Rule 103 is missing the phase, therefore phase:2 is implicitly applied with its related default actions
+# So we will expect a deny with 501 response for the blocking action.
+SecDefaultAction "phase:2,deny,status:501,log"
+SecRule REQUEST_URI "/default/block" "id:103,block,logdata:'WOOOP_BLOCKED_BY_CORAZA_TEST'"
 `,
 })
