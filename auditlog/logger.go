@@ -32,7 +32,7 @@ func NewConfig() Config {
 	return Config{
 		File:      "",
 		FileMode:  0644,
-		Dir:       "./",
+		Dir:       "",
 		DirMode:   0755,
 		Formatter: nativeFormatter,
 	}
