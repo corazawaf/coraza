@@ -35,17 +35,17 @@ func TestSecActionMessagePropagationInMatchData(t *testing.T) {
 
 func TestRuleNegativeVariables(t *testing.T) {
 	rule := NewRule()
-	if err := rule.AddVariable(variables.Args, "", false); err != nil {
+	if err := rule.AddVariable(variables.RequestURI, "", false); err != nil {
 		t.Error(err)
 	}
-	if rule.variables[0].Variable != variables.Args {
-		t.Error("Variable ARGS was not added")
+	if rule.variables[0].Variable != variables.RequestURI {
+		t.Error("Variable REQUEST_URI was not added")
 	}
 	if rule.variables[0].KeyRx != nil {
 		t.Error("invalid key type for variable")
 	}
 
-	if err := rule.AddVariableNegation(variables.Args, "test"); err != nil {
+	if err := rule.AddVariableNegation(variables.RequestURI, "test"); err != nil {
 		t.Error(err)
 	}
 
@@ -53,7 +53,7 @@ func TestRuleNegativeVariables(t *testing.T) {
 		t.Errorf("got %d exceptions", len(rule.variables[0].Exceptions))
 	}
 
-	if err := rule.AddVariable(variables.Args, "/test.*/", false); err != nil {
+	if err := rule.AddVariable(variables.RequestURI, "/test.*/", false); err != nil {
 		t.Error(err)
 	}
 
@@ -64,7 +64,7 @@ func TestRuleNegativeVariables(t *testing.T) {
 
 func TestVariableKeysAreCaseInsensitive(t *testing.T) {
 	rule := NewRule()
-	if err := rule.AddVariable(variables.Args, "Som3ThinG", false); err != nil {
+	if err := rule.AddVariable(variables.RequestURI, "Som3ThinG", false); err != nil {
 		t.Error(err)
 	}
 	if rule.variables[0].KeyStr != "som3thing" {
@@ -74,7 +74,7 @@ func TestVariableKeysAreCaseInsensitive(t *testing.T) {
 
 func TestVariablesRxAreCaseSensitive(t *testing.T) {
 	rule := NewRule()
-	if err := rule.AddVariable(variables.Args, "/Som3ThinG/", false); err != nil {
+	if err := rule.AddVariable(variables.ArgsGet, "/Som3ThinG/", false); err != nil {
 		t.Error(err)
 	}
 	if rule.variables[0].KeyRx.String() != "Som3ThinG" {

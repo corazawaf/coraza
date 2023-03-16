@@ -246,8 +246,8 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 					}
 				}
 			} else if multiphaseEvaluation && (r.HasChain && phase < r.chainMinPhase) {
-				// When multiphase evaluation is enabled, if the variable is available, but the whole chain is not,
-				// we don't evaluate tue rule yet.
+				// When multiphase evaluation is enabled, if the variable is available but the whole chain is not,
+				// we don't evaluate the rule yet.
 				continue
 			}
 			var values []types.MatchData
@@ -435,6 +435,46 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 		re = regexp.MustCompile(key)
 	}
 
+	if multiphaseEvaluation {
+		// Splitting Args variable into ArgsGet and ArgsPost
+		if v == variables.Args {
+			r.variables = append(r.variables, ruleVariableParams{
+				Count:      iscount,
+				Variable:   variables.ArgsGet,
+				KeyStr:     strings.ToLower(key),
+				KeyRx:      re,
+				Exceptions: []ruleVariableException{},
+			})
+
+			r.variables = append(r.variables, ruleVariableParams{
+				Count:      iscount,
+				Variable:   variables.ArgsPost,
+				KeyStr:     strings.ToLower(key),
+				KeyRx:      re,
+				Exceptions: []ruleVariableException{},
+			})
+			return nil
+		}
+		// Splitting ArgsNames variable into ArgsGetNames and ArgsPostNames
+		if v == variables.ArgsNames {
+			r.variables = append(r.variables, ruleVariableParams{
+				Count:      iscount,
+				Variable:   variables.ArgsGetNames,
+				KeyStr:     strings.ToLower(key),
+				KeyRx:      re,
+				Exceptions: []ruleVariableException{},
+			})
+
+			r.variables = append(r.variables, ruleVariableParams{
+				Count:      iscount,
+				Variable:   variables.ArgsPostNames,
+				KeyStr:     strings.ToLower(key),
+				KeyRx:      re,
+				Exceptions: []ruleVariableException{},
+			})
+			return nil
+		}
+	}
 	r.variables = append(r.variables, ruleVariableParams{
 		Count:      iscount,
 		Variable:   v,
@@ -464,6 +504,17 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 		return fmt.Errorf("cannot create a variable exception for an undefined rule")
 	}
 	for i, rv := range r.variables {
+		// Splitting Args and ArgsNames variables
+		if multiphaseEvaluation && v == variables.Args && (rv.Variable == variables.ArgsGet || rv.Variable == variables.ArgsPost) {
+			rv.Exceptions = append(rv.Exceptions, ruleVariableException{strings.ToLower(key), re})
+			r.variables[i] = rv
+			continue
+		}
+		if multiphaseEvaluation && v == variables.ArgsNames && (rv.Variable == variables.ArgsGetNames || rv.Variable == variables.ArgsPostNames) {
+			rv.Exceptions = append(rv.Exceptions, ruleVariableException{strings.ToLower(key), re})
+			r.variables[i] = rv
+			continue
+		}
 		if rv.Variable == v {
 			rv.Exceptions = append(rv.Exceptions, ruleVariableException{strings.ToLower(key), re})
 			r.variables[i] = rv

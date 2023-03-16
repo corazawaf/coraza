@@ -286,7 +286,6 @@ func TestHttpServer(t *testing.T) {
 			expectedProto:  "HTTP/1.1",
 			expectedStatus: 201,
 		},
-		// TODO(MultiPhase)[ARGS_forced_phased2]: rule 10 has ARGS:id, therefore it is evaluated only at phase 2.
 		"deny passes over allow due to ordering": {
 			reqURI:         "/allow_me?id=0",
 			expectedProto:  "HTTP/1.1",

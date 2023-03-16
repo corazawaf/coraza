@@ -20,7 +20,6 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/seclang"
 )
 
-// TODO(MultiPhase)[ARGS_forced_phased2]
 func TestAuditLogMessages(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	parser := seclang.NewParser(waf)
@@ -107,7 +106,6 @@ func TestAuditLogRelevantOnly(t *testing.T) {
 	}
 }
 
-// TODO(MultiPhase)[ARGS_forced_phased2]
 func TestAuditLogRelevantOnlyOk(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	parser := seclang.NewParser(waf)
