@@ -92,3 +92,44 @@ SecRule XML:/*|XML://@* \
     phase:2"
 `,
 })
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "jptosso",
+		Description: "Test if the XML body processors work (negative)",
+		Enabled:     true,
+		Name:        "postxml3.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			Title: "postxml3",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/index.php?t1=aaa&t2=bbb&t3=ccc",
+							Method: "POST",
+							Headers: map[string]string{
+								"content-type": "application/xml",
+							},
+							Data: "<?xml version=\"1.0\"?><xml><java.lang.ProcessBuilder attribute_name=\"attribute_value\">value</java.lang.ProcessBuilder></xml>",
+						},
+						Output: profile.ExpectedOutput{
+							NonTriggeredRules: []int{944100},
+							TriggeredRules:    []int{101},
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecRequestBodyAccess On
+SecRule REQUEST_HEADERS:content-type "application/xml" "id: 100, phase:1, pass, log, ctl:requestBodyProcessor=XML"
+SecRule REQBODY_PROCESSOR "XML" "id: 101,phase:1,log,block"
+SecRule XML:/*|XML://@* "@rx java\.lang\.(?:runtime|processbuilder)" \
+    "id:944100,\
+    phase:2,\
+    t:none,t:lowercase"
+`,
+})

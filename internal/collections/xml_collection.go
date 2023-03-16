@@ -4,8 +4,8 @@
 package collections
 
 import (
-	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/antchfx/xmlquery"
 	"github.com/corazawaf/coraza/v3/collection"
@@ -52,45 +52,47 @@ func (c *XML) FindString(xpath string) []types.MatchData {
 		return c.resultsCache[xpath]
 	}
 	md := []types.MatchData{}
-	/*
-		From CRS samples:
-		- //@* returns all attributes, the key for each element should be the element name
-		  The value should be the inner content (attribute="value")
-		- //* returns all elements, the key for each element should be the element name
-	*/
-	results, err := xmlquery.QueryAll(c.root, xpath)
+	// From CRS samples:
+	// - //@* returns all attributes, the key for each element should be the element name
+	//   The value should be the inner content (attribute="value")
+	// - /* returns all elements, the key for each element should be the element name
+	// This is a hack to match CRS tests
+	md, err := c.getXpath(c.root, xpath, md)
 	if err != nil {
 		// invalid xpath expression, we don't have any way of logging here
 		c.resultsCache[xpath] = md
 		return md
-	}
-	for _, n := range results {
-		switch n.Type {
-		case xmlquery.ElementNode:
-			// Value should be inner content
-			md = append(md, &corazarules.MatchData{
-				Variable_: c.variable,
-				Key_:      computePath(n.Parent),
-				Value_:    n.InnerText(),
-			})
-		case xmlquery.AttributeNode:
-			// Value should be attribute="value"
-			md = append(md, &corazarules.MatchData{
-				Variable_: c.variable,
-				Key_:      computePath(n.Parent),
-				Value_:    fmt.Sprintf("%s=%q", n.Data, n.InnerText()),
-			})
-		}
 	}
 	// we store the cache
 	c.resultsCache[xpath] = md
 	return md
 }
 
+func (c *XML) getXpath(root *xmlquery.Node, xpath string, md []types.MatchData) ([]types.MatchData, error) {
+	results, err := xmlquery.QueryAll(c.root, xpath)
+	if err != nil {
+		// invalid xpath expression, we don't have any way of logging here
+		return md, nil
+	}
+	for _, n := range results {
+		md = append(md, &corazarules.MatchData{
+			Variable_: c.variable,
+			Key_:      computePath(n),
+			Value_:    strings.TrimSpace(n.InnerText()),
+		})
+	}
+	return md, nil
+}
+
 func computePath(n *xmlquery.Node) string {
 	path := ""
 	for n != nil {
-		path = "/" + n.Data + path
+		if n.Type == xmlquery.AttributeNode {
+			// we add @ preffix to attributes
+			path = "/@" + n.Data + path
+		} else {
+			path = "/" + n.Data + path
+		}
 		n = n.Parent
 	}
 	return path
@@ -120,6 +122,4 @@ func (c *XML) Name() string {
 	return c.variable.Name()
 }
 
-func (c *XML) Reset() {
-	// NOT IMPLEMENTED
-}
+var _ collection.Map = &XML{}
