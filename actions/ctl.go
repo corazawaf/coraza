@@ -355,7 +355,7 @@ func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, str
 	return act, value, collection, strings.TrimSpace(colkey), nil
 }
 
-func rangeToInts(rules []*corazawaf.Rule, input string) ([]int, error) {
+func rangeToInts(rules []corazawaf.Rule, input string) ([]int, error) {
 	if len(input) == 0 {
 		return nil, errors.New("empty input")
 	}

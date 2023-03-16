@@ -424,7 +424,7 @@ func TestParseCtl(t *testing.T) {
 
 }
 func TestCtlParseRange(t *testing.T) {
-	rules := []*corazawaf.Rule{
+	rules := []corazawaf.Rule{
 		{
 			RuleMetadata: corazarules.RuleMetadata{
 				ID_: 5,

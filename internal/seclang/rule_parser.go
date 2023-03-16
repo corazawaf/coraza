@@ -434,7 +434,8 @@ func getLastRuleExpectingChain(w *corazawaf.WAF) *corazawaf.Rule {
 	if len(rules) == 0 {
 		return nil
 	}
-	lastRule := rules[len(rules)-1]
+
+	lastRule := &rules[len(rules)-1]
 	parent := lastRule
 	for parent.Chain != nil {
 		parent = parent.Chain
@@ -443,6 +444,7 @@ func getLastRuleExpectingChain(w *corazawaf.WAF) *corazawaf.Rule {
 	if parent.HasChain && parent.Chain == nil {
 		return lastRule
 	}
+
 	return nil
 }
 

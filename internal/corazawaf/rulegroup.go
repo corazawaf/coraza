@@ -18,7 +18,7 @@ import (
 // It is not concurrent safe, so it's not recommended to use it
 // after compilation
 type RuleGroup struct {
-	rules []*Rule
+	rules []Rule
 }
 
 // Add a rule to the collection
@@ -45,20 +45,20 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 		}
 	}
 
-	rg.rules = append(rg.rules, rule)
+	rg.rules = append(rg.rules, *rule)
 	return nil
 }
 
 // GetRules returns the slice of rules,
-func (rg *RuleGroup) GetRules() []*Rule {
+func (rg *RuleGroup) GetRules() []Rule {
 	return rg.rules
 }
 
 // FindByID return a Rule with the requested Id
 func (rg *RuleGroup) FindByID(id int) *Rule {
-	for _, r := range rg.rules {
+	for i, r := range rg.rules {
 		if r.ID_ == id {
-			return r
+			return &rg.rules[i]
 		}
 	}
 	return nil
@@ -76,7 +76,7 @@ func (rg *RuleGroup) DeleteByID(id int) {
 
 // DeleteByMsg deletes rules with the given message.
 func (rg *RuleGroup) DeleteByMsg(msg string) {
-	var kept []*Rule
+	var kept []Rule
 	for _, r := range rg.rules {
 		if r.Msg.String() != msg {
 			kept = append(kept, r)
@@ -87,7 +87,7 @@ func (rg *RuleGroup) DeleteByMsg(msg string) {
 
 // DeleteByTag deletes rules with the given tag.
 func (rg *RuleGroup) DeleteByTag(tag string) {
-	var kept []*Rule
+	var kept []Rule
 	for _, r := range rg.rules {
 		if !strings.InSlice(tag, r.Tags_) {
 			kept = append(kept, r)
@@ -118,7 +118,8 @@ func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 		delete(transformationCache, k)
 	}
 RulesLoop:
-	for _, r := range tx.WAF.Rules.GetRules() {
+	for i := range rg.rules {
+		r := &rg.rules[i]
 		// if there is already an interruption and the phase isn't logging
 		// we break the loop
 		if tx.interruption != nil && phase != types.PhaseLogging {
