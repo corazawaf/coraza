@@ -37,18 +37,9 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := waf.AuditLogWriter.Init(waf.AuditLogConfig); err != nil {
-		t.Fatal(err)
-	}
-
 	id := utils.RandomString(10)
 
-	if waf.AuditLogWriter == nil {
-		t.Fatal("Missing audit log writer")
-		return
-	}
-
-	if err := waf.AuditLogWriter.Write(&auditlog.Log{
+	if err := waf.AuditLogWriter().Write(&auditlog.Log{
 		Parts: types.AuditLogParts("ABCDEFGHIJKZ"),
 		Transaction: auditlog.Transaction{
 			ID: id,

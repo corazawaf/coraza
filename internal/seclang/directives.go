@@ -579,7 +579,7 @@ func directiveSecAuditLog(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	options.WAF.AuditLogConfig.File = options.Opts
+	options.WAF.AuditLogWriterConfig.File = options.Opts
 
 	return nil
 }
@@ -593,7 +593,7 @@ func directiveSecAuditLogType(options *DirectiveOptions) error {
 	if err != nil {
 		return err
 	}
-	options.WAF.AuditLogWriter = writer
+	options.WAF.SetAuditLogWriter(writer)
 
 	return nil
 }
@@ -611,7 +611,7 @@ func directiveSecAuditLogFormat(options *DirectiveOptions) error {
 	if err != nil {
 		return err
 	}
-	options.WAF.AuditLogConfig.Formatter = formatter
+	options.WAF.AuditLogWriterConfig.Formatter = formatter
 
 	return nil
 }
@@ -621,7 +621,7 @@ func directiveSecAuditLogDir(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	options.WAF.AuditLogConfig.Dir = options.Opts
+	options.WAF.AuditLogWriterConfig.Dir = options.Opts
 
 	return nil
 }
@@ -647,7 +647,7 @@ func directiveSecAuditLogDirMode(options *DirectiveOptions) error {
 	if err != nil {
 		return err
 	}
-	options.WAF.AuditLogConfig.DirMode = fs.FileMode(auditLogDirMode)
+	options.WAF.AuditLogWriterConfig.DirMode = fs.FileMode(auditLogDirMode)
 
 	return nil
 }
@@ -671,7 +671,7 @@ func directiveSecAuditLogFileMode(options *DirectiveOptions) error {
 	if err != nil {
 		return err
 	}
-	options.WAF.AuditLogConfig.FileMode = fs.FileMode(auditLogFileMode)
+	options.WAF.AuditLogWriterConfig.FileMode = fs.FileMode(auditLogFileMode)
 
 	return nil
 }

@@ -43,10 +43,6 @@ func TestAuditLogMessages(t *testing.T) {
 	}
 	defer os.Remove(file.Name())
 
-	if err := waf.AuditLogWriter.Init(waf.AuditLogConfig); err != nil {
-		t.Fatal(err)
-	}
-
 	tx := waf.NewTransaction()
 	tx.AddGetRequestArgument("test", "test")
 	tx.ProcessRequestHeaders()
@@ -131,10 +127,6 @@ func TestAuditLogRelevantOnlyOk(t *testing.T) {
 		SecAuditLogRelevantStatus ".*"
 		SecRule ARGS "@unconditionalMatch" "id:1,phase:1,log,msg:'unconditional match'"
 	`); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := waf.AuditLogWriter.Init(waf.AuditLogConfig); err != nil {
 		t.Fatal(err)
 	}
 

@@ -58,7 +58,6 @@ func NewWAF(config WAFConfig) (WAF, error) {
 	}
 
 	if a := c.auditLog; a != nil {
-		// TODO(anuraaga): Can't override AuditEngineOn from rules to off this way.
 		if a.relevantOnly {
 			waf.AuditEngine = types.AuditEngineRelevantOnly
 		} else {
@@ -67,12 +66,13 @@ func NewWAF(config WAFConfig) (WAF, error) {
 
 		waf.AuditLogParts = a.parts
 
-		if a.logger != nil {
-			waf.AuditLogWriter = a.logger
-			if err := waf.AuditLogWriter.Init(waf.AuditLogConfig); err != nil {
-				return nil, fmt.Errorf("invalid WAF config from audit log: %w", err)
-			}
+		if a.writer != nil {
+			waf.SetAuditLogWriter(a.writer)
 		}
+	}
+
+	if err := waf.InitAuditLogWriter(); err != nil {
+		return nil, fmt.Errorf("invalid WAF config from audit log: %w", err)
 	}
 
 	if c.requestBodyAccess {
