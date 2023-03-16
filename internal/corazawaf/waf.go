@@ -302,10 +302,13 @@ func (w *WAF) SetDebugLogLevel(lvl debuglog.Level) error {
 	return nil
 }
 
+// SetAuditLogWriter sets the audit log writer
 func (w *WAF) SetAuditLogWriter(alw auditlog.Writer) {
 	w.auditLogWriter = alw
 }
 
+// AuditLogWriter returns the audit log writer. If the writer is not initialized,
+// it will be initialized
 func (w *WAF) AuditLogWriter() auditlog.Writer {
 	if !w.auditLogWriterInitialized {
 		if err := w.auditLogWriter.Init(w.AuditLogWriterConfig); err != nil {
@@ -316,6 +319,9 @@ func (w *WAF) AuditLogWriter() auditlog.Writer {
 	return w.auditLogWriter
 }
 
+// InitAuditLogWriter initializes the audit log writer. If the writer is already
+// initialized, it will return an error as initializing the audit log writer twice
+// seems to be a bug.
 func (w *WAF) InitAuditLogWriter() error {
 	if w.auditLogWriterInitialized {
 		return errors.New("audit log writer already initialized")
