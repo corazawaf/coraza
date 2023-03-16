@@ -112,10 +112,10 @@ var _ = profile.RegisterProfile(profile.Profile{
 							Headers: map[string]string{
 								"content-type": "application/xml",
 							},
-							Data: "<?xml version=\"1.0\"?><xml><java.lang.ProcessBuilder attribute_name=\"attribute_value\">value</java.lang.ProcessBuilder></xml>",
+							Data: "<?xml version=\"1.0\"?><xml><ProcessBuilder.evil.instantiatefactory attribute_name=\"attribute_value\">value</ProcessBuilder.evil.instantiatefactory></xml>",
 						},
 						Output: profile.ExpectedOutput{
-							NonTriggeredRules: []int{944100},
+							NonTriggeredRules: []int{944100, 944120},
 							TriggeredRules:    []int{101},
 						},
 					},
@@ -131,5 +131,16 @@ SecRule XML:/*|XML://@* "@rx java\.lang\.(?:runtime|processbuilder)" \
     "id:944100,\
     phase:2,\
     t:none,t:lowercase"
+
+SecRule ARGS|ARGS_NAMES|REQUEST_COOKIES|!REQUEST_COOKIES:/__utm/|REQUEST_COOKIES_NAMES|REQUEST_BODY|REQUEST_HEADERS|XML:/*|XML://@* \
+    "@rx (?:clonetransformer|forclosure|instantiatefactory|instantiatetransformer|invokertransformer|prototypeclonefactory|prototypeserializationfactory|whileclosure|getproperty|filewriter|xmldecoder)" \
+    "id:944120,\
+    phase:2,\
+    block,\
+    t:none,t:lowercase,\
+    chain"
+    SecRule MATCHED_VARS "@rx (?:runtime|processbuilder)" \
+        "setvar:'tx.rce_score=+%{tx.critical_anomaly_score}',\
+        setvar:'tx.inbound_anomaly_score_pl1=+%{tx.critical_anomaly_score}'"	
 `,
 })

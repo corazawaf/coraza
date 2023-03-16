@@ -4,12 +4,10 @@
 package collections
 
 import (
-	"encoding/xml"
+	"regexp"
 	"strings"
 	"testing"
-	"unsafe"
 
-	"github.com/antchfx/xmlquery"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
@@ -47,20 +45,20 @@ func TestXMLPayload(t *testing.T) {
    </book>
 </catalog>`
 	col := NewXML(variables.RequestXML)
-	doc, err := decodeXML(data)
-	if err != nil {
+	if err := col.SetDoc(strings.NewReader(data)); err != nil {
 		t.Error(err)
 	}
-	col.SetDoc(doc)
 	md := col.FindString("//@*")
 	if len(md) == 0 {
 		t.Error("Expected more than one match")
 	}
-	md2 := col.FindString("//@*")
-	if unsafe.Pointer(&md[0]) != unsafe.Pointer(&md2[0]) {
-		t.Error("Expected same pointer because of cache")
-	}
-	md = col.FindString("//*")
+	/*
+		md2 := col.FindString("//@*")
+		if unsafe.Pointer(&md[0]) != unsafe.Pointer(&md2[0]) {
+			t.Error("Expected same pointer because of cache")
+		}
+	*/
+	md = col.FindString("/*")
 	if len(md) == 0 {
 		t.Error("Expected more than one match")
 	}
@@ -68,31 +66,21 @@ func TestXMLPayload(t *testing.T) {
 }
 
 func TestXMLSimple(t *testing.T) {
-	data := "<?xml version=\"1.0\"?><xml><element attribute_name=\"attribute_value\">cnVudGltZQ</element></xml>"
+	data := "<?xml version=\"1.0\"?><xml><processbuilder.evil.prototypeclonefactory attribute_name=\"attribute_value\">value</processbuilder.evil.prototypeclonefactory></xml>"
 	col := NewXML(variables.RequestXML)
-	doc, err := decodeXML(data)
-	if err != nil {
+	if err := col.SetDoc(strings.NewReader(data)); err != nil {
 		t.Error(err)
 	}
-	col.SetDoc(doc)
 	md := col.FindString("/*")
-	if len(md) == 0 {
-		t.Error("Expected more than one match")
+	md = append(md, col.FindString("//@*")...)
+	matches := 0
+	rx := regexp.MustCompile("(?:clonetransformer|forclosure|instantiatefactory|instantiatetransformer|invokertransformer|prototypeclonefactory|prototypeserializationfactory|whileclosure|getproperty|filewriter|xmldecoder)")
+	for _, m := range md {
+		if rx.MatchString(m.Value()) {
+			matches++
+		}
 	}
-}
-
-var xmlOptions = xmlquery.DecoderOptions{
-	Strict: false,
-	Entity: xml.HTMLEntity,
-}
-
-func decodeXML(data string) (*xmlquery.Node, error) {
-	opts := xmlquery.ParserOptions{
-		Decoder: &xmlOptions,
+	if matches > 0 {
+		t.Error("Expected no matches")
 	}
-	doc, err := xmlquery.ParseWithOptions(strings.NewReader(data), opts)
-	if err != nil {
-		return nil, err
-	}
-	return doc, nil
 }

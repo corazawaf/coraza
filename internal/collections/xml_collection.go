@@ -4,6 +4,7 @@
 package collections
 
 import (
+	"io"
 	"regexp"
 	"strings"
 
@@ -16,22 +17,32 @@ import (
 
 // XML is a default collection.XML.
 type XML struct {
-	variable     variables.RuleVariable
-	resultsCache map[string][]types.MatchData
-	root         *xmlquery.Node
+	variable variables.RuleVariable
+	// TODO(jptosso): Implement results cache
+	// resultsCache map[string][]types.MatchData
+	root *xmlquery.Node
 }
 
 var _ collection.Map = &XML{}
 
 func NewXML(variable variables.RuleVariable) *XML {
 	return &XML{
-		variable:     variable,
-		resultsCache: map[string][]types.MatchData{},
+		variable: variable,
 	}
 }
 
-func (c *XML) SetDoc(root *xmlquery.Node) {
-	c.root = root
+func (c *XML) SetDoc(reader io.Reader) error {
+	opts := xmlquery.ParserOptions{
+		Decoder: &xmlquery.DecoderOptions{
+			Strict: false,
+		},
+	}
+	doc, err := xmlquery.ParseWithOptions(reader, opts)
+	if err != nil {
+		return err
+	}
+	c.root = doc
+	return nil
 }
 
 func (c *XML) Get(key string) []string {
@@ -48,9 +59,6 @@ func (c *XML) FindString(xpath string) []types.MatchData {
 		// XML not initialized
 		return []types.MatchData{}
 	}
-	if _, ok := c.resultsCache[xpath]; ok {
-		return c.resultsCache[xpath]
-	}
 	md := []types.MatchData{}
 	// From CRS samples:
 	// - //@* returns all attributes, the key for each element should be the element name
@@ -60,11 +68,8 @@ func (c *XML) FindString(xpath string) []types.MatchData {
 	md, err := c.getXpath(c.root, xpath, md)
 	if err != nil {
 		// invalid xpath expression, we don't have any way of logging here
-		c.resultsCache[xpath] = md
 		return md
 	}
-	// we store the cache
-	c.resultsCache[xpath] = md
 	return md
 }
 
@@ -75,11 +80,20 @@ func (c *XML) getXpath(root *xmlquery.Node, xpath string, md []types.MatchData) 
 		return md, nil
 	}
 	for _, n := range results {
-		md = append(md, &corazarules.MatchData{
-			Variable_: c.variable,
-			Key_:      computePath(n),
-			Value_:    strings.TrimSpace(n.InnerText()),
-		})
+		switch n.Type {
+		case xmlquery.AttributeNode:
+			md = append(md, &corazarules.MatchData{
+				Variable_: c.variable,
+				Key_:      computePath(n),
+				Value_:    n.InnerText(),
+			})
+		default:
+			md = append(md, &corazarules.MatchData{
+				Variable_: c.variable,
+				Key_:      computePath(n),
+				Value_:    strings.TrimSpace(n.InnerText()),
+			})
+		}
 	}
 	return md, nil
 }
