@@ -18,7 +18,7 @@ import (
 // It is not concurrent safe, so it's not recommended to use it
 // after compilation
 type RuleGroup struct {
-	rules []*Rule
+	rules []Rule
 }
 
 // Add a rule to the collection
@@ -29,7 +29,7 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 		return nil
 	}
 
-	if rg.FindByID(rule.ID_) != nil && rule.ID_ != 0 {
+	if rule.ID_ != 0 && rg.FindByID(rule.ID_) != nil {
 		return fmt.Errorf("there is a another rule with id %d", rule.ID_)
 	}
 
@@ -45,20 +45,20 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 		}
 	}
 
-	rg.rules = append(rg.rules, rule)
+	rg.rules = append(rg.rules, *rule)
 	return nil
 }
 
 // GetRules returns the slice of rules,
-func (rg *RuleGroup) GetRules() []*Rule {
+func (rg *RuleGroup) GetRules() []Rule {
 	return rg.rules
 }
 
 // FindByID return a Rule with the requested Id
 func (rg *RuleGroup) FindByID(id int) *Rule {
-	for _, r := range rg.rules {
+	for i, r := range rg.rules {
 		if r.ID_ == id {
-			return r
+			return &rg.rules[i]
 		}
 	}
 	return nil
@@ -67,44 +67,38 @@ func (rg *RuleGroup) FindByID(id int) *Rule {
 // DeleteByID removes a rule by it's Id
 func (rg *RuleGroup) DeleteByID(id int) {
 	for i, r := range rg.rules {
-		if r != nil && r.ID_ == id {
-			copy(rg.rules[i:], rg.rules[i+1:])
-			rg.rules[len(rg.rules)-1] = nil
-			rg.rules = rg.rules[:len(rg.rules)-1]
+		if r.ID_ == id {
+			rg.rules = append(rg.rules[:i], rg.rules[i+1:]...)
+			return
 		}
 	}
 }
 
-// FindByMsg returns a slice of rules that matches the msg
-func (rg *RuleGroup) FindByMsg(msg string) []*Rule {
-	var rules []*Rule
+// DeleteByMsg deletes rules with the given message.
+func (rg *RuleGroup) DeleteByMsg(msg string) {
+	var kept []Rule
 	for _, r := range rg.rules {
-		if r.Msg.String() == msg {
-			rules = append(rules, r)
+		if r.Msg.String() != msg {
+			kept = append(kept, r)
 		}
 	}
-	return rules
+	rg.rules = kept
 }
 
-// FindByTag returns a slice of rules that matches the tag
-func (rg *RuleGroup) FindByTag(tag string) []*Rule {
-	var rules []*Rule
+// DeleteByTag deletes rules with the given tag.
+func (rg *RuleGroup) DeleteByTag(tag string) {
+	var kept []Rule
 	for _, r := range rg.rules {
-		if strings.InSlice(tag, r.Tags_) {
-			rules = append(rules, r)
+		if !strings.InSlice(tag, r.Tags_) {
+			kept = append(kept, r)
 		}
 	}
-	return rules
+	rg.rules = kept
 }
 
 // Count returns the count of rules
 func (rg *RuleGroup) Count() int {
 	return len(rg.rules)
-}
-
-// Clear will remove each and every rule stored
-func (rg *RuleGroup) Clear() {
-	rg.rules = []*Rule{}
 }
 
 // Eval rules for the specified phase, between 1 and 5
@@ -124,7 +118,8 @@ func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 		delete(transformationCache, k)
 	}
 RulesLoop:
-	for _, r := range tx.WAF.Rules.GetRules() {
+	for i := range rg.rules {
+		r := &rg.rules[i]
 		// if there is already an interruption and the phase isn't logging
 		// we break the loop
 		if tx.interruption != nil && phase != types.PhaseLogging {
@@ -226,9 +221,7 @@ RulesLoop:
 // You might use this function to replace the rules
 // and "reload" the WAF
 func NewRuleGroup() RuleGroup {
-	return RuleGroup{
-		rules: []*Rule{},
-	}
+	return RuleGroup{}
 }
 
 type transformationKey struct {
