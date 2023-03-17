@@ -81,3 +81,24 @@ func TestVariablesRxAreCaseSensitive(t *testing.T) {
 		t.Error("variable key is not case insensitive")
 	}
 }
+
+func TestInferredPhase(t *testing.T) {
+	var b inferredPhases
+
+	if b.has(types.PhaseRequestHeaders) {
+		t.Error("unexpected phase")
+	}
+
+	if b.has(types.PhaseResponseBody) {
+		t.Error("unexpected phase")
+	}
+
+	b.set(types.PhaseRequestHeaders)
+	if !b.has(types.PhaseRequestHeaders) {
+		t.Error("unexpected phase")
+	}
+
+	if b.has(types.PhaseResponseBody) {
+		t.Error("unexpected phase")
+	}
+}
