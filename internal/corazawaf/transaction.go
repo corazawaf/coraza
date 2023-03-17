@@ -1246,13 +1246,11 @@ func (tx *Transaction) ProcessLogging() {
 	tx.debugLogger.Debug().
 		Msg("Transaction marked for audit logging")
 
-	if writer := tx.WAF.AuditLogWriter; writer != nil {
-		// We don't log if there is an empty audit logger
-		if err := writer.Write(tx.AuditLog()); err != nil {
-			tx.debugLogger.Error().
-				Err(err).
-				Msg("Failed to write audit log")
-		}
+	// We don't log if there is an empty audit logger
+	if err := tx.WAF.AuditLogWriter().Write(tx.AuditLog()); err != nil {
+		tx.debugLogger.Error().
+			Err(err).
+			Msg("Failed to write audit log")
 	}
 }
 

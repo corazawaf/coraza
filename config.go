@@ -208,12 +208,12 @@ func (c *wafConfig) WithResponseBodyMimeTypes(mimeTypes []string) WAFConfig {
 type auditLogConfig struct {
 	relevantOnly bool
 	parts        types.AuditLogParts
-	logger       auditlog.Writer
+	writer       auditlog.Writer
 }
 
 func (c *auditLogConfig) LogRelevantOnly() AuditLogConfig {
 	ret := c.clone()
-	c.relevantOnly = true
+	ret.relevantOnly = true
 	return ret
 }
 
@@ -225,7 +225,7 @@ func (c *auditLogConfig) WithParts(parts types.AuditLogParts) AuditLogConfig {
 
 func (c *auditLogConfig) WithLogger(logger auditlog.Writer) AuditLogConfig {
 	ret := c.clone()
-	ret.logger = logger
+	ret.writer = logger
 	return ret
 }
 
