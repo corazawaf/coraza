@@ -522,6 +522,7 @@ func (r *Rule) executeTransformations(value string) (string, []error) {
 }
 
 // NewRule returns a new initialized rule
+// By default, the rule is set to phase 2
 func NewRule() *Rule {
 	return &Rule{
 		RuleMetadata: corazarules.RuleMetadata{
