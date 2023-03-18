@@ -85,20 +85,30 @@ func TestVariablesRxAreCaseSensitive(t *testing.T) {
 func TestInferredPhase(t *testing.T) {
 	var b inferredPhases
 
-	if b.has(types.PhaseRequestHeaders) {
-		t.Error("unexpected phase")
-	}
-
-	if b.has(types.PhaseResponseBody) {
+	if b.has(types.PhaseRequestHeaders) ||
+		b.has(types.PhaseRequestBody) ||
+		b.has(types.PhaseResponseHeaders) ||
+		b.has(types.PhaseResponseBody) {
 		t.Error("unexpected phase")
 	}
 
 	b.set(types.PhaseRequestHeaders)
 	if !b.has(types.PhaseRequestHeaders) {
-		t.Error("unexpected phase")
+		t.Error("expected to have phase")
 	}
 
-	if b.has(types.PhaseResponseBody) {
-		t.Error("unexpected phase")
+	b.set(types.PhaseRequestBody)
+	if !b.has(types.PhaseRequestBody) {
+		t.Error("expected to have phase")
+	}
+
+	b.set(types.PhaseResponseHeaders)
+	if !b.has(types.PhaseResponseHeaders) {
+		t.Error("expected to have phase")
+	}
+
+	b.set(types.PhaseResponseBody)
+	if !b.has(types.PhaseResponseBody) {
+		t.Error("expected to have phase")
 	}
 }
