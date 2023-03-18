@@ -79,6 +79,16 @@ type ruleTransformationParams struct {
 	Function rules.Transformation
 }
 
+type inferredPhases byte
+
+func (p *inferredPhases) has(phase types.RulePhase) bool {
+	return (*p & (1 << phase)) != 0
+}
+
+func (p *inferredPhases) set(phase types.RulePhase) {
+	*p |= 1 << phase
+}
+
 // Rule is used to test a Transaction against certain operators
 // and execute actions
 type Rule struct {
@@ -138,7 +148,7 @@ type Rule struct {
 
 	// inferredPhases is the inferred phases the rule is relevant for
 	// based on the processed variables.
-	inferredPhases [types.PhaseLogging + 1]bool
+	inferredPhases
 }
 
 func (r *Rule) ParentID() int {

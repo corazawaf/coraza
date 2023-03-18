@@ -34,13 +34,13 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 	}
 
 	numInferred := 0
-	rule.inferredPhases[rule.Phase_] = true
+	rule.inferredPhases.set(rule.Phase_)
 	for _, v := range rule.variables {
 		min := minPhase(v.Variable)
 		if min != 0 {
 			// We infer the earliest phase a variable used by the rule may be evaluated for use when
 			// multiphase evaluation is enabled
-			rule.inferredPhases[min] = true
+			rule.inferredPhases.set(min)
 			numInferred++
 		}
 	}
@@ -128,7 +128,7 @@ RulesLoop:
 		// Rules with phase 0 will always run
 		if r.Phase_ != 0 && r.Phase_ != phase {
 			// Execute the rule in inferred phases too if multiphase evaluation is enabled
-			if !multiphaseEvaluation || !r.inferredPhases[phase] {
+			if !multiphaseEvaluation || !r.inferredPhases.has(phase) {
 				continue
 			}
 		}
