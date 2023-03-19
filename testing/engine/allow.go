@@ -1,6 +1,8 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !coraza.rule.multiphase_evaluation
+
 package engine
 
 import (
@@ -156,23 +158,6 @@ var _ = profile.RegisterProfile(profile.Profile{
 			},
 		},
 	},
-	// TODO(MultiPhase)[MovingIntoAllowedPhase]: see rules 45 and 46. Rule 45 allows all the request phases (1 and 2)
-	// Rule 46 is anticipated to phase 1, therefore it is skept. When phase 3 is evaluated, rule 46 is skipped because
-	// it is not anymore in its minPhase.
-	// It applies also to rules 31-42 and 11-22.
-	// Possible solution: we have to find a way to be sure that rules have been evaluated in an inferred phase or not.
-	// A solution with overhead would be adding a boolean for each rule.
-	// We have to consider at least two cases:
-	// 1) The rule anticipated has been evaluated in the inferred phase before an allow action happend (it is okay do not evaluate afterwards)
-	// 2) The rule anticipated has not been evaluated because of an allow action. We have to try to evaluate it in other inferred phases)
-
-	// TODO(MultiPhase)[MovingAllowingRules]: Moving rules with allow action leads to unwanted allowed requests.
-	// See rules 70 and 71. Rule 71, being anticipated at phase:1, is evaluated before rule 70. The latter should have denied the request at phase:2
-	// Possible solution: assegnation of Inferred phases should check for allow actions and do not assign the earlier phases to rules with allow action.
-	// Possible solution: Evaluate the rule, but wait before enforcing the allow action untile the right phase is reached. Problems can arise because of rules orderin.
-	// E.g. a phase 3 with "allow", anticipated at phase:1 could delay the allow action when phase:3 is reached, but the rules order is not respected. Maybe other
-	// phase 3 rules should have been evaluated before the allow action.
-
 	Rules: `
 SecDebugLogLevel 5
 SecRequestBodyAccess On

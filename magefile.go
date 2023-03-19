@@ -122,7 +122,7 @@ func Coverage() error {
 	if err := sh.RunV("go", "test", "-race", "-coverprofile=build/coverage-multiphase.txt", "-covermode=atomic", "-coverpkg=./...", "-tags=coraza.rule.multiphase_evaluation", "./..."); err != nil {
 		return err
 	}
-	// Execute coverage tests with multiphase evaluation enabled
+	// Executes http-server tests with multiphase evaluation enabled
 	if err := sh.RunV("go", "test", "-race", "-coverprofile=build/coverage-examples.txt", "-covermode=atomic", "-tags=coraza.rule.multiphase_evaluation", "-coverpkg=./...", "./examples/http-server"); err != nil {
 		return err
 	}

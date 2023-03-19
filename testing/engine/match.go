@@ -56,10 +56,10 @@ SecRule SERVER_ADDR "! ^127" "id:1, phase:1, log"
 SecRule SERVER_PORT "!" "id:2, phase:1, log"
 
 SecRule ARGS "12345" "chain,block,id:26, log, phase: 2"
-	SecRule MATCHED_VAR "12345" ""
+  SecRule MATCHED_VAR "12345" ""
 
-SecRule ARGS "12345" "chain,block, id:28, log, phase:2"
-  SecRule MATCHED_VAR_NAME "ARGS:id" ""      
+SecRule ARGS_GET "12345" "chain,block, id:28, log, phase:2"
+  SecRule MATCHED_VAR_NAME "ARGS_GET:id" ""
 
 SecRule ARGS "12345" "chain,block, id:30, log, phase:2"
   SecRule ARGS "pineapple" "chain"
@@ -67,9 +67,9 @@ SecRule ARGS "12345" "chain,block, id:30, log, phase:2"
   #?
 
 
-SecRule ARGS "12345" "chain,block, id:35, log, phase:2"
+SecRule ARGS_GET "12345" "chain,block, id:35, log, phase:2"
   SecRule ARGS "pineapple" "chain"
-  SecRule MATCHED_VARS_NAMES "ARGS:id" "" 
+  SecRule MATCHED_VARS_NAMES "ARGS_GET:id" "" 
 
 # This rule should not be triggered because MATCHED_VARS_NAMES was reset by tx.resetAfterRule()
 SecRule REQUEST_HEADERS "123" "chain,block, id:40, log, phase:2"
