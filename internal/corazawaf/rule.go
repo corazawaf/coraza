@@ -188,6 +188,10 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 				}
 			}
 		}
+		// if no variables have a inferred phase, we rely on the phase of the rule itself
+		if r.chainMinPhase == types.PhaseUnknown {
+			r.chainMinPhase = r.Phase_
+		}
 	}
 
 	var matchedValues []types.MatchData
@@ -238,11 +242,12 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 							if phase != r.chainMinPhase {
 								continue
 							}
-						} else if min != phase {
-							// Chain is available, and variable gets evaluated in its phase and skip
-							// the rest.
-							continue
 						}
+						// Commented out: we have to evaluate variables multiple times to give a chance to chained rules to match
+						// else if min != phase {
+						// 	// Chain is available, and variable gets evaluated in its phase and skip the rest.
+						// 	continue
+						// }
 					}
 				}
 			} else if multiphaseEvaluation && (r.HasChain && phase < r.chainMinPhase) {
