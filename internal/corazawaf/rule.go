@@ -79,6 +79,16 @@ type ruleTransformationParams struct {
 	Function rules.Transformation
 }
 
+type inferredPhases byte
+
+func (p *inferredPhases) has(phase types.RulePhase) bool {
+	return (*p & (1 << phase)) != 0
+}
+
+func (p *inferredPhases) set(phase types.RulePhase) {
+	*p |= 1 << phase
+}
+
 // Rule is used to test a Transaction against certain operators
 // and execute actions
 type Rule struct {
@@ -138,7 +148,7 @@ type Rule struct {
 
 	// inferredPhases is the inferred phases the rule is relevant for
 	// based on the processed variables.
-	inferredPhases [types.PhaseLogging + 1]bool
+	inferredPhases
 
 	// chainMinPhase is the minimum phase among all chain variables.
 	// We do not eagerly evaluate variables in multiphase evaluation
@@ -614,6 +624,7 @@ func (r *Rule) executeTransformations(value string) (string, []error) {
 }
 
 // NewRule returns a new initialized rule
+// By default, the rule is set to phase 2
 func NewRule() *Rule {
 	return &Rule{
 		RuleMetadata: corazarules.RuleMetadata{

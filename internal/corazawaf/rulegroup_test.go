@@ -27,15 +27,20 @@ func TestRG(t *testing.T) {
 		t.Error("Failed to add rule to rulegroup")
 	}
 
-	if len(rg.FindByMsg("test")) != 1 {
-		t.Error("Failed to find rules by msg")
+	rg.DeleteByTag("test")
+	if rg.Count() != 0 {
+		t.Error("Failed to remove rule from rulegroup")
 	}
 
-	if len(rg.FindByTag("test")) != 1 {
-		t.Error("Failed to find rules by tag")
+	if err := rg.Add(r); err != nil {
+		t.Error("Failed to add rule to rulegroup")
 	}
 
-	rg.DeleteByID(1)
+	if rg.Count() != 1 {
+		t.Error("Failed to add rule to rulegroup")
+	}
+
+	rg.DeleteByMsg("test")
 	if rg.Count() != 0 {
 		t.Error("Failed to remove rule from rulegroup")
 	}

@@ -14,29 +14,28 @@ import (
 
 // serialWriter is used to store logs in a single file
 type serialWriter struct {
-	closer    func() error
+	io.Closer
 	log       log.Logger
 	formatter Formatter
 }
 
 func (sl *serialWriter) Init(c Config) error {
+	if c.File == "" {
+		sl.Closer = noopCloser{}
+		return nil
+	}
+
 	fileMode := c.FileMode
 	sl.formatter = c.Formatter
 
-	var w io.Writer
-	if c.File != "" {
-		f, err := os.OpenFile(c.File, os.O_APPEND|os.O_CREATE|os.O_WRONLY, fileMode)
-		if err != nil {
-			return err
-		}
-		w = f
-		sl.closer = f.Close
-	} else {
-		w = io.Discard
-		sl.closer = func() error { return nil }
+	f, err := os.OpenFile(c.File, os.O_APPEND|os.O_CREATE|os.O_WRONLY, fileMode)
+	if err != nil {
+		return err
 	}
+	sl.Closer = f
+
 	sl.log.SetFlags(0)
-	sl.log.SetOutput(w)
+	sl.log.SetOutput(f)
 	return nil
 }
 
@@ -51,10 +50,6 @@ func (sl *serialWriter) Write(al *Log) error {
 	}
 	sl.log.Println(string(bts))
 	return nil
-}
-
-func (sl *serialWriter) Close() error {
-	return sl.closer()
 }
 
 var _ Writer = (*serialWriter)(nil)

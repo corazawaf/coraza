@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/internal/io"
@@ -135,8 +134,7 @@ func (p *Parser) FromString(data string) error {
 
 func (p *Parser) evaluateLine(l string) error {
 	if l == "" || l[0] == '#' {
-		// at this point we should not receive an empty line or a commented line
-		return errors.New("invalid line")
+		panic("invalid line")
 	}
 	// first we get the directive
 	dir, opts, _ := strings.Cut(l, " ")
@@ -163,6 +161,7 @@ func (p *Parser) evaluateLine(l string) error {
 		return p.log(fmt.Sprintf("unknown directive %q", directive))
 	}
 
+	p.options.Raw = l
 	p.options.Opts = opts
 	p.options.Parser.LastLine = p.currentLine
 	p.options.Parser.ConfigFile = p.currentFile
@@ -206,7 +205,6 @@ func NewParser(waf *corazawaf.WAF) *Parser {
 		options: &DirectiveOptions{
 			WAF:      waf,
 			Datasets: make(map[string][]string),
-			AuditLog: auditlog.NewConfig(),
 		},
 		root: io.OSFS{},
 	}
