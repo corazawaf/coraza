@@ -198,10 +198,6 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 				}
 			}
 		}
-		// if no variables have a inferred phase, we rely on the phase of the rule itself
-		if r.chainMinPhase == types.PhaseUnknown {
-			r.chainMinPhase = r.Phase_
-		}
 	}
 
 	var matchedValues []types.MatchData
