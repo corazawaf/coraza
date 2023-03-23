@@ -128,10 +128,12 @@ RulesLoop:
 		// Rules with phase 0 will always run
 		if r.Phase_ != 0 && r.Phase_ != phase {
 			// Execute the rule in inferred phases too if multiphase evaluation is enabled
-			// For chained rules, inferredPhases is not relevant, we rather have to check chainMinPhase
+			// For chained rules, inferredPhases is not relevant, we rather have to run from minimal potentially
+			// matchable phase up to the rule's defined phase (chainMinPhase <= phase <= Phase_)
 			if !multiphaseEvaluation ||
 				(!r.HasChain && !r.inferredPhases.has(phase)) ||
-				r.HasChain && r.chainMinPhase > phase {
+				(r.HasChain && phase < r.chainMinPhase) ||
+				(r.HasChain && phase > r.Phase_) {
 				continue
 			}
 		}

