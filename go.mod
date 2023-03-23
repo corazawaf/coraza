@@ -22,6 +22,7 @@ require (
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20211021192214-5ab2d9280aa9
 	github.com/tidwall/gjson v1.14.4
 	golang.org/x/net v0.8.0
+	rsc.io/binaryregexp v0.2.0
 )
 
 require (

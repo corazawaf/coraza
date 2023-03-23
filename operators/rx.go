@@ -6,7 +6,7 @@
 package operators
 
 import (
-	"regexp"
+	regexp "rsc.io/binaryregexp"
 
 	"github.com/corazawaf/coraza/v3/rules"
 )
