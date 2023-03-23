@@ -19,9 +19,10 @@ type rx struct {
 var _ rules.Operator = (*rx)(nil)
 
 func newRX(options rules.OperatorOptions) (rules.Operator, error) {
-	data := options.Arguments
-	data = fmt.Sprintf("(?sm)%s", data)
-
+	// (?sm) enables multiline mode which makes 942522-7 work, see
+	// - https://stackoverflow.com/a/27680233
+	// - https://groups.google.com/g/golang-nuts/c/jiVdamGFU9E
+	data := fmt.Sprintf("(?sm)%s", options.Arguments)
 	re, err := regexp.Compile(data)
 	if err != nil {
 		return nil, err

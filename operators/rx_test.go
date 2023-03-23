@@ -38,9 +38,16 @@ func TestRx(t *testing.T) {
 			input:   "グッバイワールド",
 			want:    false,
 		},
-		// Requires dotall
 		{
+			// Requires dotall
 			pattern: `hello.*world`,
+			input:   "hello\nworld",
+			want:    true,
+		},
+		{
+			// Makes sure, (?sm) passed by the user does not
+			// break the regex.
+			pattern: `(?sm)hello.*world`,
 			input:   "hello\nworld",
 			want:    true,
 		},
