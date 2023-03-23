@@ -45,6 +45,11 @@ func TestRx(t *testing.T) {
 			want:    true,
 		},
 		{
+			pattern: `^hello.*world`,
+			input:   "test\nhello\nworld",
+			want:    true,
+		},
+		{
 			// Makes sure, (?sm) passed by the user does not
 			// break the regex.
 			pattern: `(?sm)hello.*world`,
