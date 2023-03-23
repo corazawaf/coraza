@@ -38,6 +38,11 @@ func TestRx(t *testing.T) {
 			input:   "グッバイワールド",
 			want:    false,
 		},
+		{
+			pattern: `hello.*world`,
+			input:   "hello\nworld",
+			want:    true,
+		},
 	}
 
 	for _, tc := range tests {

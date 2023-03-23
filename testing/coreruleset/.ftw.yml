@@ -22,5 +22,4 @@ testoverride:
     934120-39: 'regex matches arbitrary bytes'
     941310-1: 'regex matches arbitrary bytes'
     941310-3: 'regex matches arbitrary bytes'
-    942522-7: ''
     944200-1: 'regex matches arbitrary bytes'

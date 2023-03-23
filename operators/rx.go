@@ -6,6 +6,7 @@
 package operators
 
 import (
+	"fmt"
 	"regexp"
 
 	"github.com/corazawaf/coraza/v3/rules"
@@ -19,6 +20,7 @@ var _ rules.Operator = (*rx)(nil)
 
 func newRX(options rules.OperatorOptions) (rules.Operator, error) {
 	data := options.Arguments
+	data = fmt.Sprintf("(?sm)%s", data)
 
 	re, err := regexp.Compile(data)
 	if err != nil {
