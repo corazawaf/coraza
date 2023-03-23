@@ -38,6 +38,7 @@ func TestRx(t *testing.T) {
 			input:   "グッバイワールド",
 			want:    false,
 		},
+		// Requires dotall
 		{
 			pattern: `hello.*world`,
 			input:   "hello\nworld",
