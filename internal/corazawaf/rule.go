@@ -85,6 +85,23 @@ func (p *inferredPhases) has(phase types.RulePhase) bool {
 	return (*p & (1 << phase)) != 0
 }
 
+// hasOrMinor returns true if the phase is set or any phase before it
+// E.g.
+// inferredPhases = 00000010 (types.PhaseRequestHeaders)
+// hasOrMinor(types.PhaseRequestBody) performs:
+// 00000010 & 00000001
+// 00000010 & 00000010
+// 00000010 & 00000100
+// If any of the them is true, it returns true and stops iterating
+func (p *inferredPhases) hasOrMinor(phase types.RulePhase) bool {
+	for i := 1; i <= int(phase); i++ {
+		if (*p & (1 << i)) != 0 {
+			return true
+		}
+	}
+	return false
+}
+
 func (p *inferredPhases) set(phase types.RulePhase) {
 	*p |= 1 << phase
 }
@@ -155,6 +172,10 @@ type Rule struct {
 	// if they would be earlier than chained rules as they could never
 	// match.
 	chainMinPhase types.RulePhase
+
+	// chainedRules containing rules with just PhaseUnknown variables, may potentially
+	// be anticipated. This boolean ensures that it happens
+	withPhaseUnknownVariable bool
 }
 
 func (r *Rule) ParentID() int {
@@ -185,17 +206,24 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 	// time we evaluate the rule. Instead, we should do this at parse time, but this will require a
 	// large-ish refactoring of the parser, which adds parent rules to a rule group before preparing
 	// the child rules. In the meantime, only evaluating this once should allow performance to be fine.
-	if r.ParentID_ == 0 && r.HasChain && r.chainMinPhase == types.PhaseUnknown {
+	//
+	// chainMinPhase is the minimum phase among all the rules in which the chained rule may match.
+	// We evaluate the min possible phase for each rule in the chain and we take the minimum in common
+	// If we reached this point, it means that the parent rule already reached its min phase.
+	if multiphaseEvaluation && r.ParentID_ == 0 && r.HasChain && r.chainMinPhase == types.PhaseUnknown {
 		for c := r.Chain; c != nil; c = c.Chain {
+			singleChainedRuleMinPhase := types.PhaseUnknown
 			for _, v := range c.variables {
 				min := minPhase(v.Variable)
-				if min != types.PhaseUnknown {
-					if r.chainMinPhase == types.PhaseUnknown {
-						r.chainMinPhase = min
-					} else if min < r.chainMinPhase {
-						r.chainMinPhase = min
-					}
+				if min == types.PhaseUnknown {
+					continue
 				}
+				if singleChainedRuleMinPhase == types.PhaseUnknown || min < singleChainedRuleMinPhase {
+					singleChainedRuleMinPhase = min
+				}
+			}
+			if r.chainMinPhase == types.PhaseUnknown || singleChainedRuleMinPhase > r.chainMinPhase {
+				r.chainMinPhase = singleChainedRuleMinPhase
 			}
 		}
 	}
@@ -234,13 +262,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 				// When multiphase evaluation is enabled, any variable is evaluated at its
 				// earliest possible phase, so we make sure to skip in other phases.
 				if min != types.PhaseUnknown {
-					if !r.HasChain {
-						// For rules that have no chains, we know the variable is evaluated in its
-						// min phase and no other phase.
-						if min != phase {
-							continue
-						}
-					} else {
+					if r.HasChain {
 						if min < r.chainMinPhase {
 							// The variable was previously available but not evaluated yet because the
 							// chain wasn't available. We evaluate once during the chainMinPhase and
@@ -254,6 +276,12 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 						// 	// Chain is available, and variable gets evaluated in its phase and skip the rest.
 						// 	continue
 						// }
+					} else {
+						// For rules that have no chains, we know the variable is evaluated in its
+						// min phase and no other phase.
+						if min != phase {
+							continue
+						}
 					}
 				}
 			} else if multiphaseEvaluation && (r.HasChain && phase < r.chainMinPhase) {
