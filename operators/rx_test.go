@@ -67,6 +67,12 @@ func TestRx(t *testing.T) {
 			input:   "hello\nworld",
 			want:    true,
 		},
+		{
+			// Make sure user flags are also applied
+			pattern: `(?i)^hello.*world`,
+			input:   "test\nHELLO\nworld",
+			want:    true,
+		},
 	}
 
 	for _, tc := range tests {
