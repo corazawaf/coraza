@@ -6,6 +6,7 @@
 package operators
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 	"unicode/utf8"
@@ -22,7 +23,10 @@ type rx struct {
 var _ rules.Operator = (*rx)(nil)
 
 func newRX(options rules.OperatorOptions) (rules.Operator, error) {
-	data := options.Arguments
+	// (?sm) enables multiline and dotall mode, required by some CRS rules and matching ModSec behavior, see
+	// - https://stackoverflow.com/a/27680233
+	// - https://groups.google.com/g/golang-nuts/c/jiVdamGFU9E
+	data := fmt.Sprintf("(?sm)%s", options.Arguments)
 
 	if matchesArbitraryBytes(data) {
 		// Use binary regex matcher if expression matches non-utf8 bytes. The binary matcher does

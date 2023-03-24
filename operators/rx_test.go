@@ -48,6 +48,25 @@ func TestRx(t *testing.T) {
 			input:   "\xac\xed\x00t\x00\x04test",
 			want:    false,
 		},
+		{
+			// Requires dotall
+			pattern: `hello.*world`,
+			input:   "hello\nworld",
+			want:    true,
+		},
+		{
+			// Requires multiline
+			pattern: `^hello.*world`,
+			input:   "test\nhello\nworld",
+			want:    true,
+		},
+		{
+			// Makes sure, (?sm) passed by the user does not
+			// break the regex.
+			pattern: `(?sm)hello.*world`,
+			input:   "hello\nworld",
+			want:    true,
+		},
 	}
 
 	for _, tc := range tests {
