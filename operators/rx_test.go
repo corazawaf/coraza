@@ -39,12 +39,23 @@ func TestRx(t *testing.T) {
 			want:    false,
 		},
 		{
+			pattern: `\xac\xed\x00\x05`,
+			input:   "\xac\xed\x00\x05t\x00\x04test",
+			want:    true,
+		},
+		{
+			pattern: `\xac\xed\x00\x05`,
+			input:   "\xac\xed\x00t\x00\x04test",
+			want:    false,
+		},
+		{
 			// Requires dotall
 			pattern: `hello.*world`,
 			input:   "hello\nworld",
 			want:    true,
 		},
 		{
+			// Requires multiline
 			pattern: `^hello.*world`,
 			input:   "test\nhello\nworld",
 			want:    true,
