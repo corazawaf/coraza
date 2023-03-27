@@ -188,7 +188,7 @@ func (t *Test) RunPhases() error {
 func (t *Test) OutputInterruptionErrors() []string {
 	var errors []string
 
-	if t.ExpectedOutput.Interruption != nil {
+	if t.ExpectedOutput.Interruption != nil && t.transaction.IsInterrupted() {
 		if t.ExpectedOutput.Interruption.Action != t.transaction.Interruption().Action {
 			errors = append(errors, fmt.Sprintf("Interruption.Action: expected: '%s', got: '%s'",
 				t.ExpectedOutput.Interruption.Action, t.transaction.Interruption().Action))

@@ -295,7 +295,7 @@ func TestHttpServer(t *testing.T) {
 
 	logger := debuglog.Default().
 		WithOutput(testLogOutput{t}).
-		WithLevel(debuglog.LogLevelInfo)
+		WithLevel(debuglog.LevelInfo)
 
 	// Perform tests
 	for name, tCase := range tests {
@@ -357,7 +357,7 @@ func TestHttpServerWithRuleEngineOff(t *testing.T) {
 	}
 	logger := debuglog.Default().
 		WithOutput(testLogOutput{t}).
-		WithLevel(debuglog.LogLevelInfo)
+		WithLevel(debuglog.LevelInfo)
 
 	// Perform tests
 	for name, tCase := range tests {
@@ -383,7 +383,7 @@ func runAgainstWAF(t *testing.T, tCase httpTest, waf coraza.WAF) {
 	defer close(serverErrC)
 
 	// Spin up the test server
-	ts := httptest.NewUnstartedServer(WrapHandler(waf, t.Logf, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	ts := httptest.NewUnstartedServer(WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if want, have := tCase.expectedProto, req.Proto; want != have {
 			t.Errorf("unexpected proto, want: %s, have: %s", want, have)
 		}
@@ -492,7 +492,7 @@ func TestObtainStatusCodeFromInterruptionOrDefault(t *testing.T) {
 
 func TestHandlerWithNilWAF(t *testing.T) {
 	delegateHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-	wrappedHandler := WrapHandler(nil, t.Logf, delegateHandler).(http.HandlerFunc)
+	wrappedHandler := WrapHandler(nil, delegateHandler).(http.HandlerFunc)
 	if want, have := fmt.Sprintf("%v", delegateHandler), fmt.Sprintf("%v", wrappedHandler); want != have {
 		t.Errorf("unexpected wrapped handler")
 	}
@@ -560,7 +560,7 @@ func TestHandlerAPI(t *testing.T) {
 
 	for name, tCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			srv := httptest.NewServer(WrapHandler(waf, t.Logf, tCase.handler))
+			srv := httptest.NewServer(WrapHandler(waf, tCase.handler))
 			defer srv.Close()
 
 			res, err := http.Post(srv.URL, "application/json", bytes.NewBufferString("the payload"))

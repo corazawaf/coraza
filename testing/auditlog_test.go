@@ -26,21 +26,23 @@ func TestAuditLogMessages(t *testing.T) {
 	// generate a random tmp file
 	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if err := parser.FromString(`
 		SecRuleEngine DetectionOnly
 		SecAuditEngine On
 		SecAuditLogFormat json
 		SecAuditLogType serial
+		SecAuditLogParts ABCDEFGHIJKZ
 		SecRule ARGS "@unconditionalMatch" "id:1,phase:1,log,msg:'unconditional match'"
 	`); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	defer os.Remove(file.Name())
+
 	tx := waf.NewTransaction()
 	tx.AddGetRequestArgument("test", "test")
 	tx.ProcessRequestHeaders()
@@ -61,7 +63,7 @@ func TestAuditLogMessages(t *testing.T) {
 		t.Error(err)
 	}
 	if len(al2.Messages) != 1 {
-		t.Errorf("Expected 1 message, got %d", len(al2.Messages))
+		t.Fatalf("Expected 1 message, got %d", len(al2.Messages))
 	}
 	if al2.Messages[0].Message != "unconditional match" {
 		t.Errorf("Expected message %q, got %q", "unconditional match", al2.Messages[0].Message)
@@ -125,8 +127,9 @@ func TestAuditLogRelevantOnlyOk(t *testing.T) {
 		SecAuditLogRelevantStatus ".*"
 		SecRule ARGS "@unconditionalMatch" "id:1,phase:1,log,msg:'unconditional match'"
 	`); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+
 	tx := waf.NewTransaction()
 	tx.AddGetRequestArgument("test", "test")
 	tx.ProcessRequestHeaders()

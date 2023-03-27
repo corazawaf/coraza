@@ -37,12 +37,6 @@ type WAF struct {
 	// ruleGroup object, contains all rules and helpers
 	Rules RuleGroup
 
-	// Audit mode status
-	AuditEngine types.AuditEngineStatus
-
-	// Array of logging parts to be used
-	AuditLogParts types.AuditLogParts
-
 	// If true, transactions will have access to the request body
 	RequestBodyAccess bool
 
@@ -69,9 +63,6 @@ type WAF struct {
 
 	// Add significant rule components to audit log
 	ComponentNames []string
-
-	// Contains the regular expression for relevant status audit logging
-	AuditLogRelevantStatus *regexp.Regexp
 
 	// If true WAF engine will fail when remote rules cannot be loaded
 	AbortOnRemoteRulesFail bool
@@ -120,8 +111,22 @@ type WAF struct {
 
 	ErrorLogCb func(rule types.MatchedRule)
 
-	// AuditLogWriter is used to write audit logs
-	AuditLogWriter auditlog.LogWriter
+	// Audit mode status
+	AuditEngine types.AuditEngineStatus
+
+	// Array of logging parts to be used
+	AuditLogParts types.AuditLogParts
+
+	// Contains the regular expression for relevant status audit logging
+	AuditLogRelevantStatus *regexp.Regexp
+
+	auditLogWriter auditlog.Writer
+
+	// AuditLogWriterConfig is configuration of audit logging, populated by multiple directives and consumed by
+	// SecAuditLog.
+	AuditLogWriterConfig auditlog.Config
+
+	auditLogWriterInitialized bool
 }
 
 // NewTransaction Creates a new initialized transaction for this WAF instance
@@ -251,9 +256,9 @@ const _1gb = 1073741824
 
 // NewWAF creates a new WAF instance with default variables
 func NewWAF() *WAF {
-	logger := debuglog.Nop()
+	logger := debuglog.Noop()
 
-	logWriter, err := auditlog.GetLogWriter("serial")
+	logWriter, err := auditlog.GetWriter("serial")
 	if err != nil {
 		logger.Error().
 			Err(err).
@@ -264,13 +269,15 @@ func NewWAF() *WAF {
 		// Initializing pool for transactions
 		txPool: sync.NewPool(func() interface{} { return new(Transaction) }),
 		// These defaults are unavoidable as they are zero values for the variables
-		RuleEngine:         types.RuleEngineOn,
-		RequestBodyAccess:  false,
-		RequestBodyLimit:   _1gb,
-		ResponseBodyAccess: false,
-		ResponseBodyLimit:  _1gb,
-		AuditLogWriter:     logWriter,
-		Logger:             logger,
+		RuleEngine:                types.RuleEngineOn,
+		RequestBodyAccess:         false,
+		RequestBodyLimit:          _1gb,
+		ResponseBodyAccess:        false,
+		ResponseBodyLimit:         _1gb,
+		auditLogWriter:            logWriter,
+		auditLogWriterInitialized: false,
+		AuditLogWriterConfig:      auditlog.NewConfig(),
+		Logger:                    logger,
 	}
 
 	if environment.HasAccessToFS {
@@ -286,12 +293,46 @@ func (w *WAF) SetDebugLogOutput(wr io.Writer) {
 }
 
 // SetDebugLogLevel changes the debug level of the WAF instance
-func (w *WAF) SetDebugLogLevel(lvl debuglog.LogLevel) error {
+func (w *WAF) SetDebugLogLevel(lvl debuglog.Level) error {
 	if !lvl.Valid() {
 		return errors.New("invalid log level")
 	}
 
 	w.Logger = w.Logger.WithLevel(lvl)
+	return nil
+}
+
+// SetAuditLogWriter sets the audit log writer
+func (w *WAF) SetAuditLogWriter(alw auditlog.Writer) {
+	w.auditLogWriter = alw
+}
+
+// AuditLogWriter returns the audit log writer. If the writer is not initialized,
+// it will be initialized
+func (w *WAF) AuditLogWriter() auditlog.Writer {
+	if !w.auditLogWriterInitialized {
+		if err := w.auditLogWriter.Init(w.AuditLogWriterConfig); err != nil {
+			w.Logger.Error().Err(err).Msg("Failed to initialize audit log")
+		}
+	}
+
+	return w.auditLogWriter
+}
+
+// InitAuditLogWriter initializes the audit log writer. If the writer is already
+// initialized, it will return an error as initializing the audit log writer twice
+// seems to be a bug.
+func (w *WAF) InitAuditLogWriter() error {
+	if w.auditLogWriterInitialized {
+		return errors.New("audit log writer already initialized")
+	}
+
+	if err := w.auditLogWriter.Init(w.AuditLogWriterConfig); err != nil {
+		return err
+	}
+
+	w.auditLogWriterInitialized = true
+
 	return nil
 }
 

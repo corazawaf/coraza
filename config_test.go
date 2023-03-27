@@ -114,7 +114,7 @@ func TestConfigSetters(t *testing.T) {
 }
 
 func TestConfigLogger(t *testing.T) {
-	logger, err := auditlog.GetLogWriter("concurrent")
+	logger, err := auditlog.GetWriter("concurrent")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,22 +122,19 @@ func TestConfigLogger(t *testing.T) {
 		LogRelevantOnly().
 		WithLogger(logger).
 		WithParts([]types.AuditLogPart("abcdedf"))
+
 	cfg := NewWAFConfig().WithAuditLog(logCfg)
 	waf, err := NewWAF(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
 	w := waf.(wafWrapper)
-	// TODO(jptosso): this is not working, but there is a comment in the code
-	/*
-		if w.waf.AuditEngine != types.AuditEngineRelevantOnly {
-			t.Errorf("expected audit engine to be relevant only")
-		}
-	*/
-	if w.waf.AuditLogWriter == nil {
-		t.Errorf("expected audit log writer to be set")
-	}
+
 	if w.waf.AuditLogParts == nil {
 		t.Errorf("expected audit log parts to be set")
+	}
+
+	if w.waf.AuditEngine != types.AuditEngineRelevantOnly {
+		t.Errorf("expected audit engine to be relevant only")
 	}
 }

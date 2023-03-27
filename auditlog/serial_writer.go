@@ -8,39 +8,34 @@ package auditlog
 
 import (
 	"io"
-	"io/fs"
 	"log"
 	"os"
-
-	"github.com/corazawaf/coraza/v3/types"
 )
 
 // serialWriter is used to store logs in a single file
 type serialWriter struct {
-	closer    func() error
+	io.Closer
 	log       log.Logger
-	formatter LogFormatter
+	formatter Formatter
 }
 
-func (sl *serialWriter) Init(c types.Config) error {
-	fileMode := c.Get("auditlog_file_mode", fs.FileMode(0644)).(fs.FileMode)
-	sl.formatter = c.Get("auditlog_formatter", nativeFormatter).(LogFormatter)
-
-	fileName := c.Get("auditlog_file", "").(string)
-	var w io.Writer
-	if fileName != "" {
-		f, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, fileMode)
-		if err != nil {
-			return err
-		}
-		w = f
-		sl.closer = f.Close
-	} else {
-		w = io.Discard
-		sl.closer = func() error { return nil }
+func (sl *serialWriter) Init(c Config) error {
+	if c.File == "" {
+		sl.Closer = noopCloser{}
+		return nil
 	}
+
+	fileMode := c.FileMode
+	sl.formatter = c.Formatter
+
+	f, err := os.OpenFile(c.File, os.O_APPEND|os.O_CREATE|os.O_WRONLY, fileMode)
+	if err != nil {
+		return err
+	}
+	sl.Closer = f
+
 	sl.log.SetFlags(0)
-	sl.log.SetOutput(w)
+	sl.log.SetOutput(f)
 	return nil
 }
 
@@ -57,8 +52,4 @@ func (sl *serialWriter) Write(al *Log) error {
 	return nil
 }
 
-func (sl *serialWriter) Close() error {
-	return sl.closer()
-}
-
-var _ LogWriter = (*serialWriter)(nil)
+var _ Writer = (*serialWriter)(nil)

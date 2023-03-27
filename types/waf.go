@@ -8,27 +8,6 @@ import (
 	"strings"
 )
 
-// Config is used to store the configuration of the WAF
-// Internal configurations are not exported.
-// This is used to connect directives with audit auditlog.
-// A WAF instance will share it's Config object with the
-// audit auditlog.
-type Config map[string]interface{}
-
-// Get returns the configuration value for the given key
-// If the key is not found, it returns the default value
-func (w Config) Get(key string, defaultValue interface{}) interface{} {
-	if value, ok := w[key]; ok {
-		return value
-	}
-	return defaultValue
-}
-
-// Set sets the configuration value for the given key
-func (w Config) Set(key string, value interface{}) {
-	w[key] = value
-}
-
 // AuditEngineStatus represents the functionality
 // of the audit engine.
 type AuditEngineStatus int

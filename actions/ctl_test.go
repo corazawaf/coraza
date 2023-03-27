@@ -318,7 +318,7 @@ func TestCtl(t *testing.T) {
 			defer logsBuf.Reset()
 
 			logger := debuglog.Default().
-				WithLevel(debuglog.LogLevelWarn).
+				WithLevel(debuglog.LevelWarn).
 				WithOutput(logsBuf)
 
 			waf := corazawaf.NewWAF()
@@ -424,7 +424,7 @@ func TestParseCtl(t *testing.T) {
 
 }
 func TestCtlParseRange(t *testing.T) {
-	rules := []*corazawaf.Rule{
+	rules := []corazawaf.Rule{
 		{
 			RuleMetadata: corazarules.RuleMetadata{
 				ID_: 5,
