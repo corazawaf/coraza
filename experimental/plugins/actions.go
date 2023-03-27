@@ -13,7 +13,6 @@ import (
 type ActionFactory = func() rules.Action
 
 // RegisterAction registers a new RuleAction
-// It can be used also for plugins.
 // If you register an action with an existing name, it will be overwritten.
 func RegisterAction(name string, a ActionFactory) {
 	actions.Register(name, a)
