@@ -24,47 +24,47 @@ type ruleActionWrapper = func() rules.Action
 // TODO maybe change it to sync.Map
 var actionmap = map[string]ruleActionWrapper{}
 
-// RegisterPlugin registers a new RuleAction
+// Register registers a new RuleAction
 // It can be used also for plugins.
 // If you register an action with an existing name, it will be overwritten.
-func RegisterPlugin(name string, a func() rules.Action) {
+func Register(name string, a func() rules.Action) {
 	name = strings.ToLower(name)
 	actionmap[name] = a
 }
 
 func init() {
-	RegisterPlugin("allow", allow)
-	RegisterPlugin("auditlog", auditlog)
-	RegisterPlugin("block", block)
-	RegisterPlugin("capture", capture)
-	RegisterPlugin("chain", chain)
-	RegisterPlugin("ctl", ctl)
-	RegisterPlugin("deny", deny)
-	RegisterPlugin("drop", drop)
-	RegisterPlugin("exec", exec)
-	RegisterPlugin("expirevar", expirevar)
-	RegisterPlugin("id", id)
-	RegisterPlugin("initcol", initcol)
-	RegisterPlugin("log", log)
-	RegisterPlugin("logdata", logdata)
-	RegisterPlugin("maturity", maturity)
-	RegisterPlugin("msg", msg)
-	RegisterPlugin("multiMatch", multimatch)
-	RegisterPlugin("noauditlog", noauditlog)
-	RegisterPlugin("nolog", nolog)
-	RegisterPlugin("pass", pass)
-	RegisterPlugin("phase", phase)
-	RegisterPlugin("redirect", redirect)
-	RegisterPlugin("rev", rev)
-	RegisterPlugin("setenv", setenv)
-	RegisterPlugin("setvar", setvar)
-	RegisterPlugin("severity", severity)
-	RegisterPlugin("skip", skip)
-	RegisterPlugin("skipAfter", skipafter)
-	RegisterPlugin("status", status)
-	RegisterPlugin("t", t)
-	RegisterPlugin("tag", tag)
-	RegisterPlugin("ver", ver)
+	Register("allow", allow)
+	Register("auditlog", auditlog)
+	Register("block", block)
+	Register("capture", capture)
+	Register("chain", chain)
+	Register("ctl", ctl)
+	Register("deny", deny)
+	Register("drop", drop)
+	Register("exec", exec)
+	Register("expirevar", expirevar)
+	Register("id", id)
+	Register("initcol", initcol)
+	Register("log", log)
+	Register("logdata", logdata)
+	Register("maturity", maturity)
+	Register("msg", msg)
+	Register("multiMatch", multimatch)
+	Register("noauditlog", noauditlog)
+	Register("nolog", nolog)
+	Register("pass", pass)
+	Register("phase", phase)
+	Register("redirect", redirect)
+	Register("rev", rev)
+	Register("setenv", setenv)
+	Register("setvar", setvar)
+	Register("severity", severity)
+	Register("skip", skip)
+	Register("skipAfter", skipafter)
+	Register("status", status)
+	Register("t", t)
+	Register("tag", tag)
+	Register("ver", ver)
 }
 
 // Get returns an unwrapped RuleAction from the actionmap based on the name
