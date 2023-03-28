@@ -1343,3 +1343,33 @@ func TestResponseBodyForceProcessing(t *testing.T) {
 		t.Fatal("json.key not found")
 	}
 }
+
+func TestForceRequestBodyOverride(t *testing.T) {
+	waf := NewWAF()
+	waf.RequestBodyAccess = true
+	tx := waf.NewTransaction()
+	tx.ForceRequestBodyVariable = true
+	tx.variables.RequestBodyProcessor().Set("JSON")
+	tx.ProcessRequestHeaders()
+	if _, _, err := tx.WriteRequestBody([]byte("foo=bar&baz=qux")); err != nil {
+		t.Errorf("Failed to write request body: %v", err)
+	}
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Errorf("Failed to process request body: %v", err)
+	}
+	if tx.variables.RequestBodyProcessor().Get() != "JSON" {
+		t.Errorf("Failed to force request body variable")
+	}
+	tx = waf.NewTransaction()
+	tx.ForceRequestBodyVariable = true
+	tx.ProcessRequestHeaders()
+	if _, _, err := tx.WriteRequestBody([]byte("foo=bar&baz=qux")); err != nil {
+		t.Errorf("Failed to write request body: %v", err)
+	}
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Errorf("Failed to process request body: %v", err)
+	}
+	if tx.variables.RequestBodyProcessor().Get() != "URLENCODED" {
+		t.Errorf("Failed to force request body variable, got RBP: %q", tx.variables.RequestBodyProcessor().Get())
+	}
+}
