@@ -4,8 +4,6 @@
 package rules
 
 import (
-	"io"
-
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/types"
@@ -26,20 +24,13 @@ type TransactionState interface {
 	// Interrupt interrupts the transaction.
 	Interrupt(interruption *types.Interruption)
 
-	// TODO: elaborate while addressing ContentInjection actions
-	// ResponseBodyWriter allows writing to the response body.
-	// TODO(anuraaga): Should this be combined with interruption? Any action writing anything to response can be dangerous.
-	// ResponseBodyWriter() io.Writer
-	WriteResponseBody(b []byte) (*types.Interruption, int, error)
-
-	ReadResponseBodyFrom(io.Reader) (*types.Interruption, int, error)
-
 	// DebugLogger returns the logger for this transaction.
 	DebugLogger() debuglog.Logger
 
 	// Capturing returns whether the transaction is capturing. CaptureField only works if capturing, this can be used
 	// as an optimization to avoid processing specific to capturing fields.
 	Capturing() bool // TODO(anuraaga): Only needed in operators?
+
 	// CaptureField captures a field.
 	CaptureField(idx int, value string)
 
