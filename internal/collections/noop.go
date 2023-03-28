@@ -14,7 +14,7 @@ var Noop collection.Map = &noop{}
 
 type noop struct{}
 
-func (c *noop) Get(key string) []string {
+func (c *noop) Get(_ string) []string {
 	return []string{}
 }
 
