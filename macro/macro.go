@@ -36,8 +36,8 @@ func NewMacro(data string) (Macro, error) {
 
 type macroToken struct {
 	text     string
-	variable variables.RuleVariable
 	key      string
+	variable variables.RuleVariable
 }
 
 // macro is used to create tokenized strings that can be

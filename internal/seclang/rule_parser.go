@@ -20,10 +20,10 @@ import (
 var defaultActionsPhase2 = "phase:2,log,auditlog,pass"
 
 type ruleAction struct {
+	F     rules.Action
 	Key   string
 	Value string
 	Atype rules.ActionType
-	F     rules.Action
 }
 
 // RuleParser is used to programatically create new rules using seclang formatted strings
@@ -303,12 +303,12 @@ func (p *RuleParser) Rule() *corazawaf.Rule {
 
 // RuleOptions contains the options used to compile a rule
 type RuleOptions struct {
-	WithOperator bool
 	WAF          *corazawaf.WAF
 	ParserConfig ParserConfig
 	Raw          string
 	Directive    string
 	Data         string
+	WithOperator bool
 }
 
 // ParseRule parses a rule from a string

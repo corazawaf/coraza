@@ -145,9 +145,9 @@ func isSlash(c uint8) bool {
 
 type lazybuf struct {
 	path       string
+	volAndPath string
 	buf        []byte
 	w          int
-	volAndPath string
 	volLen     int
 }
 

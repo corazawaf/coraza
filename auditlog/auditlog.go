@@ -22,9 +22,11 @@ type Log struct {
 // Transaction contains transaction specific
 // information
 type Transaction struct {
+	Request  *TransactionRequest  `json:"request,omitempty"`
+	Response *TransactionResponse `json:"response,omitempty"`
+	Producer *TransactionProducer `json:"producer,omitempty"`
 	// Timestamp "02/Jan/2006:15:04:20 -0700" format
-	Timestamp     string `json:"timestamp"`
-	UnixTimestamp int64  `json:"unix_timestamp"`
+	Timestamp string `json:"timestamp"`
 
 	// Unique ID
 	ID string `json:"id"`
@@ -32,22 +34,21 @@ type Transaction struct {
 	// Client IP Address string representation
 	ClientIP string `json:"client_ip"`
 
-	ClientPort int                  `json:"client_port"`
-	HostIP     string               `json:"host_ip"`
-	HostPort   int                  `json:"host_port"`
-	ServerID   string               `json:"server_id"`
-	Request    *TransactionRequest  `json:"request,omitempty"`
-	Response   *TransactionResponse `json:"response,omitempty"`
-	Producer   *TransactionProducer `json:"producer,omitempty"`
+	HostIP        string `json:"host_ip"`
+	ServerID      string `json:"server_id"`
+	UnixTimestamp int64  `json:"unix_timestamp"`
+
+	ClientPort int `json:"client_port"`
+	HostPort   int `json:"host_port"`
 }
 
 // TransactionResponse contains response specific
 // information
 type TransactionResponse struct {
-	Protocol string              `json:"protocol"`
-	Status   int                 `json:"status"`
 	Headers  map[string][]string `json:"headers"`
+	Protocol string              `json:"protocol"`
 	Body     string              `json:"body"`
+	Status   int                 `json:"status"`
 }
 
 // TransactionProducer contains producer specific
@@ -77,8 +78,8 @@ type TransactionRequest struct {
 // for the uploaded files using multipart forms
 type TransactionRequestFiles struct {
 	Name string `json:"name"`
-	Size int64  `json:"size"`
 	Mime string `json:"mime"`
+	Size int64  `json:"size"`
 }
 
 // Message contains information about the triggered
@@ -93,25 +94,23 @@ type Message struct {
 // rules in detail
 type MessageData struct {
 	File     string             `json:"file"`
-	Line     int                `json:"line"`
-	ID       int                `json:"id"`
 	Rev      string             `json:"rev"`
 	Msg      string             `json:"msg"`
 	Data     string             `json:"data"`
-	Severity types.RuleSeverity `json:"severity"`
 	Ver      string             `json:"ver"`
+	Raw      string             `json:"raw"`
+	Tags     []string           `json:"tags"`
+	Line     int                `json:"line"`
+	ID       int                `json:"id"`
+	Severity types.RuleSeverity `json:"severity"`
 	Maturity int                `json:"maturity"`
 	Accuracy int                `json:"accuracy"`
-	Tags     []string           `json:"tags"`
-	Raw      string             `json:"raw"`
 }
 
 // LEGACY FORMAT
 
 // Main struct for audit log data
 type logLegacy struct {
-	// Section A
-	Transaction logLegacyTransaction `json:"transaction"`
 
 	// Section B or C
 	Request *logLegacyRequest `json:"request,omitempty"`
@@ -124,6 +123,8 @@ type logLegacy struct {
 
 	// Section H
 	AuditData *logLegacyData `json:"audit_data,omitempty"`
+	// Section A
+	Transaction logLegacyTransaction `json:"transaction"`
 }
 
 type logLegacyTransaction struct {
@@ -131,33 +132,33 @@ type logLegacyTransaction struct {
 	Time          string `json:"time"`
 	TransactionID string `json:"transaction_id"`
 	RemoteAddress string `json:"remote_address"`
-	RemotePort    int    `json:"remote_port"`
 	LocalAddress  string `json:"local_address"`
+	RemotePort    int    `json:"remote_port"`
 	LocalPort     int    `json:"local_port"`
 }
 
 type logLegacyRequest struct {
-	RequestLine string `json:"request_line"`
 	// Headers should be a map of slices but in this case they are
 	// joined by comma (,)
-	Headers map[string]string `json:"headers,omitempty"`
+	Headers     map[string]string `json:"headers,omitempty"`
+	RequestLine string            `json:"request_line"`
 }
 
 type logLegacyResponse struct {
-	Status   int               `json:"status"`
-	Protocol string            `json:"protocol"`
 	Headers  map[string]string `json:"headers"`
+	Protocol string            `json:"protocol"`
+	Status   int               `json:"status"`
 }
 
 type logLegacyData struct {
-	Messages              []string           `json:"messages"`
-	ErrorMessages         []string           `json:"error_messages"`
 	Handler               string             `json:"handler"`
-	Stopwatch             logLegacyStopwatch `json:"stopwatch"`
-	ResponseBodyDechunked bool               `json:"response_body_dechunked"`
-	Producer              []string           `json:"producer"`
 	Server                string             `json:"server"`
 	EngineMode            string             `json:"engine_mode"`
+	Messages              []string           `json:"messages"`
+	ErrorMessages         []string           `json:"error_messages"`
+	Producer              []string           `json:"producer"`
+	Stopwatch             logLegacyStopwatch `json:"stopwatch"`
+	ResponseBodyDechunked bool               `json:"response_body_dechunked"`
 }
 
 type logLegacyStopwatch struct {

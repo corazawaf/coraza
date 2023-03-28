@@ -17,39 +17,40 @@ import (
 // Test represents a unique transaction within
 // a WAF instance for a test case
 type Test struct {
+	// Expected contains the expected result of the test
+	ExpectedOutput profile.ExpectedOutput
 	// waf contains a waf instance pointer
 	waf coraza.WAF
 	// transaction contains the current transaction
 	transaction types.Transaction
-	magic       bool
-	Name        string
-	body        string
+	// ResponseHeaders contains the headers of the response
+	ResponseHeaders map[string]string
+	// RequestHeaders contains the headers of the request
+	RequestHeaders map[string]string
+	// RequestMethod contains the method of the request
+	RequestMethod string
+	// RequestURI contains the uri of the request
+	RequestURI string
 
 	// public variables
 	// RequestAddress contains the address of the request
 	RequestAddress string
-	// RequestPort contains the port of the request
-	RequestPort int
-	// RequestURI contains the uri of the request
-	RequestURI string
-	// RequestMethod contains the method of the request
-	RequestMethod string
 	// RequestProtocol contains the protocol of the request
 	RequestProtocol string
-	// RequestHeaders contains the headers of the request
-	RequestHeaders map[string]string
-	// ResponseHeaders contains the headers of the response
-	ResponseHeaders map[string]string
-	// ResponseCode contains the response code of the response
-	ResponseCode int
+	body            string
+
+	Name string
 	// ResponseProtocol contains the protocol of the response
 	ResponseProtocol string
 	// ServerAddress contains the address of the server
 	ServerAddress string
+	// RequestPort contains the port of the request
+	RequestPort int
+	// ResponseCode contains the response code of the response
+	ResponseCode int
 	// ServerPort contains the port of the server
 	ServerPort int
-	// Expected contains the expected result of the test
-	ExpectedOutput profile.ExpectedOutput
+	magic      bool
 }
 
 // SetWAF sets the waf instance pointer

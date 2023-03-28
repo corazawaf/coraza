@@ -10,19 +10,19 @@ import (
 // RuleMetadata is used to store rule metadata
 // that can be used across packages
 type RuleMetadata struct {
-	ID_       int
-	File_     string
-	Line_     int
-	Rev_      string
-	Severity_ types.RuleSeverity
-	Version_  string
-	Tags_     []string
-	Maturity_ int
-	Accuracy_ int
 	Operator_ string
-	Phase_    types.RulePhase
+	File_     string
+	Rev_      string
+	Version_  string
 	Raw_      string
 	SecMark_  string
+	Tags_     []string
+	Line_     int
+	Severity_ types.RuleSeverity
+	Maturity_ int
+	Accuracy_ int
+	ID_       int
+	Phase_    types.RulePhase
 }
 
 func (r *RuleMetadata) ID() int {

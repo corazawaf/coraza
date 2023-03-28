@@ -140,17 +140,17 @@ const (
 //		return show403()
 //	}
 type Interruption struct {
-	// Rule that caused the interruption
-	RuleID int
 
 	// drop, deny, redirect
 	Action string
 
-	// Force this status code
-	Status int
-
 	// Parameters used by proxy and redirect
 	Data string
+	// Rule that caused the interruption
+	RuleID int
+
+	// Force this status code
+	Status int
 }
 
 // BodyBufferOptions is used to feed a coraza.BodyBuffer with parameters

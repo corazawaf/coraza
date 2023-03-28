@@ -21,8 +21,8 @@ import (
 type rwInterceptor struct {
 	w                  http.ResponseWriter
 	tx                 types.Transaction
-	statusCode         int
 	proto              string
+	statusCode         int
 	isWriteHeaderFlush bool
 	wroteHeader        bool
 }

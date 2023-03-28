@@ -7,17 +7,17 @@ import "io/fs"
 
 // OperatorOptions is used to store the options for a rule operator
 type OperatorOptions struct {
-	// Arguments is used to store the operator args
-	Arguments string
-
-	// Path is used to store a list of possible data paths
-	Path []string
 
 	// Root is the root to resolve Path from.
 	Root fs.FS
 
 	// Datasets contains input datasets or dictionaries
 	Datasets map[string][]string
+	// Arguments is used to store the operator args
+	Arguments string
+
+	// Path is used to store a list of possible data paths
+	Path []string
 }
 
 // Operator interface is used to define rule @operators

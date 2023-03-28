@@ -17,13 +17,13 @@ import (
 )
 
 type concurrentWriter struct {
+	io.Closer
 	mux         *sync.RWMutex
 	log         *log.Logger
+	formatter   Formatter
 	logDir      string
 	logDirMode  fs.FileMode
 	logFileMode fs.FileMode
-	formatter   Formatter
-	io.Closer
 }
 
 func (cl *concurrentWriter) Init(c Config) error {

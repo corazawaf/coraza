@@ -22,11 +22,11 @@ const maxIncludeRecursion = 100
 
 // Parser provides functions to evaluate (compile) SecLang directives
 type Parser struct {
+	root         fs.FS
 	options      *DirectiveOptions
-	currentLine  int
 	currentFile  string
 	currentDir   string
-	root         fs.FS
+	currentLine  int
 	includeCount int
 }
 
@@ -212,14 +212,14 @@ func NewParser(waf *corazawaf.WAF) *Parser {
 }
 
 type ParserConfig struct {
+	Root                        fs.FS
+	ConfigFile                  string
+	ConfigDir                   string
+	WorkingDir                  string
 	DisabledRuleActions         []string
 	DisabledRuleOperators       []string
 	RuleDefaultActions          []string
+	LastLine                    int
 	HasRuleDefaultActions       bool
 	IgnoreRuleCompilationErrors bool
-	LastLine                    int
-	ConfigFile                  string
-	ConfigDir                   string
-	Root                        fs.FS
-	WorkingDir                  string
 }

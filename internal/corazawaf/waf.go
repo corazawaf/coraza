@@ -32,40 +32,41 @@ import (
 // All WAF instance fields are immutable, if you update any
 // of them in runtime you might create concurrency issues
 type WAF struct {
+
+	// AuditLogWriterConfig is configuration of audit logging, populated by multiple directives and consumed by
+	// SecAuditLog.
+	AuditLogWriterConfig auditlog.Config
+
+	// Used for the debug logger
+	Logger debuglog.Logger
+
+	auditLogWriter auditlog.Writer
+
 	txPool sync.Pool
-
-	// ruleGroup object, contains all rules and helpers
-	Rules RuleGroup
-
-	// If true, transactions will have access to the request body
-	RequestBodyAccess bool
-
-	// Request body page file limit
-	RequestBodyLimit int64
 
 	// Request body in memory limit
 	requestBodyInMemoryLimit *int64
 
-	// If true, transactions will have access to the response body
-	ResponseBodyAccess bool
+	ErrorLogCb func(rule types.MatchedRule)
 
-	// Response body memory limit
-	ResponseBodyLimit int64
+	// Contains the regular expression for relevant status audit logging
+	AuditLogRelevantStatus *regexp.Regexp
 
-	// Defines if rules are going to be evaluated
-	RuleEngine types.RuleEngineStatus
+	// UploadDir is the directory where the uploaded files will be stored
+	UploadDir string
 
-	// Responses will only be loaded if mime is listed here
-	ResponseBodyMimeTypes []string
+	// ProducerConnectorVersion is used by connectors to identify the producer
+	// version on audit logs
+	ProducerConnectorVersion string
 
 	// Web Application id, apps sharing the same id will share persistent collections
 	WebAppID string
 
-	// Add significant rule components to audit log
-	ComponentNames []string
+	// ProducerConnector is used by connectors to identify the producer
+	// on audit logs, for example, apache-modcoraza
+	ProducerConnector string
 
-	// If true WAF engine will fail when remote rules cannot be loaded
-	AbortOnRemoteRulesFail bool
+	ArgumentSeparator string
 
 	// Instructs the waf to change the Server response header
 	ServerSignature string
@@ -79,52 +80,55 @@ type WAF struct {
 	// Path to store data files (ex. cache)
 	DataDir string
 
-	// If true, the WAF will store the uploaded files in the UploadDir
-	// directory
-	UploadKeepFiles bool
-	// UploadFileMode instructs the waf to set the file mode for uploaded files
-	UploadFileMode fs.FileMode
-	// UploadFileLimit is the maximum size of the uploaded file to be stored
-	UploadFileLimit int
-	// UploadDir is the directory where the uploaded files will be stored
-	UploadDir string
+	// Responses will only be loaded if mime is listed here
+	ResponseBodyMimeTypes []string
 
-	// Request body in memory limit excluding the size of any files being transported in the request.
-	RequestBodyNoFilesLimit int64
+	// Add significant rule components to audit log
+	ComponentNames []string
 
-	RequestBodyLimitAction types.BodyLimitAction
-
-	ResponseBodyLimitAction types.BodyLimitAction
-
-	ArgumentSeparator string
-
-	// ProducerConnector is used by connectors to identify the producer
-	// on audit logs, for example, apache-modcoraza
-	ProducerConnector string
-
-	// ProducerConnectorVersion is used by connectors to identify the producer
-	// version on audit logs
-	ProducerConnectorVersion string
-
-	// Used for the debug logger
-	Logger debuglog.Logger
-
-	ErrorLogCb func(rule types.MatchedRule)
-
-	// Audit mode status
-	AuditEngine types.AuditEngineStatus
+	// ruleGroup object, contains all rules and helpers
+	Rules RuleGroup
 
 	// Array of logging parts to be used
 	AuditLogParts types.AuditLogParts
 
-	// Contains the regular expression for relevant status audit logging
-	AuditLogRelevantStatus *regexp.Regexp
+	RequestBodyLimitAction types.BodyLimitAction
 
-	auditLogWriter auditlog.Writer
+	// Request body page file limit
+	RequestBodyLimit int64
 
-	// AuditLogWriterConfig is configuration of audit logging, populated by multiple directives and consumed by
-	// SecAuditLog.
-	AuditLogWriterConfig auditlog.Config
+	ResponseBodyLimitAction types.BodyLimitAction
+
+	// UploadFileLimit is the maximum size of the uploaded file to be stored
+	UploadFileLimit int
+
+	// Request body in memory limit excluding the size of any files being transported in the request.
+	RequestBodyNoFilesLimit int64
+
+	// Defines if rules are going to be evaluated
+	RuleEngine types.RuleEngineStatus
+
+	// Response body memory limit
+	ResponseBodyLimit int64
+
+	// Audit mode status
+	AuditEngine types.AuditEngineStatus
+
+	// UploadFileMode instructs the waf to set the file mode for uploaded files
+	UploadFileMode fs.FileMode
+
+	// If true, transactions will have access to the response body
+	ResponseBodyAccess bool
+
+	// If true, the WAF will store the uploaded files in the UploadDir
+	// directory
+	UploadKeepFiles bool
+
+	// If true, transactions will have access to the request body
+	RequestBodyAccess bool
+
+	// If true WAF engine will fail when remote rules cannot be loaded
+	AbortOnRemoteRulesFail bool
 
 	auditLogWriterInitialized bool
 }

@@ -15,8 +15,6 @@ import (
 // MatchData works like VariableKey but is used for logging,
 // so it contains the collection as a string, and it's value
 type MatchData struct {
-	// Variable
-	Variable_ variables.RuleVariable
 	// Key of the variable, blank if no key is required
 	Key_ string
 	// Value of the current VARIABLE:KEY
@@ -25,6 +23,8 @@ type MatchData struct {
 	Message_ string
 	// Macro expanded logdata
 	Data_ string
+	// Variable
+	Variable_ variables.RuleVariable
 }
 
 func (m *MatchData) Variable() variables.RuleVariable {
@@ -50,6 +50,7 @@ func (m *MatchData) Data() string {
 // MatchedRule contains a list of macro expanded messages,
 // matched variables and a pointer to the rule
 type MatchedRule struct {
+	Rule_ types.RuleMetadata
 	// Macro expanded message
 	Message_ string
 	// Macro expanded logdata
@@ -58,8 +59,6 @@ type MatchedRule struct {
 	URI_ string
 	// Transaction id
 	TransactionID_ string
-	// Is disruptive
-	Disruptive_ bool
 	// Server IP address
 	ServerIPAddress_ string
 	// Client IP address
@@ -67,7 +66,8 @@ type MatchedRule struct {
 	// A slice of matched variables
 	MatchedDatas_ []types.MatchData
 
-	Rule_ types.RuleMetadata
+	// Is disruptive
+	Disruptive_ bool
 }
 
 func (mr *MatchedRule) Message() string {

@@ -38,49 +38,23 @@ import (
 // It is safe to manage multiple transactions but transactions themself are not
 // thread safe
 type Transaction struct {
-	// Transaction ID
-	id string
+	variables TransactionVariables
 
-	// Contains the list of matched rules and associated match information
-	matchedRules []types.MatchedRule
-
-	// True if the transaction has been disrupted by any rule
-	interruption *types.Interruption
-
-	// This is used to store log messages
-	Logdata string
-
-	// Rules will be skipped after a rule with this SecMarker is found
-	SkipAfter string
-
-	// AllowType is used by the allow disruptive action to skip evaluating rules after being allowed
-	AllowType corazatypes.AllowType
-
-	// Copies from the WAF instance that may be overwritten by the ctl action
-	AuditEngine               types.AuditEngineStatus
-	AuditLogParts             types.AuditLogParts
-	ForceRequestBodyVariable  bool
-	RequestBodyAccess         bool
-	RequestBodyLimit          int64
-	ForceResponseBodyVariable bool
-	ResponseBodyAccess        bool
-	ResponseBodyLimit         int64
-	RuleEngine                types.RuleEngineStatus
-	HashEngine                bool
-	HashEnforcement           bool
-
-	// Stores the last phase that was evaluated
-	// Used by allow to skip phases
-	lastPhase types.RulePhase
+	debugLogger debuglog.Logger
 
 	// Handles request body buffers
 	requestBodyBuffer *BodyBuffer
 
-	// Handles response body buffers
-	responseBodyBuffer *BodyBuffer
+	transformationCache map[transformationKey]*transformationValue
 
-	// Rules with this id are going to be skipped while processing a phase
-	ruleRemoveByID []int
+	// True if the transaction has been disrupted by any rule
+	interruption *types.Interruption
+
+	// Contains a WAF instance for the current transaction
+	WAF *WAF
+
+	// Contains duration in useconds per phase
+	stopWatches map[types.RulePhase]int64
 
 	// ruleRemoveTargetByID is used by ctl to remove rule targets by id during the
 	// transaction. All other "target removers" like "ByTag" are an abstraction of "ById"
@@ -88,32 +62,66 @@ type Transaction struct {
 	// {85: {variables.RequestHeaders, "user-agent"}}
 	ruleRemoveTargetByID map[int][]ruleVariableParams
 
+	// Handles response body buffers
+	responseBodyBuffer *BodyBuffer
+
+	// This is used to store log messages
+	Logdata string
+
+	// Rules will be skipped after a rule with this SecMarker is found
+	SkipAfter string
+
+	// Transaction ID
+	id string
+
+	AuditLogParts types.AuditLogParts
+
+	// Rules with this id are going to be skipped while processing a phase
+	ruleRemoveByID []int
+
+	// Contains the list of matched rules and associated match information
+	matchedRules []types.MatchedRule
+
+	RequestBodyLimit int64
+
+	// Copies from the WAF instance that may be overwritten by the ctl action
+	AuditEngine types.AuditEngineStatus
+
+	// Stores the last phase that was evaluated
+	// Used by allow to skip phases
+	lastPhase types.RulePhase
+
+	RuleEngine types.RuleEngineStatus
+
+	// AllowType is used by the allow disruptive action to skip evaluating rules after being allowed
+	AllowType corazatypes.AllowType
+
+	// Timestamp of the request
+	Timestamp int64
+
+	ResponseBodyLimit int64
+
 	// Will skip this number of rules, this value will be decreased on each skip
 	Skip int
+
+	ForceResponseBodyVariable bool
+	RequestBodyAccess         bool
+	ForceRequestBodyVariable  bool
 
 	// Actions with capture features will read the capture state from this field
 	// We have currently removed this feature as Capture will always run
 	// We must reuse it in the future
 	Capture bool
 
-	// Contains duration in useconds per phase
-	stopWatches map[types.RulePhase]int64
-
-	// Contains a WAF instance for the current transaction
-	WAF *WAF
-
-	debugLogger debuglog.Logger
-
-	// Timestamp of the request
-	Timestamp int64
+	HashEngine bool
 
 	// When a rule matches and contains r.Audit = true, this will be set to true
 	// it will write to the audit log
 	audit bool
 
-	variables TransactionVariables
+	HashEnforcement bool
 
-	transformationCache map[transformationKey]*transformationValue
+	ResponseBodyAccess bool
 }
 
 func (tx *Transaction) ID() string {

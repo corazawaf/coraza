@@ -14,8 +14,8 @@ import (
 
 type expirevarFn struct {
 	collection string
-	ttl        int
 	key        string
+	ttl        int
 }
 
 func (a *expirevarFn) Init(_ rules.RuleMetadata, data string) error {

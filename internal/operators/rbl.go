@@ -18,8 +18,8 @@ import (
 const timeout = 500 * time.Millisecond
 
 type rbl struct {
-	service  string
 	resolver *net.Resolver
+	service  string
 }
 
 var _ rules.Operator = (*rbl)(nil)

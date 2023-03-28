@@ -7,21 +7,21 @@ package profile
 type Meta struct {
 	Author      string `yaml:"author,omitempty"`
 	Description string `yaml:"description,omitempty"`
-	Enabled     bool   `yaml:"enabled,omitempty"`
 	Name        string `yaml:"name,omitempty"`
+	Enabled     bool   `yaml:"enabled,omitempty"`
 }
 
 // StageInput contains the input data for tests
 type StageInput struct {
+	Headers        map[string]string `yaml:"headers,omitempty"`
 	DestAddr       string            `yaml:"dest_addr,omitempty"`
-	Port           int               `yaml:"port,omitempty"`
 	Method         string            `yaml:"method,omitempty"`
 	URI            string            `yaml:"uri,omitempty"`
 	Version        string            `yaml:"version,omitempty"`
 	Data           string            `yaml:"data,omitempty"` // Accepts array or string
-	Headers        map[string]string `yaml:"headers,omitempty"`
-	RawRequest     []byte            `yaml:"raw_request,omitempty"`
 	EncodedRequest string            `yaml:"encoded_request,omitempty"`
+	RawRequest     []byte            `yaml:"raw_request,omitempty"`
+	Port           int               `yaml:"port,omitempty"`
 	StopMagic      bool              `yaml:"stop_magic,omitempty"`
 }
 
@@ -34,8 +34,8 @@ type Stage struct {
 // SubStage contains the input data and expected output
 // for tests
 type SubStage struct {
-	Input  StageInput     `yaml:"input,omitempty"`
 	Output ExpectedOutput `yaml:"output,omitempty"`
+	Input  StageInput     `yaml:"input,omitempty"`
 }
 
 // Test contains the title and test stages
@@ -49,31 +49,31 @@ type Test struct {
 // It contains metadata and instructions for a test
 // It requires more documentation
 type Profile struct {
-	Rules string `yaml:"rules,omitempty"`
-	Pass  bool   `yaml:"pass,omitempty"`
 	Meta  Meta   `yaml:"meta,omitempty"`
+	Rules string `yaml:"rules,omitempty"`
 	Tests []Test `yaml:"tests,omitempty"`
+	Pass  bool   `yaml:"pass,omitempty"`
 }
 
 // ExpectedOutput contains the expected output results for a test
 type ExpectedOutput struct {
-	Headers           map[string]string     `yaml:"headers,omitempty"`
 	Data              interface{}           `yaml:"data,omitempty"` // Accepts array or string
+	Status            interface{}           `yaml:"status,omitempty"`
+	Headers           map[string]string     `yaml:"headers,omitempty"`
+	Interruption      *ExpectedInterruption `yaml:"interruption,omitempty"`
 	LogContains       string                `yaml:"log_contains,omitempty"`
 	NoLogContains     string                `yaml:"no_log_contains,omitempty"`
-	ExpectError       bool                  `yaml:"expect_error,omitempty"`
 	TriggeredRules    []int                 `yaml:"triggered_rules,omitempty"`
 	NonTriggeredRules []int                 `yaml:"non_triggered_rules,omitempty"`
-	Status            interface{}           `yaml:"status,omitempty"`
-	Interruption      *ExpectedInterruption `yaml:"interruption,omitempty"`
+	ExpectError       bool                  `yaml:"expect_error,omitempty"`
 }
 
 // ExpectedInterruption contains the expected interruption results for a test
 type ExpectedInterruption struct {
-	RuleID int    `yaml:"rule_id,omitempty"`
 	Action string `yaml:"action,omitempty"`
-	Status int    `yaml:"status,omitempty"`
 	Data   string `yaml:"data,omitempty"`
+	RuleID int    `yaml:"rule_id,omitempty"`
+	Status int    `yaml:"status,omitempty"`
 }
 
 // Profiles is a map of registered profiles used by test runners

@@ -12,9 +12,9 @@ import (
 )
 
 type defaultEvent struct {
-	level   Level
 	printer Printer
 	fields  []byte
+	level   Level
 }
 
 func (e *defaultEvent) Msg(msg string) {
@@ -90,8 +90,8 @@ func (defaultEvent) IsEnabled() bool {
 type defaultLogger struct {
 	printer       Printer
 	factory       PrinterFactory
-	level         Level
 	defaultFields []byte
+	level         Level
 }
 
 func (l defaultLogger) WithOutput(w io.Writer) Logger {

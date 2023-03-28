@@ -11,20 +11,20 @@ import (
 
 // Config is the configuration of a Writer.
 type Config struct {
+
+	// Formatter is the formatter to use when writing formatted audit logs.
+	Formatter Formatter
 	// File is the path to the file to write the raw audit log to.
 	File string
-
-	// FileMode is the mode to use when creating File.
-	FileMode fs.FileMode
 
 	// Dir is the path to the directory to write formatted audit logs to.
 	Dir string
 
+	// FileMode is the mode to use when creating File.
+	FileMode fs.FileMode
+
 	// DirMode is the mode to use when creating Dir.
 	DirMode fs.FileMode
-
-	// Formatter is the formatter to use when writing formatted audit logs.
-	Formatter Formatter
 }
 
 // NewConfig returns a Config with default values.

@@ -22,11 +22,11 @@ import (
 // ruleActionParams is used as a wrapper to store the action name
 // and parameters, basically for logging purposes.
 type ruleActionParams struct {
-	// The name of the action, used for logging
-	Name string
 
 	// The action to be executed
 	Function rules.Action
+	// The name of the action, used for logging
+	Name string
 }
 
 // Operator is a container for an operator,
@@ -43,24 +43,19 @@ type ruleOperatorParams struct {
 }
 
 type ruleVariableException struct {
-	// The string key for the variable that is going to be requested
-	// If KeyRx is not nil, KeyStr is ignored
-	KeyStr string
 
 	// The key for the variable that is going to be requested
 	// If nil, KeyStr is going to be used
 	KeyRx *regexp.Regexp
+	// The string key for the variable that is going to be requested
+	// If KeyRx is not nil, KeyStr is ignored
+	KeyStr string
 }
 
 // RuleVariable is compiled during runtime by transactions
 // to get values from the transaction's variables
 // It supports xml, regex, exceptions and many more features
 type ruleVariableParams struct {
-	// If true, the count of results will be returned
-	Count bool
-
-	// The VARIABLE that will be requested
-	Variable variables.RuleVariable
 
 	// The key for the variable that is going to be requested
 	// If nil, KeyStr is going to be used
@@ -72,6 +67,11 @@ type ruleVariableParams struct {
 
 	// A slice of key exceptions
 	Exceptions []ruleVariableException
+	// If true, the count of results will be returned
+	Count bool
+
+	// The VARIABLE that will be requested
+	Variable variables.RuleVariable
 }
 
 type ruleTransformationParams struct {
@@ -92,25 +92,41 @@ func (p *inferredPhases) set(phase types.RulePhase) {
 // Rule is used to test a Transaction against certain operators
 // and execute actions
 type Rule struct {
-	corazarules.RuleMetadata
-	// Contains a list of variables that will be compiled
-	// by a transaction
-	variables []ruleVariableParams
+
+	// Rule logdata
+	LogData macro.Macro
+
+	// Message text to be macro expanded and logged
+	// In future versions we might use a special type of string that
+	// supports cached macro expansions. For performance
+	Msg macro.Macro
+
+	// Contains the child rule to chain, nil if there are no chains
+	Chain *Rule
 
 	// Contains a pointer to the operator struct used
 	// SecActions and SecMark can have nil Operators
 	operator *ruleOperatorParams
+
+	corazarules.RuleMetadata
+	// Contains a list of variables that will be compiled
+	// by a transaction
+	variables []ruleVariableParams
 
 	// List of transformations to be evaluated
 	// In the future, transformations might be run by the
 	// action itself, not sure yet
 	transformations []ruleTransformationParams
 
-	transformationsID int
-
 	// Slice of initialized actions to be evaluated during
 	// the rule evaluation process
 	actions []ruleActionParams
+
+	transformationsID int
+
+	// DisruptiveStatus is the status that will be set to interruptions
+	// by disruptive rules
+	DisruptiveStatus int
 
 	// Contains the Id of the parent rule if you are inside
 	// a chain. Otherwise, it will be 0
@@ -119,21 +135,6 @@ type Rule struct {
 	// Capture is used by the transaction to tell the operator
 	// to capture variables on TX:0-9
 	Capture bool
-
-	// Contains the child rule to chain, nil if there are no chains
-	Chain *Rule
-
-	// DisruptiveStatus is the status that will be set to interruptions
-	// by disruptive rules
-	DisruptiveStatus int
-
-	// Message text to be macro expanded and logged
-	// In future versions we might use a special type of string that
-	// supports cached macro expansions. For performance
-	Msg macro.Macro
-
-	// Rule logdata
-	LogData macro.Macro
 
 	// If true, triggering this rule write to the error log
 	Log bool
@@ -218,7 +219,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 			for _, c := range ecol {
 				if c.Variable == v.Variable {
 					// TODO shall we check the pointer?
-					v.Exceptions = append(v.Exceptions, ruleVariableException{c.KeyStr, nil})
+					v.Exceptions = append(v.Exceptions, ruleVariableException{KeyStr: c.KeyStr})
 				}
 			}
 
@@ -429,7 +430,7 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 	}
 	for i, rv := range r.variables {
 		if rv.Variable == v {
-			rv.Exceptions = append(rv.Exceptions, ruleVariableException{strings.ToLower(key), re})
+			rv.Exceptions = append(rv.Exceptions, ruleVariableException{KeyStr: strings.ToLower(key), KeyRx: re})
 			r.variables[i] = rv
 		}
 	}

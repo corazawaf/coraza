@@ -13,8 +13,8 @@ import (
 )
 
 type setenvFn struct {
-	key   string
 	value macro.Macro
+	key   string
 }
 
 func (a *setenvFn) Init(_ rules.RuleMetadata, data string) error {

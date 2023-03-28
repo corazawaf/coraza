@@ -44,10 +44,10 @@ const (
 )
 
 type ctlFn struct {
-	action     ctlFunctionType
 	value      string
-	collection variables.RuleVariable
 	colKey     string
+	action     ctlFunctionType
+	collection variables.RuleVariable
 }
 
 func (a *ctlFn) Init(_ rules.RuleMetadata, data string) error {

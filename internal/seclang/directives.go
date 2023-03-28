@@ -25,14 +25,14 @@ import (
 // TODO(anuraaga): Propagation of config probably should be separated from a directive's options.
 type DirectiveOptions struct {
 	WAF      *corazawaf.WAF
-	Raw      string
-	Opts     string
-	Path     []string
 	Datasets map[string][]string
 
 	// Parser is configuration of the parser, populated by multiple directives and consumed by
 	// directives that parse.
 	Parser ParserConfig
+	Raw    string
+	Opts   string
+	Path   []string
 }
 
 type directive = func(options *DirectiveOptions) error

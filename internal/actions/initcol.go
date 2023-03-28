@@ -12,8 +12,8 @@ import (
 // Initializes a persistent collection and add the data to the standard collections coraza.
 type initcolFn struct {
 	collection string
-	variable   byte
 	key        string
+	variable   byte
 }
 
 func (a *initcolFn) Init(_ rules.RuleMetadata, data string) error {
