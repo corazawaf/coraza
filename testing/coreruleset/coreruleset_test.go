@@ -263,12 +263,6 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 		if err != nil {
 			return err
 		}
-		// now we add the X-Test-Id header to all tests
-		for _, tt := range t.Tests {
-			for _, stage := range tt.Stages {
-				stage.Stage.Input.Headers.Add("X-Test-Id", tt.TestTitle)
-			}
-		}
 		tests = append(tests, t)
 		return nil
 	})
