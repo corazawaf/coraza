@@ -34,6 +34,11 @@ func Format() error {
 	if err := sh.RunV("go", "mod", "tidy"); err != nil {
 		return err
 	}
+
+	if err := sh.RunV("go", "work", "sync"); err != nil {
+		return err
+	}
+
 	// addlicense strangely logs skipped files to stderr despite not being erroneous, so use the long sh.Exec form to
 	// discard stderr too.
 	if _, err := sh.Exec(map[string]string{}, io.Discard, io.Discard, "go", "run", fmt.Sprintf("github.com/google/addlicense@%s", addLicenseVersion),
@@ -57,7 +62,7 @@ func Lint() error {
 		return err
 	}
 
-	if sh.Run("git", "diff", "--exit-code") != nil {
+	if sh.Run("git", "diff", "--exit-code", "--", "'*.gen.go'") != nil {
 		return errUpdateGeneratedFiles
 	}
 
@@ -69,7 +74,11 @@ func Lint() error {
 		return err
 	}
 
-	if sh.Run("git", "diff", "--exit-code", "go.mod", "go.sum") != nil {
+	if err := sh.RunV("go", "work", "sync"); err != nil {
+		return err
+	}
+
+	if sh.Run("git", "diff", "--exit-code", "go.mod", "go.sum", "go.work", "go.work.sum") != nil {
 		return errRunGoModTidy
 	}
 

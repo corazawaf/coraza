@@ -6,8 +6,9 @@ package coraza
 import (
 	"io/fs"
 
+	"github.com/corazawaf/coraza/v3/auditlog"
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -15,9 +16,6 @@ import (
 //
 // Note: WAFConfig is immutable. Each WithXXX function returns a new instance including the corresponding change.
 type WAFConfig interface {
-	// WithRules adds rules to the WAF.
-	WithRules(rules ...*corazawaf.Rule) WAFConfig
-
 	// WithDirectives parses the directives from the given string and adds them to the WAF.
 	WithDirectives(directives string) WAFConfig
 
@@ -59,7 +57,7 @@ type WAFConfig interface {
 	WithResponseBodyMimeTypes(mimeTypes []string) WAFConfig
 
 	// WithDebugLogger configures a debug logger.
-	WithDebugLogger(logger loggers.DebugLogger) WAFConfig
+	WithDebugLogger(logger debuglog.Logger) WAFConfig
 
 	// WithErrorCallback configures an error callback that can be used
 	// to log errors triggered by the WAF.
@@ -70,15 +68,9 @@ type WAFConfig interface {
 	WithRootFS(fs fs.FS) WAFConfig
 }
 
-const unsetLimit = -1
-
 // NewWAFConfig creates a new WAFConfig with the default settings.
 func NewWAFConfig() WAFConfig {
-	return &wafConfig{
-		requestBodyLimit:         unsetLimit,
-		requestBodyInMemoryLimit: unsetLimit,
-		responseBodyLimit:        unsetLimit,
-	}
+	return &wafConfig{}
 }
 
 // AuditLogConfig controls audit logging.
@@ -89,8 +81,8 @@ type AuditLogConfig interface {
 	// WithParts configures the parts of the request/response to be logged.
 	WithParts(parts types.AuditLogParts) AuditLogConfig
 
-	// WithLogger configures the loggers.LogWriter to write logs to.
-	WithLogger(logger loggers.LogWriter) AuditLogConfig
+	// WithLogger configures the auditlog.Writer to write logs to.
+	WithLogger(logger auditlog.Writer) AuditLogConfig
 }
 
 // NewAuditLogConfig returns a new AuditLogConfig with the default settings.
@@ -111,12 +103,12 @@ type wafConfig struct {
 	rules                    []wafRule
 	auditLog                 *auditLogConfig
 	requestBodyAccess        bool
-	requestBodyLimit         int
-	requestBodyInMemoryLimit int
+	requestBodyLimit         *int
+	requestBodyInMemoryLimit *int
 	responseBodyAccess       bool
-	responseBodyLimit        int
+	responseBodyLimit        *int
 	responseBodyMimeTypes    []string
-	debugLogger              loggers.DebugLogger
+	debugLogger              debuglog.Logger
 	errorCallback            func(rule types.MatchedRule)
 	fsRoot                   fs.FS
 }
@@ -163,7 +155,7 @@ func (c *wafConfig) WithResponseBodyAccess() WAFConfig {
 	return ret
 }
 
-func (c *wafConfig) WithDebugLogger(logger loggers.DebugLogger) WAFConfig {
+func (c *wafConfig) WithDebugLogger(logger debuglog.Logger) WAFConfig {
 	ret := c.clone()
 	ret.debugLogger = logger
 	return ret
@@ -191,19 +183,19 @@ func (c *wafConfig) clone() *wafConfig {
 
 func (c *wafConfig) WithRequestBodyLimit(limit int) WAFConfig {
 	ret := c.clone()
-	ret.requestBodyLimit = limit
+	ret.requestBodyLimit = &limit
 	return ret
 }
 
 func (c *wafConfig) WithRequestBodyInMemoryLimit(limit int) WAFConfig {
 	ret := c.clone()
-	ret.requestBodyInMemoryLimit = limit
+	ret.requestBodyInMemoryLimit = &limit
 	return ret
 }
 
 func (c *wafConfig) WithResponseBodyLimit(limit int) WAFConfig {
 	ret := c.clone()
-	ret.responseBodyLimit = limit
+	ret.responseBodyLimit = &limit
 	return ret
 }
 
@@ -216,12 +208,12 @@ func (c *wafConfig) WithResponseBodyMimeTypes(mimeTypes []string) WAFConfig {
 type auditLogConfig struct {
 	relevantOnly bool
 	parts        types.AuditLogParts
-	logger       loggers.LogWriter
+	writer       auditlog.Writer
 }
 
 func (c *auditLogConfig) LogRelevantOnly() AuditLogConfig {
 	ret := c.clone()
-	c.relevantOnly = true
+	ret.relevantOnly = true
 	return ret
 }
 
@@ -231,9 +223,9 @@ func (c *auditLogConfig) WithParts(parts types.AuditLogParts) AuditLogConfig {
 	return ret
 }
 
-func (c *auditLogConfig) WithLogger(logger loggers.LogWriter) AuditLogConfig {
+func (c *auditLogConfig) WithLogger(logger auditlog.Writer) AuditLogConfig {
 	ret := c.clone()
-	ret.logger = logger
+	ret.writer = logger
 	return ret
 }
 

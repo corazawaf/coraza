@@ -5,21 +5,8 @@ package types
 
 import (
 	"io"
-)
 
-// ArgumentType is used to define types of argument for transactions
-// There are three supported types: POST, GET and PATH
-type ArgumentType int
-
-const (
-	// ArgumentInvalid is used to define invalid argument types
-	ArgumentInvalid ArgumentType = iota
-	// ArgumentGET is used to define GET arguments
-	ArgumentGET
-	// ArgumentPOST is used to define POST arguments
-	ArgumentPOST
-	// ArgumentPATH is used to define PATH arguments
-	ArgumentPATH
+	"github.com/corazawaf/coraza/v3/debuglog"
 )
 
 // Transaction is created from a WAF instance to handle web requests and responses,
@@ -33,20 +20,25 @@ type Transaction interface {
 	// ProcessConnection should be called at very beginning of a request process, it is
 	// expected to be executed prior to the virtual host resolution, when the
 	// connection arrives on the server.
-	// Important: Remember to check for a possible intervention.
 	ProcessConnection(client string, cPort int, server string, sPort int)
 
 	// ProcessURI Performs the analysis on the URI and all the query string variables.
 	// This method should be called at very beginning of a request process, it is
 	// expected to be executed prior to the virtual host resolution, when the
 	// connection arrives on the server.
-	// note: There is no direct connection between this function and any phase of
-	//
-	//	the SecLanguages phases. It is something that may occur between the
-	//	SecLanguage phase 1 and 2.
+	// note: There is no direct connection between this function and any phase of the
+	// SecLanguages phases. It is something that may occur between the SecLanguage
+	// phase 1 and 2.
 	//
 	// note: This function won't add GET arguments, they must be added with AddArgument
 	ProcessURI(uri string, method string, httpVersion string)
+
+	// SetServerName allows to set server name details.
+	// The API consumer is in charge of retrieving the value (e.g. from the host header)
+	// before providing it to this method.
+	// In order to be able to check SERVER_NAME variable since phase 1, it is expected
+	// to execute SetServerName before calling ProcessRequestHeaders.
+	SetServerName(serverName string)
 
 	// AddRequestHeader Adds a request header
 	//
@@ -68,12 +60,20 @@ type Transaction interface {
 	// within the Transaction while also passing it further in an HTTP framework.
 	RequestBodyReader() (io.Reader, error)
 
-	// AddArgument Add arguments GET or POST
-	// This will set ARGS_(GET|POST), ARGS, ARGS_NAMES, ARGS_COMBINED_SIZE and
-	// ARGS_(GET|POST)_NAMES
-	// With this method it is possible to feed Coraza with a GET or POST argument
-	// providing granular control over the arguments.
-	AddArgument(orig ArgumentType, key string, value string)
+	// AddGetRequestArgument Add arguments GET, this will feed ARGS_GET, ARGS_GET_NAMES,
+	// ARGS, ARGS_NAMES, and ARGS_COMBINED_SIZE variables.
+	AddGetRequestArgument(key string, value string)
+
+	// AddPostRequestArgument Add arguments POST, this will feed ARGS_POST, ARGS_POST_NAMES,
+	// ARGS, ARGS_NAMES, and ARGS_COMBINED_SIZE variables.
+	AddPostRequestArgument(key string, value string)
+
+	// AddPathRequestArgument Add arguments PATH, this will feed ARGS_PATH, ARGS_PATH_NAMES,
+	// ARGS, ARGS_NAMES, and ARGS_COMBINED_SIZE variables.
+	AddPathRequestArgument(key string, value string)
+
+	// AddResponseArgument Add arguments to the response, this will feed ARGS_RESPONSE
+	AddResponseArgument(key string, value string)
 
 	// ProcessRequestBody Performs the analysis of the request body (if any)
 	//
@@ -186,6 +186,9 @@ type Transaction interface {
 
 	// MatchedRules returns the rules that have matched the requests with associated information.
 	MatchedRules() []MatchedRule
+
+	// DebugLogger returns the debug logger for this transaction.
+	DebugLogger() debuglog.Logger
 
 	// ID returns the transaction ID.
 	ID() string

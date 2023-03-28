@@ -22,7 +22,7 @@ func TestInterruption(t *testing.T) {
 	waf := coraza.NewWAF()
 	p := NewParser(waf)
 	if err := p.FromString(`SecAction "id:1,deny,log,phase:1"`); err != nil {
-		t.Error("Could not create from string")
+		t.Errorf("Could not create from string: %s", err.Error())
 	}
 	tx := waf.NewTransaction()
 	if tx.ProcessRequestHeaders() == nil {
@@ -36,6 +36,20 @@ func TestDirectivesCaseInsensitive(t *testing.T) {
 	err := p.FromString("seCwEbAppid 15")
 	if err != nil {
 		t.Error(err)
+	}
+}
+
+func TestInvalidDirective(t *testing.T) {
+	waf := coraza.NewWAF()
+	p := NewParser(waf)
+	err := p.FromString("Unknown Rule")
+	if err == nil {
+		t.Error("expected error")
+	}
+
+	err = p.FromString("SecEngineRule")
+	if err == nil {
+		t.Error("expected error")
 	}
 }
 

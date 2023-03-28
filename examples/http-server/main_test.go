@@ -14,7 +14,7 @@ import (
 func setupTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
 	waf := createWAF()
-	return httptest.NewServer(txhttp.WrapHandler(waf, t.Logf, http.HandlerFunc(exampleHandler)))
+	return httptest.NewServer(txhttp.WrapHandler(waf, http.HandlerFunc(exampleHandler)))
 }
 
 func doGetRequest(t *testing.T, getPath string) int {
@@ -79,7 +79,7 @@ func TestHttpServer(t *testing.T) {
 		{
 			"positive for response body limit reject",
 			"/",
-			403,
+			413,
 			map[string]string{
 				"DIRECTIVES_FILE": "./testdata/response-body-limits-reject.conf",
 				"RESPONSE_BODY":   "response body beyond the limit",

@@ -15,10 +15,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
-	"github.com/corazawaf/coraza/v3/loggers"
-	"github.com/corazawaf/coraza/v3/types"
 )
 
 func TestAuditLogMessages(t *testing.T) {
@@ -27,23 +26,25 @@ func TestAuditLogMessages(t *testing.T) {
 	// generate a random tmp file
 	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if err := parser.FromString(`
 		SecRuleEngine DetectionOnly
 		SecAuditEngine On
 		SecAuditLogFormat json
 		SecAuditLogType serial
+		SecAuditLogParts ABCDEFGHIJKZ
 		SecRule ARGS "@unconditionalMatch" "id:1,phase:1,log,msg:'unconditional match'"
 	`); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	defer os.Remove(file.Name())
+
 	tx := waf.NewTransaction()
-	tx.AddArgument(types.ArgumentGET, "test", "test")
+	tx.AddGetRequestArgument("test", "test")
 	tx.ProcessRequestHeaders()
 	al := tx.AuditLog()
 	if len(al.Messages) != 1 {
@@ -57,12 +58,12 @@ func TestAuditLogMessages(t *testing.T) {
 	if _, err := file.Seek(0, 0); err != nil {
 		t.Error(err)
 	}
-	var al2 loggers.AuditLog
+	var al2 auditlog.Log
 	if err := json.NewDecoder(file).Decode(&al2); err != nil {
 		t.Error(err)
 	}
 	if len(al2.Messages) != 1 {
-		t.Errorf("Expected 1 message, got %d", len(al2.Messages))
+		t.Fatalf("Expected 1 message, got %d", len(al2.Messages))
 	}
 	if al2.Messages[0].Message != "unconditional match" {
 		t.Errorf("Expected message %q, got %q", "unconditional match", al2.Messages[0].Message)
@@ -92,14 +93,14 @@ func TestAuditLogRelevantOnly(t *testing.T) {
 		t.Error(err)
 	}
 	tx := waf.NewTransaction()
-	tx.AddArgument(types.ArgumentGET, "test", "test")
+	tx.AddGetRequestArgument("test", "test")
 	tx.ProcessRequestHeaders()
 	// now we read file
 	if _, err := file.Seek(0, 0); err != nil {
 		t.Error(err)
 	}
 	tx.ProcessLogging()
-	var al2 loggers.AuditLog
+	var al2 auditlog.Log
 	// this should fail, there should be no log
 	if err := json.NewDecoder(file).Decode(&al2); err == nil {
 		t.Error(err)
@@ -126,17 +127,18 @@ func TestAuditLogRelevantOnlyOk(t *testing.T) {
 		SecAuditLogRelevantStatus ".*"
 		SecRule ARGS "@unconditionalMatch" "id:1,phase:1,log,msg:'unconditional match'"
 	`); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+
 	tx := waf.NewTransaction()
-	tx.AddArgument(types.ArgumentGET, "test", "test")
+	tx.AddGetRequestArgument("test", "test")
 	tx.ProcessRequestHeaders()
 	// now we read file
 	if _, err := file.Seek(0, 0); err != nil {
 		t.Error(err)
 	}
 	tx.ProcessLogging()
-	var al2 loggers.AuditLog
+	var al2 auditlog.Log
 	// this should pass as it matches any status
 	if err := json.NewDecoder(file).Decode(&al2); err != nil {
 		t.Error(err)
@@ -166,14 +168,14 @@ func TestAuditLogRelevantOnlyNoAuditlog(t *testing.T) {
 		t.Error(err)
 	}
 	tx := waf.NewTransaction()
-	tx.AddArgument(types.ArgumentGET, "test", "test")
+	tx.AddGetRequestArgument("test", "test")
 	tx.ProcessRequestHeaders()
 	// now we read file
 	if _, err := file.Seek(0, 0); err != nil {
 		t.Error(err)
 	}
 	tx.ProcessLogging()
-	var al2 loggers.AuditLog
+	var al2 auditlog.Log
 	// there should be no audit log because of noauditlog
 	if err := json.NewDecoder(file).Decode(&al2); err == nil {
 		t.Errorf("there should be no audit log, got %v", al2)

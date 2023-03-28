@@ -7,7 +7,7 @@ import (
 	"io"
 
 	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/loggers"
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -31,113 +31,97 @@ type TransactionState interface {
 	// TODO(anuraaga): Should this be combined with interruption? Any action writing anything to response can be dangerous.
 	// ResponseBodyWriter() io.Writer
 	WriteResponseBody(b []byte) (*types.Interruption, int, error)
+
 	ReadResponseBodyFrom(io.Reader) (*types.Interruption, int, error)
 
 	// DebugLogger returns the logger for this transaction.
-	DebugLogger() loggers.DebugLogger
+	DebugLogger() debuglog.Logger
 
 	// Capturing returns whether the transaction is capturing. CaptureField only works if capturing, this can be used
 	// as an optimization to avoid processing specific to capturing fields.
 	Capturing() bool // TODO(anuraaga): Only needed in operators?
 	// CaptureField captures a field.
 	CaptureField(idx int, value string)
+
+	LastPhase() types.RulePhase
 }
 
 // TransactionVariables has pointers to all the variables of the transaction
 type TransactionVariables interface {
+	// All iterates over all the variables in this TransactionVariables, invoking f for each.
+	// Results are passed in no defined order. If f returns false, iteration stops.
+	All(f func(v variables.RuleVariable, col collection.Collection) bool)
+
 	// Simple Variables
-	UserID() *collection.Simple
-	UrlencodedError() *collection.Simple
-	ResponseContentType() *collection.Simple
-	UniqueID() *collection.Simple
-	ArgsCombinedSize() *collection.SizeProxy
-	AuthType() *collection.Simple
-	FilesCombinedSize() *collection.Simple
-	FullRequest() *collection.Simple
-	FullRequestLength() *collection.Simple
-	InboundDataError() *collection.Simple
-	MatchedVar() *collection.Simple
-	MatchedVarName() *collection.Simple
-	MultipartBoundaryQuoted() *collection.Simple
-	MultipartBoundaryWhitespace() *collection.Simple
-	MultipartCrlfLfLines() *collection.Simple
-	MultipartDataAfter() *collection.Simple
-	MultipartDataBefore() *collection.Simple
-	MultipartFileLimitExceeded() *collection.Simple
-	MultipartPartHeaders() *collection.Map
-	MultipartHeaderFolding() *collection.Simple
-	MultipartInvalidHeaderFolding() *collection.Simple
-	MultipartInvalidPart() *collection.Simple
-	MultipartInvalidQuoting() *collection.Simple
-	MultipartLfLine() *collection.Simple
-	MultipartMissingSemicolon() *collection.Simple
-	MultipartStrictError() *collection.Simple
-	MultipartUnmatchedBoundary() *collection.Simple
-	OutboundDataError() *collection.Simple
-	PathInfo() *collection.Simple
-	QueryString() *collection.Simple
-	RemoteAddr() *collection.Simple
-	RemoteHost() *collection.Simple
-	RemotePort() *collection.Simple
-	RequestBodyError() *collection.Simple
-	RequestBodyErrorMsg() *collection.Simple
-	RequestBodyProcessorError() *collection.Simple
-	RequestBodyProcessorErrorMsg() *collection.Simple
-	RequestBodyProcessor() *collection.Simple
-	RequestBasename() *collection.Simple
-	RequestBody() *collection.Simple
-	RequestBodyLength() *collection.Simple
-	RequestFilename() *collection.Simple
-	RequestLine() *collection.Simple
-	RequestMethod() *collection.Simple
-	RequestProtocol() *collection.Simple
-	RequestURI() *collection.Simple
-	RequestURIRaw() *collection.Simple
-	ResponseBody() *collection.Simple
-	ResponseContentLength() *collection.Simple
-	ResponseProtocol() *collection.Simple
-	ResponseStatus() *collection.Simple
-	ServerAddr() *collection.Simple
-	ServerName() *collection.Simple
-	ServerPort() *collection.Simple
-	SessionID() *collection.Simple
-	HighestSeverity() *collection.Simple
-	StatusLine() *collection.Simple
-	InboundErrorData() *collection.Simple
-	// Custom
-	Env() *collection.Map
-	TX() *collection.Map
-	Rule() *collection.Map
-	Duration() *collection.Simple
-	// Proxy Variables
-	Args() *collection.Proxy
-	// Maps Variables
-	ArgsGet() *collection.Map
-	ArgsPost() *collection.Map
-	ArgsPath() *collection.Map
-	FilesTmpNames() *collection.Map
-	Geo() *collection.Map
-	Files() *collection.Map
-	RequestCookies() *collection.Map
-	RequestHeaders() *collection.Map
-	ResponseHeaders() *collection.Map
-	MultipartName() *collection.Map
-	MatchedVarsNames() *collection.Map
-	MultipartFilename() *collection.Map
-	MatchedVars() *collection.Map
-	FilesSizes() *collection.Map
-	FilesNames() *collection.Map
-	FilesTmpContent() *collection.Map
-	ResponseHeadersNames() *collection.Map
-	RequestHeadersNames() *collection.Map
-	RequestCookiesNames() *collection.Map
-	XML() *collection.Map
-	RequestXML() *collection.Map
-	ResponseXML() *collection.Map
-	// Persistent variables
-	IP() *collection.Map
-	// Translation Proxy Variables
-	ArgsNames() *collection.TranslationProxy
-	ArgsGetNames() *collection.TranslationProxy
-	ArgsPostNames() *collection.TranslationProxy
+	UrlencodedError() collection.Single
+	ResponseContentType() collection.Single
+	UniqueID() collection.Single
+	ArgsCombinedSize() collection.Collection
+	FilesCombinedSize() collection.Single
+	FullRequestLength() collection.Single
+	InboundDataError() collection.Single
+	MatchedVar() collection.Single
+	MatchedVarName() collection.Single
+	MultipartDataAfter() collection.Single
+	MultipartPartHeaders() collection.Map
+	OutboundDataError() collection.Single
+	QueryString() collection.Single
+	RemoteAddr() collection.Single
+	RemoteHost() collection.Single
+	RemotePort() collection.Single
+	RequestBodyError() collection.Single
+	RequestBodyErrorMsg() collection.Single
+	RequestBodyProcessorError() collection.Single
+	RequestBodyProcessorErrorMsg() collection.Single
+	RequestBodyProcessor() collection.Single
+	RequestBasename() collection.Single
+	RequestBody() collection.Single
+	RequestBodyLength() collection.Single
+	RequestFilename() collection.Single
+	RequestLine() collection.Single
+	RequestMethod() collection.Single
+	RequestProtocol() collection.Single
+	RequestURI() collection.Single
+	RequestURIRaw() collection.Single
+	ResponseBody() collection.Single
+	ResponseArgs() collection.Map
+	ResponseContentLength() collection.Single
+	ResponseProtocol() collection.Single
+	ResponseStatus() collection.Single
+	ResponseBodyProcessor() collection.Single
+	ServerAddr() collection.Single
+	ServerName() collection.Single
+	ServerPort() collection.Single
+	HighestSeverity() collection.Single
+	StatusLine() collection.Single
+	Env() collection.Map
+	TX() collection.Map
+	Rule() collection.Map
+	Duration() collection.Single
+	Args() collection.Keyed
+	ArgsGet() collection.Map
+	ArgsPost() collection.Map
+	ArgsPath() collection.Map
+	FilesTmpNames() collection.Map
+	Geo() collection.Map
+	Files() collection.Map
+	RequestCookies() collection.Map
+	RequestHeaders() collection.Map
+	ResponseHeaders() collection.Map
+	MultipartName() collection.Map
+	MatchedVarsNames() collection.Collection
+	MultipartFilename() collection.Map
+	MatchedVars() collection.Map
+	FilesSizes() collection.Map
+	FilesNames() collection.Map
+	FilesTmpContent() collection.Map
+	ResponseHeadersNames() collection.Collection
+	RequestHeadersNames() collection.Collection
+	RequestCookiesNames() collection.Collection
+	XML() collection.Map
+	RequestXML() collection.Map
+	ResponseXML() collection.Map
+	ArgsNames() collection.Collection
+	ArgsGetNames() collection.Collection
+	ArgsPostNames() collection.Collection
 }

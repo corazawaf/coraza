@@ -4,7 +4,6 @@
 package actions
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -21,9 +20,9 @@ type setvarFn struct {
 	isRemove   bool
 }
 
-func (a *setvarFn) Init(r rules.RuleMetadata, data string) error {
-	if data == "" {
-		return fmt.Errorf("setvar requires arguments")
+func (a *setvarFn) Init(_ rules.RuleMetadata, data string) error {
+	if len(data) == 0 {
+		return ErrMissingArguments
 	}
 
 	if data[0] == '!' {
@@ -33,7 +32,6 @@ func (a *setvarFn) Init(r rules.RuleMetadata, data string) error {
 
 	var err error
 	key, val, valOk := strings.Cut(data, "=")
-
 	colKey, colVal, colOk := strings.Cut(key, ".")
 	a.collection, err = variables.Parse(colKey)
 	if err != nil {
@@ -46,6 +44,7 @@ func (a *setvarFn) Init(r rules.RuleMetadata, data string) error {
 		}
 		a.key = macro
 	}
+
 	if valOk {
 		macro, err := macro.NewMacro(val)
 		if err != nil {
@@ -59,7 +58,11 @@ func (a *setvarFn) Init(r rules.RuleMetadata, data string) error {
 func (a *setvarFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	key := a.key.Expand(tx)
 	value := a.value.Expand(tx)
-	tx.DebugLogger().Debug("[%s] Setting var %q to %q by rule %d", tx.ID(), key, value, r.ID())
+	tx.DebugLogger().Debug().
+		Str("var_key", key).
+		Str("var_value", value).
+		Int("rule_id", r.ID()).
+		Msg("Action evaluated")
 	a.evaluateTxCollection(r, tx, strings.ToLower(key), value)
 }
 
@@ -68,7 +71,7 @@ func (a *setvarFn) Type() rules.ActionType {
 }
 
 func (a *setvarFn) evaluateTxCollection(r rules.RuleMetadata, tx rules.TransactionState, key string, value string) {
-	col := (tx.Collection(a.collection)).(*collection.Map)
+	col := (tx.Collection(a.collection)).(collection.Map)
 	if col == nil {
 		// fmt.Println("Invalid Collection " + a.Collection) LOG error?
 		return
@@ -93,7 +96,11 @@ func (a *setvarFn) evaluateTxCollection(r rules.RuleMetadata, tx rules.Transacti
 		if len(value) > 1 {
 			sum, err = strconv.Atoi(value[1:])
 			if err != nil {
-				tx.DebugLogger().Error("[%s] Invalid value for setvar %q on rule %d", tx.ID(), value, r.ID())
+				tx.DebugLogger().Error().
+					Str("var_value", value).
+					Int("rule_id", r.ID()).
+					Err(err).
+					Msg("Invalid value")
 				return
 			}
 		}
@@ -101,7 +108,11 @@ func (a *setvarFn) evaluateTxCollection(r rules.RuleMetadata, tx rules.Transacti
 		if res != "" {
 			val, err = strconv.Atoi(res)
 			if err != nil {
-				tx.DebugLogger().Error("[%s] Invalid value for setvar %q on rule %d", tx.ID(), res, r.ID())
+				tx.DebugLogger().Error().
+					Str("var_key", res).
+					Int("rule_id", r.ID()).
+					Err(err).
+					Msg("Invalid value")
 				return
 			}
 		}

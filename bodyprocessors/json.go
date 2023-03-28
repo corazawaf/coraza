@@ -13,8 +13,9 @@ import (
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
-type jsonBodyProcessor struct {
-}
+type jsonBodyProcessor struct{}
+
+var _ BodyProcessor = &jsonBodyProcessor{}
 
 func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v rules.TransactionVariables, _ Options) error {
 	col := v.ArgsPost()
@@ -22,20 +23,21 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v rules.Transactio
 	if err != nil {
 		return err
 	}
-	argsGetCol := v.ArgsGet()
 	for key, value := range data {
-		// TODO: This hack prevent GET variables from overriding POST variables
-		for k := range argsGetCol.Data() {
-			if k == key {
-				argsGetCol.Remove(k)
-			}
-		}
 		col.SetIndex(key, 0, value)
 	}
 	return nil
 }
 
 func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v rules.TransactionVariables, _ Options) error {
+	col := v.ResponseArgs()
+	data, err := readJSON(reader)
+	if err != nil {
+		return err
+	}
+	for key, value := range data {
+		col.SetIndex(key, 0, value)
+	}
 	return nil
 }
 
@@ -96,8 +98,6 @@ func readItems(json gjson.Result, objKey []byte, res map[string]string) {
 		res[string(objKey)] = strconv.Itoa(arrayLen)
 	}
 }
-
-var _ BodyProcessor = &jsonBodyProcessor{}
 
 func init() {
 	Register("json", func() BodyProcessor {

@@ -10,24 +10,23 @@ import (
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
-type msgFn struct {
-}
+type msgFn struct{}
 
 func (a *msgFn) Init(r rules.RuleMetadata, data string) error {
 	data = utils.MaybeRemoveQuotes(data)
-	msg, err := macro.NewMacro(data)
+	if len(data) == 0 {
+		return ErrMissingArguments
+	}
 
+	msg, err := macro.NewMacro(data)
 	if err != nil {
 		return err
 	}
-	// TODO(anuraaga): Confirm this is internal implementation detail
 	r.(*corazawaf.Rule).Msg = msg
 	return nil
 }
 
-func (a *msgFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-	// Not evaluated
-}
+func (a *msgFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
 
 func (a *msgFn) Type() rules.ActionType {
 	return rules.ActionTypeMetadata

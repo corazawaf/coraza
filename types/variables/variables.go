@@ -6,348 +6,199 @@
 package variables
 
 import (
-	"errors"
-	"strings"
+	"github.com/corazawaf/coraza/v3/internal/variables"
 )
 
 // This file repeats the same content many times in order to make access
 // efficient for seclang and transactions
 
 // RuleVariable is used to identify information from a transaction
-type RuleVariable byte
+type RuleVariable = variables.RuleVariable
 
 const (
 	// Unknown is used as placeholder for errors
-	Unknown RuleVariable = iota
+	Unknown = variables.Unknown
 	// ResponseContentType is the content type of the response
-	ResponseContentType
+	ResponseContentType = variables.ResponseContentType
 	// UniqueID is the unique id of the transaction
-	UniqueID
+	UniqueID = variables.UniqueID
 	// ArgsCombinedSize is the combined size of the arguments
-	ArgsCombinedSize
-	// AuthType is the authentication type
-	AuthType
+	ArgsCombinedSize = variables.ArgsCombinedSize
 	// FilesCombinedSize is the combined size of the uploaded files
-	FilesCombinedSize
-	// FullRequest is the full request
-	FullRequest
+	FilesCombinedSize = variables.FilesCombinedSize
 	// FullRequestLength is the length of the full request
-	FullRequestLength
-	// InboundDataError represents errors for inbound data
-	InboundDataError
+	FullRequestLength = variables.FullRequestLength
+	// InboundDataError will be set to 1 when the request body size
+	// is above the setting configured by SecRequesteBodyLimit
+	InboundDataError = variables.InboundDataError
 	// MatchedVar is the value of the matched variable
-	MatchedVar
+	MatchedVar = variables.MatchedVar
 	// MatchedVarName is the name of the matched variable
-	MatchedVarName
-	// MultipartBoundaryQuoted kept for compatibility
-	MultipartBoundaryQuoted
-	// MultipartBoundaryWhitespace kept for compatibility
-	MultipartBoundaryWhitespace
-	// MultipartCrlfLfLines kept for compatibility
-	MultipartCrlfLfLines
+	MatchedVarName = variables.MatchedVarName
 	// MultipartDataAfter kept for compatibility
-	MultipartDataAfter
-	// MultipartDataBefore kept for compatibility
-	MultipartDataBefore
-	// MultipartFileLimitExceeded kept for compatibility
-	MultipartFileLimitExceeded
-	// MultipartHeaderFolding kept for compatibility
-	MultipartHeaderFolding
-	// MultipartInvalidHeaderFolding kept for compatibility
-	MultipartInvalidHeaderFolding
-	// MultipartInvalidPart kept for compatibility
-	MultipartInvalidPart
-	// MultipartInvalidQuoting kept for compatibility
-	MultipartInvalidQuoting
-	// MultipartLfLine kept for compatibility
-	MultipartLfLine
-	// MultipartMissingSemicolon kept for compatibility
-	MultipartMissingSemicolon
-	// MultipartStrictError kept for compatibility
-	MultipartStrictError
-	// MultipartUnmatchedBoundary kept for compatibility
-	MultipartUnmatchedBoundary
+	MultipartDataAfter = variables.MultipartDataAfter
 	// OutboundDataError will be set to 1 when the response body size
 	// is above the setting configured by SecResponseBodyLimit
-	OutboundDataError
-	// PathInfo is kept for compatibility
-	PathInfo
+	OutboundDataError = variables.OutboundDataError
 	// QueryString contains the raw query string part of a request URI
-	QueryString
+	QueryString = variables.QueryString
 	// RemoteAddr is the remote address of the connection
-	RemoteAddr
+	RemoteAddr = variables.RemoteAddr
 	// RemoteHost is the remote host of the connection, not implemented
-	RemoteHost
+	RemoteHost = variables.RemoteHost
 	// RemotePort is the remote port of the connection
-	RemotePort
+	RemotePort = variables.RemotePort
 	// ReqbodyError contains the status of the request body processor used
 	// for request body parsing, 0 means no error, 1 means error
-	ReqbodyError
+	ReqbodyError = variables.ReqbodyError
 	// ReqbodyErrorMsg contains the error message of the request body processor error
-	ReqbodyErrorMsg
+	ReqbodyErrorMsg = variables.ReqbodyErrorMsg
 	// ReqbodyProcessorError is the same as ReqbodyErrr ?
-	ReqbodyProcessorError
+	ReqbodyProcessorError = variables.ReqbodyProcessorError
 	// ReqbodyProcessorErrorMsg is the same as ReqbodyErrorMsg ?
-	ReqbodyProcessorErrorMsg
+	ReqbodyProcessorErrorMsg = variables.ReqbodyProcessorErrorMsg
 	// ReqbodyProcessor contains the name of the request body processor used, default
 	// ones are: URLENCODED, MULTIPART, and XML. They can be extended using plugins.
-	ReqbodyProcessor
+	ReqbodyProcessor = variables.ReqbodyProcessor
 	// RequestBasename contains the name after the last slash in the request URI
 	// It does not pass through any anti-evasion, use with transformations
-	RequestBasename
+	RequestBasename = variables.RequestBasename
 	// RequestBody contains the full request body, it will only be available
 	// For urlencoded requests. It is possible to force it's presence by using
 	// the ctl:forceRequestBodyVariable action
-	RequestBody
+	RequestBody = variables.RequestBody
 	// RequestBodyLength contains the length of the request body in bytes calculated from
 	// the BodyBuffer, not from the content-type header
-	RequestBodyLength
+	RequestBodyLength = variables.RequestBodyLength
 	// RequestFilename holds the relative request URL without the query string part.
 	// Anti-evasion transformations are not used by default
-	RequestFilename
+	RequestFilename = variables.RequestFilename
 	// RequestLine This variable holds the complete request line sent to the server
 	// (including the request method and HTTP version information).
-	RequestLine
+	RequestLine = variables.RequestLine
 	// RequestMethod is the request method
-	RequestMethod
+	RequestMethod = variables.RequestMethod
 	// RequestProtocol is the protocol used in the request
-	RequestProtocol
+	RequestProtocol = variables.RequestProtocol
 	// RequestURI holds the full request URL including the query string data without
 	// the domain name
-	RequestURI
+	RequestURI = variables.RequestURI
 	// RequestURIRaw is the same as RequestURI but with the domain name in case
 	// it was provided in the request line
-	RequestURIRaw
+	RequestURIRaw = variables.RequestURIRaw
 	// ResponseBody contains the full response body, it will only be available if
 	// responseBodyAccess is set to on and the response mime matches the configured
 	// processable mime types
-	ResponseBody
+	ResponseBody = variables.ResponseBody
 	// ResponseContentLength contains the length of the response body in bytes calculated from
 	// the BodyBuffer, not from the content-type header
-	ResponseContentLength
+	ResponseContentLength = variables.ResponseContentLength
 	// ResponseProtocol is the protocol used in the response
-	ResponseProtocol
+	ResponseProtocol = variables.ResponseProtocol
 	// ResponseStatus is the status code of the response
-	ResponseStatus
+	ResponseStatus = variables.ResponseStatus
+	// ResBodyProcessor contains the name of the response body processor used, no default
+	ResBodyProcessor = variables.ResBodyProcessor
 	// ServerAddr is the address of the server
-	ServerAddr
+	ServerAddr = variables.ServerAddr
 	// ServerName is the name of the server
-	ServerName
+	ServerName = variables.ServerName
 	// ServerPort is the port of the server
-	ServerPort
-	// Sessionid is not supported
-	Sessionid
+	ServerPort = variables.ServerPort
 	// HighestSeverity is the highest severity from all matched rules
-	HighestSeverity
+	HighestSeverity = variables.HighestSeverity
 	// StatusLine is the status line of the response, including the request method
 	// and HTTP version information
-	StatusLine
-	// InboundErrorData will be set to 1 when the request body size
-	// is above the setting configured by SecRequesteBodyLimit
-	InboundErrorData
+	StatusLine = variables.StatusLine
 	// Duration contains the time in miliseconds from
 	// the beginning of the transaction until this point
-	Duration
+	Duration = variables.Duration
 	// ResponseHeadersNames contains the names of the response headers
-	ResponseHeadersNames
+	ResponseHeadersNames = variables.ResponseHeadersNames
 	// RequestHeadersNames contains the names of the request headers
-	RequestHeadersNames
-	// Userid is not supported
-	Userid
+	RequestHeadersNames = variables.RequestHeadersNames
 	// Args contains copies of ArgsGet and ArgsPost
-	Args
+	Args = variables.Args
 	// ArgsGet contains the GET (URL) arguments
-	ArgsGet
+	ArgsGet = variables.ArgsGet
 	// ArgsPost contains the POST (BODY) arguments
-	ArgsPost
+	ArgsPost = variables.ArgsPost
 	// ArgsPath contains the url path parts
-	ArgsPath
+	ArgsPath = variables.ArgsPath
 	// FilesSizes contains the sizes of the uploaded files
-	FilesSizes
+	FilesSizes = variables.FilesSizes
 	// FilesNames contains the names of the uploaded files
-	FilesNames
+	FilesNames = variables.FilesNames
 	// FilesTmpContent is not supported
-	FilesTmpContent
+	FilesTmpContent = variables.FilesTmpContent
 	// MultipartFilename contains the multipart data from field FILENAME
-	MultipartFilename
+	MultipartFilename = variables.MultipartFilename
 	// MultipartName contains the multipart data from field NAME.
-	MultipartName
+	MultipartName = variables.MultipartName
 	// MatchedVarsNames is similar to MATCHED_VAR_NAME except that it is
 	// a collection of all matches for the current operator check.
-	MatchedVarsNames
+	MatchedVarsNames = variables.MatchedVarsNames
 	// MatchedVars is similar to MATCHED_VAR except that it is a collection
 	// of all matches for the current operator check
-	MatchedVars
+	MatchedVars = variables.MatchedVars
 	// Files contains a collection of original file names
 	// (as they were called on the remote user’s filesys- tem).
 	// Available only on inspected multipart/form-data requests.
-	Files
+	Files = variables.Files
 	// RequestCookies is a collection of all of request cookies (values only
-	RequestCookies
+	RequestCookies = variables.RequestCookies
 	// RequestHeaders can be used as either a collection of all of the request
 	// headers or can be used to inspect selected headers
-	RequestHeaders
+	RequestHeaders = variables.RequestHeaders
 	// ResponseHeaders can be used as either a collection of all of the response
 	// headers or can be used to inspect selected headers
-	ResponseHeaders
+	ResponseHeaders = variables.ResponseHeaders
 	// Geo contains the location information of the client
-	Geo
+	Geo = variables.Geo
 	// RequestCookiesNames contains the names of the request cookies
-	RequestCookiesNames
+	RequestCookiesNames = variables.RequestCookiesNames
 	// FilesTmpNames contains the names of the uploaded temporal files
-	FilesTmpNames
+	FilesTmpNames = variables.FilesTmpNames
 	// ArgsNames contains the names of the arguments (POST and GET)
-	ArgsNames
+	ArgsNames = variables.ArgsNames
 	// ArgsGetNames contains the names of the GET arguments
-	ArgsGetNames
+	ArgsGetNames = variables.ArgsGetNames
 	// ArgsPostNames contains the names of the POST arguments
-	ArgsPostNames
+	ArgsPostNames = variables.ArgsPostNames
 	// TX contains transaction specific variables created with setvar
-	TX
+	TX = variables.TX
 	// Rule contains rule metadata
-	Rule
+	Rule = variables.Rule
 	// JSON does not provide any data, might be removed
-	JSON
+	JSON = variables.JSON
 	// Env contains the process environment variables
-	Env
-	// IP is kept for compatibility
-	IP
+	Env = variables.Env
 	// UrlencodedError equals 1 if we failed to parse de URL
 	// It applies for URL query part and urlencoded post body
-	UrlencodedError
+	UrlencodedError = variables.UrlencodedError
 	// ResponseArgs contains the response parsed arguments
-	ResponseArgs
+	ResponseArgs = variables.ResponseArgs
 	// ResponseXML contains the response parsed XML
-	ResponseXML
+	ResponseXML = variables.ResponseXML
 	// RequestXML contains the request parsed XML
-	RequestXML
+	RequestXML = variables.RequestXML
 	// XML is a pointer to ResponseXML
-	XML
+	XML = variables.XML
 	// MultipartPartHeaders contains the multipart headers
-	MultipartPartHeaders
+	MultipartPartHeaders = variables.MultipartPartHeaders
+	// ResBodyError is 1 if the response body processor failed
+	ResBodyError = variables.ResBodyError
+	// ResBodyErrorMsg contains the error message if the response body processor failed
+	ResBodyErrorMsg = variables.ResBodyErrorMsg
+	// ResBodyProcessorError is 1 if the response body processor failed
+	ResBodyProcessorError = variables.ResBodyProcessorError
+	// ResBodyProcessorErrorMsg contains the error message if the response body processor failed
+	ResBodyProcessorErrorMsg = variables.ResBodyProcessorErrorMsg
 )
-
-var rulemap = map[RuleVariable]string{
-	Unknown:                       "UNKNOWN",
-	UrlencodedError:               "URLENCODED_ERROR",
-	ResponseContentType:           "RESPONSE_CONTENT_TYPE",
-	UniqueID:                      "UNIQUE_ID",
-	ArgsCombinedSize:              "ARGS_COMBINED_SIZE",
-	AuthType:                      "AUTH_TYPE",
-	FilesCombinedSize:             "FILES_COMBINED_SIZE",
-	FullRequest:                   "FULL_REQUEST",
-	FullRequestLength:             "FULL_REQUEST_LENGTH",
-	InboundDataError:              "INBOUND_DATA_ERROR",
-	MatchedVar:                    "MATCHED_VAR",
-	MatchedVarName:                "MATCHED_VAR_NAME",
-	MultipartBoundaryQuoted:       "MULTIPART_BOUNDARY_QUOTED",
-	MultipartBoundaryWhitespace:   "MULTIPART_BOUNDARY_WHITESPACE",
-	MultipartCrlfLfLines:          "MULTIPART_CRLF_LF_LINES",
-	MultipartDataAfter:            "MULTIPART_DATA_AFTER",
-	MultipartDataBefore:           "MULTIPART_DATA_BEFORE",
-	MultipartFileLimitExceeded:    "MULTIPART_FILE_LIMIT_EXCEEDED",
-	MultipartHeaderFolding:        "MULTIPART_HEADER_FOLDING",
-	MultipartInvalidHeaderFolding: "MULTIPART_INVALID_HEADER_FOLDING",
-	MultipartInvalidPart:          "MULTIPART_INVALID_PART",
-	MultipartInvalidQuoting:       "MULTIPART_INVALID_QUOTING",
-	MultipartLfLine:               "MULTIPART_LF_LINE",
-	MultipartMissingSemicolon:     "MULTIPART_MISSING_SEMICOLON",
-	MultipartStrictError:          "MULTIPART_STRICT_ERROR",
-	MultipartUnmatchedBoundary:    "MULTIPART_UNMATCHED_BOUNDARY",
-	OutboundDataError:             "OUTBOUND_DATA_ERROR",
-	PathInfo:                      "PATH_INFO",
-	QueryString:                   "QUERY_STRING",
-	RemoteAddr:                    "REMOTE_ADDR",
-	RemoteHost:                    "REMOTE_HOST",
-	RemotePort:                    "REMOTE_PORT",
-	ReqbodyError:                  "REQBODY_ERROR",
-	ReqbodyErrorMsg:               "REQBODY_ERROR_MSG",
-	ReqbodyProcessorError:         "REQBODY_PROCESSOR_ERROR",
-	ReqbodyProcessorErrorMsg:      "REQBODY_PROCESSOR_ERROR_MSG",
-	ReqbodyProcessor:              "REQBODY_PROCESSOR",
-	RequestBasename:               "REQUEST_BASENAME",
-	RequestBody:                   "REQUEST_BODY",
-	RequestBodyLength:             "REQUEST_BODY_LENGTH",
-	RequestFilename:               "REQUEST_FILENAME",
-	RequestLine:                   "REQUEST_LINE",
-	RequestMethod:                 "REQUEST_METHOD",
-	RequestProtocol:               "REQUEST_PROTOCOL",
-	RequestURI:                    "REQUEST_URI",
-	RequestURIRaw:                 "REQUEST_URI_RAW",
-	ResponseBody:                  "RESPONSE_BODY",
-	ResponseContentLength:         "RESPONSE_CONTENT_LENGTH",
-	ResponseProtocol:              "RESPONSE_PROTOCOL",
-	ResponseStatus:                "RESPONSE_STATUS",
-	ServerAddr:                    "SERVER_ADDR",
-	ServerName:                    "SERVER_NAME",
-	ServerPort:                    "SERVER_PORT",
-	Sessionid:                     "SESSIONID",
-	HighestSeverity:               "HIGHEST_SEVERITY",
-	StatusLine:                    "STATUS_LINE",
-	InboundErrorData:              "INBOUND_ERROR_DATA",
-	Duration:                      "DURATION",
-	ResponseHeadersNames:          "RESPONSE_HEADERS_NAMES",
-	RequestHeadersNames:           "REQUEST_HEADERS_NAMES",
-	Userid:                        "USERID",
-	Args:                          "ARGS",
-	ArgsGet:                       "ARGS_GET",
-	ArgsPost:                      "ARGS_POST",
-	ArgsPath:                      "ARGS_PATH",
-	FilesSizes:                    "FILES_SIZES",
-	FilesNames:                    "FILES_NAMES",
-	FilesTmpContent:               "FILES_TMP_CONTENT",
-	MultipartFilename:             "MULTIPART_FILENAME",
-	MultipartName:                 "MULTIPART_NAME",
-	MatchedVarsNames:              "MATCHED_VARS_NAMES",
-	MatchedVars:                   "MATCHED_VARS",
-	Files:                         "FILES",
-	RequestCookies:                "REQUEST_COOKIES",
-	RequestHeaders:                "REQUEST_HEADERS",
-	ResponseHeaders:               "RESPONSE_HEADERS",
-	Geo:                           "GEO",
-	RequestCookiesNames:           "REQUEST_COOKIES_NAMES",
-	FilesTmpNames:                 "FILES_TMPNAMES",
-	ArgsNames:                     "ARGS_NAMES",
-	ArgsGetNames:                  "ARGS_GET_NAMES",
-	ArgsPostNames:                 "ARGS_POST_NAMES",
-	TX:                            "TX",
-	Rule:                          "RULE",
-	XML:                           "XML",
-	JSON:                          "JSON",
-	Env:                           "ENV",
-	IP:                            "IP",
-	RequestXML:                    "REQUEST_XML",
-	ResponseXML:                   "RESPONSE_XML",
-	ResponseArgs:                  "RESPONSE_ARGS",
-	MultipartPartHeaders:          "MULTIPART_PART_HEADERS",
-}
-
-var rulemapRev = map[string]RuleVariable{}
-
-// Name transforms a VARIABLE representation
-// into a string, it's used for audit and logging
-func (v RuleVariable) Name() string {
-	if name, ok := rulemap[v]; ok {
-		return name
-	}
-	return "INVALID_VARIABLE"
-}
-
-var errUnknownVariable = errors.New("unknown variable")
 
 // Parse returns the byte interpretation
 // of a variable from a string
 // Returns error if there is no representation
 func Parse(v string) (RuleVariable, error) {
-	if v, ok := rulemapRev[strings.ToUpper(v)]; ok {
-		return v, nil
-	}
-	return 0, errUnknownVariable
-}
-
-func init() {
-	// we fill the rulemapRev with the reverse of rulemap
-	for k, v := range rulemap {
-		rulemapRev[v] = k
-	}
+	return variables.Parse(v)
 }

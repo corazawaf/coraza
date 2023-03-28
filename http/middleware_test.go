@@ -21,21 +21,21 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
-	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/macro"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 func TestProcessRequest(t *testing.T) {
 	req, _ := http.NewRequest("POST", "https://www.coraza.io/test", strings.NewReader("test=456"))
-	waf := corazawaf.NewWAF()
-	tx := waf.NewTransaction()
+	waf, _ := coraza.NewWAF(coraza.NewWAFConfig())
+	tx := waf.NewTransaction().(*corazawaf.Transaction)
 	if _, err := processRequest(tx, req); err != nil {
 		t.Fatal(err)
 	}
-	if tx.Variables().RequestMethod().String() != "POST" {
+	if tx.Variables().RequestMethod().Get() != "POST" {
 		t.Fatal("failed to set request from request object")
 	}
 	if err := tx.Close(); err != nil {
@@ -45,13 +45,13 @@ func TestProcessRequest(t *testing.T) {
 
 func TestProcessRequestEngineOff(t *testing.T) {
 	req, _ := http.NewRequest("POST", "https://www.coraza.io/test", strings.NewReader("test=456"))
-	waf := corazawaf.NewWAF()
-	waf.RuleEngine = types.RuleEngineOff
-	tx := waf.NewTransaction()
+	// TODO(jcchavezs): Shall we make RuleEngine a first class method in WAF config?
+	waf, _ := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives("SecRuleEngine OFF"))
+	tx := waf.NewTransaction().(*corazawaf.Transaction)
 	if _, err := processRequest(tx, req); err != nil {
 		t.Fatal(err)
 	}
-	if tx.Variables().RequestMethod().String() != "POST" {
+	if tx.Variables().RequestMethod().Get() != "POST" {
 		t.Fatal("failed to set request from request object")
 	}
 	if err := tx.Close(); err != nil {
@@ -60,11 +60,9 @@ func TestProcessRequestEngineOff(t *testing.T) {
 }
 
 func TestProcessRequestMultipart(t *testing.T) {
-	waf := corazawaf.NewWAF()
-	waf.RequestBodyAccess = true
+	waf, _ := coraza.NewWAF(coraza.NewWAFConfig().WithRequestBodyAccess())
 
 	tx := waf.NewTransaction()
-	tx.RequestBodyAccess = true
 
 	req := createMultipartRequest(t)
 
@@ -127,17 +125,20 @@ func createMultipartRequest(t *testing.T) *http.Request {
 // from issue https://github.com/corazawaf/coraza/issues/159 @zpeasystart
 func TestDirectiveSecAuditLog(t *testing.T) {
 	waf := corazawaf.NewWAF()
-	p := seclang.NewParser(waf)
-	if err := p.FromString(`
+	waf.RequestBodyAccess = true
+	if err := seclang.NewParser(waf).FromString(`
 	SecRule REQUEST_FILENAME "@unconditionalMatch" "id:100, phase:2, t:none, log, setvar:'tx.count=+1',chain"
 	SecRule ARGS:username "@unconditionalMatch" "t:none, setvar:'tx.count=+2',chain"
 	SecRule ARGS:password "@unconditionalMatch" "t:none, setvar:'tx.count=+3'"
 		`); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	if err := waf.Validate(); err != nil {
+		t.Fatal(err)
+	}
+
 	tx := waf.NewTransaction()
 	defer tx.Close()
-	tx.RequestBodyAccess = true
 	tx.ForceRequestBodyVariable = true
 	// request
 	rdata := []string{
@@ -193,39 +194,27 @@ func errLogger(t *testing.T) func(rule types.MatchedRule) {
 	}
 }
 
-type debugLogger struct {
+type testLogOutput struct {
 	t *testing.T
 }
 
-func (l *debugLogger) Info(message string, args ...interface{}) { l.t.Logf(message, args...) }
-
-func (l *debugLogger) Warn(message string, args ...interface{}) { l.t.Logf(message, args...) }
-
-func (l *debugLogger) Error(message string, args ...interface{}) { l.t.Logf(message, args...) }
-
-func (l *debugLogger) Debug(message string, args ...interface{}) { l.t.Logf(message, args...) }
-
-func (l *debugLogger) Trace(message string, args ...interface{}) { l.t.Logf(message, args...) }
-
-func (l *debugLogger) SetLevel(level loggers.LogLevel) {
-	l.t.Logf("Setting level to %q", level.String())
-}
-
-func (l *debugLogger) SetOutput(w io.WriteCloser) {
-	l.t.Log("ignoring SecDebugLog directive, debug logs are always routed to proxy logs")
+func (l testLogOutput) Write(p []byte) (int, error) {
+	l.t.Log(string(p))
+	return len(p), nil
 }
 
 type httpTest struct {
-	http2            bool
-	reqURI           string
-	reqBody          string
-	echoReqBody      bool
-	reqBodyLimit     int
-	respHeaders      map[string]string
-	respBody         string
-	expectedProto    string
-	expectedStatus   int
-	expectedRespBody string
+	http2                   bool
+	reqURI                  string
+	reqBody                 string
+	echoReqBody             bool
+	reqBodyLimit            int
+	shouldRejectOnBodyLimit bool
+	respHeaders             map[string]string
+	respBody                string
+	expectedProto           string
+	expectedStatus          int
+	expectedRespBody        string
 }
 
 func TestHttpServer(t *testing.T) {
@@ -252,7 +241,7 @@ func TestHttpServer(t *testing.T) {
 			expectedProto:  "HTTP/1.1",
 			expectedStatus: 403,
 		},
-		"request body larger than limit": {
+		"request body larger than limit (process partial)": {
 			reqURI:      "/hello",
 			reqBody:     "eval('cat /etc/passwd')",
 			echoReqBody: true,
@@ -261,6 +250,16 @@ func TestHttpServer(t *testing.T) {
 			expectedProto:    "HTTP/1.1",
 			expectedStatus:   201,
 			expectedRespBody: "eval('cat /etc/passwd')",
+		},
+		"request body larger than limit (reject)": {
+			reqURI:                  "/hello",
+			reqBody:                 "something larger than 3",
+			echoReqBody:             true,
+			reqBodyLimit:            3,
+			shouldRejectOnBodyLimit: true,
+			expectedProto:           "HTTP/1.1",
+			expectedStatus:          413,
+			expectedRespBody:        "",
 		},
 		"response headers blocking": {
 			reqURI:         "/hello",
@@ -282,24 +281,43 @@ func TestHttpServer(t *testing.T) {
 			expectedStatus:   403,
 			expectedRespBody: "", // blocking at response body phase means returning it empty
 		},
+		"allow": {
+			reqURI:         "/allow_me",
+			expectedProto:  "HTTP/1.1",
+			expectedStatus: 201,
+		},
+		"deny passes over allow due to ordering": {
+			reqURI:         "/allow_me?id=0",
+			expectedProto:  "HTTP/1.1",
+			expectedStatus: 403,
+		},
 	}
+
+	logger := debuglog.Default().
+		WithOutput(testLogOutput{t}).
+		WithLevel(debuglog.LevelInfo)
 
 	// Perform tests
 	for name, tCase := range tests {
 		t.Run(name, func(t *testing.T) {
+			limitAction := "ProcessPartial"
+			if tCase.shouldRejectOnBodyLimit {
+				limitAction = "Reject"
+			}
 			conf := coraza.NewWAFConfig().
 				WithDirectives(`
 	# This is a comment
-	SecDebugLogLevel 5
+	SecDebugLogLevel 9
 	SecRequestBodyAccess On
 	SecResponseBodyAccess On
 	SecResponseBodyMimeType text/plain
-	SecRequestBodyLimitAction ProcessPartial
-	SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
+	SecRequestBodyLimitAction ` + limitAction + `
+	SecRule ARGS:id "@eq 0" "id:10, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
 	SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
 	SecRule RESPONSE_HEADERS:Foo "@pm bar" "id:199,phase:3,deny,t:lowercase,deny, status:401,msg:'Invalid response header',log,auditlog"
 	SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
-`).WithErrorCallback(errLogger(t)).WithDebugLogger(&debugLogger{t: t})
+	SecRule REQUEST_URI "/allow_me" "id:9,phase:1,allow,msg:'ALLOWED'"
+`).WithErrorCallback(errLogger(t)).WithDebugLogger(logger)
 			if l := tCase.reqBodyLimit; l > 0 {
 				conf = conf.WithRequestBodyAccess().WithRequestBodyLimit(l).WithRequestBodyInMemoryLimit(l)
 			}
@@ -337,6 +355,10 @@ func TestHttpServerWithRuleEngineOff(t *testing.T) {
 			expectedRespBody: "Waf is Off!",
 		},
 	}
+	logger := debuglog.Default().
+		WithOutput(testLogOutput{t}).
+		WithLevel(debuglog.LevelInfo)
+
 	// Perform tests
 	for name, tCase := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -346,7 +368,7 @@ func TestHttpServerWithRuleEngineOff(t *testing.T) {
 			SecRequestBodyAccess On
 			SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
 			SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
-			`).WithErrorCallback(errLogger(t)).WithDebugLogger(&debugLogger{t: t}))
+			`).WithErrorCallback(errLogger(t)).WithDebugLogger(logger))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -361,7 +383,7 @@ func runAgainstWAF(t *testing.T, tCase httpTest, waf coraza.WAF) {
 	defer close(serverErrC)
 
 	// Spin up the test server
-	ts := httptest.NewUnstartedServer(WrapHandler(waf, t.Logf, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	ts := httptest.NewUnstartedServer(WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if want, have := tCase.expectedProto, req.Proto; want != have {
 			t.Errorf("unexpected proto, want: %s, have: %s", want, have)
 		}
@@ -463,6 +485,97 @@ func TestObtainStatusCodeFromInterruptionOrDefault(t *testing.T) {
 			}, tCase.defaultCode)
 			if want != have {
 				t.Errorf("unexpected status code, want %d, have %d", want, have)
+			}
+		})
+	}
+}
+
+func TestHandlerWithNilWAF(t *testing.T) {
+	delegateHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+	wrappedHandler := WrapHandler(nil, delegateHandler).(http.HandlerFunc)
+	if want, have := fmt.Sprintf("%v", delegateHandler), fmt.Sprintf("%v", wrappedHandler); want != have {
+		t.Errorf("unexpected wrapped handler")
+	}
+}
+
+func TestHandlerAPI(t *testing.T) {
+	testCases := map[string]struct {
+		handler            http.HandlerFunc
+		expectedStatusCode int
+	}{
+		"empty handler": {
+			handler:            func(w http.ResponseWriter, r *http.Request) {},
+			expectedStatusCode: 200,
+		},
+		"read the request body": {
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				b, err := io.ReadAll(r.Body)
+				if err != nil {
+					panic(err)
+				}
+				if string(b) != "the payload" {
+					panic("unexpected payload")
+				}
+			},
+			expectedStatusCode: 200,
+		},
+		"status code but no body": {
+			handler:            func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(201) },
+			expectedStatusCode: 201,
+		},
+		"double status code but no body": {
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(201)
+				w.WriteHeader(202)
+			},
+			expectedStatusCode: 201,
+		},
+		"no status code and body": {
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				_, _ = w.Write([]byte{1, 2, 3})
+			},
+			expectedStatusCode: 200,
+		},
+		"status code and body": {
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(201)
+				_, _ = w.Write([]byte{1, 2, 3})
+			},
+			expectedStatusCode: 201,
+		},
+		"status code and multiwrite body": {
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(201)
+				_, _ = w.Write([]byte{1, 2, 3})
+				_, _ = w.Write([]byte{4, 5, 6})
+			},
+			expectedStatusCode: 201,
+		},
+	}
+
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithRequestBodyLimit(3))
+	if err != nil {
+		t.Fatalf("unexpected error while creating the WAF: %s", err.Error())
+	}
+
+	for name, tCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			srv := httptest.NewServer(WrapHandler(waf, tCase.handler))
+			defer srv.Close()
+
+			res, err := http.Post(srv.URL, "application/json", bytes.NewBufferString("the payload"))
+			if err != nil {
+				t.Fatalf("unexpected error while performing the request: %s", err.Error())
+			}
+			defer res.Body.Close()
+
+			if want, have := tCase.expectedStatusCode, res.StatusCode; want != have {
+				t.Fatalf("unexpected status code, want: %d, have: %d", want, have)
+			}
+
+			_, err = io.ReadAll(res.Body)
+			if err != nil {
+				t.Fatalf("unexpected error while reading the body: %s", err.Error())
 			}
 		})
 	}

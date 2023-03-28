@@ -39,34 +39,80 @@ func TestNewTransaction(t *testing.T) {
 }
 
 func TestSetDebugLogPath(t *testing.T) {
-	waf := NewWAF()
-
-	testCases := []struct {
-		path   string
-		writer io.Writer
+	tests := map[string]struct {
+		path string
+		w    io.Writer
 	}{
-		{
-			path:   "/dev/stdout",
-			writer: os.Stdout,
+		"empty path": {path: "", w: io.Discard},
+		"stdout":     {path: "/dev/stdout", w: os.Stdout},
+		"stderr":     {path: "/dev/stderr", w: os.Stderr},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			w, err := resolveLogPath(test.path)
+			if err != nil {
+				t.Errorf("unexpected error: %s", err.Error())
+			}
+
+			if w != test.w {
+				t.Errorf("expected io.Discard, got %T", w)
+			}
+		})
+	}
+}
+
+func TestValidate(t *testing.T) {
+	testCases := map[string]struct {
+		customizer func(*WAF)
+		expectErr  bool
+	}{
+		"default": {
+			expectErr:  false,
+			customizer: func(w *WAF) {},
 		},
-		{
-			path:   "/dev/stderr",
-			writer: os.Stderr,
+		"request body limit less than zero": {
+			expectErr:  true,
+			customizer: func(w *WAF) { w.RequestBodyLimit = -1 },
+		},
+		"request body limit greater than 1gb": {
+			expectErr:  true,
+			customizer: func(w *WAF) { w.RequestBodyLimit = _1gb + 1 },
+		},
+		"request body in memory limit less than zero": {
+			expectErr:  true,
+			customizer: func(w *WAF) { w.SetRequestBodyInMemoryLimit(-1) },
+		},
+		"request body limit less than request body in memory limit": {
+			expectErr: true,
+			customizer: func(w *WAF) {
+				w.RequestBodyLimit = 10
+				w.SetRequestBodyInMemoryLimit(11)
+			}},
+		"response body limit less than zero": {
+			expectErr:  true,
+			customizer: func(w *WAF) { w.ResponseBodyLimit = -1 },
+		},
+		"response body limit greater than 1gb": {
+			expectErr:  true,
+			customizer: func(w *WAF) { w.ResponseBodyLimit = _1gb + 1 },
 		},
 	}
 
-	for _, tCase := range testCases {
-		t.Run(tCase.path, func(t *testing.T) {
-			err := waf.SetDebugLogPath(tCase.path)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
+	for name, tCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			waf := NewWAF()
+			tCase.customizer(waf)
+			err := waf.Validate()
+			if tCase.expectErr {
+				if err == nil {
+					t.Fatalf("expected error: %s", err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %s", err.Error())
+				}
 			}
-
-			l := waf.Logger.(*stdDebugLogger)
-			if want, have := tCase.writer, l.logger.Writer(); want != have {
-				t.Error("unexpected logger writer")
-			}
-			_ = waf.SetDebugLogPath("")
 		})
 	}
 }

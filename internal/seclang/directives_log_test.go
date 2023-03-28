@@ -1,8 +1,7 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-// Logs are currently disabled for tinygo
-
+// Logs are currently disabled for tinygo builds.
 //go:build !tinygo
 // +build !tinygo
 
@@ -16,16 +15,17 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	waf := corazawaf.NewWAF()
-	auditpath := t.TempDir()
 	parser := NewParser(waf)
+
+	auditpath := t.TempDir()
 	if err := parser.FromString(fmt.Sprintf(`
 	SecAuditLog %s
 	SecAuditLogFormat json
@@ -34,20 +34,18 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	SecAuditLogFileMode 0777
 	SecAuditLogType concurrent
 	`, filepath.Join(auditpath, "audit.log"), auditpath)); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+
 	id := utils.RandomString(10)
-	if waf.AuditLogWriter == nil {
-		t.Error("Invalid audit logger (nil)")
-		return
-	}
-	if err := waf.AuditLogWriter.Write(&loggers.AuditLog{
+
+	if err := waf.AuditLogWriter().Write(&auditlog.Log{
 		Parts: types.AuditLogParts("ABCDEFGHIJKZ"),
-		Transaction: loggers.AuditTransaction{
+		Transaction: auditlog.Transaction{
 			ID: id,
 		},
 	}); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	f, err := findFileContaining(auditpath, id)
 	if err != nil {
@@ -80,11 +78,11 @@ func TestDebugDirectives(t *testing.T) {
 	}
 	if err := directiveSecDebugLogLevel(&DirectiveOptions{
 		WAF:  waf,
-		Opts: "5",
+		Opts: "3",
 	}); err != nil {
 		t.Error(err)
 	}
-	p.options.WAF.Logger.Info("abc123")
+	p.options.WAF.Logger.Info().Msg("abc123")
 	data, err := os.ReadFile(tmp)
 	if err != nil {
 		t.Error(err)

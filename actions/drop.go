@@ -10,7 +10,10 @@ import (
 
 type dropFn struct{}
 
-func (a *dropFn) Init(r rules.RuleMetadata, data string) error {
+func (a *dropFn) Init(_ rules.RuleMetadata, data string) error {
+	if len(data) > 0 {
+		return ErrUnexpectedArguments
+	}
 	return nil
 }
 

@@ -44,9 +44,13 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 			tx.AddRequestHeader(k, v)
 		}
 	}
-	// Host will always be removed from req.Headers(), so we manually add it
+
+	// Host will always be removed from req.Headers() and promoted to the
+	// Request.Host field, so we manually add it
 	if req.Host != "" {
 		tx.AddRequestHeader("Host", req.Host)
+		// This connector relies on the host header (now host field) to populate ServerName
+		tx.SetServerName(req.Host)
 	}
 
 	in = tx.ProcessRequestHeaders()
@@ -102,7 +106,11 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 	return tx.ProcessRequestBody()
 }
 
-func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
+func WrapHandler(waf coraza.WAF, h http.Handler) http.Handler {
+	if waf == nil {
+		return h
+	}
+
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		tx := waf.NewTransaction()
 		defer func() {
@@ -110,7 +118,7 @@ func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
 			tx.ProcessLogging()
 			// we remove temporary files and free some memory
 			if err := tx.Close(); err != nil {
-				l("failed to close the transaction: %v", err)
+				tx.DebugLogger().Error().Err(err).Msg("Failed to close the transaction")
 			}
 		}()
 
@@ -126,7 +134,7 @@ func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
 		// ProcessRequestHeaders and ProcessRequestBody.
 		// It fails if any of these functions returns an error and it stops on interruption.
 		if it, err := processRequest(tx, r); err != nil {
-			l("failed to process request: %v", err)
+			tx.DebugLogger().Error().Err(err).Msg("Failed to process request")
 			return
 		} else if it != nil {
 			w.WriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, http.StatusOK))
@@ -139,7 +147,7 @@ func WrapHandler(waf coraza.WAF, l Logger, h http.Handler) http.Handler {
 		h.ServeHTTP(ww, r)
 
 		if err := processResponse(tx, r); err != nil {
-			l("failed to process response: %v", err)
+			tx.DebugLogger().Error().Err(err).Msg("Failed to close the response")
 			return
 		}
 	}

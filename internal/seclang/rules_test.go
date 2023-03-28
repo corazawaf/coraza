@@ -31,7 +31,7 @@ func TestRuleMatch(t *testing.T) {
 		t.Errorf("failed to match rules with %d", len(tx.MatchedRules()))
 	}
 	if tx.Interruption() == nil {
-		t.Error("failed to interrupt transaction")
+		t.Fatal("failed to interrupt transaction")
 	}
 
 	if tx.Interruption().RuleID != 1 {
@@ -51,7 +51,7 @@ func TestRuleMatchWithRegex(t *testing.T) {
 		t.Error(err.Error())
 	}
 	tx := waf.NewTransaction()
-	tx.AddArgument(types.ArgumentGET, "id_test", "123")
+	tx.AddGetRequestArgument("id_test", "123")
 	tx.ProcessRequestHeaders()
 	if len(tx.MatchedRules()) != 1 {
 		t.Errorf("failed to match rules with %d", len(tx.MatchedRules()))
@@ -95,6 +95,31 @@ func TestSecMarkers(t *testing.T) {
 	}
 	if len(tx.MatchedRules()) == 1 {
 		t.Errorf("not matching any rule after secmark")
+	}
+}
+
+// There can only be one disruptive action per rule (if there are multiple disruptive
+// actions present, or inherited, only the last one will take effect).
+// The parser enforces it, keeping only one disruptive action per rule.
+func TestOnlyLastDisruptiveActionEnforced(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	parser := NewParser(waf)
+	// Both deny and allow are disruptive actions, so only allow should be enforced
+	err := parser.FromString(`
+		SecRuleEngine On
+		SecDefaultAction "phase:1,deny,status:403,log"
+		SecRule REQUEST_URI "@unconditionalMatch" "id:1, phase:1,deny,allow,log,auditlog"
+	`)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	tx := waf.NewTransaction()
+	tx.ProcessRequestHeaders()
+	if len(tx.MatchedRules()) != 1 {
+		t.Errorf("failed to match rules with %d", len(tx.MatchedRules()))
+	}
+	if tx.Interruption() != nil {
+		t.Fatal("unexpected interruption, deny action has been enforced instead of allow")
 	}
 }
 
@@ -143,8 +168,8 @@ func TestRuleLogging(t *testing.T) {
 		t.Error(err.Error())
 	}
 	tx := waf.NewTransaction()
-	tx.AddArgument(types.ArgumentGET, "test1", "123")
-	tx.AddArgument(types.ArgumentGET, "test2", "456")
+	tx.AddGetRequestArgument("test1", "123")
+	tx.AddGetRequestArgument("test2", "456")
 	tx.ProcessRequestHeaders()
 	if len(tx.MatchedRules()) != 3 {
 		t.Errorf("failed to match rules with %d", len(tx.MatchedRules()))
@@ -180,8 +205,8 @@ func TestRuleChains(t *testing.T) {
 		t.Error(err.Error())
 	}
 	tx := waf.NewTransaction()
-	tx.AddArgument(types.ArgumentGET, "test1", "123")
-	tx.AddArgument(types.ArgumentGET, "test2", "456")
+	tx.AddGetRequestArgument("test1", "123")
+	tx.AddGetRequestArgument("test2", "456")
 	tx.ProcessRequestHeaders()
 	if len(tx.MatchedRules()) != 1 {
 		t.Errorf("failed to match rules with %d matches, expected 1", len(tx.MatchedRules()))
@@ -202,8 +227,8 @@ func TestTagsAreNotPrintedTwice(t *testing.T) {
 		t.Error(err.Error())
 	}
 	tx := waf.NewTransaction()
-	tx.AddArgument(types.ArgumentGET, "test1", "123")
-	tx.AddArgument(types.ArgumentGET, "test2", "456")
+	tx.AddGetRequestArgument("test1", "123")
+	tx.AddGetRequestArgument("test2", "456")
 	tx.ProcessRequestHeaders()
 	if len(tx.MatchedRules()) != 1 {
 		t.Errorf("failed to match rules with %d", len(tx.MatchedRules()))
@@ -234,8 +259,8 @@ func TestStatusFromInterruptions(t *testing.T) {
 		t.Error(err.Error())
 	}
 	tx := waf.NewTransaction()
-	tx.AddArgument(types.ArgumentGET, "test1", "123")
-	tx.AddArgument(types.ArgumentGET, "test2", "456")
+	tx.AddGetRequestArgument("test1", "123")
+	tx.AddGetRequestArgument("test2", "456")
 	it := tx.ProcessRequestHeaders()
 	if it == nil {
 		t.Error("failed to interrupt")
@@ -272,9 +297,9 @@ func TestLogsAreNotPrintedManyTimes(t *testing.T) {
 		t.Error(err.Error())
 	}
 	tx := waf.NewTransaction()
-	tx.AddArgument(types.ArgumentGET, "test1", "123")
-	tx.AddArgument(types.ArgumentGET, "test2", "456")
-	tx.AddArgument(types.ArgumentGET, "test2", "789")
+	tx.AddGetRequestArgument("test1", "123")
+	tx.AddGetRequestArgument("test2", "456")
+	tx.AddGetRequestArgument("test2", "789")
 	tx.AddRequestHeader("test", "123")
 	tx.ProcessRequestHeaders()
 	if len(tx.MatchedRules()) != 1 {
@@ -314,8 +339,12 @@ func TestTxIssue147(t *testing.T) {
 	tx := waf.NewTransaction()
 	// response body access is required
 	tx.ResponseBodyAccess = true
-	// we need a content-type header
+	tx.WAF.ResponseBodyMimeTypes = []string{"text/html"}
 	tx.AddResponseHeader("Content-Type", "text/html")
+	tx.ProcessRequestHeaders()
+	_, _ = tx.ProcessRequestBody()
+	tx.ProcessResponseHeaders(200, "HTTP/1.1")
+
 	if tx.IsResponseBodyProcessable() {
 		if it, _, err := tx.WriteResponseBody([]byte("#!/usr/bin/python")); it != nil || err != nil {
 			t.Error(err)
@@ -369,7 +398,7 @@ func TestIssue176(t *testing.T) {
 	//		t.Error(err.Error())
 	//	}
 	//	tx = waf.NewTransaction()
-	//	tx.AddArgument(types.ArgumentGET, "Test1", "123")
+	//	tx.AddGetRequestArgument("Test1", "123")
 	//	it = tx.ProcessRequestHeaders()
 	//	if it == nil {
 	//		t.Error("failed to test argument case-sensitive")
@@ -382,7 +411,7 @@ func TestIssue176(t *testing.T) {
 	//		t.Error(err.Error())
 	//	}
 	//	tx = waf.NewTransaction()
-	//	tx.AddArgument(types.ArgumentGET, "Test2", "123")
+	//	tx.AddGetRequestArgument("Test2", "123")
 	//	it = tx.ProcessRequestHeaders()
 	//	if it != nil {
 	//		t.Error("failed to test argument case-sensitive")
@@ -450,7 +479,8 @@ func TestUnicode(t *testing.T) {
 	}
 
 	tx := waf.NewTransaction()
-	tx.AddArgument(types.ArgumentPOST, "var", `ハローワールド`)
+	tx.ProcessRequestHeaders()
+	tx.AddPostRequestArgument("var", `ハローワールド`)
 	it, err := tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -502,7 +532,7 @@ func Test941310(t *testing.T) {
 	// }
 	//
 	// tx := waf.NewTransaction()
-	// tx.AddArgument(types.ArgumentPOST, "var", `\\xbcscript\\xbealert(\xa2XSS\xa2)\xbc/script\xbe`)
+	// tx.AddPostRequestArgument("var", `\\xbcscript\\xbealert(\xa2XSS\xa2)\xbc/script\xbe`)
 	// it, err := tx.ProcessRequestBody()
 	// if err != nil {
 	// 	t.Error(err)
@@ -524,7 +554,7 @@ func TestArgumentNamesCaseSensitive(t *testing.T) {
 	}
 	/*
 		tx := waf.NewTransaction()
-		tx.AddArgument(types.ArgumentPOST, "Test1", "Xyz")
+		tx.AddPostRequestArgument("Test1", "Xyz")
 		it, err := tx.ProcessRequestBody()
 		if err != nil {
 			t.Error(err)
@@ -534,7 +564,7 @@ func TestArgumentNamesCaseSensitive(t *testing.T) {
 		}
 
 		tx = waf.NewTransaction()
-		tx.AddArgument(types.ArgumentPOST, "TEST1", "Xyz")
+		tx.AddPostRequestArgument("TEST1", "Xyz")
 		it, err = tx.ProcessRequestBody()
 		if err != nil {
 			t.Error(err)
@@ -544,7 +574,7 @@ func TestArgumentNamesCaseSensitive(t *testing.T) {
 		}
 
 		tx = waf.NewTransaction()
-		tx.AddArgument(types.ArgumentPOST, "test1", "Xyz")
+		tx.AddPostRequestArgument("test1", "Xyz")
 		it, err = tx.ProcessRequestBody()
 		if err != nil {
 			t.Error(err)
@@ -567,7 +597,8 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 	}
 
 	tx := waf.NewTransaction()
-	tx.AddArgument(types.ArgumentPOST, "Test1", "Xyz")
+	tx.ProcessRequestHeaders()
+	tx.AddPostRequestArgument("Test1", "Xyz")
 	it, err := tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -577,7 +608,8 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 	}
 
 	tx = waf.NewTransaction()
-	tx.AddArgument(types.ArgumentPOST, "TEST1", "Xyz")
+	tx.ProcessRequestHeaders()
+	tx.AddPostRequestArgument("TEST1", "Xyz")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -587,7 +619,8 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 	}
 
 	tx = waf.NewTransaction()
-	tx.AddArgument(types.ArgumentPOST, "test1", "Xyz")
+	tx.ProcessRequestHeaders()
+	tx.AddPostRequestArgument("test1", "Xyz")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -597,7 +630,8 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 	}
 
 	tx = waf.NewTransaction()
-	tx.AddArgument(types.ArgumentPOST, "test1", "xyz")
+	tx.ProcessRequestHeaders()
+	tx.AddPostRequestArgument("test1", "xyz")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -607,7 +641,8 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 	}
 
 	tx = waf.NewTransaction()
-	tx.AddArgument(types.ArgumentPOST, "test1", "XYZ")
+	tx.ProcessRequestHeaders()
+	tx.AddPostRequestArgument("test1", "XYZ")
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -630,6 +665,7 @@ func TestCookiesCaseSensitive(t *testing.T) {
 
 	tx := waf.NewTransaction()
 	tx.AddRequestHeader("cookie", "Test1=Xyz")
+	tx.ProcessRequestHeaders()
 	it, err := tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -640,6 +676,7 @@ func TestCookiesCaseSensitive(t *testing.T) {
 
 	tx = waf.NewTransaction()
 	tx.AddRequestHeader("cookie", "TEST1=Xyz")
+	tx.ProcessRequestHeaders()
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -650,6 +687,7 @@ func TestCookiesCaseSensitive(t *testing.T) {
 
 	tx = waf.NewTransaction()
 	tx.AddRequestHeader("cookie", "test1=Xyz")
+	tx.ProcessRequestHeaders()
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -660,6 +698,7 @@ func TestCookiesCaseSensitive(t *testing.T) {
 
 	tx = waf.NewTransaction()
 	tx.AddRequestHeader("cookie", "test1=xyz")
+	tx.ProcessRequestHeaders()
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -670,6 +709,7 @@ func TestCookiesCaseSensitive(t *testing.T) {
 
 	tx = waf.NewTransaction()
 	tx.AddRequestHeader("cookie", "test1=XYZ")
+	tx.ProcessRequestHeaders()
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -692,6 +732,7 @@ func TestHeadersCaseSensitive(t *testing.T) {
 
 	tx := waf.NewTransaction()
 	tx.AddRequestHeader("Test1", "Xyz")
+	tx.ProcessRequestHeaders()
 	it, err := tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -702,6 +743,7 @@ func TestHeadersCaseSensitive(t *testing.T) {
 
 	tx = waf.NewTransaction()
 	tx.AddRequestHeader("TEST1", "Xyz")
+	tx.ProcessRequestHeaders()
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -712,6 +754,7 @@ func TestHeadersCaseSensitive(t *testing.T) {
 
 	tx = waf.NewTransaction()
 	tx.AddRequestHeader("test1", "Xyz")
+	tx.ProcessRequestHeaders()
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -722,6 +765,7 @@ func TestHeadersCaseSensitive(t *testing.T) {
 
 	tx = waf.NewTransaction()
 	tx.AddRequestHeader("test1", "xyz")
+	tx.ProcessRequestHeaders()
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -732,6 +776,7 @@ func TestHeadersCaseSensitive(t *testing.T) {
 
 	tx = waf.NewTransaction()
 	tx.AddRequestHeader("test1", "XYZ")
+	tx.ProcessRequestHeaders()
 	it, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -753,9 +798,10 @@ func TestParameterPollution(t *testing.T) {
 	}
 
 	tx := waf.NewTransaction()
-	tx.AddArgument(types.ArgumentPOST, "test1", "xyz")
-	tx.AddArgument(types.ArgumentPOST, "Test1", "Xyz")
-	tx.AddArgument(types.ArgumentPOST, "TEST1", "XYZ")
+	tx.ProcessRequestHeaders()
+	tx.AddPostRequestArgument("test1", "xyz")
+	tx.AddPostRequestArgument("Test1", "Xyz")
+	tx.AddPostRequestArgument("TEST1", "XYZ")
 	_, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -772,10 +818,11 @@ func TestParameterPollution(t *testing.T) {
 	}
 
 	tx = waf.NewTransaction()
-	tx.AddArgument(types.ArgumentPOST, "test1", "xyz")
-	tx.AddArgument(types.ArgumentPOST, "Test1", "Xyz")
-	tx.AddArgument(types.ArgumentPOST, "tesT1", "Xyz")
-	tx.AddArgument(types.ArgumentPOST, "TEST1", "XYZ")
+	tx.ProcessRequestHeaders()
+	tx.AddPostRequestArgument("test1", "xyz")
+	tx.AddPostRequestArgument("Test1", "Xyz")
+	tx.AddPostRequestArgument("tesT1", "Xyz")
+	tx.AddPostRequestArgument("TEST1", "XYZ")
 	_, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -805,6 +852,7 @@ func TestURIQueryParamCaseSensitive(t *testing.T) {
 
 	tx := waf.NewTransaction()
 	tx.ProcessURI("/url?Test1='SQLI", "POST", "HTTP/1.1")
+	tx.ProcessRequestHeaders()
 	_, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -825,6 +873,7 @@ func TestURIQueryParamCaseSensitive(t *testing.T) {
 
 	tx = waf.NewTransaction()
 	tx.ProcessURI("/test?test1='SQLI&Test1='SQLI&TEST1='SQLI", "POST", "HTTP/1.1")
+	tx.ProcessRequestHeaders()
 	_, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -949,6 +998,9 @@ SecRule REQUEST_URI|ARGS|REQUEST_HEADERS|!REQUEST_HEADERS:Referer|FILES|XML:/* "
 
 	tx := waf.NewTransaction()
 	tx.AddRequestHeader("Content-Type", "multipart/form-data; boundary=----WebKitFormBoundaryABCDEFGIJKLMNOPQ")
+	if it := tx.ProcessRequestHeaders(); it != nil {
+		t.Errorf("Unexpected interruption with status %d at Request Headers phaseus\n", it.Status)
+	}
 
 	body := strings.NewReader(`
 ------WebKitFormBoundaryABCDEFGIJKLMNOPQ

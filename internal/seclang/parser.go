@@ -13,8 +13,8 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/internal/io"
-	"github.com/corazawaf/coraza/v3/types"
 )
 
 // maxIncludeRecursion is used to avoid DDOS by including files that include
@@ -61,7 +61,6 @@ func (p *Parser) FromFile(profilePath string) error {
 			// we don't use defer for this as tinygo does not seem to like it
 			p.currentDir = originalDir
 			p.currentFile = ""
-			p.options.WAF.Logger.Error(err.Error())
 			return fmt.Errorf("failed to readfile: %s", err.Error())
 		}
 
@@ -70,7 +69,6 @@ func (p *Parser) FromFile(profilePath string) error {
 			// we don't use defer for this as tinygo does not seem to like it
 			p.currentDir = originalDir
 			p.currentFile = ""
-			p.options.WAF.Logger.Error(err.Error())
 			return fmt.Errorf("failed to parse string: %s", err.Error())
 		}
 		// restore the lastDir post processing all includes
@@ -134,13 +132,14 @@ func (p *Parser) FromString(data string) error {
 	return nil
 }
 
-func (p *Parser) evaluateLine(data string) error {
-	if data == "" || data[0] == '#' {
-		return errors.New("invalid lines")
+func (p *Parser) evaluateLine(l string) error {
+	if l == "" || l[0] == '#' {
+		panic("invalid line")
 	}
 	// first we get the directive
-	dir, opts, _ := strings.Cut(data, " ")
-	p.options.WAF.Logger.Debug("parsing directive %q", data)
+	dir, opts, _ := strings.Cut(l, " ")
+
+	p.options.WAF.Logger.Debug().Str("line", l).Msg("Parsing directive")
 	directive := strings.ToLower(dir)
 
 	if len(opts) >= 3 && opts[0] == '"' && opts[len(opts)-1] == '"' {
@@ -152,33 +151,39 @@ func (p *Parser) evaluateLine(data string) error {
 		// note a user might still include another file that includes the original file
 		// generating a DDOS attack
 		if p.includeCount >= maxIncludeRecursion {
-			return fmt.Errorf("cannot include more than %d files", maxIncludeRecursion)
+			return p.log(fmt.Sprintf("cannot include more than %d files", maxIncludeRecursion))
 		}
 		p.includeCount++
 		return p.FromFile(opts)
 	}
 	d, ok := directivesMap[directive]
 	if !ok || d == nil {
-		return p.log("Unknown directive " + directive)
+		return p.log(fmt.Sprintf("unknown directive %q", directive))
 	}
 
+	p.options.Raw = l
 	p.options.Opts = opts
-	p.options.Config.Set("last_profile_line", p.currentLine)
-	p.options.Config.Set("parser_config_file", p.currentFile)
-	p.options.Config.Set("parser_config_dir", p.currentDir)
-	p.options.Config.Set("parser_root", p.root)
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
+	p.options.Parser.LastLine = p.currentLine
+	p.options.Parser.ConfigFile = p.currentFile
+	p.options.Parser.ConfigDir = p.currentDir
+	p.options.Parser.Root = p.root
+	if environment.HasAccessToFS {
+		wd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		p.options.Parser.WorkingDir = wd
 	}
-	p.options.Config.Set("working_dir", wd)
 
-	return d(p.options)
+	if err := d(p.options); err != nil {
+		return fmt.Errorf("failed to compile the directive %q: %w", directive, err)
+	}
+
+	return nil
 }
 
 func (p *Parser) log(msg string) error {
-	msg = fmt.Sprintf("[Parser] [Line %d] %s", p.currentLine, msg)
-	p.options.WAF.Logger.Error("[%d] %s", p.currentLine, msg)
+	p.options.WAF.Logger.Error().Int("line", p.currentLine).Msg(msg)
 	return errors.New(msg)
 }
 
@@ -199,10 +204,22 @@ func NewParser(waf *corazawaf.WAF) *Parser {
 	p := &Parser{
 		options: &DirectiveOptions{
 			WAF:      waf,
-			Config:   make(types.Config),
 			Datasets: make(map[string][]string),
 		},
 		root: io.OSFS{},
 	}
 	return p
+}
+
+type ParserConfig struct {
+	DisabledRuleActions         []string
+	DisabledRuleOperators       []string
+	RuleDefaultActions          []string
+	HasRuleDefaultActions       bool
+	IgnoreRuleCompilationErrors bool
+	LastLine                    int
+	ConfigFile                  string
+	ConfigDir                   string
+	Root                        fs.FS
+	WorkingDir                  string
 }

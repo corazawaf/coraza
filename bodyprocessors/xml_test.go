@@ -1,9 +1,6 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build !tinygo
-// +build !tinygo
-
 package bodyprocessors
 
 import (
@@ -48,5 +45,26 @@ func TestXMLAttribures(t *testing.T) {
 		if !strings.InSlice(content, contents) {
 			t.Errorf("Expected content %s, got %v", content, contents)
 		}
+	}
+}
+
+func TestXMLPayloadFlexibility(t *testing.T) {
+	xmldoc := `<note>
+			<to>Tove</to>
+			<from>Jani</from>
+			<heading>Reminder</heading>
+			<body>Don't forget me this weekend!
+		</note>`
+	_, contents, err := readXML(bytes.NewReader([]byte(xmldoc)))
+	if err != nil {
+		t.Error(err)
+	}
+	for _, content := range []string{"Tove", "Jani", "Reminder", "Don't forget me this weekend!"} {
+		if !strings.InSlice(content, contents) {
+			t.Errorf("Expected content %s, got %v", content, contents)
+		}
+	}
+	if len(contents) != 4 {
+		t.Errorf("Expected 4 contents, got %d", len(contents))
 	}
 }

@@ -16,16 +16,20 @@ type initcolFn struct {
 	key        string
 }
 
-func (a *initcolFn) Init(r rules.RuleMetadata, data string) error {
-	col, key, _ := strings.Cut(data, "=")
+func (a *initcolFn) Init(_ rules.RuleMetadata, data string) error {
+	col, key, ok := strings.Cut(data, "=")
+	if !ok {
+		return ErrInvalidKVArguments
+	}
+
 	a.collection = col
 	a.key = key
 	a.variable = 0x0
 	return nil
 }
 
-func (a *initcolFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-	// tx.WAF.Logger.Error("initcol was used but it's not supported", zap.Int("rule", r.Id))
+func (a *initcolFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {
+	// tx.DebugLogger().Error().Msg("initcol was used but it's not supported", zap.Int("rule", r.Id))
 	/*
 		key := tx.MacroExpansion(a.key)
 		data := tx.WAF.Persistence.Get(a.variable, key)

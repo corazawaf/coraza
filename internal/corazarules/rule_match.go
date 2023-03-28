@@ -15,8 +15,6 @@ import (
 // MatchData works like VariableKey but is used for logging,
 // so it contains the collection as a string, and it's value
 type MatchData struct {
-	// variable name stored for cache
-	VariableName_ string
 	// Variable
 	Variable_ variables.RuleVariable
 	// Key of the variable, blank if no key is required
@@ -27,10 +25,6 @@ type MatchData struct {
 	Message_ string
 	// Macro expanded logdata
 	Data_ string
-}
-
-func (m *MatchData) VariableName() string {
-	return m.VariableName_
 }
 
 func (m *MatchData) Variable() variables.RuleVariable {
@@ -51,11 +45,6 @@ func (m *MatchData) Message() string {
 
 func (m *MatchData) Data() string {
 	return m.Data_
-}
-
-// IsNil is used to check whether the MatchData is empty
-func (m MatchData) IsNil() bool {
-	return m == MatchData{}
 }
 
 // MatchedRule contains a list of macro expanded messages,

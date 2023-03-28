@@ -8,8 +8,6 @@ import "github.com/corazawaf/coraza/v3/types/variables"
 // MatchData works like VariableKey but is used for logging,
 // so it contains the collection as a string, and it's value
 type MatchData interface {
-	// VariableName stored for cache
-	VariableName() string
 	// Variable
 	Variable() variables.RuleVariable
 	// Key of the variable, blank if no key is required
@@ -20,8 +18,6 @@ type MatchData interface {
 	Message() string
 	// Data is the expanded logdata of the macro
 	Data() string
-	// IsNil is used to check whether the MatchData is empty
-	IsNil() bool
 }
 
 // MatchedRule contains a list of macro expanded messages,

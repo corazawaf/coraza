@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/corazawaf/coraza/v3/internal/corazatypes"
 	"github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -17,7 +18,7 @@ import (
 // It is not concurrent safe, so it's not recommended to use it
 // after compilation
 type RuleGroup struct {
-	rules []*Rule
+	rules []Rule
 }
 
 // Add a rule to the collection
@@ -28,36 +29,36 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 		return nil
 	}
 
-	if rg.FindByID(rule.ID_) != nil && rule.ID_ != 0 {
+	if rule.ID_ != 0 && rg.FindByID(rule.ID_) != nil {
 		return fmt.Errorf("there is a another rule with id %d", rule.ID_)
 	}
 
 	numInferred := 0
-	rule.inferredPhases[rule.Phase_] = true
+	rule.inferredPhases.set(rule.Phase_)
 	for _, v := range rule.variables {
 		min := minPhase(v.Variable)
 		if min != 0 {
 			// We infer the earliest phase a variable used by the rule may be evaluated for use when
 			// multiphase evaluation is enabled
-			rule.inferredPhases[min] = true
+			rule.inferredPhases.set(min)
 			numInferred++
 		}
 	}
 
-	rg.rules = append(rg.rules, rule)
+	rg.rules = append(rg.rules, *rule)
 	return nil
 }
 
 // GetRules returns the slice of rules,
-func (rg *RuleGroup) GetRules() []*Rule {
+func (rg *RuleGroup) GetRules() []Rule {
 	return rg.rules
 }
 
 // FindByID return a Rule with the requested Id
 func (rg *RuleGroup) FindByID(id int) *Rule {
-	for _, r := range rg.rules {
+	for i, r := range rg.rules {
 		if r.ID_ == id {
-			return r
+			return &rg.rules[i]
 		}
 	}
 	return nil
@@ -66,34 +67,33 @@ func (rg *RuleGroup) FindByID(id int) *Rule {
 // DeleteByID removes a rule by it's Id
 func (rg *RuleGroup) DeleteByID(id int) {
 	for i, r := range rg.rules {
-		if r != nil && r.ID_ == id {
-			copy(rg.rules[i:], rg.rules[i+1:])
-			rg.rules[len(rg.rules)-1] = nil
-			rg.rules = rg.rules[:len(rg.rules)-1]
+		if r.ID_ == id {
+			rg.rules = append(rg.rules[:i], rg.rules[i+1:]...)
+			return
 		}
 	}
 }
 
-// FindByMsg returns a slice of rules that matches the msg
-func (rg *RuleGroup) FindByMsg(msg string) []*Rule {
-	var rules []*Rule
+// DeleteByMsg deletes rules with the given message.
+func (rg *RuleGroup) DeleteByMsg(msg string) {
+	var kept []Rule
 	for _, r := range rg.rules {
-		if r.Msg.String() == msg {
-			rules = append(rules, r)
+		if r.Msg.String() != msg {
+			kept = append(kept, r)
 		}
 	}
-	return rules
+	rg.rules = kept
 }
 
-// FindByTag returns a slice of rules that matches the tag
-func (rg *RuleGroup) FindByTag(tag string) []*Rule {
-	var rules []*Rule
+// DeleteByTag deletes rules with the given tag.
+func (rg *RuleGroup) DeleteByTag(tag string) {
+	var kept []Rule
 	for _, r := range rg.rules {
-		if strings.InSlice(tag, r.Tags_) {
-			rules = append(rules, r)
+		if !strings.InSlice(tag, r.Tags_) {
+			kept = append(kept, r)
 		}
 	}
-	return rules
+	rg.rules = kept
 }
 
 // Count returns the count of rules
@@ -101,16 +101,16 @@ func (rg *RuleGroup) Count() int {
 	return len(rg.rules)
 }
 
-// Clear will remove each and every rule stored
-func (rg *RuleGroup) Clear() {
-	rg.rules = []*Rule{}
-}
-
 // Eval rules for the specified phase, between 1 and 5
+// Rules are evaluated in syntactic order and the evaluation finishes
+// as soon as an interruption has been triggered.
 // Returns true if transaction is disrupted
 func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
-	tx.WAF.Logger.Debug("[%s] Evaluating phase %d", tx.id, int(phase))
-	tx.LastPhase = phase
+	tx.DebugLogger().Debug().
+		Int("phase", int(phase)).
+		Msg("Evaluating phase")
+
+	tx.lastPhase = phase
 	usedRules := 0
 	ts := time.Now().UnixNano()
 	transformationCache := tx.transformationCache
@@ -118,14 +118,17 @@ func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 		delete(transformationCache, k)
 	}
 RulesLoop:
-	for _, r := range tx.WAF.Rules.GetRules() {
+	for i := range rg.rules {
+		r := &rg.rules[i]
+		// if there is already an interruption and the phase isn't logging
+		// we break the loop
 		if tx.interruption != nil && phase != types.PhaseLogging {
 			break RulesLoop
 		}
 		// Rules with phase 0 will always run
 		if r.Phase_ != 0 && r.Phase_ != phase {
 			// Execute the rule in inferred phases too if multiphase evaluation is enabled
-			if !multiphaseEvaluation || !r.inferredPhases[phase] {
+			if !multiphaseEvaluation || !r.inferredPhases.has(phase) {
 				continue
 			}
 		}
@@ -133,7 +136,10 @@ RulesLoop:
 		// we skip the rule in case it's in the excluded list
 		for _, trb := range tx.ruleRemoveByID {
 			if trb == r.ID_ {
-				tx.WAF.Logger.Debug("[%s] Skipping rule %d", tx.id, r.ID_)
+				tx.DebugLogger().Debug().
+					Int("rule_id", r.ID_).
+					Msg("Skipping rule")
+
 				continue RulesLoop
 			}
 		}
@@ -143,7 +149,11 @@ RulesLoop:
 			if r.SecMark_ == tx.SkipAfter {
 				tx.SkipAfter = ""
 			} else {
-				tx.WAF.Logger.Debug("[%s] Skipping rule %d because of SkipAfter, expecting %s and got: %q", tx.id, r.ID_, tx.SkipAfter, r.SecMark_)
+				tx.DebugLogger().Debug().
+					Int("rule_id", r.ID_).
+					Str("skip_after", tx.SkipAfter).
+					Str("secmarker", r.SecMark_).
+					Msg("Skipping rule because of SkipAfter")
 			}
 			continue
 		}
@@ -152,16 +162,56 @@ RulesLoop:
 			// Skipping rule
 			continue
 		}
-		// TODO this lines are SUPER SLOW
+		switch tx.AllowType {
+		case corazatypes.AllowTypeUnset:
+			break
+		case corazatypes.AllowTypePhase:
+			// Allow phase requires skipping all rules of the current phase.
+			// It is done by breaking the loop and resetting AllowType for the next phase right after the loop.
+			tx.DebugLogger().Debug().
+				Int("phase", int(phase)).
+				Msg("Skipping phase because of allow phase action")
+			break RulesLoop
+		case corazatypes.AllowTypeRequest:
+			// Allow request requires skipping all rules of any request phase.
+			// It is done by breaking the loop only if in a request phase (1 or 2)
+			// and resetting AllowType once the request phases are over (after request body phase)
+			tx.DebugLogger().Debug().
+				Int("phase", int(phase)).
+				Msg("Skipping phase because of allow request action")
+			if phase == types.PhaseRequestHeaders {
+				// tx.AllowType is not resetted because another request phase might be called
+				break RulesLoop
+			}
+			if phase == types.PhaseRequestBody {
+				// // tx.AllowType is resetted, currently PhaseRequestBody is the last request phase
+				tx.AllowType = corazatypes.AllowTypeUnset
+				break RulesLoop
+			}
+		case corazatypes.AllowTypeAll:
+			break RulesLoop
+		}
+		// TODO these lines are SUPER SLOW
 		// we reset matched_vars, matched_vars_names, etc
 		tx.variables.matchedVars.Reset()
-		tx.variables.matchedVarsNames.Reset()
 
 		r.Evaluate(phase, tx, transformationCache)
 		tx.Capture = false // we reset captures
 		usedRules++
 	}
-	tx.WAF.Logger.Debug("[%s] Finished phase %d", tx.id, int(phase))
+	tx.DebugLogger().Debug().
+		Int("phase", int(phase)).
+		Msg("Finished phase")
+
+	// Reset AllowType if meant to allow only this specific phase. It is particuarly needed
+	// to reset it at this point, in case of an allow:phase action enforced by the last rule of the phase.
+	// In this case, allow:phase must not have any impact on the next phase.
+	if tx.AllowType == corazatypes.AllowTypePhase {
+		tx.AllowType = corazatypes.AllowTypeUnset
+	}
+	// // Reset Skip counter at the end of each phase. Skip actions work only within the current processing phase
+	tx.Skip = 0
+
 	tx.stopWatches[phase] = time.Now().UnixNano() - ts
 	return tx.interruption != nil
 }
@@ -171,9 +221,7 @@ RulesLoop:
 // You might use this function to replace the rules
 // and "reload" the WAF
 func NewRuleGroup() RuleGroup {
-	return RuleGroup{
-		rules: []*Rule{},
-	}
+	return RuleGroup{}
 }
 
 type transformationKey struct {

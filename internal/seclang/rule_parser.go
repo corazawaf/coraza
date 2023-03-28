@@ -6,13 +6,10 @@ package seclang
 import (
 	"errors"
 	"fmt"
-	"io/fs"
-	"regexp"
 	"strings"
 
 	actionsmod "github.com/corazawaf/coraza/v3/actions"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/internal/io"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	operators "github.com/corazawaf/coraza/v3/operators"
 	"github.com/corazawaf/coraza/v3/rules"
@@ -20,7 +17,7 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-const defaultActionsPhase2 = "phase:2,log,auditlog,pass"
+var defaultActionsPhase2 = "phase:2,log,auditlog,pass"
 
 type ruleAction struct {
 	Key   string
@@ -172,6 +169,8 @@ func (p *RuleParser) ParseOperator(operator string) error {
 		operator = "!@rx " + operator[1:]
 	}
 
+	// We clone strings to ensure a slice into larger rule definition isn't kept in
+	// memory just to store operator information.
 	opRaw, opdataRaw, _ := strings.Cut(operator, " ")
 	op := strings.TrimSpace(opRaw)
 	opdata := strings.TrimSpace(opdataRaw)
@@ -187,11 +186,15 @@ func (p *RuleParser) ParseOperator(operator string) error {
 	opts := rules.OperatorOptions{
 		Arguments: opdata,
 		Path: []string{
-			p.options.Config.Get("parser_config_dir", "").(string),
-			p.options.Config.Get("working_dir", "").(string),
+			p.options.ParserConfig.ConfigDir,
 		},
-		Root: p.options.Config.Get("parser_root", io.OSFS{}).(fs.FS),
+		Root: p.options.ParserConfig.Root,
 	}
+
+	if wd := p.options.ParserConfig.WorkingDir; wd != "" {
+		opts.Path = append(opts.Path, wd)
+	}
+
 	opfn, err := operators.Get(op, opts)
 	if err != nil {
 		return err
@@ -225,12 +228,23 @@ func (p *RuleParser) ParseDefaultActions(actions string) error {
 		if action.Atype == rules.ActionTypeDisruptive {
 			defaultDisruptive = action.Key
 		}
+		// SecDefaultActions can not contain metadata actions
+		if action.Atype == rules.ActionTypeMetadata {
+			return fmt.Errorf("SecDefaultAction must not contain metadata actions: %s", actions)
+		}
+		// Transformations are not suitable to be part of the default actions defined by SecDefaultActions
+		if action.Key == "t" {
+			return fmt.Errorf("SecDefaultAction must not contain transformation actions: %s", actions)
+		}
 	}
 	if phase == 0 {
-		return errors.New("SecDefaultAction must contain a phase")
+		return fmt.Errorf("SecDefaultAction must contain a phase")
 	}
 	if defaultDisruptive == "" {
-		return errors.New("SecDefaultAction must contain a disruptive action: " + actions)
+		return fmt.Errorf("SecDefaultAction must contain a disruptive action: %s", actions)
+	}
+	if p.defaultActions[types.RulePhase(phase)] != nil {
+		return fmt.Errorf("SecDefaultAction already defined for this phase: %s", actions)
 	}
 	p.defaultActions[types.RulePhase(phase)] = act
 	return nil
@@ -239,7 +253,7 @@ func (p *RuleParser) ParseDefaultActions(actions string) error {
 // ParseActions parses a comma separated list of actions:arguments
 // Arguments can be wrapper inside quotes
 func (p *RuleParser) ParseActions(actions string) error {
-	disabledActions := p.options.Config.Get("disabled_rule_actions", []string{}).([]string)
+	disabledActions := p.options.ParserConfig.DisabledRuleActions
 	act, err := parseActions(actions)
 	if err != nil {
 		return err
@@ -254,11 +268,12 @@ func (p *RuleParser) ParseActions(actions string) error {
 	for _, a := range act {
 		if a.Atype == rules.ActionTypeMetadata {
 			if err := a.F.Init(p.rule, a.Value); err != nil {
-				return err
+				return fmt.Errorf("failed to init action %s: %s", a.Key, err.Error())
 			}
 		}
 	}
 
+	// if the rule is missing the phase, the default phase assigned is phase 2 (See NewRule())
 	phase := p.rule.Phase_
 
 	defaults := p.defaultActions[phase]
@@ -290,14 +305,11 @@ func (p *RuleParser) Rule() *corazawaf.Rule {
 type RuleOptions struct {
 	WithOperator bool
 	WAF          *corazawaf.WAF
-	Config       types.Config
+	ParserConfig ParserConfig
+	Raw          string
 	Directive    string
 	Data         string
 }
-
-// ruleTokenRegex splits the sections operator and actions.
-// e.g. &REQUEST_COOKIES_NAMES:'/^(?:phpMyAdminphp|MyAdmin_https)$/'|ARGS:test "id:3" => "id:3"
-var ruleTokenRegex = regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
 
 // ParseRule parses a rule from a string
 // The string must match the seclang format
@@ -309,19 +321,28 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 	}
 
 	var err error
-	rp := &RuleParser{
+	rp := RuleParser{
 		options:        options,
 		rule:           corazawaf.NewRule(),
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
+	var defaultActionsRaw []string
+	// Default actions are persisted only inside the ParserConfig, therefore they are parsed every time a rule is parsed
+	// and not just once when the SecDefaultAction is read.
+	if options.ParserConfig.HasRuleDefaultActions {
+		defaultActionsRaw = options.ParserConfig.RuleDefaultActions
+	}
+	disabledRuleOperators := options.ParserConfig.DisabledRuleOperators
+	for _, da := range defaultActionsRaw {
 
-	defaultActions := options.Config.Get("rule_default_actions", []string{
-		defaultActionsPhase2,
-	}).([]string)
-	disabledRuleOperators := options.Config.Get("disabled_rule_operators", []string{}).([]string)
-
-	for _, da := range defaultActions {
 		err = rp.ParseDefaultActions(da)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// If no default actions for phase 2 are defined, defaultActionsPhase2 variable (hardcoded default actions for phase 2) is used.
+	if rp.defaultActions[types.PhaseRequestBody] == nil {
+		err = rp.ParseDefaultActions(defaultActionsPhase2)
 		if err != nil {
 			return nil, err
 		}
@@ -329,27 +350,21 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 	actions := ""
 
 	if options.WithOperator {
-		matches := ruleTokenRegex.FindAllString(options.Data, 3) // we use at most second match
-		if len(matches) == 0 {
-			return nil, fmt.Errorf("invalid rule with no transformation matches: %q", options.Data)
+		vars, operator, acts, err := parseActionOperator(options.Data)
+		if err != nil {
+			return nil, err
 		}
-		operator := utils.MaybeRemoveQuotes(matches[0])
 		if utils.InSlice(operator, disabledRuleOperators) {
 			return nil, fmt.Errorf("%s rule operator is disabled", operator)
 		}
-		vars, _, _ := strings.Cut(options.Data, " ")
-		err = rp.ParseVariables(vars)
-		if err != nil {
+		if err := rp.ParseVariables(vars); err != nil {
 			return nil, err
 		}
-		err = rp.ParseOperator(operator)
-		if err != nil {
+		if err := rp.ParseOperator(operator); err != nil {
 			return nil, err
 		}
-		if len(matches) > 1 {
-			actions = utils.MaybeRemoveQuotes(matches[1])
-			err = rp.ParseActions(actions)
-			if err != nil {
+		if acts != "" {
+			if err := rp.ParseActions(acts); err != nil {
 				return nil, err
 			}
 		}
@@ -362,9 +377,9 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 		}
 	}
 	rule := rp.Rule()
-	rule.Raw_ = fmt.Sprintf("%s %s", options.Directive, options.Data)
-	rule.File_ = options.Config.Get("parser_config_file", "").(string)
-	rule.Line_ = options.Config.Get("parser_last_line", 0).(int)
+	rule.Raw_ = options.Raw
+	rule.File_ = options.ParserConfig.ConfigFile
+	rule.Line_ = options.ParserConfig.LastLine
 
 	if parent := getLastRuleExpectingChain(options.WAF); parent != nil {
 		rule.ParentID_ = parent.ID_
@@ -377,7 +392,61 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 		lastChain.Chain = rule
 		return nil, nil
 	}
-	return rp.rule, nil
+	return rule, nil
+}
+
+func parseActionOperator(data string) (vars string, op string, actions string, err error) {
+	// So only need to TrimLeft below
+	data = strings.Trim(data, " ")
+	vars, rest, ok := strings.Cut(data, " ")
+	if !ok {
+		return "", "", "", fmt.Errorf("invalid format for rule with operator: %q", data)
+	}
+
+	rest = strings.TrimLeft(rest, " ")
+
+	if len(rest) == 0 || rest[0] != '"' {
+		return "", "", "", fmt.Errorf("invalid operator for rule with operator: %q", data)
+	}
+
+	op, rest, err = cutQuotedString(rest)
+	if err != nil {
+		return
+	}
+	op = utils.MaybeRemoveQuotes(op)
+
+	rest = strings.TrimLeft(rest, " ")
+	if len(rest) == 0 {
+		// No actions
+		return
+	}
+
+	if len(rest) < 2 || rest[0] != '"' || rest[len(rest)-1] != '"' {
+		return "", "", "", fmt.Errorf("invalid actions for rule with operator: %q", data)
+	}
+	actions = utils.MaybeRemoveQuotes(rest)
+
+	return
+}
+
+func cutQuotedString(s string) (string, string, error) {
+	if len(s) == 0 || s[0] != '"' {
+		return "", "", fmt.Errorf("expected quoted string: %q", s)
+	}
+
+	for i := 1; i < len(s); i++ {
+		// Search until first quote that isn't part of an escape sequence.
+		if s[i] != '"' {
+			continue
+		}
+		if s[i-1] == '\\' {
+			continue
+		}
+
+		return s[:i+1], s[i+1:], nil
+	}
+
+	return "", "", fmt.Errorf("expected terminating quote: %q", s)
 }
 
 func getLastRuleExpectingChain(w *corazawaf.WAF) *corazawaf.Rule {
@@ -385,7 +454,8 @@ func getLastRuleExpectingChain(w *corazawaf.WAF) *corazawaf.Rule {
 	if len(rules) == 0 {
 		return nil
 	}
-	lastRule := rules[len(rules)-1]
+
+	lastRule := &rules[len(rules)-1]
 	parent := lastRule
 	for parent.Chain != nil {
 		parent = parent.Chain
@@ -394,70 +464,106 @@ func getLastRuleExpectingChain(w *corazawaf.WAF) *corazawaf.Rule {
 	if parent.HasChain && parent.Chain == nil {
 		return lastRule
 	}
+
 	return nil
 }
+
+const unset = -1
 
 // parseActions will assign the function name, arguments and
 // function (pkg.actions) for each action split by comma (,)
 // Action arguments are allowed to wrap values between colons(”)
 func parseActions(actions string) ([]ruleAction, error) {
-	iskey := true
-	ckey := ""
-	cval := ""
-	quoted := false
 	var res []ruleAction
-actionLoop:
-	for i, c := range actions {
-		switch {
-		case iskey && c == ' ':
-			// skip whitespaces in key
-			continue actionLoop
-		case !quoted && c == ',':
-			f, err := actionsmod.Get(ckey)
-			if err != nil {
-				return nil, err
-			}
-			res = append(res, ruleAction{
-				Key:   ckey,
-				Value: cval,
-				F:     f,
-				Atype: f.Type(),
-			})
-			ckey = ""
-			cval = ""
-			iskey = true
-		case iskey && c == ':':
-			iskey = false
-		case !iskey && c == '\'' && actions[i-1] != '\\':
-			if quoted {
-				quoted = false
-				iskey = true
-			} else {
-				quoted = true
-			}
-		case !iskey:
-			if c == ' ' && !quoted {
-				// skip unquoted whitespaces
-				continue actionLoop
-			}
-			cval += string(c)
-		case iskey:
-			ckey += string(c)
+	var err error
+	disruptiveActionIndex := unset
+
+	beforeKey := -1 // index before first char of key
+	afterKey := -1  // index after last char of key and before first char of value
+
+	inQuotes := false
+
+	for i := 1; i < len(actions); i++ {
+		c := actions[i]
+		if actions[i-1] == '\\' {
+			// Escaped character, no need to process
+			continue
 		}
-		if i+1 == len(actions) {
-			f, err := actionsmod.Get(ckey)
+		if c == '\'' {
+			inQuotes = !inQuotes
+			continue
+		}
+		if inQuotes {
+			// Inside quotes, no need to process
+			continue
+		}
+		switch c {
+		case ':':
+			if afterKey != -1 {
+				// Reading value, no need to process
+				continue
+			}
+			afterKey = i
+		case ',':
+			var val string
+			if afterKey == -1 {
+				// No value, we only have a key
+				afterKey = i
+			} else {
+				val = actions[afterKey+1 : i]
+			}
+			res, disruptiveActionIndex, err = appendRuleAction(res, actions[beforeKey+1:afterKey], val, disruptiveActionIndex)
 			if err != nil {
 				return nil, err
 			}
-			res = append(res, ruleAction{
-				Key:   ckey,
-				Value: cval,
-				F:     f,
-				Atype: f.Type(),
-			})
+			beforeKey = i
+			afterKey = -1
 		}
 	}
+	var val string
+	if afterKey == -1 {
+		// No value, we only have a key
+		afterKey = len(actions)
+	} else {
+		val = actions[afterKey+1:]
+	}
+	res, _, err = appendRuleAction(res, actions[beforeKey+1:afterKey], val, disruptiveActionIndex)
+	if err != nil {
+		return nil, err
+	}
 	return res, nil
+}
+
+func appendRuleAction(res []ruleAction, key string, val string, disruptiveActionIndex int) ([]ruleAction, int, error) {
+	key = strings.ToLower(strings.TrimSpace(key))
+	val = strings.TrimSpace(val) // We may want to keep case sensitive values (e.g. Messages)
+	val = utils.MaybeRemoveQuotes(val)
+	f, err := actionsmod.Get(key)
+	if err != nil {
+		return res, unset, err
+	}
+	if f.Type() == rules.ActionTypeDisruptive && disruptiveActionIndex != unset {
+		// There can only be one disruptive action per rule (if there are multiple disruptive
+		// actions present, or inherited, only the last one will take effect).
+		// Therefore, if we encounter another disruptive action, we replace the previous one.
+		res[disruptiveActionIndex] = ruleAction{
+			Key:   key,
+			Value: val,
+			F:     f,
+			Atype: f.Type(),
+		}
+	} else {
+		if f.Type() == rules.ActionTypeDisruptive {
+			disruptiveActionIndex = len(res)
+		}
+		res = append(res, ruleAction{
+			Key:   key,
+			Value: val,
+			F:     f,
+			Atype: f.Type(),
+		})
+	}
+	return res, disruptiveActionIndex, nil
 }
 
 /*

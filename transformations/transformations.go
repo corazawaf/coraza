@@ -55,4 +55,7 @@ func init() {
 	RegisterPlugin("urlDecodeUni", urlDecodeUni)
 	RegisterPlugin("urlEncode", urlEncode)
 	RegisterPlugin("utf8toUnicode", utf8ToUnicode)
+	RegisterPlugin("trim", trim)
+	RegisterPlugin("trimLeft", trimLeft)
+	RegisterPlugin("trimRight", trimRight)
 }

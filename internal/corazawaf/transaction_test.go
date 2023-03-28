@@ -4,6 +4,7 @@
 package corazawaf
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"regexp"
@@ -13,9 +14,10 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/debuglog"
+	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/loggers"
 	"github.com/corazawaf/coraza/v3/macro"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -198,7 +200,6 @@ func TestWriteRequestBody(t *testing.T) {
 							waf.RuleEngine = types.RuleEngineOn
 							waf.RequestBodyAccess = true
 							waf.RequestBodyLimit = int64(testCase.requestBodyLimit)
-							waf.RequestBodyInMemoryLimit = int64(testCase.requestBodyLimit)
 							waf.RequestBodyLimitAction = testCase.requestBodyLimitAction
 
 							tx := waf.NewTransaction()
@@ -269,7 +270,6 @@ func TestWriteRequestBodyOnLimitReached(t *testing.T) {
 		waf.RuleEngine = types.RuleEngineOn
 		waf.RequestBodyAccess = true
 		waf.RequestBodyLimit = 2
-		waf.RequestBodyInMemoryLimit = 2
 		waf.RequestBodyLimitAction = tCase.requestBodyLimitAction
 
 		t.Run(tName, func(t *testing.T) {
@@ -352,7 +352,7 @@ func TestWriteRequestBodyIsNopWhenBodyIsNotAccesible(t *testing.T) {
 func TestResponseHeader(t *testing.T) {
 	tx := makeTransaction(t)
 	tx.AddResponseHeader("content-type", "test")
-	if tx.variables.responseContentType.String() != "test" {
+	if tx.variables.responseContentType.Get() != "test" {
 		t.Error("invalid RESPONSE_CONTENT_TYPE after response headers")
 	}
 
@@ -371,7 +371,7 @@ func TestProcessRequestHeadersDoesNoEvaluationOnEngineOff(t *testing.T) {
 	}
 
 	_ = tx.ProcessRequestHeaders()
-	if tx.LastPhase != 0 { // 0 means no phases have been evaluated
+	if tx.lastPhase != 0 { // 0 means no phases have been evaluated
 		t.Error("unexpected rule evaluation")
 	}
 }
@@ -382,7 +382,7 @@ func TestProcessRequestBodyDoesNoEvaluationOnEngineOff(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error("failed to process request body")
 	}
-	if tx.LastPhase != 0 {
+	if tx.lastPhase != 0 {
 		t.Error("unexpected rule evaluation")
 	}
 }
@@ -391,7 +391,7 @@ func TestProcessResponseHeadersDoesNoEvaluationOnEngineOff(t *testing.T) {
 	tx := NewWAF().NewTransaction()
 	tx.RuleEngine = types.RuleEngineOff
 	_ = tx.ProcessResponseHeaders(200, "OK")
-	if tx.LastPhase != 0 {
+	if tx.lastPhase != 0 {
 		t.Error("unexpected rule evaluation")
 	}
 }
@@ -402,7 +402,7 @@ func TestProcessResponseBodyDoesNoEvaluationOnEngineOff(t *testing.T) {
 	if _, err := tx.ProcessResponseBody(); err != nil {
 		t.Error("Failed to process response body")
 	}
-	if tx.LastPhase != 0 {
+	if tx.lastPhase != 0 {
 		t.Error("unexpected rule evaluation")
 	}
 }
@@ -411,7 +411,7 @@ func TestProcessLoggingDoesNoEvaluationOnEngineOff(t *testing.T) {
 	tx := NewWAF().NewTransaction()
 	tx.RuleEngine = types.RuleEngineOff
 	tx.ProcessLogging()
-	if tx.LastPhase != 0 {
+	if tx.lastPhase != 0 {
 		t.Error("unexpected rule evaluation")
 	}
 }
@@ -487,9 +487,14 @@ func TestWriteResponseBody(t *testing.T) {
 						t.Run(name, func(t *testing.T) {
 							waf := NewWAF()
 							waf.RuleEngine = types.RuleEngineOn
+							waf.ResponseBodyMimeTypes = []string{"text/plain"}
 							waf.ResponseBodyAccess = true
 							waf.ResponseBodyLimit = int64(testCase.responseBodyLimit)
 							waf.ResponseBodyLimitAction = testCase.responseBodyLimitAction
+
+							if err := waf.Validate(); err != nil {
+								t.Fatalf("failed to validate the WAF: %s", err.Error())
+							}
 
 							tx := waf.NewTransaction()
 							tx.AddResponseHeader("content-type", "text/plain")
@@ -522,7 +527,7 @@ func TestWriteResponseBody(t *testing.T) {
 								}
 								// checking if the body has been populated up to the first POST arg
 								index := strings.Index(urlencodedBody, "&")
-								if tx.variables.responseBody.String()[:index] != urlencodedBody[:index] {
+								if tx.variables.responseBody.Get()[:index] != urlencodedBody[:index] {
 									t.Error("failed to set response body")
 								}
 							}
@@ -647,8 +652,7 @@ func TestAuditLogFields(t *testing.T) {
 	rule.ID_ = 131
 	tx.MatchRule(rule, []types.MatchData{
 		&corazarules.MatchData{
-			VariableName_: "UNIQUE_ID",
-			Variable_:     variables.UniqueID,
+			Variable_: variables.UniqueID,
 		},
 	})
 	if len(tx.matchedRules) == 0 || tx.matchedRules[0].Rule().ID() != rule.ID_ {
@@ -690,7 +694,7 @@ func TestRelevantAuditLogging(t *testing.T) {
 	tx.WAF.AuditLogRelevantStatus = regexp.MustCompile(`(403)`)
 	tx.variables.responseStatus.Set("403")
 	tx.AuditEngine = types.AuditEngineRelevantOnly
-	// tx.WAF.auditLogger = loggers.NewAuditLogger()
+	// tx.WAF.auditLogger = auditlog.NewAuditLogger()
 	tx.ProcessLogging()
 	// TODO how do we check if the log was writen?
 	if err := tx.Close(); err != nil {
@@ -708,8 +712,7 @@ func TestLogCallback(t *testing.T) {
 	rule := NewRule()
 	tx.MatchRule(rule, []types.MatchData{
 		&corazarules.MatchData{
-			VariableName_: "UNIQUE_ID",
-			Variable_:     variables.UniqueID,
+			Variable_: variables.UniqueID,
 		},
 	})
 	if buffer == "" && strings.Contains(buffer, tx.id) {
@@ -732,15 +735,24 @@ func TestHeaderSetters(t *testing.T) {
 	if tx.variables.requestHeaders.Get("cookie")[0] != "abc=def;hij=klm" {
 		t.Error("failed to set request header")
 	}
-	if !utils.InSlice("cookie", tx.variables.requestHeadersNames.Get("cookie")) {
-		t.Error("failed to set header name", tx.variables.requestHeadersNames.Get("cookie"))
+	if !utils.InSlice("cookie", collectionValues(t, tx.variables.requestHeadersNames)) {
+		t.Error("failed to set header name", collectionValues(t, tx.variables.requestHeadersNames))
 	}
-	if !utils.InSlice("abc", tx.variables.requestCookiesNames.Get("abc")) {
+	if !utils.InSlice("abc", collectionValues(t, tx.variables.requestCookiesNames)) {
 		t.Error("failed to set cookie name")
 	}
 	if err := tx.Close(); err != nil {
 		t.Error(err)
 	}
+}
+
+func collectionValues(t *testing.T, col collection.Collection) []string {
+	t.Helper()
+	var values []string
+	for _, v := range col.FindAll() {
+		values = append(values, v.Value())
+	}
+	return values
 }
 
 func TestRequestBodyProcessingAlgorithm(t *testing.T) {
@@ -751,14 +763,57 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 	tx.ForceRequestBodyVariable = true
 	tx.AddRequestHeader("content-type", "text/plain")
 	tx.AddRequestHeader("content-length", "7")
+	tx.ProcessRequestHeaders()
 	if _, err := tx.requestBodyBuffer.Write([]byte("test123")); err != nil {
 		t.Error("Failed to write request body buffer")
 	}
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error("failed to process request body")
 	}
-	if tx.variables.requestBody.String() != "test123" {
+	if tx.variables.requestBody.Get() != "test123" {
 		t.Error("failed to set request body")
+	}
+	if err := tx.Close(); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestProcessBodiesSkippedIfHeadersPhasesNotReached(t *testing.T) {
+	logBuffer := &bytes.Buffer{}
+	waf := NewWAF()
+	waf.SetDebugLogOutput(logBuffer)
+	_ = waf.SetDebugLogLevel(debuglog.LevelDebug)
+	tx := waf.NewTransaction()
+	tx.RuleEngine = types.RuleEngineOn
+	tx.RequestBodyAccess = true
+	// Current phase is PhaseUnknown (ProcessRequestHeaders has not been called)
+	it, err := tx.ProcessRequestBody()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if it != nil {
+		t.Fatal("Unexpected interruption")
+	}
+	it, err = tx.ProcessResponseBody()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if it != nil {
+		t.Fatal("Unexpected interruption")
+	}
+	logEntries := strings.Split(strings.TrimSpace(logBuffer.String()), "\n")
+	// At this point we are expecting three log entries:
+	// [0] New transaction log
+	// [1] Anomalous call before request headers evaluation
+	// [2] Anomalous call before response headers evaluation
+	if want, have := 3, len(logEntries); want != have {
+		t.Fatalf("unexpected number of log entries, want %d, have %d", want, have)
+	}
+	if want, have := "anomalous call before request headers evaluation", logEntries[1]; !strings.Contains(have, want) {
+		t.Fatalf("unexpected message, want %q, have %q", want, have)
+	}
+	if want, have := "anomalous call before response headers evaluation", logEntries[2]; !strings.Contains(have, want) {
+		t.Fatalf("unexpected message, want %q, have %q", want, have)
 	}
 	if err := tx.Close(); err != nil {
 		t.Error(err)
@@ -768,7 +823,6 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 func TestTxVariables(t *testing.T) {
 	tx := makeTransaction(t)
 	rv := ruleVariableParams{
-		Name:     "REQUEST_HEADERS",
 		Variable: variables.RequestHeaders,
 		KeyStr:   "ho.*",
 		KeyRx:    regexp.MustCompile("ho.*"),
@@ -805,7 +859,6 @@ func TestTxVariables(t *testing.T) {
 func TestTxVariablesExceptions(t *testing.T) {
 	tx := makeTransaction(t)
 	rv := ruleVariableParams{
-		Name:     "REQUEST_HEADERS",
 		Variable: variables.RequestHeaders,
 		KeyStr:   "ho.*",
 		KeyRx:    regexp.MustCompile("ho.*"),
@@ -861,18 +914,22 @@ func TestTxPhase4Magic(t *testing.T) {
 	waf.ResponseBodyAccess = true
 	waf.ResponseBodyLimit = 3
 	waf.ResponseBodyLimitAction = types.BodyLimitActionProcessPartial
+	waf.ResponseBodyMimeTypes = []string{"text/html"}
 	tx := waf.NewTransaction()
 	tx.AddResponseHeader("content-type", "text/html")
+	tx.ProcessRequestHeaders()
+	_, _ = tx.ProcessRequestBody()
+	tx.ProcessResponseHeaders(200, "HTTP/1.1")
 	if it, _, err := tx.WriteResponseBody([]byte("more bytes")); it != nil || err != nil {
 		t.Error(err)
 	}
 	if _, err := tx.ProcessResponseBody(); err != nil {
 		t.Error(err)
 	}
-	if tx.variables.outboundDataError.String() != "1" {
+	if tx.variables.outboundDataError.Get() != "1" {
 		t.Error("failed to set outbound data error")
 	}
-	if tx.variables.responseBody.String() != "mor" {
+	if tx.variables.responseBody.Get() != "mor" {
 		t.Error("failed to set response body")
 	}
 }
@@ -881,10 +938,9 @@ func TestVariablesMatch(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
 	tx.matchVariable(&corazarules.MatchData{
-		VariableName_: "ARGS_NAMES",
-		Variable_:     variables.ArgsNames,
-		Key_:          "sample",
-		Value_:        "samplevalue",
+		Variable_: variables.ArgsNames,
+		Key_:      "sample",
+		Value_:    "samplevalue",
 	})
 	expect := map[variables.RuleVariable]string{
 		variables.MatchedVar:     "samplevalue",
@@ -892,7 +948,7 @@ func TestVariablesMatch(t *testing.T) {
 	}
 
 	for k, v := range expect {
-		if m := (tx.Collection(k)).(*collection.Simple).String(); m != v {
+		if m := (tx.Collection(k)).(*collections.Single).Get(); m != v {
 			t.Errorf("failed to match variable %s, Expected: %s, got: %s", k.Name(), v, m)
 		}
 	}
@@ -905,6 +961,7 @@ func TestVariablesMatch(t *testing.T) {
 func TestTxReqBodyForce(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
+	tx.ProcessRequestHeaders()
 	tx.RequestBodyAccess = true
 	tx.ForceRequestBodyVariable = true
 	if _, err := tx.requestBodyBuffer.Write([]byte("test")); err != nil {
@@ -913,7 +970,7 @@ func TestTxReqBodyForce(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error(err)
 	}
-	if tx.variables.requestBody.String() != "test" {
+	if tx.variables.requestBody.Get() != "test" {
 		t.Error("failed to set request body")
 	}
 }
@@ -929,7 +986,7 @@ func TestTxReqBodyForceNegative(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Error(err)
 	}
-	if tx.variables.requestBody.String() == "test" {
+	if tx.variables.requestBody.Get() == "test" {
 		t.Error("reqbody should not be there")
 	}
 }
@@ -938,27 +995,51 @@ func TestTxProcessConnection(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
 	tx.ProcessConnection("127.0.0.1", 80, "127.0.0.2", 8080)
-	if tx.variables.remoteAddr.String() != "127.0.0.1" {
+	if tx.variables.remoteAddr.Get() != "127.0.0.1" {
 		t.Error("failed to set client ip")
 	}
-	if tx.variables.remotePort.Int() != 80 {
+	if rp, _ := strconv.Atoi(tx.variables.remotePort.Get()); rp != 80 {
 		t.Error("failed to set client port")
 	}
+}
+
+func TestTxSetServerName(t *testing.T) {
+	logBuffer := &bytes.Buffer{}
+
+	waf := NewWAF()
+	waf.SetDebugLogOutput(logBuffer)
+	_ = waf.SetDebugLogLevel(debuglog.LevelWarn)
+
+	tx := waf.NewTransaction()
+	tx.lastPhase = types.PhaseRequestHeaders
+	tx.SetServerName("coraza.io")
+	if tx.variables.serverName.Get() != "coraza.io" {
+		t.Error("failed to set server name")
+	}
+	logEntries := strings.Split(strings.TrimSpace(logBuffer.String()), "\n")
+	if want, have := 1, len(logEntries); want != have {
+		t.Fatalf("unexpected number of log entries, want %d, have %d", want, have)
+	}
+
+	if want, have := "SetServerName has been called after ProcessRequestHeaders", logEntries[0]; !strings.Contains(have, want) {
+		t.Fatalf("unexpected message, want %q, have %q", want, have)
+	}
+
 }
 
 func TestTxAddArgument(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
 	tx.ProcessConnection("127.0.0.1", 80, "127.0.0.2", 8080)
-	tx.AddArgument(types.ArgumentGET, "test", "testvalue")
+	tx.AddGetRequestArgument("test", "testvalue")
 	if tx.variables.argsGet.Get("test")[0] != "testvalue" {
 		t.Error("failed to set args get")
 	}
-	tx.AddArgument(types.ArgumentPOST, "ptest", "ptestvalue")
+	tx.AddPostRequestArgument("ptest", "ptestvalue")
 	if tx.variables.argsPost.Get("ptest")[0] != "ptestvalue" {
 		t.Error("failed to set args post")
 	}
-	tx.AddArgument(types.ArgumentPATH, "ptest2", "ptestvalue")
+	tx.AddPathRequestArgument("ptest2", "ptestvalue")
 	if tx.variables.argsPath.Get("ptest2")[0] != "ptestvalue" {
 		t.Error("failed to set args post")
 	}
@@ -967,7 +1048,6 @@ func TestTxAddArgument(t *testing.T) {
 func TestTxGetField(t *testing.T) {
 	tx := makeTransaction(t)
 	rvp := ruleVariableParams{
-		Name:     "args",
 		Variable: variables.Args,
 	}
 	if f := tx.GetField(rvp); len(f) != 3 {
@@ -980,13 +1060,13 @@ func TestTxProcessURI(t *testing.T) {
 	tx := waf.NewTransaction()
 	uri := "http://example.com/path/to/file.html?query=string&other=value"
 	tx.ProcessURI(uri, "GET", "HTTP/1.1")
-	if s := tx.variables.requestURI.String(); s != uri {
+	if s := tx.variables.requestURI.Get(); s != uri {
 		t.Errorf("failed to set request uri, got %s", s)
 	}
-	if s := tx.variables.requestBasename.String(); s != "file.html" {
+	if s := tx.variables.requestBasename.Get(); s != "file.html" {
 		t.Errorf("failed to set request path, got %s", s)
 	}
-	if tx.variables.queryString.String() != "query=string&other=value" {
+	if tx.variables.queryString.Get() != "query=string&other=value" {
 		t.Error("failed to set request query")
 	}
 	if v := tx.variables.args.FindAll(); len(v) != 2 {
@@ -1074,7 +1154,7 @@ func validateMacroExpansion(tests map[string]string, tx *Transaction, t *testing
 		res := m.Expand(tx)
 		if res != v {
 			if testing.Verbose() {
-				fmt.Println(tx.Debug())
+				fmt.Println(tx)
 				fmt.Println("===STACK===\n", string(debug.Stack())+"\n===STACK===")
 			}
 			t.Error("Failed set transaction for " + k + ", expected " + v + ", got " + res)
@@ -1135,26 +1215,12 @@ func BenchmarkMacro(b *testing.B) {
 	}
 }
 
-type inspectableLogger struct {
-	entries []string
-}
-
-func (l *inspectableLogger) Write(p []byte) (n int, err error) {
-	l.entries = append(l.entries, string(p))
-	return len(p), nil
-}
-
-func (l *inspectableLogger) Close() error {
-	l.entries = nil
-	return nil
-}
-
-func TestProcessorsIdempotency(t *testing.T) {
-	l := &inspectableLogger{}
+func TestProcessorsIdempotencyWithAlreadyRaisedInterruption(t *testing.T) {
+	logBuffer := &bytes.Buffer{}
 
 	waf := NewWAF()
-	waf.Logger.SetOutput(l)
-	waf.Logger.SetLevel(loggers.LogLevelError)
+	waf.SetDebugLogOutput(logBuffer)
+	_ = waf.SetDebugLogLevel(debuglog.LevelError)
 
 	expectedInterruption := &types.Interruption{
 		RuleID: 123,
@@ -1188,6 +1254,8 @@ func TestProcessorsIdempotency(t *testing.T) {
 
 	for processor, tCase := range testCases {
 		t.Run(processor, func(t *testing.T) {
+			logBuffer.Reset()
+
 			it := tCase(tx)
 			if it == nil {
 				t.Fatal("expected interruption")
@@ -1197,17 +1265,111 @@ func TestProcessorsIdempotency(t *testing.T) {
 				t.Fatal("unexpected interruption")
 			}
 
-			if want, have := 1, len(l.entries); want != have {
+			logEntries := strings.Split(strings.TrimSpace(logBuffer.String()), "\n")
+			if want, have := 1, len(logEntries); want != have {
 				t.Fatalf("unexpected number of log entries, want %d, have %d", want, have)
 			}
 
-			expectedMessage := fmt.Sprintf("[ERROR] Calling %s but there is a preexisting interruption\n", processor)
+			expectedMessage := fmt.Sprintf("Calling %s but there is a preexisting interruption", processor)
 
-			if want, have := expectedMessage, l.entries[0]; want != have {
-				t.Fatalf("unexpected message, want %q, have %q", want, have)
+			if want, have := expectedMessage, logEntries[0]; !strings.Contains(have, want) {
+				t.Fatalf("unexpected message, want to contain %q in %q", want, have)
+			}
+		})
+	}
+}
+
+func TestIterationStops(t *testing.T) {
+	// This is a valid test of iteration mechanics but is really overkill. We mostly do it for
+	// code coverage.
+
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+
+	// Order doesn't matter, iterate once without stopping to know the order
+	var allVars []variables.RuleVariable
+	tx.Variables().All(func(v variables.RuleVariable, _ collection.Collection) bool {
+		allVars = append(allVars, v)
+		return true
+	})
+
+	for i, stopV := range allVars {
+		t.Run(stopV.Name(), func(t *testing.T) {
+			var haveVars []variables.RuleVariable
+			tx.Variables().All(func(v variables.RuleVariable, _ collection.Collection) bool {
+				haveVars = append(haveVars, v)
+				return v != stopV
+			})
+
+			if want, have := i+1, len(haveVars); want != have {
+				t.Errorf("stopped with unexpected number of variables, want %d, have %d", want, have)
 			}
 
-			l.Close()
+			for j, v := range haveVars {
+				if want, have := allVars[j], v; want != have {
+					t.Errorf("unexpected variable at index %d, want %s, have %s", j, want.Name(), have.Name())
+				}
+			}
 		})
+	}
+}
+
+func TestTxAddResponseArgs(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	tx.AddResponseArgument("samplekey", "samplevalue")
+	t.Log("This is a placeholder for tx.AddResponseArgs")
+}
+
+func TestResponseBodyForceProcessing(t *testing.T) {
+	waf := NewWAF()
+	waf.ResponseBodyAccess = true
+	tx := waf.NewTransaction()
+	tx.ForceResponseBodyVariable = true
+	tx.variables.ResponseBodyProcessor().Set("JSON")
+	tx.ProcessRequestHeaders()
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Fatal(err)
+	}
+	tx.ProcessResponseHeaders(200, "HTTP/1")
+	if _, _, err := tx.WriteResponseBody([]byte(`{"key":"value"}`)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.ProcessResponseBody(); err != nil {
+		t.Fatal(err)
+	}
+	f := tx.variables.responseArgs.FindString("json.key")
+	if len(f) == 0 {
+		t.Fatal("json.key not found")
+	}
+}
+
+func TestForceRequestBodyOverride(t *testing.T) {
+	waf := NewWAF()
+	waf.RequestBodyAccess = true
+	tx := waf.NewTransaction()
+	tx.ForceRequestBodyVariable = true
+	tx.variables.RequestBodyProcessor().Set("JSON")
+	tx.ProcessRequestHeaders()
+	if _, _, err := tx.WriteRequestBody([]byte("foo=bar&baz=qux")); err != nil {
+		t.Errorf("Failed to write request body: %v", err)
+	}
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Errorf("Failed to process request body: %v", err)
+	}
+	if tx.variables.RequestBodyProcessor().Get() != "JSON" {
+		t.Errorf("Failed to force request body variable")
+	}
+	tx = waf.NewTransaction()
+	tx.ForceRequestBodyVariable = true
+	tx.ProcessRequestHeaders()
+	if _, _, err := tx.WriteRequestBody([]byte("foo=bar&baz=qux")); err != nil {
+		t.Errorf("Failed to write request body: %v", err)
+	}
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Errorf("Failed to process request body: %v", err)
+	}
+	if tx.variables.RequestBodyProcessor().Get() != "URLENCODED" {
+		t.Errorf("Failed to force request body variable, got RBP: %q", tx.variables.RequestBodyProcessor().Get())
 	}
 }

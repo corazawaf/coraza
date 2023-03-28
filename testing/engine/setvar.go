@@ -37,6 +37,6 @@ SecRule ARGS_NAMES "@rx ." \
 	nolog,\
 	setvar:'TX.paramcounter_%{MATCHED_VAR_NAME}=+1'"
 
-SecRule TX:/paramcounter_/ "@eq 2" "id:920271,log"
+SecRule TX:/paramcounter_.*/ "@eq 2" "id:920271,log"
 `,
 })

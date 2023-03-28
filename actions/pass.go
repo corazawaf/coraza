@@ -7,16 +7,16 @@ import (
 	"github.com/corazawaf/coraza/v3/rules"
 )
 
-type passFn struct {
-}
+type passFn struct{}
 
-func (a *passFn) Init(r rules.RuleMetadata, data string) error {
+func (a *passFn) Init(_ rules.RuleMetadata, data string) error {
+	if len(data) > 0 {
+		return ErrUnexpectedArguments
+	}
 	return nil
 }
 
-func (a *passFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
-	// Not evaluated
-}
+func (a *passFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
 
 func (a *passFn) Type() rules.ActionType {
 	return rules.ActionTypeDisruptive

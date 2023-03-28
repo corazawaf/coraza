@@ -6,10 +6,10 @@ package actions
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/rules"
@@ -20,25 +20,27 @@ import (
 type ctlFunctionType int
 
 const (
-	ctlUnknown                  ctlFunctionType = iota
-	ctlRuleRemoveTargetByID     ctlFunctionType = iota
-	ctlRuleRemoveTargetByTag    ctlFunctionType = iota
-	ctlRuleRemoveTargetByMsg    ctlFunctionType = iota
-	ctlAuditEngine              ctlFunctionType = iota
-	ctlAuditLogParts            ctlFunctionType = iota
-	ctlForceRequestBodyVariable ctlFunctionType = iota
-	ctlRequestBodyAccess        ctlFunctionType = iota
-	ctlRequestBodyLimit         ctlFunctionType = iota
-	ctlRuleEngine               ctlFunctionType = iota
-	ctlRuleRemoveByID           ctlFunctionType = iota
-	ctlRuleRemoveByMsg          ctlFunctionType = iota
-	ctlRuleRemoveByTag          ctlFunctionType = iota
-	ctlHashEngine               ctlFunctionType = iota
-	ctlHashEnforcement          ctlFunctionType = iota
-	ctlRequestBodyProcessor     ctlFunctionType = iota
-	ctlResponseBodyAccess       ctlFunctionType = iota
-	ctlResponseBodyLimit        ctlFunctionType = iota
-	ctlDebugLogLevel            ctlFunctionType = iota
+	ctlUnknown                   ctlFunctionType = iota
+	ctlRuleRemoveTargetByID      ctlFunctionType = iota
+	ctlRuleRemoveTargetByTag     ctlFunctionType = iota
+	ctlRuleRemoveTargetByMsg     ctlFunctionType = iota
+	ctlAuditEngine               ctlFunctionType = iota
+	ctlAuditLogParts             ctlFunctionType = iota
+	ctlForceRequestBodyVariable  ctlFunctionType = iota
+	ctlRequestBodyAccess         ctlFunctionType = iota
+	ctlRequestBodyLimit          ctlFunctionType = iota
+	ctlRuleEngine                ctlFunctionType = iota
+	ctlRuleRemoveByID            ctlFunctionType = iota
+	ctlRuleRemoveByMsg           ctlFunctionType = iota
+	ctlRuleRemoveByTag           ctlFunctionType = iota
+	ctlHashEngine                ctlFunctionType = iota
+	ctlHashEnforcement           ctlFunctionType = iota
+	ctlRequestBodyProcessor      ctlFunctionType = iota
+	ctlForceResponseBodyVariable ctlFunctionType = iota
+	ctlResponseBodyProcessor     ctlFunctionType = iota
+	ctlResponseBodyAccess        ctlFunctionType = iota
+	ctlResponseBodyLimit         ctlFunctionType = iota
+	ctlDebugLogLevel             ctlFunctionType = iota
 )
 
 type ctlFn struct {
@@ -46,18 +48,11 @@ type ctlFn struct {
 	value      string
 	collection variables.RuleVariable
 	colKey     string
-	colRx      *regexp.Regexp
 }
 
-func (a *ctlFn) Init(r rules.RuleMetadata, data string) error {
+func (a *ctlFn) Init(_ rules.RuleMetadata, data string) error {
 	var err error
 	a.action, a.value, a.collection, a.colKey, err = parseCtl(data)
-	if len(a.colKey) > 2 && a.colKey[0] == '/' && a.colKey[len(a.colKey)-1] == '/' {
-		a.colRx, err = regexp.Compile(a.colKey[1 : len(a.colKey)-1])
-		if err != nil {
-			return err
-		}
-	}
 	return err
 }
 
@@ -74,14 +69,16 @@ func parseOnOff(s string) (bool, bool) {
 	}
 }
 
-func (a *ctlFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
-	// TODO(anuraaga): Confirm this is internal implementation detail
+func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 	tx := txS.(*corazawaf.Transaction)
 	switch a.action {
 	case ctlRuleRemoveTargetByID:
 		ran, err := rangeToInts(tx.WAF.Rules.GetRules(), a.value)
 		if err != nil {
-			tx.WAF.Logger.Error("[ctl:RuleRemoveTargetByID] invalid range: %s", err.Error())
+			tx.DebugLogger().Error().
+				Str("ctl", "RuleRemoveTargetByID").
+				Err(err).
+				Msg("Invalid range")
 			return
 		}
 		for _, id := range ran {
@@ -104,7 +101,11 @@ func (a *ctlFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
 	case ctlAuditEngine:
 		ae, err := types.ParseAuditEngineStatus(a.value)
 		if err != nil {
-			tx.WAF.Logger.Error("[ctl:AuditEngine] %s", err.Error())
+			tx.DebugLogger().Error().
+				Str("ctl", "AuditEngine").
+				Str("value", a.value).
+				Err(err).
+				Msg("Invalid status")
 			return
 		}
 		tx.AuditEngine = ae
@@ -114,36 +115,80 @@ func (a *ctlFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
 	case ctlForceRequestBodyVariable:
 		val, ok := parseOnOff(a.value)
 		if !ok {
-			tx.WAF.Logger.Error("[ctl:ForceRequestBodyVariable] unknown value %q", a.value)
+			tx.DebugLogger().Error().
+				Str("ctl", "ForceRequestBodyVariable").
+				Str("value", a.value).
+				Msg("Unknown toggle")
 			return
 		}
 		tx.ForceRequestBodyVariable = val
-		tx.WAF.Logger.Debug("[ctl:ForceRequestBodyVariable] Forcing request body var with CTL to %s", val)
+		tx.DebugLogger().Debug().
+			Str("ctl", "ForceRequestBodyVariable").
+			Bool("value", val).
+			Msg("Forcing request body var")
 	case ctlRequestBodyAccess:
-		val, ok := parseOnOff(a.value)
-		if !ok {
-			tx.WAF.Logger.Error("[ctl:RequestBodyAccess] unknown value %q", a.value)
+		if tx.LastPhase() <= types.PhaseRequestHeaders {
+
+			val, ok := parseOnOff(a.value)
+			if !ok {
+				tx.DebugLogger().Error().
+					Str("ctl", "RequestBodyAccess").
+					Str("value", a.value).
+					Msg("Unknown toggle")
+				return
+			}
+			tx.RequestBodyAccess = val
+		} else {
+			tx.DebugLogger().Warn().
+				Str("ctl", "RequestBodyAccess").
+				Msg("Cannot change request body access after request headers phase")
 			return
 		}
-		tx.RequestBodyAccess = val
 	case ctlRequestBodyLimit:
-		limit, err := strconv.ParseInt(a.value, 10, 64)
-		if err != nil {
-			tx.WAF.Logger.Error("[ctl:RequestBodyLimit] Incorrect integer CTL value %q", a.value)
+		if tx.LastPhase() <= types.PhaseRequestHeaders {
+			limit, err := strconv.ParseInt(a.value, 10, 64)
+			if err != nil {
+				tx.DebugLogger().Error().
+					Str("ctl", "RequestBodyLimit").
+					Str("value", a.value).
+					Err(err).
+					Msg("Invalid limit")
+				return
+			}
+			tx.RequestBodyLimit = limit
+		} else {
+			tx.DebugLogger().Warn().
+				Str("ctl", "RequestBodyLimit").
+				Msg("Cannot change request body limit after request headers phase")
 			return
 		}
-		tx.RequestBodyLimit = limit
+	case ctlRequestBodyProcessor:
+		if tx.LastPhase() <= types.PhaseRequestHeaders {
+			tx.Variables().RequestBodyProcessor().Set(strings.ToUpper(a.value))
+		} else {
+			tx.DebugLogger().Warn().
+				Str("ctl", "RequestBodyProcessor").
+				Msg("Cannot change request body processor after request headers phase")
+		}
 	case ctlRuleEngine:
 		re, err := types.ParseRuleEngineStatus(a.value)
 		if err != nil {
-			tx.WAF.Logger.Error("[ctl:RuleEngine] %s", err.Error())
+			tx.DebugLogger().Error().
+				Str("ctl", "RuleEngine").
+				Str("value", a.value).
+				Err(err).
+				Msg("Invalid status")
 			return
 		}
 		tx.RuleEngine = re
 	case ctlRuleRemoveByID:
 		id, err := strconv.Atoi(a.value)
 		if err != nil {
-			tx.WAF.Logger.Error("[ctl:RuleRemoveByID] %s", err.Error())
+			tx.DebugLogger().Error().
+				Str("ctl", "RuleRemoveByID").
+				Str("value", a.value).
+				Err(err).
+				Msg("Invalid rule ID")
 			return
 		}
 		tx.RemoveRuleByID(id)
@@ -161,19 +206,89 @@ func (a *ctlFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
 				tx.RemoveRuleByID(r.ID_)
 			}
 		}
-	case ctlRequestBodyProcessor:
-		tx.Variables().RequestBodyProcessor().Set(strings.ToUpper(a.value))
+
+	case ctlResponseBodyAccess:
+		if tx.LastPhase() <= types.PhaseResponseHeaders {
+			val, ok := parseOnOff(a.value)
+			if !ok {
+				tx.DebugLogger().Error().
+					Str("ctl", "ResponseBodyAccess").
+					Str("value", a.value).
+					Msg("Unknown toggle")
+				return
+			}
+			tx.ResponseBodyAccess = val
+		} else {
+			tx.DebugLogger().Warn().
+				Str("ctl", "ResponseBodyAccess").
+				Msg("Cannot change response body access after response headers phase")
+			return
+		}
+
+	case ctlResponseBodyLimit:
+		if tx.LastPhase() <= types.PhaseResponseHeaders {
+			limit, err := strconv.ParseInt(a.value, 10, 64)
+			if err != nil {
+				tx.DebugLogger().Error().
+					Str("ctl", "ResponseBodyLimit").
+					Str("value", a.value).
+					Err(err).
+					Msg("Invalid limit")
+				return
+			}
+			tx.ResponseBodyLimit = limit
+		} else {
+			tx.DebugLogger().Warn().
+				Str("ctl", "ResponseBodyLimit").
+				Msg("Cannot change response body access after response headers phase")
+			return
+		}
+
+	case ctlForceResponseBodyVariable:
+		val, ok := parseOnOff(a.value)
+		if !ok {
+			tx.DebugLogger().Error().
+				Str("ctl", "ForceResponseBodyVariable").
+				Str("value", a.value).
+				Msg("Unknown toggle")
+			return
+		}
+		tx.ForceResponseBodyVariable = val
+		tx.WAF.Logger.Debug().
+			Str("ctl", "ForceResponseBodyVariable").
+			Bool("value", val).
+			Msg("Forcing response body var")
+	case ctlResponseBodyProcessor:
+		if tx.LastPhase() <= types.PhaseResponseHeaders {
+			// We are still in time to set the response body processor
+			// TODO(jcchavezs): Who should hold this knowledge?
+			// TODO(jcchavezs): Shall we validate such body processor exists or is it
+			// too ambitious as plugins might register their own at some point in the
+			// lifecycle which does not have to happen before this.
+			tx.Variables().ResponseBodyProcessor().Set(strings.ToUpper(a.value))
+		} else {
+			tx.DebugLogger().Warn().
+				Str("ctl", "ResponseBodyLimit").
+				Msg("Cannot change response body access after response headers phase")
+			return
+		}
 	case ctlHashEngine:
 		// Not supported yet
 	case ctlHashEnforcement:
 		// Not supported yet
 	case ctlDebugLogLevel:
-		// lvl, _ := strconv.Atoi(a.Value)
-		// TODO
-		// We cannot update the log level, it would affect the whole waf instance...
-		// tx.WAF.SetLogLevel(lvl)
-	}
+		lvl, err := strconv.ParseInt(a.value, 10, 8)
+		if err != nil {
+			tx.DebugLogger().Error().
+				Str("ctl", "DebugLogLevel").
+				Str("value", a.value).
+				Err(err).
+				Msg("Invalid log level")
+			return
+		}
 
+		tx.SetDebugLogLevel(debuglog.Level(lvl))
+	}
 }
 
 func (a *ctlFn) Type() rules.ActionType {
@@ -198,18 +313,22 @@ func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, str
 		act = ctlAuditEngine
 	case "auditLogParts":
 		act = ctlAuditLogParts
-	case "forceRequestBodyVariable":
-		act = ctlForceRequestBodyVariable
 	case "requestBodyAccess":
 		act = ctlRequestBodyAccess
 	case "requestBodyLimit":
 		act = ctlRequestBodyLimit
 	case "requestBodyProcessor":
 		act = ctlRequestBodyProcessor
+	case "forceRequestBodyVariable":
+		act = ctlForceRequestBodyVariable
+	case "responseBodyProcessor":
+		act = ctlResponseBodyProcessor
 	case "responseBodyAccess":
 		act = ctlResponseBodyAccess
 	case "responseBodyLimit":
 		act = ctlResponseBodyLimit
+	case "forceResponseBodyVariable":
+		act = ctlForceResponseBodyVariable
 	case "ruleEngine":
 		act = ctlRuleEngine
 	case "ruleRemoveById":
@@ -228,13 +347,15 @@ func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, str
 		act = ctlHashEngine
 	case "hashEnforcement":
 		act = ctlHashEnforcement
+	case "debugLogLevel":
+		act = ctlDebugLogLevel
 	default:
 		return ctlUnknown, "", 0x00, "", fmt.Errorf("unknown ctl action %q", action)
 	}
 	return act, value, collection, strings.TrimSpace(colkey), nil
 }
 
-func rangeToInts(rules []*corazawaf.Rule, input string) ([]int, error) {
+func rangeToInts(rules []corazawaf.Rule, input string) ([]int, error) {
 	if len(input) == 0 {
 		return nil, errors.New("empty input")
 	}

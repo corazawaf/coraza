@@ -25,9 +25,6 @@ type ruleActionParams struct {
 	// The name of the action, used for logging
 	Name string
 
-	// Parameters used by the action
-	Param string
-
 	// The action to be executed
 	Function rules.Action
 }
@@ -59,9 +56,6 @@ type ruleVariableException struct {
 // to get values from the transaction's variables
 // It supports xml, regex, exceptions and many more features
 type ruleVariableParams struct {
-	// We store the name for performance
-	Name string
-
 	// If true, the count of results will be returned
 	Count bool
 
@@ -81,11 +75,18 @@ type ruleVariableParams struct {
 }
 
 type ruleTransformationParams struct {
-	// The transformation to be used, used for logging
-	Name string
-
 	// The transformation function to be used
 	Function rules.Transformation
+}
+
+type inferredPhases byte
+
+func (p *inferredPhases) has(phase types.RulePhase) bool {
+	return (*p & (1 << phase)) != 0
+}
+
+func (p *inferredPhases) set(phase types.RulePhase) {
+	*p |= 1 << phase
 }
 
 // Rule is used to test a Transaction against certain operators
@@ -143,14 +144,11 @@ type Rule struct {
 	// If true, the transformations will be multi matched
 	MultiMatch bool
 
-	// Used for error logging
-	Disruptive bool
-
 	HasChain bool
 
 	// inferredPhases is the inferred phases the rule is relevant for
 	// based on the processed variables.
-	inferredPhases [types.PhaseLogging + 1]bool
+	inferredPhases
 }
 
 func (r *Rule) ParentID() int {
@@ -164,8 +162,8 @@ func (r *Rule) Status() int {
 // Evaluate will evaluate the current rule for the indicated transaction
 // If the operator matches, actions will be evaluated, and it will return
 // the matched variables, keys and values (MatchData)
-func (r *Rule) Evaluate(phase types.RulePhase, tx rules.TransactionState, cache map[transformationKey]*transformationValue) []types.MatchData {
-	return r.doEvaluate(phase, tx.(*Transaction), cache)
+func (r *Rule) Evaluate(phase types.RulePhase, tx rules.TransactionState, cache map[transformationKey]*transformationValue) {
+	r.doEvaluate(phase, tx.(*Transaction), cache)
 }
 
 func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[transformationKey]*transformationValue) []types.MatchData {
@@ -179,8 +177,8 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 
 	var matchedValues []types.MatchData
 	// we log if we are the parent rule
-	tx.WAF.Logger.Debug("[%s] [%d] Evaluating rule %d", tx.id, rid, r.ID_)
-	defer tx.WAF.Logger.Debug("[%s] [%d] Finish evaluating rule %d", tx.id, rid, r.ID_)
+	tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Evaluating rule")
+	defer tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Finish evaluating rule")
 	ruleCol := tx.variables.rule
 	ruleCol.SetIndex("id", 0, strconv.Itoa(rid))
 	if r.Msg != nil {
@@ -193,8 +191,14 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 	ruleCol.SetIndex("severity", 0, r.Severity_.String())
 	// SecMark and SecAction uses nil operator
 	if r.operator == nil {
-		tx.WAF.Logger.Debug("[%s] [%d] Forcing rule %d to match", tx.id, rid, r.ID_)
+		tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Forcing rule to match")
 		md := &corazarules.MatchData{}
+		if r.Msg != nil {
+			md.Message_ = r.Msg.Expand(tx)
+		}
+		if r.LogData != nil {
+			md.Data_ = r.LogData.Expand(tx)
+		}
 		matchedValues = append(matchedValues, md)
 		r.matchVariable(tx, md)
 	} else {
@@ -219,24 +223,32 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 			}
 
 			values = tx.GetField(v)
-			tx.WAF.Logger.Debug("[%s] [%d] Expanding %d arguments for rule %d", tx.id, rid, len(values), r.ID_)
+			tx.DebugLogger().Debug().
+				Int("rule_id", rid).
+				Str("variable", v.Variable.Name()).
+				Msg("Expanding arguments for rule")
 			for i, arg := range values {
-				tx.WAF.Logger.Debug("[%s] [%d] Transforming argument %q for rule %d", tx.id, rid, arg.Value(), r.ID_)
+				tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Transforming argument for rule")
 				args, errs := r.transformArg(arg, i, cache)
 				if len(errs) > 0 {
-					tx.WAF.Logger.Debug("[%s] [%d] Error transforming argument %q for rule %d: %v", tx.id, rid, arg.Value(), r.ID_, errs)
+					log := tx.DebugLogger().Debug().Int("rule_id", rid)
+					if log.IsEnabled() {
+						for i, err := range errs {
+							log = log.Str(fmt.Sprintf("errors[%d]", i), err.Error())
+						}
+						log.Msg("Error transforming argument for rule")
+					}
 				}
-				tx.WAF.Logger.Debug("[%s] [%d] Arguments transformed for rule %d: %v", tx.id, rid, r.ID_, args)
+				tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Arguments transformed for rule")
 
 				// args represents the transformed variables
 				for _, carg := range args {
 					match := r.executeOperator(carg, tx)
 					if match {
 						mr := &corazarules.MatchData{
-							VariableName_: v.Variable.Name(),
-							Variable_:     arg.Variable(),
-							Key_:          arg.Key(),
-							Value_:        carg,
+							Variable_: arg.Variable(),
+							Key_:      arg.Key(),
+							Value_:    carg,
 						}
 						// Set the txn variables for expansions before usage
 						r.matchVariable(tx, mr)
@@ -248,22 +260,19 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 							mr.Data_ = r.LogData.Expand(tx)
 						}
 						matchedValues = append(matchedValues, mr)
-
-						tx.WAF.Logger.Debug("[%s] [%d] Evaluating operator \"%s %s\" against %q: MATCH",
-							tx.id,
-							rid,
-							r.operator.Function,
-							r.operator.Data,
-							carg,
-						)
+						tx.DebugLogger().Debug().
+							Int("rule_id", rid).
+							Str("operator_function", r.operator.Function).
+							Str("operator_data", r.operator.Data).
+							Str("arg", carg).
+							Msg("Evaluating operator: MATCH")
 					} else {
-						tx.WAF.Logger.Debug("[%s] [%d] Evaluating operator \"%s %s\" against %q: NO MATCH",
-							tx.id,
-							rid,
-							r.operator.Function,
-							r.operator.Data,
-							carg,
-						)
+						tx.DebugLogger().Debug().
+							Int("rule_id", rid).
+							Str("operator_function", r.operator.Function).
+							Str("operator_data", r.operator.Data).
+							Str("arg", carg).
+							Msg("Evaluating operator: NO MATCH")
 					}
 				}
 			}
@@ -274,28 +283,29 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 		return matchedValues
 	}
 
-	// disruptive actions are only evaluated by parent rules
+	// disruptive actions and rules affecting the rule flow are only evaluated by parent rules
 	if r.ParentID_ == 0 {
 		// we only run the chains for the parent rule
 		for nr := r.Chain; nr != nil; {
-			tx.WAF.Logger.Debug("[%s] [%d] Evaluating rule chain for %d", tx.id, rid, r.ID_)
-			matchedChainValues := nr.Evaluate(phase, tx, cache)
+			tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Evaluating rule chain")
+			matchedChainValues := nr.doEvaluate(phase, tx, cache)
 			if len(matchedChainValues) == 0 {
 				return matchedChainValues
 			}
 			matchedValues = append(matchedValues, matchedChainValues...)
 			nr = nr.Chain
 		}
-		// we need to add disruptive actions in the end, otherwise they would be triggered without their chains.
-		if tx.RuleEngine != types.RuleEngineDetectionOnly {
-			tx.WAF.Logger.Debug("[%s] [%d] Disrupting transaction by rule %d", tx.id, rid, r.ID_)
-			for _, a := range r.actions {
-				if a.Function.Type() == rules.ActionTypeDisruptive || a.Function.Type() == rules.ActionTypeFlow {
-					tx.WAF.Logger.Debug("[%s] [%d] Evaluating action %s for rule %d", tx.id, rid, a.Name, r.ID_)
-					a.Function.Evaluate(r, tx)
-				}
-			}
 
+		for _, a := range r.actions {
+			if a.Function.Type() == rules.ActionTypeFlow {
+				// Flow actions are evaluated also if the rule engine is set to DetectionOnly
+				tx.DebugLogger().Debug().Int("rule_id", rid).Str("action", a.Name).Msg("Evaluating flow action for rule")
+				a.Function.Evaluate(r, tx)
+			} else if a.Function.Type() == rules.ActionTypeDisruptive && tx.RuleEngine == types.RuleEngineOn {
+				// The parser enforces that the disruptive action is just one per rule (if more than one, only the last one is kept)
+				tx.DebugLogger().Debug().Int("rule_id", rid).Str("action", a.Name).Msg("Executing disruptive action for rule")
+				a.Function.Evaluate(r, tx)
+			}
 		}
 		if r.ID_ != 0 {
 			// we avoid matching chains and secmarkers
@@ -314,7 +324,7 @@ func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transform
 		switch {
 		case len(r.transformations) == 0:
 			return []string{arg.Value()}, nil
-		case arg.VariableName() == "TX":
+		case arg.Variable().Name() == "TX":
 			// no cache for TX
 			arg, errs := r.executeTransformations(arg.Value())
 			return []string{arg}, errs
@@ -349,8 +359,12 @@ func (r *Rule) matchVariable(tx *Transaction, m *corazarules.MatchData) {
 	if rid == 0 {
 		rid = r.ParentID_
 	}
-	if !m.IsNil() {
-		tx.WAF.Logger.Debug("[%s] [%d] Matching rule %d %s:%s", tx.id, rid, r.ID_, m.VariableName(), m.Key())
+	if m.Variable() != variables.Unknown {
+		tx.DebugLogger().Debug().
+			Int("rule_id", rid).
+			Str("variable_name", m.Variable().Name()).
+			Str("key", m.Key()).
+			Msg("Matching rule")
 	}
 	// we must match the vars before running the chains
 
@@ -358,7 +372,7 @@ func (r *Rule) matchVariable(tx *Transaction, m *corazarules.MatchData) {
 	tx.matchVariable(m)
 	for _, a := range r.actions {
 		if a.Function.Type() == rules.ActionTypeNondisruptive {
-			tx.WAF.Logger.Debug("[%s] [%d] Evaluating action %s for rule %d", tx.id, rid, a.Name, r.ID_)
+			tx.DebugLogger().Debug().Str("action", a.Name).Msg("Evaluating action")
 			a.Function.Evaluate(r, tx)
 		}
 	}
@@ -386,7 +400,6 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 	}
 
 	r.variables = append(r.variables, ruleVariableParams{
-		Name:       v.Name(),
 		Count:      iscount,
 		Variable:   v,
 		KeyStr:     strings.ToLower(key),
@@ -449,7 +462,7 @@ func (r *Rule) AddTransformation(name string, t rules.Transformation) error {
 	if t == nil || name == "" {
 		return fmt.Errorf("invalid transformation %q not found", name)
 	}
-	r.transformations = append(r.transformations, ruleTransformationParams{name, t})
+	r.transformations = append(r.transformations, ruleTransformationParams{Function: t})
 	r.transformationsID = transformationID(r.transformationsID, name)
 	return nil
 }
@@ -509,6 +522,7 @@ func (r *Rule) executeTransformations(value string) (string, []error) {
 }
 
 // NewRule returns a new initialized rule
+// By default, the rule is set to phase 2
 func NewRule() *Rule {
 	return &Rule{
 		RuleMetadata: corazarules.RuleMetadata{
@@ -531,13 +545,7 @@ func minPhase(v variables.RuleVariable) types.RulePhase {
 	case variables.ArgsCombinedSize:
 		// Size changes between phase 1 and 2 so evaluate both times
 		return types.PhaseRequestHeaders
-	case variables.AuthType:
-		// Not populated by Coraza, but should generally be in headers
-		return types.PhaseRequestHeaders
 	case variables.FilesCombinedSize:
-		return types.PhaseRequestBody
-	case variables.FullRequest:
-		// Not populated by Coraza
 		return types.PhaseRequestBody
 	case variables.FullRequestLength:
 		// Not populated by Coraza
@@ -551,54 +559,12 @@ func minPhase(v variables.RuleVariable) types.RulePhase {
 	case variables.MatchedVarName:
 		// MatchedVar is only for logging, not evaluation
 		return types.PhaseUnknown
-	case variables.MultipartBoundaryQuoted:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
 	// MultipartBoundaryWhitespace kept for compatibility
-	case variables.MultipartBoundaryWhitespace:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MultipartCrlfLfLines:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
 	case variables.MultipartDataAfter:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MultipartDataBefore:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MultipartFileLimitExceeded:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MultipartHeaderFolding:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MultipartInvalidHeaderFolding:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MultipartInvalidPart:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MultipartInvalidQuoting:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MultipartLfLine:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MultipartMissingSemicolon:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MultipartStrictError:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MultipartUnmatchedBoundary:
 		// Not populated by Coraza
 		return types.PhaseRequestBody
 	case variables.OutboundDataError:
 		return types.PhaseResponseBody
-	case variables.PathInfo:
-		// Not populated by Coraza
-		return types.PhaseRequestHeaders
 	case variables.QueryString:
 		return types.PhaseRequestHeaders
 	case variables.RemoteAddr:
@@ -654,25 +620,17 @@ func minPhase(v variables.RuleVariable) types.RulePhase {
 	case variables.ServerPort:
 		// Configuration of the server itself
 		return types.PhaseRequestHeaders
-	case variables.Sessionid:
-		// Not populated by Coraza
-		return types.PhaseRequestHeaders
 	case variables.HighestSeverity:
 		// Result of matching, not used in phaes
 		return types.PhaseUnknown
 	case variables.StatusLine:
 		return types.PhaseResponseHeaders
-	case variables.InboundErrorData:
-		return types.PhaseRequestBody
 	case variables.Duration:
 		// If used in matching, would need to be defined for multiple inferredPhases to make sense
 		return types.PhaseUnknown
 	case variables.ResponseHeadersNames:
 		return types.PhaseResponseHeaders
 	case variables.RequestHeadersNames:
-		return types.PhaseRequestHeaders
-	case variables.Userid:
-		// Not populated by Coraza
 		return types.PhaseRequestHeaders
 	case variables.Args:
 		// Updated between headers and body
@@ -730,9 +688,6 @@ func minPhase(v variables.RuleVariable) types.RulePhase {
 	case variables.JSON:
 		return types.PhaseRequestBody
 	case variables.Env:
-		return types.PhaseRequestHeaders
-	case variables.IP:
-		// Not populated by Coraza
 		return types.PhaseRequestHeaders
 	case variables.UrlencodedError:
 		return types.PhaseRequestHeaders

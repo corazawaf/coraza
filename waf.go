@@ -4,7 +4,6 @@
 package coraza
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
@@ -45,21 +44,20 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		switch {
 		case r.rule != nil:
 			if err := waf.Rules.Add(r.rule); err != nil {
-				return nil, fmt.Errorf("invalid WAF config: %w", err)
+				return nil, fmt.Errorf("invalid WAF config from rule: %w", err)
 			}
 		case r.str != "":
 			if err := parser.FromString(r.str); err != nil {
-				return nil, fmt.Errorf("invalid WAF config: %w", err)
+				return nil, fmt.Errorf("invalid WAF config from string: %w", err)
 			}
 		case r.file != "":
 			if err := parser.FromFile(r.file); err != nil {
-				return nil, fmt.Errorf("invalid WAF config: %w", err)
+				return nil, fmt.Errorf("invalid WAF config from file: %w", err)
 			}
 		}
 	}
 
 	if a := c.auditLog; a != nil {
-		// TODO(anuraaga): Can't override AuditEngineOn from rules to off this way.
 		if a.relevantOnly {
 			waf.AuditEngine = types.AuditEngineRelevantOnly
 		} else {
@@ -68,46 +66,45 @@ func NewWAF(config WAFConfig) (WAF, error) {
 
 		waf.AuditLogParts = a.parts
 
-		if a.logger != nil {
-			waf.AuditLogWriter = a.logger
+		if a.writer != nil {
+			waf.SetAuditLogWriter(a.writer)
 		}
+	}
+
+	if err := waf.InitAuditLogWriter(); err != nil {
+		return nil, fmt.Errorf("invalid WAF config from audit log: %w", err)
 	}
 
 	if c.requestBodyAccess {
 		waf.RequestBodyAccess = true
 	}
 
-	if c.requestBodyLimit != unsetLimit {
-		if c.requestBodyLimit <= 0 {
-			return nil, errors.New("request body limit should be bigger than 0")
-		}
-
-		if c.requestBodyLimit < c.requestBodyInMemoryLimit {
-			return nil, errors.New("request body limit should be at least the memory limit")
-		}
-		waf.RequestBodyLimit = int64(c.requestBodyLimit)
+	if c.requestBodyLimit != nil {
+		waf.RequestBodyLimit = int64(*c.requestBodyLimit)
 	}
 
-	if c.requestBodyInMemoryLimit != unsetLimit {
-		if c.requestBodyInMemoryLimit <= 0 {
-			return nil, errors.New("request body memory limit should be bigger than 0")
-		}
-		waf.RequestBodyInMemoryLimit = int64(c.requestBodyInMemoryLimit)
+	if c.requestBodyInMemoryLimit != nil {
+		waf.SetRequestBodyInMemoryLimit(int64(*c.requestBodyInMemoryLimit))
 	}
 
 	if c.responseBodyAccess {
 		waf.ResponseBodyAccess = true
 	}
 
-	if c.responseBodyLimit != unsetLimit {
-		if c.responseBodyLimit <= 0 {
-			return nil, errors.New("response body limit should be bigger than 0")
-		}
-		waf.ResponseBodyLimit = int64(c.responseBodyLimit)
+	if c.responseBodyLimit != nil {
+		waf.ResponseBodyLimit = int64(*c.responseBodyLimit)
+	}
+
+	if c.responseBodyMimeTypes != nil {
+		waf.ResponseBodyMimeTypes = c.responseBodyMimeTypes
 	}
 
 	if c.errorCallback != nil {
 		waf.ErrorLogCb = c.errorCallback
+	}
+
+	if err := waf.Validate(); err != nil {
+		return nil, err
 	}
 
 	return wafWrapper{waf: waf}, nil
