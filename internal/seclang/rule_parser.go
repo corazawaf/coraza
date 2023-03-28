@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"strings"
 
-	actionsmod "github.com/corazawaf/coraza/v3/actions"
+	actionsmod "github.com/corazawaf/coraza/v3/internal/actions"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/internal/operators"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	operators "github.com/corazawaf/coraza/v3/operators"
 	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -314,7 +314,7 @@ type RuleOptions struct {
 // ParseRule parses a rule from a string
 // The string must match the seclang format
 // In case WithOperator is false, the rule will be parsed without operator
-// This function is created for external plugin directives
+// This function is created for external plugins directives
 func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 	if strings.TrimSpace(options.Data) == "" {
 		return nil, errors.New("empty rule")
