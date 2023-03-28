@@ -18,7 +18,7 @@ func (c *noop) Get(_ string) []string {
 	return []string{}
 }
 
-func (c *noop) FindRegex(key *regexp.Regexp) []types.MatchData {
+func (c *noop) FindRegex(_ *regexp.Regexp) []types.MatchData {
 	return []types.MatchData{}
 }
 
