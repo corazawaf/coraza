@@ -1373,3 +1373,37 @@ func TestForceRequestBodyOverride(t *testing.T) {
 		t.Errorf("Failed to force request body variable, got RBP: %q", tx.variables.RequestBodyProcessor().Get())
 	}
 }
+
+func TestAllVariablesImplemented(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	// All modsec variables are listed here
+	// Ref: https://github.com/SpiderLabs/ModSecurity/wiki/Reference-Manual-%28v2.x%29#user-content-Variables
+	vars := []string{"ARGS", "ARGS_COMBINED_SIZE", "ARGS_GET", "ARGS_GET_NAMES", "ARGS_NAMES", "ARGS_POST", "ARGS_POST_NAMES", "AUTH_TYPE", "DURATION", "ENV", "FILES", "FILES_COMBINED_SIZE", "FILES_NAMES", "FULL_REQUEST", "FULL_REQUEST_LENGTH", "FILES_SIZES", "FILES_TMPNAMES", "FILES_TMP_CONTENT", "GEO", "HIGHEST_SEVERITY", "INBOUND_DATA_ERROR", "MATCHED_VAR", "MATCHED_VARS", "MATCHED_VAR_NAME", "MATCHED_VARS_NAMES", "MODSEC_BUILD", "MULTIPART_CRLF_LF_LINES", "MULTIPART_FILENAME", "MULTIPART_NAME", "MULTIPART_PART_HEADERS", "MULTIPART_STRICT_ERROR", "MULTIPART_UNMATCHED_BOUNDARY", "OUTBOUND_DATA_ERROR", "PATH_INFO", "PERF_ALL", "PERF_COMBINED", "PERF_GC", "PERF_LOGGING", "PERF_PHASE1", "PERF_PHASE2", "PERF_PHASE3", "PERF_PHASE4", "PERF_PHASE5", "PERF_RULES", "PERF_SREAD", "PERF_SWRITE", "QUERY_STRING", "REMOTE_ADDR", "REMOTE_HOST", "REMOTE_PORT", "REMOTE_USER", "REQBODY_ERROR", "REQBODY_ERROR_MSG", "REQBODY_PROCESSOR", "REQUEST_BASENAME", "REQUEST_BODY", "REQUEST_BODY_LENGTH", "REQUEST_COOKIES", "REQUEST_COOKIES_NAMES", "REQUEST_FILENAME", "REQUEST_HEADERS", "REQUEST_HEADERS_NAMES", "REQUEST_LINE", "REQUEST_METHOD", "REQUEST_PROTOCOL", "REQUEST_URI", "REQUEST_URI_RAW", "RESPONSE_BODY", "RESPONSE_CONTENT_LENGTH", "RESPONSE_CONTENT_TYPE", "RESPONSE_HEADERS", "RESPONSE_HEADERS_NAMES", "RESPONSE_PROTOCOL", "RESPONSE_STATUS", "RULE", "SCRIPT_BASENAME", "SCRIPT_FILENAME", "SCRIPT_GID", "SCRIPT_GROUPNAME", "SCRIPT_MODE", "SCRIPT_UID", "SCRIPT_USERNAME", "SDBM_DELETE_ERROR", "SERVER_ADDR", "SERVER_NAME", "SERVER_PORT", "SESSION", "SESSIONID", "STATUS_LINE", "STREAM_INPUT_BODY", "STREAM_OUTPUT_BODY", "TIME", "TIME_DAY", "TIME_EPOCH", "TIME_HOUR", "TIME_MIN", "TIME_MON", "TIME_SEC", "TIME_WDAY", "TIME_YEAR", "TX", "UNIQUE_ID", "URLENCODED_ERROR", "USERID", "USERAGENT_IP", "WEBAPPID", "WEBSERVER_ERROR_LOG", "XML"}
+	// Variables that are not part of Coraza
+	ignored := []string{"MODSEC_BUILD", "PERF_ALL", "PERF_COMBINED", "PERF_GC", "PERF_LOGGING", "PERF_PHASE1", "PERF_PHASE2", "PERF_PHASE3", "PERF_PHASE4", "PERF_PHASE5", "PERF_RULES", "PERF_SREAD", "PERF_SWRITE", "REMOTE_USER", "SCRIPT_BASENAME", "SCRIPT_FILENAME", "SCRIPT_GID", "SCRIPT_GROUPNAME", "SCRIPT_MODE", "SCRIPT_UID", "SCRIPT_USERNAME", "SDBM_DELETE_ERROR", "SESSION", "STREAM_INPUT_BODY", "STREAM_OUTPUT_BODY", "TIME", "TIME_DAY", "TIME_EPOCH", "TIME_HOUR", "TIME_MIN", "TIME_MON", "TIME_SEC", "TIME_WDAY", "TIME_YEAR", "WEBAPPID", "USERAGENT_IP", "WEBSERVER_ERROR_LOG"}
+	// Noop variables
+	noops := []string{"AUTH_TYPE", "FULL_REQUEST", "MULTIPART_CRLF_LF_LINES", "MULTIPART_STRICT_ERROR", "MULTIPART_UNMATCHED_BOUNDARY", "PATH_INFO", "SESSIONID", "USERID"}
+
+	for _, v := range vars {
+		if utils.InSlice(v, ignored) {
+			continue
+		}
+		vv, err := variables.Parse(v)
+		if err != nil {
+			t.Errorf("Failed to compile variable %s: %v", v, err)
+			continue
+		}
+		col := tx.Collection(vv)
+		if col.Name() == "" {
+			if !utils.InSlice(v, noops) {
+				t.Errorf("Variable %s is not implemented in tx.Collection", v)
+			} else {
+				// we check if col is of type collection.Map (noop)
+				if _, ok := col.(collection.Map); !ok {
+					t.Errorf("Variable %s is not implemented as a noop", v)
+				}
+			}
+		}
+	}
+}

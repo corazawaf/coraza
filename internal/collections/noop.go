@@ -10,7 +10,7 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
-var Noop collection.Collection = &noop{}
+var Noop collection.Map = &noop{}
 
 type noop struct{}
 
@@ -30,9 +30,7 @@ func (c *noop) FindAll() []types.MatchData {
 	return []types.MatchData{}
 }
 
-func (c *noop) Add(key string, value string) {
-	c.Set(key, []string{value})
-}
+func (c *noop) Add(key string, value string) {}
 
 func (c *noop) Set(key string, values []string) {}
 
