@@ -107,9 +107,7 @@ func (m *macro) compile(input string) error {
 			if currentToken.Len() > 0 {
 				// we add the text token
 				m.tokens = append(m.tokens, macroToken{
-					text:     currentToken.String(),
-					variable: variables.Unknown,
-					key:      "",
+					text: currentToken.String(),
 				})
 			}
 			currentToken.Reset()

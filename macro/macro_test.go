@@ -78,7 +78,7 @@ func TestCompile(t *testing.T) {
 			t.Fatalf("unexpected number of tokens: want %d, have %d", want, have)
 		}
 
-		expectedMacro := macroToken{"tx.count", variables.TX, "count"}
+		expectedMacro := macroToken{text: "tx.count", variable: variables.TX, key: "count"}
 		if want, have := m.tokens[0], expectedMacro; want != have {
 			t.Errorf("unexpected token: want %v, have %v", want, have)
 		}
@@ -95,27 +95,27 @@ func TestCompile(t *testing.T) {
 			t.Fatalf("unexpected number of tokens: want %d, have %d", want, have)
 		}
 
-		expectedMacro0 := macroToken{"tx.id", variables.TX, "id"}
+		expectedMacro0 := macroToken{text: "tx.id", variable: variables.TX, key: "id"}
 		if want, have := m.tokens[0], expectedMacro0; want != have {
 			t.Errorf("unexpected token: want %v, have %v", want, have)
 		}
 
-		expectedMacro1 := macroToken{" got ", variables.Unknown, ""}
+		expectedMacro1 := macroToken{text: " got "}
 		if want, have := m.tokens[1], expectedMacro1; want != have {
 			t.Errorf("unexpected token: want %v, have %v", want, have)
 		}
 
-		expectedMacro2 := macroToken{"tx.count", variables.TX, "count"}
+		expectedMacro2 := macroToken{text: "tx.count", variable: variables.TX, key: "count"}
 		if want, have := m.tokens[2], expectedMacro2; want != have {
 			t.Errorf("unexpected token: want %v, have %v", want, have)
 		}
 
-		expectedMacro3 := macroToken{" in this transaction and as zero ", variables.Unknown, ""}
+		expectedMacro3 := macroToken{text: " in this transaction and as zero "}
 		if want, have := m.tokens[3], expectedMacro3; want != have {
 			t.Errorf("unexpected token: want %v, have %v", want, have)
 		}
 
-		expectedMacro4 := macroToken{"tx.0", variables.TX, "0"}
+		expectedMacro4 := macroToken{text: "tx.0", variable: variables.TX, key: "0"}
 		if want, have := m.tokens[4], expectedMacro4; want != have {
 			t.Errorf("unexpected token: want %v, have %v", want, have)
 		}
@@ -125,9 +125,7 @@ func TestCompile(t *testing.T) {
 func TestExpand(t *testing.T) {
 	t.Run("no expansion", func(t *testing.T) {
 		m := &macro{
-			tokens: []macroToken{
-				{"text", variables.Unknown, ""},
-			},
+			tokens: []macroToken{{text: "text"}},
 		}
 
 		if want, have := "text", m.Expand(nil); want != have {
