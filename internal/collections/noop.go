@@ -22,7 +22,7 @@ func (c *noop) FindRegex(_ *regexp.Regexp) []types.MatchData {
 	return []types.MatchData{}
 }
 
-func (c *noop) FindString(key string) []types.MatchData {
+func (c *noop) FindString(_ string) []types.MatchData {
 	return []types.MatchData{}
 }
 
