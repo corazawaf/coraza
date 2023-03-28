@@ -1321,6 +1321,29 @@ func TestTxAddResponseArgs(t *testing.T) {
 	t.Log("This is a placeholder for tx.AddResponseArgs")
 }
 
+func TestResponseBodyForceProcessing(t *testing.T) {
+	waf := NewWAF()
+	waf.ResponseBodyAccess = true
+	tx := waf.NewTransaction()
+	tx.ForceResponseBodyVariable = true
+	tx.variables.ResponseBodyProcessor().Set("JSON")
+	tx.ProcessRequestHeaders()
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Fatal(err)
+	}
+	tx.ProcessResponseHeaders(200, "HTTP/1")
+	if _, _, err := tx.WriteResponseBody([]byte(`{"key":"value"}`)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.ProcessResponseBody(); err != nil {
+		t.Fatal(err)
+	}
+	f := tx.variables.responseArgs.FindString("json.key")
+	if len(f) == 0 {
+		t.Fatal("json.key not found")
+	}
+}
+
 func TestForceRequestBodyOverride(t *testing.T) {
 	waf := NewWAF()
 	waf.RequestBodyAccess = true

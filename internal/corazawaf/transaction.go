@@ -1016,6 +1016,10 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Int
 // directly to the client or write them to Coraza's buffer.
 func (tx *Transaction) IsResponseBodyProcessable() bool {
 	// TODO add more validations
+	if tx.ForceResponseBodyVariable {
+		// we force the response body to be processed because of the ctl:forceResponseBodyVariable
+		return true
+	}
 	ct := tx.variables.responseContentType.Get()
 	return stringsutil.InSlice(ct, tx.WAF.ResponseBodyMimeTypes)
 }
