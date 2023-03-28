@@ -16,7 +16,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 	},
 	Tests: []profile.Test{
 		{
-			Title: "actions",
+			Title: "noons",
 			Stages: []profile.Stage{
 				{
 					Stage: profile.SubStage{
@@ -33,8 +33,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 		},
 	},
 	Rules: `
-SecRule IP:/_/|TIME|USER ".*" "id: 3,  log"
-SecRule &IP "@eq 0" "id: 4,  log, chain"
-	SecRule &IP:/_/ "@eq 0" "log"
+	SecRule IP:/_/|TIME|USER ".*" "id: 3,  log"
+	SecRule &IP "@eq 0" "id: 4,  log, chain"
+		SecRule &IP:/_/ "@eq 0" "log"
 `,
 })
