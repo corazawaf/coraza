@@ -81,7 +81,9 @@ func (a *setvarFn) Type() rules.ActionType {
 
 func (a *setvarFn) evaluateTxCollection(r rules.RuleMetadata, tx rules.TransactionState, key string, value string) {
 	var col collection.Map
-	if c, ok := tx.Collection(a.collection).(collection.Map); ok {
+	if col, ok := tx.Collection(a.collection).(collection.Map); !ok {
+	    return
+	}
 		col = c
 	}
 	if col == nil {
