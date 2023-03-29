@@ -37,7 +37,7 @@ func (a *setvarFn) Init(_ rules.RuleMetadata, data string) error {
 	// Right not it only makes sense to allow setting TX
 	// key is also required
 	if strings.ToUpper(colKey) != "TX" {
-		return errors.New("Invalid collection for setvar: " + colKey)
+		return errors.New("invalid arguments, expected collection TX")
 	}
 	if strings.TrimSpace(colVal) == "" {
 		return errors.New("Invalid key for setvar: " + colKey)
