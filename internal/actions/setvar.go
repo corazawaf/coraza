@@ -40,7 +40,7 @@ func (a *setvarFn) Init(_ rules.RuleMetadata, data string) error {
 		return errors.New("invalid arguments, expected collection TX")
 	}
 	if strings.TrimSpace(colVal) == "" {
-		return errors.New("Invalid key for setvar: " + colKey)
+		return errors.New("invalid arguments, expected syntax TX.{key}={value}")
 	}
 	a.collection, err = variables.Parse(colKey)
 	if err != nil {
