@@ -192,7 +192,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 	// SecMark and SecAction uses nil operator
 	if r.operator == nil {
 		tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Forcing rule to match")
-		md := &corazarules.MatchData{}
+		md := corazarules.MatchData{}
 		if r.Msg != nil {
 			md.Message_ = r.Msg.Expand(tx)
 		}
@@ -245,7 +245,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 				for _, carg := range args {
 					match := r.executeOperator(carg, tx)
 					if match {
-						mr := &corazarules.MatchData{
+						mr := corazarules.MatchData{
 							Variable_: arg.Variable(),
 							Key_:      arg.Key(),
 							Value_:    carg,
@@ -354,7 +354,7 @@ func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transform
 	}
 }
 
-func (r *Rule) matchVariable(tx *Transaction, m *corazarules.MatchData) {
+func (r *Rule) matchVariable(tx *Transaction, m corazarules.MatchData) {
 	rid := r.ID_
 	if rid == 0 {
 		rid = r.ParentID_

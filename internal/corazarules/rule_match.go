@@ -27,23 +27,23 @@ type MatchData struct {
 	Data_ string
 }
 
-func (m *MatchData) Variable() variables.RuleVariable {
+func (m MatchData) Variable() variables.RuleVariable {
 	return m.Variable_
 }
 
-func (m *MatchData) Key() string {
+func (m MatchData) Key() string {
 	return m.Key_
 }
 
-func (m *MatchData) Value() string {
+func (m MatchData) Value() string {
 	return m.Value_
 }
 
-func (m *MatchData) Message() string {
+func (m MatchData) Message() string {
 	return m.Message_
 }
 
-func (m *MatchData) Data() string {
+func (m MatchData) Data() string {
 	return m.Data_
 }
 

@@ -442,7 +442,7 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 
 // matchVariable Creates the MATCHED_ variables required by chains and macro expansion
 // MATCHED_VARS, MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES
-func (tx *Transaction) matchVariable(match *corazarules.MatchData) {
+func (tx *Transaction) matchVariable(match corazarules.MatchData) {
 	var varName string
 	if match.Key_ != "" {
 		varName = match.Variable().Name() + ":" + match.Key_

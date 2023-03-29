@@ -937,7 +937,7 @@ func TestTxPhase4Magic(t *testing.T) {
 func TestVariablesMatch(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
-	tx.matchVariable(&corazarules.MatchData{
+	tx.matchVariable(corazarules.MatchData{
 		Variable_: variables.ArgsNames,
 		Key_:      "sample",
 		Value_:    "samplevalue",
