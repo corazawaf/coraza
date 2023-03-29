@@ -4,6 +4,7 @@
 package actions
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 
@@ -33,6 +34,14 @@ func (a *setvarFn) Init(_ rules.RuleMetadata, data string) error {
 	var err error
 	key, val, valOk := strings.Cut(data, "=")
 	colKey, colVal, colOk := strings.Cut(key, ".")
+	// Right not it only makes sense to allow setting TX
+	// key is also required
+	if strings.ToUpper(colKey) != "TX" {
+		return errors.New("invalid arguments, expected collection TX")
+	}
+	if strings.TrimSpace(colVal) == "" {
+		return errors.New("invalid arguments, expected syntax TX.{key}={value}")
+	}
 	a.collection, err = variables.Parse(colKey)
 	if err != nil {
 		return err
@@ -71,9 +80,15 @@ func (a *setvarFn) Type() rules.ActionType {
 }
 
 func (a *setvarFn) evaluateTxCollection(r rules.RuleMetadata, tx rules.TransactionState, key string, value string) {
-	col := (tx.Collection(a.collection)).(collection.Map)
+	var col collection.Map
+	if c, ok := tx.Collection(a.collection).(collection.Map); !ok {
+		tx.DebugLogger().Error().Msg("collection in setvar is not a map")
+		return
+	} else {
+		col = c
+	}
 	if col == nil {
-		// fmt.Println("Invalid Collection " + a.Collection) LOG error?
+		tx.DebugLogger().Error().Msg("collection in setvar is nil")
 		return
 	}
 
