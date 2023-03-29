@@ -10,13 +10,13 @@ import (
 type md struct {
 }
 
-func (m *md) ID() int {
+func (_ md) ID() int {
 	return 0
 }
-func (m *md) ParentID() int {
+func (_ md) ParentID() int {
 	return 0
 }
-func (m *md) Status() int {
+func (_ md) Status() int {
 	return 0
 }
 

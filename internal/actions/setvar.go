@@ -81,13 +81,14 @@ func (a *setvarFn) Type() rules.ActionType {
 
 func (a *setvarFn) evaluateTxCollection(r rules.RuleMetadata, tx rules.TransactionState, key string, value string) {
 	var col collection.Map
-	if col, ok := tx.Collection(a.collection).(collection.Map); !ok {
-	    return
-	}
+	if c, ok := tx.Collection(a.collection).(collection.Map); !ok {
+		tx.DebugLogger().Error().Msg("collection in setvar is not a map")
+		return
+	} else {
 		col = c
 	}
 	if col == nil {
-		// fmt.Println("Invalid Collection " + a.Collection) LOG error?
+		tx.DebugLogger().Error().Msg("collection in setvar is nil")
 		return
 	}
 
