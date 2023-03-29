@@ -42,13 +42,9 @@ func (a *setvarFn) Init(_ rules.RuleMetadata, data string) error {
 	if strings.TrimSpace(colVal) == "" {
 		return errors.New("Invalid key for setvar: " + colKey)
 	}
-	// Future validations shouldn't be removed.
 	a.collection, err = variables.Parse(colKey)
 	if err != nil {
 		return err
-	}
-	if a.collection == variables.Unknown {
-		return errors.New("Invalid collection for setvar: " + colKey)
 	}
 	if colOk {
 		macro, err := macro.NewMacro(colVal)
