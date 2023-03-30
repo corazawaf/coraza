@@ -395,6 +395,7 @@ func TestParseCtl(t *testing.T) {
 		{"forceResponseBodyVariable=On", ctlForceResponseBodyVariable, "On", variables.Unknown, ""},
 		{"ruleEngine=On", ctlRuleEngine, "On", variables.Unknown, ""},
 		{"ruleRemoveById=1", ctlRuleRemoveByID, "1", variables.Unknown, ""},
+		{"ruleRemoveById=1-9", ctlRuleRemoveByID, "1-9", variables.Unknown, ""},
 		{"ruleRemoveByMsg=MY_MSG", ctlRuleRemoveByMsg, "MY_MSG", variables.Unknown, ""},
 		{"ruleRemoveByTag=MY_TAG", ctlRuleRemoveByTag, "MY_TAG", variables.Unknown, ""},
 		{"ruleRemoveTargetByMsg=MY_MSG;ARGS:user", ctlRuleRemoveTargetByMsg, "MY_MSG", variables.Args, "user"},
