@@ -164,6 +164,10 @@ func TestDirectives(t *testing.T) {
 		},
 		"SecRuleRemoveById": {
 			{"", expectErrorOnDirective},
+			{"a", expectErrorOnDirective},
+			{"1-a", expectErrorOnDirective},
+			{"a-2", expectErrorOnDirective},
+			{"2-1", expectErrorOnDirective},
 			{"1", expectNoErrorOnDirective},
 			{"1 2", expectNoErrorOnDirective},
 			{"1 2 3-4", expectNoErrorOnDirective},
