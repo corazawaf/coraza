@@ -204,7 +204,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 				return
 			}
 			for _, id := range ran {
-				tx.RemoveRuleTargetByID(id, a.collection, a.colKey)
+				tx.RemoveRuleByID(id)
 			}
 		}
 	case ctlRuleRemoveByMsg:
