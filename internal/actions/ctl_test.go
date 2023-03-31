@@ -171,10 +171,21 @@ func TestCtl(t *testing.T) {
 		"ruleRemoveById": {
 			input: "ruleRemoveById=123",
 		},
+		"ruleRemoveById range": {
+			input: "ruleRemoveById=1-3",
+		},
 		"ruleRemoveById incorrect": {
 			input: "ruleRemoveById=W",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
 				if wantToContain, have := "[ERROR] Invalid rule ID", logEntry; !strings.Contains(have, wantToContain) {
+					t.Errorf("Failed to log entry, want to contain %q, have %q", wantToContain, have)
+				}
+			},
+		},
+		"ruleRemoveById range incorrect": {
+			input: "ruleRemoveById=a-2",
+			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
+				if wantToContain, have := "[ERROR] Invalid range", logEntry; !strings.Contains(have, wantToContain) {
 					t.Errorf("Failed to log entry, want to contain %q, have %q", wantToContain, have)
 				}
 			},
@@ -395,6 +406,7 @@ func TestParseCtl(t *testing.T) {
 		{"forceResponseBodyVariable=On", ctlForceResponseBodyVariable, "On", variables.Unknown, ""},
 		{"ruleEngine=On", ctlRuleEngine, "On", variables.Unknown, ""},
 		{"ruleRemoveById=1", ctlRuleRemoveByID, "1", variables.Unknown, ""},
+		{"ruleRemoveById=1-9", ctlRuleRemoveByID, "1-9", variables.Unknown, ""},
 		{"ruleRemoveByMsg=MY_MSG", ctlRuleRemoveByMsg, "MY_MSG", variables.Unknown, ""},
 		{"ruleRemoveByTag=MY_TAG", ctlRuleRemoveByTag, "MY_TAG", variables.Unknown, ""},
 		{"ruleRemoveTargetByMsg=MY_MSG;ARGS:user", ctlRuleRemoveTargetByMsg, "MY_MSG", variables.Args, "user"},

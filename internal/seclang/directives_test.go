@@ -102,6 +102,7 @@ func TestSecDataset(t *testing.T) {
 }
 
 var expectErrorOnDirective func(*corazawaf.WAF) bool = nil
+var expectNoErrorOnDirective func(*corazawaf.WAF) bool = func(*corazawaf.WAF) bool { return true }
 
 func TestDirectives(t *testing.T) {
 	type directiveCase struct {
@@ -163,6 +164,13 @@ func TestDirectives(t *testing.T) {
 		},
 		"SecRuleRemoveById": {
 			{"", expectErrorOnDirective},
+			{"a", expectErrorOnDirective},
+			{"1-a", expectErrorOnDirective},
+			{"a-2", expectErrorOnDirective},
+			{"2-1", expectErrorOnDirective},
+			{"1", expectNoErrorOnDirective},
+			{"1 2", expectNoErrorOnDirective},
+			{"1 2 3-4", expectNoErrorOnDirective},
 		},
 		"SecResponseBodyMimeTypesClear": {
 			{"", func(w *corazawaf.WAF) bool { return len(w.ResponseBodyMimeTypes) == 0 }},

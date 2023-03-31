@@ -182,16 +182,31 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 		}
 		tx.RuleEngine = re
 	case ctlRuleRemoveByID:
-		id, err := strconv.Atoi(a.value)
-		if err != nil {
-			tx.DebugLogger().Error().
-				Str("ctl", "RuleRemoveByID").
-				Str("value", a.value).
-				Err(err).
-				Msg("Invalid rule ID")
-			return
+		if idx := strings.Index(a.value, "-"); idx == -1 {
+			id, err := strconv.Atoi(a.value)
+			if err != nil {
+				tx.DebugLogger().Error().
+					Str("ctl", "RuleRemoveByID").
+					Str("value", a.value).
+					Err(err).
+					Msg("Invalid rule ID")
+				return
+			}
+
+			tx.RemoveRuleByID(id)
+		} else {
+			ran, err := rangeToInts(tx.WAF.Rules.GetRules(), a.value)
+			if err != nil {
+				tx.DebugLogger().Error().
+					Str("ctl", "RuleRemoveByID").
+					Err(err).
+					Msg("Invalid range")
+				return
+			}
+			for _, id := range ran {
+				tx.RemoveRuleByID(id)
+			}
 		}
-		tx.RemoveRuleByID(id)
 	case ctlRuleRemoveByMsg:
 		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
@@ -374,6 +389,10 @@ func rangeToInts(rules []corazawaf.Rule, input string) ([]int, error) {
 		end, err = strconv.Atoi(in1)
 		if err != nil {
 			return nil, err
+		}
+
+		if start > end {
+			return nil, errors.New("invalid range, start > end")
 		}
 	} else {
 		id, err := strconv.Atoi(input)
