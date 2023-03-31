@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/url"
 	"github.com/corazawaf/coraza/v3/rules"
 )
@@ -27,8 +28,8 @@ func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, v rules.Transac
 	for k, vs := range values {
 		argsCol.Set(k, vs)
 	}
-	v.RequestBody().Set(b)
-	v.RequestBodyLength().Set(strconv.Itoa(len(b)))
+	v.RequestBody().(*collections.Single).Set(b)
+	v.RequestBodyLength().(*collections.Single).Set(strconv.Itoa(len(b)))
 	return nil
 }
 
