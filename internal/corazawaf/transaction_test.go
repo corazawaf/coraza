@@ -1326,7 +1326,7 @@ func TestResponseBodyForceProcessing(t *testing.T) {
 	waf.ResponseBodyAccess = true
 	tx := waf.NewTransaction()
 	tx.ForceResponseBodyVariable = true
-	tx.variables.ResponseBodyProcessor().Set("JSON")
+	tx.variables.ResponseBodyProcessor().(*collections.Single).Set("JSON")
 	tx.ProcessRequestHeaders()
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Fatal(err)
@@ -1349,7 +1349,7 @@ func TestForceRequestBodyOverride(t *testing.T) {
 	waf.RequestBodyAccess = true
 	tx := waf.NewTransaction()
 	tx.ForceRequestBodyVariable = true
-	tx.variables.RequestBodyProcessor().Set("JSON")
+	tx.variables.RequestBodyProcessor().(*collections.Single).Set("JSON")
 	tx.ProcessRequestHeaders()
 	if _, _, err := tx.WriteRequestBody([]byte("foo=bar&baz=qux")); err != nil {
 		t.Errorf("Failed to write request body: %v", err)
