@@ -9,7 +9,6 @@ testoverride:
     920171-3: 'Go/http removes the Transfer-Encoding header after parsing it (https://github.com/golang/go/blob/master/src/net/http/transfer.go#L631). The test looks for it'
     920270-4: 'Rule works, log contains 920270. Test expects status 400 (Apache behaviour)'
     920272-5: 'Rule works, log contains 920272. Test expects status 400 (Apache behaviour)'
-    920280-1: 'WIP - https://github.com/coreruleset/go-ftw/pull/132. With go-ftw/issues/129 fix it works, tests expects log contains: ftw sends HTTP 1.0, Go/http accepts HTTP 1.0 without Host. From HTTP/1.1 it will results in 400'
     920290-1: 'Rule works, log contains 920290. Test expects status 400 (Apache behaviour)'
     920420-8: 'HEAD request with data. Go/http does not allow it - 400 Bad Request'
     920430-5: 'Test has expect_error, Go/http and Envoy return 400'

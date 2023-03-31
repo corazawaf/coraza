@@ -177,13 +177,15 @@ SecAction "id:900005,\
   setvar:tx.combined_file_sizes=65535"
 
 # Write the value from the X-CRS-Test header as a marker to the log
+# Requests with X-CRS-Test header will not be matched by any rule. See https://github.com/coreruleset/go-ftw/pull/133
 SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
   "id:999999,\
   phase:1,\
+  pass,\
+  t:none,\
   log,\
   msg:'X-CRS-Test %{MATCHED_VAR}',\
-  pass,\
-  t:none"
+  ctl:ruleRemoveById=1-999999"
 `
 	// Configs are loaded with a precise order:
 	// 1. Coraza config
@@ -283,8 +285,8 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 		t.Fatal(err)
 	}
 	cfg.WithLogfile(errorPath)
-	cfg.TestOverride.Input.DestAddr = &host
-	cfg.TestOverride.Input.Port = &port
+	cfg.TestOverride.Overrides.DestAddr = &host
+	cfg.TestOverride.Overrides.Port = &port
 
 	res, err := runner.Run(cfg, tests, runner.RunnerConfig{
 		ShowTime: false,
