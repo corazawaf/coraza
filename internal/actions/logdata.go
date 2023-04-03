@@ -4,14 +4,14 @@
 package actions
 
 import (
+	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/macro"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type logdataFn struct{}
 
-func (a *logdataFn) Init(r rules.RuleMetadata, data string) error {
+func (a *logdataFn) Init(r plugintypes.RuleMetadata, data string) error {
 	if len(data) == 0 {
 		return ErrMissingArguments
 	}
@@ -24,19 +24,19 @@ func (a *logdataFn) Init(r rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *logdataFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
+func (a *logdataFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
 	tx.(*corazawaf.Transaction).Logdata = r.(*corazawaf.Rule).LogData.Expand(tx)
 }
 
-func (a *logdataFn) Type() rules.ActionType {
-	return rules.ActionTypeNondisruptive
+func (a *logdataFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeNondisruptive
 }
 
-func logdata() rules.Action {
+func logdata() plugintypes.Action {
 	return &logdataFn{}
 }
 
 var (
-	_ rules.Action      = &logdataFn{}
-	_ ruleActionWrapper = logdata
+	_ plugintypes.Action = &logdataFn{}
+	_ ruleActionWrapper  = logdata
 )

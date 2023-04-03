@@ -13,14 +13,14 @@ import (
 	"os"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/environment"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type multipartBodyProcessor struct{}
 
-func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v rules.TransactionVariables, options Options) error {
+func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.TransactionVariables, options plugintypes.BodyProcessorOptions) error {
 	mimeType := options.Mime
 	storagePath := options.StoragePath
 	mediaType, params, err := mime.ParseMediaType(mimeType)
@@ -94,12 +94,12 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v rules.Tran
 	return nil
 }
 
-func (mbp *multipartBodyProcessor) ProcessResponse(_ io.Reader, _ rules.TransactionVariables, options Options) error {
+func (mbp *multipartBodyProcessor) ProcessResponse(_ io.Reader, _ plugintypes.TransactionVariables, options plugintypes.BodyProcessorOptions) error {
 	return nil
 }
 
 var (
-	_ BodyProcessor = (*multipartBodyProcessor)(nil)
+	_ plugintypes.BodyProcessor = (*multipartBodyProcessor)(nil)
 )
 
 // OriginFileName returns the filename parameter of the Part's Content-Disposition header.
@@ -118,7 +118,7 @@ func originFileName(p *multipart.Part) string {
 }
 
 func init() {
-	Register("multipart", func() BodyProcessor {
+	RegisterBodyProcessor("multipart", func() plugintypes.BodyProcessor {
 		return &multipartBodyProcessor{}
 	})
 }

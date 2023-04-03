@@ -6,13 +6,13 @@ package operators
 import (
 	"fmt"
 
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
-var operators = map[string]rules.OperatorFactory{}
+var operators = map[string]plugintypes.OperatorFactory{}
 
 // Get returns an operator by name
-func Get(name string, options rules.OperatorOptions) (rules.Operator, error) {
+func Get(name string, options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	if op, ok := operators[name]; ok {
 		return op(options)
 	}
@@ -21,6 +21,6 @@ func Get(name string, options rules.OperatorOptions) (rules.Operator, error) {
 
 // Register registers a new operator
 // If the operator already exists it will be overwritten
-func Register(name string, op rules.OperatorFactory) {
+func Register(name string, op plugintypes.OperatorFactory) {
 	operators[name] = op
 }

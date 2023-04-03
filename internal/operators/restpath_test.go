@@ -6,8 +6,8 @@ package operators
 import (
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 func TestRestPath(t *testing.T) {
@@ -15,7 +15,7 @@ func TestRestPath(t *testing.T) {
 	tx := waf.NewTransaction()
 	exp := "/some-random/url-{id}/{name}"
 	path := "/some-random/url-123/juan"
-	rp, err := newRESTPath(rules.OperatorOptions{
+	rp, err := newRESTPath(plugintypes.OperatorOptions{
 		Arguments: exp,
 	})
 	if err != nil {

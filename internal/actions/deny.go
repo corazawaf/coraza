@@ -4,20 +4,20 @@
 package actions
 
 import (
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 type denyFn struct{}
 
-func (a *denyFn) Init(_ rules.RuleMetadata, data string) error {
+func (a *denyFn) Init(_ plugintypes.RuleMetadata, data string) error {
 	if len(data) > 0 {
 		return ErrUnexpectedArguments
 	}
 	return nil
 }
 
-func (a *denyFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
+func (a *denyFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
 	rid := r.ID()
 	if rid == 0 {
 		rid = r.ParentID()
@@ -29,15 +29,15 @@ func (a *denyFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	})
 }
 
-func (a *denyFn) Type() rules.ActionType {
-	return rules.ActionTypeDisruptive
+func (a *denyFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeDisruptive
 }
 
-func deny() rules.Action {
+func deny() plugintypes.Action {
 	return &denyFn{}
 }
 
 var (
-	_ rules.Action      = &denyFn{}
-	_ ruleActionWrapper = deny
+	_ plugintypes.Action = &denyFn{}
+	_ ruleActionWrapper  = deny
 )

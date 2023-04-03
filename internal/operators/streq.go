@@ -6,15 +6,15 @@
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v3/macro"
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type streq struct {
 	data macro.Macro
 }
 
-func newStrEq(options rules.OperatorOptions) (rules.Operator, error) {
+func newStrEq(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)
@@ -24,7 +24,7 @@ func newStrEq(options rules.OperatorOptions) (rules.Operator, error) {
 	return &streq{data: m}, nil
 }
 
-func (o *streq) Evaluate(tx rules.TransactionState, value string) bool {
+func (o *streq) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	data := o.data.Expand(tx)
 	return data == value
 }

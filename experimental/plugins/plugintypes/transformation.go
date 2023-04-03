@@ -1,7 +1,7 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package rules
+package plugintypes
 
 // Transformation is used to create transformation plugins
 // See the documentation for more information

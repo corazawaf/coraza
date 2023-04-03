@@ -12,9 +12,9 @@ import (
 	"sync"
 	"unsafe"
 
+	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
-	"github.com/corazawaf/coraza/v3/macro"
-	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -26,13 +26,13 @@ type ruleActionParams struct {
 	Name string
 
 	// The action to be executed
-	Function rules.Action
+	Function plugintypes.Action
 }
 
 // Operator is a container for an operator,
 type ruleOperatorParams struct {
 	// Operator to be used
-	Operator rules.Operator
+	Operator plugintypes.Operator
 
 	// Function name (ex @rx)
 	Function string
@@ -76,7 +76,7 @@ type ruleVariableParams struct {
 
 type ruleTransformationParams struct {
 	// The transformation function to be used
-	Function rules.Transformation
+	Function plugintypes.Transformation
 }
 
 type inferredPhases byte
@@ -162,7 +162,7 @@ func (r *Rule) Status() int {
 // Evaluate will evaluate the current rule for the indicated transaction
 // If the operator matches, actions will be evaluated, and it will return
 // the matched variables, keys and values (MatchData)
-func (r *Rule) Evaluate(phase types.RulePhase, tx rules.TransactionState, cache map[transformationKey]*transformationValue) {
+func (r *Rule) Evaluate(phase types.RulePhase, tx plugintypes.TransactionState, cache map[transformationKey]*transformationValue) {
 	r.doEvaluate(phase, tx.(*Transaction), cache)
 }
 
@@ -297,11 +297,11 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 		}
 
 		for _, a := range r.actions {
-			if a.Function.Type() == rules.ActionTypeFlow {
+			if a.Function.Type() == plugintypes.ActionTypeFlow {
 				// Flow actions are evaluated also if the rule engine is set to DetectionOnly
 				tx.DebugLogger().Debug().Int("rule_id", rid).Str("action", a.Name).Msg("Evaluating flow action for rule")
 				a.Function.Evaluate(r, tx)
-			} else if a.Function.Type() == rules.ActionTypeDisruptive && tx.RuleEngine == types.RuleEngineOn {
+			} else if a.Function.Type() == plugintypes.ActionTypeDisruptive && tx.RuleEngine == types.RuleEngineOn {
 				// The parser enforces that the disruptive action is just one per rule (if more than one, only the last one is kept)
 				tx.DebugLogger().Debug().Int("rule_id", rid).Str("action", a.Name).Msg("Executing disruptive action for rule")
 				a.Function.Evaluate(r, tx)
@@ -371,7 +371,7 @@ func (r *Rule) matchVariable(tx *Transaction, m *corazarules.MatchData) {
 	// We run non-disruptive actions even if there is no chain match
 	tx.matchVariable(m)
 	for _, a := range r.actions {
-		if a.Function.Type() == rules.ActionTypeNondisruptive {
+		if a.Function.Type() == plugintypes.ActionTypeNondisruptive {
 			tx.DebugLogger().Debug().Str("action", a.Name).Msg("Evaluating action")
 			a.Function.Evaluate(r, tx)
 		}
@@ -379,7 +379,7 @@ func (r *Rule) matchVariable(tx *Transaction, m *corazarules.MatchData) {
 }
 
 // AddAction adds an action to the rule
-func (r *Rule) AddAction(name string, action rules.Action) error {
+func (r *Rule) AddAction(name string, action plugintypes.Action) error {
 	// TODO add more logic, like one persistent action per rule etc
 	r.actions = append(r.actions, ruleActionParams{
 		Name:     name,
@@ -458,7 +458,7 @@ func transformationID(currentID int, transformationName string) int {
 
 // AddTransformation adds a transformation to the rule
 // it fails if the transformation cannot be found
-func (r *Rule) AddTransformation(name string, t rules.Transformation) error {
+func (r *Rule) AddTransformation(name string, t plugintypes.Transformation) error {
 	if t == nil || name == "" {
 		return fmt.Errorf("invalid transformation %q not found", name)
 	}
@@ -476,7 +476,7 @@ func (r *Rule) ClearTransformations() {
 // SetOperator sets the operator of the rule
 // There can be only one operator per rule
 // functionName and params are used for logging
-func (r *Rule) SetOperator(operator rules.Operator, functionName string, params string) {
+func (r *Rule) SetOperator(operator plugintypes.Operator, functionName string, params string) {
 	r.operator = &ruleOperatorParams{
 		Operator: operator,
 		Function: functionName,

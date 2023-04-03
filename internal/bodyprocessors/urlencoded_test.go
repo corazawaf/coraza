@@ -8,12 +8,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/bodyprocessors"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 func TestURLEncode(t *testing.T) {
-	bp, err := bodyprocessors.Get("urlencoded")
+	bp, err := bodyprocessors.GetBodyProcessor("urlencoded")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -29,7 +30,7 @@ func TestURLEncode(t *testing.T) {
 		body += k + "=" + v + "&"
 	}
 	body = strings.TrimSuffix(body, "&")
-	if err := bp.ProcessRequest(strings.NewReader(body), v, bodyprocessors.Options{}); err != nil {
+	if err := bp.ProcessRequest(strings.NewReader(body), v, plugintypes.BodyProcessorOptions{}); err != nil {
 		t.Error(err)
 	}
 	if v.RequestBody().Get() != body {

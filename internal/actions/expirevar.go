@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type expirevarFn struct {
@@ -18,7 +18,7 @@ type expirevarFn struct {
 	key        string
 }
 
-func (a *expirevarFn) Init(_ rules.RuleMetadata, data string) error {
+func (a *expirevarFn) Init(_ plugintypes.RuleMetadata, data string) error {
 	k, ttl, ok := strings.Cut(data, "=")
 	if !ok {
 		return ErrInvalidKVArguments
@@ -44,21 +44,21 @@ func (a *expirevarFn) Init(_ rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *expirevarFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {
+func (a *expirevarFn) Evaluate(_ plugintypes.RuleMetadata, _ plugintypes.TransactionState) {
 	// Not supported
 	// TODO(jcchavezs): Shall we log a message?
 	// tx.DebugLogger().Error().Msg("Expirevar was used but it's not supported", zap.Int("rule", r.Id))
 }
 
-func (a *expirevarFn) Type() rules.ActionType {
-	return rules.ActionTypeNondisruptive
+func (a *expirevarFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeNondisruptive
 }
 
-func expirevar() rules.Action {
+func expirevar() plugintypes.Action {
 	return &expirevarFn{}
 }
 
 var (
-	_ rules.Action      = &expirevarFn{}
-	_ ruleActionWrapper = expirevar
+	_ plugintypes.Action = &expirevarFn{}
+	_ ruleActionWrapper  = expirevar
 )

@@ -6,13 +6,13 @@ package operators
 import (
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 func TestValidateByteRangeCase4(t *testing.T) {
 	ranges := "0-255"
-	opts := rules.OperatorOptions{
+	opts := plugintypes.OperatorOptions{
 		Arguments: ranges,
 	}
 	op, err := newValidateByteRange(opts)
@@ -27,7 +27,7 @@ func TestValidateByteRangeCase4(t *testing.T) {
 
 func TestValidateByteRangeCase5(t *testing.T) {
 	ranges := "9,10,13,32-126,128-255"
-	opts := rules.OperatorOptions{
+	opts := plugintypes.OperatorOptions{
 		Arguments: ranges,
 	}
 	op, err := newValidateByteRange(opts)
@@ -46,7 +46,7 @@ func getTransaction() *corazawaf.Transaction {
 
 func BenchmarkValidateByteRange(b *testing.B) {
 	ranges := "9,10,13,32-126,128-255"
-	opts := rules.OperatorOptions{
+	opts := plugintypes.OperatorOptions{
 		Arguments: ranges,
 	}
 	op, err := newValidateByteRange(opts)

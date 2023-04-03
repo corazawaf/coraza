@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type maturityFn struct{}
 
-func (a *maturityFn) Init(r rules.RuleMetadata, data string) error {
+func (a *maturityFn) Init(r plugintypes.RuleMetadata, data string) error {
 	m, err := strconv.Atoi(data)
 	if err != nil {
 		return err
@@ -25,17 +25,17 @@ func (a *maturityFn) Init(r rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *maturityFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
+func (a *maturityFn) Evaluate(_ plugintypes.RuleMetadata, _ plugintypes.TransactionState) {}
 
-func (a *maturityFn) Type() rules.ActionType {
-	return rules.ActionTypeMetadata
+func (a *maturityFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeMetadata
 }
 
-func maturity() rules.Action {
+func maturity() plugintypes.Action {
 	return &maturityFn{}
 }
 
 var (
-	_ rules.Action      = &maturityFn{}
-	_ ruleActionWrapper = maturity
+	_ plugintypes.Action = &maturityFn{}
+	_ ruleActionWrapper  = maturity
 )

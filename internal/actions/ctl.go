@@ -10,10 +10,10 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/debuglog"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -51,7 +51,7 @@ type ctlFn struct {
 	colKey     string
 }
 
-func (a *ctlFn) Init(_ rules.RuleMetadata, data string) error {
+func (a *ctlFn) Init(_ plugintypes.RuleMetadata, data string) error {
 	var err error
 	a.action, a.value, a.collection, a.colKey, err = parseCtl(data)
 	return err
@@ -70,7 +70,7 @@ func parseOnOff(s string) (bool, bool) {
 	}
 }
 
-func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
+func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.TransactionState) {
 	tx := txS.(*corazawaf.Transaction)
 	switch a.action {
 	case ctlRuleRemoveTargetByID:
@@ -307,8 +307,8 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 	}
 }
 
-func (a *ctlFn) Type() rules.ActionType {
-	return rules.ActionTypeNondisruptive
+func (a *ctlFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeNondisruptive
 }
 
 func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, string, error) {
@@ -411,11 +411,11 @@ func rangeToInts(rules []corazawaf.Rule, input string) ([]int, error) {
 	return ids, nil
 }
 
-func ctl() rules.Action {
+func ctl() plugintypes.Action {
 	return &ctlFn{}
 }
 
 var (
-	_ rules.Action      = &ctlFn{}
-	_ ruleActionWrapper = ctl
+	_ plugintypes.Action = &ctlFn{}
+	_ ruleActionWrapper  = ctl
 )

@@ -10,14 +10,14 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type jsonBodyProcessor struct{}
 
-var _ BodyProcessor = &jsonBodyProcessor{}
+var _ plugintypes.BodyProcessor = &jsonBodyProcessor{}
 
-func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v rules.TransactionVariables, _ Options) error {
+func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
 	col := v.ArgsPost()
 	data, err := readJSON(reader)
 	if err != nil {
@@ -29,7 +29,7 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v rules.Transactio
 	return nil
 }
 
-func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v rules.TransactionVariables, _ Options) error {
+func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
 	col := v.ResponseArgs()
 	data, err := readJSON(reader)
 	if err != nil {
@@ -100,7 +100,7 @@ func readItems(json gjson.Result, objKey []byte, res map[string]string) {
 }
 
 func init() {
-	Register("json", func() BodyProcessor {
+	RegisterBodyProcessor("json", func() plugintypes.BodyProcessor {
 		return &jsonBodyProcessor{}
 	})
 }

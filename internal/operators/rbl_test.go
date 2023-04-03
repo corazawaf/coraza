@@ -11,8 +11,8 @@ import (
 
 	"github.com/foxcpp/go-mockdns"
 
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type testLogger struct{ t *testing.T }
@@ -23,7 +23,7 @@ func (l *testLogger) Printf(format string, v ...interface{}) {
 }
 
 func TestRbl(t *testing.T) {
-	opts := rules.OperatorOptions{
+	opts := plugintypes.OperatorOptions{
 		Arguments: "xbl.spamhaus.org",
 	}
 	op, err := newRBL(opts)

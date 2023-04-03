@@ -10,10 +10,10 @@ import (
 
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
 
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
-func newPMFromDataset(options rules.OperatorOptions) (rules.Operator, error) {
+func newPMFromDataset(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 	dataset, ok := options.Datasets[data]
 	if !ok {

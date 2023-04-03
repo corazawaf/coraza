@@ -4,13 +4,13 @@
 package actions
 
 import (
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type chainFn struct{}
 
-func (a *chainFn) Init(r rules.RuleMetadata, data string) error {
+func (a *chainFn) Init(r plugintypes.RuleMetadata, data string) error {
 	if len(data) > 0 {
 		return ErrUnexpectedArguments
 	}
@@ -19,17 +19,17 @@ func (a *chainFn) Init(r rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *chainFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
+func (a *chainFn) Evaluate(_ plugintypes.RuleMetadata, _ plugintypes.TransactionState) {}
 
-func (a *chainFn) Type() rules.ActionType {
-	return rules.ActionTypeFlow
+func (a *chainFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeFlow
 }
 
-func chain() rules.Action {
+func chain() plugintypes.Action {
 	return &chainFn{}
 }
 
 var (
-	_ rules.Action      = &chainFn{}
-	_ ruleActionWrapper = chain
+	_ plugintypes.Action = &chainFn{}
+	_ ruleActionWrapper  = chain
 )

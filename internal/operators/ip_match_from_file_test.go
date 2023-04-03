@@ -7,15 +7,15 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/io"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 func TestFromFile(t *testing.T) {
 	addrok := []string{"127.0.0.1", "192.168.0.1", "192.168.0.253"}
 	addrfail := []string{"127.0.0.2", "192.168.1.1"}
 
-	opts := rules.OperatorOptions{
+	opts := plugintypes.OperatorOptions{
 		Arguments: filepath.Join("testdata", "op", "netranges.dat"),
 		Path:      []string{"."},
 		Root:      io.OSFS{},

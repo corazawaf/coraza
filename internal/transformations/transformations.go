@@ -7,20 +7,20 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
-var transformations = map[string]rules.Transformation{}
+var transformations = map[string]plugintypes.Transformation{}
 
 // Register registers a transformation by name
 // If the transformation is already registered, it will be overwritten
-func Register(name string, trans rules.Transformation) {
+func Register(name string, trans plugintypes.Transformation) {
 	transformations[strings.ToLower(name)] = trans
 }
 
 // GetTransformation returns a transformation by name
 // If the transformation is not found, it returns an error
-func GetTransformation(name string) (rules.Transformation, error) {
+func GetTransformation(name string) (plugintypes.Transformation, error) {
 	if t, ok := transformations[strings.ToLower(name)]; ok {
 		return t, nil
 	}

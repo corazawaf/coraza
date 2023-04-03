@@ -4,13 +4,13 @@
 package actions
 
 import (
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type verFn struct{}
 
-func (a *verFn) Init(r rules.RuleMetadata, data string) error {
+func (a *verFn) Init(r plugintypes.RuleMetadata, data string) error {
 	if len(data) == 0 {
 		return ErrMissingArguments
 	}
@@ -18,17 +18,17 @@ func (a *verFn) Init(r rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *verFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
+func (a *verFn) Evaluate(_ plugintypes.RuleMetadata, _ plugintypes.TransactionState) {}
 
-func (a *verFn) Type() rules.ActionType {
-	return rules.ActionTypeMetadata
+func (a *verFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeMetadata
 }
 
-func ver() rules.Action {
+func ver() plugintypes.Action {
 	return &verFn{}
 }
 
 var (
-	_ rules.Action      = &verFn{}
-	_ ruleActionWrapper = ver
+	_ plugintypes.Action = &verFn{}
+	_ ruleActionWrapper  = ver
 )

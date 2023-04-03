@@ -9,16 +9,16 @@ import (
 	"net"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type ipMatch struct {
 	subnets []net.IPNet
 }
 
-var _ rules.Operator = (*ipMatch)(nil)
+var _ plugintypes.Operator = (*ipMatch)(nil)
 
-func newIPMatch(options rules.OperatorOptions) (rules.Operator, error) {
+func newIPMatch(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
 	var subnets []net.IPNet
@@ -43,7 +43,7 @@ func newIPMatch(options rules.OperatorOptions) (rules.Operator, error) {
 	return &ipMatch{subnets: subnets}, nil
 }
 
-func (o *ipMatch) Evaluate(tx rules.TransactionState, value string) bool {
+func (o *ipMatch) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	ip := net.ParseIP(value)
 	for _, subnet := range o.subnets {
 		if subnet.Contains(ip) {

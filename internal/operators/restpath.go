@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 var rePathTokenRe = regexp.MustCompile(`\{([^\}]+)\}`)
@@ -23,9 +23,9 @@ type restpath struct {
 	re *regexp.Regexp
 }
 
-var _ rules.Operator = (*restpath)(nil)
+var _ plugintypes.Operator = (*restpath)(nil)
 
-func newRESTPath(options rules.OperatorOptions) (rules.Operator, error) {
+func newRESTPath(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := strings.ReplaceAll(options.Arguments, "/", "\\/")
 	for _, token := range rePathTokenRe.FindAllStringSubmatch(data, -1) {
 		data = strings.Replace(data, token[0], fmt.Sprintf("(?P<%s>.*)", token[1]), 1)
@@ -37,7 +37,7 @@ func newRESTPath(options rules.OperatorOptions) (rules.Operator, error) {
 	return &restpath{re: re}, nil
 }
 
-func (o *restpath) Evaluate(tx rules.TransactionState, value string) bool {
+func (o *restpath) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	// we use the re regex to match the path and match named captured groups
 	// to the ARGS_PATH
 	match := o.re.FindStringSubmatch(value)

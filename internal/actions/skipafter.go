@@ -4,16 +4,16 @@
 package actions
 
 import (
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type skipafterFn struct {
 	data string
 }
 
-func (a *skipafterFn) Init(_ rules.RuleMetadata, data string) error {
+func (a *skipafterFn) Init(_ plugintypes.RuleMetadata, data string) error {
 	data = utils.MaybeRemoveQuotes(data)
 	if len(data) == 0 {
 		return ErrMissingArguments
@@ -22,22 +22,22 @@ func (a *skipafterFn) Init(_ rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *skipafterFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
+func (a *skipafterFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
 	tx.DebugLogger().Debug().
 		Str("value", a.data).
 		Msg("Starting secmarker")
 	tx.(*corazawaf.Transaction).SkipAfter = a.data
 }
 
-func (a *skipafterFn) Type() rules.ActionType {
-	return rules.ActionTypeFlow
+func (a *skipafterFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeFlow
 }
 
-func skipafter() rules.Action {
+func skipafter() plugintypes.Action {
 	return &skipafterFn{}
 }
 
 var (
-	_ rules.Action      = &skipafterFn{}
-	_ ruleActionWrapper = skipafter
+	_ plugintypes.Action = &skipafterFn{}
+	_ ruleActionWrapper  = skipafter
 )

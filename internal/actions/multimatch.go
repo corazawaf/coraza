@@ -4,13 +4,13 @@
 package actions
 
 import (
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type multimatchFn struct{}
 
-func (a *multimatchFn) Init(r rules.RuleMetadata, data string) error {
+func (a *multimatchFn) Init(r plugintypes.RuleMetadata, data string) error {
 	if len(data) > 0 {
 		return ErrUnexpectedArguments
 	}
@@ -18,17 +18,17 @@ func (a *multimatchFn) Init(r rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *multimatchFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
+func (a *multimatchFn) Evaluate(_ plugintypes.RuleMetadata, _ plugintypes.TransactionState) {}
 
-func (a *multimatchFn) Type() rules.ActionType {
-	return rules.ActionTypeNondisruptive
+func (a *multimatchFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeNondisruptive
 }
 
-func multimatch() rules.Action {
+func multimatch() plugintypes.Action {
 	return &multimatchFn{}
 }
 
 var (
-	_ rules.Action      = &multimatchFn{}
-	_ ruleActionWrapper = multimatch
+	_ plugintypes.Action = &multimatchFn{}
+	_ ruleActionWrapper  = multimatch
 )

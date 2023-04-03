@@ -8,17 +8,17 @@ package operators
 import (
 	"strconv"
 
-	"github.com/corazawaf/coraza/v3/macro"
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type eq struct {
 	data macro.Macro
 }
 
-var _ rules.Operator = (*eq)(nil)
+var _ plugintypes.Operator = (*eq)(nil)
 
-func newEq(options rules.OperatorOptions) (rules.Operator, error) {
+func newEq(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)
@@ -28,7 +28,7 @@ func newEq(options rules.OperatorOptions) (rules.Operator, error) {
 	return &eq{data: m}, nil
 }
 
-func (o *eq) Evaluate(tx rules.TransactionState, value string) bool {
+func (o *eq) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	d1, _ := strconv.Atoi(o.data.Expand(tx))
 	d2, _ := strconv.Atoi(value)
 	return d1 == d2

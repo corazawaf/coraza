@@ -4,7 +4,7 @@
 package actions
 
 import (
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -12,7 +12,7 @@ type redirectFn struct {
 	target string
 }
 
-func (a *redirectFn) Init(_ rules.RuleMetadata, data string) error {
+func (a *redirectFn) Init(_ plugintypes.RuleMetadata, data string) error {
 	if len(data) == 0 {
 		return ErrMissingArguments
 	}
@@ -21,7 +21,7 @@ func (a *redirectFn) Init(_ rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *redirectFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
+func (a *redirectFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
 	rid := r.ID()
 	if rid == 0 {
 		rid = r.ParentID()
@@ -34,15 +34,15 @@ func (a *redirectFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	})
 }
 
-func (a *redirectFn) Type() rules.ActionType {
-	return rules.ActionTypeDisruptive
+func (a *redirectFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeDisruptive
 }
 
-func redirect() rules.Action {
+func redirect() plugintypes.Action {
 	return &redirectFn{}
 }
 
 var (
-	_ rules.Action      = &redirectFn{}
-	_ ruleActionWrapper = redirect
+	_ plugintypes.Action = &redirectFn{}
+	_ ruleActionWrapper  = redirect
 )

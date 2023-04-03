@@ -8,15 +8,15 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/url"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type urlencodedBodyProcessor struct {
 }
 
-func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, v rules.TransactionVariables, options Options) error {
+func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.TransactionVariables, options plugintypes.BodyProcessorOptions) error {
 	buf := new(strings.Builder)
 	if _, err := io.Copy(buf, reader); err != nil {
 		return err
@@ -33,16 +33,16 @@ func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, v rules.Transac
 	return nil
 }
 
-func (*urlencodedBodyProcessor) ProcessResponse(reader io.Reader, v rules.TransactionVariables, options Options) error {
+func (*urlencodedBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.TransactionVariables, options plugintypes.BodyProcessorOptions) error {
 	return nil
 }
 
 var (
-	_ BodyProcessor = &urlencodedBodyProcessor{}
+	_ plugintypes.BodyProcessor = &urlencodedBodyProcessor{}
 )
 
 func init() {
-	Register("urlencoded", func() BodyProcessor {
+	RegisterBodyProcessor("urlencoded", func() plugintypes.BodyProcessor {
 		return &urlencodedBodyProcessor{}
 	})
 }

@@ -4,13 +4,13 @@
 package actions
 
 import (
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type captureFn struct{}
 
-func (a *captureFn) Init(r rules.RuleMetadata, data string) error {
+func (a *captureFn) Init(r plugintypes.RuleMetadata, data string) error {
 	if len(data) > 0 {
 		return ErrUnexpectedArguments
 	}
@@ -19,17 +19,17 @@ func (a *captureFn) Init(r rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *captureFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
+func (a *captureFn) Evaluate(_ plugintypes.RuleMetadata, _ plugintypes.TransactionState) {}
 
-func (a *captureFn) Type() rules.ActionType {
-	return rules.ActionTypeNondisruptive
+func (a *captureFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeNondisruptive
 }
 
-func capture() rules.Action {
+func capture() plugintypes.Action {
 	return &captureFn{}
 }
 
 var (
-	_ rules.Action      = &captureFn{}
-	_ ruleActionWrapper = capture
+	_ plugintypes.Action = &captureFn{}
+	_ ruleActionWrapper  = capture
 )
