@@ -66,7 +66,7 @@ func (rg *RuleGroup) FindByID(id int) *Rule {
 	return nil
 }
 
-// DeleteByID removes a rule by it's Id
+// DeleteByID removes a rule by its ID
 func (rg *RuleGroup) DeleteByID(id int) {
 	for i, r := range rg.rules {
 		if r.ID_ == id {
@@ -74,6 +74,17 @@ func (rg *RuleGroup) DeleteByID(id int) {
 			return
 		}
 	}
+}
+
+// DeleteByRange removes rules by their ID in a range
+func (rg *RuleGroup) DeleteByRange(start, end int) {
+	var kept []Rule
+	for _, r := range rg.rules {
+		if r.ID_ < start || r.ID_ > end {
+			kept = append(kept, r)
+		}
+	}
+	rg.rules = kept
 }
 
 // DeleteByMsg deletes rules with the given message.

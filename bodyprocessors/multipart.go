@@ -13,6 +13,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/rules"
 )
@@ -88,7 +89,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v rules.Tran
 			totalSize += int64(len(data))
 			postCol.Add(p.FormName(), string(data))
 		}
-		filesCombinedSizeCol.Set(fmt.Sprintf("%d", totalSize))
+		filesCombinedSizeCol.(*collections.Single).Set(fmt.Sprintf("%d", totalSize))
 	}
 	return nil
 }

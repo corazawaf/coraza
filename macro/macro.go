@@ -138,13 +138,7 @@ func (m *macro) compile(input string) error {
 				continue
 			}
 
-			// 48: 0
-			// 57: 9
-			// 65: A
-			// 90: Z
-			// 97: a
-			// 122: z
-			if !(c == '.' || c == '_' || c == '-' || (c >= 48 && c <= 57) || (c >= 65 && c <= 90) || (c >= 97 && c <= 122)) {
+			if !(c == '.' || c == '_' || c == '-' || (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
 				currentToken.WriteByte(c)
 				return fmt.Errorf("malformed variable starting with %q", "%{"+currentToken.String())
 			}

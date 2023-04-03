@@ -1320,3 +1320,56 @@ func TestTxAddResponseArgs(t *testing.T) {
 	tx.AddResponseArgument("samplekey", "samplevalue")
 	t.Log("This is a placeholder for tx.AddResponseArgs")
 }
+
+func TestResponseBodyForceProcessing(t *testing.T) {
+	waf := NewWAF()
+	waf.ResponseBodyAccess = true
+	tx := waf.NewTransaction()
+	tx.ForceResponseBodyVariable = true
+	tx.variables.ResponseBodyProcessor().(*collections.Single).Set("JSON")
+	tx.ProcessRequestHeaders()
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Fatal(err)
+	}
+	tx.ProcessResponseHeaders(200, "HTTP/1")
+	if _, _, err := tx.WriteResponseBody([]byte(`{"key":"value"}`)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.ProcessResponseBody(); err != nil {
+		t.Fatal(err)
+	}
+	f := tx.variables.responseArgs.FindString("json.key")
+	if len(f) == 0 {
+		t.Fatal("json.key not found")
+	}
+}
+
+func TestForceRequestBodyOverride(t *testing.T) {
+	waf := NewWAF()
+	waf.RequestBodyAccess = true
+	tx := waf.NewTransaction()
+	tx.ForceRequestBodyVariable = true
+	tx.variables.RequestBodyProcessor().(*collections.Single).Set("JSON")
+	tx.ProcessRequestHeaders()
+	if _, _, err := tx.WriteRequestBody([]byte("foo=bar&baz=qux")); err != nil {
+		t.Errorf("Failed to write request body: %v", err)
+	}
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Errorf("Failed to process request body: %v", err)
+	}
+	if tx.variables.RequestBodyProcessor().Get() != "JSON" {
+		t.Errorf("Failed to force request body variable")
+	}
+	tx = waf.NewTransaction()
+	tx.ForceRequestBodyVariable = true
+	tx.ProcessRequestHeaders()
+	if _, _, err := tx.WriteRequestBody([]byte("foo=bar&baz=qux")); err != nil {
+		t.Errorf("Failed to write request body: %v", err)
+	}
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Errorf("Failed to process request body: %v", err)
+	}
+	if tx.variables.RequestBodyProcessor().Get() != "URLENCODED" {
+		t.Errorf("Failed to force request body variable, got RBP: %q", tx.variables.RequestBodyProcessor().Get())
+	}
+}

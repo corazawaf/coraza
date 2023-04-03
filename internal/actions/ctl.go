@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/debuglog"
+	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/rules"
@@ -164,7 +165,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 		}
 	case ctlRequestBodyProcessor:
 		if tx.LastPhase() <= types.PhaseRequestHeaders {
-			tx.Variables().RequestBodyProcessor().Set(strings.ToUpper(a.value))
+			tx.Variables().RequestBodyProcessor().(*collections.Single).Set(strings.ToUpper(a.value))
 		} else {
 			tx.DebugLogger().Warn().
 				Str("ctl", "RequestBodyProcessor").
@@ -182,16 +183,31 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 		}
 		tx.RuleEngine = re
 	case ctlRuleRemoveByID:
-		id, err := strconv.Atoi(a.value)
-		if err != nil {
-			tx.DebugLogger().Error().
-				Str("ctl", "RuleRemoveByID").
-				Str("value", a.value).
-				Err(err).
-				Msg("Invalid rule ID")
-			return
+		if idx := strings.Index(a.value, "-"); idx == -1 {
+			id, err := strconv.Atoi(a.value)
+			if err != nil {
+				tx.DebugLogger().Error().
+					Str("ctl", "RuleRemoveByID").
+					Str("value", a.value).
+					Err(err).
+					Msg("Invalid rule ID")
+				return
+			}
+
+			tx.RemoveRuleByID(id)
+		} else {
+			ran, err := rangeToInts(tx.WAF.Rules.GetRules(), a.value)
+			if err != nil {
+				tx.DebugLogger().Error().
+					Str("ctl", "RuleRemoveByID").
+					Err(err).
+					Msg("Invalid range")
+				return
+			}
+			for _, id := range ran {
+				tx.RemoveRuleByID(id)
+			}
 		}
-		tx.RemoveRuleByID(id)
 	case ctlRuleRemoveByMsg:
 		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
@@ -265,7 +281,7 @@ func (a *ctlFn) Evaluate(_ rules.RuleMetadata, txS rules.TransactionState) {
 			// TODO(jcchavezs): Shall we validate such body processor exists or is it
 			// too ambitious as plugins might register their own at some point in the
 			// lifecycle which does not have to happen before this.
-			tx.Variables().ResponseBodyProcessor().Set(strings.ToUpper(a.value))
+			tx.Variables().ResponseBodyProcessor().(*collections.Single).Set(strings.ToUpper(a.value))
 		} else {
 			tx.DebugLogger().Warn().
 				Str("ctl", "ResponseBodyLimit").
@@ -374,6 +390,10 @@ func rangeToInts(rules []corazawaf.Rule, input string) ([]int, error) {
 		end, err = strconv.Atoi(in1)
 		if err != nil {
 			return nil, err
+		}
+
+		if start > end {
+			return nil, errors.New("invalid range, start > end")
 		}
 	} else {
 		id, err := strconv.Atoi(input)

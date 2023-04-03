@@ -38,6 +38,41 @@ func TestRx(t *testing.T) {
 			input:   "グッバイワールド",
 			want:    false,
 		},
+		{
+			pattern: `\xac\xed\x00\x05`,
+			input:   "\xac\xed\x00\x05t\x00\x04test",
+			want:    true,
+		},
+		{
+			pattern: `\xac\xed\x00\x05`,
+			input:   "\xac\xed\x00t\x00\x04test",
+			want:    false,
+		},
+		{
+			// Requires dotall
+			pattern: `hello.*world`,
+			input:   "hello\nworld",
+			want:    true,
+		},
+		{
+			// Requires multiline
+			pattern: `^hello.*world`,
+			input:   "test\nhello\nworld",
+			want:    true,
+		},
+		{
+			// Makes sure, (?sm) passed by the user does not
+			// break the regex.
+			pattern: `(?sm)hello.*world`,
+			input:   "hello\nworld",
+			want:    true,
+		},
+		{
+			// Make sure user flags are also applied
+			pattern: `(?i)^hello.*world`,
+			input:   "test\nHELLO\nworld",
+			want:    true,
+		},
 	}
 
 	for _, tc := range tests {

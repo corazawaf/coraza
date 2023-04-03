@@ -27,9 +27,6 @@ type Single interface {
 
 	// Get returns the value of this Single
 	Get() string
-
-	// Set sets the value of this Single
-	Set(string)
 }
 
 // Keyed is a Collection with elements that can be selected by key.

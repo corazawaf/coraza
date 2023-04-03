@@ -943,7 +943,9 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	// XML and JSON must be forced with ctl:requestBodyProcessor=JSON
 	if tx.ForceRequestBodyVariable {
 		// We force URLENCODED if mime is x-www... or we have an empty RBP and ForceRequestBodyVariable
-		rbp = "URLENCODED"
+		if rbp == "" {
+			rbp = "URLENCODED"
+		}
 		tx.variables.reqbodyProcessor.Set(rbp)
 	}
 	rbp = strings.ToLower(rbp)
@@ -1014,6 +1016,10 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Int
 // directly to the client or write them to Coraza's buffer.
 func (tx *Transaction) IsResponseBodyProcessable() bool {
 	// TODO add more validations
+	if tx.ForceResponseBodyVariable {
+		// we force the response body to be processed because of the ctl:forceResponseBodyVariable
+		return true
+	}
 	ct := tx.variables.responseContentType.Get()
 	return stringsutil.InSlice(ct, tx.WAF.ResponseBodyMimeTypes)
 }

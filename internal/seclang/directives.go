@@ -322,12 +322,41 @@ func directiveSecRuleRemoveByMsg(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Removes the matching rules from the current configuration context.
+// Syntax: SecRuleRemoveById ...[ID OR RANGE]
 func directiveSecRuleRemoveByID(options *DirectiveOptions) error {
-	id, err := strconv.Atoi(options.Opts)
-	if err != nil {
-		return err
+	if len(options.Opts) == 0 {
+		return errEmptyOptions
 	}
-	options.WAF.Rules.DeleteByID(id)
+
+	idsOrRanges := strings.Fields(options.Opts)
+	for _, idOrRange := range idsOrRanges {
+		if idx := strings.Index(idOrRange, "-"); idx == -1 {
+			id, err := strconv.Atoi(idOrRange)
+			if err != nil {
+				return err
+			}
+
+			options.WAF.Rules.DeleteByID(id)
+		} else {
+			start, err := strconv.Atoi(idOrRange[:idx])
+			if err != nil {
+				return err
+			}
+
+			end, err := strconv.Atoi(idOrRange[idx+1:])
+			if err != nil {
+				return err
+			}
+
+			if start > end {
+				return fmt.Errorf("invalid range: %s", idOrRange)
+			}
+
+			options.WAF.Rules.DeleteByRange(start, end)
+		}
+	}
+
 	return nil
 }
 
