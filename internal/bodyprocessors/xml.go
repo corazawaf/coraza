@@ -8,13 +8,13 @@ import (
 	"io"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type xmlBodyProcessor struct {
 }
 
-func (*xmlBodyProcessor) ProcessRequest(reader io.Reader, v rules.TransactionVariables, options Options) error {
+func (*xmlBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.TransactionVariables, options plugintypes.BodyProcessorOptions) error {
 	values, contents, err := readXML(reader)
 	if err != nil {
 		return err
@@ -25,7 +25,7 @@ func (*xmlBodyProcessor) ProcessRequest(reader io.Reader, v rules.TransactionVar
 	return nil
 }
 
-func (*xmlBodyProcessor) ProcessResponse(reader io.Reader, v rules.TransactionVariables, options Options) error {
+func (*xmlBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.TransactionVariables, options plugintypes.BodyProcessorOptions) error {
 	return nil
 }
 
@@ -59,11 +59,11 @@ func readXML(reader io.Reader) ([]string, []string, error) {
 }
 
 var (
-	_ BodyProcessor = &xmlBodyProcessor{}
+	_ plugintypes.BodyProcessor = &xmlBodyProcessor{}
 )
 
 func init() {
-	Register("xml", func() BodyProcessor {
+	RegisterBodyProcessor("xml", func() plugintypes.BodyProcessor {
 		return &xmlBodyProcessor{}
 	})
 }

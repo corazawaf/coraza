@@ -7,12 +7,12 @@
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type inspectFile struct{}
 
-func newInspectFile(rules.OperatorOptions) (rules.Operator, error) {
+func newInspectFile(plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	return &unconditionalMatch{}, nil
 }
 

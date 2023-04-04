@@ -4,12 +4,12 @@
 package plugins
 
 import (
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/operators"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 // RegisterOperator registers a new operator
 // If the operator already exists it will be overwritten
-func RegisterOperator(name string, op rules.OperatorFactory) {
+func RegisterOperator(name string, op plugintypes.OperatorFactory) {
 	operators.Register(name, op)
 }

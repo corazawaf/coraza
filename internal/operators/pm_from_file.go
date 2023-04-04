@@ -12,10 +12,10 @@ import (
 
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
 
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
-func newPMFromFile(options rules.OperatorOptions) (rules.Operator, error) {
+func newPMFromFile(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	path := options.Arguments
 
 	data, err := loadFromFile(path, options.Path, options.Root)

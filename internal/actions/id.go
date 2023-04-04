@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type idFn struct{}
 
-func (a *idFn) Init(r rules.RuleMetadata, data string) error {
+func (a *idFn) Init(r plugintypes.RuleMetadata, data string) error {
 	if len(data) == 0 {
 		return ErrMissingArguments
 	}
@@ -31,17 +31,17 @@ func (a *idFn) Init(r rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *idFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
+func (a *idFn) Evaluate(_ plugintypes.RuleMetadata, _ plugintypes.TransactionState) {}
 
-func (a *idFn) Type() rules.ActionType {
-	return rules.ActionTypeMetadata
+func (a *idFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeMetadata
 }
 
-func id() rules.Action {
+func id() plugintypes.Action {
 	return &idFn{}
 }
 
 var (
-	_ rules.Action      = &idFn{}
-	_ ruleActionWrapper = id
+	_ plugintypes.Action = &idFn{}
+	_ ruleActionWrapper  = id
 )

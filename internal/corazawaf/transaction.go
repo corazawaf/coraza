@@ -17,15 +17,15 @@ import (
 	"time"
 
 	"github.com/corazawaf/coraza/v3/auditlog"
-	"github.com/corazawaf/coraza/v3/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/debuglog"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/corazatypes"
 	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 	urlutil "github.com/corazawaf/coraza/v3/internal/url"
-	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -120,7 +120,7 @@ func (tx *Transaction) ID() string {
 	return tx.id
 }
 
-func (tx *Transaction) Variables() rules.TransactionVariables {
+func (tx *Transaction) Variables() plugintypes.TransactionVariables {
 	return &tx.variables
 }
 
@@ -954,7 +954,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.interruption, nil
 	}
-	bodyprocessor, err := bodyprocessors.Get(rbp)
+	bodyprocessor, err := bodyprocessors.GetBodyProcessor(rbp)
 	if err != nil {
 		tx.generateRequestBodyError(errors.New("invalid body processor"))
 		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
@@ -965,7 +965,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		Str("body_processor", rbp).
 		Msg("Attempting to process request body")
 
-	if err := bodyprocessor.ProcessRequest(reader, tx.Variables(), bodyprocessors.Options{
+	if err := bodyprocessor.ProcessRequest(reader, tx.Variables(), plugintypes.BodyProcessorOptions{
 		Mime:        mime,
 		StoragePath: tx.WAF.UploadDir,
 	}); err != nil {
@@ -1186,7 +1186,7 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 	}
 
 	if bp := tx.variables.resBodyProcessor.Get(); bp != "" {
-		b, err := bodyprocessors.Get(bp)
+		b, err := bodyprocessors.GetBodyProcessor(bp)
 		if err != nil {
 			tx.generateResponseBodyError(errors.New("invalid body processor"))
 			tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
@@ -1195,7 +1195,7 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 
 		tx.debugLogger.Debug().Str("body_processor", bp).Msg("Attempting to process response body")
 
-		if err := b.ProcessResponse(reader, tx.Variables(), bodyprocessors.Options{}); err != nil {
+		if err := b.ProcessResponse(reader, tx.Variables(), plugintypes.BodyProcessorOptions{}); err != nil {
 			tx.debugLogger.Error().Err(err).Msg("Failed to process response body")
 			tx.generateResponseBodyError(err)
 		}

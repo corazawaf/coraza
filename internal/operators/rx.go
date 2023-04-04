@@ -13,16 +13,16 @@ import (
 
 	"rsc.io/binaryregexp"
 
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type rx struct {
 	re *regexp.Regexp
 }
 
-var _ rules.Operator = (*rx)(nil)
+var _ plugintypes.Operator = (*rx)(nil)
 
-func newRX(options rules.OperatorOptions) (rules.Operator, error) {
+func newRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	// (?sm) enables multiline and dotall mode, required by some CRS rules and matching ModSec behavior, see
 	// - https://stackoverflow.com/a/27680233
 	// - https://groups.google.com/g/golang-nuts/c/jiVdamGFU9E
@@ -42,7 +42,7 @@ func newRX(options rules.OperatorOptions) (rules.Operator, error) {
 	return &rx{re: re}, nil
 }
 
-func (o *rx) Evaluate(tx rules.TransactionState, value string) bool {
+func (o *rx) Evaluate(tx plugintypes.TransactionState, value string) bool {
 
 	if tx.Capturing() {
 		match := o.re.FindStringSubmatch(value)
@@ -67,9 +67,9 @@ type binaryRX struct {
 	re *binaryregexp.Regexp
 }
 
-var _ rules.Operator = (*binaryRX)(nil)
+var _ plugintypes.Operator = (*binaryRX)(nil)
 
-func newBinaryRX(options rules.OperatorOptions) (rules.Operator, error) {
+func newBinaryRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
 	re, err := binaryregexp.Compile(data)
@@ -79,7 +79,7 @@ func newBinaryRX(options rules.OperatorOptions) (rules.Operator, error) {
 	return &binaryRX{re: re}, nil
 }
 
-func (o *binaryRX) Evaluate(tx rules.TransactionState, value string) bool {
+func (o *binaryRX) Evaluate(tx plugintypes.TransactionState, value string) bool {
 
 	if tx.Capturing() {
 		match := o.re.FindStringSubmatch(value)

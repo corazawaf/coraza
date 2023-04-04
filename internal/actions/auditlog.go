@@ -4,13 +4,13 @@
 package actions
 
 import (
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type auditlogFn struct{}
 
-func (a *auditlogFn) Init(r rules.RuleMetadata, data string) error {
+func (a *auditlogFn) Init(r plugintypes.RuleMetadata, data string) error {
 	if len(data) > 0 {
 		return ErrUnexpectedArguments
 	}
@@ -19,17 +19,17 @@ func (a *auditlogFn) Init(r rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *auditlogFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
+func (a *auditlogFn) Evaluate(_ plugintypes.RuleMetadata, _ plugintypes.TransactionState) {}
 
-func (a *auditlogFn) Type() rules.ActionType {
-	return rules.ActionTypeNondisruptive
+func (a *auditlogFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeNondisruptive
 }
 
-func auditlog() rules.Action {
+func auditlog() plugintypes.Action {
 	return &auditlogFn{}
 }
 
 var (
-	_ rules.Action      = (*auditlogFn)(nil)
-	_ ruleActionWrapper = auditlog
+	_ plugintypes.Action = (*auditlogFn)(nil)
+	_ ruleActionWrapper  = auditlog
 )

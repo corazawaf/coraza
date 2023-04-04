@@ -8,17 +8,17 @@ package operators
 import (
 	"strconv"
 
-	"github.com/corazawaf/coraza/v3/macro"
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type lt struct {
 	data macro.Macro
 }
 
-var _ rules.Operator = (*lt)(nil)
+var _ plugintypes.Operator = (*lt)(nil)
 
-func newLT(options rules.OperatorOptions) (rules.Operator, error) {
+func newLT(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)
@@ -28,7 +28,7 @@ func newLT(options rules.OperatorOptions) (rules.Operator, error) {
 	return &lt{data: m}, nil
 }
 
-func (o *lt) Evaluate(tx rules.TransactionState, value string) bool {
+func (o *lt) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	vv := o.data.Expand(tx)
 	data, _ := strconv.Atoi(vv)
 	v, _ := strconv.Atoi(value)

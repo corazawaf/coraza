@@ -8,18 +8,18 @@ package operators
 import (
 	"unicode/utf8"
 
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type validateUtf8Encoding struct{}
 
-var _ rules.Operator = (*validateUtf8Encoding)(nil)
+var _ plugintypes.Operator = (*validateUtf8Encoding)(nil)
 
-func newValidateUTF8Encoding(rules.OperatorOptions) (rules.Operator, error) {
+func newValidateUTF8Encoding(plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	return &validateUtf8Encoding{}, nil
 }
 
-func (o *validateUtf8Encoding) Evaluate(_ rules.TransactionState, value string) bool {
+func (o *validateUtf8Encoding) Evaluate(_ plugintypes.TransactionState, value string) bool {
 	return !utf8.ValidString(value)
 }
 

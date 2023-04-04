@@ -6,16 +6,16 @@
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type unconditionalMatch struct{}
 
-func newUnconditionalMatch(rules.OperatorOptions) (rules.Operator, error) {
+func newUnconditionalMatch(plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	return &unconditionalMatch{}, nil
 }
 
-func (*unconditionalMatch) Evaluate(rules.TransactionState, string) bool { return true }
+func (*unconditionalMatch) Evaluate(plugintypes.TransactionState, string) bool { return true }
 
 func init() {
 	Register("unconditionalMatch", newUnconditionalMatch)

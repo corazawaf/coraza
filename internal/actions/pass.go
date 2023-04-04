@@ -4,29 +4,29 @@
 package actions
 
 import (
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type passFn struct{}
 
-func (a *passFn) Init(_ rules.RuleMetadata, data string) error {
+func (a *passFn) Init(_ plugintypes.RuleMetadata, data string) error {
 	if len(data) > 0 {
 		return ErrUnexpectedArguments
 	}
 	return nil
 }
 
-func (a *passFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
+func (a *passFn) Evaluate(_ plugintypes.RuleMetadata, _ plugintypes.TransactionState) {}
 
-func (a *passFn) Type() rules.ActionType {
-	return rules.ActionTypeDisruptive
+func (a *passFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeDisruptive
 }
 
-func pass() rules.Action {
+func pass() plugintypes.Action {
 	return &passFn{}
 }
 
 var (
-	_ rules.Action      = &passFn{}
-	_ ruleActionWrapper = pass
+	_ plugintypes.Action = &passFn{}
+	_ ruleActionWrapper  = pass
 )

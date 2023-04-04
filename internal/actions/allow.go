@@ -6,9 +6,9 @@ package actions
 import (
 	"fmt"
 
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazatypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 // 0 nothing, 1 phase, 2 request
@@ -16,7 +16,7 @@ type allowFn struct {
 	allow corazatypes.AllowType
 }
 
-func (a *allowFn) Init(_ rules.RuleMetadata, data string) error {
+func (a *allowFn) Init(_ plugintypes.RuleMetadata, data string) error {
 	switch data {
 	case "phase":
 		a.allow = corazatypes.AllowTypePhase // skip current phase
@@ -41,20 +41,20 @@ func (a *allowFn) Init(_ rules.RuleMetadata, data string) error {
 //     Other phases will continue as normal.
 //   - If used with parameter "request", allow will cause the engine to stop processing the current phase.
 //     The next phase to be processed will be phase types.PhaseResponseHeaders.
-func (a *allowFn) Evaluate(r rules.RuleMetadata, txS rules.TransactionState) {
+func (a *allowFn) Evaluate(r plugintypes.RuleMetadata, txS plugintypes.TransactionState) {
 	tx := txS.(*corazawaf.Transaction)
 	tx.AllowType = a.allow
 }
 
-func (a *allowFn) Type() rules.ActionType {
-	return rules.ActionTypeDisruptive
+func (a *allowFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeDisruptive
 }
 
-func allow() rules.Action {
+func allow() plugintypes.Action {
 	return &allowFn{}
 }
 
 var (
-	_ rules.Action      = (*allowFn)(nil)
-	_ ruleActionWrapper = allow
+	_ plugintypes.Action = (*allowFn)(nil)
+	_ ruleActionWrapper  = allow
 )

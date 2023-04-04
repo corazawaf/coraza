@@ -6,10 +6,10 @@
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
-func newGeoLookup(rules.OperatorOptions) (rules.Operator, error) {
+func newGeoLookup(plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	return &unconditionalMatch{}, nil
 }
 

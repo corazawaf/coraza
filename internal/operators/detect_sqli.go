@@ -8,18 +8,18 @@ package operators
 import (
 	"github.com/corazawaf/libinjection-go"
 
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type detectSQLi struct{}
 
-var _ rules.Operator = (*detectSQLi)(nil)
+var _ plugintypes.Operator = (*detectSQLi)(nil)
 
-func newDetectSQLi(rules.OperatorOptions) (rules.Operator, error) {
+func newDetectSQLi(plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	return &detectSQLi{}, nil
 }
 
-func (o *detectSQLi) Evaluate(tx rules.TransactionState, value string) bool {
+func (o *detectSQLi) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	res, fingerprint := libinjection.IsSQLi(value)
 	if !res {
 		return false
