@@ -49,11 +49,7 @@ func cssDecodeInplace(input string, pos int) string {
 						d[c] = xsingle2c(input[i])
 						c++
 
-					case 2:
-						/* Use the last two from the end. */
-						d[c] = utils.X2c(input[i+j-2:])
-						c++
-					case 3:
+					case 2, 3:
 						/* Use the last two from the end. */
 						d[c] = utils.X2c(input[i+j-2:])
 						c++
