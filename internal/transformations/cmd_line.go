@@ -38,16 +38,16 @@ func doCMDLine(input string, pos int) string {
 	space := false
 	for i := pos; i < len(input); i++ {
 		a := input[i]
-		switch {
-		case a == '"' || a == '\'' || a == '\\' || a == '^':
+		switch a {
+		case '"', '\'', '\\', '^':
 			/* remove some characters */
-		case a == ' ' || a == ',' || a == ';' || a == '\t' || a == '\r' || a == '\n':
+		case ' ', ',', ';', '\t', '\r', '\n':
 			/* replace some characters to space (only one) */
 			if !space {
 				ret = append(ret, ' ')
 				space = true
 			}
-		case a == '/' || a == '(':
+		case '/', '(':
 			/* remove space before / or ( */
 			if space {
 				ret = ret[:len(ret)-1]
@@ -71,5 +71,10 @@ func needsTransform(c byte) bool {
 	if c >= 'A' && c <= 'Z' {
 		return true
 	}
-	return c == '"' || c == '\'' || c == '\\' || c == '^' || c == ' ' || c == ',' || c == ';' || c == '\t' || c == '\r' || c == '\n' || c == '/' || c == '('
+	switch c {
+	case '"', '\'', '\\', '^', ' ', ',', ';', '\t', '\r', '\n', '/', '(':
+		return true
+	default:
+		return false
+	}
 }
