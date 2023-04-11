@@ -85,6 +85,31 @@ func TestProcessRequestMultipart(t *testing.T) {
 	}
 }
 
+func TestProcessRequestTransferEncodingChunked(t *testing.T) {
+	waf, _ := coraza.NewWAF(coraza.NewWAFConfig().
+		WithDirectives(`
+# This is a comment
+SecDebugLogLevel 9
+SecRule &REQUEST_HEADERS:Transfer-Encoding "!@eq 0" "id:1,phase:1,deny"
+`))
+	tx := waf.NewTransaction()
+
+	req, _ := http.NewRequest("GET", "https://www.coraza.io/test", nil)
+	req.TransferEncoding = []string{"chunked"}
+
+	it, err := processRequest(tx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if it == nil {
+		t.Fatal("expected interruption")
+	}
+
+	if err := tx.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func createMultipartRequest(t *testing.T) *http.Request {
 	t.Helper()
 
