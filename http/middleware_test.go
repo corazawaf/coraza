@@ -88,8 +88,6 @@ func TestProcessRequestMultipart(t *testing.T) {
 func TestProcessRequestTransferEncodingChunked(t *testing.T) {
 	waf, _ := coraza.NewWAF(coraza.NewWAFConfig().
 		WithDirectives(`
-# This is a comment
-SecDebugLogLevel 9
 SecRule &REQUEST_HEADERS:Transfer-Encoding "!@eq 0" "id:1,phase:1,deny"
 `))
 	tx := waf.NewTransaction()
@@ -102,9 +100,11 @@ SecRule &REQUEST_HEADERS:Transfer-Encoding "!@eq 0" "id:1,phase:1,deny"
 		t.Fatal(err)
 	}
 	if it == nil {
-		t.Fatal("expected interruption")
+		t.Fatal("Expected interruption")
 	}
-
+	if it.RuleID != 1 {
+		t.Fatalf("Expected rule 1 to be triggered, got rule %d", it.RuleID)
+	}
 	if err := tx.Close(); err != nil {
 		t.Fatal(err)
 	}
