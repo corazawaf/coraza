@@ -4,13 +4,13 @@
 package plugins
 
 import (
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/actions"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 // ActionFactory is used to wrap a RuleAction so that it can be registered
 // and recreated on each call
-type ActionFactory = func() rules.Action
+type ActionFactory = func() plugintypes.Action
 
 // RegisterAction registers a new RuleAction
 // If you register an action with an existing name, it will be overwritten.

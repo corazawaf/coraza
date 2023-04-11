@@ -1,7 +1,7 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package rules
+package plugintypes
 
 // ActionType is used to define when an action is going
 // to be triggered

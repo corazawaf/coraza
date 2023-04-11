@@ -22,9 +22,9 @@ import (
 
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/debuglog"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
-	"github.com/corazawaf/coraza/v3/macro"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -80,6 +80,31 @@ func TestProcessRequestMultipart(t *testing.T) {
 		t.Errorf("failed to read multipart request: %s", err.Error())
 	}
 
+	if err := tx.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestProcessRequestTransferEncodingChunked(t *testing.T) {
+	waf, _ := coraza.NewWAF(coraza.NewWAFConfig().
+		WithDirectives(`
+SecRule &REQUEST_HEADERS:Transfer-Encoding "!@eq 0" "id:1,phase:1,deny"
+`))
+	tx := waf.NewTransaction()
+
+	req, _ := http.NewRequest("GET", "https://www.coraza.io/test", nil)
+	req.TransferEncoding = []string{"chunked"}
+
+	it, err := processRequest(tx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if it == nil {
+		t.Fatal("Expected interruption")
+	}
+	if it.RuleID != 1 {
+		t.Fatalf("Expected rule 1 to be triggered, got rule %d", it.RuleID)
+	}
 	if err := tx.Close(); err != nil {
 		t.Fatal(err)
 	}

@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/macro"
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
@@ -21,7 +21,7 @@ type setvarFn struct {
 	isRemove   bool
 }
 
-func (a *setvarFn) Init(_ rules.RuleMetadata, data string) error {
+func (a *setvarFn) Init(_ plugintypes.RuleMetadata, data string) error {
 	if len(data) == 0 {
 		return ErrMissingArguments
 	}
@@ -64,7 +64,7 @@ func (a *setvarFn) Init(_ rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *setvarFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
+func (a *setvarFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
 	key := a.key.Expand(tx)
 	value := a.value.Expand(tx)
 	tx.DebugLogger().Debug().
@@ -75,11 +75,11 @@ func (a *setvarFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	a.evaluateTxCollection(r, tx, strings.ToLower(key), value)
 }
 
-func (a *setvarFn) Type() rules.ActionType {
-	return rules.ActionTypeNondisruptive
+func (a *setvarFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeNondisruptive
 }
 
-func (a *setvarFn) evaluateTxCollection(r rules.RuleMetadata, tx rules.TransactionState, key string, value string) {
+func (a *setvarFn) evaluateTxCollection(r plugintypes.RuleMetadata, tx plugintypes.TransactionState, key string, value string) {
 	var col collection.Map
 	if c, ok := tx.Collection(a.collection).(collection.Map); !ok {
 		tx.DebugLogger().Error().Msg("collection in setvar is not a map")
@@ -144,11 +144,11 @@ func (a *setvarFn) evaluateTxCollection(r rules.RuleMetadata, tx rules.Transacti
 	}
 }
 
-func setvar() rules.Action {
+func setvar() plugintypes.Action {
 	return &setvarFn{}
 }
 
 var (
-	_ rules.Action      = &setvarFn{}
-	_ ruleActionWrapper = setvar
+	_ plugintypes.Action = &setvarFn{}
+	_ ruleActionWrapper  = setvar
 )

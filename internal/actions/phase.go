@@ -4,14 +4,14 @@
 package actions
 
 import (
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 type phaseFn struct{}
 
-func (a *phaseFn) Init(r rules.RuleMetadata, data string) error {
+func (a *phaseFn) Init(r plugintypes.RuleMetadata, data string) error {
 	if len(data) == 0 {
 		return ErrMissingArguments
 	}
@@ -24,17 +24,17 @@ func (a *phaseFn) Init(r rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *phaseFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
+func (a *phaseFn) Evaluate(_ plugintypes.RuleMetadata, _ plugintypes.TransactionState) {}
 
-func (a *phaseFn) Type() rules.ActionType {
-	return rules.ActionTypeMetadata
+func (a *phaseFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeMetadata
 }
 
-func phase() rules.Action {
+func phase() plugintypes.Action {
 	return &phaseFn{}
 }
 
 var (
-	_ rules.Action      = &phaseFn{}
-	_ ruleActionWrapper = phase
+	_ plugintypes.Action = &phaseFn{}
+	_ ruleActionWrapper  = phase
 )

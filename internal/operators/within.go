@@ -8,15 +8,15 @@ package operators
 import (
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/macro"
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type within struct {
 	data macro.Macro
 }
 
-func newWithin(options rules.OperatorOptions) (rules.Operator, error) {
+func newWithin(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)
@@ -26,7 +26,7 @@ func newWithin(options rules.OperatorOptions) (rules.Operator, error) {
 	return &within{data: m}, nil
 }
 
-func (o *within) Evaluate(tx rules.TransactionState, value string) bool {
+func (o *within) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	data := o.data.Expand(tx)
 	return strings.Contains(data, value)
 }

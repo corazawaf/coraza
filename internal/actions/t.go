@@ -4,14 +4,14 @@
 package actions
 
 import (
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/transformations"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type tFn struct{}
 
-func (a *tFn) Init(r rules.RuleMetadata, data string) error {
+func (a *tFn) Init(r plugintypes.RuleMetadata, data string) error {
 	// TODO there is a chance that it won't work, it requires tests
 	// none is a special hardcoded transformation, it must remove previous transformations
 	if data == "none" {
@@ -27,17 +27,17 @@ func (a *tFn) Init(r rules.RuleMetadata, data string) error {
 	return r.(*corazawaf.Rule).AddTransformation(data, tt)
 }
 
-func (a *tFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
+func (a *tFn) Evaluate(_ plugintypes.RuleMetadata, _ plugintypes.TransactionState) {}
 
-func (a *tFn) Type() rules.ActionType {
-	return rules.ActionTypeNondisruptive
+func (a *tFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeNondisruptive
 }
 
-func t() rules.Action {
+func t() plugintypes.Action {
 	return &tFn{}
 }
 
 var (
-	_ rules.Action      = &tFn{}
-	_ ruleActionWrapper = t
+	_ plugintypes.Action = &tFn{}
+	_ ruleActionWrapper  = t
 )

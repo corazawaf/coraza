@@ -4,12 +4,12 @@
 package plugins
 
 import (
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/transformations"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 // RegisterTransformation registers a transformation by name
 // If the transformation is already registered, it will be overwritten
-func RegisterTransformation(name string, trans rules.Transformation) {
+func RegisterTransformation(name string, trans plugintypes.Transformation) {
 	transformations.Register(name, trans)
 }

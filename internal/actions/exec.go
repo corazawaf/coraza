@@ -4,29 +4,29 @@
 package actions
 
 import (
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type execFn struct{}
 
-func (a *execFn) Init(_ rules.RuleMetadata, data string) error {
+func (a *execFn) Init(_ plugintypes.RuleMetadata, data string) error {
 	if len(data) > 0 {
 		return ErrUnexpectedArguments
 	}
 	return nil
 }
 
-func (a *execFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
+func (a *execFn) Evaluate(_ plugintypes.RuleMetadata, _ plugintypes.TransactionState) {}
 
-func (a *execFn) Type() rules.ActionType {
-	return rules.ActionTypeNondisruptive
+func (a *execFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeNondisruptive
 }
 
-func exec() rules.Action {
+func exec() plugintypes.Action {
 	return &execFn{}
 }
 
 var (
-	_ rules.Action      = &execFn{}
-	_ ruleActionWrapper = exec
+	_ plugintypes.Action = &execFn{}
+	_ ruleActionWrapper  = exec
 )

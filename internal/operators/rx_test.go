@@ -8,8 +8,8 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 func TestRx(t *testing.T) {
@@ -79,7 +79,7 @@ func TestRx(t *testing.T) {
 		tt := tc
 		t.Run(fmt.Sprintf("%s/%s", tt.pattern, tt.input), func(t *testing.T) {
 
-			opts := rules.OperatorOptions{
+			opts := plugintypes.OperatorOptions{
 				Arguments: tt.pattern,
 			}
 			rx, err := newRX(opts)

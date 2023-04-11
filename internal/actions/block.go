@@ -4,12 +4,12 @@
 package actions
 
 import (
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type blockFn struct{}
 
-func (a *blockFn) Init(_ rules.RuleMetadata, data string) error {
+func (a *blockFn) Init(_ plugintypes.RuleMetadata, data string) error {
 	if len(data) > 0 {
 		return ErrUnexpectedArguments
 	}
@@ -17,20 +17,20 @@ func (a *blockFn) Init(_ rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *blockFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {
+func (a *blockFn) Evaluate(_ plugintypes.RuleMetadata, _ plugintypes.TransactionState) {
 	// This should never run
 	// TODO(jcchavezs): check if we return a panic
 }
 
-func (a *blockFn) Type() rules.ActionType {
-	return rules.ActionTypeDisruptive
+func (a *blockFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeDisruptive
 }
 
-func block() rules.Action {
+func block() plugintypes.Action {
 	return &blockFn{}
 }
 
 var (
-	_ rules.Action      = &blockFn{}
-	_ ruleActionWrapper = block
+	_ plugintypes.Action = &blockFn{}
+	_ ruleActionWrapper  = block
 )

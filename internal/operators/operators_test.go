@@ -12,9 +12,9 @@ import (
 
 	"github.com/tidwall/gjson"
 
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type Test struct {
@@ -90,7 +90,7 @@ func TestOperators(t *testing.T) {
 						data.Param = p
 					}
 
-					opts := rules.OperatorOptions{
+					opts := plugintypes.OperatorOptions{
 						Arguments: data.Param,
 						Path:      []string{"op"},
 						Root:      os.DirFS("testdata"),

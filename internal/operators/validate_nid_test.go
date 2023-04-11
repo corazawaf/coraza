@@ -6,13 +6,13 @@ package operators
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 func TestVaildateNid(t *testing.T) {
 	notOk := []string{"cl11.111.111-1", "us16100407-2", "clc 12345", "uss 1234567"}
 	for _, no := range notOk {
-		opts := rules.OperatorOptions{
+		opts := plugintypes.OperatorOptions{
 			Arguments: no,
 		}
 		_, err := newValidateNID(opts)

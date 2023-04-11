@@ -7,10 +7,10 @@
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
-func newRBL(rules.OperatorOptions) (rules.Operator, error) {
+func newRBL(plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	return &unconditionalMatch{}, nil
 }
 

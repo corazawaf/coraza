@@ -7,15 +7,15 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type skipFn struct {
 	data int
 }
 
-func (a *skipFn) Init(_ rules.RuleMetadata, data string) error {
+func (a *skipFn) Init(_ plugintypes.RuleMetadata, data string) error {
 	if len(data) == 0 {
 		return ErrMissingArguments
 	}
@@ -31,19 +31,19 @@ func (a *skipFn) Init(_ rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *skipFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
+func (a *skipFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
 	tx.(*corazawaf.Transaction).Skip = a.data
 }
 
-func (a *skipFn) Type() rules.ActionType {
-	return rules.ActionTypeFlow
+func (a *skipFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeFlow
 }
 
-func skip() rules.Action {
+func skip() plugintypes.Action {
 	return &skipFn{}
 }
 
 var (
-	_ rules.Action      = &skipFn{}
-	_ ruleActionWrapper = skip
+	_ plugintypes.Action = &skipFn{}
+	_ ruleActionWrapper  = skip
 )

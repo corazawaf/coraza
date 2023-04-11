@@ -4,13 +4,13 @@
 package actions
 
 import (
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type nologFn struct{}
 
-func (a *nologFn) Init(r rules.RuleMetadata, data string) error {
+func (a *nologFn) Init(r plugintypes.RuleMetadata, data string) error {
 	if len(data) > 0 {
 		return ErrUnexpectedArguments
 	}
@@ -20,17 +20,17 @@ func (a *nologFn) Init(r rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *nologFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
+func (a *nologFn) Evaluate(_ plugintypes.RuleMetadata, _ plugintypes.TransactionState) {}
 
-func (a *nologFn) Type() rules.ActionType {
-	return rules.ActionTypeNondisruptive
+func (a *nologFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeNondisruptive
 }
 
-func nolog() rules.Action {
+func nolog() plugintypes.Action {
 	return &nologFn{}
 }
 
 var (
-	_ rules.Action      = &nologFn{}
-	_ ruleActionWrapper = nolog
+	_ plugintypes.Action = &nologFn{}
+	_ ruleActionWrapper  = nolog
 )

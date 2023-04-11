@@ -4,20 +4,20 @@
 package actions
 
 import (
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 type dropFn struct{}
 
-func (a *dropFn) Init(_ rules.RuleMetadata, data string) error {
+func (a *dropFn) Init(_ plugintypes.RuleMetadata, data string) error {
 	if len(data) > 0 {
 		return ErrUnexpectedArguments
 	}
 	return nil
 }
 
-func (a *dropFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
+func (a *dropFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
 	rid := r.ID()
 	if rid == 0 {
 		rid = r.ParentID()
@@ -29,15 +29,15 @@ func (a *dropFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 	})
 }
 
-func (a *dropFn) Type() rules.ActionType {
-	return rules.ActionTypeDisruptive
+func (a *dropFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeDisruptive
 }
 
-func drop() rules.Action {
+func drop() plugintypes.Action {
 	return &dropFn{}
 }
 
 var (
-	_ rules.Action      = &dropFn{}
-	_ ruleActionWrapper = drop
+	_ plugintypes.Action = &dropFn{}
+	_ ruleActionWrapper  = drop
 )

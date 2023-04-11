@@ -10,16 +10,16 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type validateByteRange struct {
 	validBytes [256]bool // array, not slice, so don't pass as-is to functions
 }
 
-var _ rules.Operator = (*validateByteRange)(nil)
+var _ plugintypes.Operator = (*validateByteRange)(nil)
 
-func newValidateByteRange(options rules.OperatorOptions) (rules.Operator, error) {
+func newValidateByteRange(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
 	if data == "" {
@@ -69,7 +69,7 @@ func validateByte(b int) error {
 	return nil
 }
 
-func (o *validateByteRange) Evaluate(tx rules.TransactionState, data string) bool {
+func (o *validateByteRange) Evaluate(tx plugintypes.TransactionState, data string) bool {
 	if data == "" {
 		return false
 	}

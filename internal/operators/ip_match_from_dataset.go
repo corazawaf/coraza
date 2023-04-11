@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
-func newIPMatchFromDataset(options rules.OperatorOptions) (rules.Operator, error) {
+func newIPMatchFromDataset(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 	dataset, ok := options.Datasets[data]
 	if !ok || len(dataset) == 0 {
@@ -21,7 +21,7 @@ func newIPMatchFromDataset(options rules.OperatorOptions) (rules.Operator, error
 
 	datasetParsed := strings.Join(dataset, ",")
 
-	opts := rules.OperatorOptions{
+	opts := plugintypes.OperatorOptions{
 		Arguments: datasetParsed,
 	}
 	return newIPMatch(opts)

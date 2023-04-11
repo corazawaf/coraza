@@ -12,7 +12,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 const timeout = 500 * time.Millisecond
@@ -22,9 +22,9 @@ type rbl struct {
 	resolver *net.Resolver
 }
 
-var _ rules.Operator = (*rbl)(nil)
+var _ plugintypes.Operator = (*rbl)(nil)
 
-func newRBL(options rules.OperatorOptions) (rules.Operator, error) {
+func newRBL(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
 	return &rbl{
@@ -35,7 +35,7 @@ func newRBL(options rules.OperatorOptions) (rules.Operator, error) {
 
 // https://github.com/mrichman/godnsbl
 // https://github.com/SpiderLabs/ModSecurity/blob/b66224853b4e9d30e0a44d16b29d5ed3842a6b11/src/operators/rbl.cc
-func (o *rbl) Evaluate(tx rules.TransactionState, ipAddr string) bool {
+func (o *rbl) Evaluate(tx plugintypes.TransactionState, ipAddr string) bool {
 	// TODO validate address
 	resC := make(chan bool)
 	ctx, cancel := context.WithCancel(context.Background())

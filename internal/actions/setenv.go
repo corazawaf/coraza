@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/macro"
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type setenvFn struct {
@@ -17,7 +17,7 @@ type setenvFn struct {
 	value macro.Macro
 }
 
-func (a *setenvFn) Init(_ rules.RuleMetadata, data string) error {
+func (a *setenvFn) Init(_ plugintypes.RuleMetadata, data string) error {
 	if len(data) == 0 {
 		return ErrMissingArguments
 	}
@@ -44,7 +44,7 @@ func (a *setenvFn) Init(_ rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *setenvFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
+func (a *setenvFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
 	v := a.value.Expand(tx)
 	// set env variable
 	if err := os.Setenv(a.key, v); err != nil {
@@ -59,15 +59,15 @@ func (a *setenvFn) Evaluate(r rules.RuleMetadata, tx rules.TransactionState) {
 
 }
 
-func (a *setenvFn) Type() rules.ActionType {
-	return rules.ActionTypeNondisruptive
+func (a *setenvFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeNondisruptive
 }
 
-func setenv() rules.Action {
+func setenv() plugintypes.Action {
 	return &setenvFn{}
 }
 
 var (
-	_ rules.Action      = &setenvFn{}
-	_ ruleActionWrapper = setenv
+	_ plugintypes.Action = &setenvFn{}
+	_ ruleActionWrapper  = setenv
 )

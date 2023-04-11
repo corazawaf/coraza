@@ -8,17 +8,17 @@ package operators
 import (
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/macro"
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type beginsWith struct {
 	data macro.Macro
 }
 
-var _ rules.Operator = (*beginsWith)(nil)
+var _ plugintypes.Operator = (*beginsWith)(nil)
 
-func newBeginsWith(options rules.OperatorOptions) (rules.Operator, error) {
+func newBeginsWith(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)
@@ -28,7 +28,7 @@ func newBeginsWith(options rules.OperatorOptions) (rules.Operator, error) {
 	return &beginsWith{data: m}, nil
 }
 
-func (o *beginsWith) Evaluate(tx rules.TransactionState, value string) bool {
+func (o *beginsWith) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	data := o.data.Expand(tx)
 	return strings.HasPrefix(value, data)
 }
