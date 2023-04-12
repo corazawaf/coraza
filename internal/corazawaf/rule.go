@@ -358,7 +358,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, collectiveMatc
 							// time from the same variables chain.
 							tx.matchVariable(mr)
 							for _, a := range r.actions {
-								if a.Function.Type() == rules.ActionTypeNondisruptive {
+								if a.Function.Type() == plugintypes.ActionTypeNondisruptive {
 									tx.DebugLogger().Debug().Str("action", a.Name).Msg("Evaluating action")
 									a.Function.Evaluate(r, tx)
 								}
