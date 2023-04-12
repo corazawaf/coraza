@@ -9,12 +9,12 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 type Macro interface {
-	Expand(tx rules.TransactionState) string
+	Expand(tx plugintypes.TransactionState) string
 	String() string
 }
 
@@ -54,7 +54,7 @@ type macro struct {
 }
 
 // Expand the pre-compiled macro expression into a string
-func (m *macro) Expand(tx rules.TransactionState) string {
+func (m *macro) Expand(tx plugintypes.TransactionState) string {
 	if len(m.tokens) == 1 {
 		return expandToken(tx, m.tokens[0])
 	}
@@ -65,7 +65,7 @@ func (m *macro) Expand(tx rules.TransactionState) string {
 	return res.String()
 }
 
-func expandToken(tx rules.TransactionState, token macroToken) string {
+func expandToken(tx plugintypes.TransactionState, token macroToken) string {
 	if token.variable == variables.Unknown {
 		return token.text
 	}

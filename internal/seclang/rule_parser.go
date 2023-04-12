@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	actionsmod "github.com/corazawaf/coraza/v3/internal/actions"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/operators"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -22,8 +22,8 @@ var defaultActionsPhase2 = "phase:2,log,auditlog,pass"
 type ruleAction struct {
 	Key   string
 	Value string
-	Atype rules.ActionType
-	F     rules.Action
+	Atype plugintypes.ActionType
+	F     plugintypes.Action
 }
 
 // RuleParser is used to programatically create new rules using seclang formatted strings
@@ -183,7 +183,7 @@ func (p *RuleParser) ParseOperator(operator string) error {
 		op = op[2:]
 	}
 
-	opts := rules.OperatorOptions{
+	opts := plugintypes.OperatorOptions{
 		Arguments: opdata,
 		Path: []string{
 			p.options.ParserConfig.ConfigDir,
@@ -225,11 +225,11 @@ func (p *RuleParser) ParseDefaultActions(actions string) error {
 			}
 			continue
 		}
-		if action.Atype == rules.ActionTypeDisruptive {
+		if action.Atype == plugintypes.ActionTypeDisruptive {
 			defaultDisruptive = action.Key
 		}
 		// SecDefaultActions can not contain metadata actions
-		if action.Atype == rules.ActionTypeMetadata {
+		if action.Atype == plugintypes.ActionTypeMetadata {
 			return fmt.Errorf("SecDefaultAction must not contain metadata actions: %s", actions)
 		}
 		// Transformations are not suitable to be part of the default actions defined by SecDefaultActions
@@ -266,7 +266,7 @@ func (p *RuleParser) ParseActions(actions string) error {
 	}
 	// first we execute metadata rules
 	for _, a := range act {
-		if a.Atype == rules.ActionTypeMetadata {
+		if a.Atype == plugintypes.ActionTypeMetadata {
 			if err := a.F.Init(p.rule, a.Value); err != nil {
 				return fmt.Errorf("failed to init action %s: %s", a.Key, err.Error())
 			}
@@ -283,7 +283,7 @@ func (p *RuleParser) ParseActions(actions string) error {
 
 	for _, action := range act {
 		// now we evaluate non-metadata actions
-		if action.Atype == rules.ActionTypeMetadata {
+		if action.Atype == plugintypes.ActionTypeMetadata {
 			continue
 		}
 		if err := action.F.Init(p.rule, action.Value); err != nil {
@@ -542,7 +542,7 @@ func appendRuleAction(res []ruleAction, key string, val string, disruptiveAction
 	if err != nil {
 		return res, unset, err
 	}
-	if f.Type() == rules.ActionTypeDisruptive && disruptiveActionIndex != unset {
+	if f.Type() == plugintypes.ActionTypeDisruptive && disruptiveActionIndex != unset {
 		// There can only be one disruptive action per rule (if there are multiple disruptive
 		// actions present, or inherited, only the last one will take effect).
 		// Therefore, if we encounter another disruptive action, we replace the previous one.
@@ -553,7 +553,7 @@ func appendRuleAction(res []ruleAction, key string, val string, disruptiveAction
 			Atype: f.Type(),
 		}
 	} else {
-		if f.Type() == rules.ActionTypeDisruptive {
+		if f.Type() == plugintypes.ActionTypeDisruptive {
 			disruptiveActionIndex = len(res)
 		}
 		res = append(res, ruleAction{
@@ -584,18 +584,18 @@ func mergeActions(origin []ruleAction, defaults []ruleAction) []ruleAction {
 	var res []ruleAction
 	var da ruleAction // Disruptive action
 	for _, action := range defaults {
-		if action.Atype == rules.ActionTypeDisruptive {
+		if action.Atype == plugintypes.ActionTypeDisruptive {
 			da = action
 			continue
 		}
-		if action.Atype == rules.ActionTypeMetadata {
+		if action.Atype == plugintypes.ActionTypeMetadata {
 			continue
 		}
 		res = append(res, action)
 	}
 	hasDa := false
 	for _, action := range origin {
-		if action.Atype == rules.ActionTypeDisruptive {
+		if action.Atype == plugintypes.ActionTypeDisruptive {
 			if action.Key != "block" {
 				hasDa = true
 				// We add the default rule DA in case this is no block

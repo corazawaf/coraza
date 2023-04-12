@@ -7,13 +7,13 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/actions"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 func TestAction(t *testing.T) {
 	t.Run("get existing action", func(t *testing.T) {
-		action := func() rules.Action {
+		action := func() plugintypes.Action {
 			return nil
 		}
 

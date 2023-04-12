@@ -6,7 +6,7 @@ package actions
 import (
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 // Initializes a persistent collection and add the data to the standard collections coraza.
@@ -16,7 +16,7 @@ type initcolFn struct {
 	key        string
 }
 
-func (a *initcolFn) Init(_ rules.RuleMetadata, data string) error {
+func (a *initcolFn) Init(_ plugintypes.RuleMetadata, data string) error {
 	col, key, ok := strings.Cut(data, "=")
 	if !ok {
 		return ErrInvalidKVArguments
@@ -28,7 +28,7 @@ func (a *initcolFn) Init(_ rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *initcolFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {
+func (a *initcolFn) Evaluate(_ plugintypes.RuleMetadata, _ plugintypes.TransactionState) {
 	// tx.DebugLogger().Error().Msg("initcol was used but it's not supported", zap.Int("rule", r.Id))
 	/*
 		key := tx.MacroExpansion(a.key)
@@ -52,15 +52,15 @@ func (a *initcolFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {
 	*/
 }
 
-func (a *initcolFn) Type() rules.ActionType {
-	return rules.ActionTypeNondisruptive
+func (a *initcolFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeNondisruptive
 }
 
-func initcol() rules.Action {
+func initcol() plugintypes.Action {
 	return &initcolFn{}
 }
 
 var (
-	_ rules.Action      = &initcolFn{}
-	_ ruleActionWrapper = initcol
+	_ plugintypes.Action = &initcolFn{}
+	_ ruleActionWrapper  = initcol
 )

@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type validateNidFunction = func(input string) bool
@@ -21,9 +21,9 @@ type validateNid struct {
 	re *regexp.Regexp
 }
 
-var _ rules.Operator = (*validateNid)(nil)
+var _ plugintypes.Operator = (*validateNid)(nil)
 
-func newValidateNID(options rules.OperatorOptions) (rules.Operator, error) {
+func newValidateNID(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
 	typ, expr, ok := strings.Cut(data, " ")
@@ -46,7 +46,7 @@ func newValidateNID(options rules.OperatorOptions) (rules.Operator, error) {
 	return &validateNid{fn: fn, re: re}, nil
 }
 
-func (o *validateNid) Evaluate(tx rules.TransactionState, value string) bool {
+func (o *validateNid) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	matches := o.re.FindAllStringSubmatch(value, 11)
 
 	res := false
@@ -134,9 +134,9 @@ func digitToInt(d byte) int {
 }
 
 var (
-	_ rules.Operator      = &validateNid{}
-	_ validateNidFunction = nidCl
-	_ validateNidFunction = nidUs
+	_ plugintypes.Operator = &validateNid{}
+	_ validateNidFunction  = nidCl
+	_ validateNidFunction  = nidUs
 )
 
 func init() {

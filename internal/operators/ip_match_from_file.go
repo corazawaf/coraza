@@ -10,10 +10,10 @@ import (
 	"bytes"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
-func newIPMatchFromFile(options rules.OperatorOptions) (rules.Operator, error) {
+func newIPMatchFromFile(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	path := options.Arguments
 
 	data, err := loadFromFile(path, options.Path, options.Root)
@@ -36,7 +36,7 @@ func newIPMatchFromFile(options rules.OperatorOptions) (rules.Operator, error) {
 		dataParsed.WriteString(l)
 	}
 
-	opts := rules.OperatorOptions{
+	opts := plugintypes.OperatorOptions{
 		Arguments: dataParsed.String(),
 	}
 	return newIPMatch(opts)

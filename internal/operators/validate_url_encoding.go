@@ -6,18 +6,18 @@
 package operators
 
 import (
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type validateURLEncoding struct{}
 
-var _ rules.Operator = (*validateURLEncoding)(nil)
+var _ plugintypes.Operator = (*validateURLEncoding)(nil)
 
-func newValidateURLEncoding(rules.OperatorOptions) (rules.Operator, error) {
+func newValidateURLEncoding(plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	return &validateURLEncoding{}, nil
 }
 
-func (o *validateURLEncoding) Evaluate(_ rules.TransactionState, value string) bool {
+func (o *validateURLEncoding) Evaluate(_ plugintypes.TransactionState, value string) bool {
 	if len(value) == 0 {
 		return false
 	}

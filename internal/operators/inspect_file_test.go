@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 func TestInspectFile(t *testing.T) {
@@ -33,7 +33,7 @@ func TestInspectFile(t *testing.T) {
 	for _, tc := range tests {
 		tt := tc
 		t.Run(tt.path, func(t *testing.T) {
-			ipf, err := newInspectFile(rules.OperatorOptions{Arguments: tt.path})
+			ipf, err := newInspectFile(plugintypes.OperatorOptions{Arguments: tt.path})
 			if err != nil {
 				t.Error("cannot init inspectfile operator")
 			}

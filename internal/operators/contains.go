@@ -8,17 +8,17 @@ package operators
 import (
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/macro"
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type contains struct {
 	data macro.Macro
 }
 
-var _ rules.Operator = (*contains)(nil)
+var _ plugintypes.Operator = (*contains)(nil)
 
-func newContains(options rules.OperatorOptions) (rules.Operator, error) {
+func newContains(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)
@@ -28,7 +28,7 @@ func newContains(options rules.OperatorOptions) (rules.Operator, error) {
 	return &contains{data: m}, nil
 }
 
-func (o *contains) Evaluate(tx rules.TransactionState, value string) bool {
+func (o *contains) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	data := o.data.Expand(tx)
 	return strings.Contains(value, data)
 }

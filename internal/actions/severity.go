@@ -4,14 +4,14 @@
 package actions
 
 import (
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/rules"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 type severityFn struct{}
 
-func (a *severityFn) Init(r rules.RuleMetadata, data string) error {
+func (a *severityFn) Init(r plugintypes.RuleMetadata, data string) error {
 	if len(data) == 0 {
 		return ErrMissingArguments
 	}
@@ -24,17 +24,17 @@ func (a *severityFn) Init(r rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *severityFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
+func (a *severityFn) Evaluate(_ plugintypes.RuleMetadata, _ plugintypes.TransactionState) {}
 
-func (a *severityFn) Type() rules.ActionType {
-	return rules.ActionTypeMetadata
+func (a *severityFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeMetadata
 }
 
-func severity() rules.Action {
+func severity() plugintypes.Action {
 	return &severityFn{}
 }
 
 var (
-	_ rules.Action      = &severityFn{}
-	_ ruleActionWrapper = severity
+	_ plugintypes.Action = &severityFn{}
+	_ ruleActionWrapper  = severity
 )

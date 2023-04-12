@@ -10,16 +10,16 @@ import (
 
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
 
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type pm struct {
 	matcher ahocorasick.AhoCorasick
 }
 
-var _ rules.Operator = (*pm)(nil)
+var _ plugintypes.Operator = (*pm)(nil)
 
-func newPM(options rules.OperatorOptions) (rules.Operator, error) {
+func newPM(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
 	data = strings.ToLower(data)
@@ -35,11 +35,11 @@ func newPM(options rules.OperatorOptions) (rules.Operator, error) {
 	return &pm{matcher: builder.Build(dict)}, nil
 }
 
-func (o *pm) Evaluate(tx rules.TransactionState, value string) bool {
+func (o *pm) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	return pmEvaluate(o.matcher, tx, value)
 }
 
-func pmEvaluate(matcher ahocorasick.AhoCorasick, tx rules.TransactionState, value string) bool {
+func pmEvaluate(matcher ahocorasick.AhoCorasick, tx plugintypes.TransactionState, value string) bool {
 	iter := matcher.Iter(value)
 
 	if !tx.Capturing() {

@@ -4,13 +4,13 @@
 package actions
 
 import (
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type tagFn struct{}
 
-func (a *tagFn) Init(r rules.RuleMetadata, data string) error {
+func (a *tagFn) Init(r plugintypes.RuleMetadata, data string) error {
 	if len(data) == 0 {
 		return ErrMissingArguments
 	}
@@ -18,17 +18,17 @@ func (a *tagFn) Init(r rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *tagFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
+func (a *tagFn) Evaluate(_ plugintypes.RuleMetadata, _ plugintypes.TransactionState) {}
 
-func (a *tagFn) Type() rules.ActionType {
-	return rules.ActionTypeMetadata
+func (a *tagFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeMetadata
 }
 
-func tag() rules.Action {
+func tag() plugintypes.Action {
 	return &tagFn{}
 }
 
 var (
-	_ rules.Action      = &tagFn{}
-	_ ruleActionWrapper = tag
+	_ plugintypes.Action = &tagFn{}
+	_ ruleActionWrapper  = tag
 )

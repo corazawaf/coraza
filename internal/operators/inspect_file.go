@@ -11,20 +11,20 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type inspectFile struct {
 	path string
 }
 
-var _ rules.Operator = (*inspectFile)(nil)
+var _ plugintypes.Operator = (*inspectFile)(nil)
 
-func newInspectFile(options rules.OperatorOptions) (rules.Operator, error) {
+func newInspectFile(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	return &inspectFile{path: options.Arguments}, nil
 }
 
-func (o *inspectFile) Evaluate(tx rules.TransactionState, value string) bool {
+func (o *inspectFile) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	// TODO parametrize timeout
 	// TODO add relative path capabilities
 	// TODO add lua special support

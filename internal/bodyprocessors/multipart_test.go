@@ -7,13 +7,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/bodyprocessors"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
-func multipartProcessor(t *testing.T) bodyprocessors.BodyProcessor {
+func multipartProcessor(t *testing.T) plugintypes.BodyProcessor {
 	t.Helper()
-	mp, err := bodyprocessors.Get("multipart")
+	mp, err := bodyprocessors.GetBodyProcessor("multipart")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -25,7 +26,7 @@ func TestProcessRequestFailsDueToIncorrectMimeType(t *testing.T) {
 
 	expectedError := "not a multipart body"
 
-	if err := mp.ProcessRequest(strings.NewReader(""), corazawaf.NewTransactionVariables(), bodyprocessors.Options{
+	if err := mp.ProcessRequest(strings.NewReader(""), corazawaf.NewTransactionVariables(), plugintypes.BodyProcessorOptions{
 		Mime: "application/json",
 	}); err == nil || err.Error() != expectedError {
 		t.Fatal("expected error")
@@ -56,7 +57,7 @@ Content-Type: text/html
 	mp := multipartProcessor(t)
 
 	v := corazawaf.NewTransactionVariables()
-	if err := mp.ProcessRequest(strings.NewReader(payload), v, bodyprocessors.Options{
+	if err := mp.ProcessRequest(strings.NewReader(payload), v, plugintypes.BodyProcessorOptions{
 		Mime: "multipart/form-data; boundary=---------------------------9051914041544843365972754266",
 	}); err != nil {
 		t.Fatal(err)

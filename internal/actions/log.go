@@ -4,13 +4,13 @@
 package actions
 
 import (
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/rules"
 )
 
 type logFn struct{}
 
-func (a *logFn) Init(r rules.RuleMetadata, data string) error {
+func (a *logFn) Init(r plugintypes.RuleMetadata, data string) error {
 	if len(data) > 0 {
 		return ErrUnexpectedArguments
 	}
@@ -20,17 +20,17 @@ func (a *logFn) Init(r rules.RuleMetadata, data string) error {
 	return nil
 }
 
-func (a *logFn) Evaluate(_ rules.RuleMetadata, _ rules.TransactionState) {}
+func (a *logFn) Evaluate(_ plugintypes.RuleMetadata, _ plugintypes.TransactionState) {}
 
-func (a *logFn) Type() rules.ActionType {
-	return rules.ActionTypeNondisruptive
+func (a *logFn) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeNondisruptive
 }
 
-func log() rules.Action {
+func log() plugintypes.Action {
 	return &logFn{}
 }
 
 var (
-	_ rules.Action      = &logFn{}
-	_ ruleActionWrapper = log
+	_ plugintypes.Action = &logFn{}
+	_ ruleActionWrapper  = log
 )

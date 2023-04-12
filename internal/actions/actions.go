@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 var (
@@ -19,7 +19,7 @@ var (
 
 // ruleActionWrapper is used to wrap a RuleAction so that it can be registered
 // and recreated on each call
-type ruleActionWrapper = func() rules.Action
+type ruleActionWrapper = func() plugintypes.Action
 
 // TODO maybe change it to sync.Map
 var actionmap = map[string]ruleActionWrapper{}
@@ -27,7 +27,7 @@ var actionmap = map[string]ruleActionWrapper{}
 // Register registers a new RuleAction
 // It can be used also for plugins.
 // If you register an action with an existing name, it will be overwritten.
-func Register(name string, a func() rules.Action) {
+func Register(name string, a func() plugintypes.Action) {
 	name = strings.ToLower(name)
 	actionmap[name] = a
 }
@@ -69,7 +69,7 @@ func init() {
 
 // Get returns an unwrapped RuleAction from the actionmap based on the name
 // If the action does not exist it returns an error
-func Get(name string) (rules.Action, error) {
+func Get(name string) (plugintypes.Action, error) {
 	name = strings.ToLower(name)
 	if a, ok := actionmap[name]; ok {
 		return a(), nil

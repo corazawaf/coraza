@@ -8,17 +8,17 @@ package operators
 import (
 	"strconv"
 
-	"github.com/corazawaf/coraza/v3/macro"
-	"github.com/corazawaf/coraza/v3/rules"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type ge struct {
 	data macro.Macro
 }
 
-var _ rules.Operator = (*ge)(nil)
+var _ plugintypes.Operator = (*ge)(nil)
 
-func newGE(options rules.OperatorOptions) (rules.Operator, error) {
+func newGE(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)
@@ -28,7 +28,7 @@ func newGE(options rules.OperatorOptions) (rules.Operator, error) {
 	return &ge{data: m}, nil
 }
 
-func (o *ge) Evaluate(tx rules.TransactionState, value string) bool {
+func (o *ge) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	v, _ := strconv.Atoi(value)
 	data, _ := strconv.Atoi(o.data.Expand(tx))
 	return v >= data

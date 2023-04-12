@@ -46,14 +46,10 @@ func cssDecodeInplace(input string, pos int) string {
 					switch j {
 					/* Number of hex characters */
 					case 1:
-						d[c] = xsingle2c(input[i:])
+						d[c] = xsingle2c(input[i])
 						c++
 
-					case 2:
-						/* Use the last two from the end. */
-						d[c] = utils.X2c(input[i+j-2:])
-						c++
-					case 3:
+					case 2, 3:
 						/* Use the last two from the end. */
 						d[c] = utils.X2c(input[i+j-2:])
 						c++
@@ -144,12 +140,12 @@ func cssDecodeInplace(input string, pos int) string {
 /**
  * Converts a single hexadecimal digit into a decimal value.
  */
-func xsingle2c(what string) byte {
+func xsingle2c(what byte) byte {
 	var digit byte
-	if what[0] >= 'A' {
-		digit = ((what[0] & 0xdf) - 'A') + 10
+	if what >= 'A' {
+		digit = ((what & 0xdf) - 'A') + 10
 	} else {
-		digit = what[0] - '0'
+		digit = what - '0'
 	}
 	return digit
 }
