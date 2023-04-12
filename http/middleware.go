@@ -18,12 +18,12 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
-// processRequest fills all transaction variables from an http.Request object
+// ProcessRequest fills all transaction variables from an http.Request object
 // Most implementations of Coraza will probably use http.Request objects
 // so this will implement all phase 0, 1 and 2 variables
 // Note: This function will stop after an interruption
 // Note: Do not manually fill any request variables
-func processRequest(tx types.Transaction, req *http.Request) (*types.Interruption, error) {
+func ProcessRequest(tx types.Transaction, req *http.Request) (*types.Interruption, error) {
 	var (
 		client string
 		cport  int
@@ -139,20 +139,20 @@ func WrapHandler(waf coraza.WAF, h http.Handler) http.Handler {
 		// ProcessRequest is just a wrapper around ProcessConnection, ProcessURI,
 		// ProcessRequestHeaders and ProcessRequestBody.
 		// It fails if any of these functions returns an error and it stops on interruption.
-		if it, err := processRequest(tx, r); err != nil {
+		if it, err := ProcessRequest(tx, r); err != nil {
 			tx.DebugLogger().Error().Err(err).Msg("Failed to process request")
 			return
 		} else if it != nil {
-			w.WriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, http.StatusOK))
+			w.WriteHeader(ObtainStatusCodeFromInterruptionOrDefault(it, http.StatusOK))
 			return
 		}
 
-		ww, processResponse := wrap(w, r, tx)
+		ww, ProcessResponse := Wrap(w, r, tx)
 
 		// We continue with the other middlewares by catching the response
 		h.ServeHTTP(ww, r)
 
-		if err := processResponse(tx, r); err != nil {
+		if err := ProcessResponse(tx, r); err != nil {
 			tx.DebugLogger().Error().Err(err).Msg("Failed to close the response")
 			return
 		}
@@ -161,9 +161,9 @@ func WrapHandler(waf coraza.WAF, h http.Handler) http.Handler {
 	return http.HandlerFunc(fn)
 }
 
-// obtainStatusCodeFromInterruptionOrDefault returns the desired status code derived from the interruption
+// ObtainStatusCodeFromInterruptionOrDefault returns the desired status code derived from the interruption
 // on a "deny" action or a default value.
-func obtainStatusCodeFromInterruptionOrDefault(it *types.Interruption, defaultStatusCode int) int {
+func ObtainStatusCodeFromInterruptionOrDefault(it *types.Interruption, defaultStatusCode int) int {
 	if it.Action == "deny" {
 		statusCode := it.Status
 		if statusCode == 0 {

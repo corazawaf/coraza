@@ -43,7 +43,7 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 
 	i.statusCode = statusCode
 	if it := i.tx.ProcessResponseHeaders(statusCode, i.proto); it != nil {
-		i.statusCode = obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode)
+		i.statusCode = ObtainStatusCodeFromInterruptionOrDefault(it, i.statusCode)
 		i.flushWriteHeader()
 		return
 	}
@@ -109,13 +109,13 @@ func (i *rwInterceptor) Header() http.Header {
 
 var _ http.ResponseWriter = (*rwInterceptor)(nil)
 
-// wrap wraps the interceptor into a response writer that also preserves
+// Wrap wraps the interceptor into a response writer that also preserves
 // the http interfaces implemented by the original response writer to avoid
 // the observer effect. It also returns the response processor which takes care
 // of the response body copyback from the transaction buffer.
 //
 // Heavily inspired in https://github.com/openzipkin/zipkin-go/blob/master/middleware/http/server.go#L218
-func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
+func Wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 	http.ResponseWriter,
 	func(types.Transaction, *http.Request) error,
 ) { // nolint:gocyclo
@@ -136,7 +136,7 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 				i.flushWriteHeader()
 				return err
 			} else if it != nil {
-				i.overrideWriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode))
+				i.overrideWriteHeader(ObtainStatusCodeFromInterruptionOrDefault(it, i.statusCode))
 				i.flushWriteHeader()
 				return nil
 			}
