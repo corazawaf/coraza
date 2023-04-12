@@ -20,7 +20,8 @@ func TestSecActionMessagePropagationInMatchData(t *testing.T) {
 	r.operator = nil
 	tx := NewWAF().NewTransaction()
 	transformationCache := tx.transformationCache
-	matchdata := r.doEvaluate(types.PhaseLogging, tx, transformationCache)
+	var matchedValues []types.MatchData
+	matchdata := r.doEvaluate(types.PhaseLogging, tx, &matchedValues, 0, transformationCache)
 	if len(matchdata) != 1 {
 		t.Errorf("expected 1 matchdata from a SecActions rule, got %d", len(matchdata))
 	}

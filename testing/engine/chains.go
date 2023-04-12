@@ -160,3 +160,84 @@ SecRule REQUEST_HEADERS "@rx attack21" \
     block"
 `,
 })
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "M4tteoP",
+		Description: "Tests the number of expected matches against a chained rule",
+		Enabled:     true,
+		Name:        "chains_counter.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			Title: "chains_number_matches",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/test",
+							Method: "POST",
+							Headers: map[string]string{
+								"Content-type":   "application/x-www-form-urlencoded",
+								"custom_header1": "test",
+							},
+							Data: "test",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{1, 2},
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecDebugLogLevel 9
+SecRequestBodyAccess On
+
+SecRule REQUEST_URI "test" "id:1, phase:2, t:none, pass, log, chain"
+	SecRule REQUEST_URI|REQUEST_BODY|REQUEST_HEADERS:custom_header1 "test" "setvar:'tx.counter=+1'"
+	SecRule TX:counter "@eq 3" "id:2, phase:2, t:none, pass, log"
+`,
+})
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "M4tteoP",
+		Description: "Tests the number of expected matches against a chained rule",
+		Enabled:     true,
+		Name:        "chains_counter_2.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			Title: "chains_number_matches",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/test",
+							Method: "POST",
+							Headers: map[string]string{
+								"Content-type":   "application/x-www-form-urlencoded",
+								"custom_header1": "test",
+							},
+							Data: "test",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{1, 2},
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecDebugLogLevel 9
+SecRequestBodyAccess On
+
+SecRule REQUEST_URI|REQUEST_HEADERS "test" "id:1, phase:2, t:none, pass, log, chain"
+    SecRule REQUEST_URI|REQUEST_HEADERS "test" "chain"
+        SecRule REQUEST_BODY|REQUEST_HEADERS:custom_header1|REQUEST_HEADERS "test" "setvar:'tx.counter=+1'"
+SecRule TX:counter "@eq 3" "id:2, phase:2, t:none, pass, log"
+`,
+})

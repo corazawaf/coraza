@@ -18,7 +18,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 	},
 	Tests: []profile.Test{
 		{
-			Title: "actions",
+			Title: "allow action",
 			Stages: []profile.Stage{
 				{
 					Stage: profile.SubStage{
@@ -104,12 +104,10 @@ var _ = profile.RegisterProfile(profile.Profile{
 				{
 					Stage: profile.SubStage{
 						Input: profile.StageInput{
-							URI:    "/allow_only_response?key=allow_only_response",
-							Method: "POST",
-							Headers: map[string]string{
-								"Content-type": "application/x-www-form-urlencoded",
-							},
-							Data: "allow_only_response",
+							URI:     "/allow_only_response?key=allow_only_response",
+							Method:  "POST",
+							Headers: map[string]string{"Content-type": "application/x-www-form-urlencoded"},
+							Data:    "allow_only_response",
 						},
 						Output: profile.ExpectedOutput{
 							TriggeredRules: []int{
@@ -140,12 +138,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 							Data: "response_allow",
 						},
 						Output: profile.ExpectedOutput{
-							TriggeredRules: []int{
-								70,
-							},
-							NonTriggeredRules: []int{
-								71,
-							},
+							TriggeredRules:    []int{70},
+							NonTriggeredRules: []int{71},
 							Interruption: &profile.ExpectedInterruption{
 								Status: 500,
 								Data:   "",

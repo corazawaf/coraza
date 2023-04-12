@@ -186,14 +186,18 @@ func (r *Rule) Status() int {
 	return r.DisruptiveStatus
 }
 
+const chainLevelZero = 0
+
 // Evaluate will evaluate the current rule for the indicated transaction
 // If the operator matches, actions will be evaluated, and it will return
 // the matched variables, keys and values (MatchData)
 func (r *Rule) Evaluate(phase types.RulePhase, tx rules.TransactionState, cache map[transformationKey]*transformationValue) {
-	r.doEvaluate(phase, tx.(*Transaction), cache)
+	// collectiveMatchedValues lives across recursive calls of doEvaluate
+	var collectiveMatchedValues []types.MatchData
+	r.doEvaluate(phase, tx.(*Transaction), &collectiveMatchedValues, chainLevelZero, cache)
 }
 
-func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[transformationKey]*transformationValue) []types.MatchData {
+func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, collectiveMatchedValues *[]types.MatchData, chainLevel int, cache map[transformationKey]*transformationValue) []types.MatchData {
 	if r.Capture {
 		tx.Capture = true
 	}
@@ -253,6 +257,9 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 			md.Data_ = r.LogData.Expand(tx)
 		}
 		matchedValues = append(matchedValues, md)
+		if multiphaseEvaluation {
+			*collectiveMatchedValues = append(*collectiveMatchedValues, md)
+		}
 		r.matchVariable(tx, md)
 	} else {
 		ecol := tx.ruleRemoveTargetByID[r.ID_]
@@ -321,9 +328,10 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 					match := r.executeOperator(carg, tx)
 					if match {
 						mr := &corazarules.MatchData{
-							Variable_: arg.Variable(),
-							Key_:      arg.Key(),
-							Value_:    carg,
+							Variable_:   arg.Variable(),
+							Key_:        arg.Key(),
+							Value_:      carg,
+							ChainLevel_: chainLevel,
 						}
 						// Set the txn variables for expansions before usage
 						r.matchVariable(tx, mr)
@@ -334,7 +342,36 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 						if r.LogData != nil {
 							mr.Data_ = r.LogData.Expand(tx)
 						}
-						matchedValues = append(matchedValues, mr)
+
+						if !multiphaseEvaluation {
+							matchedValues = append(matchedValues, mr)
+						} else {
+							if isMultiphaseDoubleEvaluation(tx, phase, r, collectiveMatchedValues, mr) {
+								// This variables chain already matched, let's evaluate the next variable
+								continue
+							}
+							// For multiphase evaluation, the append to matchedValues is delayed after checking that the variable has not already matched
+							matchedValues = append(matchedValues, mr)
+							// For multiphase evaluation, the non disruptive actions execution is enforced here, after having checked that the rule
+							// has not already been matched against the same variables chain. If effectively enforces to skip the execution of non disruptive actions that are
+							// part of the last rule of the chain if the evaluated chained variables already matched. This avoids incrementing the CRS anomaly score multiple
+							// time from the same variables chain.
+							tx.matchVariable(mr)
+							for _, a := range r.actions {
+								if a.Function.Type() == rules.ActionTypeNondisruptive {
+									tx.DebugLogger().Debug().Str("action", a.Name).Msg("Evaluating action")
+									a.Function.Evaluate(r, tx)
+								}
+							}
+							// Msg and LogData have to be expanded again because actions execution might have changed them
+							if r.Msg != nil {
+								mr.Message_ = r.Msg.Expand(tx)
+							}
+							if r.LogData != nil {
+								mr.Data_ = r.LogData.Expand(tx)
+							}
+						}
+
 						tx.DebugLogger().Debug().
 							Int("rule_id", rid).
 							Str("operator_function", r.operator.Function).
@@ -362,15 +399,15 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 	if r.ParentID_ == 0 {
 		// we only run the chains for the parent rule
 		for nr := r.Chain; nr != nil; {
+			chainLevel++
 			tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Evaluating rule chain")
-			matchedChainValues := nr.doEvaluate(phase, tx, cache)
+			matchedChainValues := nr.doEvaluate(phase, tx, collectiveMatchedValues, chainLevel, cache)
 			if len(matchedChainValues) == 0 {
 				return matchedChainValues
 			}
 			matchedValues = append(matchedValues, matchedChainValues...)
 			nr = nr.Chain
 		}
-
 		for _, a := range r.actions {
 			if a.Function.Type() == rules.ActionTypeFlow {
 				// Flow actions are evaluated also if the rule engine is set to DetectionOnly
@@ -444,11 +481,15 @@ func (r *Rule) matchVariable(tx *Transaction, m *corazarules.MatchData) {
 	// we must match the vars before running the chains
 
 	// We run non-disruptive actions even if there is no chain match
-	tx.matchVariable(m)
-	for _, a := range r.actions {
-		if a.Function.Type() == rules.ActionTypeNondisruptive {
-			tx.DebugLogger().Debug().Str("action", a.Name).Msg("Evaluating action")
-			a.Function.Evaluate(r, tx)
+	// if multiphaseEvaluation is true, the non disruptive actions execution is deferred
+	// SecActions (r.operator == nil) are always executed
+	if !multiphaseEvaluation || r.operator == nil {
+		tx.matchVariable(m)
+		for _, a := range r.actions {
+			if a.Function.Type() == rules.ActionTypeNondisruptive {
+				tx.DebugLogger().Debug().Str("action", a.Name).Msg("Evaluating action")
+				a.Function.Evaluate(r, tx)
+			}
 		}
 	}
 }
@@ -830,4 +871,118 @@ func minPhase(v variables.RuleVariable) types.RulePhase {
 	}
 
 	return types.PhaseUnknown
+}
+
+// generateChainMatches generates matched chains based on the matchedValues. The latter provides all the variables that matched and their depth in the chain
+// generateChainMatches splits them into variables chains matches.
+// E.g. REQUEST_URI (chainLevel 0), REQUEST_URI (chainLevel 1), REQUEST_HEADERS (chainLevel 1), REQUEST_BODY (chainLevel 2), REQUEST_HEADERS (chainLevel 2)
+// REQUEST_URI - REQUEST_URI - REQUEST_BODY
+// REQUEST_URI - REQUEST_URI - REQUEST_HEADERS
+// REQUEST_URI - REQUEST_HEADERS - REQUEST_BODY
+// REQUEST_URI - REQUEST_HEADERS - REQUEST_HEADERS
+func generateChainMatches(tx *Transaction, matchedValues []types.MatchData, currentDepth int, buildingMatchedChain []types.MatchData, matchedChainsResult *[][]types.MatchData) {
+
+	finalDepth := matchedChainDepth(matchedValues)
+
+	// Iterate the variables based on the chain level (first all the variables at level 0, then all the variables at level 1, etc.)
+	for _, mv := range matchedValues {
+		if mv.ChainLevel() == currentDepth {
+			var localebuildingMatchedChain []types.MatchData
+			if buildingMatchedChain == nil {
+				localebuildingMatchedChain = []types.MatchData{}
+			} else {
+				localebuildingMatchedChain = make([]types.MatchData, len(buildingMatchedChain))
+				copy(localebuildingMatchedChain, buildingMatchedChain)
+			}
+			localebuildingMatchedChain = append(localebuildingMatchedChain, mv)
+
+			if mv.ChainLevel() == finalDepth {
+				// We have reached the last level of the chain, we can generate the matched chains
+				*matchedChainsResult = append(*matchedChainsResult, localebuildingMatchedChain)
+				continue
+			}
+			generateChainMatches(tx, matchedValues, currentDepth+1, localebuildingMatchedChain, matchedChainsResult)
+		}
+	}
+}
+
+// isMultiphaseDoubleEvaluation checks if the rule already matched against the same variables.
+// It avoids running more then once the relative actions (e.g. avoids incrementing the anomaly score twice).
+// Currently, it is intended for chained matches because the same variables are evaluated multiple times and not
+// constained to the min phase. If the same match is found, the actions of the most inner rule are skipped and the match
+// is not added to matchedValues (and removed from collectiveMatchedValues)
+func isMultiphaseDoubleEvaluation(tx *Transaction, phase types.RulePhase, r *Rule, collectiveMatchedValues *[]types.MatchData, mr types.MatchData) bool {
+	*collectiveMatchedValues = append(*collectiveMatchedValues, mr)
+
+	for _, matchedRule := range tx.matchedRules {
+		if matchedRule.Rule().ID() == r.ParentID_ && matchedChainDepth(matchedRule.MatchedDatas()) == matchedChainDepth(*collectiveMatchedValues) {
+			// This might be a double match, let's generate the chains that aready matched and the one that just matched
+			// let's see if all the latter already matched.
+
+			// generateChainMatches generates matched chains based on the matchedValues and populates matchedChains and collectiveMatchedChains variables
+			var matchedChains, collectiveMatchedChains [][]types.MatchData
+			generateChainMatches(tx, matchedRule.MatchedDatas(), 0, nil, &matchedChains)
+			generateChainMatches(tx, *collectiveMatchedValues, 0, nil, &collectiveMatchedChains)
+
+			// Check if a newly matched chain (part of collectiveMatchedChain) already matched
+			for _, newMatchedChain := range collectiveMatchedChains {
+				// if collectiveMatchedChain is inside matchedChains, then it is a double match
+				if chainPartOf(newMatchedChain, matchedChains) {
+					// if this point is reached, it means that these chained values already matched
+					// We have to skip actions execution in order to avoid double match against the same variable and consequent double actions execution
+					var res strings.Builder
+					for n, m := range newMatchedChain {
+						if n != 0 {
+							res.WriteString(" - ")
+						}
+						res.WriteString(m.Variable().Name())
+					}
+					rid := r.ID_
+					if rid == 0 {
+						rid = r.ParentID_
+					}
+					tx.DebugLogger().Debug().Int("rule_id", rid).Int("phase", int(phase)).
+						Str("matched chain", res.String()).Msg("Chain already matched, skipping actions enforcement")
+					// The rule already matched against the same variables, we skip it
+					// we skip this variable and remove it from the collectiveMatchedValues slice
+					*collectiveMatchedValues = (*collectiveMatchedValues)[:len(*collectiveMatchedValues)-1]
+					return true
+				}
+			}
+			// if this point is reached, it means that these chained values did not match yet
+			// we can continue iterating the matched values, generate new matched chains and repeat the check
+			continue
+		}
+	}
+	return false
+}
+
+// chainPartOf checks if a chain is part of a list of already matched chains
+func chainPartOf(newMatchedChain []types.MatchData, matchedChains [][]types.MatchData) bool {
+	for _, matchedChain := range matchedChains {
+		var differentMatch bool
+		for n, newMatchedValue := range newMatchedChain {
+			if newMatchedValue.Variable() != matchedChain[n].Variable() || newMatchedValue.Value() != matchedChain[n].Value() {
+				differentMatch = true
+				break
+			}
+		}
+		if differentMatch {
+			continue
+		}
+		// we found a chain already matched
+		return true
+	}
+	return false
+}
+
+// matchedChainDepth returns the depth of a matched chain returning the lowest chain level between all the the matched values
+func matchedChainDepth(datas []types.MatchData) int {
+	depth := 0
+	for _, matchedValue := range datas {
+		if matchedValue.ChainLevel() > depth {
+			depth = matchedValue.ChainLevel()
+		}
+	}
+	return depth
 }

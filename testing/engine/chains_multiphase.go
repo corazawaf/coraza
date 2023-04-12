@@ -103,6 +103,58 @@ SecAction "id:20, phase:2, t:none, deny, status:503"
 var _ = profile.RegisterProfile(profile.Profile{
 	Meta: profile.Meta{
 		Author:      "M4tteoP",
+		Description: "Test if a chain rule is not matched twice against the same variables in different phases",
+		Enabled:     true,
+		Name:        "chains_multiphase_counter.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			Title: "chains_no_double_match",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/test",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{1},
+							NonTriggeredRules: []int{2, 3},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/test",
+							Method: "POST",
+							Headers: map[string]string{
+								"Content-type":   "application/x-www-form-urlencoded",
+								"custom_header1": "test",
+							},
+							Data: "test",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{1, 2, 3},
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecDebugLogLevel 9
+SecRequestBodyAccess On
+
+SecRule REQUEST_URI "test" "id:1, phase:2, t:none, pass, log, chain"
+	SecRule REQUEST_URI|REQUEST_BODY|REQUEST_HEADERS:custom_header1 "test" "setvar:'tx.counter=+1'"
+SecRule TX:counter "!@eq 1" "id:2, phase:2, t:none, pass, log"
+SecRule TX:counter "@eq 3" "id:3, phase:2, t:none, pass, log"
+`,
+})
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "M4tteoP",
 		Description: "Test if CRS like chain action works with multiphase evaluation",
 		Enabled:     true,
 		Name:        "chains_multiphase_crs.yaml",
