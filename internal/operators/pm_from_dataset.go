@@ -28,3 +28,7 @@ func newPMFromDataset(options plugintypes.OperatorOptions) (plugintypes.Operator
 
 	return &pm{matcher: builder.Build(dataset)}, nil
 }
+
+func init() {
+	Register("pmFromDataset", newPMFromDataset)
+}

@@ -123,7 +123,7 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 	i := &rwInterceptor{w: w, tx: tx, proto: r.Proto, statusCode: 200}
 
 	responseProcessor := func(tx types.Transaction, r *http.Request) error {
-		// We look for interruptions triggered at phase 4 (response headers)
+		// We look for interruptions triggered at phase 3 (response headers)
 		// and during writing the response body. If so, response status code
 		// has been sent over the flush already.
 		if tx.IsInterrupted() {
