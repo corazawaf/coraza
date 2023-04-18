@@ -19,18 +19,18 @@ func TestSizedCollection(t *testing.T) {
 		t.Errorf("want %s, have %s", want, have)
 	}
 	c1.Set("key1", []string{"value1", "value2"})
-	assertValuesMatch(t, proxy.FindAll(), "12")
-	if want, have := "ARGS_COMBINED_SIZE: 12", proxy.String(); want != have {
+	assertValuesMatch(t, proxy.FindAll(), "20")
+	if want, have := "ARGS_COMBINED_SIZE: 20", proxy.String(); want != have {
 		t.Errorf("want %s, have %s", want, have)
 	}
 	c1.Set("key2", []string{"value2"})
-	assertValuesMatch(t, proxy.FindAll(), "18")
-	if want, have := "ARGS_COMBINED_SIZE: 18", proxy.String(); want != have {
+	assertValuesMatch(t, proxy.FindAll(), "30")
+	if want, have := "ARGS_COMBINED_SIZE: 30", proxy.String(); want != have {
 		t.Errorf("want %s, have %s", want, have)
 	}
 	c2.Set("key3", []string{"value3"})
-	assertValuesMatch(t, proxy.FindAll(), "24")
-	if want, have := "ARGS_COMBINED_SIZE: 24", proxy.String(); want != have {
+	assertValuesMatch(t, proxy.FindAll(), "40")
+	if want, have := "ARGS_COMBINED_SIZE: 40", proxy.String(); want != have {
 		t.Errorf("want %s, have %s", want, have)
 	}
 }
