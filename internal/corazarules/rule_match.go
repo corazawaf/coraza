@@ -25,7 +25,8 @@ type MatchData struct {
 	Message_ string
 	// Macro expanded logdata
 	Data_ string
-	// Keeps track of the chain depth in which the data matched
+	// Keeps track of the chain depth in which the data matched.
+	// Multiphase specific field
 	ChainLevel_ int
 }
 
