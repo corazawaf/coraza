@@ -38,7 +38,7 @@ type RuleParser struct {
 // Multiple separated variables: VARIABLE1|VARIABLE2|VARIABLE3
 // Variable count: &VARIABLE1
 // Variable key negation: REQUEST_HEADERS|!REQUEST_HEADERS:user-agent
-func (p *RuleParser) ParseVariables(vars string) error {
+func (rp *RuleParser) ParseVariables(vars string) error {
 
 	// 0 = variable name
 	// 1 = key
@@ -92,9 +92,9 @@ func (p *RuleParser) ParseVariables(vars string) error {
 				key = fmt.Sprintf("/%s/", key)
 			}
 			if isNegation {
-				err = p.rule.AddVariableNegation(v, key)
+				err = rp.rule.AddVariableNegation(v, key)
 			} else {
-				err = p.rule.AddVariable(v, key, isCount)
+				err = rp.rule.AddVariable(v, key, isCount)
 			}
 			if err != nil {
 				return err
@@ -157,7 +157,7 @@ func (p *RuleParser) ParseVariables(vars string) error {
 // ParseOperator parses a seclang formatted operator string
 // A operator must begin with @ (like @rx), if no operator is specified, rx
 // will be used. Everything after the operator will be used as operator argument
-func (p *RuleParser) ParseOperator(operator string) error {
+func (rp *RuleParser) ParseOperator(operator string) error {
 	// default operator @RX
 	operatorLen := len(operator)
 	switch {
@@ -186,12 +186,13 @@ func (p *RuleParser) ParseOperator(operator string) error {
 	opts := plugintypes.OperatorOptions{
 		Arguments: opdata,
 		Path: []string{
-			p.options.ParserConfig.ConfigDir,
+			rp.options.ParserConfig.ConfigDir,
 		},
-		Root: p.options.ParserConfig.Root,
+		Root:     rp.options.ParserConfig.Root,
+		Datasets: rp.options.Datasets,
 	}
 
-	if wd := p.options.ParserConfig.WorkingDir; wd != "" {
+	if wd := rp.options.ParserConfig.WorkingDir; wd != "" {
 		opts.Path = append(opts.Path, wd)
 	}
 
@@ -199,7 +200,7 @@ func (p *RuleParser) ParseOperator(operator string) error {
 	if err != nil {
 		return err
 	}
-	p.rule.SetOperator(opfn, opRaw, opdata)
+	rp.rule.SetOperator(opfn, opRaw, opdata)
 	return nil
 }
 
@@ -210,7 +211,7 @@ func (p *RuleParser) ParseOperator(operator string) error {
 // A disruptive action is required to be specified
 // Each rule on the indicated phase will inherit the previously declared actions
 // If the user overwrites the default actions, the default actions will be overwritten
-func (p *RuleParser) ParseDefaultActions(actions string) error {
+func (rp *RuleParser) ParseDefaultActions(actions string) error {
 	act, err := parseActions(actions)
 	if err != nil {
 		return err
@@ -243,17 +244,17 @@ func (p *RuleParser) ParseDefaultActions(actions string) error {
 	if defaultDisruptive == "" {
 		return fmt.Errorf("SecDefaultAction must contain a disruptive action: %s", actions)
 	}
-	if p.defaultActions[types.RulePhase(phase)] != nil {
+	if rp.defaultActions[types.RulePhase(phase)] != nil {
 		return fmt.Errorf("SecDefaultAction already defined for this phase: %s", actions)
 	}
-	p.defaultActions[types.RulePhase(phase)] = act
+	rp.defaultActions[types.RulePhase(phase)] = act
 	return nil
 }
 
 // ParseActions parses a comma separated list of actions:arguments
 // Arguments can be wrapper inside quotes
-func (p *RuleParser) ParseActions(actions string) error {
-	disabledActions := p.options.ParserConfig.DisabledRuleActions
+func (rp *RuleParser) ParseActions(actions string) error {
+	disabledActions := rp.options.ParserConfig.DisabledRuleActions
 	act, err := parseActions(actions)
 	if err != nil {
 		return err
@@ -267,16 +268,16 @@ func (p *RuleParser) ParseActions(actions string) error {
 	// first we execute metadata rules
 	for _, a := range act {
 		if a.Atype == plugintypes.ActionTypeMetadata {
-			if err := a.F.Init(p.rule, a.Value); err != nil {
+			if err := a.F.Init(rp.rule, a.Value); err != nil {
 				return fmt.Errorf("failed to init action %s: %s", a.Key, err.Error())
 			}
 		}
 	}
 
 	// if the rule is missing the phase, the default phase assigned is phase 2 (See NewRule())
-	phase := p.rule.Phase_
+	phase := rp.rule.Phase_
 
-	defaults := p.defaultActions[phase]
+	defaults := rp.defaultActions[phase]
 	if defaults != nil {
 		act = mergeActions(act, defaults)
 	}
@@ -286,10 +287,10 @@ func (p *RuleParser) ParseActions(actions string) error {
 		if action.Atype == plugintypes.ActionTypeMetadata {
 			continue
 		}
-		if err := action.F.Init(p.rule, action.Value); err != nil {
+		if err := action.F.Init(rp.rule, action.Value); err != nil {
 			return err
 		}
-		if err := p.rule.AddAction(action.Key, action.F); err != nil {
+		if err := rp.rule.AddAction(action.Key, action.F); err != nil {
 			return err
 		}
 	}
@@ -297,8 +298,8 @@ func (p *RuleParser) ParseActions(actions string) error {
 }
 
 // Rule returns the compiled rule
-func (p *RuleParser) Rule() *corazawaf.Rule {
-	return p.rule
+func (rp *RuleParser) Rule() *corazawaf.Rule {
+	return rp.rule
 }
 
 // RuleOptions contains the options used to compile a rule
@@ -309,6 +310,7 @@ type RuleOptions struct {
 	Raw          string
 	Directive    string
 	Data         string
+	Datasets     map[string][]string
 }
 
 // ParseRule parses a rule from a string
