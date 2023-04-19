@@ -181,6 +181,7 @@ func directiveSecRule(options *DirectiveOptions) error {
 		Raw:          options.Raw,
 		Directive:    "SecRule",
 		Data:         options.Opts,
+		Datasets:     options.Datasets,
 	})
 	if err != nil && !ignoreErrors {
 		return err

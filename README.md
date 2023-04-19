@@ -105,7 +105,7 @@ Go build tags can tweak certain functionality at compile-time. These are for adv
 have compatibility guarantees across minor versions - use with care.
 
 - coraza.disabled_operators.* - excludes the specified operator from compilation. Particularly useful if overriding
-the operator with `operators.Register` to reduce binary size / startup overhead.
+the operator with `plugins.RegisterOperator` to reduce binary size / startup overhead.
 - `coraza.rule.multiphase_valuation` - enables evaluation of rule variables in the phases that they are ready, not
 only the phase the rule is defined for.
 
