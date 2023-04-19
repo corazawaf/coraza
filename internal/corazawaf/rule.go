@@ -494,16 +494,20 @@ func (r *Rule) executeOperator(data string, tx *Transaction) (result bool) {
 }
 
 func (r *Rule) executeTransformationsMultimatch(value string) ([]string, []error) {
+	// The original value will be evaluated
 	res := []string{value}
 	var errs []error
-	var err error
 	for _, t := range r.transformations {
-		value, err = t.Function(value)
+		transformedValue, err := t.Function(value)
 		if err != nil {
 			errs = append(errs, err)
 			continue
 		}
-		res = append(res, value)
+		// Every time a transformation generates a new value different from the previous one, the new value is collected to be evaluated
+		if transformedValue != value {
+			res = append(res, transformedValue)
+			value = transformedValue
+		}
 	}
 	return res, errs
 }

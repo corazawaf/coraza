@@ -42,3 +42,52 @@ SecRule REQUEST_HEADERS:test2 "@eq 32" "id:778, phase:1, log, t:none, t:md5, t:h
 SecRule REQUEST_BASENAME "@gt 10" "id:942101,phase:1,block,capture,t:none,t:utf8toUnicode,t:urlDecodeUni,t:removeNulls,t:length, log"
 `,
 })
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "m4tteoP",
+		Description: "Test if multiMatch does not matches multiple time the same unchanged variable",
+		Enabled:     true,
+		Name:        "transformations_multimatch.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			Title: "transformations_multimatch",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/this_very_specific_uri",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{1, 11},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/this_very_specific_URI",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{2, 12},
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecRule REQUEST_URI "@rx this_very_specific_uri" "id:1, phase:1, pass, log, t:urlDecodeUni, t:removeNulls, t:lowercase,\
+multiMatch, setvar:'tx.matched_times=+1'"
+
+SecRule REQUEST_URI "@rx this_very_specific" \
+    "id:2, phase:1, pass, log,\
+    t:lowercase,\
+    multiMatch,\
+    setvar:'tx.matched_times2=+1'"
+
+SecRule TX:matched_times "@eq 1" "id:11, phase:1, pass, log, t:none"
+SecRule TX:matched_times2 "@eq 2" "id:12, phase:1, pass, log, t:none"
+`,
+})
