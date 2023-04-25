@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"reflect"
 	"regexp"
 	"runtime/debug"
 	"strconv"
@@ -426,6 +427,28 @@ func TestAuditLog(t *testing.T) {
 	// TODO more checks
 	if err := tx.Close(); err != nil {
 		t.Error(err)
+	}
+}
+
+func TestParseAuditLog(t *testing.T) {
+	tx := makeTransaction(t)
+	var err error
+	tx.AuditLogParts, err = types.ParseAuditLogParts("ABCDEFGHIJK")
+	al := tx.AuditLog()
+	if err != nil {
+		t.Error("unexpected audit log parts")
+	}
+	if al.Transaction.ID != tx.id {
+		t.Error("invalid auditlog id")
+	}
+	if err = tx.Close(); err != nil {
+		t.Error(err)
+	}
+}
+func TestInvalidAuditLog(t *testing.T) {
+	AuditLogParts, err := types.ParseAuditLogParts("ABCDEFGHIJKLMN")
+	if err == nil || !reflect.DeepEqual(AuditLogParts, types.AuditLogParts("")) {
+		t.Error("AuditLogParts should fail of invalid part")
 	}
 }
 
