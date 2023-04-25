@@ -112,7 +112,16 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 		tx.AuditEngine = ae
 	case ctlAuditLogParts:
 		// TODO lets switch it to a string
-		tx.AuditLogParts = types.AuditLogParts(a.value)
+		AuditLogParts, err := types.ParseAuditLogParts(a.value)
+		if err != nil {
+			tx.DebugLogger().Error().
+				Str("ctl", "AuditLogParts").
+				Str("value", a.value).
+				Err(err).
+				Msg("Invalid audit log part")
+			return
+		}
+		tx.AuditLogParts = AuditLogParts
 	case ctlForceRequestBodyVariable:
 		val, ok := parseOnOff(a.value)
 		if !ok {
