@@ -111,7 +111,6 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 		}
 		tx.AuditEngine = ae
 	case ctlAuditLogParts:
-		// TODO lets switch it to a string
 		AuditLogParts, err := types.ParseAuditLogParts(a.value)
 		if err != nil {
 			tx.DebugLogger().Error().

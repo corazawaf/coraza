@@ -106,19 +106,19 @@ type AuditLogPart byte
 // Z: Final boundary, signifies the end of the entry (mandatory).
 type AuditLogParts []AuditLogPart
 
-var validOpts = map[AuditLogPart]bool{
-	AuditLogPartAuditLogHeader:              true,
-	AuditLogPartRequestHeaders:              true,
-	AuditLogPartRequestBody:                 true,
-	AuditLogPartIntermediaryResponseHeaders: true,
-	AuditLogPartIntermediaryResponseBody:    true,
-	AuditLogPartResponseHeaders:             true,
-	AuditLogPartResponseBody:                true,
-	AuditLogPartAuditLogTrailer:             true,
-	AuditLogPartRequestBodyAlternative:      true,
-	AuditLogPartUploadedFiles:               true,
-	AuditLogPartRulesMatched:                true,
-	AuditLogPartFinalBoundary:               true,
+var validOpts = map[AuditLogPart]struct{}{
+	AuditLogPartAuditLogHeader:              {},
+	AuditLogPartRequestHeaders:              {},
+	AuditLogPartRequestBody:                 {},
+	AuditLogPartIntermediaryResponseHeaders: {},
+	AuditLogPartIntermediaryResponseBody:    {},
+	AuditLogPartResponseHeaders:             {},
+	AuditLogPartResponseBody:                {},
+	AuditLogPartAuditLogTrailer:             {},
+	AuditLogPartRequestBodyAlternative:      {},
+	AuditLogPartUploadedFiles:               {},
+	AuditLogPartRulesMatched:                {},
+	AuditLogPartFinalBoundary:               {},
 }
 
 func ParseAuditLogParts(opts string) (AuditLogParts, error) {
