@@ -5,8 +5,9 @@ package transformations
 
 import "strings"
 
-func urlEncode(data string) (string, error) {
-	return doURLEncode(data), nil
+func urlEncode(data string) (string, bool, error) {
+	transformedData := doURLEncode(data)
+	return transformedData, data != transformedData, nil
 }
 
 func doURLEncode(input string) string {

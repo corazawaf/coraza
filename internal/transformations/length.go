@@ -7,6 +7,7 @@ import (
 	"strconv"
 )
 
-func length(data string) (string, error) {
-	return strconv.Itoa(len(data)), nil
+func length(data string) (string, bool, error) {
+	transformedData := strconv.Itoa(len(data))
+	return transformedData, data != transformedData, nil
 }

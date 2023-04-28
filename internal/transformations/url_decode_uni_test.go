@@ -25,7 +25,7 @@ func BenchmarkURLDecode(b *testing.B) {
 			tt := tc
 			b.Run(fmt.Sprintf("%s/%s", mode, tt), func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					if _, err := f(tt); err != nil {
+					if _, _, err := f(tt); err != nil {
 						b.Fatal(err)
 					}
 				}

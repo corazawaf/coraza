@@ -7,17 +7,17 @@ import (
 	"path/filepath"
 )
 
-func normalisePath(data string) (string, error) {
+func normalisePath(data string) (string, bool, error) {
 	leng := len(data)
 	if leng < 1 {
-		return data, nil
+		return data, false, nil
 	}
 	clean := filepath.Clean(data)
 	if clean == "." {
-		return "", nil
+		return "", true, nil
 	}
 	if data[len(data)-1] == '/' {
-		return clean + "/", nil
+		return clean + "/", true, nil
 	}
-	return clean, nil
+	return clean, data != clean, nil
 }

@@ -5,6 +5,7 @@ package transformations
 
 import "strings"
 
-func replaceNulls(data string) (string, error) {
-	return strings.ReplaceAll(data, "\x00", " "), nil
+func replaceNulls(data string) (string, bool, error) {
+	transformedData := strings.ReplaceAll(data, "\x00", " ")
+	return transformedData, data != transformedData, nil
 }

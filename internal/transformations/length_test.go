@@ -3,7 +3,9 @@
 
 package transformations
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestLength(t *testing.T) {
 	tests := []struct {
@@ -22,14 +24,21 @@ func TestLength(t *testing.T) {
 			input:  "ハローワールド",
 			length: "21",
 		},
+		{
+			input:  "1",
+			length: "1",
+		},
 	}
 
 	for _, tc := range tests {
 		tt := tc
 		t.Run(tt.input, func(t *testing.T) {
-			have, err := length(tt.input)
+			have, changed, err := length(tt.input)
 			if err != nil {
 				t.Error(err)
+			}
+			if tt.input == have && changed {
+				t.Errorf("input %q, have %q with changed %t", tt.input, have, changed)
 			}
 			if have != tt.length {
 				t.Errorf("Expected %s, have %s", tt.length, have)

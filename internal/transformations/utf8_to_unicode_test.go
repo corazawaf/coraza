@@ -43,9 +43,12 @@ func TestUTF8ToUnicode(t *testing.T) {
 	for _, tc := range tests {
 		tt := tc
 		t.Run(tt.input, func(t *testing.T) {
-			have, err := utf8ToUnicode(tt.input)
+			have, changed, err := utf8ToUnicode(tt.input)
 			if err != nil {
 				t.Error(err)
+			}
+			if tt.input == tt.want && changed {
+				t.Errorf("input %q, have %q with changed %t", tt.input, have, changed)
 			}
 			if have != tt.want {
 				t.Errorf("have %q, want %q", have, tt.want)
@@ -65,7 +68,7 @@ func BenchmarkUTF8ToUnicode(b *testing.B) {
 		tt := tc
 		b.Run(tt, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := utf8ToUnicode(tt); err != nil {
+				if _, _, err := utf8ToUnicode(tt); err != nil {
 					b.Fatal(err)
 				}
 			}

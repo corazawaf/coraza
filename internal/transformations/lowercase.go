@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
-func lowerCase(data string) (string, error) {
-	return strings.ToLower(data), nil
+func lowerCase(data string) (string, bool, error) {
+	transformedData := strings.ToLower(data)
+	return transformedData, data != transformedData, nil
 }

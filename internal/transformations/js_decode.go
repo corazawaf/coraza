@@ -10,13 +10,14 @@ import (
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 )
 
-func jsDecode(data string) (string, error) {
+func jsDecode(data string) (string, bool, error) {
 	if i := strings.IndexByte(data, '\\'); i != -1 {
 		// TODO: This will transform even if the backslash isn't followed by an escape,
 		// but keep it simple for now.
-		return doJsDecode(data, i), nil
+		transformedData := doJsDecode(data, i)
+		return transformedData, data != transformedData, nil
 	}
-	return data, nil
+	return data, false, nil
 }
 
 // https://github.com/SpiderLabs/ModSecurity/blob/b66224853b4e9d30e0a44d16b29d5ed3842a6b11/src/actions/transformations/js_decode.cc

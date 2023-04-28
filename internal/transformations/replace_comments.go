@@ -3,13 +3,15 @@
 
 package transformations
 
-func replaceComments(data string) (string, error) {
-	return doReplaceComments(data), nil
+func replaceComments(data string) (string, bool, error) {
+	transformedData, changed := doReplaceComments(data)
+	return transformedData, changed, nil
 }
 
-func doReplaceComments(value string) string {
+func doReplaceComments(value string) (string, bool) {
 	var i, j int
 	incomment := false
+	changed := false
 
 	input := []byte(value)
 	inputLen := len(input)
@@ -37,8 +39,9 @@ func doReplaceComments(value string) string {
 
 	if incomment {
 		input[j] = ' '
+		changed = true
 		j++
 	}
 
-	return string(input[0:j])
+	return string(input[0:j]), changed
 }

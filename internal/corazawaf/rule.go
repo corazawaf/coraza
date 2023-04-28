@@ -498,13 +498,13 @@ func (r *Rule) executeTransformationsMultimatch(value string) ([]string, []error
 	res := []string{value}
 	var errs []error
 	for _, t := range r.transformations {
-		transformedValue, err := t.Function(value)
+		transformedValue, changed, err := t.Function(value)
 		if err != nil {
 			errs = append(errs, err)
 			continue
 		}
 		// Every time a transformation generates a new value different from the previous one, the new value is collected to be evaluated
-		if transformedValue != value {
+		if changed {
 			res = append(res, transformedValue)
 			value = transformedValue
 		}
@@ -515,7 +515,7 @@ func (r *Rule) executeTransformationsMultimatch(value string) ([]string, []error
 func (r *Rule) executeTransformations(value string) (string, []error) {
 	var errs []error
 	for _, t := range r.transformations {
-		v, err := t.Function(value)
+		v, _, err := t.Function(value)
 		if err != nil {
 			errs = append(errs, err)
 			continue

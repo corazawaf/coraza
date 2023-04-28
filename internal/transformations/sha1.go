@@ -12,16 +12,17 @@ import (
 
 var emptySHA1 string
 
-func sha1T(data string) (string, error) {
+func sha1T(data string) (string, bool, error) {
 	if len(data) == 0 {
-		return emptySHA1, nil
+		return emptySHA1, false, nil
 	}
 	h := sha1.New()
 	_, err := io.WriteString(h, data)
 	if err != nil {
-		return data, err
+		return data, false, err
 	}
-	return strings.WrapUnsafe(h.Sum(nil)), nil
+	// The occurrence of an invariant transformation is so unlikely that we can assume the transformation returns a changed value
+	return strings.WrapUnsafe(h.Sum(nil)), true, nil
 }
 
 func init() {

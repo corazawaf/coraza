@@ -3,7 +3,7 @@
 
 package transformations
 
-func none(data string) (string, error) {
+func none(data string) (string, bool, error) {
 	// This case is special and is hardcoded in the seclang parser
-	return data, nil
+	return data, false, nil
 }
