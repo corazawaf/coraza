@@ -135,6 +135,12 @@ go run mage.go format
 
 Contributions are welcome! Please refer to [CONTRIBUTING.md](./CONTRIBUTING.md) for guidance.
 
+## Security
+
+To report a security issue, please follow [this link](https://github.com/corazawaf/coraza/security/advisories/new) and add a description of the issue, the steps you took to create the issue, affected versions, and, if known, mitigations for the issue. 
+
+Our vulnerability management team will respond within 3 working days of your report. If the issue is confirmed as a vulnerability, we will open a Security Advisory. This project follows a 90 day disclosure timeline.
+
 ## Thanks
 
 * Modsecurity team for creating ModSecurity
@@ -144,9 +150,9 @@ Contributions are welcome! Please refer to [CONTRIBUTING.md](./CONTRIBUTING.md) 
 
 * [Babiel](https://babiel.com) (supporter)
 
-### Author on Twitter 
+### Coraza on Twitter 
 
-- [@jptosso](https://twitter.com/jptosso)
+- [@corazaio](https://twitter.com/corazaio)
 
 ## Donations
 
@@ -154,7 +160,9 @@ For donations, see [Donations site](https://owasp.org/donate/?reponame=www-proje
 
 ## Thanks to all the people who have contributed
 
-We could not have done this without you!
+First and foremost, huge thanks to [Juan Pablo Tosso](https://twitter.com/jptosso) for starting this project, and building an amazing community around Coraza!
+
+Today we have lots of amazing contributors, we could not have done this without you!
 
 <a href="https://github.com/corazawaf/coraza/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=corazawaf/coraza" />
