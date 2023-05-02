@@ -12,13 +12,17 @@ on:
     paths-ignore:
       - "**/*.md"
       - "LICENSE"
+
+permissions:
+  contents: read
+
 jobs:
   benchmark:
     name: Performance regression check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
         with:
           go-version: '>=1.18.0'      
       - name: Install dependencies
@@ -28,13 +32,15 @@ jobs:
         run: go test -bench=. ./... | tee output.txt
       # Download previous benchmark result from cache (if exists)
       - name: Download previous benchmark data
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ./cache
           key: ${{ runner.os }}-benchmark
       # Run `github-action-benchmark` action
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
+        permissions:
+          contents: write
         with:
           # What benchmark tool the output.txt came from
           tool: 'go'

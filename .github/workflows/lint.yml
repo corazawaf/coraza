@@ -3,13 +3,17 @@ name: Lint (pre-commit)
 on:
   pull_request:
   push:
+
+permissions:
+  content: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: Install Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version: v1.18.x
           cache: true
