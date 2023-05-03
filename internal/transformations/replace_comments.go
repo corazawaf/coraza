@@ -19,6 +19,7 @@ func doReplaceComments(value string) (string, bool) {
 		if !incomment {
 			if (input[i] == '/') && (i+1 < inputLen) && (input[i+1] == '*') {
 				incomment = true
+				changed = true
 				i += 2
 			} else {
 				input[j] = input[i]
@@ -39,7 +40,6 @@ func doReplaceComments(value string) (string, bool) {
 
 	if incomment {
 		input[j] = ' '
-		changed = true
 		j++
 	}
 

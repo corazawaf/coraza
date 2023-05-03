@@ -17,5 +17,5 @@ const trimSpaces = " \t\n\r\f\v"
 
 func trim(data string) (string, bool, error) {
 	transformedData := strings.Trim(data, trimSpaces)
-	return transformedData, data != transformedData, nil
+	return transformedData, len(data) != len(transformedData), nil
 }

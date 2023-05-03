@@ -10,5 +10,5 @@ import (
 // removeNulls removes NUL bytes in input.
 func removeNulls(data string) (string, bool, error) {
 	transformedData := strings.ReplaceAll(data, "\x00", "")
-	return transformedData, data != transformedData, nil
+	return transformedData, len(data) != len(transformedData), nil
 }

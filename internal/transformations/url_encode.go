@@ -6,15 +6,16 @@ package transformations
 import "strings"
 
 func urlEncode(data string) (string, bool, error) {
-	transformedData := doURLEncode(data)
-	return transformedData, data != transformedData, nil
+	transformedData, changed := doURLEncode(data)
+	return transformedData, changed, nil
 }
 
-func doURLEncode(input string) string {
+func doURLEncode(input string) (string, bool) {
 	inputLen := len(input)
 	if inputLen == 0 {
-		return ""
+		return "", false
 	}
+	changed := false
 	leng := inputLen * 3
 	var d strings.Builder
 	d.Grow(leng)
@@ -27,14 +28,16 @@ func doURLEncode(input string) string {
 
 		if cc == ' ' {
 			d.WriteByte('+')
+			changed = true
 		} else {
 			if (cc == 42) || ((cc >= 48) && (cc <= 57)) || ((cc >= 65) && (cc <= 90)) || ((cc >= 97) && (cc <= 122)) {
 				d.WriteByte(cc)
 			} else {
 				d.Write([]byte{'%', c2xTable[(cc&0xff)>>4], c2xTable[(cc&0xff)&0x0f]})
+				changed = true
 			}
 		}
 	}
 
-	return d.String()
+	return d.String(), changed
 }

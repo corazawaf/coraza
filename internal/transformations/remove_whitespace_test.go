@@ -31,7 +31,7 @@ func TestRemoveWhiteSpace(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			if tt.input == tt.want && changed {
+			if tt.input == tt.want && changed || tt.input != tt.want && !changed {
 				t.Errorf("input %q, have %q with changed %t", tt.input, have, changed)
 			}
 			if have != tt.want {

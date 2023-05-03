@@ -7,5 +7,5 @@ import "strings"
 
 func trimRight(data string) (string, bool, error) {
 	transformedData := strings.TrimRight(data, trimSpaces)
-	return transformedData, data != transformedData, nil
+	return transformedData, len(data) != len(transformedData), nil
 }

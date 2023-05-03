@@ -9,5 +9,5 @@ import (
 
 func htmlEntityDecode(data string) (string, bool, error) {
 	transformedData := html.UnescapeString(data)
-	return transformedData, data != transformedData, nil
+	return transformedData, len(data) != len(transformedData), nil
 }

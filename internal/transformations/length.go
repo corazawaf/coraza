@@ -9,5 +9,5 @@ import (
 
 func length(data string) (string, bool, error) {
 	transformedData := strconv.Itoa(len(data))
-	return transformedData, data != transformedData, nil
+	return transformedData, true, nil
 }
