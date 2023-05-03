@@ -106,6 +106,30 @@ type AuditLogPart byte
 // Z: Final boundary, signifies the end of the entry (mandatory).
 type AuditLogParts []AuditLogPart
 
+var validOpts = map[AuditLogPart]struct{}{
+	AuditLogPartAuditLogHeader:              {},
+	AuditLogPartRequestHeaders:              {},
+	AuditLogPartRequestBody:                 {},
+	AuditLogPartIntermediaryResponseHeaders: {},
+	AuditLogPartIntermediaryResponseBody:    {},
+	AuditLogPartResponseHeaders:             {},
+	AuditLogPartResponseBody:                {},
+	AuditLogPartAuditLogTrailer:             {},
+	AuditLogPartRequestBodyAlternative:      {},
+	AuditLogPartUploadedFiles:               {},
+	AuditLogPartRulesMatched:                {},
+	AuditLogPartFinalBoundary:               {},
+}
+
+func ParseAuditLogParts(opts string) (AuditLogParts, error) {
+	for _, opt := range opts {
+		if _, ok := validOpts[AuditLogPart(opt)]; !ok {
+			return AuditLogParts(""), fmt.Errorf("invalid audit log part: %s", opts)
+		}
+	}
+	return AuditLogParts(opts), nil
+}
+
 const (
 	// AuditLogPartAuditLogHeader is the mandatory header part
 	AuditLogPartAuditLogHeader AuditLogPart = 'A'
