@@ -431,13 +431,23 @@ func TestAuditLog(t *testing.T) {
 
 func TestParseAuditLog(t *testing.T) {
 	AuditLogParts, err := types.ParseAuditLogParts("ABCDEFGHIJK")
-	if err != nil || string(AuditLogParts) != "ABCDEFGHIJK" {
+	if err != nil {
 		t.Error("unexpected audit log parts")
+	}
+	expected := types.AuditLogParts("ABCDEFGHIJK")
+	if len(AuditLogParts) != len(expected) {
+		t.Error("AuditLogParts has different length than expected")
+
+	}
+	for i := 0; i < len(AuditLogParts); i++ {
+		if AuditLogParts[i] != expected[i] {
+			t.Errorf("Byte at position %d differs", i)
+		}
 	}
 }
 func TestInvalidAuditLog(t *testing.T) {
 	AuditLogParts, err := types.ParseAuditLogParts("ABCDEFGHIJKLMN")
-	if err == nil || string(AuditLogParts) != "" {
+	if err == nil || len(AuditLogParts) != 0 {
 		t.Error("AuditLogParts should fail of invalid part")
 	}
 }
