@@ -130,21 +130,19 @@ func (mr MatchedRule) details(matchData types.MatchData) string {
 
 func (mr MatchedRule) matchData(matchData types.MatchData) string {
 	log := &strings.Builder{}
-	for _, matchData := range mr.MatchedDatas_ {
-		v := matchData.Variable().Name()
-		if matchData.Key() != "" {
-			v += fmt.Sprintf(":%s", matchData.Key())
-		}
-		value := matchData.Value()
-		if len(value) > 200 {
-			value = value[:200]
-		}
-		if mr.Rule_.Operator() != "" {
-			log.WriteString(fmt.Sprintf("Matched \"Operator %s matched %s at %s.",
-				"", value, v))
-		} else {
-			log.WriteString("Matched.\"")
-		}
+	v := matchData.Variable().Name()
+	if matchData.Key() != "" {
+		v += fmt.Sprintf(":%s", matchData.Key())
+	}
+	value := matchData.Value()
+	if len(value) > 200 {
+		value = value[:200]
+	}
+	if mr.Rule_.Operator() != "" {
+		log.WriteString(fmt.Sprintf("Matched \"Operator %s matched %s at %s.",
+			"", value, v))
+	} else {
+		log.WriteString("Matched.\"")
 	}
 	return log.String()
 }
