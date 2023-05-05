@@ -87,13 +87,13 @@ func TestNoMatchEvaluateBecauseOfException(t *testing.T) {
 
 type dummyFlowAction struct{}
 
-func (a *dummyFlowAction) Init(_ plugintypes.RuleMetadata, data string) error {
+func (_ *dummyFlowAction) Init(_ plugintypes.RuleMetadata, _ string) error {
 	return nil
 }
-func (a *dummyFlowAction) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
+func (_ *dummyFlowAction) Evaluate(_ plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
 	tx.(*Transaction).Logdata = "flow action triggered"
 }
-func (a *dummyFlowAction) Type() plugintypes.ActionType {
+func (_ *dummyFlowAction) Type() plugintypes.ActionType {
 	return plugintypes.ActionTypeFlow
 }
 func TestFlowActionIfDetectionOnlyEngine(t *testing.T) {
@@ -116,13 +116,13 @@ func TestFlowActionIfDetectionOnlyEngine(t *testing.T) {
 
 type dummyNonDisruptiveAction struct{}
 
-func (a *dummyNonDisruptiveAction) Init(_ plugintypes.RuleMetadata, data string) error {
+func (_ *dummyNonDisruptiveAction) Init(_ plugintypes.RuleMetadata, _ string) error {
 	return nil
 }
-func (a *dummyNonDisruptiveAction) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
+func (_ *dummyNonDisruptiveAction) Evaluate(_ plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
 	tx.(*Transaction).Logdata = "action enforced"
 }
-func (a *dummyNonDisruptiveAction) Type() plugintypes.ActionType {
+func (_ *dummyNonDisruptiveAction) Type() plugintypes.ActionType {
 	return plugintypes.ActionTypeNondisruptive
 }
 func TestMatchVariableRunsActionTypeNondisruptive(t *testing.T) {
@@ -181,7 +181,7 @@ func TestRuleDetailsTransferredToTransaction(t *testing.T) {
 
 type dummyEqOperator struct{}
 
-func (o *dummyEqOperator) Evaluate(tx plugintypes.TransactionState, value string) bool {
+func (_ *dummyEqOperator) Evaluate(_ plugintypes.TransactionState, value string) bool {
 	return value == "0"
 }
 
@@ -295,10 +295,10 @@ func TestInferredPhase(t *testing.T) {
 
 type dummyDenyAction struct{}
 
-func (a *dummyDenyAction) Init(_ plugintypes.RuleMetadata, data string) error {
+func (_ *dummyDenyAction) Init(_ plugintypes.RuleMetadata, _ string) error {
 	return nil
 }
-func (a *dummyDenyAction) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
+func (_ *dummyDenyAction) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
 	rid := r.ID()
 	if rid == 0 {
 		rid = r.ParentID()
@@ -309,7 +309,7 @@ func (a *dummyDenyAction) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.Tr
 		Action: "deny",
 	})
 }
-func (a *dummyDenyAction) Type() plugintypes.ActionType {
+func (_ *dummyDenyAction) Type() plugintypes.ActionType {
 	return plugintypes.ActionTypeDisruptive
 }
 func TestAddAction(t *testing.T) {
@@ -474,7 +474,7 @@ func TestTransformArgSimple(t *testing.T) {
 	_ = rule.AddTransformation("AppendB", transformationAppendB)
 	args, errs := rule.transformArg(md, 0, transformationCache)
 	if errs != nil {
-		t.Fatalf("unexpected errors executing transformations: %v", errs)
+		t.Fatalf("Unexpected errors executing transformations: %v", errs)
 	}
 	if args[0] != "/testAB" {
 		t.Errorf("Expected \"/testAB\", got \"%s\"", args[0])
@@ -485,7 +485,7 @@ func TestTransformArgSimple(t *testing.T) {
 	// Repeating the same transformation, expecting still one element in the cache (that means it is a cache hit)
 	args, errs = rule.transformArg(md, 0, transformationCache)
 	if errs != nil {
-		t.Fatalf("unexpected errors executing transformations: %v", errs)
+		t.Fatalf("Unexpected errors executing transformations: %v", errs)
 	}
 	if args[0] != "/testAB" {
 		t.Errorf("Expected \"/testAB\", got \"%s\"", args[0])
