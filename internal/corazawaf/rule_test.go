@@ -87,15 +87,18 @@ func TestNoMatchEvaluateBecauseOfException(t *testing.T) {
 
 type dummyFlowAction struct{}
 
-func (_ *dummyFlowAction) Init(_ plugintypes.RuleMetadata, _ string) error {
+func (*dummyFlowAction) Init(_ plugintypes.RuleMetadata, _ string) error {
 	return nil
 }
-func (_ *dummyFlowAction) Evaluate(_ plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
+
+func (*dummyFlowAction) Evaluate(_ plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
 	tx.(*Transaction).Logdata = "flow action triggered"
 }
-func (_ *dummyFlowAction) Type() plugintypes.ActionType {
+
+func (*dummyFlowAction) Type() plugintypes.ActionType {
 	return plugintypes.ActionTypeFlow
 }
+
 func TestFlowActionIfDetectionOnlyEngine(t *testing.T) {
 	r := NewRule()
 	r.ID_ = 1
@@ -116,15 +119,18 @@ func TestFlowActionIfDetectionOnlyEngine(t *testing.T) {
 
 type dummyNonDisruptiveAction struct{}
 
-func (_ *dummyNonDisruptiveAction) Init(_ plugintypes.RuleMetadata, _ string) error {
+func (*dummyNonDisruptiveAction) Init(_ plugintypes.RuleMetadata, _ string) error {
 	return nil
 }
-func (_ *dummyNonDisruptiveAction) Evaluate(_ plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
+
+func (*dummyNonDisruptiveAction) Evaluate(_ plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
 	tx.(*Transaction).Logdata = "action enforced"
 }
-func (_ *dummyNonDisruptiveAction) Type() plugintypes.ActionType {
+
+func (*dummyNonDisruptiveAction) Type() plugintypes.ActionType {
 	return plugintypes.ActionTypeNondisruptive
 }
+
 func TestMatchVariableRunsActionTypeNondisruptive(t *testing.T) {
 	rule := NewRule()
 	tx := NewWAF().NewTransaction()
@@ -181,7 +187,7 @@ func TestRuleDetailsTransferredToTransaction(t *testing.T) {
 
 type dummyEqOperator struct{}
 
-func (_ *dummyEqOperator) Evaluate(_ plugintypes.TransactionState, value string) bool {
+func (*dummyEqOperator) Evaluate(_ plugintypes.TransactionState, value string) bool {
 	return value == "0"
 }
 
@@ -295,10 +301,11 @@ func TestInferredPhase(t *testing.T) {
 
 type dummyDenyAction struct{}
 
-func (_ *dummyDenyAction) Init(_ plugintypes.RuleMetadata, _ string) error {
+func (*dummyDenyAction) Init(_ plugintypes.RuleMetadata, _ string) error {
 	return nil
 }
-func (_ *dummyDenyAction) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
+
+func (*dummyDenyAction) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
 	rid := r.ID()
 	if rid == 0 {
 		rid = r.ParentID()
@@ -309,9 +316,11 @@ func (_ *dummyDenyAction) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.Tr
 		Action: "deny",
 	})
 }
-func (_ *dummyDenyAction) Type() plugintypes.ActionType {
+
+func (*dummyDenyAction) Type() plugintypes.ActionType {
 	return plugintypes.ActionTypeDisruptive
 }
+
 func TestAddAction(t *testing.T) {
 	actionName := "action_name"
 	rule := NewRule()
