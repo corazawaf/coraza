@@ -6,7 +6,7 @@ package coraza
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/auditlog"
+	"github.com/corazawaf/coraza/v3/internal/auditlog"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
