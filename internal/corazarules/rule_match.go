@@ -125,23 +125,23 @@ func (mr MatchedRule) writeDetails(log *strings.Builder, matchData types.MatchDa
 		mr.ServerIPAddress_, mr.URI_, mr.TransactionID_))
 }
 
-func (mr MatchedRule) matchData(matchData types.MatchData) string {
-	log := &strings.Builder{}
-	v := matchData.Variable().Name()
-	if matchData.Key() != "" {
-		v += fmt.Sprintf(":%s", matchData.Key())
-	}
+func (mr MatchedRule) matchData(matchData types.MatchData, log *strings.Builder) {
 	value := matchData.Value()
 	if len(value) > 200 {
 		value = value[:200]
 	}
-	if mr.Rule_.Operator() != "" {
-		log.WriteString(fmt.Sprintf("Matched \"Operator %s matched %s at %s.",
-			"", value, v))
-	} else {
-		log.WriteString("Matched.\"")
+	op := mr.Rule_.Operator()
+	log.WriteString("Matched Operator ")
+	log.WriteString(op)
+	log.WriteString(" matched ")
+	log.WriteString(value)
+	log.WriteString(" at ")
+	log.WriteString(matchData.Variable().Name())
+	if matchData.Key() != "" {
+		log.WriteString(":")
+		log.WriteString(matchData.Key())
 	}
-	return log.String()
+	log.WriteString(".")
 }
 
 // AuditLog transforms the matched rule into an error log
@@ -155,7 +155,7 @@ func (mr MatchedRule) AuditLog(code int) string {
 		} else {
 			log.WriteString("Coraza: Warning. ")
 		}
-		log.WriteString(mr.matchData(matchData))
+		mr.matchData(matchData, log)
 		mr.writeDetails(log, matchData)
 		log.WriteString("\n")
 	}
