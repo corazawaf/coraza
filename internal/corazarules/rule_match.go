@@ -131,6 +131,10 @@ func (mr MatchedRule) matchData(matchData types.MatchData, log *strings.Builder)
 		value = value[:200]
 	}
 	op := mr.Rule_.Operator()
+	if op == "" {
+		log.WriteString("Matched.")
+		return
+	}
 	log.WriteString("Matched Operator ")
 	log.WriteString(op)
 	log.WriteString(" matched ")
