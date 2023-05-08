@@ -9,13 +9,13 @@ import (
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 )
 
-func cssDecode(data string) (string, error) {
+func cssDecode(data string) (string, bool, error) {
 	if i := strings.IndexByte(data, '\\'); i != -1 {
 		// TODO: This will transform even if the backslash isn't followed by hex,
 		// but keep it simple for now.
-		return cssDecodeInplace(data, i), nil
+		return cssDecodeInplace(data, i), true, nil
 	}
-	return data, nil
+	return data, false, nil
 }
 
 func cssDecodeInplace(input string, pos int) string {

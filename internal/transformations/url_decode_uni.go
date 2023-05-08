@@ -7,13 +7,13 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/strings"
 )
 
-func urlDecodeUni(data string) (string, error) {
+func urlDecodeUni(data string) (string, bool, error) {
 	for i := 0; i < len(data); i++ {
 		if data[i] == '%' || data[i] == '+' {
-			return inplaceUniDecode(data, []byte(data), i), nil
+			return inplaceUniDecode(data, []byte(data), i), true, nil
 		}
 	}
-	return data, nil
+	return data, false, nil
 }
 
 func inplaceUniDecode(input string, d []byte, pos int) string {

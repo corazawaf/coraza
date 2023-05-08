@@ -12,8 +12,8 @@ import (
 
 func TestTransformation(t *testing.T) {
 	t.Run("get existing transformation", func(t *testing.T) {
-		transformation := func(input string) (string, error) {
-			return "", nil
+		transformation := func(input string) (string, bool, error) {
+			return "", false, nil
 		}
 
 		plugins.RegisterTransformation("custom_transformation", transformation)
