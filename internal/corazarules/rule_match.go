@@ -106,9 +106,7 @@ func (mr *MatchedRule) Rule() types.RuleMetadata {
 	return mr.Rule_
 }
 
-func (mr MatchedRule) details(matchData types.MatchData) string {
-	log := &strings.Builder{}
-
+func (mr MatchedRule) writeDetails(log *strings.Builder, matchData types.MatchData) {
 	msg := matchData.Message()
 	data := matchData.Data()
 	if len(msg) > 200 {
@@ -125,7 +123,6 @@ func (mr MatchedRule) details(matchData types.MatchData) string {
 	}
 	log.WriteString(fmt.Sprintf(" [hostname %q] [uri %q] [unique_id %q]",
 		mr.ServerIPAddress_, mr.URI_, mr.TransactionID_))
-	return log.String()
 }
 
 func (mr MatchedRule) matchData(matchData types.MatchData) string {
@@ -159,7 +156,7 @@ func (mr MatchedRule) AuditLog(code int) string {
 			log.WriteString("Coraza: Warning. ")
 		}
 		log.WriteString(mr.matchData(matchData))
-		log.WriteString(mr.details(matchData))
+		mr.writeDetails(log, matchData)
 		log.WriteString("\n")
 	}
 	return log.String()
@@ -190,7 +187,7 @@ func (mr MatchedRule) ErrorLog(code int) string {
 		}
 		log.WriteString(msg)
 		log.WriteString(" ")
-		log.WriteString(mr.details(matchData))
+		mr.writeDetails(log, matchData)
 		log.WriteString("\n")
 	}
 	return log.String()
