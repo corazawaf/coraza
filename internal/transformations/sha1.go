@@ -14,7 +14,7 @@ var emptySHA1 string
 
 func sha1T(data string) (string, bool, error) {
 	if len(data) == 0 {
-		return emptySHA1, false, nil
+		return emptySHA1, true, nil
 	}
 	h := sha1.New()
 	_, err := io.WriteString(h, data)

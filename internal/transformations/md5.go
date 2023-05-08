@@ -14,7 +14,7 @@ var emptyMD5 string
 
 func md5T(data string) (string, bool, error) {
 	if len(data) == 0 {
-		return emptyMD5, false, nil
+		return emptyMD5, true, nil
 	}
 
 	h := md5.New()
