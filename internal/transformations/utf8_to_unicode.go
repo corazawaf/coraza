@@ -21,13 +21,13 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/strings"
 )
 
-func utf8ToUnicode(str string) (string, error) {
+func utf8ToUnicode(str string) (string, bool, error) {
 	for i, c := range str {
 		if c >= utf8.RuneSelf {
-			return doUTF8ToUnicode(str, i), nil
+			return doUTF8ToUnicode(str, i), true, nil
 		}
 	}
-	return str, nil
+	return str, false, nil
 }
 
 func doUTF8ToUnicode(input string, pos int) string {

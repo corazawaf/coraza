@@ -3,12 +3,13 @@
 
 package transformations
 
-func removeComments(value string) (string, error) {
+func removeComments(value string) (string, bool, error) {
 	inputLen := len(value)
 	// we must add one pad to the right
 	input := []byte(value + "\x00")
 
 	var i, j int
+	changed := false
 	incomment := false
 
 charLoop:
@@ -23,9 +24,11 @@ charLoop:
 				i += 4
 			case (input[i] == '-') && (i+1 < inputLen) && (input[i+1] == '-'):
 				input[i] = ' '
+				changed = true
 				break charLoop
 			case input[i] == '#':
 				input[i] = ' '
+				changed = true
 				break charLoop
 			default:
 				input[j] = input[i]
@@ -53,8 +56,9 @@ charLoop:
 	}
 
 	if incomment {
+		changed = true
 		input[j] = ' '
 		j++
 	}
-	return string(input[0:j]), nil
+	return string(input[0:j]), changed, nil
 }

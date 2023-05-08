@@ -56,7 +56,7 @@ func TestTransformations(t *testing.T) {
 					// Cannot use t.Skip for TinyGo support
 					return
 				}
-				out, err := trans(data.Input)
+				out, _, err := trans(data.Input)
 				if err != nil {
 					t.Error(err)
 				}

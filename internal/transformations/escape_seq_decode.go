@@ -10,19 +10,20 @@ import (
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 )
 
-func escapeSeqDecode(input string) (string, error) {
+func escapeSeqDecode(input string) (string, bool, error) {
 	if i := strings.IndexByte(input, '\\'); i != -1 {
 		// TODO: This will transform even if the backslash isn't followed by an escape,
 		// but keep it simple for now.
-		return doEscapeSeqDecode(input, i), nil
+		transformedInput, changed := doEscapeSeqDecode(input, i)
+		return transformedInput, changed, nil
 	}
-	return input, nil
+	return input, false, nil
 }
 
-func doEscapeSeqDecode(input string, pos int) string {
+func doEscapeSeqDecode(input string, pos int) (string, bool) {
 	inputLen := len(input)
 	data := []byte(input)
-
+	changed := false
 	d := pos
 	i := pos
 
@@ -103,6 +104,7 @@ func doEscapeSeqDecode(input string, pos int) string {
 			} else {
 				/* Converted the encoding. */
 				data[d] = byte(c)
+				changed = true
 				d++
 			}
 		} else {
@@ -112,7 +114,7 @@ func doEscapeSeqDecode(input string, pos int) string {
 			i++
 		}
 	}
-	return utils.WrapUnsafe(data[:d])
+	return utils.WrapUnsafe(data[:d]), changed
 }
 
 func isODigit(c byte) bool {

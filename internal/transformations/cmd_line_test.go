@@ -20,7 +20,7 @@ func BenchmarkCMDLine(b *testing.B) {
 		tt := tc
 		b.Run(tt, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := cmdLine(tt); err != nil {
+				if _, _, err := cmdLine(tt); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -33,7 +33,7 @@ func FuzzCMDLine(f *testing.F) {
 		f.Add(tc)
 	}
 	f.Fuzz(func(t *testing.T, tc string) {
-		data, err := cmdLine(tc)
+		data, _, err := cmdLine(tc)
 		if err != nil {
 			t.Error(err)
 		}
