@@ -31,10 +31,13 @@ func NewConcatCollection(variable variables.RuleVariable, data ...collection.Col
 // FindAll returns all matches for all collections
 func (c *ConcatCollection) FindAll() []types.MatchData {
 	res := make([]types.MatchData, 0, len(c.data))
+	i := 0
 	for _, d := range c.data {
-		res = append(res, replaceVariable(c.variable, d.FindAll())...)
+		fa := d.FindAll()
+		i += len(fa)
+		res = append(res, replaceVariable(c.variable, fa)...)
 	}
-	return res
+	return res[:i]
 }
 
 // Name returns the name for the current CollectionconcatCollection
