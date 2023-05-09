@@ -344,8 +344,8 @@ func TestAddAction(t *testing.T) {
 func TestAddTransformation(t *testing.T) {
 	rule := NewRule()
 	transformationName := "transformation"
-	transformation := func(input string) (string, error) {
-		return "Test", nil
+	transformation := func(input string) (string, bool, error) {
+		return "Test", true, nil
 	}
 	err := rule.AddTransformation(transformationName, transformation)
 	if err != nil {
@@ -359,8 +359,8 @@ func TestAddTransformation(t *testing.T) {
 func TestAddTransformationEmpty(t *testing.T) {
 	rule := NewRule()
 	transformationName := ""
-	transformation := func(input string) (string, error) {
-		return transformationName, nil
+	transformation := func(input string) (string, bool, error) {
+		return transformationName, true, nil
 	}
 	err := rule.AddTransformation(transformationName, transformation)
 	if err == nil {
@@ -371,8 +371,8 @@ func TestAddTransformationEmpty(t *testing.T) {
 func TestClearTransformation(t *testing.T) {
 	rule := NewRule()
 	transformationName := "trans"
-	transformation := func(input string) (string, error) {
-		return transformationName, nil
+	transformation := func(input string) (string, bool, error) {
+		return transformationName, true, nil
 	}
 	_ = rule.AddTransformation(transformationName, transformation)
 	if rule.transformations == nil {
@@ -384,12 +384,12 @@ func TestClearTransformation(t *testing.T) {
 	}
 }
 
-var transformationAppendA = func(input string) (string, error) {
-	return input + "A", nil
+var transformationAppendA = func(input string) (string, bool, error) {
+	return input + "A", true, nil
 }
 
-var transformationAppendB = func(input string) (string, error) {
-	return input + "B", nil
+var transformationAppendB = func(input string) (string, bool, error) {
+	return input + "B", true, nil
 }
 
 func TestExecuteTransformations(t *testing.T) {
@@ -404,14 +404,16 @@ func TestExecuteTransformations(t *testing.T) {
 		t.Fatalf("Expected inputAB, got %s", transformedInput)
 	}
 }
+
+var transformationErrorA = func(input string) (string, bool, error) {
+	return "", false, errors.New("errorA")
+}
+var transformationErrorB = func(input string) (string, bool, error) {
+	return "", false, errors.New("errorB")
+}
+
 func TestExecuteTransformationsReturnsMultipleErrors(t *testing.T) {
 	rule := NewRule()
-	transformationErrorA := func(input string) (string, error) {
-		return "", errors.New("errorA")
-	}
-	transformationErrorB := func(input string) (string, error) {
-		return "", errors.New("errorB")
-	}
 	_ = rule.AddTransformation("AppendA", transformationErrorA)
 	_ = rule.AddTransformation("AppendB", transformationErrorB)
 	_, error := rule.executeTransformations("arg")
@@ -450,12 +452,6 @@ func TestExecuteTransformationsMultiMatch(t *testing.T) {
 
 func TestExecuteTransformationsMultiMatchReturnsMultipleErrors(t *testing.T) {
 	rule := NewRule()
-	transformationErrorA := func(input string) (string, error) {
-		return "", errors.New("errorA")
-	}
-	transformationErrorB := func(input string) (string, error) {
-		return "", errors.New("errorB")
-	}
 	_ = rule.AddTransformation("A", transformationErrorA)
 	_ = rule.AddTransformation("B", transformationErrorB)
 	_, error := rule.executeTransformationsMultimatch("arg")
