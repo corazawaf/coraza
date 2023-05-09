@@ -5,12 +5,10 @@ package corazawaf
 
 import (
 	"fmt"
-	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
-	"unsafe"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
@@ -315,7 +313,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 	return matchedValues
 }
 
-func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transformationKey]*transformationValue) ([]string, []error) {
+func (r *Rule) transformArg(arg types.MatchData, argIdx int, _ map[transformationKey]*transformationValue) ([]string, []error) {
 	if r.MultiMatch {
 		// TODOs:
 		// - We don't need to run every transformation. We could try for each until found
@@ -330,27 +328,10 @@ func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transform
 			arg, errs := r.executeTransformations(arg.Value())
 			return []string{arg}, errs
 		default:
-			// NOTE: See comment on transformationKey struct to understand this hacky code
-			argKey := arg.Key()
-			argKeyPtr := (*reflect.StringHeader)(unsafe.Pointer(&argKey)).Data
-			key := transformationKey{
-				argKey:            argKeyPtr,
-				argIndex:          argIdx,
-				argVariable:       arg.Variable(),
-				transformationsID: r.transformationsID,
-			}
-			if cached, ok := cache[key]; ok {
-				return cached.args, cached.errs
-			} else {
-				ars, es := r.executeTransformations(arg.Value())
-				args := []string{ars}
-				errs := es
-				cache[key] = &transformationValue{
-					args: args,
-					errs: es,
-				}
-				return args, errs
-			}
+			ars, es := r.executeTransformations(arg.Value())
+			args := []string{ars}
+			errs := es
+			return args, errs
 		}
 	}
 }

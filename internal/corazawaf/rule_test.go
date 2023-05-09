@@ -484,19 +484,8 @@ func TestTransformArgSimple(t *testing.T) {
 	if args[0] != "/testAB" {
 		t.Errorf("Expected \"/testAB\", got \"%s\"", args[0])
 	}
-	if len(transformationCache) != 1 {
-		t.Errorf("Expected 1 transformations in cache, got %d", len(transformationCache))
-	}
-	// Repeating the same transformation, expecting still one element in the cache (that means it is a cache hit)
-	args, errs = rule.transformArg(md, 0, transformationCache)
-	if errs != nil {
-		t.Fatalf("Unexpected errors executing transformations: %v", errs)
-	}
 	if args[0] != "/testAB" {
 		t.Errorf("Expected \"/testAB\", got \"%s\"", args[0])
-	}
-	if len(transformationCache) != 1 {
-		t.Errorf("Expected 1 transformations in cache, got %d", len(transformationCache))
 	}
 }
 
