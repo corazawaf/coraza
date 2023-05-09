@@ -9,6 +9,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
+	istrings "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -32,7 +33,7 @@ func (c *Map) Get(key string) []string {
 	if len(c.data) == 0 {
 		return nil
 	}
-	keyL := strings.ToLower(key)
+	keyL := istrings.AsciiToLower(key)
 	var values []string
 	for _, a := range c.data[keyL] {
 		values = append(values, a.value)
@@ -64,7 +65,7 @@ func (c *Map) FindString(key string) []types.MatchData {
 	if len(c.data) == 0 {
 		return nil
 	}
-	keyL := strings.ToLower(key)
+	keyL := istrings.AsciiToLower(key)
 	// if key is not empty
 	if e, ok := c.data[keyL]; ok {
 		for _, aVar := range e {
@@ -79,7 +80,9 @@ func (c *Map) FindString(key string) []types.MatchData {
 }
 
 func (c *Map) FindAll() []types.MatchData {
-	var result []types.MatchData
+	// most of the times the size will be len(c.data)
+	result := make([]types.MatchData, 0, len(c.data))
+	i := 0
 	for _, data := range c.data {
 		for _, d := range data {
 			result = append(result, &corazarules.MatchData{
@@ -87,19 +90,20 @@ func (c *Map) FindAll() []types.MatchData {
 				Key_:      d.key,
 				Value_:    d.value,
 			})
+			i++
 		}
 	}
-	return result
+	return result[:i]
 }
 
 func (c *Map) Add(key string, value string) {
-	keyL := strings.ToLower(key)
+	keyL := istrings.AsciiToLower(key)
 	aVal := keyValue{key: key, value: value}
 	c.data[keyL] = append(c.data[keyL], aVal)
 }
 
 func (c *Map) Set(key string, values []string) {
-	keyL := strings.ToLower(key)
+	keyL := istrings.AsciiToLower(key)
 	c.data[keyL] = make([]keyValue, 0, len(values))
 	for _, v := range values {
 		c.data[keyL] = append(c.data[keyL], keyValue{key: key, value: v})
@@ -107,7 +111,7 @@ func (c *Map) Set(key string, values []string) {
 }
 
 func (c *Map) SetIndex(key string, index int, value string) {
-	keyL := strings.ToLower(key)
+	keyL := istrings.AsciiToLower(key)
 	values := c.data[keyL]
 	av := keyValue{key: key, value: value}
 
@@ -125,7 +129,7 @@ func (c *Map) Remove(key string) {
 	if len(c.data) == 0 {
 		return
 	}
-	keyL := strings.ToLower(key)
+	keyL := istrings.AsciiToLower(key)
 	delete(c.data, keyL)
 }
 

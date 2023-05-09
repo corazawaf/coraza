@@ -106,3 +106,12 @@ func InSlice(a string, list []string) bool {
 func WrapUnsafe(buf []byte) string {
 	return *(*string)(unsafe.Pointer(&buf))
 }
+
+func AsciiToLower(s string) string {
+	return strings.Map(func(r rune) rune {
+		if r >= 'A' && r <= 'Z' {
+			return r + 32
+		}
+		return r
+	}, s)
+}

@@ -8,13 +8,13 @@ import (
 	"reflect"
 	"regexp"
 	"strconv"
-	"strings"
 	"sync"
 	"unsafe"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
+	istrings "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -403,7 +403,7 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 	r.variables = append(r.variables, ruleVariableParams{
 		Count:      iscount,
 		Variable:   v,
-		KeyStr:     strings.ToLower(key),
+		KeyStr:     istrings.AsciiToLower(key),
 		KeyRx:      re,
 		Exceptions: []ruleVariableException{},
 	})
@@ -430,7 +430,7 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 	}
 	for i, rv := range r.variables {
 		if rv.Variable == v {
-			rv.Exceptions = append(rv.Exceptions, ruleVariableException{strings.ToLower(key), re})
+			rv.Exceptions = append(rv.Exceptions, ruleVariableException{istrings.AsciiToLower(key), re})
 			r.variables[i] = rv
 		}
 	}

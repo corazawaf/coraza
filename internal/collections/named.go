@@ -99,19 +99,23 @@ func (c *NamedCollectionNames) FindString(key string) []types.MatchData {
 }
 
 func (c *NamedCollectionNames) FindAll() []types.MatchData {
-	var res []types.MatchData
+	// we will get at least len(c.collection.Map.data) elements
+	res := make([]types.MatchData, 0, len(c.collection.Map.data))
 	// Iterates over all the data in the map and adds the key element also to the Key field (The key value may be the value
 	//  that is matched, but it is still also the key of the pair and it is needed to print the matched var name)
+	i := 0
 	for _, data := range c.collection.Map.data {
+		// TODO(jptosso): maybe we should grow res by len(data) on each iteration?
 		for _, d := range data {
 			res = append(res, &corazarules.MatchData{
 				Variable_: c.variable,
 				Key_:      d.key,
 				Value_:    d.key,
 			})
+			i++
 		}
 	}
-	return res
+	return res[:i]
 }
 
 func (c *NamedCollectionNames) Name() string {

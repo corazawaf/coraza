@@ -11,6 +11,7 @@ import (
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	istrings "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
@@ -72,7 +73,7 @@ func (a *setvarFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.Transacti
 		Str("var_value", value).
 		Int("rule_id", r.ID()).
 		Msg("Action evaluated")
-	a.evaluateTxCollection(r, tx, strings.ToLower(key), value)
+	a.evaluateTxCollection(r, tx, istrings.AsciiToLower(key), value)
 }
 
 func (a *setvarFn) Type() plugintypes.ActionType {

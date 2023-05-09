@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strings"
 
+	istrings "github.com/corazawaf/coraza/v3/internal/strings"
+
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -132,7 +134,7 @@ func (m *macro) compile(input string) error {
 				m.tokens = append(m.tokens, macroToken{
 					text:     currentToken.String(),
 					variable: v,
-					key:      strings.ToLower(key),
+					key:      istrings.AsciiToLower(key),
 				})
 				currentToken.Reset()
 				continue

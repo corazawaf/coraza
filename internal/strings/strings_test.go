@@ -6,7 +6,10 @@
 
 package strings
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestMaybeRemoveQuotes(t *testing.T) {
 	tests := []struct {
@@ -88,4 +91,26 @@ func TestRandomStringConcurrency(t *testing.T) {
 	for i := 0; i < 5000; i++ {
 		go RandomString(10000)
 	}
+}
+
+func TestAsciiToLower(t *testing.T) {
+	hw := "HELLO WORLD"
+	hw = AsciiToLower(hw)
+	if hw != "hello world" {
+		t.Errorf("AsciiToLower() = %s, want %s", hw, "hello world")
+	}
+}
+
+func BenchmarkAsciiVsUnicodeCaseString(b *testing.B) {
+	str := "This is a String With a lot of Characters!!!"
+	b.Run("ascii", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			AsciiToLower(str)
+		}
+	})
+	b.Run("unicode", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			strings.ToLower(str)
+		}
+	})
 }

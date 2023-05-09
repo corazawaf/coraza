@@ -307,7 +307,7 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 	if key == "" {
 		return
 	}
-	keyl := strings.ToLower(key)
+	keyl := stringsutil.AsciiToLower(key)
 	tx.variables.requestHeaders.Add(key, value)
 
 	switch keyl {
@@ -336,7 +336,7 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 	if key == "" {
 		return
 	}
-	keyl := strings.ToLower(key)
+	keyl := stringsutil.AsciiToLower(key)
 	tx.variables.responseHeaders.Add(key, value)
 
 	// Most headers can be managed like that

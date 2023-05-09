@@ -6,7 +6,8 @@ package types
 import (
 	"fmt"
 	"strconv"
-	"strings"
+
+	istrings "github.com/corazawaf/coraza/v3/internal/strings"
 )
 
 // RuleSeverity represents the severity of a triggered rule
@@ -84,7 +85,7 @@ func ParseRuleSeverity(input string) (RuleSeverity, error) {
 		}
 		return RuleSeverity(s), nil
 	}
-	switch strings.ToLower(input) {
+	switch istrings.AsciiToLower(input) {
 	case "emergency":
 		return RuleSeverityEmergency, nil
 	case "alert":
