@@ -113,9 +113,7 @@ func (mr *MatchedRule) Rule() types.RuleMetadata {
 	return mr.Rule_
 }
 
-func (mr MatchedRule) details(matchData types.MatchData) string {
-	log := &strings.Builder{}
-
+func (mr MatchedRule) writeDetails(log *strings.Builder, matchData types.MatchData) {
 	msg := matchData.Message()
 	data := matchData.Data()
 	if len(msg) > 200 {
@@ -132,28 +130,29 @@ func (mr MatchedRule) details(matchData types.MatchData) string {
 	}
 	log.WriteString(fmt.Sprintf(" [hostname %q] [uri %q] [unique_id %q]",
 		mr.ServerIPAddress_, mr.URI_, mr.TransactionID_))
-	return log.String()
 }
 
-func (mr MatchedRule) matchData(matchData types.MatchData) string {
-	log := &strings.Builder{}
-	for _, matchData := range mr.MatchedDatas_ {
-		v := matchData.Variable().Name()
-		if matchData.Key() != "" {
-			v += fmt.Sprintf(":%s", matchData.Key())
-		}
-		value := matchData.Value()
-		if len(value) > 200 {
-			value = value[:200]
-		}
-		if mr.Rule_.Operator() != "" {
-			log.WriteString(fmt.Sprintf("Matched \"Operator %s matched %s at %s.",
-				"", value, v))
-		} else {
-			log.WriteString("Matched.\"")
-		}
+func (mr MatchedRule) matchData(matchData types.MatchData, log *strings.Builder) {
+	value := matchData.Value()
+	if len(value) > 200 {
+		value = value[:200]
 	}
-	return log.String()
+	op := mr.Rule_.Operator()
+	if op == "" {
+		log.WriteString("Matched.")
+		return
+	}
+	log.WriteString("Matched Operator ")
+	log.WriteString(op)
+	log.WriteString(" matched ")
+	log.WriteString(value)
+	log.WriteString(" at ")
+	log.WriteString(matchData.Variable().Name())
+	if matchData.Key() != "" {
+		log.WriteString(":")
+		log.WriteString(matchData.Key())
+	}
+	log.WriteString(".")
 }
 
 // AuditLog transforms the matched rule into an error log
@@ -167,8 +166,8 @@ func (mr MatchedRule) AuditLog(code int) string {
 		} else {
 			log.WriteString("Coraza: Warning. ")
 		}
-		log.WriteString(mr.matchData(matchData))
-		log.WriteString(mr.details(matchData))
+		mr.matchData(matchData, log)
+		mr.writeDetails(log, matchData)
 		log.WriteString("\n")
 	}
 	return log.String()
@@ -199,7 +198,7 @@ func (mr MatchedRule) ErrorLog(code int) string {
 		}
 		log.WriteString(msg)
 		log.WriteString(" ")
-		log.WriteString(mr.details(matchData))
+		mr.writeDetails(log, matchData)
 		log.WriteString("\n")
 	}
 	return log.String()

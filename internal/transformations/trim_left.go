@@ -5,6 +5,7 @@ package transformations
 
 import "strings"
 
-func trimLeft(data string) (string, error) {
-	return strings.TrimLeft(data, trimSpaces), nil
+func trimLeft(data string) (string, bool, error) {
+	transformedData := strings.TrimLeft(data, trimSpaces)
+	return transformedData, len(data) != len(transformedData), nil
 }

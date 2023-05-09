@@ -352,8 +352,9 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, collectiveMatc
 
 func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transformationKey]*transformationValue) ([]string, []error) {
 	if r.MultiMatch {
-		// TODO in the future, we don't need to run every transformation
-		// We could try for each until found
+		// TODOs:
+		// - We don't need to run every transformation. We could try for each until found
+		// - Cache is not used for multimatch
 		return r.executeTransformationsMultimatch(arg.Value())
 	} else {
 		switch {
@@ -584,16 +585,20 @@ func (r *Rule) executeOperator(data string, tx *Transaction) (result bool) {
 }
 
 func (r *Rule) executeTransformationsMultimatch(value string) ([]string, []error) {
+	// The original value will be evaluated
 	res := []string{value}
 	var errs []error
-	var err error
 	for _, t := range r.transformations {
-		value, err = t.Function(value)
+		transformedValue, changed, err := t.Function(value)
 		if err != nil {
 			errs = append(errs, err)
 			continue
 		}
-		res = append(res, value)
+		// Every time a transformation generates a new value different from the previous one, the new value is collected to be evaluated
+		if changed {
+			res = append(res, transformedValue)
+			value = transformedValue
+		}
 	}
 	return res, errs
 }
@@ -601,7 +606,7 @@ func (r *Rule) executeTransformationsMultimatch(value string) ([]string, []error
 func (r *Rule) executeTransformations(value string) (string, []error) {
 	var errs []error
 	for _, t := range r.transformations {
-		v, err := t.Function(value)
+		v, _, err := t.Function(value)
 		if err != nil {
 			errs = append(errs, err)
 			continue

@@ -7,8 +7,8 @@ import (
 	"encoding/hex"
 )
 
-func hexEncode(data string) (string, error) {
+func hexEncode(data string) (string, bool, error) {
 	src := []byte(data)
 
-	return hex.EncodeToString(src), nil
+	return hex.EncodeToString(src), true, nil
 }

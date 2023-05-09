@@ -181,6 +181,7 @@ func directiveSecRule(options *DirectiveOptions) error {
 		Raw:          options.Raw,
 		Directive:    "SecRule",
 		Data:         options.Opts,
+		Datasets:     options.Datasets,
 	})
 	if err != nil && !ignoreErrors {
 		return err
@@ -778,8 +779,9 @@ func directiveSecAuditLogParts(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	options.WAF.AuditLogParts = types.AuditLogParts(options.Opts)
-	return nil
+	var err error
+	options.WAF.AuditLogParts, err = types.ParseAuditLogParts(options.Opts)
+	return err
 }
 
 // Description: Configures the audit logging engine.

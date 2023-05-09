@@ -7,24 +7,27 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/strings"
 )
 
-func compressWhitespace(value string) (string, error) {
+func compressWhitespace(value string) (string, bool, error) {
 	for i := 0; i < len(value); i++ {
 		if isLatinSpace(value[i]) {
-			return doCompressWhitespace(value, i), nil
+			transformedValue, changed := doCompressWhitespace(value, i)
+			return transformedValue, changed, nil
 		}
 	}
-	return value, nil
+	return value, false, nil
 }
 
-func doCompressWhitespace(input string, pos int) string {
-	// The output may be significantly different length than input, so we don't preallocate
+func doCompressWhitespace(input string, pos int) (string, bool) {
+	// The output may be significantly different in length (shorter) than the input, so we don't preallocate
 	ret := []byte(input[0:pos])
 
+	changed := false
 	inWhiteSpace := false
 	for i := pos; i < len(input); {
 		if isLatinSpace(input[i]) {
 			if inWhiteSpace {
 				i++
+				changed = true
 				continue
 			} else {
 				inWhiteSpace = true
@@ -37,7 +40,7 @@ func doCompressWhitespace(input string, pos int) string {
 		i++
 	}
 
-	return strings.WrapUnsafe(ret)
+	return strings.WrapUnsafe(ret), changed
 }
 
 func isLatinSpace(c byte) bool { // copied from unicode.IsSpace

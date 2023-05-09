@@ -20,7 +20,7 @@ func BenchmarkB64Decode(b *testing.B) {
 	for _, tt := range b64DecodeTests {
 		b.Run(tt, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				_, err := base64decode(tt)
+				_, _, err := base64decode(tt)
 				if err != nil {
 					b.Error(err)
 				}
@@ -34,7 +34,7 @@ func FuzzB64Decode(f *testing.F) {
 		f.Add(tc)
 	}
 	f.Fuzz(func(t *testing.T, tc string) {
-		data, err := base64decode(tc)
+		data, _, err := base64decode(tc)
 		// We decode base64 within non-base64 so there is no
 		// error case.
 		if err != nil {

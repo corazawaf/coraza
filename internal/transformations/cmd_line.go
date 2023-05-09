@@ -20,13 +20,13 @@ replacing all commas [,] and semicolon [;] into a space
 replacing all multiple spaces (including tab, newline, etc.) into one space
 transform all characters to lowercase
 */
-func cmdLine(data string) (string, error) {
+func cmdLine(data string) (string, bool, error) {
 	for i := 0; i < len(data); i++ {
 		if needsTransform(data[i]) {
-			return doCMDLine(data, i), nil
+			return doCMDLine(data, i), true, nil
 		}
 	}
-	return data, nil
+	return data, false, nil
 }
 
 func doCMDLine(input string, pos int) string {
