@@ -317,8 +317,9 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 
 func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transformationKey]*transformationValue) ([]string, []error) {
 	if r.MultiMatch {
-		// TODO in the future, we don't need to run every transformation
-		// We could try for each until found
+		// TODOs:
+		// - We don't need to run every transformation. We could try for each until found
+		// - Cache is not used for multimatch
 		return r.executeTransformationsMultimatch(arg.Value())
 	} else {
 		switch {
