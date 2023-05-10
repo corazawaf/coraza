@@ -110,7 +110,13 @@ func WrapUnsafe(buf []byte) string {
 // AsciiToLower converts the ASCII characters in the string to lowercase.
 // Unlike strings.ToLower, this function does not allocate memory.
 func AsciiToLower(s string) string {
-	return strings.ToLower(s)
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c >= 'A' && c <= 'Z' {
+			return doAsciiToLower(s, i)
+		}
+	}
+	return s
 }
 
 func doAsciiToLower(s string, start int) string {
