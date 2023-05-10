@@ -102,15 +102,36 @@ func TestAsciiToLower(t *testing.T) {
 }
 
 func BenchmarkAsciiVsUnicodeCaseString(b *testing.B) {
-	str := "This is a String With a lot of Characters!!!"
-	b.Run("ascii", func(b *testing.B) {
+	strs := []string{
+		"This is a String With a lot of Characters!!!",
+		"this is a lowercase string with many characters",
+		"THIS IS AN UPPERCASE STRING WITH MANY CHARACTERS",
+		"ThIs Is A StRiNg WiTh MiXeD CaSe",
+	}
+	b.Run("hacky ascii", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			AsciiToLower(str)
+			for _, str := range strs {
+				AsciiToLower(str)
+			}
+		}
+	})
+	b.Run("standard ascii", func(b *testing.B) {
+		for _, s := range strs {
+			bts := []byte(s)
+			for i := 0; i < len(s); i++ {
+				c := s[i]
+				if c >= 'A' && c <= 'Z' {
+					bts[i] = c + 32
+				}
+			}
+			_ = string(bts)
 		}
 	})
 	b.Run("unicode", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			strings.ToLower(str)
+			for _, str := range strs {
+				strings.ToLower(str)
+			}
 		}
 	})
 }
