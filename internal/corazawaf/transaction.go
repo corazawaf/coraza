@@ -440,7 +440,7 @@ func (tx *Transaction) ParseRequestReader(data io.Reader) (*types.Interruption, 
 	return tx.ProcessRequestBody()
 }
 
-// matchVariable Creates the MATCHED_ variables required by chains and macro expansion
+// matchVariable creates MATCHED_* variables required by chains and macro expansions
 // MATCHED_VARS, MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES
 func (tx *Transaction) matchVariable(match *corazarules.MatchData) {
 	var varName string

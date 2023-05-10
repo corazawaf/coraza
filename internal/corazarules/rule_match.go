@@ -125,7 +125,19 @@ func (mr MatchedRule) writeDetails(log *strings.Builder, matchData types.MatchDa
 		mr.ServerIPAddress_, mr.URI_, mr.TransactionID_))
 }
 
-func (mr MatchedRule) matchData(matchData types.MatchData, log *strings.Builder) {
+func (mr MatchedRule) writeExtraRuleDetails(log *strings.Builder, matchData types.MatchData, n int) {
+	msg := matchData.Message()
+	data := matchData.Data()
+	if len(msg) > 200 {
+		msg = msg[:200]
+	}
+	if len(data) > 200 {
+		data = data[:200]
+	}
+	log.WriteString(fmt.Sprintf("[msg_match_%d %q] [data_match_%d %q]", n, msg, n, data))
+}
+
+func (mr MatchedRule) matchData(log *strings.Builder, matchData types.MatchData) {
 	value := matchData.Value()
 	if len(value) > 200 {
 		value = value[:200]
@@ -159,7 +171,7 @@ func (mr MatchedRule) AuditLog(code int) string {
 		} else {
 			log.WriteString("Coraza: Warning. ")
 		}
-		mr.matchData(matchData, log)
+		mr.matchData(log, matchData)
 		mr.writeDetails(log, matchData)
 		log.WriteString("\n")
 	}
@@ -168,7 +180,8 @@ func (mr MatchedRule) AuditLog(code int) string {
 
 // ErrorLog returns the same as audit log but without matchData
 func (mr MatchedRule) ErrorLog(code int) string {
-	msg := mr.MatchedDatas_[0].Message()
+	matchData := mr.MatchedDatas_[0]
+	msg := matchData.Message()
 	for _, md := range mr.MatchedDatas_ {
 		// Use 1st set message of rule chain as message
 		if md.Message() != "" {
@@ -182,17 +195,26 @@ func (mr MatchedRule) ErrorLog(code int) string {
 
 	log := &strings.Builder{}
 
-	for _, matchData := range mr.MatchedDatas_ {
-		log.WriteString(fmt.Sprintf("[client %q] ", mr.ClientIPAddress_))
-		if mr.Disruptive_ {
-			log.WriteString(fmt.Sprintf("Coraza: Access denied with code %d (phase %d). ", code, mr.Rule_.Phase()))
-		} else {
-			log.WriteString("Coraza: Warning. ")
-		}
-		log.WriteString(msg)
-		log.WriteString(" ")
-		mr.writeDetails(log, matchData)
-		log.WriteString("\n")
+	log.WriteString(fmt.Sprintf("[client %q] ", mr.ClientIPAddress_))
+	if mr.Disruptive_ {
+		log.WriteString(fmt.Sprintf("Coraza: Access denied with code %d (phase %d). ", code, mr.Rule_.Phase()))
+	} else {
+		log.WriteString("Coraza: Warning. ")
 	}
+	log.WriteString(msg)
+	log.WriteString(" ")
+	mr.writeDetails(log, matchData)
+
+	for n, matchData := range mr.MatchedDatas_ {
+		if n == 0 {
+			// Skipping first matchData, it has been just added to the log
+			continue
+		}
+		if matchData.Message() != "" || matchData.Data() != "" {
+			mr.writeExtraRuleDetails(log, matchData, n)
+		}
+	}
+
+	log.WriteString("\n")
 	return log.String()
 }
