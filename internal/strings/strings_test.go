@@ -116,15 +116,17 @@ func BenchmarkAsciiVsUnicodeCaseString(b *testing.B) {
 		}
 	})
 	b.Run("standard ascii", func(b *testing.B) {
-		for _, s := range strs {
-			bts := []byte(s)
-			for i := 0; i < len(s); i++ {
-				c := s[i]
-				if c >= 'A' && c <= 'Z' {
-					bts[i] = c + 32
+		for i := 0; i < b.N; i++ {
+			for _, s := range strs {
+				bts := []byte(s)
+				for i := 0; i < len(s); i++ {
+					c := s[i]
+					if c >= 'A' && c <= 'Z' {
+						bts[i] = c + 32
+					}
 				}
+				_ = string(bts)
 			}
-			_ = string(bts)
 		}
 	})
 	b.Run("unicode", func(b *testing.B) {
