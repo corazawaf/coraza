@@ -7,6 +7,7 @@ import (
 	"golang.org/x/net/html"
 )
 
-func htmlEntityDecode(data string) (string, error) {
-	return html.UnescapeString(data), nil
+func htmlEntityDecode(data string) (string, bool, error) {
+	transformedData := html.UnescapeString(data)
+	return transformedData, len(data) != len(transformedData), nil
 }

@@ -10,10 +10,11 @@ import (
 )
 
 // base64decode decodes a Base64-encoded string.
-func base64decode(data string) (string, error) {
+func base64decode(data string) (string, bool, error) {
 	dec, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
-		return data, nil
+		// Forgiving implementation, which ignores invalid characters
+		return data, false, nil
 	}
-	return stringsutil.WrapUnsafe(dec), nil
+	return stringsutil.WrapUnsafe(dec), true, nil
 }

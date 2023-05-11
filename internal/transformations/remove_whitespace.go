@@ -9,13 +9,17 @@ import (
 )
 
 // removeWhitespace removes all whitespace characters from input.
-func removeWhitespace(data string) (string, error) {
-	return strings.Map(func(r rune) rune {
+func removeWhitespace(data string) (string, bool, error) {
+	changed := false
+	transformedData := strings.Map(func(r rune) rune {
 		if unicode.IsSpace(r) {
 			// if the character is a space, drop it
+			changed = true
 			return -1
 		}
 		// else keep it in the string
 		return r
-	}, data), nil
+	}, data)
+
+	return transformedData, changed, nil
 }

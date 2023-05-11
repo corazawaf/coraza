@@ -14,7 +14,7 @@ func BenchmarkSHA1(b *testing.B) {
 		tt := tc
 		b.Run(tt, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := sha1T(tt); err != nil {
+				if _, _, err := sha1T(tt); err != nil {
 					b.Fatal(err)
 				}
 			}

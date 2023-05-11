@@ -5,33 +5,37 @@ package transformations
 
 import "testing"
 
-func TestEncode(t *testing.T) {
+func TestLowerCase(t *testing.T) {
 	tests := []struct {
 		input string
 		want  string
 	}{
 		{
+			input: "TestCase",
+			want:  "testcase",
+		},
+		{
+			input: "test\u0000case",
+			want:  "test\u0000case",
+		},
+		{
+			input: "testcase",
+			want:  "testcase",
+		},
+		{
 			input: "",
 			want:  "",
 		},
 		{
-			input: "helloWorld",
-			want:  "helloWorld",
-		},
-		{
-			input: "hello world",
-			want:  "hello+world",
-		},
-		{
-			input: "https://www.coraza.io",
-			want:  "https%3a%2f%2fwww%2ecoraza%2eio",
+			input: "ThIs Is A tExT fOr TeStInG lOwErCaSe FuNcTiOnAlItY.",
+			want:  "this is a text for testing lowercase functionality.",
 		},
 	}
 
 	for _, tc := range tests {
 		tt := tc
 		t.Run(tt.input, func(t *testing.T) {
-			have, changed, err := urlEncode(tt.input)
+			have, changed, err := lowerCase(tt.input)
 			if err != nil {
 				t.Error(err)
 			}
@@ -45,18 +49,16 @@ func TestEncode(t *testing.T) {
 	}
 }
 
-func BenchmarkURLEncode(b *testing.B) {
+func BenchmarkLowercase(b *testing.B) {
 	tests := []string{
-		" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}",
-		"ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ",
-		"~",
-		"Test Case",
+		"tesTcase",
+		"ThIs Is A tExT fOr TeStInG lOwErCaSe FuNcTiOnAlItY.ThIs Is A tExT fOr TeStInG lOwErCaSe FuNcTiOnAlItY. ThIs Is A tExT fOr TeStInG lOwErCaSe FuNcTiOnAlItY.ThIs Is A tExT fOr TeStInG lOwErCaSe FuNcTiOnAlItY.",
 	}
 	for i := 0; i < b.N; i++ {
 		for _, tt := range tests {
 			b.Run(tt, func(b *testing.B) {
 				for j := 0; j < b.N; j++ {
-					_, _, err := urlEncode(tt)
+					_, _, err := lowerCase(tt)
 					if err != nil {
 						b.Error(err)
 					}

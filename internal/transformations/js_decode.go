@@ -10,19 +10,21 @@ import (
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 )
 
-func jsDecode(data string) (string, error) {
+func jsDecode(data string) (string, bool, error) {
 	if i := strings.IndexByte(data, '\\'); i != -1 {
 		// TODO: This will transform even if the backslash isn't followed by an escape,
 		// but keep it simple for now.
-		return doJsDecode(data, i), nil
+		transformedData, changed := doJsDecode(data, i)
+		return transformedData, changed, nil
 	}
-	return data, nil
+	return data, false, nil
 }
 
 // https://github.com/SpiderLabs/ModSecurity/blob/b66224853b4e9d30e0a44d16b29d5ed3842a6b11/src/actions/transformations/js_decode.cc
-func doJsDecode(input string, pos int) string {
+func doJsDecode(input string, pos int) (string, bool) {
 	d := []byte(input)
 	inputLen := len(input)
+	changed := false
 
 	i := pos
 	c := pos
@@ -38,10 +40,12 @@ func doJsDecode(input string, pos int) string {
 
 				/* Use only the lower byte. */
 				d[c] = utils.X2c(input[i+4:])
+				changed = true
 
 				/* Full width ASCII (ff01 - ff5e) needs 0x20 added */
 				if (d[c] > 0x00) && (d[c] < 0x5f) && ((input[i+2] == 'f') || (input[i+2] == 'F')) && ((input[i+3] == 'f') || (input[i+3] == 'F')) {
 					d[c] += 0x20
+					changed = true
 				}
 
 				c++
@@ -49,6 +53,7 @@ func doJsDecode(input string, pos int) string {
 			case (i+3 < inputLen) && (input[i+1] == 'x') && utils.ValidHex(input[i+2]) && utils.ValidHex(input[i+3]):
 				/* \xHH */
 				d[c] = utils.X2c(input[i+2:])
+				changed = true
 				c++
 				i += 4
 			case (i+1 < inputLen) && isodigit(input[i+1]):
@@ -73,6 +78,7 @@ func doJsDecode(input string, pos int) string {
 					}
 					nn, _ := strconv.ParseInt(string(buf), 8, 8)
 					d[c] = byte(nn)
+					changed = true
 					c++
 					i += 1 + j
 				}
@@ -100,6 +106,7 @@ func doJsDecode(input string, pos int) string {
 				}
 
 				d[c] = cc
+				changed = true
 				c++
 				i += 2
 			default:
@@ -117,7 +124,7 @@ func doJsDecode(input string, pos int) string {
 		}
 	}
 
-	return utils.WrapUnsafe(d[:c])
+	return utils.WrapUnsafe(d[:c]), changed
 
 }
 

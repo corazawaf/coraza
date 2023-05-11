@@ -7,10 +7,10 @@ import (
 	"strings"
 )
 
-func normalisePathWin(data string) (string, error) {
+func normalisePathWin(data string) (string, bool, error) {
 	leng := len(data)
 	if leng < 1 {
-		return data, nil
+		return data, false, nil
 	}
 	data = strings.ReplaceAll(data, "\\", "/")
 	return normalisePath(data)
