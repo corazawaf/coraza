@@ -9,6 +9,8 @@ package auditlog
 import (
 	"reflect"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 func TestDefaultWriters(t *testing.T) {
@@ -36,7 +38,7 @@ func TestGetFormatters(t *testing.T) {
 	})
 
 	t.Run("existing formatter", func(t *testing.T) {
-		expectedFn := func(al *Log) ([]byte, error) { return nil, nil }
+		expectedFn := func(al plugintypes.AuditLog) ([]byte, error) { return nil, nil }
 		RegisterFormatter("test", expectedFn)
 		actualFn, err := GetFormatter("TeSt")
 		if err != nil {

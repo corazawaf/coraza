@@ -147,7 +147,7 @@ func TestSecAuditLogs(t *testing.T) {
 		t.Error("failed to match rules")
 	}
 
-	if tx.AuditLog().Messages[0].Data.ID != 4482 {
+	if tx.AuditLog().Messages()[0].Data().ID() != 4482 {
 		t.Error("failed to match rule id")
 	}
 }

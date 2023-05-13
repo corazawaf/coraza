@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 func TestSerialLoggerFailsOnInit(t *testing.T) {
@@ -51,14 +53,14 @@ func TestSerialWriterWrites(t *testing.T) {
 		t.Error(err)
 	}
 	al := &Log{
-		Transaction: Transaction{
-			ID: "test123",
+		Transaction_: Transaction{
+			ID_: "test123",
 		},
-		Messages: []Message{
-			{
-				Data: MessageData{
-					ID:  100,
-					Raw: "SecAction \"id:100\"",
+		Messages_: []plugintypes.AuditLogMessage{
+			Message{
+				Data_: &MessageData{
+					ID_:  100,
+					Raw_: "SecAction \"id:100\"",
 				},
 			},
 		},

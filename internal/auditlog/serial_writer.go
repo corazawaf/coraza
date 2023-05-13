@@ -10,16 +10,18 @@ import (
 	"io"
 	"log"
 	"os"
+
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 // serialWriter is used to store logs in a single file
 type serialWriter struct {
 	io.Closer
 	log       log.Logger
-	formatter Formatter
+	formatter plugintypes.AuditLogFormatter
 }
 
-func (sl *serialWriter) Init(c Config) error {
+func (sl *serialWriter) Init(c plugintypes.AuditLogConfig) error {
 	if c.File == "" {
 		sl.Closer = noopCloser{}
 		return nil
@@ -39,7 +41,7 @@ func (sl *serialWriter) Init(c Config) error {
 	return nil
 }
 
-func (sl *serialWriter) Write(al *Log) error {
+func (sl *serialWriter) Write(al plugintypes.AuditLog) error {
 	if sl.formatter == nil {
 		return nil
 	}
@@ -52,4 +54,4 @@ func (sl *serialWriter) Write(al *Log) error {
 	return nil
 }
 
-var _ Writer = (*serialWriter)(nil)
+var _ plugintypes.AuditLogWriter = (*serialWriter)(nil)

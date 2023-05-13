@@ -40,9 +40,9 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	id := utils.RandomString(10)
 
 	if err := waf.AuditLogWriter().Write(&auditlog.Log{
-		Parts: types.AuditLogParts("ABCDEFGHIJKZ"),
-		Transaction: auditlog.Transaction{
-			ID: id,
+		Parts_: types.AuditLogParts("ABCDEFGHIJKZ"),
+		Transaction_: auditlog.Transaction{
+			ID_: id,
 		},
 	}); err != nil {
 		t.Fatal(err)

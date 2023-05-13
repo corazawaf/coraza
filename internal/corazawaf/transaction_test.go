@@ -420,7 +420,7 @@ func TestAuditLog(t *testing.T) {
 	tx := makeTransaction(t)
 	tx.AuditLogParts = types.AuditLogParts("ABCDEFGHIJK")
 	al := tx.AuditLog()
-	if al.Transaction.ID != tx.id {
+	if al.Transaction().ID() != tx.id {
 		t.Error("invalid auditlog id")
 	}
 	// TODO more checks
@@ -682,13 +682,14 @@ func TestAuditLogFields(t *testing.T) {
 		t.Error("failed to match rule for audit")
 	}
 	al := tx.AuditLog()
-	if len(al.Messages) == 0 || al.Messages[0].Data.ID != rule.ID_ {
+	if len(al.Messages()) == 0 || al.Messages()[0].Data().ID() != rule.ID_ {
 		t.Error("failed to add rules to audit logs")
 	}
-	if al.Transaction.Request.Headers == nil || al.Transaction.Request.Headers["test"][0] != "test" {
+
+	if len(al.Transaction().Request().Headers()) == 0 || al.Transaction().Request().Headers()["test"][0] != "test" {
 		t.Error("failed to add request header to audit log")
 	}
-	if al.Transaction.Response.Headers == nil || al.Transaction.Response.Headers["test"][0] != "test" {
+	if len(al.Transaction().Response().Headers()) == 0 || al.Transaction().Response().Headers()["test"][0] != "test" {
 		t.Error("failed to add Response header to audit log")
 	}
 	if err := tx.Close(); err != nil {

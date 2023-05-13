@@ -7,6 +7,8 @@
 
 package auditlog
 
-func noopFormater(al *Log) ([]byte, error) {
+import "github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+
+func noopFormater(plugintypes.AuditLog) ([]byte, error) {
 	return nil, nil
 }

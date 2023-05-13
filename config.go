@@ -7,7 +7,7 @@ import (
 	"io/fs"
 
 	"github.com/corazawaf/coraza/v3/debuglog"
-	"github.com/corazawaf/coraza/v3/internal/auditlog"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -196,7 +196,7 @@ func (c *wafConfig) WithResponseBodyMimeTypes(mimeTypes []string) WAFConfig {
 type auditLogConfig struct {
 	relevantOnly bool
 	parts        types.AuditLogParts
-	writer       auditlog.Writer
+	writer       plugintypes.AuditLogWriter
 }
 
 func (c *auditLogConfig) LogRelevantOnly() AuditLogConfig {
