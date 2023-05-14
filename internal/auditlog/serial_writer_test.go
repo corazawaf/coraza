@@ -50,7 +50,7 @@ func TestSerialWriterWrites(t *testing.T) {
 	config.Formatter = jsonFormatter
 
 	if err := writer.Init(config); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	al := &Log{
 		Transaction_: Transaction{
@@ -71,8 +71,9 @@ func TestSerialWriterWrites(t *testing.T) {
 
 	data, err := os.ReadFile(tmp)
 	if err != nil {
-		t.Error("failed to read serial logger file", err)
+		t.Fatal("failed to read serial logger file", err)
 	}
+
 	if !strings.Contains(string(data), "test123") {
 		t.Errorf("failed to parse log tx id from serial log: \n%q on file %q", string(data), tmp)
 	}

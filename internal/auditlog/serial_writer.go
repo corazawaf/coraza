@@ -27,14 +27,23 @@ func (sl *serialWriter) Init(c plugintypes.AuditLogConfig) error {
 		return nil
 	}
 
-	fileMode := c.FileMode
 	sl.formatter = c.Formatter
 
-	f, err := os.OpenFile(c.File, os.O_APPEND|os.O_CREATE|os.O_WRONLY, fileMode)
-	if err != nil {
-		return err
+	var f *os.File
+	switch c.File {
+	case "/dev/stdout":
+		f = os.Stdout
+		sl.Closer = noopCloser{}
+	case "/dev/stderr":
+		f = os.Stderr
+		sl.Closer = noopCloser{}
+	default:
+		var err error
+		if f, err = os.OpenFile(c.File, os.O_APPEND|os.O_CREATE|os.O_WRONLY, c.FileMode); err != nil {
+			return err
+		}
+		sl.Closer = f
 	}
-	sl.Closer = f
 
 	sl.log.SetFlags(0)
 	sl.log.SetOutput(f)
