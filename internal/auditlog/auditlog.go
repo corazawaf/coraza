@@ -120,8 +120,16 @@ func (t Transaction) ServerID() string {
 	return t.ServerID_
 }
 
+func (t Transaction) HasRequest() bool {
+	return t.Request_ != nil
+}
+
 func (t Transaction) Request() plugintypes.AuditLogTransactionRequest {
 	return t.Request_
+}
+
+func (t Transaction) HasResponse() bool {
+	return t.Response_ != nil
 }
 
 func (t Transaction) Response() plugintypes.AuditLogTransactionResponse {
@@ -143,24 +151,36 @@ type TransactionResponse struct {
 
 var _ plugintypes.AuditLogTransactionResponse = (*TransactionResponse)(nil)
 
-func (tr *TransactionResponse) Protocol() string {
-	return tr.Protocol_
+func (tRes *TransactionResponse) Protocol() string {
+	if tRes == nil {
+		return ""
+	}
+
+	return tRes.Protocol_
 }
 
 func (tr *TransactionResponse) Status() int {
+	if tr == nil {
+		return 0
+	}
+
 	return tr.Status_
 }
 
 func (tr *TransactionResponse) Headers() map[string][]string {
+	if tr == nil {
+		return nil
+	}
+
 	return tr.Headers_
 }
 
 func (tr *TransactionResponse) Body() string {
-	return tr.Body_
-}
+	if tr == nil {
+		return ""
+	}
 
-func (tr *TransactionResponse) IsNil() bool {
-	return tr == nil
+	return tr.Body_
 }
 
 // TransactionProducer contains producer specific
@@ -214,36 +234,56 @@ type TransactionRequest struct {
 
 var _ plugintypes.AuditLogTransactionRequest = (*TransactionRequest)(nil)
 
-func (tr *TransactionRequest) Method() string {
-	return tr.Method_
+func (tReq *TransactionRequest) Method() string {
+	if tReq == nil {
+		return ""
+	}
+	return tReq.Method_
 }
 
 func (tr *TransactionRequest) Protocol() string {
+	if tr == nil {
+		return ""
+	}
 	return tr.Protocol_
 }
 
 func (tr *TransactionRequest) URI() string {
+	if tr == nil {
+		return ""
+	}
 	return tr.URI_
 }
 
 func (tr *TransactionRequest) HTTPVersion() string {
+	if tr == nil {
+		return ""
+	}
 	return tr.HTTPVersion_
 }
 
 func (tr *TransactionRequest) Headers() map[string][]string {
+	if tr == nil {
+		return nil
+	}
+
 	return tr.Headers_
 }
 
 func (tr *TransactionRequest) Body() string {
+	if tr == nil {
+		return ""
+	}
+
 	return tr.Body_
 }
 
 func (tr *TransactionRequest) Files() []plugintypes.AuditLogTransactionRequestFiles {
-	return tr.Files_
-}
+	if tr == nil {
+		return nil
+	}
 
-func (tr *TransactionRequest) IsNil() bool {
-	return tr == nil
+	return tr.Files_
 }
 
 // TransactionRequestFiles contains information

@@ -81,14 +81,14 @@ func (cl concurrentWriter) Write(al plugintypes.AuditLog) error {
 	defer cl.mux.Unlock()
 
 	cl.log.Printf("%s %s - - [%s]", al.Transaction().ClientIP(), al.Transaction().HostIP(), al.Transaction().Timestamp())
-	if !al.Transaction().Request().IsNil() {
+	if al.Transaction().HasRequest() {
 		cl.log.Printf(
 			` "%s %s %s"`,
 			al.Transaction().Request().Method(),
 			al.Transaction().Request().URI(),
 			al.Transaction().Request().HTTPVersion())
 	}
-	if !al.Transaction().Response().IsNil() {
+	if al.Transaction().HasResponse() {
 		cl.log.Printf(` %d`, al.Transaction().Response().Status())
 	}
 	cl.log.Printf("%s - %s\n", al.Transaction().ID(), filepath)

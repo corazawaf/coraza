@@ -27,7 +27,9 @@ type AuditLogTransaction interface {
 	HostPort() int
 	ServerID() string
 	Request() AuditLogTransactionRequest
+	HasRequest() bool
 	Response() AuditLogTransactionResponse
+	HasResponse() bool
 	Producer() AuditLogTransactionProducer
 }
 
@@ -37,7 +39,6 @@ type AuditLogTransactionResponse interface {
 	Status() int
 	Headers() map[string][]string
 	Body() string
-	IsNil() bool
 }
 
 // AuditLogTransactionProducer contains producer specific information
@@ -60,7 +61,6 @@ type AuditLogTransactionRequest interface {
 	Headers() map[string][]string
 	Body() string
 	Files() []AuditLogTransactionRequestFiles
-	IsNil() bool
 }
 
 // AuditLogTransactionRequestFiles contains information for the
