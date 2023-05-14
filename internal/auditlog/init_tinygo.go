@@ -6,11 +6,13 @@
 
 package auditlog
 
+import "github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+
 func init() {
-	RegisterWriter("concurrent", func() Writer {
+	RegisterWriter("concurrent", func() plugintypes.AuditLogWriter {
 		return noopWriter{}
 	})
-	RegisterWriter("serial", func() Writer {
+	RegisterWriter("serial", func() plugintypes.AuditLogWriter {
 		return noopWriter{}
 	})
 
