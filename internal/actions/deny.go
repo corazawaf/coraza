@@ -17,9 +17,11 @@ func (a *denyFn) Init(_ plugintypes.RuleMetadata, data string) error {
 	return nil
 }
 
+const noID = 0
+
 func (a *denyFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
 	rid := r.ID()
-	if rid == 0 {
+	if rid == noID {
 		rid = r.ParentID()
 	}
 	tx.Interrupt(&types.Interruption{

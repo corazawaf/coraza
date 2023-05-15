@@ -166,10 +166,12 @@ func (r *Rule) Evaluate(phase types.RulePhase, tx plugintypes.TransactionState, 
 	r.doEvaluate(phase, tx.(*Transaction), cache)
 }
 
+const noID = 0
+
 func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[transformationKey]*transformationValue) []types.MatchData {
 	tx.Capture = r.Capture
 	rid := r.ID_
-	if rid == 0 {
+	if rid == noID {
 		rid = r.ParentID_
 	}
 
@@ -191,7 +193,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 	if r.operator == nil {
 		tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Forcing rule to match")
 		md := &corazarules.MatchData{}
-		if r.ParentID_ != 0 || r.MultiMatch {
+		if r.ParentID_ != noID || r.MultiMatch {
 			// In order to support Msg and LogData for inner rules, we need to expand them now
 			if r.Msg != nil {
 				md.Message_ = r.Msg.Expand(tx)
@@ -206,7 +208,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 		ecol := tx.ruleRemoveTargetByID[r.ID_]
 		for _, v := range r.variables {
 			// TODO(anuraaga): Support skipping variables based on phase for rule chains too.
-			if multiphaseEvaluation && !r.HasChain && r.ParentID_ == 0 {
+			if multiphaseEvaluation && !r.HasChain && r.ParentID_ == noID {
 				min := minPhase(v.Variable)
 				// When multiphase evaluation is enabled, any variable is evaluated at its
 				// earliest possible phase, so we skip it if the rule refers to other phases
@@ -254,7 +256,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 						// Set the txn variables for expansions before usage
 						r.matchVariable(tx, mr)
 
-						if r.ParentID_ != 0 || r.MultiMatch {
+						if r.ParentID_ != noID || r.MultiMatch {
 							// In order to support Msg and LogData for inner rules, we need to expand them now
 							if r.Msg != nil {
 								mr.Message_ = r.Msg.Expand(tx)
@@ -289,7 +291,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 
 	// disruptive actions and rules affecting the rule flow are only evaluated by parent rules
 	// also, expansion of Msg and LogData of the parent rule is postponed after the chain evaluation (if any)
-	if r.ParentID_ == 0 {
+	if r.ParentID_ == noID {
 		// we only run the chains for the parent rule
 		for nr := r.Chain; nr != nil; {
 			tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Evaluating rule chain")
@@ -322,7 +324,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 				a.Function.Evaluate(r, tx)
 			}
 		}
-		if r.ID_ != 0 {
+		if r.ID_ != noID {
 			// we avoid matching chains and secmarkers
 			tx.MatchRule(r, matchedValues)
 		}
@@ -372,7 +374,7 @@ func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transform
 
 func (r *Rule) matchVariable(tx *Transaction, m *corazarules.MatchData) {
 	rid := r.ID_
-	if rid == 0 {
+	if rid == noID {
 		rid = r.ParentID_
 	}
 	if m.Variable() != variables.Unknown {

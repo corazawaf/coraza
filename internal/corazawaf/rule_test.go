@@ -307,7 +307,7 @@ func (*dummyDenyAction) Init(_ plugintypes.RuleMetadata, _ string) error {
 
 func (*dummyDenyAction) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
 	rid := r.ID()
-	if rid == 0 {
+	if rid == noID {
 		rid = r.ParentID()
 	}
 	tx.Interrupt(&types.Interruption{

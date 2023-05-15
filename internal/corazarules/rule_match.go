@@ -106,14 +106,16 @@ func (mr *MatchedRule) Rule() types.RuleMetadata {
 	return mr.Rule_
 }
 
+const maxSizeLogMessage = 200
+
 func (mr MatchedRule) writeDetails(log *strings.Builder, matchData types.MatchData) {
 	msg := matchData.Message()
 	data := matchData.Data()
-	if len(msg) > 200 {
-		msg = msg[:200]
+	if len(msg) > maxSizeLogMessage {
+		msg = msg[:maxSizeLogMessage]
 	}
-	if len(data) > 200 {
-		data = data[:200]
+	if len(data) > maxSizeLogMessage {
+		data = data[:maxSizeLogMessage]
 	}
 	log.WriteString(fmt.Sprintf("[file %q] [line %q] [id %q] [rev %q] [msg %q] [data %q] [severity %q] [ver %q] [maturity %q] [accuracy %q]",
 		mr.Rule_.File(), strconv.Itoa(mr.Rule_.Line()), strconv.Itoa(mr.Rule_.ID()), mr.Rule_.Revision(), msg, data, mr.Rule_.Severity().String(), mr.Rule_.Version(),
@@ -128,19 +130,19 @@ func (mr MatchedRule) writeDetails(log *strings.Builder, matchData types.MatchDa
 func (mr MatchedRule) writeExtraRuleDetails(log *strings.Builder, matchData types.MatchData, n int) {
 	msg := matchData.Message()
 	data := matchData.Data()
-	if len(msg) > 200 {
-		msg = msg[:200]
+	if len(msg) > maxSizeLogMessage {
+		msg = msg[:maxSizeLogMessage]
 	}
-	if len(data) > 200 {
-		data = data[:200]
+	if len(data) > maxSizeLogMessage {
+		data = data[:maxSizeLogMessage]
 	}
 	log.WriteString(fmt.Sprintf("[msg_match_%d %q] [data_match_%d %q]", n, msg, n, data))
 }
 
 func (mr MatchedRule) matchData(log *strings.Builder, matchData types.MatchData) {
 	value := matchData.Value()
-	if len(value) > 200 {
-		value = value[:200]
+	if len(value) > maxSizeLogMessage {
+		value = value[:maxSizeLogMessage]
 	}
 	op := mr.Rule_.Operator()
 	if op == "" {
@@ -189,8 +191,8 @@ func (mr MatchedRule) ErrorLog(code int) string {
 			break
 		}
 	}
-	if len(msg) > 200 {
-		msg = msg[:200]
+	if len(msg) > maxSizeLogMessage {
+		msg = msg[:maxSizeLogMessage]
 	}
 
 	log := &strings.Builder{}
