@@ -1,9 +1,6 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build !tinygo
-// +build !tinygo
-
 package auditlog
 
 import (
@@ -12,6 +9,7 @@ import (
 	"os"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/environment"
 )
 
 // serialWriter is used to store logs in a single file
@@ -27,9 +25,7 @@ func (sl *serialWriter) Init(c plugintypes.AuditLogConfig) error {
 		return nil
 	}
 
-	sl.formatter = c.Formatter
-
-	var f *os.File
+	var f io.Writer
 	switch c.File {
 	case "/dev/stdout":
 		f = os.Stdout
@@ -38,13 +34,20 @@ func (sl *serialWriter) Init(c plugintypes.AuditLogConfig) error {
 		f = os.Stderr
 		sl.Closer = noopCloser{}
 	default:
-		var err error
-		if f, err = os.OpenFile(c.File, os.O_APPEND|os.O_CREATE|os.O_WRONLY, c.FileMode); err != nil {
+		if !environment.HasAccessToFS {
+			sl.Closer = noopCloser{}
+			return nil
+		}
+
+		ff, err := os.OpenFile(c.File, os.O_APPEND|os.O_CREATE|os.O_WRONLY, c.FileMode)
+		if err != nil {
 			return err
 		}
-		sl.Closer = f
+		f = ff
+		sl.Closer = ff
 	}
 
+	sl.formatter = c.Formatter
 	sl.log.SetFlags(0)
 	sl.log.SetOutput(f)
 	return nil

@@ -13,7 +13,7 @@ func ExampleRegisterAuditLogFormatter() {
 		return []byte(al.Transaction().ID()), nil
 	})
 
-	w, _ := coraza.NewWAF(
+	w, err := coraza.NewWAF(
 		coraza.NewWAFConfig().
 			WithDirectives(`
 				SecAuditEngine On
@@ -23,6 +23,10 @@ func ExampleRegisterAuditLogFormatter() {
 				SecAuditLogType serial
 			`),
 	)
+	if err != nil {
+		panic(err)
+	}
+
 	tx := w.NewTransactionWithID("abc123")
 	tx.ProcessLogging()
 	tx.Close()
