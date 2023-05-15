@@ -1,3 +1,9 @@
+// Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
+// SPDX-License-Identifier: Apache-2.0
+
+//go:build !tinygo
+// +build !tinygo
+
 package plugins_test
 
 import (
@@ -11,34 +17,6 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
-
-// ExampleRegisterAuditLogFormatter shows how to register a custom audit log formatter
-// and tests the output of the formatter.
-func ExampleRegisterAuditLogFormatter() {
-	plugins.RegisterAuditLogFormatter("txid", func(al plugintypes.AuditLog) ([]byte, error) {
-		return []byte(al.Transaction().ID()), nil
-	})
-
-	w, err := coraza.NewWAF(
-		coraza.NewWAFConfig().
-			WithDirectives(`
-				SecAuditEngine On
-				SecAuditLogParts ABCFHZ
-				SecAuditLog /dev/stdout
-				SecAuditLogFormat txid
-				SecAuditLogType serial
-			`),
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	tx := w.NewTransactionWithID("abc123")
-	tx.ProcessLogging()
-	tx.Close()
-
-	// Output: abc123
-}
 
 type urlWriter struct {
 	url string
@@ -61,8 +39,8 @@ func (s *urlWriter) Write(al plugintypes.AuditLog) error {
 
 func (s *urlWriter) Close() error { return nil }
 
-// ExampleRegisterAuditLogFormatter shows how to register a custom audit log formatter
-// and tests the output of the formatter.
+// ExampleRegisterAuditLogWriter shows how to register a custom audit log writer
+// and tests the output of the writer.
 func ExampleRegisterAuditLogWriter() {
 	plugins.RegisterAuditLogWriter("url", func() plugintypes.AuditLogWriter {
 		return &urlWriter{}
