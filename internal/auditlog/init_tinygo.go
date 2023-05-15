@@ -13,7 +13,7 @@ func init() {
 		return noopWriter{}
 	})
 	RegisterWriter("serial", func() plugintypes.AuditLogWriter {
-		return &serialWriter{}
+		return noopWriter{}
 	})
 
 	// TODO(jcchavezs): check if newest TinyGo supports json.Marshaler for audit log type.

@@ -30,7 +30,7 @@ type concurrentWriter struct {
 
 func (cl *concurrentWriter) Init(c plugintypes.AuditLogConfig) error {
 	if c.Target == "" {
-		cl.Closer = noopCloser{}
+		cl.Closer = NoopCloser
 		return nil
 	}
 

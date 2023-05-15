@@ -7,6 +7,7 @@
 package auditlog
 
 import (
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -16,19 +17,45 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
-func TestSerialLoggerFailsOnInit(t *testing.T) {
-	config := NewConfig()
-	writer := &serialWriter{}
-	if err := writer.Init(config); err != nil {
-		t.Errorf("unexpected error: %s", err.Error())
+func TestSerialLoggerSuccessOnInit(t *testing.T) {
+	tests := map[string]struct {
+		target         string
+		expectedCloser io.Closer
+	}{
+		"empty": {
+			expectedCloser: NoopCloser,
+		},
+		"stderr": {
+			target:         "/dev/stderr",
+			expectedCloser: NoopCloser,
+		},
+		"stdout": {
+			target:         "/dev/stdout",
+			expectedCloser: NoopCloser,
+		},
 	}
+	for name, test := range tests {
+		config := NewConfig()
+		config.Target = test.target
 
-	if err := writer.Close(); err != nil {
-		t.Errorf("unexpected error: %s", err.Error())
+		w := &serialWriter{}
+		t.Run(name, func(t *testing.T) {
+			if err := w.Init(config); err != nil {
+				t.Errorf("unexpected error: %s", err.Error())
+			}
+
+			if want, have := test.expectedCloser, w.Closer; want != have {
+				t.Errorf("unexpected closer, want %v, have %v", want, have)
+			}
+
+			if err := w.Close(); err != nil {
+				t.Errorf("unexpected error: %s", err.Error())
+			}
+		})
 	}
 }
 
-func TestSerialWriterFailsOnInit(t *testing.T) {
+func TestSerialWriterFailsOnInitForUnexistingFile(t *testing.T) {
 	config := NewConfig()
 	config.Target = "/unexisting.log"
 	config.Dir = t.TempDir()
@@ -36,9 +63,13 @@ func TestSerialWriterFailsOnInit(t *testing.T) {
 	config.DirMode = fs.FileMode(0777)
 	config.Formatter = jsonFormatter
 
-	writer := &serialWriter{}
-	if err := writer.Init(config); err == nil {
+	w := &serialWriter{}
+	if err := w.Init(config); err == nil {
 		t.Error("expected error")
+	}
+
+	if err := w.Close(); err != nil {
+		t.Errorf("unexpected error: %s", err.Error())
 	}
 }
 
