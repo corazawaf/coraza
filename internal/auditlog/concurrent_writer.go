@@ -29,7 +29,7 @@ type concurrentWriter struct {
 }
 
 func (cl *concurrentWriter) Init(c plugintypes.AuditLogConfig) error {
-	if c.File == "" {
+	if c.Target == "" {
 		cl.Closer = noopCloser{}
 		return nil
 	}
@@ -40,7 +40,7 @@ func (cl *concurrentWriter) Init(c plugintypes.AuditLogConfig) error {
 	cl.formatter = c.Formatter
 	cl.mux = &sync.RWMutex{}
 
-	f, err := os.OpenFile(c.File, os.O_CREATE|os.O_WRONLY|os.O_APPEND, cl.logFileMode)
+	f, err := os.OpenFile(c.Target, os.O_CREATE|os.O_WRONLY|os.O_APPEND, cl.logFileMode)
 	if err != nil {
 		return err
 	}

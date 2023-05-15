@@ -20,13 +20,13 @@ type serialWriter struct {
 }
 
 func (sl *serialWriter) Init(c plugintypes.AuditLogConfig) error {
-	if c.File == "" {
+	if c.Target == "" {
 		sl.Closer = noopCloser{}
 		return nil
 	}
 
 	var f io.Writer
-	switch c.File {
+	switch c.Target {
 	case "/dev/stdout":
 		f = os.Stdout
 		sl.Closer = noopCloser{}
@@ -39,7 +39,7 @@ func (sl *serialWriter) Init(c plugintypes.AuditLogConfig) error {
 			return nil
 		}
 
-		ff, err := os.OpenFile(c.File, os.O_APPEND|os.O_CREATE|os.O_WRONLY, c.FileMode)
+		ff, err := os.OpenFile(c.Target, os.O_APPEND|os.O_CREATE|os.O_WRONLY, c.FileMode)
 		if err != nil {
 			return err
 		}

@@ -13,7 +13,7 @@ import (
 // NewConfig returns a Config with default values.
 func NewConfig() plugintypes.AuditLogConfig {
 	return plugintypes.AuditLogConfig{
-		File:      "",
+		Target:    "",
 		FileMode:  0644,
 		Dir:       "",
 		DirMode:   0755,

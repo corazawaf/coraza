@@ -34,7 +34,7 @@ func TestConcurrentWriterNoop(t *testing.T) {
 
 func TestConcurrentWriterFailsOnInit(t *testing.T) {
 	config := NewConfig()
-	config.File = "/unexisting.log"
+	config.Target = "/unexisting.log"
 	config.Dir = t.TempDir()
 	config.FileMode = fs.FileMode(0777)
 	config.DirMode = fs.FileMode(0777)
@@ -53,7 +53,7 @@ func TestConcurrentWriterWrites(t *testing.T) {
 		t.Error("failed to create concurrent logger file")
 	}
 	config := plugintypes.AuditLogConfig{
-		File:      file.Name(),
+		Target:    file.Name(),
 		Dir:       dir,
 		FileMode:  fs.FileMode(0777),
 		DirMode:   fs.FileMode(0777),

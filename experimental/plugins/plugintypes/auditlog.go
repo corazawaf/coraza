@@ -97,8 +97,8 @@ type AuditLogMessageData interface {
 
 // AuditLogConfig is the configuration of a Writer.
 type AuditLogConfig struct {
-	// File is the path to the file to write the raw audit log to.
-	File string
+	// Target is the path to the file to write the raw audit log to.
+	Target string
 
 	// FileMode is the mode to use when creating File.
 	FileMode fs.FileMode

@@ -30,7 +30,7 @@ func TestSerialLoggerFailsOnInit(t *testing.T) {
 
 func TestSerialWriterFailsOnInit(t *testing.T) {
 	config := NewConfig()
-	config.File = "/unexisting.log"
+	config.Target = "/unexisting.log"
 	config.Dir = t.TempDir()
 	config.FileMode = fs.FileMode(0777)
 	config.DirMode = fs.FileMode(0777)
@@ -46,7 +46,7 @@ func TestSerialWriterWrites(t *testing.T) {
 	tmp := filepath.Join(t.TempDir(), "audit.log")
 	writer := &serialWriter{}
 	config := NewConfig()
-	config.File = tmp
+	config.Target = tmp
 	config.Formatter = jsonFormatter
 
 	if err := writer.Init(config); err != nil {

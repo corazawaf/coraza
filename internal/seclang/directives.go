@@ -608,7 +608,7 @@ func directiveSecAuditLog(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	options.WAF.AuditLogWriterConfig.File = options.Opts
+	options.WAF.AuditLogWriterConfig.Target = options.Opts
 
 	return nil
 }
