@@ -171,11 +171,11 @@ func TestRuleLogging(t *testing.T) {
 	tx.AddGetRequestArgument("test1", "123")
 	tx.AddGetRequestArgument("test2", "456")
 	tx.ProcessRequestHeaders()
-	if len(tx.MatchedRules()) != 3 {
+	if len(tx.MatchedRules()) != 4 {
 		t.Errorf("failed to match rules with %d", len(tx.MatchedRules()))
 	}
 	// we expect 2 logs
-	if len(logs) != 2 {
+	if len(logs) != 3 {
 		t.Errorf("failed to log with %d", len(logs))
 	} else {
 		for _, l := range logs[:1] {
@@ -183,7 +183,7 @@ func TestRuleLogging(t *testing.T) {
 				t.Errorf("failed to log rule, got \n%s", l)
 			}
 		}
-		if !strings.Contains(logs[1], "[id \"2\"]") {
+		if !strings.Contains(logs[2], "[id \"2\"]") {
 			t.Errorf("failed to log rule, got \n%s", logs[2])
 		}
 	}
@@ -208,7 +208,7 @@ func TestRuleChains(t *testing.T) {
 	tx.AddGetRequestArgument("test1", "123")
 	tx.AddGetRequestArgument("test2", "456")
 	tx.ProcessRequestHeaders()
-	if len(tx.MatchedRules()) != 1 {
+	if len(tx.MatchedRules()) != 3 {
 		t.Errorf("failed to match rules with %d matches, expected 1", len(tx.MatchedRules()))
 	}
 }
@@ -230,11 +230,11 @@ func TestTagsAreNotPrintedTwice(t *testing.T) {
 	tx.AddGetRequestArgument("test1", "123")
 	tx.AddGetRequestArgument("test2", "456")
 	tx.ProcessRequestHeaders()
-	if len(tx.MatchedRules()) != 1 {
+	if len(tx.MatchedRules()) != 2 {
 		t.Errorf("failed to match rules with %d", len(tx.MatchedRules()))
 	}
 	// we expect 1 log
-	if len(logs) != 1 {
+	if len(logs) != 2 {
 		t.Errorf("failed to log with %d", len(logs))
 	}
 	re := regexp.MustCompile(`\[tag "some1"\]`)
@@ -302,11 +302,11 @@ func TestLogsAreNotPrintedManyTimes(t *testing.T) {
 	tx.AddGetRequestArgument("test2", "789")
 	tx.AddRequestHeader("test", "123")
 	tx.ProcessRequestHeaders()
-	if len(tx.MatchedRules()) != 1 {
+	if len(tx.MatchedRules()) != 3 {
 		t.Errorf("failed to match rules with %d", len(tx.MatchedRules()))
 	}
 	// we expect 2 logs
-	if len(logs) != 1 {
+	if len(logs) != 3 {
 		t.Errorf("failed to log with %d", len(logs))
 	}
 }
@@ -827,7 +827,7 @@ func TestParameterPollution(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if len(tx.MatchedRules()) == 1 {
+	if len(tx.MatchedRules()) == 2 {
 		if len(tx.MatchedRules()[0].MatchedDatas()) != 2 {
 			t.Errorf("failed to test arguments pollution. Found matches: %d, %+v\n",
 				len(tx.MatchedRules()[0].MatchedDatas()), tx.MatchedRules())
@@ -879,7 +879,7 @@ func TestURIQueryParamCaseSensitive(t *testing.T) {
 		t.Error(err)
 	}
 
-	if len(tx.MatchedRules()) == 1 {
+	if len(tx.MatchedRules()) == 3 {
 		if len(tx.MatchedRules()[0].MatchedDatas()) != 3 {
 			t.Errorf("failed to test uri query param. Found matches: %d, %+v\n",
 				len(tx.MatchedRules()[0].MatchedDatas()), tx.MatchedRules())

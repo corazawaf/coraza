@@ -477,29 +477,26 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 	if r.Severity_ > maxSeverity {
 		hs.Set(strconv.Itoa(r.Severity_.Int()))
 	}
-
-	mr := &corazarules.MatchedRule{
-		URI_:             tx.variables.requestURI.Get(),
-		TransactionID_:   tx.id,
-		ServerIPAddress_: tx.variables.serverAddr.Get(),
-		ClientIPAddress_: tx.variables.remoteAddr.Get(),
-		Rule_:            &r.RuleMetadata,
-		MatchedDatas_:    mds,
-	}
-
+	uri := tx.variables.requestURI.Get()
+	serverIP := tx.variables.serverAddr.Get()
+	clientIP := tx.variables.remoteAddr.Get()
 	for _, md := range mds {
-		// Use 1st set message of rule chain as message
-		if md.Message() != "" {
-			mr.Message_ = md.Message()
-			mr.Data_ = md.Data()
-			break
+		mr := &corazarules.MatchedRule{
+			URI_:             uri,
+			TransactionID_:   tx.id,
+			ServerIPAddress_: serverIP,
+			ClientIPAddress_: clientIP,
+			Rule_:            &r.RuleMetadata,
+			MatchedDatas_:    mds,
+		}
+		mr.Message_ = md.Message()
+		mr.Data_ = md.Data()
+		tx.matchedRules = append(tx.matchedRules, mr)
+		if tx.WAF.ErrorLogCb != nil && r.Log {
+			tx.WAF.ErrorLogCb(mr)
 		}
 	}
 
-	tx.matchedRules = append(tx.matchedRules, mr)
-	if tx.WAF.ErrorLogCb != nil && r.Log {
-		tx.WAF.ErrorLogCb(mr)
-	}
 }
 
 // GetStopWatch is used to debug phase durations
