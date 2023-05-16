@@ -8,7 +8,7 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/auditlog"
 )
 
-// RegisterAuditLogWriter registers a new audit log writter.
+// RegisterAuditLogWriter registers a new audit log writer.
 func RegisterAuditLogWriter(name string, writerFactory func() plugintypes.AuditLogWriter) {
 	auditlog.RegisterWriter(name, writerFactory)
 }
