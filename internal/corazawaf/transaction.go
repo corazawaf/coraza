@@ -486,6 +486,15 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 		Rule_:            &r.RuleMetadata,
 		MatchedDatas_:    mds,
 	}
+	// Populate MatchedRule Disruptive_ field only if the Engine is capable of performing disruptive actions
+	if tx.RuleEngine == types.RuleEngineOn {
+		for _, a := range r.actions {
+			if a.Function.Type() == plugintypes.ActionTypeDisruptive {
+				mr.Disruptive_ = true
+				break
+			}
+		}
+	}
 
 	for _, md := range mds {
 		// Use 1st set message of rule chain as message

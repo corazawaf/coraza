@@ -48,7 +48,7 @@ func TestErrorLogMessagesSizesNoExtraRuleDetails(t *testing.T) {
 	}
 	matchedRule.Disruptive_ = true
 	logWithDisruptive := matchedRule.ErrorLog(403)
-	disruptiveLine := "Coraza: Access denied with code"
+	disruptiveLine := "Coraza: Access denied"
 	if !strings.Contains(logWithDisruptive, disruptiveLine) {
 		t.Errorf("Expected string \"%s\" if disruptive rule, got %s", disruptiveLine, logWithMsg)
 	}
