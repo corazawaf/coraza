@@ -147,7 +147,7 @@ func TestSecAuditLogs(t *testing.T) {
 		t.Error("failed to match rules")
 	}
 
-	if tx.AuditLog().Messages[0].Data.ID != 4482 {
+	if tx.AuditLog().Messages()[0].Data().ID() != 4482 {
 		t.Error("failed to match rule id")
 	}
 }
@@ -196,7 +196,7 @@ func TestRuleChains(t *testing.T) {
 		SecRule ARGS "123" "id:1,phase:1,log,chain"
 			SecRule &ARGS "@gt 0" "chain"
 			SecRule ARGS "456" "setvar:'tx.test=ok'"
-		
+
 		SecRule ARGS "123" "id:2,phase:1,log,chain"
 			SecRule &ARGS "@gt 100" "chain"
 			SecRule ARGS "456" "setvar:'tx.test2=fail'"

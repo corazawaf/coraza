@@ -37,7 +37,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 						Output: profile.ExpectedOutput{
 							TriggeredRules:    []int{1, 200},
 							NonTriggeredRules: []int{2, 1313, 20},
-							LogContains:       "found within ARGS:Var2: prepayloadpost",
+							LogContains:       "found within ARGS_GET:Var2: prepayloadpost",
 						},
 					},
 				},
@@ -49,7 +49,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 						Output: profile.ExpectedOutput{
 							TriggeredRules:    []int{1, 300},
 							NonTriggeredRules: []int{2, 1313, 20},
-							LogContains:       "found within ARGS:Var3: pre3payloadpost",
+							LogContains:       "found within ARGS_GET:Var3: pre3payloadpost",
 						},
 					},
 				},
@@ -61,7 +61,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 						Output: profile.ExpectedOutput{
 							TriggeredRules:    []int{1, 400},
 							NonTriggeredRules: []int{2, 1313, 20},
-							LogContains:       "found within ARGS:Var4: pre4payloadpost",
+							LogContains:       "found within ARGS_GET:Var4: pre4payloadpost",
 						},
 					},
 				},
@@ -112,21 +112,21 @@ SecAction "id: 2, log, chain"
 SecRule REQUEST_URI "@rx (\d\d+)" "id:1313, chain, log"
   SecRule REQUEST_METHOD "GET" ""
 
-SecRule ARGS "@rx prepayloadpost"  "id:200, phase:2, log, msg:'Rule Parent 200', \
+SecRule ARGS_GET "@rx prepayloadpost"  "id:200, phase:2, log, msg:'Rule Parent 200', \
   logdata:'Matched Data: %{TX.0} found within %{TX.200_MATCHED_VAR_NAME}: %{MATCHED_VAR}',\
   setvar:'tx.200_matched_var_name=%{MATCHED_VAR_NAME}',\
   chain"
   SecRule MATCHED_VAR "@rx pre" "chain"
     SecRule MATCHED_VAR "@rx post"
 
-SecRule ARGS:var3 "@rx pre3payloadpost"  "id:300, phase:2, log, msg:'Rule Parent 300', \
+SecRule ARGS_GET:var3 "@rx pre3payloadpost"  "id:300, phase:2, log, msg:'Rule Parent 300', \
   logdata:'Matched Data: %{TX.0} found within %{TX.300_MATCHED_VAR_NAME}: %{MATCHED_VAR}',\
   setvar:'tx.300_matched_var_name=%{MATCHED_VAR_NAME}',\
   chain"
   SecRule MATCHED_VAR "@rx pre" "chain"
     SecRule MATCHED_VAR "@rx post"
 
-SecRule ARGS:Var4 "@rx pre4payloadpost"  "id:400, phase:2, log, msg:'Rule Parent 400', \
+SecRule ARGS_GET:Var4 "@rx pre4payloadpost"  "id:400, phase:2, log, msg:'Rule Parent 400', \
   logdata:'Matched Data: %{TX.0} found within %{TX.400_MATCHED_VAR_NAME}: %{MATCHED_VAR}',\
   setvar:'tx.400_matched_var_name=%{MATCHED_VAR_NAME}',\
   chain"
@@ -158,5 +158,86 @@ SecRule REQUEST_HEADERS "@rx attack21" \
     "msg:'Sub Sub Chain Rule',\
     logdata:'FoundSubSubChain21 %{MATCHED_VAR} in %{MATCHED_VAR_NAME}',\
     block"
+`,
+})
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "M4tteoP",
+		Description: "Tests the number of expected matches against a chained rule",
+		Enabled:     true,
+		Name:        "chains_counter.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			Title: "chains_number_matches",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/test",
+							Method: "POST",
+							Headers: map[string]string{
+								"Content-type":   "application/x-www-form-urlencoded",
+								"custom_header1": "test",
+							},
+							Data: "test",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{1, 2},
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecDebugLogLevel 9
+SecRequestBodyAccess On
+
+SecRule REQUEST_URI "test" "id:1, phase:2, t:none, pass, log, chain"
+	SecRule REQUEST_URI|REQUEST_BODY|REQUEST_HEADERS:custom_header1 "test" "setvar:'tx.counter=+1'"
+	SecRule TX:counter "@eq 3" "id:2, phase:2, t:none, pass, log"
+`,
+})
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "M4tteoP",
+		Description: "Tests the number of expected matches against a chained rule",
+		Enabled:     true,
+		Name:        "chains_counter_2.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			Title: "chains_number_matches",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/test",
+							Method: "POST",
+							Headers: map[string]string{
+								"Content-type":   "application/x-www-form-urlencoded",
+								"custom_header1": "test",
+							},
+							Data: "test",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{1, 2},
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecDebugLogLevel 9
+SecRequestBodyAccess On
+
+SecRule REQUEST_URI|REQUEST_HEADERS "test" "id:1, phase:2, t:none, pass, log, chain"
+    SecRule REQUEST_URI|REQUEST_HEADERS "test" "chain"
+        SecRule REQUEST_BODY|REQUEST_HEADERS:custom_header1|REQUEST_HEADERS "test" "setvar:'tx.counter=+1'"
+SecRule TX:counter "@eq 3" "id:2, phase:2, t:none, pass, log"
 `,
 })

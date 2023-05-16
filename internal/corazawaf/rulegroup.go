@@ -37,11 +37,13 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 	rule.inferredPhases.set(rule.Phase_)
 	for _, v := range rule.variables {
 		min := minPhase(v.Variable)
-		if min != 0 {
+		if min != types.PhaseUnknown {
 			// We infer the earliest phase a variable used by the rule may be evaluated for use when
 			// multiphase evaluation is enabled
 			rule.inferredPhases.set(min)
 			numInferred++
+		} else {
+			rule.withPhaseUnknownVariable = true
 		}
 	}
 
@@ -139,7 +141,15 @@ RulesLoop:
 		// Rules with phase 0 will always run
 		if r.Phase_ != 0 && r.Phase_ != phase {
 			// Execute the rule in inferred phases too if multiphase evaluation is enabled
-			if !multiphaseEvaluation || !r.inferredPhases.has(phase) {
+			// For chained rules, inferredPhases is not relevant, we rather have to run from minimal potentially
+			// matchable phase up to the rule's defined phase (chainMinPhase <= phase <= Phase_)
+			// At the first run chainMinPhase is not set, so we look at the parent chain rule's minimal phase.
+			// If it is not reached, we skip the whole chain, there is no chance to match it.
+			if !multiphaseEvaluation ||
+				(!r.HasChain && !r.inferredPhases.has(phase)) ||
+				(r.HasChain && phase < r.chainMinPhase) ||
+				(r.HasChain && !r.inferredPhases.hasOrMinor(phase) && !r.withPhaseUnknownVariable) ||
+				(r.HasChain && phase > r.Phase_) {
 				continue
 			}
 		}
@@ -220,7 +230,7 @@ RulesLoop:
 	if tx.AllowType == corazatypes.AllowTypePhase {
 		tx.AllowType = corazatypes.AllowTypeUnset
 	}
-	// // Reset Skip counter at the end of each phase. Skip actions work only within the current processing phase
+	// Reset Skip counter at the end of each phase. Skip actions work only within the current processing phase
 	tx.Skip = 0
 
 	tx.stopWatches[phase] = time.Now().UnixNano() - ts

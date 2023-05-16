@@ -56,12 +56,12 @@ func TestLegacyFormatter(t *testing.T) {
 	if err := json.Unmarshal(data, &legacyAl); err != nil {
 		t.Error(err)
 	}
-	if legacyAl.Transaction.Time != al.Transaction.Timestamp {
-		t.Errorf("failed to match legacy formatter, \ngot: %s\nexpected: %s", legacyAl.Transaction.Time, al.Transaction.Timestamp)
+	if legacyAl.Transaction.Time != al.Transaction().Timestamp() {
+		t.Errorf("failed to match legacy formatter, \ngot: %s\nexpected: %s", legacyAl.Transaction.Time, al.Transaction().Timestamp())
 	}
 	// validate transaction ID
-	if legacyAl.Transaction.TransactionID != al.Transaction.ID {
-		t.Errorf("failed to match legacy formatter, \ngot: %s\nexpected: %s", legacyAl.Transaction.TransactionID, al.Transaction.ID)
+	if legacyAl.Transaction.TransactionID != al.Transaction().ID() {
+		t.Errorf("failed to match legacy formatter, \ngot: %s\nexpected: %s", legacyAl.Transaction.TransactionID, al.Transaction().ID())
 	}
 	if legacyAl.AuditData.Messages[0] != "some message" {
 		t.Errorf("failed to match legacy formatter, \ngot: %s\nexpected: %s", legacyAl.AuditData.Messages[0], "some message")

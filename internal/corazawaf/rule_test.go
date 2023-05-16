@@ -30,7 +30,8 @@ func TestMatchEvaluate(t *testing.T) {
 	tx := NewWAF().NewTransaction()
 	tx.AddGetRequestArgument("test", "0")
 
-	matchdata := r.doEvaluate(types.PhaseLogging, tx, tx.transformationCache)
+	var matchedValues []types.MatchData
+	matchdata := r.doEvaluate(types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
 	if len(matchdata) != 1 {
 		t.Errorf("Expected 1 matchdata from a SecActions rule, got %d", len(matchdata))
 	}
@@ -52,7 +53,8 @@ func TestNoMatchEvaluate(t *testing.T) {
 	tx := NewWAF().NewTransaction()
 	tx.AddGetRequestArgument("test", "999")
 
-	matchdata := r.doEvaluate(types.PhaseLogging, tx, tx.transformationCache)
+	var matchedValues []types.MatchData
+	matchdata := r.doEvaluate(types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
 	if len(matchdata) != 0 {
 		t.Errorf("Expected 0 matchdata from a SecActions rule, got %d", len(matchdata))
 	}
@@ -76,7 +78,8 @@ func TestNoMatchEvaluateBecauseOfException(t *testing.T) {
 	tx := NewWAF().NewTransaction()
 	tx.AddGetRequestArgument("test", "0")
 	tx.RemoveRuleTargetByID(1, variables.ArgsGet, "test")
-	matchdata := r.doEvaluate(types.PhaseLogging, tx, tx.transformationCache)
+	var matchedValues []types.MatchData
+	matchdata := r.doEvaluate(types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
 	if len(matchdata) != 0 {
 		t.Errorf("Expected 0 matchdata, got %d", len(matchdata))
 	}
@@ -108,7 +111,8 @@ func TestFlowActionIfDetectionOnlyEngine(t *testing.T) {
 	tx := NewWAF().NewTransaction()
 	tx.RuleEngine = types.RuleEngineDetectionOnly
 
-	matchdata := r.doEvaluate(types.PhaseLogging, tx, tx.transformationCache)
+	var matchedValues []types.MatchData
+	matchdata := r.doEvaluate(types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
 	if len(matchdata) != 1 {
 		t.Errorf("Expected 1 matchdata, got %d", len(matchdata))
 	}
@@ -159,7 +163,8 @@ func TestDisruptiveActionFromChainNotEvaluated(t *testing.T) {
 	r.Chain = chainedRule
 	tx := NewWAF().NewTransaction()
 
-	matchdata := r.doEvaluate(types.PhaseLogging, tx, tx.transformationCache)
+	var matchedValues []types.MatchData
+	matchdata := r.doEvaluate(types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
 	if len(matchdata) != 2 {
 		t.Errorf("Expected 2 matchdata from a SecActions chained rule (total 2 rules), got %d", len(matchdata))
 	}
@@ -176,7 +181,8 @@ func TestRuleDetailsTransferredToTransaction(t *testing.T) {
 	r.operator = nil
 	tx := NewWAF().NewTransaction()
 
-	r.doEvaluate(types.PhaseLogging, tx, tx.transformationCache)
+	var matchedValues []types.MatchData
+	r.doEvaluate(types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
 	if tx.variables.rule.Get("id")[0] != strconv.Itoa(r.ParentID()) {
 		t.Errorf("Expected id: %d (parent id), got %s", r.ParentID(), tx.variables.rule.Get("id")[0])
 	}
@@ -199,7 +205,8 @@ func TestSecActionMessagePropagationInMatchData(t *testing.T) {
 	// SecAction uses nil operator
 	r.operator = nil
 	tx := NewWAF().NewTransaction()
-	matchdata := r.doEvaluate(types.PhaseLogging, tx, tx.transformationCache)
+	var matchedValues []types.MatchData
+	matchdata := r.doEvaluate(types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
 	if len(matchdata) != 1 {
 		t.Errorf("Expected 1 matchdata from a SecActions rule, got %d", len(matchdata))
 	}
@@ -214,17 +221,17 @@ func TestSecActionMessagePropagationInMatchData(t *testing.T) {
 
 func TestRuleNegativeVariables(t *testing.T) {
 	rule := NewRule()
-	if err := rule.AddVariable(variables.Args, "", false); err != nil {
+	if err := rule.AddVariable(variables.RequestURI, "", false); err != nil {
 		t.Error(err)
 	}
-	if rule.variables[0].Variable != variables.Args {
-		t.Error("Variable ARGS was not added")
+	if rule.variables[0].Variable != variables.RequestURI {
+		t.Error("Variable REQUEST_URI was not added")
 	}
 	if rule.variables[0].KeyRx != nil {
 		t.Error("invalid key type for variable")
 	}
 
-	if err := rule.AddVariableNegation(variables.Args, "test"); err != nil {
+	if err := rule.AddVariableNegation(variables.RequestURI, "test"); err != nil {
 		t.Error(err)
 	}
 
@@ -232,7 +239,7 @@ func TestRuleNegativeVariables(t *testing.T) {
 		t.Errorf("got %d exceptions", len(rule.variables[0].Exceptions))
 	}
 
-	if err := rule.AddVariable(variables.Args, "/test.*/", false); err != nil {
+	if err := rule.AddVariable(variables.RequestURI, "/test.*/", false); err != nil {
 		t.Error(err)
 	}
 
@@ -250,7 +257,7 @@ func TestRuleNegativeVariablesEmtpyRule(t *testing.T) {
 
 func TestVariableKeysAreCaseInsensitive(t *testing.T) {
 	rule := NewRule()
-	if err := rule.AddVariable(variables.Args, "Som3ThinG", false); err != nil {
+	if err := rule.AddVariable(variables.RequestURI, "Som3ThinG", false); err != nil {
 		t.Error(err)
 	}
 	if rule.variables[0].KeyStr != "som3thing" {
@@ -260,7 +267,7 @@ func TestVariableKeysAreCaseInsensitive(t *testing.T) {
 
 func TestVariablesRxAreCaseSensitive(t *testing.T) {
 	rule := NewRule()
-	if err := rule.AddVariable(variables.Args, "/Som3ThinG/", false); err != nil {
+	if err := rule.AddVariable(variables.ArgsGet, "/Som3ThinG/", false); err != nil {
 		t.Error(err)
 	}
 	if rule.variables[0].KeyRx.String() != "Som3ThinG" {

@@ -79,16 +79,6 @@ type ruleTransformationParams struct {
 	Function plugintypes.Transformation
 }
 
-type inferredPhases byte
-
-func (p *inferredPhases) has(phase types.RulePhase) bool {
-	return (*p & (1 << phase)) != 0
-}
-
-func (p *inferredPhases) set(phase types.RulePhase) {
-	*p |= 1 << phase
-}
-
 // Rule is used to test a Transaction against certain operators
 // and execute actions
 type Rule struct {
@@ -148,7 +138,18 @@ type Rule struct {
 
 	// inferredPhases is the inferred phases the rule is relevant for
 	// based on the processed variables.
+	// Multiphase specific field
 	inferredPhases
+
+	// chainMinPhase is the minimum phase among all chain variables.
+	// We do not eagerly evaluate variables in multiphase evaluation
+	// if they would be earlier than chained rules as they could never
+	// match.
+	chainMinPhase types.RulePhase
+
+	// chainedRules containing rules with just PhaseUnknown variables, may potentially
+	// be anticipated. This boolean ensures that it happens
+	withPhaseUnknownVariable bool
 }
 
 func (r *Rule) ParentID() int {
@@ -159,20 +160,29 @@ func (r *Rule) Status() int {
 	return r.DisruptiveStatus
 }
 
+const chainLevelZero = 0
+
 // Evaluate will evaluate the current rule for the indicated transaction
 // If the operator matches, actions will be evaluated, and it will return
 // the matched variables, keys and values (MatchData)
 func (r *Rule) Evaluate(phase types.RulePhase, tx plugintypes.TransactionState, cache map[transformationKey]*transformationValue) {
-	r.doEvaluate(phase, tx.(*Transaction), cache)
+	// collectiveMatchedValues lives across recursive calls of doEvaluate
+	var collectiveMatchedValues []types.MatchData
+	r.doEvaluate(phase, tx.(*Transaction), &collectiveMatchedValues, chainLevelZero, cache)
 }
 
 const noID = 0
 
-func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[transformationKey]*transformationValue) []types.MatchData {
+func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, collectiveMatchedValues *[]types.MatchData, chainLevel int, cache map[transformationKey]*transformationValue) []types.MatchData {
 	tx.Capture = r.Capture
-	rid := r.ID_
+
+  rid := r.ID_
 	if rid == noID {
 		rid = r.ParentID_
+	}
+
+	if multiphaseEvaluation {
+		computeRuleChainMinPhase(r)
 	}
 
 	var matchedValues []types.MatchData
@@ -203,19 +213,15 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 			}
 		}
 		matchedValues = append(matchedValues, md)
+		if multiphaseEvaluation {
+			*collectiveMatchedValues = append(*collectiveMatchedValues, md)
+		}
 		r.matchVariable(tx, md)
 	} else {
 		ecol := tx.ruleRemoveTargetByID[r.ID_]
 		for _, v := range r.variables {
-			// TODO(anuraaga): Support skipping variables based on phase for rule chains too.
-			if multiphaseEvaluation && !r.HasChain && r.ParentID_ == noID {
-				min := minPhase(v.Variable)
-				// When multiphase evaluation is enabled, any variable is evaluated at its
-				// earliest possible phase, so we skip it if the rule refers to other phases
-				// to avoid double-evaluation.
-				if min != types.PhaseUnknown && min != phase {
-					continue
-				}
+			if multiphaseEvaluation && multiphaseSkipVariable(r, v.Variable, phase) {
+				continue
 			}
 			var values []types.MatchData
 			for _, c := range ecol {
@@ -249,9 +255,10 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 					match := r.executeOperator(carg, tx)
 					if match {
 						mr := &corazarules.MatchData{
-							Variable_: arg.Variable(),
-							Key_:      arg.Key(),
-							Value_:    carg,
+							Variable_:   arg.Variable(),
+							Key_:        arg.Key(),
+							Value_:      carg,
+							ChainLevel_: chainLevel,
 						}
 						// Set the txn variables for expansions before usage
 						r.matchVariable(tx, mr)
@@ -265,7 +272,36 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 								mr.Data_ = r.LogData.Expand(tx)
 							}
 						}
-						matchedValues = append(matchedValues, mr)
+
+						if !multiphaseEvaluation {
+							matchedValues = append(matchedValues, mr)
+						} else {
+							if isMultiphaseDoubleEvaluation(tx, phase, r, collectiveMatchedValues, mr) {
+								// This variables chain already matched, let's evaluate the next variable
+								continue
+							}
+							// For multiphase evaluation, the append to matchedValues is delayed after checking that the variable has not already matched
+							matchedValues = append(matchedValues, mr)
+							// For multiphase evaluation, the non disruptive actions execution is enforced here, after having checked that the rule
+							// has not already been matched against the same variables chain. If effectively enforces to skip the execution of non disruptive actions that are
+							// part of the last rule of the chain if the evaluated chained variables already matched. This avoids incrementing the CRS anomaly score multiple
+							// time from the same variables chain.
+							tx.matchVariable(mr)
+							for _, a := range r.actions {
+								if a.Function.Type() == plugintypes.ActionTypeNondisruptive {
+									tx.DebugLogger().Debug().Str("action", a.Name).Msg("Evaluating action")
+									a.Function.Evaluate(r, tx)
+								}
+							}
+							// Msg and LogData have to be expanded again because actions execution might have changed them
+							if r.Msg != nil {
+								mr.Message_ = r.Msg.Expand(tx)
+							}
+							if r.LogData != nil {
+								mr.Data_ = r.LogData.Expand(tx)
+							}
+						}
+
 						tx.DebugLogger().Debug().
 							Int("rule_id", rid).
 							Str("operator_function", r.operator.Function).
@@ -294,14 +330,16 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 	if r.ParentID_ == noID {
 		// we only run the chains for the parent rule
 		for nr := r.Chain; nr != nil; {
+			chainLevel++
 			tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Evaluating rule chain")
-			matchedChainValues := nr.doEvaluate(phase, tx, cache)
+			matchedChainValues := nr.doEvaluate(phase, tx, collectiveMatchedValues, chainLevel, cache)
 			if len(matchedChainValues) == 0 {
 				return matchedChainValues
 			}
 			matchedValues = append(matchedValues, matchedChainValues...)
 			nr = nr.Chain
 		}
+    
 		// Expansion of Msg and LogData is postponed here. It allows to run it only if the whole rule/chain
 		// matches and to rely on MATCHED_* variables updated by the chain, not just by the fist rule.
 		if !r.MultiMatch {
@@ -312,11 +350,11 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, cache map[tran
 				matchedValues[0].(*corazarules.MatchData).Data_ = r.LogData.Expand(tx)
 			}
 		}
-
+    
 		for _, a := range r.actions {
 			if a.Function.Type() == plugintypes.ActionTypeFlow {
 				// Flow actions are evaluated also if the rule engine is set to DetectionOnly
-				tx.DebugLogger().Debug().Int("rule_id", rid).Str("action", a.Name).Msg("Evaluating flow action for rule")
+				tx.DebugLogger().Debug().Int("rule_id", rid).Str("action", a.Name).Int("phase", int(phase)).Msg("Evaluating flow action for rule")
 				a.Function.Evaluate(r, tx)
 			} else if a.Function.Type() == plugintypes.ActionTypeDisruptive && tx.RuleEngine == types.RuleEngineOn {
 				// The parser enforces that the disruptive action is just one per rule (if more than one, only the last one is kept)
@@ -387,11 +425,15 @@ func (r *Rule) matchVariable(tx *Transaction, m *corazarules.MatchData) {
 	// we must match the vars before running the chains
 
 	// We run non-disruptive actions even if there is no chain match
-	tx.matchVariable(m)
-	for _, a := range r.actions {
-		if a.Function.Type() == plugintypes.ActionTypeNondisruptive {
-			tx.DebugLogger().Debug().Str("action", a.Name).Msg("Evaluating action")
-			a.Function.Evaluate(r, tx)
+	// if multiphaseEvaluation is true, the non disruptive actions execution is deferred
+	// SecActions (r.operator == nil) are always executed
+	if !multiphaseEvaluation || r.operator == nil {
+		tx.matchVariable(m)
+		for _, a := range r.actions {
+			if a.Function.Type() == plugintypes.ActionTypeNondisruptive {
+				tx.DebugLogger().Debug().Str("action", a.Name).Msg("Evaluating action")
+				a.Function.Evaluate(r, tx)
+			}
 		}
 	}
 }
@@ -417,6 +459,46 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 		re = regexp.MustCompile(key)
 	}
 
+	if multiphaseEvaluation {
+		// Splitting Args variable into ArgsGet and ArgsPost
+		if v == variables.Args {
+			r.variables = append(r.variables, ruleVariableParams{
+				Count:      iscount,
+				Variable:   variables.ArgsGet,
+				KeyStr:     strings.ToLower(key),
+				KeyRx:      re,
+				Exceptions: []ruleVariableException{},
+			})
+
+			r.variables = append(r.variables, ruleVariableParams{
+				Count:      iscount,
+				Variable:   variables.ArgsPost,
+				KeyStr:     strings.ToLower(key),
+				KeyRx:      re,
+				Exceptions: []ruleVariableException{},
+			})
+			return nil
+		}
+		// Splitting ArgsNames variable into ArgsGetNames and ArgsPostNames
+		if v == variables.ArgsNames {
+			r.variables = append(r.variables, ruleVariableParams{
+				Count:      iscount,
+				Variable:   variables.ArgsGetNames,
+				KeyStr:     strings.ToLower(key),
+				KeyRx:      re,
+				Exceptions: []ruleVariableException{},
+			})
+
+			r.variables = append(r.variables, ruleVariableParams{
+				Count:      iscount,
+				Variable:   variables.ArgsPostNames,
+				KeyStr:     strings.ToLower(key),
+				KeyRx:      re,
+				Exceptions: []ruleVariableException{},
+			})
+			return nil
+		}
+	}
 	r.variables = append(r.variables, ruleVariableParams{
 		Count:      iscount,
 		Variable:   v,
@@ -446,6 +528,17 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 		return fmt.Errorf("cannot create a variable exception for an undefined rule")
 	}
 	for i, rv := range r.variables {
+		// Splitting Args and ArgsNames variables
+		if multiphaseEvaluation && v == variables.Args && (rv.Variable == variables.ArgsGet || rv.Variable == variables.ArgsPost) {
+			rv.Exceptions = append(rv.Exceptions, ruleVariableException{strings.ToLower(key), re})
+			r.variables[i] = rv
+			continue
+		}
+		if multiphaseEvaluation && v == variables.ArgsNames && (rv.Variable == variables.ArgsGetNames || rv.Variable == variables.ArgsPostNames) {
+			rv.Exceptions = append(rv.Exceptions, ruleVariableException{strings.ToLower(key), re})
+			r.variables[i] = rv
+			continue
+		}
 		if rv.Variable == v {
 			rv.Exceptions = append(rv.Exceptions, ruleVariableException{strings.ToLower(key), re})
 			r.variables[i] = rv
@@ -552,178 +645,4 @@ func NewRule() *Rule {
 			Tags_:  []string{},
 		},
 	}
-}
-
-// minPhase returns the earliest phase a variable may be populated.
-// NOTE: variables.Args and variables.ArgsNames should ideally be evaluated
-// both in phase 1 and 2, but rules can set state in the transaction, e.g. a
-// counter, which prevents evaluating any variable multiple times.
-func minPhase(v variables.RuleVariable) types.RulePhase {
-	switch v {
-	case variables.ResponseContentType:
-		return types.PhaseResponseHeaders
-	case variables.UniqueID:
-		return types.PhaseRequestHeaders
-	case variables.ArgsCombinedSize:
-		// Size changes between phase 1 and 2 so evaluate both times
-		return types.PhaseRequestHeaders
-	case variables.FilesCombinedSize:
-		return types.PhaseRequestBody
-	case variables.FullRequestLength:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.InboundDataError:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MatchedVar:
-		// MatchedVar is only for logging, not evaluation
-		return types.PhaseUnknown
-	case variables.MatchedVarName:
-		// MatchedVar is only for logging, not evaluation
-		return types.PhaseUnknown
-	// MultipartBoundaryWhitespace kept for compatibility
-	case variables.MultipartDataAfter:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.OutboundDataError:
-		return types.PhaseResponseBody
-	case variables.QueryString:
-		return types.PhaseRequestHeaders
-	case variables.RemoteAddr:
-		return types.PhaseRequestHeaders
-	case variables.RemoteHost:
-		// Not implemented
-		return types.PhaseRequestHeaders
-	case variables.RemotePort:
-		return types.PhaseRequestHeaders
-	case variables.ReqbodyError:
-		return types.PhaseRequestBody
-	case variables.ReqbodyErrorMsg:
-		return types.PhaseRequestBody
-	case variables.ReqbodyProcessorError:
-		return types.PhaseRequestBody
-	case variables.ReqbodyProcessorErrorMsg:
-		return types.PhaseRequestBody
-	case variables.ReqbodyProcessor:
-		// Configuration of Coraza itself, though shouldn't be used in phases
-		return types.PhaseUnknown
-	case variables.RequestBasename:
-		return types.PhaseRequestHeaders
-	case variables.RequestBody:
-		return types.PhaseRequestBody
-	case variables.RequestBodyLength:
-		return types.PhaseRequestBody
-	case variables.RequestFilename:
-		return types.PhaseRequestHeaders
-	case variables.RequestLine:
-		return types.PhaseRequestHeaders
-	case variables.RequestMethod:
-		return types.PhaseRequestHeaders
-	case variables.RequestProtocol:
-		return types.PhaseRequestHeaders
-	case variables.RequestURI:
-		return types.PhaseRequestHeaders
-	case variables.RequestURIRaw:
-		return types.PhaseRequestHeaders
-	case variables.ResponseBody:
-		return types.PhaseResponseBody
-	case variables.ResponseContentLength:
-		return types.PhaseResponseBody
-	case variables.ResponseProtocol:
-		return types.PhaseResponseHeaders
-	case variables.ResponseStatus:
-		return types.PhaseResponseHeaders
-	case variables.ServerAddr:
-		// Configuration of the server itself
-		return types.PhaseRequestHeaders
-	case variables.ServerName:
-		// Configuration of the server itself
-		return types.PhaseRequestHeaders
-	case variables.ServerPort:
-		// Configuration of the server itself
-		return types.PhaseRequestHeaders
-	case variables.HighestSeverity:
-		// Result of matching, not used in phaes
-		return types.PhaseUnknown
-	case variables.StatusLine:
-		return types.PhaseResponseHeaders
-	case variables.Duration:
-		// If used in matching, would need to be defined for multiple inferredPhases to make sense
-		return types.PhaseUnknown
-	case variables.ResponseHeadersNames:
-		return types.PhaseResponseHeaders
-	case variables.RequestHeadersNames:
-		return types.PhaseRequestHeaders
-	case variables.Args:
-		// Updated between headers and body
-		return types.PhaseRequestBody
-	case variables.ArgsGet:
-		return types.PhaseRequestHeaders
-	case variables.ArgsPost:
-		return types.PhaseRequestBody
-	case variables.ArgsPath:
-		return types.PhaseRequestHeaders
-	case variables.FilesSizes:
-		return types.PhaseRequestBody
-	case variables.FilesNames:
-		return types.PhaseRequestBody
-	case variables.FilesTmpContent:
-		// Not populated by Coraza
-		return types.PhaseRequestBody
-	case variables.MultipartFilename:
-		return types.PhaseRequestBody
-	case variables.MultipartName:
-		return types.PhaseRequestBody
-	case variables.MatchedVarsNames:
-		// Result of execution, not used in inferredPhases
-		return types.PhaseUnknown
-	case variables.MatchedVars:
-		// Result of execution, not used in inferredPhases
-		return types.PhaseUnknown
-	case variables.Files:
-		return types.PhaseRequestBody
-	case variables.RequestCookies:
-		return types.PhaseRequestHeaders
-	case variables.RequestHeaders:
-		return types.PhaseRequestHeaders
-	case variables.ResponseHeaders:
-		return types.PhaseResponseHeaders
-	case variables.Geo:
-		// Not populated by Coraza
-		return types.PhaseRequestHeaders
-	case variables.RequestCookiesNames:
-		return types.PhaseRequestHeaders
-	case variables.FilesTmpNames:
-		return types.PhaseRequestBody
-	case variables.ArgsNames:
-		// Updated between headers and body
-		return types.PhaseRequestBody
-	case variables.ArgsGetNames:
-		return types.PhaseRequestHeaders
-	case variables.ArgsPostNames:
-		return types.PhaseRequestBody
-	case variables.TX:
-		return types.PhaseUnknown
-	case variables.Rule:
-		// Shouldn't be used in phases
-		return types.PhaseUnknown
-	case variables.JSON:
-		return types.PhaseRequestBody
-	case variables.Env:
-		return types.PhaseRequestHeaders
-	case variables.UrlencodedError:
-		return types.PhaseRequestHeaders
-	case variables.ResponseArgs:
-		return types.PhaseResponseBody
-	case variables.ResponseXML:
-		return types.PhaseResponseBody
-	case variables.RequestXML:
-		return types.PhaseRequestBody
-	case variables.XML:
-		return types.PhaseRequestBody
-	case variables.MultipartPartHeaders:
-		return types.PhaseRequestBody
-	}
-
-	return types.PhaseUnknown
 }
