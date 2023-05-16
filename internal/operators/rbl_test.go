@@ -28,7 +28,7 @@ func TestRbl(t *testing.T) {
 	}
 	op, err := newRBL(opts)
 	if err != nil {
-		t.Error("Cannot init rbl operator")
+		t.Fatal("Cannot init rbl operator")
 	}
 
 	logger := &testLogger{t}
@@ -47,7 +47,7 @@ func TestRbl(t *testing.T) {
 		},
 	}, logger, false)
 	if err != nil {
-		t.Error("Cannot start mockdns server")
+		t.Fatalf("Cannot start mockdns server: %v", err)
 	}
 	defer srv.Close()
 

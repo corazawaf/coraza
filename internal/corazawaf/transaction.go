@@ -16,10 +16,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/corazawaf/coraza/v3/auditlog"
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
@@ -1295,8 +1295,9 @@ func (tx *Transaction) LastPhase() types.RulePhase {
 // AuditLog returns an AuditLog struct, used to write audit logs
 func (tx *Transaction) AuditLog() *auditlog.Log {
 	al := &auditlog.Log{}
-	al.Parts = tx.AuditLogParts
+	al.Parts_ = tx.AuditLogParts
 
+	var alTransaction auditlog.Transaction
 	for _, part := range tx.AuditLogParts {
 		switch part {
 		case types.AuditLogPartAuditLogHeader:
@@ -1304,28 +1305,28 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 			hostPort, _ := strconv.Atoi(tx.variables.serverPort.Get())
 			// YYYY/MM/DD HH:mm:ss
 			ts := time.Unix(0, tx.Timestamp).Format("2006/01/02 15:04:05")
-			al.Transaction = auditlog.Transaction{
-				Timestamp:     ts,
-				UnixTimestamp: tx.Timestamp,
-				ID:            tx.id,
-				ClientIP:      tx.variables.remoteAddr.Get(),
-				ClientPort:    clientPort,
-				HostIP:        tx.variables.serverAddr.Get(),
-				HostPort:      hostPort,
-				ServerID:      tx.variables.serverName.Get(), // TODO check
+			alTransaction = auditlog.Transaction{
+				Timestamp_:     ts,
+				UnixTimestamp_: tx.Timestamp,
+				ID_:            tx.id,
+				ClientIP_:      tx.variables.remoteAddr.Get(),
+				ClientPort_:    clientPort,
+				HostIP_:        tx.variables.serverAddr.Get(),
+				HostPort_:      hostPort,
+				ServerID_:      tx.variables.serverName.Get(), // TODO check
 			}
 		case types.AuditLogPartRequestHeaders:
-			if al.Transaction.Request == nil {
-				al.Transaction.Request = &auditlog.TransactionRequest{}
+			if alTransaction.Request_ == nil {
+				alTransaction.Request_ = &auditlog.TransactionRequest{}
 			}
-			al.Transaction.Request.Headers = tx.variables.requestHeaders.Data()
+			alTransaction.Request_.Headers_ = tx.variables.requestHeaders.Data()
 		case types.AuditLogPartRequestBody:
-			if al.Transaction.Request == nil {
-				al.Transaction.Request = &auditlog.TransactionRequest{}
+			if alTransaction.Request_ == nil {
+				alTransaction.Request_ = &auditlog.TransactionRequest{}
 			}
 			// TODO maybe change to:
 			// al.Transaction.Request.Body = tx.RequestBodyBuffer.String()
-			al.Transaction.Request.Body = tx.variables.requestBody.Get()
+			alTransaction.Request_.Body_ = tx.variables.requestBody.Get()
 
 			/*
 			* TODO:
@@ -1336,8 +1337,8 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 			* if you don’t want to have (often large) files stored in your audit logs.
 			 */
 			// upload data
-			var files []auditlog.TransactionRequestFiles
-			al.Transaction.Request.Files = nil
+			var files []plugintypes.AuditLogTransactionRequestFiles
+			alTransaction.Request_.Files_ = nil
 			for _, file := range tx.variables.files.Get("") {
 				var size int64
 				if fs := tx.variables.filesSizes.Get(file); len(fs) > 0 {
@@ -1346,54 +1347,54 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 				}
 				ext := filepath.Ext(file)
 				at := auditlog.TransactionRequestFiles{
-					Size: size,
-					Name: file,
-					Mime: mime.TypeByExtension(ext),
+					Size_: size,
+					Name_: file,
+					Mime_: mime.TypeByExtension(ext),
 				}
 				files = append(files, at)
 			}
-			al.Transaction.Request.Files = files
+			alTransaction.Request_.Files_ = files
 		case types.AuditLogPartIntermediaryResponseBody:
-			if al.Transaction.Response == nil {
-				al.Transaction.Response = &auditlog.TransactionResponse{}
+			if alTransaction.Response_ == nil {
+				alTransaction.Response_ = &auditlog.TransactionResponse{}
 			}
-			al.Transaction.Response.Body = tx.variables.responseBody.Get()
+			alTransaction.Response_.Body_ = tx.variables.responseBody.Get()
 		case types.AuditLogPartResponseHeaders:
-			if al.Transaction.Response == nil {
-				al.Transaction.Response = &auditlog.TransactionResponse{}
+			if alTransaction.Response_ == nil {
+				alTransaction.Response_ = &auditlog.TransactionResponse{}
 			}
 			status, _ := strconv.Atoi(tx.variables.responseStatus.Get())
-			al.Transaction.Response.Status = status
-			al.Transaction.Response.Headers = tx.variables.responseHeaders.Data()
+			alTransaction.Response_.Status_ = status
+			alTransaction.Response_.Headers_ = tx.variables.responseHeaders.Data()
 		case types.AuditLogPartAuditLogTrailer:
-			al.Transaction.Producer = &auditlog.TransactionProducer{
-				Connector:  tx.WAF.ProducerConnector,
-				Version:    tx.WAF.ProducerConnectorVersion,
-				Server:     "",
-				RuleEngine: tx.RuleEngine.String(),
-				Stopwatch:  tx.GetStopWatch(),
-				Rulesets:   tx.WAF.ComponentNames,
+			alTransaction.Producer_ = &auditlog.TransactionProducer{
+				Connector_:  tx.WAF.ProducerConnector,
+				Version_:    tx.WAF.ProducerConnectorVersion,
+				Server_:     "",
+				RuleEngine_: tx.RuleEngine.String(),
+				Stopwatch_:  tx.GetStopWatch(),
+				Rulesets_:   tx.WAF.ComponentNames,
 			}
 		case types.AuditLogPartRulesMatched:
 			for _, mr := range tx.matchedRules {
 				r := mr.Rule()
 				for _, matchData := range mr.MatchedDatas() {
-					al.Messages = append(al.Messages, auditlog.Message{
-						Actionset: strings.Join(tx.WAF.ComponentNames, " "),
-						Message:   matchData.Message(),
-						Data: auditlog.MessageData{
-							File:     mr.Rule().File(),
-							Line:     mr.Rule().Line(),
-							ID:       r.ID(),
-							Rev:      r.Revision(),
-							Msg:      matchData.Message(),
-							Data:     matchData.Data(),
-							Severity: r.Severity(),
-							Ver:      r.Version(),
-							Maturity: r.Maturity(),
-							Accuracy: r.Accuracy(),
-							Tags:     r.Tags(),
-							Raw:      r.Raw(),
+					al.Messages_ = append(al.Messages_, auditlog.Message{
+						Actionset_: strings.Join(tx.WAF.ComponentNames, " "),
+						Message_:   matchData.Message(),
+						Data_: &auditlog.MessageData{
+							File_:     mr.Rule().File(),
+							Line_:     mr.Rule().Line(),
+							ID_:       r.ID(),
+							Rev_:      r.Revision(),
+							Msg_:      matchData.Message(),
+							Data_:     matchData.Data(),
+							Severity_: r.Severity(),
+							Ver_:      r.Version(),
+							Maturity_: r.Maturity(),
+							Accuracy_: r.Accuracy(),
+							Tags_:     r.Tags(),
+							Raw_:      r.Raw(),
 						},
 					})
 				}
@@ -1401,6 +1402,7 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 		}
 	}
 
+	al.Transaction_ = alTransaction
 	return al
 }
 

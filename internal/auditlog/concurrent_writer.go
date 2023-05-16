@@ -14,6 +14,8 @@ import (
 	"path"
 	"sync"
 	"time"
+
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type concurrentWriter struct {
@@ -22,13 +24,13 @@ type concurrentWriter struct {
 	logDir      string
 	logDirMode  fs.FileMode
 	logFileMode fs.FileMode
-	formatter   Formatter
+	formatter   plugintypes.AuditLogFormatter
 	io.Closer
 }
 
-func (cl *concurrentWriter) Init(c Config) error {
-	if c.File == "" {
-		cl.Closer = noopCloser{}
+func (cl *concurrentWriter) Init(c plugintypes.AuditLogConfig) error {
+	if c.Target == "" {
+		cl.Closer = NoopCloser
 		return nil
 	}
 
@@ -38,7 +40,7 @@ func (cl *concurrentWriter) Init(c Config) error {
 	cl.formatter = c.Formatter
 	cl.mux = &sync.RWMutex{}
 
-	f, err := os.OpenFile(c.File, os.O_CREATE|os.O_WRONLY|os.O_APPEND, cl.logFileMode)
+	f, err := os.OpenFile(c.Target, os.O_CREATE|os.O_WRONLY|os.O_APPEND, cl.logFileMode)
 	if err != nil {
 		return err
 	}
@@ -48,17 +50,17 @@ func (cl *concurrentWriter) Init(c Config) error {
 	return nil
 }
 
-func (cl concurrentWriter) Write(al *Log) error {
+func (cl concurrentWriter) Write(al plugintypes.AuditLog) error {
 	if cl.formatter == nil {
 		return nil
 	}
 
 	// 192.168.3.130 192.168.3.1 - - [22/Aug/2009:13:24:20 +0100] "GET / HTTP/1.1" 200 56 "-" "-" SojdH8AAQEAAAugAQAAAAAA "-" /20090822/20090822-1324/20090822-132420-SojdH8AAQEAAAugAQAAAAAA 0 1248
-	t := time.Unix(0, al.Transaction.UnixTimestamp)
+	t := time.Unix(0, al.Transaction().UnixTimestamp())
 
 	ymd := t.Format("20060102")
 	ymdhm := ymd + t.Format("-1504")
-	filename := ymdhm + t.Format("05") + "-" + al.Transaction.ID
+	filename := ymdhm + t.Format("05") + "-" + al.Transaction().ID()
 
 	logdir := path.Join(cl.logDir, ymd, ymdhm)
 	if err := os.MkdirAll(logdir, cl.logDirMode); err != nil {
@@ -78,16 +80,20 @@ func (cl concurrentWriter) Write(al *Log) error {
 	cl.mux.Lock()
 	defer cl.mux.Unlock()
 
-	cl.log.Printf("%s %s - - [%s]", al.Transaction.ClientIP, al.Transaction.HostIP, al.Transaction.Timestamp)
-	if al.Transaction.Request != nil {
-		cl.log.Printf(` "%s %s %s"`, al.Transaction.Request.Method, al.Transaction.Request.URI, al.Transaction.Request.HTTPVersion)
+	cl.log.Printf("%s %s - - [%s]", al.Transaction().ClientIP(), al.Transaction().HostIP(), al.Transaction().Timestamp())
+	if al.Transaction().HasRequest() {
+		cl.log.Printf(
+			` "%s %s %s"`,
+			al.Transaction().Request().Method(),
+			al.Transaction().Request().URI(),
+			al.Transaction().Request().HTTPVersion())
 	}
-	if al.Transaction.Response != nil {
-		cl.log.Printf(` %d`, al.Transaction.Response.Status)
+	if al.Transaction().HasResponse() {
+		cl.log.Printf(` %d`, al.Transaction().Response().Status())
 	}
-	cl.log.Printf("%s - %s\n", al.Transaction.ID, filepath)
+	cl.log.Printf("%s - %s\n", al.Transaction().ID(), filepath)
 
 	return nil
 }
 
-var _ Writer = (*concurrentWriter)(nil)
+var _ plugintypes.AuditLogWriter = (*concurrentWriter)(nil)

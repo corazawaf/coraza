@@ -15,7 +15,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/auditlog"
+	"github.com/corazawaf/coraza/v3/internal/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
 )
@@ -47,11 +47,11 @@ func TestAuditLogMessages(t *testing.T) {
 	tx.AddGetRequestArgument("test", "test")
 	tx.ProcessRequestHeaders()
 	al := tx.AuditLog()
-	if len(al.Messages) != 1 {
-		t.Errorf("Expected 1 message, got %d", len(al.Messages))
+	if len(al.Messages()) != 1 {
+		t.Errorf("Expected 1 message, got %d", len(al.Messages()))
 	}
-	if al.Messages[0].Message != "unconditional match" {
-		t.Errorf("Expected message 'unconditional match', got '%s'", al.Messages[0].Message)
+	if al.Messages()[0].Message() != "unconditional match" {
+		t.Errorf("Expected message 'unconditional match', got '%s'", al.Messages()[0].Message())
 	}
 	tx.ProcessLogging()
 	// now we read file
@@ -62,11 +62,11 @@ func TestAuditLogMessages(t *testing.T) {
 	if err := json.NewDecoder(file).Decode(&al2); err != nil {
 		t.Error(err)
 	}
-	if len(al2.Messages) != 1 {
-		t.Fatalf("Expected 1 message, got %d", len(al2.Messages))
+	if len(al2.Messages()) != 1 {
+		t.Fatalf("Expected 1 message, got %d", len(al2.Messages()))
 	}
-	if al2.Messages[0].Message != "unconditional match" {
-		t.Errorf("Expected message %q, got %q", "unconditional match", al2.Messages[0].Message)
+	if al2.Messages()[0].Message() != "unconditional match" {
+		t.Errorf("Expected message %q, got %q", "unconditional match", al2.Messages()[0].Message())
 	}
 }
 
