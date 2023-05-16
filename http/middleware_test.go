@@ -148,14 +148,14 @@ func createMultipartRequest(t *testing.T) *http.Request {
 }
 
 // from issue https://github.com/corazawaf/coraza/issues/159 @zpeasystart
-func TestDirectiveSecAuditLog(t *testing.T) {
+func TestChainEvaluation(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	waf.RequestBodyAccess = true
 	if err := seclang.NewParser(waf).FromString(`
 	SecRule REQUEST_FILENAME "@unconditionalMatch" "id:100, phase:2, t:none, log, setvar:'tx.count=+1',chain"
-	SecRule ARGS:username "@unconditionalMatch" "t:none, setvar:'tx.count=+2',chain"
-	SecRule ARGS:password "@unconditionalMatch" "t:none, setvar:'tx.count=+3'"
-		`); err != nil {
+		SecRule ARGS_POST:username "@unconditionalMatch" "t:none, setvar:'tx.count=+2',chain"
+			SecRule ARGS_POST:password "@unconditionalMatch" "t:none, setvar:'tx.count=+3'"
+	`); err != nil {
 		t.Fatal(err)
 	}
 	if err := waf.Validate(); err != nil {

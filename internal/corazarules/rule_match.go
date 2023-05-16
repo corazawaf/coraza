@@ -25,6 +25,9 @@ type MatchData struct {
 	Message_ string
 	// Macro expanded logdata
 	Data_ string
+	// Keeps track of the chain depth in which the data matched.
+	// Multiphase specific field
+	ChainLevel_ int
 }
 
 func (m *MatchData) Variable() variables.RuleVariable {
@@ -45,6 +48,10 @@ func (m *MatchData) Message() string {
 
 func (m *MatchData) Data() string {
 	return m.Data_
+}
+
+func (m *MatchData) ChainLevel() int {
+	return m.ChainLevel_
 }
 
 // MatchedRule contains a list of macro expanded messages,

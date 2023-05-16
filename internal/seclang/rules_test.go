@@ -196,7 +196,7 @@ func TestRuleChains(t *testing.T) {
 		SecRule ARGS "123" "id:1,phase:1,log,chain"
 			SecRule &ARGS "@gt 0" "chain"
 			SecRule ARGS "456" "setvar:'tx.test=ok'"
-		
+
 		SecRule ARGS "123" "id:2,phase:1,log,chain"
 			SecRule &ARGS "@gt 100" "chain"
 			SecRule ARGS "456" "setvar:'tx.test2=fail'"

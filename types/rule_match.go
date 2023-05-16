@@ -18,6 +18,8 @@ type MatchData interface {
 	Message() string
 	// Data is the expanded logdata of the macro
 	Data() string
+	// Chain depth of variable match
+	ChainLevel() int
 }
 
 // MatchedRule contains a list of macro expanded messages,

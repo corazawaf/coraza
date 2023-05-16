@@ -1,6 +1,8 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !coraza.rule.multiphase_evaluation
+
 package engine
 
 import (
@@ -16,7 +18,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 	},
 	Tests: []profile.Test{
 		{
-			Title: "actions",
+			Title: "allow action",
 			Stages: []profile.Stage{
 				{
 					Stage: profile.SubStage{
@@ -102,12 +104,10 @@ var _ = profile.RegisterProfile(profile.Profile{
 				{
 					Stage: profile.SubStage{
 						Input: profile.StageInput{
-							URI:    "/allow_only_response?key=allow_only_response",
-							Method: "POST",
-							Headers: map[string]string{
-								"Content-type": "application/x-www-form-urlencoded",
-							},
-							Data: "allow_only_response",
+							URI:     "/allow_only_response?key=allow_only_response",
+							Method:  "POST",
+							Headers: map[string]string{"Content-type": "application/x-www-form-urlencoded"},
+							Data:    "allow_only_response",
 						},
 						Output: profile.ExpectedOutput{
 							TriggeredRules: []int{
@@ -127,12 +127,35 @@ var _ = profile.RegisterProfile(profile.Profile{
 						},
 					},
 				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/response_allow",
+							Method: "POST",
+							Headers: map[string]string{
+								"Content-type": "application/x-www-form-urlencoded",
+							},
+							Data: "response_allow",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{70},
+							NonTriggeredRules: []int{71},
+							Interruption: &profile.ExpectedInterruption{
+								Status: 500,
+								Data:   "",
+								RuleID: 70,
+								Action: "deny",
+							},
+						},
+					},
+				},
 			},
 		},
 	},
 	Rules: `
 SecDebugLogLevel 5
 SecRequestBodyAccess On
+
 SecRule REQUEST_URI "/allow_me" "id:1,phase:1,allow,msg:'ALLOWED'"
 SecRule REQUEST_URI "/allow_me" "id:2,phase:1,deny,msg:'DENIED'"
 
@@ -151,18 +174,22 @@ SecRule REQUEST_URI "/request_allow" "id:34,phase:2,deny,msg:'NOT DENIED'"
 SecRule REQUEST_URI "/request_allow" "id:42,phase:3,deny,status:500,msg:'DENIED'"
 
 # Rule 45 allows only request phases (1 and 2), it should not impact on phase 3.
-# Therefor, rule 46 is expected to be triggered.
+# Therefore, rule 46 is expected to be triggered.
 SecRule REQUEST_URI "/useless_request_allow" "id:45,phase:1,allow:request,msg:'Allowed at the request'"
 SecRule REQUEST_URI "/useless_request_allow" "id:46,phase:3,deny,status:500,msg:'DENIED'"
 
 # Rule 50 allows only the current phase (phase 1), it should not impact any other rule (being part of other phases).
-# Rule 61 is meant to allow only from phase 3, rule 51, at phase 2 should deny the request
+# Rule 61 is meant to allow only from phase 3 (so phase 3 and 4), rule 51, at phase 2 should deny the request
 # before reaching phase 3. Therefore rule 61 and 62 should not be triggered.
-# Suitable for testing that allow:phase is not propagated to other phases and for testing
-# multiphase evaluation combined with with allow actions.
+# Suitable for testing that allow:phase is not propagated to other phases
 SecRule REQUEST_URI "/allow_only_response" "id:50,phase:1,allow:phase,msg:'Allowed phase 1'"
 SecRule REQUEST_BODY "allow_only_response" "id:51,phase:2,deny,status:500,msg:'Denied request'"
 SecRule REQUEST_URI "/allow_only_response" "id:61,phase:3,allow,msg:'Allowed Response not triggered'"
 SecRule REQUEST_URI "/allow_only_response" "id:62,phase:4,deny,msg:'Deny response not triggered'"
+
+# Rule 70 should deny the request at phase:2 before rule 71.
+# Suitable for testing multiphase evaluation combined with allow actions.
+SecRule REQUEST_BODY "response_allow" "id:70,phase:2,deny,status:500,msg:'Denied request'"
+SecRule REQUEST_URI "/response_allow" "id:71,phase:3,allow,msg:'Allowed Response not triggered'"
 `,
 })
