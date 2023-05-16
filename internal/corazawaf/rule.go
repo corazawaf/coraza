@@ -176,7 +176,7 @@ const noID = 0
 func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, collectiveMatchedValues *[]types.MatchData, chainLevel int, cache map[transformationKey]*transformationValue) []types.MatchData {
 	tx.Capture = r.Capture
 
-  rid := r.ID_
+	rid := r.ID_
 	if rid == noID {
 		rid = r.ParentID_
 	}
@@ -339,7 +339,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, collectiveMatc
 			matchedValues = append(matchedValues, matchedChainValues...)
 			nr = nr.Chain
 		}
-    
+
 		// Expansion of Msg and LogData is postponed here. It allows to run it only if the whole rule/chain
 		// matches and to rely on MATCHED_* variables updated by the chain, not just by the fist rule.
 		if !r.MultiMatch {
@@ -350,7 +350,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, collectiveMatc
 				matchedValues[0].(*corazarules.MatchData).Data_ = r.LogData.Expand(tx)
 			}
 		}
-    
+
 		for _, a := range r.actions {
 			if a.Function.Type() == plugintypes.ActionTypeFlow {
 				// Flow actions are evaluated also if the rule engine is set to DetectionOnly

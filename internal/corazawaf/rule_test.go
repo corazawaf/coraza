@@ -542,7 +542,8 @@ func TestCaptureNotPropagatedToInnerChainRule(t *testing.T) {
 	chainedRule.Capture = false
 	r.Chain = chainedRule
 	tx := NewWAF().NewTransaction()
-	r.doEvaluate(types.PhaseRequestHeaders, tx, tx.transformationCache)
+	var matchedValues []types.MatchData
+	r.doEvaluate(types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
 	// We expect that capture is false after doEvaluate.
 	if tx.Capture {
 		t.Errorf("Expected capture to be false. The parent rule enables capture, but inner rule should disable it.")
@@ -577,7 +578,8 @@ func TestExpandMacroAfterWholeRuleEvaluation(t *testing.T) {
 	tx.ProcessURI("0", "GET", "HTTP/1.1")
 	tx.AddGetRequestArgument("test", "0")
 
-	matchdata := r.doEvaluate(types.PhaseLogging, tx, tx.transformationCache)
+	var matchedValues []types.MatchData
+	matchdata := r.doEvaluate(types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
 	if len(matchdata) != 2 {
 		t.Errorf("Expected 2 matchdata from a chained rule (total 2 rules), got %d", len(matchdata))
 	}
