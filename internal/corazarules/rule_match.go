@@ -124,14 +124,13 @@ func (mr MatchedRule) writeDetails(log *strings.Builder, matchData types.MatchDa
 	if len(data) > maxSizeLogMessage {
 		data = data[:maxSizeLogMessage]
 	}
-	log.WriteString(fmt.Sprintf("[file %q] [line %q] [id %q] [rev %q] [msg %q] [data %q] [severity %q] [ver %q] [maturity %q] [accuracy %q]",
+	fmt.Fprintf(log, "[file %q] [line %q] [id %q] [rev %q] [msg %q] [data %q] [severity %q] [ver %q] [maturity %q] [accuracy %q]",
 		mr.Rule_.File(), strconv.Itoa(mr.Rule_.Line()), strconv.Itoa(mr.Rule_.ID()), mr.Rule_.Revision(), msg, data, mr.Rule_.Severity().String(), mr.Rule_.Version(),
-		strconv.Itoa(mr.Rule_.Maturity()), strconv.Itoa(mr.Rule_.Accuracy())))
+		strconv.Itoa(mr.Rule_.Maturity()), strconv.Itoa(mr.Rule_.Accuracy()))
 	for _, t := range mr.Rule_.Tags() {
-		log.WriteString(fmt.Sprintf(" [tag %q]", t))
+		fmt.Fprintf(log, " [tag %q]", t)
 	}
-	log.WriteString(fmt.Sprintf(" [hostname %q] [uri %q] [unique_id %q]",
-		mr.ServerIPAddress_, mr.URI_, mr.TransactionID_))
+	fmt.Fprintf(log, " [hostname %q] [uri %q] [unique_id %q]", mr.ServerIPAddress_, mr.URI_, mr.TransactionID_)
 }
 
 func (mr MatchedRule) writeExtraRuleDetails(log *strings.Builder, matchData types.MatchData, n int) {
@@ -143,7 +142,7 @@ func (mr MatchedRule) writeExtraRuleDetails(log *strings.Builder, matchData type
 	if len(data) > maxSizeLogMessage {
 		data = data[:maxSizeLogMessage]
 	}
-	log.WriteString(fmt.Sprintf("[msg_match_%d %q] [data_match_%d %q]", n, msg, n, data))
+	fmt.Fprintf(log, "[msg_match_%d %q] [data_match_%d %q]", n, msg, n, data)
 }
 
 func (mr MatchedRule) matchData(log *strings.Builder, matchData types.MatchData) {
@@ -174,9 +173,9 @@ func (mr MatchedRule) matchData(log *strings.Builder, matchData types.MatchData)
 func (mr MatchedRule) AuditLog(code int) string {
 	log := &strings.Builder{}
 	for _, matchData := range mr.MatchedDatas_ {
-		log.WriteString(fmt.Sprintf("[client %q] ", mr.ClientIPAddress_))
+		fmt.Fprintf(log, "[client %q] ", mr.ClientIPAddress_)
 		if mr.Disruptive_ {
-			log.WriteString(fmt.Sprintf("Coraza: Access denied with code %d (phase %d). ", code, mr.Rule_.Phase()))
+			fmt.Fprintf(log, "Coraza: Access denied with code %d (phase %d). ", code, mr.Rule_.Phase())
 		} else {
 			log.WriteString("Coraza: Warning. ")
 		}
@@ -204,9 +203,9 @@ func (mr MatchedRule) ErrorLog(code int) string {
 
 	log := &strings.Builder{}
 
-	log.WriteString(fmt.Sprintf("[client %q] ", mr.ClientIPAddress_))
+	fmt.Fprintf(log, "[client %q] ", mr.ClientIPAddress_)
 	if mr.Disruptive_ {
-		log.WriteString(fmt.Sprintf("Coraza: Access denied with code %d (phase %d). ", code, mr.Rule_.Phase()))
+		fmt.Fprintf(log, "Coraza: Access denied with code %d (phase %d). ", code, mr.Rule_.Phase())
 	} else {
 		log.WriteString("Coraza: Warning. ")
 	}
