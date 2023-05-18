@@ -314,7 +314,7 @@ func (*dummyDenyAction) Init(_ plugintypes.RuleMetadata, _ string) error {
 
 func (*dummyDenyAction) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
 	rid := r.ID()
-	if rid == 0 {
+	if rid == noID {
 		rid = r.ParentID()
 	}
 	tx.Interrupt(&types.Interruption{
@@ -525,5 +525,68 @@ func TestTransformArgNoCacheForTXVariable(t *testing.T) {
 	}
 	if len(transformationCache) != 0 {
 		t.Errorf("Expected 0 transformations in cache, got %d. It is not expected to cache TX variable transformations", len(transformationCache))
+	}
+}
+
+func TestCaptureNotPropagatedToInnerChainRule(t *testing.T) {
+	r := NewRule()
+	r.ID_ = 1
+	r.operator = nil
+	r.HasChain = true
+	r.Phase_ = 1
+	r.Capture = true
+	chainedRule := NewRule()
+	chainedRule.ID_ = 0
+	chainedRule.ParentID_ = 1
+	chainedRule.operator = nil
+	chainedRule.Capture = false
+	r.Chain = chainedRule
+	tx := NewWAF().NewTransaction()
+	var matchedValues []types.MatchData
+	r.doEvaluate(types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
+	// We expect that capture is false after doEvaluate.
+	if tx.Capture {
+		t.Errorf("Expected capture to be false. The parent rule enables capture, but inner rule should disable it.")
+	}
+}
+
+func TestExpandMacroAfterWholeRuleEvaluation(t *testing.T) {
+	r := NewRule()
+	r.ID_ = 1
+	r.operator = nil
+	r.HasChain = true
+	r.Phase_ = 1
+	r.Msg, _ = macro.NewMacro("%{MATCHED_VAR_NAME}-msg")
+	r.LogData, _ = macro.NewMacro("%{MATCHED_VAR_NAME}-data")
+	action := &dummyNonDisruptiveAction{}
+	_ = r.AddAction("dummyNonDisruptiveAction", action)
+	chainedRule := NewRule()
+	chainedRule.ID_ = 0
+	chainedRule.ParentID_ = 1
+	chainedRule.operator = nil
+
+	_ = r.AddVariable(variables.RequestURI, "", false)
+	// ArgsGet is the variable matched by the inner rule. We expect that MATCHED_VAR_NAME
+	// will be ARGS_GET being the last variable matched
+	_ = chainedRule.AddVariable(variables.ArgsGet, "", false)
+	dummyEqOp := &dummyEqOperator{}
+	r.SetOperator(dummyEqOp, "@eq", "0")
+	chainedRule.SetOperator(dummyEqOp, "@eq", "0")
+
+	r.Chain = chainedRule
+	tx := NewWAF().NewTransaction()
+	tx.ProcessURI("0", "GET", "HTTP/1.1")
+	tx.AddGetRequestArgument("test", "0")
+
+	var matchedValues []types.MatchData
+	matchdata := r.doEvaluate(types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
+	if len(matchdata) != 2 {
+		t.Errorf("Expected 2 matchdata from a chained rule (total 2 rules), got %d", len(matchdata))
+	}
+	if matchdata[0].Message() != "ARGS_GET:test-msg" {
+		t.Errorf("Expected ArgsGet-msg, got %s", matchdata[0].Message())
+	}
+	if matchdata[0].Data() != "ARGS_GET:test-data" {
+		t.Errorf("Expected ArgsGet-data, got %s", matchdata[0].Data())
 	}
 }

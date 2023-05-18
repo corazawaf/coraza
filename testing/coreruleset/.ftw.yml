@@ -11,3 +11,4 @@ testoverride:
     920420-8: 'HEAD request with data. Go/http does not allow it - 400 Bad Request'
     920430-5: 'Test has expect_error, Go/http and Envoy return 400'
     920430-8: 'Go/http does no allow HTTP/3.0 - 505 HTTP Version Not Supported'
+    932200-13: 'wip'

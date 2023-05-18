@@ -171,12 +171,13 @@ func (r *Rule) Evaluate(phase types.RulePhase, tx plugintypes.TransactionState, 
 	r.doEvaluate(phase, tx.(*Transaction), &collectiveMatchedValues, chainLevelZero, cache)
 }
 
+const noID = 0
+
 func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, collectiveMatchedValues *[]types.MatchData, chainLevel int, cache map[transformationKey]*transformationValue) []types.MatchData {
-	if r.Capture {
-		tx.Capture = true
-	}
+	tx.Capture = r.Capture
+
 	rid := r.ID_
-	if rid == 0 {
+	if rid == noID {
 		rid = r.ParentID_
 	}
 
@@ -202,11 +203,14 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, collectiveMatc
 	if r.operator == nil {
 		tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Forcing rule to match")
 		md := &corazarules.MatchData{}
-		if r.Msg != nil {
-			md.Message_ = r.Msg.Expand(tx)
-		}
-		if r.LogData != nil {
-			md.Data_ = r.LogData.Expand(tx)
+		if r.ParentID_ != noID || r.MultiMatch {
+			// In order to support Msg and LogData for inner rules, we need to expand them now
+			if r.Msg != nil {
+				md.Message_ = r.Msg.Expand(tx)
+			}
+			if r.LogData != nil {
+				md.Data_ = r.LogData.Expand(tx)
+			}
 		}
 		matchedValues = append(matchedValues, md)
 		if multiphaseEvaluation {
@@ -259,11 +263,14 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, collectiveMatc
 						// Set the txn variables for expansions before usage
 						r.matchVariable(tx, mr)
 
-						if r.Msg != nil {
-							mr.Message_ = r.Msg.Expand(tx)
-						}
-						if r.LogData != nil {
-							mr.Data_ = r.LogData.Expand(tx)
+						if r.ParentID_ != noID || r.MultiMatch {
+							// In order to support Msg and LogData for inner rules, we need to expand them now
+							if r.Msg != nil {
+								mr.Message_ = r.Msg.Expand(tx)
+							}
+							if r.LogData != nil {
+								mr.Data_ = r.LogData.Expand(tx)
+							}
 						}
 
 						if !multiphaseEvaluation {
@@ -319,7 +326,8 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, collectiveMatc
 	}
 
 	// disruptive actions and rules affecting the rule flow are only evaluated by parent rules
-	if r.ParentID_ == 0 {
+	// also, expansion of Msg and LogData of the parent rule is postponed after the chain evaluation (if any)
+	if r.ParentID_ == noID {
 		// we only run the chains for the parent rule
 		for nr := r.Chain; nr != nil; {
 			chainLevel++
@@ -331,6 +339,18 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, collectiveMatc
 			matchedValues = append(matchedValues, matchedChainValues...)
 			nr = nr.Chain
 		}
+
+		// Expansion of Msg and LogData is postponed here. It allows to run it only if the whole rule/chain
+		// matches and to rely on MATCHED_* variables updated by the chain, not just by the fist rule.
+		if !r.MultiMatch {
+			if r.Msg != nil {
+				matchedValues[0].(*corazarules.MatchData).Message_ = r.Msg.Expand(tx)
+			}
+			if r.LogData != nil {
+				matchedValues[0].(*corazarules.MatchData).Data_ = r.LogData.Expand(tx)
+			}
+		}
+
 		for _, a := range r.actions {
 			if a.Function.Type() == plugintypes.ActionTypeFlow {
 				// Flow actions are evaluated also if the rule engine is set to DetectionOnly
@@ -342,7 +362,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, collectiveMatc
 				a.Function.Evaluate(r, tx)
 			}
 		}
-		if r.ID_ != 0 {
+		if r.ID_ != noID {
 			// we avoid matching chains and secmarkers
 			tx.MatchRule(r, matchedValues)
 		}
@@ -392,7 +412,7 @@ func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transform
 
 func (r *Rule) matchVariable(tx *Transaction, m *corazarules.MatchData) {
 	rid := r.ID_
-	if rid == 0 {
+	if rid == noID {
 		rid = r.ParentID_
 	}
 	if m.Variable() != variables.Unknown {

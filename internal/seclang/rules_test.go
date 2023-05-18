@@ -239,9 +239,78 @@ func TestTagsAreNotPrintedTwice(t *testing.T) {
 	}
 	re := regexp.MustCompile(`\[tag "some1"\]`)
 	for _, l := range logs {
-		if len(re.FindAllString(l, -1)) < 2 {
-			t.Errorf("failed to log tag, missing instances (%d)\n%s", len(re.FindAllString(l, -1)), l)
+		if len(re.FindAllString(l, -1)) > 1 {
+			t.Errorf("failed to log tag, got multiple instances (%d)\n%s", len(re.FindAllString(l, -1)), l)
 		}
+	}
+}
+
+func TestPrintedExtraMsgAndDataFromChainedRules(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	var logs []string
+	waf.SetErrorCallback(func(mr types.MatchedRule) {
+		logs = append(logs, mr.ErrorLog(403))
+	})
+	parser := NewParser(waf)
+	err := parser.FromString(`
+	SecRule ARGS_GET "@rx .*" "id:1, phase:1, log, chain, deny, status:403, msg:'Parent msg', logdata:'%{MATCHED_VAR} in %{MATCHED_VAR_NAME}"
+	  SecRule ARGS_GET "@rx .*" "msg:'Inner message 1', logdata:'%{MATCHED_VAR} in %{MATCHED_VAR_NAME}', chain"
+	    SecRule ARGS_GET "@rx .*" "msg:'Inner message 2', logdata:'%{MATCHED_VAR} in %{MATCHED_VAR_NAME}'"
+	`)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	tx := waf.NewTransaction()
+	tx.AddGetRequestArgument("test", "1")
+	it := tx.ProcessRequestHeaders()
+	if it == nil {
+		t.Error("failed to interrupt")
+	} else if it.Status != 403 {
+		t.Errorf("failed to set status, got %d", it.Status)
+	}
+	if len(logs) != 1 {
+		t.Errorf("failed to log with %d", len(logs))
+	}
+	if count := strings.Count(logs[0], "1 in ARGS_GET:test"); count != 3 {
+		t.Errorf("failed to log logdata, expected 3 repetitions, got %d", count)
+	}
+	if count := strings.Count(logs[0], "Inner message 1"); count != 1 {
+		t.Errorf("Unexpected number of msg from inner rule 1, expected 1 got %d", count)
+	}
+	if count := strings.Count(logs[0], "Inner message 2"); count != 1 {
+		t.Errorf("Unexpected number of msg from inner rule 2, expected 1 got %d", count)
+	}
+}
+
+func TestPrintedMultipleMsgAndDataWithMultiMatch(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	var logs []string
+	waf.SetErrorCallback(func(mr types.MatchedRule) {
+		logs = append(logs, mr.ErrorLog(403))
+	})
+	parser := NewParser(waf)
+	err := parser.FromString(`
+	SecRule ARGS_GET "@rx .*" "id:9696, phase:1, log, chain, deny, t:lowercase, status:403, msg:'msg', logdata:'%{MATCHED_VAR} in %{MATCHED_VAR_NAME}',multiMatch"
+	`)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	tx := waf.NewTransaction()
+	tx.AddGetRequestArgument("testArgGet", "tEsT1")
+	it := tx.ProcessRequestHeaders()
+	if it == nil {
+		t.Error("failed to interrupt")
+	} else if it.Status != 403 {
+		t.Errorf("failed to set status, got %d", it.Status)
+	}
+	if len(logs) != 1 {
+		t.Errorf("failed to log with %d", len(logs))
+	}
+	if count := strings.Count(logs[0], "tEsT1 in ARGS_GET"); count != 1 {
+		t.Errorf("failed to log logdata, expected \"tEsT1 in ARGS_GET\" occurence, got %s", logs[0])
+	}
+	if count := strings.Count(logs[0], "test1 in ARGS_GET"); count != 1 {
+		t.Errorf("failed to log logdata, expected \"test1 in ARGS_GET\" occurence, got %s", logs[0])
 	}
 }
 

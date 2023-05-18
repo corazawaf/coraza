@@ -16,6 +16,7 @@ import (
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
@@ -727,23 +728,80 @@ func TestRelevantAuditLogging(t *testing.T) {
 }
 
 func TestLogCallback(t *testing.T) {
-	waf := NewWAF()
-	buffer := ""
-	waf.SetErrorCallback(func(mr types.MatchedRule) {
-		buffer = mr.ErrorLog(403)
-	})
-	tx := waf.NewTransaction()
-	rule := NewRule()
-	tx.MatchRule(rule, []types.MatchData{
-		&corazarules.MatchData{
-			Variable_: variables.UniqueID,
+
+	testCases := []struct {
+		name            string
+		engineStatus    types.RuleEngineStatus
+		action          plugintypes.Action
+		shouldInterrupt bool
+		expectedLogLine string
+	}{
+		{
+			name:            "disruptive action",
+			engineStatus:    types.RuleEngineOn,
+			action:          &dummyDenyAction{},
+			shouldInterrupt: true,
+			expectedLogLine: "Coraza: Access denied",
 		},
-	})
-	if buffer == "" && strings.Contains(buffer, tx.id) {
-		t.Error("failed to call error log callback")
+		{
+			name:            "disruptive action detection only",
+			engineStatus:    types.RuleEngineDetectionOnly,
+			action:          &dummyDenyAction{},
+			shouldInterrupt: false,
+			expectedLogLine: "Coraza: Warning",
+		},
+		{
+			name:            "no disruptive action",
+			engineStatus:    types.RuleEngineOn,
+			action:          &dummyNonDisruptiveAction{},
+			shouldInterrupt: false,
+			expectedLogLine: "Coraza: Warning",
+		},
 	}
-	if err := tx.Close(); err != nil {
-		t.Error(err)
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			waf := NewWAF()
+			buffer := ""
+			waf.SetErrorCallback(func(mr types.MatchedRule) {
+				buffer = mr.ErrorLog(403)
+			})
+			waf.RuleEngine = testCase.engineStatus
+			tx := waf.NewTransaction()
+			rule := NewRule()
+			rule.ID_ = 1
+			rule.Phase_ = 1
+			rule.Log = true
+			_ = rule.AddAction("action", testCase.action)
+			tx.MatchRule(rule, []types.MatchData{
+				&corazarules.MatchData{
+					Variable_: variables.UniqueID,
+				},
+			})
+			tx.WAF.Rules.rules = append(tx.WAF.Rules.rules, *rule)
+
+			it := tx.ProcessRequestHeaders()
+			if testCase.shouldInterrupt {
+				if it == nil {
+					t.Fatal("Expected interruption on headers with disruptive action")
+				}
+			} else {
+				if it != nil {
+					t.Fatal("Unexpected interruption on headers without disruptive action")
+				}
+			}
+
+			if buffer == "" || !strings.Contains(buffer, tx.id) {
+				t.Error("failed to call error log callback")
+			}
+			if !strings.Contains(buffer, testCase.expectedLogLine) {
+				t.Errorf("Expected string \"%s\" with disruptive rule, got %s", testCase.expectedLogLine, buffer)
+
+				if err := tx.Close(); err != nil {
+					t.Error(err)
+				}
+			}
+		})
 	}
 }
 
