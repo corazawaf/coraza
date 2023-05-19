@@ -6,8 +6,8 @@ package coraza
 import (
 	"io/fs"
 
-	"github.com/corazawaf/coraza/v3/auditlog"
 	"github.com/corazawaf/coraza/v3/debuglog"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -21,9 +21,6 @@ type WAFConfig interface {
 
 	// WithDirectivesFromFile parses the directives from the given file and adds them to the WAF.
 	WithDirectivesFromFile(path string) WAFConfig
-
-	// WithAuditLog configures audit logging.
-	WithAuditLog(config AuditLogConfig) WAFConfig
 
 	// WithRequestBodyAccess enables access to the request body.
 	WithRequestBodyAccess() WAFConfig
@@ -80,9 +77,6 @@ type AuditLogConfig interface {
 
 	// WithParts configures the parts of the request/response to be logged.
 	WithParts(parts types.AuditLogParts) AuditLogConfig
-
-	// WithLogger configures the auditlog.Writer to write logs to.
-	WithLogger(logger auditlog.Writer) AuditLogConfig
 }
 
 // NewAuditLogConfig returns a new AuditLogConfig with the default settings.
@@ -134,12 +128,6 @@ func (c *wafConfig) WithDirectivesFromFile(path string) WAFConfig {
 func (c *wafConfig) WithDirectives(directives string) WAFConfig {
 	ret := c.clone()
 	ret.rules = append(ret.rules, wafRule{str: directives})
-	return ret
-}
-
-func (c *wafConfig) WithAuditLog(config AuditLogConfig) WAFConfig {
-	ret := c.clone()
-	ret.auditLog = config.(*auditLogConfig)
 	return ret
 }
 
@@ -208,7 +196,7 @@ func (c *wafConfig) WithResponseBodyMimeTypes(mimeTypes []string) WAFConfig {
 type auditLogConfig struct {
 	relevantOnly bool
 	parts        types.AuditLogParts
-	writer       auditlog.Writer
+	writer       plugintypes.AuditLogWriter
 }
 
 func (c *auditLogConfig) LogRelevantOnly() AuditLogConfig {
@@ -220,12 +208,6 @@ func (c *auditLogConfig) LogRelevantOnly() AuditLogConfig {
 func (c *auditLogConfig) WithParts(parts types.AuditLogParts) AuditLogConfig {
 	ret := c.clone()
 	ret.parts = parts
-	return ret
-}
-
-func (c *auditLogConfig) WithLogger(logger auditlog.Writer) AuditLogConfig {
-	ret := c.clone()
-	ret.writer = logger
 	return ret
 }
 

@@ -15,7 +15,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/auditlog"
+	"github.com/corazawaf/coraza/v3/internal/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
@@ -40,9 +40,9 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	id := utils.RandomString(10)
 
 	if err := waf.AuditLogWriter().Write(&auditlog.Log{
-		Parts: types.AuditLogParts("ABCDEFGHIJKZ"),
-		Transaction: auditlog.Transaction{
-			ID: id,
+		Parts_: types.AuditLogParts("ABCDEFGHIJKZ"),
+		Transaction_: auditlog.Transaction{
+			ID_: id,
 		},
 	}); err != nil {
 		t.Fatal(err)

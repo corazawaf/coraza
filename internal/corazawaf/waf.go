@@ -14,8 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/corazawaf/coraza/v3/auditlog"
 	"github.com/corazawaf/coraza/v3/debuglog"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/environment"
 	stringutils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/internal/sync"
@@ -120,11 +121,11 @@ type WAF struct {
 	// Contains the regular expression for relevant status audit logging
 	AuditLogRelevantStatus *regexp.Regexp
 
-	auditLogWriter auditlog.Writer
+	auditLogWriter plugintypes.AuditLogWriter
 
 	// AuditLogWriterConfig is configuration of audit logging, populated by multiple directives and consumed by
 	// SecAuditLog.
-	AuditLogWriterConfig auditlog.Config
+	AuditLogWriterConfig plugintypes.AuditLogConfig
 
 	auditLogWriterInitialized bool
 }
@@ -303,13 +304,13 @@ func (w *WAF) SetDebugLogLevel(lvl debuglog.Level) error {
 }
 
 // SetAuditLogWriter sets the audit log writer
-func (w *WAF) SetAuditLogWriter(alw auditlog.Writer) {
+func (w *WAF) SetAuditLogWriter(alw plugintypes.AuditLogWriter) {
 	w.auditLogWriter = alw
 }
 
 // AuditLogWriter returns the audit log writer. If the writer is not initialized,
 // it will be initialized
-func (w *WAF) AuditLogWriter() auditlog.Writer {
+func (w *WAF) AuditLogWriter() plugintypes.AuditLogWriter {
 	if !w.auditLogWriterInitialized {
 		if err := w.auditLogWriter.Init(w.AuditLogWriterConfig); err != nil {
 			w.Logger.Error().Err(err).Msg("Failed to initialize audit log")

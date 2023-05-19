@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -24,7 +25,7 @@ func TestNativeFormatter(t *testing.T) {
 
 func createAuditLog() *Log {
 	return &Log{
-		Parts: []types.AuditLogPart{
+		Parts_: []types.AuditLogPart{
 			types.AuditLogPartAuditLogHeader,
 			types.AuditLogPartRequestHeaders,
 			types.AuditLogPartRequestBody,
@@ -33,38 +34,38 @@ func createAuditLog() *Log {
 			types.AuditLogPartAuditLogTrailer,
 			types.AuditLogPartRulesMatched,
 		},
-		Transaction: Transaction{
-			Timestamp:     "02/Jan/2006:15:04:20 -0700",
-			UnixTimestamp: 0,
-			ID:            "123",
-			Request: &TransactionRequest{
-				URI:    "/test.php",
-				Method: "GET",
-				Headers: map[string][]string{
+		Transaction_: Transaction{
+			Timestamp_:     "02/Jan/2006:15:04:20 -0700",
+			UnixTimestamp_: 0,
+			ID_:            "123",
+			Request_: &TransactionRequest{
+				URI_:    "/test.php",
+				Method_: "GET",
+				Headers_: map[string][]string{
 					"some": {
 						"somedata",
 					},
 				},
 			},
-			Response: &TransactionResponse{
-				Status: 200,
-				Headers: map[string][]string{
+			Response_: &TransactionResponse{
+				Status_: 200,
+				Headers_: map[string][]string{
 					"some": {
 						"somedata",
 					},
 				},
 			},
-			Producer: &TransactionProducer{
-				Connector: "some connector",
-				Version:   "1.2.3",
+			Producer_: &TransactionProducer{
+				Connector_: "some connector",
+				Version_:   "1.2.3",
 			},
 		},
-		Messages: []Message{
-			{
-				Message: "some message",
-				Data: MessageData{
-					Msg: "some message",
-					Raw: "SecAction \"id:100\"",
+		Messages_: []plugintypes.AuditLogMessage{
+			&Message{
+				Message_: "some message",
+				Data_: &MessageData{
+					Msg_: "some message",
+					Raw_: "SecAction \"id:100\"",
 				},
 			},
 		},
