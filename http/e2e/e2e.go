@@ -9,15 +9,23 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 // TODO Expected Coraza configs
 // ...
 // ...
+// CORAZA_HOST
+// HTTPBIN_HOST
+// CORAZA_ENVOY
+
+// CORAZA_ENVOY=true go run .
+
+const healthCheckTimeout = 15 // Seconds
+
 func main() {
 	// Initialize variables
-	// TODO set to false by default
-	corazaEnvoy := true
+	corazaEnvoy := false
 	corazaEnvoyString := os.Getenv("CORAZA_ENVOY")
 	if corazaEnvoyString == "true" {
 		corazaEnvoy = true
@@ -26,21 +34,33 @@ func main() {
 	if corazaHost == "" {
 		corazaHost = "localhost:8080"
 	}
-	// httpbinHost := os.Getenv("HTTPBIN_HOST")
-	// if httpbinHost == "" {
-	// 	httpbinHost = "localhost:8081"
-	// }
-	// TODO check if needed
-	// timoutSecs := os.Getenv("TIMEOUT_SECS")
-	// if timoutSecs == "" {
-	// 	timoutSecs = "5"
-	// }
+	httpbinHost := os.Getenv("HTTPBIN_HOST")
+	if httpbinHost == "" {
+		httpbinHost = "localhost:8081"
+	}
 
-	// healthEndPointUrl := "http://" + httpbinHost
+	healthEndPointUrl := "http://" + httpbinHost + "/status/200"
 	urlUnfiltered := "http://" + corazaHost
 	urlFiltered := urlUnfiltered + "/admin"
 	urlEcho := urlUnfiltered + "/anything"
 	urlFilteredRespHeader := urlUnfiltered + "/status/406"
+
+	healthChecks := []struct {
+		name         string
+		url          string
+		expectedCode int
+	}{
+		{
+			name:         "Backend health check",
+			url:          healthEndPointUrl,
+			expectedCode: 200,
+		},
+		{
+			name:         "Coraza health check",
+			url:          urlUnfiltered,
+			expectedCode: 200,
+		},
+	}
 
 	tests := []struct {
 		name               string
@@ -104,18 +124,59 @@ func main() {
 			expectedEmptyBody: true,
 			expectedCode:      403,
 		},
+		{
+			name:         "Testing XSS detection at request headers",
+			url:          urlEcho + "?arg=<script>alert(0)</script>",
+			httpMethod:   "GET",
+			expectedCode: 403,
+		},
+		{
+			name:         "Testing SQLi detection at request body",
+			url:          urlEcho + "?arg=<script>alert(0)</script>",
+			httpMethod:   "POST",
+			headers:      map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			payload:      "1%27%20ORDER%20BY%203--%2B",
+			expectedCode: 403,
+		},
+		{
+			name: "Testing CRS rule 913100 sending malicious UA",
+			url:  urlEcho,
+			headers: map[string]string{
+				"Content-Type": "application/x-www-form-urlencoded",
+				"User-Agent":   "Grabber/0.1 (X11; U; Linux i686; en-US; rv:1.7)",
+			},
+			httpMethod:   "GET",
+			expectedCode: 403,
+		},
 	}
 
 	// Check health endpoint
-	// TODO wait for filter and endpoint to be ready
+	totalChecks := len(healthChecks)
+	for currentCheckIndex, healthCheck := range healthChecks {
+		fmt.Printf("[%d/%d]Running health check: %s\n", currentCheckIndex+1, totalChecks, healthCheck.name)
+		client := http.Client{}
+		timeout := healthCheckTimeout
+		tick := time.Tick(time.Second)
+		for range tick {
+			resp, err := client.Get(healthCheck.url)
+			fmt.Printf("[Wait] Waiting for %s. Timeout: %ds\n", healthCheck.url, timeout)
+			if err == nil && resp.StatusCode == http.StatusOK {
+				fmt.Printf("[Ok] Health check successful, got status code %d\n", resp.StatusCode)
+				break
+			}
+			timeout--
+			if timeout == 0 {
+				fmt.Printf("[Fail] Timeout waiting for response from %s, make sure the server is running.\n", healthCheck.url)
+				os.Exit(1)
+			}
+		}
+	}
 
 	totalTests := len(tests)
-	currentTestIndex := 0
 
 	// Iterate over tests
-	for _, test := range tests {
-		currentTestIndex++
-		fmt.Printf("[%d/%d] Running test: %s\n", currentTestIndex, totalTests, test.name)
+	for currentTestIndex, test := range tests {
+		fmt.Printf("[%d/%d] Running test: %s\n", currentTestIndex+1, totalTests, test.name)
 		client := &http.Client{}
 		payloadReader := io.Reader(nil)
 		if test.payload != "" {
