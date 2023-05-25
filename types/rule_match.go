@@ -44,6 +44,6 @@ type MatchedRule interface {
 
 	Rule() RuleMetadata
 
-	AuditLog(code int) string
-	ErrorLog(code int) string
+	AuditLog() string
+	ErrorLog() string
 }

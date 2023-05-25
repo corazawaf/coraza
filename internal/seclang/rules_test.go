@@ -156,7 +156,7 @@ func TestRuleLogging(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	var logs []string
 	waf.SetErrorCallback(func(mr types.MatchedRule) {
-		logs = append(logs, mr.ErrorLog(403))
+		logs = append(logs, mr.ErrorLog())
 	})
 	parser := NewParser(waf)
 	err := parser.FromString(`
@@ -217,7 +217,7 @@ func TestTagsAreNotPrintedTwice(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	var logs []string
 	waf.SetErrorCallback(func(mr types.MatchedRule) {
-		logs = append(logs, mr.ErrorLog(403))
+		logs = append(logs, mr.ErrorLog())
 	})
 	parser := NewParser(waf)
 	err := parser.FromString(`
@@ -249,7 +249,7 @@ func TestPrintedExtraMsgAndDataFromChainedRules(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	var logs []string
 	waf.SetErrorCallback(func(mr types.MatchedRule) {
-		logs = append(logs, mr.ErrorLog(403))
+		logs = append(logs, mr.ErrorLog())
 	})
 	parser := NewParser(waf)
 	err := parser.FromString(`
@@ -286,7 +286,7 @@ func TestPrintedMultipleMsgAndDataWithMultiMatch(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	var logs []string
 	waf.SetErrorCallback(func(mr types.MatchedRule) {
-		logs = append(logs, mr.ErrorLog(403))
+		logs = append(logs, mr.ErrorLog())
 	})
 	parser := NewParser(waf)
 	err := parser.FromString(`
@@ -318,7 +318,7 @@ func TestStatusFromInterruptions(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	var logs []string
 	waf.SetErrorCallback(func(mr types.MatchedRule) {
-		logs = append(logs, mr.ErrorLog(403))
+		logs = append(logs, mr.ErrorLog())
 	})
 	parser := NewParser(waf)
 	err := parser.FromString(`
@@ -356,7 +356,7 @@ func TestLogsAreNotPrintedManyTimes(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	var logs []string
 	waf.SetErrorCallback(func(mr types.MatchedRule) {
-		logs = append(logs, mr.ErrorLog(403))
+		logs = append(logs, mr.ErrorLog())
 	})
 	parser := NewParser(waf)
 	err := parser.FromString(`

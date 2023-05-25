@@ -215,7 +215,7 @@ func TestChainEvaluation(t *testing.T) {
 
 func errLogger(t *testing.T) func(rule types.MatchedRule) {
 	return func(rule types.MatchedRule) {
-		t.Log(rule.ErrorLog(0))
+		t.Log(rule.ErrorLog())
 	}
 }
 
