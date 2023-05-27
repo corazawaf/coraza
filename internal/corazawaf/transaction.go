@@ -1456,8 +1456,7 @@ func (tx *Transaction) String() string {
 	res := strings.Builder{}
 	res.WriteString("\n\n----------------------- ERRORLOG ----------------------\n")
 	for _, mr := range tx.matchedRules {
-		status, _ := strconv.Atoi(tx.variables.responseStatus.Get())
-		res.WriteString(mr.ErrorLog(status))
+		res.WriteString(mr.ErrorLog())
 		res.WriteString("\n\n----------------------- MATCHDATA ---------------------\n")
 		for _, md := range mr.MatchedDatas() {
 			fmt.Fprintf(&res, "%+v\n", md)

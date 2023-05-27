@@ -26,16 +26,16 @@ func TestErrorLogMessagesSizesNoExtraRuleDetails(t *testing.T) {
 			},
 		},
 	}
-	LogSizeWithoutMsg := len(matchedRule.ErrorLog(403))
+	LogSizeWithoutMsg := len(matchedRule.ErrorLog())
 	matchedRule.MatchedDatas_[0].(*MatchData).Message_ = strings.Repeat("a", 300)
-	logWithMsg := matchedRule.ErrorLog(403)
+	logWithMsg := matchedRule.ErrorLog()
 	logSizeWithMsg := len(logWithMsg)
 	// The parent message is repeated twice when loggin error log
 	if lenDiff := logSizeWithMsg - LogSizeWithoutMsg; lenDiff != maxSizeLogMessage*2 {
 		t.Errorf("Expected message repeated twice with total len equal to %d, got %d", maxSizeLogMessage*2, lenDiff)
 	}
 	matchedRule.MatchedDatas_[0].(*MatchData).Data_ = strings.Repeat("b", 300)
-	logWithMsgData := matchedRule.ErrorLog(403)
+	logWithMsgData := matchedRule.ErrorLog()
 	logSizeWithMsgData := len(logWithMsgData)
 	// The parent message is repeated twice when loggin error log
 	if lenDiff := logSizeWithMsgData - logSizeWithMsg; lenDiff != maxSizeLogMessage {
@@ -47,7 +47,7 @@ func TestErrorLogMessagesSizesNoExtraRuleDetails(t *testing.T) {
 		t.Errorf("Expected string \"%s\" if not disruptive rule, got %s", noDisruptiveLine, logWithMsg)
 	}
 	matchedRule.Disruptive_ = true
-	logWithDisruptive := matchedRule.ErrorLog(403)
+	logWithDisruptive := matchedRule.ErrorLog()
 	disruptiveLine := "Coraza: Access denied"
 	if !strings.Contains(logWithDisruptive, disruptiveLine) {
 		t.Errorf("Expected string \"%s\" if disruptive rule, got %s", disruptiveLine, logWithMsg)
@@ -76,14 +76,14 @@ func TestErrorLogMessagesSizesWithExtraRuleDetails(t *testing.T) {
 			},
 		},
 	}
-	logWithExtraMsg := matchedRule.ErrorLog(403)
+	logWithExtraMsg := matchedRule.ErrorLog()
 	expectedExtraMsgLine := "\"" + strings.Repeat("c", maxSizeLogMessage) + "\""
 	if !strings.Contains(logWithExtraMsg, expectedExtraMsgLine) {
 		t.Errorf("Expected \"%s\" in log string, got %s", expectedExtraMsgLine, logWithExtraMsg)
 	}
 
 	matchedRule.MatchedDatas_[1].(*MatchData).Data_ = strings.Repeat("d", 300)
-	logWithExtraMsgData := matchedRule.ErrorLog(403)
+	logWithExtraMsgData := matchedRule.ErrorLog()
 
 	expectedExtraDataLine := "\"" + strings.Repeat("d", maxSizeLogMessage) + "\""
 	if !strings.Contains(logWithExtraMsgData, expectedExtraDataLine) {
