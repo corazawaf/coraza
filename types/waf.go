@@ -122,6 +122,9 @@ var validOpts = map[AuditLogPart]struct{}{
 }
 
 func ParseAuditLogParts(opts string) (AuditLogParts, error) {
+	if !strings.Contains(opts, "A") {
+		return AuditLogParts(""), fmt.Errorf("audit log parts A is required")
+	}
 	for _, opt := range opts {
 		if _, ok := validOpts[AuditLogPart(opt)]; !ok {
 			return AuditLogParts(""), fmt.Errorf("invalid audit log part: %s", opts)

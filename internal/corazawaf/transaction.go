@@ -1305,7 +1305,7 @@ func (tx *Transaction) LastPhase() types.RulePhase {
 func (tx *Transaction) AuditLog() *auditlog.Log {
 	al := &auditlog.Log{}
 	al.Parts_ = tx.AuditLogParts
-
+	FinalBoundary := false
 	var alTransaction auditlog.Transaction
 	for _, part := range tx.AuditLogParts {
 		switch part {
@@ -1408,6 +1408,11 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 					})
 				}
 			}
+		case types.AuditLogPartFinalBoundary:
+			FinalBoundary = true
+		}
+		if FinalBoundary {
+			break
 		}
 	}
 
