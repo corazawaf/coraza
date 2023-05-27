@@ -57,6 +57,6 @@ func createWAF() coraza.WAF {
 }
 
 func logError(error types.MatchedRule) {
-	msg := error.ErrorLog(0)
+	msg := error.ErrorLog()
 	fmt.Printf("[logError][%s] %s", error.Rule().Severity(), msg)
 }

@@ -252,7 +252,7 @@ func (t *Test) OutputErrors() []string {
 // LogContains checks if the log contains a string
 func (t *Test) LogContains(log string) bool {
 	for _, mr := range t.transaction.MatchedRules() {
-		if strings.Contains(mr.ErrorLog(t.ResponseCode), log) {
+		if strings.Contains(mr.ErrorLog(), log) {
 			return true
 		}
 	}

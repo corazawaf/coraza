@@ -764,7 +764,7 @@ func TestLogCallback(t *testing.T) {
 			waf := NewWAF()
 			buffer := ""
 			waf.SetErrorCallback(func(mr types.MatchedRule) {
-				buffer = mr.ErrorLog(403)
+				buffer = mr.ErrorLog()
 			})
 			waf.RuleEngine = testCase.engineStatus
 			tx := waf.NewTransaction()
