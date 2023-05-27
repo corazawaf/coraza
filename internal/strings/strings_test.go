@@ -109,9 +109,11 @@ func BenchmarkAsciiVsUnicodeCaseString(b *testing.B) {
 		"ThIs Is A StRiNg WiTh MiXeD CaSe",
 	}
 	b.Run("hacky ascii", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			for _, str := range strs {
-				AsciiToLower(str)
+		for _, str := range strs {
+			b.Run(str, func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					AsciiToLower(str)
+				}
 			}
 		}
 	})
