@@ -121,7 +121,8 @@ func AsciiToLower(s string) string {
 
 func doAsciiToLower(s string, start int) string {
 	res := []byte(s)
-	for i := start; i < len(res); i++ {
+	res[start] += 32
+	for i := start + 1; i < len(res); i++ {
 		c := res[i]
 		if c >= 'A' && c <= 'Z' {
 			res[i] += 32

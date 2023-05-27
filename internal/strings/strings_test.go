@@ -94,15 +94,15 @@ func TestRandomStringConcurrency(t *testing.T) {
 }
 
 func TestAsciiToLower(t *testing.T) {
-	hw := "HELLO WORLD"
-	hw = AsciiToLower(hw)
-	if hw != "hello world" {
-		t.Errorf("AsciiToLower() = %s, want %s", hw, "hello world")
+	word := "HELLO WORLD"
+	if want, have := "hello world", AsciiToLower(word); want != have {
+		t.Errorf("Unexpected lowercase word, want %q, have %q", want, have)
 	}
 }
 
 func BenchmarkAsciiVsUnicodeCaseString(b *testing.B) {
 	strs := []string{
+		"!!!!!!!!!!!!!!aaaaaaaaa please merge me!!!",
 		"This is a String With a lot of Characters!!!",
 		"this is a lowercase string with many characters",
 		"THIS IS AN UPPERCASE STRING WITH MANY CHARACTERS",

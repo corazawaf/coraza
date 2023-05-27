@@ -465,7 +465,7 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 			r.variables = append(r.variables, ruleVariableParams{
 				Count:      iscount,
 				Variable:   variables.ArgsGet,
-				KeyStr:     strings.ToLower(key),
+				KeyStr:     istrings.AsciiToLower(key),
 				KeyRx:      re,
 				Exceptions: []ruleVariableException{},
 			})
@@ -473,7 +473,7 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 			r.variables = append(r.variables, ruleVariableParams{
 				Count:      iscount,
 				Variable:   variables.ArgsPost,
-				KeyStr:     strings.ToLower(key),
+				KeyStr:     istrings.AsciiToLower(key),
 				KeyRx:      re,
 				Exceptions: []ruleVariableException{},
 			})
@@ -484,7 +484,7 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 			r.variables = append(r.variables, ruleVariableParams{
 				Count:      iscount,
 				Variable:   variables.ArgsGetNames,
-				KeyStr:     strings.ToLower(key),
+				KeyStr:     istrings.AsciiToLower(key),
 				KeyRx:      re,
 				Exceptions: []ruleVariableException{},
 			})
@@ -492,7 +492,7 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 			r.variables = append(r.variables, ruleVariableParams{
 				Count:      iscount,
 				Variable:   variables.ArgsPostNames,
-				KeyStr:     strings.ToLower(key),
+				KeyStr:     istrings.AsciiToLower(key),
 				KeyRx:      re,
 				Exceptions: []ruleVariableException{},
 			})
@@ -530,12 +530,12 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 	for i, rv := range r.variables {
 		// Splitting Args and ArgsNames variables
 		if multiphaseEvaluation && v == variables.Args && (rv.Variable == variables.ArgsGet || rv.Variable == variables.ArgsPost) {
-			rv.Exceptions = append(rv.Exceptions, ruleVariableException{strings.ToLower(key), re})
+			rv.Exceptions = append(rv.Exceptions, ruleVariableException{istrings.AsciiToLower(key), re})
 			r.variables[i] = rv
 			continue
 		}
 		if multiphaseEvaluation && v == variables.ArgsNames && (rv.Variable == variables.ArgsGetNames || rv.Variable == variables.ArgsPostNames) {
-			rv.Exceptions = append(rv.Exceptions, ruleVariableException{strings.ToLower(key), re})
+			rv.Exceptions = append(rv.Exceptions, ruleVariableException{istrings.AsciiToLower(key), re})
 			r.variables[i] = rv
 			continue
 		}
