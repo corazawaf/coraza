@@ -12,12 +12,12 @@ import (
 	"time"
 )
 
-// External configurable variables
-// CORAZA_ENVOY: Interruptions at response body phase are allowed to return 200 (Instead of 403), but with a body full of null bytes. Defaults to "false".
-// CORAZA_HOST: Main url used to perform requests. Defaults to "localhost:8080".
-// HTTPBIN_HOST: Backend url, used for health checking reasons. Defaults to "localhost:8081".
+// External configurable variables:
+// - CORAZA_ENVOY: Interruptions at response body phase are allowed to return 200 (Instead of 403), but with a body full of null bytes. Defaults to "false".
+// - CORAZA_HOST: Main url used to perform requests. Defaults to "localhost:8080".
+// - HTTPBIN_HOST: Backend url, used for health checking reasons. Defaults to "localhost:8081".
 
-// Expected Coraza configs
+// Expected Coraza configs:
 /*
 // coraza.conf-recommended with SecRuleEngine On
 Include @demo-conf
