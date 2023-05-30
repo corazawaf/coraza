@@ -170,12 +170,12 @@ func (mr MatchedRule) matchData(log *strings.Builder, matchData types.MatchData)
 
 // AuditLog transforms the matched rule into an error log
 // using the legacy Modsecurity syntax
-func (mr MatchedRule) AuditLog(code int) string {
+func (mr MatchedRule) AuditLog() string {
 	log := &strings.Builder{}
 	for _, matchData := range mr.MatchedDatas_ {
 		fmt.Fprintf(log, "[client %q] ", mr.ClientIPAddress_)
 		if mr.Disruptive_ {
-			fmt.Fprintf(log, "Coraza: Access denied with code %d (phase %d). ", code, mr.Rule_.Phase())
+			fmt.Fprintf(log, "Coraza: Access denied (phase %d). ", mr.Rule_.Phase())
 		} else {
 			log.WriteString("Coraza: Warning. ")
 		}
@@ -187,7 +187,7 @@ func (mr MatchedRule) AuditLog(code int) string {
 }
 
 // ErrorLog returns the same as audit log but without matchData
-func (mr MatchedRule) ErrorLog(code int) string {
+func (mr MatchedRule) ErrorLog() string {
 	matchData := mr.MatchedDatas_[0]
 	msg := matchData.Message()
 	for _, md := range mr.MatchedDatas_ {
@@ -205,7 +205,7 @@ func (mr MatchedRule) ErrorLog(code int) string {
 
 	fmt.Fprintf(log, "[client %q] ", mr.ClientIPAddress_)
 	if mr.Disruptive_ {
-		fmt.Fprintf(log, "Coraza: Access denied with code %d (phase %d). ", code, mr.Rule_.Phase())
+		fmt.Fprintf(log, "Coraza: Access denied (phase %d). ", mr.Rule_.Phase())
 	} else {
 		log.WriteString("Coraza: Warning. ")
 	}
