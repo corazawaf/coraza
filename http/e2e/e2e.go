@@ -13,7 +13,7 @@ import (
 )
 
 // External configurable variables:
-// - CORAZA_ENVOY: Interruptions at response body phase are allowed to return 200 (Instead of 403), but with a body full of null bytes. Defaults to "false".
+// - NULLED_BODY: Interruptions at response body phase are allowed to return 200 (Instead of 403), but with a body full of null bytes. Defaults to "false".
 // - CORAZA_HOST: Main url used to perform requests. Defaults to "localhost:8080".
 // - HTTPBIN_HOST: Backend url, used for health checking reasons. Defaults to "localhost:8081".
 
@@ -38,10 +38,10 @@ const healthCheckTimeout = 15 // Seconds
 
 func main() {
 	// Initialize variables
-	corazaEnvoy := false
-	corazaEnvoyString := os.Getenv("CORAZA_ENVOY")
-	if corazaEnvoyString == "true" {
-		corazaEnvoy = true
+	nulledBody := false
+	nulledBodyString := os.Getenv("NULLED_BODY")
+	if nulledBodyString == "true" {
+		nulledBody = true
 	}
 	corazaHost := os.Getenv("CORAZA_HOST")
 	if corazaHost == "" {
@@ -170,14 +170,13 @@ func main() {
 
 	// Check health endpoint
 	totalChecks := len(healthChecks)
+	client := http.Client{}
 	for currentCheckIndex, healthCheck := range healthChecks {
 		fmt.Printf("[%d/%d]Running health check: %s\n", currentCheckIndex+1, totalChecks, healthCheck.name)
-		client := http.Client{}
 		timeout := healthCheckTimeout
 		tick := time.Tick(time.Second)
-
+		req, _ := http.NewRequest(http.MethodGet, healthCheck.url, nil)
 		for range tick {
-			req, _ := http.NewRequest(http.MethodGet, healthCheck.url, nil)
 			if healthCheck.expectedCode != configCheckStatusCode {
 				//  The default e2e header is not added if we are checking that the expected config is loaded
 				req.Header.Add("coraza-e2e", "ok")
@@ -185,6 +184,7 @@ func main() {
 			resp, err := client.Do(req)
 			fmt.Printf("[Wait] Waiting for %s. Timeout: %ds\n", healthCheck.url, timeout)
 			if err == nil {
+				resp.Body.Close()
 				if resp.StatusCode == healthCheck.expectedCode {
 					fmt.Printf("[Ok] Check successful, got status code %d\n", resp.StatusCode)
 					break
@@ -222,38 +222,38 @@ func main() {
 		}
 		req.Header.Add("coraza-e2e", "ok")
 
-		res, err := client.Do(req)
+		resp, err := client.Do(req)
 		if err != nil {
 			fmt.Printf("Error: could not do http request: %s\n", err)
 			os.Exit(1)
 		}
-		if res.StatusCode != test.expectedCode {
-			// Envoy can not return anymore a 403 at phase:4 therefore we expect a 200, but with an empty body
-			if !(corazaEnvoy && test.expectedEmptyBody && res.StatusCode == 200 && test.expectedCode == 403) {
-				fmt.Printf("[Fail] Expected status code %d, got %d from %s\n", test.expectedCode, res.StatusCode, test.url)
-				os.Exit(1)
-			}
-		}
-		resBody, err := io.ReadAll(res.Body)
+		respBody, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
 		if err != nil {
 			fmt.Printf("Error: could not read response body: %s\n", err)
 			os.Exit(1)
 		}
-		if test.expectedEmptyBody && string(resBody) != "" {
-			// If an interruption happend at phase:4, Envoy will override the response body with empty bytes
-			for _, byte := range resBody {
+
+		if resp.StatusCode != test.expectedCode {
+			// Some connectors (such as coraza-proxy-wasm) might not be able to change anymore the status code at phase:4,
+			// therefore, if NULLED_BODY is true, we expect a 200, but with a nulled body
+			if !(nulledBody && test.expectedEmptyBody && resp.StatusCode == 200 && test.expectedCode == 403) {
+				fmt.Printf("[Fail] Expected status code %d, got %d from %s\n", test.expectedCode, resp.StatusCode, test.url)
+				os.Exit(1)
+			}
+		}
+
+		if test.expectedEmptyBody && string(respBody) != "" {
+			// If an interruption happend at phase:4, some connectors (such as coraza-proxy-wasm) will override the response body with empty bytes
+			for _, byte := range respBody {
 				if byte != 0 {
-					fmt.Printf("[Fail] Unexpected response with body, got %s\n", string(resBody))
+					fmt.Printf("[Fail] Unexpected response with body, got %s\n", string(respBody))
 					os.Exit(1)
 
 				}
 			}
 			fmt.Printf("[Ok] Response body filled of null bytes\n")
 		}
-		// if string(resBody) != test.expectedBody {
-		// 	fmt.Printf("[Fail] Expected body %s, got %s\n", test.expectedBody, string(resBody))
-		// 	os.Exit(1)
-		// }
-		fmt.Printf("[Ok] Got status code %d, expected %d\n", res.StatusCode, test.expectedCode)
+		fmt.Printf("[Ok] Got status code %d, expected %d\n", resp.StatusCode, test.expectedCode)
 	}
 }
