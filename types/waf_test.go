@@ -26,8 +26,15 @@ func TestParseAuditLogParts(t *testing.T) {
 				if err != nil {
 					t.Error("unexpected error")
 				}
-				if want, have := string(test.expectedParts), string(parts); want != have {
-					t.Errorf("unexpected parts, want %q, have %q", want, have)
+
+				if want, have := len(test.expectedParts), len(parts); want != have {
+					t.Errorf("unexpected parts length, want %d, have %d", want, have)
+				}
+
+				for i, part := range test.expectedParts {
+					if want, have := part, parts[i]; want != have {
+						t.Errorf("unexpected part, want %q, have %q", want, have)
+					}
 				}
 			}
 		})
