@@ -4,6 +4,7 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -121,13 +122,19 @@ var validOpts = map[AuditLogPart]struct{}{
 	AuditLogPartFinalBoundary:               {},
 }
 
+// ParseAuditLogParts parses the audit log parts
 func ParseAuditLogParts(opts string) (AuditLogParts, error) {
-	if !strings.Contains(opts, "A") {
-		return AuditLogParts(""), fmt.Errorf("audit log parts A is required")
+	if !strings.HasPrefix(opts, "A") {
+		return nil, errors.New("audit log parts is required to start with A")
 	}
+
+	if !strings.HasSuffix(opts, "Z") {
+		return nil, errors.New("audit log parts is required to end with Z")
+	}
+
 	for _, opt := range opts {
 		if _, ok := validOpts[AuditLogPart(opt)]; !ok {
-			return AuditLogParts(""), fmt.Errorf("invalid audit log part: %s", opts)
+			return AuditLogParts(""), fmt.Errorf("invalid audit log parts %q", opts)
 		}
 	}
 	return AuditLogParts(opts), nil

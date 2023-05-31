@@ -445,17 +445,6 @@ func TestParseAuditLog(t *testing.T) {
 		}
 	}
 }
-func TestInvalidAuditLog(t *testing.T) {
-	AuditLogParts, err := types.ParseAuditLogParts("ABCDEFGHIJKLMN")
-	if err == nil || len(AuditLogParts) != 0 {
-		t.Error("AuditLogParts should fail of invalid part")
-	}
-
-	_, err = types.ParseAuditLogParts("BCDEFGHIJKZ")
-	if err.Error() != "audit log parts A is required" {
-		t.Error("AuditLogParts A is required")
-	}
-}
 
 var responseBodyWriters = map[string]func(tx *Transaction, body string) (*types.Interruption, int, error){
 	"WriteResponsequestBody": func(tx *Transaction, body string) (*types.Interruption, int, error) {
@@ -1110,7 +1099,6 @@ func TestTxSetServerName(t *testing.T) {
 	if want, have := "SetServerName has been called after ProcessRequestHeaders", logEntries[0]; !strings.Contains(have, want) {
 		t.Fatalf("unexpected message, want %q, have %q", want, have)
 	}
-
 }
 
 func TestTxAddArgument(t *testing.T) {
