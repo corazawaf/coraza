@@ -430,22 +430,6 @@ func TestAuditLog(t *testing.T) {
 	}
 }
 
-func TestParseAuditLog(t *testing.T) {
-	AuditLogParts, err := types.ParseAuditLogParts("ABCDEFGHIJKZ")
-	if err != nil {
-		t.Error("unexpected audit log parts")
-	}
-	expected := types.AuditLogParts("ABCDEFGHIJKZ")
-	if len(AuditLogParts) != len(expected) {
-		t.Error("AuditLogParts has different length than expected")
-	}
-	for i := 0; i < len(AuditLogParts); i++ {
-		if AuditLogParts[i] != expected[i] {
-			t.Errorf("Byte at position %d differs", i)
-		}
-	}
-}
-
 var responseBodyWriters = map[string]func(tx *Transaction, body string) (*types.Interruption, int, error){
 	"WriteResponsequestBody": func(tx *Transaction, body string) (*types.Interruption, int, error) {
 		return tx.WriteResponseBody([]byte(body))

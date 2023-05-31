@@ -108,7 +108,6 @@ type AuditLogPart byte
 type AuditLogParts []AuditLogPart
 
 var validOpts = map[AuditLogPart]struct{}{
-	AuditLogPartAuditLogHeader:              {},
 	AuditLogPartRequestHeaders:              {},
 	AuditLogPartRequestBody:                 {},
 	AuditLogPartIntermediaryResponseHeaders: {},
@@ -119,7 +118,6 @@ var validOpts = map[AuditLogPart]struct{}{
 	AuditLogPartRequestBodyAlternative:      {},
 	AuditLogPartUploadedFiles:               {},
 	AuditLogPartRulesMatched:                {},
-	AuditLogPartFinalBoundary:               {},
 }
 
 // ParseAuditLogParts parses the audit log parts
@@ -132,17 +130,16 @@ func ParseAuditLogParts(opts string) (AuditLogParts, error) {
 		return nil, errors.New("audit log parts is required to end with Z")
 	}
 
-	for _, opt := range opts {
-		if _, ok := validOpts[AuditLogPart(opt)]; !ok {
+	parts := opts[1 : len(opts)-1]
+	for _, p := range parts {
+		if _, ok := validOpts[AuditLogPart(p)]; !ok {
 			return AuditLogParts(""), fmt.Errorf("invalid audit log parts %q", opts)
 		}
 	}
-	return AuditLogParts(opts), nil
+	return AuditLogParts(parts), nil
 }
 
 const (
-	// AuditLogPartAuditLogHeader is the mandatory header part
-	AuditLogPartAuditLogHeader AuditLogPart = 'A'
 	// AuditLogPartRequestHeaders is the request headers part
 	AuditLogPartRequestHeaders AuditLogPart = 'B'
 	// AuditLogPartRequestBody is the request body part
@@ -163,8 +160,6 @@ const (
 	AuditLogPartUploadedFiles AuditLogPart = 'J'
 	// AuditLogPartRulesMatched is the matched rules part
 	AuditLogPartRulesMatched AuditLogPart = 'K'
-	// AuditLogPartFinalBoundary is the mandatory final boundary part
-	AuditLogPartFinalBoundary AuditLogPart = 'Z'
 )
 
 // Interruption is used to notify the Coraza implementation
