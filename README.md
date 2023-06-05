@@ -6,16 +6,16 @@
 [![Regression Tests](https://github.com/corazawaf/coraza/actions/workflows/regression.yml/badge.svg)](https://github.com/corazawaf/coraza/actions/workflows/regression.yml)
 [![Coreruleset Compatibility](https://img.shields.io/badge/Coreruleset%20Compatibility-100%25-brightgreen)](#)
 [![CodeQL](https://github.com/corazawaf/coraza/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/corazawaf/coraza/actions/workflows/codeql-analysis.yml)
-[![codecov](https://codecov.io/gh/corazawaf/coraza/branch/v3/dev/graph/badge.svg?token=6570804ZC7)](https://codecov.io/gh/corazawaf/coraza)
+[![codecov](https://codecov.io/gh/corazawaf/coraza/branch/main/graph/badge.svg?token=6570804ZC7)](https://codecov.io/gh/corazawaf/coraza)
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 [![OWASP Lab Project](https://img.shields.io/badge/owasp-lab%20project-brightgreen)](https://owasp.org/www-project-coraza-web-application-firewall)
 [![GoDoc](https://godoc.org/github.com/corazawaf/coraza?status.svg)](https://godoc.org/github.com/corazawaf/coraza/v3)
 
 Coraza is an open source, enterprise-grade, high performance Web Application Firewall (WAF) ready to protect your beloved applications. It written in Go, supports ModSecurity SecLang rulesets and is 100% compatible with the OWASP Core Rule Set.
 
-* Website: https://coraza.io
+* Website: <https://coraza.io>
 * Forum: [Github Discussions](https://github.com/corazawaf/coraza/discussions)
-* OWASP Slack Community (#coraza): https://owasp.org/slack/invite
+* OWASP Slack Community (#coraza): <https://owasp.org/slack/invite>
 * Rule testing: [Coraza Playground](https://playground.coraza.io)
 * Planning: [Github Projects](https://github.com/orgs/corazawaf/projects?type=beta)
 
@@ -39,7 +39,7 @@ Key Features:
 
 ## Integrations
 
-The Coraza Project maintains implementations and plugins for the following servers: 
+The Coraza Project maintains implementations and plugins for the following servers:
 
 * [Caddy Reverse Proxy and Webserver Plugin](https://github.com/corazawaf/coraza-caddy) - stable, needs a maintainer
 * [Proxy WASM extension](https://github.com/corazawaf/coraza-proxy-wasm) for proxies with proxy-wasm support (e.g. Envoy) - stable, still under development
@@ -59,7 +59,6 @@ The Coraza Project maintains implementations and plugins for the following serve
 * Golang compiler v1.18+
 * Linux distribution (Debian or Centos recommended) or Mac. Windows not supported yet.
 
-
 ## Coraza Core Usage
 
 Coraza can be used as a library for your Go program to implement a security middleware or integrate it with existing application & webservers.
@@ -68,33 +67,34 @@ Coraza can be used as a library for your Go program to implement a security midd
 package main
 
 import (
-	"fmt"
-	"github.com/corazawaf/coraza/v3"
+ "fmt"
+ "github.com/corazawaf/coraza/v3"
 )
 
 func main() {
-	// First we initialize our waf and our seclang parser
-	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
-		WithDirectives(`SecRule REMOTE_ADDR "@rx .*" "id:1,phase:1,deny,status:403"`))
-	// Now we parse our rules
-	if err != nil {
-		fmt.Println(err)
-	}
+ // First we initialize our waf and our seclang parser
+ waf, err := coraza.NewWAF(coraza.NewWAFConfig().
+  WithDirectives(`SecRule REMOTE_ADDR "@rx .*" "id:1,phase:1,deny,status:403"`))
+ // Now we parse our rules
+ if err != nil {
+  fmt.Println(err)
+ }
 
-	// Then we create a transaction and assign some variables
+ // Then we create a transaction and assign some variables
     tx := waf.NewTransaction()
-	defer func() {
-		tx.ProcessLogging()
-		tx.Close()
-	}()
-	tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 12345)
+ defer func() {
+  tx.ProcessLogging()
+  tx.Close()
+ }()
+ tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 12345)
 
-	// Finally we process the request headers phase, which may return an interruption
-	if it := tx.ProcessRequestHeaders(); it != nil {
-		fmt.Printf("Transaction was interrupted with status %d\n", it.Status)
-	}
+ // Finally we process the request headers phase, which may return an interruption
+ if it := tx.ProcessRequestHeaders(); it != nil {
+  fmt.Printf("Transaction was interrupted with status %d\n", it.Status)
+ }
 }
 ```
+
 [Examples/http-server](./examples/http-server/) provides an example to practice with Coraza.
 
 ### Build tags
@@ -102,9 +102,9 @@ func main() {
 Go build tags can tweak certain functionality at compile-time. These are for advanced use cases only and do not
 have compatibility guarantees across minor versions - use with care.
 
-- coraza.disabled_operators.* - excludes the specified operator from compilation. Particularly useful if overriding
+* coraza.disabled_operators.* - excludes the specified operator from compilation. Particularly useful if overriding
 the operator with `plugins.RegisterOperator` to reduce binary size / startup overhead.
-- `coraza.rule.multiphase_valuation` - enables evaluation of rule variables in the phases that they are ready, not
+* `coraza.rule.multiphase_valuation` - enables evaluation of rule variables in the phases that they are ready, not
 only the phase the rule is defined for.
 
 ## Tools
@@ -135,7 +135,7 @@ Contributions are welcome! Please refer to [CONTRIBUTING.md](./CONTRIBUTING.md) 
 
 ## Security
 
-To report a security issue, please follow [this link](https://github.com/corazawaf/coraza/security/advisories/new) and add a description of the issue, the steps you took to create the issue, affected versions, and, if known, mitigations for the issue. 
+To report a security issue, please follow [this link](https://github.com/corazawaf/coraza/security/advisories/new) and add a description of the issue, the steps you took to create the issue, affected versions, and, if known, mitigations for the issue.
 
 Our vulnerability management team will respond within 3 working days of your report. If the issue is confirmed as a vulnerability, we will open a Security Advisory. This project follows a 90 day disclosure timeline.
 
@@ -148,9 +148,9 @@ Our vulnerability management team will respond within 3 working days of your rep
 
 * [Babiel](https://babiel.com) (supporter)
 
-### Coraza on Twitter 
+### Coraza on Twitter
 
-- [@corazaio](https://twitter.com/corazaio)
+* [@corazaio](https://twitter.com/corazaio)
 
 ## Donations
 

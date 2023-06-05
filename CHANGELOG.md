@@ -77,7 +77,7 @@ A lot of effort was added to optimize and clean up the Coraza API which resulted
 
 * **New Variables Engine** - [#277](https://github.com/corazawaf/coraza/pull/277) - Implements a new Variables Engine similar to modsecurity. Variables have two pointers `tx.Collections[]` and `tx.variables.*` which either allow programmatic access using the proper collection mechanism or using dynamic variable names.
 
-  There are multiple variable types (Simple, Map, Proxy, Translation) with different helpers and generic helpers. Each type has its own variable (string, map, proxy, etc.)  <https://github.com/corazawaf/coraza/tree/v3/dev/collection>
+  There are multiple variable types (Simple, Map, Proxy, Translation) with different helpers and generic helpers. Each type has its own variable (string, map, proxy, etc.)  <https://github.com/corazawaf/coraza/tree/main/collection>
 
   **BREAKING**: Raw data can only be accessed through a RequestBodyProcessor
 

@@ -3,8 +3,7 @@ name: Performance Regression Check
 on:
   push:
     branches:
-      - v3/dev
-      - v3/main
+      - main
     paths-ignore:
       - "**/*.md"
       - "LICENSE"
