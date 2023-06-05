@@ -38,11 +38,11 @@ curl -i 'localhost:8090/hello'
 
 ## Customize WAF rules
 
-The configuration of the WAF relies on [default.conf](https://github.com/corazawaf/coraza/blob/v3/dev/examples/http-server/default.conf). Feel free to play with it.
+The configuration of the WAF relies on [default.conf](https://github.com/corazawaf/coraza/blob/main/examples/http-server/default.conf). Feel free to play with it.
 
 ## Customize server behaviour
 
-The following snippet shows an example of code that may be added to the [exampleHandler](https://github.com/corazawaf/coraza/blob/v3/dev/examples/http-server/main.go#L17) in order to make the example capable of echoing the body request. It comes in handy for testing rules that match the response body.
+The following snippet shows an example of code that may be added to the [exampleHandler](https://github.com/corazawaf/coraza/blob/main/examples/http-server/main.go#L17) in order to make the example capable of echoing the body request. It comes in handy for testing rules that match the response body.
 
 ```go
 func exampleHandler(w http.ResponseWriter, req *http.Request) {
