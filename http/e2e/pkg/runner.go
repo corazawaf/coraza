@@ -1,58 +1,25 @@
 // Copyright 2023 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package main
+package e2e
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 )
 
-// Flags:
-// --nulledBody:  Interruptions at response body phase are allowed to return 200 (Instead of 403), but with a body full of null bytes. Defaults to "false".
-// --corazaHost:  Main url used to perform requests. Defaults to "localhost:8080".
-// --httpbinHost: HTTPBIN_HOST: Backend url, used for health checking reasons. Defaults to "localhost:8081".
-
-// Expected Coraza configs:
-/*
-// coraza.conf-recommended with SecRuleEngine On
-Include @demo-conf
-// Unmodified CRS configuration and rules
-Include @crs-setup-demo-conf
-Include @owasp_crs/*.conf
-// Custom rule for Coraza config check (ensuring that these configs are used)
-SecRule &REQUEST_HEADERS:coraza-e2e "@eq 0" "id:100,phase:1,deny,status:424,msg:'Coraza E2E - Missing header'"
-// Custom rules for e2e testing
-SecRule REQUEST_URI "@streq /admin" "id:101,phase:1,t:lowercase,deny"
-SecRule REQUEST_BODY "@rx maliciouspayload" "id:102,phase:2,t:lowercase,deny"
-SecRule RESPONSE_HEADERS::status "@rx 406" "id:103,phase:3,t:lowercase,deny"
-SecRule RESPONSE_BODY "@contains responsebodycode" "id:104,phase:4,t:lowercase,deny"
-*/
-
 const configCheckStatusCode = 424
 const healthCheckTimeout = 15 // Seconds
 
-func main() {
-	// Initialize variables
-	var nulledBody bool
-	flag.BoolVar(&nulledBody, "nulledBody", false, "Accept a body filled of empty bytes as an enforced disruptive action. Default: false")
-
-	var corazaHost string
-	flag.StringVar(&corazaHost, "corazaHost", "localhost:8080", "Configures the url in which coraza is running. Default: localhost:8080")
-
-	var httpbinHost string
-	flag.StringVar(&httpbinHost, "httpbinHost", "localhost:8081", "Configures the url in which httpbin is running. Default: localhost:8081")
-
+func RunTests(nulledBody bool, corazaHost string, httpbinHost string) error {
 	healthEndPointUrl := "http://" + httpbinHost + "/status/200"
 	urlUnfiltered := "http://" + corazaHost
 	urlFiltered := urlUnfiltered + "/admin"
 	urlEcho := urlUnfiltered + "/anything"
-	urlFilteredRespHeader := urlUnfiltered + "/status/406"
+	urlFilteredRespHeader := urlUnfiltered + "/response-headers?pass=leak"
 
 	healthChecks := []struct {
 		name         string
@@ -170,9 +137,10 @@ func main() {
 	for currentCheckIndex, healthCheck := range healthChecks {
 		fmt.Printf("[%d/%d]Running health check: %s\n", currentCheckIndex+1, totalChecks, healthCheck.name)
 		timeout := healthCheckTimeout
-		tick := time.Tick(time.Second)
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
 		req, _ := http.NewRequest(http.MethodGet, healthCheck.url, nil)
-		for range tick {
+		for range ticker.C {
 			if healthCheck.expectedCode != configCheckStatusCode {
 				//  The default e2e header is not added if we are checking that the expected config is loaded
 				req.Header.Add("coraza-e2e", "ok")
@@ -186,14 +154,12 @@ func main() {
 					break
 				}
 				if healthCheck.expectedCode == configCheckStatusCode {
-					fmt.Printf("[Fail] Configs check failed, got status code %d, expected %d. Please check configs used.\n", resp.StatusCode, healthCheck.expectedCode)
-					os.Exit(1)
+					return fmt.Errorf("configs check failed, got status code %d, expected %d. Please check configs used", resp.StatusCode, healthCheck.expectedCode)
 				}
 			}
 			timeout--
 			if timeout == 0 {
-				fmt.Printf("[Fail] Timeout waiting for response from %s, make sure the server is running.\n", healthCheck.url)
-				os.Exit(1)
+				return fmt.Errorf("timeout waiting for response from %s, make sure the server is running", healthCheck.url)
 			}
 		}
 	}
@@ -210,8 +176,7 @@ func main() {
 		}
 		req, err := http.NewRequest(test.httpMethod, test.url, payloadReader)
 		if err != nil {
-			fmt.Printf("Error: could not make http request: %s\n", err)
-			os.Exit(1)
+			return fmt.Errorf("could not make http request: %s", err)
 		}
 		for k, v := range test.headers {
 			req.Header.Add(k, v)
@@ -220,22 +185,19 @@ func main() {
 
 		resp, err := client.Do(req)
 		if err != nil {
-			fmt.Printf("Error: could not do http request: %s\n", err)
-			os.Exit(1)
+			return fmt.Errorf("could not do http request: %s", err)
 		}
 		respBody, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
 		if err != nil {
-			fmt.Printf("Error: could not read response body: %s\n", err)
-			os.Exit(1)
+			return fmt.Errorf("could not read response body: %s", err)
 		}
 
 		if resp.StatusCode != test.expectedCode {
 			// Some connectors (such as coraza-proxy-wasm) might not be able to change anymore the status code at phase:4,
 			// therefore, if nulledBody parameter is true, we expect a 200, but with a nulled body
 			if !(nulledBody && test.expectedEmptyBody && resp.StatusCode == 200 && test.expectedCode == 403) {
-				fmt.Printf("[Fail] Expected status code %d, got %d from %s\n", test.expectedCode, resp.StatusCode, test.url)
-				os.Exit(1)
+				return fmt.Errorf("unexpected status code, got %d, expected %d", resp.StatusCode, test.expectedCode)
 			}
 		}
 
@@ -243,13 +205,12 @@ func main() {
 			// If an interruption happend at phase:4, some connectors (such as coraza-proxy-wasm) will override the response body with empty bytes
 			for _, byte := range respBody {
 				if byte != 0 {
-					fmt.Printf("[Fail] Unexpected response with body, got %s\n", string(respBody))
-					os.Exit(1)
-
+					return fmt.Errorf("unexpected response body with body, got %s", string(respBody))
 				}
 			}
 			fmt.Printf("[Ok] Response body filled of null bytes\n")
 		}
 		fmt.Printf("[Ok] Got status code %d, expected %d\n", resp.StatusCode, test.expectedCode)
 	}
+	return nil
 }

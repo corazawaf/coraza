@@ -402,6 +402,53 @@ func TestHttpServerWithRuleEngineOff(t *testing.T) {
 	}
 }
 
+func TestHttpServerWithE2e(t *testing.T) {
+	tests := map[string]httpTest{
+		"no blocking": {
+			reqURI:         "/hello",
+			expectedProto:  "HTTP/1.1",
+			expectedStatus: 201,
+		},
+		"no blocking HTTP/2": {
+			http2:          true,
+			reqURI:         "/hello",
+			expectedProto:  "HTTP/2.0",
+			expectedStatus: 201,
+		},
+	}
+
+	logger := debuglog.Default().
+		WithOutput(testLogOutput{t}).
+		WithLevel(debuglog.LevelInfo)
+
+	// Perform tests
+	for name, tCase := range tests {
+		t.Run(name, func(t *testing.T) {
+			conf := coraza.NewWAFConfig().
+				WithDirectives(`
+	# This is a comment
+	SecDebugLogLevel 9
+	SecRequestBodyAccess On
+	SecResponseBodyAccess On
+	SecResponseBodyMimeType text/plain
+	SecRule ARGS:id "@eq 0" "id:10, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
+	SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
+	SecRule RESPONSE_HEADERS:Foo "@pm bar" "id:199,phase:3,deny,t:lowercase,deny, status:401,msg:'Invalid response header',log,auditlog"
+	SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
+	SecRule REQUEST_URI "/allow_me" "id:9,phase:1,allow,msg:'ALLOWED'"
+`).WithErrorCallback(errLogger(t)).WithDebugLogger(logger)
+			if l := tCase.reqBodyLimit; l > 0 {
+				conf = conf.WithRequestBodyAccess().WithRequestBodyLimit(l).WithRequestBodyInMemoryLimit(l)
+			}
+			waf, err := coraza.NewWAF(conf)
+			if err != nil {
+				t.Fatal(err)
+			}
+			runAgainstWAF(t, tCase, waf)
+		})
+	}
+}
+
 func runAgainstWAF(t *testing.T, tCase httpTest, waf coraza.WAF) {
 	t.Helper()
 	serverErrC := make(chan error, 1)
@@ -488,7 +535,7 @@ func TestObtainStatusCodeFromInterruptionOrDefault(t *testing.T) {
 	}{
 		"action deny with no code": {
 			interruptionAction: "deny",
-			expectedCode:       503,
+			expectedCode:       403,
 		},
 		"action deny with code": {
 			interruptionAction: "deny",
