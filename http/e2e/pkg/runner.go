@@ -11,15 +11,21 @@ import (
 	"time"
 )
 
-const configCheckStatusCode = 424
-const healthCheckTimeout = 15 // Seconds
+const (
+	configCheckStatusCode = 424
+	healthCheckTimeout    = 15 // Seconds
+)
 
-func RunTests(nulledBody bool, corazaHost string, httpbinHost string) error {
-	healthEndPointUrl := "http://" + httpbinHost + "/status/200"
-	urlUnfiltered := "http://" + corazaHost
-	urlFiltered := urlUnfiltered + "/admin"
-	urlEcho := urlUnfiltered + "/anything"
-	urlFilteredRespHeader := urlUnfiltered + "/response-headers?pass=leak"
+type Config struct {
+	NulledBody      bool
+	ProxyHostport   string
+	HttpbinHostport string
+}
+
+func Run(cfg Config) error {
+	healthURL := "http://" + cfg.HttpbinHostport + "/status/200"
+	proxyURL := "http://" + cfg.ProxyHostport
+	echoProxiedURL := proxyURL + "/anything"
 
 	healthChecks := []struct {
 		name         string
@@ -27,118 +33,111 @@ func RunTests(nulledBody bool, corazaHost string, httpbinHost string) error {
 		expectedCode int
 	}{
 		{
-			name:         "Backend health check",
-			url:          healthEndPointUrl,
+			name:         "Health check",
+			url:          healthURL,
 			expectedCode: 200,
 		},
 		{
-			name:         "Coraza health check",
-			url:          urlUnfiltered,
+			name:         "Proxy check",
+			url:          proxyURL,
 			expectedCode: 200,
 		},
 		{
-			name:         "Coraza config check",
-			url:          urlUnfiltered,
+			name:         "Header check",
+			url:          proxyURL,
 			expectedCode: configCheckStatusCode,
 		},
 	}
 
 	tests := []struct {
 		name               string
-		url                string
-		headers            map[string]string
-		payload            string
-		httpMethod         string
-		expectedCode       int
+		requestURL         string
+		requestHeaders     map[string]string
+		requestBody        string
+		requestMethod      string
+		expectedStatusCode int
 		expectedEmptyBody  bool
-		expectedBodyString string
+		expectedBody       string
 	}{
 		{
-			name:         "(onRequestheaders) Testing true negative request",
-			url:          urlUnfiltered + "?arg=arg_1",
-			httpMethod:   "GET",
-			expectedCode: 200,
+			name:               "Legit request",
+			requestURL:         proxyURL + "?arg=arg_1",
+			requestMethod:      "GET",
+			expectedStatusCode: 200,
 		},
 		{
-			name:              "(onRequestheaders) Testing true positive custom rule",
-			url:               urlFiltered,
-			httpMethod:        "GET",
-			expectedCode:      403,
-			expectedEmptyBody: true,
+			name:               "Denied request by URL",
+			requestURL:         proxyURL + "/admin",
+			requestMethod:      "GET",
+			expectedStatusCode: 403,
+			expectedEmptyBody:  true,
 		},
 		{
-			name:         "(onRequestBody) Testing true negative request (body)",
-			url:          urlEcho,
-			httpMethod:   "POST",
-			headers:      map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
-			payload:      "This is a payload",
-			expectedCode: 200,
+			name:               "Legit request with legit body",
+			requestURL:         echoProxiedURL,
+			requestMethod:      "POST",
+			requestHeaders:     map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			requestBody:        "This is a legit payload",
+			expectedStatusCode: 200,
 		},
 		{
-			name:         "(onRequestBody) Testing true positive request (body)",
-			url:          urlUnfiltered,
-			httpMethod:   "POST",
-			headers:      map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
-			payload:      "maliciouspayload",
-			expectedCode: 403,
+			name:               "Denied request with malicious request body",
+			requestURL:         echoProxiedURL,
+			requestMethod:      "POST",
+			requestHeaders:     map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			requestBody:        "maliciouspayload",
+			expectedStatusCode: 403,
 		},
 		{
-			name:         "(onResponseHeaders) Testing true positive",
-			url:          urlFilteredRespHeader,
-			httpMethod:   "GET",
-			expectedCode: 403,
+			name:               "Denied request with malicious response body",
+			requestURL:         proxyURL + "/response-headers?pass=leak",
+			requestMethod:      "GET",
+			expectedStatusCode: 403,
 		},
 		{
-			name:         "(onResponseBody) Testing true negative",
-			url:          urlEcho,
-			httpMethod:   "POST",
-			headers:      map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
-			payload:      "Hello world",
-			expectedCode: 200,
+			name:               "Denied request with malicious response body",
+			requestURL:         echoProxiedURL,
+			requestMethod:      "POST",
+			requestHeaders:     map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			requestBody:        "responsebodycode",
+			expectedEmptyBody:  true,
+			expectedStatusCode: 403,
 		},
 		{
-			name:              "(onResponseBody) Testing true positive",
-			url:               urlEcho,
-			httpMethod:        "POST",
-			headers:           map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
-			payload:           "responsebodycode",
-			expectedEmptyBody: true,
-			expectedCode:      403,
+			name:               "Denied request with XSS query parameters",
+			requestURL:         echoProxiedURL + "?arg=<script>alert(0)</script>",
+			requestMethod:      "GET",
+			expectedStatusCode: 403,
 		},
 		{
-			name:         "Testing XSS detection at request headers",
-			url:          urlEcho + "?arg=<script>alert(0)</script>",
-			httpMethod:   "GET",
-			expectedCode: 403,
+			name:               "Denied request with SQLi query parameters",
+			requestURL:         echoProxiedURL + "?arg=<script>alert(0)</script>",
+			requestMethod:      "POST",
+			requestHeaders:     map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			requestBody:        "1%27%20ORDER%20BY%203--%2B",
+			expectedStatusCode: 403,
 		},
 		{
-			name:         "Testing SQLi detection at request body",
-			url:          urlEcho + "?arg=<script>alert(0)</script>",
-			httpMethod:   "POST",
-			headers:      map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
-			payload:      "1%27%20ORDER%20BY%203--%2B",
-			expectedCode: 403,
-		},
-		{
-			name: "Testing CRS rule 913100 sending malicious UA",
-			url:  urlEcho,
-			headers: map[string]string{
+			name:       "CRS rule 913100 sending malicious UA",
+			requestURL: echoProxiedURL,
+			requestHeaders: map[string]string{
 				"Content-Type": "application/x-www-form-urlencoded",
 				"User-Agent":   "Grabber/0.1 (X11; U; Linux i686; en-US; rv:1.7)",
 			},
-			httpMethod:   "GET",
-			expectedCode: 403,
+			requestMethod:      "GET",
+			expectedStatusCode: 403,
 		},
 	}
 
 	// Check health endpoint
-	totalChecks := len(healthChecks)
-	client := http.Client{}
+	client := http.DefaultClient
 	for currentCheckIndex, healthCheck := range healthChecks {
-		fmt.Printf("[%d/%d]Running health check: %s\n", currentCheckIndex+1, totalChecks, healthCheck.name)
+		fmt.Printf("[%d/%d] Running health check: %s\n", currentCheckIndex+1, len(healthChecks), healthCheck.name)
 		timeout := healthCheckTimeout
+
 		ticker := time.NewTicker(time.Second)
 		defer ticker.Stop()
+
 		req, _ := http.NewRequest(http.MethodGet, healthCheck.url, nil)
 		for range ticker.C {
 			if healthCheck.expectedCode != configCheckStatusCode {
@@ -169,48 +168,51 @@ func RunTests(nulledBody bool, corazaHost string, httpbinHost string) error {
 	// Iterate over tests
 	for currentTestIndex, test := range tests {
 		fmt.Printf("[%d/%d] Running test: %s\n", currentTestIndex+1, totalTests, test.name)
-		client := &http.Client{}
-		payloadReader := io.Reader(nil)
-		if test.payload != "" {
-			payloadReader = strings.NewReader(test.payload)
+		var requestBody io.Reader
+		if test.requestBody != "" {
+			requestBody = strings.NewReader(test.requestBody)
 		}
-		req, err := http.NewRequest(test.httpMethod, test.url, payloadReader)
+
+		req, err := http.NewRequest(test.requestMethod, test.requestURL, requestBody)
 		if err != nil {
-			return fmt.Errorf("could not make http request: %s", err)
+			return fmt.Errorf("could not make http request: %v", err)
 		}
-		for k, v := range test.headers {
+
+		for k, v := range test.requestHeaders {
 			req.Header.Add(k, v)
 		}
 		req.Header.Add("coraza-e2e", "ok")
 
-		resp, err := client.Do(req)
+		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			return fmt.Errorf("could not do http request: %s", err)
+			return fmt.Errorf("could not do http request: %v", err)
 		}
+
 		respBody, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
 		if err != nil {
-			return fmt.Errorf("could not read response body: %s", err)
+			return fmt.Errorf("could not read response body: %v", err)
 		}
 
-		if resp.StatusCode != test.expectedCode {
+		if resp.StatusCode != test.expectedStatusCode {
 			// Some connectors (such as coraza-proxy-wasm) might not be able to change anymore the status code at phase:4,
 			// therefore, if nulledBody parameter is true, we expect a 200, but with a nulled body
-			if !(nulledBody && test.expectedEmptyBody && resp.StatusCode == 200 && test.expectedCode == 403) {
-				return fmt.Errorf("unexpected status code, got %d, expected %d", resp.StatusCode, test.expectedCode)
+			if !(cfg.NulledBody && test.expectedEmptyBody && resp.StatusCode == 200 && test.expectedStatusCode == 403) {
+				return fmt.Errorf("unexpected status code, got %d, expected %d", resp.StatusCode, test.expectedStatusCode)
 			}
 		}
 
 		if test.expectedEmptyBody && string(respBody) != "" {
 			// If an interruption happend at phase:4, some connectors (such as coraza-proxy-wasm) will override the response body with empty bytes
-			for _, byte := range respBody {
-				if byte != 0 {
+			for _, b := range respBody {
+				if b != 0 {
 					return fmt.Errorf("unexpected response body with body, got %s", string(respBody))
 				}
 			}
 			fmt.Printf("[Ok] Response body filled of null bytes\n")
 		}
-		fmt.Printf("[Ok] Got status code %d, expected %d\n", resp.StatusCode, test.expectedCode)
+
+		fmt.Printf("[Ok] Got status code %d, expected %d\n", resp.StatusCode, test.expectedStatusCode)
 	}
 	return nil
 }

@@ -12,9 +12,9 @@ import (
 )
 
 // Flags:
-// --nulledBody:  Interruptions at response body phase are allowed to return 200 (Instead of 403), but with a body full of null bytes. Defaults to "false".
-// --corazaHost:  Main url used to perform requests. Defaults to "localhost:8080".
-// --httpbinHost: HTTPBIN_HOST: Backend url, used for health checking reasons. Defaults to "localhost:8081".
+// --nulled-body:  Interruptions at response body phase are allowed to return 200 (Instead of 403), but with a body full of null bytes. Defaults to "false".
+// --proxy-hostport:  Proxy endpoint used to perform requests. Defaults to "localhost:8080".
+// --httpbin-hostport: Upstream httpbin endpoint, used for health checking reasons. Defaults to "localhost:8081".
 
 // Expected Coraza configs:
 /*
@@ -34,20 +34,21 @@ SecRule RESPONSE_BODY "@contains responsebodycode" "id:104,phase:4,t:lowercase,d
 
 func main() {
 	// Initialize variables
-	var nulledBody bool
-	flag.BoolVar(&nulledBody, "nulledBody", false, "Accept a body filled of empty bytes as an enforced disruptive action. Default: false")
-
-	var corazaHost string
-	flag.StringVar(&corazaHost, "corazaHost", "localhost:8080", "Configures the url in which coraza is running. Default: localhost:8080")
-
-	var httpbinHost string
-	flag.StringVar(&httpbinHost, "httpbinHost", "localhost:8081", "Configures the url in which httpbin is running. Default: localhost:8081")
-
+	var (
+		nulledBody      = flag.Bool("nulled-body", false, "Accept a body filled of empty bytes as an enforced disruptive action. Default: false")
+		proxyHostport   = flag.String("proxy-hostport", "localhost:8080", "Configures the URL in which the proxy is running. Default: \"localhost:8080\"")
+		httpbinHostport = flag.String("httpbin-hostport", "localhost:8081", "Configures the URL in which httpbin is running. Default: \"localhost:8081\"")
+	)
 	flag.Parse()
 
-	err := e2e.RunTests(nulledBody, corazaHost, httpbinHost)
+	err := e2e.Run(e2e.Config{
+		NulledBody:      *nulledBody,
+		ProxyHostport:   *proxyHostport,
+		HttpbinHostport: *httpbinHostport,
+	})
+
 	if err != nil {
 		fmt.Printf("[Fail] %s\n", err)
-		os.Exit(-1)
+		os.Exit(1)
 	}
 }
