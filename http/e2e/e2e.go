@@ -4,6 +4,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,10 +13,10 @@ import (
 	"time"
 )
 
-// External configurable variables:
-// - NULLED_BODY: Interruptions at response body phase are allowed to return 200 (Instead of 403), but with a body full of null bytes. Defaults to "false".
-// - CORAZA_HOST: Main url used to perform requests. Defaults to "localhost:8080".
-// - HTTPBIN_HOST: Backend url, used for health checking reasons. Defaults to "localhost:8081".
+// Flags:
+// --nulledBody:  Interruptions at response body phase are allowed to return 200 (Instead of 403), but with a body full of null bytes. Defaults to "false".
+// --corazaHost:  Main url used to perform requests. Defaults to "localhost:8080".
+// --httpbinHost: HTTPBIN_HOST: Backend url, used for health checking reasons. Defaults to "localhost:8081".
 
 // Expected Coraza configs:
 /*
@@ -38,19 +39,14 @@ const healthCheckTimeout = 15 // Seconds
 
 func main() {
 	// Initialize variables
-	nulledBody := false
-	nulledBodyString := os.Getenv("NULLED_BODY")
-	if nulledBodyString == "true" {
-		nulledBody = true
-	}
-	corazaHost := os.Getenv("CORAZA_HOST")
-	if corazaHost == "" {
-		corazaHost = "localhost:8080"
-	}
-	httpbinHost := os.Getenv("HTTPBIN_HOST")
-	if httpbinHost == "" {
-		httpbinHost = "localhost:8081"
-	}
+	var nulledBody bool
+	flag.BoolVar(&nulledBody, "nulledBody", false, "Accept a body filled of empty bytes as an enforced disruptive action. Default: false")
+
+	var corazaHost string
+	flag.StringVar(&corazaHost, "corazaHost", "localhost:8080", "Configures the url in which coraza is running. Default: localhost:8080")
+
+	var httpbinHost string
+	flag.StringVar(&httpbinHost, "httpbinHost", "localhost:8081", "Configures the url in which httpbin is running. Default: localhost:8081")
 
 	healthEndPointUrl := "http://" + httpbinHost + "/status/200"
 	urlUnfiltered := "http://" + corazaHost
@@ -236,7 +232,7 @@ func main() {
 
 		if resp.StatusCode != test.expectedCode {
 			// Some connectors (such as coraza-proxy-wasm) might not be able to change anymore the status code at phase:4,
-			// therefore, if NULLED_BODY is true, we expect a 200, but with a nulled body
+			// therefore, if nulledBody parameter is true, we expect a 200, but with a nulled body
 			if !(nulledBody && test.expectedEmptyBody && resp.StatusCode == 200 && test.expectedCode == 403) {
 				fmt.Printf("[Fail] Expected status code %d, got %d from %s\n", test.expectedCode, resp.StatusCode, test.url)
 				os.Exit(1)
