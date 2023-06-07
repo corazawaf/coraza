@@ -3,15 +3,13 @@ name: Tinygo tests
 on:
   push:
     branches:
-      - v3/dev
-      - v3/main
+      - main
     paths-ignore:
       - "**/*.md"
       - "LICENSE"
   pull_request:
     branches:
-      - v3/dev
-      - v3/main
+      - main
     paths-ignore:
       - "**/*.md"
       - "LICENSE"

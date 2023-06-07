@@ -26,7 +26,6 @@ func TestNativeFormatter(t *testing.T) {
 func createAuditLog() *Log {
 	return &Log{
 		Parts_: []types.AuditLogPart{
-			types.AuditLogPartAuditLogHeader,
 			types.AuditLogPartRequestHeaders,
 			types.AuditLogPartRequestBody,
 			types.AuditLogPartIntermediaryResponseBody,

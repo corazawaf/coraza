@@ -37,11 +37,10 @@ func nativeFormatter(al plugintypes.AuditLog) ([]byte, error) {
 		res.WriteString(boundaryPrefix)
 		res.WriteByte(byte(part))
 		res.WriteString("--\n")
+		// [27/Jul/2016:05:46:16 +0200] V5guiH8AAQEAADTeJ2wAAAAK 192.168.3.1 50084 192.168.3.111 80
+		_, _ = fmt.Fprintf(&res, "[%s] %s %s %d %s %d", al.Transaction().Timestamp(), al.Transaction().ID(),
+			al.Transaction().ClientIP(), al.Transaction().ClientPort(), al.Transaction().HostIP(), al.Transaction().HostPort())
 		switch part {
-		case types.AuditLogPartAuditLogHeader:
-			// [27/Jul/2016:05:46:16 +0200] V5guiH8AAQEAADTeJ2wAAAAK 192.168.3.1 50084 192.168.3.111 80
-			_, _ = fmt.Fprintf(&res, "[%s] %s %s %d %s %d", al.Transaction().Timestamp(), al.Transaction().ID(),
-				al.Transaction().ClientIP(), al.Transaction().ClientPort(), al.Transaction().HostIP(), al.Transaction().HostPort())
 		case types.AuditLogPartRequestHeaders:
 			// GET /url HTTP/1.1
 			// Host: example.com

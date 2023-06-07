@@ -129,7 +129,7 @@ func TestSecAuditLogs(t *testing.T) {
 	err := parser.FromString(`
 		SecAuditEngine On
 		SecAction "id:4482,log,auditlog, msg:'test'"
-		SecAuditLogParts ABCDEFGHIJK
+		SecAuditLogParts ABCDEFGHIJKZ
 		SecRuleEngine On
 	`)
 	if err != nil {
