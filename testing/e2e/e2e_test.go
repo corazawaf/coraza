@@ -113,7 +113,7 @@ func TestE2e(t *testing.T) {
 	defer s.Close()
 
 	url := strings.TrimPrefix(s.URL, "http://")
-	err = e2e.RunTests(false, url, url)
+	err = e2e.Run(false, url, url)
 	if err != nil {
 		t.Fatalf("e2e tests failed: %v", err)
 	}
