@@ -8,7 +8,6 @@
 package e2e_test
 
 import (
-	"bufio"
 	b64 "encoding/base64"
 	"fmt"
 	"io"
@@ -24,7 +23,6 @@ import (
 	"github.com/corazawaf/coraza/v3"
 	txhttp "github.com/corazawaf/coraza/v3/http"
 	e2e "github.com/corazawaf/coraza/v3/http/e2e/pkg"
-	"github.com/corazawaf/coraza/v3/types"
 )
 
 func TestE2e(t *testing.T) {
@@ -35,7 +33,7 @@ func TestE2e(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	customTestingConfig := `
+	customE2eDirectives := `
 	SecRuleEngine On
 	# Custom rule for Coraza config check (ensuring that these configs are used)
 	SecRule &REQUEST_HEADERS:coraza-e2e "@eq 0" "id:100,phase:1,deny,status:424,msg:'Coraza E2E - Missing header'"
@@ -50,23 +48,7 @@ func TestE2e(t *testing.T) {
 		WithDirectives(string(recommended)).
 		WithDirectives("Include @crs-setup.conf.example").
 		WithDirectives("Include @owasp_crs/*.conf").
-		WithDirectives(customTestingConfig)
-
-	errorPath := filepath.Join(t.TempDir(), "e2e_error.log")
-	errorFile, err := os.Create(errorPath)
-	if err != nil {
-		t.Fatalf("failed to create error log: %v", err)
-	}
-	errorWriter := bufio.NewWriter(errorFile)
-	conf = conf.WithErrorCallback(func(rule types.MatchedRule) {
-		msg := rule.ErrorLog()
-		if _, err := io.WriteString(errorWriter, msg); err != nil {
-			t.Fatal(err)
-		}
-		if err := errorWriter.Flush(); err != nil {
-			t.Fatal(err)
-		}
-	})
+		WithDirectives(customE2eDirectives)
 
 	waf, err := coraza.NewWAF(conf)
 	if err != nil {
@@ -76,7 +58,7 @@ func TestE2e(t *testing.T) {
 	s := httptest.NewServer(txhttp.WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		w.Header().Set("Content-Type", "text/plain")
-		// Emualtes httpbin behaviour
+		// Emulates httpbin behaviour
 		switch {
 		case r.URL.Path == "/anything":
 			body, err := io.ReadAll(r.Body)
@@ -94,14 +76,12 @@ func TestE2e(t *testing.T) {
 			}
 
 		case strings.HasPrefix(r.URL.Path, "/base64/"):
-			// Emulated httpbin behaviour: /base64 endpoint write the decoded base64 into the response body
 			b64Decoded, err := b64.StdEncoding.DecodeString(strings.TrimPrefix(r.URL.Path, "/base64/"))
 			if err != nil {
 				t.Fatalf("handler can not decode base64: %v", err)
 			}
 			fmt.Fprint(w, string(b64Decoded))
 		case strings.HasPrefix(r.URL.Path, "/response-headers"):
-			// Emulated httpbin behaviour: /response-headers endpoint
 			for key, values := range r.URL.Query() {
 				w.Header().Set(key, values[0])
 			}

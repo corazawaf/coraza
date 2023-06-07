@@ -81,7 +81,7 @@ func Run(cfg Config) error {
 			expectedStatusCode: 200,
 		},
 		{
-			name:               "Denied request with malicious request body",
+			name:               "Denied request with a malicious request body",
 			requestURL:         echoProxiedURL,
 			requestMethod:      "POST",
 			requestHeaders:     map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
@@ -89,13 +89,13 @@ func Run(cfg Config) error {
 			expectedStatusCode: 403,
 		},
 		{
-			name:               "Denied request with malicious response body",
+			name:               "Denied request with a malicious response header",
 			requestURL:         proxyURL + "/response-headers?pass=leak",
 			requestMethod:      "GET",
 			expectedStatusCode: 403,
 		},
 		{
-			name:               "Denied request with malicious response body",
+			name:               "Denied request with a malicious response body",
 			requestURL:         echoProxiedURL,
 			requestMethod:      "POST",
 			requestHeaders:     map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
@@ -209,7 +209,7 @@ func Run(cfg Config) error {
 					return fmt.Errorf("unexpected response body with body, got %s", string(respBody))
 				}
 			}
-			fmt.Printf("[Ok] Response body filled of null bytes\n")
+			fmt.Printf("[Ok] Response body filled with null bytes\n")
 		}
 
 		fmt.Printf("[Ok] Got status code %d, expected %d\n", resp.StatusCode, test.expectedStatusCode)
