@@ -112,8 +112,12 @@ func TestE2e(t *testing.T) {
 	})))
 	defer s.Close()
 
-	url := strings.TrimPrefix(s.URL, "http://")
-	err = e2e.Run(false, url, url)
+	serverUrl := strings.TrimPrefix(s.URL, "http://")
+	err = e2e.Run(e2e.Config{
+		NulledBody:      false,
+		ProxyHostport:   serverUrl,
+		HttpbinHostport: serverUrl,
+	})
 	if err != nil {
 		t.Fatalf("e2e tests failed: %v", err)
 	}
