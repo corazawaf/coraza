@@ -8,21 +8,18 @@
 package e2e_test
 
 import (
-	b64 "encoding/base64"
-	"fmt"
-	"io"
+	_ "embed"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	coreruleset "github.com/corazawaf/coraza-coreruleset"
 	"github.com/corazawaf/coraza/v3"
 	txhttp "github.com/corazawaf/coraza/v3/http"
 	e2e "github.com/corazawaf/coraza/v3/http/e2e/pkg"
+	"github.com/mccutchen/go-httpbin/v2/httpbin"
 )
 
 func TestE2e(t *testing.T) {
@@ -55,48 +52,20 @@ func TestE2e(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s := httptest.NewServer(txhttp.WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer r.Body.Close()
-		w.Header().Set("Content-Type", "text/plain")
-		// Emulates httpbin behaviour
-		switch {
-		case r.URL.Path == "/anything":
-			body, err := io.ReadAll(r.Body)
-			if r.Header.Get("Content-Type") == "application/x-www-form-urlencoded" {
-				if err != nil {
-					t.Fatalf("handler can not read request body: %v", err)
-				}
-				urldecodedBody, err := url.QueryUnescape(string(body))
-				if err != nil {
-					t.Fatalf("handler can not unescape urlencoded request body: %v", err)
-				}
-				fmt.Fprint(w, urldecodedBody)
-			} else {
-				_, _ = w.Write(body)
-			}
+	httpbin := httpbin.New()
 
-		case strings.HasPrefix(r.URL.Path, "/base64/"):
-			b64Decoded, err := b64.StdEncoding.DecodeString(strings.TrimPrefix(r.URL.Path, "/base64/"))
-			if err != nil {
-				t.Fatalf("handler can not decode base64: %v", err)
-			}
-			fmt.Fprint(w, string(b64Decoded))
-		case strings.HasPrefix(r.URL.Path, "/response-headers"):
-			for key, values := range r.URL.Query() {
-				w.Header().Set(key, values[0])
-			}
-			w.WriteHeader(200)
-		default:
-			fmt.Fprintf(w, "Hello!")
-		}
-	})))
+	mux := http.NewServeMux()
+	mux.Handle("/status/200", httpbin) // Health check
+	mux.Handle("/", txhttp.WrapHandler(waf, httpbin))
+
+	// Create the server with the WAF and the reverse proxy.
+	s := httptest.NewServer(mux)
 	defer s.Close()
 
-	serverUrl := strings.TrimPrefix(s.URL, "http://")
 	err = e2e.Run(e2e.Config{
-		NulledBody:      false,
-		ProxyHostport:   serverUrl,
-		HttpbinHostport: serverUrl,
+		NulledBody:        false,
+		ProxiedEntrypoint: s.URL,
+		HttpbinEntrypoint: s.URL,
 	})
 	if err != nil {
 		t.Fatalf("e2e tests failed: %v", err)
