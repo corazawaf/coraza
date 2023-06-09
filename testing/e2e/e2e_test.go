@@ -8,9 +8,9 @@
 package e2e_test
 
 import (
+	_ "embed"
+	"net/http"
 	"net/http/httptest"
-	"net/http/httputil"
-	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -52,19 +52,20 @@ func TestE2e(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	httpbinServer := httptest.NewServer(httpbin.New())
-	defer httpbinServer.Close()
+	httpbin := httpbin.New()
 
-	httpbinURL, _ := url.Parse(httpbinServer.URL)
-	proxy := httputil.NewSingleHostReverseProxy(httpbinURL)
+	mux := http.NewServeMux()
+	mux.Handle("/status/200", httpbin) // Health check
+	mux.Handle("/", txhttp.WrapHandler(waf, httpbin))
 
 	// Create the server with the WAF and the reverse proxy.
-	s := httptest.NewServer(txhttp.WrapHandler(waf, proxy))
-	sURL, _ := url.Parse(s.URL)
+	s := httptest.NewServer(mux)
+	defer s.Close()
+
 	err = e2e.Run(e2e.Config{
-		NulledBody:      false,
-		ProxyHostport:   sURL.Host,
-		HttpbinHostport: httpbinURL.Host,
+		NulledBody:        false,
+		ProxiedEntrypoint: s.URL,
+		HttpbinEntrypoint: s.URL,
 	})
 	if err != nil {
 		t.Fatalf("e2e tests failed: %v", err)

@@ -17,15 +17,15 @@ const (
 )
 
 type Config struct {
-	NulledBody      bool
-	ProxyHostport   string
-	HttpbinHostport string
+	NulledBody        bool
+	ProxiedEntrypoint string
+	HttpbinEntrypoint string
 }
 
 func Run(cfg Config) error {
-	healthURL := "http://" + cfg.HttpbinHostport + "/status/200"
-	proxyURL := "http://" + cfg.ProxyHostport
-	echoProxiedURL := proxyURL + "/anything"
+	healthURL := cfg.HttpbinEntrypoint + "/status/200"
+	baseProxyURL := cfg.ProxiedEntrypoint
+	echoProxiedURL := baseProxyURL + "/anything"
 
 	healthChecks := []struct {
 		name         string
@@ -39,12 +39,12 @@ func Run(cfg Config) error {
 		},
 		{
 			name:         "Proxy check",
-			url:          proxyURL,
+			url:          baseProxyURL,
 			expectedCode: 200,
 		},
 		{
 			name:         "Header check",
-			url:          proxyURL,
+			url:          baseProxyURL,
 			expectedCode: configCheckStatusCode,
 		},
 	}
@@ -61,13 +61,13 @@ func Run(cfg Config) error {
 	}{
 		{
 			name:               "Legit request",
-			requestURL:         proxyURL + "?arg=arg_1",
+			requestURL:         baseProxyURL + "?arg=arg_1",
 			requestMethod:      "GET",
 			expectedStatusCode: 200,
 		},
 		{
 			name:               "Denied request by URL",
-			requestURL:         proxyURL + "/admin",
+			requestURL:         baseProxyURL + "/admin",
 			requestMethod:      "GET",
 			expectedStatusCode: 403,
 			expectedEmptyBody:  true,
@@ -84,25 +84,23 @@ func Run(cfg Config) error {
 			name:               "Denied request with a malicious request body",
 			requestURL:         echoProxiedURL,
 			requestMethod:      "POST",
-			requestHeaders:     map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 			requestBody:        "maliciouspayload",
 			expectedStatusCode: 403,
 		},
-		// {
-		// 	name:               "Denied request with a malicious response header",
-		// 	requestURL:         proxyURL + "/response-headers?pass=leak",
-		// 	requestMethod:      "GET",
-		// 	expectedStatusCode: 403,
-		// },
-		// {
-		// 	name:               "Denied request with a malicious response body",
-		// 	requestURL:         echoProxiedURL,
-		// 	requestMethod:      "POST",
-		// 	requestHeaders:     map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
-		// 	requestBody:        "responsebodycode",
-		// 	expectedEmptyBody:  true,
-		// 	expectedStatusCode: 403,
-		// },
+		{
+			name:               "Denied request with a malicious response header",
+			requestURL:         baseProxyURL + "/response-headers?pass=leak",
+			requestMethod:      "GET",
+			expectedStatusCode: 403,
+		},
+		{
+			name:               "Denied request with a malicious response body",
+			requestURL:         echoProxiedURL,
+			requestMethod:      "POST",
+			requestBody:        "responsebodycode",
+			expectedEmptyBody:  true,
+			expectedStatusCode: 403,
+		},
 		{
 			name:               "Denied request with XSS query parameters",
 			requestURL:         echoProxiedURL + "?arg=<script>alert(0)</script>",
@@ -163,11 +161,9 @@ func Run(cfg Config) error {
 		}
 	}
 
-	totalTests := len(tests)
-
 	// Iterate over tests
 	for currentTestIndex, test := range tests {
-		fmt.Printf("[%d/%d] Running test: %s\n", currentTestIndex+1, totalTests, test.name)
+		fmt.Printf("[%d/%d] Running test: %s\n", currentTestIndex+1, len(tests), test.name)
 		var requestBody io.Reader
 		if test.requestBody != "" {
 			requestBody = strings.NewReader(test.requestBody)
@@ -202,8 +198,9 @@ func Run(cfg Config) error {
 			}
 		}
 
-		if test.expectedEmptyBody && string(respBody) != "" {
-			// If an interruption happend at phase:4, some connectors (such as coraza-proxy-wasm) will override the response body with empty bytes
+		if test.expectedEmptyBody && len(respBody) != 0 {
+			// If an interruption happened at phase:4, some connectors (such as coraza-proxy-wasm) will override the response
+			// body with empty bytes
 			for _, b := range respBody {
 				if b != 0 {
 					return fmt.Errorf("unexpected response body with body, got %s", string(respBody))

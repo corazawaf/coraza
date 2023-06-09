@@ -42,9 +42,9 @@ func main() {
 	flag.Parse()
 
 	err := e2e.Run(e2e.Config{
-		NulledBody:      *nulledBody,
-		ProxyHostport:   *proxyHostport,
-		HttpbinHostport: *httpbinHostport,
+		NulledBody:        *nulledBody,
+		ProxiedEntrypoint: *proxyHostport,
+		HttpbinEntrypoint: *httpbinHostport,
 	})
 
 	if err != nil {
