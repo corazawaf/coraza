@@ -1376,7 +1376,9 @@ func TestTxAddResponseArgs(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
 	tx.AddResponseArgument("samplekey", "samplevalue")
-	t.Log("This is a placeholder for tx.AddResponseArgs")
+	if tx.variables.responseArgs.Get("samplekey")[0] != "samplevalue" {
+		t.Errorf("failed to add response argument")
+	}
 }
 
 func TestResponseBodyForceProcessing(t *testing.T) {
