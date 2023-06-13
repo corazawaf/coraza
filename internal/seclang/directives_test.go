@@ -236,6 +236,7 @@ func TestDirectives(t *testing.T) {
 		},
 		"SecArgumentsLimit": {
 			{"", expectErrorOnDirective},
+			{"0", expectErrorOnDirective},
 			{"10", func(waf *corazawaf.WAF) bool { return waf.ArgumentLimit == 10 }},
 			// according to modsec docs SecArgumentsLimit 1000
 			{"1000", func(waf *corazawaf.WAF) bool { return waf.ArgumentLimit == 1000 }},
