@@ -162,7 +162,7 @@ func (c *Map) String() string {
 	return res.String()
 }
 
-func (c *Map) Length() int {
+func (c *Map) Len() int {
 	return len(c.data)
 }
 

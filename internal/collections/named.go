@@ -49,7 +49,7 @@ func (c *NamedCollection) Remove(key string) {
 	c.Map.Remove(key)
 }
 
-func (c *NamedCollection) Length() int {
+func (c *NamedCollection) Len() int {
 	return len(c.Map.data)
 }
 
