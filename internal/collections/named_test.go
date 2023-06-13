@@ -81,4 +81,9 @@ func TestNamedCollection(t *testing.T) {
 	if want, have := "ARGS_POST_NAMES: key,key,Key", fmt.Sprint(names); want != have {
 		t.Errorf("want %q, have %q", want, have)
 	}
+
+	if c.Len() != len(c.data) {
+		t.Fatal("The lengths are not equal.")
+	}
+
 }
