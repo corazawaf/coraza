@@ -997,6 +997,9 @@ func directiveSecArgumentsLimit(options *DirectiveOptions) error {
 	if err != nil {
 		return err
 	}
+	if limit == 0 {
+		return errors.New("cannot assign 0 for ArgumentLimit")
+	}
 	options.WAF.ArgumentLimit = limit
 	return nil
 }
