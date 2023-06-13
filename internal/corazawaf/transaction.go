@@ -657,7 +657,7 @@ func (tx *Transaction) AddPathRequestArgument(key string, value string) {
 // AddResponseArgument
 func (tx *Transaction) AddResponseArgument(key string, value string) {
 	// TODO implement ARGS value limit using ArgumentsLimit
-	// tx.variables.argsResponse.Add(key, value)
+	tx.variables.responseArgs.Add(key, value)
 }
 
 // ProcessURI Performs the analysis on the URI and all the query string variables.
