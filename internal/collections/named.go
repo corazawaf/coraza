@@ -49,6 +49,10 @@ func (c *NamedCollection) Remove(key string) {
 	c.Map.Remove(key)
 }
 
+func (c *NamedCollection) Length() int {
+	return len(c.Map.data)
+}
+
 // Data is an internal method used for serializing to JSON
 func (c *NamedCollection) Data() map[string][]string {
 	result := map[string][]string{}
