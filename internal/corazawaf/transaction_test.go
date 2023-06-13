@@ -1381,6 +1381,48 @@ func TestTxAddResponseArgs(t *testing.T) {
 	}
 }
 
+func TestAddArgsWhileOverlimit(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	waf.ArgumentLimit = 1 // for test only
+	// test Add Response Argument
+	tx.AddResponseArgument("samplekey", "samplevalue")
+	tx.AddResponseArgument("samplekey2", "samplevalue")
+	if tx.variables.responseArgs.Get("samplekey")[0] != "samplevalue" {
+		t.Errorf("failed to add response argument")
+	}
+	if tx.variables.responseArgs.Length() != waf.ArgumentLimit {
+		t.Errorf("Argumeng limit is failing while add responseArgs")
+	}
+	// test add path request argument
+	tx.AddPathRequestArgument("samplekey", "samplevalue")
+	tx.AddPathRequestArgument("samplekey2", "samplevalue")
+	if tx.variables.argsPath.Get("samplekey")[0] != "samplevalue" {
+		t.Errorf("failed to add path argument")
+	}
+	if tx.variables.argsPath.Length() != waf.ArgumentLimit {
+		t.Errorf("Argumeng limit is failing while add path args")
+	}
+	// test Add PostRequest Argument
+	tx.AddPostRequestArgument("samplekey", "samplevalue")
+	tx.AddPostRequestArgument("samplekey2", "samplevalue")
+	if tx.variables.argsPost.Get("samplekey")[0] != "samplevalue" {
+		t.Errorf("failed to add post argument")
+	}
+	if tx.variables.argsPost.Length() != waf.ArgumentLimit {
+		t.Errorf("Argumeng limit is failed while add post args")
+	}
+	// test Add Get Request Argument
+	tx.AddGetRequestArgument("samplekey", "samplevalue")
+	tx.AddGetRequestArgument("samplekey2", "samplevalue")
+	if tx.variables.argsGet.Get("samplekey")[0] != "samplevalue" {
+		t.Errorf("failed to add get argument")
+	}
+	if tx.variables.argsGet.Length() != waf.ArgumentLimit {
+		t.Errorf("Argumeng limit is failed while add get args")
+	}
+}
+
 func TestResponseBodyForceProcessing(t *testing.T) {
 	waf := NewWAF()
 	waf.ResponseBodyAccess = true

@@ -638,25 +638,37 @@ func (tx *Transaction) ExtractGetArguments(uri string) {
 
 // AddGetRequestArgument
 func (tx *Transaction) AddGetRequestArgument(key string, value string) {
-	// TODO implement ARGS value limit using ArgumentsLimit
+	if tx.WAF.ArgumentLimit != 0 && tx.variables.argsGet.Length() >= tx.WAF.ArgumentLimit {
+		tx.debugLogger.Warn().Msg("skipping get request argument, over limit")
+		return
+	}
 	tx.variables.argsGet.Add(key, value)
 }
 
 // AddPostRequestArgument
 func (tx *Transaction) AddPostRequestArgument(key string, value string) {
-	// TODO implement ARGS value limit using ArgumentsLimit
+	if tx.WAF.ArgumentLimit != 0 && tx.variables.argsPost.Length() >= tx.WAF.ArgumentLimit {
+		tx.debugLogger.Warn().Msg("skipping post request argument, over limit")
+		return
+	}
 	tx.variables.argsPost.Add(key, value)
 }
 
 // AddPathRequestArgument
 func (tx *Transaction) AddPathRequestArgument(key string, value string) {
-	// TODO implement ARGS value limit using ArgumentsLimit
+	if tx.WAF.ArgumentLimit != 0 && tx.variables.argsPath.Length() >= tx.WAF.ArgumentLimit {
+		tx.debugLogger.Warn().Msg("skipping path request argument, over limit")
+		return
+	}
 	tx.variables.argsPath.Add(key, value)
 }
 
 // AddResponseArgument
 func (tx *Transaction) AddResponseArgument(key string, value string) {
-	// TODO implement ARGS value limit using ArgumentsLimit
+	if tx.WAF.ArgumentLimit != 0 && tx.variables.responseArgs.Length() >= tx.WAF.ArgumentLimit {
+		tx.debugLogger.Warn().Msg("skipping response argument, over limit")
+		return
+	}
 	tx.variables.responseArgs.Add(key, value)
 }
 
