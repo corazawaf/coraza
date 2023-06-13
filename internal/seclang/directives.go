@@ -992,6 +992,15 @@ func directiveSecDataset(options *DirectiveOptions) error {
 	return nil
 }
 
+func directiveSecArgumentsLimit(options *DirectiveOptions) error {
+	limit, err := strconv.Atoi(options.Opts)
+	if err != nil {
+		return err
+	}
+	options.WAF.ArgumentLimit = limit
+	return nil
+}
+
 func parseBoolean(data string) (bool, error) {
 	data = strings.ToLower(data)
 	switch data {

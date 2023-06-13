@@ -128,6 +128,9 @@ type WAF struct {
 	AuditLogWriterConfig plugintypes.AuditLogConfig
 
 	auditLogWriterInitialized bool
+
+	// Configures the maximum number of ARGS that will be accepted for processing.
+	ArgumentLimit int
 }
 
 // NewTransaction Creates a new initialized transaction for this WAF instance

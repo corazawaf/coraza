@@ -234,6 +234,10 @@ func TestDirectives(t *testing.T) {
 		"SecAuditLog": {
 			{"", expectErrorOnDirective},
 		},
+		"SecArgumentsLimit": {
+			{"", expectErrorOnDirective},
+			{"10", func(waf *corazawaf.WAF) bool { return waf.ArgumentLimit == 10 }},
+		},
 	}
 
 	for name, dCases := range directiveCases {
