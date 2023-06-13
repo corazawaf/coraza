@@ -996,11 +996,8 @@ func directiveSecDataset(options *DirectiveOptions) error {
 // Default: 1000
 // Syntax: SecArgumentsLimit [LIMIT]
 // ---
-// Exceeding the limit will set the REQBODY_ERROR variable,
-// and additional arguments beyond the limit will not be included.
-// With JSON body processing, there is an additional short-circuit to halt parsing once the limit is breached.
-// As with the enforcement of other issues that signal REQBODY_ERROR,
-// a rule should be in place to test this value, like rule 200002 in modsecurity.conf-recommended.
+// Exceeding the limit will not be included.
+// With JSON body processing, there is nothing to do when exceed the limit.
 // Example:
 // ```apache
 // SecArgumentsLimit 1000
