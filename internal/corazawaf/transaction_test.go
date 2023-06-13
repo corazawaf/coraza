@@ -1381,45 +1381,67 @@ func TestTxAddResponseArgs(t *testing.T) {
 	}
 }
 
-func TestAddArgsWhileOverlimit(t *testing.T) {
-	waf := NewWAF()
-	tx := waf.NewTransaction()
-	waf.ArgumentLimit = 1 // for test only
-	// test Add Response Argument
-	tx.AddResponseArgument("samplekey", "samplevalue")
-	tx.AddResponseArgument("samplekey2", "samplevalue")
-	if tx.variables.responseArgs.Get("samplekey")[0] != "samplevalue" {
-		t.Fatal("failed to add response argument")
+func TestAddGetArgsWithOverlimit(t *testing.T) {
+	testCases := []int{1, 2, 5, 1000}
+
+	for _, limit := range testCases {
+		waf := NewWAF()
+		tx := waf.NewTransaction()
+		tx.WAF.ArgumentLimit = limit
+		for i := 0; i < limit+1; i++ {
+			tx.AddGetRequestArgument(fmt.Sprintf("testKey%d", i), "samplevalue")
+		}
+		if tx.variables.argsGet.Len() > waf.ArgumentLimit {
+			t.Fatal("Argument limit is failed while add get args")
+		}
 	}
-	if tx.variables.responseArgs.Len() != waf.ArgumentLimit {
-		t.Fatal("Argumeng limit is failing while add responseArgs")
+}
+
+func TestAddPostArgsWithOverlimit(t *testing.T) {
+	testCases := []int{1, 2, 5, 1000}
+
+	for _, limit := range testCases {
+		waf := NewWAF()
+		tx := waf.NewTransaction()
+		tx.WAF.ArgumentLimit = limit
+		for i := 0; i < limit+1; i++ {
+			tx.AddPostRequestArgument(fmt.Sprintf("testKey%d", i), "samplevalue")
+		}
+		if tx.variables.argsPost.Len() > waf.ArgumentLimit {
+			t.Fatal("Argument limit is failed while add post args")
+		}
 	}
-	// test add path request argument
-	tx.AddPathRequestArgument("samplekey", "samplevalue")
-	tx.AddPathRequestArgument("samplekey2", "samplevalue")
-	if tx.variables.argsPath.Get("samplekey")[0] != "samplevalue" {
-		t.Fatal("failed to add path argument")
+}
+
+func TestAddPathArgsWithOverlimit(t *testing.T) {
+	testCases := []int{1, 2, 5, 1000}
+
+	for _, limit := range testCases {
+		waf := NewWAF()
+		tx := waf.NewTransaction()
+		tx.WAF.ArgumentLimit = limit
+		for i := 0; i < limit+1; i++ {
+			tx.AddPathRequestArgument(fmt.Sprintf("testKey%d", i), "samplevalue")
+		}
+		if tx.variables.argsPath.Len() > waf.ArgumentLimit {
+			t.Fatal("Argument limit is failed while add path args")
+		}
 	}
-	if tx.variables.argsPath.Len() != waf.ArgumentLimit {
-		t.Fatal("Argumeng limit is failing while add path args")
-	}
-	// test Add PostRequest Argument
-	tx.AddPostRequestArgument("samplekey", "samplevalue")
-	tx.AddPostRequestArgument("samplekey2", "samplevalue")
-	if tx.variables.argsPost.Get("samplekey")[0] != "samplevalue" {
-		t.Fatal("failed to add post argument")
-	}
-	if tx.variables.argsPost.Len() != waf.ArgumentLimit {
-		t.Fatal("Argumeng limit is failed while add post args")
-	}
-	// test Add Get Request Argument
-	tx.AddGetRequestArgument("samplekey", "samplevalue")
-	tx.AddGetRequestArgument("samplekey2", "samplevalue")
-	if tx.variables.argsGet.Get("samplekey")[0] != "samplevalue" {
-		t.Fatal("failed to add get argument")
-	}
-	if tx.variables.argsGet.Len() != waf.ArgumentLimit {
-		t.Fatal("Argumeng limit is failed while add get args")
+}
+
+func TestAddResponseArgsWithOverlimit(t *testing.T) {
+	testCases := []int{1, 2, 5, 1000}
+
+	for _, limit := range testCases {
+		waf := NewWAF()
+		tx := waf.NewTransaction()
+		tx.WAF.ArgumentLimit = limit
+		for i := 0; i < limit+1; i++ {
+			tx.AddResponseArgument(fmt.Sprintf("testKey%d", i), "samplevalue")
+		}
+		if tx.variables.responseArgs.Len() > waf.ArgumentLimit {
+			t.Fatal("Argument limit is failed while add response args")
+		}
 	}
 }
 
