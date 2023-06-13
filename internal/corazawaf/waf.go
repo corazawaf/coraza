@@ -282,6 +282,7 @@ func NewWAF() *WAF {
 		auditLogWriterInitialized: false,
 		AuditLogWriterConfig:      auditlog.NewConfig(),
 		Logger:                    logger,
+		ArgumentLimit:             1000,
 	}
 
 	if environment.HasAccessToFS {
@@ -381,6 +382,10 @@ func (w *WAF) Validate() error {
 
 	if w.ResponseBodyLimit > _1gb {
 		return errors.New("response body limit should be at most 1GB")
+	}
+
+	if w.ArgumentLimit <= 0 {
+		return errors.New("argument limit should be bigger than 0")
 	}
 
 	return nil
