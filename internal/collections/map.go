@@ -162,6 +162,10 @@ func (c *Map) String() string {
 	return res.String()
 }
 
+func (c *Map) Len() int {
+	return len(c.data)
+}
+
 // keyValue stores the case preserved original key and value
 // of the variable
 type keyValue struct {

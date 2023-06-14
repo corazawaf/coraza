@@ -97,6 +97,14 @@ func TestValidate(t *testing.T) {
 			expectErr:  true,
 			customizer: func(w *WAF) { w.ResponseBodyLimit = _1gb + 1 },
 		},
+		"argument limit greater than 0": {
+			expectErr:  false,
+			customizer: func(w *WAF) { w.ArgumentLimit = 1000 },
+		},
+		"argument limit less than 0": {
+			expectErr:  true,
+			customizer: func(w *WAF) { w.ArgumentLimit = -1 },
+		},
 	}
 
 	for name, tCase := range testCases {

@@ -1381,6 +1381,70 @@ func TestTxAddResponseArgs(t *testing.T) {
 	}
 }
 
+func TestAddGetArgsWithOverlimit(t *testing.T) {
+	testCases := []int{1, 2, 5, 1000}
+
+	for _, limit := range testCases {
+		waf := NewWAF()
+		tx := waf.NewTransaction()
+		tx.WAF.ArgumentLimit = limit
+		for i := 0; i < limit+1; i++ {
+			tx.AddGetRequestArgument(fmt.Sprintf("testKey%d", i), "samplevalue")
+		}
+		if tx.variables.argsGet.Len() > waf.ArgumentLimit {
+			t.Fatal("Argument limit is failed while add get args")
+		}
+	}
+}
+
+func TestAddPostArgsWithOverlimit(t *testing.T) {
+	testCases := []int{1, 2, 5, 1000}
+
+	for _, limit := range testCases {
+		waf := NewWAF()
+		tx := waf.NewTransaction()
+		tx.WAF.ArgumentLimit = limit
+		for i := 0; i < limit+1; i++ {
+			tx.AddPostRequestArgument(fmt.Sprintf("testKey%d", i), "samplevalue")
+		}
+		if tx.variables.argsPost.Len() > waf.ArgumentLimit {
+			t.Fatal("Argument limit is failed while add post args")
+		}
+	}
+}
+
+func TestAddPathArgsWithOverlimit(t *testing.T) {
+	testCases := []int{1, 2, 5, 1000}
+
+	for _, limit := range testCases {
+		waf := NewWAF()
+		tx := waf.NewTransaction()
+		tx.WAF.ArgumentLimit = limit
+		for i := 0; i < limit+1; i++ {
+			tx.AddPathRequestArgument(fmt.Sprintf("testKey%d", i), "samplevalue")
+		}
+		if tx.variables.argsPath.Len() > waf.ArgumentLimit {
+			t.Fatal("Argument limit is failed while add path args")
+		}
+	}
+}
+
+func TestAddResponseArgsWithOverlimit(t *testing.T) {
+	testCases := []int{1, 2, 5, 1000}
+
+	for _, limit := range testCases {
+		waf := NewWAF()
+		tx := waf.NewTransaction()
+		tx.WAF.ArgumentLimit = limit
+		for i := 0; i < limit+1; i++ {
+			tx.AddResponseArgument(fmt.Sprintf("testKey%d", i), "samplevalue")
+		}
+		if tx.variables.responseArgs.Len() > waf.ArgumentLimit {
+			t.Fatal("Argument limit is failed while add response args")
+		}
+	}
+}
+
 func TestResponseBodyForceProcessing(t *testing.T) {
 	waf := NewWAF()
 	waf.ResponseBodyAccess = true
