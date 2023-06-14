@@ -109,7 +109,7 @@ func Run(cfg Config) error {
 		},
 		{
 			name:               "Denied request with SQLi query parameters",
-			requestURL:         echoProxiedURL + "?arg=<script>alert(0)</script>",
+			requestURL:         echoProxiedURL,
 			requestMethod:      "POST",
 			requestHeaders:     map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 			requestBody:        "1%27%20ORDER%20BY%203--%2B",
@@ -174,6 +174,9 @@ func Run(cfg Config) error {
 			return fmt.Errorf("could not make http request: %v", err)
 		}
 
+		if test.requestMethod == "POST" {
+			req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		}
 		for k, v := range test.requestHeaders {
 			req.Header.Add(k, v)
 		}

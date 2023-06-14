@@ -18,18 +18,21 @@ import (
 
 // Expected Coraza configs:
 /*
-# coraza.conf-recommended with SecRuleEngine On
-Include @demo-conf
-# Unmodified CRS configuration and rules
-Include @crs-setup-demo-conf
-Include @owasp_crs/*.conf
+SecRuleEngine On
+SecRequestBodyAccess On
+SecResponseBodyAccess On
+SecResponseBodyMimeType application/json
 # Custom rule for Coraza config check (ensuring that these configs are used)
-SecRule &REQUEST_HEADERS:coraza-e2e "@eq 0" "id:100,phase:1,deny,status:424,msg:'Coraza E2E - Missing header'"
+SecRule &REQUEST_HEADERS:coraza-e2e "@eq 0" "id:100,phase:1,deny,status:424,log,msg:'Coraza E2E - Missing header'"
 # Custom rules for e2e testing
-SecRule REQUEST_URI "@streq /admin" "id:101,phase:1,t:lowercase,deny"
-SecRule REQUEST_BODY "@rx maliciouspayload" "id:102,phase:2,t:lowercase,deny"
-SecRule RESPONSE_HEADERS:pass "@rx leak" "id:103,phase:3,t:lowercase,deny"
-SecRule RESPONSE_BODY "@contains responsebodycode" "id:104,phase:4,t:lowercase,deny"
+SecRule REQUEST_URI "@streq /admin" "id:101,phase:1,t:lowercase,log,deny"
+SecRule REQUEST_BODY "@rx maliciouspayload" "id:102,phase:2,t:lowercase,log,deny"
+SecRule RESPONSE_HEADERS:pass "@rx leak" "id:103,phase:3,t:lowercase,log,deny"
+SecRule RESPONSE_BODY "@contains responsebodycode" "id:104,phase:4,t:lowercase,log,deny"
+# Custom rules mimicking the following CRS rules: 941100, 942100, 913100
+SecRule ARGS_NAMES|ARGS|XML:/* "@detectXSS" "id:9411,phase:2,t:none,t:utf8toUnicode,t:urlDecodeUni,t:htmlEntityDecode,t:jsDecode,t:cssDecode,t:removeNulls,log,deny"
+SecRule ARGS_NAMES|ARGS|XML:/* "@detectSQLi" "id:9421,phase:2,t:none,t:utf8toUnicode,t:urlDecodeUni,t:removeNulls,multiMatch,log,deny"
+SecRule REQUEST_HEADERS:User-Agent "@pm grabber masscan havij" "id:9131,phase:1,t:none,log,deny"
 */
 
 func main() {
