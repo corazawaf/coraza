@@ -664,12 +664,12 @@ func (tx *Transaction) AddPathRequestArgument(key string, value string) {
 }
 
 func (tx *Transaction) checkArgumentLimit(c *collections.NamedCollection) bool {
-	return tx.WAF.ArgumentLimit != 0 && c.Len() >= tx.WAF.ArgumentLimit
+	return c.Len() >= tx.WAF.ArgumentLimit
 }
 
 // AddResponseArgument
 func (tx *Transaction) AddResponseArgument(key string, value string) {
-	if tx.WAF.ArgumentLimit != 0 && tx.variables.responseArgs.Len() >= tx.WAF.ArgumentLimit {
+	if tx.variables.responseArgs.Len() >= tx.WAF.ArgumentLimit {
 		tx.debugLogger.Warn().Msg("skipping response argument, over limit")
 		return
 	}
