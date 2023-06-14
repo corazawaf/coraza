@@ -62,6 +62,7 @@ var (
 	_ directive = directiveSecRuleUpdateTargetByID
 	_ directive = directiveSecIgnoreRuleCompilationErrors
 	_ directive = directiveSecDataset
+	_ directive = directiveSecArgumentsLimit
 )
 
 var directivesMap = map[string]directive{
@@ -121,6 +122,7 @@ var directivesMap = map[string]directive{
 	"secruleupdatetargetbyid":        directiveSecRuleUpdateTargetByID,
 	"secignorerulecompilationerrors": directiveSecIgnoreRuleCompilationErrors,
 	"secdataset":                     directiveSecDataset,
+	"secargumentslimit":              directiveSecArgumentsLimit,
 
 	// Unsupported directives
 	"secargumentseparator":     directiveUnsupported,

@@ -55,4 +55,9 @@ func TestMap(t *testing.T) {
 			t.Errorf("String() = %q, want %q", have, wantStr)
 		}
 	}
+
+	if c.Len() != len(c.data) {
+		t.Fatal("The lengths are not equal.")
+	}
+
 }

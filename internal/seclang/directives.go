@@ -992,6 +992,28 @@ func directiveSecDataset(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Configures the maximum number of ARGS that will be accepted for processing.
+// Default: 1000
+// Syntax: SecArgumentsLimit [LIMIT]
+// ---
+// Exceeding the limit will not be included.
+// With JSON body processing, there is nothing to do when exceed the limit.
+// Example:
+// ```apache
+// SecArgumentsLimit 1000
+// ```
+func directiveSecArgumentsLimit(options *DirectiveOptions) error {
+	limit, err := strconv.Atoi(options.Opts)
+	if err != nil {
+		return err
+	}
+	if limit <= 0 {
+		return errors.New("argument limit should be bigger than 0")
+	}
+	options.WAF.ArgumentLimit = limit
+	return nil
+}
+
 func parseBoolean(data string) (bool, error) {
 	data = strings.ToLower(data)
 	switch data {

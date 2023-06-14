@@ -220,6 +220,17 @@ func TestDefaultActionsForPhase2(t *testing.T) {
 	}
 }
 
+func TestArgumentsLimit(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	p := NewParser(waf)
+
+	// single variable with key
+	err := p.FromString(`SecArgumentsLimit 100`)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
 func TestInvalidOperatorRuleData(t *testing.T) {
 	tests := []string{
 		`ARGS`,
