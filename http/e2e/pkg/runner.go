@@ -116,7 +116,7 @@ func Run(cfg Config) error {
 			expectedStatusCode: 403,
 		},
 		{
-			name:       "CRS rule 913100 sending malicious UA",
+			name:       "CRS malicious UA test (913100-6)",
 			requestURL: echoProxiedURL,
 			requestHeaders: map[string]string{
 				"Content-Type": "application/x-www-form-urlencoded",

@@ -35,9 +35,9 @@ func TestE2e(t *testing.T) {
 	SecRule RESPONSE_HEADERS:pass "@rx leak" "id:103,phase:3,t:lowercase,log,deny"
 	SecRule RESPONSE_BODY "@contains responsebodycode" "id:104,phase:4,t:lowercase,log,deny"
 	# Custom rules mimicking the following CRS rules: 941100, 942100, 913100
-	SecRule ARGS_NAMES|ARGS|XML:/* "@detectXSS" "id:9411,phase:2,t:none,t:utf8toUnicode,t:urlDecodeUni,t:htmlEntityDecode,t:jsDecode,t:cssDecode,t:removeNulls,log,deny"
-	SecRule ARGS_NAMES|ARGS|XML:/* "@detectSQLi" "id:9421,phase:2,t:none,t:utf8toUnicode,t:urlDecodeUni,t:removeNulls,multiMatch,log,deny"
-	SecRule REQUEST_HEADERS:User-Agent "@pm grabber masscan havij" "id:9131,phase:1,t:none,log,deny"
+	SecRule ARGS_NAMES|ARGS "@detectXSS" "id:9411,phase:2,t:none,t:utf8toUnicode,t:urlDecodeUni,t:htmlEntityDecode,t:jsDecode,t:cssDecode,t:removeNulls,log,deny"
+	SecRule ARGS_NAMES|ARGS "@detectSQLi" "id:9421,phase:2,t:none,t:utf8toUnicode,t:urlDecodeUni,t:removeNulls,multiMatch,log,deny"
+	SecRule REQUEST_HEADERS:User-Agent "@pm grabber masscan" "id:9131,phase:1,t:none,log,deny"
 `
 	conf = conf.
 		WithDirectives(customE2eDirectives)
