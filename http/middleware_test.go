@@ -32,7 +32,7 @@ func TestProcessRequest(t *testing.T) {
 	req, _ := http.NewRequest("POST", "https://www.coraza.io/test", strings.NewReader("test=456"))
 	waf, _ := coraza.NewWAF(coraza.NewWAFConfig())
 	tx := waf.NewTransaction().(*corazawaf.Transaction)
-	if _, err := processRequest(tx, req); err != nil {
+	if _, err := ProcessRequest(tx, req); err != nil {
 		t.Fatal(err)
 	}
 	if tx.Variables().RequestMethod().Get() != "POST" {
@@ -48,7 +48,7 @@ func TestProcessRequestEngineOff(t *testing.T) {
 	// TODO(jcchavezs): Shall we make RuleEngine a first class method in WAF config?
 	waf, _ := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives("SecRuleEngine OFF"))
 	tx := waf.NewTransaction().(*corazawaf.Transaction)
-	if _, err := processRequest(tx, req); err != nil {
+	if _, err := ProcessRequest(tx, req); err != nil {
 		t.Fatal(err)
 	}
 	if tx.Variables().RequestMethod().Get() != "POST" {
@@ -66,7 +66,7 @@ func TestProcessRequestMultipart(t *testing.T) {
 
 	req := createMultipartRequest(t)
 
-	if _, err := processRequest(tx, req); err != nil {
+	if _, err := ProcessRequest(tx, req); err != nil {
 		t.Fatal(err)
 	}
 
@@ -95,7 +95,7 @@ SecRule &REQUEST_HEADERS:Transfer-Encoding "!@eq 0" "id:1,phase:1,deny"
 	req, _ := http.NewRequest("GET", "https://www.coraza.io/test", nil)
 	req.TransferEncoding = []string{"chunked"}
 
-	it, err := processRequest(tx, req)
+	it, err := ProcessRequest(tx, req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,7 +187,7 @@ func TestChainEvaluation(t *testing.T) {
 		t.Errorf("Description HTTP request parsing failed")
 	}
 
-	_, err = processRequest(tx, req)
+	_, err = ProcessRequest(tx, req)
 	if err != nil {
 		t.Errorf("Failed to load the HTTP request")
 	}
@@ -504,7 +504,7 @@ func TestObtainStatusCodeFromInterruptionOrDefault(t *testing.T) {
 	for name, tCase := range tCases {
 		t.Run(name, func(t *testing.T) {
 			want := tCase.expectedCode
-			have := obtainStatusCodeFromInterruptionOrDefault(&types.Interruption{
+			have := ObtainStatusCodeFromInterruptionOrDefault(&types.Interruption{
 				Status: tCase.interruptionCode,
 				Action: tCase.interruptionAction,
 			}, tCase.defaultCode)

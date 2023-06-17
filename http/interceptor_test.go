@@ -24,7 +24,7 @@ func TestWriteHeader(t *testing.T) {
 	tx := waf.NewTransaction()
 	req, _ := http.NewRequest("GET", "", nil)
 	res := httptest.NewRecorder()
-	rw, responseProcessor := wrap(res, req, tx)
+	rw, responseProcessor := Wrap(res, req, tx)
 	rw.WriteHeader(204)
 	rw.WriteHeader(205)
 	// although we called WriteHeader, status code should be applied until
