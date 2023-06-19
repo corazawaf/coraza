@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -108,9 +109,9 @@ func expectEmptyBody() bodyExpectation {
 }
 
 func Run(cfg Config) error {
-	healthURL := cfg.HttpbinEntrypoint + "/status/200"
-	baseProxyURL := cfg.ProxiedEntrypoint
-	echoProxiedURL := baseProxyURL + "/anything"
+	healthURL := setHTTPSchemeIfMissing(cfg.HttpbinEntrypoint) + "/status/200"
+	baseProxyURL := setHTTPSchemeIfMissing(cfg.ProxiedEntrypoint)
+	echoProxiedURL := setHTTPSchemeIfMissing(baseProxyURL) + "/anything"
 
 	healthChecks := []struct {
 		name         string
@@ -157,9 +158,12 @@ func Run(cfg Config) error {
 			expectedBody:       expectEmptyBody(),
 		},
 		{
-			name:               "Legit request with legit body",
-			requestURL:         echoProxiedURL,
-			requestMethod:      "POST",
+			name:          "Legit request with legit body",
+			requestURL:    echoProxiedURL,
+			requestMethod: "POST",
+			// When sending a POST request, the "application/x-www-form-urlencoded" content-type header is needed
+			// being the only content-type for which by default Coraza enforces the request body processing.
+			// See https://github.com/corazawaf/coraza/issues/438
 			requestHeaders:     map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 			requestBody:        "This is a legit payload",
 			expectedStatusCode: expectStatusCode(200),
@@ -168,6 +172,7 @@ func Run(cfg Config) error {
 			name:               "Denied request with a malicious request body",
 			requestURL:         echoProxiedURL,
 			requestMethod:      "POST",
+			requestHeaders:     map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 			requestBody:        "maliciouspayload",
 			expectedStatusCode: expectStatusCode(403),
 		},
@@ -181,6 +186,7 @@ func Run(cfg Config) error {
 			name:               "Denied request with a malicious response body",
 			requestURL:         echoProxiedURL,
 			requestMethod:      "POST",
+			requestHeaders:     map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 			requestBody:        "responsebodycode",
 			expectedBody:       expectEmptyOrNulledBody(cfg.NulledBody),
 			expectedStatusCode: expectNulledBodyStatusCode(cfg.NulledBody, 403, 200),
@@ -203,8 +209,7 @@ func Run(cfg Config) error {
 			name:       "CRS malicious UA test (913100-6)",
 			requestURL: echoProxiedURL,
 			requestHeaders: map[string]string{
-				"Content-Type": "application/x-www-form-urlencoded",
-				"User-Agent":   "Grabber/0.1 (X11; U; Linux i686; en-US; rv:1.7)",
+				"User-Agent": "Grabber/0.1 (X11; U; Linux i686; en-US; rv:1.7)",
 			},
 			requestMethod:      "GET",
 			expectedStatusCode: expectStatusCode(403),
@@ -240,7 +245,7 @@ func Run(cfg Config) error {
 			}
 			timeout--
 			if timeout == 0 {
-				return fmt.Errorf("timeout waiting for response from %s, make sure the server is running", healthCheck.url)
+				return fmt.Errorf("timeout waiting for response from %s, make sure the server is running. Last request error: %v", healthCheck.url, err)
 			}
 		}
 	}
@@ -256,10 +261,6 @@ func Run(cfg Config) error {
 		req, err := http.NewRequest(test.requestMethod, test.requestURL, requestBody)
 		if err != nil {
 			return fmt.Errorf("could not make http request: %v", err)
-		}
-
-		if test.requestMethod == "POST" {
-			req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		}
 		for k, v := range test.requestHeaders {
 			req.Header.Add(k, v)
@@ -299,4 +300,12 @@ func Run(cfg Config) error {
 		}
 	}
 	return nil
+}
+
+func setHTTPSchemeIfMissing(rawURL string) string {
+	parsedURL, _ := url.Parse(rawURL)
+	if parsedURL.Scheme == "" {
+		parsedURL.Scheme = "http"
+	}
+	return parsedURL.String()
 }
