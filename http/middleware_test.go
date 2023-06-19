@@ -446,7 +446,9 @@ func runAgainstWAF(t *testing.T, tCase httpTest, waf coraza.WAF) {
 		reqBody = strings.NewReader(tCase.reqBody)
 	}
 	req, _ := http.NewRequest("POST", ts.URL+tCase.reqURI, reqBody)
-	// TODO(jcchavezs): Fix it once the discussion in https://github.com/corazawaf/coraza/issues/438 is settled
+	// When sending a POST request, the "application/x-www-form-urlencoded" content-type header is needed
+	// being the only content-type for which by default Coraza enforces the request body processing.
+	// See https://github.com/corazawaf/coraza/issues/438
 	req.Header.Add("content-type", "application/x-www-form-urlencoded")
 	res, err := ts.Client().Do(req)
 	if err != nil {
@@ -488,7 +490,7 @@ func TestObtainStatusCodeFromInterruptionOrDefault(t *testing.T) {
 	}{
 		"action deny with no code": {
 			interruptionAction: "deny",
-			expectedCode:       503,
+			expectedCode:       403,
 		},
 		"action deny with code": {
 			interruptionAction: "deny",

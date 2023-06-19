@@ -167,7 +167,7 @@ func obtainStatusCodeFromInterruptionOrDefault(it *types.Interruption, defaultSt
 	if it.Action == "deny" {
 		statusCode := it.Status
 		if statusCode == 0 {
-			statusCode = 503
+			statusCode = 403
 		}
 
 		return statusCode
