@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -20,6 +21,90 @@ type Config struct {
 	NulledBody        bool
 	ProxiedEntrypoint string
 	HttpbinEntrypoint string
+}
+
+// statusCodeExpectation is a function that checks the status code of a response
+// Some connectors (such as coraza-proxy-wasm) might not be able to change anymore the status code at phase:4,
+// therefore, if nulledBody parameter is true, we expect a 200, but with a nulled body
+type statusCodeExpectation func(int) error
+
+func expectStatusCode(expectedCode int) statusCodeExpectation {
+	return func(code int) error {
+		if code != expectedCode {
+			return fmt.Errorf("expected status code %d, got %d", expectedCode, code)
+		}
+
+		return nil
+	}
+}
+
+func expectNulledBodyStatusCode(nulledBody bool, expectedEmptyBodyCode, expectedNulledBodyCode int) statusCodeExpectation {
+	return func(code int) error {
+		if nulledBody {
+			if code != expectedNulledBodyCode {
+				return fmt.Errorf("expected status code %d, got %d", expectedNulledBodyCode, code)
+			}
+
+			return nil
+		}
+
+		if code != expectedEmptyBodyCode {
+			return fmt.Errorf("expected status code %d, got %d", expectedEmptyBodyCode, code)
+		}
+
+		return nil
+	}
+}
+
+// bodyExpectation sets a function to check the body expectations.
+// Some connectors (such as coraza-proxy-wasm) might not be able to change anymore the status code at phase:4,
+// therefore, if nulledBody parameter is true, we expect a 200, but with a nulled body
+type bodyExpectation func(int, []byte) error
+
+func expectEmptyOrNulledBody(nulledBody bool) bodyExpectation {
+	return func(contentLength int, body []byte) error {
+		if nulledBody {
+			if contentLength == 0 {
+				return fmt.Errorf("expected nulled body, got content-length 0")
+			}
+
+			if len(body) == 0 {
+				return fmt.Errorf("expected nulled body, got empty body")
+			}
+
+			for _, b := range body {
+				if b != 0 {
+					return fmt.Errorf("expected nulled body, got %q", string(body))
+				}
+			}
+
+			return nil
+		}
+
+		if contentLength != 0 {
+			return fmt.Errorf("expected empty body, got content-length %d", contentLength)
+		}
+
+		if len(body) != 0 {
+			return fmt.Errorf("expected empty body, got %q", string(body))
+		}
+
+		return nil
+	}
+}
+
+func expectEmptyBody() bodyExpectation {
+	return func(contentLength int, body []byte) error {
+		if contentLength != 0 {
+			return fmt.Errorf("expected empty body, got content-length %d", contentLength)
+		}
+
+		if len(body) != 0 {
+			return fmt.Errorf("expected empty body, got %q", string(body))
+		}
+
+		return nil
+	}
 }
 
 func Run(cfg Config) error {
@@ -55,22 +140,21 @@ func Run(cfg Config) error {
 		requestHeaders     map[string]string
 		requestBody        string
 		requestMethod      string
-		expectedStatusCode int
-		expectedEmptyBody  bool
-		expectedBody       string
+		expectedStatusCode statusCodeExpectation
+		expectedBody       bodyExpectation
 	}{
 		{
 			name:               "Legit request",
 			requestURL:         baseProxyURL + "?arg=arg_1",
 			requestMethod:      "GET",
-			expectedStatusCode: 200,
+			expectedStatusCode: expectStatusCode(200),
 		},
 		{
 			name:               "Denied request by URL",
 			requestURL:         baseProxyURL + "/admin",
 			requestMethod:      "GET",
-			expectedStatusCode: 403,
-			expectedEmptyBody:  true,
+			expectedStatusCode: expectStatusCode(403),
+			expectedBody:       expectEmptyBody(),
 		},
 		{
 			name:               "Legit request with legit body",
@@ -78,34 +162,34 @@ func Run(cfg Config) error {
 			requestMethod:      "POST",
 			requestHeaders:     map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 			requestBody:        "This is a legit payload",
-			expectedStatusCode: 200,
+			expectedStatusCode: expectStatusCode(200),
 		},
 		{
 			name:               "Denied request with a malicious request body",
 			requestURL:         echoProxiedURL,
 			requestMethod:      "POST",
 			requestBody:        "maliciouspayload",
-			expectedStatusCode: 403,
+			expectedStatusCode: expectStatusCode(403),
 		},
 		{
 			name:               "Denied request with a malicious response header",
 			requestURL:         baseProxyURL + "/response-headers?pass=leak",
 			requestMethod:      "GET",
-			expectedStatusCode: 403,
+			expectedStatusCode: expectStatusCode(403),
 		},
 		{
 			name:               "Denied request with a malicious response body",
 			requestURL:         echoProxiedURL,
 			requestMethod:      "POST",
 			requestBody:        "responsebodycode",
-			expectedEmptyBody:  true,
-			expectedStatusCode: 403,
+			expectedBody:       expectEmptyOrNulledBody(cfg.NulledBody),
+			expectedStatusCode: expectNulledBodyStatusCode(cfg.NulledBody, 403, 200),
 		},
 		{
 			name:               "Denied request with XSS query parameters",
 			requestURL:         echoProxiedURL + "?arg=<script>alert(0)</script>",
 			requestMethod:      "GET",
-			expectedStatusCode: 403,
+			expectedStatusCode: expectStatusCode(403),
 		},
 		{
 			name:               "Denied request with SQLi query parameters",
@@ -113,7 +197,7 @@ func Run(cfg Config) error {
 			requestMethod:      "POST",
 			requestHeaders:     map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 			requestBody:        "1%27%20ORDER%20BY%203--%2B",
-			expectedStatusCode: 403,
+			expectedStatusCode: expectStatusCode(403),
 		},
 		{
 			name:       "CRS malicious UA test (913100-6)",
@@ -123,7 +207,7 @@ func Run(cfg Config) error {
 				"User-Agent":   "Grabber/0.1 (X11; U; Linux i686; en-US; rv:1.7)",
 			},
 			requestMethod:      "GET",
-			expectedStatusCode: 403,
+			expectedStatusCode: expectStatusCode(403),
 		},
 	}
 
@@ -193,26 +277,26 @@ func Run(cfg Config) error {
 			return fmt.Errorf("could not read response body: %v", err)
 		}
 
-		if resp.StatusCode != test.expectedStatusCode {
-			// Some connectors (such as coraza-proxy-wasm) might not be able to change anymore the status code at phase:4,
-			// therefore, if nulledBody parameter is true, we expect a 200, but with a nulled body
-			if !(cfg.NulledBody && test.expectedEmptyBody && resp.StatusCode == 200 && test.expectedStatusCode == 403) {
-				return fmt.Errorf("unexpected status code, got %d, expected %d", resp.StatusCode, test.expectedStatusCode)
+		if test.expectedStatusCode != nil {
+			if err := test.expectedStatusCode(resp.StatusCode); err != nil {
+				return err
 			}
+
+			fmt.Printf("[Ok] Got expected status code %d\n", resp.StatusCode)
 		}
 
-		if test.expectedEmptyBody && len(respBody) != 0 {
-			// If an interruption happened at phase:4, some connectors (such as coraza-proxy-wasm) will override the response
-			// body with empty bytes
-			for _, b := range respBody {
-				if b != 0 {
-					return fmt.Errorf("unexpected response body with body, got %s", string(respBody))
-				}
+		if test.expectedBody != nil {
+			code, err := strconv.Atoi(resp.Header.Get("Content-Length"))
+			if err != nil {
+				return fmt.Errorf("could not convert content-length header to int: %v", err)
 			}
-			fmt.Printf("[Ok] Response body filled with null bytes\n")
-		}
 
-		fmt.Printf("[Ok] Got status code %d, expected %d\n", resp.StatusCode, test.expectedStatusCode)
+			if err := test.expectedBody(code, respBody); err != nil {
+				return err
+			}
+
+			fmt.Print("[Ok] Got expected response body\n")
+		}
 	}
 	return nil
 }
