@@ -113,13 +113,13 @@ only the phase the rule is defined for.
 It can be used standalone against your own waf deployment:
 
 ```shell
-go run github.com/corazawaf/coraza/http/e2e@main --proxy-hostport localhost:8080 --httpbin-hostport localhost:8081
+go run github.com/corazawaf/coraza/http/e2e/cmd/httpe2e@main --proxy-hostport localhost:8080 --httpbin-hostport localhost:8081
 ```
 
 or as a library by importing:
 
 ```go
-"github.com/corazawaf/coraza/v3/http/e2e/pkg"
+"github.com/corazawaf/coraza/v3/http/e2e"
 ```
 
 As a reference for library usage, see [`testing/e2e/e2e_test.go`](.testing/e2e/e2e_test.go).

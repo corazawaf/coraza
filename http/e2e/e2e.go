@@ -303,9 +303,17 @@ func Run(cfg Config) error {
 }
 
 func setHTTPSchemeIfMissing(rawURL string) string {
-	parsedURL, _ := url.Parse(rawURL)
-	if parsedURL.Scheme == "" {
+	// Addressing url without scheme (E.g: localhost:8080)
+	// https://stackoverflow.com/questions/62083272/parsing-url-with-port-and-without-scheme
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return rawURL
+	}
+	if parsedURL.Host == "" {
+		// the URL is missing the scheme, setting it to http by default
 		parsedURL.Scheme = "http"
+		parsedURL.Host = rawURL
+		parsedURL.Opaque = ""
 	}
 	return parsedURL.String()
 }
