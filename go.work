@@ -3,5 +3,7 @@ go 1.18
 use (
 	.
 	./examples/http-server
+	./http/e2e
 	./testing/coreruleset
+	./testing/e2e
 )

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 
-	e2e "github.com/corazawaf/coraza/v3/http/e2e/pkg"
+	e2e "github.com/corazawaf/coraza/v3/http/e2e/runner"
 )
 
 // Flags:

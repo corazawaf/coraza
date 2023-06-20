@@ -1,8 +1,11 @@
-module github.com/corazawaf/coraza/v3/examples/http-server
+module github.com/corazawaf/coraza/v3/testing/e2e
 
 go 1.18
 
-require github.com/corazawaf/coraza/v3 v3.0.0
+require (
+	github.com/corazawaf/coraza/v3 v3.0.0
+	github.com/mccutchen/go-httpbin/v2 v2.9.0
+)
 
 require (
 	github.com/corazawaf/libinjection-go v0.1.2 // indirect

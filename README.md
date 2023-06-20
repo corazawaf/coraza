@@ -116,7 +116,7 @@ go run github.com/corazawaf/coraza/http/e2e@main --proxy-hostport localhost:8080
 ```
 or as a library by importing:
 ```go
-"github.com/corazawaf/coraza/v3/http/e2e/pkg"
+"github.com/corazawaf/coraza/v3/http/e2e/runner"
 ```
 As a reference for library usage, see [`testing/e2e/e2e_test.go`](.testing/e2e/e2e_test.go).
 Expected directives that have to be loaded and available flags can be found in [`http/e2e/main.go`](./examples/http/e2e/main.go).
