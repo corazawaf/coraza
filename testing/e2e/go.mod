@@ -3,7 +3,7 @@ module github.com/corazawaf/coraza/v3/testing/e2e
 go 1.18
 
 require (
-	github.com/corazawaf/coraza/v3 v3.0.0
+	github.com/corazawaf/coraza/v3 v3.0.1-0.20230620093802-ce5e52dd2b74
 	github.com/mccutchen/go-httpbin/v2 v2.9.0
 )
 
