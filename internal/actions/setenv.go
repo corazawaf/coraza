@@ -18,7 +18,7 @@ import (
 // Creates, removes, and updates environment variables that can be accessed by the implementation.
 // > In a trained rule, the action will be executed when an individual rule matches (not the entire chain).
 //
-// Examples:
+// Example:
 // ```
 // SecRule RESPONSE_HEADERS:/Set-Cookie2?/ "(?i:(j?sessionid|(php)?sessid|(asp|jserv|jw)?session[-_]?(id)?|cf(id|token)|sid))" "phase:3,t:none,pass,id:139,nolog,setvar:tx.sessionid=%{matched_var}"
 // SecRule TX:SESSIONID "!(?i:\;? ?httponly;?)" "phase:3,id:140,t:none,setenv:httponly_cookie=%{matched_var},pass,log,auditlog,msg:'AppDefect: Missing HttpOnly Cookie Flag.'"
