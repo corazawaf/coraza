@@ -44,6 +44,62 @@ const (
 	ctlDebugLogLevel             ctlFunctionType = iota
 )
 
+// Action Group: Non-disruptive
+//
+// Description:
+// Change Coraza configuration on transient, per-transaction basis.
+// Any changes made using this action will affect only the transaction in which the action is executed.
+// The default configuration, as well as the other transactions running in parallel, will be unaffected.
+//
+// The following configuration options are supported:
+// - `auditEngine`
+// - `auditLogParts`
+// - `debugLogLevel`
+// - `forceRequestBodyVariable`
+// - `requestBodyAccess`
+// - `requestBodyLimit`
+// - `requestBodyProcessor`
+// - `responseBodyAccess`
+// - `responseBodyLimit`
+// - `ruleEngine`
+// - `ruleRemoveById`
+// - `ruleRemoveByMsg`
+// - `ruleRemoveByTag`
+// - `ruleRemoveTargetById`
+// - `ruleRemoveTargetByMsg`
+// - `ruleRemoveTargetByTag`
+// - `hashEngine` (**Not Supported in Coraza (TBI)**)
+// - `hashEnforcement` (**Not supported in Coraza (TBI)**)
+//
+// Here are some notes about the options:
+//
+//  1. Option `ruleRemoveTargetById`, `ruleRemoveTargetByMsg`, and `ruleRemoveTargetByTag`, users don't need to use the char ! before the target list.
+//
+//  2. Option `ruleRemoveById` is triggered at run time and should be specified before the rule in which it is disabling.
+//
+//  3. Option `requestBodyProcessor` allows you to configure the request body processor.
+//     By default, Coraza will use the `URLENCODED` and `MULTIPART` processors to process an `application/x-www-form-urlencoded` and a `multipart/form-data` body respectively.
+//     Other processors also supported: `JSON` and `XML`, but they are never used implicitly.
+//     Instead, you must tell Coraza to use it by placing a few rules in the `REQUEST_HEADERS` processing phase.
+//     After the request body is processed as XML, you will be able to use the XML-related features to inspect it.
+//     Request body processors will not interrupt a transaction if an error occurs during parsing.
+//     Instead, they will set the variables `REQBODY_PROCESSOR_ERROR` and `REQBODY_PROCESSOR_ERROR_MSG`.
+//     These variables should be inspected in the `REQUEST_BODY` phase and an appropriate action taken.
+//
+//  4. Option `forceRequestBodyVariable“ allows you to configure the `REQUEST_BODY` variable to be set when there is no request body processor configured.
+//     This allows for inspection of request bodies of unknown types.
+//
+// Example:
+// ```
+// # Parse requests with Content-Type "text/xml" as XML
+// SecRule REQUEST_CONTENT_TYPE ^text/xml "nolog,pass,id:106,ctl:requestBodyProcessor=XML"
+//
+// # white-list the user parameter for rule #981260 when the REQUEST_URI is /index.php
+//
+//		SecRule REQUEST_URI "@beginsWith /index.php" "phase:1,t:none,pass,\
+//	 	nolog,ctl:ruleRemoveTargetById=981260;ARGS:user"
+//
+// ```
 type ctlFn struct {
 	action     ctlFunctionType
 	value      string
