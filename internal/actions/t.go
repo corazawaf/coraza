@@ -9,6 +9,17 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/transformations"
 )
 
+// Action Group: Non-disruptive
+//
+// Description:
+// `t` is used to specify the transformation pipeline to use to transform the value of each variable used in the rule before matching.
+// Any transformation functions that you specify in a `SecRule` will be added to the previous ones specified in `SecDefaultAction`.
+// It is recommended that you always use `t:none` in your rules, which prevents them depending on the default configuration.
+//
+// Example:
+// ```
+// SecRule ARGS "(asfunction|javascript|vbscript|data|mocha|livescript):" "id:146,t:none,t:htmlEntityDecode,t:lowercase,t:removeNulls,t:removeWhitespace"
+// ```
 type tFn struct{}
 
 func (a *tFn) Init(r plugintypes.RuleMetadata, data string) error {
