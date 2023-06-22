@@ -10,7 +10,7 @@ import (
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 )
 
-// Action Group: metadata
+// Action Group: Metadata
 //
 // Description:
 // Assigns a custom message to the rule or chain in which it appears, and the message will be logged along with every alert.
