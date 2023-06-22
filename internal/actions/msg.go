@@ -10,6 +10,16 @@ import (
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 )
 
+// Action Group: Metadata
+//
+// Description:
+// Assigns a custom message to the rule or chain in which it appears, and the message will be logged along with every alert.
+// Noted that the msg information appears in the error and/or audit log files and is not sent back to the client in response headers.
+//
+// Example:
+// ```
+// SecRule &REQUEST_HEADERS:Host "@eq 0" "log,id:60008,severity:2,msg:'Request Missing a Host Header'"
+// ```
 type msgFn struct{}
 
 func (a *msgFn) Init(r plugintypes.RuleMetadata, data string) error {

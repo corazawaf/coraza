@@ -8,6 +8,16 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
+// Action Group: Non-disruptive
+//
+// Description:
+// Marks the transaction for logging in the audit log.
+//
+// Example:
+// ```
+// # The action is explicit if the log is specified.
+// SecRule REMOTE_ADDR "^192\.168\.1\.100$" "auditlog,phase:1,id:100,allow"
+// ```
 type auditlogFn struct{}
 
 func (a *auditlogFn) Init(r plugintypes.RuleMetadata, data string) error {
