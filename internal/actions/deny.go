@@ -8,6 +8,15 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
+// Action Group: Disruptive
+//
+// Description:
+// Stops rule processing and intercepts transaction.
+//
+// Example:
+// ```
+// SecRule REQUEST_HEADERS:User-Agent "nikto" "log,deny,id:107,msg:'Nikto Scanners Identified'"
+// ```
 type denyFn struct{}
 
 func (a *denyFn) Init(_ plugintypes.RuleMetadata, data string) error {

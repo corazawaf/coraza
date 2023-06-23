@@ -8,6 +8,16 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
+// Action Group: Non-disruptive
+//
+// Description:
+// Prevents rule matches from appearing in both error and audit logs.
+// Although nolog implies noauditlog, you can override the former by using `nolog,auditlog`.
+//
+// Example:
+// ```
+// SecRule REQUEST_HEADERS:User-Agent "@streq Test" "allow,nolog,id:121"
+// ```
 type nologFn struct{}
 
 func (a *nologFn) Init(r plugintypes.RuleMetadata, data string) error {

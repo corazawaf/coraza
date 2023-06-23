@@ -107,6 +107,20 @@ the operator with `plugins.RegisterOperator` to reduce binary size / startup ove
 * `coraza.rule.multiphase_valuation` - enables evaluation of rule variables in the phases that they are ready, not
 only the phase the rule is defined for.
 
+## E2E Testing
+
+[`Http/e2e/`](./http/e2e) provides an utility to run e2e tests.
+It can be used standalone against your own waf deployment:
+```shell
+go run github.com/corazawaf/coraza/http/e2e@main --proxy-hostport localhost:8080 --httpbin-hostport localhost:8081
+```
+or as a library by importing:
+```go
+"github.com/corazawaf/coraza/v3/http/e2e/pkg"
+```
+As a reference for library usage, see [`testing/e2e/e2e_test.go`](.testing/e2e/e2e_test.go).
+Expected directives that have to be loaded and available flags can be found in [`http/e2e/main.go`](./examples/http/e2e/main.go).
+
 ## Tools
 
 * [Go FTW](https://github.com/coreruleset/go-ftw): Rule testing engine

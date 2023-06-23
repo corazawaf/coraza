@@ -8,6 +8,18 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
+// Action Group: Disruptive
+//
+// Description:
+// Intercepts transaction by issuing an external (client-visible) redirection to the given location.
+// If the status action is presented on the same rule,
+// and its value can be used for a redirection (i.e., one of the following: 301, 302, 303, or 307),
+// the value will be used for the redirection status code. Otherwise, status code 302 will be used.
+//
+// Example:
+// ```
+// SecRule REQUEST_HEADERS:User-Agent "@streq Test" "phase:1,id:130,log,redirect:http://www.example.com/failed.html"
+// ```
 type redirectFn struct {
 	target string
 }

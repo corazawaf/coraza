@@ -14,6 +14,46 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
+// Action Group: Non-disruptive
+//
+// Description:
+// Creates, removes, or updates a variable. Variable names are **case-insensitive**.
+//
+// Example:
+// ```
+// # Create a variable and set its value to 1 (usually used for setting flags)
+// `setvar:TX.score`
+//
+// # Create a variable and initialize it at the same time,
+// `setvar:TX.score=10`
+//
+// # Remove a variable, prefix the name with an exclamation mark
+// `setvar:!TX.score`
+//
+// # Increase or decrease variable value, use + and - characters in front of a numerical value
+// `setvar:TX.score=+5`
+//
+// # Example from OWASP CRS:
+//
+//	SecRule REQUEST_FILENAME|ARGS_NAMES|ARGS|XML:/* "\bsys\.user_catalog\b" \
+//		"phase:2,rev:'2.1.3',capture,t:none,t:urlDecodeUni,t:htmlEntityDecode,t:lowercase,t:replaceComments,t:compressWhiteSpace,ctl:auditLogParts=+E, \
+//		block,msg:'Blind SQL Injection Attack',id:'959517',tag:'WEB_ATTACK/SQL_INJECTION',tag:'WASCTC/WASC-19',tag:'OWASP_TOP_10/A1',tag:'OWASP_AppSensor/CIE1', \
+//		tag:'PCI/6.5.2',logdata:'%{TX.0}',severity:'2',setvar:'tx.msg=%{rule.msg}',setvar:tx.sql_injection_score=+%{tx.critical_anomaly_score}, \
+//		setvar:tx.anomaly_score=+%{tx.critical_anomaly_score},setvar:tx.%{rule.id}-WEB_ATTACK/SQL_INJECTION-%{matched_var_name}=%{tx.0}"
+//
+// # When using in a chain, the action will be executed when an individual rule matches instead of the entire chain match.
+//
+//	SecRule REQUEST_FILENAME "@contains /test.php" "chain,id:7,phase:1,t:none,nolog,setvar:tx.auth_attempt=+1"
+//		SecRule ARGS_POST:action "@streq login" "t:none"
+//
+// # Increment every time that test.php is visited (regardless of the parameters submitted).
+// # If the desired goal is to set the variable only if the entire rule matches,
+// # it should be included in the last rule of the chain.
+//
+//	SecRule REQUEST_FILENAME "@streq test.php" "chain,id:7,phase:1,t:none,nolog"
+//		SecRule ARGS_POST:action "@streq login" "t:none,setvar:tx.auth_attempt=+1"
+//
+// ```
 type setvarFn struct {
 	key        macro.Macro
 	value      macro.Macro
