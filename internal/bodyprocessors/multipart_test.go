@@ -77,3 +77,20 @@ Content-Type: text/html
 		}
 	}
 }
+
+func TestInvalidMultipartCT(t *testing.T) {
+	payload := strings.TrimSpace(`
+-----------------------------9051914041544843365972754266
+Content-Disposition: form-data; name="text"
+
+text default
+-----------------------------9051914041544843365972754266
+`)
+	mp := multipartProcessor(t)
+	v := corazawaf.NewTransactionVariables()
+	if err := mp.ProcessRequest(strings.NewReader(payload), v, plugintypes.BodyProcessorOptions{
+		Mime: "multipart/form-data; boundary=---------------------------9051914041544843365972754266; a=1; a=2",
+	}); err == nil {
+		t.Error("multipart processor should fail for invalid content-type")
+	}
+}
