@@ -50,7 +50,7 @@ func exampleHandler(w http.ResponseWriter, req *http.Request) {
    var buf bytes.Buffer
  _, err := io.Copy(&buf, req.Body)
    if err != nil {
-     log.Fatalf("handler can not read request body: %v", err)
+     log.Errorf("handler can not read request body: %v", err)
    }
  w.Write(buf.Bytes())
 }
