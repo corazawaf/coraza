@@ -148,7 +148,7 @@ func TestBodyBufferResetAndReadTheReader(t *testing.T) {
 		MemoryLimit: 5,
 		Limit:       5,
 	})
-	br.Write([]byte("test1"))
+	br.Write([]byte("test1")) // nolint
 
 	r, _ := br.Reader()
 
