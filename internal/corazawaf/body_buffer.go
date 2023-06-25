@@ -21,6 +21,7 @@ type BodyBuffer struct {
 	buffer  *bytes.Buffer
 	writer  *os.File
 	length  int64
+	readers []*bodyBufferReader
 }
 
 var (
@@ -57,7 +58,7 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 		// Write has been called without checking the Limit, it should never happend. Raising an error.
 		// The buffers are private and populated only by WriteRequestBody, ReadRequestBodyFrom, and similar functions
 		// that have to perform limit checks before calling Write()
-		return 0, errors.New("Limit reached while writing")
+		return 0, errors.New("limit reached while writing")
 	}
 	targetLen := br.length + int64(len(data))
 
@@ -99,18 +100,25 @@ type bodyBufferReader struct {
 }
 
 func (b *bodyBufferReader) Read(p []byte) (n int, err error) {
+	if b.br == nil {
+		// reader has been closed and hence we don't attempt to do anymore read
+		return 0, io.EOF
+	}
+
 	if !environment.HasAccessToFS || b.br.writer == nil {
 		buf := b.br.buffer.Bytes()
+
 		n = len(p)
-		if b.pos+n > len(buf) {
-			n = len(buf) - b.pos
+		if bl := b.br.buffer.Len(); b.pos+n > bl {
+			n = bl - b.pos
 		}
 		if n == 0 {
 			return 0, io.EOF
 		}
-		copy(p, buf[b.pos:b.pos+n])
-		b.pos += n
-		return
+
+		k := copy(p, buf[b.pos:b.pos+n])
+		b.pos += k
+		return k, nil
 	}
 
 	n, err = b.br.writer.ReadAt(p, int64(b.pos))
@@ -118,11 +126,19 @@ func (b *bodyBufferReader) Read(p []byte) (n int, err error) {
 	return
 }
 
+// Close closes the reader
+func (b *bodyBufferReader) Close() {
+	b.br = nil
+	b.pos = 0
+}
+
 // Reader Returns a working reader for the body buffer in memory or file
 func (br *BodyBuffer) Reader() (io.Reader, error) {
-	return &bodyBufferReader{
+	r := &bodyBufferReader{
 		br: br,
-	}, nil
+	}
+	br.readers = append(br.readers, r)
+	return r, nil
 }
 
 // Size returns the current size of the body buffer
@@ -134,6 +150,15 @@ func (br *BodyBuffer) Size() int64 {
 func (br *BodyBuffer) Reset() error {
 	br.buffer.Reset()
 	br.length = 0
+
+	// close all readers, this is important because connectors may have
+	// a reference to a reader but the transaction is already closed and
+	// hence the reader is not valid anymore.
+	for _, r := range br.readers {
+		r.Close()
+	}
+	br.readers = nil
+
 	if environment.HasAccessToFS && br.writer != nil {
 		w := br.writer
 		br.writer = nil

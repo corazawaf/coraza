@@ -141,3 +141,36 @@ func TestWriteLimit(t *testing.T) {
 		})
 	}
 }
+
+// See https://github.com/corazawaf/coraza-caddy/issues/48
+func TestBodyBufferResetAndReadTheReader(t *testing.T) {
+	br := NewBodyBuffer(types.BodyBufferOptions{
+		MemoryLimit: 5,
+		Limit:       5,
+	})
+	br.Write([]byte("test1"))
+
+	r, _ := br.Reader()
+
+	dest := make([]byte, 5)
+	nRead, err := r.Read(dest)
+	if err != nil {
+		t.Fatalf("unexpected error when creating reader %s", err.Error())
+	}
+	if nRead != 5 {
+		t.Fatalf("unexpected number of bytes read, want: %d, have: %d", 5, nRead)
+	}
+
+	err = br.Reset()
+	if err != nil {
+		t.Fatalf("unexpected error %s", err.Error())
+	}
+
+	nCopied, err := io.Copy(io.Discard, r)
+	if err != nil {
+		t.Fatalf("unexpected error %s", err.Error())
+	}
+	if nCopied != 0 {
+		t.Fatalf("unexpected number of bytes read, want: %d, have: %d", 5, nCopied)
+	}
+}
