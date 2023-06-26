@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"mime"
 	"mime/multipart"
 	"os"
@@ -25,7 +24,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 	storagePath := options.StoragePath
 	mediaType, params, err := mime.ParseMediaType(mimeType)
 	if err != nil {
-		log.Fatalf("failed to parse media type: %s", err.Error())
+		return err
 	}
 	if !strings.HasPrefix(mediaType, "multipart/") {
 		return errors.New("not a multipart body")
