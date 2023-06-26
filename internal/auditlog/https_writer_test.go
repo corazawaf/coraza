@@ -12,12 +12,19 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 func TestHTTPSAuditLog(t *testing.T) {
 	writer := &httpsWriter{}
-	formatter := jsonFormatter
+	formatter := nativeFormatter
+	pts, err := types.ParseAuditLogParts("ABCDEZ")
+	if err != nil {
+		t.Fatal(err)
+	}
 	al := &Log{
+		Parts_: pts,
+
 		Transaction_: Transaction{
 			ID_: "test123",
 		},
