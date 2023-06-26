@@ -29,13 +29,16 @@ func TestCSSDecode(t *testing.T) {
 		t.Run(tt.input, func(t *testing.T) {
 			have, changed, err := cssDecode(tt.input)
 			if err != nil {
-				t.Error(err)
+				t.Fatal(err)
 			}
-			if tt.input == tt.want && changed || tt.input != tt.want && !changed {
-				t.Errorf("input %q, have %q with changed %t", tt.input, have, changed)
+
+			shouldChange := tt.input != tt.want
+			if changed != shouldChange {
+				t.Errorf("unexpected changed value, want %t, have %t", shouldChange, changed)
 			}
+
 			if have != tt.want {
-				t.Errorf("have %q, want %q", have, tt.want)
+				t.Errorf("unexpected value, want %q, have %q", tt.want, have)
 			}
 		})
 	}
