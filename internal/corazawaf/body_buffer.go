@@ -109,16 +109,16 @@ func (b *bodyBufferReader) Read(p []byte) (n int, err error) {
 		buf := b.br.buffer.Bytes()
 
 		n = len(p)
-		if bl := b.br.buffer.Len(); b.pos+n > bl {
-			n = bl - b.pos
+		if b.pos+n > len(buf) {
+			n = len(buf) - b.pos
 		}
 		if n == 0 {
 			return 0, io.EOF
 		}
 
-		k := copy(p, buf[b.pos:b.pos+n])
-		b.pos += k
-		return k, nil
+		an := copy(p, buf[b.pos:b.pos+n])
+		b.pos += an
+		return an, nil
 	}
 
 	n, err = b.br.writer.ReadAt(p, int64(b.pos))
