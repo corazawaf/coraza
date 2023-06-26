@@ -486,10 +486,12 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 		Rule_:            &r.RuleMetadata,
 		MatchedDatas_:    mds,
 	}
-	// Populate MatchedRule Disruptive_ field only if the Engine is capable of performing disruptive actions
+	// Populate MatchedRule disruption related fields only if the Engine is capable of performing disruptive actions
 	if tx.RuleEngine == types.RuleEngineOn {
 		for _, a := range r.actions {
+			// There can be only at most one disruptive action per rule
 			if a.Function.Type() == plugintypes.ActionTypeDisruptive {
+				mr.DisruptiveActionName_ = a.Name
 				mr.Disruptive_ = true
 				break
 			}

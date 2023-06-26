@@ -749,7 +749,7 @@ func TestLogCallback(t *testing.T) {
 			rule.ID_ = 1
 			rule.Phase_ = 1
 			rule.Log = true
-			_ = rule.AddAction("action", testCase.action)
+			_ = rule.AddAction("deny", testCase.action)
 			tx.MatchRule(rule, []types.MatchData{
 				&corazarules.MatchData{
 					Variable_: variables.UniqueID,

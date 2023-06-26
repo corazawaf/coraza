@@ -67,6 +67,9 @@ type MatchedRule struct {
 	TransactionID_ string
 	// Is disruptive
 	Disruptive_ bool
+	// Name of the disruptive action
+	// Note: not exposed in corarza v3.0.*
+	DisruptiveActionName_ string
 	// Server IP address
 	ServerIPAddress_ string
 	// Client IP address
@@ -175,7 +178,7 @@ func (mr MatchedRule) AuditLog() string {
 	for _, matchData := range mr.MatchedDatas_ {
 		fmt.Fprintf(log, "[client %q] ", mr.ClientIPAddress_)
 		if mr.Disruptive_ {
-			fmt.Fprintf(log, "Coraza: Access denied (phase %d). ", mr.Rule_.Phase())
+			WriteDisruptiveActionSpecificLog(log, mr)
 		} else {
 			log.WriteString("Coraza: Warning. ")
 		}
@@ -205,7 +208,7 @@ func (mr MatchedRule) ErrorLog() string {
 
 	fmt.Fprintf(log, "[client %q] ", mr.ClientIPAddress_)
 	if mr.Disruptive_ {
-		fmt.Fprintf(log, "Coraza: Access denied (phase %d). ", mr.Rule_.Phase())
+		WriteDisruptiveActionSpecificLog(log, mr)
 	} else {
 		log.WriteString("Coraza: Warning. ")
 	}
@@ -225,4 +228,19 @@ func (mr MatchedRule) ErrorLog() string {
 
 	log.WriteString("\n")
 	return log.String()
+}
+
+func WriteDisruptiveActionSpecificLog(log *strings.Builder, mr MatchedRule) {
+	switch mr.DisruptiveActionName_ {
+	case "allow":
+		fmt.Fprintf(log, "Coraza: Access allowed (phase %d). ", mr.Rule_.Phase())
+	case "deny":
+		fmt.Fprintf(log, "Coraza: Access denied (phase %d). ", mr.Rule_.Phase())
+	case "drop":
+		fmt.Fprintf(log, "Coraza: Access dropped (phase %d). ", mr.Rule_.Phase())
+	case "pass":
+		log.WriteString("Coraza: Warning. ")
+	case "redirect":
+		fmt.Fprintf(log, "Coraza: Access redirected (phase %d). ", mr.Rule_.Phase())
+	}
 }

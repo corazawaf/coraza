@@ -30,27 +30,80 @@ func TestErrorLogMessagesSizesNoExtraRuleDetails(t *testing.T) {
 	matchedRule.MatchedDatas_[0].(*MatchData).Message_ = strings.Repeat("a", 300)
 	logWithMsg := matchedRule.ErrorLog()
 	logSizeWithMsg := len(logWithMsg)
-	// The parent message is repeated twice when loggin error log
+	// The parent message is repeated twice when logging error log
 	if lenDiff := logSizeWithMsg - LogSizeWithoutMsg; lenDiff != maxSizeLogMessage*2 {
 		t.Errorf("Expected message repeated twice with total len equal to %d, got %d", maxSizeLogMessage*2, lenDiff)
 	}
 	matchedRule.MatchedDatas_[0].(*MatchData).Data_ = strings.Repeat("b", 300)
 	logWithMsgData := matchedRule.ErrorLog()
 	logSizeWithMsgData := len(logWithMsgData)
-	// The parent message is repeated twice when loggin error log
 	if lenDiff := logSizeWithMsgData - logSizeWithMsg; lenDiff != maxSizeLogMessage {
 		t.Errorf("Expected data message with len equal to %d, got %d", maxSizeLogMessage, lenDiff)
 	}
-
-	noDisruptiveLine := "Coraza: Warning."
-	if !strings.Contains(logWithMsg, noDisruptiveLine) {
-		t.Errorf("Expected string \"%s\" if not disruptive rule, got %s", noDisruptiveLine, logWithMsg)
+}
+func TestErrorLogMessages(t *testing.T) {
+	matchedRule := &MatchedRule{
+		Rule_: &RuleMetadata{
+			ID_: 1234,
+		},
+		MatchedDatas_: []types.MatchData{
+			&MatchData{
+				Variable_: variables.RequestURI,
+				Key_:      "REQUEST_URI",
+				Value_:    "/",
+				Message_:  "",
+				Data_:     "",
+			},
+		},
 	}
-	matchedRule.Disruptive_ = true
-	logWithDisruptive := matchedRule.ErrorLog()
-	disruptiveLine := "Coraza: Access denied"
-	if !strings.Contains(logWithDisruptive, disruptiveLine) {
-		t.Errorf("Expected string \"%s\" if disruptive rule, got %s", disruptiveLine, logWithMsg)
+	testCases := map[string]struct {
+		disruptiveAction     bool
+		disruptiveActionName string
+		expectedLogLine      string
+	}{
+		"no disruptive action": {
+			disruptiveAction:     false,
+			disruptiveActionName: "",
+			expectedLogLine:      "Coraza: Warning.",
+		},
+		"Deny disruptive action": {
+			disruptiveAction:     true,
+			disruptiveActionName: "deny",
+			expectedLogLine:      "Coraza: Access denied",
+		},
+		"Allow disruptive action": {
+			disruptiveAction:     true,
+			disruptiveActionName: "allow",
+			expectedLogLine:      "Coraza: Access allowed",
+		},
+		"Drop disruptive action": {
+			disruptiveAction:     true,
+			disruptiveActionName: "drop",
+			expectedLogLine:      "Coraza: Access dropped",
+		},
+		"Pass disruptive action": {
+			disruptiveAction:     true,
+			disruptiveActionName: "pass",
+			expectedLogLine:      "Coraza: Warning.",
+		},
+		"Redirect disruptive action": {
+			disruptiveAction:     true,
+			disruptiveActionName: "redirect",
+			expectedLogLine:      "Coraza: Access redirected",
+		},
+	}
+
+	for name, tCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			matchedRule.Disruptive_ = tCase.disruptiveAction
+			if tCase.disruptiveActionName != "" {
+				matchedRule.DisruptiveActionName_ = tCase.disruptiveActionName
+			}
+			logLine := matchedRule.ErrorLog()
+			if !strings.Contains(logLine, tCase.expectedLogLine) {
+				t.Errorf("Expected string \"%s\", got %s", tCase.expectedLogLine, logLine)
+			}
+		})
 	}
 }
 
