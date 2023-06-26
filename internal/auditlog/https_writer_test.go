@@ -1,0 +1,66 @@
+// Copyright 2023 Juan Pablo Tosso and the OWASP Coraza contributors
+// SPDX-License-Identifier: Apache-2.0
+
+package auditlog
+
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+)
+
+func TestHTTPSAuditLog(t *testing.T) {
+	writer := &httpsWriter{}
+	formatter := jsonFormatter
+	al := &Log{
+		Transaction_: Transaction{
+			ID_: "test123",
+		},
+		Messages_: []plugintypes.AuditLogMessage{
+			Message{
+				Data_: &MessageData{
+					ID_:  100,
+					Raw_: "SecAction \"id:100\"",
+				},
+			},
+		},
+	}
+	// we create a test http server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		if r.ContentLength == 0 {
+			t.Fatal("ContentLength is 0")
+		}
+		fmt.Println(r.Header.Get("User-Agent"))
+		// now we get the body
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(body) == 0 {
+			t.Fatal("Body is empty")
+		}
+		b, err := formatter(al)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(body, b) {
+			t.Fatal("Body does not match")
+		}
+	}))
+	defer server.Close()
+	if err := writer.Init(plugintypes.AuditLogConfig{
+		Target:    server.URL,
+		Formatter: formatter,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Write(al); err != nil {
+		t.Fatal(err)
+	}
+}

@@ -15,6 +15,9 @@ func init() {
 	RegisterWriter("serial", func() plugintypes.AuditLogWriter {
 		return &serialWriter{}
 	})
+	RegisterWriter("https", func() plugintypes.AuditLogWriter {
+		return &httpsWriter{}
+	})
 
 	RegisterFormatter("json", jsonFormatter)
 	RegisterFormatter("jsonlegacy", legacyJSONFormatter)
