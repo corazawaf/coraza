@@ -1,8 +1,19 @@
 name: Lint (pre-commit)
 
 on:
-  pull_request:
   push:
+    branches:
+      - main
+    paths-ignore:
+      - "**/*.md"
+      - "LICENSE"
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "**/*.md"
+      - "LICENSE"
+
 jobs:
   lint:
     runs-on: ubuntu-latest
