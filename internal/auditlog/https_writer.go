@@ -1,4 +1,4 @@
-// Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
+// Copyright 2023 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
 package auditlog
@@ -58,8 +58,13 @@ func (h *httpsWriter) Write(al plugintypes.AuditLog) error {
 		return err
 	}
 	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK {
+	if res.StatusCode >= 300 || res.StatusCode < 200 {
 		return fmt.Errorf("unexpected status code %d", res.StatusCode)
+	}
+	if _, err := io.Copy(io.Discard, res.Body); err != nil {
+		// the stream failed, but the log was received, we don't return error
+		// we cannot generate a log using the current api
+		return nil
 	}
 	return nil
 }

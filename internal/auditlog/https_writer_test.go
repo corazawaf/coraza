@@ -5,7 +5,6 @@ package auditlog
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -43,7 +42,6 @@ func TestHTTPSAuditLog(t *testing.T) {
 		if r.ContentLength == 0 {
 			t.Fatal("ContentLength is 0")
 		}
-		fmt.Println(r.Header.Get("User-Agent"))
 		// now we get the body
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
