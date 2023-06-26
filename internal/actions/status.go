@@ -11,6 +11,16 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
+// Action Group: Data
+//
+// Description:
+// Specifies the response status code to use with actions deny and redirect.
+//
+// Example:
+// ```
+// # Deny status 403
+// SecDefaultAction "phase:1,log,deny,id:145,status:403"
+// ```
 type statusFn struct{}
 
 func (a *statusFn) Init(r plugintypes.RuleMetadata, data string) error {

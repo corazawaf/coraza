@@ -9,6 +9,18 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
+// Action Group: Non-disruptive
+//
+// Description:
+// Logs a data fragment as part of the alert message.
+// The logdata information appears in the error and/or audit log files. Macro expansion is performed,
+// so you may use variable names such as %{TX.0} or %{MATCHED_VAR}.
+// The information is properly escaped for use with logging of binary data.
+//
+// Example:
+// ```
+// SecRule ARGS:p "@rx <script>" "phase:2,id:118,log,pass,logdata:%{MATCHED_VAR}"
+// ```
 type logdataFn struct{}
 
 func (a *logdataFn) Init(r plugintypes.RuleMetadata, data string) error {

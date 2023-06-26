@@ -29,84 +29,81 @@ func doEscapeSeqDecode(input string, pos int) (string, bool) {
 
 	for i < inputLen {
 		if (input[i] == '\\') && (i+1 < inputLen) {
-			c := int8(-1)
+			var c byte
+			var ok bool
 
 			switch input[i+1] {
 			case 'a':
 				c = '\a'
+				ok = true
 			case 'b':
 				c = '\b'
+				ok = true
 			case 'f':
 				c = '\f'
+				ok = true
 			case 'n':
 				c = '\n'
+				ok = true
 			case 'r':
 				c = '\r'
+				ok = true
 			case 't':
 				c = '\t'
+				ok = true
 			case 'v':
 				c = '\v'
+				ok = true
 			case '\\':
 				c = '\\'
+				ok = true
 			case '?':
 				c = '?'
+				ok = true
 			case '\'':
 				c = '\''
+				ok = true
 			case '"':
 				c = '"'
+				ok = true
 			}
 
-			if c != -1 {
+			if ok {
+				data[d] = c
+				d += 1
 				i += 2
+				changed = true
+				continue
 			}
 
 			/* Hexadecimal or octal? */
-			if c == -1 {
-				if (input[i+1] == 'x') || (input[i+1] == 'X') {
-					/* Hexadecimal. */
-					if (i+3 < inputLen) && (utils.ValidHex((input[i+2]))) && (utils.ValidHex((input[i+3]))) {
-						/* Two digits. */
-						c = int8(utils.X2c(input[i+2:]))
-						i += 4
-					}
-					/* Else Invalid encoding, do nothing. */
-
-				} else {
-					if isODigit(input[i+1]) { /* Octal. */
-						buf := make([]byte, 4)
-						j := 0
-
-						for (i+1+j < inputLen) && (j < 3) {
-							buf[j] = input[i+1+j]
-							j++
-							if (len(input) > (i + 1 + j)) && !isODigit(input[i+1+j]) {
-								break
-							}
-						}
-						// buf[j] = '\x00'
-						// This line actually means that the string ends here so:
-						buf = buf[:j]
-
-						if j > 0 {
-							bc, _ := strconv.ParseUint(string(buf), 8, 8)
-							c = int8(bc)
-							i += 1 + j
-						}
-					}
-				}
-			}
-
-			if c == -1 {
-				/* Didn't recognise encoding, copy raw bytes. */
-				data[d] = input[i+1]
-				d++
-				i += 2
-			} else {
-				/* Converted the encoding. */
-				data[d] = byte(c)
+			if (input[i+1] == 'x' || input[i+1] == 'X') && i+3 < inputLen && utils.ValidHex(input[i+2]) && utils.ValidHex(input[i+3]) {
+				/* Two digits. */
+				data[d] = utils.X2c(input[i+2:])
+				d += 1
+				i += 4
 				changed = true
-				d++
+				continue
 			}
+
+			if isODigit(input[i+1]) { /* Octal. */
+				j := 2
+				for j < 4 && i+j < inputLen && isODigit(input[i+j]) {
+					j += 1
+				}
+
+				bc, _ := strconv.ParseUint(input[i+1:i+j], 8, 8)
+				data[d] = byte(bc)
+				d += 1
+				i += j
+				changed = true
+				continue
+			}
+
+			/* Didn't recognise encoding, copy raw bytes. */
+			data[d] = input[i+1]
+			d++
+			i += 2
 		} else {
 			/* Input character not a backslash, copy it. */
 			data[d] = input[i]

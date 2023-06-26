@@ -9,7 +9,19 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
-// Initializes a persistent collection and add the data to the standard collections coraza.
+// Action Group: Non-disruptive
+//
+// Description:
+// Initializes a named persistent collection, either by loading data from storage or by creating a new collection in memory.
+// Collections are loaded into memory on-demand, when the initcol action is executed.
+// A collection will be persisted only if a change was made to it in the course of transaction processing.
+// See the `Persistent Storage` section for further details.
+//
+// Example:
+// ```
+// # Initiates IP address tracking, which is best done in phase 1
+// SecAction "phase:1,id:116,nolog,pass,initcol:ip=%{REMOTE_ADDR}"
+// ```
 type initcolFn struct {
 	collection string
 	variable   byte

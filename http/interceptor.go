@@ -43,6 +43,7 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 
 	i.statusCode = statusCode
 	if it := i.tx.ProcessResponseHeaders(statusCode, i.proto); it != nil {
+		i.Header().Set("Content-Length", "0")
 		i.statusCode = obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode)
 		i.flushWriteHeader()
 		return
@@ -136,6 +137,7 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 				i.flushWriteHeader()
 				return err
 			} else if it != nil {
+				i.Header().Set("Content-Length", "0")
 				i.overrideWriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode))
 				i.flushWriteHeader()
 				return nil

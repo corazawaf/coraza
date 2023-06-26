@@ -11,7 +11,31 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
-// 0 nothing, 1 phase, 2 request
+// Action Group: Disruptive
+//
+// Description:
+// Stops rule processing on a successful match and allows a transaction to be proceed.
+//
+// - Using solely: allow will affect the entire transaction.
+// stopping processing of the current phase but also skipping over all other phases apart from the logging phase.
+// (The logging phase is special; it is designed to be always execute.)
+// - Using with parameter `phase`: the engine will stop processing the current phase, and the other phases will continue.
+// - Using with parameter `request`: engine will stop processing the current phase, and the next phase to be processed will be phase `types.PhaseResponseHeaders`.
+//
+// Example:
+// ```
+// # Allow unrestricted access from 192.168.1.100
+// SecRule REMOTE_ADDR "^192\.168\.1\.100$" phase:1,id:95,nolog,allow
+//
+// # Do not process request but process response
+// SecAction phase:1,allow:request,id:96
+//
+// # Do not process transaction (request and response).
+// SecAction phase:1,allow,id:97
+//
+// # If you want to allow a response through, put a rule in phase RESPONSE_HEADERS and use allow
+// SecAction phase:3,allow,id:98
+// ```
 type allowFn struct {
 	allow corazatypes.AllowType
 }
@@ -30,17 +54,6 @@ func (a *allowFn) Init(_ plugintypes.RuleMetadata, data string) error {
 	return nil
 }
 
-// Evaluate Allow has the following rules:
-//
-// Example: `SecRule REMOTE_ADDR "^192\.168\.1\.100$" "phase:1,id:95,nolog,allow"`
-//
-//   - If used one its own, like in the example above, allow will affect the entire transaction,
-//     stopping processing of the current phase but also skipping over all other phases apart from the logging phase.
-//     (The logging phase is special; it is designed to always execute.)
-//   - If used with parameter "phase", allow will cause the engine to stop processing the current phase.
-//     Other phases will continue as normal.
-//   - If used with parameter "request", allow will cause the engine to stop processing the current phase.
-//     The next phase to be processed will be phase types.PhaseResponseHeaders.
 func (a *allowFn) Evaluate(r plugintypes.RuleMetadata, txS plugintypes.TransactionState) {
 	tx := txS.(*corazawaf.Transaction)
 	tx.AllowType = a.allow
