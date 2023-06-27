@@ -29,43 +29,36 @@ func doEscapeSeqDecode(input string, pos int) (string, bool) {
 
 	for i < inputLen {
 		if (input[i] == '\\') && (i+1 < inputLen) {
-			var c byte
-			var ok bool
+			var (
+				c  byte
+				ok = true
+			)
 
 			switch input[i+1] {
 			case 'a':
 				c = '\a'
-				ok = true
 			case 'b':
 				c = '\b'
-				ok = true
 			case 'f':
 				c = '\f'
-				ok = true
 			case 'n':
 				c = '\n'
-				ok = true
 			case 'r':
 				c = '\r'
-				ok = true
 			case 't':
 				c = '\t'
-				ok = true
 			case 'v':
 				c = '\v'
-				ok = true
 			case '\\':
 				c = '\\'
-				ok = true
 			case '?':
 				c = '?'
-				ok = true
 			case '\'':
 				c = '\''
-				ok = true
 			case '"':
 				c = '"'
-				ok = true
+			default:
+				ok = false
 			}
 
 			if ok {
