@@ -11,7 +11,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
@@ -69,15 +71,43 @@ func Lint() error {
 		return err
 	}
 
-	if err := sh.RunV("go", "mod", "tidy"); err != nil {
+	if err := filepath.WalkDir(".", func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if d.IsDir() {
+			return nil
+		}
+
+		runGoModTidy := strings.HasSuffix(path, "go.mod")
+		if runGoModTidy {
+			cmd := exec.Command("go", "mod", "tidy")
+			cmd.Dir = filepath.Dir(path)
+			out, err := cmd.Output()
+			fmt.Printf(string(out))
+			if err != nil {
+				return err
+			}
+		}
+
+		runGoWorkSync := strings.HasSuffix(path, "go.work") || runGoModTidy
+		if runGoWorkSync {
+			cmd := exec.Command("go", "work", "sync")
+			cmd.Dir = filepath.Dir(path)
+			out, err := cmd.Output()
+			fmt.Printf(string(out))
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}); err != nil {
 		return err
 	}
 
-	if err := sh.RunV("go", "work", "sync"); err != nil {
-		return err
-	}
-
-	if sh.Run("git", "diff", "--exit-code", "go.mod", "go.sum", "go.work", "go.work.sum") != nil {
+	if sh.Run("git", "diff", "--exit-code", "**/go.mod", "**/go.sum", "go.work", "go.work.sum") != nil {
 		return errRunGoModTidy
 	}
 
