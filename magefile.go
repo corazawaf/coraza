@@ -13,7 +13,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
@@ -76,14 +75,13 @@ func Lint() error {
 			return err
 		}
 
-		if d.IsDir() {
+		if !d.IsDir() {
 			return nil
 		}
 
-		runGoModTidy := strings.HasSuffix(path, "go.mod")
-		if runGoModTidy {
-			cmd := exec.Command("go", "mod", "tidy")
-			cmd.Dir = filepath.Dir(path)
+		if _, err := os.Stat(filepath.Join(path, "go.work")); err == nil {
+			cmd := exec.Command("go", "work", "sync")
+			cmd.Dir = path
 			out, err := cmd.Output()
 			fmt.Printf(string(out))
 			if err != nil {
@@ -91,10 +89,9 @@ func Lint() error {
 			}
 		}
 
-		runGoWorkSync := strings.HasSuffix(path, "go.work") || runGoModTidy
-		if runGoWorkSync {
-			cmd := exec.Command("go", "work", "sync")
-			cmd.Dir = filepath.Dir(path)
+		if _, err := os.Stat(filepath.Join(path, "go.mod")); err == nil {
+			cmd := exec.Command("go", "mod", "tidy")
+			cmd.Dir = path
 			out, err := cmd.Output()
 			fmt.Printf(string(out))
 			if err != nil {
