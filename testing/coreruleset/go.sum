@@ -40,8 +40,8 @@ github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGX
 github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
 github.com/corazawaf/coraza-coreruleset v0.0.0-20230330101229-43b851256042 h1:WMAVBbS+u1zopf0gT1UBTtmmxVRCj9gY1dmnT14PsZM=
 github.com/corazawaf/coraza-coreruleset v0.0.0-20230330101229-43b851256042/go.mod h1:h7fBXlh00atH/uVC9Lpjawg/RlJCsHjvyVk+bP3ylq8=
-github.com/corazawaf/coraza/v3 v3.0.0 h1:GvTzxcgtfQ76LneYL19Nkb1/T+2E/s3BRAOEt6h2sY0=
-github.com/corazawaf/coraza/v3 v3.0.0/go.mod h1:MjV/iyO+B+JcVEWUJi4O2r1sfHeFzlF28MnvAqWfea0=
+github.com/corazawaf/coraza/v3 v3.0.2 h1:UHu2WiZnI7iHcv7KOPyKHYfR66cvjAwRm1EC3HGkuC0=
+github.com/corazawaf/coraza/v3 v3.0.2/go.mod h1:zvldIncYMuW8xmRcOs37OWRhY3CPWBKbTngIGzR5v4Y=
 github.com/corazawaf/libinjection-go v0.1.2 h1:oeiV9pc5rvJ+2oqOqXEAMJousPpGiup6f7Y3nZj5GoM=
 github.com/corazawaf/libinjection-go v0.1.2/go.mod h1:OP4TM7xdJ2skyXqNX1AN1wN5nNZEmJNuWbNPOItn7aw=
 github.com/coreos/go-semver v0.3.0/go.mod h1:nnelYz7RCh+5ahJtPPxZlU+153eP4D4r3EedlOD2RNk=
