@@ -86,7 +86,7 @@ func Lint() error {
 		if _, err := os.Stat(filepath.Join(path, "go.mod")); err == nil {
 			cmd := exec.Command("go", "mod", "tidy")
 			cmd.Dir = path
-			out, err := cmd.Output()
+			out, err := cmd.CombinedOutput()
 			fmt.Printf(string(out))
 			if err != nil {
 				return err
