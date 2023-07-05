@@ -70,6 +70,10 @@ func Lint() error {
 		return err
 	}
 
+	if err := sh.RunV("go", "work", "sync"); err != nil {
+		return err
+	}
+
 	if err := filepath.WalkDir(".", func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -77,16 +81,6 @@ func Lint() error {
 
 		if !d.IsDir() {
 			return nil
-		}
-
-		if _, err := os.Stat(filepath.Join(path, "go.work")); err == nil {
-			cmd := exec.Command("go", "work", "sync")
-			cmd.Dir = path
-			out, err := cmd.Output()
-			fmt.Printf(string(out))
-			if err != nil {
-				return err
-			}
 		}
 
 		if _, err := os.Stat(filepath.Join(path, "go.mod")); err == nil {
