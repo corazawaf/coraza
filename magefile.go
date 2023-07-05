@@ -89,7 +89,6 @@ func Lint() error {
 			out, err := cmd.CombinedOutput()
 			fmt.Printf(string(out))
 			if err != nil {
-				err = fmt.Errorf("running go mod tidy in '%s', %w", path, err)
 				return err
 			}
 		}
