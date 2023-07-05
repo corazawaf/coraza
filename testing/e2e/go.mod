@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/corazawaf/coraza/v3 v3.0.1-0.20230620093802-ce5e52dd2b74
+	github.com/corazawaf/coraza/v3/http/e2e v0.0.0-00010101000000-000000000000
 	github.com/mccutchen/go-httpbin/v2 v2.9.0
 )
 
@@ -17,3 +18,5 @@ require (
 	golang.org/x/net v0.11.0 // indirect
 	rsc.io/binaryregexp v0.2.0 // indirect
 )
+
+replace github.com/corazawaf/coraza/v3/http/e2e => ../../http/e2e/
