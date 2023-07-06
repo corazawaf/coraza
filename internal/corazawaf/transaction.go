@@ -505,9 +505,12 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 		}
 	}
 
-	tx.matchedRules = append(tx.matchedRules, mr)
-	if tx.WAF.ErrorLogCb != nil && r.Log {
-		tx.WAF.ErrorLogCb(mr)
+	if r.Log {
+		// Only rules with log data will added to the matchedRules list
+		tx.matchedRules = append(tx.matchedRules, mr)
+		if tx.WAF.ErrorLogCb != nil {
+			tx.WAF.ErrorLogCb(mr)
+		}
 	}
 }
 
