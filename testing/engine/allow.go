@@ -155,14 +155,15 @@ var _ = profile.RegisterProfile(profile.Profile{
 	Rules: `
 SecDebugLogLevel 5
 SecRequestBodyAccess On
+SecDefaultAction "phase:1,log,pass"
 
 SecRule REQUEST_URI "/allow_me" "id:1,phase:1,allow,log,msg:'ALLOWED'"
 SecRule REQUEST_URI "/allow_me" "id:2,phase:1,deny,log,msg:'DENIED'"
 
 # Rule 11 allows phase 1, so rule 12 and 13, being both phase 1, are not triggered. Rule 22 is then triggered in phase 2.
-SecRule REQUEST_URI "/partial_allow" "id:11,phase:1,allow:phase,log,msg:'Allowed in this phase only'"
-SecRule REQUEST_URI "/partial_allow" "id:12,phase:1,deny,log,msg:'NOT DENIED'"
-SecRule REQUEST_URI "/partial_allow" "id:13,phase:1,deny,log,msg:'NOT DENIED'"
+SecRule REQUEST_URI "/partial_allow" "id:11,phase:1,allow:phase,msg:'Allowed in this phase only'"
+SecRule REQUEST_URI "/partial_allow" "id:12,phase:1,deny,msg:'NOT DENIED'"
+SecRule REQUEST_URI "/partial_allow" "id:13,phase:1,deny,msg:'NOT DENIED'"
 SecRule REQUEST_URI "/partial_allow" "id:22,phase:2,deny,log,status:500,msg:'DENIED'"
 
 # Rule 31 allows all the request phases (1 and 2), therefore rules 32, 33 and 34 should not be triggered. Rule 42 is

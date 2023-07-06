@@ -42,6 +42,8 @@ type Transaction struct {
 	id string
 
 	// Contains the list of matched rules and associated match information
+	// Only rules with log action (excplicit or inferred by a SecDefaultAction directive)
+	// are be added to this list
 	matchedRules []types.MatchedRule
 
 	// True if the transaction has been disrupted by any rule
