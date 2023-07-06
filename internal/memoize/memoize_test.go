@@ -1,7 +1,7 @@
 // Copyright 2023 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build !tinygo
+//go:build !tinygo && memoize_regex
 
 // https://github.com/kofalt/go-memoize/blob/master/memoize.go
 
@@ -9,13 +9,54 @@ package memoize
 
 import (
 	"errors"
+	"sync"
 	"testing"
 
 	"golang.org/x/sync/singleflight"
 )
 
+func TestDo(t *testing.T) {
+	expensiveCalls := 0
+
+	// Function tracks how many times its been called
+	expensive := func() (interface{}, error) {
+		expensiveCalls++
+		return expensiveCalls, nil
+	}
+
+	// First call SHOULD NOT be cached
+	result, err := Do("key1", expensive)
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+
+	if want, have := 1, result.(int); want != have {
+		t.Fatalf("unexpected value, want %d, have %d", want, have)
+	}
+
+	// Second call on same key SHOULD be cached
+	result, err = Do("key1", expensive)
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+
+	if want, have := 1, result.(int); want != have {
+		t.Fatalf("unexpected value, want %d, have %d", want, have)
+	}
+
+	// First call on a new key SHOULD NOT be cached
+	result, err = Do("key2", expensive)
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+
+	if want, have := 2, result.(int); want != have {
+		t.Fatalf("unexpected value, want %d, have %d", want, have)
+	}
+}
+
 func TestSuccessCall(t *testing.T) {
-	do := makeDoer(newCache(), &singleflight.Group{})
+	do := makeDoer(new(sync.Map), &singleflight.Group{})
 
 	expensiveCalls := 0
 
@@ -69,7 +110,7 @@ func TestSuccessCall(t *testing.T) {
 }
 
 func TestFailedCall(t *testing.T) {
-	do := makeDoer(newCache(), &singleflight.Group{})
+	do := makeDoer(new(sync.Map), &singleflight.Group{})
 
 	calls := 0
 
