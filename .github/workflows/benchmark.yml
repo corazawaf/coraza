@@ -23,12 +23,14 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
         with:
-          go-version: '>=1.18.0'      
+          go-version: '>=1.19.0'      
       - name: Install dependencies
         run: go get ./...
       # Run benchmark with `go test -bench` and stores the output to a file
       - name: Run benchmark
-        run: go test -bench=. ./... | tee output.txt
+        run: |
+          go test -bench=. ./... | tee output.txt
+          exit ${PIPESTATUS[0]}
       # Download previous benchmark result from cache (if exists)
       - name: Download previous benchmark data
         uses: actions/cache@v3
