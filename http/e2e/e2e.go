@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -303,17 +302,9 @@ func Run(cfg Config) error {
 }
 
 func setHTTPSchemeIfMissing(rawURL string) string {
-	// Addressing url without scheme (E.g: localhost:8080)
-	// https://stackoverflow.com/questions/62083272/parsing-url-with-port-and-without-scheme
-	parsedURL, err := url.Parse(rawURL)
-	if err != nil {
+	if rawURL == "" || strings.HasPrefix(rawURL, "http") || rawURL[:3] == "://" {
 		return rawURL
 	}
-	if parsedURL.Host == "" {
-		// the URL is missing the scheme, setting it to http by default
-		parsedURL.Scheme = "http"
-		parsedURL.Host = rawURL
-		parsedURL.Opaque = ""
-	}
-	return parsedURL.String()
+
+	return "http://" + rawURL
 }
