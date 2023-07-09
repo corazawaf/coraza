@@ -305,9 +305,9 @@ func Run(cfg Config) error {
 }
 
 func setHTTPSchemeIfMissing(rawURL string) string {
-	if rawURL == "" || strings.HasPrefix(rawURL, "http") || strings.HasPrefix(rawURL, "://") {
+	if rawURL == "" || strings.HasPrefix(rawURL, "http") || rawURL[:3] == "://" {
 		return rawURL
 	}
 
-	return fmt.Sprintf("http://%s", rawURL)
+	return "http://" + rawURL
 }
