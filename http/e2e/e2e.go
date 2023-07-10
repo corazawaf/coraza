@@ -306,5 +306,5 @@ func setHTTPSchemeIfMissing(rawURL string) string {
 		return rawURL
 	}
 
-	return "http://" + rawURL
+	return fmt.Sprintf("http://%s", rawURL)
 }
