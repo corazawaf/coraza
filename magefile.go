@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/magefile/mage/mg"
@@ -69,15 +70,35 @@ func Lint() error {
 		return err
 	}
 
-	if err := sh.RunV("go", "mod", "tidy"); err != nil {
-		return err
-	}
-
 	if err := sh.RunV("go", "work", "sync"); err != nil {
 		return err
 	}
 
-	if sh.Run("git", "diff", "--exit-code", "go.mod", "go.sum", "go.work", "go.work.sum") != nil {
+	if err := filepath.WalkDir(".", func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !d.IsDir() {
+			return nil
+		}
+
+		if _, err := os.Stat(filepath.Join(path, "go.mod")); err == nil {
+			cmd := exec.Command("go", "mod", "tidy")
+			cmd.Dir = path
+			out, err := cmd.CombinedOutput()
+			fmt.Printf(string(out))
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	if sh.Run("git", "diff", "--exit-code", "**/go.mod", "**/go.sum", "go.work", "go.work.sum") != nil {
 		return errRunGoModTidy
 	}
 
