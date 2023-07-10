@@ -23,7 +23,6 @@ type httpsWriter struct {
 }
 
 func (h *httpsWriter) Init(c plugintypes.AuditLogConfig) error {
-	h.Closer = NoopCloser
 	h.formatter = c.Formatter
 	h.url = c.Target
 	// now we validate h.url is a valid url
