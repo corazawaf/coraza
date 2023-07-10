@@ -38,9 +38,6 @@ func (h *httpsWriter) Init(c plugintypes.AuditLogConfig) error {
 }
 
 func (h *httpsWriter) Write(al plugintypes.AuditLog) error {
-	if h.formatter == nil {
-		return fmt.Errorf("formatter is not set")
-	}
 	body, err := h.formatter(al)
 	if err != nil {
 		return err
