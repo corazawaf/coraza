@@ -1,4 +1,4 @@
-// Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
+// Copyright 2023 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
 // These benchmarks don't currently compile with TinyGo
@@ -15,7 +15,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3"
 	txhttp "github.com/corazawaf/coraza/v3/http"
-	e2e "github.com/corazawaf/coraza/v3/http/e2e/pkg"
+	"github.com/corazawaf/coraza/v3/http/e2e"
 	"github.com/mccutchen/go-httpbin/v2/httpbin"
 )
 
