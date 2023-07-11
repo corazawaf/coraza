@@ -109,15 +109,19 @@ only the phase the rule is defined for.
 
 ## E2E Testing
 
-[`Http/e2e/`](./http/e2e) provides an utility to run e2e tests.
+[`http/e2e/`](./http/e2e) provides an utility to run e2e tests.
 It can be used standalone against your own waf deployment:
+
 ```shell
-go run github.com/corazawaf/coraza/http/e2e@main --proxy-hostport localhost:8080 --httpbin-hostport localhost:8081
+go run github.com/corazawaf/coraza/http/e2e/cmd/httpe2e@main --proxy-hostport localhost:8080 --httpbin-hostport localhost:8081
 ```
+
 or as a library by importing:
+
 ```go
-"github.com/corazawaf/coraza/v3/http/e2e/pkg"
+"github.com/corazawaf/coraza/v3/http/e2e"
 ```
+
 As a reference for library usage, see [`testing/e2e/e2e_test.go`](.testing/e2e/e2e_test.go).
 Expected directives that have to be loaded and available flags can be found in [`http/e2e/main.go`](./examples/http/e2e/main.go).
 
