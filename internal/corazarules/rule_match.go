@@ -68,7 +68,7 @@ type MatchedRule struct {
 	// Is disruptive
 	Disruptive_ bool
 	// Name of the disruptive action
-	// Note: not exposed in corarza v3.0.*
+	// Note: not exposed in coraza v3.0.*
 	DisruptiveActionName_ string
 	// Server IP address
 	ServerIPAddress_ string
