@@ -35,6 +35,8 @@ type MatchedRule interface {
 	TransactionID() string
 	// Disruptive is whether this rule will block the request
 	Disruptive() bool
+	// Log is whether this rule is marked as expected to be logged
+	Log() bool
 	// ServerIPAddress is the address of the server
 	ServerIPAddress() string
 	// ClientIPAddress is the address of the client

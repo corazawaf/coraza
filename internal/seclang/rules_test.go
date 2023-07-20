@@ -171,8 +171,7 @@ func TestRuleLogging(t *testing.T) {
 	tx.AddGetRequestArgument("test1", "123")
 	tx.AddGetRequestArgument("test2", "456")
 	tx.ProcessRequestHeaders()
-	// Only rules with log action are added to the matched rules, therefore we expect 2 occurrences
-	if len(tx.MatchedRules()) != 2 {
+	if len(tx.MatchedRules()) != 3 {
 		t.Errorf("failed to match rules with %d", len(tx.MatchedRules()))
 	}
 	// we expect 2 logs

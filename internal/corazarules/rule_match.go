@@ -67,6 +67,8 @@ type MatchedRule struct {
 	TransactionID_ string
 	// Is disruptive
 	Disruptive_ bool
+	// Is meant to be logged
+	Log_ bool
 	// Server IP address
 	ServerIPAddress_ string
 	// Client IP address
@@ -95,6 +97,10 @@ func (mr *MatchedRule) TransactionID() string {
 
 func (mr *MatchedRule) Disruptive() bool {
 	return mr.Disruptive_
+}
+
+func (mr *MatchedRule) Log() bool {
+	return mr.Log_
 }
 
 func (mr *MatchedRule) ServerIPAddress() string {
