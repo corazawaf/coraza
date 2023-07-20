@@ -1,13 +1,15 @@
 // Copyright 2023 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !tinygo
+// +build !tinygo
+
 package e2e
 
 import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -303,9 +305,9 @@ func Run(cfg Config) error {
 }
 
 func setHTTPSchemeIfMissing(rawURL string) string {
-	parsedURL, _ := url.Parse(rawURL)
-	if parsedURL.Scheme == "" {
-		parsedURL.Scheme = "http"
+	if rawURL == "" || strings.HasPrefix(rawURL, "http") || strings.HasPrefix(rawURL, "://") {
+		return rawURL
 	}
-	return parsedURL.String()
+
+	return "http://" + rawURL
 }
