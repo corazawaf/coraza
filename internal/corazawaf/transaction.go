@@ -1406,7 +1406,9 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 		case types.AuditLogPartRulesMatched:
 			for _, mr := range tx.matchedRules {
 				// Log action is required to log a matched rule on both error log and audit log
-				if mr.Log() {
+				// RuleLogger is added to avoid breaking the Coraza v3.* API adding a Log() method to the MatchedRule interface
+				mrWithlog, ok := mr.(types.RuleLogger)
+				if ok && mrWithlog.Log() {
 					r := mr.Rule()
 					for _, matchData := range mr.MatchedDatas() {
 						al.Messages_ = append(al.Messages_, auditlog.Message{
