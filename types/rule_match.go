@@ -37,7 +37,8 @@ type MatchedRule interface {
 	Disruptive() bool
 	// // Log is whether this rule is marked as expected to be logged
 	// Log() is commented out to avoid breaking changes in Coraza v3.*
-	// As a workaround, an assertion (E.g. mr.(types.RuleLogger)) can be performed before calling Log()
+	// As a workaround, an assertion (E.g. mr.(types.ruleLogger)) can be performed before calling Log()
+	// with ruleLogger defined as: type ruleLogger interface{ Log() bool }
 	// Log() bool
 	// ServerIPAddress is the address of the server
 	ServerIPAddress() string
@@ -50,10 +51,4 @@ type MatchedRule interface {
 
 	AuditLog() string
 	ErrorLog() string
-}
-
-// RuleLogger is added to avoid breaking the Coraza v3.* API adding a Log() method to the MatchedRule interface
-// An assertion has to be done to check if the MatchedRule implements RuleLogger before calling Log()
-type RuleLogger interface {
-	Log() bool
 }
