@@ -81,16 +81,16 @@ func TestAuditLogRelevantOnly(t *testing.T) {
 		SecAuditLogRelevantStatus 401
 		SecRule ARGS "@unconditionalMatch" "id:1,phase:1,log,msg:'unconditional match'"
 	`); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	// generate a random tmp file
 	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	defer os.Remove(file.Name())
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	tx := waf.NewTransaction()
 	tx.AddGetRequestArgument("test", "test")
@@ -113,11 +113,11 @@ func TestAuditLogRelevantOnlyOk(t *testing.T) {
 	// generate a random tmp file
 	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	defer os.Remove(file.Name())
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if err := parser.FromString(`
 		SecRuleEngine DetectionOnly
@@ -156,16 +156,16 @@ func TestAuditLogRelevantOnlyNoAuditlog(t *testing.T) {
 		SecAuditLogRelevantStatus ".*"
 		SecRule ARGS "@unconditionalMatch" "id:1,phase:1,noauditlog,msg:'unconditional match'"
 	`); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	// generate a random tmp file
 	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	defer os.Remove(file.Name())
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	tx := waf.NewTransaction()
 	tx.AddGetRequestArgument("test", "test")
@@ -195,16 +195,16 @@ func TestAuditLogOnNoLog(t *testing.T) {
 		# auditlog tells that the transaction will have to log matches meant to be logged (not the ones with nolog)
 		SecRule ARGS "@unconditionalMatch" "id:1,phase:1,nolog,auditlog,msg:'nolog message'"
 	`); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	// generate a random tmp file
 	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	defer os.Remove(file.Name())
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	tx := waf.NewTransaction()
 	tx.AddGetRequestArgument("test", "test")

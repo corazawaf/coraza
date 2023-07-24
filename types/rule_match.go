@@ -35,11 +35,6 @@ type MatchedRule interface {
 	TransactionID() string
 	// Disruptive is whether this rule will block the request
 	Disruptive() bool
-	// // Log is whether this rule is marked as expected to be logged
-	// Log() is commented out to avoid breaking changes in Coraza v3.*
-	// As a workaround, an assertion (E.g. mr.(types.ruleLogger)) can be performed before calling Log()
-	// with ruleLogger defined as: type ruleLogger interface{ Log() bool }
-	// Log() bool
 	// ServerIPAddress is the address of the server
 	ServerIPAddress() string
 	// ClientIPAddress is the address of the client
