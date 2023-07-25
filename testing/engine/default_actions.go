@@ -43,15 +43,15 @@ var _ = profile.RegisterProfile(profile.Profile{
 		},
 	},
 	Rules: `
-SecAction "id:1, phase:1, pass"
-SecAction "id:2, phase:2, pass"
-SecAction "id:3, phase:3, pass"
-SecAction "id:4, phase:4, pass"
-SecAction "id:5, phase:5, pass"
-SecAction "id:6, phase:1, pass"
-SecAction "id:7, phase:2, pass"
-SecAction "id:8, phase:3, pass"
-SecAction "id:9, phase:4, pass"
-SecAction "id:10, phase:5, pass"
+SecAction "id:1, phase:1, log, pass"
+SecAction "id:2, phase:2, log, pass"
+SecAction "id:3, phase:3, log, pass"
+SecAction "id:4, phase:4, log, pass"
+SecAction "id:5, phase:5, log, pass"
+SecAction "id:6, phase:1, log, pass"
+SecAction "id:7, phase:2, log, pass"
+SecAction "id:8, phase:3, log, pass"
+SecAction "id:9, phase:4, log, pass"
+SecAction "id:10, phase:5, log, pass"
 `,
 })
