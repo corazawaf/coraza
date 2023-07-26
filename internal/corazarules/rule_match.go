@@ -184,13 +184,12 @@ func (mr MatchedRule) AuditLog() string {
 	for _, matchData := range mr.MatchedDatas_ {
 		fmt.Fprintf(log, "[client %q] ", mr.ClientIPAddress_)
 		if mr.Disruptive_ {
-			WriteDisruptiveActionSpecificLog(log, mr)
+			writeDisruptiveActionSpecificLog(log, mr)
 		} else {
 			log.WriteString("Coraza: Warning. ")
 		}
 		mr.matchData(log, matchData)
 		mr.writeDetails(log, matchData)
-		log.WriteString("\n")
 	}
 	return log.String()
 }
@@ -214,7 +213,7 @@ func (mr MatchedRule) ErrorLog() string {
 
 	fmt.Fprintf(log, "[client %q] ", mr.ClientIPAddress_)
 	if mr.Disruptive_ {
-		WriteDisruptiveActionSpecificLog(log, mr)
+		writeDisruptiveActionSpecificLog(log, mr)
 	} else {
 		log.WriteString("Coraza: Warning. ")
 	}
@@ -236,7 +235,7 @@ func (mr MatchedRule) ErrorLog() string {
 	return log.String()
 }
 
-func WriteDisruptiveActionSpecificLog(log *strings.Builder, mr MatchedRule) {
+func writeDisruptiveActionSpecificLog(log *strings.Builder, mr MatchedRule) {
 	switch mr.DisruptiveActionName_ {
 	case "allow":
 		fmt.Fprintf(log, "Coraza: Access allowed (phase %d). ", mr.Rule_.Phase())
@@ -248,5 +247,7 @@ func WriteDisruptiveActionSpecificLog(log *strings.Builder, mr MatchedRule) {
 		log.WriteString("Coraza: Warning. ")
 	case "redirect":
 		fmt.Fprintf(log, "Coraza: Access redirected (phase %d). ", mr.Rule_.Phase())
+	default:
+		fmt.Fprintf(log, "Coraza: Custom disruptive action (%s) triggered (phase %d). ", mr.DisruptiveActionName_, mr.Rule_.Phase())
 	}
 }
