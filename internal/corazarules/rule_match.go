@@ -231,7 +231,6 @@ func (mr MatchedRule) ErrorLog() string {
 		}
 	}
 
-	log.WriteString("\n")
 	return log.String()
 }
 
