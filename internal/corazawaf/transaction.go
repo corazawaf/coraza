@@ -484,6 +484,7 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 		ServerIPAddress_: tx.variables.serverAddr.Get(),
 		ClientIPAddress_: tx.variables.remoteAddr.Get(),
 		Rule_:            &r.RuleMetadata,
+		Log_:             r.Log,
 		MatchedDatas_:    mds,
 	}
 	// Populate MatchedRule disruption related fields only if the Engine is capable of performing disruptive actions
@@ -511,6 +512,7 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 	if tx.WAF.ErrorLogCb != nil && r.Log {
 		tx.WAF.ErrorLogCb(mr)
 	}
+
 }
 
 // GetStopWatch is used to debug phase durations
@@ -1405,26 +1407,32 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 			}
 		case types.AuditLogPartRulesMatched:
 			for _, mr := range tx.matchedRules {
-				r := mr.Rule()
-				for _, matchData := range mr.MatchedDatas() {
-					al.Messages_ = append(al.Messages_, auditlog.Message{
-						Actionset_: strings.Join(tx.WAF.ComponentNames, " "),
-						Message_:   matchData.Message(),
-						Data_: &auditlog.MessageData{
-							File_:     mr.Rule().File(),
-							Line_:     mr.Rule().Line(),
-							ID_:       r.ID(),
-							Rev_:      r.Revision(),
-							Msg_:      matchData.Message(),
-							Data_:     matchData.Data(),
-							Severity_: r.Severity(),
-							Ver_:      r.Version(),
-							Maturity_: r.Maturity(),
-							Accuracy_: r.Accuracy(),
-							Tags_:     r.Tags(),
-							Raw_:      r.Raw(),
-						},
-					})
+				// Log action is required to log a matched rule on both error log and audit log
+				// An assertion has to be done to check if the MatchedRule implements the Log() function before calling Log()
+				// It is performed to avoid breaking the Coraza v3.* API adding a Log() method to the MatchedRule interface
+				mrWithlog, ok := mr.(*corazarules.MatchedRule)
+				if ok && mrWithlog.Log() {
+					r := mr.Rule()
+					for _, matchData := range mr.MatchedDatas() {
+						al.Messages_ = append(al.Messages_, auditlog.Message{
+							Actionset_: strings.Join(tx.WAF.ComponentNames, " "),
+							Message_:   matchData.Message(),
+							Data_: &auditlog.MessageData{
+								File_:     mr.Rule().File(),
+								Line_:     mr.Rule().Line(),
+								ID_:       r.ID(),
+								Rev_:      r.Revision(),
+								Msg_:      matchData.Message(),
+								Data_:     matchData.Data(),
+								Severity_: r.Severity(),
+								Ver_:      r.Version(),
+								Maturity_: r.Maturity(),
+								Accuracy_: r.Accuracy(),
+								Tags_:     r.Tags(),
+								Raw_:      r.Raw(),
+							},
+						})
+					}
 				}
 			}
 		}

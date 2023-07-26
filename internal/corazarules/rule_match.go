@@ -70,6 +70,8 @@ type MatchedRule struct {
 	// Name of the disruptive action
 	// Note: not exposed in coraza v3.0.*
 	DisruptiveActionName_ string
+	// Is meant to be logged
+	Log_ bool
 	// Server IP address
 	ServerIPAddress_ string
 	// Client IP address
@@ -98,6 +100,10 @@ func (mr *MatchedRule) TransactionID() string {
 
 func (mr *MatchedRule) Disruptive() bool {
 	return mr.Disruptive_
+}
+
+func (mr *MatchedRule) Log() bool {
+	return mr.Log_
 }
 
 func (mr *MatchedRule) ServerIPAddress() string {

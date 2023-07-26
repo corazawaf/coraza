@@ -126,7 +126,7 @@ SecRequestBodyAccess On
 
 # Skip action works only within the current phase, rule 30 should skip rule 32, not rule 31
 SecRule REQUEST_URI "/phase_multi_skip" "id:30, phase:2, skip:1,log"
-SecRule REQUEST_URI "/phase_multi_skip" "id:31, phase:1,pass"
+SecRule REQUEST_URI "/phase_multi_skip" "id:31, phase:1,pass, log"
 SecRule REQUEST_BODY "phase_multi_skip" "id:32, phase:2, t:none, log, deny, status:500"
 `,
 })
@@ -207,7 +207,7 @@ SecDebugLogLevel 5
 
 # skipAfter action works only within the current phase, rule 50 should skip rule 52, not rule 51
 SecRule REQUEST_URI "/multi_skipafter_phase" "id:50, phase:2, skipAfter:LOCATION_TWO,log"
-SecRule REQUEST_URI "/multi_skipafter_phase" "id:51, phase:1,pass"
+SecRule REQUEST_URI "/multi_skipafter_phase" "id:51, phase:1,pass, log"
 SecRule REQUEST_BODY "multi_skipafter_phase" "id:52, phase:2, t:none, log, deny, status:500"
 SecMarker LOCATION_TWO
 `,

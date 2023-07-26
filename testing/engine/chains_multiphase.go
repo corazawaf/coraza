@@ -280,12 +280,13 @@ var _ = profile.RegisterProfile(profile.Profile{
 SecDebugLogLevel 9
 SecRequestBodyAccess On
 
-SecAction "id:1, phase:1, pass, setvar:'tx.CRS_VALIDATE_UTF8_ENCODING=1'"
+SecAction "id:1, phase:1, pass, log, setvar:'tx.CRS_VALIDATE_UTF8_ENCODING=1'"
 SecRule TX:CRS_VALIDATE_UTF8_ENCODING "@eq 1" \
     "id:920250,\
     phase:2,\
     deny,\
 	status:403,\
+	log,\
     t:none,\
     chain"
     SecRule REQUEST_FILENAME|ARGS|ARGS_NAMES "@validateUtf8Encoding" \
@@ -355,6 +356,7 @@ SecRequestBodyAccess On
 SecRule ARGS "@rx (?i)(?:(?:url|jar):)?(?:a(?:cap|f[ps]|ttachment)|b(?:eshare|itcoin|lob)|c(?:a(?:llto|p)|id|vs|ompress.(?:zlib|bzip2))|d(?:a(?:v|ta)|ict|n(?:s|tp))|e(?:d2k|xpect)|f(?:(?:ee)?d|i(?:le|nger|sh)|tps?)|g(?:it|o(?:pher)?|lob)|h(?:323|ttps?)|i(?:ax|cap|(?:ma|p)ps?|rc[6s]?)|ja(?:bbe)?r|l(?:dap[is]?|ocal_file)|m(?:a(?:ilto|ven)|ms|umble)|n(?:e(?:tdoc|ws)|fs|ntps?)|ogg|p(?:aparazzi|h(?:ar|p)|op(?:2|3s?)|r(?:es|oxy)|syc)|r(?:mi|sync|tm(?:f?p)?|ar)|s(?:3|ftp|ips?|m(?:[bs]|tps?)|n(?:ews|mp)|sh(?:2(?:.(?:s(?:hell|(?:ft|c)p)|exec|tunnel))?)?|vn(?:\+ssh)?)|t(?:e(?:amspeak|lnet)|ftp|urns?)|u(?:dp|nreal|t2004)|v(?:entrilo|iew-source|nc)|w(?:ebcal|ss?)|x(?:mpp|ri)|zip)://(?:[^@]+@)?([^/]*)" \
     "id:931130, phase:2, deny, status:403, t:none,\
     setvar:'tx.rfi_parameter_%{MATCHED_VAR_NAME}=.%{tx.1}',\
+	log,\
     chain"
     SecRule TX:/rfi_parameter_.*/ "!@endsWith .%{request_headers.host}" \
         "setvar:'tx.inbound_anomaly_score_pl2=+1'"
