@@ -91,6 +91,11 @@ func TestErrorLogMessages(t *testing.T) {
 			disruptiveActionName: "redirect",
 			expectedLogLine:      "Coraza: Access redirected",
 		},
+		"Custom disruptive action": {
+			disruptiveAction:     true,
+			disruptiveActionName: "customDisruptiveAction",
+			expectedLogLine:      "Coraza: Custom disruptive action",
+		},
 	}
 
 	for name, tCase := range testCases {
