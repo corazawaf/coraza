@@ -459,7 +459,7 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 		key = key[1 : len(key)-1]
 
 		if vare, err := memoize.Do(key, func() (interface{}, error) { return regexp.Compile(key) }); err != nil {
-			panic(err)
+			return err
 		} else {
 			re = vare.(*regexp.Regexp)
 		}
@@ -528,7 +528,7 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 	if len(key) > 2 && key[0] == '/' && key[len(key)-1] == '/' {
 		key = key[1 : len(key)-1]
 		if vare, err := memoize.Do(key, func() (interface{}, error) { return regexp.Compile(key) }); err != nil {
-			panic(err)
+			return err
 		} else {
 			re = vare.(*regexp.Regexp)
 		}
