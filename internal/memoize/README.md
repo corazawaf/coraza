@@ -6,6 +6,6 @@ the regexes when the connects spins up more than one WAF in
 the same process and hence same regexes are being compiled
 over and over.
 
-Currently it is opt-in under the `memoize_regex` build tag
+Currently it is opt-in under the `memoize_builders` build tag
 as under a misuse it could lead to a memory leak as currently
 the cache is global.

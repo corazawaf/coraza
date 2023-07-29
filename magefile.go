@@ -111,7 +111,7 @@ func Test() error {
 		return err
 	}
 
-	if err := sh.RunV("go", "test", "-tags=memoize_regex", "./..."); err != nil {
+	if err := sh.RunV("go", "test", "-tags=memoize_builders", "./..."); err != nil {
 		return err
 	}
 
@@ -123,9 +123,10 @@ func Test() error {
 		return err
 	}
 
-	if err := sh.RunV("go", "test", "-tags=memoize_regex", "./testing/coreruleset"); err != nil {
+	if err := sh.RunV("go", "test", "-tags=memoize_builders", "./testing/coreruleset"); err != nil {
 		return err
 	}
+
 	// Execute FTW tests with multiphase evaluation enabled as well
 	if err := sh.RunV("go", "test", "-tags=coraza.rule.multiphase_evaluation", "./testing/coreruleset"); err != nil {
 		return err

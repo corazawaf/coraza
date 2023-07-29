@@ -1,7 +1,7 @@
 // Copyright 2023 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build !tinygo && memoize_regex
+//go:build tinygo && memoize_builders
 
 // https://github.com/kofalt/go-memoize/blob/master/memoize.go
 
@@ -11,8 +11,6 @@ import (
 	"errors"
 	"sync"
 	"testing"
-
-	"golang.org/x/sync/singleflight"
 )
 
 func TestDo(t *testing.T) {
@@ -56,7 +54,7 @@ func TestDo(t *testing.T) {
 }
 
 func TestSuccessCall(t *testing.T) {
-	do := makeDoer(new(sync.Map), &singleflight.Group{})
+	do := makeDoer(new(sync.Map))
 
 	expensiveCalls := 0
 
@@ -110,7 +108,7 @@ func TestSuccessCall(t *testing.T) {
 }
 
 func TestFailedCall(t *testing.T) {
-	do := makeDoer(new(sync.Map), &singleflight.Group{})
+	do := makeDoer(new(sync.Map))
 
 	calls := 0
 
