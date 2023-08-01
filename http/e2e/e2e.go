@@ -286,7 +286,7 @@ func Run(cfg Config) error {
 		}
 
 		if test.expectedBody != nil {
-			// Same servers might aborting the request before sending the body (E.g. triggering a phase 3 rule with deny action)
+			// Some servers might abort the request before sending the body (E.g. triggering a phase 3 rule with deny action)
 			// Therefore, we check if we properly read the body only if we expect a body to be received.
 			if errReadRespBody != nil {
 				return fmt.Errorf("could not read response body: %v", err)
