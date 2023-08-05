@@ -19,7 +19,7 @@ func TestNativeFormatter(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if !strings.Contains(f.MIME(), "json") {
+	if !strings.Contains(f.MIME(), "x-coraza-auditlog-native") {
 		t.Errorf("failed to match MIME, expected json and got %s", f.MIME())
 	}
 	// Log contains random strings, do a simple sanity check
