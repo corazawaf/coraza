@@ -28,7 +28,9 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
-func nativeFormatter(al plugintypes.AuditLog) ([]byte, error) {
+type nativeFormatter struct{}
+
+func (_ nativeFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 	boundaryPrefix := fmt.Sprintf("--%s-", utils.RandomString(10))
 
 	var res strings.Builder
@@ -102,6 +104,10 @@ func nativeFormatter(al plugintypes.AuditLog) ([]byte, error) {
 	return []byte(res.String()), nil
 }
 
+func (_ nativeFormatter) MIME() string {
+	return "application/x-coraza-auditlog-native"
+}
+
 var (
-	_ plugintypes.AuditLogFormatter = nativeFormatter
+	_ plugintypes.AuditLogFormatter = &nativeFormatter{}
 )

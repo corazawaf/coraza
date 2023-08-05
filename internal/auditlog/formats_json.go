@@ -15,8 +15,9 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
-// Coraza format
-func jsonFormatter(al plugintypes.AuditLog) ([]byte, error) {
+type jsonFormatter struct{}
+
+func (_ jsonFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 	jsdata, err := json.Marshal(al)
 	if err != nil {
 		return nil, err
@@ -24,8 +25,13 @@ func jsonFormatter(al plugintypes.AuditLog) ([]byte, error) {
 	return jsdata, nil
 }
 
-// Coraza legacy json format
-func legacyJSONFormatter(al plugintypes.AuditLog) ([]byte, error) {
+func (_ jsonFormatter) MIME() string {
+	return "application/json; charset=utf-8"
+}
+
+type legacyJSONFormatter struct{}
+
+func (_ legacyJSONFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 	al2 := logLegacy{
 		Transaction: logLegacyTransaction{
 			Time:          al.Transaction().Timestamp(),
@@ -92,7 +98,11 @@ func legacyJSONFormatter(al plugintypes.AuditLog) ([]byte, error) {
 	return jsdata, nil
 }
 
+func (_ legacyJSONFormatter) MIME() string {
+	return "application/json; charset=utf-8"
+}
+
 var (
-	_ plugintypes.AuditLogFormatter = jsonFormatter
-	_ plugintypes.AuditLogFormatter = legacyJSONFormatter
+	_ plugintypes.AuditLogFormatter = &jsonFormatter{}
+	_ plugintypes.AuditLogFormatter = &legacyJSONFormatter{}
 )

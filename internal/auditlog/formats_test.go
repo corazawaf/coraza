@@ -13,7 +13,8 @@ import (
 
 func TestNativeFormatter(t *testing.T) {
 	al := createAuditLog()
-	data, err := nativeFormatter(al)
+	f := &nativeFormatter{}
+	data, err := f.Format(al)
 	if err != nil {
 		t.Error(err)
 	}

@@ -48,7 +48,8 @@ func TestModsecBoundary(t *testing.T) {
 
 func TestLegacyFormatter(t *testing.T) {
 	al := createAuditLog()
-	data, err := legacyJSONFormatter(al)
+	f := &legacyJSONFormatter{}
+	data, err := f.Format(al)
 	if err != nil {
 		t.Error(err)
 	}

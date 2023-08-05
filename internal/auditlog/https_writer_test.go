@@ -35,7 +35,7 @@ var sampleHttpsAuditLog = &Log{
 
 func TestHTTPSAuditLog(t *testing.T) {
 	writer := &httpsWriter{}
-	formatter := nativeFormatter
+	formatter := &nativeFormatter{}
 	pts, err := types.ParseAuditLogParts("ABCDEZ")
 	if err != nil {
 		t.Fatal(err)
@@ -76,7 +76,7 @@ func TestHTTPSAuditLog(t *testing.T) {
 
 func TestJSONAuditHTTPS(t *testing.T) {
 	writer := &httpsWriter{}
-	formatter := jsonFormatter
+	formatter := &jsonFormatter{}
 	// we create a test http server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

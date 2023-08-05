@@ -42,7 +42,7 @@ func (h *httpsWriter) Init(c plugintypes.AuditLogConfig) error {
 }
 
 func (h *httpsWriter) Write(al plugintypes.AuditLog) error {
-	body, err := h.formatter(al)
+	body, err := h.formatter.Format(al)
 	if err != nil {
 		return err
 	}
