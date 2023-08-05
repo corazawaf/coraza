@@ -17,7 +17,7 @@ import (
 
 type jsonFormatter struct{}
 
-func (_ jsonFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
+func (jsonFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 	jsdata, err := json.Marshal(al)
 	if err != nil {
 		return nil, err
@@ -25,7 +25,7 @@ func (_ jsonFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 	return jsdata, nil
 }
 
-func (_ jsonFormatter) MIME() string {
+func (jsonFormatter) MIME() string {
 	return "application/json; charset=utf-8"
 }
 

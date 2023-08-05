@@ -20,7 +20,7 @@ func (testFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 	return []byte(al.Transaction().ID()), nil
 }
 
-func (_ testFormatter) MIME() string {
+func (testFormatter) MIME() string {
 	return "sample"
 }
 

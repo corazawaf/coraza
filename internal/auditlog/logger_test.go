@@ -32,8 +32,8 @@ func TestGetUnknownWriter(t *testing.T) {
 
 type noopFormatter struct{}
 
-func (_ noopFormatter) Format(al plugintypes.AuditLog) ([]byte, error) { return nil, nil }
-func (_ noopFormatter) MIME() string                                   { return "" }
+func (noopFormatter) Format(al plugintypes.AuditLog) ([]byte, error) { return nil, nil }
+func (noopFormatter) MIME() string                                   { return "" }
 
 func TestGetFormatters(t *testing.T) {
 	t.Run("missing formatter", func(t *testing.T) {
