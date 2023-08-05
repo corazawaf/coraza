@@ -5,6 +5,8 @@
 
 package memoize
 
+import "sync"
+
 var doer = makeDoer(new(sync.Map))
 
 // Do executes and returns the results of the given function, unless there was a cached
