@@ -128,7 +128,7 @@ type AuditLogWriter interface {
 	Close() error
 }
 
-// AuditLogFormatter serializes an AuditLog intoto a byte slice.
+// AuditLogFormatter serializes an AuditLog into a byte slice.
 // It is used to construct the formatted audit log.
 type AuditLogFormatter interface {
 	Format(AuditLog) ([]byte, error)
