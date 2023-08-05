@@ -16,7 +16,7 @@ import (
 
 type testFormatter struct{}
 
-func (_ testFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
+func (testFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 	return []byte(al.Transaction().ID()), nil
 }
 
