@@ -47,8 +47,8 @@ func TestHTTPSAuditLog(t *testing.T) {
 		if r.ContentLength == 0 {
 			t.Fatal("ContentLength is 0")
 		}
-		if ct := r.Header.Get("Content-Type"); !strings.HasPrefix(ct, "application/octet-stream") {
-			t.Fatalf("Content-Type is not application/octet-stream, got %s", ct)
+		if ct := r.Header.Get("Content-Type"); !strings.HasPrefix(ct, "application/x-coraza") {
+			t.Fatalf("Content-Type is not application/x-coraza, got %s", ct)
 		}
 		// now we get the body
 		body, err := io.ReadAll(r.Body)

@@ -20,10 +20,9 @@ import (
 // httpsWriter is used to store logs in a single file
 type httpsWriter struct {
 	io.Closer
-	formatter   plugintypes.AuditLogFormatter
-	url         string
-	client      *http.Client
-	contentType string
+	formatter plugintypes.AuditLogFormatter
+	url       string
+	client    *http.Client
 }
 
 func (h *httpsWriter) Init(c plugintypes.AuditLogConfig) error {
@@ -52,21 +51,7 @@ func (h *httpsWriter) Write(al plugintypes.AuditLog) error {
 		return err
 	}
 	req.Header.Set("User-Agent", "Coraza+v3")
-	if len(h.contentType) == 0 {
-		// we only do this once
-		// formatter is immutable in runtime
-		h.contentType = "application/octet-stream"
-		if len(body) > 1 {
-			firstByte := body[0]
-			if firstByte == '{' || firstByte == '[' {
-				lastByte := body[len(body)-1]
-				if lastByte == '}' || lastByte == ']' {
-					h.contentType = "application/json"
-				}
-			}
-		}
-	}
-	req.Header.Set("Content-Type", h.contentType)
+	req.Header.Set("Content-Type", h.formatter.MIME())
 	res, err := h.client.Do(req)
 	if err != nil {
 		return err
