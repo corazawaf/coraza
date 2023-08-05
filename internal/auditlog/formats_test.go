@@ -5,6 +5,7 @@ package auditlog
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
@@ -17,6 +18,9 @@ func TestNativeFormatter(t *testing.T) {
 	data, err := f.Format(al)
 	if err != nil {
 		t.Error(err)
+	}
+	if !strings.Contains(f.MIME(), "json") {
+		t.Errorf("failed to match MIME, expected json and got %s", f.MIME())
 	}
 	// Log contains random strings, do a simple sanity check
 	if !bytes.Contains(data, []byte("[02/Jan/2006:15:04:20 -0700] 123  0  0")) {
