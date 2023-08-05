@@ -104,5 +104,5 @@ func (_ legacyJSONFormatter) MIME() string {
 
 var (
 	_ plugintypes.AuditLogFormatter = &jsonFormatter{}
-	_ plugintypes.AuditLogFormatter = &legacyJSONFormatter{}
+	_ plugintypes.AuditLogFormatter = (*legacyJSONFormatter)(nil)
 )
