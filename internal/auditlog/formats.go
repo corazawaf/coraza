@@ -109,5 +109,5 @@ func (nativeFormatter) MIME() string {
 }
 
 var (
-	_ plugintypes.AuditLogFormatter = &nativeFormatter{}
+	_ plugintypes.AuditLogFormatter = (*nativeFormatter)(nil)
 )
