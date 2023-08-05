@@ -34,11 +34,11 @@ var _ = profile.RegisterProfile(profile.Profile{
 	},
 	Rules: `
 	SecRuleEngine DetectionOnly
-	SecRule REQUEST_URI "@unconditionalMatch" "id:1,phase:1,pass,nolog,skipAfter:END-REPORTING"
+	SecRule REQUEST_URI "@unconditionalMatch" "id:1,phase:1,pass,log,skipAfter:END-REPORTING"
 	SecAction "id:2,phase:1,deny,status:403,log,msg:'Should not be triggered, being skipped by skipAfter of rule 1'"
 	SecMarker "END-REPORTING"
 
-	SecRule REQUEST_URI "@unconditionalMatch" "id:3,phase:2,pass,nolog,skipAfter:END,chain"
+	SecRule REQUEST_URI "@unconditionalMatch" "id:3,phase:2,pass,log,skipAfter:END,chain"
 	SecRule REQUEST_URI "@rx /UrlThatWillNotMatch" "id:3,phase:2,pass,log"
 	SecAction "id:4,phase:2,deny,status:403,log,msg:'Should match because rule 3 should not be triggered, not being the whole chain matched'"
 	SecMarker "END"

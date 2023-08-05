@@ -44,7 +44,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 	},
 	Rules: `
 SecAction "id: 1, log"
-SecAction "id: 2, nolog, skipAfter:test-mark"
+SecAction "id: 2, log, skipAfter:test-mark"
 
 SecAction "id: 4, log"
 SecAction "id: 5,log"

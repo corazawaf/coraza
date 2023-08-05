@@ -1,13 +1,15 @@
 // Copyright 2023 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !tinygo
+// +build !tinygo
+
 package e2e
 
 import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -272,11 +274,8 @@ func Run(cfg Config) error {
 			return fmt.Errorf("could not do http request: %v", err)
 		}
 
-		respBody, err := io.ReadAll(resp.Body)
+		respBody, errReadRespBody := io.ReadAll(resp.Body)
 		resp.Body.Close()
-		if err != nil {
-			return fmt.Errorf("could not read response body: %v", err)
-		}
 
 		if test.expectedStatusCode != nil {
 			if err := test.expectedStatusCode(resp.StatusCode); err != nil {
@@ -287,6 +286,11 @@ func Run(cfg Config) error {
 		}
 
 		if test.expectedBody != nil {
+			// Some servers might abort the request before sending the body (E.g. triggering a phase 3 rule with deny action)
+			// Therefore, we check if we properly read the body only if we expect a body to be received.
+			if errReadRespBody != nil {
+				return fmt.Errorf("could not read response body: %v", err)
+			}
 			code, err := strconv.Atoi(resp.Header.Get("Content-Length"))
 			if err != nil {
 				return fmt.Errorf("could not convert content-length header to int: %v", err)
@@ -303,9 +307,9 @@ func Run(cfg Config) error {
 }
 
 func setHTTPSchemeIfMissing(rawURL string) string {
-	parsedURL, _ := url.Parse(rawURL)
-	if parsedURL.Scheme == "" {
-		parsedURL.Scheme = "http"
+	if rawURL == "" || strings.HasPrefix(rawURL, "http") || strings.HasPrefix(rawURL, "://") {
+		return rawURL
 	}
-	return parsedURL.String()
+
+	return "http://" + rawURL
 }
