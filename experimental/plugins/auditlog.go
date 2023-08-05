@@ -14,6 +14,6 @@ func RegisterAuditLogWriter(name string, writerFactory func() plugintypes.AuditL
 }
 
 // RegisterAuditLogFormatter registers a new audit log formatter.
-func RegisterAuditLogFormatter(name string, formatFactory func() plugintypes.AuditLogFormatter) {
-	auditlog.RegisterFormatter(name, formatFactory)
+func RegisterAuditLogFormatter(name string, format plugintypes.AuditLogFormatter) {
+	auditlog.RegisterFormatter(name, format)
 }

@@ -44,7 +44,7 @@ func TestGetFormatters(t *testing.T) {
 
 	t.Run("existing formatter", func(t *testing.T) {
 		f := &noopFormatter{}
-		RegisterFormatter("test", func() plugintypes.AuditLogFormatter { return f })
+		RegisterFormatter("test", f)
 		actualFn, err := GetFormatter("TeSt")
 		if err != nil {
 			t.Errorf("unexpected error: %s", err.Error())

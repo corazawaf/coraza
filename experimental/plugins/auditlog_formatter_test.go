@@ -28,9 +28,7 @@ func (testFormatter) MIME() string {
 // and tests the output of the formatter.
 func ExampleRegisterAuditLogFormatter() {
 
-	plugins.RegisterAuditLogFormatter("txid", func() plugintypes.AuditLogFormatter {
-		return &testFormatter{}
-	})
+	plugins.RegisterAuditLogFormatter("txid", &testFormatter{})
 
 	w, err := coraza.NewWAF(
 		coraza.NewWAFConfig().

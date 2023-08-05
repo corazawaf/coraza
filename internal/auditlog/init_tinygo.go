@@ -20,13 +20,7 @@ func init() {
 	})
 
 	// TODO(jcchavezs): check if newest TinyGo supports json.Marshaler for audit log type.
-	RegisterFormatter("json", func() plugintypes.AuditLogFormatter {
-		return &noopFormatter{}
-	})
-	RegisterFormatter("jsonlegacy", func() plugintypes.AuditLogFormatter {
-		return &noopFormatter{}
-	})
-	RegisterFormatter("native", func() plugintypes.AuditLogFormatter {
-		return &noopFormatter{}
-	})
+	RegisterFormatter("json", &noopFormatter{})
+	RegisterFormatter("jsonlegacy", &noopFormatter{})
+	RegisterFormatter("native", &noopFormatter{})
 }

@@ -19,7 +19,7 @@ func init() {
 		return &httpsWriter{}
 	})
 
-	RegisterFormatter("json", func() plugintypes.AuditLogFormatter { return &jsonFormatter{} })
-	RegisterFormatter("jsonlegacy", func() plugintypes.AuditLogFormatter { return &legacyJSONFormatter{} })
-	RegisterFormatter("native", func() plugintypes.AuditLogFormatter { return &nativeFormatter{} })
+	RegisterFormatter("json", &jsonFormatter{})
+	RegisterFormatter("jsonlegacy", &legacyJSONFormatter{})
+	RegisterFormatter("native", &nativeFormatter{})
 }
