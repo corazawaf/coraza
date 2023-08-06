@@ -13,12 +13,13 @@ import (
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/memoize"
 )
 
 func newPMFromFile(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
-	path := options.Arguments
+	filepath := options.Arguments
 
-	data, err := loadFromFile(path, options.Path, options.Root)
+	data, err := loadFromFile(filepath, options.Path, options.Root)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +45,9 @@ func newPMFromFile(options plugintypes.OperatorOptions) (plugintypes.Operator, e
 		DFA:                  false,
 	})
 
-	return &pm{matcher: builder.Build(lines)}, nil
+	m, _ := memoize.Do(strings.Join(options.Path, ",")+filepath, func() (interface{}, error) { return builder.Build(lines), nil })
+
+	return &pm{matcher: m.(ahocorasick.AhoCorasick)}, nil
 }
 
 func init() {
