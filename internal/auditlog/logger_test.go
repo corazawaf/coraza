@@ -30,6 +30,11 @@ func TestGetUnknownWriter(t *testing.T) {
 	}
 }
 
+type noopFormatter struct{}
+
+func (noopFormatter) Format(al plugintypes.AuditLog) ([]byte, error) { return nil, nil }
+func (noopFormatter) MIME() string                                   { return "" }
+
 func TestGetFormatters(t *testing.T) {
 	t.Run("missing formatter", func(t *testing.T) {
 		if _, err := GetFormatter("missing"); err == nil {
@@ -38,14 +43,14 @@ func TestGetFormatters(t *testing.T) {
 	})
 
 	t.Run("existing formatter", func(t *testing.T) {
-		expectedFn := func(al plugintypes.AuditLog) ([]byte, error) { return nil, nil }
-		RegisterFormatter("test", expectedFn)
+		f := &noopFormatter{}
+		RegisterFormatter("test", f)
 		actualFn, err := GetFormatter("TeSt")
 		if err != nil {
 			t.Errorf("unexpected error: %s", err.Error())
 		}
 
-		if want, have := reflect.ValueOf(expectedFn), reflect.ValueOf(actualFn); want.Pointer() != have.Pointer() {
+		if want, have := reflect.ValueOf(f), reflect.ValueOf(actualFn); want.Pointer() != have.Pointer() {
 			t.Errorf("unexpected formatter function")
 		}
 	})

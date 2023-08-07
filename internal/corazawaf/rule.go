@@ -15,6 +15,7 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
+	"github.com/corazawaf/coraza/v3/internal/memoize"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -456,7 +457,12 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 	var re *regexp.Regexp
 	if len(key) > 2 && key[0] == '/' && key[len(key)-1] == '/' {
 		key = key[1 : len(key)-1]
-		re = regexp.MustCompile(key)
+
+		if vare, err := memoize.Do(key, func() (interface{}, error) { return regexp.Compile(key) }); err != nil {
+			return err
+		} else {
+			re = vare.(*regexp.Regexp)
+		}
 	}
 
 	if multiphaseEvaluation {
@@ -521,7 +527,11 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 	var re *regexp.Regexp
 	if len(key) > 2 && key[0] == '/' && key[len(key)-1] == '/' {
 		key = key[1 : len(key)-1]
-		re = regexp.MustCompile(key)
+		if vare, err := memoize.Do(key, func() (interface{}, error) { return regexp.Compile(key) }); err != nil {
+			return err
+		} else {
+			re = vare.(*regexp.Regexp)
+		}
 	}
 	// Prevent sigsev
 	if r == nil {

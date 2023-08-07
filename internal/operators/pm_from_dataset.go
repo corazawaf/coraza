@@ -11,6 +11,7 @@ import (
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/memoize"
 )
 
 func newPMFromDataset(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
@@ -26,7 +27,9 @@ func newPMFromDataset(options plugintypes.OperatorOptions) (plugintypes.Operator
 		DFA:                  true,
 	})
 
-	return &pm{matcher: builder.Build(dataset)}, nil
+	m, _ := memoize.Do(data, func() (interface{}, error) { return builder.Build(dataset), nil })
+
+	return &pm{matcher: m.(ahocorasick.AhoCorasick)}, nil
 }
 
 func init() {
