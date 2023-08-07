@@ -97,6 +97,9 @@ have compatibility guarantees across minor versions - use with care.
 the operator with `plugins.RegisterOperator` to reduce binary size / startup overhead.
 * `coraza.rule.multiphase_valuation` - enables evaluation of rule variables in the phases that they are ready, not
 only the phase the rule is defined for.
+* `memoize_builders` - enables memoization of builders for regex and aho-corasick
+dictionaries to reduce memory consumption in deployments that launch several coraza
+instances. For more context check [this issue](https://github.com/corazawaf/coraza-caddy/issues/76)
 
 ## E2E Testing
 

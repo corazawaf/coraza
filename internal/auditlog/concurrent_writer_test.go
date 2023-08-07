@@ -38,7 +38,7 @@ func TestConcurrentWriterFailsOnInit(t *testing.T) {
 	config.Dir = t.TempDir()
 	config.FileMode = fs.FileMode(0777)
 	config.DirMode = fs.FileMode(0777)
-	config.Formatter = jsonFormatter
+	config.Formatter = &jsonFormatter{}
 
 	writer := &concurrentWriter{}
 	if err := writer.Init(config); err == nil {
@@ -57,7 +57,7 @@ func TestConcurrentWriterWrites(t *testing.T) {
 		Dir:       dir,
 		FileMode:  fs.FileMode(0777),
 		DirMode:   fs.FileMode(0777),
-		Formatter: jsonFormatter,
+		Formatter: &jsonFormatter{},
 	}
 	ts := time.Now()
 	expectedLog := &Log{

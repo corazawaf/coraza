@@ -29,7 +29,7 @@ func getTestFile(t *testing.T) (string, string) {
 func TestLoadFromFileNoPaths(t *testing.T) {
 	_, err := loadFromFile("non-existing-file", nil, io.OSFS{})
 	if err == nil {
-		t.Errorf("expected error: %s", errEmptyPaths.Error())
+		t.Errorf("expected error: %s", errEmptyDirs.Error())
 	}
 }
 
