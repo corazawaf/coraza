@@ -8,7 +8,7 @@
 [![CodeQL](https://github.com/corazawaf/coraza/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/corazawaf/coraza/actions/workflows/codeql-analysis.yml)
 [![codecov](https://codecov.io/gh/corazawaf/coraza/branch/main/graph/badge.svg?token=6570804ZC7)](https://codecov.io/gh/corazawaf/coraza)
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
-[![OWASP Lab Project](https://img.shields.io/badge/owasp-lab%20project-brightgreen)](https://owasp.org/www-project-coraza-web-application-firewall)
+[![OWASP Production Project](https://img.shields.io/badge/owasp-production%20project-brightgreen)](https://owasp.org/www-project-coraza-web-application-firewall)
 [![GoDoc](https://godoc.org/github.com/corazawaf/coraza?status.svg)](https://godoc.org/github.com/corazawaf/coraza/v3)
 
 Coraza is an open source, enterprise-grade, high performance Web Application Firewall (WAF) ready to protect your beloved applications. It is written in Go, supports ModSecurity SecLang rulesets and is 100% compatible with the OWASP Core Rule Set v4.
@@ -17,7 +17,6 @@ Coraza is an open source, enterprise-grade, high performance Web Application Fir
 * Forum: [Github Discussions](https://github.com/corazawaf/coraza/discussions)
 * OWASP Slack Community (#coraza): <https://owasp.org/slack/invite>
 * Rule testing: [Coraza Playground](https://playground.coraza.io)
-* Planning: [Github Projects](https://github.com/orgs/corazawaf/projects?type=beta)
 
 <br/>
 
@@ -43,21 +42,13 @@ The Coraza Project maintains implementations and plugins for the following serve
 
 * [Caddy Reverse Proxy and Webserver Plugin](https://github.com/corazawaf/coraza-caddy) - stable, needs a maintainer
 * [Proxy WASM extension](https://github.com/corazawaf/coraza-proxy-wasm) for proxies with proxy-wasm support (e.g. Envoy) - stable, still under development
-* [HAProxy SPOE Plugin](https://github.com/corazawaf/coraza-spoa) - preview
-* [Traefik Proxy Plugin](https://github.com/jptosso/coraza-traefik) - preview, needs maintainer
-* [Gin Web Framework Middleware](https://github.com/jptosso/coraza-gin) - preview, needs maintainer
-* [Apache HTTP Server](https://github.com/corazawaf/coraza-server) - experimental
-* [Nginx](https://github.com/corazawaf/coraza-server) - experimental
-* [Coraza C Library](https://github.com/corazawaf/libcoraza) - experimental
-
-## Plugins
-
-* [Coraza GeoIP](https://github.com/corazawaf/coraza-geoip) (preview)
+* [HAProxy SPOE Plugin](https://github.com/corazawaf/coraza-spoa) - experimental
+* [Coraza C Library (For nginx, etc)](https://github.com/corazawaf/libcoraza) - experimental
 
 ## Prerequisites
 
 * Golang compiler v1.18+
-* Linux distribution (Debian or Centos recommended) or Mac. Windows not supported yet.
+* Linux distribution (Debian or Centos recommended), Windows or Mac.
 
 ## Coraza Core Usage
 
@@ -142,6 +133,15 @@ See the list of commands
 
 ```shell
 go run mage.go -l
+Targets:
+  check        runs lint and tests.
+  coverage     runs tests with coverage and race detector enabled.
+  doc          runs godoc, access at http://localhost:6060
+  format       formats code in this repository.
+  fuzz         runs fuzz tests
+  lint         verifies code quality.
+  precommit    installs a git hook to run check when committing
+  test         runs all tests.
 ```
 
 For example, to format your code before submission, run
@@ -164,10 +164,6 @@ Our vulnerability management team will respond within 3 working days of your rep
 
 * Modsecurity team for creating ModSecurity
 * OWASP Coreruleset team for the CRS and their help
-
-### Companies using Coraza
-
-* [Babiel](https://babiel.com) (supporter)
 
 ### Coraza on Twitter
 
