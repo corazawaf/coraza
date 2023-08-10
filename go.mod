@@ -1,6 +1,6 @@
 module github.com/corazawaf/coraza/v3
 
-go 1.18
+go 1.19
 
 // Testing dependencies:
 // - go-mockdns
@@ -21,9 +21,9 @@ require (
 	github.com/foxcpp/go-mockdns v1.0.0
 	github.com/magefile/mage v1.15.0
 	github.com/mccutchen/go-httpbin/v2 v2.9.0
-	github.com/petar-dambovaliev/aho-corasick v0.0.0-20211021192214-5ab2d9280aa9
-	github.com/tidwall/gjson v1.14.4
-	golang.org/x/net v0.11.0
+	github.com/petar-dambovaliev/aho-corasick v0.0.0-20230725210150-fb29fc3c913e
+	github.com/tidwall/gjson v1.16.0
+	golang.org/x/net v0.14.0
 	rsc.io/binaryregexp v0.2.0
 )
 
@@ -32,6 +32,6 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	golang.org/x/mod v0.8.0 // indirect
-	golang.org/x/sys v0.9.0 // indirect
+	golang.org/x/sys v0.11.0 // indirect
 	golang.org/x/tools v0.6.0 // indirect
 )
