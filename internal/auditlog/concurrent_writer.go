@@ -67,7 +67,7 @@ func (cl concurrentWriter) Write(al plugintypes.AuditLog) error {
 		return err
 	}
 
-	formattedAL, err := cl.formatter(al)
+	formattedAL, err := cl.formatter.Format(al)
 	if err != nil {
 		return err
 	}

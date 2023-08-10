@@ -10,15 +10,15 @@ import (
 	"path"
 )
 
-var errEmptyPaths = errors.New("empty paths")
+var errEmptyDirs = errors.New("empty dirs")
 
-func loadFromFile(filepath string, paths []string, root fs.FS) ([]byte, error) {
+func loadFromFile(filepath string, dirs []string, root fs.FS) ([]byte, error) {
 	if path.IsAbs(filepath) {
 		return fs.ReadFile(root, filepath)
 	}
 
-	if len(paths) == 0 {
-		return nil, errEmptyPaths
+	if len(dirs) == 0 {
+		return nil, errEmptyDirs
 	}
 
 	// handling files by operators is hard because we must know the paths where we can
@@ -29,7 +29,7 @@ func loadFromFile(filepath string, paths []string, root fs.FS) ([]byte, error) {
 		err     error
 	)
 
-	for _, p := range paths {
+	for _, p := range dirs {
 		absFilepath := path.Join(p, filepath)
 		content, err = fs.ReadFile(root, absFilepath)
 		if err != nil {

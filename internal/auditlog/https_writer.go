@@ -41,7 +41,7 @@ func (h *httpsWriter) Init(c plugintypes.AuditLogConfig) error {
 }
 
 func (h *httpsWriter) Write(al plugintypes.AuditLog) error {
-	body, err := h.formatter(al)
+	body, err := h.formatter.Format(al)
 	if err != nil {
 		return err
 	}
@@ -51,7 +51,7 @@ func (h *httpsWriter) Write(al plugintypes.AuditLog) error {
 		return err
 	}
 	req.Header.Set("User-Agent", "Coraza+v3")
-	// TODO: declare content type in the formatter
+	req.Header.Set("Content-Type", h.formatter.MIME())
 	res, err := h.client.Do(req)
 	if err != nil {
 		return err
