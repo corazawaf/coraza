@@ -57,52 +57,51 @@ func TestErrorLogMessages(t *testing.T) {
 		},
 	}
 	testCases := map[string]struct {
-		disruptiveAction     bool
-		disruptiveActionName string
-		expectedLogLine      string
+		disruptive       bool
+		disruptiveAction DisruptiveAction
+		expectedLogLine  string
 	}{
 		"no disruptive action": {
-			disruptiveAction:     false,
-			disruptiveActionName: "",
-			expectedLogLine:      "Coraza: Warning.",
+			disruptive:      false,
+			expectedLogLine: "Coraza: Warning.",
 		},
 		"Deny disruptive action": {
-			disruptiveAction:     true,
-			disruptiveActionName: "deny",
-			expectedLogLine:      "Coraza: Access denied",
+			disruptive:       true,
+			disruptiveAction: DisruptiveActionDeny,
+			expectedLogLine:  "Coraza: Access denied",
 		},
 		"Allow disruptive action": {
-			disruptiveAction:     true,
-			disruptiveActionName: "allow",
-			expectedLogLine:      "Coraza: Access allowed",
+			disruptive:       true,
+			disruptiveAction: DisruptiveActionAllow,
+			expectedLogLine:  "Coraza: Access allowed",
 		},
 		"Drop disruptive action": {
-			disruptiveAction:     true,
-			disruptiveActionName: "drop",
-			expectedLogLine:      "Coraza: Access dropped",
+			disruptive:       true,
+			disruptiveAction: DisruptiveActionDrop,
+			expectedLogLine:  "Coraza: Access dropped",
 		},
 		"Pass disruptive action": {
-			disruptiveAction:     true,
-			disruptiveActionName: "pass",
-			expectedLogLine:      "Coraza: Warning.",
+			disruptive:       true,
+			disruptiveAction: DisruptiveActionPass,
+			expectedLogLine:  "Coraza: Warning.",
 		},
 		"Redirect disruptive action": {
-			disruptiveAction:     true,
-			disruptiveActionName: "redirect",
-			expectedLogLine:      "Coraza: Access redirected",
+			disruptive:       true,
+			disruptiveAction: DisruptiveActionRedirect,
+			expectedLogLine:  "Coraza: Access redirected",
 		},
 		"Custom disruptive action": {
-			disruptiveAction:     true,
-			disruptiveActionName: "customDisruptiveAction",
-			expectedLogLine:      "Coraza: Custom disruptive action",
+			disruptive:       true,
+			disruptiveAction: DisruptiveActionUnknown,
+			expectedLogLine:  "Coraza: Custom disruptive action",
 		},
 	}
 
 	for name, tCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			matchedRule.Disruptive_ = tCase.disruptiveAction
-			if tCase.disruptiveActionName != "" {
-				matchedRule.DisruptiveActionName_ = tCase.disruptiveActionName
+			matchedRule.Disruptive_ = tCase.disruptive
+			if tCase.disruptive {
+				matchedRule.DisruptiveAction_ = tCase.disruptiveAction
 			}
 			logLine := matchedRule.ErrorLog()
 			if !strings.Contains(logLine, tCase.expectedLogLine) {

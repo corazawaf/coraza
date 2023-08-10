@@ -54,6 +54,26 @@ func (m *MatchData) ChainLevel() int {
 	return m.ChainLevel_
 }
 
+// ActionName is used to identify an action.
+type DisruptiveAction int
+
+const (
+	DisruptiveActionUnknown DisruptiveAction = iota
+	DisruptiveActionAllow
+	DisruptiveActionDeny
+	DisruptiveActionDrop
+	DisruptiveActionPass
+	DisruptiveActionRedirect
+)
+
+var DisruptiveActionMap = map[string]DisruptiveAction{
+	"allow":    DisruptiveActionAllow,
+	"deny":     DisruptiveActionDeny,
+	"drop":     DisruptiveActionDrop,
+	"pass":     DisruptiveActionPass,
+	"redirect": DisruptiveActionRedirect,
+}
+
 // MatchedRule contains a list of macro expanded messages,
 // matched variables and a pointer to the rule
 type MatchedRule struct {
@@ -69,7 +89,7 @@ type MatchedRule struct {
 	Disruptive_ bool
 	// Name of the disruptive action
 	// Note: not exposed in coraza v3.0.*
-	DisruptiveActionName_ string
+	DisruptiveAction_ DisruptiveAction
 	// Is meant to be logged
 	Log_ bool
 	// Server IP address
@@ -235,18 +255,18 @@ func (mr MatchedRule) ErrorLog() string {
 }
 
 func writeDisruptiveActionSpecificLog(log *strings.Builder, mr MatchedRule) {
-	switch mr.DisruptiveActionName_ {
-	case "allow":
+	switch mr.DisruptiveAction_ {
+	case DisruptiveActionAllow:
 		fmt.Fprintf(log, "Coraza: Access allowed (phase %d). ", mr.Rule_.Phase())
-	case "deny":
+	case DisruptiveActionDeny:
 		fmt.Fprintf(log, "Coraza: Access denied (phase %d). ", mr.Rule_.Phase())
-	case "drop":
+	case DisruptiveActionDrop:
 		fmt.Fprintf(log, "Coraza: Access dropped (phase %d). ", mr.Rule_.Phase())
-	case "pass":
+	case DisruptiveActionPass:
 		log.WriteString("Coraza: Warning. ")
-	case "redirect":
+	case DisruptiveActionRedirect:
 		fmt.Fprintf(log, "Coraza: Access redirected (phase %d). ", mr.Rule_.Phase())
 	default:
-		fmt.Fprintf(log, "Coraza: Custom disruptive action (%s) triggered (phase %d). ", mr.DisruptiveActionName_, mr.Rule_.Phase())
+		fmt.Fprintf(log, "Coraza: Custom disruptive action triggered (phase %d). ", mr.Rule_.Phase())
 	}
 }
