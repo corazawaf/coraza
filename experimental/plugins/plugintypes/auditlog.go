@@ -128,5 +128,9 @@ type AuditLogWriter interface {
 	Close() error
 }
 
-// AuditLogFormatter formats an audit log to a byte slice.
-type AuditLogFormatter func(AuditLog) ([]byte, error)
+// AuditLogFormatter serializes an AuditLog into a byte slice.
+// It is used to construct the formatted audit log.
+type AuditLogFormatter interface {
+	Format(AuditLog) ([]byte, error)
+	MIME() string
+}

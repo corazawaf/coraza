@@ -16,6 +16,7 @@ import (
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/internal/memoize"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -731,9 +732,13 @@ func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	var err error
-	options.WAF.AuditLogRelevantStatus, err = regexp.Compile(options.Opts)
-	return err
+	re, err := memoize.Do(options.Opts, func() (interface{}, error) { return regexp.Compile(options.Opts) })
+	if err != nil {
+		return err
+	}
+
+	options.WAF.AuditLogRelevantStatus = re.(*regexp.Regexp)
+	return nil
 }
 
 // Description: Defines which parts of each transaction are going to be recorded

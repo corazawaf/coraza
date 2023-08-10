@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/memoize"
 )
 
 var rePathTokenRe = regexp.MustCompile(`\{([^\}]+)\}`)
@@ -30,11 +31,12 @@ func newRESTPath(options plugintypes.OperatorOptions) (plugintypes.Operator, err
 	for _, token := range rePathTokenRe.FindAllStringSubmatch(data, -1) {
 		data = strings.Replace(data, token[0], fmt.Sprintf("(?P<%s>.*)", token[1]), 1)
 	}
-	re, err := regexp.Compile(data)
+
+	re, err := memoize.Do(data, func() (interface{}, error) { return regexp.Compile(data) })
 	if err != nil {
 		return nil, err
 	}
-	return &restpath{re: re}, nil
+	return &restpath{re: re.(*regexp.Regexp)}, nil
 }
 
 func (o *restpath) Evaluate(tx plugintypes.TransactionState, value string) bool {

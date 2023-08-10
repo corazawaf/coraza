@@ -17,7 +17,7 @@ func NewConfig() plugintypes.AuditLogConfig {
 		FileMode:  0644,
 		Dir:       "",
 		DirMode:   0755,
-		Formatter: nativeFormatter,
+		Formatter: &nativeFormatter{},
 	}
 }
 
@@ -42,7 +42,7 @@ func GetWriter(name string) (plugintypes.AuditLogWriter, error) {
 
 // RegisterFormatter registers a new logger format
 // it can be used for plugins
-func RegisterFormatter(name string, f func(plugintypes.AuditLog) ([]byte, error)) {
+func RegisterFormatter(name string, f plugintypes.AuditLogFormatter) {
 	formatters[name] = f
 }
 

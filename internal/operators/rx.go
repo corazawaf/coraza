@@ -14,6 +14,7 @@ import (
 	"rsc.io/binaryregexp"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/memoize"
 )
 
 type rx struct {
@@ -35,15 +36,14 @@ func newRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 		return newBinaryRX(options)
 	}
 
-	re, err := regexp.Compile(data)
+	re, err := memoize.Do(data, func() (interface{}, error) { return regexp.Compile(data) })
 	if err != nil {
 		return nil, err
 	}
-	return &rx{re: re}, nil
+	return &rx{re: re.(*regexp.Regexp)}, nil
 }
 
 func (o *rx) Evaluate(tx plugintypes.TransactionState, value string) bool {
-
 	if tx.Capturing() {
 		match := o.re.FindStringSubmatch(value)
 		if len(match) == 0 {
@@ -72,15 +72,14 @@ var _ plugintypes.Operator = (*binaryRX)(nil)
 func newBinaryRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
-	re, err := binaryregexp.Compile(data)
+	re, err := memoize.Do(data, func() (interface{}, error) { return binaryregexp.Compile(data) })
 	if err != nil {
 		return nil, err
 	}
-	return &binaryRX{re: re}, nil
+	return &binaryRX{re: re.(*binaryregexp.Regexp)}, nil
 }
 
 func (o *binaryRX) Evaluate(tx plugintypes.TransactionState, value string) bool {
-
 	if tx.Capturing() {
 		match := o.re.FindStringSubmatch(value)
 		if len(match) == 0 {
