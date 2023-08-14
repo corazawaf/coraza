@@ -16,8 +16,9 @@ func Register(name string, engine plugintypes.PersistenceEngine) {
 }
 
 func Get(name string) (plugintypes.PersistenceEngine, error) {
-	if persistenceEngines[name] == nil {
+	if e, ok := persistenceEngines[name]; !ok {
 		return nil, fmt.Errorf("persistence engine %s not found", name)
+	} else {
+		return e, nil
 	}
-	return persistenceEngines[name], nil
 }
