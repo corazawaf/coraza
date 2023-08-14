@@ -9,6 +9,7 @@ import (
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/actions"
+	_ "github.com/corazawaf/coraza/v3/internal/persistence"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
