@@ -495,6 +495,7 @@ func directiveSecPersistenceEngine(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
 	}
+	options.WAF.Logger.Warn().Msg("Persistence is a experimental feature, be careful.")
 	engine, err := persistence.Get(options.Opts)
 	if err != nil {
 		return err
