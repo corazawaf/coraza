@@ -32,7 +32,8 @@ func (d *defaultEngine) Open(uri string, ttl int) error {
 }
 
 func (d *defaultEngine) Close() error {
-	d.data = sync.Map{}
+	// Close will just stop the GC
+	// it won't delete the data as it would cause race conditions.
 	d.stopGC <- true
 	return nil
 }
@@ -119,7 +120,6 @@ func (d *defaultEngine) gc() {
 			})
 		}
 	}
-
 }
 
 func (d *defaultEngine) getCollection(collectionName string, collectionKey string) map[string]interface{} {
