@@ -222,12 +222,20 @@ const (
 	MultipartUnmatchedBoundary
 	// PathInfo is kept for compatibility
 	PathInfo
-	// Sessionid is not supported
+	// Sessionid is the session id
 	Sessionid
-	// Userid is not supported
+	// Userid is a persistent collection of user ids
 	Userid
-	// IP is kept for compatibility
+	// IP is a persistent collection of IP addresses
 	IP
+	// Global is a persistent collection of global variables
+	Global
+	// Resource is a persistent collection of resources
+	Resource
+	// User is a persistent collection of user variables
+	User
+	// Session is a persistent collection of session variables
+	Session
 	// ResBodyError
 	ResBodyError
 	// ResBodyErrorMsg

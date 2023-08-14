@@ -3,14 +3,21 @@
 
 package persistence
 
-import "github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+import (
+	"fmt"
+
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+)
 
 var persistenceEngines = map[string]plugintypes.PersistenceEngine{}
 
-func RegisterPersistenceEngine(name string, engine plugintypes.PersistenceEngine) {
+func Register(name string, engine plugintypes.PersistenceEngine) {
 	persistenceEngines[name] = engine
 }
 
-func GetPersistenceEngine(name string) plugintypes.PersistenceEngine {
-	return persistenceEngines[name]
+func Get(name string) (plugintypes.PersistenceEngine, error) {
+	if persistenceEngines[name] == nil {
+		return nil, fmt.Errorf("persistence engine %s not found", name)
+	}
+	return persistenceEngines[name], nil
 }

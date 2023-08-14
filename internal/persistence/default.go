@@ -1,6 +1,9 @@
 // Copyright 2023 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !tinygo
+// +build !tinygo
+
 package persistence
 
 import (
@@ -10,6 +13,9 @@ import (
 	"time"
 )
 
+// defaultEngine
+// defaultEngine is just a sample and it shouldn't be used in production.
+// It's not thread safe enough and it's not persistent on disk.
 type defaultEngine struct {
 	data   sync.Map
 	ttl    int
@@ -62,6 +68,36 @@ func (d *defaultEngine) Get(collectionName string, collectionKey string, key str
 func (d *defaultEngine) Set(collection string, collectionKey string, key string, value string) error {
 	d.set(collection, collectionKey, key, value)
 	return nil
+}
+
+func (d *defaultEngine) Remove(collection string, collectionKey string, key string) error {
+	data := d.getCollection(collection, collectionKey)
+	if data == nil {
+		return nil
+	}
+	delete(data, key)
+	return nil
+}
+
+func (d *defaultEngine) All(collectionName string, collectionKey string) (map[string]string, error) {
+	data := d.getCollection(collectionName, collectionKey)
+	if data == nil {
+		return nil, nil
+	}
+	res := map[string]string{}
+	for k, v := range data {
+		if v == nil {
+			res[k] = ""
+		} else {
+			switch v2 := v.(type) {
+			case string:
+				res[k] = v2
+			case int:
+				res[k] = strconv.Itoa(v2)
+			}
+		}
+	}
+	return res, nil
 }
 
 func (d *defaultEngine) gc() {
@@ -143,4 +179,8 @@ func (d *defaultEngine) updateCollection(col map[string]interface{}) {
 	}
 	// we update the timeout
 	col["TIMEOUT"] = time_now + d.ttl
+}
+
+func init() {
+	Register("default", &defaultEngine{})
 }

@@ -43,35 +43,45 @@ type Keyed interface {
 	FindString(key string) []types.MatchData
 }
 
+type Editable interface {
+	Keyed
+
+	// Remove deletes the key from the CollectionMap
+	Remove(key string)
+
+	// Set will replace the key's value with this slice
+	Set(key string, values []string)
+
+	// TODO: in v4 this should contain setters for Map and Persistence
+}
+
 // Map are used to store VARIABLE data
 // for transactions, this data structured is designed
 // to store slices of data for keys
 // Important: CollectionMaps ARE NOT concurrent safe
 type Map interface {
-	Keyed
+	Editable
 
 	// Add a value to some key
 	Add(key string, value string)
-
-	// Set will replace the key's value with this slice
-	Set(key string, values []string)
 
 	// SetIndex will place the value under the index
 	// If the index is higher than the current size of the CollectionMap
 	// it will be appended
 	SetIndex(key string, index int, value string)
-
-	// Remove deletes the key from the CollectionMap
-	Remove(key string)
 }
 
 // Persistent collections won't use arrays as values
 // They are designed for collections that will be stored
 type Persistent interface {
-	Collection
+	Editable
 
-	Set(key string, value string)
+	// Initializes the input as the collection key
+	Init(key string)
 
-	// Remove deletes the key
-	Remove(key string)
+	// Sum will add the value to the key
+	Sum(key string, sum int)
+
+	// SetOne will replace the key's value with this string
+	SetOne(key string, value string)
 }

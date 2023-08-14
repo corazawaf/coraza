@@ -210,6 +210,11 @@ func Doc() error {
 	return sh.RunV("go", "run", "golang.org/x/tools/cmd/godoc@latest", "-http=:6060")
 }
 
+// Generate generates code using available generators.
+func Generate() error {
+	return sh.RunV("go", "generate", "./...")
+}
+
 // Precommit installs a git hook to run check when committing
 func Precommit() error {
 	if _, err := os.Stat(filepath.Join(".git", "hooks")); os.IsNotExist(err) {
