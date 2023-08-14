@@ -131,6 +131,9 @@ type WAF struct {
 
 	// Configures the maximum number of ARGS that will be accepted for processing.
 	ArgumentLimit int
+
+	// PersistenceEngine is used to store persistent collections
+	PersistenceEngine plugintypes.PersistenceEngine
 }
 
 // NewTransaction Creates a new initialized transaction for this WAF instance
