@@ -62,6 +62,7 @@ SecPersistenceEngine default
 SecAction "id:1,phase:1,initcol:session=%{REQUEST_COOKIES.session},pass,nolog"
 SecRule REQUEST_URI "test1" "id:2,phase:2,pass,nolog,setvar:session.test=1"
 SecRule REQUEST_URI "test2" "id:3,phase:2,pass,nolog,chain"
-	SecRule SESSION:test "1" "log"
+	SecRule SESSION:test "1" "log,chain"
+	SecRule SESSION:/te.*/ "1" "log"
 `,
 })
