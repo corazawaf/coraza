@@ -24,6 +24,8 @@ type defaultEngine struct {
 
 func (d *defaultEngine) Open(uri string, ttl int) error {
 	d.data = sync.Map{}
+	d.ttl = ttl
+	d.stopGC = make(chan bool)
 	// we start the garbage collector
 	go d.gc()
 	return nil
@@ -105,6 +107,8 @@ func (d *defaultEngine) gc() {
 		select {
 		case <-d.stopGC:
 			return
+		case <-time.After(time.Second * 1):
+			// this is a concurrent safe sleep
 		default:
 			d.data.Range(func(key, value interface{}) bool {
 				col := value.(map[string]interface{})
@@ -113,7 +117,6 @@ func (d *defaultEngine) gc() {
 				}
 				return true
 			})
-			time.Sleep(1 * time.Second)
 		}
 	}
 

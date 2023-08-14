@@ -38,7 +38,18 @@ func (c *Persistent) Get(key string) []string {
 }
 
 func (c *Persistent) FindRegex(key *regexp.Regexp) []types.MatchData {
-	return nil
+	all, _ := c.engine.All(c.variable.Name(), c.collectionKey) //nolint:errcheck
+	matches := make([]types.MatchData, 0, len(all))
+	for i, v := range all {
+		if key.MatchString(i) {
+			matches = append(matches, &corazarules.MatchData{
+				Variable_: c.variable,
+				Key_:      i,
+				Value_:    v,
+			})
+		}
+	}
+	return matches
 }
 
 func (c *Persistent) FindString(key string) []types.MatchData {
@@ -52,7 +63,16 @@ func (c *Persistent) FindString(key string) []types.MatchData {
 }
 
 func (c *Persistent) FindAll() []types.MatchData {
-	return nil
+	all, _ := c.engine.All(c.variable.Name(), c.collectionKey) //nolint:errcheck
+	matches := make([]types.MatchData, 0, len(all))
+	for i, v := range all {
+		matches = append(matches, &corazarules.MatchData{
+			Variable_: c.variable,
+			Key_:      i,
+			Value_:    v,
+		})
+	}
+	return matches
 }
 
 func (c *Persistent) SetOne(key string, value string) {

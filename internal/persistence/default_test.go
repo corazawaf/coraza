@@ -80,13 +80,14 @@ func TestDefaultEngineSetAndGet(t *testing.T) {
 
 func TestDefaultGC(t *testing.T) {
 	engine := &defaultEngine{}
-	engine.Open("", 1) //nolint:errcheck
+	engine.Open("", 1)   //nolint:errcheck
+	defer engine.Close() //nolint:errcheck
 	err := engine.Set("testCol", "testColKey", "testKey", "testValue")
 	if err != nil {
 		t.Errorf("Set failed: %v", err)
 	}
-	// we sleep 1.3 second
-	time.Sleep(1300 * time.Millisecond)
+	// we sleep 2 second
+	time.Sleep(2000 * time.Millisecond)
 	// now we should have no data
 	val, err := engine.Get("testCol", "testColKey", "testKey")
 	if err != nil {
@@ -96,4 +97,20 @@ func TestDefaultGC(t *testing.T) {
 		t.Errorf("Value was not deleted")
 	}
 
+}
+
+func TestDefaultAll(t *testing.T) {
+	engine := &defaultEngine{}
+	engine.Open("", 3600) //nolint:errcheck
+	defer engine.Close()  //nolint:errcheck
+	if err := engine.Set("testCol", "testColKey", "testKey", "testValue"); err != nil {
+		t.Errorf("Set failed: %v", err)
+	}
+	all, err := engine.All("testCol", "testColKey")
+	if err != nil {
+		t.Errorf("All failed: %v", err)
+	}
+	if all["testKey"] != "testValue" {
+		t.Errorf("All failed: %v", all)
+	}
 }
