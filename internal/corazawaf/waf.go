@@ -135,6 +135,9 @@ type WAF struct {
 
 	// Configures the maximum number of ARGS that will be accepted for processing.
 	ArgumentLimit int
+
+	// PersistenceEngine is used to store persistent collections
+	PersistenceEngine plugintypes.PersistenceEngine
 }
 
 // Options is used to pass options to the WAF instance
