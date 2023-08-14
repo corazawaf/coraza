@@ -18,6 +18,7 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/environment"
+	"github.com/corazawaf/coraza/v3/internal/persistence"
 	stringutils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/internal/sync"
 	"github.com/corazawaf/coraza/v3/types"
@@ -223,7 +224,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 			Limit:       w.ResponseBodyLimit,
 		})
 
-		tx.variables = *NewTransactionVariables()
+		tx.variables = *NewTransactionVariables(tx.WAF.PersistenceEngine)
 		tx.transformationCache = map[transformationKey]*transformationValue{}
 	}
 
@@ -253,7 +254,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 }
 
 func resolveLogPath(path string) (io.Writer, error) {
-	if path == "" {
+	if path == "" || path == "/dev/null" {
 		return io.Discard, nil
 	}
 
@@ -293,6 +294,10 @@ func NewWAF() *WAF {
 			Err(err).
 			Msg("error creating serial log writer")
 	}
+	noopPersistenceEngine, err := persistence.Get("noop")
+	if err != nil {
+		logger.Error().Err(err).Msg("error creating noop persistence engine")
+	}
 
 	waf := &WAF{
 		// Initializing pool for transactions
@@ -313,9 +318,10 @@ func NewWAF() *WAF {
 			types.AuditLogPartResponseHeaders,
 			types.AuditLogPartAuditLogTrailer,
 		},
-		AuditLogFormat: "Native",
-		Logger:         logger,
-		ArgumentLimit:  1000,
+		AuditLogFormat:    "Native",
+		Logger:            logger,
+		ArgumentLimit:     1000,
+		PersistenceEngine: noopPersistenceEngine,
 	}
 
 	if environment.HasAccessToFS {

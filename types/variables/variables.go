@@ -214,6 +214,16 @@ const (
 	TimeWday = variables.TimeWday
 	// TimeYear the current four-digit year value
 	TimeYear = variables.TimeYear
+	// Global contains global persistent data
+	Global = variables.Global
+	// Resource contains the persistent resource data
+	Resource = variables.Resource
+	// IP contains the persistent IP information
+	IP = variables.IP
+	// Session contains the persistent session information
+	Session = variables.Session
+	// User contains the persistent user information
+	User = variables.User
 )
 
 // Parse returns the byte interpretation

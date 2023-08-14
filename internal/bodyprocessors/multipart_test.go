@@ -26,7 +26,7 @@ func TestProcessRequestFailsDueToIncorrectMimeType(t *testing.T) {
 
 	expectedError := "not a multipart body"
 
-	if err := mp.ProcessRequest(strings.NewReader(""), corazawaf.NewTransactionVariables(), plugintypes.BodyProcessorOptions{
+	if err := mp.ProcessRequest(strings.NewReader(""), corazawaf.NewTransactionVariables(nil), plugintypes.BodyProcessorOptions{
 		Mime: "application/json",
 	}); err == nil || err.Error() != expectedError {
 		t.Fatal("expected error")
@@ -56,7 +56,7 @@ Content-Type: text/html
 
 	mp := multipartProcessor(t)
 
-	v := corazawaf.NewTransactionVariables()
+	v := corazawaf.NewTransactionVariables(nil)
 	if err := mp.ProcessRequest(strings.NewReader(payload), v, plugintypes.BodyProcessorOptions{
 		Mime: "multipart/form-data; boundary=---------------------------9051914041544843365972754266",
 	}); err != nil {
@@ -87,7 +87,7 @@ text default
 -----------------------------9051914041544843365972754266
 `)
 	mp := multipartProcessor(t)
-	v := corazawaf.NewTransactionVariables()
+	v := corazawaf.NewTransactionVariables(nil)
 	if err := mp.ProcessRequest(strings.NewReader(payload), v, plugintypes.BodyProcessorOptions{
 		Mime: "multipart/form-data; boundary=---------------------------9051914041544843365972754266; a=1; a=2",
 	}); err == nil {

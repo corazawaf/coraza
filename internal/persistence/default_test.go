@@ -1,6 +1,9 @@
 // Copyright 2023 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !tinygo
+// +build !tinygo
+
 package persistence
 
 import (
@@ -63,6 +66,14 @@ func TestDefaultEngineSetAndGet(t *testing.T) {
 		t.Errorf("Set failed: %v", err)
 	}
 	if val := engine.get("testCol", "testColKey", "sum"); val != 7 {
+		t.Errorf("Sum failed, got %v", val)
+	}
+
+	err = engine.Remove("testCol", "testColKey", "sum")
+	if err != nil {
+		t.Errorf("Set failed: %v", err)
+	}
+	if val := engine.get("testCol", "testColKey", "sum"); val != nil {
 		t.Errorf("Sum failed, got %v", val)
 	}
 }

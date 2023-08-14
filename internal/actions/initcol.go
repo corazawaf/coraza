@@ -4,9 +4,14 @@
 package actions
 
 import (
+	"fmt"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/collections"
+	utils "github.com/corazawaf/coraza/v3/internal/strings"
+	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 // Action Group: Non-disruptive
@@ -23,9 +28,8 @@ import (
 // SecAction "phase:1,id:116,nolog,pass,initcol:ip=%{REMOTE_ADDR}"
 // ```
 type initcolFn struct {
-	collection string
-	variable   byte
-	key        string
+	collection variables.RuleVariable
+	key        macro.Macro
 }
 
 func (a *initcolFn) Init(_ plugintypes.RuleMetadata, data string) error {
@@ -34,34 +38,34 @@ func (a *initcolFn) Init(_ plugintypes.RuleMetadata, data string) error {
 		return ErrInvalidKVArguments
 	}
 
-	a.collection = col
-	a.key = key
-	a.variable = 0x0
+	c, err := variables.Parse(col)
+	if err != nil {
+		return fmt.Errorf("initcol: collection %s is not valid", col)
+	}
+	// we validate if this is a persistent collection
+	persistent := []string{"USER", "SESSION", "IP", "RESOURCE", "GLOBAL"}
+	if !utils.InSlice(c.Name(), persistent) {
+		return fmt.Errorf("initcol: collection %s is not persistent", c.Name())
+	}
+	a.collection = c
+	mkey, err := macro.NewMacro(key)
+	if err != nil {
+		return err
+	}
+	a.key = mkey
 	return nil
 }
 
-func (a *initcolFn) Evaluate(_ plugintypes.RuleMetadata, _ plugintypes.TransactionState) {
-	// tx.DebugLogger().Error().Msg("initcol was used but it's not supported", zap.Int("rule", r.Id))
-	/*
-		key := tx.MacroExpansion(a.key)
-		data := tx.WAF.Persistence.Get(a.variable, key)
-		if data == nil {
-			ts := time.Now().UnixNano()
-			tss := strconv.FormatInt(ts, 10)
-			tsstimeout := strconv.FormatInt(ts+(int64(tx.WAF.CollectionTimeout)*1000), 10)
-			data = map[string][]string{
-				"CREATE_TIME":      {tss},
-				"IS_NEW":           {"1"},
-				"KEY":              {key},
-				"LAST_UPDATE_TIME": {tss},
-				"TIMEOUT":          {tsstimeout},
-				"UPDATE_COUNTER":   {"0"},
-				"UPDATE_RATE":      {"0"},
-			}
-		}
-		tx.GetCollection(a.variable).SetData(data)
-		tx.PersistentCollections[a.variable] = key
-	*/
+func (a *initcolFn) Evaluate(_ plugintypes.RuleMetadata, txs plugintypes.TransactionState) {
+	col := txs.Collection(a.collection)
+	key := a.key.Expand(txs)
+	txs.DebugLogger().Debug().Str("collection", a.collection.Name()).Str("key", key).Msg("initcol: initializing collection")
+	c, ok := col.(*collections.Persistent)
+	if !ok {
+		txs.DebugLogger().Error().Str("collection", a.collection.Name()).Msg("initcol: collection is not a persistent collection")
+		return
+	}
+	c.Init(key)
 }
 
 func (a *initcolFn) Type() plugintypes.ActionType {

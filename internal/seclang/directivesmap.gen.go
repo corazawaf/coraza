@@ -25,6 +25,7 @@ var (
 	_ directive = directiveSecResponseBodyLimit
 	_ directive = directiveSecRequestBodyLimitAction
 	_ directive = directiveSecRequestBodyInMemoryLimit
+	_ directive = directiveSecPersistenceEngine
 	_ directive = directiveSecRemoteRulesFailAction
 	_ directive = directiveSecRemoteRules
 	_ directive = directiveSecConnWriteStateLimit
@@ -87,6 +88,7 @@ var directivesMap = map[string]directive{
 	"secresponsebodylimit":           directiveSecResponseBodyLimit,
 	"secrequestbodylimitaction":      directiveSecRequestBodyLimitAction,
 	"secrequestbodyinmemorylimit":    directiveSecRequestBodyInMemoryLimit,
+	"secpersistenceengine":           directiveSecPersistenceEngine,
 	"secremoterulesfailaction":       directiveSecRemoteRulesFailAction,
 	"secremoterules":                 directiveSecRemoteRules,
 	"secconnwritestatelimit":         directiveSecConnWriteStateLimit,
