@@ -1,6 +1,9 @@
 // Copyright 2023 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !tinygo
+// +build !tinygo
+
 package actions_test
 
 import (
@@ -9,7 +12,6 @@ import (
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/actions"
-	_ "github.com/corazawaf/coraza/v3/internal/persistence"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
@@ -20,7 +22,7 @@ func TestPersistenceSetvar(t *testing.T) {
 	}
 	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives("SecPersistenceEngine default"))
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	t.Run("SESSION should be set", func(t *testing.T) {
 		if err := a.Init(&md{}, "SESSION.test=test"); err != nil {
