@@ -64,3 +64,14 @@ type Map interface {
 	// Remove deletes the key from the CollectionMap
 	Remove(key string)
 }
+
+// Persistent collections won't use arrays as values
+// They are designed for collections that will be stored
+type Persistent interface {
+	Collection
+
+	Set(key string, value string)
+
+	// Remove deletes the key
+	Remove(key string)
+}
