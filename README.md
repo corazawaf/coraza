@@ -48,8 +48,6 @@ The Coraza Project maintains implementations and plugins for the following serve
 ## Prerequisites
 
 * Go v1.19+ or tinygo compiler
-* Linux distribution (Debian or Centos recommended) or Mac. Windows not supported yet.
-* Golang compiler v1.18+
 * Linux distribution (Debian or Centos recommended), Windows or Mac.
 
 ## Coraza Core Usage
