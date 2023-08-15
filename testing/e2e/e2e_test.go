@@ -13,10 +13,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/mccutchen/go-httpbin/v2/httpbin"
+
 	"github.com/corazawaf/coraza/v3"
 	txhttp "github.com/corazawaf/coraza/v3/http"
 	"github.com/corazawaf/coraza/v3/http/e2e"
-	"github.com/mccutchen/go-httpbin/v2/httpbin"
 )
 
 func TestE2e(t *testing.T) {
