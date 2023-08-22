@@ -72,7 +72,7 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	if targetLen > br.options.MemoryLimit {
 		if !environment.HasAccessToFS {
 			// TinyGo MemoryLimit should be equal to Limit. Therefore, Write function has been called without Limit check.
-			return 0, errors.New("MemoryLimit reached while writing")
+			return 0, errors.New("memoryLimit reached while writing")
 		} else {
 			if br.writer == nil {
 				br.writer, err = os.CreateTemp(br.options.TmpPath, "body*")

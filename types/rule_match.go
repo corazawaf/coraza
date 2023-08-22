@@ -33,7 +33,7 @@ type MatchedRule interface {
 	URI() string
 	// TransactionID is the transaction ID
 	TransactionID() string
-	// Disruptive is whether this rule will block the request
+	// Disruptive is whether this rule will perform disruptive actions (note also pass, allow, redirect are considered disruptive actions)
 	Disruptive() bool
 	// ServerIPAddress is the address of the server
 	ServerIPAddress() string
