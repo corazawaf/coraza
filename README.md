@@ -162,6 +162,10 @@ To report a security issue, please follow [this link](https://github.com/corazaw
 
 Our vulnerability management team will respond within 3 working days of your report. If the issue is confirmed as a vulnerability, we will open a Security Advisory. This project follows a 90 day disclosure timeline.
 
+## Thanks
+
+* OWASP Coreruleset team for the CRS and their help
+
 ### Coraza on Twitter
 
 * [@corazaio](https://twitter.com/corazaio)
