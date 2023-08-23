@@ -206,7 +206,7 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	}
 	errorWriter := bufio.NewWriter(errorFile)
 	conf = conf.WithErrorCallback(func(rule types.MatchedRule) {
-		msg := rule.ErrorLog()
+		msg := rule.ErrorLog() + "\n"
 		if _, err := io.WriteString(errorWriter, msg); err != nil {
 			t.Fatal(err)
 		}
