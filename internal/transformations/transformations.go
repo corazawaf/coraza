@@ -50,6 +50,7 @@ func init() {
 	Register("removeWhitespace", removeWhitespace)
 	Register("replaceComments", replaceComments)
 	Register("replaceNulls", replaceNulls)
+	Register("reverse", reverse)
 	Register("sha1", sha1T)
 	Register("urlDecode", urlDecode)
 	Register("urlDecodeUni", urlDecodeUni)

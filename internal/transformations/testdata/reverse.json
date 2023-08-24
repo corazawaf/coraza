@@ -1,0 +1,38 @@
+[
+    {
+        "output": "desrever si siht",
+        "name": "reverse",
+        "input": "this is reversed",
+        "type": "tfn",
+        "ret": 0
+    },
+    {
+        "output": "síht sì dèsrèvèr",
+        "name": "reverse",
+        "input": "rèvèrsèd ìs thís",
+        "type": "tfn",
+        "ret": 0
+    },
+    {
+        "output": "esaC\u0000tseT",
+        "name": "reverse",
+        "input": "Test\u0000Case",
+        "type": "tfn",
+        "ret": 0        
+    },
+    {
+        "output": "",
+        "name": "reverse",
+        "input": "",
+        "type": "tfn",
+        "ret": 0
+    },
+    {
+        "output": "a",
+        "name": "reverse",
+        "input": "a",
+        "type": "tfn",
+        "ret": 0
+    }
+
+]

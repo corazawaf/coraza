@@ -8,4 +8,6 @@ package plugintypes
 // If a transformation fails to run it will return the same string
 // and an error, errors are only used for logging, it won't stop
 // the execution of the rule
-type Transformation = func(input string) (string, bool, error)
+// "updated" is used for transformation cache, if true, the cache
+// will be updated
+type Transformation = func(input string) (result string, updated bool, err error)
