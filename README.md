@@ -116,8 +116,8 @@ or as a library by importing:
 "github.com/corazawaf/coraza/v3/http/e2e"
 ```
 
-As a reference for library usage, see [`testing/e2e/e2e_test.go`](.testing/e2e/e2e_test.go).
-Expected directives that have to be loaded and available flags can be found in [`http/e2e/main.go`](./examples/http/e2e/main.go).
+As a reference for library usage, see [`testing/e2e/e2e_test.go`](./testing/e2e/e2e_test.go).
+Expected directives that have to be loaded and available flags can be found in [`http/e2e/cmd/httpe2e/main.go`](./http/e2e/cmd/httpe2e/main.go).
 
 ## Tools
 
