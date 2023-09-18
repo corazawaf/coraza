@@ -24,10 +24,10 @@ type rx struct {
 var _ plugintypes.Operator = (*rx)(nil)
 
 func newRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
-	// (?sm) enables multiline and dotall mode, required by some CRS rules and matching ModSec behavior, see
-	// - https://stackoverflow.com/a/27680233
-	// - https://groups.google.com/g/golang-nuts/c/jiVdamGFU9E
-	data := fmt.Sprintf("(?sm)%s", options.Arguments)
+	// (?s) enables dotall mode, required by some CRS rules and matching ModSec behavior, see
+	// - https://github.com/google/re2/wiki/Syntax
+	// - Flag usage: https://groups.google.com/g/golang-nuts/c/jiVdamGFU9E
+	data := fmt.Sprintf("(?s)%s", options.Arguments)
 
 	if matchesArbitraryBytes(data) {
 		// Use binary regex matcher if expression matches non-utf8 bytes. The binary matcher does
