@@ -22,7 +22,7 @@ require (
 	github.com/magefile/mage v1.15.0
 	github.com/mccutchen/go-httpbin/v2 v2.9.0
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20230725210150-fb29fc3c913e
-	github.com/tidwall/gjson v1.14.4
+	github.com/tidwall/gjson v1.17.0
 	golang.org/x/net v0.11.0
 	golang.org/x/sync v0.3.0
 	rsc.io/binaryregexp v0.2.0
