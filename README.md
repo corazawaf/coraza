@@ -93,13 +93,14 @@ func main() {
 Go build tags can tweak certain functionality at compile-time. These are for advanced use cases only and do not
 have compatibility guarantees across minor versions - use with care.
 
-* coraza.disabled_operators.* - excludes the specified operator from compilation. Particularly useful if overriding
+* `coraza.disabled_operators.*` - excludes the specified operator from compilation. Particularly useful if overriding
 the operator with `plugins.RegisterOperator` to reduce binary size / startup overhead.
 * `coraza.rule.multiphase_valuation` - enables evaluation of rule variables in the phases that they are ready, not
 only the phase the rule is defined for.
 * `memoize_builders` - enables memoization of builders for regex and aho-corasick
 dictionaries to reduce memory consumption in deployments that launch several coraza
 instances. For more context check [this issue](https://github.com/corazawaf/coraza-caddy/issues/76)
+* `no_fs_access` - indicates that the target environment has no access to FS in order to not leverage OS' filesystem related functionality e.g. file body buffers.
 
 ## E2E Testing
 
