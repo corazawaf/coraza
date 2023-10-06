@@ -1,7 +1,7 @@
 name: Fixes dependabot lint
 on:
   pull_request:
-    types: [opened]
+    types: [opened, synchronize]
     branches:
       - main
 jobs:
@@ -17,8 +17,12 @@ jobs:
           cache: true
       - name: Format code
         run: go run mage.go format
+      - name: Check for uncommitted changes
+        id: check-changes
+        uses: mskri/check-uncommitted-changes-action@v1.0.1
       - name: Commit and push changes
+        if: steps.check-changes.outputs.outcome == failure()
         uses: devops-infra/action-commit-push@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          ammend: true
+          commit_message: "chore: run mage format"
