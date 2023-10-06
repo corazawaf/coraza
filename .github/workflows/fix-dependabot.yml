@@ -21,4 +21,4 @@ jobs:
         uses: devops-infra/action-commit-push@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          commit_message: "chore: go mod tidy"
+          ammend: true
