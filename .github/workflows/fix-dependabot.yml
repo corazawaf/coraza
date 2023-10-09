@@ -18,10 +18,10 @@ jobs:
       - name: Format code
         run: go run mage.go format
       - name: Check for uncommitted changes
-        id: check-changes
+        id: check-uncommited
         uses: mskri/check-uncommitted-changes-action@v1.0.1
       - name: Commit and push changes
-        if: steps.check-changes.outputs.outcome == failure()
+        if: steps.check-uncommited.outputs.outcome == failure()
         uses: devops-infra/action-commit-push@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
