@@ -64,7 +64,9 @@ func NewWAF(config WAFConfig) (WAF, error) {
 			waf.AuditEngine = types.AuditEngineOn
 		}
 
-		waf.AuditLogParts = a.parts
+		if len(a.parts) > 0 {
+			waf.AuditLogParts = a.parts
+		}
 
 		if a.writer != nil {
 			waf.SetAuditLogWriter(a.writer)
