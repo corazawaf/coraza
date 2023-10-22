@@ -80,6 +80,13 @@ func TestSetvarEvaluateErrors(t *testing.T) {
 			expectNewVarValue:        "-5",
 		},
 		{
+			name:                     "Numerical operation - with existing negative variable",
+			init:                     "TX.newvar=-5",
+			init2:                    "TX.newvar=+5",
+			expectInvalidSyntaxError: false,
+			expectNewVarValue:        "0",
+		},
+		{
 			name:                     "Numerical operation + with missing (or non-numerical) variable",
 			init:                     "TX.newvar=+%{tx.missingvar}",
 			expectInvalidSyntaxError: true,
