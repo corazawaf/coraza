@@ -229,7 +229,7 @@ func directiveSecResponseBodyAccess(options *DirectiveOptions) error {
 }
 
 // Description: Configures the maximum request body size Coraza will accept for buffering.
-// Default: 134217728 (131072 KB)
+// Default: 1073741824 (1024 MiB)
 // Syntax: SecRequestBodyLimit [LIMIT_IN_BYTES]
 // ---
 // Anything over the limit will be rejected with status code 413 (Request Entity Too Large).
@@ -410,7 +410,7 @@ func directiveSecResponseBodyLimitAction(options *DirectiveOptions) error {
 
 // Description: Configures the maximum response body size that will be accepted for buffering.
 // Syntax: SecResponseBodyLimit [LIMIT_IN_BYTES]
-// Default: 524288 (512 KB)
+// Default: 1073741824 (1024 MiB)
 // ---
 // Anything over this limit will be rejected with status code 500 (Internal Server Error).
 // This setting will not affect the responses with MIME types that are not selected for
@@ -448,7 +448,7 @@ func directiveSecRequestBodyLimitAction(options *DirectiveOptions) error {
 }
 
 // Description: Configures the maximum request body size that Coraza will store in memory.
-// Default: 131072 (128 KB)
+// Default: defaults to RequestBodyLimit
 // Syntax: SecRequestBodyInMemoryLimit [LIMIT_IN_BYTES]
 // ---
 // When a `multipart/form-data` request is being processed, once the in-memory limit is reached,
@@ -876,6 +876,8 @@ func directiveSecUploadDir(options *DirectiveOptions) error {
 	return nil
 }
 
+// Not implemented yet
+//
 // Description: Configures the maximum request body size Coraza will accept for
 // buffering, excluding the size of any files being transported in the request.
 // This directive is useful to reduce susceptibility to DoS attacks when someone is
