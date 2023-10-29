@@ -45,7 +45,7 @@ SecRequestBodyLimit 13107200
 
 SecRequestBodyInMemoryLimit 131072
 
-SecRequestBodyNoFilesLimit 131072
+# SecRequestBodyNoFilesLimit 131072
 
 # What to do if the request body size is above our configured limit.
 # Keep in mind that this setting will automatically be set to ProcessPartial
