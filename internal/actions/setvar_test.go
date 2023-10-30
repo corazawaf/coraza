@@ -57,7 +57,7 @@ func TestSetvarInit(t *testing.T) {
 var invalidSyntaxAtoiError = "invalid syntax"
 var warningKeyNotFoundInCollection = "key not found in collection"
 
-func TestSetvarEvaluateErrors(t *testing.T) {
+func TestSetvarEvaluate(t *testing.T) {
 	tests := []struct {
 		name                     string
 		init                     string
