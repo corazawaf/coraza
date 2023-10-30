@@ -45,6 +45,7 @@ SecRequestBodyLimit 13107200
 
 SecRequestBodyInMemoryLimit 131072
 
+# SecRequestBodyNoFilesLimit is currently not supported by Coraza
 # SecRequestBodyNoFilesLimit 131072
 
 # What to do if the request body size is above our configured limit.
