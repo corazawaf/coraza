@@ -549,37 +549,41 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 		if m, ok := col.(collection.Keyed); ok {
 			matches = m.FindRegex(rv.KeyRx)
 		} else {
-			tx.WAF.Logger.Error().Msg("attempted to use regex with non-selectable collection: " + rv.Variable.Name())
+			panic("attempted to use regex with non-selectable collection: " + rv.Variable.Name())
 		}
 	case rv.KeyStr != "":
 		if m, ok := col.(collection.Keyed); ok {
 			matches = m.FindString(rv.KeyStr)
 		} else {
-			tx.WAF.Logger.Error().Msg("attempted to use string with non-selectable collection: " + rv.Variable.Name())
+			panic("attempted to use string with non-selectable collection: " + rv.Variable.Name())
 		}
 	default:
 		matches = col.FindAll()
 	}
 
-	// in the most common scenario filteredMatches length will be
-	// the same as matches length, so we avoid allocating per result
-	filteredMatches := make([]types.MatchData, 0, len(matches))
-
-	for _, c := range matches {
-		isException := false
-		lkey := strings.ToLower(c.Key())
+	var rmi []int
+	for i, c := range matches {
 		for _, ex := range rv.Exceptions {
+			lkey := strings.ToLower(c.Key())
+			// in case it matches the regex or the keyStr
+			// Since keys are case sensitive we need to check with lower case
 			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || strings.ToLower(ex.KeyStr) == lkey {
-				isException = true
-				break
+				// we remove the exception from the list of values
+				// we tried with standard append, but it fails... let's do some hacking
+				// m2 := append(matches[:i], matches[i+1:]...)
+				rmi = append(rmi, i)
 			}
 		}
-		if !isException {
-			filteredMatches = append(filteredMatches, c)
+	}
+	// we read the list of indexes backwards
+	// then we remove each one of them because of the exceptions
+	for i := len(rmi) - 1; i >= 0; i-- {
+		if len(matches) < rmi[i]+1 {
+			matches = matches[:rmi[i]-1]
+		} else {
+			matches = append(matches[:rmi[i]], matches[rmi[i]+1:]...)
 		}
 	}
-	matches = filteredMatches
-
 	if rv.Count {
 		count := len(matches)
 		matches = []types.MatchData{
