@@ -95,11 +95,13 @@ type NamedCollectionNames struct {
 }
 
 func (c *NamedCollectionNames) FindRegex(key *regexp.Regexp) []types.MatchData {
-	panic("selection operator not supported")
+	// not supported
+	return []types.MatchData{}
 }
 
 func (c *NamedCollectionNames) FindString(key string) []types.MatchData {
-	panic("selection operator not supported")
+	// not supported
+	return []types.MatchData{}
 }
 
 func (c *NamedCollectionNames) FindAll() []types.MatchData {

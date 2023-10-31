@@ -1159,7 +1159,7 @@ func makeTransaction(t testing.TB) *Transaction {
 	data := strings.Join(ht, "\r\n")
 	_, err := tx.ParseRequestReader(strings.NewReader(data))
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	return tx
 }
@@ -1199,7 +1199,7 @@ func makeTransactionMultipart(t *testing.T) *Transaction {
 	data := strings.Join(ht, "\r\n")
 	_, err := tx.ParseRequestReader(strings.NewReader(data))
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	return tx
 }
