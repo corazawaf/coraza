@@ -563,8 +563,7 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 
 	// in the most common scenario filteredMatches length will be
 	// the same as matches length, so we avoid allocating per result
-	filteredMatches := make([]types.MatchData, len(matches))
-	filteredCount := 0
+	filteredMatches := make([]types.MatchData, 0, len(matches))
 
 	for _, c := range matches {
 		isException := false
@@ -576,11 +575,10 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 			}
 		}
 		if !isException {
-			filteredMatches[filteredCount] = c
-			filteredCount++
+			filteredMatches = append(filteredMatches, c)
 		}
 	}
-	matches = filteredMatches[:filteredCount]
+	matches = filteredMatches
 
 	if rv.Count {
 		count := len(matches)
