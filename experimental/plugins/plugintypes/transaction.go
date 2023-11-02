@@ -115,4 +115,10 @@ type TransactionVariables interface {
 	ArgsNames() collection.Collection
 	ArgsGetNames() collection.Collection
 	ArgsPostNames() collection.Collection
+	// TODO(v4: Add these)
+	//  Session() collection.Persistent
+	//  User() collection.Persistent
+	//  IP() collection.Persistent
+	//  Global() collection.Persistent
+	//  Resource() collection.Persistent
 }

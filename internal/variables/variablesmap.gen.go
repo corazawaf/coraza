@@ -198,6 +198,14 @@ func (v RuleVariable) Name() string {
 		return "USERID"
 	case IP:
 		return "IP"
+	case Global:
+		return "GLOBAL"
+	case Resource:
+		return "RESOURCE"
+	case User:
+		return "USER"
+	case Session:
+		return "SESSION"
 	case ResBodyError:
 		return "RES_BODY_ERROR"
 	case ResBodyErrorMsg:
@@ -305,6 +313,10 @@ var rulemapRev = map[string]RuleVariable{
 	"SESSIONID":                        Sessionid,
 	"USERID":                           Userid,
 	"IP":                               IP,
+	"GLOBAL":                           Global,
+	"RESOURCE":                         Resource,
+	"USER":                             User,
+	"SESSION":                          Session,
 	"RES_BODY_ERROR":                   ResBodyError,
 	"RES_BODY_ERROR_MSG":               ResBodyErrorMsg,
 	"RES_BODY_PROCESSOR_ERROR":         ResBodyProcessorError,

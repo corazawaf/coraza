@@ -18,7 +18,7 @@ func TestURLEncode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	v := corazawaf.NewTransactionVariables()
+	v := corazawaf.NewTransactionVariables(nil)
 	m := map[string]string{
 		"a": "1",
 		"b": "2",
