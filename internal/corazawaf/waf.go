@@ -276,10 +276,10 @@ func NewWAF() *WAF {
 		// These defaults are unavoidable as they are zero values for the variables
 		RuleEngine:                types.RuleEngineOn,
 		RequestBodyAccess:         false,
-		RequestBodyLimit:          _1gb,
+		RequestBodyLimit:          134217728, // Hard limit equal to _1gb
 		RequestBodyLimitAction:    types.BodyLimitActionReject,
 		ResponseBodyAccess:        false,
-		ResponseBodyLimit:         _1gb,
+		ResponseBodyLimit:         524288, // Hard limit equal to _1gb
 		auditLogWriter:            logWriter,
 		auditLogWriterInitialized: false,
 		AuditLogWriterConfig:      auditlog.NewConfig(),
