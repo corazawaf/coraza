@@ -342,7 +342,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, collectiveMatc
 		}
 
 		// Expansion of Msg and LogData is postponed here. It allows to run it only if the whole rule/chain
-		// matches and to rely on MATCHED_* variables updated by the chain, not just by the fist rule.
+		// matches and to rely on MATCHED_* variables updated by the chain, not just by the first rule.
 		if !r.MultiMatch {
 			if r.Msg != nil {
 				matchedValues[0].(*corazarules.MatchData).Message_ = r.Msg.Expand(tx)

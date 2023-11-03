@@ -82,6 +82,8 @@ func expandToken(tx plugintypes.TransactionState, token macroToken) string {
 		}
 	}
 
+	// If the variable is known (e.g. TX) but the key is not found, we return the original text
+	tx.DebugLogger().Warn().Str("variable", token.variable.Name()).Str("key", token.key).Msg("key not found in collection, returning the original text")
 	return token.text
 }
 

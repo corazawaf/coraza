@@ -48,6 +48,7 @@ type Transaction struct {
 	interruption *types.Interruption
 
 	// This is used to store log messages
+	// Deprecated since Coraza 3.0.5: this variable is not used, logdata values are stored in the matched rules
 	Logdata string
 
 	// Rules will be skipped after a rule with this SecMarker is found
