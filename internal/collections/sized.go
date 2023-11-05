@@ -5,9 +5,10 @@ package collections
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/corazawaf/coraza/v3/internal/regexp"
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
@@ -32,7 +33,7 @@ func NewSizeCollection(variable variables.RuleVariable, data ...*NamedCollection
 }
 
 // FindRegex returns a slice of MatchData for the regex
-func (c *SizeCollection) FindRegex(*regexp.Regexp) []types.MatchData {
+func (c *SizeCollection) FindRegex(regexp.Regexp) []types.MatchData {
 	return c.FindAll()
 }
 

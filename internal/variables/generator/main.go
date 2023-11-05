@@ -14,9 +14,10 @@ import (
 	"go/types"
 	"log"
 	"os"
-	"regexp"
 	"strings"
 	"text/template"
+
+	"github.com/corazawaf/coraza/v3/internal/regexp"
 )
 
 //go:embed variablesmap.go.tmpl

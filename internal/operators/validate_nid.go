@@ -7,9 +7,10 @@ package operators
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/corazawaf/coraza/v3/internal/regexp"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/memoize"
@@ -19,7 +20,7 @@ type validateNidFunction = func(input string) bool
 
 type validateNid struct {
 	fn validateNidFunction
-	re *regexp.Regexp
+	re regexp.Regexp
 }
 
 var _ plugintypes.Operator = (*validateNid)(nil)
@@ -46,7 +47,7 @@ func newValidateNID(options plugintypes.OperatorOptions) (plugintypes.Operator, 
 		return nil, err
 	}
 
-	return &validateNid{fn: fn, re: re.(*regexp.Regexp)}, nil
+	return &validateNid{fn: fn, re: re.(regexp.Regexp)}, nil
 }
 
 func (o *validateNid) Evaluate(tx plugintypes.TransactionState, value string) bool {

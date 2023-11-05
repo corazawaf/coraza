@@ -4,7 +4,7 @@
 package collection
 
 import (
-	"regexp"
+	"github.com/corazawaf/coraza/v3/internal/regexp"
 
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -37,7 +37,7 @@ type Keyed interface {
 	Get(key string) []string
 
 	// FindRegex returns a slice of MatchData for the regex
-	FindRegex(key *regexp.Regexp) []types.MatchData
+	FindRegex(key regexp.Regexp) []types.MatchData
 
 	// FindString returns a slice of MatchData for the string
 	FindString(key string) []types.MatchData

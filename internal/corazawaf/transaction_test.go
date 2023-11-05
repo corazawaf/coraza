@@ -7,11 +7,12 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"regexp"
 	"runtime/debug"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3/internal/regexp"
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/debuglog"

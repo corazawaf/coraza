@@ -15,8 +15,9 @@ package collections
 
 import (
 	"fmt"
-	"regexp"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3/internal/regexp"
 
 	"github.com/corazawaf/coraza/v3/types/variables"
 )

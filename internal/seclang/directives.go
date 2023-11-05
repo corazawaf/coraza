@@ -9,9 +9,10 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/corazawaf/coraza/v3/internal/regexp"
 
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/auditlog"
@@ -737,7 +738,7 @@ func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 		return err
 	}
 
-	options.WAF.AuditLogRelevantStatus = re.(*regexp.Regexp)
+	options.WAF.AuditLogRelevantStatus = re.(regexp.Regexp)
 	return nil
 }
 

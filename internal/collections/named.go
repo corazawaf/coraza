@@ -5,8 +5,9 @@ package collections
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
+
+	"github.com/corazawaf/coraza/v3/internal/regexp"
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
@@ -94,7 +95,7 @@ type NamedCollectionNames struct {
 	collection *NamedCollection
 }
 
-func (c *NamedCollectionNames) FindRegex(key *regexp.Regexp) []types.MatchData {
+func (c *NamedCollectionNames) FindRegex(key regexp.Regexp) []types.MatchData {
 	panic("selection operator not supported")
 }
 

@@ -9,10 +9,11 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/corazawaf/coraza/v3/internal/regexp"
 
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
@@ -119,7 +120,7 @@ type WAF struct {
 	AuditLogParts types.AuditLogParts
 
 	// Contains the regular expression for relevant status audit logging
-	AuditLogRelevantStatus *regexp.Regexp
+	AuditLogRelevantStatus regexp.Regexp
 
 	auditLogWriter plugintypes.AuditLogWriter
 

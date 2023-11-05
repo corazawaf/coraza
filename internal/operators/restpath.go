@@ -7,8 +7,9 @@ package operators
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
+
+	"github.com/corazawaf/coraza/v3/internal/regexp"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/memoize"
@@ -21,7 +22,7 @@ var rePathTokenRe = regexp.MustCompile(`\{([^\}]+)\}`)
 // It will later transform the path to a regex and assign the variables to
 // ARGS_PATH
 type restpath struct {
-	re *regexp.Regexp
+	re regexp.Regexp
 }
 
 var _ plugintypes.Operator = (*restpath)(nil)
@@ -36,7 +37,7 @@ func newRESTPath(options plugintypes.OperatorOptions) (plugintypes.Operator, err
 	if err != nil {
 		return nil, err
 	}
-	return &restpath{re: re.(*regexp.Regexp)}, nil
+	return &restpath{re: re.(regexp.Regexp)}, nil
 }
 
 func (o *restpath) Evaluate(tx plugintypes.TransactionState, value string) bool {

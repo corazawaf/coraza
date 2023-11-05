@@ -6,11 +6,12 @@ package corazawaf
 import (
 	"fmt"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"unsafe"
+
+	"github.com/corazawaf/coraza/v3/internal/regexp"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
@@ -50,7 +51,7 @@ type ruleVariableException struct {
 
 	// The key for the variable that is going to be requested
 	// If nil, KeyStr is going to be used
-	KeyRx *regexp.Regexp
+	KeyRx regexp.Regexp
 }
 
 // RuleVariable is compiled during runtime by transactions
@@ -65,7 +66,7 @@ type ruleVariableParams struct {
 
 	// The key for the variable that is going to be requested
 	// If nil, KeyStr is going to be used
-	KeyRx *regexp.Regexp
+	KeyRx regexp.Regexp
 
 	// The string key for the variable that is going to be requested
 	// If KeyRx is not nil, KeyStr is ignored
@@ -454,14 +455,14 @@ func (r *Rule) AddAction(name string, action plugintypes.Action) error {
 // it will be used to match the variable, in case of string it will
 // be a fixed match, in case of nil it will match everything
 func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) error {
-	var re *regexp.Regexp
+	var re regexp.Regexp
 	if len(key) > 2 && key[0] == '/' && key[len(key)-1] == '/' {
 		key = key[1 : len(key)-1]
 
 		if vare, err := memoize.Do(key, func() (interface{}, error) { return regexp.Compile(key) }); err != nil {
 			return err
 		} else {
-			re = vare.(*regexp.Regexp)
+			re = vare.(regexp.Regexp)
 		}
 	}
 
@@ -524,13 +525,13 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 // OK: SecRule !ARGS:id "..."
 // ERROR: SecRule !ARGS: "..."
 func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
-	var re *regexp.Regexp
+	var re regexp.Regexp
 	if len(key) > 2 && key[0] == '/' && key[len(key)-1] == '/' {
 		key = key[1 : len(key)-1]
 		if vare, err := memoize.Do(key, func() (interface{}, error) { return regexp.Compile(key) }); err != nil {
 			return err
 		} else {
-			re = vare.(*regexp.Regexp)
+			re = vare.(regexp.Regexp)
 		}
 	}
 	// Prevent sigsev

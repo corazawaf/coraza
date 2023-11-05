@@ -4,8 +4,9 @@
 package collections
 
 import (
-	"regexp"
 	"strings"
+
+	"github.com/corazawaf/coraza/v3/internal/regexp"
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
@@ -67,7 +68,7 @@ func (c *ConcatKeyed) Get(key string) []string {
 }
 
 // FindRegex returns a slice of MatchData for the regex
-func (c *ConcatKeyed) FindRegex(key *regexp.Regexp) []types.MatchData {
+func (c *ConcatKeyed) FindRegex(key regexp.Regexp) []types.MatchData {
 	var res []types.MatchData
 	for _, d := range c.data {
 		res = append(res, replaceVariable(c.variable, d.FindRegex(key))...)

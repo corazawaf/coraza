@@ -7,9 +7,10 @@ package operators
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 	"unicode/utf8"
+
+	"github.com/corazawaf/coraza/v3/internal/regexp"
 
 	"rsc.io/binaryregexp"
 
@@ -18,7 +19,7 @@ import (
 )
 
 type rx struct {
-	re *regexp.Regexp
+	re regexp.Regexp
 }
 
 var _ plugintypes.Operator = (*rx)(nil)
@@ -40,7 +41,7 @@ func newRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &rx{re: re.(*regexp.Regexp)}, nil
+	return &rx{re: re.(regexp.Regexp)}, nil
 }
 
 func (o *rx) Evaluate(tx plugintypes.TransactionState, value string) bool {

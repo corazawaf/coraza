@@ -4,9 +4,10 @@
 package collections
 
 import (
-	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3/internal/regexp"
 
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"

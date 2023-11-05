@@ -4,8 +4,9 @@
 package collections
 
 import (
-	"regexp"
 	"strings"
+
+	"github.com/corazawaf/coraza/v3/internal/regexp"
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
@@ -40,7 +41,7 @@ func (c *Map) Get(key string) []string {
 	return values
 }
 
-func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
+func (c *Map) FindRegex(key regexp.Regexp) []types.MatchData {
 	var result []types.MatchData
 	for k, data := range c.data {
 		if key.MatchString(k) {
