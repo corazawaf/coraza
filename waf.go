@@ -57,21 +57,7 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		}
 	}
 
-	if a := c.auditLog; a != nil {
-		if a.relevantOnly {
-			waf.AuditEngine = types.AuditEngineRelevantOnly
-		} else {
-			waf.AuditEngine = types.AuditEngineOn
-		}
-
-		if len(a.parts) > 0 {
-			waf.AuditLogParts = a.parts
-		}
-
-		if a.writer != nil {
-			waf.SetAuditLogWriter(a.writer)
-		}
-	}
+	populateAuditLog(waf, c)
 
 	if err := waf.InitAuditLogWriter(); err != nil {
 		return nil, fmt.Errorf("invalid WAF config from audit log: %w", err)
@@ -110,6 +96,26 @@ func NewWAF(config WAFConfig) (WAF, error) {
 	}
 
 	return wafWrapper{waf: waf}, nil
+}
+
+func populateAuditLog(waf *corazawaf.WAF, c *wafConfig) {
+	if c.auditLog == nil {
+		return
+	}
+
+	if c.auditLog.relevantOnly {
+		waf.AuditEngine = types.AuditEngineRelevantOnly
+	} else {
+		waf.AuditEngine = types.AuditEngineOn
+	}
+
+	if len(c.auditLog.parts) > 0 {
+		waf.AuditLogParts = c.auditLog.parts
+	}
+
+	if c.auditLog.writer != nil {
+		waf.SetAuditLogWriter(c.auditLog.writer)
+	}
 }
 
 type wafWrapper struct {
