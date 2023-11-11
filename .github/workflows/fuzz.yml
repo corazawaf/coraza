@@ -11,7 +11,7 @@ jobs:
     name: Fuzz tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions/setup-go@v1
         with:
           go-version: '>=1.19.0'
