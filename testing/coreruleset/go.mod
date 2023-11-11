@@ -7,7 +7,7 @@ require (
 	github.com/corazawaf/coraza-coreruleset v0.0.0-20230330101229-43b851256042
 	github.com/corazawaf/coraza/v3 v3.0.4
 	github.com/coreruleset/go-ftw v0.4.9
-	github.com/rs/zerolog v1.28.0
+	github.com/rs/zerolog v1.31.0
 )
 
 require (
@@ -26,7 +26,7 @@ require (
 	github.com/kyokomi/emoji v2.2.4+incompatible // indirect
 	github.com/magefile/mage v1.15.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.16 // indirect
+	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
