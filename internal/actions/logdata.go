@@ -37,7 +37,7 @@ func (a *logdataFn) Init(r plugintypes.RuleMetadata, data string) error {
 }
 
 func (a *logdataFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
-	tx.(*corazawaf.Transaction).Logdata = r.(*corazawaf.Rule).LogData.Expand(tx)
+	// logdata macro expansion is performed after all other actions have been evaluated (and potentially all the needed variables have been set)
 }
 
 func (a *logdataFn) Type() plugintypes.ActionType {

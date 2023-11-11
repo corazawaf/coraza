@@ -237,7 +237,7 @@ func TestCtl(t *testing.T) {
 				}
 			},
 		},
-		"responseBodyLimit successfuly": {
+		"responseBodyLimit successfully": {
 			input: "responseBodyLimit=12345",
 			prepareTX: func(tx *corazawaf.Transaction) {
 				tx.ProcessRequestHeaders()

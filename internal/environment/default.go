@@ -6,5 +6,6 @@
 
 package environment
 
-// HasAccessToFS indicates whether the build environment is TinyGo.
+// HasAccessToFS indicates whether the runtime target environment has access
+// to OS' filesystem or not.
 var HasAccessToFS = true

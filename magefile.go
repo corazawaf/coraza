@@ -20,8 +20,7 @@ import (
 
 var addLicenseVersion = "v1.1.1" // https://github.com/google/addlicense/releases
 var gosImportsVer = "v0.3.7"     // https://github.com/rinchsan/gosimports/releases
-
-var errRunGoModTidy = errors.New("go.mod/sum not formatted, commit changes")
+var golangCILintVer = "v1.54.0"  // https://github.com/golangci/golangci-lint/releases
 var errNoGitDir = errors.New("no .git directory found")
 var errUpdateGeneratedFiles = errors.New("generated files need to be updated")
 
@@ -96,10 +95,6 @@ func Lint() error {
 		return nil
 	}); err != nil {
 		return err
-	}
-
-	if sh.Run("git", "diff", "--exit-code", "**/go.mod", "**/go.sum", "go.work", "go.work.sum") != nil {
-		return errRunGoModTidy
 	}
 
 	return nil

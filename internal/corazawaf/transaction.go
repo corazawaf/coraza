@@ -48,6 +48,7 @@ type Transaction struct {
 	interruption *types.Interruption
 
 	// This is used to store log messages
+	// Deprecated since Coraza 3.0.5: this variable is not used, logdata values are stored in the matched rules
 	Logdata string
 
 	// Rules will be skipped after a rule with this SecMarker is found
@@ -561,29 +562,25 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 		matches = col.FindAll()
 	}
 
-	var rmi []int
-	for i, c := range matches {
+	// in the most common scenario filteredMatches length will be
+	// the same as matches length, so we avoid allocating per result
+	filteredMatches := make([]types.MatchData, 0, len(matches))
+
+	for _, c := range matches {
+		isException := false
+		lkey := strings.ToLower(c.Key())
 		for _, ex := range rv.Exceptions {
-			lkey := strings.ToLower(c.Key())
-			// in case it matches the regex or the keyStr
-			// Since keys are case sensitive we need to check with lower case
 			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || strings.ToLower(ex.KeyStr) == lkey {
-				// we remove the exception from the list of values
-				// we tried with standard append, but it fails... let's do some hacking
-				// m2 := append(matches[:i], matches[i+1:]...)
-				rmi = append(rmi, i)
+				isException = true
+				break
 			}
 		}
-	}
-	// we read the list of indexes backwards
-	// then we remove each one of them because of the exceptions
-	for i := len(rmi) - 1; i >= 0; i-- {
-		if len(matches) < rmi[i]+1 {
-			matches = matches[:rmi[i]-1]
-		} else {
-			matches = append(matches[:rmi[i]], matches[rmi[i]+1:]...)
+		if !isException {
+			filteredMatches = append(filteredMatches, c)
 		}
 	}
+	matches = filteredMatches
+
 	if rv.Count {
 		count := len(matches)
 		matches = []types.MatchData{
