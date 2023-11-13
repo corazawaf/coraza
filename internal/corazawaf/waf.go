@@ -281,8 +281,14 @@ func NewWAF() *WAF {
 		auditLogWriter:            logWriter,
 		auditLogWriterInitialized: false,
 		AuditLogWriterConfig:      auditlog.NewConfig(),
-		Logger:                    logger,
-		ArgumentLimit:             1000,
+		AuditLogParts: types.AuditLogParts{
+			types.AuditLogPartRequestHeaders,
+			types.AuditLogPartRequestBody,
+			types.AuditLogPartResponseHeaders,
+			types.AuditLogPartAuditLogTrailer,
+		},
+		Logger:        logger,
+		ArgumentLimit: 1000,
 	}
 
 	if environment.HasAccessToFS {
