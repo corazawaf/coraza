@@ -10,10 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/internal/regexp"
-
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/memoize"
+	"github.com/corazawaf/coraza/v3/internal/regexp"
 )
 
 type validateNidFunction = func(input string) bool

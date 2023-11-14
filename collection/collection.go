@@ -5,7 +5,6 @@ package collection
 
 import (
 	"github.com/corazawaf/coraza/v3/internal/regexp"
-
 	"github.com/corazawaf/coraza/v3/types"
 )
 

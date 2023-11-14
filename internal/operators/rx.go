@@ -10,12 +10,11 @@ import (
 	"strconv"
 	"unicode/utf8"
 
-	"github.com/corazawaf/coraza/v3/internal/regexp"
-
 	"rsc.io/binaryregexp"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/memoize"
+	"github.com/corazawaf/coraza/v3/internal/regexp"
 )
 
 type rx struct {

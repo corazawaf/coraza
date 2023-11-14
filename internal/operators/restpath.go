@@ -9,10 +9,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/internal/regexp"
-
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/memoize"
+	"github.com/corazawaf/coraza/v3/internal/regexp"
 )
 
 var rePathTokenRe = regexp.MustCompile(`\{([^\}]+)\}`)
