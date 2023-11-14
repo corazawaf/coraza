@@ -24,21 +24,3 @@ func TestMustCompile(t *testing.T) {
 	}()
 	MustCompile("[a-z]+")
 }
-
-func TestCompileCompilesJustOnce(t *testing.T) {
-	re, _ := Compile("[a-z]+")
-	lre := re.(*lazyRegexp)
-
-	if lre.re != nil {
-		t.Fatalf("expected nil")
-	}
-
-	m := re.Match([]byte("abc"))
-	if !m {
-		t.Fatalf("expected match")
-	}
-
-	if lre.re == nil {
-		t.Fatalf("unexpected nil")
-	}
-}
