@@ -202,7 +202,7 @@ func TestReadFrom(t *testing.T) {
 
 type testPusher struct{}
 
-func (x *testPusher) Push(target string, opts *http.PushOptions) error {
+func (x *testPusher) Push(string, *http.PushOptions) error {
 	return nil
 }
 
