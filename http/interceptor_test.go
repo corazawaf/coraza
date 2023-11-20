@@ -307,11 +307,9 @@ func TestInterface(t *testing.T) {
 	t.Run("http.Hijacker and http.Pusher", func(t *testing.T) {
 		rw, _ := wrap(struct {
 			http.ResponseWriter
-			http.Flusher
 			http.Hijacker
 			http.Pusher
 		}{
-			res,
 			res,
 			&testHijacker{},
 			&testPusher{},
