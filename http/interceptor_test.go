@@ -124,26 +124,50 @@ func TestFlush(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tx := waf.NewTransaction()
-	req, _ := http.NewRequest("GET", "", nil)
-	res := httptest.NewRecorder()
-	rw, responseProcessor := wrap(res, req, tx)
-	rw.WriteHeader(204)
-	rw.(http.Flusher).Flush()
-	// although we called WriteHeader, status code should be applied until
-	// responseProcessor is called.
-	if unwanted, have := 204, res.Code; unwanted == have {
-		t.Errorf("unexpected status code %d", have)
-	}
+	t.Run("WriteHeader before Flush", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		req, _ := http.NewRequest("GET", "", nil)
+		res := httptest.NewRecorder()
+		rw, responseProcessor := wrap(res, req, tx)
+		rw.WriteHeader(204)
+		rw.(http.Flusher).Flush()
+		// although we called WriteHeader, status code should be applied until
+		// responseProcessor is called.
+		if unwanted, have := 204, res.Code; unwanted == have {
+			t.Errorf("unexpected status code %d", have)
+		}
 
-	err = responseProcessor(tx, req)
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
+		err = responseProcessor(tx, req)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
 
-	if want, have := 204, res.Code; want != have {
-		t.Errorf("unexpected status code, want %d, have %d", want, have)
-	}
+		if want, have := 204, res.Code; want != have {
+			t.Errorf("unexpected status code, want %d, have %d", want, have)
+		}
+	})
+
+	t.Run("Flush before WriteHeader", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		req, _ := http.NewRequest("GET", "", nil)
+		res := httptest.NewRecorder()
+		rw, responseProcessor := wrap(res, req, tx)
+		rw.(http.Flusher).Flush()
+		rw.WriteHeader(204)
+
+		if want, have := 200, res.Code; want != have {
+			t.Errorf("unexpected status code, want %d, have %d", want, have)
+		}
+
+		err = responseProcessor(tx, req)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+
+		if want, have := 200, res.Code; want != have {
+			t.Errorf("unexpected status code, want %d, have %d", want, have)
+		}
+	})
 }
 
 type testReaderFrom struct {

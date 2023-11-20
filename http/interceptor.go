@@ -113,8 +113,9 @@ func (i *rwInterceptor) ReadFrom(r io.Reader) (n int64, err error) {
 }
 
 func (i *rwInterceptor) Flush() {
-	// coraza middleware always needs to buffer the entire request, response cycle
-	// we can not flush early
+	if !i.wroteHeader {
+		i.WriteHeader(i.statusCode)
+	}
 }
 
 type responseWriter interface {
