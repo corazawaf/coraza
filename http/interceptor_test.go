@@ -86,7 +86,10 @@ func TestReadFrom(t *testing.T) {
 	res := httptest.NewRecorder()
 	rw, _ := wrap(res, req, tx)
 	rw.WriteHeader(204)
-	rw.(io.ReaderFrom).ReadFrom(bytes.NewBuffer([]byte("hello world")))
+	_, err = rw.(io.ReaderFrom).ReadFrom(bytes.NewBuffer([]byte("hello world")))
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 
 	if want, have := 204, res.Code; want != have {
 		t.Errorf("unexpected status code, want %d, have %d", want, have)
