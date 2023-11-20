@@ -8,6 +8,7 @@
 package http
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -42,5 +43,34 @@ func TestWriteHeader(t *testing.T) {
 	// value.
 	if want, have := 204, res.Code; want != have {
 		t.Errorf("unexpected status code, want %d, have %d", want, have)
+	}
+}
+
+func TestWriteString(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx := waf.NewTransaction()
+	req, _ := http.NewRequest("GET", "", nil)
+	res := httptest.NewRecorder()
+	rw, responseProcessor := wrap(res, req, tx)
+	n, err := rw.(io.StringWriter).WriteString("hello")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if n != 5 {
+		t.Errorf("unexpected number of bytes written, want 5, have %d", n)
+	}
+
+	err = responseProcessor(tx, req)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	if want, have := "hello", res.Body.String(); want != have {
+		t.Errorf("unexpected response body, want %s, have %s", want, have)
 	}
 }
