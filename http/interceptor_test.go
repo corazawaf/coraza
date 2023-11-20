@@ -8,8 +8,10 @@
 package http
 
 import (
+	"bufio"
 	"bytes"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -204,7 +206,13 @@ func (x *testPusher) Push(target string, opts *http.PushOptions) error {
 	return nil
 }
 
-func TestPusher(t *testing.T) {
+type testHijacker struct{}
+
+func (x *testHijacker) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	return nil, nil, nil
+}
+
+func TestInterface(t *testing.T) {
 	waf, err := coraza.NewWAF(coraza.NewWAFConfig())
 	if err != nil {
 		t.Fatal(err)
@@ -214,38 +222,85 @@ func TestPusher(t *testing.T) {
 	req, _ := http.NewRequest("GET", "", nil)
 	res := httptest.NewRecorder()
 
-	type responseWriter interface {
-		http.ResponseWriter
-		http.Flusher
-	}
+	t.Run("default", func(t *testing.T) {
+		rw, _ := wrap(struct {
+			http.ResponseWriter
+		}{
+			res,
+		}, req, tx)
 
-	resWithPush := struct {
-		responseWriter
-		http.Pusher
-	}{
-		res,
-		&testPusher{},
-	}
+		_, ok := rw.(http.Pusher)
+		if ok {
+			t.Errorf("expected the wrapped ResponseWriter to not implement http.Pusher")
+		}
 
-	rw, responseProcessor := wrap(resWithPush, req, tx)
-	rw.WriteHeader(204)
-	err = rw.(http.Pusher).Push("http://example.com", nil)
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
+		_, ok = rw.(http.Hijacker)
+		if ok {
+			t.Errorf("expected the wrapped ResponseWriter to not implement http.Hijacker")
+		}
+	})
 
-	// although we called WriteHeader, status code should be applied until
-	// responseProcessor is called.
-	if unwanted, have := 204, res.Code; unwanted == have {
-		t.Errorf("unexpected status code %d", have)
-	}
+	t.Run("http.Pusher", func(t *testing.T) {
+		rw, _ := wrap(struct {
+			http.ResponseWriter
+			http.Pusher
+		}{
+			res,
+			&testPusher{},
+		}, req, tx)
 
-	err = responseProcessor(tx, req)
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
+		_, ok := rw.(http.Pusher)
+		if !ok {
+			t.Errorf("expected the wrapped ResponseWriter to implement http.Pusher")
+		}
 
-	if want, have := 204, res.Code; want != have {
-		t.Errorf("unexpected status code, want %d, have %d", want, have)
-	}
+		_, ok = rw.(http.Hijacker)
+		if ok {
+			t.Errorf("expected the wrapped ResponseWriter to not implement http.Hijacker")
+		}
+	})
+
+	t.Run("http.Hijacker", func(t *testing.T) {
+		rw, _ := wrap(struct {
+			http.ResponseWriter
+			http.Hijacker
+		}{
+			res,
+			&testHijacker{},
+		}, req, tx)
+
+		_, ok := rw.(http.Hijacker)
+		if !ok {
+			t.Errorf("expected the wrapped ResponseWriter to implement http.Hijacker")
+		}
+
+		_, ok = rw.(http.Pusher)
+		if ok {
+			t.Errorf("expected the wrapped ResponseWriter to not implement http.Pusher")
+		}
+	})
+
+	t.Run("http.Hijacker and http.Pusher", func(t *testing.T) {
+		rw, _ := wrap(struct {
+			http.ResponseWriter
+			http.Flusher
+			http.Hijacker
+			http.Pusher
+		}{
+			res,
+			res,
+			&testHijacker{},
+			&testPusher{},
+		}, req, tx)
+
+		_, ok := rw.(http.Hijacker)
+		if !ok {
+			t.Errorf("expected the wrapped ResponseWriter to implement http.Hijacker")
+		}
+
+		_, ok = rw.(http.Pusher)
+		if !ok {
+			t.Errorf("expected the wrapped ResponseWriter to implement http.Pusher")
+		}
+	})
 }

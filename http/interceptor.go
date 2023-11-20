@@ -186,10 +186,6 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 	)
 
 	switch {
-	case !isHijacker && !isPusher:
-		return struct {
-			responseWriter
-		}{i}, responseProcessor
 	case !isHijacker && isPusher:
 		return struct {
 			responseWriter
