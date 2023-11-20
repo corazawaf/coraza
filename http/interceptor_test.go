@@ -229,7 +229,11 @@ func TestPusher(t *testing.T) {
 
 	rw, responseProcessor := wrap(resWithPush, req, tx)
 	rw.WriteHeader(204)
-	rw.(http.Pusher).Push("http://example.com", nil)
+	err = rw.(http.Pusher).Push("http://example.com", nil)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
 	// although we called WriteHeader, status code should be applied until
 	// responseProcessor is called.
 	if unwanted, have := 204, res.Code; unwanted == have {
