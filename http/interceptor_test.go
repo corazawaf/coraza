@@ -8,6 +8,8 @@
 package http
 
 import (
+	"bytes"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -40,6 +42,52 @@ func TestWriteHeader(t *testing.T) {
 
 	// although we called a second time with 205, status code should remain the first
 	// value.
+	if want, have := 204, res.Code; want != have {
+		t.Errorf("unexpected status code, want %d, have %d", want, have)
+	}
+}
+
+func TestFlush(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx := waf.NewTransaction()
+	req, _ := http.NewRequest("GET", "", nil)
+	res := httptest.NewRecorder()
+	rw, responseProcessor := wrap(res, req, tx)
+	rw.WriteHeader(204)
+	rw.(http.Flusher).Flush()
+	// although we called WriteHeader, status code should be applied until
+	// responseProcessor is called.
+	if unwanted, have := 204, res.Code; unwanted == have {
+		t.Errorf("unexpected status code %d", have)
+	}
+
+	err = responseProcessor(tx, req)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	if want, have := 204, res.Code; want != have {
+		t.Errorf("unexpected status code, want %d, have %d", want, have)
+	}
+}
+
+func TestReadFrom(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx := waf.NewTransaction()
+	req, _ := http.NewRequest("GET", "", nil)
+	res := httptest.NewRecorder()
+	rw, _ := wrap(res, req, tx)
+	rw.WriteHeader(204)
+	rw.(io.ReaderFrom).ReadFrom(bytes.NewBuffer([]byte("hello world")))
+
 	if want, have := 204, res.Code; want != have {
 		t.Errorf("unexpected status code, want %d, have %d", want, have)
 	}
