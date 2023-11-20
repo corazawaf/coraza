@@ -114,7 +114,7 @@ func (i *rwInterceptor) ReadFrom(r io.Reader) (n int64, err error) {
 
 func (i *rwInterceptor) Flush() {
 	if !i.wroteHeader {
-		i.WriteHeader(i.statusCode)
+		i.WriteHeader(http.StatusOK)
 	}
 }
 
