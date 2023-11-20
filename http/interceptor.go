@@ -104,6 +104,11 @@ func (i *rwInterceptor) Write(b []byte) (int, error) {
 	return i.w.Write(b)
 }
 
+// WriteString buffers the response body until the request body limit is reach or an
+// interruption is triggered, this buffer is later used to analyse the body in
+// the response processor.
+// If the body isn't accessible or the mime type isn't processable, the response
+// body is being written to the delegate response writer directly.
 func (i *rwInterceptor) WriteString(s string) (n int, err error) {
 	return i.Write([]byte(s))
 }
