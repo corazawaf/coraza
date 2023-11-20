@@ -117,7 +117,7 @@ func (i *rwInterceptor) Header() http.Header {
 	return i.w.Header()
 }
 
-type stringResponseWriter interface {
+type responseWriter interface {
 	http.ResponseWriter
 	io.StringWriter
 }
