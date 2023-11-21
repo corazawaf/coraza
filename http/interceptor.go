@@ -109,7 +109,7 @@ func (i *rwInterceptor) Header() http.Header {
 }
 
 func (i *rwInterceptor) ReadFrom(r io.Reader) (n int64, err error) {
-	return io.Copy(i, r)
+	return io.Copy(struct{ io.Writer }{i}, r)
 }
 
 func (i *rwInterceptor) Flush() {
