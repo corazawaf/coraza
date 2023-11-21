@@ -214,6 +214,11 @@ func TestReadFrom(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 
+	_, err = rw.(io.ReaderFrom).ReadFrom(struct{ io.Reader }{bytes.NewBuffer([]byte("hello world"))})
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
 	err = responseProcessor(tx, req)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
