@@ -9,8 +9,9 @@ import (
 
 // ParseQuery parses the URL-encoded query string and returns the corresponding map.
 // It takes separators as parameter, for example: & or ; or &;
+// Setting urlUnescape true performs a non-strict version of net/url.QueryUnescape on keys and values.
 // It returns error if the query string is malformed.
-func ParseQuery(query string, separator byte) map[string][]string {
+func ParseQuery(query string, separator byte, urlUnescape bool) map[string][]string {
 	m := make(map[string][]string)
 	for query != "" {
 		key := query
@@ -26,8 +27,10 @@ func ParseQuery(query string, separator byte) map[string][]string {
 		if i := strings.IndexByte(key, '='); i >= 0 {
 			key, value = key[:i], key[i+1:]
 		}
-		key = QueryUnescape(key)
-		value = QueryUnescape(value)
+		if urlUnescape {
+			key = QueryUnescape(key)
+			value = QueryUnescape(value)
+		}
 		m[key] = append(m[key], value)
 	}
 	return m

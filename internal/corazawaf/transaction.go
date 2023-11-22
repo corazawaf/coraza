@@ -117,6 +117,11 @@ type Transaction struct {
 	transformationCache map[transformationKey]*transformationValue
 }
 
+const (
+	URLUnescape   = true
+	noURLUnescape = false
+)
+
 func (tx *Transaction) ID() string {
 	return tx.id
 }
@@ -321,7 +326,7 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 		}
 	case "cookie":
 		// Cookies use the same syntax as GET params but with semicolon (;) separator
-		values := urlutil.ParseQuery(value, ';')
+		values := urlutil.ParseQuery(value, ';', noURLUnescape)
 		for k, vr := range values {
 			for _, v := range vr {
 				tx.variables.requestCookies.Add(k, v)
@@ -535,7 +540,7 @@ func (tx *Transaction) GetStopWatch() string {
 }
 
 // GetField Retrieve data from collections applying exceptions
-// In future releases we may remove de exceptions slice and
+// In future releases we may remove the exceptions slice and
 // make it easier to use
 func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 	col := tx.Collection(rv.Variable)
@@ -633,7 +638,7 @@ func (tx *Transaction) ProcessConnection(client string, cPort int, server string
 
 // ExtractGetArguments transforms an url encoded string to a map and creates ARGS_GET
 func (tx *Transaction) ExtractGetArguments(uri string) {
-	data := urlutil.ParseQuery(uri, '&')
+	data := urlutil.ParseQuery(uri, '&', URLUnescape)
 	for k, vs := range data {
 		for _, v := range vs {
 			tx.AddGetRequestArgument(k, v)
