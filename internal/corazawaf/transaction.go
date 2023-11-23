@@ -326,6 +326,7 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 		}
 	case "cookie":
 		// Cookies use the same syntax as GET params but with semicolon (;) separator
+		// noURLUnescape is used to avoid implicitly performing an URL decode on the cookies
 		values := urlutil.ParseQuery(value, ';', noURLUnescape)
 		for k, vr := range values {
 			for _, v := range vr {
