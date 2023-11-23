@@ -16,7 +16,7 @@ import (
 type urlencodedBodyProcessor struct {
 }
 
-const URLUnescape = true
+const urlUnescape = true
 
 func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.TransactionVariables, options plugintypes.BodyProcessorOptions) error {
 	buf := new(strings.Builder)
@@ -25,7 +25,7 @@ func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.T
 	}
 
 	b := buf.String()
-	values := urlutil.ParseQuery(b, '&', URLUnescape)
+	values := urlutil.ParseQuery(b, '&', urlUnescape)
 	argsCol := v.ArgsPost()
 	for k, vs := range values {
 		argsCol.Set(k, vs)
