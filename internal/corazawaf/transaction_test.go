@@ -806,6 +806,35 @@ func TestHeaderSetters(t *testing.T) {
 	}
 }
 
+func TestCookiesNotUrldecoded(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	fullCookie := "abc=%7Bd+e+f%7D;hij=%7Bklm%7D"
+	expectedUrlencodedAbcCookieValue := "%7Bd+e+f%7D"
+	unexpectedUrldencodedAbcCookieValue := "{d e f}"
+	tx.AddRequestHeader("cookie", fullCookie)
+	c := tx.variables.requestCookies.Get("abc")[0]
+	if c != expectedUrlencodedAbcCookieValue {
+		if c == unexpectedUrldencodedAbcCookieValue {
+			t.Errorf("failed to set cookie, unexpected urldecoding. Got: %q, expected: %q", unexpectedUrldencodedAbcCookieValue, expectedUrlencodedAbcCookieValue)
+		} else {
+			t.Errorf("failed to set cookie, got %q", c)
+		}
+	}
+	if tx.variables.requestHeaders.Get("cookie")[0] != fullCookie {
+		t.Errorf("failed to set request header, got: %q, expected: %q", tx.variables.requestHeaders.Get("cookie")[0], fullCookie)
+	}
+	if !utils.InSlice("cookie", collectionValues(t, tx.variables.requestHeadersNames)) {
+		t.Error("failed to set header name", collectionValues(t, tx.variables.requestHeadersNames))
+	}
+	if !utils.InSlice("abc", collectionValues(t, tx.variables.requestCookiesNames)) {
+		t.Error("failed to set cookie name")
+	}
+	if err := tx.Close(); err != nil {
+		t.Error(err)
+	}
+}
+
 func collectionValues(t *testing.T, col collection.Collection) []string {
 	t.Helper()
 	var values []string
