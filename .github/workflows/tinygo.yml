@@ -23,16 +23,16 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go-version }}
           cache: true
 
       - name: setup tinygo
-        uses: acifani/setup-tinygo@v1
+        uses: acifani/setup-tinygo@v2
         with:
           tinygo-version: 0.27.0
 
