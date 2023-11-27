@@ -91,7 +91,7 @@ type WAF struct {
 	UploadDir string
 
 	// Request body in memory limit excluding the size of any files being transported in the request.
-	// TODO: SecRequestBodyNoFilesLimit directive is retrieving the value, but no logic based on it is implemented.
+	// TODO: SecRequestBodyNoFilesLimit directive is retrieving the value, but no logic based on it is implemented. See https://github.com/corazawaf/coraza/issues/896
 	RequestBodyNoFilesLimit int64
 
 	RequestBodyLimitAction types.BodyLimitAction
