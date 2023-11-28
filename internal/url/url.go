@@ -18,7 +18,7 @@ func ParseQuery(query string, separator byte) map[string][]string {
 	return doParseQuery(query, separator, urlUnescape)
 }
 
-// Sibling of ParseQuery, but without performing URL unescape of keys and values.
+// ParseQueryWithoutUnescape is a sibling of ParseQuery, but without performing URL unescape of keys and values.
 func ParseQueryWithoutUnescape(query string, separator byte) map[string][]string {
 	return doParseQuery(query, separator, noUrlUnescape)
 }
