@@ -34,7 +34,7 @@ var queryUnescapePayloads = map[string]string{
 
 func TestQueryUnescape(t *testing.T) {
 	for k, v := range queryUnescapePayloads {
-		if out := QueryUnescape(k); out != v {
+		if out := queryUnescape(k); out != v {
 			t.Errorf("Error parsing %q, got %q and expected %q", k, out, v)
 		}
 	}
@@ -43,7 +43,7 @@ func TestQueryUnescape(t *testing.T) {
 func BenchmarkQueryUnescape(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		for k := range queryUnescapePayloads {
-			QueryUnescape(k)
+			queryUnescape(k)
 		}
 	}
 }

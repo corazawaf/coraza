@@ -14,8 +14,6 @@ const (
 
 // ParseQuery parses the URL-encoded query string and returns the corresponding map.
 // It takes separators as parameter, for example: & or ; or &;
-// Setting urlUnescape true performs a non-strict version of net/url.QueryUnescape on keys and values.
-// It returns error if the query string is malformed.
 func ParseQuery(query string, separator byte) map[string][]string {
 	return doParseQuery(query, separator, urlUnescape)
 }
@@ -42,16 +40,16 @@ func doParseQuery(query string, separator byte, urlUnescape bool) map[string][]s
 			key, value = key[:i], key[i+1:]
 		}
 		if urlUnescape {
-			key = QueryUnescape(key)
-			value = QueryUnescape(value)
+			key = queryUnescape(key)
+			value = queryUnescape(value)
 		}
 		m[key] = append(m[key], value)
 	}
 	return m
 }
 
-// QueryUnescape is a non-strict version of net/url.QueryUnescape.
-func QueryUnescape(input string) string {
+// queryUnescape is a non-strict version of net/url.QueryUnescape.
+func queryUnescape(input string) string {
 	ilen := len(input)
 	res := strings.Builder{}
 	res.Grow(ilen)
