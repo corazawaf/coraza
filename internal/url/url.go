@@ -7,11 +7,25 @@ import (
 	"strings"
 )
 
+const (
+	urlUnescape   = true
+	noUrlUnescape = false
+)
+
 // ParseQuery parses the URL-encoded query string and returns the corresponding map.
 // It takes separators as parameter, for example: & or ; or &;
 // Setting urlUnescape true performs a non-strict version of net/url.QueryUnescape on keys and values.
 // It returns error if the query string is malformed.
-func ParseQuery(query string, separator byte, urlUnescape bool) map[string][]string {
+func ParseQuery(query string, separator byte) map[string][]string {
+	return doParseQuery(query, separator, urlUnescape)
+}
+
+// Sibling of ParseQuery, but without performing URL unescape of keys and values.
+func ParseQueryWithoutUnescape(query string, separator byte) map[string][]string {
+	return doParseQuery(query, separator, noUrlUnescape)
+}
+
+func doParseQuery(query string, separator byte, urlUnescape bool) map[string][]string {
 	m := make(map[string][]string)
 	for query != "" {
 		key := query

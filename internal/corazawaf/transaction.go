@@ -117,11 +117,6 @@ type Transaction struct {
 	transformationCache map[transformationKey]*transformationValue
 }
 
-const (
-	urlUnescape   = true
-	noUrlUnescape = false
-)
-
 func (tx *Transaction) ID() string {
 	return tx.id
 }
@@ -327,7 +322,7 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 	case "cookie":
 		// Cookies use the same syntax as GET params but with semicolon (;) separator
 		// noUrlUnescape is used to avoid implicitly performing an URL decode on the cookies
-		values := urlutil.ParseQuery(value, ';', noUrlUnescape)
+		values := urlutil.ParseQueryWithoutUnescape(value, ';')
 		for k, vr := range values {
 			for _, v := range vr {
 				tx.variables.requestCookies.Add(k, v)
@@ -639,7 +634,7 @@ func (tx *Transaction) ProcessConnection(client string, cPort int, server string
 
 // ExtractGetArguments transforms an url encoded string to a map and creates ARGS_GET
 func (tx *Transaction) ExtractGetArguments(uri string) {
-	data := urlutil.ParseQuery(uri, '&', urlUnescape)
+	data := urlutil.ParseQuery(uri, '&')
 	for k, vs := range data {
 		for _, v := range vs {
 			tx.AddGetRequestArgument(k, v)
