@@ -30,6 +30,8 @@ var queryUnescapePayloads = map[string]string{
 	"s% ample":  "s% ample",  // non-strict sample
 	"s%ssample": "s%ssample", // non-strict sample
 	"s%00ample": "s\x00ample",
+	"%7B%%7d":   "{%}",
+	"%7B+%+%7d": "{ % }",
 }
 
 func TestQueryUnescape(t *testing.T) {
