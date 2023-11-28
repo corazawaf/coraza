@@ -15,19 +15,28 @@ func TestUrlPayloads(t *testing.T) {
 	}
 }
 
+var queryUnescapePayloads = map[string]string{
+	"sample":    "sample",
+	"s%20ample": "s ample",
+	"s+ample":   "s ample",
+	"s%2fample": "s/ample",
+	"s% ample":  "s% ample",  // non-strict sample
+	"s%ssample": "s%ssample", // non-strict sample
+	"s%00ample": "s\x00ample",
+}
+
 func TestQueryUnescape(t *testing.T) {
-	payloads := map[string]string{
-		"sample":    "sample",
-		"s%20ample": "s ample",
-		"s+ample":   "s ample",
-		"s%2fample": "s/ample",
-		"s% ample":  "s% ample",  // non-strict sample
-		"s%ssample": "s%ssample", // non-strict sample
-		"s%00ample": "s\x00ample",
-	}
-	for k, v := range payloads {
+	for k, v := range queryUnescapePayloads {
 		if out := QueryUnescape(k); out != v {
 			t.Errorf("Error parsing %q, got %q and expected %q", k, out, v)
+		}
+	}
+}
+
+func BenchmarkQueryUnescape(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		for k := range queryUnescapePayloads {
+			QueryUnescape(k)
 		}
 	}
 }
