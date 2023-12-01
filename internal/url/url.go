@@ -7,20 +7,15 @@ import (
 	"strings"
 )
 
-const (
-	urlUnescape   = true
-	noUrlUnescape = false
-)
-
 // ParseQuery parses the URL-encoded query string and returns the corresponding map.
 // It takes separators as parameter, for example: & or ; or &;
 func ParseQuery(query string, separator byte) map[string][]string {
-	return doParseQuery(query, separator, urlUnescape)
+	return doParseQuery(query, separator, true)
 }
 
 // ParseQueryWithoutUnescape is a sibling of ParseQuery, but without performing URL unescape of keys and values.
 func ParseQueryWithoutUnescape(query string, separator byte) map[string][]string {
-	return doParseQuery(query, separator, noUrlUnescape)
+	return doParseQuery(query, separator, false)
 }
 
 func doParseQuery(query string, separator byte, urlUnescape bool) map[string][]string {
