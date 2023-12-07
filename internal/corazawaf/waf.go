@@ -153,7 +153,7 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	tx.id = id
 	tx.matchedRules = []types.MatchedRule{}
 	tx.interruption = nil
-	tx.Logdata = ""
+	tx.Logdata = "" // Deprecated, this variable is not used. Logdata for each matched rule is stored in the MatchData field.
 	tx.SkipAfter = ""
 	tx.AuditEngine = w.AuditEngine
 	tx.AuditLogParts = w.AuditLogParts
@@ -281,8 +281,14 @@ func NewWAF() *WAF {
 		auditLogWriter:            logWriter,
 		auditLogWriterInitialized: false,
 		AuditLogWriterConfig:      auditlog.NewConfig(),
-		Logger:                    logger,
-		ArgumentLimit:             1000,
+		AuditLogParts: types.AuditLogParts{
+			types.AuditLogPartRequestHeaders,
+			types.AuditLogPartRequestBody,
+			types.AuditLogPartResponseHeaders,
+			types.AuditLogPartAuditLogTrailer,
+		},
+		Logger:        logger,
+		ArgumentLimit: 1000,
 	}
 
 	if environment.HasAccessToFS {

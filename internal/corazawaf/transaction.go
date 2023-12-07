@@ -48,6 +48,7 @@ type Transaction struct {
 	interruption *types.Interruption
 
 	// This is used to store log messages
+	// Deprecated since Coraza 3.0.5: this variable is not used, logdata values are stored in the matched rules
 	Logdata string
 
 	// Rules will be skipped after a rule with this SecMarker is found
@@ -487,10 +488,16 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 		Log_:             r.Log,
 		MatchedDatas_:    mds,
 	}
-	// Populate MatchedRule Disruptive_ field only if the Engine is capable of performing disruptive actions
+	// Populate MatchedRule disruption related fields only if the Engine is capable of performing disruptive actions
 	if tx.RuleEngine == types.RuleEngineOn {
+		var exists bool
 		for _, a := range r.actions {
+			// There can be only at most one disruptive action per rule
 			if a.Function.Type() == plugintypes.ActionTypeDisruptive {
+				mr.DisruptiveAction_, exists = corazarules.DisruptiveActionMap[a.Name]
+				if !exists {
+					mr.DisruptiveAction_ = corazarules.DisruptiveActionUnknown
+				}
 				mr.Disruptive_ = true
 				break
 			}
@@ -555,29 +562,25 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 		matches = col.FindAll()
 	}
 
-	var rmi []int
-	for i, c := range matches {
+	// in the most common scenario filteredMatches length will be
+	// the same as matches length, so we avoid allocating per result
+	filteredMatches := make([]types.MatchData, 0, len(matches))
+
+	for _, c := range matches {
+		isException := false
+		lkey := strings.ToLower(c.Key())
 		for _, ex := range rv.Exceptions {
-			lkey := strings.ToLower(c.Key())
-			// in case it matches the regex or the keyStr
-			// Since keys are case sensitive we need to check with lower case
 			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || strings.ToLower(ex.KeyStr) == lkey {
-				// we remove the exception from the list of values
-				// we tried with standard append, but it fails... let's do some hacking
-				// m2 := append(matches[:i], matches[i+1:]...)
-				rmi = append(rmi, i)
+				isException = true
+				break
 			}
 		}
-	}
-	// we read the list of indexes backwards
-	// then we remove each one of them because of the exceptions
-	for i := len(rmi) - 1; i >= 0; i-- {
-		if len(matches) < rmi[i]+1 {
-			matches = matches[:rmi[i]-1]
-		} else {
-			matches = append(matches[:rmi[i]], matches[rmi[i]+1:]...)
+		if !isException {
+			filteredMatches = append(filteredMatches, c)
 		}
 	}
+	matches = filteredMatches
+
 	if rv.Count {
 		count := len(matches)
 		matches = []types.MatchData{

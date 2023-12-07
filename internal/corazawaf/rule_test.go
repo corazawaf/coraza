@@ -95,7 +95,8 @@ func (*dummyFlowAction) Init(_ plugintypes.RuleMetadata, _ string) error {
 }
 
 func (*dummyFlowAction) Evaluate(_ plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
-	tx.(*Transaction).Logdata = "flow action triggered"
+	// SkipAfter is used in a improper way, just for testing purposes ensuring that the action has been enforced
+	tx.(*Transaction).SkipAfter = "flow action triggered"
 }
 
 func (*dummyFlowAction) Type() plugintypes.ActionType {
@@ -116,7 +117,7 @@ func TestFlowActionIfDetectionOnlyEngine(t *testing.T) {
 	if len(matchdata) != 1 {
 		t.Errorf("Expected 1 matchdata, got %d", len(matchdata))
 	}
-	if tx.Logdata != "flow action triggered" {
+	if tx.SkipAfter != "flow action triggered" {
 		t.Errorf("Expected flow action triggered with DetectionOnly engine")
 	}
 }
@@ -128,7 +129,7 @@ func (*dummyNonDisruptiveAction) Init(_ plugintypes.RuleMetadata, _ string) erro
 }
 
 func (*dummyNonDisruptiveAction) Evaluate(_ plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
-	tx.(*Transaction).Logdata = "action enforced"
+	tx.(*Transaction).SkipAfter = "action enforced"
 }
 
 func (*dummyNonDisruptiveAction) Type() plugintypes.ActionType {
@@ -142,7 +143,7 @@ func TestMatchVariableRunsActionTypeNondisruptive(t *testing.T) {
 	action := &dummyNonDisruptiveAction{}
 	_ = rule.AddAction("dummyNonDisruptiveAction", action)
 	rule.matchVariable(tx, md)
-	if tx.Logdata != "action enforced" {
+	if tx.SkipAfter != "action enforced" {
 		t.Errorf("Expected non disruptive action to be enforced during matchVariable")
 	}
 }

@@ -31,6 +31,10 @@ import (
 type nativeFormatter struct{}
 
 func (nativeFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
+	if len(al.Parts()) == 0 {
+		return nil, nil
+	}
+
 	boundaryPrefix := fmt.Sprintf("--%s-", utils.RandomString(10))
 
 	var res strings.Builder
@@ -56,31 +60,36 @@ func (nativeFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 			// Content-Length: 6
 			_, _ = fmt.Fprintf(
 				&res,
-				"%s %s %s\n",
+				"\n%s %s %s",
 				al.Transaction().Request().Method(),
 				al.Transaction().Request().URI(),
 				al.Transaction().Request().Protocol(),
 			)
 			for k, vv := range al.Transaction().Request().Headers() {
 				for _, v := range vv {
+					res.WriteByte('\n')
 					res.WriteString(k)
 					res.WriteString(": ")
 					res.WriteString(v)
-					res.WriteByte('\n')
 				}
 			}
 		case types.AuditLogPartRequestBody:
-			// b=test
-			res.WriteString(al.Transaction().Request().Body())
+			if body := al.Transaction().Request().Body(); body != "" {
+				res.WriteByte('\n')
+				res.WriteString(body)
+			}
 		case types.AuditLogPartIntermediaryResponseBody:
-			res.WriteString(al.Transaction().Response().Body())
+			if body := al.Transaction().Response().Body(); body != "" {
+				res.WriteByte('\n')
+				res.WriteString(al.Transaction().Response().Body())
+			}
 		case types.AuditLogPartResponseHeaders:
 			for k, vv := range al.Transaction().Response().Headers() {
 				for _, v := range vv {
+					res.WriteByte('\n')
 					res.WriteString(k)
 					res.WriteString(": ")
 					res.WriteString(v)
-					res.WriteByte('\n')
 				}
 			}
 		case types.AuditLogPartAuditLogTrailer:
@@ -91,11 +100,11 @@ func (nativeFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 			// Producer: ModSecurity for Apache/2.9.1 (http://www.modsecurity.org/).
 			// Server: Apache
 			// Engine-Mode: "ENABLED"
-			_, _ = fmt.Fprintf(&res, "Stopwatch: %s\nResponse-Body-Transformed: %s\nProducer: %s\nServer: %s", "", "", "", "")
+			_, _ = fmt.Fprintf(&res, "\nStopwatch: %s\nResponse-Body-Transformed: %s\nProducer: %s\nServer: %s", "", "", "", "")
 		case types.AuditLogPartRulesMatched:
 			for _, r := range al.Messages() {
-				res.WriteString(r.Data().Raw())
 				res.WriteByte('\n')
+				res.WriteString(r.Data().Raw())
 			}
 		}
 		res.WriteByte('\n')

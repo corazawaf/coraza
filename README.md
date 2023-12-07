@@ -47,7 +47,7 @@ The Coraza Project maintains implementations and plugins for the following serve
 
 ## Prerequisites
 
-* Golang compiler v1.18+
+* Go v1.19+ or tinygo compiler
 * Linux distribution (Debian or Centos recommended), Windows or Mac.
 
 ## Coraza Core Usage
@@ -95,13 +95,14 @@ func main() {
 Go build tags can tweak certain functionality at compile-time. These are for advanced use cases only and do not
 have compatibility guarantees across minor versions - use with care.
 
-* coraza.disabled_operators.* - excludes the specified operator from compilation. Particularly useful if overriding
+* `coraza.disabled_operators.*` - excludes the specified operator from compilation. Particularly useful if overriding
 the operator with `plugins.RegisterOperator` to reduce binary size / startup overhead.
 * `coraza.rule.multiphase_valuation` - enables evaluation of rule variables in the phases that they are ready, not
 only the phase the rule is defined for.
 * `memoize_builders` - enables memoization of builders for regex and aho-corasick
 dictionaries to reduce memory consumption in deployments that launch several coraza
 instances. For more context check [this issue](https://github.com/corazawaf/coraza-caddy/issues/76)
+* `no_fs_access` - indicates that the target environment has no access to FS in order to not leverage OS' filesystem related functionality e.g. file body buffers.
 
 ## E2E Testing
 
@@ -118,8 +119,8 @@ or as a library by importing:
 "github.com/corazawaf/coraza/v3/http/e2e"
 ```
 
-As a reference for library usage, see [`testing/e2e/e2e_test.go`](.testing/e2e/e2e_test.go).
-Expected directives that have to be loaded and available flags can be found in [`http/e2e/main.go`](./examples/http/e2e/main.go).
+As a reference for library usage, see [`testing/e2e/e2e_test.go`](./testing/e2e/e2e_test.go).
+Expected directives that have to be loaded and available flags can be found in [`http/e2e/cmd/httpe2e/main.go`](./http/e2e/cmd/httpe2e/main.go).
 
 ## Tools
 
