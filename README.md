@@ -165,6 +165,7 @@ Our vulnerability management team will respond within 3 working days of your rep
 ## Thanks
 
 * OWASP Coreruleset team for the CRS and their help
+* Ivan Ristić for creating ModSecurity
 
 ### Coraza on Twitter
 
