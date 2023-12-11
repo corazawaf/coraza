@@ -10,7 +10,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/collections"
-	"github.com/corazawaf/coraza/v3/internal/url"
+	urlutil "github.com/corazawaf/coraza/v3/internal/url"
 )
 
 type urlencodedBodyProcessor struct {
@@ -23,7 +23,7 @@ func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.T
 	}
 
 	b := buf.String()
-	values := url.ParseQuery(b, '&')
+	values := urlutil.ParseQuery(b, '&')
 	argsCol := v.ArgsPost()
 	for k, vs := range values {
 		argsCol.Set(k, vs)
