@@ -10,17 +10,81 @@ import (
 	"testing"
 )
 
-var b64DecodeTests = []string{
-	"VGVzdENhc2U=",
-	"P.HNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==",
-	"VGVzdABDYXNl",
+var b64DecodeTests = []struct {
+	name     string
+	input    string
+	expected string
+}{
+	{
+		name:     "Valid",
+		input:    "VGVzdENhc2U=",
+		expected: "TestCase",
+	},
+	{
+		name:     "Valid with \u0000",
+		input:    "VGVzdABDYXNl",
+		expected: "Test\x00Case",
+	},
+	{
+		name:     "Valid without padding",
+		input:    "VGVzdENhc2U",
+		expected: "TestCase",
+	},
+	{
+		name:     "Valid without longer padding",
+		input:    "PA==",
+		expected: "<",
+	},
+	{
+		name:     "valid <TEST>",
+		input:    "PFRFU1Q+",
+		expected: "<TEST>",
+	},
+	{
+		name:     "decoded up to the space (invalid caracter)",
+		input:    "PFR FU1Q+",
+		expected: "<T",
+	},
+	{
+		name:     "decoded up to the dot (invalid caracter)",
+		input:    "P.HNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==",
+		expected: "",
+	},
+	{
+		name:     "decoded up to the dot (invalid caracter)",
+		input:    "PHNjcmlwd.D5hbGVydCgxKTwvc2NyaXB0Pg==",
+		expected: "<scrip",
+	},
+	{
+		name:     "decoded up to the dot (invalid caracter)",
+		input:    "PHNjcmlwdD.5hbGVydCgxKTwvc2NyaXB0Pg==",
+		expected: "<script",
+	},
+	{
+		name:     "decoded up to the dash (invalid caracter for base64.RawStdEncoding)",
+		input:    "PFRFU1Q-",
+		expected: "<TEST",
+	},
 }
 
+func TestBase64Decode(t *testing.T) {
+	for _, tt := range b64DecodeTests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual, _, err := base64decode(tt.input)
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			if actual != tt.expected {
+				t.Errorf("Expected %q, but got %q", tt.expected, actual)
+			}
+		})
+	}
+}
 func BenchmarkB64Decode(b *testing.B) {
 	for _, tt := range b64DecodeTests {
-		b.Run(tt, func(b *testing.B) {
+		b.Run(tt.input, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				_, _, err := base64decode(tt)
+				_, _, err := base64decode(tt.input)
 				if err != nil {
 					b.Error(err)
 				}
@@ -31,7 +95,7 @@ func BenchmarkB64Decode(b *testing.B) {
 
 func FuzzB64Decode(f *testing.F) {
 	for _, tc := range b64DecodeTests {
-		f.Add(tc)
+		f.Add(tc.input)
 	}
 	f.Fuzz(func(t *testing.T, tc string) {
 		data, _, err := base64decode(tc)
