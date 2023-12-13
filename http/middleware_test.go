@@ -101,8 +101,7 @@ SecRule &REQUEST_HEADERS:Transfer-Encoding "!@eq 0" "id:1,phase:1,deny"
 	}
 	if it == nil {
 		t.Fatal("Expected interruption")
-	}
-	if it.RuleID != 1 {
+	} else if it.RuleID != 1 {
 		t.Fatalf("Expected rule 1 to be triggered, got rule %d", it.RuleID)
 	}
 	if err := tx.Close(); err != nil {

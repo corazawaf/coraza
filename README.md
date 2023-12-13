@@ -58,32 +58,34 @@ Coraza can be used as a library for your Go program to implement a security midd
 package main
 
 import (
- "fmt"
- "github.com/corazawaf/coraza/v3"
+	"fmt"
+
+	"github.com/corazawaf/coraza/v3"
 )
 
 func main() {
- // First we initialize our waf and our seclang parser
- waf, err := coraza.NewWAF(coraza.NewWAFConfig().
-  WithDirectives(`SecRule REMOTE_ADDR "@rx .*" "id:1,phase:1,deny,status:403"`))
- // Now we parse our rules
- if err != nil {
-  fmt.Println(err)
- }
+	// First we initialize our waf and our seclang parser
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
+		WithDirectives(`SecRule REMOTE_ADDR "@rx .*" "id:1,phase:1,deny,status:403"`))
+	// Now we parse our rules
+	if err != nil {
+		fmt.Println(err)
+	}
 
- // Then we create a transaction and assign some variables
-    tx := waf.NewTransaction()
- defer func() {
-  tx.ProcessLogging()
-  tx.Close()
- }()
- tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 12345)
+	// Then we create a transaction and assign some variables
+	tx := waf.NewTransaction()
+	defer func() {
+		tx.ProcessLogging()
+		tx.Close()
+	}()
+	tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 12345)
 
- // Finally we process the request headers phase, which may return an interruption
- if it := tx.ProcessRequestHeaders(); it != nil {
-  fmt.Printf("Transaction was interrupted with status %d\n", it.Status)
- }
+	// Finally we process the request headers phase, which may return an interruption
+	if it := tx.ProcessRequestHeaders(); it != nil {
+		fmt.Printf("Transaction was interrupted with status %d\n", it.Status)
+	}
 }
+
 ```
 
 [Examples/http-server](./examples/http-server/) provides an example to practice with Coraza.
@@ -132,8 +134,8 @@ Coraza only requires Go for development. You can run `mage.go` to issue developm
 
 See the list of commands
 
-```shell
-go run mage.go -l
+```
+$ go run mage.go -l
 Targets:
   check        runs lint and tests.
   coverage     runs tests with coverage and race detector enabled.
@@ -163,8 +165,8 @@ Our vulnerability management team will respond within 3 working days of your rep
 
 ## Thanks
 
-* Modsecurity team for creating ModSecurity
 * OWASP Coreruleset team for the CRS and their help
+* Ivan Ristić for creating ModSecurity
 
 ### Coraza on Twitter
 
