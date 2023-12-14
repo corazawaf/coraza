@@ -20,7 +20,7 @@ require (
 	github.com/corazawaf/libinjection-go v0.1.2
 	github.com/foxcpp/go-mockdns v1.0.0
 	github.com/magefile/mage v1.15.0
-	github.com/mccutchen/go-httpbin/v2 v2.12.0
+	github.com/mccutchen/go-httpbin/v2 v2.13.1
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20230725210150-fb29fc3c913e
 	github.com/tidwall/gjson v1.17.0
 	golang.org/x/net v0.19.0
