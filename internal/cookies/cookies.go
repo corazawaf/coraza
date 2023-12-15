@@ -26,6 +26,10 @@ func ParseCookies(rawCookies string) map[string][]string {
 		}
 		name, val, _ := strings.Cut(part, "=")
 		name = textproto.TrimString(name)
+		// if name is empty (eg: "Cookie:   =foo;") skip it
+		if name == "" {
+			continue
+		}
 		cookies[name] = append(cookies[name], val)
 	}
 	return cookies

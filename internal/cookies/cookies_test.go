@@ -62,8 +62,13 @@ func TestParseCookies(t *testing.T) {
 		},
 		{
 			name: "EmptyCookie",
-			args: args{rawCookies: "test1=value1;;test2=value2"},
-			want: map[string][]string{"test1": {"value1"}, "test2": {"value2"}},
+			args: args{rawCookies: ";;foo=bar"},
+			want: map[string][]string{"foo": {"bar"}},
+		},
+		{
+			name: "EmptyName",
+			args: args{rawCookies: "=bar;"},
+			want: map[string][]string{},
 		},
 		{
 			name: "MultipleEqualsInValues",
