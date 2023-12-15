@@ -1,9 +1,35 @@
 package cookies
 
 import (
-	"reflect"
 	"testing"
 )
+
+func equalMaps(map1 map[string][]string, map2 map[string][]string) bool {
+	if len(map1) != len(map2) {
+		return false
+	}
+
+	// Iterate through the key-value pairs of the first map
+	for key, slice1 := range map1 {
+		// Check if the key exists in the second map
+		slice2, ok := map2[key]
+		if !ok {
+			return false
+		}
+
+		// Compare the values of the corresponding keys
+		for i, val1 := range slice1 {
+			val2 := slice2[i]
+
+			// Compare the elements
+			if val1 != val2 {
+				return false
+			}
+		}
+	}
+
+	return true
+}
 
 func TestParseCookies(t *testing.T) {
 	type args struct {
@@ -52,7 +78,8 @@ func TestParseCookies(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := ParseCookies(tt.args.rawCookies); !reflect.DeepEqual(got, tt.want) {
+			got := ParseCookies(tt.args.rawCookies)
+			if !equalMaps(got, tt.want) {
 				t.Errorf("ParseCookies() = %v, want %v", got, tt.want)
 			}
 		})
