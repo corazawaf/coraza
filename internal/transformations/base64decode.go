@@ -21,8 +21,10 @@ func base64decode(data string) (string, bool, error) {
 		// and perform a partial decoding up to that point
 		if corrErr, ok := err.(base64.CorruptInputError); ok {
 			illegalCharPos := int(corrErr)
-			// Forgiving call to DecodeString, decoding is performed up to the illegal characther
-			// If an error occurs, dec will still contain the decoded string up to the error
+			// Forgiving call (no error check) to DecodeString. Decoding is performed truncating
+			// the input string to the first error index. If a new decoding error occurs,
+			// it will not be about an illegal character but a malformed encoding of the trailing
+			// character because of the truncation. The dec will still contain a best effort decoded string
 			dec, _ = base64.RawStdEncoding.DecodeString(dataNoPadding[:illegalCharPos])
 		} else {
 			return data, false, nil

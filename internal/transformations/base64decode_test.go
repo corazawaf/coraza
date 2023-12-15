@@ -41,27 +41,32 @@ var b64DecodeTests = []struct {
 		expected: "<TEST>",
 	},
 	{
-		name:     "decoded up to the space (invalid caracter)",
+		name:     "Malformed base64 encoding",
+		input:    "PHNjcmlwd",
+		expected: "<scrip",
+	},
+	{
+		name:     "decoded up to the space (invalid character)",
 		input:    "PFR FU1Q+",
 		expected: "<T",
 	},
 	{
 		name:     "decoded up to the dot (invalid caracter)",
 		input:    "P.HNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==",
-		expected: "",
+		expected: "", // Only the P character does not result in a printable character conversion.
 	},
 	{
-		name:     "decoded up to the dot (invalid caracter)",
+		name:     "decoded up to the dot (invalid character)",
 		input:    "PHNjcmlwd.D5hbGVydCgxKTwvc2NyaXB0Pg==",
 		expected: "<scrip",
 	},
 	{
-		name:     "decoded up to the dot (invalid caracter)",
+		name:     "decoded up to the dot (invalid character)",
 		input:    "PHNjcmlwdD.5hbGVydCgxKTwvc2NyaXB0Pg==",
 		expected: "<script",
 	},
 	{
-		name:     "decoded up to the dash (invalid caracter for base64.RawStdEncoding)",
+		name:     "decoded up to the dash (invalid character for base64.RawStdEncoding)",
 		input:    "PFRFU1Q-",
 		expected: "<TEST",
 	},
