@@ -835,6 +835,28 @@ func TestCookiesNotUrldecoded(t *testing.T) {
 	}
 }
 
+func TestMultipleCookiesWithSpaceBetweenThem(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	multipleCookies := "cookie1=value1; cookie2=value2;    cookie1=value2"
+	tx.AddRequestHeader("cookie", multipleCookies)
+	v11 := tx.variables.requestCookies.Get("cookie1")[0]
+	if v11 != "value1" {
+		t.Errorf("failed to set cookie, got %q", v11)
+	}
+	v12 := tx.variables.requestCookies.Get("cookie1")[1]
+	if v12 != "value2" {
+		t.Errorf("failed to set cookie, got %q", v12)
+	}
+	v2 := tx.variables.requestCookies.Get("cookie2")[0]
+	if v2 != "value2" {
+		t.Errorf("failed to set cookie, got %q", v2)
+	}
+	if err := tx.Close(); err != nil {
+		t.Error(err)
+	}
+}
+
 func collectionValues(t *testing.T, col collection.Collection) []string {
 	t.Helper()
 	var values []string
