@@ -5,29 +5,6 @@ package transformations
 
 import "strings"
 
-// // base64decode decodes a Base64-encoded string.
-// func base64decode(data string) (string, bool, error) {
-// 	// RawStdEncoding.DecodeString accepts and requires an unpadded string as input
-// 	// https://stackoverflow.com/questions/31971614/base64-encode-decode-without-padding-on-golang-appengine
-// 	dataNoPadding := strings.TrimRight(data, "=")
-// 	dec, err := base64.RawStdEncoding.DecodeString(dataNoPadding)
-// 	if err != nil {
-// 		// If the error is of type CorruptInputError, we can get the position of the illegal character
-// 		// and perform a partial decoding up to that point
-// 		if corrErr, ok := err.(base64.CorruptInputError); ok {
-// 			illegalCharPos := int(corrErr)
-// 			// Forgiving call (no error check) to DecodeString. Decoding is performed truncating
-// 			// the input string to the first error index. If a new decoding error occurs,
-// 			// it will not be about an illegal character but a malformed encoding of the trailing
-// 			// character because of the truncation. The dec will still contain a best effort decoded string
-// 			dec, _ = base64.RawStdEncoding.DecodeString(dataNoPadding[:illegalCharPos])
-// 		} else {
-// 			return data, false, nil
-// 		}
-// 	}
-// 	return stringsutil.WrapUnsafe(dec), true, nil
-// }
-
 var base64DecMap = []byte{
 	127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
 	127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
@@ -45,9 +22,9 @@ var base64DecMap = []byte{
 }
 
 // base64decode decodes a Base64-encoded string.
-// Important: We cannot use the golang base64 package because it does not
-// support mixed content like RAW+BASE64+RAW
-// This implementations supports base64 between non-base64 content
+// Padding is optional.
+// Partial decoding is returned up to the first invalid character (if any).
+// New line characters (\r and \n) are ignored.
 func base64decode(data string) (string, bool, error) {
 	res := doBase64decode(data)
 	return res, true, nil
@@ -64,7 +41,7 @@ func doBase64decode(src string) string {
 	dst.Grow(slen)
 
 	for ; srcc < slen; srcc++ {
-		// If invalid characther or padding reached, we stop decoding
+		// If invalid character or padding reached, we stop decoding
 		if src[srcc] == '=' || src[srcc] == ' ' || src[srcc] > 127 || base64DecMap[src[srcc]] == 127 {
 			break
 		}
