@@ -18,3 +18,5 @@ coraza-waf
 __debug_bin
 
 build/
+
+go.work.sum

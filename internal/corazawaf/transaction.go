@@ -321,7 +321,8 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 		}
 	case "cookie":
 		// Cookies use the same syntax as GET params but with semicolon (;) separator
-		values := urlutil.ParseQuery(value, ';')
+		// WithoutUnescape is used to avoid implicitly performing an URL decode on the cookies
+		values := urlutil.ParseQueryWithoutUnescape(value, ';')
 		for k, vr := range values {
 			for _, v := range vr {
 				tx.variables.requestCookies.Add(k, v)
@@ -535,7 +536,7 @@ func (tx *Transaction) GetStopWatch() string {
 }
 
 // GetField Retrieve data from collections applying exceptions
-// In future releases we may remove de exceptions slice and
+// In future releases we may remove the exceptions slice and
 // make it easier to use
 func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 	col := tx.Collection(rv.Variable)
