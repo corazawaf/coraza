@@ -41,6 +41,11 @@ func TestParseCookies(t *testing.T) {
 		want map[string][]string
 	}{
 		{
+			name: "EmptyString",
+			args: args{rawCookies: "  "},
+			want: map[string][]string{},
+		},
+		{
 			name: "SimpleCookie",
 			args: args{rawCookies: "test=test_value"},
 			want: map[string][]string{"test": {"test_value"}},

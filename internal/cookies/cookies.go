@@ -11,11 +11,11 @@ import (
 func ParseCookies(rawCookies string) map[string][]string {
 	cookies := make(map[string][]string)
 
-	if len(rawCookies) == 0 {
+	rawCookies = textproto.TrimString(rawCookies)
+
+	if rawCookies == "" {
 		return cookies
 	}
-
-	rawCookies = textproto.TrimString(rawCookies)
 
 	var part string
 	for len(rawCookies) > 0 { // continue since we have rest
