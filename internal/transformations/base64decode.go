@@ -36,20 +36,26 @@ func doBase64decode(src string) string {
 		return src
 	}
 
-	var n, x, srcc int
+	var n, x int
 	var dst strings.Builder
 	dst.Grow(slen)
 
-	for ; srcc < slen; srcc++ {
+	for i := 0; i < slen; i++ {
+		currChar := src[i]
 		// If invalid character or padding reached, we stop decoding
-		if src[srcc] == '=' || src[srcc] == ' ' || src[srcc] > 127 || base64DecMap[src[srcc]] == 127 {
+		if currChar == '=' || currChar == ' ' || currChar > 127 {
 			break
 		}
-		if src[srcc] == '\r' || src[srcc] == '\n' {
+		decodedChar := base64DecMap[currChar]
+		// Another condition of invalid character
+		if decodedChar == 127 {
+			break
+		}
+		if currChar == '\r' || currChar == '\n' {
 			continue
 		}
 
-		x = (x << 6) | int(base64DecMap[src[srcc]]&0x3F)
+		x = (x << 6) | int(decodedChar&0x3F)
 		n++
 		if n == 4 {
 			dst.WriteByte(byte(x >> 16))

@@ -51,7 +51,7 @@ var b64DecodeTests = []struct {
 		expected: "<T",
 	},
 	{
-		name:     "decoded up to the dot (invalid caracter)",
+		name:     "decoded up to the dot (invalid character)",
 		input:    "P.HNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==",
 		expected: "", // Only the P character does not result in a printable character conversion.
 	},
@@ -66,7 +66,7 @@ var b64DecodeTests = []struct {
 		expected: "<script",
 	},
 	{
-		name:     "decoded up to the dash (invalid character for base64.RawStdEncoding)",
+		name:     "decoded up to the dash (invalid character for base64, only valid for Base64url)",
 		input:    "PFRFU1Q-",
 		expected: "<TEST",
 	},
