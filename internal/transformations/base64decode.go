@@ -42,6 +42,10 @@ func doBase64decode(src string) string {
 
 	for i := 0; i < slen; i++ {
 		currChar := src[i]
+		// new line characters are ignored.
+		if currChar == '\r' || currChar == '\n' {
+			continue
+		}
 		// If invalid character or padding reached, we stop decoding
 		if currChar == '=' || currChar == ' ' || currChar > 127 {
 			break
@@ -50,9 +54,6 @@ func doBase64decode(src string) string {
 		// Another condition of invalid character
 		if decodedChar == 127 {
 			break
-		}
-		if currChar == '\r' || currChar == '\n' {
-			continue
 		}
 
 		x = (x << 6) | int(decodedChar&0x3F)
