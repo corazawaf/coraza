@@ -70,6 +70,93 @@ var b64DecodeTests = []struct {
 		input:    "PFRFU1Q-",
 		expected: "<TEST",
 	},
+	// The following tests are from the golang base64 decoder tests
+	// Source: https://github.com/golang/go/blob/master/src/encoding/base64/base64_test.go
+	{
+		name:     "golang test - RFC 3548 examples",
+		input:    "FPucA9l+",
+		expected: "\x14\xfb\x9c\x03\xd9\x7e",
+	},
+	{
+		name:     "golang test - RFC 3548 examples",
+		input:    "FPucA9k=",
+		expected: "\x14\xfb\x9c\x03\xd9",
+	},
+	{
+		name:     "golang test - RFC 3548 examples",
+		input:    "FPucAw==",
+		expected: "\x14\xfb\x9c\x03",
+	},
+	{
+		name:     "golang test - RFC 4648 examples",
+		input:    "",
+		expected: "",
+	},
+	{
+		name:     "golang test - RFC 4648 examples",
+		input:    "Zg==",
+		expected: "f",
+	},
+	{
+		name:     "golang test - RFC 4648 examples",
+		input:    "Zm8=",
+		expected: "fo",
+	},
+	{
+		name:     "golang test - RFC 4648 examples",
+		input:    "Zm9v",
+		expected: "foo",
+	},
+	{
+		name:     "golang test - RFC 4648 examples",
+		input:    "Zm9vYg==",
+		expected: "foob",
+	},
+	{
+		name:     "golang test - RFC 4648 examples",
+		input:    "Zm9vYmE=",
+		expected: "fooba",
+	},
+	{
+		name:     "golang test - RFC 4648 examples",
+		input:    "Zm9vYmFy",
+		expected: "foobar",
+	},
+	{
+		name:     "golang test - Wikipedia examples",
+		input:    "c3VyZS4=",
+		expected: "sure.",
+	},
+	{
+		name:     "golang test - Wikipedia examples",
+		input:    "c3VyZQ==",
+		expected: "sure",
+	},
+	{
+		name:     "golang test - Wikipedia examples",
+		input:    "c3Vy",
+		expected: "sur",
+	},
+	{
+		name:     "golang test - Wikipedia examples",
+		input:    "c3U=",
+		expected: "su",
+	},
+	{
+		name:     "golang test - Wikipedia examples",
+		input:    "bGVhc3VyZS4=",
+		expected: "leasure.",
+	},
+	{
+		name:     "golang test - Wikipedia examples",
+		input:    "ZWFzdXJlLg==",
+		expected: "easure.",
+	},
+	{
+		name:     "golang test - Wikipedia examples",
+		input:    "YXN1cmUu",
+		expected: "asure.",
+	},
 }
 
 func TestBase64Decode(t *testing.T) {
