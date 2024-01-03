@@ -25,6 +25,9 @@ var base64DecMap = []byte{
 // Padding is optional.
 // Partial decoding is returned up to the first invalid character (if any).
 // New line characters (\r and \n) are ignored.
+// Note: a custom base64 decoder is used in order to return partial decoding when an error arises. It
+// would be possible to use the standard library only relying on undocumented behaviors of the decoder.
+// For more context, see https://github.com/corazawaf/coraza/pull/940
 func base64decode(data string) (string, bool, error) {
 	res := doBase64decode(data)
 	return res, true, nil
