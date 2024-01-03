@@ -71,7 +71,7 @@ var b64DecodeTests = []struct {
 		expected: "<TEST",
 	},
 	// The following tests are from the golang base64 decoder tests
-	// Source: https://github.com/golang/go/blob/master/src/encoding/base64/base64_test.go
+	// Source: https://github.com/golang/go/blob/c95fe91d0715dc0a8d55ac80a80f383c3635548b/src/encoding/base64/base64_test.go#L25C4-L49
 	{
 		name:     "golang test - RFC 3548 examples",
 		input:    "FPucA9l+",
