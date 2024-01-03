@@ -9,5 +9,3 @@ testoverride:
     920290-1: 'Rule works, log contains 920290. Test expects status 400 (Apache behaviour)'
     920430-8: 'Go/http does no allow HTTP/3.0 - 505 HTTP Version Not Supported'
     932200-13: 'wip'
-    934131-5: 't:base64decode too strict https://github.com/corazawaf/coraza/issues/926 and https://github.com/corazawaf/coraza/issues/920. Rule itself is debated CRS side: https://github.com/coreruleset/coreruleset/issues/3376'
-    934131-7: 't:base64decode too strict https://github.com/corazawaf/coraza/issues/926 and https://github.com/corazawaf/coraza/issues/920. Rule itself is debated CRS side: https://github.com/coreruleset/coreruleset/issues/3376'
