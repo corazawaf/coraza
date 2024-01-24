@@ -9,6 +9,7 @@ package coreruleset
 
 import (
 	"bufio"
+	"context"
 	b64 "encoding/base64"
 	"fmt"
 	"io"
@@ -205,7 +206,7 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 		t.Fatalf("failed to create error log: %v", err)
 	}
 	errorWriter := bufio.NewWriter(errorFile)
-	conf = conf.WithErrorCallback(func(rule types.MatchedRule) {
+	conf = conf.WithErrorCallback(func(_ context.Context, rule types.MatchedRule) {
 		msg := rule.ErrorLog() + "\n"
 		if _, err := io.WriteString(errorWriter, msg); err != nil {
 			t.Fatal(err)

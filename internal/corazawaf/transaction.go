@@ -5,6 +5,7 @@ package corazawaf
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -40,6 +41,8 @@ import (
 type Transaction struct {
 	// Transaction ID
 	id string
+
+	ctx context.Context
 
 	// Contains the list of matched rules and associated match information
 	matchedRules []types.MatchedRule
@@ -515,7 +518,7 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 
 	tx.matchedRules = append(tx.matchedRules, mr)
 	if tx.WAF.ErrorLogCb != nil && r.Log {
-		tx.WAF.ErrorLogCb(mr)
+		tx.WAF.ErrorLogCb(tx.ctx, mr)
 	}
 
 }
@@ -1446,6 +1449,7 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 // This method helps the GC to clean up the transaction faster and release resources
 // It also allows caches the transaction back into the sync.Pool
 func (tx *Transaction) Close() error {
+	tx.ctx = nil
 	defer tx.WAF.txPool.Put(tx)
 	tx.variables.reset()
 	var errs []error

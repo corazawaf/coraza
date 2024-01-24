@@ -4,12 +4,27 @@
 package coraza
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/corazawaf/coraza/v4/internal/corazawaf"
 	"github.com/corazawaf/coraza/v4/internal/seclang"
 	"github.com/corazawaf/coraza/v4/types"
 )
+
+type Option func(*corazawaf.Options)
+
+func WithID(id string) Option {
+	return func(o *corazawaf.Options) {
+		o.ID = id
+	}
+}
+
+func WithContext(ctx context.Context) Option {
+	return func(o *corazawaf.Options) {
+		o.Context = ctx
+	}
+}
 
 // WAF instance is used to store configurations and rules
 // Every web application should have a different WAF instance,
@@ -20,8 +35,7 @@ import (
 // concurrent safe
 type WAF interface {
 	// NewTransaction Creates a new initialized transaction for this WAF instance
-	NewTransaction() types.Transaction
-	NewTransactionWithID(id string) types.Transaction
+	NewTransaction(opts ...Option) types.Transaction
 }
 
 // NewWAF creates a new WAF instance with the provided configuration.
@@ -123,11 +137,12 @@ type wafWrapper struct {
 }
 
 // NewTransaction implements the same method on WAF.
-func (w wafWrapper) NewTransaction() types.Transaction {
-	return w.waf.NewTransaction()
-}
+func (w wafWrapper) NewTransaction(opts ...Option) types.Transaction {
+	o := &corazawaf.Options{}
+	for _, opt := range opts {
+		opt(o)
+	}
+	o.Backfill()
 
-// NewTransactionWithID implements the same method on WAF.
-func (w wafWrapper) NewTransactionWithID(id string) types.Transaction {
-	return w.waf.NewTransactionWithID(id)
+	return w.waf.NewTransaction(o)
 }

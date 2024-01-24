@@ -118,7 +118,7 @@ func WrapHandler(waf coraza.WAF, h http.Handler) http.Handler {
 	}
 
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		tx := waf.NewTransaction()
+		tx := waf.NewTransaction(coraza.WithContext(r.Context()))
 		defer func() {
 			// We run phase 5 rules and create audit logs (if enabled)
 			tx.ProcessLogging()

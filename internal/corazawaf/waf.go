@@ -4,6 +4,7 @@
 package corazawaf
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -11,7 +12,6 @@ import (
 	"os"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/corazawaf/coraza/v4/debuglog"
@@ -110,7 +110,7 @@ type WAF struct {
 	// Used for the debug logger
 	Logger debuglog.Logger
 
-	ErrorLogCb func(rule types.MatchedRule)
+	ErrorLogCb func(ctx context.Context, rule types.MatchedRule)
 
 	// Audit mode status
 	AuditEngine types.AuditEngineStatus
@@ -133,24 +133,26 @@ type WAF struct {
 	ArgumentLimit int
 }
 
-// NewTransaction Creates a new initialized transaction for this WAF instance
-func (w *WAF) NewTransaction() *Transaction {
-	return w.newTransactionWithID(stringutils.RandomString(19))
+type Options struct {
+	ID      string
+	Context context.Context
 }
 
-func (w *WAF) NewTransactionWithID(id string) *Transaction {
-	if len(strings.TrimSpace(id)) == 0 {
-		id = stringutils.RandomString(19)
-		w.Logger.Warn().Msg("Empty ID passed for new transaction")
+func (o *Options) Backfill() {
+	if o.ID == "" {
+		o.ID = stringutils.RandomString(19)
 	}
-	return w.newTransactionWithID(id)
+
+	if o.Context == nil {
+		o.Context = context.Background()
+	}
 }
 
-// NewTransactionWithID Creates a new initialized transaction for this WAF instance
-// Using the specified ID
-func (w *WAF) newTransactionWithID(id string) *Transaction {
+// NewTransaction Creates a new initialized transaction for this WAF instance
+func (w *WAF) NewTransaction(opts *Options) *Transaction {
 	tx := w.txPool.Get().(*Transaction)
-	tx.id = id
+	tx.id = opts.ID
+	tx.ctx = opts.Context
 	tx.matchedRules = []types.MatchedRule{}
 	tx.interruption = nil
 	tx.Logdata = "" // Deprecated, this variable is not used. Logdata for each matched rule is stored in the MatchData field.
@@ -350,7 +352,7 @@ func (w *WAF) InitAuditLogWriter() error {
 // SetErrorCallback sets the callback function for error logging
 // The error callback receives all the error data and some
 // helpers to write modsecurity style logs
-func (w *WAF) SetErrorCallback(cb func(rule types.MatchedRule)) {
+func (w *WAF) SetErrorCallback(cb func(context.Context, types.MatchedRule)) {
 	w.ErrorLogCb = cb
 }
 
