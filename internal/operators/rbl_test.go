@@ -11,8 +11,8 @@ import (
 
 	"github.com/foxcpp/go-mockdns"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v4/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v4/internal/corazawaf"
 )
 
 type testLogger struct{ t *testing.T }

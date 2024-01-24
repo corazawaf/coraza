@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/corazawaf/coraza/v4/types"
+	"github.com/corazawaf/coraza/v4/types/variables"
 )
 
 func TestConcatKeyed(t *testing.T) {

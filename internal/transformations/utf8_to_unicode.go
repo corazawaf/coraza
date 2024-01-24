@@ -18,7 +18,7 @@ import (
 	"strconv"
 	"unicode/utf8"
 
-	"github.com/corazawaf/coraza/v3/internal/strings"
+	"github.com/corazawaf/coraza/v4/internal/strings"
 )
 
 func utf8ToUnicode(str string) (string, bool, error) {

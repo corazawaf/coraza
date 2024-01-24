@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/testing/profile"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v4"
+	"github.com/corazawaf/coraza/v4/testing/profile"
+	"github.com/corazawaf/coraza/v4/types"
 )
 
 // Test represents a unique transaction within

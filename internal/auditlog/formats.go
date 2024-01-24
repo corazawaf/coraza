@@ -23,9 +23,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v4/experimental/plugins/plugintypes"
+	utils "github.com/corazawaf/coraza/v4/internal/strings"
+	"github.com/corazawaf/coraza/v4/types"
 )
 
 type nativeFormatter struct{}

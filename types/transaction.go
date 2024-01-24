@@ -6,7 +6,7 @@ package types
 import (
 	"io"
 
-	"github.com/corazawaf/coraza/v3/debuglog"
+	"github.com/corazawaf/coraza/v4/debuglog"
 )
 
 // Transaction is created from a WAF instance to handle web requests and responses,

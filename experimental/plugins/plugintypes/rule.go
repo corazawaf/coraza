@@ -3,7 +3,7 @@
 
 package plugintypes
 
-import "github.com/corazawaf/coraza/v3/types"
+import "github.com/corazawaf/coraza/v4/types"
 
 // Rule is a rule executed against a transaction.
 type Rule interface {

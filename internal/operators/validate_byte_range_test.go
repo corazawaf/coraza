@@ -6,8 +6,8 @@ package operators
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v4/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v4/internal/corazawaf"
 )
 
 func TestValidateByteRangeCase4(t *testing.T) {

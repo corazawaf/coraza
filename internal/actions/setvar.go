@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/corazawaf/coraza/v4/collection"
+	"github.com/corazawaf/coraza/v4/experimental/plugins/macro"
+	"github.com/corazawaf/coraza/v4/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v4/types/variables"
 )
 
 // Action Group: Non-disruptive

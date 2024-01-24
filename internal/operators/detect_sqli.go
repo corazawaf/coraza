@@ -8,7 +8,7 @@ package operators
 import (
 	"github.com/corazawaf/libinjection-go"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v4/experimental/plugins/plugintypes"
 )
 
 type detectSQLi struct{}

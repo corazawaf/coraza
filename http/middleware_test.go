@@ -20,12 +20,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/debuglog"
-	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/internal/seclang"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v4"
+	"github.com/corazawaf/coraza/v4/debuglog"
+	"github.com/corazawaf/coraza/v4/experimental/plugins/macro"
+	"github.com/corazawaf/coraza/v4/internal/corazawaf"
+	"github.com/corazawaf/coraza/v4/internal/seclang"
+	"github.com/corazawaf/coraza/v4/types"
 )
 
 func TestProcessRequest(t *testing.T) {

@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v4/experimental/plugins/plugintypes"
 )
 
 func TestInspectFile(t *testing.T) {

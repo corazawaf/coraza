@@ -6,7 +6,7 @@ package transformations
 import (
 	"encoding/base64"
 
-	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
+	stringsutil "github.com/corazawaf/coraza/v4/internal/strings"
 )
 
 // base64decode decodes a Base64-encoded string.

@@ -9,7 +9,7 @@
 [![codecov](https://codecov.io/gh/corazawaf/coraza/branch/main/graph/badge.svg?token=6570804ZC7)](https://codecov.io/gh/corazawaf/coraza)
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 [![OWASP Production Project](https://img.shields.io/badge/owasp-production%20project-brightgreen)](https://owasp.org/www-project-coraza-web-application-firewall)
-[![GoDoc](https://godoc.org/github.com/corazawaf/coraza?status.svg)](https://godoc.org/github.com/corazawaf/coraza/v3)
+[![GoDoc](https://godoc.org/github.com/corazawaf/coraza?status.svg)](https://godoc.org/github.com/corazawaf/coraza/v4)
 
 Coraza is an open source, enterprise-grade, high performance Web Application Firewall (WAF) ready to protect your beloved applications. It is written in Go, supports ModSecurity SecLang rulesets and is 100% compatible with the OWASP Core Rule Set v4.
 
@@ -60,7 +60,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v4"
 )
 
 func main() {
@@ -110,13 +110,13 @@ instances. For more context check [this issue](https://github.com/corazawaf/cora
 It can be used standalone against your own waf deployment:
 
 ```shell
-go run github.com/corazawaf/coraza/v3/http/e2e/cmd/httpe2e@main --proxy-hostport localhost:8080 --httpbin-hostport localhost:8081
+go run github.com/corazawaf/coraza/v4/http/e2e/cmd/httpe2e@main --proxy-hostport localhost:8080 --httpbin-hostport localhost:8081
 ```
 
 or as a library by importing:
 
 ```go
-"github.com/corazawaf/coraza/v3/http/e2e"
+"github.com/corazawaf/coraza/v4/http/e2e"
 ```
 
 As a reference for library usage, see [`testing/e2e/e2e_test.go`](./testing/e2e/e2e_test.go).

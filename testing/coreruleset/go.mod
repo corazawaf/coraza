@@ -1,11 +1,13 @@
-module github.com/corazawaf/coraza/v3/testing/coreruleset
+module github.com/corazawaf/coraza/v4/testing/coreruleset
 
 go 1.18
+
+replace github.com/corazawaf/coraza/v4 => ../..
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.6.1
 	github.com/corazawaf/coraza-coreruleset v0.0.0-20230330101229-43b851256042
-	github.com/corazawaf/coraza/v3 v3.0.4
+	github.com/corazawaf/coraza/v4 v4.0.0-00010101000000-000000000000
 	github.com/coreruleset/go-ftw v0.4.9
 	github.com/rs/zerolog v1.31.0
 )
@@ -35,10 +37,10 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/yargevad/filepathx v1.0.0 // indirect
-	golang.org/x/crypto v0.15.0 // indirect
-	golang.org/x/net v0.18.0 // indirect
+	golang.org/x/crypto v0.16.0 // indirect
+	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/sync v0.5.0 // indirect
-	golang.org/x/sys v0.14.0 // indirect
+	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	rsc.io/binaryregexp v0.2.0 // indirect

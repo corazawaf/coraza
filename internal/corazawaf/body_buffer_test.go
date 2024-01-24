@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/internal/environment"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v4/internal/environment"
+	"github.com/corazawaf/coraza/v4/types"
 )
 
 func TestBodyReaderMemory(t *testing.T) {

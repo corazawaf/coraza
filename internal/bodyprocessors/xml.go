@@ -8,7 +8,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v4/experimental/plugins/plugintypes"
 )
 
 type xmlBodyProcessor struct {

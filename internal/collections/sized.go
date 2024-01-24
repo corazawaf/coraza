@@ -9,10 +9,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/internal/corazarules"
-	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/corazawaf/coraza/v4/collection"
+	"github.com/corazawaf/coraza/v4/internal/corazarules"
+	"github.com/corazawaf/coraza/v4/types"
+	"github.com/corazawaf/coraza/v4/types/variables"
 )
 
 type SizeCollection struct {

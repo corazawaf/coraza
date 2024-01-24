@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	coraza "github.com/corazawaf/coraza/v3/internal/corazawaf"
+	coraza "github.com/corazawaf/coraza/v4/internal/corazawaf"
 )
 
 //go:embed testdata

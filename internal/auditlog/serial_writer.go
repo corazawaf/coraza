@@ -8,7 +8,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v4/experimental/plugins/plugintypes"
 )
 
 // serialWriter is used to store logs in a single file

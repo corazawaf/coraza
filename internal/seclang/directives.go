@@ -13,12 +13,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/debuglog"
-	"github.com/corazawaf/coraza/v3/internal/auditlog"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/internal/memoize"
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v4/debuglog"
+	"github.com/corazawaf/coraza/v4/internal/auditlog"
+	"github.com/corazawaf/coraza/v4/internal/corazawaf"
+	"github.com/corazawaf/coraza/v4/internal/memoize"
+	utils "github.com/corazawaf/coraza/v4/internal/strings"
+	"github.com/corazawaf/coraza/v4/types"
 )
 
 // DirectiveOptions contains the parsed options for a directive. It is mutable and propagated

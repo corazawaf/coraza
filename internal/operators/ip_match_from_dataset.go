@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v4/experimental/plugins/plugintypes"
 )
 
 func newIPMatchFromDataset(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {

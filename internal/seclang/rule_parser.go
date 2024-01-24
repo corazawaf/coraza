@@ -8,13 +8,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	actionsmod "github.com/corazawaf/coraza/v3/internal/actions"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/internal/operators"
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/corazawaf/coraza/v4/experimental/plugins/plugintypes"
+	actionsmod "github.com/corazawaf/coraza/v4/internal/actions"
+	"github.com/corazawaf/coraza/v4/internal/corazawaf"
+	"github.com/corazawaf/coraza/v4/internal/operators"
+	utils "github.com/corazawaf/coraza/v4/internal/strings"
+	"github.com/corazawaf/coraza/v4/types"
+	"github.com/corazawaf/coraza/v4/types/variables"
 )
 
 var defaultActionsPhase2 = "phase:2,log,auditlog,pass"

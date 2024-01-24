@@ -3,7 +3,7 @@
 
 package transformations
 
-import stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
+import stringsutil "github.com/corazawaf/coraza/v4/internal/strings"
 
 func removeCommentsChar(value string) (string, bool, error) {
 	inputLen := len(value)

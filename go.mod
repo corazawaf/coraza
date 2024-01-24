@@ -1,4 +1,4 @@
-module github.com/corazawaf/coraza/v3
+module github.com/corazawaf/coraza/v4
 
 go 1.19
 
