@@ -4,7 +4,6 @@
 package coraza
 
 import (
-	"context"
 	"io/fs"
 
 	"github.com/corazawaf/coraza/v4/debuglog"
@@ -60,7 +59,7 @@ type WAFConfig interface {
 	// WithErrorCallback configures an error callback that can be used
 	// to log errors triggered by the WAF.
 	// It contains the severity so the cb can decide to skip it or not
-	WithErrorCallback(logger func(ctx context.Context, rule types.MatchedRule)) WAFConfig
+	WithErrorCallback(logger func(rule types.MatchedRule)) WAFConfig
 
 	// WithRootFS configures the root file system.
 	WithRootFS(fs fs.FS) WAFConfig
@@ -104,7 +103,7 @@ type wafConfig struct {
 	responseBodyLimit        *int
 	responseBodyMimeTypes    []string
 	debugLogger              debuglog.Logger
-	errorCallback            func(ctx context.Context, rule types.MatchedRule)
+	errorCallback            func(rule types.MatchedRule)
 	fsRoot                   fs.FS
 }
 
@@ -150,7 +149,7 @@ func (c *wafConfig) WithDebugLogger(logger debuglog.Logger) WAFConfig {
 	return ret
 }
 
-func (c *wafConfig) WithErrorCallback(logger func(context.Context, types.MatchedRule)) WAFConfig {
+func (c *wafConfig) WithErrorCallback(logger func(types.MatchedRule)) WAFConfig {
 	ret := c.clone()
 	ret.errorCallback = logger
 	return ret

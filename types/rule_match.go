@@ -3,7 +3,11 @@
 
 package types
 
-import "github.com/corazawaf/coraza/v4/types/variables"
+import (
+	"context"
+
+	"github.com/corazawaf/coraza/v4/types/variables"
+)
 
 // MatchData works like VariableKey but is used for logging,
 // so it contains the collection as a string, and it's value
@@ -45,5 +49,8 @@ type MatchedRule interface {
 	Rule() RuleMetadata
 
 	AuditLog() string
+
 	ErrorLog() string
+
+	Context() context.Context
 }

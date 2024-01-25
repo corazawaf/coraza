@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -57,7 +56,7 @@ func createWAF() coraza.WAF {
 	return waf
 }
 
-func logError(ctx context.Context, error types.MatchedRule) {
+func logError(error types.MatchedRule) {
 	msg := error.ErrorLog()
 	fmt.Printf("[logError][%s] %s\n", error.Rule().Severity(), msg)
 }

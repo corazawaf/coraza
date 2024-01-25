@@ -490,6 +490,7 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 		Rule_:            &r.RuleMetadata,
 		Log_:             r.Log,
 		MatchedDatas_:    mds,
+		Context_:         tx.ctx,
 	}
 	// Populate MatchedRule disruption related fields only if the Engine is capable of performing disruptive actions
 	if tx.RuleEngine == types.RuleEngineOn {
@@ -518,7 +519,7 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 
 	tx.matchedRules = append(tx.matchedRules, mr)
 	if tx.WAF.ErrorLogCb != nil && r.Log {
-		tx.WAF.ErrorLogCb(tx.ctx, mr)
+		tx.WAF.ErrorLogCb(mr)
 	}
 
 }

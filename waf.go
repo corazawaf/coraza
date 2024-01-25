@@ -6,6 +6,7 @@ package coraza
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/corazawaf/coraza/v4/internal/corazawaf"
 	"github.com/corazawaf/coraza/v4/internal/seclang"
@@ -16,7 +17,7 @@ type Option func(*corazawaf.Options)
 
 func WithID(id string) Option {
 	return func(o *corazawaf.Options) {
-		o.ID = id
+		o.ID = strings.TrimSpace(id)
 	}
 }
 
@@ -142,7 +143,5 @@ func (w wafWrapper) NewTransaction(opts ...Option) types.Transaction {
 	for _, opt := range opts {
 		opt(o)
 	}
-	o.Backfill()
-
-	return w.waf.NewTransaction(o)
+	return w.waf.NewTransactionWithOptions(o)
 }

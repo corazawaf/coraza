@@ -4,6 +4,7 @@
 package corazarules
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -29,6 +30,8 @@ type MatchData struct {
 	// Multiphase specific field
 	ChainLevel_ int
 }
+
+var _ types.MatchData = (*MatchData)(nil)
 
 func (m *MatchData) Variable() variables.RuleVariable {
 	return m.Variable_
@@ -99,6 +102,8 @@ type MatchedRule struct {
 	// A slice of matched variables
 	MatchedDatas_ []types.MatchData
 
+	Context_ context.Context
+
 	Rule_ types.RuleMetadata
 }
 
@@ -112,6 +117,10 @@ func (mr *MatchedRule) Data() string {
 
 func (mr *MatchedRule) URI() string {
 	return mr.URI_
+}
+
+func (mr *MatchedRule) Context() context.Context {
+	return mr.Context_
 }
 
 func (mr *MatchedRule) TransactionID() string {

@@ -110,7 +110,7 @@ type WAF struct {
 	// Used for the debug logger
 	Logger debuglog.Logger
 
-	ErrorLogCb func(ctx context.Context, rule types.MatchedRule)
+	ErrorLogCb func(rule types.MatchedRule)
 
 	// Audit mode status
 	AuditEngine types.AuditEngineStatus
@@ -138,18 +138,24 @@ type Options struct {
 	Context context.Context
 }
 
-func (o *Options) Backfill() {
-	if o.ID == "" {
-		o.ID = stringutils.RandomString(19)
-	}
+func (w *WAF) NewTransaction() *Transaction {
+	return w.newTransaction(&Options{})
+}
 
-	if o.Context == nil {
-		o.Context = context.Background()
-	}
+func (w *WAF) NewTransactionWithOptions(opts *Options) *Transaction {
+	return w.newTransaction(opts)
 }
 
 // NewTransaction Creates a new initialized transaction for this WAF instance
-func (w *WAF) NewTransaction(opts *Options) *Transaction {
+func (w *WAF) newTransaction(opts *Options) *Transaction {
+	if opts.ID == "" {
+		opts.ID = stringutils.RandomString(19)
+	}
+
+	if opts.Context == nil {
+		opts.Context = context.Background()
+	}
+
 	tx := w.txPool.Get().(*Transaction)
 	tx.id = opts.ID
 	tx.ctx = opts.Context
@@ -352,7 +358,7 @@ func (w *WAF) InitAuditLogWriter() error {
 // SetErrorCallback sets the callback function for error logging
 // The error callback receives all the error data and some
 // helpers to write modsecurity style logs
-func (w *WAF) SetErrorCallback(cb func(context.Context, types.MatchedRule)) {
+func (w *WAF) SetErrorCallback(cb func(types.MatchedRule)) {
 	w.ErrorLogCb = cb
 }
 

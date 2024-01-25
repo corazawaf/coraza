@@ -745,7 +745,7 @@ func TestLogCallback(t *testing.T) {
 				buffer = mr.ErrorLog()
 			})
 			waf.RuleEngine = testCase.engineStatus
-			tx := waf.NewTransaction()
+			tx := waf.NewTransaction(&Options{})
 			rule := NewRule()
 			rule.ID_ = 1
 			rule.Phase_ = 1
