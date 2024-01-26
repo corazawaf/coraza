@@ -4,8 +4,11 @@
 package coraza
 
 import (
+	"context"
 	"fmt"
+	"strings"
 
+	"github.com/corazawaf/coraza/v3/experimental"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
 	"github.com/corazawaf/coraza/v3/types"
@@ -129,5 +132,19 @@ func (w wafWrapper) NewTransaction() types.Transaction {
 
 // NewTransactionWithID implements the same method on WAF.
 func (w wafWrapper) NewTransactionWithID(id string) types.Transaction {
-	return w.waf.NewTransactionWithID(id)
+	id = strings.TrimSpace(id)
+	if len(id) == 0 {
+		w.waf.Logger.Warn().Msg("Empty ID passed for new transaction")
+	}
+
+	return w.waf.NewTransactionWithOptions(corazawaf.Options{Context: context.Background(), ID: id})
+}
+
+// NewTransaction implements the same method on WAF.
+func (w wafWrapper) NewTransactionWithOptions(opts ...experimental.Option) types.Transaction {
+	o := corazawaf.Options{}
+	for _, opt := range opts {
+		opt(&o)
+	}
+	return w.waf.NewTransactionWithOptions(o)
 }
