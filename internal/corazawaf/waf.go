@@ -139,15 +139,13 @@ type Options struct {
 }
 
 func (w *WAF) NewTransaction() *Transaction {
-	return w.newTransaction(&Options{})
+	return w.newTransaction(Options{
+		ID:      stringutils.RandomString(19),
+		Context: context.Background(),
+	})
 }
 
-func (w *WAF) NewTransactionWithOptions(opts *Options) *Transaction {
-	return w.newTransaction(opts)
-}
-
-// NewTransaction Creates a new initialized transaction for this WAF instance
-func (w *WAF) newTransaction(opts *Options) *Transaction {
+func (w *WAF) NewTransactionWithOptions(opts Options) *Transaction {
 	if opts.ID == "" {
 		opts.ID = stringutils.RandomString(19)
 	}
@@ -156,6 +154,11 @@ func (w *WAF) newTransaction(opts *Options) *Transaction {
 		opts.Context = context.Background()
 	}
 
+	return w.newTransaction(opts)
+}
+
+// NewTransaction Creates a new initialized transaction for this WAF instance
+func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx := w.txPool.Get().(*Transaction)
 	tx.id = opts.ID
 	tx.ctx = opts.Context

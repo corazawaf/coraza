@@ -35,8 +35,11 @@ func WithContext(ctx context.Context) Option {
 // You can use as many WAF instances as you want, and they are
 // concurrent safe
 type WAF interface {
-	// NewTransaction Creates a new initialized transaction for this WAF instance
+	// NewTransaction creates a new initialized transaction for this WAF instance
 	NewTransaction(opts ...Option) types.Transaction
+
+	// Deprecated: use NewTransaction instead passing WithID option
+	NewTransactionWithID(id string) types.Transaction
 }
 
 // NewWAF creates a new WAF instance with the provided configuration.
@@ -139,9 +142,16 @@ type wafWrapper struct {
 
 // NewTransaction implements the same method on WAF.
 func (w wafWrapper) NewTransaction(opts ...Option) types.Transaction {
-	o := &corazawaf.Options{}
+	o := corazawaf.Options{}
 	for _, opt := range opts {
-		opt(o)
+		opt(&o)
 	}
 	return w.waf.NewTransactionWithOptions(o)
+}
+
+func (w wafWrapper) NewTransactionWithID(id string) types.Transaction {
+	return w.waf.NewTransactionWithOptions(corazawaf.Options{
+		ID:      id,
+		Context: context.Background(),
+	})
 }

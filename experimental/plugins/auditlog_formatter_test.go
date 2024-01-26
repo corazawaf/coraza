@@ -44,7 +44,7 @@ func ExampleRegisterAuditLogFormatter() {
 		panic(err)
 	}
 
-	tx := w.NewTransactionWithID("abc123")
+	tx := w.NewTransaction(coraza.WithID("abc123"))
 	tx.ProcessLogging()
 	tx.Close()
 

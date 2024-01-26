@@ -52,5 +52,6 @@ type MatchedRule interface {
 
 	ErrorLog() string
 
+	// Context is the context of the transaction
 	Context() context.Context
 }
