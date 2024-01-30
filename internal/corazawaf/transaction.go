@@ -1356,22 +1356,25 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 		HostIP_:        tx.variables.serverAddr.Get(),
 		HostPort_:      hostPort,
 		ServerID_:      tx.variables.serverName.Get(), // TODO check
+		Request_: &auditlog.TransactionRequest{
+			Method_:   tx.variables.requestMethod.Get(),
+			URI_:      tx.variables.requestURI.Get(),
+			Protocol_: tx.variables.requestProtocol.Get(),
+		},
 	}
 
 	for _, part := range tx.AuditLogParts {
 		switch part {
 		case types.AuditLogPartRequestHeaders:
-			if al.Transaction_.Request_ == nil {
-				al.Transaction_.Request_ = &auditlog.TransactionRequest{}
-			}
 			al.Transaction_.Request_.Headers_ = tx.variables.requestHeaders.Data()
 		case types.AuditLogPartRequestBody:
-			if al.Transaction_.Request_ == nil {
-				al.Transaction_.Request_ = &auditlog.TransactionRequest{}
+			reader, err := tx.requestBodyBuffer.Reader()
+			if err == nil {
+				content, err := io.ReadAll(reader)
+				if err == nil {
+					al.Transaction_.Request_.Body_ = string(content)
+				}
 			}
-			// TODO maybe change to:
-			// al.Transaction.Request.Body = tx.RequestBodyBuffer.String()
-			al.Transaction_.Request_.Body_ = tx.variables.requestBody.Get()
 
 			/*
 			* TODO:
