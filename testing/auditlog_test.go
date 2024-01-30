@@ -304,8 +304,14 @@ func TestAuditLogRequestBody(t *testing.T) {
 	}
 	tx := waf.NewTransaction()
 	params := "somepost=data"
-	tx.ReadRequestBodyFrom(strings.NewReader(params))
-	tx.ProcessRequestBody()
+	_, _, err = tx.ReadRequestBodyFrom(strings.NewReader(params))
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
 	// now we read file
 	if _, err := file.Seek(0, 0); err != nil {
 		t.Error(err)
