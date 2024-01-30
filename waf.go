@@ -141,10 +141,6 @@ func (w wafWrapper) NewTransactionWithID(id string) types.Transaction {
 }
 
 // NewTransaction implements the same method on WAF.
-func (w wafWrapper) NewTransactionWithOptions(opts ...experimental.Option) types.Transaction {
-	o := corazawaf.Options{}
-	for _, opt := range opts {
-		opt(&o)
-	}
-	return w.waf.NewTransactionWithOptions(o)
+func (w wafWrapper) NewTransactionWithOptions(opts experimental.Options) types.Transaction {
+	return w.waf.NewTransactionWithOptions(opts)
 }

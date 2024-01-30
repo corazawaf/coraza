@@ -147,6 +147,8 @@ func (w *WAF) NewTransaction() *Transaction {
 	})
 }
 
+// NewTransactionWithOptions Creates a new initialized transaction for this WAF
+// instance with the provided options
 func (w *WAF) NewTransactionWithOptions(opts Options) *Transaction {
 	if opts.ID == "" {
 		opts.ID = stringutils.RandomString(19)

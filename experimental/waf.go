@@ -4,33 +4,14 @@
 package experimental
 
 import (
-	"context"
-	"strings"
-
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
-type Option func(*corazawaf.Options)
-
-// WithID sets the transaction ID
-func WithID(id string) Option {
-	return func(o *corazawaf.Options) {
-		o.ID = strings.TrimSpace(id)
-	}
-}
-
-// WithContext sets the transaction context, this is useful for passing
-// a context into the logger.
-// The transaction lifecycle isn't tied to the context lifecycle.
-func WithContext(ctx context.Context) Option {
-	return func(o *corazawaf.Options) {
-		o.Context = ctx
-	}
-}
+type Options = corazawaf.Options
 
 // WAFWithOptions is an interface that allows to create transactions
 // with options
 type WAFWithOptions interface {
-	NewTransactionWithOptions(opts ...Option) types.Transaction
+	NewTransactionWithOptions(Options) types.Transaction
 }
