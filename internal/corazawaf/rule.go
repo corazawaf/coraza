@@ -12,6 +12,7 @@ import (
 	"sync"
 	"unsafe"
 
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
@@ -169,12 +170,21 @@ const chainLevelZero = 0
 func (r *Rule) Evaluate(phase types.RulePhase, tx plugintypes.TransactionState, cache map[transformationKey]*transformationValue) {
 	// collectiveMatchedValues lives across recursive calls of doEvaluate
 	var collectiveMatchedValues []types.MatchData
-	r.doEvaluate(phase, tx.(*Transaction), &collectiveMatchedValues, chainLevelZero, cache)
+
+	var logger debuglog.Logger
+
+	if r.ID_ == noID {
+		logger = tx.DebugLogger().With(debuglog.Str("rule_ref", fmt.Sprintf("%s#L%d", r.File_, r.Line_)))
+	} else {
+		logger = tx.DebugLogger().With(debuglog.Int("rule_id", r.ID_))
+	}
+
+	r.doEvaluate(logger, phase, tx.(*Transaction), &collectiveMatchedValues, chainLevelZero, cache)
 }
 
 const noID = 0
 
-func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, collectiveMatchedValues *[]types.MatchData, chainLevel int, cache map[transformationKey]*transformationValue) []types.MatchData {
+func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Transaction, collectiveMatchedValues *[]types.MatchData, chainLevel int, cache map[transformationKey]*transformationValue) []types.MatchData {
 	tx.Capture = r.Capture
 
 	rid := r.ID_
@@ -186,10 +196,13 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, collectiveMatc
 		computeRuleChainMinPhase(r)
 	}
 
+	debugLogger := logger.Debug()
+
 	var matchedValues []types.MatchData
 	// we log if we are the parent rule
-	tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Evaluating rule")
-	defer tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Finish evaluating rule")
+	debugLogger.Msg("Evaluating rule")
+	defer debugLogger.Msg("Finished rule evaluation")
+
 	ruleCol := tx.variables.rule
 	ruleCol.SetIndex("id", 0, strconv.Itoa(rid))
 	if r.Msg != nil {
@@ -202,7 +215,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, collectiveMatc
 	ruleCol.SetIndex("severity", 0, r.Severity_.String())
 	// SecMark and SecAction uses nil operator
 	if r.operator == nil {
-		tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Forcing rule to match")
+		debugLogger.Msg("Forcing rule to match")
 		md := &corazarules.MatchData{}
 		if r.ParentID_ != noID || r.MultiMatch {
 			// In order to support Msg and LogData for inner rules, we need to expand them now
@@ -233,23 +246,19 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, collectiveMatc
 			}
 
 			values = tx.GetField(v)
-			tx.DebugLogger().Debug().
-				Int("rule_id", rid).
-				Str("variable", v.Variable.Name()).
-				Msg("Expanding arguments for rule")
+
+			vLog := debugLogger.Str("variable", v.Variable.Name())
+			vLog.Msg("Expanding arguments for rule")
 			for i, arg := range values {
-				tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Transforming argument for rule")
 				args, errs := r.transformArg(arg, i, cache)
 				if len(errs) > 0 {
-					log := tx.DebugLogger().Debug().Int("rule_id", rid)
-					if log.IsEnabled() {
+					if vLog.IsEnabled() {
 						for i, err := range errs {
-							log = log.Str(fmt.Sprintf("errors[%d]", i), err.Error())
+							vLog = vLog.Str(fmt.Sprintf("errors[%d]", i), err.Error())
 						}
-						log.Msg("Error transforming argument for rule")
+						vLog.Msg("Error transforming argument for rule")
 					}
 				}
-				tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Arguments transformed for rule")
 
 				// args represents the transformed variables
 				for _, carg := range args {
@@ -290,7 +299,7 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, collectiveMatc
 							tx.matchVariable(mr)
 							for _, a := range r.actions {
 								if a.Function.Type() == plugintypes.ActionTypeNondisruptive {
-									tx.DebugLogger().Debug().Str("action", a.Name).Msg("Evaluating action")
+									vLog.Str("action", a.Name).Msg("Evaluating action")
 									a.Function.Evaluate(r, tx)
 								}
 							}
@@ -303,15 +312,13 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, collectiveMatc
 							}
 						}
 
-						tx.DebugLogger().Debug().
-							Int("rule_id", rid).
+						vLog.
 							Str("operator_function", r.operator.Function).
 							Str("operator_data", r.operator.Data).
 							Str("arg", carg).
 							Msg("Evaluating operator: MATCH")
 					} else {
-						tx.DebugLogger().Debug().
-							Int("rule_id", rid).
+						vLog.
 							Str("operator_function", r.operator.Function).
 							Str("operator_data", r.operator.Data).
 							Str("arg", carg).
@@ -332,8 +339,15 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, collectiveMatc
 		// we only run the chains for the parent rule
 		for nr := r.Chain; nr != nil; {
 			chainLevel++
-			tx.DebugLogger().Debug().Int("rule_id", rid).Msg("Evaluating rule chain")
-			matchedChainValues := nr.doEvaluate(phase, tx, collectiveMatchedValues, chainLevel, cache)
+
+			var nrLogger debuglog.Logger
+			if nr.ID_ == noID {
+				nrLogger = logger.With(debuglog.Int("chain_rule_id", nr.ID_))
+			} else {
+				nrLogger = logger.With(debuglog.Str("chain_rule_ref", fmt.Sprintf("%s#L%d", nr.File_, nr.Line_)))
+			}
+
+			matchedChainValues := nr.doEvaluate(nrLogger, phase, tx, collectiveMatchedValues, chainLevel, cache)
 			if len(matchedChainValues) == 0 {
 				return matchedChainValues
 			}
@@ -355,11 +369,11 @@ func (r *Rule) doEvaluate(phase types.RulePhase, tx *Transaction, collectiveMatc
 		for _, a := range r.actions {
 			if a.Function.Type() == plugintypes.ActionTypeFlow {
 				// Flow actions are evaluated also if the rule engine is set to DetectionOnly
-				tx.DebugLogger().Debug().Int("rule_id", rid).Str("action", a.Name).Int("phase", int(phase)).Msg("Evaluating flow action for rule")
+				debugLogger.Str("action", a.Name).Int("phase", int(phase)).Msg("Evaluating flow action for rule")
 				a.Function.Evaluate(r, tx)
 			} else if a.Function.Type() == plugintypes.ActionTypeDisruptive && tx.RuleEngine == types.RuleEngineOn {
 				// The parser enforces that the disruptive action is just one per rule (if more than one, only the last one is kept)
-				tx.DebugLogger().Debug().Int("rule_id", rid).Str("action", a.Name).Msg("Executing disruptive action for rule")
+				debugLogger.Str("action", a.Name).Msg("Executing disruptive action for rule")
 				a.Function.Evaluate(r, tx)
 			}
 		}
