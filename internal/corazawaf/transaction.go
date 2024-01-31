@@ -5,6 +5,7 @@ package corazawaf
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -41,6 +42,9 @@ import (
 type Transaction struct {
 	// Transaction ID
 	id string
+
+	// The context associated to the transaction.
+	context context.Context
 
 	// Contains the list of matched rules and associated match information
 	matchedRules []types.MatchedRule
@@ -501,6 +505,7 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 		Rule_:            &r.RuleMetadata,
 		Log_:             r.Log,
 		MatchedDatas_:    mds,
+		Context_:         tx.context,
 	}
 	// Populate MatchedRule disruption related fields only if the Engine is capable of performing disruptive actions
 	if tx.RuleEngine == types.RuleEngineOn {
