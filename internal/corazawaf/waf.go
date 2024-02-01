@@ -238,7 +238,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.variables.highestSeverity.Set("0")
 	tx.variables.uniqueID.Set(tx.id)
 
-	w.Logger.Debug().Msg("New transaction created")
+	tx.debugLogger.Debug().Msg("Transaction started")
 
 	return tx
 }
