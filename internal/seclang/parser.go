@@ -64,7 +64,7 @@ func (p *Parser) FromFile(profilePath string) error {
 			return fmt.Errorf("failed to readfile: %s", err.Error())
 		}
 
-		err = p.FromString(string(file))
+		err = p.parseString(string(file))
 		if err != nil {
 			// we don't use defer for this as tinygo does not seem to like it
 			p.currentDir = originalDir
@@ -85,6 +85,14 @@ func (p *Parser) FromFile(profilePath string) error {
 // It will return error if any directive fails to parse
 // or arguments are invalid
 func (p *Parser) FromString(data string) error {
+	oldCurrentFile := p.currentFile
+	p.currentFile = "_inline_"
+	err := p.parseString(data)
+	p.currentFile = oldCurrentFile
+	return err
+}
+
+func (p *Parser) parseString(data string) error {
 	scanner := bufio.NewScanner(strings.NewReader(data))
 	var linebuffer strings.Builder
 	inBackticks := false

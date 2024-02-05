@@ -4,6 +4,7 @@
 package corazarules
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -29,6 +30,8 @@ type MatchData struct {
 	// Multiphase specific field
 	ChainLevel_ int
 }
+
+var _ types.MatchData = (*MatchData)(nil)
 
 func (m *MatchData) Variable() variables.RuleVariable {
 	return m.Variable_
@@ -100,7 +103,11 @@ type MatchedRule struct {
 	MatchedDatas_ []types.MatchData
 
 	Rule_ types.RuleMetadata
+
+	Context_ context.Context
 }
+
+var _ types.MatchedRule = (*MatchedRule)(nil)
 
 func (mr *MatchedRule) Message() string {
 	return mr.Message_
@@ -140,6 +147,35 @@ func (mr *MatchedRule) MatchedDatas() []types.MatchData {
 
 func (mr *MatchedRule) Rule() types.RuleMetadata {
 	return mr.Rule_
+}
+
+// Context returns the context associated with the transaction
+// This is useful for logging purposes where you want to add
+// additional information to the log.
+// The context can be easily retrieved in the logger using
+// an ancillary interface:
+// ```
+//
+//	 type Contexter interface {
+//			Context() context.Context
+//		}
+//
+// ```
+// and then using it like this:
+//
+// ```
+//
+//	func errorLogCb(mr types.MatchedRule) {
+//	     ctx := context.Background()
+//		 if ctxer, ok := mr.(Contexter); ok {
+//	    	ctx = ctxer.Context()
+//		 }
+//	     logger.Context(ctx).Error().Msg("...")
+//	}
+//
+// ```
+func (mr *MatchedRule) Context() context.Context {
+	return mr.Context_
 }
 
 const maxSizeLogMessage = 200

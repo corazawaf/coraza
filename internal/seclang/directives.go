@@ -306,6 +306,19 @@ func directiveSecServerSignature(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Removes the matching rules from the current configuration context.
+// Syntax: SecRuleRemoveByTag [TAG]
+// ---
+// Normally, you would use `SecRuleRemoveById` to remove rules, but it may occasionally
+// be easier to disable an entire group of rules with `SecRuleRemoveByTag`. Matching is
+// by case-sensitive string equality.
+//
+// Example:
+// ```apache
+// SecRuleRemoveByTag attack-dos
+// ```
+//
+// Note: OWASP CRS has a list of supported tags https://coreruleset.org/docs/rules/metadata/
 func directiveSecRuleRemoveByTag(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
