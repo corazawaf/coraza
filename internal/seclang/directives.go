@@ -876,8 +876,6 @@ func directiveSecUploadDir(options *DirectiveOptions) error {
 	return nil
 }
 
-// Not implemented yet
-//
 // Description: Configures the maximum request body size Coraza will accept for
 // buffering, excluding the size of any files being transported in the request.
 // This directive is useful to reduce susceptibility to DoS attacks when someone is
@@ -892,6 +890,7 @@ func directiveSecUploadDir(options *DirectiveOptions) error {
 // Generally speaking, the default value is not small enough. For most applications, you
 // should be able to reduce it down to 128 KB or lower. Anything over the limit will be
 // rejected with status code 413 (Request Entity Too Large). There is a hard limit of 1 GB.
+// Note: not implemented yet
 func directiveSecRequestBodyNoFilesLimit(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
