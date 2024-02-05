@@ -12,7 +12,7 @@ import (
 type rawBodyProcessor struct {
 }
 
-func (*rawBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.TransactionVariables, options plugintypes.BodyProcessorOptions) error {
+func (*rawBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
 	buf := new(strings.Builder)
 	if _, err := io.Copy(buf, reader); err != nil {
 		return err
@@ -25,7 +25,7 @@ func (*rawBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.Transact
 	return nil
 }
 
-func (*rawBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.TransactionVariables, options plugintypes.BodyProcessorOptions) error {
+func (*rawBodyProcessor) ProcessResponse(io.Reader, plugintypes.TransactionVariables, plugintypes.BodyProcessorOptions) error {
 	return nil
 }
 
