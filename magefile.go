@@ -127,6 +127,10 @@ func Test() error {
 		return err
 	}
 
+	if err := sh.RunV("go", "test", "./http/integration"); err != nil {
+		return err
+	}
+
 	return nil
 }
 

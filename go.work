@@ -3,5 +3,6 @@ go 1.19
 use (
 	.
 	./examples/http-server
+	./http/integration
 	./testing/coreruleset
 )
