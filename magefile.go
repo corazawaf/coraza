@@ -145,6 +145,9 @@ func Coverage() error {
 	if err := sh.RunV("go", "test", "-race", "-coverprofile=build/coverage-examples.txt", "-covermode=atomic", "-coverpkg=./...", "./examples/http-server"); err != nil {
 		return err
 	}
+	if err := sh.RunV("go", "test", "-race", "./http/integration"); err != nil {
+		return err
+	}
 	if err := sh.RunV("go", "test", "-coverprofile=build/coverage-ftw.txt", "-covermode=atomic", "-coverpkg=./...", "./testing/coreruleset"); err != nil {
 		return err
 	}
