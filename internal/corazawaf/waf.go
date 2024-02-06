@@ -91,6 +91,7 @@ type WAF struct {
 	UploadDir string
 
 	// Request body in memory limit excluding the size of any files being transported in the request.
+	// TODO: SecRequestBodyNoFilesLimit directive is retrieving the value, but no logic based on it is implemented. See https://github.com/corazawaf/coraza/issues/896
 	RequestBodyNoFilesLimit int64
 
 	RequestBodyLimitAction types.BodyLimitAction
@@ -196,7 +197,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	// Always non-nil if buffers / collections were already initialized so we don't do any of them
 	// based on the presence of RequestBodyBuffer.
 	if tx.requestBodyBuffer == nil {
-		// if no requestBodyInMemoryLimit has been set we default to the
+		// if no requestBodyInMemoryLimit has been set we default to the requestBodyLimit
 		var requestBodyInMemoryLimit int64 = w.RequestBodyLimit
 		if w.requestBodyInMemoryLimit != nil {
 			requestBodyInMemoryLimit = int64(*w.requestBodyInMemoryLimit)
@@ -291,9 +292,10 @@ func NewWAF() *WAF {
 		// These defaults are unavoidable as they are zero values for the variables
 		RuleEngine:                types.RuleEngineOn,
 		RequestBodyAccess:         false,
-		RequestBodyLimit:          _1gb,
+		RequestBodyLimit:          134217728, // Hard limit equal to _1gb
+		RequestBodyLimitAction:    types.BodyLimitActionReject,
 		ResponseBodyAccess:        false,
-		ResponseBodyLimit:         _1gb,
+		ResponseBodyLimit:         524288, // Hard limit equal to _1gb
 		auditLogWriter:            logWriter,
 		auditLogWriterInitialized: false,
 		AuditLogWriterConfig:      auditlog.NewConfig(),
