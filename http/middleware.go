@@ -16,6 +16,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/experimental"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -113,7 +114,43 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 	return tx.ProcessRequestBody()
 }
 
+// Options is a set of options for the middleware
+type Options struct {
+	// OnTransactionStarted is called when a new transaction is started. It is useful to
+	// complement observability signals like metrics, traces and logs by providing additional
+	// context about the transaction.
+	OnTransactionStarted func(tx plugintypes.TransactionState)
+
+	// OnTransactionClosed is called when a transaction is closed, after the response has been
+	// written. It is useful to complement observability signals like metrics, traces and logs
+	// by providing additional context about the transaction and the rules that were matched.
+	OnTransactionClosed func(tx plugintypes.TransactionState, matchedRules []types.MatchedRule)
+}
+
+var defaultOptions = Options{
+	OnTransactionStarted: func(plugintypes.TransactionState) {},
+	OnTransactionClosed:  func(plugintypes.TransactionState, []types.MatchedRule) {},
+}
+
+func (o *Options) loadDefaults() {
+	if o.OnTransactionStarted == nil {
+		o.OnTransactionStarted = defaultOptions.OnTransactionStarted
+	}
+	if o.OnTransactionClosed == nil {
+		o.OnTransactionClosed = defaultOptions.OnTransactionClosed
+	}
+}
+
 func WrapHandler(waf coraza.WAF, h http.Handler) http.Handler {
+	return wrapHandler(waf, h, defaultOptions)
+}
+
+func WrapHandlerWithOptions(waf coraza.WAF, h http.Handler, opts Options) http.Handler {
+	opts.loadDefaults()
+	return wrapHandler(waf, h, opts)
+}
+
+func wrapHandler(waf coraza.WAF, h http.Handler, opts Options) http.Handler {
 	if waf == nil {
 		return h
 	}
@@ -132,6 +169,8 @@ func WrapHandler(waf coraza.WAF, h http.Handler) http.Handler {
 
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		tx := newTX(r)
+		txs := tx.(plugintypes.TransactionState)
+		opts.OnTransactionStarted(txs)
 		defer func() {
 			// We run phase 5 rules and create audit logs (if enabled)
 			tx.ProcessLogging()
@@ -139,6 +178,7 @@ func WrapHandler(waf coraza.WAF, h http.Handler) http.Handler {
 			if err := tx.Close(); err != nil {
 				tx.DebugLogger().Error().Err(err).Msg("Failed to close the transaction")
 			}
+			opts.OnTransactionClosed(txs, tx.MatchedRules())
 		}()
 
 		// Early return, Coraza is not going to process any rule
