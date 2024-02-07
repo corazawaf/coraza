@@ -1,6 +1,6 @@
 module github.com/corazawaf/coraza/v3
 
-go 1.19
+go 1.21
 
 // Testing dependencies:
 // - go-mockdns
