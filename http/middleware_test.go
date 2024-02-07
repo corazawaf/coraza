@@ -619,7 +619,8 @@ func TestWrapHandlerWithOptions(t *testing.T) {
 	ctx := context.WithValue(context.Background(), ctxKey{}, "value")
 	req, _ := http.NewRequestWithContext(ctx, "GET", "https://www.coraza.io/test", nil)
 
-	wrappedHandler := WrapHandlerWithOptions(waf, delegateHandler, Options{
+	wrappedHandler := WrapHandlerWithOptions(delegateHandler, Options{
+		WAF: waf,
 		OnTransactionStarted: func(tx plugintypes.TransactionState) {
 			if want, have := "value", tx.Context().Value(ctxKey{}).(string); want != have {
 				t.Errorf("unexpected context value, want: %s, have: %s", want, have)
