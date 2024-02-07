@@ -10,6 +10,7 @@ package http
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -23,6 +24,7 @@ import (
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
 	"github.com/corazawaf/coraza/v3/types"
@@ -213,6 +215,7 @@ func TestChainEvaluation(t *testing.T) {
 }
 
 func errLogger(t *testing.T) func(rule types.MatchedRule) {
+	t.Helper()
 	return func(rule types.MatchedRule) {
 		t.Log(rule.ErrorLog())
 	}
@@ -605,4 +608,24 @@ func TestHandlerAPI(t *testing.T) {
 			}
 		})
 	}
+}
+
+type ctxKey struct{}
+
+func TestWrapHandlerWithOptions(t *testing.T) {
+	waf, _ := coraza.NewWAF(coraza.NewWAFConfig())
+	delegateHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+
+	ctx := context.WithValue(context.Background(), ctxKey{}, "value")
+	req, _ := http.NewRequestWithContext(ctx, "GET", "https://www.coraza.io/test", nil)
+
+	wrappedHandler := WrapHandlerWithOptions(waf, delegateHandler, Options{
+		OnTransactionStarted: func(tx plugintypes.TransactionState) {
+			if want, have := "value", tx.Context().Value(ctxKey{}).(string); want != have {
+				t.Errorf("unexpected context value, want: %s, have: %s", want, have)
+			}
+		},
+	}).(http.HandlerFunc)
+
+	wrappedHandler(httptest.NewRecorder(), req)
 }
