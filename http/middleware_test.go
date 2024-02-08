@@ -23,8 +23,8 @@ import (
 
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/debuglog"
+	"github.com/corazawaf/coraza/v3/experimental/middleware"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
 	"github.com/corazawaf/coraza/v3/types"
@@ -620,8 +620,13 @@ func TestWrapHandlerWithOptions(t *testing.T) {
 	req, _ := http.NewRequestWithContext(ctx, "GET", "https://www.coraza.io/test", nil)
 
 	wrappedHandler := WrapHandlerWithOptions(waf, delegateHandler, Options{
-		OnTransactionStarted: func(tx plugintypes.TransactionState) {
-			if want, have := "value", tx.Context().Value(ctxKey{}).(string); want != have {
+		BeforeCloseTransaction: func(tx middleware.TransactionState) {
+			ctx, ok := middleware.GetContext(tx)
+			if !ok {
+				t.Error("unexpected context")
+			}
+
+			if want, have := "value", ctx.Value(ctxKey{}).(string); want != have {
 				t.Errorf("unexpected context value, want: %s, have: %s", want, have)
 			}
 		},
