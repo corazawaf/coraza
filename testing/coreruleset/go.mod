@@ -1,12 +1,14 @@
 module github.com/corazawaf/coraza/v3/testing/coreruleset
 
-go 1.20
+go 1.21
+
+toolchain go1.22.0
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.6.1
 	github.com/corazawaf/coraza-coreruleset v0.0.0-20231103220038-fd5c847140a6
 	github.com/corazawaf/coraza/v3 v3.0.4
-	github.com/coreruleset/go-ftw v0.6.4-0.20240208104922-1da98b9f4fa7
+	github.com/coreruleset/go-ftw v0.6.4
 	github.com/rs/zerolog v1.32.0
 )
 

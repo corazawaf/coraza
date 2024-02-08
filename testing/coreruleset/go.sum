@@ -17,6 +17,8 @@ github.com/coreruleset/ftw-tests-schema v1.1.0 h1:3+NYrdLE3HVmOc3nGrisRBBvY9lGje
 github.com/coreruleset/ftw-tests-schema v1.1.0/go.mod h1:gRd9wBxjUI85HypWRDxJzbk1JqHC4KTxl0l/Y2p9QK4=
 github.com/coreruleset/go-ftw v0.6.4-0.20240208104922-1da98b9f4fa7 h1:QLlaeBg39rV9zOCYIvtbfQnzJZ0kN8MwbZ7TOblnmx0=
 github.com/coreruleset/go-ftw v0.6.4-0.20240208104922-1da98b9f4fa7/go.mod h1:cMCg+6N7YM4ZSVl6DB7pe9jZaNmja69SutMj8+XWEAQ=
+github.com/coreruleset/go-ftw v0.6.4 h1:EdDNld38Jv4lxqHS+csGOJuHu1/8rpp4TlrFyoijTPk=
+github.com/coreruleset/go-ftw v0.6.4/go.mod h1:IayMjfOmmNNBcqTcZU92e6UZTy79/eFdmJEmRu8tLs4=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/fatih/color v1.16.0 h1:zmkK9Ngbjj+K0yRhTVONQh1p/HknKYSlNT+vZCzyokM=
