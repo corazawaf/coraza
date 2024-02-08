@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/experimental"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -117,8 +118,20 @@ func WrapHandler(waf coraza.WAF, h http.Handler) http.Handler {
 		return h
 	}
 
+	newTX := func(*http.Request) types.Transaction {
+		return waf.NewTransaction()
+	}
+
+	if ctxwaf, ok := waf.(experimental.WAFWithOptions); ok {
+		newTX = func(r *http.Request) types.Transaction {
+			return ctxwaf.NewTransactionWithOptions(experimental.Options{
+				Context: r.Context(),
+			})
+		}
+	}
+
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		tx := waf.NewTransaction()
+		tx := newTX(r)
 		defer func() {
 			// We run phase 5 rules and create audit logs (if enabled)
 			tx.ProcessLogging()

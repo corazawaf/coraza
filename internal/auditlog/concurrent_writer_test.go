@@ -8,6 +8,7 @@ package auditlog
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -46,7 +47,51 @@ func TestConcurrentWriterFailsOnInit(t *testing.T) {
 	}
 }
 
-func TestConcurrentWriterWrites(t *testing.T) {
+type mockFormatter struct {
+	plugintypes.AuditLogFormatter
+	formatted []byte
+	err       error
+}
+
+func (ef mockFormatter) Format(plugintypes.AuditLog) ([]byte, error) {
+	return ef.formatted, ef.err
+}
+
+func TestConcurrentWriter(t *testing.T) {
+	t.Run("empty formatted", func(t *testing.T) {
+		config := plugintypes.AuditLogConfig{
+			Target:    os.DevNull,
+			Formatter: mockFormatter{},
+		}
+
+		writer := &concurrentWriter{}
+		if err := writer.Init(config); err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+
+		if err := writer.Write(nil); err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("formatting error", func(t *testing.T) {
+		config := plugintypes.AuditLogConfig{
+			Target:    os.DevNull,
+			Formatter: mockFormatter{err: errors.New("formatting error")},
+		}
+
+		writer := &concurrentWriter{}
+		if err := writer.Init(config); err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+
+		if err := writer.Write(nil); err == nil {
+			t.Errorf("expected error: %v", err)
+		}
+	})
+}
+
+func TestConcurrentWriterSuccess(t *testing.T) {
 	dir := t.TempDir()
 	file, err := os.Create(filepath.Join(dir, "audit.log"))
 	if err != nil {
@@ -59,6 +104,12 @@ func TestConcurrentWriterWrites(t *testing.T) {
 		DirMode:   fs.FileMode(0777),
 		Formatter: &jsonFormatter{},
 	}
+
+	writer := &concurrentWriter{}
+	if err := writer.Init(config); err != nil {
+		t.Error("failed to init concurrent logger", err)
+	}
+
 	ts := time.Now()
 	expectedLog := &Log{
 		Transaction_: Transaction{
@@ -73,10 +124,6 @@ func TestConcurrentWriterWrites(t *testing.T) {
 				Status_: 201,
 			},
 		},
-	}
-	writer := &concurrentWriter{}
-	if err := writer.Init(config); err != nil {
-		t.Error("failed to init concurrent logger", err)
 	}
 	if err := writer.Write(expectedLog); err != nil {
 		t.Error("failed to write to logger: ", err)

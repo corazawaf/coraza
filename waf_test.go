@@ -5,7 +5,12 @@ package coraza
 
 import (
 	"errors"
+	"reflect"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 func TestRequestBodyLimit(t *testing.T) {
@@ -100,6 +105,76 @@ func TestResponseBodyLimit(t *testing.T) {
 					t.Fatalf("unexpected error: want %q, have %q", want, have)
 				}
 			}
+		})
+	}
+}
+
+type testAuditLogWriter struct {
+	plugintypes.AuditLogWriter
+}
+
+func (*testAuditLogWriter) Init(plugintypes.AuditLogConfig) error {
+	return nil
+}
+
+func TestPopulateAuditLog(t *testing.T) {
+	writer := &testAuditLogWriter{}
+
+	testCases := map[string]struct {
+		config *wafConfig
+		check  func(*testing.T, *corazawaf.WAF)
+	}{
+		"empty config": {
+			config: &wafConfig{},
+			check:  func(*testing.T, *corazawaf.WAF) {},
+		},
+		"with relevant only": {
+			config: &wafConfig{
+				auditLog: &auditLogConfig{
+					relevantOnly: true,
+				},
+			},
+			check: func(t *testing.T, waf *corazawaf.WAF) {
+				if waf.AuditEngine != types.AuditEngineRelevantOnly {
+					t.Fatal("expected AuditLogRelevantOnly to be true")
+				}
+			},
+		},
+		"with parts": {
+			config: &wafConfig{
+				auditLog: &auditLogConfig{
+					parts: []types.AuditLogPart{
+						types.AuditLogPartRequestHeaders,
+						types.AuditLogPartResponseBody,
+					},
+				},
+			},
+			check: func(t *testing.T, waf *corazawaf.WAF) {
+				if want, have := []types.AuditLogPart{
+					types.AuditLogPartRequestHeaders,
+					types.AuditLogPartResponseBody,
+				}, waf.AuditLogParts; len(want) != len(have) {
+					t.Fatalf("unexpected AuditLogParts: want %v, have %v", want, have)
+				}
+			},
+		},
+		"with audit log writer": {
+			config: &wafConfig{
+				auditLog: &auditLogConfig{writer: writer},
+			},
+			check: func(t *testing.T, waf *corazawaf.WAF) {
+				if reflect.DeepEqual(waf.AuditLogWriter(), &writer) {
+					t.Fatal("expected AuditLogWriter to be set")
+				}
+			},
+		},
+	}
+
+	for name, tCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			waf := &corazawaf.WAF{}
+			populateAuditLog(waf, tCase.config)
+			tCase.check(t, waf)
 		})
 	}
 }

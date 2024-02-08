@@ -4,6 +4,7 @@
 package corazawaf
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -11,7 +12,6 @@ import (
 	"os"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/corazawaf/coraza/v3/debuglog"
@@ -91,6 +91,7 @@ type WAF struct {
 	UploadDir string
 
 	// Request body in memory limit excluding the size of any files being transported in the request.
+	// TODO: SecRequestBodyNoFilesLimit directive is retrieving the value, but no logic based on it is implemented. See https://github.com/corazawaf/coraza/issues/896
 	RequestBodyNoFilesLimit int64
 
 	RequestBodyLimitAction types.BodyLimitAction
@@ -133,24 +134,40 @@ type WAF struct {
 	ArgumentLimit int
 }
 
-// NewTransaction Creates a new initialized transaction for this WAF instance
-func (w *WAF) NewTransaction() *Transaction {
-	return w.newTransactionWithID(stringutils.RandomString(19))
+// Options is used to pass options to the WAF instance
+type Options struct {
+	ID      string
+	Context context.Context
 }
 
-func (w *WAF) NewTransactionWithID(id string) *Transaction {
-	if len(strings.TrimSpace(id)) == 0 {
-		id = stringutils.RandomString(19)
-		w.Logger.Warn().Msg("Empty ID passed for new transaction")
+// NewTransaction Creates a new initialized transaction for this WAF instance
+func (w *WAF) NewTransaction() *Transaction {
+	return w.newTransaction(Options{
+		ID:      stringutils.RandomString(19),
+		Context: context.Background(),
+	})
+}
+
+// NewTransactionWithOptions Creates a new initialized transaction for this WAF
+// instance with the provided options
+func (w *WAF) NewTransactionWithOptions(opts Options) *Transaction {
+	if opts.ID == "" {
+		opts.ID = stringutils.RandomString(19)
 	}
-	return w.newTransactionWithID(id)
+
+	if opts.Context == nil {
+		opts.Context = context.Background()
+	}
+
+	return w.newTransaction(opts)
 }
 
 // NewTransactionWithID Creates a new initialized transaction for this WAF instance
 // Using the specified ID
-func (w *WAF) newTransactionWithID(id string) *Transaction {
+func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx := w.txPool.Get().(*Transaction)
-	tx.id = id
+	tx.id = opts.ID
+	tx.context = opts.Context
 	tx.matchedRules = []types.MatchedRule{}
 	tx.interruption = nil
 	tx.Logdata = "" // Deprecated, this variable is not used. Logdata for each matched rule is stored in the MatchData field.
@@ -180,7 +197,7 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	// Always non-nil if buffers / collections were already initialized so we don't do any of them
 	// based on the presence of RequestBodyBuffer.
 	if tx.requestBodyBuffer == nil {
-		// if no requestBodyInMemoryLimit has been set we default to the
+		// if no requestBodyInMemoryLimit has been set we default to the requestBodyLimit
 		var requestBodyInMemoryLimit int64 = w.RequestBodyLimit
 		if w.requestBodyInMemoryLimit != nil {
 			requestBodyInMemoryLimit = int64(*w.requestBodyInMemoryLimit)
@@ -222,7 +239,7 @@ func (w *WAF) newTransactionWithID(id string) *Transaction {
 	tx.variables.highestSeverity.Set("0")
 	tx.variables.uniqueID.Set(tx.id)
 
-	w.Logger.Debug().Msg("New transaction created")
+	tx.debugLogger.Debug().Msg("Transaction started")
 
 	return tx
 }
@@ -275,14 +292,21 @@ func NewWAF() *WAF {
 		// These defaults are unavoidable as they are zero values for the variables
 		RuleEngine:                types.RuleEngineOn,
 		RequestBodyAccess:         false,
-		RequestBodyLimit:          _1gb,
+		RequestBodyLimit:          134217728, // Hard limit equal to _1gb
+		RequestBodyLimitAction:    types.BodyLimitActionReject,
 		ResponseBodyAccess:        false,
-		ResponseBodyLimit:         _1gb,
+		ResponseBodyLimit:         524288, // Hard limit equal to _1gb
 		auditLogWriter:            logWriter,
 		auditLogWriterInitialized: false,
 		AuditLogWriterConfig:      auditlog.NewConfig(),
-		Logger:                    logger,
-		ArgumentLimit:             1000,
+		AuditLogParts: types.AuditLogParts{
+			types.AuditLogPartRequestHeaders,
+			types.AuditLogPartRequestBody,
+			types.AuditLogPartResponseHeaders,
+			types.AuditLogPartAuditLogTrailer,
+		},
+		Logger:        logger,
+		ArgumentLimit: 1000,
 	}
 
 	if environment.HasAccessToFS {

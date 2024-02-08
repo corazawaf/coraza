@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
@@ -31,7 +32,7 @@ func TestMatchEvaluate(t *testing.T) {
 	tx.AddGetRequestArgument("test", "0")
 
 	var matchedValues []types.MatchData
-	matchdata := r.doEvaluate(types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
+	matchdata := r.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
 	if len(matchdata) != 1 {
 		t.Errorf("Expected 1 matchdata from a SecActions rule, got %d", len(matchdata))
 	}
@@ -54,7 +55,7 @@ func TestNoMatchEvaluate(t *testing.T) {
 	tx.AddGetRequestArgument("test", "999")
 
 	var matchedValues []types.MatchData
-	matchdata := r.doEvaluate(types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
+	matchdata := r.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
 	if len(matchdata) != 0 {
 		t.Errorf("Expected 0 matchdata from a SecActions rule, got %d", len(matchdata))
 	}
@@ -79,7 +80,7 @@ func TestNoMatchEvaluateBecauseOfException(t *testing.T) {
 	tx.AddGetRequestArgument("test", "0")
 	tx.RemoveRuleTargetByID(1, variables.ArgsGet, "test")
 	var matchedValues []types.MatchData
-	matchdata := r.doEvaluate(types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
+	matchdata := r.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
 	if len(matchdata) != 0 {
 		t.Errorf("Expected 0 matchdata, got %d", len(matchdata))
 	}
@@ -113,7 +114,7 @@ func TestFlowActionIfDetectionOnlyEngine(t *testing.T) {
 	tx.RuleEngine = types.RuleEngineDetectionOnly
 
 	var matchedValues []types.MatchData
-	matchdata := r.doEvaluate(types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
+	matchdata := r.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
 	if len(matchdata) != 1 {
 		t.Errorf("Expected 1 matchdata, got %d", len(matchdata))
 	}
@@ -165,7 +166,7 @@ func TestDisruptiveActionFromChainNotEvaluated(t *testing.T) {
 	tx := NewWAF().NewTransaction()
 
 	var matchedValues []types.MatchData
-	matchdata := r.doEvaluate(types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
+	matchdata := r.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
 	if len(matchdata) != 2 {
 		t.Errorf("Expected 2 matchdata from a SecActions chained rule (total 2 rules), got %d", len(matchdata))
 	}
@@ -183,7 +184,7 @@ func TestRuleDetailsTransferredToTransaction(t *testing.T) {
 	tx := NewWAF().NewTransaction()
 
 	var matchedValues []types.MatchData
-	r.doEvaluate(types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
+	r.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
 	if tx.variables.rule.Get("id")[0] != strconv.Itoa(r.ParentID()) {
 		t.Errorf("Expected id: %d (parent id), got %s", r.ParentID(), tx.variables.rule.Get("id")[0])
 	}
@@ -207,7 +208,7 @@ func TestSecActionMessagePropagationInMatchData(t *testing.T) {
 	r.operator = nil
 	tx := NewWAF().NewTransaction()
 	var matchedValues []types.MatchData
-	matchdata := r.doEvaluate(types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
+	matchdata := r.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
 	if len(matchdata) != 1 {
 		t.Errorf("Expected 1 matchdata from a SecActions rule, got %d", len(matchdata))
 	}
@@ -544,7 +545,7 @@ func TestCaptureNotPropagatedToInnerChainRule(t *testing.T) {
 	r.Chain = chainedRule
 	tx := NewWAF().NewTransaction()
 	var matchedValues []types.MatchData
-	r.doEvaluate(types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
+	r.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
 	// We expect that capture is false after doEvaluate.
 	if tx.Capture {
 		t.Errorf("Expected capture to be false. The parent rule enables capture, but inner rule should disable it.")
@@ -580,7 +581,7 @@ func TestExpandMacroAfterWholeRuleEvaluation(t *testing.T) {
 	tx.AddGetRequestArgument("test", "0")
 
 	var matchedValues []types.MatchData
-	matchdata := r.doEvaluate(types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
+	matchdata := r.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
 	if len(matchdata) != 2 {
 		t.Errorf("Expected 2 matchdata from a chained rule (total 2 rules), got %d", len(matchdata))
 	}

@@ -5,6 +5,7 @@ package corazawaf
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -22,6 +23,7 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/internal/collections"
+	"github.com/corazawaf/coraza/v3/internal/cookies"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/corazatypes"
 	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
@@ -40,6 +42,9 @@ import (
 type Transaction struct {
 	// Transaction ID
 	id string
+
+	// The context associated to the transaction.
+	context context.Context
 
 	// Contains the list of matched rules and associated match information
 	matchedRules []types.MatchedRule
@@ -320,8 +325,21 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 			tx.variables.reqbodyProcessor.Set("MULTIPART")
 		}
 	case "cookie":
-		// Cookies use the same syntax as GET params but with semicolon (;) separator
-		values := urlutil.ParseQuery(value, ';')
+		// 4.2.  Cookie
+		//
+		// 4.2.1.  Syntax
+		//
+		//   The user agent sends stored cookies to the origin server in the
+		//   Cookie header.  If the server conforms to the requirements in
+		//   Section 4.1 (and the user agent conforms to the requirements in
+		//   Section 5), the user agent will send a Cookie header that conforms to
+		//   the following grammar:
+		//
+		//   cookie-header = "Cookie:" OWS cookie-string OWS
+		//   cookie-string = cookie-pair *( ";" SP cookie-pair )
+		//
+		// There is no URL Decode performed no the cookies
+		values := cookies.ParseCookies(value)
 		for k, vr := range values {
 			for _, v := range vr {
 				tx.variables.requestCookies.Add(k, v)
@@ -487,6 +505,7 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 		Rule_:            &r.RuleMetadata,
 		Log_:             r.Log,
 		MatchedDatas_:    mds,
+		Context_:         tx.context,
 	}
 	// Populate MatchedRule disruption related fields only if the Engine is capable of performing disruptive actions
 	if tx.RuleEngine == types.RuleEngineOn {
@@ -535,7 +554,7 @@ func (tx *Transaction) GetStopWatch() string {
 }
 
 // GetField Retrieve data from collections applying exceptions
-// In future releases we may remove de exceptions slice and
+// In future releases we may remove the exceptions slice and
 // make it easier to use
 func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 	col := tx.Collection(rv.Variable)
@@ -1342,22 +1361,25 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 		HostIP_:        tx.variables.serverAddr.Get(),
 		HostPort_:      hostPort,
 		ServerID_:      tx.variables.serverName.Get(), // TODO check
+		Request_: &auditlog.TransactionRequest{
+			Method_:   tx.variables.requestMethod.Get(),
+			URI_:      tx.variables.requestURI.Get(),
+			Protocol_: tx.variables.requestProtocol.Get(),
+		},
 	}
 
 	for _, part := range tx.AuditLogParts {
 		switch part {
 		case types.AuditLogPartRequestHeaders:
-			if al.Transaction_.Request_ == nil {
-				al.Transaction_.Request_ = &auditlog.TransactionRequest{}
-			}
 			al.Transaction_.Request_.Headers_ = tx.variables.requestHeaders.Data()
 		case types.AuditLogPartRequestBody:
-			if al.Transaction_.Request_ == nil {
-				al.Transaction_.Request_ = &auditlog.TransactionRequest{}
+			reader, err := tx.requestBodyBuffer.Reader()
+			if err == nil {
+				content, err := io.ReadAll(reader)
+				if err == nil {
+					al.Transaction_.Request_.Body_ = string(content)
+				}
 			}
-			// TODO maybe change to:
-			// al.Transaction.Request.Body = tx.RequestBodyBuffer.String()
-			al.Transaction_.Request_.Body_ = tx.variables.requestBody.Get()
 
 			/*
 			* TODO:

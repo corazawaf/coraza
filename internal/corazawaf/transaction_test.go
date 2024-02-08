@@ -162,10 +162,11 @@ func TestWriteRequestBody(t *testing.T) {
 	)
 
 	testCases := []struct {
-		name                   string
-		requestBodyLimit       int
-		requestBodyLimitAction types.BodyLimitAction
-		shouldInterrupt        bool
+		name                            string
+		requestBodyLimit                int
+		requestBodyLimitAction          types.BodyLimitAction
+		avoidRequestBodyLimitActionInit bool
+		shouldInterrupt                 bool
 	}{
 		{
 			name:                   "LimitNotReached",
@@ -177,6 +178,14 @@ func TestWriteRequestBody(t *testing.T) {
 			requestBodyLimit:       urlencodedBodyLen - 3,
 			requestBodyLimitAction: types.BodyLimitActionReject,
 			shouldInterrupt:        true,
+		},
+		{
+			name:             "LimitReachedAndRejectsDefaultValue",
+			requestBodyLimit: urlencodedBodyLen - 3,
+			// Omitting requestBodyLimitAction defaults to Reject
+			// requestBodyLimitAction: types.BodyLimitActionReject,
+			avoidRequestBodyLimitActionInit: true,
+			shouldInterrupt:                 true,
 		},
 		{
 			name:                   "LimitReachedAndPartialProcessing",
@@ -201,8 +210,9 @@ func TestWriteRequestBody(t *testing.T) {
 							waf.RuleEngine = types.RuleEngineOn
 							waf.RequestBodyAccess = true
 							waf.RequestBodyLimit = int64(testCase.requestBodyLimit)
-							waf.RequestBodyLimitAction = testCase.requestBodyLimitAction
-
+							if !testCase.avoidRequestBodyLimitActionInit {
+								waf.RequestBodyLimitAction = testCase.requestBodyLimitAction
+							}
 							tx := waf.NewTransaction()
 							tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
 
@@ -471,6 +481,12 @@ func TestWriteResponseBody(t *testing.T) {
 			name:                    "LimitReachedAndPartialProcessing",
 			responseBodyLimit:       urlencodedBodyLen - 3,
 			responseBodyLimitAction: types.BodyLimitActionProcessPartial,
+		},
+		{
+			name:              "LimitReachedAndPartialProcessingDefaultValue",
+			responseBodyLimit: urlencodedBodyLen - 3,
+			// Omitting requestBodyLimitAction defaults to ProcessPartial
+			// responseBodyLimitAction: types.BodyLimitActionProcessPartial,
 		},
 	}
 
@@ -800,6 +816,57 @@ func TestHeaderSetters(t *testing.T) {
 	}
 	if !utils.InSlice("abc", collectionValues(t, tx.variables.requestCookiesNames)) {
 		t.Error("failed to set cookie name")
+	}
+	if err := tx.Close(); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestCookiesNotUrldecoded(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	fullCookie := "abc=%7Bd+e+f%7D;hij=%7Bklm%7D"
+	expectedUrlencodedAbcCookieValue := "%7Bd+e+f%7D"
+	unexpectedUrldencodedAbcCookieValue := "{d e f}"
+	tx.AddRequestHeader("cookie", fullCookie)
+	c := tx.variables.requestCookies.Get("abc")[0]
+	if c != expectedUrlencodedAbcCookieValue {
+		if c == unexpectedUrldencodedAbcCookieValue {
+			t.Errorf("failed to set cookie, unexpected urldecoding. Got: %q, expected: %q", unexpectedUrldencodedAbcCookieValue, expectedUrlencodedAbcCookieValue)
+		} else {
+			t.Errorf("failed to set cookie, got %q", c)
+		}
+	}
+	if tx.variables.requestHeaders.Get("cookie")[0] != fullCookie {
+		t.Errorf("failed to set request header, got: %q, expected: %q", tx.variables.requestHeaders.Get("cookie")[0], fullCookie)
+	}
+	if !utils.InSlice("cookie", collectionValues(t, tx.variables.requestHeadersNames)) {
+		t.Error("failed to set header name", collectionValues(t, tx.variables.requestHeadersNames))
+	}
+	if !utils.InSlice("abc", collectionValues(t, tx.variables.requestCookiesNames)) {
+		t.Error("failed to set cookie name")
+	}
+	if err := tx.Close(); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestMultipleCookiesWithSpaceBetweenThem(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	multipleCookies := "cookie1=value1; cookie2=value2;    cookie1=value2"
+	tx.AddRequestHeader("cookie", multipleCookies)
+	v11 := tx.variables.requestCookies.Get("cookie1")[0]
+	if v11 != "value1" {
+		t.Errorf("failed to set cookie, got %q", v11)
+	}
+	v12 := tx.variables.requestCookies.Get("cookie1")[1]
+	if v12 != "value2" {
+		t.Errorf("failed to set cookie, got %q", v12)
+	}
+	v2 := tx.variables.requestCookies.Get("cookie2")[0]
+	if v2 != "value2" {
+		t.Errorf("failed to set cookie, got %q", v2)
 	}
 	if err := tx.Close(); err != nil {
 		t.Error(err)

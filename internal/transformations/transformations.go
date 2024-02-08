@@ -52,6 +52,7 @@ func init() {
 	Register("replaceNulls", replaceNulls)
 	Register("reverse", reverse)
 	Register("sha1", sha1T)
+	Register("uppercase", upperCase)
 	Register("urlDecode", urlDecode)
 	Register("urlDecodeUni", urlDecodeUni)
 	Register("urlEncode", urlEncode)

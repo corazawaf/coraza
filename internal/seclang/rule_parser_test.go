@@ -251,6 +251,29 @@ func TestInvalidOperatorRuleData(t *testing.T) {
 	}
 }
 
+func TestRawChainedRules(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	p := NewParser(waf)
+	if err := p.FromString(`
+	SecRule REQUEST_URI "abc" "id:7,phase:2,chain"
+	SecRule REQUEST_URI "def" "chain"
+	SecRule REQUEST_URI "ghi" ""
+	`); err != nil {
+		t.Errorf("unexpected error: %s", err.Error())
+	}
+	raw := waf.Rules.GetRules()[0].Raw()
+	spl := strings.Split(raw, "\n")
+	if len(spl) != 3 {
+		t.Errorf("unexpected number of chained rules, want 3, have %d", len(spl))
+	}
+	for i, r := range spl {
+		// we test that all lines begin with SecRule REQUEST_URI "
+		if !strings.HasPrefix(r, "SecRule REQUEST_URI ") {
+			t.Errorf("unexpected rule at line %d: %s", i, r)
+		}
+	}
+}
+
 func BenchmarkParseActions(b *testing.B) {
 	actionsToBeParsed := "id:980170,phase:5,pass,t:none,noauditlog,msg:'Anomaly Scores:Inbound Scores - Outbound Scores',tag:test"
 	for i := 0; i < b.N; i++ {

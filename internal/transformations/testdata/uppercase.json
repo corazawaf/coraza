@@ -1,0 +1,38 @@
+[
+	{
+	   "input" : "",
+	   "name" : "uppercase",
+	   "type" : "tfn",
+	   "ret" : 0,
+	   "output" : ""
+	},
+	{
+	   "output" : "TESTCASE",
+	   "ret" : 0,
+	   "name" : "uppercase",
+	   "input" : "testcase",
+	   "type" : "tfn"
+	},
+	{
+	   "ret" : 0,
+	   "input" : "test\u0000case",
+	   "type" : "tfn",
+	   "name" : "uppercase",
+	   "output" : "TEST\u0000CASE"
+	},
+	{
+	   "output" : "TESTCASE",
+	   "input" : "testcase",
+	   "name" : "uppercase",
+	   "type" : "tfn",
+	   "ret" : 1
+	},
+	{
+	   "ret" : 1,
+	   "input" : "Test\u0000Case",
+	   "name" : "uppercase",
+	   "type" : "tfn",
+	   "output" : "TEST\u0000CASE"
+	}
+ ]
+ 

@@ -54,6 +54,11 @@ func (sl *serialWriter) Write(al plugintypes.AuditLog) error {
 	if err != nil {
 		return err
 	}
+
+	if len(bts) == 0 {
+		return nil
+	}
+
 	sl.logger.Println(string(bts))
 	return nil
 }

@@ -229,7 +229,7 @@ func directiveSecResponseBodyAccess(options *DirectiveOptions) error {
 }
 
 // Description: Configures the maximum request body size Coraza will accept for buffering.
-// Default: 134217728 (131072 KB)
+// Default: 134217728 (128 Mib)
 // Syntax: SecRequestBodyLimit [LIMIT_IN_BYTES]
 // ---
 // Anything over the limit will be rejected with status code 413 (Request Entity Too Large).
@@ -306,6 +306,19 @@ func directiveSecServerSignature(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Removes the matching rules from the current configuration context.
+// Syntax: SecRuleRemoveByTag [TAG]
+// ---
+// Normally, you would use `SecRuleRemoveById` to remove rules, but it may occasionally
+// be easier to disable an entire group of rules with `SecRuleRemoveByTag`. Matching is
+// by case-sensitive string equality.
+//
+// Example:
+// ```apache
+// SecRuleRemoveByTag attack-dos
+// ```
+//
+// Note: OWASP CRS has a list of supported tags https://coreruleset.org/docs/rules/metadata/
 func directiveSecRuleRemoveByTag(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -410,7 +423,7 @@ func directiveSecResponseBodyLimitAction(options *DirectiveOptions) error {
 
 // Description: Configures the maximum response body size that will be accepted for buffering.
 // Syntax: SecResponseBodyLimit [LIMIT_IN_BYTES]
-// Default: 524288 (512 KB)
+// Default: 524288 (512 Kib)
 // ---
 // Anything over this limit will be rejected with status code 500 (Internal Server Error).
 // This setting will not affect the responses with MIME types that are not selected for
@@ -448,7 +461,7 @@ func directiveSecRequestBodyLimitAction(options *DirectiveOptions) error {
 }
 
 // Description: Configures the maximum request body size that Coraza will store in memory.
-// Default: 131072 (128 KB)
+// Default: defaults to RequestBodyLimit
 // Syntax: SecRequestBodyInMemoryLimit [LIMIT_IN_BYTES]
 // ---
 // When a `multipart/form-data` request is being processed, once the in-memory limit is reached,
@@ -890,6 +903,7 @@ func directiveSecUploadDir(options *DirectiveOptions) error {
 // Generally speaking, the default value is not small enough. For most applications, you
 // should be able to reduce it down to 128 KB or lower. Anything over the limit will be
 // rejected with status code 413 (Request Entity Too Large). There is a hard limit of 1 GB.
+// Note: not implemented yet
 func directiveSecRequestBodyNoFilesLimit(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
