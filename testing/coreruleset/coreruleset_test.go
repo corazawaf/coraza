@@ -261,11 +261,11 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 		if err != nil {
 			return err
 		}
-		t, err := test.GetTestFromYaml(yaml)
+		ftwt, err := test.GetTestFromYaml(yaml)
 		if err != nil {
 			return err
 		}
-		tests = append(tests, t)
+		tests = append(tests, *ftwt)
 		return nil
 	})
 	if err != nil {
