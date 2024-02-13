@@ -208,7 +208,7 @@ func directiveSecRule(options *DirectiveOptions) error {
 
 // Description: Configures whether response bodies are to be buffered.
 // Syntax: SecResponseBodyAccess On|Off
-// Default: Off
+// DefaultValue: Off
 // ---
 // This directive is required if you plan to inspect HTML responses and implement
 // response blocking. Possible values are:
@@ -229,7 +229,7 @@ func directiveSecResponseBodyAccess(options *DirectiveOptions) error {
 }
 
 // Description: Configures the maximum request body size Coraza will accept for buffering.
-// Default: 134217728 (128 Mib)
+// DefaultValue: 134217728 (128 Mib)
 // Syntax: SecRequestBodyLimit [LIMIT_IN_BYTES]
 // ---
 // Anything over the limit will be rejected with status code 413 (Request Entity Too Large).
@@ -249,7 +249,7 @@ func directiveSecRequestBodyLimit(options *DirectiveOptions) error {
 
 // Description: Configures whether request bodies will be buffered and processed by Coraza.
 // Syntax: SecRequestBodyAccess On|Off
-// Default: Off
+// DefaultValue: Off
 // ---
 // This directive is required if you want to inspect the data transported request bodies
 // (e.g., POST parameters). Request buffering is also required in order to make reliable
@@ -271,7 +271,7 @@ func directiveSecRequestBodyAccess(options *DirectiveOptions) error {
 
 // Description: Configures the rules engine.
 // Syntax: SecRuleEngine On|Off|DetectionOnly
-// Default: Off
+// DefaultValue: Off
 // ---
 // The possible values are:
 // - On: process rules
@@ -423,7 +423,7 @@ func directiveSecResponseBodyLimitAction(options *DirectiveOptions) error {
 
 // Description: Configures the maximum response body size that will be accepted for buffering.
 // Syntax: SecResponseBodyLimit [LIMIT_IN_BYTES]
-// Default: 524288 (512 Kib)
+// DefaultValue: 524288 (512 Kib)
 // ---
 // Anything over this limit will be rejected with status code 500 (Internal Server Error).
 // This setting will not affect the responses with MIME types that are not selected for
@@ -444,7 +444,7 @@ func directiveSecResponseBodyLimit(options *DirectiveOptions) error {
 // Description: Controls what happens once a request body limit, configured with
 // SecRequestBodyLimit, is encountered
 // Syntax: SecRequestBodyLimitAction Reject|ProcessPartial
-// Default: Reject
+// DefaultValue: Reject
 // ---
 // By default, Coraza will reject a request body that is longer than specified to
 // avoid OOM issues while buffering the request body prior the inspection.
@@ -461,7 +461,7 @@ func directiveSecRequestBodyLimitAction(options *DirectiveOptions) error {
 }
 
 // Description: Configures the maximum request body size that Coraza will store in memory.
-// Default: defaults to RequestBodyLimit
+// DefaultText: defaults to `RequestBodyLimit`
 // Syntax: SecRequestBodyInMemoryLimit [LIMIT_IN_BYTES]
 // ---
 // When a `multipart/form-data` request is being processed, once the in-memory limit is reached,
@@ -554,7 +554,7 @@ func directiveSecHashEngine(options *DirectiveOptions) error {
 
 // Description: Defines the default list of actions, which will be inherited
 // by the rules in the same configuration context.
-// Default: phase:2,log,auditlog,pass
+// DefaultValue: phase:2,log,auditlog,pass
 // Syntax: SecDefaultAction "phase:2,log,auditlog,deny,status:403,tag:'SLA 24/7'"
 // ---
 // Every rule following a previous `SecDefaultAction` directive in the same configuration
@@ -644,7 +644,7 @@ func directiveSecAuditLogType(options *DirectiveOptions) error {
 // Description: Select the output format of the AuditLogs. The format can be either
 // the native AuditLogs format or JSON.
 // Syntax: SecAuditLogFormat JSON|Native
-// Default: Native
+// DefaultValue: Native
 func directiveSecAuditLogFormat(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -672,7 +672,7 @@ func directiveSecAuditLogDir(options *DirectiveOptions) error {
 // Description: Configures the mode (permissions) of any directories created for the
 // concurrent audit logs, using an octal mode value as parameter (as used in chmod).
 // Syntax: SecAuditLogDirMode octal_mode|"default"
-// Default: 0600
+// DefaultValue: 0600
 // ---
 // The default mode for new audit log directories (0600) only grants read/write access
 // to the owner.
@@ -699,7 +699,7 @@ func directiveSecAuditLogDirMode(options *DirectiveOptions) error {
 // audit logs using an octal mode (as used in `chmod`). See `SecAuditLogDirMode` for
 // controlling the mode of created audit log directories.
 // Syntax: SecAuditLogFileMode octal_mode|"default"
-// Default: 0600
+// DefaultValue: 0600
 // ---
 // Example:
 // ```apache
@@ -759,7 +759,7 @@ func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 // in the list then the equivalent part will be recorded. See below for the list of
 // all parts.
 // Syntax: SecAuditLogParts [PARTLETTERS]
-// Default: ABCFHZ
+// DefaultValue: ABCFHZ
 // ---
 // The format of the audit log format is documented in detail in the Audit Log Data
 // Format Documentation.
@@ -804,7 +804,7 @@ func directiveSecAuditLogParts(options *DirectiveOptions) error {
 
 // Description: Configures the audit logging engine.
 // Syntax: SecAuditEngine RelevantOnly
-// Default: Off
+// DefaultValue: Off
 // ---
 // The `SecAuditEngine` directive is used to configure the audit engine, which logs complete
 // transactions.
@@ -897,7 +897,7 @@ func directiveSecUploadDir(options *DirectiveOptions) error {
 // to disk, file uploads will not increase memory consumption. However, it’s still possible
 // for someone to take advantage of a large request body limit and send non-upload requests
 // with large body sizes. This directive eliminates that loophole.
-// Default: 1048576 (1 MB)
+// DefaultValue: 1048576 (1 MB)
 // Syntax: SecRequestBodyNoFilesLimit 131072
 // ---
 // Generally speaking, the default value is not small enough. For most applications, you
@@ -928,7 +928,7 @@ func directiveSecDebugLog(options *DirectiveOptions) error {
 }
 
 // Description: Configures the verboseness of the debug log data.
-// Default: 3
+// DefaultValue: 3
 // Syntax: SecDebugLogLevel [LOG_LEVEL]
 // ---
 // Depending on the implementation, errors ranging from 1 to 2 might be directly
@@ -1012,7 +1012,7 @@ func directiveSecDataset(options *DirectiveOptions) error {
 }
 
 // Description: Configures the maximum number of ARGS that will be accepted for processing.
-// Default: 1000
+// DefaultValue: 1000
 // Syntax: SecArgumentsLimit [LIMIT]
 // ---
 // Exceeding the limit will not be included.

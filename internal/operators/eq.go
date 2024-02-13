@@ -27,7 +27,7 @@ var _ plugintypes.Operator = (*eq)(nil)
 // SecRule &REQUEST_HEADERS_NAMES "@eq 15" "id:153"
 // ```
 // Note: If a value is provided that cannot be converted to an integer (i.e a string) this operator
-// will treat that value as 0.
+// will treat that value as `0`.
 func newEq(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
