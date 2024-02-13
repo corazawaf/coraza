@@ -53,7 +53,7 @@ func BenchmarkCRSCompilation(b *testing.B) {
 	}
 }
 
-func BenchmarkCRSSimpleGET(b *testing.B) {
+func BenchmarkCRSRuntimeSimpleGET(b *testing.B) {
 	waf := crsWAF(b)
 
 	b.ResetTimer() // only benchmark execution, not compilation
@@ -80,7 +80,7 @@ func BenchmarkCRSSimpleGET(b *testing.B) {
 	}
 }
 
-func BenchmarkCRSSimplePOST(b *testing.B) {
+func BenchmarkCRSRuntimeSimplePOST(b *testing.B) {
 	waf := crsWAF(b)
 
 	b.ReportAllocs()
@@ -112,7 +112,7 @@ func BenchmarkCRSSimplePOST(b *testing.B) {
 	}
 }
 
-func BenchmarkCRSLargePOST(b *testing.B) {
+func BenchmarkCRSRuntimeLargePOST(b *testing.B) {
 	waf := crsWAF(b)
 
 	postPayload := []byte(fmt.Sprintf("parameters2=and&other2=%s", strings.Repeat("a", 10000)))

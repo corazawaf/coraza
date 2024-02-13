@@ -223,3 +223,15 @@ func Precommit() error {
 func Check() {
 	mg.SerialDeps(Lint, Test)
 }
+
+func CRSBenchmark() error {
+	bench := "BenchmarkCRSRuntime(Simple|Large)(GET|POST)"
+	err := sh.RunV("go", "test", "-run=^$,", "-benchmem", "-bench=^"+bench+"$", "./testing/coreruleset", "-cpuprofile=cpuprof.out")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("\nTo analyze the benchmark results, run:\n")
+	fmt.Println("$ go tool pprof -http=:8080 cpuprof.out\n")
+	return nil
+}
