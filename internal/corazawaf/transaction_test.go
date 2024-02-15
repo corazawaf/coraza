@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	regexp "github.com/wasilibs/go-re2"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -20,6 +19,7 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
+	regexp "github.com/wasilibs/go-re2"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
