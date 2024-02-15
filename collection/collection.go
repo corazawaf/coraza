@@ -4,8 +4,7 @@
 package collection
 
 import (
-	"regexp"
-
+	regexp "github.com/wasilibs/go-re2"
 	"github.com/corazawaf/coraza/v3/types"
 )
 

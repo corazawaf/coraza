@@ -23,6 +23,7 @@ require (
 	github.com/mccutchen/go-httpbin/v2 v2.13.2
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20230725210150-fb29fc3c913e
 	github.com/tidwall/gjson v1.17.1
+	github.com/wasilibs/go-re2 v1.4.1
 	golang.org/x/net v0.21.0
 	golang.org/x/sync v0.6.0
 	rsc.io/binaryregexp v0.2.0
@@ -30,6 +31,7 @@ require (
 
 require (
 	github.com/miekg/dns v1.1.57 // indirect
+	github.com/tetratelabs/wazero v1.5.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	golang.org/x/mod v0.14.0 // indirect
