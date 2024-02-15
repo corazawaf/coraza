@@ -4,9 +4,9 @@
 package collections
 
 import (
-	"regexp"
 	"strings"
 
+    regexp "github.com/wasilibs/go-re2"
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/types"

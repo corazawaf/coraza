@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"regexp"
+	regexp "github.com/wasilibs/go-re2"
 	"runtime/debug"
 	"strconv"
 	"strings"

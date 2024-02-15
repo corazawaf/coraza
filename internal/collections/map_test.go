@@ -15,7 +15,7 @@ package collections
 
 import (
 	"fmt"
-	"regexp"
+	regexp "github.com/wasilibs/go-re2"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/types/variables"

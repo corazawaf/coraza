@@ -10,7 +10,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"regexp"
+	regexp "github.com/wasilibs/go-re2"
 	"strconv"
 	"time"
 
