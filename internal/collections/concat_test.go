@@ -6,7 +6,7 @@ package collections
 import (
 	"strings"
 	"testing"
-    regexp "github.com/wasilibs/go-re2"
+	regexp "github.com/wasilibs/go-re2"
 
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
