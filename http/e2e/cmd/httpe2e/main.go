@@ -20,7 +20,6 @@ import (
 // --httpbin-hostport: Upstream httpbin endpoint, used for health checking reasons. Defaults to "localhost:8081".
 
 // A dedicated set of directives is expected to be loaded for e2e testing. Refer to the `Directives` const in http/e2e/e2e.go.
-.
 
 func main() {
 	// Initialize variables
