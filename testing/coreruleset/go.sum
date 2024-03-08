@@ -10,6 +10,8 @@ github.com/corazawaf/coraza-coreruleset v0.0.0-20231103220038-fd5c847140a6 h1:Mj
 github.com/corazawaf/coraza-coreruleset v0.0.0-20231103220038-fd5c847140a6/go.mod h1:7rsocqNDkTCira5T0M7buoKR2ehh7YZiPkzxRuAgvVU=
 github.com/corazawaf/coraza/v3 v3.0.4 h1:Llemgoh0hp2NggCwcWN8lNiV4Pfe+AWzf1oEcasT234=
 github.com/corazawaf/coraza/v3 v3.0.4/go.mod h1:3fTYjY5BZv3nezLpH6NAap0gr3jZfbQWUAu2GF17ET4=
+github.com/corazawaf/coraza/v3 v3.1.0 h1:CB6YxNXdbZjUJS/0FVFoFvS8eOVFbIvlNuHNC5dh88c=
+github.com/corazawaf/coraza/v3 v3.1.0/go.mod h1:S0bhYQfTu1Ew3YKdI37X1WWu6t4En4Tvw28aKyQFJaU=
 github.com/corazawaf/libinjection-go v0.1.3 h1:PUplAYho1BBl0tIVbhDsNRuVGIeUYSiCEc9oQpb2rJU=
 github.com/corazawaf/libinjection-go v0.1.3/go.mod h1:OP4TM7xdJ2skyXqNX1AN1wN5nNZEmJNuWbNPOItn7aw=
 github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
