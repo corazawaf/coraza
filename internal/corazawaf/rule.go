@@ -171,12 +171,14 @@ func (r *Rule) Evaluate(phase types.RulePhase, tx plugintypes.TransactionState, 
 	// collectiveMatchedValues lives across recursive calls of doEvaluate
 	var collectiveMatchedValues []types.MatchData
 
-	var logger debuglog.Logger
+	logger := tx.DebugLogger()
 
-	if r.ID_ == noID {
-		logger = tx.DebugLogger().With(debuglog.Str("rule_ref", fmt.Sprintf("%s#L%d", r.File_, r.Line_)))
-	} else {
-		logger = tx.DebugLogger().With(debuglog.Int("rule_id", r.ID_))
+	if logger.Debug().IsEnabled() {
+		if r.ID_ == noID {
+			logger = logger.With(debuglog.Str("rule_ref", fmt.Sprintf("%s#L%d", r.File_, r.Line_)))
+		} else {
+			logger = logger.With(debuglog.Int("rule_id", r.ID_))
+		}
 	}
 
 	r.doEvaluate(logger, phase, tx.(*Transaction), &collectiveMatchedValues, chainLevelZero, cache)
@@ -245,7 +247,10 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 
 			values = tx.GetField(v)
 
-			vLog := logger.With(debuglog.Str("variable", v.Variable.Name()))
+			vLog := logger
+			if logger.Debug().IsEnabled() {
+				vLog = logger.With(debuglog.Str("variable", v.Variable.Name()))
+			}
 			vLog.Debug().Msg("Expanding arguments for rule")
 
 			for i, arg := range values {

@@ -255,7 +255,7 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	})))
 	defer s.Close()
 
-	var tests []test.FTWTest
+	var tests []*test.FTWTest
 	err = doublestar.GlobWalk(crstests.FS, "**/*.yaml", func(path string, d os.DirEntry) error {
 		yaml, err := fs.ReadFile(crstests.FS, path)
 		if err != nil {
@@ -265,7 +265,7 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 		if err != nil {
 			return err
 		}
-		tests = append(tests, *ftwt)
+		tests = append(tests, ftwt)
 		return nil
 	})
 	if err != nil {
