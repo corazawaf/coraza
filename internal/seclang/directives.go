@@ -1025,7 +1025,6 @@ func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
 // As an alternative to `SecRuleUpdateTargetById`, this directive will append variables to the specified rule
 // with the targets provided in the second parameter. It can be handy for updating an entire group of rules.
 // Matching is by case-sensitive string equality.
-
 // This directive will append variables to the specified rule with the targets provided in the second parameter.
 // The rule ID can be single IDs or ranges of IDs. The targets are separated by a pipe character.
 // Note: OWASP CRS has a list of supported tags https://coreruleset.org/docs/rules/metadata/
