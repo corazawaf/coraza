@@ -87,7 +87,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 	SecRule ARGS "@rx aaa" "id:60,phase:1,log,tag:tag-2"
 	SecRule ARGS:t2 "@rx bbb" "id:61,phase:1,log,tag:tag-2"
 	SecRule ARGS:t1|REQUEST_COOKIES "@rx aaa" "id:62,phase:1,log,tag:tag-2"
-	SecRuleUpdateTargetByTag tag-2 "!ARGS:t1|!ARGS:t2"
+	# The tag might also be wrapped in double quotes
+	SecRuleUpdateTargetByTag "tag-2" "!ARGS:t1|!ARGS:t2"
 
 	`,
 })

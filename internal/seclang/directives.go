@@ -1036,7 +1036,7 @@ func directiveSecRuleUpdateTargetByTag(options *DirectiveOptions) error {
 	}
 
 	for _, rule := range options.WAF.Rules.GetRules() {
-		if utils.InSlice(tagAndvars[0], rule.Tags_) {
+		if utils.InSlice(strings.Trim(tagAndvars[0], "\""), rule.Tags_) {
 			rp := RuleParser{
 				rule:           &rule,
 				options:        RuleOptions{},
