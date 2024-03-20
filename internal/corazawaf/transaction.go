@@ -126,6 +126,10 @@ func (tx *Transaction) ID() string {
 	return tx.id
 }
 
+func (tx *Transaction) Context() context.Context {
+	return tx.context
+}
+
 func (tx *Transaction) Variables() plugintypes.TransactionVariables {
 	return &tx.variables
 }
