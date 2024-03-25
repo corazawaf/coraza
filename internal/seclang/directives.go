@@ -354,6 +354,9 @@ func directiveSecRuleRemoveByID(options *DirectiveOptions) error {
 
 			options.WAF.Rules.DeleteByID(id)
 		} else {
+			if idx == 0 {
+				return fmt.Errorf("SecRuleUpdateTargetById: invalid negative id: %s", idOrRange)
+			}
 			start, err := strconv.Atoi(idOrRange[:idx])
 			if err != nil {
 				return err
@@ -975,19 +978,11 @@ func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
 			if err != nil {
 				return err
 			}
-
-			rule := options.WAF.Rules.FindByID(id)
-			if rule == nil {
-				return fmt.Errorf("SecRuleUpdateTargetById: rule \"%d\" not found", id)
-			}
-			rp := RuleParser{
-				rule:           rule,
-				options:        RuleOptions{},
-				defaultActions: map[types.RulePhase][]ruleAction{},
-			}
-			return rp.ParseVariables(strings.Trim(variables, "\""))
-
+			return updateTargetBySingleID(id, variables, options)
 		} else {
+			if idx == 0 {
+				return fmt.Errorf("SecRuleUpdateTargetById: invalid negative id: %s", idOrRange)
+			}
 			start, err := strconv.Atoi(idOrRange[:idx])
 			if err != nil {
 				return err
@@ -997,7 +992,9 @@ func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
 			if err != nil {
 				return err
 			}
-
+			if start == end {
+				return updateTargetBySingleID(start, variables, options)
+			}
 			if start > end {
 				return fmt.Errorf("invalid range: %s", idOrRange)
 			}
@@ -1019,6 +1016,20 @@ func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
 	return nil
 }
 
+func updateTargetBySingleID(id int, variables string, options *DirectiveOptions) error {
+
+	rule := options.WAF.Rules.FindByID(id)
+	if rule == nil {
+		return fmt.Errorf("SecRuleUpdateTargetById: rule \"%d\" not found", id)
+	}
+	rp := RuleParser{
+		rule:           rule,
+		options:        RuleOptions{},
+		defaultActions: map[types.RulePhase][]ruleAction{},
+	}
+	return rp.ParseVariables(strings.Trim(variables, "\""))
+}
+
 // Description: Updates the target (variable) list of the specified rule(s) by tag.
 // Syntax: SecRuleUpdateTargetByTag TAG TARGET1[|TARGET2|TARGET3]
 // ---
@@ -1035,13 +1046,15 @@ func directiveSecRuleUpdateTargetByTag(options *DirectiveOptions) error {
 	}
 
 	for _, rule := range options.WAF.Rules.GetRules() {
-		if utils.InSlice(strings.Trim(tagAndvars[0], "\""), rule.Tags_) {
+		inputTag := strings.Trim(tagAndvars[0], "\"")
+		if utils.InSlice(inputTag, rule.Tags_) {
 			rp := RuleParser{
 				rule:           &rule,
 				options:        RuleOptions{},
 				defaultActions: map[types.RulePhase][]ruleAction{},
 			}
-			if err := rp.ParseVariables(strings.Trim(tagAndvars[1], "\"")); err != nil {
+			inputVars := strings.Trim(tagAndvars[1], "\"")
+			if err := rp.ParseVariables(inputVars); err != nil {
 				return err
 			}
 		}
