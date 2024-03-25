@@ -21,6 +21,7 @@ jobs:
       contents: write # needed for triggering dispatch
       id-token: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/create-github-app-token@v1
         id: app-token
         with:
@@ -35,5 +36,5 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            --data '{"event_type": "documentation", "client_payload": { "updated": true}}' \
+            --data '{"event_type": "documentation", "client_payload": { "sha": "${{ github.sha }}"}}' \
             "https://api.github.com/repos/$GITHUB_REPOSITORY_OWNER/coraza.io/dispatches"
