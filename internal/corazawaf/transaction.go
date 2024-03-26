@@ -1290,6 +1290,9 @@ func (tx *Transaction) ProcessLogging() {
 	if tx.AuditEngine == types.AuditEngineRelevantOnly && tx.audit {
 		re := tx.WAF.AuditLogRelevantStatus
 		status := tx.variables.responseStatus.Get()
+		if tx.IsInterrupted() {
+			status = strconv.Itoa(tx.interruption.Status)
+		}
 		if re != nil && !re.Match([]byte(status)) {
 			// Not relevant status
 			tx.debugLogger.Debug().

@@ -709,15 +709,56 @@ func TestResetCapture(t *testing.T) {
 }
 
 func TestRelevantAuditLogging(t *testing.T) {
-	tx := makeTransaction(t)
-	tx.WAF.AuditLogRelevantStatus = regexp.MustCompile(`(403)`)
-	tx.variables.responseStatus.Set("403")
-	tx.AuditEngine = types.AuditEngineRelevantOnly
-	// tx.WAF.auditLogger = auditlog.NewAuditLogger()
-	tx.ProcessLogging()
-	// TODO how do we check if the log was writen?
-	if err := tx.Close(); err != nil {
-		t.Error(err)
+	tests := []struct {
+		name         string
+		status       string
+		interruption *types.Interruption
+		relevantLog  bool
+	}{
+		{
+			name:         "TestRelevantAuditLogging",
+			status:       "403",
+			interruption: nil,
+			relevantLog:  true,
+		},
+		{
+			name:         "TestNotRelevantAuditLogging",
+			status:       "200",
+			interruption: nil,
+			relevantLog:  false,
+		},
+		{
+			name: "TestRelevantAuditLoggingWithInterruption",
+			interruption: &types.Interruption{
+				Status: 403,
+				Action: "deny",
+			},
+			relevantLog: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tx := makeTransaction(t)
+			debugLog := bytes.Buffer{}
+			tx.debugLogger = debuglog.Default().WithLevel(debuglog.LevelDebug).WithOutput(&debugLog)
+			tx.WAF.AuditLogRelevantStatus = regexp.MustCompile(`(403)`)
+			tx.variables.responseStatus.Set(tt.status)
+			tx.interruption = tt.interruption
+			tx.AuditEngine = types.AuditEngineRelevantOnly
+			tx.audit = true // Mimics that there is something to audit
+			tx.ProcessLogging()
+			// TODO how do we check if the log was written?
+			if err := tx.Close(); err != nil {
+				t.Error(err)
+			}
+			if tt.relevantLog && strings.Contains(debugLog.String(), "Transaction status not marked for audit logging") {
+				t.Errorf("unexpected debug log: %q. Transaction status should be marked for audit logging", debugLog.String())
+			}
+			if !tt.relevantLog && !strings.Contains(debugLog.String(), "Transaction status not marked for audit logging") {
+				t.Errorf("missing debug log. Transaction status should be not marked for audit logging not being relevant")
+			}
+		})
 	}
 }
 
