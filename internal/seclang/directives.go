@@ -354,6 +354,9 @@ func directiveSecRuleRemoveByID(options *DirectiveOptions) error {
 
 			options.WAF.Rules.DeleteByID(id)
 		} else {
+			if idx == 0 {
+				return fmt.Errorf("SecRuleUpdateTargetById: invalid negative id: %s", idOrRange)
+			}
 			start, err := strconv.Atoi(idOrRange[:idx])
 			if err != nil {
 				return err
@@ -952,22 +955,111 @@ func directiveSecDebugLogLevel(options *DirectiveOptions) error {
 	return options.WAF.SetDebugLogLevel(debuglog.Level(lvl))
 }
 
+// Description: Updates the target (variable) list of the specified rule(s).
+// Syntax: SecRuleUpdateTargetById ID TARGET1[|TARGET2|TARGET3]
+// ---
+// This directive will append variables to the specified rule with the targets provided in the second parameter.
+// The rule ID can be single IDs or ranges of IDs. The targets are separated by a pipe character.
 func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
-	idStr, v, ok := strings.Cut(options.Opts, " ")
-	if !ok {
+	if len(options.Opts) == 0 {
+		return errEmptyOptions
+	}
+
+	idsOrRanges := strings.Fields(options.Opts)
+	length := len(idsOrRanges)
+	if length < 2 {
 		return errors.New("syntax error: SecRuleUpdateTargetById id \"VARIABLES\"")
 	}
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		return err
+	// The last element is expected to be the variable(s)
+	variables := idsOrRanges[length-1]
+	for _, idOrRange := range idsOrRanges[:length-1] {
+		if idx := strings.Index(idOrRange, "-"); idx == -1 {
+			id, err := strconv.Atoi(idOrRange)
+			if err != nil {
+				return err
+			}
+			return updateTargetBySingleID(id, variables, options)
+		} else {
+			if idx == 0 {
+				return fmt.Errorf("SecRuleUpdateTargetById: invalid negative id: %s", idOrRange)
+			}
+			start, err := strconv.Atoi(idOrRange[:idx])
+			if err != nil {
+				return err
+			}
+
+			end, err := strconv.Atoi(idOrRange[idx+1:])
+			if err != nil {
+				return err
+			}
+			if start == end {
+				return updateTargetBySingleID(start, variables, options)
+			}
+			if start > end {
+				return fmt.Errorf("invalid range: %s", idOrRange)
+			}
+
+			for _, rule := range options.WAF.Rules.GetRules() {
+				if rule.ID_ >= start && rule.ID_ <= end {
+					rp := RuleParser{
+						rule:           &rule,
+						options:        RuleOptions{},
+						defaultActions: map[types.RulePhase][]ruleAction{},
+					}
+					if err := rp.ParseVariables(strings.Trim(variables, "\"")); err != nil {
+						return err
+					}
+				}
+			}
+		}
 	}
+	return nil
+}
+
+func updateTargetBySingleID(id int, variables string, options *DirectiveOptions) error {
+
 	rule := options.WAF.Rules.FindByID(id)
+	if rule == nil {
+		return fmt.Errorf("SecRuleUpdateTargetById: rule \"%d\" not found", id)
+	}
 	rp := RuleParser{
 		rule:           rule,
 		options:        RuleOptions{},
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
-	return rp.ParseVariables(strings.Trim(v, "\""))
+	return rp.ParseVariables(strings.Trim(variables, "\""))
+}
+
+// Description: Updates the target (variable) list of the specified rule(s) by tag.
+// Syntax: SecRuleUpdateTargetByTag TAG TARGET1[|TARGET2|TARGET3]
+// ---
+// As an alternative to `SecRuleUpdateTargetById`, this directive will append variables to the specified rule
+// with the targets provided in the second parameter. It can be handy for updating an entire group of rules.
+// Matching is by case-sensitive string equality.
+// This directive will append variables to the specified rule with the targets provided in the second parameter.
+// The rule ID can be single IDs or ranges of IDs. The targets are separated by a pipe character.
+// Note: OWASP CRS has a list of supported tags https://coreruleset.org/docs/rules/metadata/
+func directiveSecRuleUpdateTargetByTag(options *DirectiveOptions) error {
+	tagAndvars := strings.Fields(options.Opts)
+	if len(tagAndvars) != 2 {
+		return errors.New("syntax error: SecRuleUpdateTargetByTag tag \"VARIABLES\"")
+	}
+
+	for _, rule := range options.WAF.Rules.GetRules() {
+		inputTag := strings.Trim(tagAndvars[0], "\"")
+		if utils.InSlice(inputTag, rule.Tags_) {
+			rp := RuleParser{
+				rule:           &rule,
+				options:        RuleOptions{},
+				defaultActions: map[types.RulePhase][]ruleAction{},
+			}
+			inputVars := strings.Trim(tagAndvars[1], "\"")
+			if err := rp.ParseVariables(inputVars); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func directiveSecIgnoreRuleCompilationErrors(options *DirectiveOptions) error {
