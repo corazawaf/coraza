@@ -15,6 +15,7 @@ package collections
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"testing"
 
@@ -25,6 +26,7 @@ func TestMap(t *testing.T) {
 	c := NewMap(variables.ArgsPost)
 	c.SetIndex("key", 1, "value")
 	c.Set("key2", []string{"value2"})
+
 	if c.Get("key")[0] != "value" {
 		t.Error("Error setting index")
 	}
@@ -60,4 +62,7 @@ func TestMap(t *testing.T) {
 		t.Fatal("The lengths are not equal.")
 	}
 
+	if reflect.DeepEqual([]string{"key, key2"}, c.Keys()) {
+		t.Fatal("Keys are not equal.")
+	}
 }

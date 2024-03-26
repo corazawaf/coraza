@@ -12,6 +12,7 @@ import (
 	"math"
 	"mime"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -26,6 +27,7 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/cookies"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/corazatypes"
+	"github.com/corazawaf/coraza/v3/internal/environment"
 	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 	urlutil "github.com/corazawaf/coraza/v3/internal/url"
 	"github.com/corazawaf/coraza/v3/types"
@@ -1470,12 +1472,24 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 func (tx *Transaction) Close() error {
 	defer tx.WAF.txPool.Put(tx)
 	tx.variables.reset()
+
 	var errs []error
 	if err := tx.requestBodyBuffer.Reset(); err != nil {
-		errs = append(errs, err)
+		errs = append(errs, fmt.Errorf("reseting request body buffer: %v", err))
 	}
 	if err := tx.responseBodyBuffer.Reset(); err != nil {
-		errs = append(errs, err)
+		errs = append(errs, fmt.Errorf("reseting response body buffer: %v", err))
+	}
+
+	if environment.HasAccessToFS {
+		fmt.Println(tx.variables.filesTmpContent.Keys())
+		for _, k := range tx.variables.filesTmpContent.Keys() {
+			for _, tmpContent := range tx.variables.filesTmpContent.Get(k) {
+				if err := os.Remove(tmpContent); err != nil {
+					errs = append(errs, fmt.Errorf("deleting content temporary file: %v", err))
+				}
+			}
+		}
 	}
 
 	if tx.IsInterrupted() {
@@ -1490,14 +1504,33 @@ func (tx *Transaction) Close() error {
 			Msg("Transaction finished")
 	}
 
-	switch {
-	case len(errs) == 0:
+	if len(errs) == 0 {
 		return nil
-	case len(errs) == 1:
-		return fmt.Errorf("transaction close failed: %s", errs[0].Error())
-	default:
-		return fmt.Errorf("transaction close failed:\n- %s\n- %s", errs[0].Error(), errs[1].Error())
 	}
+
+	return fmt.Errorf("closing transaction: %s", joinErrors(errs...))
+}
+
+func joinErrors(errs ...error) string {
+	if len(errs) == 0 {
+		return ""
+	}
+
+	if len(errs) == 1 {
+		return errs[0].Error()
+	}
+
+	res := strings.Builder{}
+	for k, err := range errs {
+		if k > 0 {
+			res.WriteByte('\n')
+		}
+		res.WriteByte('-')
+		res.WriteByte(' ')
+		res.WriteString(err.Error())
+	}
+
+	return res.String()
 }
 
 // String will return a string with the transaction debug information

@@ -40,6 +40,18 @@ func (c *Map) Get(key string) []string {
 	return values
 }
 
+func (c *Map) Keys() []string {
+	if len(c.data) == 0 {
+		return nil
+	}
+
+	var keys = make([]string, 0, len(c.data))
+	for k := range c.data {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
 func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
 	var result []types.MatchData
 	for k, data := range c.data {

@@ -66,6 +66,7 @@ Content-Type: text/html
 	headers := v.MultipartPartHeaders()
 	header1 := "Content-Disposition: form-data; name=\"file2\"; filename=\"a.html\""
 	header2 := "Content-Type: text/html"
+
 	if h := headers.Get("file2"); len(h) == 0 {
 		t.Fatal("expected headers for file2")
 	} else {
