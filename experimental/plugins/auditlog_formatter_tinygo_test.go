@@ -16,25 +16,25 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
-type testFormatterTiny struct{}
+type testFormatter struct{}
 
-func (testFormatterTiny) Format(al plugintypes.AuditLog) ([]byte, error) {
+func (testFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 	return []byte(al.Transaction().ID()), nil
 }
 
-func (testFormatterTiny) MIME() string {
+func (testFormatter) MIME() string {
 	return "sample"
 }
 
 // ExampleRegisterAuditLogFormatter shows how to register a custom audit log formatter
 // and tests the output of the formatter.
-func ExampleRegisterAuditLogFormatterTiny() {
+func ExampleRegisterAuditLogFormatter() {
 
 	plugins.RegisterAuditLogWriter("wasmserial", func() plugintypes.AuditLogWriter {
 		return &wasmSerial{}
 	})
 
-	plugins.RegisterAuditLogFormatter("txid", &testFormatterTiny{})
+	plugins.RegisterAuditLogFormatter("txid", &testFormatter{})
 
 	w, err := coraza.NewWAF(
 		coraza.NewWAFConfig().
