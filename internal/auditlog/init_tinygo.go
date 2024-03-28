@@ -13,7 +13,7 @@ func init() {
 		return noopWriter{}
 	})
 	RegisterWriter("serial", func() plugintypes.AuditLogWriter {
-		return noopWriter{}
+		return &serialWriter{}
 	})
 	RegisterWriter("https", func() plugintypes.AuditLogWriter {
 		return noopWriter{}
