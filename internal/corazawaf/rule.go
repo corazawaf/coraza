@@ -471,6 +471,9 @@ func (r *Rule) AddAction(name string, action plugintypes.Action) error {
 // it will be used to match the variable, in case of string it will
 // be a fixed match, in case of nil it will match everything
 func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) error {
+	if r == nil {
+		return fmt.Errorf("cannot add a variable to an undefined rule")
+	}
 	var re *regexp.Regexp
 	if len(key) > 2 && key[0] == '/' && key[len(key)-1] == '/' {
 		key = key[1 : len(key)-1]
