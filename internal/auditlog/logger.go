@@ -27,7 +27,7 @@ var formatters = map[string]plugintypes.AuditLogFormatter{}
 // RegisterWriter registers a new logger
 // it can be used for plugins
 func RegisterWriter(name string, writer func() plugintypes.AuditLogWriter) {
-	writers[name] = writer
+	writers[strings.ToLower(name)] = writer
 }
 
 // GetWriter returns a logger by name
@@ -43,7 +43,7 @@ func GetWriter(name string) (plugintypes.AuditLogWriter, error) {
 // RegisterFormatter registers a new logger format
 // it can be used for plugins
 func RegisterFormatter(name string, f plugintypes.AuditLogFormatter) {
-	formatters[name] = f
+	formatters[strings.ToLower(name)] = f
 }
 
 // GetFormatter returns a formatter by name

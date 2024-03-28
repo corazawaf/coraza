@@ -55,3 +55,62 @@ func TestGetFormatters(t *testing.T) {
 		}
 	})
 }
+
+type noopWriter struct{}
+
+func (noopWriter) Init(plugintypes.AuditLogConfig) error { return nil }
+func (noopWriter) Write(plugintypes.AuditLog) error      { return nil }
+func (noopWriter) Close() error                          { return nil }
+
+func TestRegisterAndGetWriter(t *testing.T) {
+
+	testCases := []struct {
+		name string
+	}{
+		{"customwriter"},
+		{"CustomWriter"},
+		{"CUSTOMWRITER"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			RegisterWriter(tc.name, func() plugintypes.AuditLogWriter {
+				return noopWriter{}
+			})
+
+			writer, err := GetWriter(tc.name)
+			if err != nil {
+				t.Fatalf("expected no error, got: %v", err)
+			}
+
+			if writer == nil {
+				t.Fatalf("expected a writer, got nil")
+			}
+		})
+	}
+}
+
+func TestRegisterAndGetFormatter(t *testing.T) {
+
+	testCases := []struct {
+		name string
+	}{
+		{"customFormatter"},
+		{"customformatter"},
+		{"CUSTOMFORMATTER"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			RegisterFormatter(tc.name, &noopFormatter{})
+			retrievedFormatter, err := GetFormatter(tc.name)
+			if err != nil {
+				t.Fatalf("expected no error, got: %v", err)
+			}
+
+			if retrievedFormatter == nil {
+				t.Fatalf("expected a formatter, got nil")
+			}
+		})
+	}
+}

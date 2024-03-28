@@ -120,7 +120,7 @@ func TestSecRuleUpdateTargetVariableNegation(t *testing.T) {
 		SecRule REQUEST_URI|REQUEST_COOKIES "abc" "id:9,phase:2"
 		SecRuleUpdateTargetById 99 "!REQUEST_HEADERS:xyz"
 	`)
-	expectedErr = errors.New("cannot create a variable exception for an undefined rule")
+	expectedErr = errors.New("SecRuleUpdateTargetById: rule \"99\" not found")
 	if errors.Unwrap(err).Error() != expectedErr.Error() {
 		t.Fatalf("unexpected error, want %q, have %q", expectedErr, errors.Unwrap(err).Error())
 	}
