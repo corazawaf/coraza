@@ -30,8 +30,8 @@ func (testFormatter) MIME() string {
 // and tests the output of the formatter.
 func ExampleRegisterAuditLogFormatter() {
 
-	plugins.RegisterAuditLogWriter("wasmserial", func() plugintypes.AuditLogWriter {
-		return &wasmSerial{}
+	plugins.RegisterAuditLogWriter("serial", func() plugintypes.AuditLogWriter {
+		return &serial{}
 	})
 
 	plugins.RegisterAuditLogFormatter("txid", &testFormatter{})
@@ -42,7 +42,7 @@ func ExampleRegisterAuditLogFormatter() {
 				SecAuditEngine On
 				SecAuditLogParts ABCFHZ
 				SecAuditLog /dev/stdout
-				SecAuditLogType wasmserial
+				SecAuditLogType Serial
 				SecAuditLogFormat txid
 			`),
 	)
@@ -57,18 +57,18 @@ func ExampleRegisterAuditLogFormatter() {
 	// Output: abc123
 }
 
-// wasmSerial emulates a custom audit log writer that writes to the log in wasm
-type wasmSerial struct {
+// serial emulates a custom audit log writer that writes to the log in wasm overriding the default serial writer.
+type serial struct {
 	io.Closer
 	formatter plugintypes.AuditLogFormatter
 }
 
-func (s *wasmSerial) Init(cfg plugintypes.AuditLogConfig) error {
+func (s *serial) Init(cfg plugintypes.AuditLogConfig) error {
 	s.formatter = cfg.Formatter
 	return nil
 }
 
-func (s *wasmSerial) Write(al plugintypes.AuditLog) error {
+func (s *serial) Write(al plugintypes.AuditLog) error {
 	bts, err := s.formatter.Format(al)
 	if err != nil {
 		return err
@@ -77,4 +77,4 @@ func (s *wasmSerial) Write(al plugintypes.AuditLog) error {
 	return nil
 }
 
-func (s *wasmSerial) Close() error { return nil }
+func (s *serial) Close() error { return nil }
