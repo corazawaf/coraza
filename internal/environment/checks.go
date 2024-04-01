@@ -10,27 +10,20 @@ import (
 	"github.com/corazawaf/coraza/v3/debuglog"
 )
 
-// CheckFSAccess is a helper function to check if the WAF has access to the filesystem
-func CheckFSAccess(logger debuglog.Logger, tmpDir string) error {
-	if HasAccessToFS {
-		file, err := os.CreateTemp(tmpDir, "checkfsfile")
-		if err != nil {
-			return fmt.Errorf("create file: %w", err)
-		}
-		defer file.Close()
-
-		_, err = file.WriteString("check fs data")
-		if err != nil {
-			return fmt.Errorf("write to file: %w", err)
-		}
-
-		err = os.Remove(file.Name())
-		if err != nil {
-			return fmt.Errorf("remove file: %w", err)
-		}
-		logger.Debug().Msg("Filesystem access check successful")
+// IsDirWritable is a helper function to check if the WAF has access to the filesystem
+func IsDirWritable(logger debuglog.Logger, dir string) error {
+	if !HasAccessToFS {
+		logger.Debug().Msg("Filesystem access check skipped")
 		return nil
 	}
-	logger.Debug().Msg("Filesystem access check skipped")
+	file, err := os.CreateTemp(dir, "checkfsfile")
+	if err != nil {
+		return fmt.Errorf("create file: %w", err)
+	}
+	defer func() {
+		file.Close()
+		os.Remove(file.Name())
+	}()
+	logger.Debug().Msg("Filesystem access check successful")
 	return nil
 }

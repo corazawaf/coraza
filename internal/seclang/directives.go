@@ -888,7 +888,7 @@ func directiveSecUploadDir(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	if err := environment.CheckFSAccess(options.WAF.Logger, options.Opts); err != nil {
+	if err := environment.IsDirWritable(options.WAF.Logger, options.Opts); err != nil {
 		return fmt.Errorf("filesystem access check: %w. Check SecUploadDir provided dir: %s", err, options.Opts)
 	}
 	options.WAF.UploadDir = options.Opts

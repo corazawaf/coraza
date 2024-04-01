@@ -40,7 +40,7 @@ func TestFSCheck(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			os.Setenv("TMPDIR", tc.tmpDir)
 			HasAccessToFS = tc.hasAccessToFS
-			err := CheckFSAccess(debuglog.Default(), tc.tmpDir)
+			err := IsDirWritable(debuglog.Default(), tc.tmpDir)
 			if tc.expectError && err == nil {
 				t.Fatal("expected error, got nil")
 			}
