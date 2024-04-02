@@ -29,8 +29,8 @@ import (
 	"github.com/coreruleset/go-ftw/test"
 	"github.com/rs/zerolog"
 
-	coreruleset "github.com/corazawaf/coraza-coreruleset"
-	crstests "github.com/corazawaf/coraza-coreruleset/tests"
+	coreruleset "github.com/corazawaf/coraza-coreruleset/v4"
+	crstests "github.com/corazawaf/coraza-coreruleset/v4/tests"
 	"github.com/corazawaf/coraza/v3"
 	txhttp "github.com/corazawaf/coraza/v3/http"
 	"github.com/corazawaf/coraza/v3/types"
