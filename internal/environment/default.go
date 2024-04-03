@@ -6,6 +6,26 @@
 
 package environment
 
+import (
+	"fmt"
+	"os"
+
+	"github.com/corazawaf/coraza/v3/debuglog"
+)
+
 // HasAccessToFS indicates whether the runtime target environment has access
 // to OS' filesystem or not.
 var HasAccessToFS = true
+
+// IsDirWritable is a helper function to check if the WAF has access to the filesystem
+func IsDirWritable(logger debuglog.Logger, dir string) error {
+	file, err := os.CreateTemp(dir, "checkfsfile")
+	if err != nil {
+		return fmt.Errorf("create file: %w", err)
+	}
+	defer func() {
+		file.Close()
+		os.Remove(file.Name())
+	}()
+	return nil
+}
