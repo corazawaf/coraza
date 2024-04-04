@@ -9,7 +9,7 @@ package auditlog
 
 import "github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 
-// noopWriter is used to store logs in a single file
+// noopWriter is used as a no operations audit log writer.
 type noopWriter struct{}
 
 func (noopWriter) Init(plugintypes.AuditLogConfig) error { return nil }
