@@ -51,7 +51,7 @@ func (p *Parser) FromFile(profilePath string) error {
 	for _, profilePath := range files {
 		profilePath = strings.TrimSpace(profilePath)
 		if !strings.HasPrefix(profilePath, "/") {
-			profilePath = filepath.Join(p.currentDir, profilePath)
+			profilePath = path.Join(p.currentDir, profilePath)
 		}
 		p.currentFile = profilePath
 		lastDir := p.currentDir
