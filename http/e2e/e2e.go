@@ -254,14 +254,19 @@ func Run(cfg Config) error {
 			resp, err := client.Do(req)
 			fmt.Printf("[Wait] Waiting for %s. Timeout: %ds\n", healthCheck.url, timeout)
 			if err == nil {
+				io.Copy(io.Discard, resp.Body)
 				resp.Body.Close()
+
 				if resp.StatusCode == healthCheck.expectedCode {
 					fmt.Printf("[Ok] Check successful, got status code %d\n", resp.StatusCode)
 					break
 				}
+
 				if healthCheck.expectedCode == configCheckStatusCode {
 					return fmt.Errorf("configs check failed, got status code %d, expected %d. Please check configs used", resp.StatusCode, healthCheck.expectedCode)
 				}
+
+				fmt.Printf("[Wait] Unexpected status code %d\n", resp.StatusCode)
 			}
 			timeout--
 			if timeout == 0 {
