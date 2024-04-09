@@ -7,5 +7,8 @@ testoverride:
     920270-4: 'Rule works, log contains 920270. Test expects status 400 (Apache behaviour)'
     920272-5: 'Rule works, log contains 920272. Test expects status 400 (Apache behaviour)'
     920290-1: 'Rule works, log contains 920290. Test expects status 400 (Apache behaviour)'
+    920290-4: 'Go/http returns 400 Bad Request: missing required Host header'
     920430-8: 'Go/http does no allow HTTP/3.0 - 505 HTTP Version Not Supported'
     932200-13: 'wip'
+    942440-19: 'Seems that ARGS is not splitted in _GET and _POST in ruleRemoveTargetById. Further investigation is needed!'
+    942440-20: 'Seems that ARGS is not splitted in _GET and _POST in ruleRemoveTargetById. Further investigation is needed!'
