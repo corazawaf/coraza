@@ -9,8 +9,6 @@ package environment
 import (
 	"os"
 	"testing"
-
-	"github.com/corazawaf/coraza/v3/debuglog"
 )
 
 func TestFSCheck(t *testing.T) {
@@ -35,7 +33,7 @@ func TestFSCheck(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			os.Setenv("TMPDIR", tc.tmpDir)
-			err := IsDirWritable(debuglog.Default(), tc.tmpDir)
+			err := IsDirWritable(tc.tmpDir)
 			if tc.expectError && err == nil {
 				t.Fatal("expected error, got nil")
 			}

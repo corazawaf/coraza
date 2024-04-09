@@ -35,7 +35,7 @@ func NewWAF(config WAFConfig) (WAF, error) {
 	waf := corazawaf.NewWAF()
 
 	if environment.HasAccessToFS {
-		if err := environment.IsDirWritable(waf.Logger, waf.TmpDir); err != nil {
+		if err := environment.IsDirWritable(waf.TmpDir); err != nil {
 			return nil, fmt.Errorf("filesystem access check: %w. Use 'no_fs_access' build tag, if not available", err)
 		}
 	}
