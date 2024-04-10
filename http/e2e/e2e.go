@@ -270,7 +270,11 @@ func Run(cfg Config) error {
 			}
 			timeout--
 			if timeout == 0 {
-				return fmt.Errorf("timeout waiting for response from %s, make sure the server is running. Last request error: %v", healthCheck.url, err)
+				if err != nil {
+					return fmt.Errorf("timeout waiting for response from %s, make sure the server is running. Last request error: %v", healthCheck.url, err)
+				}
+
+				return fmt.Errorf("timeout waiting for response from %s, unexpected status code", healthCheck.url)
 			}
 		}
 	}
