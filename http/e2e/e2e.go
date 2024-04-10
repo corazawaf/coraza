@@ -254,7 +254,10 @@ func Run(cfg Config) error {
 			resp, err := client.Do(req)
 			fmt.Printf("[Wait] Waiting for %s. Timeout: %ds\n", healthCheck.url, timeout)
 			if err == nil {
-				io.Copy(io.Discard, resp.Body)
+				_, err = io.Copy(io.Discard, res.Body)
+				if err != nil {
+					return err
+				}
 				resp.Body.Close()
 
 				if resp.StatusCode == healthCheck.expectedCode {
