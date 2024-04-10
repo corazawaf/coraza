@@ -254,7 +254,7 @@ func Run(cfg Config) error {
 			resp, err := client.Do(req)
 			fmt.Printf("[Wait] Waiting for %s. Timeout: %ds\n", healthCheck.url, timeout)
 			if err == nil {
-				_, err = io.Copy(io.Discard, res.Body)
+				_, err = io.Copy(io.Discard, resp.Body)
 				if err != nil {
 					return err
 				}
