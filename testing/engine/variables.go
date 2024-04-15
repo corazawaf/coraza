@@ -21,7 +21,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 				{
 					Stage: profile.SubStage{
 						Input: profile.StageInput{
-							URI:    "/index.php?t1=aaa&t2=bbb&t3=ccc&a=test&jsessionid=74B0CB414BD77D17B5680A6386EF1666",
+							URI:    "/index.php?t1=aaa&T1=zzz&t2=bbb&t3=ccc&a=test&jsessionid=74B0CB414BD77D17B5680A6386EF1666",
 							Method: "POST",
 							Headers: map[string]string{
 								"content-type": "application/x-www-form-urlencoded",
@@ -45,6 +45,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 								500,
 								600,
 								700,
+								919,
 								100,
 								1000,
 								// 1500,
@@ -53,6 +54,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 								99999,
 							},
 							NonTriggeredRules: []int{
+								19,
 								800,
 								900,
 								1100,
@@ -70,6 +72,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 SecRule REQBODY_PROCESSOR "" "id: 10, log"
 SecRequestBodyAccess On
 SecRule ARGS:/^t1$/ "aaa" "id:1,phase:1,block,log"
+SecRule ARGS:/^T1$/ "@streq zzz" "id:9,phase:1,block,log"
+SecRule ARGS:/^T1$/ "@streq aaa" "id:19,phase:2,block,log"
 SecRule &ARGS_GET:/t.*/ "@gt 2" "id: 1234, phase:1, block, log, setenv:test=some-secret"
 # TODO
 #SecRule &ARGS_GET|!ARGS_GET:/.*/ "@eq 0" "id: 1500, phase:1, block, log"
@@ -90,6 +94,7 @@ SecRule ARGS "(?:^|[^\x5c])\x5c[cdeghijklmpqwxyz123456789]" "id:700,log,phase:2"
 SecRule ARGS|!ARGS:t1 "aaa" "id:800,log,phase:1"
 
 SecRule ARGS|!ARGS:/t.*/ "aaa" "id:900,log,phase:1"
+SecRule ARGS|!ARGS:/T.*/ "@streq zzz" "id:919,log,phase:1"
 SecRule ARGS|!ARGS:/js.*/ "bbb" "id:1000,log,phase:1"
 SecRule ARGS|!ARGS:/js.*/ "74B0CB414BD77D17B5680A6386EF1666" "id:1100,log,phase:1"
 
