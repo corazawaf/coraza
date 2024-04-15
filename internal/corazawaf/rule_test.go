@@ -257,13 +257,13 @@ func TestRuleNegativeVariablesEmtpyRule(t *testing.T) {
 	}
 }
 
-func TestVariableKeysAreCaseInsensitive(t *testing.T) {
+func TestVariableKeysAreCaseSensitive(t *testing.T) {
 	rule := NewRule()
 	if err := rule.AddVariable(variables.RequestURI, "Som3ThinG", false); err != nil {
 		t.Error(err)
 	}
-	if rule.variables[0].KeyStr != "som3thing" {
-		t.Error("variable key is not case insensitive")
+	if rule.variables[0].KeyStr != "Som3ThinG" {
+		t.Error("variable key is not case sensitive")
 	}
 }
 

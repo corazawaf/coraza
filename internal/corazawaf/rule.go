@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
-	"strings"
+	"strconv"
 	"sync"
 	"unsafe"
 
@@ -418,6 +418,16 @@ func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transform
 	}
 }
 
+// hasRegex checks the received key to see if it is between forward slashes.
+// if it is, it will return true and the content of the regular expression inside the slashes.
+// otherwise it will return false and the same key.
+func hasRegex(key string) (bool, string) {
+	if len(key) > 2 && key[0] == '/' && key[len(key)-1] == '/' {
+		return true, key[1 : len(key)-1]
+	}
+	return false, key
+}
+
 func (r *Rule) matchVariable(tx *Transaction, m *corazarules.MatchData) {
 	rid := r.ID_
 	if rid == noID {
@@ -465,10 +475,8 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 		return fmt.Errorf("cannot add a variable to an undefined rule")
 	}
 	var re *regexp.Regexp
-	if len(key) > 2 && key[0] == '/' && key[len(key)-1] == '/' {
-		key = key[1 : len(key)-1]
-
-		if vare, err := memoize.Do(key, func() (interface{}, error) { return regexp.Compile(key) }); err != nil {
+	if isRegex, rx := hasRegex(key); isRegex {
+		if vare, err := memoize.Do(rx, func() (interface{}, error) { return regexp.Compile(rx) }); err != nil {
 			return err
 		} else {
 			re = vare.(*regexp.Regexp)
@@ -481,7 +489,7 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 			r.variables = append(r.variables, ruleVariableParams{
 				Count:      iscount,
 				Variable:   variables.ArgsGet,
-				KeyStr:     strings.ToLower(key),
+				KeyStr:     key,
 				KeyRx:      re,
 				Exceptions: []ruleVariableException{},
 			})
@@ -489,7 +497,7 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 			r.variables = append(r.variables, ruleVariableParams{
 				Count:      iscount,
 				Variable:   variables.ArgsPost,
-				KeyStr:     strings.ToLower(key),
+				KeyStr:     key,
 				KeyRx:      re,
 				Exceptions: []ruleVariableException{},
 			})
@@ -500,7 +508,7 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 			r.variables = append(r.variables, ruleVariableParams{
 				Count:      iscount,
 				Variable:   variables.ArgsGetNames,
-				KeyStr:     strings.ToLower(key),
+				KeyStr:     key,
 				KeyRx:      re,
 				Exceptions: []ruleVariableException{},
 			})
@@ -508,7 +516,7 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 			r.variables = append(r.variables, ruleVariableParams{
 				Count:      iscount,
 				Variable:   variables.ArgsPostNames,
-				KeyStr:     strings.ToLower(key),
+				KeyStr:     key,
 				KeyRx:      re,
 				Exceptions: []ruleVariableException{},
 			})
@@ -518,7 +526,7 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 	r.variables = append(r.variables, ruleVariableParams{
 		Count:      iscount,
 		Variable:   v,
-		KeyStr:     strings.ToLower(key),
+		KeyStr:     key,
 		KeyRx:      re,
 		Exceptions: []ruleVariableException{},
 	})
@@ -535,9 +543,8 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 // ERROR: SecRule !ARGS: "..."
 func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 	var re *regexp.Regexp
-	if len(key) > 2 && key[0] == '/' && key[len(key)-1] == '/' {
-		key = key[1 : len(key)-1]
-		if vare, err := memoize.Do(key, func() (interface{}, error) { return regexp.Compile(key) }); err != nil {
+	if isRegex, rx := hasRegex(key); isRegex {
+		if vare, err := memoize.Do(rx, func() (interface{}, error) { return regexp.Compile(rx) }); err != nil {
 			return err
 		} else {
 			re = vare.(*regexp.Regexp)
@@ -550,17 +557,17 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 	for i, rv := range r.variables {
 		// Splitting Args and ArgsNames variables
 		if multiphaseEvaluation && v == variables.Args && (rv.Variable == variables.ArgsGet || rv.Variable == variables.ArgsPost) {
-			rv.Exceptions = append(rv.Exceptions, ruleVariableException{strings.ToLower(key), re})
+			rv.Exceptions = append(rv.Exceptions, ruleVariableException{key, re})
 			r.variables[i] = rv
 			continue
 		}
 		if multiphaseEvaluation && v == variables.ArgsNames && (rv.Variable == variables.ArgsGetNames || rv.Variable == variables.ArgsPostNames) {
-			rv.Exceptions = append(rv.Exceptions, ruleVariableException{strings.ToLower(key), re})
+			rv.Exceptions = append(rv.Exceptions, ruleVariableException{key, re})
 			r.variables[i] = rv
 			continue
 		}
 		if rv.Variable == v {
-			rv.Exceptions = append(rv.Exceptions, ruleVariableException{strings.ToLower(key), re})
+			rv.Exceptions = append(rv.Exceptions, ruleVariableException{key, re})
 			r.variables[i] = rv
 		}
 	}
