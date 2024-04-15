@@ -21,7 +21,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 				{
 					Stage: profile.SubStage{
 						Input: profile.StageInput{
-							URI:    "/index.php?t1=aaa&T1=zzz&t2=bbb&t3=ccc&a=test&jsessionid=74B0CB414BD77D17B5680A6386EF1666",
+							URI:    "/index.php?t1=aaa&T1=zzz&t2=bbb&t3=ccc&Key=my-value&a=test&jsessionid=74B0CB414BD77D17B5680A6386EF1666",
 							Method: "POST",
 							Headers: map[string]string{
 								"content-type": "application/x-www-form-urlencoded",
@@ -48,6 +48,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 								919,
 								100,
 								1000,
+                                1028,
 								// 1500,
 								123123,
 								9123,
@@ -97,6 +98,7 @@ SecRule ARGS|!ARGS:/t.*/ "aaa" "id:900,log,phase:1"
 SecRule ARGS|!ARGS:/T.*/ "@streq zzz" "id:919,log,phase:1"
 SecRule ARGS|!ARGS:/js.*/ "bbb" "id:1000,log,phase:1"
 SecRule ARGS|!ARGS:/js.*/ "74B0CB414BD77D17B5680A6386EF1666" "id:1100,log,phase:1"
+SecRule ARGS:/^Key/ "@streq my-value" "id:1028,phase:1,deny,status:403,msg:'ARGS:key matched.'"
 
 SecRule REQUEST_HEADERS|!REQUEST_HEADERS:User-Agent|!REQUEST_HEADERS:Referer|!REQUEST_HEADERS:Cookie|!REQUEST_HEADERS:Sec-Fetch-User|!REQUEST_HEADERS:Sec-CH-UA-Mobile \
   "@validateByteRange 32,34,38,42-59,61,65-90,95,97-122" "id:920274,phase:1,log,t:none,t:urlDecodeUni"
