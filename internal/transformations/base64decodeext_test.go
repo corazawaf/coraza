@@ -31,7 +31,7 @@ var b64DecodeExtTests = []struct {
 		expected: "<script>alert(1)</script>",
 	},
 	{
-		name:     "decoded up to the space (invalid character)",
+		name:     "Decode with the space (invalid character)",
 		input:    "PFR FU1Q+",
 		expected: "<TEST>",
 	},
