@@ -48,12 +48,13 @@ func doBase64decode(src string, ext bool) string {
 
 	for i := 0; i < slen; i++ {
 		currChar := src[i]
-		// new line characters are ignored.
 
+		// Skip whitespaces and '.' if ext is set
 		if ext && (unicode.IsSpace(rune(currChar)) || currChar == '.') {
 			continue
 		}
 
+		// new line characters are ignored.
 		if currChar == '\r' || currChar == '\n' {
 			continue
 		}
