@@ -36,17 +36,17 @@ var b64DecodeExtTests = []struct {
 		expected: "<TEST>",
 	},
 	{
-		name:     "decoded up to the dot (invalid character)",
+		name:     "Decoded upto a .",
 		input:    "P.HNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==",
 		expected: "<script>alert(1)</script>", // No matter where the invalid character is, it is omitted
 	},
 	{
-		name:     "decoded up to the dot (invalid character)",
+		name:     "Decoded upto a . (In different position)",
 		input:    "PHNjcmlwd.D5hbGVydCgxKTwvc2NyaXB0Pg==",
 		expected: "<script>alert(1)</script>",
 	},
 	{
-		name:     "decoded up to the dot (invalid character)",
+		name:     "Decoded upto a . (In different position)",
 		input:    "PHNjcmlwdD.5hbGVydCgxKTwvc2NyaXB0Pg==",
 		expected: "<script>alert(1)</script>",
 	},
