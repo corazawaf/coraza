@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"unsafe"
@@ -104,10 +103,6 @@ type Rule struct {
 	// the rule evaluation process
 	actions []ruleActionParams
 
-	// Contains the Id of the parent rule if you are inside
-	// a chain. Otherwise, it will be 0
-	ParentID_ int
-
 	// Capture is used by the transaction to tell the operator
 	// to capture variables on TX:0-9
 	Capture bool
@@ -189,11 +184,6 @@ const noID = 0
 func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Transaction, collectiveMatchedValues *[]types.MatchData, chainLevel int, cache map[transformationKey]*transformationValue) []types.MatchData {
 	tx.Capture = r.Capture
 
-	rid := r.ID_
-	if rid == noID {
-		rid = r.ParentID_
-	}
-
 	if multiphaseEvaluation {
 		computeRuleChainMinPhase(r)
 	}
@@ -204,7 +194,7 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 	defer logger.Debug().Msg("Finished rule evaluation")
 
 	ruleCol := tx.variables.rule
-	ruleCol.SetIndex("id", 0, strconv.Itoa(rid))
+	ruleCol.SetIndex("id", 0, r.StrID())
 	if r.Msg != nil {
 		ruleCol.SetIndex("msg", 0, r.Msg.String())
 	}
