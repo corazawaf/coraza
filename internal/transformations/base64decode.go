@@ -36,6 +36,7 @@ func base64decode(data string) (string, bool, error) {
 	return res, true, nil
 }
 
+// The 'ext' flag indicates whether the function should conduct a lenient decoding, primarily utilized in the 'base64decodeext' transformation.
 func doBase64decode(src string, ext bool) string {
 	slen := len(src)
 	if slen == 0 {
