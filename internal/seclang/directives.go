@@ -16,6 +16,7 @@ import (
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/internal/memoize"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
@@ -887,7 +888,13 @@ func directiveSecUploadDir(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	// TODO validations
+	if environment.HasAccessToFS {
+		if err := environment.IsDirWritable(options.Opts); err != nil {
+			return fmt.Errorf("filesystem access check: %w. Check SecUploadDir provided dir: %s", err, options.Opts)
+		}
+	} else {
+		return fmt.Errorf("SecUploadDir directive is not effective because of no access to the filesystem")
+	}
 	options.WAF.UploadDir = options.Opts
 	return nil
 }
