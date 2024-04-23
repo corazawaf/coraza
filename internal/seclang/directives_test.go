@@ -141,6 +141,7 @@ func TestDirectives(t *testing.T) {
 		},
 		"SecUploadDir": {
 			{"", expectErrorOnDirective},
+			{"/tmp-non-existing", expectErrorOnDirective},
 			{"/tmp", func(w *corazawaf.WAF) bool { return w.UploadDir == "/tmp" }},
 		},
 		"SecSensorId": {
