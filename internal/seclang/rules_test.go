@@ -1097,3 +1097,25 @@ BINARYDATA
 		t.Error("failed test for rx captured")
 	}
 }
+
+func TestRuleMatchCaseSensitivity(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	parser := NewParser(waf)
+	err := parser.FromString(`
+		SecRuleEngine On
+		SecRule ARGS:/^Key/ "@streq my-value" "id:1028,phase:1,deny,status:403,msg:'ARGS:key matched.'"
+	`)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	tx := waf.NewTransaction()
+	tx.ProcessURI("https://asdf.com/index.php?t1=aaa&T1=zzz&t2=bbb&t3=ccc&Key=my-value&a=test&jsessionid=74B0CB414BD77D17B5680A6386EF1666", "GET", "HTTP/1.1")
+	tx.ProcessConnection("127.0.0.1", 0, "", 0)
+	tx.ProcessRequestHeaders()
+	if len(tx.MatchedRules()) != 1 {
+		t.Errorf("failed to match rules with %d", len(tx.MatchedRules()))
+	}
+	if tx.Interruption() == nil {
+		t.Fatal("failed to interrupt transaction")
+	}
+}
