@@ -13,9 +13,9 @@ import (
 )
 
 func TestConcatKeyed(t *testing.T) {
-	c1 := NewMap(variables.ArgsGet)
-	c2 := NewMap(variables.ArgsPost)
-	c3 := NewMap(variables.ArgsPath)
+	c1 := NewCaseSensitiveKeyMap(variables.ArgsGet)
+	c2 := NewCaseSensitiveKeyMap(variables.ArgsPost)
+	c3 := NewCaseSensitiveKeyMap(variables.ArgsPath)
 
 	c := NewConcatKeyed(variables.Args, c1, c2, c3)
 
@@ -28,10 +28,11 @@ func TestConcatKeyed(t *testing.T) {
 
 	assertValuesMatch(t, c.FindAll())
 
-	c1.Add("animal", "cat")
+	c1.Add("animAL", "cat")
 
 	assertValuesMatch(t, c.FindAll(), "cat")
-	assertValuesMatch(t, c.FindString("animal"), "cat")
+	assertValuesMatch(t, c.FindString("animAL"), "cat")
+	assertValuesMatch(t, c.FindString("animal")) // now this is case sensitive
 	assertValuesMatch(t, c.FindString("plant"))
 	assertValuesMatch(t, c.FindRegex(re1), "cat")
 	assertValuesMatch(t, c.FindRegex(re2))
@@ -40,10 +41,10 @@ func TestConcatKeyed(t *testing.T) {
 		t.Errorf("want %q, have %q", want, have)
 	}
 
-	c2.Add("animal", "dog")
+	c2.Add("animAL", "dog")
 
 	assertValuesMatch(t, c.FindAll(), "cat", "dog")
-	assertValuesMatch(t, c.FindString("animal"), "cat", "dog")
+	assertValuesMatch(t, c.FindString("animAL"), "cat", "dog")
 	assertValuesMatch(t, c.FindString("plant"))
 	assertValuesMatch(t, c.FindRegex(re1), "cat", "dog")
 	assertValuesMatch(t, c.FindRegex(re2))
@@ -51,7 +52,7 @@ func TestConcatKeyed(t *testing.T) {
 	c3.Add("plant", "palm")
 
 	assertValuesMatch(t, c.FindAll(), "cat", "dog", "palm")
-	assertValuesMatch(t, c.FindString("animal"), "cat", "dog")
+	assertValuesMatch(t, c.FindString("animAL"), "cat", "dog")
 	assertValuesMatch(t, c.FindString("plant"), "palm")
 	assertValuesMatch(t, c.FindRegex(re1), "cat", "dog")
 	assertValuesMatch(t, c.FindRegex(re2), "palm")

@@ -654,9 +654,10 @@ func TestArgumentNamesCaseSensitive(t *testing.T) {
 	*/
 }
 
+// Arguments are case sensitive per RFC 3986
 func TestArgumentsCaseSensitive(t *testing.T) {
 	waf := corazawaf.NewWAF()
-	rules := `SecRule ARGS:Test1 "Xyz" "id:3, phase:2, log, deny"`
+	rules := `SecRule ARGS:Test1 "@streq Xyz" "id:3, phase:2, log, deny"`
 	parser := NewParser(waf)
 
 	err := parser.FromString(rules)
@@ -673,7 +674,7 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 		t.Error(err)
 	}
 	if it == nil {
-		t.Errorf("failed to test arguments value match: Same case argument name, %+v\n", tx.MatchedRules())
+		t.Error("failed to test arguments value match: Same case argument name should match, but no match detected")
 	}
 
 	tx = waf.NewTransaction()
@@ -683,8 +684,8 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if it == nil {
-		t.Errorf("failed to test arguments value match: Upper case argument name, %+v\n", tx.MatchedRules())
+	if it != nil {
+		t.Errorf("failed to test arguments value match: Upper case argument name should not match, %+v\n", tx.MatchedRules())
 	}
 
 	tx = waf.NewTransaction()
@@ -694,8 +695,8 @@ func TestArgumentsCaseSensitive(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if it == nil {
-		t.Errorf("failed to test arguments value match: Lower case argument name, %+v\n", tx.MatchedRules())
+	if it != nil {
+		t.Errorf("failed: argument in lower case should not match, %+v\n", tx.MatchedRules())
 	}
 
 	tx = waf.NewTransaction()
@@ -855,9 +856,22 @@ func TestHeadersCaseSensitive(t *testing.T) {
 	}
 }
 
+// HPP - Detect HTTP Parameter Pollution Attacks
+// Parameter pollution attacks are a type of attack where the attacker tries to manipulate the parameters of a request
+// to bypass security controls, or to cause unexpected behavior. This rule is designed to detect parameter pollution
+// We will test the parameter pollution with the following rules:
+// 1. SecRule ARGS:test1 "xyz" "id:3, phase:2, log, pass"
+// 2. SecRule ARGS:test1 "ZZZZ" "id:4, phase:2, log, pass"
+// Attack:
+// POST /test?test1=xyz
+// test1=ZZZZ
+// In this case, the attacker tries to send two different values for the same parameter, and the rule should match in
+// both cases. Coraza should add the matched parameter to an array an iterate over it to check for matches.
+// For the
 func TestParameterPollution(t *testing.T) {
 	waf := corazawaf.NewWAF()
-	rules := `SecRule Args:TESt1 "Xyz" "id:3, phase:2, log, pass"`
+	rules := `SecRule ARGS:test1 "xyz" "id:3, phase:2, log, pass"
+SecRule ARGS:test1 "ZZZZ" "id:4, phase:2, log, pass"`
 	parser := NewParser(waf)
 
 	err := parser.FromString(rules)
@@ -868,49 +882,22 @@ func TestParameterPollution(t *testing.T) {
 
 	tx := waf.NewTransaction()
 	tx.ProcessRequestHeaders()
-	tx.AddPostRequestArgument("test1", "xyz")
-	tx.AddPostRequestArgument("Test1", "Xyz")
-	tx.AddPostRequestArgument("TEST1", "XYZ")
+	tx.AddGetRequestArgument("test1", "xyz")
+	tx.AddPostRequestArgument("test1", "ZZZZ")
 	_, err = tx.ProcessRequestBody()
+
 	if err != nil {
 		t.Error(err)
 	}
-
-	if len(tx.MatchedRules()) == 1 {
-		if len(tx.MatchedRules()[0].MatchedDatas()) != 1 {
-			t.Errorf("failed to test arguments pollution. Found matches: %d, %+v\n",
-				len(tx.MatchedRules()[0].MatchedDatas()), tx.MatchedRules())
-		}
-	} else {
-		t.Errorf("failed to test arguments pollution: Single match fixed case: %d, %+v\n",
-			len(tx.MatchedRules()), tx.MatchedRules())
+	if len(tx.MatchedRules()) != 2 {
+		t.Errorf("failed to test arguments pollution. Found matches: %d, %+v\n",
+			len(tx.MatchedRules()[0].MatchedDatas()), tx.MatchedRules())
 	}
-
-	tx = waf.NewTransaction()
-	tx.ProcessRequestHeaders()
-	tx.AddPostRequestArgument("test1", "xyz")
-	tx.AddPostRequestArgument("Test1", "Xyz")
-	tx.AddPostRequestArgument("tesT1", "Xyz")
-	tx.AddPostRequestArgument("TEST1", "XYZ")
-	_, err = tx.ProcessRequestBody()
-	if err != nil {
-		t.Error(err)
-	}
-	if len(tx.MatchedRules()) == 1 {
-		if len(tx.MatchedRules()[0].MatchedDatas()) != 2 {
-			t.Errorf("failed to test arguments pollution. Found matches: %d, %+v\n",
-				len(tx.MatchedRules()[0].MatchedDatas()), tx.MatchedRules())
-		}
-	} else {
-		t.Errorf("failed to test arguments pollution: Multiple match mixed case: %d, %+v\n",
-			len(tx.MatchedRules()), tx.MatchedRules())
-	}
-
 }
 
 func TestURIQueryParamCaseSensitive(t *testing.T) {
 	waf := corazawaf.NewWAF()
-	rules := `SecRule ARGS:Test1 "@contains SQLI" "id:3, phase:2, log, pass"`
+	rules := `SecRule ARGS:Test1 "@rx (SQLI|ZZZZ)" "id:3, phase:2, log, pass"`
 	parser := NewParser(waf)
 
 	err := parser.FromString(rules)
@@ -920,105 +907,19 @@ func TestURIQueryParamCaseSensitive(t *testing.T) {
 	}
 
 	tx := waf.NewTransaction()
-	tx.ProcessURI("/url?Test1='SQLI", "POST", "HTTP/1.1")
+	tx.ProcessURI("/url?Test1=SQLI", "POST", "HTTP/1.1")
 	tx.ProcessRequestHeaders()
+	tx.AddPostRequestArgument("Test1", "ZZZZ")
 	_, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
 	}
 
-	if len(tx.MatchedRules()) == 1 {
-		if len(tx.MatchedRules()[0].MatchedDatas()) != 1 {
-			t.Errorf("failed to test uri query param. Found matches: %d, %+v\n",
-				len(tx.MatchedRules()[0].MatchedDatas()), tx.MatchedRules())
-		}
-		if !isMatchData(tx.MatchedRules()[0].MatchedDatas(), "Test1") {
-			t.Error("Key did not match: Test1 !=", tx.MatchedRules()[0])
-		}
-	} else {
-		t.Errorf("failed to test uri query param: Same case arg name: %d, %+v\n",
-			len(tx.MatchedRules()), tx.MatchedRules())
-	}
-
-	tx = waf.NewTransaction()
-	tx.ProcessURI("/test?test1='SQLI&Test1='SQLI&TEST1='SQLI", "POST", "HTTP/1.1")
-	tx.ProcessRequestHeaders()
-	_, err = tx.ProcessRequestBody()
-	if err != nil {
-		t.Error(err)
-	}
-
-	if len(tx.MatchedRules()) == 1 {
-		if len(tx.MatchedRules()[0].MatchedDatas()) != 3 {
-			t.Errorf("failed to test uri query param. Found matches: %d, %+v\n",
-				len(tx.MatchedRules()[0].MatchedDatas()), tx.MatchedRules())
-		}
-		if !isMatchData(tx.MatchedRules()[0].MatchedDatas(), "Test1") {
-			t.Error("Key did not match: Test1 !=", tx.MatchedRules()[0])
-		}
-	} else {
-		t.Errorf("failed to test qparam pollution: Multiple arg different case: %d, %+v\n",
+	if len(tx.MatchedRules()) != 1 {
+		t.Errorf("failed to test arguments pollution. Found matches: %d, %+v\n",
 			len(tx.MatchedRules()), tx.MatchedRules())
 	}
 }
-
-/*
-func TestURIQueryParamNameCaseSensitive(t *testing.T) {
-	waf := coraza.NewWAF()
-	rules := `SecRule ARGS_NAMES "Test1" "id:3, phase:2, log, pass"`
-	parser, err := NewParser(waf)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	err = parser.FromString(rules)
-	if err != nil {
-		t.Error()
-		return
-	}
-
-	tx := waf.NewTransaction()
-	tx.ProcessURI("/url?Test1='SQLI", "POST", "HTTP/1.1")
-	_, err = tx.ProcessRequestBody()
-	if err != nil {
-		t.Error(err)
-	}
-
-	if len(tx.MatchedRules()) == 1 {
-		if len(tx.MatchedRules()[0].MatchedDatas) != 1 {
-			t.Errorf("failed to test uri query param. Expected: 1, Found matches: %d, %+v\n",
-				len(tx.MatchedRules()[0].MatchedDatas), tx.MatchedRules())
-		}
-		if !isMatchData(tx.MatchedRules()[0].MatchedDatas, "Test1") {
-			t.Error("Key did not match: Test1 !=", tx.MatchedRules()[0])
-		}
-	} else {
-		t.Errorf("failed to test uri query param: Same case arg name:%d, %+v\n",
-			len(tx.MatchedRules()), tx.MatchedRules())
-	}
-
-	tx = waf.NewTransaction()
-	tx.ProcessURI("/test?test1='SQLI&Test1='SQLI&TEST1='SQLI", "POST", "HTTP/1.1")
-	_, err = tx.ProcessRequestBody()
-	if err != nil {
-		t.Error(err)
-	}
-
-	if len(tx.MatchedRules()) == 1 {
-		if len(tx.MatchedRules()[0].MatchedDatas) != 1 {
-			t.Errorf("Failed to test uri query param. Expected: 1, Found matches: %d, %+v\n",
-				len(tx.MatchedRules()[0].MatchedDatas), tx.MatchedRules())
-		}
-		if !isMatchData(tx.MatchedRules()[0].MatchedDatas, "Test1") {
-			t.Error("Key did not match: Test1 !=", tx.MatchedRules()[0])
-		}
-	} else {
-		t.Error("failed to test qparam pollution: Multiple arg different case:",
-			len(tx.MatchedRules()))
-	}
-}
-*/
 
 func isMatchData(mds []types.MatchData, key string) (result bool) {
 	result = false

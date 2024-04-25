@@ -317,7 +317,7 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 		return
 	}
 	keyl := strings.ToLower(key)
-	tx.variables.requestHeaders.AddWithCSKey(keyl, value)
+	tx.variables.requestHeaders.Add(keyl, value)
 
 	switch keyl {
 	case "content-type":
@@ -359,7 +359,7 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 		return
 	}
 	keyl := strings.ToLower(key)
-	tx.variables.responseHeaders.AddWithCSKey(keyl, value)
+	tx.variables.responseHeaders.Add(keyl, value)
 
 	// Most headers can be managed like that
 	if keyl == "content-type" {
@@ -669,7 +669,7 @@ func (tx *Transaction) AddGetRequestArgument(key string, value string) {
 		tx.debugLogger.Warn().Msg("skipping get request argument, over limit")
 		return
 	}
-	tx.variables.argsGet.AddWithCSKey(key, value)
+	tx.variables.argsGet.Add(key, value)
 }
 
 // AddPostRequestArgument
@@ -678,7 +678,7 @@ func (tx *Transaction) AddPostRequestArgument(key string, value string) {
 		tx.debugLogger.Warn().Msg("skipping post request argument, over limit")
 		return
 	}
-	tx.variables.argsPost.AddWithCSKey(key, value)
+	tx.variables.argsPost.Add(key, value)
 }
 
 // AddPathRequestArgument
@@ -687,7 +687,7 @@ func (tx *Transaction) AddPathRequestArgument(key string, value string) {
 		tx.debugLogger.Warn().Msg("skipping path request argument, over limit")
 		return
 	}
-	tx.variables.argsPath.AddWithCSKey(key, value)
+	tx.variables.argsPath.Add(key, value)
 }
 
 func (tx *Transaction) checkArgumentLimit(c *collections.NamedCollection) bool {
@@ -1692,11 +1692,11 @@ func NewTransactionVariables() *TransactionVariables {
 	// XML is a pointer to RequestXML
 	v.xml = v.requestXML
 
-	v.argsGet = collections.NewNamedCollection(variables.ArgsGet)
+	v.argsGet = collections.NewCaseSensitiveNamedCollection(variables.ArgsGet)
 	v.argsGetNames = v.argsGet.Names(variables.ArgsGetNames)
-	v.argsPost = collections.NewNamedCollection(variables.ArgsPost)
+	v.argsPost = collections.NewCaseSensitiveNamedCollection(variables.ArgsPost)
 	v.argsPostNames = v.argsPost.Names(variables.ArgsPostNames)
-	v.argsPath = collections.NewNamedCollection(variables.ArgsPath)
+	v.argsPath = collections.NewCaseSensitiveNamedCollection(variables.ArgsPath)
 	v.argsCombinedSize = collections.NewSizeCollection(variables.ArgsCombinedSize, v.argsGet, v.argsPost)
 	v.args = collections.NewConcatKeyed(
 		variables.Args,

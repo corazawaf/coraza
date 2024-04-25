@@ -21,8 +21,53 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
+// Case Insensitive Map
+// This is for headers and other collections that are case insensitive
 func TestMap(t *testing.T) {
-	c := NewMap(variables.ArgsPost)
+	c := NewCaseSensitiveKeyMap(variables.RequestHeaders)
+	c.SetIndex("user", 1, "value")
+	c.Set("user-agent", []string{"value2"})
+	if c.Get("user")[0] != "value" {
+		t.Error("Error setting index")
+	}
+	if len(c.FindAll()) == 0 {
+		t.Error("Error finding all")
+	}
+	if len(c.FindString("a")) > 0 {
+		t.Error("Error should not find string")
+	}
+	if l := len(c.FindRegex(regexp.MustCompile("user.*"))); l != 2 {
+		t.Errorf("Error should find regex, got %d", l)
+	}
+
+	c.Add("user-agent", "value3")
+
+	wantStr := `REQUEST_HEADERS:
+    user: value
+    user-agent: value2,value3
+`
+
+	if have := fmt.Sprint(c); have != wantStr {
+		// Map order is not guaranteed, not pretty but checking twice is the simplest for now.
+		wantStr = `REQUEST_HEADERS:
+    user-agent: value2,value3
+    user: value
+`
+		if have != wantStr {
+			t.Errorf("String() = %q, want %q", have, wantStr)
+		}
+	}
+
+	if c.Len() != len(c.data) {
+		t.Fatal("The lengths are not equal.")
+	}
+
+}
+
+// Case Sensitive Map
+// This is for ARGS, ARGS_GET, ARGS_POST and other collections that are case sensitive
+func TestNewCaseSensitiveKeyMapMap(t *testing.T) {
+	c := NewCaseSensitiveKeyMap(variables.ArgsPost)
 	c.SetIndex("key", 1, "value")
 	c.Set("key2", []string{"value2"})
 	if c.Get("key")[0] != "value" {

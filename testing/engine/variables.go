@@ -78,9 +78,9 @@ SecRule ARGS:/^T1$/ "@streq aaa" "id:19,phase:2,block,log"
 SecRule &ARGS_GET:/t.*/ "@gt 2" "id: 1234, phase:1, block, log, setenv:test=some-secret"
 # TODO
 #SecRule &ARGS_GET|!ARGS_GET:/.*/ "@eq 0" "id: 1500, phase:1, block, log"
-SecRule REQUEST_METHOD "POST" "id:15, log"
+SecRule REQUEST_METHOD "@streq POST" "id:15, phase:1, block, log"
 SecAction "id:100,log,setvar:'tx.test=%{REQUEST_METHOD}'"
-SecRule TX:test "POST" "id:110,log"
+SecRule TX:test "POST" "id:110,log,phase:1,block"
 
 SecAction "id:130,setvar:'tx.allowed_methods=GET HEAD OPTIONS'"
 SecRule REQUEST_METHOD "!@within %{tx.allowed_methods}" "id:200,log"
@@ -98,12 +98,12 @@ SecRule ARGS|!ARGS:/t.*/ "aaa" "id:900,log,phase:1"
 SecRule ARGS|!ARGS:/T.*/ "@streq zzz" "id:919,log,phase:1"
 SecRule ARGS|!ARGS:/js.*/ "bbb" "id:1000,log,phase:1"
 SecRule ARGS|!ARGS:/js.*/ "74B0CB414BD77D17B5680A6386EF1666" "id:1100,log,phase:1"
-SecRule ARGS:/^Key/ "@streq my-value" "id:1028,phase:1,deny,status:403,msg:'ARGS:key matched.'"
+SecRule ARGS:/^Key/ "@streq my-value" "id:1028,phase:1,deny,status:403,msg:'ARGS:Key matched.'"
 
 SecRule REQUEST_HEADERS|!REQUEST_HEADERS:User-Agent|!REQUEST_HEADERS:Referer|!REQUEST_HEADERS:Cookie|!REQUEST_HEADERS:Sec-Fetch-User|!REQUEST_HEADERS:Sec-CH-UA-Mobile \
   "@validateByteRange 32,34,38,42-59,61,65-90,95,97-122" "id:920274,phase:1,log,t:none,t:urlDecodeUni"
 
-SecRule REQUEST_METHOD "^.*$" "capture,id:123123,phase:1,t:length,log,setvar:'tx.testuru=%{tx.0}',chain"
+SecRule REQUEST_METHOD "^(.*)$" "capture,id:123123,phase:1,t:length,log,setvar:'tx.testuru=%{tx.0}',chain"
   SecRule TX:testuru "@eq 4" ""
 
 SecRule ARGS:t1 "bbb" "id:9123,phase:1,log"

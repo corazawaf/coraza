@@ -4,13 +4,11 @@
 package collections
 
 import (
-	"regexp"
-	"strings"
-
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
+	"regexp"
 )
 
 // ConcatCollection is a collection view over multiple collections.
@@ -58,10 +56,9 @@ func NewConcatKeyed(variable variables.RuleVariable, data ...collection.Keyed) *
 }
 
 func (c *ConcatKeyed) Get(key string) []string {
-	keyL := strings.ToLower(key)
 	var res []string
 	for _, c := range c.data {
-		res = append(res, c.Get(keyL)...)
+		res = append(res, c.Get(key)...)
 	}
 	return res
 }
