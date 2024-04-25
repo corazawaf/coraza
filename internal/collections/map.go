@@ -56,7 +56,8 @@ func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
 	return result
 }
 
-func (c *Map) FindString(key string) []types.MatchData {
+// FindStringCSKey looks for case sensitive key matches
+func (c *Map) FindStringCSKey(key string) []types.MatchData {
 	var result []types.MatchData
 	if key == "" {
 		return c.FindAll()
@@ -64,9 +65,8 @@ func (c *Map) FindString(key string) []types.MatchData {
 	if len(c.data) == 0 {
 		return nil
 	}
-	keyL := strings.ToLower(key)
 	// if key is not empty
-	if e, ok := c.data[keyL]; ok {
+	if e, ok := c.data[key]; ok {
 		for _, aVar := range e {
 			result = append(result, &corazarules.MatchData{
 				Variable_: c.variable,
@@ -76,6 +76,11 @@ func (c *Map) FindString(key string) []types.MatchData {
 		}
 	}
 	return result
+}
+
+func (c *Map) FindString(key string) []types.MatchData {
+	key = strings.ToLower(key)
+	return c.FindStringCSKey(key)
 }
 
 func (c *Map) FindAll() []types.MatchData {
@@ -96,6 +101,12 @@ func (c *Map) Add(key string, value string) {
 	keyL := strings.ToLower(key)
 	aVal := keyValue{key: key, value: value}
 	c.data[keyL] = append(c.data[keyL], aVal)
+}
+
+// Same as Add, but the key is stored in the case sensitive map
+func (c *Map) AddWithCSKey(key string, value string) {
+	aVal := keyValue{key: key, value: value}
+	c.data[key] = append(c.data[key], aVal)
 }
 
 func (c *Map) Set(key string, values []string) {

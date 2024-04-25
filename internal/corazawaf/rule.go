@@ -181,6 +181,21 @@ func (r *Rule) Evaluate(phase types.RulePhase, tx plugintypes.TransactionState, 
 
 const noID = 0
 
+// This prepares the RULE collection with metadata
+// TODO proactively avoid this if RULE variable is not being used?
+func (r *Rule) setRuleVariable(rid int, tx *Transaction) {
+	ruleCol := tx.variables.rule
+	ruleCol.SetIndex("id", 0, strconv.Itoa(rid))
+	if r.Msg != nil {
+		ruleCol.SetIndex("msg", 0, r.Msg.String())
+	}
+	ruleCol.SetIndex("rev", 0, r.Rev_)
+	if r.LogData != nil {
+		ruleCol.SetIndex("logdata", 0, r.LogData.String())
+	}
+	ruleCol.SetIndex("severity", 0, r.Severity_.String())
+}
+
 func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Transaction, collectiveMatchedValues *[]types.MatchData, chainLevel int, cache map[transformationKey]*transformationValue) []types.MatchData {
 	tx.Capture = r.Capture
 
@@ -198,14 +213,17 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 	if r.Msg != nil {
 		ruleCol.SetIndex("msg", 0, r.Msg.String())
 	}
-	ruleCol.SetIndex("rev", 0, r.Rev_)
-	if r.LogData != nil {
-		ruleCol.SetIndex("logdata", 0, r.LogData.String())
-	}
-	ruleCol.SetIndex("severity", 0, r.Severity_.String())
+	defer func() {
+		if logger.Debug().IsEnabled() {
+			logger.Debug().Int("id", r.ID_).Msg("Finished rule evaluation")
+		}
+	}()
+	r.setRuleVariable(rid, tx)
 	// SecMark and SecAction uses nil operator
 	if r.operator == nil {
-		logger.Debug().Msg("Forcing rule to match")
+		if logger.Debug().IsEnabled() {
+			logger.Debug().Int("id", r.ID_).Msg("Forcing rule to match")
+		}
 		md := &corazarules.MatchData{}
 		if r.ParentID_ != noID || r.MultiMatch {
 			// In order to support Msg and LogData for inner rules, we need to expand them now

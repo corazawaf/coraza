@@ -48,7 +48,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 								919,
 								100,
 								1000,
-                                1028,
+								1028,
 								// 1500,
 								123123,
 								9123,

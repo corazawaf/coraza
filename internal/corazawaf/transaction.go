@@ -120,6 +120,9 @@ type Transaction struct {
 	variables TransactionVariables
 
 	transformationCache map[transformationKey]*transformationValue
+
+	// predictiveMatch analyzes the collections to disable rules for unnecessary evaluation
+	predictiveMatch bool
 }
 
 func (tx *Transaction) ID() string {
@@ -314,7 +317,7 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 		return
 	}
 	keyl := strings.ToLower(key)
-	tx.variables.requestHeaders.Add(key, value)
+	tx.variables.requestHeaders.AddWithCSKey(keyl, value)
 
 	switch keyl {
 	case "content-type":
@@ -356,7 +359,7 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 		return
 	}
 	keyl := strings.ToLower(key)
-	tx.variables.responseHeaders.Add(key, value)
+	tx.variables.responseHeaders.AddWithCSKey(keyl, value)
 
 	// Most headers can be managed like that
 	if keyl == "content-type" {
@@ -666,7 +669,7 @@ func (tx *Transaction) AddGetRequestArgument(key string, value string) {
 		tx.debugLogger.Warn().Msg("skipping get request argument, over limit")
 		return
 	}
-	tx.variables.argsGet.Add(key, value)
+	tx.variables.argsGet.AddWithCSKey(key, value)
 }
 
 // AddPostRequestArgument
@@ -675,7 +678,7 @@ func (tx *Transaction) AddPostRequestArgument(key string, value string) {
 		tx.debugLogger.Warn().Msg("skipping post request argument, over limit")
 		return
 	}
-	tx.variables.argsPost.Add(key, value)
+	tx.variables.argsPost.AddWithCSKey(key, value)
 }
 
 // AddPathRequestArgument
@@ -684,7 +687,7 @@ func (tx *Transaction) AddPathRequestArgument(key string, value string) {
 		tx.debugLogger.Warn().Msg("skipping path request argument, over limit")
 		return
 	}
-	tx.variables.argsPath.Add(key, value)
+	tx.variables.argsPath.AddWithCSKey(key, value)
 }
 
 func (tx *Transaction) checkArgumentLimit(c *collections.NamedCollection) bool {
