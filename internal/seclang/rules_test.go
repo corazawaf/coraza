@@ -1020,3 +1020,29 @@ func TestRuleMatchCaseSensitivity(t *testing.T) {
 		t.Fatal("failed to interrupt transaction")
 	}
 }
+
+func TestSetVarWithMacros(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	parser := NewParser(waf)
+	err := parser.FromString(`
+		SecAction "id:100,phase:1,log,setvar:'TX.test=%{REQUEST_METHOD}'"
+		SecRule TX:test "POST" "id:110,log,phase:1,block"
+	`)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	tx := waf.NewTransaction()
+	headers := map[string]string{
+		"content-type": "application/x-www-form-urlencoded",
+		"CookIe":       "phpmyadminphp=test",
+		"user-agent":   "<ModSecurity CRS 3 Tests",
+	}
+	tx.ProcessURI("/index.php", "POST", "HTTP/1.1")
+	for k, v := range headers {
+		tx.AddRequestHeader(k, v)
+	}
+	tx.ProcessRequestHeaders()
+	if len(tx.MatchedRules()) != 2 {
+		t.Errorf("failed to match rules with %d", len(tx.MatchedRules()))
+	}
+}

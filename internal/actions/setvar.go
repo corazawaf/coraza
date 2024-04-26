@@ -112,7 +112,7 @@ func (a *setvarFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.Transacti
 		Str("var_value", value).
 		Int("rule_id", r.ID()).
 		Msg("Action evaluated")
-	a.evaluateTxCollection(r, tx, strings.ToLower(key), value)
+	a.evaluateTxCollection(r, tx, key, value)
 }
 
 func (a *setvarFn) Type() plugintypes.ActionType {

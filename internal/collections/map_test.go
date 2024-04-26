@@ -66,7 +66,7 @@ func TestMap(t *testing.T) {
 
 // Case Sensitive Map
 // This is for ARGS, ARGS_GET, ARGS_POST and other collections that are case sensitive
-func TestNewCaseSensitiveKeyMapMap(t *testing.T) {
+func TestNewCaseSensitiveKeyMap(t *testing.T) {
 	c := NewCaseSensitiveKeyMap(variables.ArgsPost)
 	c.SetIndex("key", 1, "value")
 	c.Set("key2", []string{"value2"})

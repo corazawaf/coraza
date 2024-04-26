@@ -127,17 +127,20 @@ func (c *Map) Set(key string, values []string) {
 }
 
 func (c *Map) SetIndex(key string, index int, value string) {
-	keyL := strings.ToLower(key)
-	values := c.data[keyL]
+	origKey := key
+	if !c.isCaseSensitive {
+		key = strings.ToLower(key)
+	}
+	values := c.data[key]
 	av := keyValue{key: key, value: value}
 
 	switch {
 	case len(values) == 0:
-		c.data[keyL] = []keyValue{av}
+		c.data[origKey] = []keyValue{av}
 	case len(values) <= index:
-		c.data[keyL] = append(c.data[keyL], av)
+		c.data[origKey] = append(c.data[origKey], av)
 	default:
-		c.data[keyL][index] = av
+		c.data[origKey][index] = av
 	}
 }
 

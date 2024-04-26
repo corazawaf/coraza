@@ -388,7 +388,7 @@ func (tx *Transaction) CaptureField(index int, value string) {
 // this function is used to control which variables are reset after a new rule is evaluated
 func (tx *Transaction) resetCaptures() {
 	tx.debugLogger.Debug().
-		Msg("Reseting captured variables")
+		Msg("Resetting captured variables")
 	// We reset capture 0-9
 	ctx := tx.variables.tx
 	// RUNE 48 = 0
@@ -1679,7 +1679,7 @@ func NewTransactionVariables() *TransactionVariables {
 	v.responseHeadersNames = v.responseHeaders.Names(variables.ResponseHeadersNames)
 	v.resBodyProcessor = collections.NewSingle(variables.ResBodyProcessor)
 	v.geo = collections.NewMap(variables.Geo)
-	v.tx = collections.NewMap(variables.TX)
+	v.tx = collections.NewCaseSensitiveKeyMap(variables.TX)
 	v.rule = collections.NewMap(variables.Rule)
 	v.env = collections.NewMap(variables.Env)
 	v.files = collections.NewMap(variables.Files)

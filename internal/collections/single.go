@@ -56,6 +56,7 @@ func (c *Single) Format(res *strings.Builder) {
 	res.WriteString(c.variable.Name())
 	res.WriteString(": ")
 	res.WriteString(c.data)
+	res.WriteByte('\n')
 }
 
 func (c *Single) String() string {

@@ -136,14 +136,15 @@ SecRule ARGS_GET:Var4 "@rx pre4payloadpost"  "id:400, phase:2, log, msg:'Rule Pa
 SecRule REQUEST_HEADERS "@rx attack20" \
   "id:20,\
   phase:1,\
+  block,\
   log,\
   msg:'Chained rule Parent test',\
   logdata:'FoundChain20 %{MATCHED_VAR} in %{MATCHED_VAR_NAME}',\
   chain"
-  SecRule MATCHED_VARS_NAMES "@rx Host" \
+  SecRule MATCHED_VARS_NAMES "@rx host" \
     "chain"
     SecRule REQUEST_HEADERS:Host "@rx attack20" \
-      "block"
+      "t:none"
 
 SecRule REQUEST_HEADERS "@rx attack21" \
   "id:21,\

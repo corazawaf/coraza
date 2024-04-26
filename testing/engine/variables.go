@@ -70,7 +70,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 		},
 	},
 	Rules: `
-SecRule REQBODY_PROCESSOR "" "id: 10, log"
+SecRule REQBODY_PROCESSOR "" "id: 10, phase:1, log"
 SecRequestBodyAccess On
 SecRule ARGS:/^t1$/ "aaa" "id:1,phase:1,block,log"
 SecRule ARGS:/^T1$/ "@streq zzz" "id:9,phase:1,block,log"
@@ -79,17 +79,17 @@ SecRule &ARGS_GET:/t.*/ "@gt 2" "id: 1234, phase:1, block, log, setenv:test=some
 # TODO
 #SecRule &ARGS_GET|!ARGS_GET:/.*/ "@eq 0" "id: 1500, phase:1, block, log"
 SecRule REQUEST_METHOD "@streq POST" "id:15, phase:1, block, log"
-SecAction "id:100,log,setvar:'tx.test=%{REQUEST_METHOD}'"
+SecAction "id:100,phase:1,log,setvar:'TX.test=%{REQUEST_METHOD}'"
 SecRule TX:test "POST" "id:110,log,phase:1,block"
 
-SecAction "id:130,setvar:'tx.allowed_methods=GET HEAD OPTIONS'"
-SecRule REQUEST_METHOD "!@within %{tx.allowed_methods}" "id:200,log"
+SecAction "id:130,phase:1,setvar:'tx.allowed_methods=GET HEAD OPTIONS'"
+SecRule REQUEST_METHOD "!@within %{tx.allowed_methods}" "id:200,phase:1,log"
 
 SecRule REQUEST_COOKIES:pHpMyAdmInPhp "test" "id:300,phase:1,block,log"
-SecRule ARGS_GET_NAMES "t1" "id:400,log"
+SecRule ARGS_GET_NAMES "t1" "id:400,phase:1,log"
 
-SecRule ARGS_NAMES "jsessionid" "id: 500, log, phase:2"
-SecRule ARGS_NAMES "pineapple" "id: 600, log, phase:2"
+SecRule ARGS_NAMES "jsessionid" "id:500, log, phase:1"
+SecRule ARGS_NAMES "pineapple" "id:600, log, phase:2"
 SecRule ARGS "(?:^|[^\x5c])\x5c[cdeghijklmpqwxyz123456789]" "id:700,log,phase:2"
 
 SecRule ARGS|!ARGS:t1 "aaa" "id:800,log,phase:1"
@@ -103,8 +103,8 @@ SecRule ARGS:/^Key/ "@streq my-value" "id:1028,phase:1,deny,status:403,msg:'ARGS
 SecRule REQUEST_HEADERS|!REQUEST_HEADERS:User-Agent|!REQUEST_HEADERS:Referer|!REQUEST_HEADERS:Cookie|!REQUEST_HEADERS:Sec-Fetch-User|!REQUEST_HEADERS:Sec-CH-UA-Mobile \
   "@validateByteRange 32,34,38,42-59,61,65-90,95,97-122" "id:920274,phase:1,log,t:none,t:urlDecodeUni"
 
-SecRule REQUEST_METHOD "^(.*)$" "capture,id:123123,phase:1,t:length,log,setvar:'tx.testuru=%{tx.0}',chain"
-  SecRule TX:testuru "@eq 4" ""
+SecRule REQUEST_METHOD "^(.*)$" "id:123123,phase:1,t:length,log,capture,setvar:'TX.testuru=%{tx.0}',chain"
+  SecRule TX:testuru "@eq 4" "t:none"
 
 SecRule ARGS:t1 "bbb" "id:9123,phase:1,log"
 SecRuleUpdateTargetById 9123 "ARGS:t2"
