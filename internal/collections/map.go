@@ -22,6 +22,7 @@ type Map struct {
 
 var _ collection.Map = &Map{}
 
+// NewMap creates a new Map. By default, the Map key is case insensitive.
 func NewMap(variable variables.RuleVariable) *Map {
 	return &Map{
 		isCaseSensitive: false,
@@ -30,6 +31,7 @@ func NewMap(variable variables.RuleVariable) *Map {
 	}
 }
 
+// NewCaseSensitiveKeyMap creates a new Map with case sensitive keys.
 func NewCaseSensitiveKeyMap(variable variables.RuleVariable) *Map {
 	return &Map{
 		isCaseSensitive: true,
@@ -52,6 +54,7 @@ func (c *Map) Get(key string) []string {
 	return values
 }
 
+// FindRegex returns all map elements whose key matches the regular expression.
 func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
 	var result []types.MatchData
 	for k, data := range c.data {
@@ -68,7 +71,7 @@ func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
 	return result
 }
 
-// FindString
+// FindString returns all map elements whose key matches the string.
 func (c *Map) FindString(key string) []types.MatchData {
 	var result []types.MatchData
 	if key == "" {
@@ -93,6 +96,7 @@ func (c *Map) FindString(key string) []types.MatchData {
 	return result
 }
 
+// FindAll returns all map elements.
 func (c *Map) FindAll() []types.MatchData {
 	var result []types.MatchData
 	for _, data := range c.data {
@@ -107,6 +111,7 @@ func (c *Map) FindAll() []types.MatchData {
 	return result
 }
 
+// Add adds a new key-value pair to the map.
 func (c *Map) Add(key string, value string) {
 	aVal := keyValue{key: key, value: value}
 	if !c.isCaseSensitive {
@@ -115,6 +120,7 @@ func (c *Map) Add(key string, value string) {
 	c.data[key] = append(c.data[key], aVal)
 }
 
+// Set sets the value of a key with the array of strings passed. If the key already exists, it will be overwritten.
 func (c *Map) Set(key string, values []string) {
 	originalKey := key
 	if !c.isCaseSensitive {
@@ -126,24 +132,26 @@ func (c *Map) Set(key string, values []string) {
 	}
 }
 
+// SetIndex sets the value of a key at the specified index. If the key already exists, it will be overwritten.
 func (c *Map) SetIndex(key string, index int, value string) {
-	origKey := key
+	originalKey := key
 	if !c.isCaseSensitive {
 		key = strings.ToLower(key)
 	}
 	values := c.data[key]
-	av := keyValue{key: key, value: value}
+	av := keyValue{key: originalKey, value: value}
 
 	switch {
 	case len(values) == 0:
-		c.data[origKey] = []keyValue{av}
+		c.data[key] = []keyValue{av}
 	case len(values) <= index:
-		c.data[origKey] = append(c.data[origKey], av)
+		c.data[key] = append(c.data[originalKey], av)
 	default:
-		c.data[origKey][index] = av
+		c.data[key][index] = av
 	}
 }
 
+// Remove removes a key/value from the map.
 func (c *Map) Remove(key string) {
 	if !c.isCaseSensitive {
 		key = strings.ToLower(key)
@@ -154,16 +162,19 @@ func (c *Map) Remove(key string) {
 	delete(c.data, key)
 }
 
+// Name returns the name of the map/collection.
 func (c *Map) Name() string {
 	return c.variable.Name()
 }
 
+// Reset removes all key/value pairs from the map.
 func (c *Map) Reset() {
 	for k := range c.data {
 		delete(c.data, k)
 	}
 }
 
+// Format updates the passed strings.Builder with the formatted map key/values.
 func (c *Map) Format(res *strings.Builder) {
 	res.WriteString(c.variable.Name())
 	res.WriteString(":\n")
@@ -181,12 +192,14 @@ func (c *Map) Format(res *strings.Builder) {
 	}
 }
 
+// String returns a string representation of the map key/values.
 func (c *Map) String() string {
 	res := strings.Builder{}
 	c.Format(&res)
 	return res.String()
 }
 
+// Len returns the number of key/value pairs in the map.
 func (c *Map) Len() int {
 	return len(c.data)
 }
