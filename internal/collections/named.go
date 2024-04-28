@@ -21,6 +21,12 @@ type NamedCollection struct {
 
 var _ collection.Map = &NamedCollection{}
 
+func NewCaseSensitiveNamedCollection(rv variables.RuleVariable) *NamedCollection {
+	return &NamedCollection{
+		Map: NewCaseSensitiveKeyMap(rv),
+	}
+}
+
 func NewNamedCollection(rv variables.RuleVariable) *NamedCollection {
 	return &NamedCollection{
 		Map: NewMap(rv),

@@ -15,16 +15,26 @@ import (
 
 // Map is a default collection.Map.
 type Map struct {
-	data     map[string][]keyValue
-	variable variables.RuleVariable
+	isCaseSensitive bool
+	data            map[string][]keyValue
+	variable        variables.RuleVariable
 }
 
 var _ collection.Map = &Map{}
 
 func NewMap(variable variables.RuleVariable) *Map {
 	return &Map{
-		variable: variable,
-		data:     map[string][]keyValue{},
+		isCaseSensitive: false,
+		variable:        variable,
+		data:            map[string][]keyValue{},
+	}
+}
+
+func NewCaseSensitiveKeyMap(variable variables.RuleVariable) *Map {
+	return &Map{
+		isCaseSensitive: true,
+		variable:        variable,
+		data:            map[string][]keyValue{},
 	}
 }
 
@@ -32,9 +42,11 @@ func (c *Map) Get(key string) []string {
 	if len(c.data) == 0 {
 		return nil
 	}
-	keyL := strings.ToLower(key)
+	if !c.isCaseSensitive {
+		key = strings.ToLower(key)
+	}
 	var values []string
-	for _, a := range c.data[keyL] {
+	for _, a := range c.data[key] {
 		values = append(values, a.value)
 	}
 	return values
@@ -56,6 +68,7 @@ func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
 	return result
 }
 
+// FindString
 func (c *Map) FindString(key string) []types.MatchData {
 	var result []types.MatchData
 	if key == "" {
@@ -64,9 +77,11 @@ func (c *Map) FindString(key string) []types.MatchData {
 	if len(c.data) == 0 {
 		return nil
 	}
-	keyL := strings.ToLower(key)
+	if !c.isCaseSensitive {
+		key = strings.ToLower(key)
+	}
 	// if key is not empty
-	if e, ok := c.data[keyL]; ok {
+	if e, ok := c.data[key]; ok {
 		for _, aVar := range e {
 			result = append(result, &corazarules.MatchData{
 				Variable_: c.variable,
@@ -93,40 +108,50 @@ func (c *Map) FindAll() []types.MatchData {
 }
 
 func (c *Map) Add(key string, value string) {
-	keyL := strings.ToLower(key)
 	aVal := keyValue{key: key, value: value}
-	c.data[keyL] = append(c.data[keyL], aVal)
+	if !c.isCaseSensitive {
+		key = strings.ToLower(key)
+	}
+	c.data[key] = append(c.data[key], aVal)
 }
 
 func (c *Map) Set(key string, values []string) {
-	keyL := strings.ToLower(key)
-	c.data[keyL] = make([]keyValue, 0, len(values))
+	originalKey := key
+	if !c.isCaseSensitive {
+		key = strings.ToLower(key)
+	}
+	c.data[key] = make([]keyValue, 0, len(values))
 	for _, v := range values {
-		c.data[keyL] = append(c.data[keyL], keyValue{key: key, value: v})
+		c.data[key] = append(c.data[key], keyValue{key: originalKey, value: v})
 	}
 }
 
 func (c *Map) SetIndex(key string, index int, value string) {
-	keyL := strings.ToLower(key)
-	values := c.data[keyL]
+	origKey := key
+	if !c.isCaseSensitive {
+		key = strings.ToLower(key)
+	}
+	values := c.data[key]
 	av := keyValue{key: key, value: value}
 
 	switch {
 	case len(values) == 0:
-		c.data[keyL] = []keyValue{av}
+		c.data[origKey] = []keyValue{av}
 	case len(values) <= index:
-		c.data[keyL] = append(c.data[keyL], av)
+		c.data[origKey] = append(c.data[origKey], av)
 	default:
-		c.data[keyL][index] = av
+		c.data[origKey][index] = av
 	}
 }
 
 func (c *Map) Remove(key string) {
+	if !c.isCaseSensitive {
+		key = strings.ToLower(key)
+	}
 	if len(c.data) == 0 {
 		return
 	}
-	keyL := strings.ToLower(key)
-	delete(c.data, keyL)
+	delete(c.data, key)
 }
 
 func (c *Map) Name() string {
