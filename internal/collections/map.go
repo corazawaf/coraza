@@ -145,7 +145,7 @@ func (c *Map) SetIndex(key string, index int, value string) {
 	case len(values) == 0:
 		c.data[key] = []keyValue{av}
 	case len(values) <= index:
-		c.data[key] = append(c.data[originalKey], av)
+		c.data[key] = append(c.data[key], av)
 	default:
 		c.data[key][index] = av
 	}
