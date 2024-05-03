@@ -1689,11 +1689,11 @@ func NewTransactionVariables() *TransactionVariables {
 	// XML is a pointer to RequestXML
 	v.xml = v.requestXML
 
-	v.argsGet = collections.NewNamedCollection(variables.ArgsGet)
+	v.argsGet = collections.NewCaseSensitiveNamedCollection(variables.ArgsGet)
 	v.argsGetNames = v.argsGet.Names(variables.ArgsGetNames)
-	v.argsPost = collections.NewNamedCollection(variables.ArgsPost)
+	v.argsPost = collections.NewCaseSensitiveNamedCollection(variables.ArgsPost)
 	v.argsPostNames = v.argsPost.Names(variables.ArgsPostNames)
-	v.argsPath = collections.NewNamedCollection(variables.ArgsPath)
+	v.argsPath = collections.NewCaseSensitiveNamedCollection(variables.ArgsPath)
 	v.argsCombinedSize = collections.NewSizeCollection(variables.ArgsCombinedSize, v.argsGet, v.argsPost)
 	v.args = collections.NewConcatKeyed(
 		variables.Args,
