@@ -855,9 +855,19 @@ func TestHeadersCaseSensitive(t *testing.T) {
 	}
 }
 
-func TestParameterPollution(t *testing.T) {
+// HPP - Detect HTTP Parameter Pollution Attacks
+// Parameter pollution attacks are a type of attack where the attacker tries to manipulate the parameters of a request
+// to bypass security controls, or to cause unexpected behavior. This rule is designed to detect parameter pollution
+// The following test will test the parameter pollution with the following rule:
+// SecRule ARGS:test1 "xyz" "id:3, phase:2, log, pass"
+// Attack:
+// POST /test?test1=xyz
+// test1=abc&test1=ZZZZ
+// In this case, the attacker tries to send three different values for the same parameter, and the rule should still match.
+// Coraza should add the matched parameter to an array and iterate over it to check for matches.
+func TestSingleParameterPollution(t *testing.T) {
 	waf := corazawaf.NewWAF()
-	rules := `SecRule Args:TESt1 "Xyz" "id:3, phase:2, log, pass"`
+	rules := `SecRule ARGS:test1 "xyz" "id:3, phase:2, log, pass"`
 	parser := NewParser(waf)
 
 	err := parser.FromString(rules)
@@ -869,8 +879,8 @@ func TestParameterPollution(t *testing.T) {
 	tx := waf.NewTransaction()
 	tx.ProcessRequestHeaders()
 	tx.AddPostRequestArgument("test1", "xyz")
-	tx.AddPostRequestArgument("Test1", "Xyz")
-	tx.AddPostRequestArgument("TEST1", "XYZ")
+	tx.AddPostRequestArgument("test1", "abc")
+	tx.AddPostRequestArgument("test1", "ZZZZ")
 	_, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
@@ -885,27 +895,50 @@ func TestParameterPollution(t *testing.T) {
 		t.Errorf("failed to test arguments pollution: Single match fixed case: %d, %+v\n",
 			len(tx.MatchedRules()), tx.MatchedRules())
 	}
+}
 
-	tx = waf.NewTransaction()
+// HPP - Detect HTTP Parameter Pollution Attacks
+// This test case uses two rules instead of one to test the parameter pollution. The rules are:
+// 1. SecRule ARGS:test1 "xyz" "id:3, phase:2, log, pass"
+// 2. SecRule ARGS:test1 "ZZZZ" "id:4, phase:2, log, pass"
+// Attack:
+// POST /test?test1=xyz&test1=ABCD
+// test1=abc&test1=ZZZZ
+// In this case, the attacker tries to send multiple different values for the same parameter, and the rule should match in
+// both cases. Coraza should add the matched parameter to an array and iterate over it to check for matches.`
+// For the above case, the rule should match twice.
+func TestMultipleParameterPollution(t *testing.T) {
+	rules := `SecRule ARGS:test1 "xyz" "id:3, phase:2, log, pass"
+SecRule ARGS:test1 "ZZZZ" "id:4, phase:2, log, pass"`
+	waf := corazawaf.NewWAF()
+	parser := NewParser(waf)
+	err := parser.FromString(rules)
+	if err != nil {
+		t.Error()
+		return
+	}
+	tx := waf.NewTransaction()
+	tx.AddGetRequestArgument("test1", "xyz")
+	tx.AddGetRequestArgument("test1", "ABCD")
 	tx.ProcessRequestHeaders()
-	tx.AddPostRequestArgument("test1", "xyz")
-	tx.AddPostRequestArgument("Test1", "Xyz")
-	tx.AddPostRequestArgument("tesT1", "Xyz")
-	tx.AddPostRequestArgument("TEST1", "XYZ")
+	tx.AddPostRequestArgument("test1", "abc")
+	tx.AddPostRequestArgument("test1", "ZZZZ")
 	_, err = tx.ProcessRequestBody()
 	if err != nil {
 		t.Error(err)
 	}
-	if len(tx.MatchedRules()) == 1 {
-		if len(tx.MatchedRules()[0].MatchedDatas()) != 2 {
-			t.Errorf("failed to test arguments pollution. Found matches: %d, %+v\n",
+	if len(tx.MatchedRules()) == 2 {
+		if len(tx.MatchedRules()[0].MatchedDatas()) != 1 {
+			t.Errorf("failed to test first argument pollution. Found matches: %d, %+v\n",
+				len(tx.MatchedRules()[0].MatchedDatas()), tx.MatchedRules())
+		}
+		if len(tx.MatchedRules()[1].MatchedDatas()) != 1 {
+			t.Errorf("failed to test second match pollution. Found matches: %d, %+v\n",
 				len(tx.MatchedRules()[0].MatchedDatas()), tx.MatchedRules())
 		}
 	} else {
-		t.Errorf("failed to test arguments pollution: Multiple match mixed case: %d, %+v\n",
-			len(tx.MatchedRules()), tx.MatchedRules())
+		t.Errorf("failed to test arguments pollution, less matches than expected: %d", len(tx.MatchedRules()))
 	}
-
 }
 
 func TestURIQueryParamCaseSensitive(t *testing.T) {
