@@ -60,6 +60,7 @@ var (
 	_ directive = directiveSecDebugLog
 	_ directive = directiveSecDebugLogLevel
 	_ directive = directiveSecRuleUpdateTargetByID
+	_ directive = directiveSecRuleUpdateTargetByTag
 	_ directive = directiveSecIgnoreRuleCompilationErrors
 	_ directive = directiveSecDataset
 	_ directive = directiveSecArgumentsLimit
@@ -120,6 +121,7 @@ var directivesMap = map[string]directive{
 	"secdebuglog":                    directiveSecDebugLog,
 	"secdebugloglevel":               directiveSecDebugLogLevel,
 	"secruleupdatetargetbyid":        directiveSecRuleUpdateTargetByID,
+	"secruleupdatetargetbytag":       directiveSecRuleUpdateTargetByTag,
 	"secignorerulecompilationerrors": directiveSecIgnoreRuleCompilationErrors,
 	"secdataset":                     directiveSecDataset,
 	"secargumentslimit":              directiveSecArgumentsLimit,
@@ -127,7 +129,6 @@ var directivesMap = map[string]directive{
 	// Unsupported directives
 	"secargumentseparator":     directiveUnsupported,
 	"seccookieformat":          directiveUnsupported,
-	"secruleupdatetargetbytag": directiveUnsupported,
 	"secruleupdatetargetbymsg": directiveUnsupported,
 	"secruleupdateactionbyid":  directiveUnsupported,
 	"secrulescript":            directiveUnsupported,

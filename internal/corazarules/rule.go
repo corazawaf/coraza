@@ -4,25 +4,33 @@
 package corazarules
 
 import (
+	"strconv"
+
 	"github.com/corazawaf/coraza/v3/types"
 )
+
+const noID = 0
 
 // RuleMetadata is used to store rule metadata
 // that can be used across packages
 type RuleMetadata struct {
-	ID_       int
-	File_     string
-	Line_     int
-	Rev_      string
-	Severity_ types.RuleSeverity
-	Version_  string
-	Tags_     []string
-	Maturity_ int
-	Accuracy_ int
-	Operator_ string
-	Phase_    types.RulePhase
-	Raw_      string
-	SecMark_  string
+	ID_          int
+	File_        string
+	Line_        int
+	Rev_         string
+	Severity_    types.RuleSeverity
+	Version_     string
+	Tags_        []string
+	Maturity_    int
+	Accuracy_    int
+	Operator_    string
+	Phase_       types.RulePhase
+	Raw_         string
+	SecMark_     string
+	cachedStrID_ string
+	// Contains the Id of the parent rule if you are inside
+	// a chain. Otherwise, it will be 0
+	ParentID_ int
 }
 
 func (r *RuleMetadata) ID() int {
@@ -75,4 +83,15 @@ func (r *RuleMetadata) Raw() string {
 
 func (r *RuleMetadata) SecMark() string {
 	return r.SecMark_
+}
+
+func (r *RuleMetadata) StrID() string {
+	if r.cachedStrID_ == "" {
+		rid := r.ID_
+		if rid == noID {
+			rid = r.ParentID_
+		}
+		r.cachedStrID_ = strconv.Itoa(rid)
+	}
+	return r.cachedStrID_
 }

@@ -182,7 +182,8 @@ func Fuzz() error {
 		{
 			pkg: "./internal/transformations",
 			tests: []string{
-				"FuzzB64Decode",
+				"FuzzB64Decode$",
+				"FuzzB64DecodeExt",
 				"FuzzCMDLine",
 			},
 		},
