@@ -185,6 +185,5 @@ func obtainStatusCodeFromInterruptionOrDefault(it *types.Interruption, defaultSt
 
 		return statusCode
 	}
-
 	return defaultStatusCode
 }
