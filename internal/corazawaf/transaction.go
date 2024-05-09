@@ -12,6 +12,7 @@ import (
 	"math"
 	"mime"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -26,6 +27,7 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/cookies"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/corazatypes"
+	"github.com/corazawaf/coraza/v3/internal/environment"
 	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 	urlutil "github.com/corazawaf/coraza/v3/internal/url"
 	"github.com/corazawaf/coraza/v3/types"
@@ -1489,13 +1491,25 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 // It also allows caches the transaction back into the sync.Pool
 func (tx *Transaction) Close() error {
 	defer tx.WAF.txPool.Put(tx)
-	tx.variables.reset()
+
 	var errs []error
+	if environment.HasAccessToFS {
+		// TODO(jcchavezs): filesTmpNames should probably be a new kind of collection that
+		// is aware of the files and then attempt to delete them when the collection
+		// is resetted or an item is removed.
+		for _, file := range tx.variables.filesTmpNames.Get("") {
+			if err := os.Remove(file); err != nil {
+				errs = append(errs, fmt.Errorf("removing temporary file: %v", err))
+			}
+		}
+	}
+
+	tx.variables.reset()
 	if err := tx.requestBodyBuffer.Reset(); err != nil {
-		errs = append(errs, err)
+		errs = append(errs, fmt.Errorf("reseting request body buffer: %v", err))
 	}
 	if err := tx.responseBodyBuffer.Reset(); err != nil {
-		errs = append(errs, err)
+		errs = append(errs, fmt.Errorf("reseting response body buffer: %v", err))
 	}
 
 	if tx.IsInterrupted() {
@@ -1510,14 +1524,11 @@ func (tx *Transaction) Close() error {
 			Msg("Transaction finished")
 	}
 
-	switch {
-	case len(errs) == 0:
+	if len(errs) == 0 {
 		return nil
-	case len(errs) == 1:
-		return fmt.Errorf("transaction close failed: %s", errs[0].Error())
-	default:
-		return fmt.Errorf("transaction close failed:\n- %s\n- %s", errs[0].Error(), errs[1].Error())
 	}
+
+	return fmt.Errorf("transaction close failed: %v", errors.Join(errs...))
 }
 
 // String will return a string with the transaction debug information
