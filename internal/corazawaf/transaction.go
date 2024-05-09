@@ -620,6 +620,23 @@ func (tx *Transaction) RemoveRuleTargetByID(id int, variable variables.RuleVaria
 		Variable: variable,
 		KeyStr:   key,
 	}
+
+	if multiphaseEvaluation && (variable == variables.Args || variable == variables.ArgsNames) {
+		// ARGS and ARGS_NAMES have to be splitted into _GET and _POST
+		switch variable {
+		case variables.Args:
+			c.Variable = variables.ArgsGet
+			tx.ruleRemoveTargetByID[id] = append(tx.ruleRemoveTargetByID[id], c)
+			c.Variable = variables.ArgsPost
+			tx.ruleRemoveTargetByID[id] = append(tx.ruleRemoveTargetByID[id], c)
+		case variables.ArgsNames:
+			c.Variable = variables.ArgsGetNames
+			tx.ruleRemoveTargetByID[id] = append(tx.ruleRemoveTargetByID[id], c)
+			c.Variable = variables.ArgsPostNames
+			tx.ruleRemoveTargetByID[id] = append(tx.ruleRemoveTargetByID[id], c)
+		}
+		return
+	}
 	tx.ruleRemoveTargetByID[id] = append(tx.ruleRemoveTargetByID[id], c)
 }
 
