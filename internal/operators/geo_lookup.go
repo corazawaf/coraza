@@ -9,10 +9,7 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
+// TODO: Not Implemented
 func newGeoLookup(plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	return &unconditionalMatch{}, nil
-}
-
-func init() {
-	Register("geoLookup", newGeoLookup)
 }

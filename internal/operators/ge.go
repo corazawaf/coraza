@@ -33,7 +33,3 @@ func (o *ge) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	data, _ := strconv.Atoi(o.data.Expand(tx))
 	return v >= data
 }
-
-func init() {
-	Register("ge", newGE)
-}

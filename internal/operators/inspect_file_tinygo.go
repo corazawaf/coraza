@@ -15,7 +15,3 @@ type inspectFile struct{}
 func newInspectFile(plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	return &unconditionalMatch{}, nil
 }
-
-func init() {
-	Register("inspectFile", newInspectFile)
-}

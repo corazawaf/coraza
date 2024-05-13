@@ -32,7 +32,3 @@ func (o *beginsWith) Evaluate(tx plugintypes.TransactionState, value string) boo
 	data := o.data.Expand(tx)
 	return strings.HasPrefix(value, data)
 }
-
-func init() {
-	Register("beginsWith", newBeginsWith)
-}

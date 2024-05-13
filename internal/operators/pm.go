@@ -66,7 +66,3 @@ func pmEvaluate(matcher ahocorasick.AhoCorasick, tx plugintypes.TransactionState
 
 	return numMatches > 0
 }
-
-func init() {
-	Register("pm", newPM)
-}

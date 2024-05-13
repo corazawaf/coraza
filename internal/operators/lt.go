@@ -34,7 +34,3 @@ func (o *lt) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	v, _ := strconv.Atoi(value)
 	return v < data
 }
-
-func init() {
-	Register("lt", newLT)
-}

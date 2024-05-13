@@ -32,7 +32,3 @@ func (o *le) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	v, _ := strconv.Atoi(value)
 	return v <= d
 }
-
-func init() {
-	Register("le", newLE)
-}

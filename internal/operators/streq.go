@@ -28,7 +28,3 @@ func (o *streq) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	data := o.data.Expand(tx)
 	return data == value
 }
-
-func init() {
-	Register("streq", newStrEq)
-}

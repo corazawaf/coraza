@@ -26,7 +26,3 @@ func newIPMatchFromDataset(options plugintypes.OperatorOptions) (plugintypes.Ope
 	}
 	return newIPMatch(opts)
 }
-
-func init() {
-	Register("ipMatchFromDataset", newIPMatchFromDataset)
-}

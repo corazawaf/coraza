@@ -22,7 +22,3 @@ func newDetectXSS(plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 func (o *detectXSS) Evaluate(_ plugintypes.TransactionState, value string) bool {
 	return libinjection.IsXSS(value)
 }
-
-func init() {
-	Register("detectXSS", newDetectXSS)
-}

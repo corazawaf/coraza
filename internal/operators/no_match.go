@@ -18,7 +18,3 @@ func newNoMatch(options plugintypes.OperatorOptions) (plugintypes.Operator, erro
 }
 
 func (*noMatch) Evaluate(tx plugintypes.TransactionState, value string) bool { return false }
-
-func init() {
-	Register("noMatch", newNoMatch)
-}

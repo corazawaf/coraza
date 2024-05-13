@@ -32,7 +32,3 @@ func (o *endsWith) Evaluate(tx plugintypes.TransactionState, value string) bool 
 	data := o.data.Expand(tx)
 	return strings.HasSuffix(value, data)
 }
-
-func init() {
-	Register("endsWith", newEndsWith)
-}

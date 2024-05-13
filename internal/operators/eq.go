@@ -33,7 +33,3 @@ func (o *eq) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	d2, _ := strconv.Atoi(value)
 	return d1 == d2
 }
-
-func init() {
-	Register("eq", newEq)
-}

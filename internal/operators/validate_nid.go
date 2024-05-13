@@ -141,7 +141,3 @@ var (
 	_ validateNidFunction  = nidCl
 	_ validateNidFunction  = nidUs
 )
-
-func init() {
-	Register("validateNid", newValidateNID)
-}

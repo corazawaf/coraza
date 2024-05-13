@@ -53,7 +53,3 @@ func (o *restpath) Evaluate(tx plugintypes.TransactionState, value string) bool 
 	}
 	return true
 }
-
-func init() {
-	Register("restpath", newRESTPath)
-}

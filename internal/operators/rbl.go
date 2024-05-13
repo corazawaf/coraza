@@ -84,7 +84,3 @@ func (o *rbl) Evaluate(tx plugintypes.TransactionState, ipAddr string) bool {
 		return false
 	}
 }
-
-func init() {
-	Register("rbl", newRBL)
-}

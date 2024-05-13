@@ -97,10 +97,6 @@ func (o *binaryRX) Evaluate(tx plugintypes.TransactionState, value string) bool 
 	}
 }
 
-func init() {
-	Register("rx", newRX)
-}
-
 // matchesArbitraryBytes checks for control sequences for byte matches in the expression.
 // If the sequences are not valid utf8, it returns true.
 func matchesArbitraryBytes(expr string) bool {

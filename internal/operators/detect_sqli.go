@@ -27,7 +27,3 @@ func (o *detectSQLi) Evaluate(tx plugintypes.TransactionState, value string) boo
 	tx.CaptureField(0, fingerprint)
 	return true
 }
-
-func init() {
-	Register("detectSQLi", newDetectSQLi)
-}

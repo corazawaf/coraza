@@ -24,3 +24,37 @@ func Get(name string, options plugintypes.OperatorOptions) (plugintypes.Operator
 func Register(name string, op plugintypes.OperatorFactory) {
 	operators[name] = op
 }
+
+func init() {
+	Register("beginsWith", newBeginsWith)
+	Register("contains", newContains)
+	Register("detectSQLi", newDetectSQLi)
+	Register("detectXSS", newDetectXSS)
+	Register("endsWith", newEndsWith)
+	Register("eq", newEq)
+	Register("ge", newGE)
+	Register("geoLookup", newGeoLookup)
+	Register("gt", newGT)
+	Register("inspectFile", newInspectFile)
+	Register("inspectFile", newInspectFile)
+	Register("ipMatch", newIPMatch)
+	Register("ipMatchFromDataset", newIPMatchFromDataset)
+	Register("ipMatchFromFile", newIPMatchFromFile)
+	Register("le", newLE)
+	Register("lt", newLT)
+	Register("noMatch", newNoMatch)
+	Register("pm", newPM)
+	Register("pmFromDataset", newPMFromDataset)
+	Register("pmFromFile", newPMFromFile)
+	Register("rbl", newRBL)
+	Register("rbl", newRBL)
+	Register("restpath", newRESTPath)
+	Register("rx", newRX)
+	Register("streq", newStrEq)
+	Register("unconditionalMatch", newUnconditionalMatch)
+	Register("validateByteRange", newValidateByteRange)
+	Register("validateNid", newValidateNID)
+	Register("validateUrlEncoding", newValidateURLEncoding)
+	Register("validateUtf8Encoding", newValidateUTF8Encoding)
+	Register("within", newWithin)
+}

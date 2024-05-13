@@ -31,7 +31,3 @@ func newPMFromDataset(options plugintypes.OperatorOptions) (plugintypes.Operator
 
 	return &pm{matcher: m.(ahocorasick.AhoCorasick)}, nil
 }
-
-func init() {
-	Register("pmFromDataset", newPMFromDataset)
-}

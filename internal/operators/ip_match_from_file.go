@@ -41,7 +41,3 @@ func newIPMatchFromFile(options plugintypes.OperatorOptions) (plugintypes.Operat
 	}
 	return newIPMatch(opts)
 }
-
-func init() {
-	Register("ipMatchFromFile", newIPMatchFromFile)
-}

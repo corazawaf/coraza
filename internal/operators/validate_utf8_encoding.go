@@ -22,7 +22,3 @@ func newValidateUTF8Encoding(plugintypes.OperatorOptions) (plugintypes.Operator,
 func (o *validateUtf8Encoding) Evaluate(_ plugintypes.TransactionState, value string) bool {
 	return !utf8.ValidString(value)
 }
-
-func init() {
-	Register("validateUtf8Encoding", newValidateUTF8Encoding)
-}

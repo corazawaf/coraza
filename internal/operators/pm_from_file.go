@@ -49,7 +49,3 @@ func newPMFromFile(options plugintypes.OperatorOptions) (plugintypes.Operator, e
 
 	return &pm{matcher: m.(ahocorasick.AhoCorasick)}, nil
 }
-
-func init() {
-	Register("pmFromFile", newPMFromFile)
-}

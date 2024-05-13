@@ -72,7 +72,3 @@ func validateURLEncodingInternal(input string, inputLen int) int {
 	}
 	return 1
 }
-
-func init() {
-	Register("validateUrlEncoding", newValidateURLEncoding)
-}

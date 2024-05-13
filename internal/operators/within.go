@@ -30,7 +30,3 @@ func (o *within) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	data := o.data.Expand(tx)
 	return strings.Contains(data, value)
 }
-
-func init() {
-	Register("within", newWithin)
-}

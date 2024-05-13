@@ -32,7 +32,3 @@ func (o *contains) Evaluate(tx plugintypes.TransactionState, value string) bool 
 	data := o.data.Expand(tx)
 	return strings.Contains(value, data)
 }
-
-func init() {
-	Register("contains", newContains)
-}

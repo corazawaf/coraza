@@ -38,7 +38,3 @@ func (o *inspectFile) Evaluate(tx plugintypes.TransactionState, value string) bo
 	}
 	return true
 }
-
-func init() {
-	Register("inspectFile", newInspectFile)
-}

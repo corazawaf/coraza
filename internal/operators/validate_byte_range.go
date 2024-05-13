@@ -83,7 +83,3 @@ func (o *validateByteRange) Evaluate(tx plugintypes.TransactionState, data strin
 	}
 	return false
 }
-
-func init() {
-	Register("validateByteRange", newValidateByteRange)
-}

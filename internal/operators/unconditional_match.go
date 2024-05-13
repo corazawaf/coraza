@@ -16,7 +16,3 @@ func newUnconditionalMatch(plugintypes.OperatorOptions) (plugintypes.Operator, e
 }
 
 func (*unconditionalMatch) Evaluate(plugintypes.TransactionState, string) bool { return true }
-
-func init() {
-	Register("unconditionalMatch", newUnconditionalMatch)
-}
