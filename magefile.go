@@ -127,6 +127,10 @@ func Test() error {
 		return err
 	}
 
+	if err := sh.RunV("go", "test", "-tags=coraza.rule.case_sensitive_args_keys", "-run=^TestCaseSensitive", "./..."); err != nil {
+		return err
+	}
+
 	return nil
 }
 
