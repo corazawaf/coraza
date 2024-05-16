@@ -43,6 +43,7 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 
 	i.statusCode = statusCode
 	if it := i.tx.ProcessResponseHeaders(statusCode, i.proto); it != nil {
+		i.cleanHeaders()
 		i.Header().Set("Content-Length", "0")
 		i.statusCode = obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode)
 		i.flushWriteHeader()
@@ -62,6 +63,13 @@ func (i *rwInterceptor) flushWriteHeader() {
 	if !i.isWriteHeaderFlush {
 		i.w.WriteHeader(i.statusCode)
 		i.isWriteHeaderFlush = true
+	}
+}
+
+// cleanHeaders removes all headers from the response
+func (i *rwInterceptor) cleanHeaders() {
+	for k := range i.w.Header() {
+		i.w.Header().Del(k)
 	}
 }
 
@@ -88,7 +96,10 @@ func (i *rwInterceptor) Write(b []byte) (int, error) {
 		// to it, otherwise we just send it to the response writer.
 		it, n, err := i.tx.WriteResponseBody(b)
 		if it != nil {
-			i.overrideWriteHeader(it.Status)
+			// if there is an interruption we must clean the headers and override the status code
+			i.cleanHeaders()
+			i.Header().Set("Content-Length", "0")
+			i.overrideWriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode))
 			// We only flush the status code after an interruption.
 			i.flushWriteHeader()
 			return 0, nil
@@ -153,6 +164,8 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 				i.flushWriteHeader()
 				return err
 			} else if it != nil {
+				// if there is an interruption we must clean the headers and override the status code
+				i.cleanHeaders()
 				i.Header().Set("Content-Length", "0")
 				i.overrideWriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode))
 				i.flushWriteHeader()

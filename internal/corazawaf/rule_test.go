@@ -65,27 +65,49 @@ func TestNoMatchEvaluate(t *testing.T) {
 }
 
 func TestNoMatchEvaluateBecauseOfException(t *testing.T) {
-	r := NewRule()
-	r.Msg, _ = macro.NewMacro("Message")
-	r.LogData, _ = macro.NewMacro("Data Message")
-	r.ID_ = 1
-	if err := r.AddVariable(variables.ArgsGet, "", false); err != nil {
-		t.Error(err)
+	testCases := []struct {
+		name     string
+		variable variables.RuleVariable
+	}{
+		{
+			name:     "Test ArgsGet target exception",
+			variable: variables.ArgsGet,
+		},
+		{
+			name:     "Test Args target exception",
+			variable: variables.Args,
+		},
+		{
+			name:     "Test ArgsNames target exception",
+			variable: variables.ArgsNames,
+		},
 	}
-	dummyEqOp := &dummyEqOperator{}
-	r.SetOperator(dummyEqOp, "@eq", "0")
-	action := &dummyDenyAction{}
-	_ = r.AddAction("dummyDeny", action)
-	tx := NewWAF().NewTransaction()
-	tx.AddGetRequestArgument("test", "0")
-	tx.RemoveRuleTargetByID(1, variables.ArgsGet, "test")
-	var matchedValues []types.MatchData
-	matchdata := r.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
-	if len(matchdata) != 0 {
-		t.Errorf("Expected 0 matchdata, got %d", len(matchdata))
-	}
-	if tx.interruption != nil {
-		t.Errorf("Expected interruption not triggered because of RemoveRuleTargetByID")
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := NewRule()
+			r.Msg, _ = macro.NewMacro("Message")
+			r.LogData, _ = macro.NewMacro("Data Message")
+			r.ID_ = 1
+			if err := r.AddVariable(tc.variable, "", false); err != nil {
+				t.Error(err)
+			}
+			dummyEqOp := &dummyEqOperator{}
+			r.SetOperator(dummyEqOp, "@eq", "0")
+			action := &dummyDenyAction{}
+			_ = r.AddAction("dummyDeny", action)
+			tx := NewWAF().NewTransaction()
+			tx.AddGetRequestArgument("test", "0")
+			tx.RemoveRuleTargetByID(1, tc.variable, "test")
+			var matchedValues []types.MatchData
+			matchdata := r.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
+			if len(matchdata) != 0 {
+				t.Errorf("Expected 0 matchdata, got %d", len(matchdata))
+			}
+			if tx.interruption != nil {
+				t.Errorf("Expected interruption not triggered because of RemoveRuleTargetByID")
+			}
+		})
 	}
 }
 

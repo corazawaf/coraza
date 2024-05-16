@@ -29,8 +29,8 @@ import (
 	"github.com/coreruleset/go-ftw/test"
 	"github.com/rs/zerolog"
 
-	coreruleset "github.com/corazawaf/coraza-coreruleset"
-	crstests "github.com/corazawaf/coraza-coreruleset/tests"
+	coreruleset "github.com/corazawaf/coraza-coreruleset/v4"
+	crstests "github.com/corazawaf/coraza-coreruleset/v4/tests"
 	"github.com/corazawaf/coraza/v3"
 	txhttp "github.com/corazawaf/coraza/v3/http"
 	"github.com/corazawaf/coraza/v3/types"
@@ -234,11 +234,16 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 				}
 				urldecodedBody, err := url.QueryUnescape(string(body))
 				if err != nil {
-					t.Fatalf("handler can not unescape urlencoded request body: %v", err)
+					t.Logf("[warning] handler can not unescape urlencoded request body: %v", err)
+					// If the body can't be unescaped, we will keep going with the received body
+					urldecodedBody = string(body)
 				}
-				fmt.Fprintf(w, urldecodedBody)
+				fmt.Fprint(w, urldecodedBody)
 			} else {
 				_, err = w.Write(body)
+				if err != nil {
+					t.Fatalf("handler can not write request body: %v", err)
+				}
 			}
 
 		case strings.HasPrefix(r.URL.Path, "/base64/"):
@@ -247,10 +252,10 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 			if err != nil {
 				t.Fatalf("handler can not decode base64: %v", err)
 			}
-			fmt.Fprintf(w, string(b64Decoded))
+			fmt.Fprint(w, string(b64Decoded))
 		default:
 			// Common path "/status/200" defaults here
-			fmt.Fprintf(w, "Hello!")
+			fmt.Fprint(w, "Hello!")
 		}
 	})))
 	defer s.Close()
