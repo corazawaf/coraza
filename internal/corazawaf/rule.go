@@ -274,8 +274,12 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 						// Set the txn variables for expansions before usage
 						r.matchVariable(tx, mr)
 
-						if r.ParentID_ != noID || r.MultiMatch {
-							// In order to support Msg and LogData for inner rules, we need to expand them now
+						// Expansion for parent rule of a chain is postponed in order to rely on updated MATCHED_* variables.
+						// In all other cases, we want to expand here before continuing the rule evaluation to log the matched data
+						// just after the match an not just the last one. It is needed to log more than one variable matched by the same rule.
+						// The same logic applies to support Msg and LogData for inner rules. As soon as the inner rule matches, we want to expand and
+						// log the matched data.
+						if r.ParentID_ != noID || !r.HasChain {
 							if r.Msg != nil {
 								mr.Message_ = r.Msg.Expand(tx)
 							}
@@ -350,7 +354,7 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 
 		// Expansion of Msg and LogData is postponed here. It allows to run it only if the whole rule/chain
 		// matches and to rely on MATCHED_* variables updated by the chain, not just by the first rule.
-		if !r.MultiMatch {
+		if r.HasChain || r.operator == nil {
 			if r.Msg != nil {
 				matchedValues[0].(*corazarules.MatchData).Message_ = r.Msg.Expand(tx)
 			}
