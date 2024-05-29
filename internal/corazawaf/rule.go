@@ -460,6 +460,44 @@ func (r *Rule) AddAction(name string, action plugintypes.Action) error {
 	return nil
 }
 
+// hasRegex checks the received key to see if it is between forward slashes.
+// if it is, it will return true and the content of the regular expression inside the slashes.
+// otherwise it will return false and the same key.
+func hasRegex(key string) (bool, string) {
+	if len(key) > 2 && key[0] == '/' && key[len(key)-1] == '/' {
+		return true, key[1 : len(key)-1]
+	}
+	return false, key
+}
+
+// caseSensitiveVariable returns true if the variable is case sensitive
+func caseSensitiveVariable(v variables.RuleVariable) bool {
+	res := false
+	switch v {
+	case variables.Args, variables.ArgsNames,
+		variables.ArgsGet, variables.ArgsPost,
+		variables.ArgsGetNames, variables.ArgsPostNames:
+		res = true
+	}
+	return res
+}
+
+// newRuleVariableParams creates a new ruleVariableParams
+// knows if a key needs to be lowercased. This probably should not be here,
+// but the knowledge of the type of the Map it not here also, so let's start with this.
+func newRuleVariableParams(v variables.RuleVariable, key string, re *regexp.Regexp, iscount bool) ruleVariableParams {
+	if !caseSensitiveVariable(v) {
+		key = strings.ToLower(key)
+	}
+	return ruleVariableParams{
+		Count:      iscount,
+		Variable:   v,
+		KeyStr:     key,
+		KeyRx:      re,
+		Exceptions: []ruleVariableException{},
+	}
+}
+
 // AddVariable adds a variable to the rule
 // The key can be a regexp.Regexp, a string or nil, in case of regexp
 // it will be used to match the variable, in case of string it will
@@ -469,10 +507,8 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 		return fmt.Errorf("cannot add a variable to an undefined rule")
 	}
 	var re *regexp.Regexp
-	if len(key) > 2 && key[0] == '/' && key[len(key)-1] == '/' {
-		key = key[1 : len(key)-1]
-
-		if vare, err := memoize.Do(key, func() (interface{}, error) { return regexp.Compile(key) }); err != nil {
+	if isRegex, rx := hasRegex(key); isRegex {
+		if vare, err := memoize.Do(rx, func() (interface{}, error) { return regexp.Compile(rx) }); err != nil {
 			return err
 		} else {
 			re = vare.(*regexp.Regexp)
@@ -482,51 +518,27 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 	if multiphaseEvaluation {
 		// Splitting Args variable into ArgsGet and ArgsPost
 		if v == variables.Args {
-			r.variables = append(r.variables, ruleVariableParams{
-				Count:      iscount,
-				Variable:   variables.ArgsGet,
-				KeyStr:     strings.ToLower(key),
-				KeyRx:      re,
-				Exceptions: []ruleVariableException{},
-			})
-
-			r.variables = append(r.variables, ruleVariableParams{
-				Count:      iscount,
-				Variable:   variables.ArgsPost,
-				KeyStr:     strings.ToLower(key),
-				KeyRx:      re,
-				Exceptions: []ruleVariableException{},
-			})
+			r.variables = append(r.variables, newRuleVariableParams(variables.ArgsGet, key, re, iscount))
+			r.variables = append(r.variables, newRuleVariableParams(variables.ArgsPost, key, re, iscount))
 			return nil
 		}
 		// Splitting ArgsNames variable into ArgsGetNames and ArgsPostNames
 		if v == variables.ArgsNames {
-			r.variables = append(r.variables, ruleVariableParams{
-				Count:      iscount,
-				Variable:   variables.ArgsGetNames,
-				KeyStr:     strings.ToLower(key),
-				KeyRx:      re,
-				Exceptions: []ruleVariableException{},
-			})
-
-			r.variables = append(r.variables, ruleVariableParams{
-				Count:      iscount,
-				Variable:   variables.ArgsPostNames,
-				KeyStr:     strings.ToLower(key),
-				KeyRx:      re,
-				Exceptions: []ruleVariableException{},
-			})
+			r.variables = append(r.variables, newRuleVariableParams(variables.ArgsGetNames, key, re, iscount))
+			r.variables = append(r.variables, newRuleVariableParams(variables.ArgsPostNames, key, re, iscount))
 			return nil
 		}
 	}
-	r.variables = append(r.variables, ruleVariableParams{
-		Count:      iscount,
-		Variable:   v,
-		KeyStr:     strings.ToLower(key),
-		KeyRx:      re,
-		Exceptions: []ruleVariableException{},
-	})
+	r.variables = append(r.variables, newRuleVariableParams(v, key, re, iscount))
 	return nil
+}
+
+// needToSplitConcatenatedVariable returns true if the variable v is Args or ArgsNames and the
+// variable ve is ArgsGet, ArgsPost, ArgsGetNames or ArgsPostNames
+func needToSplitConcatenatedVariable(v variables.RuleVariable, ve variables.RuleVariable) bool {
+	return (v == variables.Args || v == variables.ArgsNames) &&
+		(ve == variables.ArgsGet || ve == variables.ArgsPost ||
+			ve == variables.ArgsGetNames || ve == variables.ArgsPostNames)
 }
 
 // AddVariableNegation adds an exception to a variable
@@ -539,9 +551,8 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 // ERROR: SecRule !ARGS: "..."
 func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 	var re *regexp.Regexp
-	if len(key) > 2 && key[0] == '/' && key[len(key)-1] == '/' {
-		key = key[1 : len(key)-1]
-		if vare, err := memoize.Do(key, func() (interface{}, error) { return regexp.Compile(key) }); err != nil {
+	if isRegex, rx := hasRegex(key); isRegex {
+		if vare, err := memoize.Do(rx, func() (interface{}, error) { return regexp.Compile(rx) }); err != nil {
 			return err
 		} else {
 			re = vare.(*regexp.Regexp)
@@ -552,19 +563,15 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 		return fmt.Errorf("cannot create a variable exception for an undefined rule")
 	}
 	for i, rv := range r.variables {
-		// Splitting Args and ArgsNames variables
-		if multiphaseEvaluation && v == variables.Args && (rv.Variable == variables.ArgsGet || rv.Variable == variables.ArgsPost) {
-			rv.Exceptions = append(rv.Exceptions, ruleVariableException{strings.ToLower(key), re})
-			r.variables[i] = rv
-			continue
-		}
-		if multiphaseEvaluation && v == variables.ArgsNames && (rv.Variable == variables.ArgsGetNames || rv.Variable == variables.ArgsPostNames) {
-			rv.Exceptions = append(rv.Exceptions, ruleVariableException{strings.ToLower(key), re})
+		// Even when Args and ArgsNames are one map, the exceptions must be created for the individual maps the
+		// Concat Map contains in order for exceptions to apply in the corresponding phase.
+		if multiphaseEvaluation && needToSplitConcatenatedVariable(v, rv.Variable) {
+			rv.Exceptions = append(rv.Exceptions, ruleVariableException{key, re})
 			r.variables[i] = rv
 			continue
 		}
 		if rv.Variable == v {
-			rv.Exceptions = append(rv.Exceptions, ruleVariableException{strings.ToLower(key), re})
+			rv.Exceptions = append(rv.Exceptions, ruleVariableException{key, re})
 			r.variables[i] = rv
 		}
 	}

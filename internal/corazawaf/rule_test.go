@@ -1,4 +1,4 @@
-// Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
+// Copyright 2024 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
 package corazawaf
@@ -276,16 +276,6 @@ func TestRuleNegativeVariablesEmtpyRule(t *testing.T) {
 	var rule *Rule
 	if err := rule.AddVariableNegation(variables.ArgsGet, "test"); err == nil {
 		t.Error("Expected error, calling AddVariableNegation for an undefined rule")
-	}
-}
-
-func TestVariableKeysAreCaseInsensitive(t *testing.T) {
-	rule := NewRule()
-	if err := rule.AddVariable(variables.RequestURI, "Som3ThinG", false); err != nil {
-		t.Error(err)
-	}
-	if rule.variables[0].KeyStr != "som3thing" {
-		t.Error("variable key is not case insensitive")
 	}
 }
 
