@@ -119,7 +119,7 @@ SecRule ARGS_GET "@rx prepayloadpost"  "id:200, phase:2, log, msg:'Rule Parent 2
   SecRule MATCHED_VAR "@rx pre" "chain"
     SecRule MATCHED_VAR "@rx post"
 
-SecRule ARGS_GET:var3 "@rx pre3payloadpost"  "id:300, phase:2, log, msg:'Rule Parent 300', \
+SecRule ARGS_GET:Var3 "@rx pre3payloadpost"  "id:300, phase:2, log, msg:'Rule Parent 300', \
   logdata:'Matched Data: %{TX.0} found within %{TX.300_MATCHED_VAR_NAME}: %{MATCHED_VAR}',\
   setvar:'tx.300_matched_var_name=%{MATCHED_VAR_NAME}',\
   chain"

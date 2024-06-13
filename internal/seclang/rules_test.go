@@ -1,4 +1,4 @@
-// Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
+// Copyright 2024 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
 package seclang
@@ -245,6 +245,33 @@ func TestTagsAreNotPrintedTwice(t *testing.T) {
 	}
 }
 
+func TestPrintedExtraMsgAndDataFromRuleWithMultipleMatches(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	var logs []string
+	waf.SetErrorCallback(func(mr types.MatchedRule) {
+		logs = append(logs, mr.ErrorLog())
+	})
+	parser := NewParser(waf)
+	err := parser.FromString(`
+	SecRule ARGS_GET "@rx .*" "id:1, phase:1, log, pass, logdata:'%{MATCHED_VAR} in %{MATCHED_VAR_NAME}"
+	`)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	tx := waf.NewTransaction()
+	tx.AddGetRequestArgument("test", "1")
+	tx.AddGetRequestArgument("test2", "2")
+	tx.ProcessRequestHeaders()
+	if len(logs) != 1 {
+		t.Errorf("failed to log. Expected 1 entry, got %d", len(logs))
+	}
+	if count := strings.Count(logs[0], "2 in ARGS_GET:test2"); count != 1 {
+		t.Errorf("failed to log logdata, expected %q occurence, got %v", "2 in ARGS_GET:test2", logs[0])
+	}
+	if count := strings.Count(logs[0], "1 in ARGS_GET:test"); count != 1 {
+		t.Errorf("failed to log second logdata, expected %q occurence, got %v", "1 in ARGS_GET:test", logs[0])
+	}
+}
 func TestPrintedExtraMsgAndDataFromChainedRules(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	var logs []string
@@ -269,7 +296,7 @@ func TestPrintedExtraMsgAndDataFromChainedRules(t *testing.T) {
 		t.Errorf("failed to set status, got %d", it.Status)
 	}
 	if len(logs) != 1 {
-		t.Errorf("failed to log with %d", len(logs))
+		t.Errorf("failed to log. Expected 1 entry, got %d", len(logs))
 	}
 	if count := strings.Count(logs[0], "1 in ARGS_GET:test"); count != 3 {
 		t.Errorf("failed to log logdata, expected 3 repetitions, got %d", count)
@@ -290,7 +317,7 @@ func TestPrintedMultipleMsgAndDataWithMultiMatch(t *testing.T) {
 	})
 	parser := NewParser(waf)
 	err := parser.FromString(`
-	SecRule ARGS_GET "@rx .*" "id:9696, phase:1, log, chain, deny, t:lowercase, status:403, msg:'msg', logdata:'%{MATCHED_VAR} in %{MATCHED_VAR_NAME}',multiMatch"
+	SecRule ARGS_GET "@rx .*" "id:9696, phase:1, log, deny, t:lowercase, status:403, msg:'msg', logdata:'%{MATCHED_VAR} in %{MATCHED_VAR_NAME}',multiMatch"
 	`)
 	if err != nil {
 		t.Error(err.Error())
@@ -654,73 +681,6 @@ func TestArgumentNamesCaseSensitive(t *testing.T) {
 	*/
 }
 
-func TestArgumentsCaseSensitive(t *testing.T) {
-	waf := corazawaf.NewWAF()
-	rules := `SecRule ARGS:Test1 "Xyz" "id:3, phase:2, log, deny"`
-	parser := NewParser(waf)
-
-	err := parser.FromString(rules)
-	if err != nil {
-		t.Error()
-		return
-	}
-
-	tx := waf.NewTransaction()
-	tx.ProcessRequestHeaders()
-	tx.AddPostRequestArgument("Test1", "Xyz")
-	it, err := tx.ProcessRequestBody()
-	if err != nil {
-		t.Error(err)
-	}
-	if it == nil {
-		t.Errorf("failed to test arguments value match: Same case argument name, %+v\n", tx.MatchedRules())
-	}
-
-	tx = waf.NewTransaction()
-	tx.ProcessRequestHeaders()
-	tx.AddPostRequestArgument("TEST1", "Xyz")
-	it, err = tx.ProcessRequestBody()
-	if err != nil {
-		t.Error(err)
-	}
-	if it == nil {
-		t.Errorf("failed to test arguments value match: Upper case argument name, %+v\n", tx.MatchedRules())
-	}
-
-	tx = waf.NewTransaction()
-	tx.ProcessRequestHeaders()
-	tx.AddPostRequestArgument("test1", "Xyz")
-	it, err = tx.ProcessRequestBody()
-	if err != nil {
-		t.Error(err)
-	}
-	if it == nil {
-		t.Errorf("failed to test arguments value match: Lower case argument name, %+v\n", tx.MatchedRules())
-	}
-
-	tx = waf.NewTransaction()
-	tx.ProcessRequestHeaders()
-	tx.AddPostRequestArgument("test1", "xyz")
-	it, err = tx.ProcessRequestBody()
-	if err != nil {
-		t.Error(err)
-	}
-	if it != nil {
-		t.Error("failed to test arguments value: different value case")
-	}
-
-	tx = waf.NewTransaction()
-	tx.ProcessRequestHeaders()
-	tx.AddPostRequestArgument("test1", "XYZ")
-	it, err = tx.ProcessRequestBody()
-	if err != nil {
-		t.Error(err)
-	}
-	if it != nil {
-		t.Error("failed to test arguments value: different value case")
-	}
-}
-
 func TestCookiesCaseSensitive(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	rules := `SecRule REQUEST_COOKIES:Test1 "Xyz" "id:3, phase:2, log, deny"`
@@ -941,9 +901,9 @@ SecRule ARGS:test1 "ZZZZ" "id:4, phase:2, log, pass"`
 	}
 }
 
-func TestURIQueryParamCaseSensitive(t *testing.T) {
+func TestURIQueryParamNameCaseSensitive(t *testing.T) {
 	waf := corazawaf.NewWAF()
-	rules := `SecRule ARGS:Test1 "@contains SQLI" "id:3, phase:2, log, pass"`
+	rules := `SecRule ARGS_NAMES "Test1" "id:3, phase:2, log, pass"`
 	parser := NewParser(waf)
 
 	err := parser.FromString(rules)
@@ -962,14 +922,14 @@ func TestURIQueryParamCaseSensitive(t *testing.T) {
 
 	if len(tx.MatchedRules()) == 1 {
 		if len(tx.MatchedRules()[0].MatchedDatas()) != 1 {
-			t.Errorf("failed to test uri query param. Found matches: %d, %+v\n",
+			t.Errorf("failed to test uri query param. Expected: 1, Found matches: %d, %+v\n",
 				len(tx.MatchedRules()[0].MatchedDatas()), tx.MatchedRules())
 		}
 		if !isMatchData(tx.MatchedRules()[0].MatchedDatas(), "Test1") {
 			t.Error("Key did not match: Test1 !=", tx.MatchedRules()[0])
 		}
 	} else {
-		t.Errorf("failed to test uri query param: Same case arg name: %d, %+v\n",
+		t.Errorf("failed to test uri query param: Same case arg name:%d, %+v\n",
 			len(tx.MatchedRules()), tx.MatchedRules())
 	}
 
@@ -982,68 +942,11 @@ func TestURIQueryParamCaseSensitive(t *testing.T) {
 	}
 
 	if len(tx.MatchedRules()) == 1 {
-		if len(tx.MatchedRules()[0].MatchedDatas()) != 3 {
-			t.Errorf("failed to test uri query param. Found matches: %d, %+v\n",
+		if len(tx.MatchedRules()[0].MatchedDatas()) != 1 {
+			t.Errorf("Failed to test uri query param. Expected: 1, Found matches: %d, %+v\n",
 				len(tx.MatchedRules()[0].MatchedDatas()), tx.MatchedRules())
 		}
 		if !isMatchData(tx.MatchedRules()[0].MatchedDatas(), "Test1") {
-			t.Error("Key did not match: Test1 !=", tx.MatchedRules()[0])
-		}
-	} else {
-		t.Errorf("failed to test qparam pollution: Multiple arg different case: %d, %+v\n",
-			len(tx.MatchedRules()), tx.MatchedRules())
-	}
-}
-
-/*
-func TestURIQueryParamNameCaseSensitive(t *testing.T) {
-	waf := coraza.NewWAF()
-	rules := `SecRule ARGS_NAMES "Test1" "id:3, phase:2, log, pass"`
-	parser, err := NewParser(waf)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	err = parser.FromString(rules)
-	if err != nil {
-		t.Error()
-		return
-	}
-
-	tx := waf.NewTransaction()
-	tx.ProcessURI("/url?Test1='SQLI", "POST", "HTTP/1.1")
-	_, err = tx.ProcessRequestBody()
-	if err != nil {
-		t.Error(err)
-	}
-
-	if len(tx.MatchedRules()) == 1 {
-		if len(tx.MatchedRules()[0].MatchedDatas) != 1 {
-			t.Errorf("failed to test uri query param. Expected: 1, Found matches: %d, %+v\n",
-				len(tx.MatchedRules()[0].MatchedDatas), tx.MatchedRules())
-		}
-		if !isMatchData(tx.MatchedRules()[0].MatchedDatas, "Test1") {
-			t.Error("Key did not match: Test1 !=", tx.MatchedRules()[0])
-		}
-	} else {
-		t.Errorf("failed to test uri query param: Same case arg name:%d, %+v\n",
-			len(tx.MatchedRules()), tx.MatchedRules())
-	}
-
-	tx = waf.NewTransaction()
-	tx.ProcessURI("/test?test1='SQLI&Test1='SQLI&TEST1='SQLI", "POST", "HTTP/1.1")
-	_, err = tx.ProcessRequestBody()
-	if err != nil {
-		t.Error(err)
-	}
-
-	if len(tx.MatchedRules()) == 1 {
-		if len(tx.MatchedRules()[0].MatchedDatas) != 1 {
-			t.Errorf("Failed to test uri query param. Expected: 1, Found matches: %d, %+v\n",
-				len(tx.MatchedRules()[0].MatchedDatas), tx.MatchedRules())
-		}
-		if !isMatchData(tx.MatchedRules()[0].MatchedDatas, "Test1") {
 			t.Error("Key did not match: Test1 !=", tx.MatchedRules()[0])
 		}
 	} else {
@@ -1051,7 +954,6 @@ func TestURIQueryParamNameCaseSensitive(t *testing.T) {
 			len(tx.MatchedRules()))
 	}
 }
-*/
 
 func isMatchData(mds []types.MatchData, key string) (result bool) {
 	result = false
