@@ -171,17 +171,20 @@ func TestWriteRequestBody(t *testing.T) {
 		requestBodyLimitAction          types.BodyLimitAction
 		avoidRequestBodyLimitActionInit bool
 		shouldInterrupt                 bool
+		limitReached                    bool // If the limit is reached, INBOUND_DATA_ERROR should be set
 	}{
 		{
 			name:                   "LimitNotReached",
 			requestBodyLimit:       urlencodedBodyLen + 2,
 			requestBodyLimitAction: types.BodyLimitAction(-1),
+			limitReached:           false,
 		},
 		{
 			name:                   "LimitReachedAndRejects",
 			requestBodyLimit:       urlencodedBodyLen - 3,
 			requestBodyLimitAction: types.BodyLimitActionReject,
 			shouldInterrupt:        true,
+			limitReached:           true,
 		},
 		{
 			name:             "LimitReachedAndRejectsDefaultValue",
@@ -190,11 +193,13 @@ func TestWriteRequestBody(t *testing.T) {
 			// requestBodyLimitAction: types.BodyLimitActionReject,
 			avoidRequestBodyLimitActionInit: true,
 			shouldInterrupt:                 true,
+			limitReached:                    true,
 		},
 		{
 			name:                   "LimitReachedAndPartialProcessing",
 			requestBodyLimit:       urlencodedBodyLen - 3,
 			requestBodyLimitAction: types.BodyLimitActionProcessPartial,
+			limitReached:           true,
 		},
 	}
 
@@ -232,7 +237,9 @@ func TestWriteRequestBody(t *testing.T) {
 									t.Fatalf("Failed to write body buffer: %s", err.Error())
 								}
 							}
-
+							if testCase.limitReached && tx.variables.inboundDataError.Get() != "1" {
+								t.Fatalf("Expected INBOUND_DATA_ERROR to be set")
+							}
 							if testCase.shouldInterrupt {
 								if it == nil {
 									t.Fatal("Expected interruption, got nil")
@@ -485,28 +492,33 @@ func TestWriteResponseBody(t *testing.T) {
 		responseBodyLimit       int
 		responseBodyLimitAction types.BodyLimitAction
 		shouldInterrupt         bool
+		limitReached            bool // If the limit is reached, OUTBOUND_DATA_ERROR should be set
 	}{
 		{
 			name:                    "LimitNotReached",
 			responseBodyLimit:       urlencodedBodyLen + 2,
 			responseBodyLimitAction: types.BodyLimitAction(-1),
+			limitReached:            false,
 		},
 		{
 			name:                    "LimitReachedAndRejects",
 			responseBodyLimit:       urlencodedBodyLen - 3,
 			responseBodyLimitAction: types.BodyLimitActionReject,
 			shouldInterrupt:         true,
+			limitReached:            true,
 		},
 		{
 			name:                    "LimitReachedAndPartialProcessing",
 			responseBodyLimit:       urlencodedBodyLen - 3,
 			responseBodyLimitAction: types.BodyLimitActionProcessPartial,
+			limitReached:            true,
 		},
 		{
 			name:              "LimitReachedAndPartialProcessingDefaultValue",
 			responseBodyLimit: urlencodedBodyLen - 3,
 			// Omitting requestBodyLimitAction defaults to ProcessPartial
 			// responseBodyLimitAction: types.BodyLimitActionProcessPartial,
+			limitReached: true,
 		},
 	}
 
@@ -548,7 +560,9 @@ func TestWriteResponseBody(t *testing.T) {
 									t.Fatalf("Failed to write body buffer: %s", err.Error())
 								}
 							}
-
+							if testCase.limitReached && tx.variables.outboundDataError.Get() != "1" {
+								t.Fatalf("Expected OUTBOUND_DATA_ERROR to be set")
+							}
 							if testCase.shouldInterrupt {
 								if it == nil {
 									t.Fatal("Expected interruption, got nil")
