@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.6.1
-	github.com/corazawaf/coraza-coreruleset/v4 v4.2.0
+	github.com/corazawaf/coraza-coreruleset/v4 v4.3.0
 	github.com/corazawaf/coraza/v3 v3.1.0
 	github.com/coreruleset/go-ftw v0.6.4
 	github.com/rs/zerolog v1.33.0

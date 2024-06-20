@@ -10,3 +10,4 @@ testoverride:
     920290-4: 'Go/http returns 400 Bad Request: missing required Host header'
     920430-8: 'Go/http does not allow HTTP/3.0 - 505 HTTP Version Not Supported'
     932200-13: 'wip'
+    930110-7: 'CRS issue: https://github.com/coreruleset/coreruleset/issues/3736'
