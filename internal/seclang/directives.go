@@ -110,6 +110,7 @@ func directiveSecMarker(options *DirectiveOptions) error {
 	rule.Raw_ = fmt.Sprintf("SecMarker %s", options.Opts)
 	rule.SecMark_ = options.Opts
 	rule.ID_ = 0
+	rule.StrRuleID_ = "0"
 	rule.Phase_ = 0
 	rule.Line_ = options.Parser.LastLine
 	rule.File_ = options.Parser.ConfigFile

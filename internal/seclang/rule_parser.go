@@ -384,6 +384,9 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 
 	if parent := getLastRuleExpectingChain(options.WAF); parent != nil {
 		rule.ParentID_ = parent.ID_
+		// While the ID_ will be kept to 0 being a chain rule, the StrRuleID_ is meant to be
+		// the printable ID that represents the chain rule, therefore the parent's ID is inherited.
+		rule.StrRuleID_ = parent.StrRuleID_
 		lastChain := parent
 		for lastChain.Chain != nil {
 			lastChain = lastChain.Chain

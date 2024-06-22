@@ -21,6 +21,7 @@ func TestMatchEvaluate(t *testing.T) {
 	r.Msg, _ = macro.NewMacro("Message")
 	r.LogData, _ = macro.NewMacro("Data Message")
 	r.ID_ = 1
+	r.StrRuleID_ = "1"
 	if err := r.AddVariable(variables.ArgsGet, "", false); err != nil {
 		t.Error(err)
 	}
@@ -44,6 +45,7 @@ func TestMatchEvaluate(t *testing.T) {
 func TestNoMatchEvaluate(t *testing.T) {
 	r := NewRule()
 	r.ID_ = 1
+	r.StrRuleID_ = "1"
 	if err := r.AddVariable(variables.ArgsGet, "", false); err != nil {
 		t.Error(err)
 	}
@@ -89,6 +91,7 @@ func TestNoMatchEvaluateBecauseOfException(t *testing.T) {
 			r.Msg, _ = macro.NewMacro("Message")
 			r.LogData, _ = macro.NewMacro("Data Message")
 			r.ID_ = 1
+			r.StrRuleID_ = "1"
 			if err := r.AddVariable(tc.variable, "", false); err != nil {
 				t.Error(err)
 			}
@@ -129,6 +132,7 @@ func (*dummyFlowAction) Type() plugintypes.ActionType {
 func TestFlowActionIfDetectionOnlyEngine(t *testing.T) {
 	r := NewRule()
 	r.ID_ = 1
+	r.StrRuleID_ = "1"
 	r.operator = nil
 	action := &dummyFlowAction{}
 	_ = r.AddAction("dummyFlowAction", action)
@@ -174,6 +178,7 @@ func TestMatchVariableRunsActionTypeNondisruptive(t *testing.T) {
 func TestDisruptiveActionFromChainNotEvaluated(t *testing.T) {
 	r := NewRule()
 	r.ID_ = 1
+	r.StrRuleID_ = "1"
 	r.operator = nil
 	r.HasChain = true
 	action := &dummyNonDisruptiveAction{}
@@ -181,6 +186,7 @@ func TestDisruptiveActionFromChainNotEvaluated(t *testing.T) {
 	chainedRule := NewRule()
 	chainedRule.ID_ = 0
 	chainedRule.ParentID_ = 1
+	chainedRule.StrRuleID_ = "1"
 	chainedRule.operator = nil
 	chainedAction := &dummyDenyAction{}
 	_ = chainedRule.AddAction("dummyDenyAction", chainedAction)
@@ -201,6 +207,7 @@ func TestRuleDetailsTransferredToTransaction(t *testing.T) {
 	r := NewRule()
 	r.ID_ = 0
 	r.ParentID_ = 1
+	r.StrRuleID_ = "1"
 	r.Capture = true
 	r.operator = nil
 	tx := NewWAF().NewTransaction()
@@ -226,6 +233,7 @@ func TestSecActionMessagePropagationInMatchData(t *testing.T) {
 	r.Msg, _ = macro.NewMacro("Message")
 	r.LogData, _ = macro.NewMacro("Data Message")
 	r.ID_ = 1
+	r.StrRuleID_ = "1"
 	// SecAction uses nil operator
 	r.operator = nil
 	tx := NewWAF().NewTransaction()
@@ -545,6 +553,7 @@ func TestTransformArgNoCacheForTXVariable(t *testing.T) {
 func TestCaptureNotPropagatedToInnerChainRule(t *testing.T) {
 	r := NewRule()
 	r.ID_ = 1
+	r.StrRuleID_ = "1"
 	r.operator = nil
 	r.HasChain = true
 	r.Phase_ = 1
@@ -552,6 +561,7 @@ func TestCaptureNotPropagatedToInnerChainRule(t *testing.T) {
 	chainedRule := NewRule()
 	chainedRule.ID_ = 0
 	chainedRule.ParentID_ = 1
+	chainedRule.StrRuleID_ = "1"
 	chainedRule.operator = nil
 	chainedRule.Capture = false
 	r.Chain = chainedRule
@@ -567,6 +577,7 @@ func TestCaptureNotPropagatedToInnerChainRule(t *testing.T) {
 func TestExpandMacroAfterWholeRuleEvaluation(t *testing.T) {
 	r := NewRule()
 	r.ID_ = 1
+	r.StrRuleID_ = "1"
 	r.operator = nil
 	r.HasChain = true
 	r.Phase_ = 1
@@ -577,6 +588,7 @@ func TestExpandMacroAfterWholeRuleEvaluation(t *testing.T) {
 	chainedRule := NewRule()
 	chainedRule.ID_ = 0
 	chainedRule.ParentID_ = 1
+	chainedRule.StrRuleID_ = "1"
 	chainedRule.operator = nil
 
 	_ = r.AddVariable(variables.RequestURI, "", false)
