@@ -194,7 +194,7 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 	defer logger.Debug().Msg("Finished rule evaluation")
 
 	ruleCol := tx.variables.rule
-	ruleCol.SetIndex("id", 0, r.StrID())
+	ruleCol.SetIndex("id", 0, r.LogID())
 	if r.Msg != nil {
 		ruleCol.SetIndex("msg", 0, r.Msg.String())
 	}

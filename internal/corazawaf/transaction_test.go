@@ -845,6 +845,7 @@ func TestLogCallback(t *testing.T) {
 			tx := waf.NewTransaction()
 			rule := NewRule()
 			rule.ID_ = 1
+			rule.LogID_ = "1"
 			rule.Phase_ = 1
 			rule.Log = true
 			_ = rule.AddAction("deny", testCase.action)
