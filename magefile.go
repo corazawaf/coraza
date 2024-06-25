@@ -110,7 +110,7 @@ func Test() error {
 		return err
 	}
 
-	if err := sh.RunV("go", "test", "./examples/http-server"); err != nil {
+	if err := sh.RunV("go", "test", "./examples/http-server", "-race"); err != nil {
 		return err
 	}
 

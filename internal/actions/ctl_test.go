@@ -335,6 +335,8 @@ func TestCtl(t *testing.T) {
 			waf := corazawaf.NewWAF()
 			waf.Logger = logger
 			r := corazawaf.NewRule()
+			r.ID_ = 1
+			r.LogID_ = "1"
 			err := waf.Rules.Add(r)
 			if err != nil {
 				t.Fatalf("failed to add rule: %s", err.Error())
