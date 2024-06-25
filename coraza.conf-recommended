@@ -232,7 +232,7 @@ SecAuditLogType Serial
 
 # The format used to write the audit log.
 # Can be one of JSON|Native|OCSF
-SecAuditLogFormat OCSF
+SecAuditLogFormat Native
 
 
 # -- Miscellaneous -----------------------------------------------------------
