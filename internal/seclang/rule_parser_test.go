@@ -5,6 +5,7 @@ package seclang
 
 import (
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -271,6 +272,37 @@ func TestRawChainedRules(t *testing.T) {
 		if !strings.HasPrefix(r, "SecRule REQUEST_URI ") {
 			t.Errorf("unexpected rule at line %d: %s", i, r)
 		}
+	}
+}
+
+func TestParseRule(t *testing.T) {
+	tests := []struct {
+		name string
+		vars string
+		want int
+	}{
+		{"Does not contain escape characters", `ARGS_GET:/(test)/|REQUEST_XML`, 2},
+		{"The last variable contains escape characters", `ARGS_GET|REQUEST_XML:/(test)\b/`, 2},
+		{"Contains escape characters", `ARGS_GET:/(test\b)/|REQUEST_XML`, 2},
+	}
+
+	for _, tc := range tests {
+		tt := tc
+		t.Run(tt.name, func(t *testing.T) {
+			rp := RuleParser{
+				rule: corazawaf.NewRule(),
+			}
+			if err := rp.ParseVariables(tt.vars); err != nil {
+				t.Error(err)
+			}
+			//for i := 0; i < reflect.ValueOf(rp.rule).Elem().FieldByName("variables").Len(); i++ {
+			//	fmt.Println(i, reflect.ValueOf(rp.rule).Elem().FieldByName("variables").Index(i).FieldByName("KeyStr").String())
+			//}
+			got := reflect.ValueOf(rp.rule).Elem().FieldByName("variables").Len()
+			if got != tt.want {
+				t.Error("variables parse error want", tt.want, "got", got)
+			}
+		})
 	}
 }
 
