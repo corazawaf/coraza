@@ -67,6 +67,7 @@ type Transaction struct {
 	// Copies from the WAF instance that may be overwritten by the ctl action
 	AuditEngine               types.AuditEngineStatus
 	AuditLogParts             types.AuditLogParts
+	AuditLogFormat            types.AuditLogFormat
 	ForceRequestBodyVariable  bool
 	RequestBodyAccess         bool
 	RequestBodyLimit          int64
@@ -1372,6 +1373,11 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 
 	clientPort, _ := strconv.Atoi(tx.variables.remotePort.Get())
 	hostPort, _ := strconv.Atoi(tx.variables.serverPort.Get())
+	args := &strings.Builder{}
+	for _, arg := range tx.Collection(variables.Args).FindAll() {
+		args.WriteString(fmt.Sprintf("%s=%s", arg.Key(), arg.Value()))
+	}
+
 	// YYYY/MM/DD HH:mm:ss
 	ts := time.Unix(0, tx.Timestamp).Format("2006/01/02 15:04:05")
 	al.Transaction_ = auditlog.Transaction{
@@ -1387,7 +1393,10 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 			Method_:   tx.variables.requestMethod.Get(),
 			URI_:      tx.variables.requestURI.Get(),
 			Protocol_: tx.variables.requestProtocol.Get(),
+			Args_:     args.String(),
+			Length_:   int32(tx.requestBodyBuffer.length),
 		},
+		HighestSeverity_: tx.variables.highestSeverity.Get(),
 	}
 
 	for _, part := range tx.AuditLogParts {

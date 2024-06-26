@@ -1,6 +1,8 @@
 module github.com/corazawaf/coraza/v3/testing/coreruleset
 
-go 1.20
+go 1.22
+
+toolchain go1.22.4
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.6.1
@@ -38,6 +40,7 @@ require (
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20240411101913-e07a1f0e8eb4 // indirect
+	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/tidwall/gjson v1.17.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect

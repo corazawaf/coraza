@@ -77,13 +77,14 @@ type Transaction struct {
 	// Client IP Address string representation
 	ClientIP_ string `json:"client_ip"`
 
-	ClientPort_ int                  `json:"client_port"`
-	HostIP_     string               `json:"host_ip"`
-	HostPort_   int                  `json:"host_port"`
-	ServerID_   string               `json:"server_id"`
-	Request_    *TransactionRequest  `json:"request,omitempty"`
-	Response_   *TransactionResponse `json:"response,omitempty"`
-	Producer_   *TransactionProducer `json:"producer,omitempty"`
+	ClientPort_      int                  `json:"client_port"`
+	HostIP_          string               `json:"host_ip"`
+	HostPort_        int                  `json:"host_port"`
+	ServerID_        string               `json:"server_id"`
+	Request_         *TransactionRequest  `json:"request,omitempty"`
+	Response_        *TransactionResponse `json:"response,omitempty"`
+	Producer_        *TransactionProducer `json:"producer,omitempty"`
+	HighestSeverity_ string               `json:"highest_severity"`
 }
 
 var _ plugintypes.AuditLogTransaction = Transaction{}
@@ -138,6 +139,10 @@ func (t Transaction) Response() plugintypes.AuditLogTransactionResponse {
 
 func (t Transaction) Producer() plugintypes.AuditLogTransactionProducer {
 	return t.Producer_
+}
+
+func (t Transaction) HighestSeverity() string {
+	return t.HighestSeverity_
 }
 
 // TransactionResponse contains response specific
@@ -230,6 +235,9 @@ type TransactionRequest struct {
 	Headers_     map[string][]string                           `json:"headers"`
 	Body_        string                                        `json:"body"`
 	Files_       []plugintypes.AuditLogTransactionRequestFiles `json:"files"`
+	Args_        string                                        `json:"args"`
+	Length_      int32                                         `json:"length"`
+	Uid_         string                                        `json:"uid"`
 }
 
 var _ plugintypes.AuditLogTransactionRequest = (*TransactionRequest)(nil)
@@ -284,6 +292,28 @@ func (tr *TransactionRequest) Files() []plugintypes.AuditLogTransactionRequestFi
 	}
 
 	return tr.Files_
+}
+
+func (tr *TransactionRequest) Args() string {
+	if tr == nil {
+		return ""
+	}
+
+	return tr.Args_
+}
+
+func (tr *TransactionRequest) Length() int32 {
+	if tr == nil {
+		return 0
+	}
+	return tr.Length_
+}
+
+func (tr *TransactionRequest) UID() string {
+	if tr == nil {
+		return ""
+	}
+	return tr.Uid_
 }
 
 // TransactionRequestFiles contains information

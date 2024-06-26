@@ -162,6 +162,31 @@ const (
 	AuditLogPartRulesMatched AuditLogPart = 'K'
 )
 
+// The format used to write the audit log
+type AuditLogFormat int
+
+const (
+	// AuditLogFormatNative - The Native format
+	AuditLogFormatNative AuditLogFormat = iota
+	// AuditLogFormatJSON - JSON format
+	AuditLogFormatJSON AuditLogFormat = iota
+	// AuditLogFormatOCSF - Open Cybersecurity Schema Framework format
+	AuditLogFormatOCSF AuditLogFormat = iota
+)
+
+// ParseAuditLogFormat parses the audit engine status
+func ParseAuditLogFormat(alf string) (AuditLogFormat, error) {
+	switch strings.ToLower(alf) {
+	case "native":
+		return AuditLogFormatNative, nil
+	case "json":
+		return AuditLogFormatJSON, nil
+	case "ocsf":
+		return AuditLogFormatOCSF, nil
+	}
+	return -1, fmt.Errorf("invalid audit log format : %s", alf)
+}
+
 // Interruption is used to notify the Coraza implementation
 // that the transaction must be disrupted, for example:
 //

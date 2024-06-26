@@ -31,6 +31,7 @@ type AuditLogTransaction interface {
 	Response() AuditLogTransactionResponse
 	HasResponse() bool
 	Producer() AuditLogTransactionProducer
+	HighestSeverity() string
 }
 
 // AuditLogTransactionResponse contains response specific information
@@ -61,6 +62,9 @@ type AuditLogTransactionRequest interface {
 	Headers() map[string][]string
 	Body() string
 	Files() []AuditLogTransactionRequestFiles
+	Args() string
+	Length() int32
+	UID() string
 }
 
 // AuditLogTransactionRequestFiles contains information for the
