@@ -295,9 +295,6 @@ func TestParseRule(t *testing.T) {
 			if err := rp.ParseVariables(tt.vars); err != nil {
 				t.Error(err)
 			}
-			//for i := 0; i < reflect.ValueOf(rp.rule).Elem().FieldByName("variables").Len(); i++ {
-			//	fmt.Println(i, reflect.ValueOf(rp.rule).Elem().FieldByName("variables").Index(i).FieldByName("KeyStr").String())
-			//}
 			got := reflect.ValueOf(rp.rule).Elem().FieldByName("variables").Len()
 			if got != tt.want {
 				t.Error("variables parse error want", tt.want, "got", got)
