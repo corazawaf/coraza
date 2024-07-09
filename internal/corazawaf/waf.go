@@ -120,7 +120,7 @@ type WAF struct {
 	AuditLogParts types.AuditLogParts
 
 	// Audit log format
-	AuditLogFormat types.AuditLogFormat
+	AuditLogFormat string
 
 	// Contains the regular expression for relevant status audit logging
 	AuditLogRelevantStatus *regexp.Regexp
@@ -309,7 +309,7 @@ func NewWAF() *WAF {
 			types.AuditLogPartResponseHeaders,
 			types.AuditLogPartAuditLogTrailer,
 		},
-		AuditLogFormat: types.AuditLogFormatOCSF,
+		AuditLogFormat: "Native",
 		Logger:         logger,
 		ArgumentLimit:  1000,
 	}
