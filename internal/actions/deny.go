@@ -4,8 +4,6 @@
 package actions
 
 import (
-	"net/http"
-
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -39,7 +37,8 @@ func (a *denyFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.Transaction
 	status := r.Status()
 	// deny action defaults to status 403
 	if status == noStatus {
-		status = http.StatusForbidden
+		// TODO(M4tteop): use http.StatusForbidden once we drop Go 1.20 support. http pkg unsupported with TinyGo and Go <1.20
+		status = 403
 	}
 	tx.Interrupt(&types.Interruption{
 		Status: status,
