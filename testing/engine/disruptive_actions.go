@@ -43,7 +43,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 						Output: profile.ExpectedOutput{
 							TriggeredRules: []int{2},
 							Interruption: &profile.ExpectedInterruption{
-								Status: 500,
+								Status: 403,
 								Data:   "",
 								RuleID: 2,
 								Action: "deny",
@@ -285,7 +285,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 	},
 	Rules: `
 SecRule REQUEST_URI "/redirect1$" "phase:1,id:1,log,status:302,redirect:https://www.example.com"
-SecRule REQUEST_URI "/deny1$" "phase:1,id:2,log,status:500,deny"
+# deny action defaults to status 403
+SecRule REQUEST_URI "/deny1$" "phase:1,id:2,log,deny"
 SecRule REQUEST_URI "/drop1$" "phase:1,id:3,log,drop"
 
 SecRule REQUEST_URI "/redirect2$" "phase:2,id:21,log,status:302,redirect:https://www.example.com"

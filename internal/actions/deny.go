@@ -27,14 +27,21 @@ func (a *denyFn) Init(_ plugintypes.RuleMetadata, data string) error {
 }
 
 const noID = 0
+const noStatus = 0
 
 func (a *denyFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
 	rid := r.ID()
 	if rid == noID {
 		rid = r.ParentID()
 	}
+	status := r.Status()
+	// deny action defaults to status 403
+	if status == noStatus {
+		// TODO(M4tteop): use http.StatusForbidden once we drop Go 1.20 support. http pkg unsupported with TinyGo and Go <1.20
+		status = 403
+	}
 	tx.Interrupt(&types.Interruption{
-		Status: r.Status(),
+		Status: status,
 		RuleID: rid,
 		Action: "deny",
 	})
