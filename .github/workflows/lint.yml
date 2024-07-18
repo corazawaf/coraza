@@ -22,6 +22,6 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v5
         with:
-          go-version: v1.20.x
+          go-version: v1.21.x
           cache: true
       - run: go run mage.go lint
