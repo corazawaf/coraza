@@ -15,6 +15,7 @@ import (
 //
 // Description:
 // Specifies the response status code to use with actions deny and redirect.
+// If status is not set, deny action defaults to status 403.
 //
 // Example:
 // ```
