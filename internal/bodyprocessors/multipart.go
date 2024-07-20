@@ -24,6 +24,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 	storagePath := options.StoragePath
 	mediaType, params, err := mime.ParseMediaType(mimeType)
 	if err != nil {
+		v.MultipartStrictError().(*collections.Single).Set("1")
 		return err
 	}
 	if !strings.HasPrefix(mediaType, "multipart/") {
@@ -44,6 +45,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 			break
 		}
 		if err != nil {
+			v.MultipartStrictError().(*collections.Single).Set("1")
 			return err
 		}
 		partName := p.FormName()
@@ -60,10 +62,12 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 				// Only copy file to temp when not running in TinyGo
 				temp, err := os.CreateTemp(storagePath, "crzmp*")
 				if err != nil {
+					v.MultipartStrictError().(*collections.Single).Set("1")
 					return err
 				}
 				sz, err := io.Copy(temp, p)
 				if err != nil {
+					v.MultipartStrictError().(*collections.Single).Set("1")
 					return err
 				}
 				size = sz
@@ -71,6 +75,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 			} else {
 				sz, err := io.Copy(io.Discard, p)
 				if err != nil {
+					v.MultipartStrictError().(*collections.Single).Set("1")
 					return err
 				}
 				size = sz
@@ -83,6 +88,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 			// if is a field
 			data, err := io.ReadAll(p)
 			if err != nil {
+				v.MultipartStrictError().(*collections.Single).Set("1")
 				return err
 			}
 			totalSize += int64(len(data))
