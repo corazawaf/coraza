@@ -54,7 +54,6 @@ func readJSON(reader io.Reader, maxRecursion int) (map[string]string, error) {
 	res := make(map[string]string)
 	key := []byte("json")
 
-
 	if !gjson.Valid(s.String()) {
 		return res, errors.New("invalid JSON")
 	}
