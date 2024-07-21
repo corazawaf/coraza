@@ -3,7 +3,6 @@
   "extends": [
     "config:best-practices"
   ],
-  {
   "constraints": {
     "go": "1.21"
   }
