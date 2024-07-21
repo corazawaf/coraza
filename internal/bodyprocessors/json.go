@@ -32,7 +32,7 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.Tran
 	return nil
 }
 
-func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.TransactionVariables, bpo plugintypes.BodyProcessorOptions) error {
+func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
 	col := v.ResponseArgs()
 	data, err := readJSON(reader, ResponseBodyRecursionLimit)
 	if err != nil {
@@ -54,9 +54,6 @@ func readJSON(reader io.Reader, maxRecursion int) (map[string]string, error) {
 	res := make(map[string]string)
 	key := []byte("json")
 
-	// TODO: Just so we don't forget: we should validate the JSON before processing it
-	// gjson library `Valid` function can be used for this purpose, but it needs json to be _indented_ properly
-	// also... which might not normally the case.
 
 	if !gjson.Valid(s.String()) {
 		return res, errors.New("invalid JSON")
