@@ -4,6 +4,7 @@
 package bodyprocessors
 
 import (
+	"errors"
 	"io"
 	"strconv"
 	"strings"
@@ -13,13 +14,15 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
+const ResponseBodyRecursionLimit = -1
+
 type jsonBodyProcessor struct{}
 
 var _ plugintypes.BodyProcessor = &jsonBodyProcessor{}
 
-func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
+func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.TransactionVariables, bpo plugintypes.BodyProcessorOptions) error {
 	col := v.ArgsPost()
-	data, err := readJSON(reader)
+	data, err := readJSON(reader, bpo.RequestBodyRecursionLimit)
 	if err != nil {
 		return err
 	}
@@ -29,9 +32,9 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.Tran
 	return nil
 }
 
-func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
+func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.TransactionVariables, bpo plugintypes.BodyProcessorOptions) error {
 	col := v.ResponseArgs()
-	data, err := readJSON(reader)
+	data, err := readJSON(reader, ResponseBodyRecursionLimit)
 	if err != nil {
 		return err
 	}
@@ -41,28 +44,42 @@ func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.Tra
 	return nil
 }
 
-func readJSON(reader io.Reader) (map[string]string, error) {
+func readJSON(reader io.Reader, maxRecursion int) (map[string]string, error) {
 	s := strings.Builder{}
 	_, err := io.Copy(&s, reader)
 	if err != nil {
 		return nil, err
 	}
 
-	json := gjson.Parse(s.String())
 	res := make(map[string]string)
 	key := []byte("json")
-	readItems(json, key, res)
-	return res, nil
+
+	// TODO: Just so we don't forget: we should validate the JSON before processing it
+	// gjson library `Valid` function can be used for this purpose, but it needs json to be _indented_ properly
+	// also... which might not normally the case.
+
+	if !gjson.Valid(s.String()) {
+		return res, errors.New("invalid JSON")
+	}
+	json := gjson.Parse(s.String())
+	err = readItems(json, key, maxRecursion, res)
+	return res, err
 }
 
 // Transform JSON to a map[string]string
+// This function is recursive and will call itself for nested objects.
+// The limit in recursion is defined by maxItems.
 // Example input: {"data": {"name": "John", "age": 30}, "items": [1,2,3]}
 // Example output: map[string]string{"json.data.name": "John", "json.data.age": "30", "json.items.0": "1", "json.items.1": "2", "json.items.2": "3"}
 // Example input: [{"data": {"name": "John", "age": 30}, "items": [1,2,3]}]
 // Example output: map[string]string{"json.0.data.name": "John", "json.0.data.age": "30", "json.0.items.0": "1", "json.0.items.1": "2", "json.0.items.2": "3"}
-// TODO add some anti DOS protection
-func readItems(json gjson.Result, objKey []byte, res map[string]string) {
+func readItems(json gjson.Result, objKey []byte, maxRecursion int, res map[string]string) error {
 	arrayLen := 0
+	var iterationError error
+	if maxRecursion == 0 {
+		// we reached the limit of nesting we want to handle
+		return errors.New("max recursion reached while reading json object")
+	}
 	json.ForEach(func(key, value gjson.Result) bool {
 		// Avoid string concatenation to maintain a single buffer for key aggregation.
 		prevParentLength := len(objKey)
@@ -77,7 +94,11 @@ func readItems(json gjson.Result, objKey []byte, res map[string]string) {
 		var val string
 		switch value.Type {
 		case gjson.JSON:
-			readItems(value, objKey, res)
+			// call recursively with one less item to avoid doing infinite recursion
+			iterationError = readItems(value, objKey, maxRecursion-1, res)
+			if iterationError != nil {
+				return false
+			}
 			objKey = objKey[:prevParentLength]
 			return true
 		case gjson.String:
@@ -97,6 +118,7 @@ func readItems(json gjson.Result, objKey []byte, res map[string]string) {
 	if arrayLen > 0 {
 		res[string(objKey)] = strconv.Itoa(arrayLen)
 	}
+	return iterationError
 }
 
 func init() {

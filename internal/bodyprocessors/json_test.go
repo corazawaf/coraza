@@ -4,14 +4,21 @@
 package bodyprocessors
 
 import (
+	"errors"
 	"strings"
 	"testing"
+)
+
+const (
+	deeplyNestedJSONObject = 15000
+	maxRecursion           = 10000
 )
 
 var jsonTests = []struct {
 	name string
 	json string
 	want map[string]string
+	err  error
 }{
 	{
 		name: "map",
@@ -56,6 +63,7 @@ var jsonTests = []struct {
 			"json.f.0.0":     "1",
 			"json.f.0.0.0.z": "abc",
 		},
+		err: nil,
 	},
 	{
 		name: "array",
@@ -116,6 +124,35 @@ var jsonTests = []struct {
 			"json.1.f.0.0":     "1",
 			"json.1.f.0.0.0.z": "abc",
 		},
+		err: nil,
+	},
+	{
+		name: "broken1",
+		json: `{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a": 1 }}}}}}}}}}}}}}}}}}}}}}`,
+		want: map[string]string{},
+		err:  errors.New("invalid JSON"),
+	},
+	{
+		name: "broken2",
+		json: `{"test": 123, "test2": 456, "test3": [22, 44, 55], "test4": 3}`,
+		want: map[string]string{
+			"json.test3.0": "22",
+			"json.test3.1": "44",
+			"json.test3.2": "55",
+			"json.test4":   "3",
+			"json.test":    "123",
+			"json.test2":   "456",
+			"json.test3":   "3",
+		},
+		err: nil,
+	},
+	{
+		name: "bomb",
+		json: strings.Repeat(`{"a":`, deeplyNestedJSONObject) + "1" + strings.Repeat(`}`, deeplyNestedJSONObject),
+		want: map[string]string{
+			"json." + strings.Repeat(`a.`, deeplyNestedJSONObject-1) + "a": "1",
+		},
+		err: errors.New("max recursion reached while reading json object"),
 	},
 }
 
@@ -123,11 +160,13 @@ func TestReadJSON(t *testing.T) {
 	for _, tc := range jsonTests {
 		tt := tc
 		t.Run(tt.name, func(t *testing.T) {
-			jsonMap, err := readJSON(strings.NewReader(tt.json))
-			if err != nil {
-				t.Error(err)
-			}
+			jsonMap, err := readJSON(strings.NewReader(tt.json), maxRecursion)
 			for k, want := range tt.want {
+				if err != nil && err.Error() == tt.err.Error() {
+					continue
+				} else if err != nil {
+					t.Error(err)
+				}
 				if have, ok := jsonMap[k]; ok {
 					if want != have {
 						t.Errorf("key=%s, want %s, have %s", k, want, have)
@@ -150,7 +189,7 @@ func BenchmarkReadJSON(b *testing.B) {
 		tt := tc
 		b.Run(tt.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				_, err := readJSON(strings.NewReader(tt.json))
+				_, err := readJSON(strings.NewReader(tt.json), maxRecursion)
 				if err != nil {
 					b.Error(err)
 				}
