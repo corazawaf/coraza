@@ -21,40 +21,40 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
       - name: Install Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
         with:
           go-version: ${{ matrix.go-version }}
           cache: true
       - name: Tests and coverage
         run: go run mage.go coverage
       - name: "Codecov: General"
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4
         if: ${{ matrix.go-version == '1.21.x' }}
         with:
           files: build/coverage.txt
           flags: default
       - name: "Codecov: Examples"
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4
         if: ${{ matrix.go-version == '1.21.x' }}
         with:
           files: build/coverage-examples.txt
           flags: examples
       - name: "Codecov: FTW"
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4
         if: ${{ matrix.go-version == '1.21.x' }}
         with:
           files: build/coverage-ftw.txt
           flags: ftw
       - name: "Codecov: FTW Multiphase tag"
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4
         if: ${{ matrix.go-version == '1.21.x' }}
         with:
           files: build/coverage-ftw-multiphase.txt
           flags: ftw-multiphase
       - name: "Codecov: Tinygo"
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4
         if: ${{ matrix.go-version == '1.21.x' }}
         with:
           files: build/coverage-tinygo.txt
