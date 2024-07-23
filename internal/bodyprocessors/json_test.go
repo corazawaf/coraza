@@ -162,10 +162,11 @@ func TestReadJSON(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			jsonMap, err := readJSON(strings.NewReader(tt.json), maxRecursion)
 			for k, want := range tt.want {
-				if err != nil && err.Error() == tt.err.Error() {
+				if err != nil {
+				        if err.Error() != tt.err.Error() {
+					        t.Error(err)
+				        }
 					continue
-				} else if err != nil {
-					t.Error(err)
 				}
 				if have, ok := jsonMap[k]; ok {
 					if want != have {
