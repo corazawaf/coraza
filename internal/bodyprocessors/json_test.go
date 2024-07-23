@@ -127,7 +127,7 @@ var jsonTests = []struct {
 		err: nil,
 	},
 	{
-		name: "broken1", # this json test has more opening brackets than closing, so it is broken
+		name: "broken1", // this json test has more opening brackets than closing, so it is broken
 		json: `{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a": 1 }}}}}}}}}}}}}}}}}}}}}}`,
 		want: map[string]string{},
 		err:  errors.New("invalid JSON"),
