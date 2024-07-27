@@ -163,9 +163,9 @@ func TestReadJSON(t *testing.T) {
 			jsonMap, err := readJSON(strings.NewReader(tt.json), maxRecursion)
 			for k, want := range tt.want {
 				if err != nil {
-				        if err.Error() != tt.err.Error() {
-					        t.Error(err)
-				        }
+					if err.Error() != tt.err.Error() {
+						t.Error(err)
+					}
 					continue
 				}
 				if have, ok := jsonMap[k]; ok {
