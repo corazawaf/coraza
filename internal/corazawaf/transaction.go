@@ -70,6 +70,7 @@ type Transaction struct {
 	ForceRequestBodyVariable  bool
 	RequestBodyAccess         bool
 	RequestBodyLimit          int64
+	RequestBodyJsonDepthLimit int
 	ForceResponseBodyVariable bool
 	ResponseBodyAccess        bool
 	ResponseBodyLimit         int64
@@ -78,7 +79,7 @@ type Transaction struct {
 	HashEnforcement           bool
 
 	// Stores the last phase that was evaluated
-	// Used by allow to skip phases
+	// Used by allow to skip phasesx
 	lastPhase types.RulePhase
 
 	// Handles request body buffers
@@ -996,9 +997,9 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.interruption, nil
 	}
-	mime := ""
+	mimeType := ""
 	if m := tx.variables.requestHeaders.Get("content-type"); len(m) > 0 {
-		mime = m[0]
+		mimeType = m[0]
 	}
 
 	reader, err := tx.requestBodyBuffer.Reader()
@@ -1011,7 +1012,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	// Default variables.ReqbodyProcessor values
 	// XML and JSON must be forced with ctl:requestBodyProcessor=JSON
 	if tx.ForceRequestBodyVariable {
-		// We force URLENCODED if mime is x-www... or we have an empty RBP and ForceRequestBodyVariable
+		// We force URLENCODED if mimeType is x-www... or we have an empty RBP and ForceRequestBodyVariable
 		if rbp == "" {
 			rbp = "URLENCODED"
 		}
@@ -1035,8 +1036,9 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		Msg("Attempting to process request body")
 
 	if err := bodyprocessor.ProcessRequest(reader, tx.Variables(), plugintypes.BodyProcessorOptions{
-		Mime:        mime,
-		StoragePath: tx.WAF.UploadDir,
+		Mime:                      mimeType,
+		StoragePath:               tx.WAF.UploadDir,
+		RequestBodyRecursionLimit: tx.WAF.RequestBodyJsonDepthLimit,
 	}); err != nil {
 		tx.debugLogger.Error().Err(err).Msg("Failed to process request body")
 		tx.generateRequestBodyError(err)
@@ -1262,7 +1264,6 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		}
 
 		tx.debugLogger.Debug().Str("body_processor", bp).Msg("Attempting to process response body")
-
 		if err := b.ProcessResponse(reader, tx.Variables(), plugintypes.BodyProcessorOptions{}); err != nil {
 			tx.debugLogger.Error().Err(err).Msg("Failed to process response body")
 			tx.generateResponseBodyError(err)

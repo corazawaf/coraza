@@ -23,6 +23,12 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
+// Default settings
+const (
+	// DefaultRequestBodyJsonDepthLimit is the default limit for the depth of JSON objects in the request body
+	DefaultRequestBodyJsonDepthLimit = 1024
+)
+
 // WAF instance is used to store configurations and rules
 // Every web application should have a different WAF instance,
 // but you can share an instance if you are ok with sharing
@@ -43,6 +49,9 @@ type WAF struct {
 
 	// Request body page file limit
 	RequestBodyLimit int64
+
+	// Request body JSON recursive depth limit
+	RequestBodyJsonDepthLimit int
 
 	// Request body in memory limit
 	requestBodyInMemoryLimit *int64
@@ -176,9 +185,10 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.AuditLogParts = w.AuditLogParts
 	tx.ForceRequestBodyVariable = false
 	tx.RequestBodyAccess = w.RequestBodyAccess
-	tx.RequestBodyLimit = int64(w.RequestBodyLimit)
+	tx.RequestBodyLimit = w.RequestBodyLimit
+	tx.RequestBodyJsonDepthLimit = w.RequestBodyJsonDepthLimit
 	tx.ResponseBodyAccess = w.ResponseBodyAccess
-	tx.ResponseBodyLimit = int64(w.ResponseBodyLimit)
+	tx.ResponseBodyLimit = w.ResponseBodyLimit
 	tx.RuleEngine = w.RuleEngine
 	tx.HashEngine = false
 	tx.HashEnforcement = false
@@ -194,13 +204,13 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.Timestamp = time.Now().UnixNano()
 	tx.audit = false
 
-	// Always non-nil if buffers / collections were already initialized so we don't do any of them
+	// Always non-nil if buffers / collections were already initialized, so we don't do any of them
 	// based on the presence of RequestBodyBuffer.
 	if tx.requestBodyBuffer == nil {
 		// if no requestBodyInMemoryLimit has been set we default to the requestBodyLimit
-		var requestBodyInMemoryLimit int64 = w.RequestBodyLimit
+		var requestBodyInMemoryLimit = w.RequestBodyLimit
 		if w.requestBodyInMemoryLimit != nil {
-			requestBodyInMemoryLimit = int64(*w.requestBodyInMemoryLimit)
+			requestBodyInMemoryLimit = *w.requestBodyInMemoryLimit
 		}
 
 		tx.requestBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
@@ -294,6 +304,7 @@ func NewWAF() *WAF {
 		RequestBodyAccess:         false,
 		RequestBodyLimit:          134217728, // Hard limit equal to _1gb
 		RequestBodyLimitAction:    types.BodyLimitActionReject,
+		RequestBodyJsonDepthLimit: DefaultRequestBodyJsonDepthLimit,
 		ResponseBodyAccess:        false,
 		ResponseBodyLimit:         524288, // Hard limit equal to _1gb
 		auditLogWriter:            logWriter,
@@ -410,6 +421,10 @@ func (w *WAF) Validate() error {
 
 	if w.ArgumentLimit <= 0 {
 		return errors.New("argument limit should be bigger than 0")
+	}
+
+	if w.RequestBodyJsonDepthLimit <= 0 {
+		return errors.New("request body json depth limit should be bigger than 0")
 	}
 
 	return nil

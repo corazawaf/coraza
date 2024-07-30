@@ -1665,7 +1665,7 @@ func TestResponseBodyForceProcessing(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Fatal(err)
 	}
-	tx.ProcessResponseHeaders(200, "HTTP/1")
+	tx.ProcessResponseHeaders(200, "HTTP/1.1")
 	if _, _, err := tx.WriteResponseBody([]byte(`{"key":"value"}`)); err != nil {
 		t.Fatal(err)
 	}
