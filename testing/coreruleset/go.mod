@@ -4,9 +4,9 @@ go 1.22
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.6.1
-	github.com/corazawaf/coraza-coreruleset/v4 v4.3.0
+	github.com/corazawaf/coraza-coreruleset/v4 v4.5.0
 	github.com/corazawaf/coraza/v3 v3.0.0-00010101000000-000000000000
-	github.com/coreruleset/go-ftw v0.6.4
+	github.com/coreruleset/go-ftw v1.0.3
 	github.com/rs/zerolog v1.33.0
 )
 
@@ -15,8 +15,8 @@ require (
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
 	github.com/corazawaf/libinjection-go v0.2.1 // indirect
-	github.com/coreruleset/ftw-tests-schema v1.1.0 // indirect
-	github.com/fatih/color v1.16.0 // indirect
+	github.com/coreruleset/ftw-tests-schema/v2 v2.1.0 // indirect
+	github.com/fatih/color v1.17.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.0.0-alpha.1 // indirect
 	github.com/goccy/go-yaml v1.11.3 // indirect
@@ -28,7 +28,7 @@ require (
 	github.com/knadh/koanf/maps v0.1.1 // indirect
 	github.com/knadh/koanf/parsers/yaml v0.1.0 // indirect
 	github.com/knadh/koanf/providers/env v0.1.0 // indirect
-	github.com/knadh/koanf/providers/file v0.1.0 // indirect
+	github.com/knadh/koanf/providers/file v1.1.0 // indirect
 	github.com/knadh/koanf/providers/rawbytes v0.1.0 // indirect
 	github.com/knadh/koanf/v2 v2.1.1 // indirect
 	github.com/kyokomi/emoji/v2 v2.2.13 // indirect
