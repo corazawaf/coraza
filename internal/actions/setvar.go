@@ -150,11 +150,17 @@ func (a *setvarFn) evaluateTxCollection(r plugintypes.RuleMetadata, tx plugintyp
 		if len(value) > 1 {
 			val, err = strconv.Atoi(value[1:])
 			if err != nil {
-				tx.DebugLogger().Error().
-					Str("var_value", value).
-					Int("rule_id", r.ID()).
-					Err(err).
-					Msg("Invalid value")
+				// If the variable doesn't exist, we would need to raise an error. Otherwise, it should be the same value.
+				if strings.HasPrefix(value[1:], "tx.") {
+					tx.DebugLogger().Error().
+						Str("var_value", value).
+						Int("rule_id", r.ID()).
+						Err(err).
+						Msg(value)
+					return
+				}
+
+				col.Set(key, []string{value})
 				return
 			}
 		}
