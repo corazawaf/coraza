@@ -100,11 +100,13 @@ func TestSetvarEvaluate(t *testing.T) {
 			name:                     "Non Numerical Operation - If the value starts with -",
 			init:                     "TX.newvar=----expected_value",
 			expectInvalidSyntaxError: false,
+			expectNewVarValue:        "----expected_value",
 		},
 		{
 			name:                     "Non Numerical Operation - If the value starts with +",
 			init:                     "TX.newvar=+++expected_value",
 			expectInvalidSyntaxError: false,
+			expectNewVarValue:        "+++expected_value",
 		},
 	}
 
