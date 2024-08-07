@@ -96,6 +96,18 @@ func TestSetvarEvaluate(t *testing.T) {
 			init:                     "TX.newvar=-%{tx.missingvar}",
 			expectInvalidSyntaxError: true,
 		},
+		{
+			name:                     "Non Numerical Operation - If the value starts with -",
+			init:                     "TX.newvar=----expected_value",
+			expectInvalidSyntaxError: false,
+			expectNewVarValue:        "----expected_value",
+		},
+		{
+			name:                     "Non Numerical Operation - If the value starts with +",
+			init:                     "TX.newvar=+++expected_value",
+			expectInvalidSyntaxError: false,
+			expectNewVarValue:        "+++expected_value",
+		},
 	}
 
 	for _, tt := range tests {
