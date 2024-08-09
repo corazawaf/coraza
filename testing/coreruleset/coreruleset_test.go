@@ -272,6 +272,11 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	cfg.WithLogfile(errorPath)
 	cfg.TestOverride.Overrides.DestAddr = &host
 	cfg.TestOverride.Overrides.Port = &port
+
+	// TODO(M4tteoP)
+	// cfg.LoadPlatformOverrides(): .ftw.yml should become a platform override file
+	// Tests would not just be ignored, but new expectations would be set for the specific platform
+	// E.g. see https://github.com/coreruleset/coreruleset/blob/main/tests/regression/nginx-overrides.yaml
 	res, err := runner.Run(cfg, tests, runner.RunnerConfig{
 		ShowTime: false,
 	}, output.NewOutput("quiet", os.Stdout))
