@@ -6,7 +6,7 @@ require (
 	github.com/bmatcuk/doublestar/v4 v4.6.1
 	github.com/corazawaf/coraza-coreruleset/v4 v4.5.0
 	github.com/corazawaf/coraza/v3 v3.0.0-00010101000000-000000000000
-	github.com/coreruleset/go-ftw v1.0.3
+	github.com/coreruleset/go-ftw v1.0.4-0.20240809050408-f8169f0325ac
 	github.com/rs/zerolog v1.33.0
 )
 
@@ -48,6 +48,7 @@ require (
 	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.23.0 // indirect
+	golang.org/x/time v0.6.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	rsc.io/binaryregexp v0.2.0 // indirect
