@@ -21,6 +21,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/coreruleset/go-ftw/config"
@@ -278,7 +279,8 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	// Tests would not just be ignored, but new expectations would be set for the specific platform
 	// E.g. see https://github.com/coreruleset/coreruleset/blob/main/tests/regression/nginx-overrides.yaml
 	res, err := runner.Run(cfg, tests, runner.RunnerConfig{
-		ShowTime: false,
+		ShowTime:       false,
+		ConnectTimeout: 10 * time.Second, // WIP: Defaults to 3s but looks to be not enough
 	}, output.NewOutput("quiet", os.Stdout))
 	if err != nil {
 		t.Fatal(err)
