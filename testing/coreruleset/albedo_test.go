@@ -30,6 +30,7 @@ type reflectionSpec struct {
 }
 
 func handleReflect(t testing.TB, w http.ResponseWriter, r *http.Request) {
+	t.Helper()
 	log.Println("Received reflection request")
 
 	body, err := io.ReadAll(r.Body)

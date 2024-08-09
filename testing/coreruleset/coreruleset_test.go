@@ -279,8 +279,8 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	// Tests would not just be ignored, but new expectations would be set for the specific platform
 	// E.g. see https://github.com/coreruleset/coreruleset/blob/main/tests/regression/nginx-overrides.yaml
 	res, err := runner.Run(cfg, tests, runner.RunnerConfig{
-		ShowTime:       false,
-		ConnectTimeout: 10 * time.Second, // WIP: Defaults to 3s but looks to be not enough
+		ShowTime:    false,
+		ReadTimeout: 3 * time.Second, // Defaults to 1s but looks to be not enough in the CI
 	}, output.NewOutput("quiet", os.Stdout))
 	if err != nil {
 		t.Fatal(err)
