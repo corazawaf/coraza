@@ -10,7 +10,6 @@ testoverride:
     932200-13: 'Failing only in multiphase evalution'
     932300-10: 'Failing only in multiphase evalution'
     933120-2: 'Failing only in multiphase evalution'
-    # 920274-1: 'Host validation. Apache expects status 400, Coraza should trigger the rule 920274. Run and check it.'
     920280-3: ''
     920430-3: ''
     920430-5: ''
