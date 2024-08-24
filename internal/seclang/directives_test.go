@@ -4,6 +4,7 @@
 package seclang
 
 import (
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -142,7 +143,7 @@ func TestDirectives(t *testing.T) {
 		"SecUploadDir": {
 			{"", expectErrorOnDirective},
 			{"/tmp-non-existing", expectErrorOnDirective},
-			{"/tmp", func(w *corazawaf.WAF) bool { return w.UploadDir == "/tmp" }},
+			{os.TempDir(), func(w *corazawaf.WAF) bool { return w.UploadDir == os.TempDir() }},
 		},
 		"SecSensorId": {
 			{"", expectErrorOnDirective},
