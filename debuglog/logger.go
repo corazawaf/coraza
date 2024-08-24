@@ -97,4 +97,6 @@ type Logger interface {
 	// Error starts a new message with error level.
 	// You must call Msg on the returned event in order to send the event.
 	Error() Event
+
+	io.Closer
 }

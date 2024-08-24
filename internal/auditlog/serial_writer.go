@@ -13,13 +13,13 @@ import (
 
 // serialWriter is used to store logs in a single file
 type serialWriter struct {
-	io.Closer
+	closer    io.Closer
 	logger    log.Logger
 	formatter plugintypes.AuditLogFormatter
 }
 
 func (sl *serialWriter) Init(c plugintypes.AuditLogConfig) error {
-	sl.Closer = NoopCloser
+	sl.closer = NoopCloser
 	if c.Target == "" {
 		return nil
 	}
@@ -36,7 +36,7 @@ func (sl *serialWriter) Init(c plugintypes.AuditLogConfig) error {
 			return err
 		}
 		f = ff
-		sl.Closer = ff
+		sl.closer = ff
 	}
 
 	sl.formatter = c.Formatter
@@ -60,6 +60,13 @@ func (sl *serialWriter) Write(al plugintypes.AuditLog) error {
 	}
 
 	sl.logger.Println(string(bts))
+	return nil
+}
+
+func (sl *serialWriter) Close() error {
+	if sl.closer != nil {
+		return sl.closer.Close()
+	}
 	return nil
 }
 

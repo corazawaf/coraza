@@ -6,6 +6,7 @@ package coraza
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/experimental"
@@ -26,6 +27,7 @@ type WAF interface {
 	// NewTransaction Creates a new initialized transaction for this WAF instance
 	NewTransaction() types.Transaction
 	NewTransactionWithID(id string) types.Transaction
+	io.Closer
 }
 
 // NewWAF creates a new WAF instance with the provided configuration.
@@ -150,4 +152,9 @@ func (w wafWrapper) NewTransactionWithID(id string) types.Transaction {
 // NewTransaction implements the same method on WAF.
 func (w wafWrapper) NewTransactionWithOptions(opts experimental.Options) types.Transaction {
 	return w.waf.NewTransactionWithOptions(opts)
+}
+
+// Close open log files
+func (w wafWrapper) Close() error {
+	return w.waf.Close()
 }
