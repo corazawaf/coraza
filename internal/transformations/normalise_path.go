@@ -5,6 +5,7 @@ package transformations
 
 import (
 	"path/filepath"
+	"strings"
 )
 
 func normalisePath(data string) (string, bool, error) {
@@ -13,10 +14,15 @@ func normalisePath(data string) (string, bool, error) {
 		return data, false, nil
 	}
 	clean := filepath.Clean(data)
+	if filepath.Separator != '/' {
+		// filepath.Clean uses filepath.Separator for the cleaned path
+		// on windows we need to replace the Separator with the expected forward slash
+		clean = strings.ReplaceAll(clean, string(filepath.Separator), "/")
+	}
 	if clean == "." {
 		return "", true, nil
 	}
-	if data[len(data)-1] == '/' {
+	if data[len(data)-1] == '/' || data[len(data)-1] == '\\' {
 		return clean + "/", true, nil
 	}
 	return clean, data != clean, nil
