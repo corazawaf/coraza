@@ -96,18 +96,11 @@ type defaultLogger struct {
 }
 
 func (l defaultLogger) WithOutput(w io.Writer) Logger {
-	var closable io.Closer = nil
-	// I kept w as io.Writer to keep compability and easy use
-	if c, ok := w.(io.Closer); ok && w != os.Stdout && w != os.Stderr {
-		closable = c
-	}
-
 	return defaultLogger{
 		printer:       l.factory(w),
 		factory:       l.factory,
 		level:         l.level,
 		defaultFields: l.defaultFields,
-		closable:      closable,
 	}
 }
 
@@ -117,7 +110,6 @@ func (l defaultLogger) WithLevel(lvl Level) Logger {
 		factory:       l.factory,
 		level:         lvl,
 		defaultFields: l.defaultFields,
-		closable:      l.closable,
 	}
 }
 
@@ -131,7 +123,6 @@ func (l defaultLogger) With(fs ...ContextField) Logger {
 		factory:       l.factory,
 		level:         l.level,
 		defaultFields: append(l.defaultFields, e.(*defaultEvent).fields...),
-		closable:      l.closable,
 	}
 }
 
@@ -173,13 +164,6 @@ func (l defaultLogger) Error() Event {
 	}
 
 	return &defaultEvent{printer: l.printer, level: LevelError, fields: l.defaultFields}
-}
-
-func (l defaultLogger) Close() error {
-	if l.closable != nil {
-		return l.closable.Close()
-	}
-	return nil
 }
 
 // Default returns a default logger that writes to stderr.
