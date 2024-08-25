@@ -71,8 +71,6 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	// Close log files if any
-	defer waf.Close()
 
 	// Then we create a transaction and assign some variables
 	tx := waf.NewTransaction()
