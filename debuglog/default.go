@@ -92,7 +92,6 @@ type defaultLogger struct {
 	factory       PrinterFactory
 	level         Level
 	defaultFields []byte
-	closable      io.Closer
 }
 
 func (l defaultLogger) WithOutput(w io.Writer) Logger {
