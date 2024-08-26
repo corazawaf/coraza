@@ -65,6 +65,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 					v.MultipartStrictError().(*collections.Single).Set("1")
 					return err
 				}
+				defer temp.Close()
 				sz, err := io.Copy(temp, p)
 				if err != nil {
 					v.MultipartStrictError().(*collections.Single).Set("1")
