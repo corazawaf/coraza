@@ -1,11 +1,12 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !windows
+
 package transformations
 
 import (
 	"path/filepath"
-	"strings"
 )
 
 func normalisePath(data string) (string, bool, error) {
@@ -14,11 +15,6 @@ func normalisePath(data string) (string, bool, error) {
 		return data, false, nil
 	}
 	clean := filepath.Clean(data)
-	if filepath.Separator != '/' {
-		// filepath.Clean uses filepath.Separator for the cleaned path
-		// on windows we need to replace the Separator with the expected forward slash
-		clean = strings.ReplaceAll(clean, string(filepath.Separator), "/")
-	}
 	if clean == "." {
 		return "", true, nil
 	}
