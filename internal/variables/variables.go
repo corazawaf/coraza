@@ -173,12 +173,12 @@ const (
 	// JSON does not provide any data, might be removed
 	JSON //CanBeSelected
 	// Env contains the process environment variables
-	Env
+	Env //CanBeSelected
 	// UrlencodedError equals 1 if we failed to parse de URL
 	// It applies for URL query part and urlencoded post body
 	UrlencodedError
 	// ResponseArgs contains the response parsed arguments
-	ResponseArgs
+	ResponseArgs //CanBeSelected
 	// ResponseXML contains the response parsed XML
 	ResponseXML //CanBeSelected
 	// RequestXML contains the request parsed XML

@@ -348,11 +348,11 @@ func (v RuleVariable) CanBeSelected() bool {
 	case JSON:
 		return true
 	case Env:
-		return false
+		return true
 	case UrlencodedError:
 		return false
 	case ResponseArgs:
-		return false
+		return true
 	case ResponseXML:
 		return true
 	case RequestXML:
