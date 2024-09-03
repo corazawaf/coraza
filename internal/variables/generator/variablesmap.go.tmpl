@@ -22,6 +22,17 @@ func (v RuleVariable) Name() string {
     }
 }
 
+//CanBeSelected returns true if the variable supports selection (ie, `:foobar`)
+func (v RuleVariable) CanBeSelected() bool {
+    switch v {
+        {{range .}}case {{ .Key }}:
+            return {{ .CanBeSelected }}
+        {{end}}
+        default:
+            return false
+    }
+}
+
 var rulemapRev = map[string]RuleVariable{
     {{range .}}"{{ .Value }}": {{ .Key }},
     {{end}}

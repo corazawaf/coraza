@@ -303,6 +303,17 @@ func TestParseRule(t *testing.T) {
 	}
 }
 
+func TestNonSelectableCollection(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	p := NewParser(waf)
+	err := p.FromString(`
+	SecRule REQUEST_URI:foo "bar" "id:1,phase:1"
+	`)
+	if err == nil {
+		t.Error("expected error")
+	}
+}
+
 func BenchmarkParseActions(b *testing.B) {
 	actionsToBeParsed := "id:980170,phase:5,pass,t:none,noauditlog,msg:'Anomaly Scores:Inbound Scores - Outbound Scores',tag:test"
 	for i := 0; i < b.N; i++ {
