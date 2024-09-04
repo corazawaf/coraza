@@ -21,6 +21,8 @@ package auditlog
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/valllabh/ocsf-schema-golang/ocsf/v1_2_0/events/application"
@@ -32,6 +34,23 @@ import (
 )
 
 type ocsfFormatter struct{}
+
+func (f ocsfFormatter) getRequestArguments(al plugintypes.AuditLog) string {
+	argString := &strings.Builder{}
+	if al.Transaction().Request().Args() != nil {
+		args := al.Transaction().Request().Args().FindAll()
+		i := 1
+		count := len(args)
+		for _, arg := range al.Transaction().Request().Args().FindAll() {
+			argString.WriteString(fmt.Sprintf("%s=%s", arg.Key(), arg.Value()))
+			if i < count {
+				argString.WriteString(",")
+			}
+			i++
+		}
+	}
+	return argString.String()
+}
 
 func (f ocsfFormatter) getRequestHeaders(al plugintypes.AuditLog) []*objects.HttpHeader {
 	requestHeaders := []*objects.HttpHeader{}
@@ -69,27 +88,6 @@ func (f ocsfFormatter) getAffectedWebResources(al plugintypes.AuditLog) []*objec
 	return webResources
 }
 
-// Returns a OCSF Metadata object for the given in AuditLog
-// func (f ocsfFormatter) getMetaData(al plugintypes.AuditLog) *objects.Metadata {
-// 	metaData := &objects.Metadata{
-// 		CorrelationUid: "",
-// 		EventCode:      "",
-// 		Uid:            al.Transaction().ID(),
-// 		//Labels:         [2]string{"", ""},
-// 		LogLevel:    "",
-// 		LogName:     "",
-// 		LogProvider: "OWASP Coraza Web Application Firewall",
-// 		LogVersion:  "",
-// 		LoggedTime:  time.Now().UnixMicro(),
-// 		Product: &objects.Product{
-// 			VendorName: "OWASP Coraza Web Application Firewall",
-// 		},
-// 		Version: "1.2.0",
-// 	}
-
-// 	return metaData
-// }
-
 // Returns an array of Enrichment objects containing the details of each message in AuditLog.Messages
 func (f ocsfFormatter) getMatchDetails(al plugintypes.AuditLog) []*objects.Enrichment {
 	matchDetails := []*objects.Enrichment{}
@@ -114,20 +112,21 @@ func (f ocsfFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 		ActivityName: enums.WEB_RESOURCES_ACTIVITY_ACTIVITY_ID_name[int32(enums.WEB_RESOURCES_ACTIVITY_ACTIVITY_ID_WEB_RESOURCES_ACTIVITY_ACTIVITY_ID_READ)],
 		CategoryName: "Application Activity",
 		ClassName:    "Web Resources Activity",
-		CategoryUid:  0,
-		ClassUid:     6001,
+		CategoryUid:  enums.WEB_RESOURCES_ACTIVITY_CATEGORY_UID_WEB_RESOURCES_ACTIVITY_CATEGORY_UID_APPLICATION_ACTIVITY,
+		ClassUid:     enums.WEB_RESOURCES_ACTIVITY_CLASS_UID_WEB_RESOURCES_ACTIVITY_CLASS_UID_WEB_RESOURCES_ACTIVITY,
 		Time:         al.Transaction().UnixTimestamp(),
-		//Metadata:     f.getMetaData(al),
+		ActionId:     enums.WEB_RESOURCES_ACTIVITY_ACTION_ID_WEB_RESOURCES_ACTIVITY_ACTION_ID_DENIED,
 		Metadata: &objects.Metadata{
 			CorrelationUid: "",
 			EventCode:      "",
 			Uid:            al.Transaction().ID(),
 			//Labels:         [2]string{"", ""},
-			LogLevel:    "",
-			LogName:     "",
-			LogProvider: "OWASP Coraza Web Application Firewall",
-			LogVersion:  "",
-			LoggedTime:  time.Now().UnixMicro(),
+			LogLevel: "",
+			LogName:  "",
+			//LogProvider: "OWASP Coraza Web Application Firewall",
+			//LogProvider: al.Transaction().Producer().Connector(),
+			//LogVersion:  al.Transaction().Producer().Version(),
+			LoggedTime: time.Now().UnixMicro(),
 			Product: &objects.Product{
 				VendorName: "OWASP Coraza Web Application Firewall",
 			},
@@ -137,7 +136,7 @@ func (f ocsfFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 		Enrichments: f.getMatchDetails(al),
 		HttpRequest: &objects.HttpRequest{
 			Version:     al.Transaction().Request().Protocol(),
-			Args:        al.Transaction().Request().Args(),
+			Args:        f.getRequestArguments(al),
 			HttpMethod:  al.Transaction().Request().Method(),
 			Uid:         al.Transaction().Request().UID(),
 			Url:         &objects.Url{UrlString: al.Transaction().Request().URI()},
