@@ -2,6 +2,7 @@ module github.com/corazawaf/coraza/v3
 
 go 1.21
 
+
 // Testing dependencies:
 // - go-mockdns
 // - go-modsecurity (optional)
@@ -14,6 +15,7 @@ go 1.21
 // - aho-corasick
 // - gjson
 // - binaryregexp
+// - ocsf-schema-golang
 
 require (
 	github.com/anuraaga/go-modsecurity v0.0.0-20220824035035-b9a4099778df
@@ -25,6 +27,7 @@ require (
 	github.com/tidwall/gjson v1.17.1
 	golang.org/x/net v0.28.0
 	golang.org/x/sync v0.8.0
+	github.com/valllabh/ocsf-schema-golang v1.0.3
 	rsc.io/binaryregexp v0.2.0
 )
 
@@ -35,4 +38,5 @@ require (
 	golang.org/x/mod v0.17.0 // indirect
 	golang.org/x/sys v0.23.0 // indirect
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
+	google.golang.org/protobuf v1.34.1 // indirect
 )
