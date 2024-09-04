@@ -249,7 +249,7 @@ var expectedBlockingHeaders = []string{"Content-Length", "Date"}
 
 func TestHttpServer(t *testing.T) {
 	tests := map[string]httpTest{
-		/*"no blocking": {
+		"no blocking": {
 			reqURI:                  "/hello",
 			expectedProto:           "HTTP/1.1",
 			expectedStatus:          201,
@@ -331,7 +331,7 @@ func TestHttpServer(t *testing.T) {
 			expectedProto:           "HTTP/1.1",
 			expectedStatus:          403,
 			expectedRespHeadersKeys: expectedBlockingHeaders,
-		},*/
+		},
 		"deny based on number of post arguments matching a name": {
 			reqURI:                  "/hello?foobar=1&foobar=2",
 			expectedProto:           "HTTP/1.1",
