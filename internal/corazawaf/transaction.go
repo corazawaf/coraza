@@ -1604,6 +1604,7 @@ type TransactionVariables struct {
 	multipartFilename        *collections.Map
 	multipartName            *collections.Map
 	multipartPartHeaders     *collections.Map
+	multipartStrictError     *collections.Single
 	outboundDataError        *collections.Single
 	queryString              *collections.Single
 	remoteAddr               *collections.Single
@@ -1722,6 +1723,7 @@ func NewTransactionVariables() *TransactionVariables {
 	v.responseXML = collections.NewMap(variables.ResponseXML)
 	v.requestXML = collections.NewMap(variables.RequestXML)
 	v.multipartPartHeaders = collections.NewMap(variables.MultipartPartHeaders)
+	v.multipartStrictError = collections.NewSingle(variables.MultipartStrictError)
 
 	// XML is a pointer to RequestXML
 	v.xml = v.requestXML
@@ -2055,6 +2057,10 @@ func (v *TransactionVariables) ResBodyProcessorErrorMsg() collection.Single {
 	return v.resBodyProcessorErrorMsg
 }
 
+func (v *TransactionVariables) MultipartStrictError() collection.Single {
+	return v.multipartStrictError
+}
+
 // All iterates over the variables. We return both variable and its collection, i.e. key/value, to follow
 // general range iteration in Go which always has a key and value (key is int index for slices). Notably,
 // this is consistent with discussions for custom iterable types in a future language version
@@ -2142,6 +2148,9 @@ func (v *TransactionVariables) All(f func(v variables.RuleVariable, col collecti
 		return
 	}
 	if !f(variables.MultipartPartHeaders, v.multipartPartHeaders) {
+		return
+	}
+	if !f(variables.MultipartStrictError, v.multipartStrictError) {
 		return
 	}
 	if !f(variables.OutboundDataError, v.outboundDataError) {
