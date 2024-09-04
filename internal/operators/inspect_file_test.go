@@ -9,19 +9,24 @@ package operators
 import (
 	_ "fmt"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 func TestInspectFile(t *testing.T) {
+	existCommand := "/bin/echo"
+	if runtime.GOOS == "windows" {
+		existCommand = "C:\\Windows\\system32\\tasklist.exe"
+	}
+
 	tests := []struct {
 		path   string
 		exists bool
 	}{
 		{
-			// TODO(anuraaga): Don't have this rely on OS details.
-			path:   "/bin/echo",
+			path:   existCommand,
 			exists: true,
 		},
 		{
@@ -37,7 +42,7 @@ func TestInspectFile(t *testing.T) {
 			if err != nil {
 				t.Error("cannot init inspectfile operator")
 			}
-			if want, have := tt.exists, ipf.Evaluate(nil, ""); want != have {
+			if want, have := tt.exists, ipf.Evaluate(nil, "/?"); want != have {
 				t.Errorf("inspectfile path %s: want %v, have %v", tt.path, want, have)
 			}
 		})
