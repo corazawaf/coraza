@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/types/variables"
-	"github.com/davecgh/go-spew/spew"
 )
 
 func TestNamedCollection(t *testing.T) {
@@ -54,8 +53,6 @@ func TestNamedCollection(t *testing.T) {
 	if want, have := "ARGS_POST_NAMES", names.Name(); want != have {
 		t.Errorf("want %q, have %q", want, have)
 	}
-
-	spew.Dump(names)
 
 	assertUnorderedValuesMatch(t, names.FindAll(), "key", "key2")
 	if want, have := "ARGS_POST_NAMES: key,key2", fmt.Sprint(names); want != have {
