@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/davecgh/go-spew/spew"
 )
 
 func TestNamedCollection(t *testing.T) {
@@ -54,6 +55,8 @@ func TestNamedCollection(t *testing.T) {
 		t.Errorf("want %q, have %q", want, have)
 	}
 
+	spew.Dump(names)
+
 	assertUnorderedValuesMatch(t, names.FindAll(), "key", "key2")
 	if want, have := "ARGS_POST_NAMES: key,key2", fmt.Sprint(names); want != have {
 		if want := "ARGS_POST_NAMES: key2,key"; want != have {
@@ -86,4 +89,28 @@ func TestNamedCollection(t *testing.T) {
 		t.Fatal("The lengths are not equal.")
 	}
 
+}
+
+func TestNames(t *testing.T) {
+	c := NewNamedCollection(variables.ArgsPost)
+	if c.Name() != "ARGS_POST" {
+		t.Error("Error getting name")
+	}
+
+	c.SetIndex("key", 1, "value")
+	c.Set("key2", []string{"value2", "value3"})
+
+	names := c.Names(variables.ArgsPostNames)
+
+	r := names.FindString("key2")
+
+	if len(r) != 2 {
+		t.Errorf("Error finding string, got %d instead of 2", len(r))
+	}
+
+	r = names.FindRegex(regexp.MustCompile("key.*"))
+
+	if len(r) != 3 {
+		t.Errorf("Error finding regex, got %d instead of 3", len(r))
+	}
 }
