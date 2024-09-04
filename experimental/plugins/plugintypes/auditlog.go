@@ -6,6 +6,7 @@ package plugintypes
 import (
 	"io/fs"
 
+	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -31,7 +32,7 @@ type AuditLogTransaction interface {
 	Response() AuditLogTransactionResponse
 	HasResponse() bool
 	Producer() AuditLogTransactionProducer
-	HighestSeverity() string
+	HighestSeverity() string // The highest severity of the matched rules for the transaction
 }
 
 // AuditLogTransactionResponse contains response specific information
@@ -62,7 +63,7 @@ type AuditLogTransactionRequest interface {
 	Headers() map[string][]string
 	Body() string
 	Files() []AuditLogTransactionRequestFiles
-	Args() string
+	Args() *collections.ConcatKeyed // A string representation of all request agruments in the format 'k=v,'
 	Length() int32
 	UID() string
 }

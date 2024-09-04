@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -235,7 +236,7 @@ type TransactionRequest struct {
 	Headers_     map[string][]string                           `json:"headers"`
 	Body_        string                                        `json:"body"`
 	Files_       []plugintypes.AuditLogTransactionRequestFiles `json:"files"`
-	Args_        string                                        `json:"args"`
+	Args_        *collections.ConcatKeyed                      `json:"args"`
 	Length_      int32                                         `json:"length"`
 	Uid_         string                                        `json:"uid"`
 }
@@ -294,9 +295,9 @@ func (tr *TransactionRequest) Files() []plugintypes.AuditLogTransactionRequestFi
 	return tr.Files_
 }
 
-func (tr *TransactionRequest) Args() string {
+func (tr *TransactionRequest) Args() *collections.ConcatKeyed {
 	if tr == nil {
-		return ""
+		return &collections.ConcatKeyed{}
 	}
 
 	return tr.Args_
