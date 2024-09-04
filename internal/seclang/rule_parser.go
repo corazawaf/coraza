@@ -145,6 +145,9 @@ func (rp *RuleParser) ParseVariables(vars string) error {
 				isEscaped = !isEscaped
 			default:
 				curKey = append(curKey, c)
+				if isEscaped {
+					isEscaped = false
+				}
 			}
 		case 3:
 			// XPATH
