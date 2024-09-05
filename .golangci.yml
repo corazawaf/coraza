@@ -20,6 +20,3 @@ issues:
     - path: magefile\.go
       linters:
         - deadcode
-    - path: internal\/corazawaf\/rule\.go
-      linters:
-        - staticcheck

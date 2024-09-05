@@ -109,7 +109,7 @@ func (f ocsfFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 	// Populate the required fields for the WebRecourcesActivity
 	webResourcesActivity := application.WebResourcesActivity{
 		ActivityId:   enums.WEB_RESOURCES_ACTIVITY_ACTIVITY_ID_WEB_RESOURCES_ACTIVITY_ACTIVITY_ID_READ,
-		ActivityName: enums.WEB_RESOURCES_ACTIVITY_ACTIVITY_ID_name[int32(enums.WEB_RESOURCES_ACTIVITY_ACTIVITY_ID_WEB_RESOURCES_ACTIVITY_ACTIVITY_ID_READ)],
+		ActivityName: "Read",
 		CategoryName: "Application Activity",
 		ClassName:    "Web Resources Activity",
 		CategoryUid:  enums.WEB_RESOURCES_ACTIVITY_CATEGORY_UID_WEB_RESOURCES_ACTIVITY_CATEGORY_UID_APPLICATION_ACTIVITY,
@@ -124,9 +124,9 @@ func (f ocsfFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 			LogLevel: "",
 			LogName:  "",
 			//LogProvider: "OWASP Coraza Web Application Firewall",
-			//LogProvider: al.Transaction().Producer().Connector(),
-			//LogVersion:  al.Transaction().Producer().Version(),
-			LoggedTime: time.Now().UnixMicro(),
+			LogProvider: al.Transaction().Producer().Connector(),
+			LogVersion:  al.Transaction().Producer().Version(),
+			LoggedTime:  time.Now().UnixMicro(),
 			Product: &objects.Product{
 				VendorName: "OWASP Coraza Web Application Firewall",
 			},
@@ -190,7 +190,7 @@ func (f ocsfFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 	webResourcesActivity.SeverityId = enums.WEB_RESOURCES_ACTIVITY_SEVERITY_ID_WEB_RESOURCES_ACTIVITY_SEVERITY_ID_OTHER
 
 	webResourcesActivity.StartTime = al.Transaction().UnixTimestamp()
-	webResourcesActivity.TypeName = enums.WEB_RESOURCES_ACTIVITY_ACTIVITY_ID_name[int32(enums.WEB_RESOURCES_ACTIVITY_ACTIVITY_ID_WEB_RESOURCES_ACTIVITY_ACTIVITY_ID_READ)]
+	webResourcesActivity.TypeName = "Read"
 
 	// Not implemented
 	// webResourcesActivity.Count = 0

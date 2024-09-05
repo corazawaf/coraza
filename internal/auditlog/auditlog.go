@@ -203,26 +203,50 @@ type TransactionProducer struct {
 var _ plugintypes.AuditLogTransactionProducer = (*TransactionProducer)(nil)
 
 func (tp *TransactionProducer) Connector() string {
+	if tp == nil {
+		return ""
+	}
+
 	return tp.Connector_
 }
 
 func (tp *TransactionProducer) Version() string {
+	if tp == nil {
+		return ""
+	}
+
 	return tp.Version_
 }
 
 func (tp *TransactionProducer) Server() string {
+	if tp == nil {
+		return ""
+	}
+
 	return tp.Server_
 }
 
 func (tp *TransactionProducer) RuleEngine() string {
+	if tp == nil {
+		return ""
+	}
+
 	return tp.RuleEngine_
 }
 
 func (tp *TransactionProducer) Stopwatch() string {
+	if tp == nil {
+		return ""
+	}
+
 	return tp.Stopwatch_
 }
 
 func (tp *TransactionProducer) Rulesets() []string {
+	if tp == nil {
+		return nil
+	}
+
 	return tp.Rulesets_
 }
 
