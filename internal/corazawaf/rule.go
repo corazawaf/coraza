@@ -399,7 +399,7 @@ func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transform
 		default:
 			// NOTE: See comment on transformationKey struct to understand this hacky code
 			argKey := arg.Key()
-			argKeyPtr := (*reflect.StringHeader)(unsafe.Pointer(&argKey)).Data
+			argKeyPtr := (*reflect.StringHeader)(unsafe.Pointer(&argKey)).Data // nolint:staticcheck
 			key := transformationKey{
 				argKey:            argKeyPtr,
 				argIndex:          argIdx,
