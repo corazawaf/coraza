@@ -42,6 +42,7 @@ require (
 	github.com/tidwall/gjson v1.17.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/valllabh/ocsf-schema-golang v1.0.3 // indirect
 	github.com/yargevad/filepathx v1.0.0 // indirect
 	golang.org/x/crypto v0.26.0 // indirect
 	golang.org/x/net v0.28.0 // indirect

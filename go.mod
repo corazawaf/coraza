@@ -25,9 +25,9 @@ require (
 	github.com/mccutchen/go-httpbin/v2 v2.14.0
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20240411101913-e07a1f0e8eb4
 	github.com/tidwall/gjson v1.17.1
+	github.com/valllabh/ocsf-schema-golang v1.0.3
 	golang.org/x/net v0.28.0
 	golang.org/x/sync v0.8.0
-	github.com/valllabh/ocsf-schema-golang v1.0.3
 	rsc.io/binaryregexp v0.2.0
 )
 
