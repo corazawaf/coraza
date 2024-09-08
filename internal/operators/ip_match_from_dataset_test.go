@@ -27,13 +27,13 @@ func TestIpMatchFromDataset(t *testing.T) {
 	}
 	for _, ok := range addrok {
 		if !ipm.Evaluate(nil, ok) {
-			t.Errorf("Invalid result for single CIDR IpMatchFromDataset " + ok)
+			t.Errorf("Invalid result for single CIDR IpMatchFromDataset %q", ok)
 		}
 	}
 
 	for _, fail := range addrfail {
 		if ipm.Evaluate(nil, fail) {
-			t.Errorf("Invalid result for single CIDR IpMatchFromDataset" + fail)
+			t.Errorf("Invalid result for single CIDR IpMatchFromDataset %q", fail)
 		}
 	}
 }

@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -104,11 +103,15 @@ func TestConcurrentWriterSuccess(t *testing.T) {
 		DirMode:   fs.FileMode(0777),
 		Formatter: &jsonFormatter{},
 	}
+	if err := file.Close(); err != nil {
+		t.Error(err)
+	}
 
 	writer := &concurrentWriter{}
 	if err := writer.Init(config); err != nil {
 		t.Error("failed to init concurrent logger", err)
 	}
+	defer writer.Close()
 
 	ts := time.Now()
 	expectedLog := &Log{
@@ -130,7 +133,7 @@ func TestConcurrentWriterSuccess(t *testing.T) {
 	}
 
 	fileName := fmt.Sprintf("/%s-%s", ts.Format("20060102-150405"), expectedLog.Transaction().ID())
-	logFile := path.Join(dir, ts.Format("20060102"), ts.Format("20060102-1504"), fileName)
+	logFile := filepath.Join(dir, ts.Format("20060102"), ts.Format("20060102-1504"), fileName)
 
 	logData, err := os.ReadFile(logFile)
 	if err != nil {
