@@ -162,7 +162,7 @@ SecAuditLogParts ABIJDEFHZ
 SecAuditLogType Serial
 
 # The format used to write the audit log.
-# Can be one of JSON|Native|OCSF
+# Can be one of JSON|JsonLegacy|Native|OCSF
 SecAuditLogFormat Native
 
 # The following settings are not supported by Coraza
