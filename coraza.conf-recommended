@@ -161,8 +161,11 @@ SecAuditLogParts ABIJDEFHZ
 #
 SecAuditLogType Serial
 
-# The following settings are not supported by Coraza
+# The format used to write the audit log.
+# Can be one of JSON|JsonLegacy|Native|OCSF
+SecAuditLogFormat Native
 
+# The following settings are not supported by Coraza
 # SecCookieFormat 0
 # SecArgumentSeparator &
 # SecRule MULTIPART_UNMATCHED_BOUNDARY "@eq 1" \
