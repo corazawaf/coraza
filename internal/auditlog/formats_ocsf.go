@@ -28,6 +28,7 @@ import (
 	"github.com/valllabh/ocsf-schema-golang/ocsf/v1_2_0/events/application"
 	"github.com/valllabh/ocsf-schema-golang/ocsf/v1_2_0/events/application/enums"
 	"github.com/valllabh/ocsf-schema-golang/ocsf/v1_2_0/objects"
+	ocsf_object_enums "github.com/valllabh/ocsf-schema-golang/ocsf/v1_2_0/objects/enums"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/types"
@@ -104,6 +105,41 @@ func (f ocsfFormatter) getMatchDetails(al plugintypes.AuditLog) []*objects.Enric
 	return matchDetails
 }
 
+// Returns an array of Observable objects
+func (f ocsfFormatter) getObservables(al plugintypes.AuditLog) []*objects.Observable {
+	observables := []*objects.Observable{}
+
+	observables = append(observables, &objects.Observable{
+		Name:   "ServerID",
+		Type:   "ServerID",
+		TypeId: ocsf_object_enums.OBSERVABLE_TYPE_ID_OBSERVABLE_TYPE_ID_OTHER,
+		Value:  al.Transaction().ServerID(),
+	})
+
+	for _, file := range al.Transaction().Request().Files() {
+		observables = append(observables, &objects.Observable{
+			Name:   file.Name(),
+			Type:   "File Name",
+			TypeId: 7,
+			Value:  file.Name(),
+		})
+		observables = append(observables, &objects.Observable{
+			Name:   file.Name(),
+			Type:   "Size",
+			TypeId: ocsf_object_enums.OBSERVABLE_TYPE_ID_OBSERVABLE_TYPE_ID_OTHER,
+			Value:  fmt.Sprint(file.Size()),
+		})
+		observables = append(observables, &objects.Observable{
+			Name:   file.Name(),
+			Type:   "Mime",
+			TypeId: ocsf_object_enums.OBSERVABLE_TYPE_ID_OBSERVABLE_TYPE_ID_OTHER,
+			Value:  file.Mime(),
+		})
+	}
+
+	return observables
+}
+
 func (f ocsfFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 
 	// Populate the required fields for the WebRecourcesActivity
@@ -163,6 +199,8 @@ func (f ocsfFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 		webResourcesActivity.HttpRequest.UserAgent = userAgent[0]
 	}
 
+	// Note: 'referer' is a misspelling of 'referrer' but was incorporated into the HTTP specification with this misspelling
+	// see https://en.wikipedia.org/wiki/HTTP_referer
 	referrer := al.Transaction().Request().Headers()["referer"]
 	if len(referrer) > 0 {
 		webResourcesActivity.HttpRequest.Referrer = referrer[0]
@@ -192,11 +230,12 @@ func (f ocsfFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 	webResourcesActivity.StartTime = al.Transaction().UnixTimestamp()
 	webResourcesActivity.TypeName = "Read"
 
+	webResourcesActivity.Observables = f.getObservables(al)
+
 	// Not implemented
 	// webResourcesActivity.Count = 0
 	// webResourcesActivity.Duration = 0
 	// webResourcesActivity.EndTime = 0
-	// webResourcesActivity.Observables = &objects.Observable{}
 	// webResourcesActivity.RawData = ""
 	// webResourcesActivity.Status = ""
 	// webResourcesActivity.StatusCode = ""
