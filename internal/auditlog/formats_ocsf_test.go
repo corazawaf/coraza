@@ -10,7 +10,9 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/types/variables"
 	"github.com/valllabh/ocsf-schema-golang/ocsf/v1_2_0/events/application"
 )
 
@@ -30,46 +32,102 @@ func TestOCSFFormatter(t *testing.T) {
 			t.Error(err)
 		}
 
+		// validate MIME type
+		if f.MIME() != "application/json" {
+			t.Errorf("failed to match ocsfFormatter MIME type, \ngot: %s\nexpected: %s", fmt.Sprint(f.MIME()), "application/json")
+		}
+
 		// validate Unix Timestamp
 		if wra.Time != al.Transaction().UnixTimestamp() {
 			t.Errorf("failed to match audit log Unix Timestamp, \ngot: %s\nexpected: %s", fmt.Sprint(wra.Time), fmt.Sprint(al.Transaction().UnixTimestamp()))
 		}
+		// validate Server ID
+		for _, observable := range wra.Observables {
+			if observable.Name == "ServerID" {
+				if observable.Value != al.Transaction().ServerID() {
+					t.Errorf("failed to match audit log Server ID, \ngot: %s\nexpected: %s", observable.Value, al.Transaction().ServerID())
+				}
+			}
+		}
+
 		// validate transaction ID
 		if wra.Metadata.Uid != al.Transaction().ID() {
-			t.Errorf("failed to match audit log data, \ngot: %s\nexpected: %s", wra.Metadata.Uid, al.Transaction().ID())
+			t.Errorf("failed to match audit log transaction ID, \ngot: %s\nexpected: %s", wra.Metadata.Uid, al.Transaction().ID())
 		}
-		// validate Request URI
-		if wra.HttpRequest.Url.UrlString != al.Transaction().Request().URI() {
-			t.Errorf("failed to match audit log URI, \ngot: %s\nexpected: %s", wra.HttpRequest.Url.UrlString, al.Transaction().Request().URI())
-		}
-		// validate Request Method
-		if wra.HttpRequest.HttpMethod != al.Transaction().Request().Method() {
-			t.Errorf("failed to match audit log HTTP Request Method, \ngot: %s\nexpected: %s", wra.HttpRequest.HttpMethod, al.Transaction().Request().Method())
-		}
-		// validate Request Headers
-		for _, header := range wra.HttpRequest.HttpHeaders {
-			if header.Value != al.Transaction().Request().Headers()[header.Name][0] {
-				t.Errorf("failed to match audit log Request Header, \ngot: %s\nexpected: %s", header.Value, al.Transaction().Request().Headers()[header.Name][0])
+
+		// validate transaction requests
+		if al.Transaction().HasRequest() {
+			// validate Request URI
+			if wra.HttpRequest.Url.UrlString != al.Transaction().Request().URI() {
+				t.Errorf("failed to match audit log URI, \ngot: %s\nexpected: %s", wra.HttpRequest.Url.UrlString, al.Transaction().Request().URI())
+			}
+			// validate Request Method
+			if wra.HttpRequest.HttpMethod != al.Transaction().Request().Method() {
+				t.Errorf("failed to match audit log HTTP Request Method, \ngot: %s\nexpected: %s", wra.HttpRequest.HttpMethod, al.Transaction().Request().Method())
+			}
+			// validate Request Headers
+			for _, header := range wra.HttpRequest.HttpHeaders {
+				if header.Value != al.Transaction().Request().Headers()[header.Name][0] {
+					t.Errorf("failed to match audit log Request Header, \ngot: %s\nexpected: %s", header.Value, al.Transaction().Request().Headers()[header.Name][0])
+				}
+			}
+			// validate Request Files
+			for _, file := range al.Transaction().Request().Files() {
+				for _, observable := range wra.Observables {
+					if observable.Name == file.Name() {
+						if observable.Type == "File Name" {
+							if file.Name() != observable.Value {
+								t.Errorf("failed to match audit log Request File Name, \ngot: %s\nexpected: %s", observable.Value, file.Name())
+							}
+						}
+						if observable.Type == "Mime" {
+							if file.Mime() != observable.Value {
+								t.Errorf("failed to match audit log Request File Mime, \ngot: %s\nexpected: %s", observable.Value, file.Mime())
+							}
+						}
+						if observable.Type == "Size" {
+							if fmt.Sprint(file.Size()) != observable.Value {
+								t.Errorf("failed to match audit log Request File Size, \ngot: %s\nexpected: %s", observable.Value, fmt.Sprint(file.Size()))
+							}
+						}
+					}
+				}
+			}
+
+			// validate Request Protocol
+			if wra.HttpRequest.Version != al.Transaction().Request().Protocol() {
+				t.Errorf("failed to match audit log HTTP Request Protocol, \ngot: %s\nexpected: %s", wra.HttpRequest.Version, al.Transaction().Request().Protocol())
+			}
+
+			// validate Request Arguments
+			if al.Transaction().Request().Args() != nil {
+				for _, arg := range al.Transaction().Request().Args().FindAll() {
+					if strings.Contains(wra.HttpRequest.Args, fmt.Sprintf("%s=%s", arg.Key(), arg.Value())) == false {
+						t.Errorf("failed to match audit log Request arguments, \n%s not found in: %s", fmt.Sprintf("%s=%s", arg.Key(), arg.Value()), wra.HttpRequest.Args)
+					}
+				}
 			}
 		}
-		// validate Request Protocol
-		if wra.HttpRequest.Version != al.Transaction().Request().Protocol() {
-			t.Errorf("failed to match audit log HTTP Request Protocol, \ngot: %s\nexpected: %s", wra.HttpRequest.Version, al.Transaction().Request().Protocol())
-		}
-		// validate Response Status
-		if int(wra.HttpResponse.Code) != al.Transaction().Response().Status() {
-			t.Errorf("failed to match audit log HTTP Response Status, \ngot: %s\nexpected: %s", fmt.Sprint(wra.HttpResponse.Code), fmt.Sprint(al.Transaction().Response().Status()))
-		}
-		// validate Response Headers
-		for _, header := range wra.HttpResponse.HttpHeaders {
-			if header.Value != al.Transaction().Response().Headers()[header.Name][0] {
-				t.Errorf("failed to match audit log Response Header, \ngot: %s\nexpected: %s", header.Value, al.Transaction().Response().Headers()[header.Name][0])
+
+		if al.Transaction().HasResponse() {
+			// validate Response Status
+			if int(wra.HttpResponse.Code) != al.Transaction().Response().Status() {
+				t.Errorf("failed to match audit log HTTP Response Status, \ngot: %s\nexpected: %s", fmt.Sprint(wra.HttpResponse.Code), fmt.Sprint(al.Transaction().Response().Status()))
+			}
+
+			// validate Response Headers
+			for _, header := range wra.HttpResponse.HttpHeaders {
+				if header.Value != al.Transaction().Response().Headers()[header.Name][0] {
+					t.Errorf("failed to match audit log Response Header, \ngot: %s\nexpected: %s", header.Value, al.Transaction().Response().Headers()[header.Name][0])
+				}
 			}
 		}
+
 		// validate Enrichments (Rule Matches)
 		if wra.Enrichments[0].Name != al.Messages()[0].Data().Msg() {
 			t.Errorf("failed to match audit log data, \ngot: %s\nexpected: %s", wra.Enrichments[0].Name, al.Messages()[0].Data().Msg())
 		}
+
 		// validate Schema
 		// ocsf-schema-golang appears to have a bug and is not validating against the OCSF 1.2 Schema.
 		// It would be nice to include this validation as part of the test suite, but for now it must be disabled until this bug is fixed.
@@ -83,6 +141,13 @@ func createAuditLogs() []*Log {
 
 	transactionLogs := []*Log{}
 
+	// Test case for "normal" / "typical" transaction
+	getArgs := collections.NewMap(variables.ArgsGet)
+	postArgs := collections.NewMap(variables.ArgsPost)
+	pathArgs := collections.NewMap(variables.ArgsPath)
+	args := collections.NewConcatKeyed(variables.Args, getArgs, postArgs, pathArgs)
+	getArgs.Add("qkey", "qvalue")
+	postArgs.Add("pkey", "pvalue")
 	transactionLogs = append(transactionLogs, &Log{
 		Parts_: []types.AuditLogPart{
 			types.AuditLogPartRequestHeaders,
@@ -97,20 +162,28 @@ func createAuditLogs() []*Log {
 			UnixTimestamp_: 1136239460,
 			ID_:            "123",
 			Request_: &TransactionRequest{
-				URI_:    "/test.php",
+				URI_:    "/test.php?qkey=qvalue",
 				Method_: "GET",
 				Headers_: map[string][]string{
-					"Host": {
+					"host": {
 						"test.coraza.null",
 					},
 				},
-				Body_:     "some request body",
+				Body_:     "pkey=pvalue",
 				Protocol_: "HTTP/1.1",
+				Args_:     args,
+				Files_: []plugintypes.AuditLogTransactionRequestFiles{
+					&TransactionRequestFiles{
+						Name_: "dummyfile.txt",
+						Mime_: "text/plain",
+						Size_: 12345,
+					},
+				},
 			},
 			Response_: &TransactionResponse{
 				Status_: 200,
 				Headers_: map[string][]string{
-					"Connection": {
+					"connection": {
 						"close",
 					},
 				},
@@ -132,6 +205,11 @@ func createAuditLogs() []*Log {
 		},
 	})
 
+	// Test case for abnormal transaction (all empty values, no arguments)
+	getArgs = collections.NewMap(variables.ArgsGet)
+	postArgs = collections.NewMap(variables.ArgsPost)
+	pathArgs = collections.NewMap(variables.ArgsPath)
+	args = collections.NewConcatKeyed(variables.Args, getArgs, postArgs, pathArgs)
 	transactionLogs = append(transactionLogs, &Log{
 		Parts_: []types.AuditLogPart{
 			types.AuditLogPartRequestHeaders,
@@ -142,65 +220,149 @@ func createAuditLogs() []*Log {
 			types.AuditLogPartRulesMatched,
 		},
 		Transaction_: Transaction{
-			Timestamp_:     "08/Jul/2024:14:24:24 -0500",
-			UnixTimestamp_: 1720466664,
-			ID_:            "456",
+			Timestamp_:     "",
+			UnixTimestamp_: 0,
+			ID_:            "",
+			ServerID_:      "someServer",
 			Request_: &TransactionRequest{
-				URI_:    "/test.php?file=/etc/passwd",
-				Method_: "GET",
+				URI_:    "",
+				Method_: "",
 				Headers_: map[string][]string{
-					"Host": {
-						"test.coraza.null",
+					"host": {
+						"",
 					},
-					"Accept": {
-						"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+					"accept": {
+						"",
 					},
-					"Accept-Encoding": {
-						"gzip, deflate, br, zstd",
+					"accept-encoding": {
+						"",
 					},
-					"Accept-Language": {
-						"en-US,en;q=0.9",
+					"accept-language": {
+						"",
 					},
-					"Cache-Control": {
-						"max-age=0",
+					"cache-control": {
+						"",
 					},
-					"Connection": {
-						"keep-alive",
+					"connection": {
+						"",
 					},
-					"Upgrade-Insecure-Requests": {
-						"1",
+					"upgrade-insecure-requests": {
+						"",
 					},
-					"User-Agent": {
-						"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+					"user-agent": {
+						"",
+					},
+					"x-forwarded-for": {
+						"",
+					},
+					"referer": {
+						"",
 					},
 				},
 				Body_:     "",
-				Protocol_: "HTTP/1.1",
+				Protocol_: "",
+				Args_:     args,
 			},
 			Response_: &TransactionResponse{
 				Status_: 200,
 				Headers_: map[string][]string{
-					"Connection": {
-						"close",
+					"connection": {
+						"",
 					},
-					"Content-Type": {
-						"text/html;charset=UTF-8",
+					"content-type": {
+						"",
 					},
-					"Referrer-Policy": {
-						"no-referrer-when-downgrade",
+					"referrer-policy": {
+						"",
 					},
-					"Strict-Transport-Security": {
-						"max-age=63072000; includeSubDomains; preload;",
+					"strict-transport-security": {
+						"",
 					},
-					"Transfer-Encoding": {
-						"chunked",
+					"transfer-encoding": {
+						"",
+					},
+					"referer": {
+						"",
 					},
 				},
-				Body_: "<html><head><head><body>some response body</body>",
+				Body_: "",
 			},
 			Producer_: &TransactionProducer{
-				Connector_: "some connector",
-				Version_:   "1.2.3",
+				Connector_: "",
+				Version_:   "",
+			},
+		},
+		Messages_: []plugintypes.AuditLogMessage{
+			&Message{
+				Message_: "some message",
+				Data_: &MessageData{
+					Msg_: "some message",
+					Raw_: "SecAction \"id:100\"",
+				},
+			},
+		},
+	})
+
+	// Test case for abnormal transaction (all empty values, no arguments, no reponse)
+	getArgs = collections.NewMap(variables.ArgsGet)
+	postArgs = collections.NewMap(variables.ArgsPost)
+	pathArgs = collections.NewMap(variables.ArgsPath)
+	args = collections.NewConcatKeyed(variables.Args, getArgs, postArgs, pathArgs)
+	transactionLogs = append(transactionLogs, &Log{
+		Parts_: []types.AuditLogPart{
+			types.AuditLogPartRequestHeaders,
+			types.AuditLogPartRequestBody,
+			types.AuditLogPartIntermediaryResponseBody,
+			types.AuditLogPartResponseHeaders,
+			types.AuditLogPartAuditLogTrailer,
+			types.AuditLogPartRulesMatched,
+		},
+		Transaction_: Transaction{
+			Timestamp_:     "",
+			UnixTimestamp_: 0,
+			ID_:            "",
+			Request_: &TransactionRequest{
+				URI_:    "",
+				Method_: "",
+				Headers_: map[string][]string{
+					"host": {
+						"",
+					},
+					"accept": {
+						"",
+					},
+					"accept-encoding": {
+						"",
+					},
+					"accept-language": {
+						"",
+					},
+					"cache-control": {
+						"",
+					},
+					"connection": {
+						"",
+					},
+					"upgrade-insecure-requests": {
+						"",
+					},
+					"user-agent": {
+						"",
+					},
+					"x-forwarded-for": {
+						"",
+					},
+					"referer": {
+						"",
+					},
+				},
+				Body_:     "",
+				Protocol_: "",
+				Args_:     args,
+			},
+			Producer_: &TransactionProducer{
+				Connector_: "",
+				Version_:   "",
 			},
 		},
 		Messages_: []plugintypes.AuditLogMessage{

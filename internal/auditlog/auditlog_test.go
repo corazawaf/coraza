@@ -20,9 +20,24 @@ func TestAuditLogUnmarshalJSON(t *testing.T) {
 			}
 		]
 	}`)
+
+	// Improper JSON data (missing a closing '}')
+	invalidSerializedLog := []byte(`{
+		"transaction": {
+			"id":
+	}`)
+
 	log := &Log{}
 	if err := log.UnmarshalJSON(serializedLog); err != nil {
 		t.Error(err)
+	}
+
+	// Verify a error is returned for invalidly formatted JSON data
+	if err := log.UnmarshalJSON(invalidSerializedLog); err != nil {
+		if err.Error() != "invalid character '}' looking for beginning of value" {
+			t.Errorf("failed to match error message, \ngot: %s, \nexpected: %s", err, "invalid character '}' looking for beginning of value")
+		}
+
 	}
 
 	if want, have := "abc123", log.Transaction().ID(); want != have {
