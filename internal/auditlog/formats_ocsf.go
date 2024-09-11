@@ -109,12 +109,14 @@ func (f ocsfFormatter) getMatchDetails(al plugintypes.AuditLog) []*objects.Enric
 func (f ocsfFormatter) getObservables(al plugintypes.AuditLog) []*objects.Observable {
 	observables := []*objects.Observable{}
 
-	observables = append(observables, &objects.Observable{
-		Name:   "ServerID",
-		Type:   "ServerID",
-		TypeId: ocsf_object_enums.OBSERVABLE_TYPE_ID_OBSERVABLE_TYPE_ID_OTHER,
-		Value:  al.Transaction().ServerID(),
-	})
+	if al.Transaction().ServerID() != "" {
+		observables = append(observables, &objects.Observable{
+			Name:   "ServerID",
+			Type:   "ServerID",
+			TypeId: ocsf_object_enums.OBSERVABLE_TYPE_ID_OBSERVABLE_TYPE_ID_OTHER,
+			Value:  al.Transaction().ServerID(),
+		})
+	}
 
 	for _, file := range al.Transaction().Request().Files() {
 		observables = append(observables, &objects.Observable{
