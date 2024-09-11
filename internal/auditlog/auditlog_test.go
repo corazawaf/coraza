@@ -300,7 +300,7 @@ func TestAuditLogUnmarshalJSON(t *testing.T) {
 		t.Errorf("failed to match message data tags, expected tag: %s not found in array", want)
 	}
 
-	// Validaate Transaction Producer parameters
+	// Validate Transaction Producer parameters
 	if want, have := "c", log.Transaction().Producer().Connector(); want != have {
 		t.Errorf("failed to match producer connector, got: %s, expected: %s", have, want)
 	}
