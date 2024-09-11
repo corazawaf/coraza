@@ -28,14 +28,13 @@ func (f ocsfFormatter) getRequestArguments(al plugintypes.AuditLog) string {
 	argString := &strings.Builder{}
 	if al.Transaction().Request().Args() != nil {
 		args := al.Transaction().Request().Args().FindAll()
-		i := 1
-		count := len(args)
-		for _, arg := range al.Transaction().Request().Args().FindAll() {
+
+		argCount := len(args)
+		for i, arg := range al.Transaction().Request().Args().FindAll() {
 			argString.WriteString(fmt.Sprintf("%s=%s", arg.Key(), arg.Value()))
-			if i < count {
+			if i < argCount {
 				argString.WriteString(",")
 			}
-			i++
 		}
 	}
 	return argString.String()
