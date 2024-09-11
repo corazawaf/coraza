@@ -1,22 +1,10 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package ocsflog implements a set of log formatters and writers
-// for audit logging.
-//
-// The following log formats are supported:
-//
-// - JSON
-// - Coraza
-// - Native
-//
-// The following log writers are supported:
-//
-// - Serial
-// - Concurrent
-//
-// More writers and formatters can be registered using the RegisterWriter and
-// RegisterFormatter functions.
+// OCSF log format
+// OCSF (Open Cybersecurity Schema Framework) (https://github.com/ocsf) is an open-source framework with the goal of providing an open standard for logging security events.
+// This log format will produce a JSON log which adheres to the OCSF schema (https://schema.ocsf.io/)
+
 package auditlog
 
 import (
