@@ -1375,7 +1375,7 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 	hostPort, _ := strconv.Atoi(tx.variables.serverPort.Get())
 
 	// Convert the transaction fullRequestLength to Int32
-	requestLength, err := strconv.Atoi(tx.variables.fullRequestLength.Get())
+	requestLength, err := strconv.ParseInt(tx.variables.fullRequestLength.Get(), 10, 32)
 	if err != nil {
 		requestLength = 0
 		tx.DebugLogger().Error().
