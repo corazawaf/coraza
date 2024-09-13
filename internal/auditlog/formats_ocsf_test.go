@@ -71,11 +71,6 @@ func TestOCSFFormatter(t *testing.T) {
 			}
 		}
 
-		// validate transaction ID
-		if wra.Metadata.Uid != al.Transaction().ID() {
-			t.Errorf("failed to match audit log transaction ID, \ngot: %s\nexpected: %s", wra.Metadata.Uid, al.Transaction().ID())
-		}
-
 		// validate transaction requests
 		if al.Transaction().HasRequest() {
 			// validate Request URI

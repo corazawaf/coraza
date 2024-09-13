@@ -154,7 +154,6 @@ func (f ocsfFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 		Metadata: &objects.Metadata{
 			CorrelationUid: "",
 			EventCode:      "",
-			Uid:            al.Transaction().ID(),
 			//Labels:         [2]string{"", ""},
 			LogLevel: "",
 			LogName:  "",
@@ -173,7 +172,7 @@ func (f ocsfFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 			Version:     al.Transaction().Request().Protocol(),
 			Args:        f.getRequestArguments(al),
 			HttpMethod:  al.Transaction().Request().Method(),
-			Uid:         al.Transaction().Request().UID(),
+			Uid:         al.Transaction().ID(),
 			Url:         &objects.Url{UrlString: al.Transaction().Request().URI()},
 			HttpHeaders: f.getRequestHeaders(al),
 			Length:      al.Transaction().Request().Length(),

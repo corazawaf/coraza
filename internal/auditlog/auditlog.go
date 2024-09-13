@@ -267,7 +267,6 @@ type TransactionRequest struct {
 	Files_       []plugintypes.AuditLogTransactionRequestFiles `json:"files"`
 	Args_        *collections.ConcatKeyed                      `json:"args"`
 	Length_      int32                                         `json:"length"`
-	Uid_         string                                        `json:"uid"`
 }
 
 var _ plugintypes.AuditLogTransactionRequest = (*TransactionRequest)(nil)
@@ -337,13 +336,6 @@ func (tr *TransactionRequest) Length() int32 {
 		return 0
 	}
 	return tr.Length_
-}
-
-func (tr *TransactionRequest) UID() string {
-	if tr == nil {
-		return ""
-	}
-	return tr.Uid_
 }
 
 // TransactionRequestFiles contains information

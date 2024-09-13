@@ -65,8 +65,7 @@ type AuditLogTransactionRequest interface {
 	Body() string
 	Files() []AuditLogTransactionRequestFiles
 	Args() *collections.ConcatKeyed // A string representation of all request agruments in the format 'k=v,'
-	Length() int32
-	UID() string
+	Length() int32                  // The total size of the request in bytes
 }
 
 // AuditLogTransactionRequestFiles contains information for the
