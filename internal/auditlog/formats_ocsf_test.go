@@ -123,6 +123,16 @@ func TestOCSFFormatter(t *testing.T) {
 					}
 				}
 			}
+
+			// validate Request UID
+			if wra.HttpRequest.Uid != al.Transaction().ID() {
+				t.Errorf("failed to match audit log HTTP Request UID, \ngot: %s\nexpected: %s", wra.HttpRequest.Uid, al.Transaction().ID())
+			}
+
+			// validate Request Length
+			if wra.HttpRequest.Length != al.Transaction().Request().Length() {
+				t.Errorf("failed to match audit log HTTP Request Length, \ngot: %d\nexpected: %d", wra.HttpRequest.Length, al.Transaction().Request().Length())
+			}
 		}
 
 		if al.Transaction().HasResponse() {
@@ -189,6 +199,7 @@ func createAuditLogs() []*Log {
 				Body_:     "pkey=pvalue",
 				Protocol_: "HTTP/1.1",
 				Args_:     args,
+				Length_:   112345,
 				Files_: []plugintypes.AuditLogTransactionRequestFiles{
 					&TransactionRequestFiles{
 						Name_: "dummyfile.txt",
@@ -280,6 +291,7 @@ func createAuditLogs() []*Log {
 				Body_:     "",
 				Protocol_: "",
 				Args_:     args,
+				Length_:   0,
 			},
 			Response_: &TransactionResponse{
 				Status_: 200,
