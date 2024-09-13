@@ -86,6 +86,7 @@ type Transaction struct {
 	Response_        *TransactionResponse `json:"response,omitempty"`
 	Producer_        *TransactionProducer `json:"producer,omitempty"`
 	HighestSeverity_ string               `json:"highest_severity"`
+	IsInterrupted_   bool                 `json:"is_interrupted"`
 }
 
 var _ plugintypes.AuditLogTransaction = Transaction{}
@@ -144,6 +145,10 @@ func (t Transaction) Producer() plugintypes.AuditLogTransactionProducer {
 
 func (t Transaction) HighestSeverity() string {
 	return t.HighestSeverity_
+}
+
+func (t Transaction) IsInterrupted() bool {
+	return t.IsInterrupted_
 }
 
 // TransactionResponse contains response specific

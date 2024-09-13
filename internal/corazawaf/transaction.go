@@ -1391,6 +1391,7 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 			Protocol_: tx.variables.requestProtocol.Get(),
 			Args_:     tx.variables.args,
 		},
+		IsInterrupted_: tx.IsInterrupted(),
 	}
 
 	for _, part := range tx.AuditLogParts {

@@ -14,6 +14,7 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 	"github.com/valllabh/ocsf-schema-golang/ocsf/v1_2_0/events/application"
+	"github.com/valllabh/ocsf-schema-golang/ocsf/v1_2_0/events/application/enums"
 )
 
 func TestOCSFFormatter(t *testing.T) {
@@ -41,6 +42,26 @@ func TestOCSFFormatter(t *testing.T) {
 		if wra.Time != al.Transaction().UnixTimestamp() {
 			t.Errorf("failed to match audit log Unix Timestamp, \ngot: %s\nexpected: %s", fmt.Sprint(wra.Time), fmt.Sprint(al.Transaction().UnixTimestamp()))
 		}
+
+		// validate transation interruption
+		if al.Transaction().IsInterrupted() {
+			if wra.Action != "Denied" {
+				t.Errorf("failed to match audit log Action, \ngot: %s\nexpected: %s", wra.Action, "Denied")
+			}
+
+			if wra.ActionId != enums.WEB_RESOURCES_ACTIVITY_ACTION_ID_WEB_RESOURCES_ACTIVITY_ACTION_ID_DENIED {
+				t.Errorf("failed to match audit log Action ID, \ngot: %s\nexpected: %s", wra.ActionId, enums.WEB_RESOURCES_ACTIVITY_ACTION_ID_WEB_RESOURCES_ACTIVITY_ACTION_ID_DENIED)
+			}
+		} else {
+			if wra.Action != "Allowed" {
+				t.Errorf("failed to match audit log Action, \ngot: %s\nexpected: %s", wra.Action, "Allowed")
+			}
+
+			if wra.ActionId != enums.WEB_RESOURCES_ACTIVITY_ACTION_ID_WEB_RESOURCES_ACTIVITY_ACTION_ID_ALLOWED {
+				t.Errorf("failed to match audit log Action ID, \ngot: %s\nexpected: %s", wra.ActionId, enums.WEB_RESOURCES_ACTIVITY_ACTION_ID_WEB_RESOURCES_ACTIVITY_ACTION_ID_ALLOWED)
+			}
+		}
+
 		// validate Server ID
 		for _, observable := range wra.Observables {
 			if observable.Name == "ServerID" {
@@ -161,6 +182,7 @@ func createAuditLogs() []*Log {
 			Timestamp_:     "02/Jan/2006:15:04:20 -0700",
 			UnixTimestamp_: 1136239460,
 			ID_:            "123",
+			IsInterrupted_: true,
 			Request_: &TransactionRequest{
 				URI_:    "/test.php?qkey=qvalue",
 				Method_: "GET",
@@ -223,6 +245,7 @@ func createAuditLogs() []*Log {
 			Timestamp_:     "",
 			UnixTimestamp_: 0,
 			ID_:            "",
+			IsInterrupted_: true,
 			ServerID_:      "someServer",
 			Request_: &TransactionRequest{
 				URI_:    "",
@@ -321,6 +344,7 @@ func createAuditLogs() []*Log {
 			Timestamp_:     "",
 			UnixTimestamp_: 0,
 			ID_:            "",
+			IsInterrupted_: true,
 			Request_: &TransactionRequest{
 				URI_:    "",
 				Method_: "",

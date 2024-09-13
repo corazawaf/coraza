@@ -131,6 +131,15 @@ func (f ocsfFormatter) getObservables(al plugintypes.AuditLog) []*objects.Observ
 
 func (f ocsfFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 
+	// Determine the Action/ActionID based on whether the transaction was interrutped
+	ActionID := enums.WEB_RESOURCES_ACTIVITY_ACTION_ID_WEB_RESOURCES_ACTIVITY_ACTION_ID_ALLOWED
+	Action := "Allowed"
+	if al.Transaction().IsInterrupted() {
+		ActionID = enums.WEB_RESOURCES_ACTIVITY_ACTION_ID_WEB_RESOURCES_ACTIVITY_ACTION_ID_DENIED
+		Action = "Denied"
+
+	}
+
 	// Populate the required fields for the WebRecourcesActivity
 	webResourcesActivity := application.WebResourcesActivity{
 		ActivityId:   enums.WEB_RESOURCES_ACTIVITY_ACTIVITY_ID_WEB_RESOURCES_ACTIVITY_ACTIVITY_ID_READ,
@@ -140,7 +149,8 @@ func (f ocsfFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 		CategoryUid:  enums.WEB_RESOURCES_ACTIVITY_CATEGORY_UID_WEB_RESOURCES_ACTIVITY_CATEGORY_UID_APPLICATION_ACTIVITY,
 		ClassUid:     enums.WEB_RESOURCES_ACTIVITY_CLASS_UID_WEB_RESOURCES_ACTIVITY_CLASS_UID_WEB_RESOURCES_ACTIVITY,
 		Time:         al.Transaction().UnixTimestamp(),
-		ActionId:     enums.WEB_RESOURCES_ACTIVITY_ACTION_ID_WEB_RESOURCES_ACTIVITY_ACTION_ID_DENIED,
+		ActionId:     ActionID,
+		Action:       Action,
 		Metadata: &objects.Metadata{
 			CorrelationUid: "",
 			EventCode:      "",
