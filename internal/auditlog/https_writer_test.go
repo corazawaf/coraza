@@ -98,3 +98,28 @@ func TestJSONAuditHTTPS(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestOCSFAuditHTTPS(t *testing.T) {
+	writer := &httpsWriter{}
+	formatter := &ocsfFormatter{}
+	// we create a test http server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		if r.ContentLength == 0 {
+			t.Fatal("ContentLength is 0")
+		}
+		if ct := r.Header.Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+			t.Fatalf("Content-Type is not application/json, got %s", ct)
+		}
+	}))
+	defer server.Close()
+	if err := writer.Init(plugintypes.AuditLogConfig{
+		Target:    server.URL,
+		Formatter: formatter,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Write(sampleHttpsAuditLog); err != nil {
+		t.Fatal(err)
+	}
+}
