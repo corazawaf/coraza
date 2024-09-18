@@ -67,6 +67,7 @@ type Transaction struct {
 	// Copies from the WAF instance that may be overwritten by the ctl action
 	AuditEngine               types.AuditEngineStatus
 	AuditLogParts             types.AuditLogParts
+	AuditLogFormat            string
 	ForceRequestBodyVariable  bool
 	RequestBodyAccess         bool
 	RequestBodyLimit          int64
@@ -1374,6 +1375,18 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 
 	clientPort, _ := strconv.Atoi(tx.variables.remotePort.Get())
 	hostPort, _ := strconv.Atoi(tx.variables.serverPort.Get())
+
+	// Convert the transaction fullRequestLength to Int32
+	requestLength, err := strconv.ParseInt(tx.variables.fullRequestLength.Get(), 10, 32)
+	if err != nil {
+		requestLength = 0
+		tx.DebugLogger().Error().
+			Str("transaction", "AuditLog").
+			Str("value", tx.variables.fullRequestLength.Get()).
+			Err(err).
+			Msg("Error converting request length to integer")
+	}
+
 	// YYYY/MM/DD HH:mm:ss
 	ts := time.Unix(0, tx.Timestamp).Format("2006/01/02 15:04:05")
 	al.Transaction_ = auditlog.Transaction{
@@ -1389,7 +1402,10 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 			Method_:   tx.variables.requestMethod.Get(),
 			URI_:      tx.variables.requestURI.Get(),
 			Protocol_: tx.variables.requestProtocol.Get(),
+			Args_:     tx.variables.args,
+			Length_:   int32(requestLength),
 		},
+		IsInterrupted_: tx.IsInterrupted(),
 	}
 
 	for _, part := range tx.AuditLogParts {
