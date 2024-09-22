@@ -2,8 +2,6 @@
 testoverride:
   ignore:
     920100-5: 'Invalid uri, Coraza not reached - 404 page not found'
-    920290-1: 'Rule works, log contains 920290. Test expects status 400 (Apache behaviour)'
-    920290-4: 'Go/http returns 400 Bad Request: missing required Host header'
     930110-7: 'CRS issue: https://github.com/coreruleset/coreruleset/issues/3736'
 
     # TODO: investigate
