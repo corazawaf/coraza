@@ -9,7 +9,6 @@ package coreruleset
 
 import (
 	"bufio"
-	b64 "encoding/base64"
 	"fmt"
 	"io"
 	"io/fs"
@@ -35,6 +34,7 @@ import (
 	"github.com/corazawaf/coraza/v3"
 	txhttp "github.com/corazawaf/coraza/v3/http"
 	"github.com/corazawaf/coraza/v3/types"
+	albedo "github.com/coreruleset/albedo/server"
 )
 
 func BenchmarkCRSCompilation(b *testing.B) {
@@ -222,19 +222,12 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	}
 
 	s := httptest.NewServer(txhttp.WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Emulates https://github.com/coreruleset/albedo behavior
+		// CRS regression tests are expected to be run with https://github.com/coreruleset/albedo as backend server
 		defer r.Body.Close()
 		w.Header().Set("Content-Type", "text/plain")
 		switch {
 		case r.URL.Path == "/reflect":
-			handleReflect(t, w, r)
-		case strings.HasPrefix(r.URL.Path, "/base64/"):
-			// Emulated httpbin behaviour: /base64 endpoint write the decoded base64 into the response body
-			b64Decoded, err := b64.StdEncoding.DecodeString(strings.TrimPrefix(r.URL.Path, "/base64/"))
-			if err != nil {
-				t.Fatalf("handler can not decode base64: %v", err)
-			}
-			fmt.Fprint(w, string(b64Decoded))
+			albedo.Handler().ServeHTTP(w, r)
 		default:
 			// Albedo return 200 with no body
 		}
