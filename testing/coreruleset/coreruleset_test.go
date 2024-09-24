@@ -221,16 +221,13 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 		t.Fatal(err)
 	}
 
+	// CRS regression tests are expected to be run with https://github.com/coreruleset/albedo as backend server
 	s := httptest.NewServer(txhttp.WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// CRS regression tests are expected to be run with https://github.com/coreruleset/albedo as backend server
 		defer r.Body.Close()
+		// TODO: Investigate why we need to enforce text/plain to have response body tests working.
+		// Check the Content-Type set by albed and SecResponseBodyMimeType
 		w.Header().Set("Content-Type", "text/plain")
-		switch {
-		case r.URL.Path == "/reflect":
-			albedo.Handler().ServeHTTP(w, r)
-		default:
-			// Albedo return 200 with no body
-		}
+		albedo.Handler().ServeHTTP(w, r)
 	})))
 	defer s.Close()
 
@@ -266,10 +263,7 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	cfg.WithLogfile(errorPath)
 	cfg.TestOverride.Overrides.DestAddr = &host
 	cfg.TestOverride.Overrides.Port = &port
-	// TODO(M4tteoP)
-	// cfg.LoadPlatformOverrides(): .ftw.yml should become a platform override file
-	// Tests would not just be ignored, but new expectations would be set for the specific platform
-	// E.g. see https://github.com/coreruleset/coreruleset/blob/main/tests/regression/nginx-overrides.yaml
+
 	cfg.LoadPlatformOverrides(".ftw-overrides.yml")
 	res, err := runner.Run(cfg, tests, runner.RunnerConfig{
 		ShowTime:    false,
