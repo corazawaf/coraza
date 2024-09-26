@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
+	utils "github.com/redwanghb/coraza/v3/internal/strings"
 )
 
 func jsDecode(data string) (string, bool, error) {

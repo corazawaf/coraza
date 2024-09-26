@@ -16,9 +16,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/internal/auditlog"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/internal/seclang"
+	"github.com/redwanghb/coraza/v3/internal/auditlog"
+	"github.com/redwanghb/coraza/v3/internal/corazawaf"
+	"github.com/redwanghb/coraza/v3/internal/seclang"
 )
 
 func TestAuditLogMessages(t *testing.T) {

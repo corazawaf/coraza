@@ -13,8 +13,8 @@ import (
 
 	"rsc.io/binaryregexp"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/memoize"
+	"github.com/redwanghb/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/redwanghb/coraza/v3/internal/memoize"
 )
 
 type rx struct {

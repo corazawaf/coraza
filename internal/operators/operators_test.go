@@ -12,9 +12,9 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
+	"github.com/redwanghb/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/redwanghb/coraza/v3/internal/corazawaf"
+	utils "github.com/redwanghb/coraza/v3/internal/strings"
 )
 
 type Test struct {

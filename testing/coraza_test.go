@@ -8,10 +8,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/debuglog"
-	_ "github.com/corazawaf/coraza/v3/testing/engine"
-	"github.com/corazawaf/coraza/v3/testing/profile"
+	"github.com/redwanghb/coraza/v3"
+	"github.com/redwanghb/coraza/v3/debuglog"
+	_ "github.com/redwanghb/coraza/v3/testing/engine"
+	"github.com/redwanghb/coraza/v3/testing/profile"
 )
 
 func TestEngine(t *testing.T) {

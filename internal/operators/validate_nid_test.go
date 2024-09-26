@@ -6,7 +6,7 @@ package operators
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/redwanghb/coraza/v3/experimental/plugins/plugintypes"
 )
 
 func TestVaildateNid(t *testing.T) {

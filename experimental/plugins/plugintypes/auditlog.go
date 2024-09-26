@@ -6,8 +6,8 @@ package plugintypes
 import (
 	"io/fs"
 
-	"github.com/corazawaf/coraza/v3/internal/collections"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/redwanghb/coraza/v3/internal/collections"
+	"github.com/redwanghb/coraza/v3/types"
 )
 
 // AuditLog represents the main struct for audit log data

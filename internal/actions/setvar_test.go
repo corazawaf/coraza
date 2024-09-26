@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/debuglog"
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/redwanghb/coraza/v3/collection"
+	"github.com/redwanghb/coraza/v3/debuglog"
+	"github.com/redwanghb/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/redwanghb/coraza/v3/internal/corazawaf"
 )
 
 type md struct {

@@ -15,10 +15,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/internal/auditlog"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/redwanghb/coraza/v3/internal/auditlog"
+	"github.com/redwanghb/coraza/v3/internal/corazawaf"
+	utils "github.com/redwanghb/coraza/v3/internal/strings"
+	"github.com/redwanghb/coraza/v3/types"
 )
 
 func TestSecAuditLogDirectivesConcurrent(t *testing.T) {

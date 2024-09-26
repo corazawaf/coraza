@@ -6,7 +6,7 @@
 package variables
 
 import (
-	"github.com/corazawaf/coraza/v3/internal/variables"
+	"github.com/redwanghb/coraza/v3/internal/variables"
 )
 
 // This file repeats the same content many times in order to make access

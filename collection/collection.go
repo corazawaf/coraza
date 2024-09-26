@@ -6,7 +6,7 @@ package collection
 import (
 	"regexp"
 
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/redwanghb/coraza/v3/types"
 )
 
 // Collection are used to store VARIABLE data

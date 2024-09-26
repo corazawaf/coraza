@@ -8,7 +8,7 @@ package corazawaf
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/redwanghb/coraza/v3/types/variables"
 )
 
 func TestARGSSplit(t *testing.T) {

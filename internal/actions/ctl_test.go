@@ -8,11 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/debuglog"
-	"github.com/corazawaf/coraza/v3/internal/corazarules"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/redwanghb/coraza/v3/debuglog"
+	"github.com/redwanghb/coraza/v3/internal/corazarules"
+	"github.com/redwanghb/coraza/v3/internal/corazawaf"
+	"github.com/redwanghb/coraza/v3/types"
+	"github.com/redwanghb/coraza/v3/types/variables"
 )
 
 func TestCtl(t *testing.T) {

@@ -4,7 +4,7 @@
 package transformations
 
 import (
-	"github.com/corazawaf/coraza/v3/internal/strings"
+	"github.com/redwanghb/coraza/v3/internal/strings"
 )
 
 /*

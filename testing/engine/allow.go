@@ -6,7 +6,7 @@
 package engine
 
 import (
-	"github.com/corazawaf/coraza/v3/testing/profile"
+	"github.com/redwanghb/coraza/v3/testing/profile"
 )
 
 var _ = profile.RegisterProfile(profile.Profile{

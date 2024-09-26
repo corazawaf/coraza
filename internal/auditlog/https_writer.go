@@ -14,7 +14,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/redwanghb/coraza/v3/experimental/plugins/plugintypes"
 )
 
 // httpsWriter is used to store logs in a single file

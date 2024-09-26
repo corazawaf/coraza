@@ -5,7 +5,7 @@
 
 package engine
 
-import "github.com/corazawaf/coraza/v3/testing/profile"
+import "github.com/redwanghb/coraza/v3/testing/profile"
 
 var _ = profile.RegisterProfile(profile.Profile{
 	Meta: profile.Meta{

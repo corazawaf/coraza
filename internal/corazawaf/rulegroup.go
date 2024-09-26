@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/corazawaf/coraza/v3/internal/corazatypes"
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
-	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/redwanghb/coraza/v3/internal/corazatypes"
+	utils "github.com/redwanghb/coraza/v3/internal/strings"
+	"github.com/redwanghb/coraza/v3/types"
+	"github.com/redwanghb/coraza/v3/types/variables"
 )
 
 // RuleGroup is a collection of rules

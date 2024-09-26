@@ -20,12 +20,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/debuglog"
-	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/internal/seclang"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/redwanghb/coraza/v3"
+	"github.com/redwanghb/coraza/v3/debuglog"
+	"github.com/redwanghb/coraza/v3/experimental/plugins/macro"
+	"github.com/redwanghb/coraza/v3/internal/corazawaf"
+	"github.com/redwanghb/coraza/v3/internal/seclang"
+	"github.com/redwanghb/coraza/v3/types"
 )
 
 func TestProcessRequest(t *testing.T) {
@@ -146,7 +146,7 @@ func createMultipartRequest(t *testing.T) *http.Request {
 	return req
 }
 
-// from issue https://github.com/corazawaf/coraza/issues/159 @zpeasystart
+// from issue https://github.com/redwanghb/coraza/issues/159 @zpeasystart
 func TestChainEvaluation(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	waf.RequestBodyAccess = true
@@ -467,7 +467,7 @@ func runAgainstWAF(t *testing.T, tCase httpTest, waf coraza.WAF) {
 	req, _ := http.NewRequest("POST", ts.URL+tCase.reqURI, reqBody)
 	// When sending a POST request, the "application/x-www-form-urlencoded" content-type header is needed
 	// being the only content-type for which by default Coraza enforces the request body processing.
-	// See https://github.com/corazawaf/coraza/issues/438
+	// See https://github.com/redwanghb/coraza/issues/438
 	req.Header.Add("content-type", "application/x-www-form-urlencoded")
 	res, err := ts.Client().Do(req)
 	if err != nil {

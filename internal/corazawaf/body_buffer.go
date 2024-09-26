@@ -9,8 +9,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/corazawaf/coraza/v3/internal/environment"
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/redwanghb/coraza/v3/internal/environment"
+	"github.com/redwanghb/coraza/v3/types"
 )
 
 // BodyBuffer is used to read RequestBody and ResponseBody objects

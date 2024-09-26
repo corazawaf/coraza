@@ -8,7 +8,7 @@ package operators
 import (
 	"unicode/utf8"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/redwanghb/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type validateUtf8Encoding struct{}

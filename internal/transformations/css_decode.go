@@ -6,7 +6,7 @@ package transformations
 import (
 	"strings"
 
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
+	utils "github.com/redwanghb/coraza/v3/internal/strings"
 )
 
 func cssDecode(data string) (string, bool, error) {

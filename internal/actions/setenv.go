@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/redwanghb/coraza/v3/experimental/plugins/macro"
+	"github.com/redwanghb/coraza/v3/experimental/plugins/plugintypes"
 )
 
 // Action Group: Non-disruptive

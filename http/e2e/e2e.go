@@ -183,7 +183,7 @@ func Run(cfg Config) error {
 			requestMethod: "POST",
 			// When sending a POST request, the "application/x-www-form-urlencoded" content-type header is needed
 			// being the only content-type for which by default Coraza enforces the request body processing.
-			// See https://github.com/corazawaf/coraza/issues/438
+			// See https://github.com/redwanghb/coraza/issues/438
 			requestHeaders:     map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 			requestBody:        "This is a legit payload",
 			expectedStatusCode: expectStatusCode(200),

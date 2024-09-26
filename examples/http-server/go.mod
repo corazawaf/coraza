@@ -1,8 +1,8 @@
-module github.com/corazawaf/coraza/v3/examples/http-server
+module github.com/redwanghb/coraza/v3/examples/http-server
 
 go 1.22
 
-require github.com/corazawaf/coraza/v3 v3.2.1
+require github.com/redwanghb/coraza/v3 v3.2.1
 
 require (
 	github.com/corazawaf/libinjection-go v0.2.1 // indirect
