@@ -21,7 +21,7 @@ require (
 	github.com/corazawaf/libinjection-go v0.2.1
 	github.com/foxcpp/go-mockdns v1.1.0
 	github.com/magefile/mage v1.15.0
-	github.com/mccutchen/go-httpbin/v2 v2.14.0
+	github.com/mccutchen/go-httpbin/v2 v2.15.0
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20240411101913-e07a1f0e8eb4
 	github.com/tidwall/gjson v1.17.3
 	github.com/valllabh/ocsf-schema-golang v1.0.3
