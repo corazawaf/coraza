@@ -1,6 +1,6 @@
 module github.com/corazawaf/coraza/v3
 
-go 1.22
+go 1.22.3
 
 // Testing dependencies:
 // - go-mockdns
@@ -34,8 +34,8 @@ require (
 	github.com/miekg/dns v1.1.57 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
-	golang.org/x/mod v0.17.0 // indirect
+	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/sys v0.25.0 // indirect
-	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
+	golang.org/x/tools v0.22.0 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
 )
