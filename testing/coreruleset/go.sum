@@ -17,6 +17,8 @@ github.com/coreruleset/ftw-tests-schema/v2 v2.1.0 h1:2ilKzKRG5UzzxBcrJLXFtPalStd
 github.com/coreruleset/ftw-tests-schema/v2 v2.1.0/go.mod h1:ZHVFX5ses4+5IxUP0ufCNg/VqRWxziH6ZuUca092Hxo=
 github.com/coreruleset/go-ftw v1.0.4-0.20240809050408-f8169f0325ac h1:I++204ogJDnOyYQrMs6IdfTYRBIMr4A9Dtix+XdtZEc=
 github.com/coreruleset/go-ftw v1.0.4-0.20240809050408-f8169f0325ac/go.mod h1:gI2N2EYdTIZnXQbsdzBRxbj/zSaYEyrhLJUCOJ3VK6I=
+github.com/coreruleset/go-ftw v1.0.4-0.20240923043156-8474a93d514a h1:ucsngMh75QkedILO3N9JRiVWPbkcelhH055adS51hNs=
+github.com/coreruleset/go-ftw v1.0.4-0.20240923043156-8474a93d514a/go.mod h1:/HKpRGHn0rOEb+VdkfjLqltb3Jr5DHDeKPAiC/04lR8=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
