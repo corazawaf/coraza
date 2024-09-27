@@ -1,4 +1,4 @@
-// Copyright 2023 Juan Pablo Tosso and the OWASP Coraza contributors
+// Copyright 2024 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
 package plugintypes
@@ -6,6 +6,7 @@ package plugintypes
 import (
 	"io/fs"
 
+	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -31,6 +32,8 @@ type AuditLogTransaction interface {
 	Response() AuditLogTransactionResponse
 	HasResponse() bool
 	Producer() AuditLogTransactionProducer
+	HighestSeverity() string // The highest severity of the matched rules for the transaction
+	IsInterrupted() bool     // True if the transaction was interrupted
 }
 
 // AuditLogTransactionResponse contains response specific information
@@ -61,6 +64,8 @@ type AuditLogTransactionRequest interface {
 	Headers() map[string][]string
 	Body() string
 	Files() []AuditLogTransactionRequestFiles
+	Args() *collections.ConcatKeyed // A string representation of all request agruments in the format 'k=v,'
+	Length() int32                  // The total size of the request in bytes
 }
 
 // AuditLogTransactionRequestFiles contains information for the

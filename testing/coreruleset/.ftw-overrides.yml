@@ -1,0 +1,52 @@
+version: "v0.0.0"
+meta:
+  engine: "coraza"
+  platform: "go"
+  annotations:
+    - purpose: "Overrides for CRS test suite running against Coraza deployed as a Go middleware"
+test_overrides:
+  # - rule_id: 920100
+  #   test_ids: [5]
+  #   reason: "Invalid uri, Coraza not reached - 301 returned"
+  #   output:
+  #     status: 301
+  - rule_id: 920100
+    test_ids: [8]
+    reason: |
+      On Apache is not allowed to put a colon in the path. Go/http allows it.
+      Note that the colon is a legal character in a regular path segment, according to the RFC.
+    output:
+      status: 200
+      log:
+        no_expect_ids: [920100]
+  - rule_id: 920270
+    test_ids: [4]
+    reason: "Rule works, Apache test expects status 400"
+    output:
+      log:
+        expect_ids: [920270]
+  - rule_id: 920274
+    test_ids: [1]
+    reason: "Host validation. Apache expects status 400. Coraza correctly triggers the rule 920274"
+    output:
+      log:
+        expect_ids: [920274]
+  - rule_id: 920290
+    test_ids: [1]
+    reason: "TODO"
+    output:
+      log:
+        expect_ids: [920280] # TODO: understand why 920280 (Missing Host Header) is triggered and not 920290 (Empty Host header). See what go-ftw sends.
+  - rule_id: 920290
+    test_ids: [4]
+    reason: "TODO"
+    output:
+      log:
+        expect_ids: [920280] # TODO: understand why 920280 (Missing Host Header) is triggered and not 920290 (Empty Host header). See what go-ftw sends.
+  - rule_id: 920430
+    test_ids: [8]
+    reason: "Go/http does not allow HTTP/3.0 - 505 HTTP Version Not Supported"
+    output:
+      status: 505
+      log:
+        no_expect_ids: [920430]
