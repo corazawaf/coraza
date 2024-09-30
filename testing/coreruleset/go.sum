@@ -13,6 +13,8 @@ github.com/corazawaf/libinjection-go v0.2.1/go.mod h1:OP4TM7xdJ2skyXqNX1AN1wN5nN
 github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
 github.com/coreruleset/albedo v0.0.16-0.20240924185852-4b95a321ebfd h1:4KjOGOv4I81ZOuW/TY29oe0yZCNeNGuPt8HXvmjukPI=
 github.com/coreruleset/albedo v0.0.16-0.20240924185852-4b95a321ebfd/go.mod h1:6mYBASfvvRM2ckXgYO7N5nyKAj8OqLnT4+YLbM0/XWE=
+github.com/coreruleset/albedo v0.0.16 h1:YYWEJBSfAwVmZ5tbBgQQhL8uU6IKeA2QwpAkii3UPKY=
+github.com/coreruleset/albedo v0.0.16/go.mod h1:6mYBASfvvRM2ckXgYO7N5nyKAj8OqLnT4+YLbM0/XWE=
 github.com/coreruleset/ftw-tests-schema/v2 v2.1.0 h1:2ilKzKRG5UzzxBcrJLXFtPalStdQ9jzzaYFuFk0OEk0=
 github.com/coreruleset/ftw-tests-schema/v2 v2.1.0/go.mod h1:ZHVFX5ses4+5IxUP0ufCNg/VqRWxziH6ZuUca092Hxo=
 github.com/coreruleset/go-ftw v1.0.4-0.20240809050408-f8169f0325ac h1:I++204ogJDnOyYQrMs6IdfTYRBIMr4A9Dtix+XdtZEc=
