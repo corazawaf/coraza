@@ -23,6 +23,7 @@ import (
 
 func TestAuditLogMessages(t *testing.T) {
 	waf := corazawaf.NewWAF()
+	defer waf.Close()
 	parser := seclang.NewParser(waf)
 	// generate a random tmp file
 	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
@@ -42,7 +43,7 @@ func TestAuditLogMessages(t *testing.T) {
 	`); err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(file.Name())
+	defer file.Close()
 
 	tx := waf.NewTransaction()
 	tx.AddGetRequestArgument("test", "test")
@@ -73,6 +74,7 @@ func TestAuditLogMessages(t *testing.T) {
 
 func TestAuditLogRelevantOnly(t *testing.T) {
 	waf := corazawaf.NewWAF()
+	defer waf.Close()
 	parser := seclang.NewParser(waf)
 	if err := parser.FromString(`
 		SecRuleEngine DetectionOnly
@@ -89,7 +91,7 @@ func TestAuditLogRelevantOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(file.Name())
+	defer file.Close()
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
 		t.Fatal(err)
 	}
@@ -110,13 +112,14 @@ func TestAuditLogRelevantOnly(t *testing.T) {
 
 func TestAuditLogRelevantOnlyOk(t *testing.T) {
 	waf := corazawaf.NewWAF()
+	defer waf.Close()
 	parser := seclang.NewParser(waf)
 	// generate a random tmp file
 	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(file.Name())
+	defer file.Close()
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
 		t.Fatal(err)
 	}
@@ -148,6 +151,7 @@ func TestAuditLogRelevantOnlyOk(t *testing.T) {
 
 func TestAuditLogRelevantOnlyNoAuditlog(t *testing.T) {
 	waf := corazawaf.NewWAF()
+	defer waf.Close()
 	parser := seclang.NewParser(waf)
 	if err := parser.FromString(`
 		SecRuleEngine DetectionOnly
@@ -164,7 +168,7 @@ func TestAuditLogRelevantOnlyNoAuditlog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(file.Name())
+	defer file.Close()
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
 		t.Fatal(err)
 	}
@@ -185,6 +189,7 @@ func TestAuditLogRelevantOnlyNoAuditlog(t *testing.T) {
 
 func TestAuditLogOnNoLog(t *testing.T) {
 	waf := corazawaf.NewWAF()
+	defer waf.Close()
 	parser := seclang.NewParser(waf)
 	if err := parser.FromString(`
 		SecRuleEngine DetectionOnly
@@ -203,7 +208,7 @@ func TestAuditLogOnNoLog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(file.Name())
+	defer file.Close()
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
 		t.Fatal(err)
 	}
@@ -228,6 +233,7 @@ func TestAuditLogOnNoLog(t *testing.T) {
 
 func TestAuditLogRequestMethodURIProtocol(t *testing.T) {
 	waf := corazawaf.NewWAF()
+	defer waf.Close()
 	parser := seclang.NewParser(waf)
 	if err := parser.FromString(`
 		SecRuleEngine DetectionOnly
@@ -242,7 +248,7 @@ func TestAuditLogRequestMethodURIProtocol(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(file.Name())
+	defer file.Close()
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
 		t.Fatal(err)
 	}
@@ -283,6 +289,7 @@ func TestAuditLogRequestMethodURIProtocol(t *testing.T) {
 
 func TestAuditLogRequestBody(t *testing.T) {
 	waf := corazawaf.NewWAF()
+	defer waf.Close()
 	parser := seclang.NewParser(waf)
 	if err := parser.FromString(`
 		SecRuleEngine DetectionOnly
@@ -298,7 +305,7 @@ func TestAuditLogRequestBody(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(file.Name())
+	defer file.Close()
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
 		t.Fatal(err)
 	}

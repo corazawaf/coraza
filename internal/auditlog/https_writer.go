@@ -19,7 +19,6 @@ import (
 
 // httpsWriter is used to store logs in a single file
 type httpsWriter struct {
-	io.Closer
 	formatter plugintypes.AuditLogFormatter
 	url       string
 	client    *http.Client
@@ -65,6 +64,10 @@ func (h *httpsWriter) Write(al plugintypes.AuditLog) error {
 		// we cannot generate a log using the current api
 		return nil
 	}
+	return nil
+}
+
+func (h *httpsWriter) Close() error {
 	return nil
 }
 

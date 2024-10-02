@@ -44,7 +44,7 @@ func TestSerialLoggerSuccessOnInit(t *testing.T) {
 				t.Errorf("unexpected error: %s", err.Error())
 			}
 
-			if want, have := test.expectedCloser, w.Closer; want != have {
+			if want, have := test.expectedCloser, w.closer; want != have {
 				t.Errorf("unexpected closer, want %v, have %v", want, have)
 			}
 

@@ -25,12 +25,12 @@ type concurrentWriter struct {
 	logDirMode  fs.FileMode
 	logFileMode fs.FileMode
 	formatter   plugintypes.AuditLogFormatter
-	io.Closer
+	closer      io.Closer
 }
 
 func (cl *concurrentWriter) Init(c plugintypes.AuditLogConfig) error {
 	if c.Target == "" {
-		cl.Closer = NoopCloser
+		cl.closer = NoopCloser
 		return nil
 	}
 
@@ -44,7 +44,7 @@ func (cl *concurrentWriter) Init(c plugintypes.AuditLogConfig) error {
 	if err != nil {
 		return err
 	}
-	cl.Closer = f
+	cl.closer = f
 
 	cl.log = log.New(f, "", 0)
 	return nil
@@ -97,6 +97,13 @@ func (cl concurrentWriter) Write(al plugintypes.AuditLog) error {
 	}
 	cl.log.Printf("%s - %s\n", al.Transaction().ID(), filepath)
 
+	return nil
+}
+
+func (cl concurrentWriter) Close() error {
+	if cl.closer != nil {
+		return cl.closer.Close()
+	}
 	return nil
 }
 

@@ -6,6 +6,7 @@ package corazawaf
 import (
 	"io"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -40,23 +41,24 @@ func TestNewTransaction(t *testing.T) {
 
 func TestSetDebugLogPath(t *testing.T) {
 	tests := map[string]struct {
-		path string
-		w    io.Writer
+		path  string
+		match func(io.Writer, bool) bool
 	}{
-		"empty path": {path: "", w: io.Discard},
-		"stdout":     {path: "/dev/stdout", w: os.Stdout},
-		"stderr":     {path: "/dev/stderr", w: os.Stderr},
+		"empty path": {path: "", match: func(w io.Writer, b bool) bool { return w == io.Discard && b == false }},
+		"stdout":     {path: "/dev/stdout", match: func(w io.Writer, b bool) bool { return w == os.Stdout && b == false }},
+		"stderr":     {path: "/dev/stderr", match: func(w io.Writer, b bool) bool { return w == os.Stderr && b == false }},
+		"file":       {path: filepath.Join(t.TempDir(), "debuglogtest.log"), match: func(w io.Writer, b bool) bool { fl, ok := w.(io.Closer); fl.Close(); return ok && b == true }},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			w, err := resolveLogPath(test.path)
+			w, toClose, err := resolveLogPath(test.path)
 			if err != nil {
 				t.Errorf("unexpected error: %s", err.Error())
 			}
 
-			if w != test.w {
-				t.Errorf("expected io.Discard, got %T", w)
+			if !test.match(w, toClose) {
+				t.Errorf("unexpected return from check")
 			}
 		})
 	}

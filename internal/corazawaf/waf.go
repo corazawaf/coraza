@@ -109,7 +109,8 @@ type WAF struct {
 	ProducerConnectorVersion string
 
 	// Used for the debug logger
-	Logger debuglog.Logger
+	Logger         debuglog.Logger
+	debugLogCloser io.Closer
 
 	ErrorLogCb func(rule types.MatchedRule)
 
@@ -244,31 +245,38 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	return tx
 }
 
-func resolveLogPath(path string) (io.Writer, error) {
+func resolveLogPath(path string) (io.Writer, bool, error) {
 	if path == "" {
-		return io.Discard, nil
+		return io.Discard, false, nil
 	}
 
 	if path == "/dev/stdout" {
-		return os.Stdout, nil
+		return os.Stdout, false, nil
 	}
 
 	if path == "/dev/stderr" {
-		return os.Stderr, nil
+		return os.Stderr, false, nil
 	}
 
-	return os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		return nil, false, err
+	}
+
+	return file, true, nil
 }
 
 // SetDebugLogPath sets the path for the debug log
 // If the path is empty, the debug log will be disabled
 // note: this is not thread safe
 func (w *WAF) SetDebugLogPath(path string) error {
-	o, err := resolveLogPath(path)
+	o, toClose, err := resolveLogPath(path)
 	if err != nil {
 		return err
 	}
-
+	if toClose {
+		w.debugLogCloser = o.(io.Closer)
+	}
 	w.SetDebugLogOutput(o)
 	return nil
 }
@@ -413,4 +421,22 @@ func (w *WAF) Validate() error {
 	}
 
 	return nil
+}
+
+func (w *WAF) Close() error {
+	var (
+		err1 error = nil
+		err2 error = nil
+	)
+	if w.auditLogWriter != nil {
+		err1 = w.auditLogWriter.Close()
+	}
+	if w.debugLogCloser != nil {
+		err2 = w.debugLogCloser.Close()
+	}
+
+	if err1 == nil {
+		return err2
+	}
+	return err1
 }
