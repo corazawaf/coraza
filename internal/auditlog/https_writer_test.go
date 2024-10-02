@@ -1,4 +1,4 @@
-// Copyright 2023 Juan Pablo Tosso and the OWASP Coraza contributors
+// Copyright 2024 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build !tinygo
@@ -19,7 +19,6 @@ import (
 )
 
 var sampleHttpsAuditLog = &Log{
-
 	Transaction_: Transaction{
 		ID_: "test123",
 	},
@@ -33,7 +32,7 @@ var sampleHttpsAuditLog = &Log{
 	},
 }
 
-func TestHTTPSAuditLog(t *testing.T) {
+func TestHTTPAuditLog(t *testing.T) {
 	writer := &httpsWriter{}
 	formatter := &nativeFormatter{}
 	pts, err := types.ParseAuditLogParts("ABCDEZ")
@@ -74,7 +73,7 @@ func TestHTTPSAuditLog(t *testing.T) {
 	}
 }
 
-func TestJSONAuditHTTPS(t *testing.T) {
+func TestJSONAuditHTTP(t *testing.T) {
 	writer := &httpsWriter{}
 	formatter := &jsonFormatter{}
 	// we create a test http server
@@ -99,7 +98,7 @@ func TestJSONAuditHTTPS(t *testing.T) {
 	}
 }
 
-func TestOCSFAuditHTTPS(t *testing.T) {
+func TestOCSFAuditHTTP(t *testing.T) {
 	writer := &httpsWriter{}
 	formatter := &ocsfFormatter{}
 	// we create a test http server
