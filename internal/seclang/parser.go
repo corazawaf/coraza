@@ -56,7 +56,7 @@ func (p *Parser) FromFile(profilePath string) error {
 		p.currentFile = profilePath
 		lastDir := p.currentDir
 		p.currentDir = filepath.Dir(profilePath)
-		file, err := fs.ReadFile(p.root, profilePath)
+		file, err := io.FSReadFile(p.root, profilePath)
 		if err != nil {
 			// we don't use defer for this as tinygo does not seem to like it
 			p.currentDir = originalDir
