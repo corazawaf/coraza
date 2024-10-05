@@ -3,7 +3,7 @@
 ---
 testoverride:
   ignore:
-    920100-4: 'Invalid uri, Coraza not reached - 404 page not found'
+    920100-4: 'Invalid uri, Coraza not reached - 404 page not found' 
     920100-5: 'Invalid uri, Coraza not reached - 404 page not found'
     930110-7: 'CRS issue: https://github.com/coreruleset/coreruleset/issues/3736'
 

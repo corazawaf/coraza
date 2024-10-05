@@ -611,8 +611,6 @@ func directiveSecCollectionTimeout(options *DirectiveOptions) error {
 // or the concurrent logging index file (concurrent logging format).
 // Syntax: SecAuditLog [ABSOLUTE_PATH_TO_LOG_FILE]
 // ---
-// When used in combination with mlogc (only possible with concurrent logging), this
-// directive defines the mlogc location and command line.
 //
 // Example:
 // ```apache
@@ -664,6 +662,16 @@ func directiveSecAuditLogFormat(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Configures the directory where concurrent audit log entries are stored.
+// Syntax: SecAuditLogDir [PATH_TO_LOG_DIR]
+// ---
+// This directive is required only when concurrent audit logging is used. Ensure that you
+// specify a file system location with adequate disk space.
+//
+// Example:
+// ```apache
+// SecAuditLogDir /tmp/auditlogs/
+// ```
 func directiveSecAuditLogDir(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -675,7 +683,7 @@ func directiveSecAuditLogDir(options *DirectiveOptions) error {
 }
 
 // Description: Configures the mode (permissions) of any directories created for the
-// concurrent audit logs, using an octal mode value as parameter (as used in chmod).
+// concurrent audit logs, using an octal mode value as parameter (as used in `chmod`).
 // Syntax: SecAuditLogDirMode octal_mode|"default"
 // Default: 0600
 // ---
@@ -830,7 +838,7 @@ func directiveSecAuditLogParts(options *DirectiveOptions) error {
 // SecAuditLog logs/audit/audit.log
 // SecAuditLogParts ABCFHZ
 // SecAuditLogType concurrent
-// SecAuditLogStorageDir logs/audit
+// SecAuditLogDir logs/audit
 // SecAuditLogRelevantStatus ^(?:5|4(?!04))
 // ```
 func directiveSecAuditEngine(options *DirectiveOptions) error {
