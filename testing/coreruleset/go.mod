@@ -4,7 +4,7 @@ go 1.22.3
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.6.1
-	github.com/corazawaf/coraza-coreruleset/v4 v4.5.0
+	github.com/corazawaf/coraza-coreruleset/v4 v4.6.0
 	github.com/corazawaf/coraza/v3 v3.0.0-00010101000000-000000000000
 	github.com/coreruleset/albedo v0.0.16
 	github.com/coreruleset/go-ftw v1.0.4-0.20240923043156-8474a93d514a
@@ -41,7 +41,7 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20240411101913-e07a1f0e8eb4 // indirect
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
-	github.com/tidwall/gjson v1.17.3 // indirect
+	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/valllabh/ocsf-schema-golang v1.0.3 // indirect
