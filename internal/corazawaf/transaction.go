@@ -280,6 +280,8 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.xml
 	case variables.MultipartPartHeaders:
 		return tx.variables.multipartPartHeaders
+	case variables.MultipartStrictError:
+		return tx.variables.multipartStrictError
 	}
 
 	return collections.Noop
@@ -1049,12 +1051,12 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	return tx.interruption, nil
 }
 
-// ProcessResponseHeaders Perform the analysis on the response readers.
+// ProcessResponseHeaders performs the analysis on the response headers.
 //
-// This method perform the analysis on the response headers, notice however
+// This method performs the analysis on the response headers. Note, however,
 // that the headers should be added prior to the execution of this function.
 //
-// note: Remember to check for a possible intervention.
+// Note: Remember to check for a possible intervention.
 func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Interruption {
 	if tx.RuleEngine == types.RuleEngineOff {
 		return nil
