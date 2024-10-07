@@ -112,21 +112,21 @@ const (
 	// the beginning of the transaction until this point
 	Duration
 	// ResponseHeadersNames contains the names of the response headers
-	ResponseHeadersNames
+	ResponseHeadersNames // CanBeSelected
 	// RequestHeadersNames contains the names of the request headers
-	RequestHeadersNames
+	RequestHeadersNames // CanBeSelected
 	// Args contains copies of ArgsGet and ArgsPost
-	Args
+	Args // CanBeSelected
 	// ArgsGet contains the GET (URL) arguments
-	ArgsGet
+	ArgsGet // CanBeSelected
 	// ArgsPost contains the POST (BODY) arguments
-	ArgsPost
+	ArgsPost // CanBeSelected
 	// ArgsPath contains the url path parts
 	ArgsPath
 	// FilesSizes contains the sizes of the uploaded files
 	FilesSizes
 	// FilesNames contains the names of the uploaded files
-	FilesNames
+	FilesNames // CanBeSelected
 	// FilesTmpContent is not supported
 	FilesTmpContent
 	// MultipartFilename contains the multipart data from field FILENAME
@@ -135,58 +135,58 @@ const (
 	MultipartName
 	// MatchedVarsNames is similar to MATCHED_VAR_NAME except that it is
 	// a collection of all matches for the current operator check.
-	MatchedVarsNames
+	MatchedVarsNames // CanBeSelected
 	// MatchedVars is similar to MATCHED_VAR except that it is a collection
 	// of all matches for the current operator check
-	MatchedVars
+	MatchedVars // CanBeSelected
 	// Files contains a collection of original file names
 	// (as they were called on the remote user’s filesys- tem).
 	// Available only on inspected multipart/form-data requests.
 	Files
 	// RequestCookies is a collection of all of request cookies (values only
-	RequestCookies
+	RequestCookies // CanBeSelected
 	// RequestHeaders can be used as either a collection of all of the request
 	// headers or can be used to inspect selected headers
-	RequestHeaders
+	RequestHeaders // CanBeSelected
 	// ResponseHeaders can be used as either a collection of all of the response
 	// headers or can be used to inspect selected headers
-	ResponseHeaders
+	ResponseHeaders // CanBeSelected
 	// ReseBodyProcessor contains the name of the response body processor used,
 	// no default
 	ResBodyProcessor
 	// Geo contains the location information of the client
 	Geo
 	// RequestCookiesNames contains the names of the request cookies
-	RequestCookiesNames
+	RequestCookiesNames // CanBeSelected
 	// FilesTmpNames contains the names of the uploaded temporal files
-	FilesTmpNames
+	FilesTmpNames // CanBeSelected
 	// ArgsNames contains the names of the arguments (POST and GET)
-	ArgsNames
+	ArgsNames // CanBeSelected
 	// ArgsGetNames contains the names of the GET arguments
-	ArgsGetNames
+	ArgsGetNames // CanBeSelected
 	// ArgsPostNames contains the names of the POST arguments
-	ArgsPostNames
+	ArgsPostNames // CanBeSelected
 	// TX contains transaction specific variables created with setvar
-	TX
+	TX // CanBeSelected
 	// Rule contains rule metadata
 	Rule
 	// JSON does not provide any data, might be removed
-	JSON
+	JSON // CanBeSelected
 	// Env contains the process environment variables
-	Env
+	Env // CanBeSelected
 	// UrlencodedError equals 1 if we failed to parse de URL
 	// It applies for URL query part and urlencoded post body
 	UrlencodedError
 	// ResponseArgs contains the response parsed arguments
-	ResponseArgs
+	ResponseArgs // CanBeSelected
 	// ResponseXML contains the response parsed XML
-	ResponseXML
+	ResponseXML // CanBeSelected
 	// RequestXML contains the request parsed XML
-	RequestXML
+	RequestXML // CanBeSelected
 	// XML is a pointer to ResponseXML
-	XML
+	XML // CanBeSelected
 	// MultipartPartHeaders contains the multipart headers
-	MultipartPartHeaders
+	MultipartPartHeaders // CanBeSelected
 
 	// Unsupported variables
 
