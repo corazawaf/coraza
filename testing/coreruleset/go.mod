@@ -7,7 +7,7 @@ require (
 	github.com/corazawaf/coraza-coreruleset/v4 v4.6.0
 	github.com/corazawaf/coraza/v3 v3.0.0-00010101000000-000000000000
 	github.com/coreruleset/albedo v0.0.16
-	github.com/coreruleset/go-ftw v1.0.4-0.20240923043156-8474a93d514a
+	github.com/coreruleset/go-ftw v1.0.4-0.20241007132832-628aa1ec5dda
 	github.com/rs/zerolog v1.33.0
 )
 
@@ -29,7 +29,7 @@ require (
 	github.com/knadh/koanf/maps v0.1.1 // indirect
 	github.com/knadh/koanf/parsers/yaml v0.1.0 // indirect
 	github.com/knadh/koanf/providers/env v0.1.0 // indirect
-	github.com/knadh/koanf/providers/file v1.1.0 // indirect
+	github.com/knadh/koanf/providers/file v1.1.2 // indirect
 	github.com/knadh/koanf/providers/rawbytes v0.1.0 // indirect
 	github.com/knadh/koanf/v2 v2.1.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
