@@ -30,6 +30,16 @@ type Parser struct {
 	includeCount int
 }
 
+type ParsingError struct {
+	Line int
+	File string
+	Err  error
+}
+
+func (e ParsingError) Error() string {
+	return fmt.Sprintf("syntax error, %s on %s:%d", e.Err.Error(), e.File, e.Line)
+}
+
 // FromFile imports directives from a file
 // It will return error if any directive fails to parse
 // or the file does not exist.
@@ -61,7 +71,7 @@ func (p *Parser) FromFile(profilePath string) error {
 			// we don't use defer for this as tinygo does not seem to like it
 			p.currentDir = originalDir
 			p.currentFile = ""
-			return fmt.Errorf("failed to readfile: %s", err.Error())
+			return fmt.Errorf("failed to read file: %s", err.Error())
 		}
 
 		err = p.parseString(string(file))
@@ -69,7 +79,7 @@ func (p *Parser) FromFile(profilePath string) error {
 			// we don't use defer for this as tinygo does not seem to like it
 			p.currentDir = originalDir
 			p.currentFile = ""
-			return fmt.Errorf("failed to parse string: %s", err.Error())
+			return fmt.Errorf("failed to parse string: %w", err)
 		}
 		// restore the lastDir post processing all includes
 		p.currentDir = lastDir
@@ -92,10 +102,14 @@ func (p *Parser) FromString(data string) error {
 	return err
 }
 
+// parseString parses a string and evaluates each line
+// It will return a ParsingError if any directive fails to parse
 func (p *Parser) parseString(data string) error {
 	scanner := bufio.NewScanner(strings.NewReader(data))
-	var linebuffer strings.Builder
-	inBackticks := false
+	var (
+		linebuffer  strings.Builder
+		inBackticks bool
+	)
 	for scanner.Scan() {
 		p.currentLine++
 		line := strings.TrimSpace(scanner.Text())
@@ -129,13 +143,13 @@ func (p *Parser) parseString(data string) error {
 			linebuffer.WriteString(line)
 			err := p.evaluateLine(linebuffer.String())
 			if err != nil {
-				return err
+				return ParsingError{Line: p.currentLine, File: p.currentFile, Err: err}
 			}
 			linebuffer.Reset()
 		}
 	}
 	if inBackticks {
-		return errors.New("backticks left open")
+		return ParsingError{Line: p.currentLine, File: p.currentFile, Err: errors.New("backticks left open")}
 	}
 	return nil
 }

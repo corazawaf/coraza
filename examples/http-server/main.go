@@ -14,7 +14,7 @@ import (
 
 func exampleHandler(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
-	resBody := "Hello world, transaction not disrupted."
+	resBody := "Hello world, transaction not disrupted.\n"
 
 	if body := os.Getenv("RESPONSE_BODY"); body != "" {
 		resBody = body
