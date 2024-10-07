@@ -67,6 +67,7 @@ type Transaction struct {
 	// Copies from the WAF instance that may be overwritten by the ctl action
 	AuditEngine               types.AuditEngineStatus
 	AuditLogParts             types.AuditLogParts
+	AuditLogFormat            string
 	ForceRequestBodyVariable  bool
 	RequestBodyAccess         bool
 	RequestBodyLimit          int64
@@ -279,6 +280,8 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.xml
 	case variables.MultipartPartHeaders:
 		return tx.variables.multipartPartHeaders
+	case variables.MultipartStrictError:
+		return tx.variables.multipartStrictError
 	}
 
 	return collections.Noop
@@ -1048,12 +1051,12 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	return tx.interruption, nil
 }
 
-// ProcessResponseHeaders Perform the analysis on the response readers.
+// ProcessResponseHeaders performs the analysis on the response headers.
 //
-// This method perform the analysis on the response headers, notice however
+// This method performs the analysis on the response headers. Note, however,
 // that the headers should be added prior to the execution of this function.
 //
-// note: Remember to check for a possible intervention.
+// Note: Remember to check for a possible intervention.
 func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Interruption {
 	if tx.RuleEngine == types.RuleEngineOff {
 		return nil
@@ -1372,6 +1375,18 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 
 	clientPort, _ := strconv.Atoi(tx.variables.remotePort.Get())
 	hostPort, _ := strconv.Atoi(tx.variables.serverPort.Get())
+
+	// Convert the transaction fullRequestLength to Int32
+	requestLength, err := strconv.ParseInt(tx.variables.fullRequestLength.Get(), 10, 32)
+	if err != nil {
+		requestLength = 0
+		tx.DebugLogger().Error().
+			Str("transaction", "AuditLog").
+			Str("value", tx.variables.fullRequestLength.Get()).
+			Err(err).
+			Msg("Error converting request length to integer")
+	}
+
 	// YYYY/MM/DD HH:mm:ss
 	ts := time.Unix(0, tx.Timestamp).Format("2006/01/02 15:04:05")
 	al.Transaction_ = auditlog.Transaction{
@@ -1387,7 +1402,10 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 			Method_:   tx.variables.requestMethod.Get(),
 			URI_:      tx.variables.requestURI.Get(),
 			Protocol_: tx.variables.requestProtocol.Get(),
+			Args_:     tx.variables.args,
+			Length_:   int32(requestLength),
 		},
+		IsInterrupted_: tx.IsInterrupted(),
 	}
 
 	for _, part := range tx.AuditLogParts {

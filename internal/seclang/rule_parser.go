@@ -76,7 +76,7 @@ func (rp *RuleParser) ParseVariables(vars string) error {
 				if len(vars) <= i+1 || vars[i+1] != '\'' {
 					if vars[i] != '\'' {
 						// TODO fix here
-						return fmt.Errorf("unclosed quote: " + string(curKey))
+						return fmt.Errorf("unclosed quote: %q", string(curKey))
 					}
 				}
 				// we skip one additional character

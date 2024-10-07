@@ -253,7 +253,7 @@ type transformationKey struct {
 	// transaction phase and we would never have different string pointers with the same
 	// content, or more problematically same pointer for different content, as the strings
 	// will be alive throughout the phase.
-	argKey            uintptr
+	argKey            *byte
 	argIndex          int
 	argVariable       variables.RuleVariable
 	transformationsID int
