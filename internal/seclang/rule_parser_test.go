@@ -4,7 +4,6 @@
 package seclang
 
 import (
-	"errors"
 	"reflect"
 	"strings"
 	"testing"
@@ -111,9 +110,10 @@ func TestSecRuleUpdateTargetVariableNegation(t *testing.T) {
 		SecRule REQUEST_URI|REQUEST_COOKIES "abc" "id:8,phase:2"
 		SecRuleUpdateTargetById 8 "!REQUEST_HEADERS:"
 	`)
-	expectedErr := errors.New("unknown variable")
-	if errors.Unwrap(err).Error() != expectedErr.Error() {
-		t.Fatalf("unexpexted error, want %q, have %q", expectedErr, errors.Unwrap(err).Error())
+
+	expectedErrMsg := "unknown variable"
+	if !strings.Contains(err.Error(), expectedErrMsg) {
+		t.Fatalf("unexpexted error, want to contain %q, have %q", expectedErrMsg, err)
 	}
 
 	// Try to update undefined rule
@@ -121,9 +121,9 @@ func TestSecRuleUpdateTargetVariableNegation(t *testing.T) {
 		SecRule REQUEST_URI|REQUEST_COOKIES "abc" "id:9,phase:2"
 		SecRuleUpdateTargetById 99 "!REQUEST_HEADERS:xyz"
 	`)
-	expectedErr = errors.New("SecRuleUpdateTargetById: rule \"99\" not found")
-	if errors.Unwrap(err).Error() != expectedErr.Error() {
-		t.Fatalf("unexpected error, want %q, have %q", expectedErr, errors.Unwrap(err).Error())
+	expectedErrMsg = "SecRuleUpdateTargetById: rule \"99\" not found"
+	if !strings.Contains(err.Error(), expectedErrMsg) {
+		t.Fatalf("unexpexted error, want to contain %q, have %q", expectedErrMsg, err)
 	}
 }
 
