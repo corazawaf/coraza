@@ -4,6 +4,7 @@
 package seclang
 
 import (
+	"errors"
 	"io/fs"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
@@ -17,6 +18,32 @@ type Parser interface {
 	FromString(string) error
 }
 
+type parser struct {
+	Parser
+}
+
+func unwrapErr(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	if uErr := errors.Unwrap(err); uErr != nil {
+		if pErr, ok := uErr.(seclang.ParsingError); ok {
+			return pErr
+		}
+	}
+
+	return err
+}
+
+func (p parser) FromFile(profilePath string) error {
+	return unwrapErr(p.Parser.FromFile(profilePath))
+}
+
+func (p parser) FromString(data string) error {
+	return unwrapErr(p.Parser.FromString(data))
+}
+
 // ParserConfig is an interface for configuring the parser
 type ParserConfig interface {
 	WithRoot(root fs.FS) ParserConfig
@@ -24,7 +51,9 @@ type ParserConfig interface {
 
 // NewParser creates a new SecLang parser
 func NewParser(config ParserConfig) Parser {
-	return seclang.NewParser(corazawaf.NewWAF())
+	p := seclang.NewParser(corazawaf.NewWAF())
+	p.SetRoot(config.(*parserConfig).root)
+	return parser{p}
 }
 
 type parserConfig struct {
@@ -32,7 +61,7 @@ type parserConfig struct {
 }
 
 func (c *parserConfig) WithRoot(root fs.FS) ParserConfig {
-	ret := &parserConfig{root: c.root}
+	ret := &parserConfig{}
 	ret.root = root
 	return ret
 }
