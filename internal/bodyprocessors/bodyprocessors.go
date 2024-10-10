@@ -5,7 +5,8 @@ package bodyprocessors
 
 import (
 	"fmt"
-	"strings"
+
+	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
@@ -24,7 +25,7 @@ func RegisterBodyProcessor(name string, fn func() plugintypes.BodyProcessor) {
 // GetBodyProcessor returns a body processor by name
 // If the body processor is not found, it returns an error
 func GetBodyProcessor(name string) (plugintypes.BodyProcessor, error) {
-	if fn, ok := processors[strings.ToLower(name)]; ok {
+	if fn, ok := processors[stringsutil.AsciiToLower(name)]; ok {
 		return fn(), nil
 	}
 	return nil, fmt.Errorf("invalid bodyprocessor %q", name)

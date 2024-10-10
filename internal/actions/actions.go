@@ -6,9 +6,9 @@ package actions
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 )
 
 var (
@@ -28,7 +28,7 @@ var actionmap = map[string]ruleActionWrapper{}
 // It can be used also for plugins.
 // If you register an action with an existing name, it will be overwritten.
 func Register(name string, a func() plugintypes.Action) {
-	name = strings.ToLower(name)
+	name = stringsutil.AsciiToLower(name)
 	actionmap[name] = a
 }
 
@@ -70,7 +70,7 @@ func init() {
 // Get returns an unwrapped RuleAction from the actionmap based on the name
 // If the action does not exist it returns an error
 func Get(name string) (plugintypes.Action, error) {
-	name = strings.ToLower(name)
+	name = stringsutil.AsciiToLower(name)
 	if a, ok := actionmap[name]; ok {
 		return a(), nil
 	}

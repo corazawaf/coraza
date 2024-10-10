@@ -18,7 +18,7 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/internal/memoize"
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
+	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -222,7 +222,7 @@ func directiveSecResponseBodyAccess(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	b, err := parseBoolean(strings.ToLower(options.Opts))
+	b, err := parseBoolean(stringsutil.AsciiToLower(options.Opts))
 	if err != nil {
 		return err
 	}
@@ -263,7 +263,7 @@ func directiveSecRequestBodyAccess(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	b, err := parseBoolean(strings.ToLower(options.Opts))
+	b, err := parseBoolean(stringsutil.AsciiToLower(options.Opts))
 	if err != nil {
 		return err
 	}
@@ -304,7 +304,7 @@ func directiveSecServerSignature(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	options.WAF.ServerSignature = utils.MaybeRemoveQuotes(options.Opts)
+	options.WAF.ServerSignature = stringsutil.MaybeRemoveQuotes(options.Opts)
 	return nil
 }
 
@@ -415,7 +415,7 @@ func directiveSecResponseBodyMimeType(options *DirectiveOptions) error {
 // compress, obfuscate, or even encrypt data before it is sent back, and therefore
 // bypass any monitoring device.
 func directiveSecResponseBodyLimitAction(options *DirectiveOptions) error {
-	switch strings.ToLower(options.Opts) {
+	switch stringsutil.AsciiToLower(options.Opts) {
 	case "reject":
 		options.WAF.ResponseBodyLimitAction = types.BodyLimitActionReject
 	case "processpartial":
@@ -454,7 +454,7 @@ func directiveSecResponseBodyLimit(options *DirectiveOptions) error {
 // By default, Coraza will reject a request body that is longer than specified to
 // avoid OOM issues while buffering the request body prior the inspection.
 func directiveSecRequestBodyLimitAction(options *DirectiveOptions) error {
-	switch strings.ToLower(options.Opts) {
+	switch stringsutil.AsciiToLower(options.Opts) {
 	case "reject":
 		options.WAF.RequestBodyLimitAction = types.BodyLimitActionReject
 	case "processpartial":
@@ -489,7 +489,7 @@ func directiveSecRemoteRulesFailAction(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	switch strings.ToLower(options.Opts) {
+	switch stringsutil.AsciiToLower(options.Opts) {
 	case "abort":
 		options.WAF.AbortOnRemoteRulesFail = true
 	case "warn":
@@ -1063,7 +1063,7 @@ func directiveSecRuleUpdateTargetByTag(options *DirectiveOptions) error {
 
 	for _, rule := range options.WAF.Rules.GetRules() {
 		inputTag := strings.Trim(tagAndvars[0], "\"")
-		if utils.InSlice(inputTag, rule.Tags_) {
+		if stringsutil.InSlice(inputTag, rule.Tags_) {
 			rp := RuleParser{
 				rule:           &rule,
 				options:        RuleOptions{},
@@ -1142,7 +1142,7 @@ func directiveSecArgumentsLimit(options *DirectiveOptions) error {
 }
 
 func parseBoolean(data string) (bool, error) {
-	data = strings.ToLower(data)
+	data = stringsutil.AsciiToLower(data)
 	switch data {
 	case "on":
 		return true, nil

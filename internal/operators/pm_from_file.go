@@ -14,6 +14,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/memoize"
+	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 )
 
 func newPMFromFile(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
@@ -35,7 +36,7 @@ func newPMFromFile(options plugintypes.OperatorOptions) (plugintypes.Operator, e
 		if l[0] == '#' {
 			continue
 		}
-		lines = append(lines, strings.ToLower(l))
+		lines = append(lines, stringsutil.AsciiToLower(l))
 	}
 
 	builder := ahocorasick.NewAhoCorasickBuilder(ahocorasick.Opts{

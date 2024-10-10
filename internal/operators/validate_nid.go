@@ -13,6 +13,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/memoize"
+	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 )
 
 type validateNidFunction = func(input string) bool
@@ -72,7 +73,7 @@ func nidCl(nid string) bool {
 	if len(nid) < 8 {
 		return false
 	}
-	nid = strings.ToLower(nid)
+	nid = stringsutil.AsciiToLower(nid)
 	nid = nonDigitOrK.ReplaceAllString(nid, "")
 	rut, _ := strconv.Atoi(nid[:len(nid)-1])
 	dv := nid[len(nid)-1:]
