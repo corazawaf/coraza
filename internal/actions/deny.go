@@ -4,6 +4,8 @@
 package actions
 
 import (
+	"net/http"
+
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -12,6 +14,7 @@ import (
 //
 // Description:
 // Stops rule processing and intercepts transaction.
+// If status action is not used, deny action defaults to status 403.
 //
 // Example:
 // ```
@@ -27,14 +30,20 @@ func (a *denyFn) Init(_ plugintypes.RuleMetadata, data string) error {
 }
 
 const noID = 0
+const noStatus = 0
 
 func (a *denyFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
 	rid := r.ID()
 	if rid == noID {
 		rid = r.ParentID()
 	}
+	status := r.Status()
+	// deny action defaults to status 403
+	if status == noStatus {
+		status = http.StatusForbidden
+	}
 	tx.Interrupt(&types.Interruption{
-		Status: r.Status(),
+		Status: status,
 		RuleID: rid,
 		Action: "deny",
 	})

@@ -27,8 +27,7 @@ func TestEngine(t *testing.T) {
 				t.Error(err)
 			}
 			for _, test := range tt {
-				testname := p.Tests[0].Title
-				t.Run(testname, func(t *testing.T) {
+				t.Run(test.Name, func(t *testing.T) {
 					if err := test.RunPhases(); err != nil {
 						t.Errorf("%s, ERROR: %s", test.Name, err)
 					}

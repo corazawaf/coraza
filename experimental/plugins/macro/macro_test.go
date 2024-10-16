@@ -67,6 +67,24 @@ func TestCompile(t *testing.T) {
 		}
 	})
 
+	t.Run("unknown key", func(t *testing.T) {
+		m := &macro{}
+
+		err := m.compile("%{tx.missing_key}")
+		if err != nil {
+			t.Fatalf("unexpected error")
+		}
+
+		if want, have := 1, len(m.tokens); want != have {
+			t.Fatalf("unexpected number of tokens: want %d, have %d", want, have)
+		}
+
+		expectedMacro := macroToken{"tx.missing_key", variables.TX, "missing_key"}
+		if want, have := m.tokens[0], expectedMacro; want != have {
+			t.Errorf("unexpected token: wanted %v, got %v", want, have)
+		}
+	})
+
 	t.Run("valid macro", func(t *testing.T) {
 		m := &macro{}
 		err := m.compile("%{tx.count}")
@@ -123,7 +141,7 @@ func TestCompile(t *testing.T) {
 }
 
 func TestExpand(t *testing.T) {
-	t.Run("no expansion", func(t *testing.T) {
+	t.Run("unknown variable", func(t *testing.T) {
 		m := &macro{
 			tokens: []macroToken{
 				{"text", variables.Unknown, ""},

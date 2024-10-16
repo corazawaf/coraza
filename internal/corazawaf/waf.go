@@ -119,6 +119,9 @@ type WAF struct {
 	// Array of logging parts to be used
 	AuditLogParts types.AuditLogParts
 
+	// Audit log format
+	AuditLogFormat string
+
 	// Contains the regular expression for relevant status audit logging
 	AuditLogRelevantStatus *regexp.Regexp
 
@@ -174,6 +177,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.SkipAfter = ""
 	tx.AuditEngine = w.AuditEngine
 	tx.AuditLogParts = w.AuditLogParts
+	tx.AuditLogFormat = w.AuditLogFormat
 	tx.ForceRequestBodyVariable = false
 	tx.RequestBodyAccess = w.RequestBodyAccess
 	tx.RequestBodyLimit = int64(w.RequestBodyLimit)
@@ -305,8 +309,9 @@ func NewWAF() *WAF {
 			types.AuditLogPartResponseHeaders,
 			types.AuditLogPartAuditLogTrailer,
 		},
-		Logger:        logger,
-		ArgumentLimit: 1000,
+		AuditLogFormat: "Native",
+		Logger:         logger,
+		ArgumentLimit:  1000,
 	}
 
 	if environment.HasAccessToFS {

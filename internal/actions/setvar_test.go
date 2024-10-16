@@ -96,6 +96,18 @@ func TestSetvarEvaluate(t *testing.T) {
 			init:                     "TX.newvar=-%{tx.missingvar}",
 			expectInvalidSyntaxError: true,
 		},
+		{
+			name:                     "Non Numerical Operation - If the value starts with -",
+			init:                     "TX.newvar=----expected_value",
+			expectInvalidSyntaxError: false,
+			expectNewVarValue:        "----expected_value",
+		},
+		{
+			name:                     "Non Numerical Operation - If the value starts with +",
+			init:                     "TX.newvar=+++expected_value",
+			expectInvalidSyntaxError: false,
+			expectNewVarValue:        "+++expected_value",
+		},
 	}
 
 	for _, tt := range tests {
@@ -108,24 +120,29 @@ func TestSetvarEvaluate(t *testing.T) {
 			a := setvar()
 			metadata := &md{}
 			if err := a.Init(metadata, tt.init); err != nil {
-				t.Error("unexpected error during setvar init")
+				t.Fatal("unexpected error during setvar init")
 			}
+
 			waf := corazawaf.NewWAF()
 			waf.Logger = logger
+
 			tx := waf.NewTransaction()
 			a.Evaluate(metadata, tx)
+
 			if tt.expectInvalidSyntaxError {
+				t.Log(logsBuf.String())
 				if logsBuf.Len() == 0 {
-					t.Fatal("expected error")
+					t.Fatal("expected logs")
 				}
+
 				if !strings.Contains(logsBuf.String(), invalidSyntaxAtoiError) {
-					t.Errorf("expected error containing %q, got %q", invalidSyntaxAtoiError, logsBuf.String())
+					t.Errorf("expected error log containing %q, got %q", invalidSyntaxAtoiError, logsBuf.String())
 				}
+
 				if !strings.Contains(logsBuf.String(), warningKeyNotFoundInCollection) {
-					t.Errorf("expected error containing %q, got %q", warningKeyNotFoundInCollection, logsBuf.String())
+					t.Errorf("expected error log containing %q, got %q", warningKeyNotFoundInCollection, logsBuf.String())
 				}
-			}
-			if logsBuf.Len() != 0 && !tt.expectInvalidSyntaxError {
+			} else if logsBuf.Len() != 0 {
 				t.Fatalf("unexpected error: %s", logsBuf.String())
 			}
 

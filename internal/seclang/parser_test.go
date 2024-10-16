@@ -169,6 +169,10 @@ func TestHardcodedIncludeDirectiveDDOS2(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	err = tmpFile2.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	w := bufio.NewWriter(tmpFile)
 	for i := 0; i < maxIncludeRecursion+1; i++ {

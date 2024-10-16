@@ -5,7 +5,6 @@ package corazawaf
 
 import (
 	"fmt"
-	"reflect"
 	"regexp"
 	"strings"
 	"sync"
@@ -194,7 +193,7 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 	defer logger.Debug().Msg("Finished rule evaluation")
 
 	ruleCol := tx.variables.rule
-	ruleCol.SetIndex("id", 0, r.StrID())
+	ruleCol.SetIndex("id", 0, r.LogID())
 	if r.Msg != nil {
 		ruleCol.SetIndex("msg", 0, r.Msg.String())
 	}
@@ -399,7 +398,7 @@ func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transform
 		default:
 			// NOTE: See comment on transformationKey struct to understand this hacky code
 			argKey := arg.Key()
-			argKeyPtr := (*reflect.StringHeader)(unsafe.Pointer(&argKey)).Data
+			argKeyPtr := unsafe.StringData(argKey)
 			key := transformationKey{
 				argKey:            argKeyPtr,
 				argIndex:          argIdx,

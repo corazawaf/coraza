@@ -178,7 +178,7 @@ func (mr *MatchedRule) Context() context.Context {
 	return mr.Context_
 }
 
-const maxSizeLogMessage = 200
+const maxSizeLogMessage = 280
 
 func (mr MatchedRule) writeDetails(log *strings.Builder, matchData types.MatchData) {
 	msg := matchData.Message()

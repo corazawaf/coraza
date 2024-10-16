@@ -194,6 +194,8 @@ const (
 	ResBodyProcessorError = variables.ResBodyProcessorError
 	// ResBodyProcessorErrorMsg contains the error message if the response body processor failed
 	ResBodyProcessorErrorMsg = variables.ResBodyProcessorErrorMsg
+	// MultipartStrictError will be set to 1 when there is an error parsing multipart
+	MultipartStrictError = variables.MultipartStrictError
 )
 
 // Parse returns the byte interpretation

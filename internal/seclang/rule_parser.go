@@ -76,7 +76,7 @@ func (rp *RuleParser) ParseVariables(vars string) error {
 				if len(vars) <= i+1 || vars[i+1] != '\'' {
 					if vars[i] != '\'' {
 						// TODO fix here
-						return fmt.Errorf("unclosed quote: " + string(curKey))
+						return fmt.Errorf("unclosed quote: %q", string(curKey))
 					}
 				}
 				// we skip one additional character
@@ -145,6 +145,9 @@ func (rp *RuleParser) ParseVariables(vars string) error {
 				isEscaped = !isEscaped
 			default:
 				curKey = append(curKey, c)
+				if isEscaped {
+					isEscaped = false
+				}
 			}
 		case 3:
 			// XPATH
@@ -384,6 +387,9 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 
 	if parent := getLastRuleExpectingChain(options.WAF); parent != nil {
 		rule.ParentID_ = parent.ID_
+		// While the ID_ will be kept to 0 being a chain rule, the LogID_ is meant to be
+		// the printable ID that represents the chain rule, therefore the parent's ID is inherited.
+		rule.LogID_ = parent.LogID_
 		lastChain := parent
 		for lastChain.Chain != nil {
 			lastChain = lastChain.Chain
