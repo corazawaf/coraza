@@ -106,3 +106,29 @@ func InSlice(a string, list []string) bool {
 func WrapUnsafe(buf []byte) string {
 	return *(*string)(unsafe.Pointer(&buf))
 }
+
+// AsciiToLower converts ASCII characters in the string to lowercase
+// without allocating additional memory, unlike strings.ToLower.
+func AsciiToLower(s string) string {
+	for i := 0; i < len(s); i++ {
+		if s[i] >= 'A' && s[i] <= 'Z' {
+			return asciiToLowerInPlace(s, i)
+		}
+	}
+	return s
+}
+
+// asciiToLowerInPlace converts ASCII characters in the string to lowercase
+// starting from the specified index.
+func asciiToLowerInPlace(s string, start int) string {
+	res := []byte(s)
+	const asciiDiff = 'a' - 'A'
+	res[start] += asciiDiff
+
+	for i := start + 1; i < len(res); i++ {
+		if res[i] >= 'A' && res[i] <= 'Z' {
+			res[i] += asciiDiff
+		}
+	}
+	return WrapUnsafe(res)
+}

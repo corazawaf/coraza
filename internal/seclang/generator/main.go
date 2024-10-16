@@ -14,6 +14,8 @@ import (
 	"log"
 	"os"
 	"strings"
+
+	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 )
 
 //go:embed directivesmap.go.tmpl
@@ -64,7 +66,7 @@ func main() {
 			}
 
 			directives = append(directives, DirectivesMap{
-				Key:    strings.ToLower(directiveName),
+				Key:    stringsutil.AsciiToLower(directiveName),
 				FnName: fnName,
 			})
 		default:

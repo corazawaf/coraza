@@ -13,7 +13,7 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
+	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -115,7 +115,7 @@ func (a *ctlFn) Init(_ plugintypes.RuleMetadata, data string) error {
 
 // parseOnOff turns a string value into a boolean equivalent on/off into true/false
 func parseOnOff(s string) (bool, bool) {
-	val := strings.ToLower(s)
+	val := stringsutil.AsciiToLower(s)
 	switch val {
 	case "on":
 		return true, true
@@ -144,7 +144,7 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 	case ctlRuleRemoveTargetByTag:
 		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
-			if utils.InSlice(a.value, r.Tags_) {
+			if stringsutil.InSlice(a.value, r.Tags_) {
 				tx.RemoveRuleTargetByID(r.ID(), a.collection, a.colKey)
 			}
 		}
@@ -282,7 +282,7 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 	case ctlRuleRemoveByTag:
 		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
-			if utils.InSlice(a.value, r.Tags_) {
+			if stringsutil.InSlice(a.value, r.Tags_) {
 				tx.RemoveRuleByID(r.ID_)
 			}
 		}
@@ -386,7 +386,7 @@ func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, str
 		colname, colkey, _ = strings.Cut(col, ":")
 	}
 	collection, _ := variables.Parse(strings.TrimSpace(colname))
-	colkey = strings.ToLower(colkey)
+	colkey = stringsutil.AsciiToLower(colkey)
 	var act ctlFunctionType
 	switch action {
 	case "auditEngine":

@@ -318,12 +318,12 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 	if key == "" {
 		return
 	}
-	keyl := strings.ToLower(key)
+	keyl := stringsutil.AsciiToLower(key)
 	tx.variables.requestHeaders.Add(key, value)
 
 	switch keyl {
 	case "content-type":
-		val := strings.ToLower(value)
+		val := stringsutil.AsciiToLower(value)
 		if val == "application/x-www-form-urlencoded" {
 			tx.variables.reqbodyProcessor.Set("URLENCODED")
 		} else if strings.HasPrefix(val, "multipart/form-data") {
@@ -360,7 +360,7 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 	if key == "" {
 		return
 	}
-	keyl := strings.ToLower(key)
+	keyl := stringsutil.AsciiToLower(key)
 	tx.variables.responseHeaders.Add(key, value)
 
 	// Most headers can be managed like that
@@ -592,9 +592,9 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 
 	for _, c := range matches {
 		isException := false
-		lkey := strings.ToLower(c.Key())
+		lkey := stringsutil.AsciiToLower(c.Key())
 		for _, ex := range rv.Exceptions {
-			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || strings.ToLower(ex.KeyStr) == lkey {
+			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || stringsutil.AsciiToLower(ex.KeyStr) == lkey {
 				isException = true
 				break
 			}
@@ -1020,7 +1020,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		}
 		tx.variables.reqbodyProcessor.Set(rbp)
 	}
-	rbp = strings.ToLower(rbp)
+	rbp = stringsutil.AsciiToLower(rbp)
 	if rbp == "" {
 		// so there is no bodyprocessor, we don't want to generate an error
 		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)

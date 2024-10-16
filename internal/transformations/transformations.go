@@ -5,9 +5,9 @@ package transformations
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 )
 
 var transformations = map[string]plugintypes.Transformation{}
@@ -15,13 +15,13 @@ var transformations = map[string]plugintypes.Transformation{}
 // Register registers a transformation by name
 // If the transformation is already registered, it will be overwritten
 func Register(name string, trans plugintypes.Transformation) {
-	transformations[strings.ToLower(name)] = trans
+	transformations[stringsutil.AsciiToLower(name)] = trans
 }
 
 // GetTransformation returns a transformation by name
 // If the transformation is not found, it returns an error
 func GetTransformation(name string) (plugintypes.Transformation, error) {
-	if t, ok := transformations[strings.ToLower(name)]; ok {
+	if t, ok := transformations[stringsutil.AsciiToLower(name)]; ok {
 		return t, nil
 	}
 	return nil, fmt.Errorf("invalid transformation name %q", name)

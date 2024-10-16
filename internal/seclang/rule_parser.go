@@ -12,7 +12,7 @@ import (
 	actionsmod "github.com/corazawaf/coraza/v3/internal/actions"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/operators"
-	utils "github.com/corazawaf/coraza/v3/internal/strings"
+	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -264,7 +264,7 @@ func (rp *RuleParser) ParseActions(actions string) error {
 	}
 	// check if forbidden action:
 	for _, a := range act {
-		if utils.InSlice(a.Key, disabledActions) {
+		if stringsutil.InSlice(a.Key, disabledActions) {
 			return fmt.Errorf("%s rule action is disabled", a.Key)
 		}
 	}
@@ -359,7 +359,7 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 		if err != nil {
 			return nil, err
 		}
-		if utils.InSlice(operator, disabledRuleOperators) {
+		if stringsutil.InSlice(operator, disabledRuleOperators) {
 			return nil, fmt.Errorf("%s rule operator is disabled", operator)
 		}
 		if err := rp.ParseVariables(vars); err != nil {
@@ -375,7 +375,7 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 		}
 	} else {
 		// quoted actions separated by comma (,)
-		actions = utils.MaybeRemoveQuotes(options.Data)
+		actions = stringsutil.MaybeRemoveQuotes(options.Data)
 		err = rp.ParseActions(actions)
 		if err != nil {
 			return nil, err
@@ -425,7 +425,7 @@ func parseActionOperator(data string) (vars string, op string, actions string, e
 	if err != nil {
 		return
 	}
-	op = utils.MaybeRemoveQuotes(op)
+	op = stringsutil.MaybeRemoveQuotes(op)
 
 	rest = strings.TrimLeft(rest, " ")
 	if len(rest) == 0 {
@@ -436,7 +436,7 @@ func parseActionOperator(data string) (vars string, op string, actions string, e
 	if len(rest) < 2 || rest[0] != '"' || rest[len(rest)-1] != '"' {
 		return "", "", "", fmt.Errorf("invalid actions for rule with operator: %q", data)
 	}
-	actions = utils.MaybeRemoveQuotes(rest)
+	actions = stringsutil.MaybeRemoveQuotes(rest)
 
 	return
 }
@@ -547,9 +547,9 @@ func parseActions(actions string) ([]ruleAction, error) {
 }
 
 func appendRuleAction(res []ruleAction, key string, val string, disruptiveActionIndex int) ([]ruleAction, int, error) {
-	key = strings.ToLower(strings.TrimSpace(key))
+	key = stringsutil.AsciiToLower(strings.TrimSpace(key))
 	val = strings.TrimSpace(val) // We may want to keep case sensitive values (e.g. Messages)
-	val = utils.MaybeRemoveQuotes(val)
+	val = stringsutil.MaybeRemoveQuotes(val)
 	f, err := actionsmod.Get(key)
 	if err != nil {
 		return res, unset, err

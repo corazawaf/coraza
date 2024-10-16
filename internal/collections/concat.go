@@ -5,10 +5,10 @@ package collections
 
 import (
 	"regexp"
-	"strings"
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
+	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -58,7 +58,7 @@ func NewConcatKeyed(variable variables.RuleVariable, data ...collection.Keyed) *
 }
 
 func (c *ConcatKeyed) Get(key string) []string {
-	keyL := strings.ToLower(key)
+	keyL := stringsutil.AsciiToLower(key)
 	var res []string
 	for _, c := range c.data {
 		res = append(res, c.Get(keyL)...)

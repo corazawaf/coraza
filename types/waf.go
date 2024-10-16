@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 )
 
 // AuditEngineStatus represents the functionality
@@ -24,7 +26,7 @@ const (
 
 // ParseAuditEngineStatus parses the audit engine status
 func ParseAuditEngineStatus(as string) (AuditEngineStatus, error) {
-	switch strings.ToLower(as) {
+	switch stringsutil.AsciiToLower(as) {
 	case "on":
 		return AuditEngineOn, nil
 	case "off":
@@ -52,7 +54,7 @@ const (
 
 // ParseRuleEngineStatus parses the rule engine status
 func ParseRuleEngineStatus(re string) (RuleEngineStatus, error) {
-	switch strings.ToLower(re) {
+	switch stringsutil.AsciiToLower(re) {
 	case "on":
 		return RuleEngineOn, nil
 	case "detectiononly":

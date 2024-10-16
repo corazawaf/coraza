@@ -15,6 +15,7 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/internal/io"
+	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 )
 
 // maxIncludeRecursion is used to avoid DDOS by including files that include
@@ -148,7 +149,7 @@ func (p *Parser) evaluateLine(l string) error {
 	dir, opts, _ := strings.Cut(l, " ")
 
 	p.options.WAF.Logger.Debug().Str("line", l).Msg("Parsing directive")
-	directive := strings.ToLower(dir)
+	directive := stringsutil.AsciiToLower(dir)
 
 	if len(opts) >= 3 && opts[0] == '"' && opts[len(opts)-1] == '"' {
 		opts = strings.Trim(opts, `"`)
