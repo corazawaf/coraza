@@ -6,7 +6,6 @@ package corazawaf
 import (
 	"fmt"
 	"regexp"
-	"strings"
 	"sync"
 	"unsafe"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/memoize"
+	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -486,7 +486,7 @@ func caseSensitiveVariable(v variables.RuleVariable) bool {
 // but the knowledge of the type of the Map it not here also, so let's start with this.
 func newRuleVariableParams(v variables.RuleVariable, key string, re *regexp.Regexp, iscount bool) ruleVariableParams {
 	if !caseSensitiveVariable(v) {
-		key = strings.ToLower(key)
+		key = stringsutil.AsciiToLower(key)
 	}
 	return ruleVariableParams{
 		Count:      iscount,

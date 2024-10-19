@@ -12,6 +12,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/memoize"
+	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 )
 
 type pm struct {
@@ -23,7 +24,7 @@ var _ plugintypes.Operator = (*pm)(nil)
 func newPM(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
-	data = strings.ToLower(data)
+	data = stringsutil.AsciiToLower(data)
 	dict := strings.Split(data, " ")
 	builder := ahocorasick.NewAhoCorasickBuilder(ahocorasick.Opts{
 		AsciiCaseInsensitive: true,
