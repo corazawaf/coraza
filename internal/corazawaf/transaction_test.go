@@ -1719,7 +1719,6 @@ func TestForceRequestBodyOverride(t *testing.T) {
 func TestGetUnixTimestamp(t *testing.T) {
 	tx := makeTransaction(t)
 	stamp := tx.UnixTimestamp()
-	t.Logf("stamp: %d", stamp)
 	if stamp <= 0 {
 		t.Fatalf("no timestamp found")
 	}
