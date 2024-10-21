@@ -1504,6 +1504,11 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 	return al
 }
 
+// UnixTimestamp returns the timestamp when the request was received.
+func (tx *Transaction) UnixTimestamp() int64 {
+	return tx.Timestamp
+}
+
 // Close closes the transaction after phase 5
 // This method helps the GC to clean up the transaction faster and release resources
 // It also allows caches the transaction back into the sync.Pool
