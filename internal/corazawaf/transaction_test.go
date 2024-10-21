@@ -1716,6 +1716,14 @@ func TestForceRequestBodyOverride(t *testing.T) {
 	}
 }
 
+func TestGetUnixTimestamp(t *testing.T) {
+	tx := makeTransaction(t)
+	stamp := tx.UnixTimestamp()
+	if stamp <= 0 {
+		t.Fatalf("no timestamp found")
+	}
+}
+
 func TestCloseFails(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
