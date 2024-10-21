@@ -171,7 +171,13 @@ const (
 	// Rule contains rule metadata
 	Rule
 	// JSON does not provide any data, might be removed
+	// JSON应该默认指向ResponseJSON
 	JSON
+	// 添加RequestJSON和ResponseJSON，用于请求体和响应体的处理
+	// RequestJSON包含了请求体解析成JSON格式的数据
+	RequestJSON
+	// ResponseJSON包含了响应体解析成JSON格式的数据
+	ResponseJSON
 	// Env contains the process environment variables
 	Env
 	// UrlencodedError equals 1 if we failed to parse de URL

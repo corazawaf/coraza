@@ -171,6 +171,11 @@ const (
 	Rule = variables.Rule
 	// JSON does not provide any data, might be removed
 	JSON = variables.JSON
+	// 添加RequestJSON和ResponseJSON两个变量
+	// RequestJSON包含了JSON格式的请求
+	RequestJSON = variables.RequestJSON
+	// ResponseJSON包含了JSON格式的响应
+	ResponseJSON = variables.ResponseJSON
 	// Env contains the process environment variables
 	Env = variables.Env
 	// UrlencodedError equals 1 if we failed to parse de URL

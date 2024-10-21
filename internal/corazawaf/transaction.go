@@ -28,6 +28,7 @@ import (
 	"github.com/redwanghb/coraza/v3/internal/corazarules"
 	"github.com/redwanghb/coraza/v3/internal/corazatypes"
 	"github.com/redwanghb/coraza/v3/internal/environment"
+	"github.com/redwanghb/coraza/v3/internal/llmguard"
 	stringsutil "github.com/redwanghb/coraza/v3/internal/strings"
 	urlutil "github.com/redwanghb/coraza/v3/internal/url"
 	"github.com/redwanghb/coraza/v3/types"
@@ -265,7 +266,14 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.rule
 	case variables.JSON:
 		// TODO(anuraaga): This collection seems to be missing.
-		return nil
+		//return nil
+		//添加针对JSON的支持
+		return tx.variables.json
+	// 支持JSON格式
+	case variables.RequestJSON:
+		return tx.variables.requestJSON
+	case variables.ResponseJSON:
+		return tx.variables.responseJSON
 	case variables.Env:
 		return tx.variables.env
 	case variables.UrlencodedError:
@@ -1007,6 +1015,30 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		return nil, err
 	}
 
+	//TODO 添加LLMGuard针对req.Body的prompt injection检查处理
+	// 判断请求体是否为json结构
+	// TODO 如何判定是想要检测的API和内容是json结构
+	if llmguard.ContainsContentType(mime) {
+		// 将请求体转换为string类型内容
+		s := strings.Builder{}
+		_, err := io.Copy(&s, reader)
+		if err != nil {
+			return nil, err
+		}
+		// 调用LLMGuard接口
+		detection, _ := llmguard.DetectQuestion(s.String())
+		if detection {
+			//TODO 优化，根据配置的规则选择是重定向、阻断还是放行
+			tx.interruption = &types.Interruption{
+				RuleID: 90001,
+				Action: "deny",
+				Status: 403,
+			}
+			return tx.interruption, nil
+		}
+
+	}
+
 	rbp := tx.variables.reqbodyProcessor.Get()
 
 	// Default variables.ReqbodyProcessor values
@@ -1659,6 +1691,10 @@ type TransactionVariables struct {
 	resBodyErrorMsg          *collections.Single
 	resBodyProcessorError    *collections.Single
 	resBodyProcessorErrorMsg *collections.Single
+	// 支持JSON格式的请求体和响应体的处理，JSON默认为responseJSON
+	json         *collections.Map
+	requestJSON  *collections.Map
+	responseJSON *collections.Map
 }
 
 func NewTransactionVariables() *TransactionVariables {
@@ -1731,7 +1767,10 @@ func NewTransactionVariables() *TransactionVariables {
 	v.requestXML = collections.NewMap(variables.RequestXML)
 	v.multipartPartHeaders = collections.NewMap(variables.MultipartPartHeaders)
 	v.multipartStrictError = collections.NewSingle(variables.MultipartStrictError)
-
+	// 添加JSON支持，v.json指向v.reqeustJSON
+	v.requestJSON = collections.NewMap(variables.RequestJSON)
+	v.responseJSON = collections.NewMap(variables.ResponseJSON)
+	v.json = v.requestJSON
 	// XML is a pointer to RequestXML
 	v.xml = v.requestXML
 
@@ -2068,6 +2107,19 @@ func (v *TransactionVariables) MultipartStrictError() collection.Single {
 	return v.multipartStrictError
 }
 
+// 添加针对JSON成员的方法支持
+func (v *TransactionVariables) JSON() collection.Map {
+	return v.json
+}
+
+func (v *TransactionVariables) RequestJSON() collection.Map {
+	return v.requestJSON
+}
+
+func (v *TransactionVariables) ResponseJSON() collection.Map {
+	return v.responseJSON
+}
+
 // All iterates over the variables. We return both variable and its collection, i.e. key/value, to follow
 // general range iteration in Go which always has a key and value (key is int index for slices). Notably,
 // this is consistent with discussions for custom iterable types in a future language version
@@ -2287,6 +2339,16 @@ func (v *TransactionVariables) All(f func(v variables.RuleVariable, col collecti
 		return
 	}
 	if !f(variables.XML, v.xml) {
+		return
+	}
+	// 添加JSON支持
+	if !f(variables.JSON, v.json) {
+		return
+	}
+	if !f(variables.RequestJSON, v.requestJSON) {
+		return
+	}
+	if !f(variables.ResponseJSON, v.responseJSON) {
 		return
 	}
 }

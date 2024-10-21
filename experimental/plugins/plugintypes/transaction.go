@@ -116,4 +116,8 @@ type TransactionVariables interface {
 	ArgsGetNames() collection.Collection
 	ArgsPostNames() collection.Collection
 	MultipartStrictError() collection.Single
+	//添加针对JSON的处理方法
+	JSON() collection.Map
+	RequestJSON() collection.Map
+	ResponseJSON() collection.Map
 }

@@ -146,6 +146,10 @@ func (v RuleVariable) Name() string {
 		return "RULE"
 	case JSON:
 		return "JSON"
+	case RequestJSON:
+		return "REQUEST_JSON"
+	case ResponseJSON:
+		return "RESPONSE_JSON"
 	case Env:
 		return "ENV"
 	case UrlencodedError:
@@ -279,6 +283,8 @@ var rulemapRev = map[string]RuleVariable{
 	"TX":                               TX,
 	"RULE":                             Rule,
 	"JSON":                             JSON,
+	"REQUEST_JSON":						RequestJSON,
+	"RESPONSE_JSON":					ResponseJSON,
 	"ENV":                              Env,
 	"URLENCODED_ERROR":                 UrlencodedError,
 	"RESPONSE_ARGS":                    ResponseArgs,

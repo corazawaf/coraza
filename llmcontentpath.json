@@ -1,0 +1,9 @@
+{
+    "address": "http://192.168.174.3:8000",
+    "llmpaths": [
+        {
+            "request": "messages.0.content",
+            "response": "message.content"
+        }
+    ]
+}

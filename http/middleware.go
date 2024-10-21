@@ -59,7 +59,7 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 	if req.TransferEncoding != nil {
 		tx.AddRequestHeader("Transfer-Encoding", req.TransferEncoding[0])
 	}
-
+	// 请求头匹配
 	in = tx.ProcessRequestHeaders()
 	if in != nil {
 		return in, nil

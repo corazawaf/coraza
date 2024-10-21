@@ -18,7 +18,9 @@ type jsonBodyProcessor struct{}
 var _ plugintypes.BodyProcessor = &jsonBodyProcessor{}
 
 func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
-	col := v.ArgsPost()
+	//col := v.ArgsPost()
+	// 修改支持RequestJSON
+	col := v.RequestJSON()
 	data, err := readJSON(reader)
 	if err != nil {
 		return err
@@ -30,7 +32,9 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.Tran
 }
 
 func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
-	col := v.ResponseArgs()
+	//col := v.ResponseArgs()
+	// 修改支持ResponseJSON
+	col := v.ResponseJSON()
 	data, err := readJSON(reader)
 	if err != nil {
 		return err
