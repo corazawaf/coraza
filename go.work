@@ -3,5 +3,6 @@ go 1.22.3
 use (
 	.
 	./examples/http-server
+	./examples/parser
 	./testing/coreruleset
 )
