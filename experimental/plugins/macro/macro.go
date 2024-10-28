@@ -99,38 +99,38 @@ func (m *macro) compile(input string) error {
 		return fmt.Errorf("empty macro")
 	}
 
-	currentToken := strings.Builder{}
 	m.original = input
+	var currentToken strings.Builder
 	isMacro := false
+
 	for i := 0; i < l; i++ {
 		c := input[i]
-		if c == '%' && (i <= l && input[i+1] == '{') {
-			// we have a macro
+
+		if c == '%' && i+1 < l && input[i+1] == '{' {
 			if currentToken.Len() > 0 {
-				// we add the text token
 				m.tokens = append(m.tokens, macroToken{
 					text:     currentToken.String(),
 					variable: variables.Unknown,
 					key:      "",
 				})
+				currentToken.Reset()
 			}
-			currentToken.Reset()
 			isMacro = true
-			i++
+			i++ // Skip '{'
 			continue
 		}
 
 		if isMacro {
 			if c == '}' {
-				// we close a macro
 				isMacro = false
-				// TODO(jcchavezs): key should only be empty in single collections
+				if input[i-1] == '.' {
+					return fmt.Errorf("empty variable name")
+				}
 				varName, key, _ := strings.Cut(currentToken.String(), ".")
 				v, err := variables.Parse(varName)
 				if err != nil {
 					return fmt.Errorf("unknown variable %q", varName)
 				}
-				// we add the variable token
 				m.tokens = append(m.tokens, macroToken{
 					text:     currentToken.String(),
 					variable: v,
@@ -140,8 +140,7 @@ func (m *macro) compile(input string) error {
 				continue
 			}
 
-			if !(c == '.' || c == '_' || c == '-' || (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
-				currentToken.WriteByte(c)
+			if !isValidMacroChar(c) {
 				return fmt.Errorf("malformed variable starting with %q", "%{"+currentToken.String())
 			}
 
@@ -152,10 +151,10 @@ func (m *macro) compile(input string) error {
 			}
 			continue
 		}
-		// we have a normal character
+
 		currentToken.WriteByte(c)
 	}
-	// if there is something left
+
 	if currentToken.Len() > 0 {
 		m.tokens = append(m.tokens, macroToken{
 			text:     currentToken.String(),
@@ -164,6 +163,10 @@ func (m *macro) compile(input string) error {
 		})
 	}
 	return nil
+}
+
+func isValidMacroChar(c byte) bool {
+	return c == '.' || c == '_' || c == '-' || (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')
 }
 
 // String returns the original string
