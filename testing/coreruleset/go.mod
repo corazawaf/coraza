@@ -15,7 +15,7 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
-	github.com/corazawaf/libinjection-go v0.2.1 // indirect
+	github.com/corazawaf/libinjection-go v0.2.2 // indirect
 	github.com/coreruleset/ftw-tests-schema/v2 v2.1.0 // indirect
 	github.com/fatih/color v1.17.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
