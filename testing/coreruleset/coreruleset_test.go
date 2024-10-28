@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/bmatcuk/doublestar/v4"
+	albedo "github.com/coreruleset/albedo/server"
 	"github.com/coreruleset/go-ftw/config"
 	"github.com/coreruleset/go-ftw/output"
 	"github.com/coreruleset/go-ftw/runner"
@@ -34,7 +35,6 @@ import (
 	"github.com/corazawaf/coraza/v3"
 	txhttp "github.com/corazawaf/coraza/v3/http"
 	"github.com/corazawaf/coraza/v3/types"
-	albedo "github.com/coreruleset/albedo/server"
 )
 
 func BenchmarkCRSCompilation(b *testing.B) {
