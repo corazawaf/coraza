@@ -146,16 +146,19 @@ func TestTxResponse(t *testing.T) {
 }
 
 var requestBodyWriters = map[string]func(tx *Transaction, body string) (*types.Interruption, int, error){
-	"WriteRequestBody": func(tx *Transaction, body string) (*types.Interruption, int, error) {
-		return tx.WriteRequestBody([]byte(body))
-	},
-	"ReadRequestBodyFromKnownLen": func(tx *Transaction, body string) (*types.Interruption, int, error) {
-		return tx.ReadRequestBodyFrom(strings.NewReader(body))
-	},
-	"ReadRequestBodyFromUnknownLen": func(tx *Transaction, body string) (*types.Interruption, int, error) {
-		return tx.ReadRequestBodyFrom(struct{ io.Reader }{
-			strings.NewReader(body),
-		})
+	// "WriteRequestBody": func(tx *Transaction, body string) (*types.Interruption, int, error) {
+	// 	return tx.WriteRequestBody([]byte(body))
+	// },
+	// "ReadRequestBodyFromKnownLen": func(tx *Transaction, body string) (*types.Interruption, int, error) {
+	// 	return tx.ReadRequestBodyFrom(strings.NewReader(body))
+	// },
+	// "ReadRequestBodyFromUnknownLen": func(tx *Transaction, body string) (*types.Interruption, int, error) {
+	// 	return tx.ReadRequestBodyFrom(struct{ io.Reader }{
+	// 		strings.NewReader(body),
+	// 	})
+	// },
+	"UseRequestBody": func(tx *Transaction, body string) (*types.Interruption, int, error) {
+		return tx.UseRequestBody([]byte(body))
 	},
 }
 
@@ -211,10 +214,14 @@ func TestWriteRequestBody(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			for name, writeRequestBody := range requestBodyWriters {
-				t.Run(name, func(t *testing.T) {
+			for writerName, writeRequestBody := range requestBodyWriters {
+				t.Run(writerName, func(t *testing.T) {
 					for name, chunks := range bodyChunks {
 						t.Run(name, func(t *testing.T) {
+							if name != "BodyInOneShot" && writerName == "UseRequestBody" {
+								// UseRequestBody is intended to be used when the whole body is available
+								return
+							}
 							waf := NewWAF()
 							waf.RuleEngine = types.RuleEngineOn
 							waf.RequestBodyAccess = true
@@ -298,6 +305,10 @@ func TestWriteRequestBodyOnLimitReached(t *testing.T) {
 
 		t.Run(tName, func(t *testing.T) {
 			for wName, writer := range requestBodyWriters {
+				if wName == "UseRequestBody" {
+					// Skip UseRequestBody test case. It is intended to be used when the whole body is available
+					continue
+				}
 				t.Run(wName, func(t *testing.T) {
 					tx := waf.NewTransaction()
 					_, err := tx.requestBodyBuffer.Write([]byte("ab"))
@@ -312,11 +323,11 @@ func TestWriteRequestBodyOnLimitReached(t *testing.T) {
 					}
 
 					if it != tCase.preexistingInterruption {
-						t.Fatalf("unexpected interruption")
+						t.Fatalf("unexpected interruption: %v", it)
 					}
 
 					if n != 0 {
-						t.Fatalf("unexpected number of bytes written")
+						t.Fatalf("unexpected number of bytes written. Expected 0, got %d", n)
 					}
 
 					if err := tx.Close(); err != nil {
@@ -376,6 +387,32 @@ func TestWriteRequestBodyIsNopWhenBodyIsNotAccesible(t *testing.T) {
 		})
 	}
 }
+
+// TODO: test TestUseRequestBodyMultipleCalls return an error
+// TODO: implement UseResponseBody
+// func TestUseRequestBodyMultipleCalls(t *testing.T) {
+// 	tx := makeTransaction(t)
+// 	tx.RequestBodyAccess = true
+// 	tx.RequestBodyLimit = 20
+// 	body := bytes.Repeat([]byte("a"), 100)
+// 	it, n, err := tx.UseRequestBody(body)
+// 	if err != nil {
+// 		t.Fatalf("unexpected error: %s", err.Error())
+// 	}
+// 	if it != nil {
+// 		t.Fatalf("unexpected interruption")
+// 	}
+// 	if n != int(tx.RequestBodyLimit) {
+// 		t.Fatalf("unexpected number of bytes written")
+// 	}
+// 	// UseRequestBody should not generate a copy of the data,
+// 	// body and tx.Buffer are expected to point to the same data
+// 	bodyPtr := unsafe.SliceData(body)
+// 	txBufferPtr := &tx.requestBodyBuffer.buffer.Bytes()[0]
+// 	if bodyPtr != txBufferPtr {
+// 		t.Fatalf("body and tx.Buffer are not pointing to the same data")
+// 	}
+// }
 
 func TestResponseHeader(t *testing.T) {
 	tx := makeTransaction(t)

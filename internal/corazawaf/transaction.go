@@ -968,6 +968,56 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 	return tx.interruption, int(w), err
 }
 
+// UseRequestBody directly sets the provided byte slice as the request body buffer.
+// This is meant to be used when the entire request body is available, as it avoids
+// the need for an extra copy into the request body buffer. Because of this, this method is expected to
+// be called just once. Further calls to UseRequestBody will overwrite the previous body set.
+// If the body size exceeds the limit and the action is to reject, an interruption will be returned.
+// The caller should not use b slice after this call.
+//
+// It returns the relevant interruption, the final internal body buffer length and any error that occurs.
+func (tx *Transaction) UseRequestBody(b []byte) (*types.Interruption, int, error) {
+	if tx.RuleEngine == types.RuleEngineOff {
+		return nil, 0, nil
+	}
+
+	if !tx.RequestBodyAccess {
+		return nil, 0, nil
+	}
+
+	bodySize := int64(len(b))
+	var runProcessRequestBody bool
+
+	if bodySize > tx.RequestBodyLimit {
+		tx.variables.inboundDataError.Set("1")
+		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
+			// We interrupt this transaction in case RequestBodyLimitAction is Reject
+			return setAndReturnBodyLimitInterruption(tx)
+		}
+
+		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
+			// Truncate the body slice to the configured limit
+			b = b[:tx.RequestBodyLimit]
+			bodySize = tx.RequestBodyLimit
+			runProcessRequestBody = true
+		}
+	}
+
+	// Point the internal buffer to the provided slice
+	err := tx.requestBodyBuffer.SetBuffer(b)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	err = nil
+	if runProcessRequestBody {
+		tx.debugLogger.Warn().Msg("Processing request body whose size reached the configured limit (Action ProcessPartial)")
+		_, err = tx.ProcessRequestBody()
+	}
+
+	return tx.interruption, int(bodySize), err
+}
+
 // ProcessRequestBody Performs the analysis of the request body (if any)
 //
 // It is recommended to call this method even if it is not expected to have a body.
