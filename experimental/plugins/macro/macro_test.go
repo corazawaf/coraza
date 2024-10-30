@@ -36,7 +36,39 @@ func TestCompile(t *testing.T) {
 		}
 	})
 
-	t.Run("malformed macro", func(t *testing.T) {
+	t.Run("single percent sign", func(t *testing.T) {
+		m := &macro{}
+		err := m.compile("%")
+		if err != nil {
+			t.Errorf("single percent sign should not error")
+		}
+	})
+
+	t.Run("empty braces", func(t *testing.T) {
+		m := &macro{}
+		err := m.compile("%{}")
+		if err == nil {
+			t.Errorf("expected error for empty braces")
+		}
+	})
+
+	t.Run("missing key", func(t *testing.T) {
+		m := &macro{}
+		err := m.compile("%{tx.}")
+		if err == nil {
+			t.Errorf("expected error for missing key")
+		}
+	})
+
+	t.Run("missing collection", func(t *testing.T) {
+		m := &macro{}
+		err := m.compile("%{.key}")
+		if err == nil {
+			t.Errorf("expected error for missing collection")
+		}
+	})
+
+	t.Run("malformed macros", func(t *testing.T) {
 		for _, test := range []string{"%{tx.count", "%{{tx.count}", "%{{tx.{count}", "something %{tx.count"} {
 			t.Run(test, func(t *testing.T) {
 				m := &macro{}
