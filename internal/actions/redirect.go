@@ -34,12 +34,17 @@ func (a *redirectFn) Init(_ plugintypes.RuleMetadata, data string) error {
 }
 
 func (a *redirectFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
+	status := 302 // default status code for redirection
 	rid := r.ID()
 	if rid == noID {
 		rid = r.ParentID()
 	}
+	rstatus := r.Status()
+	if rstatus == 301 || rstatus == 302 || rstatus == 303 || rstatus == 307 {
+		status = rstatus
+	}
 	tx.Interrupt(&types.Interruption{
-		Status: r.Status(),
+		Status: status,
 		RuleID: rid,
 		Action: "redirect",
 		Data:   a.target,
