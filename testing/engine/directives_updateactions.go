@@ -10,13 +10,13 @@ import (
 var _ = profile.RegisterProfile(profile.Profile{
 	Meta: profile.Meta{
 		Author:      "fzipi",
-		Description: "Test SecRuleUpdateAction directives",
+		Description: "Test SecRuleUpdateActionById directives",
 		Enabled:     true,
-		Name:        "SecRuleUpdateAction.yaml",
+		Name:        "SecRuleUpdateActionById.yaml",
 	},
 	Tests: []profile.Test{
 		{
-			Title: "SecRuleUpdateTarget",
+			Title: "SecRuleUpdateActionById to pass",
 			Stages: []profile.Stage{
 				// Phase 1
 				{
@@ -43,8 +43,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 							},
 							Interruption: &profile.ExpectedInterruption{
 								Status: 302,
-								Data:   "https://www.example.com",
-								RuleID: 1,
+								Data:   "https://www.example.com/",
+								RuleID: 1014,
 								Action: "redirect",
 							},
 						},
@@ -59,6 +59,6 @@ var _ = profile.RegisterProfile(profile.Profile{
     SecRuleUpdateActionById 1004 "pass"
 
     SecRule ARGS "@contains value2" "phase:2,id:1014,block,deny"
-	SecRuleUpdateActionById 1014 "redirect:'https://www.example.com/'"
+	SecRuleUpdateActionById 1014 "redirect:'https://www.example.com/',status:302"
 	`,
 })
