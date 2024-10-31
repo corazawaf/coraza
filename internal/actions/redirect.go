@@ -12,9 +12,9 @@ import (
 //
 // Description:
 // Intercepts transaction by issuing an external (client-visible) redirection to the given location.
-// If the status action is presented on the same rule,
-// and its value can be used for a redirection (i.e., one of the following: 301, 302, 303, or 307),
-// the value will be used for the redirection status code. Otherwise, status code 302 will be used.
+// If the status action is presented on the same rule,  and its value can be used for a redirection
+// (supported redirection codes: 301, 302, 303, 307) the value will be used for the redirection status code.
+// Otherwise, status code 302 will be used.
 //
 // Example:
 // ```
@@ -34,12 +34,17 @@ func (a *redirectFn) Init(_ plugintypes.RuleMetadata, data string) error {
 }
 
 func (a *redirectFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
+	status := 302 // default status code for redirection
 	rid := r.ID()
 	if rid == noID {
 		rid = r.ParentID()
 	}
+	rstatus := r.Status()
+	if rstatus == 301 || rstatus == 302 || rstatus == 303 || rstatus == 307 {
+		status = rstatus
+	}
 	tx.Interrupt(&types.Interruption{
-		Status: r.Status(),
+		Status: status,
 		RuleID: rid,
 		Action: "redirect",
 		Data:   a.target,
