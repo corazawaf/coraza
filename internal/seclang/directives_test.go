@@ -36,6 +36,31 @@ func Test_NonImplementedDirective(t *testing.T) {
 	}
 }
 
+func TestSecRuleUpdateActionByID(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	rule, err := ParseRule(RuleOptions{
+		Data:         "REQUEST_URI \"^/test\" \"id:181,log\"",
+		WAF:          waf,
+		WithOperator: true,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	if err := waf.Rules.Add(rule); err != nil {
+		t.Error(err)
+	}
+	if waf.Rules.Count() != 1 {
+		t.Error("Failed to add rule")
+	}
+	if err := directiveSecRuleUpdateActionByID(&DirectiveOptions{
+		WAF:  waf,
+		Opts: "181 \"nolog\"",
+	}); err != nil {
+		t.Error(err)
+	}
+
+}
+
 func TestSecRuleUpdateTargetByID(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	rule, err := ParseRule(RuleOptions{
@@ -178,6 +203,19 @@ func TestDirectives(t *testing.T) {
 			{"1", expectNoErrorOnDirective},
 			{"1 2", expectNoErrorOnDirective},
 			{"1 2 3-4", expectNoErrorOnDirective},
+		},
+		"SecRuleUpdateActionById": {
+			{"", expectErrorOnDirective},
+			{"a", expectErrorOnDirective},
+			{"1-a", expectErrorOnDirective},
+			{"a-2", expectErrorOnDirective},
+			{"2-1", expectErrorOnDirective},
+			{"1-a \"status:403\"", expectErrorOnDirective},
+			{"a-2 \"status:403\"", expectErrorOnDirective},
+			{"2-1 \"status:403\"", expectErrorOnDirective},
+			{"-1 \"status:403\"", expectErrorOnDirective},
+			{"1 2 3-4 \"status:403\"", expectNoErrorOnDirective},
+			{"1 2 3-4 \"status:403,nolog\"", expectNoErrorOnDirective},
 		},
 		"SecRuleUpdateTargetById": {
 			{"", expectErrorOnDirective},
