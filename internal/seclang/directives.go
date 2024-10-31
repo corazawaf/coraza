@@ -1063,13 +1063,13 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 	}
 
 	idsOrRanges := strings.Fields(options.Opts)
-	length := len(idsOrRanges)
-	if length < 2 {
+	idsOrRangesLen := len(idsOrRanges)
+	if idsOrRangesLen < 2 {
 		return errors.New("syntax error: SecRuleUpdateActionById id \"ACTION1,ACTION2,...\"")
 	}
 	// The last element is expected to be the actions(s)
-	actions := idsOrRanges[length-1]
-	for _, idOrRange := range idsOrRanges[:length-1] {
+	actions := idsOrRanges[idsOrRangesLen-1]
+	for _, idOrRange := range idsOrRanges[:idsOrRangesLen-1] {
 		if idx := strings.Index(idOrRange, "-"); idx == -1 {
 			id, err := strconv.Atoi(idOrRange)
 			if err != nil {
@@ -1097,15 +1097,16 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 			}
 
 			for _, rule := range options.WAF.Rules.GetRules() {
-				if rule.ID_ >= start && rule.ID_ <= end {
-					rp := RuleParser{
-						rule:           &rule,
-						options:        RuleOptions{},
-						defaultActions: map[types.RulePhase][]ruleAction{},
-					}
-					if err := rp.ParseActions(strings.Trim(actions, "\"")); err != nil {
-						return err
-					}
+				if rule.ID_ < start && rule.ID_ > end {
+					continue
+				}
+				rp := RuleParser{
+					rule:           &rule,
+					options:        RuleOptions{},
+					defaultActions: map[types.RulePhase][]ruleAction{},
+				}
+				if err := rp.ParseActions(strings.Trim(actions, "\"")); err != nil {
+					return err
 				}
 			}
 		}
