@@ -12,9 +12,9 @@ import (
 //
 // Description:
 // Intercepts transaction by issuing an external (client-visible) redirection to the given location.
-// If the status action is presented on the same rule,
-// and its value can be used for a redirection (i.e., one of the following: 301, 302, 303, or 307),
-// the value will be used for the redirection status code. Otherwise, status code 302 will be used.
+// If the status action is presented on the same rule,  and its value can be used for a redirection
+// (supported redirection codes: 301, 302, 303, 307) the value will be used for the redirection status code.
+// Otherwise, status code 302 will be used.
 //
 // Example:
 // ```
