@@ -1053,7 +1053,7 @@ func updateTargetBySingleID(id int, variables string, options *DirectiveOptions)
 // It has two limitations: it cannot be used to change the ID or phase of a rule.
 // Only the actions that can appear only once are overwritten.
 // The actions that are allowed to appear multiple times in a list, will be appended to the end of the list.
-// The following example demonstrates how `SecAuditEngine` is used:
+// The following example demonstrates how `SecRuleUpdateActionById` is used:
 // ```apache
 // SecRuleUpdateActionById 12345 "deny,status:403"
 // ```
@@ -1067,7 +1067,7 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 	if idsOrRangesLen < 2 {
 		return errors.New("syntax error: SecRuleUpdateActionById id \"ACTION1,ACTION2,...\"")
 	}
-	// The last element is expected to be the actions(s)
+	// The last element is expected to be the action(s)
 	actions := idsOrRanges[idsOrRangesLen-1]
 	for _, idOrRange := range idsOrRanges[:idsOrRangesLen-1] {
 		if idx := strings.Index(idOrRange, "-"); idx == -1 {

@@ -1,6 +1,7 @@
 github.com/corazawaf/coraza/v3 v3.2.1 h1:zBIji4ut9FtFe8lXdqFwXMAkUoDJZ7HsOlEUYWERLI8=
 github.com/corazawaf/coraza/v3 v3.2.1/go.mod h1:fVndCGdUHJWl9c26VZPcORQRzUYwMPnRkC6TyTkhbUg=
 github.com/corazawaf/libinjection-go v0.2.2 h1:Chzodvb6+NXh6wew5/yhD0Ggioif9ACrQGR4qjTCs1g=
+github.com/corazawaf/libinjection-go v0.2.2/go.mod h1:OP4TM7xdJ2skyXqNX1AN1wN5nNZEmJNuWbNPOItn7aw=
 github.com/foxcpp/go-mockdns v1.1.0 h1:jI0rD8M0wuYAxL7r/ynTrCQQq0BVqfB99Vgk7DlmewI=
 github.com/foxcpp/go-mockdns v1.1.0/go.mod h1:IhLeSFGed3mJIAXPH2aiRQB+kqz7oqu8ld2qVbOu7Wk=
 github.com/magefile/mage v1.15.0 h1:BvGheCMAsG3bWUDbZ8AyXXpCNwU9u5CB6sM+HNb9HYg=
