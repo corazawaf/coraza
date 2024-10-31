@@ -969,9 +969,9 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 
 // ProcessRequestBody Performs the analysis of the request body (if any)
 //
-// This method perform the analysis on the request body. It is optional to
-// call that function. If this API consumer already knows that there isn't a
-// body for inspect it is recommended to skip this step.
+// It is recommended to call this method even if it is not expected to have a body.
+// It permits to execute rules belonging to request body phase, but not necesarily
+// processing the request body.
 //
 // Remember to check for a possible intervention.
 func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
@@ -985,11 +985,15 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	}
 
 	if tx.lastPhase != types.PhaseRequestHeaders {
-		if tx.lastPhase >= types.PhaseRequestBody {
-			// Phase already evaluated or skipped
-			tx.debugLogger.Warn().Msg("ProcessRequestBody should have already been called")
-		} else {
-			tx.debugLogger.Debug().Msg("Skipping request body processing, anomalous call before request headers evaluation")
+		switch {
+		case tx.lastPhase == types.PhaseRequestBody:
+			// This condition can happen quite often when ProcessPartial is used as the write body functions call ProcessRequestBody when
+			// the limit is reached
+			tx.debugLogger.Debug().Msg("Request body processing has been already performed")
+		case tx.lastPhase > types.PhaseRequestBody:
+			tx.debugLogger.Warn().Msg("Skipping anomalous call to ProcessRequestBody. It should have already been called")
+		default:
+			tx.debugLogger.Warn().Msg("Skipping anomalous call to ProcessRequestBody. It has been called before request headers evaluation")
 		}
 		return nil, nil
 	}
@@ -1215,9 +1219,9 @@ func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, i
 
 // ProcessResponseBody Perform the analysis of the the response body (if any)
 //
-// This method perform the analysis on the response body. It is optional to
-// call that method. If this API consumer already knows that there isn't a
-// body for inspect it is recommended to skip this step.
+// It is recommended to call this method even if it is not expected to have a body.
+// It permits to execute rules belonging to request body phase, but not necesarily
+// processing the response body.
 //
 // note Remember to check for a possible intervention.
 func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
@@ -1231,14 +1235,18 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 	}
 
 	if tx.lastPhase != types.PhaseResponseHeaders {
-		if tx.lastPhase >= types.PhaseResponseBody {
-			// Phase already evaluated or skipped
-			tx.debugLogger.Warn().Msg("ProcessResponseBody should have already been called")
-		} else {
+		switch {
+		case tx.lastPhase == types.PhaseResponseBody:
+			// This condition can happen quite often when ProcessPartial is used as the write body functions call ProcessResponseBody when
+			// the limit is reached
+			tx.debugLogger.Debug().Msg("Response body processing has been already performed")
+		case tx.lastPhase > types.PhaseResponseBody:
+			tx.debugLogger.Warn().Msg("Skipping anomalous call to ProcessResponseBody. It should have already been called")
+		default:
 			// Prevents evaluating response body rules if last phase has not been response headers. It may happen
 			// when a server returns an error prior to evaluating WAF rules, but ResponseBody is still called at
 			// the end of http stream
-			tx.debugLogger.Debug().Msg("Skipping response body processing, anomalous call before response headers evaluation")
+			tx.debugLogger.Warn().Msg("Skipping anomalous call to ProcessResponseBody. It has been called before response headers evaluation")
 		}
 		return nil, nil
 	}
