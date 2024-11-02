@@ -7,7 +7,7 @@ require (
 	github.com/corazawaf/coraza-coreruleset/v4 v4.6.0
 	github.com/corazawaf/coraza/v3 v3.0.0-00010101000000-000000000000
 	github.com/coreruleset/albedo v0.0.16
-	github.com/coreruleset/go-ftw v1.1.0
+	github.com/coreruleset/go-ftw v1.0.4-0.20240923043156-8474a93d514a
 	github.com/rs/zerolog v1.33.0
 )
 
