@@ -4,12 +4,12 @@ package types
 
 import "unicode"
 
-// ValueMetadata is the type of metadata that a value can have.
-type ValueMetadata int
+// DataMetadata is the type of metadata that a value can have.
+type DataMetadata int
 
 const (
 	// ValueMetadataAlphanumeric represents an alphanumeric value.
-	ValueMetadataAlphanumeric ValueMetadata = iota
+	ValueMetadataAlphanumeric DataMetadata = iota
 	// ValueMetadataAscii represents an ASCII value.
 	ValueMetadataAscii
 	// ValueMetadataBase64 represents a base64 value.
@@ -27,7 +27,7 @@ const (
 )
 
 // NewValueMetadata returns a new ValueMetadata from a string.
-func NewValueMetadata(metadata string) (ValueMetadata, bool) {
+func NewValueMetadata(metadata string) (DataMetadata, bool) {
 	switch metadata {
 	case "alphanumeric":
 		return ValueMetadataAlphanumeric, true
@@ -51,11 +51,10 @@ func NewValueMetadata(metadata string) (ValueMetadata, bool) {
 
 // DataMetadataList is a list of ValueMetadata.
 type DataMetadataList struct {
-	metadata    map[ValueMetadata]bool
-	testedTypes []ValueMetadata
+	metadata map[DataMetadata]bool
 }
 
-func (v *DataMetadataList) Test(data string, metadataType ValueMetadata) bool {
+func (v *DataMetadataList) Test(data string, metadataType DataMetadata) bool {
 	result, ok := v.metadata[metadataType]
 	if !ok {
 		// we do the analysis only once
