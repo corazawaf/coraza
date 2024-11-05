@@ -1,4 +1,4 @@
-// Copyright 2023 Juan Pablo Tosso and the OWASP Coraza contributors
+// Copyright 2024 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
 // These benchmarks don't currently compile with TinyGo

@@ -1,4 +1,4 @@
-// Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
+// Copyright 2024 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
 // tinygo does not support net.http so this package is not needed for it

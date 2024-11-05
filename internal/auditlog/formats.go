@@ -1,4 +1,4 @@
-// Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
+// Copyright 2024 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
 // Package auditlog implements a set of log formatters and writers
