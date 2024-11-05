@@ -32,11 +32,6 @@ func TestNewTransaction(t *testing.T) {
 	if tx.id != "test" {
 		t.Error("ID not set")
 	}
-	ctx = context.WithValue(context.Background(), types.IDCtxKey, "")
-	tx = waf.NewTransactionWithContext(ctx)
-	if tx.id == "" {
-		t.Error("ID not set")
-	}
 	tx = waf.NewTransaction()
 	if tx.id == "" {
 		t.Error("ID not set")

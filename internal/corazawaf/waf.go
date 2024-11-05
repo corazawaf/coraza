@@ -150,8 +150,8 @@ func (w *WAF) NewTransactionWithID(id string) *Transaction {
 
 // NewTransactionWithContext Creates a new initialized transaction for this WAF instance
 func (w *WAF) NewTransactionWithContext(ctx context.Context) *Transaction {
-	id := ctx.Value(types.IDCtxKey).(string)
-	if id == "" {
+	id, ok := ctx.Value(types.IDCtxKey).(string)
+	if !ok || id == "" {
 		id = stringutils.RandomString(19)
 	}
 	ctx = context.WithValue(ctx, types.IDCtxKey, id)
@@ -167,7 +167,11 @@ func (w *WAF) Close() error {
 // Using the specified context
 func (w *WAF) newTransaction(ctx context.Context) *Transaction {
 	tx := w.txPool.Get().(*Transaction)
-	tx.id = ctx.Value(types.IDCtxKey).(string)
+	var ok bool
+	tx.id, ok = ctx.Value(types.IDCtxKey).(string)
+	if !ok {
+		tx.id = ""
+	}
 	tx.context = ctx
 	tx.matchedRules = []types.MatchedRule{}
 	tx.interruption = nil
