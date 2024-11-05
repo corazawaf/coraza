@@ -9,6 +9,7 @@ import (
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/rule"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -63,6 +64,11 @@ type WAFConfig interface {
 
 	// WithRootFS configures the root file system.
 	WithRootFS(fs fs.FS) WAFConfig
+
+	// WithRules adds the given rules to the WAF.
+	// Rules can be added multiple times, and the order of addition
+	// is preserved.
+	WithRules(rule ...*rule.Rule) WAFConfig
 }
 
 // NewWAFConfig creates a new WAFConfig with the default settings.
@@ -107,15 +113,12 @@ type wafConfig struct {
 	fsRoot                   fs.FS
 }
 
-func (c *wafConfig) WithRules(rules ...*corazawaf.Rule) WAFConfig {
+func (c *wafConfig) WithRules(rules ...*rule.Rule) WAFConfig {
 	if len(rules) == 0 {
 		return c
 	}
 
 	ret := c.clone()
-	for _, r := range rules {
-		ret.rules = append(ret.rules, wafRule{rule: r})
-	}
 	return ret
 }
 
