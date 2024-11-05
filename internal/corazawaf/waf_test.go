@@ -1,12 +1,15 @@
-// Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
+// Copyright 2024 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
 package corazawaf
 
 import (
+	"context"
 	"io"
 	"os"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 func TestNewTransaction(t *testing.T) {
@@ -15,7 +18,8 @@ func TestNewTransaction(t *testing.T) {
 	waf.ResponseBodyAccess = true
 	waf.RequestBodyLimit = 1044
 
-	tx := waf.NewTransactionWithOptions(Options{ID: "test"})
+	ctx := context.WithValue(context.Background(), types.IDCtxKey, "test")
+	tx := waf.NewTransactionWithContext(ctx)
 	if !tx.RequestBodyAccess {
 		t.Error("Request body access not enabled")
 	}
@@ -28,7 +32,8 @@ func TestNewTransaction(t *testing.T) {
 	if tx.id != "test" {
 		t.Error("ID not set")
 	}
-	tx = waf.NewTransactionWithOptions(Options{ID: ""})
+	ctx = context.WithValue(context.Background(), types.IDCtxKey, "")
+	tx = waf.NewTransactionWithContext(ctx)
 	if tx.id == "" {
 		t.Error("ID not set")
 	}

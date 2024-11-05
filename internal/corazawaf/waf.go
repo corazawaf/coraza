@@ -1,4 +1,4 @@
-// Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
+// Copyright 2024 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
 package corazawaf
@@ -137,40 +137,38 @@ type WAF struct {
 	ArgumentLimit int
 }
 
-// Options is used to pass options to the WAF instance
-type Options struct {
-	ID      string
-	Context context.Context
-}
-
 // NewTransaction Creates a new initialized transaction for this WAF instance
 func (w *WAF) NewTransaction() *Transaction {
-	return w.newTransaction(Options{
-		ID:      stringutils.RandomString(19),
-		Context: context.Background(),
-	})
-}
-
-// NewTransactionWithOptions Creates a new initialized transaction for this WAF
-// instance with the provided options
-func (w *WAF) NewTransactionWithOptions(opts Options) *Transaction {
-	if opts.ID == "" {
-		opts.ID = stringutils.RandomString(19)
-	}
-
-	if opts.Context == nil {
-		opts.Context = context.Background()
-	}
-
-	return w.newTransaction(opts)
+	return w.newTransaction(context.Background())
 }
 
 // NewTransactionWithID Creates a new initialized transaction for this WAF instance
-// Using the specified ID
-func (w *WAF) newTransaction(opts Options) *Transaction {
+func (w *WAF) NewTransactionWithID(id string) *Transaction {
+	ctx := context.WithValue(context.Background(), types.IDCtxKey, id)
+	return w.newTransaction(ctx)
+}
+
+// NewTransactionWithContext Creates a new initialized transaction for this WAF instance
+func (w *WAF) NewTransactionWithContext(ctx context.Context) *Transaction {
+	id := ctx.Value(types.IDCtxKey).(string)
+	if id == "" {
+		id = stringutils.RandomString(19)
+	}
+	ctx = context.WithValue(ctx, types.IDCtxKey, id)
+	return w.newTransaction(ctx)
+}
+
+// Close
+func (w *WAF) Close() error {
+	return nil
+}
+
+// newTransaction Creates a new initialized transaction for this WAF instance
+// Using the specified context
+func (w *WAF) newTransaction(ctx context.Context) *Transaction {
 	tx := w.txPool.Get().(*Transaction)
-	tx.id = opts.ID
-	tx.context = opts.Context
+	tx.id = ctx.Value(types.IDCtxKey).(string)
+	tx.context = ctx
 	tx.matchedRules = []types.MatchedRule{}
 	tx.interruption = nil
 	tx.Logdata = "" // Deprecated, this variable is not used. Logdata for each matched rule is stored in the MatchData field.

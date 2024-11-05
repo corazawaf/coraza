@@ -1,4 +1,4 @@
-// Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
+// Copyright 2024 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
 package coraza
@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/experimental"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
@@ -26,6 +25,12 @@ type WAF interface {
 	// NewTransaction Creates a new initialized transaction for this WAF instance
 	NewTransaction() types.Transaction
 	NewTransactionWithID(id string) types.Transaction
+	// NewTransactionWithOptions Creates a new initialized transaction for this WAF instance with options
+	// Available options are:
+	// - coraza.IDCtxKey: string
+	NewTransactionWithContext(ctx context.Context) types.Transaction
+	// Close closes the WAF instance and releases resources
+	Close() error
 }
 
 // NewWAF creates a new WAF instance with the provided configuration.
@@ -144,10 +149,17 @@ func (w wafWrapper) NewTransactionWithID(id string) types.Transaction {
 		w.waf.Logger.Warn().Msg("Empty ID passed for new transaction")
 	}
 
-	return w.waf.NewTransactionWithOptions(corazawaf.Options{Context: context.Background(), ID: id})
+	context := context.WithValue(context.Background(), types.IDCtxKey, id)
+	return w.waf.NewTransactionWithContext(context)
 }
 
 // NewTransaction implements the same method on WAF.
-func (w wafWrapper) NewTransactionWithOptions(opts experimental.Options) types.Transaction {
-	return w.waf.NewTransactionWithOptions(opts)
+func (w wafWrapper) NewTransactionWithContext(ctx context.Context) types.Transaction {
+
+	return w.waf.NewTransactionWithContext(ctx)
+}
+
+// Close implements the same method on WAF.
+func (w wafWrapper) Close() error {
+	return w.waf.Close()
 }
