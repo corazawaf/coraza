@@ -20,7 +20,7 @@ require (
 	github.com/anuraaga/go-modsecurity v0.0.0-20220824035035-b9a4099778df
 	github.com/corazawaf/libinjection-go v0.2.2
 	github.com/foxcpp/go-mockdns v1.1.0
-	github.com/magefile/mage v1.15.0
+	github.com/magefile/mage v1.15.1-0.20231118170541-2385abb49a1f
 	github.com/mccutchen/go-httpbin/v2 v2.15.0
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20240411101913-e07a1f0e8eb4
 	github.com/tidwall/gjson v1.18.0
@@ -37,5 +37,5 @@ require (
 	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/sys v0.26.0 // indirect
 	golang.org/x/tools v0.22.0 // indirect
-	google.golang.org/protobuf v1.34.1 // indirect
+	google.golang.org/protobuf v1.34.2 // indirect
 )
