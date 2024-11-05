@@ -29,6 +29,8 @@ type MatchData struct {
 	// Keeps track of the chain depth in which the data matched.
 	// Multiphase specific field
 	ChainLevel_ int
+	// Metadata of the matched data
+	Metadata_ types.DataMetadataList
 }
 
 var _ types.MatchData = (*MatchData)(nil)
