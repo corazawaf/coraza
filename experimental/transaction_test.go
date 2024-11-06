@@ -23,4 +23,7 @@ func TestTxTimestamp(t *testing.T) {
 	if tx2.UnixTimestamp() == 0 {
 		t.Error("Timestamp should not be 0")
 	}
+	if tx2.Context() == nil {
+		t.Error("Context should not be nil")
+	}
 }

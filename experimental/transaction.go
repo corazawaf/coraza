@@ -3,9 +3,16 @@
 
 package experimental
 
-import "github.com/corazawaf/coraza/v3/types"
+import (
+	"context"
+
+	"github.com/corazawaf/coraza/v3/types"
+)
 
 type Transaction interface {
 	types.Transaction
+	// UnixTimestamp returns the Unix timestamp of the transaction
 	UnixTimestamp() int64
+	// Context returns the context of the transaction
+	Context() context.Context
 }
