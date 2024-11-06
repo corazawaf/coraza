@@ -4,6 +4,7 @@
 package types
 
 import (
+	"context"
 	"io"
 
 	"github.com/corazawaf/coraza/v3/debuglog"
@@ -196,6 +197,9 @@ type Transaction interface {
 
 	// ID returns the transaction ID.
 	ID() string
+
+	// Context returns the context associated with the transaction.
+	Context() context.Context
 
 	// Closer closes the transaction and releases any resources associated with it such as request/response bodies.
 	io.Closer

@@ -1591,6 +1591,11 @@ func (tx *Transaction) generateResponseBodyError(err error) {
 	tx.variables.resBodyProcessorErrorMsg.Set(err.Error())
 }
 
+// Context returns the context of the transaction
+func (tx *Transaction) Context() context.Context {
+	return tx.context
+}
+
 // TransactionVariables has pointers to all the variables of the transaction
 type TransactionVariables struct {
 	args                     *collections.ConcatKeyed
