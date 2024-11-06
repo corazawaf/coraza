@@ -186,3 +186,39 @@ SecRule REQUEST_URI|REQUEST_BODY "@rx test" "id:3, phase:2, deny, log, status:50
 SecRule REQUEST_URI "@unconditionalMatch" "id:4, phase:1, pass, log"
 `,
 })
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "M4tteoP",
+		Description: "Tests CRS ruleRemoveTargetById usage with multiphase and ARGS/ARGS_NAMES",
+		Enabled:     true,
+		Name:        "multiphase_ruleRemoveTargetById_args.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			Title: "ruleRemoveTargetByIdWithARGS",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/test/?fbclid=justanid",
+							Method: "GET",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{942441},
+							NonTriggeredRules: []int{942440},
+						},
+					},
+				},
+			},
+		},
+	},
+	// Rule 942441 should exclude ARGS:fbclid splitting it into excluding ARGS_GET:fbclidand ARGS_POST:fbclid,
+	// therefore rule 942440 should not be triggered.
+	Rules: `
+SecDebugLogLevel 9
+
+SecRule ARGS_GET:fbclid "@unconditionalMatch" "id:942441, phase:2,pass,t:none,t:urlDecodeUni,ctl:ruleRemoveTargetById=942440;ARGS:fbclid"
+SecRule ARGS_NAMES|ARGS "@rx justanid" "id:942440,phase:2,status:503,log,t:none,t:urlDecodeUni"
+`,
+})

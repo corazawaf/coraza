@@ -43,6 +43,7 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 
 	i.statusCode = statusCode
 	if it := i.tx.ProcessResponseHeaders(statusCode, i.proto); it != nil {
+		i.cleanHeaders()
 		i.Header().Set("Content-Length", "0")
 		i.statusCode = obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode)
 		i.flushWriteHeader()
@@ -65,6 +66,13 @@ func (i *rwInterceptor) flushWriteHeader() {
 	}
 }
 
+// cleanHeaders removes all headers from the response
+func (i *rwInterceptor) cleanHeaders() {
+	for k := range i.w.Header() {
+		i.w.Header().Del(k)
+	}
+}
+
 // Write buffers the response body until the request body limit is reach or an
 // interruption is triggered, this buffer is later used to analyse the body in
 // the response processor.
@@ -75,7 +83,11 @@ func (i *rwInterceptor) Write(b []byte) (int, error) {
 		// if there is an interruption it must be from at least phase 4 and hence
 		// WriteHeader or Write should have been called and hence the status code
 		// has been flushed to the delegated response writer.
-		return 0, nil
+		//
+		// We return the number of bytes as according to the interface io.Writer
+		// if we don't return an error, the number of bytes written is len(p).
+		// See https://pkg.go.dev/io#Writer
+		return len(b), nil
 	}
 
 	if !i.wroteHeader {
@@ -88,10 +100,16 @@ func (i *rwInterceptor) Write(b []byte) (int, error) {
 		// to it, otherwise we just send it to the response writer.
 		it, n, err := i.tx.WriteResponseBody(b)
 		if it != nil {
-			i.overrideWriteHeader(it.Status)
+			// if there is an interruption we must clean the headers and override the status code
+			i.cleanHeaders()
+			i.Header().Set("Content-Length", "0")
+			i.overrideWriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode))
 			// We only flush the status code after an interruption.
 			i.flushWriteHeader()
-			return 0, nil
+			// We return the number of bytes as according to the interface io.Writer
+			// if we don't return an error, the number of bytes written is len(p).
+			// See https://pkg.go.dev/io#Writer
+			return len(b), nil
 		}
 		return n, err
 	}
@@ -153,6 +171,8 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 				i.flushWriteHeader()
 				return err
 			} else if it != nil {
+				// if there is an interruption we must clean the headers and override the status code
+				i.cleanHeaders()
 				i.Header().Set("Content-Length", "0")
 				i.overrideWriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode))
 				i.flushWriteHeader()

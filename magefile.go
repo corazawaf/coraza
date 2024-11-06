@@ -20,7 +20,7 @@ import (
 
 var addLicenseVersion = "v1.1.1" // https://github.com/google/addlicense/releases
 var gosImportsVer = "v0.3.7"     // https://github.com/rinchsan/gosimports/releases
-var golangCILintVer = "v1.54.0"  // https://github.com/golangci/golangci-lint/releases
+var golangCILintVer = "v1.60.3"  // https://github.com/golangci/golangci-lint/releases
 var errNoGitDir = errors.New("no .git directory found")
 var errUpdateGeneratedFiles = errors.New("generated files need to be updated")
 
@@ -110,7 +110,7 @@ func Test() error {
 		return err
 	}
 
-	if err := sh.RunV("go", "test", "./examples/http-server"); err != nil {
+	if err := sh.RunV("go", "test", "./examples/http-server", "-race"); err != nil {
 		return err
 	}
 
@@ -124,6 +124,10 @@ func Test() error {
 
 	// Execute FTW tests with multiphase evaluation enabled as well
 	if err := sh.RunV("go", "test", "-tags=coraza.rule.multiphase_evaluation", "./testing/coreruleset"); err != nil {
+		return err
+	}
+
+	if err := sh.RunV("go", "test", "-tags=coraza.rule.case_sensitive_args_keys", "-run=^TestCaseSensitive", "./..."); err != nil {
 		return err
 	}
 
@@ -182,7 +186,8 @@ func Fuzz() error {
 		{
 			pkg: "./internal/transformations",
 			tests: []string{
-				"FuzzB64Decode",
+				"FuzzB64Decode$",
+				"FuzzB64DecodeExt",
 				"FuzzCMDLine",
 			},
 		},

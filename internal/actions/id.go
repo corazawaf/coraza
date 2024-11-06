@@ -38,6 +38,7 @@ func (a *idFn) Init(r plugintypes.RuleMetadata, data string) error {
 
 	cr := r.(*corazawaf.Rule)
 	cr.ID_ = int(i)
+	cr.LogID_ = strconv.Itoa(i)
 	return nil
 }
 

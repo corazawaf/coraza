@@ -22,9 +22,9 @@ Coraza is an open source, enterprise-grade, high performance Web Application Fir
 
 Key Features:
 
-* ⇲ **Drop-in** - Coraza is a drop-in alternative to replace the soon to be abandoned Trustwave ModSecurity Engine and supports industry standard SecLang rule sets.
+* ⇲ **Drop-in** - Coraza is an alternative engine that has partial compatibility with ~~Trustwave~~[OWASP ModSecurity Engine](https://github.com/owasp-modsecurity/modsecurity/) and supports industry-standard SecLang rule sets.
 
-* 🔥 **Security** -  Coraza runs the [OWASP Core Rule Set (CRS)](https://coreruleset.org) **v4** to protect your web applications from a wide range of attacks, including the OWASP Top Ten, with a minimum of false alerts. CRS protects from many common attack categories including: SQL Injection (SQLi), Cross Site Scripting (XSS), PHP & Java Code Injection, HTTPoxy, Shellshock, Scripting/Scanner/Bot Detection & Metadata & Error Leakages. Note that older versions of the CRS are not compatible.
+* 🔥 **Security** -  Coraza runs the [OWASP CRS](https://coreruleset.org) **v4** (Formerly known as Core Rule Set) to protect your web applications from a wide range of attacks, including the OWASP Top Ten, with a minimum of false alerts. CRS protects from many common attack categories including: SQL Injection (SQLi), Cross Site Scripting (XSS), PHP & Java Code Injection, HTTPoxy, Shellshock, Scripting/Scanner/Bot Detection & Metadata & Error Leakages. Note that older versions of the CRS are not compatible.
 
 * 🔌 **Extensible** - Coraza is a library at its core, with many integrations to deploy on-premise Web Application Firewall instances. Audit Loggers, persistence engines, operators, actions, create your own functionalities to extend Coraza as much as you want.
 
@@ -32,7 +32,7 @@ Key Features:
 
 * ﹡ **Simplicity** - Anyone is able to understand and modify the Coraza source code. It is easy to extend Coraza with new functionality.
 
-* 💬 **Community** - Coraza is a community project, contributions are accepted and all ideas will be considered. Find contributor guidance in the [CONTRIBUTION](https://github.com/corazawaf/coraza/blob/v2/master/CONTRIBUTING.md) document.
+* 💬 **Community** - Coraza is a community project, contributions are accepted and all ideas will be considered. Find contributor guidance in the [CONTRIBUTION](https://github.com/corazawaf/coraza/blob/main/CONTRIBUTING.md) document.
 
 <br/>
 
@@ -47,7 +47,7 @@ The Coraza Project maintains implementations and plugins for the following serve
 
 ## Prerequisites
 
-* Go v1.19+ or tinygo compiler
+* Go v1.22+ or tinygo compiler
 * Linux distribution (Debian or Centos recommended), Windows or Mac.
 
 ## Coraza Core Usage
@@ -103,6 +103,7 @@ only the phase the rule is defined for.
 dictionaries to reduce memory consumption in deployments that launch several coraza
 instances. For more context check [this issue](https://github.com/corazawaf/coraza-caddy/issues/76)
 * `no_fs_access` - indicates that the target environment has no access to FS in order to not leverage OS' filesystem related functionality e.g. file body buffers.
+* `coraza.rule.case_sensitive_args_keys` - enables case-sensitive matching for ARGS keys, aligning Coraza behavior with RFC 3986 specification. It will be enabled by default in the next major version.
 
 ## E2E Testing
 
@@ -168,7 +169,7 @@ Our vulnerability management team will respond within 3 working days of your rep
 * OWASP Coreruleset team for the CRS and their help
 * Ivan Ristić for creating ModSecurity
 
-### Coraza on Twitter
+### Coraza on X/Twitter
 
 * [@corazaio](https://twitter.com/corazaio)
 

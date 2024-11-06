@@ -3,7 +3,10 @@
 
 package transformations
 
-import "strings"
+import (
+	"strings"
+	"unicode"
+)
 
 var base64DecMap = []byte{
 	127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
@@ -29,11 +32,12 @@ var base64DecMap = []byte{
 // would be possible to use the standard library only relying on undocumented behaviors of the decoder.
 // For more context, see https://github.com/corazawaf/coraza/pull/940
 func base64decode(data string) (string, bool, error) {
-	res := doBase64decode(data)
+	res := doBase64decode(data, false)
 	return res, true, nil
 }
 
-func doBase64decode(src string) string {
+// The 'ext' flag indicates whether the function should conduct a lenient decoding, primarily utilized in the 'base64decodeext' transformation.
+func doBase64decode(src string, ext bool) string {
 	slen := len(src)
 	if slen == 0 {
 		return src
@@ -45,6 +49,12 @@ func doBase64decode(src string) string {
 
 	for i := 0; i < slen; i++ {
 		currChar := src[i]
+
+		// Skip whitespaces and '.' if ext is set
+		if ext && (unicode.IsSpace(rune(currChar)) || currChar == '.') {
+			continue
+		}
+
 		// new line characters are ignored.
 		if currChar == '\r' || currChar == '\n' {
 			continue

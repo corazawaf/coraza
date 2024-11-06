@@ -25,7 +25,7 @@ import (
 // ```
 // # Run external program on rule match
 // SecRule REQUEST_URI "^/cgi-bin/script\.pl" "phase:2,id:112,t:none,t:lowercase,t:normalizePath,block,\ exec:/usr/local/apache/bin/test.sh"
-
+//
 // # Run Lua script on rule match
 // SecRule ARGS:p attack "phase:2,id:113,block,exec:/usr/local/apache/conf/exec.lua"
 // ```

@@ -121,4 +121,5 @@ type TransactionVariables interface {
 	ArgsNames() collection.Collection
 	ArgsGetNames() collection.Collection
 	ArgsPostNames() collection.Collection
+	MultipartStrictError() collection.Single
 }

@@ -36,7 +36,39 @@ func TestCompile(t *testing.T) {
 		}
 	})
 
-	t.Run("malformed macro", func(t *testing.T) {
+	t.Run("single percent sign", func(t *testing.T) {
+		m := &macro{}
+		err := m.compile("%")
+		if err != nil {
+			t.Errorf("single percent sign should not error")
+		}
+	})
+
+	t.Run("empty braces", func(t *testing.T) {
+		m := &macro{}
+		err := m.compile("%{}")
+		if err == nil {
+			t.Errorf("expected error for empty braces")
+		}
+	})
+
+	t.Run("missing key", func(t *testing.T) {
+		m := &macro{}
+		err := m.compile("%{tx.}")
+		if err == nil {
+			t.Errorf("expected error for missing key")
+		}
+	})
+
+	t.Run("missing collection", func(t *testing.T) {
+		m := &macro{}
+		err := m.compile("%{.key}")
+		if err == nil {
+			t.Errorf("expected error for missing collection")
+		}
+	})
+
+	t.Run("malformed macros", func(t *testing.T) {
 		for _, test := range []string{"%{tx.count", "%{{tx.count}", "%{{tx.{count}", "something %{tx.count"} {
 			t.Run(test, func(t *testing.T) {
 				m := &macro{}
@@ -64,6 +96,24 @@ func TestCompile(t *testing.T) {
 		expectedErr := "unknown variable"
 		if !strings.Contains(err.Error(), expectedErr) {
 			t.Errorf("unexpected error, should contain %q, got %q", expectedErr, err.Error())
+		}
+	})
+
+	t.Run("unknown key", func(t *testing.T) {
+		m := &macro{}
+
+		err := m.compile("%{tx.missing_key}")
+		if err != nil {
+			t.Fatalf("unexpected error")
+		}
+
+		if want, have := 1, len(m.tokens); want != have {
+			t.Fatalf("unexpected number of tokens: want %d, have %d", want, have)
+		}
+
+		expectedMacro := macroToken{"tx.missing_key", variables.TX, "missing_key"}
+		if want, have := m.tokens[0], expectedMacro; want != have {
+			t.Errorf("unexpected token: wanted %v, got %v", want, have)
 		}
 	})
 
@@ -123,7 +173,7 @@ func TestCompile(t *testing.T) {
 }
 
 func TestExpand(t *testing.T) {
-	t.Run("no expansion", func(t *testing.T) {
+	t.Run("unknown variable", func(t *testing.T) {
 		m := &macro{
 			tokens: []macroToken{
 				{"text", variables.Unknown, ""},

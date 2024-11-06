@@ -1,4 +1,4 @@
-// Copyright 2023 Juan Pablo Tosso and the OWASP Coraza contributors
+// Copyright 2024 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build !tinygo
@@ -19,7 +19,6 @@ import (
 )
 
 var sampleHttpsAuditLog = &Log{
-
 	Transaction_: Transaction{
 		ID_: "test123",
 	},
@@ -33,7 +32,7 @@ var sampleHttpsAuditLog = &Log{
 	},
 }
 
-func TestHTTPSAuditLog(t *testing.T) {
+func TestHTTPAuditLog(t *testing.T) {
 	writer := &httpsWriter{}
 	formatter := &nativeFormatter{}
 	pts, err := types.ParseAuditLogParts("ABCDEZ")
@@ -74,9 +73,34 @@ func TestHTTPSAuditLog(t *testing.T) {
 	}
 }
 
-func TestJSONAuditHTTPS(t *testing.T) {
+func TestJSONAuditHTTP(t *testing.T) {
 	writer := &httpsWriter{}
 	formatter := &jsonFormatter{}
+	// we create a test http server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		if r.ContentLength == 0 {
+			t.Fatal("ContentLength is 0")
+		}
+		if ct := r.Header.Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+			t.Fatalf("Content-Type is not application/json, got %s", ct)
+		}
+	}))
+	defer server.Close()
+	if err := writer.Init(plugintypes.AuditLogConfig{
+		Target:    server.URL,
+		Formatter: formatter,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Write(sampleHttpsAuditLog); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestOCSFAuditHTTP(t *testing.T) {
+	writer := &httpsWriter{}
+	formatter := &ocsfFormatter{}
 	// we create a test http server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

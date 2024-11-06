@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/corazawaf/coraza/v3/internal/corazatypes"
-	"github.com/corazawaf/coraza/v3/internal/strings"
+	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -102,7 +102,7 @@ func (rg *RuleGroup) DeleteByMsg(msg string) {
 func (rg *RuleGroup) DeleteByTag(tag string) {
 	var kept []Rule
 	for _, r := range rg.rules {
-		if !strings.InSlice(tag, r.Tags_) {
+		if !utils.InSlice(tag, r.Tags_) {
 			kept = append(kept, r)
 		}
 	}
@@ -253,7 +253,7 @@ type transformationKey struct {
 	// transaction phase and we would never have different string pointers with the same
 	// content, or more problematically same pointer for different content, as the strings
 	// will be alive throughout the phase.
-	argKey            uintptr
+	argKey            *byte
 	argIndex          int
 	argVariable       variables.RuleVariable
 	transformationsID int

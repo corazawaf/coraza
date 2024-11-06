@@ -10,7 +10,12 @@ import (
 // RuleMetadata is used to store rule metadata
 // that can be used across packages
 type RuleMetadata struct {
-	ID_       int
+	ID_ int
+	// Stores the string representation of the rule ID for logging purposes.
+	// If the rule is part of a chain, the parent ID is used as log ID.
+	// This approach prevents repeated computations in performance-critical sections, enhancing efficiency.
+	// It is stored for performance reasons, avoiding to perfrom the computation multiple times in the hot path
+	LogID_    string
 	File_     string
 	Line_     int
 	Rev_      string
@@ -23,6 +28,9 @@ type RuleMetadata struct {
 	Phase_    types.RulePhase
 	Raw_      string
 	SecMark_  string
+	// Contains the Id of the parent rule if you are inside
+	// a chain. Otherwise, it will be 0
+	ParentID_ int
 }
 
 func (r *RuleMetadata) ID() int {
@@ -75,4 +83,8 @@ func (r *RuleMetadata) Raw() string {
 
 func (r *RuleMetadata) SecMark() string {
 	return r.SecMark_
+}
+
+func (r *RuleMetadata) LogID() string {
+	return r.LogID_
 }

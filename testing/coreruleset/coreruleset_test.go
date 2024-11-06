@@ -9,7 +9,6 @@ package coreruleset
 
 import (
 	"bufio"
-	b64 "encoding/base64"
 	"fmt"
 	"io"
 	"io/fs"
@@ -21,16 +20,18 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bmatcuk/doublestar/v4"
+	albedo "github.com/coreruleset/albedo/server"
 	"github.com/coreruleset/go-ftw/config"
 	"github.com/coreruleset/go-ftw/output"
 	"github.com/coreruleset/go-ftw/runner"
 	"github.com/coreruleset/go-ftw/test"
 	"github.com/rs/zerolog"
 
-	coreruleset "github.com/corazawaf/coraza-coreruleset"
-	crstests "github.com/corazawaf/coraza-coreruleset/tests"
+	coreruleset "github.com/corazawaf/coraza-coreruleset/v4"
+	crstests "github.com/corazawaf/coraza-coreruleset/v4/tests"
 	"github.com/corazawaf/coraza/v3"
 	txhttp "github.com/corazawaf/coraza/v3/http"
 	"github.com/corazawaf/coraza/v3/types"
@@ -220,52 +221,27 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 		t.Fatal(err)
 	}
 
+	// CRS regression tests are expected to be run with https://github.com/coreruleset/albedo as backend server
 	s := httptest.NewServer(txhttp.WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
+		// TODO: Investigate why we need to enforce text/plain to have response body tests working.
+		// Check the Content-Type set by albed and SecResponseBodyMimeType
 		w.Header().Set("Content-Type", "text/plain")
-		switch {
-		case r.URL.Path == "/anything", r.URL.Path == "/post":
-			body, err := io.ReadAll(r.Body)
-			// Emulated httpbin behaviour: /anything and /post endpoints act as an echo server, writing back the request body
-			if r.Header.Get("Content-Type") == "application/x-www-form-urlencoded" {
-				// Tests 954120-1 and 954120-2 are the only two calling /anything with a POST and payload is urlencoded
-				if err != nil {
-					t.Fatalf("handler can not read request body: %v", err)
-				}
-				urldecodedBody, err := url.QueryUnescape(string(body))
-				if err != nil {
-					t.Fatalf("handler can not unescape urlencoded request body: %v", err)
-				}
-				fmt.Fprintf(w, urldecodedBody)
-			} else {
-				_, err = w.Write(body)
-			}
-
-		case strings.HasPrefix(r.URL.Path, "/base64/"):
-			// Emulated httpbin behaviour: /base64 endpoint write the decoded base64 into the response body
-			b64Decoded, err := b64.StdEncoding.DecodeString(strings.TrimPrefix(r.URL.Path, "/base64/"))
-			if err != nil {
-				t.Fatalf("handler can not decode base64: %v", err)
-			}
-			fmt.Fprintf(w, string(b64Decoded))
-		default:
-			// Common path "/status/200" defaults here
-			fmt.Fprintf(w, "Hello!")
-		}
+		albedo.Handler().ServeHTTP(w, r)
 	})))
 	defer s.Close()
 
-	var tests []test.FTWTest
+	var tests []*test.FTWTest
 	err = doublestar.GlobWalk(crstests.FS, "**/*.yaml", func(path string, d os.DirEntry) error {
 		yaml, err := fs.ReadFile(crstests.FS, path)
 		if err != nil {
 			return err
 		}
-		t, err := test.GetTestFromYaml(yaml)
+		ftwt, err := test.GetTestFromYaml(yaml, path)
 		if err != nil {
 			return err
 		}
-		tests = append(tests, t)
+		tests = append(tests, ftwt)
 		return nil
 	})
 	if err != nil {
@@ -288,15 +264,21 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	cfg.TestOverride.Overrides.DestAddr = &host
 	cfg.TestOverride.Overrides.Port = &port
 
+	cfg.LoadPlatformOverrides(".ftw-overrides.yml")
 	res, err := runner.Run(cfg, tests, runner.RunnerConfig{
-		ShowTime: false,
+		ShowTime:    false,
+		ReadTimeout: 3 * time.Second, // Defaults to 1s but looks to be not enough in the CI
 	}, output.NewOutput("quiet", os.Stdout))
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	if len(res.Stats.Failed) > 0 {
-		t.Errorf("failed tests: %v", res.Stats.Failed)
+	totalIgnored := len(res.Stats.Ignored)
+	if totalIgnored > 0 {
+		t.Logf("[info] %d ignored tests: %v", totalIgnored, res.Stats.Ignored)
+	}
+	totalFailed := len(res.Stats.Failed)
+	if totalFailed > 0 {
+		t.Errorf("[fatal] %d failed tests: %v", totalFailed, res.Stats.Failed)
 	}
 }
 

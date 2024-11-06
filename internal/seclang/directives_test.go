@@ -4,6 +4,8 @@
 package seclang
 
 import (
+	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -34,7 +36,32 @@ func Test_NonImplementedDirective(t *testing.T) {
 	}
 }
 
-func TestSecRuleUpdateTargetBy(t *testing.T) {
+func TestSecRuleUpdateActionByID(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	rule, err := ParseRule(RuleOptions{
+		Data:         "REQUEST_URI \"^/test\" \"id:181,log\"",
+		WAF:          waf,
+		WithOperator: true,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	if err := waf.Rules.Add(rule); err != nil {
+		t.Error(err)
+	}
+	if waf.Rules.Count() != 1 {
+		t.Error("Failed to add rule")
+	}
+	if err := directiveSecRuleUpdateActionByID(&DirectiveOptions{
+		WAF:  waf,
+		Opts: "181 \"nolog\"",
+	}); err != nil {
+		t.Error(err)
+	}
+
+}
+
+func TestSecRuleUpdateTargetByID(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	rule, err := ParseRule(RuleOptions{
 		Data:         "REQUEST_URI \"^/test\" \"id:181,tag:test\"",
@@ -140,7 +167,8 @@ func TestDirectives(t *testing.T) {
 		},
 		"SecUploadDir": {
 			{"", expectErrorOnDirective},
-			{"/tmp", func(w *corazawaf.WAF) bool { return w.UploadDir == "/tmp" }},
+			{"/tmp-non-existing", expectErrorOnDirective},
+			{os.TempDir(), func(w *corazawaf.WAF) bool { return w.UploadDir == os.TempDir() }},
 		},
 		"SecSensorId": {
 			{"", expectErrorOnDirective},
@@ -158,6 +186,7 @@ func TestDirectives(t *testing.T) {
 		},
 		"SecRuleRemoveByTag": {
 			{"", expectErrorOnDirective},
+			{"attack-sqli", expectNoErrorOnDirective},
 		},
 		"SecRuleRemoveByMsg": {
 			{"", expectErrorOnDirective},
@@ -168,9 +197,53 @@ func TestDirectives(t *testing.T) {
 			{"1-a", expectErrorOnDirective},
 			{"a-2", expectErrorOnDirective},
 			{"2-1", expectErrorOnDirective},
+			{"-1", expectErrorOnDirective},
+			{"-5--1", expectErrorOnDirective},
+			{"5--1", expectErrorOnDirective},
 			{"1", expectNoErrorOnDirective},
 			{"1 2", expectNoErrorOnDirective},
 			{"1 2 3-4", expectNoErrorOnDirective},
+		},
+		"SecRuleUpdateActionById": {
+			{"", expectErrorOnDirective},
+			{"a", expectErrorOnDirective},
+			{"1-a", expectErrorOnDirective},
+			{"a-2", expectErrorOnDirective},
+			{"2-1", expectErrorOnDirective},
+			{"1-a \"status:403\"", expectErrorOnDirective},
+			{"a-2 \"status:403\"", expectErrorOnDirective},
+			{"2-1 \"status:403\"", expectErrorOnDirective},
+			{"-1 \"status:403\"", expectErrorOnDirective},
+			{"1 2 3-4 \"status:403\"", expectNoErrorOnDirective},
+			{"1 2 3-4 \"status:403,nolog\"", expectNoErrorOnDirective},
+		},
+		"SecRuleUpdateTargetById": {
+			{"", expectErrorOnDirective},
+			{"a", expectErrorOnDirective},
+			{"1-a", expectErrorOnDirective},
+			{"a-2", expectErrorOnDirective},
+			{"2-1", expectErrorOnDirective},
+			{"1-a \"ARGS:wp_post\"", expectErrorOnDirective},
+			{"a-2 \"ARGS:wp_post\"", expectErrorOnDirective},
+			{"2-1 \"ARGS:wp_post\"", expectErrorOnDirective},
+			{"-1 \"ARGS:wp_post\"", expectErrorOnDirective},
+			{"-5--1 \"ARGS:wp_post\"", expectErrorOnDirective},
+			{"5--1 \"ARGS:wp_post\"", expectErrorOnDirective},
+			// Variables has also to be provided to the directive
+			{"1", expectErrorOnDirective},
+			{"1 \"ARGS:wp_post\"", expectNoErrorOnDirective},
+			{"7-7 \"ARGS:wp_post\"", expectNoErrorOnDirective},
+			{"1 2 \"ARGS:wp_post\"", expectNoErrorOnDirective},
+			{"1 2 3-4 \"ARGS:wp_post\"", expectNoErrorOnDirective},
+			{"1 \"REQUEST_BODY|ARGS:wp_post\"", expectNoErrorOnDirective},
+			{"1 2 3-4 \"ARGS:wp_post|RESPONSE_HEADERS\"", expectNoErrorOnDirective},
+		},
+		"SecRuleUpdateTargetByTag": {
+			{"", expectErrorOnDirective},
+			{"a", expectErrorOnDirective},
+			{"tag-1 \"ARGS:wp_post\"", expectNoErrorOnDirective},
+			{"tag-1 tag-2 \"ARGS:wp_post\"", expectErrorOnDirective}, // Multiple tags in line is not supported
+			{"tag-2 \"ARGS:wp_post|RESPONSE_HEADERS|!REQUEST_BODY\"", expectNoErrorOnDirective},
 		},
 		"SecResponseBodyMimeTypesClear": {
 			{"", func(w *corazawaf.WAF) bool { return len(w.ResponseBodyMimeTypes) == 0 }},
@@ -262,7 +335,12 @@ func TestDirectives(t *testing.T) {
 						}
 					} else {
 						if err != nil {
-							t.Errorf("unexpected error: %s", err.Error())
+							match, _ := regexp.MatchString(`rule "\d+" not found`, err.Error())
+							// Logical errors are not checked by this test, therefore this specific pattern is allowed here
+							if !match {
+								// Syntax errors are checked
+								t.Errorf("unexpected error: %s", err.Error())
+							}
 						}
 
 						if !tCase.check(waf) {
