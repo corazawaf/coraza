@@ -1291,6 +1291,20 @@ func TestTxGetField(t *testing.T) {
 	}
 }
 
+func BenchmarkTxGetField(b *testing.B) {
+	tx := makeTransaction(b)
+	rvp := ruleVariableParams{
+		Variable: variables.Args,
+	}
+	for i := 0; i < b.N; i++ {
+		tx.GetField(rvp)
+	}
+	if err := tx.Close(); err != nil {
+		b.Fatalf("Failed to close transaction: %s", err.Error())
+	}
+	b.ReportAllocs()
+}
+
 func TestTxProcessURI(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
