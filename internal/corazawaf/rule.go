@@ -13,6 +13,7 @@ import (
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	experimentalTypes "github.com/corazawaf/coraza/v3/experimental/types"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/memoize"
 	"github.com/corazawaf/coraza/v3/types"
@@ -163,7 +164,7 @@ const chainLevelZero = 0
 // the matched variables, keys and values (MatchData)
 func (r *Rule) Evaluate(phase types.RulePhase, tx plugintypes.TransactionState, cache map[transformationKey]*transformationValue) {
 	// collectiveMatchedValues lives across recursive calls of doEvaluate
-	var collectiveMatchedValues []types.MatchData
+	var collectiveMatchedValues []experimentalTypes.MatchData
 
 	logger := tx.DebugLogger()
 
@@ -180,14 +181,14 @@ func (r *Rule) Evaluate(phase types.RulePhase, tx plugintypes.TransactionState, 
 
 const noID = 0
 
-func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Transaction, collectiveMatchedValues *[]types.MatchData, chainLevel int, cache map[transformationKey]*transformationValue) []types.MatchData {
+func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Transaction, collectiveMatchedValues *[]experimentalTypes.MatchData, chainLevel int, cache map[transformationKey]*transformationValue) []experimentalTypes.MatchData {
 	tx.Capture = r.Capture
 
 	if multiphaseEvaluation {
 		computeRuleChainMinPhase(r)
 	}
 
-	var matchedValues []types.MatchData
+	var matchedValues []experimentalTypes.MatchData
 	// we log if we are the parent rule
 	logger.Debug().Msg("Evaluating rule")
 	defer logger.Debug().Msg("Finished rule evaluation")
@@ -226,7 +227,7 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 			if multiphaseEvaluation && multiphaseSkipVariable(r, v.Variable, phase) {
 				continue
 			}
-			var values []types.MatchData
+			var values []experimentalTypes.MatchData
 			for _, c := range ecol {
 				if c.Variable == v.Variable {
 					// TODO shall we check the pointer?
@@ -381,7 +382,7 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 	return matchedValues
 }
 
-func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transformationKey]*transformationValue) ([]string, []error) {
+func (r *Rule) transformArg(arg experimentalTypes.MatchData, argIdx int, cache map[transformationKey]*transformationValue) ([]string, []error) {
 	if r.MultiMatch {
 		// TODOs:
 		// - We don't need to run every transformation. We could try for each until found

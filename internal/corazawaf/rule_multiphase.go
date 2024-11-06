@@ -5,7 +5,9 @@ package corazawaf
 
 import (
 	"strings"
+	"unsafe"
 
+	experimentalTypes "github.com/corazawaf/coraza/v3/experimental/types"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -281,18 +283,18 @@ func multiphaseSkipVariable(r *Rule, variable variables.RuleVariable, phase type
 // REQUEST_URI - REQUEST_URI - REQUEST_HEADERS
 // REQUEST_URI - REQUEST_HEADERS - REQUEST_BODY
 // REQUEST_URI - REQUEST_HEADERS - REQUEST_HEADERS
-func generateChainMatches(tx *Transaction, matchedValues []types.MatchData, currentDepth int, buildingMatchedChain []types.MatchData, matchedChainsResult *[][]types.MatchData) {
+func generateChainMatches(tx *Transaction, matchedValues []experimentalTypes.MatchData, currentDepth int, buildingMatchedChain []experimentalTypes.MatchData, matchedChainsResult *[][]experimentalTypes.MatchData) {
 
 	finalDepth := matchedChainDepth(matchedValues)
 
 	// Iterate the variables based on the chain level (first all the variables at level 0, then all the variables at level 1, etc.)
 	for _, mv := range matchedValues {
 		if mv.ChainLevel() == currentDepth {
-			var localebuildingMatchedChain []types.MatchData
+			var localebuildingMatchedChain []experimentalTypes.MatchData
 			if buildingMatchedChain == nil {
-				localebuildingMatchedChain = []types.MatchData{}
+				localebuildingMatchedChain = []experimentalTypes.MatchData{}
 			} else {
-				localebuildingMatchedChain = make([]types.MatchData, len(buildingMatchedChain))
+				localebuildingMatchedChain = make([]experimentalTypes.MatchData, len(buildingMatchedChain))
 				copy(localebuildingMatchedChain, buildingMatchedChain)
 			}
 			localebuildingMatchedChain = append(localebuildingMatchedChain, mv)
@@ -312,17 +314,19 @@ func generateChainMatches(tx *Transaction, matchedValues []types.MatchData, curr
 // Currently, it is intended for chained matches because the same variables are evaluated multiple times and not
 // constained to the min phase. If the same match is found, the actions of the most inner rule are skipped and the match
 // is not added to matchedValues (and removed from collectiveMatchedValues)
-func isMultiphaseDoubleEvaluation(tx *Transaction, phase types.RulePhase, r *Rule, collectiveMatchedValues *[]types.MatchData, mr types.MatchData) bool {
+func isMultiphaseDoubleEvaluation(tx *Transaction, phase types.RulePhase, r *Rule, collectiveMatchedValues *[]experimentalTypes.MatchData, mr experimentalTypes.MatchData) bool {
 	*collectiveMatchedValues = append(*collectiveMatchedValues, mr)
 
 	for _, matchedRule := range tx.matchedRules {
-		if matchedRule.Rule().ID() == r.ParentID_ && matchedChainDepth(matchedRule.MatchedDatas()) == matchedChainDepth(*collectiveMatchedValues) {
+		matchedData := matchedRule.MatchedDatas()
+		matchedDataExp := *(*[]experimentalTypes.MatchData)(unsafe.Pointer(&matchedData))
+		if matchedRule.Rule().ID() == r.ParentID_ && matchedChainDepth(matchedDataExp) == matchedChainDepth(*collectiveMatchedValues) {
 			// This might be a double match, let's generate the chains that aready matched and the one that just matched
 			// let's see if all the latter already matched.
 
 			// generateChainMatches generates matched chains based on the matchedValues and populates matchedChains and collectiveMatchedChains variables
-			var matchedChains, collectiveMatchedChains [][]types.MatchData
-			generateChainMatches(tx, matchedRule.MatchedDatas(), 0, nil, &matchedChains)
+			var matchedChains, collectiveMatchedChains [][]experimentalTypes.MatchData
+			generateChainMatches(tx, matchedDataExp, 0, nil, &matchedChains)
 			generateChainMatches(tx, *collectiveMatchedValues, 0, nil, &collectiveMatchedChains)
 
 			// Check if a newly matched chain (part of collectiveMatchedChain) already matched
@@ -359,7 +363,7 @@ func isMultiphaseDoubleEvaluation(tx *Transaction, phase types.RulePhase, r *Rul
 }
 
 // chainPartOf checks if a chain is part of a list of already matched chains
-func chainPartOf(newMatchedChain []types.MatchData, matchedChains [][]types.MatchData) bool {
+func chainPartOf(newMatchedChain []experimentalTypes.MatchData, matchedChains [][]experimentalTypes.MatchData) bool {
 	for _, matchedChain := range matchedChains {
 		var differentMatch bool
 		for n, newMatchedValue := range newMatchedChain {
@@ -378,7 +382,7 @@ func chainPartOf(newMatchedChain []types.MatchData, matchedChains [][]types.Matc
 }
 
 // matchedChainDepth returns the depth of a matched chain returning the lowest chain level between all the the matched values
-func matchedChainDepth(datas []types.MatchData) int {
+func matchedChainDepth(datas []experimentalTypes.MatchData) int {
 	depth := 0
 	for _, matchedValue := range datas {
 		if matchedValue.ChainLevel() > depth {

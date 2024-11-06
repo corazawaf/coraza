@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"unsafe"
 
+	experimentalTypes "github.com/corazawaf/coraza/v3/experimental/types"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -30,10 +32,12 @@ type MatchData struct {
 	// Multiphase specific field
 	ChainLevel_ int
 	// Metadata of the matched data
-	Metadata_ types.DataMetadataList
+	Metadata_ experimentalTypes.DataMetadataList
 }
 
 var _ types.MatchData = (*MatchData)(nil)
+
+var _ experimentalTypes.MatchData = (*MatchData)(nil)
 
 func (m *MatchData) Variable() variables.RuleVariable {
 	return m.Variable_
@@ -57,6 +61,10 @@ func (m *MatchData) Data() string {
 
 func (m *MatchData) ChainLevel() int {
 	return m.ChainLevel_
+}
+
+func (m *MatchData) Metadata() experimentalTypes.DataMetadataList {
+	return m.Metadata_
 }
 
 // ActionName is used to identify an action.
@@ -102,7 +110,7 @@ type MatchedRule struct {
 	// Client IP address
 	ClientIPAddress_ string
 	// A slice of matched variables
-	MatchedDatas_ []types.MatchData
+	MatchedDatas_ []experimentalTypes.MatchData
 
 	Rule_ types.RuleMetadata
 
@@ -144,6 +152,10 @@ func (mr *MatchedRule) ClientIPAddress() string {
 }
 
 func (mr *MatchedRule) MatchedDatas() []types.MatchData {
+	return *(*[]types.MatchData)(unsafe.Pointer(&mr.MatchedDatas_))
+}
+
+func (mr *MatchedRule) MatchedDatasExperimental_() []experimentalTypes.MatchData {
 	return mr.MatchedDatas_
 }
 
