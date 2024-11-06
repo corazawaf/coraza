@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"github.com/corazawaf/coraza/v3"
 	txhttp "github.com/corazawaf/coraza/v3/http"
 	"github.com/corazawaf/coraza/v3/types"
+	"github.com/go-chi/chi/middleware"
 )
 
 func exampleHandler(w http.ResponseWriter, req *http.Request) {
@@ -32,7 +34,9 @@ func exampleHandler(w http.ResponseWriter, req *http.Request) {
 func main() {
 	waf := createWAF()
 
-	http.Handle("/", txhttp.WrapHandler(waf, http.HandlerFunc(exampleHandler)))
+	http.Handle("/", middleware.RequestID( // makes sure the request ID is propagated in the context
+		txhttp.WrapHandler(waf, http.HandlerFunc(exampleHandler)),
+	))
 
 	fmt.Println("Server is running. Listening port: 8090")
 
@@ -53,10 +57,21 @@ func createWAF() coraza.WAF {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	return waf
 }
 
-func logError(error types.MatchedRule) {
-	msg := error.ErrorLog()
-	fmt.Printf("[logError][%s] %s\n", error.Rule().Severity(), msg)
+type Contexter interface {
+	Context() context.Context
+}
+
+func logError(mr types.MatchedRule) {
+	msg := mr.ErrorLog()
+	if ctxMR, ok := mr.(Contexter); ok {
+		if requestID := middleware.GetReqID(ctxMR.Context()); requestID != "" {
+			msg = fmt.Sprintf("%s [request_id %q]", msg, requestID)
+		}
+	}
+
+	fmt.Println(msg)
 }
