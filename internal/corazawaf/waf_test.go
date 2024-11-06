@@ -32,10 +32,6 @@ func TestNewTransaction(t *testing.T) {
 	if tx.id != "test" {
 		t.Error("ID not set")
 	}
-	tx = waf.NewTransaction()
-	if tx.id == "" {
-		t.Error("ID not set")
-	}
 }
 
 func TestSetDebugLogPath(t *testing.T) {

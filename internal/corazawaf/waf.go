@@ -197,7 +197,7 @@ func (w *WAF) newTransaction(ctx context.Context) *Transaction {
 	tx.stopWatches = map[types.RulePhase]int64{}
 	tx.WAF = w
 	tx.debugLogger = w.Logger.With(debuglog.Str("tx_id", tx.id))
-	tx.Timestamp = time.Now().UnixNano()
+	tx.timestamp = time.Now().UnixNano()
 	tx.audit = false
 
 	// Always non-nil if buffers / collections were already initialized so we don't do any of them

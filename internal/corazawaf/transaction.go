@@ -113,8 +113,8 @@ type Transaction struct {
 
 	debugLogger debuglog.Logger
 
-	// Timestamp of the request
-	Timestamp int64
+	// timestamp of the request
+	timestamp int64
 
 	// When a rule matches and contains r.Audit = true, this will be set to true
 	// it will write to the audit log
@@ -547,7 +547,7 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 // GetStopWatch is used to debug phase durations
 // Normally it should be named StopWatch() but it would be confusing
 func (tx *Transaction) GetStopWatch() string {
-	ts := tx.Timestamp
+	ts := tx.timestamp
 	sum := int64(0)
 	for _, r := range tx.stopWatches {
 		sum += r
@@ -1396,10 +1396,10 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 	}
 
 	// YYYY/MM/DD HH:mm:ss
-	ts := time.Unix(0, tx.Timestamp).Format("2006/01/02 15:04:05")
+	ts := time.Unix(0, tx.timestamp).Format("2006/01/02 15:04:05")
 	al.Transaction_ = auditlog.Transaction{
 		Timestamp_:     ts,
-		UnixTimestamp_: tx.Timestamp,
+		UnixTimestamp_: tx.timestamp,
 		ID_:            tx.id,
 		ClientIP_:      tx.variables.remoteAddr.Get(),
 		ClientPort_:    clientPort,
@@ -1594,6 +1594,11 @@ func (tx *Transaction) generateResponseBodyError(err error) {
 // Context returns the context of the transaction
 func (tx *Transaction) Context() context.Context {
 	return tx.context
+}
+
+// UnixTimestamp returns the timestamp of the transaction
+func (tx *Transaction) UnixTimestamp() int64 {
+	return tx.timestamp
 }
 
 // TransactionVariables has pointers to all the variables of the transaction
