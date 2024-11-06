@@ -1576,6 +1576,10 @@ func (tx *Transaction) String() string {
 	return res.String()
 }
 
+func (tx *Transaction) UnixTimestamp() int64 {
+	return tx.Timestamp
+}
+
 // generateRequestBodyError generates all the error variables for the request body parser
 func (tx *Transaction) generateRequestBodyError(err error) {
 	tx.variables.reqbodyError.Set("1")
