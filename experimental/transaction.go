@@ -3,13 +3,10 @@
 
 package experimental
 
-import "github.com/corazawaf/coraza/v3/internal/corazawaf"
+import "github.com/corazawaf/coraza/v3/types"
 
-type Transaction struct {
-	corazawaf.Transaction
-}
-
-// UnixTimestamp returns the timestamp when the request was received.
-func (tx *Transaction) UnixTimestamp() int64 {
-	return tx.Timestamp
+type Transaction interface {
+	// UnixTimestamp returns the timestamp when the request was received.
+	UnixTimestamp() int64
+	types.Transaction
 }

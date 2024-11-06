@@ -1,36 +1,17 @@
 package experimental
 
 import (
-	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3"
 )
 
-func makeTransaction(t testing.TB) *Transaction {
+func makeTransaction(t testing.TB) Transaction {
 	t.Helper()
-	tx := corazawaf.NewWAF().NewTransaction()
-	etx, ok := tx.(experimental.UnixTimestamp)
-	if !ok {
-		panic("WAF does not implement WAFWithOptions")
-	}
-	tx.RequestBodyAccess = true
-	ht := []string{
-		"POST /testurl.php?id=123&b=456 HTTP/1.1",
-		"Host: www.test.com:80",
-		"Cookie: test=123",
-		"Content-Type: application/x-www-form-urlencoded",
-		"X-Test-Header: test456",
-		"Content-Length: 13",
-		"",
-		"testfield=456",
-	}
-	data := strings.Join(ht, "\r\n")
-	_, err := tx.ParseRequestReader(strings.NewReader(data))
-	if err != nil {
-		panic(err)
-	}
-	return tx
+	waf, _ := coraza.NewWAF(coraza.NewWAFConfig().WithRequestBodyAccess())
+	tx := waf.NewTransaction()
+	tx.ProcessConnection("", 80, "", 443)
+	return tx.(Transaction)
 }
 
 func TestGetUnixTimestamp(t *testing.T) {
