@@ -1,0 +1,25 @@
+name: Add cherrypicking label for v3 issues
+
+on:
+  pull_request:
+    types: [opened]
+
+jobs:
+  add-label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if PR targets the specified branch
+        id: branch_check
+        run: |
+          if [ "${{ github.event.pull_request.base.ref }}" == "main" ]; then
+            echo "is_target_branch=true" >> $GITHUB_ENV
+          else
+            echo "is_target_branch=false" >> $GITHUB_ENV
+          fi
+
+      - name: Add label to PR
+        if: env.is_target_branch == 'true'
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          labels: "pending-v4-cherrypick"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
