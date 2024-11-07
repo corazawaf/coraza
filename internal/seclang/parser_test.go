@@ -30,6 +30,37 @@ func TestInterruption(t *testing.T) {
 	}
 }
 
+func TestAllowedMetadataTags(t *testing.T) {
+	waf := coraza.NewWAF()
+	p := NewParser(waf)
+	if err := p.FromString(`
+		SecRule ARGS "@rx 123" "id:1,block,log,tag:'metadatafilter/numeric',phase:2"
+		SecRule ARGS "@rx abc" "id:2,block,log,tag:'metadatafilter/numeric',phase:2"
+		SecRule ARGS "@rx a5" "id:3,block,log,tag:'metadatafilter/boolean',phase:2"
+		SecRule ARGS "@rx true" "id:4,block,log,tag:'metadatafilter/boolean,alphanumeric',phase:2"
+		SecRule ARGS "@rx a5" "id:5,block,log,phase:2"
+	`); err != nil {
+		t.Errorf("Could not create from string: %s", err.Error())
+	}
+	tx := waf.NewTransaction()
+	tx.ProcessURI("http://localhost/test.php?m1=123&m2=abc123&m3=true&m4=a5", "GET", "1.1")
+	tx.ProcessRequestHeaders()
+	tx.ProcessRequestBody()
+	matchedRules := tx.MatchedRules()
+	if len(matchedRules) != 3 {
+		t.Errorf("Expected 4 matched rule, got %d", len(matchedRules))
+	}
+	if matchedRules[0].Rule().ID() != 1 {
+		t.Errorf("Expected matched rule ID 1, got %d", matchedRules[0].Rule().ID())
+	}
+	if matchedRules[1].Rule().ID() != 4 {
+		t.Errorf("Expected matched rule ID 1, got %d", matchedRules[0].Rule().ID())
+	}
+	if matchedRules[2].Rule().ID() != 5 {
+		t.Errorf("Expected matched rule ID 1, got %d", matchedRules[0].Rule().ID())
+	}
+}
+
 func TestDirectivesCaseInsensitive(t *testing.T) {
 	waf := coraza.NewWAF()
 	p := NewParser(waf)

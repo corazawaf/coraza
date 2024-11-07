@@ -60,39 +60,25 @@ func (v *DataMetadataList) Evaluate(data string) {
 	// we do the analysis only once
 	if v.metadata == nil {
 		v.metadata = make(map[DataMetadata]bool)
-		for metadataType := range v.metadata {
-			switch metadataType {
-			case ValueMetadataNumeric:
-				v.evaluateNumeric(data)
-			case ValueMetadataBoolean:
-				v.evaluateBoolean(data)
-			case ValueMetadataAlphanumeric:
-				v.evaluateAlphanumeric(data)
-			case ValueMetadataAscii:
-				v.evaluateAscii(data)
-			case ValueMetadataBase64:
-				v.evaluateBase64(data)
-				// case ValueMetadataURI:
-				// 	result = result || v.evaluateURI(data)
-				// case ValueMetadataDomain:
-				// 	result = result || v.evaluateDomain(data)
-				// case ValueMetadataUnicode:
-				// 	result = result || v.evaluateUnicode(data)
-			}
-		}
+		v.evaluateNumeric(data)
+		v.evaluateBoolean(data)
+		v.evaluateAlphanumeric(data)
+		v.evaluateAscii(data)
+		v.evaluateBase64(data)
+		// v.evaluateURI(data)
+		// v.evaluateDomain(data)
+		// v.evaluateUnicode(data)
 	}
 }
 
 func (v *DataMetadataList) evaluateAlphanumeric(data string) bool {
-	res := true
 	for _, c := range data {
 		if !unicode.IsLetter(c) && !unicode.IsNumber(c) {
-			res = false
+			v.metadata[ValueMetadataAlphanumeric] = false
 			break
 		}
 	}
-	v.metadata[ValueMetadataAlphanumeric] = res
-	return res
+	return v.metadata[ValueMetadataAlphanumeric]
 }
 
 func (v *DataMetadataList) evaluateAscii(data string) bool {
@@ -136,7 +122,7 @@ func (v *DataMetadataList) evaluateNumeric(data string) bool {
 }
 
 func (v *DataMetadataList) evaluateBoolean(data string) bool {
-	res := true
+	res := false
 	if data == "true" || data == "false" {
 		res = true
 	}
@@ -144,43 +130,11 @@ func (v *DataMetadataList) evaluateBoolean(data string) bool {
 	return res
 }
 
-func (v *DataMetadataList) TestNumeric() bool {
-	return v.metadata[ValueMetadataNumeric]
-}
-
-func (v *DataMetadataList) TestBoolean() bool {
-	return v.metadata[ValueMetadataBoolean]
-}
-
-func (v *DataMetadataList) TestAlphanumeric() bool {
-	return v.metadata[ValueMetadataAlphanumeric]
-}
-
-func (v *DataMetadataList) TestAscii() bool {
-	return v.metadata[ValueMetadataAscii]
-}
-
-func (v *DataMetadataList) TestBase64() bool {
-	return v.metadata[ValueMetadataBase64]
-}
-
-func (v *DataMetadataList) TestURI() bool {
-	return v.metadata[ValueMetadataURI]
-}
-
-func (v *DataMetadataList) TestDomain() bool {
-	return v.metadata[ValueMetadataDomain]
-}
-
-func (v *DataMetadataList) TestUnicode() bool {
-	return v.metadata[ValueMetadataUnicode]
-}
-
-func (v *DataMetadataList) Test(metadataTypes []DataMetadata) bool {
+func (v *DataMetadataList) IsInScope(metadataTypes []DataMetadata) bool {
 	for _, metadataType := range metadataTypes {
-		if !v.metadata[metadataType] {
-			return false
+		if v.metadata[metadataType] {
+			return true
 		}
 	}
-	return true
+	return false
 }

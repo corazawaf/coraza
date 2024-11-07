@@ -249,10 +249,12 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 			}
 			vLog.Debug().Msg("Expanding arguments for rule")
 			allowedMetadatas := r.AllowedMetadatas()
+			vLog.Debug().Msg("Allowed metadata for rule" + fmt.Sprint(allowedMetadatas))
 			for i, arg := range values {
 				if len(allowedMetadatas) > 0 {
 					argDataMetadataList := arg.Metadata()
-					if argDataMetadataList.Test(allowedMetadatas) {
+					if !argDataMetadataList.IsInScope(allowedMetadatas) {
+						vLog.Debug().Msg("Skipping evaluation for " + arg.Key() + " because it is not in scope")
 						continue
 					}
 				}
