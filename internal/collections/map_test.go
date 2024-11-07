@@ -108,20 +108,15 @@ func TestNewCaseSensitiveKeyMap(t *testing.T) {
 }
 
 func BenchmarkTxSetGet(b *testing.B) {
-	// Set up the map once outside of the loop
 	c := NewCaseSensitiveKeyMap(variables.RequestHeaders)
-
-	// Benchmark the Set operation
 	b.Run("Set", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			key := fmt.Sprintf("key%d", i)
 			c.Set(key, []string{"value2"})
 		}
 	})
-
 	// Benchmark the Get operation
 	b.Run("Get", func(b *testing.B) {
-		// Ensure some values are already set for Get to work
 		for i := 0; i < b.N; i++ {
 			key := fmt.Sprintf("key%d", i)
 			c.Set(key, []string{"value2"})
@@ -132,7 +127,5 @@ func BenchmarkTxSetGet(b *testing.B) {
 			c.Get(key)
 		}
 	})
-
-	// Report all memory allocations during the benchmark
 	b.ReportAllocs()
 }

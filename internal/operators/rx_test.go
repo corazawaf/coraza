@@ -119,3 +119,13 @@ func BenchmarkRxSubstringVsMatch(b *testing.B) {
 		rx.FindAllString(str, 3)
 	})
 }
+
+// Benchmark tests for both the original and optimized versions
+func BenchmarkMatchesArbitraryBytesOriginal(b *testing.B) {
+	expr := "\\x41\\x42\\x43\\x44" // Test with a few escape sequences
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		matchesArbitraryBytes(expr)
+	}
+}
