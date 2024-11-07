@@ -1018,10 +1018,10 @@ func TestProcessBodiesSkippedIfHeadersPhasesNotReached(t *testing.T) {
 	if want, have := 3, len(logEntries); want != have {
 		t.Fatalf("unexpected number of log entries, want %d, have %d", want, have)
 	}
-	if want, have := "anomalous call before request headers evaluation", logEntries[1]; !strings.Contains(have, want) {
+	if want, have := "has been called before request headers evaluation", logEntries[1]; !strings.Contains(have, want) {
 		t.Fatalf("unexpected message, want %q, have %q", want, have)
 	}
-	if want, have := "anomalous call before response headers evaluation", logEntries[2]; !strings.Contains(have, want) {
+	if want, have := "has been called before response headers evaluation", logEntries[2]; !strings.Contains(have, want) {
 		t.Fatalf("unexpected message, want %q, have %q", want, have)
 	}
 	if err := tx.Close(); err != nil {
@@ -1289,6 +1289,20 @@ func TestTxGetField(t *testing.T) {
 	if err := tx.Close(); err != nil {
 		t.Fatalf("Failed to close transaction: %s", err.Error())
 	}
+}
+
+func BenchmarkTxGetField(b *testing.B) {
+	tx := makeTransaction(b)
+	rvp := ruleVariableParams{
+		Variable: variables.Args,
+	}
+	for i := 0; i < b.N; i++ {
+		tx.GetField(rvp)
+	}
+	if err := tx.Close(); err != nil {
+		b.Fatalf("Failed to close transaction: %s", err.Error())
+	}
+	b.ReportAllocs()
 }
 
 func TestTxProcessURI(t *testing.T) {

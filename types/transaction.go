@@ -77,9 +77,9 @@ type Transaction interface {
 
 	// ProcessRequestBody Performs the analysis of the request body (if any)
 	//
-	// This method perform the analysis on the request body. It is optional to
-	// call that function. If this API consumer already knows that there isn't a
-	// body for inspect it is recommended to skip this step.
+	// It is recommended to call this method even if it is not expected to have a body.
+	// It permits to execute rules belonging to request body phase, but not necesarily
+	// processing the request body.
 	//
 	// Remember to check for a possible intervention.
 	ProcessRequestBody() (*Interruption, error)
@@ -88,6 +88,8 @@ type Transaction interface {
 	// returns an interruption if the body is bigger than the limit and the action is to
 	// reject. This is specially convenient to resolve an interruption before copying
 	// the body into the request body buffer.
+	// ProcessRequestBody is called automatically when the action is to process partially
+	// the body (up to the limit) if the limit is reached.
 	//
 	// It returns the corresponding interruption, the number of bytes written an error if any.
 	WriteRequestBody(b []byte) (*Interruption, int, error)
@@ -96,6 +98,8 @@ type Transaction interface {
 	// returns an interruption if the body is bigger than the limit and the action is to
 	// reject. This is specially convenient to resolve an interruption before copying
 	// the body into the request body buffer.
+	// ProcessRequestBody is called automatically when the action is to process partially
+	// the body (up to the limit) if the limit is reached.
 	//
 	// It returns the corresponding interruption, the number of bytes written an error if any.
 	ReadRequestBodyFrom(io.Reader) (*Interruption, int, error)
@@ -120,9 +124,9 @@ type Transaction interface {
 
 	// ProcessResponseBody Perform the analysis of the response body (if any)
 	//
-	// This method perform the analysis on the response body. It is optional to
-	// call that method. If this API consumer already knows that there isn't a
-	// body for inspect it is recommended to skip this step.
+	// It is recommended to call this method even if it is not expected to have a body.
+	// It permits to execute rules belonging to request body phase, but not necesarily
+	// processing the response body.
 	//
 	// note Remember to check for a possible intervention.
 	ProcessResponseBody() (*Interruption, error)
@@ -144,7 +148,6 @@ type Transaction interface {
 	ReadResponseBodyFrom(io.Reader) (*Interruption, int, error)
 
 	// ProcessLogging Logging all information relative to this transaction.
-	// An error log
 	// At this point there is not need to hold the connection, the response can be
 	// delivered prior to the execution of this method.
 	ProcessLogging()

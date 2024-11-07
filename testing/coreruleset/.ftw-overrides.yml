@@ -50,3 +50,24 @@ test_overrides:
       status: 505
       log:
         no_expect_ids: [920430]
+
+  - rule_id: 922130
+    test_ids: [1,2,7]
+    reason: "Multipart parsing tests. 922130 rule is not reached, Coraza triggers rule 200003 (MULTIPART_STRICT_ERROR) at parsing time"
+    output:
+      log:
+        expect_ids: [200003]
+  - rule_id: 922130
+    test_ids: [4]
+    reason: |
+      Multipart parsing tests. A space caracther is not in the valid range. 0x20 character raises MULTIPART_STRICT_ERROR (see multipart_error.yaml engine test),
+      But 922130-4 test does not. In this case, rule 922130 is matched.
+    output:
+      log:
+        expect_ids: [922130]
+  - rule_id: 922130
+    test_ids: [3,5,6]
+    reason: "Valid Multipart parsing payloads. Coraza should not trigger rules 200002 (REQBODY_ERROR), 200003 (MULTIPART_STRICT_ERROR), 922130"
+    output:
+      log:
+        no_expect_ids: [200002,200003,922130]

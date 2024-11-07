@@ -9,12 +9,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/valllabh/ocsf-schema-golang/ocsf/v1_2_0/events/application"
+	"github.com/valllabh/ocsf-schema-golang/ocsf/v1_2_0/events/application/enums"
+
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
-	"github.com/valllabh/ocsf-schema-golang/ocsf/v1_2_0/events/application"
-	"github.com/valllabh/ocsf-schema-golang/ocsf/v1_2_0/events/application/enums"
 )
 
 func TestOCSFFormatter(t *testing.T) {
