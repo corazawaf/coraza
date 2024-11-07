@@ -124,13 +124,18 @@ func (c *Map) Add(key string, value string) {
 	c.data[key] = append(c.data[key], aVal)
 }
 
-// Set sets the value of a key with the array of strings passed. If the key already exists, it will be overwritten.
+// Sets the value of a key with the array of strings passed. If the key already exists, it will be overwritten.
 func (c *Map) Set(key string, values []string) {
 	originalKey := key
 	if !c.isCaseSensitive {
 		key = strings.ToLower(key)
 	}
-	dataSlice := make([]keyValue, len(values))
+	dataSlice, exists := c.data[key]
+	if !exists || cap(dataSlice) < len(values) {
+		dataSlice = make([]keyValue, len(values))
+	} else {
+		dataSlice = dataSlice[:len(values)] // Reuse existing slice with the same length
+	}
 	for i, v := range values {
 		dataSlice[i] = keyValue{key: originalKey, value: v}
 	}
