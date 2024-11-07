@@ -148,7 +148,6 @@ type Transaction interface {
 	ReadResponseBodyFrom(io.Reader) (*Interruption, int, error)
 
 	// ProcessLogging Logging all information relative to this transaction.
-	// An error log
 	// At this point there is not need to hold the connection, the response can be
 	// delivered prior to the execution of this method.
 	ProcessLogging()
