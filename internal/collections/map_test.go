@@ -16,6 +16,7 @@ package collections
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -105,4 +106,15 @@ func TestNewCaseSensitiveKeyMap(t *testing.T) {
 		t.Fatal("The lengths are not equal.")
 	}
 
+}
+
+func BenchmarkTxGet(b *testing.B) {
+	c := NewCaseSensitiveKeyMap(variables.RequestHeaders)
+	for i := 0; i < b.N; i++ {
+		c.Set("key"+strconv.Itoa(i), []string{"value1", "value2"})
+	}
+	// Benchmark the Get method
+	for i := 0; i < b.N; i++ {
+		c.Get("key500")
+	}
 }
