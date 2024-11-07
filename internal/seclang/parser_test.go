@@ -45,7 +45,13 @@ func TestAllowedMetadataTags(t *testing.T) {
 	tx := waf.NewTransaction()
 	tx.ProcessURI("http://localhost/test.php?m1=123&m2=abc123&m3=true&m4=a5", "GET", "1.1")
 	tx.ProcessRequestHeaders()
-	tx.ProcessRequestBody()
+	interrupt, err := tx.ProcessRequestBody()
+	if err != nil {
+		t.Error(err)
+	}
+	if interrupt != nil {
+		t.Error("Transaction interrupted")
+	}
 	matchedRules := tx.MatchedRules()
 	if len(matchedRules) != 3 {
 		t.Errorf("Expected 4 matched rule, got %d", len(matchedRules))
