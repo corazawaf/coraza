@@ -114,9 +114,6 @@ func BenchmarkTxSetGet(b *testing.B) {
 	}
 	c := NewCaseSensitiveKeyMap(variables.RequestHeaders)
 
-	for i := 0; i < b.N; i++ {
-		c.Set(keys[i], []string{"value2"})
-	}
 	b.Run("Set", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
