@@ -147,6 +147,8 @@ type Rule struct {
 	// chainedRules containing rules with just PhaseUnknown variables, may potentially
 	// be anticipated. This boolean ensures that it happens
 	withPhaseUnknownVariable bool
+
+	allowedMetadatas []experimentalTypes.DataMetadata
 }
 
 func (r *Rule) ParentID() int {
@@ -155,6 +157,10 @@ func (r *Rule) ParentID() int {
 
 func (r *Rule) Status() int {
 	return r.DisruptiveStatus
+}
+
+func (r *Rule) AllowedMetadatas() []experimentalTypes.DataMetadata {
+	return r.allowedMetadatas
 }
 
 const chainLevelZero = 0
@@ -242,8 +248,14 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 				vLog = logger.With(debuglog.Str("variable", v.Variable.Name()))
 			}
 			vLog.Debug().Msg("Expanding arguments for rule")
-
+			allowedMetadatas := r.AllowedMetadatas()
 			for i, arg := range values {
+				if len(allowedMetadatas) > 0 {
+					argDataMetadataList := arg.Metadata()
+					if argDataMetadataList.Test(allowedMetadatas) {
+						continue
+					}
+				}
 				args, errs := r.transformArg(arg, i, cache)
 				if len(errs) > 0 {
 					vWarnLog := vLog.Warn()
@@ -606,6 +618,15 @@ func (r *Rule) AddTransformation(name string, t plugintypes.Transformation) erro
 	}
 	r.transformations = append(r.transformations, ruleTransformationParams{Function: t})
 	r.transformationsID = transformationID(r.transformationsID, name)
+	return nil
+}
+
+func (r *Rule) AddAllowedMetadata(metadataName string) error {
+	metadata, ok := experimentalTypes.NewValueMetadata(metadataName)
+	if !ok {
+		return fmt.Errorf("invalid metadata %q not found", metadataName)
+	}
+	r.allowedMetadatas = append(r.allowedMetadatas, metadata)
 	return nil
 }
 

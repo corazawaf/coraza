@@ -318,15 +318,18 @@ func isMultiphaseDoubleEvaluation(tx *Transaction, phase types.RulePhase, r *Rul
 	*collectiveMatchedValues = append(*collectiveMatchedValues, mr)
 
 	for _, matchedRule := range tx.matchedRules {
-		matchedData := matchedRule.MatchedDatas()
-		matchedDataExp := *(*[]experimentalTypes.MatchData)(unsafe.Pointer(&matchedData))
-		if matchedRule.Rule().ID() == r.ParentID_ && matchedChainDepth(matchedDataExp) == matchedChainDepth(*collectiveMatchedValues) {
+		matchedDatas := matchedRule.MatchedDatas()
+		var matchedDatasExp []experimentalTypes.MatchData
+		for _, v := range matchedDatas {
+			matchedDatasExp = append(matchedDatasExp, *(*experimentalTypes.MatchData)(unsafe.Pointer(&v)))
+		}
+		if matchedRule.Rule().ID() == r.ParentID_ && matchedChainDepth(matchedDatasExp) == matchedChainDepth(*collectiveMatchedValues) {
 			// This might be a double match, let's generate the chains that aready matched and the one that just matched
 			// let's see if all the latter already matched.
 
 			// generateChainMatches generates matched chains based on the matchedValues and populates matchedChains and collectiveMatchedChains variables
 			var matchedChains, collectiveMatchedChains [][]experimentalTypes.MatchData
-			generateChainMatches(tx, matchedDataExp, 0, nil, &matchedChains)
+			generateChainMatches(tx, matchedDatasExp, 0, nil, &matchedChains)
 			generateChainMatches(tx, *collectiveMatchedValues, 0, nil, &collectiveMatchedChains)
 
 			// Check if a newly matched chain (part of collectiveMatchedChain) already matched

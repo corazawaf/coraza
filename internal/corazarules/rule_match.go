@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"unsafe"
 
 	experimentalTypes "github.com/corazawaf/coraza/v3/experimental/types"
 	"github.com/corazawaf/coraza/v3/types"
@@ -64,6 +63,8 @@ func (m *MatchData) ChainLevel() int {
 }
 
 func (m *MatchData) Metadata() experimentalTypes.DataMetadataList {
+	// Evaluate the metadata if it's not set
+	m.Metadata_.Evaluate(m.Value_)
 	return m.Metadata_
 }
 
@@ -152,7 +153,11 @@ func (mr *MatchedRule) ClientIPAddress() string {
 }
 
 func (mr *MatchedRule) MatchedDatas() []types.MatchData {
-	return *(*[]types.MatchData)(unsafe.Pointer(&mr.MatchedDatas_))
+	var matchedDatas []types.MatchData
+	for _, md := range mr.MatchedDatas_ {
+		matchedDatas = append(matchedDatas, md)
+	}
+	return matchedDatas
 }
 
 func (mr *MatchedRule) MatchedDatasExperimental_() []experimentalTypes.MatchData {
