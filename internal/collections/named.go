@@ -104,14 +104,15 @@ func (c *NamedCollectionNames) FindRegex(key *regexp.Regexp) []types.MatchData {
 	var res []types.MatchData
 
 	for k, data := range c.collection.Map.data {
-		if key.MatchString(k) {
-			for _, d := range data {
-				res = append(res, &corazarules.MatchData{
-					Variable_: c.variable,
-					Key_:      d.key,
-					Value_:    d.key,
-				})
-			}
+		if !key.MatchString(k) {
+			continue
+		}
+		for _, d := range data {
+			res = append(res, &corazarules.MatchData{
+				Variable_: c.variable,
+				Key_:      d.key,
+				Value_:    d.key,
+			})
 		}
 	}
 	return res
@@ -121,14 +122,15 @@ func (c *NamedCollectionNames) FindString(key string) []types.MatchData {
 	var res []types.MatchData
 
 	for k, data := range c.collection.Map.data {
-		if k == key {
-			for _, d := range data {
-				res = append(res, &corazarules.MatchData{
-					Variable_: c.variable,
-					Key_:      d.key,
-					Value_:    d.key,
-				})
-			}
+		if k != key {
+			continue
+		}
+		for _, d := range data {
+			res = append(res, &corazarules.MatchData{
+				Variable_: c.variable,
+				Key_:      d.key,
+				Value_:    d.key,
+			})
 		}
 	}
 	return res
