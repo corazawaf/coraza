@@ -41,6 +41,9 @@ func NewCaseSensitiveKeyMap(variable variables.RuleVariable) *Map {
 }
 
 func (c *Map) Get(key string) []string {
+	if len(c.data) == 0 {
+		return nil
+	}
 	if !c.isCaseSensitive {
 		key = strings.ToLower(key)
 	}
