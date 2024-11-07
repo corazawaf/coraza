@@ -608,8 +608,8 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []experimentalTypes.Match
 	matches = matches[:filteredCount]
 
 	if rv.Count {
-		count := len(filteredMatches)
-		filteredMatches = []experimentalTypes.MatchData{
+		count := len(matches)
+		matches = []experimentalTypes.MatchData{
 			&corazarules.MatchData{
 				Variable_: rv.Variable,
 				Key_:      rv.KeyStr,
@@ -617,7 +617,7 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []experimentalTypes.Match
 			},
 		}
 	}
-	return filteredMatches
+	return matches
 }
 
 // RemoveRuleTargetByID Removes the VARIABLE:KEY from the rule ID
