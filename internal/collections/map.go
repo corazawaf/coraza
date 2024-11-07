@@ -41,17 +41,18 @@ func NewCaseSensitiveKeyMap(variable variables.RuleVariable) *Map {
 }
 
 func (c *Map) Get(key string) []string {
-	if len(c.data) == 0 {
-		return nil
-	}
 	if !c.isCaseSensitive {
 		key = strings.ToLower(key)
 	}
-	var values []string
-	for _, a := range c.data[key] {
-		values = append(values, a.value)
+	values := c.data[key]
+	if len(values) == 0 {
+		return nil
 	}
-	return values
+	result := make([]string, 0, len(values))
+	for _, a := range values {
+		result = append(result, a.value)
+	}
+	return result
 }
 
 // FindRegex returns all map elements whose key matches the regular expression.
