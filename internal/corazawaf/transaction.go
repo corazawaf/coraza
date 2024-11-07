@@ -588,9 +588,9 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []experimentalTypes.Match
 	}
 
 	// in the most common scenario filteredMatches length will be
-	// the same as matches length, so we avoid allocating per result
-	filteredMatches := make([]experimentalTypes.MatchData, 0, len(matches))
-
+	// the same as matches length, so we avoid allocating per result.
+	// We reuse the matches slice to store filtered results avoiding extra allocation.
+	filteredCount := 0
 	for _, c := range matches {
 		isException := false
 		lkey := strings.ToLower(c.Key())
@@ -601,9 +601,11 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []experimentalTypes.Match
 			}
 		}
 		if !isException {
-			filteredMatches = append(filteredMatches, c.(experimentalTypes.MatchData))
+			matches[filteredCount] = c
+			filteredCount++
 		}
 	}
+	matches = matches[:filteredCount]
 
 	if rv.Count {
 		count := len(filteredMatches)
@@ -1291,8 +1293,7 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 	return tx.interruption, nil
 }
 
-// ProcessLogging Logging all information relative to this transaction.
-// An error log
+// ProcessLogging logs all information relative to this transaction.
 // At this point there is not need to hold the connection, the response can be
 // delivered prior to the execution of this method.
 func (tx *Transaction) ProcessLogging() {

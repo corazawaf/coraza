@@ -774,9 +774,6 @@ func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 // Syntax: SecAuditLogParts [PARTLETTERS]
 // Default: ABCFHZ
 // ---
-// The format of the audit log format is documented in detail in the Audit Log Data
-// Format Documentation.
-//
 // Example:
 // ```apache
 // SecAuditLogParts ABCFHZ
