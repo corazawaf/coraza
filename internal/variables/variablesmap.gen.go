@@ -215,84 +215,6 @@ func (v RuleVariable) Name() string {
 // CanBeSelected returns true if the variable supports selection (ie, `:foobar`)
 func (v RuleVariable) CanBeSelected() bool {
 	switch v {
-	case Unknown:
-		return false
-	case ResponseContentType:
-		return false
-	case UniqueID:
-		return false
-	case ArgsCombinedSize:
-		return false
-	case FilesCombinedSize:
-		return false
-	case FullRequestLength:
-		return false
-	case InboundDataError:
-		return false
-	case MatchedVar:
-		return false
-	case MatchedVarName:
-		return false
-	case MultipartDataAfter:
-		return false
-	case OutboundDataError:
-		return false
-	case QueryString:
-		return false
-	case RemoteAddr:
-		return false
-	case RemoteHost:
-		return false
-	case RemotePort:
-		return false
-	case ReqbodyError:
-		return false
-	case ReqbodyErrorMsg:
-		return false
-	case ReqbodyProcessorError:
-		return false
-	case ReqbodyProcessorErrorMsg:
-		return false
-	case ReqbodyProcessor:
-		return false
-	case RequestBasename:
-		return false
-	case RequestBody:
-		return false
-	case RequestBodyLength:
-		return false
-	case RequestFilename:
-		return false
-	case RequestLine:
-		return false
-	case RequestMethod:
-		return false
-	case RequestProtocol:
-		return false
-	case RequestURI:
-		return false
-	case RequestURIRaw:
-		return false
-	case ResponseBody:
-		return false
-	case ResponseContentLength:
-		return false
-	case ResponseProtocol:
-		return false
-	case ResponseStatus:
-		return false
-	case ServerAddr:
-		return false
-	case ServerName:
-		return false
-	case ServerPort:
-		return false
-	case HighestSeverity:
-		return false
-	case StatusLine:
-		return false
-	case Duration:
-		return false
 	case ResponseHeadersNames:
 		return true
 	case RequestHeadersNames:
@@ -303,34 +225,18 @@ func (v RuleVariable) CanBeSelected() bool {
 		return true
 	case ArgsPost:
 		return true
-	case ArgsPath:
-		return false
-	case FilesSizes:
-		return false
 	case FilesNames:
 		return true
-	case FilesTmpContent:
-		return false
-	case MultipartFilename:
-		return false
-	case MultipartName:
-		return false
 	case MatchedVarsNames:
 		return true
 	case MatchedVars:
 		return true
-	case Files:
-		return false
 	case RequestCookies:
 		return true
 	case RequestHeaders:
 		return true
 	case ResponseHeaders:
 		return true
-	case ResBodyProcessor:
-		return false
-	case Geo:
-		return false
 	case RequestCookiesNames:
 		return true
 	case FilesTmpNames:
@@ -343,14 +249,10 @@ func (v RuleVariable) CanBeSelected() bool {
 		return true
 	case TX:
 		return true
-	case Rule:
-		return false
 	case JSON:
 		return true
 	case Env:
 		return true
-	case UrlencodedError:
-		return false
 	case ResponseArgs:
 		return true
 	case ResponseXML:
@@ -361,53 +263,6 @@ func (v RuleVariable) CanBeSelected() bool {
 		return true
 	case MultipartPartHeaders:
 		return true
-	case AuthType:
-		return false
-	case FullRequest:
-		return false
-	case MultipartBoundaryQuoted:
-		return false
-	case MultipartBoundaryWhitespace:
-		return false
-	case MultipartCrlfLfLines:
-		return false
-	case MultipartDataBefore:
-		return false
-	case MultipartFileLimitExceeded:
-		return false
-	case MultipartHeaderFolding:
-		return false
-	case MultipartInvalidHeaderFolding:
-		return false
-	case MultipartInvalidPart:
-		return false
-	case MultipartInvalidQuoting:
-		return false
-	case MultipartLfLine:
-		return false
-	case MultipartMissingSemicolon:
-		return false
-	case MultipartStrictError:
-		return false
-	case MultipartUnmatchedBoundary:
-		return false
-	case PathInfo:
-		return false
-	case Sessionid:
-		return false
-	case Userid:
-		return false
-	case IP:
-		return false
-	case ResBodyError:
-		return false
-	case ResBodyErrorMsg:
-		return false
-	case ResBodyProcessorError:
-		return false
-	case ResBodyProcessorErrorMsg:
-		return false
-
 	default:
 		return false
 	}

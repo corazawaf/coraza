@@ -22,14 +22,17 @@ func (v RuleVariable) Name() string {
     }
 }
 
-//CanBeSelected returns true if the variable supports selection (ie, `:foobar`)
+// CanBeSelected returns true if the variable supports selection (ie, `:foobar`)
 func (v RuleVariable) CanBeSelected() bool {
     switch v {
-        {{range .}}case {{ .Key }}:
-            return {{ .CanBeSelected }}
-        {{end}}
-        default:
-            return false
+    {{- range . }}
+    {{- if .CanBeSelected }}
+    case {{ .Key }}:
+        return true
+    {{- end }}
+    {{- end }}
+    default:
+        return false
     }
 }
 
