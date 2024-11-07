@@ -1292,8 +1292,7 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 	return tx.interruption, nil
 }
 
-// ProcessLogging Logging all information relative to this transaction.
-// An error log
+// ProcessLogging logs all information relative to this transaction.
 // At this point there is not need to hold the connection, the response can be
 // delivered prior to the execution of this method.
 func (tx *Transaction) ProcessLogging() {
