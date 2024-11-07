@@ -108,23 +108,23 @@ func TestNewCaseSensitiveKeyMap(t *testing.T) {
 }
 
 func BenchmarkTxSetGet(b *testing.B) {
+	// Pre-generate keys in a map to avoid fmt.Sprintf overhead during benchmarking
+	keys := make(map[int]string, b.N)
+	for i := 0; i < b.N; i++ {
+		keys[i] = fmt.Sprintf("key%d", i)
+	}
 	c := NewCaseSensitiveKeyMap(variables.RequestHeaders)
 	b.Run("Set", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			key := fmt.Sprintf("key%d", i)
-			c.Set(key, []string{"value2"})
+			c.Set(keys[i], []string{"value2"})
 		}
 	})
-	// Benchmark the Get operation
 	b.Run("Get", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			key := fmt.Sprintf("key%d", i)
-			c.Set(key, []string{"value2"})
+			c.Set(keys[i], []string{"value2"})
 		}
-
 		for i := 0; i < b.N; i++ {
-			key := fmt.Sprintf("key%d", i)
-			c.Get(key)
+			c.Get(keys[i])
 		}
 	})
 	b.ReportAllocs()
