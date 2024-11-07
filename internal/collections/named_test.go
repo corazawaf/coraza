@@ -105,9 +105,21 @@ func TestNames(t *testing.T) {
 		t.Errorf("Error finding string, got %d instead of 2", len(r))
 	}
 
+	r = names.FindString("nonexistent")
+
+	if len(r) != 0 {
+		t.Errorf("Error finding nonexistent, got %d instead of 0", len(r))
+	}
+
 	r = names.FindRegex(regexp.MustCompile("key.*"))
 
 	if len(r) != 3 {
 		t.Errorf("Error finding regex, got %d instead of 3", len(r))
+	}
+
+	r = names.FindRegex(regexp.MustCompile("nonexistent"))
+
+	if len(r) != 0 {
+		t.Errorf("Error finding nonexistent regex, got %d instead of 0", len(r))
 	}
 }
