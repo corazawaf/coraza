@@ -122,17 +122,17 @@ const (
 	// ArgsPost contains the POST (BODY) arguments
 	ArgsPost // CanBeSelected
 	// ArgsPath contains the url path parts
-	ArgsPath
+	ArgsPath // CanBeSelected
 	// FilesSizes contains the sizes of the uploaded files
-	FilesSizes
+	FilesSizes // CanBeSelected
 	// FilesNames contains the names of the uploaded files
 	FilesNames // CanBeSelected
 	// FilesTmpContent is not supported
-	FilesTmpContent
+	FilesTmpContent // CanBeSelected
 	// MultipartFilename contains the multipart data from field FILENAME
-	MultipartFilename
+	MultipartFilename // CanBeSelected
 	// MultipartName contains the multipart data from field NAME.
-	MultipartName
+	MultipartName // CanBeSelected
 	// MatchedVarsNames is similar to MATCHED_VAR_NAME except that it is
 	// a collection of all matches for the current operator check.
 	MatchedVarsNames // CanBeSelected
@@ -142,7 +142,7 @@ const (
 	// Files contains a collection of original file names
 	// (as they were called on the remote user’s filesys- tem).
 	// Available only on inspected multipart/form-data requests.
-	Files
+	Files // CanBeSelected
 	// RequestCookies is a collection of all of request cookies (values only
 	RequestCookies // CanBeSelected
 	// RequestHeaders can be used as either a collection of all of the request
@@ -155,7 +155,7 @@ const (
 	// no default
 	ResBodyProcessor
 	// Geo contains the location information of the client
-	Geo
+	Geo // CanBeSelected
 	// RequestCookiesNames contains the names of the request cookies
 	RequestCookiesNames // CanBeSelected
 	// FilesTmpNames contains the names of the uploaded temporal files
@@ -169,7 +169,7 @@ const (
 	// TX contains transaction specific variables created with setvar
 	TX // CanBeSelected
 	// Rule contains rule metadata
-	Rule
+	Rule // CanBeSelected
 	// JSON does not provide any data, might be removed
 	JSON // CanBeSelected
 	// Env contains the process environment variables
