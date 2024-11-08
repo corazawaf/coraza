@@ -51,9 +51,9 @@ func (c *Map) Get(key string) []string {
 	if len(values) == 0 {
 		return nil
 	}
-	result := make([]string, 0, len(values))
-	for _, a := range values {
-		result = append(result, a.value)
+	result := make([]string, len(values))
+	for i, v := range values {
+		result[i] = v.value
 	}
 	return result
 }
