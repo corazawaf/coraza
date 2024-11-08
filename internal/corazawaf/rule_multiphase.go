@@ -321,7 +321,15 @@ func isMultiphaseDoubleEvaluation(tx *Transaction, phase types.RulePhase, r *Rul
 		matchedDatas := matchedRule.MatchedDatas()
 		var matchedDatasExp []experimentalTypes.MatchData
 		for _, v := range matchedDatas {
-			matchedDatasExp = append(matchedDatasExp, *(*experimentalTypes.MatchData)(unsafe.Pointer(&v)))
+			matchedDatasExp = append(matchedDatasExp, &experimentalTypes.MatchData{
+				Variable_: v.Variable(),
+				Key_:      v.Key(),
+				Value_:    v.Value(),
+				Message_: v.Message(),
+				Data_: v.Data(),
+				ChainLevel_: v.ChainLevel(),
+			})
+			}
 		}
 		if matchedRule.Rule().ID() == r.ParentID_ && matchedChainDepth(matchedDatasExp) == matchedChainDepth(*collectiveMatchedValues) {
 			// This might be a double match, let's generate the chains that aready matched and the one that just matched
