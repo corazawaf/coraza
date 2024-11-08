@@ -385,31 +385,37 @@ func TestAddTransformation(t *testing.T) {
 }
 
 func BenchmarkAddTransformationUnique(b *testing.B) {
-	rule := NewRule()
 	transformation := func(input string) (string, bool, error) {
 		return "Test", true, nil
 	}
-	for i := 0; i < b.N; i++ {
-		transformationName := "transformation" + strconv.Itoa(i)
-		err := rule.AddTransformation(transformationName, transformation)
-		if err != nil {
-			b.Fatalf("Failed to add a transformation: %s", err.Error())
+	b.ResetTimer()
+	b.RunParallel(func(p *testing.PB) {
+		rule := NewRule()
+		for p.Next() {
+			transformationName := "transformation" + b.Name()
+			err := rule.AddTransformation(transformationName, transformation)
+			if err != nil {
+				b.Fatalf("Failed to add a transformation: %s", err.Error())
+			}
 		}
-	}
+	})
 }
 
 func BenchmarkAddTransformationSame(b *testing.B) {
 	transformation := func(input string) (string, bool, error) {
 		return "Test", true, nil
 	}
-	for i := 0; i < b.N; i++ {
-		rule := NewRule()
-		transformationName := "transformation" + strconv.Itoa(i)
-		err := rule.AddTransformation(transformationName, transformation)
-		if err != nil {
-			b.Fatalf("Failed to add a transformation: %s", err.Error())
+	b.ResetTimer()
+	b.RunParallel(func(p *testing.PB) {
+		for p.Next() {
+			rule := NewRule()
+			transformationName := "transformation"
+			err := rule.AddTransformation(transformationName, transformation)
+			if err != nil {
+				b.Fatalf("Failed to add a transformation: %s", err.Error())
+			}
 		}
-	}
+	})
 }
 
 func TestAddTransformationEmpty(t *testing.T) {
