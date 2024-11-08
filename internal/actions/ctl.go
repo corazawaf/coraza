@@ -6,6 +6,7 @@ package actions
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -105,11 +106,12 @@ type ctlFn struct {
 	value      string
 	collection variables.RuleVariable
 	colKey     string
+	colKeyRx   *regexp.Regexp
 }
 
 func (a *ctlFn) Init(_ plugintypes.RuleMetadata, data string) error {
 	var err error
-	a.action, a.value, a.collection, a.colKey, err = parseCtl(data)
+	a.action, a.value, a.collection, a.colKey, a.colKeyRx, err = parseCtl(data)
 	return err
 }
 
@@ -375,10 +377,10 @@ func (a *ctlFn) Type() plugintypes.ActionType {
 	return plugintypes.ActionTypeNondisruptive
 }
 
-func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, string, error) {
+func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, string, *regexp.Regexp, error) {
 	action, ctlVal, ok := strings.Cut(data, "=")
 	if !ok {
-		return ctlUnknown, "", 0, "", errors.New("invalid syntax")
+		return ctlUnknown, "", 0, "", nil, errors.New("invalid syntax")
 	}
 	value, col, ok := strings.Cut(ctlVal, ";")
 	var colkey, colname string
@@ -386,7 +388,14 @@ func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, str
 		colname, colkey, _ = strings.Cut(col, ":")
 	}
 	collection, _ := variables.Parse(strings.TrimSpace(colname))
-	colkey = strings.ToLower(colkey)
+	var re *regexp.Regexp
+	if len(colkey) > 2 && colkey[0] == '/' && colkey[len(colkey)-1] == '/' {
+		var err error
+		re, err = regexp.Compile(colkey[1 : len(colkey)-1])
+		if err != nil {
+			return ctlUnknown, "", 0x00, "", nil, err
+		}
+	}
 	var act ctlFunctionType
 	switch action {
 	case "auditEngine":
@@ -430,9 +439,12 @@ func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, str
 	case "debugLogLevel":
 		act = ctlDebugLogLevel
 	default:
-		return ctlUnknown, "", 0x00, "", fmt.Errorf("unknown ctl action %q", action)
+		return ctlUnknown, "", 0x00, "", nil, fmt.Errorf("unknown ctl action %q", action)
 	}
-	return act, value, collection, strings.TrimSpace(colkey), nil
+	if re != nil {
+		return act, value, collection, strings.TrimSpace(colkey), re, nil
+	}
+	return act, value, collection, strings.TrimSpace(strings.ToLower(colkey)), nil, nil
 }
 
 func rangeToInts(rules []corazawaf.Rule, input string) ([]int, error) {
