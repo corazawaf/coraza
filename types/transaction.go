@@ -104,15 +104,8 @@ type Transaction interface {
 	// It returns the corresponding interruption, the number of bytes written an error if any.
 	ReadRequestBodyFrom(io.Reader) (*Interruption, int, error)
 
-	// UseRequestBody directly sets the provided byte slice as the request body buffer.
-	// This is meant to be used when the entire request body is available, as it avoids
-	// the need for an extra copy into the request body buffer. Because of this, this method is expected to
-	// be called just once. Further calls to UseRequestBody will overwrite the previous body set.
-	// If the body size exceeds the limit and the action is to reject, an interruption will be returned.
-	// The caller should not use b slice after this call.
-	//
-	// It returns the relevant interruption, the final internal body buffer length and any error that occurs.
-	UseRequestBody(b []byte) (*Interruption, int, error)
+	// Corrently exposed only as experimental
+	// UseRequestBody(b []byte) (*Interruption, int, error)
 
 	// AddResponseHeader Adds a response header variable
 	//
@@ -156,6 +149,9 @@ type Transaction interface {
 	//
 	// It returns the corresponding interruption, the number of bytes written an error if any.
 	ReadResponseBodyFrom(io.Reader) (*Interruption, int, error)
+
+	// Corrently exposed only as experimental
+	// UseResponseBody(b []byte) (*Interruption, int, error)
 
 	// ProcessLogging Logging all information relative to this transaction.
 	// At this point there is not need to hold the connection, the response can be
