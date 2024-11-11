@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"io/fs"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -154,4 +155,16 @@ func TestHttpServerConcurrent(t *testing.T) {
 			}
 		}
 	})
+}
+
+// ValidPath is called by fs.ReadFile to check if the path is valid, only when fsys.(ReadFileFS) fails.
+// For some reasons, this type assertion fails from Go 1.23, therefore ValidPath is called and fails.
+func TestValidPath(t *testing.T) {
+	if !fs.ValidPath("config/coraza.conf") {
+		t.Error("Valid path")
+	}
+	// Path starting with / is invalid for fs.ValidPath
+	if !fs.ValidPath("/opt/coraza/config/coraza.conf") {
+		t.Error("Invalid path")
+	}
 }
