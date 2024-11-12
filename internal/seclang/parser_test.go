@@ -10,9 +10,13 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	coreruleset "github.com/corazawaf/coraza-coreruleset"
 	coraza "github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/jcchavezs/mergefs"
+	"github.com/jcchavezs/mergefs/io"
 )
 
 //go:embed testdata
@@ -97,6 +101,39 @@ func TestLoadConfigurationFile(t *testing.T) {
 	err = p.FromFile("./testdata/glob/*.conf")
 	if err != nil {
 		t.Errorf("unexpected error: %s", err.Error())
+	}
+}
+
+// Connectors are supporting embedding github.com/corazawaf/coraza-coreruleset to ease CRS integration
+// mergefs.Merge is used to combine both CRS and local files. This test is to ensure that the parser
+// is able to load configuration files from both filesystems.
+func TestLoadConfigurationFileWithMultiFs(t *testing.T) {
+	waf := coraza.NewWAF()
+	p := NewParser(waf)
+	p.SetRoot(mergefs.Merge(coreruleset.FS, io.OSFS))
+
+	err := p.FromFile("../../coraza.conf-recommended")
+	if err != nil {
+		t.Errorf("unexpected error: %s", err.Error())
+	}
+
+	err = p.FromFile("../doesnotexist.conf")
+	if !strings.Contains(err.Error(), "no such file or directory") {
+		t.Errorf("expected not found error. Got: %s", err.Error())
+	}
+
+	err = p.FromFile("/tmp/doesnotexist.conf")
+	if !strings.Contains(err.Error(), "no such file or directory") {
+		t.Errorf("expected not found error. Got: %s", err.Error())
+	}
+
+	err = p.FromFile("./testdata/glob/*.conf")
+	if err != nil {
+		t.Errorf("unexpected error: %s", err.Error())
+	}
+
+	if err := p.FromString("Include @owasp_crs/REQUEST-911-METHOD-ENFORCEMENT.conf"); err != nil {
+		t.Error(err)
 	}
 }
 

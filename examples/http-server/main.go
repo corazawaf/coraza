@@ -7,12 +7,9 @@ import (
 	"os"
 	"strings"
 
-	coreruleset "github.com/corazawaf/coraza-coreruleset"
 	"github.com/corazawaf/coraza/v3"
 	txhttp "github.com/corazawaf/coraza/v3/http"
 	"github.com/corazawaf/coraza/v3/types"
-	"github.com/jcchavezs/mergefs"
-	"github.com/jcchavezs/mergefs/io"
 )
 
 func exampleHandler(w http.ResponseWriter, req *http.Request) {
@@ -50,7 +47,6 @@ func createWAF() coraza.WAF {
 
 	waf, err := coraza.NewWAF(
 		coraza.NewWAFConfig().
-			WithRootFS(mergefs.Merge(coreruleset.FS, io.OSFS)).
 			WithErrorCallback(logError).
 			WithDirectivesFromFile(directivesFile),
 	)
