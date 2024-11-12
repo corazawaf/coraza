@@ -393,6 +393,32 @@ func TestUseRequestBodyMultipleCalls(t *testing.T) {
 	}
 }
 
+func BenchmarkUseRequestBody(b *testing.B) {
+	body := bytes.Repeat([]byte("A"), 10*1024*1024)
+
+	b.Run("WriteRequestBody", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			tx := makeTransaction(b)
+			tx.lastPhase = 1
+			tx.RequestBodyAccess = true
+			tx.RequestBodyLimit = 11 * 1024 * 1024
+			_, _, _ = tx.WriteRequestBody(body)
+		}
+		b.ReportAllocs()
+	})
+
+	b.Run("UseRequestBody", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			tx := makeTransaction(b)
+			tx.lastPhase = 1
+			tx.RequestBodyAccess = true
+			tx.RequestBodyLimit = 11 * 1024 * 1024
+			_, _, _ = tx.UseRequestBody(body)
+		}
+		b.ReportAllocs()
+	})
+}
+
 func TestResponseHeader(t *testing.T) {
 	tx := makeTransaction(t)
 	tx.AddResponseHeader("content-type", "test")
@@ -760,6 +786,32 @@ func TestUseResponseBodyMultipleCalls(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error calling UseRequestBody twice with phase 2 processed in between")
 	}
+}
+
+func BenchmarkUseResponseBody(b *testing.B) {
+	body := bytes.Repeat([]byte("A"), 10*1024*1024)
+
+	b.Run("WriteResponseBody", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			tx := makeTransaction(b)
+			tx.lastPhase = 3
+			tx.ResponseBodyAccess = true
+			tx.ResponseBodyLimit = 11 * 1024 * 1024
+			_, _, _ = tx.WriteRequestBody(body)
+		}
+		b.ReportAllocs()
+	})
+
+	b.Run("UseResponseBody", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			tx := makeTransaction(b)
+			tx.lastPhase = 3
+			tx.ResponseBodyAccess = true
+			tx.ResponseBodyLimit = 11 * 1024 * 1024
+			_, _, _ = tx.UseResponseBody(body)
+		}
+		b.ReportAllocs()
+	})
 }
 
 func TestAuditLogFields(t *testing.T) {
