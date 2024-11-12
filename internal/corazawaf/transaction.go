@@ -1272,11 +1272,6 @@ func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, i
 	return tx.interruption, int(w), err
 }
 
-// If the body size exceeds the limit and the action is to reject, an interruption will be returned.
-// The caller should not use b slice after this call.
-//
-// It returns the relevant interruption, the final internal body buffer length and any error that occurs.
-
 // UseResponseBody directly sets the provided byte slice as the response body buffer.
 // This is meant to be used when the entire response body is available, as it avoids
 // the need for an extra copy into the response body buffer. Because of this, this method is expected to

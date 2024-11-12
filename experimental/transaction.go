@@ -9,6 +9,7 @@ import (
 
 type Transaction interface {
 	types.Transaction
+
 	// UseRequestBody directly sets the provided byte slice as the request body buffer.
 	// This is meant to be used when the entire request body is available, as it avoids
 	// the need for an extra copy into the request body buffer. Because of this, this method
@@ -19,5 +20,13 @@ type Transaction interface {
 	// It returns the relevant interruption, the final internal body buffer length and any error that occurs.
 	UseRequestBody(b []byte) (*types.Interruption, int, error)
 
+	// UseResponseBody directly sets the provided byte slice as the response body buffer.
+	// This is meant to be used when the entire response body is available, as it avoids
+	// the need for an extra copy into the response body buffer. Because of this, this method is expected to
+	// be called just once, further calls to UseResponseBody have to be avoided.
+	// If the body size exceeds the limit and the action is to reject, an interruption will be returned.
+	// The caller should not use b slice after this call.
+	//
+	// It returns the relevant interruption, the final internal body buffer length and any error that occurs.
 	UseResponseBody(b []byte) (*types.Interruption, int, error)
 }
