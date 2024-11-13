@@ -46,13 +46,7 @@ jobs:
           cache: true  
       - name: Tests and coverage
         run: |
-          mkdir build
-          echo 
-          go test -race -coverprofile=build/${{ matrix.build-flag }}.txt -covermode=atomic -coverpkg=./... -tags=${{ matrix.build-flag }} ./...
-          go test -race -coverprofile=build/${{ matrix.build-flag }}-examples.txt -covermode=atomic -coverpkg=./... -tags=${{ matrix.build-flag }} ./examples/http-server
-          go test -coverprofile=build/${{ matrix.build-flag }}-ftw.txt -covermode=atomic -coverpkg=./... -tags=${{ matrix.build-flag }} ./testing/coreruleset
-          go test -race -tags=tinygo,${{ matrix.build-flag }} -coverprofile=build/${{ matrix.build-flag }}-tinygo.txt -covermode=atomic -coverpkg=./... ./...
-          go tool cover -html=build/${{ matrix.build-flag }}.txt -o build/${{ matrix.build-flag }}.html
+          go run mage.go coverage ${{ matrix.build-flag }}
       - name: "Codecov: General"
         uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
         if: ${{ matrix.go-version == '1.22.x' }}

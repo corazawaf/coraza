@@ -136,39 +136,38 @@ func Test() error {
 	return nil
 }
 
+func buildTagsFlags(tags string) string {
+	if tags == "" {
+		return ""
+	}
+	return fmt.Sprintf("%q", tags)
+}
+
 // Coverage runs tests with coverage and race detector enabled.
-func Coverage() error {
+func Coverage(tags string) error {
+	tags = buildTagsFlags(tags)
 	if err := os.MkdirAll("build", 0755); err != nil {
 		return err
 	}
-	if err := sh.RunV("go", "test", "-race", "-coverprofile=build/coverage.txt", "-covermode=atomic", "-coverpkg=./...", "./..."); err != nil {
+	fmt.Println("Running tests with coverage")
+	fmt.Println("Tags:", tags)
+	tagsCmd := ""
+	if tags != "" {
+		tagsCmd = "-tags=" + tags
+	}
+	if err := sh.RunV("go", "test", "-race", tagsCmd, fmt.Sprintf("-coverprofile=build/%s-coverage.txt", tags), "-covermode=atomic", "-coverpkg=./...", "./..."); err != nil {
 		return err
 	}
-	if err := sh.RunV("go", "test", "-race", "-coverprofile=build/coverage-examples.txt", "-covermode=atomic", "-coverpkg=./...", "./examples/http-server"); err != nil {
+	// Execute http-server tests with coverage
+	if err := sh.RunV("go", "test", "-race", tagsCmd, fmt.Sprintf("-coverprofile=build/%s-coverage-examples.txt", tags), "-covermode=atomic", "-coverpkg=./...", "./examples/http-server"); err != nil {
 		return err
 	}
-	if err := sh.RunV("go", "test", "-coverprofile=build/coverage-ftw.txt", "-covermode=atomic", "-coverpkg=./...", "./testing/coreruleset"); err != nil {
-		return err
-	}
-	// Execute coverage tests with multiphase evaluation enabled
-	if err := sh.RunV("go", "test", "-race", "-coverprofile=build/coverage-multiphase.txt", "-covermode=atomic", "-coverpkg=./...", "-tags=coraza.rule.multiphase_evaluation", "./..."); err != nil {
-		return err
-	}
-	// Executes http-server tests with multiphase evaluation enabled
-	if err := sh.RunV("go", "test", "-race", "-coverprofile=build/coverage-examples.txt", "-covermode=atomic", "-tags=coraza.rule.multiphase_evaluation", "-coverpkg=./...", "./examples/http-server"); err != nil {
-		return err
-	}
-	// Execute FTW tests with multiphase evaluation enabled as well
-	if err := sh.RunV("go", "test", "-coverprofile=build/coverage-ftw-multiphase.txt", "-covermode=atomic", "-coverpkg=./...", "-tags=coraza.rule.multiphase_evaluation", "./testing/coreruleset"); err != nil {
-		return err
-	}
-	// This is not actually running tests with tinygo, but with the tag that includes its code so we can calculate coverage
-	// for it.
-	if err := sh.RunV("go", "test", "-race", "-tags=tinygo", "-coverprofile=build/coverage-tinygo.txt", "-covermode=atomic", "-coverpkg=./...", "./..."); err != nil {
+	// Execute FTW tests with coverage as well
+	if err := sh.RunV("go", "test", tagsCmd, fmt.Sprintf("-coverprofile=build/%s-coverage-ftw.txt", tags), "-covermode=atomic", "-coverpkg=./...", "./testing/coreruleset"); err != nil {
 		return err
 	}
 
-	return sh.RunV("go", "tool", "cover", "-html=build/coverage.txt", "-o", "build/coverage.html")
+	return sh.RunV("go", "tool", "cover", fmt.Sprintf("-html=build/%s-coverage.txt", tags), "-o", fmt.Sprintf("build/%s-coverage.html", tags))
 }
 
 // Fuzz runs fuzz tests
@@ -257,6 +256,7 @@ func TagsMatrix() error {
 		"coraza.rule.case_sensitive_args_keys",
 		"memoize_builders",
 		"coraza.rule.multiphase_valuation",
+		"tinygo",
 	}
 	combos := combinations(tags)
 
