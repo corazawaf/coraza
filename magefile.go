@@ -7,12 +7,14 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
@@ -227,4 +229,43 @@ func Precommit() error {
 // Check runs lint and tests.
 func Check() {
 	mg.SerialDeps(Lint, Test)
+}
+
+// combinations generates all possible combinations of build tags
+func combinations(tags []string) []string {
+	var result []string
+	n := len(tags)
+	for i := 0; i < (1 << n); i++ {
+		var combo []string
+		for j := 0; j < n; j++ {
+			if i&(1<<j) != 0 {
+				combo = append(combo, tags[j])
+			}
+		}
+		if len(combo) > 0 {
+			result = append(result, "-tags="+strings.Join(combo, ","))
+		} else {
+			result = append(result, "")
+		}
+	}
+	return result
+}
+
+// Generates a JSON output to stdout which contains all permutations of build tags for the project.
+func TagsMatrix() error {
+	tags := []string{
+		"coraza.rule.case_sensitive_args_keys",
+		"memoize_builders",
+		"coraza.rule.multiphase_valuation",
+	}
+	combos := combinations(tags)
+
+	jsonData, err := json.Marshal(combos)
+	if err != nil {
+		fmt.Println("Error generating JSON:", err)
+		return nil
+	}
+
+	fmt.Println(string(jsonData))
+	return nil
 }
