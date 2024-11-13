@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/magefile/mage/mg"
@@ -140,7 +141,12 @@ func buildTagsFlags(tags string) string {
 	if tags == "" {
 		return ""
 	}
-	return fmt.Sprintf("%q", tags)
+	// we remove all non alphanumeric _,-
+	rx := regexp.MustCompile("^[\\w_,]+$")
+	if !rx.MatchString(tags) {
+		panic("Invalid build tags")
+	}
+	return tags
 }
 
 // Coverage runs tests with coverage and race detector enabled.
@@ -157,19 +163,19 @@ func Coverage() error {
 	if tags != "" {
 		tagsCmd = "-tags=" + tags
 	}
-	if err := sh.RunV("go", "test", "-race", tagsCmd, fmt.Sprintf("-coverprofile=build/%s-coverage.txt", tags), "-covermode=atomic", "-coverpkg=./...", "./..."); err != nil {
+	if err := sh.RunV("go", "test", "-race", tagsCmd, "-coverprofile=build/coverage.txt", "-covermode=atomic", "-coverpkg=./...", "./..."); err != nil {
 		return err
 	}
 	// Execute http-server tests with coverage
-	if err := sh.RunV("go", "test", "-race", tagsCmd, fmt.Sprintf("-coverprofile=build/%s-coverage-examples.txt", tags), "-covermode=atomic", "-coverpkg=./...", "./examples/http-server"); err != nil {
+	if err := sh.RunV("go", "test", "-race", tagsCmd, "-coverprofile=build/coverage-examples.txt", "-covermode=atomic", "-coverpkg=./...", "./examples/http-server"); err != nil {
 		return err
 	}
 	// Execute FTW tests with coverage as well
-	if err := sh.RunV("go", "test", tagsCmd, fmt.Sprintf("-coverprofile=build/%s-coverage-ftw.txt", tags), "-covermode=atomic", "-coverpkg=./...", "./testing/coreruleset"); err != nil {
+	if err := sh.RunV("go", "test", tagsCmd, "-coverprofile=build/coverage-ftw.txt", "-covermode=atomic", "-coverpkg=./...", "./testing/coreruleset"); err != nil {
 		return err
 	}
 
-	return sh.RunV("go", "tool", "cover", fmt.Sprintf("-html=build/%s-coverage.txt", tags), "-o", fmt.Sprintf("build/%s-coverage.html", tags))
+	return sh.RunV("go", "tool", "cover", "-html=build/coverage.txt", "-o", "build/coverage.html")
 }
 
 // Fuzz runs fuzz tests
