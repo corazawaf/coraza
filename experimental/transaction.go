@@ -15,7 +15,9 @@ type Transaction interface {
 	// the need for an extra copy into the request body buffer. Because of this, this method
 	// is expected to be called just once, further calls to UseRequestBody have to be avoided.
 	// If the body size exceeds the limit and the action is to reject, an interruption will be returned.
-	// The caller should not use b slice after this call.
+	//
+	// Note: The new internal buffer takes ownership of the provided data, the caller should NOT use b slice
+	// after this call.
 	//
 	// It returns the relevant interruption, the final internal body buffer length and any error that occurs.
 	UseRequestBody(b []byte) (*types.Interruption, int, error)
@@ -25,7 +27,9 @@ type Transaction interface {
 	// the need for an extra copy into the response body buffer. Because of this, this method is expected to
 	// be called just once, further calls to UseResponseBody have to be avoided.
 	// If the body size exceeds the limit and the action is to reject, an interruption will be returned.
-	// The caller should not use b slice after this call.
+	//
+	// Note: The new internal buffer takes ownership of the provided data, the caller should NOT use b slice
+	// after this call.
 	//
 	// It returns the relevant interruption, the final internal body buffer length and any error that occurs.
 	UseResponseBody(b []byte) (*types.Interruption, int, error)
