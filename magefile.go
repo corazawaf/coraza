@@ -144,8 +144,10 @@ func buildTagsFlags(tags string) string {
 }
 
 // Coverage runs tests with coverage and race detector enabled.
-func Coverage(tags string) error {
-	tags = buildTagsFlags(tags)
+// Usage: mage coverage [buildTags]
+func Coverage() error {
+	buildTags := os.Getenv("BUILD_TAGS")
+	tags := buildTagsFlags(buildTags)
 	if err := os.MkdirAll("build", 0755); err != nil {
 		return err
 	}
