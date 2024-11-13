@@ -11,7 +11,8 @@ on:
     paths-ignore:
       - "**/*.md"
       - "LICENSE"
-
+  schedule:
+    - cron: "0 0 * * *"
 jobs:
   # Generate matrix of tags for all permutations of the tests
   generate-matrix:
@@ -46,7 +47,7 @@ jobs:
           cache: true  
       - name: Tests and coverage
         run: |
-          export BUILD_TAGS="${{ matrix.build-flag }}"
+          export BUILD_TAGS=${{ matrix.build-flag }}
           go run mage.go coverage
       - name: "Codecov: General"
         uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
