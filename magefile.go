@@ -142,7 +142,7 @@ func buildTagsFlags(tags string) string {
 		return ""
 	}
 	// we remove all non alphanumeric _,-
-	rx := regexp.MustCompile("^[\\w_,]+$")
+	rx := regexp.MustCompile("^[\\w_,\\.]+$")
 	if !rx.MatchString(tags) {
 		panic("Invalid build tags")
 	}
