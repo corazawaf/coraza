@@ -273,7 +273,7 @@ func TagsMatrix() error {
 		"coraza.rule.case_sensitive_args_keys",
 		"memoize_builders",
 		"coraza.rule.multiphase_valuation",
-		"no_fs_access"
+		"no_fs_access",
 	}
 	combos := combinations(tags)
 
