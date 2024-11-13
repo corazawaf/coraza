@@ -243,7 +243,7 @@ func combinations(tags []string) []string {
 			}
 		}
 		if len(combo) > 0 {
-			result = append(result, "-tags="+strings.Join(combo, ","))
+			result = append(result, strings.Join(combo, ","))
 		} else {
 			result = append(result, "")
 		}
