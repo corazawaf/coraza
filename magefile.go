@@ -174,6 +174,15 @@ func Coverage() error {
 	if err := sh.RunV("go", "test", tagsCmd, "-coverprofile=build/coverage-ftw.txt", "-covermode=atomic", "-coverpkg=./...", "./testing/coreruleset"); err != nil {
 		return err
 	}
+	// we run tinygo tag only if memoize_builders is is not enabled
+	if !strings.Contains(tags, "memoize_builders") {
+		if tagsCmd != "" {
+			tagsCmd += ",tinygo"
+		}
+		if err := sh.RunV("go", "test", "-race", tagsCmd, "-coverprofile=build/coverage-tinygo.txt", "-covermode=atomic", "-coverpkg=./...", "./..."); err != nil {
+			return err
+		}
+	}
 
 	return sh.RunV("go", "tool", "cover", "-html=build/coverage.txt", "-o", "build/coverage.html")
 }
@@ -264,7 +273,6 @@ func TagsMatrix() error {
 		"coraza.rule.case_sensitive_args_keys",
 		"memoize_builders",
 		"coraza.rule.multiphase_valuation",
-		"tinygo",
 	}
 	combos := combinations(tags)
 
