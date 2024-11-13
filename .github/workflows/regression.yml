@@ -25,7 +25,7 @@ jobs:
       - name: Generate tag combinations
         id: generate
         run: |
-          go run mage.go tags-matrix > tags.json
+          go run mage.go tagsmatrix > tags.json
           echo "::set-output name=tags::$(cat tags.json)"
         shell: bash
   test:
