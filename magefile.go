@@ -130,6 +130,15 @@ func Test() error {
 		return err
 	}
 
+	// Execute FTW tests with coraza.rule.no_regex_multiline as well
+	if err := sh.RunV("go", "test", "-tags=coraza.rule.no_regex_multiline", "./testing/coreruleset"); err != nil {
+		return err
+	}
+
+	if err := sh.RunV("go", "test", "-tags=coraza.rule.no_regex_multiline", "-run=^TestRx", "./..."); err != nil {
+		return err
+	}
+
 	if err := sh.RunV("go", "test", "-tags=coraza.rule.case_sensitive_args_keys", "-run=^TestCaseSensitive", "./..."); err != nil {
 		return err
 	}
