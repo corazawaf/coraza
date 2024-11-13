@@ -11,8 +11,6 @@ on:
     paths-ignore:
       - "**/*.md"
       - "LICENSE"
-  schedule:
-    - cron: "0 0 * * *"
 jobs:
   # Generate matrix of tags for all permutations of the tests
   generate-matrix:
