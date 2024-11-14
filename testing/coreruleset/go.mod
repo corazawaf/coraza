@@ -4,7 +4,7 @@ go 1.22.3
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.7.1
-	github.com/corazawaf/coraza-coreruleset/v4 v4.6.0
+	github.com/corazawaf/coraza-coreruleset/v4 v4.7.0
 	github.com/corazawaf/coraza/v3 v3.2.1
 	github.com/coreruleset/albedo v0.0.16
 	github.com/coreruleset/go-ftw v1.1.1
