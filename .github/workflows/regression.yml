@@ -11,13 +11,29 @@ on:
     paths-ignore:
       - "**/*.md"
       - "LICENSE"
-
 jobs:
+  # Generate matrix of tags for all permutations of the tests
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      tags: ${{ steps.generate.outputs.tags }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      
+      - name: Generate tag combinations
+        id: generate
+        run: |
+          go run mage.go tagsmatrix > tags.json
+          echo "::set-output name=tags::$(cat tags.json)"
+        shell: bash
   test:
+    needs: generate-matrix
     strategy:
       matrix:
         go-version: [1.22.x, 1.23.x]
         os: [ubuntu-latest]
+        build-flag: ${{ fromJson(needs.generate-matrix.outputs.tags) }}
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
@@ -26,36 +42,37 @@ jobs:
         uses: actions/setup-go@41dfa10bad2bb2ae585af6ee5bb4d7d973ad74ed # v5
         with:
           go-version: ${{ matrix.go-version }}
-          cache: true
+          cache: true  
       - name: Tests and coverage
-        run: go run mage.go coverage
+        run: |
+          export BUILD_TAGS=${{ matrix.build-flag }}
+          go run mage.go coverage
       - name: "Codecov: General"
         uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
         if: ${{ matrix.go-version == '1.22.x' }}
         with:
           files: build/coverage.txt
-          flags: default
+          flags: default,${{ matrix.build-flag }}
+          token: ${{ secrets.CODECOV_TOKEN }}   
       - name: "Codecov: Examples"
         uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
         if: ${{ matrix.go-version == '1.22.x' }}
         with:
           files: build/coverage-examples.txt
-          flags: examples
+          flags: examples+${{ matrix.build-flag }}
+          token: ${{ secrets.CODECOV_TOKEN }}
       - name: "Codecov: FTW"
         uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
         if: ${{ matrix.go-version == '1.22.x' }}
         with:
           files: build/coverage-ftw.txt
-          flags: ftw
-      - name: "Codecov: FTW Multiphase tag"
-        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
-        if: ${{ matrix.go-version == '1.22.x' }}
-        with:
-          files: build/coverage-ftw-multiphase.txt
-          flags: ftw-multiphase
+          flags: ftw,${{ matrix.build-flag }}
+          token: ${{ secrets.CODECOV_TOKEN }}
       - name: "Codecov: Tinygo"
         uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
-        if: ${{ matrix.go-version == '1.22.x' }}
+        # only if coverage-tinygo.txt exists
+        if: ${{ matrix.go-version == '1.22.x' && hashFiles('build/coverage-tinygo.txt') != '' }}
         with:
           files: build/coverage-tinygo.txt
-          flags: tinygo
+          flags: tinygo,${{ matrix.build-flag }}
+          token: ${{ secrets.CODECOV_TOKEN }}
