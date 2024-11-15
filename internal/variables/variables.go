@@ -4,7 +4,7 @@
 //go:generate go run generator/main.go
 
 // Package variables contains the representation of the variables used in the rules
-// Variables are created as bytes and they have a string representation
+// Variables are created as bytes, and they have a string representation
 package variables
 
 // This internal file contains all variables supported by handling of SecLang, such as
@@ -236,4 +236,22 @@ const (
 	ResBodyProcessorError
 	// ResBodyProcessorErrorMsg
 	ResBodyProcessorErrorMsg
+	// Time
+	Time
+	// TimeDay
+	TimeDay
+	// TimeEpoch
+	TimeEpoch
+	// TimeHour
+	TimeHour
+	// TimeMin
+	TimeMin
+	// TimeMon
+	TimeMon
+	// TimeSec
+	TimeSec
+	// TimeWday
+	TimeWday
+	// TimeYear
+	TimeYear
 )
