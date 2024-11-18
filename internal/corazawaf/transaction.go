@@ -282,6 +282,24 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.multipartPartHeaders
 	case variables.MultipartStrictError:
 		return tx.variables.multipartStrictError
+	case variables.Time:
+		return tx.variables.time
+	case variables.TimeDay:
+		return tx.variables.timeDay
+	case variables.TimeEpoch:
+		return tx.variables.timeEpoch
+	case variables.TimeHour:
+		return tx.variables.timeHour
+	case variables.TimeMin:
+		return tx.variables.timeMin
+	case variables.TimeMon:
+		return tx.variables.timeMon
+	case variables.TimeSec:
+		return tx.variables.timeSec
+	case variables.TimeWday:
+		return tx.variables.timeWday
+	case variables.TimeYear:
+		return tx.variables.timeYear
 	}
 
 	return collections.Noop
@@ -1591,6 +1609,20 @@ func (tx *Transaction) generateResponseBodyError(err error) {
 	tx.variables.resBodyProcessorErrorMsg.Set(err.Error())
 }
 
+// setTimeVariables sets all the time variables
+func (tx *Transaction) setTimeVariables() {
+	timestamp := time.Unix(0, tx.Timestamp)
+	tx.variables.time.Set(timestamp.Format(time.TimeOnly))
+	tx.variables.timeDay.Set(strconv.Itoa(timestamp.Day()))
+	tx.variables.timeEpoch.Set(strconv.FormatInt(timestamp.Unix(), 10))
+	tx.variables.timeHour.Set(strconv.Itoa(timestamp.Hour()))
+	tx.variables.timeMin.Set(strconv.Itoa(timestamp.Minute()))
+	tx.variables.timeSec.Set(strconv.Itoa(timestamp.Second()))
+	tx.variables.timeWday.Set(strconv.Itoa(int(timestamp.Weekday())))
+	tx.variables.timeMon.Set(strconv.Itoa(int(timestamp.Month())))
+	tx.variables.timeYear.Set(strconv.Itoa(timestamp.Year()))
+}
+
 // TransactionVariables has pointers to all the variables of the transaction
 type TransactionVariables struct {
 	args                     *collections.ConcatKeyed
@@ -1669,6 +1701,15 @@ type TransactionVariables struct {
 	resBodyErrorMsg          *collections.Single
 	resBodyProcessorError    *collections.Single
 	resBodyProcessorErrorMsg *collections.Single
+	time                     *collections.Single
+	timeDay                  *collections.Single
+	timeEpoch                *collections.Single
+	timeHour                 *collections.Single
+	timeMin                  *collections.Single
+	timeMon                  *collections.Single
+	timeSec                  *collections.Single
+	timeWday                 *collections.Single
+	timeYear                 *collections.Single
 }
 
 func NewTransactionVariables() *TransactionVariables {
@@ -1741,6 +1782,15 @@ func NewTransactionVariables() *TransactionVariables {
 	v.requestXML = collections.NewMap(variables.RequestXML)
 	v.multipartPartHeaders = collections.NewMap(variables.MultipartPartHeaders)
 	v.multipartStrictError = collections.NewSingle(variables.MultipartStrictError)
+	v.time = collections.NewSingle(variables.Time)
+	v.timeDay = collections.NewSingle(variables.TimeDay)
+	v.timeEpoch = collections.NewSingle(variables.TimeEpoch)
+	v.timeHour = collections.NewSingle(variables.TimeHour)
+	v.timeMin = collections.NewSingle(variables.TimeMin)
+	v.timeMon = collections.NewSingle(variables.TimeMon)
+	v.timeSec = collections.NewSingle(variables.TimeSec)
+	v.timeWday = collections.NewSingle(variables.TimeWday)
+	v.timeYear = collections.NewSingle(variables.TimeYear)
 
 	// XML is a pointer to RequestXML
 	v.xml = v.requestXML
@@ -2297,6 +2347,33 @@ func (v *TransactionVariables) All(f func(v variables.RuleVariable, col collecti
 		return
 	}
 	if !f(variables.XML, v.xml) {
+		return
+	}
+	if !f(variables.Time, v.time) {
+		return
+	}
+	if !f(variables.TimeDay, v.timeDay) {
+		return
+	}
+	if !f(variables.TimeEpoch, v.timeEpoch) {
+		return
+	}
+	if !f(variables.TimeHour, v.timeHour) {
+		return
+	}
+	if !f(variables.TimeMin, v.timeMin) {
+		return
+	}
+	if !f(variables.TimeMon, v.timeMon) {
+		return
+	}
+	if !f(variables.TimeSec, v.timeSec) {
+		return
+	}
+	if !f(variables.TimeWday, v.timeWday) {
+		return
+	}
+	if !f(variables.TimeYear, v.timeYear) {
 		return
 	}
 }

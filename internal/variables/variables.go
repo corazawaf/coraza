@@ -236,22 +236,22 @@ const (
 	ResBodyProcessorError
 	// ResBodyProcessorErrorMsg
 	ResBodyProcessorErrorMsg
-	// Time
+	// Time holds a formatted string representing the time (hour:minute:second).
 	Time
-	// TimeDay
+	// TimeDay holds the current day of the month (1-31)
 	TimeDay
-	// TimeEpoch
+	// TimeEpoch holds the time in seconds since 1970
 	TimeEpoch
-	// TimeHour
+	// TimeHour holds the current hour of the day (0-23)
 	TimeHour
-	// TimeMin
+	// TimeMin holds the current minute of the hour (0-59)
 	TimeMin
-	// TimeMon
+	// TimeMon holds the current month of the year (0-11)
 	TimeMon
-	// TimeSec
+	// TimeSec holds the current second of the minute (0-59)
 	TimeSec
-	// TimeWday
+	// TimeWday holds the current weekday value (1–7), where Monday is 1
 	TimeWday
-	// TimeYear
+	// TimeYear the current four-digit year value
 	TimeYear
 )
