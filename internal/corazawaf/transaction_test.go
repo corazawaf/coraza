@@ -13,10 +13,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/debuglog"
+	"github.com/corazawaf/coraza/v3/experimental/collection"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	experimentalTypes "github.com/corazawaf/coraza/v3/experimental/types"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/environment"
@@ -709,7 +710,7 @@ func TestAuditLogFields(t *testing.T) {
 	rule := NewRule()
 	rule.ID_ = 131
 	rule.Log = true
-	tx.MatchRule(rule, []types.MatchData{
+	tx.MatchRule(rule, []experimentalTypes.MatchData{
 		&corazarules.MatchData{
 			Variable_: variables.UniqueID,
 		},
@@ -850,7 +851,7 @@ func TestLogCallback(t *testing.T) {
 			rule.Phase_ = 1
 			rule.Log = true
 			_ = rule.AddAction("deny", testCase.action)
-			tx.MatchRule(rule, []types.MatchData{
+			tx.MatchRule(rule, []experimentalTypes.MatchData{
 				&corazarules.MatchData{
 					Variable_: variables.UniqueID,
 				},

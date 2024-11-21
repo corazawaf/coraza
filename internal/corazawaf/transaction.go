@@ -18,9 +18,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/debuglog"
+	"github.com/corazawaf/coraza/v3/experimental/collection"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	experimentalTypes "github.com/corazawaf/coraza/v3/experimental/types"
 	"github.com/corazawaf/coraza/v3/internal/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/internal/collections"
@@ -486,7 +487,7 @@ func (tx *Transaction) matchVariable(match *corazarules.MatchData) {
 }
 
 // MatchRule Matches a rule to be logged
-func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
+func (tx *Transaction) MatchRule(r *Rule, mds []experimentalTypes.MatchData) {
 	tx.debugLogger.Debug().Int("rule_id", r.ID_).Msg("Rule matched")
 	// tx.MatchedRules = append(tx.MatchedRules, mr)
 
@@ -561,13 +562,13 @@ func (tx *Transaction) GetStopWatch() string {
 // GetField Retrieve data from collections applying exceptions
 // In future releases we may remove the exceptions slice and
 // make it easier to use
-func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
+func (tx *Transaction) GetField(rv ruleVariableParams) []experimentalTypes.MatchData {
 	col := tx.Collection(rv.Variable)
 	if col == nil {
-		return []types.MatchData{}
+		return []experimentalTypes.MatchData{}
 	}
 
-	var matches []types.MatchData
+	var matches []experimentalTypes.MatchData
 	// Now that we have access to the collection, we can apply the exceptions
 	switch {
 	case rv.KeyRx != nil:
@@ -608,7 +609,7 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 
 	if rv.Count {
 		count := len(matches)
-		matches = []types.MatchData{
+		matches = []experimentalTypes.MatchData{
 			&corazarules.MatchData{
 				Variable_: rv.Variable,
 				Key_:      rv.KeyStr,

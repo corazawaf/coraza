@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/experimental/collection"
+	"github.com/corazawaf/coraza/v3/experimental/types"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
-	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
