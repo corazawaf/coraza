@@ -8,8 +8,6 @@ github.com/bmatcuk/doublestar/v4 v4.7.1 h1:fdDeAqgT47acgwd9bd9HxJRDmc9UAmPpc+2m0
 github.com/bmatcuk/doublestar/v4 v4.7.1/go.mod h1:xBQ8jztBU6kakFMg+8WGxn0c6z1fTSPVIjEY1Wr7jzc=
 github.com/corazawaf/coraza-coreruleset v0.0.0-20240226094324-415b1017abdc h1:OlJhrgI3I+FLUCTI3JJW8MoqyM78WbqJjecqMnqG+wc=
 github.com/corazawaf/coraza-coreruleset v0.0.0-20240226094324-415b1017abdc/go.mod h1:7rsocqNDkTCira5T0M7buoKR2ehh7YZiPkzxRuAgvVU=
-github.com/corazawaf/coraza-coreruleset/v4 v4.6.0 h1:VGlMw3QMuKaV7XgifPgcqCm66K+HRSdM4d9PRh1nD50=
-github.com/corazawaf/coraza-coreruleset/v4 v4.6.0/go.mod h1:1FQt1p+JSQ6tYrafMqZrEEdDmhq6aVuIJdnk+bM9hMY=
 github.com/corazawaf/coraza-coreruleset/v4 v4.7.0 h1:j02CDxQYHVFZfBxbKLWYg66jSLbPmZp1GebyMwzN9Z0=
 github.com/corazawaf/coraza-coreruleset/v4 v4.7.0/go.mod h1:1FQt1p+JSQ6tYrafMqZrEEdDmhq6aVuIJdnk+bM9hMY=
 github.com/corazawaf/libinjection-go v0.2.2 h1:Chzodvb6+NXh6wew5/yhD0Ggioif9ACrQGR4qjTCs1g=
