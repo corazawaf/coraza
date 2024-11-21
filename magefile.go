@@ -130,6 +130,15 @@ func Test() error {
 		return err
 	}
 
+	// Execute FTW tests with coraza.rule.no_regex_multiline as well
+	if err := sh.RunV("go", "test", "-tags=coraza.rule.no_regex_multiline", "./testing/coreruleset"); err != nil {
+		return err
+	}
+
+	if err := sh.RunV("go", "test", "-tags=coraza.rule.no_regex_multiline", "-run=^TestRx", "./..."); err != nil {
+		return err
+	}
+
 	if err := sh.RunV("go", "test", "-tags=coraza.rule.case_sensitive_args_keys", "-run=^TestCaseSensitive", "./..."); err != nil {
 		return err
 	}
@@ -174,7 +183,7 @@ func Coverage() error {
 	if err := sh.RunV("go", "test", tagsCmd, "-coverprofile=build/coverage-ftw.txt", "-covermode=atomic", "-coverpkg=./...", "./testing/coreruleset"); err != nil {
 		return err
 	}
-	// we run tinygo tag only if memoize_builders is is not enabled
+	// we run tinygo tag only if memoize_builders is not enabled
 	if !strings.Contains(tags, "memoize_builders") {
 		if tagsCmd != "" {
 			tagsCmd += ",tinygo"
@@ -271,6 +280,7 @@ func combinations(tags []string) []string {
 func TagsMatrix() error {
 	tags := []string{
 		"coraza.rule.case_sensitive_args_keys",
+		"coraza.rule.no_regex_multiline",
 		"memoize_builders",
 		"coraza.rule.multiphase_valuation",
 		"no_fs_access",
