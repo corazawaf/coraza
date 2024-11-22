@@ -96,7 +96,7 @@ func NewDataMetadataList() DataMetadataList {
 
 func (v *DataMetadataList) EvaluateMetadata(data string) {
 	// we do the analysis only once
-	if !v.evaluated {
+	if v != nil && !v.evaluated {
 		v.metadata = make(map[DataMetadata]bool)
 		v.evaluateBoolean(data)
 		v.evaluateNumeric(data)

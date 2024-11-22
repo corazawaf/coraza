@@ -154,6 +154,7 @@ func TestAllowedMetadataTagsInspectionEnabled(t *testing.T) {
 		t.Error(err)
 	}
 	tx := waf.NewTransaction()
+	tx.SetMetadataInspection(true)
 	tx.AddRequestHeader("Content-Type", "application/json")
 	tx.ProcessURI("http://localhost/test.php", "GET", "1.1")
 	tx.ProcessRequestHeaders()
@@ -210,6 +211,7 @@ func BenchmarkAllowedMetadataTagsInspectionEnabled(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		tx := waf.NewTransaction()
+		tx.SetMetadataInspection(true)
 		tx.AddRequestHeader("Content-Type", "application/json")
 		tx.ProcessURI("http://localhost/test.php", "GET", "1.1")
 		tx.ProcessRequestHeaders()
@@ -267,6 +269,7 @@ func BenchmarkAllowedMetadataTagsInspectionDisabled(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		tx := waf.NewTransaction()
+		tx.SetMetadataInspection(false)
 		tx.AddRequestHeader("Content-Type", "application/json")
 		tx.SetMetadataInspection(false)
 		tx.ProcessURI("http://localhost/test.php", "GET", "1.1")

@@ -66,6 +66,9 @@ func (m MatchData) ChainLevel() int {
 
 func (m *MatchData) DataMetadata() experimentalTypes.DataMetadataList {
 	// Evaluate the metadata if it's not set
+	if m.Metadata_ == nil {
+		m.Metadata_ = &experimentalTypes.DataMetadataList{}
+	}
 	m.Metadata_.EvaluateMetadata(m.Value_)
 	return *m.Metadata_
 }
