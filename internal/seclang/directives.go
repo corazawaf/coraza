@@ -858,12 +858,13 @@ func directiveSecDataDir(options *DirectiveOptions) error {
 }
 
 func directiveSecUploadKeepFiles(options *DirectiveOptions) error {
-	b, err := parseBoolean(options.Opts)
-	if err != nil {
-		return err
+	if len(options.Opts) == 0 {
+		return errEmptyOptions
 	}
-	options.WAF.UploadKeepFiles = b
-	return nil
+
+	ku, err := types.ParseKeepUploadFilesStatus(options.Opts)
+	options.WAF.UploadKeepFiles = ku
+	return err
 }
 
 func directiveSecUploadFileMode(options *DirectiveOptions) error {

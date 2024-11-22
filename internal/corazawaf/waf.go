@@ -82,7 +82,7 @@ type WAF struct {
 
 	// If true, the WAF will store the uploaded files in the UploadDir
 	// directory
-	UploadKeepFiles bool
+	UploadKeepFiles types.KeepUploadFilesStatus
 	// UploadFileMode instructs the waf to set the file mode for uploaded files
 	UploadFileMode fs.FileMode
 	// UploadFileLimit is the maximum size of the uploaded file to be stored

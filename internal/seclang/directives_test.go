@@ -154,8 +154,9 @@ func TestDirectives(t *testing.T) {
 		"SecUploadKeepFiles": {
 			{"", expectErrorOnDirective},
 			{"Ox", expectErrorOnDirective},
-			{"On", func(w *corazawaf.WAF) bool { return w.UploadKeepFiles }},
-			{"Off", func(w *corazawaf.WAF) bool { return !w.UploadKeepFiles }},
+			{"On", func(w *corazawaf.WAF) bool { return w.UploadKeepFiles == types.KeepUploadFilesOn }},
+			{"Off", func(w *corazawaf.WAF) bool { return w.UploadKeepFiles == types.KeepUploadFilesOff }},
+			{"RelevantOnly", func(w *corazawaf.WAF) bool { return w.UploadKeepFiles == types.KeepUploadFilesRelevantOnly }},
 		},
 		"SecUploadFileMode": {
 			{"", expectErrorOnDirective},

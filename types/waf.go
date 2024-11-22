@@ -35,6 +35,32 @@ func ParseAuditEngineStatus(as string) (AuditEngineStatus, error) {
 	return -1, fmt.Errorf("invalid audit engine status: %s", as)
 }
 
+// KeepUploadFilesStatus represents the functionality
+// of the audit engine.
+type KeepUploadFilesStatus int
+
+const (
+	// KeepUploadFilesOn will keep all uploaded files
+	KeepUploadFilesOn KeepUploadFilesStatus = iota
+	// KeepUploadFilesOff will not keep any uploaded file
+	KeepUploadFilesOff KeepUploadFilesStatus = iota
+	// KeepUploadFilesRelevantOnly will keep only relevant uploaded files
+	KeepUploadFilesRelevantOnly KeepUploadFilesStatus = iota
+)
+
+// ParseKeepUploadFilesStatus parses the keep upload files status
+func ParseKeepUploadFilesStatus(re string) (KeepUploadFilesStatus, error) {
+	switch strings.ToLower(re) {
+	case "on":
+		return KeepUploadFilesOn, nil
+	case "relevantonly":
+		return KeepUploadFilesRelevantOnly, nil
+	case "off":
+		return KeepUploadFilesOff, nil
+	}
+	return -1, fmt.Errorf("invalid keep upload files: %q", re)
+}
+
 // RuleEngineStatus represents the functionality
 // of the rule engine.
 type RuleEngineStatus int
