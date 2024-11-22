@@ -3,6 +3,7 @@
 package types
 
 import (
+	"net/url"
 	"unicode"
 )
 
@@ -26,6 +27,22 @@ const (
 	ValueMetadataBoolean
 	// ValueMetadataUnicode represents a unicode value.
 	ValueMetadataUnicode
+	// NotValueMetadataAlphanumeric represents a non-alphanumeric value.
+	NotValueMetadataAlphanumeric
+	// NotValueMetadataAscii represents a non-ASCII value.
+	NotValueMetadataAscii
+	// NotValueMetadataBase64 represents a non-base64 value.
+	NotValueMetadataBase64
+	// NotValueMetadataURI represents a non-URI value.
+	NotValueMetadataURI
+	// NotValueMetadataDomain represents a non-domain value.
+	NotValueMetadataDomain
+	// NotValueMetadataNumeric represents a non-numeric value.
+	NotValueMetadataNumeric
+	// NotValueMetadataBoolean represents a non-boolean value.
+	NotValueMetadataBoolean
+	// NotValueMetadataUnicode represents a non-unicode value.
+	NotValueMetadataUnicode
 )
 
 // NewValueMetadata returns a new ValueMetadata from a string.
@@ -47,6 +64,22 @@ func NewValueMetadata(metadata string) (DataMetadata, bool) {
 		return ValueMetadataDomain, true
 	case "unicode":
 		return ValueMetadataUnicode, true
+	case "not_numeric":
+		return NotValueMetadataNumeric, true
+	case "not_boolean":
+		return NotValueMetadataBoolean, true
+	case "not_alphanumeric":
+		return NotValueMetadataAlphanumeric, true
+	case "not_ascii":
+		return NotValueMetadataAscii, true
+	case "not_base64":
+		return NotValueMetadataBase64, true
+	case "not_uri":
+		return NotValueMetadataURI, true
+	case "not_domain":
+		return NotValueMetadataDomain, true
+	case "not_unicode":
+		return NotValueMetadataUnicode, true
 	}
 	return 0, false
 }
@@ -54,27 +87,34 @@ func NewValueMetadata(metadata string) (DataMetadata, bool) {
 // DataMetadataList is a list of ValueMetadata.
 type DataMetadataList struct {
 	metadata map[DataMetadata]bool
+	evaluated bool
 }
 
-func (v *DataMetadataList) Evaluate(data string) {
+func NewDataMetadataList() DataMetadataList {
+	return DataMetadataList{}
+}
+
+func (v *DataMetadataList) EvaluateMetadata(data string) {
 	// we do the analysis only once
-	if v.metadata == nil {
+	if !v.evaluated {
 		v.metadata = make(map[DataMetadata]bool)
-		v.evaluateNumeric(data)
 		v.evaluateBoolean(data)
+		v.evaluateNumeric(data)
 		v.evaluateAlphanumeric(data)
 		v.evaluateAscii(data)
 		v.evaluateBase64(data)
-		// v.evaluateURI(data)
+		v.evaluateURI(data)
 		// v.evaluateDomain(data)
-		// v.evaluateUnicode(data)
+		v.evaluateUnicode(data)
+		v.evaluated = true
 	}
 }
 
 func (v *DataMetadataList) evaluateAlphanumeric(data string) bool {
 	for _, c := range data {
-		if !unicode.IsLetter(c) && !unicode.IsNumber(c) {
+		if !unicode.IsLetter(c) && !unicode.IsNumber(c) && !unicode.IsSpace(c){
 			v.metadata[ValueMetadataAlphanumeric] = false
+			v.metadata[NotValueMetadataAlphanumeric] = true
 			break
 		}
 	}
@@ -90,6 +130,7 @@ func (v *DataMetadataList) evaluateAscii(data string) bool {
 		}
 	}
 	v.metadata[ValueMetadataAscii] = res
+	v.metadata[NotValueMetadataAscii] = !res
 	return res
 }
 
@@ -106,6 +147,7 @@ func (v *DataMetadataList) evaluateBase64(data string) bool {
 		}
 	}
 	v.metadata[ValueMetadataBase64] = res
+	v.metadata[NotValueMetadataBase64] = !res
 	return res
 }
 
@@ -118,6 +160,7 @@ func (v *DataMetadataList) evaluateNumeric(data string) bool {
 		}
 	}
 	v.metadata[ValueMetadataNumeric] = res
+	v.metadata[NotValueMetadataNumeric] = !res
 	return res
 }
 
@@ -127,6 +170,28 @@ func (v *DataMetadataList) evaluateBoolean(data string) bool {
 		res = true
 	}
 	v.metadata[ValueMetadataBoolean] = res
+	v.metadata[NotValueMetadataBoolean] = !res
+	return res
+}
+
+func (v *DataMetadataList) evaluateURI(data string) bool {
+	res := false
+	u, err := url.Parse(data)
+	v.metadata[ValueMetadataURI] = err == nil && u.Scheme != "" && u.Host != ""
+	v.metadata[NotValueMetadataURI] = !v.metadata[ValueMetadataURI]
+	return res
+}
+
+func (v *DataMetadataList) evaluateUnicode(data string) bool {
+	res := false
+	for _, c := range data {
+		if c > unicode.MaxASCII {
+			res = true
+			break
+		}
+	}
+	v.metadata[ValueMetadataUnicode] = res
+	v.metadata[NotValueMetadataUnicode] = !res
 	return res
 }
 

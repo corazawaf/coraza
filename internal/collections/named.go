@@ -112,6 +112,7 @@ func (c *NamedCollectionNames) FindRegex(key *regexp.Regexp) []types.MatchData {
 				Variable_: c.variable,
 				Key_:      d.key,
 				Value_:    d.key,
+				Metadata_: d.metadata,
 			})
 		}
 	}
@@ -130,6 +131,7 @@ func (c *NamedCollectionNames) FindString(key string) []types.MatchData {
 				Variable_: c.variable,
 				Key_:      d.key,
 				Value_:    d.key,
+				Metadata_: d.metadata,
 			})
 		}
 	}
@@ -150,6 +152,7 @@ func (c *NamedCollectionNames) FindAll() []types.MatchData {
 				Variable_: c.variable,
 				Key_:      d.key,
 				Value_:    d.key,
+				Metadata_: d.metadata,
 			})
 		}
 	}

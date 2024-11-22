@@ -23,5 +23,5 @@ type MatchData interface {
 	// Chain depth of variable match
 	ChainLevel() int
 	// Metadata of the matched data
-	Metadata() DataMetadataList
+	DataMetadata() DataMetadataList
 }

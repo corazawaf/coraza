@@ -31,7 +31,7 @@ type MatchData struct {
 	// Multiphase specific field
 	ChainLevel_ int
 	// Metadata of the matched data
-	Metadata_ experimentalTypes.DataMetadataList
+	Metadata_ *experimentalTypes.DataMetadataList
 }
 
 var _ types.MatchData = (*MatchData)(nil)
@@ -64,10 +64,10 @@ func (m MatchData) ChainLevel() int {
 	return m.ChainLevel_
 }
 
-func (m *MatchData) Metadata() experimentalTypes.DataMetadataList {
+func (m *MatchData) DataMetadata() experimentalTypes.DataMetadataList {
 	// Evaluate the metadata if it's not set
-	m.Metadata_.Evaluate(m.Value_)
-	return m.Metadata_
+	m.Metadata_.EvaluateMetadata(m.Value_)
+	return *m.Metadata_
 }
 
 // ActionName is used to identify an action.

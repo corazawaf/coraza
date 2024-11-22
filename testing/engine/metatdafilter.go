@@ -56,5 +56,6 @@ SecRule ARGS "@rx abc" "block,id:29, log, phase: 2, tag:'metadatafilter/alphanum
 SecRule ARGS "@rx @" "block,id:30, log, phase: 2, tag:'metadatafilter/boolean,alphanumeric'"
 SecRule ARGS "@rx @" "block,id:31, log, phase: 2, tag:'metadatafilter/boolean'"
 SecRule ARGS "@rx @" "block,id:32, log, phase: 2, tag:'metadatafilter/ascii'"
+SecRule ARGS "@rx @" "block,id:33, log, phase: 2, tag:'metadatafilter/boolean,not_alphanumeric'"
 `,
 })

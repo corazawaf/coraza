@@ -68,6 +68,7 @@ func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
 					Variable_: c.variable,
 					Key_:      d.key,
 					Value_:    d.value,
+					Metadata_: d.metadata,
 				})
 			}
 		}
@@ -94,6 +95,7 @@ func (c *Map) FindString(key string) []types.MatchData {
 				Variable_: c.variable,
 				Key_:      aVar.key,
 				Value_:    aVar.value,
+				Metadata_: aVar.metadata,
 			})
 		}
 	}
@@ -109,6 +111,7 @@ func (c *Map) FindAll() []types.MatchData {
 				Variable_: c.variable,
 				Key_:      d.key,
 				Value_:    d.value,
+				Metadata_: d.metadata,
 			})
 		}
 	}
@@ -117,7 +120,7 @@ func (c *Map) FindAll() []types.MatchData {
 
 // Add adds a new key-value pair to the map.
 func (c *Map) Add(key string, value string) {
-	aVal := keyValue{key: key, value: value}
+	aVal := keyValue{key: key, value: value, metadata: &types.DataMetadataList{}}
 	if !c.isCaseSensitive {
 		key = strings.ToLower(key)
 	}
@@ -137,7 +140,7 @@ func (c *Map) Set(key string, values []string) {
 		dataSlice = dataSlice[:len(values)] // Reuse existing slice with the same length
 	}
 	for i, v := range values {
-		dataSlice[i] = keyValue{key: originalKey, value: v}
+		dataSlice[i] = keyValue{key: originalKey, value: v, metadata: &types.DataMetadataList{}}
 	}
 	c.data[key] = dataSlice
 }
@@ -149,7 +152,7 @@ func (c *Map) SetIndex(key string, index int, value string) {
 		key = strings.ToLower(key)
 	}
 	values := c.data[key]
-	av := keyValue{key: originalKey, value: value}
+	av := keyValue{key: originalKey, value: value, metadata: &types.DataMetadataList{}}
 
 	switch {
 	case len(values) == 0:
@@ -219,4 +222,5 @@ func (c *Map) Len() int {
 type keyValue struct {
 	key   string
 	value string
+	metadata *types.DataMetadataList
 }

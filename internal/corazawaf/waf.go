@@ -183,6 +183,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.RequestBodyLimit = int64(w.RequestBodyLimit)
 	tx.ResponseBodyAccess = w.ResponseBodyAccess
 	tx.ResponseBodyLimit = int64(w.ResponseBodyLimit)
+	tx.AllowMetadataInspection = false
 	tx.RuleEngine = w.RuleEngine
 	tx.HashEngine = false
 	tx.HashEnforcement = false

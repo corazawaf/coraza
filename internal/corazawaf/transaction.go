@@ -121,6 +121,8 @@ type Transaction struct {
 	// it will write to the audit log
 	audit bool
 
+	AllowMetadataInspection bool
+
 	variables TransactionVariables
 
 	transformationCache map[transformationKey]*transformationValue
@@ -620,6 +622,15 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []experimentalTypes.Match
 		}
 	}
 	return matches
+}
+
+func (tx *Transaction) SetMetadataInspection(allow bool) bool {
+	tx.AllowMetadataInspection = allow
+	return tx.AllowMetadataInspection
+}
+
+func (tx *Transaction) MetadataInspection() bool {
+	return tx.AllowMetadataInspection
 }
 
 // RemoveRuleTargetByID Removes the VARIABLE:KEY from the rule ID
