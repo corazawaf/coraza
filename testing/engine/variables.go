@@ -108,3 +108,72 @@ SecRuleUpdateTargetById 9124 "!ARGS:t2"
 SecAction "id: 99999, log, msg:'%{env.test}'"
 `,
 })
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "M4tteoP",
+		Description: "Test variables with []",
+		Enabled:     true,
+		Name:        "variables_with_square_brackets.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			Title: "variables_with_square_brackets",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/index.php",
+							Method: "POST",
+							Headers: map[string]string{
+								"content-type": "application/x-www-form-urlencoded",
+							},
+							Data: `key[value]=sensitive&key2[]=newValue`,
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								10,
+								11,
+							},
+							NonTriggeredRules: []int{
+								9,
+							},
+							LogContains: `Message from rule 10: ARGS:key[value] sensitive`,
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/index.php",
+							Method: "POST",
+							Headers: map[string]string{
+								"content-type": "application/x-www-form-urlencoded",
+							},
+							Data: `key2[name]=PaYlOaD`,
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								12,
+							},
+							NonTriggeredRules: []int{
+								9,
+								10,
+								11,
+							},
+							LogContains: `Message from rule 12: ARGS:key2[name], macro expansion: PaYlOaD`,
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecRequestBodyAccess On
+SecRule ARGS:key "@contains sensitive" "id:9,phase:2,pass"
+SecRule ARGS:key[value] "@contains sensitive" "id:10,phase:2,pass,log,logdata:'Message from rule 10: %{MATCHED_VAR_NAME} %{MATCHED_VAR}'"
+SecRule ARGS:key2[] "@contains newValue" "id:11,phase:2,pass,setvar:'tx.macro_exp_var=%{ARGS.key2[]}',chain"
+	SecRule TX:macro_exp_var "@contains newValue"
+SecRule ARGS:key2[name] "@contains PaYlOaD" "id:12,phase:2,pass,log,logdata:'Message from rule 12: %{MATCHED_VAR_NAME}, macro expansion: %{ARGS.key2[name]}'"
+`,
+})
