@@ -14,6 +14,8 @@ github.com/jcchavezs/mergefs v0.1.0 h1:7oteO7Ocl/fnfFMkoVLJxTveCjrsd//UB0j89xmnp
 github.com/jcchavezs/mergefs v0.1.0/go.mod h1:eRLTrsA+vFwQZ48hj8p8gki/5v9C2bFtHH5Mnn4bcGk=
 github.com/magefile/mage v1.15.1-0.20231118170541-2385abb49a1f h1:iiLWLoibjCL0XND6inF7bs2nc20lU/FYkiR//VIOLUc=
 github.com/magefile/mage v1.15.1-0.20231118170541-2385abb49a1f/go.mod h1:z5UZb/iS3GoOSn0JgWuiw7dxlurVYTu+/jHXqQg881A=
+github.com/magefile/mage v1.15.1-0.20241124190125-32e01077f0aa h1:RAKYgtUC3OPrwUYKQcwB0wWXCHo09ZWh5TFlnF0nVfA=
+github.com/magefile/mage v1.15.1-0.20241124190125-32e01077f0aa/go.mod h1:z5UZb/iS3GoOSn0JgWuiw7dxlurVYTu+/jHXqQg881A=
 github.com/mccutchen/go-httpbin/v2 v2.15.0 h1:3b2s8LMRR2aFd+8U+1Bx2kdgHNQ5ZQkQOiW8e52Jj9A=
 github.com/mccutchen/go-httpbin/v2 v2.15.0/go.mod h1:GBy5I7XwZ4ZLhT3hcq39I4ikwN9x4QUt6EAxNiR8Jus=
 github.com/miekg/dns v1.1.57 h1:Jzi7ApEIzwEPLHWRcafCN9LZSBbqQpxjt/wpgvg7wcM=
