@@ -20,6 +20,7 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
+	"github.com/corazawaf/coraza/v3/internal/environment"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -1845,6 +1846,9 @@ func TestForceRequestBodyOverride(t *testing.T) {
 }
 
 func TestCloseFails(t *testing.T) {
+	if !environment.HasAccessToFS {
+		t.Skip("skipping test as it requires access to filesystem")
+	}
 	waf := NewWAF()
 	tx := waf.NewTransaction()
 	col := tx.Variables().FilesTmpNames().(*collections.Map)

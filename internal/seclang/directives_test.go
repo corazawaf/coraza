@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -165,11 +166,6 @@ func TestDirectives(t *testing.T) {
 			{"", expectErrorOnDirective},
 			{"1000", func(w *corazawaf.WAF) bool { return w.UploadFileLimit == 1000 }},
 		},
-		"SecUploadDir": {
-			{"", expectErrorOnDirective},
-			{"/tmp-non-existing", expectErrorOnDirective},
-			{os.TempDir(), func(w *corazawaf.WAF) bool { return w.UploadDir == os.TempDir() }},
-		},
 		"SecSensorId": {
 			{"", expectErrorOnDirective},
 			{"test", func(w *corazawaf.WAF) bool { return w.SensorID == "test" }},
@@ -314,6 +310,13 @@ func TestDirectives(t *testing.T) {
 			// according to modsec docs SecArgumentsLimit 1000
 			{"1000", func(waf *corazawaf.WAF) bool { return waf.ArgumentLimit == 1000 }},
 		},
+	}
+	if environment.HasAccessToFS {
+		directiveCases["SecUploadDir"] = []directiveCase{
+			{"", expectErrorOnDirective},
+			{"/tmp-non-existing", expectErrorOnDirective},
+			{os.TempDir(), func(w *corazawaf.WAF) bool { return w.UploadDir == os.TempDir() }},
+		}
 	}
 
 	for name, dCases := range directiveCases {
