@@ -1432,18 +1432,20 @@ func makeTransactionMultipart(t *testing.T) *Transaction {
 
 func validateMacroExpansion(tests map[string]string, tx *Transaction, t *testing.T) {
 	for k, v := range tests {
-		m, err := macro.NewMacro(k)
-		if err != nil {
-			t.Fatal(err)
-		}
-		res := m.Expand(tx)
-		if res != v {
-			if testing.Verbose() {
-				fmt.Println(tx)
-				fmt.Println("===STACK===\n", string(debug.Stack())+"\n===STACK===")
+		t.Run(k, func(t *testing.T) {
+			m, err := macro.NewMacro(k)
+			if err != nil {
+				t.Fatal(err)
 			}
-			t.Fatal("Failed set transaction for " + k + ", expected " + v + ", got " + res)
-		}
+			res := m.Expand(tx)
+			if res != v {
+				if testing.Verbose() {
+					fmt.Println(tx)
+					fmt.Println("===STACK===\n", string(debug.Stack())+"\n===STACK===")
+				}
+				t.Fatalf("Incorrect set transaction: expected %q, got %q", v, res)
+			}
+		})
 	}
 }
 

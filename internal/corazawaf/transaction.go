@@ -1612,15 +1612,15 @@ func (tx *Transaction) generateResponseBodyError(err error) {
 // setTimeVariables sets all the time variables
 func (tx *Transaction) setTimeVariables() {
 	timestamp := time.Unix(0, tx.Timestamp)
-	tx.variables.time.Set(timestamp.Format(time.TimeOnly))
-	tx.variables.timeDay.Set(strconv.Itoa(timestamp.Day()))
-	tx.variables.timeEpoch.Set(strconv.FormatInt(timestamp.Unix(), 10))
-	tx.variables.timeHour.Set(strconv.Itoa(timestamp.Hour()))
-	tx.variables.timeMin.Set(strconv.Itoa(timestamp.Minute()))
-	tx.variables.timeSec.Set(strconv.Itoa(timestamp.Second()))
-	tx.variables.timeWday.Set(strconv.Itoa(int(timestamp.Weekday())))
-	tx.variables.timeMon.Set(strconv.Itoa(int(timestamp.Month())))
-	tx.variables.timeYear.Set(strconv.Itoa(timestamp.Year()))
+	tx.variables.time.Set(func() string { return timestamp.Format(time.TimeOnly) })
+	tx.variables.timeDay.Set(func() string { return strconv.Itoa(timestamp.Day()) })
+	tx.variables.timeEpoch.Set(func() string { return strconv.FormatInt(timestamp.Unix(), 10) })
+	tx.variables.timeHour.Set(func() string { return strconv.Itoa(timestamp.Hour()) })
+	tx.variables.timeMin.Set(func() string { return strconv.Itoa(timestamp.Minute()) })
+	tx.variables.timeSec.Set(func() string { return strconv.Itoa(timestamp.Second()) })
+	tx.variables.timeWday.Set(func() string { return strconv.Itoa(int(timestamp.Weekday())) })
+	tx.variables.timeMon.Set(func() string { return strconv.Itoa(int(timestamp.Month())) })
+	tx.variables.timeYear.Set(func() string { return strconv.Itoa(timestamp.Year()) })
 }
 
 // TransactionVariables has pointers to all the variables of the transaction
@@ -1701,15 +1701,15 @@ type TransactionVariables struct {
 	resBodyErrorMsg          *collections.Single
 	resBodyProcessorError    *collections.Single
 	resBodyProcessorErrorMsg *collections.Single
-	time                     *collections.Single
-	timeDay                  *collections.Single
-	timeEpoch                *collections.Single
-	timeHour                 *collections.Single
-	timeMin                  *collections.Single
-	timeMon                  *collections.Single
-	timeSec                  *collections.Single
-	timeWday                 *collections.Single
-	timeYear                 *collections.Single
+	time                     *collections.LazySingle
+	timeDay                  *collections.LazySingle
+	timeEpoch                *collections.LazySingle
+	timeHour                 *collections.LazySingle
+	timeMin                  *collections.LazySingle
+	timeMon                  *collections.LazySingle
+	timeSec                  *collections.LazySingle
+	timeWday                 *collections.LazySingle
+	timeYear                 *collections.LazySingle
 }
 
 func NewTransactionVariables() *TransactionVariables {
@@ -1782,15 +1782,15 @@ func NewTransactionVariables() *TransactionVariables {
 	v.requestXML = collections.NewMap(variables.RequestXML)
 	v.multipartPartHeaders = collections.NewMap(variables.MultipartPartHeaders)
 	v.multipartStrictError = collections.NewSingle(variables.MultipartStrictError)
-	v.time = collections.NewSingle(variables.Time)
-	v.timeDay = collections.NewSingle(variables.TimeDay)
-	v.timeEpoch = collections.NewSingle(variables.TimeEpoch)
-	v.timeHour = collections.NewSingle(variables.TimeHour)
-	v.timeMin = collections.NewSingle(variables.TimeMin)
-	v.timeMon = collections.NewSingle(variables.TimeMon)
-	v.timeSec = collections.NewSingle(variables.TimeSec)
-	v.timeWday = collections.NewSingle(variables.TimeWday)
-	v.timeYear = collections.NewSingle(variables.TimeYear)
+	v.time = collections.NewLazySingle(variables.Time)
+	v.timeDay = collections.NewLazySingle(variables.TimeDay)
+	v.timeEpoch = collections.NewLazySingle(variables.TimeEpoch)
+	v.timeHour = collections.NewLazySingle(variables.TimeHour)
+	v.timeMin = collections.NewLazySingle(variables.TimeMin)
+	v.timeMon = collections.NewLazySingle(variables.TimeMon)
+	v.timeSec = collections.NewLazySingle(variables.TimeSec)
+	v.timeWday = collections.NewLazySingle(variables.TimeWday)
+	v.timeYear = collections.NewLazySingle(variables.TimeYear)
 
 	// XML is a pointer to RequestXML
 	v.xml = v.requestXML
