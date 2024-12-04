@@ -1378,7 +1378,7 @@ func makeTransaction(t testing.TB) *Transaction {
 	return tx
 }
 
-func makeTransactionTimestamped(t testing.TB) *Transaction {
+func makeTransactionTimestamped(t *testing.T) *Transaction {
 	t.Helper()
 	tx := NewWAF().NewTransaction()
 	timestamp, err := time.ParseInLocation(time.DateTime, "2024-11-18 15:27:34", time.Local)
@@ -1388,6 +1388,14 @@ func makeTransactionTimestamped(t testing.TB) *Transaction {
 	tx.Timestamp = timestamp.UnixNano()
 	tx.setTimeVariables()
 	return tx
+}
+
+func BenchmarkTransactionTimestamped(b *testing.B) {
+	tx := NewWAF().NewTransaction()
+	tx.Timestamp = time.Now().Unix()
+	for i := 0; i < b.N; i++ {
+		tx.setTimeVariables()
+	}
 }
 
 func makeTransactionMultipart(t *testing.T) *Transaction {
