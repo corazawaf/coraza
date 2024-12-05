@@ -94,6 +94,24 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	return br.buffer.Write(data)
 }
 
+// SetBuffer sets the buffer to the provided slice of bytes.
+func (br *BodyBuffer) SetBuffer(data []byte) error {
+	if len(data) == 0 {
+		return errors.New("provided data is empty")
+	}
+
+	// Check if the provided data exceeds the memory limit
+	if int64(len(data)) > br.options.MemoryLimit {
+		return errors.New("memoryLimit reached while writing")
+	}
+
+	// Set the buffer to the provided slice
+	br.buffer = bytes.NewBuffer(data)
+	br.length = int64(len(data))
+
+	return nil
+}
+
 type bodyBufferReader struct {
 	pos int
 	br  *BodyBuffer

@@ -104,6 +104,9 @@ type Transaction interface {
 	// It returns the corresponding interruption, the number of bytes written an error if any.
 	ReadRequestBodyFrom(io.Reader) (*Interruption, int, error)
 
+	// Corrently exposed only as experimental
+	// UseRequestBody(b []byte) (*Interruption, int, error)
+
 	// AddResponseHeader Adds a response header variable
 	//
 	// With this method it is possible to feed Coraza with a response header.
@@ -146,6 +149,9 @@ type Transaction interface {
 	//
 	// It returns the corresponding interruption, the number of bytes written an error if any.
 	ReadResponseBodyFrom(io.Reader) (*Interruption, int, error)
+
+	// Corrently exposed only as experimental
+	// UseResponseBody(b []byte) (*Interruption, int, error)
 
 	// ProcessLogging Logging all information relative to this transaction.
 	// At this point there is not need to hold the connection, the response can be
