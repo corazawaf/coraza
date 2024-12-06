@@ -47,6 +47,24 @@ func minPhase(v variables.RuleVariable) types.RulePhase {
 		return types.PhaseResponseHeaders
 	case variables.UniqueID:
 		return types.PhaseRequestHeaders
+	case variables.Time:
+		return types.PhaseRequestHeaders
+	case variables.TimeDay:
+		return types.PhaseRequestHeaders
+	case variables.TimeEpoch:
+		return types.PhaseRequestHeaders
+	case variables.TimeHour:
+		return types.PhaseRequestHeaders
+	case variables.TimeMin:
+		return types.PhaseRequestHeaders
+	case variables.TimeMon:
+		return types.PhaseRequestHeaders
+	case variables.TimeSec:
+		return types.PhaseRequestHeaders
+	case variables.TimeWday:
+		return types.PhaseRequestHeaders
+	case variables.TimeYear:
+		return types.PhaseRequestHeaders
 	case variables.ArgsCombinedSize:
 		// Size changes between phase 1 and 2 so evaluate both times
 		return types.PhaseRequestHeaders

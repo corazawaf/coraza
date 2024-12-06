@@ -206,6 +206,24 @@ func (v RuleVariable) Name() string {
 		return "RES_BODY_PROCESSOR_ERROR"
 	case ResBodyProcessorErrorMsg:
 		return "RES_BODY_PROCESSOR_ERROR_MSG"
+	case Time:
+		return "TIME"
+	case TimeDay:
+		return "TIME_DAY"
+	case TimeEpoch:
+		return "TIME_EPOCH"
+	case TimeHour:
+		return "TIME_HOUR"
+	case TimeMin:
+		return "TIME_MIN"
+	case TimeMon:
+		return "TIME_MON"
+	case TimeSec:
+		return "TIME_SEC"
+	case TimeWday:
+		return "TIME_WDAY"
+	case TimeYear:
+		return "TIME_YEAR"
 
 	default:
 		return "INVALID_VARIABLE"
@@ -309,6 +327,15 @@ var rulemapRev = map[string]RuleVariable{
 	"RES_BODY_ERROR_MSG":               ResBodyErrorMsg,
 	"RES_BODY_PROCESSOR_ERROR":         ResBodyProcessorError,
 	"RES_BODY_PROCESSOR_ERROR_MSG":     ResBodyProcessorErrorMsg,
+	"TIME":                             Time,
+	"TIME_DAY":                         TimeDay,
+	"TIME_EPOCH":                       TimeEpoch,
+	"TIME_HOUR":                        TimeHour,
+	"TIME_MIN":                         TimeMin,
+	"TIME_MON":                         TimeMon,
+	"TIME_SEC":                         TimeSec,
+	"TIME_WDAY":                        TimeWday,
+	"TIME_YEAR":                        TimeYear,
 }
 
 var errUnknownVariable = errors.New("unknown variable")

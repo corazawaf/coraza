@@ -242,6 +242,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.variables.duration.Set("0")
 	tx.variables.highestSeverity.Set("0")
 	tx.variables.uniqueID.Set(tx.id)
+	tx.setTimeVariables()
 
 	tx.debugLogger.Debug().Msg("Transaction started")
 
