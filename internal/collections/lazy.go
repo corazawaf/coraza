@@ -9,31 +9,32 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-type LazySingle struct {
+type LazySingle[T any] struct {
 	*Single
 	initialize bool
-	fn         func() string
+	fn         func(T) string
+	args       T
 }
 
 var (
-	_       collection.Single = &LazySingle{}
-	emptyFn                   = func() string { return "" }
+	_ collection.Single = &LazySingle[int]{}
 )
 
-func NewLazySingle(variable variables.RuleVariable) *LazySingle {
-	return &LazySingle{
+func NewLazySingle[T any](variable variables.RuleVariable) *LazySingle[T] {
+	return &LazySingle[T]{
 		Single: &Single{variable: variable},
-		fn:     emptyFn,
 	}
 }
 
-func (l *LazySingle) initSingle() {
-	l.data = l.fn()
+func (l *LazySingle[T]) initSingle() {
+	l.data = l.fn(l.args)
 	l.fn = nil
+	var emptyT T
+	l.args = emptyT
 	l.initialize = true
 }
 
-func (l *LazySingle) Get() string {
+func (l *LazySingle[T]) Get() string {
 	if !l.initialize {
 		l.initSingle()
 	}
@@ -41,11 +42,12 @@ func (l *LazySingle) Get() string {
 	return l.data
 }
 
-func (l *LazySingle) Set(valFn func() string) {
+func (l *LazySingle[T]) Set(valFn func(T) string, args T) {
 	l.fn = valFn
+	l.args = args
 }
 
-func (l *LazySingle) FindAll() []types.MatchData {
+func (l *LazySingle[T]) FindAll() []types.MatchData {
 	if !l.initialize {
 		l.initSingle()
 	}
