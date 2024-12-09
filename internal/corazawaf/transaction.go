@@ -1612,15 +1612,20 @@ func (tx *Transaction) generateResponseBodyError(err error) {
 // setTimeVariables sets all the time variables
 func (tx *Transaction) setTimeVariables() {
 	timestamp := time.Unix(0, tx.Timestamp)
-	tx.variables.time.Set(timestamp.Format(time.TimeOnly))
-	tx.variables.timeDay.Set(strconv.Itoa(timestamp.Day()))
 	tx.variables.timeEpoch.Set(strconv.FormatInt(timestamp.Unix(), 10))
-	tx.variables.timeHour.Set(strconv.Itoa(timestamp.Hour()))
-	tx.variables.timeMin.Set(strconv.Itoa(timestamp.Minute()))
-	tx.variables.timeSec.Set(strconv.Itoa(timestamp.Second()))
+
+	timeOnly := timestamp.Format(time.TimeOnly)
+	tx.variables.time.Set(timeOnly)
+	tx.variables.timeHour.Set(timeOnly[0:2])
+	tx.variables.timeMin.Set(timeOnly[3:5])
+	tx.variables.timeSec.Set(timeOnly[6:8])
+
+	y, m, d := timestamp.Date()
+	tx.variables.timeDay.Set(strconv.Itoa(d))
+	tx.variables.timeMon.Set(strconv.Itoa(int(m)))
+	tx.variables.timeYear.Set(strconv.Itoa(y))
+
 	tx.variables.timeWday.Set(strconv.Itoa(int(timestamp.Weekday())))
-	tx.variables.timeMon.Set(strconv.Itoa(int(timestamp.Month())))
-	tx.variables.timeYear.Set(strconv.Itoa(timestamp.Year()))
 }
 
 // TransactionVariables has pointers to all the variables of the transaction
