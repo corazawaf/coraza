@@ -1618,7 +1618,7 @@ func (tx *Transaction) setTimeVariables() {
 	tx.variables.time.Set(timeOnly)
 	tx.variables.timeHour.Set(timeOnly[0:2])
 	tx.variables.timeMin.Set(timeOnly[3:5])
-	tx.variables.timeSec.Set(timeOnly)
+	tx.variables.timeSec.Set(timeOnly[6:8])
 
 	y, m, d := timestamp.Date()
 	tx.variables.timeDay.Set(strconv.Itoa(d))
