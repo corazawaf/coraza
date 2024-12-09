@@ -1390,6 +1390,15 @@ func makeTransactionTimestamped(t testing.TB) *Transaction {
 	return tx
 }
 
+func BenchmarkTransactionTimestamped(b *testing.B) {
+	tx := NewWAF().NewTransaction()
+	tx.Timestamp = time.Now().Unix()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tx.setTimeVariables()
+	}
+}
+
 func makeTransactionMultipart(t *testing.T) *Transaction {
 	if t != nil {
 		t.Helper()
