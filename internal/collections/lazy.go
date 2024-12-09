@@ -27,8 +27,10 @@ func NewLazySingle[T any](variable variables.RuleVariable) *LazySingle[T] {
 }
 
 func (l *LazySingle[T]) initSingle() {
-	l.data = l.fn(l.args)
-	l.fn = nil
+	if l.fn != nil {
+		l.data = l.fn(l.args)
+		l.fn = nil
+	}
 	var emptyT T
 	l.args = emptyT
 	l.initialize = true
