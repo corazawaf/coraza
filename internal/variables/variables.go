@@ -4,7 +4,7 @@
 //go:generate go run generator/main.go
 
 // Package variables contains the representation of the variables used in the rules
-// Variables are created as bytes and they have a string representation
+// Variables are created as bytes, and they have a string representation
 package variables
 
 // This internal file contains all variables supported by handling of SecLang, such as
@@ -236,4 +236,22 @@ const (
 	ResBodyProcessorError
 	// ResBodyProcessorErrorMsg
 	ResBodyProcessorErrorMsg
+	// Time holds a formatted string representing the time (hour:minute:second).
+	Time
+	// TimeDay holds the current day of the month (1-31)
+	TimeDay
+	// TimeEpoch holds the time in seconds since 1970
+	TimeEpoch
+	// TimeHour holds the current hour of the day (0-23)
+	TimeHour
+	// TimeMin holds the current minute of the hour (0-59)
+	TimeMin
+	// TimeMon holds the current month of the year (0-11)
+	TimeMon
+	// TimeSec holds the current second of the minute (0-59)
+	TimeSec
+	// TimeWday holds the current weekday value (1–7), where Monday is 1
+	TimeWday
+	// TimeYear the current four-digit year value
+	TimeYear
 )
