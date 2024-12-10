@@ -64,12 +64,12 @@ func (m MatchData) ChainLevel() int {
 	return m.ChainLevel_
 }
 
-func (m *MatchData) DataMetadata() experimentalTypes.DataMetadataList {
+func (m *MatchData) DataMetadata(allowedMetadatas []experimentalTypes.DataMetadata) experimentalTypes.DataMetadataList {
 	// Evaluate the metadata if it's not set
 	if m.Metadata_ == nil {
 		m.Metadata_ = &experimentalTypes.DataMetadataList{}
 	}
-	m.Metadata_.EvaluateMetadata(m.Value_)
+	m.Metadata_.EvaluateMetadata(m.Value_, allowedMetadatas)
 	return *m.Metadata_
 }
 
