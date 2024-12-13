@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/debuglog"
@@ -19,6 +20,7 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
+	"github.com/corazawaf/coraza/v3/internal/environment"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -66,6 +68,23 @@ func TestTxSetters(t *testing.T) {
 
 	validateMacroExpansion(exp, tx, t)
 }
+
+func TestTxTime(t *testing.T) {
+	tx := makeTransactionTimestamped(t)
+	exp := map[string]string{
+		"%{TIME}":       "15:27:34",
+		"%{TIME_DAY}":   "18",
+		"%{TIME_EPOCH}": fmt.Sprintf("%d", tx.Timestamp/1e9), // 1731943654 in UTC, may differ in local timezone
+		"%{TIME_HOUR}":  "15",
+		"%{TIME_MIN}":   "27",
+		"%{TIME_MON}":   "11",
+		"%{TIME_SEC}":   "34",
+		"%{TIME_WDAY}":  "1",
+		"%{TIME_YEAR}":  "2024",
+	}
+	validateMacroExpansion(exp, tx, t)
+}
+
 func TestTxMultipart(t *testing.T) {
 	tx := NewWAF().NewTransaction()
 	body := []string{
@@ -1359,6 +1378,27 @@ func makeTransaction(t testing.TB) *Transaction {
 	return tx
 }
 
+func makeTransactionTimestamped(t testing.TB) *Transaction {
+	t.Helper()
+	tx := NewWAF().NewTransaction()
+	timestamp, err := time.ParseInLocation(time.DateTime, "2024-11-18 15:27:34", time.Local)
+	if err != nil {
+		panic(err)
+	}
+	tx.Timestamp = timestamp.UnixNano()
+	tx.setTimeVariables()
+	return tx
+}
+
+func BenchmarkTransactionTimestamped(b *testing.B) {
+	tx := NewWAF().NewTransaction()
+	tx.Timestamp = time.Now().Unix()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tx.setTimeVariables()
+	}
+}
+
 func makeTransactionMultipart(t *testing.T) *Transaction {
 	if t != nil {
 		t.Helper()
@@ -1731,6 +1771,9 @@ func TestForceRequestBodyOverride(t *testing.T) {
 }
 
 func TestCloseFails(t *testing.T) {
+	if !environment.HasAccessToFS {
+		t.Skip("skipping test as it requires access to filesystem")
+	}
 	waf := NewWAF()
 	tx := waf.NewTransaction()
 	col := tx.Variables().FilesTmpNames().(*collections.Map)

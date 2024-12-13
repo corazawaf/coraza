@@ -61,11 +61,11 @@ func (c *NamedCollection) Len() int {
 
 // Data is an internal method used for serializing to JSON
 func (c *NamedCollection) Data() map[string][]string {
-	result := map[string][]string{}
+	result := make(map[string][]string, len(c.data))
 	for k, v := range c.data {
-		result[k] = make([]string, 0, len(v))
-		for _, a := range v {
-			result[k] = append(result[k], a.value)
+		result[k] = make([]string, len(v))
+		for i, a := range v {
+			result[k][i] = a.value
 		}
 	}
 	return result

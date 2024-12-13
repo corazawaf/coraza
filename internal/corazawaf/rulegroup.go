@@ -260,6 +260,6 @@ type transformationKey struct {
 }
 
 type transformationValue struct {
-	args []string
+	arg  string
 	errs []error
 }
