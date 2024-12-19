@@ -8,5 +8,7 @@ import (
 )
 
 func base64Encode(data string) (string, bool, error) {
-	return base64.StdEncoding.EncodeToString([]byte(data)), true, nil
+	src := []byte(data)
+
+	return base64.StdEncoding.EncodeToString(src), true, nil
 }
