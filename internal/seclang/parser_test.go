@@ -102,6 +102,11 @@ func TestLoadConfigurationFile(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %s", err.Error())
 	}
+
+	err = p.FromFile("./testdata/glob/*.comf")
+	if err == nil {
+		t.Errorf("expected an error as glob does not match any file")
+	}
 }
 
 // Connectors are supporting embedding github.com/corazawaf/coraza-coreruleset to ease CRS integration

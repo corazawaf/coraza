@@ -34,7 +34,8 @@ type Parser struct {
 // It will return error if any directive fails to parse
 // or the file does not exist.
 // If the path contains a *, it will be expanded to all
-// files in the directory matching the pattern
+// files in the directory matching the pattern.
+// It will return an error if there are no files matching the pattern.
 func (p *Parser) FromFile(profilePath string) error {
 	originalDir := p.currentDir
 
@@ -44,6 +45,9 @@ func (p *Parser) FromFile(profilePath string) error {
 		files, err = fs.Glob(p.root, profilePath)
 		if err != nil {
 			return fmt.Errorf("failed to glob: %s", err.Error())
+		}
+		if len(files) == 0 {
+			return fmt.Errorf("empty glob: %s does not match any file", profilePath)
 		}
 	} else {
 		files = append(files, profilePath)
