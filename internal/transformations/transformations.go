@@ -34,6 +34,7 @@ func init() {
 	Register("compressWhitespace", compressWhitespace)
 	Register("cssDecode", cssDecode)
 	Register("escapeSeqDecode", escapeSeqDecode)
+	// Register("hexDecode", hexDecode)
 	Register("hexEncode", hexEncode)
 	Register("htmlEntityDecode", htmlEntityDecode)
 	Register("jsDecode", jsDecode)
