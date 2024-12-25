@@ -175,9 +175,6 @@ func checkCollectionValue(t *testing.T, a *setvarFn, tx plugintypes.TransactionS
 		t.Fatal("collection in setvar is nil")
 		return
 	}
-	if col == nil {
-		t.Fatal("collection is nil")
-	}
 	if col.Get(key)[0] != expected {
 		t.Errorf("key %q: expected %q, got %q", key, expected, col.Get(key))
 	}
