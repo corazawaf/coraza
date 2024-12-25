@@ -7,20 +7,32 @@ import (
 	"regexp"
 
 	"github.com/corazawaf/coraza/v3/collection"
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
+// TODO: Temporary solution to avoid import cycle between collections and plugintypes.
+// Make a decision with maintainers.
+type PersistenceEngine interface {
+	Open(uri string, ttl int) error
+	Close() error
+	Sum(collectionName string, collectionKey string, key string, sum int) error
+	Get(collectionName string, collectionKey string, key string) (string, error)
+
+	All(collectionName string, collectionKey string) (map[string]string, error)
+	Set(collection string, collectionKey string, key string, value string) error
+	Remove(collection string, collectionKey string, key string) error
+}
+
 // Persistent uses collection.Map.
 type Persistent struct {
 	variable      variables.RuleVariable
-	engine        plugintypes.PersistenceEngine
+	engine        PersistenceEngine
 	collectionKey string
 }
 
-func NewPersistent(variable variables.RuleVariable, engine plugintypes.PersistenceEngine) *Persistent {
+func NewPersistent(variable variables.RuleVariable, engine PersistenceEngine) *Persistent {
 	return &Persistent{
 		variable:      variable,
 		engine:        engine,

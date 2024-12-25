@@ -1,7 +1,7 @@
 // Copyright 2023 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package actions_test
+package actions
 
 import (
 	"bytes"
@@ -11,7 +11,6 @@ import (
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/actions"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
@@ -29,12 +28,12 @@ func (md) Status() int {
 }
 
 func TestSetvarInit(t *testing.T) {
-	a, err := actions.Get("setvar")
+	a, err := Get("setvar")
 	if err != nil {
 		t.Error("failed to get setvar action")
 	}
 	t.Run("no arguments", func(t *testing.T) {
-		if err := a.Init(nil, ""); err == nil || err != actions.ErrMissingArguments {
+		if err := a.Init(nil, ""); err == nil || err != ErrMissingArguments {
 			t.Error("expected error ErrMissingArguments")
 		}
 	})

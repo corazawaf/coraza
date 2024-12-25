@@ -15,6 +15,19 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
+type md struct {
+}
+
+func (md) ID() int {
+	return 0
+}
+func (md) ParentID() int {
+	return 0
+}
+func (md) Status() int {
+	return 0
+}
+
 func TestPersistenceSetvar(t *testing.T) {
 	a, err := actions.Get("setvar")
 	if err != nil {
