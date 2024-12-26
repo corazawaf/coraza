@@ -13,6 +13,8 @@ import (
 	"time"
 )
 
+const DefaultEngine = "default"
+
 // defaultEngine
 // defaultEngine is just a sample and it shouldn't be used in production.
 // It's not thread safe enough and it's not persistent on disk.
@@ -185,5 +187,5 @@ func (d *defaultEngine) updateCollection(col map[string]interface{}) {
 }
 
 func init() {
-	Register("default", &defaultEngine{})
+	Register(DefaultEngine, &defaultEngine{})
 }

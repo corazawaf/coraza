@@ -63,6 +63,9 @@ type WAFConfig interface {
 
 	// WithRootFS configures the root file system.
 	WithRootFS(fs fs.FS) WAFConfig
+
+	// WithPersistenceEngine sets the persistence engine to be used
+	WithPersistenceEngine(engine plugintypes.PersistenceEngine) WAFConfig
 }
 
 // NewWAFConfig creates a new WAFConfig with the default settings.
@@ -105,6 +108,7 @@ type wafConfig struct {
 	debugLogger              debuglog.Logger
 	errorCallback            func(rule types.MatchedRule)
 	fsRoot                   fs.FS
+	persistenceEngine        plugintypes.PersistenceEngine
 }
 
 func (c *wafConfig) WithRules(rules ...*corazawaf.Rule) WAFConfig {
@@ -190,6 +194,12 @@ func (c *wafConfig) WithResponseBodyLimit(limit int) WAFConfig {
 func (c *wafConfig) WithResponseBodyMimeTypes(mimeTypes []string) WAFConfig {
 	ret := c.clone()
 	ret.responseBodyMimeTypes = mimeTypes
+	return ret
+}
+
+func (c *wafConfig) WithPersistenceEngine(pe plugintypes.PersistenceEngine) WAFConfig {
+	ret := c.clone()
+	ret.persistenceEngine = pe
 	return ret
 }
 

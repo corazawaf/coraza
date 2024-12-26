@@ -101,6 +101,10 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		waf.ErrorLogCb = c.errorCallback
 	}
 
+	if c.persistenceEngine != nil {
+		waf.PersistenceEngine = c.persistenceEngine
+	}
+
 	if err := waf.Validate(); err != nil {
 		return nil, err
 	}
