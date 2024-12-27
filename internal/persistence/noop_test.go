@@ -10,9 +10,9 @@ func TestNoopEngine(t *testing.T) {
 	if err != nil {
 		t.Error("Failed to get noop engine")
 	}
-	ne.Open("", 100)                       //nolint:errcheck
-	ne.Close()                             //nolint:errcheck
-	ne.Get("test", "test", "test")         //nolint:errcheck
-	ne.Set("test", "test", "test", "test") //nolint:errcheck
-	ne.Remove("test", "test", "test")      //nolint:errcheck
+	_ = ne.Open("", 100)
+	_ = ne.Close()
+	_, _ = ne.Get("test", "test", "test")
+	_ = ne.Set("test", "test", "test", "test")
+	_ = ne.Remove("test", "test", "test")
 }
