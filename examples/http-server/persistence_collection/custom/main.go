@@ -46,9 +46,8 @@ func createWAF() coraza.WAF {
 		directivesFile = s
 	}
 
-	pe := customttl.NewTTLCacheEngine(10)
+	pe := customttl.NewTTLCacheEngine()
 
-	// pe := initDefaultPersistenceEngine()
 	waf, err := coraza.NewWAF(
 		coraza.NewWAFConfig().
 			WithErrorCallback(logError).
