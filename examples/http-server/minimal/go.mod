@@ -1,4 +1,4 @@
-module github.com/corazawaf/coraza/v3/examples/http-server
+module github.com/corazawaf/coraza/v3/examples/http-server/minimal
 
 go 1.22.0
 

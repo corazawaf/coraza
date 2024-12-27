@@ -8,8 +8,8 @@ type PersistenceEngine interface {
 	Close() error
 	Sum(collectionName string, collectionKey string, key string, sum int) error
 	Get(collectionName string, collectionKey string, key string) (string, error)
-
 	All(collectionName string, collectionKey string) (map[string]string, error)
 	Set(collection string, collectionKey string, key string, value string) error
+	SetTTL(collection string, collectionKey string, key string, ttl int) error
 	Remove(collection string, collectionKey string, key string) error
 }

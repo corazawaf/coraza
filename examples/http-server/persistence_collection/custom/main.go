@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/examples/http-server/persistence_collection/custom/customttl"
 	txhttp "github.com/corazawaf/coraza/v3/http"
-	"github.com/corazawaf/coraza/v3/internal/persistence"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -41,16 +41,14 @@ func main() {
 }
 
 func createWAF() coraza.WAF {
-	directivesFile := "./default.conf"
+	directivesFile := "./session.conf"
 	if s := os.Getenv("DIRECTIVES_FILE"); s != "" {
 		directivesFile = s
 	}
 
-	pe, err := persistence.Get(persistence.DefaultEngine)
-	if err != nil {
-		log.Fatalf("failed to set persistence engine: %v", err)
-	}
+	pe := customttl.NewTTLCacheEngine(10)
 
+	// pe := initDefaultPersistenceEngine()
 	waf, err := coraza.NewWAF(
 		coraza.NewWAFConfig().
 			WithErrorCallback(logError).

@@ -1184,7 +1184,7 @@ func directiveSecIgnoreRuleCompilationErrors(options *DirectiveOptions) error {
 	}
 	if b {
 		options.WAF.Logger.Warn().
-			Msg(`Running in Compatibility Mode (SecIgnoreRuleCompilationErrors On), 
+			Msg(`Running in Compatibility Mode (SecIgnoreRuleCompilationErrors On),
 			which may cause unexpected behavior on faulty rules.`)
 	}
 	options.Parser.IgnoreRuleCompilationErrors = b

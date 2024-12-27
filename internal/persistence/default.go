@@ -105,17 +105,31 @@ func (d *defaultEngine) All(collectionName string, collectionKey string) (map[st
 	return res, nil
 }
 
+func (d *defaultEngine) SetTTL(collection string, collectionKey string, key string, ttl int) error {
+	data := d.getCollection(collection, collectionKey)
+	if data == nil {
+		return nil
+	}
+	now := int(time.Now().Unix())
+	if now < data["TIMEOUT"].(int) {
+		return nil
+	}
+	data["TIMEOUT"] = int(time.Now().Unix()) + ttl
+	return nil
+}
+
 func (d *defaultEngine) gc() {
+	ticker := time.NewTicker(time.Second * 1)
 	for {
 		select {
 		case <-d.stopGC:
+			ticker.Stop()
 			return
-		case <-time.After(time.Second * 1):
-			// this is a concurrent safe sleep
-		default:
+		case <-ticker.C:
 			d.data.Range(func(key, value interface{}) bool {
 				col := value.(map[string]interface{})
-				if col["TIMEOUT"].(int) < int(time.Now().Unix()) {
+				timeout := col["TIMEOUT"].(int)
+				if timeout > 0 && timeout < int(time.Now().Unix()) {
 					d.data.Delete(key)
 				}
 				return true
@@ -146,18 +160,25 @@ func (d *defaultEngine) get(collectionName string, collectionKey string, key str
 
 func (d *defaultEngine) set(collection string, collectionKey string, key string, value interface{}) {
 	data := d.getCollection(collection, collectionKey)
-	now := time.Now().Unix()
+	now := int(time.Now().Unix())
+	timeout := now + d.ttl
+	if d.ttl <= 0 {
+		timeout = d.ttl
+	}
+	if data != nil && now > data["TIMEOUT"].(int) {
+		d.data.Delete(d.getCollectionName(collection, collectionKey))
+		data = nil
+	}
 	if data == nil {
 		data := map[string]interface{}{
 			key:                value,
-			"CREATE_TIME":      int(now),
+			"CREATE_TIME":      now,
 			"IS_NEW":           1,
 			"KEY":              collectionKey,
 			"LAST_UPDATE_TIME": 0,
-			// we timeout at now + d.ttl
-			"TIMEOUT":        int(now) + d.ttl,
-			"UPDATE_COUNTER": 0,
-			"UPDATE_RATE":    0,
+			"TIMEOUT":          timeout,
+			"UPDATE_COUNTER":   0,
+			"UPDATE_RATE":      0,
 		}
 		d.data.Store(d.getCollectionName(collection, collectionKey), data)
 	} else {
@@ -182,8 +203,6 @@ func (d *defaultEngine) updateCollection(col map[string]interface{}) {
 	if delta > 0 {
 		col["UPDATE_RATE"] = int(update_counter / delta)
 	}
-	// we update the timeout
-	col["TIMEOUT"] = time_now + d.ttl
 }
 
 func init() {

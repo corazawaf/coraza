@@ -2158,6 +2158,26 @@ func (v *TransactionVariables) MultipartStrictError() collection.Single {
 	return v.multipartStrictError
 }
 
+func (v *TransactionVariables) Global() collection.Persistent {
+	return v.global
+}
+
+func (v *TransactionVariables) Resource() collection.Persistent {
+	return v.resource
+}
+
+func (v *TransactionVariables) IP() collection.Persistent {
+	return v.ip
+}
+
+func (v *TransactionVariables) Session() collection.Persistent {
+	return v.session
+}
+
+func (v *TransactionVariables) User() collection.Persistent {
+	return v.user
+}
+
 // All iterates over the variables. We return both variable and its collection, i.e. key/value, to follow
 // general range iteration in Go which always has a key and value (key is int index for slices). Notably,
 // this is consistent with discussions for custom iterable types in a future language version

@@ -33,6 +33,10 @@ func (noopEngine) All(collection string, collectionKey string) (map[string]strin
 	return nil, nil
 }
 
+func (noopEngine) SetTTL(collection string, collectionKey string, key string, ttl int) error {
+	return nil
+}
+
 func init() {
 	Register("noop", noopEngine{})
 }

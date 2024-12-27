@@ -113,7 +113,7 @@ func Test() error {
 		return err
 	}
 
-	if err := sh.RunV("go", "test", "./examples/http-server", "-race"); err != nil {
+	if err := sh.RunV("go", "test", "./examples/http-server/minimal", "-race"); err != nil {
 		return err
 	}
 
@@ -176,7 +176,7 @@ func Coverage() error {
 		return err
 	}
 	// Execute http-server tests with coverage
-	if err := sh.RunV("go", "test", "-race", tagsCmd, "-coverprofile=build/coverage-examples.txt", "-covermode=atomic", "-coverpkg=./...", "./examples/http-server"); err != nil {
+	if err := sh.RunV("go", "test", "-race", tagsCmd, "-coverprofile=build/coverage-examples.txt", "-covermode=atomic", "-coverpkg=./...", "./examples/http-server/minimal"); err != nil {
 		return err
 	}
 	// Execute FTW tests with coverage as well

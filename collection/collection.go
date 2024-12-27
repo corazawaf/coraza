@@ -76,12 +76,15 @@ type Map interface {
 type Persistent interface {
 	Editable
 
-	// Initializes the input as the collection key
-	Init(key string)
+	// // Initializes the input as the collection key
+	// Init(key string)
 
-	// Sum will add the value to the key
-	Sum(key string, sum int)
+	// // Sum will add the value to the key
+	// Sum(key string, sum int)
 
-	// SetOne will replace the key's value with this string
-	SetOne(key string, value string)
+	// // SetOne will replace the key's value with this string
+	// SetOne(key string, value string)
+
+	// SetTTL will set the TTL for the key
+	SetTTL(key string, ttl int)
 }

@@ -15,11 +15,9 @@ import (
 // TODO: Temporary solution to avoid import cycle between collections and plugintypes.
 // Make a decision with maintainers.
 type PersistenceEngine interface {
-	Open(uri string, ttl int) error
-	Close() error
 	Sum(collectionName string, collectionKey string, key string, sum int) error
 	Get(collectionName string, collectionKey string, key string) (string, error)
-
+	SetTTL(collection string, collectionKey string, key string, ttl int) error
 	All(collectionName string, collectionKey string) (map[string]string, error)
 	Set(collection string, collectionKey string, key string, value string) error
 	Remove(collection string, collectionKey string, key string) error
@@ -93,6 +91,10 @@ func (c *Persistent) SetOne(key string, value string) {
 
 func (c *Persistent) Set(key string, values []string) {
 	c.engine.Set(c.variable.Name(), c.collectionKey, key, values[0]) //nolint:errcheck
+}
+
+func (c *Persistent) SetTTL(key string, ttl int) {
+	c.engine.SetTTL(c.variable.Name(), c.collectionKey, key, ttl) //nolint:errcheck
 }
 
 func (c *Persistent) Remove(key string) {

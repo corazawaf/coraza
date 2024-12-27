@@ -4,7 +4,15 @@
 package actions
 
 import (
+	"errors"
+	"strconv"
+	"strings"
+
+	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	utils "github.com/corazawaf/coraza/v3/internal/strings"
+	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 // Action Group: Non-disruptive
@@ -23,15 +31,71 @@ import (
 //		setvar:session.suspicious=1,expirevar:session.suspicious=3600,phase:1"
 //
 // ```
-type expirevarFn struct{}
+
+type expirevarFn struct {
+	key        macro.Macro
+	ttl        int
+	collection variables.RuleVariable
+}
 
 func (a *expirevarFn) Init(_ plugintypes.RuleMetadata, data string) error {
+	if len(data) == 0 {
+		return errors.New("expirevar: missing arguments")
+	}
+
+	// Split the input "variable=ttl" (e.g., "ip.request_count=60")
+	key, ttlStr, ttlOk := strings.Cut(data, "=")
+	colKey, colVal, colOk := strings.Cut(key, ".")
+
+	// Ensure the collection is one of the editable ones
+	available := []string{"TX", "USER", "GLOBAL", "RESOURCE", "SESSION", "IP"}
+	if !utils.InSlice(strings.ToUpper(colKey), available) {
+		return errors.New("expirevar: invalid collection, available collections are: " + strings.Join(available, ", "))
+	}
+	if strings.TrimSpace(colVal) == "" {
+		return errors.New("expirevar: invalid variable format, expected syntax COLLECTION.{key}=ttl")
+	}
+
+	// Parse the collection and the variable name
+	var err error
+	a.collection, err = variables.Parse(colKey)
+	if err != nil {
+		return err
+	}
+	if colOk {
+		a.key, err = macro.NewMacro(colVal)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Parse the TTL value
+	if !ttlOk {
+		return errors.New("expirevar: missing TTL value")
+	}
+	ttlSeconds, err := strconv.Atoi(strings.TrimSpace(ttlStr))
+	if err != nil || ttlSeconds <= 0 {
+		return errors.New("expirevar: invalid TTL, must be a positive integer")
+	}
+	a.ttl = ttlSeconds
 	return nil
 }
 
 func (a *expirevarFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
-	// Not supported
-	tx.DebugLogger().Warn().Int("rule_id", r.ID()).Msg("Expirevar was used but it's not supported")
+	key := a.key.Expand(tx)
+
+	// TODO: TX support
+	// TX will be handled by the rule engine
+	// It has collection.Map interface
+	var col collection.Persistent
+	if c, ok := tx.Collection(a.collection).(collection.Persistent); !ok {
+		tx.DebugLogger().Error().Msg("collection in setvar is not editable")
+		return
+	} else {
+		col = c
+	}
+	// update the TTL
+	col.SetTTL(key, a.ttl)
 }
 
 func (a *expirevarFn) Type() plugintypes.ActionType {
