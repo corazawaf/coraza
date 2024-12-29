@@ -69,7 +69,10 @@ func TestCompile(t *testing.T) {
 	})
 
 	t.Run("malformed macros", func(t *testing.T) {
-		for _, test := range []string{"%{tx.count", "%{{tx.count}", "%{{tx.{count}", "something %{tx.count"} {
+		for _, test := range []string{
+			"%{tx.count", "%{{tx.count}", "%{{tx.{count}", "something %{tx.count",
+			"%{ARG_NAMES:/exec/", // Wildcard variable names are not supported
+		} {
 			t.Run(test, func(t *testing.T) {
 				m := &macro{}
 				err := m.compile(test)
@@ -118,19 +121,28 @@ func TestCompile(t *testing.T) {
 	})
 
 	t.Run("valid macro", func(t *testing.T) {
-		m := &macro{}
-		err := m.compile("%{tx.count}")
-		if err != nil {
-			t.Fatalf("unexpected error: %s", err.Error())
+		type testCase struct {
+			input         string
+			expectedMacro macroToken
 		}
+		for _, tc := range []testCase{
+			{"%{tx.count}", macroToken{"tx.count", variables.TX, "count"}},
+			{"%{ARGS.exec}", macroToken{"ARGS.exec", variables.Args, "exec"}},
+			{"%{ARGS_GET.db[]}", macroToken{"ARGS_GET.db[]", variables.ArgsGet, "db[]"}},
+		} {
+			m := &macro{}
+			err := m.compile(tc.input)
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err.Error())
+			}
 
-		if want, have := 1, len(m.tokens); want != have {
-			t.Fatalf("unexpected number of tokens: want %d, have %d", want, have)
-		}
+			if len(m.tokens) != 1 {
+				t.Fatalf("unexpected number of tokens: want %d, have %d", 1, len(m.tokens))
+			}
 
-		expectedMacro := macroToken{"tx.count", variables.TX, "count"}
-		if want, have := m.tokens[0], expectedMacro; want != have {
-			t.Errorf("unexpected token: want %v, have %v", want, have)
+			if m.tokens[0] != tc.expectedMacro {
+				t.Errorf("unexpected token: want %v, have %v", tc.expectedMacro, m.tokens[0])
+			}
 		}
 	})
 
