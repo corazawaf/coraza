@@ -591,14 +591,12 @@ var transformationNameToID = sync.Map{} // map[string]int
 func transformationID(currentID int, transformationName string) int {
 	currName := transformationIDToName[currentID]
 	nextName := fmt.Sprintf("%s+%s", currName, transformationName)
-	if id, ok := transformationNameToID.Load(nextName); ok {
-		return id.(int)
-	}
-
-	id := len(transformationIDToName)
-	transformationIDToName = append(transformationIDToName, nextName)
-	transformationNameToID.Store(nextName, id)
-	return id
+	id, _ := transformationNameToID.LoadOrStore(nextName, func() interface{} {
+		txid := len(transformationIDToName)
+		transformationIDToName = append(transformationIDToName, nextName)
+		return txid
+	}())
+	return id.(int)
 }
 
 // AddTransformation adds a transformation to the rule
