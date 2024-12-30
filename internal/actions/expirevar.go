@@ -40,7 +40,7 @@ type expirevarFn struct {
 
 func (a *expirevarFn) Init(_ plugintypes.RuleMetadata, data string) error {
 	if len(data) == 0 {
-		return errors.New("expirevar: missing arguments")
+		return ErrMissingArguments
 	}
 
 	// Split the input "variable=ttl" (e.g., "ip.request_count=60")
@@ -50,10 +50,10 @@ func (a *expirevarFn) Init(_ plugintypes.RuleMetadata, data string) error {
 	// Ensure the collection is one of the editable ones
 	available := []string{"TX", "USER", "GLOBAL", "RESOURCE", "SESSION", "IP"}
 	if !utils.InSlice(strings.ToUpper(colKey), available) {
-		return errors.New("expirevar: invalid collection, available collections are: " + strings.Join(available, ", "))
+		return errors.New("invalid collection, available collections are: " + strings.Join(available, ", "))
 	}
 	if strings.TrimSpace(colVal) == "" {
-		return errors.New("expirevar: invalid variable format, expected syntax COLLECTION.{key}=ttl")
+		return ErrInvalidKVArguments
 	}
 
 	// Parse the collection and the variable name
@@ -71,11 +71,11 @@ func (a *expirevarFn) Init(_ plugintypes.RuleMetadata, data string) error {
 
 	// Parse the TTL value
 	if !ttlOk {
-		return errors.New("expirevar: missing TTL value")
+		return errors.New("missing TTL value")
 	}
 	ttlSeconds, err := strconv.Atoi(strings.TrimSpace(ttlStr))
 	if err != nil || ttlSeconds <= 0 {
-		return errors.New("expirevar: invalid TTL, must be a positive integer")
+		return errors.New("invalid TTL, must be a positive integer")
 	}
 	a.ttl = ttlSeconds
 	return nil

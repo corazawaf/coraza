@@ -83,7 +83,7 @@ func (a *setvarFn) Init(_ plugintypes.RuleMetadata, data string) error {
 		return errors.New("setvar: invalid editable collection, available collections are: " + strings.Join(available, ", "))
 	}
 	if strings.TrimSpace(colVal) == "" {
-		return errors.New("invalid arguments, expected syntax TX.{key}={value}")
+		return errors.New("invalid arguments, expected syntax {key}={value}")
 	}
 	a.collection, err = variables.Parse(colKey)
 	if err != nil {
