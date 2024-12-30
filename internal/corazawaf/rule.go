@@ -586,22 +586,18 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 }
 
 var transformationIDToName = []string{""}
-var transformationNameToID = map[string]int{"": 0}
-var transformationIDsLock = sync.Mutex{}
+var transformationNameToID = sync.Map{} // map[string]int
 
 func transformationID(currentID int, transformationName string) int {
-	transformationIDsLock.Lock()
-	defer transformationIDsLock.Unlock()
-
 	currName := transformationIDToName[currentID]
 	nextName := fmt.Sprintf("%s+%s", currName, transformationName)
-	if id, ok := transformationNameToID[nextName]; ok {
-		return id
+	if id, ok := transformationNameToID.Load(nextName); ok {
+		return id.(int)
 	}
 
 	id := len(transformationIDToName)
 	transformationIDToName = append(transformationIDToName, nextName)
-	transformationNameToID[nextName] = id
+	transformationNameToID.Store(nextName, id)
 	return id
 }
 
