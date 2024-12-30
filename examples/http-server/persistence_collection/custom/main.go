@@ -31,7 +31,8 @@ func exampleHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
-	waf := createWAF()
+	directivesFile := "./session.conf"
+	waf := createWAF(directivesFile)
 
 	http.Handle("/", txhttp.WrapHandler(waf, http.HandlerFunc(exampleHandler)))
 
@@ -40,8 +41,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8090", nil))
 }
 
-func createWAF() coraza.WAF {
-	directivesFile := "./session.conf"
+func createWAF(directivesFile string) coraza.WAF {
 	if s := os.Getenv("DIRECTIVES_FILE"); s != "" {
 		directivesFile = s
 	}

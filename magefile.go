@@ -117,6 +117,15 @@ func Test() error {
 		return err
 	}
 
+	// no -race flag, currently default persistence engine is not concurrent safe
+	if err := sh.RunV("go", "test", "./examples/http-server/persistence_collection/default"); err != nil {
+		return err
+	}
+
+	if err := sh.RunV("go", "test", "./examples/http-server/persistence_collection/custom", "-race"); err != nil {
+		return err
+	}
+
 	if err := sh.RunV("go", "test", "./testing/coreruleset"); err != nil {
 		return err
 	}
