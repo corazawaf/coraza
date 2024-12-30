@@ -110,12 +110,15 @@ func (d *defaultEngine) SetTTL(collection string, collectionKey string, key stri
 	if data == nil {
 		return nil
 	}
-	ttlSet, ok := data["TTL_SET"].(bool)
-	if ok && ttlSet {
-		return nil
+	v, ok := data["TTL_SET"]
+	if ok {
+		setTTL, ok := v.(bool)
+		if ok && setTTL {
+			return nil
+		}
 	}
-	now := int(time.Now().Unix())
-	data["TIMEOUT"] = now + ttl
+
+	data["TIMEOUT"] = int(time.Now().Unix()) + ttl
 	data["TTL_SET"] = true
 	return nil
 }
@@ -130,8 +133,11 @@ func (d *defaultEngine) gc() {
 		case <-ticker.C:
 			d.data.Range(func(key, value interface{}) bool {
 				col := value.(map[string]interface{})
-				timeout := col["TIMEOUT"].(int)
-				if timeout > 0 && timeout < int(time.Now().Unix()) {
+				timeout, ok := col["TIMEOUT"].(int)
+				if !ok {
+					return true
+				}
+				if timeout < int(time.Now().Unix()) {
 					d.data.Delete(key)
 				}
 				return true
@@ -173,7 +179,6 @@ func (d *defaultEngine) set(collection string, collectionKey string, key string,
 			"TIMEOUT":          now + d.ttl,
 			"UPDATE_COUNTER":   0,
 			"UPDATE_RATE":      0,
-			"TTL_SET":          false,
 		}
 		d.data.Store(d.getCollectionName(collection, collectionKey), data)
 	} else {

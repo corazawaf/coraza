@@ -70,7 +70,7 @@ func initDefaultPersistenceEngine() plugintypes.PersistenceEngine {
 	if err != nil {
 		log.Fatalf("failed to open persistence engine: %v", err)
 	}
-	err = pe.Open("", 0)
+	err = pe.Open("", 60)
 	if err != nil {
 		log.Fatalf("failed to open persistence engine: %v", err)
 	}

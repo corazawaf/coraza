@@ -82,7 +82,7 @@ func (e *Engine) set(collection string, collectionKey string, key string, value 
 			createTime:   time.Now().Unix(),
 			updateCouter: 0,
 			isNew:        true,
-		}, ttlcache.NoTTL) // we update ttl only in SetTTL method
+		}, ttlcache.NoTTL) // we set ttl only in SetTTL method
 	} else {
 		// update existing record
 		record.val = value
