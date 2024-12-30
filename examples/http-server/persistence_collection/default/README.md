@@ -10,11 +10,13 @@ go run .
 
 The server will be reachable at `http://localhost:8090`.
 
-Example for the rate limit requests from the same X-Real-IP.
+Example for the rate limit requests from the same X-Session-ID:
 
 ```bash
-# True negative request (200 OK) // call 3 times
-curl --header 'X-Session-ID: unique-session-id' http://localhost:8090/
-# True positive request (403 Forbidden) // 4d call
 curl --header 'X-Session-ID: unique-session-id' http://localhost:8090/
 ```
+
+- True negative request (200 OK) // 2 calls
+- True positive request (403 Forbidden) // 3d call
+- Wait for 10 seconds (ttl is set in the `expirevar` directive)
+- repeat
