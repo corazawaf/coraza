@@ -110,11 +110,13 @@ func (d *defaultEngine) SetTTL(collection string, collectionKey string, key stri
 	if data == nil {
 		return nil
 	}
-	now := int(time.Now().Unix())
-	if now < data["TIMEOUT"].(int) {
+	ttlSet, ok := data["TTL_SET"].(bool)
+	if ok && ttlSet {
 		return nil
 	}
-	data["TIMEOUT"] = int(time.Now().Unix()) + ttl
+	now := int(time.Now().Unix())
+	data["TIMEOUT"] = now + ttl
+	data["TTL_SET"] = true
 	return nil
 }
 
@@ -161,14 +163,6 @@ func (d *defaultEngine) get(collectionName string, collectionKey string, key str
 func (d *defaultEngine) set(collection string, collectionKey string, key string, value interface{}) {
 	data := d.getCollection(collection, collectionKey)
 	now := int(time.Now().Unix())
-	timeout := now + d.ttl
-	if d.ttl <= 0 {
-		timeout = d.ttl
-	}
-	if data != nil && now > data["TIMEOUT"].(int) {
-		d.data.Delete(d.getCollectionName(collection, collectionKey))
-		data = nil
-	}
 	if data == nil {
 		data := map[string]interface{}{
 			key:                value,
@@ -176,9 +170,10 @@ func (d *defaultEngine) set(collection string, collectionKey string, key string,
 			"IS_NEW":           1,
 			"KEY":              collectionKey,
 			"LAST_UPDATE_TIME": 0,
-			"TIMEOUT":          timeout,
+			"TIMEOUT":          now + d.ttl,
 			"UPDATE_COUNTER":   0,
 			"UPDATE_RATE":      0,
+			"TTL_SET":          false,
 		}
 		d.data.Store(d.getCollectionName(collection, collectionKey), data)
 	} else {

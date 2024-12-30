@@ -82,19 +82,15 @@ func (a *expirevarFn) Init(_ plugintypes.RuleMetadata, data string) error {
 }
 
 func (a *expirevarFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
-	key := a.key.Expand(tx)
-
 	// TODO: TX support
-	// TX will be handled by the rule engine
-	// It has collection.Map interface
-	var col collection.Persistent
-	if c, ok := tx.Collection(a.collection).(collection.Persistent); !ok {
-		tx.DebugLogger().Error().Msg("collection in setvar is not editable")
+	// It has collection.Map interface and will not be converted to collection.Persistent
+	col, ok := tx.Collection(a.collection).(collection.Persistent)
+	if !ok {
+		tx.DebugLogger().Error().Msg("collection in expirevar is not editable")
 		return
-	} else {
-		col = c
 	}
 	// update the TTL
+	key := a.key.Expand(tx)
 	col.SetTTL(key, a.ttl)
 }
 
