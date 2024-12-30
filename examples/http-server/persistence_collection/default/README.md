@@ -14,7 +14,7 @@ Example for the rate limit requests from the same X-Real-IP.
 
 ```bash
 # True negative request (200 OK) // call 3 times
-curl --header 'X-Real-IP: 8.8.8.8' http://localhost:8090/
+curl --header 'X-Session-ID: unique-session-id' http://localhost:8090/
 # True positive request (403 Forbidden) // 4d call
-curl --header 'X-Real-IP: 8.8.8.8' http://localhost:8090/
+curl --header 'X-Session-ID: unique-session-id' http://localhost:8090/
 ```
