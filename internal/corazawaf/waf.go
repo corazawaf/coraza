@@ -429,3 +429,16 @@ func (w *WAF) Validate() error {
 
 	return nil
 }
+
+// Close will release resources used by the WAF instance
+func (w *WAF) Close() error {
+	err := w.PersistenceEngine.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close persitence engine: %w", err)
+	}
+	err = w.AuditLogWriter().Close()
+	if err != nil {
+		return fmt.Errorf("failed to close audit log writer: %w", err)
+	}
+	return nil
+}

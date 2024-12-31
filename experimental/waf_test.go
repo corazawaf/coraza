@@ -1,31 +1,32 @@
 // Copyright 2024 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package experimental_test
+package experimental
 
 import (
-	"fmt"
+	"testing"
 
 	"github.com/corazawaf/coraza/v3"
-	"github.com/corazawaf/coraza/v3/experimental"
 )
 
-func ExampleWAFWithOptions_NewTransactionWithOptions() {
+func TestWAFWithOptions(t *testing.T) {
 	waf, err := coraza.NewWAF(coraza.NewWAFConfig())
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
-	oWAF, ok := waf.(experimental.WAFWithOptions)
+	oWAF, ok := waf.(WAF)
 	if !ok {
-		panic("WAF does not implement WAFWithOptions")
+		t.Fatal("WAF does not implement WAF v4")
 	}
 
-	tx := oWAF.NewTransactionWithOptions(experimental.Options{
+	tx := oWAF.NewTransactionWithOptions(coraza.Options{
 		ID: "abc123",
 	})
 
-	fmt.Println("Transaction ID:", tx.ID())
+	if tx.ID() != "abc123" {
+		t.Error("Transaction ID not set")
+	}
 
 	// Output:
 	// Transaction ID: abc123

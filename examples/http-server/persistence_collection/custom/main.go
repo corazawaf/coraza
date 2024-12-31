@@ -31,8 +31,8 @@ func exampleHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
-	directivesFile := "./session.conf"
-	waf := createWAF(directivesFile)
+	directiveFile := "./session.conf"
+	waf := createWAF(directiveFile)
 
 	http.Handle("/", txhttp.WrapHandler(waf, http.HandlerFunc(exampleHandler)))
 
