@@ -201,11 +201,11 @@ RulesLoop:
 				Int("phase", int(phase)).
 				Msg("Skipping phase because of allow request action")
 			if phase == types.PhaseRequestHeaders {
-				// tx.AllowType is not resetted because another request phase might be called
+				// tx.AllowType is not reset because another request phase might be called
 				break RulesLoop
 			}
 			if phase == types.PhaseRequestBody {
-				// // tx.AllowType is resetted, currently PhaseRequestBody is the last request phase
+				// // tx.AllowType is reset, currently PhaseRequestBody is the last request phase
 				tx.AllowType = corazatypes.AllowTypeUnset
 				break RulesLoop
 			}
@@ -224,7 +224,7 @@ RulesLoop:
 		Int("phase", int(phase)).
 		Msg("Finished phase")
 
-	// Reset AllowType if meant to allow only this specific phase. It is particuarly needed
+	// Reset AllowType if meant to allow only this specific phase. It is particularly needed
 	// to reset it at this point, in case of an allow:phase action enforced by the last rule of the phase.
 	// In this case, allow:phase must not have any impact on the next phase.
 	if tx.AllowType == corazatypes.AllowTypePhase {

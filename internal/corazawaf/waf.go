@@ -434,7 +434,7 @@ func (w *WAF) Validate() error {
 func (w *WAF) Close() error {
 	err := w.PersistenceEngine.Close()
 	if err != nil {
-		return fmt.Errorf("failed to close persitence engine: %w", err)
+		return fmt.Errorf("failed to close persistence engine: %w", err)
 	}
 	err = w.AuditLogWriter().Close()
 	if err != nil {

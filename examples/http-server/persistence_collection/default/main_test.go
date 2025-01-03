@@ -27,11 +27,11 @@ func doGetRequest(t *testing.T, getPath string) int {
 
 func TestSetVarRequestCountForSession(t *testing.T) {
 	tests := []struct {
-		name         string
-		path         string
-		header       map[string]string
-		direciveFile string
-		expStatuses  []int
+		name           string
+		path           string
+		header         map[string]string
+		directivesFile string
+		expStatuses    []int
 	}{
 		{
 			"negative for the first 2 requests and positive for 3d",
@@ -49,7 +49,7 @@ func TestSetVarRequestCountForSession(t *testing.T) {
 		var statusCode int
 		t.Run(tt.name, func(t *testing.T) {
 			// Spin up the test server
-			testServer := setupTestServer(t, tt.direciveFile)
+			testServer := setupTestServer(t, tt.directivesFile)
 			defer testServer.Close()
 
 			for _, expStatus := range tt.expStatuses {

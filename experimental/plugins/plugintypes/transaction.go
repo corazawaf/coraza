@@ -116,7 +116,6 @@ type TransactionVariables interface {
 	ArgsGetNames() collection.Collection
 	ArgsPostNames() collection.Collection
 	MultipartStrictError() collection.Single
-	// TODO(v4: Add these)
 	Session() collection.Persistent
 	User() collection.Persistent
 	IP() collection.Persistent

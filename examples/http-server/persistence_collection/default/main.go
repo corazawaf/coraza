@@ -32,8 +32,8 @@ func exampleHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
-	directiveFile := "./testdata/expirevar-request-count.conf"
-	waf := createWAF(directiveFile)
+	directivesFile := "./testdata/expirevar-request-count.conf"
+	waf := createWAF(directivesFile)
 
 	http.Handle("/", txhttp.WrapHandler(waf, http.HandlerFunc(exampleHandler)))
 

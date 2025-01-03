@@ -13,12 +13,12 @@ type (
 	}
 
 	collectionRecord struct {
-		key          string
-		val          string
-		updateCouter int
-		isNew        bool
-		createTime   int64
-		timeout      int64
+		key           string
+		val           string
+		updateCounter int
+		isNew         bool
+		createTime    int64
+		timeout       int64
 	}
 )
 
@@ -76,17 +76,17 @@ func (e *Engine) set(collection string, collectionKey string, key string, value 
 	if record.isEmpty() {
 		// create new record
 		e.store.Set(k, collectionRecord{
-			key:          key,
-			val:          value,
-			timeout:      int64(ttlcache.NoTTL),
-			createTime:   time.Now().Unix(),
-			updateCouter: 0,
-			isNew:        true,
+			key:           key,
+			val:           value,
+			timeout:       int64(ttlcache.NoTTL),
+			createTime:    time.Now().Unix(),
+			updateCounter: 0,
+			isNew:         true,
 		}, ttlcache.NoTTL) // we set ttl only in SetTTL method
 	} else {
 		// update existing record
 		record.val = value
-		record.updateCouter++
+		record.updateCounter++
 		// unfortunately this library doesn't provide the way to update data without setting ttl once again
 		ttl := time.Duration(record.timeout)
 		if ttl != ttlcache.NoTTL {

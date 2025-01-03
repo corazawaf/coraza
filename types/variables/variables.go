@@ -53,7 +53,7 @@ const (
 	ReqbodyError = variables.ReqbodyError
 	// ReqbodyErrorMsg contains the error message of the request body processor error
 	ReqbodyErrorMsg = variables.ReqbodyErrorMsg
-	// ReqbodyProcessorError is the same as ReqbodyErrr ?
+	// ReqbodyProcessorError is the same as ReqbodyErr ?
 	ReqbodyProcessorError = variables.ReqbodyProcessorError
 	// ReqbodyProcessorErrorMsg is the same as ReqbodyErrorMsg ?
 	ReqbodyProcessorErrorMsg = variables.ReqbodyProcessorErrorMsg
@@ -110,7 +110,7 @@ const (
 	// StatusLine is the status line of the response, including the request method
 	// and HTTP version information
 	StatusLine = variables.StatusLine
-	// Duration contains the time in miliseconds from
+	// Duration contains the time in milliseconds from
 	// the beginning of the transaction until this point
 	Duration = variables.Duration
 	// ResponseHeadersNames contains the names of the response headers

@@ -108,7 +108,7 @@ const (
 	// StatusLine is the status line of the response, including the request method
 	// and HTTP version information
 	StatusLine
-	// Duration contains the time in miliseconds from
+	// Duration contains the time in milliseconds from
 	// the beginning of the transaction until this point
 	Duration
 	// ResponseHeadersNames contains the names of the response headers
@@ -151,7 +151,7 @@ const (
 	// ResponseHeaders can be used as either a collection of all of the response
 	// headers or can be used to inspect selected headers
 	ResponseHeaders
-	// ReseBodyProcessor contains the name of the response body processor used,
+	// ResBodyProcessor contains the name of the response body processor used,
 	// no default
 	ResBodyProcessor
 	// Geo contains the location information of the client

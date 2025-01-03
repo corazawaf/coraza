@@ -145,7 +145,7 @@ func (a *setvarFn) evaluateTxCollection(r plugintypes.RuleMetadata, tx plugintyp
 	case len(value) == 0:
 		// if nothing to input
 		col.Set(key, []string{""})
-	// Check if this could be an arithemetic operation. If it is followed by a number, it will be treated as an arithmetic operation. Otherwise, it will be treated as a string.
+	// Check if this could be an arithmetic operation. If it is followed by a number, it will be treated as an arithmetic operation. Otherwise, it will be treated as a string.
 	case value[0] == '+', value[0] == '-':
 		val := 0
 		if len(value) > 1 {
