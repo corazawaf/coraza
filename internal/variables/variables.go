@@ -224,7 +224,7 @@ const (
 	PathInfo
 	// Sessionid is the session id
 	Sessionid
-	// Userid is a persistent collection of user ids
+	// Userid variable contains the value set with setuid.
 	Userid
 	// IP is a persistent collection of IP addresses
 	IP
