@@ -300,6 +300,16 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.timeWday
 	case variables.TimeYear:
 		return tx.variables.timeYear
+	case variables.User:
+		return tx.variables.user
+	case variables.Session:
+		return tx.variables.session
+	case variables.Global:
+		return tx.variables.global
+	case variables.IP:
+		return tx.variables.ip
+	case variables.Resource:
+		return tx.variables.resource
 	}
 
 	return collections.Noop
@@ -592,13 +602,15 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 		if m, ok := col.(collection.Keyed); ok {
 			matches = m.FindRegex(rv.KeyRx)
 		} else {
-			panic("attempted to use regex with non-selectable collection: " + rv.Variable.Name())
+			tx.DebugLogger().Error().Msg("attempted to use regex with non-selectable collection: " + rv.Variable.Name())
+			return matches
 		}
 	case rv.KeyStr != "":
 		if m, ok := col.(collection.Keyed); ok {
 			matches = m.FindString(rv.KeyStr)
 		} else {
-			panic("attempted to use string with non-selectable collection: " + rv.Variable.Name())
+			tx.DebugLogger().Error().Msg("attempted to use string with non-selectable collection: " + rv.Variable.Name())
+			return matches
 		}
 	default:
 		matches = col.FindAll()
@@ -1715,9 +1727,15 @@ type TransactionVariables struct {
 	timeSec                  *collections.Single
 	timeWday                 *collections.Single
 	timeYear                 *collections.Single
+	// persistent collections
+	global   *collections.Persistent
+	resource *collections.Persistent
+	ip       *collections.Persistent
+	session  *collections.Persistent
+	user     *collections.Persistent
 }
 
-func NewTransactionVariables() *TransactionVariables {
+func NewTransactionVariables(persistenceEngine plugintypes.PersistenceEngine) *TransactionVariables {
 	v := &TransactionVariables{}
 	v.urlencodedError = collections.NewSingle(variables.UrlencodedError)
 	v.responseContentType = collections.NewSingle(variables.ResponseContentType)
@@ -1826,6 +1844,13 @@ func NewTransactionVariables() *TransactionVariables {
 		// Only used in a concatenating collection so variable name doesn't matter.
 		v.argsPath.Names(variables.Unknown),
 	)
+
+	// Persistent collections
+	v.global = collections.NewPersistent(variables.Global, persistenceEngine)
+	v.resource = collections.NewPersistent(variables.Resource, persistenceEngine)
+	v.ip = collections.NewPersistent(variables.IP, persistenceEngine)
+	v.session = collections.NewPersistent(variables.Session, persistenceEngine)
+	v.user = collections.NewPersistent(variables.User, persistenceEngine)
 	return v
 }
 
@@ -2131,6 +2156,26 @@ func (v *TransactionVariables) ResBodyProcessorErrorMsg() collection.Single {
 
 func (v *TransactionVariables) MultipartStrictError() collection.Single {
 	return v.multipartStrictError
+}
+
+func (v *TransactionVariables) Global() collection.Persistent {
+	return v.global
+}
+
+func (v *TransactionVariables) Resource() collection.Persistent {
+	return v.resource
+}
+
+func (v *TransactionVariables) IP() collection.Persistent {
+	return v.ip
+}
+
+func (v *TransactionVariables) Session() collection.Persistent {
+	return v.session
+}
+
+func (v *TransactionVariables) User() collection.Persistent {
+	return v.user
 }
 
 // All iterates over the variables. We return both variable and its collection, i.e. key/value, to follow

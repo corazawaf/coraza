@@ -4,6 +4,7 @@
 package seclang
 
 import (
+	"errors"
 	"os"
 	"regexp"
 	"strings"
@@ -59,7 +60,48 @@ func TestSecRuleUpdateActionByID(t *testing.T) {
 	}); err != nil {
 		t.Error(err)
 	}
+}
 
+func TestDirectiveSecPersistenceEngine(t *testing.T) {
+	t.Parallel()
+
+	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+		opts := &DirectiveOptions{}
+
+		err := directiveSecPersistenceEngine(opts)
+		if !errors.Is(err, errEmptyOptions) {
+			t.Errorf("err should be %q, got %q", errEmptyOptions, err)
+		}
+	})
+
+	t.Run("invalid persistent engine name", func(t *testing.T) {
+		t.Parallel()
+		waf := corazawaf.NewWAF()
+		opts := &DirectiveOptions{
+			WAF:  waf,
+			Opts: "test",
+		}
+
+		err := directiveSecPersistenceEngine(opts)
+		if err == nil {
+			t.Error("err should not be nil")
+		}
+	})
+
+	t.Run("noop", func(t *testing.T) {
+		t.Parallel()
+		waf := corazawaf.NewWAF()
+		opts := &DirectiveOptions{
+			WAF:  waf,
+			Opts: "noop",
+		}
+
+		err := directiveSecPersistenceEngine(opts)
+		if err != nil {
+			t.Errorf("err should be nil, got %q", err)
+		}
+	})
 }
 
 func TestSecRuleUpdateTargetByID(t *testing.T) {

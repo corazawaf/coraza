@@ -30,7 +30,7 @@ func TestSkipInit(t *testing.T) {
 			err := a.Init(nil, test.data)
 			if test.expectedError {
 				if err == nil {
-					t.Errorf("expected error: %s", err.Error())
+					t.Error("error expected, got nil")
 				}
 			} else {
 				if err != nil {

@@ -18,6 +18,7 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/environment"
+	"github.com/corazawaf/coraza/v3/internal/persistence"
 	stringutils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/internal/sync"
 	"github.com/corazawaf/coraza/v3/types"
@@ -135,6 +136,9 @@ type WAF struct {
 
 	// Configures the maximum number of ARGS that will be accepted for processing.
 	ArgumentLimit int
+
+	// PersistenceEngine is used to store persistent collections
+	PersistenceEngine plugintypes.PersistenceEngine
 }
 
 // Options is used to pass options to the WAF instance
@@ -220,7 +224,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 			Limit:       w.ResponseBodyLimit,
 		})
 
-		tx.variables = *NewTransactionVariables()
+		tx.variables = *NewTransactionVariables(tx.WAF.PersistenceEngine)
 		tx.transformationCache = map[transformationKey]*transformationValue{}
 	}
 
@@ -250,7 +254,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 }
 
 func resolveLogPath(path string) (io.Writer, error) {
-	if path == "" {
+	if path == "" || path == "/dev/null" {
 		return io.Discard, nil
 	}
 
@@ -290,6 +294,10 @@ func NewWAF() *WAF {
 			Err(err).
 			Msg("error creating serial log writer")
 	}
+	noopPersistenceEngine, err := persistence.Get("noop")
+	if err != nil {
+		logger.Error().Err(err).Msg("error creating noop persistence engine")
+	}
 
 	waf := &WAF{
 		// Initializing pool for transactions
@@ -310,9 +318,10 @@ func NewWAF() *WAF {
 			types.AuditLogPartResponseHeaders,
 			types.AuditLogPartAuditLogTrailer,
 		},
-		AuditLogFormat: "Native",
-		Logger:         logger,
-		ArgumentLimit:  1000,
+		AuditLogFormat:    "Native",
+		Logger:            logger,
+		ArgumentLimit:     1000,
+		PersistenceEngine: noopPersistenceEngine,
 	}
 
 	if environment.HasAccessToFS {
@@ -418,5 +427,18 @@ func (w *WAF) Validate() error {
 		return errors.New("argument limit should be bigger than 0")
 	}
 
+	return nil
+}
+
+// Close will release resources used by the WAF instance
+func (w *WAF) Close() error {
+	err := w.PersistenceEngine.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close persistence engine: %w", err)
+	}
+	err = w.AuditLogWriter().Close()
+	if err != nil {
+		return fmt.Errorf("failed to close audit log writer: %w", err)
+	}
 	return nil
 }

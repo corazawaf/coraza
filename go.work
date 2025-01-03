@@ -2,6 +2,7 @@ go 1.22.3
 
 use (
 	.
-	./examples/http-server
+	./examples/http-server/minimal
+	./examples/http-server/persistence_collection/custom
 	./testing/coreruleset
 )

@@ -114,7 +114,7 @@ func TestValidate(t *testing.T) {
 			err := waf.Validate()
 			if tCase.expectErr {
 				if err == nil {
-					t.Fatalf("expected error: %s", err.Error())
+					t.Fatalf("error expected, got nil")
 				}
 			} else {
 				if err != nil {

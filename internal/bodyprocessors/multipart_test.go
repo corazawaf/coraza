@@ -10,6 +10,7 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/internal/persistence"
 )
 
 func multipartProcessor(t *testing.T) plugintypes.BodyProcessor {
@@ -26,7 +27,7 @@ func TestProcessRequestFailsDueToIncorrectMimeType(t *testing.T) {
 
 	expectedError := "not a multipart body"
 
-	if err := mp.ProcessRequest(strings.NewReader(""), corazawaf.NewTransactionVariables(), plugintypes.BodyProcessorOptions{
+	if err := mp.ProcessRequest(strings.NewReader(""), corazawaf.NewTransactionVariables(nil), plugintypes.BodyProcessorOptions{
 		Mime: "application/json",
 	}); err == nil || err.Error() != expectedError {
 		t.Fatal("expected error")
@@ -56,7 +57,7 @@ Content-Type: text/html
 
 	mp := multipartProcessor(t)
 
-	v := corazawaf.NewTransactionVariables()
+	v := corazawaf.NewTransactionVariables(nil)
 	if err := mp.ProcessRequest(strings.NewReader(payload), v, plugintypes.BodyProcessorOptions{
 		Mime: "multipart/form-data; boundary=---------------------------9051914041544843365972754266",
 	}); err != nil {
@@ -87,7 +88,7 @@ text default
 -----------------------------9051914041544843365972754266
 `)
 	mp := multipartProcessor(t)
-	v := corazawaf.NewTransactionVariables()
+	v := corazawaf.NewTransactionVariables(nil)
 	if err := mp.ProcessRequest(strings.NewReader(payload), v, plugintypes.BodyProcessorOptions{
 		Mime: "multipart/form-data; boundary=---------------------------9051914041544843365972754266; a=1; a=2",
 	}); err == nil {
@@ -103,7 +104,8 @@ func TestMultipartErrorSetsMultipartStrictError(t *testing.T) {
 		"<%out.print(123)%>\n" +
 		"--a--"
 	mp := multipartProcessor(t)
-	v := corazawaf.NewTransactionVariables()
+	pe, _ := persistence.Get("noop")
+	v := corazawaf.NewTransactionVariables(pe)
 	strictError := v.MultipartStrictError()
 	if strictError.Get() != "" {
 		t.Errorf("expected strict error to be empty")
@@ -139,7 +141,8 @@ func TestMultipartCRLFAndLF(t *testing.T) {
 		"----------------------------756b6d74fa1a8ee2--\r"
 
 	mp := multipartProcessor(t)
-	v := corazawaf.NewTransactionVariables()
+	pe, _ := persistence.Get("noop")
+	v := corazawaf.NewTransactionVariables(pe)
 	if err := mp.ProcessRequest(strings.NewReader(payload), v, plugintypes.BodyProcessorOptions{
 		Mime: "multipart/form-data; boundary=756b6d74fa1a8ee2",
 	}); err != nil {
@@ -168,7 +171,8 @@ func TestMultipartInvalidHeaderFolding(t *testing.T) {
 		"2\n" +
 		"-------------------------------69343412719991675451336310646--\n"
 	mp := multipartProcessor(t)
-	v := corazawaf.NewTransactionVariables()
+	pe, _ := persistence.Get("noop")
+	v := corazawaf.NewTransactionVariables(pe)
 	if err := mp.ProcessRequest(strings.NewReader(payload), v, plugintypes.BodyProcessorOptions{
 		Mime: "multipart/form-data; boundary=69343412719991675451336310646",
 	}); err != nil {
@@ -200,7 +204,8 @@ func TestMultipartUnmatchedBoundary(t *testing.T) {
 		"This is another very small test file..\n" +
 		"\n"
 	mp := multipartProcessor(t)
-	v := corazawaf.NewTransactionVariables()
+	pe, _ := persistence.Get("noop")
+	v := corazawaf.NewTransactionVariables(pe)
 	if err := mp.ProcessRequest(strings.NewReader(payload), v, plugintypes.BodyProcessorOptions{
 		Mime: "multipart/form-data; boundary=756b6d74fa1a8ee2",
 	}); err != nil {

@@ -28,27 +28,27 @@ func (md) Status() int {
 }
 
 func TestSetvarInit(t *testing.T) {
+	a, err := Get("setvar")
+	if err != nil {
+		t.Error("failed to get setvar action")
+	}
 	t.Run("no arguments", func(t *testing.T) {
-		a := setvar()
 		if err := a.Init(nil, ""); err == nil || err != ErrMissingArguments {
 			t.Error("expected error ErrMissingArguments")
 		}
 	})
 	t.Run("non-map variable", func(t *testing.T) {
-		a := setvar()
 		if err := a.Init(&md{}, "PATH_INFO=test"); err == nil {
 			t.Error("expected error")
 		}
 	})
 	t.Run("TX set ok", func(t *testing.T) {
-		a := setvar()
 		if err := a.Init(&md{}, "TX.some=test"); err != nil {
 			t.Error(err)
 		}
 	})
-	t.Run("TX without key should fail", func(t *testing.T) {
-		a := setvar()
-		if err := a.Init(&md{}, "TX=test"); err == nil {
+	t.Run("SESSION without key should fail", func(t *testing.T) {
+		if err := a.Init(&md{}, "SESSION=test"); err == nil {
 			t.Error("expected error")
 		}
 	})
@@ -174,9 +174,6 @@ func checkCollectionValue(t *testing.T, a *setvarFn, tx plugintypes.TransactionS
 	if col == nil {
 		t.Fatal("collection in setvar is nil")
 		return
-	}
-	if col == nil {
-		t.Fatal("collection is nil")
 	}
 	if col.Get(key)[0] != expected {
 		t.Errorf("key %q: expected %q, got %q", key, expected, col.Get(key))

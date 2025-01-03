@@ -18,6 +18,7 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/internal/memoize"
+	"github.com/corazawaf/coraza/v3/internal/persistence"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -481,6 +482,25 @@ func directiveSecRequestBodyInMemoryLimit(options *DirectiveOptions) error {
 		return err
 	}
 	options.WAF.SetRequestBodyInMemoryLimit(limit)
+	return nil
+}
+
+// Description: Set the persistence engine to be used by Coraza.
+// Default: noop
+// Syntax: SecPersistenceEngine [noop|default]
+// ---
+// The default persistence engine is a noop engine that does not store any data.
+// New engines can be implemented by using experimental/plugins/persistence.go
+func directiveSecPersistenceEngine(options *DirectiveOptions) error {
+	if len(options.Opts) == 0 {
+		return errEmptyOptions
+	}
+	options.WAF.Logger.Warn().Msg("Persistence is a experimental feature, be careful.")
+	engine, err := persistence.Get(options.Opts)
+	if err != nil {
+		return err
+	}
+	options.WAF.PersistenceEngine = engine
 	return nil
 }
 
@@ -1164,7 +1184,7 @@ func directiveSecIgnoreRuleCompilationErrors(options *DirectiveOptions) error {
 	}
 	if b {
 		options.WAF.Logger.Warn().
-			Msg(`Running in Compatibility Mode (SecIgnoreRuleCompilationErrors On), 
+			Msg(`Running in Compatibility Mode (SecIgnoreRuleCompilationErrors On),
 			which may cause unexpected behavior on faulty rules.`)
 	}
 	options.Parser.IgnoreRuleCompilationErrors = b

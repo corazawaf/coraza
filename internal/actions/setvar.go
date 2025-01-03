@@ -11,6 +11,7 @@ import (
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
@@ -76,11 +77,13 @@ func (a *setvarFn) Init(_ plugintypes.RuleMetadata, data string) error {
 	colKey, colVal, colOk := strings.Cut(key, ".")
 	// Right not it only makes sense to allow setting TX
 	// key is also required
-	if strings.ToUpper(colKey) != "TX" {
-		return errors.New("invalid arguments, expected collection TX")
+	available := []string{"TX", "USER", "GLOBAL", "RESOURCE", "SESSION", "IP"}
+	// we validate uppercase colKey is one of available
+	if !utils.InSlice(strings.ToUpper(colKey), available) {
+		return errors.New("setvar: invalid editable collection, available collections are: " + strings.Join(available, ", "))
 	}
 	if strings.TrimSpace(colVal) == "" {
-		return errors.New("invalid arguments, expected syntax TX.{key}={value}")
+		return errors.New("invalid arguments, expected syntax {key}={value}")
 	}
 	a.collection, err = variables.Parse(colKey)
 	if err != nil {
@@ -111,7 +114,7 @@ func (a *setvarFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.Transacti
 		Str("var_key", key).
 		Str("var_value", value).
 		Int("rule_id", r.ID()).
-		Msg("Action evaluated")
+		Msg("Action SetVar evaluated")
 	a.evaluateTxCollection(r, tx, strings.ToLower(key), value)
 }
 
@@ -120,16 +123,13 @@ func (a *setvarFn) Type() plugintypes.ActionType {
 }
 
 func (a *setvarFn) evaluateTxCollection(r plugintypes.RuleMetadata, tx plugintypes.TransactionState, key string, value string) {
-	var col collection.Map
-	if c, ok := tx.Collection(a.collection).(collection.Map); !ok {
-		tx.DebugLogger().Error().Msg("collection in setvar is not a map")
+	// TODO for api breaking issues, we have to split this function in Map and Persistent
+	var col collection.Editable
+	if c, ok := tx.Collection(a.collection).(collection.Editable); !ok {
+		tx.DebugLogger().Error().Msg("collection in setvar is not editable")
 		return
 	} else {
 		col = c
-	}
-	if col == nil {
-		tx.DebugLogger().Error().Msg("collection in setvar is nil")
-		return
 	}
 
 	if a.isRemove {
@@ -145,7 +145,7 @@ func (a *setvarFn) evaluateTxCollection(r plugintypes.RuleMetadata, tx plugintyp
 	case len(value) == 0:
 		// if nothing to input
 		col.Set(key, []string{""})
-	// Check if this could be an arithemetic operation. If it is followed by a number, it will be treated as an arithmetic operation. Otherwise, it will be treated as a string.
+	// Check if this could be an arithmetic operation. If it is followed by a number, it will be treated as an arithmetic operation. Otherwise, it will be treated as a string.
 	case value[0] == '+', value[0] == '-':
 		val := 0
 		if len(value) > 1 {
