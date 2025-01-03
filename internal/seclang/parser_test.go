@@ -1,4 +1,4 @@
-// Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
+// Copyright 2024 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
 package seclang
@@ -13,10 +13,11 @@ import (
 	"strings"
 	"testing"
 
-	coreruleset "github.com/corazawaf/coraza-coreruleset"
-	coraza "github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/jcchavezs/mergefs"
 	"github.com/jcchavezs/mergefs/io"
+
+	coreruleset "github.com/corazawaf/coraza-coreruleset"
+	coraza "github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 //go:embed testdata
