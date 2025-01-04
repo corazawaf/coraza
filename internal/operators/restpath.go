@@ -29,7 +29,7 @@ var _ plugintypes.Operator = (*restpath)(nil)
 func newRESTPath(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := strings.ReplaceAll(options.Arguments, "/", "\\/")
 	for _, token := range rePathTokenRe.FindAllStringSubmatch(data, -1) {
-		data = strings.Replace(data, token[0], fmt.Sprintf("(?P<%s>[^?/]*)", token[1]), 1)
+		data = strings.Replace(data, token[0], fmt.Sprintf("(?P<%s>[^?/]+)", token[1]), 1)
 	}
 
 	re, err := memoize.Do(data, func() (interface{}, error) { return regexp.Compile(data) })
@@ -43,6 +43,7 @@ func (o *restpath) Evaluate(tx plugintypes.TransactionState, value string) bool 
 	// we use the re regex to match the path and match named captured groups
 	// to the ARGS_PATH
 	match := o.re.FindStringSubmatch(value)
+
 	if len(match) == 0 {
 		return false
 	}
