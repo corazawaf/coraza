@@ -125,3 +125,19 @@ func TestRestPathShouldNotMatchOnIncompleteURLWithEndingParam(t *testing.T) {
 		t.Errorf("Expected %s to NOT match %s", exp, path)
 	}
 }
+
+func TestRestPathShouldNotMatchOnEmptyPathElement(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	tx := waf.NewTransaction()
+	exp := "/some-random/{id}/{name}"
+	path := "/some-random//test"
+	rp, err := newRESTPath(plugintypes.OperatorOptions{
+		Arguments: exp,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	if rp.Evaluate(tx, path) {
+		t.Errorf("Expected %s to NOT match %s", exp, path)
+	}
+}
