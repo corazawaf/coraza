@@ -43,7 +43,6 @@ func (o *restpath) Evaluate(tx plugintypes.TransactionState, value string) bool 
 	// we use the re regex to match the path and match named captured groups
 	// to the ARGS_PATH
 	match := o.re.FindStringSubmatch(value)
-
 	if len(match) == 0 {
 		return false
 	}
