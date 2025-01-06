@@ -7,7 +7,7 @@ toolchain go1.23.2
 require (
 	github.com/bmatcuk/doublestar/v4 v4.7.1
 	github.com/corazawaf/coraza-coreruleset/v4 v4.7.0
-	github.com/corazawaf/coraza/v3 v3.2.2
+	github.com/corazawaf/coraza/v3 v3.3.0
 	github.com/coreruleset/albedo v0.0.16
 	github.com/coreruleset/go-ftw v1.2.0
 	github.com/rs/zerolog v1.33.0
@@ -19,6 +19,7 @@ require (
 	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
 	github.com/corazawaf/libinjection-go v0.2.2 // indirect
 	github.com/coreruleset/ftw-tests-schema/v2 v2.2.0 // indirect
+	github.com/fatih/color v1.17.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
