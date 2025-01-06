@@ -27,7 +27,7 @@ require (
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20240411101913-e07a1f0e8eb4
 	github.com/tidwall/gjson v1.18.0
 	github.com/valllabh/ocsf-schema-golang v1.0.3
-	golang.org/x/net v0.32.0
+	golang.org/x/net v0.33.0
 	golang.org/x/sync v0.10.0
 	rsc.io/binaryregexp v0.2.0
 )
@@ -44,3 +44,5 @@ require (
 	golang.org/x/tools v0.22.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 )
+
+retract v3.2.2

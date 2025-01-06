@@ -30,6 +30,7 @@ func GetTransformation(name string) (plugintypes.Transformation, error) {
 func init() {
 	Register("base64Decode", base64decode)
 	Register("base64DecodeExt", base64decodeext)
+	Register("base64Encode", base64encode)
 	Register("cmdLine", cmdLine)
 	Register("compressWhitespace", compressWhitespace)
 	Register("cssDecode", cssDecode)
