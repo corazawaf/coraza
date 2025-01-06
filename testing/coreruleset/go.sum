@@ -17,12 +17,6 @@ github.com/coreruleset/albedo v0.0.16 h1:YYWEJBSfAwVmZ5tbBgQQhL8uU6IKeA2QwpAkii3
 github.com/coreruleset/albedo v0.0.16/go.mod h1:6mYBASfvvRM2ckXgYO7N5nyKAj8OqLnT4+YLbM0/XWE=
 github.com/coreruleset/ftw-tests-schema/v2 v2.2.0 h1:G2NA/XMOWSIvRqVDt/9NlqrVF+Qhz3Ngys8JOfb5plc=
 github.com/coreruleset/ftw-tests-schema/v2 v2.2.0/go.mod h1:QEkxQti2T54tDWFPocxgAtLhw6J+zXV44JkqGFFP0is=
-github.com/coreruleset/ftw-tests-schema/v2 v2.1.0 h1:2ilKzKRG5UzzxBcrJLXFtPalStdQ9jzzaYFuFk0OEk0=
-github.com/coreruleset/ftw-tests-schema/v2 v2.1.0/go.mod h1:ZHVFX5ses4+5IxUP0ufCNg/VqRWxziH6ZuUca092Hxo=
-github.com/coreruleset/ftw-tests-schema/v2 v2.2.0 h1:G2NA/XMOWSIvRqVDt/9NlqrVF+Qhz3Ngys8JOfb5plc=
-github.com/coreruleset/ftw-tests-schema/v2 v2.2.0/go.mod h1:QEkxQti2T54tDWFPocxgAtLhw6J+zXV44JkqGFFP0is=
-github.com/coreruleset/go-ftw v1.1.2 h1:0YHXk7NIoEIWwfvFXA6V7Qd6rlxvnDhZSXgz65Tyo44=
-github.com/coreruleset/go-ftw v1.1.2/go.mod h1:558l2XWYkhlzZRyLWgyFT1O430Ixcl6z01tuj8xP6MA=
 github.com/coreruleset/go-ftw v1.2.0 h1:/z7BCJPgmL/wdXYOSTgKYeHUcKyHvJzxmr1c8l1zcvA=
 github.com/coreruleset/go-ftw v1.2.0/go.mod h1:OnCo0SQjzKH17pxvTUB7MUY8jCENVP/FWpfSYGZVIU8=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
