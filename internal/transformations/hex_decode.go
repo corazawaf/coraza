@@ -9,6 +9,9 @@ import (
 func hexDecode(data string) (string, bool, error) {
 	src := []byte(data)
 
+	// According to RFC-4648 section 8, the valid lenght of src MUST be even.
+	// Here https://datatracker.ietf.org/doc/html/rfc4648#section-8
+	// There was a decision to cut "redundant" bytes for the "best effort aproach" and proceed decoding.
 	if len(src)%2 != 0 {
 		src = src[:len(src)-1]
 	}
