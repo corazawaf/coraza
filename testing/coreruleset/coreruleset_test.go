@@ -265,7 +265,7 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	cfg.TestOverride.Overrides.Port = &port
 
 	cfg.LoadPlatformOverrides(".ftw-overrides.yml")
-	res, err := runner.Run(cfg, tests, runner.RunnerConfig{
+	res, err := runner.Run(cfg, tests, &runner.RunnerConfig{
 		ShowTime:    false,
 		ReadTimeout: 3 * time.Second, // Defaults to 1s but looks to be not enough in the CI
 	}, output.NewOutput("quiet", os.Stdout))
