@@ -53,7 +53,7 @@ const (
 	ReqbodyError = variables.ReqbodyError
 	// ReqbodyErrorMsg contains the error message of the request body processor error
 	ReqbodyErrorMsg = variables.ReqbodyErrorMsg
-	// ReqbodyProcessorError is the same as ReqbodyErrr ?
+	// ReqbodyProcessorError is the same as ReqbodyErr ?
 	ReqbodyProcessorError = variables.ReqbodyProcessorError
 	// ReqbodyProcessorErrorMsg is the same as ReqbodyErrorMsg ?
 	ReqbodyProcessorErrorMsg = variables.ReqbodyProcessorErrorMsg
@@ -110,7 +110,7 @@ const (
 	// StatusLine is the status line of the response, including the request method
 	// and HTTP version information
 	StatusLine = variables.StatusLine
-	// Duration contains the time in miliseconds from
+	// Duration contains the time in milliseconds from
 	// the beginning of the transaction until this point
 	Duration = variables.Duration
 	// ResponseHeadersNames contains the names of the response headers
@@ -214,6 +214,16 @@ const (
 	TimeWday = variables.TimeWday
 	// TimeYear the current four-digit year value
 	TimeYear = variables.TimeYear
+	// Global contains global persistent data
+	Global = variables.Global
+	// Resource contains the persistent resource data
+	Resource = variables.Resource
+	// IP contains the persistent IP information
+	IP = variables.IP
+	// Session contains the persistent session information
+	Session = variables.Session
+	// User contains the persistent user information
+	User = variables.User
 )
 
 // Parse returns the byte interpretation

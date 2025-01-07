@@ -11,6 +11,7 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/internal/persistence"
 )
 
 func TestRAW(t *testing.T) {
@@ -18,7 +19,8 @@ func TestRAW(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	v := corazawaf.NewTransactionVariables()
+	pe, _ := persistence.Get("noop")
+	v := corazawaf.NewTransactionVariables(pe)
 
 	body := `this is a body
 without &any=meaning`

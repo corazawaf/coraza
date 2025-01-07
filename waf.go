@@ -8,12 +8,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/experimental"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
 	"github.com/corazawaf/coraza/v3/types"
 )
+
+// Options is used to create tranactions with context and ID
+// This is only supported as part of the experimental package
+// experimental.WAF.NewTransactionWithOptions(Options)
+type Options = corazawaf.Options
 
 // WAF instance is used to store configurations and rules
 // Every web application should have a different WAF instance,
@@ -101,6 +105,10 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		waf.ErrorLogCb = c.errorCallback
 	}
 
+	if c.persistenceEngine != nil {
+		waf.PersistenceEngine = c.persistenceEngine
+	}
+
 	if err := waf.Validate(); err != nil {
 		return nil, err
 	}
@@ -148,6 +156,11 @@ func (w wafWrapper) NewTransactionWithID(id string) types.Transaction {
 }
 
 // NewTransaction implements the same method on WAF.
-func (w wafWrapper) NewTransactionWithOptions(opts experimental.Options) types.Transaction {
+func (w wafWrapper) NewTransactionWithOptions(opts Options) types.Transaction {
 	return w.waf.NewTransactionWithOptions(opts)
+}
+
+// Close implements the same method on WAF.
+func (w wafWrapper) Close() error {
+	return w.waf.Close()
 }
