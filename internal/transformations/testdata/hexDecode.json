@@ -22,16 +22,16 @@
   },
   {
     "type": "tfn",
-    "name": "hexDecode",
-    "input": "01234567890az",
-    "output": "\\x01#Eg\\x89\\x0a",
-    "ret": 1
+    "name": "invalidCharacter",
+    "input": "01234567890z",
+    "output": "",
+    "ret": 0
   },
   {
     "type": "tfn",
-    "name": "hexDecode",
-    "input": "01234567890a0",
-    "output": "\\x01#Eg\\x89\\x0a",
-    "ret": 1
+    "name": "invalidLen",
+    "input": "54657374004",
+    "output": "",
+    "ret": 0
   }
 ]

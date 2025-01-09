@@ -22,13 +22,13 @@ func TestHexDecode(t *testing.T) {
 		{
 			name:           "odd length",
 			input:          "48656c6c6f7",
-			expectedOutput: "Hello",
-			expectedValid:  true,
-			expectError:    false,
+			expectedOutput: "",
+			expectedValid:  false,
+			expectError:    true,
 		},
 		{
 			name:           "invalid with non hex characters",
-			input:          "YYY",
+			input:          "YyYy",
 			expectedOutput: "",
 			expectedValid:  false,
 			expectError:    true,
@@ -71,9 +71,9 @@ func TestHexDecode(t *testing.T) {
 		{
 			name:           "odd length with invalid character",
 			input:          "48656c6c6fZ",
-			expectedOutput: "Hello",
-			expectedValid:  true,
-			expectError:    false,
+			expectedOutput: "",
+			expectedValid:  false,
+			expectError:    true,
 		},
 	}
 
