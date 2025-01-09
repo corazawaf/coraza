@@ -89,25 +89,34 @@ func TestErrorWithBackticks(t *testing.T) {
 func TestLoadConfigurationFile(t *testing.T) {
 	waf := coraza.NewWAF()
 	p := NewParser(waf)
-	err := p.FromFile("../../coraza.conf-recommended")
-	if err != nil {
-		t.Errorf("unexpected error: %s", err.Error())
-	}
 
-	err = p.FromFile("../doesnotexist.conf")
-	if err == nil {
-		t.Error("expected not found error")
-	}
+	t.Run("existing file", func(t *testing.T) {
+		err := p.FromFile("../../coraza.conf-recommended")
+		if err != nil {
+			t.Errorf("unexpected error: %s", err.Error())
+		}
+	})
 
-	err = p.FromFile("./testdata/glob/*.conf")
-	if err != nil {
-		t.Errorf("unexpected error: %s", err.Error())
-	}
+	t.Run("unexisting file", func(t *testing.T) {
+		err := p.FromFile("../doesnotexist.conf")
+		if err == nil {
+			t.Error("expected not found error")
+		}
+	})
 
-	err = p.FromFile("./testdata/glob/*.comf")
-	if err == nil {
-		t.Errorf("expected an error as glob does not match any file")
-	}
+	t.Run("successful glob", func(t *testing.T) {
+		err := p.FromFile("./testdata/glob/*.conf")
+		if err != nil {
+			t.Errorf("unexpected error: %s", err.Error())
+		}
+	})
+
+	t.Run("empty glob result", func(t *testing.T) {
+		err := p.FromFile("./testdata/glob/*.comf")
+		if err != nil {
+			t.Errorf("unexpected error despite glob not matching any file")
+		}
+	})
 }
 
 // Connectors are supporting embedding github.com/corazawaf/coraza-coreruleset to ease CRS integration
