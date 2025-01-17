@@ -76,3 +76,14 @@ jobs:
           files: build/coverage-tinygo.txt
           flags: tinygo,${{ matrix.build-flag }}
           token: ${{ secrets.CODECOV_TOKEN }}
+  enforce-all-checks:
+      runs-on: ubuntu-latest
+      needs: test
+      permissions:
+        checks: read
+      steps:
+        - name: GitHub Checks
+          uses: poseidon/wait-for-status-checks@v0.6.0
+          with:
+            token: ${{ secrets.GITHUB_TOKEN }}
+  
