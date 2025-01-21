@@ -230,6 +230,62 @@ func (v RuleVariable) Name() string {
 	}
 }
 
+// CanBeSelected returns true if the variable supports selection (ie, `:foobar`)
+func (v RuleVariable) CanBeSelected() bool {
+	switch v {
+	case ResponseHeadersNames:
+		return true
+	case RequestHeadersNames:
+		return true
+	case Args:
+		return true
+	case ArgsGet:
+		return true
+	case ArgsPost:
+		return true
+	case FilesNames:
+		return true
+	case MatchedVarsNames:
+		return true
+	case MatchedVars:
+		return true
+	case RequestCookies:
+		return true
+	case RequestHeaders:
+		return true
+	case ResponseHeaders:
+		return true
+	case RequestCookiesNames:
+		return true
+	case FilesTmpNames:
+		return true
+	case ArgsNames:
+		return true
+	case ArgsGetNames:
+		return true
+	case ArgsPostNames:
+		return true
+	case TX:
+		return true
+	case JSON:
+		return true
+	case Env:
+		return true
+	case ResponseArgs:
+		return true
+	case ResponseXML:
+		return true
+	case RequestXML:
+		return true
+	case XML:
+		return true
+	case MultipartPartHeaders:
+		return true
+	default:
+		return false
+	}
+}
+
 var rulemapRev = map[string]RuleVariable{
 	"UNKNOWN":                          Unknown,
 	"RESPONSE_CONTENT_TYPE":            ResponseContentType,
