@@ -616,3 +616,20 @@ func TestExpandMacroAfterWholeRuleEvaluation(t *testing.T) {
 		t.Errorf("Expected ArgsGet-data, got %s", matchdata[0].Data())
 	}
 }
+
+func BenchmarkAddTransformationUnique(b *testing.B) {
+	transformation := func(input string) (string, bool, error) {
+		return "Test", true, nil
+	}
+	b.ResetTimer()
+	b.RunParallel(func(p *testing.PB) {
+		rule := NewRule()
+		for p.Next() {
+			transformationName := "transformation" + b.Name()
+			err := rule.AddTransformation(transformationName, transformation)
+			if err != nil {
+				b.Fatalf("Failed to add a transformation: %s", err.Error())
+			}
+		}
+	})
+}
