@@ -384,6 +384,23 @@ func TestAddTransformation(t *testing.T) {
 	}
 }
 
+func BenchmarkAddTransformationUnique(b *testing.B) {
+	transformation := func(input string) (string, bool, error) {
+		return "Test", true, nil
+	}
+	b.ResetTimer()
+	b.RunParallel(func(p *testing.PB) {
+		rule := NewRule()
+		for p.Next() {
+			transformationName := "transformation" + b.Name()
+			err := rule.AddTransformation(transformationName, transformation)
+			if err != nil {
+				b.Fatalf("Failed to add a transformation: %s", err.Error())
+			}
+		}
+	})
+}
+
 func TestAddTransformationEmpty(t *testing.T) {
 	rule := NewRule()
 	transformationName := ""
