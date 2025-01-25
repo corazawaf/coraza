@@ -48,28 +48,28 @@ jobs:
           export BUILD_TAGS=${{ matrix.build-flag }}
           go run mage.go coverage
       - name: "Codecov: General"
-        uses: codecov/codecov-action@5a605bd92782ce0810fa3b8acc235c921b497052 # v5
+        uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3 # v5
         if: ${{ matrix.go-version == '1.22.x' }}
         with:
           files: build/coverage.txt
           flags: default,${{ matrix.build-flag }}
           token: ${{ secrets.CODECOV_TOKEN }}   
       - name: "Codecov: Examples"
-        uses: codecov/codecov-action@5a605bd92782ce0810fa3b8acc235c921b497052 # v5
+        uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3 # v5
         if: ${{ matrix.go-version == '1.22.x' }}
         with:
           files: build/coverage-examples.txt
           flags: examples+${{ matrix.build-flag }}
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: "Codecov: FTW"
-        uses: codecov/codecov-action@5a605bd92782ce0810fa3b8acc235c921b497052 # v5
+        uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3 # v5
         if: ${{ matrix.go-version == '1.22.x' }}
         with:
           files: build/coverage-ftw.txt
           flags: ftw,${{ matrix.build-flag }}
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: "Codecov: Tinygo"
-        uses: codecov/codecov-action@5a605bd92782ce0810fa3b8acc235c921b497052 # v5
+        uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3 # v5
         # only if coverage-tinygo.txt exists
         if: ${{ matrix.go-version == '1.22.x' && hashFiles('build/coverage-tinygo.txt') != '' }}
         with:
@@ -86,4 +86,5 @@ jobs:
           uses: poseidon/wait-for-status-checks@899c768d191b56eef585c18f8558da19e1f3e707 # v0.6.0
           with:
             token: ${{ secrets.GITHUB_TOKEN }}
+            ignore: "codecov/patch,codecov/project"
  
