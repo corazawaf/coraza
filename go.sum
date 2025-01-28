@@ -16,6 +16,8 @@ github.com/magefile/mage v1.15.1-0.20241126214340-bdc92f694516 h1:aAO0L0ulox6m/C
 github.com/magefile/mage v1.15.1-0.20241126214340-bdc92f694516/go.mod h1:z5UZb/iS3GoOSn0JgWuiw7dxlurVYTu+/jHXqQg881A=
 github.com/mccutchen/go-httpbin/v2 v2.15.0 h1:3b2s8LMRR2aFd+8U+1Bx2kdgHNQ5ZQkQOiW8e52Jj9A=
 github.com/mccutchen/go-httpbin/v2 v2.15.0/go.mod h1:GBy5I7XwZ4ZLhT3hcq39I4ikwN9x4QUt6EAxNiR8Jus=
+github.com/mccutchen/go-httpbin/v2 v2.16.0 h1:dzoFvE4fWPIzWZ7ZRznLDYK9FpqXyx5NE3uzCngeTHM=
+github.com/mccutchen/go-httpbin/v2 v2.16.0/go.mod h1:GBy5I7XwZ4ZLhT3hcq39I4ikwN9x4QUt6EAxNiR8Jus=
 github.com/miekg/dns v1.1.57 h1:Jzi7ApEIzwEPLHWRcafCN9LZSBbqQpxjt/wpgvg7wcM=
 github.com/miekg/dns v1.1.57/go.mod h1:uqRjCRUuEAA6qsOiJvDd+CFo/vW+y5WR6SNmHE55hZk=
 github.com/petar-dambovaliev/aho-corasick v0.0.0-20240411101913-e07a1f0e8eb4 h1:1Kw2vDBXmjop+LclnzCb/fFy+sgb3gYARwfmoUcQe6o=
