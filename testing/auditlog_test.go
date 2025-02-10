@@ -226,6 +226,50 @@ func TestAuditLogOnWithNoLog(t *testing.T) {
 	}
 }
 
+func TestAuditLogOnNoLogAuditLog(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	parser := seclang.NewParser(waf)
+	if err := parser.FromString(`
+		SecRuleEngine DetectionOnly
+		SecAuditEngine On
+		SecAuditLogFormat json
+		SecAuditLogType serial
+		SecAuditLogParts ABCHIJKZ
+		SecAuditLogRelevantStatus ".*"
+		# auditlog tells that the transaction will have to log matches meant to be logged (not the ones with nolog)
+		SecRule ARGS "@unconditionalMatch" "id:1,phase:1,nolog,auditlog,msg:'unconditional match'"
+	`); err != nil {
+		t.Fatal(err)
+	}
+	// generate a random tmp file
+	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(file.Name())
+	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
+		t.Fatal(err)
+	}
+	tx := waf.NewTransaction()
+	tx.AddGetRequestArgument("test", "test")
+	tx.ProcessRequestHeaders()
+	// now we read file
+	if _, err := file.Seek(0, 0); err != nil {
+		t.Error(err)
+	}
+	tx.ProcessLogging()
+	var al auditlog.Log
+	if err := json.NewDecoder(file).Decode(&al); err != nil {
+		t.Error(err)
+	}
+	if len(al.Messages()) != 1 {
+		t.Fatalf("Expected 1 message, got %d", len(al.Messages()))
+	}
+	if al.Messages()[0].Message() != "unconditional match" {
+		t.Errorf("Expected message %q, got %q", "unconditional match", al.Messages()[0].Message())
+	}
+}
+
 func TestAuditLogRequestMethodURIProtocol(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	parser := seclang.NewParser(waf)
