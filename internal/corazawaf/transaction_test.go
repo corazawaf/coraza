@@ -728,6 +728,7 @@ func TestAuditLogFields(t *testing.T) {
 	rule := NewRule()
 	rule.ID_ = 131
 	rule.Log = true
+	rule.Audit = true
 	tx.MatchRule(rule, []types.MatchData{
 		&corazarules.MatchData{
 			Variable_: variables.UniqueID,
