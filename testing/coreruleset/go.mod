@@ -5,7 +5,7 @@ go 1.22.3
 toolchain go1.23.2
 
 require (
-	github.com/bmatcuk/doublestar/v4 v4.8.0
+	github.com/bmatcuk/doublestar/v4 v4.8.1
 	github.com/corazawaf/coraza-coreruleset/v4 v4.7.0
 	github.com/corazawaf/coraza/v3 v3.3.2
 	github.com/coreruleset/albedo v0.0.16
