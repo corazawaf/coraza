@@ -95,6 +95,8 @@ type MatchedRule struct {
 	DisruptiveAction_ DisruptiveAction
 	// Is meant to be logged
 	Log_ bool
+	// Is meant to be logged to audit
+	Audit_ bool
 	// Server IP address
 	ServerIPAddress_ string
 	// Client IP address
@@ -131,6 +133,10 @@ func (mr *MatchedRule) Disruptive() bool {
 
 func (mr *MatchedRule) Log() bool {
 	return mr.Log_
+}
+
+func (mr *MatchedRule) Audit() bool {
+	return mr.Audit_
 }
 
 func (mr *MatchedRule) ServerIPAddress() string {
