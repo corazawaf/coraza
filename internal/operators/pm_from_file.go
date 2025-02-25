@@ -51,5 +51,6 @@ func newPMFromFile(options plugintypes.OperatorOptions) (plugintypes.Operator, e
 }
 
 func init() {
-	Register("pmFromFile", newPMFromFile)
+    Register("pmFromFile", newPMFromFile)
+    Register("pmf", newPMFromFile)
 }
