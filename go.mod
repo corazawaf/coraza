@@ -27,7 +27,7 @@ require (
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20240411101913-e07a1f0e8eb4
 	github.com/tidwall/gjson v1.18.0
 	github.com/valllabh/ocsf-schema-golang v1.0.3
-	golang.org/x/net v0.35.0
+	golang.org/x/net v0.36.0
 	golang.org/x/sync v0.11.0
 	rsc.io/binaryregexp v0.2.0
 )
