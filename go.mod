@@ -1,6 +1,6 @@
 module github.com/corazawaf/coraza/v3
 
-go 1.23.6
+go 1.23.0
 
 // Testing dependencies:
 // - go-mockdns
@@ -42,7 +42,7 @@ require (
 	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/tools v0.22.0 // indirect
-	google.golang.org/protobuf v1.34.2 // indirect
+	google.golang.org/protobuf v1.35.1 // indirect
 )
 
 retract v3.2.2
