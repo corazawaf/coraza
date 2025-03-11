@@ -85,3 +85,16 @@ func TestRuleGroupDeleteByID(t *testing.T) {
 		t.Fatal("Unexpected remaining rule in the rulegroup")
 	}
 }
+
+func TestRuleIDMandatoryCondition(t *testing.T) {
+	r := NewRule()
+	r.Msg, _ = macro.NewMacro("test-rule")
+	r.Tags_ = []string{
+		"test/no-id",
+	}
+
+	rg := NewRuleGroup()
+	if err := rg.Add(r); err == nil {
+		t.Error("Expected error - rule without id should not be allowed")
+	}
+}
