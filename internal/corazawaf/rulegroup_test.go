@@ -98,3 +98,21 @@ func TestRuleIDMandatoryCondition(t *testing.T) {
 		t.Error("Expected error - rule without id should not be allowed")
 	}
 }
+
+func TestRuleIDDuplicate(t *testing.T) {
+	r := newTestRule(1)
+
+	rg := NewRuleGroup()
+	if err := rg.Add(r); err != nil {
+		t.Error("Failed to add rule to rulegroup")
+	}
+
+	if rg.Count() != 1 {
+		t.Error("Failed to add rule to rulegroup")
+	}
+
+	sr := newTestRule(1)
+	if err := rg.Add(sr); err == nil {
+		t.Error("Expected error - duplicate rule id should not be allowed")
+	}
+}
