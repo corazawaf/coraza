@@ -33,8 +33,9 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 	if rule.SecMark_ == "" { // means its SecRule/SecAction
 		if rule.ID_ == 0 {
 			return fmt.Errorf("rule id is missing, rule residing in file %s at line %d", rule.File_, rule.Line_)
-		} else if rg.FindByID(rule.ID_) != nil {
-			return fmt.Errorf("there is a another rule with id %d", rule.ID_)
+		}
+		if rg.FindByID(rule.ID_) != nil {
+			return fmt.Errorf("duplicated rule id %d", rule.ID_)
 		}
 	}
 
