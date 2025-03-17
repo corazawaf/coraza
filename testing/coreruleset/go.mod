@@ -1,8 +1,6 @@
 module github.com/corazawaf/coraza/v3/testing/coreruleset
 
-go 1.23.6
-
-toolchain go1.24.1
+go 1.23.0
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.8.1
@@ -21,6 +19,7 @@ require (
 	github.com/coreruleset/ftw-tests-schema/v2 v2.2.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/huandu/xstrings v1.4.0 // indirect
 	github.com/icza/backscanner v0.0.0-20241124160932-dff01ac50250 // indirect
