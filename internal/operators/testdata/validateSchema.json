@@ -1,0 +1,51 @@
+[
+   {
+      "type": "op",
+      "name": "validateSchema",
+      "input": "{\"name\": \"John\", \"age\": 30}",
+      "param": "testdata/schema.json",
+      "ret": 0
+   },
+   {
+      "type": "op",
+      "name": "validateSchema",
+      "input": "{\"name\": \"John\", age: 30}",
+      "param": "testdata/schema.json",
+      "ret": 1
+   },
+   {
+      "type": "op",
+      "name": "validateSchema",
+      "input": "{\"name\": \"John\"}",
+      "param": "testdata/schema.json",
+      "ret": 1
+   },
+   {
+      "type": "op",
+      "name": "validateSchema",
+      "input": "{\"name\": \"John\", \"age\": \"thirty\"}",
+      "param": "testdata/schema.json",
+      "ret": 1
+   },
+   {
+      "type": "op",
+      "name": "validateSchema",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><person><name>John</name><age>30</age></person>",
+      "param": "testdata/schema.xsd",
+      "ret": 0
+   },
+   {
+      "type": "op",
+      "name": "validateSchema",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><person><name>John</name><age>30</age></person",
+      "param": "testdata/schema.xsd",
+      "ret": 1
+   },
+   {
+      "type": "op",
+      "name": "validateSchema",
+      "input": "",
+      "param": "testdata/schema.json",
+      "ret": 0
+   }
+]

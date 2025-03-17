@@ -18,26 +18,52 @@ type jsonBodyProcessor struct{}
 var _ plugintypes.BodyProcessor = &jsonBodyProcessor{}
 
 func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
+	// Read the entire body to store it and process it
+	s := strings.Builder{}
+	tr := io.TeeReader(reader, &s)
+
+	// Process as normal
 	col := v.ArgsPost()
-	data, err := readJSON(reader)
+	data, err := readJSON(tr)
 	if err != nil {
 		return err
 	}
 	for key, value := range data {
 		col.SetIndex(key, 0, value)
 	}
+
+	// Store the raw JSON in the TX variable for validateSchema
+	// This is needed because RequestBody is a Single interface without a Set method
+	if txVar := v.TX(); txVar != nil && v.RequestBody() != nil {
+		// Store the content type and raw body
+		txVar.Set("json_request_body", []string{s.String()})
+	}
+
 	return nil
 }
 
 func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
+	// Read the entire body to store it and process it
+	s := strings.Builder{}
+	tr := io.TeeReader(reader, &s)
+
+	// Process as normal
 	col := v.ResponseArgs()
-	data, err := readJSON(reader)
+	data, err := readJSON(tr)
 	if err != nil {
 		return err
 	}
 	for key, value := range data {
 		col.SetIndex(key, 0, value)
 	}
+
+	// Store the raw JSON in the TX variable for validateSchema
+	// This is needed because ResponseBody is a Single interface without a Set method
+	if txVar := v.TX(); txVar != nil && v.ResponseBody() != nil {
+		// Store the content type and raw body
+		txVar.Set("json_response_body", []string{s.String()})
+	}
+
 	return nil
 }
 
