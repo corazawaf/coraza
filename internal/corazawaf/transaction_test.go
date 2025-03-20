@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net/http"
 	"regexp"
 	"runtime/debug"
 	"strconv"
@@ -1785,5 +1786,80 @@ func TestCloseFails(t *testing.T) {
 
 	if !strings.Contains(err.Error(), "removing temporary file") {
 		t.Fatalf("unexpected error message: %s", err.Error())
+	}
+}
+
+func TestRequestFilename(t *testing.T) {
+	tests := []struct {
+		name     string
+		uri      string
+		expected string
+	}{
+		{
+			name:     "simple",
+			uri:      "/foo",
+			expected: "/foo",
+		},
+		{
+			name:     "with query",
+			uri:      "/foo?bar=baz",
+			expected: "/foo",
+		},
+		{
+			name:     "with query and fragment",
+			uri:      "/foo?bar=baz#qux",
+			expected: "/foo",
+		},
+		{
+			name:     "subdirectory",
+			uri:      "/foo/bar",
+			expected: "/foo/bar",
+		},
+		{
+			name:     "subdirectory with query",
+			uri:      "/foo/bar?baz=qux",
+			expected: "/foo/bar",
+		},
+		{
+			name:     "multiple leading slashes",
+			uri:      "//foo/bar",
+			expected: "//foo/bar",
+		},
+		{
+			name:     "multiple leading slashes - 2",
+			uri:      "///foo/bar",
+			expected: "///foo/bar",
+		},
+		{ // This is a bug. This test should be adapted when the issue is fixed.
+			name:     "invalid encoding",
+			uri:      "/foo%zz?a=b",
+			expected: "/foo%zz?a=b",
+		},
+		{
+			name:     "valid encoding",
+			uri:      "/foo%20bar",
+			expected: "/foo bar",
+		},
+		{
+			name:     "trailing slash",
+			uri:      "/foo/bar/",
+			expected: "/foo/bar/",
+		},
+		{
+			name:     "duplicated slashes",
+			uri:      "//foo//bar",
+			expected: "//foo//bar",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			waf := NewWAF()
+			tx := waf.NewTransaction()
+			tx.ProcessURI(test.uri, http.MethodGet, "HTTP/1.1")
+			if tx.variables.requestFilename.Get() != test.expected {
+				t.Fatalf("Expected REQUEST_FILENAME %q, got %q", test.expected, tx.variables.requestFilename.Get())
+			}
+		})
 	}
 }

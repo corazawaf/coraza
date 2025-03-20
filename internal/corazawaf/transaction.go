@@ -765,7 +765,7 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 		uri = uri[:in]
 	}
 	path := ""
-	parsedURL, err := url.Parse(uri)
+	parsedURL, err := url.ParseRequestURI(uri)
 	query := ""
 	if err != nil {
 		tx.variables.urlencodedError.Set(err.Error())
