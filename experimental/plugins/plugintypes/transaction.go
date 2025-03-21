@@ -100,20 +100,20 @@ type TransactionVariables interface {
 	RequestHeaders() collection.Map
 	ResponseHeaders() collection.Map
 	MultipartName() collection.Map
-	MatchedVarsNames() collection.Collection
+	MatchedVarsNames() collection.Keyed
 	MultipartFilename() collection.Map
 	MatchedVars() collection.Map
 	FilesSizes() collection.Map
 	FilesNames() collection.Map
 	FilesTmpContent() collection.Map
-	ResponseHeadersNames() collection.Collection
-	RequestHeadersNames() collection.Collection
-	RequestCookiesNames() collection.Collection
+	ResponseHeadersNames() collection.Keyed
+	RequestHeadersNames() collection.Keyed
+	RequestCookiesNames() collection.Keyed
 	XML() collection.Map
 	RequestXML() collection.Map
 	ResponseXML() collection.Map
-	ArgsNames() collection.Collection
-	ArgsGetNames() collection.Collection
-	ArgsPostNames() collection.Collection
+	ArgsNames() collection.Keyed
+	ArgsGetNames() collection.Keyed
+	ArgsPostNames() collection.Keyed
 	MultipartStrictError() collection.Single
 }
