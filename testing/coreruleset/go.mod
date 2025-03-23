@@ -8,7 +8,7 @@ require (
 	github.com/corazawaf/coraza/v3 v3.3.3
 	github.com/coreruleset/albedo v0.1.0
 	github.com/coreruleset/go-ftw v1.3.0
-	github.com/rs/zerolog v1.33.0
+	github.com/rs/zerolog v1.34.0
 )
 
 require (
