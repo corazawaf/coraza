@@ -35,12 +35,12 @@ SecRule REQUEST_HEADERS:Content-Type "^application/[a-z0-9.-]+[+]json" \
      "id:'200006',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=JSON"
 
 # Maximum request body size we will accept for buffering. If you support
-# file uploads then the value given has to be as large as the largest file
+# file uploads, this value must has to be as large as the largest file
 # you are willing to accept.
 SecRequestBodyLimit 13107200
 
 # Maximum request body size that Coraza will store in memory. If the body
-# size is larger than this value, it will saved to a temporary file on disk.
+# size exceeds this value, it will be saved to a temporary file on disk.
 SecRequestBodyInMemoryLimit 131072
 
 # Maximum request body size we will accept for buffering, with files excluded.
@@ -52,7 +52,7 @@ SecRequestBodyInMemoryLimit 131072
 # Keep in mind that this setting will automatically be set to ProcessPartial
 # when SecRuleEngine is set to DetectionOnly mode in order to minimize
 # disruptions when initially deploying Coraza.
-# Warning: setting this directive to ProcessPartial introduces a potential bypass
+# Warning: Setting this directive to ProcessPartial introduces a potential bypass
 # risk, as attackers could prepend junk data equal to or greater than the inspected body size.
 #
 SecRequestBodyLimitAction Reject
