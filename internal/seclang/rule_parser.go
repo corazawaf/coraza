@@ -70,6 +70,9 @@ func (rp *RuleParser) ParseVariables(vars string) error {
 			if err != nil {
 				return err
 			}
+			if curr == 1 && !v.CanBeSelected() {
+				return fmt.Errorf("attempting to select a value inside a non-selectable collection: %s", string(curVar))
+			}
 			// fmt.Printf("(PREVIOUS %s) %s:%s (%t %t)\n", vars, curvar, curkey, iscount, isnegation)
 			if isquoted {
 				// if it is quoted we remove the last quote
