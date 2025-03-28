@@ -13,8 +13,6 @@ github.com/corazawaf/coraza-coreruleset/v4 v4.7.0/go.mod h1:1FQt1p+JSQ6tYrafMqZr
 github.com/corazawaf/libinjection-go v0.2.2 h1:Chzodvb6+NXh6wew5/yhD0Ggioif9ACrQGR4qjTCs1g=
 github.com/corazawaf/libinjection-go v0.2.2/go.mod h1:OP4TM7xdJ2skyXqNX1AN1wN5nNZEmJNuWbNPOItn7aw=
 github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
-github.com/coreruleset/albedo v0.0.16 h1:YYWEJBSfAwVmZ5tbBgQQhL8uU6IKeA2QwpAkii3UPKY=
-github.com/coreruleset/albedo v0.0.16/go.mod h1:6mYBASfvvRM2ckXgYO7N5nyKAj8OqLnT4+YLbM0/XWE=
 github.com/coreruleset/albedo v0.1.0 h1:W3vNOWYgj8Ug6+KpqsAjM+osk1uW1ruoNCmMc9o1YLE=
 github.com/coreruleset/albedo v0.1.0/go.mod h1:t3ZNKLVHzxzGll+Ddzgcw5FFIdiYNobTfcNdKvQHpkc=
 github.com/coreruleset/ftw-tests-schema/v2 v2.2.0 h1:G2NA/XMOWSIvRqVDt/9NlqrVF+Qhz3Ngys8JOfb5plc=
