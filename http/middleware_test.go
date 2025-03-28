@@ -614,6 +614,16 @@ func TestHandlerAPI(t *testing.T) {
 			},
 			expectedStatusCode: 201,
 		},
+		"tx is set in context": {
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				tx := r.Context().Value(types.ContextTransactionKey)
+				if tx != nil {
+					t.Fatal("tx is not set in context")
+				}
+				w.WriteHeader(204)
+			},
+			expectedStatusCode: 204,
+		},
 	}
 
 	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithRequestBodyLimit(3))
