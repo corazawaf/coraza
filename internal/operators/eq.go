@@ -18,7 +18,19 @@ type eq struct {
 
 var _ plugintypes.Operator = (*eq)(nil)
 
-func newEq(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
+// Name: eq
+// Description: Performs numerical comparison and returns true if the input value is equal
+// to the provided parameter. Macro expansion is performed on the parameter string before comparison.
+// ---
+// Example:
+// ```apache
+// # Detect exactly 15 request headers
+// SecRule &REQUEST_HEADERS_NAMES "@eq 15" "id:153"
+// ```
+//
+// Note: If a value is provided that cannot be converted to an integer (i.e a string) this operator will
+// treat that value as `0`.
+func newOperatorEq(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)
@@ -35,5 +47,5 @@ func (o *eq) Evaluate(tx plugintypes.TransactionState, value string) bool {
 }
 
 func init() {
-	Register("eq", newEq)
+	Register("eq", newOperatorEq)
 }
