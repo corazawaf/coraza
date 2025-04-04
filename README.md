@@ -97,7 +97,7 @@ have compatibility guarantees across minor versions - use with care.
 
 * `coraza.disabled_operators.*` - excludes the specified operator from compilation. Particularly useful if overriding
 the operator with `plugins.RegisterOperator` to reduce binary size / startup overhead.
-* `coraza.rule.multiphase_valuation` - enables evaluation of rule variables in the phases that they are ready, not
+* `coraza.rule.multiphase_evaluation` - enables evaluation of rule variables in the phases that they are ready, not
 only the phase the rule is defined for.
 * `memoize_builders` - enables memoization of builders for regex and aho-corasick
 dictionaries to reduce memory consumption in deployments that launch several coraza
