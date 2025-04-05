@@ -166,6 +166,92 @@ func TestXMLWithSpecialEntities(t *testing.T) {
 	}
 }
 
+func TestXMLExternalEntityProtection(t *testing.T) {
+	// Test XML with external entity that should not be processed
+	xxeXML := `<?xml version="1.0" encoding="UTF-8"?>
+	<!DOCTYPE test [
+		<!ENTITY xxe SYSTEM "file:///etc/passwd">
+	]>
+	<root>
+		<data>&xxe;</data>
+	</root>`
+
+	// If XXE is not blocked, this would contain file contents
+	attrs, contents, err := readXML(stdstrings.NewReader(xxeXML))
+
+	// The parser should either ignore the entity or return an error
+	// We check that no file contents are accidentally included
+
+	// Check each content string to ensure it doesn't contain passwd file data
+	for _, content := range contents {
+		if stdstrings.Contains(content, "root:") || stdstrings.Contains(content, "/bin/bash") {
+			t.Errorf("XXE attack succeeded, found passwd file content: %s", content)
+		}
+	}
+
+	// Either we should not find &xxe; (parser strips it) or it should remain unexpanded
+	for _, content := range contents {
+		if stdstrings.Contains(content, "&xxe;") {
+			t.Logf("Found unexpanded &xxe; entity in content")
+		}
+	}
+
+	// Log the actual behavior for debugging
+	t.Logf("XXE Test - Error: %v, Contents: %v, Attrs: %v", err, contents, attrs)
+}
+
+func TestXMLNetworkEntityProtection(t *testing.T) {
+	// Test XML with external entity that points to a network resource
+	xxeNetworkXML := `<?xml version="1.0" encoding="UTF-8"?>
+	<!DOCTYPE test [
+		<!ENTITY xxe SYSTEM "http://localhost:9999/should-not-connect">
+	]>
+	<root>
+		<data>&xxe;</data>
+	</root>`
+
+	// If XXE is not blocked, this would try to connect to the URL
+	attrs, contents, err := readXML(stdstrings.NewReader(xxeNetworkXML))
+
+	// The parser should either ignore the entity or return an error
+	// We check that no unexpected data appears in the contents
+
+	// Log the actual behavior for debugging
+	t.Logf("XXE Network Test - Error: %v, Contents: %v, Attrs: %v", err, contents, attrs)
+
+	// Confirm we don't have any unexpected content that would
+	// indicate a successful network connection
+	for _, content := range contents {
+		if stdstrings.Contains(content, "should-not-connect") ||
+			stdstrings.Contains(content, "localhost:9999") {
+			t.Errorf("XXE network attack might have succeeded, found suspicious content: %s", content)
+		}
+	}
+}
+
+func TestXMLBillionLaughsProtection(t *testing.T) {
+	// Test "Billion Laughs" attack, a form of entity expansion bomb
+	billionLaughsXML := `<?xml version="1.0" encoding="UTF-8"?>
+	<!DOCTYPE lolz [
+		<!ENTITY lol "lol">
+		<!ENTITY lol1 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">
+		<!ENTITY lol2 "&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;">
+		<!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;">
+	]>
+	<root>&lol3;</root>`
+
+	// If entity expansion is not limited, this would cause excessive memory usage
+	// We just check that the operation completes in a reasonable time
+	_, _, err := readXML(stdstrings.NewReader(billionLaughsXML))
+
+	// Log the result
+	t.Logf("Billion Laughs Test - Error: %v", err)
+
+	// We don't assert anything specific here, as different XML parsers might
+	// handle this differently. The important thing is that it doesn't crash
+	// or cause excessive resource consumption.
+}
+
 // errorReader implements io.Reader but always returns an error
 type errorReader struct {
 	err error

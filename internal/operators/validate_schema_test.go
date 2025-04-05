@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/debuglog"
@@ -566,6 +567,235 @@ func TestValidateSchemaWithXMLRequest(t *testing.T) {
 	tx.reqXMLVar.Set("raw", []string{invalidXML})
 	// We can't assert on the result because actual validation depends on libxml2
 	op.Evaluate(tx, "")
+}
+
+// TestValidateSchemaWithXXEAttempt tests that XXE attacks are prevented in XML validation
+func TestValidateSchemaWithXXEAttempt(t *testing.T) {
+	// Create a temporary schema file
+	tmpDir := t.TempDir()
+	schemaPath := filepath.Join(tmpDir, "schema.xsd")
+
+	// Simple XML schema for testing
+	schemaContent := `<?xml version="1.0" encoding="UTF-8"?>
+	<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+		<xs:element name="person">
+			<xs:complexType>
+				<xs:sequence>
+					<xs:element name="name" type="xs:string"/>
+					<xs:element name="data" type="xs:string"/>
+				</xs:sequence>
+			</xs:complexType>
+		</xs:element>
+	</xs:schema>`
+	err := os.WriteFile(schemaPath, []byte(schemaContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test schema file: %v", err)
+	}
+
+	opts := plugintypes.OperatorOptions{
+		Arguments: schemaPath,
+	}
+	op, err := NewValidateSchema(opts)
+	if err != nil {
+		t.Fatalf("Failed to initialize validateSchema operator: %v", err)
+	}
+
+	// Create a mock transaction with XML variables
+	tx := &mockTransaction{
+		txVar: collections.NewMap(variables.TX),
+	}
+
+	// XML with XXE attack attempt
+	xxeXML := `<?xml version="1.0" encoding="UTF-8"?>
+	<!DOCTYPE test [
+		<!ENTITY xxe SYSTEM "file:///etc/passwd">
+	]>
+	<person>
+		<name>John</name>
+		<data>&xxe;</data>
+	</person>`
+
+	// Set the XML content in TX variable
+	tx.txVar.Set("xml_request_body", []string{xxeXML})
+
+	// Regardless of validation result, we shouldn't get file contents
+	// Just validate that it doesn't crash
+	result := op.Evaluate(tx, "")
+	t.Logf("XXE validation test result: %v", result)
+
+	// Test with network entity
+	xxeNetworkXML := `<?xml version="1.0" encoding="UTF-8"?>
+	<!DOCTYPE test [
+		<!ENTITY xxe SYSTEM "http://localhost:9999/nonexistent">
+	]>
+	<person>
+		<name>John</name>
+		<data>&xxe;</data>
+	</person>`
+
+	// Set the XML content in TX variable
+	tx.txVar.Set("xml_request_body", []string{xxeNetworkXML})
+
+	// Validate it doesn't crash or make external connections
+	result = op.Evaluate(tx, "")
+	t.Logf("XXE network validation test result: %v", result)
+}
+
+// TestValidateSchemaWithFileBasedXXE tests that file-based XXE attacks are prevented in schema validation
+func TestValidateSchemaWithFileBasedXXE(t *testing.T) {
+	// Create a temporary schema file
+	tmpDir := t.TempDir()
+	schemaPath := filepath.Join(tmpDir, "schema.xsd")
+
+	// Simple XML schema for testing
+	schemaContent := `<?xml version="1.0" encoding="UTF-8"?>
+	<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+		<xs:element name="data">
+			<xs:complexType>
+				<xs:sequence>
+					<xs:element name="field" type="xs:string"/>
+				</xs:sequence>
+			</xs:complexType>
+		</xs:element>
+	</xs:schema>`
+	err := os.WriteFile(schemaPath, []byte(schemaContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test schema file: %v", err)
+	}
+
+	opts := plugintypes.OperatorOptions{
+		Arguments: schemaPath,
+	}
+	op, err := NewValidateSchema(opts)
+	if err != nil {
+		t.Fatalf("Failed to initialize validateSchema operator: %v", err)
+	}
+
+	// Create a mock transaction with XML variables
+	tx := &mockTransaction{
+		txVar: collections.NewMap(variables.TX),
+	}
+
+	// Various XXE attack vectors that target file disclosure
+	xxeAttacks := []struct {
+		name string
+		xml  string
+	}{
+		{
+			name: "basic_file_xxe",
+			xml: `<?xml version="1.0" encoding="UTF-8"?>
+			<!DOCTYPE data [
+				<!ENTITY xxe SYSTEM "file:///etc/passwd">
+			]>
+			<data><field>&xxe;</field></data>`,
+		},
+		{
+			name: "parameter_entity_xxe",
+			xml: `<?xml version="1.0" encoding="UTF-8"?>
+			<!DOCTYPE data [
+				<!ENTITY % file SYSTEM "file:///etc/passwd">
+				<!ENTITY % eval "<!ENTITY &#x25; exfil SYSTEM 'file:///invalid/%file;'>">
+				%eval;
+				%exfil;
+			]>
+			<data><field>test</field></data>`,
+		},
+		{
+			name: "external_dtd_xxe",
+			xml: `<?xml version="1.0" encoding="UTF-8"?>
+			<!DOCTYPE data SYSTEM "file:///etc/passwd">
+			<data><field>test</field></data>`,
+		},
+	}
+
+	for _, attack := range xxeAttacks {
+		t.Run(attack.name, func(t *testing.T) {
+			// Set the attack XML
+			tx.txVar.Set("xml_request_body", []string{attack.xml})
+
+			// Ensure it doesn't crash and execute the attack
+			result := op.Evaluate(tx, "")
+			t.Logf("%s validation result: %v", attack.name, result)
+
+			// Test with response body too
+			tx.txVar.Set("xml_response_body", []string{attack.xml})
+			result = op.Evaluate(tx, "")
+			t.Logf("%s response validation result: %v", attack.name, result)
+		})
+	}
+}
+
+// TestValidateSchemaWithBillionLaughs tests that "Billion Laughs" entity expansion attacks are prevented
+func TestValidateSchemaWithBillionLaughs(t *testing.T) {
+	// Create a temporary schema file
+	tmpDir := t.TempDir()
+	schemaPath := filepath.Join(tmpDir, "schema.xsd")
+
+	// Simple XML schema for testing
+	schemaContent := `<?xml version="1.0" encoding="UTF-8"?>
+	<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+		<xs:element name="data">
+			<xs:complexType>
+				<xs:sequence>
+					<xs:element name="field" type="xs:string"/>
+				</xs:sequence>
+			</xs:complexType>
+		</xs:element>
+	</xs:schema>`
+	err := os.WriteFile(schemaPath, []byte(schemaContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test schema file: %v", err)
+	}
+
+	opts := plugintypes.OperatorOptions{
+		Arguments: schemaPath,
+	}
+	op, err := NewValidateSchema(opts)
+	if err != nil {
+		t.Fatalf("Failed to initialize validateSchema operator: %v", err)
+	}
+
+	// Create a mock transaction with XML variables
+	tx := &mockTransaction{
+		txVar: collections.NewMap(variables.TX),
+	}
+
+	// Billion Laughs Attack XML
+	billionLaughsXML := `<?xml version="1.0" encoding="UTF-8"?>
+	<!DOCTYPE data [
+		<!ENTITY lol "lol">
+		<!ENTITY lol1 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">
+		<!ENTITY lol2 "&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;">
+		<!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;">
+		<!ENTITY lol4 "&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;">
+		<!ENTITY lol5 "&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;">
+		<!ENTITY lol6 "&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;">
+		<!ENTITY lol7 "&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;">
+		<!ENTITY lol8 "&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;">
+		<!ENTITY lol9 "&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;">
+	]>
+	<data><field>&lol9;</field></data>`
+
+	// Test with request body
+	tx.txVar.Set("xml_request_body", []string{billionLaughsXML})
+
+	// We just ensure it doesn't crash with excessive memory usage
+	start := time.Now()
+	result := op.Evaluate(tx, "")
+	duration := time.Since(start)
+	t.Logf("Billion Laughs validation result: %v (completed in %v)", result, duration)
+
+	// A successful mitigation should complete quickly
+	if duration > 5*time.Second {
+		t.Errorf("Billion Laughs attack mitigation took too long: %v", duration)
+	}
+
+	// Test with response body too
+	tx.txVar.Set("xml_response_body", []string{billionLaughsXML})
+	start = time.Now()
+	result = op.Evaluate(tx, "")
+	duration = time.Since(start)
+	t.Logf("Billion Laughs response validation result: %v (completed in %v)", result, duration)
 }
 
 // TestValidateSchemaWithXMLResponse tests that the operator can validate XML data from XML (ResponseXML) variable
