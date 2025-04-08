@@ -78,12 +78,13 @@ func TestNativeFormatter(t *testing.T) {
 		checkLine(t, lines, 10, mutateSeparator(separator, 'F'))
 		checkLine(t, lines, 12, "some: response header")
 		checkLine(t, lines, 13, mutateSeparator(separator, 'H'))
-		checkLine(t, lines, 15, "Stopwatch: ")
-		checkLine(t, lines, 16, "Response-Body-Transformed: ")
-		checkLine(t, lines, 17, "Producer: ")
-		checkLine(t, lines, 18, "Server: ")
-		checkLine(t, lines, 19, mutateSeparator(separator, 'K'))
-		checkLine(t, lines, 21, `SecAction "id:100"`)
+		checkLine(t, lines, 15, "error message")
+		checkLine(t, lines, 16, "Stopwatch: ")
+		checkLine(t, lines, 17, "Response-Body-Transformed: ")
+		checkLine(t, lines, 18, "Producer: ")
+		checkLine(t, lines, 19, "Server: ")
+		checkLine(t, lines, 20, mutateSeparator(separator, 'K'))
+		checkLine(t, lines, 22, `SecAction "id:100"`)
 	})
 }
 
@@ -128,7 +129,8 @@ func createAuditLog() *Log {
 		},
 		Messages_: []plugintypes.AuditLogMessage{
 			&Message{
-				Message_: "some message",
+				Message_:      "some message",
+				ErrorMessage_: "error message",
 				Data_: &MessageData{
 					Msg_: "some message",
 					Raw_: "SecAction \"id:100\"",

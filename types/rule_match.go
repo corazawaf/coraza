@@ -47,4 +47,6 @@ type MatchedRule interface {
 	AuditLog() string
 
 	ErrorLog() string
+
+	// TODO(4.x): Add Log()
 }
