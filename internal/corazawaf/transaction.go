@@ -123,6 +123,10 @@ type Transaction struct {
 	variables TransactionVariables
 
 	transformationCache map[transformationKey]*transformationValue
+
+	// ruleFilter allows applying custom rule filtering logic per transaction.
+	// If set, it's used during rule evaluation to determine if a rule should be skipped.
+	ruleFilter types.RuleFilter
 }
 
 func (tx *Transaction) ID() string {
@@ -1596,6 +1600,13 @@ func (tx *Transaction) Close() error {
 	}
 
 	return fmt.Errorf("transaction close failed: %v", errors.Join(errs...))
+}
+
+// UseRuleFilter applies a RuleFilter to the transaction.
+// This filter will be consulted during rule evaluation in each phase
+// to determine if specific rules should be skipped for this transaction.
+func (tx *Transaction) UseRuleFilter(filter types.RuleFilter) {
+	tx.ruleFilter = filter
 }
 
 // String will return a string with the transaction debug information
