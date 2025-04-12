@@ -1,8 +1,8 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build !tinygo && !coraza.disabled_operators.validateSchema
-// +build !tinygo,!coraza.disabled_operators.validateSchema
+//go:build tinygo && !coraza.disabled_operators.validateSchema
+// +build tinygo,!coraza.disabled_operators.validateSchema
 
 package operators
 
@@ -18,21 +18,14 @@ import (
 	"sync"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/kaptinlin/jsonschema"
-	xsdvalidate "github.com/terminalstatic/go-xsd-validate"
 )
 
-// Initialize libxml2 for XML validation
-var xmlInitOnce sync.Once
-
 type validateSchema struct {
-	schemaType string
-	schemaPath string
-	schemaData []byte
-	jsonSchema *jsonschema.Schema
-	xsdHandler *xsdvalidate.XsdHandler
-	initOnce   sync.Once
-	initError  error
+	schemaType  string
+	schemaPath  string
+	schemaData  []byte
+	initOnce    sync.Once
+	initError   error
 }
 
 var _ plugintypes.Operator = (*validateSchema)(nil)
@@ -94,44 +87,10 @@ func NewValidateSchema(options plugintypes.OperatorOptions) (plugintypes.Operato
 }
 
 // initValidators lazily initializes the validators to avoid doing expensive operations during initialization
+// In TinyGo there's no real initialization needed since we only do basic validation
 func (o *validateSchema) initValidators() error {
-	var err error
 	o.initOnce.Do(func() {
-		if o.schemaType == "json" {
-			// Initialize JSON Schema validator
-			compiler := jsonschema.NewCompiler()
-
-			// Parse the schema
-			var schema *jsonschema.Schema
-			schema, err = compiler.Compile(o.schemaData)
-			if err != nil {
-				o.initError = fmt.Errorf("failed to compile JSON schema: %v", err)
-				return
-			}
-			o.jsonSchema = schema
-		} else if o.schemaType == "xml" {
-			// Initialize libxml2 once
-			xmlInitOnce.Do(func() {
-				err = xsdvalidate.Init()
-				if err != nil {
-					o.initError = fmt.Errorf("failed to initialize XML validator: %v", err)
-					return
-				}
-			})
-
-			if o.initError != nil {
-				return
-			}
-
-			// Initialize XML Schema validator
-			var xsdHandler *xsdvalidate.XsdHandler
-			xsdHandler, err = xsdvalidate.NewXsdHandlerMem(o.schemaData, xsdvalidate.ParsErrDefault)
-			if err != nil {
-				o.initError = fmt.Errorf("failed to create XSD handler: %v", err)
-				return
-			}
-			o.xsdHandler = xsdHandler
-		}
+		// No initialization needed for TinyGo implementation - just basic validation
 	})
 	return o.initError
 }
@@ -230,39 +189,23 @@ func (o *validateSchema) Evaluate(tx plugintypes.TransactionState, data string) 
 	return false
 }
 
-// isValidJSON performs comprehensive JSON Schema validation
+// isValidJSON performs basic JSON syntax validation for TinyGo
 func (o *validateSchema) isValidJSON(data string) bool {
-	// First check basic JSON syntax
+	// For TinyGo, just check basic JSON syntax
 	var js interface{}
 	if err := json.Unmarshal([]byte(data), &js); err != nil {
 		return false
 	}
-
-	// Return true for basic validity if no schema validator is available
-	if o.jsonSchema == nil {
-		return true
-	}
-
-	// Use the compiled schema validator
-	result := o.jsonSchema.Validate(js)
-	return result == nil || result.IsValid()
+	return true
 }
 
-// isValidXML performs XML validation against an XSD schema
+// isValidXML performs basic XML validation for TinyGo
 func (o *validateSchema) isValidXML(data string) bool {
-	// First check basic XML syntax
+	// For TinyGo, just check basic XML syntax
 	if err := xml.Unmarshal([]byte(data), new(interface{})); err != nil {
 		return false
 	}
-
-	// If no XSD handler is available, just return true for syntax validation
-	if o.xsdHandler == nil {
-		return true
-	}
-
-	// Validate XML against schema
-	err := o.xsdHandler.ValidateMem([]byte(data), xsdvalidate.ValidErrDefault)
-	return err == nil
+	return true
 }
 
 func init() {

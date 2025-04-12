@@ -4,7 +4,6 @@
 package operators
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -67,23 +66,15 @@ func TestValidateSchemaJSONBasic(t *testing.T) {
 	// Valid JSON should return false (no violation)
 	validJSON := `{"name": "John", "age": 30}`
 
-	// Parse the JSON to validate
-	var jsObj interface{}
-	err = json.Unmarshal([]byte(validJSON), &jsObj)
-	if err != nil {
-		t.Fatalf("Failed to parse JSON: %v", err)
-	}
-
-	// Validate directly with schema
-	evalResult := validateOp.jsonSchema.Validate(jsObj)
-	if evalResult != nil && !evalResult.IsValid() {
+	// Validate directly
+	valid := validateOp.isValidJSON(validJSON)
+	if !valid {
 		// Print schema and input for debugging
 		t.Logf("Schema: %s", string(validateOp.schemaData))
 		t.Logf("Input: %s", validJSON)
-		t.Fatalf("Direct schema validation failed: %v", evalResult)
+		t.Fatalf("Direct schema validation failed")
 	}
 
-	valid := validateOp.isValidJSON(validJSON)
 	if !valid {
 		t.Fatalf("JSON validation failed but should have passed")
 	}
