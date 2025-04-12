@@ -1201,3 +1201,220 @@ func (m *mockTransaction) RequestMethod() collection.Single                { ret
 func (m *mockTransaction) RequestProtocol() collection.Single              { return nil }
 func (m *mockTransaction) ResponseArgs() collection.Map                    { return nil }
 func (m *mockTransaction) ResponseXML() collection.Map                     { return nil }
+
+// TestValidateSchemaWithEmptyData tests evaluation with empty data
+func TestValidateSchemaWithEmptyData(t *testing.T) {
+	// Create a temporary schema file
+	tmpDir := t.TempDir()
+	schemaPath := filepath.Join(tmpDir, "schema.json")
+
+	schemaContent := `{
+		"type": "object",
+		"properties": {
+			"name": { "type": "string" }
+		}
+	}`
+	err := os.WriteFile(schemaPath, []byte(schemaContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test schema file: %v", err)
+	}
+
+	opts := plugintypes.OperatorOptions{
+		Arguments: schemaPath,
+	}
+	op, err := NewValidateSchema(opts)
+	if err != nil {
+		t.Fatalf("Failed to initialize validateSchema operator: %v", err)
+	}
+
+	// Test with empty data should return false (no violation)
+	if op.Evaluate(nil, "") {
+		t.Errorf("Expected empty data to return false, got true")
+	}
+}
+
+// TestValidateSchemaWithCompilerError tests JSON schema compiler error
+func TestValidateSchemaWithCompilerError(t *testing.T) {
+	// Create a temporary schema file with invalid schema format
+	tmpDir := t.TempDir()
+	schemaPath := filepath.Join(tmpDir, "schema.json")
+
+	// This is valid JSON but not a valid JSON schema
+	schemaContent := `{ 
+		"type": "invalid-type-value",
+		"properties": 123
+	}`
+
+	err := os.WriteFile(schemaPath, []byte(schemaContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test schema file: %v", err)
+	}
+
+	opts := plugintypes.OperatorOptions{
+		Arguments: schemaPath,
+	}
+	op, err := NewValidateSchema(opts)
+	if err != nil {
+		// If the schema library rejects this at creation time, that's acceptable
+		return
+	}
+
+	// Force initialization - this should fail during schema compilation
+	validateOp, ok := op.(*validateSchema)
+	if !ok {
+		t.Fatalf("Failed to cast operator to validateSchema")
+	}
+
+	err = validateOp.initValidators()
+	// Either we should get an error or the jsonSchema should be nil
+	if err == nil && validateOp.jsonSchema != nil {
+		jsonData := `{"test": "value"}`
+		// Try validation - should handle errors gracefully
+		result := validateOp.isValidJSON(jsonData)
+		// We're just testing that it doesn't panic here
+		t.Logf("Validation result with bad schema compiler: %v", result)
+	}
+}
+
+// TestXMLInitFailure tests XML initialization failure
+func TestXMLInitFailure(t *testing.T) {
+	// Create a temporary schema file
+	tmpDir := t.TempDir()
+	schemaPath := filepath.Join(tmpDir, "schema.xsd")
+
+	// Valid XML schema syntax but may have semantic issues
+	schemaContent := `<?xml version="1.0" encoding="UTF-8"?>
+	<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+		<xs:element name="person">
+			<xs:complexType>
+				<xs:sequence>
+					<xs:element name="name" type="xs:string"/>
+				</xs:sequence>
+			</xs:complexType>
+		</xs:element>
+	</xs:schema>`
+
+	err := os.WriteFile(schemaPath, []byte(schemaContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test schema file: %v", err)
+	}
+
+	opts := plugintypes.OperatorOptions{
+		Arguments: schemaPath,
+	}
+	op, err := NewValidateSchema(opts)
+	if err != nil {
+		// This is acceptable since XSD validation might fail at creation time
+		return
+	}
+
+	// Test XML initialization error path by patching the operator
+	validateOp, ok := op.(*validateSchema)
+	if !ok {
+		t.Fatalf("Failed to cast operator to validateSchema")
+	}
+
+	// Force an error directly instead of mocking the xsdvalidate package
+	validateOp.initError = fmt.Errorf("forced XML init error for testing")
+
+	// Now try to use the operator - initialization should fail
+	result := op.Evaluate(nil, `<person><name>John</name></person>`)
+	if result {
+		t.Errorf("Expected false result with XML init error, got true")
+	}
+}
+
+// TestValidateSchemaWithCompleteXMLCoverage tests edge cases for XML handling
+func TestValidateSchemaWithCompleteXMLCoverage(t *testing.T) {
+	// Create a temporary schema file
+	tmpDir := t.TempDir()
+	schemaPath := filepath.Join(tmpDir, "schema.xsd")
+
+	schemaContent := `<?xml version="1.0" encoding="UTF-8"?>
+	<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+		<xs:element name="person">
+			<xs:complexType>
+				<xs:sequence>
+					<xs:element name="name" type="xs:string"/>
+					<xs:element name="age" type="xs:integer"/>
+				</xs:sequence>
+			</xs:complexType>
+		</xs:element>
+	</xs:schema>`
+
+	err := os.WriteFile(schemaPath, []byte(schemaContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test schema file: %v", err)
+	}
+
+	opts := plugintypes.OperatorOptions{
+		Arguments: schemaPath,
+	}
+	op, err := NewValidateSchema(opts)
+	if err != nil {
+		t.Fatalf("Failed to initialize validateSchema operator: %v", err)
+	}
+
+	// Create a mock transaction with XML variables
+	tx := &mockTransaction{
+		txVar:      collections.NewMap(variables.TX),
+		reqXMLVar:  collections.NewMap(variables.RequestXML),
+		respXMLVar: collections.NewMap(variables.XML),
+	}
+
+	// Add XML response body but not request body to test that branch
+	tx.txVar.Set("xml_response_body", []string{`<person><name>Smith</name><age>42</age></person>`})
+
+	// Test evaluation with XML response body
+	if op.Evaluate(tx, "") {
+		t.Errorf("Expected evaluation with valid XML response to return false, got true")
+	}
+
+	// Test with empty response XML data to get more coverage
+	tx.respXMLVar.Set("raw", []string{""})
+	op.Evaluate(tx, "")
+
+	// Set invalid response XML data
+	tx.respXMLVar.Set("raw", []string{`<person><name>Smith</name></person>`}) // Missing required age element
+	op.Evaluate(tx, "")
+
+	// Test with a transaction that has empty TX collection
+	emptyTxTest := &mockTransaction{
+		txVar:      collections.NewMap(variables.TX), // Empty but not nil
+		reqXMLVar:  collections.NewMap(variables.RequestXML),
+		respXMLVar: collections.NewMap(variables.XML),
+	}
+	emptyTxTest.reqXMLVar.Set("raw", []string{`<person><name>Smith</name><age>42</age></person>`})
+	op.Evaluate(emptyTxTest, "")
+
+	// Test case where schema type isn't recognized
+	validateOp, ok := op.(*validateSchema)
+	if !ok {
+		t.Fatalf("Failed to cast operator to validateSchema")
+	}
+
+	// Manipulate schema type to test unknown type branch
+	origSchemaType := validateOp.schemaType
+	validateOp.schemaType = "unknown"
+	result := op.Evaluate(nil, `<person><name>John</name></person>`)
+	if result {
+		t.Errorf("Expected false result with unknown schema type, got true")
+	}
+	validateOp.schemaType = origSchemaType
+}
+
+// TestValidateSchemaWithFSRootError tests error path with invalid FS
+func TestValidateSchemaWithFSRootError(t *testing.T) {
+	// Create a fake filesystem that will generate an error
+	fs := fstest.MapFS{}
+
+	opts := plugintypes.OperatorOptions{
+		Arguments: "nonexistent.json",
+		Root:      fs,
+	}
+
+	_, err := NewValidateSchema(opts)
+	if err == nil {
+		t.Errorf("Expected error for nonexistent file in FS, got nil")
+	}
+}

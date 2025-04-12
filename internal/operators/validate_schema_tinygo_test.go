@@ -77,9 +77,37 @@ func TestValidateSchemaCreation(t *testing.T) {
 
 // TestEvaluateWithTx tests Evaluate method with transaction data
 func TestEvaluateWithTx(t *testing.T) {
-	// This test will be minimal since we can't create a full mock transaction in TinyGo
-	// Instead, we'll focus on the direct validation functions which are the core
-	// of the TinyGo implementation
+	// Create temporary directories for test files
+	validTempDir := t.TempDir()
+	
+	// Create a valid JSON schema file
+	validSchemaContent := `{"type": "object", "properties": {"name":{"type":"string"}}}`
+	validSchemaPath := createTempSchemaFile(t, validTempDir, "valid_schema", validSchemaContent, ".json")
+
+	// Create a valid operator
+	op, err := NewValidateSchema(plugintypes.OperatorOptions{Arguments: validSchemaPath})
+	if err != nil {
+		t.Fatalf("Failed to create operator: %v", err)
+	}
+	
+	// Test the initValidators method
+	validateOp, ok := op.(*validateSchema)
+	if !ok {
+		t.Fatalf("Failed to cast to validateSchema")
+	}
+	
+	// Test initialization - should succeed
+	err = validateOp.initValidators()
+	if err != nil {
+		t.Errorf("Expected no error from initValidators, got: %v", err)
+	}
+	
+	// Test with error condition
+	validateOp.initError = fmt.Errorf("test error")
+	res := validateOp.Evaluate(nil, `{"name":"John"}`)
+	if res {
+		t.Errorf("Expected false when initError is set, got true")
+	}
 }
 
 // TestBasicJSONValidation tests the basic JSON validation functionality in TinyGo
