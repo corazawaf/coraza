@@ -26,7 +26,6 @@ require (
 	github.com/magefile/mage v1.15.1-0.20241126214340-bdc92f694516
 	github.com/mccutchen/go-httpbin/v2 v2.18.0
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20240411101913-e07a1f0e8eb4
-	github.com/terminalstatic/go-xsd-validate v0.1.6
 	github.com/tidwall/gjson v1.18.0
 	github.com/valllabh/ocsf-schema-golang v1.0.3
 	golang.org/x/net v0.39.0

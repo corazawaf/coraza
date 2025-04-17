@@ -8,7 +8,6 @@ package operators
 
 import (
 	"encoding/json"
-	"encoding/xml"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -57,28 +56,18 @@ func NewValidateSchema(options plugintypes.OperatorOptions) (plugintypes.Operato
 
 	// Determine schema type from file extension
 	ext := strings.ToLower(filepath.Ext(data))
-	var schemaType string
-	switch ext {
-	case ".json":
-		schemaType = "json"
-		// Preliminarily validate that the schema is valid JSON
-		var jsonSchema interface{}
-		if err := json.Unmarshal(schemaData, &jsonSchema); err != nil {
-			return nil, fmt.Errorf("invalid JSON schema: %v", err)
-		}
-	case ".xsd":
-		schemaType = "xml"
-		// Preliminarily validate that the XSD is valid XML
-		var xmlSchema interface{}
-		if err := xml.Unmarshal(schemaData, &xmlSchema); err != nil {
-			return nil, fmt.Errorf("invalid XML schema: %v", err)
-		}
-	default:
-		return nil, fmt.Errorf("unsupported schema type: %s, must be .json or .xsd", ext)
+	if ext != ".json" {
+		return nil, fmt.Errorf("unsupported schema type: %s, must be .json", ext)
+	}
+
+	// Preliminarily validate that the schema is valid JSON
+	var jsonSchema interface{}
+	if err := json.Unmarshal(schemaData, &jsonSchema); err != nil {
+		return nil, fmt.Errorf("invalid JSON schema: %v", err)
 	}
 
 	operator := &validateSchema{
-		schemaType: schemaType,
+		schemaType: "json",
 		schemaPath: data,
 		schemaData: schemaData,
 	}
@@ -108,64 +97,23 @@ func (o *validateSchema) Evaluate(tx plugintypes.TransactionState, data string) 
 	// Check TX variable for stored raw data from body processors
 	if tx != nil && tx.Variables() != nil && tx.Variables().TX() != nil {
 		txVar := tx.Variables().TX()
-		// Try to get the appropriate type of data based on schema type
-		if o.schemaType == "json" {
-			// Try JSON request data first
-			jsonReqData := txVar.Get("json_request_body")
-			if len(jsonReqData) > 0 && jsonReqData[0] != "" {
-				bodyData = jsonReqData[0]
-			} else {
-				// Try JSON response data
-				jsonRespData := txVar.Get("json_response_body")
-				if len(jsonRespData) > 0 && jsonRespData[0] != "" {
-					bodyData = jsonRespData[0]
-				}
-			}
-		} else if o.schemaType == "xml" {
-			// Try XML request data first
-			xmlReqData := txVar.Get("xml_request_body")
-			if len(xmlReqData) > 0 && xmlReqData[0] != "" {
-				bodyData = xmlReqData[0]
-			} else {
-				// Try XML response data
-				xmlRespData := txVar.Get("xml_response_body")
-				if len(xmlRespData) > 0 && xmlRespData[0] != "" {
-					bodyData = xmlRespData[0]
-				}
+		
+		// Try JSON request data first
+		jsonReqData := txVar.Get("json_request_body")
+		if len(jsonReqData) > 0 && jsonReqData[0] != "" {
+			bodyData = jsonReqData[0]
+		} else {
+			// Try JSON response data
+			jsonRespData := txVar.Get("json_response_body")
+			if len(jsonRespData) > 0 && jsonRespData[0] != "" {
+				bodyData = jsonRespData[0]
 			}
 		}
 
 		// If we found data in TX, validate it
 		if bodyData != "" {
-			if o.schemaType == "json" {
-				// Return true if validation fails (violation)
-				return !o.isValidJSON(bodyData)
-			} else if o.schemaType == "xml" {
-				// Return true if validation fails (violation)
-				return !o.isValidXML(bodyData)
-			}
-		}
-	}
-
-	// Check XML variables for raw XML content
-	// For backward compatibility with the older approach
-	if tx != nil && tx.Variables() != nil && o.schemaType == "xml" {
-		// Try RequestXML first
-		if reqXML := tx.Variables().RequestXML(); reqXML != nil {
-			rawData := reqXML.Get("raw")
-			if len(rawData) > 0 && rawData[0] != "" {
-				// Return true if validation fails (violation)
-				return !o.isValidXML(rawData[0])
-			}
-		}
-
-		// Try XML (ResponseXML) next
-		if respXML := tx.Variables().XML(); respXML != nil {
-			rawData := respXML.Get("raw")
-			if len(rawData) > 0 && rawData[0] != "" {
-				// Return true if validation fails (violation)
-				return !o.isValidXML(rawData[0])
-			}
+			// Return true if validation fails (violation)
+			return !o.isValidJSON(bodyData)
 		}
 	}
 
@@ -174,19 +122,9 @@ func (o *validateSchema) Evaluate(tx plugintypes.TransactionState, data string) 
 		return false
 	}
 
-	// Validate the provided data based on schema type
-	if o.schemaType == "json" {
-		// Return true if validation fails (violation)
-		result := o.isValidJSON(data)
-		return !result
-	} else if o.schemaType == "xml" {
-		// Return true if validation fails (violation)
-		result := o.isValidXML(data)
-		return !result
-	}
-
-	// If we don't know how to validate this schema type, return false
-	return false
+	// Return true if validation fails (violation)
+	result := o.isValidJSON(data)
+	return !result
 }
 
 // isValidJSON performs basic JSON syntax validation for TinyGo
@@ -194,15 +132,6 @@ func (o *validateSchema) isValidJSON(data string) bool {
 	// For TinyGo, just check basic JSON syntax
 	var js interface{}
 	if err := json.Unmarshal([]byte(data), &js); err != nil {
-		return false
-	}
-	return true
-}
-
-// isValidXML performs basic XML validation for TinyGo
-func (o *validateSchema) isValidXML(data string) bool {
-	// For TinyGo, just check basic XML syntax
-	if err := xml.Unmarshal([]byte(data), new(interface{})); err != nil {
 		return false
 	}
 	return true

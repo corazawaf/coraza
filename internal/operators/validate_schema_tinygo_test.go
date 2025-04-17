@@ -8,7 +8,7 @@ package operators
 
 import (
 	"encoding/json"
-	"encoding/xml"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -134,29 +134,6 @@ func TestBasicJSONValidation(t *testing.T) {
 	}
 }
 
-// TestBasicXMLValidation tests the basic XML validation functionality in TinyGo
-func TestBasicXMLValidation(t *testing.T) {
-	// Valid XML
-	validXML := `<?xml version="1.0" encoding="UTF-8"?><person><name>John</name></person>`
-	valid := isValidXML(validXML)
-	if !valid {
-		t.Errorf("Expected valid XML to return true, got false")
-	}
-
-	// Syntactically invalid XML (this should definitely fail)
-	invalidXML := `<?xml version="1.0" encoding="UTF-8"?><person><name>John</person>` // Missing closing tag
-	valid = isValidXML(invalidXML)
-	if valid {
-		t.Errorf("Expected invalid XML to return false, got true")
-	}
-	
-	// Empty XML
-	emptyXML := ""
-	valid = isValidXML(emptyXML)
-	if valid {
-		t.Errorf("Expected empty XML to return false, got true")
-	}
-}
 
 // isValidJSON performs basic JSON syntax validation for TinyGo
 func isValidJSON(data string) bool {
@@ -168,11 +145,3 @@ func isValidJSON(data string) bool {
 	return true
 }
 
-// isValidXML performs basic XML validation for TinyGo
-func isValidXML(data string) bool {
-	// For TinyGo, just check basic XML syntax
-	if err := xml.Unmarshal([]byte(data), new(interface{})); err != nil {
-		return false
-	}
-	return true
-}
