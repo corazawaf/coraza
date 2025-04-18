@@ -84,47 +84,19 @@ func (o *validateSchema) initValidators() error {
 	return o.initError
 }
 
-func (o *validateSchema) Evaluate(tx plugintypes.TransactionState, data string) bool {
+// Evaluate performs JSON schema validation on the provided data.
+// For TinyGo, only basic JSON syntax validation is supported.
+func (o *validateSchema) Evaluate(_ plugintypes.TransactionState, data string) bool {
 	// Lazy initialize the validators
 	if err := o.initValidators(); err != nil {
-		// If we can't initialize validators, we can't validate
 		return false
 	}
-
-	// If we're validating a request/response body, try to get data from the TX variable
-	var bodyData string
-
-	// Check TX variable for stored raw data from body processors
-	if tx != nil && tx.Variables() != nil && tx.Variables().TX() != nil {
-		txVar := tx.Variables().TX()
-		
-		// Try JSON request data first
-		jsonReqData := txVar.Get("json_request_body")
-		if len(jsonReqData) > 0 && jsonReqData[0] != "" {
-			bodyData = jsonReqData[0]
-		} else {
-			// Try JSON response data
-			jsonRespData := txVar.Get("json_response_body")
-			if len(jsonRespData) > 0 && jsonRespData[0] != "" {
-				bodyData = jsonRespData[0]
-			}
-		}
-
-		// If we found data in TX, validate it
-		if bodyData != "" {
-			// Return true if validation fails (violation)
-			return !o.isValidJSON(bodyData)
-		}
-	}
-
-	// If no variable data found or used, try the provided data string
+	// If no data is provided, no violation
 	if data == "" {
 		return false
 	}
-
 	// Return true if validation fails (violation)
-	result := o.isValidJSON(data)
-	return !result
+	return !o.isValidJSON(data)
 }
 
 // isValidJSON performs basic JSON syntax validation for TinyGo
