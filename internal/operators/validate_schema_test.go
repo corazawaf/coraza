@@ -6,7 +6,6 @@
 package operators
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -51,12 +50,6 @@ func TestValidateSchemaJSONBasic(t *testing.T) {
 	validateOp, ok := op.(*validateSchema)
 	if !ok {
 		t.Fatalf("Failed to cast operator to validateSchema")
-	}
-
-	// Force initialize validators
-	err = validateOp.initValidators()
-	if err != nil {
-		t.Fatalf("Failed to initialize validators: %v", err)
 	}
 
 	if validateOp.jsonSchema == nil {
@@ -389,10 +382,6 @@ func TestValidateSchemaJSONNilSchema(t *testing.T) {
 		t.Fatalf("Failed to cast operator to validateSchema")
 	}
 
-	// Force initialize but then set the schema to nil to test a fallback code path
-	validateOp.initOnce.Do(func() {
-		// Already initialized, but we set schema to nil for testing
-	})
 	validateOp.jsonSchema = nil
 
 	// Valid JSON syntax but nil schema should just do basic JSON validation
@@ -400,49 +389,6 @@ func TestValidateSchemaJSONNilSchema(t *testing.T) {
 	result := validateOp.isValidJSON(validJSON)
 	if !result {
 		t.Errorf("Expected valid JSON to return true even with nil schema, got false")
-	}
-}
-
-// TestValidateSchemaXMLNilHandler tests evaluation with a nil XSD handler
-// TestValidateSchemaInitError tests a scenario where initialization fails
-func TestValidateSchemaInitError(t *testing.T) {
-	// Create a temporary schema file
-	tmpDir := t.TempDir()
-	schemaPath := filepath.Join(tmpDir, "schema.json")
-
-	// Simple JSON schema for testing
-	schemaContent := `{
-		"type": "object",
-		"properties": {
-			"name": { "type": "string" }
-		}
-	}`
-	err := os.WriteFile(schemaPath, []byte(schemaContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create test schema file: %v", err)
-	}
-
-	opts := plugintypes.OperatorOptions{
-		Arguments: schemaPath,
-	}
-	op, err := NewValidateSchema(opts)
-	if err != nil {
-		t.Fatalf("Failed to initialize validateSchema operator: %v", err)
-	}
-
-	// Cast to validateSchema to manipulate internals
-	validateOp, ok := op.(*validateSchema)
-	if !ok {
-		t.Fatalf("Failed to cast operator to validateSchema")
-	}
-
-	// Set an initialization error to test error handling
-	validateOp.initError = fmt.Errorf("test initialization error")
-
-	// Ensure evaluation with an initialization error returns false
-	result := op.Evaluate(nil, `{"name": "John"}`)
-	if result {
-		t.Errorf("Expected evaluation to return false with init error, got true")
 	}
 }
 
@@ -611,7 +557,7 @@ func TestValidateSchemaWithCompilerError(t *testing.T) {
 	schemaPath := filepath.Join(tmpDir, "schema.json")
 
 	// This is valid JSON but not a valid JSON schema
-	schemaContent := `{ 
+	schemaContent := `{
 		"type": "invalid-type-value",
 		"properties": 123
 	}`
@@ -636,7 +582,6 @@ func TestValidateSchemaWithCompilerError(t *testing.T) {
 		t.Fatalf("Failed to cast operator to validateSchema")
 	}
 
-	err = validateOp.initValidators()
 	// Either we should get an error or the jsonSchema should be nil
 	if err == nil && validateOp.jsonSchema != nil {
 		jsonData := `{"test": "value"}`

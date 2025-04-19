@@ -20,11 +20,11 @@ import (
 )
 
 type validateSchema struct {
-	schemaType  string
-	schemaPath  string
-	schemaData  []byte
-	initOnce    sync.Once
-	initError   error
+	schemaType string
+	schemaPath string
+	schemaData []byte
+	initOnce   sync.Once
+	initError  error
 }
 
 var _ plugintypes.Operator = (*validateSchema)(nil)
@@ -87,12 +87,14 @@ func (o *validateSchema) initValidators() error {
 // Evaluate performs JSON schema validation on the provided data.
 // For TinyGo, only basic JSON syntax validation is supported.
 func (o *validateSchema) Evaluate(_ plugintypes.TransactionState, data string) bool {
-	// Lazy initialize the validators
-	if err := o.initValidators(); err != nil {
-		return false
-	}
+
 	// If no data is provided, no violation
 	if data == "" {
+		return false
+	}
+
+	// Lazy initialize the validators
+	if err := o.initValidators(); err != nil {
 		return false
 	}
 	// Return true if validation fails (violation)

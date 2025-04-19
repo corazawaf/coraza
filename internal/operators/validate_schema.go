@@ -14,7 +14,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/kaptinlin/jsonschema"
@@ -25,8 +24,6 @@ type validateSchema struct {
 	schemaPath string
 	schemaData []byte
 	jsonSchema *jsonschema.Schema
-	initOnce   sync.Once
-	initError  error
 }
 
 var _ plugintypes.Operator = (*validateSchema)(nil)
@@ -74,34 +71,18 @@ func NewValidateSchema(options plugintypes.OperatorOptions) (plugintypes.Operato
 		schemaData: schemaData,
 	}
 
+	// Compile JSON Schema at creation time
+	compiler := jsonschema.NewCompiler()
+	schema, err := compiler.Compile(operator.schemaData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile JSON schema: %v", err)
+	}
+	operator.jsonSchema = schema
+
 	return operator, nil
 }
 
-// initValidators lazily initializes the validators to avoid doing expensive operations during initialization
-func (o *validateSchema) initValidators() error {
-	var err error
-	o.initOnce.Do(func() {
-		// Initialize JSON Schema validator
-		compiler := jsonschema.NewCompiler()
-
-		// Parse the schema
-		var schema *jsonschema.Schema
-		schema, err = compiler.Compile(o.schemaData)
-		if err != nil {
-			o.initError = fmt.Errorf("failed to compile JSON schema: %v", err)
-			return
-		}
-		o.jsonSchema = schema
-	})
-	return o.initError
-}
-
 func (o *validateSchema) Evaluate(tx plugintypes.TransactionState, data string) bool {
-	// Lazy initialize the validators
-	if err := o.initValidators(); err != nil {
-		// If we can't initialize validators, we can't validate
-		return false
-	}
 
 	// If we're validating a request/response body, try to get data from the TX variable
 	var bodyData string
@@ -141,15 +122,16 @@ func (o *validateSchema) Evaluate(tx plugintypes.TransactionState, data string) 
 
 // isValidJSON performs comprehensive JSON Schema validation
 func (o *validateSchema) isValidJSON(data string) bool {
-	// First check basic JSON syntax
-	var js interface{}
-	if err := json.Unmarshal([]byte(data), &js); err != nil {
-		return false
-	}
 
 	// Return true for basic validity if no schema validator is available
 	if o.jsonSchema == nil {
 		return true
+	}
+
+	// Check basic JSON syntax
+	var js interface{}
+	if err := json.Unmarshal([]byte(data), &js); err != nil {
+		return false
 	}
 
 	// Use the compiled schema validator
