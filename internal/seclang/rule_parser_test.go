@@ -357,7 +357,7 @@ func TestParseActions(t *testing.T) {
 			} else if !tt.expectError && err != nil {
 				t.Errorf("unexpected error: %s", err.Error())
 			}
-			if tt.expectedLogLine == "" && logsBuf.String() != "" {
+			if tt.expectedLogLine == "" && logsBuf.Len() > 0 {
 				t.Errorf("expected empty warn debug log, got %q", logsBuf.String())
 			}
 			if tt.expectedLogLine != "" && !strings.Contains(logsBuf.String(), tt.expectedLogLine) {
