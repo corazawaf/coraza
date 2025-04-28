@@ -5,8 +5,6 @@ package rulefilter
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -31,31 +29,38 @@ func TestSetRuleFilter(t *testing.T) {
 	t.Run("set success", func(t *testing.T) {
 		conf := coraza.NewWAFConfig()
 		waf, err := coraza.NewWAF(conf)
-		require.NoError(t, err)
+		if err != nil {
+			t.Fatalf("Failed to create WAF: %v", err)
+		}
 		tx := waf.NewTransaction()
-		require.NotNil(t, tx)
+		if tx == nil {
+			t.Fatal("Expected non-nil transaction, but got nil")
+		}
 
 		filter := &mockRuleFilter{}
 
 		err = SetRuleFilter(tx, filter)
-		require.NoError(t, err, "Setting filter on standard tx should succeed")
+		if err != nil {
+			t.Fatalf("Setting filter should succeed, but got error: %v", err)
+		}
 	})
 
 	t.Run("set success for nil", func(t *testing.T) {
 		conf := coraza.NewWAFConfig()
 		waf, err := coraza.NewWAF(conf)
-		require.NoError(t, err)
+		if err != nil {
+			t.Fatalf("Failed to create WAF: %v", err)
+		}
 		tx := waf.NewTransaction()
-		require.NotNil(t, tx)
+		if tx == nil {
+			t.Fatal("Expected non-nil transaction, but got nil")
+		}
 
-		// First set a filter
-		initialFilter := &mockRuleFilter{}
-		err = SetRuleFilter(tx, initialFilter)
-		require.NoError(t, err)
-
-		// Now clear it by setting nil
+		// resetting the filter should not fail
 		err = SetRuleFilter(tx, nil)
-		require.NoError(t, err, "Setting nil filter should succeed")
+		if err != nil {
+			t.Fatalf("Setting nil filter should succeed, but got error: %v", err)
+		}
 	})
 
 	t.Run("fail wrong transaction type", func(t *testing.T) {
@@ -64,7 +69,8 @@ func TestSetRuleFilter(t *testing.T) {
 		filter := &mockRuleFilter{}
 
 		err := SetRuleFilter(mockTx, filter)
-		require.Error(t, err, "Setting filter on incorrect tx type should fail")
+		if err == nil {
+			t.Fatal("Setting filter on incorrect tx type should fail")
+		}
 	})
-
 }
