@@ -196,11 +196,6 @@ type Transaction interface {
 	// ID returns the transaction ID.
 	ID() string
 
-	// UseRuleFilter applies a RuleFilter to the transaction.
-	// This filter will be consulted during rule evaluation in each phase
-	// to determine if specific rules should be skipped for this transaction.
-	UseRuleFilter(RuleFilter)
-
 	// Closer closes the transaction and releases any resources associated with it such as request/response bodies.
 	io.Closer
 }

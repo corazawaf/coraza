@@ -161,7 +161,7 @@ func TestRuleFilterInteraction(t *testing.T) {
 							return fa.filterShouldIgnore
 						},
 					}
-					tx.UseRuleFilter(testFilter)
+					tx.SetRuleFilter(testFilter)
 
 					interrupted := waf.Rules.Eval(currentPhase, tx)
 					if interrupted != fa.expectInterruption {
