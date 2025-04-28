@@ -369,8 +369,7 @@ func TestParseActions(t *testing.T) {
 
 func BenchmarkParseActions(b *testing.B) {
 	actionsToBeParsed := "id:980170,phase:5,pass,t:none,noauditlog,msg:'Anomaly Scores:Inbound Scores - Outbound Scores',tag:test"
-	var dummyLogger debuglog.Logger
 	for i := 0; i < b.N; i++ {
-		_, _ = parseActions(dummyLogger, actionsToBeParsed)
+		_, _ = parseActions(nil, actionsToBeParsed)
 	}
 }
