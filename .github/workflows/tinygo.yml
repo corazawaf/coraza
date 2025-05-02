@@ -19,7 +19,7 @@ jobs:
     strategy:
       matrix:
         go-version: [1.23.x]
-        tinygo-version: [0.33.0]
+        tinygo-version: [0.36.0]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
