@@ -8,6 +8,7 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -115,6 +116,10 @@ func WrapHandler(waf coraza.WAF, h http.Handler) http.Handler {
 
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		tx := newTX(r)
+
+		ctx := context.WithValue(r.Context(), types.ContextTransactionKey, tx)
+		r = r.WithContext(ctx)
+
 		defer func() {
 			// We run phase 5 rules and create audit logs (if enabled)
 			tx.ProcessLogging()
