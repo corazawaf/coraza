@@ -368,7 +368,7 @@ func TestCtl(t *testing.T) {
 
 func TestParseCtl(t *testing.T) {
 	t.Run("invalid ctl", func(t *testing.T) {
-		ctl, _, _, _, err := parseCtl("invalid")
+		ctl, _, _, _, _, err := parseCtl("invalid")
 		if err == nil {
 			t.Errorf("expected error, got nil")
 		}
@@ -379,7 +379,7 @@ func TestParseCtl(t *testing.T) {
 	})
 
 	t.Run("malformed ctl", func(t *testing.T) {
-		ctl, _, _, _, err := parseCtl("unknown=")
+		ctl, _, _, _, _, err := parseCtl("unknown=")
 		if err == nil {
 			t.Errorf("expected error, got nil")
 		}
@@ -417,9 +417,12 @@ func TestParseCtl(t *testing.T) {
 	for _, tCase := range tCases {
 		testName, _, _ := strings.Cut(tCase.input, "=")
 		t.Run(testName, func(t *testing.T) {
-			action, value, collection, colKey, err := parseCtl(tCase.input)
+			action, value, collection, colKey, rx, err := parseCtl(tCase.input)
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err.Error())
+			}
+			if rx != nil {
+				t.Error("unexpected regex, want nil regex")
 			}
 			if action != tCase.expectAction {
 				t.Errorf("unexpected action, want: %d, have: %d", tCase.expectAction, action)
@@ -435,8 +438,24 @@ func TestParseCtl(t *testing.T) {
 			}
 		})
 	}
-
 }
+
+func TestCtlRegexColname(t *testing.T) {
+	_, _, _, _, rx, err := parseCtl("ruleRemoveTargetById=2;ARGS:/user/")
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+	if rx == nil {
+		t.Error("unexpected nil regex")
+	}
+	if rx.String() != "user" {
+		t.Errorf("unexpected regex, want: user, have: %s", rx.String())
+	}
+	if !rx.MatchString("user") {
+		t.Error("unexpected match")
+	}
+}
+
 func TestCtlParseRange(t *testing.T) {
 	rules := []corazawaf.Rule{
 		{
