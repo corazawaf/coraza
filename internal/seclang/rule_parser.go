@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	actionsmod "github.com/corazawaf/coraza/v3/internal/actions"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
@@ -215,7 +216,11 @@ func (rp *RuleParser) ParseOperator(operator string) error {
 // Each rule on the indicated phase will inherit the previously declared actions
 // If the user overwrites the default actions, the default actions will be overwritten
 func (rp *RuleParser) ParseDefaultActions(actions string) error {
-	act, err := parseActions(actions)
+	var logger debuglog.Logger
+	if rp.options.WAF != nil {
+		logger = rp.options.WAF.Logger
+	}
+	act, err := parseActions(logger, actions)
 	if err != nil {
 		return err
 	}
@@ -258,7 +263,7 @@ func (rp *RuleParser) ParseDefaultActions(actions string) error {
 // Arguments can be wrapper inside quotes
 func (rp *RuleParser) ParseActions(actions string) error {
 	disabledActions := rp.options.ParserConfig.DisabledRuleActions
-	act, err := parseActions(actions)
+	act, err := parseActions(rp.options.WAF.Logger, actions)
 	if err != nil {
 		return err
 	}
@@ -485,7 +490,7 @@ const unset = -1
 // parseActions will assign the function name, arguments and
 // function (pkg.actions) for each action split by comma (,)
 // Action arguments are allowed to wrap values between colons(”)
-func parseActions(actions string) ([]ruleAction, error) {
+func parseActions(logger debuglog.Logger, actions string) ([]ruleAction, error) {
 	var res []ruleAction
 	var err error
 	disruptiveActionIndex := unset
@@ -530,6 +535,12 @@ func parseActions(actions string) ([]ruleAction, error) {
 			}
 			beforeKey = i
 			afterKey = -1
+		}
+	}
+	if inQuotes {
+		// TODO(4.x): evaluate returning an error. It currently is a warning in order to don't make it a breaking change
+		if logger != nil {
+			logger.Warn().Str("actions", actions).Msg("unclosed quotes in action line")
 		}
 	}
 	var val string

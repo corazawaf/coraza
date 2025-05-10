@@ -5,6 +5,7 @@ package seclang
 
 import (
 	"bufio"
+	"bytes"
 	"embed"
 	"fmt"
 	"io/fs"
@@ -17,6 +18,7 @@ import (
 	"github.com/jcchavezs/mergefs/io"
 
 	coreruleset "github.com/corazawaf/coraza-coreruleset"
+	"github.com/corazawaf/coraza/v3/debuglog"
 	coraza "github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
@@ -90,10 +92,16 @@ func TestLoadConfigurationFile(t *testing.T) {
 	waf := coraza.NewWAF()
 	p := NewParser(waf)
 
-	t.Run("existing file", func(t *testing.T) {
+	t.Run("existing recommended file", func(t *testing.T) {
+		logsBuf := &bytes.Buffer{}
+		p.options.WAF.Logger = debuglog.Default().WithLevel(debuglog.LevelWarn).WithOutput(logsBuf)
 		err := p.FromFile("../../coraza.conf-recommended")
 		if err != nil {
 			t.Errorf("unexpected error: %s", err.Error())
+		}
+		// The recommended file is expected to have no warnings/error logs
+		if logsBuf.Len() > 0 {
+			t.Errorf("unexpected warnings logs while parsing recommended file: %s", logsBuf.String())
 		}
 	})
 
