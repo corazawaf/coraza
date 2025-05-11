@@ -87,3 +87,39 @@ func TestNamedCollection(t *testing.T) {
 	}
 
 }
+
+func TestNames(t *testing.T) {
+	c := NewNamedCollection(variables.ArgsPost)
+	if c.Name() != "ARGS_POST" {
+		t.Error("Error getting name")
+	}
+
+	c.SetIndex("key", 1, "value")
+	c.Set("key2", []string{"value2", "value3"})
+
+	names := c.Names(variables.ArgsPostNames)
+
+	r := names.FindString("key2")
+
+	if len(r) != 2 {
+		t.Errorf("Error finding string, got %d instead of 2", len(r))
+	}
+
+	r = names.FindString("nonexistent")
+
+	if len(r) != 0 {
+		t.Errorf("Error finding nonexistent, got %d instead of 0", len(r))
+	}
+
+	r = names.FindRegex(regexp.MustCompile("key.*"))
+
+	if len(r) != 3 {
+		t.Errorf("Error finding regex, got %d instead of 3", len(r))
+	}
+
+	r = names.FindRegex(regexp.MustCompile("nonexistent"))
+
+	if len(r) != 0 {
+		t.Errorf("Error finding nonexistent regex, got %d instead of 0", len(r))
+	}
+}
