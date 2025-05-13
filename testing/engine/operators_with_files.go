@@ -40,8 +40,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 				{
 					Stage: profile.SubStage{
 						Output: profile.ExpectedOutput{
-							TriggeredRules:    []int{30},
-							NonTriggeredRules: []int{31},
+							TriggeredRules:    []int{30, 40},
+							NonTriggeredRules: []int{31, 41},
 						},
 					},
 				},
@@ -59,5 +59,7 @@ SecRule REQUEST_COOKIES_NAMES "@pmf pmFromFile-01.dat" "id:22,log"
 SecRule REQUEST_HEADERS_NAMES "@pmf pmFromFile-01.dat" "id:23,log"
 SecRule REMOTE_ADDR "@ipMatchF netranges-01.dat" "id:30,log"
 SecRule REMOTE_ADDR "@ipMatchF netranges-02.dat" "id:31,log"
+SecRule REMOTE_ADDR "@ipMatchFromFile netranges-01.dat" "id:40,log"
+SecRule REMOTE_ADDR "@ipMatchFromFile netranges-02.dat" "id:41,log"
 `,
 })
