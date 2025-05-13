@@ -34,6 +34,19 @@ var _ = profile.RegisterProfile(profile.Profile{
 				},
 			},
 		},
+		{
+			Title: "operator of ip match from file",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{30, 40},
+							NonTriggeredRules: []int{31, 41},
+						},
+					},
+				},
+			},
+		},
 	},
 	Rules: `
 SecRule ARGS_NAMES "@pmFromFile pmFromFile-01.dat" "id:1,log"
@@ -44,5 +57,9 @@ SecRule ARGS_NAMES "@pmf pmFromFile-01.dat" "id:20,log"
 SecRule REQUEST_COOKIES:def "@pmf pmFromFile-01.dat" "id:21,log"
 SecRule REQUEST_COOKIES_NAMES "@pmf pmFromFile-01.dat" "id:22,log"
 SecRule REQUEST_HEADERS_NAMES "@pmf pmFromFile-01.dat" "id:23,log"
+SecRule REMOTE_ADDR "@ipMatchF netranges-01.dat" "id:30,log"
+SecRule REMOTE_ADDR "@ipMatchF netranges-02.dat" "id:31,log"
+SecRule REMOTE_ADDR "@ipMatchFromFile netranges-01.dat" "id:40,log"
+SecRule REMOTE_ADDR "@ipMatchFromFile netranges-02.dat" "id:41,log"
 `,
 })
