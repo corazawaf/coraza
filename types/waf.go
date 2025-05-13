@@ -192,3 +192,7 @@ type BodyBufferOptions struct {
 	// Limit is the overall maximum amount of memory to be buffered
 	Limit int64
 }
+
+type CorazaWafContextKey string
+
+const ContextTransactionKey = CorazaWafContextKey("tx")
