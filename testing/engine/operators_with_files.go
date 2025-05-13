@@ -28,7 +28,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 							},
 						},
 						Output: profile.ExpectedOutput{
-							TriggeredRules: []int{1, 3, 5, 10},
+							TriggeredRules: []int{1, 3, 5, 10, 20, 21, 22, 23},
 						},
 					},
 				},
@@ -40,8 +40,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 				{
 					Stage: profile.SubStage{
 						Output: profile.ExpectedOutput{
-							TriggeredRules:    []int{20},
-							NonTriggeredRules: []int{21},
+							TriggeredRules:    []int{30},
+							NonTriggeredRules: []int{31},
 						},
 					},
 				},
@@ -53,7 +53,11 @@ SecRule ARGS_NAMES "@pmFromFile pmFromFile-01.dat" "id:1,log"
 SecRule REQUEST_COOKIES:def "@pmFromFile pmFromFile-01.dat" "id:3,log"
 SecRule REQUEST_COOKIES_NAMES "@pmFromFile pmFromFile-01.dat" "id:5,log"
 SecRule REQUEST_HEADERS_NAMES "@pmFromFile pmFromFile-01.dat" "id:10,log"
-SecRule REMOTE_ADDR "@ipMatchF netranges-01.dat" "id:20,log"
-SecRule REMOTE_ADDR "@ipMatchF netranges-02.dat" "id:21,log"
+SecRule ARGS_NAMES "@pmf pmFromFile-01.dat" "id:20,log"
+SecRule REQUEST_COOKIES:def "@pmf pmFromFile-01.dat" "id:21,log"
+SecRule REQUEST_COOKIES_NAMES "@pmf pmFromFile-01.dat" "id:22,log"
+SecRule REQUEST_HEADERS_NAMES "@pmf pmFromFile-01.dat" "id:23,log"
+SecRule REMOTE_ADDR "@ipMatchF netranges-01.dat" "id:30,log"
+SecRule REMOTE_ADDR "@ipMatchF netranges-02.dat" "id:31,log"
 `,
 })
