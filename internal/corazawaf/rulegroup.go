@@ -133,6 +133,16 @@ func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 RulesLoop:
 	for i := range rg.rules {
 		r := &rg.rules[i]
+		// Check if a specific rule filter is applied to this transaction
+		// and if the current rule should be ignored according to the filter.
+		if tx.ruleFilter != nil {
+			if tx.ruleFilter.ShouldIgnore(r) {
+				tx.DebugLogger().Debug().
+					Int("rule_id", r.ID_).
+					Msg("Skipping rule due to RulesFilter")
+				continue RulesLoop
+			}
+		}
 		// if there is already an interruption and the phase isn't logging
 		// we break the loop
 		if tx.interruption != nil && phase != types.PhaseLogging {
@@ -159,8 +169,7 @@ RulesLoop:
 			if trb == r.ID_ {
 				tx.DebugLogger().Debug().
 					Int("rule_id", r.ID_).
-					Msg("Skipping rule")
-
+					Msg("Skipping rule due to ruleRemoveByID")
 				continue RulesLoop
 			}
 		}
