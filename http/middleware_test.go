@@ -616,8 +616,8 @@ func TestHandlerAPI(t *testing.T) {
 		},
 		"tx is set in context": {
 			handler: func(w http.ResponseWriter, r *http.Request) {
-				tx := r.Context().Value(types.ContextTransactionKey)
-				if tx != nil {
+				tx := TxFromContext(r.Context())
+				if tx == nil {
 					t.Fatal("tx is not set in context")
 				}
 				w.WriteHeader(204)

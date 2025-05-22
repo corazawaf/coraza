@@ -117,7 +117,7 @@ func WrapHandler(waf coraza.WAF, h http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		tx := newTX(r)
 
-		ctx := context.WithValue(r.Context(), types.ContextTransactionKey, tx)
+		ctx := NewContext(r.Context(), &tx)
 		r = r.WithContext(ctx)
 
 		defer func() {
@@ -174,4 +174,16 @@ func obtainStatusCodeFromInterruptionOrDefault(it *types.Interruption, defaultSt
 		return statusCode
 	}
 	return defaultStatusCode
+}
+
+type corazaWafContextKeyType string
+
+const contextTransactionKey = corazaWafContextKeyType("tx")
+
+func TxFromContext(ctx context.Context) *types.Transaction {
+	return ctx.Value(contextTransactionKey).(*types.Transaction)
+}
+
+func NewContext(ctx context.Context, tx *types.Transaction) context.Context {
+	return context.WithValue(ctx, contextTransactionKey, tx)
 }
