@@ -13,11 +13,12 @@ import (
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	experimentalTypes "github.com/corazawaf/coraza/v3/experimental/types"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/memoize"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
+
+	experimentalTypes "github.com/corazawaf/coraza/v3/experimental/types"
 )
 
 // ruleActionParams is used as a wrapper to store the action name
@@ -161,6 +162,8 @@ func (r *Rule) Status() int {
 	return r.DisruptiveStatus
 }
 
+const chainLevelZero = 0
+
 func (r *Rule) AllowedMetadatas() []experimentalTypes.DataMetadata {
 	return r.allowedMetadatas
 }
@@ -168,8 +171,6 @@ func (r *Rule) AllowedMetadatas() []experimentalTypes.DataMetadata {
 func (r *Rule) AttackType() string {
 	return r.attackType
 }
-
-const chainLevelZero = 0
 
 // Evaluate will evaluate the current rule for the indicated transaction
 // If the operator matches, actions will be evaluated, and it will return
@@ -629,17 +630,6 @@ func transformationID(currentID int, transformationName string) int {
 	return id
 }
 
-// AddTransformation adds a transformation to the rule
-// it fails if the transformation cannot be found
-func (r *Rule) AddTransformation(name string, t plugintypes.Transformation) error {
-	if t == nil || name == "" {
-		return fmt.Errorf("invalid transformation %q not found", name)
-	}
-	r.transformations = append(r.transformations, ruleTransformationParams{Function: t})
-	r.transformationsID = transformationID(r.transformationsID, name)
-	return nil
-}
-
 func (r *Rule) AddAllowedMetadata(metadataName string) error {
 	metadata, ok := experimentalTypes.NewValueMetadata(metadataName)
 	if !ok {
@@ -649,8 +639,14 @@ func (r *Rule) AddAllowedMetadata(metadataName string) error {
 	return nil
 }
 
-func (r *Rule) AddAttackType(attackName string) error {
-	r.attackType = attackName
+// AddTransformation adds a transformation to the rule
+// it fails if the transformation cannot be found
+func (r *Rule) AddTransformation(name string, t plugintypes.Transformation) error {
+	if t == nil || name == "" {
+		return fmt.Errorf("invalid transformation %q not found", name)
+	}
+	r.transformations = append(r.transformations, ruleTransformationParams{Function: t})
+	r.transformationsID = transformationID(r.transformationsID, name)
 	return nil
 }
 

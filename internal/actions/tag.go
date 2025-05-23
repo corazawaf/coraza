@@ -34,18 +34,16 @@ func (a *tagFn) Init(r plugintypes.RuleMetadata, data string) error {
 	}
 	r.(*corazawaf.Rule).Tags_ = append(r.(*corazawaf.Rule).Tags_, data)
 	if strings.HasPrefix(data, "metadatafilter/") {
-		filters_string := strings.Split(data, "/")
-		filters := strings.Split(filters_string[1], ",")
+		filtersString := strings.Split(data, "/")
+		if len(filtersString) < 2 {
+			return fmt.Errorf("invalid metadatafilter format: %s", data)
+		}
+		filters := strings.Split(filtersString[1], ",")
 		for _, filter := range filters {
-			ok := r.(*corazawaf.Rule).AddAllowedMetadata(filter)
-			if ok != nil {
+			if err := r.(*corazawaf.Rule).AddAllowedMetadata(filter); err != nil {
 				return fmt.Errorf("invalid metadata filter: %s", filter)
 			}
 		}
-	} else if strings.HasPrefix(data, "attack-") {
-		r.(*corazawaf.Rule).AddAttackType(data)
-	} else if strings.HasPrefix(data, "sub-type/attack-") {
-		r.(*corazawaf.Rule).AddAttackType(data)
 	}
 	return nil
 }

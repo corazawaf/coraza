@@ -332,7 +332,7 @@ func generateChainMatches(tx *Transaction, matchedValues []experimentalTypes.Mat
 // Currently, it is intended for chained matches because the same variables are evaluated multiple times and not
 // constained to the min phase. If the same match is found, the actions of the most inner rule are skipped and the match
 // is not added to matchedValues (and removed from collectiveMatchedValues)
-func isMultiphaseDoubleEvaluation(tx *Transaction, phase experimentalTypes.RulePhase, r *Rule, collectiveMatchedValues *[]types.MatchData, mr types.MatchData) bool {
+func isMultiphaseDoubleEvaluation(tx *Transaction, phase types.RulePhase, r *Rule, collectiveMatchedValues *[]experimentalTypes.MatchData, mr experimentalTypes.MatchData) bool {
 	*collectiveMatchedValues = append(*collectiveMatchedValues, mr)
 
 	for _, matchedRule := range tx.matchedRules {
