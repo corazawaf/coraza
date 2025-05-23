@@ -4,6 +4,9 @@
 package actions
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
@@ -30,6 +33,20 @@ func (a *tagFn) Init(r plugintypes.RuleMetadata, data string) error {
 		return ErrMissingArguments
 	}
 	r.(*corazawaf.Rule).Tags_ = append(r.(*corazawaf.Rule).Tags_, data)
+	if strings.HasPrefix(data, "metadatafilter/") {
+		filters_string := strings.Split(data, "/")
+		filters := strings.Split(filters_string[1], ",")
+		for _, filter := range filters {
+			ok := r.(*corazawaf.Rule).AddAllowedMetadata(filter)
+			if ok != nil {
+				return fmt.Errorf("invalid metadata filter: %s", filter)
+			}
+		}
+	} else if strings.HasPrefix(data, "attack-") {
+		r.(*corazawaf.Rule).AddAttackType(data)
+	} else if strings.HasPrefix(data, "sub-type/attack-") {
+		r.(*corazawaf.Rule).AddAttackType(data)
+	}
 	return nil
 }
 
