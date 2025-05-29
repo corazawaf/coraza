@@ -767,7 +767,7 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 		uri = uri[:in]
 	}
 	path := ""
-	parsedURL, err := url.Parse(uri)
+	parsedURL, err := url.ParseRequestURI(uri)
 	query := ""
 	if err != nil {
 		tx.variables.urlencodedError.Set(err.Error())
@@ -1436,6 +1436,7 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 		IsInterrupted_: tx.IsInterrupted(),
 	}
 
+	var auditLogPartAuditLogTrailerSet, auditLogPartRulesMatchedSet bool
 	for _, part := range tx.AuditLogParts {
 		switch part {
 		case types.AuditLogPartRequestHeaders:
@@ -1488,6 +1489,7 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 			al.Transaction_.Response_.Status_ = status
 			al.Transaction_.Response_.Headers_ = tx.variables.responseHeaders.Data()
 		case types.AuditLogPartAuditLogTrailer:
+			auditLogPartAuditLogTrailerSet = true
 			al.Transaction_.Producer_ = &auditlog.TransactionProducer{
 				Connector_:  tx.WAF.ProducerConnector,
 				Version_:    tx.WAF.ProducerConnectorVersion,
@@ -1497,6 +1499,7 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 				Rulesets_:   tx.WAF.ComponentNames,
 			}
 		case types.AuditLogPartRulesMatched:
+			auditLogPartRulesMatchedSet = true
 			for _, mr := range tx.matchedRules {
 				// Log action is required to log a matched rule on both error log and audit log
 				// An assertion has to be done to check if the MatchedRule implements the Log() function before calling Log()
@@ -1505,7 +1508,7 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 				if ok && mrWithlog.Log() {
 					r := mr.Rule()
 					for _, matchData := range mr.MatchedDatas() {
-						al.Messages_ = append(al.Messages_, auditlog.Message{
+						newAlEntry := auditlog.Message{
 							Actionset_: strings.Join(tx.WAF.ComponentNames, " "),
 							Message_:   matchData.Message(),
 							Data_: &auditlog.MessageData{
@@ -1522,11 +1525,31 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 								Tags_:     r.Tags(),
 								Raw_:      r.Raw(),
 							},
-						})
+						}
+						// If AuditLogPartAuditLogTrailer (H) is set, we expect to log the error messages emitted by the rules
+						// in the audit log
+						if auditLogPartAuditLogTrailerSet {
+							newAlEntry.ErrorMessage_ = mr.ErrorLog()
+						}
+						al.Messages_ = append(al.Messages_, newAlEntry)
 					}
 				}
 			}
 		}
+	}
+
+	// If AuditLogPartRulesMatched (K) is not set, but AuditLogPartAuditLogTrailer (H) is set, we still expect to
+	// log the error messages emitted by the rules (if the rule has Log set to true)
+	if !auditLogPartRulesMatchedSet && auditLogPartAuditLogTrailerSet {
+		for _, mr := range tx.matchedRules {
+			mrWithlog, ok := mr.(*corazarules.MatchedRule)
+			if ok && mrWithlog.Log() {
+				al.Messages_ = append(al.Messages_, auditlog.Message{
+					ErrorMessage_: mr.ErrorLog(),
+				})
+			}
+		}
+
 	}
 
 	return al

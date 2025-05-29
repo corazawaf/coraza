@@ -4,12 +4,15 @@
 package seclang
 
 import (
+	"bytes"
 	"errors"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 func TestInvalidRule(t *testing.T) {
@@ -314,9 +317,70 @@ func TestNonSelectableCollection(t *testing.T) {
 	}
 }
 
+func TestParseActions(t *testing.T) {
+	tests := []struct {
+		name            string
+		inputActions    string
+		expectedLogLine string
+		expectError     bool
+	}{
+		{
+			name:         "Valid actions with ID and phase",
+			inputActions: "id:1,phase:1,log,deny",
+			expectError:  false,
+		},
+		{
+			name:         "invalid action",
+			inputActions: "id:1,phase:2,notvalidaction",
+			expectError:  true,
+		},
+		{
+			name:         "unclosed quotes",
+			inputActions: "id:1,phase:2,log,deny,msg:'message not closed",
+			// TODO(4.x): returning an error in Coraza 3.x would break all the installations with coraza.conf-recommended that comes
+			// with an unclosed message in rule id 200003.
+			expectError:     false,
+			expectedLogLine: "[WARN] unclosed quotes",
+		},
+		{
+			name:            "unclosed quotes #2",
+			inputActions:    "id:1,phase:2,log,deny,tag:'this_is_a_tag,logdata:'log data'",
+			expectError:     false,
+			expectedLogLine: "[WARN] unclosed quotes",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rp := &RuleParser{
+				rule:           corazawaf.NewRule(),
+				defaultActions: map[types.RulePhase][]ruleAction{},
+				options: RuleOptions{
+					WAF: corazawaf.NewWAF(),
+				},
+			}
+			logsBuf := &bytes.Buffer{}
+			rp.options.WAF.Logger = debuglog.Default().WithLevel(debuglog.LevelWarn).WithOutput(logsBuf)
+
+			err := rp.ParseActions(tt.inputActions)
+			if tt.expectError && err == nil {
+				t.Errorf("expected error")
+			} else if !tt.expectError && err != nil {
+				t.Errorf("unexpected error: %s", err.Error())
+			}
+			if tt.expectedLogLine == "" && logsBuf.Len() > 0 {
+				t.Errorf("expected empty warn debug log, got %q", logsBuf.String())
+			}
+			if tt.expectedLogLine != "" && !strings.Contains(logsBuf.String(), tt.expectedLogLine) {
+				t.Errorf("expected debug log containing %q, got %q", tt.expectedLogLine, logsBuf.String())
+			}
+		})
+	}
+}
+
 func BenchmarkParseActions(b *testing.B) {
 	actionsToBeParsed := "id:980170,phase:5,pass,t:none,noauditlog,msg:'Anomaly Scores:Inbound Scores - Outbound Scores',tag:test"
 	for i := 0; i < b.N; i++ {
-		_, _ = parseActions(actionsToBeParsed)
+		_, _ = parseActions(nil, actionsToBeParsed)
 	}
 }

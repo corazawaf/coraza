@@ -23,7 +23,7 @@ import (
 
 var addLicenseVersion = "v1.1.1" // https://github.com/google/addlicense/releases
 var gosImportsVer = "v0.3.7"     // https://github.com/rinchsan/gosimports/releases
-var golangCILintVer = "v1.60.3"  // https://github.com/golangci/golangci-lint/releases
+var golangCILintVer = "v1.64.8"  // https://github.com/golangci/golangci-lint/releases
 var errNoGitDir = errors.New("no .git directory found")
 var errUpdateGeneratedFiles = errors.New("generated files need to be updated")
 
@@ -282,7 +282,7 @@ func TagsMatrix() error {
 		"coraza.rule.case_sensitive_args_keys",
 		"coraza.rule.no_regex_multiline",
 		"memoize_builders",
-		"coraza.rule.multiphase_valuation",
+		"coraza.rule.multiphase_evaluation",
 		"no_fs_access",
 	}
 	combos := combinations(tags)
