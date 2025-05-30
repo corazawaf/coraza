@@ -15,7 +15,16 @@ type detectSQLi struct{}
 
 var _ plugintypes.Operator = (*detectSQLi)(nil)
 
-func newDetectSQLi(plugintypes.OperatorOptions) (plugintypes.Operator, error) {
+// Name: detectSQLi
+// Description: Returns true if SQL injection payload is found. This operator uses LibInjection
+// to detect SQLi attacks.
+// ---
+// Example:
+// ```apache
+// # Detect SQL Injection inside request uri data"
+// SecRule REQUEST_URI "@detectSQLi" "id:152"
+// ```
+func newOperatorDetectSQLi(plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	return &detectSQLi{}, nil
 }
 
@@ -29,5 +38,5 @@ func (o *detectSQLi) Evaluate(tx plugintypes.TransactionState, value string) boo
 }
 
 func init() {
-	Register("detectSQLi", newDetectSQLi)
+	Register("detectSQLi", newOperatorDetectSQLi)
 }
