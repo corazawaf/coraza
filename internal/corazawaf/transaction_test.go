@@ -1480,10 +1480,6 @@ func TestMacro(t *testing.T) {
 		t.Fatal(err)
 		return
 	}
-	// TODO(anuraaga): Decouple this test from transaction implementation.
-	// if !macro.IsExpandable() || len(macro.tokens) != 4 || macro.Expand(tx) != "some complex text secretly wrapped in m secretly" {
-	//   t.Fatalf("failed to parse replacements %v", macro.tokens)
-	// }
 
 	if err := tx.Close(); err != nil {
 		t.Fatalf("Failed to close transaction: %s", err.Error())

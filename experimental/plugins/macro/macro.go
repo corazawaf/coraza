@@ -69,6 +69,7 @@ func expandToken(tx plugintypes.TransactionState, token macroToken) string {
 	if token.variable == variables.Unknown {
 		return token.text
 	}
+
 	switch col := tx.Collection(token.variable).(type) {
 	case collection.Keyed:
 		if c := col.Get(token.key); len(c) > 0 {
@@ -172,10 +173,4 @@ func isValidMacroChar(c byte) bool {
 // String returns the original string
 func (m *macro) String() string {
 	return m.original
-}
-
-// IsExpandable return true if there are macro expanadable tokens
-// TODO(jcchavezs): this is used only in a commented out section
-func (m *macro) IsExpandable() bool {
-	return len(m.tokens) > 1
 }
