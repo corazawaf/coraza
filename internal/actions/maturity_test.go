@@ -26,8 +26,8 @@ func TestMaturityInit(t *testing.T) {
 		r := &corazawaf.Rule{}
 		err := a.Init(r, test.data)
 		if test.expectedError {
-			if err != nil {
-				t.Errorf("expected error: %s", err.Error())
+			if err == nil {
+				t.Errorf("expected error")
 			}
 		} else {
 			if err != nil {
