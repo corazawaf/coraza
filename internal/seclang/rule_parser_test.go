@@ -306,6 +306,17 @@ func TestParseRule(t *testing.T) {
 	}
 }
 
+func TestNonSelectableCollection(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	p := NewParser(waf)
+	err := p.FromString(`
+	SecRule REQUEST_URI:foo "bar" "id:1,phase:1"
+	`)
+	if err == nil {
+		t.Error("expected error")
+	}
+}
+
 func TestParseActions(t *testing.T) {
 	tests := []struct {
 		name            string
