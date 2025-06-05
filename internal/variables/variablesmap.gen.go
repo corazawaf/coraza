@@ -243,17 +243,31 @@ func (v RuleVariable) CanBeSelected() bool {
 		return true
 	case ArgsPost:
 		return true
+	case ArgsPath:
+		return true
+	case FilesSizes:
+		return true
 	case FilesNames:
+		return true
+	case FilesTmpContent:
+		return true
+	case MultipartFilename:
+		return true
+	case MultipartName:
 		return true
 	case MatchedVarsNames:
 		return true
 	case MatchedVars:
+		return true
+	case Files:
 		return true
 	case RequestCookies:
 		return true
 	case RequestHeaders:
 		return true
 	case ResponseHeaders:
+		return true
+	case Geo:
 		return true
 	case RequestCookiesNames:
 		return true
@@ -266,6 +280,8 @@ func (v RuleVariable) CanBeSelected() bool {
 	case ArgsPostNames:
 		return true
 	case TX:
+		return true
+	case Rule:
 		return true
 	case JSON:
 		return true
