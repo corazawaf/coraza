@@ -1,0 +1,36 @@
+name: Check generated code
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "**/*.md"
+      - "LICENSE"
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "**/*.md"
+      - "LICENSE"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Install Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
+        with:
+          go-version: 1.24.x
+          cache: true
+      - name: Check generated code
+        run: |
+            go generate ./...
+            if [[ $(git status --porcelain) ]]; then
+            echo "Error: Uncommitted changes found after running 'go generate'. Please commit all generated code."
+            git diff
+            exit 1
+            else
+              echo "No changes detected after running 'go generate'."
+            fi
