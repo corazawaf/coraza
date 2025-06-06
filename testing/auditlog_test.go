@@ -435,3 +435,51 @@ func TestAuditLogWithKFlagWithoutHFlag(t *testing.T) {
 		t.Errorf("Not expected audit log to contain %q, got %q", notExpected, alWithErrMsg.ErrorMessage())
 	}
 }
+
+func TestAuditLogRelevantOnlyDeny(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	parser := seclang.NewParser(waf)
+	if err := parser.FromString(`
+		SecRuleEngine DetectionOnly
+		SecAuditEngine RelevantOnly
+		SecAuditLogFormat json
+		SecAuditLogType serial
+		SecAuditLogRelevantStatus "403"
+		SecRule ARGS "@unconditionalMatch" "id:1,phase:1,deny,log,auditlog,msg:'expected rule message'"
+	`); err != nil {
+		t.Fatal(err)
+	}
+	// generate a random tmp file
+	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(file.Name())
+	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
+		t.Fatal(err)
+	}
+	tx := waf.NewTransaction()
+	tx.AddGetRequestArgument("test", "test")
+	tx.ProcessRequestHeaders()
+	// now we read file
+	if _, err := file.Seek(0, 0); err != nil {
+		t.Error(err)
+	}
+	tx.ProcessLogging()
+	var al auditlog.Log
+	if err := json.NewDecoder(file).Decode(&al); err != nil {
+		t.Error(err)
+	}
+	if len(al.Messages()) != 1 {
+		t.Fatalf("Expected 1 message, got %d", len(al.Messages()))
+	}
+	type auditLogWithErrMesg interface{ ErrorMessage() string }
+	alWithErrMsg, ok := al.Messages()[0].(auditLogWithErrMesg)
+	if !ok {
+		t.Fatalf("Expected message to be of type auditLogWithErrMesg")
+	}
+	expected := "expected rule message"
+	if !strings.Contains(alWithErrMsg.ErrorMessage(), expected) {
+		t.Errorf("Expected audit log to contain %q, got %q", expected, alWithErrMsg.ErrorMessage())
+	}
+}
