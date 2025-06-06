@@ -20,6 +20,7 @@ func TestEngine(t *testing.T) {
 	}
 
 	t.Logf("Loading %d profiles\n", len(profile.Profiles))
+	// Add AllowMetadataInspection to true to allow metadata inspection,
 	for _, p := range profile.Profiles {
 		t.Run(p.Meta.Name, func(t *testing.T) {
 			tt, err := testList(t, &p)
@@ -28,6 +29,9 @@ func TestEngine(t *testing.T) {
 			}
 			for _, test := range tt {
 				t.Run(test.Name, func(t *testing.T) {
+					if p.Meta.MetadataInspection {
+						test.transaction.SetMetadataInspection(true)
+					}
 					if err := test.RunPhases(); err != nil {
 						t.Errorf("%s, ERROR: %s", test.Name, err)
 					}
