@@ -11,7 +11,7 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
-func TestCaseSensitiveRuleMatchRegex(t *testing.T) {
+func TestCaseSensitiveArgsRuleMatchRegex(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	parser := NewParser(waf)
 	err := parser.FromString(`
@@ -33,48 +33,82 @@ func TestCaseSensitiveRuleMatchRegex(t *testing.T) {
 	}
 }
 
-func TestCaseSensitiveArguments(t *testing.T) {
-	waf := corazawaf.NewWAF()
-	rules := `SecRule ARGS:Test1 "Xyz" "id:3, phase:2, log, deny"`
-	parser := NewParser(waf)
-
-	err := parser.FromString(rules)
-	if err != nil {
-		t.Error()
-		return
+func TestCaseSensitivePostArguments(t *testing.T) {
+	tests := []struct {
+		name         string
+		rule         string
+		argPostKey   string
+		argPostValue string
+		expectMatch  bool
+	}{
+		{
+			name:         "Arg key and operator matching case sensitivity",
+			rule:         `SecRule ARGS:Test1 "Xyz" "id:3, phase:2, log, deny"`,
+			argPostKey:   "Test1",
+			argPostValue: "Xyz",
+			expectMatch:  true,
+		},
+		{
+			name:         "Arg key uppercase with post key lowercase",
+			rule:         `SecRule ARGS:Test1 "Xyz" "id:3, phase:2, log, deny"`,
+			argPostKey:   "TEST1",
+			argPostValue: "Xyz",
+			expectMatch:  false,
+		},
+		{
+			name:         "Arg key marching case sensitivity, match not",
+			rule:         `SecRule ARGS:Test1 "Xyz" "id:3, phase:2, log, deny"`,
+			argPostKey:   "Test1",
+			argPostValue: "XYZ",
+			expectMatch:  false,
+		},
+		{
+			name:         "ARGS_NAMES expected to be case-sensitive. Test1 should exist",
+			rule:         `SecRule ARGS_NAMES "Test1" "id:1, phase:2, log, deny"`,
+			argPostKey:   "Test1",
+			argPostValue: "Xyz",
+			expectMatch:  true,
+		},
+		{
+			name:         "ARGS_NAMES expected to be case-sensitive. TEST1 should not exist",
+			rule:         `SecRule ARGS_NAMES "TEST1" "id:1, phase:2, log, deny"`,
+			argPostKey:   "Test1",
+			argPostValue: "Xyz",
+			expectMatch:  false,
+		},
+		{
+			name:         "ARGS_NAMES expected to be case-sensitive. TEST1 with case sensitivity (?i) regex should match",
+			rule:         `SecRule ARGS_NAMES "@rx (?i)TEST1" "id:1, phase:2, log, deny"`,
+			argPostKey:   "Test1",
+			argPostValue: "Xyz",
+			expectMatch:  true,
+		},
 	}
 
-	tx := waf.NewTransaction()
-	tx.ProcessRequestHeaders()
-	tx.AddPostRequestArgument("Test1", "Xyz")
-	it, err := tx.ProcessRequestBody()
-	if err != nil {
-		t.Error(err)
-	}
-	if it == nil {
-		t.Errorf("failed to test arguments value match: Same case argument name, %+v\n", tx.MatchedRules())
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			waf := corazawaf.NewWAF()
+			parser := NewParser(waf)
 
-	tx = waf.NewTransaction()
-	tx.ProcessRequestHeaders()
-	tx.AddPostRequestArgument("TEST1", "Xyz")
-	it, err = tx.ProcessRequestBody()
-	if err != nil {
-		t.Error(err)
-	}
-	if it != nil {
-		t.Errorf("failed to test arguments value match: argument is matching a different case, %+v\n", tx.MatchedRules())
-	}
+			err := parser.FromString(tt.rule)
+			if err != nil {
+				t.Fatalf("failed to parse rule: %v", err)
+			}
+			tx := waf.NewTransaction()
+			tx.ProcessRequestHeaders()
+			tx.AddPostRequestArgument(tt.argPostKey, tt.argPostValue)
+			it, err := tx.ProcessRequestBody()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 
-	tx = waf.NewTransaction()
-	tx.ProcessRequestHeaders()
-	tx.AddPostRequestArgument("Test1", "XYZ")
-	it, err = tx.ProcessRequestBody()
-	if err != nil {
-		t.Error(err)
-	}
-	if it != nil {
-		t.Errorf("failed to test arguments value match: argument is matching a different case, %+v\n", tx.MatchedRules())
+			if tt.expectMatch && it == nil {
+				t.Errorf("expected a match but got none")
+			}
+			if !tt.expectMatch && it != nil {
+				t.Errorf("expected no match but got: %+v", tx.MatchedRules()[0])
+			}
+		})
 	}
 }
 

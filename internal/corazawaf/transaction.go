@@ -1792,8 +1792,6 @@ func NewTransactionVariables() *TransactionVariables {
 	v.multipartName = collections.NewMap(variables.MultipartName)
 	v.matchedVars = collections.NewNamedCollection(variables.MatchedVars)
 	v.matchedVarsNames = v.matchedVars.Names(variables.MatchedVarsNames)
-	v.requestCookies = collections.NewNamedCollection(variables.RequestCookies)
-	v.requestCookiesNames = v.requestCookies.Names(variables.RequestCookiesNames)
 	v.requestHeaders = collections.NewNamedCollection(variables.RequestHeaders)
 	v.requestHeadersNames = v.requestHeaders.Names(variables.RequestHeadersNames)
 	v.responseHeaders = collections.NewNamedCollection(variables.ResponseHeaders)
@@ -1827,10 +1825,14 @@ func NewTransactionVariables() *TransactionVariables {
 		v.argsGet = collections.NewCaseSensitiveNamedCollection(variables.ArgsGet)
 		v.argsPost = collections.NewCaseSensitiveNamedCollection(variables.ArgsPost)
 		v.argsPath = collections.NewCaseSensitiveNamedCollection(variables.ArgsPath)
+		v.requestCookies = collections.NewCaseSensitiveNamedCollection(variables.RequestCookies)
+		v.requestCookiesNames = v.requestCookies.Names(variables.RequestCookiesNames)
 	} else {
 		v.argsGet = collections.NewNamedCollection(variables.ArgsGet)
 		v.argsPost = collections.NewNamedCollection(variables.ArgsPost)
 		v.argsPath = collections.NewNamedCollection(variables.ArgsPath)
+		v.requestCookies = collections.NewNamedCollection(variables.RequestCookies)
+		v.requestCookiesNames = v.requestCookies.Names(variables.RequestCookiesNames)
 	}
 
 	v.argsGetNames = v.argsGet.Names(variables.ArgsGetNames)

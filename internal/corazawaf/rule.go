@@ -505,10 +505,10 @@ func newRuleVariableParams(v variables.RuleVariable, key string, re *regexp.Rege
 	}
 }
 
-// AddVariable adds a variable to the rule
-// The key can be a regexp.Regexp, a string or nil, in case of regexp
-// it will be used to match the variable, in case of string it will
-// be a fixed match, in case of nil it will match everything
+// AddVariable adds a variable to the rule. The key can be one of the following:
+// - regexp.Regexp: for a regex match. // TODO: talk about case sensitivity
+// - string: for an exact (fixed) match. // TODO: talk about case sensitivity
+// - nil: for matching everything.
 func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) error {
 	if r == nil {
 		return fmt.Errorf("cannot add a variable to an undefined rule")
