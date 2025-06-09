@@ -27,7 +27,7 @@ func TestMaturityInit(t *testing.T) {
 		err := a.Init(r, test.data)
 		if test.expectedError {
 			if err == nil {
-				t.Errorf("expected error: %s", err.Error())
+				t.Errorf("expected error")
 			}
 		} else {
 			if err != nil {
