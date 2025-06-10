@@ -64,7 +64,7 @@ func Lint() error {
 		return err
 	}
 
-	if sh.Run("git", "diff", "--exit-code", "--", "'*.gen.go'") != nil {
+	if sh.Run("git", "diff", "--exit-code", "*.gen.go") != nil {
 		return errUpdateGeneratedFiles
 	}
 
