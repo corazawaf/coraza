@@ -1,5 +1,4 @@
-run:
-  deadline: 5m
+run: {}
 
 linters:
   disable-all: true
@@ -15,8 +14,20 @@ linters:
     - goimports
     - gofmt
     - gocritic
+    - gocyclo
+    - funlen
 issues:
   exclude-rules:
     - path: magefile\.go
       linters:
         - deadcode
+linters-settings:
+  gocyclo:
+    # Minimal code complexity to report.
+    # Default: 30 (but we recommend 10-20)
+    min-complexity: 20
+  errcheck:
+    # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
+    # Such cases aren't reported by default.
+    # Default: false
+    check-type-assertions: true
