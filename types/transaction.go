@@ -198,4 +198,9 @@ type Transaction interface {
 
 	// Closer closes the transaction and releases any resources associated with it such as request/response bodies.
 	io.Closer
+
+	MetadataInspection() bool
+
+	// SetMetadataInspection sets the metadata inspection flag.
+	SetMetadataInspection(bool) bool
 }
