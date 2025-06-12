@@ -23,7 +23,7 @@ require (
 	github.com/foxcpp/go-mockdns v1.1.0
 	github.com/jcchavezs/mergefs v0.1.0
 	github.com/magefile/mage v1.15.1-0.20241126214340-bdc92f694516
-	github.com/mccutchen/go-httpbin/v2 v2.18.1
+	github.com/mccutchen/go-httpbin/v2 v2.18.2
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20250424160509-463d218d4745
 	github.com/tidwall/gjson v1.18.0
 	github.com/valllabh/ocsf-schema-golang v1.0.3
