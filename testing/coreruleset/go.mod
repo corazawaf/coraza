@@ -4,9 +4,9 @@ go 1.23.0
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.8.1
-	github.com/corazawaf/coraza-coreruleset/v4 v4.10.0
+	github.com/corazawaf/coraza-coreruleset/v4 v4.14.0
 	github.com/corazawaf/coraza/v3 v3.3.3
-	github.com/coreruleset/albedo v0.1.0
+	github.com/coreruleset/albedo v0.2.0
 	github.com/coreruleset/go-ftw v1.3.0
 	github.com/rs/zerolog v1.34.0
 )
@@ -36,17 +36,17 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
-	github.com/petar-dambovaliev/aho-corasick v0.0.0-20240411101913-e07a1f0e8eb4 // indirect
+	github.com/petar-dambovaliev/aho-corasick v0.0.0-20250424160509-463d218d4745 // indirect
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/valllabh/ocsf-schema-golang v1.0.3 // indirect
 	github.com/yargevad/filepathx v1.0.0 // indirect
-	golang.org/x/crypto v0.36.0 // indirect
-	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/sync v0.12.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/crypto v0.39.0 // indirect
+	golang.org/x/net v0.41.0 // indirect
+	golang.org/x/sync v0.15.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/time v0.9.0 // indirect
 	google.golang.org/protobuf v1.35.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
