@@ -18,6 +18,8 @@ github.com/mccutchen/go-httpbin/v2 v2.18.1 h1:Zsi6gLCUS/kqZf36BicIbZsO8o0VyO2nSa
 github.com/mccutchen/go-httpbin/v2 v2.18.1/go.mod h1:GBy5I7XwZ4ZLhT3hcq39I4ikwN9x4QUt6EAxNiR8Jus=
 github.com/mccutchen/go-httpbin/v2 v2.18.2 h1:UU5rd5ohZFX7ZyuTwINL4EBnParq0nM2JoJIVjA6hGQ=
 github.com/mccutchen/go-httpbin/v2 v2.18.2/go.mod h1:GBy5I7XwZ4ZLhT3hcq39I4ikwN9x4QUt6EAxNiR8Jus=
+github.com/mccutchen/go-httpbin/v2 v2.18.3 h1:DyckIScjHLJtmlSju+rgjqqI1nL8AdMZHsLSljlbnMU=
+github.com/mccutchen/go-httpbin/v2 v2.18.3/go.mod h1:GBy5I7XwZ4ZLhT3hcq39I4ikwN9x4QUt6EAxNiR8Jus=
 github.com/miekg/dns v1.1.57 h1:Jzi7ApEIzwEPLHWRcafCN9LZSBbqQpxjt/wpgvg7wcM=
 github.com/miekg/dns v1.1.57/go.mod h1:uqRjCRUuEAA6qsOiJvDd+CFo/vW+y5WR6SNmHE55hZk=
 github.com/petar-dambovaliev/aho-corasick v0.0.0-20250424160509-463d218d4745 h1:Vpr4VgAizEgEZsaMohpw6JYDP+i9Of9dmdY4ufNP6HI=
