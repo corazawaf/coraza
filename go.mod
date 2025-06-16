@@ -22,7 +22,7 @@ require (
 	github.com/corazawaf/libinjection-go v0.2.2
 	github.com/foxcpp/go-mockdns v1.1.0
 	github.com/jcchavezs/mergefs v0.1.0
-	github.com/magefile/mage v1.15.1-0.20241126214340-bdc92f694516
+	github.com/magefile/mage v1.15.1-0.20250615140142-78acbaf2e3ae
 	github.com/mccutchen/go-httpbin/v2 v2.18.3
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20250424160509-463d218d4745
 	github.com/tidwall/gjson v1.18.0
