@@ -14,6 +14,8 @@ github.com/jcchavezs/mergefs v0.1.0 h1:7oteO7Ocl/fnfFMkoVLJxTveCjrsd//UB0j89xmnp
 github.com/jcchavezs/mergefs v0.1.0/go.mod h1:eRLTrsA+vFwQZ48hj8p8gki/5v9C2bFtHH5Mnn4bcGk=
 github.com/magefile/mage v1.15.1-0.20241126214340-bdc92f694516 h1:aAO0L0ulox6m/CLRYvJff+jWXYYCKGpEm3os7dM/Z+M=
 github.com/magefile/mage v1.15.1-0.20241126214340-bdc92f694516/go.mod h1:z5UZb/iS3GoOSn0JgWuiw7dxlurVYTu+/jHXqQg881A=
+github.com/magefile/mage v1.15.1-0.20250615140142-78acbaf2e3ae h1:yyMUG1VUd6IjV5jonMKpLXgwm9AzkfRsYisdCXc5OVI=
+github.com/magefile/mage v1.15.1-0.20250615140142-78acbaf2e3ae/go.mod h1:z5UZb/iS3GoOSn0JgWuiw7dxlurVYTu+/jHXqQg881A=
 github.com/mccutchen/go-httpbin/v2 v2.18.1 h1:Zsi6gLCUS/kqZf36BicIbZsO8o0VyO2nSaOv/J8XKlQ=
 github.com/mccutchen/go-httpbin/v2 v2.18.1/go.mod h1:GBy5I7XwZ4ZLhT3hcq39I4ikwN9x4QUt6EAxNiR8Jus=
 github.com/mccutchen/go-httpbin/v2 v2.18.2 h1:UU5rd5ohZFX7ZyuTwINL4EBnParq0nM2JoJIVjA6hGQ=
