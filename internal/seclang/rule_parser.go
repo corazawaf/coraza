@@ -454,21 +454,21 @@ func cutQuotedString(s string) (string, string, error) {
 		return "", "", fmt.Errorf("expected quoted string: %q", s)
 	}
 
-	previousScapeCount := 0
+	previousEscapeCount := 0
 	for i := 1; i < len(s); i++ {
 		// Search until first quote that isn't part of an escape sequence.
 		// track the longest sequence of backslashes preceding the quote
 		// reset the count when a non-backslash character is encountered
 		if s[i] != '"' {
 			if s[i] == '\\' {
-				previousScapeCount++
+				previousEscapeCount++
 			} else {
-				previousScapeCount = 0
+				previousEscapeCount = 0
 			}
 			continue
 		}
 		// if the number of backslashes is odd, it's an escape sequence
-		if previousScapeCount%2 == 1 {
+		if previousEscapeCount%2 == 1 {
 			continue
 		}
 
