@@ -34,7 +34,7 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.Tran
 
 	// Store the raw JSON in the TX variable for validateSchema
 	// This is needed because RequestBody is a Single interface without a Set method
-	if txVar := v.TX(); txVar != nil && v.RequestBody() != nil {
+	if txVar := v.TX(); txVar != nil {
 		// Store the content type and raw body
 		txVar.Set("json_request_body", []string{s.String()})
 	}

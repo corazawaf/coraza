@@ -89,7 +89,7 @@ func (o *validateSchema) Evaluate(tx plugintypes.TransactionState, data string) 
 	var bodyData string
 
 	// Check TX variable for stored raw data from body processors
-	if tx != nil && tx.Variables() != nil && tx.Variables().TX() != nil {
+	if tx != nil {
 		txVar := tx.Variables().TX()
 
 		// Try JSON request data first
