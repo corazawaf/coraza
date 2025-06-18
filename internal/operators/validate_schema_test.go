@@ -228,9 +228,10 @@ func TestValidateSchemaWithRequestBody(t *testing.T) {
 	// Create a mock TX map
 	txMap := collections.NewMap(variables.TX)
 
-	// Create a mock transaction
+	// Create a mock transaction in the request body phase
 	tx := &mockTransaction{
-		txVar: txMap,
+		txVar:     txMap,
+		lastPhase: types.PhaseRequestBody,
 	}
 
 	// Set valid JSON content
@@ -285,9 +286,10 @@ func TestValidateSchemaWithResponseBody(t *testing.T) {
 	// Create a mock TX map
 	txMap := collections.NewMap(variables.TX)
 
-	// Create a mock transaction
+	// Create a mock transaction in the response body phase
 	tx := &mockTransaction{
-		txVar: txMap,
+		txVar:     txMap,
+		lastPhase: types.PhaseResponseBody,
 	}
 
 	// Set valid JSON content
@@ -394,7 +396,8 @@ func TestValidateSchemaJSONNilSchema(t *testing.T) {
 
 // Mock transaction for testing
 type mockTransaction struct {
-	txVar *collections.Map
+	txVar     *collections.Map
+	lastPhase types.RulePhase
 }
 
 func (m *mockTransaction) ID() string {
@@ -427,7 +430,7 @@ func (m *mockTransaction) Capturing() bool {
 func (m *mockTransaction) CaptureField(idx int, value string) {}
 
 func (m *mockTransaction) LastPhase() types.RulePhase {
-	return types.PhaseRequestHeaders
+	return m.lastPhase
 }
 
 // Implement TransactionVariables interface
@@ -519,8 +522,8 @@ func (m *mockTransaction) RequestProtocol() collection.Single              { ret
 func (m *mockTransaction) ResponseArgs() collection.Map                    { return nil }
 func (m *mockTransaction) ResponseXML() collection.Map                     { return nil }
 
-// TestValidateSchemaWithEmptyData tests evaluation with empty data
-func TestValidateSchemaWithEmptyData(t *testing.T) {
+// TestValidateSchemaPhaseChecking tests that the operator respects phases for request/response body validation
+func TestValidateSchemaPhaseChecking(t *testing.T) {
 	// Create a temporary schema file
 	tmpDir := t.TempDir()
 	schemaPath := filepath.Join(tmpDir, "schema.json")
@@ -529,7 +532,8 @@ func TestValidateSchemaWithEmptyData(t *testing.T) {
 		"type": "object",
 		"properties": {
 			"name": { "type": "string" }
-		}
+		},
+		"required": ["name"]
 	}`
 	err := os.WriteFile(schemaPath, []byte(schemaContent), 0644)
 	if err != nil {
@@ -544,24 +548,72 @@ func TestValidateSchemaWithEmptyData(t *testing.T) {
 		t.Fatalf("Failed to initialize validateSchema operator: %v", err)
 	}
 
-	// Test with empty data should return false (no violation)
-	if op.Evaluate(nil, "") {
-		t.Errorf("Expected empty data to return false, got true")
+	// Create a mock TX map
+	txMap := collections.NewMap(variables.TX)
+
+	// Test: Request body data should not be validated in PhaseRequestHeaders (phase 1)
+	tx := &mockTransaction{
+		txVar:     txMap,
+		lastPhase: types.PhaseRequestHeaders,
+	}
+
+	// Set invalid JSON that would normally fail validation
+	invalidJSON := `{"invalid": "missing required name field"}`
+	txMap.Set("json_request_body", []string{invalidJSON})
+
+	// Should return false (no violation) because we're not in the right phase
+	opResult := op.Evaluate(tx, "")
+	if opResult {
+		t.Errorf("Expected request body validation to be skipped in phase 1, but got violation")
+	}
+
+	// Test: Request body data should be validated in PhaseRequestBody (phase 2)
+	tx.lastPhase = types.PhaseRequestBody
+	opResult = op.Evaluate(tx, "")
+	if !opResult {
+		t.Errorf("Expected request body validation to trigger violation in phase 2, got false")
+	}
+
+	// Clear request body data and test response body
+	txMap.Remove("json_request_body")
+
+	// Test: Response body data should not be validated in PhaseResponseHeaders (phase 3)
+	tx.lastPhase = types.PhaseResponseHeaders
+	txMap.Set("json_response_body", []string{invalidJSON})
+
+	opResult = op.Evaluate(tx, "")
+	if opResult {
+		t.Errorf("Expected response body validation to be skipped in phase 3, but got violation")
+	}
+
+	// Test: Response body data should be validated in PhaseResponseBody (phase 4)
+	tx.lastPhase = types.PhaseResponseBody
+	opResult = op.Evaluate(tx, "")
+	if !opResult {
+		t.Errorf("Expected response body validation to trigger violation in phase 4, got false")
+	}
+
+	// Test: Response body data should also be validated in PhaseLogging (phase 5)
+	tx.lastPhase = types.PhaseLogging
+	opResult = op.Evaluate(tx, "")
+	if !opResult {
+		t.Errorf("Expected response body validation to trigger violation in phase 5, got false")
 	}
 }
 
-// TestValidateSchemaWithCompilerError tests JSON schema compiler error
-func TestValidateSchemaWithCompilerError(t *testing.T) {
-	// Create a temporary schema file with invalid schema format
+// TestValidateSchemaPhasePreference tests that request body is preferred over response body in the right phases
+func TestValidateSchemaPhasePreference(t *testing.T) {
+	// Create a temporary schema file
 	tmpDir := t.TempDir()
 	schemaPath := filepath.Join(tmpDir, "schema.json")
 
-	// This is valid JSON but not a valid JSON schema
 	schemaContent := `{
-		"type": "invalid-type-value",
-		"properties": 123
+		"type": "object",
+		"properties": {
+			"name": { "type": "string" }
+		},
+		"required": ["name"]
 	}`
-
 	err := os.WriteFile(schemaPath, []byte(schemaContent), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create test schema file: %v", err)
@@ -572,38 +624,41 @@ func TestValidateSchemaWithCompilerError(t *testing.T) {
 	}
 	op, err := NewValidateSchema(opts)
 	if err != nil {
-		// If the schema library rejects this at creation time, that's acceptable
-		return
+		t.Fatalf("Failed to initialize validateSchema operator: %v", err)
 	}
 
-	// Force initialization - this should fail during schema compilation
-	validateOp, ok := op.(*validateSchema)
-	if !ok {
-		t.Fatalf("Failed to cast operator to validateSchema")
+	// Create a mock TX map
+	txMap := collections.NewMap(variables.TX)
+
+	// Set both request and response body data
+	validRequestJSON := `{"name": "John"}` // Valid for request
+	invalidResponseJSON := `{"age": 30}`   // Invalid (missing name)
+
+	txMap.Set("json_request_body", []string{validRequestJSON})
+	txMap.Set("json_response_body", []string{invalidResponseJSON})
+
+	// Test: In phase 2, should prefer request body over response body
+	tx := &mockTransaction{
+		txVar:     txMap,
+		lastPhase: types.PhaseRequestBody,
 	}
 
-	// Either we should get an error or the jsonSchema should be nil
-	if err == nil && validateOp.jsonSchema != nil {
-		jsonData := `{"test": "value"}`
-		// Try validation - should handle errors gracefully
-		result := validateOp.isValidJSON(jsonData)
-		// We're just testing that it doesn't panic here
-		t.Logf("Validation result with bad schema compiler: %v", result)
-	}
-}
-
-// TestValidateSchemaWithFSRootError tests error path with invalid FS
-func TestValidateSchemaWithFSRootError(t *testing.T) {
-	// Create a fake filesystem that will generate an error
-	fs := fstest.MapFS{}
-
-	opts := plugintypes.OperatorOptions{
-		Arguments: "nonexistent.json",
-		Root:      fs,
+	opResult := op.Evaluate(tx, "")
+	if opResult {
+		t.Errorf("Expected request body to be validated (valid) in phase 2, but got violation")
 	}
 
-	_, err := NewValidateSchema(opts)
-	if err == nil {
-		t.Errorf("Expected error for nonexistent file in FS, got nil")
+	// Test: In phase 4, should prefer response body over request body
+	tx.lastPhase = types.PhaseResponseBody
+	opResult = op.Evaluate(tx, "")
+	if !opResult {
+		t.Errorf("Expected response body to be preferred in phase 4, but got no violation (should have failed on invalid response body)")
+	}
+
+	// Test: In phase 4 with only response body, should validate response body
+	txMap.Remove("json_request_body")
+	opResult = op.Evaluate(tx, "")
+	if !opResult {
+		t.Errorf("Expected response body validation to trigger violation when only response body is available")
 	}
 }

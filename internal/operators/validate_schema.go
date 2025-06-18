@@ -18,6 +18,7 @@ import (
 	"github.com/kaptinlin/jsonschema"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 type validateSchema struct {
@@ -91,16 +92,24 @@ func (o *validateSchema) Evaluate(tx plugintypes.TransactionState, data string) 
 	// Check TX variable for stored raw data from body processors
 	if tx != nil {
 		txVar := tx.Variables().TX()
+		currentPhase := tx.LastPhase()
 
-		// Try JSON request data first
-		jsonReqData := txVar.Get("json_request_body")
-		if len(jsonReqData) > 0 && jsonReqData[0] != "" {
-			bodyData = jsonReqData[0]
-		} else {
-			// Try JSON response data
+		// If we're in the response phase, check for response body data first
+		if currentPhase >= types.PhaseResponseBody {
+			// Try JSON response data, but only if we're in the appropriate phase
+			// Response bodies are available starting from phase 4 (PhaseResponseBody)
 			jsonRespData := txVar.Get("json_response_body")
 			if len(jsonRespData) > 0 && jsonRespData[0] != "" {
 				bodyData = jsonRespData[0]
+			}
+		}
+
+		// If we are in the request phase or later, check for request body data
+		if bodyData == "" && currentPhase >= types.PhaseRequestBody {
+			// Request bodies are available starting from phase 2 (PhaseRequestBody)
+			jsonReqData := txVar.Get("json_request_body")
+			if len(jsonReqData) > 0 && jsonReqData[0] != "" {
+				bodyData = jsonReqData[0]
 			}
 		}
 
