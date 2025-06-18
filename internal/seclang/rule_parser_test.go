@@ -61,6 +61,11 @@ func TestVariables(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
+	err = p.FromString(`SecRule REQUEST_HEADERS "@rx C:\\" "id:7"`)
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func TestVariableCases(t *testing.T) {
