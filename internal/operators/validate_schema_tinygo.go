@@ -8,13 +8,11 @@ package operators
 
 import "github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 
-
 // NewValidateSchema is not implemented in TinyGo and falls back to an unconditional match.
 func NewValidateSchema(_ plugintypes.OperatorOptions) (plugintypes.Operator, error) {
-   return &unconditionalMatch{}, nil
+	return &unconditionalMatch{}, nil
 }
 
-
 func init() {
-   Register("validateSchema", NewValidateSchema)
+	Register("validateSchema", NewValidateSchema)
 }

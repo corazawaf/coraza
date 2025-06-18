@@ -15,8 +15,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/kaptinlin/jsonschema"
+
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
 type validateSchema struct {
