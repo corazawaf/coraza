@@ -34,7 +34,7 @@ jobs:
           cache: true
 
       - name: setup tinygo
-        uses: acifani/setup-tinygo@b2ba42b249c7d3efdfe94166ec0f48b3191404f7 # v2
+        uses: acifani/setup-tinygo@db56321a62b9a67922bb9ac8f9d085e218807bb3 # v2
         with:
           tinygo-version: ${{ matrix.tinygo-version }}
 

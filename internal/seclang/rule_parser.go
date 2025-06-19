@@ -71,6 +71,9 @@ func (rp *RuleParser) ParseVariables(vars string) error {
 			if err != nil {
 				return err
 			}
+			if curr == 1 && !v.CanBeSelected() {
+				return fmt.Errorf("attempting to select a value inside a non-selectable collection: %s", string(curVar))
+			}
 			// fmt.Printf("(PREVIOUS %s) %s:%s (%t %t)\n", vars, curvar, curkey, iscount, isnegation)
 			if isquoted {
 				// if it is quoted we remove the last quote
@@ -451,12 +454,21 @@ func cutQuotedString(s string) (string, string, error) {
 		return "", "", fmt.Errorf("expected quoted string: %q", s)
 	}
 
+	previousEscapeCount := 0
 	for i := 1; i < len(s); i++ {
 		// Search until first quote that isn't part of an escape sequence.
+		// track the longest sequence of backslashes preceding the quote
+		// reset the count when a non-backslash character is encountered
 		if s[i] != '"' {
+			if s[i] == '\\' {
+				previousEscapeCount++
+			} else {
+				previousEscapeCount = 0
+			}
 			continue
 		}
-		if s[i-1] == '\\' {
+		// if the number of backslashes is odd, it's an escape sequence
+		if previousEscapeCount%2 == 1 {
 			continue
 		}
 

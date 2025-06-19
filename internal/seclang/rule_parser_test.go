@@ -61,6 +61,11 @@ func TestVariables(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
+	err = p.FromString(`SecRule REQUEST_HEADERS "@rx C:\\" "id:7"`)
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func TestVariableCases(t *testing.T) {
@@ -303,6 +308,17 @@ func TestParseRule(t *testing.T) {
 				t.Error("variables parse error want", tt.want, "got", got)
 			}
 		})
+	}
+}
+
+func TestNonSelectableCollection(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	p := NewParser(waf)
+	err := p.FromString(`
+	SecRule REQUEST_URI:foo "bar" "id:1,phase:1"
+	`)
+	if err == nil {
+		t.Error("expected error")
 	}
 }
 

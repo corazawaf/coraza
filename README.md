@@ -44,6 +44,7 @@ The Coraza Project maintains implementations and plugins for the following serve
 * [Proxy WASM extension](https://github.com/corazawaf/coraza-proxy-wasm) for proxies with proxy-wasm support (e.g. Envoy) - stable, still under development
 * [HAProxy SPOE Plugin](https://github.com/corazawaf/coraza-spoa) - experimental
 * [Coraza C Library (For nginx, etc)](https://github.com/corazawaf/libcoraza) - experimental
+* [RuiQi WAF](https://github.com/HUAHUAI23/RuiQi) - Web management panel and enhanced traffic control for Coraza SPOA - experimental
 
 ## Prerequisites
 
