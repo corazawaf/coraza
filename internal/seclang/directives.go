@@ -234,7 +234,9 @@ func directiveSecResponseBodyAccess(options *DirectiveOptions) error {
 // Default: 134217728 (128 Mib)
 // Syntax: SecRequestBodyLimit [LIMIT_IN_BYTES]
 // ---
-// Anything over the limit will be rejected with status code 413 (Request Entity Too Large).
+// Depends on `SecRequestBodyLimitAction`
+// - Reject: Anything over this limit will be rejected with status code 413 (Request Entity Too Large).
+// - ProcessPartial: The first N bytes of the request body will be processed.
 // There is a hard limit of 1 GB.
 func directiveSecRequestBodyLimit(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
@@ -430,7 +432,9 @@ func directiveSecResponseBodyLimitAction(options *DirectiveOptions) error {
 // Syntax: SecResponseBodyLimit [LIMIT_IN_BYTES]
 // Default: 524288 (512 Kib)
 // ---
-// Anything over this limit will be rejected with status code 500 (Internal Server Error).
+// Depends on `SecResponseBodyLimitAction`
+// - Reject: Anything over this limit will be rejected with status code 500 (Internal Server Error).
+// - ProcessPartial: The first N bytes of the response body will be processed.
 // This setting will not affect the responses with MIME types that are not selected for
 // buffering. There is a hard limit of 1 GB.
 func directiveSecResponseBodyLimit(options *DirectiveOptions) error {
