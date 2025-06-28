@@ -1496,11 +1496,7 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 				Stopwatch_:  tx.GetStopWatch(),
 				Rulesets_:   tx.WAF.ComponentNames,
 			}
-<<<<<<< HEAD
-		case types.AuditLogPartRulesMatched:
 			auditLogPartRulesMatchedSet = true
-=======
->>>>>>> af9e194 (move messages to H part, separate error logs and audit logs)
 			for _, mr := range tx.matchedRules {
 				// Log action is required to log a matched rule on both error log and audit log
 				// An assertion has to be done to check if the MatchedRule implements the Log() function before calling Log()
