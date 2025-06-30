@@ -271,6 +271,24 @@ func directiveSecRequestBodyAccess(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Configures the maximum JSON recursion depth limit Coraza will accept.
+// Default: 1024
+// Syntax: SecRequestBodyJsonDepthLimit [LIMIT]
+// ---
+// Anything over the limit will generate a REQBODY_ERROR in the JSON body processor.
+func directiveSecRequestBodyJsonDepthLimit(options *DirectiveOptions) error {
+	if len(options.Opts) == 0 {
+		return errEmptyOptions
+	}
+
+	limit, err := strconv.Atoi(options.Opts)
+	if err != nil {
+		return err
+	}
+	options.WAF.RequestBodyJsonDepthLimit = limit
+	return nil
+}
+
 // Description: Configures the rules engine.
 // Syntax: SecRuleEngine On|Off|DetectionOnly
 // Default: Off
