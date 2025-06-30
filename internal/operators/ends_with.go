@@ -18,7 +18,16 @@ type endsWith struct {
 
 var _ plugintypes.Operator = (*endsWith)(nil)
 
-func newEndsWith(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
+// Name: endsWith
+// Description: Returns `true` if the parameter string is found at the end of the input.
+// Macro expansion is performed on the parameter string before comparison.
+// ---
+// Example:
+// ```apache
+// # Detect request line that does not end with "HTTP/1.1"
+// SecRule REQUEST_LINE "!@endsWith HTTP/1.1" "id:152"
+// ```
+func newOperatorEndsWith(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)
@@ -34,5 +43,5 @@ func (o *endsWith) Evaluate(tx plugintypes.TransactionState, value string) bool 
 }
 
 func init() {
-	Register("endsWith", newEndsWith)
+	Register("endsWith", newOperatorEndsWith)
 }

@@ -18,7 +18,16 @@ type beginsWith struct {
 
 var _ plugintypes.Operator = (*beginsWith)(nil)
 
-func newBeginsWith(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
+// Name: beginsWith
+// Description: Returns `true` if the parameter string is found at the beginning of the input.
+// Macro expansion is performed on the parameter string before comparison.
+// ---
+// Example:
+// ```apache
+// # Detect request line that does not begin with "GET"
+// SecRule REQUEST_LINE "!@beginsWith GET" "id:149"
+// ```
+func newOperatorBeginsWith(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)
@@ -34,5 +43,5 @@ func (o *beginsWith) Evaluate(tx plugintypes.TransactionState, value string) boo
 }
 
 func init() {
-	Register("beginsWith", newBeginsWith)
+	Register("beginsWith", newOperatorBeginsWith)
 }
