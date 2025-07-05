@@ -18,6 +18,9 @@ func init() {
 	RegisterWriter("https", func() plugintypes.AuditLogWriter {
 		return noopWriter{}
 	})
+	RegisterWriter("syslog", func() plugintypes.AuditLogWriter {
+		return noopWriter{}
+	})
 
 	RegisterFormatter("json", &jsonFormatter{})
 	RegisterFormatter("jsonlegacy", &legacyJSONFormatter{})

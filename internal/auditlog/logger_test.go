@@ -56,12 +56,6 @@ func TestGetFormatters(t *testing.T) {
 	})
 }
 
-type noopWriter struct{}
-
-func (noopWriter) Init(plugintypes.AuditLogConfig) error { return nil }
-func (noopWriter) Write(plugintypes.AuditLog) error      { return nil }
-func (noopWriter) Close() error                          { return nil }
-
 func TestRegisterAndGetWriter(t *testing.T) {
 
 	testCases := []struct {
