@@ -4,8 +4,6 @@
 package bodyprocessors
 
 import (
-	"errors"
-	"strings"
 	"testing"
 )
 
@@ -145,7 +143,7 @@ func TestReadJSON(t *testing.T) {
 	for _, tc := range jsonTests {
 		tt := tc
 		t.Run(tt.name, func(t *testing.T) {
-			jsonMap, err := readJSON(strings.NewReader(tt.json))
+			jsonMap, err := readJSON(tt.json)
 			if err != nil {
 				t.Error(err)
 			}
@@ -185,7 +183,7 @@ func mapKeys(m map[string]string) []string {
 }
 
 func TestInvalidJSON(t *testing.T) {
-	_, err := readJSON(strings.NewReader(`{invalid json`))
+	_, err := readJSON(`{invalid json`)
 	if err != nil {
 		// We expect no error since gjson.Parse doesn't return errors for invalid JSON
 		// Instead, it returns a Result with Type == Null
@@ -193,28 +191,12 @@ func TestInvalidJSON(t *testing.T) {
 	}
 }
 
-func TestReadJSONErrorHandling(t *testing.T) {
-	// Create a reader that fails when reading
-	r := &failingReader{}
-	_, err := readJSON(r)
-	if err == nil {
-		t.Error("Expected error from failingReader, got nil")
-	}
-}
-
-// failingReader implements io.Reader but always returns an error
-type failingReader struct{}
-
-func (r *failingReader) Read(p []byte) (n int, err error) {
-	return 0, errors.New("read error")
-}
-
 func BenchmarkReadJSON(b *testing.B) {
 	for _, tc := range jsonTests {
 		tt := tc
 		b.Run(tt.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				_, err := readJSON(strings.NewReader(tt.json))
+				_, err := readJSON(tt.json)
 				if err != nil {
 					b.Error(err)
 				}

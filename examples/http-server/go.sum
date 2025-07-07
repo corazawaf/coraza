@@ -4,8 +4,8 @@ github.com/corazawaf/libinjection-go v0.2.2 h1:Chzodvb6+NXh6wew5/yhD0Ggioif9ACrQ
 github.com/corazawaf/libinjection-go v0.2.2/go.mod h1:OP4TM7xdJ2skyXqNX1AN1wN5nNZEmJNuWbNPOItn7aw=
 github.com/foxcpp/go-mockdns v1.1.0 h1:jI0rD8M0wuYAxL7r/ynTrCQQq0BVqfB99Vgk7DlmewI=
 github.com/foxcpp/go-mockdns v1.1.0/go.mod h1:IhLeSFGed3mJIAXPH2aiRQB+kqz7oqu8ld2qVbOu7Wk=
-github.com/magefile/mage v1.15.1-0.20241126214340-bdc92f694516 h1:aAO0L0ulox6m/CLRYvJff+jWXYYCKGpEm3os7dM/Z+M=
-github.com/magefile/mage v1.15.1-0.20241126214340-bdc92f694516/go.mod h1:z5UZb/iS3GoOSn0JgWuiw7dxlurVYTu+/jHXqQg881A=
+github.com/magefile/mage v1.15.1-0.20250615140142-78acbaf2e3ae h1:yyMUG1VUd6IjV5jonMKpLXgwm9AzkfRsYisdCXc5OVI=
+github.com/magefile/mage v1.15.1-0.20250615140142-78acbaf2e3ae/go.mod h1:z5UZb/iS3GoOSn0JgWuiw7dxlurVYTu+/jHXqQg881A=
 github.com/miekg/dns v1.1.57 h1:Jzi7ApEIzwEPLHWRcafCN9LZSBbqQpxjt/wpgvg7wcM=
 github.com/miekg/dns v1.1.57/go.mod h1:uqRjCRUuEAA6qsOiJvDd+CFo/vW+y5WR6SNmHE55hZk=
 github.com/petar-dambovaliev/aho-corasick v0.0.0-20250424160509-463d218d4745 h1:Vpr4VgAizEgEZsaMohpw6JYDP+i9Of9dmdY4ufNP6HI=

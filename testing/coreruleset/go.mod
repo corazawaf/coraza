@@ -17,19 +17,19 @@ require (
 	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
 	github.com/corazawaf/libinjection-go v0.2.2 // indirect
 	github.com/coreruleset/ftw-tests-schema/v2 v2.2.0 // indirect
-	github.com/fatih/color v1.18.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.3.0 // indirect
-	github.com/goccy/go-json v0.10.3 // indirect
-	github.com/goccy/go-yaml v1.13.4 // indirect
+	github.com/goccy/go-json v0.10.5 // indirect
+	github.com/goccy/go-yaml v1.18.0 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gotnospirit/makeplural v0.0.0-20180622080156-a5f48d94d976 // indirect
 	github.com/gotnospirit/messageformat v0.0.0-20221001023931-dfe49f1eb092 // indirect
 	github.com/huandu/xstrings v1.4.0 // indirect
 	github.com/icza/backscanner v0.0.0-20241124160932-dff01ac50250 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
-	github.com/kaptinlin/go-i18n v0.1.3 // indirect
-	github.com/kaptinlin/jsonschema v0.2.2 // indirect
+	github.com/kaptinlin/go-i18n v0.1.4 // indirect
+	github.com/kaptinlin/jsonschema v0.4.5 // indirect
 	github.com/knadh/koanf/maps v0.1.1 // indirect
 	github.com/knadh/koanf/parsers/yaml v0.1.0 // indirect
 	github.com/knadh/koanf/providers/env v1.0.0 // indirect
