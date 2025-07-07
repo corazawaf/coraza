@@ -1,4 +1,4 @@
-// Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
+// Copyright 2024 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build !tinygo && !coraza.disabled_operators.validateSchema
@@ -7,85 +7,84 @@
 package operators
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/kaptinlin/jsonschema"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/memoize"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
 type validateSchema struct {
-	schemaType string
-	schemaPath string
-	schemaData []byte
 	jsonSchema *jsonschema.Schema
 }
 
 var _ plugintypes.Operator = (*validateSchema)(nil)
 
+func md5Hash(b []byte) string {
+	hasher := md5.New()
+	hasher.Write(b)
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
 // NewValidateSchema creates a new validateSchema operator
 func NewValidateSchema(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
-	data := options.Arguments
-	if data == "" {
-		return nil, errors.New("schema file path is required")
-	}
-
-	var schemaData []byte
-	var err error
-
-	// Check if it's a file path and read schema data
-	if options.Root != nil {
-		// Handle file from provided filesystem root
-		schemaData, err = fs.ReadFile(options.Root, data)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read schema file from root FS: %v", err)
-		}
-	} else {
-		// Direct file access fallback
-		schemaData, err = os.ReadFile(data)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read schema file: %v", err)
-		}
+	schemaPath := options.Arguments
+	if schemaPath == "" {
+		return nil, errors.New("missing schema file path")
 	}
 
 	// Determine schema type from file extension
-	ext := strings.ToLower(filepath.Ext(data))
+	ext := strings.ToLower(filepath.Ext(schemaPath))
 	if ext != ".json" {
-		return nil, fmt.Errorf("unsupported schema type: %s, must be .json", ext)
+		return nil, fmt.Errorf("unsupported schema type: %s, only JSON is supported", ext)
 	}
 
-	// Preliminarily validate that the schema is valid JSON
-	var jsonSchema interface{}
-	if err := json.Unmarshal(schemaData, &jsonSchema); err != nil {
-		return nil, fmt.Errorf("invalid JSON schema: %v", err)
-	}
+	var (
+		schemaData []byte
+		err        error
+	)
 
-	operator := &validateSchema{
-		schemaType: "json",
-		schemaPath: data,
-		schemaData: schemaData,
-	}
-
-	// Compile JSON Schema at creation time
-	compiler := jsonschema.NewCompiler()
-	schema, err := compiler.Compile(operator.schemaData)
+	// Handle file from provided filesystem root
+	schemaData, err = fs.ReadFile(options.Root, schemaPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compile JSON schema: %v", err)
+		return nil, fmt.Errorf("reading schema from root FS: %v", err)
 	}
-	operator.jsonSchema = schema
 
-	return operator, nil
+	key := md5Hash(schemaData)
+	schema, err := memoize.Do(key, func() (any, error) {
+		// Preliminarily validate that the schema is valid JSON
+		var jsonSchema any
+		if err := json.Unmarshal(schemaData, &jsonSchema); err != nil {
+			return nil, fmt.Errorf("validating schema as JSON: %v", err)
+		}
+
+		// Compile JSON Schema at creation time
+		compiler := jsonschema.NewCompiler()
+		schema, err := compiler.Compile(schemaData)
+		if err != nil {
+			return nil, fmt.Errorf("compiling JSON schema: %v", err)
+		}
+		return schema, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &validateSchema{
+		jsonSchema: schema.(*jsonschema.Schema),
+	}, nil
 }
 
 func (o *validateSchema) Evaluate(tx plugintypes.TransactionState, data string) bool {
-
 	// If we're validating a request/response body, try to get data from the TX variable
 	var bodyData string
 
@@ -125,21 +124,18 @@ func (o *validateSchema) Evaluate(tx plugintypes.TransactionState, data string) 
 		return false
 	}
 
-	// Return true if validation fails (violation)
-	result := o.isValidJSON(data)
-	return !result
+	return !o.isValidJSON(data)
 }
 
 // isValidJSON performs comprehensive JSON Schema validation
 func (o *validateSchema) isValidJSON(data string) bool {
-
 	// Return true for basic validity if no schema validator is available
 	if o.jsonSchema == nil {
 		return true
 	}
 
 	// Check basic JSON syntax
-	var js interface{}
+	var js any
 	if err := json.Unmarshal([]byte(data), &js); err != nil {
 		return false
 	}

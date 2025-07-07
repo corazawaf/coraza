@@ -20,11 +20,14 @@ var _ plugintypes.BodyProcessor = &jsonBodyProcessor{}
 func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
 	// Read the entire body to store it and process it
 	s := strings.Builder{}
-	tr := io.TeeReader(reader, &s)
+	if _, err := io.Copy(&s, reader); err != nil {
+		return err
+	}
+	ss := s.String()
 
 	// Process as normal
 	col := v.ArgsPost()
-	data, err := readJSON(tr)
+	data, err := readJSON(ss)
 	if err != nil {
 		return err
 	}
@@ -36,7 +39,7 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.Tran
 	// This is needed because RequestBody is a Single interface without a Set method
 	if txVar := v.TX(); txVar != nil {
 		// Store the content type and raw body
-		txVar.Set("json_request_body", []string{s.String()})
+		txVar.Set("json_request_body", []string{ss})
 	}
 
 	return nil
@@ -45,11 +48,14 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.Tran
 func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
 	// Read the entire body to store it and process it
 	s := strings.Builder{}
-	tr := io.TeeReader(reader, &s)
+	if _, err := io.Copy(&s, reader); err != nil {
+		return err
+	}
+	ss := s.String()
 
 	// Process as normal
 	col := v.ResponseArgs()
-	data, err := readJSON(tr)
+	data, err := readJSON(ss)
 	if err != nil {
 		return err
 	}
@@ -61,20 +67,14 @@ func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.Tra
 	// This is needed because ResponseBody is a Single interface without a Set method
 	if txVar := v.TX(); txVar != nil && v.ResponseBody() != nil {
 		// Store the content type and raw body
-		txVar.Set("json_response_body", []string{s.String()})
+		txVar.Set("json_response_body", []string{ss})
 	}
 
 	return nil
 }
 
-func readJSON(reader io.Reader) (map[string]string, error) {
-	s := strings.Builder{}
-	_, err := io.Copy(&s, reader)
-	if err != nil {
-		return nil, err
-	}
-
-	json := gjson.Parse(s.String())
+func readJSON(s string) (map[string]string, error) {
+	json := gjson.Parse(s)
 	res := make(map[string]string)
 	key := []byte("json")
 	readItems(json, key, res)

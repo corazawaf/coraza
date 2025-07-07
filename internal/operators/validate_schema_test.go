@@ -1,4 +1,4 @@
-// Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
+// Copyright 2024 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 //go:build !tinygo
 // +build !tinygo
@@ -6,8 +6,7 @@
 package operators
 
 import (
-	"os"
-	"path/filepath"
+	"io/fs"
 	"testing"
 	"testing/fstest"
 
@@ -19,27 +18,29 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-func TestValidateSchemaJSONBasic(t *testing.T) {
-	// Create a temporary schema file
-	tmpDir := t.TempDir()
-	schemaPath := filepath.Join(tmpDir, "schema.json")
+func setupJSONSchema(name, data string) fs.FS {
+	return fstest.MapFS{
+		name: &fstest.MapFile{
+			Data: []byte(data),
+			Mode: 0644,
+		},
+	}
+}
 
-	// Simple JSON schema for testing
-	schemaContent := `{
+func TestValidateSchemaJSONBasic(t *testing.T) {
+	schema := "schema.json"
+	rootFS := setupJSONSchema(schema, `{
 		"type": "object",
 		"properties": {
 			"name": { "type": "string" },
 			"age": { "type": "number" }
 		},
 		"required": ["name", "age"]
-	}`
-	err := os.WriteFile(schemaPath, []byte(schemaContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create test schema file: %v", err)
-	}
+	}`)
 
 	opts := plugintypes.OperatorOptions{
-		Arguments: schemaPath,
+		Arguments: schema,
+		Root:      rootFS,
 	}
 	op, err := NewValidateSchema(opts)
 	if err != nil {
@@ -63,7 +64,6 @@ func TestValidateSchemaJSONBasic(t *testing.T) {
 	valid := validateOp.isValidJSON(validJSON)
 	if !valid {
 		// Print schema and input for debugging
-		t.Logf("Schema: %s", string(validateOp.schemaData))
 		t.Logf("Input: %s", validJSON)
 		t.Fatalf("Direct schema validation failed")
 	}
@@ -96,50 +96,10 @@ func TestValidateSchemaJSONBasic(t *testing.T) {
 	}
 }
 
-func TestValidateSchemaJSONViaFS(t *testing.T) {
-	// Simple JSON schema for testing
-	schemaContent := `{
-		"type": "object",
-		"properties": {
-			"name": { "type": "string" },
-			"age": { "type": "number" }
-		},
-		"required": ["name", "age"]
-	}`
-
-	// Create a virtual file system
-	fs := fstest.MapFS{
-		"schema.json": &fstest.MapFile{
-			Data: []byte(schemaContent),
-		},
-	}
-
-	opts := plugintypes.OperatorOptions{
-		Arguments: "schema.json",
-		Root:      fs,
-	}
-	op, err := NewValidateSchema(opts)
-	if err != nil {
-		t.Fatalf("Failed to initialize validateSchema operator via FS: %v", err)
-	}
-
-	// Valid JSON should return false (no violation)
-	validJSON := `{"name": "John", "age": 30}`
-	opResult := op.Evaluate(nil, validJSON)
-	if opResult {
-		t.Errorf("Expected valid JSON to return false, got true")
-	}
-
-	// Invalid JSON should return true (violation detected)
-	invalidJSON := `{"name": "John", age: 30}` // Missing quotes around age
-	if !op.Evaluate(nil, invalidJSON) {
-		t.Errorf("Expected invalid JSON to return true, got false")
-	}
-}
-
 func TestValidateSchemaInvalidFile(t *testing.T) {
 	opts := plugintypes.OperatorOptions{
 		Arguments: "nonexistent.json",
+		Root:      fstest.MapFS{},
 	}
 	_, err := NewValidateSchema(opts)
 	if err == nil {
@@ -149,41 +109,36 @@ func TestValidateSchemaInvalidFile(t *testing.T) {
 
 func TestValidateSchemaUnsupportedType(t *testing.T) {
 	// Create a temporary file with unsupported extension
-	tmpDir := t.TempDir()
-	schemaPath := filepath.Join(tmpDir, "schema.txt")
-	err := os.WriteFile(schemaPath, []byte("some content"), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create test schema file: %v", err)
-	}
+	var (
+		name   = "schema.xml"
+		rootFS = setupJSONSchema(name, "")
+	)
 
 	opts := plugintypes.OperatorOptions{
-		Arguments: schemaPath,
+		Arguments: name,
+		Root:      rootFS,
 	}
-	_, err = NewValidateSchema(opts)
+	_, err := NewValidateSchema(opts)
 	if err == nil {
 		t.Errorf("Expected error for unsupported schema type, got nil")
 	}
 }
 
 func TestValidateSchemaEmptyInput(t *testing.T) {
-	// Create a temporary schema file
-	tmpDir := t.TempDir()
-	schemaPath := filepath.Join(tmpDir, "schema.json")
-
-	schemaContent := `{
+	var (
+		name   = "schema.json"
+		rootFS = setupJSONSchema(name, `{
 		"type": "object",
 		"properties": {
 			"name": { "type": "string" }
 		},
 		"required": ["name"]
-	}`
-	err := os.WriteFile(schemaPath, []byte(schemaContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create test schema file: %v", err)
-	}
+	}`)
+	)
 
 	opts := plugintypes.OperatorOptions{
-		Arguments: schemaPath,
+		Arguments: name,
+		Root:      rootFS,
 	}
 	op, err := NewValidateSchema(opts)
 	if err != nil {
@@ -199,26 +154,21 @@ func TestValidateSchemaEmptyInput(t *testing.T) {
 
 // TestValidateSchemaWithRequestBody tests that the operator can validate JSON data from the REQUEST_BODY variable
 func TestValidateSchemaWithRequestBody(t *testing.T) {
-	// Create a temporary schema file
-	tmpDir := t.TempDir()
-	schemaPath := filepath.Join(tmpDir, "schema.json")
-
-	// Simple JSON schema for testing
-	schemaContent := `{
-		"type": "object",
-		"properties": {
-			"name": { "type": "string" },
-			"age": { "type": "number" }
-		},
-		"required": ["name", "age"]
-	}`
-	err := os.WriteFile(schemaPath, []byte(schemaContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create test schema file: %v", err)
-	}
+	var (
+		name   = "schema.json"
+		rootFS = setupJSONSchema(name, `{
+			"type": "object",
+			"properties": {
+				"name": { "type": "string" },
+				"age": { "type": "number" }
+			},
+			"required": ["name", "age"]
+		}`)
+	)
 
 	opts := plugintypes.OperatorOptions{
-		Arguments: schemaPath,
+		Arguments: name,
+		Root:      rootFS,
 	}
 	op, err := NewValidateSchema(opts)
 	if err != nil {
@@ -257,26 +207,21 @@ func TestValidateSchemaWithRequestBody(t *testing.T) {
 
 // TestValidateSchemaWithResponseBody tests that the operator can validate JSON data from the RESPONSE_BODY variable
 func TestValidateSchemaWithResponseBody(t *testing.T) {
-	// Create a temporary schema file
-	tmpDir := t.TempDir()
-	schemaPath := filepath.Join(tmpDir, "schema.json")
-
-	// Simple JSON schema for testing
-	schemaContent := `{
-		"type": "object",
-		"properties": {
-			"name": { "type": "string" },
-			"age": { "type": "number" }
-		},
-		"required": ["name", "age"]
-	}`
-	err := os.WriteFile(schemaPath, []byte(schemaContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create test schema file: %v", err)
-	}
+	var (
+		name   = "schema.json"
+		rootFS = setupJSONSchema(name, `{
+			"type": "object",
+			"properties": {
+				"name": { "type": "string" },
+				"age": { "type": "number" }
+			},
+			"required": ["name", "age"]
+		}`)
+	)
 
 	opts := plugintypes.OperatorOptions{
-		Arguments: schemaPath,
+		Arguments: name,
+		Root:      rootFS,
 	}
 	op, err := NewValidateSchema(opts)
 	if err != nil {
@@ -325,28 +270,23 @@ func TestValidateSchemaWithNoArguments(t *testing.T) {
 
 // TestValidateSchemaInvalidJSONSchema tests with an invalid JSON schema
 func TestValidateSchemaInvalidJSONSchema(t *testing.T) {
-	// Create a temporary schema file with invalid JSON
-	tmpDir := t.TempDir()
-	schemaPath := filepath.Join(tmpDir, "schema.json")
-
-	// Invalid JSON schema
-	schemaContent := `{
-		"type": "object",
-		"properties": {
-			"name": { "type": "string" },
-			"age": { "type": "number"
-		},
-		"required": ["name", "age"]
-	}` // Missing closing bracket
-	err := os.WriteFile(schemaPath, []byte(schemaContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create test schema file: %v", err)
-	}
+	var (
+		name   = "schema.json"
+		rootFS = setupJSONSchema(name, `{
+			"type": "object",
+			"properties": {
+				"name": { "type": "string" },
+				"age": { "type": "number" -> here it is the error
+			},
+			"required": ["name", "age"]
+		}`)
+	)
 
 	opts := plugintypes.OperatorOptions{
-		Arguments: schemaPath,
+		Arguments: name,
+		Root:      rootFS,
 	}
-	_, err = NewValidateSchema(opts)
+	_, err := NewValidateSchema(opts)
 	if err == nil {
 		t.Errorf("Expected error for invalid JSON schema, got nil")
 	}
@@ -354,24 +294,19 @@ func TestValidateSchemaInvalidJSONSchema(t *testing.T) {
 
 // TestValidateSchemaJSONNilSchema tests evaluation with a nil schema validator
 func TestValidateSchemaJSONNilSchema(t *testing.T) {
-	// Create a temporary schema file
-	tmpDir := t.TempDir()
-	schemaPath := filepath.Join(tmpDir, "schema.json")
-
-	// Simple JSON schema for testing (we won't actually use the schema's contents)
-	schemaContent := `{
-		"type": "object",
-		"properties": {
-			"name": { "type": "string" }
-		}
-	}`
-	err := os.WriteFile(schemaPath, []byte(schemaContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create test schema file: %v", err)
-	}
+	var (
+		name   = "schema.json"
+		rootFS = setupJSONSchema(name, `{
+			"type": "object",
+			"properties": {
+				"name": { "type": "string" }
+			}
+		}`)
+	)
 
 	opts := plugintypes.OperatorOptions{
-		Arguments: schemaPath,
+		Arguments: name,
+		Root:      rootFS,
 	}
 	op, err := NewValidateSchema(opts)
 	if err != nil {
@@ -524,25 +459,22 @@ func (m *mockTransaction) ResponseXML() collection.Map                     { ret
 
 // TestValidateSchemaPhaseChecking tests that the operator respects phases for request/response body validation
 func TestValidateSchemaPhaseChecking(t *testing.T) {
-	// Create a temporary schema file
-	tmpDir := t.TempDir()
-	schemaPath := filepath.Join(tmpDir, "schema.json")
-
-	schemaContent := `{
-		"type": "object",
-		"properties": {
-			"name": { "type": "string" }
-		},
-		"required": ["name"]
-	}`
-	err := os.WriteFile(schemaPath, []byte(schemaContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create test schema file: %v", err)
-	}
+	var (
+		name   = "schema.json"
+		rootFS = setupJSONSchema(name, `{
+			"type": "object",
+			"properties": {
+				"name": { "type": "string" }
+			},
+			"required": ["name"]
+		}`)
+	)
 
 	opts := plugintypes.OperatorOptions{
-		Arguments: schemaPath,
+		Arguments: name,
+		Root:      rootFS,
 	}
+
 	op, err := NewValidateSchema(opts)
 	if err != nil {
 		t.Fatalf("Failed to initialize validateSchema operator: %v", err)
@@ -603,25 +535,22 @@ func TestValidateSchemaPhaseChecking(t *testing.T) {
 
 // TestValidateSchemaPhasePreference tests that request body is preferred over response body in the right phases
 func TestValidateSchemaPhasePreference(t *testing.T) {
-	// Create a temporary schema file
-	tmpDir := t.TempDir()
-	schemaPath := filepath.Join(tmpDir, "schema.json")
-
-	schemaContent := `{
-		"type": "object",
-		"properties": {
-			"name": { "type": "string" }
-		},
-		"required": ["name"]
-	}`
-	err := os.WriteFile(schemaPath, []byte(schemaContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create test schema file: %v", err)
-	}
+	var (
+		name   = "schema.json"
+		rootFS = setupJSONSchema(name, `{
+			"type": "object",
+			"properties": {
+				"name": { "type": "string" }
+			},
+			"required": ["name"]
+		}`)
+	)
 
 	opts := plugintypes.OperatorOptions{
-		Arguments: schemaPath,
+		Arguments: name,
+		Root:      rootFS,
 	}
+
 	op, err := NewValidateSchema(opts)
 	if err != nil {
 		t.Fatalf("Failed to initialize validateSchema operator: %v", err)
