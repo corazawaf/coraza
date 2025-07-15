@@ -15,7 +15,16 @@ type detectXSS struct{}
 
 var _ plugintypes.Operator = (*detectXSS)(nil)
 
-func newDetectXSS(plugintypes.OperatorOptions) (plugintypes.Operator, error) {
+// Name: detectXSS
+// Description: Returns true if XSS injection is found. This operator uses LibInjection
+// to detect XSS attacks.
+// ---
+// Example:
+// ```apache
+// # Detect XSS Injection inside request body
+// SecRule REQUEST_BODY "@detectXSS" "id:12345,log,deny"
+// ```
+func newOperatorDetectXSS(plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	return &detectXSS{}, nil
 }
 
@@ -24,5 +33,5 @@ func (o *detectXSS) Evaluate(_ plugintypes.TransactionState, value string) bool 
 }
 
 func init() {
-	Register("detectXSS", newDetectXSS)
+	Register("detectXSS", newOperatorDetectXSS)
 }
