@@ -5,10 +5,11 @@ package profile
 
 // Meta contains the test metadata
 type Meta struct {
-	Author      string `yaml:"author,omitempty"`
-	Description string `yaml:"description,omitempty"`
-	Enabled     bool   `yaml:"enabled,omitempty"`
-	Name        string `yaml:"name,omitempty"`
+	Author             string `yaml:"author,omitempty"`
+	Description        string `yaml:"description,omitempty"`
+	Enabled            bool   `yaml:"enabled,omitempty"`
+	Name               string `yaml:"name,omitempty"`
+	MetadataInspection bool   `yaml:"metadata_inspection,omitempty"`
 }
 
 // StageInput contains the input data for tests
