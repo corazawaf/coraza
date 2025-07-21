@@ -839,10 +839,10 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 	return tx.interruption
 }
 
-func setAndReturnBodyLimitInterruption(tx *Transaction) (*types.Interruption, int, error) {
+func setAndReturnBodyLimitInterruption(tx *Transaction, status int) (*types.Interruption, int, error) {
 	tx.debugLogger.Warn().Msg("Disrupting transaction with body size above the configured limit (Action Reject)")
 	tx.interruption = &types.Interruption{
-		Status: 413,
+		Status: status,
 		Action: "deny",
 	}
 	return tx.interruption, 0, nil
@@ -887,7 +887,7 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 		tx.variables.inboundDataError.Set("1")
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			// We interrupt this transaction in case RequestBodyLimitAction is Reject
-			return setAndReturnBodyLimitInterruption(tx)
+			return setAndReturnBodyLimitInterruption(tx, 413)
 		}
 
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
@@ -952,7 +952,7 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 		if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
 			tx.variables.inboundDataError.Set("1")
 			if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
-				return setAndReturnBodyLimitInterruption(tx)
+				return setAndReturnBodyLimitInterruption(tx, 413)
 			}
 
 			if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
@@ -972,7 +972,7 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 	if tx.requestBodyBuffer.length == tx.RequestBodyLimit {
 		tx.variables.inboundDataError.Set("1")
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
-			return setAndReturnBodyLimitInterruption(tx)
+			return setAndReturnBodyLimitInterruption(tx, 413)
 		}
 
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
@@ -1153,7 +1153,7 @@ func (tx *Transaction) WriteResponseBody(b []byte) (*types.Interruption, int, er
 		tx.variables.outboundDataError.Set("1")
 		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionReject {
 			// We interrupt this transaction in case ResponseBodyLimitAction is Reject
-			return setAndReturnBodyLimitInterruption(tx)
+			return setAndReturnBodyLimitInterruption(tx, 500)
 		}
 
 		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionProcessPartial {
@@ -1203,7 +1203,7 @@ func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, i
 		if tx.responseBodyBuffer.length+writingBytes >= tx.ResponseBodyLimit {
 			tx.variables.outboundDataError.Set("1")
 			if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionReject {
-				return setAndReturnBodyLimitInterruption(tx)
+				return setAndReturnBodyLimitInterruption(tx, 500)
 			}
 
 			if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionProcessPartial {
@@ -1223,7 +1223,7 @@ func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, i
 	if tx.responseBodyBuffer.length == tx.ResponseBodyLimit {
 		tx.variables.outboundDataError.Set("1")
 		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionReject {
-			return setAndReturnBodyLimitInterruption(tx)
+			return setAndReturnBodyLimitInterruption(tx, 500)
 		}
 
 		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionProcessPartial {
