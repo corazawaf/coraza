@@ -1,8 +1,9 @@
-// Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
+// Copyright 2022 the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build !tinygo && !windows && !plan9
-// +build !tinygo,!windows,!plan9
+//go:build (windows || plan9) && !tinygo
+// +build windows plan9
+// +build !tinygo
 
 package auditlog
 
@@ -19,7 +20,7 @@ func init() {
 		return &httpsWriter{}
 	})
 	RegisterWriter("syslog", func() plugintypes.AuditLogWriter {
-		return NewSyslogWriter()
+		return &noopWriter{}
 	})
 
 	RegisterFormatter("json", &jsonFormatter{})

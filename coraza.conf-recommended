@@ -72,7 +72,7 @@ SecRule REQBODY_ERROR "!@eq 0" \
 #
 SecRule MULTIPART_STRICT_ERROR "!@eq 0" \
     "id:'200003',phase:2,t:none,log,deny,status:400, \
-    msg:'Multipart request body failed strict validation."
+    msg:'Multipart request body failed strict validation.'"
 
 # -- Response body handling --------------------------------------------------
 

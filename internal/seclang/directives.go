@@ -234,7 +234,9 @@ func directiveSecResponseBodyAccess(options *DirectiveOptions) error {
 // Default: 134217728 (128 Mib)
 // Syntax: SecRequestBodyLimit [LIMIT_IN_BYTES]
 // ---
-// Anything over the limit will be rejected with status code 413 (Request Entity Too Large).
+// Depends on `SecRequestBodyLimitAction`
+// - Reject: Anything over this limit will be rejected with status code 413 (Request Entity Too Large).
+// - ProcessPartial: The first N bytes of the request body will be processed.
 // There is a hard limit of 1 GB.
 func directiveSecRequestBodyLimit(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
@@ -430,7 +432,9 @@ func directiveSecResponseBodyLimitAction(options *DirectiveOptions) error {
 // Syntax: SecResponseBodyLimit [LIMIT_IN_BYTES]
 // Default: 524288 (512 Kib)
 // ---
-// Anything over this limit will be rejected with status code 500 (Internal Server Error).
+// Depends on `SecResponseBodyLimitAction`
+// - Reject: Anything over this limit will be rejected with status code 500 (Internal Server Error).
+// - ProcessPartial: The first N bytes of the response body will be processed.
 // This setting will not affect the responses with MIME types that are not selected for
 // buffering. There is a hard limit of 1 GB.
 func directiveSecResponseBodyLimit(options *DirectiveOptions) error {
@@ -1015,8 +1019,10 @@ func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
 			for _, rule := range options.WAF.Rules.GetRules() {
 				if rule.ID_ >= start && rule.ID_ <= end {
 					rp := RuleParser{
-						rule:           &rule,
-						options:        RuleOptions{},
+						rule: &rule,
+						options: RuleOptions{
+							WAF: options.WAF,
+						},
 						defaultActions: map[types.RulePhase][]ruleAction{},
 					}
 					if err := rp.ParseVariables(strings.Trim(variables, "\"")); err != nil {
@@ -1036,8 +1042,10 @@ func updateTargetBySingleID(id int, variables string, options *DirectiveOptions)
 		return fmt.Errorf("SecRuleUpdateTargetById: rule \"%d\" not found", id)
 	}
 	rp := RuleParser{
-		rule:           rule,
-		options:        RuleOptions{},
+		rule: rule,
+		options: RuleOptions{
+			WAF: options.WAF,
+		},
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
 	return rp.ParseVariables(strings.Trim(variables, "\""))
@@ -1098,8 +1106,10 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 					continue
 				}
 				rp := RuleParser{
-					rule:           &rule,
-					options:        RuleOptions{},
+					rule: &rule,
+					options: RuleOptions{
+						WAF: options.WAF,
+					},
 					defaultActions: map[types.RulePhase][]ruleAction{},
 				}
 				if err := rp.ParseActions(strings.Trim(actions, "\"")); err != nil {
@@ -1118,8 +1128,10 @@ func updateActionBySingleID(id int, actions string, options *DirectiveOptions) e
 		return fmt.Errorf("SecRuleUpdateActionById: rule \"%d\" not found", id)
 	}
 	rp := RuleParser{
-		rule:           rule,
-		options:        RuleOptions{},
+		rule: rule,
+		options: RuleOptions{
+			WAF: options.WAF,
+		},
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
 	return rp.ParseActions(strings.Trim(actions, "\""))
@@ -1144,8 +1156,10 @@ func directiveSecRuleUpdateTargetByTag(options *DirectiveOptions) error {
 		inputTag := strings.Trim(tagAndvars[0], "\"")
 		if utils.InSlice(inputTag, rule.Tags_) {
 			rp := RuleParser{
-				rule:           &rule,
-				options:        RuleOptions{},
+				rule: &rule,
+				options: RuleOptions{
+					WAF: options.WAF,
+				},
 				defaultActions: map[types.RulePhase][]ruleAction{},
 			}
 			inputVars := strings.Trim(tagAndvars[1], "\"")
