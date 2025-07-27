@@ -8,12 +8,16 @@ github.com/bmatcuk/doublestar/v4 v4.8.1 h1:54Bopc5c2cAvhLRAzqOGCYHYyhcDHsFF4wWIR
 github.com/bmatcuk/doublestar/v4 v4.8.1/go.mod h1:xBQ8jztBU6kakFMg+8WGxn0c6z1fTSPVIjEY1Wr7jzc=
 github.com/bmatcuk/doublestar/v4 v4.9.0 h1:DBvuZxjdKkRP/dr4GVV4w2fnmrk5Hxc90T51LZjv0JA=
 github.com/bmatcuk/doublestar/v4 v4.9.0/go.mod h1:xBQ8jztBU6kakFMg+8WGxn0c6z1fTSPVIjEY1Wr7jzc=
+github.com/bmatcuk/doublestar/v4 v4.9.1 h1:X8jg9rRZmJd4yRy7ZeNDRnM+T3ZfHv15JiBJ/avrEXE=
+github.com/bmatcuk/doublestar/v4 v4.9.1/go.mod h1:xBQ8jztBU6kakFMg+8WGxn0c6z1fTSPVIjEY1Wr7jzc=
 github.com/corazawaf/coraza-coreruleset v0.0.0-20240226094324-415b1017abdc h1:OlJhrgI3I+FLUCTI3JJW8MoqyM78WbqJjecqMnqG+wc=
 github.com/corazawaf/coraza-coreruleset v0.0.0-20240226094324-415b1017abdc/go.mod h1:7rsocqNDkTCira5T0M7buoKR2ehh7YZiPkzxRuAgvVU=
 github.com/corazawaf/coraza-coreruleset/v4 v4.14.0 h1:bblMqFRGQyREP81dsJ7RRiHua0LW7apuIrDwKy8qFHg=
 github.com/corazawaf/coraza-coreruleset/v4 v4.14.0/go.mod h1:yeZPZUM23HVL0jMAzLfKF3M7XjCQBXDrvcQT/gkjwhg=
 github.com/corazawaf/coraza-coreruleset/v4 v4.15.0 h1:rfdp5NK7ehB8+f0wcCaEAmPJ3h/7pD7KT085xyNVKIo=
 github.com/corazawaf/coraza-coreruleset/v4 v4.15.0/go.mod h1:yeZPZUM23HVL0jMAzLfKF3M7XjCQBXDrvcQT/gkjwhg=
+github.com/corazawaf/coraza-coreruleset/v4 v4.16.0 h1:xbC785u2JYTkoZpYDchW3NOys8sKdFBmh2JTpva1Czc=
+github.com/corazawaf/coraza-coreruleset/v4 v4.16.0/go.mod h1:yeZPZUM23HVL0jMAzLfKF3M7XjCQBXDrvcQT/gkjwhg=
 github.com/corazawaf/libinjection-go v0.2.2 h1:Chzodvb6+NXh6wew5/yhD0Ggioif9ACrQGR4qjTCs1g=
 github.com/corazawaf/libinjection-go v0.2.2/go.mod h1:OP4TM7xdJ2skyXqNX1AN1wN5nNZEmJNuWbNPOItn7aw=
 github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
