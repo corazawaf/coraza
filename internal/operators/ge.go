@@ -18,7 +18,19 @@ type ge struct {
 
 var _ plugintypes.Operator = (*ge)(nil)
 
-func newGE(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
+// Name: ge
+// Description: Performs numerical comparison and returns true if the input value is greater than or equal
+// to the provided parameter. Macro expansion is performed on the parameter string before comparison.
+// ---
+// Example:
+// ```apache
+// # Detect 15 or more request headers
+// SecRule &REQUEST_HEADERS_NAMES "@ge 15" "id:154"
+// ```
+//
+// Note: If a value is provided that cannot be converted to an integer (i.e a string) this operator will
+// treat that value as `0`.
+func newOperatorGE(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)
@@ -35,5 +47,5 @@ func (o *ge) Evaluate(tx plugintypes.TransactionState, value string) bool {
 }
 
 func init() {
-	Register("ge", newGE)
+	Register("ge", newOperatorGE)
 }
