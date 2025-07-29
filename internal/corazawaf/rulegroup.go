@@ -42,7 +42,7 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 	} else {
 		// rule id is not mandatory, but if it is set, it must be unique ID
 		if rule.ID_ != 0 && rg.FindByID(rule.ID_) != nil {
-			return fmt.Errorf("there is a another rule with id %d", rule.ID_)
+			return fmt.Errorf("duplicated rule id %d", rule.ID_)
 		}
 	}
 
