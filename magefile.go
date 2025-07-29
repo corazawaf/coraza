@@ -279,6 +279,7 @@ func combinations(tags []string) []string {
 // Generates a JSON output to stdout which contains all permutations of build tags for the project.
 func TagsMatrix() error {
 	tags := []string{
+		"coraza.rule.mandatory_rule_id_check",
 		"coraza.rule.case_sensitive_args_keys",
 		"coraza.rule.no_regex_multiline",
 		"memoize_builders",
