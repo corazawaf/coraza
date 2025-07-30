@@ -29,8 +29,21 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 		return nil
 	}
 
-	if rule.ID_ != 0 && rg.FindByID(rule.ID_) != nil {
-		return fmt.Errorf("there is a another rule with id %d", rule.ID_)
+	if shouldDoMandatoryRuleIdCheck {
+		// rule id is mandatory and must be unique ID for all SecRule/SecAction.
+		if rule.SecMark_ == "" { // means its SecRule/SecAction
+			if rule.ID_ == 0 {
+				return fmt.Errorf("rule id is missing, rule residing in file %s at line %d", rule.File_, rule.Line_)
+			}
+			if rg.FindByID(rule.ID_) != nil {
+				return fmt.Errorf("duplicated rule id %d", rule.ID_)
+			}
+		}
+	} else {
+		// rule id is not mandatory, but if it is set, it must be unique ID
+		if rule.ID_ != 0 && rg.FindByID(rule.ID_) != nil {
+			return fmt.Errorf("duplicated rule id %d", rule.ID_)
+		}
 	}
 
 	numInferred := 0
