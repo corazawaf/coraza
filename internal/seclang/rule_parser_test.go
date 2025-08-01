@@ -67,7 +67,7 @@ func TestVariables(t *testing.T) {
 		t.Error(err)
 	}
 
-	p.FromString(`SecRule REQUEST_HEADERS "@contains \"" "id:8"`)
+	err = p.FromString(`SecRule REQUEST_HEADERS "@contains \"" "id:8"`)
 	if err != nil {
 		t.Error(err)
 	}
