@@ -469,6 +469,7 @@ func cutQuotedString(s string) (string, string, error) {
 		}
 		// if the number of backslashes is odd, it's an escape sequence
 		if previousEscapeCount%2 == 1 {
+			previousEscapeCount = 0
 			continue
 		}
 
