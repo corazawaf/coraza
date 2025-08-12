@@ -22,7 +22,7 @@ require (
 	github.com/corazawaf/libinjection-go v0.2.2
 	github.com/foxcpp/go-mockdns v1.1.0
 	github.com/jcchavezs/mergefs v0.1.0
-	github.com/kaptinlin/jsonschema v0.4.5
+	github.com/kaptinlin/jsonschema v0.4.6
 	github.com/magefile/mage v1.15.1-0.20250615140142-78acbaf2e3ae
 	github.com/mccutchen/go-httpbin/v2 v2.18.3
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20250424160509-463d218d4745
@@ -44,10 +44,10 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
-	golang.org/x/mod v0.25.0 // indirect
+	golang.org/x/mod v0.26.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
-	golang.org/x/text v0.27.0 // indirect
-	golang.org/x/tools v0.34.0 // indirect
+	golang.org/x/text v0.28.0 // indirect
+	golang.org/x/tools v0.35.0 // indirect
 	google.golang.org/protobuf v1.35.1 // indirect
 )
 
