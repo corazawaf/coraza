@@ -1866,7 +1866,7 @@ func TestRequestFilename(t *testing.T) {
 }
 
 func TestContext(t *testing.T) {
-	t.Run(test.name, func(t *testing.T) {
+	t.Run("getting context using tx.Context()", func(t *testing.T) {
 		expected := context.Background()
 		waf := NewWAF()
 		tx := waf.NewTransaction()
