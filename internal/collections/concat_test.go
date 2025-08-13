@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/experimental/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
