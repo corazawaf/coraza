@@ -61,6 +61,7 @@ var (
 	_ directive = directiveSecDebugLogLevel
 	_ directive = directiveSecRuleUpdateTargetByID
 	_ directive = directiveSecRuleUpdateActionByID
+	_ directive = directiveSecRuleUpdateActionByTag
 	_ directive = directiveSecRuleUpdateTargetByTag
 	_ directive = directiveSecIgnoreRuleCompilationErrors
 	_ directive = directiveSecDataset
@@ -123,6 +124,7 @@ var directivesMap = map[string]directive{
 	"secdebugloglevel":               directiveSecDebugLogLevel,
 	"secruleupdatetargetbyid":        directiveSecRuleUpdateTargetByID,
 	"secruleupdateactionbyid":        directiveSecRuleUpdateActionByID,
+	"secruleupdateactionbytag":        directiveSecRuleUpdateActionByTag,
 	"secruleupdatetargetbytag":       directiveSecRuleUpdateTargetByTag,
 	"secignorerulecompilationerrors": directiveSecIgnoreRuleCompilationErrors,
 	"secdataset":                     directiveSecDataset,

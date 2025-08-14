@@ -62,6 +62,57 @@ func TestSecRuleUpdateActionByID(t *testing.T) {
 
 }
 
+func TestSecRuleUpdateActionByTag(t *testing.T) {
+	t.Run("Find and update rules by tag", func(t *testing.T) {
+		waf := corazawaf.NewWAF()
+		
+		rules := []*corazawaf.Rule{}
+		for i := 1; i <= 2; i++ {
+			data := fmt.Sprintf("REQUEST_URI \"^/test/%d\" \"id:18%d,log,tag:my-tag\"", i, i)
+			rule, err := ParseRule(RuleOptions{
+				Data:         data,
+				WAF:          waf,
+				WithOperator: true,
+			})
+			if err != nil {
+				t.Error(err)
+			}
+			if err := waf.Rules.Add(rule); err != nil {
+				t.Error(err)
+			}
+			rules = append(rules, rule)
+		}
+		
+		if waf.Rules.Count() != 2 {
+			t.Error("Failed to add rules")
+		}
+
+		if err := directiveSecRuleUpdateActionByTag(&DirectiveOptions{
+			WAF:  waf,
+			Opts: "my-tag \"nolog\"",
+		}); err != nil {
+			t.Error(err)
+		}
+
+		for _, rule := range rules {
+			if !rule.HasAction("nolog") {
+				t.Error("Failed to update rule. Added action not found in the rule %d", rule.ID())
+			}
+		}
+	}
+	
+	t.Run("Error if no rules is found for the provided tag", func(t *testing.T) {
+		waf := corazawaf.NewWAF()
+		
+		if err := directiveSecRuleUpdateActionByTag(&DirectiveOptions{
+			WAF:  waf,
+			Opts: "my-tag \"nolog\"",
+		}); err == nil {
+			t.Error("Should return a error when no rule is found for provided tag")
+		}
+	}
+}
+
 func TestSecRuleUpdateTargetByID(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	rule, err := ParseRule(RuleOptions{

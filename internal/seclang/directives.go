@@ -1105,14 +1105,7 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 				if rule.ID_ < start && rule.ID_ > end {
 					continue
 				}
-				rp := RuleParser{
-					rule: &rule,
-					options: RuleOptions{
-						WAF: options.WAF,
-					},
-					defaultActions: map[types.RulePhase][]ruleAction{},
-				}
-				if err := rp.ParseActions(strings.Trim(actions, "\"")); err != nil {
+				if err := updateRuleAction(options.WAF, rule, actions); err != nil {
 					return err
 				}
 			}
@@ -1121,20 +1114,42 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 	return nil
 }
 
+func updateRuleAction(waf *corazawaf.WAF, rule *Rule, actions string, ) error {
+	rp := RuleParser{
+		rule: rule,
+		options: RuleOptions{
+			WAF: waf,
+		},
+		defaultActions: map[types.RulePhase][]ruleAction{},
+	}
+	return rp.ParseActions(strings.Trim(actions, "\""))
+}
+
 func updateActionBySingleID(id int, actions string, options *DirectiveOptions) error {
 
 	rule := options.WAF.Rules.FindByID(id)
 	if rule == nil {
 		return fmt.Errorf("SecRuleUpdateActionById: rule \"%d\" not found", id)
 	}
-	rp := RuleParser{
-		rule: rule,
-		options: RuleOptions{
-			WAF: options.WAF,
-		},
-		defaultActions: map[types.RulePhase][]ruleAction{},
+	return updateRuleAction(options.WAF, rule, actions)
+}
+
+func directiveSecRuleUpdateActionByTag(options *DirectiveOptions) error {
+	tagAndActions := strings.Fields(options.Opts)
+	if len(tagAndActions) != 2 {
+		return errors.New("syntax error: SecRuleUpdateActionByTag tag \"ACTION1,ACTION2,...\"")
 	}
-	return rp.ParseActions(strings.Trim(actions, "\""))
+	tag := tagAndActions[0]
+	actions := tagAndActions[1]
+	rules := options.WAF.Rules.GetRulesByTag(tag)
+	if len(rules) == 0 {
+		return fmt.Errorf("SecRuleUpdateActionByTag: rule not found for tag %q", tag)
+	}
+	for _, rule := rules {
+		if err := updateRuleAction(options.WAF, rule, actions), err != nil {
+			return err
+		}
+	}
 }
 
 // Description: Updates the target (variable) list of the specified rule(s) by tag.

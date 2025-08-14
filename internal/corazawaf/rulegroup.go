@@ -111,11 +111,21 @@ func (rg *RuleGroup) DeleteByMsg(msg string) {
 	rg.rules = kept
 }
 
+func (rg *RuleGroup) GetRulesByTag(tag string) []*Rule {
+	var rules := []*Rule{}
+	for i, r := range rg.rules {
+		if !r.HasTag(tag) {
+			rules = append(rules, &rg.rules[i])
+		}
+	}
+	return rules
+}
+
 // DeleteByTag deletes rules with the given tag.
 func (rg *RuleGroup) DeleteByTag(tag string) {
 	var kept []Rule
 	for _, r := range rg.rules {
-		if !utils.InSlice(tag, r.Tags_) {
+		if !r.HasTag(tag) {
 			kept = append(kept, r)
 		}
 	}

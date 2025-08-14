@@ -15,6 +15,7 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/memoize"
+	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -467,6 +468,16 @@ func (r *Rule) AddAction(name string, action plugintypes.Action) error {
 	return nil
 }
 
+// HasAction: at this moment, used only for testing purposes
+func (r *Rule) HasAction(name string) bool {
+	for _, action := r.actions {
+		if action.Name == name {
+			return true
+		}
+	}
+	return false
+} 
+
 // hasRegex checks the received key to see if it is between forward slashes.
 // if it is, it will return true and the content of the regular expression inside the slashes.
 // otherwise it will return false and the same key.
@@ -672,6 +683,10 @@ func (r *Rule) executeTransformations(value string) (string, []error) {
 		value = v
 	}
 	return value, errs
+}
+
+func (r *Rule) HasTag(tag string) bool {
+	return utils.InSlice(tag, r.Tags_)
 }
 
 // NewRule returns a new initialized rule
