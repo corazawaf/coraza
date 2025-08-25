@@ -6,6 +6,7 @@
 package operators
 
 import (
+	"context"
 	"io/fs"
 	"testing"
 	"testing/fstest"
@@ -366,6 +367,10 @@ func (m *mockTransaction) CaptureField(idx int, value string) {}
 
 func (m *mockTransaction) LastPhase() types.RulePhase {
 	return m.lastPhase
+}
+
+func (m *mockTransaction) Context() context.Context {
+	return context.Background()
 }
 
 // Implement TransactionVariables interface
