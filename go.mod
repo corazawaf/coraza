@@ -1,6 +1,8 @@
 module github.com/corazawaf/coraza/v3
 
-go 1.23.0
+go 1.24
+
+toolchain go1.24.6
 
 // Testing dependencies:
 // - go-mockdns
@@ -35,6 +37,7 @@ require (
 
 require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/go-json-experiment/json v0.0.0-20250813233538-9b1f9ea2e11b // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/goccy/go-yaml v1.18.0 // indirect
 	github.com/gotnospirit/makeplural v0.0.0-20180622080156-a5f48d94d976 // indirect
