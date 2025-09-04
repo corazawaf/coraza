@@ -75,9 +75,9 @@ func TestValidate(t *testing.T) {
 			expectErr:  true,
 			customizer: func(w *WAF) { w.RequestBodyLimit = -1 },
 		},
-		"request body limit greater than 1gb": {
+		"request body limit greater than 1gib": {
 			expectErr:  true,
-			customizer: func(w *WAF) { w.RequestBodyLimit = _1gb + 1 },
+			customizer: func(w *WAF) { w.RequestBodyLimit = _1gib + 1 },
 		},
 		"request body in memory limit less than zero": {
 			expectErr:  true,
@@ -93,9 +93,9 @@ func TestValidate(t *testing.T) {
 			expectErr:  true,
 			customizer: func(w *WAF) { w.ResponseBodyLimit = -1 },
 		},
-		"response body limit greater than 1gb": {
+		"response body limit greater than 1gib": {
 			expectErr:  true,
-			customizer: func(w *WAF) { w.ResponseBodyLimit = _1gb + 1 },
+			customizer: func(w *WAF) { w.ResponseBodyLimit = _1gib + 1 },
 		},
 		"argument limit greater than 0": {
 			expectErr:  false,
