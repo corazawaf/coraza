@@ -36,7 +36,7 @@ func TestRequestBodyLimit(t *testing.T) {
 		},
 		"limit bigger than the hard limit": {
 			limit:       1073741825,
-			expectedErr: errors.New("request body limit should be at most 1GB"),
+			expectedErr: errors.New("request body limit should be at most 1GiB"),
 		},
 		"right limits": {
 			limit:         100,
@@ -79,7 +79,7 @@ func TestResponseBodyLimit(t *testing.T) {
 		},
 		"limit bigger than the hard limit": {
 			limit:       1073741825,
-			expectedErr: errors.New("response body limit should be at most 1GB"),
+			expectedErr: errors.New("response body limit should be at most 1GiB"),
 		},
 		"right limit": {
 			limit: 100,

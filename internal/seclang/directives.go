@@ -237,7 +237,7 @@ func directiveSecResponseBodyAccess(options *DirectiveOptions) error {
 // Depends on `SecRequestBodyLimitAction`
 // - Reject: Anything over this limit will be rejected with status code 413 (Request Entity Too Large).
 // - ProcessPartial: The first N bytes of the request body will be processed.
-// There is a hard limit of 1 GB.
+// There is a hard limit of 1 GiB.
 func directiveSecRequestBodyLimit(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -436,7 +436,7 @@ func directiveSecResponseBodyLimitAction(options *DirectiveOptions) error {
 // - Reject: Anything over this limit will be rejected with status code 500 (Internal Server Error).
 // - ProcessPartial: The first N bytes of the response body will be processed.
 // This setting will not affect the responses with MIME types that are not selected for
-// buffering. There is a hard limit of 1 GB.
+// buffering. There is a hard limit of 1 GiB.
 func directiveSecResponseBodyLimit(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -922,7 +922,7 @@ func directiveSecUploadDir(options *DirectiveOptions) error {
 // ---
 // Generally speaking, the default value is not small enough. For most applications, you
 // should be able to reduce it down to 128 KB or lower. Anything over the limit will be
-// rejected with status code 413 (Request Entity Too Large). There is a hard limit of 1 GB.
+// rejected with status code 413 (Request Entity Too Large). There is a hard limit of 1 GiB.
 // Note: not implemented yet
 func directiveSecRequestBodyNoFilesLimit(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
