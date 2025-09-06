@@ -1653,6 +1653,10 @@ func (tx *Transaction) setTimeVariables() {
 	tx.variables.timeWday.Set(strconv.Itoa(int(timestamp.Weekday())))
 }
 
+func (tx *Transaction) Context() context.Context {
+	return tx.context
+}
+
 // TransactionVariables has pointers to all the variables of the transaction
 type TransactionVariables struct {
 	args                     *collections.ConcatKeyed
