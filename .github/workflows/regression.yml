@@ -31,6 +31,7 @@ jobs:
   test:
     needs: generate-matrix
     strategy:
+      fail-fast: false
       matrix:
         go-version: [1.23.x, 1.24.x]
         os: [ubuntu-latest]
