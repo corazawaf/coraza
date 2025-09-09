@@ -92,7 +92,7 @@ const (
 // Example:
 // ```
 // # Parse requests with Content-Type "text/xml" as XML
-// SecRule REQUEST_CONTENT_TYPE ^text/xml "nolog,pass,id:106,ctl:requestBodyProcessor=XML"
+// SecRule REQUEST_CONTENT_TYPE ^text/xml "nolog,pass,id:106,phase:1,ctl:requestBodyProcessor=XML"
 //
 // # white-list the user parameter for rule #981260 when the REQUEST_URI is /index.php
 //
