@@ -82,7 +82,6 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
   enforce-all-checks:
       runs-on: ubuntu-latest
-      needs: test
       permissions:
         checks: read
       steps:
@@ -90,5 +89,7 @@ jobs:
           uses: poseidon/wait-for-status-checks@899c768d191b56eef585c18f8558da19e1f3e707 # v0.6.0
           with:
             token: ${{ secrets.GITHUB_TOKEN }}
+            delay: 120s # give some time to matrix jobs
+            interval: 10s # default value
+            timeout: 3600s # default value
             ignore: "codecov/patch,codecov/project"
- 
