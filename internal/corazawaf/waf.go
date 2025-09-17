@@ -165,6 +165,11 @@ func (w *WAF) NewTransactionWithOptions(opts Options) *Transaction {
 	return w.newTransaction(opts)
 }
 
+// Close will release resources used by the WAF instance
+func (w *WAF) Close() error {
+	return nil
+}
+
 // NewTransactionWithID Creates a new initialized transaction for this WAF instance
 // Using the specified ID
 func (w *WAF) newTransaction(opts Options) *Transaction {
