@@ -4,6 +4,9 @@
 package actions
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
@@ -30,6 +33,18 @@ func (a *tagFn) Init(r plugintypes.RuleMetadata, data string) error {
 		return ErrMissingArguments
 	}
 	r.(*corazawaf.Rule).Tags_ = append(r.(*corazawaf.Rule).Tags_, data)
+	if strings.HasPrefix(data, "metadatafilter/") {
+		filtersString := strings.Split(data, "/")
+		if len(filtersString) < 2 {
+			return fmt.Errorf("invalid metadatafilter format: %s", data)
+		}
+		filters := strings.Split(filtersString[1], ",")
+		for _, filter := range filters {
+			if err := r.(*corazawaf.Rule).AddAllowedMetadata(filter); err != nil {
+				return fmt.Errorf("invalid metadata filter: %s", filter)
+			}
+		}
+	}
 	return nil
 }
 

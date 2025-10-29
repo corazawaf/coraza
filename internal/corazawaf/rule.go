@@ -17,6 +17,8 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/memoize"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
+
+	experimentalTypes "github.com/corazawaf/coraza/v3/experimental/types"
 )
 
 // ruleActionParams is used as a wrapper to store the action name
@@ -146,6 +148,10 @@ type Rule struct {
 	// chainedRules containing rules with just PhaseUnknown variables, may potentially
 	// be anticipated. This boolean ensures that it happens
 	withPhaseUnknownVariable bool
+
+	allowedMetadatas []experimentalTypes.DataMetadata
+
+	attackType string
 }
 
 func (r *Rule) ParentID() int {
@@ -158,12 +164,20 @@ func (r *Rule) Status() int {
 
 const chainLevelZero = 0
 
+func (r *Rule) AllowedMetadatas() []experimentalTypes.DataMetadata {
+	return r.allowedMetadatas
+}
+
+func (r *Rule) AttackType() string {
+	return r.attackType
+}
+
 // Evaluate will evaluate the current rule for the indicated transaction
 // If the operator matches, actions will be evaluated, and it will return
 // the matched variables, keys and values (MatchData)
 func (r *Rule) Evaluate(phase types.RulePhase, tx plugintypes.TransactionState, cache map[transformationKey]*transformationValue) {
 	// collectiveMatchedValues lives across recursive calls of doEvaluate
-	var collectiveMatchedValues []types.MatchData
+	var collectiveMatchedValues []experimentalTypes.MatchData
 
 	logger := tx.DebugLogger()
 
@@ -180,14 +194,14 @@ func (r *Rule) Evaluate(phase types.RulePhase, tx plugintypes.TransactionState, 
 
 const noID = 0
 
-func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Transaction, collectiveMatchedValues *[]types.MatchData, chainLevel int, cache map[transformationKey]*transformationValue) []types.MatchData {
+func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Transaction, collectiveMatchedValues *[]experimentalTypes.MatchData, chainLevel int, cache map[transformationKey]*transformationValue) []experimentalTypes.MatchData {
 	tx.Capture = r.Capture
 
 	if multiphaseEvaluation {
 		computeRuleChainMinPhase(r)
 	}
 
-	var matchedValues []types.MatchData
+	var matchedValues []experimentalTypes.MatchData
 	// we log if we are the parent rule
 	logger.Debug().Msg("Evaluating rule")
 	defer logger.Debug().Msg("Finished rule evaluation")
@@ -226,7 +240,7 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 			if multiphaseEvaluation && multiphaseSkipVariable(r, v.Variable, phase) {
 				continue
 			}
-			var values []types.MatchData
+			var values []experimentalTypes.MatchData
 			for _, c := range ecol {
 				if c.Variable == v.Variable {
 					// TODO shall we check the pointer?
@@ -242,10 +256,21 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 			}
 			vLog.Debug().Msg("Expanding arguments for rule")
 
+			allowedMetadatas := r.AllowedMetadatas()
+			vLog.Debug().Msg("Allowed metadata for rule" + fmt.Sprint(allowedMetadatas))
+			attackType := r.AttackType()
 			args := make([]string, 1)
 			var errs []error
 			var argsLen int
 			for i, arg := range values {
+				if tx.AllowMetadataInspection {
+					if len(allowedMetadatas) > 0 {
+						if !arg.IsInScope(allowedMetadatas, attackType) {
+							vLog.Debug().Msg("Skipping evaluation for " + arg.Key() + " because it is not in scope")
+							continue
+						}
+					}
+				}
 				if r.MultiMatch {
 					args, errs = r.transformMultiMatchArg(arg)
 					argsLen = len(args)
@@ -390,14 +415,14 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 	return matchedValues
 }
 
-func (r *Rule) transformMultiMatchArg(arg types.MatchData) ([]string, []error) {
+func (r *Rule) transformMultiMatchArg(arg experimentalTypes.MatchData) ([]string, []error) {
 	// TODOs:
 	// - We don't need to run every transformation. We could try for each until found
 	// - Cache is not used for multimatch
 	return r.executeTransformationsMultimatch(arg.Value())
 }
 
-func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transformationKey]*transformationValue) (string, []error) {
+func (r *Rule) transformArg(arg experimentalTypes.MatchData, argIdx int, cache map[transformationKey]*transformationValue) (string, []error) {
 	switch {
 	case len(r.transformations) == 0:
 		return arg.Value(), nil
@@ -603,6 +628,15 @@ func transformationID(currentID int, transformationName string) int {
 	transformationIDToName = append(transformationIDToName, nextName)
 	transformationNameToID[nextName] = id
 	return id
+}
+
+func (r *Rule) AddAllowedMetadata(metadataName string) error {
+	metadata, ok := experimentalTypes.NewValueMetadata(metadataName)
+	if !ok {
+		return fmt.Errorf("invalid metadata %q not found", metadataName)
+	}
+	r.allowedMetadatas = append(r.allowedMetadatas, metadata)
+	return nil
 }
 
 // AddTransformation adds a transformation to the rule
