@@ -20,7 +20,7 @@ jobs:
       tags: ${{ steps.generate.outputs.tags }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
       
       - name: Generate tag combinations
         id: generate
@@ -31,6 +31,7 @@ jobs:
   test:
     needs: generate-matrix
     strategy:
+      fail-fast: false
       matrix:
         go-version: [1.23.x, 1.24.x]
         os: [ubuntu-latest]
@@ -40,9 +41,9 @@ jobs:
       GOLANG_BASE_VERSION: "1.23.x"
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
       - name: Install Go
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
         with:
           go-version: ${{ matrix.go-version }}
           cache: true  
@@ -51,28 +52,28 @@ jobs:
           export BUILD_TAGS=${{ matrix.build-flag }}
           go run mage.go coverage
       - name: "Codecov: General"
-        uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5
         if: ${{ matrix.go-version == env.GOLANG_BASE_VERSION }}
         with:
           files: build/coverage.txt
           flags: default,${{ matrix.build-flag }}
           token: ${{ secrets.CODECOV_TOKEN }}   
       - name: "Codecov: Examples"
-        uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5
         if: ${{ matrix.go-version == env.GOLANG_BASE_VERSION }}
         with:
           files: build/coverage-examples.txt
           flags: examples+${{ matrix.build-flag }}
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: "Codecov: FTW"
-        uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5
         if: ${{ matrix.go-version == env.GOLANG_BASE_VERSION }}
         with:
           files: build/coverage-ftw.txt
           flags: ftw,${{ matrix.build-flag }}
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: "Codecov: Tinygo"
-        uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5
         # only if coverage-tinygo.txt exists
         if: ${{ matrix.go-version == env.GOLANG_BASE_VERSION && hashFiles('build/coverage-tinygo.txt') != '' }}
         with:
@@ -81,7 +82,6 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
   enforce-all-checks:
       runs-on: ubuntu-latest
-      needs: test
       permissions:
         checks: read
       steps:
@@ -89,5 +89,7 @@ jobs:
           uses: poseidon/wait-for-status-checks@899c768d191b56eef585c18f8558da19e1f3e707 # v0.6.0
           with:
             token: ${{ secrets.GITHUB_TOKEN }}
+            delay: 120s # give some time to matrix jobs
+            interval: 10s # default value
+            timeout: 3600s # default value
             ignore: "codecov/patch,codecov/project"
- 

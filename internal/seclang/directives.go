@@ -61,6 +61,15 @@ var _ directive = directiveInclude
 
 var errEmptyOptions = errors.New("expected options")
 
+// Description: Appends component signature to the Coraza signature.
+// Syntax: SecComponentSignature "COMPONENT_NAME/X.Y.Z (COMMENT)"
+// ---
+// Appends component signature to the Coraza signature.
+//
+// Example:
+// ```apache
+// SecComponentSignature "OWASP_CRS/4.18.0"
+// ```
 func directiveSecComponentSignature(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -237,7 +246,7 @@ func directiveSecResponseBodyAccess(options *DirectiveOptions) error {
 // Depends on `SecRequestBodyLimitAction`
 // - Reject: Anything over this limit will be rejected with status code 413 (Request Entity Too Large).
 // - ProcessPartial: The first N bytes of the request body will be processed.
-// There is a hard limit of 1 GB.
+// There is a hard limit of 1 GiB.
 func directiveSecRequestBodyLimit(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -332,6 +341,17 @@ func directiveSecRuleRemoveByTag(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Removes the matching rules from the current configuration context.
+// Syntax: SecRuleRemoveByMsg MESSAGE
+// ---
+// Normally, you would use `SecRuleRemoveById` to remove rules, but it may occasionally
+// be easier to disable one or more rules with `SecRuleRemoveByMsg`. Matching is
+// by case-sensitive string equality.
+//
+// Example:
+// ```apache
+// SecRuleRemoveByMsg "Directory Listing"
+// ```
 func directiveSecRuleRemoveByMsg(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -382,6 +402,9 @@ func directiveSecRuleRemoveByID(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Clears the list of MIME types considered for response body buffering,
+// allowing you to start populating the list from scratch.
+// Syntax: SecResponseBodyMimeTypesClear
 func directiveSecResponseBodyMimeTypesClear(options *DirectiveOptions) error {
 	if len(options.Opts) > 0 {
 		return errors.New("unexpected options")
@@ -390,6 +413,16 @@ func directiveSecResponseBodyMimeTypesClear(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Configures which MIME types are to be considered for response body buffering.
+// Syntax: SecResponseBodyMimeType MIMETYPE MIMETYPE ...
+// ---
+// Multiple SecResponseBodyMimeType directives can be used to add MIME types.
+// Use SecResponseBodyMimeTypesClear to clear previously configured MIME types and start over.
+//
+// Example:
+// ```apache
+// SecResponseBodyMimeType text/plain text/html text/xml
+// ```
 func directiveSecResponseBodyMimeType(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -436,7 +469,7 @@ func directiveSecResponseBodyLimitAction(options *DirectiveOptions) error {
 // - Reject: Anything over this limit will be rejected with status code 500 (Internal Server Error).
 // - ProcessPartial: The first N bytes of the response body will be processed.
 // This setting will not affect the responses with MIME types that are not selected for
-// buffering. There is a hard limit of 1 GB.
+// buffering. There is a hard limit of 1 GiB.
 func directiveSecResponseBodyLimit(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -634,6 +667,24 @@ func directiveSecAuditLog(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Configures the type of audit logging mechanism to be used.
+// Syntax: SecAuditLogType Serial|Concurrent|HTTPS|Syslog
+// ---
+// The possible values are:
+//
+//   - Serial : Audit log entries will be stored in a single file, specified by SecAuditLog.
+//     This is convenient for casual use, but it can slow down the server, because only
+//     one audit log entry can be written to the file at any one time.
+//   - Concurrent : One file per transaction is used for audit logging. This approach is more
+//     scalable when heavy logging is required (multiple transactions can be recorded in parallel)
+//   - HTTPS : Audit log entries will be sent to the target URL, specified by SecAuditLog.
+//   - Syslog : Audit log entries will be sent to the syslog server, specified by SecAuditLog
+//     in one of formats: "ADDRESS:PORT" (TCP), "udp://ADDRESS:PORT", or "unixgram:///var/run/syslog".
+//
+// Example:
+// ```apache
+// SecAuditLogType Serial
+// ```
 func directiveSecAuditLogType(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -922,7 +973,7 @@ func directiveSecUploadDir(options *DirectiveOptions) error {
 // ---
 // Generally speaking, the default value is not small enough. For most applications, you
 // should be able to reduce it down to 128 KB or lower. Anything over the limit will be
-// rejected with status code 413 (Request Entity Too Large). There is a hard limit of 1 GB.
+// rejected with status code 413 (Request Entity Too Large). There is a hard limit of 1 GiB.
 // Note: not implemented yet
 func directiveSecRequestBodyNoFilesLimit(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
