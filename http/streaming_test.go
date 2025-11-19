@@ -18,6 +18,22 @@ import (
 	"github.com/corazawaf/coraza/v3"
 )
 
+// We use a spy to verify Flush() is actually called on the underlying writer.
+// Relying solely on network streaming timing can be flaky in unit tests (httptest).
+// spy.flushed: Proves that the Coraza middleware correctly propagated the signal.
+type flushSpy struct {
+	http.ResponseWriter
+	flushed bool
+}
+
+func (f *flushSpy) Flush() {
+	f.flushed = true
+	if fl, ok := f.ResponseWriter.(http.Flusher); ok {
+		fl.Flush()
+	}
+}
+
+// readFirstN: Proves that the client actually received the bytes (end-to-end verification).
 // readFirstN tries to read exactly n bytes within the given timeout.
 // It returns the bytes read (possibly less than n) and whether the deadline was met.
 func readFirstN(t *testing.T, r io.Reader, n int, timeout time.Duration) ([]byte, bool) {
@@ -68,14 +84,19 @@ func TestStreamingEngineOff(t *testing.T) {
 		t.Fatalf("failed to create WAF: %v", err)
 	}
 
-	ts := httptest.NewServer(WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		flusher, _ := w.(http.Flusher)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("Hello "))
-		flusher.Flush()
-		time.Sleep(500 * time.Millisecond)
-		_, _ = w.Write([]byte("world!"))
-	})))
+	var spy *flushSpy
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		spy = &flushSpy{ResponseWriter: w}
+		handler := WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			flusher, _ := w.(http.Flusher)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("Hello "))
+			flusher.Flush()
+			time.Sleep(500 * time.Millisecond)
+			_, _ = w.Write([]byte("world!"))
+		}))
+		handler.ServeHTTP(spy, r)
+	}))
 	defer ts.Close()
 
 	res, err := http.Get(ts.URL)
@@ -96,6 +117,10 @@ func TestStreamingEngineOff(t *testing.T) {
 	}
 	if string(b) != "Hello " {
 		t.Fatalf("unexpected first chunk: %q", string(b))
+	}
+	// Verify Flush was actually propagated
+	if spy == nil || !spy.flushed {
+		t.Fatalf("Flush() was not propagated to the underlying response writer")
 	}
 	// Read the remainder of the body without timing assertions.
 	rest, err := io.ReadAll(res.Body)
@@ -119,14 +144,19 @@ SecResponseBodyAccess Off`)
 		t.Fatalf("failed to create WAF: %v", err)
 	}
 
-	ts := httptest.NewServer(WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		flusher, _ := w.(http.Flusher)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("Hello "))
-		flusher.Flush()
-		time.Sleep(500 * time.Millisecond)
-		_, _ = w.Write([]byte("world!"))
-	})))
+	var spy *flushSpy
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		spy = &flushSpy{ResponseWriter: w}
+		handler := WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			flusher, _ := w.(http.Flusher)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("Hello "))
+			flusher.Flush()
+			time.Sleep(500 * time.Millisecond)
+			_, _ = w.Write([]byte("world!"))
+		}))
+		handler.ServeHTTP(spy, r)
+	}))
 	defer ts.Close()
 
 	res, err := http.Get(ts.URL)
@@ -148,6 +178,11 @@ SecResponseBodyAccess Off`)
 	}
 	if string(b) != "Hello " {
 		t.Fatalf("unexpected first chunk: %q", string(b))
+	}
+
+	// Verify Flush was actually propagated
+	if spy == nil || !spy.flushed {
+		t.Fatalf("Flush() was not propagated to the underlying response writer")
 	}
 
 	// Read the remainder of the body without timing assertions.
@@ -173,16 +208,21 @@ SecResponseBodyAccess On`)
 		t.Fatalf("failed to create WAF: %v", err)
 	}
 
-	ts := httptest.NewServer(WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain")
-		flusher, _ := w.(http.Flusher)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("Hello "))
-		flusher.Flush()
-		// Keep the same 500ms gap used in the other tests
-		time.Sleep(500 * time.Millisecond)
-		_, _ = w.Write([]byte("world!"))
-	})))
+	var spy *flushSpy
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		spy = &flushSpy{ResponseWriter: w}
+		handler := WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/plain")
+			flusher, _ := w.(http.Flusher)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("Hello "))
+			flusher.Flush()
+			// Keep the same 500ms gap used in the other tests
+			time.Sleep(500 * time.Millisecond)
+			_, _ = w.Write([]byte("world!"))
+		}))
+		handler.ServeHTTP(spy, r)
+	}))
 	defer ts.Close()
 
 	res, err := http.Get(ts.URL)
@@ -203,6 +243,11 @@ SecResponseBodyAccess On`)
 	}
 	if string(b) != "Hello " {
 		t.Fatalf("unexpected first chunk: %q", string(b))
+	}
+
+	// Verify Flush was actually propagated
+	if spy == nil || !spy.flushed {
+		t.Fatalf("Flush() was not propagated to the underlying response writer")
 	}
 
 	// Read the remainder of the body without timing assertions.
@@ -229,16 +274,21 @@ SecRule RESPONSE_BODY "@contains world!" "id:1,phase:4,t:lowercase,deny"`)
 		t.Fatalf("failed to create WAF: %v", err)
 	}
 
-	ts := httptest.NewServer(WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain")
-		flusher, _ := w.(http.Flusher)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("Hello "))
-		flusher.Flush()
-		// Keep the same 500ms gap used in the other tests
-		time.Sleep(500 * time.Millisecond)
-		_, _ = w.Write([]byte("world!"))
-	})))
+	var spy *flushSpy
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		spy = &flushSpy{ResponseWriter: w}
+		handler := WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/plain")
+			flusher, _ := w.(http.Flusher)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("Hello "))
+			flusher.Flush()
+			// Keep the same 500ms gap used in the other tests
+			time.Sleep(500 * time.Millisecond)
+			_, _ = w.Write([]byte("world!"))
+		}))
+		handler.ServeHTTP(spy, r)
+	}))
 	defer ts.Close()
 
 	res, err := http.Get(ts.URL)
@@ -258,6 +308,11 @@ SecRule RESPONSE_BODY "@contains world!" "id:1,phase:4,t:lowercase,deny"`)
 	}
 	if string(b) != "Hello " {
 		t.Fatalf("unexpected first chunk: %q", string(b))
+	}
+
+	// Verify Flush was actually propagated
+	if spy == nil || !spy.flushed {
+		t.Fatalf("Flush() was not propagated to the underlying response writer")
 	}
 
 	// Read the remainder of the body without timing assertions.
