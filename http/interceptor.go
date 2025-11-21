@@ -25,11 +25,13 @@ type rwInterceptor struct {
 	proto              string
 	isWriteHeaderFlush bool
 	wroteHeader        bool
+	allowFlushing      bool
 }
 
 // WriteHeader records the status code to be sent right before the moment
 // the body is being written.
 func (i *rwInterceptor) WriteHeader(statusCode int) {
+	println("interceptor write header called!")
 	if i.wroteHeader {
 		log.Println("http: superfluous response.WriteHeader call")
 		return
@@ -51,6 +53,11 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 	}
 
 	i.wroteHeader = true
+	if !i.tx.IsResponseBodyAccessible() || !i.tx.IsResponseBodyProcessable() {
+		// if the response body isn't accessible or processable we can already allow flushing
+		// we need to set this flag before the first call to Flush()
+		i.allowFlushing = true
+	}
 }
 
 // overrideWriteHeader overrides the recorded status code
@@ -61,6 +68,7 @@ func (i *rwInterceptor) overrideWriteHeader(statusCode int) {
 // flushWriteHeader sends the status code to the delegate writers
 func (i *rwInterceptor) flushWriteHeader() {
 	if !i.isWriteHeaderFlush {
+		println("interceptor flush write header called!")
 		i.w.WriteHeader(i.statusCode)
 		i.isWriteHeaderFlush = true
 	}
@@ -98,6 +106,7 @@ func (i *rwInterceptor) Write(b []byte) (int, error) {
 	if i.tx.IsResponseBodyAccessible() && i.tx.IsResponseBodyProcessable() {
 		// we only buffer the response body if we are going to access
 		// to it, otherwise we just send it to the response writer.
+		println("interceptor buffering!")
 		it, n, err := i.tx.WriteResponseBody(b)
 		if it != nil {
 			// if there is an interruption we must clean the headers and override the status code
@@ -119,6 +128,7 @@ func (i *rwInterceptor) Write(b []byte) (int, error) {
 
 	// if response body isn't accesible or processable we write the response bytes
 	// directly to the caller.
+	println("interceptor writing!")
 	return i.w.Write(b)
 }
 
@@ -131,8 +141,21 @@ func (i *rwInterceptor) ReadFrom(r io.Reader) (n int64, err error) {
 }
 
 func (i *rwInterceptor) Flush() {
+	println("interceptor flush called!")
 	if !i.wroteHeader {
 		i.WriteHeader(http.StatusOK)
+	}
+
+	if i.allowFlushing {
+		println("in Flush: flushing is allowed")
+		if i.isWriteHeaderFlush {
+			println("headers have been flushed already... propagating flush!")
+			// only propagate flush if the headers have been flushed already
+			if fl, ok := i.w.(http.Flusher); ok {
+				fl.Flush()
+			}
+		}
+
 	}
 }
 
@@ -195,6 +218,7 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 				return fmt.Errorf("failed to copy the response body: %v", err)
 			}
 		} else {
+			i.allowFlushing = true
 			i.flushWriteHeader()
 		}
 
@@ -204,7 +228,14 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 	var (
 		hijacker, isHijacker = i.w.(http.Hijacker)
 		pusher, isPusher     = i.w.(http.Pusher)
+		_, isFlusher         = i.w.(http.Flusher)
 	)
+	print("isHijacker: ")
+	println(isHijacker)
+	print("isPusher: ")
+	println(isPusher)
+	print("isFlusher: ")
+	println(isFlusher)
 
 	switch {
 	case !isHijacker && isPusher:
