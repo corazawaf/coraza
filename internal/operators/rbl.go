@@ -3,8 +3,6 @@
 
 //go:build !tinygo && !coraza.disabled_operators.rbl
 
-// ,!coraza.disabled_operators.rbl
-
 package operators
 
 import (

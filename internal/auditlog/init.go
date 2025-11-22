@@ -3,8 +3,6 @@
 
 //go:build !tinygo && !windows && !plan9
 
-// ,!windows,!plan9
-
 package auditlog
 
 import "github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"

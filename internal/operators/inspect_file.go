@@ -3,8 +3,6 @@
 
 //go:build !tinygo && !coraza.disabled_operators.inspectFile
 
-// ,!coraza.disabled_operators.inspectFile
-
 package operators
 
 import (
