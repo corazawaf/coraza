@@ -19,12 +19,12 @@ go 1.23.0
 require (
 	github.com/anuraaga/go-modsecurity v0.0.0-20220824035035-b9a4099778df
 	github.com/corazawaf/coraza-coreruleset v0.0.0-20240226094324-415b1017abdc
-	github.com/corazawaf/libinjection-go v0.2.2
+	github.com/corazawaf/libinjection-go v0.2.3
 	github.com/foxcpp/go-mockdns v1.1.0
-	github.com/jcchavezs/mergefs v0.1.0
-	github.com/kaptinlin/jsonschema v0.4.6
+	github.com/jcchavezs/mergefs v0.1.1
+	github.com/kaptinlin/jsonschema v0.6.1
 	github.com/magefile/mage v1.15.1-0.20250615140142-78acbaf2e3ae
-	github.com/mccutchen/go-httpbin/v2 v2.18.3
+	github.com/mccutchen/go-httpbin/v2 v2.19.0
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20250424160509-463d218d4745
 	github.com/tidwall/gjson v1.18.0
 	github.com/valllabh/ocsf-schema-golang v1.0.3
