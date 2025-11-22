@@ -20,16 +20,4 @@ formatters:
   enable:
     - gofmt
     - goimports
-
-
-    # - depguard
-    # - errname
-    # - errorlint
-    # - goconst
-    # - gocritic
-    # - lll
-    # - misspell
-    # - prealloc
-    # - revive
-    # - unconvert
-    # - usetesting
+    
