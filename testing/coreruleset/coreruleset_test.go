@@ -1,9 +1,9 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+// These benchmarks don't currently compile with TinyGo
 //go:build !tinygo
 
-// These benchmarks don't currently compile with TinyGo
 package coreruleset
 
 import (
