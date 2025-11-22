@@ -129,7 +129,7 @@ func nidUs(nid string) bool {
 		prev = curr
 	}
 
-	return !(sequence || equals)
+	return !sequence && !equals
 }
 
 func digitToInt(d byte) int {

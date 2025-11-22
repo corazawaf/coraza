@@ -3,7 +3,6 @@
 
 // Logs are currently disabled for tinygo builds.
 //go:build !tinygo
-// +build !tinygo
 
 package seclang
 

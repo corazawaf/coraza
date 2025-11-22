@@ -977,8 +977,9 @@ func TestMultipleCookiesWithSpaceBetweenThem(t *testing.T) {
 
 func collectionValues(t *testing.T, col collection.Collection) []string {
 	t.Helper()
-	var values []string
-	for _, v := range col.FindAll() {
+	all := col.FindAll()
+	values := make([]string, 0, len(all))
+	for _, v := range all {
 		values = append(values, v.Value())
 	}
 	return values

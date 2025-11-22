@@ -20,7 +20,7 @@ func checkLine(t *testing.T, lines []string, index int, expected string) {
 		auditLog := &strings.Builder{}
 		auditLog.WriteByte('\n')
 		for i, line := range lines {
-			auditLog.WriteString(fmt.Sprintf("Line %d: ", i))
+			fmt.Fprintf(auditLog, "Line %d: ", i)
 			auditLog.WriteString(line)
 			auditLog.WriteByte('\n')
 		}

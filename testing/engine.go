@@ -184,7 +184,7 @@ func (t *Test) RunPhases() error {
 }
 
 // OutputInterruptionErrors returns a list of errors
-// that occured when comparing the interruption result
+// that occurred when comparing the interruption result
 func (t *Test) OutputInterruptionErrors() []string {
 	var errors []string
 
