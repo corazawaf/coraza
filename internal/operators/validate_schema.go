@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build !tinygo && !coraza.disabled_operators.validateSchema
-// +build !tinygo,!coraza.disabled_operators.validateSchema
+
+// ,!coraza.disabled_operators.validateSchema
 
 package operators
 

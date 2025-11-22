@@ -27,7 +27,7 @@ func (jsonFormatter) MIME() string {
 
 type legacyJSONFormatter struct{}
 
-func (_ legacyJSONFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
+func (legacyJSONFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 	al2 := logLegacy{
 		Transaction: logLegacyTransaction{
 			Time:          al.Transaction().Timestamp(),
@@ -94,7 +94,7 @@ func (_ legacyJSONFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 	return jsdata, nil
 }
 
-func (_ legacyJSONFormatter) MIME() string {
+func (legacyJSONFormatter) MIME() string {
 	return "application/json; charset=utf-8"
 }
 

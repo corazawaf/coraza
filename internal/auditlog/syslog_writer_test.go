@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build !tinygo && !windows && !plan9
-// +build !tinygo,!windows,!plan9
+
+// ,!windows,!plan9
 
 package auditlog
 

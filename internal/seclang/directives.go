@@ -1250,8 +1250,8 @@ func directiveSecDataset(options *DirectiveOptions) error {
 			Str("dataset_name", name).
 			Msg("Dataset already exists, overwriting")
 	}
-	var arr []string
 	data := strings.Trim(d, "`")
+	var arr []string
 	for _, s := range strings.Split(data, "\n") {
 		s = strings.TrimSpace(s)
 		if s == "" || s[0] == '#' {

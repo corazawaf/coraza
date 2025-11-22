@@ -64,7 +64,7 @@ type AuditLogTransactionRequest interface {
 	Headers() map[string][]string
 	Body() string
 	Files() []AuditLogTransactionRequestFiles
-	Args() *collections.ConcatKeyed // A string representation of all request agruments in the format 'k=v,'
+	Args() *collections.ConcatKeyed // A string representation of all request arguments in the format 'k=v,'
 	Length() int32                  // The total size of the request in bytes
 }
 

@@ -202,7 +202,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	// based on the presence of RequestBodyBuffer.
 	if tx.requestBodyBuffer == nil {
 		// if no requestBodyInMemoryLimit has been set we default to the requestBodyLimit
-		var requestBodyInMemoryLimit int64 = w.RequestBodyLimit
+		requestBodyInMemoryLimit := w.RequestBodyLimit
 		if w.requestBodyInMemoryLimit != nil {
 			requestBodyInMemoryLimit = int64(*w.requestBodyInMemoryLimit)
 		}

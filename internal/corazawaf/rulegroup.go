@@ -47,13 +47,13 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 	}
 
 	numInferred := 0
-	rule.inferredPhases.set(rule.Phase_)
+	rule.set(rule.Phase_)
 	for _, v := range rule.variables {
 		min := minPhase(v.Variable)
 		if min != types.PhaseUnknown {
 			// We infer the earliest phase a variable used by the rule may be evaluated for use when
 			// multiphase evaluation is enabled
-			rule.inferredPhases.set(min)
+			rule.set(min)
 			numInferred++
 		} else {
 			rule.withPhaseUnknownVariable = true
@@ -159,9 +159,9 @@ RulesLoop:
 			// At the first run chainMinPhase is not set, so we look at the parent chain rule's minimal phase.
 			// If it is not reached, we skip the whole chain, there is no chance to match it.
 			if !multiphaseEvaluation ||
-				(!r.HasChain && !r.inferredPhases.has(phase)) ||
+				(!r.HasChain && !r.has(phase)) ||
 				(r.HasChain && phase < r.chainMinPhase) ||
-				(r.HasChain && !r.inferredPhases.hasOrMinor(phase) && !r.withPhaseUnknownVariable) ||
+				(r.HasChain && !r.hasOrMinor(phase) && !r.withPhaseUnknownVariable) ||
 				(r.HasChain && phase > r.Phase_) {
 				continue
 			}
@@ -198,7 +198,7 @@ RulesLoop:
 		}
 		switch tx.AllowType {
 		case corazatypes.AllowTypeUnset:
-			break
+			// No action needed
 		case corazatypes.AllowTypePhase:
 			// Allow phase requires skipping all rules of the current phase.
 			// It is done by breaking the loop and resetting AllowType for the next phase right after the loop.
