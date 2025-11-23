@@ -9,6 +9,7 @@ package http
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -21,6 +22,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/debuglog"
+	"github.com/corazawaf/coraza/v3/experimental/middleware"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
@@ -212,6 +214,7 @@ func TestChainEvaluation(t *testing.T) {
 }
 
 func errLogger(t *testing.T) func(rule types.MatchedRule) {
+	t.Helper()
 	return func(rule types.MatchedRule) {
 		t.Log(rule.ErrorLog())
 	}
@@ -648,4 +651,29 @@ func TestHandlerAPI(t *testing.T) {
 			}
 		})
 	}
+}
+
+type ctxKey struct{}
+
+func TestWrapHandlerWithOptions(t *testing.T) {
+	waf, _ := coraza.NewWAF(coraza.NewWAFConfig())
+	delegateHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+
+	ctx := context.WithValue(context.Background(), ctxKey{}, "value")
+	req, _ := http.NewRequestWithContext(ctx, "GET", "https://www.coraza.io/test", nil)
+
+	wrappedHandler := WrapHandlerWithOptions(waf, delegateHandler, Options{
+		BeforeCloseTransaction: func(tx middleware.TransactionState) {
+			ctx, ok := middleware.GetContext(tx)
+			if !ok {
+				t.Error("unexpected context")
+			}
+
+			if want, have := "value", ctx.Value(ctxKey{}).(string); want != have {
+				t.Errorf("unexpected context value, want: %s, have: %s", want, have)
+			}
+		},
+	}).(http.HandlerFunc)
+
+	wrappedHandler(httptest.NewRecorder(), req)
 }
