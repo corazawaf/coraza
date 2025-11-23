@@ -58,13 +58,13 @@ type Profile struct {
 // ExpectedOutput contains the expected output results for a test
 type ExpectedOutput struct {
 	Headers           map[string]string     `yaml:"headers,omitempty"`
-	Data              interface{}           `yaml:"data,omitempty"` // Accepts array or string
+	Data              any                   `yaml:"data,omitempty"` // Accepts array or string
 	LogContains       string                `yaml:"log_contains,omitempty"`
 	NoLogContains     string                `yaml:"no_log_contains,omitempty"`
 	ExpectError       bool                  `yaml:"expect_error,omitempty"`
 	TriggeredRules    []int                 `yaml:"triggered_rules,omitempty"`
 	NonTriggeredRules []int                 `yaml:"non_triggered_rules,omitempty"`
-	Status            interface{}           `yaml:"status,omitempty"`
+	Status            any                   `yaml:"status,omitempty"`
 	Interruption      *ExpectedInterruption `yaml:"interruption,omitempty"`
 }
 

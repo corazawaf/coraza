@@ -27,7 +27,7 @@ func newPMFromDataset(options plugintypes.OperatorOptions) (plugintypes.Operator
 		DFA:                  true,
 	})
 
-	m, _ := memoize.Do(data, func() (interface{}, error) { return builder.Build(dataset), nil })
+	m, _ := memoize.Do(data, func() (any, error) { return builder.Build(dataset), nil })
 
 	return &pm{matcher: m.(ahocorasick.AhoCorasick)}, nil
 }
