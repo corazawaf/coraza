@@ -236,7 +236,7 @@ func TestHardcodedIncludeDirectiveDDOS2(t *testing.T) {
 	}
 
 	w := bufio.NewWriter(tmpFile)
-	for i := 0; i < maxIncludeRecursion+1; i++ {
+	for range maxIncludeRecursion + 1 {
 		data := fmt.Sprintf("Include %s\n", tmpFile2.Name())
 		if _, err := w.WriteString(data); err != nil {
 			t.Fatal(err)

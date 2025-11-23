@@ -1127,7 +1127,7 @@ func TestTransactionSyncPool(t *testing.T) {
 			ID_: 1234,
 		},
 	})
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		if err := tx.Close(); err != nil {
 			t.Fatal(err)
 		}

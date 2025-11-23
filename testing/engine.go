@@ -120,7 +120,7 @@ func (t *Test) SetRawRequest(request []byte) error {
 }
 
 // SetRequestBody sets the request body
-func (t *Test) SetRequestBody(body interface{}) error {
+func (t *Test) SetRequestBody(body any) error {
 	if body == nil {
 		return nil
 	}
@@ -141,7 +141,7 @@ func (t *Test) SetRequestBody(body interface{}) error {
 }
 
 // SetResponseBody sets the request body
-func (t *Test) SetResponseBody(body interface{}) error {
+func (t *Test) SetResponseBody(body any) error {
 	if body == nil {
 		return nil
 	}
@@ -297,11 +297,11 @@ func NewTest(name string, waf coraza.WAF) *Test {
 	return t
 }
 
-func bodyToString(iface interface{}) string {
+func bodyToString(iface any) string {
 	data := ""
 	switch v := iface.(type) {
 	case []string:
-		for i := 0; i < len(v); i++ {
+		for i := range v {
 			data += fmt.Sprintf("%s\r\n", v[i])
 		}
 		data += "\r\n"
