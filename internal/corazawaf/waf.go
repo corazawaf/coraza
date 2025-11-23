@@ -197,6 +197,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.debugLogger = w.Logger.With(debuglog.Str("tx_id", tx.id))
 	tx.Timestamp = time.Now().UnixNano()
 	tx.audit = false
+	tx.ruleFilter = nil
 
 	// Always non-nil if buffers / collections were already initialized so we don't do any of them
 	// based on the presence of RequestBodyBuffer.
