@@ -47,7 +47,7 @@ func doBase64decode(src string, ext bool) string {
 	var dst strings.Builder
 	dst.Grow(slen)
 
-	for i := 0; i < slen; i++ {
+	for i := range slen {
 		currChar := src[i]
 
 		// Skip whitespaces and '.' if ext is set

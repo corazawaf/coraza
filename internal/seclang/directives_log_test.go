@@ -58,7 +58,7 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 		t.Error("failed to write audit log")
 	}
 	// we test it is a valid json
-	var j map[string]interface{}
+	var j map[string]any
 	if err := json.Unmarshal(data, &j); err != nil {
 		t.Error(err)
 	}
