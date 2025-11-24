@@ -103,16 +103,15 @@ type NamedCollectionNames struct {
 func (c *NamedCollectionNames) FindRegex(key *regexp.Regexp) []types.MatchData {
 	var res []types.MatchData
 
-	for k, data := range c.collection.data {
-		if !key.MatchString(k) {
-			continue
-		}
+	for _, data := range c.collection.data {
 		for _, d := range data {
-			res = append(res, &corazarules.MatchData{
-				Variable_: c.variable,
-				Key_:      d.key,
-				Value_:    d.key,
-			})
+			if key.MatchString(d.key) {
+				res = append(res, &corazarules.MatchData{
+					Variable_: c.variable,
+					Key_:      d.key,
+					Value_:    d.key,
+				})
+			}
 		}
 	}
 	return res
