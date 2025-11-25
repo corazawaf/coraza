@@ -813,7 +813,7 @@ func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	re, err := memoize.Do(options.Opts, func() (interface{}, error) { return regexp.Compile(options.Opts) })
+	re, err := memoize.Do(options.Opts, func() (any, error) { return regexp.Compile(options.Opts) })
 	if err != nil {
 		return err
 	}

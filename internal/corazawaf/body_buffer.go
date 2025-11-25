@@ -55,7 +55,7 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	// Checks if the limit has been already reached and if the new data will exceed it.
 	// if br.length == br.options.Limit the error will be always raised because len(data) at this point will always be >=1
 	if br.length > (br.options.Limit - int64(len(data))) {
-		// Write has been called without checking the Limit, it should never happend. Raising an error.
+		// Write has been called without checking the Limit, it should never happen. Raising an error.
 		// The buffers are private and populated only by WriteRequestBody, ReadRequestBodyFrom, and similar functions
 		// that have to perform limit checks before calling Write()
 		return 0, errors.New("limit reached while writing")

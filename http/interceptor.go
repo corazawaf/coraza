@@ -3,7 +3,6 @@
 
 // tinygo does not support net.http so this package is not needed for it
 //go:build !tinygo
-// +build !tinygo
 
 package http
 
@@ -83,7 +82,7 @@ func (i *rwInterceptor) cleanHeaders() {
 // interruption is triggered, this buffer is later used to analyse the body in
 // the response processor.
 // If the body isn't accessible or the mime type isn't processable, the response
-// body is being writen to the delegate response writer directly.
+// body is being written to the delegate response writer directly.
 func (i *rwInterceptor) Write(b []byte) (int, error) {
 	if i.tx.IsInterrupted() {
 		// if there is an interruption it must be from at least phase 4 and hence
@@ -200,7 +199,7 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 			if err != nil {
 				i.overrideWriteHeader(http.StatusInternalServerError)
 				i.flushWriteHeader()
-				return fmt.Errorf("failed to release the response body reader: %v", err)
+				return fmt.Errorf("failed to release the response body reader: %w", err)
 			}
 
 			// this is the last opportunity we have to report the resolved status code
@@ -208,7 +207,7 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 			// response status code.)
 			i.flushWriteHeader()
 			if _, err := io.Copy(w, reader); err != nil {
-				return fmt.Errorf("failed to copy the response body: %v", err)
+				return fmt.Errorf("failed to copy the response body: %w", err)
 			}
 		} else {
 			i.allowFlushing = true

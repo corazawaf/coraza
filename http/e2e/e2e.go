@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build !tinygo
-// +build !tinygo
 
 package e2e
 
@@ -274,7 +273,7 @@ func Run(cfg Config) error {
 			timeout--
 			if timeout == 0 {
 				if err != nil {
-					return fmt.Errorf("timeout waiting for response from %s, make sure the server is running. Last request error: %v", healthCheck.url, err)
+					return fmt.Errorf("timeout waiting for response from %s, make sure the server is running. Last request error: %w", healthCheck.url, err)
 				}
 
 				return fmt.Errorf("timeout waiting for response from %s, unexpected status code", healthCheck.url)

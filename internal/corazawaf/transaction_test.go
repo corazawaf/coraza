@@ -977,8 +977,9 @@ func TestMultipleCookiesWithSpaceBetweenThem(t *testing.T) {
 
 func collectionValues(t *testing.T, col collection.Collection) []string {
 	t.Helper()
-	var values []string
-	for _, v := range col.FindAll() {
+	all := col.FindAll()
+	values := make([]string, 0, len(all))
+	for _, v := range all {
 		values = append(values, v.Value())
 	}
 	return values
@@ -1126,7 +1127,7 @@ func TestTransactionSyncPool(t *testing.T) {
 			ID_: 1234,
 		},
 	})
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		if err := tx.Close(); err != nil {
 			t.Fatal(err)
 		}
