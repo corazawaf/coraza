@@ -8,6 +8,7 @@ package http
 import (
 	"context"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -245,4 +246,112 @@ SecResponseBodyAccess Off`)
 	if string(rest) != "" {
 		t.Fatalf("unexpected remaining body: %q", string(rest))
 	}
+}
+
+// TestStreamingEngineOnNoResponseBodyAccess_HTTP10 verifies that when SecRuleEngine is On but
+// SecResponseBodyAccess is Off, the WAF does not block or delay Flush() calls during
+// streaming HTTP/1.0 responses. It uses a raw TCP connection to simulate an HTTP/1.0
+// client and checks that response chunks are sent immediately as expected.
+// This validates that streaming responses work correctly without response body buffering
+// interfering, even in environments that do not support HTTP/1.1 chunked transfer encoding.
+//
+// We cannot use httptest.Server here because it always uses HTTP/1.1 internally,
+// even if the client request is HTTP/1.0. Since this test specifically targets
+// HTTP/1.0 behavior, we must bypass httptest and use a net.Listener with a custom http.Server
+// to ensure the response is sent using HTTP/1.0 semantics.
+func TestStreamingEngineOnNoResponseBodyAccess_HTTP10(t *testing.T) {
+	directives := strings.TrimSpace(`
+SecRuleEngine On
+SecResponseBodyAccess Off`)
+
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives(directives))
+	if err != nil {
+		t.Fatalf("failed to create WAF: %v", err)
+	}
+
+	// Create a listener on a random port
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("failed to create listener: %v", err)
+	}
+	defer listener.Close()
+
+	// Base address for the server
+	address := listener.Addr().String()
+
+	// Set up HTTP server with handler
+	server := &http.Server{
+		Handler: WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/plain")
+			flusher, _ := w.(http.Flusher)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("Hello "))
+			flusher.Flush()
+			time.Sleep(500 * time.Millisecond)
+			_, _ = w.Write([]byte("world!"))
+		})),
+	}
+
+	// Run server in a goroutine
+	go func() {
+		if err := server.Serve(listener); err != nil && err != http.ErrServerClosed {
+			t.Errorf("server error: %v", err)
+		}
+	}()
+
+	// Give server time to start
+	time.Sleep(100 * time.Millisecond)
+
+	// Connect client
+	conn, err := net.Dial("tcp", address)
+	if err != nil {
+		t.Fatalf("failed to connect to server: %v", err)
+	}
+	defer conn.Close()
+
+	// Send HTTP/1.0 GET request
+	_, _ = conn.Write([]byte("GET / HTTP/1.0\r\nHost: localhost\r\n\r\n"))
+
+	// Read initial response
+	// It's crucial to set a timeout shorter than the delay in the server's handler
+	err = conn.SetReadDeadline(time.Now().Add(20 * time.Millisecond))
+	if err != nil {
+		t.Fatalf("failed to set read timeout: %v", err)
+	}
+	buf := make([]byte, 1024)
+	n, err := conn.Read(buf)
+	if err != nil {
+		t.Fatalf("failed to read response: %v", err)
+	}
+
+	responseText := string(buf[:n])
+	// Verify HTTP/1.0 response
+	if !strings.HasPrefix(responseText, "HTTP/1.0 200") {
+		t.Fatalf("expected HTTP/1.0 200 OK, got: %q", responseText)
+	}
+
+	// Check that the first part "Hello " is sent immediately
+	if !strings.Contains(responseText, "Hello ") {
+		t.Fatalf("response does not contain 'Hello ': %q", responseText)
+	}
+
+	// Wait for the server to send the second part
+	time.Sleep(600 * time.Millisecond)
+	// Reset timeout for the second read
+	err = conn.SetReadDeadline(time.Now().Add(200 * time.Millisecond))
+	if err != nil {
+		t.Fatalf("failed to set read timeout: %v", err)
+	}
+	n, err = conn.Read(buf)
+	if err != nil && err != io.EOF {
+		t.Fatalf("error reading second part: %v", err)
+	}
+
+	// Check the second part
+	if n > 0 && !strings.Contains(string(buf[:n]), "world!") {
+		t.Fatalf("second part does not contain 'world!': %q", string(buf[:n]))
+	}
+
+	// Stop the server
+	server.Close()
 }
