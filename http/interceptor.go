@@ -24,6 +24,7 @@ type rwInterceptor struct {
 	proto              string
 	isWriteHeaderFlush bool
 	wroteHeader        bool
+	allowFlushing      bool
 }
 
 // WriteHeader records the status code to be sent right before the moment
@@ -50,6 +51,11 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 	}
 
 	i.wroteHeader = true
+	if !i.tx.IsResponseBodyAccessible() || !i.tx.IsResponseBodyProcessable() {
+		// if the response body isn't accessible or processable we can already allow flushing
+		// we need to set this flag before the first call to Flush()
+		i.allowFlushing = true
+	}
 }
 
 // overrideWriteHeader overrides the recorded status code
@@ -133,6 +139,16 @@ func (i *rwInterceptor) Flush() {
 	if !i.wroteHeader {
 		i.WriteHeader(http.StatusOK)
 	}
+
+	if i.allowFlushing {
+		if i.isWriteHeaderFlush {
+			// only propagate flush if the headers have been flushed already
+			if fl, ok := i.w.(http.Flusher); ok {
+				fl.Flush()
+			}
+		}
+
+	}
 }
 
 type responseWriter interface {
@@ -194,6 +210,7 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 				return fmt.Errorf("failed to copy the response body: %w", err)
 			}
 		} else {
+			i.allowFlushing = true
 			i.flushWriteHeader()
 		}
 
