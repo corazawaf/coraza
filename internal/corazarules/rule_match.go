@@ -5,6 +5,7 @@ package corazarules
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -77,6 +78,28 @@ var DisruptiveActionMap = map[string]DisruptiveAction{
 	"redirect": DisruptiveActionRedirect,
 }
 
+type errorLogJSON struct {
+	Accuracy         int              `json:"accuracy"`
+	Client           string           `json:"client"`
+	Data             string           `json:"data"`
+	Disruptive       bool             `json:"disruptive"`
+	DisruptiveAction DisruptiveAction `json:"disruptive_action"`
+	File             string           `json:"file"`
+	Line             int              `json:"line"`
+	Maturity         int              `json:"maturity"`
+	Msg              string           `json:"msg"`
+	Phase            types.RulePhase  `json:"phase"`
+	Revision         string           `json:"revision"`
+	RuleID           int              `json:"rule_id"`
+	Server           string           `json:"server"`
+	Severity         string           `json:"severity"`
+	SeverityID       int              `json:"severity_id"`
+	Tags             []string         `json:"tags"`
+	URI              string           `json:"uri"`
+	UniqueID         string           `json:"unique_id"`
+	Version          string           `json:"version"`
+}
+
 // MatchedRule contains a list of macro expanded messages,
 // matched variables and a pointer to the rule
 type MatchedRule struct {
@@ -127,6 +150,10 @@ func (mr *MatchedRule) TransactionID() string {
 
 func (mr *MatchedRule) Disruptive() bool {
 	return mr.Disruptive_
+}
+
+func (mr *MatchedRule) DisruptiveAction() DisruptiveAction {
+	return mr.DisruptiveAction_
 }
 
 func (mr *MatchedRule) Log() bool {
@@ -288,6 +315,33 @@ func (mr MatchedRule) ErrorLog() string {
 	}
 
 	return log.String()
+}
+
+func (mr MatchedRule) ErrorLogJSON() []byte {
+	r := mr.Rule()
+	jsonData, _ := json.Marshal(errorLogJSON{
+		Accuracy:         r.Accuracy(),
+		Client:           mr.ClientIPAddress(),
+		Data:             mr.Data(),
+		Disruptive:       mr.Disruptive(),
+		DisruptiveAction: mr.DisruptiveAction(),
+		File:             r.File(),
+		Line:             r.Line(),
+		Maturity:         r.Maturity(),
+		Msg:              mr.Message(),
+		Phase:            r.Phase(),
+		Revision:         r.Revision(),
+		RuleID:           r.ID(),
+		Server:           mr.ServerIPAddress(),
+		Severity:         r.Severity().String(),
+		SeverityID:       r.Severity().Int(),
+		Tags:             r.Tags(),
+		URI:              mr.URI(),
+		UniqueID:         mr.TransactionID(),
+		Version:          r.Version(),
+	})
+
+	return jsonData
 }
 
 func writeDisruptiveActionSpecificLog(log *strings.Builder, mr MatchedRule) {
