@@ -488,7 +488,7 @@ func TestAuditLog(t *testing.T) {
 }
 
 var responseBodyWriters = map[string]func(tx *Transaction, body string) (*types.Interruption, int, error){
-	"WriteResponsequestBody": func(tx *Transaction, body string) (*types.Interruption, int, error) {
+	"WriteResponseBody": func(tx *Transaction, body string) (*types.Interruption, int, error) {
 		return tx.WriteResponseBody([]byte(body))
 	},
 	"ReadResponseBodyFromKnownLen": func(tx *Transaction, body string) (*types.Interruption, int, error) {
