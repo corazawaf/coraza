@@ -22,6 +22,7 @@ jobs:
         # tinygo-version is meant to stay aligned with the one used in corazawaf/coraza-proxy-wasm
         tinygo-version: [0.39.0]
         os: [ubuntu-latest]
+        tags: ["", "memoize_builders"]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
@@ -47,8 +48,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-tinygo-
 
-      - name: Tests
-        run: tinygo test -opt=2 ./...
+      - name: Tests ${{ matrix.tags }}
+        run: tinygo test -v -opt=2 -tags=${{ matrix.tags }} ./...
 
-      - name: Tests memoize
-        run: tinygo test -opt=2 -tags=memoize_builders ./...
