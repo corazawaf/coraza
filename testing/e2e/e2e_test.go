@@ -49,3 +49,34 @@ func TestE2e(t *testing.T) {
 		t.Fatalf("e2e tests failed: %v", err)
 	}
 }
+
+func TestE2eStreamedResponse(t *testing.T) {
+	conf := coraza.NewWAFConfig()
+
+	conf = conf.
+		WithDirectives(e2e.DirectivesStreamedResponse)
+
+	waf, err := coraza.NewWAF(conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	httpbin := httpbin.New()
+
+	mux := http.NewServeMux()
+	mux.Handle("/status/200", httpbin) // Health check
+	mux.Handle("/", txhttp.WrapHandler(waf, httpbin))
+
+	// Create the server with the WAF and the reverse proxy.
+	s := httptest.NewServer(mux)
+	defer s.Close()
+
+	err = e2e.RunStreamedResponse(e2e.Config{
+		NulledBody:        false,
+		ProxiedEntrypoint: s.URL,
+		HttpbinEntrypoint: s.URL,
+	})
+	if err != nil {
+		t.Fatalf("e2e tests failed: %v", err)
+	}
+}
