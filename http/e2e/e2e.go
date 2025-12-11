@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -133,6 +132,16 @@ func expectEmptyBody() bodyExpectation {
 	}
 }
 
+func expect10Events() bodyExpectation {
+	return func(contentLength int, body []byte) error {
+		eventsCount := strings.Count(string(body), "event: ping\ndata: {\"id\":")
+		if eventsCount != 10 {
+			return fmt.Errorf("expected 10 events, got %d", eventsCount)
+		}
+		return nil
+	}
+}
+
 // HealthCheck represents a single health verification
 type HealthCheck struct {
 	name         string
@@ -242,12 +251,8 @@ func runTests(tests []TestCase) error {
 			if errReadRespBody != nil {
 				return fmt.Errorf("could not read response body: %v", err)
 			}
-			code, err := strconv.Atoi(resp.Header.Get("Content-Length"))
-			if err != nil {
-				return fmt.Errorf("could not convert content-length header to int: %v", err)
-			}
 
-			if err := test.expectedBody(code, respBody); err != nil {
+			if err := test.expectedBody(len(respBody), respBody); err != nil {
 				return err
 			}
 
@@ -387,10 +392,11 @@ func RunStreamedResponse(cfg Config) error {
 
 	tests := []TestCase{
 		{
-			name:               "Legit request",
+			name:               "Legit response stream",
 			requestURL:         baseProxyURL + "/sse?delay=1s&duration=5s&count=10",
 			requestMethod:      "GET",
 			expectedStatusCode: expectStatusCode(200),
+			expectedBody:       expect10Events(),
 		},
 	}
 
