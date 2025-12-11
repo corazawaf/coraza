@@ -43,6 +43,23 @@ type Config struct {
 	HttpbinEntrypoint string
 }
 
+type HealthCheck struct {
+	name         string
+	url          string
+	expectedCode int
+}
+
+// TestCase represents a single E2E test specification
+type TestCase struct {
+	name               string
+	requestURL         string
+	requestHeaders     map[string]string
+	requestBody        string
+	requestMethod      string
+	expectedStatusCode statusCodeExpectation
+	expectedBody       bodyExpectation
+}
+
 // statusCodeExpectation is a function that checks the status code of a response
 // Some connectors (such as coraza-proxy-wasm) might not be able to change anymore the status code at phase:4,
 // therefore, if nulledBody parameter is true, we expect a 200, but with a nulled body
@@ -127,24 +144,6 @@ func expectEmptyBody() bodyExpectation {
 	}
 }
 
-// HealthCheck represents a single health verification
-type HealthCheck struct {
-	name         string
-	url          string
-	expectedCode int
-}
-
-// TestCase represents a single E2E test specification
-type TestCase struct {
-	name               string
-	requestURL         string
-	requestHeaders     map[string]string
-	requestBody        string
-	requestMethod      string
-	expectedStatusCode statusCodeExpectation
-	expectedBody       bodyExpectation
-}
-
 // runHealthChecks executes all health checks and returns at first failure
 func runHealthChecks(healthChecks []HealthCheck) error {
 	// Check health endpoint
@@ -219,16 +218,19 @@ func runTests(tests []TestCase) error {
 			return fmt.Errorf("could not do http request: %v", err)
 		}
 
-		respBody, errReadRespBody := io.ReadAll(resp.Body)
-		resp.Body.Close()
-
+		// Check status code first so stream checks can still read the body
 		if test.expectedStatusCode != nil {
 			if err := test.expectedStatusCode(resp.StatusCode); err != nil {
+				_ = resp.Body.Close()
 				return err
 			}
 
 			fmt.Printf("[Ok] Got expected status code %d\n", resp.StatusCode)
 		}
+
+		// Default path: read the entire body and validate with expectedBody if provided
+		respBody, errReadRespBody := io.ReadAll(resp.Body)
+		resp.Body.Close()
 
 		if test.expectedBody != nil {
 			// Some servers might abort the request before sending the body (E.g. triggering a phase 3 rule with deny action)
