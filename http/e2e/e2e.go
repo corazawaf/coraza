@@ -6,6 +6,7 @@
 package e2e
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"net/http"
@@ -154,20 +155,90 @@ func expectEmptyBody() bodyExpectation {
 	}
 }
 
-func expect10Events() bodyExpectation {
-	return func(contentLength int, body []byte) error {
-		eventsCount := strings.Count(string(body), "event: ping\ndata: {\"id\":")
-		if eventsCount != 10 {
-			return fmt.Errorf("expected 10 events, got %d", eventsCount)
-		}
-		return nil
-	}
-}
-
 // StreamCheck is a callback used for validating responses that should be
 // read incrementally (e.g., streaming/SSE). The callback should read from
 // resp.Body as needed and return an error on validation failure.
 type StreamCheck func(resp *http.Response) error
+
+// VerifySSEStreamResponse ensures that response is streamed incrementally:
+// - first event arrives within firstChunkDeadline
+// - exactly expectedEvents events are received
+// - streaming headers are sane for SSE
+// - events arrive within totalDeadline
+func VerifySSEStreamResponse(resp *http.Response, expectedEvents int, firstChunkDeadline, totalDeadline time.Duration) error {
+	// Basic header checks
+	ct := strings.ToLower(resp.Header.Get("Content-Type"))
+	if !strings.Contains(ct, "text/event-stream") {
+		return fmt.Errorf("expected Content-Type text/event-stream, got %q", resp.Header.Get("Content-Type"))
+	}
+	if cl := resp.Header.Get("Content-Length"); cl != "" {
+		return fmt.Errorf("expected no Content-Length for streaming, got %q", cl)
+	}
+
+	// Sanitize deadlines
+	if totalDeadline <= 0 {
+		totalDeadline = 30 * time.Second
+	}
+	if firstChunkDeadline < 0 {
+		firstChunkDeadline = 0
+	}
+	if firstChunkDeadline > 0 && totalDeadline <= firstChunkDeadline {
+		totalDeadline = firstChunkDeadline + 5*time.Second
+	}
+
+	start := time.Now()
+	r := bufio.NewReader(resp.Body)
+
+	gotFirst := false
+	firstAt := time.Time{}
+	events := 0
+	inEvent := false
+
+	for {
+		if totalDeadline > 0 && time.Since(start) > totalDeadline {
+			_ = resp.Body.Close()
+			return fmt.Errorf("stream did not complete within total deadline %v (received %d/%d events)", totalDeadline, events, expectedEvents)
+		}
+
+		line, err := r.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return fmt.Errorf("read error: %v", err)
+		}
+
+		s := strings.TrimRight(line, "\r\n")
+		if strings.HasPrefix(s, "event:") {
+			inEvent = true
+			if !gotFirst {
+				gotFirst = true
+				firstAt = time.Now()
+			}
+		}
+		if inEvent && strings.HasPrefix(s, "data:") {
+			events++
+			inEvent = false
+			if events >= expectedEvents {
+				break
+			}
+		}
+	}
+
+	if events == 0 {
+		return fmt.Errorf("no event received; not streamed")
+	}
+	if firstChunkDeadline > 0 && gotFirst && firstAt.Sub(start) >= firstChunkDeadline {
+		return fmt.Errorf("first body chunk too late")
+	}
+	if events != expectedEvents {
+		return fmt.Errorf("expected %d events, got %d", expectedEvents, events)
+	}
+	if firstChunkDeadline > 0 && time.Since(start) <= firstChunkDeadline {
+		return fmt.Errorf("stream ended too quickly; expected progressive delivery; response probably buffered by coraza")
+	}
+	return nil
+}
 
 // runHealthChecks executes all health checks and returns at first failure
 func runHealthChecks(healthChecks []HealthCheck) error {
@@ -415,11 +486,13 @@ func RunStreamedResponse(cfg Config) error {
 
 	tests := []TestCase{
 		{
-			name:               "Legit response stream",
-			requestURL:         baseProxyURL + "/sse?delay=1s&duration=5s&count=10",
+			name:               "Legitimate SSE response stream",
+			requestURL:         baseProxyURL + "/sse?delay=1s&duration=5s&count=5",
 			requestMethod:      "GET",
 			expectedStatusCode: expectStatusCode(200),
-			expectedBody:       expect10Events(),
+			streamCheck: func(resp *http.Response) error {
+				return VerifySSEStreamResponse(resp, 5, 200*time.Millisecond, 6*time.Second)
+			},
 		},
 	}
 
