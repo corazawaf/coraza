@@ -35,12 +35,6 @@ SecRule ARGS_NAMES|ARGS "@detectXSS" "id:9411,phase:2,t:none,t:utf8toUnicode,t:u
 SecRule ARGS_NAMES|ARGS "@detectSQLi" "id:9421,phase:2,t:none,t:utf8toUnicode,t:urlDecodeUni,t:removeNulls,multiMatch,log,deny"
 SecRule REQUEST_HEADERS:User-Agent "@pm grabber masscan" "id:9131,phase:1,t:none,log,deny"
 `
-	DirectivesStreamedResponse = `
-SecRuleEngine On
-SecRequestBodyAccess Off
-# Custom rule for Coraza config check (ensuring that these configs are used)
-SecRule &REQUEST_HEADERS:coraza-e2e "@eq 0" "id:100,phase:1,deny,status:424,log,msg:'Coraza E2E - Missing header'"
-`
 )
 
 type Config struct {
@@ -450,41 +444,6 @@ func Run(cfg Config) error {
 			requestMethod:      "GET",
 			expectedStatusCode: expectStatusCode(403),
 		},
-	}
-
-	if err := runHealthChecks(healthChecks); err != nil {
-		return err
-	}
-
-	if err := runTests(tests); err != nil {
-		return err
-	}
-	return nil
-}
-
-func RunStreamedResponse(cfg Config) error {
-	healthURL := setHTTPSchemeIfMissing(cfg.HttpbinEntrypoint) + "/status/200"
-	baseProxyURL := setHTTPSchemeIfMissing(cfg.ProxiedEntrypoint)
-
-	healthChecks := []HealthCheck{
-		{
-			name:         "Health check",
-			url:          healthURL,
-			expectedCode: 200,
-		},
-		{
-			name:         "Proxy check",
-			url:          baseProxyURL,
-			expectedCode: 200,
-		},
-		{
-			name:         "Header check",
-			url:          baseProxyURL,
-			expectedCode: configCheckStatusCode,
-		},
-	}
-
-	tests := []TestCase{
 		{
 			name:               "Legitimate SSE response stream",
 			requestURL:         baseProxyURL + "/sse?delay=1s&duration=5s&count=5",
