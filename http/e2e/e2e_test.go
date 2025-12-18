@@ -5,7 +5,9 @@
 
 package e2e
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestSetHTTPSchemeIfMissing(t *testing.T) {
 	tests := map[string]struct {
@@ -26,5 +28,77 @@ func TestSetHTTPSchemeIfMissing(t *testing.T) {
 				t.Errorf("unexpected URL, want %q, have %q", want, have)
 			}
 		})
+	}
+}
+
+func Test_expectStatusCode(t *testing.T) {
+	ok := expectStatusCode(200)
+	if err := ok(200); err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if err := ok(403); err == nil {
+		t.Fatalf("expected an error when status code mismatches")
+	}
+}
+
+func Test_expectNulledBodyStatusCode(t *testing.T) {
+	// nulledBody=true → expect expectedNulledBodyCode
+	nulled := expectNulledBodyStatusCode(true, 403, 200)
+	if err := nulled(200); err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if err := nulled(403); err == nil {
+		t.Fatalf("expected error when nulledBody=true and code != expectedNulledBodyCode")
+	}
+
+	// nulledBody=false → expect expectedEmptyBodyCode
+	nonNulled := expectNulledBodyStatusCode(false, 403, 200)
+	if err := nonNulled(403); err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if err := nonNulled(200); err == nil {
+		t.Fatalf("expected error when nulledBody=false and code != expectedEmptyBodyCode")
+	}
+}
+
+func Test_expectEmptyOrNulledBody(t *testing.T) {
+	// nulled body: non-empty, all zeros
+	zeros := make([]byte, 8)
+	if err := expectEmptyOrNulledBody(true)(len(zeros), zeros); err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	// failures for nulled body case
+	if err := expectEmptyOrNulledBody(true)(0, nil); err == nil {
+		t.Fatalf("expected error (content-length 0)")
+	}
+	if err := expectEmptyOrNulledBody(true)(0, []byte{}); err == nil {
+		t.Fatalf("expected error (empty body)")
+	}
+	nonZero := append([]byte{0, 0, 0}, byte('x'))
+	if err := expectEmptyOrNulledBody(true)(len(nonZero), nonZero); err == nil {
+		t.Fatalf("expected error (non-zero byte present)")
+	}
+
+	// empty body case
+	if err := expectEmptyOrNulledBody(false)(0, nil); err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if err := expectEmptyOrNulledBody(false)(0, []byte{}); err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if err := expectEmptyOrNulledBody(false)(1, []byte{'a'}); err == nil {
+		t.Fatalf("expected error (non-empty)")
+	}
+}
+
+func Test_expectEmptyBody(t *testing.T) {
+	if err := expectEmptyBody()(0, nil); err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if err := expectEmptyBody()(0, []byte{}); err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if err := expectEmptyBody()(1, []byte{'a'}); err == nil {
+		t.Fatalf("expected error (non-empty)")
 	}
 }
