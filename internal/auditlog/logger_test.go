@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build !tinygo
-// +build !tinygo
 
 package auditlog
 
@@ -55,12 +54,6 @@ func TestGetFormatters(t *testing.T) {
 		}
 	})
 }
-
-type noopWriter struct{}
-
-func (noopWriter) Init(plugintypes.AuditLogConfig) error { return nil }
-func (noopWriter) Write(plugintypes.AuditLog) error      { return nil }
-func (noopWriter) Close() error                          { return nil }
 
 func TestRegisterAndGetWriter(t *testing.T) {
 

@@ -138,7 +138,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 							NonTriggeredRules: []int{
 								9,
 							},
-							LogContains: `Message from rule 10: ARGS:key[value] sensitive`,
+							LogContains: `Message from rule 10: ARGS_POST:key[value] sensitive`,
 						},
 					},
 				},
@@ -161,7 +161,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 								10,
 								11,
 							},
-							LogContains: `Message from rule 12: ARGS:key2[name], macro expansion: PaYlOaD`,
+							LogContains: `Message from rule 12: ARGS_POST:key2[name], macro expansion: PaYlOaD`,
 						},
 					},
 				},
@@ -171,9 +171,9 @@ var _ = profile.RegisterProfile(profile.Profile{
 	Rules: `
 SecRequestBodyAccess On
 SecRule ARGS:key "@contains sensitive" "id:9,phase:2,pass"
-SecRule ARGS:key[value] "@contains sensitive" "id:10,phase:2,pass,log,logdata:'Message from rule 10: %{MATCHED_VAR_NAME} %{MATCHED_VAR}'"
-SecRule ARGS:key2[] "@contains newValue" "id:11,phase:2,pass,setvar:'tx.macro_exp_var=%{ARGS.key2[]}',chain"
+SecRule ARGS_POST:key[value] "@contains sensitive" "id:10,phase:2,pass,log,logdata:'Message from rule 10: %{MATCHED_VAR_NAME} %{MATCHED_VAR}'"
+SecRule ARGS:key2[] "@contains newValue" "id:11,phase:2,pass,setvar:'tx.macro_exp_var=%{ARGS_POST.key2[]}',chain"
 	SecRule TX:macro_exp_var "@contains newValue"
-SecRule ARGS:key2[name] "@contains PaYlOaD" "id:12,phase:2,pass,log,logdata:'Message from rule 12: %{MATCHED_VAR_NAME}, macro expansion: %{ARGS.key2[name]}'"
+SecRule ARGS_POST:key2[name] "@contains PaYlOaD" "id:12,phase:2,pass,log,logdata:'Message from rule 12: %{MATCHED_VAR_NAME}, macro expansion: %{ARGS_POST.key2[name]}'"
 `,
 })

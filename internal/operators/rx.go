@@ -45,7 +45,7 @@ func newRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 		return newBinaryRX(options)
 	}
 
-	re, err := memoize.Do(data, func() (interface{}, error) { return regexp.Compile(data) })
+	re, err := memoize.Do(data, func() (any, error) { return regexp.Compile(data) })
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ var _ plugintypes.Operator = (*binaryRX)(nil)
 func newBinaryRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
-	re, err := memoize.Do(data, func() (interface{}, error) { return binaryregexp.Compile(data) })
+	re, err := memoize.Do(data, func() (any, error) { return binaryregexp.Compile(data) })
 	if err != nil {
 		return nil, err
 	}

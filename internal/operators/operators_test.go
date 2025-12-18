@@ -122,8 +122,8 @@ func unmarshalTests(t *testing.T, json []byte) []Test {
 	t.Helper()
 	var tests []Test
 	v := gjson.ParseBytes(json).Value()
-	for _, in := range v.([]interface{}) {
-		obj := in.(map[string]interface{})
+	for _, in := range v.([]any) {
+		obj := in.(map[string]any)
 		t := Test{}
 		if s, ok := obj["input"]; ok {
 			t.Input = s.(string)

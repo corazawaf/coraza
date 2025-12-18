@@ -6,6 +6,6 @@ package sync
 // Pool is an interface matching Go's sync.Pool. We delegate normally but reimplement for TinyGo
 // since it does not have a pooling implementation.
 type Pool interface {
-	Get() interface{}
-	Put(x interface{})
+	Get() any
+	Put(x any)
 }

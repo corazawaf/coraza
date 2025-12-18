@@ -44,6 +44,7 @@ The Coraza Project maintains implementations and plugins for the following serve
 * [Proxy WASM extension](https://github.com/corazawaf/coraza-proxy-wasm) for proxies with proxy-wasm support (e.g. Envoy) - stable, still under development
 * [HAProxy SPOE Plugin](https://github.com/corazawaf/coraza-spoa) - experimental
 * [Coraza C Library (For nginx, etc)](https://github.com/corazawaf/libcoraza) - experimental
+* [RuiQi WAF](https://github.com/HUAHUAI23/RuiQi) - Web management panel and enhanced traffic control for Coraza SPOA - experimental
 
 ## Prerequisites
 
@@ -97,7 +98,7 @@ have compatibility guarantees across minor versions - use with care.
 
 * `coraza.disabled_operators.*` - excludes the specified operator from compilation. Particularly useful if overriding
 the operator with `plugins.RegisterOperator` to reduce binary size / startup overhead.
-* `coraza.rule.multiphase_valuation` - enables evaluation of rule variables in the phases that they are ready, not
+* `coraza.rule.multiphase_evaluation` - enables evaluation of rule variables in the phases that they are ready, not
 only the phase the rule is defined for.
 * `memoize_builders` - enables memoization of builders for regex and aho-corasick
 dictionaries to reduce memory consumption in deployments that launch several coraza
@@ -105,6 +106,7 @@ instances. For more context check [this issue](https://github.com/corazawaf/cora
 * `no_fs_access` - indicates that the target environment has no access to FS in order to not leverage OS' filesystem related functionality e.g. file body buffers.
 * `coraza.rule.case_sensitive_args_keys` - enables case-sensitive matching for ARGS keys, aligning Coraza behavior with RFC 3986 specification. It will be enabled by default in the next major version.
 * `coraza.rule.no_regex_multiline` - disables enabling by default regexes multiline modifiers in `@rx` operator. It aligns with CRS expected behavior, reduces false positives and might improve performances. No multiline regexes by default will be enabled in the next major version. For more context check [this PR](https://github.com/corazawaf/coraza/pull/876)
+* `coraza.rule.mandatory_rule_id_check` - enables strict rule id check where `id` action is required for all SecRule/SecAction.
 
 ## E2E Testing
 

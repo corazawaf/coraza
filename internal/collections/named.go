@@ -56,7 +56,7 @@ func (c *NamedCollection) Remove(key string) {
 }
 
 func (c *NamedCollection) Len() int {
-	return len(c.Map.data)
+	return len(c.data)
 }
 
 // Data is an internal method used for serializing to JSON
@@ -80,7 +80,7 @@ func (c *NamedCollection) Reset() {
 	c.Map.Reset()
 }
 
-func (c *NamedCollection) Names(rv variables.RuleVariable) collection.Collection {
+func (c *NamedCollection) Names(rv variables.RuleVariable) collection.Keyed {
 	return &NamedCollectionNames{
 		variable:   rv,
 		collection: c,
@@ -101,18 +101,50 @@ type NamedCollectionNames struct {
 }
 
 func (c *NamedCollectionNames) FindRegex(key *regexp.Regexp) []types.MatchData {
-	panic("selection operator not supported")
+	var res []types.MatchData
+
+	for k, data := range c.collection.data {
+		if !key.MatchString(k) {
+			continue
+		}
+		for _, d := range data {
+			res = append(res, &corazarules.MatchData{
+				Variable_: c.variable,
+				Key_:      d.key,
+				Value_:    d.key,
+			})
+		}
+	}
+	return res
 }
 
 func (c *NamedCollectionNames) FindString(key string) []types.MatchData {
-	panic("selection operator not supported")
+	var res []types.MatchData
+
+	for k, data := range c.collection.data {
+		if k != key {
+			continue
+		}
+		for _, d := range data {
+			res = append(res, &corazarules.MatchData{
+				Variable_: c.variable,
+				Key_:      d.key,
+				Value_:    d.key,
+			})
+		}
+	}
+	return res
+}
+
+func (c *NamedCollectionNames) Get(key string) []string {
+	return c.collection.Get(key)
 }
 
 func (c *NamedCollectionNames) FindAll() []types.MatchData {
 	var res []types.MatchData
 	// Iterates over all the data in the map and adds the key element also to the Key field (The key value may be the value
 	//  that is matched, but it is still also the key of the pair and it is needed to print the matched var name)
-	for _, data := range c.collection.Map.data {
+	for _, data := range c.collection.data {
 		for _, d := range data {
 			res = append(res, &corazarules.MatchData{
 				Variable_: c.variable,
@@ -133,7 +165,7 @@ func (c *NamedCollectionNames) String() string {
 	res.WriteString(c.variable.Name())
 	res.WriteString(": ")
 	firstOccurrence := true
-	for _, data := range c.collection.Map.data {
+	for _, data := range c.collection.data {
 		for _, d := range data {
 			if !firstOccurrence {
 				res.WriteString(",")

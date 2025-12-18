@@ -31,7 +31,7 @@ func (f ocsfFormatter) getRequestArguments(al plugintypes.AuditLog) string {
 
 		argCount := len(args)
 		for i, arg := range al.Transaction().Request().Args().FindAll() {
-			argString.WriteString(fmt.Sprintf("%s=%s", arg.Key(), arg.Value()))
+			fmt.Fprintf(argString, "%s=%s", arg.Key(), arg.Value())
 			if i < argCount {
 				argString.WriteString(",")
 			}
