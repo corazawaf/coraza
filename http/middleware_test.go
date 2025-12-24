@@ -3,7 +3,6 @@
 
 // tinygo does not support net.http so this package is not needed for it
 //go:build !tinygo
-// +build !tinygo
 
 package http
 
@@ -244,7 +243,7 @@ type httpTest struct {
 
 var expectedNoBlockingHeaders = []string{"Content-Type", "Content-Length", "Coraza-Middleware", "Date"}
 
-// When an interruption occour, we are expecting that no response headers are sent back to the client.
+// When an interruption occur, we are expecting that no response headers are sent back to the client.
 var expectedBlockingHeaders = []string{"Content-Length", "Date"}
 
 func TestHttpServer(t *testing.T) {

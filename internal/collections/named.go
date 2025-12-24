@@ -56,7 +56,7 @@ func (c *NamedCollection) Remove(key string) {
 }
 
 func (c *NamedCollection) Len() int {
-	return len(c.Map.data)
+	return len(c.data)
 }
 
 // Data is an internal method used for serializing to JSON
@@ -103,7 +103,7 @@ type NamedCollectionNames struct {
 func (c *NamedCollectionNames) FindRegex(key *regexp.Regexp) []types.MatchData {
 	var res []types.MatchData
 
-	for k, data := range c.collection.Map.data {
+	for k, data := range c.collection.data {
 		if !key.MatchString(k) {
 			continue
 		}
@@ -121,7 +121,7 @@ func (c *NamedCollectionNames) FindRegex(key *regexp.Regexp) []types.MatchData {
 func (c *NamedCollectionNames) FindString(key string) []types.MatchData {
 	var res []types.MatchData
 
-	for k, data := range c.collection.Map.data {
+	for k, data := range c.collection.data {
 		if k != key {
 			continue
 		}
@@ -137,14 +137,14 @@ func (c *NamedCollectionNames) FindString(key string) []types.MatchData {
 }
 
 func (c *NamedCollectionNames) Get(key string) []string {
-	return c.collection.Map.Get(key)
+	return c.collection.Get(key)
 }
 
 func (c *NamedCollectionNames) FindAll() []types.MatchData {
 	var res []types.MatchData
 	// Iterates over all the data in the map and adds the key element also to the Key field (The key value may be the value
 	//  that is matched, but it is still also the key of the pair and it is needed to print the matched var name)
-	for _, data := range c.collection.Map.data {
+	for _, data := range c.collection.data {
 		for _, d := range data {
 			res = append(res, &corazarules.MatchData{
 				Variable_: c.variable,
@@ -165,7 +165,7 @@ func (c *NamedCollectionNames) String() string {
 	res.WriteString(c.variable.Name())
 	res.WriteString(": ")
 	firstOccurrence := true
-	for _, data := range c.collection.Map.data {
+	for _, data := range c.collection.data {
 		for _, d := range data {
 			if !firstOccurrence {
 				res.WriteString(",")

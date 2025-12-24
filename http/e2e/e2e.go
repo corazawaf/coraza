@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build !tinygo
-// +build !tinygo
 
 package e2e
 
@@ -47,6 +46,23 @@ type Config struct {
 	ProxiedEntrypoint string
 	// HttpbinEntrypoint is the upstream httpbin endpoint, used for health checking reasons.
 	HttpbinEntrypoint string
+}
+
+type healthCheck struct {
+	name         string
+	url          string
+	expectedCode int
+}
+
+// testCase represents a single E2E test specification
+type testCase struct {
+	name               string
+	requestURL         string
+	requestHeaders     map[string]string
+	requestBody        string
+	requestMethod      string
+	expectedStatusCode statusCodeExpectation
+	expectedBody       bodyExpectation
 }
 
 // statusCodeExpectation is a function that checks the status code of a response
@@ -133,6 +149,115 @@ func expectEmptyBody() bodyExpectation {
 	}
 }
 
+// runHealthChecks executes all health checks and returns at first failure
+func runHealthChecks(healthChecks []healthCheck) error {
+	// Check health endpoint
+	client := http.DefaultClient
+	for currentCheckIndex, healthCheck := range healthChecks {
+		fmt.Printf("[%d/%d] Running health check: %s\n", currentCheckIndex+1, len(healthChecks), healthCheck.name)
+		timeout := healthCheckTimeout
+
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+
+		req, _ := http.NewRequest(http.MethodGet, healthCheck.url, nil)
+		for range ticker.C {
+			if healthCheck.expectedCode != configCheckStatusCode {
+				//  The default e2e header is not added if we are checking that the expected config is loaded
+				req.Header.Add("coraza-e2e", "ok")
+			}
+			resp, err := client.Do(req)
+			fmt.Printf("[Wait] Waiting for %s. Timeout: %ds\n", healthCheck.url, timeout)
+			if err == nil {
+				_, err = io.Copy(io.Discard, resp.Body)
+				if err != nil {
+					return err
+				}
+				resp.Body.Close()
+
+				if resp.StatusCode == healthCheck.expectedCode {
+					fmt.Printf("[Ok] Check successful, got status code %d\n", resp.StatusCode)
+					break
+				}
+
+				if healthCheck.expectedCode == configCheckStatusCode {
+					return fmt.Errorf("configs check failed, got status code %d, expected %d. Please check configs used", resp.StatusCode, healthCheck.expectedCode)
+				}
+
+				fmt.Printf("[Wait] Unexpected status code %d\n", resp.StatusCode)
+			}
+			timeout--
+			if timeout == 0 {
+				if err != nil {
+					return fmt.Errorf("timeout waiting for response from %s, make sure the server is running. Last request error: %w", healthCheck.url, err)
+				}
+
+				return fmt.Errorf("timeout waiting for response from %s, unexpected status code", healthCheck.url)
+			}
+		}
+	}
+	return nil
+}
+
+// runTests executes all provided tests and validates expectations
+func runTests(tests []testCase) error {
+	// Iterate over tests
+	for currentTestIndex, test := range tests {
+		fmt.Printf("[%d/%d] Running test: %s\n", currentTestIndex+1, len(tests), test.name)
+		var requestBody io.Reader
+		if test.requestBody != "" {
+			requestBody = strings.NewReader(test.requestBody)
+		}
+
+		req, err := http.NewRequest(test.requestMethod, test.requestURL, requestBody)
+		if err != nil {
+			return fmt.Errorf("could not make http request: %v", err)
+		}
+		for k, v := range test.requestHeaders {
+			req.Header.Add(k, v)
+		}
+		req.Header.Add("coraza-e2e", "ok")
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return fmt.Errorf("could not do http request: %v", err)
+		}
+
+		// Check status code first so stream checks can still read the body
+		if test.expectedStatusCode != nil {
+			if err := test.expectedStatusCode(resp.StatusCode); err != nil {
+				_ = resp.Body.Close()
+				return err
+			}
+
+			fmt.Printf("[Ok] Got expected status code %d\n", resp.StatusCode)
+		}
+
+		// Default path: read the entire body and validate with expectedBody if provided
+		respBody, errReadRespBody := io.ReadAll(resp.Body)
+		resp.Body.Close()
+
+		if test.expectedBody != nil {
+			// Some servers might abort the request before sending the body (E.g. triggering a phase 3 rule with deny action)
+			// Therefore, we check if we properly read the body only if we expect a body to be received.
+			if errReadRespBody != nil {
+				return fmt.Errorf("could not read response body: %v", err)
+			}
+			code, err := strconv.Atoi(resp.Header.Get("Content-Length"))
+			if err != nil {
+				return fmt.Errorf("could not convert content-length header to int: %v", err)
+			}
+
+			if err := test.expectedBody(code, respBody); err != nil {
+				return err
+			}
+
+			fmt.Print("[Ok] Got expected response body\n")
+		}
+	}
+	return nil
+}
+
 // Run executes the end-to-end tests with the given configuration.
 // It performs health checks on the proxy and httpbin endpoints,
 // and then runs a series of tests to validate the behavior of the Coraza WAF.
@@ -141,11 +266,7 @@ func Run(cfg Config) error {
 	baseProxyURL := setHTTPSchemeIfMissing(cfg.ProxiedEntrypoint)
 	echoProxiedURL := setHTTPSchemeIfMissing(baseProxyURL) + "/anything"
 
-	healthChecks := []struct {
-		name         string
-		url          string
-		expectedCode int
-	}{
+	healthChecks := []healthCheck{
 		{
 			name:         "Health check",
 			url:          healthURL,
@@ -163,15 +284,7 @@ func Run(cfg Config) error {
 		},
 	}
 
-	tests := []struct {
-		name               string
-		requestURL         string
-		requestHeaders     map[string]string
-		requestBody        string
-		requestMethod      string
-		expectedStatusCode statusCodeExpectation
-		expectedBody       bodyExpectation
-	}{
+	tests := []testCase{
 		{
 			name:               "Legit request",
 			requestURL:         baseProxyURL + "?arg=arg_1",
@@ -244,102 +357,12 @@ func Run(cfg Config) error {
 		},
 	}
 
-	// Check health endpoint
-	client := http.DefaultClient
-	for currentCheckIndex, healthCheck := range healthChecks {
-		fmt.Printf("[%d/%d] Running health check: %s\n", currentCheckIndex+1, len(healthChecks), healthCheck.name)
-		timeout := healthCheckTimeout
-
-		ticker := time.NewTicker(time.Second)
-		defer ticker.Stop()
-
-		req, _ := http.NewRequest(http.MethodGet, healthCheck.url, nil)
-		for range ticker.C {
-			if healthCheck.expectedCode != configCheckStatusCode {
-				//  The default e2e header is not added if we are checking that the expected config is loaded
-				req.Header.Add("coraza-e2e", "ok")
-			}
-			resp, err := client.Do(req)
-			fmt.Printf("[Wait] Waiting for %s. Timeout: %ds\n", healthCheck.url, timeout)
-			if err == nil {
-				_, err = io.Copy(io.Discard, resp.Body)
-				if err != nil {
-					return err
-				}
-				resp.Body.Close()
-
-				if resp.StatusCode == healthCheck.expectedCode {
-					fmt.Printf("[Ok] Check successful, got status code %d\n", resp.StatusCode)
-					break
-				}
-
-				if healthCheck.expectedCode == configCheckStatusCode {
-					return fmt.Errorf("configs check failed, got status code %d, expected %d. Please check configs used", resp.StatusCode, healthCheck.expectedCode)
-				}
-
-				fmt.Printf("[Wait] Unexpected status code %d\n", resp.StatusCode)
-			}
-			timeout--
-			if timeout == 0 {
-				if err != nil {
-					return fmt.Errorf("timeout waiting for response from %s, make sure the server is running. Last request error: %v", healthCheck.url, err)
-				}
-
-				return fmt.Errorf("timeout waiting for response from %s, unexpected status code", healthCheck.url)
-			}
-		}
+	if err := runHealthChecks(healthChecks); err != nil {
+		return err
 	}
 
-	// Iterate over tests
-	for currentTestIndex, test := range tests {
-		fmt.Printf("[%d/%d] Running test: %s\n", currentTestIndex+1, len(tests), test.name)
-		var requestBody io.Reader
-		if test.requestBody != "" {
-			requestBody = strings.NewReader(test.requestBody)
-		}
-
-		req, err := http.NewRequest(test.requestMethod, test.requestURL, requestBody)
-		if err != nil {
-			return fmt.Errorf("could not make http request: %v", err)
-		}
-		for k, v := range test.requestHeaders {
-			req.Header.Add(k, v)
-		}
-		req.Header.Add("coraza-e2e", "ok")
-
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return fmt.Errorf("could not do http request: %v", err)
-		}
-
-		respBody, errReadRespBody := io.ReadAll(resp.Body)
-		resp.Body.Close()
-
-		if test.expectedStatusCode != nil {
-			if err := test.expectedStatusCode(resp.StatusCode); err != nil {
-				return err
-			}
-
-			fmt.Printf("[Ok] Got expected status code %d\n", resp.StatusCode)
-		}
-
-		if test.expectedBody != nil {
-			// Some servers might abort the request before sending the body (E.g. triggering a phase 3 rule with deny action)
-			// Therefore, we check if we properly read the body only if we expect a body to be received.
-			if errReadRespBody != nil {
-				return fmt.Errorf("could not read response body: %v", err)
-			}
-			code, err := strconv.Atoi(resp.Header.Get("Content-Length"))
-			if err != nil {
-				return fmt.Errorf("could not convert content-length header to int: %v", err)
-			}
-
-			if err := test.expectedBody(code, respBody); err != nil {
-				return err
-			}
-
-			fmt.Print("[Ok] Got expected response body\n")
-		}
+	if err := runTests(tests); err != nil {
+		return err
 	}
 	return nil
 }

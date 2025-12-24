@@ -4,7 +4,6 @@
 // Audit logs are currently disabled for tinygo
 
 //go:build !tinygo
-// +build !tinygo
 
 package testing
 

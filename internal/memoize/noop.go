@@ -5,6 +5,6 @@
 
 package memoize
 
-func Do(_ string, fn func() (interface{}, error)) (interface{}, error) {
+func Do(_ string, fn func() (any, error)) (any, error) {
 	return fn()
 }
