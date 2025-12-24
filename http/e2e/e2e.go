@@ -18,6 +18,7 @@ const (
 	configCheckStatusCode = 424
 	healthCheckTimeout    = 15 // Seconds
 
+	// Directives to be used for e2e testing
 	Directives = `
 SecRuleEngine On
 SecRequestBodyAccess On
@@ -37,20 +38,24 @@ SecRule REQUEST_HEADERS:User-Agent "@pm grabber masscan" "id:9131,phase:1,t:none
 `
 )
 
+// Config holds the configuration for running the end-to-end tests.
 type Config struct {
-	NulledBody        bool
+	// NulledBody indicates whether interruptions at response body phase are allowed to return 200 (Instead of 403), but with a body full of null bytes.
+	NulledBody bool
+	// ProxiedEntrypoint is the proxy endpoint used to perform requests.
 	ProxiedEntrypoint string
+	// HttpbinEntrypoint is the upstream httpbin endpoint, used for health checking reasons.
 	HttpbinEntrypoint string
 }
 
-type HealthCheck struct {
+type healthCheck struct {
 	name         string
 	url          string
 	expectedCode int
 }
 
-// TestCase represents a single E2E test specification
-type TestCase struct {
+// testCase represents a single E2E test specification
+type testCase struct {
 	name               string
 	requestURL         string
 	requestHeaders     map[string]string
@@ -235,7 +240,7 @@ func VerifySSEStreamResponse(resp *http.Response, expectedEvents int, firstChunk
 }
 
 // runHealthChecks executes all health checks and returns at first failure
-func runHealthChecks(healthChecks []HealthCheck) error {
+func runHealthChecks(healthChecks []healthCheck) error {
 	// Check health endpoint
 	client := http.DefaultClient
 	for currentCheckIndex, healthCheck := range healthChecks {
@@ -285,7 +290,7 @@ func runHealthChecks(healthChecks []HealthCheck) error {
 }
 
 // runTests executes all provided tests and validates expectations
-func runTests(tests []TestCase) error {
+func runTests(tests []testCase) error {
 	// Iterate over tests
 	for currentTestIndex, test := range tests {
 		fmt.Printf("[%d/%d] Running test: %s\n", currentTestIndex+1, len(tests), test.name)
@@ -350,12 +355,15 @@ func runTests(tests []TestCase) error {
 	return nil
 }
 
+// Run executes the end-to-end tests with the given configuration.
+// It performs health checks on the proxy and httpbin endpoints,
+// and then runs a series of tests to validate the behavior of the Coraza WAF.
 func Run(cfg Config) error {
 	healthURL := setHTTPSchemeIfMissing(cfg.HttpbinEntrypoint) + "/status/200"
 	baseProxyURL := setHTTPSchemeIfMissing(cfg.ProxiedEntrypoint)
 	echoProxiedURL := setHTTPSchemeIfMissing(baseProxyURL) + "/anything"
 
-	healthChecks := []HealthCheck{
+	healthChecks := []healthCheck{
 		{
 			name:         "Health check",
 			url:          healthURL,
@@ -373,7 +381,7 @@ func Run(cfg Config) error {
 		},
 	}
 
-	tests := []TestCase{
+	tests := []testCase{
 		{
 			name:               "Legit request",
 			requestURL:         baseProxyURL + "?arg=arg_1",
