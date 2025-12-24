@@ -19,6 +19,7 @@ const (
 	configCheckStatusCode = 424
 	healthCheckTimeout    = 15 // Seconds
 
+	// Directives to be used for e2e testing
 	Directives = `
 SecRuleEngine On
 SecRequestBodyAccess On
@@ -38,9 +39,13 @@ SecRule REQUEST_HEADERS:User-Agent "@pm grabber masscan" "id:9131,phase:1,t:none
 `
 )
 
+// Config holds the configuration for running the end-to-end tests.
 type Config struct {
-	NulledBody        bool
+	// NulledBody indicates whether interruptions at response body phase are allowed to return 200 (Instead of 403), but with a body full of null bytes.
+	NulledBody bool
+	// ProxiedEntrypoint is the proxy endpoint used to perform requests.
 	ProxiedEntrypoint string
+	// HttpbinEntrypoint is the upstream httpbin endpoint, used for health checking reasons.
 	HttpbinEntrypoint string
 }
 
@@ -128,6 +133,9 @@ func expectEmptyBody() bodyExpectation {
 	}
 }
 
+// Run executes the end-to-end tests with the given configuration.
+// It performs health checks on the proxy and httpbin endpoints,
+// and then runs a series of tests to validate the behavior of the Coraza WAF.
 func Run(cfg Config) error {
 	healthURL := setHTTPSchemeIfMissing(cfg.HttpbinEntrypoint) + "/status/200"
 	baseProxyURL := setHTTPSchemeIfMissing(cfg.ProxiedEntrypoint)
