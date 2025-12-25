@@ -164,7 +164,7 @@ func Test_runHealthChecks(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	healthChecks := []HealthCheck{
+	healthChecks := []healthCheck{
 		{name: "health", url: ts.URL + "/status", expectedCode: 200},
 		{name: "proxy", url: ts.URL + "/proxy", expectedCode: 200},
 		{name: "config", url: ts.URL + "/config", expectedCode: 424},
@@ -209,7 +209,7 @@ func Test_runTests(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	tests := []TestCase{
+	tests := []testCase{
 		{
 			name:               "basic 200",
 			requestURL:         ts.URL + "/ok",
