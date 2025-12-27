@@ -2,11 +2,11 @@ package e2e
 
 // Package e2e provides end-to-end testing routine for the Coraza WAF connectors.
 // It includes configurations and functions to run tests against a proxy
-// endpoint and an upstream httpbin service, validating the WAF's behavior
-// under various scenarios.
+// endpoint and an upstream [httpbingo](https://httpbingo.org/) service, validating
+// the WAF's behavior under various scenarios.
 //
-// Impotant: The proxy under test is expected to have Coraza WAF integrated and configured
-// according to the provided Directives constant in this package.
+// Important: The proxy under test is expected to have Coraza WAF integrated and configured
+// according to the provided `Directives` constant in this package.
 //
 // As a library, it exposes the Run function which accepts a Config struct
 // to customize the test parameters:

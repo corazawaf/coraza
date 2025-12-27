@@ -6,10 +6,11 @@
 package e2e
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -63,6 +64,11 @@ type testCase struct {
 	requestMethod      string
 	expectedStatusCode statusCodeExpectation
 	expectedBody       bodyExpectation
+	// streamCheck, when set, switches the runner to incremental read mode.
+	// The checker receives the live *http.Response and is responsible for
+	// consuming/validating the body progressively (e.g., verifying streaming).
+	// If streamCheck is set, expectedBody is ignored.
+	streamCheck StreamCheck
 }
 
 // statusCodeExpectation is a function that checks the status code of a response
@@ -149,6 +155,99 @@ func expectEmptyBody() bodyExpectation {
 	}
 }
 
+// StreamCheck is a callback used for validating responses that should be
+// read incrementally (e.g., streaming/SSE). The callback should read from
+// resp.Body as needed and return an error on validation failure.
+type StreamCheck func(resp *http.Response) error
+
+// verifySSEStreamResponse ensures that response is streamed incrementally:
+// - first event arrives within firstChunkDeadline
+// - exactly expectedEvents events are received
+// - streaming headers are sane for SSE
+// - events arrive within totalDeadline
+func verifySSEStreamResponse(resp *http.Response, expectedEvents int, firstChunkDeadline, totalDeadline time.Duration) error {
+	// Basic header checks
+	ct := strings.ToLower(resp.Header.Get("Content-Type"))
+	if !strings.Contains(ct, "text/event-stream") {
+		return fmt.Errorf("expected Content-Type text/event-stream, got %q", resp.Header.Get("Content-Type"))
+	}
+
+	if cl := resp.Header.Get("Content-Length"); cl != "" {
+		return fmt.Errorf("expected no Content-Length for streaming, got %q", cl)
+	}
+
+	// Sanitize deadlines
+	if totalDeadline < 0 {
+		return errors.New("totalDeadline cannot be negative")
+	}
+
+	if firstChunkDeadline < 0 {
+		return errors.New("firstChunkDeadline cannot be negative")
+	}
+
+	if totalDeadline <= firstChunkDeadline {
+		return errors.New("totalDeadline must be greater than firstChunkDeadline")
+	}
+
+	r := bufio.NewReader(resp.Body)
+
+	var (
+		start       = time.Now()
+		firstAt     = time.Time{}
+		eventsCount = 0
+		inEvent     = false
+	)
+
+	for {
+		if time.Since(start) > totalDeadline {
+			_ = resp.Body.Close()
+			return fmt.Errorf("stream did not complete within total deadline %v (received %d/%d events)", totalDeadline, eventsCount, expectedEvents)
+		}
+
+		line, err := r.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+
+			return fmt.Errorf("read error: %v", err)
+		}
+
+		if strings.HasPrefix(line, "event:") {
+			inEvent = true
+			if firstAt.IsZero() {
+				firstAt = time.Now()
+
+				if firstAt.Sub(start) >= firstChunkDeadline {
+					return fmt.Errorf("first body chunk too late")
+				}
+			}
+		}
+
+		if inEvent && strings.HasPrefix(line, "data:") {
+			eventsCount++
+			inEvent = false
+			if eventsCount >= expectedEvents {
+				break
+			}
+		}
+	}
+
+	if eventsCount == 0 {
+		return fmt.Errorf("no event received; not streamed")
+	}
+
+	if eventsCount != expectedEvents {
+		return fmt.Errorf("expected %d events, got %d", expectedEvents, eventsCount)
+	}
+
+	if time.Since(start) <= firstChunkDeadline {
+		return fmt.Errorf("stream ended too quickly; expected progressive delivery; response probably buffered by coraza")
+	}
+
+	return nil
+}
+
 // runHealthChecks executes all health checks and returns at first failure
 func runHealthChecks(healthChecks []healthCheck) error {
 	// Check health endpoint
@@ -233,6 +332,18 @@ func runTests(tests []testCase) error {
 			fmt.Printf("[Ok] Got expected status code %d\n", resp.StatusCode)
 		}
 
+		// If a streaming checker is provided, use it and skip io.ReadAll
+		if test.streamCheck != nil {
+			err := test.streamCheck(resp)
+			_ = resp.Body.Close()
+			if err != nil {
+				return err
+			}
+
+			fmt.Print("[Ok] Stream verified\n")
+			continue
+		}
+
 		// Default path: read the entire body and validate with expectedBody if provided
 		respBody, errReadRespBody := io.ReadAll(resp.Body)
 		resp.Body.Close()
@@ -243,12 +354,8 @@ func runTests(tests []testCase) error {
 			if errReadRespBody != nil {
 				return fmt.Errorf("could not read response body: %v", err)
 			}
-			code, err := strconv.Atoi(resp.Header.Get("Content-Length"))
-			if err != nil {
-				return fmt.Errorf("could not convert content-length header to int: %v", err)
-			}
 
-			if err := test.expectedBody(code, respBody); err != nil {
+			if err := test.expectedBody(len(respBody), respBody); err != nil {
 				return err
 			}
 
@@ -354,6 +461,16 @@ func Run(cfg Config) error {
 			},
 			requestMethod:      "GET",
 			expectedStatusCode: expectStatusCode(403),
+		},
+		{
+			name: "Legitimate SSE response stream",
+			// The SSE endpoint is provided by gohttpbin
+			requestURL:         baseProxyURL + "/sse?count=5&delay=1s&duration=5s",
+			requestMethod:      "GET",
+			expectedStatusCode: expectStatusCode(200),
+			streamCheck: func(resp *http.Response) error {
+				return verifySSEStreamResponse(resp, 5, 200*time.Millisecond, 6*time.Second)
+			},
 		},
 	}
 
