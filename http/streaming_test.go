@@ -301,7 +301,7 @@ SecResponseBodyAccess Off`)
 
 	// Ensure Flush was NOT propagated
 	if spy != nil && spy.flushed {
-		t.Fatalf("Flush() was propagated to the underlying response writer besides headers being blocked")
+		t.Fatalf("Flush() was propagated to the underlying response writer despite headers being blocked")
 	}
 
 	// Read the remainder of the body without timing assertions.
