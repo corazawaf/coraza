@@ -33,7 +33,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
           cache: true
 
-      - name: setup tinygo
+      - name: Setup tinygo
         uses: acifani/setup-tinygo@db56321a62b9a67922bb9ac8f9d085e218807bb3 # v2
         with:
           tinygo-version: ${{ matrix.tinygo-version }}
@@ -43,9 +43,9 @@ jobs:
         with:
           path: |
             ~/.cache/tinygo
-          key: ${{ runner.os }}-tinygo-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-tinygo-${{ matrix.tinygo-version }}-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-tinygo-
+            ${{ runner.os }}-tinygo-${{ matrix.tinygo-version }}-
 
       - name: Tests
         run: tinygo test ./...
