@@ -852,8 +852,8 @@ func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 // - I: This part is a replacement for part C. It will log the same data as C in all cases except when
 // `multipart/form-data` encoding in used. In this case, it will log a fake `application/x-www-form-urlencoded`
 // body that contains the information about parameters but not about the files. This is handy if
-// you don’t want to have (often large) files stored in your audit logs.
-// - J: This part contains information about the files uploaded using `multipart/form-data` encoding.
+// you don’t want to have (often large) files stored in your audit logs; not implemented yet.
+// - J: This part contains information about the files uploaded using `multipart/form-data` encoding; not implemented yet.
 // - K: This part contains a full list of every rule that matched (one per line) in the order they were
 // matched. The rules are fully qualified and will thus show inherited actions and default operators.
 // - Z: Final boundary, signifies the end of the entry (mandatory).
