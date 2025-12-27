@@ -7,6 +7,7 @@ package e2e
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -159,44 +160,48 @@ func expectEmptyBody() bodyExpectation {
 // resp.Body as needed and return an error on validation failure.
 type StreamCheck func(resp *http.Response) error
 
-// VerifySSEStreamResponse ensures that response is streamed incrementally:
+// verifySSEStreamResponse ensures that response is streamed incrementally:
 // - first event arrives within firstChunkDeadline
 // - exactly expectedEvents events are received
 // - streaming headers are sane for SSE
 // - events arrive within totalDeadline
-func VerifySSEStreamResponse(resp *http.Response, expectedEvents int, firstChunkDeadline, totalDeadline time.Duration) error {
+func verifySSEStreamResponse(resp *http.Response, expectedEvents int, firstChunkDeadline, totalDeadline time.Duration) error {
 	// Basic header checks
 	ct := strings.ToLower(resp.Header.Get("Content-Type"))
 	if !strings.Contains(ct, "text/event-stream") {
 		return fmt.Errorf("expected Content-Type text/event-stream, got %q", resp.Header.Get("Content-Type"))
 	}
+
 	if cl := resp.Header.Get("Content-Length"); cl != "" {
 		return fmt.Errorf("expected no Content-Length for streaming, got %q", cl)
 	}
 
 	// Sanitize deadlines
-	if totalDeadline <= 0 {
-		totalDeadline = 30 * time.Second
-	}
-	if firstChunkDeadline < 0 {
-		firstChunkDeadline = 0
-	}
-	if firstChunkDeadline > 0 && totalDeadline <= firstChunkDeadline {
-		totalDeadline = firstChunkDeadline + 5*time.Second
+	if totalDeadline < 0 {
+		return errors.New("totalDeadline cannot be negative")
 	}
 
-	start := time.Now()
+	if firstChunkDeadline < 0 {
+		return errors.New("firstChunkDeadline cannot be negative")
+	}
+
+	if totalDeadline <= firstChunkDeadline {
+		return errors.New("totalDeadline must be greater than firstChunkDeadline")
+	}
+
 	r := bufio.NewReader(resp.Body)
 
-	gotFirst := false
-	firstAt := time.Time{}
-	events := 0
-	inEvent := false
+	var (
+		start       = time.Now()
+		firstAt     = time.Time{}
+		eventsCount = 0
+		inEvent     = false
+	)
 
 	for {
-		if totalDeadline > 0 && time.Since(start) > totalDeadline {
+		if time.Since(start) > totalDeadline {
 			_ = resp.Body.Close()
-			return fmt.Errorf("stream did not complete within total deadline %v (received %d/%d events)", totalDeadline, events, expectedEvents)
+			return fmt.Errorf("stream did not complete within total deadline %v (received %d/%d events)", totalDeadline, eventsCount, expectedEvents)
 		}
 
 		line, err := r.ReadString('\n')
@@ -204,38 +209,42 @@ func VerifySSEStreamResponse(resp *http.Response, expectedEvents int, firstChunk
 			if err == io.EOF {
 				break
 			}
+
 			return fmt.Errorf("read error: %v", err)
 		}
 
-		s := strings.TrimRight(line, "\r\n")
-		if strings.HasPrefix(s, "event:") {
+		if strings.HasPrefix(line, "event:") {
 			inEvent = true
-			if !gotFirst {
-				gotFirst = true
+			if firstAt.IsZero() {
 				firstAt = time.Now()
+
+				if firstAt.Sub(start) >= firstChunkDeadline {
+					return fmt.Errorf("first body chunk too late")
+				}
 			}
 		}
-		if inEvent && strings.HasPrefix(s, "data:") {
-			events++
+
+		if inEvent && strings.HasPrefix(line, "data:") {
+			eventsCount++
 			inEvent = false
-			if events >= expectedEvents {
+			if eventsCount >= expectedEvents {
 				break
 			}
 		}
 	}
 
-	if events == 0 {
+	if eventsCount == 0 {
 		return fmt.Errorf("no event received; not streamed")
 	}
-	if firstChunkDeadline > 0 && gotFirst && firstAt.Sub(start) >= firstChunkDeadline {
-		return fmt.Errorf("first body chunk too late")
+
+	if eventsCount != expectedEvents {
+		return fmt.Errorf("expected %d events, got %d", expectedEvents, eventsCount)
 	}
-	if events != expectedEvents {
-		return fmt.Errorf("expected %d events, got %d", expectedEvents, events)
-	}
-	if firstChunkDeadline > 0 && time.Since(start) <= firstChunkDeadline {
+
+	if time.Since(start) <= firstChunkDeadline {
 		return fmt.Errorf("stream ended too quickly; expected progressive delivery; response probably buffered by coraza")
 	}
+
 	return nil
 }
 
@@ -330,6 +339,7 @@ func runTests(tests []testCase) error {
 			if err != nil {
 				return err
 			}
+
 			fmt.Print("[Ok] Stream verified\n")
 			continue
 		}
@@ -453,12 +463,13 @@ func Run(cfg Config) error {
 			expectedStatusCode: expectStatusCode(403),
 		},
 		{
-			name:               "Legitimate SSE response stream",
-			requestURL:         baseProxyURL + "/sse?delay=1s&duration=5s&count=5",
+			name: "Legitimate SSE response stream",
+			// The SSE endpoint is provided by gohttpbin
+			requestURL:         baseProxyURL + "/sse?count=5&delay=1s&duration=5s",
 			requestMethod:      "GET",
 			expectedStatusCode: expectStatusCode(200),
 			streamCheck: func(resp *http.Response) error {
-				return VerifySSEStreamResponse(resp, 5, 200*time.Millisecond, 6*time.Second)
+				return verifySSEStreamResponse(resp, 5, 200*time.Millisecond, 6*time.Second)
 			},
 		},
 	}
