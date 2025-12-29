@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Coraza is a Web Application Firewall (WAF) written in Go that implements the OWASP  Core Rule Set (CRS). It provides protection against common web application attacks.
+Coraza is a Web Application Firewall (WAF) engine written in Go that implements Seclang directives and it is compatible with OWASP CRS. It provides protection against common web application attacks.
 
 ## Code Style and Conventions
 
@@ -84,7 +84,7 @@ Coraza is a Web Application Firewall (WAF) written in Go that implements the OWA
 
 - Organize code by functionality
 - All packages should be internal unless they are part of the public API
-- Use the experimental/ directory for experimental features
+- Use the `experimental/` directory for experimental features
 - Keep tests in the same package as the code being tested
 - Use subdirectories for large packages to improve organization
 
