@@ -96,14 +96,6 @@ Coraza is a Web Application Firewall (WAF) engine written in Go that implements 
 - Keep dependencies up to date
 - Use Go modules for dependency management
 
-## Common Patterns
-
-
-### Variable Expansion
-- Support ModSecurity variable syntax (e.g., `%{TX.anomaly_score}`)
-- Handle collections and specific fields
-- Implement proper escaping
-
 ## Anti-Patterns to Avoid
 
 - Don't use global mutable state
