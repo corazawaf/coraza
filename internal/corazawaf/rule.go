@@ -376,7 +376,7 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 				// Flow actions are evaluated also if the rule engine is set to DetectionOnly
 				logger.Debug().Str("action", a.Name).Int("phase", int(phase)).Msg("Evaluating flow action for rule")
 				a.Function.Evaluate(r, tx)
-			} else if a.Function.Type() == plugintypes.ActionTypeDisruptive && tx.RuleEngine == types.RuleEngineOn {
+			} else if a.Function.Type() == plugintypes.ActionTypeDisruptive && tx.RuleEngine != types.RuleEngineOff {
 				// The parser enforces that the disruptive action is just one per rule (if more than one, only the last one is kept)
 				logger.Debug().Str("action", a.Name).Msg("Executing disruptive action for rule")
 				a.Function.Evaluate(r, tx)
