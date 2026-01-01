@@ -11,7 +11,7 @@ import (
 
 func TestEq(t *testing.T) {
 	t.Run("test invalid values return 0", func(t *testing.T) {
-		eq, _ := newEq(plugintypes.OperatorOptions{
+		eq, _ := newOperatorEq(plugintypes.OperatorOptions{
 			Arguments: "a",
 		})
 
@@ -32,7 +32,7 @@ func TestEq(t *testing.T) {
 	})
 
 	t.Run("test valid values", func(t *testing.T) {
-		eq, _ := newEq(plugintypes.OperatorOptions{
+		eq, _ := newOperatorEq(plugintypes.OperatorOptions{
 			Arguments: "1",
 		})
 

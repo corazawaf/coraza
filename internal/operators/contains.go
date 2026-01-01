@@ -18,7 +18,16 @@ type contains struct {
 
 var _ plugintypes.Operator = (*contains)(nil)
 
-func newContains(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
+// Name: contains
+// Description: Returns `true` if the parameter string is found anywhere in the input.
+// Macro expansion is performed on the parameter string before comparison.
+// ---
+// Example:
+// ```apache
+// # Detect ".php" anywhere in the request line
+// SecRule REQUEST_LINE "@contains .php" "id:150"
+// ```
+func newOperatorContains(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
 	m, err := macro.NewMacro(data)
@@ -34,5 +43,5 @@ func (o *contains) Evaluate(tx plugintypes.TransactionState, value string) bool 
 }
 
 func init() {
-	Register("contains", newContains)
+	Register("contains", newOperatorContains)
 }
