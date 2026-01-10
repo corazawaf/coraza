@@ -139,6 +139,78 @@ func ParseAuditLogParts(opts string) (AuditLogParts, error) {
 	return AuditLogParts(parts), nil
 }
 
+// ApplyAuditLogParts applies audit log parts modifications to the base parts.
+// It supports adding parts with '+' prefix (e.g., "+E") or removing parts with '-' prefix (e.g., "-E").
+// For absolute values (e.g., "ABCDEFZ"), use ParseAuditLogParts instead.
+// Parts 'A' and 'Z' are mandatory and cannot be added or removed.
+func ApplyAuditLogParts(base AuditLogParts, modification string) (AuditLogParts, error) {
+	if len(modification) == 0 {
+		return nil, errors.New("modification string cannot be empty")
+	}
+
+	// Check if this is a modification (starts with + or -)
+	if modification[0] != '+' && modification[0] != '-' {
+		// This is an absolute value, parse it directly
+		return ParseAuditLogParts(modification)
+	}
+
+	isAddition := modification[0] == '+'
+	partsToModify := modification[1:]
+
+	// Validate all parts to modify
+	for _, p := range partsToModify {
+		// Parts A and Z are mandatory and cannot be added or removed
+		if p == 'A' || p == 'Z' {
+			return nil, fmt.Errorf("audit log parts A and Z are mandatory and cannot be modified")
+		}
+		if _, ok := validOpts[AuditLogPart(p)]; !ok {
+			return nil, fmt.Errorf("invalid audit log part %q", p)
+		}
+	}
+
+	// Create a map of current parts for efficient lookup
+	partsMap := make(map[AuditLogPart]bool)
+	for _, p := range base {
+		partsMap[p] = true
+	}
+
+	if isAddition {
+		// Add new parts
+		for _, p := range partsToModify {
+			partsMap[AuditLogPart(p)] = true
+		}
+	} else {
+		// Remove parts
+		for _, p := range partsToModify {
+			delete(partsMap, AuditLogPart(p))
+		}
+	}
+
+	// Convert map back to slice, maintaining a consistent order
+	// Order: BCDEFGHIJK (as defined in the constants)
+	orderedParts := []AuditLogPart{
+		AuditLogPartRequestHeaders,
+		AuditLogPartRequestBody,
+		AuditLogPartIntermediaryResponseHeaders,
+		AuditLogPartIntermediaryResponseBody,
+		AuditLogPartResponseHeaders,
+		AuditLogPartResponseBody,
+		AuditLogPartAuditLogTrailer,
+		AuditLogPartRequestBodyAlternative,
+		AuditLogPartUploadedFiles,
+		AuditLogPartRulesMatched,
+	}
+
+	result := make([]AuditLogPart, 0, len(partsMap))
+	for _, part := range orderedParts {
+		if partsMap[part] {
+			result = append(result, part)
+		}
+	}
+
+	return AuditLogParts(result), nil
+}
+
 const (
 	// AuditLogPartRequestHeaders is the request headers part
 	AuditLogPartRequestHeaders AuditLogPart = 'B'
