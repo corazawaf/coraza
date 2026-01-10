@@ -3,7 +3,6 @@
 
 // These benchmarks don't currently compile with TinyGo
 //go:build !tinygo
-// +build !tinygo
 
 package coreruleset
 
@@ -205,6 +204,8 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	if err != nil {
 		t.Fatalf("failed to create error log: %v", err)
 	}
+	defer errorFile.Close()
+
 	errorWriter := bufio.NewWriter(errorFile)
 	conf = conf.WithErrorCallback(func(rule types.MatchedRule) {
 		msg := rule.ErrorLog() + "\n"
@@ -265,7 +266,7 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	cfg.TestOverride.Overrides.Port = &port
 
 	cfg.LoadPlatformOverrides(".ftw-overrides.yml")
-	res, err := runner.Run(cfg, tests, runner.RunnerConfig{
+	res, err := runner.Run(cfg, tests, &runner.RunnerConfig{
 		ShowTime:    false,
 		ReadTimeout: 3 * time.Second, // Defaults to 1s but looks to be not enough in the CI
 	}, output.NewOutput("quiet", os.Stdout))

@@ -41,7 +41,7 @@ func newValidateNID(options plugintypes.OperatorOptions) (plugintypes.Operator, 
 		return nil, fmt.Errorf("invalid @validateNid argument")
 	}
 
-	re, err := memoize.Do(expr, func() (interface{}, error) { return regexp.Compile(expr) })
+	re, err := memoize.Do(expr, func() (any, error) { return regexp.Compile(expr) })
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func nidUs(nid string) bool {
 		prev = curr
 	}
 
-	return !(sequence || equals)
+	return !sequence && !equals
 }
 
 func digitToInt(d byte) int {

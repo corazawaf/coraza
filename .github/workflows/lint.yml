@@ -18,10 +18,10 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
       - name: Install Go
-        uses: actions/setup-go@41dfa10bad2bb2ae585af6ee5bb4d7d973ad74ed # v5
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
         with:
-          go-version: v1.22.x
+          go-version: 1.25.x
           cache: true
       - run: go run mage.go lint

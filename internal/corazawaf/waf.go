@@ -202,7 +202,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	// based on the presence of RequestBodyBuffer.
 	if tx.requestBodyBuffer == nil {
 		// if no requestBodyInMemoryLimit has been set we default to the requestBodyLimit
-		var requestBodyInMemoryLimit int64 = w.RequestBodyLimit
+		requestBodyInMemoryLimit := w.RequestBodyLimit
 		if w.requestBodyInMemoryLimit != nil {
 			requestBodyInMemoryLimit = int64(*w.requestBodyInMemoryLimit)
 		}
@@ -242,6 +242,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.variables.duration.Set("0")
 	tx.variables.highestSeverity.Set("0")
 	tx.variables.uniqueID.Set(tx.id)
+	tx.setTimeVariables()
 
 	tx.debugLogger.Debug().Msg("Transaction started")
 
@@ -277,7 +278,7 @@ func (w *WAF) SetDebugLogPath(path string) error {
 	return nil
 }
 
-const _1gb = 1073741824
+const _1gib = 1073741824
 
 // NewWAF creates a new WAF instance with default variables
 func NewWAF() *WAF {
@@ -292,14 +293,14 @@ func NewWAF() *WAF {
 
 	waf := &WAF{
 		// Initializing pool for transactions
-		txPool: sync.NewPool(func() interface{} { return new(Transaction) }),
+		txPool: sync.NewPool(func() any { return new(Transaction) }),
 		// These defaults are unavoidable as they are zero values for the variables
 		RuleEngine:                types.RuleEngineOn,
 		RequestBodyAccess:         false,
-		RequestBodyLimit:          134217728, // Hard limit equal to _1gb
+		RequestBodyLimit:          134217728, // Hard limit equal to _1gib
 		RequestBodyLimitAction:    types.BodyLimitActionReject,
 		ResponseBodyAccess:        false,
-		ResponseBodyLimit:         524288, // Hard limit equal to _1gb
+		ResponseBodyLimit:         524288, // Hard limit equal to _1gib
 		auditLogWriter:            logWriter,
 		auditLogWriterInitialized: false,
 		AuditLogWriterConfig:      auditlog.NewConfig(),
@@ -391,8 +392,8 @@ func (w *WAF) Validate() error {
 		return errors.New("request body limit should be bigger than 0")
 	}
 
-	if w.RequestBodyLimit > _1gb {
-		return errors.New("request body limit should be at most 1GB")
+	if w.RequestBodyLimit > _1gib {
+		return errors.New("request body limit should be at most 1GiB")
 	}
 
 	if w.requestBodyInMemoryLimit != nil {
@@ -409,8 +410,8 @@ func (w *WAF) Validate() error {
 		return errors.New("response body limit should be bigger than 0")
 	}
 
-	if w.ResponseBodyLimit > _1gb {
-		return errors.New("response body limit should be at most 1GB")
+	if w.ResponseBodyLimit > _1gib {
+		return errors.New("response body limit should be at most 1GiB")
 	}
 
 	if w.ArgumentLimit <= 0 {

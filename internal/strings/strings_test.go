@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build !tinygo
-// +build !tinygo
 
 package strings
 
@@ -85,7 +84,7 @@ func TestMaybeRemoveQuotes(t *testing.T) {
 
 func TestRandomStringConcurrency(t *testing.T) {
 	// Make sure random strings don't crash under high concurrency.
-	for i := 0; i < 5000; i++ {
+	for range 5000 {
 		go RandomString(10000)
 	}
 }

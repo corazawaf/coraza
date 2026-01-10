@@ -363,9 +363,10 @@ func (trf TransactionRequestFiles) Mime() string {
 // Message contains information about the triggered
 // rules
 type Message struct {
-	Actionset_ string       `json:"actionset"`
-	Message_   string       `json:"message"`
-	Data_      *MessageData `json:"data"`
+	Actionset_    string       `json:"actionset"`
+	Message_      string       `json:"message"`
+	ErrorMessage_ string       `json:"error_message"`
+	Data_         *MessageData `json:"data"`
 }
 
 var _ plugintypes.AuditLogMessage = Message{}
@@ -376,6 +377,10 @@ func (m Message) Actionset() string {
 
 func (m Message) Message() string {
 	return m.Message_
+}
+
+func (m Message) ErrorMessage() string {
+	return m.ErrorMessage_
 }
 
 func (m Message) Data() plugintypes.AuditLogMessageData {

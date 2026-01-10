@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build tinygo
-// +build tinygo
 
 package auditlog
 
@@ -16,6 +15,9 @@ func init() {
 		return &serialWriter{}
 	})
 	RegisterWriter("https", func() plugintypes.AuditLogWriter {
+		return noopWriter{}
+	})
+	RegisterWriter("syslog", func() plugintypes.AuditLogWriter {
 		return noopWriter{}
 	})
 

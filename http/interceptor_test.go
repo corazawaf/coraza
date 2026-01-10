@@ -3,17 +3,18 @@
 
 // tinygo does not support net.http so this package is not needed for it
 //go:build !tinygo
-// +build !tinygo
 
 package http
 
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3"
@@ -330,4 +331,141 @@ func TestInterface(t *testing.T) {
 			t.Errorf("expected the wrapped ResponseWriter to implement http.Pusher")
 		}
 	})
+}
+
+func TestResponseBody(t *testing.T) {
+	const (
+		contentWithoutDataLeak    = "No data leak"
+		contentWithDataLeak       = "data leak: SQL Error!!"
+		limitActionReject         = "Reject"
+		limitActionProcessPartial = "ProcessPartial"
+	)
+	testCases := []struct {
+		name                      string
+		content                   string
+		responseBodyRelativeLimit int
+		responseBodyLimitAction   string
+		expectedStatusCode        int
+	}{
+		{
+			name:                      "OneByteLongerThanLimitAndRejects",
+			content:                   contentWithoutDataLeak,
+			responseBodyRelativeLimit: -1,
+			responseBodyLimitAction:   limitActionReject,
+			expectedStatusCode:        http.StatusInternalServerError, // used to be StatusRequestEntityTooLarge, see https://github.com/corazawaf/coraza/pull/1379
+		},
+		{
+			name:                      "JustEqualToLimitAndAccepts",
+			content:                   contentWithoutDataLeak,
+			responseBodyRelativeLimit: 0,
+			responseBodyLimitAction:   limitActionReject,
+			// NOTE: According to https://coraza.io/docs/seclang/directives/#secresponsebodylimit
+			// expectedStatusCode should be http.StatusOK, but actually it is http.StatusInternalServerError.
+			// Coraza should be fixed.
+			expectedStatusCode: http.StatusInternalServerError,
+		},
+		{
+			name:                      "OneByteShorterThanLimitAndAccepts",
+			content:                   contentWithoutDataLeak,
+			responseBodyRelativeLimit: 1,
+			responseBodyLimitAction:   limitActionReject,
+			expectedStatusCode:        http.StatusOK,
+		},
+		{
+			name:                      "DataLeakAndRejects",
+			content:                   contentWithDataLeak,
+			responseBodyRelativeLimit: 1,
+			responseBodyLimitAction:   limitActionReject,
+			expectedStatusCode:        http.StatusForbidden,
+		},
+		{
+			name:                      "LimitReachedNoDataLeakPartialProcessing",
+			content:                   contentWithoutDataLeak,
+			responseBodyRelativeLimit: -3,
+			responseBodyLimitAction:   limitActionProcessPartial,
+			expectedStatusCode:        http.StatusOK,
+		},
+		{
+			name:                      "DataLeakFoundInPartialProcessing",
+			content:                   contentWithDataLeak,
+			responseBodyRelativeLimit: -2,
+			responseBodyLimitAction:   limitActionProcessPartial,
+			expectedStatusCode:        http.StatusForbidden,
+		},
+		{
+			name:                      "DataLeakAroundLimitPartialProcessing",
+			content:                   contentWithDataLeak,
+			responseBodyRelativeLimit: -3,
+			responseBodyLimitAction:   limitActionProcessPartial,
+			expectedStatusCode:        http.StatusOK,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			bodyLenThird := len(testCase.content) / 3
+			bodyChunks := map[string][]string{
+				"BodyInOneShot":     {testCase.content},
+				"BodyInThreeChunks": {testCase.content[0:bodyLenThird], testCase.content[bodyLenThird : 2*bodyLenThird], testCase.content[2*bodyLenThird:]},
+			}
+
+			for name, chunks := range bodyChunks {
+				t.Run(name, func(t *testing.T) {
+					directives := fmt.Sprintf(`
+						SecRuleEngine On
+						SecResponseBodyAccess On
+						SecResponseBodyMimeType text/plain
+						SecResponseBodyLimit %d
+						SecResponseBodyLimitAction %s
+						SecRule RESPONSE_BODY "SQL Error" "id:100,phase:4,deny"
+					`, len(testCase.content)+testCase.responseBodyRelativeLimit, testCase.responseBodyLimitAction)
+
+					waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives(directives))
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					handler := WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						if len(chunks) == 1 {
+							w.Header().Set("Content-Length", strconv.Itoa(len(testCase.content)))
+						}
+						w.Header().Set("Content-Type", "text/plain")
+						for _, chunk := range chunks {
+							if n, err := fmt.Fprint(w, chunk); err != nil {
+								t.Logf("failed to write response: %s", err)
+							} else if got, want := n, len(chunk); got != want {
+								t.Errorf("written response byte count mismatch, got=%d, want=%d", got, want)
+							}
+							if f, ok := w.(http.Flusher); ok && len(chunks) > 1 {
+								f.Flush()
+							}
+						}
+					}))
+
+					ts := httptest.NewServer(handler)
+					t.Cleanup(ts.Close)
+
+					res, err := http.Get(ts.URL)
+					if err != nil {
+						t.Fatalf("unexpected error performing request: %v", err)
+					}
+					defer res.Body.Close()
+
+					if got, want := res.StatusCode, testCase.expectedStatusCode; got != want {
+						t.Errorf("unexpected status code, got=%d, want=%d", got, want)
+					}
+
+					if testCase.expectedStatusCode == http.StatusOK {
+						body, err := io.ReadAll(res.Body)
+						if err != nil {
+							t.Fatalf("failed to read response body: %v", err)
+						}
+						if got, want := string(body), testCase.content; got != want {
+							t.Errorf("unexpected response body, got=%q, want=%q", got, want)
+						}
+					}
+				})
+			}
+		})
+	}
 }

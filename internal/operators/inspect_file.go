@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build !tinygo && !coraza.disabled_operators.inspectFile
-// +build !tinygo,!coraza.disabled_operators.inspectFile
 
 package operators
 
@@ -32,11 +31,11 @@ func (o *inspectFile) Evaluate(tx plugintypes.TransactionState, value string) bo
 	defer cancel()
 	// Add /bin/bash to context?
 	cmd := exec.CommandContext(ctx, o.path, value)
-	_, err := cmd.CombinedOutput()
+	output, err := cmd.CombinedOutput()
 	if ctx.Err() == context.DeadlineExceeded || err != nil {
 		return false
 	}
-	return true
+	return len(output) > 0 && output[0] != '1'
 }
 
 func init() {

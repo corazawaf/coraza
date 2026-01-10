@@ -34,7 +34,8 @@ type Parser struct {
 // It will return error if any directive fails to parse
 // or the file does not exist.
 // If the path contains a *, it will be expanded to all
-// files in the directory matching the pattern
+// files in the directory matching the pattern.
+// It will return an error if there are no files matching the pattern.
 func (p *Parser) FromFile(profilePath string) error {
 	originalDir := p.currentDir
 
@@ -45,9 +46,14 @@ func (p *Parser) FromFile(profilePath string) error {
 		if err != nil {
 			return fmt.Errorf("failed to glob: %s", err.Error())
 		}
+
+		if len(files) == 0 {
+			p.options.WAF.Logger.Warn().Int("line", p.currentLine).Msg("empty glob result")
+		}
 	} else {
 		files = append(files, profilePath)
 	}
+
 	for _, profilePath := range files {
 		profilePath = strings.TrimSpace(profilePath)
 		if !strings.HasPrefix(profilePath, "/") {
@@ -153,20 +159,22 @@ func (p *Parser) evaluateLine(l string) error {
 	if len(opts) >= 3 && opts[0] == '"' && opts[len(opts)-1] == '"' {
 		opts = strings.Trim(opts, `"`)
 	}
+
 	if directive == "include" {
 		// this is a special hardcoded case
 		// we cannot add it as a directive type because there are recursion issues
 		// note a user might still include another file that includes the original file
 		// generating a DDOS attack
 		if p.includeCount >= maxIncludeRecursion {
-			return p.log(fmt.Sprintf("cannot include more than %d files", maxIncludeRecursion))
+			return p.logAndReturnErr(fmt.Sprintf("cannot include more than %d files", maxIncludeRecursion))
 		}
 		p.includeCount++
 		return p.FromFile(opts)
 	}
+
 	d, ok := directivesMap[directive]
 	if !ok || d == nil {
-		return p.log(fmt.Sprintf("unknown directive %q", directive))
+		return p.logAndReturnErr(fmt.Sprintf("unknown directive %q", directive))
 	}
 
 	p.options.Raw = l
@@ -190,7 +198,7 @@ func (p *Parser) evaluateLine(l string) error {
 	return nil
 }
 
-func (p *Parser) log(msg string) error {
+func (p *Parser) logAndReturnErr(msg string) error {
 	p.options.WAF.Logger.Error().Int("line", p.currentLine).Msg(msg)
 	return errors.New(msg)
 }

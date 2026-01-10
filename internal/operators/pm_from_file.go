@@ -45,11 +45,12 @@ func newPMFromFile(options plugintypes.OperatorOptions) (plugintypes.Operator, e
 		DFA:                  false,
 	})
 
-	m, _ := memoize.Do(strings.Join(options.Path, ",")+filepath, func() (interface{}, error) { return builder.Build(lines), nil })
+	m, _ := memoize.Do(strings.Join(options.Path, ",")+filepath, func() (any, error) { return builder.Build(lines), nil })
 
 	return &pm{matcher: m.(ahocorasick.AhoCorasick)}, nil
 }
 
 func init() {
 	Register("pmFromFile", newPMFromFile)
+	Register("pmf", newPMFromFile)
 }

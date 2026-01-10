@@ -35,22 +35,25 @@ SecRule REQUEST_HEADERS:Content-Type "^application/[a-z0-9.-]+[+]json" \
      "id:'200006',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=JSON"
 
 # Maximum request body size we will accept for buffering. If you support
-# file uploads then the value given on the first line has to be as large
-# as the largest file you are willing to accept. The second value refers
-# to the size of data, with files excluded. You want to keep that value as
-# low as practical.
-#
+# file uploads, this value must has to be as large as the largest file
+# you are willing to accept.
 SecRequestBodyLimit 13107200
 
+# Maximum request body size that Coraza will store in memory. If the body
+# size exceeds this value, it will be saved to a temporary file on disk.
 SecRequestBodyInMemoryLimit 131072
 
-# SecRequestBodyNoFilesLimit is currently not supported by Coraza
+# Maximum request body size we will accept for buffering, with files excluded.
+# You want to keep that value as low as practical.
+# Note: SecRequestBodyNoFilesLimit is currently NOT supported by Coraza
 # SecRequestBodyNoFilesLimit 131072
 
 # What to do if the request body size is above our configured limit.
 # Keep in mind that this setting will automatically be set to ProcessPartial
 # when SecRuleEngine is set to DetectionOnly mode in order to minimize
 # disruptions when initially deploying Coraza.
+# Warning: Setting this directive to ProcessPartial introduces a potential bypass
+# risk, as attackers could prepend junk data equal to or greater than the inspected body size.
 #
 SecRequestBodyLimitAction Reject
 
@@ -69,7 +72,7 @@ SecRule REQBODY_ERROR "!@eq 0" \
 #
 SecRule MULTIPART_STRICT_ERROR "!@eq 0" \
     "id:'200003',phase:2,t:none,log,deny,status:400, \
-    msg:'Multipart request body failed strict validation."
+    msg:'Multipart request body failed strict validation.'"
 
 # -- Response body handling --------------------------------------------------
 
@@ -100,7 +103,7 @@ SecResponseBodyLimitAction ProcessPartial
 
 # -- Filesystem configuration ------------------------------------------------
 
-# The location where Coraza will keep its persistent data.  This default setting 
+# The location where Coraza will keep its persistent data. This default setting 
 # is chosen due to all systems have /tmp available however, it
 # too should be updated to a place that other users can't access.
 #
@@ -115,15 +118,16 @@ SecDataDir /tmp/
 #
 #SecUploadDir /opt/coraza/var/upload/
 
-# By default, only keep the files that were determined to be unusual
-# in some way (by an external inspection script). For this to work you
-# will also need at least one file inspection rule.
+# If On, the WAF will store the uploaded files in the SecUploadDir
+# directory.
+# Note: SecUploadKeepFiles is currently NOT supported by Coraza
 #
-#SecUploadKeepFiles RelevantOnly
+#SecUploadKeepFiles Off
 
 # Uploaded files are by default created with permissions that do not allow
 # any other user to access them. You may need to relax that if you want to
 # interface Coraza to an external program (e.g., an anti-virus).
+# Note: SecUploadFileMode is currently NOT supported by Coraza
 #
 #SecUploadFileMode 0600
 
@@ -138,8 +142,7 @@ SecDataDir /tmp/
 # 3:   Info
 # 4-8: Debug
 # 9:   Trace (most verbose)
-# Most logging has not been implemented because it will be replaced with
-# advanced rule profiling options
+# 
 #SecDebugLog /opt/coraza/var/log/debug.log
 #SecDebugLogLevel 3
 
@@ -153,7 +156,7 @@ SecDataDir /tmp/
 SecAuditEngine RelevantOnly
 SecAuditLogRelevantStatus "^(?:(5|4)(0|1)[0-9])$"
 
-# Log everything we know about a transaction.
+# Define which parts of the transaction are going to be recorded in the audit log
 SecAuditLogParts ABIJDEFHZ
 
 # Use a single file for logging. This is much easier to look at, but
@@ -164,6 +167,9 @@ SecAuditLogType Serial
 # The format used to write the audit log.
 # Can be one of JSON|JsonLegacy|Native|OCSF
 SecAuditLogFormat Native
+
+# Specify the path for concurrent audit logging.
+#SecAuditLogStorageDir /opt/coraza/var/audit/
 
 # The following settings are not supported by Coraza
 # SecCookieFormat 0

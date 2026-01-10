@@ -206,9 +206,99 @@ func (v RuleVariable) Name() string {
 		return "RES_BODY_PROCESSOR_ERROR"
 	case ResBodyProcessorErrorMsg:
 		return "RES_BODY_PROCESSOR_ERROR_MSG"
+	case Time:
+		return "TIME"
+	case TimeDay:
+		return "TIME_DAY"
+	case TimeEpoch:
+		return "TIME_EPOCH"
+	case TimeHour:
+		return "TIME_HOUR"
+	case TimeMin:
+		return "TIME_MIN"
+	case TimeMon:
+		return "TIME_MON"
+	case TimeSec:
+		return "TIME_SEC"
+	case TimeWday:
+		return "TIME_WDAY"
+	case TimeYear:
+		return "TIME_YEAR"
 
 	default:
 		return "INVALID_VARIABLE"
+	}
+}
+
+// CanBeSelected returns true if the variable supports selection (ie, `:foobar`)
+func (v RuleVariable) CanBeSelected() bool {
+	switch v {
+	case ResponseHeadersNames:
+		return true
+	case RequestHeadersNames:
+		return true
+	case Args:
+		return true
+	case ArgsGet:
+		return true
+	case ArgsPost:
+		return true
+	case ArgsPath:
+		return true
+	case FilesSizes:
+		return true
+	case FilesNames:
+		return true
+	case FilesTmpContent:
+		return true
+	case MultipartFilename:
+		return true
+	case MultipartName:
+		return true
+	case MatchedVarsNames:
+		return true
+	case MatchedVars:
+		return true
+	case Files:
+		return true
+	case RequestCookies:
+		return true
+	case RequestHeaders:
+		return true
+	case ResponseHeaders:
+		return true
+	case Geo:
+		return true
+	case RequestCookiesNames:
+		return true
+	case FilesTmpNames:
+		return true
+	case ArgsNames:
+		return true
+	case ArgsGetNames:
+		return true
+	case ArgsPostNames:
+		return true
+	case TX:
+		return true
+	case Rule:
+		return true
+	case JSON:
+		return true
+	case Env:
+		return true
+	case ResponseArgs:
+		return true
+	case ResponseXML:
+		return true
+	case RequestXML:
+		return true
+	case XML:
+		return true
+	case MultipartPartHeaders:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -309,6 +399,15 @@ var rulemapRev = map[string]RuleVariable{
 	"RES_BODY_ERROR_MSG":               ResBodyErrorMsg,
 	"RES_BODY_PROCESSOR_ERROR":         ResBodyProcessorError,
 	"RES_BODY_PROCESSOR_ERROR_MSG":     ResBodyProcessorErrorMsg,
+	"TIME":                             Time,
+	"TIME_DAY":                         TimeDay,
+	"TIME_EPOCH":                       TimeEpoch,
+	"TIME_HOUR":                        TimeHour,
+	"TIME_MIN":                         TimeMin,
+	"TIME_MON":                         TimeMon,
+	"TIME_SEC":                         TimeSec,
+	"TIME_WDAY":                        TimeWday,
+	"TIME_YEAR":                        TimeYear,
 }
 
 var errUnknownVariable = errors.New("unknown variable")

@@ -24,10 +24,19 @@ type rx struct {
 var _ plugintypes.Operator = (*rx)(nil)
 
 func newRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
-	// (?sm) enables multiline and dotall mode, required by some CRS rules and matching ModSec behavior, see
-	// - https://stackoverflow.com/a/27680233
-	// - https://groups.google.com/g/golang-nuts/c/jiVdamGFU9E
-	data := fmt.Sprintf("(?sm)%s", options.Arguments)
+	var data string
+	if shouldNotUseMultilineRegexesOperatorByDefault {
+		// (?s) enables dotall mode, required by some CRS rules and matching ModSec behavior, see
+		// - https://github.com/google/re2/wiki/Syntax
+		// - Flag usage: https://groups.google.com/g/golang-nuts/c/jiVdamGFU9E
+		data = fmt.Sprintf("(?s)%s", options.Arguments)
+	} else {
+		// TODO: deprecate multiline modifier set by default in Coraza v4
+		// CRS rules will explicitly set the multiline modifier when needed
+		// Having it enabled by default can lead to false positives and less performance
+		// See https://github.com/corazawaf/coraza/pull/876
+		data = fmt.Sprintf("(?sm)%s", options.Arguments)
+	}
 
 	if matchesArbitraryBytes(data) {
 		// Use binary regex matcher if expression matches non-utf8 bytes. The binary matcher does
@@ -36,7 +45,7 @@ func newRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 		return newBinaryRX(options)
 	}
 
-	re, err := memoize.Do(data, func() (interface{}, error) { return regexp.Compile(data) })
+	re, err := memoize.Do(data, func() (any, error) { return regexp.Compile(data) })
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +81,7 @@ var _ plugintypes.Operator = (*binaryRX)(nil)
 func newBinaryRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
-	re, err := memoize.Do(data, func() (interface{}, error) { return binaryregexp.Compile(data) })
+	re, err := memoize.Do(data, func() (any, error) { return binaryregexp.Compile(data) })
 	if err != nil {
 		return nil, err
 	}
