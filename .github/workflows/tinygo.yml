@@ -32,12 +32,10 @@ jobs:
       - name: Generate Package List
         id: generate
         run: |
-          # Running 'go list ./...' to get directories
-          packages=$(go list ./...)
-          # Save output to GITHUB_OUTPUT
-          echo "packages<<EOF" >> $GITHUB_OUTPUT
-          echo "$packages" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # Running 'go list ./...' to get directories and convert to JSON array
+          packages=$(go list ./... | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          # Save JSON array output to GITHUB_OUTPUT
+          echo "packages=$packages" >> "$GITHUB_OUTPUT"
 
   test:
     needs: generate-packages
@@ -75,7 +73,7 @@ jobs:
             ${{ runner.os }}-tinygo-${{ matrix.tinygo-version }}-
 
       - name: Testing ${{ matrix.package }}
-        run: tinygo test ./${{ matrix.package }}
+        run: tinygo test ${{ matrix.package }}
 
       - name: Tests memoize for ${{ matrix.package }}
-        run: tinygo test -tags=memoize_builders ./${{ matrix.package }}
+        run: tinygo test -tags=memoize_builders ${{ matrix.package }}
