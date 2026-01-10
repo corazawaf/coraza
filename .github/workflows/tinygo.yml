@@ -15,13 +15,40 @@ on:
       - "LICENSE"
 
 jobs:
+  generate-packages:
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.generate.outputs.packages }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
+
+      - name: Install Go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
+        with:
+          go-version: 1.24.x
+          cache: true
+
+      - name: Generate Package List
+        id: generate
+        run: |
+          # Running 'go list ./...' to get directories
+          packages=$(go list ./...)
+          # Save output to GITHUB_OUTPUT
+          echo "packages<<EOF" >> $GITHUB_OUTPUT
+          echo "$packages" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
   test:
+    needs: generate-packages
     strategy:
       matrix:
         go-version: [1.24.x]
         # tinygo-version is meant to stay aligned with the one used in corazawaf/coraza-proxy-wasm
         tinygo-version: [0.40.1]
         os: [ubuntu-latest]
+        package: ${{ fromJson(needs.generate-packages.outputs.packages) }}
+
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
@@ -47,8 +74,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-tinygo-${{ matrix.tinygo-version }}-
 
-      - name: Tests
-        run: tinygo test ./...
+      - name: Testing ${{ matrix.package }}
+        run: tinygo test ./${{ matrix.package }}
 
-      - name: Tests memoize
-        run: tinygo test -tags=memoize_builders ./...
+      - name: Tests memoize for ${{ matrix.package }}
+        run: tinygo test -tags=memoize_builders ./${{ matrix.package }}
