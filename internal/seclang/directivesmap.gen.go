@@ -108,7 +108,6 @@ var directivesMap = map[string]directive{
 	"secauditlogtype":                directiveSecAuditLogType,
 	"secauditlogformat":              directiveSecAuditLogFormat,
 	"secauditlogstoragedir":          directiveSecAuditLogStorageDir,
-	"secauditlogdir":                 directiveSecAuditLogStorageDir,
 	"secauditlogdirmode":             directiveSecAuditLogDirMode,
 	"secauditlogfilemode":            directiveSecAuditLogFileMode,
 	"secauditlogrelevantstatus":      directiveSecAuditLogRelevantStatus,
