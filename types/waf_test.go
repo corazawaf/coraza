@@ -171,6 +171,20 @@ func TestApplyAuditLogParts(t *testing.T) {
 			expectedParts:    nil,
 			expectedHasError: true,
 		},
+		{
+			name:             "operator only + (no parts specified)",
+			base:             AuditLogParts("BC"),
+			modification:     "+",
+			expectedParts:    AuditLogParts("BC"),
+			expectedHasError: false,
+		},
+		{
+			name:             "operator only - (no parts specified)",
+			base:             AuditLogParts("BC"),
+			modification:     "-",
+			expectedParts:    AuditLogParts("BC"),
+			expectedHasError: false,
+		},
 	}
 
 	for _, test := range tests {

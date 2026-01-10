@@ -141,7 +141,7 @@ func ParseAuditLogParts(opts string) (AuditLogParts, error) {
 
 // ApplyAuditLogParts applies audit log parts modifications to the base parts.
 // It supports adding parts with '+' prefix (e.g., "+E") or removing parts with '-' prefix (e.g., "-E").
-// For absolute values (e.g., "ABCDEFZ"), use ParseAuditLogParts instead.
+// It also accepts absolute values (e.g., "ABCDEFZ"), which are parsed internally via ParseAuditLogParts.
 // Parts 'A' and 'Z' are mandatory and cannot be added or removed.
 func ApplyAuditLogParts(base AuditLogParts, modification string) (AuditLogParts, error) {
 	if len(modification) == 0 {
@@ -188,21 +188,8 @@ func ApplyAuditLogParts(base AuditLogParts, modification string) (AuditLogParts,
 
 	// Convert map back to slice, maintaining a consistent order
 	// Order: BCDEFGHIJK (as defined in the constants)
-	orderedParts := []AuditLogPart{
-		AuditLogPartRequestHeaders,
-		AuditLogPartRequestBody,
-		AuditLogPartIntermediaryResponseHeaders,
-		AuditLogPartIntermediaryResponseBody,
-		AuditLogPartResponseHeaders,
-		AuditLogPartResponseBody,
-		AuditLogPartAuditLogTrailer,
-		AuditLogPartRequestBodyAlternative,
-		AuditLogPartUploadedFiles,
-		AuditLogPartRulesMatched,
-	}
-
 	result := make([]AuditLogPart, 0, len(partsMap))
-	for _, part := range orderedParts {
+	for _, part := range orderedAuditLogParts {
 		if partsMap[part] {
 			result = append(result, part)
 		}
@@ -233,6 +220,21 @@ const (
 	// AuditLogPartRulesMatched is the matched rules part
 	AuditLogPartRulesMatched AuditLogPart = 'K'
 )
+
+// orderedAuditLogParts defines the canonical ordering of audit log parts (BCDEFGHIJK).
+// This package-level variable avoids repeated allocations in ApplyAuditLogParts.
+var orderedAuditLogParts = []AuditLogPart{
+	AuditLogPartRequestHeaders,
+	AuditLogPartRequestBody,
+	AuditLogPartIntermediaryResponseHeaders,
+	AuditLogPartIntermediaryResponseBody,
+	AuditLogPartResponseHeaders,
+	AuditLogPartResponseBody,
+	AuditLogPartAuditLogTrailer,
+	AuditLogPartRequestBodyAlternative,
+	AuditLogPartUploadedFiles,
+	AuditLogPartRulesMatched,
+}
 
 // Interruption is used to notify the Coraza implementation
 // that the transaction must be disrupted, for example:
