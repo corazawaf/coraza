@@ -718,16 +718,16 @@ func directiveSecAuditLogFormat(options *DirectiveOptions) error {
 }
 
 // Description: Configures the directory where concurrent audit log entries are stored.
-// Syntax: SecAuditLogDir [PATH_TO_LOG_DIR]
+// Syntax: SecAuditLogStorageDir [PATH_TO_LOG_DIR]
 // ---
 // This directive is required only when concurrent audit logging is used. Ensure that you
 // specify a file system location with adequate disk space.
 //
 // Example:
 // ```apache
-// SecAuditLogDir /tmp/auditlogs/
+// SecAuditLogStorageDir /tmp/auditlogs/
 // ```
-func directiveSecAuditLogDir(options *DirectiveOptions) error {
+func directiveSecAuditLogStorageDir(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
 	}
@@ -890,7 +890,7 @@ func directiveSecAuditLogParts(options *DirectiveOptions) error {
 // SecAuditLog logs/audit/audit.log
 // SecAuditLogParts ABCFHZ
 // SecAuditLogType concurrent
-// SecAuditLogDir logs/audit
+// SecAuditLogStorageDir logs/audit
 // SecAuditLogRelevantStatus ^(?:5|4(?!04))
 // ```
 func directiveSecAuditEngine(options *DirectiveOptions) error {
