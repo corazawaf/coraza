@@ -169,15 +169,15 @@ func ApplyAuditLogParts(base AuditLogParts, modification string) (AuditLogParts,
 	}
 
 	// Create a map of current parts for efficient lookup
-	partsMap := make(map[AuditLogPart]bool)
+	partsMap := make(map[AuditLogPart]struct{})
 	for _, p := range base {
-		partsMap[p] = true
+		partsMap[p] = struct{}{}
 	}
 
 	if isAddition {
 		// Add new parts
 		for _, p := range partsToModify {
-			partsMap[AuditLogPart(p)] = true
+			partsMap[AuditLogPart(p)] = struct{}{}
 		}
 	} else {
 		// Remove parts
@@ -203,7 +203,7 @@ func ApplyAuditLogParts(base AuditLogParts, modification string) (AuditLogParts,
 
 	result := make([]AuditLogPart, 0, len(partsMap))
 	for _, part := range orderedParts {
-		if partsMap[part] {
+		if _, ok := partsMap[part]; ok {
 			result = append(result, part)
 		}
 	}
