@@ -92,6 +92,29 @@ const (
 
 type AuditLogPart byte
 
+const (
+	// AuditLogPartRequestHeaders is the request headers part
+	AuditLogPartRequestHeaders AuditLogPart = 'B'
+	// AuditLogPartRequestBody is the request body part
+	AuditLogPartRequestBody AuditLogPart = 'C'
+	// AuditLogPartIntermediaryResponseHeaders is the intermediary response headers part
+	AuditLogPartIntermediaryResponseHeaders AuditLogPart = 'D'
+	// AuditLogPartIntermediaryResponseBody is the intermediary response body part
+	AuditLogPartIntermediaryResponseBody AuditLogPart = 'E'
+	// AuditLogPartResponseHeaders is the final response headers part
+	AuditLogPartResponseHeaders AuditLogPart = 'F'
+	// AuditLogPartResponseBody is the final response body part
+	AuditLogPartResponseBody AuditLogPart = 'G'
+	// AuditLogPartAuditLogTrailer is the audit log trailer part
+	AuditLogPartAuditLogTrailer AuditLogPart = 'H'
+	// AuditLogPartRequestBodyAlternative is the request body replaced part
+	AuditLogPartRequestBodyAlternative AuditLogPart = 'I'
+	// AuditLogPartUploadedFiles is the uploaded files part
+	AuditLogPartUploadedFiles AuditLogPart = 'J'
+	// AuditLogPartRulesMatched is the matched rules part
+	AuditLogPartRulesMatched AuditLogPart = 'K'
+)
+
 // AuditLogParts represents the parts of the audit log
 // A: Audit log header (mandatory).
 // B: Request headers.
@@ -107,18 +130,28 @@ type AuditLogPart byte
 // Z: Final boundary, signifies the end of the entry (mandatory).
 type AuditLogParts []AuditLogPart
 
-var validOpts = map[AuditLogPart]struct{}{
-	AuditLogPartRequestHeaders:              {},
-	AuditLogPartRequestBody:                 {},
-	AuditLogPartIntermediaryResponseHeaders: {},
-	AuditLogPartIntermediaryResponseBody:    {},
-	AuditLogPartResponseHeaders:             {},
-	AuditLogPartResponseBody:                {},
-	AuditLogPartAuditLogTrailer:             {},
-	AuditLogPartRequestBodyAlternative:      {},
-	AuditLogPartUploadedFiles:               {},
-	AuditLogPartRulesMatched:                {},
+// orderedAuditLogParts defines the canonical order for audit log parts (BCDEFGHIJK)
+var orderedAuditLogParts = []AuditLogPart{
+	AuditLogPartRequestHeaders,              // B
+	AuditLogPartRequestBody,                 // C
+	AuditLogPartIntermediaryResponseHeaders, // D
+	AuditLogPartIntermediaryResponseBody,    // E
+	AuditLogPartResponseHeaders,             // F
+	AuditLogPartResponseBody,                // G
+	AuditLogPartAuditLogTrailer,             // H
+	AuditLogPartRequestBodyAlternative,      // I
+	AuditLogPartUploadedFiles,               // J
+	AuditLogPartRulesMatched,                // K
 }
+
+// validOpts is generated from orderedAuditLogParts for efficient validation
+var validOpts = func() map[AuditLogPart]struct{} {
+	m := make(map[AuditLogPart]struct{}, len(orderedAuditLogParts))
+	for _, part := range orderedAuditLogParts {
+		m[part] = struct{}{}
+	}
+	return m
+}()
 
 // ParseAuditLogParts parses the audit log parts
 func ParseAuditLogParts(opts string) (AuditLogParts, error) {
@@ -186,23 +219,9 @@ func ApplyAuditLogParts(base AuditLogParts, modification string) (AuditLogParts,
 		}
 	}
 
-	// Convert map back to slice, maintaining a consistent order
-	// Order: BCDEFGHIJK (as defined in the constants)
-	orderedParts := []AuditLogPart{
-		AuditLogPartRequestHeaders,
-		AuditLogPartRequestBody,
-		AuditLogPartIntermediaryResponseHeaders,
-		AuditLogPartIntermediaryResponseBody,
-		AuditLogPartResponseHeaders,
-		AuditLogPartResponseBody,
-		AuditLogPartAuditLogTrailer,
-		AuditLogPartRequestBodyAlternative,
-		AuditLogPartUploadedFiles,
-		AuditLogPartRulesMatched,
-	}
-
+	// Convert map back to slice, maintaining the canonical order
 	result := make([]AuditLogPart, 0, len(partsMap))
-	for _, part := range orderedParts {
+	for _, part := range orderedAuditLogParts {
 		if _, ok := partsMap[part]; ok {
 			result = append(result, part)
 		}
@@ -210,29 +229,6 @@ func ApplyAuditLogParts(base AuditLogParts, modification string) (AuditLogParts,
 
 	return AuditLogParts(result), nil
 }
-
-const (
-	// AuditLogPartRequestHeaders is the request headers part
-	AuditLogPartRequestHeaders AuditLogPart = 'B'
-	// AuditLogPartRequestBody is the request body part
-	AuditLogPartRequestBody AuditLogPart = 'C'
-	// AuditLogPartIntermediaryResponseHeaders is the intermediary response headers part
-	AuditLogPartIntermediaryResponseHeaders AuditLogPart = 'D'
-	// AuditLogPartIntermediaryResponseBody is the intermediary response body part
-	AuditLogPartIntermediaryResponseBody AuditLogPart = 'E'
-	// AuditLogPartResponseHeaders is the final response headers part
-	AuditLogPartResponseHeaders AuditLogPart = 'F'
-	// AuditLogPartResponseBody is the final response body part
-	AuditLogPartResponseBody AuditLogPart = 'G'
-	// AuditLogPartAuditLogTrailer is the audit log trailer part
-	AuditLogPartAuditLogTrailer AuditLogPart = 'H'
-	// AuditLogPartRequestBodyAlternative is the request body replaced part
-	AuditLogPartRequestBodyAlternative AuditLogPart = 'I'
-	// AuditLogPartUploadedFiles is the uploaded files part
-	AuditLogPartUploadedFiles AuditLogPart = 'J'
-	// AuditLogPartRulesMatched is the matched rules part
-	AuditLogPartRulesMatched AuditLogPart = 'K'
-)
 
 // Interruption is used to notify the Coraza implementation
 // that the transaction must be disrupted, for example:
