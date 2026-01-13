@@ -188,6 +188,19 @@ func (t *Test) RunPhases() error {
 func (t *Test) OutputInterruptionErrors() []string {
 	var errors []string
 
+	// Check if interruption expectation matches actual state
+	if t.ExpectedOutput.Interruption == nil && t.transaction.IsInterrupted() {
+		errors = append(errors, fmt.Sprintf("Expected no interruption, but transaction was interrupted by rule %d with action '%s'",
+			t.transaction.Interruption().RuleID, t.transaction.Interruption().Action))
+		return errors
+	}
+
+	if t.ExpectedOutput.Interruption != nil && !t.transaction.IsInterrupted() {
+		errors = append(errors, "Expected interruption, but transaction was not interrupted")
+		return errors
+	}
+
+	// If we expect an interruption and got one, validate the details
 	if t.ExpectedOutput.Interruption != nil && t.transaction.IsInterrupted() {
 		if t.ExpectedOutput.Interruption.Action != t.transaction.Interruption().Action {
 			errors = append(errors, fmt.Sprintf("Interruption.Action: expected: '%s', got: '%s'",
