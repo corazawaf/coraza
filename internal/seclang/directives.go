@@ -1187,7 +1187,9 @@ func updateActionBySingleID(id int, actions string, options *DirectiveOptions) e
 		return err
 	}
 
-	// Check if any of the new actions are disruptive
+	// Check if any of the new actions are disruptive.
+	// Defaults to false so that when parsedActions is empty, no disruptive actions
+	// are cleared, preserving the rule's original disruptive behavior.
 	hasDisruptiveAction := false
 	for _, action := range parsedActions {
 		if action.Atype == plugintypes.ActionTypeDisruptive {
