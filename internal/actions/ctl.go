@@ -167,7 +167,7 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 		}
 		tx.AuditEngine = ae
 	case ctlAuditLogParts:
-		AuditLogParts, err := types.ParseAuditLogParts(a.value)
+		AuditLogParts, err := types.ApplyAuditLogParts(tx.AuditLogParts, a.value)
 		if err != nil {
 			tx.DebugLogger().Error().
 				Str("ctl", "AuditLogParts").
