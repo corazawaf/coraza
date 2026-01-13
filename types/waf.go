@@ -6,6 +6,7 @@ package types
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -144,15 +145,6 @@ var orderedAuditLogParts = []AuditLogPart{
 	AuditLogPartRulesMatched,                // K
 }
 
-// validOpts is generated from orderedAuditLogParts for efficient validation
-var validOpts = func() map[AuditLogPart]struct{} {
-	m := make(map[AuditLogPart]struct{}, len(orderedAuditLogParts))
-	for _, part := range orderedAuditLogParts {
-		m[part] = struct{}{}
-	}
-	return m
-}()
-
 // ParseAuditLogParts parses the audit log parts
 func ParseAuditLogParts(opts string) (AuditLogParts, error) {
 	if !strings.HasPrefix(opts, "A") {
@@ -165,7 +157,7 @@ func ParseAuditLogParts(opts string) (AuditLogParts, error) {
 
 	parts := opts[1 : len(opts)-1]
 	for _, p := range parts {
-		if _, ok := validOpts[AuditLogPart(p)]; !ok {
+		if !slices.Contains(orderedAuditLogParts, AuditLogPart(p)) {
 			return AuditLogParts(""), fmt.Errorf("invalid audit log parts %q", opts)
 		}
 	}
@@ -196,7 +188,7 @@ func ApplyAuditLogParts(base AuditLogParts, modification string) (AuditLogParts,
 		if p == 'A' || p == 'Z' {
 			return nil, fmt.Errorf("audit log parts A and Z are mandatory and cannot be modified")
 		}
-		if _, ok := validOpts[AuditLogPart(p)]; !ok {
+		if !slices.Contains(orderedAuditLogParts, AuditLogPart(p)) {
 			return nil, fmt.Errorf("invalid audit log part %q", p)
 		}
 	}
