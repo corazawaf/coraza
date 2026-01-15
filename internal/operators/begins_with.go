@@ -12,6 +12,24 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
+// Description:
+// Matches if the parameter string appears at the beginning of the input.
+// Supports macro expansion for dynamic string matching.
+//
+// Arguments:
+// String to match at the start of the input. Supports variable expansion using %{VAR} syntax.
+//
+// Returns:
+// true if the input starts with the parameter string, false otherwise
+//
+// Example:
+// ```
+// # Block requests that don't start with GET
+// SecRule REQUEST_LINE "!@beginsWith GET" "id:149,deny,log"
+//
+// # Check if URI starts with /admin
+// SecRule REQUEST_URI "@beginsWith /admin" "id:150,deny"
+// ```
 type beginsWith struct {
 	data macro.Macro
 }
