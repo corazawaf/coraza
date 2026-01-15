@@ -12,6 +12,24 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
+// Description:
+// Matches if the parameter string appears at the end of the input.
+// Supports macro expansion for dynamic string matching.
+//
+// Arguments:
+// String to match at the end of the input. Supports variable expansion using %{VAR} syntax.
+//
+// Returns:
+// true if the input ends with the parameter string, false otherwise
+//
+// Example:
+// ```
+// # Block requests that don't end with HTTP/1.1
+// SecRule REQUEST_LINE "!@endsWith HTTP/1.1" "id:152,deny,log"
+//
+// # Check if filename ends with .exe
+// SecRule REQUEST_FILENAME "@endsWith .exe" "id:154,deny"
+// ```
 type endsWith struct {
 	data macro.Macro
 }
