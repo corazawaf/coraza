@@ -3,16 +3,63 @@
 
 // Package actions implements SecLang rule actions for processing and control flow.
 //
-// Actions define what happens when a SecRule matches. They can be categorized into:
-//   - Disruptive: Stop processing and take action (deny, drop, redirect, allow)
-//   - Non-disruptive: Execute without stopping (log, setvar, msg)
-//   - Flow: Control rule execution (chain, skip, skipAfter)
-//   - Metadata: Add information to rules (id, rev, severity, tag)
-//   - Data: Store information for other actions (logdata)
+// # Overview
+//
+// Actions define how the system handles HTTP requests when rule conditions match.
+// Actions are defined as part of a SecRule or as parameters for SecAction or SecDefaultAction.
+// A rule can have no or several actions which need to be separated by a comma.
+//
+// # Action Categories
+//
+// Actions are categorized into five types:
+//
+// 1. Disruptive Actions
+//
+// Trigger Coraza operations such as blocking or allowing transactions.
+// Only one disruptive action per rule applies; if multiple are specified,
+// the last one takes precedence. Disruptive actions will NOT be executed
+// if SecRuleEngine is set to DetectionOnly.
+//
+// Examples: deny, drop, redirect, allow, block, pass
+//
+// 2. Non-disruptive Actions
+//
+// Perform operations without affecting rule flow, such as variable modifications,
+// logging, or setting metadata. These actions execute regardless of SecRuleEngine mode.
+//
+// Examples: log, nolog, setvar, msg, logdata, severity, tag
+//
+// 3. Flow Actions
+//
+// Control rule processing and execution flow. These actions determine which rules
+// are evaluated and in what order.
+//
+// Examples: chain, skip, skipAfter
+//
+// 4. Meta-data Actions
+//
+// Provide information about rules, such as identification, versioning, and classification.
+// These actions do not affect transaction processing.
+//
+// Examples: id, rev, msg, tag, severity, maturity, ver
+//
+// 5. Data Actions
+//
+// Containers that hold data for use by other actions, such as status codes
+// for blocking responses.
+//
+// Examples: status (used with deny/redirect)
+//
+// # Usage
 //
 // Actions are specified in SecRule directives as comma-separated values:
 //
 //	SecRule ARGS "@rx attack" "id:100,deny,log,msg:'Attack detected'"
+//
+// # Important Notes
+//
+// When using the allow action for allowlisting, it's recommended to add
+// ctl:ruleEngine=On to ensure the rule executes even in DetectionOnly mode.
 //
 // For the complete list of available actions, see: https://coraza.io/docs/seclang/actions/
 package actions
