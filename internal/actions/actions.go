@@ -1,6 +1,20 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package actions implements SecLang rule actions for processing and control flow.
+//
+// Actions define what happens when a SecRule matches. They can be categorized into:
+//   - Disruptive: Stop processing and take action (deny, drop, redirect, allow)
+//   - Non-disruptive: Execute without stopping (log, setvar, msg)
+//   - Flow: Control rule execution (chain, skip, skipAfter)
+//   - Metadata: Add information to rules (id, rev, severity, tag)
+//   - Data: Store information for other actions (logdata)
+//
+// Actions are specified in SecRule directives as comma-separated values:
+//
+//	SecRule ARGS "@rx attack" "id:100,deny,log,msg:'Attack detected'"
+//
+// For the complete list of available actions, see: https://coraza.io/docs/seclang/actions/
 package actions
 
 import (
