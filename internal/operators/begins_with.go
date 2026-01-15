@@ -28,7 +28,7 @@ import (
 // SecRule REQUEST_LINE "!@beginsWith GET" "id:149,deny,log"
 //
 // # Check if URI starts with /admin
-// SecRule REQUEST_URI "@beginsWith /admin" "id:150,deny"
+// SecRule REQUEST_URI "@beginsWith /admin" "id:151,deny"
 // ```
 type beginsWith struct {
 	data macro.Macro

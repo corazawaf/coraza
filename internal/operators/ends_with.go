@@ -28,7 +28,7 @@ import (
 // SecRule REQUEST_LINE "!@endsWith HTTP/1.1" "id:152,deny,log"
 //
 // # Check if filename ends with .exe
-// SecRule REQUEST_FILENAME "@endsWith .exe" "id:153,deny"
+// SecRule REQUEST_FILENAME "@endsWith .exe" "id:154,deny"
 // ```
 type endsWith struct {
 	data macro.Macro
