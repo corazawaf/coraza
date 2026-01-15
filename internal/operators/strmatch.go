@@ -13,25 +13,17 @@ import (
 )
 
 // strmatch performs string matching using substring search.
-// This operator uses Go's strings.Contains which implements the Rabin-Karp algorithm
-// with additional assembly optimizations for improved performance.
 //
-// The operator performs case-sensitive substring matching. To perform case-insensitive
-// matching, use the t:lowercase transformation.
-//
-// Performance characteristics:
-//   - Optimized for typical WAF use cases with short patterns
-//   - Uses SIMD instructions on supported platforms
-//   - Zero heap allocations
-//   - Consistent O(n) performance for most inputs
+// The operator performs case-sensitive substring matching using Go's
+// strings.Contains function. To perform case-insensitive matching, use the
+// t:lowercase transformation.
 //
 // Example usage:
 //
 //	SecRule REQUEST_HEADERS:User-Agent "@strmatch WebZIP" "id:1,deny"
 //
-// This is equivalent to ModSecurity's @strmatch operator, though ModSecurity
-// uses Boyer-Moore-Horspool while Coraza uses Rabin-Karp. Benchmarks show
-// Rabin-Karp performs better for the typical pattern sizes used in WAF rules.
+// This operator is intended to be compatible with ModSecurity's @strmatch
+// operator in terms of behavior.
 type strmatch struct {
 	data macro.Macro
 }
