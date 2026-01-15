@@ -26,7 +26,8 @@ import (
 //   - Consistent O(n) performance for most inputs
 //
 // Example usage:
-//   SecRule REQUEST_HEADERS:User-Agent "@strmatch WebZIP" "id:1,deny"
+//
+//	SecRule REQUEST_HEADERS:User-Agent "@strmatch WebZIP" "id:1,deny"
 //
 // This is equivalent to ModSecurity's @strmatch operator, though ModSecurity
 // uses Boyer-Moore-Horspool while Coraza uses Rabin-Karp. Benchmarks show

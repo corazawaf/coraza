@@ -47,11 +47,11 @@ func TestStrmatch(t *testing.T) {
 		}
 
 		testCases := map[string]bool{
-			"WebZIP":                  true,
-			"This is WebZIP client":   true,
-			"webzip":                  false,
-			"WEBZIP":                  false,
-			"Mozilla/5.0 (WebZIP)":    true,
+			"WebZIP":                true,
+			"This is WebZIP client": true,
+			"webzip":                false,
+			"WEBZIP":                false,
+			"Mozilla/5.0 (WebZIP)":  true,
 		}
 
 		for value, want := range testCases {
