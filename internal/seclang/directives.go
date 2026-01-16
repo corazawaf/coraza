@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/debuglog"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/environment"
@@ -1178,6 +1179,30 @@ func updateActionBySingleID(id int, actions string, options *DirectiveOptions) e
 	if rule == nil {
 		return fmt.Errorf("SecRuleUpdateActionById: rule \"%d\" not found", id)
 	}
+
+	// Parse actions first to check if any are disruptive
+	trimmedActions := strings.Trim(actions, "\"")
+	parsedActions, err := parseActions(options.WAF.Logger, trimmedActions)
+	if err != nil {
+		return err
+	}
+
+	// Check if any of the new actions are disruptive
+	hasDisruptiveAction := false
+	for _, action := range parsedActions {
+		if action.Atype == plugintypes.ActionTypeDisruptive {
+			hasDisruptiveAction = true
+			break
+		}
+	}
+
+	// Only clear disruptive actions if the update contains a disruptive action
+	// This matches ModSecurity behavior where SecRuleUpdateActionById replaces
+	// disruptive actions but preserves them if only non-disruptive actions are updated
+	if hasDisruptiveAction {
+		rule.ClearActionsOfType(plugintypes.ActionTypeDisruptive)
+	}
+
 	rp := RuleParser{
 		rule: rule,
 		options: RuleOptions{
@@ -1185,7 +1210,7 @@ func updateActionBySingleID(id int, actions string, options *DirectiveOptions) e
 		},
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
-	return rp.ParseActions(strings.Trim(actions, "\""))
+	return rp.ParseActions(trimmedActions)
 }
 
 // Description: Updates the target (variable) list of the specified rule(s) by tag.
