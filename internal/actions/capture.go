@@ -21,8 +21,8 @@ import (
 //
 // Example:
 // ```
-// SecRule REQUEST_BODY "^username=(\w{25,})" phase:2,capture,t:none,chain,id:105
-// SecRule TX:1 "(?:(?:a(dmin|nonymous)))"
+// SecRule REQUEST_BODY "^username=(\w{25,})" "phase:2,capture,t:none,chain,id:105"
+// 	SecRule TX:1 "(?:(?:a(dmin|nonymous)))"
 // ```
 type captureFn struct{}
 
