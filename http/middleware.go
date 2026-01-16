@@ -104,9 +104,9 @@ func WrapHandler(waf coraza.WAF, h http.Handler) http.Handler {
 		return waf.NewTransaction()
 	}
 
-	if ctxwaf, ok := waf.(experimental.WAFWithOptions); ok {
+	if ctxwaf, ok := waf.(experimental.WAF); ok {
 		newTX = func(r *http.Request) types.Transaction {
-			return ctxwaf.NewTransactionWithOptions(experimental.Options{
+			return ctxwaf.NewTransactionWithOptions(coraza.Options{
 				Context: r.Context(),
 			})
 		}
