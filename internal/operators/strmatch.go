@@ -12,18 +12,25 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
-// strmatch performs string matching using substring search.
+// Description:
+// Performs case-sensitive substring matching to check if the parameter string appears anywhere in the input.
+// This operator is compatible with ModSecurity's @strmatch operator. Supports macro expansion for dynamic string matching.
+// To perform case-insensitive matching, use the t:lowercase transformation.
 //
-// The operator performs case-sensitive substring matching using Go's
-// strings.Contains function. To perform case-insensitive matching, use the
-// t:lowercase transformation.
+// Arguments:
+// String to search for within the input. Supports variable expansion using %{VAR} syntax.
 //
-// Example usage:
+// Returns:
+// true if the parameter string is found anywhere in the input, false otherwise
 //
-//	SecRule REQUEST_HEADERS:User-Agent "@strmatch WebZIP" "id:1,deny"
+// Example:
+// ```
+// # Block requests with WebZIP user agent
+// SecRule REQUEST_HEADERS:User-Agent "@strmatch WebZIP" "id:1,deny"
 //
-// This operator is intended to be compatible with ModSecurity's @strmatch
-// operator in terms of behavior.
+// # Detect suspicious patterns in URI
+// SecRule REQUEST_URI "@strmatch ../../../" "id:2,deny,log"
+// ```
 type strmatch struct {
 	data macro.Macro
 }
