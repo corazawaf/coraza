@@ -63,6 +63,10 @@ type WAFConfig interface {
 
 	// WithRootFS configures the root file system.
 	WithRootFS(fs fs.FS) WAFConfig
+
+	// WithRuleObserver allows observing rules at load time. It is intended
+	// for logging, metrics, and audit use cases.
+	WithRuleObserver(observer func(rule types.RuleMetadata)) WAFConfig
 }
 
 // NewWAFConfig creates a new WAFConfig with the default settings.
@@ -94,6 +98,7 @@ type wafRule struct {
 // int is a signed integer type that is at least 32 bits in size (platform-dependent size).
 // We still basically assume 64-bit usage where int are big sizes.
 type wafConfig struct {
+	ruleObserver             func(rule types.RuleMetadata)
 	rules                    []wafRule
 	auditLog                 *auditLogConfig
 	requestBodyAccess        bool
@@ -105,6 +110,12 @@ type wafConfig struct {
 	debugLogger              debuglog.Logger
 	errorCallback            func(rule types.MatchedRule)
 	fsRoot                   fs.FS
+}
+
+func (c *wafConfig) WithRuleObserver(observer func(rule types.RuleMetadata)) WAFConfig {
+	ret := c.clone()
+	ret.ruleObserver = observer
+	return ret
 }
 
 func (c *wafConfig) WithRules(rules ...*corazawaf.Rule) WAFConfig {
