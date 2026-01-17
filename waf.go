@@ -44,6 +44,10 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		waf.Logger = c.debugLogger
 	}
 
+	if c.ruleObserver != nil {
+		waf.Rules.SetObserver(c.ruleObserver)
+	}
+
 	parser := seclang.NewParser(waf)
 
 	if c.fsRoot != nil {
