@@ -49,7 +49,7 @@ func TestCtl(t *testing.T) {
 		"auditLogParts": {
 			input: "auditLogParts=ABZ",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if want, have := types.AuditLogPartRequestHeaders, tx.AuditLogParts[0]; want != have {
+				if want, have := types.AuditLogPartRequestHeaders, tx.AuditLogParts[1]; want != have {
 					t.Errorf("Failed to set audit log parts, want %s, have %s", string(want), string(have))
 				}
 			},
