@@ -14,6 +14,9 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
+// ResponseBodyRecursionLimit is set to -1 to disable recursion limiting for response bodies.
+// The check in readItems (maxRecursion == 0) will never trigger with negative values,
+// effectively allowing unlimited nesting in responses where we have less control over the data.
 const ResponseBodyRecursionLimit = -1
 
 type jsonBodyProcessor struct{}
@@ -21,7 +24,9 @@ type jsonBodyProcessor struct{}
 var _ plugintypes.BodyProcessor = &jsonBodyProcessor{}
 
 func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.TransactionVariables, bpo plugintypes.BodyProcessorOptions) error {
-	// Read the entire body to store it and process it
+	// Read the entire body into memory for two purposes:
+	// 1. Store raw JSON in TX variables for operators like @validateSchema
+	// 2. Parse and flatten for ARGS_POST collection
 	s := strings.Builder{}
 	if _, err := io.Copy(&s, reader); err != nil {
 		return err
@@ -99,7 +104,10 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, res map[strin
 	arrayLen := 0
 	var iterationError error
 	if maxRecursion == 0 {
-		// we reached the limit of nesting we want to handle
+		// We reached the limit of nesting we want to handle. This protects against
+		// DoS attacks using deeply nested JSON structures (e.g., {"a":{"a":{"a":...}}}).
+		// Note: Negative maxRecursion values (like ResponseBodyRecursionLimit = -1)
+		// will never trigger this check, effectively allowing unlimited depth.
 		return errors.New("max recursion reached while reading json object")
 	}
 	json.ForEach(func(key, value gjson.Result) bool {
