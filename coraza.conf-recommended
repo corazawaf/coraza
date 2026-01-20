@@ -34,6 +34,25 @@ SecRule REQUEST_HEADERS:Content-Type "^application/json" \
 SecRule REQUEST_HEADERS:Content-Type "^application/[a-z0-9.-]+[+]json" \
      "id:'200006',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=JSON"
 
+# Enable JSON stream request body parser for NDJSON (Newline Delimited JSON) format.
+# This processor handles streaming JSON where each line contains a complete JSON object.
+# Commonly used for bulk data imports, log streaming, and batch API endpoints.
+# Each JSON object is indexed by line number: json.0.field, json.1.field, etc.
+#
+SecRule REQUEST_HEADERS:Content-Type "^application/x-ndjson" \
+     "id:'200007',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=JSONSTREAM"
+
+SecRule REQUEST_HEADERS:Content-Type "^application/jsonlines" \
+     "id:'200008',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=NDJSON"
+
+# Optional: Limit the number of JSON objects in NDJSON streams to prevent abuse
+# Uncomment and adjust the limit as needed for your bulk endpoints
+#
+#SecRule TX:jsonstream_request_line_count "@gt 1000" \
+#     "id:'200009',phase:2,t:none,deny,status:413,\
+#     msg:'Too many JSON objects in stream',\
+#     logdata:'Line count: %{TX.jsonstream_request_line_count}'"
+
 # Maximum request body size we will accept for buffering. If you support
 # file uploads, this value must has to be as large as the largest file
 # you are willing to accept.
@@ -88,6 +107,9 @@ SecResponseBodyAccess On
 # Which response MIME types do you want to inspect? You should adjust the
 # configuration below to catch documents but avoid static files
 # (e.g., images and archives).
+#
+# Note: Add 'application/json' and 'application/x-ndjson' if you want to
+# inspect JSON and NDJSON response bodies
 #
 SecResponseBodyMimeType text/plain text/html text/xml
 
