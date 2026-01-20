@@ -555,69 +555,6 @@ func TestCtlRegexColname(t *testing.T) {
 	}
 }
 
-func TestIsRegexPattern(t *testing.T) {
-	tCases := []struct {
-		name   string
-		input  string
-		expect bool
-	}{
-		{
-			name:   "valid regex pattern",
-			input:  "/user/",
-			expect: true,
-		},
-		{
-			name:   "escaped slash at end",
-			input:  `/user\/`,
-			expect: false,
-		},
-		{
-			name:   "double escaped slash at end",
-			input:  `/user\\/`,
-			expect: true,
-		},
-		{
-			name:   "triple escaped slash at end",
-			input:  `/user\\\/`,
-			expect: false,
-		},
-		{
-			name:   "empty pattern",
-			input:  "//",
-			expect: true,
-		},
-		{
-			name:   "too short",
-			input:  "/a",
-			expect: false,
-		},
-		{
-			name:   "no leading slash",
-			input:  "user/",
-			expect: false,
-		},
-		{
-			name:   "no trailing slash",
-			input:  "/user",
-			expect: false,
-		},
-		{
-			name:   "just slashes",
-			input:  "//",
-			expect: true,
-		},
-	}
-
-	for _, tCase := range tCases {
-		t.Run(tCase.name, func(t *testing.T) {
-			got := isRegexPattern(tCase.input)
-			if got != tCase.expect {
-				t.Errorf("isRegexPattern(%q) = %v, want %v", tCase.input, got, tCase.expect)
-			}
-		})
-	}
-}
-
 func TestCtlParseRange(t *testing.T) {
 	rules := []corazawaf.Rule{
 		{

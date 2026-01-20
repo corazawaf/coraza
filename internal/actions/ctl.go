@@ -380,36 +380,6 @@ func (a *ctlFn) Type() plugintypes.ActionType {
 	return plugintypes.ActionTypeNondisruptive
 }
 
-// isRegexPattern checks if a string is enclosed in forward slashes (e.g., "/pattern/")
-// and handles escaped slashes properly. Returns true only if the string starts with '/'
-// and ends with an unescaped '/'.
-func isRegexPattern(s string) bool {
-	if len(s) < 2 || s[0] != '/' {
-		return false
-	}
-	
-	// Check if the last character is '/' and it's not escaped
-	lastChar := len(s) - 1
-	if s[lastChar] != '/' {
-		return false
-	}
-	
-	// For "//" we should return true even though it's empty
-	if lastChar == 1 {
-		return true
-	}
-	
-	// Count consecutive backslashes before the last '/'
-	backslashCount := 0
-	for i := lastChar - 1; i >= 0 && s[i] == '\\'; i-- {
-		backslashCount++
-	}
-	
-	// If there's an even number of backslashes (including 0), the '/' is not escaped
-	// If there's an odd number, the '/' is escaped
-	return backslashCount%2 == 0
-}
-
 func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, string, *regexp.Regexp, error) {
 	action, ctlVal, ok := strings.Cut(data, "=")
 	if !ok {
@@ -428,8 +398,7 @@ func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, str
 	// are used. Rule authors should carefully validate regex patterns to avoid performance issues.
 	var re *regexp.Regexp
 	colkey = strings.TrimSpace(colkey)
-	if isRegexPattern(colkey) {
-		pattern := colkey[1 : len(colkey)-1]
+	if isRegex, pattern := utils.HasRegex(colkey); isRegex {
 		// Validate that the pattern is not empty
 		if len(pattern) == 0 {
 			return ctlUnknown, "", 0, "", nil, errors.New("empty regex pattern")
