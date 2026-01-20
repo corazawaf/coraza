@@ -12,6 +12,24 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
+// Description:
+// Returns true if the input value is greater than the operator parameter.
+// Both values are converted to integers before comparison. Supports macro expansion for dynamic comparison.
+//
+// Arguments:
+// Integer value to compare against. Supports variable expansion using %{VAR} syntax.
+//
+// Returns:
+// true if the input value is greater than the parameter value, false otherwise
+//
+// Example:
+// ```
+// # Deny if request header count exceeds limit
+// SecRule &REQUEST_HEADERS_NAMES "@gt 15" "id:158,deny,log"
+//
+// # Check if quantity exceeds threshold
+// SecRule ARGS:count "@gt 100" "id:159,deny"
+// ```
 type gt struct {
 	data macro.Macro
 }

@@ -13,6 +13,26 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
+// Description:
+// Validates that the byte values used in input fall into the specified range(s).
+// Returns true (violation) if any byte is found outside the allowed ranges. Useful for
+// detecting binary data, control characters, or restricting character sets.
+//
+// Arguments:
+// Comma-separated byte values or ranges (e.g., "10, 13, 32-126" for printable ASCII).
+// Ranges are specified as "start-end" and individual bytes as single numbers (0-255).
+//
+// Returns:
+// true if any byte is outside the allowed range (violation detected), false if all bytes are valid
+//
+// Example:
+// ```
+// # Allow only printable ASCII characters
+// SecRule ARGS "@validateByteRange 10, 13, 32-126" "id:189,deny,log,msg:'Invalid characters'"
+//
+// # Detect null bytes
+// SecRule REQUEST_URI "@validateByteRange 1-255" "id:190,deny"
+// ```
 type validateByteRange struct {
 	validBytes [256]bool // array, not slice, so don't pass as-is to functions
 }
