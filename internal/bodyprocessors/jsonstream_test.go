@@ -394,6 +394,221 @@ func TestJSONStreamProcessResponse(t *testing.T) {
 	}
 }
 
+func TestJSONSequenceRFC7464(t *testing.T) {
+	// RFC 7464 format uses ASCII RS (0x1E) as record separator
+	const RS = "\x1e"
+
+	input := RS + `{"name": "John", "age": 30}` + "\n" +
+		RS + `{"name": "Jane", "age": 25}` + "\n" +
+		RS + `{"name": "Bob", "age": 35}` + "\n"
+
+	jsp := jsonstreamProcessor(t)
+	v := corazawaf.NewTransactionVariables()
+
+	err := jsp.ProcessRequest(strings.NewReader(input), v, plugintypes.BodyProcessorOptions{})
+
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+
+	argsPost := v.ArgsPost()
+
+	// Check all three records
+	tests := []struct {
+		record int
+		name   string
+		age    string
+	}{
+		{0, "John", "30"},
+		{1, "Jane", "25"},
+		{2, "Bob", "35"},
+	}
+
+	for _, tt := range tests {
+		nameKey := fmt.Sprintf("json.%d.name", tt.record)
+		ageKey := fmt.Sprintf("json.%d.age", tt.record)
+
+		if name := argsPost.Get(nameKey); len(name) == 0 || name[0] != tt.name {
+			t.Errorf("%s should be '%s', got: %v", nameKey, tt.name, name)
+		}
+
+		if age := argsPost.Get(ageKey); len(age) == 0 || age[0] != tt.age {
+			t.Errorf("%s should be '%s', got: %v", ageKey, tt.age, age)
+		}
+	}
+
+	// Check line count
+	txVars := v.TX()
+	lineCount := txVars.Get("jsonstream_request_line_count")
+	if len(lineCount) == 0 || lineCount[0] != "3" {
+		t.Errorf("jsonstream_request_line_count should be 3, got: %v", lineCount)
+	}
+}
+
+func TestJSONSequenceNestedObjects(t *testing.T) {
+	const RS = "\x1e"
+
+	input := RS + `{"user": {"name": "John", "id": 1}, "active": true}` + "\n" +
+		RS + `{"user": {"name": "Jane", "id": 2}, "active": false}` + "\n"
+
+	jsp := jsonstreamProcessor(t)
+	v := corazawaf.NewTransactionVariables()
+
+	err := jsp.ProcessRequest(strings.NewReader(input), v, plugintypes.BodyProcessorOptions{})
+
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+
+	argsPost := v.ArgsPost()
+
+	// Check nested fields
+	if name := argsPost.Get("json.0.user.name"); len(name) == 0 || name[0] != "John" {
+		t.Errorf("json.0.user.name should be 'John', got: %v", name)
+	}
+
+	if id := argsPost.Get("json.0.user.id"); len(id) == 0 || id[0] != "1" {
+		t.Errorf("json.0.user.id should be '1', got: %v", id)
+	}
+
+	if active := argsPost.Get("json.0.active"); len(active) == 0 || active[0] != "true" {
+		t.Errorf("json.0.active should be 'true', got: %v", active)
+	}
+}
+
+func TestJSONSequenceWithoutTrailingNewlines(t *testing.T) {
+	const RS = "\x1e"
+
+	// RFC 7464 says newlines are optional, test without them
+	input := RS + `{"name": "John"}` + RS + `{"name": "Jane"}` + RS + `{"name": "Bob"}`
+
+	jsp := jsonstreamProcessor(t)
+	v := corazawaf.NewTransactionVariables()
+
+	err := jsp.ProcessRequest(strings.NewReader(input), v, plugintypes.BodyProcessorOptions{})
+
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+
+	argsPost := v.ArgsPost()
+
+	if name := argsPost.Get("json.0.name"); len(name) == 0 || name[0] != "John" {
+		t.Errorf("json.0.name should be 'John', got: %v", name)
+	}
+
+	if name := argsPost.Get("json.1.name"); len(name) == 0 || name[0] != "Jane" {
+		t.Errorf("json.1.name should be 'Jane', got: %v", name)
+	}
+
+	if name := argsPost.Get("json.2.name"); len(name) == 0 || name[0] != "Bob" {
+		t.Errorf("json.2.name should be 'Bob', got: %v", name)
+	}
+}
+
+func TestJSONSequenceEmptyRecords(t *testing.T) {
+	const RS = "\x1e"
+
+	// Empty records (multiple RS in a row) should be skipped
+	input := RS + RS + `{"name": "John"}` + "\n" + RS + "\n" + RS + `{"name": "Jane"}` + "\n"
+
+	jsp := jsonstreamProcessor(t)
+	v := corazawaf.NewTransactionVariables()
+
+	err := jsp.ProcessRequest(strings.NewReader(input), v, plugintypes.BodyProcessorOptions{})
+
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+
+	argsPost := v.ArgsPost()
+
+	// Should only have 2 records (empty ones skipped)
+	if name := argsPost.Get("json.0.name"); len(name) == 0 || name[0] != "John" {
+		t.Errorf("json.0.name should be 'John', got: %v", name)
+	}
+
+	if name := argsPost.Get("json.1.name"); len(name) == 0 || name[0] != "Jane" {
+		t.Errorf("json.1.name should be 'Jane', got: %v", name)
+	}
+
+	// Third record should not exist
+	if name := argsPost.Get("json.2.name"); len(name) != 0 {
+		t.Errorf("json.2.name should not exist, got: %v", name)
+	}
+}
+
+func TestJSONSequenceInvalidJSON(t *testing.T) {
+	const RS = "\x1e"
+
+	input := RS + `{"name": "John"}` + "\n" +
+		RS + `{invalid json}` + "\n" +
+		RS + `{"name": "Jane"}` + "\n"
+
+	jsp := jsonstreamProcessor(t)
+	v := corazawaf.NewTransactionVariables()
+
+	err := jsp.ProcessRequest(strings.NewReader(input), v, plugintypes.BodyProcessorOptions{})
+
+	if err == nil {
+		t.Errorf("expected error for invalid JSON, got none")
+	}
+
+	if !strings.Contains(err.Error(), "invalid JSON") {
+		t.Errorf("expected 'invalid JSON' error, got: %v", err)
+	}
+}
+
+func TestFormatAutoDetection(t *testing.T) {
+	const RS = "\x1e"
+
+	tests := []struct {
+		name   string
+		input  string
+		format string
+	}{
+		{
+			name:   "NDJSON without RS",
+			input:  `{"name": "John"}` + "\n" + `{"name": "Jane"}` + "\n",
+			format: "NDJSON",
+		},
+		{
+			name:   "JSON Sequence with RS",
+			input:  RS + `{"name": "John"}` + "\n" + RS + `{"name": "Jane"}` + "\n",
+			format: "JSON Sequence",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			jsp := jsonstreamProcessor(t)
+			v := corazawaf.NewTransactionVariables()
+
+			err := jsp.ProcessRequest(strings.NewReader(tt.input), v, plugintypes.BodyProcessorOptions{})
+
+			if err != nil {
+				t.Errorf("unexpected error for %s: %v", tt.format, err)
+				return
+			}
+
+			argsPost := v.ArgsPost()
+
+			// Both formats should produce the same output
+			if name := argsPost.Get("json.0.name"); len(name) == 0 || name[0] != "John" {
+				t.Errorf("%s: json.0.name should be 'John', got: %v", tt.format, name)
+			}
+
+			if name := argsPost.Get("json.1.name"); len(name) == 0 || name[0] != "Jane" {
+				t.Errorf("%s: json.1.name should be 'Jane', got: %v", tt.format, name)
+			}
+		})
+	}
+}
+
 func BenchmarkJSONStreamProcessor(b *testing.B) {
 	// Create a realistic NDJSON stream with 100 objects
 	var sb strings.Builder

@@ -39,13 +39,16 @@ SecRule REQUEST_HEADERS:Content-Type "^application/[a-z0-9.-]+[+]json" \
 # Commonly used for bulk data imports, log streaming, and batch API endpoints.
 # Each JSON object is indexed by line number: json.0.field, json.1.field, etc.
 #
-SecRule REQUEST_HEADERS:Content-Type "^application/x-ndjson" \
-     "id:'200007',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=JSONSTREAM"
+#SecRule REQUEST_HEADERS:Content-Type "^application/x-ndjson" \
+#     "id:'200007',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=JSONSTREAM"
+#
+#SecRule REQUEST_HEADERS:Content-Type "^application/jsonlines" \
+#     "id:'200008',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=JSONSTREAM"
+#
+#SecRule REQUEST_HEADERS:Content-Type "^application/json-seq" \
+#     "id:'200010',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=JSONSTREAM"
 
-SecRule REQUEST_HEADERS:Content-Type "^application/jsonlines" \
-     "id:'200008',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=JSONSTREAM"
-
-# Optional: Limit the number of JSON objects in NDJSON streams to prevent abuse
+# Optional: Limit the number of JSON objects in NDJSON/JSON Sequence streams to prevent abuse
 # Uncomment and adjust the limit as needed for your bulk endpoints
 #
 #SecRule TX:jsonstream_request_line_count "@gt 1000" \
