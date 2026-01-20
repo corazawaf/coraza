@@ -47,6 +47,24 @@ func minPhase(v variables.RuleVariable) types.RulePhase {
 		return types.PhaseResponseHeaders
 	case variables.UniqueID:
 		return types.PhaseRequestHeaders
+	case variables.Time:
+		return types.PhaseRequestHeaders
+	case variables.TimeDay:
+		return types.PhaseRequestHeaders
+	case variables.TimeEpoch:
+		return types.PhaseRequestHeaders
+	case variables.TimeHour:
+		return types.PhaseRequestHeaders
+	case variables.TimeMin:
+		return types.PhaseRequestHeaders
+	case variables.TimeMon:
+		return types.PhaseRequestHeaders
+	case variables.TimeSec:
+		return types.PhaseRequestHeaders
+	case variables.TimeWday:
+		return types.PhaseRequestHeaders
+	case variables.TimeYear:
+		return types.PhaseRequestHeaders
 	case variables.ArgsCombinedSize:
 		// Size changes between phase 1 and 2 so evaluate both times
 		return types.PhaseRequestHeaders
@@ -317,7 +335,7 @@ func isMultiphaseDoubleEvaluation(tx *Transaction, phase types.RulePhase, r *Rul
 
 	for _, matchedRule := range tx.matchedRules {
 		if matchedRule.Rule().ID() == r.ParentID_ && matchedChainDepth(matchedRule.MatchedDatas()) == matchedChainDepth(*collectiveMatchedValues) {
-			// This might be a double match, let's generate the chains that aready matched and the one that just matched
+			// This might be a double match, let's generate the chains that already matched and the one that just matched
 			// let's see if all the latter already matched.
 
 			// generateChainMatches generates matched chains based on the matchedValues and populates matchedChains and collectiveMatchedChains variables

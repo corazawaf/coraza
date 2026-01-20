@@ -3,7 +3,6 @@
 
 // Logs are currently disabled for tinygo builds.
 //go:build !tinygo
-// +build !tinygo
 
 package seclang
 
@@ -29,7 +28,7 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	if err := parser.FromString(fmt.Sprintf(`
 	SecAuditLog %s
 	SecAuditLogFormat json
-	SecAuditLogDir %s
+	SecAuditLogStorageDir %s
 	SecAuditLogDirMode 0777
 	SecAuditLogFileMode 0777
 	SecAuditLogType concurrent
@@ -59,7 +58,7 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 		t.Error("failed to write audit log")
 	}
 	// we test it is a valid json
-	var j map[string]interface{}
+	var j map[string]any
 	if err := json.Unmarshal(data, &j); err != nil {
 		t.Error(err)
 	}

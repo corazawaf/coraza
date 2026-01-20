@@ -1,13 +1,21 @@
+# Tests should not just be ignored via .ftw.yml, but new expectations for each test should be set.
+# Avoid as much as possible adding new entries here, in favor of .ftw-overrides.yml
 ---
 testoverride:
   ignore:
-    920100-4: 'Invalid uri, Coraza not reached - 404 page not found'
+    920100-4: 'Invalid uri, Coraza not reached - 404 page not found' 
     920100-5: 'Invalid uri, Coraza not reached - 404 page not found'
-    920100-8: 'Go/http allows a colon in the path. Test expects status 400 or 403 (Apache behaviour)'
-    920270-4: 'Rule works, log contains 920270. Test expects status 400 (Apache behaviour)'
-    920272-5: 'Rule works, log contains 920272. Test expects status 400 (Apache behaviour)'
-    920290-1: 'Rule works, log contains 920290. Test expects status 400 (Apache behaviour)'
-    920290-4: 'Go/http returns 400 Bad Request: missing required Host header'
-    920430-8: 'Go/http does not allow HTTP/3.0 - 505 HTTP Version Not Supported'
-    932200-13: 'wip'
     930110-7: 'CRS issue: https://github.com/coreruleset/coreruleset/issues/3736'
+
+    # TODO: investigate
+    932200-13: 'Failing only in multiphase evalution'
+    932300-10: 'Failing only in multiphase evalution'
+    933120-2: 'Failing only in multiphase evalution'
+    920280-3: ''
+    920430-3: ''
+    920430-5: ''
+    920430-9: ''
+    920610-2: 'fragments, Coraza might just happly accept them. Run and check it.'
+    920620-1: 'Rule checks if multiple Content-Type headers are kepts. Go/http might keep them and trigger the rule. Run and check it.'
+    921250-1: 'Expected to match $Version in cookies, check case sensitivity matching'
+    921250-2: 'Expected to match $Version in cookies, check case sensitivity matching'

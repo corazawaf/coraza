@@ -12,6 +12,24 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
+// Description:
+// Performs numerical comparison and returns true if the input value is equal to the provided parameter.
+// Both values are converted to integers before comparison. Supports macro expansion for dynamic comparison.
+//
+// Arguments:
+// Integer value to compare against. Supports variable expansion using %{VAR} syntax.
+//
+// Returns:
+// true if the input value equals the parameter value numerically, false otherwise
+//
+// Example:
+// ```
+// # Check if request header count is exactly 15
+// SecRule &REQUEST_HEADERS_NAMES "@eq 15" "id:153,deny,log"
+//
+// # Compare parameter value to expected number
+// SecRule ARGS:quantity "@eq 100" "id:154,pass"
+// ```
 type eq struct {
 	data macro.Macro
 }

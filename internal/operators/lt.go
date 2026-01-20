@@ -12,6 +12,24 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
+// Description:
+// Returns true if the input value is less than the operator parameter.
+// Both values are converted to integers before comparison. Supports macro expansion for dynamic comparison.
+//
+// Arguments:
+// Integer value to compare against. Supports variable expansion using %{VAR} syntax.
+//
+// Returns:
+// true if the input value is less than the parameter value, false otherwise
+//
+// Example:
+// ```
+// # Ensure header count stays below threshold
+// SecRule &REQUEST_HEADERS_NAMES "@lt 15" "id:166,pass,log"
+//
+// # Check value is under limit
+// SecRule ARGS:quantity "@lt 1000" "id:167,pass"
+// ```
 type lt struct {
 	data macro.Macro
 }

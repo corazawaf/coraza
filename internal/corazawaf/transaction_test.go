@@ -7,11 +7,13 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net/http"
 	"regexp"
 	"runtime/debug"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/debuglog"
@@ -19,6 +21,7 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
+	"github.com/corazawaf/coraza/v3/internal/environment"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -66,6 +69,23 @@ func TestTxSetters(t *testing.T) {
 
 	validateMacroExpansion(exp, tx, t)
 }
+
+func TestTxTime(t *testing.T) {
+	tx := makeTransactionTimestamped(t)
+	exp := map[string]string{
+		"%{TIME}":       "15:27:34",
+		"%{TIME_DAY}":   "18",
+		"%{TIME_EPOCH}": fmt.Sprintf("%d", tx.Timestamp/1e9), // 1731943654 in UTC, may differ in local timezone
+		"%{TIME_HOUR}":  "15",
+		"%{TIME_MIN}":   "27",
+		"%{TIME_MON}":   "11",
+		"%{TIME_SEC}":   "34",
+		"%{TIME_WDAY}":  "1",
+		"%{TIME_YEAR}":  "2024",
+	}
+	validateMacroExpansion(exp, tx, t)
+}
+
 func TestTxMultipart(t *testing.T) {
 	tx := NewWAF().NewTransaction()
 	body := []string{
@@ -468,7 +488,7 @@ func TestAuditLog(t *testing.T) {
 }
 
 var responseBodyWriters = map[string]func(tx *Transaction, body string) (*types.Interruption, int, error){
-	"WriteResponsequestBody": func(tx *Transaction, body string) (*types.Interruption, int, error) {
+	"WriteResponseBody": func(tx *Transaction, body string) (*types.Interruption, int, error) {
 		return tx.WriteResponseBody([]byte(body))
 	},
 	"ReadResponseBodyFromKnownLen": func(tx *Transaction, body string) (*types.Interruption, int, error) {
@@ -957,8 +977,9 @@ func TestMultipleCookiesWithSpaceBetweenThem(t *testing.T) {
 
 func collectionValues(t *testing.T, col collection.Collection) []string {
 	t.Helper()
-	var values []string
-	for _, v := range col.FindAll() {
+	all := col.FindAll()
+	values := make([]string, 0, len(all))
+	for _, v := range all {
 		values = append(values, v.Value())
 	}
 	return values
@@ -1018,10 +1039,10 @@ func TestProcessBodiesSkippedIfHeadersPhasesNotReached(t *testing.T) {
 	if want, have := 3, len(logEntries); want != have {
 		t.Fatalf("unexpected number of log entries, want %d, have %d", want, have)
 	}
-	if want, have := "anomalous call before request headers evaluation", logEntries[1]; !strings.Contains(have, want) {
+	if want, have := "has been called before request headers evaluation", logEntries[1]; !strings.Contains(have, want) {
 		t.Fatalf("unexpected message, want %q, have %q", want, have)
 	}
-	if want, have := "anomalous call before response headers evaluation", logEntries[2]; !strings.Contains(have, want) {
+	if want, have := "has been called before response headers evaluation", logEntries[2]; !strings.Contains(have, want) {
 		t.Fatalf("unexpected message, want %q, have %q", want, have)
 	}
 	if err := tx.Close(); err != nil {
@@ -1106,7 +1127,7 @@ func TestTransactionSyncPool(t *testing.T) {
 			ID_: 1234,
 		},
 	})
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		if err := tx.Close(); err != nil {
 			t.Fatal(err)
 		}
@@ -1291,6 +1312,20 @@ func TestTxGetField(t *testing.T) {
 	}
 }
 
+func BenchmarkTxGetField(b *testing.B) {
+	tx := makeTransaction(b)
+	rvp := ruleVariableParams{
+		Variable: variables.Args,
+	}
+	for i := 0; i < b.N; i++ {
+		tx.GetField(rvp)
+	}
+	if err := tx.Close(); err != nil {
+		b.Fatalf("Failed to close transaction: %s", err.Error())
+	}
+	b.ReportAllocs()
+}
+
 func TestTxProcessURI(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
@@ -1343,6 +1378,27 @@ func makeTransaction(t testing.TB) *Transaction {
 		panic(err)
 	}
 	return tx
+}
+
+func makeTransactionTimestamped(t testing.TB) *Transaction {
+	t.Helper()
+	tx := NewWAF().NewTransaction()
+	timestamp, err := time.ParseInLocation(time.DateTime, "2024-11-18 15:27:34", time.Local)
+	if err != nil {
+		panic(err)
+	}
+	tx.Timestamp = timestamp.UnixNano()
+	tx.setTimeVariables()
+	return tx
+}
+
+func BenchmarkTransactionTimestamped(b *testing.B) {
+	tx := NewWAF().NewTransaction()
+	tx.Timestamp = time.Now().Unix()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tx.setTimeVariables()
+	}
 }
 
 func makeTransactionMultipart(t *testing.T) *Transaction {
@@ -1717,6 +1773,9 @@ func TestForceRequestBodyOverride(t *testing.T) {
 }
 
 func TestCloseFails(t *testing.T) {
+	if !environment.HasAccessToFS {
+		t.Skip("skipping test as it requires access to filesystem")
+	}
 	waf := NewWAF()
 	tx := waf.NewTransaction()
 	col := tx.Variables().FilesTmpNames().(*collections.Map)
@@ -1728,5 +1787,80 @@ func TestCloseFails(t *testing.T) {
 
 	if !strings.Contains(err.Error(), "removing temporary file") {
 		t.Fatalf("unexpected error message: %s", err.Error())
+	}
+}
+
+func TestRequestFilename(t *testing.T) {
+	tests := []struct {
+		name     string
+		uri      string
+		expected string
+	}{
+		{
+			name:     "simple",
+			uri:      "/foo",
+			expected: "/foo",
+		},
+		{
+			name:     "with query",
+			uri:      "/foo?bar=baz",
+			expected: "/foo",
+		},
+		{
+			name:     "with query and fragment",
+			uri:      "/foo?bar=baz#qux",
+			expected: "/foo",
+		},
+		{
+			name:     "subdirectory",
+			uri:      "/foo/bar",
+			expected: "/foo/bar",
+		},
+		{
+			name:     "subdirectory with query",
+			uri:      "/foo/bar?baz=qux",
+			expected: "/foo/bar",
+		},
+		{
+			name:     "multiple leading slashes",
+			uri:      "//foo/bar",
+			expected: "//foo/bar",
+		},
+		{
+			name:     "multiple leading slashes - 2",
+			uri:      "///foo/bar",
+			expected: "///foo/bar",
+		},
+		{ // This is a bug. This test should be adapted when the issue is fixed.
+			name:     "invalid encoding",
+			uri:      "/foo%zz?a=b",
+			expected: "/foo%zz?a=b",
+		},
+		{
+			name:     "valid encoding",
+			uri:      "/foo%20bar",
+			expected: "/foo bar",
+		},
+		{
+			name:     "trailing slash",
+			uri:      "/foo/bar/",
+			expected: "/foo/bar/",
+		},
+		{
+			name:     "duplicated slashes",
+			uri:      "//foo//bar",
+			expected: "//foo//bar",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			waf := NewWAF()
+			tx := waf.NewTransaction()
+			tx.ProcessURI(test.uri, http.MethodGet, "HTTP/1.1")
+			if tx.variables.requestFilename.Get() != test.expected {
+				t.Fatalf("Expected REQUEST_FILENAME %q, got %q", test.expected, tx.variables.requestFilename.Get())
+			}
+		})
 	}
 }

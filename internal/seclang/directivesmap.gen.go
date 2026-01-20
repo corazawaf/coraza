@@ -46,7 +46,7 @@ var (
 	_ directive = directiveSecAuditLog
 	_ directive = directiveSecAuditLogType
 	_ directive = directiveSecAuditLogFormat
-	_ directive = directiveSecAuditLogDir
+	_ directive = directiveSecAuditLogStorageDir
 	_ directive = directiveSecAuditLogDirMode
 	_ directive = directiveSecAuditLogFileMode
 	_ directive = directiveSecAuditLogRelevantStatus
@@ -61,6 +61,7 @@ var (
 	_ directive = directiveSecDebugLog
 	_ directive = directiveSecDebugLogLevel
 	_ directive = directiveSecRuleUpdateTargetByID
+	_ directive = directiveSecRuleUpdateActionByID
 	_ directive = directiveSecRuleUpdateTargetByTag
 	_ directive = directiveSecIgnoreRuleCompilationErrors
 	_ directive = directiveSecDataset
@@ -108,7 +109,7 @@ var directivesMap = map[string]directive{
 	"secauditlog":                    directiveSecAuditLog,
 	"secauditlogtype":                directiveSecAuditLogType,
 	"secauditlogformat":              directiveSecAuditLogFormat,
-	"secauditlogdir":                 directiveSecAuditLogDir,
+	"secauditlogstoragedir":          directiveSecAuditLogStorageDir,
 	"secauditlogdirmode":             directiveSecAuditLogDirMode,
 	"secauditlogfilemode":            directiveSecAuditLogFileMode,
 	"secauditlogrelevantstatus":      directiveSecAuditLogRelevantStatus,
@@ -123,6 +124,7 @@ var directivesMap = map[string]directive{
 	"secdebuglog":                    directiveSecDebugLog,
 	"secdebugloglevel":               directiveSecDebugLogLevel,
 	"secruleupdatetargetbyid":        directiveSecRuleUpdateTargetByID,
+	"secruleupdateactionbyid":        directiveSecRuleUpdateActionByID,
 	"secruleupdatetargetbytag":       directiveSecRuleUpdateTargetByTag,
 	"secignorerulecompilationerrors": directiveSecIgnoreRuleCompilationErrors,
 	"secdataset":                     directiveSecDataset,
@@ -132,7 +134,6 @@ var directivesMap = map[string]directive{
 	"secargumentseparator":     directiveUnsupported,
 	"seccookieformat":          directiveUnsupported,
 	"secruleupdatetargetbymsg": directiveUnsupported,
-	"secruleupdateactionbyid":  directiveUnsupported,
 	"secrulescript":            directiveUnsupported,
 	"secruleperftime":          directiveUnsupported,
 	"secunicodemap":            directiveUnsupported,

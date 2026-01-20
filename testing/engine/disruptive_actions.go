@@ -84,6 +84,71 @@ var _ = profile.RegisterProfile(profile.Profile{
 						},
 					},
 				},
+				// Phase 2
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/redirect2",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{21},
+							Interruption: &profile.ExpectedInterruption{
+								Status: 302,
+								Data:   "https://www.example.com",
+								RuleID: 21,
+								Action: "redirect",
+							},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/redirect6",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{61},
+							Interruption: &profile.ExpectedInterruption{
+								Status: 302,
+								Data:   "https://www.example.com",
+								RuleID: 61,
+								Action: "redirect",
+							},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/redirect7",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{62},
+							Interruption: &profile.ExpectedInterruption{
+								Status: 307,
+								Data:   "https://www.example.com",
+								RuleID: 62,
+								Action: "redirect",
+							},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/redirect8",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{63},
+							Interruption: &profile.ExpectedInterruption{
+								Status: 302,
+								Data:   "https://www.example.com",
+								RuleID: 63,
+								Action: "redirect",
+							},
+						},
+					},
+				},
 				{
 					Stage: profile.SubStage{
 						Input: profile.StageInput{
@@ -304,6 +369,11 @@ SecRule REQUEST_URI "/drop4$" "phase:4,id:43,log,drop"
 SecRule REQUEST_URI "/redirect5$" "phase:5,id:51,log,status:302,redirect:https://www.example.com"
 SecRule REQUEST_URI "/deny5$" "phase:5,id:52,log,status:500,deny"
 SecRule REQUEST_URI "/drop5$" "phase:5,id:53,log,drop"
+
+SecRule REQUEST_URI "/redirect6$" "phase:2,id:61,log,redirect:https://www.example.com"
+SecRule REQUEST_URI "/redirect7$" "phase:2,id:62,log,status:307,redirect:https://www.example.com"
+SecRule REQUEST_URI "/redirect8$" "phase:2,id:63,log,status:401,redirect:https://www.example.com"
+
 
 # Rule 103 is missing the phase, therefore phase:2 is implicitly applied with its related default actions
 # So we will expect a deny with 501 response for the blocking action.

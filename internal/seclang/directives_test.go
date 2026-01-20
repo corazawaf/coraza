@@ -4,11 +4,13 @@
 package seclang
 
 import (
+	"os"
 	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -33,6 +35,31 @@ func Test_NonImplementedDirective(t *testing.T) {
 			t.Errorf("failed to set directive: %s", rule)
 		}
 	}
+}
+
+func TestSecRuleUpdateActionByID(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	rule, err := ParseRule(RuleOptions{
+		Data:         "REQUEST_URI \"^/test\" \"id:181,log\"",
+		WAF:          waf,
+		WithOperator: true,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	if err := waf.Rules.Add(rule); err != nil {
+		t.Error(err)
+	}
+	if waf.Rules.Count() != 1 {
+		t.Error("Failed to add rule")
+	}
+	if err := directiveSecRuleUpdateActionByID(&DirectiveOptions{
+		WAF:  waf,
+		Opts: "181 \"nolog\"",
+	}); err != nil {
+		t.Error(err)
+	}
+
 }
 
 func TestSecRuleUpdateTargetByID(t *testing.T) {
@@ -139,11 +166,6 @@ func TestDirectives(t *testing.T) {
 			{"", expectErrorOnDirective},
 			{"1000", func(w *corazawaf.WAF) bool { return w.UploadFileLimit == 1000 }},
 		},
-		"SecUploadDir": {
-			{"", expectErrorOnDirective},
-			{"/tmp-non-existing", expectErrorOnDirective},
-			{"/tmp", func(w *corazawaf.WAF) bool { return w.UploadDir == "/tmp" }},
-		},
 		"SecSensorId": {
 			{"", expectErrorOnDirective},
 			{"test", func(w *corazawaf.WAF) bool { return w.SensorID == "test" }},
@@ -177,6 +199,19 @@ func TestDirectives(t *testing.T) {
 			{"1", expectNoErrorOnDirective},
 			{"1 2", expectNoErrorOnDirective},
 			{"1 2 3-4", expectNoErrorOnDirective},
+		},
+		"SecRuleUpdateActionById": {
+			{"", expectErrorOnDirective},
+			{"a", expectErrorOnDirective},
+			{"1-a", expectErrorOnDirective},
+			{"a-2", expectErrorOnDirective},
+			{"2-1", expectErrorOnDirective},
+			{"1-a \"status:403\"", expectErrorOnDirective},
+			{"a-2 \"status:403\"", expectErrorOnDirective},
+			{"2-1 \"status:403\"", expectErrorOnDirective},
+			{"-1 \"status:403\"", expectErrorOnDirective},
+			{"1 2 3-4 \"status:403\"", expectNoErrorOnDirective},
+			{"1 2 3-4 \"status:403,nolog\"", expectNoErrorOnDirective},
 		},
 		"SecRuleUpdateTargetById": {
 			{"", expectErrorOnDirective},
@@ -275,6 +310,13 @@ func TestDirectives(t *testing.T) {
 			// according to modsec docs SecArgumentsLimit 1000
 			{"1000", func(waf *corazawaf.WAF) bool { return waf.ArgumentLimit == 1000 }},
 		},
+	}
+	if environment.HasAccessToFS {
+		directiveCases["SecUploadDir"] = []directiveCase{
+			{"", expectErrorOnDirective},
+			{"/tmp-non-existing", expectErrorOnDirective},
+			{os.TempDir(), func(w *corazawaf.WAF) bool { return w.UploadDir == os.TempDir() }},
+		}
 	}
 
 	for name, dCases := range directiveCases {

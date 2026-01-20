@@ -2,17 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build mage
-// +build mage
 
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
@@ -20,7 +22,7 @@ import (
 
 var addLicenseVersion = "v1.1.1" // https://github.com/google/addlicense/releases
 var gosImportsVer = "v0.3.7"     // https://github.com/rinchsan/gosimports/releases
-var golangCILintVer = "v1.54.0"  // https://github.com/golangci/golangci-lint/releases
+var golangCILintVer = "v2.6.2"   // https://github.com/golangci/golangci-lint/releases
 var errNoGitDir = errors.New("no .git directory found")
 var errUpdateGeneratedFiles = errors.New("generated files need to be updated")
 
@@ -61,11 +63,11 @@ func Lint() error {
 		return err
 	}
 
-	if sh.Run("git", "diff", "--exit-code", "--", "'*.gen.go'") != nil {
+	if sh.Run("git", "diff", "--exit-code", "*.gen.go") != nil {
 		return errUpdateGeneratedFiles
 	}
 
-	if err := sh.RunV("go", "run", fmt.Sprintf("github.com/golangci/golangci-lint/cmd/golangci-lint@%s", golangCILintVer), "run"); err != nil {
+	if err := sh.RunV("go", "run", fmt.Sprintf("github.com/golangci/golangci-lint/v2/cmd/golangci-lint@%s", golangCILintVer), "run"); err != nil {
 		return err
 	}
 
@@ -127,6 +129,15 @@ func Test() error {
 		return err
 	}
 
+	// Execute FTW tests with coraza.rule.no_regex_multiline as well
+	if err := sh.RunV("go", "test", "-tags=coraza.rule.no_regex_multiline", "./testing/coreruleset"); err != nil {
+		return err
+	}
+
+	if err := sh.RunV("go", "test", "-tags=coraza.rule.no_regex_multiline", "-run=^TestRx", "./..."); err != nil {
+		return err
+	}
+
 	if err := sh.RunV("go", "test", "-tags=coraza.rule.case_sensitive_args_keys", "-run=^TestCaseSensitive", "./..."); err != nil {
 		return err
 	}
@@ -134,36 +145,51 @@ func Test() error {
 	return nil
 }
 
+func buildTagsFlags(tags string) string {
+	if tags == "" {
+		return ""
+	}
+	// we remove all non alphanumeric _,-
+	rx := regexp.MustCompile("^[\\w_,\\.]+$")
+	if !rx.MatchString(tags) {
+		panic("Invalid build tags")
+	}
+	return tags
+}
+
 // Coverage runs tests with coverage and race detector enabled.
+// Usage: mage coverage [buildTags]
 func Coverage() error {
+	buildTags := os.Getenv("BUILD_TAGS")
+	tags := buildTagsFlags(buildTags)
 	if err := os.MkdirAll("build", 0755); err != nil {
 		return err
 	}
-	if err := sh.RunV("go", "test", "-race", "-coverprofile=build/coverage.txt", "-covermode=atomic", "-coverpkg=./...", "./..."); err != nil {
+	fmt.Println("Running tests with coverage")
+	fmt.Println("Tags:", tags)
+	tagsCmd := ""
+	if tags != "" {
+		tagsCmd = "-tags=" + tags
+	}
+	if err := sh.RunV("go", "test", "-race", tagsCmd, "-coverprofile=build/coverage.txt", "-covermode=atomic", "-coverpkg=./...", "./..."); err != nil {
 		return err
 	}
-	if err := sh.RunV("go", "test", "-race", "-coverprofile=build/coverage-examples.txt", "-covermode=atomic", "-coverpkg=./...", "./examples/http-server"); err != nil {
+	// Execute http-server tests with coverage
+	if err := sh.RunV("go", "test", "-race", tagsCmd, "-coverprofile=build/coverage-examples.txt", "-covermode=atomic", "-coverpkg=./...", "./examples/http-server"); err != nil {
 		return err
 	}
-	if err := sh.RunV("go", "test", "-coverprofile=build/coverage-ftw.txt", "-covermode=atomic", "-coverpkg=./...", "./testing/coreruleset"); err != nil {
+	// Execute FTW tests with coverage as well
+	if err := sh.RunV("go", "test", tagsCmd, "-coverprofile=build/coverage-ftw.txt", "-covermode=atomic", "-coverpkg=./...", "./testing/coreruleset"); err != nil {
 		return err
 	}
-	// Execute coverage tests with multiphase evaluation enabled
-	if err := sh.RunV("go", "test", "-race", "-coverprofile=build/coverage-multiphase.txt", "-covermode=atomic", "-coverpkg=./...", "-tags=coraza.rule.multiphase_evaluation", "./..."); err != nil {
-		return err
-	}
-	// Executes http-server tests with multiphase evaluation enabled
-	if err := sh.RunV("go", "test", "-race", "-coverprofile=build/coverage-examples.txt", "-covermode=atomic", "-tags=coraza.rule.multiphase_evaluation", "-coverpkg=./...", "./examples/http-server"); err != nil {
-		return err
-	}
-	// Execute FTW tests with multiphase evaluation enabled as well
-	if err := sh.RunV("go", "test", "-coverprofile=build/coverage-ftw-multiphase.txt", "-covermode=atomic", "-coverpkg=./...", "-tags=coraza.rule.multiphase_evaluation", "./testing/coreruleset"); err != nil {
-		return err
-	}
-	// This is not actually running tests with tinygo, but with the tag that includes its code so we can calculate coverage
-	// for it.
-	if err := sh.RunV("go", "test", "-race", "-tags=tinygo", "-coverprofile=build/coverage-tinygo.txt", "-covermode=atomic", "-coverpkg=./...", "./..."); err != nil {
-		return err
+	// we run tinygo tag only if memoize_builders is not enabled
+	if !strings.Contains(tags, "memoize_builders") {
+		if tagsCmd != "" {
+			tagsCmd += ",tinygo"
+		}
+		if err := sh.RunV("go", "test", "-race", tagsCmd, "-coverprofile=build/coverage-tinygo.txt", "-covermode=atomic", "-coverpkg=./...", "./..."); err != nil {
+			return err
+		}
 	}
 
 	return sh.RunV("go", "tool", "cover", "-html=build/coverage.txt", "-o", "build/coverage.html")
@@ -227,4 +253,46 @@ func Precommit() error {
 // Check runs lint and tests.
 func Check() {
 	mg.SerialDeps(Lint, Test)
+}
+
+// combinations generates all possible combinations of build tags
+func combinations(tags []string) []string {
+	var result []string
+	n := len(tags)
+	for i := 0; i < (1 << n); i++ {
+		var combo []string
+		for j := 0; j < n; j++ {
+			if i&(1<<j) != 0 {
+				combo = append(combo, tags[j])
+			}
+		}
+		if len(combo) > 0 {
+			result = append(result, strings.Join(combo, ","))
+		} else {
+			result = append(result, "")
+		}
+	}
+	return result
+}
+
+// Generates a JSON output to stdout which contains all permutations of build tags for the project.
+func TagsMatrix() error {
+	tags := []string{
+		"coraza.rule.mandatory_rule_id_check",
+		"coraza.rule.case_sensitive_args_keys",
+		"coraza.rule.no_regex_multiline",
+		"memoize_builders",
+		"coraza.rule.multiphase_evaluation",
+		"no_fs_access",
+	}
+	combos := combinations(tags)
+
+	jsonData, err := json.Marshal(combos)
+	if err != nil {
+		fmt.Println("Error generating JSON:", err)
+		return nil
+	}
+
+	fmt.Println(string(jsonData))
+	return nil
 }

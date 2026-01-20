@@ -5,7 +5,6 @@ package corazawaf
 
 import (
 	"fmt"
-	"reflect"
 	"regexp"
 	"strings"
 	"sync"
@@ -243,8 +242,17 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 			}
 			vLog.Debug().Msg("Expanding arguments for rule")
 
+			args := make([]string, 1)
+			var errs []error
+			var argsLen int
 			for i, arg := range values {
-				args, errs := r.transformArg(arg, i, cache)
+				if r.MultiMatch {
+					args, errs = r.transformMultiMatchArg(arg)
+					argsLen = len(args)
+				} else {
+					args[0], errs = r.transformArg(arg, i, cache)
+					argsLen = 1
+				}
 				if len(errs) > 0 {
 					vWarnLog := vLog.Warn()
 					if vWarnLog.IsEnabled() {
@@ -256,7 +264,7 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 				}
 
 				// args represents the transformed variables
-				for _, carg := range args {
+				for _, carg := range args[:argsLen] {
 					evalLog := vLog.
 						Debug().
 						Str("operator_function", r.operator.Function).
@@ -382,42 +390,41 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 	return matchedValues
 }
 
-func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transformationKey]*transformationValue) ([]string, []error) {
-	if r.MultiMatch {
-		// TODOs:
-		// - We don't need to run every transformation. We could try for each until found
-		// - Cache is not used for multimatch
-		return r.executeTransformationsMultimatch(arg.Value())
-	} else {
-		switch {
-		case len(r.transformations) == 0:
-			return []string{arg.Value()}, nil
-		case arg.Variable().Name() == "TX":
-			// no cache for TX
-			arg, errs := r.executeTransformations(arg.Value())
-			return []string{arg}, errs
-		default:
-			// NOTE: See comment on transformationKey struct to understand this hacky code
-			argKey := arg.Key()
-			argKeyPtr := (*reflect.StringHeader)(unsafe.Pointer(&argKey)).Data
-			key := transformationKey{
-				argKey:            argKeyPtr,
-				argIndex:          argIdx,
-				argVariable:       arg.Variable(),
-				transformationsID: r.transformationsID,
+func (r *Rule) transformMultiMatchArg(arg types.MatchData) ([]string, []error) {
+	// TODOs:
+	// - We don't need to run every transformation. We could try for each until found
+	// - Cache is not used for multimatch
+	return r.executeTransformationsMultimatch(arg.Value())
+}
+
+func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transformationKey]*transformationValue) (string, []error) {
+	switch {
+	case len(r.transformations) == 0:
+		return arg.Value(), nil
+	case arg.Variable().Name() == "TX":
+		// no cache for TX
+		arg, errs := r.executeTransformations(arg.Value())
+		return arg, errs
+	default:
+		// NOTE: See comment on transformationKey struct to understand this hacky code
+		argKey := arg.Key()
+		argKeyPtr := unsafe.StringData(argKey)
+		key := transformationKey{
+			argKey:            argKeyPtr,
+			argIndex:          argIdx,
+			argVariable:       arg.Variable(),
+			transformationsID: r.transformationsID,
+		}
+		if cached, ok := cache[key]; ok {
+			return cached.arg, cached.errs
+		} else {
+			ars, es := r.executeTransformations(arg.Value())
+			errs := es
+			cache[key] = &transformationValue{
+				arg:  ars,
+				errs: es,
 			}
-			if cached, ok := cache[key]; ok {
-				return cached.args, cached.errs
-			} else {
-				ars, es := r.executeTransformations(arg.Value())
-				args := []string{ars}
-				errs := es
-				cache[key] = &transformationValue{
-					args: args,
-					errs: es,
-				}
-				return args, errs
-			}
+			return ars, errs
 		}
 	}
 }
@@ -508,7 +515,7 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 	}
 	var re *regexp.Regexp
 	if isRegex, rx := hasRegex(key); isRegex {
-		if vare, err := memoize.Do(rx, func() (interface{}, error) { return regexp.Compile(rx) }); err != nil {
+		if vare, err := memoize.Do(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
 			return err
 		} else {
 			re = vare.(*regexp.Regexp)
@@ -552,7 +559,7 @@ func needToSplitConcatenatedVariable(v variables.RuleVariable, ve variables.Rule
 func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 	var re *regexp.Regexp
 	if isRegex, rx := hasRegex(key); isRegex {
-		if vare, err := memoize.Do(rx, func() (interface{}, error) { return regexp.Compile(rx) }); err != nil {
+		if vare, err := memoize.Do(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
 			return err
 		} else {
 			re = vare.(*regexp.Regexp)

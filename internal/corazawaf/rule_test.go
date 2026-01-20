@@ -506,23 +506,23 @@ func TestTransformArgSimple(t *testing.T) {
 	rule := NewRule()
 	_ = rule.AddTransformation("AppendA", transformationAppendA)
 	_ = rule.AddTransformation("AppendB", transformationAppendB)
-	args, errs := rule.transformArg(md, 0, transformationCache)
+	arg, errs := rule.transformArg(md, 0, transformationCache)
 	if errs != nil {
 		t.Fatalf("Unexpected errors executing transformations: %v", errs)
 	}
-	if args[0] != "/testAB" {
-		t.Errorf("Expected \"/testAB\", got \"%s\"", args[0])
+	if arg != "/testAB" {
+		t.Errorf("Expected \"/testAB\", got \"%s\"", arg)
 	}
 	if len(transformationCache) != 1 {
 		t.Errorf("Expected 1 transformations in cache, got %d", len(transformationCache))
 	}
 	// Repeating the same transformation, expecting still one element in the cache (that means it is a cache hit)
-	args, errs = rule.transformArg(md, 0, transformationCache)
+	arg, errs = rule.transformArg(md, 0, transformationCache)
 	if errs != nil {
 		t.Fatalf("Unexpected errors executing transformations: %v", errs)
 	}
-	if args[0] != "/testAB" {
-		t.Errorf("Expected \"/testAB\", got \"%s\"", args[0])
+	if arg != "/testAB" {
+		t.Errorf("Expected \"/testAB\", got \"%s\"", arg)
 	}
 	if len(transformationCache) != 1 {
 		t.Errorf("Expected 1 transformations in cache, got %d", len(transformationCache))
@@ -538,12 +538,12 @@ func TestTransformArgNoCacheForTXVariable(t *testing.T) {
 	}
 	rule := NewRule()
 	_ = rule.AddTransformation("AppendA", transformationAppendA)
-	args, errs := rule.transformArg(md, 0, transformationCache)
+	arg, errs := rule.transformArg(md, 0, transformationCache)
 	if errs != nil {
 		t.Fatalf("Unexpected errors executing transformations: %v", errs)
 	}
-	if args[0] != "testA" {
-		t.Errorf("Expected \"testA\", got \"%s\"", args[0])
+	if arg != "testA" {
+		t.Errorf("Expected \"testA\", got \"%s\"", arg)
 	}
 	if len(transformationCache) != 0 {
 		t.Errorf("Expected 0 transformations in cache, got %d. It is not expected to cache TX variable transformations", len(transformationCache))
