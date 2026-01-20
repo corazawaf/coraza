@@ -105,8 +105,11 @@ type ctlFn struct {
 	action     ctlFunctionType
 	value      string
 	collection variables.RuleVariable
-	colKey     string
-	colKeyRx   *regexp.Regexp
+	colKey string
+	// colKeyRx holds the compiled regex pattern when the collection key is specified as a regex (e.g., "/pattern/").
+	// It is nil otherwise. The regex is compiled during rule initialization and used during rule evaluation
+	// to match against collection keys dynamically.
+	colKeyRx *regexp.Regexp
 }
 
 func (a *ctlFn) Init(_ plugintypes.RuleMetadata, data string) error {
@@ -141,20 +144,20 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 			return
 		}
 		for _, id := range ran {
-			tx.RemoveRuleTargetByID(id, a.collection, a.colKey)
+			tx.RemoveRuleTargetByID(id, a.collection, a.colKey, a.colKeyRx)
 		}
 	case ctlRuleRemoveTargetByTag:
 		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
 			if utils.InSlice(a.value, r.Tags_) {
-				tx.RemoveRuleTargetByID(r.ID(), a.collection, a.colKey)
+				tx.RemoveRuleTargetByID(r.ID(), a.collection, a.colKey, a.colKeyRx)
 			}
 		}
 	case ctlRuleRemoveTargetByMsg:
 		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
 			if r.Msg != nil && r.Msg.String() == a.value {
-				tx.RemoveRuleTargetByID(r.ID(), a.collection, a.colKey)
+				tx.RemoveRuleTargetByID(r.ID(), a.collection, a.colKey, a.colKeyRx)
 			}
 		}
 	case ctlAuditEngine:
@@ -377,6 +380,36 @@ func (a *ctlFn) Type() plugintypes.ActionType {
 	return plugintypes.ActionTypeNondisruptive
 }
 
+// isRegexPattern checks if a string is enclosed in forward slashes (e.g., "/pattern/")
+// and handles escaped slashes properly. Returns true only if the string starts with '/'
+// and ends with an unescaped '/'.
+func isRegexPattern(s string) bool {
+	if len(s) < 2 || s[0] != '/' {
+		return false
+	}
+	
+	// Check if the last character is '/' and it's not escaped
+	lastChar := len(s) - 1
+	if s[lastChar] != '/' {
+		return false
+	}
+	
+	// For "//" we should return true even though it's empty
+	if lastChar == 1 {
+		return true
+	}
+	
+	// Count consecutive backslashes before the last '/'
+	backslashCount := 0
+	for i := lastChar - 1; i >= 0 && s[i] == '\\'; i-- {
+		backslashCount++
+	}
+	
+	// If there's an even number of backslashes (including 0), the '/' is not escaped
+	// If there's an odd number, the '/' is escaped
+	return backslashCount%2 == 0
+}
+
 func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, string, *regexp.Regexp, error) {
 	action, ctlVal, ok := strings.Cut(data, "=")
 	if !ok {
@@ -388,14 +421,29 @@ func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, str
 		colname, colkey, _ = strings.Cut(col, ":")
 	}
 	collection, _ := variables.Parse(strings.TrimSpace(colname))
+	
+	// Parse regex pattern if present
+	// Note: Regex patterns can be user-controlled through WAF rules, which may introduce
+	// ReDoS (Regular Expression Denial of Service) risks if malicious or poorly written patterns
+	// are used. Rule authors should carefully validate regex patterns to avoid performance issues.
 	var re *regexp.Regexp
-	if len(colkey) > 2 && colkey[0] == '/' && colkey[len(colkey)-1] == '/' {
-		var err error
-		re, err = regexp.Compile(colkey[1 : len(colkey)-1])
-		if err != nil {
-			return ctlUnknown, "", 0x00, "", nil, err
+	colkey = strings.TrimSpace(colkey)
+	if isRegexPattern(colkey) {
+		pattern := colkey[1 : len(colkey)-1]
+		// Validate that the pattern is not empty
+		if len(pattern) == 0 {
+			return ctlUnknown, "", 0, "", nil, errors.New("empty regex pattern")
 		}
+		var err error
+		re, err = regexp.Compile(pattern)
+		if err != nil {
+			return ctlUnknown, "", 0x00, "", nil, fmt.Errorf("invalid regex pattern: %w", err)
+		}
+	} else if colkey != "" {
+		// Apply lowercase normalization only for non-regex keys
+		colkey = strings.ToLower(colkey)
 	}
+	
 	var act ctlFunctionType
 	switch action {
 	case "auditEngine":
@@ -441,10 +489,8 @@ func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, str
 	default:
 		return ctlUnknown, "", 0x00, "", nil, fmt.Errorf("unknown ctl action %q", action)
 	}
-	if re != nil {
-		return act, value, collection, strings.TrimSpace(colkey), re, nil
-	}
-	return act, value, collection, strings.TrimSpace(strings.ToLower(colkey)), nil, nil
+	
+	return act, value, collection, colkey, re, nil
 }
 
 func rangeToInts(rules []corazawaf.Rule, input string) ([]int, error) {
