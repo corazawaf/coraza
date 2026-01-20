@@ -43,7 +43,7 @@ SecRule REQUEST_HEADERS:Content-Type "^application/x-ndjson" \
      "id:'200007',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=JSONSTREAM"
 
 SecRule REQUEST_HEADERS:Content-Type "^application/jsonlines" \
-     "id:'200008',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=NDJSON"
+     "id:'200008',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=JSONSTREAM"
 
 # Optional: Limit the number of JSON objects in NDJSON streams to prevent abuse
 # Uncomment and adjust the limit as needed for your bulk endpoints

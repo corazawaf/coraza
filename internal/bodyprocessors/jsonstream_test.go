@@ -4,6 +4,7 @@
 package bodyprocessors_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -77,8 +78,8 @@ func TestJSONStreamMultipleLines(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		nameKey := "json." + string(rune('0'+tt.line)) + ".name"
-		ageKey := "json." + string(rune('0'+tt.line)) + ".age"
+		nameKey := fmt.Sprintf("json.%d.name", tt.line)
+		ageKey := fmt.Sprintf("json.%d.age", tt.line)
 
 		if name := argsPost.Get(nameKey); len(name) == 0 || name[0] != tt.name {
 			t.Errorf("%s should be '%s', got: %v", nameKey, tt.name, name)

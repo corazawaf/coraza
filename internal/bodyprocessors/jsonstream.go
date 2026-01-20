@@ -29,7 +29,8 @@ const (
 // Supported formats:
 // - NDJSON (application/x-ndjson): Each line is a complete JSON object
 // - JSON Lines (application/jsonlines): Alias for NDJSON
-// - JSON Sequence (application/json-seq): RFC 7464 format with RS separator
+//
+// Note: RFC 7464 JSON Sequence format (with ASCII RS 0x1E record separator) is not yet implemented.
 type jsonStreamBodyProcessor struct{}
 
 var _ plugintypes.BodyProcessor = &jsonStreamBodyProcessor{}
@@ -37,10 +38,13 @@ var _ plugintypes.BodyProcessor = &jsonStreamBodyProcessor{}
 func (js *jsonStreamBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
 	col := v.ArgsPost()
 
-	// Use a string builder to store the raw body for TX variables
+	// Store the raw body for TX variables.
+	// Note: This creates a memory copy of the entire body, similar to the regular JSON processor.
+	// This is necessary for operators like @validateSchema that need access to the raw content.
+	// Memory usage: 2x the body size (once in buffer, once in parsed variables)
 	var rawBody strings.Builder
 
-	// Create a TeeReader to read the body and store it at the same time
+	// Create a TeeReader to read the body and store it simultaneously
 	tee := io.TeeReader(reader, &rawBody)
 
 	// Use default recursion limit for now
@@ -62,10 +66,12 @@ func (js *jsonStreamBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 func (js *jsonStreamBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
 	col := v.ResponseArgs()
 
-	// Use a string builder to store the raw body for TX variables
+	// Store the raw body for TX variables.
+	// Note: This creates a memory copy of the entire body, similar to the regular JSON processor.
+	// Memory usage: 2x the body size (once in buffer, once in parsed variables)
 	var rawBody strings.Builder
 
-	// Create a TeeReader to read the body and store it at the same time
+	// Create a TeeReader to read the body and store it simultaneously
 	tee := io.TeeReader(reader, &rawBody)
 
 	// Use default recursion limit for response bodies too
@@ -91,6 +97,13 @@ func processJSONStream(reader io.Reader, col interface {
 	SetIndex(string, int, string)
 }, maxRecursion int) (int, error) {
 	scanner := bufio.NewScanner(reader)
+
+	// Increase scanner buffer to handle large JSON objects (default is 64KB)
+	// Set max to 1MB to match typical JSON object sizes while preventing memory exhaustion
+	const maxScanTokenSize = 1024 * 1024 // 1MB
+	buf := make([]byte, 64*1024)
+	scanner.Buffer(buf, maxScanTokenSize)
+
 	lineNum := 0
 
 	for scanner.Scan() {
@@ -104,13 +117,15 @@ func processJSONStream(reader io.Reader, col interface {
 
 		// Validate JSON before parsing
 		if !gjson.Valid(line) {
-			return lineNum, fmt.Errorf("invalid JSON at line %d", lineNum)
+			// Use 1-based line numbering for user-friendly error messages
+			return lineNum, fmt.Errorf("invalid JSON at line %d", lineNum+1)
 		}
 
 		// Parse the JSON line using the existing readJSON function
 		data, err := readJSONWithLimit(line, maxRecursion)
 		if err != nil {
-			return lineNum, fmt.Errorf("error parsing JSON at line %d: %w", lineNum, err)
+			// Use 1-based line numbering for user-friendly error messages
+			return lineNum, fmt.Errorf("error parsing JSON at line %d: %w", lineNum+1, err)
 		}
 
 		// Add each key-value pair with a line number prefix
