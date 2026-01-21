@@ -106,3 +106,38 @@ func InSlice(a string, list []string) bool {
 func WrapUnsafe(buf []byte) string {
 	return *(*string)(unsafe.Pointer(&buf))
 }
+
+// HasRegex checks if a string is enclosed in forward slashes (e.g., "/pattern/")
+// and handles escaped slashes properly. Returns true only if the string starts with '/'
+// and ends with an unescaped '/'. If the string is a regex pattern, it also returns
+// the pattern content (without the surrounding slashes).
+func HasRegex(s string) (bool, string) {
+	if len(s) < 2 || s[0] != '/' {
+		return false, s
+	}
+	
+	// Check if the last character is '/' and it's not escaped
+	lastChar := len(s) - 1
+	if s[lastChar] != '/' {
+		return false, s
+	}
+	
+	// For "//" we should return true even though it's empty
+	if lastChar == 1 {
+		return true, ""
+	}
+	
+	// Count consecutive backslashes before the last '/'
+	backslashCount := 0
+	for i := lastChar - 1; i >= 0 && s[i] == '\\'; i-- {
+		backslashCount++
+	}
+	
+	// If there's an even number of backslashes (including 0), the '/' is not escaped
+	// If there's an odd number, the '/' is escaped
+	if backslashCount%2 == 0 {
+		return true, s[1:lastChar]
+	}
+	
+	return false, s
+}
