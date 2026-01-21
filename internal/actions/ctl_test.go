@@ -441,18 +441,117 @@ func TestParseCtl(t *testing.T) {
 }
 
 func TestCtlRegexColname(t *testing.T) {
-	_, _, _, _, rx, err := parseCtl("ruleRemoveTargetById=2;ARGS:/user/")
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
+	tCases := []struct {
+		name          string
+		input         string
+		expectError   bool
+		expectRegex   bool
+		expectPattern string
+		expectKey     string
+		errorContains string
+	}{
+		{
+			name:          "simple regex pattern",
+			input:         "ruleRemoveTargetById=2;ARGS:/user/",
+			expectError:   false,
+			expectRegex:   true,
+			expectPattern: "user",
+			expectKey:     "/user/",
+		},
+		{
+			name:          "regex with escaped slash at end",
+			input:         `ruleRemoveTargetById=2;ARGS:/user\/`,
+			expectError:   false,
+			expectRegex:   false,
+			expectKey:     `/user\/`,
+		},
+		{
+			name:          "regex with double escaped slash at end",
+			input:         `ruleRemoveTargetById=2;ARGS:/user\\/`,
+			expectError:   false,
+			expectRegex:   true,
+			expectPattern: `user\\`,
+			expectKey:     `/user\\/`,
+		},
+		{
+			name:          "empty regex pattern",
+			input:         "ruleRemoveTargetById=2;ARGS://",
+			expectError:   true,
+			errorContains: "empty regex pattern",
+		},
+		{
+			name:          "invalid regex syntax",
+			input:         "ruleRemoveTargetById=2;ARGS:/[invalid/",
+			expectError:   true,
+			errorContains: "invalid regex pattern",
+		},
+		{
+			name:          "regex with special characters",
+			input:         "ruleRemoveTargetById=2;ARGS:/user[0-9]+/",
+			expectError:   false,
+			expectRegex:   true,
+			expectPattern: "user[0-9]+",
+			expectKey:     "/user[0-9]+/",
+		},
+		{
+			name:          "regex case sensitivity",
+			input:         "ruleRemoveTargetById=2;ARGS:/User/",
+			expectError:   false,
+			expectRegex:   true,
+			expectPattern: "User",
+			expectKey:     "/User/",
+		},
+		{
+			name:          "non-regex key is lowercased",
+			input:         "ruleRemoveTargetById=2;ARGS:User",
+			expectError:   false,
+			expectRegex:   false,
+			expectKey:     "user",
+		},
+		{
+			name:          "regex with dot matches multiple strings",
+			input:         "ruleRemoveTargetById=2;ARGS:/u.*/",
+			expectError:   false,
+			expectRegex:   true,
+			expectPattern: "u.*",
+			expectKey:     "/u.*/",
+		},
 	}
-	if rx == nil {
-		t.Error("unexpected nil regex")
-	}
-	if rx.String() != "user" {
-		t.Errorf("unexpected regex, want: user, have: %s", rx.String())
-	}
-	if !rx.MatchString("user") {
-		t.Error("unexpected match")
+
+	for _, tCase := range tCases {
+		t.Run(tCase.name, func(t *testing.T) {
+			_, _, _, key, rx, err := parseCtl(tCase.input)
+			
+			if tCase.expectError {
+				if err == nil {
+					t.Fatalf("expected error but got none")
+				}
+				if tCase.errorContains != "" && !strings.Contains(err.Error(), tCase.errorContains) {
+					t.Errorf("expected error to contain %q, got: %s", tCase.errorContains, err.Error())
+				}
+				return
+			}
+			
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err.Error())
+			}
+			
+			if tCase.expectRegex {
+				if rx == nil {
+					t.Error("expected regex but got nil")
+				} else if rx.String() != tCase.expectPattern {
+					t.Errorf("unexpected regex pattern, want: %s, have: %s", tCase.expectPattern, rx.String())
+				}
+			} else {
+				if rx != nil {
+					t.Errorf("expected nil regex but got: %s", rx.String())
+				}
+			}
+			
+			if key != tCase.expectKey {
+				t.Errorf("unexpected key, want: %s, have: %s", tCase.expectKey, key)
+			}
+		})
 	}
 }
 
