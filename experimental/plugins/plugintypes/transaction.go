@@ -4,6 +4,8 @@
 package plugintypes
 
 import (
+	"context"
+
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/types"
@@ -35,6 +37,8 @@ type TransactionState interface {
 	CaptureField(idx int, value string)
 
 	LastPhase() types.RulePhase
+
+	Context() context.Context
 }
 
 // TransactionVariables has pointers to all the variables of the transaction
