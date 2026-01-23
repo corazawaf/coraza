@@ -11,6 +11,7 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	_ "github.com/corazawaf/coraza/v3/experimental/bodyprocessors"
 )
 
 func jsonstreamProcessor(t *testing.T) plugintypes.BodyProcessor {

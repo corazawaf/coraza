@@ -13,6 +13,7 @@ import (
 
 	"github.com/tidwall/gjson"
 
+	"github.com/corazawaf/coraza/v3/experimental/plugins"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
@@ -344,13 +345,13 @@ func readItemsWithLimit(json gjson.Result, objKey []byte, maxRecursion int, res 
 
 func init() {
 	// Register the processor with multiple names for different content-types
-	RegisterBodyProcessor("jsonstream", func() plugintypes.BodyProcessor {
+	plugins.RegisterBodyProcessor("jsonstream", func() plugintypes.BodyProcessor {
 		return &jsonStreamBodyProcessor{}
 	})
-	RegisterBodyProcessor("ndjson", func() plugintypes.BodyProcessor {
+	plugins.RegisterBodyProcessor("ndjson", func() plugintypes.BodyProcessor {
 		return &jsonStreamBodyProcessor{}
 	})
-	RegisterBodyProcessor("jsonlines", func() plugintypes.BodyProcessor {
+	plugins.RegisterBodyProcessor("jsonlines", func() plugintypes.BodyProcessor {
 		return &jsonStreamBodyProcessor{}
 	})
 }
