@@ -8,15 +8,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
-	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	_ "github.com/corazawaf/coraza/v3/experimental/bodyprocessors"
+
+	"github.com/corazawaf/coraza/v3/experimental/plugins"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
 func jsonstreamProcessor(t *testing.T) plugintypes.BodyProcessor {
 	t.Helper()
-	jsp, err := bodyprocessors.GetBodyProcessor("jsonstream")
+	jsp, err := plugins.GetBodyProcessor("jsonstream")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -619,7 +620,7 @@ func BenchmarkJSONStreamProcessor(b *testing.B) {
 	}
 	input := sb.String()
 
-	jsp, err := bodyprocessors.GetBodyProcessor("jsonstream")
+	jsp, err := plugins.GetBodyProcessor("jsonstream")
 	if err != nil {
 		b.Fatal(err)
 	}
