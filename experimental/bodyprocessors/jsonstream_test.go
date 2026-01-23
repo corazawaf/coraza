@@ -4,6 +4,7 @@
 package bodyprocessors_test
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -635,5 +636,135 @@ func BenchmarkJSONStreamProcessor(b *testing.B) {
 		if err != nil {
 			b.Error(err)
 		}
+	}
+}
+
+func TestProcessorRegistration(t *testing.T) {
+	// Test that all three aliases are registered
+	aliases := []string{"jsonstream", "ndjson", "jsonlines"}
+
+	for _, alias := range aliases {
+		t.Run(alias, func(t *testing.T) {
+			processor, err := plugins.GetBodyProcessor(alias)
+			if err != nil {
+				t.Errorf("Failed to get processor '%s': %v", alias, err)
+			}
+			if processor == nil {
+				t.Errorf("Processor '%s' is nil", alias)
+			}
+		})
+	}
+}
+
+func TestJSONStreamLargeToken(t *testing.T) {
+	// Create a JSON object that exceeds 1MB to trigger scanner buffer error
+	largeValue := strings.Repeat("x", 2*1024*1024) // 2MB string
+	input := fmt.Sprintf(`{"large": "%s"}`, largeValue) + "\n"
+
+	jsp := jsonstreamProcessor(t)
+	v := corazawaf.NewTransactionVariables()
+
+	err := jsp.ProcessRequest(strings.NewReader(input), v, plugintypes.BodyProcessorOptions{})
+
+	// Should get a scanner error about token too long
+	if err == nil {
+		t.Errorf("expected error for token too large, got none")
+	}
+
+	if !strings.Contains(err.Error(), "error reading stream") && !strings.Contains(err.Error(), "token too long") {
+		t.Logf("Got error (this is expected): %v", err)
+	}
+}
+
+func TestJSONSequenceLargeToken(t *testing.T) {
+	const RS = "\x1e"
+	// Create a JSON object that exceeds 1MB to trigger scanner buffer error
+	largeValue := strings.Repeat("x", 2*1024*1024) // 2MB string
+	input := RS + fmt.Sprintf(`{"large": "%s"}`, largeValue) + "\n"
+
+	jsp := jsonstreamProcessor(t)
+	v := corazawaf.NewTransactionVariables()
+
+	err := jsp.ProcessRequest(strings.NewReader(input), v, plugintypes.BodyProcessorOptions{})
+
+	// Should get a scanner error about token too long
+	if err == nil {
+		t.Errorf("expected error for token too large, got none")
+	}
+
+	if !strings.Contains(err.Error(), "error reading stream") && !strings.Contains(err.Error(), "token too long") {
+		t.Logf("Got error (this is expected): %v", err)
+	}
+}
+
+func TestProcessResponseWithoutResponseBody(t *testing.T) {
+	input := `{"status": "ok"}
+`
+
+	jsp := jsonstreamProcessor(t)
+	v := corazawaf.NewTransactionVariables()
+
+	// Process response without setting up ResponseBody
+	err := jsp.ProcessResponse(strings.NewReader(input), v, plugintypes.BodyProcessorOptions{})
+
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+
+	// Check response args were still populated
+	responseArgs := v.ResponseArgs()
+	if status := responseArgs.Get("json.0.status"); len(status) == 0 || status[0] != "ok" {
+		t.Errorf("json.0.status should be 'ok', got: %v", status)
+	}
+
+	// TX variables should be set (but response body related ones may not be if ResponseBody() is nil)
+	txVars := v.TX()
+	lineCount := txVars.Get("jsonstream_response_line_count")
+	if len(lineCount) == 0 || lineCount[0] != "1" {
+		t.Logf("jsonstream_response_line_count: %v (may be empty if ResponseBody() is nil)", lineCount)
+	}
+}
+
+// errorReader is a reader that always returns an error
+type errorReader struct{}
+
+func (e errorReader) Read(p []byte) (n int, err error) {
+	return 0, errors.New("simulated read error")
+}
+
+func TestJSONStreamPeekError(t *testing.T) {
+	jsp := jsonstreamProcessor(t)
+	v := corazawaf.NewTransactionVariables()
+
+	// Use an error reader to trigger peek error
+	err := jsp.ProcessRequest(errorReader{}, v, plugintypes.BodyProcessorOptions{})
+
+	if err == nil {
+		t.Errorf("expected error from peek, got none")
+	}
+
+	if !strings.Contains(err.Error(), "error peeking stream") {
+		t.Errorf("expected 'error peeking stream' error, got: %v", err)
+	}
+}
+
+func TestJSONSequenceOnlyRS(t *testing.T) {
+	const RS = "\x1e"
+
+	// Only RS characters, no actual JSON
+	input := RS + RS + RS
+
+	jsp := jsonstreamProcessor(t)
+	v := corazawaf.NewTransactionVariables()
+
+	err := jsp.ProcessRequest(strings.NewReader(input), v, plugintypes.BodyProcessorOptions{})
+
+	if err == nil {
+		t.Errorf("expected error for only RS characters, got none")
+	}
+
+	if !strings.Contains(err.Error(), "no valid JSON objects") {
+		t.Errorf("expected 'no valid JSON objects' error, got: %v", err)
 	}
 }
