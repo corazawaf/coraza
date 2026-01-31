@@ -33,6 +33,9 @@ jobs:
           go-version: ${{ matrix.go-version }}
           cache: true
 
+      - name: Download dependencies
+        run: go mod download
+
       - name: Setup tinygo
         uses: acifani/setup-tinygo@db56321a62b9a67922bb9ac8f9d085e218807bb3 # v2
         with:
