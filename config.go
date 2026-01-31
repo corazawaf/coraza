@@ -63,10 +63,6 @@ type WAFConfig interface {
 
 	// WithRootFS configures the root file system.
 	WithRootFS(fs fs.FS) WAFConfig
-
-	// WithRuleObserver allows observing rules at load time. It is intended
-	// for logging, metrics, and audit use cases.
-	WithRuleObserver(observer func(rule types.RuleMetadata)) WAFConfig
 }
 
 // NewWAFConfig creates a new WAFConfig with the default settings.

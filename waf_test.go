@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/experimental"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
@@ -217,9 +218,9 @@ func TestRuleObserver(t *testing.T) {
 				WithDirectives(tc.directives)
 
 			if tc.withObserver {
-				cfg = cfg.WithRuleObserver(func(rule types.RuleMetadata) {
+				cfg = experimental.WAFConfigWithRuleObserver(cfg, func(rule types.RuleMetadata) {
 					observed = append(observed, rule)
-				})
+				}).(WAFConfig)
 			}
 
 			waf, err := NewWAF(cfg)
