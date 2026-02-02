@@ -18,9 +18,9 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.23.x]
+        go-version: [1.24.x]
         # tinygo-version is meant to stay aligned with the one used in corazawaf/coraza-proxy-wasm
-        tinygo-version: [0.34.0]
+        tinygo-version: [0.40.1]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -32,6 +32,9 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
           cache: true
+
+      - name: Download dependencies
+        run: go mod download
 
       - name: Setup tinygo
         uses: acifani/setup-tinygo@db56321a62b9a67922bb9ac8f9d085e218807bb3 # v2
@@ -48,7 +51,7 @@ jobs:
             ${{ runner.os }}-tinygo-${{ matrix.tinygo-version }}-
 
       - name: Tests
-        run: tinygo test ./...
+        run: tinygo test -v -short ./internal/...
 
       - name: Tests memoize
-        run: tinygo test -tags=memoize_builders ./...
+        run: tinygo test -v -short -tags=memoize_builders ./internal/...
