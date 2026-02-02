@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"net/http"
 	"regexp"
 	"runtime/debug"
 	"strconv"
@@ -1857,7 +1856,7 @@ func TestRequestFilename(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			waf := NewWAF()
 			tx := waf.NewTransaction()
-			tx.ProcessURI(test.uri, http.MethodGet, "HTTP/1.1")
+			tx.ProcessURI(test.uri, "GET", "HTTP/1.1")
 			if tx.variables.requestFilename.Get() != test.expected {
 				t.Fatalf("Expected REQUEST_FILENAME %q, got %q", test.expected, tx.variables.requestFilename.Get())
 			}

@@ -4,8 +4,6 @@
 package actions
 
 import (
-	"net/http"
-
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -40,7 +38,7 @@ func (a *denyFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.Transaction
 	status := r.Status()
 	// deny action defaults to status 403
 	if status == noStatus {
-		status = http.StatusForbidden
+		status = 403
 	}
 	tx.Interrupt(&types.Interruption{
 		Status: status,
