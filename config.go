@@ -108,7 +108,7 @@ type wafConfig struct {
 	fsRoot                   fs.FS
 }
 
-func (c *wafConfig) WithRuleObserver(observer func(rule types.RuleMetadata)) WAFConfig {
+func (c *wafConfig) WithRuleObserver(observer func(rule types.RuleMetadata)) any {
 	ret := c.clone()
 	ret.ruleObserver = observer
 	return ret
