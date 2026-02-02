@@ -434,6 +434,7 @@ func parseActionOperator(data string) (vars string, op string, actions string, e
 		return
 	}
 	op = utils.MaybeRemoveQuotes(op)
+	op = utils.UnescapeQuotedString(op)
 
 	rest = strings.TrimLeft(rest, " ")
 	if len(rest) == 0 {
