@@ -682,70 +682,286 @@ func TestArgumentNamesCaseSensitive(t *testing.T) {
 }
 
 func TestCookiesCaseSensitive(t *testing.T) {
-	waf := corazawaf.NewWAF()
-	rules := `SecRule REQUEST_COOKIES:Test1 "Xyz" "id:3, phase:2, log, deny"`
-	parser := NewParser(waf)
+	t.Run("KeyString", func(t *testing.T) {
+		waf := corazawaf.NewWAF()
+		rules := `SecRule REQUEST_COOKIES:Test1 "Xyz" "id:3, phase:2, log, deny"`
+		parser := NewParser(waf)
 
-	err := parser.FromString(rules)
-	if err != nil {
-		t.Error()
-		return
-	}
+		err := parser.FromString(rules)
+		if err != nil {
+			t.Error()
+			return
+		}
 
-	tx := waf.NewTransaction()
-	tx.AddRequestHeader("cookie", "Test1=Xyz")
-	tx.ProcessRequestHeaders()
-	it, err := tx.ProcessRequestBody()
-	if err != nil {
-		t.Error(err)
-	}
-	if it == nil {
-		t.Error("failed to test cookies case sensitive")
-	}
+		t.Run("NameMatchValueMatch", func(t *testing.T) {
+			tx := waf.NewTransaction()
+			tx.AddRequestHeader("cookie", "Test1=Xyz")
+			tx.ProcessRequestHeaders()
+			it, err := tx.ProcessRequestBody()
+			if err != nil {
+				t.Error(err)
+			}
+			if it == nil {
+				t.Error("failed to test cookies case sensitive")
+			}
+		})
+		t.Run("NameCaseMismatchValueMatch", func(t *testing.T) {
+			tx := waf.NewTransaction()
+			tx.AddRequestHeader("cookie", "TEST1=Xyz")
+			tx.ProcessRequestHeaders()
+			it, err := tx.ProcessRequestBody()
+			if err != nil {
+				t.Error(err)
+			}
+			if it == nil {
+				t.Error("failed to test cookies case sensitive")
+			}
 
-	tx = waf.NewTransaction()
-	tx.AddRequestHeader("cookie", "TEST1=Xyz")
-	tx.ProcessRequestHeaders()
-	it, err = tx.ProcessRequestBody()
-	if err != nil {
-		t.Error(err)
-	}
-	if it == nil {
-		t.Error("failed to test cookies case sensitive")
-	}
+			tx = waf.NewTransaction()
+			tx.AddRequestHeader("cookie", "test1=Xyz")
+			tx.ProcessRequestHeaders()
+			it, err = tx.ProcessRequestBody()
+			if err != nil {
+				t.Error(err)
+			}
+			if it == nil {
+				t.Error("failed to test cookies case sensitive")
+			}
+		})
+		t.Run("NameCaseMismatchValueCaseMismatch", func(t *testing.T) {
+			tx := waf.NewTransaction()
+			tx.AddRequestHeader("cookie", "test1=xyz")
+			tx.ProcessRequestHeaders()
+			it, err := tx.ProcessRequestBody()
+			if err != nil {
+				t.Error(err)
+			}
+			if it != nil {
+				t.Error("failed to test cookies value case sensitive")
+			}
 
-	tx = waf.NewTransaction()
-	tx.AddRequestHeader("cookie", "test1=Xyz")
-	tx.ProcessRequestHeaders()
-	it, err = tx.ProcessRequestBody()
-	if err != nil {
-		t.Error(err)
-	}
-	if it == nil {
-		t.Error("failed to test cookies case sensitive")
-	}
+			tx = waf.NewTransaction()
+			tx.AddRequestHeader("cookie", "test1=XYZ")
+			tx.ProcessRequestHeaders()
+			it, err = tx.ProcessRequestBody()
+			if err != nil {
+				t.Error(err)
+			}
+			if it != nil {
+				t.Error("failed to test cookies value case sensitive")
+			}
+		})
+	})
+	t.Run("KeyRegexCaseInsensitive", func(t *testing.T) {
+		waf := corazawaf.NewWAF()
+		rules := `SecRule REQUEST_COOKIES:/(?i)Test1/ "Xyz" "id:3, phase:2, log, deny"`
+		parser := NewParser(waf)
 
-	tx = waf.NewTransaction()
-	tx.AddRequestHeader("cookie", "test1=xyz")
-	tx.ProcessRequestHeaders()
-	it, err = tx.ProcessRequestBody()
-	if err != nil {
-		t.Error(err)
-	}
-	if it != nil {
-		t.Error("failed to test cookies value case sensitive")
-	}
+		err := parser.FromString(rules)
+		if err != nil {
+			t.Error()
+			return
+		}
 
-	tx = waf.NewTransaction()
-	tx.AddRequestHeader("cookie", "test1=XYZ")
-	tx.ProcessRequestHeaders()
-	it, err = tx.ProcessRequestBody()
-	if err != nil {
-		t.Error(err)
-	}
-	if it != nil {
-		t.Error("failed to test cookies value case sensitive")
-	}
+		t.Run("NameMatchValueMatch", func(t *testing.T) {
+			tx := waf.NewTransaction()
+			tx.AddRequestHeader("cookie", "Test1=Xyz")
+			tx.ProcessRequestHeaders()
+			it, err := tx.ProcessRequestBody()
+			if err != nil {
+				t.Error(err)
+			}
+			if it == nil {
+				t.Error("failed to test cookies case sensitive")
+			}
+		})
+		t.Run("NameCaseMismatchValueMatch", func(t *testing.T) {
+			tx := waf.NewTransaction()
+			tx.AddRequestHeader("cookie", "TEST1=Xyz")
+			tx.ProcessRequestHeaders()
+			it, err := tx.ProcessRequestBody()
+			if err != nil {
+				t.Error(err)
+			}
+			if it == nil {
+				t.Error("failed to test cookies case sensitive")
+			}
+
+			tx = waf.NewTransaction()
+			tx.AddRequestHeader("cookie", "test1=Xyz")
+			tx.ProcessRequestHeaders()
+			it, err = tx.ProcessRequestBody()
+			if err != nil {
+				t.Error(err)
+			}
+			if it == nil {
+				t.Error("failed to test cookies case sensitive")
+			}
+		})
+		t.Run("NameCaseMismatchValueCaseMismatch", func(t *testing.T) {
+			tx := waf.NewTransaction()
+			tx.AddRequestHeader("cookie", "test1=xyz")
+			tx.ProcessRequestHeaders()
+			it, err := tx.ProcessRequestBody()
+			if err != nil {
+				t.Error(err)
+			}
+			if it != nil {
+				t.Error("failed to test cookies value case sensitive")
+			}
+
+			tx = waf.NewTransaction()
+			tx.AddRequestHeader("cookie", "test1=XYZ")
+			tx.ProcessRequestHeaders()
+			it, err = tx.ProcessRequestBody()
+			if err != nil {
+				t.Error(err)
+			}
+			if it != nil {
+				t.Error("failed to test cookies value case sensitive")
+			}
+		})
+	})
+	t.Run("KeyRegexCaseSensitiveAllLowerCase", func(t *testing.T) {
+		waf := corazawaf.NewWAF()
+		rules := `SecRule REQUEST_COOKIES:/test1/ "Xyz" "id:3, phase:2, log, deny"`
+		parser := NewParser(waf)
+
+		err := parser.FromString(rules)
+		if err != nil {
+			t.Error()
+			return
+		}
+
+		t.Run("NameCaseMismatchValueMatch", func(t *testing.T) {
+			tx := waf.NewTransaction()
+			tx.AddRequestHeader("cookie", "Test1=Xyz")
+			tx.ProcessRequestHeaders()
+			it, err := tx.ProcessRequestBody()
+			if err != nil {
+				t.Error(err)
+			}
+			if it != nil {
+				t.Error("failed to test cookies case sensitive")
+			}
+
+			tx = waf.NewTransaction()
+			tx.AddRequestHeader("cookie", "TEST1=Xyz")
+			tx.ProcessRequestHeaders()
+			it, err = tx.ProcessRequestBody()
+			if err != nil {
+				t.Error(err)
+			}
+			if it != nil {
+				t.Error("failed to test cookies case sensitive")
+			}
+		})
+		t.Run("NameMatchValueMatch", func(t *testing.T) {
+			tx := waf.NewTransaction()
+			tx.AddRequestHeader("cookie", "test1=Xyz")
+			tx.ProcessRequestHeaders()
+			it, err := tx.ProcessRequestBody()
+			if err != nil {
+				t.Error(err)
+			}
+			if it == nil {
+				t.Error("failed to test cookies case sensitive")
+			}
+		})
+		t.Run("NameMatchValueCaseMismatch", func(t *testing.T) {
+			tx := waf.NewTransaction()
+			tx.AddRequestHeader("cookie", "test1=xyz")
+			tx.ProcessRequestHeaders()
+			it, err := tx.ProcessRequestBody()
+			if err != nil {
+				t.Error(err)
+			}
+			if it != nil {
+				t.Error("failed to test cookies value case sensitive")
+			}
+
+			tx = waf.NewTransaction()
+			tx.AddRequestHeader("cookie", "test1=XYZ")
+			tx.ProcessRequestHeaders()
+			it, err = tx.ProcessRequestBody()
+			if err != nil {
+				t.Error(err)
+			}
+			if it != nil {
+				t.Error("failed to test cookies value case sensitive")
+			}
+		})
+	})
+	t.Run("KeyRegexCaseSensitiveHasUpperCase", func(t *testing.T) {
+		waf := corazawaf.NewWAF()
+		rules := `SecRule REQUEST_COOKIES:/Test1/ "Xyz" "id:3, phase:2, log, deny"`
+		parser := NewParser(waf)
+
+		err := parser.FromString(rules)
+		if err != nil {
+			t.Error()
+			return
+		}
+
+		t.Run("NameMatchValueMatch", func(t *testing.T) {
+			tx := waf.NewTransaction()
+			tx.AddRequestHeader("cookie", "Test1=Xyz")
+			tx.ProcessRequestHeaders()
+			it, err := tx.ProcessRequestBody()
+			if err != nil {
+				t.Error(err)
+			}
+			if it == nil {
+				t.Error("failed to test cookies case sensitive")
+			}
+		})
+		t.Run("NameCaseMismatchValueMatch", func(t *testing.T) {
+			tx := waf.NewTransaction()
+			tx.AddRequestHeader("cookie", "TEST1=Xyz")
+			tx.ProcessRequestHeaders()
+			it, err := tx.ProcessRequestBody()
+			if err != nil {
+				t.Error(err)
+			}
+			if it != nil {
+				t.Error("failed to test cookies case sensitive")
+			}
+
+			tx = waf.NewTransaction()
+			tx.AddRequestHeader("cookie", "test1=Xyz")
+			tx.ProcessRequestHeaders()
+			it, err = tx.ProcessRequestBody()
+			if err != nil {
+				t.Error(err)
+			}
+			if it != nil {
+				t.Error("failed to test cookies case sensitive")
+			}
+		})
+		t.Run("NameCaseMismatchValueCaseMismatch", func(t *testing.T) {
+			tx := waf.NewTransaction()
+			tx.AddRequestHeader("cookie", "test1=xyz")
+			tx.ProcessRequestHeaders()
+			it, err := tx.ProcessRequestBody()
+			if err != nil {
+				t.Error(err)
+			}
+			if it != nil {
+				t.Error("failed to test cookies value case sensitive")
+			}
+
+			tx = waf.NewTransaction()
+			tx.AddRequestHeader("cookie", "test1=XYZ")
+			tx.ProcessRequestHeaders()
+			it, err = tx.ProcessRequestBody()
+			if err != nil {
+				t.Error(err)
+			}
+			if it != nil {
+				t.Error("failed to test cookies value case sensitive")
+			}
+		})
+	})
 }
 
 func TestHeadersCaseSensitive(t *testing.T) {
