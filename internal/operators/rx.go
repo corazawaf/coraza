@@ -17,6 +17,29 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/memoize"
 )
 
+// Description:
+// Performs regular expression pattern matching using RE2 syntax. This is the default operator
+// if no @ prefix is specified. Supports capturing groups (up to 9) for use in rule actions.
+// By default enables dotall mode (?s) where . matches newlines for compatibility with ModSecurity.
+//
+// Arguments:
+// Regular expression pattern following RE2 syntax. The pattern is automatically wrapped with
+// mode flags for proper matching behavior.
+//
+// Returns:
+// true if the pattern matches the input, false otherwise
+//
+// Example:
+// ```
+// # Match User-Agent containing "nikto" (with explicit @rx)
+// SecRule REQUEST_HEADERS:User-Agent "@rx nikto" "id:180,deny,log"
+//
+// # Implicit operator usage (same as @rx)
+// SecRule ARGS "(?i)union.*select" "id:181,deny"
+//
+// # Capture groups for reuse in actions
+// SecRule REQUEST_URI "@rx ^/api/v(\d+)" "id:182,setvar:tx.api_version=%{TX.1}"
+// ```
 type rx struct {
 	re *regexp.Regexp
 }

@@ -11,6 +11,25 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
+// Description:
+// Checks whether the input is a valid UTF-8 encoded string. Detects encoding issues,
+// malformed sequences, and overlong encodings. Useful for preventing UTF-8 validation
+// attacks and ensuring proper character encoding.
+//
+// Arguments:
+// None. Operates on the target variable specified in the rule.
+//
+// Returns:
+// true if invalid UTF-8 encoding is found (violation), false if encoding is valid
+//
+// Example:
+// ```
+// # Ensure valid UTF-8 in request parameters
+// SecRule ARGS "@validateUtf8Encoding" "id:193,deny,log,msg:'Invalid UTF-8 encoding'"
+//
+// # Check request body encoding
+// SecRule REQUEST_BODY "@validateUtf8Encoding" "id:194,deny"
+// ```
 type validateUtf8Encoding struct{}
 
 var _ plugintypes.Operator = (*validateUtf8Encoding)(nil)
