@@ -614,8 +614,8 @@ func TestSetRawRequest_WithBody(t *testing.T) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 
-	// The body includes the empty line separator when parsed from raw request
-	expectedBody := "\r\ntest=body&data=value"
+	// The body should start after the empty line separator when parsed from raw request
+	expectedBody := "test=body&data=value"
 	if test.body != expectedBody {
 		t.Errorf("Expected body '%s', got '%s'", expectedBody, test.body)
 	}

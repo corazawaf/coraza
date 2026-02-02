@@ -1153,10 +1153,32 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 				return fmt.Errorf("invalid range: %s", idOrRange)
 			}
 
+			// Parse actions once to check if any are disruptive
+			trimmedActions := strings.Trim(actions, "\"")
+			parsedActions, err := parseActions(options.WAF.Logger, trimmedActions)
+			if err != nil {
+				return err
+			}
+
+			// Check if any of the new actions are disruptive
+			hasDisruptiveAction := false
+			for _, action := range parsedActions {
+				if action.Atype == plugintypes.ActionTypeDisruptive {
+					hasDisruptiveAction = true
+					break
+				}
+			}
+
 			for _, rule := range options.WAF.Rules.GetRules() {
-				if rule.ID_ < start && rule.ID_ > end {
+				if rule.ID_ < start || rule.ID_ > end {
 					continue
 				}
+
+				// Only clear disruptive actions if the update contains a disruptive action
+				if hasDisruptiveAction {
+					rule.ClearActionsOfType(plugintypes.ActionTypeDisruptive)
+				}
+
 				rp := RuleParser{
 					rule: &rule,
 					options: RuleOptions{
@@ -1164,7 +1186,7 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 					},
 					defaultActions: map[types.RulePhase][]ruleAction{},
 				}
-				if err := rp.ParseActions(strings.Trim(actions, "\"")); err != nil {
+				if err := rp.applyParsedActions(parsedActions); err != nil {
 					return err
 				}
 			}
@@ -1187,7 +1209,9 @@ func updateActionBySingleID(id int, actions string, options *DirectiveOptions) e
 		return err
 	}
 
-	// Check if any of the new actions are disruptive
+	// Check if any of the new actions are disruptive.
+	// hasDisruptiveAction defaults to false; when parsedActions is empty or contains
+	// only non-disruptive actions, we preserve existing disruptive actions on the rule.
 	hasDisruptiveAction := false
 	for _, action := range parsedActions {
 		if action.Atype == plugintypes.ActionTypeDisruptive {
@@ -1203,6 +1227,7 @@ func updateActionBySingleID(id int, actions string, options *DirectiveOptions) e
 		rule.ClearActionsOfType(plugintypes.ActionTypeDisruptive)
 	}
 
+	// Apply the parsed actions to the rule without re-parsing
 	rp := RuleParser{
 		rule: rule,
 		options: RuleOptions{
@@ -1210,7 +1235,7 @@ func updateActionBySingleID(id int, actions string, options *DirectiveOptions) e
 		},
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
-	return rp.ParseActions(trimmedActions)
+	return rp.applyParsedActions(parsedActions)
 }
 
 // Description: Updates the target (variable) list of the specified rule(s) by tag.

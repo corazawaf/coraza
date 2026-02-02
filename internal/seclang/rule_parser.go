@@ -265,11 +265,18 @@ func (rp *RuleParser) ParseDefaultActions(actions string) error {
 // ParseActions parses a comma separated list of actions:arguments
 // Arguments can be wrapper inside quotes
 func (rp *RuleParser) ParseActions(actions string) error {
-	disabledActions := rp.options.ParserConfig.DisabledRuleActions
 	act, err := parseActions(rp.options.WAF.Logger, actions)
 	if err != nil {
 		return err
 	}
+	return rp.applyParsedActions(act)
+}
+
+// applyParsedActions applies a list of already-parsed actions to the rule.
+// This is useful when actions have been parsed once for inspection and need
+// to be applied without re-parsing, avoiding redundant parsing operations.
+func (rp *RuleParser) applyParsedActions(act []ruleAction) error {
+	disabledActions := rp.options.ParserConfig.DisabledRuleActions
 	// check if forbidden action:
 	for _, a := range act {
 		if utils.InSlice(a.Key, disabledActions) {
