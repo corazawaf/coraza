@@ -273,8 +273,15 @@ func (rp *RuleParser) ParseActions(actions string) error {
 }
 
 // applyParsedActions applies a list of already-parsed actions to the rule.
-// This is useful when actions have been parsed once for inspection and need
-// to be applied without re-parsing, avoiding redundant parsing operations.
+//
+// This is a helper method used internally by ParseActions and directive handlers
+// (such as SecRuleUpdateActionById) to avoid code duplication. It's useful when
+// actions have been parsed once for inspection and need to be applied without
+// re-parsing, avoiding redundant parsing operations.
+//
+// The method validates that none of the actions are disabled, executes metadata
+// actions, merges with default actions for the rule's phase, and initializes
+// all actions on the rule.
 func (rp *RuleParser) applyParsedActions(act []ruleAction) error {
 	disabledActions := rp.options.ParserConfig.DisabledRuleActions
 	// check if forbidden action:
