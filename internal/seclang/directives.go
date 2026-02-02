@@ -1103,6 +1103,17 @@ func updateTargetBySingleID(id int, variables string, options *DirectiveOptions)
 	return rp.ParseVariables(strings.Trim(variables, "\""))
 }
 
+// hasDisruptiveActions checks if any of the parsed actions are disruptive.
+// Returns true if at least one action has ActionTypeDisruptive, false otherwise.
+func hasDisruptiveActions(actions []ruleAction) bool {
+	for _, action := range actions {
+		if action.Atype == plugintypes.ActionTypeDisruptive {
+			return true
+		}
+	}
+	return false
+}
+
 // Description: Updates the action list of the specified rule(s).
 // Syntax: SecRuleUpdateActionById ID ACTIONLIST
 // ---
@@ -1161,13 +1172,7 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 			}
 
 			// Check if any of the new actions are disruptive
-			hasDisruptiveAction := false
-			for _, action := range parsedActions {
-				if action.Atype == plugintypes.ActionTypeDisruptive {
-					hasDisruptiveAction = true
-					break
-				}
-			}
+			hasDisruptiveAction := hasDisruptiveActions(parsedActions)
 
 			for _, rule := range options.WAF.Rules.GetRules() {
 				if rule.ID_ < start || rule.ID_ > end {
@@ -1210,15 +1215,9 @@ func updateActionBySingleID(id int, actions string, options *DirectiveOptions) e
 	}
 
 	// Check if any of the new actions are disruptive.
-	// hasDisruptiveAction defaults to false; when parsedActions is empty or contains
-	// only non-disruptive actions, we preserve existing disruptive actions on the rule.
-	hasDisruptiveAction := false
-	for _, action := range parsedActions {
-		if action.Atype == plugintypes.ActionTypeDisruptive {
-			hasDisruptiveAction = true
-			break
-		}
-	}
+	// hasDisruptiveActions returns false when parsedActions is empty or contains
+	// only non-disruptive actions, preserving existing disruptive actions on the rule.
+	hasDisruptiveAction := hasDisruptiveActions(parsedActions)
 
 	// Only clear disruptive actions if the update contains a disruptive action
 	// This matches ModSecurity behavior where SecRuleUpdateActionById replaces
