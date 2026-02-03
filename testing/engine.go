@@ -113,7 +113,10 @@ func (t *Test) SetRawRequest(request []byte) error {
 	}
 	// parse body
 	if i < len(spl) {
-		return t.SetRequestBody(strings.Join(spl[i:], "\r\n"))
+		// i is the index of the empty line separator.
+		// Skip the separator by joining from i+1.
+		// If i is the last element (i+1 == len(spl)), spl[i+1:] is empty, which is correct.
+		return t.SetRequestBody(strings.Join(spl[i+1:], "\r\n"))
 	}
 
 	return nil
