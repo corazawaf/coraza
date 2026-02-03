@@ -167,6 +167,11 @@ var _ = profile.RegisterProfile(profile.Profile{
 						Output: profile.ExpectedOutput{
 							TriggeredRules:    []int{1, 3, 4},
 							NonTriggeredRules: []int{2},
+							Interruption: &profile.ExpectedInterruption{
+								Status: 504,
+								RuleID: 3,
+								Action: "deny",
+							},
 						},
 					},
 				},

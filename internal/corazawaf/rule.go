@@ -467,6 +467,26 @@ func (r *Rule) AddAction(name string, action plugintypes.Action) error {
 	return nil
 }
 
+// ClearActionsOfType removes all actions of the given plugintypes.ActionType from the rule.
+//
+// This helper is typically used by rule parsers or directives that need to override
+// previously configured actions for a rule (for example, to clear all disruptive or
+// logging actions before adding new ones) without modifying the rest of the rule
+// definition.
+//
+// The actionType argument identifies the logical category of actions to remove, as
+// reported by Action.Type() (such as disruptive, non-disruptive, or logging). Any
+// action whose Type() matches actionType is filtered out from r.actions.
+func (r *Rule) ClearActionsOfType(actionType plugintypes.ActionType) {
+	filtered := make([]ruleActionParams, 0, len(r.actions))
+	for _, action := range r.actions {
+		if action.Function.Type() != actionType {
+			filtered = append(filtered, action)
+		}
+	}
+	r.actions = filtered
+}
+
 // hasRegex checks the received key to see if it is between forward slashes.
 // if it is, it will return true and the content of the regular expression inside the slashes.
 // otherwise it will return false and the same key.
