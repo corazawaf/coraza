@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strings"
 
+	_ "github.com/corazawaf/coraza/v3/experimental/bodyprocessors"
+
 	"github.com/corazawaf/coraza/v3/experimental"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/environment"
