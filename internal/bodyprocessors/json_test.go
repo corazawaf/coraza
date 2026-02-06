@@ -4,13 +4,21 @@
 package bodyprocessors
 
 import (
+	"errors"
+	"strings"
 	"testing"
+)
+
+const (
+	deeplyNestedJSONObject = 15000
+	maxRecursion           = 10000
 )
 
 var jsonTests = []struct {
 	name string
 	json string
 	want map[string]string
+	err  error
 }{
 	{
 		name: "map",
@@ -55,6 +63,7 @@ var jsonTests = []struct {
 			"json.f.0.0":     "1",
 			"json.f.0.0.0.z": "abc",
 		},
+		err: nil,
 	},
 	{
 		name: "array",
@@ -115,6 +124,35 @@ var jsonTests = []struct {
 			"json.1.f.0.0":     "1",
 			"json.1.f.0.0.0.z": "abc",
 		},
+		err: nil,
+	},
+	{
+		name: "broken1", // this json test has more opening brackets than closing, so it is broken
+		json: `{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a": 1 }}}}}}}}}}}}}}}}}}}}}}`,
+		want: map[string]string{},
+		err:  errors.New("invalid JSON"),
+	},
+	{
+		name: "broken2",
+		json: `{"test": 123, "test2": 456, "test3": [22, 44, 55], "test4": 3}`,
+		want: map[string]string{
+			"json.test3.0": "22",
+			"json.test3.1": "44",
+			"json.test3.2": "55",
+			"json.test4":   "3",
+			"json.test":    "123",
+			"json.test2":   "456",
+			"json.test3":   "3",
+		},
+		err: nil,
+	},
+	{
+		name: "bomb",
+		json: strings.Repeat(`{"a":`, deeplyNestedJSONObject) + "1" + strings.Repeat(`}`, deeplyNestedJSONObject),
+		want: map[string]string{
+			"json." + strings.Repeat(`a.`, deeplyNestedJSONObject-1) + "a": "1",
+		},
+		err: errors.New("max recursion reached while reading json object"),
 	},
 	{
 		name: "empty_object",
@@ -143,19 +181,25 @@ func TestReadJSON(t *testing.T) {
 	for _, tc := range jsonTests {
 		tt := tc
 		t.Run(tt.name, func(t *testing.T) {
-			jsonMap, err := readJSON(tt.json)
-			if err != nil {
-				t.Error(err)
-			}
+			jsonMap, err := readJSON(tt.json, maxRecursion)
 
 			// Special case for nested_empty - just check that the function doesn't error
 			if tt.name == "nested_empty" {
+				if err != nil {
+					t.Error(err)
+				}
 				// Print the keys for debugging
 				t.Logf("Actual keys for nested_empty: %v", mapKeys(jsonMap))
 				return
 			}
 
 			for k, want := range tt.want {
+				if err != nil {
+					if tt.err == nil || err.Error() != tt.err.Error() {
+						t.Error(err)
+					}
+					continue
+				}
 				if have, ok := jsonMap[k]; ok {
 					if want != have {
 						t.Errorf("key=%s, want %s, have %s", k, want, have)
@@ -183,11 +227,10 @@ func mapKeys(m map[string]string) []string {
 }
 
 func TestInvalidJSON(t *testing.T) {
-	_, err := readJSON(`{invalid json`)
-	if err != nil {
-		// We expect no error since gjson.Parse doesn't return errors for invalid JSON
-		// Instead, it returns a Result with Type == Null
-		t.Error("Expected no error for invalid JSON, got:", err)
+	_, err := readJSON(`{invalid json`, maxRecursion)
+	if err == nil {
+		// We expect an error for invalid JSON since we now validate
+		t.Error("Expected error for invalid JSON, got nil")
 	}
 }
 
@@ -196,7 +239,7 @@ func BenchmarkReadJSON(b *testing.B) {
 		tt := tc
 		b.Run(tt.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				_, err := readJSON(tt.json)
+				_, err := readJSON(tt.json, maxRecursion)
 				if err != nil {
 					b.Error(err)
 				}
