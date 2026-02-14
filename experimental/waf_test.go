@@ -1,6 +1,8 @@
 // Copyright 2024 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !tinygo
+
 package experimental_test
 
 import (
@@ -24,6 +26,7 @@ func ExampleWAFWithOptions_NewTransactionWithOptions() {
 	tx := oWAF.NewTransactionWithOptions(experimental.Options{
 		ID: "abc123",
 	})
+	defer tx.Close()
 
 	fmt.Println("Transaction ID:", tx.ID())
 
