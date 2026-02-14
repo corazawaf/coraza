@@ -612,30 +612,156 @@ func TestFormatAutoDetection(t *testing.T) {
 	}
 }
 
-func BenchmarkJSONStreamProcessor(b *testing.B) {
-	// Create a realistic NDJSON stream with 100 objects
-	var sb strings.Builder
-	for i := 0; i < 100; i++ {
-		sb.WriteString(`{"user_id": 1234567890, "name": "User Name", "email": "user@example.com", "tags": ["tag1", "tag2", "tag3"]}`)
-		sb.WriteString("\n")
-	}
-	input := sb.String()
+// --- Benchmarks ---
 
+// buildNDJSONStream generates an NDJSON stream with the given number of records using the record template.
+func buildNDJSONStream(numRecords int, record string) string {
+	var sb strings.Builder
+	sb.Grow(numRecords * (len(record) + 1))
+	for i := 0; i < numRecords; i++ {
+		sb.WriteString(record)
+		sb.WriteByte('\n')
+	}
+	return sb.String()
+}
+
+// buildRFC7464Stream generates an RFC 7464 JSON Sequence stream.
+func buildRFC7464Stream(numRecords int, record string) string {
+	var sb strings.Builder
+	sb.Grow(numRecords * (len(record) + 2))
+	for i := 0; i < numRecords; i++ {
+		sb.WriteByte('\x1e')
+		sb.WriteString(record)
+		sb.WriteByte('\n')
+	}
+	return sb.String()
+}
+
+const (
+	smallRecord  = `{"id":1,"name":"Alice"}`
+	mediumRecord = `{"user_id":1234567890,"name":"User Name","email":"user@example.com","role":"admin","active":true,"tags":["tag1","tag2","tag3"]}`
+	nestedRecord = `{"user":{"name":"Alice","address":{"city":"NYC","zip":"10001"}},"scores":[95,87,92],"meta":{"created":"2026-01-01","active":true}}`
+)
+
+func BenchmarkJSONStreamProcessor(b *testing.B) {
 	jsp, err := plugins.GetBodyProcessor("jsonstream")
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		v := corazawaf.NewTransactionVariables()
-		reader := strings.NewReader(input)
+	benchmarks := []struct {
+		name       string
+		numRecords int
+		record     string
+	}{
+		{"small/1", 1, smallRecord},
+		{"small/10", 10, smallRecord},
+		{"small/100", 100, smallRecord},
+		{"small/1000", 1000, smallRecord},
+		{"medium/1", 1, mediumRecord},
+		{"medium/10", 10, mediumRecord},
+		{"medium/100", 100, mediumRecord},
+		{"medium/1000", 1000, mediumRecord},
+		{"nested/1", 1, nestedRecord},
+		{"nested/10", 10, nestedRecord},
+		{"nested/100", 100, nestedRecord},
+		{"nested/1000", 1000, nestedRecord},
+	}
 
-		err := jsp.ProcessRequest(reader, v, plugintypes.BodyProcessorOptions{})
+	for _, bm := range benchmarks {
+		input := buildNDJSONStream(bm.numRecords, bm.record)
+		b.Run("ProcessRequest/"+bm.name, func(b *testing.B) {
+			b.SetBytes(int64(len(input)))
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				v := corazawaf.NewTransactionVariables()
+				if err := jsp.ProcessRequest(strings.NewReader(input), v, plugintypes.BodyProcessorOptions{}); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
+}
 
-		if err != nil {
-			b.Error(err)
-		}
+func BenchmarkJSONStreamCallback(b *testing.B) {
+	bp, err := plugins.GetBodyProcessor("jsonstream")
+	if err != nil {
+		b.Fatal(err)
+	}
+	sp, ok := bp.(plugintypes.StreamingBodyProcessor)
+	if !ok {
+		b.Fatal("jsonstream processor does not implement StreamingBodyProcessor")
+	}
+
+	benchmarks := []struct {
+		name       string
+		numRecords int
+		record     string
+	}{
+		{"small/1", 1, smallRecord},
+		{"small/10", 10, smallRecord},
+		{"small/100", 100, smallRecord},
+		{"small/1000", 1000, smallRecord},
+		{"medium/1", 1, mediumRecord},
+		{"medium/10", 10, mediumRecord},
+		{"medium/100", 100, mediumRecord},
+		{"medium/1000", 1000, mediumRecord},
+		{"nested/1", 1, nestedRecord},
+		{"nested/10", 10, nestedRecord},
+		{"nested/100", 100, nestedRecord},
+		{"nested/1000", 1000, nestedRecord},
+	}
+
+	noop := func(_ int, _ map[string]string, _ string) error { return nil }
+
+	for _, bm := range benchmarks {
+		input := buildNDJSONStream(bm.numRecords, bm.record)
+		b.Run(bm.name, func(b *testing.B) {
+			b.SetBytes(int64(len(input)))
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				if err := sp.ProcessRequestRecords(strings.NewReader(input), plugintypes.BodyProcessorOptions{}, noop); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
+}
+
+func BenchmarkJSONStreamRFC7464(b *testing.B) {
+	bp, err := plugins.GetBodyProcessor("jsonstream")
+	if err != nil {
+		b.Fatal(err)
+	}
+	sp, ok := bp.(plugintypes.StreamingBodyProcessor)
+	if !ok {
+		b.Fatal("jsonstream processor does not implement StreamingBodyProcessor")
+	}
+
+	benchmarks := []struct {
+		name       string
+		numRecords int
+		record     string
+	}{
+		{"small/10", 10, smallRecord},
+		{"small/100", 100, smallRecord},
+		{"medium/100", 100, mediumRecord},
+		{"nested/100", 100, nestedRecord},
+	}
+
+	noop := func(_ int, _ map[string]string, _ string) error { return nil }
+
+	for _, bm := range benchmarks {
+		input := buildRFC7464Stream(bm.numRecords, bm.record)
+		b.Run(bm.name, func(b *testing.B) {
+			b.SetBytes(int64(len(input)))
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				if err := sp.ProcessRequestRecords(strings.NewReader(input), plugintypes.BodyProcessorOptions{}, noop); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
 	}
 }
 
