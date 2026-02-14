@@ -32,3 +32,24 @@ type BodyProcessor interface {
 	ProcessRequest(reader io.Reader, variables TransactionVariables, options BodyProcessorOptions) error
 	ProcessResponse(reader io.Reader, variables TransactionVariables, options BodyProcessorOptions) error
 }
+
+// StreamingBodyProcessor extends BodyProcessor with per-record streaming support.
+// Body processors that handle multi-record formats (NDJSON, JSON-Seq) can implement
+// this interface to enable per-record rule evaluation instead of evaluating rules
+// only after the entire body has been consumed.
+//
+// The callback receives pre-formatted field keys including the record number prefix
+// (e.g., "json.0.name", "json.1.age") and the raw record text. Returning a non-nil
+// error from the callback stops processing immediately.
+type StreamingBodyProcessor interface {
+	BodyProcessor
+
+	// ProcessRequestRecords reads records one at a time from the reader and calls fn
+	// for each record's parsed fields. Processing stops if fn returns a non-nil error.
+	ProcessRequestRecords(reader io.Reader, options BodyProcessorOptions,
+		fn func(recordNum int, fields map[string]string, rawRecord string) error) error
+
+	// ProcessResponseRecords is the response equivalent of ProcessRequestRecords.
+	ProcessResponseRecords(reader io.Reader, options BodyProcessorOptions,
+		fn func(recordNum int, fields map[string]string, rawRecord string) error) error
+}

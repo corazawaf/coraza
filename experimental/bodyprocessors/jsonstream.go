@@ -38,7 +38,7 @@ const (
 // The processor auto-detects the format based on the presence of RS characters.
 type jsonStreamBodyProcessor struct{}
 
-var _ plugintypes.BodyProcessor = &jsonStreamBodyProcessor{}
+var _ plugintypes.StreamingBodyProcessor = &jsonStreamBodyProcessor{}
 
 func (js *jsonStreamBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
 	col := v.ArgsPost()
@@ -102,6 +102,20 @@ func (js *jsonStreamBodyProcessor) ProcessResponse(reader io.Reader, v plugintyp
 func processJSONStream(reader io.Reader, col interface {
 	SetIndex(string, int, string)
 }, maxRecursion int) (int, error) {
+	return processJSONStreamWithCallback(reader, maxRecursion, func(_ int, fields map[string]string, _ string) error {
+		for key, value := range fields {
+			col.SetIndex(key, 0, value)
+		}
+		return nil
+	})
+}
+
+// processJSONStreamWithCallback processes a stream of JSON objects, calling fn for each record.
+// The callback receives the record number, a map of pre-formatted fields (with record-prefixed keys
+// like "json.0.name"), and the raw record text. If fn returns a non-nil error, processing stops.
+// Returns the number of records processed and any error encountered.
+func processJSONStreamWithCallback(reader io.Reader, maxRecursion int,
+	fn func(recordNum int, fields map[string]string, rawRecord string) error) (int, error) {
 	bufReader := bufio.NewReader(reader)
 
 	// Peek at the first chunk to detect format without consuming the entire stream
@@ -120,9 +134,9 @@ func processJSONStream(reader io.Reader, col interface {
 	// Auto-detect format: if peek contains RS characters, use JSON Sequence parsing
 	// Otherwise, use NDJSON (newline) parsing
 	if containsRS(peekBytes) {
-		return processJSONSequenceStream(bufReader, col, maxRecursion)
+		return processJSONSequenceStreamWithCallback(bufReader, maxRecursion, fn)
 	}
-	return processNDJSONStream(bufReader, col, maxRecursion)
+	return processNDJSONStreamWithCallback(bufReader, maxRecursion, fn)
 }
 
 // containsRS checks if a byte slice contains the RS character
@@ -135,12 +149,12 @@ func containsRS(data []byte) bool {
 	return false
 }
 
-// processNDJSONStream processes NDJSON format (newline-delimited JSON objects) from a reader.
-// This function processes the stream incrementally, reading and parsing one line at a time.
-func processNDJSONStream(reader io.Reader, col interface {
-	SetIndex(string, int, string)
-}, maxRecursion int) (int, error) {
+// newRecordScanner creates a bufio.Scanner with the standard buffer sizes used for JSON record scanning.
+func newRecordScanner(reader io.Reader, split bufio.SplitFunc) *bufio.Scanner {
 	scanner := bufio.NewScanner(reader)
+	if split != nil {
+		scanner.Split(split)
+	}
 
 	// Increase scanner buffer to handle large JSON objects (default is 64KB)
 	// Set max to 1MB to match typical JSON object sizes while preventing memory exhaustion
@@ -148,19 +162,28 @@ func processNDJSONStream(reader io.Reader, col interface {
 	buf := make([]byte, 64*1024)
 	scanner.Buffer(buf, maxScanTokenSize)
 
+	return scanner
+}
+
+// scanRecords iterates over scanner records, parsing each as JSON and calling fn.
+// Shared logic for both NDJSON and RFC 7464 processing.
+func scanRecords(scanner *bufio.Scanner, maxRecursion int,
+	fn func(recordNum int, fields map[string]string, rawRecord string) error) (int, error) {
 	recordNum := 0
 
 	for scanner.Scan() {
-		line := scanner.Text()
-
-		// Skip empty lines
-		line = strings.TrimSpace(line)
-		if line == "" {
+		record := strings.TrimSpace(scanner.Text())
+		if record == "" {
 			continue
 		}
 
-		if err := processJSONRecord(line, recordNum, col, maxRecursion); err != nil {
+		fields, err := parseJSONRecord(record, recordNum, maxRecursion)
+		if err != nil {
 			return recordNum, err
+		}
+
+		if err := fn(recordNum, fields, record); err != nil {
+			return recordNum + 1, err
 		}
 
 		recordNum++
@@ -177,47 +200,18 @@ func processNDJSONStream(reader io.Reader, col interface {
 	return recordNum, nil
 }
 
-// processJSONSequenceStream processes RFC 7464 JSON Sequence format (RS-delimited JSON objects) from a reader.
-// Format: <RS>JSON-text<LF><RS>JSON-text<LF>...
-// This function processes the stream incrementally using a custom scanner split function.
-func processJSONSequenceStream(reader io.Reader, col interface {
-	SetIndex(string, int, string)
-}, maxRecursion int) (int, error) {
-	scanner := bufio.NewScanner(reader)
-	scanner.Split(splitOnRS)
+// processNDJSONStreamWithCallback processes NDJSON format (newline-delimited JSON objects) from a reader,
+// calling fn for each record.
+func processNDJSONStreamWithCallback(reader io.Reader, maxRecursion int,
+	fn func(recordNum int, fields map[string]string, rawRecord string) error) (int, error) {
+	return scanRecords(newRecordScanner(reader, nil), maxRecursion, fn)
+}
 
-	// Increase scanner buffer to handle large JSON objects
-	const maxScanTokenSize = 1024 * 1024 // 1MB
-	buf := make([]byte, 64*1024)
-	scanner.Buffer(buf, maxScanTokenSize)
-
-	recordNum := 0
-
-	for scanner.Scan() {
-		record := scanner.Text()
-
-		// Skip empty records (e.g., before first RS or after last RS)
-		record = strings.TrimSpace(record)
-		if record == "" {
-			continue
-		}
-
-		if err := processJSONRecord(record, recordNum, col, maxRecursion); err != nil {
-			return recordNum, err
-		}
-
-		recordNum++
-	}
-
-	if err := scanner.Err(); err != nil {
-		return recordNum, fmt.Errorf("error reading stream: %w", err)
-	}
-
-	if recordNum == 0 {
-		return 0, errors.New("no valid JSON objects found in stream")
-	}
-
-	return recordNum, nil
+// processJSONSequenceStreamWithCallback processes RFC 7464 JSON Sequence format (RS-delimited JSON objects)
+// from a reader, calling fn for each record.
+func processJSONSequenceStreamWithCallback(reader io.Reader, maxRecursion int,
+	fn func(recordNum int, fields map[string]string, rawRecord string) error) (int, error) {
+	return scanRecords(newRecordScanner(reader, splitOnRS), maxRecursion, fn)
 }
 
 // splitOnRS is a custom split function for bufio.Scanner that splits on RS (0x1E) characters.
@@ -251,25 +245,25 @@ func splitOnRS(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	return 0, nil, nil
 }
 
-// processJSONRecord parses a single JSON record and adds it to the collection
-func processJSONRecord(jsonText string, recordNum int, col interface {
-	SetIndex(string, int, string)
-}, maxRecursion int) error {
+// parseJSONRecord parses a single JSON record and returns a map of fields with record-prefixed keys.
+// Keys are formatted as "json.{recordNum}.field.subfield".
+func parseJSONRecord(jsonText string, recordNum int, maxRecursion int) (map[string]string, error) {
 	// Validate JSON before parsing
 	if !gjson.Valid(jsonText) {
 		// Use 1-based numbering for user-friendly error messages
-		return fmt.Errorf("invalid JSON at record %d", recordNum+1)
+		return nil, fmt.Errorf("invalid JSON at record %d", recordNum+1)
 	}
 
 	// Parse the JSON record
 	data, err := readJSONWithLimit(jsonText, maxRecursion)
 	if err != nil {
 		// Use 1-based numbering for user-friendly error messages
-		return fmt.Errorf("error parsing JSON at record %d: %w", recordNum+1, err)
+		return nil, fmt.Errorf("error parsing JSON at record %d: %w", recordNum+1, err)
 	}
 
-	// Add each key-value pair with a record number prefix
+	// Build result with record-prefixed keys
 	// Example: json.0.field, json.1.field, etc.
+	fields := make(map[string]string, len(data))
 	for key, value := range data {
 		// Replace the "json" prefix with "json.{recordNum}"
 		// Original key format: "json.field.subfield"
@@ -279,10 +273,10 @@ func processJSONRecord(jsonText string, recordNum int, col interface {
 		} else if key == "json" {
 			key = fmt.Sprintf("json.%d", recordNum)
 		}
-		col.SetIndex(key, 0, value)
+		fields[key] = value
 	}
 
-	return nil
+	return fields, nil
 }
 
 // readJSONWithLimit is a helper that calls readJSON but with protection against deep nesting
@@ -341,6 +335,30 @@ func readItemsWithLimit(json gjson.Result, objKey []byte, maxRecursion int, res 
 		res[string(objKey)] = strconv.Itoa(arrayLen)
 	}
 	return iterationError
+}
+
+func (js *jsonStreamBodyProcessor) ProcessRequestRecords(reader io.Reader, _ plugintypes.BodyProcessorOptions,
+	fn func(recordNum int, fields map[string]string, rawRecord string) error) error {
+	recordCount, err := processJSONStreamWithCallback(reader, DefaultStreamRecursionLimit, fn)
+	if err != nil {
+		return err
+	}
+	if recordCount == 0 {
+		return errors.New("no valid JSON objects found in stream")
+	}
+	return nil
+}
+
+func (js *jsonStreamBodyProcessor) ProcessResponseRecords(reader io.Reader, _ plugintypes.BodyProcessorOptions,
+	fn func(recordNum int, fields map[string]string, rawRecord string) error) error {
+	recordCount, err := processJSONStreamWithCallback(reader, DefaultStreamRecursionLimit, fn)
+	if err != nil {
+		return err
+	}
+	if recordCount == 0 {
+		return errors.New("no valid JSON objects found in stream")
+	}
+	return nil
 }
 
 func init() {

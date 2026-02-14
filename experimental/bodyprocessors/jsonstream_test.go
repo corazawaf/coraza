@@ -768,3 +768,220 @@ func TestJSONSequenceOnlyRS(t *testing.T) {
 		t.Errorf("expected 'no valid JSON objects' error, got: %v", err)
 	}
 }
+
+// --- Streaming callback tests ---
+
+func jsonstreamStreamingProcessor(t *testing.T) plugintypes.StreamingBodyProcessor {
+	t.Helper()
+	bp := jsonstreamProcessor(t)
+	sp, ok := bp.(plugintypes.StreamingBodyProcessor)
+	if !ok {
+		t.Fatal("jsonstream processor does not implement StreamingBodyProcessor")
+	}
+	return sp
+}
+
+func TestStreamingCallbackPerRecord(t *testing.T) {
+	input := `{"name": "Alice", "age": 30}
+{"name": "Bob", "age": 25}
+{"name": "Charlie", "age": 35}
+`
+	sp := jsonstreamStreamingProcessor(t)
+
+	var records []int
+	var rawRecords []string
+
+	err := sp.ProcessRequestRecords(strings.NewReader(input), plugintypes.BodyProcessorOptions{},
+		func(recordNum int, fields map[string]string, rawRecord string) error {
+			records = append(records, recordNum)
+			rawRecords = append(rawRecords, rawRecord)
+			return nil
+		})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(records) != 3 {
+		t.Fatalf("expected 3 records, got %d", len(records))
+	}
+
+	for i, r := range records {
+		if r != i {
+			t.Errorf("expected recordNum %d, got %d", i, r)
+		}
+	}
+
+	if !strings.Contains(rawRecords[0], "Alice") {
+		t.Errorf("expected raw record 0 to contain Alice, got: %s", rawRecords[0])
+	}
+	if !strings.Contains(rawRecords[1], "Bob") {
+		t.Errorf("expected raw record 1 to contain Bob, got: %s", rawRecords[1])
+	}
+}
+
+func TestStreamingFieldsHaveRecordPrefix(t *testing.T) {
+	input := `{"name": "Alice"}
+{"name": "Bob"}
+`
+	sp := jsonstreamStreamingProcessor(t)
+
+	var allFields []map[string]string
+
+	err := sp.ProcessRequestRecords(strings.NewReader(input), plugintypes.BodyProcessorOptions{},
+		func(recordNum int, fields map[string]string, _ string) error {
+			// Copy fields since the map may be reused
+			copy := make(map[string]string, len(fields))
+			for k, v := range fields {
+				copy[k] = v
+			}
+			allFields = append(allFields, copy)
+			return nil
+		})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(allFields) != 2 {
+		t.Fatalf("expected 2 records, got %d", len(allFields))
+	}
+
+	// Record 0 should have json.0.name
+	if v, ok := allFields[0]["json.0.name"]; !ok || v != "Alice" {
+		t.Errorf("expected json.0.name=Alice, got %q (ok=%v)", v, ok)
+	}
+
+	// Record 1 should have json.1.name
+	if v, ok := allFields[1]["json.1.name"]; !ok || v != "Bob" {
+		t.Errorf("expected json.1.name=Bob, got %q (ok=%v)", v, ok)
+	}
+
+	// Record 0 should NOT have json.1.* keys
+	for k := range allFields[0] {
+		if strings.HasPrefix(k, "json.1.") {
+			t.Errorf("record 0 should not have key %q", k)
+		}
+	}
+}
+
+func TestStreamingInterruptionStops(t *testing.T) {
+	input := `{"name": "Alice"}
+{"name": "Bob"}
+{"name": "Charlie"}
+{"name": "Dave"}
+`
+	sp := jsonstreamStreamingProcessor(t)
+	errBlocked := errors.New("blocked")
+	processedRecords := 0
+
+	err := sp.ProcessRequestRecords(strings.NewReader(input), plugintypes.BodyProcessorOptions{},
+		func(recordNum int, fields map[string]string, _ string) error {
+			processedRecords++
+			if recordNum == 1 {
+				return errBlocked
+			}
+			return nil
+		})
+
+	if err != errBlocked {
+		t.Fatalf("expected errBlocked, got: %v", err)
+	}
+
+	if processedRecords != 2 {
+		t.Errorf("expected 2 records processed (0 and 1), got %d", processedRecords)
+	}
+}
+
+func TestStreamingEmptyStream(t *testing.T) {
+	sp := jsonstreamStreamingProcessor(t)
+
+	err := sp.ProcessRequestRecords(strings.NewReader(""), plugintypes.BodyProcessorOptions{},
+		func(_ int, _ map[string]string, _ string) error {
+			t.Error("callback should not be called for empty stream")
+			return nil
+		})
+
+	if err == nil {
+		t.Error("expected error for empty stream")
+	}
+}
+
+func TestStreamingRFC7464WithCallback(t *testing.T) {
+	input := "\x1e{\"name\": \"Alice\"}\n\x1e{\"name\": \"Bob\"}\n"
+
+	sp := jsonstreamStreamingProcessor(t)
+
+	var records []int
+	var allFields []map[string]string
+
+	err := sp.ProcessRequestRecords(strings.NewReader(input), plugintypes.BodyProcessorOptions{},
+		func(recordNum int, fields map[string]string, _ string) error {
+			records = append(records, recordNum)
+			copy := make(map[string]string, len(fields))
+			for k, v := range fields {
+				copy[k] = v
+			}
+			allFields = append(allFields, copy)
+			return nil
+		})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(records) != 2 {
+		t.Fatalf("expected 2 records, got %d", len(records))
+	}
+
+	if v := allFields[0]["json.0.name"]; v != "Alice" {
+		t.Errorf("expected json.0.name=Alice, got %q", v)
+	}
+	if v := allFields[1]["json.1.name"]; v != "Bob" {
+		t.Errorf("expected json.1.name=Bob, got %q", v)
+	}
+}
+
+func TestStreamingResponseRecords(t *testing.T) {
+	input := `{"status": "ok"}
+{"status": "error"}
+`
+	sp := jsonstreamStreamingProcessor(t)
+	processedRecords := 0
+
+	err := sp.ProcessResponseRecords(strings.NewReader(input), plugintypes.BodyProcessorOptions{},
+		func(recordNum int, fields map[string]string, _ string) error {
+			processedRecords++
+			return nil
+		})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if processedRecords != 2 {
+		t.Errorf("expected 2 records, got %d", processedRecords)
+	}
+}
+
+func TestStreamingBackwardCompat(t *testing.T) {
+	// Verify that ProcessRequest still works unchanged after refactoring
+	input := `{"name": "Alice"}
+{"name": "Bob"}
+`
+	jsp := jsonstreamProcessor(t)
+	v := corazawaf.NewTransactionVariables()
+
+	err := jsp.ProcessRequest(strings.NewReader(input), v, plugintypes.BodyProcessorOptions{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	argsPost := v.ArgsPost()
+	if vals := argsPost.Get("json.0.name"); len(vals) == 0 || vals[0] != "Alice" {
+		t.Errorf("expected json.0.name=Alice via ProcessRequest, got %v", vals)
+	}
+	if vals := argsPost.Get("json.1.name"); len(vals) == 0 || vals[0] != "Bob" {
+		t.Errorf("expected json.1.name=Bob via ProcessRequest, got %v", vals)
+	}
+}
