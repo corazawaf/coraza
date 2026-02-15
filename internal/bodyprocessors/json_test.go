@@ -4,6 +4,8 @@
 package bodyprocessors
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -221,6 +223,121 @@ func BenchmarkReadJSON(b *testing.B) {
 				if err != nil {
 					b.Error(err)
 				}
+			}
+		})
+	}
+}
+
+// generateFlatObject returns a JSON object with n string key-value pairs.
+func generateFlatObject(n int) string {
+	var b strings.Builder
+	b.WriteString("{")
+	for i := 0; i < n; i++ {
+		if i > 0 {
+			b.WriteString(",")
+		}
+		fmt.Fprintf(&b, `"key%d":"value%d"`, i, i)
+	}
+	b.WriteString("}")
+	return b.String()
+}
+
+// generateDeepObject returns a JSON object nested to depth d.
+func generateDeepObject(depth int) string {
+	var b strings.Builder
+	for i := 0; i < depth; i++ {
+		fmt.Fprintf(&b, `{"k%d":`, i)
+	}
+	b.WriteString(`"leaf"`)
+	for i := 0; i < depth; i++ {
+		b.WriteString("}")
+	}
+	return b.String()
+}
+
+// generateWideArray returns a JSON array with n integer elements.
+func generateWideArray(n int) string {
+	var b strings.Builder
+	b.WriteString("[")
+	for i := 0; i < n; i++ {
+		if i > 0 {
+			b.WriteString(",")
+		}
+		fmt.Fprintf(&b, "%d", i)
+	}
+	b.WriteString("]")
+	return b.String()
+}
+
+// generateMixedPayload returns a realistic API-like JSON payload with
+// the given number of items in the "items" array.
+func generateMixedPayload(items int) string {
+	var b strings.Builder
+	b.WriteString(`{"status":"ok","count":`)
+	fmt.Fprintf(&b, "%d", items)
+	b.WriteString(`,"metadata":{"page":1,"limit":100,"total":`)
+	fmt.Fprintf(&b, "%d", items)
+	b.WriteString(`},"items":[`)
+	for i := 0; i < items; i++ {
+		if i > 0 {
+			b.WriteString(",")
+		}
+		fmt.Fprintf(&b, `{"id":%d,"name":"item_%d","active":true,"tags":["web","api"],"score":%.1f}`, i, i, float64(i)*1.5)
+	}
+	b.WriteString("]}")
+	return b.String()
+}
+
+var benchCases = []struct {
+	name string
+	json string
+}{
+	{"flat_10_keys", generateFlatObject(10)},
+	{"flat_100_keys", generateFlatObject(100)},
+	{"flat_1000_keys", generateFlatObject(1000)},
+	{"deep_5", generateDeepObject(5)},
+	{"deep_20", generateDeepObject(20)},
+	{"deep_50", generateDeepObject(50)},
+	{"array_10", generateWideArray(10)},
+	{"array_100", generateWideArray(100)},
+	{"array_1000", generateWideArray(1000)},
+	{"mixed_10_items", generateMixedPayload(10)},
+	{"mixed_100_items", generateMixedPayload(100)},
+	{"mixed_1000_items", generateMixedPayload(1000)},
+}
+
+func BenchmarkReadJSONSizes(b *testing.B) {
+	for _, tc := range benchCases {
+		tt := tc
+		b.Run(tt.name, func(b *testing.B) {
+			b.SetBytes(int64(len(tt.json)))
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				_, err := readJSON(tt.json)
+				if err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
+}
+
+func BenchmarkInvalidJSON(b *testing.B) {
+	inputs := []struct {
+		name  string
+		input string
+	}{
+		{"truncated_small", `{"a": 1, "b"`},
+		{"truncated_large", generateFlatObject(100)[:len(generateFlatObject(100))-5]},
+		{"empty", ``},
+	}
+	for _, tc := range inputs {
+		tt := tc
+		b.Run(tt.name, func(b *testing.B) {
+			b.SetBytes(int64(len(tt.input)))
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				readJSON(tt.input) //nolint:errcheck
 			}
 		})
 	}
