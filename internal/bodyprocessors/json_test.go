@@ -127,7 +127,7 @@ var jsonTests = []struct {
 		err: nil,
 	},
 	{
-		name: "broken1", // this json test has more opening brackets than closing, so it is broken
+		name: "unbalanced_brackets",
 		json: `{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a":{"a": 1 }}}}}}}}}}}}}}}}}}}}}}`,
 		want: map[string]string{},
 		err:  errors.New("invalid JSON"),
@@ -193,13 +193,14 @@ func TestReadJSON(t *testing.T) {
 				return
 			}
 
-			for k, want := range tt.want {
-				if err != nil {
-					if tt.err == nil || err.Error() != tt.err.Error() {
-						t.Error(err)
-					}
-					continue
+			if err != nil {
+				if tt.err == nil || err.Error() != tt.err.Error() {
+					t.Error(err)
 				}
+				return
+			}
+
+			for k, want := range tt.want {
 				if have, ok := jsonMap[k]; ok {
 					if want != have {
 						t.Errorf("key=%s, want %s, have %s", k, want, have)
