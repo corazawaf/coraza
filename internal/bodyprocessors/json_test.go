@@ -7,6 +7,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/tidwall/gjson"
 )
 
 const (
@@ -243,6 +245,74 @@ func BenchmarkReadJSON(b *testing.B) {
 				_, err := readJSON(tt.json, maxRecursion)
 				if err != nil {
 					b.Error(err)
+				}
+			}
+		})
+	}
+}
+
+// readJSONNoValidation is readJSON without the gjson.Valid pre-check.
+// Used only in benchmarks to measure the overhead of validation.
+func readJSONNoValidation(s string, maxRecursion int) (map[string]string, error) {
+	json := gjson.Parse(s)
+	res := make(map[string]string)
+	key := []byte("json")
+	err := readItems(json, key, maxRecursion, res)
+	return res, err
+}
+
+// BenchmarkValidationOverhead measures the cost of pre-validating JSON with gjson.Valid
+// in the context of the full readJSON pipeline (Valid + Parse + readItems).
+// gjson.Parse is lazy (~9ns regardless of input size), so the real overhead is
+// gjson.Valid vs the readItems traversal that does the actual parsing work.
+func BenchmarkValidationOverhead(b *testing.B) {
+	benchCases := []struct {
+		name string
+		json string
+	}{
+		{
+			name: "small_object",
+			json: `{"name":"John","age":30}`,
+		},
+		{
+			name: "medium_object",
+			json: `{"user":{"name":"John","email":"john@example.com","roles":["admin","user"]},"settings":{"theme":"dark","notifications":true},"metadata":{"created":"2026-01-01","updated":"2026-02-15"}}`,
+		},
+		{
+			name: "large_array",
+			json: func() string {
+				var sb strings.Builder
+				sb.WriteString("[")
+				for i := 0; i < 100; i++ {
+					if i > 0 {
+						sb.WriteString(",")
+					}
+					sb.WriteString(`{"id":` + strings.Repeat("1", 5) + `,"name":"user","active":true}`)
+				}
+				sb.WriteString("]")
+				return sb.String()
+			}(),
+		},
+		{
+			name: "nested_10_levels",
+			json: strings.Repeat(`{"a":`, 10) + "1" + strings.Repeat(`}`, 10),
+		},
+	}
+
+	for _, bc := range benchCases {
+		b.Run("WithValidation/"+bc.name, func(b *testing.B) {
+			b.SetBytes(int64(len(bc.json)))
+			for i := 0; i < b.N; i++ {
+				if _, err := readJSON(bc.json, maxRecursion); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+		b.Run("WithoutValidation/"+bc.name, func(b *testing.B) {
+			b.SetBytes(int64(len(bc.json)))
+			for i := 0; i < b.N; i++ {
+				if _, err := readJSONNoValidation(bc.json, maxRecursion); err != nil {
+					b.Fatal(err)
 				}
 			}
 		})
