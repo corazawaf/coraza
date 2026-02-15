@@ -26,6 +26,11 @@ const (
 	recordSeparator = '\x1e'
 )
 
+// indexedCollection is an interface for collections that support indexed key-value storage.
+type indexedCollection interface {
+	SetIndex(string, int, string)
+}
+
 // jsonStreamBodyProcessor handles streaming JSON formats.
 // Each record/line in the input is expected to be a complete, valid JSON object.
 // Empty lines are ignored. Each JSON object is flattened and indexed by record number.
@@ -99,9 +104,7 @@ func (js *jsonStreamBodyProcessor) ProcessResponse(reader io.Reader, v plugintyp
 // Supports both NDJSON (newline-delimited) and RFC 7464 JSON Sequence (RS-delimited) formats.
 // The format is auto-detected by peeking at the first chunk of data.
 // Returns the number of records processed and any error encountered.
-func processJSONStream(reader io.Reader, col interface {
-	SetIndex(string, int, string)
-}, maxRecursion int) (int, error) {
+func processJSONStream(reader io.Reader, col indexedCollection, maxRecursion int) (int, error) {
 	return processJSONStreamWithCallback(reader, maxRecursion, func(_ int, fields map[string]string, _ string) error {
 		for key, value := range fields {
 			col.SetIndex(key, 0, value)
@@ -166,8 +169,10 @@ func newRecordScanner(reader io.Reader, split bufio.SplitFunc) *bufio.Scanner {
 }
 
 // scanRecords iterates over scanner records, parsing each as JSON and calling fn.
-// Shared logic for both NDJSON and RFC 7464 processing.
-func scanRecords(scanner *bufio.Scanner, maxRecursion int,
+// The formatRecord function wraps each parsed record with the format-specific delimiters
+// (e.g., trailing \n for NDJSON, or RS prefix + trailing \n for RFC 7464),
+// so the rawRecord passed to fn can be relayed as-is to preserve the original format.
+func scanRecords(scanner *bufio.Scanner, maxRecursion int, formatRecord func(string) string,
 	fn func(recordNum int, fields map[string]string, rawRecord string) error) (int, error) {
 	recordNum := 0
 
@@ -182,7 +187,7 @@ func scanRecords(scanner *bufio.Scanner, maxRecursion int,
 			return recordNum, err
 		}
 
-		if err := fn(recordNum, fields, record); err != nil {
+		if err := fn(recordNum, fields, formatRecord(record)); err != nil {
 			return recordNum + 1, err
 		}
 
@@ -200,18 +205,26 @@ func scanRecords(scanner *bufio.Scanner, maxRecursion int,
 	return recordNum, nil
 }
 
+func formatNDJSON(record string) string {
+	return record + "\n"
+}
+
+func formatJSONSequence(record string) string {
+	return "\x1e" + record + "\n"
+}
+
 // processNDJSONStreamWithCallback processes NDJSON format (newline-delimited JSON objects) from a reader,
 // calling fn for each record.
 func processNDJSONStreamWithCallback(reader io.Reader, maxRecursion int,
 	fn func(recordNum int, fields map[string]string, rawRecord string) error) (int, error) {
-	return scanRecords(newRecordScanner(reader, nil), maxRecursion, fn)
+	return scanRecords(newRecordScanner(reader, nil), maxRecursion, formatNDJSON, fn)
 }
 
 // processJSONSequenceStreamWithCallback processes RFC 7464 JSON Sequence format (RS-delimited JSON objects)
 // from a reader, calling fn for each record.
 func processJSONSequenceStreamWithCallback(reader io.Reader, maxRecursion int,
 	fn func(recordNum int, fields map[string]string, rawRecord string) error) (int, error) {
-	return scanRecords(newRecordScanner(reader, splitOnRS), maxRecursion, fn)
+	return scanRecords(newRecordScanner(reader, splitOnRS), maxRecursion, formatJSONSequence, fn)
 }
 
 // splitOnRS is a custom split function for bufio.Scanner that splits on RS (0x1E) characters.
@@ -279,8 +292,9 @@ func parseJSONRecord(jsonText string, recordNum int, maxRecursion int) (map[stri
 	return fields, nil
 }
 
-// readJSONWithLimit is a helper that calls readJSON but with protection against deep nesting
-// TODO: Remove this when readJSON supports maxRecursion parameter natively
+// readJSONWithLimit is a helper that calls readJSON but with protection against deep nesting.
+// This is a separate copy from internal/bodyprocessors/json.go due to package boundaries.
+// TODO: Remove this when readItems supports maxRecursion parameter natively (see #1110)
 func readJSONWithLimit(s string, maxRecursion int) (map[string]string, error) {
 	json := gjson.Parse(s)
 	res := make(map[string]string)
@@ -289,8 +303,9 @@ func readJSONWithLimit(s string, maxRecursion int) (map[string]string, error) {
 	return res, err
 }
 
-// readItemsWithLimit is similar to readItems but with recursion limit
-// TODO: Remove this when readItems supports maxRecursion parameter natively
+// readItemsWithLimit is similar to readItems in internal/bodyprocessors/json.go but with recursion limit.
+// This is a separate copy due to package boundaries (experimental vs internal).
+// TODO: Remove this when readItems supports maxRecursion parameter natively (see #1110)
 func readItemsWithLimit(json gjson.Result, objKey []byte, maxRecursion int, res map[string]string) error {
 	arrayLen := 0
 	var iterationError error

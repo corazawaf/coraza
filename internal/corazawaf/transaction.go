@@ -1259,12 +1259,11 @@ func (tx *Transaction) ProcessRequestBodyFromStream(input io.Reader, output io.W
 			return errStreamInterrupted
 		}
 
-		// Record passed evaluation, write to output for relay
+		// Record passed evaluation, write to output for relay.
+		// rawRecord includes format-specific delimiters (e.g., \n for NDJSON,
+		// RS prefix + \n for RFC 7464), preserving the original stream format.
 		if _, err := io.WriteString(output, rawRecord); err != nil {
 			return fmt.Errorf("failed to write record to output: %w", err)
-		}
-		if _, err := io.WriteString(output, "\n"); err != nil {
-			return fmt.Errorf("failed to write record delimiter: %w", err)
 		}
 
 		return nil
@@ -1357,11 +1356,9 @@ func (tx *Transaction) ProcessResponseBodyFromStream(input io.Reader, output io.
 			return errStreamInterrupted
 		}
 
+		// rawRecord includes format-specific delimiters, preserving the original stream format.
 		if _, err := io.WriteString(output, rawRecord); err != nil {
 			return fmt.Errorf("failed to write response record to output: %w", err)
-		}
-		if _, err := io.WriteString(output, "\n"); err != nil {
-			return fmt.Errorf("failed to write response record delimiter: %w", err)
 		}
 
 		return nil
