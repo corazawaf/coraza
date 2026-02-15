@@ -92,6 +92,9 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 		}
 	}
 
+	// ProcessRequestBody evaluates Phase 2 rules. For streaming body processors
+	// (e.g., NDJSON, JSON-Seq), rules are evaluated per record. For standard
+	// body processors, rules are evaluated once after the full body is processed.
 	return tx.ProcessRequestBody()
 }
 
