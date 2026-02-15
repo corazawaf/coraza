@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIpMatchFromDataset(t *testing.T) {
@@ -22,19 +23,13 @@ func TestIpMatchFromDataset(t *testing.T) {
 	}
 
 	ipm, err := newIPMatchFromDataset(opts)
-	if err != nil {
-		t.Error("Cannot init ipmatchfromfile operator")
-	}
+	require.NoError(t, err, "Cannot init ipmatchfromfile operator")
 	for _, ok := range addrok {
-		if !ipm.Evaluate(nil, ok) {
-			t.Errorf("Invalid result for single CIDR IpMatchFromDataset %q", ok)
-		}
+		require.True(t, ipm.Evaluate(nil, ok), "Invalid result for single CIDR IpMatchFromDataset %q", ok)
 	}
 
 	for _, fail := range addrfail {
-		if ipm.Evaluate(nil, fail) {
-			t.Errorf("Invalid result for single CIDR IpMatchFromDataset %q", fail)
-		}
+		require.False(t, ipm.Evaluate(nil, fail), "Invalid result for single CIDR IpMatchFromDataset %q", fail)
 	}
 }
 
@@ -46,7 +41,5 @@ func TestIpMatchFromEmptyDataset(t *testing.T) {
 		},
 	}
 	_, err := newIPMatchFromDataset(opts)
-	if err == nil {
-		t.Error("Empty dataset not checked")
-	}
+	require.Error(t, err, "Empty dataset not checked")
 }

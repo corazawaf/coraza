@@ -8,6 +8,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRestPath(t *testing.T) {
@@ -18,18 +19,10 @@ func TestRestPath(t *testing.T) {
 	rp, err := newRESTPath(plugintypes.OperatorOptions{
 		Arguments: exp,
 	})
-	if err != nil {
-		t.Error(err)
-	}
-	if !rp.Evaluate(tx, path) {
-		t.Errorf("Expected %s to match %s", exp, path)
-	}
-	if tx.Variables().ArgsPath().Get("id")[0] != "123" {
-		t.Errorf("Expected id to be 123, got %s", tx.Variables().ArgsPath().Get("id"))
-	}
-	if tx.Variables().ArgsPath().Get("name")[0] != "juan" {
-		t.Errorf("Expected name to be juan, got %s", tx.Variables().ArgsPath().Get("name"))
-	}
+	require.NoError(t, err)
+	require.True(t, rp.Evaluate(tx, path), "Expected %s to match %s", exp, path)
+	require.Equal(t, "123", tx.Variables().ArgsPath().Get("id")[0], "Expected id to be 123")
+	require.Equal(t, "juan", tx.Variables().ArgsPath().Get("name")[0], "Expected name to be juan")
 }
 
 func TestRestPathQueryShouldNotBeGreedy(t *testing.T) {
@@ -47,15 +40,9 @@ func TestRestPathQueryShouldNotBeGreedy(t *testing.T) {
 		rp, err := newRESTPath(plugintypes.OperatorOptions{
 			Arguments: exp,
 		})
-		if err != nil {
-			t.Error(err)
-		}
-		if !rp.Evaluate(tx, path) {
-			t.Errorf("Expected %s to match %s", exp, path)
-		}
-		if tx.Variables().ArgsPath().Get("id")[0] != want {
-			t.Errorf("Expected id value of %s, got %s", want, tx.Variables().ArgsPath().Get("id"))
-		}
+		require.NoError(t, err)
+		require.True(t, rp.Evaluate(tx, path), "Expected %s to match %s", exp, path)
+		require.Equal(t, want, tx.Variables().ArgsPath().Get("id")[0], "Expected id value of %s", want)
 	}
 }
 
@@ -67,21 +54,11 @@ func TestRestPathShouldNotBeGreedyOnMultiMatch(t *testing.T) {
 	rp, err := newRESTPath(plugintypes.OperatorOptions{
 		Arguments: exp,
 	})
-	if err != nil {
-		t.Error(err)
-	}
-	if !rp.Evaluate(tx, path) {
-		t.Errorf("Expected %s to match %s", exp, path)
-	}
-	if tx.Variables().ArgsPath().Get("id")[0] != "123" {
-		t.Errorf("Expected id to be 123, got %s", tx.Variables().ArgsPath().Get("id"))
-	}
-	if tx.Variables().ArgsPath().Get("expression")[0] != "foo" {
-		t.Errorf("Expected expression to be foo, got %s", tx.Variables().ArgsPath().Get("expression"))
-	}
-	if tx.Variables().ArgsPath().Get("name")[0] != "juan" {
-		t.Errorf("Expected name to be juan, got %s", tx.Variables().ArgsPath().Get("name"))
-	}
+	require.NoError(t, err)
+	require.True(t, rp.Evaluate(tx, path), "Expected %s to match %s", exp, path)
+	require.Equal(t, "123", tx.Variables().ArgsPath().Get("id")[0], "Expected id to be 123")
+	require.Equal(t, "foo", tx.Variables().ArgsPath().Get("expression")[0], "Expected expression to be foo")
+	require.Equal(t, "juan", tx.Variables().ArgsPath().Get("name")[0], "Expected name to be juan")
 }
 
 func TestRestPathWithBadExpressionShouldError(t *testing.T) {
@@ -89,9 +66,7 @@ func TestRestPathWithBadExpressionShouldError(t *testing.T) {
 	_, err := newRESTPath(plugintypes.OperatorOptions{
 		Arguments: exp,
 	})
-	if err == nil {
-		t.Error("Expected error not to be nil with a bad expression")
-	}
+	require.Error(t, err, "Expected error not to be nil with a bad expression")
 }
 
 func TestRestPathShouldNotMatchOnIncompleteURL(t *testing.T) {
@@ -118,12 +93,8 @@ func TestRestPathShouldNotMatchOnIncompleteURLWithEndingParam(t *testing.T) {
 	rp, err := newRESTPath(plugintypes.OperatorOptions{
 		Arguments: exp,
 	})
-	if err != nil {
-		t.Error(err)
-	}
-	if rp.Evaluate(tx, path) {
-		t.Errorf("Expected %s to NOT match %s", exp, path)
-	}
+	require.NoError(t, err)
+	require.False(t, rp.Evaluate(tx, path), "Expected %s to NOT match %s", exp, path)
 }
 
 func TestRestPathShouldNotMatchOnEmptyPathElement(t *testing.T) {
@@ -134,10 +105,6 @@ func TestRestPathShouldNotMatchOnEmptyPathElement(t *testing.T) {
 	rp, err := newRESTPath(plugintypes.OperatorOptions{
 		Arguments: exp,
 	})
-	if err != nil {
-		t.Error(err)
-	}
-	if rp.Evaluate(tx, path) {
-		t.Errorf("Expected %s to NOT match %s", exp, path)
-	}
+	require.NoError(t, err)
+	require.False(t, rp.Evaluate(tx, path), "Expected %s to NOT match %s", exp, path)
 }

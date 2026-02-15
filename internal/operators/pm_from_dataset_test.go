@@ -4,11 +4,11 @@
 package operators
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPmFromDataset(t *testing.T) {
@@ -19,19 +19,14 @@ func TestPmFromDataset(t *testing.T) {
 		},
 	}
 	pm, err := newPMFromDataset(opts)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	waf := corazawaf.NewWAF()
 	tx := waf.NewTransaction()
 	tx.Capture = true
 	res := pm.Evaluate(tx, "test_1")
-	if !res {
-		t.Error("pmFromDataset failed")
-	}
+	require.True(t, res, "pmFromDataset failed")
 	opts.Datasets = map[string][]string{}
 
-	if _, err = newPMFromDataset(opts); err == nil {
-		t.Error(fmt.Errorf("pmFromDataset should have failed"))
-	}
+	_, err = newPMFromDataset(opts)
+	require.Error(t, err, "pmFromDataset should have failed")
 }

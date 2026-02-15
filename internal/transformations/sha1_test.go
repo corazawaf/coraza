@@ -3,7 +3,11 @@
 
 package transformations
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
 
 func BenchmarkSHA1(b *testing.B) {
 	tests := []string{
@@ -14,9 +18,8 @@ func BenchmarkSHA1(b *testing.B) {
 		tt := tc
 		b.Run(tt, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, _, err := sha1T(tt); err != nil {
-					b.Fatal(err)
-				}
+				_, _, err := sha1T(tt)
+				require.NoError(b, err)
 			}
 		})
 	}

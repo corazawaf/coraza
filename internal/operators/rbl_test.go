@@ -12,6 +12,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/stretchr/testify/require"
 )
 
 type testLogger struct{ t *testing.T }
@@ -26,9 +27,7 @@ func TestRbl(t *testing.T) {
 		Arguments: "xbl.spamhaus.org",
 	}
 	op, err := newRBL(opts)
-	if err != nil {
-		t.Fatal("Cannot init rbl operator")
-	}
+	require.NoError(t, err, "Cannot init rbl operator")
 
 	logger := &testLogger{t}
 
@@ -45,44 +44,30 @@ func TestRbl(t *testing.T) {
 			TXT: []string{"blocked"},
 		},
 	}, logger, false)
-	if err != nil {
-		t.Fatalf("Cannot start mockdns server: %v", err)
-	}
+	require.NoError(t, err, "Cannot start mockdns server")
 	defer srv.Close()
 
 	srv.PatchNet(op.(*rbl).resolver)
 	defer mockdns.UnpatchNet(op.(*rbl).resolver)
 
 	t.Run("Valid hostname with no TXT record", func(t *testing.T) {
-		if op.Evaluate(nil, "valid_no_txt") {
-			t.Errorf("Unexpected result for valid hostname with no TXT record")
-		}
+		require.False(t, op.Evaluate(nil, "valid_no_txt"), "Unexpected result for valid hostname with no TXT record")
 	})
 
 	t.Run("Valid hostname with TXT record", func(t *testing.T) {
 		tx := corazawaf.NewWAF().NewTransaction()
-		if !op.Evaluate(tx, "valid_txt") {
-			t.Errorf("Unexpected result for valid hostname")
-		}
-		if want, have := "not blocked", tx.Variables().TX().Get("httpbl_msg")[0]; want != have {
-			t.Errorf("Unexpected result for valid hostname: want %q, have %q", want, have)
-		}
+		require.True(t, op.Evaluate(tx, "valid_txt"), "Unexpected result for valid hostname")
+		require.Equal(t, "not blocked", tx.Variables().TX().Get("httpbl_msg")[0], "Unexpected result for valid hostname")
 	})
 
 	t.Run("Invalid hostname", func(t *testing.T) {
-		if op.Evaluate(nil, "invalid") {
-			t.Errorf("Unexpected result for invalid hostname")
-		}
+		require.False(t, op.Evaluate(nil, "invalid"), "Unexpected result for invalid hostname")
 	})
 
 	t.Run("Blocked hostname", func(t *testing.T) {
 		tx := corazawaf.NewWAF().NewTransaction()
-		if !op.Evaluate(tx, "blocked") {
-			t.Fatal("Unexpected result for blocked hostname")
-		}
+		require.True(t, op.Evaluate(tx, "blocked"), "Unexpected result for blocked hostname")
 		t.Log(tx.Variables().TX().Get("httpbl_msg"))
-		if want, have := "blocked", tx.Variables().TX().Get("httpbl_msg")[0]; want != have {
-			t.Errorf("Unexpected result for valid hostname: want %q, have %q", want, have)
-		}
+		require.Equal(t, "blocked", tx.Variables().TX().Get("httpbl_msg")[0], "Unexpected result for valid hostname")
 	})
 }
