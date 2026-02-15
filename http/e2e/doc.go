@@ -1,3 +1,6 @@
+// Copyright 2025 Juan Pablo Tosso and the OWASP Coraza contributors
+// SPDX-License-Identifier: Apache-2.0
+
 package e2e
 
 // Package e2e provides end-to-end testing routine for the Coraza WAF connectors.

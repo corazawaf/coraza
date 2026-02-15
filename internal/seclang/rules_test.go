@@ -966,6 +966,36 @@ func isMatchData(mds []types.MatchData, key string) (result bool) {
 	return result
 }
 
+func TestEscapedQuoteInOperator(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	parser := NewParser(waf)
+	err := parser.FromString(`
+		SecRuleEngine On
+		SecRule ARGS:id "@contains \"" "id:1,phase:1,deny,status:403,log,auditlog"
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Positive: request with a double quote in id should be blocked
+	tx := waf.NewTransaction()
+	tx.AddGetRequestArgument("id", `1"`)
+	it := tx.ProcessRequestHeaders()
+	if it == nil {
+		t.Error("expected transaction to be interrupted for request containing a double quote")
+	} else if it.RuleID != 1 {
+		t.Errorf("expected rule ID 1, got %d", it.RuleID)
+	}
+
+	// Negative: request without a double quote should not be blocked
+	tx = waf.NewTransaction()
+	tx.AddGetRequestArgument("id", "1")
+	it = tx.ProcessRequestHeaders()
+	if it != nil {
+		t.Error("unexpected interruption for request without a double quote")
+	}
+}
+
 func Test930110_10(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	rules := `
