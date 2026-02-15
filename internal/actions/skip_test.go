@@ -5,14 +5,16 @@ package actions
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestSkipInit(t *testing.T) {
 	t.Run("no arguments", func(t *testing.T) {
 		a := skip()
-		if err := a.Init(nil, ""); err == nil || err != ErrMissingArguments {
-			t.Error("expected error ErrMissingArguments")
-		}
+		err := a.Init(nil, "")
+		require.Error(t, err)
+		require.Equal(t, ErrMissingArguments, err)
 	})
 
 	t.Run("with arguments", func(t *testing.T) {
@@ -29,17 +31,11 @@ func TestSkipInit(t *testing.T) {
 			a := skip()
 			err := a.Init(nil, test.data)
 			if test.expectedError {
-				if err == nil {
-					t.Errorf("expected error: %s", err.Error())
-				}
+				require.Error(t, err)
 			} else {
-				if err != nil {
-					t.Errorf("unexpected error: %s", err.Error())
-				}
+				require.NoError(t, err)
 
-				if want, have := test.expectedData, a.(*skipFn).data; want != have {
-					t.Errorf("unexpected maturity value, want %d, have %d", want, have)
-				}
+				require.Equal(t, test.expectedData, a.(*skipFn).data)
 			}
 		}
 	})

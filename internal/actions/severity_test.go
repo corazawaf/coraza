@@ -8,6 +8,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSeverity(t *testing.T) {
@@ -38,12 +39,8 @@ func TestSeverity(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			rule := corazawaf.NewRule()
 			sev := severity()
-			if err := sev.Init(rule, tt.name); err != nil {
-				t.Error(err)
-			}
-			if got := rule.Severity_; got != tt.want {
-				t.Errorf("Severity = %s, want %s", got.String(), tt.want.String())
-			}
+			require.NoError(t, sev.Init(rule, tt.name))
+			require.Equal(t, tt.want, rule.Severity_)
 		})
 	}
 }

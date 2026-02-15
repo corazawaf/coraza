@@ -5,13 +5,13 @@ package actions
 
 import (
 	"bytes"
-	"strings"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/stretchr/testify/require"
 )
 
 type md struct {
@@ -30,27 +30,21 @@ func (md) Status() int {
 func TestSetvarInit(t *testing.T) {
 	t.Run("no arguments", func(t *testing.T) {
 		a := setvar()
-		if err := a.Init(nil, ""); err == nil || err != ErrMissingArguments {
-			t.Error("expected error ErrMissingArguments")
-		}
+		err := a.Init(nil, "")
+		require.Error(t, err)
+		require.Equal(t, ErrMissingArguments, err)
 	})
 	t.Run("non-map variable", func(t *testing.T) {
 		a := setvar()
-		if err := a.Init(&md{}, "PATH_INFO=test"); err == nil {
-			t.Error("expected error")
-		}
+		require.Error(t, a.Init(&md{}, "PATH_INFO=test"))
 	})
 	t.Run("TX set ok", func(t *testing.T) {
 		a := setvar()
-		if err := a.Init(&md{}, "TX.some=test"); err != nil {
-			t.Error(err)
-		}
+		require.NoError(t, a.Init(&md{}, "TX.some=test"))
 	})
 	t.Run("TX without key should fail", func(t *testing.T) {
 		a := setvar()
-		if err := a.Init(&md{}, "TX=test"); err == nil {
-			t.Error("expected error")
-		}
+		require.Error(t, a.Init(&md{}, "TX=test"))
 	})
 }
 
@@ -119,9 +113,7 @@ func TestSetvarEvaluate(t *testing.T) {
 			defer logsBuf.Reset()
 			a := setvar()
 			metadata := &md{}
-			if err := a.Init(metadata, tt.init); err != nil {
-				t.Fatal("unexpected error during setvar init")
-			}
+			require.NoError(t, a.Init(metadata, tt.init), "unexpected error during setvar init")
 
 			waf := corazawaf.NewWAF()
 			waf.Logger = logger
@@ -131,28 +123,20 @@ func TestSetvarEvaluate(t *testing.T) {
 
 			if tt.expectInvalidSyntaxError {
 				t.Log(logsBuf.String())
-				if logsBuf.Len() == 0 {
-					t.Fatal("expected logs")
-				}
+				require.NotZero(t, logsBuf.Len(), "expected logs")
 
-				if !strings.Contains(logsBuf.String(), invalidSyntaxAtoiError) {
-					t.Errorf("expected error log containing %q, got %q", invalidSyntaxAtoiError, logsBuf.String())
-				}
+				require.Contains(t, logsBuf.String(), invalidSyntaxAtoiError)
 
-				if !strings.Contains(logsBuf.String(), warningKeyNotFoundInCollection) {
-					t.Errorf("expected error log containing %q, got %q", warningKeyNotFoundInCollection, logsBuf.String())
-				}
-			} else if logsBuf.Len() != 0 {
-				t.Fatalf("unexpected error: %s", logsBuf.String())
+				require.Contains(t, logsBuf.String(), warningKeyNotFoundInCollection)
+			} else {
+				require.Zero(t, logsBuf.Len())
 			}
 
 			if tt.init2 != "" {
-				if err := a.Init(metadata, tt.init2); err != nil {
-					t.Fatal("unexpected error during setvar init")
-				}
+				require.NoError(t, a.Init(metadata, tt.init2), "unexpected error during setvar init")
 				a.Evaluate(metadata, tx)
-				if logsBuf.Len() != 0 && !tt.expectInvalidSyntaxError {
-					t.Fatalf("unexpected error: %s", logsBuf.String())
+				if !tt.expectInvalidSyntaxError {
+					require.Zero(t, logsBuf.Len())
 				}
 			}
 			if tt.expectNewVarValue != "" {
@@ -171,14 +155,6 @@ func checkCollectionValue(t *testing.T, a *setvarFn, tx plugintypes.TransactionS
 	} else {
 		col = c
 	}
-	if col == nil {
-		t.Fatal("collection in setvar is nil")
-		return
-	}
-	if col == nil {
-		t.Fatal("collection is nil")
-	}
-	if col.Get(key)[0] != expected {
-		t.Errorf("key %q: expected %q, got %q", key, expected, col.Get(key))
-	}
+	require.NotNil(t, col, "collection in setvar is nil")
+	require.Equal(t, expected, col.Get(key)[0])
 }

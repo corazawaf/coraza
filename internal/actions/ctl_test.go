@@ -13,6 +13,7 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCtl(t *testing.T) {
@@ -33,49 +34,37 @@ func TestCtl(t *testing.T) {
 		"auditEngine incorrect": {
 			input: "auditEngine=X",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if wantToContain, have := "Invalid status", logEntry; !strings.Contains(have, wantToContain) {
-					t.Errorf("Failed to log entry, want to contain %q, have %q", wantToContain, have)
-				}
+				require.Contains(t, logEntry, "Invalid status")
 			},
 		},
 		"auditEngine successfully": {
 			input: "auditEngine=Off",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if tx.AuditEngine != types.AuditEngineOff {
-					t.Error("Failed to disable audit log")
-				}
+				require.Equal(t, types.AuditEngineOff, tx.AuditEngine)
 			},
 		},
 		"auditLogParts": {
 			input: "auditLogParts=ABZ",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if want, have := types.AuditLogPartRequestHeaders, tx.AuditLogParts[1]; want != have {
-					t.Errorf("Failed to set audit log parts, want %s, have %s", string(want), string(have))
-				}
+				require.Equal(t, types.AuditLogPartRequestHeaders, tx.AuditLogParts[1])
 			},
 		},
 		"forceRequestBodyVariable incorrect": {
 			input: "forceRequestBodyVariable=X",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if wantToContain, have := "X", logEntry; !strings.Contains(have, wantToContain) {
-					t.Errorf("Failed to log entry, want to contain %q, have %q", wantToContain, have)
-				}
+				require.Contains(t, logEntry, "X")
 			},
 		},
 		"forceRequestBodyVariable successfully": {
 			input: "forceRequestBodyVariable=On",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if want, have := true, tx.ForceRequestBodyVariable; want != have {
-					t.Errorf("Failed to set forceRequestBodyVariable, want %t, have %t", want, have)
-				}
+				require.True(t, tx.ForceRequestBodyVariable)
 			},
 		},
 		"requestBodyAccess incorrect": {
 			input: "requestBodyAccess=X",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if wantToContain, have := "[ERROR] Unknown toggle", logEntry; !strings.Contains(have, wantToContain) {
-					t.Errorf("Failed to log entry, want to contain %q, have %q", wantToContain, have)
-				}
+				require.Contains(t, logEntry, "[ERROR] Unknown toggle")
 			},
 		},
 		"requestBodyAccess too late": {
@@ -85,9 +74,7 @@ func TestCtl(t *testing.T) {
 			},
 			input: "requestBodyAccess=On",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if wantToContain, have := "[WARN] Cannot change request body access after request headers phase", logEntry; !strings.Contains(have, wantToContain) {
-					t.Errorf("Failed to log entry, want to contain %q, have %q", wantToContain, have)
-				}
+				require.Contains(t, logEntry, "[WARN] Cannot change request body access after request headers phase")
 			},
 		},
 		"requestBodyAccess successfully": {
@@ -96,9 +83,7 @@ func TestCtl(t *testing.T) {
 			},
 			input: "requestBodyAccess=On",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if want, have := true, tx.RequestBodyAccess; want != have {
-					t.Errorf("Failed to set requestBodyAccess, want %t, have %t", want, have)
-				}
+				require.True(t, tx.RequestBodyAccess)
 			},
 		},
 		"requestBodyProcessor too late": {
@@ -108,9 +93,7 @@ func TestCtl(t *testing.T) {
 			},
 			input: "requestBodyProcessor=JSON",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if wantToContain, have := "[WARN] Cannot change request body processor after request headers phase", logEntry; !strings.Contains(have, wantToContain) {
-					t.Errorf("Failed to log entry, want to contain %q, have %q", wantToContain, have)
-				}
+				require.Contains(t, logEntry, "[WARN] Cannot change request body processor after request headers phase")
 			},
 		},
 		"requestBodyProcessor successfully": {
@@ -119,17 +102,13 @@ func TestCtl(t *testing.T) {
 			},
 			input: "requestBodyProcessor=XML",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if want, have := "XML", tx.Variables().RequestBodyProcessor().Get(); want != have {
-					t.Errorf("Failed to set requestBodyProcessor, want %s, have %s", want, have)
-				}
+				require.Equal(t, "XML", tx.Variables().RequestBodyProcessor().Get())
 			},
 		},
 		"requestBodyLimit incorrect": {
 			input: "requestBodyLimit=X",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if wantToContain, have := "[ERROR] Invalid limit", logEntry; !strings.Contains(have, wantToContain) {
-					t.Errorf("Failed to log entry, want to contain %q, have %q", wantToContain, have)
-				}
+				require.Contains(t, logEntry, "[ERROR] Invalid limit")
 			},
 		},
 		"requestBodyLimit too late": {
@@ -139,33 +118,25 @@ func TestCtl(t *testing.T) {
 			},
 			input: "requestBodyLimit=12345",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if wantToContain, have := "[WARN] Cannot change request body limit after request headers phase", logEntry; !strings.Contains(have, wantToContain) {
-					t.Errorf("Failed to log entry, want to contain %q, have %q", wantToContain, have)
-				}
+				require.Contains(t, logEntry, "[WARN] Cannot change request body limit after request headers phase")
 			},
 		},
 		"requestBodyLimit successfully": {
 			input: "requestBodyLimit=12345",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if want, have := int64(12345), tx.RequestBodyLimit; want != have {
-					t.Errorf("Failed to set requestBodyLimit, want %d, have %d", want, have)
-				}
+				require.Equal(t, int64(12345), tx.RequestBodyLimit)
 			},
 		},
 		"ruleEngine incorrect": {
 			input: "ruleEngine=X",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if wantToContain, have := "Invalid status", logEntry; !strings.Contains(have, wantToContain) {
-					t.Errorf("Failed to log entry, want to contain %q, have %q", wantToContain, have)
-				}
+				require.Contains(t, logEntry, "Invalid status")
 			},
 		},
 		"ruleEngine successfully": {
 			input: "ruleEngine=Off",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if want, have := types.RuleEngineOff, tx.RuleEngine; want != have {
-					t.Errorf("Failed to set ruleEngine, want %s, have %s", want, have)
-				}
+				require.Equal(t, types.RuleEngineOff, tx.RuleEngine)
 			},
 		},
 		"ruleRemoveById": {
@@ -177,17 +148,13 @@ func TestCtl(t *testing.T) {
 		"ruleRemoveById incorrect": {
 			input: "ruleRemoveById=W",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if wantToContain, have := "[ERROR] Invalid rule ID", logEntry; !strings.Contains(have, wantToContain) {
-					t.Errorf("Failed to log entry, want to contain %q, have %q", wantToContain, have)
-				}
+				require.Contains(t, logEntry, "[ERROR] Invalid rule ID")
 			},
 		},
 		"ruleRemoveById range incorrect": {
 			input: "ruleRemoveById=a-2",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if wantToContain, have := "[ERROR] Invalid range", logEntry; !strings.Contains(have, wantToContain) {
-					t.Errorf("Failed to log entry, want to contain %q, have %q", wantToContain, have)
-				}
+				require.Contains(t, logEntry, "[ERROR] Invalid range")
 			},
 		},
 		"ruleRemoveByMsg": {
@@ -199,17 +166,13 @@ func TestCtl(t *testing.T) {
 		"requestBodyProcessor": {
 			input: "requestBodyProcessor=XML",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if want, have := tx.Variables().RequestBodyProcessor().Get(), "XML"; want != have {
-					t.Errorf("failed to set requestBodyProcessor, want %s, have %s", want, have)
-				}
+				require.Equal(t, "XML", tx.Variables().RequestBodyProcessor().Get())
 			},
 		},
 		"responseBodyAccess incorrect": {
 			input: "responseBodyAccess=X",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if wantToContain, have := "[ERROR] Unknown toggle", logEntry; !strings.Contains(have, wantToContain) {
-					t.Errorf("Failed to log entry, want to contain %q, have %q", wantToContain, have)
-				}
+				require.Contains(t, logEntry, "[ERROR] Unknown toggle")
 			},
 		},
 		"responseBodyAccess too late": {
@@ -221,9 +184,7 @@ func TestCtl(t *testing.T) {
 			},
 			input: "responseBodyAccess=On",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if wantToContain, have := "[WARN] Cannot change response body access after response headers phase", logEntry; !strings.Contains(have, wantToContain) {
-					t.Errorf("Failed to log entry, want to contain %q, have %q", wantToContain, have)
-				}
+				require.Contains(t, logEntry, "[WARN] Cannot change response body access after response headers phase")
 			},
 		},
 		"responseBodyAccess successfully": {
@@ -232,9 +193,7 @@ func TestCtl(t *testing.T) {
 			},
 			input: "responseBodyAccess=On",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if want, have := true, tx.ResponseBodyAccess; want != have {
-					t.Errorf("Failed to set responseBodyAccess, want %t, have %t", want, have)
-				}
+				require.True(t, tx.ResponseBodyAccess)
 			},
 		},
 		"responseBodyLimit successfully": {
@@ -245,9 +204,7 @@ func TestCtl(t *testing.T) {
 				tx.ProcessRequestHeaders()
 			},
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if tx.ResponseBodyLimit != 12345 {
-					t.Errorf("Failed to set response body limit, want %d, have %d", 12345, tx.ResponseBodyLimit)
-				}
+				require.Equal(t, int64(12345), tx.ResponseBodyLimit)
 			},
 		},
 		"responseBodyLimit too late": {
@@ -259,25 +216,19 @@ func TestCtl(t *testing.T) {
 				_, _ = tx.ProcessResponseBody()
 			},
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if wantToContain, have := "[WARN] Cannot change response body access after response headers phase", logEntry; !strings.Contains(have, wantToContain) {
-					t.Errorf("Failed to log entry, want to contain %q, have %q", wantToContain, have)
-				}
+				require.Contains(t, logEntry, "[WARN] Cannot change response body access after response headers phase")
 			},
 		},
 		"responseBodyLimit incorrect": {
 			input: "responseBodyLimit=a",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if wantToContain, have := "[ERROR] Invalid limit", logEntry; !strings.Contains(have, wantToContain) {
-					t.Errorf("Failed to log entry, want to contain %q, have %q", wantToContain, have)
-				}
+				require.Contains(t, logEntry, "[ERROR] Invalid limit")
 			},
 		},
 		"responseBodyProcessor successfully": {
 			input: "responseBodyProcessor=XML",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if want, have := tx.Variables().ResponseBodyProcessor().Get(), "XML"; want != have {
-					t.Errorf("failed to set requestBodyProcessor, want %s, have %s", want, have)
-				}
+				require.Equal(t, "XML", tx.Variables().ResponseBodyProcessor().Get())
 			},
 		},
 		"responseBodyProcessor too late": {
@@ -289,33 +240,25 @@ func TestCtl(t *testing.T) {
 			},
 			input: "responseBodyProcessor=XML",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if wantToContain, have := "[WARN] Cannot change response body access after response headers phase", logEntry; !strings.Contains(have, wantToContain) {
-					t.Errorf("Failed to log entry, want to contain %q, have %q", wantToContain, have)
-				}
+				require.Contains(t, logEntry, "[WARN] Cannot change response body access after response headers phase")
 			},
 		},
 		"forceResponseBodyVariable incorrect": {
 			input: "forceResponseBodyVariable=X",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if wantToContain, have := "X", logEntry; !strings.Contains(have, wantToContain) {
-					t.Errorf("Failed to log entry, want to contain %q, have %q", wantToContain, have)
-				}
+				require.Contains(t, logEntry, "X")
 			},
 		},
 		"forceResponseBodyVariable successfully": {
 			input: "forceResponseBodyVariable=On",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if want, have := true, tx.ForceResponseBodyVariable; want != have {
-					t.Errorf("Failed to set forceResponseBodyVariable, want %t, have %t", want, have)
-				}
+				require.True(t, tx.ForceResponseBodyVariable)
 			},
 		},
 		"debugLogLevel incorrect": {
 			input: "debugLogLevel=X",
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
-				if wantToContain, have := "[ERROR] Invalid log level", logEntry; !strings.Contains(have, wantToContain) {
-					t.Errorf("Failed to log entry, want to contain %q, have %q", wantToContain, have)
-				}
+				require.Contains(t, logEntry, "[ERROR] Invalid log level")
 			},
 		},
 		"debugLogLevel successfully": {
@@ -338,14 +281,10 @@ func TestCtl(t *testing.T) {
 			r.ID_ = 1
 			r.LogID_ = "1"
 			err := waf.Rules.Add(r)
-			if err != nil {
-				t.Fatalf("failed to add rule: %s", err.Error())
-			}
+			require.NoError(t, err, "failed to add rule")
 
 			a := ctl()
-			if err := a.Init(r, test.input); err != nil {
-				t.Fatalf("failed to init ctl: %s", err.Error())
-			}
+			require.NoError(t, a.Init(r, test.input), "failed to init ctl")
 
 			tx := waf.NewTransaction()
 			if test.prepareTX != nil {
@@ -369,24 +308,16 @@ func TestCtl(t *testing.T) {
 func TestParseCtl(t *testing.T) {
 	t.Run("invalid ctl", func(t *testing.T) {
 		ctl, _, _, _, err := parseCtl("invalid")
-		if err == nil {
-			t.Errorf("expected error, got nil")
-		}
+		require.Error(t, err)
 
-		if ctl != ctlUnknown {
-			t.Errorf("expected ctlUnknown, got %d", ctl)
-		}
+		require.Equal(t, ctlUnknown, ctl)
 	})
 
 	t.Run("malformed ctl", func(t *testing.T) {
 		ctl, _, _, _, err := parseCtl("unknown=")
-		if err == nil {
-			t.Errorf("expected error, got nil")
-		}
+		require.Error(t, err)
 
-		if ctl != ctlUnknown {
-			t.Errorf("expected ctlUnknown, got %d", ctl)
-		}
+		require.Equal(t, ctlUnknown, ctl)
 	})
 
 	tCases := []struct {
@@ -418,21 +349,11 @@ func TestParseCtl(t *testing.T) {
 		testName, _, _ := strings.Cut(tCase.input, "=")
 		t.Run(testName, func(t *testing.T) {
 			action, value, collection, colKey, err := parseCtl(tCase.input)
-			if err != nil {
-				t.Fatalf("unexpected error: %s", err.Error())
-			}
-			if action != tCase.expectAction {
-				t.Errorf("unexpected action, want: %d, have: %d", tCase.expectAction, action)
-			}
-			if value != tCase.expectValue {
-				t.Errorf("unexpected value, want: %s, have: %s", tCase.expectValue, value)
-			}
-			if collection != tCase.expectCollection {
-				t.Errorf("unexpected collection, want: %s, have: %s", tCase.expectCollection.Name(), collection.Name())
-			}
-			if colKey != tCase.expectKey {
-				t.Errorf("unexpected key, want: %s, have: %s", tCase.expectKey, colKey)
-			}
+			require.NoError(t, err)
+			require.Equal(t, tCase.expectAction, action)
+			require.Equal(t, tCase.expectValue, value)
+			require.Equal(t, tCase.expectCollection, collection)
+			require.Equal(t, tCase.expectKey, colKey)
 		})
 	}
 
@@ -470,16 +391,11 @@ func TestCtlParseRange(t *testing.T) {
 	for _, tCase := range tCases {
 		t.Run(tCase._range, func(t *testing.T) {
 			ints, err := rangeToInts(rules, tCase._range)
-			if tCase.expectErr && err == nil {
-				t.Error("expected error for range")
-			}
-
-			if !tCase.expectErr && err != nil {
-				t.Errorf("unexpected error for range: %s", err.Error())
-			}
-
-			if !tCase.expectErr && len(ints) != tCase.expectedNumberOfIds {
-				t.Error("unexpected number of ids")
+			if tCase.expectErr {
+				require.Error(t, err, "expected error for range")
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tCase.expectedNumberOfIds, len(ints))
 			}
 		})
 	}
@@ -503,12 +419,8 @@ func TestParseOnOff(t *testing.T) {
 	for _, tCase := range tCases {
 		t.Run(tCase.val, func(t *testing.T) {
 			val, ok := parseOnOff(tCase.val)
-			if want, have := tCase.expectedOK, ok; want != have {
-				t.Errorf("unexpected OK, want: %t, have: %t", want, have)
-			}
-			if want, have := tCase.expectedVal, val; want != have {
-				t.Errorf("unexpected value, want: %t, have: %t", want, have)
-			}
+			require.Equal(t, tCase.expectedOK, ok)
+			require.Equal(t, tCase.expectedVal, val)
 		})
 	}
 }
