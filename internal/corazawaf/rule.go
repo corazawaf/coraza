@@ -467,17 +467,13 @@ func (r *Rule) AddAction(name string, action plugintypes.Action) error {
 	return nil
 }
 
-// ClearActionsOfType removes all actions of the given plugintypes.ActionType from the rule.
+// ClearDisruptiveActions removes all disruptive actions from the rule.
 //
-// This helper is typically used by rule parsers or directives that need to override
-// previously configured actions for a rule (for example, to clear all disruptive or
-// logging actions before adding new ones) without modifying the rest of the rule
-// definition.
-//
-// The actionType argument identifies the logical category of actions to remove, as
-// reported by Action.Type() (such as disruptive, non-disruptive, or logging). Any
-// action whose Type() matches actionType is filtered out from r.actions.
-func (r *Rule) ClearActionsOfType(actionType plugintypes.ActionType) {
+// This is used by directives like SecRuleUpdateActionById to clear existing
+// disruptive actions before applying new ones, matching ModSecurity behavior
+// where updating with a disruptive action replaces the previous one.
+func (r *Rule) ClearDisruptiveActions() {
+	actionType := plugintypes.ActionTypeDisruptive
 	filtered := make([]ruleActionParams, 0, len(r.actions))
 	for _, action := range r.actions {
 		if action.Function.Type() != actionType {

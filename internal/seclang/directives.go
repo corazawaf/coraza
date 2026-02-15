@@ -1164,7 +1164,9 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 				return fmt.Errorf("invalid range: %s", idOrRange)
 			}
 
-			// Parse actions once to check if any are disruptive
+			// Parse actions once to check if any are disruptive.
+			// Trim surrounding quotes because the SecLang syntax uses quoted action lists
+			// (e.g., SecRuleUpdateActionById 1004 "pass") and strings.Fields preserves them.
 			trimmedActions := strings.Trim(actions, "\"")
 			parsedActions, err := parseActions(options.WAF.Logger, trimmedActions)
 			if err != nil {
@@ -1181,7 +1183,7 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 
 				// Only clear disruptive actions if the update contains a disruptive action
 				if hasDisruptiveAction {
-					rule.ClearActionsOfType(plugintypes.ActionTypeDisruptive)
+					rule.ClearDisruptiveActions()
 				}
 
 				rp := RuleParser{
@@ -1201,13 +1203,13 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 }
 
 func updateActionBySingleID(id int, actions string, options *DirectiveOptions) error {
-
 	rule := options.WAF.Rules.FindByID(id)
 	if rule == nil {
 		return fmt.Errorf("SecRuleUpdateActionById: rule \"%d\" not found", id)
 	}
 
-	// Parse actions first to check if any are disruptive
+	// Parse actions first to check if any are disruptive.
+	// Trim surrounding quotes from the SecLang action list syntax.
 	trimmedActions := strings.Trim(actions, "\"")
 	parsedActions, err := parseActions(options.WAF.Logger, trimmedActions)
 	if err != nil {
@@ -1223,7 +1225,7 @@ func updateActionBySingleID(id int, actions string, options *DirectiveOptions) e
 	// This matches ModSecurity behavior where SecRuleUpdateActionById replaces
 	// disruptive actions but preserves them if only non-disruptive actions are updated
 	if hasDisruptiveAction {
-		rule.ClearActionsOfType(plugintypes.ActionTypeDisruptive)
+		rule.ClearDisruptiveActions()
 	}
 
 	// Apply the parsed actions to the rule without re-parsing
