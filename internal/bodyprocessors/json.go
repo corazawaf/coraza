@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tidwall/gjson"
+	"github.com/valyala/fastjson"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
@@ -74,10 +74,14 @@ func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.Tra
 }
 
 func readJSON(s string) (map[string]string, error) {
-	json := gjson.Parse(s)
+	var p fastjson.Parser
+	v, err := p.Parse(s)
+	if err != nil {
+		return nil, err
+	}
 	res := make(map[string]string)
 	key := []byte("json")
-	readItems(json, key, res)
+	readItems(v, key, res)
 	return res, nil
 }
 
@@ -86,42 +90,44 @@ func readJSON(s string) (map[string]string, error) {
 // Example output: map[string]string{"json.data.name": "John", "json.data.age": "30", "json.items.0": "1", "json.items.1": "2", "json.items.2": "3"}
 // Example input: [{"data": {"name": "John", "age": 30}, "items": [1,2,3]}]
 // Example output: map[string]string{"json.0.data.name": "John", "json.0.data.age": "30", "json.0.items.0": "1", "json.0.items.1": "2", "json.0.items.2": "3"}
-// TODO add some anti DOS protection
-func readItems(json gjson.Result, objKey []byte, res map[string]string) {
-	arrayLen := 0
-	json.ForEach(func(key, value gjson.Result) bool {
-		// Avoid string concatenation to maintain a single buffer for key aggregation.
-		prevParentLength := len(objKey)
-		objKey = append(objKey, '.')
-		if key.Type == gjson.String {
-			objKey = append(objKey, key.Str...)
-		} else {
-			objKey = strconv.AppendInt(objKey, int64(key.Num), 10)
-			arrayLen++
+func readItems(v *fastjson.Value, objKey []byte, res map[string]string) {
+	switch v.Type() {
+	case fastjson.TypeObject:
+		o, _ := v.Object()
+		o.Visit(func(k []byte, val *fastjson.Value) {
+			// Avoid string concatenation to maintain a single buffer for key aggregation.
+			prevLen := len(objKey)
+			objKey = append(objKey, '.')
+			objKey = append(objKey, k...)
+			readValue(val, objKey, res)
+			objKey = objKey[:prevLen]
+		})
+	case fastjson.TypeArray:
+		arr, _ := v.Array()
+		for i, val := range arr {
+			prevLen := len(objKey)
+			objKey = append(objKey, '.')
+			objKey = strconv.AppendInt(objKey, int64(i), 10)
+			readValue(val, objKey, res)
+			objKey = objKey[:prevLen]
 		}
-
-		var val string
-		switch value.Type {
-		case gjson.JSON:
-			readItems(value, objKey, res)
-			objKey = objKey[:prevParentLength]
-			return true
-		case gjson.String:
-			val = value.Str
-		case gjson.Null:
-			val = ""
-		default:
-			// For all other types, raw JSON is what we need
-			val = value.Raw
+		if len(arr) > 0 {
+			res[string(objKey)] = strconv.Itoa(len(arr))
 		}
+	}
+}
 
-		res[string(objKey)] = val
-		objKey = objKey[:prevParentLength]
-
-		return true
-	})
-	if arrayLen > 0 {
-		res[string(objKey)] = strconv.Itoa(arrayLen)
+func readValue(v *fastjson.Value, objKey []byte, res map[string]string) {
+	switch v.Type() {
+	case fastjson.TypeObject, fastjson.TypeArray:
+		readItems(v, objKey, res)
+	case fastjson.TypeString:
+		res[string(objKey)] = string(v.GetStringBytes())
+	case fastjson.TypeNull:
+		res[string(objKey)] = ""
+	default:
+		// TypeNumber, TypeTrue, TypeFalse — raw JSON representation
+		res[string(objKey)] = string(v.MarshalTo(nil))
 	}
 }
 

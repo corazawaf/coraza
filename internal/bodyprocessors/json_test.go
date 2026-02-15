@@ -184,10 +184,31 @@ func mapKeys(m map[string]string) []string {
 
 func TestInvalidJSON(t *testing.T) {
 	_, err := readJSON(`{invalid json`)
-	if err != nil {
-		// We expect no error since gjson.Parse doesn't return errors for invalid JSON
-		// Instead, it returns a Result with Type == Null
-		t.Error("Expected no error for invalid JSON, got:", err)
+	if err == nil {
+		t.Error("Expected error for invalid JSON, got nil")
+	}
+}
+
+func TestInvalidJSONVariants(t *testing.T) {
+	invalidInputs := []struct {
+		name  string
+		input string
+	}{
+		{"truncated object", `{"a": 1, "b"`},
+		{"truncated array", `[1, 2, `},
+		{"bare string", `hello`},
+		{"trailing comma", `{"a": 1,}`},
+		{"single quotes", `{'a': 1}`},
+		{"unquoted keys", `{a: 1}`},
+		{"empty input", ``},
+	}
+	for _, tc := range invalidInputs {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := readJSON(tc.input)
+			if err == nil {
+				t.Errorf("Expected error for invalid JSON %q, got nil", tc.input)
+			}
+		})
 	}
 }
 

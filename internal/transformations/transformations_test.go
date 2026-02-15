@@ -4,13 +4,12 @@
 package transformations
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
-
-	"github.com/tidwall/gjson"
 )
 
 type Test struct {
@@ -78,10 +77,13 @@ func TestTransformationsAreCaseInsensitive(t *testing.T) {
 	}
 }
 
-func unmarshalTests(json []byte) []Test {
+func unmarshalTests(data []byte) []Test {
+	var raw []any
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil
+	}
 	var tests []Test
-	v := gjson.ParseBytes(json).Value()
-	for _, in := range v.([]any) {
+	for _, in := range raw {
 		obj := in.(map[string]any)
 		t := Test{}
 		if s, ok := obj["input"]; ok {

@@ -4,13 +4,12 @@
 package operators
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
-
-	"github.com/tidwall/gjson"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
@@ -117,11 +116,14 @@ func TestOperators(t *testing.T) {
 	}
 }
 
-func unmarshalTests(t *testing.T, json []byte) []Test {
+func unmarshalTests(t *testing.T, data []byte) []Test {
 	t.Helper()
+	var raw []any
+	if err := json.Unmarshal(data, &raw); err != nil {
+		t.Fatalf("failed to unmarshal test data: %s", err.Error())
+	}
 	var tests []Test
-	v := gjson.ParseBytes(json).Value()
-	for _, in := range v.([]any) {
+	for _, in := range raw {
 		obj := in.(map[string]any)
 		t := Test{}
 		if s, ok := obj["input"]; ok {
