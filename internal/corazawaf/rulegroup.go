@@ -18,7 +18,8 @@ import (
 // It is not concurrent safe, so it's not recommended to use it
 // after compilation
 type RuleGroup struct {
-	rules []Rule
+	rules    []Rule
+	observer func(rule types.RuleMetadata)
 }
 
 // Add a rule to the collection
@@ -61,7 +62,17 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 	}
 
 	rg.rules = append(rg.rules, *rule)
+
+	if rg.observer != nil {
+		rg.observer(rule)
+	}
+
 	return nil
+}
+
+// SetObserver assigns the observer function to the group.
+func (rg *RuleGroup) SetObserver(observer func(rule types.RuleMetadata)) {
+	rg.observer = observer
 }
 
 // GetRules returns the slice of rules,
