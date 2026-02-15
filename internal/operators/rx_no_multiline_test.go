@@ -11,6 +11,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRx(t *testing.T) {
@@ -104,16 +105,12 @@ func TestRx(t *testing.T) {
 				Arguments: tt.pattern,
 			}
 			rx, err := newRX(opts)
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 			waf := corazawaf.NewWAF()
 			tx := waf.NewTransaction()
 			tx.Capture = true
 			res := rx.Evaluate(tx, tt.input)
-			if res != tt.want {
-				t.Errorf("want %v, got %v", tt.want, res)
-			}
+			require.Equal(t, tt.want, res, "want %v, got %v", tt.want, res)
 		})
 	}
 }

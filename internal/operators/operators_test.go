@@ -15,6 +15,7 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
+	"github.com/stretchr/testify/require"
 )
 
 type Test struct {
@@ -74,18 +75,13 @@ func TestOperators(t *testing.T) {
 
 					if strings.Contains(data.Input, `\x`) {
 						in, err := strconv.Unquote(`"` + data.Input + `"`)
-						if err != nil {
-							t.Errorf("Cannot parse test case: %s", err.Error())
-						} else {
-							data.Input = in
-						}
+						require.NoError(t, err, "Cannot parse test case")
+						data.Input = in
 					}
 
 					if strings.Contains(data.Param, `\x`) {
 						p, err := strconv.Unquote(`"` + data.Param + `"`)
-						if err != nil {
-							t.Errorf("Cannot parse test case: %s", err.Error())
-						}
+						require.NoError(t, err, "Cannot parse test case")
 						data.Param = p
 					}
 
@@ -95,10 +91,7 @@ func TestOperators(t *testing.T) {
 						Root:      os.DirFS("testdata"),
 					}
 					op, err := Get(data.Name, opts)
-					if err != nil {
-						t.Error(err)
-						return
-					}
+					require.NoError(t, err)
 					tx := waf.NewTransaction()
 					tx.Capture = capVal
 					res := op.Evaluate(tx, data.Input)
@@ -109,7 +102,7 @@ func TestOperators(t *testing.T) {
 						if data.Ret == 0 {
 							expected = "no match"
 						}
-						t.Errorf("Invalid operator result for @%s(%q, %q), %s expected", data.Name, data.Param, data.Input, expected)
+						require.Fail(t, "Invalid operator result", "Invalid operator result for @%s(%q, %q), %s expected", data.Name, data.Param, data.Input, expected)
 					}
 				})
 			}

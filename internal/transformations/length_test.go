@@ -5,6 +5,8 @@ package transformations
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestLength(t *testing.T) {
@@ -36,15 +38,11 @@ func TestLength(t *testing.T) {
 		tt := tc
 		t.Run(tt.input, func(t *testing.T) {
 			have, changed, err := length(tt.input)
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 			if tt.input == have && changed {
-				t.Errorf("input %q, have %q with changed %t", tt.input, have, changed)
+				require.Failf(t, "unexpected changed value", "input %q, have %q with changed %t", tt.input, have, changed)
 			}
-			if have != tt.length {
-				t.Errorf("Expected %s, have %s", tt.length, have)
-			}
+			require.Equal(t, tt.length, have)
 		})
 	}
 }

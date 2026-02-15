@@ -3,22 +3,22 @@
 
 package actions
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
 
 func TestInitcolInit(t *testing.T) {
 	t.Run("invalid argument", func(t *testing.T) {
 		initcol := initcol()
 		err := initcol.Init(nil, "foo")
-		if err == nil {
-			t.Errorf("expected error")
-		}
+		require.Error(t, err)
 	})
 
 	t.Run("passing argument", func(t *testing.T) {
 		initcol := initcol()
 		err := initcol.Init(nil, "foo=bar")
-		if err != nil {
-			t.Errorf("unexpected error: %s", err.Error())
-		}
+		require.NoError(t, err)
 	})
 }

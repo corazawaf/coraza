@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/stretchr/testify/require"
 )
 
 func TestEq(t *testing.T) {
@@ -44,9 +45,7 @@ func TestEq(t *testing.T) {
 
 		for value, want := range testCases {
 			t.Run(value, func(t *testing.T) {
-				if have := eq.Evaluate(nil, value); want != have {
-					t.Errorf("unexpected result: want %v, have %v", want, have)
-				}
+				require.Equal(t, want, eq.Evaluate(nil, value), "unexpected result")
 			})
 		}
 	})

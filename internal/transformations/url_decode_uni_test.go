@@ -6,6 +6,8 @@ package transformations
 import (
 	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkURLDecode(b *testing.B) {
@@ -25,9 +27,8 @@ func BenchmarkURLDecode(b *testing.B) {
 			tt := tc
 			b.Run(fmt.Sprintf("%s/%s", mode, tt), func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					if _, _, err := f(tt); err != nil {
-						b.Fatal(err)
-					}
+					_, _, err := f(tt)
+					require.NoError(b, err)
 				}
 			})
 		}

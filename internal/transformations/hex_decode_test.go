@@ -5,6 +5,8 @@ package transformations
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestHexDecode(t *testing.T) {
@@ -85,17 +87,14 @@ func TestHexDecode(t *testing.T) {
 			t.Parallel()
 			output, valid, err := hexDecode(tt.input)
 
-			if (err != nil) != tt.expectError {
-				t.Errorf("hexDecode(%q): expected error=%v, got error=%v", tt.input, tt.expectError, err)
+			if tt.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
 			}
 
-			if output != tt.expectedOutput {
-				t.Errorf("hexDecode(%q): expected output=%q, got output=%q", tt.input, tt.expectedOutput, output)
-			}
-
-			if valid != tt.expectedValid {
-				t.Errorf("hexDecode(%q): expected valid=%v, got valid=%v", tt.input, tt.expectedValid, valid)
-			}
+			require.Equal(t, tt.expectedOutput, output)
+			require.Equal(t, tt.expectedValid, valid)
 		})
 	}
 }

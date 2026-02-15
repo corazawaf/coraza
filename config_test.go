@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/types"
+	"github.com/stretchr/testify/require"
 )
 
 func TestConfigRulesImmutable(t *testing.T) {
@@ -19,46 +20,25 @@ func TestConfigRulesImmutable(t *testing.T) {
 	c1 := c.WithDirectives("SecRequestBodyAccess On")
 
 	waf1, err := NewWAF(c1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if !waf1.(wafWrapper).waf.RequestBodyAccess {
-		t.Errorf("waf1: expected request body access to be enabled")
-	}
-
-	if waf1.(wafWrapper).waf.ResponseBodyAccess {
-		t.Errorf("waf1: expected response body access to be disabled")
-	}
+	require.True(t, waf1.(wafWrapper).waf.RequestBodyAccess, "waf1: expected request body access to be enabled")
+	require.False(t, waf1.(wafWrapper).waf.ResponseBodyAccess, "waf1: expected response body access to be disabled")
 
 	c2 := c.WithDirectives("SecResponseBodyAccess On")
 
 	waf2, err := NewWAF(c2)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if waf2.(wafWrapper).waf.RequestBodyAccess {
-		t.Errorf("waf1: expected request body access to be disabled")
-	}
-
-	if !waf2.(wafWrapper).waf.ResponseBodyAccess {
-		t.Errorf("waf1: expected response body access to be enabled")
-	}
+	require.False(t, waf2.(wafWrapper).waf.RequestBodyAccess, "waf1: expected request body access to be disabled")
+	require.True(t, waf2.(wafWrapper).waf.ResponseBodyAccess, "waf1: expected response body access to be enabled")
 
 	// c1 should not have been affected
 	waf1, err = NewWAF(c1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if !waf1.(wafWrapper).waf.RequestBodyAccess {
-		t.Errorf("waf1: expected request body access to be enabled")
-	}
-
-	if waf1.(wafWrapper).waf.ResponseBodyAccess {
-		t.Errorf("waf1: expected response body access to be disabled")
-	}
+	require.True(t, waf1.(wafWrapper).waf.RequestBodyAccess, "waf1: expected request body access to be enabled")
+	require.False(t, waf1.(wafWrapper).waf.ResponseBodyAccess, "waf1: expected response body access to be disabled")
 }
 
 func TestConfigSetters(t *testing.T) {
@@ -78,35 +58,29 @@ func TestConfigSetters(t *testing.T) {
 		SecRule RESPONSE_BODY "aaa" "phase:4,id:40,log,msg:'ok'"
 		`)
 	waf, err := NewWAF(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+
 	tx := waf.NewTransaction()
 	tx.ProcessRequestHeaders()
 	tx.AddResponseHeader("Content-Type", "text/html")
 	tx.ProcessResponseHeaders(200, "http/1.1")
-	if _, _, err := tx.WriteResponseBody([]byte("aaa")); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := tx.ProcessResponseBody(); err != nil {
-		t.Fatal(err)
-	}
-	if !changed {
-		t.Errorf("error callback not called")
-	}
-	if !tx.IsResponseBodyProcessable() {
-		t.Errorf("response body should be processable")
-	}
+	_, _, err = tx.WriteResponseBody([]byte("aaa"))
+	require.NoError(t, err)
+
+	_, err = tx.ProcessResponseBody()
+	require.NoError(t, err)
+
+	require.True(t, changed, "error callback not called")
+	require.True(t, tx.IsResponseBodyProcessable(), "response body should be processable")
 	expectedMatches := []int{1, 40}
 	for _, id := range expectedMatches {
-		ok := false
+		found := false
 		for _, m := range tx.MatchedRules() {
 			if m.Rule().ID() == id {
-				ok = true
+				found = true
+				break
 			}
 		}
-		if !ok {
-			t.Errorf("expected rule %d to match", id)
-		}
+		require.True(t, found, "expected rule %d to match", id)
 	}
 }

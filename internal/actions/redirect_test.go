@@ -3,24 +3,24 @@
 
 package actions
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
 
 func TestRedirectInit(t *testing.T) {
 	t.Run("no arguments", func(t *testing.T) {
 		a := redirect()
-		if err := a.Init(nil, ""); err == nil || err != ErrMissingArguments {
-			t.Error("expected error ErrMissingArguments")
-		}
+		err := a.Init(nil, "")
+		require.Error(t, err)
+		require.Equal(t, ErrMissingArguments, err)
 	})
 
 	t.Run("passed arguments", func(t *testing.T) {
 		a := redirect()
-		if err := a.Init(nil, "abc"); err != nil {
-			t.Error("unexpected error")
-		}
+		require.NoError(t, a.Init(nil, "abc"))
 
-		if want, have := "abc", a.(*redirectFn).target; want != have {
-			t.Errorf("unexpected target, want %q, got %q", want, have)
-		}
+		require.Equal(t, "abc", a.(*redirectFn).target)
 	})
 }

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"github.com/tidwall/gjson"
 )
 
@@ -26,7 +27,7 @@ func TestTransformations(t *testing.T) {
 	root := "./testdata"
 	var files [][]byte
 	if _, err := os.Stat(root); os.IsNotExist(err) {
-		t.Error("failed to find transformation test files")
+		require.Fail(t, "failed to find transformation test files")
 	}
 	if err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if strings.HasSuffix(path, ".json") {
@@ -35,7 +36,7 @@ func TestTransformations(t *testing.T) {
 		}
 		return nil
 	}); err != nil {
-		t.Error("Error walking files")
+		require.Fail(t, "Error walking files")
 	}
 	for _, f := range files {
 		cases := unmarshalTests(f)
@@ -70,12 +71,10 @@ func TestTransformations(t *testing.T) {
 }
 
 func TestTransformationsAreCaseInsensitive(t *testing.T) {
-	if _, err := GetTransformation("cmdLine"); err != nil {
-		t.Error(err)
-	}
-	if _, err := GetTransformation("cmdline"); err != nil {
-		t.Error(err)
-	}
+	_, err := GetTransformation("cmdLine")
+	require.NoError(t, err)
+	_, err = GetTransformation("cmdline")
+	require.NoError(t, err)
 }
 
 func unmarshalTests(json []byte) []Test {

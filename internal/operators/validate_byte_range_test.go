@@ -8,6 +8,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/stretchr/testify/require"
 )
 
 func TestValidateByteRangeCase4(t *testing.T) {
@@ -20,9 +21,7 @@ func TestValidateByteRangeCase4(t *testing.T) {
 		t.Error("Cannot init byte range operator")
 	}
 	tx := getTransaction()
-	if op.Evaluate(tx, "\u00d0\u0090") {
-		t.Error("Invalid byte between ranges (negative)", []byte("\u00d0\u0090"))
-	}
+	require.False(t, op.Evaluate(tx, "\u00d0\u0090"), "Invalid byte between ranges (negative) %v", []byte("\u00d0\u0090"))
 }
 
 func TestValidateByteRangeCase5(t *testing.T) {
@@ -31,12 +30,8 @@ func TestValidateByteRangeCase5(t *testing.T) {
 		Arguments: ranges,
 	}
 	op, err := newValidateByteRange(opts)
-	if err != nil {
-		t.Error("Cannot init byte range operator")
-	}
-	if op.Evaluate(nil, "/\ufffdindex.html?test=test1") {
-		t.Error("Invalid byte between ranges (negative)", []byte("/\ufffdindex.html?test=test1"))
-	}
+	require.NoError(t, err, "Cannot init byte range operator")
+	require.False(t, op.Evaluate(nil, "/\ufffdindex.html?test=test1"), "Invalid byte between ranges (negative) %v", []byte("/\ufffdindex.html?test=test1"))
 }
 
 func getTransaction() *corazawaf.Transaction {

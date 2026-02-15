@@ -4,28 +4,24 @@
 package actions
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCaptureInit(t *testing.T) {
 	t.Run("passed arguments", func(t *testing.T) {
 		a := capture()
 		r := &corazawaf.Rule{}
-		if err := a.Init(r, ""); err != nil {
-			t.Error(err)
-		}
-		if want, have := true, r.Capture; want != have {
-			t.Errorf("expected action %t, got %t", want, have)
-		}
+		require.NoError(t, a.Init(r, ""))
+		require.True(t, r.Capture)
 	})
 
 	t.Run("no arguments", func(t *testing.T) {
 		a := capture()
-		if err := a.Init(nil, "abc"); err == nil || !errors.Is(err, ErrUnexpectedArguments) {
-			t.Error("expected error ErrUnexpectedArguments")
-		}
+		err := a.Init(nil, "abc")
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrUnexpectedArguments)
 	})
 }
