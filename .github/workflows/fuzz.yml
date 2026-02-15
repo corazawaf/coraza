@@ -14,7 +14,7 @@ jobs:
       - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
       - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
         with:
-          go-version: ">=1.23.0"
+          go-version: ">=1.24.0"
       - run: go run mage.go fuzz
       - run: |
           gh issue create --title "$GITHUB_WORKFLOW #$GITHUB_RUN_NUMBER failed" \
