@@ -14,3 +14,9 @@ import (
 func RegisterBodyProcessor(name string, fn func() plugintypes.BodyProcessor) {
 	bodyprocessors.RegisterBodyProcessor(name, fn)
 }
+
+// GetBodyProcessor returns a body processor by name.
+// If the body processor is not found, it returns an error
+func GetBodyProcessor(name string) (plugintypes.BodyProcessor, error) {
+	return bodyprocessors.GetBodyProcessor(name)
+}

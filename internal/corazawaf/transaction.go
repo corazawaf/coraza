@@ -1062,10 +1062,17 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		Str("body_processor", rbp).
 		Msg("Attempting to process request body")
 
-	if err := bodyprocessor.ProcessRequest(reader, tx.Variables(), plugintypes.BodyProcessorOptions{
+	bpOpts := plugintypes.BodyProcessorOptions{
 		Mime:        mime,
 		StoragePath: tx.WAF.UploadDir,
-	}); err != nil {
+	}
+
+	// If the body processor supports streaming, evaluate rules per record
+	if sp, ok := bodyprocessor.(plugintypes.StreamingBodyProcessor); ok {
+		return tx.processRequestBodyStreaming(sp, reader, bpOpts)
+	}
+
+	if err := bodyprocessor.ProcessRequest(reader, tx.Variables(), bpOpts); err != nil {
 		tx.debugLogger.Error().Err(err).Msg("Failed to process request body")
 		tx.generateRequestBodyError(err)
 		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
@@ -1073,6 +1080,301 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	}
 
 	tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
+	return tx.interruption, nil
+}
+
+// errStreamInterrupted is a sentinel error used to stop streaming body processing
+// when a rule triggers an interruption.
+var errStreamInterrupted = errors.New("stream processing interrupted")
+
+// processRequestBodyStreaming evaluates Phase 2 rules after each record in a streaming body.
+// ArgsPost is cleared and repopulated for each record, while TX variables persist across records
+// for cross-record correlation (e.g., anomaly scoring).
+func (tx *Transaction) processRequestBodyStreaming(sp plugintypes.StreamingBodyProcessor, reader io.Reader, opts plugintypes.BodyProcessorOptions) (*types.Interruption, error) {
+	err := sp.ProcessRequestRecords(reader, opts, func(recordNum int, fields map[string]string, _ string) error {
+		// Clear ArgsPost and repopulate with this record's fields only
+		tx.variables.argsPost.Reset()
+		for key, value := range fields {
+			tx.variables.argsPost.SetIndex(key, 0, value)
+		}
+
+		// Evaluate Phase 2 rules for this record
+		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
+
+		if tx.interruption != nil {
+			tx.debugLogger.Debug().
+				Int("record_num", recordNum).
+				Msg("Stream processing interrupted by rule")
+			return errStreamInterrupted
+		}
+		return nil
+	})
+
+	if err != nil && err != errStreamInterrupted {
+		tx.debugLogger.Error().Err(err).Msg("Failed to process streaming request body")
+		tx.generateRequestBodyError(err)
+		if tx.interruption == nil {
+			tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
+		}
+	}
+
+	return tx.interruption, nil
+}
+
+// processResponseBodyStreaming evaluates Phase 4 rules after each record in a streaming response body.
+// ArgsResponse is cleared and repopulated for each record, while TX variables persist across records.
+func (tx *Transaction) processResponseBodyStreaming(sp plugintypes.StreamingBodyProcessor, reader io.Reader, opts plugintypes.BodyProcessorOptions) (*types.Interruption, error) {
+	err := sp.ProcessResponseRecords(reader, opts, func(recordNum int, fields map[string]string, _ string) error {
+		// Clear ResponseArgs and repopulate with this record's fields only
+		tx.variables.responseArgs.Reset()
+		for key, value := range fields {
+			tx.variables.responseArgs.SetIndex(key, 0, value)
+		}
+
+		// Evaluate Phase 4 rules for this record
+		tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
+
+		if tx.interruption != nil {
+			tx.debugLogger.Debug().
+				Int("record_num", recordNum).
+				Msg("Response stream processing interrupted by rule")
+			return errStreamInterrupted
+		}
+		return nil
+	})
+
+	if err != nil && err != errStreamInterrupted {
+		tx.debugLogger.Error().Err(err).Msg("Failed to process streaming response body")
+		tx.generateResponseBodyError(err)
+		if tx.interruption == nil {
+			tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
+		}
+	}
+
+	return tx.interruption, nil
+}
+
+// ProcessRequestBodyFromStream processes a streaming request body by reading records
+// from input, evaluating Phase 2 rules per record, and writing clean records to output.
+// This enables true streaming without buffering the entire body.
+//
+// Unlike ProcessRequestBody(), this method reads directly from the provided input
+// rather than from the transaction's body buffer. Records that pass rule evaluation
+// are written to output for relay to the backend.
+//
+// This method handles Phase 2 rule evaluation internally.
+func (tx *Transaction) ProcessRequestBodyFromStream(input io.Reader, output io.Writer) (*types.Interruption, error) {
+	if tx.RuleEngine == types.RuleEngineOff {
+		// Pass through: copy input to output without evaluation
+		if _, err := io.Copy(output, input); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	}
+
+	if tx.interruption != nil {
+		return tx.interruption, nil
+	}
+
+	if tx.lastPhase != types.PhaseRequestHeaders {
+		tx.debugLogger.Debug().Msg("Skipping ProcessRequestBodyFromStream: wrong phase")
+		return nil, nil
+	}
+
+	rbp := tx.variables.reqbodyProcessor.Get()
+	if tx.ForceRequestBodyVariable && rbp == "" {
+		rbp = "URLENCODED"
+		tx.variables.reqbodyProcessor.Set(rbp)
+	}
+	rbp = strings.ToLower(rbp)
+	if rbp == "" {
+		// No body processor, pass through
+		if _, err := io.Copy(output, input); err != nil {
+			return nil, err
+		}
+		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
+		return tx.interruption, nil
+	}
+
+	bodyprocessor, err := bodyprocessors.GetBodyProcessor(rbp)
+	if err != nil {
+		tx.generateRequestBodyError(errors.New("invalid body processor"))
+		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
+		return tx.interruption, nil
+	}
+
+	sp, ok := bodyprocessor.(plugintypes.StreamingBodyProcessor)
+	if !ok {
+		// Non-streaming body processor: buffer input, process normally, then copy to output
+		it, _, err := tx.ReadRequestBodyFrom(input)
+		if err != nil {
+			return nil, err
+		}
+		if it != nil {
+			return it, nil
+		}
+
+		it, err = tx.ProcessRequestBody()
+		if err != nil || it != nil {
+			return it, err
+		}
+
+		// Copy buffered body to output
+		rbr, err := tx.RequestBodyReader()
+		if err != nil {
+			return nil, err
+		}
+		if _, err := io.Copy(output, rbr); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	}
+
+	mime := ""
+	if m := tx.variables.requestHeaders.Get("content-type"); len(m) > 0 {
+		mime = m[0]
+	}
+
+	tx.debugLogger.Debug().
+		Str("body_processor", rbp).
+		Msg("Attempting to process streaming request body with relay")
+
+	streamErr := sp.ProcessRequestRecords(input, plugintypes.BodyProcessorOptions{
+		Mime:        mime,
+		StoragePath: tx.WAF.UploadDir,
+	}, func(recordNum int, fields map[string]string, rawRecord string) error {
+		// Clear ArgsPost and repopulate with this record's fields only
+		tx.variables.argsPost.Reset()
+		for key, value := range fields {
+			tx.variables.argsPost.SetIndex(key, 0, value)
+		}
+
+		// Evaluate Phase 2 rules for this record
+		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
+
+		if tx.interruption != nil {
+			tx.debugLogger.Debug().
+				Int("record_num", recordNum).
+				Msg("Stream relay interrupted by rule")
+			return errStreamInterrupted
+		}
+
+		// Record passed evaluation, write to output for relay
+		if _, err := io.WriteString(output, rawRecord); err != nil {
+			return fmt.Errorf("failed to write record to output: %w", err)
+		}
+		if _, err := io.WriteString(output, "\n"); err != nil {
+			return fmt.Errorf("failed to write record delimiter: %w", err)
+		}
+
+		return nil
+	})
+
+	if streamErr != nil && streamErr != errStreamInterrupted {
+		tx.debugLogger.Error().Err(streamErr).Msg("Failed to process streaming request body relay")
+		tx.generateRequestBodyError(streamErr)
+		if tx.interruption == nil {
+			tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
+		}
+	}
+
+	return tx.interruption, nil
+}
+
+// ProcessResponseBodyFromStream processes a streaming response body by reading records
+// from input, evaluating Phase 4 rules per record, and writing clean records to output.
+// This enables true streaming of response bodies without full buffering.
+func (tx *Transaction) ProcessResponseBodyFromStream(input io.Reader, output io.Writer) (*types.Interruption, error) {
+	if tx.RuleEngine == types.RuleEngineOff {
+		if _, err := io.Copy(output, input); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	}
+
+	if tx.interruption != nil {
+		return tx.interruption, nil
+	}
+
+	if tx.lastPhase != types.PhaseResponseHeaders {
+		tx.debugLogger.Debug().Msg("Skipping ProcessResponseBodyFromStream: wrong phase")
+		return nil, nil
+	}
+
+	bp := tx.variables.resBodyProcessor.Get()
+	if bp == "" {
+		// No body processor, pass through
+		if _, err := io.Copy(output, input); err != nil {
+			return nil, err
+		}
+		tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
+		return tx.interruption, nil
+	}
+
+	bodyprocessor, err := bodyprocessors.GetBodyProcessor(bp)
+	if err != nil {
+		tx.generateResponseBodyError(errors.New("invalid body processor"))
+		tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
+		return tx.interruption, nil
+	}
+
+	sp, ok := bodyprocessor.(plugintypes.StreamingBodyProcessor)
+	if !ok {
+		// Non-streaming: buffer, process, copy
+		if _, _, err := tx.ReadResponseBodyFrom(input); err != nil {
+			return nil, err
+		}
+		it, err := tx.ProcessResponseBody()
+		if err != nil || it != nil {
+			return it, err
+		}
+		rbr, err := tx.ResponseBodyReader()
+		if err != nil {
+			return nil, err
+		}
+		if _, err := io.Copy(output, rbr); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	}
+
+	tx.debugLogger.Debug().
+		Str("body_processor", bp).
+		Msg("Attempting to process streaming response body with relay")
+
+	streamErr := sp.ProcessResponseRecords(input, plugintypes.BodyProcessorOptions{}, func(recordNum int, fields map[string]string, rawRecord string) error {
+		tx.variables.responseArgs.Reset()
+		for key, value := range fields {
+			tx.variables.responseArgs.SetIndex(key, 0, value)
+		}
+
+		tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
+
+		if tx.interruption != nil {
+			tx.debugLogger.Debug().
+				Int("record_num", recordNum).
+				Msg("Response stream relay interrupted by rule")
+			return errStreamInterrupted
+		}
+
+		if _, err := io.WriteString(output, rawRecord); err != nil {
+			return fmt.Errorf("failed to write response record to output: %w", err)
+		}
+		if _, err := io.WriteString(output, "\n"); err != nil {
+			return fmt.Errorf("failed to write response record delimiter: %w", err)
+		}
+
+		return nil
+	})
+
+	if streamErr != nil && streamErr != errStreamInterrupted {
+		tx.debugLogger.Error().Err(streamErr).Msg("Failed to process streaming response body relay")
+		tx.generateResponseBodyError(streamErr)
+		if tx.interruption == nil {
+			tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
+		}
+	}
+
 	return tx.interruption, nil
 }
 
@@ -1294,6 +1596,11 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		}
 
 		tx.debugLogger.Debug().Str("body_processor", bp).Msg("Attempting to process response body")
+
+		// If the body processor supports streaming, evaluate rules per record
+		if sp, ok := b.(plugintypes.StreamingBodyProcessor); ok {
+			return tx.processResponseBodyStreaming(sp, reader, plugintypes.BodyProcessorOptions{})
+		}
 
 		if err := b.ProcessResponse(reader, tx.Variables(), plugintypes.BodyProcessorOptions{}); err != nil {
 			tx.debugLogger.Error().Err(err).Msg("Failed to process response body")
