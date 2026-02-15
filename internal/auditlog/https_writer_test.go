@@ -57,7 +57,7 @@ func TestHTTPAuditLog(t *testing.T) {
 			t.Fatal("Body is empty")
 		}
 		if !bytes.Contains(body, []byte("test123")) {
-			t.Fatal("Body does not match")
+			t.Fatalf("Body does not match, got:\n%s", string(body))
 		}
 	}))
 	defer server.Close()
