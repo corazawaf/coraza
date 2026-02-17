@@ -1054,8 +1054,8 @@ func TestTxVariables(t *testing.T) {
 	tx := makeTransaction(t)
 	rv := ruleVariableParams{
 		Variable: variables.RequestHeaders,
-		KeyStr:   "ho.*",
-		KeyRx:    regexp.MustCompile("ho.*"),
+		KeyStr:   "Ho.*",
+		KeyRx:    regexp.MustCompile("Ho.*"),
 	}
 	if len(tx.GetField(rv)) != 1 || tx.GetField(rv)[0].Value() != "www.test.com:80" {
 		t.Fatalf("failed to match rule variable REQUEST_HEADERS:host, %d matches, %v", len(tx.GetField(rv)), tx.GetField(rv))
@@ -1090,8 +1090,8 @@ func TestTxVariablesExceptions(t *testing.T) {
 	tx := makeTransaction(t)
 	rv := ruleVariableParams{
 		Variable: variables.RequestHeaders,
-		KeyStr:   "ho.*",
-		KeyRx:    regexp.MustCompile("ho.*"),
+		KeyStr:   "Ho.*",
+		KeyRx:    regexp.MustCompile("Ho.*"),
 		Exceptions: []ruleVariableException{
 			{KeyStr: "host"},
 		},
@@ -1107,7 +1107,7 @@ func TestTxVariablesExceptions(t *testing.T) {
 	}
 	rv.Exceptions = []ruleVariableException{
 		{
-			KeyRx: regexp.MustCompile("ho.*"),
+			KeyRx: regexp.MustCompile("Ho.*"),
 		},
 	}
 	fields = tx.GetField(rv)
