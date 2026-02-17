@@ -16,10 +16,26 @@ import (
 
 var rePathTokenRe = regexp.MustCompile(`\{([^\}]+)\}`)
 
-// @restpath takes as argument a path expression in the format
-// /path/to/resource/{id}/{name}/{age}
-// It will later transform the path to a regex and assign the variables to
-// ARGS_PATH
+// Description:
+// Takes a path expression with placeholders and transforms it to a regex for REST endpoint validation.
+// Extracts path parameters from the URI and stores them in ARGS_PATH collection for use in rules.
+// Useful for validating REST API endpoints with dynamic path segments.
+//
+// Arguments:
+// Path template with {placeholder} syntax (e.g., "/api/v1/users/{id}/posts/{postId}").
+// Placeholders are converted to named capture groups and stored as ARGS_PATH variables.
+//
+// Returns:
+// true if the URI matches the path template, false otherwise. Matched placeholders are available in ARGS_PATH.
+//
+// Example:
+// ```
+// # Match REST endpoint and extract path parameters
+// SecRule REQUEST_URI "@restpath /api/v1/users/{userId}/posts/{postId}" "id:201,pass,log"
+//
+// # Validate extracted path parameter
+// SecRule ARGS_PATH:userId "@rx ^[0-9]+$" "id:202,deny,msg:'Invalid user ID format'"
+// ```
 type restpath struct {
 	re *regexp.Regexp
 }
@@ -32,7 +48,7 @@ func newRESTPath(options plugintypes.OperatorOptions) (plugintypes.Operator, err
 		data = strings.Replace(data, token[0], fmt.Sprintf("(?P<%s>[^?/]+)", token[1]), 1)
 	}
 
-	re, err := memoize.Do(data, func() (interface{}, error) { return regexp.Compile(data) })
+	re, err := memoize.Do(data, func() (any, error) { return regexp.Compile(data) })
 	if err != nil {
 		return nil, err
 	}

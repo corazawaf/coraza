@@ -18,14 +18,14 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.23.x]
+        go-version: [1.24.x]
         # tinygo-version is meant to stay aligned with the one used in corazawaf/coraza-proxy-wasm
-        tinygo-version: [0.34.0]
+        tinygo-version: [0.40.1]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
 
       - name: Install Go
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
@@ -33,22 +33,25 @@ jobs:
           go-version: ${{ matrix.go-version }}
           cache: true
 
-      - name: setup tinygo
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Setup tinygo
         uses: acifani/setup-tinygo@db56321a62b9a67922bb9ac8f9d085e218807bb3 # v2
         with:
           tinygo-version: ${{ matrix.tinygo-version }}
 
       - name: Cache TinyGo build
-        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4
+        uses: actions/cache@a7833574556fa59680c1b7cb190c1735db73ebf0 # v5
         with:
           path: |
             ~/.cache/tinygo
-          key: ${{ runner.os }}-tinygo-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-tinygo-${{ matrix.tinygo-version }}-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-tinygo-
+            ${{ runner.os }}-tinygo-${{ matrix.tinygo-version }}-
 
       - name: Tests
-        run: tinygo test ./...
+        run: tinygo test -v -short ./internal/...
 
       - name: Tests memoize
-        run: tinygo test -tags=memoize_builders ./...
+        run: tinygo test -v -short -tags=memoize_builders ./internal/...

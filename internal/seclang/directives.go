@@ -718,16 +718,16 @@ func directiveSecAuditLogFormat(options *DirectiveOptions) error {
 }
 
 // Description: Configures the directory where concurrent audit log entries are stored.
-// Syntax: SecAuditLogDir [PATH_TO_LOG_DIR]
+// Syntax: SecAuditLogStorageDir [PATH_TO_LOG_DIR]
 // ---
 // This directive is required only when concurrent audit logging is used. Ensure that you
 // specify a file system location with adequate disk space.
 //
 // Example:
 // ```apache
-// SecAuditLogDir /tmp/auditlogs/
+// SecAuditLogStorageDir /tmp/auditlogs/
 // ```
-func directiveSecAuditLogDir(options *DirectiveOptions) error {
+func directiveSecAuditLogStorageDir(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
 	}
@@ -813,7 +813,7 @@ func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	re, err := memoize.Do(options.Opts, func() (interface{}, error) { return regexp.Compile(options.Opts) })
+	re, err := memoize.Do(options.Opts, func() (any, error) { return regexp.Compile(options.Opts) })
 	if err != nil {
 		return err
 	}
@@ -852,8 +852,8 @@ func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 // - I: This part is a replacement for part C. It will log the same data as C in all cases except when
 // `multipart/form-data` encoding in used. In this case, it will log a fake `application/x-www-form-urlencoded`
 // body that contains the information about parameters but not about the files. This is handy if
-// you don’t want to have (often large) files stored in your audit logs.
-// - J: This part contains information about the files uploaded using `multipart/form-data` encoding.
+// you don’t want to have (often large) files stored in your audit logs; not implemented yet.
+// - J: This part contains information about the files uploaded using `multipart/form-data` encoding; not implemented yet.
 // - K: This part contains a full list of every rule that matched (one per line) in the order they were
 // matched. The rules are fully qualified and will thus show inherited actions and default operators.
 // - Z: Final boundary, signifies the end of the entry (mandatory).
@@ -890,7 +890,7 @@ func directiveSecAuditLogParts(options *DirectiveOptions) error {
 // SecAuditLog logs/audit/audit.log
 // SecAuditLogParts ABCFHZ
 // SecAuditLogType concurrent
-// SecAuditLogDir logs/audit
+// SecAuditLogStorageDir logs/audit
 // SecAuditLogRelevantStatus ^(?:5|4(?!04))
 // ```
 func directiveSecAuditEngine(options *DirectiveOptions) error {

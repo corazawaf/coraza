@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build tinygo
-// +build tinygo
 
 package auditlog
 
@@ -25,5 +24,5 @@ func init() {
 	RegisterFormatter("json", &jsonFormatter{})
 	RegisterFormatter("jsonlegacy", &legacyJSONFormatter{})
 	RegisterFormatter("native", &nativeFormatter{})
-	RegisterFormatter("ocsf", &ocsfFormatter{})
+	RegisterFormatter("ocsf", &noopFormatter{})
 }

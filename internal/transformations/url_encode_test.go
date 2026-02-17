@@ -49,7 +49,7 @@ func BenchmarkURLEncode(b *testing.B) {
 	tests := []string{
 		" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}",
 		"ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ",
-		"~",
+		"~", //nolint:staticcheck
 		"Test Case",
 	}
 	for i := 0; i < b.N; i++ {

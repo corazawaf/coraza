@@ -1,6 +1,8 @@
 // Copyright 2024 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !tinygo
+
 package auditlog
 
 import (
@@ -44,7 +46,7 @@ func TestOCSFFormatter(t *testing.T) {
 			t.Errorf("failed to match audit log Unix Timestamp, \ngot: %s\nexpected: %s", fmt.Sprint(wra.Time), fmt.Sprint(al.Transaction().UnixTimestamp()))
 		}
 
-		// validate transation interruption
+		// validate transaction interruption
 		if al.Transaction().IsInterrupted() {
 			if wra.Action != "Denied" {
 				t.Errorf("failed to match audit log Action, \ngot: %s\nexpected: %s", wra.Action, "Denied")
@@ -334,7 +336,7 @@ func createAuditLogs() []*Log {
 		},
 	})
 
-	// Test case for abnormal transaction (all empty values, no arguments, no reponse)
+	// Test case for abnormal transaction (all empty values, no arguments, no response)
 	getArgs = collections.NewMap(variables.ArgsGet)
 	postArgs = collections.NewMap(variables.ArgsPost)
 	pathArgs = collections.NewMap(variables.ArgsPath)

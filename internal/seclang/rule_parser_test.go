@@ -265,6 +265,41 @@ func TestInvalidOperatorRuleData(t *testing.T) {
 	}
 }
 
+func TestParseActionOperatorUnescaping(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		wantOp string
+	}{
+		{
+			name:   "escaped double quote",
+			input:  `ARGS:id "@contains \"" "id:1,phase:1,deny,status:403"`,
+			wantOp: `@contains "`,
+		},
+		{
+			name:   "escaped backslash stays",
+			input:  `REQUEST_HEADERS "@rx C:\\" "id:2"`,
+			wantOp: `@rx C:\\`,
+		},
+		{
+			name:   "no escapes",
+			input:  `ARGS "@contains test" "id:3"`,
+			wantOp: `@contains test`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, op, _, err := parseActionOperator(tt.input)
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if op != tt.wantOp {
+				t.Errorf("parseActionOperator() op = %q, want %q", op, tt.wantOp)
+			}
+		})
+	}
+}
+
 func TestRawChainedRules(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	p := NewParser(waf)

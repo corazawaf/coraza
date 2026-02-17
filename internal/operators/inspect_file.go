@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build !tinygo && !coraza.disabled_operators.inspectFile
-// +build !tinygo,!coraza.disabled_operators.inspectFile
 
 package operators
 
@@ -14,6 +13,26 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
+// Description:
+// Executes an external program for every variable in the target list. Useful for integrating
+// external validation tools (virus scanners, content analyzers, etc.). The program receives
+// the variable value as a command-line argument and has a 10-second timeout.
+//
+// Arguments:
+// Path to the external program/script to execute. The program should return '1' in the first
+// byte of output to indicate a match, any other output indicates no match.
+//
+// Returns:
+// true if the external program indicates a match (non-'1' output), false on timeout or '1' output
+//
+// Example:
+// ```
+// # Scan uploaded files with external antivirus
+// SecRule FILES_TMPNAMES "@inspectFile /usr/local/bin/av-scan.sh" "id:203,deny,log,msg:'Virus detected'"
+//
+// # Custom content validation script
+// SecRule REQUEST_BODY "@inspectFile /opt/waf/scripts/validate-content.py" "id:204,deny"
+// ```
 type inspectFile struct {
 	path string
 }

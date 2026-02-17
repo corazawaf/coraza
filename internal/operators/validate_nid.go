@@ -17,6 +17,26 @@ import (
 
 type validateNidFunction = func(input string) bool
 
+// Description:
+// Validates that the input contains a valid National Identifier for the specified country.
+// Uses country-specific validation algorithms (Luhn check, format rules, etc.).
+// Supports multiple country codes with custom regex patterns.
+//
+// Arguments:
+// Country code and regex pattern separated by space (e.g., "cl ^[0-9]{7,8}-[0-9Kk]$" for Chile RUT).
+// Currently supports: "cl" (Chile RUT), "us" (US SSN).
+//
+// Returns:
+// true if the national ID is valid, false otherwise
+//
+// Example:
+// ```
+// # Validate Chilean RUT format
+// SecRule ARGS:rut "@validateNid cl ^[0-9]{7,8}-[0-9Kk]$" "id:195,pass,log"
+//
+// # Reject invalid Chilean national IDs
+// SecRule ARGS:nid "!@validateNid cl ^[0-9]{7,8}-[0-9Kk]$" "id:196,deny,msg:'Invalid RUT'"
+// ```
 type validateNid struct {
 	fn validateNidFunction
 	re *regexp.Regexp
@@ -41,7 +61,7 @@ func newValidateNID(options plugintypes.OperatorOptions) (plugintypes.Operator, 
 		return nil, fmt.Errorf("invalid @validateNid argument")
 	}
 
-	re, err := memoize.Do(expr, func() (interface{}, error) { return regexp.Compile(expr) })
+	re, err := memoize.Do(expr, func() (any, error) { return regexp.Compile(expr) })
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +149,7 @@ func nidUs(nid string) bool {
 		prev = curr
 	}
 
-	return !(sequence || equals)
+	return !sequence && !equals
 }
 
 func digitToInt(d byte) int {

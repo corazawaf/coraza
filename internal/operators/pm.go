@@ -14,6 +14,25 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/memoize"
 )
 
+// Description:
+// Performs case-insensitive pattern matching using the Aho-Corasick algorithm for efficient
+// multi-pattern searching. Matches space-separated keywords or patterns provided as arguments.
+//
+// Arguments:
+// Space-separated keywords or patterns to match. Supports Snort data syntax like "A|42|C|44|F"
+// for hex notation. All patterns are converted to lowercase for case-insensitive matching.
+//
+// Returns:
+// true if any of the patterns are found in the input, false otherwise
+//
+// Example:
+// ```
+// # Detect known malicious user agents
+// SecRule REQUEST_HEADERS:User-Agent "@pm WebZIP WebCopier Webster" "id:170,deny,log"
+//
+// # Match multiple attack patterns
+// SecRule ARGS "@pm <script> javascript: onerror=" "id:171,deny"
+// ```
 type pm struct {
 	matcher ahocorasick.AhoCorasick
 }
@@ -32,7 +51,7 @@ func newPM(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 		DFA:                  true,
 	})
 
-	m, _ := memoize.Do(data, func() (interface{}, error) { return builder.Build(dict), nil })
+	m, _ := memoize.Do(data, func() (any, error) { return builder.Build(dict), nil })
 	// TODO this operator is supposed to support snort data syntax: "@pm A|42|C|44|F"
 	return &pm{matcher: m.(ahocorasick.AhoCorasick)}, nil
 }

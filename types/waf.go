@@ -6,6 +6,7 @@ package types
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -92,54 +93,9 @@ const (
 
 type AuditLogPart byte
 
-// AuditLogParts represents the parts of the audit log
-// A: Audit log header (mandatory).
-// B: Request headers.
-// C: Request body
-// D: Reserved for intermediary response headers; not implemented yet.
-// E: Intermediary response body (not implemented yet).
-// F: Final response headers
-// G: Reserved for the actual response body; not implemented yet.
-// H: Audit log trailer.
-// I: This part is a replacement for part C.
-// J: This part contains information about the files uploaded using multipart/form-data encoding.
-// K: This part contains a full list of every rule that matched (one per line)
-// Z: Final boundary, signifies the end of the entry (mandatory).
-type AuditLogParts []AuditLogPart
-
-var validOpts = map[AuditLogPart]struct{}{
-	AuditLogPartRequestHeaders:              {},
-	AuditLogPartRequestBody:                 {},
-	AuditLogPartIntermediaryResponseHeaders: {},
-	AuditLogPartIntermediaryResponseBody:    {},
-	AuditLogPartResponseHeaders:             {},
-	AuditLogPartResponseBody:                {},
-	AuditLogPartAuditLogTrailer:             {},
-	AuditLogPartRequestBodyAlternative:      {},
-	AuditLogPartUploadedFiles:               {},
-	AuditLogPartRulesMatched:                {},
-}
-
-// ParseAuditLogParts parses the audit log parts
-func ParseAuditLogParts(opts string) (AuditLogParts, error) {
-	if !strings.HasPrefix(opts, "A") {
-		return nil, errors.New("audit log parts is required to start with A")
-	}
-
-	if !strings.HasSuffix(opts, "Z") {
-		return nil, errors.New("audit log parts is required to end with Z")
-	}
-
-	parts := opts[1 : len(opts)-1]
-	for _, p := range parts {
-		if _, ok := validOpts[AuditLogPart(p)]; !ok {
-			return AuditLogParts(""), fmt.Errorf("invalid audit log parts %q", opts)
-		}
-	}
-	return AuditLogParts(parts), nil
-}
-
 const (
+	// AuditLogPartHeader is the audit log header part (mandatory)
+	AuditLogPartHeader AuditLogPart = 'A'
 	// AuditLogPartRequestHeaders is the request headers part
 	AuditLogPartRequestHeaders AuditLogPart = 'B'
 	// AuditLogPartRequestBody is the request body part
@@ -160,7 +116,117 @@ const (
 	AuditLogPartUploadedFiles AuditLogPart = 'J'
 	// AuditLogPartRulesMatched is the matched rules part
 	AuditLogPartRulesMatched AuditLogPart = 'K'
+	// AuditLogPartEndMarker is the final boundary, signifies the end of the entry (mandatory)
+	AuditLogPartEndMarker AuditLogPart = 'Z'
 )
+
+// AuditLogParts represents the parts of the audit log
+// A: Audit log header (mandatory).
+// B: Request headers.
+// C: Request body
+// D: Reserved for intermediary response headers; not implemented yet.
+// E: Intermediary response body (not implemented yet).
+// F: Final response headers
+// G: Reserved for the actual response body; not implemented yet.
+// H: Audit log trailer.
+// I: This part is a replacement for part C.
+// J: This part contains information about the files uploaded using multipart/form-data encoding.
+// K: This part contains a full list of every rule that matched (one per line)
+// Z: Final boundary, signifies the end of the entry (mandatory).
+type AuditLogParts []AuditLogPart
+
+// orderedAuditLogParts defines the canonical order for audit log parts (BCDEFGHIJK)
+var orderedAuditLogParts = []AuditLogPart{
+	AuditLogPartRequestHeaders,              // B
+	AuditLogPartRequestBody,                 // C
+	AuditLogPartIntermediaryResponseHeaders, // D
+	AuditLogPartIntermediaryResponseBody,    // E
+	AuditLogPartResponseHeaders,             // F
+	AuditLogPartResponseBody,                // G
+	AuditLogPartAuditLogTrailer,             // H
+	AuditLogPartRequestBodyAlternative,      // I
+	AuditLogPartUploadedFiles,               // J
+	AuditLogPartRulesMatched,                // K
+}
+
+// ParseAuditLogParts parses the audit log parts
+func ParseAuditLogParts(opts string) (AuditLogParts, error) {
+	if !strings.HasPrefix(opts, "A") {
+		return nil, errors.New("audit log parts is required to start with A")
+	}
+
+	if !strings.HasSuffix(opts, "Z") {
+		return nil, errors.New("audit log parts is required to end with Z")
+	}
+
+	// Validate the middle parts (everything between A and Z)
+	middleParts := opts[1 : len(opts)-1]
+	for _, p := range middleParts {
+		if !slices.Contains(orderedAuditLogParts, AuditLogPart(p)) {
+			return AuditLogParts(""), fmt.Errorf("invalid audit log parts %q", opts)
+		}
+	}
+	// Return all parts including A and Z
+	return AuditLogParts(opts), nil
+}
+
+// ApplyAuditLogParts applies audit log parts modifications to the base parts.
+// It supports adding parts with '+' prefix (e.g., "+E") or removing parts with '-' prefix (e.g., "-E").
+// For absolute values (e.g., "ABCDEFZ"), use ParseAuditLogParts instead.
+// Parts 'A' and 'Z' are mandatory and cannot be added or removed.
+func ApplyAuditLogParts(base AuditLogParts, modification string) (AuditLogParts, error) {
+	if len(modification) == 0 {
+		return nil, errors.New("modification string cannot be empty")
+	}
+
+	// Check if this is a modification (starts with + or -)
+	if modification[0] != '+' && modification[0] != '-' {
+		// This is an absolute value, parse it directly
+		return ParseAuditLogParts(modification)
+	}
+
+	isAddition := modification[0] == '+'
+	partsToModify := modification[1:]
+
+	// Validate all parts to modify
+	for _, p := range partsToModify {
+		// Parts A and Z are mandatory and cannot be added or removed
+		if p == 'A' || p == 'Z' {
+			return nil, fmt.Errorf("audit log parts A and Z are mandatory and cannot be modified")
+		}
+		if !slices.Contains(orderedAuditLogParts, AuditLogPart(p)) {
+			return nil, fmt.Errorf("invalid audit log part %q", p)
+		}
+	}
+
+	// Create a map of current parts for efficient lookup
+	partsMap := make(map[AuditLogPart]struct{})
+	for _, p := range base {
+		partsMap[p] = struct{}{}
+	}
+
+	if isAddition {
+		// Add new parts
+		for _, p := range partsToModify {
+			partsMap[AuditLogPart(p)] = struct{}{}
+		}
+	} else {
+		// Remove parts
+		for _, p := range partsToModify {
+			delete(partsMap, AuditLogPart(p))
+		}
+	}
+
+	// Convert map back to slice, maintaining the canonical order
+	result := make([]AuditLogPart, 0, len(partsMap))
+	for _, part := range orderedAuditLogParts {
+		if _, ok := partsMap[part]; ok {
+			result = append(result, part)
+		}
+	}
+
+	return AuditLogParts(result), nil
+}
 
 // Interruption is used to notify the Coraza implementation
 // that the transaction must be disrupted, for example:

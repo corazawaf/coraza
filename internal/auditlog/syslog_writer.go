@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build !tinygo && !windows && !plan9
-// +build !tinygo,!windows,!plan9
 
 package auditlog
 
@@ -65,14 +64,14 @@ func (s *syslogWriter) Write(al plugintypes.AuditLog) error {
 	}
 
 	if al.Transaction().IsInterrupted() {
-		if err := s.Syslog.Err(string(payload)); err != nil {
+		if err := s.Err(string(payload)); err != nil {
 			return fmt.Errorf("error write failure: %w", err)
 		}
 
 		return nil
 	}
 
-	if err := s.Syslog.Info(string(payload)); err != nil {
+	if err := s.Info(string(payload)); err != nil {
 		return fmt.Errorf("info write failure: %w", err)
 	}
 
