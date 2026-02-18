@@ -5,6 +5,7 @@ package corazawaf
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -1863,4 +1864,16 @@ func TestRequestFilename(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestContext(t *testing.T) {
+	t.Run("getting context using tx.Context()", func(t *testing.T) {
+		expected := context.Background()
+		waf := NewWAF()
+		tx := waf.NewTransaction()
+		context := tx.Context()
+		if context != expected {
+			t.Fatalf("Expected context.Background() %q, got %q", expected, context)
+		}
+	})
 }
