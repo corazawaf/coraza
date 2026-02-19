@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/experimental"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
@@ -176,5 +177,101 @@ func TestPopulateAuditLog(t *testing.T) {
 			populateAuditLog(waf, tCase.config)
 			tCase.check(t, waf)
 		})
+	}
+}
+
+func TestMergeRules(t *testing.T) {
+	// Create parent WAF with a rule
+	parentWAF, err := NewWAF(NewWAFConfig().
+		WithDirectives(`SecRule REMOTE_ADDR "127.0.0.1" "id:1,phase:1,deny,status:403"`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create child WAF with a different rule
+	childWAF, err := NewWAF(NewWAFConfig().
+		WithDirectives(`SecRule REQUEST_URI "/admin" "id:2,phase:1,deny,status:403"`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	parentRules, ok := parentWAF.(experimental.WAFWithRules)
+	if !ok {
+		t.Fatal("WAF does not implement WAFWithRules")
+	}
+	childRules, ok := childWAF.(experimental.WAFWithRules)
+	if !ok {
+		t.Fatal("WAF does not implement WAFWithRules")
+	}
+
+	if parentRules.RulesCount() != 1 {
+		t.Fatalf("expected 1 parent rule, got %d", parentRules.RulesCount())
+	}
+	if childRules.RulesCount() != 1 {
+		t.Fatalf("expected 1 child rule, got %d", childRules.RulesCount())
+	}
+
+	// Merge parent rules into child
+	if err := childRules.MergeRules(parentRules); err != nil {
+		t.Fatal(err)
+	}
+
+	if childRules.RulesCount() != 2 {
+		t.Fatalf("expected 2 child rules after merge, got %d", childRules.RulesCount())
+	}
+
+	// Verify parent is unchanged
+	if parentRules.RulesCount() != 1 {
+		t.Fatalf("expected parent to still have 1 rule, got %d", parentRules.RulesCount())
+	}
+}
+
+func TestMergeRulesSkipsDuplicates(t *testing.T) {
+	waf1, err := NewWAF(NewWAFConfig().
+		WithDirectives(`SecRule REMOTE_ADDR "127.0.0.1" "id:1,phase:1,deny,status:403"`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	waf2, err := NewWAF(NewWAFConfig().
+		WithDirectives(`SecRule REMOTE_ADDR "10.0.0.1" "id:1,phase:1,deny,status:403"`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rules1 := waf1.(experimental.WAFWithRules)
+	rules2 := waf2.(experimental.WAFWithRules)
+
+	if err := rules1.MergeRules(rules2); err != nil {
+		t.Fatal(err)
+	}
+
+	// Should still be 1 since the IDs are the same
+	if rules1.RulesCount() != 1 {
+		t.Fatalf("expected 1 rule (duplicate skipped), got %d", rules1.RulesCount())
+	}
+}
+
+func TestRulesCount(t *testing.T) {
+	waf, err := NewWAF(NewWAFConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rules := waf.(experimental.WAFWithRules)
+	if rules.RulesCount() != 0 {
+		t.Fatalf("expected 0 rules, got %d", rules.RulesCount())
+	}
+
+	waf, err = NewWAF(NewWAFConfig().
+		WithDirectives(`SecRule REMOTE_ADDR "127.0.0.1" "id:1,phase:1,deny,status:403"`).
+		WithDirectives(`SecRule REQUEST_URI "/test" "id:2,phase:1,deny,status:403"`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rules = waf.(experimental.WAFWithRules)
+	if rules.RulesCount() != 2 {
+		t.Fatalf("expected 2 rules, got %d", rules.RulesCount())
 	}
 }

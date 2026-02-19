@@ -127,6 +127,19 @@ func (rg *RuleGroup) Count() int {
 	return len(rg.rules)
 }
 
+// Merge adds all rules from the other RuleGroup that are not already
+// present (by ID) in this RuleGroup. Rules with ID 0 are always added.
+func (rg *RuleGroup) Merge(other *RuleGroup) error {
+	for i := range other.rules {
+		r := &other.rules[i]
+		if r.ID_ != 0 && rg.FindByID(r.ID_) != nil {
+			continue
+		}
+		rg.rules = append(rg.rules, *r)
+	}
+	return nil
+}
+
 // Eval rules for the specified phase, between 1 and 5
 // Rules are evaluated in syntactic order and the evaluation finishes
 // as soon as an interruption has been triggered.

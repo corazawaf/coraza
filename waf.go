@@ -147,7 +147,21 @@ func (w wafWrapper) NewTransactionWithID(id string) types.Transaction {
 	return w.waf.NewTransactionWithOptions(corazawaf.Options{Context: context.Background(), ID: id})
 }
 
-// NewTransaction implements the same method on WAF.
+// NewTransactionWithOptions implements the same method on WAF.
 func (w wafWrapper) NewTransactionWithOptions(opts experimental.Options) types.Transaction {
 	return w.waf.NewTransactionWithOptions(opts)
+}
+
+// MergeRules merges rules from the other WAF into this one.
+func (w wafWrapper) MergeRules(other experimental.WAFWithRules) error {
+	otherWrapper, ok := other.(wafWrapper)
+	if !ok {
+		return fmt.Errorf("incompatible WAF type for merge")
+	}
+	return w.waf.Rules.Merge(&otherWrapper.waf.Rules)
+}
+
+// RulesCount returns the number of rules in this WAF.
+func (w wafWrapper) RulesCount() int {
+	return w.waf.Rules.Count()
 }
