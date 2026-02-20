@@ -112,6 +112,33 @@ func TestRuleGroupMerge(t *testing.T) {
 	}
 }
 
+func TestRuleGroupMergeSecAction(t *testing.T) {
+	rg1 := NewRuleGroup()
+	// SecAction rules have ID 0
+	if err := rg1.Add(newTestRule(0)); err != nil {
+		t.Fatal(err)
+	}
+	if err := rg1.Add(newTestRule(1)); err != nil {
+		t.Fatal(err)
+	}
+
+	rg2 := NewRuleGroup()
+	if err := rg2.Add(newTestRule(0)); err != nil {
+		t.Fatal(err)
+	}
+	if err := rg2.Add(newTestRule(2)); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := rg1.Merge(&rg2); err != nil {
+		t.Fatal(err)
+	}
+	// Both ID=0 rules should be added (never skipped), plus ID=2
+	if rg1.Count() != 4 {
+		t.Fatalf("expected 4 rules after merge (SecAction rules always added), got %d", rg1.Count())
+	}
+}
+
 func TestRuleGroupMergeSkipsDuplicates(t *testing.T) {
 	rg1 := NewRuleGroup()
 	if err := rg1.Add(newTestRule(1)); err != nil {

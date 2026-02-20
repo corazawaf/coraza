@@ -226,6 +226,36 @@ func TestMergeRules(t *testing.T) {
 	}
 }
 
+func TestMergeRulesSecAction(t *testing.T) {
+	// SecAction without id: gets ID=0 internally — these should always be merged, never skipped
+	parentWAF, err := NewWAF(NewWAFConfig().
+		WithDirectives(`SecAction "phase:1,pass,setvar:tx.test=1"`).
+		WithDirectives(`SecRule REMOTE_ADDR "127.0.0.1" "id:1,phase:1,deny,status:403"`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	childWAF, err := NewWAF(NewWAFConfig().
+		WithDirectives(`SecAction "phase:1,pass,setvar:tx.test=2"`).
+		WithDirectives(`SecRule REQUEST_URI "/admin" "id:2,phase:1,deny,status:403"`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	parentRules := parentWAF.(experimental.WAFWithRules)
+	childRules := childWAF.(experimental.WAFWithRules)
+
+	if err := childRules.MergeRules(parentRules); err != nil {
+		t.Fatal(err)
+	}
+
+	// Child should have: its own SecAction(ID=0) + id:2 + parent SecAction(ID=0) + id:1 = 4
+	// Both ID=0 rules are kept (never deduplicated)
+	if childRules.RulesCount() != 4 {
+		t.Fatalf("expected 4 rules after merge, got %d", childRules.RulesCount())
+	}
+}
+
 func TestMergeRulesSkipsDuplicates(t *testing.T) {
 	waf1, err := NewWAF(NewWAFConfig().
 		WithDirectives(`SecRule REMOTE_ADDR "127.0.0.1" "id:1,phase:1,deny,status:403"`))
