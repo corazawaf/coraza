@@ -130,6 +130,13 @@ func (rg *RuleGroup) Count() int {
 // Merge adds all rules from the other RuleGroup that are not already
 // present (by ID) in this RuleGroup. Rules with ID 0 are always added.
 func (rg *RuleGroup) Merge(other *RuleGroup) error {
+	if rg == nil {
+		return fmt.Errorf("corazawaf: cannot merge into nil RuleGroup")
+	}
+	if other == nil {
+		// Treat a nil source RuleGroup as a no-op to avoid panics for callers.
+		return nil
+	}
 	if other == nil || len(other.rules) == 0 {
 		return nil
 	}
