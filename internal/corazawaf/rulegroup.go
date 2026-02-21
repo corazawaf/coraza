@@ -130,10 +130,27 @@ func (rg *RuleGroup) Count() int {
 // Merge adds all rules from the other RuleGroup that are not already
 // present (by ID) in this RuleGroup. Rules with ID 0 are always added.
 func (rg *RuleGroup) Merge(other *RuleGroup) error {
+	if other == nil || len(other.rules) == 0 {
+		return nil
+	}
+
+	// Build a set of existing non-zero rule IDs for O(1) lookups.
+	existingIDs := make(map[int]struct{}, len(rg.rules))
+	for i := range rg.rules {
+		id := rg.rules[i].ID_
+		if id == 0 {
+			continue
+		}
+		existingIDs[id] = struct{}{}
+	}
+
 	for i := range other.rules {
 		r := &other.rules[i]
-		if r.ID_ != 0 && rg.FindByID(r.ID_) != nil {
-			continue
+		if r.ID_ != 0 {
+			if _, exists := existingIDs[r.ID_]; exists {
+				continue
+			}
+			existingIDs[r.ID_] = struct{}{}
 		}
 		rg.rules = append(rg.rules, *r)
 	}
