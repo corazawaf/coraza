@@ -166,6 +166,14 @@ const (
 	ArgsGetNames // CanBeSelected
 	// ArgsPostNames contains the names of the POST arguments
 	ArgsPostNames // CanBeSelected
+	// ArgsRaw contains copies of ArgsGetRaw and ArgsPostRaw (wire-format, not URL-decoded)
+	ArgsRaw // CanBeSelected
+	// ArgsGetRaw contains the GET (URL) arguments without URL decoding
+	ArgsGetRaw // CanBeSelected
+	// ArgsPostRaw contains the POST (BODY) arguments without URL decoding
+	ArgsPostRaw // CanBeSelected
+	// ArgsNamesRaw contains the names of the arguments without URL decoding
+	ArgsNamesRaw // CanBeSelected
 	// TX contains transaction specific variables created with setvar
 	TX // CanBeSelected
 	// Rule contains rule metadata

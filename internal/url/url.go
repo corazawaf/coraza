@@ -13,6 +13,12 @@ func ParseQuery(query string, separator byte) map[string][]string {
 	return doParseQuery(query, separator, true)
 }
 
+// ParseQueryRaw splits a URL-encoded query string into key/value pairs
+// WITHOUT percent-decoding, preserving the original wire-format encoding.
+func ParseQueryRaw(query string, separator byte) map[string][]string {
+	return doParseQuery(query, separator, false)
+}
+
 func doParseQuery(query string, separator byte, urlUnescape bool) map[string][]string {
 	m := make(map[string][]string)
 	for query != "" {

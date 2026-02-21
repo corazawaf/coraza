@@ -417,6 +417,10 @@ func (m *mockTransaction) ArgsPath() collection.Map                        { ret
 func (m *mockTransaction) ArgsNames() collection.Keyed                     { return nil }
 func (m *mockTransaction) ArgsGetNames() collection.Keyed                  { return nil }
 func (m *mockTransaction) ArgsPostNames() collection.Keyed                 { return nil }
+func (m *mockTransaction) ArgsRaw() collection.Keyed                       { return nil }
+func (m *mockTransaction) ArgsGetRaw() collection.Map                      { return nil }
+func (m *mockTransaction) ArgsPostRaw() collection.Map                     { return nil }
+func (m *mockTransaction) ArgsNamesRaw() collection.Keyed                  { return nil }
 func (m *mockTransaction) Duration() collection.Single                     { return nil }
 func (m *mockTransaction) Files() collection.Map                           { return nil }
 func (m *mockTransaction) FilesNames() collection.Map                      { return nil }
