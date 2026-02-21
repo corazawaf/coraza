@@ -127,6 +127,43 @@ func (rg *RuleGroup) Count() int {
 	return len(rg.rules)
 }
 
+// Merge adds all rules from the other RuleGroup that are not already
+// present (by ID) in this RuleGroup. Rules with ID 0 are always added.
+func (rg *RuleGroup) Merge(other *RuleGroup) error {
+	if rg == nil {
+		return fmt.Errorf("corazawaf: cannot merge into nil RuleGroup")
+	}
+	if other == nil {
+		// Treat a nil source RuleGroup as a no-op to avoid panics for callers.
+		return nil
+	}
+	if other == nil || len(other.rules) == 0 {
+		return nil
+	}
+
+	// Build a set of existing non-zero rule IDs for O(1) lookups.
+	existingIDs := make(map[int]struct{}, len(rg.rules))
+	for i := range rg.rules {
+		id := rg.rules[i].ID_
+		if id == 0 {
+			continue
+		}
+		existingIDs[id] = struct{}{}
+	}
+
+	for i := range other.rules {
+		r := &other.rules[i]
+		if r.ID_ != 0 {
+			if _, exists := existingIDs[r.ID_]; exists {
+				continue
+			}
+			existingIDs[r.ID_] = struct{}{}
+		}
+		rg.rules = append(rg.rules, *r)
+	}
+	return nil
+}
+
 // Eval rules for the specified phase, between 1 and 5
 // Rules are evaluated in syntactic order and the evaluation finishes
 // as soon as an interruption has been triggered.

@@ -85,3 +85,79 @@ func TestRuleGroupDeleteByID(t *testing.T) {
 		t.Fatal("Unexpected remaining rule in the rulegroup")
 	}
 }
+
+func TestRuleGroupMerge(t *testing.T) {
+	rg1 := NewRuleGroup()
+	if err := rg1.Add(newTestRule(1)); err != nil {
+		t.Fatal(err)
+	}
+	if err := rg1.Add(newTestRule(2)); err != nil {
+		t.Fatal(err)
+	}
+
+	rg2 := NewRuleGroup()
+	if err := rg2.Add(newTestRule(3)); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := rg1.Merge(&rg2); err != nil {
+		t.Fatal(err)
+	}
+	if rg1.Count() != 3 {
+		t.Fatalf("expected 3 rules after merge, got %d", rg1.Count())
+	}
+	// Source should be unchanged
+	if rg2.Count() != 1 {
+		t.Fatalf("expected source to still have 1 rule, got %d", rg2.Count())
+	}
+}
+
+func TestRuleGroupMergeSecAction(t *testing.T) {
+	rg1 := NewRuleGroup()
+	// SecAction rules have ID 0
+	if err := rg1.Add(newTestRule(0)); err != nil {
+		t.Fatal(err)
+	}
+	if err := rg1.Add(newTestRule(1)); err != nil {
+		t.Fatal(err)
+	}
+
+	rg2 := NewRuleGroup()
+	if err := rg2.Add(newTestRule(0)); err != nil {
+		t.Fatal(err)
+	}
+	if err := rg2.Add(newTestRule(2)); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := rg1.Merge(&rg2); err != nil {
+		t.Fatal(err)
+	}
+	// Both ID=0 rules should be added (never skipped), plus ID=2
+	if rg1.Count() != 4 {
+		t.Fatalf("expected 4 rules after merge (SecAction rules always added), got %d", rg1.Count())
+	}
+}
+
+func TestRuleGroupMergeSkipsDuplicates(t *testing.T) {
+	rg1 := NewRuleGroup()
+	if err := rg1.Add(newTestRule(1)); err != nil {
+		t.Fatal(err)
+	}
+
+	rg2 := NewRuleGroup()
+	if err := rg2.Add(newTestRule(1)); err != nil {
+		t.Fatal(err)
+	}
+	if err := rg2.Add(newTestRule(2)); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := rg1.Merge(&rg2); err != nil {
+		t.Fatal(err)
+	}
+	// Rule ID 1 exists in both, so only rule 2 should be added
+	if rg1.Count() != 2 {
+		t.Fatalf("expected 2 rules (duplicate skipped), got %d", rg1.Count())
+	}
+}
