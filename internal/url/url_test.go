@@ -49,3 +49,76 @@ func BenchmarkQueryUnescape(b *testing.B) {
 		}
 	}
 }
+
+func TestParseQueryRaw(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  map[string][]string
+	}{
+		{
+			name:  "preserves percent-encoded values",
+			input: "key=%3Cscript%3E&other=hello",
+			want: map[string][]string{
+				"key":   {"%3Cscript%3E"},
+				"other": {"hello"},
+			},
+		},
+		{
+			name:  "preserves double encoding",
+			input: "password=Secret%2500",
+			want: map[string][]string{
+				"password": {"Secret%2500"},
+			},
+		},
+		{
+			name:  "preserves plus signs",
+			input: "q=hello+world",
+			want: map[string][]string{
+				"q": {"hello+world"},
+			},
+		},
+		{
+			name:  "preserves encoded key names",
+			input: "p%61ssword=test",
+			want: map[string][]string{
+				"p%61ssword": {"test"},
+			},
+		},
+		{
+			name:  "empty value",
+			input: "key=",
+			want: map[string][]string{
+				"key": {""},
+			},
+		},
+		{
+			name:  "no value (no equals)",
+			input: "key",
+			want: map[string][]string{
+				"key": {""},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ParseQueryRaw(tt.input, '&')
+			for k, wantVals := range tt.want {
+				gotVals, ok := got[k]
+				if !ok {
+					t.Errorf("missing key %q", k)
+					continue
+				}
+				if len(gotVals) != len(wantVals) {
+					t.Errorf("key %q: got %d values, want %d", k, len(gotVals), len(wantVals))
+					continue
+				}
+				for i, wv := range wantVals {
+					if gotVals[i] != wv {
+						t.Errorf("key %q[%d]: got %q, want %q", k, i, gotVals[i], wv)
+					}
+				}
+			}
+		})
+	}
+}

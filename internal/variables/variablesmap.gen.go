@@ -140,6 +140,14 @@ func (v RuleVariable) Name() string {
 		return "ARGS_GET_NAMES"
 	case ArgsPostNames:
 		return "ARGS_POST_NAMES"
+	case ArgsRaw:
+		return "ARGS_RAW"
+	case ArgsGetRaw:
+		return "ARGS_GET_RAW"
+	case ArgsPostRaw:
+		return "ARGS_POST_RAW"
+	case ArgsNamesRaw:
+		return "ARGS_NAMES_RAW"
 	case TX:
 		return "TX"
 	case Rule:
@@ -279,6 +287,14 @@ func (v RuleVariable) CanBeSelected() bool {
 		return true
 	case ArgsPostNames:
 		return true
+	case ArgsRaw:
+		return true
+	case ArgsGetRaw:
+		return true
+	case ArgsPostRaw:
+		return true
+	case ArgsNamesRaw:
+		return true
 	case TX:
 		return true
 	case Rule:
@@ -366,6 +382,10 @@ var rulemapRev = map[string]RuleVariable{
 	"ARGS_NAMES":                       ArgsNames,
 	"ARGS_GET_NAMES":                   ArgsGetNames,
 	"ARGS_POST_NAMES":                  ArgsPostNames,
+	"ARGS_RAW":                         ArgsRaw,
+	"ARGS_GET_RAW":                     ArgsGetRaw,
+	"ARGS_POST_RAW":                    ArgsPostRaw,
+	"ARGS_NAMES_RAW":                   ArgsNamesRaw,
 	"TX":                               TX,
 	"RULE":                             Rule,
 	"JSON":                             JSON,
