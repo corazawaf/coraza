@@ -154,11 +154,17 @@ func (w wafWrapper) NewTransactionWithOptions(opts experimental.Options) types.T
 
 // MergeRules merges rules from the other WAF into this one.
 func (w wafWrapper) MergeRules(other experimental.WAFWithRules) error {
-	otherWrapper, ok := other.(wafWrapper)
-	if !ok {
+	switch ow := other.(type) {
+	case wafWrapper:
+		return w.waf.Rules.Merge(&ow.waf.Rules)
+	case *wafWrapper:
+		if ow == nil {
+			return fmt.Errorf("incompatible WAF type for merge")
+		}
+		return w.waf.Rules.Merge(&ow.waf.Rules)
+	default:
 		return fmt.Errorf("incompatible WAF type for merge")
 	}
-	return w.waf.Rules.Merge(&otherWrapper.waf.Rules)
 }
 
 // RulesCount returns the number of rules in this WAF.
