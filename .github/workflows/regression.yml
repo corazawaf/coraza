@@ -21,7 +21,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
-      
+
       - name: Generate tag combinations
         id: generate
         run: |
@@ -33,12 +33,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go-version: [1.23.x, 1.24.x]
+        go-version: [1.24.x, 1.25.x]
         os: [ubuntu-latest]
         build-flag: ${{ fromJson(needs.generate-matrix.outputs.tags) }}
     runs-on: ${{ matrix.os }}
     env:
-      GOLANG_BASE_VERSION: "1.23.x"
+      GOLANG_BASE_VERSION: "1.24.x"
     steps:
       - name: Checkout code
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
@@ -46,7 +46,7 @@ jobs:
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
         with:
           go-version: ${{ matrix.go-version }}
-          cache: true  
+          cache: true
       - name: Tests and coverage
         run: |
           export BUILD_TAGS=${{ matrix.build-flag }}
@@ -57,7 +57,7 @@ jobs:
         with:
           files: build/coverage.txt
           flags: default,${{ matrix.build-flag }}
-          token: ${{ secrets.CODECOV_TOKEN }}   
+          token: ${{ secrets.CODECOV_TOKEN }}
       - name: "Codecov: Examples"
         uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5
         if: ${{ matrix.go-version == env.GOLANG_BASE_VERSION }}
@@ -81,15 +81,15 @@ jobs:
           flags: tinygo,${{ matrix.build-flag }}
           token: ${{ secrets.CODECOV_TOKEN }}
   enforce-all-checks:
-      runs-on: ubuntu-latest
-      permissions:
-        checks: read
-      steps:
-        - name: GitHub Checks
-          uses: poseidon/wait-for-status-checks@899c768d191b56eef585c18f8558da19e1f3e707 # v0.6.0
-          with:
-            token: ${{ secrets.GITHUB_TOKEN }}
-            delay: 120s # give some time to matrix jobs
-            interval: 10s # default value
-            timeout: 3600s # default value
-            ignore: "codecov/patch,codecov/project"
+    runs-on: ubuntu-latest
+    permissions:
+      checks: read
+    steps:
+      - name: GitHub Checks
+        uses: poseidon/wait-for-status-checks@899c768d191b56eef585c18f8558da19e1f3e707 # v0.6.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          delay: 120s # give some time to matrix jobs
+          interval: 10s # default value
+          timeout: 3600s # default value
+          ignore: "codecov/patch,codecov/project"
