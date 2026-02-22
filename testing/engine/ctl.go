@@ -46,6 +46,24 @@ var _ = profile.RegisterProfile(profile.Profile{
 				},
 			},
 		},
+		{
+			Title: "ruleRemoveTargetById whole collection",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							URI:    "/test.php?foo=bar&baz=qux",
+						},
+						Output: profile.ExpectedOutput{
+							// Rule 200 removes all ARGS_GET from rule 201, so rule 201 should not match
+							NonTriggeredRules: []int{201},
+							TriggeredRules:    []int{200},
+						},
+					},
+				},
+			},
+		},
 	},
 	Rules: `
 SecDebugLogLevel 9
@@ -76,5 +94,9 @@ SecRule REQUEST_BODY "pizza" "id:103,log,phase:2"
 SecRule ARGS_POST:pineapple "pizza" "id:105,log,phase:2"
 
 SecAction "id:444,phase:2,log"
+
+# ruleRemoveTargetById whole collection test: removes all ARGS_GET from rule 201
+SecAction "id:200,phase:1,ctl:ruleRemoveTargetById=201;ARGS_GET,log"
+SecRule ARGS_GET "@rx ." "id:201, phase:1, log"
 `,
 })

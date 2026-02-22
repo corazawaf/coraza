@@ -114,6 +114,52 @@ func TestNoMatchEvaluateBecauseOfException(t *testing.T) {
 	}
 }
 
+func TestNoMatchEvaluateBecauseOfWholeCollectionException(t *testing.T) {
+	testCases := []struct {
+		name     string
+		variable variables.RuleVariable
+	}{
+		{
+			name:     "Test ArgsGet whole collection exception",
+			variable: variables.ArgsGet,
+		},
+		{
+			name:     "Test Args whole collection exception",
+			variable: variables.Args,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := NewRule()
+			r.Msg, _ = macro.NewMacro("Message")
+			r.LogData, _ = macro.NewMacro("Data Message")
+			r.ID_ = 1
+			r.LogID_ = "1"
+			if err := r.AddVariable(tc.variable, "", false); err != nil {
+				t.Error(err)
+			}
+			dummyEqOp := &dummyEqOperator{}
+			r.SetOperator(dummyEqOp, "@eq", "0")
+			action := &dummyDenyAction{}
+			_ = r.AddAction("dummyDeny", action)
+			tx := NewWAF().NewTransaction()
+			tx.AddGetRequestArgument("test", "0")
+			tx.AddGetRequestArgument("other", "0")
+			// Remove with empty key should exclude the entire collection
+			tx.RemoveRuleTargetByID(1, tc.variable, "")
+			var matchedValues []types.MatchData
+			matchdata := r.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
+			if len(matchdata) != 0 {
+				t.Errorf("Expected 0 matchdata when whole collection is excluded, got %d", len(matchdata))
+			}
+			if tx.interruption != nil {
+				t.Errorf("Expected no interruption because whole collection is excluded")
+			}
+		})
+	}
+}
+
 type dummyFlowAction struct{}
 
 func (*dummyFlowAction) Init(_ plugintypes.RuleMetadata, _ string) error {
