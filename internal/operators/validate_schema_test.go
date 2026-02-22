@@ -421,6 +421,8 @@ func (m *mockTransaction) ArgsRaw() collection.Keyed                       { ret
 func (m *mockTransaction) ArgsGetRaw() collection.Map                      { return nil }
 func (m *mockTransaction) ArgsPostRaw() collection.Map                     { return nil }
 func (m *mockTransaction) ArgsNamesRaw() collection.Keyed                  { return nil }
+func (m *mockTransaction) ArgsGetNamesRaw() collection.Keyed               { return nil }
+func (m *mockTransaction) ArgsPostNamesRaw() collection.Keyed              { return nil }
 func (m *mockTransaction) Duration() collection.Single                     { return nil }
 func (m *mockTransaction) Files() collection.Map                           { return nil }
 func (m *mockTransaction) FilesNames() collection.Map                      { return nil }

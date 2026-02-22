@@ -265,6 +265,10 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.argsPostRaw
 	case variables.ArgsNamesRaw:
 		return tx.variables.argsNamesRaw
+	case variables.ArgsGetNamesRaw:
+		return tx.variables.argsGetNamesRaw
+	case variables.ArgsPostNamesRaw:
+		return tx.variables.argsPostNamesRaw
 	case variables.ResBodyProcessor:
 		return tx.variables.resBodyProcessor
 	case variables.TX:
@@ -1680,12 +1684,14 @@ type TransactionVariables struct {
 	argsCombinedSize         *collections.SizeCollection
 	argsGet                  *collections.NamedCollection
 	argsGetNames             collection.Keyed
+	argsGetNamesRaw          collection.Keyed
 	argsGetRaw               *collections.NamedCollection
 	argsNames                *collections.ConcatKeyed
 	argsNamesRaw             *collections.ConcatKeyed
 	argsPath                 *collections.NamedCollection
 	argsPost                 *collections.NamedCollection
 	argsPostNames            collection.Keyed
+	argsPostNamesRaw         collection.Keyed
 	argsPostRaw              *collections.NamedCollection
 	argsRaw                  *collections.ConcatKeyed
 	duration                 *collections.Single
@@ -1880,6 +1886,8 @@ func NewTransactionVariables() *TransactionVariables {
 		// Only used in a concatenating collection so variable name doesn't matter.
 		v.argsPath.Names(variables.Unknown),
 	)
+	v.argsGetNamesRaw = v.argsGetRaw.Names(variables.ArgsGetNamesRaw)
+	v.argsPostNamesRaw = v.argsPostRaw.Names(variables.ArgsPostNamesRaw)
 	v.argsRaw = collections.NewConcatKeyed(
 		variables.ArgsRaw,
 		v.argsGetRaw,
@@ -1887,9 +1895,8 @@ func NewTransactionVariables() *TransactionVariables {
 	)
 	v.argsNamesRaw = collections.NewConcatKeyed(
 		variables.ArgsNamesRaw,
-		// Only used in a concatenating collection so variable name doesn't matter.
-		v.argsGetRaw.Names(variables.Unknown),
-		v.argsPostRaw.Names(variables.Unknown),
+		v.argsGetNamesRaw,
+		v.argsPostNamesRaw,
 	)
 	return v
 }
@@ -2190,6 +2197,14 @@ func (v *TransactionVariables) ArgsPostRaw() collection.Map {
 	return v.argsPostRaw
 }
 
+func (v *TransactionVariables) ArgsGetNamesRaw() collection.Keyed {
+	return v.argsGetNamesRaw
+}
+
+func (v *TransactionVariables) ArgsPostNamesRaw() collection.Keyed {
+	return v.argsPostNamesRaw
+}
+
 func (v *TransactionVariables) ArgsNamesRaw() collection.Keyed {
 	return v.argsNamesRaw
 }
@@ -2253,6 +2268,12 @@ func (v *TransactionVariables) All(f func(v variables.RuleVariable, col collecti
 		return
 	}
 	if !f(variables.ArgsNamesRaw, v.argsNamesRaw) {
+		return
+	}
+	if !f(variables.ArgsGetNamesRaw, v.argsGetNamesRaw) {
+		return
+	}
+	if !f(variables.ArgsPostNamesRaw, v.argsPostNamesRaw) {
 		return
 	}
 	if !f(variables.Duration, v.duration) {

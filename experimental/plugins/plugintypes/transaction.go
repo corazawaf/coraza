@@ -118,6 +118,8 @@ type TransactionVariables interface {
 	ArgsRaw() collection.Keyed
 	ArgsGetRaw() collection.Map
 	ArgsPostRaw() collection.Map
+	ArgsGetNamesRaw() collection.Keyed
+	ArgsPostNamesRaw() collection.Keyed
 	ArgsNamesRaw() collection.Keyed
 	MultipartStrictError() collection.Single
 }
