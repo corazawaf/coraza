@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/experimental"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
@@ -148,6 +147,6 @@ func (w wafWrapper) NewTransactionWithID(id string) types.Transaction {
 }
 
 // NewTransaction implements the same method on WAF.
-func (w wafWrapper) NewTransactionWithOptions(opts experimental.Options) types.Transaction {
+func (w wafWrapper) NewTransactionWithOptions(opts corazawaf.Options) types.Transaction {
 	return w.waf.NewTransactionWithOptions(opts)
 }
