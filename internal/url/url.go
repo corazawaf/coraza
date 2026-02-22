@@ -19,6 +19,32 @@ func ParseQueryRaw(query string, separator byte) map[string][]string {
 	return doParseQuery(query, separator, false)
 }
 
+// ParseQueryBoth parses a URL-encoded query string in a single pass and returns
+// both the decoded (cooked) and raw (non-decoded) key/value maps. This is more
+// efficient than calling ParseQuery and ParseQueryRaw separately.
+func ParseQueryBoth(query string, separator byte) (decoded, raw map[string][]string) {
+	decoded = make(map[string][]string)
+	raw = make(map[string][]string)
+	for query != "" {
+		key := query
+		if i := strings.IndexByte(key, separator); i >= 0 {
+			key, query = key[:i], key[i+1:]
+		} else {
+			query = ""
+		}
+		if key == "" {
+			continue
+		}
+		value := ""
+		if i := strings.IndexByte(key, '='); i >= 0 {
+			key, value = key[:i], key[i+1:]
+		}
+		raw[key] = append(raw[key], value)
+		decoded[queryUnescape(key)] = append(decoded[queryUnescape(key)], queryUnescape(value))
+	}
+	return decoded, raw
+}
+
 func doParseQuery(query string, separator byte, urlUnescape bool) map[string][]string {
 	m := make(map[string][]string)
 	for query != "" {

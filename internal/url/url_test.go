@@ -122,3 +122,30 @@ func TestParseQueryRaw(t *testing.T) {
 		})
 	}
 }
+
+func TestParseQueryBoth(t *testing.T) {
+	input := "key=%3Cscript%3E&p%61ssword=Secret%2500&plain=hello"
+	decoded, raw := ParseQueryBoth(input, '&')
+
+	// Verify decoded values
+	if v := decoded["key"]; len(v) != 1 || v[0] != "<script>" {
+		t.Errorf("decoded key: got %v, want [<script>]", v)
+	}
+	if v := decoded["password"]; len(v) != 1 || v[0] != "Secret%00" {
+		t.Errorf("decoded password: got %v, want [Secret%%00]", v)
+	}
+	if v := decoded["plain"]; len(v) != 1 || v[0] != "hello" {
+		t.Errorf("decoded plain: got %v, want [hello]", v)
+	}
+
+	// Verify raw values
+	if v := raw["key"]; len(v) != 1 || v[0] != "%3Cscript%3E" {
+		t.Errorf("raw key: got %v, want [%%3Cscript%%3E]", v)
+	}
+	if v := raw["p%61ssword"]; len(v) != 1 || v[0] != "Secret%2500" {
+		t.Errorf("raw password: got %v, want [Secret%%2500]", v)
+	}
+	if v := raw["plain"]; len(v) != 1 || v[0] != "hello" {
+		t.Errorf("raw plain: got %v, want [hello]", v)
+	}
+}

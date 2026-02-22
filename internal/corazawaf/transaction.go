@@ -703,14 +703,12 @@ func (tx *Transaction) ProcessConnection(client string, cPort int, server string
 
 // ExtractGetArguments transforms an url encoded string to a map and creates ARGS_GET and ARGS_GET_RAW
 func (tx *Transaction) ExtractGetArguments(uri string) {
-	data := urlutil.ParseQuery(uri, '&')
+	data, rawData := urlutil.ParseQueryBoth(uri, '&')
 	for k, vs := range data {
 		for _, v := range vs {
 			tx.AddGetRequestArgument(k, v)
 		}
 	}
-	// Populate raw (non-decoded) collection
-	rawData := urlutil.ParseQueryRaw(uri, '&')
 	for k, vs := range rawData {
 		for _, v := range vs {
 			tx.addGetRequestArgumentRaw(k, v)
@@ -747,6 +745,7 @@ func (tx *Transaction) AddPathRequestArgument(key string, value string) {
 
 func (tx *Transaction) addGetRequestArgumentRaw(key string, value string) {
 	if tx.checkArgumentLimit(tx.variables.argsGetRaw) {
+		tx.debugLogger.Warn().Msg("skipping raw get request argument, over limit")
 		return
 	}
 	tx.variables.argsGetRaw.Add(key, value)
