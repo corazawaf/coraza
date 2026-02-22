@@ -23,8 +23,10 @@ func ParseQueryRaw(query string, separator byte) map[string][]string {
 // both the decoded (cooked) and raw (non-decoded) key/value maps. This is more
 // efficient than calling ParseQuery and ParseQueryRaw separately.
 func ParseQueryBoth(query string, separator byte) (decoded, raw map[string][]string) {
-	decoded = make(map[string][]string)
-	raw = make(map[string][]string)
+	// Estimate pair count to pre-size maps and reduce rehashing.
+	n := strings.Count(query, string(separator)) + 1
+	decoded = make(map[string][]string, n)
+	raw = make(map[string][]string, n)
 	for query != "" {
 		key := query
 		if i := strings.IndexByte(key, separator); i >= 0 {
@@ -40,7 +42,8 @@ func ParseQueryBoth(query string, separator byte) (decoded, raw map[string][]str
 			key, value = key[:i], key[i+1:]
 		}
 		raw[key] = append(raw[key], value)
-		decoded[queryUnescape(key)] = append(decoded[queryUnescape(key)], queryUnescape(value))
+		dk := queryUnescape(key)
+		decoded[dk] = append(decoded[dk], queryUnescape(value))
 	}
 	return decoded, raw
 }
@@ -72,6 +75,13 @@ func doParseQuery(query string, separator byte, urlUnescape bool) map[string][]s
 
 // queryUnescape is a non-strict version of net/url.QueryUnescape.
 func queryUnescape(input string) string {
+	// Fast path: if no encoding characters are present, return input
+	// without allocation. This is the common case for most parameter
+	// names and many values.
+	if strings.IndexByte(input, '%') < 0 && strings.IndexByte(input, '+') < 0 {
+		return input
+	}
+
 	ilen := len(input)
 	res := strings.Builder{}
 	res.Grow(ilen)
