@@ -93,6 +93,24 @@ var _ = profile.RegisterProfile(profile.Profile{
 				},
 			},
 		},
+		{
+			Title: "SecRuleUpdateActionById range update - deny to pass should not block",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/test?id=0",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								4001, 4002,
+							},
+							// No interruption expected - range update changed deny to pass
+						},
+					},
+				},
+			},
+		},
 	},
 	Rules: `
 	# Test 1: Updating deny to pass

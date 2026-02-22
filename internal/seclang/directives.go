@@ -1177,18 +1177,19 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 			// Check if any of the new actions are disruptive
 			hasDisruptiveAction := hasDisruptiveActions(parsedActions)
 
-			for _, rule := range options.WAF.Rules.GetRules() {
-				if rule.ID_ < start || rule.ID_ > end {
+			rules := options.WAF.Rules.GetRules()
+			for i := range rules {
+				if rules[i].ID_ < start || rules[i].ID_ > end {
 					continue
 				}
 
 				// Only clear disruptive actions if the update contains a disruptive action
 				if hasDisruptiveAction {
-					rule.ClearDisruptiveActions()
+					rules[i].ClearDisruptiveActions()
 				}
 
 				rp := RuleParser{
-					rule: &rule,
+					rule: &rules[i],
 					options: RuleOptions{
 						WAF: options.WAF,
 					},
