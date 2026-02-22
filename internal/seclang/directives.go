@@ -1125,6 +1125,7 @@ func hasDisruptiveActions(actions []ruleAction) bool {
 // ```apache
 // SecRuleUpdateActionById 12345 "deny,status:403"
 // ```
+// The rule ID can be single IDs or ranges of IDs. The targets are separated by a pipe character.
 func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions

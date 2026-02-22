@@ -110,5 +110,10 @@ var _ = profile.RegisterProfile(profile.Profile{
 	# Test 3: Issue #1414 - exact scenario from the GitHub issue
 	SecRule ARGS:id "@eq 0" "id:3001, phase:1,deny,status:403,msg:'Invalid id',log,auditlog"
 	SecRuleUpdateActionById 3001 "log,pass"
+
+	# Test 4: Range update - same scenario as test 3 but with two rules updated via range
+	SecRule ARGS:id "@eq 0" "id:4001, phase:1,deny,status:403,msg:'Invalid id',log,auditlog"
+	SecRule ARGS:id "@eq 0" "id:4002, phase:1,deny,status:403,msg:'Invalid id',log,auditlog"
+	SecRuleUpdateActionById 4001-4002 "log,pass"
 	`,
 })
