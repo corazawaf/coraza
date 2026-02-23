@@ -609,22 +609,31 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 	// in the most common scenario filteredMatches length will be
 	// the same as matches length, so we avoid allocating per result.
 	// We reuse the matches slice to store filtered results avoiding extra allocation.
-	filteredCount := 0
-	for _, c := range matches {
-		isException := false
-		lkey := strings.ToLower(c.Key())
-		for _, ex := range rv.Exceptions {
-			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || strings.ToLower(ex.KeyStr) == lkey {
-				isException = true
-				break
+	if len(rv.Exceptions) > 0 {
+		// Pre-lowercase exception key strings once to avoid repeated allocations
+		// inside the inner loop.
+		exKeysLower := make([]string, len(rv.Exceptions))
+		for i, ex := range rv.Exceptions {
+			exKeysLower[i] = strings.ToLower(ex.KeyStr)
+		}
+
+		filteredCount := 0
+		for _, c := range matches {
+			isException := false
+			lkey := strings.ToLower(c.Key())
+			for i, ex := range rv.Exceptions {
+				if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || exKeysLower[i] == lkey {
+					isException = true
+					break
+				}
+			}
+			if !isException {
+				matches[filteredCount] = c
+				filteredCount++
 			}
 		}
-		if !isException {
-			matches[filteredCount] = c
-			filteredCount++
-		}
+		matches = matches[:filteredCount]
 	}
-	matches = matches[:filteredCount]
 
 	if rv.Count {
 		count := len(matches)
