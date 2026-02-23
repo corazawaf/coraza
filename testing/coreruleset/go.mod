@@ -1,10 +1,10 @@
 module github.com/corazawaf/coraza/v3/testing/coreruleset
 
-go 1.24.0
+go 1.24.6
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.9.1
-	github.com/corazawaf/coraza-coreruleset/v4 v4.20.0
+	github.com/corazawaf/coraza-coreruleset/v4 v4.22.0
 	github.com/corazawaf/coraza/v3 v3.3.3
 	github.com/coreruleset/albedo v0.3.0
 	github.com/coreruleset/go-ftw v1.3.0
@@ -15,7 +15,7 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
-	github.com/corazawaf/libinjection-go v0.2.2 // indirect
+	github.com/corazawaf/libinjection-go v0.3.2 // indirect
 	github.com/coreruleset/ftw-tests-schema/v2 v2.2.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
@@ -49,11 +49,11 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/valllabh/ocsf-schema-golang v1.0.3 // indirect
 	github.com/yargevad/filepathx v1.0.0 // indirect
-	golang.org/x/crypto v0.45.0 // indirect
-	golang.org/x/net v0.47.0 // indirect
-	golang.org/x/sync v0.18.0 // indirect
-	golang.org/x/sys v0.38.0 // indirect
-	golang.org/x/text v0.31.0 // indirect
+	golang.org/x/crypto v0.48.0 // indirect
+	golang.org/x/net v0.50.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/text v0.34.0 // indirect
 	golang.org/x/time v0.9.0 // indirect
 	google.golang.org/protobuf v1.35.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
