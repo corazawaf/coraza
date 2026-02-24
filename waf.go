@@ -146,7 +146,7 @@ func (w wafWrapper) NewTransactionWithID(id string) types.Transaction {
 	return w.waf.NewTransactionWithOptions(corazawaf.Options{Context: context.Background(), ID: id})
 }
 
-// NewTransaction implements the same method on WAF.
+// NewTransactionWithOptions implements the same method on WAF.
 func (w wafWrapper) NewTransactionWithOptions(opts corazawaf.Options) types.Transaction {
 	return w.waf.NewTransactionWithOptions(opts)
 }
