@@ -33,7 +33,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go-version: [1.24.x, 1.25.x, 1.26.x]
+        go-version: [1.25.x, 1.26.x]
         os: [ubuntu-latest]
         build-flag: ${{ fromJson(needs.generate-matrix.outputs.tags) }}
     runs-on: ${{ matrix.os }}
