@@ -108,12 +108,6 @@ type wafConfig struct {
 	fsRoot                   fs.FS
 }
 
-func (c *wafConfig) WithRuleObserver(observer func(rule types.RuleMetadata)) any {
-	ret := c.clone()
-	ret.ruleObserver = observer
-	return ret
-}
-
 func (c *wafConfig) WithRules(rules ...*corazawaf.Rule) WAFConfig {
 	if len(rules) == 0 {
 		return c
@@ -123,6 +117,12 @@ func (c *wafConfig) WithRules(rules ...*corazawaf.Rule) WAFConfig {
 	for _, r := range rules {
 		ret.rules = append(ret.rules, wafRule{rule: r})
 	}
+	return ret
+}
+
+func (c *wafConfig) WithRuleObserver(observer func(rule types.RuleMetadata)) WAFConfig {
+	ret := c.clone()
+	ret.ruleObserver = observer
 	return ret
 }
 
