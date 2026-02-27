@@ -23,11 +23,18 @@ func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.T
 	}
 
 	b := buf.String()
-	values := urlutil.ParseQuery(b, '&')
+
+	// Parse both decoded and raw values in a single pass
+	values, rawValues := urlutil.ParseQueryBoth(b, '&')
 	argsCol := v.ArgsPost()
 	for k, vs := range values {
 		argsCol.Set(k, vs)
 	}
+	argsRawCol := v.ArgsPostRaw()
+	for k, vs := range rawValues {
+		argsRawCol.Set(k, vs)
+	}
+
 	v.RequestBody().(*collections.Single).Set(b)
 	v.RequestBodyLength().(*collections.Single).Set(strconv.Itoa(len(b)))
 	return nil

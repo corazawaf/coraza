@@ -165,6 +165,18 @@ const (
 	ArgsGetNames = variables.ArgsGetNames
 	// ArgsPostNames contains the names of the POST arguments
 	ArgsPostNames = variables.ArgsPostNames
+	// ArgsRaw contains copies of ArgsGetRaw and ArgsPostRaw (wire-format, not URL-decoded)
+	ArgsRaw = variables.ArgsRaw
+	// ArgsGetRaw contains the GET (URL) arguments without URL decoding
+	ArgsGetRaw = variables.ArgsGetRaw
+	// ArgsPostRaw contains the POST (BODY) arguments without URL decoding
+	ArgsPostRaw = variables.ArgsPostRaw
+	// ArgsGetNamesRaw contains the names of the GET arguments without URL decoding
+	ArgsGetNamesRaw = variables.ArgsGetNamesRaw
+	// ArgsPostNamesRaw contains the names of the POST arguments without URL decoding
+	ArgsPostNamesRaw = variables.ArgsPostNamesRaw
+	// ArgsNamesRaw contains the names of the arguments (POST and GET) without URL decoding
+	ArgsNamesRaw = variables.ArgsNamesRaw
 	// TX contains transaction specific variables created with setvar
 	TX = variables.TX
 	// Rule contains rule metadata

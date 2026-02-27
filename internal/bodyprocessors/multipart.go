@@ -36,6 +36,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 	filesTmpNamesCol := v.FilesTmpNames()
 	fileSizesCol := v.FilesSizes()
 	postCol := v.ArgsPost()
+	postRawCol := v.ArgsPostRaw()
 	filesCombinedSizeCol := v.FilesCombinedSize()
 	filesNamesCol := v.FilesNames()
 	headersNames := v.MultipartPartHeaders()
@@ -94,6 +95,8 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 			}
 			totalSize += int64(len(data))
 			postCol.Add(p.FormName(), string(data))
+			// Multipart fields are not URL-encoded, so raw == cooked
+			postRawCol.Add(p.FormName(), string(data))
 		}
 		filesCombinedSizeCol.(*collections.Single).Set(fmt.Sprintf("%d", totalSize))
 	}
