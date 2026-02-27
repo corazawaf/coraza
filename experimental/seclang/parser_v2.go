@@ -931,25 +931,25 @@ func (c *typeConverter) actionToRuleAction(action crstypes.Action) (ruleAction, 
 	// but Coraza's setvar Init expects just "TX.key=value"
 	if sv, ok := action.(crstypes.SetvarAction); ok {
 		params := sv.GetAllParams()
-		var result []ruleAction
-		for _, param := range params {
-			// Strip the "setvar:" prefix that GetAllParams includes
-			param = strings.TrimPrefix(param, "setvar:")
-			f, err := actionsmod.Get("setvar")
-			if err != nil {
-				return ruleAction{}, err
-			}
-			result = append(result, ruleAction{
-				Key:   "setvar",
-				Value: param,
-				Atype: f.Type(),
-				F:     f,
-			})
+		if len(params) == 0 {
+			return ruleAction{}, fmt.Errorf("empty setvar action")
 		}
-		if len(result) > 0 {
-			return result[0], nil
+		if len(params) > 1 {
+			return ruleAction{}, fmt.Errorf("multiple setvar parameters are not supported: got %d", len(params))
 		}
-		return ruleAction{}, fmt.Errorf("empty setvar action")
+
+		// Strip the "setvar:" prefix that GetAllParams includes
+		param := strings.TrimPrefix(params[0], "setvar:")
+		f, err := actionsmod.Get("setvar")
+		if err != nil {
+			return ruleAction{}, err
+		}
+		return ruleAction{
+			Key:   "setvar",
+			Value: param,
+			Atype: f.Type(),
+			F:     f,
+		}, nil
 	}
 
 	// Extract value from action
