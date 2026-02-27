@@ -33,9 +33,6 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-// maxIncludeRecursion prevents DoS via circular includes
-const maxIncludeRecursion = 100
-
 // ParserState holds mutable state that persists across directive parsing
 type ParserState struct {
 	// Default actions per phase (raw action strings)
@@ -67,11 +64,10 @@ type ParserState struct {
 // Parser uses the crslang listener to parse SecLang into structured types,
 // then converts those types into Coraza's internal representation.
 type Parser struct {
-	waf          *corazawaf.WAF
-	root         fs.FS
-	currentFile  string
-	currentDir   string
-	includeCount int
+	waf         *corazawaf.WAF
+	root        fs.FS
+	currentFile string
+	currentDir  string
 
 	state *ParserState
 }
@@ -191,7 +187,8 @@ func (p *Parser) parseString(data string) error {
 
 	tree := secLangParser.Configuration()
 
-	allErrors := append(lexerErrorListener.errors, parserErrorListener.errors...)
+	allErrors := lexerErrorListener.errors
+	allErrors = append(allErrors, parserErrorListener.errors...)
 	if len(allErrors) > 0 {
 		return fmt.Errorf("parse errors: %v", allErrors)
 	}
@@ -258,9 +255,8 @@ type ruleAction struct {
 
 // typeConverter converts crslang types to Coraza's internal representation
 type typeConverter struct {
-	waf    *corazawaf.WAF
-	state  *ParserState
-	errors []error
+	waf   *corazawaf.WAF
+	state *ParserState
 }
 
 func newTypeConverter(waf *corazawaf.WAF, state *ParserState) *typeConverter {
