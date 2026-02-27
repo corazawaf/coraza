@@ -15,3 +15,11 @@ type Options = corazawaf.Options
 type WAFWithOptions interface {
 	NewTransactionWithOptions(Options) types.Transaction
 }
+
+// WAFWithRules is an interface that allows to inspect the number of
+// rules loaded in a WAF instance. This is useful for connectors that
+// need to verify rule loading or implement configuration caching.
+type WAFWithRules interface {
+	// RulesCount returns the number of rules in this WAF.
+	RulesCount() int
+}
