@@ -54,6 +54,9 @@ type Transaction struct {
 	// True if the transaction has been disrupted by any rule
 	interruption *types.Interruption
 
+	// This is used to store detected interruptions that are not disruptive
+	detectedInterruption *types.Interruption
+
 	// This is used to store log messages
 	// Deprecated since Coraza 3.0.5: this variable is not used, logdata values are stored in the matched rules
 	Logdata string
@@ -308,6 +311,9 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 func (tx *Transaction) Interrupt(interruption *types.Interruption) {
 	if tx.RuleEngine == types.RuleEngineOn {
 		tx.interruption = interruption
+	} else if tx.RuleEngine == types.RuleEngineDetectionOnly {
+		// Do not actually interrupt the transaction but still log it in the audit log
+		tx.detectedInterruption = interruption
 	}
 }
 
@@ -1342,6 +1348,8 @@ func (tx *Transaction) ProcessLogging() {
 		status := tx.variables.responseStatus.Get()
 		if tx.IsInterrupted() {
 			status = strconv.Itoa(tx.interruption.Status)
+		} else if tx.detectedInterruption != nil {
+			status = strconv.Itoa(tx.detectedInterruption.Status)
 		}
 		if re != nil && !re.Match([]byte(status)) {
 			// Not relevant status
