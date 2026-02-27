@@ -4,29 +4,25 @@
 package actions
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/stretchr/testify/require"
 )
 
 func TestChainInit(t *testing.T) {
 	t.Run("no arguments", func(t *testing.T) {
 		a := chain()
 		r := &corazawaf.Rule{}
-		if err := a.Init(r, ""); err != nil {
-			t.Error(err)
-		}
+		require.NoError(t, a.Init(r, ""))
 
-		if want, have := true, r.HasChain; want != have {
-			t.Errorf("expected action %t, got %t", want, have)
-		}
+		require.True(t, r.HasChain)
 	})
 
 	t.Run("unexpected arguments", func(t *testing.T) {
 		a := chain()
-		if err := a.Init(nil, "abc"); err == nil || !errors.Is(err, ErrUnexpectedArguments) {
-			t.Error("expected error ErrUnexpectedArguments")
-		}
+		err := a.Init(nil, "abc")
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrUnexpectedArguments)
 	})
 }

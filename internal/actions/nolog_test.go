@@ -7,29 +7,24 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNologInit(t *testing.T) {
 	t.Run("no arguments", func(t *testing.T) {
 		a := nolog()
 		r := &corazawaf.Rule{}
-		if err := a.Init(r, ""); err != nil {
-			t.Error(err)
-		}
+		require.NoError(t, a.Init(r, ""))
 
-		if r.Audit {
-			t.Error("unexpected audit value")
-		}
+		require.False(t, r.Audit)
 
-		if r.Log {
-			t.Error("unexpected log value")
-		}
+		require.False(t, r.Log)
 	})
 
 	t.Run("unexpected arguments", func(t *testing.T) {
 		a := nolog()
-		if err := a.Init(nil, "abc"); err == nil || err != ErrUnexpectedArguments {
-			t.Error("expected error ErrUnexpectedArguments")
-		}
+		err := a.Init(nil, "abc")
+		require.Error(t, err)
+		require.Equal(t, ErrUnexpectedArguments, err)
 	})
 }

@@ -3,7 +3,11 @@
 
 package transformations
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
 
 func TestUTF8ToUnicode(t *testing.T) {
 	tests := []struct {
@@ -44,15 +48,11 @@ func TestUTF8ToUnicode(t *testing.T) {
 		tt := tc
 		t.Run(tt.input, func(t *testing.T) {
 			have, changed, err := utf8ToUnicode(tt.input)
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 			if tt.input == tt.want && changed || tt.input != tt.want && !changed {
-				t.Errorf("input %q, have %q with changed %t", tt.input, have, changed)
+				require.Failf(t, "unexpected changed value", "input %q, have %q with changed %t", tt.input, have, changed)
 			}
-			if have != tt.want {
-				t.Errorf("have %q, want %q", have, tt.want)
-			}
+			require.Equal(t, tt.want, have)
 		})
 	}
 }
@@ -68,9 +68,8 @@ func BenchmarkUTF8ToUnicode(b *testing.B) {
 		tt := tc
 		b.Run(tt, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, _, err := utf8ToUnicode(tt); err != nil {
-					b.Fatal(err)
-				}
+				_, _, err := utf8ToUnicode(tt)
+				require.NoError(b, err)
 			}
 		})
 	}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/io"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFromFile(t *testing.T) {
@@ -21,22 +22,16 @@ func TestFromFile(t *testing.T) {
 		Root:      io.OSFS{},
 	}
 	ipm, err := newIPMatchFromFile(opts)
-	if err != nil {
-		t.Error("Cannot init ipmatchfromfile operator")
-	}
+	require.NoError(t, err, "Cannot init ipmatchfromfile operator")
 	for _, ok := range addrok {
 		t.Run(ok, func(t *testing.T) {
-			if !ipm.Evaluate(nil, ok) {
-				t.Errorf("Invalid result for single CIDR IpMatchFromFile")
-			}
+			require.True(t, ipm.Evaluate(nil, ok), "Invalid result for single CIDR IpMatchFromFile")
 		})
 	}
 
 	for _, fail := range addrfail {
 		t.Run(fail, func(t *testing.T) {
-			if ipm.Evaluate(nil, fail) {
-				t.Errorf("Invalid result for single CIDR IpMatchFromFile")
-			}
+			require.False(t, ipm.Evaluate(nil, fail), "Invalid result for single CIDR IpMatchFromFile")
 		})
 	}
 }

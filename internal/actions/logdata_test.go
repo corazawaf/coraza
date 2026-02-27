@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLogDataInit(t *testing.T) {
@@ -22,10 +23,10 @@ func TestLogDataInit(t *testing.T) {
 			action := logdata()
 			r := &corazawaf.Rule{}
 			err := action.Init(r, test.data)
-			if test.expectError && err == nil {
-				t.Errorf("expected error")
-			} else if !test.expectError && err != nil {
-				t.Errorf("unexpected error: %s", err.Error())
+			if test.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}

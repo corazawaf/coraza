@@ -6,6 +6,8 @@ package transformations
 import (
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 var cmdLineTests = []string{
@@ -20,9 +22,8 @@ func BenchmarkCMDLine(b *testing.B) {
 		tt := tc
 		b.Run(tt, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, _, err := cmdLine(tt); err != nil {
-					b.Fatal(err)
-				}
+				_, _, err := cmdLine(tt)
+				require.NoError(b, err)
 			}
 		})
 	}
@@ -34,13 +35,11 @@ func FuzzCMDLine(f *testing.F) {
 	}
 	f.Fuzz(func(t *testing.T, tc string) {
 		data, _, err := cmdLine(tc)
-		if err != nil {
-			t.Error(err)
-		}
+		require.NoError(t, err)
 
 		// Check simple expectations
 		if strings.ContainsAny(data, `\"'^,;'ABCDEFGHIJKLMNOPQRSTUVWXYZ`) {
-			t.Errorf("unexpected characters in output %s for input %s", data, tc)
+			require.Failf(t, "unexpected characters", "unexpected characters in output %s for input %s", data, tc)
 		}
 	})
 }

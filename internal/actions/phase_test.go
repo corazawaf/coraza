@@ -4,22 +4,23 @@
 package actions
 
 import (
-	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestPhaseInit(t *testing.T) {
 	t.Run("no arguments", func(t *testing.T) {
 		a := phase()
-		if err := a.Init(nil, ""); err == nil || err != ErrMissingArguments {
-			t.Error("expected error ErrMissingArguments")
-		}
+		err := a.Init(nil, "")
+		require.Error(t, err)
+		require.Equal(t, ErrMissingArguments, err)
 	})
 
 	t.Run("unknown phase", func(t *testing.T) {
 		a := phase()
-		if err := a.Init(nil, "connect"); err == nil || strings.Contains(err.Error(), "unknown phase") {
-			t.Error("expected error for unknown phase")
-		}
+		err := a.Init(nil, "connect")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "invalid phase")
 	})
 }

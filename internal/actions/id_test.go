@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIdInit(t *testing.T) {
@@ -26,15 +27,13 @@ func TestIdInit(t *testing.T) {
 			a := id()
 			err := a.Init(r, test.data)
 
-			if test.expectsError && err == nil {
-				t.Error("expected error")
-			} else if !test.expectsError && err != nil {
-				t.Errorf("unexpected error: %s", err.Error())
+			if test.expectsError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
 			}
 
-			if want, have := test.expectedID, r.ID_; want != have {
-				t.Errorf("unexpected id, want: %d, have: %d", want, have)
-			}
+			require.Equal(t, test.expectedID, r.ID_)
 		})
 	}
 }

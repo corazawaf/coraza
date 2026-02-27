@@ -7,25 +7,22 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMultiMatchInit(t *testing.T) {
 	t.Run("with arguments", func(t *testing.T) {
 		a := multimatch()
-		if err := a.Init(nil, "abc"); err == nil || err != ErrUnexpectedArguments {
-			t.Error("expected error ErrUnexpectedArguments")
-		}
+		err := a.Init(nil, "abc")
+		require.Error(t, err)
+		require.Equal(t, ErrUnexpectedArguments, err)
 	})
 
 	t.Run("no arguments", func(t *testing.T) {
 		a := multimatch()
 		r := &corazawaf.Rule{}
-		if err := a.Init(r, ""); err != nil {
-			t.Error(err)
-		}
+		require.NoError(t, a.Init(r, ""))
 
-		if !r.MultiMatch {
-			t.Errorf("expected multimatch to be true")
-		}
+		require.True(t, r.MultiMatch)
 	})
 }

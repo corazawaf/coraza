@@ -3,7 +3,11 @@
 
 package transformations
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
 
 func BenchmarkMD5(b *testing.B) {
 	tests := []string{
@@ -14,9 +18,8 @@ func BenchmarkMD5(b *testing.B) {
 		tt := tc
 		b.Run(tt, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, _, err := md5T(tt); err != nil {
-					b.Fatal(err)
-				}
+				_, _, err := md5T(tt)
+				require.NoError(b, err)
 			}
 		})
 	}

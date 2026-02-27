@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/corazatypes"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAllowInit(t *testing.T) {
@@ -20,19 +21,13 @@ func TestAllowInit(t *testing.T) {
 	} {
 		t.Run(test.data, func(t *testing.T) {
 			a := allow()
-			if err := a.Init(nil, test.data); err != nil {
-				t.Errorf("unexpected error: %s", err.Error())
-			}
+			require.NoError(t, a.Init(nil, test.data))
 
-			if want, have := a.(*allowFn).allow, test.expectedAllowType; want != have {
-				t.Errorf("unexpected allow type, want: %d, have: %d", want, have)
-			}
+			require.Equal(t, test.expectedAllowType, a.(*allowFn).allow)
 		})
 	}
 
 	t.Run("invalid", func(t *testing.T) {
-		if err := allow().Init(nil, "response"); err == nil {
-			t.Errorf("expected error")
-		}
+		require.Error(t, allow().Init(nil, "response"))
 	})
 }

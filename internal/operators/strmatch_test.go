@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/stretchr/testify/require"
 )
 
 func TestStrmatch(t *testing.T) {
@@ -14,9 +15,7 @@ func TestStrmatch(t *testing.T) {
 		strmatch, err := newStrmatch(plugintypes.OperatorOptions{
 			Arguments: "test",
 		})
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
+		require.NoError(t, err, "unexpected error")
 
 		testCases := map[string]bool{
 			"test":           true,
@@ -42,9 +41,7 @@ func TestStrmatch(t *testing.T) {
 		strmatch, err := newStrmatch(plugintypes.OperatorOptions{
 			Arguments: "WebZIP",
 		})
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
+		require.NoError(t, err, "unexpected error")
 
 		testCases := map[string]bool{
 			"WebZIP":                true,
@@ -56,9 +53,7 @@ func TestStrmatch(t *testing.T) {
 
 		for value, want := range testCases {
 			t.Run(value, func(t *testing.T) {
-				if have := strmatch.Evaluate(nil, value); want != have {
-					t.Errorf("unexpected result for '%s': want %v, have %v", value, want, have)
-				}
+				require.Equal(t, want, strmatch.Evaluate(nil, value), "unexpected result for '%s'", value)
 			})
 		}
 	})

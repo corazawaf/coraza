@@ -11,6 +11,7 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
+	"github.com/stretchr/testify/require"
 )
 
 // wafWithRules mirrors experimental.WAFWithRules for testing without import cycle.
@@ -57,17 +58,10 @@ func TestRequestBodyLimit(t *testing.T) {
 
 			_, err := NewWAF(cfg)
 			if tCase.expectedErr == nil {
-				if err != nil {
-					t.Fatalf("unexpected error: %s", err.Error())
-				}
+				require.NoError(t, err)
 			} else {
-				if err == nil {
-					t.Fatal("expected error")
-				}
-
-				if want, have := tCase.expectedErr, err; want.Error() != have.Error() {
-					t.Fatalf("unexpected error: want %q, have %q", want, have)
-				}
+				require.Error(t, err)
+				require.Equal(t, tCase.expectedErr.Error(), err.Error())
 			}
 		})
 	}
@@ -98,17 +92,10 @@ func TestResponseBodyLimit(t *testing.T) {
 
 			_, err := NewWAF(cfg)
 			if tCase.expectedErr == nil {
-				if err != nil {
-					t.Fatalf("unexpected error: %s", err.Error())
-				}
+				require.NoError(t, err)
 			} else {
-				if err == nil {
-					t.Fatal("expected error")
-				}
-
-				if want, have := tCase.expectedErr, err; want.Error() != have.Error() {
-					t.Fatalf("unexpected error: want %q, have %q", want, have)
-				}
+				require.Error(t, err)
+				require.Equal(t, tCase.expectedErr.Error(), err.Error())
 			}
 		})
 	}
@@ -140,9 +127,7 @@ func TestPopulateAuditLog(t *testing.T) {
 				},
 			},
 			check: func(t *testing.T, waf *corazawaf.WAF) {
-				if waf.AuditEngine != types.AuditEngineRelevantOnly {
-					t.Fatal("expected AuditLogRelevantOnly to be true")
-				}
+				require.Equal(t, types.AuditEngineRelevantOnly, waf.AuditEngine)
 			},
 		},
 		"with parts": {
@@ -155,12 +140,11 @@ func TestPopulateAuditLog(t *testing.T) {
 				},
 			},
 			check: func(t *testing.T, waf *corazawaf.WAF) {
-				if want, have := []types.AuditLogPart{
+				want := []types.AuditLogPart{
 					types.AuditLogPartRequestHeaders,
 					types.AuditLogPartResponseBody,
-				}, waf.AuditLogParts; len(want) != len(have) {
-					t.Fatalf("unexpected AuditLogParts: want %v, have %v", want, have)
 				}
+				require.Len(t, waf.AuditLogParts, len(want))
 			},
 		},
 		"with audit log writer": {
@@ -168,9 +152,7 @@ func TestPopulateAuditLog(t *testing.T) {
 				auditLog: &auditLogConfig{writer: writer},
 			},
 			check: func(t *testing.T, waf *corazawaf.WAF) {
-				if reflect.DeepEqual(waf.AuditLogWriter(), &writer) {
-					t.Fatal("expected AuditLogWriter to be set")
-				}
+				require.False(t, reflect.DeepEqual(waf.AuditLogWriter(), &writer))
 			},
 		},
 	}

@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/stretchr/testify/require"
 )
 
 func TestInspectFileExitCode(t *testing.T) {
@@ -38,12 +39,8 @@ func TestInspectFileExitCode(t *testing.T) {
 		tt := tc
 		t.Run(tt.path, func(t *testing.T) {
 			ipf, err := newInspectFile(plugintypes.OperatorOptions{Arguments: tt.path})
-			if err != nil {
-				t.Error("cannot init inspectfile operator")
-			}
-			if want, have := tt.exists, ipf.Evaluate(nil, "/?"); want != have {
-				t.Errorf("inspectfile path %s: want %v, have %v", tt.path, want, have)
-			}
+			require.NoError(t, err, "cannot init inspectfile operator")
+			require.Equal(t, tt.exists, ipf.Evaluate(nil, "/?"), "inspectfile path %s", tt.path)
 		})
 	}
 }
@@ -56,9 +53,7 @@ func TestInspectFileOutput(t *testing.T) {
 	}
 
 	ipf, err := newInspectFile(plugintypes.OperatorOptions{Arguments: existCommand})
-	if err != nil {
-		t.Error("cannot init inspectfile operator")
-	}
+	require.NoError(t, err, "cannot init inspectfile operator")
 
 	tests := []struct {
 		output string
@@ -76,9 +71,7 @@ func TestInspectFileOutput(t *testing.T) {
 	for _, tc := range tests {
 		tt := tc
 		t.Run(tt.output, func(t *testing.T) {
-			if want, have := tt.match, ipf.Evaluate(nil, tt.output); want != have {
-				t.Errorf("inspectfile output '%s': want %t, have %t", tt.output, want, have)
-			}
+			require.Equal(t, tt.match, ipf.Evaluate(nil, tt.output), "inspectfile output '%s'", tt.output)
 		})
 	}
 }

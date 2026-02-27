@@ -7,25 +7,22 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMsgInit(t *testing.T) {
 	t.Run("no arguments", func(t *testing.T) {
 		a := msg()
-		if err := a.Init(nil, ""); err == nil || err != ErrMissingArguments {
-			t.Error("expected error ErrMissingArguments")
-		}
+		err := a.Init(nil, "")
+		require.Error(t, err)
+		require.Equal(t, ErrMissingArguments, err)
 	})
 
 	t.Run("with arguments", func(t *testing.T) {
 		a := msg()
 		r := &corazawaf.Rule{}
-		if err := a.Init(r, "test"); err != nil {
-			t.Error(err)
-		}
+		require.NoError(t, a.Init(r, "test"))
 
-		if r.Msg == nil {
-			t.Error("expected msg to be set")
-		}
+		require.NotNil(t, r.Msg)
 	})
 }

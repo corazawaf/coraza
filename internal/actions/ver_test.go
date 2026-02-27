@@ -7,25 +7,22 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/stretchr/testify/require"
 )
 
 func TestVerInit(t *testing.T) {
 	t.Run("passed arguments", func(t *testing.T) {
 		a := ver()
 		r := &corazawaf.Rule{}
-		if err := a.Init(r, "1.2.3"); err != nil {
-			t.Error(err)
-		}
+		require.NoError(t, a.Init(r, "1.2.3"))
 
-		if want, have := "1.2.3", r.Version_; want != have {
-			t.Errorf("expected version %s, got %s", want, have)
-		}
+		require.Equal(t, "1.2.3", r.Version_)
 	})
 
 	t.Run("missing arguments", func(t *testing.T) {
 		a := ver()
-		if err := a.Init(nil, ""); err == nil || err != ErrMissingArguments {
-			t.Error("expected error ErrMissingArguments")
-		}
+		err := a.Init(nil, "")
+		require.Error(t, err)
+		require.Equal(t, ErrMissingArguments, err)
 	})
 }

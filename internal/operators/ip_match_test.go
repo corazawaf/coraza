@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/stretchr/testify/require"
 )
 
 func TestOneAddress(t *testing.T) {
@@ -18,15 +19,9 @@ func TestOneAddress(t *testing.T) {
 		Arguments: cidr,
 	}
 	ipm, err := newIPMatch(opts)
-	if err != nil {
-		t.Error("Cannot init ipmatchtest operator")
-	}
-	if !ipm.Evaluate(nil, addrok) {
-		t.Errorf("Invalid result for single CIDR IpMatch")
-	}
-	if ipm.Evaluate(nil, addrfail) {
-		t.Errorf("Invalid result for single CIDR IpMatch")
-	}
+	require.NoError(t, err, "Cannot init ipmatchtest operator")
+	require.True(t, ipm.Evaluate(nil, addrok), "Invalid result for single CIDR IpMatch")
+	require.False(t, ipm.Evaluate(nil, addrfail), "Invalid result for single CIDR IpMatch")
 }
 
 func TestMultipleAddress(t *testing.T) {
@@ -37,18 +32,12 @@ func TestMultipleAddress(t *testing.T) {
 		Arguments: cidr,
 	}
 	ipm, err := newIPMatch(opts)
-	if err != nil {
-		t.Error("Cannot init ipmatchtest operator")
-	}
+	require.NoError(t, err, "Cannot init ipmatchtest operator")
 	for _, ok := range addrok {
-		if !ipm.Evaluate(nil, ok) {
-			t.Errorf("Invalid result for single CIDR IpMatch: %s", ok)
-		}
+		require.True(t, ipm.Evaluate(nil, ok), "Invalid result for single CIDR IpMatch: %s", ok)
 	}
 
 	for _, fail := range addrfail {
-		if ipm.Evaluate(nil, fail) {
-			t.Errorf("Invalid result for single CIDR IpMatch: %s", fail)
-		}
+		require.False(t, ipm.Evaluate(nil, fail), "Invalid result for single CIDR IpMatch: %s", fail)
 	}
 }

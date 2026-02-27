@@ -15,6 +15,7 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/stretchr/testify/require"
 )
 
 func setupJSONSchema(name, data string) fs.FS {
@@ -48,51 +49,31 @@ func TestValidateSchemaJSONBasic(t *testing.T) {
 
 	// Enable to debug schema validation directly
 	validateOp, ok := op.(*validateSchema)
-	if !ok {
-		t.Fatalf("Failed to cast operator to validateSchema")
-	}
+	require.True(t, ok, "Failed to cast operator to validateSchema")
 
-	if validateOp.jsonSchema == nil {
-		t.Fatalf("JSON Schema is nil after initialization")
-	}
+	require.NotNil(t, validateOp.jsonSchema, "JSON Schema is nil after initialization")
 
 	// Valid JSON should return false (no violation)
 	validJSON := `{"name": "John", "age": 30}`
 
 	// Validate directly
 	valid := validateOp.isValidJSON(validJSON)
-	if !valid {
-		// Print schema and input for debugging
-		t.Logf("Input: %s", validJSON)
-		t.Fatalf("Direct schema validation failed")
-	}
-
-	if !valid {
-		t.Fatalf("JSON validation failed but should have passed")
-	}
+	require.True(t, valid, "Direct schema validation failed - Input: %s", validJSON)
 
 	opResult := op.Evaluate(nil, validJSON)
-	if opResult {
-		t.Errorf("Expected valid JSON to return false, got true - JSON validation result was: %v", valid)
-	}
+	require.False(t, opResult, "Expected valid JSON to return false, got true - JSON validation result was: %v", valid)
 
 	// Invalid JSON syntax should return true (violation detected)
 	invalidJSON := `{"name": "John", age: 30}` // Missing quotes around age
-	if !op.Evaluate(nil, invalidJSON) {
-		t.Errorf("Expected invalid JSON to return true, got false")
-	}
+	require.True(t, op.Evaluate(nil, invalidJSON), "Expected invalid JSON to return true, got false")
 
 	// Missing required field should return true (violation detected)
 	missingFieldJSON := `{"name": "John"}` // Missing age field
 	valid = validateOp.isValidJSON(missingFieldJSON)
-	if valid {
-		t.Fatalf("JSON validation passed but should have failed due to missing required field")
-	}
+	require.False(t, valid, "JSON validation passed but should have failed due to missing required field")
 
 	opResult = op.Evaluate(nil, missingFieldJSON)
-	if !opResult {
-		t.Errorf("Expected JSON with missing required field to return true, got false")
-	}
+	require.True(t, opResult, "Expected JSON with missing required field to return true, got false")
 }
 
 func TestValidateSchemaInvalidFile(t *testing.T) {
@@ -101,9 +82,7 @@ func TestValidateSchemaInvalidFile(t *testing.T) {
 		Root:      fstest.MapFS{},
 	}
 	_, err := NewValidateSchema(opts)
-	if err == nil {
-		t.Errorf("Expected error for nonexistent file, got nil")
-	}
+	require.Error(t, err, "Expected error for nonexistent file, got nil")
 }
 
 func TestValidateSchemaUnsupportedType(t *testing.T) {
@@ -118,9 +97,7 @@ func TestValidateSchemaUnsupportedType(t *testing.T) {
 		Root:      rootFS,
 	}
 	_, err := NewValidateSchema(opts)
-	if err == nil {
-		t.Errorf("Expected error for unsupported schema type, got nil")
-	}
+	require.Error(t, err, "Expected error for unsupported schema type, got nil")
 }
 
 func TestValidateSchemaEmptyInput(t *testing.T) {
@@ -140,15 +117,11 @@ func TestValidateSchemaEmptyInput(t *testing.T) {
 		Root:      rootFS,
 	}
 	op, err := NewValidateSchema(opts)
-	if err != nil {
-		t.Fatalf("Failed to initialize validateSchema operator: %v", err)
-	}
+	require.NoError(t, err, "Failed to initialize validateSchema operator")
 
 	// Empty input should return false (no violation, as per original behavior)
 	emptyInput := ""
-	if op.Evaluate(nil, emptyInput) {
-		t.Errorf("Expected empty input to return false, got true")
-	}
+	require.False(t, op.Evaluate(nil, emptyInput), "Expected empty input to return false, got true")
 }
 
 // TestValidateSchemaWithRequestBody tests that the operator can validate JSON data from the REQUEST_BODY variable
@@ -262,9 +235,7 @@ func TestValidateSchemaWithNoArguments(t *testing.T) {
 		Arguments: "",
 	}
 	_, err := NewValidateSchema(opts)
-	if err == nil {
-		t.Errorf("Expected error for empty schema path, got nil")
-	}
+	require.Error(t, err, "Expected error for empty schema path, got nil")
 }
 
 // TestValidateSchemaInvalidJSONSchema tests with an invalid JSON schema
@@ -286,9 +257,7 @@ func TestValidateSchemaInvalidJSONSchema(t *testing.T) {
 		Root:      rootFS,
 	}
 	_, err := NewValidateSchema(opts)
-	if err == nil {
-		t.Errorf("Expected error for invalid JSON schema, got nil")
-	}
+	require.Error(t, err, "Expected error for invalid JSON schema, got nil")
 }
 
 // TestValidateSchemaJSONNilSchema tests evaluation with a nil schema validator
@@ -308,24 +277,18 @@ func TestValidateSchemaJSONNilSchema(t *testing.T) {
 		Root:      rootFS,
 	}
 	op, err := NewValidateSchema(opts)
-	if err != nil {
-		t.Fatalf("Failed to initialize validateSchema operator: %v", err)
-	}
+	require.NoError(t, err, "Failed to initialize validateSchema operator")
 
 	// Cast to validateSchema to manipulate the internals
 	validateOp, ok := op.(*validateSchema)
-	if !ok {
-		t.Fatalf("Failed to cast operator to validateSchema")
-	}
+	require.True(t, ok, "Failed to cast operator to validateSchema")
 
 	validateOp.jsonSchema = nil
 
 	// Valid JSON syntax but nil schema should just do basic JSON validation
 	validJSON := `{"name": "John"}`
 	result := validateOp.isValidJSON(validJSON)
-	if !result {
-		t.Errorf("Expected valid JSON to return true even with nil schema, got false")
-	}
+	require.True(t, result, "Expected valid JSON to return true even with nil schema, got false")
 }
 
 // Mock transaction for testing
@@ -494,16 +457,12 @@ func TestValidateSchemaPhaseChecking(t *testing.T) {
 
 	// Should return false (no violation) because we're not in the right phase
 	opResult := op.Evaluate(tx, "")
-	if opResult {
-		t.Errorf("Expected request body validation to be skipped in phase 1, but got violation")
-	}
+	require.False(t, opResult, "Expected request body validation to be skipped in phase 1, but got violation")
 
 	// Test: Request body data should be validated in PhaseRequestBody (phase 2)
 	tx.lastPhase = types.PhaseRequestBody
 	opResult = op.Evaluate(tx, "")
-	if !opResult {
-		t.Errorf("Expected request body validation to trigger violation in phase 2, got false")
-	}
+	require.True(t, opResult, "Expected request body validation to trigger violation in phase 2, got false")
 
 	// Clear request body data and test response body
 	txMap.Remove("json_request_body")
@@ -513,23 +472,17 @@ func TestValidateSchemaPhaseChecking(t *testing.T) {
 	txMap.Set("json_response_body", []string{invalidJSON})
 
 	opResult = op.Evaluate(tx, "")
-	if opResult {
-		t.Errorf("Expected response body validation to be skipped in phase 3, but got violation")
-	}
+	require.False(t, opResult, "Expected response body validation to be skipped in phase 3, but got violation")
 
 	// Test: Response body data should be validated in PhaseResponseBody (phase 4)
 	tx.lastPhase = types.PhaseResponseBody
 	opResult = op.Evaluate(tx, "")
-	if !opResult {
-		t.Errorf("Expected response body validation to trigger violation in phase 4, got false")
-	}
+	require.True(t, opResult, "Expected response body validation to trigger violation in phase 4, got false")
 
 	// Test: Response body data should also be validated in PhaseLogging (phase 5)
 	tx.lastPhase = types.PhaseLogging
 	opResult = op.Evaluate(tx, "")
-	if !opResult {
-		t.Errorf("Expected response body validation to trigger violation in phase 5, got false")
-	}
+	require.True(t, opResult, "Expected response body validation to trigger violation in phase 5, got false")
 }
 
 // TestValidateSchemaPhasePreference tests that request body is preferred over response body in the right phases
@@ -551,9 +504,7 @@ func TestValidateSchemaPhasePreference(t *testing.T) {
 	}
 
 	op, err := NewValidateSchema(opts)
-	if err != nil {
-		t.Fatalf("Failed to initialize validateSchema operator: %v", err)
-	}
+	require.NoError(t, err, "Failed to initialize validateSchema operator")
 
 	// Create a mock TX map
 	txMap := collections.NewMap(variables.TX)
@@ -572,21 +523,15 @@ func TestValidateSchemaPhasePreference(t *testing.T) {
 	}
 
 	opResult := op.Evaluate(tx, "")
-	if opResult {
-		t.Errorf("Expected request body to be validated (valid) in phase 2, but got violation")
-	}
+	require.False(t, opResult, "Expected request body to be validated (valid) in phase 2, but got violation")
 
 	// Test: In phase 4, should prefer response body over request body
 	tx.lastPhase = types.PhaseResponseBody
 	opResult = op.Evaluate(tx, "")
-	if !opResult {
-		t.Errorf("Expected response body to be preferred in phase 4, but got no violation (should have failed on invalid response body)")
-	}
+	require.True(t, opResult, "Expected response body to be preferred in phase 4, but got no violation (should have failed on invalid response body)")
 
 	// Test: In phase 4 with only response body, should validate response body
 	txMap.Remove("json_request_body")
 	opResult = op.Evaluate(tx, "")
-	if !opResult {
-		t.Errorf("Expected response body validation to trigger violation when only response body is available")
-	}
+	require.True(t, opResult, "Expected response body validation to trigger violation when only response body is available")
 }

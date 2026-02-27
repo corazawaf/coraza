@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMaturityInit(t *testing.T) {
@@ -26,17 +27,11 @@ func TestMaturityInit(t *testing.T) {
 		r := &corazawaf.Rule{}
 		err := a.Init(r, test.data)
 		if test.expectedError {
-			if err == nil {
-				t.Errorf("expected error")
-			}
+			require.Error(t, err)
 		} else {
-			if err != nil {
-				t.Errorf("unexpected error: %s", err.Error())
-			}
+			require.NoError(t, err)
 
-			if want, have := test.expectedMaturity, r.Maturity_; want != have {
-				t.Errorf("unexpected maturity value, want %d, have %d", want, have)
-			}
+			require.Equal(t, test.expectedMaturity, r.Maturity_)
 		}
 	}
 }
