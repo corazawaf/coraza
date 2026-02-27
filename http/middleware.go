@@ -15,6 +15,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/experimental"
+	"github.com/corazawaf/coraza/v3/experimental/middleware"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -95,7 +96,34 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 	return tx.ProcessRequestBody()
 }
 
+// Options is a set of options for the middleware
+type Options struct {
+	// BeforeCloseTransaction is called before the transaction is closed, after the response has
+	// been written. It is useful to complement observability signals like metrics, traces and
+	// logs by providing additional context about the transaction and the rules that were matched.
+	BeforeCloseTransaction func(tx middleware.TransactionState)
+}
+
+var defaultOptions = Options{
+	BeforeCloseTransaction: func(middleware.TransactionState) {},
+}
+
+func (o *Options) loadDefaults() {
+	if o.BeforeCloseTransaction == nil {
+		o.BeforeCloseTransaction = defaultOptions.BeforeCloseTransaction
+	}
+}
+
 func WrapHandler(waf coraza.WAF, h http.Handler) http.Handler {
+	return wrapHandler(waf, h, defaultOptions)
+}
+
+func WrapHandlerWithOptions(waf coraza.WAF, h http.Handler, opts Options) http.Handler {
+	opts.loadDefaults()
+	return wrapHandler(waf, h, opts)
+}
+
+func wrapHandler(waf coraza.WAF, h http.Handler, opts Options) http.Handler {
 	if waf == nil {
 		return h
 	}
@@ -114,9 +142,13 @@ func WrapHandler(waf coraza.WAF, h http.Handler) http.Handler {
 
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		tx := newTX(r)
+		txs := tx.(middleware.TransactionState)
 		defer func() {
 			// We run phase 5 rules and create audit logs (if enabled)
 			tx.ProcessLogging()
+
+			opts.BeforeCloseTransaction(txs)
+
 			// we remove temporary files and free some memory
 			if err := tx.Close(); err != nil {
 				tx.DebugLogger().Error().Err(err).Msg("Failed to close the transaction")
