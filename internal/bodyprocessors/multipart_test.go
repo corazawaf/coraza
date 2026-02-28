@@ -210,3 +210,90 @@ func TestMultipartUnmatchedBoundary(t *testing.T) {
 		}
 	}
 }
+
+func TestIncompleteMultipartPayload(t *testing.T) {
+	testCases := []struct {
+		name  string
+		input string
+	}{
+		{
+			name: "inMiddleOfBoundary",
+			input: `
+-----------------------------9051914041544843365972754266
+Content-Disposition: form-data; name="text"
+
+text default
+-----------------------------9051914041544843365972754266
+Content-Disposition: form-data; name="file1"; filename="a.txt"
+Content-Type: text/plain
+
+Content of a.txt.
+
+-----------------------------905191404154484336
+`,
+		},
+		{
+			name: "inMiddleOfHeader",
+			input: `
+-----------------------------9051914041544843365972754266
+Content-Disposition: form-data; name="text"
+
+text default
+-----------------------------9051914041544843365972754266
+Content-Disposition: form-data; name="file1"; filename="a.txt"
+Content-Type: text/plain
+
+Content of a.txt.
+
+-----------------------------9051914041544843365972754266
+Content-Disposition: form-data; name="fil`,
+		},
+		{
+			name: "inMiddleOfContent",
+			input: `
+-----------------------------9051914041544843365972754266
+Content-Disposition: form-data; name="text"
+
+text default
+-----------------------------9051914041544843365972754266
+Content-Disposition: form-data; name="file1"; filename="a.txt"
+Content-Type: text/plain
+
+Content of a.txt.
+
+-----------------------------9051914041544843365972754266
+Content-Disposition: form-data; name="file2"; filename="a.html"
+Content-Type: text/html
+
+<!DOCTYPE html><title>Content of `,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			payload := strings.TrimSpace(tc.input)
+
+			mp := multipartProcessor(t)
+
+			v := corazawaf.NewTransactionVariables()
+			if err := mp.ProcessRequest(strings.NewReader(payload), v, plugintypes.BodyProcessorOptions{
+				Mime: "multipart/form-data; boundary=---------------------------9051914041544843365972754266",
+			}); err != nil {
+				t.Fatal(err)
+			}
+			// first we validate we got the headers
+			headers := v.MultipartPartHeaders()
+			header1 := "Content-Disposition: form-data; name=\"file1\"; filename=\"a.txt\""
+			header2 := "Content-Type: text/plain"
+			if h := headers.Get("file1"); len(h) == 0 {
+				t.Fatal("expected headers for file2")
+			} else {
+				if len(h) != 2 {
+					t.Fatal("expected 2 headers for file2")
+				}
+				if (h[0] != header1 && h[0] != header2) || (h[1] != header1 && h[1] != header2) {
+					t.Fatalf("Got invalid multipart headers")
+				}
+			}
+		})
+	}
+}
