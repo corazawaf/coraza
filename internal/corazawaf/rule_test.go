@@ -297,6 +297,39 @@ func TestVariablesRxAreCaseSensitive(t *testing.T) {
 	}
 }
 
+func TestVariablesRxAreLowercasedForCaseInsensitiveCollections(t *testing.T) {
+	rule := NewRule()
+	if err := rule.AddVariable(variables.TX, "/MULTIPART_HEADERS_CONTENT_TYPES_.*/", false); err != nil {
+		t.Error(err)
+	}
+	if rule.variables[0].KeyRx == nil {
+		t.Fatal("expected regex to be set")
+	}
+	if rule.variables[0].KeyRx.String() != "multipart_headers_content_types_.*" {
+		t.Errorf("expected lowercased regex for case-insensitive variable TX, got %q", rule.variables[0].KeyRx.String())
+	}
+}
+
+func TestVariableNegationRxLowercasedForCaseInsensitiveCollections(t *testing.T) {
+	rule := NewRule()
+	if err := rule.AddVariable(variables.TX, "", false); err != nil {
+		t.Error(err)
+	}
+	if err := rule.AddVariableNegation(variables.TX, "/SOME_PATTERN.*/"); err != nil {
+		t.Error(err)
+	}
+	if len(rule.variables[0].Exceptions) != 1 {
+		t.Fatal("expected 1 exception")
+	}
+	ex := rule.variables[0].Exceptions[0]
+	if ex.KeyRx == nil {
+		t.Fatal("expected regex exception to be set")
+	}
+	if ex.KeyRx.String() != "some_pattern.*" {
+		t.Errorf("expected lowercased regex for case-insensitive variable TX exception, got %q", ex.KeyRx.String())
+	}
+}
+
 func TestInferredPhase(t *testing.T) {
 	var b inferredPhases
 
