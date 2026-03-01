@@ -1,10 +1,10 @@
 module github.com/corazawaf/coraza/v3/testing/coreruleset
 
-go 1.24.0
+go 1.24.6
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.9.1
-	github.com/corazawaf/coraza-coreruleset/v4 v4.20.0
+	github.com/corazawaf/coraza-coreruleset/v4 v4.24.0
 	github.com/corazawaf/coraza/v3 v3.3.3
 	github.com/coreruleset/albedo v0.3.0
 	github.com/coreruleset/go-ftw v1.3.0
@@ -15,7 +15,7 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
-	github.com/corazawaf/libinjection-go v0.2.2 // indirect
+	github.com/corazawaf/libinjection-go v0.3.2 // indirect
 	github.com/coreruleset/ftw-tests-schema/v2 v2.2.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
