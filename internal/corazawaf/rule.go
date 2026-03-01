@@ -531,6 +531,9 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 	}
 	var re *regexp.Regexp
 	if isRegex, rx := hasRegex(key); isRegex {
+		if !caseSensitiveVariable(v) {
+			rx = strings.ToLower(rx)
+		}
 		if vare, err := memoize.Do(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
 			return err
 		} else {
@@ -575,6 +578,9 @@ func needToSplitConcatenatedVariable(v variables.RuleVariable, ve variables.Rule
 func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 	var re *regexp.Regexp
 	if isRegex, rx := hasRegex(key); isRegex {
+		if !caseSensitiveVariable(v) {
+			rx = strings.ToLower(rx)
+		}
 		if vare, err := memoize.Do(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
 			return err
 		} else {
