@@ -34,6 +34,9 @@ SecRule REQUEST_HEADERS:Content-Type "^application/json" \
 SecRule REQUEST_HEADERS:Content-Type "^application/[a-z0-9.-]+[+]json" \
      "id:'200006',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=JSON"
 
+# Configures the maximum JSON recursion depth limit Coraza will accept.
+SecRequestBodyJsonDepthLimit 1024
+
 # Maximum request body size we will accept for buffering. If you support
 # file uploads, this value must has to be as large as the largest file
 # you are willing to accept.
