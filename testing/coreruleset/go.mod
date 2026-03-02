@@ -1,6 +1,6 @@
 module github.com/corazawaf/coraza/v3/testing/coreruleset
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.9.1
