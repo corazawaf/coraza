@@ -28,7 +28,7 @@ func TestSecAuditLogDirectivesConcurrent(t *testing.T) {
 	if err := parser.FromString(fmt.Sprintf(`
 	SecAuditLog %s
 	SecAuditLogFormat json
-	SecAuditLogDir %s
+	SecAuditLogStorageDir %s
 	SecAuditLogDirMode 0777
 	SecAuditLogFileMode 0777
 	SecAuditLogType concurrent

@@ -168,6 +168,9 @@ SecAuditLogType Serial
 # Can be one of JSON|JsonLegacy|Native|OCSF
 SecAuditLogFormat Native
 
+# Specify the path for concurrent audit logging.
+#SecAuditLogStorageDir /opt/coraza/var/audit/
+
 # The following settings are not supported by Coraza
 # SecCookieFormat 0
 # SecArgumentSeparator &

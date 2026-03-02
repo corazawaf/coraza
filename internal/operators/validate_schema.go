@@ -22,6 +22,26 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
+// Description:
+// Validates JSON request or response bodies against a JSON Schema specification.
+// Automatically retrieves JSON data from TX variables (json_request_body or json_response_body)
+// based on the current phase. Returns true if validation fails (schema violation).
+//
+// Arguments:
+// Path to JSON Schema file (relative to configured root filesystem).
+// Only JSON Schema format (.json) is currently supported.
+//
+// Returns:
+// true if JSON validation fails (violation), false if JSON is valid or no data to validate
+//
+// Example:
+// ```
+// # Validate request body against API schema
+// SecRule REQUEST_BODY "@validateSchema /schemas/api-request.json" "id:197,deny,log,phase:2"
+//
+// # Validate response body schema
+// SecRule RESPONSE_BODY "@validateSchema /schemas/api-response.json" "id:198,log,phase:4"
+// ```
 type validateSchema struct {
 	jsonSchema *jsonschema.Schema
 }

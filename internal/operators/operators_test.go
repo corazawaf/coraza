@@ -48,7 +48,6 @@ func TestOperators(t *testing.T) {
 
 	notImplemented := []string{
 		"containsWord",
-		"strmatch",
 		"verifyCC",
 		"verifycpf",
 		"verifyssn",

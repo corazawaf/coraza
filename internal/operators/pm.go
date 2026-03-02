@@ -14,6 +14,25 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/memoize"
 )
 
+// Description:
+// Performs case-insensitive pattern matching using the Aho-Corasick algorithm for efficient
+// multi-pattern searching. Matches space-separated keywords or patterns provided as arguments.
+//
+// Arguments:
+// Space-separated keywords or patterns to match. Supports Snort data syntax like "A|42|C|44|F"
+// for hex notation. All patterns are converted to lowercase for case-insensitive matching.
+//
+// Returns:
+// true if any of the patterns are found in the input, false otherwise
+//
+// Example:
+// ```
+// # Detect known malicious user agents
+// SecRule REQUEST_HEADERS:User-Agent "@pm WebZIP WebCopier Webster" "id:170,deny,log"
+//
+// # Match multiple attack patterns
+// SecRule ARGS "@pm <script> javascript: onerror=" "id:171,deny"
+// ```
 type pm struct {
 	matcher ahocorasick.AhoCorasick
 }

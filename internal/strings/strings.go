@@ -91,6 +91,29 @@ func MaybeRemoveQuotes(s string) string {
 	return s[1 : len(s)-1]
 }
 
+// UnescapeQuotedString unescapes `\"` sequences to `"` in seclang quoted
+// strings. This is the only escape sequence recognized by the seclang quoted
+// string parser — backslashes before any other character (including other
+// backslashes) are left as-is so that operator arguments like regex patterns
+// are passed through unchanged.
+func UnescapeQuotedString(s string) string {
+	if !strings.ContainsRune(s, '\\') {
+		return s
+	}
+
+	var sb strings.Builder
+	sb.Grow(len(s))
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\\' && i+1 < len(s) && s[i+1] == '"' {
+			sb.WriteByte('"')
+			i++ // skip the quote
+			continue
+		}
+		sb.WriteByte(s[i])
+	}
+	return sb.String()
+}
+
 // InSlice returns true if the string is in the slice
 func InSlice(a string, list []string) bool {
 	for _, b := range list {

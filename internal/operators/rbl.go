@@ -16,6 +16,25 @@ import (
 
 const timeout = 500 * time.Millisecond
 
+// Description:
+// Looks up the input IP address in the specified RBL (Real-time Block List) service.
+// Performs DNS lookups to check if the IP is listed. Sets TX.httpbl_msg variable with
+// the response text if found. Has a 500ms timeout for DNS queries.
+//
+// Arguments:
+// RBL hostname to query (e.g., "sbl-xbl.spamhaus.org").
+//
+// Returns:
+// true if the IP address is found in the RBL, false otherwise or on timeout
+//
+// Example:
+// ```
+// # Check IP against Spamhaus blocklist
+// SecRule REMOTE_ADDR "@rbl sbl-xbl.spamhaus.org" "id:183,deny,log,msg:'IP found in RBL'"
+//
+// # Multiple RBL checks
+// SecRule REMOTE_ADDR "@rbl dnsbl.example.com" "id:184,deny"
+// ```
 type rbl struct {
 	service  string
 	resolver *net.Resolver

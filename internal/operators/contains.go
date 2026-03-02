@@ -12,6 +12,24 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
+// Description:
+// Matches if the parameter string is found anywhere in the input.
+// Supports macro expansion for dynamic string matching.
+//
+// Arguments:
+// String to search for within the input. Supports variable expansion using %{VAR} syntax.
+//
+// Returns:
+// true if the parameter string is found anywhere in the input, false otherwise
+//
+// Example:
+// ```
+// # Detect PHP files in request line
+// SecRule REQUEST_LINE "@contains .php" "id:150,deny,log"
+//
+// # Check if URI contains admin
+// SecRule REQUEST_URI "@contains admin" "id:151,deny"
+// ```
 type contains struct {
 	data macro.Macro
 }
