@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -641,10 +642,12 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 
 // RemoveRuleTargetByID Removes the VARIABLE:KEY from the rule ID
 // It's mostly used by CTL to dynamically remove targets from rules
-func (tx *Transaction) RemoveRuleTargetByID(id int, variable variables.RuleVariable, key string) {
+// If keyRx is provided, it will be used for regex matching; otherwise, key will be used for exact matching
+func (tx *Transaction) RemoveRuleTargetByID(id int, variable variables.RuleVariable, key string, keyRx *regexp.Regexp) {
 	c := ruleVariableParams{
 		Variable: variable,
 		KeyStr:   key,
+		KeyRx:    keyRx,
 	}
 
 	if multiphaseEvaluation && (variable == variables.Args || variable == variables.ArgsNames) {

@@ -112,3 +112,79 @@ func TestRandomStringConcurrency(t *testing.T) {
 		go RandomString(10000)
 	}
 }
+
+func TestHasRegex(t *testing.T) {
+	tCases := []struct {
+		name           string
+		input          string
+		expectIsRegex  bool
+		expectPattern  string
+	}{
+		{
+			name:           "valid regex pattern",
+			input:          "/user/",
+			expectIsRegex:  true,
+			expectPattern:  "user",
+		},
+		{
+			name:           "escaped slash at end",
+			input:          `/user\/`,
+			expectIsRegex:  false,
+			expectPattern:  `/user\/`,
+		},
+		{
+			name:           "double escaped slash at end",
+			input:          `/user\\/`,
+			expectIsRegex:  true,
+			expectPattern:  `user\\`,
+		},
+		{
+			name:           "triple escaped slash at end",
+			input:          `/user\\\/`,
+			expectIsRegex:  false,
+			expectPattern:  `/user\\\/`,
+		},
+		{
+			name:           "empty pattern",
+			input:          "//",
+			expectIsRegex:  true,
+			expectPattern:  "",
+		},
+		{
+			name:           "too short",
+			input:          "/a",
+			expectIsRegex:  false,
+			expectPattern:  "/a",
+		},
+		{
+			name:           "no leading slash",
+			input:          "user/",
+			expectIsRegex:  false,
+			expectPattern:  "user/",
+		},
+		{
+			name:           "no trailing slash",
+			input:          "/user",
+			expectIsRegex:  false,
+			expectPattern:  "/user",
+		},
+		{
+			name:           "just slashes",
+			input:          "//",
+			expectIsRegex:  true,
+			expectPattern:  "",
+		},
+	}
+
+	for _, tCase := range tCases {
+		t.Run(tCase.name, func(t *testing.T) {
+			gotIsRegex, gotPattern := HasRegex(tCase.input)
+			if gotIsRegex != tCase.expectIsRegex {
+				t.Errorf("HasRegex(%q) isRegex = %v, want %v", tCase.input, gotIsRegex, tCase.expectIsRegex)
+			}
+			if gotPattern != tCase.expectPattern {
+				t.Errorf("HasRegex(%q) pattern = %q, want %q", tCase.input, gotPattern, tCase.expectPattern)
+			}
+		})
+	}
+}
