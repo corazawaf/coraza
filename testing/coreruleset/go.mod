@@ -1,10 +1,10 @@
 module github.com/corazawaf/coraza/v3/testing/coreruleset
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.9.1
-	github.com/corazawaf/coraza-coreruleset/v4 v4.20.0
+	github.com/corazawaf/coraza-coreruleset/v4 v4.24.0
 	github.com/corazawaf/coraza/v3 v3.3.3
 	github.com/coreruleset/albedo v0.3.0
 	github.com/coreruleset/go-ftw v1.3.0
@@ -50,7 +50,7 @@ require (
 	github.com/valllabh/ocsf-schema-golang v1.0.3 // indirect
 	github.com/yargevad/filepathx v1.0.0 // indirect
 	golang.org/x/crypto v0.48.0 // indirect
-	golang.org/x/net v0.50.0 // indirect
+	golang.org/x/net v0.51.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
