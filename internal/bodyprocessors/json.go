@@ -14,7 +14,7 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
-// ResponseBodyRecursionLimit is the default recursion depth limit for response body JSON parsing.
+// responseBodyRecursionLimit is the default recursion depth limit for response body JSON parsing.
 // Uses the same default as request bodies (1024) to protect against deeply nested structures.
 const responseBodyRecursionLimit = 1024
 
