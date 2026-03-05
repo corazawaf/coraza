@@ -183,6 +183,10 @@ const noID = 0
 func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Transaction, collectiveMatchedValues *[]types.MatchData, chainLevel int, cache map[transformationKey]*transformationValue) []types.MatchData {
 	tx.Capture = r.Capture
 
+	if multiphaseEvaluation {
+		computeRuleChainMinPhase(r)
+	}
+
 	var matchedValues []types.MatchData
 	// we log if we are the parent rule
 	logger.Debug().Msg("Evaluating rule")
@@ -223,16 +227,9 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 				continue
 			}
 			var values []types.MatchData
-			var exceptionsModified bool
 			for _, c := range ecol {
 				if c.Variable == v.Variable {
-					if !exceptionsModified {
-						// Defensive copy to avoid data race on shared backing array
-						newExceptions := make([]ruleVariableException, len(v.Exceptions), len(v.Exceptions)+len(ecol))
-						copy(newExceptions, v.Exceptions)
-						v.Exceptions = newExceptions
-						exceptionsModified = true
-					}
+					// TODO shall we check the pointer?
 					v.Exceptions = append(v.Exceptions, ruleVariableException{c.KeyStr, nil})
 				}
 			}

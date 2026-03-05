@@ -8,7 +8,6 @@ package corazawaf
 import (
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
@@ -112,33 +111,4 @@ func TestRuleNegativeVariablesMulti(t *testing.T) {
 		t.Errorf("got %d exceptions, expected 1", len(rule.variables[3].Exceptions))
 	}
 
-}
-
-func TestChainMinPhaseComputedAtAddTime(t *testing.T) {
-	parent := NewRule()
-	parent.ID_ = 1
-	parent.LogID_ = "1"
-	parent.HasChain = true
-	parent.Phase_ = 2
-	_ = parent.AddVariable(variables.RequestURI, "", false)
-
-	child := NewRule()
-	child.ParentID_ = 1
-	child.LogID_ = "1"
-	// ResponseBody has min phase = PhaseResponseBody (4)
-	_ = child.AddVariable(variables.ResponseBody, "", false)
-	parent.Chain = child
-
-	rg := NewRuleGroup()
-	if err := rg.Add(parent); err != nil {
-		t.Fatal(err)
-	}
-
-	added := rg.FindByID(1)
-	if added.chainMinPhase == types.PhaseUnknown {
-		t.Error("Expected chainMinPhase to be computed after Add(), got PhaseUnknown")
-	}
-	if added.chainMinPhase != types.PhaseResponseBody {
-		t.Errorf("Expected chainMinPhase PhaseResponseBody (%d), got %d", types.PhaseResponseBody, added.chainMinPhase)
-	}
 }

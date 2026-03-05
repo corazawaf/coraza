@@ -61,10 +61,6 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 		}
 	}
 
-	if multiphaseEvaluation {
-		computeRuleChainMinPhase(rule)
-	}
-
 	rg.rules = append(rg.rules, *rule)
 
 	if rg.observer != nil {

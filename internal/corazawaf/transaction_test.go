@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"regexp"
 	"runtime/debug"
@@ -134,36 +135,6 @@ func TestTxMultipart(t *testing.T) {
 	}
 }
 
-func TestTxResponse(t *testing.T) {
-	/*
-		tx := NewWAF().NewTransaction()
-		ht := []string{
-			"HTTP/1.1 200 OK",
-			"Content-Type: text/html",
-			"Last-Modified: Mon, 14 Sep 2020 21:10:42 GMT",
-			"Accept-Ranges: bytes",
-			"ETag: \"0b5f480db8ad61:0\"",
-			"Vary: Accept-Encoding",
-			"Server: Microsoft-IIS/8.5",
-			"Content-Security-Policy: default-src: https:; frame-ancestors 'self' X-Frame-Options: SAMEORIGIN",
-			"Strict-Transport-Security: max-age=31536000; includeSubDomains; preload",
-			"Date: Wed, 16 Sep 2020 14:14:09 GMT",
-			"Connection: close",
-			"Content-Length: 10",
-			"",
-			"testcontent",
-		}
-		data := strings.Join(ht, "\r\n")
-		tx.ParseResponseString(nil, data)
-
-		exp := map[string]string{
-			"%{response_headers.content-length}": "10",
-			"%{response_headers.server}":         "Microsoft-IIS/8.5",
-		}
-
-		validateMacroExpansion(exp, tx, t)
-	*/
-}
 
 var requestBodyWriters = map[string]func(tx *Transaction, body string) (*types.Interruption, int, error){
 	"WriteRequestBody": func(tx *Transaction, body string) (*types.Interruption, int, error) {
@@ -1862,5 +1833,260 @@ func TestRequestFilename(t *testing.T) {
 				t.Fatalf("Expected REQUEST_FILENAME %q, got %q", test.expected, tx.variables.requestFilename.Get())
 			}
 		})
+	}
+}
+
+func TestTransactionID(t *testing.T) {
+	waf := NewWAF()
+	tx1 := waf.NewTransaction()
+	tx2 := waf.NewTransaction()
+
+	if tx1.ID() == "" {
+		t.Fatal("expected non-empty transaction ID")
+	}
+	if tx2.ID() == "" {
+		t.Fatal("expected non-empty transaction ID")
+	}
+	if tx1.ID() == tx2.ID() {
+		t.Fatal("expected unique transaction IDs")
+	}
+
+	if err := tx1.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx2.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestIsInterrupted(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+
+	if tx.IsInterrupted() {
+		t.Fatal("expected IsInterrupted() to be false initially")
+	}
+
+	tx.interruption = &types.Interruption{Status: 403, Action: "deny"}
+	if !tx.IsInterrupted() {
+		t.Fatal("expected IsInterrupted() to be true after setting interruption")
+	}
+
+	if err := tx.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestInterruptionAccessor(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+
+	if tx.Interruption() != nil {
+		t.Fatal("expected Interruption() to be nil initially")
+	}
+
+	expected := &types.Interruption{Status: 403, Action: "deny", RuleID: 42}
+	tx.interruption = expected
+	if tx.Interruption() != expected {
+		t.Fatal("expected Interruption() to return the set value")
+	}
+
+	if err := tx.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestMatchedRulesAccessor(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+
+	if len(tx.MatchedRules()) != 0 {
+		t.Fatal("expected MatchedRules() to return empty slice initially")
+	}
+
+	if err := tx.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestTransactionString(t *testing.T) {
+	tx := makeTransaction(t)
+	s := tx.String()
+	if s == "" {
+		t.Fatal("expected non-empty String() output")
+	}
+	if !strings.Contains(s, "ERRORLOG") {
+		t.Fatal("expected String() to contain ERRORLOG section")
+	}
+	if !strings.Contains(s, "DEBUG") {
+		t.Fatal("expected String() to contain DEBUG section")
+	}
+	if err := tx.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestResponseBodyOverflowCheck(t *testing.T) {
+	// This test validates the bug fix: WriteResponseBody and ReadResponseBodyFrom
+	// now include the integer overflow check that was previously only in the request body functions.
+	// The unknown-length reader path cannot perform the overflow check since the size is unknown,
+	// so we only test WriteResponseBody and ReadResponseBodyFromKnownLen.
+	overflowWriters := map[string]func(tx *Transaction, body string) (*types.Interruption, int, error){
+		"WriteResponseBody": func(tx *Transaction, body string) (*types.Interruption, int, error) {
+			return tx.WriteResponseBody([]byte(body))
+		},
+		"ReadResponseBodyFromKnownLen": func(tx *Transaction, body string) (*types.Interruption, int, error) {
+			return tx.ReadResponseBodyFrom(strings.NewReader(body))
+		},
+	}
+	for name, writer := range overflowWriters {
+		t.Run(name, func(t *testing.T) {
+			waf := NewWAF()
+			waf.RuleEngine = types.RuleEngineOn
+			waf.ResponseBodyAccess = true
+			waf.ResponseBodyLimit = math.MaxInt64
+			waf.ResponseBodyLimitAction = types.BodyLimitActionReject
+
+			tx := waf.NewTransaction()
+			// Simulate a buffer that is nearly at MaxInt64 to trigger overflow check
+			tx.responseBodyBuffer.length = math.MaxInt64 - 1
+
+			_, _, err := writer(tx, "ab")
+			if err == nil {
+				t.Fatal("expected overflow error, got nil")
+			}
+			if !strings.Contains(err.Error(), "overflow") {
+				t.Fatalf("expected overflow error, got: %s", err.Error())
+			}
+
+			if err := tx.Close(); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestAuditLogPartExtraction(t *testing.T) {
+	tx := makeTransaction(t)
+	tx.AuditLogParts = types.AuditLogParts("ABCDEFGHIJK")
+	tx.AddResponseHeader("content-type", "text/html")
+	tx.ProcessResponseHeaders(200, "HTTP/1.1")
+
+	rule := NewRule()
+	rule.ID_ = 200
+	rule.Log = true
+	tx.MatchRule(rule, []types.MatchData{
+		&corazarules.MatchData{
+			Variable_: variables.UniqueID,
+		},
+	})
+
+	al := tx.AuditLog()
+
+	// Verify request headers are populated (part B)
+	if al.Transaction().Request().Headers() == nil {
+		t.Fatal("expected request headers in audit log")
+	}
+
+	// Verify response headers are populated (part F)
+	if al.Transaction().Response() == nil {
+		t.Fatal("expected response in audit log")
+	}
+	if al.Transaction().Response().Status() != 200 {
+		t.Fatalf("expected response status 200, got %d", al.Transaction().Response().Status())
+	}
+
+	// Verify producer is populated (part H)
+	if al.Transaction().Producer() == nil {
+		t.Fatal("expected producer in audit log")
+	}
+
+	// Verify matched rules are populated (part K)
+	if len(al.Messages()) == 0 {
+		t.Fatal("expected matched rules in audit log")
+	}
+	if al.Messages()[0].Data().ID() != 200 {
+		t.Fatalf("expected rule ID 200, got %d", al.Messages()[0].Data().ID())
+	}
+
+	if err := tx.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBodyLimitRejectReturnsInterruptionOnRepeatedCalls(t *testing.T) {
+	for name, writer := range requestBodyWriters {
+		t.Run(name, func(t *testing.T) {
+			waf := NewWAF()
+			waf.RuleEngine = types.RuleEngineOn
+			waf.RequestBodyAccess = true
+			waf.RequestBodyLimit = 5
+			waf.RequestBodyLimitAction = types.BodyLimitActionReject
+
+			tx := waf.NewTransaction()
+			// Fill the buffer to exactly the limit
+			_, err := tx.requestBodyBuffer.Write([]byte("abcde"))
+			if err != nil {
+				t.Fatalf("unexpected error filling buffer: %s", err)
+			}
+			// Set the interruption as if a previous write triggered it
+			tx.interruption = &types.Interruption{Status: 413, Action: "deny"}
+
+			// Now call the writer: limit is already reached, should return the existing interruption
+			it, n, err := writer(tx, "more")
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if it == nil {
+				t.Fatal("expected interruption on call after limit reached")
+			}
+			if n != 0 {
+				t.Fatalf("expected 0 bytes written on call after limit reached, got %d", n)
+			}
+
+			if err := tx.Close(); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestProcessResponseBodyPhaseGuards(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	tx.RuleEngine = types.RuleEngineOn
+
+	// ProcessResponseBody before ProcessResponseHeaders should be a no-op
+	it, err := tx.ProcessResponseBody()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if it != nil {
+		t.Fatal("expected no interruption when calling ProcessResponseBody before response headers")
+	}
+
+	// After proper phase progression
+	tx.ProcessRequestHeaders()
+	tx.ProcessRequestBody()
+	tx.ProcessResponseHeaders(200, "HTTP/1.1")
+	it, err = tx.ProcessResponseBody()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if it != nil {
+		t.Fatal("unexpected interruption")
+	}
+
+	// Calling again should be a no-op (already processed)
+	it, err = tx.ProcessResponseBody()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if it != nil {
+		t.Fatal("unexpected interruption on repeated call")
+	}
+
+	if err := tx.Close(); err != nil {
+		t.Fatal(err)
 	}
 }
