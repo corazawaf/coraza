@@ -120,6 +120,68 @@ Coraza is a Web Application Firewall (WAF) engine written in Go that implements 
 - Don't log in tight loops
 - Make logging configurable
 
+## Code Review Guidelines
+
+### Testing Requirements
+- All new exported and unexported functions must have corresponding tests
+- If a pull request adds new functions without tests, request them before approving
+- Tests should cover the function's expected behavior, edge cases, and error conditions
+- Table-driven tests are preferred for functions with multiple input/output scenarios
+- Verify that new tests actually exercise the new code paths (not just compiling)
+- Benchmark tests should accompany changes to performance-critical paths
+
+### Error Handling Review
+- Verify that no errors are silently discarded (no `_ = funcThatReturnsError()`)
+- Ensure errors are wrapped with context using `fmt.Errorf("context: %w", err)` rather than returned bare
+- Check that custom error types implement the `error` interface correctly
+- Confirm that `errors.Is()` and `errors.As()` are used instead of direct type assertions on errors
+- Ensure `panic` is not used in library code; it should only appear in tests or truly unrecoverable situations
+
+### Concurrency and Thread Safety
+- Verify that shared state is protected by mutexes or other synchronization primitives
+- Check for potential data races: mutable data accessed from multiple goroutines without synchronization
+- Ensure `sync.Pool` objects are not retained after `Put` (no lingering references)
+- Confirm that goroutines have a clear lifecycle and are not leaked (check for missing context cancellation or channel closes)
+- Watch for lock ordering inconsistencies that could cause deadlocks
+- Verify tinygo compatibility when concurrency primitives are used; use build tags if needed
+
+### Performance Review
+- Flag unnecessary allocations in hot paths (e.g., `fmt.Sprintf` where a static string suffices)
+- Watch for unbounded slices or maps that could cause memory leaks
+- Ensure `defer` is not used in tight loops where the overhead matters
+- Check for string concatenation in loops; prefer `strings.Builder`
+- Verify that regex patterns are compiled once (`regexp.MustCompile` at package level), not on every call
+- Review map access patterns: prefer comma-ok idiom (`v, ok := m[key]`) to avoid zero-value confusion
+
+### API and Interface Design
+- Exported types, functions, and methods must have godoc comments starting with the identifier name
+- New exported APIs must be intentional; do not export symbols unnecessarily
+- Prefer accepting interfaces and returning concrete types
+- Check that new interfaces are small and focused (Go convention: one or two methods)
+- Ensure backward compatibility: no breaking changes to existing exported APIs without discussion
+- Verify that option patterns or functional options are used instead of long parameter lists
+
+### Code Clarity and Idioms
+- Prefer early returns and guard clauses over deep nesting
+- Use named return values only when they improve readability (e.g., in complex functions), not as a default
+- Check for unnecessary `else` after `return`, `break`, or `continue`
+- Ensure `switch` statements are preferred over long `if-else` chains when comparing a single value
+- Verify that `range` loops use value semantics correctly (no unintended pointer aliasing from loop variables)
+- Confirm that `init()` functions are avoided unless absolutely necessary
+
+### Security-Specific Review
+- Ensure user-supplied input is validated before use in rule evaluation or logging
+- Verify that regex patterns are not vulnerable to ReDoS (catastrophic backtracking)
+- Check that sensitive data (tokens, credentials, session IDs) is never logged or exposed in error messages
+- Confirm that constant-time comparisons are used for security-sensitive string checks
+- Review any use of `unsafe` package; it should be justified and well-documented
+
+### Dependencies and Imports
+- Verify that no new external dependencies are introduced without justification
+- Check that imports are organized: standard library, then external packages, then internal packages
+- Ensure unused imports are not present (the build will catch this, but review for commented-out imports)
+- Confirm that `replace` directives in `go.mod` are not accidentally included
+
 ## When Adding New Features
 
 1. Come up with a solid use case with more than one potential user
