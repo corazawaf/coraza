@@ -8,6 +8,7 @@ package corazawaf
 import (
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
@@ -20,11 +21,11 @@ func TestARGSSplit(t *testing.T) {
 	if len(rule.variables) != 2 {
 		t.Fatalf("Expected 2 variables, got %d", len(rule.variables))
 	}
-	if rule.variables[0].Variable != variables.ArgsGet &&
+	if rule.variables[0].Variable != variables.ArgsGet ||
 		rule.variables[1].Variable != variables.ArgsPost {
 		t.Errorf("Expected variables ArgsGet and ArgsPost")
 	}
-	if rule.variables[0].KeyStr != key && rule.variables[1].KeyStr != key {
+	if rule.variables[0].KeyStr != key || rule.variables[1].KeyStr != key {
 		t.Errorf("Expected keys equal to %s, got: %s and %s", key, rule.variables[0].KeyStr, rule.variables[1].KeyStr)
 	}
 }
@@ -38,11 +39,11 @@ func TestARGS_NAMESSplit(t *testing.T) {
 	if len(rule.variables) != 2 {
 		t.Fatalf("Expected 2 variables, got %d", len(rule.variables))
 	}
-	if rule.variables[0].Variable != variables.ArgsGetNames &&
+	if rule.variables[0].Variable != variables.ArgsGetNames ||
 		rule.variables[1].Variable != variables.ArgsPostNames {
 		t.Errorf("Expected ArgsGetNames and ArgsPostNames variables")
 	}
-	if rule.variables[0].KeyStr != key && rule.variables[1].KeyStr != key {
+	if rule.variables[0].KeyStr != key || rule.variables[1].KeyStr != key {
 		t.Errorf("Expected keys equal to %s, got: %s and %s", key, rule.variables[0].KeyStr, rule.variables[1].KeyStr)
 	}
 }
@@ -54,10 +55,10 @@ func TestRuleNegativeVariablesMulti(t *testing.T) {
 	}
 	// [0] ArgsGet
 	// [1] ArgsPost
-	if rule.variables[0].Variable != variables.ArgsGet && rule.variables[1].Variable != variables.ArgsPost {
+	if rule.variables[0].Variable != variables.ArgsGet || rule.variables[1].Variable != variables.ArgsPost {
 		t.Error("Variable ARGS has not been properly added and splitted into ArgsPost ArgsGet")
 	}
-	if rule.variables[0].KeyRx != nil && rule.variables[1].KeyRx != nil {
+	if rule.variables[0].KeyRx != nil || rule.variables[1].KeyRx != nil {
 		t.Error("invalid key type for variables")
 	}
 
@@ -70,7 +71,7 @@ func TestRuleNegativeVariablesMulti(t *testing.T) {
 	}
 
 	if len(rule.variables[1].Exceptions) != 1 || rule.variables[1].Exceptions[0].KeyStr != "test" {
-		t.Errorf("got %d exceptions, expected 1", len(rule.variables[0].Exceptions))
+		t.Errorf("got %d exceptions, expected 1", len(rule.variables[1].Exceptions))
 	}
 
 	if err := rule.AddVariable(variables.Args, "/test.*/", false); err != nil {
@@ -100,15 +101,44 @@ func TestRuleNegativeVariablesMulti(t *testing.T) {
 	}
 
 	if len(rule.variables[1].Exceptions) != 2 || rule.variables[1].Exceptions[1].KeyStr != "test2" {
-		t.Errorf("got %d exceptions, expected 2", len(rule.variables[0].Exceptions))
+		t.Errorf("got %d exceptions, expected 2", len(rule.variables[1].Exceptions))
 	}
 
-	if len(rule.variables[2].Exceptions) != 1 || rule.variables[0].Exceptions[1].KeyStr != "test2" {
-		t.Errorf("got %d exceptions, expected 2", len(rule.variables[0].Exceptions))
+	if len(rule.variables[2].Exceptions) != 1 || rule.variables[2].Exceptions[0].KeyStr != "test2" {
+		t.Errorf("got %d exceptions, expected 1", len(rule.variables[2].Exceptions))
 	}
 
-	if len(rule.variables[3].Exceptions) != 1 || rule.variables[0].Exceptions[1].KeyStr != "test2" {
-		t.Errorf("got %d exceptions, expected 2", len(rule.variables[0].Exceptions))
+	if len(rule.variables[3].Exceptions) != 1 || rule.variables[3].Exceptions[0].KeyStr != "test2" {
+		t.Errorf("got %d exceptions, expected 1", len(rule.variables[3].Exceptions))
 	}
 
+}
+
+func TestChainMinPhaseComputedAtAddTime(t *testing.T) {
+	parent := NewRule()
+	parent.ID_ = 1
+	parent.LogID_ = "1"
+	parent.HasChain = true
+	parent.Phase_ = 2
+	_ = parent.AddVariable(variables.RequestURI, "", false)
+
+	child := NewRule()
+	child.ParentID_ = 1
+	child.LogID_ = "1"
+	// ResponseBody has min phase = PhaseResponseBody (4)
+	_ = child.AddVariable(variables.ResponseBody, "", false)
+	parent.Chain = child
+
+	rg := NewRuleGroup()
+	if err := rg.Add(parent); err != nil {
+		t.Fatal(err)
+	}
+
+	added := rg.FindByID(1)
+	if added.chainMinPhase == types.PhaseUnknown {
+		t.Error("Expected chainMinPhase to be computed after Add(), got PhaseUnknown")
+	}
+	if added.chainMinPhase != types.PhaseResponseBody {
+		t.Errorf("Expected chainMinPhase PhaseResponseBody (%d), got %d", types.PhaseResponseBody, added.chainMinPhase)
+	}
 }

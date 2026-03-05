@@ -183,10 +183,6 @@ const noID = 0
 func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Transaction, collectiveMatchedValues *[]types.MatchData, chainLevel int, cache map[transformationKey]*transformationValue) []types.MatchData {
 	tx.Capture = r.Capture
 
-	if multiphaseEvaluation {
-		computeRuleChainMinPhase(r)
-	}
-
 	var matchedValues []types.MatchData
 	// we log if we are the parent rule
 	logger.Debug().Msg("Evaluating rule")
@@ -227,9 +223,16 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 				continue
 			}
 			var values []types.MatchData
+			var exceptionsModified bool
 			for _, c := range ecol {
 				if c.Variable == v.Variable {
-					// TODO shall we check the pointer?
+					if !exceptionsModified {
+						// Defensive copy to avoid data race on shared backing array
+						newExceptions := make([]ruleVariableException, len(v.Exceptions), len(v.Exceptions)+len(ecol))
+						copy(newExceptions, v.Exceptions)
+						v.Exceptions = newExceptions
+						exceptionsModified = true
+					}
 					v.Exceptions = append(v.Exceptions, ruleVariableException{c.KeyStr, nil})
 				}
 			}
@@ -576,6 +579,10 @@ func needToSplitConcatenatedVariable(v variables.RuleVariable, ve variables.Rule
 // OK: SecRule !ARGS:id "..."
 // ERROR: SecRule !ARGS: "..."
 func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
+	// Prevent sigsev
+	if r == nil {
+		return fmt.Errorf("cannot create a variable exception for an undefined rule")
+	}
 	var re *regexp.Regexp
 	if isRegex, rx := hasRegex(key); isRegex {
 		if !caseSensitiveVariable(v) {
@@ -586,10 +593,6 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 		} else {
 			re = vare.(*regexp.Regexp)
 		}
-	}
-	// Prevent sigsev
-	if r == nil {
-		return fmt.Errorf("cannot create a variable exception for an undefined rule")
 	}
 	for i, rv := range r.variables {
 		// Even when Args and ArgsNames are one map, the exceptions must be created for the individual maps the

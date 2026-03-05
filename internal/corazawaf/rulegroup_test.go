@@ -55,6 +55,33 @@ func TestRuleGroupDeleteByMsg(t *testing.T) {
 	}
 }
 
+func TestRuleGroupDeleteByMsgNilMsg(t *testing.T) {
+	rg := NewRuleGroup()
+	r := NewRule()
+	r.ID_ = 1
+	// r.Msg is nil by default
+	if err := rg.Add(r); err != nil {
+		t.Fatal(err)
+	}
+	// Should not panic
+	rg.DeleteByMsg("anything")
+	if rg.Count() != 1 {
+		t.Error("Rule with nil Msg should not be deleted")
+	}
+}
+
+func TestRuleGroupDeleteByRangeNoMatch(t *testing.T) {
+	rg := NewRuleGroup()
+	r := newTestRule(5)
+	if err := rg.Add(r); err != nil {
+		t.Fatal(err)
+	}
+	rg.DeleteByRange(1, 4) // range doesn't include 5
+	if rg.Count() != 1 {
+		t.Error("Rule outside range should not be deleted")
+	}
+}
+
 func TestRuleGroupDeleteByID(t *testing.T) {
 	var (
 		r1 = newTestRule(1)

@@ -607,6 +607,76 @@ func TestCaptureNotPropagatedToInnerChainRule(t *testing.T) {
 	}
 }
 
+func TestExecuteOperatorNegation(t *testing.T) {
+	r := NewRule()
+	r.ID_ = 1
+	r.LogID_ = "1"
+	dummyEqOp := &dummyEqOperator{}
+	r.SetOperator(dummyEqOp, "!@eq", "0")
+	tx := NewWAF().NewTransaction()
+	// dummyEqOperator returns true for "0", negation should flip it
+	if r.executeOperator("0", tx) {
+		t.Error("Expected negated operator to return false for matching input")
+	}
+	if !r.executeOperator("non-matching", tx) {
+		t.Error("Expected negated operator to return true for non-matching input")
+	}
+}
+
+func TestClearDisruptiveActions(t *testing.T) {
+	rule := NewRule()
+	_ = rule.AddAction("deny", &dummyDenyAction{})
+	_ = rule.AddAction("nondisruptive", &dummyNonDisruptiveAction{})
+	if len(rule.actions) != 2 {
+		t.Fatalf("Expected 2 actions, got %d", len(rule.actions))
+	}
+	rule.ClearDisruptiveActions()
+	if len(rule.actions) != 1 {
+		t.Fatalf("Expected 1 action after clearing disruptive, got %d", len(rule.actions))
+	}
+	if rule.actions[0].Function.Type() == plugintypes.ActionTypeDisruptive {
+		t.Error("Disruptive action should have been removed")
+	}
+}
+
+func TestHasRegex(t *testing.T) {
+	tests := []struct {
+		input   string
+		isRegex bool
+		result  string
+	}{
+		{"/test.*/", true, "test.*"},
+		{"plain", false, "plain"},
+		{"//", false, "//"},
+		{"/a/", true, "a"},
+		{"", false, ""},
+		{"/", false, "/"},
+		{"no/slash", false, "no/slash"},
+	}
+	for _, tc := range tests {
+		isRegex, result := hasRegex(tc.input)
+		if isRegex != tc.isRegex || result != tc.result {
+			t.Errorf("hasRegex(%q) = (%v, %q), want (%v, %q)", tc.input, isRegex, result, tc.isRegex, tc.result)
+		}
+	}
+}
+
+func TestNewRuleDefaults(t *testing.T) {
+	r := NewRule()
+	if r.Phase_ != 2 {
+		t.Errorf("Expected default phase 2, got %d", r.Phase_)
+	}
+	if r.Tags_ == nil {
+		t.Error("Expected non-nil Tags slice")
+	}
+	if r.operator != nil {
+		t.Error("Expected nil operator by default")
+	}
+	if r.Msg != nil {
+		t.Error("Expected nil Msg by default")
+	}
+}
+
 func TestExpandMacroAfterWholeRuleEvaluation(t *testing.T) {
 	r := NewRule()
 	r.ID_ = 1
