@@ -16,7 +16,7 @@ import (
 
 // ResponseBodyRecursionLimit is the default recursion depth limit for response body JSON parsing.
 // Uses the same default as request bodies (1024) to protect against deeply nested structures.
-const ResponseBodyRecursionLimit = 1024
+const responseBodyRecursionLimit = 1024
 
 type jsonBodyProcessor struct{}
 
@@ -62,7 +62,7 @@ func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.Tra
 
 	// Process with recursion limit
 	col := v.ResponseArgs()
-	data, err := readJSON(ss, ResponseBodyRecursionLimit)
+	data, err := readJSON(ss, responseBodyRecursionLimit)
 	if err != nil {
 		return err
 	}
