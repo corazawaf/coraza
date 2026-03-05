@@ -92,10 +92,10 @@ func TestWriteWithWriteHeader(t *testing.T) {
 	res := httptest.NewRecorder()
 
 	rw, responseProcessor := wrap(res, req, tx)
-	rw.WriteHeader(204)
+	rw.WriteHeader(201)
 	// although we called WriteHeader, status code should be applied until
 	// responseProcessor is called.
-	if unwanted, have := 204, res.Code; unwanted == have {
+	if unwanted, have := 201, res.Code; unwanted == have {
 		t.Errorf("unexpected status code %d", have)
 	}
 
@@ -114,7 +114,7 @@ func TestWriteWithWriteHeader(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 
-	if want, have := 204, res.Code; want != have {
+	if want, have := 201, res.Code; want != have {
 		t.Errorf("unexpected status code, want %d, have %d", want, have)
 	}
 }
@@ -203,10 +203,10 @@ func TestReadFrom(t *testing.T) {
 	}
 
 	rw, responseProcessor := wrap(resWithReaderFrom, req, tx)
-	rw.WriteHeader(204)
+	rw.WriteHeader(201)
 	// although we called WriteHeader, status code should be applied until
 	// responseProcessor is called.
-	if unwanted, have := 204, res.Code; unwanted == have {
+	if unwanted, have := 201, res.Code; unwanted == have {
 		t.Errorf("unexpected status code %d", have)
 	}
 
@@ -225,7 +225,7 @@ func TestReadFrom(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 
-	if want, have := 204, res.Code; want != have {
+	if want, have := 201, res.Code; want != have {
 		t.Errorf("unexpected status code, want %d, have %d", want, have)
 	}
 }
