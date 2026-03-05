@@ -154,3 +154,8 @@ func (w wafWrapper) NewTransactionWithID(id string) types.Transaction {
 func (w wafWrapper) NewTransactionWithOptions(opts corazawaf.Options) types.Transaction {
 	return w.waf.NewTransactionWithOptions(opts)
 }
+
+// RulesCount returns the number of rules in this WAF.
+func (w wafWrapper) RulesCount() int {
+	return w.waf.Rules.Count()
+}
