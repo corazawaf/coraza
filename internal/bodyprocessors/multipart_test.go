@@ -285,15 +285,48 @@ Content-Type: text/html
 			header1 := "Content-Disposition: form-data; name=\"file1\"; filename=\"a.txt\""
 			header2 := "Content-Type: text/plain"
 			if h := headers.Get("file1"); len(h) == 0 {
-				t.Fatal("expected headers for file2")
+				t.Fatal("expected headers for file1")
 			} else {
 				if len(h) != 2 {
-					t.Fatal("expected 2 headers for file2")
+					t.Fatal("expected 2 headers for file1")
 				}
 				if (h[0] != header1 && h[0] != header2) || (h[1] != header1 && h[1] != header2) {
 					t.Fatalf("Got invalid multipart headers")
 				}
 			}
+
+			// Verify form field data was correctly processed before the incomplete part
+			argsPost := v.ArgsPost()
+			if textValues := argsPost.Get("text"); len(textValues) == 0 {
+				t.Fatal("expected ArgsPost to contain 'text' field")
+			} else if textValues[0] != "text default" {
+				t.Fatalf("expected ArgsPost 'text' to be 'text default', got %q", textValues[0])
+			}
 		})
+	}
+}
+
+func TestIncompleteMultipartPayloadInFormField(t *testing.T) {
+	payload := strings.TrimSpace(`
+-----------------------------9051914041544843365972754266
+Content-Disposition: form-data; name="text"
+
+text defa`)
+
+	mp := multipartProcessor(t)
+
+	v := corazawaf.NewTransactionVariables()
+	if err := mp.ProcessRequest(strings.NewReader(payload), v, plugintypes.BodyProcessorOptions{
+		Mime: "multipart/form-data; boundary=---------------------------9051914041544843365972754266",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify the partial form field data was processed
+	argsPost := v.ArgsPost()
+	if textValues := argsPost.Get("text"); len(textValues) == 0 {
+		t.Fatal("expected ArgsPost to contain 'text' field")
+	} else if textValues[0] != "text defa" {
+		t.Fatalf("expected ArgsPost 'text' to be 'text defa', got %q", textValues[0])
 	}
 }

@@ -92,6 +92,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 			filesCol.Add("", filename)
 			fileSizesCol.SetIndex(filename, 0, fmt.Sprintf("%d", size))
 			filesNamesCol.Add("", p.FormName())
+			filesCombinedSizeCol.(*collections.Single).Set(fmt.Sprintf("%d", totalSize))
 			if seenUnexpectedEOF {
 				break
 			}
@@ -99,13 +100,18 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 			// if is a field
 			data, err := io.ReadAll(p)
 			if err != nil {
-				v.MultipartStrictError().(*collections.Single).Set("1")
-				return err
+				if !errors.Is(err, io.ErrUnexpectedEOF) {
+					v.MultipartStrictError().(*collections.Single).Set("1")
+					return err
+				}
 			}
 			totalSize += int64(len(data))
 			postCol.Add(p.FormName(), string(data))
+			filesCombinedSizeCol.(*collections.Single).Set(fmt.Sprintf("%d", totalSize))
+			if errors.Is(err, io.ErrUnexpectedEOF) {
+				break
+			}
 		}
-		filesCombinedSizeCol.(*collections.Single).Set(fmt.Sprintf("%d", totalSize))
 	}
 	return nil
 }
