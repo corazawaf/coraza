@@ -8,9 +8,10 @@ package memoize
 import "sync"
 
 type entry struct {
-	value  any
-	mu     sync.Mutex
-	owners map[string]struct{}
+	value   any
+	mu      sync.Mutex
+	owners  map[string]struct{}
+	deleted bool
 }
 
 var cache sync.Map // key -> *entry
@@ -31,9 +32,12 @@ func (m *Memoizer) Do(key string, fn func() (any, error)) (any, error) {
 	if v, ok := cache.Load(key); ok {
 		e := v.(*entry)
 		e.mu.Lock()
-		e.owners[m.ownerID] = struct{}{}
+		if !e.deleted {
+			e.owners[m.ownerID] = struct{}{}
+			e.mu.Unlock()
+			return e.value, nil
+		}
 		e.mu.Unlock()
-		return e.value, nil
 	}
 
 	data, err := fn()
@@ -53,11 +57,11 @@ func Release(ownerID string) {
 		e := value.(*entry)
 		e.mu.Lock()
 		delete(e.owners, ownerID)
-		empty := len(e.owners) == 0
-		e.mu.Unlock()
-		if empty {
+		if len(e.owners) == 0 {
+			e.deleted = true
 			cache.Delete(key)
 		}
+		e.mu.Unlock()
 		return true
 	})
 }

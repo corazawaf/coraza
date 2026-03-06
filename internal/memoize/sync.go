@@ -12,9 +12,10 @@ import (
 )
 
 type entry struct {
-	value  any
-	mu     sync.Mutex
-	owners map[string]struct{}
+	value   any
+	mu      sync.Mutex
+	owners  map[string]struct{}
+	deleted bool
 }
 
 var (
@@ -32,16 +33,28 @@ func NewMemoizer(ownerID string) *Memoizer {
 	return &Memoizer{ownerID: ownerID}
 }
 
+// addOwner attempts to register the ownerID on the entry.
+// Returns false if the entry has been marked as deleted.
+func (m *Memoizer) addOwner(e *entry) bool {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.deleted {
+		return false
+	}
+	e.owners[m.ownerID] = struct{}{}
+	return true
+}
+
 // Do returns a cached value for key, or calls fn and caches the result.
 // Only one execution is in-flight for a given key at a time.
 func (m *Memoizer) Do(key string, fn func() (any, error)) (any, error) {
 	// Fast path: check cache
 	if v, ok := cache.Load(key); ok {
 		e := v.(*entry)
-		e.mu.Lock()
-		e.owners[m.ownerID] = struct{}{}
-		e.mu.Unlock()
-		return e.value, nil
+		if m.addOwner(e) {
+			return e.value, nil
+		}
+		// Entry was deleted concurrently; fall through to slow path.
 	}
 
 	// Slow path: singleflight ensures only one compilation per key
@@ -49,10 +62,9 @@ func (m *Memoizer) Do(key string, fn func() (any, error)) (any, error) {
 		// Double-check after acquiring singleflight
 		if v, ok := cache.Load(key); ok {
 			e := v.(*entry)
-			e.mu.Lock()
-			e.owners[m.ownerID] = struct{}{}
-			e.mu.Unlock()
-			return e.value, nil
+			if m.addOwner(e) {
+				return e.value, nil
+			}
 		}
 
 		data, innerErr := fn()
@@ -66,6 +78,15 @@ func (m *Memoizer) Do(key string, fn func() (any, error)) (any, error) {
 		return data, innerErr
 	})
 
+	// Ensure this caller is registered as an owner even if its execution
+	// was deduplicated by singleflight.
+	if err == nil {
+		if v, ok := cache.Load(key); ok {
+			e := v.(*entry)
+			m.addOwner(e)
+		}
+	}
+
 	return val, err
 }
 
@@ -75,11 +96,11 @@ func Release(ownerID string) {
 		e := value.(*entry)
 		e.mu.Lock()
 		delete(e.owners, ownerID)
-		empty := len(e.owners) == 0
-		e.mu.Unlock()
-		if empty {
+		if len(e.owners) == 0 {
+			e.deleted = true
 			cache.Delete(key)
 		}
+		e.mu.Unlock()
 		return true
 	})
 }
