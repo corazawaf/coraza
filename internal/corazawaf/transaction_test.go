@@ -1249,6 +1249,32 @@ func TestTxProcessConnection(t *testing.T) {
 	}
 }
 
+func TestGetStopWatch(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	// Process through phases to populate stopwatches
+	tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 80)
+	tx.ProcessURI("/test", "GET", "HTTP/1.1")
+	tx.ProcessRequestHeaders()
+	tx.ProcessRequestBody()
+
+	sw := tx.GetStopWatch()
+
+	// Verify format: "timestamp diff; combined=X, p1=X, p2=X, p3=X, p4=X, p5=X"
+	if sw == "" {
+		t.Fatal("GetStopWatch returned empty string")
+	}
+
+	// Verify it contains expected fields
+	for _, field := range []string{"combined=", "p1=", "p2=", "p3=", "p4=", "p5="} {
+		if !strings.Contains(sw, field) {
+			t.Errorf("GetStopWatch missing field %q in output: %s", field, sw)
+		}
+	}
+}
+
 func TestTxSetServerName(t *testing.T) {
 	logBuffer := &bytes.Buffer{}
 
