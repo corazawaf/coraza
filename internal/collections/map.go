@@ -130,9 +130,14 @@ func (c *Map) Add(key string, value string) {
 
 // AddWithLowerKey adds a new key-value pair using a pre-computed lowercase key,
 // avoiding a redundant ToLower call when the caller already has the lowercase key.
+// For case-sensitive maps, the original key is used as the storage key instead.
 func (c *Map) AddWithLowerKey(key, lowerKey, value string) {
+	storageKey := lowerKey
+	if c.isCaseSensitive {
+		storageKey = key
+	}
 	aVal := keyValue{key: key, value: value, lowerKey: lowerKey}
-	c.data[lowerKey] = append(c.data[lowerKey], aVal)
+	c.data[storageKey] = append(c.data[storageKey], aVal)
 }
 
 // Sets the value of a key with the array of strings passed. If the key already exists, it will be overwritten.
