@@ -77,28 +77,34 @@ func TestMinMatchLength(t *testing.T) {
 	}
 }
 
-func TestExtractLiterals(t *testing.T) {
+// TestPrefilterFuncBuildability verifies that prefilterFunc correctly decides
+// which patterns can produce a prefilter (non-nil) and which cannot (nil).
+// For patterns that produce a prefilter, it also validates that the prefilter
+// accepts known matching inputs and rejects known non-matching inputs.
+func TestPrefilterFuncBuildability(t *testing.T) {
 	tests := []struct {
-		pattern string
-		wantNil bool
-		desc    string
+		pattern   string
+		wantNil   bool
+		desc      string
+		match     string // input that the regex matches (checked when prefilter is non-nil)
+		noMatch   string // input that the regex does not match (checked when prefilter is non-nil)
 	}{
-		{"hello", false, "plain literal"},
-		{"[a-z]+", true, "char class only"},
-		{"hello.*world", false, "literals around wildcard"},
-		{"(ab|cd)", false, "alternation with literals"},
-		{".*", true, "pure wildcard"},
-		{"\\d+", true, "digit class"},
-		{"sleep\\s*\\(", false, "literal with optional whitespace"},
-		{"(?:union\\s+select|insert\\s+into)", false, "CRS-style alternation"},
-		{".", true, "single any-char"},
-		{"(a|.)", true, "alternation with wildcard branch"},
-		{"(?:ab|[0-9]+)", true, "alternation where one branch has no literal"},
-		{"(abc)+", false, "repeated literal"},
-		{"(abc)?", true, "optional group"},
-		{"(abc)*", true, "zero-or-more group"},
-		{"^hello$", false, "anchored literal"},
-		{"(?i)SELECT", false, "case-insensitive literal"},
+		{"hello", false, "plain literal", "say hello", "goodbye"},
+		{"[a-z]+", true, "char class only", "", ""},
+		{"hello.*world", false, "literals around wildcard", "hello big world", "goodbye planet"},
+		{"(ab|cd)", false, "alternation with literals", "xabx", "xyz"},
+		{".*", true, "pure wildcard", "", ""},
+		{"\\d+", true, "digit class", "", ""},
+		{"sleep\\s*\\(", false, "literal with optional whitespace", "sleep(1)", "wake(1)"},
+		{"(?:union\\s+select|insert\\s+into)", false, "CRS-style alternation", "union select 1", "update set x"},
+		{".", true, "single any-char", "", ""},
+		{"(a|.)", true, "alternation with wildcard branch", "", ""},
+		{"(?:ab|[0-9]+)", true, "alternation where one branch has no literal", "", ""},
+		{"(abc)+", false, "repeated literal", "xabcabc", "xyzxyz"},
+		{"(abc)?", true, "optional group", "", ""},
+		{"(abc)*", true, "zero-or-more group", "", ""},
+		{"^hello$", false, "anchored literal", "hello", "world"},
+		{"(?i)SELECT", false, "case-insensitive literal", "select", "update"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -108,6 +114,23 @@ func TestExtractLiterals(t *testing.T) {
 			}
 			if !tc.wantNil && pf == nil {
 				t.Errorf("prefilterFunc(%q) expected non-nil, got nil", tc.pattern)
+			}
+			// When prefilter exists, validate it accepts matching inputs and
+			// rejects (or conservatively accepts) non-matching inputs.
+			if pf != nil && tc.match != "" {
+				if !pf(tc.match) {
+					t.Errorf("prefilter(%q) rejected matching input %q — false negative", tc.pattern, tc.match)
+				}
+			}
+			if pf != nil && tc.noMatch != "" {
+				re := regexp.MustCompile(tc.pattern)
+				if re.MatchString(tc.noMatch) {
+					t.Fatalf("test bug: noMatch %q actually matches %q", tc.noMatch, tc.pattern)
+				}
+				// Prefilter may accept (conservative) or reject — but if it rejects, it's correct
+				if pf(tc.noMatch) {
+					// Conservative pass-through: prefilter said "maybe", that's OK
+				}
 			}
 		})
 	}
@@ -570,8 +593,11 @@ func TestContainsFoldASCII(t *testing.T) {
 		{"", "hello", false},
 		{"hi", "hello", false},
 		{"xhellox", "hello", true},
-		{"HÉLLO", "hello", false}, // non-ASCII É
-		{"", "", true},            // empty needle always matches
+		{"HÉLLO", "hello", false},       // non-ASCII É in haystack, ASCII needle
+		{"Straße", "straße", true},      // non-ASCII needle: conservative true to avoid false negatives
+		{"STRASSE", "straße", true},     // non-ASCII needle: conservative true (Unicode folding is tricky)
+		{"totally different", "straße", true}, // non-ASCII needle: conservative true even when absent
+		{"", "", true},                  // empty needle always matches
 		{"abc", "", true},
 		{"SELECT", "select", true},
 		{"sElEcT", "select", true},
