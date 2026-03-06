@@ -879,6 +879,269 @@ func TestPrefilterConcurrentSafety(t *testing.T) {
 	}
 }
 
+// TestPrefilterUnicodeFoldingSafety verifies that the prefilter does not produce
+// false negatives when the input contains non-ASCII characters that are Unicode
+// fold equivalents of ASCII letters. Go's regexp (?i) uses Unicode simple case
+// folding, so (?i)s matches 'ſ' (U+017F) and (?i)k matches 'K' (U+212A).
+// Our prefilter only does ASCII folding, so for non-ASCII inputs it must
+// conservatively return true ("maybe match") to avoid missing attacks.
+func TestPrefilterUnicodeFoldingSafety(t *testing.T) {
+	tests := []struct {
+		name    string
+		pattern string
+		input   string
+		matches bool // what the regex says
+	}{
+		// 'ſ' (U+017F, Latin Small Letter Long S) folds to 's'
+		{
+			name:    "long_s_select",
+			pattern: "(?i)select",
+			input:   "ſelect",
+			matches: true,
+		},
+		{
+			name:    "long_s_sleep",
+			pattern: "(?i)sleep",
+			input:   "ſleep(5)",
+			matches: true,
+		},
+		{
+			name:    "long_s_insert",
+			pattern: "(?i)(?:select|insert)",
+			input:   "inſert",
+			matches: true,
+		},
+		// 'K' (U+212A, Kelvin Sign) folds to 'k'
+		{
+			name:    "kelvin_ok",
+			pattern: "(?i)ok",
+			input:   "o\u212a",
+			matches: true,
+		},
+		// Mixed: non-ASCII input but no fold relevance (should still be safe)
+		{
+			name:    "unrelated_non_ascii",
+			pattern: "(?i)hello",
+			input:   "héllo",
+			matches: false,
+		},
+		// Pure ASCII input — normal fast path should work
+		{
+			name:    "ascii_select_upper",
+			pattern: "(?i)select",
+			input:   "SELECT",
+			matches: true,
+		},
+		{
+			name:    "ascii_select_no_match",
+			pattern: "(?i)select",
+			input:   "UPDATE",
+			matches: false,
+		},
+		// CRS-style alternation with Unicode fold in input
+		{
+			name:    "crs_sqli_long_s",
+			pattern: `(?i)(?:union\s+select|insert\s+into)`,
+			input:   "union ſelect * from t",
+			matches: true,
+		},
+		// Empty non-ASCII input
+		{
+			name:    "non_ascii_short",
+			pattern: "(?i)hello",
+			input:   "é",
+			matches: false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			re := regexp.MustCompile(tc.pattern)
+			regexResult := re.MatchString(tc.input)
+			if regexResult != tc.matches {
+				t.Fatalf("test bug: regex %q on %q = %v, expected %v",
+					tc.pattern, tc.input, regexResult, tc.matches)
+			}
+
+			ml := minMatchLength(tc.pattern)
+			if regexResult && len(tc.input) < ml {
+				t.Errorf("FALSE NEGATIVE: minMatchLength(%q)=%d rejects matching input %q (len=%d)",
+					tc.pattern, ml, tc.input, len(tc.input))
+			}
+
+			pf := prefilterFunc(tc.pattern)
+			if pf != nil && regexResult && !pf(tc.input) {
+				t.Errorf("FALSE NEGATIVE: prefilter(%q) returned false for matching input %q — "+
+					"this is a SECURITY BUG (Unicode fold equivalents not handled)",
+					tc.pattern, tc.input)
+			}
+		})
+	}
+}
+
+// TestPrefilterEdgeCases covers additional edge cases that are easy to miss:
+// empty alternation branches, escaped special chars, very short patterns,
+// patterns with only anchors, adjacent literals, and patterns where all
+// extracted literals are too short to be useful.
+func TestPrefilterEdgeCases(t *testing.T) {
+	tests := []struct {
+		name    string
+		pattern string
+		input   string
+		matches bool
+	}{
+		// Empty alternation branch: (|abc) can match empty string
+		// Prefilter must NOT require "abc" since the empty branch can match anything
+		{
+			name:    "empty_alt_branch_match_empty",
+			pattern: "(|abc)",
+			input:   "",
+			matches: true,
+		},
+		{
+			name:    "empty_alt_branch_match_abc",
+			pattern: "(|abc)",
+			input:   "abc",
+			matches: true,
+		},
+		{
+			name:    "empty_alt_branch_match_other",
+			pattern: "(|abc)",
+			input:   "xyz",
+			matches: true,
+		},
+		// Escaped special chars become literals
+		{
+			name:    "escaped_dot_exe",
+			pattern: `.*\.exe`,
+			input:   "malware.exe",
+			matches: true,
+		},
+		{
+			name:    "escaped_dot_exe_no_match",
+			pattern: `.*\.exe`,
+			input:   "malwarexexe",
+			matches: false,
+		},
+		// Pattern with only anchors — no literals to extract
+		{
+			name:    "only_anchors",
+			pattern: "^$",
+			input:   "",
+			matches: true,
+		},
+		// Adjacent literals in concat (AST may merge or keep separate)
+		{
+			name:    "adjacent_literals",
+			pattern: "hel" + "lo",
+			input:   "hello",
+			matches: true,
+		},
+		// All extracted literals too short (filtered out by filterShort)
+		{
+			name:    "short_literals_only",
+			pattern: "a.*b",
+			input:   "axb",
+			matches: true,
+		},
+		// Nested quantifiers
+		{
+			name:    "nested_plus_star",
+			pattern: "(ab+)*cd",
+			input:   "abbbcd",
+			matches: true,
+		},
+		{
+			name:    "nested_plus_star_no_match",
+			pattern: "(ab+)*cd",
+			input:   "xyz",
+			matches: false,
+		},
+		// Very long literal
+		{
+			name:    "long_literal_match",
+			pattern: "abcdefghijklmnop",
+			input:   "xxabcdefghijklmnopxx",
+			matches: true,
+		},
+		{
+			name:    "long_literal_no_match",
+			pattern: "abcdefghijklmnop",
+			input:   "xxabcdefghijklmnoxx",
+			matches: false,
+		},
+		// Alternation where branches share a prefix
+		{
+			name:    "shared_prefix_alt",
+			pattern: "(?:abcdef|abcxyz)",
+			input:   "xabcxyzx",
+			matches: true,
+		},
+		// Nested alternation (previously found by fuzzer)
+		{
+			name:    "nested_alt_10_00",
+			pattern: "10|(10|00)",
+			input:   "00",
+			matches: true,
+		},
+		{
+			name:    "nested_alt_10_10",
+			pattern: "10|(10|00)",
+			input:   "10",
+			matches: true,
+		},
+		// Pattern with \b word boundary (zero-width, no literals)
+		{
+			name:    "word_boundary",
+			pattern: `\bhello\b`,
+			input:   "say hello world",
+			matches: true,
+		},
+		// Repeat with high min
+		{
+			name:    "repeat_high_min",
+			pattern: `a{5}`,
+			input:   "aaaaa",
+			matches: true,
+		},
+		{
+			name:    "repeat_high_min_short",
+			pattern: `a{5}`,
+			input:   "aaaa",
+			matches: false,
+		},
+		// Case-sensitive pattern should NOT match uppercase
+		{
+			name:    "case_sensitive_exact",
+			pattern: "select",
+			input:   "SELECT",
+			matches: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			re := regexp.MustCompile(tc.pattern)
+			regexResult := re.MatchString(tc.input)
+			if regexResult != tc.matches {
+				t.Fatalf("test bug: regex %q on %q = %v, expected %v",
+					tc.pattern, tc.input, regexResult, tc.matches)
+			}
+
+			ml := minMatchLength(tc.pattern)
+			if regexResult && len(tc.input) < ml {
+				t.Errorf("FALSE NEGATIVE via minLen: pattern=%q input=%q (len=%d, minLen=%d)",
+					tc.pattern, tc.input, len(tc.input), ml)
+			}
+
+			pf := prefilterFunc(tc.pattern)
+			if pf != nil && regexResult && !pf(tc.input) {
+				t.Errorf("FALSE NEGATIVE via prefilter: pattern=%q input=%q",
+					tc.pattern, tc.input)
+			}
+		})
+	}
+}
+
 // FuzzPrefilterNoFalseNegatives uses Go's built-in fuzz testing to verify with
 // random patterns AND inputs that the prefilter never rejects an input the
 // regex matches. This is the primary safety net — it generates arbitrary
@@ -965,6 +1228,11 @@ func FuzzPrefilterNoFalseNegatives(f *testing.F) {
 		// Unicode
 		"ハローワールド",
 		"un café chaud",
+		// Unicode fold equivalents (ſ = long s, K = Kelvin sign)
+		"ſelect",
+		"ſleep(5)",
+		"o\u212a",
+		"inſert into t",
 	}
 	for _, p := range patterns {
 		for _, inp := range inputs {
