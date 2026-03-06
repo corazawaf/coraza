@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/debuglog"
-	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -437,49 +436,42 @@ func TestParseCtl(t *testing.T) {
 	}
 
 }
-func TestCtlParseRange(t *testing.T) {
-	rules := []corazawaf.Rule{
-		{
-			RuleMetadata: corazarules.RuleMetadata{
-				ID_: 5,
-			},
-		},
-		{
-			RuleMetadata: corazarules.RuleMetadata{
-				ID_: 15,
-			},
-		},
-	}
-
+func TestCtlParseIDOrRange(t *testing.T) {
 	tCases := []struct {
-		_range              string
-		expectedNumberOfIds int
-		expectErr           bool
+		input       string
+		expectStart int
+		expectEnd   int
+		expectErr   bool
 	}{
-		{"1-2", 0, false},
-		{"4-5", 1, false},
-		{"4-15", 2, false},
-		{"5", 1, false},
-		{"", 0, true},
-		{"test", 0, true},
-		{"test-2", 0, true},
-		{"2-test", 0, true},
-		{"-", 0, true},
-		{"4-5-15", 0, true},
+		{"1-2", 1, 2, false},
+		{"4-5", 4, 5, false},
+		{"4-15", 4, 15, false},
+		{"5", 5, 5, false},
+		{"", 0, 0, true},
+		{"test", 0, 0, true},
+		{"test-2", 0, 0, true},
+		{"2-test", 0, 0, true},
+		{"-", 0, 0, true},
+		{"4-5-15", 0, 0, true},
 	}
 	for _, tCase := range tCases {
-		t.Run(tCase._range, func(t *testing.T) {
-			ints, err := rangeToInts(rules, tCase._range)
+		t.Run(tCase.input, func(t *testing.T) {
+			start, end, err := parseIDOrRange(tCase.input)
 			if tCase.expectErr && err == nil {
-				t.Error("expected error for range")
+				t.Error("expected error for input")
 			}
 
 			if !tCase.expectErr && err != nil {
-				t.Errorf("unexpected error for range: %s", err.Error())
+				t.Errorf("unexpected error for input: %s", err.Error())
 			}
 
-			if !tCase.expectErr && len(ints) != tCase.expectedNumberOfIds {
-				t.Error("unexpected number of ids")
+			if !tCase.expectErr {
+				if start != tCase.expectStart {
+					t.Errorf("unexpected start, want %d, have %d", tCase.expectStart, start)
+				}
+				if end != tCase.expectEnd {
+					t.Errorf("unexpected end, want %d, have %d", tCase.expectEnd, end)
+				}
 			}
 		})
 	}
