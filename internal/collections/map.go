@@ -179,9 +179,7 @@ func (c *Map) Name() string {
 
 // Reset removes all key/value pairs from the map.
 func (c *Map) Reset() {
-	for k := range c.data {
-		delete(c.data, k)
-	}
+	clear(c.data)
 }
 
 // Format updates the passed strings.Builder with the formatted map key/values.

@@ -151,9 +151,7 @@ func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	usedRules := 0
 	ts := time.Now().UnixNano()
 	transformationCache := tx.transformationCache
-	for k := range transformationCache {
-		delete(transformationCache, k)
-	}
+	clear(transformationCache)
 RulesLoop:
 	for i := range rg.rules {
 		r := &rg.rules[i]
