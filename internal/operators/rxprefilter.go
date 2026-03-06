@@ -37,6 +37,13 @@
 // This is safe by construction — the prefilter is a necessary-condition check,
 // not a sufficient-condition check.
 //
+// Design principle: when in doubt, fall back to the regex. The prefilter is
+// purely an optimization. If there is any uncertainty about whether the input
+// could match (e.g., non-ASCII input with case-insensitive patterns, unknown
+// AST nodes, unparseable patterns), we return "maybe match" and let the full
+// regex engine make the final decision. A missed optimization is free; a missed
+// attack is a security vulnerability.
+//
 // AST walk rules for literal extraction (extractLiterals):
 //
 //   - OpLiteral → the literal string itself (required)
@@ -143,6 +150,8 @@ func prefilterFunc(pattern string) func(string) bool {
 		return nil
 	}
 
+	var pf func(string) bool
+
 	switch v := lits.(type) {
 	case allRequired:
 		// allRequired: every literal must be present in the input.
@@ -155,16 +164,16 @@ func prefilterFunc(pattern string) func(string) bool {
 		if len(filtered) == 1 {
 			needle := filtered[0]
 			if caseInsensitive {
-				return func(s string) bool {
+				pf = func(s string) bool {
 					return containsFoldASCII(s, needle)
 				}
+			} else {
+				pf = func(s string) bool {
+					return strings.Contains(s, needle)
+				}
 			}
-			return func(s string) bool {
-				return strings.Contains(s, needle)
-			}
-		}
-		if caseInsensitive {
-			return func(s string) bool {
+		} else if caseInsensitive {
+			pf = func(s string) bool {
 				for _, needle := range filtered {
 					if !containsFoldASCII(s, needle) {
 						return false
@@ -172,14 +181,15 @@ func prefilterFunc(pattern string) func(string) bool {
 				}
 				return true
 			}
-		}
-		return func(s string) bool {
-			for _, needle := range filtered {
-				if !strings.Contains(s, needle) {
-					return false
+		} else {
+			pf = func(s string) bool {
+				for _, needle := range filtered {
+					if !strings.Contains(s, needle) {
+						return false
+					}
 				}
+				return true
 			}
-			return true
 		}
 	case anyRequired:
 		// anyRequired: at least one literal must be present in the input.
@@ -192,29 +202,56 @@ func prefilterFunc(pattern string) func(string) bool {
 		if len(filtered) == 1 {
 			needle := filtered[0]
 			if caseInsensitive {
-				return func(s string) bool {
+				pf = func(s string) bool {
 					return containsFoldASCII(s, needle)
 				}
+			} else {
+				pf = func(s string) bool {
+					return strings.Contains(s, needle)
+				}
 			}
-			return func(s string) bool {
-				return strings.Contains(s, needle)
+		} else {
+			// Build an Aho-Corasick automaton for multi-pattern matching in O(n).
+			// Same library already used by the @pm operator.
+			builder := ahocorasick.NewAhoCorasickBuilder(ahocorasick.Opts{
+				AsciiCaseInsensitive: caseInsensitive,
+				MatchOnlyWholeWords:  false,
+				MatchKind:            ahocorasick.LeftMostLongestMatch,
+				DFA:                  true,
+			})
+			ac := builder.Build(filtered)
+			pf = func(s string) bool {
+				iter := ac.Iter(s)
+				return iter.Next() != nil
 			}
-		}
-		// Build an Aho-Corasick automaton for multi-pattern matching in O(n).
-		// Same library already used by the @pm operator.
-		builder := ahocorasick.NewAhoCorasickBuilder(ahocorasick.Opts{
-			AsciiCaseInsensitive: caseInsensitive,
-			MatchOnlyWholeWords:  false,
-			MatchKind:            ahocorasick.LeftMostLongestMatch,
-			DFA:                  true,
-		})
-		ac := builder.Build(filtered)
-		return func(s string) bool {
-			iter := ac.Iter(s)
-			return iter.Next() != nil
 		}
 	}
-	return nil
+
+	if pf == nil {
+		return nil
+	}
+
+	// When case-insensitive matching is active, our prefilter only performs
+	// ASCII case folding (A-Z ↔ a-z). Go's regexp with (?i) uses full Unicode
+	// simple case folding, where two ASCII letters have non-ASCII equivalents:
+	//   - 's' ↔ 'ſ' (U+017F, Latin Small Letter Long S)
+	//   - 'k' ↔ 'K' (U+212A, Kelvin Sign)
+	// For pure-ASCII inputs this is not an issue — ASCII folding is complete.
+	// For inputs containing non-ASCII bytes, we conservatively return true
+	// ("maybe match") and let the full regex engine decide. This ensures we
+	// never produce a false negative from Unicode folding mismatches.
+	// In practice, 99%+ of WAF traffic is ASCII, so this rarely triggers.
+	if caseInsensitive {
+		inner := pf
+		return func(s string) bool {
+			if !isASCII(s) {
+				return true
+			}
+			return inner(s)
+		}
+	}
+
+	return pf
 }
 
 // literal extraction types
