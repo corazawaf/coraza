@@ -22,6 +22,7 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/environment"
+	"github.com/corazawaf/coraza/v3/internal/operators"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -1865,14 +1866,18 @@ func TestRequestFilename(t *testing.T) {
 	}
 }
 
-type unconditionalMatch struct{}
-
-func (u *unconditionalMatch) Evaluate(_ plugintypes.TransactionState, _ string) bool {
-	return true
+func newTestUnconditionalMatch(t testing.TB) plugintypes.Operator {
+	t.Helper()
+	op, err := operators.Get("unconditionalMatch", plugintypes.OperatorOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return op
 }
 
 func TestRemoveRuleByID(t *testing.T) {
 	waf := NewWAF()
+	op := newTestUnconditionalMatch(t)
 
 	// Add two rules with different IDs
 	rule1 := NewRule()
@@ -1880,7 +1885,7 @@ func TestRemoveRuleByID(t *testing.T) {
 	rule1.LogID_ = "100"
 	rule1.Phase_ = types.PhaseRequestHeaders
 	rule1.operator = &ruleOperatorParams{
-		Operator: &unconditionalMatch{},
+		Operator: op,
 		Function: "@unconditionalMatch",
 	}
 	rule1.Log = true
@@ -1893,7 +1898,7 @@ func TestRemoveRuleByID(t *testing.T) {
 	rule2.LogID_ = "200"
 	rule2.Phase_ = types.PhaseRequestHeaders
 	rule2.operator = &ruleOperatorParams{
-		Operator: &unconditionalMatch{},
+		Operator: op,
 		Function: "@unconditionalMatch",
 	}
 	rule2.Log = true
@@ -1923,13 +1928,14 @@ func TestRemoveRuleByID(t *testing.T) {
 
 func BenchmarkRuleEvalWithRemovedRules(b *testing.B) {
 	waf := NewWAF()
+	op := newTestUnconditionalMatch(b)
 
 	rule := NewRule()
 	rule.ID_ = 1000
 	rule.LogID_ = "1000"
 	rule.Phase_ = types.PhaseRequestHeaders
 	rule.operator = &ruleOperatorParams{
-		Operator: &unconditionalMatch{},
+		Operator: op,
 		Function: "@unconditionalMatch",
 	}
 	if err := waf.Rules.Add(rule); err != nil {
