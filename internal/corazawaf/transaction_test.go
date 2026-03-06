@@ -1920,3 +1920,32 @@ func TestRemoveRuleByID(t *testing.T) {
 		t.Errorf("expected 2 entries in ruleRemoveByID map, got %d", len(tx.ruleRemoveByID))
 	}
 }
+
+func BenchmarkRuleEvalWithRemovedRules(b *testing.B) {
+	waf := NewWAF()
+
+	rule := NewRule()
+	rule.ID_ = 1000
+	rule.LogID_ = "1000"
+	rule.Phase_ = types.PhaseRequestHeaders
+	rule.operator = &ruleOperatorParams{
+		Operator: &unconditionalMatch{},
+		Function: "@unconditionalMatch",
+	}
+	if err := waf.Rules.Add(rule); err != nil {
+		b.Fatal(err)
+	}
+
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	for i := 1; i <= 100; i++ {
+		tx.RemoveRuleByID(i)
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		waf.Rules.Eval(types.PhaseRequestHeaders, tx)
+	}
+}
