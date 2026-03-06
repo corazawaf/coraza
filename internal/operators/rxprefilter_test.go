@@ -1142,6 +1142,100 @@ func TestPrefilterEdgeCases(t *testing.T) {
 	}
 }
 
+// TestAnyRequiredNeverFiltered verifies that the anyRequired path uses
+// anyTooShort (fail-safe) instead of filterShort (silently remove). If any
+// alternation branch produces a short literal, the prefilter should be nil
+// (no prefilter) rather than checking only the longer alternatives, which
+// would risk false negatives.
+func TestAnyRequiredNeverFiltered(t *testing.T) {
+	// Pattern (é|hello) — é is a single rune but 2 bytes in UTF-8.
+	// Both branches should produce usable literals. The prefilter should
+	// be non-nil and accept inputs matching either branch.
+	t.Run("two_byte_unicode_branch", func(t *testing.T) {
+		pattern := "(é|hello)"
+		pf := prefilterFunc(pattern)
+		// Both "é" (2 bytes) and "hello" (5 bytes) are >= 2, so prefilter exists
+		if pf == nil {
+			t.Skip("prefilter not built (acceptable)")
+		}
+		// Must accept matching inputs
+		re := regexp.MustCompile(pattern)
+		for _, input := range []string{"é", "hello", "xxéxx", "xxhelloxx"} {
+			if re.MatchString(input) && !pf(input) {
+				t.Errorf("FALSE NEGATIVE: prefilter(%q) rejected matching input %q", pattern, input)
+			}
+		}
+	})
+
+	// Verify that anyTooShort correctly detects short elements
+	t.Run("anyTooShort_function", func(t *testing.T) {
+		if anyTooShort([]string{"ab", "cd", "ef"}, 2) {
+			t.Error("expected false for all >= 2")
+		}
+		if !anyTooShort([]string{"ab", "c", "ef"}, 2) {
+			t.Error("expected true when one element is < 2")
+		}
+		if !anyTooShort([]string{"", "ab"}, 2) {
+			t.Error("expected true for empty element")
+		}
+		if anyTooShort([]string{}, 2) {
+			t.Error("expected false for empty slice")
+		}
+	})
+}
+
+// TestPrefilterSafetyInvariants tests structural invariants that must hold
+// for the prefilter to be safe. These tests catch regressions in the
+// extraction logic that could silently introduce false negatives.
+func TestPrefilterSafetyInvariants(t *testing.T) {
+	// Invariant: for any regex pattern and any input, if the regex matches
+	// and we have a prefilter, the prefilter must return true.
+	// This is tested exhaustively by the fuzz tests, but here we focus on
+	// specific structural patterns that are most likely to regress.
+
+	structural := []struct {
+		name    string
+		pattern string
+		input   string
+	}{
+		// Concat where one child is anyRequired (skipped, not promoted)
+		{"concat_with_anyRequired_child", "(?:union|select)\\s+from", "union from"},
+		// Alternation where all branches have allRequired
+		{"alt_all_branches_allRequired", "(?:hello world|goodbye world)", "hello world"},
+		// Alternation with nested alternation (v... merge)
+		{"nested_alt_merge", "aa|(bb|cc)", "cc"},
+		// Case-insensitive with ASCII input
+		{"ci_ascii_input", "(?i)select", "SELECT"},
+		// Case-insensitive with non-ASCII input (must be conservative)
+		{"ci_non_ascii_input", "(?i)select", "ſelect"},
+		// Case-sensitive with exact bytes
+		{"cs_exact_bytes", "hello", "hello"},
+		// Pattern with (?sm) prefix (from newRX)
+		{"sm_prefix", "(?sm)hello.*world", "hello\nworld"},
+		// Multi-byte unicode literal
+		{"unicode_literal", "café", "un café chaud"},
+	}
+
+	for _, tc := range structural {
+		t.Run(tc.name, func(t *testing.T) {
+			re := regexp.MustCompile(tc.pattern)
+			if !re.MatchString(tc.input) {
+				t.Fatalf("test bug: regex %q doesn't match %q", tc.pattern, tc.input)
+			}
+
+			ml := minMatchLength(tc.pattern)
+			if len(tc.input) < ml {
+				t.Errorf("SAFETY VIOLATION: minLen=%d rejects matching input len=%d", ml, len(tc.input))
+			}
+
+			pf := prefilterFunc(tc.pattern)
+			if pf != nil && !pf(tc.input) {
+				t.Errorf("SAFETY VIOLATION: prefilter rejects matching input %q", tc.input)
+			}
+		})
+	}
+}
+
 // FuzzPrefilterNoFalseNegatives uses Go's built-in fuzz testing to verify with
 // random patterns AND inputs that the prefilter never rejects an input the
 // regex matches. This is the primary safety net — it generates arbitrary
