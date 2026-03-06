@@ -80,7 +80,7 @@ type Transaction struct {
 	HashEnforcement           bool
 
 	// Stores the last phase that was evaluated
-	// Used by allow to skip phasesx
+	// Used by allow to skip phases
 	lastPhase types.RulePhase
 
 	// Handles request body buffers
