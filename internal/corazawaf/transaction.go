@@ -89,7 +89,7 @@ type Transaction struct {
 	responseBodyBuffer *BodyBuffer
 
 	// Rules with this id are going to be skipped while processing a phase
-	ruleRemoveByID []int
+	ruleRemoveByID map[int]struct{}
 
 	// ruleRemoveTargetByID is used by ctl to remove rule targets by id during the
 	// transaction. All other "target removers" like "ByTag" are an abstraction of "ById"
@@ -669,7 +669,10 @@ func (tx *Transaction) RemoveRuleTargetByID(id int, variable variables.RuleVaria
 // RemoveRuleByID Removes a rule from the transaction
 // It does not affect the WAF rules
 func (tx *Transaction) RemoveRuleByID(id int) {
-	tx.ruleRemoveByID = append(tx.ruleRemoveByID, id)
+	if tx.ruleRemoveByID == nil {
+		tx.ruleRemoveByID = map[int]struct{}{}
+	}
+	tx.ruleRemoveByID[id] = struct{}{}
 }
 
 // ProcessConnection should be called at very beginning of a request process, it is
