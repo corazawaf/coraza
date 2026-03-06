@@ -1,6 +1,8 @@
 // Copyright 2024 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build coraza.experimental.crslang_parser
+
 // Package seclang provides an experimental ANTLR4-based SecLang parser
 // that uses the crslang type system to parse SecLang into structured types,
 // then converts those types into Coraza's internal representation.
@@ -9,6 +11,8 @@
 // https://github.com/coreruleset/seclang_parser
 // And the crslang types from:
 // https://github.com/coreruleset/crslang
+//
+// Build with -tags=coraza.experimental.crslang_parser to enable this parser.
 package seclang
 
 import (
