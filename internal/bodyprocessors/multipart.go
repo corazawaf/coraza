@@ -58,6 +58,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 		filename := originFileName(p)
 		if filename != "" {
 			var size int64
+			seenUnexpectedEOF := false
 			if environment.HasAccessToFS {
 				// Only copy file to temp when not running in TinyGo
 				temp, err := os.CreateTemp(storagePath, "crzmp*")
@@ -68,16 +69,22 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 				defer temp.Close()
 				sz, err := io.Copy(temp, p)
 				if err != nil {
-					v.MultipartStrictError().(*collections.Single).Set("1")
-					return err
+					if !errors.Is(err, io.ErrUnexpectedEOF) {
+						v.MultipartStrictError().(*collections.Single).Set("1")
+						return err
+					}
+					seenUnexpectedEOF = true
 				}
 				size = sz
 				filesTmpNamesCol.Add("", temp.Name())
 			} else {
 				sz, err := io.Copy(io.Discard, p)
 				if err != nil {
-					v.MultipartStrictError().(*collections.Single).Set("1")
-					return err
+					if !errors.Is(err, io.ErrUnexpectedEOF) {
+						v.MultipartStrictError().(*collections.Single).Set("1")
+						return err
+					}
+					seenUnexpectedEOF = true
 				}
 				size = sz
 			}
@@ -85,17 +92,26 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 			filesCol.Add("", filename)
 			fileSizesCol.SetIndex(filename, 0, fmt.Sprintf("%d", size))
 			filesNamesCol.Add("", p.FormName())
+			filesCombinedSizeCol.(*collections.Single).Set(fmt.Sprintf("%d", totalSize))
+			if seenUnexpectedEOF {
+				break
+			}
 		} else {
 			// if is a field
 			data, err := io.ReadAll(p)
 			if err != nil {
-				v.MultipartStrictError().(*collections.Single).Set("1")
-				return err
+				if !errors.Is(err, io.ErrUnexpectedEOF) {
+					v.MultipartStrictError().(*collections.Single).Set("1")
+					return err
+				}
 			}
 			totalSize += int64(len(data))
 			postCol.Add(p.FormName(), string(data))
+			filesCombinedSizeCol.(*collections.Single).Set(fmt.Sprintf("%d", totalSize))
+			if errors.Is(err, io.ErrUnexpectedEOF) {
+				break
+			}
 		}
-		filesCombinedSizeCol.(*collections.Single).Set(fmt.Sprintf("%d", totalSize))
 	}
 	return nil
 }
