@@ -22,7 +22,9 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/environment"
+	"github.com/corazawaf/coraza/v3/internal/operators"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
+	"github.com/corazawaf/coraza/v3/internal/transformations"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -1862,5 +1864,47 @@ func TestRequestFilename(t *testing.T) {
 				t.Fatalf("Expected REQUEST_FILENAME %q, got %q", test.expected, tx.variables.requestFilename.Get())
 			}
 		})
+	}
+}
+
+func BenchmarkRuleEvalWithTransformations(b *testing.B) {
+	waf := NewWAF()
+	op, err := operators.Get("unconditionalMatch", plugintypes.OperatorOptions{})
+	if err != nil {
+		b.Fatal(err)
+	}
+	lowercaseFn, err := transformations.GetTransformation("lowercase")
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	rule := NewRule()
+	rule.ID_ = 1000
+	rule.LogID_ = "1000"
+	rule.Phase_ = types.PhaseRequestHeaders
+	rule.operator = &ruleOperatorParams{
+		Operator: op,
+		Function: "@unconditionalMatch",
+	}
+	if err := rule.AddTransformation("lowercase", lowercaseFn); err != nil {
+		b.Fatal(err)
+	}
+	rule.variables = append(rule.variables, ruleVariableParams{
+		Variable: variables.Args,
+	})
+	if err := waf.Rules.Add(rule); err != nil {
+		b.Fatal(err)
+	}
+
+	tx := waf.NewTransaction()
+	tx.ProcessURI("/test?a=1&b=2&c=3&d=4&e=5", "GET", "HTTP/1.1")
+	tx.AddRequestHeader("Host", "example.com")
+	tx.ProcessRequestHeaders()
+	defer tx.Close()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		waf.Rules.Eval(types.PhaseRequestHeaders, tx)
 	}
 }
