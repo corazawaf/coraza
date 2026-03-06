@@ -190,7 +190,6 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 	var matchedValues []types.MatchData
 	// we log if we are the parent rule
 	logger.Debug().Msg("Evaluating rule")
-	defer logger.Debug().Msg("Finished rule evaluation")
 
 	ruleCol := tx.variables.rule
 	ruleCol.SetIndex("id", 0, r.LogID())
@@ -335,6 +334,7 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 	}
 
 	if len(matchedValues) == 0 {
+		logger.Debug().Msg("Finished rule evaluation")
 		return matchedValues
 	}
 
@@ -354,6 +354,7 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 
 			matchedChainValues := nr.doEvaluate(nrLogger, phase, tx, collectiveMatchedValues, chainLevel, cache)
 			if len(matchedChainValues) == 0 {
+				logger.Debug().Msg("Finished rule evaluation")
 				return matchedChainValues
 			}
 			matchedValues = append(matchedValues, matchedChainValues...)
@@ -387,6 +388,7 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 			tx.MatchRule(r, matchedValues)
 		}
 	}
+	logger.Debug().Msg("Finished rule evaluation")
 	return matchedValues
 }
 
