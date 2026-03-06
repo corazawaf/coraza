@@ -14,10 +14,6 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
-// responseBodyRecursionLimit is the default recursion depth limit for response body JSON parsing.
-// Uses the same default as request bodies (1024) to protect against deeply nested structures.
-const responseBodyRecursionLimit = 1024
-
 type jsonBodyProcessor struct{}
 
 var _ plugintypes.BodyProcessor = &jsonBodyProcessor{}
@@ -31,7 +27,6 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.Tran
 		return err
 	}
 	ss := s.String()
-
 	// Process with recursion limit
 	col := v.ArgsPost()
 	data, err := readJSON(ss, bpo.RequestBodyRecursionLimit)
@@ -52,6 +47,8 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.Tran
 	return nil
 }
 
+const ignoreJSONRecursionLimit = -1
+
 func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
 	// Read the entire body to store it and process it
 	s := strings.Builder{}
@@ -59,10 +56,9 @@ func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.Tra
 		return err
 	}
 	ss := s.String()
-
-	// Process with recursion limit
+	// Process with no recursion limit as we don't have a directive for response body
 	col := v.ResponseArgs()
-	data, err := readJSON(ss, responseBodyRecursionLimit)
+	data, err := readJSON(ss, ignoreJSONRecursionLimit)
 	if err != nil {
 		return err
 	}
