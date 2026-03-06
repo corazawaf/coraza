@@ -367,11 +367,15 @@ func containsFoldASCII(s, needle string) bool {
 	if len(s) < len(needle) {
 		return false
 	}
-	// Fast path: check if all needle bytes are ASCII for simpler comparison
+	// Fast path: check if all needle bytes are ASCII for simpler comparison.
 	if isASCII(needle) {
 		return containsFoldASCIIOnly(s, needle)
 	}
-	return strings.Contains(strings.ToLower(s), needle)
+	// For non-ASCII needles, strings.ToLower does not implement the same
+	// Unicode folding rules as regexp/syntax.FoldCase (e.g., Greek sigma has
+	// multiple fold equivalents). To preserve correctness, we conservatively
+	// return true ("maybe match") and let the full regex decide.
+	return true
 }
 
 func isASCII(s string) bool {
