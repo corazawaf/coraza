@@ -182,6 +182,45 @@ func TestFindAllEmptyMap(t *testing.T) {
 	}
 }
 
+func BenchmarkFindAll(b *testing.B) {
+	b.ReportAllocs()
+	m := NewMap(variables.RequestHeaders)
+	for i := 0; i < 20; i++ {
+		m.Add(fmt.Sprintf("x-header-%d", i), fmt.Sprintf("value-%d", i))
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = m.FindAll()
+	}
+}
+
+func BenchmarkFindRegex(b *testing.B) {
+	b.ReportAllocs()
+	m := NewMap(variables.RequestHeaders)
+	for i := 0; i < 20; i++ {
+		m.Add(fmt.Sprintf("x-header-%d", i), fmt.Sprintf("value-%d", i))
+	}
+	// Matches keys ending in 0-9 (x-header-0 .. x-header-9), roughly half.
+	re := regexp.MustCompile(`^x-header-\d$`)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = m.FindRegex(re)
+	}
+}
+
+func BenchmarkFindString(b *testing.B) {
+	b.ReportAllocs()
+	m := NewMap(variables.RequestHeaders)
+	// Single key with multiple values
+	for i := 0; i < 20; i++ {
+		m.Add("x-forwarded-for", fmt.Sprintf("10.0.0.%d", i))
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = m.FindString("x-forwarded-for")
+	}
+}
+
 func BenchmarkTxSetGet(b *testing.B) {
 	keys := make(map[int]string, b.N)
 	for i := 0; i < b.N; i++ {
