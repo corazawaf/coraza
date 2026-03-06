@@ -91,6 +91,10 @@ type Transaction struct {
 	// Rules with this id are going to be skipped while processing a phase
 	ruleRemoveByID map[int]struct{}
 
+	// ruleRemoveByIDRanges stores ranges of rule IDs to be skipped during a phase.
+	// Ranges avoid expanding all IDs into the ruleRemoveByID map.
+	ruleRemoveByIDRanges [][2]int
+
 	// ruleRemoveTargetByID is used by ctl to remove rule targets by id during the
 	// transaction. All other "target removers" like "ByTag" are an abstraction of "ById"
 	// For example, if you want to remove REQUEST_HEADERS:User-Agent from rule 85:
@@ -673,6 +677,12 @@ func (tx *Transaction) RemoveRuleByID(id int) {
 		tx.ruleRemoveByID = map[int]struct{}{}
 	}
 	tx.ruleRemoveByID[id] = struct{}{}
+}
+
+// RemoveRuleByIDRange marks rules in the ID range [start, end] (inclusive) to be
+// skipped during transaction processing. It does not affect the WAF rules.
+func (tx *Transaction) RemoveRuleByIDRange(start, end int) {
+	tx.ruleRemoveByIDRanges = append(tx.ruleRemoveByIDRanges, [2]int{start, end})
 }
 
 // ProcessConnection should be called at very beginning of a request process, it is

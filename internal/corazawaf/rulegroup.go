@@ -185,6 +185,14 @@ RulesLoop:
 				Msg("Skipping rule")
 			continue RulesLoop
 		}
+		for _, rng := range tx.ruleRemoveByIDRanges {
+			if r.ID_ >= rng[0] && r.ID_ <= rng[1] {
+				tx.DebugLogger().Debug().
+					Int("rule_id", r.ID_).
+					Msg("Skipping rule")
+				continue RulesLoop
+			}
+		}
 
 		// we always evaluate secmarkers
 		if tx.SkipAfter != "" {
