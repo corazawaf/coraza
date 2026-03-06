@@ -1327,6 +1327,28 @@ func BenchmarkTxGetField(b *testing.B) {
 	b.ReportAllocs()
 }
 
+func BenchmarkTxGetFieldWithExceptions(b *testing.B) {
+	tx := makeTransaction(b)
+	rvp := ruleVariableParams{
+		Variable: variables.RequestHeaders,
+		Exceptions: []ruleVariableException{
+			{KeyStr: "host", lowerKeyStr: "host"},
+			{KeyStr: "cookie", lowerKeyStr: "cookie"},
+			{KeyStr: "content-type", lowerKeyStr: "content-type"},
+			{KeyStr: "x-test-header", lowerKeyStr: "x-test-header"},
+			{KeyStr: "accept", lowerKeyStr: "accept"},
+		},
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tx.GetField(rvp)
+	}
+	if err := tx.Close(); err != nil {
+		b.Fatalf("Failed to close transaction: %s", err.Error())
+	}
+}
+
 func TestTxProcessURI(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
