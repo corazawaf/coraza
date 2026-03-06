@@ -29,6 +29,7 @@ jobs:
           - "coraza.rule.case_sensitive_args_keys"
           - "coraza.rule.no_regex_multiline"
           - "memoize_builders"
+          - "coraza.rule.rx_prefilter"
           - "coraza.rule.multiphase_evaluation"
           - "no_fs_access"
           - "coraza.rule.multiphase_evaluation,coraza.rule.mandatory_rule_id_check"
@@ -36,7 +37,7 @@ jobs:
           - "coraza.rule.multiphase_evaluation,coraza.rule.no_regex_multiline"
           - "no_fs_access,memoize_builders"
           - "coraza.rule.mandatory_rule_id_check,coraza.rule.case_sensitive_args_keys,coraza.rule.no_regex_multiline"
-          - "coraza.rule.multiphase_evaluation,coraza.rule.mandatory_rule_id_check,coraza.rule.case_sensitive_args_keys,coraza.rule.no_regex_multiline,memoize_builders,no_fs_access"
+          - "coraza.rule.multiphase_evaluation,coraza.rule.mandatory_rule_id_check,coraza.rule.case_sensitive_args_keys,coraza.rule.no_regex_multiline,memoize_builders,no_fs_access,coraza.rule.rx_prefilter"
         include:
           - go-version: 1.26.x
             os: ubuntu-latest
