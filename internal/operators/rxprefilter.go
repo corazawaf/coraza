@@ -195,10 +195,15 @@ func prefilterFunc(pattern string) func(string) bool {
 		// anyRequired: at least one literal must be present in the input.
 		// Example: pattern "(?:union|insert)" yields anyRequired{"union", "insert"}.
 		// We use Aho-Corasick to scan for any of them in a single pass.
-		filtered := filterShort(v, 2)
-		if len(filtered) == 0 {
+		//
+		// SAFETY: Do NOT use filterShort here. For anyRequired, removing a short
+		// element changes the semantics from "one of {A,B,C}" to "one of {A,B}" —
+		// if the match was through branch C (removed), we'd miss it. Instead, if
+		// any element is too short to be useful, abandon the prefilter entirely.
+		if anyTooShort(v, 2) {
 			return nil
 		}
+		filtered := v
 		if len(filtered) == 1 {
 			needle := filtered[0]
 			if caseInsensitive {
@@ -383,8 +388,22 @@ func longest(ss []string) string {
 	return best
 }
 
+// anyTooShort returns true if any string in ss is shorter than minLen bytes.
+// Used for anyRequired: if any alternative is too short, we can't safely filter
+// because removing it would change "one of {A,B,C}" to "one of {A,B}" semantics.
+func anyTooShort(ss []string, minLen int) bool {
+	for _, s := range ss {
+		if len(s) < minLen {
+			return true
+		}
+	}
+	return false
+}
+
 // filterShort removes strings shorter than minLen bytes. Very short literals
 // (e.g. single characters) are too common across inputs to be effective filters.
+// SAFETY: Only safe for allRequired (removing a needle makes the check less strict).
+// Never use for anyRequired — use anyTooShort instead.
 func filterShort(ss []string, minLen int) []string {
 	result := ss[:0:0]
 	for _, s := range ss {
