@@ -1864,3 +1864,59 @@ func TestRequestFilename(t *testing.T) {
 		})
 	}
 }
+
+type unconditionalMatch struct{}
+
+func (u *unconditionalMatch) Evaluate(_ plugintypes.TransactionState, _ string) bool {
+	return true
+}
+
+func TestRemoveRuleByID(t *testing.T) {
+	waf := NewWAF()
+
+	// Add two rules with different IDs
+	rule1 := NewRule()
+	rule1.ID_ = 100
+	rule1.LogID_ = "100"
+	rule1.Phase_ = types.PhaseRequestHeaders
+	rule1.operator = &ruleOperatorParams{
+		Operator: &unconditionalMatch{},
+		Function: "@unconditionalMatch",
+	}
+	rule1.Log = true
+	if err := waf.Rules.Add(rule1); err != nil {
+		t.Fatal(err)
+	}
+
+	rule2 := NewRule()
+	rule2.ID_ = 200
+	rule2.LogID_ = "200"
+	rule2.Phase_ = types.PhaseRequestHeaders
+	rule2.operator = &ruleOperatorParams{
+		Operator: &unconditionalMatch{},
+		Function: "@unconditionalMatch",
+	}
+	rule2.Log = true
+	if err := waf.Rules.Add(rule2); err != nil {
+		t.Fatal(err)
+	}
+
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	// Remove rule 100
+	tx.RemoveRuleByID(100)
+
+	// Verify the map was lazily initialized
+	if tx.ruleRemoveByID == nil {
+		t.Fatal("ruleRemoveByID should not be nil after RemoveRuleByID")
+	}
+
+	// Remove another rule
+	tx.RemoveRuleByID(100) // duplicate removal should be idempotent
+	tx.RemoveRuleByID(200)
+
+	if len(tx.ruleRemoveByID) != 2 {
+		t.Errorf("expected 2 entries in ruleRemoveByID map, got %d", len(tx.ruleRemoveByID))
+	}
+}
