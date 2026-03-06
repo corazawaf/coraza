@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/corazawaf/coraza/v3/experimental"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
@@ -42,6 +41,10 @@ func NewWAF(config WAFConfig) (WAF, error) {
 
 	if c.debugLogger != nil {
 		waf.Logger = c.debugLogger
+	}
+
+	if c.ruleObserver != nil {
+		waf.Rules.SetObserver(c.ruleObserver)
 	}
 
 	parser := seclang.NewParser(waf)
@@ -147,7 +150,12 @@ func (w wafWrapper) NewTransactionWithID(id string) types.Transaction {
 	return w.waf.NewTransactionWithOptions(corazawaf.Options{Context: context.Background(), ID: id})
 }
 
-// NewTransaction implements the same method on WAF.
-func (w wafWrapper) NewTransactionWithOptions(opts experimental.Options) types.Transaction {
+// NewTransactionWithOptions implements the same method on WAF.
+func (w wafWrapper) NewTransactionWithOptions(opts corazawaf.Options) types.Transaction {
 	return w.waf.NewTransactionWithOptions(opts)
+}
+
+// RulesCount returns the number of rules in this WAF.
+func (w wafWrapper) RulesCount() int {
+	return w.waf.Rules.Count()
 }
