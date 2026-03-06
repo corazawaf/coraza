@@ -297,6 +297,11 @@ func directiveSecRequestBodyJsonDepthLimit(options *DirectiveOptions) error {
 	if err != nil {
 		return err
 	}
+
+	if limit <= 0 {
+		return errors.New("limit must be a positive integer")
+	}
+
 	options.WAF.RequestBodyJsonDepthLimit = limit
 	return nil
 }
