@@ -1093,7 +1093,7 @@ func TestTxVariablesExceptions(t *testing.T) {
 		KeyStr:   "ho.*",
 		KeyRx:    regexp.MustCompile("ho.*"),
 		Exceptions: []ruleVariableException{
-			{KeyStr: "host"},
+			{KeyStr: "host", lowerKeyStr: "host"},
 		},
 	}
 	fields := tx.GetField(rv)
