@@ -71,7 +71,6 @@ type Transaction struct {
 	ForceRequestBodyVariable  bool
 	RequestBodyAccess         bool
 	RequestBodyLimit          int64
-	RequestBodyJsonDepthLimit int
 	ForceResponseBodyVariable bool
 	ResponseBodyAccess        bool
 	ResponseBodyLimit         int64
@@ -80,7 +79,7 @@ type Transaction struct {
 	HashEnforcement           bool
 
 	// Stores the last phase that was evaluated
-	// Used by allow to skip phasesx
+	// Used by allow to skip phases
 	lastPhase types.RulePhase
 
 	// Handles request body buffers
