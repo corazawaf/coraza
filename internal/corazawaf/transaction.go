@@ -624,7 +624,11 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 			lkey = strings.ToLower(c.Key())
 		}
 		for _, ex := range rv.Exceptions {
-			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || ex.lowerKeyStr == lkey || (ex.KeyStr == "" && ex.KeyRx == nil) {
+			exLowerKey := ex.lowerKeyStr
+			if exLowerKey == "" && ex.KeyStr != "" {
+				exLowerKey = strings.ToLower(ex.KeyStr)
+			}
+			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || exLowerKey == lkey || (ex.KeyStr == "" && ex.KeyRx == nil) {
 				isException = true
 				break
 			}
