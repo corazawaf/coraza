@@ -101,37 +101,49 @@ type NamedCollectionNames struct {
 }
 
 func (c *NamedCollectionNames) FindRegex(key *regexp.Regexp) []types.MatchData {
-	var res []types.MatchData
-
+	n := 0
+	for k, data := range c.collection.data {
+		if key.MatchString(k) {
+			n += len(data)
+		}
+	}
+	if n == 0 {
+		return nil
+	}
+	buf := make([]corazarules.MatchData, n)
+	res := make([]types.MatchData, n)
+	i := 0
 	for k, data := range c.collection.data {
 		if !key.MatchString(k) {
 			continue
 		}
 		for _, d := range data {
-			res = append(res, &corazarules.MatchData{
+			buf[i] = corazarules.MatchData{
 				Variable_: c.variable,
 				Key_:      d.key,
 				Value_:    d.key,
-			})
+			}
+			res[i] = &buf[i]
+			i++
 		}
 	}
 	return res
 }
 
 func (c *NamedCollectionNames) FindString(key string) []types.MatchData {
-	var res []types.MatchData
-
-	for k, data := range c.collection.data {
-		if k != key {
-			continue
+	data, ok := c.collection.data[key]
+	if !ok || len(data) == 0 {
+		return nil
+	}
+	buf := make([]corazarules.MatchData, len(data))
+	res := make([]types.MatchData, len(data))
+	for i, d := range data {
+		buf[i] = corazarules.MatchData{
+			Variable_: c.variable,
+			Key_:      d.key,
+			Value_:    d.key,
 		}
-		for _, d := range data {
-			res = append(res, &corazarules.MatchData{
-				Variable_: c.variable,
-				Key_:      d.key,
-				Value_:    d.key,
-			})
-		}
+		res[i] = &buf[i]
 	}
 	return res
 }
@@ -141,16 +153,25 @@ func (c *NamedCollectionNames) Get(key string) []string {
 }
 
 func (c *NamedCollectionNames) FindAll() []types.MatchData {
-	var res []types.MatchData
-	// Iterates over all the data in the map and adds the key element also to the Key field (The key value may be the value
-	//  that is matched, but it is still also the key of the pair and it is needed to print the matched var name)
+	n := 0
+	for _, data := range c.collection.data {
+		n += len(data)
+	}
+	if n == 0 {
+		return nil
+	}
+	buf := make([]corazarules.MatchData, n)
+	res := make([]types.MatchData, n)
+	i := 0
 	for _, data := range c.collection.data {
 		for _, d := range data {
-			res = append(res, &corazarules.MatchData{
+			buf[i] = corazarules.MatchData{
 				Variable_: c.variable,
 				Key_:      d.key,
 				Value_:    d.key,
-			})
+			}
+			res[i] = &buf[i]
+			i++
 		}
 	}
 	return res
