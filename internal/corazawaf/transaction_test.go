@@ -22,6 +22,7 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/environment"
+	"github.com/corazawaf/coraza/v3/internal/operators"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -1862,5 +1863,95 @@ func TestRequestFilename(t *testing.T) {
 				t.Fatalf("Expected REQUEST_FILENAME %q, got %q", test.expected, tx.variables.requestFilename.Get())
 			}
 		})
+	}
+}
+
+func newTestUnconditionalMatch(t testing.TB) plugintypes.Operator {
+	t.Helper()
+	op, err := operators.Get("unconditionalMatch", plugintypes.OperatorOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return op
+}
+
+func TestRemoveRuleByID(t *testing.T) {
+	waf := NewWAF()
+	op := newTestUnconditionalMatch(t)
+
+	// Add two rules with different IDs
+	rule1 := NewRule()
+	rule1.ID_ = 100
+	rule1.LogID_ = "100"
+	rule1.Phase_ = types.PhaseRequestHeaders
+	rule1.operator = &ruleOperatorParams{
+		Operator: op,
+		Function: "@unconditionalMatch",
+	}
+	rule1.Log = true
+	if err := waf.Rules.Add(rule1); err != nil {
+		t.Fatal(err)
+	}
+
+	rule2 := NewRule()
+	rule2.ID_ = 200
+	rule2.LogID_ = "200"
+	rule2.Phase_ = types.PhaseRequestHeaders
+	rule2.operator = &ruleOperatorParams{
+		Operator: op,
+		Function: "@unconditionalMatch",
+	}
+	rule2.Log = true
+	if err := waf.Rules.Add(rule2); err != nil {
+		t.Fatal(err)
+	}
+
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	// Remove rule 100
+	tx.RemoveRuleByID(100)
+
+	// Verify the map was lazily initialized
+	if tx.ruleRemoveByID == nil {
+		t.Fatal("ruleRemoveByID should not be nil after RemoveRuleByID")
+	}
+
+	// Remove another rule
+	tx.RemoveRuleByID(100) // duplicate removal should be idempotent
+	tx.RemoveRuleByID(200)
+
+	if len(tx.ruleRemoveByID) != 2 {
+		t.Errorf("expected 2 entries in ruleRemoveByID map, got %d", len(tx.ruleRemoveByID))
+	}
+}
+
+func BenchmarkRuleEvalWithRemovedRules(b *testing.B) {
+	waf := NewWAF()
+	op := newTestUnconditionalMatch(b)
+
+	rule := NewRule()
+	rule.ID_ = 1000
+	rule.LogID_ = "1000"
+	rule.Phase_ = types.PhaseRequestHeaders
+	rule.operator = &ruleOperatorParams{
+		Operator: op,
+		Function: "@unconditionalMatch",
+	}
+	if err := waf.Rules.Add(rule); err != nil {
+		b.Fatal(err)
+	}
+
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	for i := 1; i <= 100; i++ {
+		tx.RemoveRuleByID(i)
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		waf.Rules.Eval(types.PhaseRequestHeaders, tx)
 	}
 }
