@@ -1,9 +1,7 @@
 // Copyright 2023 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build !tinygo && memoize_builders
-
-// https://github.com/kofalt/go-memoize/blob/master/memoize.go
+//go:build !tinygo && !coraza.no_memoize
 
 package memoize
 
@@ -13,35 +11,83 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
-var doer = makeDoer(new(sync.Map), new(singleflight.Group))
-
-// Do executes and returns the results of the given function, unless there was a cached
-// value of the same key. Only one execution is in-flight for a given key at a time.
-// The boolean return value indicates whether v was previously stored.
-func Do(key string, fn func() (interface{}, error)) (interface{}, error) {
-	value, err, _ := doer(key, fn)
-	return value, err
+type entry struct {
+	value  any
+	mu     sync.Mutex
+	owners map[string]struct{}
 }
 
-// makeDoer returns a function that executes and returns the results of the given function
-func makeDoer(cache *sync.Map, group *singleflight.Group) func(string, func() (interface{}, error)) (interface{}, error, bool) {
-	return func(key string, fn func() (interface{}, error)) (interface{}, error, bool) {
-		// Check cache
-		value, found := cache.Load(key)
-		if found {
-			return value, nil, true
+var (
+	cache sync.Map // key -> *entry
+	group singleflight.Group
+)
+
+// Memoizer caches expensive function calls with per-owner tracking.
+type Memoizer struct {
+	ownerID string
+}
+
+// NewMemoizer creates a Memoizer that tracks cached entries under the given owner ID.
+func NewMemoizer(ownerID string) *Memoizer {
+	return &Memoizer{ownerID: ownerID}
+}
+
+// Do returns a cached value for key, or calls fn and caches the result.
+// Only one execution is in-flight for a given key at a time.
+func (m *Memoizer) Do(key string, fn func() (any, error)) (any, error) {
+	// Fast path: check cache
+	if v, ok := cache.Load(key); ok {
+		e := v.(*entry)
+		e.mu.Lock()
+		e.owners[m.ownerID] = struct{}{}
+		e.mu.Unlock()
+		return e.value, nil
+	}
+
+	// Slow path: singleflight ensures only one compilation per key
+	val, err, _ := group.Do(key, func() (any, error) {
+		// Double-check after acquiring singleflight
+		if v, ok := cache.Load(key); ok {
+			e := v.(*entry)
+			e.mu.Lock()
+			e.owners[m.ownerID] = struct{}{}
+			e.mu.Unlock()
+			return e.value, nil
 		}
 
-		// Combine memoized function with a cache store
-		value, err, _ := group.Do(key, func() (interface{}, error) {
-			data, innerErr := fn()
-			if innerErr == nil {
-				cache.Store(key, data)
+		data, innerErr := fn()
+		if innerErr == nil {
+			e := &entry{
+				value:  data,
+				owners: map[string]struct{}{m.ownerID: {}},
 			}
+			cache.Store(key, e)
+		}
+		return data, innerErr
+	})
 
-			return data, innerErr
-		})
+	return val, err
+}
 
-		return value, err, false
-	}
+// Release removes ownerID from all cached entries, deleting entries with no remaining owners.
+func Release(ownerID string) {
+	cache.Range(func(key, value any) bool {
+		e := value.(*entry)
+		e.mu.Lock()
+		delete(e.owners, ownerID)
+		empty := len(e.owners) == 0
+		e.mu.Unlock()
+		if empty {
+			cache.Delete(key)
+		}
+		return true
+	})
+}
+
+// Reset clears the entire cache. Intended for testing.
+func Reset() {
+	cache.Range(func(key, _ any) bool {
+		cache.Delete(key)
+		return true
+	})
 }

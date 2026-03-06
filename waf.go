@@ -159,3 +159,8 @@ func (w wafWrapper) NewTransactionWithOptions(opts corazawaf.Options) types.Tran
 func (w wafWrapper) RulesCount() int {
 	return w.waf.Rules.Count()
 }
+
+// Close releases cached resources owned by this WAF instance.
+func (w wafWrapper) Close() error {
+	return w.waf.Close()
+}

@@ -5,6 +5,12 @@ package plugintypes
 
 import "io/fs"
 
+// Memoizer caches the result of expensive function calls by key.
+// Implementations must be safe for concurrent use.
+type Memoizer interface {
+	Do(key string, fn func() (any, error)) (any, error)
+}
+
 // OperatorOptions is used to store the options for a rule operator
 type OperatorOptions struct {
 	// Arguments is used to store the operator args
@@ -18,6 +24,9 @@ type OperatorOptions struct {
 
 	// Datasets contains input datasets or dictionaries
 	Datasets map[string][]string
+
+	// Memoizer caches expensive compilations (regex, aho-corasick).
+	Memoizer Memoizer
 }
 
 // Operator interface is used to define rule @operators

@@ -4,6 +4,8 @@
 package experimental
 
 import (
+	"io"
+
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -22,4 +24,12 @@ type WAFWithOptions interface {
 type WAFWithRules interface {
 	// RulesCount returns the number of rules in this WAF.
 	RulesCount() int
+}
+
+// WAFCloser allows closing a WAF instance to release cached resources
+// (memoized regex, aho-corasick). Transactions in-flight are unaffected
+// as they hold their own references to compiled patterns.
+// This will be promoted to the public WAF interface in v4.
+type WAFCloser interface {
+	io.Closer
 }

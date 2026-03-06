@@ -12,12 +12,15 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	gosync "sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/environment"
+	"github.com/corazawaf/coraza/v3/internal/memoize"
 	stringutils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/internal/sync"
 	"github.com/corazawaf/coraza/v3/types"
@@ -28,6 +31,8 @@ const (
 	// DefaultRequestBodyJsonDepthLimit is the default limit for the depth of JSON objects in the request body
 	DefaultRequestBodyJsonDepthLimit = 1024
 )
+
+var wafIDCounter atomic.Int64
 
 // WAF instance is used to store configurations and rules
 // Every web application should have a different WAF instance,
@@ -144,6 +149,10 @@ type WAF struct {
 
 	// Configures the maximum number of ARGS that will be accepted for processing.
 	ArgumentLimit int
+
+	memoizerID string
+	memoizer   *memoize.Memoizer
+	closeOnce  gosync.Once
 }
 
 // Options is used to pass options to the WAF instance
@@ -329,6 +338,10 @@ func NewWAF() *WAF {
 		waf.TmpDir = os.TempDir()
 	}
 
+	id := fmt.Sprintf("waf-%d", wafIDCounter.Add(1))
+	waf.memoizerID = id
+	waf.memoizer = memoize.NewMemoizer(id)
+
 	waf.Logger.Debug().Msg("A new WAF instance was created")
 	return waf
 }
@@ -432,5 +445,20 @@ func (w *WAF) Validate() error {
 		return errors.New("request body json depth limit should be bigger than 0")
 	}
 
+	return nil
+}
+
+// Memoizer returns the WAF's memoizer for caching compiled patterns.
+func (w *WAF) Memoizer() *memoize.Memoizer {
+	return w.memoizer
+}
+
+// Close releases cached resources (memoized regex, aho-corasick) owned by this WAF.
+// Transactions in-flight are unaffected as they hold their own references.
+// Safe to call multiple times.
+func (w *WAF) Close() error {
+	w.closeOnce.Do(func() {
+		memoize.Release(w.memoizerID)
+	})
 	return nil
 }
