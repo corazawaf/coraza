@@ -41,7 +41,18 @@ import (
 // SecRule REQUEST_URI "@rx ^/api/v(\d+)" "id:182,setvar:tx.api_version=%{TX.1}"
 // ```
 type rx struct {
-	re *regexp.Regexp
+	re        *regexp.Regexp
+	minLen    int
+	prefilter func(string) bool // returns true if regex might match; nil = no prefilter
+}
+
+// rxCompiled holds all compile-time artifacts for a regex pattern so they can
+// be computed once and shared via memoize when the same pattern appears in
+// multiple rules.
+type rxCompiled struct {
+	re        *regexp.Regexp
+	minLen    int
+	prefilter func(string) bool
 }
 
 var _ plugintypes.Operator = (*rx)(nil)
@@ -68,24 +79,60 @@ func newRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 		return newBinaryRX(options)
 	}
 
-	re, err := memoize.Do(data, func() (any, error) { return regexp.Compile(data) })
+	// Compile regex + prefilter together so memoize caches all artifacts as one
+	// unit. This avoids re-parsing the AST for minMatchLength/prefilterFunc when
+	// the same pattern appears in multiple rules.
+	compiled, err := memoize.Do(data, func() (any, error) {
+		re, err := regexp.Compile(data)
+		if err != nil {
+			return nil, err
+		}
+		return &rxCompiled{
+			re:        re,
+			minLen:    minMatchLength(data),
+			prefilter: prefilterFunc(data),
+		}, nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	return &rx{re: re.(*regexp.Regexp)}, nil
+	c := compiled.(*rxCompiled)
+	return &rx{
+		re:        c.re,
+		minLen:    c.minLen,
+		prefilter: c.prefilter,
+	}, nil
 }
 
 func (o *rx) Evaluate(tx plugintypes.TransactionState, value string) bool {
+	if len(value) < o.minLen {
+		return false
+	}
+	if o.prefilter != nil && !o.prefilter(value) {
+		return false
+	}
 	if tx.Capturing() {
-		match := o.re.FindStringSubmatch(value)
-		if len(match) == 0 {
+		// FindStringSubmatchIndex returns a slice of index pairs [start0, end0, start1, end1, ...]
+		// instead of allocating new strings for each capture group. We then slice the original
+		// input value[start:end] to get zero-allocation substrings.
+		match := o.re.FindStringSubmatchIndex(value)
+		if match == nil {
 			return false
 		}
-		for i, c := range match {
+		// match has 2 entries per group: match[2*i] is the start index,
+		// match[2*i+1] is the end index for capture group i. Group 0 is
+		// the full match, groups 1..N are the parenthesized sub-expressions.
+		for i := 0; i < len(match)/2; i++ {
 			if i == 9 {
 				return true
 			}
-			tx.CaptureField(i, c)
+			// A negative start index means the group did not participate in the match
+			// (e.g. an optional group like (foo)? when foo is absent).
+			if match[2*i] >= 0 {
+				tx.CaptureField(i, value[match[2*i]:match[2*i+1]])
+			} else {
+				tx.CaptureField(i, "")
+			}
 		}
 		return true
 	} else {
