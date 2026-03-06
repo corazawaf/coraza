@@ -190,7 +190,6 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.ForceRequestBodyVariable = false
 	tx.RequestBodyAccess = w.RequestBodyAccess
 	tx.RequestBodyLimit = w.RequestBodyLimit
-	tx.RequestBodyJsonDepthLimit = w.RequestBodyJsonDepthLimit
 	tx.ResponseBodyAccess = w.ResponseBodyAccess
 	tx.ResponseBodyLimit = w.ResponseBodyLimit
 	tx.RuleEngine = w.RuleEngine

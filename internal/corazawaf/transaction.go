@@ -71,7 +71,6 @@ type Transaction struct {
 	ForceRequestBodyVariable  bool
 	RequestBodyAccess         bool
 	RequestBodyLimit          int64
-	RequestBodyJsonDepthLimit int
 	ForceResponseBodyVariable bool
 	ResponseBodyAccess        bool
 	ResponseBodyLimit         int64
