@@ -574,7 +574,7 @@ func TestExecuteTransformationsMultiMatchReturnsMultipleErrors(t *testing.T) {
 }
 
 func TestTransformArgSimple(t *testing.T) {
-	transformationCache := map[transformationKey]*transformationValue{}
+	transformationCache := map[transformationKey]transformationValue{}
 	md := &corazarules.MatchData{
 		Variable_: variables.RequestURI,
 		Key_:      "REQUEST_URI",
@@ -609,7 +609,7 @@ func TestTransformArgSimple(t *testing.T) {
 }
 
 func TestTransformArgNoCacheForTXVariable(t *testing.T) {
-	transformationCache := map[transformationKey]*transformationValue{}
+	transformationCache := map[transformationKey]transformationValue{}
 	md := &corazarules.MatchData{
 		Variable_: variables.TX,
 		Key_:      "Custom_TX_Variable",
