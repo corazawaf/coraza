@@ -586,6 +586,273 @@ func TestContainsFoldASCII(t *testing.T) {
 	}
 }
 
+// TestBinaryRXBypassesPrefilter verifies that patterns containing non-UTF8 byte
+// sequences (e.g. \xac\xed\x00\x05) go through the binaryRX path and do NOT
+// get a prefilter attached. This is critical because rxprefilter.go only handles
+// standard regexp.Regexp, not binaryregexp.Regexp.
+func TestBinaryRXBypassesPrefilter(t *testing.T) {
+	tests := []struct {
+		name    string
+		pattern string
+		input   string
+		want    bool
+	}{
+		{
+			name:    "binary_match",
+			pattern: `\xac\xed\x00\x05`,
+			input:   "\xac\xed\x00\x05t\x00\x04test",
+			want:    true,
+		},
+		{
+			name:    "binary_no_match",
+			pattern: `\xac\xed\x00\x05`,
+			input:   "\xac\xed\x00t\x00\x04test",
+			want:    false,
+		},
+		{
+			name:    "binary_match_2",
+			pattern: `\xff\xfe`,
+			input:   "\xff\xfedata",
+			want:    true,
+		},
+		{
+			name:    "binary_no_match_2",
+			pattern: `\xff\xfe`,
+			input:   "normal text",
+			want:    false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			opts := plugintypes.OperatorOptions{Arguments: tc.pattern}
+			op, err := newRX(opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Verify it's a binaryRX, not an rx with prefilter
+			if _, ok := op.(*binaryRX); !ok {
+				t.Fatalf("expected binaryRX for pattern %q, got %T", tc.pattern, op)
+			}
+
+			waf := corazawaf.NewWAF()
+			tx := waf.NewTransaction()
+			tx.Capture = true
+			got := op.Evaluate(tx, tc.input)
+			if got != tc.want {
+				t.Errorf("Evaluate(%q, %q) = %v, want %v", tc.pattern, tc.input, got, tc.want)
+			}
+		})
+	}
+}
+
+// TestPrefilterWithSMPrefix verifies that the (?sm) or (?s) prefix that newRX
+// prepends to every pattern does not break the prefilter. The prefilterFunc
+// receives the full prefixed pattern, and it must still extract correct literals
+// and not cause false negatives.
+func TestPrefilterWithSMPrefix(t *testing.T) {
+	tests := []struct {
+		name    string
+		pattern string
+		input   string
+		want    bool
+	}{
+		// (?sm) prefix: dotall + multiline. The pattern "hello.*world" should
+		// still match across newlines, and the prefilter should still require
+		// both "hello" and "world".
+		{
+			name:    "dotall_match",
+			pattern: "hello.*world",
+			input:   "hello\nworld",
+			want:    true,
+		},
+		{
+			name:    "dotall_no_match",
+			pattern: "hello.*world",
+			input:   "goodbye\nuniverse",
+			want:    false,
+		},
+		// Multiline: ^ matches at line start
+		{
+			name:    "multiline_anchor",
+			pattern: "^hello.*world",
+			input:   "test\nhello\nworld",
+			want:    true,
+		},
+		// User-supplied (?i) combined with the automatic (?sm)
+		{
+			name:    "user_ci_with_sm_match",
+			pattern: "(?i)hello.*world",
+			input:   "HELLO\nWORLD",
+			want:    true,
+		},
+		{
+			name:    "user_ci_with_sm_no_match",
+			pattern: "(?i)hello.*world",
+			input:   "GOODBYE\nUNIVERSE",
+			want:    false,
+		},
+		// Double (?sm) — user passes (?sm) and newRX also prepends it
+		{
+			name:    "double_sm",
+			pattern: "(?sm)hello.*world",
+			input:   "hello\nworld",
+			want:    true,
+		},
+		// CRS-style pattern through newRX with automatic prefix
+		{
+			name:    "crs_sqli_via_newrx",
+			pattern: "(?:union\\s+select|insert\\s+into)",
+			input:   "union select * from t",
+			want:    true,
+		},
+		{
+			name:    "crs_sqli_via_newrx_no_match",
+			pattern: "(?:union\\s+select|insert\\s+into)",
+			input:   "just normal text",
+			want:    false,
+		},
+		// Alternation with (?i) through full pipeline
+		{
+			name:    "ci_alternation_via_newrx",
+			pattern: "(?i)(?:select|union|insert)",
+			input:   "SELECT",
+			want:    true,
+		},
+		{
+			name:    "ci_alternation_via_newrx_no_match",
+			pattern: "(?i)(?:select|union|insert)",
+			input:   "DELETE",
+			want:    false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			opts := plugintypes.OperatorOptions{Arguments: tc.pattern}
+			op, err := newRX(opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Verify this goes through the rx path (not binaryRX)
+			rxOp, ok := op.(*rx)
+			if !ok {
+				t.Fatalf("expected *rx for pattern %q, got %T", tc.pattern, op)
+			}
+
+			// Verify the prefilter doesn't cause false negatives
+			waf := corazawaf.NewWAF()
+			tx := waf.NewTransaction()
+			tx.Capture = true
+			got := rxOp.Evaluate(tx, tc.input)
+			if got != tc.want {
+				t.Errorf("Evaluate(%q, %q) = %v, want %v", tc.pattern, tc.input, got, tc.want)
+			}
+		})
+	}
+}
+
+// TestMemoizeSharesPrefilter verifies that two newRX calls with the same pattern
+// produce operators with identical compiled artifacts. When the memoize_builders
+// build tag is active, they share the same pointer; without it, they are distinct
+// but behaviorally equivalent.
+func TestMemoizeSharesPrefilter(t *testing.T) {
+	pattern := "hello.*world"
+	opts := plugintypes.OperatorOptions{Arguments: pattern}
+
+	op1, err := newRX(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	op2, err := newRX(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rx1 := op1.(*rx)
+	rx2 := op2.(*rx)
+
+	// Both should have the same minLen
+	if rx1.minLen != rx2.minLen {
+		t.Errorf("minLen mismatch: %d vs %d", rx1.minLen, rx2.minLen)
+	}
+
+	// Both should have the same regex pattern
+	if rx1.re.String() != rx2.re.String() {
+		t.Errorf("regex pattern mismatch: %q vs %q", rx1.re.String(), rx2.re.String())
+	}
+
+	// Both should produce the same evaluation results
+	inputs := []string{"hello beautiful world", "goodbye", "", "hello world"}
+	for _, inp := range inputs {
+		waf := corazawaf.NewWAF()
+		tx1 := waf.NewTransaction()
+		tx1.Capture = true
+		tx2 := waf.NewTransaction()
+		tx2.Capture = true
+
+		r1 := rx1.Evaluate(tx1, inp)
+		r2 := rx2.Evaluate(tx2, inp)
+		if r1 != r2 {
+			t.Errorf("input %q: op1=%v, op2=%v", inp, r1, r2)
+		}
+	}
+}
+
+// TestPrefilterConcurrentSafety verifies the prefilter closure and Aho-Corasick
+// automaton can be safely called from multiple goroutines concurrently.
+func TestPrefilterConcurrentSafety(t *testing.T) {
+	pattern := "(?i)(?:union\\s+select|insert\\s+into|delete\\s+from)"
+	opts := plugintypes.OperatorOptions{Arguments: pattern}
+	op, err := newRX(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	inputs := []string{
+		"union select * from t",
+		"INSERT INTO t VALUES",
+		"normal request",
+		"GET /index.html HTTP/1.1",
+		"delete from users",
+		"",
+		"UNION SELECT 1,2,3",
+	}
+
+	// Run 100 goroutines, each evaluating all inputs
+	const goroutines = 100
+	errs := make(chan error, goroutines*len(inputs))
+	done := make(chan struct{})
+
+	for g := 0; g < goroutines; g++ {
+		go func() {
+			for _, inp := range inputs {
+				waf := corazawaf.NewWAF()
+				tx := waf.NewTransaction()
+				tx.Capture = true
+				got := op.Evaluate(tx, inp)
+
+				// Cross-check against direct regex
+				re := regexp.MustCompile("(?i)(?:union\\s+select|insert\\s+into|delete\\s+from)")
+				want := re.MatchString(inp)
+				if got != want {
+					errs <- fmt.Errorf("input %q: concurrent Evaluate=%v, regex=%v", inp, got, want)
+				}
+			}
+			done <- struct{}{}
+		}()
+	}
+
+	for g := 0; g < goroutines; g++ {
+		<-done
+	}
+	close(errs)
+
+	for err := range errs {
+		t.Error(err)
+	}
+}
+
 // FuzzPrefilterNoFalseNegatives uses Go's built-in fuzz testing to verify with
 // random patterns AND inputs that the prefilter never rejects an input the
 // regex matches. This is the primary safety net — it generates arbitrary
