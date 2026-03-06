@@ -179,14 +179,11 @@ RulesLoop:
 		}
 
 		// we skip the rule in case it's in the excluded list
-		for _, trb := range tx.ruleRemoveByID {
-			if trb == r.ID_ {
-				tx.DebugLogger().Debug().
-					Int("rule_id", r.ID_).
-					Msg("Skipping rule")
-
-				continue RulesLoop
-			}
+		if _, skip := tx.ruleRemoveByID[r.ID_]; skip {
+			tx.DebugLogger().Debug().
+				Int("rule_id", r.ID_).
+				Msg("Skipping rule")
+			continue RulesLoop
 		}
 
 		// we always evaluate secmarkers
