@@ -243,7 +243,7 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 			vLog.Debug().Msg("Expanding arguments for rule")
 
 			var argsBuf [1]string
-		args := argsBuf[:]
+			args := argsBuf[:]
 			var errs []error
 			var argsLen int
 			for i, arg := range values {
