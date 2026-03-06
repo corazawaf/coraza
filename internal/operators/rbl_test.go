@@ -53,14 +53,15 @@ func TestRbl(t *testing.T) {
 	srv.PatchNet(op.(*rbl).resolver)
 	defer mockdns.UnpatchNet(op.(*rbl).resolver)
 
+	tx := corazawaf.NewWAF().NewTransaction()
+
 	t.Run("Valid hostname with no TXT record", func(t *testing.T) {
-		if op.Evaluate(nil, "valid_no_txt") {
+		if op.Evaluate(tx, "valid_no_txt") {
 			t.Errorf("Unexpected result for valid hostname with no TXT record")
 		}
 	})
 
 	t.Run("Valid hostname with TXT record", func(t *testing.T) {
-		tx := corazawaf.NewWAF().NewTransaction()
 		if !op.Evaluate(tx, "valid_txt") {
 			t.Errorf("Unexpected result for valid hostname")
 		}
@@ -70,13 +71,12 @@ func TestRbl(t *testing.T) {
 	})
 
 	t.Run("Invalid hostname", func(t *testing.T) {
-		if op.Evaluate(nil, "invalid") {
+		if op.Evaluate(tx, "invalid") {
 			t.Errorf("Unexpected result for invalid hostname")
 		}
 	})
 
 	t.Run("Blocked hostname", func(t *testing.T) {
-		tx := corazawaf.NewWAF().NewTransaction()
 		if !op.Evaluate(tx, "blocked") {
 			t.Fatal("Unexpected result for blocked hostname")
 		}
