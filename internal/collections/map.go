@@ -61,9 +61,12 @@ func (c *Map) Get(key string) []string {
 // FindRegex returns all map elements whose key matches the regular expression.
 func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
 	n := 0
+	// Collect matching data slices in a single pass to avoid evaluating the regex twice per key.
+	var matched [][]keyValue
 	for k, data := range c.data {
 		if key.MatchString(k) {
 			n += len(data)
+			matched = append(matched, data)
 		}
 	}
 	if n == 0 {
@@ -72,17 +75,15 @@ func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
 	buf := make([]corazarules.MatchData, n)
 	result := make([]types.MatchData, n)
 	i := 0
-	for k, data := range c.data {
-		if key.MatchString(k) {
-			for _, d := range data {
-				buf[i] = corazarules.MatchData{
-					Variable_: c.variable,
-					Key_:      d.key,
-					Value_:    d.value,
-				}
-				result[i] = &buf[i]
-				i++
+	for _, data := range matched {
+		for _, d := range data {
+			buf[i] = corazarules.MatchData{
+				Variable_: c.variable,
+				Key_:      d.key,
+				Value_:    d.value,
 			}
+			result[i] = &buf[i]
+			i++
 		}
 	}
 	return result

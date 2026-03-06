@@ -102,9 +102,12 @@ type NamedCollectionNames struct {
 
 func (c *NamedCollectionNames) FindRegex(key *regexp.Regexp) []types.MatchData {
 	n := 0
+	// Collect matching data slices in a single pass to avoid evaluating the regex twice per key.
+	var matched [][]keyValue
 	for k, data := range c.collection.data {
 		if key.MatchString(k) {
 			n += len(data)
+			matched = append(matched, data)
 		}
 	}
 	if n == 0 {
@@ -113,10 +116,7 @@ func (c *NamedCollectionNames) FindRegex(key *regexp.Regexp) []types.MatchData {
 	buf := make([]corazarules.MatchData, n)
 	res := make([]types.MatchData, n)
 	i := 0
-	for k, data := range c.collection.data {
-		if !key.MatchString(k) {
-			continue
-		}
+	for _, data := range matched {
 		for _, d := range data {
 			buf[i] = corazarules.MatchData{
 				Variable_: c.variable,
