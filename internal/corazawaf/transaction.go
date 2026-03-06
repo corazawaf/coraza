@@ -341,7 +341,7 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 		return
 	}
 	keyl := strings.ToLower(key)
-	tx.variables.requestHeaders.Add(key, value)
+	tx.variables.requestHeaders.AddWithLowerKey(key, keyl, value)
 
 	switch keyl {
 	case "content-type":
@@ -383,7 +383,7 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 		return
 	}
 	keyl := strings.ToLower(key)
-	tx.variables.responseHeaders.Add(key, value)
+	tx.variables.responseHeaders.AddWithLowerKey(key, keyl, value)
 
 	// Most headers can be managed like that
 	if keyl == "content-type" {
@@ -616,9 +616,13 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 	filteredCount := 0
 	for _, c := range matches {
 		isException := false
-		lkey := strings.ToLower(c.Key())
+		md := c.(*corazarules.MatchData)
+		lkey := md.LowerKey_
+		if lkey == "" && md.Key_ != "" {
+			lkey = strings.ToLower(md.Key_)
+		}
 		for _, ex := range rv.Exceptions {
-			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || strings.ToLower(ex.KeyStr) == lkey || (ex.KeyStr == "" && ex.KeyRx == nil) {
+			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || ex.lowerKeyStr == lkey || (ex.KeyStr == "" && ex.KeyRx == nil) {
 				isException = true
 				break
 			}
