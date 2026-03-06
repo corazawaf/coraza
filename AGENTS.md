@@ -4,7 +4,7 @@ This document helps LLMs (GitHub Copilot, Claude, Cursor, etc.) understand the C
 
 ## Project Overview
 
-Coraza is a Web Application Firewall (WAF) engine written in Go. It implements the SecLang directive language (compatible with ModSecurity v2/v3), is fully compatible with OWASP Core Rule Set (CRS) v4, and is an OWASP Production Project. Coraza also supports TinyGo compilation for environments with constrained runtimes (e.g. WASM).
+Coraza is a Web Application Firewall (WAF) engine written in Go. It implements the SecLang directive language (compatible with ModSecurity v2/v3), is fully compatible with OWASP CRS v4, and is an OWASP Production Project. Coraza also supports TinyGo compilation for environments with constrained runtimes (e.g. WASM).
 
 ## Repository Structure
 
