@@ -106,7 +106,7 @@ type Transaction struct {
 	Capture bool
 
 	// Contains duration in useconds per phase
-	stopWatches map[types.RulePhase]int64
+	stopWatches [6]int64
 
 	// Contains a WAF instance for the current transaction
 	WAF *WAF
@@ -566,14 +566,12 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 // Normally it should be named StopWatch() but it would be confusing
 func (tx *Transaction) GetStopWatch() string {
 	ts := tx.Timestamp
-	sum := int64(0)
-	for _, r := range tx.stopWatches {
-		sum += r
-	}
+	sw := tx.stopWatches
+	sum := sw[1] + sw[2] + sw[3] + sw[4] + sw[5]
 	diff := time.Now().UnixNano() - ts
-	sw := fmt.Sprintf("%d %d; combined=%d, p1=%d, p2=%d, p3=%d, p4=%d, p5=%d",
-		ts, diff, sum, tx.stopWatches[1], tx.stopWatches[2], tx.stopWatches[3], tx.stopWatches[4], tx.stopWatches[5])
-	return sw
+	swStr := fmt.Sprintf("%d %d; combined=%d, p1=%d, p2=%d, p3=%d, p4=%d, p5=%d",
+		ts, diff, sum, sw[1], sw[2], sw[3], sw[4], sw[5])
+	return swStr
 }
 
 // GetField Retrieve data from collections applying exceptions
