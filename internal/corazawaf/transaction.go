@@ -582,7 +582,7 @@ func (tx *Transaction) GetStopWatch() string {
 func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 	col := tx.Collection(rv.Variable)
 	if col == nil {
-		return []types.MatchData{}
+		return nil
 	}
 
 	var matches []types.MatchData
