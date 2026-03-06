@@ -616,10 +616,12 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 	filteredCount := 0
 	for _, c := range matches {
 		isException := false
-		md := c.(*corazarules.MatchData)
-		lkey := md.LowerKey_
-		if lkey == "" && md.Key_ != "" {
-			lkey = strings.ToLower(md.Key_)
+		var lkey string
+		if md, ok := c.(*corazarules.MatchData); ok {
+			lkey = md.LowerKey_
+		}
+		if lkey == "" {
+			lkey = strings.ToLower(c.Key())
 		}
 		for _, ex := range rv.Exceptions {
 			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || ex.lowerKeyStr == lkey || (ex.KeyStr == "" && ex.KeyRx == nil) {
