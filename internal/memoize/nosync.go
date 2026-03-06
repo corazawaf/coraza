@@ -1,36 +1,32 @@
 // Copyright 2023 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build tinygo && memoize_builders
+//go:build tinygo && !coraza.no_memoize
 
 package memoize
 
 import "sync"
 
-var doer = makeDoer(new(sync.Map))
+var cache sync.Map
 
-// Do executes and returns the results of the given function, unless there was a cached
-// value of the same key. Only one execution is in-flight for a given key at a time.
-// The boolean return value indicates whether v was previously stored.
-func Do(key string, fn func() (interface{}, error)) (interface{}, error) {
-	value, err, _ := doer(key, fn)
-	return value, err
+// Memoizer caches expensive function calls on a global cache.
+// TinyGo variant without singleflight.
+type Memoizer struct{}
+
+// NewMemoizer creates a new Memoizer.
+func NewMemoizer() *Memoizer {
+	return &Memoizer{}
 }
 
-// makeDoer returns a function that executes and returns the results of the given function
-func makeDoer(cache *sync.Map) func(string, func() (interface{}, error)) (interface{}, error, bool) {
-	return func(key string, fn func() (interface{}, error)) (interface{}, error, bool) {
-		// Check cache
-		value, found := cache.Load(key)
-		if found {
-			return value, nil, true
-		}
-
-		data, err := fn()
-		if err == nil {
-			cache.Store(key, data)
-		}
-
-		return data, err, false
+// Do returns a cached value for key, or calls fn and caches the result.
+func (m *Memoizer) Do(key string, fn func() (any, error)) (any, error) {
+	if value, ok := cache.Load(key); ok {
+		return value, nil
 	}
+
+	data, err := fn()
+	if err == nil {
+		cache.Store(key, data)
+	}
+	return data, err
 }
