@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
@@ -105,6 +106,42 @@ func TestNewCaseSensitiveKeyMap(t *testing.T) {
 		t.Fatal("The lengths are not equal.")
 	}
 
+}
+
+func TestAddWithLowerKey(t *testing.T) {
+	m := NewMap(variables.ArgsGet)
+	m.AddWithLowerKey("Content-Type", "content-type", "text/html")
+
+	results := m.FindString("content-type")
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+
+	if results[0].Key() != "Content-Type" {
+		t.Errorf("expected original case key 'Content-Type', got %q", results[0].Key())
+	}
+	if results[0].Value() != "text/html" {
+		t.Errorf("expected value 'text/html', got %q", results[0].Value())
+	}
+}
+
+func TestFindAllPopulatesLowerKey(t *testing.T) {
+	m := NewMap(variables.ArgsGet)
+	m.Add("Content-Type", "text/html")
+
+	results := m.FindAll()
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+
+	// Access the MatchData to check LowerKey_ is populated
+	md, ok := results[0].(*corazarules.MatchData)
+	if !ok {
+		t.Fatal("expected *corazarules.MatchData")
+	}
+	if md.LowerKey_ != "content-type" {
+		t.Errorf("expected LowerKey_ 'content-type', got %q", md.LowerKey_)
+	}
 }
 
 func BenchmarkTxSetGet(b *testing.B) {

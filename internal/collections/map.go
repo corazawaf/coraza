@@ -68,6 +68,7 @@ func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
 					Variable_: c.variable,
 					Key_:      d.key,
 					Value_:    d.value,
+					LowerKey_: d.lowerKey,
 				})
 			}
 		}
@@ -94,6 +95,7 @@ func (c *Map) FindString(key string) []types.MatchData {
 				Variable_: c.variable,
 				Key_:      aVar.key,
 				Value_:    aVar.value,
+				LowerKey_: aVar.lowerKey,
 			})
 		}
 	}
@@ -109,6 +111,7 @@ func (c *Map) FindAll() []types.MatchData {
 				Variable_: c.variable,
 				Key_:      d.key,
 				Value_:    d.value,
+				LowerKey_: d.lowerKey,
 			})
 		}
 	}
@@ -117,47 +120,62 @@ func (c *Map) FindAll() []types.MatchData {
 
 // Add adds a new key-value pair to the map.
 func (c *Map) Add(key string, value string) {
-	aVal := keyValue{key: key, value: value}
+	lk := key
 	if !c.isCaseSensitive {
-		key = strings.ToLower(key)
+		lk = strings.ToLower(key)
 	}
-	c.data[key] = append(c.data[key], aVal)
+	aVal := keyValue{key: key, value: value, lowerKey: lk}
+	c.data[lk] = append(c.data[lk], aVal)
+}
+
+// AddWithLowerKey adds a new key-value pair using a pre-computed lowercase key,
+// avoiding a redundant ToLower call when the caller already has the lowercase key.
+// For case-sensitive maps, the original key is used as the storage key instead.
+func (c *Map) AddWithLowerKey(key, lowerKey, value string) {
+	storageKey := lowerKey
+	if c.isCaseSensitive {
+		storageKey = key
+	}
+	aVal := keyValue{key: key, value: value, lowerKey: lowerKey}
+	c.data[storageKey] = append(c.data[storageKey], aVal)
 }
 
 // Sets the value of a key with the array of strings passed. If the key already exists, it will be overwritten.
 func (c *Map) Set(key string, values []string) {
 	originalKey := key
+	lk := key
 	if !c.isCaseSensitive {
-		key = strings.ToLower(key)
+		lk = strings.ToLower(key)
 	}
-	dataSlice, exists := c.data[key]
+	dataSlice, exists := c.data[lk]
 	if !exists || cap(dataSlice) < len(values) {
 		dataSlice = make([]keyValue, len(values))
 	} else {
 		dataSlice = dataSlice[:len(values)] // Reuse existing slice with the same length
 	}
 	for i, v := range values {
-		dataSlice[i] = keyValue{key: originalKey, value: v}
+		dataSlice[i] = keyValue{key: originalKey, value: v, lowerKey: lk}
 	}
-	c.data[key] = dataSlice
+	c.data[lk] = dataSlice
 }
 
 // SetIndex sets the value of a key at the specified index. If the key already exists, it will be overwritten.
 func (c *Map) SetIndex(key string, index int, value string) {
 	originalKey := key
+	lk := key
 	if !c.isCaseSensitive {
-		key = strings.ToLower(key)
+		lk = strings.ToLower(key)
 	}
-	values := c.data[key]
-	av := keyValue{key: originalKey, value: value}
+	values := c.data[lk]
+	av := keyValue{key: originalKey, value: value, lowerKey: lk}
 
 	switch {
 	case len(values) == 0:
-		c.data[key] = []keyValue{av}
+		c.data[lk] = []keyValue{av}
 	case len(values) <= index:
-		c.data[key] = append(c.data[key], av)
+		c.data[lk] = append(c.data[lk], av)
 	default:
-		c.data[key][index] = av
+		c.data[lk][index] = av
 	}
 }
 
@@ -217,6 +235,7 @@ func (c *Map) Len() int {
 // keyValue stores the case preserved original key and value
 // of the variable
 type keyValue struct {
-	key   string
-	value string
+	key      string
+	value    string
+	lowerKey string
 }
