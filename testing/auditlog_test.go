@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -23,11 +22,12 @@ import (
 func TestAuditLogMessages(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	parser := seclang.NewParser(waf)
-	// generate a random tmp file
-	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
+
+	file, err := os.CreateTemp(t.TempDir(), "tmp.log")
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer file.Close()
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
 		t.Fatal(err)
 	}
@@ -83,12 +83,12 @@ func TestAuditLogRelevantOnly(t *testing.T) {
 	`); err != nil {
 		t.Fatal(err)
 	}
-	// generate a random tmp file
-	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
+
+	file, err := os.CreateTemp(t.TempDir(), "tmp.log")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(file.Name())
+	defer file.Close()
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
 		t.Fatal(err)
 	}
@@ -110,11 +110,11 @@ func TestAuditLogRelevantOnly(t *testing.T) {
 func TestAuditLogRelevantOnlyOk(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	parser := seclang.NewParser(waf)
-	// generate a random tmp file
-	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
+	file, err := os.CreateTemp(t.TempDir(), "tmp.log")
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer file.Close()
 	defer os.Remove(file.Name())
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
 		t.Fatal(err)
@@ -158,12 +158,11 @@ func TestAuditLogRelevantOnlyNoAuditlog(t *testing.T) {
 	`); err != nil {
 		t.Fatal(err)
 	}
-	// generate a random tmp file
-	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
+	file, err := os.CreateTemp(t.TempDir(), "tmp.log")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(file.Name())
+	defer file.Close()
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
 		t.Fatal(err)
 	}
@@ -197,12 +196,11 @@ func TestAuditLogOnWithNoLog(t *testing.T) {
 	`); err != nil {
 		t.Fatal(err)
 	}
-	// generate a random tmp file
-	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
+	file, err := os.CreateTemp(t.TempDir(), "tmp.log")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(file.Name())
+	defer file.Close()
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
 		t.Fatal(err)
 	}
@@ -236,12 +234,11 @@ func TestAuditLogRequestMethodURIProtocol(t *testing.T) {
 	`); err != nil {
 		t.Fatal(err)
 	}
-	// generate a random tmp file
-	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
+	file, err := os.CreateTemp(t.TempDir(), "tmp.log")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(file.Name())
+	defer file.Close()
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
 		t.Fatal(err)
 	}
@@ -292,12 +289,11 @@ func TestAuditLogRequestBody(t *testing.T) {
 	`); err != nil {
 		t.Fatal(err)
 	}
-	// generate a random tmp file
-	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
+	file, err := os.CreateTemp(t.TempDir(), "tmp.log")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(file.Name())
+	defer file.Close()
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
 		t.Fatal(err)
 	}
@@ -350,12 +346,11 @@ func TestAuditLogHFlag(t *testing.T) {
 	`); err != nil {
 		t.Fatal(err)
 	}
-	// generate a random tmp file
-	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
+	file, err := os.CreateTemp(t.TempDir(), "tmp.log")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(file.Name())
+	defer file.Close()
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
 		t.Fatal(err)
 	}
@@ -400,12 +395,11 @@ func TestAuditLogWithKFlagWithoutHFlag(t *testing.T) {
 	`); err != nil {
 		t.Fatal(err)
 	}
-	// generate a random tmp file
-	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
+	file, err := os.CreateTemp(t.TempDir(), "tmp.log")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(file.Name())
+	defer file.Close()
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
 		t.Fatal(err)
 	}
@@ -435,7 +429,7 @@ func TestAuditLogWithKFlagWithoutHFlag(t *testing.T) {
 	}
 }
 
-func TestAuditLogRelevantOnlyDeny(t *testing.T) {
+func TestAuditLogRelevantOnlyDetectionOnly(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	parser := seclang.NewParser(waf)
 	if err := parser.FromString(`
@@ -448,26 +442,25 @@ func TestAuditLogRelevantOnlyDeny(t *testing.T) {
 	`); err != nil {
 		t.Fatal(err)
 	}
-	// generate a random tmp file
-	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
+	file, err := os.CreateTemp(t.TempDir(), "tmp.log")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(file.Name())
-	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
+	defer file.Close()
+	if err = parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
 		t.Fatal(err)
 	}
 	tx := waf.NewTransaction()
 	tx.AddGetRequestArgument("test", "test")
 	tx.ProcessRequestHeaders()
 	// now we read file
-	if _, err := file.Seek(0, 0); err != nil {
-		t.Error(err)
+	if _, err = file.Seek(0, 0); err != nil {
+		t.Fatal(err)
 	}
 	tx.ProcessLogging()
 	var al auditlog.Log
-	if err := json.NewDecoder(file).Decode(&al); err != nil {
-		t.Error(err)
+	if err = json.NewDecoder(file).Decode(&al); err != nil {
+		t.Fatal(err)
 	}
 	if len(al.Messages()) != 1 {
 		t.Fatalf("Expected 1 message, got %d", len(al.Messages()))

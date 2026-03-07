@@ -54,8 +54,10 @@ type Transaction struct {
 	// True if the transaction has been disrupted by any rule
 	interruption *types.Interruption
 
-	// This is used to store detected interruptions that are not disruptive
-	detectedInterruption *types.Interruption
+	// detectionOnlyInterruption keeps track of the interruption that would have been performed if the engine was On.
+	// It allows to have execution and audit logs parity between "On" and "DetectionOnly" modes, and improves
+	// visibility of what would have happened in On mode when the engine is set to "DetectionOnly".
+	detectionOnlyInterruption *types.Interruption
 
 	// This is used to store log messages
 	// Deprecated since Coraza 3.0.5: this variable is not used, logdata values are stored in the matched rules
@@ -65,6 +67,9 @@ type Transaction struct {
 	SkipAfter string
 
 	// AllowType is used by the allow disruptive action to skip evaluating rules after being allowed
+	// Note: Rely on tx.Allow(allowType) for tweaking this field. This field is exposed for backwards
+	// compatibility, but it is not recommended to be used directly.
+	// TODO(4.x): Evaluate to make it private
 	AllowType corazatypes.AllowType
 
 	// Copies from the WAF instance that may be overwritten by the ctl action
@@ -312,12 +317,36 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 	return collections.Noop
 }
 
+// Interrupt sets the interruption for the transaction.
+// It complies with DetectionOnly definition which requires to don't execute disruptive actions.
+// Depending on the RuleEngine mode:
+// If On: it immediately interrupts the transaction and generates a response.
+// If DetectionOnly: it keeps track of what the interruption would have been if the engine was "On",
+// allowing consistent logging and visibility of potential disruptions without actually interrupting the transaction.
 func (tx *Transaction) Interrupt(interruption *types.Interruption) {
-	if tx.RuleEngine == types.RuleEngineOn {
+	switch tx.RuleEngine {
+	case types.RuleEngineOn:
 		tx.interruption = interruption
-	} else if tx.RuleEngine == types.RuleEngineDetectionOnly {
-		// Do not actually interrupt the transaction but still log it in the audit log
-		tx.detectedInterruption = interruption
+	case types.RuleEngineDetectionOnly:
+		// In DetectionOnly mode, the interruption is not actually triggered, which means that
+		// further rules will continue to be evaluated and more actions can be executed.
+		// Let's keep only the first interruption here, matching the one that would have been triggered
+		// if the engine was on.
+		if tx.detectionOnlyInterruption == nil {
+			tx.detectionOnlyInterruption = interruption
+		}
+	}
+}
+
+// Allow sets the allow type for the transaction.
+// It complies with DetectionOnly definition which requires to don't execute disruptive actions.
+// Depending on the RuleEngine mode:
+// If On: it will cause the transaction to skip rules according to the allow type (phase, request, all).
+// If DetectionOnly: allow is not enforced.
+// TODO(4.x): evaluate to expose it in the interface.
+func (tx *Transaction) Allow(allowType corazatypes.AllowType) {
+	if tx.RuleEngine == types.RuleEngineOn {
+		tx.AllowType = allowType
 	}
 }
 
@@ -540,19 +569,19 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 		MatchedDatas_:    mds,
 		Context_:         tx.context,
 	}
-	// Populate MatchedRule disruption related fields only if the Engine is capable of performing disruptive actions
-	if tx.RuleEngine == types.RuleEngineOn {
-		var exists bool
-		for _, a := range r.actions {
-			// There can be only at most one disruptive action per rule
-			if a.Function.Type() == plugintypes.ActionTypeDisruptive {
-				mr.DisruptiveAction_, exists = corazarules.DisruptiveActionMap[a.Name]
-				if !exists {
-					mr.DisruptiveAction_ = corazarules.DisruptiveActionUnknown
-				}
-				mr.Disruptive_ = true
-				break
-			}
+
+	// Starting from Coraza 3.4, MatchedRule are including the disruptive action (DisruptiveAction_)
+	// also in DetectionOnly mode. This improves visibility of what would have happened if the engine was on.
+	// The Disruptive_ boolean still allows to identify actual disruptions from "potential" disruptions.
+	// Disruptive_ field is also used during logging to print different messages if the disruption has been real or not
+	// so it is important to set it according to the RuleEngine mode.
+	for _, a := range r.actions {
+		// There can be only at most one disruptive action per rule
+		if a.Function.Type() == plugintypes.ActionTypeDisruptive {
+			// if not found it will default to DisruptiveActionUnknown.
+			mr.DisruptiveAction_ = corazarules.DisruptiveActionMap[a.Name]
+			mr.Disruptive_ = tx.RuleEngine == types.RuleEngineOn
+			break
 		}
 	}
 
@@ -845,7 +874,7 @@ func (tx *Transaction) SetServerName(serverName string) {
 //
 // note: Remember to check for a possible intervention.
 func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
-	if tx.RuleEngine == types.RuleEngineOff {
+	if tx.IsRuleEngineOff() {
 		// Rule engine is disabled
 		return nil
 	}
@@ -855,7 +884,7 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 		return tx.interruption
 	}
 
-	if tx.interruption != nil {
+	if tx.IsInterrupted() {
 		tx.debugLogger.Error().Msg("Calling ProcessRequestHeaders but there is a preexisting interruption")
 		return tx.interruption
 	}
@@ -877,7 +906,7 @@ func setAndReturnBodyLimitInterruption(tx *Transaction, status int) (*types.Inte
 // it returns an interruption if the writing bytes go beyond the request body limit.
 // It won't copy the bytes if the body access isn't accessible.
 func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, error) {
-	if tx.RuleEngine == types.RuleEngineOff {
+	if tx.IsRuleEngineOff() {
 		return nil, 0, nil
 	}
 
@@ -942,7 +971,7 @@ type ByteLenger interface {
 // it returns an interruption if the writing bytes go beyond the request body limit.
 // It won't read the reader if the body access isn't accessible.
 func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, int, error) {
-	if tx.RuleEngine == types.RuleEngineOff {
+	if tx.IsRuleEngineOff() {
 		return nil, 0, nil
 	}
 
@@ -1021,11 +1050,10 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 //
 // Remember to check for a possible intervention.
 func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
-	if tx.RuleEngine == types.RuleEngineOff {
+	if tx.IsRuleEngineOff() {
 		return nil, nil
 	}
-
-	if tx.interruption != nil {
+	if tx.IsInterrupted() {
 		tx.debugLogger.Error().Msg("Calling ProcessRequestBody but there is a preexisting interruption")
 		return tx.interruption, nil
 	}
@@ -1109,7 +1137,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 //
 // Note: Remember to check for a possible intervention.
 func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Interruption {
-	if tx.RuleEngine == types.RuleEngineOff {
+	if tx.IsRuleEngineOff() {
 		return nil
 	}
 
@@ -1119,7 +1147,7 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Int
 		return tx.interruption
 	}
 
-	if tx.interruption != nil {
+	if tx.IsInterrupted() {
 		tx.debugLogger.Error().Msg("Calling ProcessResponseHeaders but there is a preexisting interruption")
 		return tx.interruption
 	}
@@ -1151,7 +1179,7 @@ func (tx *Transaction) IsResponseBodyProcessable() bool {
 // it returns an interruption if the writing bytes go beyond the response body limit.
 // It won't copy the bytes if the body access isn't accessible.
 func (tx *Transaction) WriteResponseBody(b []byte) (*types.Interruption, int, error) {
-	if tx.RuleEngine == types.RuleEngineOff {
+	if tx.IsRuleEngineOff() {
 		return nil, 0, nil
 	}
 
@@ -1202,7 +1230,7 @@ func (tx *Transaction) WriteResponseBody(b []byte) (*types.Interruption, int, er
 // it returns an interruption if the writing bytes go beyond the response body limit.
 // It won't read the reader if the body access isn't accessible.
 func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, int, error) {
-	if tx.RuleEngine == types.RuleEngineOff {
+	if tx.IsRuleEngineOff() {
 		return nil, 0, nil
 	}
 
@@ -1272,11 +1300,11 @@ func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, i
 //
 // note Remember to check for a possible intervention.
 func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
-	if tx.RuleEngine == types.RuleEngineOff {
+	if tx.IsRuleEngineOff() {
 		return nil, nil
 	}
 
-	if tx.interruption != nil {
+	if tx.IsInterrupted() {
 		tx.debugLogger.Error().Msg("Calling ProcessResponseBody but there is a preexisting interruption")
 		return tx.interruption, nil
 	}
@@ -1344,12 +1372,11 @@ func (tx *Transaction) ProcessLogging() {
 	// If Rule engine is disabled, Log phase rules are not going to be evaluated.
 	// This avoids trying to rely on variables not set by previous rules that
 	// have not been executed
-	if tx.RuleEngine != types.RuleEngineOff {
+	if !tx.IsRuleEngineOff() {
 		tx.WAF.Rules.Eval(types.PhaseLogging, tx)
 	}
 
 	if tx.AuditEngine == types.AuditEngineOff {
-		// Audit engine disabled
 		tx.debugLogger.Debug().
 			Msg("Transaction not marked for audit logging, AuditEngine is disabled")
 		return
@@ -1367,13 +1394,14 @@ func (tx *Transaction) ProcessLogging() {
 		status := tx.variables.responseStatus.Get()
 		if tx.IsInterrupted() {
 			status = strconv.Itoa(tx.interruption.Status)
-		} else if tx.detectedInterruption != nil {
-			status = strconv.Itoa(tx.detectedInterruption.Status)
+		} else if tx.IsDetectionOnlyInterrupted() {
+			// This allows to check for relevant status even in detection only mode.
+			// Fixes https://github.com/corazawaf/coraza/issues/1333
+			status = strconv.Itoa(tx.detectionOnlyInterruption.Status)
 		}
 		if re != nil && !re.Match([]byte(status)) {
 			// Not relevant status
-			tx.debugLogger.Debug().
-				Msg("Transaction status not marked for audit logging")
+			tx.debugLogger.Debug().Msg("Transaction status not marked for audit logging")
 			return
 		}
 	}
@@ -1409,8 +1437,17 @@ func (tx *Transaction) IsInterrupted() bool {
 	return tx.interruption != nil
 }
 
+// TODO(4.x): evaluate to expose it in the interface.
+func (tx *Transaction) IsDetectionOnlyInterrupted() bool {
+	return tx.detectionOnlyInterruption != nil
+}
+
 func (tx *Transaction) Interruption() *types.Interruption {
 	return tx.interruption
+}
+
+func (tx *Transaction) DetectionOnlyInterruption() *types.Interruption {
+	return tx.detectionOnlyInterruption
 }
 
 func (tx *Transaction) MatchedRules() []types.MatchedRule {
