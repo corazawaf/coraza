@@ -201,7 +201,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.Skip = 0
 	tx.AllowType = 0
 	tx.Capture = false
-	tx.stopWatches = map[types.RulePhase]int64{}
+	tx.stopWatches = [numPhases]int64{}
 	tx.WAF = w
 	tx.debugLogger = w.Logger.With(debuglog.Str("tx_id", tx.id))
 	tx.Timestamp = time.Now().UnixNano()

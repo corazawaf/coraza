@@ -41,6 +41,10 @@ import (
 // actions. Disruptive actions can be read from *tx.Interruption.
 // It is safe to manage multiple transactions but transactions themself are not
 // thread safe
+
+// numPhases is the number of WAF processing phases (0-5).
+const numPhases = 6
+
 type Transaction struct {
 	// Transaction ID
 	id string
@@ -106,7 +110,7 @@ type Transaction struct {
 	Capture bool
 
 	// Contains duration in useconds per phase
-	stopWatches map[types.RulePhase]int64
+	stopWatches [numPhases]int64
 
 	// Contains a WAF instance for the current transaction
 	WAF *WAF
@@ -566,14 +570,10 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 // Normally it should be named StopWatch() but it would be confusing
 func (tx *Transaction) GetStopWatch() string {
 	ts := tx.Timestamp
-	sum := int64(0)
-	for _, r := range tx.stopWatches {
-		sum += r
-	}
+	sum := tx.stopWatches[1] + tx.stopWatches[2] + tx.stopWatches[3] + tx.stopWatches[4] + tx.stopWatches[5]
 	diff := time.Now().UnixNano() - ts
-	sw := fmt.Sprintf("%d %d; combined=%d, p1=%d, p2=%d, p3=%d, p4=%d, p5=%d",
+	return fmt.Sprintf("%d %d; combined=%d, p1=%d, p2=%d, p3=%d, p4=%d, p5=%d",
 		ts, diff, sum, tx.stopWatches[1], tx.stopWatches[2], tx.stopWatches[3], tx.stopWatches[4], tx.stopWatches[5])
-	return sw
 }
 
 // GetField Retrieve data from collections applying exceptions
