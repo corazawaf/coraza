@@ -685,6 +685,12 @@ func (tx *Transaction) RemoveRuleByIDRange(start, end int) {
 	tx.ruleRemoveByIDRanges = append(tx.ruleRemoveByIDRanges, [2]int{start, end})
 }
 
+// GetRuleRemoveByIDRanges returns the list of rule ID ranges that will be skipped
+// during transaction processing.
+func (tx *Transaction) GetRuleRemoveByIDRanges() [][2]int {
+	return tx.ruleRemoveByIDRanges
+}
+
 // ProcessConnection should be called at very beginning of a request process, it is
 // expected to be executed prior to the virtual host resolution, when the
 // connection arrives on the server.

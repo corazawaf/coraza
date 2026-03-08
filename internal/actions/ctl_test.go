@@ -23,6 +23,15 @@ func TestCtl(t *testing.T) {
 		"ruleRemoveTargetById": {
 			input: "ruleRemoveTargetById=123",
 		},
+		"ruleRemoveTargetById range": {
+			// Rule 1 is in WAF; range 1-5 should match it without error
+			input: "ruleRemoveTargetById=1-5;ARGS:test",
+			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
+				if wantToNotContain := "Invalid range"; strings.Contains(logEntry, wantToNotContain) {
+					t.Errorf("unexpected error in log: %q", logEntry)
+				}
+			},
+		},
 		"ruleRemoveTargetByTag": {
 			input: "ruleRemoveTargetByTag=tag1",
 		},
@@ -172,6 +181,16 @@ func TestCtl(t *testing.T) {
 		},
 		"ruleRemoveById range": {
 			input: "ruleRemoveById=1-3",
+			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
+				if len(tx.GetRuleRemoveByIDRanges()) != 1 {
+					t.Errorf("expected 1 range entry, got %d", len(tx.GetRuleRemoveByIDRanges()))
+					return
+				}
+				rng := tx.GetRuleRemoveByIDRanges()[0]
+				if rng[0] != 1 || rng[1] != 3 {
+					t.Errorf("unexpected range [%d, %d], want [1, 3]", rng[0], rng[1])
+				}
+			},
 		},
 		"ruleRemoveById incorrect": {
 			input: "ruleRemoveById=W",
@@ -457,6 +476,45 @@ func TestCtlParseIDOrRange(t *testing.T) {
 	for _, tCase := range tCases {
 		t.Run(tCase.input, func(t *testing.T) {
 			start, end, err := parseIDOrRange(tCase.input)
+			if tCase.expectErr && err == nil {
+				t.Error("expected error for input")
+			}
+
+			if !tCase.expectErr && err != nil {
+				t.Errorf("unexpected error for input: %s", err.Error())
+			}
+
+			if !tCase.expectErr {
+				if start != tCase.expectStart {
+					t.Errorf("unexpected start, want %d, have %d", tCase.expectStart, start)
+				}
+				if end != tCase.expectEnd {
+					t.Errorf("unexpected end, want %d, have %d", tCase.expectEnd, end)
+				}
+			}
+		})
+	}
+}
+
+func TestCtlParseRange(t *testing.T) {
+	tCases := []struct {
+		input       string
+		expectStart int
+		expectEnd   int
+		expectErr   bool
+	}{
+		{"1-2", 1, 2, false},
+		{"4-15", 4, 15, false},
+		{"5-5", 5, 5, false},
+		{"test-2", 0, 0, true},
+		{"2-test", 0, 0, true},
+		{"5-4", 0, 0, true}, // start > end
+		{"-", 0, 0, true},
+		{"nodash", 0, 0, true}, // no range separator
+	}
+	for _, tCase := range tCases {
+		t.Run(tCase.input, func(t *testing.T) {
+			start, end, err := parseRange(tCase.input)
 			if tCase.expectErr && err == nil {
 				t.Error("expected error for input")
 			}
