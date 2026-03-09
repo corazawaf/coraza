@@ -1926,6 +1926,102 @@ func TestRemoveRuleByID(t *testing.T) {
 	}
 }
 
+func TestRemoveRuleByIDRange(t *testing.T) {
+	waf := NewWAF()
+
+	// Use nil-operator rules (SecAction-style): they always match regardless of variables.
+	for _, id := range []int{100, 150, 200, 300} {
+		r := NewRule()
+		r.ID_ = id
+		r.LogID_ = strconv.Itoa(id)
+		r.Phase_ = types.PhaseRequestHeaders
+		// nil operator means the rule always matches
+		if err := waf.Rules.Add(r); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	t.Run("range is stored", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		defer tx.Close()
+
+		tx.RemoveRuleByIDRange(100, 200)
+		if len(tx.ruleRemoveByIDRanges) != 1 {
+			t.Fatalf("expected 1 range entry, got %d", len(tx.ruleRemoveByIDRanges))
+		}
+		if tx.ruleRemoveByIDRanges[0][0] != 100 || tx.ruleRemoveByIDRanges[0][1] != 200 {
+			t.Errorf("unexpected range: %v", tx.ruleRemoveByIDRanges[0])
+		}
+	})
+
+	t.Run("rules in range are skipped during eval", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		defer tx.Close()
+
+		// Remove rules with IDs 100-200; rule 300 should still be evaluated.
+		tx.RemoveRuleByIDRange(100, 200)
+		waf.Rules.Eval(types.PhaseRequestHeaders, tx)
+
+		matchedIDs := make(map[int]bool)
+		for _, mr := range tx.MatchedRules() {
+			matchedIDs[mr.Rule().ID()] = true
+		}
+
+		for _, skipped := range []int{100, 150, 200} {
+			if matchedIDs[skipped] {
+				t.Errorf("rule %d should have been skipped but was matched", skipped)
+			}
+		}
+		if !matchedIDs[300] {
+			t.Errorf("rule 300 should have been matched but was not")
+		}
+	})
+
+	t.Run("multiple ranges", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		defer tx.Close()
+
+		tx.RemoveRuleByIDRange(100, 100)
+		tx.RemoveRuleByIDRange(300, 300)
+		if len(tx.ruleRemoveByIDRanges) != 2 {
+			t.Fatalf("expected 2 range entries, got %d", len(tx.ruleRemoveByIDRanges))
+		}
+
+		waf.Rules.Eval(types.PhaseRequestHeaders, tx)
+
+		matchedIDs := make(map[int]bool)
+		for _, mr := range tx.MatchedRules() {
+			matchedIDs[mr.Rule().ID()] = true
+		}
+		if matchedIDs[100] {
+			t.Error("rule 100 should have been skipped")
+		}
+		if matchedIDs[300] {
+			t.Error("rule 300 should have been skipped")
+		}
+		if !matchedIDs[150] {
+			t.Error("rule 150 should have been matched")
+		}
+		if !matchedIDs[200] {
+			t.Error("rule 200 should have been matched")
+		}
+	})
+
+	t.Run("range reset on transaction reuse", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		tx.RemoveRuleByIDRange(100, 200)
+		tx.Close()
+
+		// Get a new transaction (pool reuse may return the same object)
+		tx2 := waf.NewTransaction()
+		defer tx2.Close()
+
+		if len(tx2.ruleRemoveByIDRanges) != 0 {
+			t.Errorf("expected ruleRemoveByIDRanges to be reset, got %d entries", len(tx2.ruleRemoveByIDRanges))
+		}
+	})
+}
+
 func BenchmarkRuleEvalWithRemovedRules(b *testing.B) {
 	waf := NewWAF()
 	op := newTestUnconditionalMatch(b)
