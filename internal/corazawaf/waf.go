@@ -231,7 +231,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 		})
 
 		tx.variables = *NewTransactionVariables()
-		tx.transformationCache = map[transformationKey]*transformationValue{}
+		tx.transformationCache = map[transformationKey]transformationValue{}
 	}
 
 	// set capture variables

@@ -574,7 +574,7 @@ func TestExecuteTransformationsMultiMatchReturnsMultipleErrors(t *testing.T) {
 }
 
 func TestTransformArgSimple(t *testing.T) {
-	transformationCache := map[transformationKey]*transformationValue{}
+	transformationCache := map[transformationKey]transformationValue{}
 	md := &corazarules.MatchData{
 		Variable_: variables.RequestURI,
 		Key_:      "REQUEST_URI",
@@ -592,10 +592,11 @@ func TestTransformArgSimple(t *testing.T) {
 	if arg != "/testAB" {
 		t.Errorf("Expected \"/testAB\", got \"%s\"", arg)
 	}
-	if len(transformationCache) != 1 {
-		t.Errorf("Expected 1 transformations in cache, got %d", len(transformationCache))
+	// Prefix caching stores an entry for each transformation step
+	if len(transformationCache) != 2 {
+		t.Errorf("Expected 2 transformations in cache (one per step), got %d", len(transformationCache))
 	}
-	// Repeating the same transformation, expecting still one element in the cache (that means it is a cache hit)
+	// Repeating the same transformation, expecting still two elements in the cache (cache hit)
 	arg, errs = rule.transformArg(md, 0, transformationCache)
 	if errs != nil {
 		t.Fatalf("Unexpected errors executing transformations: %v", errs)
@@ -603,13 +604,13 @@ func TestTransformArgSimple(t *testing.T) {
 	if arg != "/testAB" {
 		t.Errorf("Expected \"/testAB\", got \"%s\"", arg)
 	}
-	if len(transformationCache) != 1 {
-		t.Errorf("Expected 1 transformations in cache, got %d", len(transformationCache))
+	if len(transformationCache) != 2 {
+		t.Errorf("Expected 2 transformations in cache, got %d", len(transformationCache))
 	}
 }
 
 func TestTransformArgNoCacheForTXVariable(t *testing.T) {
-	transformationCache := map[transformationKey]*transformationValue{}
+	transformationCache := map[transformationKey]transformationValue{}
 	md := &corazarules.MatchData{
 		Variable_: variables.TX,
 		Key_:      "Custom_TX_Variable",
@@ -626,6 +627,84 @@ func TestTransformArgNoCacheForTXVariable(t *testing.T) {
 	}
 	if len(transformationCache) != 0 {
 		t.Errorf("Expected 0 transformations in cache, got %d. It is not expected to cache TX variable transformations", len(transformationCache))
+	}
+}
+
+func TestTransformArgPrefixSharing(t *testing.T) {
+	transformationCache := map[transformationKey]transformationValue{}
+	md := &corazarules.MatchData{
+		Variable_: variables.RequestURI,
+		Key_:      "REQUEST_URI",
+		Value_:    "/test",
+	}
+
+	// Rule 1 has chain: AppendA
+	rule1 := NewRule()
+	_ = rule1.AddTransformation("AppendA", transformationAppendA)
+
+	// Rule 2 has chain: AppendA, AppendB (shares prefix with rule1)
+	rule2 := NewRule()
+	_ = rule2.AddTransformation("AppendA", transformationAppendA)
+	_ = rule2.AddTransformation("AppendB", transformationAppendB)
+
+	// Evaluate rule1 first — caches the AppendA intermediate
+	arg1, errs := rule1.transformArg(md, 0, transformationCache)
+	if errs != nil {
+		t.Fatalf("Unexpected errors: %v", errs)
+	}
+	if arg1 != "/testA" {
+		t.Errorf("Expected \"/testA\", got %q", arg1)
+	}
+	if len(transformationCache) != 1 {
+		t.Errorf("Expected 1 cache entry after rule1, got %d", len(transformationCache))
+	}
+
+	// Evaluate rule2 — should reuse the cached AppendA result and only compute AppendB
+	arg2, errs := rule2.transformArg(md, 0, transformationCache)
+	if errs != nil {
+		t.Fatalf("Unexpected errors: %v", errs)
+	}
+	if arg2 != "/testAB" {
+		t.Errorf("Expected \"/testAB\", got %q", arg2)
+	}
+	// Should now have 2 entries: AppendA (shared) and AppendA+AppendB
+	if len(transformationCache) != 2 {
+		t.Errorf("Expected 2 cache entries after rule2 (prefix reuse), got %d", len(transformationCache))
+	}
+}
+
+func TestClearTransformationsResetsID(t *testing.T) {
+	transformationCache := map[transformationKey]transformationValue{}
+	md := &corazarules.MatchData{
+		Variable_: variables.RequestURI,
+		Key_:      "REQUEST_URI",
+		Value_:    "test",
+	}
+
+	// Rule A: t:AppendA, t:none, t:AppendB — effective chain is only AppendB
+	ruleA := NewRule()
+	_ = ruleA.AddTransformation("AppendA", transformationAppendA)
+	ruleA.ClearTransformations()
+	_ = ruleA.AddTransformation("AppendB", transformationAppendB)
+
+	// Rule B: t:AppendA, t:AppendB — effective chain is AppendA then AppendB
+	ruleB := NewRule()
+	_ = ruleB.AddTransformation("AppendA", transformationAppendA)
+	_ = ruleB.AddTransformation("AppendB", transformationAppendB)
+
+	argA, _ := ruleA.transformArg(md, 0, transformationCache)
+	argB, _ := ruleB.transformArg(md, 0, transformationCache)
+
+	if argA != "testB" {
+		t.Errorf("Rule A (t:none resets): expected \"testB\", got %q", argA)
+	}
+	if argB != "testAB" {
+		t.Errorf("Rule B (t:AppendA,t:AppendB): expected \"testAB\", got %q", argB)
+	}
+	// They must produce different results — if ClearTransformations didn't reset the ID,
+	// they'd collide in the cache and one would get the wrong result.
+	if argA == argB {
+		t.Error("Rule A and Rule B produced the same result — ClearTransformations likely didn't reset transformationsID")
 	}
 }
 
