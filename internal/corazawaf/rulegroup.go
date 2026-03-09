@@ -18,7 +18,8 @@ import (
 // It is not concurrent safe, so it's not recommended to use it
 // after compilation
 type RuleGroup struct {
-	rules []Rule
+	rules    []Rule
+	observer func(rule types.RuleMetadata)
 }
 
 // Add a rule to the collection
@@ -61,7 +62,17 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 	}
 
 	rg.rules = append(rg.rules, *rule)
+
+	if rg.observer != nil {
+		rg.observer(rule)
+	}
+
 	return nil
+}
+
+// SetObserver assigns the observer function to the group.
+func (rg *RuleGroup) SetObserver(observer func(rule types.RuleMetadata)) {
+	rg.observer = observer
 }
 
 // GetRules returns the slice of rules,
@@ -168,12 +179,17 @@ RulesLoop:
 		}
 
 		// we skip the rule in case it's in the excluded list
-		for _, trb := range tx.ruleRemoveByID {
-			if trb == r.ID_ {
+		if _, skip := tx.ruleRemoveByID[r.ID_]; skip {
+			tx.DebugLogger().Debug().
+				Int("rule_id", r.ID_).
+				Msg("Skipping rule")
+			continue RulesLoop
+		}
+		for _, rng := range tx.ruleRemoveByIDRanges {
+			if r.ID_ >= rng[0] && r.ID_ <= rng[1] {
 				tx.DebugLogger().Debug().
 					Int("rule_id", r.ID_).
 					Msg("Skipping rule")
-
 				continue RulesLoop
 			}
 		}

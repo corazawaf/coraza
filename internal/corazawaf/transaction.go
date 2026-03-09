@@ -89,7 +89,11 @@ type Transaction struct {
 	responseBodyBuffer *BodyBuffer
 
 	// Rules with this id are going to be skipped while processing a phase
-	ruleRemoveByID []int
+	ruleRemoveByID map[int]struct{}
+
+	// ruleRemoveByIDRanges stores ranges of rule IDs to be skipped during a phase.
+	// Ranges avoid expanding all IDs into the ruleRemoveByID map.
+	ruleRemoveByIDRanges [][2]int
 
 	// ruleRemoveTargetByID is used by ctl to remove rule targets by id during the
 	// transaction. All other "target removers" like "ByTag" are an abstraction of "ById"
@@ -626,7 +630,7 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 		isException := false
 		lkey := strings.ToLower(c.Key())
 		for _, ex := range rv.Exceptions {
-			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || strings.ToLower(ex.KeyStr) == lkey {
+			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || strings.ToLower(ex.KeyStr) == lkey || (ex.KeyStr == "" && ex.KeyRx == nil) {
 				isException = true
 				break
 			}
@@ -681,7 +685,22 @@ func (tx *Transaction) RemoveRuleTargetByID(id int, variable variables.RuleVaria
 // RemoveRuleByID Removes a rule from the transaction
 // It does not affect the WAF rules
 func (tx *Transaction) RemoveRuleByID(id int) {
-	tx.ruleRemoveByID = append(tx.ruleRemoveByID, id)
+	if tx.ruleRemoveByID == nil {
+		tx.ruleRemoveByID = map[int]struct{}{}
+	}
+	tx.ruleRemoveByID[id] = struct{}{}
+}
+
+// RemoveRuleByIDRange marks rules in the ID range [start, end] (inclusive) to be
+// skipped during transaction processing. It does not affect the WAF rules.
+func (tx *Transaction) RemoveRuleByIDRange(start, end int) {
+	tx.ruleRemoveByIDRanges = append(tx.ruleRemoveByIDRanges, [2]int{start, end})
+}
+
+// GetRuleRemoveByIDRanges returns the list of rule ID ranges that will be skipped
+// during transaction processing.
+func (tx *Transaction) GetRuleRemoveByIDRanges() [][2]int {
+	return tx.ruleRemoveByIDRanges
 }
 
 // ProcessConnection should be called at very beginning of a request process, it is
@@ -1049,9 +1068,9 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.interruption, nil
 	}
-	mime := ""
+	mimeType := ""
 	if m := tx.variables.requestHeaders.Get("content-type"); len(m) > 0 {
-		mime = m[0]
+		mimeType = m[0]
 	}
 
 	reader, err := tx.requestBodyBuffer.Reader()
@@ -1064,7 +1083,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	// Default variables.ReqbodyProcessor values
 	// XML and JSON must be forced with ctl:requestBodyProcessor=JSON
 	if tx.ForceRequestBodyVariable {
-		// We force URLENCODED if mime is x-www... or we have an empty RBP and ForceRequestBodyVariable
+		// We force URLENCODED if mimeType is x-www... or we have an empty RBP and ForceRequestBodyVariable
 		if rbp == "" {
 			rbp = "URLENCODED"
 		}
@@ -1088,8 +1107,9 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		Msg("Attempting to process request body")
 
 	if err := bodyprocessor.ProcessRequest(reader, tx.Variables(), plugintypes.BodyProcessorOptions{
-		Mime:        mime,
-		StoragePath: tx.WAF.UploadDir,
+		Mime:                      mimeType,
+		StoragePath:               tx.WAF.UploadDir,
+		RequestBodyRecursionLimit: tx.WAF.RequestBodyJsonDepthLimit,
 	}); err != nil {
 		tx.debugLogger.Error().Err(err).Msg("Failed to process request body")
 		tx.generateRequestBodyError(err)
@@ -1319,7 +1339,6 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		}
 
 		tx.debugLogger.Debug().Str("body_processor", bp).Msg("Attempting to process response body")
-
 		if err := b.ProcessResponse(reader, tx.Variables(), plugintypes.BodyProcessorOptions{}); err != nil {
 			tx.debugLogger.Error().Err(err).Msg("Failed to process response body")
 			tx.generateResponseBodyError(err)

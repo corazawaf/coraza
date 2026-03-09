@@ -467,6 +467,22 @@ func (r *Rule) AddAction(name string, action plugintypes.Action) error {
 	return nil
 }
 
+// ClearDisruptiveActions removes all disruptive actions from the rule.
+//
+// This is used by directives like SecRuleUpdateActionById to clear existing
+// disruptive actions before applying new ones, matching ModSecurity behavior
+// where updating with a disruptive action replaces the previous one.
+func (r *Rule) ClearDisruptiveActions() {
+	actionType := plugintypes.ActionTypeDisruptive
+	filtered := make([]ruleActionParams, 0, len(r.actions))
+	for _, action := range r.actions {
+		if action.Function.Type() != actionType {
+			filtered = append(filtered, action)
+		}
+	}
+	r.actions = filtered
+}
+
 // hasRegex checks the received key to see if it is between forward slashes.
 // if it is, it will return true and the content of the regular expression inside the slashes.
 // otherwise it will return false and the same key.
@@ -515,6 +531,9 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 	}
 	var re *regexp.Regexp
 	if isRegex, rx := hasRegex(key); isRegex {
+		if !caseSensitiveVariable(v) {
+			rx = strings.ToLower(rx)
+		}
 		if vare, err := memoize.Do(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
 			return err
 		} else {
@@ -559,6 +578,9 @@ func needToSplitConcatenatedVariable(v variables.RuleVariable, ve variables.Rule
 func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 	var re *regexp.Regexp
 	if isRegex, rx := hasRegex(key); isRegex {
+		if !caseSensitiveVariable(v) {
+			rx = strings.ToLower(rx)
+		}
 		if vare, err := memoize.Do(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
 			return err
 		} else {
