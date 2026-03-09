@@ -149,3 +149,83 @@ func TestParseQueryBoth(t *testing.T) {
 		t.Errorf("raw plain: got %v, want [hello]", v)
 	}
 }
+
+func TestParseQueryBothPlusSigns(t *testing.T) {
+	// Plus signs: decoded as space in cooked, preserved literally in raw.
+	input := "q=hello+world&tag=foo+bar"
+	decoded, raw := ParseQueryBoth(input, '&')
+
+	if v := decoded["q"]; len(v) != 1 || v[0] != "hello world" {
+		t.Errorf("decoded q: got %v, want [hello world]", v)
+	}
+	if v := raw["q"]; len(v) != 1 || v[0] != "hello+world" {
+		t.Errorf("raw q: got %v, want [hello+world]", v)
+	}
+	if v := decoded["tag"]; len(v) != 1 || v[0] != "foo bar" {
+		t.Errorf("decoded tag: got %v, want [foo bar]", v)
+	}
+	if v := raw["tag"]; len(v) != 1 || v[0] != "foo+bar" {
+		t.Errorf("raw tag: got %v, want [foo+bar]", v)
+	}
+}
+
+func TestParseQueryBothMultipleValues(t *testing.T) {
+	// Multiple values for the same key.
+	input := "color=red&color=blue&color=gr%65en"
+	decoded, raw := ParseQueryBoth(input, '&')
+
+	if v := decoded["color"]; len(v) != 3 || v[0] != "red" || v[1] != "blue" || v[2] != "green" {
+		t.Errorf("decoded color: got %v, want [red blue green]", v)
+	}
+	if v := raw["color"]; len(v) != 3 || v[0] != "red" || v[1] != "blue" || v[2] != "gr%65en" {
+		t.Errorf("raw color: got %v, want [red blue gr%%65en]", v)
+	}
+}
+
+func TestParseQueryRawMultipleValues(t *testing.T) {
+	input := "x=a&x=b%20c&x=d+e"
+	got := ParseQueryRaw(input, '&')
+
+	vals, ok := got["x"]
+	if !ok {
+		t.Fatal("missing key x")
+	}
+	if len(vals) != 3 {
+		t.Fatalf("expected 3 values, got %d: %v", len(vals), vals)
+	}
+	expected := []string{"a", "b%20c", "d+e"}
+	for i, want := range expected {
+		if vals[i] != want {
+			t.Errorf("x[%d]: got %q, want %q", i, vals[i], want)
+		}
+	}
+}
+
+func TestParseQueryRawEmptyInput(t *testing.T) {
+	if got := ParseQueryRaw("", '&'); len(got) != 0 {
+		t.Errorf("expected empty map for empty input, got %v", got)
+	}
+}
+
+func TestParseQueryBothEmptyInput(t *testing.T) {
+	decoded, raw := ParseQueryBoth("", '&')
+	if len(decoded) != 0 {
+		t.Errorf("expected empty decoded map, got %v", decoded)
+	}
+	if len(raw) != 0 {
+		t.Errorf("expected empty raw map, got %v", raw)
+	}
+}
+
+func BenchmarkParseQueryBoth(b *testing.B) {
+	input := "key=%3Cscript%3E&p%61ssword=Secret%2500&plain=hello&q=hello+world"
+	for i := 0; i < b.N; i++ {
+		ParseQueryBoth(input, '&')
+	}
+}
+
+func BenchmarkParseQueryRaw(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		ParseQueryRaw(parseQueryInput, '&')
+	}
+}

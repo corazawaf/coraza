@@ -330,3 +330,43 @@ text defa`)
 		t.Fatalf("expected ArgsPost 'text' to be 'text defa', got %q", textValues[0])
 	}
 }
+
+func TestMultipartArgsPostRaw(t *testing.T) {
+	// For multipart, field values are not URL-encoded, so ArgsPostRaw should equal ArgsPost.
+	payload := strings.TrimSpace(`
+-----------------------------9051914041544843365972754266
+Content-Disposition: form-data; name="username"
+
+john_doe
+-----------------------------9051914041544843365972754266
+Content-Disposition: form-data; name="comment"
+
+hello world
+-----------------------------9051914041544843365972754266--
+`)
+
+	mp := multipartProcessor(t)
+	v := corazawaf.NewTransactionVariables()
+	if err := mp.ProcessRequest(strings.NewReader(payload), v, plugintypes.BodyProcessorOptions{
+		Mime: "multipart/form-data; boundary=---------------------------9051914041544843365972754266",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// ArgsPost and ArgsPostRaw should both contain the field values (raw == cooked for multipart).
+	argsPost := v.ArgsPost()
+	argsPostRaw := v.ArgsPostRaw()
+
+	fields := map[string]string{
+		"username": "john_doe",
+		"comment":  "hello world",
+	}
+	for field, want := range fields {
+		if got := argsPost.Get(field); len(got) == 0 || got[0] != want {
+			t.Errorf("ArgsPost[%q]: got %v, want %q", field, got, want)
+		}
+		if got := argsPostRaw.Get(field); len(got) == 0 || got[0] != want {
+			t.Errorf("ArgsPostRaw[%q]: got %v, want %q", field, got, want)
+		}
+	}
+}
