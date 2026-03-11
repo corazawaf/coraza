@@ -698,12 +698,13 @@ func TestPrefilterWithSMPrefix(t *testing.T) {
 			input:   "goodbye\nuniverse",
 			want:    false,
 		},
-		// Multiline: ^ matches at line start
+		// Multiline: ^ matches at line start (only when (?sm) is prepended;
+		// with no_regex_multiline, only (?s) is prepended so ^ matches start of string only).
 		{
 			name:    "multiline_anchor",
 			pattern: "^hello.*world",
 			input:   "test\nhello\nworld",
-			want:    true,
+			want:    !shouldNotUseMultilineRegexesOperatorByDefault,
 		},
 		// User-supplied (?i) combined with the automatic (?sm)
 		{
