@@ -44,13 +44,16 @@ func BenchmarkCRSCompilation(b *testing.B) {
 		b.Fatal(err)
 	}
 	for i := 0; i < b.N; i++ {
-		_, err := coraza.NewWAF(coraza.NewWAFConfig().
+		waf, err := coraza.NewWAF(coraza.NewWAFConfig().
 			WithRootFS(coreruleset.FS).
 			WithDirectives(string(rec)).
 			WithDirectives("Include @crs-setup.conf.example").
 			WithDirectives("Include @owasp_crs/*.conf"))
 		if err != nil {
 			b.Fatal(err)
+		}
+		if closer, ok := waf.(experimental.WAFCloser); ok {
+			closer.Close()
 		}
 	}
 }
@@ -223,6 +226,9 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	if err != nil {
 		t.Fatal(err)
 	}
+	if closer, ok := waf.(experimental.WAFCloser); ok {
+		defer closer.Close()
+	}
 
 	// CRS regression tests are expected to be run with https://github.com/coreruleset/albedo as backend server
 	s := httptest.NewServer(txhttp.WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -323,9 +329,25 @@ func TestCRSCloseReleasesMemory(t *testing.T) {
 	runtime.ReadMemStats(&m)
 	baseHeap := m.HeapAlloc
 
+	// Build WAFs directly (not via crsWAF) so we control the lifecycle
+	// without t.Cleanup holding references that prevent GC.
+	rec, err := os.ReadFile(filepath.Join("..", "..", "coraza.conf-recommended"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	conf := coraza.NewWAFConfig().
+		WithRootFS(coreruleset.FS).
+		WithDirectives(string(rec)).
+		WithDirectives("Include @crs-setup.conf.example").
+		WithDirectives("Include @owasp_crs/*.conf")
+
 	wafs := make([]coraza.WAF, 5)
 	for i := range wafs {
-		wafs[i] = crsWAF(t)
+		waf, err := coraza.NewWAF(conf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wafs[i] = waf
 	}
 
 	runtime.GC()
@@ -384,6 +406,9 @@ SecAction "id:900005,\
 	waf, err := coraza.NewWAF(conf)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if closer, ok := waf.(experimental.WAFCloser); ok {
+		t.Cleanup(func() { closer.Close() })
 	}
 
 	return waf

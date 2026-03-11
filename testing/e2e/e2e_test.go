@@ -15,6 +15,7 @@ import (
 	"github.com/mccutchen/go-httpbin/v2/httpbin"
 
 	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/experimental"
 	txhttp "github.com/corazawaf/coraza/v3/http"
 	"github.com/corazawaf/coraza/v3/http/e2e"
 )
@@ -28,6 +29,9 @@ func TestE2e(t *testing.T) {
 	waf, err := coraza.NewWAF(conf)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if closer, ok := waf.(experimental.WAFCloser); ok {
+		defer closer.Close()
 	}
 
 	httpbin := httpbin.New()
