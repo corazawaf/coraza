@@ -60,7 +60,7 @@ func BenchmarkCRSSimpleGET(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		tx := waf.NewTransaction()
 		tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 8080)
-		tx.ProcessURI("GET", "/some_path/with?parameters=and&other=Stuff", "HTTP/1.1")
+		tx.ProcessURI("/some_path/with?parameters=and&other=Stuff", "GET", "HTTP/1.1")
 		tx.AddRequestHeader("Host", "localhost")
 		tx.AddRequestHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36")
 		tx.AddRequestHeader("Accept", "application/json")
@@ -88,7 +88,7 @@ func BenchmarkCRSSimplePOST(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		tx := waf.NewTransaction()
 		tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 8080)
-		tx.ProcessURI("POST", "/some_path/with?parameters=and&other=Stuff", "HTTP/1.1")
+		tx.ProcessURI("/some_path/with?parameters=and&other=Stuff", "POST", "HTTP/1.1")
 		tx.AddRequestHeader("Host", "localhost")
 		tx.AddRequestHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36")
 		tx.AddRequestHeader("Accept", "application/json")
@@ -122,7 +122,7 @@ func BenchmarkCRSLargePOST(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		tx := waf.NewTransaction()
 		tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 8080)
-		tx.ProcessURI("POST", "/some_path/with?parameters=and&other=Stuff", "HTTP/1.1")
+		tx.ProcessURI("/some_path/with?parameters=and&other=Stuff", "POST", "HTTP/1.1")
 		tx.AddRequestHeader("Host", "localhost")
 		tx.AddRequestHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36")
 		tx.AddRequestHeader("Accept", "application/json")
