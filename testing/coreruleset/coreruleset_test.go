@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -32,6 +33,7 @@ import (
 	coreruleset "github.com/corazawaf/coraza-coreruleset/v4"
 	crstests "github.com/corazawaf/coraza-coreruleset/v4/tests"
 	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/experimental"
 	txhttp "github.com/corazawaf/coraza/v3/http"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -281,6 +283,68 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	if totalFailed > 0 {
 		t.Errorf("[fatal] %d failed tests: %v", totalFailed, res.Stats.Failed)
 	}
+}
+
+func BenchmarkCRSMultiWAFCompilation(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		for w := 0; w < 10; w++ {
+			waf := crsWAF(b)
+			if closer, ok := waf.(experimental.WAFCloser); ok {
+				closer.Close()
+			}
+		}
+	}
+}
+
+func TestCRSMemoizeSpeedup(t *testing.T) {
+	// Cold compilation (first WAF)
+	cold := time.Now()
+	waf1 := crsWAF(t)
+	coldDur := time.Since(cold)
+	if closer, ok := waf1.(experimental.WAFCloser); ok {
+		defer closer.Close()
+	}
+
+	// Warm compilation (second WAF, patterns already cached)
+	warm := time.Now()
+	waf2 := crsWAF(t)
+	warmDur := time.Since(warm)
+	if closer, ok := waf2.(experimental.WAFCloser); ok {
+		defer closer.Close()
+	}
+
+	t.Logf("cold=%s warm=%s speedup=%.1fx", coldDur, warmDur, float64(coldDur)/float64(warmDur))
+}
+
+func TestCRSCloseReleasesMemory(t *testing.T) {
+	var m runtime.MemStats
+
+	runtime.GC()
+	runtime.ReadMemStats(&m)
+	baseHeap := m.HeapAlloc
+
+	wafs := make([]coraza.WAF, 5)
+	for i := range wafs {
+		wafs[i] = crsWAF(t)
+	}
+
+	runtime.GC()
+	runtime.ReadMemStats(&m)
+	peakHeap := m.HeapAlloc
+
+	for _, waf := range wafs {
+		if closer, ok := waf.(experimental.WAFCloser); ok {
+			closer.Close()
+		}
+	}
+
+	runtime.GC()
+	runtime.ReadMemStats(&m)
+	afterHeap := m.HeapAlloc
+
+	t.Logf("base=%dMiB peak=%dMiB after_close=%dMiB released=%dMiB",
+		baseHeap/1024/1024, peakHeap/1024/1024,
+		afterHeap/1024/1024, (peakHeap-afterHeap)/1024/1024)
 }
 
 func crsWAF(t testing.TB) coraza.WAF {
