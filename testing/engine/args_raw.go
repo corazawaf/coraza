@@ -109,6 +109,76 @@ var _ = profile.RegisterProfile(profile.Profile{
 				},
 			},
 		},
+		{
+			Title: "ARGS_GET_NAMES_RAW preserves URL-encoded GET argument names",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/index.php?p%61ram=value&other=hello",
+							Method: "GET",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								500, // ARGS_GET_NAMES_RAW matches raw name p%61ram
+								501, // ARGS_GET_NAMES matches decoded name param
+							},
+							NonTriggeredRules: []int{
+								502, // ARGS_GET_NAMES_RAW does NOT match decoded "param"
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			Title: "ARGS_POST_NAMES_RAW preserves URL-encoded POST argument names",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/index.php",
+							Method: "POST",
+							Headers: map[string]string{
+								"content-type": "application/x-www-form-urlencoded",
+							},
+							Data: "p%61ssword=secret&user=admin",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								600, // ARGS_POST_NAMES_RAW matches raw name p%61ssword
+								601, // ARGS_POST_NAMES matches decoded name password
+							},
+							NonTriggeredRules: []int{
+								602, // ARGS_POST_NAMES_RAW does NOT match decoded "password"
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			Title: "ARGS_GET_RAW handles multiple values for the same key",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/index.php?color=red&color=gr%65en&color=blue",
+							Method: "GET",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								700, // ARGS_GET_RAW:color matches "gr%65en" (raw, second value)
+								701, // ARGS_GET:color matches "green" (decoded second value)
+							},
+							NonTriggeredRules: []int{
+								702, // ARGS_GET_RAW:color does NOT match decoded "green"
+							},
+						},
+					},
+				},
+			},
+		},
 	},
 	Rules: `
 SecRequestBodyAccess On
@@ -134,5 +204,20 @@ SecRule ARGS_NAMES_RAW "@streq param" "id:302,phase:1,pass,log"
 SecRule ARGS_GET_RAW:q "@rx \+" "id:400,phase:1,pass,log"
 SecRule ARGS_GET:q "@rx hello world" "id:401,phase:1,pass,log"
 SecRule ARGS_GET_RAW:q "@rx hello world" "id:402,phase:1,pass,log"
+
+# Test 5: ARGS_GET_NAMES_RAW preserves raw GET argument names
+SecRule ARGS_GET_NAMES_RAW "@contains p%61ram" "id:500,phase:1,pass,log"
+SecRule ARGS_GET_NAMES "@streq param" "id:501,phase:1,pass,log"
+SecRule ARGS_GET_NAMES_RAW "@streq param" "id:502,phase:1,pass,log"
+
+# Test 6: ARGS_POST_NAMES_RAW preserves raw POST argument names
+SecRule ARGS_POST_NAMES_RAW "@contains p%61ssword" "id:600,phase:2,pass,log"
+SecRule ARGS_POST_NAMES "@streq password" "id:601,phase:2,pass,log"
+SecRule ARGS_POST_NAMES_RAW "@streq password" "id:602,phase:2,pass,log"
+
+# Test 7: ARGS_GET_RAW handles multiple values for the same key
+SecRule ARGS_GET_RAW:color "@contains gr%65en" "id:700,phase:1,pass,log"
+SecRule ARGS_GET:color "@contains green" "id:701,phase:1,pass,log"
+SecRule ARGS_GET_RAW:color "@streq green" "id:702,phase:1,pass,log"
 `,
 })

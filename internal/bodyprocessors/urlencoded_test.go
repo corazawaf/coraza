@@ -13,6 +13,66 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
+func TestURLEncodeRawValues(t *testing.T) {
+	bp, err := bodyprocessors.GetBodyProcessor("urlencoded")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name         string
+		body         string
+		wantCooked   map[string]string // decoded value in ArgsPost
+		wantRaw      map[string]string // raw value in ArgsPostRaw
+	}{
+		{
+			name:       "percent-encoded value",
+			body:       "key=%3Cscript%3E",
+			wantCooked: map[string]string{"key": "<script>"},
+			wantRaw:    map[string]string{"key": "%3Cscript%3E"},
+		},
+		{
+			name:       "double-encoded value",
+			body:       "password=Secret%2500",
+			wantCooked: map[string]string{"password": "Secret%00"},
+			wantRaw:    map[string]string{"password": "Secret%2500"},
+		},
+		{
+			name:       "plus sign preserved in raw",
+			body:       "q=hello+world",
+			wantCooked: map[string]string{"q": "hello world"},
+			wantRaw:    map[string]string{"q": "hello+world"},
+		},
+		{
+			name:       "plain value identical in both",
+			body:       "plain=hello",
+			wantCooked: map[string]string{"plain": "hello"},
+			wantRaw:    map[string]string{"plain": "hello"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			v := corazawaf.NewTransactionVariables()
+			if err := bp.ProcessRequest(strings.NewReader(tc.body), v, plugintypes.BodyProcessorOptions{}); err != nil {
+				t.Fatal(err)
+			}
+			for k, want := range tc.wantCooked {
+				got := v.ArgsPost().Get(k)
+				if len(got) == 0 || got[0] != want {
+					t.Errorf("ArgsPost[%q]: got %v, want %q", k, got, want)
+				}
+			}
+			for k, want := range tc.wantRaw {
+				got := v.ArgsPostRaw().Get(k)
+				if len(got) == 0 || got[0] != want {
+					t.Errorf("ArgsPostRaw[%q]: got %v, want %q", k, got, want)
+				}
+			}
+		})
+	}
+}
+
 func TestURLEncode(t *testing.T) {
 	bp, err := bodyprocessors.GetBodyProcessor("urlencoded")
 	if err != nil {
