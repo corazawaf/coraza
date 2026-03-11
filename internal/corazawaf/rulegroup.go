@@ -179,12 +179,17 @@ RulesLoop:
 		}
 
 		// we skip the rule in case it's in the excluded list
-		for _, trb := range tx.ruleRemoveByID {
-			if trb == r.ID_ {
+		if _, skip := tx.ruleRemoveByID[r.ID_]; skip {
+			tx.DebugLogger().Debug().
+				Int("rule_id", r.ID_).
+				Msg("Skipping rule")
+			continue RulesLoop
+		}
+		for _, rng := range tx.ruleRemoveByIDRanges {
+			if r.ID_ >= rng[0] && r.ID_ <= rng[1] {
 				tx.DebugLogger().Debug().
 					Int("rule_id", r.ID_).
 					Msg("Skipping rule")
-
 				continue RulesLoop
 			}
 		}
