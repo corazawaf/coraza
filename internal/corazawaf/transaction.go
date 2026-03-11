@@ -55,8 +55,9 @@ type Transaction struct {
 	interruption *types.Interruption
 
 	// detectionOnlyInterruption keeps track of the interruption that would have been performed if the engine was On.
-	// It allows to have execution and audit logs parity between "On" and "DetectionOnly" modes, and improves
-	// visibility of what would have happened in On mode when the engine is set to "DetectionOnly".
+	// It provides visibility of what would have happened in On mode when the engine is set to "DetectionOnly"
+	// and is used to correctly emit relevant only audit logs in DetectionOnly mode (When the rules would have
+	// caused an interruption if the engine was On).
 	detectionOnlyInterruption *types.Interruption
 
 	// This is used to store log messages
