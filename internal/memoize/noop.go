@@ -9,7 +9,13 @@ package memoize
 type Memoizer struct{}
 
 // NewMemoizer returns a no-op Memoizer.
-func NewMemoizer() *Memoizer { return &Memoizer{} }
+func NewMemoizer(_ uint64) *Memoizer { return &Memoizer{} }
 
 // Do always calls fn directly without caching.
 func (m *Memoizer) Do(_ string, fn func() (any, error)) (any, error) { return fn() }
+
+// Release is a no-op when memoization is disabled.
+func Release(_ uint64) {}
+
+// Reset is a no-op when memoization is disabled.
+func Reset() {}
