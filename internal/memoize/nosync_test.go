@@ -11,7 +11,9 @@ import (
 )
 
 func TestDo(t *testing.T) {
-	m := NewMemoizer()
+	t.Cleanup(Reset)
+
+	m := NewMemoizer(1)
 	expensiveCalls := 0
 
 	expensive := func() (any, error) {
@@ -45,7 +47,9 @@ func TestDo(t *testing.T) {
 }
 
 func TestFailedCall(t *testing.T) {
-	m := NewMemoizer()
+	t.Cleanup(Reset)
+
+	m := NewMemoizer(1)
 	calls := 0
 
 	twoForTheMoney := func() (any, error) {
@@ -56,7 +60,7 @@ func TestFailedCall(t *testing.T) {
 		return calls, nil
 	}
 
-	result, err := m.Do("failkey1", twoForTheMoney)
+	result, err := m.Do("key1", twoForTheMoney)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -64,7 +68,7 @@ func TestFailedCall(t *testing.T) {
 		t.Fatalf("unexpected value, want %d, have %d", want, have)
 	}
 
-	result, err = m.Do("failkey1", twoForTheMoney)
+	result, err = m.Do("key1", twoForTheMoney)
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err.Error())
 	}
@@ -72,11 +76,57 @@ func TestFailedCall(t *testing.T) {
 		t.Fatalf("unexpected value, want %d, have %d", want, have)
 	}
 
-	result, err = m.Do("failkey1", twoForTheMoney)
+	result, err = m.Do("key1", twoForTheMoney)
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err.Error())
 	}
 	if want, have := 2, result.(int); want != have {
 		t.Fatalf("unexpected value, want %d, have %d", want, have)
+	}
+}
+
+func TestRelease(t *testing.T) {
+	t.Cleanup(Reset)
+
+	m1 := NewMemoizer(1)
+	m2 := NewMemoizer(2)
+
+	calls := 0
+	fn := func() (any, error) {
+		calls++
+		return calls, nil
+	}
+
+	_, _ = m1.Do("shared", fn)
+	_, _ = m2.Do("shared", fn)
+	_, _ = m1.Do("only-waf1", fn)
+
+	Release(1)
+
+	if _, ok := cache.Load("shared"); !ok {
+		t.Fatal("shared entry should still exist after releasing waf-1")
+	}
+	if _, ok := cache.Load("only-waf1"); ok {
+		t.Fatal("only-waf1 entry should be deleted after releasing its sole owner")
+	}
+
+	Release(2)
+	if _, ok := cache.Load("shared"); ok {
+		t.Fatal("shared entry should be deleted after releasing all owners")
+	}
+}
+
+func TestReset(t *testing.T) {
+	m := NewMemoizer(1)
+	_, _ = m.Do("k1", func() (any, error) { return 1, nil })
+	_, _ = m.Do("k2", func() (any, error) { return 2, nil })
+
+	Reset()
+
+	if _, ok := cache.Load("k1"); ok {
+		t.Fatal("cache should be empty after Reset")
+	}
+	if _, ok := cache.Load("k2"); ok {
+		t.Fatal("cache should be empty after Reset")
 	}
 }

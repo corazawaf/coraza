@@ -11,7 +11,7 @@ import (
 )
 
 func TestNoopDo(t *testing.T) {
-	m := NewMemoizer()
+	m := NewMemoizer(1)
 	calls := 0
 
 	fn := func() (any, error) {
@@ -38,7 +38,7 @@ func TestNoopDo(t *testing.T) {
 }
 
 func TestNoopDoError(t *testing.T) {
-	m := NewMemoizer()
+	m := NewMemoizer(1)
 
 	_, err := m.Do("key1", func() (any, error) {
 		return nil, errors.New("fail")
