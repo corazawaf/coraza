@@ -521,6 +521,68 @@ func TestRegularRequestStillProcessesResponseBody(t *testing.T) {
 	}
 }
 
+// TestWAFNotBypassedAfterWebSocketUpgrade verifies that a WebSocket upgrade
+// on one connection does not cause the WAF to skip inspection of subsequent
+// regular HTTP requests. Each request must get its own transaction.
+func TestWAFNotBypassedAfterWebSocketUpgrade(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives(`
+		SecRuleEngine On
+		SecRule ARGS:attack "evil" "id:1,phase:1,deny,status:403"
+	`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	handler := WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Upgrade") == "websocket" {
+			w.WriteHeader(http.StatusSwitchingProtocols)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "OK")
+	}))
+
+	ts := httptest.NewServer(handler)
+	t.Cleanup(ts.Close)
+
+	// Step 1: Perform a WebSocket upgrade request
+	reqWS, err := http.NewRequest("GET", ts.URL+"/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqWS.Header.Set("Upgrade", "websocket")
+	reqWS.Header.Set("Connection", "Upgrade")
+
+	resWS, err := http.DefaultClient.Do(reqWS)
+	if err != nil {
+		t.Fatalf("WebSocket upgrade request failed: %v", err)
+	}
+	resWS.Body.Close()
+
+	// Step 2: Send a regular request with a malicious payload — must be blocked
+	resBlocked, err := http.Get(ts.URL + "/?attack=evil")
+	if err != nil {
+		t.Fatalf("regular request failed: %v", err)
+	}
+	resBlocked.Body.Close()
+
+	if want, have := http.StatusForbidden, resBlocked.StatusCode; want != have {
+		t.Errorf("WAF bypass: malicious request after WebSocket upgrade was not blocked, got status %d, want %d", have, want)
+	}
+
+	// Step 3: Verify a benign request still passes
+	resOK, err := http.Get(ts.URL + "/?attack=benign")
+	if err != nil {
+		t.Fatalf("benign request failed: %v", err)
+	}
+	resOK.Body.Close()
+
+	if want, have := http.StatusOK, resOK.StatusCode; want != have {
+		t.Errorf("benign request after WebSocket upgrade was unexpectedly blocked, got status %d, want %d", have, want)
+	}
+}
+
 func TestResponseBody(t *testing.T) {
 	const (
 		contentWithoutDataLeak    = "No data leak"
