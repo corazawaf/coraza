@@ -159,7 +159,7 @@ RulesLoop:
 		r := &rg.rules[i]
 		// if there is already an interruption and the phase isn't logging
 		// we break the loop
-		if tx.interruption != nil && phase != types.PhaseLogging {
+		if tx.IsInterrupted() && phase != types.PhaseLogging {
 			break RulesLoop
 		}
 		// Rules with phase 0 will always run
@@ -179,12 +179,17 @@ RulesLoop:
 		}
 
 		// we skip the rule in case it's in the excluded list
-		for _, trb := range tx.ruleRemoveByID {
-			if trb == r.ID_ {
+		if _, skip := tx.ruleRemoveByID[r.ID_]; skip {
+			tx.DebugLogger().Debug().
+				Int("rule_id", r.ID_).
+				Msg("Skipping rule")
+			continue RulesLoop
+		}
+		for _, rng := range tx.ruleRemoveByIDRanges {
+			if r.ID_ >= rng[0] && r.ID_ <= rng[1] {
 				tx.DebugLogger().Debug().
 					Int("rule_id", r.ID_).
 					Msg("Skipping rule")
-
 				continue RulesLoop
 			}
 		}
@@ -258,7 +263,7 @@ RulesLoop:
 	tx.Skip = 0
 
 	tx.stopWatches[phase] = time.Now().UnixNano() - ts
-	return tx.interruption != nil
+	return tx.IsInterrupted()
 }
 
 // NewRuleGroup creates an empty RuleGroup that
