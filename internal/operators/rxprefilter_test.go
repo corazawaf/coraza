@@ -851,6 +851,9 @@ func TestPrefilterConcurrentSafety(t *testing.T) {
 	errs := make(chan error, goroutines*len(inputs))
 	done := make(chan struct{})
 
+	// Compile the reference regex once, outside the goroutines.
+	re := regexp.MustCompile("(?i)(?:union\\s+select|insert\\s+into|delete\\s+from)")
+
 	for g := 0; g < goroutines; g++ {
 		go func() {
 			for _, inp := range inputs {
@@ -859,8 +862,6 @@ func TestPrefilterConcurrentSafety(t *testing.T) {
 				tx.Capture = true
 				got := op.Evaluate(tx, inp)
 
-				// Cross-check against direct regex
-				re := regexp.MustCompile("(?i)(?:union\\s+select|insert\\s+into|delete\\s+from)")
 				want := re.MatchString(inp)
 				if got != want {
 					errs <- fmt.Errorf("input %q: concurrent Evaluate=%v, regex=%v", inp, got, want)
@@ -1157,7 +1158,7 @@ func TestAnyRequiredNeverFiltered(t *testing.T) {
 		pf := prefilterFunc(pattern)
 		// Both "é" (2 bytes) and "hello" (5 bytes) are >= 2, so prefilter exists
 		if pf == nil {
-			t.Skip("prefilter not built (acceptable)")
+			t.Fatal("prefilter should be non-nil: both branches are >= 2 bytes")
 		}
 		// Must accept matching inputs
 		re := regexp.MustCompile(pattern)
