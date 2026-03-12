@@ -753,6 +753,72 @@ func TestAuditLogFields(t *testing.T) {
 	}
 }
 
+func TestMatchRuleDisruptiveActionPopulated(t *testing.T) {
+	tests := []struct {
+		name                         string
+		engine                       types.RuleEngineStatus
+		wantDisruptive               bool
+		wantAction                   corazarules.DisruptiveAction
+		wantInterrupted              bool
+		wantDetectionOnlyInterrupted bool
+	}{
+		{
+			name:                         "engine on",
+			engine:                       types.RuleEngineOn,
+			wantDisruptive:               true,
+			wantAction:                   corazarules.DisruptiveActionDeny,
+			wantInterrupted:              true,
+			wantDetectionOnlyInterrupted: false,
+		},
+		{
+			name:                         "engine detection only",
+			engine:                       types.RuleEngineDetectionOnly,
+			wantDisruptive:               false,
+			wantAction:                   corazarules.DisruptiveActionDeny,
+			wantInterrupted:              false,
+			wantDetectionOnlyInterrupted: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			waf := NewWAF()
+			tx := waf.NewTransaction()
+			tx.RuleEngine = tt.engine
+
+			rule := NewRule()
+			rule.ID_ = 1
+			if err := rule.AddVariable(variables.ArgsGet, "", false); err != nil {
+				t.Fatal(err)
+			}
+			rule.SetOperator(&dummyEqOperator{}, "@eq", "0")
+			_ = rule.AddAction("deny", &dummyDenyAction{})
+
+			tx.AddGetRequestArgument("test", "0")
+
+			var matchedValues []types.MatchData
+			rule.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
+
+			if len(tx.matchedRules) != 1 {
+				t.Fatalf("expected 1 matched rule, got %d", len(tx.matchedRules))
+			}
+			mr := tx.matchedRules[0].(*corazarules.MatchedRule)
+			if mr.Disruptive_ != tt.wantDisruptive {
+				t.Errorf("Disruptive_: got %t, want %t", mr.Disruptive_, tt.wantDisruptive)
+			}
+			if mr.DisruptiveAction_ != tt.wantAction {
+				t.Errorf("DisruptiveAction_: got %d, want %d", mr.DisruptiveAction_, tt.wantAction)
+			}
+			if tx.IsInterrupted() != tt.wantInterrupted {
+				t.Errorf("IsInterrupted: got %t, want %t", tx.IsInterrupted(), tt.wantInterrupted)
+			}
+			if tx.IsDetectionOnlyInterrupted() != tt.wantDetectionOnlyInterrupted {
+				t.Errorf("IsDetectionOnlyInterrupted: got %t, want %t", tx.IsDetectionOnlyInterrupted(), tt.wantDetectionOnlyInterrupted)
+			}
+		})
+	}
+}
+
 func TestResetCapture(t *testing.T) {
 	tx := makeTransaction(t)
 	tx.Capture = true
@@ -1924,6 +1990,102 @@ func TestRemoveRuleByID(t *testing.T) {
 	if len(tx.ruleRemoveByID) != 2 {
 		t.Errorf("expected 2 entries in ruleRemoveByID map, got %d", len(tx.ruleRemoveByID))
 	}
+}
+
+func TestRemoveRuleByIDRange(t *testing.T) {
+	waf := NewWAF()
+
+	// Use nil-operator rules (SecAction-style): they always match regardless of variables.
+	for _, id := range []int{100, 150, 200, 300} {
+		r := NewRule()
+		r.ID_ = id
+		r.LogID_ = strconv.Itoa(id)
+		r.Phase_ = types.PhaseRequestHeaders
+		// nil operator means the rule always matches
+		if err := waf.Rules.Add(r); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	t.Run("range is stored", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		defer tx.Close()
+
+		tx.RemoveRuleByIDRange(100, 200)
+		if len(tx.ruleRemoveByIDRanges) != 1 {
+			t.Fatalf("expected 1 range entry, got %d", len(tx.ruleRemoveByIDRanges))
+		}
+		if tx.ruleRemoveByIDRanges[0][0] != 100 || tx.ruleRemoveByIDRanges[0][1] != 200 {
+			t.Errorf("unexpected range: %v", tx.ruleRemoveByIDRanges[0])
+		}
+	})
+
+	t.Run("rules in range are skipped during eval", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		defer tx.Close()
+
+		// Remove rules with IDs 100-200; rule 300 should still be evaluated.
+		tx.RemoveRuleByIDRange(100, 200)
+		waf.Rules.Eval(types.PhaseRequestHeaders, tx)
+
+		matchedIDs := make(map[int]bool)
+		for _, mr := range tx.MatchedRules() {
+			matchedIDs[mr.Rule().ID()] = true
+		}
+
+		for _, skipped := range []int{100, 150, 200} {
+			if matchedIDs[skipped] {
+				t.Errorf("rule %d should have been skipped but was matched", skipped)
+			}
+		}
+		if !matchedIDs[300] {
+			t.Errorf("rule 300 should have been matched but was not")
+		}
+	})
+
+	t.Run("multiple ranges", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		defer tx.Close()
+
+		tx.RemoveRuleByIDRange(100, 100)
+		tx.RemoveRuleByIDRange(300, 300)
+		if len(tx.ruleRemoveByIDRanges) != 2 {
+			t.Fatalf("expected 2 range entries, got %d", len(tx.ruleRemoveByIDRanges))
+		}
+
+		waf.Rules.Eval(types.PhaseRequestHeaders, tx)
+
+		matchedIDs := make(map[int]bool)
+		for _, mr := range tx.MatchedRules() {
+			matchedIDs[mr.Rule().ID()] = true
+		}
+		if matchedIDs[100] {
+			t.Error("rule 100 should have been skipped")
+		}
+		if matchedIDs[300] {
+			t.Error("rule 300 should have been skipped")
+		}
+		if !matchedIDs[150] {
+			t.Error("rule 150 should have been matched")
+		}
+		if !matchedIDs[200] {
+			t.Error("rule 200 should have been matched")
+		}
+	})
+
+	t.Run("range reset on transaction reuse", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		tx.RemoveRuleByIDRange(100, 200)
+		tx.Close()
+
+		// Get a new transaction (pool reuse may return the same object)
+		tx2 := waf.NewTransaction()
+		defer tx2.Close()
+
+		if len(tx2.ruleRemoveByIDRanges) != 0 {
+			t.Errorf("expected ruleRemoveByIDRanges to be reset, got %d entries", len(tx2.ruleRemoveByIDRanges))
+		}
+	})
 }
 
 func BenchmarkRuleEvalWithRemovedRules(b *testing.B) {
