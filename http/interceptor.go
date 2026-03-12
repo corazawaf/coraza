@@ -7,13 +7,26 @@
 package http
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 
 	"github.com/corazawaf/coraza/v3/types"
 )
+
+// hijackerTracker wraps an http.Hijacker and tracks whether Hijack has been called.
+type hijackerTracker struct {
+	w           http.ResponseWriter
+	interceptor *rwInterceptor
+}
+
+func (h *hijackerTracker) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	h.interceptor.isHijacked = true
+	return h.w.(http.Hijacker).Hijack()
+}
 
 // rwInterceptor intercepts the ResponseWriter, so it can track response size
 // and returned status code.
@@ -25,6 +38,7 @@ type rwInterceptor struct {
 	isWriteHeaderFlush            bool
 	wroteHeader                   bool
 	wroteBufferedBodyToDownstream bool
+	isHijacked                    bool
 	allowFlushing                 bool
 }
 
@@ -49,6 +63,13 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 		i.statusCode = obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode)
 		i.flushWriteHeader()
 		return
+	}
+
+	// For WebSocket upgrades (101 Switching Protocols), flush the headers
+	// immediately. The connection is about to be hijacked for bidirectional
+	// communication and there will be no HTTP response body to process.
+	if statusCode == http.StatusSwitchingProtocols {
+		i.flushWriteHeader()
 	}
 
 	i.wroteHeader = true
@@ -206,6 +227,12 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 	i := &rwInterceptor{w: w, tx: tx, proto: r.Proto, statusCode: 200}
 
 	responseProcessor := func(tx types.Transaction, r *http.Request) error {
+		// If the connection has been hijacked (e.g. WebSocket upgrade),
+		// we must not attempt to write to the response writer anymore.
+		if i.isHijacked {
+			return nil
+		}
+
 		// We look for interruptions triggered at phase 3 (response headers)
 		// and during writing the response body. If so, response status code
 		// has been sent over the flush already.
@@ -236,9 +263,13 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 	}
 
 	var (
-		hijacker, isHijacker = i.w.(http.Hijacker)
-		pusher, isPusher     = i.w.(http.Pusher)
+		_, isHijacker    = i.w.(http.Hijacker)
+		pusher, isPusher = i.w.(http.Pusher)
 	)
+
+	// hijackTracker wraps the underlying http.Hijacker so that we can detect
+	// when the connection has been hijacked (e.g. for WebSocket upgrades).
+	hijackTracker := &hijackerTracker{w: i.w, interceptor: i}
 
 	switch {
 	case !isHijacker && isPusher:
@@ -250,13 +281,13 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 		return struct {
 			responseWriter
 			http.Hijacker
-		}{i, hijacker}, responseProcessor
+		}{i, hijackTracker}, responseProcessor
 	case isHijacker && isPusher:
 		return struct {
 			responseWriter
 			http.Hijacker
 			http.Pusher
-		}{i, hijacker, pusher}, responseProcessor
+		}{i, hijackTracker, pusher}, responseProcessor
 	default:
 		return struct {
 			responseWriter

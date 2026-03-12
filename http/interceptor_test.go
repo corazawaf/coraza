@@ -333,6 +333,194 @@ func TestInterface(t *testing.T) {
 	})
 }
 
+// hijackableRecorder extends httptest.ResponseRecorder with http.Hijacker support
+// to simulate what a real HTTP server connection provides.
+type hijackableRecorder struct {
+	*httptest.ResponseRecorder
+	hijacked bool
+}
+
+func (h *hijackableRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	h.hijacked = true
+	// Return a pipe-based connection to simulate a hijacked connection.
+	server, client := net.Pipe()
+	rw := bufio.NewReadWriter(bufio.NewReader(client), bufio.NewWriter(client))
+	// Close server side in the background as we don't need it in tests.
+	go server.Close()
+	return client, rw, nil
+}
+
+func newHijackableRecorder() *hijackableRecorder {
+	return &hijackableRecorder{ResponseRecorder: httptest.NewRecorder()}
+}
+
+func TestWebSocketUpgradeFlushesHeaders(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives("SecRuleEngine On"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	rec := newHijackableRecorder()
+	r, _ := http.NewRequest("GET", "/ws", nil)
+
+	wrapped, _ := wrap(rec, r, tx)
+
+	// Simulate a WebSocket upgrade response
+	wrapped.Header().Set("Upgrade", "websocket")
+	wrapped.Header().Set("Connection", "Upgrade")
+	wrapped.WriteHeader(http.StatusSwitchingProtocols)
+
+	// The 101 status should have been flushed to the underlying writer immediately
+	if want, have := http.StatusSwitchingProtocols, rec.Code; want != have {
+		t.Errorf("expected 101 to be flushed immediately for WebSocket upgrades, got %d", have)
+	}
+}
+
+func TestHijackTrackerSetsIsHijacked(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives("SecRuleEngine On"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	rec := newHijackableRecorder()
+	r, _ := http.NewRequest("GET", "/ws", nil)
+
+	wrapped, _ := wrap(rec, r, tx)
+
+	hijacker, ok := wrapped.(http.Hijacker)
+	if !ok {
+		t.Fatal("expected wrapped writer to implement http.Hijacker")
+	}
+
+	conn, _, err := hijacker.Hijack()
+	if err != nil {
+		t.Fatalf("unexpected error from Hijack: %v", err)
+	}
+	defer conn.Close()
+
+	if !rec.hijacked {
+		t.Error("expected underlying writer's Hijack to have been called")
+	}
+}
+
+func TestResponseProcessorSkipsOnHijackedConnection(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives(`
+		SecRuleEngine On
+		SecResponseBodyAccess On
+		SecResponseBodyMimeType text/plain
+	`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	rec := newHijackableRecorder()
+	r, _ := http.NewRequest("GET", "/ws", nil)
+
+	wrapped, processResponse := wrap(rec, r, tx)
+
+	// Simulate WebSocket upgrade
+	wrapped.Header().Set("Upgrade", "websocket")
+	wrapped.Header().Set("Connection", "Upgrade")
+	wrapped.WriteHeader(http.StatusSwitchingProtocols)
+
+	// Hijack the connection
+	hijacker := wrapped.(http.Hijacker)
+	conn, _, err := hijacker.Hijack()
+	if err != nil {
+		t.Fatalf("unexpected error from Hijack: %v", err)
+	}
+	defer conn.Close()
+
+	// processResponse should return nil without attempting to write to the hijacked connection.
+	if err := processResponse(tx, r); err != nil {
+		t.Errorf("processResponse should not error on hijacked connection, got: %v", err)
+	}
+}
+
+func TestWebSocketUpgradeDetectionOnly(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives("SecRuleEngine DetectionOnly"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	rec := newHijackableRecorder()
+	r, _ := http.NewRequest("GET", "/ws", nil)
+
+	wrapped, processResponse := wrap(rec, r, tx)
+
+	// Simulate WebSocket upgrade
+	wrapped.Header().Set("Upgrade", "websocket")
+	wrapped.Header().Set("Connection", "Upgrade")
+	wrapped.WriteHeader(http.StatusSwitchingProtocols)
+
+	if want, have := http.StatusSwitchingProtocols, rec.Code; want != have {
+		t.Errorf("expected 101 to be flushed even in DetectionOnly mode, got %d", have)
+	}
+
+	// Hijack
+	hijacker := wrapped.(http.Hijacker)
+	conn, _, err := hijacker.Hijack()
+	if err != nil {
+		t.Fatalf("unexpected error from Hijack: %v", err)
+	}
+	defer conn.Close()
+
+	if err := processResponse(tx, r); err != nil {
+		t.Errorf("processResponse should succeed for WebSocket in DetectionOnly mode, got: %v", err)
+	}
+}
+
+func TestRegularRequestStillProcessesResponseBody(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives(`
+		SecRuleEngine On
+		SecResponseBodyAccess On
+		SecResponseBodyMimeType text/plain
+		SecRule RESPONSE_BODY "blocked-content" "id:100,phase:4,deny,status:403"
+	`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	rec := httptest.NewRecorder()
+	r, _ := http.NewRequest("GET", "/", nil)
+	r.RemoteAddr = "127.0.0.1:12345"
+
+	// Process request phases so the transaction is in the right state
+	tx.ProcessConnection("127.0.0.1", 12345, "", 0)
+	tx.ProcessURI("/", "GET", "HTTP/1.1")
+	tx.ProcessRequestHeaders()
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Fatal(err)
+	}
+
+	wrapped, processResponse := wrap(rec, r, tx)
+
+	wrapped.Header().Set("Content-Type", "text/plain")
+	wrapped.WriteHeader(http.StatusOK)
+	if _, err := wrapped.Write([]byte("blocked-content")); err != nil {
+		t.Fatalf("unexpected write error: %v", err)
+	}
+
+	if err := processResponse(tx, r); err != nil {
+		t.Fatalf("unexpected error from processResponse: %v", err)
+	}
+
+	// The phase 4 rule should have triggered an interruption, resulting in a 403
+	if want, have := http.StatusForbidden, rec.Code; want != have {
+		t.Errorf("expected status %d from response body rule, got %d", want, have)
+	}
+}
+
 func TestResponseBody(t *testing.T) {
 	const (
 		contentWithoutDataLeak    = "No data leak"
