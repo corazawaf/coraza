@@ -377,15 +377,22 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 		}
 
 		for _, a := range r.actions {
-			if a.Function.Type() == plugintypes.ActionTypeFlow {
-				// Flow actions are evaluated also if the rule engine is set to DetectionOnly
+			// All actions are evaluated independently from the engine being On or in DetectionOnly.
+			// The action evaluation is responsible of checking the engine mode and decide if the disruptive action
+			// has to be enforced or not. This allows finer control to the actions, such us creating the detectionOnlyInterruption and
+			// allowing RelevantOnly audit logs in detection only mode.
+			switch a.Function.Type() {
+			case plugintypes.ActionTypeFlow:
 				logger.Debug().Str("action", a.Name).Int("phase", int(phase)).Msg("Evaluating flow action for rule")
-				a.Function.Evaluate(r, tx)
-			} else if a.Function.Type() == plugintypes.ActionTypeDisruptive && tx.RuleEngine == types.RuleEngineOn {
+			case plugintypes.ActionTypeDisruptive:
 				// The parser enforces that the disruptive action is just one per rule (if more than one, only the last one is kept)
-				logger.Debug().Str("action", a.Name).Msg("Executing disruptive action for rule")
-				a.Function.Evaluate(r, tx)
+				logger.Debug().Str("action", a.Name).Int("phase", int(phase)).Msg("Executing disruptive action for rule")
+			default:
+				// Only flow and disruptive actions are supposed to be evaluated here, non disruptive actions
+				// are evaluated previously, during the variable matching.
+				continue
 			}
+			a.Function.Evaluate(r, tx)
 		}
 		if r.ID_ != noID {
 			// we avoid matching chains and secmarkers
