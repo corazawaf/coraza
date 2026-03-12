@@ -130,7 +130,7 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 	tx := txS.(*corazawaf.Transaction)
 	switch a.action {
 	case ctlRuleRemoveTargetByID:
-		ran, err := rangeToInts(tx.WAF.Rules.GetRules(), a.value)
+		start, end, err := parseIDOrRange(a.value)
 		if err != nil {
 			tx.DebugLogger().Error().
 				Str("ctl", "RuleRemoveTargetByID").
@@ -138,8 +138,10 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 				Msg("Invalid range")
 			return
 		}
-		for _, id := range ran {
-			tx.RemoveRuleTargetByID(id, a.collection, a.colKey)
+		for _, r := range tx.WAF.Rules.GetRules() {
+			if r.ID_ >= start && r.ID_ <= end {
+				tx.RemoveRuleTargetByID(r.ID_, a.collection, a.colKey)
+			}
 		}
 	case ctlRuleRemoveTargetByTag:
 		rules := tx.WAF.Rules.GetRules()
@@ -260,7 +262,7 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 
 			tx.RemoveRuleByID(id)
 		} else {
-			ran, err := rangeToInts(tx.WAF.Rules.GetRules(), a.value)
+			start, end, err := parseRange(a.value)
 			if err != nil {
 				tx.DebugLogger().Error().
 					Str("ctl", "RuleRemoveByID").
@@ -268,9 +270,7 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 					Msg("Invalid range")
 				return
 			}
-			for _, id := range ran {
-				tx.RemoveRuleByID(id)
-			}
+			tx.RemoveRuleByIDRange(start, end)
 		}
 	case ctlRuleRemoveByMsg:
 		rules := tx.WAF.Rules.GetRules()
@@ -435,44 +435,41 @@ func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, str
 	return act, value, collection, strings.TrimSpace(colkey), nil
 }
 
-func rangeToInts(rules []corazawaf.Rule, input string) ([]int, error) {
+// parseRange parses a range string of the form "start-end" and returns the start and end
+// values as integers. It returns an error if the input is not a valid range.
+func parseRange(input string) (start, end int, err error) {
+	in0, in1, ok := strings.Cut(input, "-")
+	if !ok {
+		return 0, 0, errors.New("no range separator found")
+	}
+	start, err = strconv.Atoi(in0)
+	if err != nil {
+		return 0, 0, err
+	}
+	end, err = strconv.Atoi(in1)
+	if err != nil {
+		return 0, 0, err
+	}
+	if start > end {
+		return 0, 0, errors.New("invalid range, start > end")
+	}
+	return start, end, nil
+}
+
+// parseIDOrRange parses either a single integer ID or a range string of the form "start-end".
+// For a single ID, start and end are equal.
+func parseIDOrRange(input string) (start, end int, err error) {
 	if len(input) == 0 {
-		return nil, errors.New("empty input")
+		return 0, 0, errors.New("empty input")
 	}
-
-	var (
-		ids        []int
-		start, end int
-		err        error
-	)
-
-	if in0, in1, ok := strings.Cut(input, "-"); ok {
-		start, err = strconv.Atoi(in0)
-		if err != nil {
-			return nil, err
-		}
-		end, err = strconv.Atoi(in1)
-		if err != nil {
-			return nil, err
-		}
-
-		if start > end {
-			return nil, errors.New("invalid range, start > end")
-		}
-	} else {
-		id, err := strconv.Atoi(input)
-		if err != nil {
-			return nil, err
-		}
-		start, end = id, id
+	if _, _, ok := strings.Cut(input, "-"); ok {
+		return parseRange(input)
 	}
-
-	for _, r := range rules {
-		if r.ID_ >= start && r.ID_ <= end {
-			ids = append(ids, r.ID_)
-		}
+	id, err := strconv.Atoi(input)
+	if err != nil {
+		return 0, 0, err
 	}
-	return ids, nil
+	return id, id, nil
 }
 
 func ctl() plugintypes.Action {

@@ -206,6 +206,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.HashEnforcement = false
 	tx.lastPhase = 0
 	tx.ruleRemoveByID = nil
+	tx.ruleRemoveByIDRanges = nil
 	tx.ruleRemoveTargetByID = map[int][]ruleVariableParams{}
 	tx.Skip = 0
 	tx.AllowType = 0
@@ -239,7 +240,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 		})
 
 		tx.variables = *NewTransactionVariables()
-		tx.transformationCache = map[transformationKey]*transformationValue{}
+		tx.transformationCache = map[transformationKey]transformationValue{}
 	}
 
 	// set capture variables
