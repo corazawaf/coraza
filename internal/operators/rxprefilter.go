@@ -10,7 +10,7 @@
 // Why this exists:
 //
 // CRS loads hundreds of @rx rules and each one is evaluated against every
-// relevant variable value per request. For typical benign traffic, 95%+ of
+// relevant variable value per request. For typical benign traffic, the vast majority of
 // these evaluations return false. The regex engine still has to run in full
 // before concluding "no match". This file provides two mechanisms to short-
 // circuit that work:
