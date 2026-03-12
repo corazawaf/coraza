@@ -159,7 +159,7 @@ RulesLoop:
 		r := &rg.rules[i]
 		// if there is already an interruption and the phase isn't logging
 		// we break the loop
-		if tx.interruption != nil && phase != types.PhaseLogging {
+		if tx.IsInterrupted() && phase != types.PhaseLogging {
 			break RulesLoop
 		}
 		// Rules with phase 0 will always run
@@ -263,7 +263,7 @@ RulesLoop:
 	tx.Skip = 0
 
 	tx.stopWatches[phase] = time.Now().UnixNano() - ts
-	return tx.interruption != nil
+	return tx.IsInterrupted()
 }
 
 // NewRuleGroup creates an empty RuleGroup that

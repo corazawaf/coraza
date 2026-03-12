@@ -753,6 +753,72 @@ func TestAuditLogFields(t *testing.T) {
 	}
 }
 
+func TestMatchRuleDisruptiveActionPopulated(t *testing.T) {
+	tests := []struct {
+		name                         string
+		engine                       types.RuleEngineStatus
+		wantDisruptive               bool
+		wantAction                   corazarules.DisruptiveAction
+		wantInterrupted              bool
+		wantDetectionOnlyInterrupted bool
+	}{
+		{
+			name:                         "engine on",
+			engine:                       types.RuleEngineOn,
+			wantDisruptive:               true,
+			wantAction:                   corazarules.DisruptiveActionDeny,
+			wantInterrupted:              true,
+			wantDetectionOnlyInterrupted: false,
+		},
+		{
+			name:                         "engine detection only",
+			engine:                       types.RuleEngineDetectionOnly,
+			wantDisruptive:               false,
+			wantAction:                   corazarules.DisruptiveActionDeny,
+			wantInterrupted:              false,
+			wantDetectionOnlyInterrupted: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			waf := NewWAF()
+			tx := waf.NewTransaction()
+			tx.RuleEngine = tt.engine
+
+			rule := NewRule()
+			rule.ID_ = 1
+			if err := rule.AddVariable(variables.ArgsGet, "", false); err != nil {
+				t.Fatal(err)
+			}
+			rule.SetOperator(&dummyEqOperator{}, "@eq", "0")
+			_ = rule.AddAction("deny", &dummyDenyAction{})
+
+			tx.AddGetRequestArgument("test", "0")
+
+			var matchedValues []types.MatchData
+			rule.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
+
+			if len(tx.matchedRules) != 1 {
+				t.Fatalf("expected 1 matched rule, got %d", len(tx.matchedRules))
+			}
+			mr := tx.matchedRules[0].(*corazarules.MatchedRule)
+			if mr.Disruptive_ != tt.wantDisruptive {
+				t.Errorf("Disruptive_: got %t, want %t", mr.Disruptive_, tt.wantDisruptive)
+			}
+			if mr.DisruptiveAction_ != tt.wantAction {
+				t.Errorf("DisruptiveAction_: got %d, want %d", mr.DisruptiveAction_, tt.wantAction)
+			}
+			if tx.IsInterrupted() != tt.wantInterrupted {
+				t.Errorf("IsInterrupted: got %t, want %t", tx.IsInterrupted(), tt.wantInterrupted)
+			}
+			if tx.IsDetectionOnlyInterrupted() != tt.wantDetectionOnlyInterrupted {
+				t.Errorf("IsDetectionOnlyInterrupted: got %t, want %t", tx.IsDetectionOnlyInterrupted(), tt.wantDetectionOnlyInterrupted)
+			}
+		})
+	}
+}
+
 func TestResetCapture(t *testing.T) {
 	tx := makeTransaction(t)
 	tx.Capture = true
