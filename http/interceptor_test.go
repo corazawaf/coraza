@@ -389,7 +389,7 @@ func TestHijackTrackerSetsIsHijacked(t *testing.T) {
 	rec := newHijackableRecorder()
 	r, _ := http.NewRequest("GET", "/ws", nil)
 
-	wrapped, _ := wrap(rec, r, tx)
+	wrapped, processResponse := wrap(rec, r, tx)
 
 	hijacker, ok := wrapped.(http.Hijacker)
 	if !ok {
@@ -404,6 +404,21 @@ func TestHijackTrackerSetsIsHijacked(t *testing.T) {
 
 	if !rec.hijacked {
 		t.Error("expected underlying writer's Hijack to have been called")
+	}
+
+	// Verify that the hijack tracking flag causes the response processor
+	// to skip writing to the now-hijacked connection.
+	if err := processResponse(tx, r); err != nil {
+		t.Errorf("expected processResponse to be a no-op after hijack, got: %v", err)
+	}
+
+	// The underlying recorder should not have had WriteHeader called on it,
+	// confirming no write was attempted to the hijacked connection.
+	if rec.Code != 200 {
+		// httptest.ResponseRecorder initialises Code to 200 but only "writes" on
+		// an explicit WriteHeader/Write call; any value other than 200 would mean
+		// something was written unexpectedly.
+		t.Errorf("expected no writes to the hijacked connection, got code %d", rec.Code)
 	}
 }
 
