@@ -319,7 +319,7 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 }
 
 // Interrupt sets the interruption for the transaction.
-// It complies with DetectionOnly definition which requires to don't execute disruptive actions.
+// It complies with DetectionOnly definition which requires that disruptive actions are not executed.
 // Depending on the RuleEngine mode:
 // If On: it immediately interrupts the transaction and generates a response.
 // If DetectionOnly: it keeps track of what the interruption would have been if the engine was "On",
@@ -340,7 +340,7 @@ func (tx *Transaction) Interrupt(interruption *types.Interruption) {
 }
 
 // Allow sets the allow type for the transaction.
-// It complies with DetectionOnly definition which requires to don't execute disruptive actions.
+// It complies with DetectionOnly definition which requires not executing disruptive actions.
 // Depending on the RuleEngine mode:
 // If On: it will cause the transaction to skip rules according to the allow type (phase, request, all).
 // If DetectionOnly: allow is not enforced.
@@ -577,7 +577,7 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 	// Disruptive_ field is also used during logging to print different messages if the disruption has been real or not
 	// so it is important to set it according to the RuleEngine mode.
 	for _, a := range r.actions {
-		// There can be only at most one disruptive action per rule
+		// There can be only one disruptive action per rule
 		if a.Function.Type() == plugintypes.ActionTypeDisruptive {
 			// if not found it will default to DisruptiveActionUnknown.
 			mr.DisruptiveAction_ = corazarules.DisruptiveActionMap[a.Name]
