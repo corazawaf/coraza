@@ -21,6 +21,7 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
+	"github.com/corazawaf/coraza/v3/internal/corazatypes"
 	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/internal/operators"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
@@ -1202,6 +1203,59 @@ func TestTransactionSyncPool(t *testing.T) {
 		if len(tx.matchedRules) != 0 {
 			t.Fatalf("failed to sync transaction pool, %d rules found after %d attempts", len(tx.matchedRules), i+1)
 			return
+		}
+	}
+}
+
+// TestTransactionCloseResetsStateBeforePoolReturn verifies that Close() resets all the
+// stateful fields before the transaction is returned to sync.Pool. This ensures that
+// reused transactions never carry dirty state from a previous request, even if
+// newTransaction() logic changes in the future.
+func TestTransactionCloseResetsStateBeforePoolReturn(t *testing.T) {
+	waf := NewWAF()
+
+	for i := range 100 {
+		tx := waf.NewTransaction()
+
+		// Set dirty state on every field that Close() must reset.
+		tx.matchedRules = append(tx.matchedRules, &corazarules.MatchedRule{
+			Rule_: &corazarules.RuleMetadata{ID_: 9999},
+		})
+		tx.interruption = &types.Interruption{Status: 403, RuleID: 1}
+		tx.Skip = 5
+		tx.SkipAfter = "SOME_MARKER"
+		tx.AllowType = corazatypes.AllowTypeAll
+		tx.audit = true
+		tx.lastPhase = types.PhaseResponseBody
+
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		// Obtain the next transaction – in a single-goroutine context the pool will
+		// return the same object, so we can inspect its state after the reset.
+		tx = waf.NewTransaction()
+
+		if len(tx.matchedRules) != 0 {
+			t.Fatalf("iteration %d: matchedRules not reset, got %d entries", i+1, len(tx.matchedRules))
+		}
+		if tx.interruption != nil {
+			t.Fatalf("iteration %d: interruption not reset, got %+v", i+1, tx.interruption)
+		}
+		if tx.Skip != 0 {
+			t.Fatalf("iteration %d: Skip not reset, got %d", i+1, tx.Skip)
+		}
+		if tx.SkipAfter != "" {
+			t.Fatalf("iteration %d: SkipAfter not reset, got %q", i+1, tx.SkipAfter)
+		}
+		if tx.AllowType != corazatypes.AllowTypeUnset {
+			t.Fatalf("iteration %d: AllowType not reset, got %d", i+1, tx.AllowType)
+		}
+		if tx.audit {
+			t.Fatalf("iteration %d: audit not reset", i+1)
+		}
+		if tx.lastPhase != 0 {
+			t.Fatalf("iteration %d: lastPhase not reset, got %d", i+1, tx.lastPhase)
 		}
 	}
 }

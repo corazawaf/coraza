@@ -1658,6 +1658,17 @@ func (tx *Transaction) Close() error {
 			Msg("Transaction finished")
 	}
 
+	// Reset fields that must be clean before the transaction is returned to the pool.
+	// newTransaction() also resets these, but resetting here ensures that a transaction
+	// returned to sync.Pool never carries stale state, even if newTransaction() changes.
+	tx.matchedRules = tx.matchedRules[:0]
+	tx.interruption = nil
+	tx.Skip = 0
+	tx.SkipAfter = ""
+	tx.AllowType = corazatypes.AllowTypeUnset
+	tx.audit = false
+	tx.lastPhase = 0
+
 	if len(errs) == 0 {
 		return nil
 	}
