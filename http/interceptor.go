@@ -19,13 +19,17 @@ import (
 
 // hijackerTracker wraps an http.Hijacker and tracks whether Hijack has been called.
 type hijackerTracker struct {
-	w           http.ResponseWriter
+	hijacker    http.Hijacker
 	interceptor *rwInterceptor
 }
 
 func (h *hijackerTracker) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	conn, rw, err := h.hijacker.Hijack()
+	if err != nil {
+		return conn, rw, err
+	}
 	h.interceptor.isHijacked = true
-	return h.w.(http.Hijacker).Hijack()
+	return conn, rw, nil
 }
 
 // rwInterceptor intercepts the ResponseWriter, so it can track response size
@@ -263,13 +267,9 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 	}
 
 	var (
-		_, isHijacker    = i.w.(http.Hijacker)
-		pusher, isPusher = i.w.(http.Pusher)
+		hijacker, isHijacker = i.w.(http.Hijacker)
+		pusher, isPusher     = i.w.(http.Pusher)
 	)
-
-	// hijackTracker wraps the underlying http.Hijacker so that we can detect
-	// when the connection has been hijacked (e.g. for WebSocket upgrades).
-	hijackTracker := &hijackerTracker{w: i.w, interceptor: i}
 
 	switch {
 	case !isHijacker && isPusher:
@@ -281,13 +281,13 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 		return struct {
 			responseWriter
 			http.Hijacker
-		}{i, hijackTracker}, responseProcessor
+		}{i, &hijackerTracker{hijacker: hijacker, interceptor: i}}, responseProcessor
 	case isHijacker && isPusher:
 		return struct {
 			responseWriter
 			http.Hijacker
 			http.Pusher
-		}{i, hijackTracker, pusher}, responseProcessor
+		}{i, &hijackerTracker{hijacker: hijacker, interceptor: i}, pusher}, responseProcessor
 	default:
 		return struct {
 			responseWriter
