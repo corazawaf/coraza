@@ -412,13 +412,12 @@ func TestHijackTrackerSetsIsHijacked(t *testing.T) {
 		t.Errorf("expected processResponse to be a no-op after hijack, got: %v", err)
 	}
 
-	// The underlying recorder should not have had WriteHeader called on it,
+	// The underlying recorder should not have had WriteHeader or Write called on it,
 	// confirming no write was attempted to the hijacked connection.
-	if rec.Code != 200 {
-		// httptest.ResponseRecorder initialises Code to 200 but only "writes" on
-		// an explicit WriteHeader/Write call; any value other than 200 would mean
-		// something was written unexpectedly.
-		t.Errorf("expected no writes to the hijacked connection, got code %d", rec.Code)
+	if rec.Code != 200 || rec.Body.Len() != 0 {
+		// httptest.ResponseRecorder initialises Code to 200 and Body to empty, so any
+		// status change or non-empty body indicates an unexpected write.
+		t.Errorf("expected no writes to the hijacked connection, got code %d and body length %d", rec.Code, rec.Body.Len())
 	}
 }
 
