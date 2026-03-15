@@ -1628,12 +1628,17 @@ func (tx *Transaction) Close() error {
 
 	var errs []error
 	if environment.HasAccessToFS {
-		// TODO(jcchavezs): filesTmpNames should probably be a new kind of collection that
-		// is aware of the files and then attempt to delete them when the collection
-		// is resetted or an item is removed.
-		for _, file := range tx.variables.filesTmpNames.Get("") {
-			if err := os.Remove(file); err != nil {
-				errs = append(errs, fmt.Errorf("removing temporary file: %v", err))
+		keepFiles := tx.WAF.UploadKeepFiles == types.UploadKeepFilesOn ||
+			(tx.WAF.UploadKeepFiles == types.UploadKeepFilesRelevantOnly && len(tx.matchedRules) > 0)
+
+		if !keepFiles {
+			// TODO(jcchavezs): filesTmpNames should probably be a new kind of collection that
+			// is aware of the files and then attempt to delete them when the collection
+			// is resetted or an item is removed.
+			for _, file := range tx.variables.filesTmpNames.Get("") {
+				if err := os.Remove(file); err != nil {
+					errs = append(errs, fmt.Errorf("removing temporary file: %v", err))
+				}
 			}
 		}
 	}

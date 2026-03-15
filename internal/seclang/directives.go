@@ -937,11 +937,11 @@ func directiveSecDataDir(options *DirectiveOptions) error {
 }
 
 func directiveSecUploadKeepFiles(options *DirectiveOptions) error {
-	b, err := parseBoolean(options.Opts)
+	status, err := types.ParseUploadKeepFilesStatus(options.Opts)
 	if err != nil {
 		return err
 	}
-	options.WAF.UploadKeepFiles = b
+	options.WAF.UploadKeepFiles = status
 	return nil
 }
 

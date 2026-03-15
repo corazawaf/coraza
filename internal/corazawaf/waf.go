@@ -89,9 +89,9 @@ type WAF struct {
 	// Path to store data files (ex. cache)
 	DataDir string
 
-	// If true, the WAF will store the uploaded files in the UploadDir
-	// directory
-	UploadKeepFiles bool
+	// UploadKeepFiles controls whether uploaded files are kept after the transaction.
+	// On: always keep, Off: always delete (default), RelevantOnly: keep only if rules matched.
+	UploadKeepFiles types.UploadKeepFilesStatus
 	// UploadFileMode instructs the waf to set the file mode for uploaded files
 	UploadFileMode fs.FileMode
 	// UploadFileLimit is the maximum size of the uploaded file to be stored

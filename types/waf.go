@@ -78,6 +78,31 @@ func (re RuleEngineStatus) String() string {
 	return "unknown"
 }
 
+// UploadKeepFilesStatus represents the status of the upload keep files directive.
+type UploadKeepFilesStatus int
+
+const (
+	// UploadKeepFilesOff will delete all uploaded files after transaction (default)
+	UploadKeepFilesOff UploadKeepFilesStatus = iota
+	// UploadKeepFilesOn will keep all uploaded files after transaction
+	UploadKeepFilesOn
+	// UploadKeepFilesRelevantOnly will keep uploaded files only if a rule matched
+	UploadKeepFilesRelevantOnly
+)
+
+// ParseUploadKeepFilesStatus parses the upload keep files status
+func ParseUploadKeepFilesStatus(s string) (UploadKeepFilesStatus, error) {
+	switch strings.ToLower(s) {
+	case "on":
+		return UploadKeepFilesOn, nil
+	case "off":
+		return UploadKeepFilesOff, nil
+	case "relevantonly":
+		return UploadKeepFilesRelevantOnly, nil
+	}
+	return -1, fmt.Errorf("invalid upload keep files status: %q", s)
+}
+
 // BodyLimitAction represents the action to take when
 // the body size exceeds the configured limit.
 type BodyLimitAction int

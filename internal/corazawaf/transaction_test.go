@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"regexp"
 	"runtime/debug"
 	"strconv"
@@ -1855,6 +1856,97 @@ func TestCloseFails(t *testing.T) {
 	if !strings.Contains(err.Error(), "removing temporary file") {
 		t.Fatalf("unexpected error message: %s", err.Error())
 	}
+}
+
+func TestUploadKeepFiles(t *testing.T) {
+	if !environment.HasAccessToFS {
+		t.Skip("skipping test as it requires access to filesystem")
+	}
+
+	createTmpFile := func(t *testing.T) string {
+		t.Helper()
+		f, err := os.CreateTemp(t.TempDir(), "crztest*")
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.Close()
+		return f.Name()
+	}
+
+	t.Run("Off deletes files", func(t *testing.T) {
+		waf := NewWAF()
+		waf.UploadKeepFiles = types.UploadKeepFilesOff
+		tx := waf.NewTransaction()
+		tmpFile := createTmpFile(t)
+
+		col := tx.Variables().FilesTmpNames().(*collections.Map)
+		col.Add("", tmpFile)
+
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := os.Stat(tmpFile); !os.IsNotExist(err) {
+			t.Fatal("expected temp file to be deleted when UploadKeepFiles is Off")
+		}
+	})
+
+	t.Run("On keeps files", func(t *testing.T) {
+		waf := NewWAF()
+		waf.UploadKeepFiles = types.UploadKeepFilesOn
+		tx := waf.NewTransaction()
+		tmpFile := createTmpFile(t)
+
+		col := tx.Variables().FilesTmpNames().(*collections.Map)
+		col.Add("", tmpFile)
+
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := os.Stat(tmpFile); err != nil {
+			t.Fatal("expected temp file to be kept when UploadKeepFiles is On")
+		}
+	})
+
+	t.Run("RelevantOnly keeps files when rules matched", func(t *testing.T) {
+		waf := NewWAF()
+		waf.UploadKeepFiles = types.UploadKeepFilesRelevantOnly
+		tx := waf.NewTransaction()
+		tmpFile := createTmpFile(t)
+
+		// Simulate a matched rule
+		tx.matchedRules = append(tx.matchedRules, &corazarules.MatchedRule{})
+
+		col := tx.Variables().FilesTmpNames().(*collections.Map)
+		col.Add("", tmpFile)
+
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := os.Stat(tmpFile); err != nil {
+			t.Fatal("expected temp file to be kept when UploadKeepFiles is RelevantOnly and rules matched")
+		}
+	})
+
+	t.Run("RelevantOnly deletes files when no rules matched", func(t *testing.T) {
+		waf := NewWAF()
+		waf.UploadKeepFiles = types.UploadKeepFilesRelevantOnly
+		tx := waf.NewTransaction()
+		tmpFile := createTmpFile(t)
+
+		col := tx.Variables().FilesTmpNames().(*collections.Map)
+		col.Add("", tmpFile)
+
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := os.Stat(tmpFile); !os.IsNotExist(err) {
+			t.Fatal("expected temp file to be deleted when UploadKeepFiles is RelevantOnly and no rules matched")
+		}
+	})
 }
 
 func TestRequestFilename(t *testing.T) {
