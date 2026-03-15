@@ -311,7 +311,7 @@ func BenchmarkRelease(b *testing.B) {
 				for o := 0; o < numOwners; o++ {
 					m := NewMemoizer(uint64(o + 1))
 					for _, p := range patterns {
-						m.Do(p, func() (any, error) {
+						_, _ = m.Do(p, func() (any, error) {
 							return regexp.Compile(p)
 						})
 					}
