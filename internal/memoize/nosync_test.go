@@ -153,6 +153,9 @@ func crsLikePatterns(n int) []string {
 }
 
 func TestMemoizeScaleMultipleOwners(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping scale test in short mode")
+	}
 	t.Cleanup(Reset)
 
 	const (
@@ -195,6 +198,9 @@ func TestMemoizeScaleMultipleOwners(t *testing.T) {
 }
 
 func TestCacheGrowthWithoutClose(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping scale test in short mode")
+	}
 	t.Cleanup(Reset)
 
 	const (
@@ -231,6 +237,9 @@ func TestCacheGrowthWithoutClose(t *testing.T) {
 }
 
 func TestCacheBoundedWithClose(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping scale test in short mode")
+	}
 	t.Cleanup(Reset)
 
 	const (
