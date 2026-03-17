@@ -433,7 +433,7 @@ func (w *WAF) Validate() error {
 		return errors.New("request body json depth limit should be bigger than 0")
 	}
 
-	if environment.HasAccessToFS() {
+	if environment.HasAccessToFS {
 		if w.UploadKeepFiles != types.UploadKeepFilesOff && w.UploadDir == "" {
 			return errors.New("SecUploadDir is required when SecUploadKeepFiles is enabled")
 		}

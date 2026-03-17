@@ -959,7 +959,7 @@ func directiveSecUploadKeepFiles(options *DirectiveOptions) error {
 		return err
 	}
 
-	if !environment.HasAccessToFS && status != types.UploadKeepFilesStatusOff {
+	if !environment.HasAccessToFS && status != types.UploadKeepFilesOff {
 		return fmt.Errorf("SecUploadKeepFiles: cannot enable keeping uploaded files: filesystem access is disabled")
 	}
 
