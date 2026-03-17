@@ -1912,14 +1912,14 @@ func TestUploadKeepFiles(t *testing.T) {
 		}
 	})
 
-	t.Run("RelevantOnly keeps files when rules matched", func(t *testing.T) {
+	t.Run("RelevantOnly keeps files when log rules matched", func(t *testing.T) {
 		waf := NewWAF()
 		waf.UploadKeepFiles = types.UploadKeepFilesRelevantOnly
 		tx := waf.NewTransaction()
 		tmpFile := createTmpFile(t)
 
-		// Simulate a matched rule
-		tx.matchedRules = append(tx.matchedRules, &corazarules.MatchedRule{})
+		// Simulate a matched rule with Log enabled
+		tx.matchedRules = append(tx.matchedRules, &corazarules.MatchedRule{Log_: true})
 
 		col := tx.Variables().FilesTmpNames().(*collections.Map)
 		col.Add("", tmpFile)
@@ -1929,7 +1929,28 @@ func TestUploadKeepFiles(t *testing.T) {
 		}
 
 		if _, err := os.Stat(tmpFile); err != nil {
-			t.Fatal("expected temp file to be kept when UploadKeepFiles is RelevantOnly and rules matched")
+			t.Fatal("expected temp file to be kept when UploadKeepFiles is RelevantOnly and log rules matched")
+		}
+	})
+
+	t.Run("RelevantOnly deletes files when only nolog rules matched", func(t *testing.T) {
+		waf := NewWAF()
+		waf.UploadKeepFiles = types.UploadKeepFilesRelevantOnly
+		tx := waf.NewTransaction()
+		tmpFile := createTmpFile(t)
+
+		// Simulate a matched rule with Log disabled (e.g. CRS initialization rules)
+		tx.matchedRules = append(tx.matchedRules, &corazarules.MatchedRule{Log_: false})
+
+		col := tx.Variables().FilesTmpNames().(*collections.Map)
+		col.Add("", tmpFile)
+
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := os.Stat(tmpFile); !os.IsNotExist(err) {
+			t.Fatal("expected temp file to be deleted when UploadKeepFiles is RelevantOnly and only nolog rules matched")
 		}
 	})
 

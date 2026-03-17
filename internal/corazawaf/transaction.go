@@ -1455,6 +1455,18 @@ func (tx *Transaction) MatchedRules() []types.MatchedRule {
 	return tx.matchedRules
 }
 
+// hasLogRelevantMatchedRules returns true if any matched rule has Log enabled.
+// Rules with nolog (e.g. CRS initialization rules) are excluded, matching
+// the same filtering used for audit log part K.
+func (tx *Transaction) hasLogRelevantMatchedRules() bool {
+	for _, mr := range tx.matchedRules {
+		if mrWithLog, ok := mr.(*corazarules.MatchedRule); ok && mrWithLog.Log() {
+			return true
+		}
+	}
+	return false
+}
+
 func (tx *Transaction) LastPhase() types.RulePhase {
 	return tx.lastPhase
 }
@@ -1629,7 +1641,7 @@ func (tx *Transaction) Close() error {
 	var errs []error
 	if environment.HasAccessToFS {
 		keepFiles := tx.WAF.UploadKeepFiles == types.UploadKeepFilesOn ||
-			(tx.WAF.UploadKeepFiles == types.UploadKeepFilesRelevantOnly && len(tx.matchedRules) > 0)
+			(tx.WAF.UploadKeepFiles == types.UploadKeepFilesRelevantOnly && tx.hasLogRelevantMatchedRules())
 
 		if !keepFiles {
 			// TODO(jcchavezs): filesTmpNames should probably be a new kind of collection that
