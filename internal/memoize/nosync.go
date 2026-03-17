@@ -52,24 +52,39 @@ func (m *Memoizer) Do(key string, fn func() (any, error)) (any, error) {
 }
 
 // Release removes ownerID from all cached entries, deleting entries with no remaining owners.
+//
+// Deletions are deferred until after Range completes because TinyGo's sync.Map
+// holds its internal lock for the entire Range call, so calling Delete inside
+// the callback would deadlock.
 func Release(ownerID uint64) {
+	var toDelete []any
 	cache.Range(func(key, value any) bool {
 		e := value.(*entry)
 		e.mu.Lock()
 		delete(e.owners, ownerID)
 		if len(e.owners) == 0 {
 			e.deleted = true
-			cache.Delete(key)
+			toDelete = append(toDelete, key)
 		}
 		e.mu.Unlock()
 		return true
 	})
+	for _, key := range toDelete {
+		cache.Delete(key)
+	}
 }
 
 // Reset clears the entire cache. Intended for testing.
+//
+// Keys are collected first and deleted after Range returns to avoid deadlocking
+// on TinyGo's mutex-based sync.Map (see Release comment).
 func Reset() {
+	var keys []any
 	cache.Range(func(key, _ any) bool {
-		cache.Delete(key)
+		keys = append(keys, key)
 		return true
 	})
+	for _, key := range keys {
+		cache.Delete(key)
+	}
 }
