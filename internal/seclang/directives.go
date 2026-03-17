@@ -940,8 +940,8 @@ func directiveSecDataDir(options *DirectiveOptions) error {
 // Syntax: SecUploadKeepFiles On|RelevantOnly|Off
 // Default: Off
 // ---
-// The `SecAuditEngine` directive is used to configure the audit engine, which logs complete
-// transactions.
+// The `SecUploadKeepFiles` directive is used to configure whether intercepted files are
+// preserved on disk after the transaction is processed.
 //
 // Possible values are:
 //   - On: Keep all uploaded files.
