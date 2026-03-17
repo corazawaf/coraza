@@ -7,6 +7,8 @@ import (
 	"io"
 	"os"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 func TestNewTransaction(t *testing.T) {
@@ -104,6 +106,27 @@ func TestValidate(t *testing.T) {
 		"argument limit less than 0": {
 			expectErr:  true,
 			customizer: func(w *WAF) { w.ArgumentLimit = -1 },
+		},
+		"upload keep files on without upload dir": {
+			expectErr: true,
+			customizer: func(w *WAF) {
+				w.UploadKeepFiles = types.UploadKeepFilesOn
+				w.UploadDir = ""
+			},
+		},
+		"upload keep files relevant only without upload dir": {
+			expectErr: true,
+			customizer: func(w *WAF) {
+				w.UploadKeepFiles = types.UploadKeepFilesRelevantOnly
+				w.UploadDir = ""
+			},
+		},
+		"upload keep files on with upload dir": {
+			expectErr: false,
+			customizer: func(w *WAF) {
+				w.UploadKeepFiles = types.UploadKeepFilesOn
+				w.UploadDir = "/tmp"
+			},
 		},
 	}
 
