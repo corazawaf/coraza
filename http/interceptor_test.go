@@ -354,6 +354,15 @@ func newHijackableRecorder() *hijackableRecorder {
 	return &hijackableRecorder{ResponseRecorder: httptest.NewRecorder()}
 }
 
+// failingHijackableRecorder is a recorder whose Hijack always returns an error.
+type failingHijackableRecorder struct {
+	*httptest.ResponseRecorder
+}
+
+func (h *failingHijackableRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	return nil, nil, fmt.Errorf("hijack not supported")
+}
+
 func TestWebSocketUpgradeFlushesHeaders(t *testing.T) {
 	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives("SecRuleEngine On"))
 	if err != nil {
@@ -594,6 +603,60 @@ func TestWAFNotBypassedAfterWebSocketUpgrade(t *testing.T) {
 
 	if want, have := http.StatusOK, resOK.StatusCode; want != have {
 		t.Errorf("benign request after WebSocket upgrade was unexpectedly blocked, got status %d, want %d", have, want)
+	}
+}
+
+func TestHijackTrackerErrorPath(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives("SecRuleEngine On"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	rec := &failingHijackableRecorder{ResponseRecorder: httptest.NewRecorder()}
+	r, _ := http.NewRequest("GET", "/ws", nil)
+
+	wrapped, _ := wrap(rec, r, tx)
+
+	hijacker, ok := wrapped.(http.Hijacker)
+	if !ok {
+		t.Fatal("expected wrapped writer to implement http.Hijacker")
+	}
+
+	conn, _, err := hijacker.Hijack()
+	if err == nil {
+		t.Fatal("expected error from Hijack, got nil")
+	}
+	if conn != nil {
+		conn.Close()
+		t.Fatal("expected nil conn on error")
+	}
+}
+
+func TestNonWebSocketWriteHeaderWithHijackableWriter(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives("SecRuleEngine On"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	rec := newHijackableRecorder()
+	r, _ := http.NewRequest("GET", "/regular", nil)
+
+	wrapped, processResponse := wrap(rec, r, tx)
+
+	// Use a regular 200 status (not 101) — this exercises the false branch
+	// of the StatusSwitchingProtocols check.
+	wrapped.WriteHeader(http.StatusOK)
+
+	if err := processResponse(tx, r); err != nil {
+		t.Fatalf("unexpected error from processResponse: %v", err)
+	}
+
+	if want, have := http.StatusOK, rec.Code; want != have {
+		t.Errorf("expected status %d, got %d", want, have)
 	}
 }
 
