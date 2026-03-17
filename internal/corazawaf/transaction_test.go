@@ -1869,8 +1869,11 @@ func TestUploadKeepFiles(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		f.Close()
-		return f.Name()
+		name := f.Name()
+		if err := f.Close(); err != nil {
+			t.Fatalf("failed to close temp file: %v", err)
+		}
+		return name
 	}
 
 	t.Run("Off deletes files", func(t *testing.T) {

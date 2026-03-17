@@ -937,6 +937,10 @@ func directiveSecDataDir(options *DirectiveOptions) error {
 }
 
 func directiveSecUploadKeepFiles(options *DirectiveOptions) error {
+	if len(options.Opts) == 0 {
+		return errEmptyOptions
+	}
+
 	status, err := types.ParseUploadKeepFilesStatus(options.Opts)
 	if err != nil {
 		return err
