@@ -90,7 +90,7 @@ type WAF struct {
 	DataDir string
 
 	// UploadKeepFiles controls whether uploaded files are kept after the transaction.
-	// On: always keep, Off: always delete (default), RelevantOnly: keep only if rules matched.
+	// On: always keep, Off: always delete (default), RelevantOnly: keep only if log-relevant rules matched (excluding nolog rules).
 	UploadKeepFiles types.UploadKeepFilesStatus
 	// UploadFileMode instructs the waf to set the file mode for uploaded files
 	UploadFileMode fs.FileMode
