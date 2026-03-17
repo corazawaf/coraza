@@ -154,9 +154,7 @@ func TestDirectives(t *testing.T) {
 		"SecUploadKeepFiles": {
 			{"", expectErrorOnDirective},
 			{"Ox", expectErrorOnDirective},
-			{"On", func(w *corazawaf.WAF) bool { return w.UploadKeepFiles == types.UploadKeepFilesOn }},
 			{"Off", func(w *corazawaf.WAF) bool { return w.UploadKeepFiles == types.UploadKeepFilesOff }},
-			{"RelevantOnly", func(w *corazawaf.WAF) bool { return w.UploadKeepFiles == types.UploadKeepFilesRelevantOnly }},
 		},
 		"SecUploadFileMode": {
 			{"", expectErrorOnDirective},
@@ -318,6 +316,10 @@ func TestDirectives(t *testing.T) {
 			{"/tmp-non-existing", expectErrorOnDirective},
 			{os.TempDir(), func(w *corazawaf.WAF) bool { return w.UploadDir == os.TempDir() }},
 		}
+		directiveCases["SecUploadKeepFiles"] = append(directiveCases["SecUploadKeepFiles"],
+			directiveCase{"On", func(w *corazawaf.WAF) bool { return w.UploadKeepFiles == types.UploadKeepFilesOn }},
+			directiveCase{"RelevantOnly", func(w *corazawaf.WAF) bool { return w.UploadKeepFiles == types.UploadKeepFilesRelevantOnly }},
+		)
 	}
 
 	for name, dCases := range directiveCases {
