@@ -942,11 +942,13 @@ func directiveSecDataDir(options *DirectiveOptions) error {
 // ---
 // The `SecUploadKeepFiles` directive is used to configure whether intercepted files are
 // preserved on disk after the transaction is processed.
+// This directive requires the storage directory to be defined (using `SecUploadDir`).
 //
 // Possible values are:
 //   - On: Keep all uploaded files.
 //   - Off: Do not keep uploaded files.
-//   - RelevantOnly: Keep only uploaded files that matched any rule.
+//   - RelevantOnly: Keep only uploaded files that matched at least one rule that would be
+//     logged (excluding rules with the `nolog` action).
 func directiveSecUploadKeepFiles(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -956,6 +958,11 @@ func directiveSecUploadKeepFiles(options *DirectiveOptions) error {
 	if err != nil {
 		return err
 	}
+
+	if !environment.HasAccessToFS && status != types.UploadKeepFilesStatusOff {
+		return fmt.Errorf("SecUploadKeepFiles: cannot enable keeping uploaded files: filesystem access is disabled")
+	}
+
 	options.WAF.UploadKeepFiles = status
 	return nil
 }
@@ -983,6 +990,11 @@ func directiveSecUploadFileLimit(options *DirectiveOptions) error {
 	return err
 }
 
+// Description: Configures the directory where uploaded files will be stored.
+// Syntax: SecUploadDir /path/to/dir
+// Default: ""
+// ---
+// This directive is required when enabling SecUploadKeepFiles.
 func directiveSecUploadDir(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions

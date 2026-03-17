@@ -86,7 +86,8 @@ const (
 	UploadKeepFilesOff UploadKeepFilesStatus = iota
 	// UploadKeepFilesOn will keep all uploaded files after transaction
 	UploadKeepFilesOn
-	// UploadKeepFilesRelevantOnly will keep uploaded files only if a rule matched
+	// UploadKeepFilesRelevantOnly will keep uploaded files only if a log-relevant rule matched
+	// (that is, a matched rule with logging enabled, excluding rules marked with nolog).
 	UploadKeepFilesRelevantOnly
 )
 
