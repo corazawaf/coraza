@@ -1640,6 +1640,9 @@ func (tx *Transaction) Close() error {
 
 	var errs []error
 	if environment.HasAccessToFS {
+		// UploadKeepFilesRelevantOnly keeps temporary files only when there are
+		// log-relevant matched rules (i.e., rules that would be logged; rules
+		// with actions such as "nolog" are intentionally excluded here).
 		keepFiles := tx.WAF.UploadKeepFiles == types.UploadKeepFilesOn ||
 			(tx.WAF.UploadKeepFiles == types.UploadKeepFilesRelevantOnly && tx.hasLogRelevantMatchedRules())
 
