@@ -32,22 +32,22 @@ jobs:
           - "coraza.rule.mandatory_rule_id_check"
           - "coraza.rule.case_sensitive_args_keys"
           - "coraza.rule.no_regex_multiline"
-          - "memoize_builders"
+          - "coraza.no_memoize"
           - "coraza.rule.multiphase_evaluation"
           - "no_fs_access"
           - "coraza.rule.multiphase_evaluation,coraza.rule.mandatory_rule_id_check"
           - "coraza.rule.multiphase_evaluation,coraza.rule.case_sensitive_args_keys"
           - "coraza.rule.multiphase_evaluation,coraza.rule.no_regex_multiline"
-          - "no_fs_access,memoize_builders"
+          - "no_fs_access,coraza.no_memoize"
           - "coraza.rule.mandatory_rule_id_check,coraza.rule.case_sensitive_args_keys,coraza.rule.no_regex_multiline"
-          - "coraza.rule.multiphase_evaluation,coraza.rule.mandatory_rule_id_check,coraza.rule.case_sensitive_args_keys,coraza.rule.no_regex_multiline,memoize_builders,no_fs_access"
+          - "coraza.rule.multiphase_evaluation,coraza.rule.mandatory_rule_id_check,coraza.rule.case_sensitive_args_keys,coraza.rule.no_regex_multiline,coraza.no_memoize,no_fs_access"
         include:
           - go-version: 1.26.x
             os: ubuntu-latest
             build-flag: ""
           - go-version: 1.26.x
             os: ubuntu-latest
-            build-flag: "coraza.rule.multiphase_evaluation,coraza.rule.mandatory_rule_id_check,coraza.rule.case_sensitive_args_keys,coraza.rule.no_regex_multiline,memoize_builders,no_fs_access"
+            build-flag: "coraza.rule.multiphase_evaluation,coraza.rule.mandatory_rule_id_check,coraza.rule.case_sensitive_args_keys,coraza.rule.no_regex_multiline,coraza.no_memoize,no_fs_access"
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read

@@ -18,7 +18,6 @@ import (
 	"github.com/kaptinlin/jsonschema"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/memoize"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -79,7 +78,7 @@ func NewValidateSchema(options plugintypes.OperatorOptions) (plugintypes.Operato
 	}
 
 	key := md5Hash(schemaData)
-	schema, err := memoize.Do(key, func() (any, error) {
+	schema, err := memoizeDo(options.Memoizer, key, func() (any, error) {
 		// Preliminarily validate that the schema is valid JSON
 		var jsonSchema any
 		if err := json.Unmarshal(schemaData, &jsonSchema); err != nil {

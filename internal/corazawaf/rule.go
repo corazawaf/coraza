@@ -14,7 +14,6 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
-	"github.com/corazawaf/coraza/v3/internal/memoize"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -151,6 +150,8 @@ type Rule struct {
 	// chainedRules containing rules with just PhaseUnknown variables, may potentially
 	// be anticipated. This boolean ensures that it happens
 	withPhaseUnknownVariable bool
+
+	memoizer plugintypes.Memoizer
 }
 
 func (r *Rule) ParentID() int {
@@ -576,7 +577,7 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 		if !caseSensitiveVariable(v) {
 			rx = strings.ToLower(rx)
 		}
-		if vare, err := memoize.Do(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
+		if vare, err := r.memoizeDo(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
 			return err
 		} else {
 			re = vare.(*regexp.Regexp)
@@ -623,7 +624,7 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 		if !caseSensitiveVariable(v) {
 			rx = strings.ToLower(rx)
 		}
-		if vare, err := memoize.Do(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
+		if vare, err := r.memoizeDo(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
 			return err
 		} else {
 			re = vare.(*regexp.Regexp)
@@ -739,6 +740,18 @@ func (r *Rule) executeTransformations(value string) (string, []error) {
 		value = v
 	}
 	return value, errs
+}
+
+// SetMemoizer sets the memoizer used for caching compiled regexes in variable selectors.
+func (r *Rule) SetMemoizer(m plugintypes.Memoizer) {
+	r.memoizer = m
+}
+
+func (r *Rule) memoizeDo(key string, fn func() (any, error)) (any, error) {
+	if r.memoizer != nil {
+		return r.memoizer.Do(key, fn)
+	}
+	return fn()
 }
 
 // NewRule returns a new initialized rule
