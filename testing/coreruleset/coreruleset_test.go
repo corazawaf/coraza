@@ -419,27 +419,33 @@ func BenchmarkCRSMultiWAFCompilation(b *testing.B) {
 	}
 }
 
-func TestCRSMemoizeSpeedup(t *testing.T) {
-	// Cold compilation (first WAF)
-	cold := time.Now()
-	waf1 := crsWAF(t)
-	coldDur := time.Since(cold)
-	if closer, ok := waf1.(experimental.WAFCloser); ok {
-		defer closer.Close()
-	}
+func BenchmarkCRSMemoizeSpeedup(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		// Cold compilation (first WAF)
+		cold := time.Now()
+		waf1 := crsWAF(b)
+		coldDur := time.Since(cold)
+		if closer, ok := waf1.(experimental.WAFCloser); ok {
+			closer.Close()
+		}
 
-	// Warm compilation (second WAF, patterns already cached)
-	warm := time.Now()
-	waf2 := crsWAF(t)
-	warmDur := time.Since(warm)
-	if closer, ok := waf2.(experimental.WAFCloser); ok {
-		defer closer.Close()
-	}
+		// Warm compilation (second WAF, patterns already cached)
+		warm := time.Now()
+		waf2 := crsWAF(b)
+		warmDur := time.Since(warm)
+		if closer, ok := waf2.(experimental.WAFCloser); ok {
+			closer.Close()
+		}
 
-	t.Logf("cold=%s warm=%s speedup=%.1fx", coldDur, warmDur, float64(coldDur)/float64(warmDur))
+		b.Logf("cold=%s warm=%s speedup=%.1fx", coldDur, warmDur, float64(coldDur)/float64(warmDur))
+	}
 }
 
 func TestCRSCloseReleasesMemory(t *testing.T) {
+	if os.Getenv("CORAZA_RUN_CRS_CLOSE_MEMTEST") == "" {
+		t.Skip("skipping memory diagnostic test; set CORAZA_RUN_CRS_CLOSE_MEMTEST=1 to run")
+	}
+
 	var m runtime.MemStats
 
 	runtime.GC()
@@ -525,7 +531,12 @@ SecAction "id:900005,\
 		t.Fatal(err)
 	}
 	if closer, ok := waf.(experimental.WAFCloser); ok {
-		t.Cleanup(func() { closer.Close() })
+		// Avoid registering per-iteration Cleanup callbacks in benchmarks, as that
+		// can retain WAF instances and skew memory/benchmark results. Benchmarks
+		// calling crsWAF are expected to close the WAF explicitly if needed.
+		if _, isBenchmark := t.(*testing.B); !isBenchmark {
+			t.Cleanup(func() { closer.Close() })
+		}
 	}
 
 	return waf
