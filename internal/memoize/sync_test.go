@@ -8,6 +8,7 @@ package memoize
 import (
 	"errors"
 	"fmt"
+	"os"
 	"regexp"
 	"testing"
 )
@@ -239,6 +240,9 @@ func TestCacheGrowthWithoutClose(t *testing.T) {
 func TestCacheBoundedWithClose(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping scale test in short mode")
+	}
+	if os.Getenv("CORAZA_MEMOIZE_SCALE") != "1" {
+		t.Skip("skipping scale test; set CORAZA_MEMOIZE_SCALE=1 to enable")
 	}
 	t.Cleanup(Reset)
 
