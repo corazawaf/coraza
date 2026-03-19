@@ -397,8 +397,10 @@ func parseCtl(data string, memoizer plugintypes.Memoizer) (ctlFunctionType, stri
 	}
 	collection, _ := variables.Parse(strings.TrimSpace(colname))
 	var keyRx *regexp.Regexp
-	if len(colkey) > 2 && colkey[0] == '/' && colkey[len(colkey)-1] == '/' {
-		rxPattern := colkey[1 : len(colkey)-1]
+	if isRegex, rxPattern := utils.HasRegex(colkey); isRegex {
+		if len(rxPattern) == 0 {
+			return ctlUnknown, "", 0, "", nil, errors.New("empty regex pattern in ctl collection key")
+		}
 		var err error
 		if memoizer != nil {
 			re, compileErr := memoizer.Do(rxPattern, func() (any, error) { return regexp.Compile(rxPattern) })

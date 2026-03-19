@@ -423,6 +423,26 @@ func TestParseCtl(t *testing.T) {
 		}
 	})
 
+	t.Run("empty regex pattern in colKey", func(t *testing.T) {
+		_, _, _, _, _, err := parseCtl("ruleRemoveTargetById=1;ARGS://", nil)
+		if err == nil {
+			t.Errorf("expected error for empty regex pattern, got nil")
+		}
+	})
+
+	t.Run("escaped slash not treated as regex", func(t *testing.T) {
+		_, _, _, key, rx, err := parseCtl(`ruleRemoveTargetById=1;ARGS:/user\/`, nil)
+		if err != nil {
+			t.Fatalf("unexpected error: %s", err.Error())
+		}
+		if rx != nil {
+			t.Errorf("expected nil regex for escaped-slash key, got: %s", rx.String())
+		}
+		if key != `/user\/` {
+			t.Errorf("unexpected key, want %q, have %q", `/user\/`, key)
+		}
+	})
+
 	tCases := []struct {
 		input            string
 		expectAction     ctlFunctionType

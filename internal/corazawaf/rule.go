@@ -14,6 +14,7 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
+	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -529,11 +530,9 @@ func (r *Rule) ClearDisruptiveActions() {
 // hasRegex checks the received key to see if it is between forward slashes.
 // if it is, it will return true and the content of the regular expression inside the slashes.
 // otherwise it will return false and the same key.
+// Delegates to utils.HasRegex which properly handles escaped slashes.
 func hasRegex(key string) (bool, string) {
-	if len(key) > 2 && key[0] == '/' && key[len(key)-1] == '/' {
-		return true, key[1 : len(key)-1]
-	}
-	return false, key
+	return utils.HasRegex(key)
 }
 
 // caseSensitiveVariable returns true if the variable is case sensitive
