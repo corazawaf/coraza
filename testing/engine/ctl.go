@@ -84,6 +84,31 @@ var _ = profile.RegisterProfile(profile.Profile{
 				},
 			},
 		},
+		{
+			Title: "ruleRemoveTargetById regex key (POST JSON body)",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "POST",
+							URI:    "/api/jsonjobs",
+							Headers: map[string]string{
+								"Content-Type": "application/json",
+							},
+							// JSON array → ARGS_POST: json.0.desc=attack, json.1.desc=attack
+							Data: `[{"desc": "attack"}, {"desc": "attack"}]`,
+						},
+						Output: profile.ExpectedOutput{
+							// Rule 310 sets the JSON body processor.
+							// Rule 311 removes ARGS_POST matching /^json\.\d+\.desc$/ from rule 312.
+							// Rule 312 would normally match "attack" but must be suppressed.
+							TriggeredRules:    []int{310, 311},
+							NonTriggeredRules: []int{312},
+						},
+					},
+				},
+			},
+		},
 	},
 	Rules: `
 SecDebugLogLevel 9
@@ -119,10 +144,19 @@ SecAction "id:444,phase:2,log"
 SecAction "id:200,phase:1,ctl:ruleRemoveTargetById=201;ARGS_GET,log"
 SecRule ARGS_GET "@rx ." "id:201, phase:1, log"
 
-# ruleRemoveTargetById regex key test:
+# ruleRemoveTargetById regex key test (GET):
 # Rule 300 removes ARGS_GET matching /^json\.\d+\.desc$/ from rule 301.
 # Matching args (json.0.desc, json.1.desc) must NOT trigger rule 301.
 SecRule REQUEST_URI "@beginsWith /api/jobs" "id:300,phase:1,pass,log,ctl:ruleRemoveTargetById=301;ARGS_GET:/^json\.\d+\.desc$/"
 SecRule ARGS_GET "@rx attack" "id:301,phase:1,log"
+
+# ruleRemoveTargetById regex key test (POST JSON body):
+# Rule 310 activates JSON body processor for application/json requests.
+# Rule 311 removes ARGS_POST matching /^json\.\d+\.desc$/ from rule 312 when URI starts with /api/jsonjobs.
+# JSON body [{"desc":"attack"},{"desc":"attack"}] → ARGS_POST: json.0.desc=attack, json.1.desc=attack.
+# Rule 312 would normally match "attack" in ARGS_POST but must be suppressed by rule 311's CTL.
+SecRule REQUEST_HEADERS:content-type "@beginsWith application/json" "id:310,phase:1,pass,log,ctl:requestBodyProcessor=JSON"
+SecRule REQUEST_URI "@beginsWith /api/jsonjobs" "id:311,phase:1,pass,log,ctl:ruleRemoveTargetById=312;ARGS_POST:/^json\.\d+\.desc$/"
+SecRule ARGS_POST "@rx attack" "id:312,phase:2,log"
 `,
 })
