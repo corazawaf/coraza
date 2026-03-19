@@ -64,6 +64,26 @@ var _ = profile.RegisterProfile(profile.Profile{
 				},
 			},
 		},
+		{
+			Title: "ruleRemoveTargetById regex key",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							// json.0.desc and json.1.desc match the regex; they are the only args
+							URI: "/api/jobs?json.0.desc=attack&json.1.desc=attack",
+						},
+						Output: profile.ExpectedOutput{
+							// Rule 300 logs and removes ARGS_GET:/^json\.\d+\.desc$/ from rule 301.
+							// Rule 301 would normally match the attack args but they are excluded by ctl.
+							TriggeredRules:    []int{300},
+							NonTriggeredRules: []int{301},
+						},
+					},
+				},
+			},
+		},
 	},
 	Rules: `
 SecDebugLogLevel 9
@@ -98,5 +118,11 @@ SecAction "id:444,phase:2,log"
 # ruleRemoveTargetById whole collection test: removes all ARGS_GET from rule 201
 SecAction "id:200,phase:1,ctl:ruleRemoveTargetById=201;ARGS_GET,log"
 SecRule ARGS_GET "@rx ." "id:201, phase:1, log"
+
+# ruleRemoveTargetById regex key test:
+# Rule 300 removes ARGS_GET matching /^json\.\d+\.desc$/ from rule 301.
+# Matching args (json.0.desc, json.1.desc) must NOT trigger rule 301.
+SecRule REQUEST_URI "@beginsWith /api/jobs" "id:300,phase:1,pass,log,ctl:ruleRemoveTargetById=301;ARGS_GET:/^json\.\d+\.desc$/"
+SecRule ARGS_GET "@rx attack" "id:301,phase:1,log"
 `,
 })

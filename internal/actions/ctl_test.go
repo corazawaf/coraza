@@ -32,6 +32,15 @@ func TestCtl(t *testing.T) {
 				}
 			},
 		},
+		"ruleRemoveTargetById regex key": {
+			// Rule 1 is in WAF; the regex /^test.*/ should remove matching ARGS targets
+			input: "ruleRemoveTargetById=1;ARGS:/^test.*/",
+			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
+				if strings.Contains(logEntry, "Invalid") || strings.Contains(logEntry, "invalid") {
+					t.Errorf("unexpected error in log: %q", logEntry)
+				}
+			},
+		},
 		"ruleRemoveTargetByTag": {
 			input: "ruleRemoveTargetByTag=tag1",
 		},
@@ -386,7 +395,7 @@ func TestCtl(t *testing.T) {
 
 func TestParseCtl(t *testing.T) {
 	t.Run("invalid ctl", func(t *testing.T) {
-		ctl, _, _, _, err := parseCtl("invalid")
+		ctl, _, _, _, _, err := parseCtl("invalid")
 		if err == nil {
 			t.Errorf("expected error, got nil")
 		}
@@ -397,7 +406,7 @@ func TestParseCtl(t *testing.T) {
 	})
 
 	t.Run("malformed ctl", func(t *testing.T) {
-		ctl, _, _, _, err := parseCtl("unknown=")
+		ctl, _, _, _, _, err := parseCtl("unknown=")
 		if err == nil {
 			t.Errorf("expected error, got nil")
 		}
@@ -407,35 +416,44 @@ func TestParseCtl(t *testing.T) {
 		}
 	})
 
+	t.Run("invalid regex in colKey", func(t *testing.T) {
+		_, _, _, _, _, err := parseCtl("ruleRemoveTargetById=1;ARGS:/[invalid/")
+		if err == nil {
+			t.Errorf("expected error for invalid regex, got nil")
+		}
+	})
+
 	tCases := []struct {
 		input            string
 		expectAction     ctlFunctionType
 		expectValue      string
 		expectCollection variables.RuleVariable
 		expectKey        string
+		expectKeyRx      string
 	}{
-		{"auditEngine=On", ctlAuditEngine, "On", variables.Unknown, ""},
-		{"auditLogParts=A", ctlAuditLogParts, "A", variables.Unknown, ""},
-		{"requestBodyAccess=On", ctlRequestBodyAccess, "On", variables.Unknown, ""},
-		{"requestBodyLimit=100", ctlRequestBodyLimit, "100", variables.Unknown, ""},
-		{"requestBodyProcessor=JSON", ctlRequestBodyProcessor, "JSON", variables.Unknown, ""},
-		{"forceRequestBodyVariable=On", ctlForceRequestBodyVariable, "On", variables.Unknown, ""},
-		{"responseBodyAccess=On", ctlResponseBodyAccess, "On", variables.Unknown, ""},
-		{"responseBodyLimit=100", ctlResponseBodyLimit, "100", variables.Unknown, ""},
-		{"responseBodyProcessor=JSON", ctlResponseBodyProcessor, "JSON", variables.Unknown, ""},
-		{"forceResponseBodyVariable=On", ctlForceResponseBodyVariable, "On", variables.Unknown, ""},
-		{"ruleEngine=On", ctlRuleEngine, "On", variables.Unknown, ""},
-		{"ruleRemoveById=1", ctlRuleRemoveByID, "1", variables.Unknown, ""},
-		{"ruleRemoveById=1-9", ctlRuleRemoveByID, "1-9", variables.Unknown, ""},
-		{"ruleRemoveByMsg=MY_MSG", ctlRuleRemoveByMsg, "MY_MSG", variables.Unknown, ""},
-		{"ruleRemoveByTag=MY_TAG", ctlRuleRemoveByTag, "MY_TAG", variables.Unknown, ""},
-		{"ruleRemoveTargetByMsg=MY_MSG;ARGS:user", ctlRuleRemoveTargetByMsg, "MY_MSG", variables.Args, "user"},
-		{"ruleRemoveTargetById=2;REQUEST_FILENAME:", ctlRuleRemoveTargetByID, "2", variables.RequestFilename, ""},
+		{"auditEngine=On", ctlAuditEngine, "On", variables.Unknown, "", ""},
+		{"auditLogParts=A", ctlAuditLogParts, "A", variables.Unknown, "", ""},
+		{"requestBodyAccess=On", ctlRequestBodyAccess, "On", variables.Unknown, "", ""},
+		{"requestBodyLimit=100", ctlRequestBodyLimit, "100", variables.Unknown, "", ""},
+		{"requestBodyProcessor=JSON", ctlRequestBodyProcessor, "JSON", variables.Unknown, "", ""},
+		{"forceRequestBodyVariable=On", ctlForceRequestBodyVariable, "On", variables.Unknown, "", ""},
+		{"responseBodyAccess=On", ctlResponseBodyAccess, "On", variables.Unknown, "", ""},
+		{"responseBodyLimit=100", ctlResponseBodyLimit, "100", variables.Unknown, "", ""},
+		{"responseBodyProcessor=JSON", ctlResponseBodyProcessor, "JSON", variables.Unknown, "", ""},
+		{"forceResponseBodyVariable=On", ctlForceResponseBodyVariable, "On", variables.Unknown, "", ""},
+		{"ruleEngine=On", ctlRuleEngine, "On", variables.Unknown, "", ""},
+		{"ruleRemoveById=1", ctlRuleRemoveByID, "1", variables.Unknown, "", ""},
+		{"ruleRemoveById=1-9", ctlRuleRemoveByID, "1-9", variables.Unknown, "", ""},
+		{"ruleRemoveByMsg=MY_MSG", ctlRuleRemoveByMsg, "MY_MSG", variables.Unknown, "", ""},
+		{"ruleRemoveByTag=MY_TAG", ctlRuleRemoveByTag, "MY_TAG", variables.Unknown, "", ""},
+		{"ruleRemoveTargetByMsg=MY_MSG;ARGS:user", ctlRuleRemoveTargetByMsg, "MY_MSG", variables.Args, "user", ""},
+		{"ruleRemoveTargetById=2;REQUEST_FILENAME:", ctlRuleRemoveTargetByID, "2", variables.RequestFilename, "", ""},
+		{"ruleRemoveTargetById=2;ARGS:/^json\\.\\d+\\.description$/", ctlRuleRemoveTargetByID, "2", variables.Args, "", `^json\.\d+\.description$`},
 	}
 	for _, tCase := range tCases {
 		testName, _, _ := strings.Cut(tCase.input, "=")
 		t.Run(testName, func(t *testing.T) {
-			action, value, collection, colKey, err := parseCtl(tCase.input)
+			action, value, collection, colKey, colKeyRx, err := parseCtl(tCase.input)
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err.Error())
 			}
@@ -450,6 +468,17 @@ func TestParseCtl(t *testing.T) {
 			}
 			if colKey != tCase.expectKey {
 				t.Errorf("unexpected key, want: %s, have: %s", tCase.expectKey, colKey)
+			}
+			if tCase.expectKeyRx == "" {
+				if colKeyRx != nil {
+					t.Errorf("unexpected non-nil regex, have: %s", colKeyRx.String())
+				}
+			} else {
+				if colKeyRx == nil {
+					t.Errorf("expected non-nil regex matching %q, got nil", tCase.expectKeyRx)
+				} else if colKeyRx.String() != tCase.expectKeyRx {
+					t.Errorf("unexpected regex, want: %s, have: %s", tCase.expectKeyRx, colKeyRx.String())
+				}
 			}
 		})
 	}

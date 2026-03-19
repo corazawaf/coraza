@@ -6,6 +6,7 @@ package actions
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -105,11 +106,12 @@ type ctlFn struct {
 	value      string
 	collection variables.RuleVariable
 	colKey     string
+	colKeyRx   *regexp.Regexp
 }
 
 func (a *ctlFn) Init(_ plugintypes.RuleMetadata, data string) error {
 	var err error
-	a.action, a.value, a.collection, a.colKey, err = parseCtl(data)
+	a.action, a.value, a.collection, a.colKey, a.colKeyRx, err = parseCtl(data)
 	return err
 }
 
@@ -140,21 +142,21 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 		}
 		for _, r := range tx.WAF.Rules.GetRules() {
 			if r.ID_ >= start && r.ID_ <= end {
-				tx.RemoveRuleTargetByID(r.ID_, a.collection, a.colKey)
+				tx.RemoveRuleTargetByID(r.ID_, a.collection, a.colKey, a.colKeyRx)
 			}
 		}
 	case ctlRuleRemoveTargetByTag:
 		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
 			if utils.InSlice(a.value, r.Tags_) {
-				tx.RemoveRuleTargetByID(r.ID(), a.collection, a.colKey)
+				tx.RemoveRuleTargetByID(r.ID(), a.collection, a.colKey, a.colKeyRx)
 			}
 		}
 	case ctlRuleRemoveTargetByMsg:
 		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
 			if r.Msg != nil && r.Msg.String() == a.value {
-				tx.RemoveRuleTargetByID(r.ID(), a.collection, a.colKey)
+				tx.RemoveRuleTargetByID(r.ID(), a.collection, a.colKey, a.colKeyRx)
 			}
 		}
 	case ctlAuditEngine:
@@ -375,18 +377,30 @@ func (a *ctlFn) Type() plugintypes.ActionType {
 	return plugintypes.ActionTypeNondisruptive
 }
 
-func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, string, error) {
+func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, string, *regexp.Regexp, error) {
 	action, ctlVal, ok := strings.Cut(data, "=")
 	if !ok {
-		return ctlUnknown, "", 0, "", errors.New("invalid syntax")
+		return ctlUnknown, "", 0, "", nil, errors.New("invalid syntax")
 	}
 	value, col, ok := strings.Cut(ctlVal, ";")
 	var colkey, colname string
 	if ok {
 		colname, colkey, _ = strings.Cut(col, ":")
+		colkey = strings.TrimSpace(colkey)
 	}
 	collection, _ := variables.Parse(strings.TrimSpace(colname))
-	colkey = strings.ToLower(colkey)
+	var keyRx *regexp.Regexp
+	if len(colkey) > 2 && colkey[0] == '/' && colkey[len(colkey)-1] == '/' {
+		rxPattern := colkey[1 : len(colkey)-1]
+		var err error
+		keyRx, err = regexp.Compile(rxPattern)
+		if err != nil {
+			return ctlUnknown, "", 0, "", nil, fmt.Errorf("invalid regex in ctl collection key: %w", err)
+		}
+		colkey = ""
+	} else {
+		colkey = strings.ToLower(colkey)
+	}
 	var act ctlFunctionType
 	switch action {
 	case "auditEngine":
@@ -430,9 +444,9 @@ func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, str
 	case "debugLogLevel":
 		act = ctlDebugLogLevel
 	default:
-		return ctlUnknown, "", 0x00, "", fmt.Errorf("unknown ctl action %q", action)
+		return ctlUnknown, "", 0x00, "", nil, fmt.Errorf("unknown ctl action %q", action)
 	}
-	return act, value, collection, strings.TrimSpace(colkey), nil
+	return act, value, collection, colkey, keyRx, nil
 }
 
 // parseRange parses a range string of the form "start-end" and returns the start and end
