@@ -109,6 +109,46 @@ var _ = profile.RegisterProfile(profile.Profile{
 				},
 			},
 		},
+		{
+			Title: "ruleRemoveTargetByTag regex key",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							// json.0.desc and json.1.desc match the regex; rule 321 is tagged OWASP_CRS
+							URI: "/api/tag-test?json.0.desc=attack&json.1.desc=attack",
+						},
+						Output: profile.ExpectedOutput{
+							// Rule 320 removes ARGS_GET:/^json\.\d+\.desc$/ from all rules tagged OWASP_CRS.
+							// Rule 321 (tagged OWASP_CRS) would normally match the attack args but must be suppressed.
+							TriggeredRules:    []int{320},
+							NonTriggeredRules: []int{321},
+						},
+					},
+				},
+			},
+		},
+		{
+			Title: "ruleRemoveTargetByMsg regex key",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							// json.0.desc and json.1.desc match the regex; rule 331 has msg:'web shell detection'
+							URI: "/api/msg-test?json.0.desc=attack&json.1.desc=attack",
+						},
+						Output: profile.ExpectedOutput{
+							// Rule 330 removes ARGS_GET:/^json\.\d+\.desc$/ from all rules with msg:'web shell detection'.
+							// Rule 331 would normally match the attack args but must be suppressed.
+							TriggeredRules:    []int{330},
+							NonTriggeredRules: []int{331},
+						},
+					},
+				},
+			},
+		},
 	},
 	Rules: `
 SecDebugLogLevel 9
@@ -158,5 +198,17 @@ SecRule ARGS_GET "@rx attack" "id:301,phase:1,log"
 SecRule REQUEST_HEADERS:content-type "@beginsWith application/json" "id:310,phase:1,pass,log,ctl:requestBodyProcessor=JSON"
 SecRule REQUEST_URI "@beginsWith /api/jsonjobs" "id:311,phase:1,pass,log,ctl:ruleRemoveTargetById=312;ARGS_POST:/^json\.\d+\.desc$/"
 SecRule ARGS_POST "@rx attack" "id:312,phase:2,log"
+
+# ruleRemoveTargetByTag regex key test:
+# Rule 320 removes ARGS_GET matching /^json\.\d+\.desc$/ from all rules tagged OWASP_CRS.
+# Rule 321 is tagged OWASP_CRS and would normally match the attack args but must be suppressed.
+SecRule REQUEST_URI "@beginsWith /api/tag-test" "id:320,phase:1,pass,log,ctl:ruleRemoveTargetByTag=OWASP_CRS;ARGS_GET:/^json\.\d+\.desc$/"
+SecRule ARGS_GET "@rx attack" "id:321,phase:1,log,tag:OWASP_CRS"
+
+# ruleRemoveTargetByMsg regex key test:
+# Rule 330 removes ARGS_GET matching /^json\.\d+\.desc$/ from all rules with msg:'web shell detection'.
+# Rule 331 has msg:'web shell detection' and would normally match the attack args but must be suppressed.
+SecRule REQUEST_URI "@beginsWith /api/msg-test" "id:330,phase:1,pass,log,ctl:ruleRemoveTargetByMsg=web shell detection;ARGS_GET:/^json\.\d+\.desc$/"
+SecRule ARGS_GET "@rx attack" "id:331,phase:1,log,msg:'web shell detection'"
 `,
 })
