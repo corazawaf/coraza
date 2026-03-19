@@ -74,7 +74,13 @@ const (
 //
 // Here are some notes about the options:
 //
-//  1. Option `ruleRemoveTargetById`, `ruleRemoveTargetByMsg`, and `ruleRemoveTargetByTag`, users don't need to use the char ! before the target list.
+//  1. Option `ruleRemoveTargetById`, `ruleRemoveTargetByMsg`, and `ruleRemoveTargetByTag` accept a collection key in two forms:
+//     - **Exact string**: `ARGS:user` — removes only the variable whose name is exactly `user`.
+//     - **Regular expression** (delimited by `/`): `ARGS:/^json\.\d+\.field$/` — removes all variables whose
+//       names match the pattern. The closing `/` must not be preceded by an odd number of backslashes
+//       (e.g. `/foo\/` is treated as the literal string `/foo\/`, not a regex). An empty pattern (`//`) is rejected.
+//       Pattern matching is always case-insensitive because variable names are lowercased before comparison.
+//     Users do not need to use the `!` character before the target list.
 //
 //  2. Option `ruleRemoveById` is triggered at run time and should be specified before the rule in which it is disabling.
 //
@@ -99,6 +105,11 @@ const (
 //
 //		SecRule REQUEST_URI "@beginsWith /index.php" "phase:1,t:none,pass,\
 //	 	nolog,ctl:ruleRemoveTargetById=981260;ARGS:user"
+//
+// # white-list all JSON array fields matching a pattern for rule #932125 when the REQUEST_URI begins with /api/jobs
+//
+//		SecRule REQUEST_URI "@beginsWith /api/jobs" "phase:1,t:none,pass,\
+//	 	nolog,ctl:ruleRemoveTargetById=932125;ARGS:/^json\.\d+\.jobdescription$/"
 //
 // ```
 type ctlFn struct {
