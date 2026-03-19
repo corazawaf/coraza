@@ -395,7 +395,7 @@ func TestCtl(t *testing.T) {
 
 func TestParseCtl(t *testing.T) {
 	t.Run("invalid ctl", func(t *testing.T) {
-		ctl, _, _, _, _, err := parseCtl("invalid")
+		ctl, _, _, _, _, err := parseCtl("invalid", nil)
 		if err == nil {
 			t.Errorf("expected error, got nil")
 		}
@@ -406,7 +406,7 @@ func TestParseCtl(t *testing.T) {
 	})
 
 	t.Run("malformed ctl", func(t *testing.T) {
-		ctl, _, _, _, _, err := parseCtl("unknown=")
+		ctl, _, _, _, _, err := parseCtl("unknown=", nil)
 		if err == nil {
 			t.Errorf("expected error, got nil")
 		}
@@ -417,7 +417,7 @@ func TestParseCtl(t *testing.T) {
 	})
 
 	t.Run("invalid regex in colKey", func(t *testing.T) {
-		_, _, _, _, _, err := parseCtl("ruleRemoveTargetById=1;ARGS:/[invalid/")
+		_, _, _, _, _, err := parseCtl("ruleRemoveTargetById=1;ARGS:/[invalid/", nil)
 		if err == nil {
 			t.Errorf("expected error for invalid regex, got nil")
 		}
@@ -453,7 +453,7 @@ func TestParseCtl(t *testing.T) {
 	for _, tCase := range tCases {
 		testName, _, _ := strings.Cut(tCase.input, "=")
 		t.Run(testName, func(t *testing.T) {
-			action, value, collection, colKey, colKeyRx, err := parseCtl(tCase.input)
+			action, value, collection, colKey, colKeyRx, err := parseCtl(tCase.input, nil)
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err.Error())
 			}

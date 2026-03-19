@@ -109,9 +109,16 @@ type ctlFn struct {
 	colKeyRx   *regexp.Regexp
 }
 
-func (a *ctlFn) Init(_ plugintypes.RuleMetadata, data string) error {
+func (a *ctlFn) Init(m plugintypes.RuleMetadata, data string) error {
+	// Type-assert RuleMetadata to *corazawaf.Rule to access the rule's memoizer.
+	// When the assertion fails (e.g., in tests using a stub RuleMetadata), the
+	// memoizer remains nil and regex compilation proceeds without caching.
+	var memoizer plugintypes.Memoizer
+	if r, ok := m.(*corazawaf.Rule); ok {
+		memoizer = r.Memoizer()
+	}
 	var err error
-	a.action, a.value, a.collection, a.colKey, a.colKeyRx, err = parseCtl(data)
+	a.action, a.value, a.collection, a.colKey, a.colKeyRx, err = parseCtl(data, memoizer)
 	return err
 }
 
@@ -377,7 +384,7 @@ func (a *ctlFn) Type() plugintypes.ActionType {
 	return plugintypes.ActionTypeNondisruptive
 }
 
-func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, string, *regexp.Regexp, error) {
+func parseCtl(data string, memoizer plugintypes.Memoizer) (ctlFunctionType, string, variables.RuleVariable, string, *regexp.Regexp, error) {
 	action, ctlVal, ok := strings.Cut(data, "=")
 	if !ok {
 		return ctlUnknown, "", 0, "", nil, errors.New("invalid syntax")
@@ -393,9 +400,17 @@ func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, str
 	if len(colkey) > 2 && colkey[0] == '/' && colkey[len(colkey)-1] == '/' {
 		rxPattern := colkey[1 : len(colkey)-1]
 		var err error
-		keyRx, err = regexp.Compile(rxPattern)
-		if err != nil {
-			return ctlUnknown, "", 0, "", nil, fmt.Errorf("invalid regex in ctl collection key: %w", err)
+		if memoizer != nil {
+			re, compileErr := memoizer.Do(rxPattern, func() (any, error) { return regexp.Compile(rxPattern) })
+			if compileErr != nil {
+				return ctlUnknown, "", 0, "", nil, fmt.Errorf("invalid regex in ctl collection key: %w", compileErr)
+			}
+			keyRx = re.(*regexp.Regexp)
+		} else {
+			keyRx, err = regexp.Compile(rxPattern)
+			if err != nil {
+				return ctlUnknown, "", 0, "", nil, fmt.Errorf("invalid regex in ctl collection key: %w", err)
+			}
 		}
 		colkey = ""
 	} else {

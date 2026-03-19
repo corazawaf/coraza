@@ -747,6 +747,11 @@ func (r *Rule) SetMemoizer(m plugintypes.Memoizer) {
 	r.memoizer = m
 }
 
+// Memoizer returns the memoizer used for caching compiled regexes in variable selectors.
+func (r *Rule) Memoizer() plugintypes.Memoizer {
+	return r.memoizer
+}
+
 func (r *Rule) memoizeDo(key string, fn func() (any, error)) (any, error) {
 	if r.memoizer != nil {
 		return r.memoizer.Do(key, fn)
