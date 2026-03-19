@@ -1393,6 +1393,61 @@ func BenchmarkTxGetField(b *testing.B) {
 	b.ReportAllocs()
 }
 
+// makeTransactionWithJSONArgs creates a transaction that includes JSON-array-style
+// GET arguments (json.0.field … json.9.field) on top of the standard args.
+// This simulates the real-world pattern that motivates regex key exceptions.
+func makeTransactionWithJSONArgs(t testing.TB) *Transaction {
+	t.Helper()
+	tx := makeTransaction(t)
+	for i := 0; i < 10; i++ {
+		tx.AddGetRequestArgument(fmt.Sprintf("json.%d.jobdescription", i), "value")
+	}
+	return tx
+}
+
+// BenchmarkTxGetFieldWithShortRegexException measures the overhead of GetField
+// when a short regex exception (e.g. ^id$) is applied against the args collection.
+func BenchmarkTxGetFieldWithShortRegexException(b *testing.B) {
+	tx := makeTransactionWithJSONArgs(b)
+	rvp := ruleVariableParams{
+		Variable: variables.Args,
+		Exceptions: []ruleVariableException{
+			{KeyRx: regexp.MustCompile(`^id$`)},
+		},
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tx.GetField(rvp)
+	}
+	b.StopTimer()
+	if err := tx.Close(); err != nil {
+		b.Fatalf("Failed to close transaction: %s", err.Error())
+	}
+}
+
+// BenchmarkTxGetFieldWithMediumRegexException measures the overhead of GetField
+// when a medium-complexity regex exception (e.g. ^json\.\d+\.jobdescription$) is
+// applied — the typical pattern used in URI-scoped CRS exclusions.
+func BenchmarkTxGetFieldWithMediumRegexException(b *testing.B) {
+	tx := makeTransactionWithJSONArgs(b)
+	rvp := ruleVariableParams{
+		Variable: variables.Args,
+		Exceptions: []ruleVariableException{
+			{KeyRx: regexp.MustCompile(`^json\.\d+\.jobdescription$`)},
+		},
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tx.GetField(rvp)
+	}
+	b.StopTimer()
+	if err := tx.Close(); err != nil {
+		b.Fatalf("Failed to close transaction: %s", err.Error())
+	}
+}
+
 func TestTxProcessURI(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
