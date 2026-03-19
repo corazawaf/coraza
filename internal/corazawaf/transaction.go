@@ -680,8 +680,12 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 	return matches
 }
 
-// RemoveRuleTargetByID Removes the VARIABLE:KEY from the rule ID
-// It's mostly used by CTL to dynamically remove targets from rules
+// RemoveRuleTargetByID removes the VARIABLE:KEY from the rule ID.
+// It is mostly used by CTL to dynamically remove targets from rules.
+// key is an exact string to match against the variable name; keyRx is an
+// optional compiled regular expression that, when non-nil, is used instead of
+// key for pattern-based matching (e.g. removing all ARGS matching
+// /^json\.\d+\.field$/ from a given rule).
 func (tx *Transaction) RemoveRuleTargetByID(id int, variable variables.RuleVariable, key string, keyRx *regexp.Regexp) {
 	c := ruleVariableParams{
 		Variable: variable,
