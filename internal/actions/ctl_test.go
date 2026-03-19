@@ -10,6 +10,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/internal/memoize"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -440,6 +441,25 @@ func TestParseCtl(t *testing.T) {
 		}
 		if key != `/user\/` {
 			t.Errorf("unexpected key, want %q, have %q", `/user\/`, key)
+		}
+	})
+
+	t.Run("memoizer with valid regex", func(t *testing.T) {
+		m := memoize.NewMemoizer(99)
+		_, _, _, _, keyRx, err := parseCtl("ruleRemoveTargetById=1;ARGS:/^test.*/", m)
+		if err != nil {
+			t.Fatalf("unexpected error: %s", err.Error())
+		}
+		if keyRx == nil {
+			t.Error("expected non-nil compiled regex, got nil")
+		}
+	})
+
+	t.Run("memoizer with invalid regex", func(t *testing.T) {
+		m := memoize.NewMemoizer(100)
+		_, _, _, _, _, err := parseCtl("ruleRemoveTargetById=1;ARGS:/[invalid/", m)
+		if err == nil {
+			t.Error("expected error for invalid regex with memoizer, got nil")
 		}
 	})
 
