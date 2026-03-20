@@ -46,6 +46,9 @@ type ruleVariableException struct {
 	// If KeyRx is not nil, KeyStr is ignored
 	KeyStr string
 
+	// Pre-computed lowercase KeyStr for efficient comparison
+	lowerKeyStr string
+
 	// The key for the variable that is going to be requested
 	// If nil, KeyStr is going to be used
 	KeyRx *regexp.Regexp
@@ -236,7 +239,7 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 			for _, c := range ecol {
 				if c.Variable == v.Variable {
 					// TODO shall we check the pointer?
-					v.Exceptions = append(v.Exceptions, ruleVariableException{c.KeyStr, nil})
+					v.Exceptions = append(v.Exceptions, ruleVariableException{KeyStr: c.KeyStr, lowerKeyStr: strings.ToLower(c.KeyStr), KeyRx: nil})
 				}
 			}
 
@@ -638,12 +641,12 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 		// Even when Args and ArgsNames are one map, the exceptions must be created for the individual maps the
 		// Concat Map contains in order for exceptions to apply in the corresponding phase.
 		if multiphaseEvaluation && needToSplitConcatenatedVariable(v, rv.Variable) {
-			rv.Exceptions = append(rv.Exceptions, ruleVariableException{key, re})
+			rv.Exceptions = append(rv.Exceptions, ruleVariableException{KeyStr: key, lowerKeyStr: strings.ToLower(key), KeyRx: re})
 			r.variables[i] = rv
 			continue
 		}
 		if rv.Variable == v {
-			rv.Exceptions = append(rv.Exceptions, ruleVariableException{key, re})
+			rv.Exceptions = append(rv.Exceptions, ruleVariableException{KeyStr: key, lowerKeyStr: strings.ToLower(key), KeyRx: re})
 			r.variables[i] = rv
 		}
 	}
