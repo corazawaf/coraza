@@ -1461,6 +1461,18 @@ func (tx *Transaction) MatchedRules() []types.MatchedRule {
 	return tx.matchedRules
 }
 
+// hasLogRelevantMatchedRules returns true if any matched rule has Log enabled.
+// Rules with nolog (e.g. CRS initialization rules) are excluded, matching
+// the same filtering used for audit log part K.
+func (tx *Transaction) hasLogRelevantMatchedRules() bool {
+	for _, mr := range tx.matchedRules {
+		if mrWithLog, ok := mr.(*corazarules.MatchedRule); ok && mrWithLog.Log() {
+			return true
+		}
+	}
+	return false
+}
+
 func (tx *Transaction) LastPhase() types.RulePhase {
 	return tx.lastPhase
 }
@@ -1634,12 +1646,20 @@ func (tx *Transaction) Close() error {
 
 	var errs []error
 	if environment.HasAccessToFS {
-		// TODO(jcchavezs): filesTmpNames should probably be a new kind of collection that
-		// is aware of the files and then attempt to delete them when the collection
-		// is resetted or an item is removed.
-		for _, file := range tx.variables.filesTmpNames.Get("") {
-			if err := os.Remove(file); err != nil {
-				errs = append(errs, fmt.Errorf("removing temporary file: %v", err))
+		// UploadKeepFilesRelevantOnly keeps temporary files only when there are
+		// log-relevant matched rules (i.e., rules that would be logged; rules
+		// with actions such as "nolog" are intentionally excluded here).
+		keepFiles := tx.WAF.UploadKeepFiles == types.UploadKeepFilesOn ||
+			(tx.WAF.UploadKeepFiles == types.UploadKeepFilesRelevantOnly && tx.hasLogRelevantMatchedRules())
+
+		if !keepFiles {
+			// TODO(jcchavezs): filesTmpNames should probably be a new kind of collection that
+			// is aware of the files and then attempt to delete them when the collection
+			// is resetted or an item is removed.
+			for _, file := range tx.variables.filesTmpNames.Get("") {
+				if err := os.Remove(file); err != nil {
+					errs = append(errs, fmt.Errorf("removing temporary file: %v", err))
+				}
 			}
 		}
 	}

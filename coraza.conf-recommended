@@ -121,11 +121,11 @@ SecDataDir /tmp/
 #
 #SecUploadDir /opt/coraza/var/upload/
 
-# If On, the WAF will store the uploaded files in the SecUploadDir
-# directory.
-# Note: SecUploadKeepFiles is currently NOT supported by Coraza
+# Controls whether intercepted uploaded files will be kept after
+# transaction is processed. Possible values: On, Off, RelevantOnly.
+# RelevantOnly will keep files only when a matching rule is logged (rules with 'nolog' do not qualify).
 #
-#SecUploadKeepFiles Off
+#SecUploadKeepFiles RelevantOnly
 
 # Uploaded files are by default created with permissions that do not allow
 # any other user to access them. You may need to relax that if you want to
