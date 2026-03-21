@@ -101,7 +101,7 @@ func TestNoMatchEvaluateBecauseOfException(t *testing.T) {
 			_ = r.AddAction("dummyDeny", action)
 			tx := NewWAF().NewTransaction()
 			tx.AddGetRequestArgument("test", "0")
-			tx.RemoveRuleTargetByID(1, tc.variable, "test")
+			tx.RemoveRuleTargetByID(1, tc.variable, "test", nil)
 			var matchedValues []types.MatchData
 			matchdata := r.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
 			if len(matchdata) != 0 {
@@ -147,7 +147,7 @@ func TestNoMatchEvaluateBecauseOfWholeCollectionException(t *testing.T) {
 			tx.AddGetRequestArgument("test", "0")
 			tx.AddGetRequestArgument("other", "0")
 			// Remove with empty key should exclude the entire collection
-			tx.RemoveRuleTargetByID(1, tc.variable, "")
+			tx.RemoveRuleTargetByID(1, tc.variable, "", nil)
 			var matchedValues []types.MatchData
 			matchdata := r.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
 			if len(matchdata) != 0 {

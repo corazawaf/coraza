@@ -14,7 +14,6 @@ import (
 	"rsc.io/binaryregexp"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/memoize"
 )
 
 // Description:
@@ -68,7 +67,7 @@ func newRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 		return newBinaryRX(options)
 	}
 
-	re, err := memoize.Do(data, func() (any, error) { return regexp.Compile(data) })
+	re, err := memoizeDo(options.Memoizer, data, func() (any, error) { return regexp.Compile(data) })
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +115,7 @@ var _ plugintypes.Operator = (*binaryRX)(nil)
 func newBinaryRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
-	re, err := memoize.Do(data, func() (any, error) { return binaryregexp.Compile(data) })
+	re, err := memoizeDo(options.Memoizer, data, func() (any, error) { return binaryregexp.Compile(data) })
 	if err != nil {
 		return nil, err
 	}
