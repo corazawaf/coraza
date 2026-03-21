@@ -29,12 +29,15 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.Tran
 	ss := s.String()
 	// Process with recursion limit
 	col := v.ArgsPost()
+	colRaw := v.ArgsPostRaw()
 	data, err := readJSON(ss, bpo.RequestBodyRecursionLimit)
 	if err != nil {
 		return err
 	}
 	for key, value := range data {
 		col.SetIndex(key, 0, value)
+		// JSON values are not URL-encoded, so raw == cooked
+		colRaw.SetIndex(key, 0, value)
 	}
 
 	// Store the raw JSON in the TX variable for validateSchema

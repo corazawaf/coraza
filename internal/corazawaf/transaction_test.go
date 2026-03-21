@@ -1834,6 +1834,129 @@ func TestAddResponseArgsWithOverlimit(t *testing.T) {
 	}
 }
 
+func TestExtractGetArgumentsRaw(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	defer func() {
+		if err := tx.Close(); err != nil {
+			t.Fatalf("Failed to close transaction: %s", err.Error())
+		}
+	}()
+
+	tx.ExtractGetArguments("key=%3Cscript%3E&plain=hello&p%61ram=value")
+
+	// Decoded values in argsGet
+	if v := tx.variables.argsGet.Get("key"); len(v) == 0 || v[0] != "<script>" {
+		t.Errorf("argsGet key: got %v, want [<script>]", v)
+	}
+	if v := tx.variables.argsGet.Get("plain"); len(v) == 0 || v[0] != "hello" {
+		t.Errorf("argsGet plain: got %v, want [hello]", v)
+	}
+	if v := tx.variables.argsGet.Get("param"); len(v) == 0 || v[0] != "value" {
+		t.Errorf("argsGet param (decoded key): got %v, want [value]", v)
+	}
+
+	// Raw values in argsGetRaw — percent-encoding preserved
+	if v := tx.variables.argsGetRaw.Get("key"); len(v) == 0 || v[0] != "%3Cscript%3E" {
+		t.Errorf("argsGetRaw key: got %v, want [%%3Cscript%%3E]", v)
+	}
+	if v := tx.variables.argsGetRaw.Get("plain"); len(v) == 0 || v[0] != "hello" {
+		t.Errorf("argsGetRaw plain: got %v, want [hello]", v)
+	}
+	// Raw key name is also preserved
+	if v := tx.variables.argsGetRaw.Get("p%61ram"); len(v) == 0 || v[0] != "value" {
+		t.Errorf("argsGetRaw p%%61ram: got %v, want [value]", v)
+	}
+}
+
+func TestExtractGetArgumentsRawPlusSign(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	defer func() {
+		if err := tx.Close(); err != nil {
+			t.Fatalf("Failed to close transaction: %s", err.Error())
+		}
+	}()
+
+	tx.ExtractGetArguments("q=hello+world")
+
+	// Decoded: "+" becomes " "
+	if v := tx.variables.argsGet.Get("q"); len(v) == 0 || v[0] != "hello world" {
+		t.Errorf("argsGet q: got %v, want [hello world]", v)
+	}
+	// Raw: "+" is preserved
+	if v := tx.variables.argsGetRaw.Get("q"); len(v) == 0 || v[0] != "hello+world" {
+		t.Errorf("argsGetRaw q: got %v, want [hello+world]", v)
+	}
+}
+
+func TestExtractGetArgumentsRawDoubleEncoding(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	defer func() {
+		if err := tx.Close(); err != nil {
+			t.Fatalf("Failed to close transaction: %s", err.Error())
+		}
+	}()
+
+	tx.ExtractGetArguments("payload=Secret%2500")
+
+	// Decoded: %25 → % giving "Secret%00"
+	if v := tx.variables.argsGet.Get("payload"); len(v) == 0 || v[0] != "Secret%00" {
+		t.Errorf("argsGet payload: got %v, want [Secret%%00]", v)
+	}
+	// Raw: double-encoding preserved as-is
+	if v := tx.variables.argsGetRaw.Get("payload"); len(v) == 0 || v[0] != "Secret%2500" {
+		t.Errorf("argsGetRaw payload: got %v, want [Secret%%2500]", v)
+	}
+}
+
+func TestExtractGetArgumentsRawNamesCollection(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	defer func() {
+		if err := tx.Close(); err != nil {
+			t.Fatalf("Failed to close transaction: %s", err.Error())
+		}
+	}()
+
+	tx.ExtractGetArguments("p%61ram=value&other=hello")
+
+	// argsGetNamesRaw should contain the raw (non-decoded) key names.
+	rawNames := tx.variables.argsGetNamesRaw.FindAll()
+	found := false
+	for _, md := range rawNames {
+		if md.Value() == "p%61ram" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("argsGetNamesRaw: expected to find 'p%%61ram', got %v", rawNames)
+	}
+}
+
+func TestAddRawGetArgsWithOverlimit(t *testing.T) {
+	testCases := []int{1, 2, 5, 1000}
+
+	for _, limit := range testCases {
+		waf := NewWAF()
+		tx := waf.NewTransaction()
+		tx.WAF.ArgumentLimit = limit
+		// Call addGetRequestArgumentRaw directly (same package) to test the limit path.
+		for i := 0; i < limit+1; i++ {
+			tx.addGetRequestArgumentRaw(fmt.Sprintf("testKey%d", i), "samplevalue")
+		}
+		if tx.variables.argsGetRaw.Len() > waf.ArgumentLimit {
+			t.Fatalf("Argument limit failed for raw GET args (limit=%d, got %d)", limit, tx.variables.argsGetRaw.Len())
+		}
+
+		if err := tx.Close(); err != nil {
+			t.Fatalf("Failed to close transaction: %s", err.Error())
+		}
+	}
+}
+
 func TestResponseBodyForceProcessing(t *testing.T) {
 	waf := NewWAF()
 	waf.ResponseBodyAccess = true
