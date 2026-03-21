@@ -14,10 +14,10 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/debuglog"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/environment"
-	"github.com/corazawaf/coraza/v3/internal/memoize"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -279,6 +279,29 @@ func directiveSecRequestBodyAccess(options *DirectiveOptions) error {
 		return err
 	}
 	options.WAF.RequestBodyAccess = b
+	return nil
+}
+
+// Description: Configures the maximum JSON recursion depth limit Coraza will accept.
+// Default: 1024
+// Syntax: SecRequestBodyJsonDepthLimit [LIMIT]
+// ---
+// Anything over the limit will generate a REQBODY_ERROR in the JSON body processor.
+func directiveSecRequestBodyJsonDepthLimit(options *DirectiveOptions) error {
+	if len(options.Opts) == 0 {
+		return errEmptyOptions
+	}
+
+	limit, err := strconv.Atoi(options.Opts)
+	if err != nil {
+		return err
+	}
+
+	if limit <= 0 {
+		return errors.New("limit must be a positive integer")
+	}
+
+	options.WAF.RequestBodyJsonDepthLimit = limit
 	return nil
 }
 
@@ -813,7 +836,7 @@ func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	re, err := memoize.Do(options.Opts, func() (any, error) { return regexp.Compile(options.Opts) })
+	re, err := options.WAF.Memoizer().Do(options.Opts, func() (any, error) { return regexp.Compile(options.Opts) })
 	if err != nil {
 		return err
 	}
@@ -912,12 +935,34 @@ func directiveSecDataDir(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Configures whether intercepted files will be kept after the transaction is processed.
+// Syntax: SecUploadKeepFiles On|RelevantOnly|Off
+// Default: Off
+// ---
+// The `SecUploadKeepFiles` directive is used to configure whether intercepted files are
+// preserved on disk after the transaction is processed.
+// This directive requires the storage directory to be defined (using `SecUploadDir`).
+//
+// Possible values are:
+//   - On: Keep all uploaded files.
+//   - Off: Do not keep uploaded files.
+//   - RelevantOnly: Keep only uploaded files that matched at least one rule that would be
+//     logged (excluding rules with the `nolog` action).
 func directiveSecUploadKeepFiles(options *DirectiveOptions) error {
-	b, err := parseBoolean(options.Opts)
+	if len(options.Opts) == 0 {
+		return errEmptyOptions
+	}
+
+	status, err := types.ParseUploadKeepFilesStatus(options.Opts)
 	if err != nil {
 		return err
 	}
-	options.WAF.UploadKeepFiles = b
+
+	if !environment.HasAccessToFS && status != types.UploadKeepFilesOff {
+		return fmt.Errorf("SecUploadKeepFiles: cannot enable keeping uploaded files: filesystem access is disabled")
+	}
+
+	options.WAF.UploadKeepFiles = status
 	return nil
 }
 
@@ -944,6 +989,11 @@ func directiveSecUploadFileLimit(options *DirectiveOptions) error {
 	return err
 }
 
+// Description: Configures the directory where uploaded files will be stored.
+// Syntax: SecUploadDir /path/to/dir
+// Default: ""
+// ---
+// This directive is required when enabling SecUploadKeepFiles.
 func directiveSecUploadDir(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -1102,6 +1152,17 @@ func updateTargetBySingleID(id int, variables string, options *DirectiveOptions)
 	return rp.ParseVariables(strings.Trim(variables, "\""))
 }
 
+// hasDisruptiveActions checks if any of the parsed actions are disruptive.
+// Returns true if at least one action has ActionTypeDisruptive, false otherwise.
+func hasDisruptiveActions(actions []ruleAction) bool {
+	for _, action := range actions {
+		if action.Atype == plugintypes.ActionTypeDisruptive {
+			return true
+		}
+	}
+	return false
+}
+
 // Description: Updates the action list of the specified rule(s).
 // Syntax: SecRuleUpdateActionById ID ACTIONLIST
 // ---
@@ -1113,6 +1174,7 @@ func updateTargetBySingleID(id int, variables string, options *DirectiveOptions)
 // ```apache
 // SecRuleUpdateActionById 12345 "deny,status:403"
 // ```
+// The rule ID can be single IDs or ranges of IDs. The targets are separated by a pipe character.
 func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -1152,18 +1214,37 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 				return fmt.Errorf("invalid range: %s", idOrRange)
 			}
 
-			for _, rule := range options.WAF.Rules.GetRules() {
-				if rule.ID_ < start && rule.ID_ > end {
+			// Parse actions once to check if any are disruptive.
+			// Trim surrounding quotes because the SecLang syntax uses quoted action lists
+			// (e.g., SecRuleUpdateActionById 1004 "pass") and strings.Fields preserves them.
+			trimmedActions := strings.Trim(actions, "\"")
+			parsedActions, err := parseActions(options.WAF.Logger, trimmedActions)
+			if err != nil {
+				return err
+			}
+
+			// Check if any of the new actions are disruptive
+			hasDisruptiveAction := hasDisruptiveActions(parsedActions)
+
+			rules := options.WAF.Rules.GetRules()
+			for i := range rules {
+				if rules[i].ID_ < start || rules[i].ID_ > end {
 					continue
 				}
+
+				// Only clear disruptive actions if the update contains a disruptive action
+				if hasDisruptiveAction {
+					rules[i].ClearDisruptiveActions()
+				}
+
 				rp := RuleParser{
-					rule: &rule,
+					rule: &rules[i],
 					options: RuleOptions{
 						WAF: options.WAF,
 					},
 					defaultActions: map[types.RulePhase][]ruleAction{},
 				}
-				if err := rp.ParseActions(strings.Trim(actions, "\"")); err != nil {
+				if err := rp.applyParsedActions(parsedActions); err != nil {
 					return err
 				}
 			}
@@ -1173,11 +1254,32 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 }
 
 func updateActionBySingleID(id int, actions string, options *DirectiveOptions) error {
-
 	rule := options.WAF.Rules.FindByID(id)
 	if rule == nil {
 		return fmt.Errorf("SecRuleUpdateActionById: rule \"%d\" not found", id)
 	}
+
+	// Parse actions first to check if any are disruptive.
+	// Trim surrounding quotes from the SecLang action list syntax.
+	trimmedActions := strings.Trim(actions, "\"")
+	parsedActions, err := parseActions(options.WAF.Logger, trimmedActions)
+	if err != nil {
+		return err
+	}
+
+	// Check if any of the new actions are disruptive.
+	// hasDisruptiveActions returns false when parsedActions is empty or contains
+	// only non-disruptive actions, preserving existing disruptive actions on the rule.
+	hasDisruptiveAction := hasDisruptiveActions(parsedActions)
+
+	// Only clear disruptive actions if the update contains a disruptive action
+	// This matches ModSecurity behavior where SecRuleUpdateActionById replaces
+	// disruptive actions but preserves them if only non-disruptive actions are updated
+	if hasDisruptiveAction {
+		rule.ClearDisruptiveActions()
+	}
+
+	// Apply the parsed actions to the rule without re-parsing
 	rp := RuleParser{
 		rule: rule,
 		options: RuleOptions{
@@ -1185,7 +1287,7 @@ func updateActionBySingleID(id int, actions string, options *DirectiveOptions) e
 		},
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
-	return rp.ParseActions(strings.Trim(actions, "\""))
+	return rp.applyParsedActions(parsedActions)
 }
 
 // Description: Updates the target (variable) list of the specified rule(s) by tag.

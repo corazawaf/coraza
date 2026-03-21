@@ -34,6 +34,9 @@ SecRule REQUEST_HEADERS:Content-Type "^application/json" \
 SecRule REQUEST_HEADERS:Content-Type "^application/[a-z0-9.-]+[+]json" \
      "id:'200006',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=JSON"
 
+# Configures the maximum JSON recursion depth limit Coraza will accept.
+SecRequestBodyJsonDepthLimit 1024
+
 # Enable JSON stream request body parser for NDJSON (Newline Delimited JSON) format.
 # This processor handles streaming JSON where each line contains a complete JSON object.
 # Commonly used for bulk data imports, log streaming, and batch API endpoints.
@@ -47,14 +50,6 @@ SecRule REQUEST_HEADERS:Content-Type "^application/[a-z0-9.-]+[+]json" \
 #
 #SecRule REQUEST_HEADERS:Content-Type "^application/json-seq" \
 #     "id:'200010',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=JSONSTREAM"
-
-# Optional: Limit the number of JSON objects in NDJSON/JSON Sequence streams to prevent abuse
-# Uncomment and adjust the limit as needed for your bulk endpoints
-#
-#SecRule TX:jsonstream_request_line_count "@gt 1000" \
-#     "id:'200009',phase:2,t:none,deny,status:413,\
-#     msg:'Too many JSON objects in stream',\
-#     logdata:'Line count: %{TX.jsonstream_request_line_count}'"
 
 # Maximum request body size we will accept for buffering. If you support
 # file uploads, this value must has to be as large as the largest file
@@ -143,11 +138,11 @@ SecDataDir /tmp/
 #
 #SecUploadDir /opt/coraza/var/upload/
 
-# If On, the WAF will store the uploaded files in the SecUploadDir
-# directory.
-# Note: SecUploadKeepFiles is currently NOT supported by Coraza
+# Controls whether intercepted uploaded files will be kept after
+# transaction is processed. Possible values: On, Off, RelevantOnly.
+# RelevantOnly will keep files only when a matching rule is logged (rules with 'nolog' do not qualify).
 #
-#SecUploadKeepFiles Off
+#SecUploadKeepFiles RelevantOnly
 
 # Uploaded files are by default created with permissions that do not allow
 # any other user to access them. You may need to relax that if you want to
