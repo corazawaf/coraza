@@ -108,7 +108,7 @@ func Test() error {
 		return err
 	}
 
-	if err := sh.RunV("go", "test", "-tags=memoize_builders", "./..."); err != nil {
+	if err := sh.RunV("go", "test", "-tags=coraza.no_memoize", "./..."); err != nil {
 		return err
 	}
 
@@ -120,7 +120,7 @@ func Test() error {
 		return err
 	}
 
-	if err := sh.RunV("go", "test", "-tags=memoize_builders", "./testing/coreruleset"); err != nil {
+	if err := sh.RunV("go", "test", "-tags=coraza.no_memoize", "./testing/coreruleset"); err != nil {
 		return err
 	}
 
@@ -182,8 +182,8 @@ func Coverage() error {
 	if err := sh.RunV("go", "test", tagsCmd, "-coverprofile=build/coverage-ftw.txt", "-covermode=atomic", "-coverpkg=./...", "./testing/coreruleset"); err != nil {
 		return err
 	}
-	// we run tinygo tag only if memoize_builders is not enabled
-	if !strings.Contains(tags, "memoize_builders") {
+	// we run tinygo tag only if coraza.no_memoize is not enabled
+	if !strings.Contains(tags, "coraza.no_memoize") {
 		if tagsCmd != "" {
 			tagsCmd += ",tinygo"
 		}
@@ -222,7 +222,7 @@ func Fuzz() error {
 	for _, pkgTests := range tests {
 		for _, test := range pkgTests.tests {
 			fmt.Println("Running", test)
-			if err := sh.RunV("go", "test", "-fuzz="+test, "-fuzztime=2m", pkgTests.pkg); err != nil {
+			if err := sh.RunV("go", "test", "-fuzz="+test, "-fuzztime=3m", pkgTests.pkg); err != nil {
 				return err
 			}
 		}
@@ -281,7 +281,7 @@ func TagsMatrix() error {
 		"coraza.rule.mandatory_rule_id_check",
 		"coraza.rule.case_sensitive_args_keys",
 		"coraza.rule.no_regex_multiline",
-		"memoize_builders",
+		"coraza.no_memoize",
 		"coraza.rule.multiphase_evaluation",
 		"no_fs_access",
 	}

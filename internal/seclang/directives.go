@@ -18,7 +18,6 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/environment"
-	"github.com/corazawaf/coraza/v3/internal/memoize"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -280,6 +279,29 @@ func directiveSecRequestBodyAccess(options *DirectiveOptions) error {
 		return err
 	}
 	options.WAF.RequestBodyAccess = b
+	return nil
+}
+
+// Description: Configures the maximum JSON recursion depth limit Coraza will accept.
+// Default: 1024
+// Syntax: SecRequestBodyJsonDepthLimit [LIMIT]
+// ---
+// Anything over the limit will generate a REQBODY_ERROR in the JSON body processor.
+func directiveSecRequestBodyJsonDepthLimit(options *DirectiveOptions) error {
+	if len(options.Opts) == 0 {
+		return errEmptyOptions
+	}
+
+	limit, err := strconv.Atoi(options.Opts)
+	if err != nil {
+		return err
+	}
+
+	if limit <= 0 {
+		return errors.New("limit must be a positive integer")
+	}
+
+	options.WAF.RequestBodyJsonDepthLimit = limit
 	return nil
 }
 
@@ -814,7 +836,7 @@ func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	re, err := memoize.Do(options.Opts, func() (any, error) { return regexp.Compile(options.Opts) })
+	re, err := options.WAF.Memoizer().Do(options.Opts, func() (any, error) { return regexp.Compile(options.Opts) })
 	if err != nil {
 		return err
 	}
@@ -913,12 +935,34 @@ func directiveSecDataDir(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Configures whether intercepted files will be kept after the transaction is processed.
+// Syntax: SecUploadKeepFiles On|RelevantOnly|Off
+// Default: Off
+// ---
+// The `SecUploadKeepFiles` directive is used to configure whether intercepted files are
+// preserved on disk after the transaction is processed.
+// This directive requires the storage directory to be defined (using `SecUploadDir`).
+//
+// Possible values are:
+//   - On: Keep all uploaded files.
+//   - Off: Do not keep uploaded files.
+//   - RelevantOnly: Keep only uploaded files that matched at least one rule that would be
+//     logged (excluding rules with the `nolog` action).
 func directiveSecUploadKeepFiles(options *DirectiveOptions) error {
-	b, err := parseBoolean(options.Opts)
+	if len(options.Opts) == 0 {
+		return errEmptyOptions
+	}
+
+	status, err := types.ParseUploadKeepFilesStatus(options.Opts)
 	if err != nil {
 		return err
 	}
-	options.WAF.UploadKeepFiles = b
+
+	if !environment.HasAccessToFS && status != types.UploadKeepFilesOff {
+		return fmt.Errorf("SecUploadKeepFiles: cannot enable keeping uploaded files: filesystem access is disabled")
+	}
+
+	options.WAF.UploadKeepFiles = status
 	return nil
 }
 
@@ -945,6 +989,11 @@ func directiveSecUploadFileLimit(options *DirectiveOptions) error {
 	return err
 }
 
+// Description: Configures the directory where uploaded files will be stored.
+// Syntax: SecUploadDir /path/to/dir
+// Default: ""
+// ---
+// This directive is required when enabling SecUploadKeepFiles.
 func directiveSecUploadDir(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions

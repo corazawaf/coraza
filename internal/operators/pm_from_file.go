@@ -13,7 +13,6 @@ import (
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/memoize"
 )
 
 // Description:
@@ -65,7 +64,7 @@ func newPMFromFile(options plugintypes.OperatorOptions) (plugintypes.Operator, e
 		DFA:                  false,
 	})
 
-	m, _ := memoize.Do(strings.Join(options.Path, ",")+filepath, func() (any, error) { return builder.Build(lines), nil })
+	m, _ := memoizeDo(options.Memoizer, strings.Join(options.Path, ",")+filepath, func() (any, error) { return builder.Build(lines), nil })
 
 	return &pm{matcher: m.(ahocorasick.AhoCorasick)}, nil
 }

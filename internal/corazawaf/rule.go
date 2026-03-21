@@ -14,7 +14,6 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
-	"github.com/corazawaf/coraza/v3/internal/memoize"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -97,6 +96,11 @@ type Rule struct {
 	transformations []ruleTransformationParams
 
 	transformationsID int
+	// transformationPrefixIDs holds the chain ID at each step of the transformation chain.
+	// transformationPrefixIDs[i] is the ID representing transformations [0..i].
+	// This enables prefix-based caching: rules sharing a common transformation prefix
+	// can reuse cached intermediate results instead of recomputing from scratch.
+	transformationPrefixIDs []int
 
 	// Slice of initialized actions to be evaluated during
 	// the rule evaluation process
@@ -146,6 +150,8 @@ type Rule struct {
 	// chainedRules containing rules with just PhaseUnknown variables, may potentially
 	// be anticipated. This boolean ensures that it happens
 	withPhaseUnknownVariable bool
+
+	memoizer plugintypes.Memoizer
 }
 
 func (r *Rule) ParentID() int {
@@ -161,7 +167,7 @@ const chainLevelZero = 0
 // Evaluate will evaluate the current rule for the indicated transaction
 // If the operator matches, actions will be evaluated, and it will return
 // the matched variables, keys and values (MatchData)
-func (r *Rule) Evaluate(phase types.RulePhase, tx plugintypes.TransactionState, cache map[transformationKey]*transformationValue) {
+func (r *Rule) Evaluate(phase types.RulePhase, tx plugintypes.TransactionState, cache map[transformationKey]transformationValue) {
 	// collectiveMatchedValues lives across recursive calls of doEvaluate
 	var collectiveMatchedValues []types.MatchData
 
@@ -180,7 +186,7 @@ func (r *Rule) Evaluate(phase types.RulePhase, tx plugintypes.TransactionState, 
 
 const noID = 0
 
-func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Transaction, collectiveMatchedValues *[]types.MatchData, chainLevel int, cache map[transformationKey]*transformationValue) []types.MatchData {
+func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Transaction, collectiveMatchedValues *[]types.MatchData, chainLevel int, cache map[transformationKey]transformationValue) []types.MatchData {
 	tx.Capture = r.Capture
 
 	if multiphaseEvaluation {
@@ -372,15 +378,22 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 		}
 
 		for _, a := range r.actions {
-			if a.Function.Type() == plugintypes.ActionTypeFlow {
-				// Flow actions are evaluated also if the rule engine is set to DetectionOnly
+			// All actions are evaluated independently from the engine being On or in DetectionOnly.
+			// The action evaluation is responsible of checking the engine mode and decide if the disruptive action
+			// has to be enforced or not. This allows finer control to the actions, such us creating the detectionOnlyInterruption and
+			// allowing RelevantOnly audit logs in detection only mode.
+			switch a.Function.Type() {
+			case plugintypes.ActionTypeFlow:
 				logger.Debug().Str("action", a.Name).Int("phase", int(phase)).Msg("Evaluating flow action for rule")
-				a.Function.Evaluate(r, tx)
-			} else if a.Function.Type() == plugintypes.ActionTypeDisruptive && tx.RuleEngine == types.RuleEngineOn {
+			case plugintypes.ActionTypeDisruptive:
 				// The parser enforces that the disruptive action is just one per rule (if more than one, only the last one is kept)
-				logger.Debug().Str("action", a.Name).Msg("Executing disruptive action for rule")
-				a.Function.Evaluate(r, tx)
+				logger.Debug().Str("action", a.Name).Int("phase", int(phase)).Msg("Executing disruptive action for rule")
+			default:
+				// Only flow and disruptive actions are supposed to be evaluated here, non disruptive actions
+				// are evaluated previously, during the variable matching.
+				continue
 			}
+			a.Function.Evaluate(r, tx)
 		}
 		if r.ID_ != noID {
 			// we avoid matching chains and secmarkers
@@ -397,7 +410,7 @@ func (r *Rule) transformMultiMatchArg(arg types.MatchData) ([]string, []error) {
 	return r.executeTransformationsMultimatch(arg.Value())
 }
 
-func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transformationKey]*transformationValue) (string, []error) {
+func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transformationKey]transformationValue) (string, []error) {
 	switch {
 	case len(r.transformations) == 0:
 		return arg.Value(), nil
@@ -409,23 +422,53 @@ func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transform
 		// NOTE: See comment on transformationKey struct to understand this hacky code
 		argKey := arg.Key()
 		argKeyPtr := unsafe.StringData(argKey)
-		key := transformationKey{
-			argKey:            argKeyPtr,
-			argIndex:          argIdx,
-			argVariable:       arg.Variable(),
-			transformationsID: r.transformationsID,
-		}
-		if cached, ok := cache[key]; ok {
-			return cached.arg, cached.errs
-		} else {
-			ars, es := r.executeTransformations(arg.Value())
-			errs := es
-			cache[key] = &transformationValue{
-				arg:  ars,
-				errs: es,
+
+		// Search from longest prefix (full chain) backwards for a cache hit.
+		// Best case: full chain cached → single map lookup, done.
+		// Typical case: shared prefix cached → start computing from there.
+		startIdx := 0
+		value := arg.Value()
+		var errs []error
+
+		for i := len(r.transformationPrefixIDs) - 1; i >= 0; i-- {
+			key := transformationKey{
+				argKey:            argKeyPtr,
+				argIndex:          argIdx,
+				argVariable:       arg.Variable(),
+				transformationsID: r.transformationPrefixIDs[i],
 			}
-			return ars, errs
+			if cached, ok := cache[key]; ok {
+				if i == len(r.transformationPrefixIDs)-1 {
+					// Full chain cached — nothing more to compute
+					return cached.arg, cached.errs
+				}
+				value = cached.arg
+				errs = cached.errs
+				startIdx = i + 1
+				break
+			}
 		}
+
+		// Execute remaining transformations, caching each intermediate step
+		// so later rules sharing a prefix can reuse our work.
+		for i := startIdx; i < len(r.transformations); i++ {
+			v, _, err := r.transformations[i].Function(value)
+			if err != nil {
+				errs = append(errs, err)
+			} else {
+				value = v
+			}
+
+			key := transformationKey{
+				argKey:            argKeyPtr,
+				argIndex:          argIdx,
+				argVariable:       arg.Variable(),
+				transformationsID: r.transformationPrefixIDs[i],
+			}
+			cache[key] = transformationValue{arg: value, errs: errs}
+		}
+
+		return value, errs
 	}
 }
 
@@ -531,7 +574,10 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 	}
 	var re *regexp.Regexp
 	if isRegex, rx := hasRegex(key); isRegex {
-		if vare, err := memoize.Do(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
+		if !caseSensitiveVariable(v) {
+			rx = strings.ToLower(rx)
+		}
+		if vare, err := r.memoizeDo(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
 			return err
 		} else {
 			re = vare.(*regexp.Regexp)
@@ -575,7 +621,10 @@ func needToSplitConcatenatedVariable(v variables.RuleVariable, ve variables.Rule
 func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 	var re *regexp.Regexp
 	if isRegex, rx := hasRegex(key); isRegex {
-		if vare, err := memoize.Do(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
+		if !caseSensitiveVariable(v) {
+			rx = strings.ToLower(rx)
+		}
+		if vare, err := r.memoizeDo(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
 			return err
 		} else {
 			re = vare.(*regexp.Regexp)
@@ -629,6 +678,7 @@ func (r *Rule) AddTransformation(name string, t plugintypes.Transformation) erro
 	}
 	r.transformations = append(r.transformations, ruleTransformationParams{Function: t})
 	r.transformationsID = transformationID(r.transformationsID, name)
+	r.transformationPrefixIDs = append(r.transformationPrefixIDs, r.transformationsID)
 	return nil
 }
 
@@ -636,6 +686,8 @@ func (r *Rule) AddTransformation(name string, t plugintypes.Transformation) erro
 // it is mostly used by the "none" transformation
 func (r *Rule) ClearTransformations() {
 	r.transformations = []ruleTransformationParams{}
+	r.transformationsID = 0
+	r.transformationPrefixIDs = nil
 }
 
 // SetOperator sets the operator of the rule
@@ -688,6 +740,18 @@ func (r *Rule) executeTransformations(value string) (string, []error) {
 		value = v
 	}
 	return value, errs
+}
+
+// SetMemoizer sets the memoizer used for caching compiled regexes in variable selectors.
+func (r *Rule) SetMemoizer(m plugintypes.Memoizer) {
+	r.memoizer = m
+}
+
+func (r *Rule) memoizeDo(key string, fn func() (any, error)) (any, error) {
+	if r.memoizer != nil {
+		return r.memoizer.Do(key, fn)
+	}
+	return fn()
 }
 
 // NewRule returns a new initialized rule

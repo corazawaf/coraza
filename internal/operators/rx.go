@@ -14,7 +14,6 @@ import (
 	"rsc.io/binaryregexp"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/memoize"
 )
 
 // Description:
@@ -68,7 +67,7 @@ func newRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 		return newBinaryRX(options)
 	}
 
-	re, err := memoize.Do(data, func() (any, error) { return regexp.Compile(data) })
+	re, err := memoizeDo(options.Memoizer, data, func() (any, error) { return regexp.Compile(data) })
 	if err != nil {
 		return nil, err
 	}
@@ -77,15 +76,27 @@ func newRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 
 func (o *rx) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	if tx.Capturing() {
-		match := o.re.FindStringSubmatch(value)
-		if len(match) == 0 {
+		// FindStringSubmatchIndex returns a slice of index pairs [start0, end0, start1, end1, ...]
+		// instead of allocating new strings for each capture group. We then slice the original
+		// input value[start:end] to get zero-allocation substrings.
+		match := o.re.FindStringSubmatchIndex(value)
+		if match == nil {
 			return false
 		}
-		for i, c := range match {
+		// match has 2 entries per group: match[2*i] is the start index,
+		// match[2*i+1] is the end index for capture group i. Group 0 is
+		// the full match, groups 1..N are the parenthesized sub-expressions.
+		for i := 0; i < len(match)/2; i++ {
 			if i == 9 {
 				return true
 			}
-			tx.CaptureField(i, c)
+			// A negative start index means the group did not participate in the match
+			// (e.g. an optional group like (foo)? when foo is absent).
+			if match[2*i] >= 0 {
+				tx.CaptureField(i, value[match[2*i]:match[2*i+1]])
+			} else {
+				tx.CaptureField(i, "")
+			}
 		}
 		return true
 	} else {
@@ -104,7 +115,7 @@ var _ plugintypes.Operator = (*binaryRX)(nil)
 func newBinaryRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
-	re, err := memoize.Do(data, func() (any, error) { return binaryregexp.Compile(data) })
+	re, err := memoizeDo(options.Memoizer, data, func() (any, error) { return binaryregexp.Compile(data) })
 	if err != nil {
 		return nil, err
 	}

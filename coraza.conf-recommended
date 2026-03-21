@@ -34,6 +34,9 @@ SecRule REQUEST_HEADERS:Content-Type "^application/json" \
 SecRule REQUEST_HEADERS:Content-Type "^application/[a-z0-9.-]+[+]json" \
      "id:'200006',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=JSON"
 
+# Configures the maximum JSON recursion depth limit Coraza will accept.
+SecRequestBodyJsonDepthLimit 1024
+
 # Maximum request body size we will accept for buffering. If you support
 # file uploads, this value must has to be as large as the largest file
 # you are willing to accept.
@@ -118,11 +121,11 @@ SecDataDir /tmp/
 #
 #SecUploadDir /opt/coraza/var/upload/
 
-# If On, the WAF will store the uploaded files in the SecUploadDir
-# directory.
-# Note: SecUploadKeepFiles is currently NOT supported by Coraza
+# Controls whether intercepted uploaded files will be kept after
+# transaction is processed. Possible values: On, Off, RelevantOnly.
+# RelevantOnly will keep files only when a matching rule is logged (rules with 'nolog' do not qualify).
 #
-#SecUploadKeepFiles Off
+#SecUploadKeepFiles RelevantOnly
 
 # Uploaded files are by default created with permissions that do not allow
 # any other user to access them. You may need to relax that if you want to

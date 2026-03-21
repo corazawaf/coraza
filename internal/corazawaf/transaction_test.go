@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"regexp"
 	"runtime/debug"
 	"strconv"
@@ -22,6 +23,7 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/environment"
+	"github.com/corazawaf/coraza/v3/internal/operators"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -749,6 +751,72 @@ func TestAuditLogFields(t *testing.T) {
 	}
 	if err := tx.Close(); err != nil {
 		t.Fatalf("Failed to close transaction: %s", err.Error())
+	}
+}
+
+func TestMatchRuleDisruptiveActionPopulated(t *testing.T) {
+	tests := []struct {
+		name                         string
+		engine                       types.RuleEngineStatus
+		wantDisruptive               bool
+		wantAction                   corazarules.DisruptiveAction
+		wantInterrupted              bool
+		wantDetectionOnlyInterrupted bool
+	}{
+		{
+			name:                         "engine on",
+			engine:                       types.RuleEngineOn,
+			wantDisruptive:               true,
+			wantAction:                   corazarules.DisruptiveActionDeny,
+			wantInterrupted:              true,
+			wantDetectionOnlyInterrupted: false,
+		},
+		{
+			name:                         "engine detection only",
+			engine:                       types.RuleEngineDetectionOnly,
+			wantDisruptive:               false,
+			wantAction:                   corazarules.DisruptiveActionDeny,
+			wantInterrupted:              false,
+			wantDetectionOnlyInterrupted: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			waf := NewWAF()
+			tx := waf.NewTransaction()
+			tx.RuleEngine = tt.engine
+
+			rule := NewRule()
+			rule.ID_ = 1
+			if err := rule.AddVariable(variables.ArgsGet, "", false); err != nil {
+				t.Fatal(err)
+			}
+			rule.SetOperator(&dummyEqOperator{}, "@eq", "0")
+			_ = rule.AddAction("deny", &dummyDenyAction{})
+
+			tx.AddGetRequestArgument("test", "0")
+
+			var matchedValues []types.MatchData
+			rule.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
+
+			if len(tx.matchedRules) != 1 {
+				t.Fatalf("expected 1 matched rule, got %d", len(tx.matchedRules))
+			}
+			mr := tx.matchedRules[0].(*corazarules.MatchedRule)
+			if mr.Disruptive_ != tt.wantDisruptive {
+				t.Errorf("Disruptive_: got %t, want %t", mr.Disruptive_, tt.wantDisruptive)
+			}
+			if mr.DisruptiveAction_ != tt.wantAction {
+				t.Errorf("DisruptiveAction_: got %d, want %d", mr.DisruptiveAction_, tt.wantAction)
+			}
+			if tx.IsInterrupted() != tt.wantInterrupted {
+				t.Errorf("IsInterrupted: got %t, want %t", tx.IsInterrupted(), tt.wantInterrupted)
+			}
+			if tx.IsDetectionOnlyInterrupted() != tt.wantDetectionOnlyInterrupted {
+				t.Errorf("IsDetectionOnlyInterrupted: got %t, want %t", tx.IsDetectionOnlyInterrupted(), tt.wantDetectionOnlyInterrupted)
+			}
+		})
 	}
 }
 
@@ -1721,7 +1789,7 @@ func TestResponseBodyForceProcessing(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Fatal(err)
 	}
-	tx.ProcessResponseHeaders(200, "HTTP/1")
+	tx.ProcessResponseHeaders(200, "HTTP/1.1")
 	if _, _, err := tx.WriteResponseBody([]byte(`{"key":"value"}`)); err != nil {
 		t.Fatal(err)
 	}
@@ -1788,6 +1856,121 @@ func TestCloseFails(t *testing.T) {
 	if !strings.Contains(err.Error(), "removing temporary file") {
 		t.Fatalf("unexpected error message: %s", err.Error())
 	}
+}
+
+func TestUploadKeepFiles(t *testing.T) {
+	if !environment.HasAccessToFS {
+		t.Skip("skipping test as it requires access to filesystem")
+	}
+
+	createTmpFile := func(t *testing.T) string {
+		t.Helper()
+		f, err := os.CreateTemp(t.TempDir(), "crztest*")
+		if err != nil {
+			t.Fatal(err)
+		}
+		name := f.Name()
+		if err := f.Close(); err != nil {
+			t.Fatalf("failed to close temp file: %v", err)
+		}
+		return name
+	}
+
+	t.Run("Off deletes files", func(t *testing.T) {
+		waf := NewWAF()
+		waf.UploadKeepFiles = types.UploadKeepFilesOff
+		tx := waf.NewTransaction()
+		tmpFile := createTmpFile(t)
+
+		col := tx.Variables().FilesTmpNames().(*collections.Map)
+		col.Add("", tmpFile)
+
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := os.Stat(tmpFile); !os.IsNotExist(err) {
+			t.Fatal("expected temp file to be deleted when UploadKeepFiles is Off")
+		}
+	})
+
+	t.Run("On keeps files", func(t *testing.T) {
+		waf := NewWAF()
+		waf.UploadKeepFiles = types.UploadKeepFilesOn
+		tx := waf.NewTransaction()
+		tmpFile := createTmpFile(t)
+
+		col := tx.Variables().FilesTmpNames().(*collections.Map)
+		col.Add("", tmpFile)
+
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := os.Stat(tmpFile); err != nil {
+			t.Fatal("expected temp file to be kept when UploadKeepFiles is On")
+		}
+	})
+
+	t.Run("RelevantOnly keeps files when log rules matched", func(t *testing.T) {
+		waf := NewWAF()
+		waf.UploadKeepFiles = types.UploadKeepFilesRelevantOnly
+		tx := waf.NewTransaction()
+		tmpFile := createTmpFile(t)
+
+		// Simulate a matched rule with Log enabled
+		tx.matchedRules = append(tx.matchedRules, &corazarules.MatchedRule{Log_: true})
+
+		col := tx.Variables().FilesTmpNames().(*collections.Map)
+		col.Add("", tmpFile)
+
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := os.Stat(tmpFile); err != nil {
+			t.Fatal("expected temp file to be kept when UploadKeepFiles is RelevantOnly and log rules matched")
+		}
+	})
+
+	t.Run("RelevantOnly deletes files when only nolog rules matched", func(t *testing.T) {
+		waf := NewWAF()
+		waf.UploadKeepFiles = types.UploadKeepFilesRelevantOnly
+		tx := waf.NewTransaction()
+		tmpFile := createTmpFile(t)
+
+		// Simulate a matched rule with Log disabled (e.g. CRS initialization rules)
+		tx.matchedRules = append(tx.matchedRules, &corazarules.MatchedRule{Log_: false})
+
+		col := tx.Variables().FilesTmpNames().(*collections.Map)
+		col.Add("", tmpFile)
+
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := os.Stat(tmpFile); !os.IsNotExist(err) {
+			t.Fatal("expected temp file to be deleted when UploadKeepFiles is RelevantOnly and only nolog rules matched")
+		}
+	})
+
+	t.Run("RelevantOnly deletes files when no rules matched", func(t *testing.T) {
+		waf := NewWAF()
+		waf.UploadKeepFiles = types.UploadKeepFilesRelevantOnly
+		tx := waf.NewTransaction()
+		tmpFile := createTmpFile(t)
+
+		col := tx.Variables().FilesTmpNames().(*collections.Map)
+		col.Add("", tmpFile)
+
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := os.Stat(tmpFile); !os.IsNotExist(err) {
+			t.Fatal("expected temp file to be deleted when UploadKeepFiles is RelevantOnly and no rules matched")
+		}
+	})
 }
 
 func TestRequestFilename(t *testing.T) {
@@ -1862,5 +2045,191 @@ func TestRequestFilename(t *testing.T) {
 				t.Fatalf("Expected REQUEST_FILENAME %q, got %q", test.expected, tx.variables.requestFilename.Get())
 			}
 		})
+	}
+}
+
+func newTestUnconditionalMatch(t testing.TB) plugintypes.Operator {
+	t.Helper()
+	op, err := operators.Get("unconditionalMatch", plugintypes.OperatorOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return op
+}
+
+func TestRemoveRuleByID(t *testing.T) {
+	waf := NewWAF()
+	op := newTestUnconditionalMatch(t)
+
+	// Add two rules with different IDs
+	rule1 := NewRule()
+	rule1.ID_ = 100
+	rule1.LogID_ = "100"
+	rule1.Phase_ = types.PhaseRequestHeaders
+	rule1.operator = &ruleOperatorParams{
+		Operator: op,
+		Function: "@unconditionalMatch",
+	}
+	rule1.Log = true
+	if err := waf.Rules.Add(rule1); err != nil {
+		t.Fatal(err)
+	}
+
+	rule2 := NewRule()
+	rule2.ID_ = 200
+	rule2.LogID_ = "200"
+	rule2.Phase_ = types.PhaseRequestHeaders
+	rule2.operator = &ruleOperatorParams{
+		Operator: op,
+		Function: "@unconditionalMatch",
+	}
+	rule2.Log = true
+	if err := waf.Rules.Add(rule2); err != nil {
+		t.Fatal(err)
+	}
+
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	// Remove rule 100
+	tx.RemoveRuleByID(100)
+
+	// Verify the map was lazily initialized
+	if tx.ruleRemoveByID == nil {
+		t.Fatal("ruleRemoveByID should not be nil after RemoveRuleByID")
+	}
+
+	// Remove another rule
+	tx.RemoveRuleByID(100) // duplicate removal should be idempotent
+	tx.RemoveRuleByID(200)
+
+	if len(tx.ruleRemoveByID) != 2 {
+		t.Errorf("expected 2 entries in ruleRemoveByID map, got %d", len(tx.ruleRemoveByID))
+	}
+}
+
+func TestRemoveRuleByIDRange(t *testing.T) {
+	waf := NewWAF()
+
+	// Use nil-operator rules (SecAction-style): they always match regardless of variables.
+	for _, id := range []int{100, 150, 200, 300} {
+		r := NewRule()
+		r.ID_ = id
+		r.LogID_ = strconv.Itoa(id)
+		r.Phase_ = types.PhaseRequestHeaders
+		// nil operator means the rule always matches
+		if err := waf.Rules.Add(r); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	t.Run("range is stored", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		defer tx.Close()
+
+		tx.RemoveRuleByIDRange(100, 200)
+		if len(tx.ruleRemoveByIDRanges) != 1 {
+			t.Fatalf("expected 1 range entry, got %d", len(tx.ruleRemoveByIDRanges))
+		}
+		if tx.ruleRemoveByIDRanges[0][0] != 100 || tx.ruleRemoveByIDRanges[0][1] != 200 {
+			t.Errorf("unexpected range: %v", tx.ruleRemoveByIDRanges[0])
+		}
+	})
+
+	t.Run("rules in range are skipped during eval", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		defer tx.Close()
+
+		// Remove rules with IDs 100-200; rule 300 should still be evaluated.
+		tx.RemoveRuleByIDRange(100, 200)
+		waf.Rules.Eval(types.PhaseRequestHeaders, tx)
+
+		matchedIDs := make(map[int]bool)
+		for _, mr := range tx.MatchedRules() {
+			matchedIDs[mr.Rule().ID()] = true
+		}
+
+		for _, skipped := range []int{100, 150, 200} {
+			if matchedIDs[skipped] {
+				t.Errorf("rule %d should have been skipped but was matched", skipped)
+			}
+		}
+		if !matchedIDs[300] {
+			t.Errorf("rule 300 should have been matched but was not")
+		}
+	})
+
+	t.Run("multiple ranges", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		defer tx.Close()
+
+		tx.RemoveRuleByIDRange(100, 100)
+		tx.RemoveRuleByIDRange(300, 300)
+		if len(tx.ruleRemoveByIDRanges) != 2 {
+			t.Fatalf("expected 2 range entries, got %d", len(tx.ruleRemoveByIDRanges))
+		}
+
+		waf.Rules.Eval(types.PhaseRequestHeaders, tx)
+
+		matchedIDs := make(map[int]bool)
+		for _, mr := range tx.MatchedRules() {
+			matchedIDs[mr.Rule().ID()] = true
+		}
+		if matchedIDs[100] {
+			t.Error("rule 100 should have been skipped")
+		}
+		if matchedIDs[300] {
+			t.Error("rule 300 should have been skipped")
+		}
+		if !matchedIDs[150] {
+			t.Error("rule 150 should have been matched")
+		}
+		if !matchedIDs[200] {
+			t.Error("rule 200 should have been matched")
+		}
+	})
+
+	t.Run("range reset on transaction reuse", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		tx.RemoveRuleByIDRange(100, 200)
+		tx.Close()
+
+		// Get a new transaction (pool reuse may return the same object)
+		tx2 := waf.NewTransaction()
+		defer tx2.Close()
+
+		if len(tx2.ruleRemoveByIDRanges) != 0 {
+			t.Errorf("expected ruleRemoveByIDRanges to be reset, got %d entries", len(tx2.ruleRemoveByIDRanges))
+		}
+	})
+}
+
+func BenchmarkRuleEvalWithRemovedRules(b *testing.B) {
+	waf := NewWAF()
+	op := newTestUnconditionalMatch(b)
+
+	rule := NewRule()
+	rule.ID_ = 1000
+	rule.LogID_ = "1000"
+	rule.Phase_ = types.PhaseRequestHeaders
+	rule.operator = &ruleOperatorParams{
+		Operator: op,
+		Function: "@unconditionalMatch",
+	}
+	if err := waf.Rules.Add(rule); err != nil {
+		b.Fatal(err)
+	}
+
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	for i := 1; i <= 100; i++ {
+		tx.RemoveRuleByID(i)
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		waf.Rules.Eval(types.PhaseRequestHeaders, tx)
 	}
 }
