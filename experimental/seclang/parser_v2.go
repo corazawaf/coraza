@@ -510,9 +510,11 @@ func (c *typeConverter) convertSecAction(secAction *crstypes.SecAction) error {
 func (c *typeConverter) convertDefaultAction(da *crstypes.DefaultAction) error {
 	// Convert back to seclang string for compatibility with existing ParseDefaultActions
 	seclangStr := da.ToSeclang()
-	// Strip "SecDefaultAction " prefix and quotes
+	// Strip "SecDefaultAction " prefix, trailing whitespace, and surrounding quotes.
+	// ToSeclang() appends a trailing newline, so TrimSpace is required before
+	// MaybeRemoveQuotes can detect the closing quote character.
 	seclangStr = strings.TrimPrefix(seclangStr, "SecDefaultAction ")
-	seclangStr = utils.MaybeRemoveQuotes(seclangStr)
+	seclangStr = utils.MaybeRemoveQuotes(strings.TrimSpace(seclangStr))
 
 	c.state.RuleDefaultActions = append(c.state.RuleDefaultActions, seclangStr)
 	c.state.HasRuleDefaultActions = true
