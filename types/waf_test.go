@@ -12,7 +12,7 @@ func TestParseAuditLogParts(t *testing.T) {
 		expectedHasError bool
 	}{
 		{"", nil, true},
-		{"ABCDEFGHIJKZ", []AuditLogPart("BCDEFGHIJK"), false},
+		{"ABCDEFGHIJKZ", []AuditLogPart("ABCDEFGHIJKZ"), false},
 		{"DEFGHZ", nil, true},
 		{"ABCD", nil, true},
 		{"AMZ", nil, true},
@@ -98,7 +98,7 @@ func TestApplyAuditLogParts(t *testing.T) {
 			name:             "absolute value (starts with A, ends with Z)",
 			base:             AuditLogParts("BC"),
 			modification:     "ABCDEFZ",
-			expectedParts:    AuditLogParts("BCDEF"),
+			expectedParts:    AuditLogParts("ABCDEFZ"),
 			expectedHasError: false,
 		},
 		{

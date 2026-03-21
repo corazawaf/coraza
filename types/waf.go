@@ -78,6 +78,32 @@ func (re RuleEngineStatus) String() string {
 	return "unknown"
 }
 
+// UploadKeepFilesStatus represents the status of the upload keep files directive.
+type UploadKeepFilesStatus int
+
+const (
+	// UploadKeepFilesOff will delete all uploaded files after transaction (default)
+	UploadKeepFilesOff UploadKeepFilesStatus = iota
+	// UploadKeepFilesOn will keep all uploaded files after transaction
+	UploadKeepFilesOn
+	// UploadKeepFilesRelevantOnly will keep uploaded files only if a log-relevant rule matched
+	// (that is, a matched rule with logging enabled, excluding rules marked with nolog).
+	UploadKeepFilesRelevantOnly
+)
+
+// ParseUploadKeepFilesStatus parses the upload keep files status
+func ParseUploadKeepFilesStatus(s string) (UploadKeepFilesStatus, error) {
+	switch strings.ToLower(s) {
+	case "on":
+		return UploadKeepFilesOn, nil
+	case "off":
+		return UploadKeepFilesOff, nil
+	case "relevantonly":
+		return UploadKeepFilesRelevantOnly, nil
+	}
+	return -1, fmt.Errorf("invalid upload keep files status: %q", s)
+}
+
 // BodyLimitAction represents the action to take when
 // the body size exceeds the configured limit.
 type BodyLimitAction int
@@ -94,6 +120,8 @@ const (
 type AuditLogPart byte
 
 const (
+	// AuditLogPartHeader is the audit log header part (mandatory)
+	AuditLogPartHeader AuditLogPart = 'A'
 	// AuditLogPartRequestHeaders is the request headers part
 	AuditLogPartRequestHeaders AuditLogPart = 'B'
 	// AuditLogPartRequestBody is the request body part
@@ -114,6 +142,8 @@ const (
 	AuditLogPartUploadedFiles AuditLogPart = 'J'
 	// AuditLogPartRulesMatched is the matched rules part
 	AuditLogPartRulesMatched AuditLogPart = 'K'
+	// AuditLogPartEndMarker is the final boundary, signifies the end of the entry (mandatory)
+	AuditLogPartEndMarker AuditLogPart = 'Z'
 )
 
 // AuditLogParts represents the parts of the audit log
@@ -155,13 +185,15 @@ func ParseAuditLogParts(opts string) (AuditLogParts, error) {
 		return nil, errors.New("audit log parts is required to end with Z")
 	}
 
-	parts := opts[1 : len(opts)-1]
-	for _, p := range parts {
+	// Validate the middle parts (everything between A and Z)
+	middleParts := opts[1 : len(opts)-1]
+	for _, p := range middleParts {
 		if !slices.Contains(orderedAuditLogParts, AuditLogPart(p)) {
 			return AuditLogParts(""), fmt.Errorf("invalid audit log parts %q", opts)
 		}
 	}
-	return AuditLogParts(parts), nil
+	// Return all parts including A and Z
+	return AuditLogParts(opts), nil
 }
 
 // ApplyAuditLogParts applies audit log parts modifications to the base parts.

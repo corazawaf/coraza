@@ -55,8 +55,10 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 
 	// Transfer-Encoding header is removed by go/http
 	// We manually add it to make rules relying on it work (E.g. CRS rule 920171)
-	if req.TransferEncoding != nil {
-		tx.AddRequestHeader("Transfer-Encoding", req.TransferEncoding[0])
+	// All values must be added to allow the WAF to detect HTTP request smuggling
+	// attempts (e.g. TE.TE attacks).
+	for _, te := range req.TransferEncoding {
+		tx.AddRequestHeader("Transfer-Encoding", te)
 	}
 
 	in = tx.ProcessRequestHeaders()
