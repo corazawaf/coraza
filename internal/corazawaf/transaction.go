@@ -1101,6 +1101,10 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	if tx.ForceRequestBodyVariable {
 		// We force URLENCODED if mimeType is x-www... or we have an empty RBP and ForceRequestBodyVariable
 		if rbp == "" {
+			// TODO(4.x): Evaluate if the new RAW body parser fits better than URLENCODED for the
+			// default forced body processor. See some reasoning in https://github.com/corazawaf/coraza/issues/938:
+			// "meaning that parsing a body of unknown type might waste some time by trying to parse it as urlencoded
+			// for nothing (and possibly set some "garbage" variables if you happen to have a & in it)"
 			rbp = "URLENCODED"
 		}
 		tx.variables.reqbodyProcessor.Set(rbp)
