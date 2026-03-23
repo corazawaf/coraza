@@ -37,6 +37,32 @@ SecRule HIGHEST_SEVERITY "@eq 5" "id:2, log"
 var _ = profile.RegisterProfile(profile.Profile{
 	Meta: profile.Meta{
 		Author:      "majiayu000",
+		Description: "Test HIGHEST_SEVERITY defaults to 255 when no rules with severity fire",
+		Enabled:     true,
+		Name:        "rulemetadata_default_severity.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			Title: "highest_severity_default",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{1},
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecRule HIGHEST_SEVERITY "@eq 255" "id:1, log"
+`,
+})
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "majiayu000",
 		Description: "Test HIGHEST_SEVERITY with multiple severities keeps the lowest number",
 		Enabled:     true,
 		Name:        "rulemetadata_highest_severity.yaml",
