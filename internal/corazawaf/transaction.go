@@ -556,8 +556,8 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 
 	// set highest_severity
 	hs := tx.variables.highestSeverity
-	maxSeverity, _ := types.ParseRuleSeverity(hs.Get())
-	if r.Severity_ > maxSeverity {
+	currentVal, _ := strconv.Atoi(hs.Get())
+	if r.Severity_.Int() < currentVal {
 		hs.Set(strconv.Itoa(r.Severity_.Int()))
 	}
 

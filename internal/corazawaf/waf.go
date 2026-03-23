@@ -259,7 +259,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.variables.reqbodyProcessorError.Set("0")
 	tx.variables.requestBodyLength.Set("0")
 	tx.variables.duration.Set("0")
-	tx.variables.highestSeverity.Set("0")
+	tx.variables.highestSeverity.Set("255")
 	tx.variables.uniqueID.Set(tx.id)
 	tx.setTimeVariables()
 
