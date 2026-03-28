@@ -1393,14 +1393,7 @@ func (tx *Transaction) ProcessLogging() {
 		return
 	}
 
-	if tx.AuditEngine == types.AuditEngineRelevantOnly && !tx.audit {
-		// Transaction marked not for audit logging
-		tx.debugLogger.Debug().
-			Msg("Transaction not marked for audit logging, AuditEngine is RelevantOnly and we got noauditlog")
-		return
-	}
-
-	if tx.AuditEngine == types.AuditEngineRelevantOnly && tx.audit {
+	if tx.AuditEngine == types.AuditEngineRelevantOnly {
 		re := tx.WAF.AuditLogRelevantStatus
 		status := tx.variables.responseStatus.Get()
 		if tx.IsInterrupted() {
@@ -1410,10 +1403,21 @@ func (tx *Transaction) ProcessLogging() {
 			// Fixes https://github.com/corazawaf/coraza/issues/1333
 			status = strconv.Itoa(tx.detectionOnlyInterruption.Status)
 		}
-		if re != nil && !re.Match([]byte(status)) {
-			// Not relevant status
-			tx.debugLogger.Debug().Msg("Transaction status not marked for audit logging")
-			return
+
+		if tx.audit {
+			// A rule triggered auditlog — still filter by relevant status if regex is set.
+			if re != nil && !re.Match([]byte(status)) {
+				tx.debugLogger.Debug().Msg("Transaction status not marked for audit logging")
+				return
+			}
+		} else {
+			// No rule triggered auditlog — only log if status matches SecAuditLogRelevantStatus.
+			// Fixes https://github.com/corazawaf/coraza/issues/1576
+			if re == nil || !re.Match([]byte(status)) {
+				tx.debugLogger.Debug().
+					Msg("Transaction not marked for audit logging, AuditEngine is RelevantOnly and status is not relevant")
+				return
+			}
 		}
 	}
 
