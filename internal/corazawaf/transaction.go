@@ -555,15 +555,14 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 	}
 
 	// set highest_severity
-	// TODO: Rules without an explicit `severity` action have Severity_=0
-	// (Go zero value = RuleSeverityEmergency), which is indistinguishable from
-	// an explicitly set Emergency severity. This may incorrectly update
-	// HIGHEST_SEVERITY (e.g., 5→0). A sentinel value or HasSeverity flag on
-	// RuleMetadata may be needed to distinguish "not set" from "Emergency".
-	hs := tx.variables.highestSeverity
-	currentVal, _ := strconv.Atoi(hs.Get())
-	if r.Severity_.Int() < currentVal {
-		hs.Set(strconv.Itoa(r.Severity_.Int()))
+	// Only update when severity was explicitly set via the severity action.
+	// This mirrors ModSecurity v3 behavior (m_severity > -1 check in transaction.cc).
+	if r.HasSeverity_ {
+		hs := tx.variables.highestSeverity
+		currentVal, _ := strconv.Atoi(hs.Get())
+		if r.Severity_.Int() < currentVal {
+			hs.Set(strconv.Itoa(r.Severity_.Int()))
+		}
 	}
 
 	mr := &corazarules.MatchedRule{

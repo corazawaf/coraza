@@ -19,8 +19,9 @@ type RuleMetadata struct {
 	File_     string
 	Line_     int
 	Rev_      string
-	Severity_ types.RuleSeverity
-	Version_  string
+	Severity_    types.RuleSeverity
+	HasSeverity_ bool
+	Version_     string
 	Tags_     []string
 	Maturity_ int
 	Accuracy_ int

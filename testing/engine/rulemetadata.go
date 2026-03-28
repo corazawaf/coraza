@@ -60,6 +60,37 @@ SecRule HIGHEST_SEVERITY "@eq 255" "id:1, log"
 `,
 })
 
+// Regression: a rule without severity must not poison HIGHEST_SEVERITY.
+// Without the HasSeverity_ guard, the no-severity rule's zero value (0) would
+// win over a later explicit severity:5, leaving HIGHEST_SEVERITY stuck at 0.
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "majiayu000",
+		Description: "Test that rules without severity do not poison HIGHEST_SEVERITY",
+		Enabled:     true,
+		Name:        "rulemetadata_no_severity_poison.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			Title: "no_severity_then_explicit",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{1, 2, 3},
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecAction "id:1, log"
+SecAction "id:2, log, severity:5"
+SecRule HIGHEST_SEVERITY "@eq 5" "id:3, log"
+`,
+})
+
 var _ = profile.RegisterProfile(profile.Profile{
 	Meta: profile.Meta{
 		Author:      "majiayu000",
