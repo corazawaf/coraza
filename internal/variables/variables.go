@@ -288,9 +288,9 @@ const (
 	// (e.g., `HTTP/1.1 200 OK`).
 	// ---
 	// ```modsecurity
-	// # Generate an alert when the application returns 500 error.
-	// SecRule STATUS_LINE "@contains 500" "phase:3,id:49,log,pass,logdata:'Application error detected!,t:none"
-	// ```
+// # Generate an alert when the application returns 500 error.
+	// SecRule STATUS_LINE "@contains 500" "phase:3,id:49,log,pass,logdata:'Application error detected!',t:none"
+	//
 	//
 	// **Note:** This variable is currently NOT implemented by Coraza, but only kept for compatibility.
 	StatusLine
@@ -638,7 +638,7 @@ const (
 
 	// Holds the authentication method used to validate a user
 	AuthType
-	// Description: Contains the full request including the request line, headers, and body.
+	// Contains the full request including the request line, headers, and body.
 	// The maximum size is determined by FULL_REQUEST_LENGTH.
 	FullRequest
 	// MultipartBoundaryQuoted kept for compatibility
