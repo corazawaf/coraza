@@ -56,7 +56,7 @@ func (a *allowFn) Init(_ plugintypes.RuleMetadata, data string) error {
 
 func (a *allowFn) Evaluate(r plugintypes.RuleMetadata, txS plugintypes.TransactionState) {
 	tx := txS.(*corazawaf.Transaction)
-	tx.AllowType = a.allow
+	tx.Allow(a.allow)
 }
 
 func (a *allowFn) Type() plugintypes.ActionType {

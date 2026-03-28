@@ -100,9 +100,11 @@ have compatibility guarantees across minor versions - use with care.
 the operator with `plugins.RegisterOperator` to reduce binary size / startup overhead.
 * `coraza.rule.multiphase_evaluation` - enables evaluation of rule variables in the phases that they are ready, not
 only the phase the rule is defined for.
-* `memoize_builders` - enables memoization of builders for regex and aho-corasick
-dictionaries to reduce memory consumption in deployments that launch several coraza
-instances. For more context check [this issue](https://github.com/corazawaf/coraza-caddy/issues/76)
+* `coraza.no_memoize` - disables the default memoization of regex and aho-corasick builders.
+Memoization is enabled by default and uses a global cache to reuse compiled patterns across WAF
+instances, reducing memory consumption and startup overhead. In long-lived processes that perform
+live reloads, use `WAF.Close()` (via `experimental.WAFCloser`) to release cached entries when a
+WAF is destroyed, or use this tag to opt out of memoization entirely.
 * `no_fs_access` - indicates that the target environment has no access to FS in order to not leverage OS' filesystem related functionality e.g. file body buffers.
 * `coraza.rule.case_sensitive_args_keys` - enables case-sensitive matching for ARGS keys, aligning Coraza behavior with RFC 3986 specification. It will be enabled by default in the next major version.
 * `coraza.rule.no_regex_multiline` - disables enabling by default regexes multiline modifiers in `@rx` operator. It aligns with CRS expected behavior, reduces false positives and might improve performances. No multiline regexes by default will be enabled in the next major version. For more context check [this PR](https://github.com/corazawaf/coraza/pull/876)
