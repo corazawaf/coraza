@@ -29,20 +29,20 @@ const (
 	// ensure that the total size of the argument data is below a certain threshold. The
 	// following rule detects a request whose parameters are more than 2500 bytes long:
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule ARGS_COMBINED_SIZE "@gt 2500" "id:12"
 	// ````
 	ArgsCombinedSize
 	// Description: Contains the total size of the files transported in request body. Available
 	// only on inspected multipart/form-data requests.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule FILES_COMBINED_SIZE "@gt 100000" "id:18"
 	// ```
 	FilesCombinedSize
 	// Description: Represents the amount of bytes that FULL_REQUEST may use.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule FULL_REQUEST_LENGTH "@eq 205" "id:21"
 	// ```
 	FullRequestLength
@@ -54,7 +54,7 @@ const (
 	// ---
 	// The best way to use this variable is as in the example below:
 	//
-	// ```modsecurity
+	// ```seclang
 	// SecRule INBOUND_DATA_ERROR "@eq 1" "phase:1,id:24,t:none,log,pass,msg:'Request Body Larger than SecRequestBodyLimit Setting'"
 	// ```
 	InboundDataError
@@ -62,7 +62,7 @@ const (
 	// similar to the TX:0, but it is automatically supported by all operators and there is no
 	// need to specify the capture action.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule ARGS pattern chain,deny,id:25
 	//   SecRule MATCHED_VAR "further scrutiny"
 	// ```
@@ -71,7 +71,7 @@ const (
 	MatchedVar
 	// Description: This variable holds the full name of the variable that was matched against.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule ARGS pattern "chain,deny,id:27"
 	//   SecRule MATCHED_VAR_NAME "@eq ARGS:param"
 	// ```
@@ -87,20 +87,20 @@ const (
 	// ---
 	// Example rule to log when the response body is larger than the configured limit:
 	//
-	// ```modsecurity
+	// ```seclang
 	// SecRule OUTBOUND_DATA_ERROR "@eq 1" "phase:1,id:32,t:none,log,pass,msg:'Response Body Larger than SecResponseBodyLimit Setting'"
 	// ```
 	OutboundDataError
 	// Description: Contains the query string part of a request URI. The value in QUERY_STRING
 	// is always provided raw, without URL decoding taking place.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule QUERY_STRING "attack" "id:34"
 	// ```
 	QueryString
 	// Description: This variable holds the IP address of the remote client.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule REMOTE_ADDR "@ipMatch 192.168.1.101" "phase:1,id:35,log,pass,msg:'Request from a specific IP address'"
 	// ```
 	RemoteAddr
@@ -111,7 +111,7 @@ const (
 	// ---
 	// The example evaluates whether the REMOTE_PORT is less than 1024, which would indicate that the user is a privileged user:
 	//
-	// ```modsecurity
+	// ```seclang
 	// SecRule REMOTE_PORT "@lt 1024" "phase:1,id:37,log, pass,msg:'Request from a privileged User'"
 	// ```
 	RemotePort
@@ -120,7 +120,7 @@ const (
 	// request body processors (typically the multipart/request-data parser, JSON or the XML
 	// parser) when they fail to do their work.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule REQBODY_ERROR "@eq 1" "phase:2,id:39,deny,log,msg:'Request Body Processor Error Detected'"
 	// ```
 	//
@@ -129,7 +129,7 @@ const (
 	// Description: If there's been an error during request body parsing, the variable will
 	// contain the following error message:
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule REQBODY_ERROR_MSG "failed to parse" "id:40"
 	// ```
 	ReqbodyErrorMsg
@@ -143,7 +143,7 @@ const (
 	// Description: Contains the name of the currently used request body processor. The default
 	// possible values are URLENCODED, MULTIPART, XML, JSON, and RAW.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule REQBODY_PROCESSOR "^XML$" "chain,id:41"
 	//   SecRule XML://* "something" "t:none"
 	// ```
@@ -153,7 +153,7 @@ const (
 	// Anti-evasion transformations are NOT applied to this variable by default. REQUEST_BASENAME will
 	// recognize both / and \ as path separators. The value of this variable depends on what was provided
 	// in request. It does not have to correspond to the resource (on disk) that will be used by the web server.
-	// ```modsecurity
+	// ```seclang
 	// SecRule REQUEST_BASENAME "^login\.php$" "phase:2,id:42,pass,t:none,t:lowercase"
 	// ```
 	RequestBasename
@@ -164,7 +164,7 @@ const (
 	// the population of this variable by setting URLENCODED as the processor when no processor
 	// would otherwise be selected.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule REQUEST_BODY "@contains foo" "id:1001,phase:2,deny,log"
 	// ```
 	//
@@ -176,7 +176,7 @@ const (
 	// Description: Holds the relative request URL without the query string part
 	// (e.g., /index.php).
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule REQUEST_FILENAME "^/cgi-bin/login\.php$" phase:2,id:46,t:none,t:normalizePath
 	// ```
 	//
@@ -185,7 +185,7 @@ const (
 	// Description: Holds the complete request line sent to the server (including
 	// the request method and HTTP version information).
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// # Allow only POST, GET and HEAD request methods, as well as only
 	// # the valid protocol versions
 	// SecRule REQUEST_LINE "!(^((?:(?:POS|GE)T|HEAD))|HTTP/(0\.9|1\.0|1\.1)$)" "phase:1,id:49,log,block,t:none"
@@ -193,13 +193,13 @@ const (
 	RequestLine
 	// Description: Holds the request method used in the transaction.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule REQUEST_METHOD "^(?:CONNECT|TRACE)$" "id:50,t:none,deny,log,msg:'Suspicious HTTP method used'"
 	// ```
 	RequestMethod
 	// Description: Holds the request protocol version information.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule REQUEST_PROTOCOL "!^HTTP/(0\.9|1\.0|1\.1)$" "id:51,t:none,deny,log,msg:'Suspicious HTTP protocol version used'"
 	// ```
 	RequestProtocol
@@ -207,7 +207,7 @@ const (
 	// parsed and normalized form of REQUEST_URI_RAW: fragments are stripped and the URL is
 	// reconstructed from the parsed components. If parsing fails, the raw URI is used as-is.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule REQUEST_URI "attack" "phase:1,id:52,t:none,t:urlDecode,t:lowercase,t:normalizePath,deny"
 	// ```
 	//
@@ -217,7 +217,7 @@ const (
 	// any parsing or normalization. This includes the domain name if the client sent an
 	// absolute URI (e.g., http://www.example.com/index.php?p=X).
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule REQUEST_URI_RAW "^http://" "phase:1,id:53,t:none,t:urlDecode,t:lowercase,t:normalizePath"
 	// ```
 	//
@@ -230,7 +230,7 @@ const (
 	// ```ctl:forceResponseBodyVariable=on``` bypasses this MIME type check, forcing buffering
 	// regardless of the Content-Type.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule RESPONSE_BODY "ODBC Error Code" "phase:4,id:54,t:none, deny"
 	// ```
 	//
@@ -244,33 +244,33 @@ const (
 	ResponseContentLength
 	// Description: Holds the HTTP response protocol information.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule RESPONSE_PROTOCOL "^HTTP\/0\.9" "phase:3,id:57,t:none"
 	// ```
 	ResponseProtocol
 	// Description: Holds the HTTP response status code returned by the backend.
 	// Available starting from phase 3.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule RESPONSE_STATUS "^[45]" "phase:3,id:58,t:none,pass,log,msg:'Response status matches 4xx or 5xx'"
 	// ```
 	ResponseStatus
 	// Description: Contains the IP address of the server.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule SERVER_ADDR "@ipMatch 192.168.1.100" "phase:1,id:67,log,pass,msg:'Request to a specific IP address'"
 	// ```
 	ServerAddr
 	// Description: Contains the server hostname or IP address. Since it originates from
 	// the client-supplied Host header, it should NOT be implicitly trusted.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule SERVER_NAME "hostname\.com$" "phase:1,id:68,log,pass,msg:'Request to a specific hostname'"
 	// ```
 	ServerName
 	// Description: Contains the target port of the request.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule SERVER_PORT "^80$" "phase:1,id:69,log,pass,msg:'Request to a specific port'"
 	// ```
 	ServerPort
@@ -278,7 +278,7 @@ const (
 	// far. Severities are numeric values and thus can be used with comparison operators such as
 	// @lt, and so on. A value of 255 indicates that no severity has been set.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule HIGHEST_SEVERITY "@le 2" "phase:2,id:23,deny,status:500,msg:'severity %{HIGHEST_SEVERITY}'"
 	// ```
 	//
@@ -287,7 +287,7 @@ const (
 	// Description: Holds the full response status line sent by the backend server.
 	// (e.g., `HTTP/1.1 200 OK`).
 	// ---
-	// ```modsecurity
+	// ```seclang
 // # Generate an alert when the application returns 500 error.
 	// SecRule STATUS_LINE "@contains 500" "phase:3,id:49,log,pass,logdata:'Application error detected!',t:none"
 	//
@@ -301,7 +301,7 @@ const (
 	Duration
 	// Description: Collection of the response header names.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule RESPONSE_HEADERS_NAMES "Set-Cookie" "phase:3,id:56,t:none,log,pass,msg:'Response contains Set-Cookie header'"
 	// ```
 	//
@@ -309,7 +309,7 @@ const (
 	ResponseHeadersNames // CanBeSelected
 	// Description: Collection of the names of all of the request headers.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule REQUEST_HEADERS_NAMES "^x-forwarded-for" "log,deny,id:48,status:403,t:lowercase,msg:'Proxy Server Used'"
 	// ```
 	RequestHeadersNames // CanBeSelected
@@ -319,31 +319,31 @@ const (
 	// ---
 	// Match all arguments:
 	//
-	// ```modsecurity
+	// ```seclang
 	// SecRule ARGS "dirty" "id:7"
 	// ```
 	//
 	// Match only the argument named p:
 	//
-	// ```modsecurity
+	// ```seclang
 	// SecRule ARGS:p "dirty" "id:8"
 	// ```
 	//
 	// Match all arguments except those named z:
 	//
-	// ```modsecurity
+	// ```seclang
 	// SecRule ARGS|!ARGS:z "dirty" "id:9"
 	// ```
 	//
 	// Count the number of arguments (triggers if more than zero):
 	//
-	// ```modsecurity
+	// ```seclang
 	// SecRule &ARGS "!^0$" "id:10"
 	// ```
 	//
 	// Match arguments whose names begin with id_:
 	//
-	// ```modsecurity
+	// ```seclang
 	// SecRule ARGS:/^id_/ "dirty" "id:11"
 	// ```
 	//
@@ -361,21 +361,21 @@ const (
 	// limitation on individual uploaded files. Available only on inspected multipart/form-data
 	// requests.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule FILES_SIZES "@gt 100" "id:20"
 	// ```
 	FilesSizes // CanBeSelected
 	// Description: Contains a list of form fields that were used for file upload. Available only
 	// on inspected multipart/form-data requests.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule FILES_NAMES "^upfile$" "id:19"
 	// ```
 	FilesNames // CanBeSelected
 	// Description: Contains a key-value set where value is the content of the file which was
 	// uploaded. Useful when used together with @fuzzyHash.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule FILES_TMP_CONTENT "@fuzzyHash $ENV{CONF_DIR}/ssdeep.txt 1" "id:192372,log,deny"
 	// ```
 	//
@@ -393,7 +393,7 @@ const (
 	// Description: Similar to MATCHED_VAR_NAME except that it is a collection of all variable
 	// names that matched during the current operator check.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule ARGS "pattern" "chain,deny,id:28"
 	//   SecRule MATCHED_VARS_NAMES "@eq ARGS:param" "t:none"
 	// ```
@@ -401,7 +401,7 @@ const (
 	// Description: Similar to MATCHED_VAR except that it is a collection of all values
 	// that matched during the current operator check.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule ARGS "pattern" "chain,deny,id:26"
 	//   SecRule MATCHED_VARS "@eq somevalue" "t:none"
 	// ```
@@ -409,7 +409,7 @@ const (
 	// Description: Contains the original filenames as submitted by the client in the multipart
 	// upload (the filename field of Content-Disposition). Available only on inspected multipart/form-data requests.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule FILES "@rx \.conf$" "id:17"
 	// ```
 	Files // CanBeSelected
@@ -417,7 +417,7 @@ const (
 	// ---
 	// Example: the following example is using the Ampersand special operator to count how many variables are in the collection. In this rule, it would trigger if the request does not include any Cookie headers.
 	//
-	// ```modsecurity
+	// ```seclang
 	// SecRule &REQUEST_COOKIES "@eq 0" "id:44"
 	// ```
 	RequestCookies // CanBeSelected
@@ -425,7 +425,7 @@ const (
 	// headers or can be used to inspect selected headers (by using the
 	// REQUEST_HEADERS:Header-Name syntax).
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule REQUEST_HEADERS:Host "^[\d\.]+$" "deny,id:47,log,status:400,msg:'Host header is a numeric IP address'"
 	// ```
 	//
@@ -434,7 +434,7 @@ const (
 	// Description: This variable refers to response headers, in the same way as
 	// REQUEST_HEADERS does to request headers.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule RESPONSE_HEADERS:X-Cache "MISS" "id:55"
 	// ```
 	ResponseHeaders // CanBeSelected
@@ -444,7 +444,7 @@ const (
 	// geographical data for a given IP address. Fields include COUNTRY_CODE, COUNTRY_NAME,
 	// COUNTRY_CONTINENT, REGION, CITY, POSTAL_CODE, LATITUDE, LONGITUDE.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule REMOTE_ADDR "@geoLookup" "phase:1,id:22,nolog,pass"
 	// SecRule GEO:COUNTRY_CODE "!@streq GB" "id:23,deny,log,msg:'Non-GB IP address'"
 	// ```
@@ -454,14 +454,14 @@ const (
 	// Description: This variable is a collection of the names of all request cookies. For
 	// example, the following rule will trigger if the JSESSIONID cookie is not present:
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule &REQUEST_COOKIES_NAMES:JSESSIONID "@eq 0" "id:45"
 	// ```
 	RequestCookiesNames // CanBeSelected
 	// Description: Contains a list of temporary files' names on the disk. Useful when used
 	// together with @inspectFile. Available only on inspected multipart/form-data requests.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule FILES_TMPNAMES "@inspectFile /path/to/inspect_script.pl" "id:21"
 	// ```
 	FilesTmpNames // CanBeSelected
@@ -470,7 +470,7 @@ const (
 	// (using an inverted rule with the exclamation mark) only the authorized argument names.
 	// This example rule allows only two argument names: p and a:
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule ARGS_NAMES "!^(p|a)$" "id:13"
 	// ```
 	ArgsNames // CanBeSelected
@@ -483,7 +483,7 @@ const (
 	// Description: Transient transaction collection used to store arbitrary data for the
 	// duration of the transaction, such as anomaly scores or state flags.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// # Increment transaction attack score on attack
 	// SecRule ARGS "attack" "phase:2,id:82,nolog,pass,setvar:TX.score=+5"
 	//
@@ -500,7 +500,7 @@ const (
 	// logdata, and msg fields of the rule that triggered the action. It can be used to refer to
 	// only the same rule in which it resides.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule &REQUEST_HEADERS:Host "@eq 0" "log,deny,id:59,setvar:tx.varname=%{RULE.id}"
 	// ```
 	Rule // CanBeSelected
@@ -509,7 +509,7 @@ const (
 	// Description: Collection that provides access to environment variables set via the
 	// `setenv` action. Requires a single parameter to specify the name of the desired variable.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// # Set environment variable
 	// SecRule REQUEST_FILENAME "printenv" \
 	// "phase:2,id:15,pass,setenv:tag=suspicious"
@@ -535,7 +535,7 @@ const (
 	// valid XPath expression, which will then be evaluated against a previously parsed XML DOM
 	// tree. Requires the XML body processor to be active.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule REQUEST_HEADERS:Content-Type "^text/xml$" "phase:1,id:87,t:lowercase,nolog,pass,ctl:requestBodyProcessor=XML"
 	// SecRule XML:/employees/employee/name "Fred" "phase:2,id:88,deny,log"
 	// ```
@@ -579,14 +579,14 @@ const (
 	// Description: This variable holds a formatted string representing the time
 	// (hour:minute:second).
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule TIME "^(([1](8|9))|([2](0|1|2|3))):\d{2}:\d{2}$" "id:74"
 	// ```
 	Time
 	// Description: This variable holds the current date (1–31). The following rule triggers on
 	// a transaction that's happening anytime between the 10th and 20th in a month:
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule TIME_DAY "^(([1](0|1|2|3|4|5|6|7|8|9))|20)$" "id:75"
 	// ```
 	TimeDay
@@ -595,40 +595,40 @@ const (
 	// Description: This variable holds the current hour value (0–23). The following rule
 	// triggers when a request is made "off hours":
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule TIME_HOUR "^(0|1|2|3|4|5|6|[1](8|9)|[2](0|1|2|3))$" "id:76"
 	// ```
 	TimeHour
 	// Description: This variable holds the current minute value (0–59). The following rule
 	// triggers during the last half hour of every hour:
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule TIME_MIN "^(3|4|5)" "id:77"
 	// ```
 	TimeMin
 	// Description: This variable holds the current month value (0–11). The following rule
 	// matches if the month is either November (value 10) or December (value 11):
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule TIME_MON "^1" "id:78"
 	// ```
 	TimeMon
 	// Description: This variable holds the current second value (0–59).
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule TIME_SEC "@gt 30" "id:79"
 	// ```
 	TimeSec
 	// Description: This variable holds the current weekday value (0–6). The following rule
 	// triggers only on Saturday and Sunday:
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule TIME_WDAY "^(0|6)$" "id:80"
 	// ```
 	TimeWday
 	// Description: This variable holds the current four-digit year value.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// SecRule TIME_YEAR "^2006$" "id:81"
 	// ```
 	TimeYear
@@ -676,7 +676,7 @@ const (
 	Sessionid
 	// Contains the value set with setuid.
 	// ---
-	// ```modsecurity
+	// ```seclang
 	// # Initialize user tracking
 	// SecAction "nolog,id:84,pass,setuid:%{REMOTE_USER}"
 	//
