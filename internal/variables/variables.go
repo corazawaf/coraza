@@ -288,7 +288,7 @@ const (
 	// (e.g., `HTTP/1.1 200 OK`).
 	// ---
 	// ```seclang
-// # Generate an alert when the application returns 500 error.
+	// # Generate an alert when the application returns 500 error.
 	// SecRule STATUS_LINE "@contains 500" "phase:3,id:49,log,pass,logdata:'Application error detected!',t:none"
 	//
 	//
