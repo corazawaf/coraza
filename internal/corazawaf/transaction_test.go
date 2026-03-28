@@ -890,6 +890,77 @@ func TestRelevantAuditLogging(t *testing.T) {
 	}
 }
 
+func TestRelevantAuditLoggingWithoutAuditFlag(t *testing.T) {
+	// Regression test for https://github.com/corazawaf/coraza/issues/1576
+	// When tx.audit is false (no rule with auditlog action matched),
+	// SecAuditLogRelevantStatus should still cause logging if the status matches.
+	tests := []struct {
+		name        string
+		status      string
+		audit       bool
+		interruption *types.Interruption
+		shouldLog   bool
+	}{
+		{
+			name:      "audit=false, relevant status via response → should log",
+			status:    "403",
+			audit:     false,
+			shouldLog: true,
+		},
+		{
+			name:      "audit=false, non-relevant status → should not log",
+			status:    "200",
+			audit:     false,
+			shouldLog: false,
+		},
+		{
+			name:  "audit=false, relevant status via interruption → should log",
+			audit: false,
+			interruption: &types.Interruption{
+				Status: 403,
+				Action: "deny",
+			},
+			shouldLog: true,
+		},
+		{
+			name:      "audit=true, relevant status → should log",
+			status:    "403",
+			audit:     true,
+			shouldLog: true,
+		},
+		{
+			name:      "audit=true, non-relevant status → should not log",
+			status:    "200",
+			audit:     true,
+			shouldLog: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tx := makeTransaction(t)
+			debugLog := bytes.Buffer{}
+			tx.debugLogger = debuglog.Default().WithLevel(debuglog.LevelDebug).WithOutput(&debugLog)
+			tx.WAF.AuditLogRelevantStatus = regexp.MustCompile(`^(?:5|4[0-9][0-35-9])`)
+			tx.variables.responseStatus.Set(tt.status)
+			tx.interruption = tt.interruption
+			tx.AuditEngine = types.AuditEngineRelevantOnly
+			tx.audit = tt.audit
+			tx.ProcessLogging()
+			if err := tx.Close(); err != nil {
+				t.Error(err)
+			}
+			logged := strings.Contains(debugLog.String(), "Transaction marked for audit logging")
+			if tt.shouldLog && !logged {
+				t.Errorf("expected transaction to be audit logged, debug: %q", debugLog.String())
+			}
+			if !tt.shouldLog && logged {
+				t.Errorf("expected transaction NOT to be audit logged, debug: %q", debugLog.String())
+			}
+		})
+	}
+}
+
 func TestLogCallback(t *testing.T) {
 
 	testCases := []struct {
