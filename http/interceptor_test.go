@@ -9,12 +9,15 @@ package http
 import (
 	"bufio"
 	"bytes"
+	"crypto/sha1"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3"
@@ -557,31 +560,84 @@ func TestWAFNotBypassedAfterWebSocketUpgrade(t *testing.T) {
 	}
 
 	handler := WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Upgrade") == "websocket" {
-			w.WriteHeader(http.StatusSwitchingProtocols)
+		if r.Header.Get("Upgrade") != "websocket" {
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprint(w, "OK")
 			return
 		}
-		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, "OK")
+		// Perform a true WebSocket upgrade via Hijack so the isHijacked path
+		// in the WAF interceptor is exercised end-to-end.
+		hijacker, ok := w.(http.Hijacker)
+		if !ok {
+			http.Error(w, "server does not support hijack", http.StatusInternalServerError)
+			return
+		}
+		key := r.Header.Get("Sec-Websocket-Key")
+		conn, brw, err := hijacker.Hijack()
+		if err != nil {
+			return
+		}
+		accept := wsComputeAccept(key)
+		_, _ = fmt.Fprintf(brw, "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %s\r\n\r\n", accept)
+		_ = brw.Flush()
+		// Run an echo loop in a goroutine: read one frame and echo it back.
+		go wsEchoOneFrame(conn, brw)
 	}))
 
 	ts := httptest.NewServer(handler)
 	t.Cleanup(ts.Close)
 
-	// Step 1: Perform a WebSocket upgrade request
-	reqWS, err := http.NewRequest("GET", ts.URL+"/ws", nil)
+	// Step 1: Perform a real WebSocket upgrade using a raw TCP connection so
+	// the Hijack()/isHijacked path in the WAF interceptor is exercised.
+	wsConn, err := net.Dial("tcp", ts.Listener.Addr().String())
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("dial failed: %v", err)
 	}
-	reqWS.Header.Set("Upgrade", "websocket")
-	reqWS.Header.Set("Connection", "Upgrade")
+	defer wsConn.Close()
 
-	resWS, err := http.DefaultClient.Do(reqWS)
+	const wsKey = "dGhlIHNhbXBsZSBub25jZQ=="
+	_, err = fmt.Fprintf(wsConn,
+		"GET /ws HTTP/1.1\r\nHost: %s\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: %s\r\nSec-WebSocket-Version: 13\r\n\r\n",
+		ts.Listener.Addr().String(), wsKey,
+	)
 	if err != nil {
-		t.Fatalf("WebSocket upgrade request failed: %v", err)
+		t.Fatalf("write upgrade request failed: %v", err)
 	}
-	resWS.Body.Close()
+
+	brWS := bufio.NewReader(wsConn)
+	// Read the status line and consume headers until the blank line.
+	statusLine, err := brWS.ReadString('\n')
+	if err != nil {
+		t.Fatalf("read upgrade status line failed: %v", err)
+	}
+	if !strings.HasPrefix(statusLine, "HTTP/1.1 101") {
+		t.Fatalf("expected 101 Switching Protocols, got: %s", statusLine)
+	}
+	for {
+		line, err := brWS.ReadString('\n')
+		if err != nil {
+			t.Fatalf("read upgrade header failed: %v", err)
+		}
+		if line == "\r\n" {
+			break
+		}
+	}
+
+	// Send a masked WebSocket text frame and verify the echo to confirm the
+	// middleware did not corrupt the stream.
+	msg := []byte("ping")
+	if _, err := wsConn.Write(wsBuildMaskedFrame(msg)); err != nil {
+		t.Fatalf("write ws frame failed: %v", err)
+	}
+	echoed, err := wsReadFrame(brWS)
+	if err != nil {
+		t.Fatalf("read ws echo frame failed: %v", err)
+	}
+	if !bytes.Equal(echoed, msg) {
+		t.Errorf("websocket echo mismatch: got %q, want %q", echoed, msg)
+	}
+	wsConn.Close()
 
 	// Step 2: Send a regular request with a malicious payload — must be blocked
 	resBlocked, err := http.Get(ts.URL + "/?attack=evil")
@@ -961,4 +1017,98 @@ func TestInboundDataErrorVariable(t *testing.T) {
 			t.Errorf("expected status %d (Reject interruption, phase:2 rule did not run), got %d", want, got)
 		}
 	})
+}
+
+// wsComputeAccept derives the Sec-WebSocket-Accept value from a client key (RFC 6455 §4.2.2).
+func wsComputeAccept(key string) string {
+	const magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+	h := sha1.New()
+	h.Write([]byte(key + magic))
+	return base64.StdEncoding.EncodeToString(h.Sum(nil))
+}
+
+// wsEchoOneFrame reads one WebSocket frame from brw, unmasks it, and writes it
+// back as an unmasked server frame on conn, then closes conn.
+func wsEchoOneFrame(conn net.Conn, brw *bufio.ReadWriter) {
+	defer conn.Close()
+	header := make([]byte, 2)
+	if _, err := io.ReadFull(brw, header); err != nil {
+		return
+	}
+	masked := header[1]&0x80 != 0
+	n := int(header[1] & 0x7F)
+	if n == 126 {
+		ext := make([]byte, 2)
+		if _, err := io.ReadFull(brw, ext); err != nil {
+			return
+		}
+		n = int(ext[0])<<8 | int(ext[1])
+	}
+	var maskKey [4]byte
+	if masked {
+		if _, err := io.ReadFull(brw, maskKey[:]); err != nil {
+			return
+		}
+	}
+	payload := make([]byte, n)
+	if _, err := io.ReadFull(brw, payload); err != nil {
+		return
+	}
+	if masked {
+		for i := range payload {
+			payload[i] ^= maskKey[i%4]
+		}
+	}
+	// Echo back as an unmasked server frame preserving the opcode.
+	frame := []byte{header[0], byte(len(payload))}
+	frame = append(frame, payload...)
+	_, _ = conn.Write(frame)
+}
+
+// wsBuildMaskedFrame builds a masked WebSocket text frame for a client→server send (RFC 6455 §5.3).
+// Assumes payload length < 126.
+func wsBuildMaskedFrame(payload []byte) []byte {
+	mask := [4]byte{0xDE, 0xAD, 0xBE, 0xEF}
+	masked := make([]byte, len(payload))
+	for i, b := range payload {
+		masked[i] = b ^ mask[i%4]
+	}
+	frame := []byte{0x81, 0x80 | byte(len(payload))}
+	frame = append(frame, mask[:]...)
+	frame = append(frame, masked...)
+	return frame
+}
+
+// wsReadFrame reads a single WebSocket frame from br and returns the unmasked payload.
+// Supports lengths up to 65535 bytes.
+func wsReadFrame(br *bufio.Reader) ([]byte, error) {
+	header := make([]byte, 2)
+	if _, err := io.ReadFull(br, header); err != nil {
+		return nil, err
+	}
+	masked := header[1]&0x80 != 0
+	n := int(header[1] & 0x7F)
+	if n == 126 {
+		ext := make([]byte, 2)
+		if _, err := io.ReadFull(br, ext); err != nil {
+			return nil, err
+		}
+		n = int(ext[0])<<8 | int(ext[1])
+	}
+	var maskKey [4]byte
+	if masked {
+		if _, err := io.ReadFull(br, maskKey[:]); err != nil {
+			return nil, err
+		}
+	}
+	payload := make([]byte, n)
+	if _, err := io.ReadFull(br, payload); err != nil {
+		return nil, err
+	}
+	if masked {
+		for i := range payload {
+			payload[i] ^= maskKey[i%4]
+		}
+	}
+	return payload, nil
 }
