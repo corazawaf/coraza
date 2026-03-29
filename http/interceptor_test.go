@@ -9,13 +9,17 @@ package http
 import (
 	"bufio"
 	"bytes"
+	"crypto/sha1"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/corazawaf/coraza/v3"
 )
@@ -333,6 +337,425 @@ func TestInterface(t *testing.T) {
 	})
 }
 
+// hijackableRecorder extends httptest.ResponseRecorder with http.Hijacker support
+// to simulate what a real HTTP server connection provides.
+type hijackableRecorder struct {
+	*httptest.ResponseRecorder
+	hijacked bool
+}
+
+func (h *hijackableRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	h.hijacked = true
+	// Return a pipe-based connection to simulate a hijacked connection.
+	server, client := net.Pipe()
+	rw := bufio.NewReadWriter(bufio.NewReader(client), bufio.NewWriter(client))
+	// Tests only interact with the client end of the pipe; the server end is
+	// never read from or written to, so close it immediately in a goroutine to
+	// avoid blocking (net.Pipe writes block until the other side reads).
+	go server.Close()
+	return client, rw, nil
+}
+
+func newHijackableRecorder() *hijackableRecorder {
+	return &hijackableRecorder{ResponseRecorder: httptest.NewRecorder()}
+}
+
+// failingHijackableRecorder is a recorder whose Hijack always returns an error.
+type failingHijackableRecorder struct {
+	*httptest.ResponseRecorder
+}
+
+func (h *failingHijackableRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	return nil, nil, fmt.Errorf("hijack not supported")
+}
+
+func TestWebSocketUpgradeFlushesHeaders(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives("SecRuleEngine On"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	rec := newHijackableRecorder()
+	r, _ := http.NewRequest("GET", "/ws", nil)
+
+	wrapped, _ := wrap(rec, r, tx)
+
+	// Simulate a WebSocket upgrade response
+	wrapped.Header().Set("Upgrade", "websocket")
+	wrapped.Header().Set("Connection", "Upgrade")
+	wrapped.WriteHeader(http.StatusSwitchingProtocols)
+
+	// The 101 status should have been flushed to the underlying writer immediately
+	if want, have := http.StatusSwitchingProtocols, rec.Code; want != have {
+		t.Errorf("expected 101 to be flushed immediately for WebSocket upgrades, got %d", have)
+	}
+}
+
+func TestHijackTrackerSetsIsHijacked(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives("SecRuleEngine On"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	rec := newHijackableRecorder()
+	r, _ := http.NewRequest("GET", "/ws", nil)
+
+	wrapped, processResponse := wrap(rec, r, tx)
+
+	hijacker, ok := wrapped.(http.Hijacker)
+	if !ok {
+		t.Fatal("expected wrapped writer to implement http.Hijacker")
+	}
+
+	conn, _, err := hijacker.Hijack()
+	if err != nil {
+		t.Fatalf("unexpected error from Hijack: %v", err)
+	}
+	defer conn.Close()
+
+	if !rec.hijacked {
+		t.Error("expected underlying writer's Hijack to have been called")
+	}
+
+	// Prime with a sentinel so that a stray WriteHeader(200) is distinguishable
+	// from the recorder's default Code value of 200.
+	rec.Code = 0
+
+	// Verify that the hijack tracking flag causes the response processor
+	// to skip writing to the now-hijacked connection.
+	if err := processResponse(tx, r); err != nil {
+		t.Errorf("expected processResponse to be a no-op after hijack, got: %v", err)
+	}
+
+	// Code must remain the sentinel and Body must stay empty: any change proves
+	// that WriteHeader or Write was called on the hijacked connection.
+	if rec.Code != 0 || rec.Body.Len() != 0 {
+		t.Errorf("expected no writes to the hijacked connection, got code %d and body length %d", rec.Code, rec.Body.Len())
+	}
+}
+
+func TestResponseProcessorSkipsOnHijackedConnection(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives(`
+		SecRuleEngine On
+		SecResponseBodyAccess On
+		SecResponseBodyMimeType text/plain
+	`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	rec := newHijackableRecorder()
+	r, _ := http.NewRequest("GET", "/ws", nil)
+
+	wrapped, processResponse := wrap(rec, r, tx)
+
+	// Simulate WebSocket upgrade
+	wrapped.Header().Set("Upgrade", "websocket")
+	wrapped.Header().Set("Connection", "Upgrade")
+	wrapped.WriteHeader(http.StatusSwitchingProtocols)
+
+	// Hijack the connection
+	hijacker := wrapped.(http.Hijacker)
+	conn, _, err := hijacker.Hijack()
+	if err != nil {
+		t.Fatalf("unexpected error from Hijack: %v", err)
+	}
+	defer conn.Close()
+
+	// Prime with a sentinel so that a stray WriteHeader(200) is distinguishable
+	// from the recorder's default Code value of 200.
+	rec.Code = 0
+
+	// processResponse should return nil without attempting to write to the hijacked connection.
+	if err := processResponse(tx, r); err != nil {
+		t.Errorf("processResponse should not error on hijacked connection, got: %v", err)
+	}
+
+	// Code must remain the sentinel and Body must stay empty: any change proves
+	// that WriteHeader or Write was called on the hijacked connection.
+	if rec.Code != 0 || rec.Body.Len() != 0 {
+		t.Errorf("expected no writes to the hijacked connection, got code %d and body length %d", rec.Code, rec.Body.Len())
+	}
+}
+
+func TestWebSocketUpgradeDetectionOnly(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives("SecRuleEngine DetectionOnly"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	rec := newHijackableRecorder()
+	r, _ := http.NewRequest("GET", "/ws", nil)
+
+	wrapped, processResponse := wrap(rec, r, tx)
+
+	// Simulate WebSocket upgrade
+	wrapped.Header().Set("Upgrade", "websocket")
+	wrapped.Header().Set("Connection", "Upgrade")
+	wrapped.WriteHeader(http.StatusSwitchingProtocols)
+
+	if want, have := http.StatusSwitchingProtocols, rec.Code; want != have {
+		t.Errorf("expected 101 to be flushed even in DetectionOnly mode, got %d", have)
+	}
+
+	// Hijack
+	hijacker := wrapped.(http.Hijacker)
+	conn, _, err := hijacker.Hijack()
+	if err != nil {
+		t.Fatalf("unexpected error from Hijack: %v", err)
+	}
+	defer conn.Close()
+
+	if err := processResponse(tx, r); err != nil {
+		t.Errorf("processResponse should succeed for WebSocket in DetectionOnly mode, got: %v", err)
+	}
+}
+
+func TestRegularRequestStillProcessesResponseBody(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives(`
+		SecRuleEngine On
+		SecResponseBodyAccess On
+		SecResponseBodyMimeType text/plain
+		SecRule RESPONSE_BODY "blocked-content" "id:100,phase:4,deny,status:403"
+	`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	rec := httptest.NewRecorder()
+	r, _ := http.NewRequest("GET", "/", nil)
+	r.RemoteAddr = "127.0.0.1:12345"
+
+	// Process request phases so the transaction is in the right state
+	tx.ProcessConnection("127.0.0.1", 12345, "", 0)
+	tx.ProcessURI("/", "GET", "HTTP/1.1")
+	tx.ProcessRequestHeaders()
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Fatal(err)
+	}
+
+	wrapped, processResponse := wrap(rec, r, tx)
+
+	wrapped.Header().Set("Content-Type", "text/plain")
+	wrapped.WriteHeader(http.StatusOK)
+	if _, err := wrapped.Write([]byte("blocked-content")); err != nil {
+		t.Fatalf("unexpected write error: %v", err)
+	}
+
+	if err := processResponse(tx, r); err != nil {
+		t.Fatalf("unexpected error from processResponse: %v", err)
+	}
+
+	// The phase 4 rule should have triggered an interruption, resulting in a 403
+	if want, have := http.StatusForbidden, rec.Code; want != have {
+		t.Errorf("expected status %d from response body rule, got %d", want, have)
+	}
+}
+
+// TestWAFNotBypassedAfterWebSocketUpgrade verifies that a WebSocket upgrade
+// on one connection does not cause the WAF to skip inspection of subsequent
+// regular HTTP requests. Each request must get its own transaction.
+func TestWAFNotBypassedAfterWebSocketUpgrade(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives(`
+		SecRuleEngine On
+		SecRule ARGS:attack "evil" "id:1,phase:1,deny,status:403"
+	`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	handler := WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Upgrade") != "websocket" {
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprint(w, "OK")
+			return
+		}
+		// Perform a true WebSocket upgrade via Hijack so the isHijacked path
+		// in the WAF interceptor is exercised end-to-end.
+		hijacker, ok := w.(http.Hijacker)
+		if !ok {
+			http.Error(w, "server does not support hijack", http.StatusInternalServerError)
+			return
+		}
+		key := r.Header.Get("Sec-Websocket-Key")
+		conn, brw, err := hijacker.Hijack()
+		if err != nil {
+			return
+		}
+		accept := wsComputeAccept(key)
+		_, _ = fmt.Fprintf(brw, "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %s\r\n\r\n", accept)
+		_ = brw.Flush()
+		// Run an echo loop in a goroutine: read one frame and echo it back.
+		go wsEchoOneFrame(conn, brw)
+	}))
+
+	ts := httptest.NewServer(handler)
+	t.Cleanup(ts.Close)
+
+	// Step 1: Perform a real WebSocket upgrade using a raw TCP connection so
+	// the Hijack()/isHijacked path in the WAF interceptor is exercised.
+	wsConn, err := net.Dial("tcp", ts.Listener.Addr().String())
+	if err != nil {
+		t.Fatalf("dial failed: %v", err)
+	}
+	defer wsConn.Close()
+	if err := wsConn.SetDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		t.Fatalf("set deadline failed: %v", err)
+	}
+
+	const wsKey = "dGhlIHNhbXBsZSBub25jZQ=="
+	_, err = fmt.Fprintf(wsConn,
+		"GET /ws HTTP/1.1\r\nHost: %s\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: %s\r\nSec-WebSocket-Version: 13\r\n\r\n",
+		ts.Listener.Addr().String(), wsKey,
+	)
+	if err != nil {
+		t.Fatalf("write upgrade request failed: %v", err)
+	}
+
+	brWS := bufio.NewReader(wsConn)
+	// Read the status line and consume headers until the blank line.
+	statusLine, err := brWS.ReadString('\n')
+	if err != nil {
+		t.Fatalf("read upgrade status line failed: %v", err)
+	}
+	if !strings.HasPrefix(statusLine, "HTTP/1.1 101") {
+		t.Fatalf("expected 101 Switching Protocols, got: %s", statusLine)
+	}
+	for {
+		line, err := brWS.ReadString('\n')
+		if err != nil {
+			t.Fatalf("read upgrade header failed: %v", err)
+		}
+		if line == "\r\n" {
+			break
+		}
+	}
+
+	// Send a masked WebSocket text frame and verify the echo to confirm the
+	// middleware did not corrupt the stream.
+	msg := []byte("ping")
+	if _, err := wsConn.Write(wsBuildMaskedFrame(msg)); err != nil {
+		t.Fatalf("write ws frame failed: %v", err)
+	}
+	echoed, err := wsReadFrame(brWS)
+	if err != nil {
+		t.Fatalf("read ws echo frame failed: %v", err)
+	}
+	if !bytes.Equal(echoed, msg) {
+		t.Errorf("websocket echo mismatch: got %q, want %q", echoed, msg)
+	}
+	// Clear the deadline so the idle connection does not expire while Steps 2/3 run.
+	// wsConn stays open; defer wsConn.Close() (above) will close it after Steps 2/3.
+	_ = wsConn.SetDeadline(time.Time{})
+
+	// Step 2: Send a regular request with a malicious payload — must be blocked
+	resBlocked, err := http.Get(ts.URL + "/?attack=evil")
+	if err != nil {
+		t.Fatalf("regular request failed: %v", err)
+	}
+	resBlocked.Body.Close()
+
+	if want, have := http.StatusForbidden, resBlocked.StatusCode; want != have {
+		t.Errorf("WAF bypass: malicious request after WebSocket upgrade was not blocked, got status %d, want %d", have, want)
+	}
+
+	// Step 3: Verify a benign request still passes
+	resOK, err := http.Get(ts.URL + "/?attack=benign")
+	if err != nil {
+		t.Fatalf("benign request failed: %v", err)
+	}
+	resOK.Body.Close()
+
+	if want, have := http.StatusOK, resOK.StatusCode; want != have {
+		t.Errorf("benign request after WebSocket upgrade was unexpectedly blocked, got status %d, want %d", have, want)
+	}
+}
+
+func TestHijackTrackerErrorPath(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives("SecRuleEngine On"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	rec := &failingHijackableRecorder{ResponseRecorder: httptest.NewRecorder()}
+	r, _ := http.NewRequest("GET", "/ws", nil)
+
+	wrapped, processResponse := wrap(rec, r, tx)
+
+	hijacker, ok := wrapped.(http.Hijacker)
+	if !ok {
+		t.Fatal("expected wrapped writer to implement http.Hijacker")
+	}
+
+	conn, _, err := hijacker.Hijack()
+	if err == nil {
+		t.Fatal("expected error from Hijack, got nil")
+	}
+	if conn != nil {
+		conn.Close()
+		t.Fatal("expected nil conn on error")
+	}
+
+	// A failed Hijack must not set isHijacked=true. Verify by running
+	// processResponse: if the flag were mistakenly set, processResponse would
+	// be a no-op and rec.Code would stay at the sentinel value of 0.
+	rec.Code = 0
+	if err := processResponse(tx, r); err != nil {
+		t.Fatalf("unexpected error from processResponse after failed Hijack: %v", err)
+	}
+	if rec.Code != http.StatusOK {
+		t.Errorf("processResponse was a no-op after failed Hijack (isHijacked incorrectly set): got code %d, want %d", rec.Code, http.StatusOK)
+	}
+}
+
+func TestNonWebSocketWriteHeaderWithHijackableWriter(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives("SecRuleEngine On"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	rec := newHijackableRecorder()
+	r, _ := http.NewRequest("GET", "/regular", nil)
+
+	wrapped, processResponse := wrap(rec, r, tx)
+
+	// Use a non-default status so the recorder's initial Code=200 cannot be
+	// mistaken for a written status. Prime the recorder with a sentinel first.
+	rec.Code = 0
+	// StatusCreated exercises the false branch of the StatusSwitchingProtocols
+	// check; the interceptor must buffer the status, not flush it immediately.
+	wrapped.WriteHeader(http.StatusCreated)
+
+	// The non-101 path must defer the flush to processResponse: rec.Code must
+	// still be the sentinel here.
+	if rec.Code != 0 {
+		t.Errorf("expected status to be buffered before processResponse, got rec.Code=%d", rec.Code)
+	}
+
+	if err := processResponse(tx, r); err != nil {
+		t.Fatalf("unexpected error from processResponse: %v", err)
+	}
+
+	if want, have := http.StatusCreated, rec.Code; want != have {
+		t.Errorf("expected status %d after processResponse, got %d", want, have)
+	}
+}
+
 func TestResponseBody(t *testing.T) {
 	const (
 		contentWithoutDataLeak    = "No data leak"
@@ -468,4 +891,99 @@ func TestResponseBody(t *testing.T) {
 			}
 		})
 	}
+}
+
+// wsComputeAccept derives the Sec-WebSocket-Accept value from a client key (RFC 6455 §4.2.2).
+func wsComputeAccept(key string) string {
+	const magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+	h := sha1.New()
+	h.Write([]byte(key + magic))
+	return base64.StdEncoding.EncodeToString(h.Sum(nil))
+}
+
+// wsEchoOneFrame reads one WebSocket frame from brw, unmasks it, and writes it
+// back as an unmasked server frame on conn. Conn lifetime is owned by the caller.
+// Supports payload lengths up to 65535 bytes (2-byte extended length, n==126);
+// 64-bit extended payload lengths (n==127) are not handled.
+func wsEchoOneFrame(conn net.Conn, brw *bufio.ReadWriter) {
+	header := make([]byte, 2)
+	if _, err := io.ReadFull(brw, header); err != nil {
+		return
+	}
+	masked := header[1]&0x80 != 0
+	n := int(header[1] & 0x7F)
+	if n == 126 {
+		ext := make([]byte, 2)
+		if _, err := io.ReadFull(brw, ext); err != nil {
+			return
+		}
+		n = int(ext[0])<<8 | int(ext[1])
+	}
+	var maskKey [4]byte
+	if masked {
+		if _, err := io.ReadFull(brw, maskKey[:]); err != nil {
+			return
+		}
+	}
+	payload := make([]byte, n)
+	if _, err := io.ReadFull(brw, payload); err != nil {
+		return
+	}
+	if masked {
+		for i := range payload {
+			payload[i] ^= maskKey[i%4]
+		}
+	}
+	// Echo back as an unmasked server frame preserving the opcode.
+	frame := []byte{header[0], byte(len(payload))}
+	frame = append(frame, payload...)
+	_, _ = conn.Write(frame)
+}
+
+// wsBuildMaskedFrame builds a masked WebSocket text frame for a client→server send (RFC 6455 §5.3).
+// Assumes payload length < 126.
+func wsBuildMaskedFrame(payload []byte) []byte {
+	mask := [4]byte{0xDE, 0xAD, 0xBE, 0xEF}
+	masked := make([]byte, len(payload))
+	for i, b := range payload {
+		masked[i] = b ^ mask[i%4]
+	}
+	frame := []byte{0x81, 0x80 | byte(len(payload))}
+	frame = append(frame, mask[:]...)
+	frame = append(frame, masked...)
+	return frame
+}
+
+// wsReadFrame reads a single WebSocket frame from br and returns the unmasked payload.
+// Supports lengths up to 65535 bytes.
+func wsReadFrame(br *bufio.Reader) ([]byte, error) {
+	header := make([]byte, 2)
+	if _, err := io.ReadFull(br, header); err != nil {
+		return nil, err
+	}
+	masked := header[1]&0x80 != 0
+	n := int(header[1] & 0x7F)
+	if n == 126 {
+		ext := make([]byte, 2)
+		if _, err := io.ReadFull(br, ext); err != nil {
+			return nil, err
+		}
+		n = int(ext[0])<<8 | int(ext[1])
+	}
+	var maskKey [4]byte
+	if masked {
+		if _, err := io.ReadFull(br, maskKey[:]); err != nil {
+			return nil, err
+		}
+	}
+	payload := make([]byte, n)
+	if _, err := io.ReadFull(br, payload); err != nil {
+		return nil, err
+	}
+	if masked {
+		for i := range payload {
+			payload[i] ^= maskKey[i%4]
+		}
+	}
+	return payload, nil
 }
