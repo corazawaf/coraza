@@ -898,7 +898,7 @@ func TestRelevantAuditLoggingWithoutAuditFlag(t *testing.T) {
 		name         string
 		status       string
 		audit        bool
-		interruption  *types.Interruption
+		interruption *types.Interruption
 		shouldLog    bool
 	}{
 		{
