@@ -726,16 +726,25 @@ func TestNonWebSocketWriteHeaderWithHijackableWriter(t *testing.T) {
 
 	wrapped, processResponse := wrap(rec, r, tx)
 
-	// Use a regular 200 status (not 101) — this exercises the false branch
-	// of the StatusSwitchingProtocols check.
-	wrapped.WriteHeader(http.StatusOK)
+	// Use a non-default status so the recorder's initial Code=200 cannot be
+	// mistaken for a written status. Prime the recorder with a sentinel first.
+	rec.Code = 0
+	// StatusCreated exercises the false branch of the StatusSwitchingProtocols
+	// check; the interceptor must buffer the status, not flush it immediately.
+	wrapped.WriteHeader(http.StatusCreated)
+
+	// The non-101 path must defer the flush to processResponse: rec.Code must
+	// still be the sentinel here.
+	if rec.Code != 0 {
+		t.Errorf("expected status to be buffered before processResponse, got rec.Code=%d", rec.Code)
+	}
 
 	if err := processResponse(tx, r); err != nil {
 		t.Fatalf("unexpected error from processResponse: %v", err)
 	}
 
-	if want, have := http.StatusOK, rec.Code; want != have {
-		t.Errorf("expected status %d, got %d", want, have)
+	if want, have := http.StatusCreated, rec.Code; want != have {
+		t.Errorf("expected status %d after processResponse, got %d", want, have)
 	}
 }
 
