@@ -685,7 +685,7 @@ func TestHijackTrackerErrorPath(t *testing.T) {
 	rec := &failingHijackableRecorder{ResponseRecorder: httptest.NewRecorder()}
 	r, _ := http.NewRequest("GET", "/ws", nil)
 
-	wrapped, _ := wrap(rec, r, tx)
+	wrapped, processResponse := wrap(rec, r, tx)
 
 	hijacker, ok := wrapped.(http.Hijacker)
 	if !ok {
@@ -699,6 +699,17 @@ func TestHijackTrackerErrorPath(t *testing.T) {
 	if conn != nil {
 		conn.Close()
 		t.Fatal("expected nil conn on error")
+	}
+
+	// A failed Hijack must not set isHijacked=true. Verify by running
+	// processResponse: if the flag were mistakenly set, processResponse would
+	// be a no-op and rec.Code would stay at the sentinel value of 0.
+	rec.Code = 0
+	if err := processResponse(tx, r); err != nil {
+		t.Fatalf("unexpected error from processResponse after failed Hijack: %v", err)
+	}
+	if rec.Code != http.StatusOK {
+		t.Errorf("processResponse was a no-op after failed Hijack (isHijacked incorrectly set): got code %d, want %d", rec.Code, http.StatusOK)
 	}
 }
 
