@@ -349,7 +349,9 @@ func (h *hijackableRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	// Return a pipe-based connection to simulate a hijacked connection.
 	server, client := net.Pipe()
 	rw := bufio.NewReadWriter(bufio.NewReader(client), bufio.NewWriter(client))
-	// Close server side in the background as we don't need it in tests.
+	// Tests only interact with the client end of the pipe; the server end is
+	// never read from or written to, so close it immediately in a goroutine to
+	// avoid blocking (net.Pipe writes block until the other side reads).
 	go server.Close()
 	return client, rw, nil
 }
@@ -1067,6 +1069,8 @@ func wsComputeAccept(key string) string {
 
 // wsEchoOneFrame reads one WebSocket frame from brw, unmasks it, and writes it
 // back as an unmasked server frame on conn. Conn lifetime is owned by the caller.
+// Supports payload lengths up to 65535 bytes (2-byte extended length, n==126);
+// 64-bit extended payload lengths (n==127) are not handled.
 func wsEchoOneFrame(conn net.Conn, brw *bufio.ReadWriter) {
 	header := make([]byte, 2)
 	if _, err := io.ReadFull(brw, header); err != nil {
