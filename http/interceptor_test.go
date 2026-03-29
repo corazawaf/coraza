@@ -649,7 +649,7 @@ func TestWAFNotBypassedAfterWebSocketUpgrade(t *testing.T) {
 	if !bytes.Equal(echoed, msg) {
 		t.Errorf("websocket echo mismatch: got %q, want %q", echoed, msg)
 	}
-	wsConn.Close()
+	// wsConn stays open; defer wsConn.Close() (above) will close it after Steps 2/3.
 
 	// Step 2: Send a regular request with a malicious payload — must be blocked
 	resBlocked, err := http.Get(ts.URL + "/?attack=evil")
@@ -894,9 +894,8 @@ func wsComputeAccept(key string) string {
 }
 
 // wsEchoOneFrame reads one WebSocket frame from brw, unmasks it, and writes it
-// back as an unmasked server frame on conn, then closes conn.
+// back as an unmasked server frame on conn. Conn lifetime is owned by the caller.
 func wsEchoOneFrame(conn net.Conn, brw *bufio.ReadWriter) {
-	defer conn.Close()
 	header := make([]byte, 2)
 	if _, err := io.ReadFull(brw, header); err != nil {
 		return
