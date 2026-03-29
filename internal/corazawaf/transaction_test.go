@@ -895,11 +895,11 @@ func TestRelevantAuditLoggingWithoutAuditFlag(t *testing.T) {
 	// When tx.audit is false (no rule with auditlog action matched),
 	// SecAuditLogRelevantStatus should still cause logging if the status matches.
 	tests := []struct {
-		name        string
-		status      string
-		audit       bool
-		interruption *types.Interruption
-		shouldLog   bool
+		name         string
+		status       string
+		audit        bool
+		interruption  *types.Interruption
+		shouldLog    bool
 	}{
 		{
 			name:      "audit=false, relevant status via response → should log",
