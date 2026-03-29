@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/corazawaf/coraza/v3"
 )
@@ -607,6 +608,9 @@ func TestWAFNotBypassedAfterWebSocketUpgrade(t *testing.T) {
 		t.Fatalf("dial failed: %v", err)
 	}
 	defer wsConn.Close()
+	if err := wsConn.SetDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		t.Fatalf("set deadline failed: %v", err)
+	}
 
 	const wsKey = "dGhlIHNhbXBsZSBub25jZQ=="
 	_, err = fmt.Fprintf(wsConn,
@@ -649,7 +653,9 @@ func TestWAFNotBypassedAfterWebSocketUpgrade(t *testing.T) {
 	if !bytes.Equal(echoed, msg) {
 		t.Errorf("websocket echo mismatch: got %q, want %q", echoed, msg)
 	}
+	// Clear the deadline so the idle connection does not expire while Steps 2/3 run.
 	// wsConn stays open; defer wsConn.Close() (above) will close it after Steps 2/3.
+	_ = wsConn.SetDeadline(time.Time{})
 
 	// Step 2: Send a regular request with a malicious payload — must be blocked
 	resBlocked, err := http.Get(ts.URL + "/?attack=evil")
