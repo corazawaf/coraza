@@ -418,17 +418,19 @@ func TestHijackTrackerSetsIsHijacked(t *testing.T) {
 		t.Error("expected underlying writer's Hijack to have been called")
 	}
 
+	// Prime with a sentinel so that a stray WriteHeader(200) is distinguishable
+	// from the recorder's default Code value of 200.
+	rec.Code = 0
+
 	// Verify that the hijack tracking flag causes the response processor
 	// to skip writing to the now-hijacked connection.
 	if err := processResponse(tx, r); err != nil {
 		t.Errorf("expected processResponse to be a no-op after hijack, got: %v", err)
 	}
 
-	// The underlying recorder should not have had WriteHeader or Write called on it,
-	// confirming no write was attempted to the hijacked connection.
-	if rec.Code != 200 || rec.Body.Len() != 0 {
-		// httptest.ResponseRecorder initialises Code to 200 and Body to empty, so any
-		// status change or non-empty body indicates an unexpected write.
+	// Code must remain the sentinel and Body must stay empty: any change proves
+	// that WriteHeader or Write was called on the hijacked connection.
+	if rec.Code != 0 || rec.Body.Len() != 0 {
 		t.Errorf("expected no writes to the hijacked connection, got code %d and body length %d", rec.Code, rec.Body.Len())
 	}
 }
@@ -463,9 +465,19 @@ func TestResponseProcessorSkipsOnHijackedConnection(t *testing.T) {
 	}
 	defer conn.Close()
 
+	// Prime with a sentinel so that a stray WriteHeader(200) is distinguishable
+	// from the recorder's default Code value of 200.
+	rec.Code = 0
+
 	// processResponse should return nil without attempting to write to the hijacked connection.
 	if err := processResponse(tx, r); err != nil {
 		t.Errorf("processResponse should not error on hijacked connection, got: %v", err)
+	}
+
+	// Code must remain the sentinel and Body must stay empty: any change proves
+	// that WriteHeader or Write was called on the hijacked connection.
+	if rec.Code != 0 || rec.Body.Len() != 0 {
+		t.Errorf("expected no writes to the hijacked connection, got code %d and body length %d", rec.Code, rec.Body.Len())
 	}
 }
 
