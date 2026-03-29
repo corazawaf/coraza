@@ -46,6 +46,7 @@ func (a *severityFn) Init(r plugintypes.RuleMetadata, data string) error {
 		return err
 	}
 	r.(*corazawaf.Rule).Severity_ = sev
+	r.(*corazawaf.Rule).HasSeverity_ = true
 	return nil
 }
 
