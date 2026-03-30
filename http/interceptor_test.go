@@ -554,3 +554,84 @@ func TestOutboundDataErrorVariable(t *testing.T) {
 		}
 	})
 }
+
+// TestInboundDataErrorVariable verifies the documented behavior of INBOUND_DATA_ERROR:
+//   - ProcessPartial: the variable is set to 1 and Phase 2 rules CAN inspect it.
+//   - Reject: the variable is set internally but Phase 2 rules never run because the
+//     transaction is interrupted immediately; error propagation goes via the connector.
+func TestInboundDataErrorVariable(t *testing.T) {
+	const body = "request body that is intentionally long enough to exceed a small limit"
+
+	t.Run("ProcessPartial_phase2RuleCanMatchInboundDataError", func(t *testing.T) {
+		// SecRequestBodyLimit is set smaller than the body so INBOUND_DATA_ERROR is
+		// set to 1. With ProcessPartial, Phase 2 rules run on the partial body, so the
+		// INBOUND_DATA_ERROR rule can fire and deny the request.
+		directives := fmt.Sprintf(`
+			SecRuleEngine On
+			SecRequestBodyAccess On
+			SecRequestBodyLimit %d
+			SecRequestBodyLimitAction ProcessPartial
+			SecRule INBOUND_DATA_ERROR "@eq 1" "phase:2,id:202,t:none,deny,status:400,msg:'Request body exceeded limit'"
+		`, len(body)-5)
+
+		waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives(directives))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		handler := WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}))
+
+		ts := httptest.NewServer(handler)
+		t.Cleanup(ts.Close)
+
+		res, err := http.Post(ts.URL, "application/x-www-form-urlencoded", bytes.NewBufferString(body))
+		if err != nil {
+			t.Fatalf("unexpected error performing request: %v", err)
+		}
+		res.Body.Close()
+
+		// The phase:2 rule matched INBOUND_DATA_ERROR==1 and denied with 400.
+		if got, want := res.StatusCode, http.StatusBadRequest; got != want {
+			t.Errorf("expected status %d (phase:2 rule fired on INBOUND_DATA_ERROR), got %d", want, got)
+		}
+	})
+
+	t.Run("Reject_interruptsBeforePhase2RulesRun", func(t *testing.T) {
+		// With Reject mode, when the body exceeds the limit the transaction is interrupted
+		// immediately. Phase 2 rules never execute, so the INBOUND_DATA_ERROR rule below
+		// cannot fire. The connector enforces a 413 from the body-limit interruption instead.
+		directives := fmt.Sprintf(`
+			SecRuleEngine On
+			SecRequestBodyAccess On
+			SecRequestBodyLimit %d
+			SecRequestBodyLimitAction Reject
+			SecRule INBOUND_DATA_ERROR "@eq 1" "phase:2,id:203,t:none,deny,status:400,msg:'Request body exceeded limit'"
+		`, len(body)-5)
+
+		waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives(directives))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		handler := WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}))
+
+		ts := httptest.NewServer(handler)
+		t.Cleanup(ts.Close)
+
+		res, err := http.Post(ts.URL, "application/x-www-form-urlencoded", bytes.NewBufferString(body))
+		if err != nil {
+			t.Fatalf("unexpected error performing request: %v", err)
+		}
+		res.Body.Close()
+
+		// 413 from the immediate body-limit interruption — not 400 from the phase:2 rule
+		// (which never ran) — confirms INBOUND_DATA_ERROR is inaccessible to rules in Reject mode.
+		if got, want := res.StatusCode, http.StatusRequestEntityTooLarge; got != want {
+			t.Errorf("expected status %d (Reject interruption, phase:2 rule did not run), got %d", want, got)
+		}
+	})
+}
