@@ -14,9 +14,31 @@ import (
 	"rsc.io/binaryregexp"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/memoize"
 )
 
+// Description:
+// Performs regular expression pattern matching using RE2 syntax. This is the default operator
+// if no @ prefix is specified. Supports capturing groups (up to 9) for use in rule actions.
+// By default enables dotall mode (?s) where . matches newlines for compatibility with ModSecurity.
+//
+// Arguments:
+// Regular expression pattern following RE2 syntax. The pattern is automatically wrapped with
+// mode flags for proper matching behavior.
+//
+// Returns:
+// true if the pattern matches the input, false otherwise
+//
+// Example:
+// ```
+// # Match User-Agent containing "nikto" (with explicit @rx)
+// SecRule REQUEST_HEADERS:User-Agent "@rx nikto" "id:180,deny,log"
+//
+// # Implicit operator usage (same as @rx)
+// SecRule ARGS "(?i)union.*select" "id:181,deny"
+//
+// # Capture groups for reuse in actions
+// SecRule REQUEST_URI "@rx ^/api/v(\d+)" "id:182,setvar:tx.api_version=%{TX.1}"
+// ```
 type rx struct {
 	re *regexp.Regexp
 }
@@ -24,10 +46,19 @@ type rx struct {
 var _ plugintypes.Operator = (*rx)(nil)
 
 func newRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
-	// (?sm) enables multiline and dotall mode, required by some CRS rules and matching ModSec behavior, see
-	// - https://stackoverflow.com/a/27680233
-	// - https://groups.google.com/g/golang-nuts/c/jiVdamGFU9E
-	data := fmt.Sprintf("(?sm)%s", options.Arguments)
+	var data string
+	if shouldNotUseMultilineRegexesOperatorByDefault {
+		// (?s) enables dotall mode, required by some CRS rules and matching ModSec behavior, see
+		// - https://github.com/google/re2/wiki/Syntax
+		// - Flag usage: https://groups.google.com/g/golang-nuts/c/jiVdamGFU9E
+		data = fmt.Sprintf("(?s)%s", options.Arguments)
+	} else {
+		// TODO: deprecate multiline modifier set by default in Coraza v4
+		// CRS rules will explicitly set the multiline modifier when needed
+		// Having it enabled by default can lead to false positives and less performance
+		// See https://github.com/corazawaf/coraza/pull/876
+		data = fmt.Sprintf("(?sm)%s", options.Arguments)
+	}
 
 	if matchesArbitraryBytes(data) {
 		// Use binary regex matcher if expression matches non-utf8 bytes. The binary matcher does
@@ -36,7 +67,7 @@ func newRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 		return newBinaryRX(options)
 	}
 
-	re, err := memoize.Do(data, func() (interface{}, error) { return regexp.Compile(data) })
+	re, err := memoizeDo(options.Memoizer, data, func() (any, error) { return regexp.Compile(data) })
 	if err != nil {
 		return nil, err
 	}
@@ -45,15 +76,27 @@ func newRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 
 func (o *rx) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	if tx.Capturing() {
-		match := o.re.FindStringSubmatch(value)
-		if len(match) == 0 {
+		// FindStringSubmatchIndex returns a slice of index pairs [start0, end0, start1, end1, ...]
+		// instead of allocating new strings for each capture group. We then slice the original
+		// input value[start:end] to get zero-allocation substrings.
+		match := o.re.FindStringSubmatchIndex(value)
+		if match == nil {
 			return false
 		}
-		for i, c := range match {
+		// match has 2 entries per group: match[2*i] is the start index,
+		// match[2*i+1] is the end index for capture group i. Group 0 is
+		// the full match, groups 1..N are the parenthesized sub-expressions.
+		for i := 0; i < len(match)/2; i++ {
 			if i == 9 {
 				return true
 			}
-			tx.CaptureField(i, c)
+			// A negative start index means the group did not participate in the match
+			// (e.g. an optional group like (foo)? when foo is absent).
+			if match[2*i] >= 0 {
+				tx.CaptureField(i, value[match[2*i]:match[2*i+1]])
+			} else {
+				tx.CaptureField(i, "")
+			}
 		}
 		return true
 	} else {
@@ -72,7 +115,7 @@ var _ plugintypes.Operator = (*binaryRX)(nil)
 func newBinaryRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
-	re, err := memoize.Do(data, func() (interface{}, error) { return binaryregexp.Compile(data) })
+	re, err := memoizeDo(options.Memoizer, data, func() (any, error) { return binaryregexp.Compile(data) })
 	if err != nil {
 		return nil, err
 	}

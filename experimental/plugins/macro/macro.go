@@ -166,7 +166,7 @@ func (m *macro) compile(input string) error {
 }
 
 func isValidMacroChar(c byte) bool {
-	return c == '.' || c == '_' || c == '-' || (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')
+	return c == '[' || c == ']' || c == '.' || c == '_' || c == '-' || (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')
 }
 
 // String returns the original string

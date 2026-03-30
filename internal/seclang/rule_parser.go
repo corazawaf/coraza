@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	actionsmod "github.com/corazawaf/coraza/v3/internal/actions"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
@@ -69,6 +70,9 @@ func (rp *RuleParser) ParseVariables(vars string) error {
 			v, err := variables.Parse(string(curVar))
 			if err != nil {
 				return err
+			}
+			if curr == 1 && !v.CanBeSelected() {
+				return fmt.Errorf("attempting to select a value inside a non-selectable collection: %s", string(curVar))
 			}
 			// fmt.Printf("(PREVIOUS %s) %s:%s (%t %t)\n", vars, curvar, curkey, iscount, isnegation)
 			if isquoted {
@@ -194,6 +198,9 @@ func (rp *RuleParser) ParseOperator(operator string) error {
 		Root:     rp.options.ParserConfig.Root,
 		Datasets: rp.options.Datasets,
 	}
+	if rp.options.WAF != nil {
+		opts.Memoizer = rp.options.WAF.Memoizer()
+	}
 
 	if wd := rp.options.ParserConfig.WorkingDir; wd != "" {
 		opts.Path = append(opts.Path, wd)
@@ -215,7 +222,11 @@ func (rp *RuleParser) ParseOperator(operator string) error {
 // Each rule on the indicated phase will inherit the previously declared actions
 // If the user overwrites the default actions, the default actions will be overwritten
 func (rp *RuleParser) ParseDefaultActions(actions string) error {
-	act, err := parseActions(actions)
+	var logger debuglog.Logger
+	if rp.options.WAF != nil {
+		logger = rp.options.WAF.Logger
+	}
+	act, err := parseActions(logger, actions)
 	if err != nil {
 		return err
 	}
@@ -257,11 +268,25 @@ func (rp *RuleParser) ParseDefaultActions(actions string) error {
 // ParseActions parses a comma separated list of actions:arguments
 // Arguments can be wrapper inside quotes
 func (rp *RuleParser) ParseActions(actions string) error {
-	disabledActions := rp.options.ParserConfig.DisabledRuleActions
-	act, err := parseActions(actions)
+	act, err := parseActions(rp.options.WAF.Logger, actions)
 	if err != nil {
 		return err
 	}
+	return rp.applyParsedActions(act)
+}
+
+// applyParsedActions applies a list of already-parsed actions to the rule.
+//
+// This is a helper method used internally by ParseActions and directive handlers
+// (such as SecRuleUpdateActionById) to avoid code duplication. It's useful when
+// actions have been parsed once for inspection and need to be applied without
+// re-parsing, avoiding redundant parsing operations.
+//
+// The method validates that none of the actions are disabled, executes metadata
+// actions, merges with default actions for the rule's phase, and initializes
+// all actions on the rule.
+func (rp *RuleParser) applyParsedActions(act []ruleAction) error {
+	disabledActions := rp.options.ParserConfig.DisabledRuleActions
 	// check if forbidden action:
 	for _, a := range act {
 		if utils.InSlice(a.Key, disabledActions) {
@@ -326,9 +351,13 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 	}
 
 	var err error
+	rule := corazawaf.NewRule()
+	if options.WAF != nil {
+		rule.SetMemoizer(options.WAF.Memoizer())
+	}
 	rp := RuleParser{
 		options:        options,
-		rule:           corazawaf.NewRule(),
+		rule:           rule,
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
 	var defaultActionsRaw []string
@@ -381,7 +410,7 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 			return nil, err
 		}
 	}
-	rule := rp.Rule()
+	rule = rp.Rule()
 	rule.File_ = options.ParserConfig.ConfigFile
 	rule.Line_ = options.ParserConfig.LastLine
 
@@ -426,6 +455,7 @@ func parseActionOperator(data string) (vars string, op string, actions string, e
 		return
 	}
 	op = utils.MaybeRemoveQuotes(op)
+	op = utils.UnescapeQuotedString(op)
 
 	rest = strings.TrimLeft(rest, " ")
 	if len(rest) == 0 {
@@ -446,12 +476,22 @@ func cutQuotedString(s string) (string, string, error) {
 		return "", "", fmt.Errorf("expected quoted string: %q", s)
 	}
 
+	previousEscapeCount := 0
 	for i := 1; i < len(s); i++ {
 		// Search until first quote that isn't part of an escape sequence.
+		// track the longest sequence of backslashes preceding the quote
+		// reset the count when a non-backslash character is encountered
 		if s[i] != '"' {
+			if s[i] == '\\' {
+				previousEscapeCount++
+			} else {
+				previousEscapeCount = 0
+			}
 			continue
 		}
-		if s[i-1] == '\\' {
+		// if the number of backslashes is odd, it's an escape sequence
+		if previousEscapeCount%2 == 1 {
+			previousEscapeCount = 0
 			continue
 		}
 
@@ -485,7 +525,7 @@ const unset = -1
 // parseActions will assign the function name, arguments and
 // function (pkg.actions) for each action split by comma (,)
 // Action arguments are allowed to wrap values between colons(”)
-func parseActions(actions string) ([]ruleAction, error) {
+func parseActions(logger debuglog.Logger, actions string) ([]ruleAction, error) {
 	var res []ruleAction
 	var err error
 	disruptiveActionIndex := unset
@@ -530,6 +570,12 @@ func parseActions(actions string) ([]ruleAction, error) {
 			}
 			beforeKey = i
 			afterKey = -1
+		}
+	}
+	if inQuotes {
+		// TODO(4.x): evaluate returning an error. It currently is a warning in order to don't make it a breaking change
+		if logger != nil {
+			logger.Warn().Str("actions", actions).Msg("unclosed quotes in action line")
 		}
 	}
 	var val string

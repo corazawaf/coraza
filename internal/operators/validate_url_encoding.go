@@ -9,6 +9,25 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
+// Description:
+// Validates URL-encoded characters in the input string. Checks that percent-encoding
+// follows proper format (%XX where X is a hexadecimal digit). Returns true if invalid
+// encoding is detected (non-hex characters or incomplete sequences).
+//
+// Arguments:
+// None. Operates on the target variable specified in the rule.
+//
+// Returns:
+// true if invalid URL encoding is found (violation), false if encoding is valid
+//
+// Example:
+// ```
+// # Ensure proper URL encoding in request URI
+// SecRule REQUEST_URI_RAW "@validateUrlEncoding" "id:191,deny,log,msg:'Invalid URL encoding'"
+//
+// # Check query string encoding
+// SecRule QUERY_STRING "@validateUrlEncoding" "id:192,deny"
+// ```
 type validateURLEncoding struct{}
 
 var _ plugintypes.Operator = (*validateURLEncoding)(nil)

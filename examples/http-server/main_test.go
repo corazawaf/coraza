@@ -79,7 +79,7 @@ func TestHttpServer(t *testing.T) {
 		{
 			"positive for response body limit reject",
 			"/",
-			413,
+			500,
 			map[string]string{
 				"DIRECTIVES_FILE": "./testdata/response-body-limits-reject.conf",
 				"RESPONSE_BODY":   "response body beyond the limit",

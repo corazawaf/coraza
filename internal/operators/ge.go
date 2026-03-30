@@ -12,6 +12,24 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
+// Description:
+// Returns true if the input value is greater than or equal to the provided parameter.
+// Both values are converted to integers before comparison. Supports macro expansion for dynamic comparison.
+//
+// Arguments:
+// Integer value to compare against. Supports variable expansion using %{VAR} syntax.
+//
+// Returns:
+// true if the input value is greater than or equal to the parameter value, false otherwise
+//
+// Example:
+// ```
+// # Block if too many request headers
+// SecRule &REQUEST_HEADERS_NAMES "@ge 15" "id:155,deny,log"
+//
+// # Check minimum value requirement
+// SecRule ARGS:age "@ge 18" "id:156,pass"
+// ```
 type ge struct {
 	data macro.Macro
 }

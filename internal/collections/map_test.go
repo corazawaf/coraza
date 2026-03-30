@@ -106,3 +106,139 @@ func TestNewCaseSensitiveKeyMap(t *testing.T) {
 	}
 
 }
+
+func TestFindAllBulkAllocIndependence(t *testing.T) {
+	m := NewMap(variables.ArgsGet)
+	m.Add("key1", "value1")
+	m.Add("key2", "value2")
+	m.Add("key3", "value3")
+
+	results := m.FindAll()
+	if len(results) != 3 {
+		t.Fatalf("expected 3 results, got %d", len(results))
+	}
+
+	// Mutate first result's value through the MatchData interface
+	// and verify others are not affected
+	values := make([]string, len(results))
+	for i, r := range results {
+		values[i] = r.Value()
+	}
+
+	// Verify all values are distinct and correct
+	seen := map[string]bool{}
+	for _, v := range values {
+		if seen[v] {
+			t.Errorf("duplicate value found: %s", v)
+		}
+		seen[v] = true
+	}
+	if !seen["value1"] || !seen["value2"] || !seen["value3"] {
+		t.Errorf("expected value1, value2, value3 but got %v", values)
+	}
+}
+
+func TestFindStringBulkAlloc(t *testing.T) {
+	m := NewMap(variables.ArgsGet)
+	m.Add("key", "val1")
+	m.Add("key", "val2")
+
+	results := m.FindString("key")
+	if len(results) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(results))
+	}
+
+	// Each result should have distinct values
+	if results[0].Value() == results[1].Value() {
+		t.Errorf("expected distinct values, got %q and %q", results[0].Value(), results[1].Value())
+	}
+}
+
+func TestFindRegexBulkAlloc(t *testing.T) {
+	m := NewMap(variables.ArgsGet)
+	m.Add("abc", "val1")
+	m.Add("abd", "val2")
+	m.Add("xyz", "val3")
+
+	re := regexp.MustCompile("^ab")
+	results := m.FindRegex(re)
+	if len(results) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(results))
+	}
+
+	// Verify keys match regex
+	for _, r := range results {
+		if r.Key() != "abc" && r.Key() != "abd" {
+			t.Errorf("unexpected key: %s", r.Key())
+		}
+	}
+}
+
+func TestFindAllEmptyMap(t *testing.T) {
+	m := NewMap(variables.ArgsGet)
+	results := m.FindAll()
+	if results != nil {
+		t.Errorf("expected nil for empty map, got %v", results)
+	}
+}
+
+func BenchmarkFindAll(b *testing.B) {
+	b.ReportAllocs()
+	m := NewMap(variables.RequestHeaders)
+	for i := 0; i < 20; i++ {
+		m.Add(fmt.Sprintf("x-header-%d", i), fmt.Sprintf("value-%d", i))
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = m.FindAll()
+	}
+}
+
+func BenchmarkFindRegex(b *testing.B) {
+	b.ReportAllocs()
+	m := NewMap(variables.RequestHeaders)
+	for i := 0; i < 20; i++ {
+		m.Add(fmt.Sprintf("x-header-%d", i), fmt.Sprintf("value-%d", i))
+	}
+	// Matches keys ending in 0-9 (x-header-0 .. x-header-9), roughly half.
+	re := regexp.MustCompile(`^x-header-\d$`)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = m.FindRegex(re)
+	}
+}
+
+func BenchmarkFindString(b *testing.B) {
+	b.ReportAllocs()
+	m := NewMap(variables.RequestHeaders)
+	// Single key with multiple values
+	for i := 0; i < 20; i++ {
+		m.Add("x-forwarded-for", fmt.Sprintf("10.0.0.%d", i))
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = m.FindString("x-forwarded-for")
+	}
+}
+
+func BenchmarkTxSetGet(b *testing.B) {
+	keys := make(map[int]string, b.N)
+	for i := 0; i < b.N; i++ {
+		keys[i] = fmt.Sprintf("key%d", i)
+	}
+	c := NewCaseSensitiveKeyMap(variables.RequestHeaders)
+
+	b.Run("Set", func(b *testing.B) {
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			c.Set(keys[i], []string{"value2"})
+		}
+	})
+	b.Run("Get", func(b *testing.B) {
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			c.Get(keys[i])
+		}
+	})
+	b.ReportAllocs()
+}

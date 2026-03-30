@@ -266,10 +266,10 @@ func TestPrintedExtraMsgAndDataFromRuleWithMultipleMatches(t *testing.T) {
 		t.Errorf("failed to log. Expected 1 entry, got %d", len(logs))
 	}
 	if count := strings.Count(logs[0], "2 in ARGS_GET:test2"); count != 1 {
-		t.Errorf("failed to log logdata, expected %q occurence, got %v", "2 in ARGS_GET:test2", logs[0])
+		t.Errorf("failed to log logdata, expected %q occurrence(s), got %v", "2 in ARGS_GET:test2", logs[0])
 	}
 	if count := strings.Count(logs[0], "1 in ARGS_GET:test"); count != 1 {
-		t.Errorf("failed to log second logdata, expected %q occurence, got %v", "1 in ARGS_GET:test", logs[0])
+		t.Errorf("failed to log second logdata, expected %q occurrence(s), got %v", "1 in ARGS_GET:test", logs[0])
 	}
 }
 func TestPrintedExtraMsgAndDataFromChainedRules(t *testing.T) {
@@ -334,10 +334,10 @@ func TestPrintedMultipleMsgAndDataWithMultiMatch(t *testing.T) {
 		t.Errorf("failed to log with %d", len(logs))
 	}
 	if count := strings.Count(logs[0], "tEsT1 in ARGS_GET"); count != 1 {
-		t.Errorf("failed to log logdata, expected \"tEsT1 in ARGS_GET\" occurence, got %s", logs[0])
+		t.Errorf("failed to log logdata, expected \"tEsT1 in ARGS_GET\" occurrence, got %s", logs[0])
 	}
 	if count := strings.Count(logs[0], "test1 in ARGS_GET"); count != 1 {
-		t.Errorf("failed to log logdata, expected \"test1 in ARGS_GET\" occurence, got %s", logs[0])
+		t.Errorf("failed to log logdata, expected \"test1 in ARGS_GET\" occurrence, got %s", logs[0])
 	}
 }
 
@@ -964,6 +964,36 @@ func isMatchData(mds []types.MatchData, key string) (result bool) {
 		}
 	}
 	return result
+}
+
+func TestEscapedQuoteInOperator(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	parser := NewParser(waf)
+	err := parser.FromString(`
+		SecRuleEngine On
+		SecRule ARGS:id "@contains \"" "id:1,phase:1,deny,status:403,log,auditlog"
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Positive: request with a double quote in id should be blocked
+	tx := waf.NewTransaction()
+	tx.AddGetRequestArgument("id", `1"`)
+	it := tx.ProcessRequestHeaders()
+	if it == nil {
+		t.Error("expected transaction to be interrupted for request containing a double quote")
+	} else if it.RuleID != 1 {
+		t.Errorf("expected rule ID 1, got %d", it.RuleID)
+	}
+
+	// Negative: request without a double quote should not be blocked
+	tx = waf.NewTransaction()
+	tx.AddGetRequestArgument("id", "1")
+	it = tx.ProcessRequestHeaders()
+	if it != nil {
+		t.Error("unexpected interruption for request without a double quote")
+	}
 }
 
 func Test930110_10(t *testing.T) {

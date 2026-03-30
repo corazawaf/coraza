@@ -97,6 +97,7 @@ func doEscapeSeqDecode(input string, pos int) (string, bool) {
 			data[d] = input[i+1]
 			d++
 			i += 2
+			changed = true
 		} else {
 			/* Input character not a backslash, copy it. */
 			data[d] = input[i]

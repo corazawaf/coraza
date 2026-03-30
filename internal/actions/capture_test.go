@@ -4,6 +4,7 @@
 package actions
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
@@ -23,7 +24,7 @@ func TestCaptureInit(t *testing.T) {
 
 	t.Run("no arguments", func(t *testing.T) {
 		a := capture()
-		if err := a.Init(nil, "abc"); err == nil || err != ErrUnexpectedArguments {
+		if err := a.Init(nil, "abc"); err == nil || !errors.Is(err, ErrUnexpectedArguments) {
 			t.Error("expected error ErrUnexpectedArguments")
 		}
 	})

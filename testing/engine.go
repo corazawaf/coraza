@@ -113,14 +113,17 @@ func (t *Test) SetRawRequest(request []byte) error {
 	}
 	// parse body
 	if i < len(spl) {
-		return t.SetRequestBody(strings.Join(spl[i:], "\r\n"))
+		// i is the index of the empty line separator.
+		// Skip the separator by joining from i+1.
+		// If i is the last element (i+1 == len(spl)), spl[i+1:] is empty, which is correct.
+		return t.SetRequestBody(strings.Join(spl[i+1:], "\r\n"))
 	}
 
 	return nil
 }
 
 // SetRequestBody sets the request body
-func (t *Test) SetRequestBody(body interface{}) error {
+func (t *Test) SetRequestBody(body any) error {
 	if body == nil {
 		return nil
 	}
@@ -141,7 +144,7 @@ func (t *Test) SetRequestBody(body interface{}) error {
 }
 
 // SetResponseBody sets the request body
-func (t *Test) SetResponseBody(body interface{}) error {
+func (t *Test) SetResponseBody(body any) error {
 	if body == nil {
 		return nil
 	}
@@ -184,10 +187,23 @@ func (t *Test) RunPhases() error {
 }
 
 // OutputInterruptionErrors returns a list of errors
-// that occured when comparing the interruption result
+// that occurred when comparing the interruption result
 func (t *Test) OutputInterruptionErrors() []string {
 	var errors []string
 
+	// Check if interruption expectation matches actual state
+	if t.ExpectedOutput.Interruption == nil && t.transaction.IsInterrupted() {
+		errors = append(errors, fmt.Sprintf("Expected no interruption, but transaction was interrupted by rule %d with action '%s'",
+			t.transaction.Interruption().RuleID, t.transaction.Interruption().Action))
+		return errors
+	}
+
+	if t.ExpectedOutput.Interruption != nil && !t.transaction.IsInterrupted() {
+		errors = append(errors, "Expected interruption, but transaction was not interrupted")
+		return errors
+	}
+
+	// If we expect an interruption and got one, validate the details
 	if t.ExpectedOutput.Interruption != nil && t.transaction.IsInterrupted() {
 		if t.ExpectedOutput.Interruption.Action != t.transaction.Interruption().Action {
 			errors = append(errors, fmt.Sprintf("Interruption.Action: expected: '%s', got: '%s'",
@@ -297,11 +313,11 @@ func NewTest(name string, waf coraza.WAF) *Test {
 	return t
 }
 
-func bodyToString(iface interface{}) string {
+func bodyToString(iface any) string {
 	data := ""
 	switch v := iface.(type) {
 	case []string:
-		for i := 0; i < len(v); i++ {
+		for i := range v {
 			data += fmt.Sprintf("%s\r\n", v[i])
 		}
 		data += "\r\n"

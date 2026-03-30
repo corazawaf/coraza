@@ -47,7 +47,7 @@ func doBase64decode(src string, ext bool) string {
 	var dst strings.Builder
 	dst.Grow(slen)
 
-	for i := 0; i < slen; i++ {
+	for i := range slen {
 		currChar := src[i]
 
 		// Skip whitespaces and '.' if ext is set
@@ -81,10 +81,11 @@ func doBase64decode(src string, ext bool) string {
 	}
 
 	// Handle any remaining characters
-	if n == 2 {
+	switch n {
+	case 2:
 		x <<= 12
 		dst.WriteByte(byte(x >> 16))
-	} else if n == 3 {
+	case 3:
 		x <<= 6
 		dst.WriteByte(byte(x >> 16))
 		dst.WriteByte(byte(x >> 8))

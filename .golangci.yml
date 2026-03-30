@@ -1,33 +1,23 @@
-run: {}
-
+version: "2"
+timeout: 5m
 linters:
-  disable-all: true
+  default: none
   enable:
-    # Enabled by default, see https://golangci-lint.run/usage/linters#enabled-by-default
     - errcheck
-    - gosimple
+    - errname
+    - gocritic
     - govet
     - ineffassign
     - staticcheck
-    - typecheck
     - unused
-    - goimports
+    - misspell
+  exclusions:
+    generated: lax
+    presets:
+      - common-false-positives
+      - std-error-handling
+formatters:
+  enable:
     - gofmt
-    - gocritic
-    - gocyclo
-    - funlen
-issues:
-  exclude-rules:
-    - path: magefile\.go
-      linters:
-        - deadcode
-linters-settings:
-  gocyclo:
-    # Minimal code complexity to report.
-    # Default: 30 (but we recommend 10-20)
-    min-complexity: 20
-  errcheck:
-    # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
-    # Such cases aren't reported by default.
-    # Default: false
-    check-type-assertions: true
+    - goimports
+    

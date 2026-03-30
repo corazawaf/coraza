@@ -3,7 +3,6 @@
 
 // These benchmarks don't currently compile with TinyGo
 //go:build !tinygo
-// +build !tinygo
 
 package e2e_test
 
@@ -16,6 +15,7 @@ import (
 	"github.com/mccutchen/go-httpbin/v2/httpbin"
 
 	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/experimental"
 	txhttp "github.com/corazawaf/coraza/v3/http"
 	"github.com/corazawaf/coraza/v3/http/e2e"
 )
@@ -29,6 +29,9 @@ func TestE2e(t *testing.T) {
 	waf, err := coraza.NewWAF(conf)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if closer, ok := waf.(experimental.WAFCloser); ok {
+		defer closer.Close()
 	}
 
 	httpbin := httpbin.New()

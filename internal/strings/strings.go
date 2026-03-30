@@ -91,6 +91,29 @@ func MaybeRemoveQuotes(s string) string {
 	return s[1 : len(s)-1]
 }
 
+// UnescapeQuotedString unescapes `\"` sequences to `"` in seclang quoted
+// strings. This is the only escape sequence recognized by the seclang quoted
+// string parser — backslashes before any other character (including other
+// backslashes) are left as-is so that operator arguments like regex patterns
+// are passed through unchanged.
+func UnescapeQuotedString(s string) string {
+	if !strings.ContainsRune(s, '\\') {
+		return s
+	}
+
+	var sb strings.Builder
+	sb.Grow(len(s))
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\\' && i+1 < len(s) && s[i+1] == '"' {
+			sb.WriteByte('"')
+			i++ // skip the quote
+			continue
+		}
+		sb.WriteByte(s[i])
+	}
+	return sb.String()
+}
+
 // InSlice returns true if the string is in the slice
 func InSlice(a string, list []string) bool {
 	for _, b := range list {
@@ -105,4 +128,32 @@ func InSlice(a string, list []string) bool {
 // must not be mutated after calling this function.
 func WrapUnsafe(buf []byte) string {
 	return *(*string)(unsafe.Pointer(&buf))
+}
+
+// HasRegex checks if s is enclosed in unescaped forward slashes (e.g. "/pattern/"),
+// consistent with the ModSecurity regex delimiter convention. It returns (true, pattern)
+// where pattern is the content between the slashes. Escaped closing slashes (e.g. "/foo\/")
+// are treated as plain strings and return (false, s).
+func HasRegex(s string) (bool, string) {
+	if len(s) < 2 || s[0] != '/' {
+		return false, s
+	}
+	lastIdx := len(s) - 1
+	if s[lastIdx] != '/' {
+		return false, s
+	}
+	// "//" edge-case: empty pattern
+	if lastIdx == 1 {
+		return true, ""
+	}
+	// Count consecutive backslashes immediately before the closing '/'.
+	// An even count (including zero) means the '/' is unescaped.
+	backslashes := 0
+	for i := lastIdx - 1; i >= 0 && s[i] == '\\'; i-- {
+		backslashes++
+	}
+	if backslashes%2 == 0 {
+		return true, s[1:lastIdx]
+	}
+	return false, s
 }

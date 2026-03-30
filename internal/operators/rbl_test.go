@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build !tinygo
-// +build !tinygo
 
 package operators
 
@@ -17,7 +16,7 @@ import (
 
 type testLogger struct{ t *testing.T }
 
-func (l *testLogger) Printf(format string, v ...interface{}) {
+func (l *testLogger) Printf(format string, v ...any) {
 	l.t.Helper()
 	l.t.Logf(format, v...)
 }

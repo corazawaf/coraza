@@ -12,15 +12,26 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	gosync "sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/environment"
+	"github.com/corazawaf/coraza/v3/internal/memoize"
 	stringutils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/internal/sync"
 	"github.com/corazawaf/coraza/v3/types"
+)
+
+var wafIDCounter atomic.Uint64
+
+// Default settings
+const (
+	// DefaultRequestBodyJsonDepthLimit is the default limit for the depth of JSON objects in the request body
+	DefaultRequestBodyJsonDepthLimit = 1024
 )
 
 // WAF instance is used to store configurations and rules
@@ -43,6 +54,9 @@ type WAF struct {
 
 	// Request body page file limit
 	RequestBodyLimit int64
+
+	// Request body JSON recursive depth limit
+	RequestBodyJsonDepthLimit int
 
 	// Request body in memory limit
 	requestBodyInMemoryLimit *int64
@@ -80,9 +94,9 @@ type WAF struct {
 	// Path to store data files (ex. cache)
 	DataDir string
 
-	// If true, the WAF will store the uploaded files in the UploadDir
-	// directory
-	UploadKeepFiles bool
+	// UploadKeepFiles controls whether uploaded files are kept after the transaction.
+	// On: always keep, Off: always delete (default), RelevantOnly: keep only if log-relevant rules matched (excluding nolog rules).
+	UploadKeepFiles types.UploadKeepFilesStatus
 	// UploadFileMode instructs the waf to set the file mode for uploaded files
 	UploadFileMode fs.FileMode
 	// UploadFileLimit is the maximum size of the uploaded file to be stored
@@ -135,6 +149,10 @@ type WAF struct {
 
 	// Configures the maximum number of ARGS that will be accepted for processing.
 	ArgumentLimit int
+
+	memoizerID uint64
+	memoizer   *memoize.Memoizer
+	closeOnce  gosync.Once
 }
 
 // Options is used to pass options to the WAF instance
@@ -180,14 +198,15 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.AuditLogFormat = w.AuditLogFormat
 	tx.ForceRequestBodyVariable = false
 	tx.RequestBodyAccess = w.RequestBodyAccess
-	tx.RequestBodyLimit = int64(w.RequestBodyLimit)
+	tx.RequestBodyLimit = w.RequestBodyLimit
 	tx.ResponseBodyAccess = w.ResponseBodyAccess
-	tx.ResponseBodyLimit = int64(w.ResponseBodyLimit)
+	tx.ResponseBodyLimit = w.ResponseBodyLimit
 	tx.RuleEngine = w.RuleEngine
 	tx.HashEngine = false
 	tx.HashEnforcement = false
 	tx.lastPhase = 0
 	tx.ruleRemoveByID = nil
+	tx.ruleRemoveByIDRanges = nil
 	tx.ruleRemoveTargetByID = map[int][]ruleVariableParams{}
 	tx.Skip = 0
 	tx.AllowType = 0
@@ -198,13 +217,13 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.Timestamp = time.Now().UnixNano()
 	tx.audit = false
 
-	// Always non-nil if buffers / collections were already initialized so we don't do any of them
+	// Always non-nil if buffers / collections were already initialized, so we don't do any of them
 	// based on the presence of RequestBodyBuffer.
 	if tx.requestBodyBuffer == nil {
 		// if no requestBodyInMemoryLimit has been set we default to the requestBodyLimit
-		var requestBodyInMemoryLimit int64 = w.RequestBodyLimit
+		requestBodyInMemoryLimit := w.RequestBodyLimit
 		if w.requestBodyInMemoryLimit != nil {
-			requestBodyInMemoryLimit = int64(*w.requestBodyInMemoryLimit)
+			requestBodyInMemoryLimit = *w.requestBodyInMemoryLimit
 		}
 
 		tx.requestBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
@@ -221,7 +240,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 		})
 
 		tx.variables = *NewTransactionVariables()
-		tx.transformationCache = map[transformationKey]*transformationValue{}
+		tx.transformationCache = map[transformationKey]transformationValue{}
 	}
 
 	// set capture variables
@@ -242,6 +261,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.variables.duration.Set("0")
 	tx.variables.highestSeverity.Set("0")
 	tx.variables.uniqueID.Set(tx.id)
+	tx.setTimeVariables()
 
 	tx.debugLogger.Debug().Msg("Transaction started")
 
@@ -277,7 +297,7 @@ func (w *WAF) SetDebugLogPath(path string) error {
 	return nil
 }
 
-const _1gb = 1073741824
+const _1gib = 1073741824
 
 // NewWAF creates a new WAF instance with default variables
 func NewWAF() *WAF {
@@ -292,14 +312,15 @@ func NewWAF() *WAF {
 
 	waf := &WAF{
 		// Initializing pool for transactions
-		txPool: sync.NewPool(func() interface{} { return new(Transaction) }),
+		txPool: sync.NewPool(func() any { return new(Transaction) }),
 		// These defaults are unavoidable as they are zero values for the variables
 		RuleEngine:                types.RuleEngineOn,
 		RequestBodyAccess:         false,
-		RequestBodyLimit:          134217728, // Hard limit equal to _1gb
+		RequestBodyLimit:          134217728, // Hard limit equal to _1gib
 		RequestBodyLimitAction:    types.BodyLimitActionReject,
+		RequestBodyJsonDepthLimit: DefaultRequestBodyJsonDepthLimit,
 		ResponseBodyAccess:        false,
-		ResponseBodyLimit:         524288, // Hard limit equal to _1gb
+		ResponseBodyLimit:         524288, // Hard limit equal to _1gib
 		auditLogWriter:            logWriter,
 		auditLogWriterInitialized: false,
 		AuditLogWriterConfig:      auditlog.NewConfig(),
@@ -317,6 +338,10 @@ func NewWAF() *WAF {
 	if environment.HasAccessToFS {
 		waf.TmpDir = os.TempDir()
 	}
+
+	id := wafIDCounter.Add(1)
+	waf.memoizerID = id
+	waf.memoizer = memoize.NewMemoizer(id)
 
 	waf.Logger.Debug().Msg("A new WAF instance was created")
 	return waf
@@ -391,8 +416,8 @@ func (w *WAF) Validate() error {
 		return errors.New("request body limit should be bigger than 0")
 	}
 
-	if w.RequestBodyLimit > _1gb {
-		return errors.New("request body limit should be at most 1GB")
+	if w.RequestBodyLimit > _1gib {
+		return errors.New("request body limit should be at most 1GiB")
 	}
 
 	if w.requestBodyInMemoryLimit != nil {
@@ -409,13 +434,42 @@ func (w *WAF) Validate() error {
 		return errors.New("response body limit should be bigger than 0")
 	}
 
-	if w.ResponseBodyLimit > _1gb {
-		return errors.New("response body limit should be at most 1GB")
+	if w.ResponseBodyLimit > _1gib {
+		return errors.New("response body limit should be at most 1GiB")
 	}
 
 	if w.ArgumentLimit <= 0 {
 		return errors.New("argument limit should be bigger than 0")
 	}
 
+	if w.RequestBodyJsonDepthLimit <= 0 {
+		return errors.New("request body json depth limit should be bigger than 0")
+	}
+
+	if environment.HasAccessToFS {
+		if w.UploadKeepFiles != types.UploadKeepFilesOff && w.UploadDir == "" {
+			return errors.New("SecUploadDir is required when SecUploadKeepFiles is enabled")
+		}
+	} else {
+		if w.UploadKeepFiles != types.UploadKeepFilesOff {
+			return errors.New("SecUploadKeepFiles requires filesystem access, which is not available in this build")
+		}
+	}
+
+	return nil
+}
+
+// Memoizer returns the WAF's memoizer for caching compiled patterns.
+func (w *WAF) Memoizer() *memoize.Memoizer {
+	return w.memoizer
+}
+
+// Close releases cached resources owned by this WAF instance.
+// Cached entries shared with other WAF instances remain until all owners release them.
+// Transactions already in-flight are unaffected as they hold their own references.
+func (w *WAF) Close() error {
+	w.closeOnce.Do(func() {
+		memoize.Release(w.memoizerID)
+	})
 	return nil
 }

@@ -3,7 +3,10 @@
 
 package actions
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 func TestBlockInit(t *testing.T) {
 	t.Run("no arguments", func(t *testing.T) {
@@ -15,7 +18,7 @@ func TestBlockInit(t *testing.T) {
 
 	t.Run("unexpected arguments", func(t *testing.T) {
 		a := block()
-		if err := a.Init(nil, "abc"); err == nil || err != ErrUnexpectedArguments {
+		if err := a.Init(nil, "abc"); err == nil || !errors.Is(err, ErrUnexpectedArguments) {
 			t.Error("expected error ErrUnexpectedArguments")
 		}
 	})

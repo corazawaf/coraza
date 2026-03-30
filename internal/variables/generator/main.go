@@ -23,8 +23,9 @@ import (
 var variablesMapTmpl string
 
 type VariablesMap struct {
-	Key   string
-	Value string
+	Key           string
+	Value         string
+	CanBeSelected bool
 }
 
 func main() {
@@ -74,9 +75,19 @@ func main() {
 						value = "FILES_TMPNAMES"
 					}
 
+					canBeSelected := false
+					if v.Comment != nil {
+						for _, c := range v.Comment.List {
+							if strings.Contains(c.Text, "CanBeSelected") {
+								canBeSelected = true
+							}
+						}
+					}
+
 					directives = append(directives, VariablesMap{
-						Key:   name.String(),
-						Value: value,
+						Key:           name.String(),
+						Value:         value,
+						CanBeSelected: canBeSelected,
 					})
 				}
 			}

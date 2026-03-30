@@ -47,25 +47,43 @@ func (c *Map) Get(key string) []string {
 	if !c.isCaseSensitive {
 		key = strings.ToLower(key)
 	}
-	var values []string
-	for _, a := range c.data[key] {
-		values = append(values, a.value)
+	values := c.data[key]
+	if len(values) == 0 {
+		return nil
 	}
-	return values
+	result := make([]string, len(values))
+	for i, v := range values {
+		result[i] = v.value
+	}
+	return result
 }
 
 // FindRegex returns all map elements whose key matches the regular expression.
 func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
-	var result []types.MatchData
+	n := 0
+	// Collect matching data slices in a single pass to avoid evaluating the regex twice per key.
+	var matched [][]keyValue
 	for k, data := range c.data {
 		if key.MatchString(k) {
-			for _, d := range data {
-				result = append(result, &corazarules.MatchData{
-					Variable_: c.variable,
-					Key_:      d.key,
-					Value_:    d.value,
-				})
+			n += len(data)
+			matched = append(matched, data)
+		}
+	}
+	if n == 0 {
+		return nil
+	}
+	buf := make([]corazarules.MatchData, n)
+	result := make([]types.MatchData, n)
+	i := 0
+	for _, data := range matched {
+		for _, d := range data {
+			buf[i] = corazarules.MatchData{
+				Variable_: c.variable,
+				Key_:      d.key,
+				Value_:    d.value,
 			}
+			result[i] = &buf[i]
+			i++
 		}
 	}
 	return result
@@ -73,7 +91,6 @@ func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
 
 // FindString returns all map elements whose key matches the string.
 func (c *Map) FindString(key string) []types.MatchData {
-	var result []types.MatchData
 	if key == "" {
 		return c.FindAll()
 	}
@@ -83,29 +100,44 @@ func (c *Map) FindString(key string) []types.MatchData {
 	if !c.isCaseSensitive {
 		key = strings.ToLower(key)
 	}
-	// if key is not empty
-	if e, ok := c.data[key]; ok {
-		for _, aVar := range e {
-			result = append(result, &corazarules.MatchData{
-				Variable_: c.variable,
-				Key_:      aVar.key,
-				Value_:    aVar.value,
-			})
+	e, ok := c.data[key]
+	if !ok || len(e) == 0 {
+		return nil
+	}
+	buf := make([]corazarules.MatchData, len(e))
+	result := make([]types.MatchData, len(e))
+	for i, aVar := range e {
+		buf[i] = corazarules.MatchData{
+			Variable_: c.variable,
+			Key_:      aVar.key,
+			Value_:    aVar.value,
 		}
+		result[i] = &buf[i]
 	}
 	return result
 }
 
 // FindAll returns all map elements.
 func (c *Map) FindAll() []types.MatchData {
-	var result []types.MatchData
+	n := 0
+	for _, data := range c.data {
+		n += len(data)
+	}
+	if n == 0 {
+		return nil
+	}
+	buf := make([]corazarules.MatchData, n)
+	result := make([]types.MatchData, n)
+	i := 0
 	for _, data := range c.data {
 		for _, d := range data {
-			result = append(result, &corazarules.MatchData{
+			buf[i] = corazarules.MatchData{
 				Variable_: c.variable,
 				Key_:      d.key,
 				Value_:    d.value,
-			})
+			}
+			result[i] = &buf[i]
+			i++
 		}
 	}
 	return result
@@ -120,16 +152,22 @@ func (c *Map) Add(key string, value string) {
 	c.data[key] = append(c.data[key], aVal)
 }
 
-// Set sets the value of a key with the array of strings passed. If the key already exists, it will be overwritten.
+// Sets the value of a key with the array of strings passed. If the key already exists, it will be overwritten.
 func (c *Map) Set(key string, values []string) {
 	originalKey := key
 	if !c.isCaseSensitive {
 		key = strings.ToLower(key)
 	}
-	c.data[key] = make([]keyValue, 0, len(values))
-	for _, v := range values {
-		c.data[key] = append(c.data[key], keyValue{key: originalKey, value: v})
+	dataSlice, exists := c.data[key]
+	if !exists || cap(dataSlice) < len(values) {
+		dataSlice = make([]keyValue, len(values))
+	} else {
+		dataSlice = dataSlice[:len(values)] // Reuse existing slice with the same length
 	}
+	for i, v := range values {
+		dataSlice[i] = keyValue{key: originalKey, value: v}
+	}
+	c.data[key] = dataSlice
 }
 
 // SetIndex sets the value of a key at the specified index. If the key already exists, it will be overwritten.

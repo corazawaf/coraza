@@ -10,6 +10,24 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
+// Description:
+// Performs a string comparison and returns true if the parameter string is identical to the input string.
+// This is a case-sensitive exact match operator. Supports macro expansion for dynamic string matching.
+//
+// Arguments:
+// String for exact comparison. Supports variable expansion using %{VAR} syntax.
+//
+// Returns:
+// true if the input string is identical to the parameter string, false otherwise
+//
+// Example:
+// ```
+// # Block if foo parameter is not exactly "bar"
+// SecRule ARGS:foo "!@streq bar" "id:176,deny,log"
+//
+// # Check if request method is exactly POST
+// SecRule REQUEST_METHOD "@streq POST" "id:177,deny"
+// ```
 type streq struct {
 	data macro.Macro
 }

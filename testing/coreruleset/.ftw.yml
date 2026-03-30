@@ -17,3 +17,5 @@ testoverride:
     920430-9: ''
     920610-2: 'fragments, Coraza might just happly accept them. Run and check it.'
     920620-1: 'Rule checks if multiple Content-Type headers are kepts. Go/http might keep them and trigger the rule. Run and check it.'
+    921250-1: 'Expected to match $Version in cookies, check case sensitivity matching'
+    921250-2: 'Expected to match $Version in cookies, check case sensitivity matching'

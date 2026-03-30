@@ -3,7 +3,6 @@
 
 // These benchmarks don't currently compile with TinyGo
 //go:build !tinygo
-// +build !tinygo
 
 package coreruleset
 
@@ -17,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -33,6 +33,7 @@ import (
 	coreruleset "github.com/corazawaf/coraza-coreruleset/v4"
 	crstests "github.com/corazawaf/coraza-coreruleset/v4/tests"
 	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/experimental"
 	txhttp "github.com/corazawaf/coraza/v3/http"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -43,13 +44,16 @@ func BenchmarkCRSCompilation(b *testing.B) {
 		b.Fatal(err)
 	}
 	for i := 0; i < b.N; i++ {
-		_, err := coraza.NewWAF(coraza.NewWAFConfig().
+		waf, err := coraza.NewWAF(coraza.NewWAFConfig().
 			WithRootFS(coreruleset.FS).
 			WithDirectives(string(rec)).
 			WithDirectives("Include @crs-setup.conf.example").
 			WithDirectives("Include @owasp_crs/*.conf"))
 		if err != nil {
 			b.Fatal(err)
+		}
+		if closer, ok := waf.(experimental.WAFCloser); ok {
+			closer.Close()
 		}
 	}
 }
@@ -61,7 +65,7 @@ func BenchmarkCRSSimpleGET(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		tx := waf.NewTransaction()
 		tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 8080)
-		tx.ProcessURI("GET", "/some_path/with?parameters=and&other=Stuff", "HTTP/1.1")
+		tx.ProcessURI("/some_path/with?parameters=and&other=Stuff", "GET", "HTTP/1.1")
 		tx.AddRequestHeader("Host", "localhost")
 		tx.AddRequestHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36")
 		tx.AddRequestHeader("Accept", "application/json")
@@ -89,7 +93,7 @@ func BenchmarkCRSSimplePOST(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		tx := waf.NewTransaction()
 		tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 8080)
-		tx.ProcessURI("POST", "/some_path/with?parameters=and&other=Stuff", "HTTP/1.1")
+		tx.ProcessURI("/some_path/with?parameters=and&other=Stuff", "POST", "HTTP/1.1")
 		tx.AddRequestHeader("Host", "localhost")
 		tx.AddRequestHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36")
 		tx.AddRequestHeader("Accept", "application/json")
@@ -123,7 +127,7 @@ func BenchmarkCRSLargePOST(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		tx := waf.NewTransaction()
 		tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 8080)
-		tx.ProcessURI("POST", "/some_path/with?parameters=and&other=Stuff", "HTTP/1.1")
+		tx.ProcessURI("/some_path/with?parameters=and&other=Stuff", "POST", "HTTP/1.1")
 		tx.AddRequestHeader("Host", "localhost")
 		tx.AddRequestHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36")
 		tx.AddRequestHeader("Accept", "application/json")
@@ -145,6 +149,123 @@ func BenchmarkCRSLargePOST(b *testing.B) {
 			b.Error(err)
 		}
 	}
+}
+
+// BenchmarkCRSTransformationCache measures the transformation cache performance
+// across different request sizes. The transformation cache benefit scales with
+// (number of arguments) × (number of rules sharing transformation prefixes),
+// so these benchmarks exercise that by varying argument counts and value sizes.
+func BenchmarkCRSTransformationCache(b *testing.B) {
+	waf := crsWAF(b)
+
+	// Small: 2 query params, short values (typical simple API call)
+	smallQuery := "user=admin&action=view"
+	// Medium: 10 params with moderate values (typical form submission)
+	mediumParams := []string{
+		"username=johndoe",
+		"email=john@example.com",
+		"first_name=John",
+		"last_name=Doe",
+		"address=123+Main+Street",
+		"city=Springfield",
+		"state=IL",
+		"zip=62701",
+		"phone=555-0123",
+		"comment=This+is+a+test+comment+with+some+content",
+	}
+	mediumBody := strings.Join(mediumParams, "&")
+	// Large: 30 params with longer values (complex form, many args)
+	var largeParams []string
+	for i := 0; i < 30; i++ {
+		largeParams = append(largeParams, fmt.Sprintf("field_%d=%s", i, strings.Repeat("value", 20)))
+	}
+	largeBody := strings.Join(largeParams, "&")
+
+	b.Run("SmallGET_2params", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			tx := waf.NewTransaction()
+			tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 8080)
+			tx.ProcessURI("GET", "/api/endpoint?"+smallQuery, "HTTP/1.1")
+			tx.AddRequestHeader("Host", "localhost")
+			tx.AddRequestHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36")
+			tx.AddRequestHeader("Accept", "application/json")
+			tx.ProcessRequestHeaders()
+			if _, err := tx.ProcessRequestBody(); err != nil {
+				b.Error(err)
+			}
+			tx.AddResponseHeader("Content-Type", "application/json")
+			tx.ProcessResponseHeaders(200, "OK")
+			if _, err := tx.ProcessResponseBody(); err != nil {
+				b.Error(err)
+			}
+			tx.ProcessLogging()
+			if err := tx.Close(); err != nil {
+				b.Error(err)
+			}
+		}
+	})
+
+	b.Run("MediumPOST_10params", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			tx := waf.NewTransaction()
+			tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 8080)
+			tx.ProcessURI("POST", "/api/submit?source=web", "HTTP/1.1")
+			tx.AddRequestHeader("Host", "localhost")
+			tx.AddRequestHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36")
+			tx.AddRequestHeader("Accept", "text/html")
+			tx.AddRequestHeader("Content-Type", "application/x-www-form-urlencoded")
+			tx.ProcessRequestHeaders()
+			if _, _, err := tx.WriteRequestBody([]byte(mediumBody)); err != nil {
+				b.Error(err)
+			}
+			if _, err := tx.ProcessRequestBody(); err != nil {
+				b.Error(err)
+			}
+			tx.AddResponseHeader("Content-Type", "text/html")
+			tx.ProcessResponseHeaders(200, "OK")
+			if _, err := tx.ProcessResponseBody(); err != nil {
+				b.Error(err)
+			}
+			tx.ProcessLogging()
+			if err := tx.Close(); err != nil {
+				b.Error(err)
+			}
+		}
+	})
+
+	b.Run("LargePOST_30params", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			tx := waf.NewTransaction()
+			tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 8080)
+			tx.ProcessURI("POST", "/api/bulk?source=web&format=json", "HTTP/1.1")
+			tx.AddRequestHeader("Host", "localhost")
+			tx.AddRequestHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36")
+			tx.AddRequestHeader("Accept", "text/html")
+			tx.AddRequestHeader("Content-Type", "application/x-www-form-urlencoded")
+			tx.ProcessRequestHeaders()
+			if _, _, err := tx.WriteRequestBody([]byte(largeBody)); err != nil {
+				b.Error(err)
+			}
+			if _, err := tx.ProcessRequestBody(); err != nil {
+				b.Error(err)
+			}
+			tx.AddResponseHeader("Content-Type", "text/html")
+			tx.ProcessResponseHeaders(200, "OK")
+			if _, err := tx.ProcessResponseBody(); err != nil {
+				b.Error(err)
+			}
+			tx.ProcessLogging()
+			if err := tx.Close(); err != nil {
+				b.Error(err)
+			}
+		}
+	})
 }
 
 func TestFTW(t *testing.T) {
@@ -205,6 +326,8 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	if err != nil {
 		t.Fatalf("failed to create error log: %v", err)
 	}
+	defer errorFile.Close()
+
 	errorWriter := bufio.NewWriter(errorFile)
 	conf = conf.WithErrorCallback(func(rule types.MatchedRule) {
 		msg := rule.ErrorLog() + "\n"
@@ -219,6 +342,9 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	waf, err := coraza.NewWAF(conf)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if closer, ok := waf.(experimental.WAFCloser); ok {
+		defer closer.Close()
 	}
 
 	// CRS regression tests are expected to be run with https://github.com/coreruleset/albedo as backend server
@@ -265,7 +391,7 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	cfg.TestOverride.Overrides.Port = &port
 
 	cfg.LoadPlatformOverrides(".ftw-overrides.yml")
-	res, err := runner.Run(cfg, tests, runner.RunnerConfig{
+	res, err := runner.Run(cfg, tests, &runner.RunnerConfig{
 		ShowTime:    false,
 		ReadTimeout: 3 * time.Second, // Defaults to 1s but looks to be not enough in the CI
 	}, output.NewOutput("quiet", os.Stdout))
@@ -280,6 +406,90 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	if totalFailed > 0 {
 		t.Errorf("[fatal] %d failed tests: %v", totalFailed, res.Stats.Failed)
 	}
+}
+
+func BenchmarkCRSMultiWAFCompilation(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		for w := 0; w < 10; w++ {
+			waf := crsWAF(b)
+			if closer, ok := waf.(experimental.WAFCloser); ok {
+				closer.Close()
+			}
+		}
+	}
+}
+
+func BenchmarkCRSMemoizeSpeedup(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		// Cold compilation (first WAF)
+		cold := time.Now()
+		waf1 := crsWAF(b)
+		coldDur := time.Since(cold)
+		if closer, ok := waf1.(experimental.WAFCloser); ok {
+			closer.Close()
+		}
+
+		// Warm compilation (second WAF, patterns already cached)
+		warm := time.Now()
+		waf2 := crsWAF(b)
+		warmDur := time.Since(warm)
+		if closer, ok := waf2.(experimental.WAFCloser); ok {
+			closer.Close()
+		}
+
+		b.Logf("cold=%s warm=%s speedup=%.1fx", coldDur, warmDur, float64(coldDur)/float64(warmDur))
+	}
+}
+
+func TestCRSCloseReleasesMemory(t *testing.T) {
+	if os.Getenv("CORAZA_RUN_CRS_CLOSE_MEMTEST") == "" {
+		t.Skip("skipping memory diagnostic test; set CORAZA_RUN_CRS_CLOSE_MEMTEST=1 to run")
+	}
+
+	var m runtime.MemStats
+
+	runtime.GC()
+	runtime.ReadMemStats(&m)
+	baseHeap := m.HeapAlloc
+
+	// Build WAFs directly (not via crsWAF) so we control the lifecycle
+	// without t.Cleanup holding references that prevent GC.
+	rec, err := os.ReadFile(filepath.Join("..", "..", "coraza.conf-recommended"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	conf := coraza.NewWAFConfig().
+		WithRootFS(coreruleset.FS).
+		WithDirectives(string(rec)).
+		WithDirectives("Include @crs-setup.conf.example").
+		WithDirectives("Include @owasp_crs/*.conf")
+
+	wafs := make([]coraza.WAF, 5)
+	for i := range wafs {
+		waf, err := coraza.NewWAF(conf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wafs[i] = waf
+	}
+
+	runtime.GC()
+	runtime.ReadMemStats(&m)
+	peakHeap := m.HeapAlloc
+
+	for _, waf := range wafs {
+		if closer, ok := waf.(experimental.WAFCloser); ok {
+			closer.Close()
+		}
+	}
+
+	runtime.GC()
+	runtime.ReadMemStats(&m)
+	afterHeap := m.HeapAlloc
+
+	t.Logf("base=%dMiB peak=%dMiB after_close=%dMiB released=%dMiB",
+		baseHeap/1024/1024, peakHeap/1024/1024,
+		afterHeap/1024/1024, (peakHeap-afterHeap)/1024/1024)
 }
 
 func crsWAF(t testing.TB) coraza.WAF {
@@ -319,6 +529,14 @@ SecAction "id:900005,\
 	waf, err := coraza.NewWAF(conf)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if closer, ok := waf.(experimental.WAFCloser); ok {
+		// Avoid registering per-iteration Cleanup callbacks in benchmarks, as that
+		// can retain WAF instances and skew memory/benchmark results. Benchmarks
+		// calling crsWAF are expected to close the WAF explicitly if needed.
+		if _, isBenchmark := t.(*testing.B); !isBenchmark {
+			t.Cleanup(func() { closer.Close() })
+		}
 	}
 
 	return waf

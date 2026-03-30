@@ -23,7 +23,7 @@ func doURLEncode(input string) (string, bool) {
 
 	/* ENH Only encode the characters that really need to be encoded. */
 
-	for i := 0; i < inputLen; i++ {
+	for i := range inputLen {
 		cc := input[i]
 
 		if cc == ' ' {

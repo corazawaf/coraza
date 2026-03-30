@@ -1,6 +1,8 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !coraza.rule.no_regex_multiline
+
 package operators
 
 import (
@@ -104,6 +106,32 @@ func TestRx(t *testing.T) {
 			*/
 		})
 	}
+}
+
+func BenchmarkRxCapture(b *testing.B) {
+	pattern := `(?sm)^/api/v(\d+)/users/(\w+)/posts/(\d+)`
+	input := "/api/v3/users/jptosso/posts/42"
+
+	re := regexp.MustCompile(pattern)
+
+	b.Run("FindStringSubmatch", func(b *testing.B) {
+		for b.Loop() {
+			match := re.FindStringSubmatch(input)
+			if len(match) == 0 {
+				b.Fatal("expected match")
+			}
+			_ = match[1]
+		}
+	})
+	b.Run("FindStringSubmatchIndex", func(b *testing.B) {
+		for b.Loop() {
+			match := re.FindStringSubmatchIndex(input)
+			if match == nil {
+				b.Fatal("expected match")
+			}
+			_ = input[match[2]:match[3]]
+		}
+	})
 }
 
 func BenchmarkRxSubstringVsMatch(b *testing.B) {

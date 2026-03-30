@@ -64,7 +64,7 @@ type AuditLogTransactionRequest interface {
 	Headers() map[string][]string
 	Body() string
 	Files() []AuditLogTransactionRequestFiles
-	Args() *collections.ConcatKeyed // A string representation of all request agruments in the format 'k=v,'
+	Args() *collections.ConcatKeyed // A string representation of all request arguments in the format 'k=v,'
 	Length() int32                  // The total size of the request in bytes
 }
 
@@ -81,6 +81,7 @@ type AuditLogMessage interface {
 	Actionset() string
 	Message() string
 	Data() AuditLogMessageData
+	// TODO(4.x): Add Log() ErrorMessage() string
 }
 
 // AuditLogMessageData contains information about the triggered rules

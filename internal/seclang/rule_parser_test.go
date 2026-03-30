@@ -4,12 +4,15 @@
 package seclang
 
 import (
+	"bytes"
 	"errors"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 func TestInvalidRule(t *testing.T) {
@@ -36,25 +39,35 @@ func TestVariables(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/^(?:phpMyAdminphp|MyAdmin_https)$/' "id:2"`)
+	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/^(?:phpMyAdminphp|MyAdmin_https)$/' "" "id:2"`)
 	if err != nil {
 		t.Error(err)
 	}
-	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/^(?:phpMyAdminphp|MyAdmin_https)$/'|ARGS:test "id:3"`)
+	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/^(?:phpMyAdminphp|MyAdmin_https)$/'|ARGS:test "" "id:3"`)
 	if err != nil {
 		t.Error(err)
 	}
-	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/.*/'|ARGS:/a|b/ "id:4"`)
+	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/.*/'|ARGS:/a|b/ "" "id:4"`)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/.*/'|ARGS:/a|b/|XML:/*|ARGS|REQUEST_HEADERS "id:5"`)
+	err = p.FromString(`SecRule &REQUEST_COOKIES_NAMES:'/.*/'|ARGS:/a|b/|XML:/*|ARGS|REQUEST_HEADERS "" "id:5"`)
 	if err != nil {
 		t.Error(err)
 	}
 
 	err = p.FromString(`SecRule XML:/*|XML://@* "" "id:6"`)
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = p.FromString(`SecRule REQUEST_HEADERS "@rx C:\\" "id:7"`)
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = p.FromString(`SecRule REQUEST_HEADERS "@contains \"" "id:8"`)
 	if err != nil {
 		t.Error(err)
 	}
@@ -252,6 +265,41 @@ func TestInvalidOperatorRuleData(t *testing.T) {
 	}
 }
 
+func TestParseActionOperatorUnescaping(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		wantOp string
+	}{
+		{
+			name:   "escaped double quote",
+			input:  `ARGS:id "@contains \"" "id:1,phase:1,deny,status:403"`,
+			wantOp: `@contains "`,
+		},
+		{
+			name:   "escaped backslash stays",
+			input:  `REQUEST_HEADERS "@rx C:\\" "id:2"`,
+			wantOp: `@rx C:\\`,
+		},
+		{
+			name:   "no escapes",
+			input:  `ARGS "@contains test" "id:3"`,
+			wantOp: `@contains test`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, op, _, err := parseActionOperator(tt.input)
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if op != tt.wantOp {
+				t.Errorf("parseActionOperator() op = %q, want %q", op, tt.wantOp)
+			}
+		})
+	}
+}
+
 func TestRawChainedRules(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	p := NewParser(waf)
@@ -303,9 +351,81 @@ func TestParseRule(t *testing.T) {
 	}
 }
 
+func TestNonSelectableCollection(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	p := NewParser(waf)
+	err := p.FromString(`
+	SecRule REQUEST_URI:foo "bar" "id:1,phase:1"
+	`)
+	if err == nil {
+		t.Error("expected error")
+	}
+}
+
+func TestParseActions(t *testing.T) {
+	tests := []struct {
+		name            string
+		inputActions    string
+		expectedLogLine string
+		expectError     bool
+	}{
+		{
+			name:         "Valid actions with ID and phase",
+			inputActions: "id:1,phase:1,log,deny",
+			expectError:  false,
+		},
+		{
+			name:         "invalid action",
+			inputActions: "id:1,phase:2,notvalidaction",
+			expectError:  true,
+		},
+		{
+			name:         "unclosed quotes",
+			inputActions: "id:1,phase:2,log,deny,msg:'message not closed",
+			// TODO(4.x): returning an error in Coraza 3.x would break all the installations with coraza.conf-recommended that comes
+			// with an unclosed message in rule id 200003.
+			expectError:     false,
+			expectedLogLine: "[WARN] unclosed quotes",
+		},
+		{
+			name:            "unclosed quotes #2",
+			inputActions:    "id:1,phase:2,log,deny,tag:'this_is_a_tag,logdata:'log data'",
+			expectError:     false,
+			expectedLogLine: "[WARN] unclosed quotes",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rp := &RuleParser{
+				rule:           corazawaf.NewRule(),
+				defaultActions: map[types.RulePhase][]ruleAction{},
+				options: RuleOptions{
+					WAF: corazawaf.NewWAF(),
+				},
+			}
+			logsBuf := &bytes.Buffer{}
+			rp.options.WAF.Logger = debuglog.Default().WithLevel(debuglog.LevelWarn).WithOutput(logsBuf)
+
+			err := rp.ParseActions(tt.inputActions)
+			if tt.expectError && err == nil {
+				t.Errorf("expected error")
+			} else if !tt.expectError && err != nil {
+				t.Errorf("unexpected error: %s", err.Error())
+			}
+			if tt.expectedLogLine == "" && logsBuf.Len() > 0 {
+				t.Errorf("expected empty warn debug log, got %q", logsBuf.String())
+			}
+			if tt.expectedLogLine != "" && !strings.Contains(logsBuf.String(), tt.expectedLogLine) {
+				t.Errorf("expected debug log containing %q, got %q", tt.expectedLogLine, logsBuf.String())
+			}
+		})
+	}
+}
+
 func BenchmarkParseActions(b *testing.B) {
 	actionsToBeParsed := "id:980170,phase:5,pass,t:none,noauditlog,msg:'Anomaly Scores:Inbound Scores - Outbound Scores',tag:test"
 	for i := 0; i < b.N; i++ {
-		_, _ = parseActions(actionsToBeParsed)
+		_, _ = parseActions(nil, actionsToBeParsed)
 	}
 }

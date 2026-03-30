@@ -1,6 +1,8 @@
 // Copyright 2024 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !tinygo
+
 // OCSF log format
 // OCSF (Open Cybersecurity Schema Framework) (https://github.com/ocsf) is an open-source framework with the goal of providing an open standard for logging security events.
 // This log format will produce a JSON log which adheres to the OCSF schema (https://schema.ocsf.io/)
@@ -31,7 +33,7 @@ func (f ocsfFormatter) getRequestArguments(al plugintypes.AuditLog) string {
 
 		argCount := len(args)
 		for i, arg := range al.Transaction().Request().Args().FindAll() {
-			argString.WriteString(fmt.Sprintf("%s=%s", arg.Key(), arg.Value()))
+			fmt.Fprintf(argString, "%s=%s", arg.Key(), arg.Value())
 			if i < argCount {
 				argString.WriteString(",")
 			}
