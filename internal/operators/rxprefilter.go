@@ -374,7 +374,9 @@ func extractLiterals(re *syntax.Regexp, ci bool) interface{} {
 	}
 }
 
-// hasFlag checks if the top-level regex has a given flag set.
+// hasFlag reports whether the flag is set on any node in the regex tree.
+// Flags in Go's regexp/syntax can be scoped to sub-expressions (e.g. (?i:...)),
+// so a top-level-only check would miss flags applied further down the tree.
 func hasFlag(re *syntax.Regexp, flag syntax.Flags) bool {
 	if re.Flags&flag != 0 {
 		return true
