@@ -1059,6 +1059,9 @@ func TestInboundDataErrorVariable(t *testing.T) {
 	})
 }
 
+// wsPayloadLen16 is the RFC 6455 §5.2 marker that the next 2 bytes carry the payload length.
+const wsPayloadLen16 = 126
+
 // wsComputeAccept derives the Sec-WebSocket-Accept value from a client key (RFC 6455 §4.2.2).
 func wsComputeAccept(key string) string {
 	const magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
@@ -1078,7 +1081,7 @@ func wsEchoOneFrame(conn net.Conn, brw *bufio.ReadWriter) {
 	}
 	masked := header[1]&0x80 != 0
 	n := int(header[1] & 0x7F)
-	if n == 126 {
+	if n == wsPayloadLen16 {
 		ext := make([]byte, 2)
 		if _, err := io.ReadFull(brw, ext); err != nil {
 			return
@@ -1101,7 +1104,14 @@ func wsEchoOneFrame(conn net.Conn, brw *bufio.ReadWriter) {
 		}
 	}
 	// Echo back as an unmasked server frame preserving the opcode.
-	frame := []byte{header[0], byte(len(payload))}
+	// Encode the payload length per RFC 6455 §5.2.
+	var frame []byte
+	if len(payload) < wsPayloadLen16 {
+		frame = []byte{header[0], byte(len(payload))}
+	} else {
+		n16 := uint16(len(payload))
+		frame = []byte{header[0], wsPayloadLen16, byte(n16 >> 8), byte(n16)}
+	}
 	frame = append(frame, payload...)
 	_, _ = conn.Write(frame)
 }
@@ -1129,7 +1139,7 @@ func wsReadFrame(br *bufio.Reader) ([]byte, error) {
 	}
 	masked := header[1]&0x80 != 0
 	n := int(header[1] & 0x7F)
-	if n == 126 {
+	if n == wsPayloadLen16 {
 		ext := make([]byte, 2)
 		if _, err := io.ReadFull(br, ext); err != nil {
 			return nil, err
