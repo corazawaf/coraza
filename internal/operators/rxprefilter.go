@@ -105,6 +105,8 @@ func minLen(re *syntax.Regexp) int {
 		return n
 	case syntax.OpAlternate:
 		// Only one branch needs to match, so take the shortest branch.
+		// Defensive: syntax.Parse never produces an empty OpAlternate after Simplify,
+		// but guard anyway to avoid an index-out-of-bounds panic.
 		if len(re.Sub) == 0 {
 			return 0
 		}
@@ -123,6 +125,9 @@ func minLen(re *syntax.Regexp) int {
 		return minLen(re.Sub[0])
 	case syntax.OpRepeat:
 		// {n,m} requires at least n repetitions.
+		// Note: syntax.Regexp.Simplify() expands counted repetitions into
+		// OpConcat/OpQuest nodes, so this case is unreachable when minLen
+		// is called after Simplify(). Kept as a correct fallback.
 		if re.Min == 0 {
 			return 0
 		}
@@ -215,6 +220,13 @@ func prefilterFunc(pattern string) func(string) bool {
 					return strings.Contains(s, needle)
 				}
 			}
+		} else if caseInsensitive && !allASCIIStrings([]string(filtered)) {
+			// When case-insensitive, Aho-Corasick uses ASCII-only folding. If any
+			// needle is non-ASCII (e.g. "ſelect" lowercased from "Select"), it could
+			// fold to an ASCII equivalent under Go's Unicode case rules — meaning a
+			// pure-ASCII input like "select" would match (?i)ſelect but the automaton
+			// wouldn't find "ſelect" in "select". To avoid false negatives, bail out.
+			return nil
 		} else {
 			// Build an Aho-Corasick automaton for multi-pattern matching in O(n).
 			// Same library already used by the @pm operator.
@@ -224,7 +236,7 @@ func prefilterFunc(pattern string) func(string) bool {
 				MatchKind:            ahocorasick.LeftMostLongestMatch,
 				DFA:                  true,
 			})
-			ac := builder.Build(filtered)
+			ac := builder.Build([]string(filtered))
 			pf = func(s string) bool {
 				iter := ac.Iter(s)
 				return iter.Next() != nil
@@ -437,6 +449,15 @@ func containsFoldASCII(s, needle string) bool {
 func isASCII(s string) bool {
 	for i := 0; i < len(s); i++ {
 		if s[i] > unicode.MaxASCII {
+			return false
+		}
+	}
+	return true
+}
+
+func allASCIIStrings(ss []string) bool {
+	for _, s := range ss {
+		if !isASCII(s) {
 			return false
 		}
 	}

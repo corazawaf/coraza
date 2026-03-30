@@ -1186,6 +1186,46 @@ func TestAnyRequiredNeverFiltered(t *testing.T) {
 	})
 }
 
+// TestParseErrorPaths verifies that invalid regex patterns are handled gracefully:
+// minMatchLength returns 0 and prefilterFunc returns nil.
+func TestParseErrorPaths(t *testing.T) {
+	invalid := []string{
+		"[unclosed",
+		"(?P<unclosed",
+		"(?",
+		"*invalid",
+	}
+	for _, p := range invalid {
+		t.Run(p, func(t *testing.T) {
+			if got := minMatchLength(p); got != 0 {
+				t.Errorf("minMatchLength(%q) = %d, want 0 for invalid pattern", p, got)
+			}
+			if got := prefilterFunc(p); got != nil {
+				t.Errorf("prefilterFunc(%q) = non-nil, want nil for invalid pattern", p)
+			}
+		})
+	}
+}
+
+// TestAllASCIIStrings directly tests the allASCIIStrings helper.
+func TestAllASCIIStrings(t *testing.T) {
+	if !allASCIIStrings(nil) {
+		t.Error("allASCIIStrings(nil) should return true")
+	}
+	if !allASCIIStrings([]string{}) {
+		t.Error("allASCIIStrings([]) should return true")
+	}
+	if !allASCIIStrings([]string{"abc", "def"}) {
+		t.Error("allASCIIStrings([\"abc\",\"def\"]) should return true")
+	}
+	if allASCIIStrings([]string{"abc", "héllo"}) {
+		t.Error("allASCIIStrings with non-ASCII should return false")
+	}
+	if allASCIIStrings([]string{"ハロー"}) {
+		t.Error("allASCIIStrings with non-ASCII only should return false")
+	}
+}
+
 // TestPrefilterSafetyInvariants tests structural invariants that must hold
 // for the prefilter to be safe. These tests catch regressions in the
 // extraction logic that could silently introduce false negatives.
