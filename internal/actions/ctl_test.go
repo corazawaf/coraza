@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/debuglog"
-	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/internal/memoize"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -23,6 +23,24 @@ func TestCtl(t *testing.T) {
 	}{
 		"ruleRemoveTargetById": {
 			input: "ruleRemoveTargetById=123",
+		},
+		"ruleRemoveTargetById range": {
+			// Rule 1 is in WAF; range 1-5 should match it without error
+			input: "ruleRemoveTargetById=1-5;ARGS:test",
+			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
+				if wantToNotContain := "Invalid range"; strings.Contains(logEntry, wantToNotContain) {
+					t.Errorf("unexpected error in log: %q", logEntry)
+				}
+			},
+		},
+		"ruleRemoveTargetById regex key": {
+			// Rule 1 is in WAF; the regex /^test.*/ should remove matching ARGS targets
+			input: "ruleRemoveTargetById=1;ARGS:/^test.*/",
+			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
+				if strings.Contains(logEntry, "Invalid") || strings.Contains(logEntry, "invalid") {
+					t.Errorf("unexpected error in log: %q", logEntry)
+				}
+			},
 		},
 		"ruleRemoveTargetByTag": {
 			input: "ruleRemoveTargetByTag=tag1",
@@ -173,6 +191,16 @@ func TestCtl(t *testing.T) {
 		},
 		"ruleRemoveById range": {
 			input: "ruleRemoveById=1-3",
+			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
+				if len(tx.GetRuleRemoveByIDRanges()) != 1 {
+					t.Errorf("expected 1 range entry, got %d", len(tx.GetRuleRemoveByIDRanges()))
+					return
+				}
+				rng := tx.GetRuleRemoveByIDRanges()[0]
+				if rng[0] != 1 || rng[1] != 3 {
+					t.Errorf("unexpected range [%d, %d], want [1, 3]", rng[0], rng[1])
+				}
+			},
 		},
 		"ruleRemoveById incorrect": {
 			input: "ruleRemoveById=W",
@@ -368,7 +396,7 @@ func TestCtl(t *testing.T) {
 
 func TestParseCtl(t *testing.T) {
 	t.Run("invalid ctl", func(t *testing.T) {
-		ctl, _, _, _, err := parseCtl("invalid")
+		ctl, _, _, _, _, err := parseCtl("invalid", nil)
 		if err == nil {
 			t.Errorf("expected error, got nil")
 		}
@@ -379,7 +407,7 @@ func TestParseCtl(t *testing.T) {
 	})
 
 	t.Run("malformed ctl", func(t *testing.T) {
-		ctl, _, _, _, err := parseCtl("unknown=")
+		ctl, _, _, _, _, err := parseCtl("unknown=", nil)
 		if err == nil {
 			t.Errorf("expected error, got nil")
 		}
@@ -389,35 +417,83 @@ func TestParseCtl(t *testing.T) {
 		}
 	})
 
+	t.Run("invalid regex in colKey", func(t *testing.T) {
+		_, _, _, _, _, err := parseCtl("ruleRemoveTargetById=1;ARGS:/[invalid/", nil)
+		if err == nil {
+			t.Errorf("expected error for invalid regex, got nil")
+		}
+	})
+
+	t.Run("empty regex pattern in colKey", func(t *testing.T) {
+		_, _, _, _, _, err := parseCtl("ruleRemoveTargetById=1;ARGS://", nil)
+		if err == nil {
+			t.Errorf("expected error for empty regex pattern, got nil")
+		}
+	})
+
+	t.Run("escaped slash not treated as regex", func(t *testing.T) {
+		_, _, _, key, rx, err := parseCtl(`ruleRemoveTargetById=1;ARGS:/user\/`, nil)
+		if err != nil {
+			t.Fatalf("unexpected error: %s", err.Error())
+		}
+		if rx != nil {
+			t.Errorf("expected nil regex for escaped-slash key, got: %s", rx.String())
+		}
+		if key != `/user\/` {
+			t.Errorf("unexpected key, want %q, have %q", `/user\/`, key)
+		}
+	})
+
+	t.Run("memoizer with valid regex", func(t *testing.T) {
+		m := memoize.NewMemoizer(99)
+		_, _, _, _, keyRx, err := parseCtl("ruleRemoveTargetById=1;ARGS:/^test.*/", m)
+		if err != nil {
+			t.Fatalf("unexpected error: %s", err.Error())
+		}
+		if keyRx == nil {
+			t.Error("expected non-nil compiled regex, got nil")
+		}
+	})
+
+	t.Run("memoizer with invalid regex", func(t *testing.T) {
+		m := memoize.NewMemoizer(100)
+		_, _, _, _, _, err := parseCtl("ruleRemoveTargetById=1;ARGS:/[invalid/", m)
+		if err == nil {
+			t.Error("expected error for invalid regex with memoizer, got nil")
+		}
+	})
+
 	tCases := []struct {
 		input            string
 		expectAction     ctlFunctionType
 		expectValue      string
 		expectCollection variables.RuleVariable
 		expectKey        string
+		expectKeyRx      string
 	}{
-		{"auditEngine=On", ctlAuditEngine, "On", variables.Unknown, ""},
-		{"auditLogParts=A", ctlAuditLogParts, "A", variables.Unknown, ""},
-		{"requestBodyAccess=On", ctlRequestBodyAccess, "On", variables.Unknown, ""},
-		{"requestBodyLimit=100", ctlRequestBodyLimit, "100", variables.Unknown, ""},
-		{"requestBodyProcessor=JSON", ctlRequestBodyProcessor, "JSON", variables.Unknown, ""},
-		{"forceRequestBodyVariable=On", ctlForceRequestBodyVariable, "On", variables.Unknown, ""},
-		{"responseBodyAccess=On", ctlResponseBodyAccess, "On", variables.Unknown, ""},
-		{"responseBodyLimit=100", ctlResponseBodyLimit, "100", variables.Unknown, ""},
-		{"responseBodyProcessor=JSON", ctlResponseBodyProcessor, "JSON", variables.Unknown, ""},
-		{"forceResponseBodyVariable=On", ctlForceResponseBodyVariable, "On", variables.Unknown, ""},
-		{"ruleEngine=On", ctlRuleEngine, "On", variables.Unknown, ""},
-		{"ruleRemoveById=1", ctlRuleRemoveByID, "1", variables.Unknown, ""},
-		{"ruleRemoveById=1-9", ctlRuleRemoveByID, "1-9", variables.Unknown, ""},
-		{"ruleRemoveByMsg=MY_MSG", ctlRuleRemoveByMsg, "MY_MSG", variables.Unknown, ""},
-		{"ruleRemoveByTag=MY_TAG", ctlRuleRemoveByTag, "MY_TAG", variables.Unknown, ""},
-		{"ruleRemoveTargetByMsg=MY_MSG;ARGS:user", ctlRuleRemoveTargetByMsg, "MY_MSG", variables.Args, "user"},
-		{"ruleRemoveTargetById=2;REQUEST_FILENAME:", ctlRuleRemoveTargetByID, "2", variables.RequestFilename, ""},
+		{"auditEngine=On", ctlAuditEngine, "On", variables.Unknown, "", ""},
+		{"auditLogParts=A", ctlAuditLogParts, "A", variables.Unknown, "", ""},
+		{"requestBodyAccess=On", ctlRequestBodyAccess, "On", variables.Unknown, "", ""},
+		{"requestBodyLimit=100", ctlRequestBodyLimit, "100", variables.Unknown, "", ""},
+		{"requestBodyProcessor=JSON", ctlRequestBodyProcessor, "JSON", variables.Unknown, "", ""},
+		{"forceRequestBodyVariable=On", ctlForceRequestBodyVariable, "On", variables.Unknown, "", ""},
+		{"responseBodyAccess=On", ctlResponseBodyAccess, "On", variables.Unknown, "", ""},
+		{"responseBodyLimit=100", ctlResponseBodyLimit, "100", variables.Unknown, "", ""},
+		{"responseBodyProcessor=JSON", ctlResponseBodyProcessor, "JSON", variables.Unknown, "", ""},
+		{"forceResponseBodyVariable=On", ctlForceResponseBodyVariable, "On", variables.Unknown, "", ""},
+		{"ruleEngine=On", ctlRuleEngine, "On", variables.Unknown, "", ""},
+		{"ruleRemoveById=1", ctlRuleRemoveByID, "1", variables.Unknown, "", ""},
+		{"ruleRemoveById=1-9", ctlRuleRemoveByID, "1-9", variables.Unknown, "", ""},
+		{"ruleRemoveByMsg=MY_MSG", ctlRuleRemoveByMsg, "MY_MSG", variables.Unknown, "", ""},
+		{"ruleRemoveByTag=MY_TAG", ctlRuleRemoveByTag, "MY_TAG", variables.Unknown, "", ""},
+		{"ruleRemoveTargetByMsg=MY_MSG;ARGS:user", ctlRuleRemoveTargetByMsg, "MY_MSG", variables.Args, "user", ""},
+		{"ruleRemoveTargetById=2;REQUEST_FILENAME:", ctlRuleRemoveTargetByID, "2", variables.RequestFilename, "", ""},
+		{"ruleRemoveTargetById=2;ARGS:/^json\\.\\d+\\.description$/", ctlRuleRemoveTargetByID, "2", variables.Args, "", `^json\.\d+\.description$`},
 	}
 	for _, tCase := range tCases {
 		testName, _, _ := strings.Cut(tCase.input, "=")
 		t.Run(testName, func(t *testing.T) {
-			action, value, collection, colKey, err := parseCtl(tCase.input)
+			action, value, collection, colKey, colKeyRx, err := parseCtl(tCase.input, nil)
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err.Error())
 			}
@@ -433,53 +509,96 @@ func TestParseCtl(t *testing.T) {
 			if colKey != tCase.expectKey {
 				t.Errorf("unexpected key, want: %s, have: %s", tCase.expectKey, colKey)
 			}
+			if tCase.expectKeyRx == "" {
+				if colKeyRx != nil {
+					t.Errorf("unexpected non-nil regex, have: %s", colKeyRx.String())
+				}
+			} else {
+				if colKeyRx == nil {
+					t.Errorf("expected non-nil regex matching %q, got nil", tCase.expectKeyRx)
+				} else if colKeyRx.String() != tCase.expectKeyRx {
+					t.Errorf("unexpected regex, want: %s, have: %s", tCase.expectKeyRx, colKeyRx.String())
+				}
+			}
 		})
 	}
 
 }
-func TestCtlParseRange(t *testing.T) {
-	rules := []corazawaf.Rule{
-		{
-			RuleMetadata: corazarules.RuleMetadata{
-				ID_: 5,
-			},
-		},
-		{
-			RuleMetadata: corazarules.RuleMetadata{
-				ID_: 15,
-			},
-		},
-	}
-
+func TestCtlParseIDOrRange(t *testing.T) {
 	tCases := []struct {
-		_range              string
-		expectedNumberOfIds int
-		expectErr           bool
+		input       string
+		expectStart int
+		expectEnd   int
+		expectErr   bool
 	}{
-		{"1-2", 0, false},
-		{"4-5", 1, false},
-		{"4-15", 2, false},
-		{"5", 1, false},
-		{"", 0, true},
-		{"test", 0, true},
-		{"test-2", 0, true},
-		{"2-test", 0, true},
-		{"-", 0, true},
-		{"4-5-15", 0, true},
+		{"1-2", 1, 2, false},
+		{"4-5", 4, 5, false},
+		{"4-15", 4, 15, false},
+		{"5", 5, 5, false},
+		{"", 0, 0, true},
+		{"test", 0, 0, true},
+		{"test-2", 0, 0, true},
+		{"2-test", 0, 0, true},
+		{"-", 0, 0, true},
+		{"4-5-15", 0, 0, true},
 	}
 	for _, tCase := range tCases {
-		t.Run(tCase._range, func(t *testing.T) {
-			ints, err := rangeToInts(rules, tCase._range)
+		t.Run(tCase.input, func(t *testing.T) {
+			start, end, err := parseIDOrRange(tCase.input)
 			if tCase.expectErr && err == nil {
-				t.Error("expected error for range")
+				t.Error("expected error for input")
 			}
 
 			if !tCase.expectErr && err != nil {
-				t.Errorf("unexpected error for range: %s", err.Error())
+				t.Errorf("unexpected error for input: %s", err.Error())
 			}
 
-			if !tCase.expectErr && len(ints) != tCase.expectedNumberOfIds {
-				t.Error("unexpected number of ids")
+			if !tCase.expectErr {
+				if start != tCase.expectStart {
+					t.Errorf("unexpected start, want %d, have %d", tCase.expectStart, start)
+				}
+				if end != tCase.expectEnd {
+					t.Errorf("unexpected end, want %d, have %d", tCase.expectEnd, end)
+				}
+			}
+		})
+	}
+}
+
+func TestCtlParseRange(t *testing.T) {
+	tCases := []struct {
+		input       string
+		expectStart int
+		expectEnd   int
+		expectErr   bool
+	}{
+		{"1-2", 1, 2, false},
+		{"4-15", 4, 15, false},
+		{"5-5", 5, 5, false},
+		{"test-2", 0, 0, true},
+		{"2-test", 0, 0, true},
+		{"5-4", 0, 0, true}, // start > end
+		{"-", 0, 0, true},
+		{"nodash", 0, 0, true}, // no range separator
+	}
+	for _, tCase := range tCases {
+		t.Run(tCase.input, func(t *testing.T) {
+			start, end, err := parseRange(tCase.input)
+			if tCase.expectErr && err == nil {
+				t.Error("expected error for input")
+			}
+
+			if !tCase.expectErr && err != nil {
+				t.Errorf("unexpected error for input: %s", err.Error())
+			}
+
+			if !tCase.expectErr {
+				if start != tCase.expectStart {
+					t.Errorf("unexpected start, want %d, have %d", tCase.expectStart, start)
+				}
+				if end != tCase.expectEnd {
+					t.Errorf("unexpected end, want %d, have %d", tCase.expectEnd, end)
+				}
 			}
 		})
 	}

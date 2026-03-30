@@ -12,16 +12,21 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	gosync "sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/environment"
+	"github.com/corazawaf/coraza/v3/internal/memoize"
 	stringutils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/internal/sync"
 	"github.com/corazawaf/coraza/v3/types"
 )
+
+var wafIDCounter atomic.Uint64
 
 // Default settings
 const (
@@ -89,9 +94,9 @@ type WAF struct {
 	// Path to store data files (ex. cache)
 	DataDir string
 
-	// If true, the WAF will store the uploaded files in the UploadDir
-	// directory
-	UploadKeepFiles bool
+	// UploadKeepFiles controls whether uploaded files are kept after the transaction.
+	// On: always keep, Off: always delete (default), RelevantOnly: keep only if log-relevant rules matched (excluding nolog rules).
+	UploadKeepFiles types.UploadKeepFilesStatus
 	// UploadFileMode instructs the waf to set the file mode for uploaded files
 	UploadFileMode fs.FileMode
 	// UploadFileLimit is the maximum size of the uploaded file to be stored
@@ -144,6 +149,10 @@ type WAF struct {
 
 	// Configures the maximum number of ARGS that will be accepted for processing.
 	ArgumentLimit int
+
+	memoizerID uint64
+	memoizer   *memoize.Memoizer
+	closeOnce  gosync.Once
 }
 
 // Options is used to pass options to the WAF instance
@@ -190,7 +199,6 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.ForceRequestBodyVariable = false
 	tx.RequestBodyAccess = w.RequestBodyAccess
 	tx.RequestBodyLimit = w.RequestBodyLimit
-	tx.RequestBodyJsonDepthLimit = w.RequestBodyJsonDepthLimit
 	tx.ResponseBodyAccess = w.ResponseBodyAccess
 	tx.ResponseBodyLimit = w.ResponseBodyLimit
 	tx.RuleEngine = w.RuleEngine
@@ -198,6 +206,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.HashEnforcement = false
 	tx.lastPhase = 0
 	tx.ruleRemoveByID = nil
+	tx.ruleRemoveByIDRanges = nil
 	tx.ruleRemoveTargetByID = map[int][]ruleVariableParams{}
 	tx.Skip = 0
 	tx.AllowType = 0
@@ -231,7 +240,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 		})
 
 		tx.variables = *NewTransactionVariables()
-		tx.transformationCache = map[transformationKey]*transformationValue{}
+		tx.transformationCache = map[transformationKey]transformationValue{}
 	}
 
 	// set capture variables
@@ -329,6 +338,10 @@ func NewWAF() *WAF {
 	if environment.HasAccessToFS {
 		waf.TmpDir = os.TempDir()
 	}
+
+	id := wafIDCounter.Add(1)
+	waf.memoizerID = id
+	waf.memoizer = memoize.NewMemoizer(id)
 
 	waf.Logger.Debug().Msg("A new WAF instance was created")
 	return waf
@@ -433,5 +446,30 @@ func (w *WAF) Validate() error {
 		return errors.New("request body json depth limit should be bigger than 0")
 	}
 
+	if environment.HasAccessToFS {
+		if w.UploadKeepFiles != types.UploadKeepFilesOff && w.UploadDir == "" {
+			return errors.New("SecUploadDir is required when SecUploadKeepFiles is enabled")
+		}
+	} else {
+		if w.UploadKeepFiles != types.UploadKeepFilesOff {
+			return errors.New("SecUploadKeepFiles requires filesystem access, which is not available in this build")
+		}
+	}
+
+	return nil
+}
+
+// Memoizer returns the WAF's memoizer for caching compiled patterns.
+func (w *WAF) Memoizer() *memoize.Memoizer {
+	return w.memoizer
+}
+
+// Close releases cached resources owned by this WAF instance.
+// Cached entries shared with other WAF instances remain until all owners release them.
+// Transactions already in-flight are unaffected as they hold their own references.
+func (w *WAF) Close() error {
+	w.closeOnce.Do(func() {
+		memoize.Release(w.memoizerID)
+	})
 	return nil
 }
