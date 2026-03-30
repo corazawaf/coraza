@@ -51,11 +51,21 @@ const (
 	// contain a rule to check this variable. Depending on the rate of false positives and
 	// your default policy you should decide whether to block or just warn when the rule is
 	// triggered.
+	//
+	// The behavior depends on SecRequestBodyLimitAction:
+	//   - ProcessPartial: the body is truncated at the limit, INBOUND_DATA_ERROR is set to 1,
+	//     and Phase 2 rules run on the partial body. Rules can inspect this variable.
+	//   - Reject (default): INBOUND_DATA_ERROR is set to 1 but the transaction is interrupted
+	//     immediately before Phase 2 rules can run. The error is propagated as an interruption
+	//     (status 413) to the connector; the variable is effectively inaccessible to rules.
+	//
+	// This variable is therefore only actionable in rules when SecRequestBodyLimitAction
+	// is set to ProcessPartial.
 	// ---
-	// The best way to use this variable is as in the example below:
+	// The best way to use this variable is as in the example below (requires ProcessPartial):
 	//
 	// ```seclang
-	// SecRule INBOUND_DATA_ERROR "@eq 1" "phase:1,id:24,t:none,log,pass,msg:'Request Body Larger than SecRequestBodyLimit Setting'"
+	// SecRule INBOUND_DATA_ERROR "@eq 1" "phase:2,id:24,t:none,log,pass,msg:'Request Body Larger than SecRequestBodyLimit Setting'"
 	// ```
 	InboundDataError
 	// Description: This variable holds the value of the most-recently matched variable. It is
@@ -80,15 +90,24 @@ const (
 	MatchedVarName
 	// MultipartDataAfter is kept for compatibility
 	MultipartDataAfter
-	// Description: This variable will be set to 1 when the response body size is above the
-	// setting configured by SecResponseBodyLimit directive.
-	// Rules checking this variable can work alongside SecResponseBodyLimitAction set to ProcessPartial,
-	// to log warning or block the response more granularly than setting SecResponseBodyLimitAction to Reject.
+	// Description: This variable will be set to 1 when the response body size exceeds the
+	// limit configured by the SecResponseBodyLimit directive.
+	//
+	// The behavior depends on SecResponseBodyLimitAction:
+	//   - ProcessPartial: the body is truncated at the limit, OUTBOUND_DATA_ERROR is set to 1,
+	//     and Phase 4 rules run on the partial body. Rules can inspect this variable to log or
+	//     block the truncated response.
+	//   - Reject (default): OUTBOUND_DATA_ERROR is set to 1 but the transaction is interrupted
+	//     immediately with a 500 error before Phase 4 rules can run. The error is propagated as
+	//     an interruption to the connector; the variable is effectively inaccessible to rules.
+	//
+	// This variable is therefore only actionable in rules when SecResponseBodyLimitAction
+	// is set to ProcessPartial.
 	// ---
-	// Example rule to log when the response body is larger than the configured limit:
+	// Example rule to deny when the response body exceeds the configured limit (requires ProcessPartial):
 	//
 	// ```seclang
-	// SecRule OUTBOUND_DATA_ERROR "@eq 1" "phase:1,id:32,t:none,log,pass,msg:'Response Body Larger than SecResponseBodyLimit Setting'"
+	// SecRule OUTBOUND_DATA_ERROR "@eq 1" "phase:4,id:32,t:none,deny,status:413,msg:'Response Body Larger than SecResponseBodyLimit Setting'"
 	// ```
 	OutboundDataError
 	// Description: Contains the query string part of a request URI. The value in QUERY_STRING

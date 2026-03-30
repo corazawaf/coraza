@@ -37,8 +37,10 @@ const (
 	MatchedVarName = variables.MatchedVarName
 	// MultipartDataAfter kept for compatibility
 	MultipartDataAfter = variables.MultipartDataAfter
-	// OutboundDataError will be set to 1 when the response body size
-	// is above the setting configured by SecResponseBodyLimit
+	// OutboundDataError will be set to 1 when the response body size exceeds
+	// SecResponseBodyLimit. Only actionable in Phase 4 rules when
+	// SecResponseBodyLimitAction is ProcessPartial; in Reject mode the
+	// transaction is interrupted before Phase 4 rules run.
 	OutboundDataError = variables.OutboundDataError
 	// QueryString contains the raw query string part of a request URI
 	QueryString = variables.QueryString
