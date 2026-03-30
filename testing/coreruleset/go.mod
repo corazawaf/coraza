@@ -1,14 +1,14 @@
 module github.com/corazawaf/coraza/v3/testing/coreruleset
 
-go 1.25.0
+go 1.26
 
 require (
-	github.com/bmatcuk/doublestar/v4 v4.9.1
-	github.com/corazawaf/coraza-coreruleset/v4 v4.24.0
-	github.com/corazawaf/coraza/v3 v3.3.3
+	github.com/bmatcuk/doublestar/v4 v4.10.0
+	github.com/corazawaf/coraza-coreruleset/v4 v4.24.1
+	github.com/corazawaf/coraza/v3 v3.5.0
 	github.com/coreruleset/albedo v0.3.0
 	github.com/coreruleset/go-ftw v1.3.0
-	github.com/rs/zerolog v1.34.0
+	github.com/rs/zerolog v1.35.0
 )
 
 require (
@@ -18,9 +18,10 @@ require (
 	github.com/corazawaf/libinjection-go v0.3.2 // indirect
 	github.com/coreruleset/ftw-tests-schema/v2 v2.2.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
+	github.com/go-json-experiment/json v0.0.0-20260214004413-d219187c3433 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
-	github.com/goccy/go-yaml v1.18.0 // indirect
+	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gotnospirit/makeplural v0.0.0-20180622080156-a5f48d94d976 // indirect
@@ -28,8 +29,10 @@ require (
 	github.com/huandu/xstrings v1.4.0 // indirect
 	github.com/icza/backscanner v0.0.0-20241124160932-dff01ac50250 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
-	github.com/kaptinlin/go-i18n v0.1.4 // indirect
-	github.com/kaptinlin/jsonschema v0.4.6 // indirect
+	github.com/kaptinlin/go-i18n v0.3.0 // indirect
+	github.com/kaptinlin/jsonpointer v0.4.17 // indirect
+	github.com/kaptinlin/jsonschema v0.7.7 // indirect
+	github.com/kaptinlin/messageformat-go v0.4.19 // indirect
 	github.com/knadh/koanf/maps v0.1.1 // indirect
 	github.com/knadh/koanf/parsers/yaml v0.1.0 // indirect
 	github.com/knadh/koanf/providers/env v1.0.0 // indirect
@@ -37,8 +40,8 @@ require (
 	github.com/knadh/koanf/providers/rawbytes v0.1.0 // indirect
 	github.com/knadh/koanf/v2 v2.1.2 // indirect
 	github.com/kyokomi/emoji/v2 v2.2.13 // indirect
-	github.com/magefile/mage v1.15.1-0.20250615140142-78acbaf2e3ae // indirect
-	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/magefile/mage v1.17.0 // indirect
+	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
