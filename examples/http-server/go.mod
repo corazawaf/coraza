@@ -7,7 +7,7 @@ require github.com/corazawaf/coraza/v3 v3.3.3
 require (
 	github.com/corazawaf/libinjection-go v0.3.2 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
-	github.com/magefile/mage v1.15.1-0.20250615140142-78acbaf2e3ae // indirect
+	github.com/magefile/mage v1.17.0 // indirect
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20250424160509-463d218d4745 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
