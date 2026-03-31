@@ -23,6 +23,8 @@ type hijackerTracker struct {
 	interceptor *rwInterceptor
 }
 
+// Hijack delegates to the underlying http.Hijacker and marks the interceptor
+// as hijacked on success, so that response processing is skipped.
 func (h *hijackerTracker) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	conn, rw, err := h.hijacker.Hijack()
 	if err != nil {
