@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -36,18 +37,24 @@ func wsUpgradeViaWriteHeader(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Verify hijacking support before sending 101: sending the upgrade response
+	// and then failing to hijack would leave the client stuck until its deadline.
+	hijacker, ok := w.(http.Hijacker)
+	if !ok {
+		http.Error(w, "server does not support connection hijacking", http.StatusInternalServerError)
+		return
+	}
+
 	// Standard upgrade sequence: set headers, then flush 101 via ResponseWriter.
+	// The Coraza interceptor must flush the 101 immediately at this point.
 	w.Header().Set("Upgrade", "websocket")
 	w.Header().Set("Connection", "Upgrade")
 	w.Header().Set("Sec-WebSocket-Accept", wsComputeAccept(key))
 	w.WriteHeader(http.StatusSwitchingProtocols)
 
-	hijacker, ok := w.(http.Hijacker)
-	if !ok {
-		return
-	}
 	conn, brw, err := hijacker.Hijack()
 	if err != nil {
+		// 101 already sent; nothing useful can be written to the client now.
 		return
 	}
 	defer conn.Close()
@@ -82,8 +89,10 @@ func doRawWSUpgrade(t *testing.T, conn net.Conn, addr, key string, extraHeaders 
 	if len(parts) < 2 {
 		t.Fatalf("malformed status line: %q", statusLine)
 	}
-	var statusCode int
-	fmt.Sscan(parts[1], &statusCode)
+	statusCode, err := strconv.Atoi(parts[1])
+	if err != nil {
+		t.Fatalf("parsing status code from %q: %v", statusLine, err)
+	}
 
 	for {
 		line, err := br.ReadString('\n')
