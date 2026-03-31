@@ -1477,6 +1477,320 @@ func FuzzPrefilterFixedCRSPatterns(f *testing.F) {
 	})
 }
 
+// TestMinLenRuneError verifies that U+FFFD in a literal counts as 1 byte, not 3.
+func TestMinLenRuneError(t *testing.T) {
+	// Pattern with a literal U+FFFD — after parsing, the AST has an OpLiteral
+	// with rune U+FFFD. Go's regexp matches this against a single invalid byte.
+	got := minMatchLength("\xef\xbf\xbd")
+	if got != 1 {
+		t.Errorf("minMatchLength(U+FFFD) = %d, want 1", got)
+	}
+	// Mixed: literal 'ab' + U+FFFD = 2 + 1 = 3
+	got = minMatchLength("ab\xef\xbf\xbd")
+	if got != 3 {
+		t.Errorf("minMatchLength(ab + U+FFFD) = %d, want 3", got)
+	}
+}
+
+// TestExtractLiteralsRuneError verifies that U+FFFD in a literal causes bail-out.
+func TestExtractLiteralsRuneError(t *testing.T) {
+	pf := prefilterFunc("(?s)\xef\xbf\xbd" + "hello")
+	// Should bail out because the literal contains U+FFFD.
+	if pf != nil {
+		t.Error("prefilterFunc should return nil for pattern containing U+FFFD literal")
+	}
+}
+
+// TestPrefilterAllRequiredFilteredToEmpty covers the case where allRequired
+// literals are all too short after filtering (< 2 bytes).
+func TestPrefilterAllRequiredFilteredToEmpty(t *testing.T) {
+	// Pattern: a single-char literal concatenated with a wildcard — "a.*"
+	// extractLiterals yields allRequired{"a"}, filterShort removes it → nil.
+	pf := prefilterFunc("(?s)a.*")
+	if pf != nil {
+		t.Error("prefilterFunc should return nil when all literals are too short")
+	}
+}
+
+// TestPrefilterAllRequiredMultiNeedleCaseInsensitive covers the case-insensitive
+// multi-needle allRequired path (lines 194-202).
+func TestPrefilterAllRequiredMultiNeedleCaseInsensitive(t *testing.T) {
+	// Pattern: (?i)hello.*world — two required CI literals.
+	pf := prefilterFunc("(?si)hello.*world")
+	if pf == nil {
+		t.Fatal("prefilterFunc should return non-nil for (?i)hello.*world")
+	}
+	// Both present (case-insensitive match)
+	if !pf("foo HELLO bar WORLD baz") {
+		t.Error("expected true when both CI literals present")
+	}
+	// One missing
+	if pf("foo HELLO bar baz") {
+		t.Error("expected false when 'world' is absent")
+	}
+	// Both present in matching input
+	if !pf("HeLLo something WoRlD") {
+		t.Error("expected true for mixed-case match")
+	}
+}
+
+// TestPrefilterAllRequiredMultiNeedleCaseSensitive covers the case-sensitive
+// multi-needle allRequired path (lines 203-211).
+func TestPrefilterAllRequiredMultiNeedleCaseSensitive(t *testing.T) {
+	// Pattern: hello.*world — two required CS literals, no (?i).
+	pf := prefilterFunc("(?s)hello.*world")
+	if pf == nil {
+		t.Fatal("prefilterFunc should return non-nil for hello.*world")
+	}
+	if !pf("prefix hello middle world suffix") {
+		t.Error("expected true when both literals present")
+	}
+	if pf("prefix hello middle suffix") {
+		t.Error("expected false when 'world' is absent")
+	}
+	// Case-sensitive: HELLO should not match
+	if pf("HELLO WORLD") {
+		t.Error("expected false for case-sensitive mismatch")
+	}
+}
+
+// TestPrefilterAnyRequiredSingleNeedle covers the anyRequired single-element
+// paths for both CI and CS (lines 226-236).
+func TestPrefilterAnyRequiredSingleNeedle(t *testing.T) {
+	// Alternation where one branch is too short gets abandoned.
+	// Use branches that are all >= 2 bytes but only one branch.
+	// A single-branch alternation: (hello) is really just allRequired.
+	// To get anyRequired with 1 element, we need a nested alternation that
+	// collapses. Instead, test the single-needle CS path via a 2-branch pattern
+	// where one gets merged.
+	//
+	// Actually, the simplest way: pattern `(ab|cd)` yields anyRequired{"ab","cd"}
+	// which hits the AC path. To test single-element anyRequired, we need a
+	// pattern like `(ab)` parsed as alternation — but that's OpCapture.
+	// Let's test the CI+CS anyRequired with 2 elements instead (lines 228-235).
+
+	// Case-insensitive anyRequired single needle — unreachable in practice
+	// because OpAlternate always has >= 2 sub-expressions. Skip.
+
+	// Case-sensitive anyRequired 2 elements
+	pf := prefilterFunc("(?s)(?:hello|world)")
+	if pf == nil {
+		t.Fatal("prefilterFunc should return non-nil for hello|world")
+	}
+	if !pf("contains hello here") {
+		t.Error("expected true when 'hello' present")
+	}
+	if !pf("contains world here") {
+		t.Error("expected true when 'world' present")
+	}
+	if pf("contains nothing here") {
+		t.Error("expected false when neither present")
+	}
+}
+
+// TestPrefilterAnyRequiredCaseInsensitiveAC covers the CI Aho-Corasick path.
+func TestPrefilterAnyRequiredCaseInsensitiveAC(t *testing.T) {
+	pf := prefilterFunc("(?si)(?:hello|world)")
+	if pf == nil {
+		t.Fatal("prefilterFunc should return non-nil for (?i)hello|world")
+	}
+	if !pf("HELLO there") {
+		t.Error("expected true for CI match on 'HELLO'")
+	}
+	if !pf("WoRlD") {
+		t.Error("expected true for CI match on 'WoRlD'")
+	}
+	if pf("nothing here") {
+		t.Error("expected false when neither present")
+	}
+}
+
+// TestPrefilterAnyRequiredNonASCIIBailout covers the non-ASCII guard for
+// CI anyRequired Aho-Corasick path (lines 237-243).
+func TestPrefilterAnyRequiredNonASCIIBailout(t *testing.T) {
+	// Construct a pattern that produces anyRequired with non-ASCII literals.
+	// (?i)(café|naïve) — after lowercasing, needles contain non-ASCII bytes.
+	pf := prefilterFunc("(?si)(?:café|naïve)")
+	// Should bail out because needles are non-ASCII under CI.
+	if pf != nil {
+		t.Error("prefilterFunc should return nil for CI pattern with non-ASCII literals")
+	}
+}
+
+// TestPrefilterNonCaseInsensitiveReturnsDirectly covers the non-CI return path
+// (line 285) — pf is returned without the isASCII wrapper.
+func TestPrefilterNonCaseInsensitiveReturnsDirectly(t *testing.T) {
+	pf := prefilterFunc("(?s)hello")
+	if pf == nil {
+		t.Fatal("prefilterFunc should return non-nil for 'hello'")
+	}
+	// Non-ASCII input should be checked literally (no isASCII guard).
+	if pf("café") {
+		t.Error("expected false: 'hello' not in 'café'")
+	}
+	if !pf("say hello") {
+		t.Error("expected true: 'hello' in 'say hello'")
+	}
+}
+
+// TestExtractLiteralsOpConcatAnyRequiredChild covers the case where OpConcat
+// has an anyRequired child that gets skipped (lines 339-343).
+func TestExtractLiteralsOpConcatAnyRequiredChild(t *testing.T) {
+	// Pattern: (ab|cd).*required — OpConcat with an OpAlternate child (anyRequired),
+	// wildcard, and an OpLiteral child. The wildcard forces a real concatenation.
+	// The anyRequired from the alternation is skipped in OpConcat; only "required"
+	// is kept as allRequired.
+	pf := prefilterFunc("(?s)(?:ab|cd).*required")
+	if pf == nil {
+		t.Fatal("prefilterFunc should return non-nil")
+	}
+	if !pf("ab stuff required here") {
+		t.Error("expected true: 'required' present")
+	}
+	if pf("ab stuff missing here") {
+		t.Error("expected false: 'required' absent")
+	}
+}
+
+// TestExtractLiteralsOpAlternateNilBranch covers OpAlternate where one branch
+// has no extractable literal (lines 360-362).
+func TestExtractLiteralsOpAlternateNilBranch(t *testing.T) {
+	// Pattern: (hello|.+) — second branch is .+ which has no literal.
+	pf := prefilterFunc("(?s)(?:hello|.+)")
+	if pf != nil {
+		t.Error("prefilterFunc should return nil when one alternation branch has no literal")
+	}
+}
+
+// TestExtractLiteralsNestedAlternation covers the anyRequired merge path
+// for nested alternations (lines 368-374).
+func TestExtractLiteralsNestedAlternation(t *testing.T) {
+	// Pattern: (hello|(world|test)) — nested alternation.
+	pf := prefilterFunc("(?s)(?:hello|(?:world|test))")
+	if pf == nil {
+		t.Fatal("prefilterFunc should return non-nil for nested alternation")
+	}
+	if !pf("hello") {
+		t.Error("expected true for 'hello'")
+	}
+	if !pf("world") {
+		t.Error("expected true for 'world'")
+	}
+	if !pf("test") {
+		t.Error("expected true for 'test'")
+	}
+	if pf("none") {
+		t.Error("expected false for 'none'")
+	}
+}
+
+// TestExtractLiteralsOpRepeat covers OpRepeat in extractLiterals (lines 385-389).
+func TestExtractLiteralsOpRepeat(t *testing.T) {
+	// OpRepeat with min>=1: should extract literals from sub.
+	// Note: Simplify() may expand {n,m} to concat/quest, but we test the
+	// function directly via minMatchLength which also exercises the AST.
+	// For extractLiterals, a pattern like (hello){2,3} after simplify becomes
+	// OpConcat(hello, hello, OpQuest(hello)).
+
+	// OpRepeat with min==0: should return nil.
+	// Pattern: (hello){0,3} — optional repetition.
+	pf := prefilterFunc("(?s)(?:hello){0,3}")
+	if pf != nil {
+		t.Error("prefilterFunc should return nil for {0,3} (min==0)")
+	}
+}
+
+// TestLongestEmpty covers longest with an empty slice (line 416-417).
+func TestLongestEmpty(t *testing.T) {
+	if got := longest(nil); got != "" {
+		t.Errorf("longest(nil) = %q, want empty", got)
+	}
+	if got := longest([]string{}); got != "" {
+		t.Errorf("longest([]) = %q, want empty", got)
+	}
+}
+
+// TestAllASCIIStringsNonASCII covers allASCIIStrings returning false (line 456-457).
+func TestAllASCIIStringsNonASCII(t *testing.T) {
+	if allASCIIStrings([]string{"hello", "café"}) {
+		t.Error("allASCIIStrings should return false for non-ASCII")
+	}
+	if !allASCIIStrings([]string{"hello", "world"}) {
+		t.Error("allASCIIStrings should return true for all ASCII")
+	}
+}
+
+// TestPrefilterAnyTooShortBailout covers the anyTooShort bail-out (lines 222-223).
+func TestPrefilterAnyTooShortBailout(t *testing.T) {
+	// Pattern: (a|hello) — 'a' is 1 byte < 2, so anyTooShort triggers bail-out.
+	pf := prefilterFunc("(?s)(?:a|hello)")
+	if pf != nil {
+		t.Error("prefilterFunc should return nil when anyRequired has too-short elements")
+	}
+}
+
+// TestPrefilterPfNilGuard covers the pf == nil guard (lines 261-263).
+// This happens when lits is a type we don't handle (shouldn't happen in practice,
+// but the guard exists). We can trigger it if extractLiterals returns an
+// unexpected type — but since we control the types, we test via patterns where
+// the switch cases don't set pf (e.g., extractLiterals returns allRequired but
+// all get filtered out).
+func TestPrefilterPfNilGuard(t *testing.T) {
+	// This is already covered by TestPrefilterAllRequiredFilteredToEmpty above,
+	// but we also test with a pattern that reaches the switch but no case matches.
+	// In practice, lits is always allRequired or anyRequired, so the nil guard
+	// is only reached when filtering removes everything.
+
+	// Pattern with only 1-char literals: "a.*b" → allRequired{"a","b"} → filtered to empty.
+	pf := prefilterFunc("(?s)a.*b")
+	if pf != nil {
+		t.Error("prefilterFunc should return nil when all allRequired literals too short")
+	}
+}
+
+// TestPrefilterCaseInsensitiveWithNonASCIIInput covers the isASCII guard wrapper
+// for CI patterns with non-ASCII input (lines 275-282).
+func TestPrefilterCaseInsensitiveWithNonASCIIInput(t *testing.T) {
+	pf := prefilterFunc("(?si)hello")
+	if pf == nil {
+		t.Fatal("prefilterFunc should return non-nil for (?i)hello")
+	}
+	// Non-ASCII input: should conservatively return true (maybe match).
+	if !pf("héllo") {
+		t.Error("expected true for non-ASCII input with CI pattern (conservative)")
+	}
+	// ASCII input without match: should return false.
+	if pf("goodbye") {
+		t.Error("expected false for 'goodbye'")
+	}
+}
+
+// TestMinLenOpRepeatUnreachable exercises the OpRepeat branch in minLen that is
+// normally unreachable after Simplify (lines 140-148). We test it indirectly
+// via patterns that include quantifiers.
+func TestMinLenOpRepeatViaPattern(t *testing.T) {
+	// {3,5} → Simplify expands to OpConcat/OpQuest, but minLen still computes
+	// correctly because the expanded form sums to the same minimum.
+	if got := minMatchLength("a{3,5}"); got != 3 {
+		t.Errorf("minMatchLength(a{3,5}) = %d, want 3", got)
+	}
+	// {0,5} → minimum is 0
+	if got := minMatchLength("a{0,5}"); got != 0 {
+		t.Errorf("minMatchLength(a{0,5}) = %d, want 0", got)
+	}
+}
+
+// TestExtractLiteralsEmptyBranchLits covers the empty branchLits guard
+// in OpAlternate (lines 377-379).
+func TestExtractLiteralsEmptyBranchLits(t *testing.T) {
+	// Pattern where all alternation branches have no extractable literals.
+	// (.+|.*) — both branches are wildcards.
+	pf := prefilterFunc("(?s)(?:.+|.*)")
+	if pf != nil {
+		t.Error("prefilterFunc should return nil when no branch has literals")
+	}
+}
+
 func BenchmarkRxPrefilter(b *testing.B) {
 	benchmarks := []struct {
 		name    string
