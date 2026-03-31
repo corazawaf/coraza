@@ -201,16 +201,16 @@ func BenchmarkCRSPrefilter(b *testing.B) {
 			}
 			tx.ProcessRequestHeaders()
 			if _, err := tx.ProcessRequestBody(); err != nil {
-				b.Error(err)
+				b.Fatal(err)
 			}
 			tx.AddResponseHeader("Content-Type", "application/json")
 			tx.ProcessResponseHeaders(200, "OK")
 			if _, err := tx.ProcessResponseBody(); err != nil {
-				b.Error(err)
+				b.Fatal(err)
 			}
 			tx.ProcessLogging()
 			if err := tx.Close(); err != nil {
-				b.Error(err)
+				b.Fatal(err)
 			}
 		}
 	}
@@ -232,19 +232,19 @@ func BenchmarkCRSPrefilter(b *testing.B) {
 			}
 			tx.ProcessRequestHeaders()
 			if _, _, err := tx.WriteRequestBody(body); err != nil {
-				b.Error(err)
+				b.Fatal(err)
 			}
 			if _, err := tx.ProcessRequestBody(); err != nil {
-				b.Error(err)
+				b.Fatal(err)
 			}
 			tx.AddResponseHeader("Content-Type", "application/json")
 			tx.ProcessResponseHeaders(200, "OK")
 			if _, err := tx.ProcessResponseBody(); err != nil {
-				b.Error(err)
+				b.Fatal(err)
 			}
 			tx.ProcessLogging()
 			if err := tx.Close(); err != nil {
-				b.Error(err)
+				b.Fatal(err)
 			}
 		}
 	}
@@ -382,16 +382,16 @@ func BenchmarkCRSPrefilter(b *testing.B) {
 			tx.AddRequestHeader("Accept", "application/json")
 			tx.ProcessRequestHeaders()
 			if _, err := tx.ProcessRequestBody(); err != nil {
-				b.Error(err)
+				b.Fatal(err)
 			}
 			tx.AddResponseHeader("Content-Type", "application/json")
 			tx.ProcessResponseHeaders(200, "OK")
 			if _, err := tx.ProcessResponseBody(); err != nil {
-				b.Error(err)
+				b.Fatal(err)
 			}
 			tx.ProcessLogging()
 			if err := tx.Close(); err != nil {
-				b.Error(err)
+				b.Fatal(err)
 			}
 		}
 	})
