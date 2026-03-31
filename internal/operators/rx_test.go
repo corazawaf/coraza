@@ -68,6 +68,36 @@ func TestRx(t *testing.T) {
 			want:    true,
 		},
 		{
+			// Braced hex no match
+			pattern: `\x{bc}[^\x{be}>]*[\x{be}>]`,
+			input:   "no binary bytes here",
+			want:    false,
+		},
+		{
+			// CRS 941310 main pattern (v4.25.0) - alternation with braced hex
+			pattern: `\x{bc}[^>\x{be}]*[>\x{be}]|<[^\x{be}]*\x{be}`,
+			input:   "\xbctest\xbe",
+			want:    true,
+		},
+		{
+			// CRS 941310 main pattern - second alternative
+			pattern: `\x{bc}[^>\x{be}]*[>\x{be}]|<[^\x{be}]*\x{be}`,
+			input:   "<test\xbe",
+			want:    true,
+		},
+		{
+			// CRS 941310 main pattern - no match
+			pattern: `\x{bc}[^>\x{be}]*[>\x{be}]|<[^\x{be}]*\x{be}`,
+			input:   "clean input",
+			want:    false,
+		},
+		{
+			// Mixed braced hex and unbraced in same pattern
+			pattern: `\xac\x{ed}`,
+			input:   "\xac\xed",
+			want:    true,
+		},
+		{
 			// Requires dotall
 			pattern: `hello.*world`,
 			input:   "hello\nworld",
@@ -131,12 +161,38 @@ func TestMatchesArbitraryBytes(t *testing.T) {
 		expr string
 		want bool
 	}{
+		// No hex escapes
 		{"plain ascii", `hello`, false},
+		{"empty string", ``, false},
+		{"only backslash escapes", `\d+\s*\w`, false},
+
+		// Unbraced hex escapes (\xNN)
 		{"unbraced non-utf8", `\xac\xed`, true},
+		{"unbraced utf8", `\x41\x42`, false}, // A, B
+
+		// Braced hex escapes (\x{NN})
 		{"braced non-utf8", `\x{ac}\x{ed}`, true},
-		{"braced utf8", `\x{41}\x{42}`, false}, // A, B - valid utf8
-		{"mixed braced non-utf8", `\x{bc}[^\x{be}>]`, true},
-		{"unicode codepoint", `\x{00e9}`, false}, // é - valid utf8
+		{"braced utf8", `\x{41}\x{42}`, false},
+		{"braced single hex digit", `\x{a}`, false}, // 0x0a is valid utf8 (newline)
+		{"braced single hex digit non-utf8", `\x{80}`, true},
+		{"braced uppercase hex", `\x{BC}\x{BE}`, true},
+		{"braced multi-byte unicode codepoint", `\x{00e9}`, false}, // é - valid utf8
+
+		// Mixed braced and unbraced
+		{"mixed braced and unbraced non-utf8", `\xbc[^\x{be}>]`, true},
+		{"mixed unbraced and braced non-utf8", `\x{bc}[^\xbe>]`, true},
+
+		// Patterns resembling CRS 941310 v4.25.0
+		{"CRS 941310 main pattern", `\x{bc}[^>\x{be}]*[>\x{be}]|<[^\x{be}]*\x{be}`, true},
+		{"CRS 941310 chained pattern", `\x{bc}[\s\x0b]*/[\s\x0b]*[^>\x{be}]*[>\x{be}]|<[\s\x0b]*/[\s\x0b]*[^\x{be}]*\x{be}`, true},
+
+		// Edge cases
+		{"backslash at end", `test\`, false},
+		{"backslash x at end", `test\x`, false},
+		{"truncated braced hex no closing brace", `\x{bc`, false},
+		{"empty braces", `\x{}`, false},
+		{"braced hex with surrounding text", `foo\x{ff}bar`, true},
+		{"backslash not followed by x", `\n\t\r`, false},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
