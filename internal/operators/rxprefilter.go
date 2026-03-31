@@ -70,6 +70,7 @@ import (
 	"regexp/syntax"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
 )
@@ -85,11 +86,24 @@ func minMatchLength(pattern string) int {
 	return minLen(re)
 }
 
+// minLen computes the minimum byte length a matching input must have for the
+// given regex AST node. Returns 0 for unknown or optional nodes.
 func minLen(re *syntax.Regexp) int {
 	switch re.Op {
 	case syntax.OpLiteral:
-		// Convert runes to string to get byte length (UTF-8 encoded).
-		return len(string(re.Rune))
+		// Count byte length per rune. U+FFFD (RuneError) is special: Go's
+		// regexp engine matches it against a single invalid UTF-8 byte (1 byte),
+		// but its UTF-8 encoding is 3 bytes. Count it as 1 to avoid rejecting
+		// inputs that the regex would actually match.
+		n := 0
+		for _, r := range re.Rune {
+			if r == utf8.RuneError {
+				n++
+			} else {
+				n += utf8.RuneLen(r)
+			}
+		}
+		return n
 	case syntax.OpAnyCharNotNL, syntax.OpAnyChar, syntax.OpCharClass:
 		// Any single character match requires at least 1 byte.
 		return 1
@@ -290,6 +304,14 @@ type anyRequired []string
 func extractLiterals(re *syntax.Regexp, ci bool) interface{} {
 	switch re.Op {
 	case syntax.OpLiteral:
+		// U+FFFD in a literal matches single invalid UTF-8 bytes in Go's regexp,
+		// but strings.Contains searches for the 3-byte encoding. Bail out to
+		// avoid false negatives.
+		for _, r := range re.Rune {
+			if r == utf8.RuneError {
+				return nil
+			}
+		}
 		s := string(re.Rune)
 		if ci {
 			s = strings.ToLower(s)
@@ -389,6 +411,7 @@ func hasFlag(re *syntax.Regexp, flag syntax.Flags) bool {
 	return false
 }
 
+// longest returns the longest string in ss, or "" if ss is empty.
 func longest(ss []string) string {
 	if len(ss) == 0 {
 		return ""
@@ -448,6 +471,7 @@ func containsFoldASCII(s, needle string) bool {
 	return true
 }
 
+// isASCII reports whether s contains only ASCII bytes.
 func isASCII(s string) bool {
 	for i := 0; i < len(s); i++ {
 		if s[i] > unicode.MaxASCII {
