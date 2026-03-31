@@ -51,6 +51,23 @@ func TestRx(t *testing.T) {
 			want:    false,
 		},
 		{
+			// Braced hex escape \x{NN} form (used by CRS 4.25+ regex-assembly output)
+			pattern: `\x{ac}\x{ed}\x{00}\x{05}`,
+			input:   "\xac\xed\x00\x05t\x00\x04test",
+			want:    true,
+		},
+		{
+			pattern: `\x{ac}\x{ed}\x{00}\x{05}`,
+			input:   "\xac\xed\x00t\x00\x04test",
+			want:    false,
+		},
+		{
+			// Mixed braced and unbraced hex escapes
+			pattern: `\x{bc}[^\x{be}>]*[\x{be}>]`,
+			input:   "\xbcfoo\xbe",
+			want:    true,
+		},
+		{
 			// Requires dotall
 			pattern: `hello.*world`,
 			input:   "hello\nworld",
@@ -104,6 +121,28 @@ func TestRx(t *testing.T) {
 					t.Error("rx1 failed")
 				}
 			*/
+		})
+	}
+}
+
+func TestMatchesArbitraryBytes(t *testing.T) {
+	tests := []struct {
+		name string
+		expr string
+		want bool
+	}{
+		{"plain ascii", `hello`, false},
+		{"unbraced non-utf8", `\xac\xed`, true},
+		{"braced non-utf8", `\x{ac}\x{ed}`, true},
+		{"braced utf8", `\x{41}\x{42}`, false}, // A, B - valid utf8
+		{"mixed braced non-utf8", `\x{bc}[^\x{be}>]`, true},
+		{"unicode codepoint", `\x{00e9}`, false}, // é - valid utf8
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := matchesArbitraryBytes(tc.expr); got != tc.want {
+				t.Errorf("matchesArbitraryBytes(%q) = %v, want %v", tc.expr, got, tc.want)
+			}
 		})
 	}
 }
