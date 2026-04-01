@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"regexp"
 	"runtime/debug"
 	"strconv"
@@ -753,6 +754,72 @@ func TestAuditLogFields(t *testing.T) {
 	}
 }
 
+func TestMatchRuleDisruptiveActionPopulated(t *testing.T) {
+	tests := []struct {
+		name                         string
+		engine                       types.RuleEngineStatus
+		wantDisruptive               bool
+		wantAction                   corazarules.DisruptiveAction
+		wantInterrupted              bool
+		wantDetectionOnlyInterrupted bool
+	}{
+		{
+			name:                         "engine on",
+			engine:                       types.RuleEngineOn,
+			wantDisruptive:               true,
+			wantAction:                   corazarules.DisruptiveActionDeny,
+			wantInterrupted:              true,
+			wantDetectionOnlyInterrupted: false,
+		},
+		{
+			name:                         "engine detection only",
+			engine:                       types.RuleEngineDetectionOnly,
+			wantDisruptive:               false,
+			wantAction:                   corazarules.DisruptiveActionDeny,
+			wantInterrupted:              false,
+			wantDetectionOnlyInterrupted: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			waf := NewWAF()
+			tx := waf.NewTransaction()
+			tx.RuleEngine = tt.engine
+
+			rule := NewRule()
+			rule.ID_ = 1
+			if err := rule.AddVariable(variables.ArgsGet, "", false); err != nil {
+				t.Fatal(err)
+			}
+			rule.SetOperator(&dummyEqOperator{}, "@eq", "0")
+			_ = rule.AddAction("deny", &dummyDenyAction{})
+
+			tx.AddGetRequestArgument("test", "0")
+
+			var matchedValues []types.MatchData
+			rule.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
+
+			if len(tx.matchedRules) != 1 {
+				t.Fatalf("expected 1 matched rule, got %d", len(tx.matchedRules))
+			}
+			mr := tx.matchedRules[0].(*corazarules.MatchedRule)
+			if mr.Disruptive_ != tt.wantDisruptive {
+				t.Errorf("Disruptive_: got %t, want %t", mr.Disruptive_, tt.wantDisruptive)
+			}
+			if mr.DisruptiveAction_ != tt.wantAction {
+				t.Errorf("DisruptiveAction_: got %d, want %d", mr.DisruptiveAction_, tt.wantAction)
+			}
+			if tx.IsInterrupted() != tt.wantInterrupted {
+				t.Errorf("IsInterrupted: got %t, want %t", tx.IsInterrupted(), tt.wantInterrupted)
+			}
+			if tx.IsDetectionOnlyInterrupted() != tt.wantDetectionOnlyInterrupted {
+				t.Errorf("IsDetectionOnlyInterrupted: got %t, want %t", tx.IsDetectionOnlyInterrupted(), tt.wantDetectionOnlyInterrupted)
+			}
+		})
+	}
+}
+
 func TestResetCapture(t *testing.T) {
 	tx := makeTransaction(t)
 	tx.Capture = true
@@ -818,6 +885,77 @@ func TestRelevantAuditLogging(t *testing.T) {
 			}
 			if !tt.relevantLog && !strings.Contains(debugLog.String(), "Transaction status not marked for audit logging") {
 				t.Errorf("missing debug log. Transaction status should be not marked for audit logging not being relevant")
+			}
+		})
+	}
+}
+
+func TestRelevantAuditLoggingWithoutAuditFlag(t *testing.T) {
+	// Regression test for https://github.com/corazawaf/coraza/issues/1576
+	// When tx.audit is false (no rule with auditlog action matched),
+	// SecAuditLogRelevantStatus should still cause logging if the status matches.
+	tests := []struct {
+		name         string
+		status       string
+		audit        bool
+		interruption *types.Interruption
+		shouldLog    bool
+	}{
+		{
+			name:      "audit=false, relevant status via response → should log",
+			status:    "403",
+			audit:     false,
+			shouldLog: true,
+		},
+		{
+			name:      "audit=false, non-relevant status → should not log",
+			status:    "200",
+			audit:     false,
+			shouldLog: false,
+		},
+		{
+			name:  "audit=false, relevant status via interruption → should log",
+			audit: false,
+			interruption: &types.Interruption{
+				Status: 403,
+				Action: "deny",
+			},
+			shouldLog: true,
+		},
+		{
+			name:      "audit=true, relevant status → should log",
+			status:    "403",
+			audit:     true,
+			shouldLog: true,
+		},
+		{
+			name:      "audit=true, non-relevant status → should not log",
+			status:    "200",
+			audit:     true,
+			shouldLog: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tx := makeTransaction(t)
+			debugLog := bytes.Buffer{}
+			tx.debugLogger = debuglog.Default().WithLevel(debuglog.LevelDebug).WithOutput(&debugLog)
+			tx.WAF.AuditLogRelevantStatus = regexp.MustCompile(`^(?:5|4[0-9][0-35-9])`)
+			tx.variables.responseStatus.Set(tt.status)
+			tx.interruption = tt.interruption
+			tx.AuditEngine = types.AuditEngineRelevantOnly
+			tx.audit = tt.audit
+			tx.ProcessLogging()
+			if err := tx.Close(); err != nil {
+				t.Error(err)
+			}
+			logged := strings.Contains(debugLog.String(), "Transaction marked for audit logging")
+			if tt.shouldLog && !logged {
+				t.Errorf("expected transaction to be audit logged, debug: %q", debugLog.String())
+			}
+			if !tt.shouldLog && logged {
+				t.Errorf("expected transaction NOT to be audit logged, debug: %q", debugLog.String())
 			}
 		})
 	}
@@ -1349,6 +1487,61 @@ func BenchmarkTxGetFieldWithExceptions(b *testing.B) {
 	}
 }
 
+// makeTransactionWithJSONArgs creates a transaction that includes JSON-array-style
+// GET arguments (json.0.field … json.9.field) on top of the standard args.
+// This simulates the real-world pattern that motivates regex key exceptions.
+func makeTransactionWithJSONArgs(t testing.TB) *Transaction {
+	t.Helper()
+	tx := makeTransaction(t)
+	for i := 0; i < 10; i++ {
+		tx.AddGetRequestArgument(fmt.Sprintf("json.%d.jobdescription", i), "value")
+	}
+	return tx
+}
+
+// BenchmarkTxGetFieldWithShortRegexException measures the overhead of GetField
+// when a short regex exception (e.g. ^id$) is applied against the args collection.
+func BenchmarkTxGetFieldWithShortRegexException(b *testing.B) {
+	tx := makeTransactionWithJSONArgs(b)
+	rvp := ruleVariableParams{
+		Variable: variables.Args,
+		Exceptions: []ruleVariableException{
+			{KeyRx: regexp.MustCompile(`^id$`)},
+		},
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tx.GetField(rvp)
+	}
+	b.StopTimer()
+	if err := tx.Close(); err != nil {
+		b.Fatalf("Failed to close transaction: %s", err.Error())
+	}
+}
+
+// BenchmarkTxGetFieldWithMediumRegexException measures the overhead of GetField
+// when a medium-complexity regex exception (e.g. ^json\.\d+\.jobdescription$) is
+// applied — the typical pattern used in URI-scoped CRS exclusions.
+func BenchmarkTxGetFieldWithMediumRegexException(b *testing.B) {
+	tx := makeTransactionWithJSONArgs(b)
+	rvp := ruleVariableParams{
+		Variable: variables.Args,
+		Exceptions: []ruleVariableException{
+			{KeyRx: regexp.MustCompile(`^json\.\d+\.jobdescription$`)},
+		},
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tx.GetField(rvp)
+	}
+	b.StopTimer()
+	if err := tx.Close(); err != nil {
+		b.Fatalf("Failed to close transaction: %s", err.Error())
+	}
+}
+
 func TestTxProcessURI(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
@@ -1811,6 +2004,121 @@ func TestCloseFails(t *testing.T) {
 	if !strings.Contains(err.Error(), "removing temporary file") {
 		t.Fatalf("unexpected error message: %s", err.Error())
 	}
+}
+
+func TestUploadKeepFiles(t *testing.T) {
+	if !environment.HasAccessToFS {
+		t.Skip("skipping test as it requires access to filesystem")
+	}
+
+	createTmpFile := func(t *testing.T) string {
+		t.Helper()
+		f, err := os.CreateTemp(t.TempDir(), "crztest*")
+		if err != nil {
+			t.Fatal(err)
+		}
+		name := f.Name()
+		if err := f.Close(); err != nil {
+			t.Fatalf("failed to close temp file: %v", err)
+		}
+		return name
+	}
+
+	t.Run("Off deletes files", func(t *testing.T) {
+		waf := NewWAF()
+		waf.UploadKeepFiles = types.UploadKeepFilesOff
+		tx := waf.NewTransaction()
+		tmpFile := createTmpFile(t)
+
+		col := tx.Variables().FilesTmpNames().(*collections.Map)
+		col.Add("", tmpFile)
+
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := os.Stat(tmpFile); !os.IsNotExist(err) {
+			t.Fatal("expected temp file to be deleted when UploadKeepFiles is Off")
+		}
+	})
+
+	t.Run("On keeps files", func(t *testing.T) {
+		waf := NewWAF()
+		waf.UploadKeepFiles = types.UploadKeepFilesOn
+		tx := waf.NewTransaction()
+		tmpFile := createTmpFile(t)
+
+		col := tx.Variables().FilesTmpNames().(*collections.Map)
+		col.Add("", tmpFile)
+
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := os.Stat(tmpFile); err != nil {
+			t.Fatal("expected temp file to be kept when UploadKeepFiles is On")
+		}
+	})
+
+	t.Run("RelevantOnly keeps files when log rules matched", func(t *testing.T) {
+		waf := NewWAF()
+		waf.UploadKeepFiles = types.UploadKeepFilesRelevantOnly
+		tx := waf.NewTransaction()
+		tmpFile := createTmpFile(t)
+
+		// Simulate a matched rule with Log enabled
+		tx.matchedRules = append(tx.matchedRules, &corazarules.MatchedRule{Log_: true})
+
+		col := tx.Variables().FilesTmpNames().(*collections.Map)
+		col.Add("", tmpFile)
+
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := os.Stat(tmpFile); err != nil {
+			t.Fatal("expected temp file to be kept when UploadKeepFiles is RelevantOnly and log rules matched")
+		}
+	})
+
+	t.Run("RelevantOnly deletes files when only nolog rules matched", func(t *testing.T) {
+		waf := NewWAF()
+		waf.UploadKeepFiles = types.UploadKeepFilesRelevantOnly
+		tx := waf.NewTransaction()
+		tmpFile := createTmpFile(t)
+
+		// Simulate a matched rule with Log disabled (e.g. CRS initialization rules)
+		tx.matchedRules = append(tx.matchedRules, &corazarules.MatchedRule{Log_: false})
+
+		col := tx.Variables().FilesTmpNames().(*collections.Map)
+		col.Add("", tmpFile)
+
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := os.Stat(tmpFile); !os.IsNotExist(err) {
+			t.Fatal("expected temp file to be deleted when UploadKeepFiles is RelevantOnly and only nolog rules matched")
+		}
+	})
+
+	t.Run("RelevantOnly deletes files when no rules matched", func(t *testing.T) {
+		waf := NewWAF()
+		waf.UploadKeepFiles = types.UploadKeepFilesRelevantOnly
+		tx := waf.NewTransaction()
+		tmpFile := createTmpFile(t)
+
+		col := tx.Variables().FilesTmpNames().(*collections.Map)
+		col.Add("", tmpFile)
+
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := os.Stat(tmpFile); !os.IsNotExist(err) {
+			t.Fatal("expected temp file to be deleted when UploadKeepFiles is RelevantOnly and no rules matched")
+		}
+	})
 }
 
 func TestRequestFilename(t *testing.T) {

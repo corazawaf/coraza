@@ -14,7 +14,7 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
-	"github.com/corazawaf/coraza/v3/internal/memoize"
+	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -154,6 +154,8 @@ type Rule struct {
 	// chainedRules containing rules with just PhaseUnknown variables, may potentially
 	// be anticipated. This boolean ensures that it happens
 	withPhaseUnknownVariable bool
+
+	memoizer plugintypes.Memoizer
 }
 
 func (r *Rule) ParentID() int {
@@ -238,7 +240,7 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 			for _, c := range ecol {
 				if c.Variable == v.Variable {
 					// TODO shall we check the pointer?
-					v.Exceptions = append(v.Exceptions, ruleVariableException{KeyStr: c.KeyStr, lowerKeyStr: strings.ToLower(c.KeyStr), KeyRx: nil})
+					v.Exceptions = append(v.Exceptions, ruleVariableException{KeyStr: c.KeyStr, lowerKeyStr: strings.ToLower(c.KeyStr), KeyRx: c.KeyRx})
 				}
 			}
 
@@ -380,15 +382,22 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 		}
 
 		for _, a := range r.actions {
-			if a.Function.Type() == plugintypes.ActionTypeFlow {
-				// Flow actions are evaluated also if the rule engine is set to DetectionOnly
+			// All actions are evaluated independently from the engine being On or in DetectionOnly.
+			// The action evaluation is responsible of checking the engine mode and decide if the disruptive action
+			// has to be enforced or not. This allows finer control to the actions, such us creating the detectionOnlyInterruption and
+			// allowing RelevantOnly audit logs in detection only mode.
+			switch a.Function.Type() {
+			case plugintypes.ActionTypeFlow:
 				logger.Debug().Str("action", a.Name).Int("phase", int(phase)).Msg("Evaluating flow action for rule")
-				a.Function.Evaluate(r, tx)
-			} else if a.Function.Type() == plugintypes.ActionTypeDisruptive && tx.RuleEngine == types.RuleEngineOn {
+			case plugintypes.ActionTypeDisruptive:
 				// The parser enforces that the disruptive action is just one per rule (if more than one, only the last one is kept)
-				logger.Debug().Str("action", a.Name).Msg("Executing disruptive action for rule")
-				a.Function.Evaluate(r, tx)
+				logger.Debug().Str("action", a.Name).Int("phase", int(phase)).Msg("Executing disruptive action for rule")
+			default:
+				// Only flow and disruptive actions are supposed to be evaluated here, non disruptive actions
+				// are evaluated previously, during the variable matching.
+				continue
 			}
+			a.Function.Evaluate(r, tx)
 		}
 		if r.ID_ != noID {
 			// we avoid matching chains and secmarkers
@@ -524,11 +533,9 @@ func (r *Rule) ClearDisruptiveActions() {
 // hasRegex checks the received key to see if it is between forward slashes.
 // if it is, it will return true and the content of the regular expression inside the slashes.
 // otherwise it will return false and the same key.
+// Delegates to utils.HasRegex which properly handles escaped slashes.
 func hasRegex(key string) (bool, string) {
-	if len(key) > 2 && key[0] == '/' && key[len(key)-1] == '/' {
-		return true, key[1 : len(key)-1]
-	}
-	return false, key
+	return utils.HasRegex(key)
 }
 
 // caseSensitiveVariable returns true if the variable is case sensitive
@@ -572,7 +579,7 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 		if !caseSensitiveVariable(v) {
 			rx = strings.ToLower(rx)
 		}
-		if vare, err := memoize.Do(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
+		if vare, err := r.memoizeDo(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
 			return err
 		} else {
 			re = vare.(*regexp.Regexp)
@@ -619,7 +626,7 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 		if !caseSensitiveVariable(v) {
 			rx = strings.ToLower(rx)
 		}
-		if vare, err := memoize.Do(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
+		if vare, err := r.memoizeDo(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
 			return err
 		} else {
 			re = vare.(*regexp.Regexp)
@@ -735,6 +742,23 @@ func (r *Rule) executeTransformations(value string) (string, []error) {
 		value = v
 	}
 	return value, errs
+}
+
+// SetMemoizer sets the memoizer used for caching compiled regexes in variable selectors.
+func (r *Rule) SetMemoizer(m plugintypes.Memoizer) {
+	r.memoizer = m
+}
+
+// Memoizer returns the memoizer used for caching compiled regexes in variable selectors.
+func (r *Rule) Memoizer() plugintypes.Memoizer {
+	return r.memoizer
+}
+
+func (r *Rule) memoizeDo(key string, fn func() (any, error)) (any, error) {
+	if r.memoizer != nil {
+		return r.memoizer.Do(key, fn)
+	}
+	return fn()
 }
 
 // NewRule returns a new initialized rule

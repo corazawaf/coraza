@@ -6,6 +6,7 @@ package actions
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -73,7 +74,13 @@ const (
 //
 // Here are some notes about the options:
 //
-//  1. Option `ruleRemoveTargetById`, `ruleRemoveTargetByMsg`, and `ruleRemoveTargetByTag`, users don't need to use the char ! before the target list.
+//  1. Option `ruleRemoveTargetById`, `ruleRemoveTargetByMsg`, and `ruleRemoveTargetByTag` accept a collection key in two forms:
+//     - **Exact string**: `ARGS:user` — removes only the variable whose name is exactly `user`.
+//     - **Regular expression** (delimited by `/`): `ARGS:/^json\.\d+\.field$/` — removes all variables whose
+//     names match the pattern. The closing `/` must not be preceded by an odd number of backslashes
+//     (e.g. `/foo\/` is treated as the literal string `/foo\/`, not a regex). An empty pattern (`//`) is rejected.
+//     Pattern matching is always case-insensitive because variable names are lowercased before comparison.
+//     Users do not need to use the `!` character before the target list.
 //
 //  2. Option `ruleRemoveById` is triggered at run time and should be specified before the rule in which it is disabling.
 //
@@ -99,17 +106,30 @@ const (
 //		SecRule REQUEST_URI "@beginsWith /index.php" "phase:1,t:none,pass,\
 //	 	nolog,ctl:ruleRemoveTargetById=981260;ARGS:user"
 //
+// # white-list all JSON array fields matching a pattern for rule #932125 when the REQUEST_URI begins with /api/jobs
+//
+//		SecRule REQUEST_URI "@beginsWith /api/jobs" "phase:1,t:none,pass,\
+//	 	nolog,ctl:ruleRemoveTargetById=932125;ARGS:/^json\.\d+\.jobdescription$/"
+//
 // ```
 type ctlFn struct {
 	action     ctlFunctionType
 	value      string
 	collection variables.RuleVariable
 	colKey     string
+	colKeyRx   *regexp.Regexp
 }
 
-func (a *ctlFn) Init(_ plugintypes.RuleMetadata, data string) error {
+func (a *ctlFn) Init(m plugintypes.RuleMetadata, data string) error {
+	// Type-assert RuleMetadata to *corazawaf.Rule to access the rule's memoizer.
+	// When the assertion fails (e.g., in tests using a stub RuleMetadata), the
+	// memoizer remains nil and regex compilation proceeds without caching.
+	var memoizer plugintypes.Memoizer
+	if r, ok := m.(*corazawaf.Rule); ok {
+		memoizer = r.Memoizer()
+	}
 	var err error
-	a.action, a.value, a.collection, a.colKey, err = parseCtl(data)
+	a.action, a.value, a.collection, a.colKey, a.colKeyRx, err = parseCtl(data, memoizer)
 	return err
 }
 
@@ -140,21 +160,21 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 		}
 		for _, r := range tx.WAF.Rules.GetRules() {
 			if r.ID_ >= start && r.ID_ <= end {
-				tx.RemoveRuleTargetByID(r.ID_, a.collection, a.colKey)
+				tx.RemoveRuleTargetByID(r.ID_, a.collection, a.colKey, a.colKeyRx)
 			}
 		}
 	case ctlRuleRemoveTargetByTag:
 		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
 			if utils.InSlice(a.value, r.Tags_) {
-				tx.RemoveRuleTargetByID(r.ID(), a.collection, a.colKey)
+				tx.RemoveRuleTargetByID(r.ID(), a.collection, a.colKey, a.colKeyRx)
 			}
 		}
 	case ctlRuleRemoveTargetByMsg:
 		rules := tx.WAF.Rules.GetRules()
 		for _, r := range rules {
 			if r.Msg != nil && r.Msg.String() == a.value {
-				tx.RemoveRuleTargetByID(r.ID(), a.collection, a.colKey)
+				tx.RemoveRuleTargetByID(r.ID(), a.collection, a.colKey, a.colKeyRx)
 			}
 		}
 	case ctlAuditEngine:
@@ -375,18 +395,40 @@ func (a *ctlFn) Type() plugintypes.ActionType {
 	return plugintypes.ActionTypeNondisruptive
 }
 
-func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, string, error) {
+func parseCtl(data string, memoizer plugintypes.Memoizer) (ctlFunctionType, string, variables.RuleVariable, string, *regexp.Regexp, error) {
 	action, ctlVal, ok := strings.Cut(data, "=")
 	if !ok {
-		return ctlUnknown, "", 0, "", errors.New("invalid syntax")
+		return ctlUnknown, "", 0, "", nil, errors.New("invalid syntax")
 	}
 	value, col, ok := strings.Cut(ctlVal, ";")
 	var colkey, colname string
 	if ok {
 		colname, colkey, _ = strings.Cut(col, ":")
+		colkey = strings.TrimSpace(colkey)
 	}
 	collection, _ := variables.Parse(strings.TrimSpace(colname))
-	colkey = strings.ToLower(colkey)
+	var keyRx *regexp.Regexp
+	if isRegex, rxPattern := utils.HasRegex(colkey); isRegex {
+		if len(rxPattern) == 0 {
+			return ctlUnknown, "", 0, "", nil, errors.New("empty regex pattern in ctl collection key")
+		}
+		var err error
+		if memoizer != nil {
+			re, compileErr := memoizer.Do(rxPattern, func() (any, error) { return regexp.Compile(rxPattern) })
+			if compileErr != nil {
+				return ctlUnknown, "", 0, "", nil, fmt.Errorf("invalid regex in ctl collection key: %w", compileErr)
+			}
+			keyRx = re.(*regexp.Regexp)
+		} else {
+			keyRx, err = regexp.Compile(rxPattern)
+			if err != nil {
+				return ctlUnknown, "", 0, "", nil, fmt.Errorf("invalid regex in ctl collection key: %w", err)
+			}
+		}
+		colkey = ""
+	} else {
+		colkey = strings.ToLower(colkey)
+	}
 	var act ctlFunctionType
 	switch action {
 	case "auditEngine":
@@ -430,9 +472,9 @@ func parseCtl(data string) (ctlFunctionType, string, variables.RuleVariable, str
 	case "debugLogLevel":
 		act = ctlDebugLogLevel
 	default:
-		return ctlUnknown, "", 0x00, "", fmt.Errorf("unknown ctl action %q", action)
+		return ctlUnknown, "", 0x00, "", nil, fmt.Errorf("unknown ctl action %q", action)
 	}
-	return act, value, collection, strings.TrimSpace(colkey), nil
+	return act, value, collection, colkey, keyRx, nil
 }
 
 // parseRange parses a range string of the form "start-end" and returns the start and end

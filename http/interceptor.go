@@ -7,13 +7,32 @@
 package http
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 
 	"github.com/corazawaf/coraza/v3/types"
 )
+
+// hijackerTracker wraps an http.Hijacker and tracks whether Hijack has been called.
+type hijackerTracker struct {
+	hijacker    http.Hijacker
+	interceptor *rwInterceptor
+}
+
+// Hijack delegates to the underlying http.Hijacker and marks the interceptor
+// as hijacked on success, so that response processing is skipped.
+func (h *hijackerTracker) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	conn, rw, err := h.hijacker.Hijack()
+	if err != nil {
+		return conn, rw, err
+	}
+	h.interceptor.isHijacked = true
+	return conn, rw, nil
+}
 
 // rwInterceptor intercepts the ResponseWriter, so it can track response size
 // and returned status code.
@@ -25,6 +44,7 @@ type rwInterceptor struct {
 	isWriteHeaderFlush            bool
 	wroteHeader                   bool
 	wroteBufferedBodyToDownstream bool
+	isHijacked                    bool
 	allowFlushing                 bool
 }
 
@@ -49,6 +69,13 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 		i.statusCode = obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode)
 		i.flushWriteHeader()
 		return
+	}
+
+	// For WebSocket upgrades (101 Switching Protocols), flush the headers
+	// immediately. The connection is about to be hijacked for bidirectional
+	// communication and there will be no HTTP response body to process.
+	if statusCode == http.StatusSwitchingProtocols {
+		i.flushWriteHeader()
 	}
 
 	i.wroteHeader = true
@@ -206,6 +233,12 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 	i := &rwInterceptor{w: w, tx: tx, proto: r.Proto, statusCode: 200}
 
 	responseProcessor := func(tx types.Transaction, r *http.Request) error {
+		// If the connection has been hijacked (e.g. WebSocket upgrade),
+		// we must not attempt to write to the response writer anymore.
+		if i.isHijacked {
+			return nil
+		}
+
 		// We look for interruptions triggered at phase 3 (response headers)
 		// and during writing the response body. If so, response status code
 		// has been sent over the flush already.
@@ -250,13 +283,13 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 		return struct {
 			responseWriter
 			http.Hijacker
-		}{i, hijacker}, responseProcessor
+		}{i, &hijackerTracker{hijacker: hijacker, interceptor: i}}, responseProcessor
 	case isHijacker && isPusher:
 		return struct {
 			responseWriter
 			http.Hijacker
 			http.Pusher
-		}{i, hijacker, pusher}, responseProcessor
+		}{i, &hijackerTracker{hijacker: hijacker, interceptor: i}, pusher}, responseProcessor
 	default:
 		return struct {
 			responseWriter
