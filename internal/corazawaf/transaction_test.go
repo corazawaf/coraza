@@ -730,6 +730,7 @@ func TestAuditLogFields(t *testing.T) {
 	rule := NewRule()
 	rule.ID_ = 131
 	rule.Log = true
+	rule.Audit = true
 	tx.MatchRule(rule, []types.MatchData{
 		&corazarules.MatchData{
 			Variable_: variables.UniqueID,
@@ -751,6 +752,144 @@ func TestAuditLogFields(t *testing.T) {
 	}
 	if err := tx.Close(); err != nil {
 		t.Fatalf("Failed to close transaction: %s", err.Error())
+	}
+}
+
+func TestAuditLogMessageFiltering(t *testing.T) {
+	tests := []struct {
+		name            string
+		log             bool
+		audit           bool
+		wantInAuditLog  bool
+		wantInErrorLog  bool
+		desc            string
+	}{
+		{
+			name:           "log action (log=true, audit=true)",
+			log:            true,
+			audit:          true,
+			wantInAuditLog: true,
+			wantInErrorLog: true,
+			desc:           "log sets both flags: rule appears in error log and audit log",
+		},
+		{
+			name:           "nolog action (log=false, audit=false)",
+			log:            false,
+			audit:          false,
+			wantInAuditLog: false,
+			wantInErrorLog: false,
+			desc:           "nolog clears both flags: rule appears in neither",
+		},
+		{
+			name:           "nolog,auditlog (log=false, audit=true)",
+			log:            false,
+			audit:          true,
+			wantInAuditLog: true,
+			wantInErrorLog: false,
+			desc:           "nolog,auditlog: rule appears in audit log only",
+		},
+		{
+			name:           "log,noauditlog (log=true, audit=false)",
+			log:            true,
+			audit:          false,
+			wantInAuditLog: false,
+			wantInErrorLog: true,
+			desc:           "log,noauditlog: rule appears in error log only",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tx := makeTransaction(t)
+			tx.AuditLogParts = types.AuditLogParts("ABCDEFGHIJK")
+
+			var errorLogCalled bool
+			tx.WAF.ErrorLogCb = func(_ types.MatchedRule) {
+				errorLogCalled = true
+			}
+
+			rule := NewRule()
+			rule.ID_ = 100
+			rule.Log = tt.log
+			rule.Audit = tt.audit
+			tx.MatchRule(rule, []types.MatchData{
+				&corazarules.MatchData{
+					Variable_: variables.UniqueID,
+				},
+			})
+
+			al := tx.AuditLog()
+
+			if got := len(al.Messages()) > 0; got != tt.wantInAuditLog {
+				t.Errorf("%s: audit log messages: got present=%v, want present=%v", tt.desc, got, tt.wantInAuditLog)
+			}
+
+			if errorLogCalled != tt.wantInErrorLog {
+				t.Errorf("%s: error log callback: got called=%v, want called=%v", tt.desc, errorLogCalled, tt.wantInErrorLog)
+			}
+
+			if err := tx.Close(); err != nil {
+				t.Fatalf("Failed to close transaction: %s", err.Error())
+			}
+		})
+	}
+}
+
+func TestAuditLogHPartMessageFiltering(t *testing.T) {
+	// When only H (AuditLogTrailer) is set without K (RulesMatched),
+	// error messages should still be filtered by the Audit flag.
+	tests := []struct {
+		name           string
+		log            bool
+		audit          bool
+		wantInAuditLog bool
+	}{
+		{
+			name:           "log,audit: appears in H-only messages",
+			log:            true,
+			audit:          true,
+			wantInAuditLog: true,
+		},
+		{
+			name:           "log,noaudit: excluded from H-only messages",
+			log:            true,
+			audit:          false,
+			wantInAuditLog: false,
+		},
+		{
+			name:           "nolog,audit: appears in H-only messages",
+			log:            false,
+			audit:          true,
+			wantInAuditLog: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tx := makeTransaction(t)
+			// H without K
+			tx.AuditLogParts = types.AuditLogParts("ABCDEFGH")
+
+			rule := NewRule()
+			rule.ID_ = 200
+			rule.Log = tt.log
+			rule.Audit = tt.audit
+			tx.MatchRule(rule, []types.MatchData{
+				&corazarules.MatchData{
+					Variable_: variables.UniqueID,
+				},
+			})
+
+			al := tx.AuditLog()
+
+			if got := len(al.Messages()) > 0; got != tt.wantInAuditLog {
+				t.Errorf("H-only audit log: got present=%v, want present=%v", got, tt.wantInAuditLog)
+			}
+
+			if err := tx.Close(); err != nil {
+				t.Fatalf("Failed to close transaction: %s", err.Error())
+			}
+		})
 	}
 }
 
