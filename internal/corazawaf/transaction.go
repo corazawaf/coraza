@@ -559,11 +559,11 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 	// This mirrors ModSecurity v3 behavior (m_severity > -1 check in transaction.cc).
 	if r.HasSeverity_ {
 		hs := tx.variables.highestSeverity
-		currentVal, err := strconv.Atoi(hs.Get())
-		if err != nil {
-			// HIGHEST_SEVERITY is initialized to "255" and only updated via strconv.Itoa,
-			// so this should not happen. Fall back to the sentinel to allow any real severity to win.
-			currentVal = 255
+		currentVal := defaultHighestSeverity
+		if v := hs.Get(); v != "" {
+			if parsed, err := strconv.Atoi(v); err == nil {
+				currentVal = parsed
+			}
 		}
 		if r.Severity_.Int() < currentVal {
 			hs.Set(strconv.Itoa(r.Severity_.Int()))
