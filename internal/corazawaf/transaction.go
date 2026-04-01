@@ -1110,6 +1110,10 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	if tx.ForceRequestBodyVariable {
 		// We force URLENCODED if mimeType is x-www... or we have an empty RBP and ForceRequestBodyVariable
 		if rbp == "" {
+			// TODO(4.x): Evaluate if the new RAW body parser fits better than URLENCODED for the
+			// default forced body processor. See some reasoning in https://github.com/corazawaf/coraza/issues/938:
+			// "meaning that parsing a body of unknown type might waste some time by trying to parse it as urlencoded
+			// for nothing (and possibly set some "garbage" variables if you happen to have a & in it)"
 			rbp = "URLENCODED"
 		}
 		tx.variables.reqbodyProcessor.Set(rbp)
@@ -1398,14 +1402,7 @@ func (tx *Transaction) ProcessLogging() {
 		return
 	}
 
-	if tx.AuditEngine == types.AuditEngineRelevantOnly && !tx.audit {
-		// Transaction marked not for audit logging
-		tx.debugLogger.Debug().
-			Msg("Transaction not marked for audit logging, AuditEngine is RelevantOnly and we got noauditlog")
-		return
-	}
-
-	if tx.AuditEngine == types.AuditEngineRelevantOnly && tx.audit {
+	if tx.AuditEngine == types.AuditEngineRelevantOnly {
 		re := tx.WAF.AuditLogRelevantStatus
 		status := tx.variables.responseStatus.Get()
 		if tx.IsInterrupted() {
@@ -1415,10 +1412,21 @@ func (tx *Transaction) ProcessLogging() {
 			// Fixes https://github.com/corazawaf/coraza/issues/1333
 			status = strconv.Itoa(tx.detectionOnlyInterruption.Status)
 		}
-		if re != nil && !re.Match([]byte(status)) {
-			// Not relevant status
-			tx.debugLogger.Debug().Msg("Transaction status not marked for audit logging")
-			return
+
+		if tx.audit {
+			// A rule triggered auditlog — still filter by relevant status if regex is set.
+			if re != nil && !re.Match([]byte(status)) {
+				tx.debugLogger.Debug().Msg("Transaction status not marked for audit logging")
+				return
+			}
+		} else {
+			// No rule triggered auditlog — only log if status matches SecAuditLogRelevantStatus.
+			// Fixes https://github.com/corazawaf/coraza/issues/1576
+			if re == nil || !re.Match([]byte(status)) {
+				tx.debugLogger.Debug().
+					Msg("Transaction not marked for audit logging, AuditEngine is RelevantOnly and status is not relevant")
+				return
+			}
 		}
 	}
 
