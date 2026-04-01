@@ -21,7 +21,7 @@ require (
 	github.com/corazawaf/coraza-coreruleset v0.0.0-20240226094324-415b1017abdc
 	github.com/corazawaf/libinjection-go v0.3.2
 	github.com/foxcpp/go-mockdns v1.1.0
-	github.com/jcchavezs/mergefs v0.1.0
+	github.com/jcchavezs/mergefs v0.1.1
 	github.com/kaptinlin/jsonschema v0.4.6
 	github.com/magefile/mage v1.17.0
 	github.com/mccutchen/go-httpbin/v2 v2.18.3

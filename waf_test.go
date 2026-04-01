@@ -184,6 +184,27 @@ func TestPopulateAuditLog(t *testing.T) {
 	}
 }
 
+func TestDetectionOnlyEnforcesProcessPartialBodyLimitActions(t *testing.T) {
+	waf, err := NewWAF(NewWAFConfig().WithDirectives(`
+		SecRuleEngine DetectionOnly
+		SecRequestBodyAccess On
+		SecRequestBodyLimitAction Reject
+		SecResponseBodyAccess On
+		SecResponseBodyLimitAction Reject
+	`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	w := waf.(wafWrapper).waf
+	if w.RequestBodyLimitAction != types.BodyLimitActionProcessPartial {
+		t.Fatalf("expected RequestBodyLimitAction to be ProcessPartial in DetectionOnly mode, got %v", w.RequestBodyLimitAction)
+	}
+	if w.ResponseBodyLimitAction != types.BodyLimitActionProcessPartial {
+		t.Fatalf("expected ResponseBodyLimitAction to be ProcessPartial in DetectionOnly mode, got %v", w.ResponseBodyLimitAction)
+	}
+}
+
 func TestRulesCount(t *testing.T) {
 	waf, err := NewWAF(NewWAFConfig())
 	if err != nil {
