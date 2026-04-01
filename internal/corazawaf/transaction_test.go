@@ -757,12 +757,12 @@ func TestAuditLogFields(t *testing.T) {
 
 func TestAuditLogMessageFiltering(t *testing.T) {
 	tests := []struct {
-		name            string
-		log             bool
-		audit           bool
-		wantInAuditLog  bool
-		wantInErrorLog  bool
-		desc            string
+		name           string
+		log            bool
+		audit          bool
+		wantInAuditLog bool
+		wantInErrorLog bool
+		desc           string
 	}{
 		{
 			name:           "log action (log=true, audit=true)",
