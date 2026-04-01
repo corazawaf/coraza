@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 
 	"rsc.io/binaryregexp"
@@ -198,7 +199,18 @@ func matchesArbitraryBytes(expr string) bool {
 			continue
 		}
 
-		v, mb, _, err := strconv.UnquoteChar(expr[i:], 0)
+		// Handle braced hex escapes like \x{bc} by converting to the
+		// unbraced form \xbc so strconv.UnquoteChar can parse them.
+		sub := expr[i:]
+		advance := 3 // default for \xNN (4 chars total, skip 3 extra)
+		if len(sub) >= 6 && sub[2] == '{' {
+			if end := strings.IndexByte(sub, '}'); end != -1 {
+				sub = `\x` + sub[3:end]
+				advance = end
+			}
+		}
+
+		v, mb, _, err := strconv.UnquoteChar(sub, 0)
 		if err != nil || mb {
 			// Wasn't a byte escape sequence, shouldn't happen in practice.
 			decoded = append(decoded, expr[i])
@@ -206,7 +218,7 @@ func matchesArbitraryBytes(expr string) bool {
 		}
 
 		decoded = append(decoded, byte(v))
-		i += 3
+		i += advance
 	}
 
 	return !utf8.Valid(decoded)
