@@ -15,11 +15,13 @@ type RuleMetadata struct {
 	// If the rule is part of a chain, the parent ID is used as log ID.
 	// This approach prevents repeated computations in performance-critical sections, enhancing efficiency.
 	// It is stored for performance reasons, avoiding to perfrom the computation multiple times in the hot path
-	LogID_       string
-	File_        string
-	Line_        int
-	Rev_         string
-	Severity_    types.RuleSeverity
+	LogID_    string
+	File_     string
+	Line_     int
+	Rev_      string
+	Severity_ types.RuleSeverity
+	// HasSeverity_ reports whether the rule explicitly set a severity action.
+	// This distinguishes an unset value from RuleSeverityEmergency (0).
 	HasSeverity_ bool
 	Version_     string
 	Tags_        []string
