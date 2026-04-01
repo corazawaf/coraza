@@ -24,10 +24,10 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	albedo "github.com/coreruleset/albedo/server"
-	"github.com/coreruleset/go-ftw/config"
-	"github.com/coreruleset/go-ftw/output"
-	"github.com/coreruleset/go-ftw/runner"
-	"github.com/coreruleset/go-ftw/test"
+	"github.com/coreruleset/go-ftw/v2/config"
+	"github.com/coreruleset/go-ftw/v2/output"
+	"github.com/coreruleset/go-ftw/v2/runner"
+	"github.com/coreruleset/go-ftw/v2/test"
 	"github.com/rs/zerolog"
 
 	coreruleset "github.com/corazawaf/coraza-coreruleset/v4"
@@ -632,15 +632,21 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg.WithLogfile(errorPath)
+	cfg.LogFile = errorPath
 	cfg.TestOverride.Overrides.DestAddr = &host
 	cfg.TestOverride.Overrides.Port = &port
 
-	cfg.LoadPlatformOverrides(".ftw-overrides.yml")
-	res, err := runner.Run(cfg, tests, &runner.RunnerConfig{
-		ShowTime:    false,
-		ReadTimeout: 3 * time.Second, // Defaults to 1s but looks to be not enough in the CI
-	}, output.NewOutput("quiet", os.Stdout))
+	// loadMultiphaseOverrides has different implementations depending on coraza.rule.multiphase_evaluation
+	// build tag. If enabled, it will include multiphase specific ignored tests.
+	if err := loadMultiphaseOverrides(cfg); err != nil {
+		t.Fatal(err)
+	}
+	runnerCfg := config.NewRunnerConfiguration(cfg)
+	runnerCfg.ReadTimeout = 3 * time.Second // Defaults to 1s but looks to be not enough in the CI
+	if err := runnerCfg.LoadPlatformOverrides(".ftw-overrides.yml"); err != nil {
+		t.Fatal(err)
+	}
+	res, err := runner.Run(runnerCfg, tests, output.NewOutput("quiet", os.Stdout))
 	if err != nil {
 		t.Fatal(err)
 	}
