@@ -1,12 +1,12 @@
 # Tests should not just be ignored via .ftw.yml, but new expectations for each test should be set.
-# Avoid as much as possible adding new entries here, in favor of .ftw-overrides.yml
+# Avoid as much as possible adding new entries here, in favor of .ftw-overrides.yml.
+# Multiphase-specific test ignores should be added to .ftw-multiphase.yml. They are combined with this file only when
+# coraza.rule.multiphase_evaluation build tag is set.
 ---
 testoverride:
   ignore:
     920100-4: 'Invalid uri, Coraza not reached - 404 page not found' 
     920100-5: 'Invalid uri, Coraza not reached - 404 page not found'
-    930110-7: 'CRS issue: https://github.com/coreruleset/coreruleset/issues/3736'
-
     # TODO: investigate
     932200-13: 'Failing only in multiphase evalution'
     932300-10: 'Failing only in multiphase evalution'
