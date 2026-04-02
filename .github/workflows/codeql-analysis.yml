@@ -4,6 +4,8 @@ on:
   schedule:
     - cron: '0 6 * * 6'
 
+permissions: {}
+
 concurrency:
   group: codeql-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -12,6 +14,9 @@ jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
 
     steps:
     - name: Checkout repository

@@ -145,7 +145,47 @@ func TestAuditLogRelevantOnlyOk(t *testing.T) {
 	}
 }
 
-func TestAuditLogRelevantOnlyNoAuditlog(t *testing.T) {
+func TestAuditLogRelevantOnlyNoAuditlogNoRelevantStatus(t *testing.T) {
+	// When a rule matches with noauditlog AND the response status does not match
+	// SecAuditLogRelevantStatus, no audit log should be written.
+	waf := corazawaf.NewWAF()
+	parser := seclang.NewParser(waf)
+	if err := parser.FromString(`
+		SecRuleEngine DetectionOnly
+		SecAuditEngine RelevantOnly
+		SecAuditLogFormat json
+		SecAuditLogType serial
+		SecAuditLogRelevantStatus "^5"
+		SecRule ARGS "@unconditionalMatch" "id:1,phase:1,noauditlog,msg:'unconditional match'"
+	`); err != nil {
+		t.Fatal(err)
+	}
+	file, err := os.CreateTemp(t.TempDir(), "tmp.log")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
+		t.Fatal(err)
+	}
+	tx := waf.NewTransaction()
+	tx.AddGetRequestArgument("test", "test")
+	tx.ProcessRequestHeaders()
+	if _, err := file.Seek(0, 0); err != nil {
+		t.Error(err)
+	}
+	tx.ProcessLogging()
+	var al2 auditlog.Log
+	// Status is 200 (not 5xx), and no auditlog action → should not log
+	if err := json.NewDecoder(file).Decode(&al2); err == nil {
+		t.Errorf("there should be no audit log, got %v", al2)
+	}
+}
+
+func TestAuditLogRelevantOnlyNoAuditlogButRelevantStatus(t *testing.T) {
+	// When a rule matches with noauditlog BUT the response status matches
+	// SecAuditLogRelevantStatus, the audit log should still be written (OR semantics).
+	// Regression test for https://github.com/corazawaf/coraza/issues/1576
 	waf := corazawaf.NewWAF()
 	parser := seclang.NewParser(waf)
 	if err := parser.FromString(`
@@ -169,15 +209,14 @@ func TestAuditLogRelevantOnlyNoAuditlog(t *testing.T) {
 	tx := waf.NewTransaction()
 	tx.AddGetRequestArgument("test", "test")
 	tx.ProcessRequestHeaders()
-	// now we read file
 	if _, err := file.Seek(0, 0); err != nil {
 		t.Error(err)
 	}
 	tx.ProcessLogging()
 	var al2 auditlog.Log
-	// there should be no audit log because of noauditlog
-	if err := json.NewDecoder(file).Decode(&al2); err == nil {
-		t.Errorf("there should be no audit log, got %v", al2)
+	// Status matches SecAuditLogRelevantStatus ".*" → should log despite noauditlog
+	if err := json.NewDecoder(file).Decode(&al2); err != nil {
+		t.Errorf("expected audit log to be written when status matches SecAuditLogRelevantStatus, got error: %v", err)
 	}
 }
 

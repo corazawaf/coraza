@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"regexp"
 	"runtime/debug"
 	"strconv"
@@ -729,6 +730,7 @@ func TestAuditLogFields(t *testing.T) {
 	rule := NewRule()
 	rule.ID_ = 131
 	rule.Log = true
+	rule.Audit = true
 	tx.MatchRule(rule, []types.MatchData{
 		&corazarules.MatchData{
 			Variable_: variables.UniqueID,
@@ -750,6 +752,144 @@ func TestAuditLogFields(t *testing.T) {
 	}
 	if err := tx.Close(); err != nil {
 		t.Fatalf("Failed to close transaction: %s", err.Error())
+	}
+}
+
+func TestAuditLogMessageFiltering(t *testing.T) {
+	tests := []struct {
+		name           string
+		log            bool
+		audit          bool
+		wantInAuditLog bool
+		wantInErrorLog bool
+		desc           string
+	}{
+		{
+			name:           "log action (log=true, audit=true)",
+			log:            true,
+			audit:          true,
+			wantInAuditLog: true,
+			wantInErrorLog: true,
+			desc:           "log sets both flags: rule appears in error log and audit log",
+		},
+		{
+			name:           "nolog action (log=false, audit=false)",
+			log:            false,
+			audit:          false,
+			wantInAuditLog: false,
+			wantInErrorLog: false,
+			desc:           "nolog clears both flags: rule appears in neither",
+		},
+		{
+			name:           "nolog,auditlog (log=false, audit=true)",
+			log:            false,
+			audit:          true,
+			wantInAuditLog: true,
+			wantInErrorLog: false,
+			desc:           "nolog,auditlog: rule appears in audit log only",
+		},
+		{
+			name:           "log,noauditlog (log=true, audit=false)",
+			log:            true,
+			audit:          false,
+			wantInAuditLog: false,
+			wantInErrorLog: true,
+			desc:           "log,noauditlog: rule appears in error log only",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tx := makeTransaction(t)
+			tx.AuditLogParts = types.AuditLogParts("ABCDEFGHIJK")
+
+			var errorLogCalled bool
+			tx.WAF.ErrorLogCb = func(_ types.MatchedRule) {
+				errorLogCalled = true
+			}
+
+			rule := NewRule()
+			rule.ID_ = 100
+			rule.Log = tt.log
+			rule.Audit = tt.audit
+			tx.MatchRule(rule, []types.MatchData{
+				&corazarules.MatchData{
+					Variable_: variables.UniqueID,
+				},
+			})
+
+			al := tx.AuditLog()
+
+			if got := len(al.Messages()) > 0; got != tt.wantInAuditLog {
+				t.Errorf("%s: audit log messages: got present=%v, want present=%v", tt.desc, got, tt.wantInAuditLog)
+			}
+
+			if errorLogCalled != tt.wantInErrorLog {
+				t.Errorf("%s: error log callback: got called=%v, want called=%v", tt.desc, errorLogCalled, tt.wantInErrorLog)
+			}
+
+			if err := tx.Close(); err != nil {
+				t.Fatalf("Failed to close transaction: %s", err.Error())
+			}
+		})
+	}
+}
+
+func TestAuditLogHPartMessageFiltering(t *testing.T) {
+	// When only H (AuditLogTrailer) is set without K (RulesMatched),
+	// error messages should still be filtered by the Audit flag.
+	tests := []struct {
+		name           string
+		log            bool
+		audit          bool
+		wantInAuditLog bool
+	}{
+		{
+			name:           "log,audit: appears in H-only messages",
+			log:            true,
+			audit:          true,
+			wantInAuditLog: true,
+		},
+		{
+			name:           "log,noaudit: excluded from H-only messages",
+			log:            true,
+			audit:          false,
+			wantInAuditLog: false,
+		},
+		{
+			name:           "nolog,audit: appears in H-only messages",
+			log:            false,
+			audit:          true,
+			wantInAuditLog: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tx := makeTransaction(t)
+			// H without K
+			tx.AuditLogParts = types.AuditLogParts("ABCDEFGH")
+
+			rule := NewRule()
+			rule.ID_ = 200
+			rule.Log = tt.log
+			rule.Audit = tt.audit
+			tx.MatchRule(rule, []types.MatchData{
+				&corazarules.MatchData{
+					Variable_: variables.UniqueID,
+				},
+			})
+
+			al := tx.AuditLog()
+
+			if got := len(al.Messages()) > 0; got != tt.wantInAuditLog {
+				t.Errorf("H-only audit log: got present=%v, want present=%v", got, tt.wantInAuditLog)
+			}
+
+			if err := tx.Close(); err != nil {
+				t.Fatalf("Failed to close transaction: %s", err.Error())
+			}
+		})
 	}
 }
 
@@ -884,6 +1024,77 @@ func TestRelevantAuditLogging(t *testing.T) {
 			}
 			if !tt.relevantLog && !strings.Contains(debugLog.String(), "Transaction status not marked for audit logging") {
 				t.Errorf("missing debug log. Transaction status should be not marked for audit logging not being relevant")
+			}
+		})
+	}
+}
+
+func TestRelevantAuditLoggingWithoutAuditFlag(t *testing.T) {
+	// Regression test for https://github.com/corazawaf/coraza/issues/1576
+	// When tx.audit is false (no rule with auditlog action matched),
+	// SecAuditLogRelevantStatus should still cause logging if the status matches.
+	tests := []struct {
+		name         string
+		status       string
+		audit        bool
+		interruption *types.Interruption
+		shouldLog    bool
+	}{
+		{
+			name:      "audit=false, relevant status via response → should log",
+			status:    "403",
+			audit:     false,
+			shouldLog: true,
+		},
+		{
+			name:      "audit=false, non-relevant status → should not log",
+			status:    "200",
+			audit:     false,
+			shouldLog: false,
+		},
+		{
+			name:  "audit=false, relevant status via interruption → should log",
+			audit: false,
+			interruption: &types.Interruption{
+				Status: 403,
+				Action: "deny",
+			},
+			shouldLog: true,
+		},
+		{
+			name:      "audit=true, relevant status → should log",
+			status:    "403",
+			audit:     true,
+			shouldLog: true,
+		},
+		{
+			name:      "audit=true, non-relevant status → should not log",
+			status:    "200",
+			audit:     true,
+			shouldLog: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tx := makeTransaction(t)
+			debugLog := bytes.Buffer{}
+			tx.debugLogger = debuglog.Default().WithLevel(debuglog.LevelDebug).WithOutput(&debugLog)
+			tx.WAF.AuditLogRelevantStatus = regexp.MustCompile(`^(?:5|4[0-9][0-35-9])`)
+			tx.variables.responseStatus.Set(tt.status)
+			tx.interruption = tt.interruption
+			tx.AuditEngine = types.AuditEngineRelevantOnly
+			tx.audit = tt.audit
+			tx.ProcessLogging()
+			if err := tx.Close(); err != nil {
+				t.Error(err)
+			}
+			logged := strings.Contains(debugLog.String(), "Transaction marked for audit logging")
+			if tt.shouldLog && !logged {
+				t.Errorf("expected transaction to be audit logged, debug: %q", debugLog.String())
+			}
+			if !tt.shouldLog && logged {
+				t.Errorf("expected transaction NOT to be audit logged, debug: %q", debugLog.String())
 			}
 		})
 	}
@@ -1393,6 +1604,61 @@ func BenchmarkTxGetField(b *testing.B) {
 	b.ReportAllocs()
 }
 
+// makeTransactionWithJSONArgs creates a transaction that includes JSON-array-style
+// GET arguments (json.0.field … json.9.field) on top of the standard args.
+// This simulates the real-world pattern that motivates regex key exceptions.
+func makeTransactionWithJSONArgs(t testing.TB) *Transaction {
+	t.Helper()
+	tx := makeTransaction(t)
+	for i := 0; i < 10; i++ {
+		tx.AddGetRequestArgument(fmt.Sprintf("json.%d.jobdescription", i), "value")
+	}
+	return tx
+}
+
+// BenchmarkTxGetFieldWithShortRegexException measures the overhead of GetField
+// when a short regex exception (e.g. ^id$) is applied against the args collection.
+func BenchmarkTxGetFieldWithShortRegexException(b *testing.B) {
+	tx := makeTransactionWithJSONArgs(b)
+	rvp := ruleVariableParams{
+		Variable: variables.Args,
+		Exceptions: []ruleVariableException{
+			{KeyRx: regexp.MustCompile(`^id$`)},
+		},
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tx.GetField(rvp)
+	}
+	b.StopTimer()
+	if err := tx.Close(); err != nil {
+		b.Fatalf("Failed to close transaction: %s", err.Error())
+	}
+}
+
+// BenchmarkTxGetFieldWithMediumRegexException measures the overhead of GetField
+// when a medium-complexity regex exception (e.g. ^json\.\d+\.jobdescription$) is
+// applied — the typical pattern used in URI-scoped CRS exclusions.
+func BenchmarkTxGetFieldWithMediumRegexException(b *testing.B) {
+	tx := makeTransactionWithJSONArgs(b)
+	rvp := ruleVariableParams{
+		Variable: variables.Args,
+		Exceptions: []ruleVariableException{
+			{KeyRx: regexp.MustCompile(`^json\.\d+\.jobdescription$`)},
+		},
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tx.GetField(rvp)
+	}
+	b.StopTimer()
+	if err := tx.Close(); err != nil {
+		b.Fatalf("Failed to close transaction: %s", err.Error())
+	}
+}
+
 func TestTxProcessURI(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
@@ -1855,6 +2121,121 @@ func TestCloseFails(t *testing.T) {
 	if !strings.Contains(err.Error(), "removing temporary file") {
 		t.Fatalf("unexpected error message: %s", err.Error())
 	}
+}
+
+func TestUploadKeepFiles(t *testing.T) {
+	if !environment.HasAccessToFS {
+		t.Skip("skipping test as it requires access to filesystem")
+	}
+
+	createTmpFile := func(t *testing.T) string {
+		t.Helper()
+		f, err := os.CreateTemp(t.TempDir(), "crztest*")
+		if err != nil {
+			t.Fatal(err)
+		}
+		name := f.Name()
+		if err := f.Close(); err != nil {
+			t.Fatalf("failed to close temp file: %v", err)
+		}
+		return name
+	}
+
+	t.Run("Off deletes files", func(t *testing.T) {
+		waf := NewWAF()
+		waf.UploadKeepFiles = types.UploadKeepFilesOff
+		tx := waf.NewTransaction()
+		tmpFile := createTmpFile(t)
+
+		col := tx.Variables().FilesTmpNames().(*collections.Map)
+		col.Add("", tmpFile)
+
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := os.Stat(tmpFile); !os.IsNotExist(err) {
+			t.Fatal("expected temp file to be deleted when UploadKeepFiles is Off")
+		}
+	})
+
+	t.Run("On keeps files", func(t *testing.T) {
+		waf := NewWAF()
+		waf.UploadKeepFiles = types.UploadKeepFilesOn
+		tx := waf.NewTransaction()
+		tmpFile := createTmpFile(t)
+
+		col := tx.Variables().FilesTmpNames().(*collections.Map)
+		col.Add("", tmpFile)
+
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := os.Stat(tmpFile); err != nil {
+			t.Fatal("expected temp file to be kept when UploadKeepFiles is On")
+		}
+	})
+
+	t.Run("RelevantOnly keeps files when log rules matched", func(t *testing.T) {
+		waf := NewWAF()
+		waf.UploadKeepFiles = types.UploadKeepFilesRelevantOnly
+		tx := waf.NewTransaction()
+		tmpFile := createTmpFile(t)
+
+		// Simulate a matched rule with Log enabled
+		tx.matchedRules = append(tx.matchedRules, &corazarules.MatchedRule{Log_: true})
+
+		col := tx.Variables().FilesTmpNames().(*collections.Map)
+		col.Add("", tmpFile)
+
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := os.Stat(tmpFile); err != nil {
+			t.Fatal("expected temp file to be kept when UploadKeepFiles is RelevantOnly and log rules matched")
+		}
+	})
+
+	t.Run("RelevantOnly deletes files when only nolog rules matched", func(t *testing.T) {
+		waf := NewWAF()
+		waf.UploadKeepFiles = types.UploadKeepFilesRelevantOnly
+		tx := waf.NewTransaction()
+		tmpFile := createTmpFile(t)
+
+		// Simulate a matched rule with Log disabled (e.g. CRS initialization rules)
+		tx.matchedRules = append(tx.matchedRules, &corazarules.MatchedRule{Log_: false})
+
+		col := tx.Variables().FilesTmpNames().(*collections.Map)
+		col.Add("", tmpFile)
+
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := os.Stat(tmpFile); !os.IsNotExist(err) {
+			t.Fatal("expected temp file to be deleted when UploadKeepFiles is RelevantOnly and only nolog rules matched")
+		}
+	})
+
+	t.Run("RelevantOnly deletes files when no rules matched", func(t *testing.T) {
+		waf := NewWAF()
+		waf.UploadKeepFiles = types.UploadKeepFilesRelevantOnly
+		tx := waf.NewTransaction()
+		tmpFile := createTmpFile(t)
+
+		col := tx.Variables().FilesTmpNames().(*collections.Map)
+		col.Add("", tmpFile)
+
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := os.Stat(tmpFile); !os.IsNotExist(err) {
+			t.Fatal("expected temp file to be deleted when UploadKeepFiles is RelevantOnly and no rules matched")
+		}
+	})
 }
 
 func TestRequestFilename(t *testing.T) {

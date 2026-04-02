@@ -104,6 +104,18 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		waf.ErrorLogCb = c.errorCallback
 	}
 
+	// In DetectionOnly mode, set ProcessPartial for body limit actions to avoid disrupting transactions during initial deployment.
+	if waf.RuleEngine == types.RuleEngineDetectionOnly {
+		if waf.RequestBodyLimitAction != types.BodyLimitActionProcessPartial {
+			waf.RequestBodyLimitAction = types.BodyLimitActionProcessPartial
+			waf.Logger.Debug().Msg("DetectionOnly mode: SecRequestBodyLimitAction enforced to ProcessPartial")
+		}
+		if waf.ResponseBodyLimitAction != types.BodyLimitActionProcessPartial {
+			waf.ResponseBodyLimitAction = types.BodyLimitActionProcessPartial
+			waf.Logger.Debug().Msg("DetectionOnly mode: SecResponseBodyLimitAction enforced to ProcessPartial")
+		}
+	}
+
 	if err := waf.Validate(); err != nil {
 		return nil, err
 	}
@@ -158,4 +170,9 @@ func (w wafWrapper) NewTransactionWithOptions(opts corazawaf.Options) types.Tran
 // RulesCount returns the number of rules in this WAF.
 func (w wafWrapper) RulesCount() int {
 	return w.waf.Rules.Count()
+}
+
+// Close releases cached resources owned by this WAF instance.
+func (w wafWrapper) Close() error {
+	return w.waf.Close()
 }

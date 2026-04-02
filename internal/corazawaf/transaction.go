@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -567,6 +568,7 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 		ClientIPAddress_: tx.variables.remoteAddr.Get(),
 		Rule_:            &r.RuleMetadata,
 		Log_:             r.Log,
+		Audit_:           r.Audit,
 		MatchedDatas_:    mds,
 		Context_:         tx.context,
 	}
@@ -679,12 +681,17 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 	return matches
 }
 
-// RemoveRuleTargetByID Removes the VARIABLE:KEY from the rule ID
-// It's mostly used by CTL to dynamically remove targets from rules
-func (tx *Transaction) RemoveRuleTargetByID(id int, variable variables.RuleVariable, key string) {
+// RemoveRuleTargetByID removes the VARIABLE:KEY from the rule ID.
+// It is mostly used by CTL to dynamically remove targets from rules.
+// key is an exact string to match against the variable name; keyRx is an
+// optional compiled regular expression that, when non-nil, is used instead of
+// key for pattern-based matching (e.g. removing all ARGS matching
+// /^json\.\d+\.field$/ from a given rule).
+func (tx *Transaction) RemoveRuleTargetByID(id int, variable variables.RuleVariable, key string, keyRx *regexp.Regexp) {
 	c := ruleVariableParams{
 		Variable: variable,
 		KeyStr:   key,
+		KeyRx:    keyRx,
 	}
 
 	if multiphaseEvaluation && (variable == variables.Args || variable == variables.ArgsNames) {
@@ -1095,6 +1102,10 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	if tx.ForceRequestBodyVariable {
 		// We force URLENCODED if mimeType is x-www... or we have an empty RBP and ForceRequestBodyVariable
 		if rbp == "" {
+			// TODO(4.x): Evaluate if the new RAW body parser fits better than URLENCODED for the
+			// default forced body processor. See some reasoning in https://github.com/corazawaf/coraza/issues/938:
+			// "meaning that parsing a body of unknown type might waste some time by trying to parse it as urlencoded
+			// for nothing (and possibly set some "garbage" variables if you happen to have a & in it)"
 			rbp = "URLENCODED"
 		}
 		tx.variables.reqbodyProcessor.Set(rbp)
@@ -1383,14 +1394,7 @@ func (tx *Transaction) ProcessLogging() {
 		return
 	}
 
-	if tx.AuditEngine == types.AuditEngineRelevantOnly && !tx.audit {
-		// Transaction marked not for audit logging
-		tx.debugLogger.Debug().
-			Msg("Transaction not marked for audit logging, AuditEngine is RelevantOnly and we got noauditlog")
-		return
-	}
-
-	if tx.AuditEngine == types.AuditEngineRelevantOnly && tx.audit {
+	if tx.AuditEngine == types.AuditEngineRelevantOnly {
 		re := tx.WAF.AuditLogRelevantStatus
 		status := tx.variables.responseStatus.Get()
 		if tx.IsInterrupted() {
@@ -1400,10 +1404,21 @@ func (tx *Transaction) ProcessLogging() {
 			// Fixes https://github.com/corazawaf/coraza/issues/1333
 			status = strconv.Itoa(tx.detectionOnlyInterruption.Status)
 		}
-		if re != nil && !re.Match([]byte(status)) {
-			// Not relevant status
-			tx.debugLogger.Debug().Msg("Transaction status not marked for audit logging")
-			return
+
+		if tx.audit {
+			// A rule triggered auditlog — still filter by relevant status if regex is set.
+			if re != nil && !re.Match([]byte(status)) {
+				tx.debugLogger.Debug().Msg("Transaction status not marked for audit logging")
+				return
+			}
+		} else {
+			// No rule triggered auditlog — only log if status matches SecAuditLogRelevantStatus.
+			// Fixes https://github.com/corazawaf/coraza/issues/1576
+			if re == nil || !re.Match([]byte(status)) {
+				tx.debugLogger.Debug().
+					Msg("Transaction not marked for audit logging, AuditEngine is RelevantOnly and status is not relevant")
+				return
+			}
 		}
 	}
 
@@ -1453,6 +1468,18 @@ func (tx *Transaction) DetectionOnlyInterruption() *types.Interruption {
 
 func (tx *Transaction) MatchedRules() []types.MatchedRule {
 	return tx.matchedRules
+}
+
+// hasLogRelevantMatchedRules returns true if any matched rule has Log enabled.
+// Rules with nolog (e.g. CRS initialization rules) are excluded, matching
+// the same filtering used for audit log part K.
+func (tx *Transaction) hasLogRelevantMatchedRules() bool {
+	for _, mr := range tx.matchedRules {
+		if mrWithLog, ok := mr.(*corazarules.MatchedRule); ok && mrWithLog.Log() {
+			return true
+		}
+	}
+	return false
 }
 
 func (tx *Transaction) LastPhase() types.RulePhase {
@@ -1566,11 +1593,14 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 		case types.AuditLogPartRulesMatched:
 			auditLogPartRulesMatchedSet = true
 			for _, mr := range tx.matchedRules {
-				// Log action is required to log a matched rule on both error log and audit log
-				// An assertion has to be done to check if the MatchedRule implements the Log() function before calling Log()
-				// It is performed to avoid breaking the Coraza v3.* API adding a Log() method to the MatchedRule interface
+				// Audit flag controls whether a matched rule appears in the audit log.
+				// This aligns with ModSecurity behavior where:
+				// - log: sets both Log and Audit (appears in error log AND audit log)
+				// - nolog: clears both (appears in neither)
+				// - nolog,auditlog: Log=false, Audit=true (audit log only)
+				// - log,noauditlog: Log=true, Audit=false (error log only)
 				mrWithlog, ok := mr.(*corazarules.MatchedRule)
-				if ok && mrWithlog.Log() {
+				if ok && mrWithlog.Audit() {
 					r := mr.Rule()
 					for _, matchData := range mr.MatchedDatas() {
 						newAlEntry := auditlog.Message{
@@ -1604,11 +1634,11 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 	}
 
 	// If AuditLogPartRulesMatched (K) is not set, but AuditLogPartAuditLogTrailer (H) is set, we still expect to
-	// log the error messages emitted by the rules (if the rule has Log set to true)
+	// log the error messages emitted by the rules (if the rule has Audit set to true)
 	if !auditLogPartRulesMatchedSet && auditLogPartAuditLogTrailerSet {
 		for _, mr := range tx.matchedRules {
 			mrWithlog, ok := mr.(*corazarules.MatchedRule)
-			if ok && mrWithlog.Log() {
+			if ok && mrWithlog.Audit() {
 				al.Messages_ = append(al.Messages_, auditlog.Message{
 					ErrorMessage_: mr.ErrorLog(),
 				})
@@ -1628,12 +1658,20 @@ func (tx *Transaction) Close() error {
 
 	var errs []error
 	if environment.HasAccessToFS {
-		// TODO(jcchavezs): filesTmpNames should probably be a new kind of collection that
-		// is aware of the files and then attempt to delete them when the collection
-		// is resetted or an item is removed.
-		for _, file := range tx.variables.filesTmpNames.Get("") {
-			if err := os.Remove(file); err != nil {
-				errs = append(errs, fmt.Errorf("removing temporary file: %v", err))
+		// UploadKeepFilesRelevantOnly keeps temporary files only when there are
+		// log-relevant matched rules (i.e., rules that would be logged; rules
+		// with actions such as "nolog" are intentionally excluded here).
+		keepFiles := tx.WAF.UploadKeepFiles == types.UploadKeepFilesOn ||
+			(tx.WAF.UploadKeepFiles == types.UploadKeepFilesRelevantOnly && tx.hasLogRelevantMatchedRules())
+
+		if !keepFiles {
+			// TODO(jcchavezs): filesTmpNames should probably be a new kind of collection that
+			// is aware of the files and then attempt to delete them when the collection
+			// is resetted or an item is removed.
+			for _, file := range tx.variables.filesTmpNames.Get("") {
+				if err := os.Remove(file); err != nil {
+					errs = append(errs, fmt.Errorf("removing temporary file: %v", err))
+				}
 			}
 		}
 	}
