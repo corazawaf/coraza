@@ -126,9 +126,8 @@ func TestPrefilterFuncBuildability(t *testing.T) {
 					t.Fatalf("test bug: noMatch %q actually matches %q", tc.noMatch, tc.pattern)
 				}
 				// Prefilter may accept (conservative) or reject — but if it rejects, it's correct
-				if pf(tc.noMatch) {
-					// Conservative pass-through: prefilter said "maybe", that's OK
-				}
+				// Conservative pass-through: prefilter said "maybe", that's OK
+				_ = pf(tc.noMatch)
 			}
 		})
 	}
