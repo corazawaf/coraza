@@ -1393,6 +1393,32 @@ func directiveSecArgumentsLimit(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Enables or disables pre-filtering for the @rx operator.
+// Syntax: SecRxPreFilter On|Off
+// Default: Off
+// ---
+// When enabled, Coraza analyses each regex pattern at rule-load time to extract required
+// literal substrings and compute the minimum match length. At request time these cheap
+// checks run before the full regex, allowing the engine to skip the regex entirely when
+// an input clearly cannot match.
+//
+// Example:
+// ```seclang
+// SecRxPreFilter On
+// ```
+func directiveSecRxPreFilter(options *DirectiveOptions) error {
+	if len(options.Opts) == 0 {
+		return errEmptyOptions
+	}
+
+	b, err := parseBoolean(strings.ToLower(options.Opts))
+	if err != nil {
+		return err
+	}
+	options.WAF.RxPreFilterEnabled = b
+	return nil
+}
+
 func parseBoolean(data string) (bool, error) {
 	data = strings.ToLower(data)
 	switch data {

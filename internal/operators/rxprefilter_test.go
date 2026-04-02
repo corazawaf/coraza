@@ -1,8 +1,6 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build coraza.rule.rx_prefilter
-
 package operators
 
 import (
@@ -64,8 +62,8 @@ func TestMinMatchLength(t *testing.T) {
 		{"\\bhello\\b", 5},
 
 		// Unicode
-		{"ハロー", 9}, // 3 runes × 3 bytes each
-		{"café", 5},  // é is 2 bytes
+		{"ハロー", 9},  // 3 runes × 3 bytes each
+		{"café", 5}, // é is 2 bytes
 	}
 	for _, tc := range tests {
 		t.Run(tc.pattern, func(t *testing.T) {
@@ -83,11 +81,11 @@ func TestMinMatchLength(t *testing.T) {
 // accepts known matching inputs and rejects known non-matching inputs.
 func TestPrefilterFuncBuildability(t *testing.T) {
 	tests := []struct {
-		pattern   string
-		wantNil   bool
-		desc      string
-		match     string // input that the regex matches (checked when prefilter is non-nil)
-		noMatch   string // input that the regex does not match (checked when prefilter is non-nil)
+		pattern string
+		wantNil bool
+		desc    string
+		match   string // input that the regex matches (checked when prefilter is non-nil)
+		noMatch string // input that the regex does not match (checked when prefilter is non-nil)
 	}{
 		{"hello", false, "plain literal", "say hello", "goodbye"},
 		{"[a-z]+", true, "char class only", "", ""},
@@ -500,7 +498,7 @@ func TestPrefilterIntegrationViaNewRX(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(fmt.Sprintf("%s/%s", tc.pattern, tc.input), func(t *testing.T) {
-			opts := plugintypes.OperatorOptions{Arguments: tc.pattern}
+			opts := plugintypes.OperatorOptions{Arguments: tc.pattern, RxPreFilterEnabled: true}
 			op, err := newRX(opts)
 			if err != nil {
 				t.Fatal(err)
@@ -554,7 +552,7 @@ func TestPrefilterCapturingCorrectness(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.pattern, func(t *testing.T) {
-			opts := plugintypes.OperatorOptions{Arguments: tc.pattern}
+			opts := plugintypes.OperatorOptions{Arguments: tc.pattern, RxPreFilterEnabled: true}
 			op, err := newRX(opts)
 			if err != nil {
 				t.Fatal(err)
@@ -593,11 +591,11 @@ func TestContainsFoldASCII(t *testing.T) {
 		{"", "hello", false},
 		{"hi", "hello", false},
 		{"xhellox", "hello", true},
-		{"HÉLLO", "hello", false},       // non-ASCII É in haystack, ASCII needle
-		{"Straße", "straße", true},      // non-ASCII needle: conservative true to avoid false negatives
-		{"STRASSE", "straße", true},     // non-ASCII needle: conservative true (Unicode folding is tricky)
+		{"HÉLLO", "hello", false},             // non-ASCII É in haystack, ASCII needle
+		{"Straße", "straße", true},            // non-ASCII needle: conservative true to avoid false negatives
+		{"STRASSE", "straße", true},           // non-ASCII needle: conservative true (Unicode folding is tricky)
 		{"totally different", "straße", true}, // non-ASCII needle: conservative true even when absent
-		{"", "", true},                  // empty needle always matches
+		{"", "", true},                        // empty needle always matches
 		{"abc", "", true},
 		{"SELECT", "select", true},
 		{"sElEcT", "select", true},
@@ -755,7 +753,7 @@ func TestPrefilterWithSMPrefix(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			opts := plugintypes.OperatorOptions{Arguments: tc.pattern}
+			opts := plugintypes.OperatorOptions{Arguments: tc.pattern, RxPreFilterEnabled: true}
 			op, err := newRX(opts)
 			if err != nil {
 				t.Fatal(err)
@@ -829,8 +827,8 @@ func TestMemoizeSharesPrefilter(t *testing.T) {
 // TestPrefilterConcurrentSafety verifies the prefilter closure and Aho-Corasick
 // automaton can be safely called from multiple goroutines concurrently.
 func TestPrefilterConcurrentSafety(t *testing.T) {
-	pattern := "(?i)(?:union\\s+select|insert\\s+into|delete\\s+from)"
-	opts := plugintypes.OperatorOptions{Arguments: pattern}
+	RxPattern := `(?i)(?:union\s+select|insert\s+into|delete\s+from)`
+	opts := plugintypes.OperatorOptions{Arguments: RxPattern}
 	op, err := newRX(opts)
 	if err != nil {
 		t.Fatal(err)
@@ -852,7 +850,7 @@ func TestPrefilterConcurrentSafety(t *testing.T) {
 	done := make(chan struct{})
 
 	// Compile the reference regex once, outside the goroutines.
-	re := regexp.MustCompile("(?i)(?:union\\s+select|insert\\s+into|delete\\s+from)")
+	re := regexp.MustCompile(RxPattern)
 
 	for g := 0; g < goroutines; g++ {
 		go func() {

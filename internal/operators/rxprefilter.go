@@ -1,8 +1,6 @@
 // Copyright 2022 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build coraza.rule.rx_prefilter
-
 // rxprefilter implements compile-time analysis of regex patterns to build cheap
 // pre-checks that can skip expensive regexp.Regexp evaluation when the input
 // clearly cannot match.
@@ -180,7 +178,8 @@ func prefilterFunc(pattern string) func(string) bool {
 		if len(filtered) == 0 {
 			return nil
 		}
-		if len(filtered) == 1 {
+		switch {
+		case len(filtered) == 1:
 			needle := filtered[0]
 			if caseInsensitive {
 				pf = func(s string) bool {
@@ -191,7 +190,7 @@ func prefilterFunc(pattern string) func(string) bool {
 					return strings.Contains(s, needle)
 				}
 			}
-		} else if caseInsensitive {
+		case caseInsensitive:
 			pf = func(s string) bool {
 				for _, needle := range filtered {
 					if !containsFoldASCII(s, needle) {
@@ -200,7 +199,7 @@ func prefilterFunc(pattern string) func(string) bool {
 				}
 				return true
 			}
-		} else {
+		default:
 			pf = func(s string) bool {
 				for _, needle := range filtered {
 					if !strings.Contains(s, needle) {
@@ -223,7 +222,8 @@ func prefilterFunc(pattern string) func(string) bool {
 			return nil
 		}
 		filtered := v
-		if len(filtered) == 1 {
+		switch {
+		case len(filtered) == 1:
 			needle := filtered[0]
 			if caseInsensitive {
 				pf = func(s string) bool {
@@ -234,14 +234,14 @@ func prefilterFunc(pattern string) func(string) bool {
 					return strings.Contains(s, needle)
 				}
 			}
-		} else if caseInsensitive && !allASCIIStrings([]string(filtered)) {
+		case caseInsensitive && !allASCIIStrings([]string(filtered)):
 			// When case-insensitive, Aho-Corasick uses ASCII-only folding. If any
 			// needle is non-ASCII (e.g. "ſelect" lowercased from "Select"), it could
 			// fold to an ASCII equivalent under Go's Unicode case rules — meaning a
 			// pure-ASCII input like "select" would match (?i)ſelect but the automaton
 			// wouldn't find "ſelect" in "select". To avoid false negatives, bail out.
 			return nil
-		} else {
+		default:
 			// Build an Aho-Corasick automaton for multi-pattern matching in O(n).
 			// Same library already used by the @pm operator.
 			builder := ahocorasick.NewAhoCorasickBuilder(ahocorasick.Opts{

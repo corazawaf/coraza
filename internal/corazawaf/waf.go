@@ -156,6 +156,10 @@ type WAF struct {
 	// Configures the maximum number of ARGS that will be accepted for processing.
 	ArgumentLimit int
 
+	// RxPreFilterEnabled controls whether the @rx operator uses compile-time
+	// literal pre-filtering. Set by the SecRxPreFilter directive.
+	RxPreFilterEnabled bool
+
 	memoizerID uint64
 	memoizer   *memoize.Memoizer
 	closeOnce  gosync.Once
@@ -337,9 +341,10 @@ func NewWAF() *WAF {
 			types.AuditLogPartResponseHeaders,
 			types.AuditLogPartAuditLogTrailer,
 		},
-		AuditLogFormat: "Native",
-		Logger:         logger,
-		ArgumentLimit:  1000,
+		AuditLogFormat:     "Native",
+		Logger:             logger,
+		ArgumentLimit:      1000,
+		RxPreFilterEnabled: defaultRxPreFilterEnabled,
 	}
 
 	if environment.HasAccessToFS {
