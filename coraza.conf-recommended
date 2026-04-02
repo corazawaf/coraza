@@ -3,7 +3,7 @@
 # Enable Coraza, attaching it to every transaction.
 # Possible values: On, Off, DetectionOnly.
 # DetectionOnly minimises the chances of post-installation disruption by
-# only logging matches rules without performing disrutive actions.
+# only logging matched rules without performing disruptive actions.
 #
 SecRuleEngine DetectionOnly
 
@@ -161,7 +161,7 @@ SecDataDir /tmp/
 
 # Configure the audit logging engine, which logs transaction details.
 # Possible values: On, Off, RelevantOnly
-# RelevantOnly logs the transactions marked by a matched rule withauditlog,
+# RelevantOnly logs the transactions marked by a matched rule with auditlog,
 # or relevant transaction based on response status (see SecAuditLogRelevantStatus).
 #
 SecAuditEngine RelevantOnly
