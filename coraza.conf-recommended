@@ -168,6 +168,7 @@ SecAuditEngine RelevantOnly
 
 # When SecAuditEngine is set to RelevantOnly, define which response
 # status codes are considered relevant.
+# The following regex matches status codes 400-419 and 500-519.
 #
 SecAuditLogRelevantStatus "^(?:(5|4)(0|1)[0-9])$"
 
