@@ -231,7 +231,7 @@ func directiveSecResponseBodyAccess(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	b, err := parseBoolean(strings.ToLower(options.Opts))
+	b, err := parseBoolean(options.Opts)
 	if err != nil {
 		return err
 	}
@@ -274,7 +274,7 @@ func directiveSecRequestBodyAccess(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	b, err := parseBoolean(strings.ToLower(options.Opts))
+	b, err := parseBoolean(options.Opts)
 	if err != nil {
 		return err
 	}
@@ -1411,7 +1411,7 @@ func directiveSecRxPreFilter(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	b, err := parseBoolean(strings.ToLower(options.Opts))
+	b, err := parseBoolean(options.Opts)
 	if err != nil {
 		return err
 	}
