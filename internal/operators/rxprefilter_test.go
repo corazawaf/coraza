@@ -1796,6 +1796,394 @@ func TestExtractLiteralsEmptyBranchLits(t *testing.T) {
 	}
 }
 
+// TestIndexedMatcherNeedleCounts verifies the shift-table indexedMatcher produces
+// correct results across a range of needle counts (2-16). For each count, it
+// validates both match and no-match inputs in CS and CI modes, cross-checking
+// against a brute-force reference implementation.
+func TestIndexedMatcherNeedleCounts(t *testing.T) {
+	pool := []string{
+		"select", "union", "insert", "delete", "update",
+		"alter", "create", "sleep", "benchmark", "extract",
+		"floor", "format", "length", "concat", "decode", "encode",
+	}
+	haystack := "GET /api/v1/users?page=1&sort=name&order=asc HTTP/1.1"
+	matchInputCS := "1 union select * from users--"
+	matchInputCI := "1 UNION SELECT * FROM users--"
+
+	bruteForceCS := func(needles []string, s string) bool {
+		for _, n := range needles {
+			if strings.Contains(s, n) {
+				return true
+			}
+		}
+		return false
+	}
+	bruteForceCI := func(needles []string, s string) bool {
+		ls := strings.ToLower(s)
+		for _, n := range needles {
+			if strings.Contains(ls, strings.ToLower(n)) {
+				return true
+			}
+		}
+		return false
+	}
+
+	for _, count := range []int{2, 3, 5, 8, 10, 15, 16} {
+		needles := pool[:count]
+
+		t.Run(fmt.Sprintf("CS_%d_needles_no_match", count), func(t *testing.T) {
+			im := newIndexedMatcher(needles, false)
+			got := im.match(haystack)
+			want := bruteForceCS(needles, haystack)
+			if got != want {
+				t.Errorf("CS %d needles no-match: got %v, want %v", count, got, want)
+			}
+		})
+
+		t.Run(fmt.Sprintf("CS_%d_needles_match", count), func(t *testing.T) {
+			im := newIndexedMatcher(needles, false)
+			got := im.match(matchInputCS)
+			want := bruteForceCS(needles, matchInputCS)
+			if got != want {
+				t.Errorf("CS %d needles match: got %v, want %v", count, got, want)
+			}
+		})
+
+		t.Run(fmt.Sprintf("CI_%d_needles_no_match", count), func(t *testing.T) {
+			im := newIndexedMatcher(needles, true)
+			got := im.match(haystack)
+			want := bruteForceCI(needles, haystack)
+			if got != want {
+				t.Errorf("CI %d needles no-match: got %v, want %v", count, got, want)
+			}
+		})
+
+		t.Run(fmt.Sprintf("CI_%d_needles_match", count), func(t *testing.T) {
+			im := newIndexedMatcher(needles, true)
+			got := im.match(matchInputCI)
+			want := bruteForceCI(needles, matchInputCI)
+			if got != want {
+				t.Errorf("CI %d needles match: got %v, want %v", count, got, want)
+			}
+		})
+	}
+}
+
+// TestIndexedMatcherEveryNeedle verifies that the matcher finds each individual
+// needle when it appears anywhere in the haystack — first position, middle, end,
+// and as the entire input.
+func TestIndexedMatcherEveryNeedle(t *testing.T) {
+	needles := []string{"alpha", "bravo", "charlie", "delta", "echo",
+		"foxtrot", "golf", "hotel", "india", "juliet"}
+
+	for _, ci := range []bool{false, true} {
+		im := newIndexedMatcher(needles, ci)
+		mode := "CS"
+		if ci {
+			mode = "CI"
+		}
+
+		for _, needle := range needles {
+			display := needle
+			if ci {
+				display = strings.ToUpper(needle)
+			}
+
+			t.Run(fmt.Sprintf("%s/start_%s", mode, needle), func(t *testing.T) {
+				if !im.match(display + " padding after") {
+					t.Errorf("expected match for %q at start", display)
+				}
+			})
+			t.Run(fmt.Sprintf("%s/middle_%s", mode, needle), func(t *testing.T) {
+				if !im.match("padding " + display + " padding") {
+					t.Errorf("expected match for %q in middle", display)
+				}
+			})
+			t.Run(fmt.Sprintf("%s/end_%s", mode, needle), func(t *testing.T) {
+				if !im.match("padding before " + display) {
+					t.Errorf("expected match for %q at end", display)
+				}
+			})
+			t.Run(fmt.Sprintf("%s/exact_%s", mode, needle), func(t *testing.T) {
+				if !im.match(display) {
+					t.Errorf("expected match for exact %q", display)
+				}
+			})
+		}
+
+		t.Run(mode+"/no_match", func(t *testing.T) {
+			if im.match("nothing relevant here at all xyz") {
+				t.Error("expected no match for irrelevant input")
+			}
+		})
+	}
+}
+
+// TestIndexedMatcherEdgeCases covers structural edge cases: shared first/last
+// bytes, varying needle lengths, boundary positions, and minimal haystacks.
+func TestIndexedMatcherEdgeCases(t *testing.T) {
+	t.Run("all_same_first_byte", func(t *testing.T) {
+		needles := []string{"select", "sleep", "substr", "system", "schema"}
+		im := newIndexedMatcher(needles, false)
+		if !im.match("call sleep(5)") {
+			t.Error("expected match for 'sleep'")
+		}
+		if !im.match("find substr here") {
+			t.Error("expected match for 'substr'")
+		}
+		if im.match("no s-words that match") {
+			t.Error("expected no match")
+		}
+	})
+
+	t.Run("all_same_last_byte", func(t *testing.T) {
+		needles := []string{"update", "delete", "create", "locate", "inate"}
+		im := newIndexedMatcher(needles, false)
+		if !im.match("please delete this") {
+			t.Error("expected match for 'delete'")
+		}
+		if im.match("nothing matching") {
+			t.Error("expected no match")
+		}
+	})
+
+	t.Run("varying_needle_lengths", func(t *testing.T) {
+		needles := []string{"ab", "abcde", "abcdefghij", "xyz", "mn"}
+		im := newIndexedMatcher(needles, false)
+		if !im.match("contains ab here") {
+			t.Error("expected match for shortest needle 'ab'")
+		}
+		if !im.match("contains abcdefghij here") {
+			t.Error("expected match for longest needle")
+		}
+		if !im.match("contains xyz here") {
+			t.Error("expected match for 'xyz'")
+		}
+		if im.match("nothing relevant") {
+			t.Error("expected no match")
+		}
+	})
+
+	t.Run("haystack_exactly_minlen", func(t *testing.T) {
+		needles := []string{"hello", "world", "tests"}
+		im := newIndexedMatcher(needles, false)
+		if !im.match("hello") {
+			t.Error("expected match when haystack == needle == minLen")
+		}
+		if im.match("nope!") {
+			t.Error("expected no match when haystack == minLen but no needle")
+		}
+	})
+
+	t.Run("haystack_shorter_than_minlen", func(t *testing.T) {
+		needles := []string{"hello", "world"}
+		im := newIndexedMatcher(needles, false)
+		if im.match("hi") {
+			t.Error("expected no match when haystack < minLen")
+		}
+		if im.match("") {
+			t.Error("expected no match for empty haystack")
+		}
+	})
+
+	t.Run("needle_at_exact_end", func(t *testing.T) {
+		needles := []string{"zzend", "world"}
+		im := newIndexedMatcher(needles, false)
+		if !im.match("at the zzend") {
+			t.Error("expected match at exact end of haystack")
+		}
+	})
+
+	t.Run("overlapping_needles", func(t *testing.T) {
+		needles := []string{"abc", "bcd", "cde"}
+		im := newIndexedMatcher(needles, false)
+		if !im.match("xxabcdexx") {
+			t.Error("expected match with overlapping needles")
+		}
+		if !im.match("xxbcdxx") {
+			t.Error("expected match for 'bcd'")
+		}
+	})
+
+	t.Run("ci_mixed_case_needles_at_boundary", func(t *testing.T) {
+		needles := []string{"hello", "world"}
+		im := newIndexedMatcher(needles, true)
+		if !im.match("HELLO") {
+			t.Error("CI: expected match for exact uppercase")
+		}
+		if !im.match("hElLo") {
+			t.Error("CI: expected match for mixed case")
+		}
+		if !im.match("end WORLD") {
+			t.Error("CI: expected match at end")
+		}
+	})
+
+	t.Run("two_needles_minimal", func(t *testing.T) {
+		needles := []string{"ab", "cd"}
+		im := newIndexedMatcher(needles, false)
+		if !im.match("ab") {
+			t.Error("expected match for 'ab'")
+		}
+		if !im.match("cd") {
+			t.Error("expected match for 'cd'")
+		}
+		if im.match("ac") {
+			t.Error("expected no match for 'ac'")
+		}
+		if im.match("x") {
+			t.Error("expected no match for too-short input")
+		}
+	})
+}
+
+// TestAnyRequiredThresholdBoundary tests the prefilter at the exact boundary
+// between the indexed matcher (N <= 16) and the Aho-Corasick fallback (N > 16).
+// Both paths must produce identical correctness behavior.
+func TestAnyRequiredThresholdBoundary(t *testing.T) {
+	// Generate diverse-prefix words so the regex parser doesn't factor them.
+	genWords := func(n int) []string {
+		prefixes := "abcdefghijklmnopqrstuvwxyz"
+		words := make([]string, n)
+		for i := 0; i < n; i++ {
+			c := prefixes[i%26]
+			words[i] = fmt.Sprintf("%cword%d", c, i)
+		}
+		return words
+	}
+
+	for _, count := range []int{15, 16, 17, 20, 30} {
+		words := genWords(count)
+		im := newIndexedMatcher(words, false)
+
+		pathName := "indexed"
+		if count > anyRequiredACThreshold {
+			pathName = "AC"
+		}
+
+		for _, needle := range words {
+			t.Run(fmt.Sprintf("N%d_%s/match_%s", count, pathName, needle), func(t *testing.T) {
+				input := "prefix " + needle + " suffix"
+				if !im.match(input) {
+					t.Errorf("expected match for needle %q in %q", needle, input)
+				}
+			})
+		}
+
+		t.Run(fmt.Sprintf("N%d_%s/no_match", count, pathName), func(t *testing.T) {
+			if im.match("completely irrelevant input with no matching keywords") {
+				t.Error("expected no match")
+			}
+		})
+	}
+}
+
+// TestAnyRequiredViaPrefilterFuncNeedleCounts builds real regex patterns with
+// varying branch counts and verifies the end-to-end prefilter correctness.
+// This exercises the full pipeline: parse → extract → build matcher → evaluate.
+func TestAnyRequiredViaPrefilterFuncNeedleCounts(t *testing.T) {
+	// All words have diverse first bytes so the parser preserves the alternation.
+	allWords := []string{
+		"alpha", "bravo", "charlie", "delta", "echo",
+		"foxtrot", "golf", "hotel", "india", "juliet",
+		"kilo", "lima", "mike", "november", "oscar", "papa",
+	}
+	noMatchInput := "GET /api/v1/resources?page=1&sort=name HTTP/1.1"
+
+	for _, count := range []int{2, 3, 5, 8, 10, 16} {
+		words := allWords[:count]
+		pattern := "(?:" + strings.Join(words, "|") + ")"
+
+		pf := prefilterFunc(pattern)
+		if pf == nil {
+			t.Fatalf("N=%d: prefilterFunc returned nil for %q", count, pattern)
+		}
+
+		re := regexp.MustCompile(pattern)
+
+		for _, word := range words {
+			input := "some " + word + " here"
+			t.Run(fmt.Sprintf("N%d/match_%s", count, word), func(t *testing.T) {
+				if !re.MatchString(input) {
+					t.Fatalf("test bug: regex doesn't match %q", input)
+				}
+				if !pf(input) {
+					t.Errorf("FALSE NEGATIVE: prefilter rejected matching input %q", input)
+				}
+			})
+		}
+
+		t.Run(fmt.Sprintf("N%d/no_match", count), func(t *testing.T) {
+			if re.MatchString(noMatchInput) {
+				t.Fatal("test bug: regex matches benign input")
+			}
+			if pf(noMatchInput) {
+				// Conservative pass-through is OK, not a failure.
+			}
+		})
+	}
+}
+
+// TestIndexedMatcherVsBruteForceExhaustive is a property-based test that
+// exercises the matcher with many random-ish inputs across needle counts,
+// verifying the result always matches a brute-force reference.
+func TestIndexedMatcherVsBruteForceExhaustive(t *testing.T) {
+	pool := []string{
+		"alpha", "bravo", "charlie", "delta", "echo",
+		"foxtrot", "golf", "hotel", "india", "juliet",
+		"kilo", "lima", "mike", "november", "oscar", "papa",
+	}
+	inputs := []string{
+		"",
+		"x",
+		"ab",
+		"alpha",
+		"ALPHA",
+		"bravo at start",
+		"end with oscar",
+		"mid foxtrot mid",
+		"GET /api/v1/users?page=1 HTTP/1.1",
+		"no matching keywords here at all",
+		strings.Repeat("xyz ", 50),
+		"xxalphaxx",
+		"xxPAPAxx",
+		"golf hotel india",
+		"CHARLIE DELTA ECHO",
+		"aaaaalimabbbb",
+	}
+
+	for _, ci := range []bool{false, true} {
+		for _, count := range []int{2, 4, 8, 12, 16} {
+			needles := pool[:count]
+			im := newIndexedMatcher(needles, ci)
+
+			for _, input := range inputs {
+				want := false
+				check := input
+				if ci {
+					check = strings.ToLower(input)
+				}
+				for _, n := range needles {
+					if strings.Contains(check, strings.ToLower(n)) {
+						want = true
+						break
+					}
+				}
+
+				got := im.match(input)
+				if got != want {
+					mode := "CS"
+					if ci {
+						mode = "CI"
+					}
+					t.Errorf("%s N=%d input=%q: got %v, want %v",
+						mode, count, input, got, want)
+				}
+			}
+		}
+	}
+}
+
 func BenchmarkRxPrefilter(b *testing.B) {
 	benchmarks := []struct {
 		name    string
