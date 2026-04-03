@@ -118,3 +118,59 @@ SecAction "id:2, log, severity:2"
 SecRule HIGHEST_SEVERITY "@eq 2" "id:3, log"
 `,
 })
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "majiayu000",
+		Description: "Test chained rules use only starter severity for HIGHEST_SEVERITY",
+		Enabled:     true,
+		Name:        "rulemetadata_chain_starter_severity.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			Title: "chain_starter_severity_only",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{1, 2},
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecAction "id:1, log, severity:5, chain"
+  SecAction "severity:1"
+SecRule HIGHEST_SEVERITY "@eq 5" "id:2, log"
+`,
+})
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "majiayu000",
+		Description: "Test chained subrule severity does not affect HIGHEST_SEVERITY without starter severity",
+		Enabled:     true,
+		Name:        "rulemetadata_chain_no_starter_severity.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			Title: "chain_subrule_severity_ignored_without_starter",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{1, 2},
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecAction "id:1, log, chain"
+  SecAction "severity:1"
+SecRule HIGHEST_SEVERITY "@eq 255" "id:2, log"
+`,
+})
