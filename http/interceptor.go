@@ -10,7 +10,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 
@@ -52,9 +51,11 @@ type rwInterceptor struct {
 // the body is being written.
 func (i *rwInterceptor) WriteHeader(statusCode int) {
 	if i.wroteHeader {
-		log.Println("http: superfluous response.WriteHeader call")
+		i.tx.DebugLogger().Warn().Msg("http: superfluous response.WriteHeader call")
 		return
 	}
+
+	i.wroteHeader = true
 
 	for k, vv := range i.w.Header() {
 		for _, v := range vv {
@@ -77,8 +78,6 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 	if statusCode == http.StatusSwitchingProtocols {
 		i.flushWriteHeader()
 	}
-
-	i.wroteHeader = true
 	if !i.tx.IsResponseBodyAccessible() || !i.tx.IsResponseBodyProcessable() {
 		// if the response body isn't accessible or processable we can already allow flushing
 		// we need to set this flag before the first call to Flush()
