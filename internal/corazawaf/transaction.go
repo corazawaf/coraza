@@ -555,10 +555,15 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 	}
 
 	// set highest_severity
-	hs := tx.variables.highestSeverity
-	maxSeverity, _ := types.ParseRuleSeverity(hs.Get())
-	if r.Severity_ > maxSeverity {
-		hs.Set(strconv.Itoa(r.Severity_.Int()))
+	// Only update when severity was explicitly set via the severity action.
+	// Unset rules retain RuleSeverityUnset (-1) and are skipped here,
+	// matching ModSecurity v2/v3 semantics.
+	if r.Severity_ != types.RuleSeverityUnset {
+		hs := tx.variables.highestSeverity
+		currentVal, _ := strconv.Atoi(hs.Get())
+		if r.Severity_.Int() < currentVal {
+			hs.Set(strconv.Itoa(r.Severity_.Int()))
+		}
 	}
 
 	mr := &corazarules.MatchedRule{

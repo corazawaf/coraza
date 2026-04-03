@@ -32,6 +32,12 @@ var wafIDCounter atomic.Uint64
 const (
 	// DefaultRequestBodyJsonDepthLimit is the default limit for the depth of JSON objects in the request body
 	DefaultRequestBodyJsonDepthLimit = 1024
+
+	// defaultHighestSeverity is the default value for HIGHEST_SEVERITY when no rules
+	// with severity have been matched, aligning with ModSecurity behavior:
+	// - ModSec v2: apache2/msc_util.c highest_severity initialized to 255
+	// - ModSec v3: src/transaction.cc m_highestSeverity initialized to 255
+	defaultHighestSeverity = 255
 )
 
 // WAF instance is used to store configurations and rules
@@ -259,7 +265,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.variables.reqbodyProcessorError.Set("0")
 	tx.variables.requestBodyLength.Set("0")
 	tx.variables.duration.Set("0")
-	tx.variables.highestSeverity.Set("0")
+	tx.variables.highestSeverity.Set(strconv.Itoa(defaultHighestSeverity))
 	tx.variables.uniqueID.Set(tx.id)
 	tx.setTimeVariables()
 
