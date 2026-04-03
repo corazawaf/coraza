@@ -573,6 +573,7 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 		ClientIPAddress_: tx.variables.remoteAddr.Get(),
 		Rule_:            &r.RuleMetadata,
 		Log_:             r.Log,
+		Audit_:           r.Audit,
 		MatchedDatas_:    mds,
 		Context_:         tx.context,
 	}
@@ -1597,11 +1598,14 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 		case types.AuditLogPartRulesMatched:
 			auditLogPartRulesMatchedSet = true
 			for _, mr := range tx.matchedRules {
-				// Log action is required to log a matched rule on both error log and audit log
-				// An assertion has to be done to check if the MatchedRule implements the Log() function before calling Log()
-				// It is performed to avoid breaking the Coraza v3.* API adding a Log() method to the MatchedRule interface
+				// Audit flag controls whether a matched rule appears in the audit log.
+				// This aligns with ModSecurity behavior where:
+				// - log: sets both Log and Audit (appears in error log AND audit log)
+				// - nolog: clears both (appears in neither)
+				// - nolog,auditlog: Log=false, Audit=true (audit log only)
+				// - log,noauditlog: Log=true, Audit=false (error log only)
 				mrWithlog, ok := mr.(*corazarules.MatchedRule)
-				if ok && mrWithlog.Log() {
+				if ok && mrWithlog.Audit() {
 					r := mr.Rule()
 					for _, matchData := range mr.MatchedDatas() {
 						newAlEntry := auditlog.Message{
@@ -1635,11 +1639,11 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 	}
 
 	// If AuditLogPartRulesMatched (K) is not set, but AuditLogPartAuditLogTrailer (H) is set, we still expect to
-	// log the error messages emitted by the rules (if the rule has Log set to true)
+	// log the error messages emitted by the rules (if the rule has Audit set to true)
 	if !auditLogPartRulesMatchedSet && auditLogPartAuditLogTrailerSet {
 		for _, mr := range tx.matchedRules {
 			mrWithlog, ok := mr.(*corazarules.MatchedRule)
-			if ok && mrWithlog.Log() {
+			if ok && mrWithlog.Audit() {
 				al.Messages_ = append(al.Messages_, auditlog.Message{
 					ErrorMessage_: mr.ErrorLog(),
 				})

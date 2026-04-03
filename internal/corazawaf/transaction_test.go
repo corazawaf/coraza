@@ -25,6 +25,7 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/internal/operators"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
+	"github.com/corazawaf/coraza/v3/internal/transformations"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
@@ -730,6 +731,7 @@ func TestAuditLogFields(t *testing.T) {
 	rule := NewRule()
 	rule.ID_ = 131
 	rule.Log = true
+	rule.Audit = true
 	tx.MatchRule(rule, []types.MatchData{
 		&corazarules.MatchData{
 			Variable_: variables.UniqueID,
@@ -751,6 +753,144 @@ func TestAuditLogFields(t *testing.T) {
 	}
 	if err := tx.Close(); err != nil {
 		t.Fatalf("Failed to close transaction: %s", err.Error())
+	}
+}
+
+func TestAuditLogMessageFiltering(t *testing.T) {
+	tests := []struct {
+		name           string
+		log            bool
+		audit          bool
+		wantInAuditLog bool
+		wantInErrorLog bool
+		desc           string
+	}{
+		{
+			name:           "log action (log=true, audit=true)",
+			log:            true,
+			audit:          true,
+			wantInAuditLog: true,
+			wantInErrorLog: true,
+			desc:           "log sets both flags: rule appears in error log and audit log",
+		},
+		{
+			name:           "nolog action (log=false, audit=false)",
+			log:            false,
+			audit:          false,
+			wantInAuditLog: false,
+			wantInErrorLog: false,
+			desc:           "nolog clears both flags: rule appears in neither",
+		},
+		{
+			name:           "nolog,auditlog (log=false, audit=true)",
+			log:            false,
+			audit:          true,
+			wantInAuditLog: true,
+			wantInErrorLog: false,
+			desc:           "nolog,auditlog: rule appears in audit log only",
+		},
+		{
+			name:           "log,noauditlog (log=true, audit=false)",
+			log:            true,
+			audit:          false,
+			wantInAuditLog: false,
+			wantInErrorLog: true,
+			desc:           "log,noauditlog: rule appears in error log only",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tx := makeTransaction(t)
+			tx.AuditLogParts = types.AuditLogParts("ABCDEFGHIJK")
+
+			var errorLogCalled bool
+			tx.WAF.ErrorLogCb = func(_ types.MatchedRule) {
+				errorLogCalled = true
+			}
+
+			rule := NewRule()
+			rule.ID_ = 100
+			rule.Log = tt.log
+			rule.Audit = tt.audit
+			tx.MatchRule(rule, []types.MatchData{
+				&corazarules.MatchData{
+					Variable_: variables.UniqueID,
+				},
+			})
+
+			al := tx.AuditLog()
+
+			if got := len(al.Messages()) > 0; got != tt.wantInAuditLog {
+				t.Errorf("%s: audit log messages: got present=%v, want present=%v", tt.desc, got, tt.wantInAuditLog)
+			}
+
+			if errorLogCalled != tt.wantInErrorLog {
+				t.Errorf("%s: error log callback: got called=%v, want called=%v", tt.desc, errorLogCalled, tt.wantInErrorLog)
+			}
+
+			if err := tx.Close(); err != nil {
+				t.Fatalf("Failed to close transaction: %s", err.Error())
+			}
+		})
+	}
+}
+
+func TestAuditLogHPartMessageFiltering(t *testing.T) {
+	// When only H (AuditLogTrailer) is set without K (RulesMatched),
+	// error messages should still be filtered by the Audit flag.
+	tests := []struct {
+		name           string
+		log            bool
+		audit          bool
+		wantInAuditLog bool
+	}{
+		{
+			name:           "log,audit: appears in H-only messages",
+			log:            true,
+			audit:          true,
+			wantInAuditLog: true,
+		},
+		{
+			name:           "log,noaudit: excluded from H-only messages",
+			log:            true,
+			audit:          false,
+			wantInAuditLog: false,
+		},
+		{
+			name:           "nolog,audit: appears in H-only messages",
+			log:            false,
+			audit:          true,
+			wantInAuditLog: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tx := makeTransaction(t)
+			// H without K
+			tx.AuditLogParts = types.AuditLogParts("ABCDEFGH")
+
+			rule := NewRule()
+			rule.ID_ = 200
+			rule.Log = tt.log
+			rule.Audit = tt.audit
+			tx.MatchRule(rule, []types.MatchData{
+				&corazarules.MatchData{
+					Variable_: variables.UniqueID,
+				},
+			})
+
+			al := tx.AuditLog()
+
+			if got := len(al.Messages()) > 0; got != tt.wantInAuditLog {
+				t.Errorf("H-only audit log: got present=%v, want present=%v", got, tt.wantInAuditLog)
+			}
+
+			if err := tx.Close(); err != nil {
+				t.Fatalf("Failed to close transaction: %s", err.Error())
+			}
+		})
 	}
 }
 
@@ -2171,6 +2311,53 @@ func TestRequestFilename(t *testing.T) {
 				t.Fatalf("Expected REQUEST_FILENAME %q, got %q", test.expected, tx.variables.requestFilename.Get())
 			}
 		})
+	}
+}
+
+func BenchmarkRuleEvalWithTransformations(b *testing.B) {
+	waf := NewWAF()
+	op, err := operators.Get("unconditionalMatch", plugintypes.OperatorOptions{})
+	if err != nil {
+		b.Fatal(err)
+	}
+	lowercaseFn, err := transformations.GetTransformation("lowercase")
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	rule := NewRule()
+	rule.ID_ = 1000
+	rule.LogID_ = "1000"
+	rule.Phase_ = types.PhaseRequestHeaders
+	rule.operator = &ruleOperatorParams{
+		Operator: op,
+		Function: "@unconditionalMatch",
+	}
+	if err := rule.AddTransformation("lowercase", lowercaseFn); err != nil {
+		b.Fatal(err)
+	}
+	rule.variables = append(rule.variables, ruleVariableParams{
+		Variable: variables.Args,
+	})
+	if err := waf.Rules.Add(rule); err != nil {
+		b.Fatal(err)
+	}
+
+	tx := waf.NewTransaction()
+	b.Cleanup(func() {
+		if err := tx.Close(); err != nil {
+			b.Fatalf("failed to close transaction: %v", err)
+		}
+	})
+	tx.ProcessURI("/test?a=1&b=2&c=3&d=4&e=5", "GET", "HTTP/1.1")
+	tx.AddRequestHeader("Host", "example.com")
+	if it := tx.ProcessRequestHeaders(); it != nil {
+		b.Fatalf("unexpected interruption during request headers processing: %+v", it)
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		waf.Rules.Eval(types.PhaseRequestHeaders, tx)
 	}
 }
 
