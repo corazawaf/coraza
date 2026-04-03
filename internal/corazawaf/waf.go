@@ -156,7 +156,7 @@ type WAF struct {
 	// Configures the maximum number of ARGS that will be accepted for processing.
 	ArgumentLimit int
 
-	// RxPreFilterEnabled controls whether the @rx operator uses compile-time
+	// RxPreFilterEnabled controls whether the @rx operator uses
 	// literal pre-filtering. Set by the SecRxPreFilter directive.
 	RxPreFilterEnabled bool
 

@@ -28,8 +28,8 @@ type OperatorOptions struct {
 	// Memoizer caches expensive compilations (regex, aho-corasick).
 	Memoizer Memoizer
 
-	// RxPreFilterEnabled controls whether the @rx operatorcompile-time
-	// literal pre-filtering is enabled.
+	// RxPreFilterEnabled controls whether the @rx operator uses
+	// literal pre-filtering. Set by the SecRxPreFilter directive.
 	RxPreFilterEnabled bool
 }
 
