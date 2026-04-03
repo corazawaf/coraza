@@ -166,6 +166,135 @@ func TestOCSFFormatter(t *testing.T) {
 	}
 }
 
+func TestOCSFFormatterPartJ(t *testing.T) {
+	f := &ocsfFormatter{}
+
+	t.Run("uploaded files appear as observables", func(t *testing.T) {
+		al := &Log{
+			Parts_: []types.AuditLogPart{
+				types.AuditLogPartRequestHeaders,
+				types.AuditLogPartUploadedFiles,
+				types.AuditLogPartRulesMatched,
+			},
+			Transaction_: Transaction{
+				Timestamp_:     "02/Jan/2006:15:04:20 -0700",
+				UnixTimestamp_: 1136239460,
+				ID_:            "partj-test",
+				Request_: &TransactionRequest{
+					URI_:      "/upload",
+					Method_:   "POST",
+					Protocol_: "HTTP/1.1",
+					Files_: []plugintypes.AuditLogTransactionRequestFiles{
+						&TransactionRequestFiles{Name_: "report.csv", Size_: 5432, Mime_: "text/csv"},
+						&TransactionRequestFiles{Name_: "photo.jpg", Size_: 98765, Mime_: "image/jpeg"},
+					},
+				},
+			},
+			Messages_: []plugintypes.AuditLogMessage{
+				&Message{
+					Message_: "test",
+					Data_:    &MessageData{Msg_: "test", Raw_: `SecAction "id:200"`},
+				},
+			},
+		}
+
+		data, err := f.Format(al)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var wra application.WebResourcesActivity
+		if err := json.Unmarshal(data, &wra); err != nil {
+			t.Fatal(err)
+		}
+
+		// Verify each file produces 3 observables: File Name, Size, Mime
+		expectedFiles := map[string]struct {
+			size string
+			mime string
+		}{
+			"report.csv": {size: "5432", mime: "text/csv"},
+			"photo.jpg":  {size: "98765", mime: "image/jpeg"},
+		}
+
+		for name, expected := range expectedFiles {
+			var foundName, foundSize, foundMime bool
+			for _, obs := range wra.Observables {
+				if obs.Name != name {
+					continue
+				}
+				switch obs.Type {
+				case "File Name":
+					if obs.Value != name {
+						t.Errorf("file %s: expected File Name observable value %s, got %s", name, name, obs.Value)
+					}
+					foundName = true
+				case "Size":
+					if obs.Value != expected.size {
+						t.Errorf("file %s: expected Size observable value %s, got %s", name, expected.size, obs.Value)
+					}
+					foundSize = true
+				case "Mime":
+					if obs.Value != expected.mime {
+						t.Errorf("file %s: expected Mime observable value %s, got %s", name, expected.mime, obs.Value)
+					}
+					foundMime = true
+				}
+			}
+			if !foundName {
+				t.Errorf("file %s: missing File Name observable", name)
+			}
+			if !foundSize {
+				t.Errorf("file %s: missing Size observable", name)
+			}
+			if !foundMime {
+				t.Errorf("file %s: missing Mime observable", name)
+			}
+		}
+	})
+
+	t.Run("no files produces no file observables", func(t *testing.T) {
+		al := &Log{
+			Parts_: []types.AuditLogPart{
+				types.AuditLogPartRequestHeaders,
+				types.AuditLogPartUploadedFiles,
+				types.AuditLogPartRulesMatched,
+			},
+			Transaction_: Transaction{
+				UnixTimestamp_: 1136239460,
+				ID_:            "partj-nofiles",
+				Request_: &TransactionRequest{
+					URI_:      "/upload",
+					Method_:   "POST",
+					Protocol_: "HTTP/1.1",
+				},
+			},
+			Messages_: []plugintypes.AuditLogMessage{
+				&Message{
+					Message_: "test",
+					Data_:    &MessageData{Msg_: "test", Raw_: `SecAction "id:201"`},
+				},
+			},
+		}
+
+		data, err := f.Format(al)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var wra application.WebResourcesActivity
+		if err := json.Unmarshal(data, &wra); err != nil {
+			t.Fatal(err)
+		}
+
+		for _, obs := range wra.Observables {
+			if obs.Type == "File Name" || obs.Type == "Size" || obs.Type == "Mime" {
+				t.Errorf("unexpected file observable found: %s = %s", obs.Type, obs.Value)
+			}
+		}
+	})
+}
+
 func createAuditLogs() []*Log {
 
 	transactionLogs := []*Log{}
