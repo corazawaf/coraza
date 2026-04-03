@@ -20,10 +20,7 @@ type RuleMetadata struct {
 	Line_     int
 	Rev_      string
 	Severity_ types.RuleSeverity
-	// HasSeverity_ reports whether the rule explicitly set a severity action.
-	// This distinguishes an unset value from RuleSeverityEmergency (0).
-	HasSeverity_ bool
-	Version_     string
+	Version_  string
 	Tags_        []string
 	Maturity_    int
 	Accuracy_    int
