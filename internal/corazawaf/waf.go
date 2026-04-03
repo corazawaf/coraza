@@ -321,6 +321,7 @@ func NewWAF() *WAF {
 		RequestBodyJsonDepthLimit: DefaultRequestBodyJsonDepthLimit,
 		ResponseBodyAccess:        false,
 		ResponseBodyLimit:         524288, // Hard limit equal to _1gib
+		ResponseBodyLimitAction:   types.BodyLimitActionProcessPartial,
 		auditLogWriter:            logWriter,
 		auditLogWriterInitialized: false,
 		AuditLogWriterConfig:      auditlog.NewConfig(),

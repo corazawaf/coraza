@@ -472,6 +472,9 @@ func directiveSecResponseBodyMimeType(options *DirectiveOptions) error {
 // cases, however, it is not possible to prevent leakage anyway. The attacker could
 // compress, obfuscate, or even encrypt data before it is sent back, and therefore
 // bypass any monitoring device.
+//
+// Note: When SecRuleEngine is set to DetectionOnly, this directive is set to
+// ProcessPartial to minimize disruptions when initially deploying Coraza.
 func directiveSecResponseBodyLimitAction(options *DirectiveOptions) error {
 	switch strings.ToLower(options.Opts) {
 	case "reject":
@@ -507,12 +510,15 @@ func directiveSecResponseBodyLimit(options *DirectiveOptions) error {
 }
 
 // Description: Controls what happens once a request body limit, configured with
-// SecRequestBodyLimit, is encountered
+// SecRequestBodyLimit, is encountered.
 // Syntax: SecRequestBodyLimitAction Reject|ProcessPartial
 // Default: Reject
 // ---
 // By default, Coraza will reject a request body that is longer than specified to
 // avoid OOM issues while buffering the request body prior the inspection.
+//
+// Note: When SecRuleEngine is set to DetectionOnly, this directive is set to
+// ProcessPartial to minimize disruptions when initially deploying Coraza.
 func directiveSecRequestBodyLimitAction(options *DirectiveOptions) error {
 	switch strings.ToLower(options.Opts) {
 	case "reject":

@@ -29,7 +29,10 @@ const (
 	// FullRequestLength is the length of the full request
 	FullRequestLength = variables.FullRequestLength
 	// InboundDataError will be set to 1 when the request body size
-	// is above the setting configured by SecRequesteBodyLimit
+	// InboundDataError will be set to 1 when the request body size exceeds
+	// SecRequestBodyLimit. Only actionable in Phase 2 rules when
+	// SecRequestBodyLimitAction is ProcessPartial; in Reject mode the
+	// transaction is interrupted before Phase 2 rules run.
 	InboundDataError = variables.InboundDataError
 	// MatchedVar is the value of the matched variable
 	MatchedVar = variables.MatchedVar
@@ -37,8 +40,10 @@ const (
 	MatchedVarName = variables.MatchedVarName
 	// MultipartDataAfter kept for compatibility
 	MultipartDataAfter = variables.MultipartDataAfter
-	// OutboundDataError will be set to 1 when the response body size
-	// is above the setting configured by SecResponseBodyLimit
+	// OutboundDataError will be set to 1 when the response body size exceeds
+	// SecResponseBodyLimit. Only actionable in Phase 4 rules when
+	// SecResponseBodyLimitAction is ProcessPartial; in Reject mode the
+	// transaction is interrupted before Phase 4 rules run.
 	OutboundDataError = variables.OutboundDataError
 	// QueryString contains the raw query string part of a request URI
 	QueryString = variables.QueryString
