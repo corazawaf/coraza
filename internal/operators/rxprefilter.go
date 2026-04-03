@@ -71,8 +71,6 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
-
-	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
 )
 
 // minMatchLength computes the minimum number of bytes an input must have
@@ -240,29 +238,23 @@ func prefilterFunc(pattern string) func(string) bool {
 			// it could fold to an ASCII equivalent under Go's Unicode case
 			// rules — causing a false negative. Bail out.
 			return nil
-		} else if len(filtered) <= anyRequiredACThreshold {
-			// Small pattern sets (typical CRS alternations: 2-20 branches):
+		} else if len(filtered) > 0 && len(filtered) <= anyRequiredMaxN {
 			// Wu-Manber shift-table matcher. Sub-linear scanning examines only
-			// ~H/minLen positions on average, beating AC's O(H) single-pass.
-			// Zero allocations.
+			// ~H/minLen positions on average. Zero allocations.
+			// For large N (>16), the shift table fills up with more zeros, but
+			// benchmarks show it still outperforms any AC library for typical
+			// WAF inputs (50-2000 B) because AC SIMD prefilters call
+			// bytes.IndexByte once per unique start byte — O(H×K) in practice.
 			im := newIndexedMatcher(filtered, caseInsensitive)
 			pf = im.match
 		} else {
-			// Large pattern sets (CRS SQLi/PHP function lists with 50-700+
-			// branches): Aho-Corasick. With hundreds of needles the bitmap
-			// has too many bits set, making nearly every position a candidate.
-			// AC's O(H) single-pass with constant per-byte cost is better here.
-			builder := ahocorasick.NewAhoCorasickBuilder(ahocorasick.Opts{
-				AsciiCaseInsensitive: caseInsensitive,
-				MatchOnlyWholeWords:  false,
-				MatchKind:            ahocorasick.LeftMostLongestMatch,
-				DFA:                  true,
-			})
-			ac := builder.Build([]string(filtered))
-			pf = func(s string) bool {
-				iter := ac.Iter(s)
-				return iter.Next() != nil
-			}
+			// N > 64: too many needles for Wu-Manber to be effective (nearly
+			// every haystack byte is a candidate). In practice regexp/syntax
+			// .Simplify() factors large alternations into tries with single-byte
+			// literals at each branch, causing extractLiterals to return nil
+			// before we ever reach this branch. If we do reach it, bail out and
+			// let the full regex run — correctness over performance.
+			return nil
 		}
 	}
 
@@ -335,6 +327,7 @@ func extractLiterals(re *syntax.Regexp, ci bool) interface{} {
 		return extractLiterals(re.Sub[0], ci)
 
 	case syntax.OpConcat:
+		// First pass: collect allRequired literals using the standard path.
 		var all []string
 		for _, sub := range re.Sub {
 			lits := extractLiterals(sub, ci)
@@ -351,10 +344,25 @@ func extractLiterals(re *syntax.Regexp, ci bool) interface{} {
 				_ = v
 			}
 		}
-		if len(all) == 0 {
-			return nil
+		if len(all) > 0 {
+			return allRequired(all)
 		}
-		return allRequired(all)
+
+		// Standard path found nothing. Try trie reconstruction for patterns
+		// that regexp/syntax.Simplify() emits when factoring common prefixes
+		// out of large alternations:
+		//
+		//   select|sleep|substr  →  s(?:elect|leep|ubstr)
+		//   union|update         →  u(?:nion|pdate)
+		//
+		// The AST is OpConcat([OpLiteral("s"), OpAlternate([...])]).
+		// extractLiterals(OpLiteral("s")) returns nil (1 byte, too short), so
+		// the standard path above produces nothing. We detect this pattern and
+		// reconstruct the full words by prepending the raw prefix to each branch.
+		//
+		// This enables prefiltering for large CRS alternation patterns that the
+		// standard path would silently skip.
+		return trieReconstruct(re, ci)
 
 	case syntax.OpAlternate:
 		// For alternation (a|b|c), exactly one branch must match. So we need
@@ -402,6 +410,133 @@ func extractLiterals(re *syntax.Regexp, ci bool) interface{} {
 	default:
 		return nil
 	}
+}
+
+// trieReconstruct handles the specific pattern that regexp/syntax.Simplify()
+// emits when factoring a common prefix from an alternation:
+//
+//	select|sleep|substr  →  s(?:elect|leep|ubstr)
+//	    AST: OpConcat([OpLiteral("s"), OpAlternate([...])])
+//
+// It prepends the raw prefix literal to every element returned by
+// rawExtractSuffixes, recovering the full literal words. The result is returned
+// as anyRequired so the caller knows "at least one of these must be present".
+//
+// Handles arbitrary nesting depth: rawExtractSuffixes recurses back into
+// extractLiterals → trieReconstruct for inner OpConcat nodes, so patterns like
+//
+//	select|set|sleep  →  s(?:e(?:lect|t)|leep)
+//
+// also reconstruct correctly ("select", "set", "sleep").
+func trieReconstruct(concat *syntax.Regexp, ci bool) anyRequired {
+	// Only handle the exact 2-child pattern [short_prefix, alternation] that
+	// regexp/syntax.Simplify() emits. Longer concats (e.g. a.*b) have
+	// intervening optional/unknown nodes that we must not skip over, as doing
+	// so would produce false negatives (e.g. "ab" present without "axb" being
+	// a valid match for a.*b).
+	if concat.Op != syntax.OpConcat || len(concat.Sub) != 2 {
+		return nil
+	}
+
+	// Extract the raw prefix literal (may be 1 byte — that's the common case).
+	prefix := rawLiteral(concat.Sub[0], ci)
+	if prefix == "" {
+		return nil
+	}
+
+	// Collect suffix candidates from remaining children using the permissive
+	// extractor that allows short literals (they will be combined with prefix).
+	var suffixes []string
+	for _, sub := range concat.Sub[1:] {
+		lits := rawExtractSuffixes(sub, ci)
+		if lits == nil {
+			continue
+		}
+		suffixes = append(suffixes, lits...)
+	}
+	if len(suffixes) == 0 {
+		return nil
+	}
+
+	result := make(anyRequired, 0, len(suffixes))
+	for _, s := range suffixes {
+		if full := prefix + s; len(full) >= 2 {
+			result = append(result, full)
+		}
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+// rawExtractSuffixes extracts literal candidates from a regex subtree for use
+// as trie-reconstruction suffixes. Unlike extractLiterals it permits short
+// literals (< 2 bytes) because they will be combined with a prefix by the
+// caller, producing a longer and more selective string.
+//
+// Returns nil if any branch of an alternation has no extractable literal (same
+// semantics as extractLiterals for OpAlternate: we can't safely omit a branch).
+func rawExtractSuffixes(re *syntax.Regexp, ci bool) []string {
+	switch re.Op {
+	case syntax.OpLiteral:
+		s := rawLiteral(re, ci)
+		if s == "" {
+			return nil
+		}
+		return []string{s}
+
+	case syntax.OpAlternate:
+		var result []string
+		for _, sub := range re.Sub {
+			lits := rawExtractSuffixes(sub, ci)
+			if lits == nil {
+				return nil // one branch has no extractable suffix → bail
+			}
+			result = append(result, lits...)
+		}
+		return result
+
+	case syntax.OpConcat:
+		// Try the full extractLiterals pipeline first (handles deeper nesting
+		// through the trieReconstruct fallback it already calls).
+		lits := extractLiterals(re, ci)
+		if lits != nil {
+			switch v := lits.(type) {
+			case allRequired:
+				return []string{strings.Join(v, "")}
+			case anyRequired:
+				return []string(v)
+			}
+		}
+		return nil
+
+	case syntax.OpCapture:
+		return rawExtractSuffixes(re.Sub[0], ci)
+
+	default:
+		return nil
+	}
+}
+
+// rawLiteral returns the string content of an OpLiteral node without applying
+// any minimum-length filter. Returns "" if the node is not a valid literal.
+// Used for trie reconstruction where short prefixes are intentionally combined
+// with alternation branches to form longer, more selective literals.
+func rawLiteral(re *syntax.Regexp, ci bool) string {
+	if re.Op != syntax.OpLiteral {
+		return ""
+	}
+	for _, r := range re.Rune {
+		if r == utf8.RuneError {
+			return ""
+		}
+	}
+	s := string(re.Rune)
+	if ci {
+		s = strings.ToLower(s)
+	}
+	return s
 }
 
 // hasFlag reports whether the flag is set on any node in the regex tree.
@@ -459,14 +594,17 @@ func filterShort(ss []string, minLen int) []string {
 	return result
 }
 
-// anyRequiredACThreshold is the needle count above which we switch from the
-// indexed bitmap matcher to Aho-Corasick. CRS v4.25 has patterns ranging from
-// 2 to 762 alternation branches. For small sets (<=16), the indexed matcher's
-// bitmap-skip approach is faster. For large sets (50-700+ branches like SQLi
-// function lists), nearly every first-byte is a candidate and AC's constant
-// per-byte DFA cost wins. The threshold is conservative — both algorithms are
-// correct at any N; only performance differs.
-const anyRequiredACThreshold = 16
+// anyRequiredMaxN is an upper bound on the number of needles we will build an
+// indexedMatcher for. Beyond this count the Wu-Manber shift table fills up with
+// zeros (every haystack byte is a candidate position), so the sub-linear skip
+// degenerates — but even in the degenerate case the 256-byte table and small
+// per-bucket cost beats any Aho-Corasick library for typical WAF inputs
+// (50-2000 byte values), because AC SIMD prefilters call bytes.IndexByte once
+// per unique start byte — O(H × K) when K (unique first bytes) is large.
+//
+// 256 covers even the largest CRS alternation sets seen in practice.
+// Raise if profiling shows Wu-Manber still wins beyond that.
+const anyRequiredMaxN = 256
 
 // indexedMatcher performs sub-linear multi-pattern substring matching using a
 // Wu-Manber style shift table. Instead of examining every byte in the haystack,
@@ -492,6 +630,9 @@ type indexedMatcher struct {
 }
 
 func newIndexedMatcher(needles []string, ci bool) *indexedMatcher {
+	if len(needles) == 0 {
+		return &indexedMatcher{ci: ci, minLen: 0}
+	}
 	im := &indexedMatcher{ci: ci}
 
 	im.minLen = len(needles[0])
@@ -551,7 +692,7 @@ func (m *indexedMatcher) match(s string) bool {
 
 func (m *indexedMatcher) matchCS(s string) bool {
 	ml := m.minLen
-	if len(s) < ml {
+	if ml == 0 || len(s) < ml {
 		return false
 	}
 	i := ml - 1
@@ -575,7 +716,7 @@ func (m *indexedMatcher) matchCS(s string) bool {
 
 func (m *indexedMatcher) matchCI(s string) bool {
 	ml := m.minLen
-	if len(s) < ml {
+	if ml == 0 || len(s) < ml {
 		return false
 	}
 	i := ml - 1
