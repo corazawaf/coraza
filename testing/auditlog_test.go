@@ -278,11 +278,11 @@ func TestAuditLogOnNoLogAuditLog(t *testing.T) {
 		t.Fatal(err)
 	}
 	// generate a random tmp file
-	file, err := os.Create(filepath.Join(t.TempDir(), "tmp.log"))
+	file, err := os.CreateTemp(t.TempDir(), "tmp.log")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(file.Name())
+	defer file.Close()
 	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
 		t.Fatal(err)
 	}
