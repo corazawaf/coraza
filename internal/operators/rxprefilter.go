@@ -70,6 +70,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
 )
 
 // minMatchLength computes the minimum number of bytes an input must have
@@ -233,13 +235,33 @@ func prefilterFunc(pattern string) func(string) bool {
 				}
 			}
 		} else if caseInsensitive && !allASCIIStrings([]string(filtered)) {
-			// Our indexed matcher uses ASCII-only folding. If any needle is
-			// non-ASCII, it could fold to an ASCII equivalent under Go's Unicode
-			// case rules — causing a false negative. Bail out.
+			// Our matchers use ASCII-only folding. If any needle is non-ASCII,
+			// it could fold to an ASCII equivalent under Go's Unicode case
+			// rules — causing a false negative. Bail out.
 			return nil
-		} else {
+		} else if len(filtered) <= anyRequiredACThreshold {
+			// Small pattern sets (typical CRS alternations: 2-20 branches):
+			// indexed bitmap matcher. Single pass with a 256-bit first-byte
+			// bitmap skips ~85% of positions, beating AC's per-byte DFA
+			// transitions. Zero allocations.
 			im := newIndexedMatcher(filtered, caseInsensitive)
 			pf = im.match
+		} else {
+			// Large pattern sets (CRS SQLi/PHP function lists with 50-700+
+			// branches): Aho-Corasick. With hundreds of needles the bitmap
+			// has too many bits set, making nearly every position a candidate.
+			// AC's O(H) single-pass with constant per-byte cost is better here.
+			builder := ahocorasick.NewAhoCorasickBuilder(ahocorasick.Opts{
+				AsciiCaseInsensitive: caseInsensitive,
+				MatchOnlyWholeWords:  false,
+				MatchKind:            ahocorasick.LeftMostLongestMatch,
+				DFA:                  true,
+			})
+			ac := builder.Build([]string(filtered))
+			pf = func(s string) bool {
+				iter := ac.Iter(s)
+				return iter.Next() != nil
+			}
 		}
 	}
 
@@ -435,6 +457,15 @@ func filterShort(ss []string, minLen int) []string {
 	}
 	return result
 }
+
+// anyRequiredACThreshold is the needle count above which we switch from the
+// indexed bitmap matcher to Aho-Corasick. CRS v4.25 has patterns ranging from
+// 2 to 762 alternation branches. For small sets (<=16), the indexed matcher's
+// bitmap-skip approach is faster. For large sets (50-700+ branches like SQLi
+// function lists), nearly every first-byte is a candidate and AC's constant
+// per-byte DFA cost wins. The threshold is conservative — both algorithms are
+// correct at any N; only performance differs.
+const anyRequiredACThreshold = 16
 
 // indexedMatcher performs single-pass multi-pattern substring matching using a
 // 256-bit first-byte bitmap and bucket-grouped verification. For each byte in

@@ -1986,6 +1986,54 @@ func BenchmarkAnyRequired(b *testing.B) {
 	}
 }
 
+// BenchmarkAnyRequiredLargeN benchmarks the AC fallback path for large needle
+// sets directly. CRS patterns with 50-700+ branches get their ASTs
+// restructured by regexp/syntax.Simplify() (common-prefix factoring), so
+// extractLiterals often can't extract anyRequired for these patterns.
+// This benchmark tests the AC and indexed matchers directly to verify the
+// threshold selection is correct.
+func BenchmarkAnyRequiredLargeN(b *testing.B) {
+	// 50 needles with diverse first bytes (no common-prefix factoring)
+	needles := make([]string, 50)
+	bases := []string{
+		"select", "union", "insert", "delete", "update", "alter", "create",
+		"benchmark", "sleep", "extract", "floor", "format", "length",
+		"concat", "decode", "encode", "replace", "reverse", "substr",
+		"trim", "upper", "lower", "coalesce", "convert", "greatest",
+	}
+	for i := range needles {
+		needles[i] = bases[i%len(bases)] + fmt.Sprintf("%d", i)
+	}
+	input := "GET /api/v1/users?name=john&sort=created_at&order=desc&page=1&limit=50 HTTP/1.1"
+
+	imSmall := newIndexedMatcher(needles[:10], false)
+	imLarge := newIndexedMatcher(needles, false)
+
+	b.Run("10_needles/indexed", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			imSmall.match(input)
+		}
+	})
+	b.Run("50_needles/indexed", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			imLarge.match(input)
+		}
+	})
+
+	b.Run("50_needles/contains_loop", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			for _, needle := range needles {
+				if strings.Contains(input, needle) {
+					break
+				}
+			}
+		}
+	})
+}
+
 // BenchmarkAnyRequiredHaystackSize benchmarks the indexedMatcher across
 // different haystack sizes to show how it scales.
 func BenchmarkAnyRequiredHaystackSize(b *testing.B) {
