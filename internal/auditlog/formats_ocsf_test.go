@@ -218,37 +218,34 @@ func TestOCSFFormatterPartJ(t *testing.T) {
 		}
 
 		for name, expected := range expectedFiles {
-			var foundName, foundSize, foundMime bool
+			// Count occurrences per observable type to detect both missing and duplicate entries
+			counts := map[string]int{"File Name": 0, "Size": 0, "Mime": 0}
 			for _, obs := range wra.Observables {
 				if obs.Name != name {
 					continue
 				}
 				switch obs.Type {
 				case "File Name":
+					counts["File Name"]++
 					if obs.Value != name {
 						t.Errorf("file %s: expected File Name observable value %s, got %s", name, name, obs.Value)
 					}
-					foundName = true
 				case "Size":
+					counts["Size"]++
 					if obs.Value != expected.size {
 						t.Errorf("file %s: expected Size observable value %s, got %s", name, expected.size, obs.Value)
 					}
-					foundSize = true
 				case "Mime":
+					counts["Mime"]++
 					if obs.Value != expected.mime {
 						t.Errorf("file %s: expected Mime observable value %s, got %s", name, expected.mime, obs.Value)
 					}
-					foundMime = true
 				}
 			}
-			if !foundName {
-				t.Errorf("file %s: missing File Name observable", name)
-			}
-			if !foundSize {
-				t.Errorf("file %s: missing Size observable", name)
-			}
-			if !foundMime {
-				t.Errorf("file %s: missing Mime observable", name)
+			for obsType, count := range counts {
+				if count != 1 {
+					t.Errorf("file %s: expected exactly 1 %s observable, got %d", name, obsType, count)
+				}
 			}
 		}
 	})
