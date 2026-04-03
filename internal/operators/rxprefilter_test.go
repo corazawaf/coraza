@@ -782,7 +782,7 @@ func TestPrefilterWithSMPrefix(t *testing.T) {
 // but behaviorally equivalent.
 func TestMemoizeSharesPrefilter(t *testing.T) {
 	pattern := "hello.*world"
-	opts := plugintypes.OperatorOptions{Arguments: pattern}
+	opts := plugintypes.OperatorOptions{Arguments: pattern, RxPreFilterEnabled: true}
 
 	op1, err := newRX(opts)
 	if err != nil {
@@ -795,6 +795,10 @@ func TestMemoizeSharesPrefilter(t *testing.T) {
 
 	rx1 := op1.(*rx)
 	rx2 := op2.(*rx)
+
+	if rx1.prefilter == nil {
+		t.Fatal("prefilter not built: RxPreFilterEnabled is required for this test")
+	}
 
 	// Both should have the same minLen
 	if rx1.minLen != rx2.minLen {
@@ -826,11 +830,15 @@ func TestMemoizeSharesPrefilter(t *testing.T) {
 // TestPrefilterConcurrentSafety verifies the prefilter closure and Aho-Corasick
 // automaton can be safely called from multiple goroutines concurrently.
 func TestPrefilterConcurrentSafety(t *testing.T) {
-	RxPattern := `(?i)(?:union\s+select|insert\s+into|delete\s+from)`
-	opts := plugintypes.OperatorOptions{Arguments: RxPattern}
+	rxPattern := `(?i)(?:union\s+select|insert\s+into|delete\s+from)`
+	opts := plugintypes.OperatorOptions{Arguments: rxPattern, RxPreFilterEnabled: true}
 	op, err := newRX(opts)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	if op.(*rx).prefilter == nil {
+		t.Fatal("prefilter not built: RxPreFilterEnabled is required for this test")
 	}
 
 	inputs := []string{
@@ -849,7 +857,7 @@ func TestPrefilterConcurrentSafety(t *testing.T) {
 	done := make(chan struct{})
 
 	// Compile the reference regex once, outside the goroutines.
-	re := regexp.MustCompile(RxPattern)
+	re := regexp.MustCompile(rxPattern)
 
 	for g := 0; g < goroutines; g++ {
 		go func() {
