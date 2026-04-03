@@ -34,11 +34,10 @@ const (
 	DefaultRequestBodyJsonDepthLimit = 1024
 
 	// defaultHighestSeverity is the default value for HIGHEST_SEVERITY when no rules
-	// with severity have been matched. Uses the RuleSeverityUnset sentinel (255),
-	// aligning with ModSecurity behavior:
+	// with severity have been matched, aligning with ModSecurity behavior:
 	// - ModSec v2: apache2/msc_util.c highest_severity initialized to 255
 	// - ModSec v3: src/transaction.cc m_highestSeverity initialized to 255
-	defaultHighestSeverity = int(types.RuleSeverityUnset)
+	defaultHighestSeverity = 255
 )
 
 // WAF instance is used to store configurations and rules

@@ -42,11 +42,10 @@ const (
 	RuleSeverityInfo RuleSeverity = 6
 	// RuleSeverityDebug represents the debug severity
 	RuleSeverityDebug RuleSeverity = 7
-	// RuleSeverityUnset is the sentinel value indicating that no severity has been
-	// assigned to a rule. It matches the ModSecurity v2/v3 convention of initializing
-	// highest_severity to 255. Valid severities are 0–7, so 255 is always greater
-	// than any real severity and will never win a "lower is higher" comparison.
-	RuleSeverityUnset RuleSeverity = 255
+	// RuleSeverityUnset means no severity was assigned to this rule.
+	// Using -1 (outside the valid 0–7 range) is idiomatic for "not set"
+	// and avoids keeping a separate boolean flag in sync.
+	RuleSeverityUnset RuleSeverity = -1
 )
 
 // String returns the string representation of the severity

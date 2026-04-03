@@ -61,7 +61,7 @@ SecRule HIGHEST_SEVERITY "@eq 255" "id:1, log"
 })
 
 // Regression: a rule without severity must not poison HIGHEST_SEVERITY.
-// Without the RuleSeverityUnset sentinel, the no-severity rule's zero value (0)
+// Without the RuleSeverityUnset sentinel (-1), the no-severity rule's zero value (0)
 // would win over a later explicit severity:5, leaving HIGHEST_SEVERITY stuck at 0.
 var _ = profile.RegisterProfile(profile.Profile{
 	Meta: profile.Meta{

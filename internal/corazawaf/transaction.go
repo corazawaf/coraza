@@ -556,8 +556,8 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 
 	// set highest_severity
 	// Only update when severity was explicitly set via the severity action.
-	// Unset rules retain RuleSeverityUnset (255), which always loses the
-	// "lower is higher" comparison, matching ModSecurity v2/v3 semantics.
+	// Unset rules retain RuleSeverityUnset (-1) and are skipped here,
+	// matching ModSecurity v2/v3 semantics.
 	if r.Severity_ != types.RuleSeverityUnset {
 		hs := tx.variables.highestSeverity
 		currentVal, _ := strconv.Atoi(hs.Get())
