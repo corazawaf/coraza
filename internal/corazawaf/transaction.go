@@ -550,9 +550,7 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 	// tx.MatchedRules = append(tx.MatchedRules, mr)
 
 	// If the rule is set to audit, we log the transaction to the audit log
-	if r.Audit {
-		tx.audit = true
-	}
+	tx.audit = tx.audit || r.Audit
 
 	// set highest_severity
 	// Only update when severity was explicitly set via the severity action.
@@ -606,7 +604,6 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 	if tx.WAF.ErrorLogCb != nil && r.Log {
 		tx.WAF.ErrorLogCb(mr)
 	}
-
 }
 
 // GetStopWatch is used to debug phase durations
