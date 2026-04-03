@@ -21,13 +21,13 @@ type RuleMetadata struct {
 	Rev_      string
 	Severity_ types.RuleSeverity
 	Version_  string
-	Tags_        []string
-	Maturity_    int
-	Accuracy_    int
-	Operator_    string
-	Phase_       types.RulePhase
-	Raw_         string
-	SecMark_     string
+	Tags_     []string
+	Maturity_ int
+	Accuracy_ int
+	Operator_ string
+	Phase_    types.RulePhase
+	Raw_      string
+	SecMark_  string
 	// Contains the Id of the parent rule if you are inside
 	// a chain. Otherwise, it will be 0
 	ParentID_ int

@@ -560,12 +560,7 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 	// "lower is higher" comparison, matching ModSecurity v2/v3 semantics.
 	if r.Severity_ != types.RuleSeverityUnset {
 		hs := tx.variables.highestSeverity
-		currentVal := defaultHighestSeverity
-		if v := hs.Get(); v != "" {
-			if parsed, err := strconv.Atoi(v); err == nil {
-				currentVal = parsed
-			}
-		}
+		currentVal, _ := strconv.Atoi(hs.Get())
 		if r.Severity_.Int() < currentVal {
 			hs.Set(strconv.Itoa(r.Severity_.Int()))
 		}
