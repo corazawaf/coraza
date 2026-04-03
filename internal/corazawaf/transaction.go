@@ -1552,24 +1552,8 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 			* the information about parameters but not about the files. This is handy
 			* if you don’t want to have (often large) files stored in your audit logs.
 			 */
-			// upload data
-			var files []plugintypes.AuditLogTransactionRequestFiles
-			al.Transaction_.Request_.Files_ = nil
-			for _, file := range tx.variables.files.Get("") {
-				var size int64
-				if fs := tx.variables.filesSizes.Get(file); len(fs) > 0 {
-					size, _ = strconv.ParseInt(fs[0], 10, 64)
-					// we ignore the error as it defaults to 0
-				}
-				ext := filepath.Ext(file)
-				at := auditlog.TransactionRequestFiles{
-					Size_: size,
-					Name_: file,
-					Mime_: mime.TypeByExtension(ext),
-				}
-				files = append(files, at)
-			}
-			al.Transaction_.Request_.Files_ = files
+		case types.AuditLogPartUploadedFiles:
+			al.Transaction_.Request_.Files_ = tx.auditLogCollectFiles()
 		case types.AuditLogPartIntermediaryResponseBody:
 			if al.Transaction_.Response_ == nil {
 				al.Transaction_.Response_ = &auditlog.TransactionResponse{}
@@ -1650,6 +1634,26 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 	}
 
 	return al
+}
+
+// auditLogCollectFiles collects uploaded file metadata from transaction variables
+// for use in audit log parts (Part J).
+func (tx *Transaction) auditLogCollectFiles() []plugintypes.AuditLogTransactionRequestFiles {
+	var files []plugintypes.AuditLogTransactionRequestFiles
+	for _, file := range tx.variables.files.Get("") {
+		var size int64
+		if fs := tx.variables.filesSizes.Get(file); len(fs) > 0 {
+			size, _ = strconv.ParseInt(fs[0], 10, 64)
+		}
+		ext := filepath.Ext(file)
+		at := auditlog.TransactionRequestFiles{
+			Size_: size,
+			Name_: file,
+			Mime_: mime.TypeByExtension(ext),
+		}
+		files = append(files, at)
+	}
+	return files
 }
 
 // Close closes the transaction after phase 5
