@@ -2396,6 +2396,15 @@ func BenchmarkRxPrefilter(b *testing.B) {
 			pattern: `[a-z]+\d+`,
 			input:   "just a normal request without any attack payload at all",
 		},
+		// trie_reconstruction: pure keyword alternation — Simplify() turns
+		// select|sleep|union|... into s(?:elect|leep)|u(?:nion|pdate)|...
+		// BEFORE trie reconstruction: prefilterFunc returned nil → full regex always ran.
+		// AFTER:  Wu-Manber prefilter built over reconstructed keywords → fast skip.
+		{
+			name:    "trie_reconstruction_sqli",
+			pattern: `(?i)(?:select|sleep|substr|union|update|insert|delete|alter|create|benchmark)`,
+			input:   "GET /api/v1/users?page=1&limit=50&sort=name HTTP/1.1",
+		},
 	}
 
 	for _, bm := range benchmarks {
