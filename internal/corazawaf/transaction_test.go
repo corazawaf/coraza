@@ -2346,9 +2346,14 @@ func BenchmarkRuleEvalWithTransformations(b *testing.B) {
 	tx := waf.NewTransaction()
 	tx.ProcessURI("/test?a=1&b=2&c=3&d=4&e=5", "GET", "HTTP/1.1")
 	tx.AddRequestHeader("Host", "example.com")
-	tx.ProcessRequestHeaders()
-	defer tx.Close()
-
+	if it := tx.ProcessRequestHeaders(); it != nil {
+		b.Fatalf("unexpected interruption during request headers processing: %+v", it)
+	}
+	b.Cleanup(func() {
+		if err := tx.Close(); err != nil {
+			b.Fatalf("failed to close transaction: %v", err)
+		}
+	})
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
