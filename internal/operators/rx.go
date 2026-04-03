@@ -9,16 +9,50 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 
 	"rsc.io/binaryregexp"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/memoize"
 )
 
+// Description:
+// Performs regular expression pattern matching using RE2 syntax. This is the default operator
+// if no @ prefix is specified. Supports capturing groups (up to 9) for use in rule actions.
+// By default enables dotall mode (?s) where . matches newlines for compatibility with ModSecurity.
+//
+// Arguments:
+// Regular expression pattern following RE2 syntax. The pattern is automatically wrapped with
+// mode flags for proper matching behavior.
+//
+// Returns:
+// true if the pattern matches the input, false otherwise
+//
+// Example:
+// ```
+// # Match User-Agent containing "nikto" (with explicit @rx)
+// SecRule REQUEST_HEADERS:User-Agent "@rx nikto" "id:180,deny,log"
+//
+// # Implicit operator usage (same as @rx)
+// SecRule ARGS "(?i)union.*select" "id:181,deny"
+//
+// # Capture groups for reuse in actions
+// SecRule REQUEST_URI "@rx ^/api/v(\d+)" "id:182,setvar:tx.api_version=%{TX.1}"
+// ```
 type rx struct {
-	re *regexp.Regexp
+	re        *regexp.Regexp
+	minLen    int
+	prefilter func(string) bool // returns true if regex might match; nil = no prefilter
+}
+
+// rxCompiled holds all compile-time artifacts for a regex pattern so they can
+// be computed once and shared via memoize when the same pattern appears in
+// multiple rules.
+type rxCompiled struct {
+	re        *regexp.Regexp
+	minLen    int
+	prefilter func(string) bool
 }
 
 var _ plugintypes.Operator = (*rx)(nil)
@@ -45,24 +79,60 @@ func newRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 		return newBinaryRX(options)
 	}
 
-	re, err := memoize.Do(data, func() (interface{}, error) { return regexp.Compile(data) })
+	// Compile regex + prefilter together so memoize caches all artifacts as one
+	// unit. This avoids re-parsing the AST for minMatchLength/prefilterFunc when
+	// the same pattern appears in multiple rules.
+	compiled, err := memoizeDo(options.Memoizer, data, func() (any, error) {
+		re, err := regexp.Compile(data)
+		if err != nil {
+			return nil, err
+		}
+		return &rxCompiled{
+			re:        re,
+			minLen:    minMatchLength(data),
+			prefilter: prefilterFunc(data),
+		}, nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	return &rx{re: re.(*regexp.Regexp)}, nil
+	c := compiled.(*rxCompiled)
+	return &rx{
+		re:        c.re,
+		minLen:    c.minLen,
+		prefilter: c.prefilter,
+	}, nil
 }
 
 func (o *rx) Evaluate(tx plugintypes.TransactionState, value string) bool {
+	if len(value) < o.minLen {
+		return false
+	}
+	if o.prefilter != nil && !o.prefilter(value) {
+		return false
+	}
 	if tx.Capturing() {
-		match := o.re.FindStringSubmatch(value)
-		if len(match) == 0 {
+		// FindStringSubmatchIndex returns a slice of index pairs [start0, end0, start1, end1, ...]
+		// instead of allocating new strings for each capture group. We then slice the original
+		// input value[start:end] to get zero-allocation substrings.
+		match := o.re.FindStringSubmatchIndex(value)
+		if match == nil {
 			return false
 		}
-		for i, c := range match {
+		// match has 2 entries per group: match[2*i] is the start index,
+		// match[2*i+1] is the end index for capture group i. Group 0 is
+		// the full match, groups 1..N are the parenthesized sub-expressions.
+		for i := 0; i < len(match)/2; i++ {
 			if i == 9 {
 				return true
 			}
-			tx.CaptureField(i, c)
+			// A negative start index means the group did not participate in the match
+			// (e.g. an optional group like (foo)? when foo is absent).
+			if match[2*i] >= 0 {
+				tx.CaptureField(i, value[match[2*i]:match[2*i+1]])
+			} else {
+				tx.CaptureField(i, "")
+			}
 		}
 		return true
 	} else {
@@ -81,7 +151,7 @@ var _ plugintypes.Operator = (*binaryRX)(nil)
 func newBinaryRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	data := options.Arguments
 
-	re, err := memoize.Do(data, func() (interface{}, error) { return binaryregexp.Compile(data) })
+	re, err := memoizeDo(options.Memoizer, data, func() (any, error) { return binaryregexp.Compile(data) })
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +199,18 @@ func matchesArbitraryBytes(expr string) bool {
 			continue
 		}
 
-		v, mb, _, err := strconv.UnquoteChar(expr[i:], 0)
+		// Handle braced hex escapes like \x{bc} by converting to the
+		// unbraced form \xbc so strconv.UnquoteChar can parse them.
+		sub := expr[i:]
+		advance := 3 // default for \xNN (4 chars total, skip 3 extra)
+		if len(sub) >= 6 && sub[2] == '{' {
+			if end := strings.IndexByte(sub, '}'); end != -1 {
+				sub = `\x` + sub[3:end]
+				advance = end
+			}
+		}
+
+		v, mb, _, err := strconv.UnquoteChar(sub, 0)
 		if err != nil || mb {
 			// Wasn't a byte escape sequence, shouldn't happen in practice.
 			decoded = append(decoded, expr[i])
@@ -137,7 +218,7 @@ func matchesArbitraryBytes(expr string) bool {
 		}
 
 		decoded = append(decoded, byte(v))
-		i += 3
+		i += advance
 	}
 
 	return !utf8.Valid(decoded)

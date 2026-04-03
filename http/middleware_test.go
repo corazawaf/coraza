@@ -3,7 +3,6 @@
 
 // tinygo does not support net.http so this package is not needed for it
 //go:build !tinygo
-// +build !tinygo
 
 package http
 
@@ -101,6 +100,32 @@ SecRule &REQUEST_HEADERS:Transfer-Encoding "!@eq 0" "id:1,phase:1,deny"
 	}
 	if it == nil {
 		t.Fatal("Expected interruption")
+	} else if it.RuleID != 1 {
+		t.Fatalf("Expected rule 1 to be triggered, got rule %d", it.RuleID)
+	}
+	if err := tx.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestProcessRequestMultipleTransferEncodings(t *testing.T) {
+	// Multiple Transfer-Encoding values are a classic HTTP request smuggling vector (TE.TE attacks).
+	// All values should be forwarded to the WAF.
+	waf, _ := coraza.NewWAF(coraza.NewWAFConfig().
+		WithDirectives(`
+SecRule REQUEST_HEADERS:Transfer-Encoding "@contains identity" "id:1,phase:1,deny"
+`))
+	tx := waf.NewTransaction()
+
+	req, _ := http.NewRequest("GET", "https://www.coraza.io/test", nil)
+	req.TransferEncoding = []string{"chunked", "identity"}
+
+	it, err := processRequest(tx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if it == nil {
+		t.Fatal("Expected interruption: second Transfer-Encoding value should be processed")
 	} else if it.RuleID != 1 {
 		t.Fatalf("Expected rule 1 to be triggered, got rule %d", it.RuleID)
 	}
@@ -244,7 +269,7 @@ type httpTest struct {
 
 var expectedNoBlockingHeaders = []string{"Content-Type", "Content-Length", "Coraza-Middleware", "Date"}
 
-// When an interruption occour, we are expecting that no response headers are sent back to the client.
+// When an interruption occur, we are expecting that no response headers are sent back to the client.
 var expectedBlockingHeaders = []string{"Content-Length", "Date"}
 
 func TestHttpServer(t *testing.T) {
@@ -332,6 +357,12 @@ func TestHttpServer(t *testing.T) {
 			expectedStatus:          403,
 			expectedRespHeadersKeys: expectedBlockingHeaders,
 		},
+		"deny based on number of post arguments matching a name": {
+			reqURI:                  "/hello?foobar=1&foobar=2",
+			expectedProto:           "HTTP/1.1",
+			expectedStatus:          403,
+			expectedRespHeadersKeys: expectedBlockingHeaders,
+		},
 	}
 
 	logger := debuglog.Default().
@@ -358,6 +389,7 @@ func TestHttpServer(t *testing.T) {
 	SecRule RESPONSE_HEADERS:Foo "@pm bar" "id:199,phase:3,deny,t:lowercase,deny, status:401,msg:'Invalid response header',log,auditlog"
 	SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
 	SecRule REQUEST_URI "/allow_me" "id:9,phase:1,allow,msg:'ALLOWED'"
+	SecRule &ARGS_GET_NAMES:foobar "@eq 2" "id:11,phase:1,deny, status:403,msg:'Invalid foobar',log,auditlog"
 `).WithErrorCallback(errLogger(t)).WithDebugLogger(logger)
 			if l := tCase.reqBodyLimit; l > 0 {
 				conf = conf.WithRequestBodyAccess().WithRequestBodyLimit(l).WithRequestBodyInMemoryLimit(l)

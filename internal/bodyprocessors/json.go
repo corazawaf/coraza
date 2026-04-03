@@ -4,6 +4,7 @@
 package bodyprocessors
 
 import (
+	"errors"
 	"io"
 	"strconv"
 	"strings"
@@ -17,52 +18,91 @@ type jsonBodyProcessor struct{}
 
 var _ plugintypes.BodyProcessor = &jsonBodyProcessor{}
 
-func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
+func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.TransactionVariables, bpo plugintypes.BodyProcessorOptions) error {
+	// Read the entire body into memory for two purposes:
+	// 1. Store raw JSON in TX variables for operators like @validateSchema
+	// 2. Parse and flatten for ARGS_POST collection
+	s := strings.Builder{}
+	if _, err := io.Copy(&s, reader); err != nil {
+		return err
+	}
+	ss := s.String()
+	// Process with recursion limit
 	col := v.ArgsPost()
-	data, err := readJSON(reader)
+	data, err := readJSON(ss, bpo.RequestBodyRecursionLimit)
 	if err != nil {
 		return err
 	}
 	for key, value := range data {
 		col.SetIndex(key, 0, value)
 	}
+
+	// Store the raw JSON in the TX variable for validateSchema
+	// This is needed because RequestBody is a Single interface without a Set method
+	if txVar := v.TX(); txVar != nil {
+		// Store the content type and raw body
+		txVar.Set("json_request_body", []string{ss})
+	}
+
 	return nil
 }
+
+const ignoreJSONRecursionLimit = -1
 
 func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
+	// Read the entire body to store it and process it
+	s := strings.Builder{}
+	if _, err := io.Copy(&s, reader); err != nil {
+		return err
+	}
+	ss := s.String()
+	// Process with no recursion limit as we don't have a directive for response body
 	col := v.ResponseArgs()
-	data, err := readJSON(reader)
+	data, err := readJSON(ss, ignoreJSONRecursionLimit)
 	if err != nil {
 		return err
 	}
 	for key, value := range data {
 		col.SetIndex(key, 0, value)
 	}
+
+	// Store the raw JSON in the TX variable for validateSchema
+	// This is needed because ResponseBody is a Single interface without a Set method
+	if txVar := v.TX(); txVar != nil && v.ResponseBody() != nil {
+		// Store the content type and raw body
+		txVar.Set("json_response_body", []string{ss})
+	}
+
 	return nil
 }
 
-func readJSON(reader io.Reader) (map[string]string, error) {
-	s := strings.Builder{}
-	_, err := io.Copy(&s, reader)
-	if err != nil {
-		return nil, err
-	}
-
-	json := gjson.Parse(s.String())
+func readJSON(s string, maxRecursion int) (map[string]string, error) {
 	res := make(map[string]string)
 	key := []byte("json")
-	readItems(json, key, res)
-	return res, nil
+
+	if !gjson.Valid(s) {
+		return res, errors.New("invalid JSON")
+	}
+	json := gjson.Parse(s)
+	err := readItems(json, key, maxRecursion, res)
+	return res, err
 }
 
 // Transform JSON to a map[string]string
+// This function is recursive and will call itself for nested objects.
+// The limit in recursion is defined by maxItems.
 // Example input: {"data": {"name": "John", "age": 30}, "items": [1,2,3]}
 // Example output: map[string]string{"json.data.name": "John", "json.data.age": "30", "json.items.0": "1", "json.items.1": "2", "json.items.2": "3"}
 // Example input: [{"data": {"name": "John", "age": 30}, "items": [1,2,3]}]
 // Example output: map[string]string{"json.0.data.name": "John", "json.0.data.age": "30", "json.0.items.0": "1", "json.0.items.1": "2", "json.0.items.2": "3"}
-// TODO add some anti DOS protection
-func readItems(json gjson.Result, objKey []byte, res map[string]string) {
+func readItems(json gjson.Result, objKey []byte, maxRecursion int, res map[string]string) error {
 	arrayLen := 0
+	var iterationError error
+	if maxRecursion == 0 {
+		// We reached the limit of nesting we want to handle. This protects against
+		// DoS attacks using deeply nested JSON structures (e.g., {"a":{"a":{"a":...}}}).
+		return errors.New("max recursion reached while reading json object")
+	}
 	json.ForEach(func(key, value gjson.Result) bool {
 		// Avoid string concatenation to maintain a single buffer for key aggregation.
 		prevParentLength := len(objKey)
@@ -77,7 +117,11 @@ func readItems(json gjson.Result, objKey []byte, res map[string]string) {
 		var val string
 		switch value.Type {
 		case gjson.JSON:
-			readItems(value, objKey, res)
+			// call recursively with one less item to avoid doing infinite recursion
+			iterationError = readItems(value, objKey, maxRecursion-1, res)
+			if iterationError != nil {
+				return false
+			}
 			objKey = objKey[:prevParentLength]
 			return true
 		case gjson.String:
@@ -97,6 +141,7 @@ func readItems(json gjson.Result, objKey []byte, res map[string]string) {
 	if arrayLen > 0 {
 		res[string(objKey)] = strconv.Itoa(arrayLen)
 	}
+	return iterationError
 }
 
 func init() {

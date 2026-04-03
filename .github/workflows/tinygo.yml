@@ -14,40 +14,52 @@ on:
       - "**/*.md"
       - "LICENSE"
 
+permissions: {}
+
+concurrency:
+  group: tinygo-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.22.x]
-        tinygo-version: [0.33.0]
+        go-version: [1.25.x]
+        # tinygo-version is meant to stay aligned with the one used in corazawaf/coraza-proxy-wasm
+        tinygo-version: [0.40.1]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
 
       - name: Install Go
-        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
         with:
           go-version: ${{ matrix.go-version }}
           cache: true
 
-      - name: setup tinygo
-        uses: acifani/setup-tinygo@b2ba42b249c7d3efdfe94166ec0f48b3191404f7 # v2
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Setup tinygo
+        uses: acifani/setup-tinygo@db56321a62b9a67922bb9ac8f9d085e218807bb3 # v2
         with:
           tinygo-version: ${{ matrix.tinygo-version }}
 
       - name: Cache TinyGo build
-        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4
+        uses: actions/cache@a7833574556fa59680c1b7cb190c1735db73ebf0 # v5
         with:
           path: |
             ~/.cache/tinygo
-          key: ${{ runner.os }}-tinygo-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-tinygo-${{ matrix.tinygo-version }}-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-tinygo-
+            ${{ runner.os }}-tinygo-${{ matrix.tinygo-version }}-
 
       - name: Tests
-        run: tinygo test ./...
+        run: tinygo test -v -short ./internal/...
 
-      - name: Tests memoize
-        run: tinygo test -tags=memoize_builders ./...
+      - name: Tests no_memoize
+        run: tinygo test -v -short -tags=coraza.no_memoize ./internal/...

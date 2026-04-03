@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build mage
-// +build mage
 
 package main
 
@@ -23,7 +22,7 @@ import (
 
 var addLicenseVersion = "v1.1.1" // https://github.com/google/addlicense/releases
 var gosImportsVer = "v0.3.7"     // https://github.com/rinchsan/gosimports/releases
-var golangCILintVer = "v1.60.3"  // https://github.com/golangci/golangci-lint/releases
+var golangCILintVer = "v2.6.2"   // https://github.com/golangci/golangci-lint/releases
 var errNoGitDir = errors.New("no .git directory found")
 var errUpdateGeneratedFiles = errors.New("generated files need to be updated")
 
@@ -64,11 +63,11 @@ func Lint() error {
 		return err
 	}
 
-	if sh.Run("git", "diff", "--exit-code", "--", "'*.gen.go'") != nil {
+	if sh.Run("git", "diff", "--exit-code", "*.gen.go") != nil {
 		return errUpdateGeneratedFiles
 	}
 
-	if err := sh.RunV("go", "run", fmt.Sprintf("github.com/golangci/golangci-lint/cmd/golangci-lint@%s", golangCILintVer), "run"); err != nil {
+	if err := sh.RunV("go", "run", fmt.Sprintf("github.com/golangci/golangci-lint/v2/cmd/golangci-lint@%s", golangCILintVer), "run"); err != nil {
 		return err
 	}
 
@@ -109,7 +108,7 @@ func Test() error {
 		return err
 	}
 
-	if err := sh.RunV("go", "test", "-tags=memoize_builders", "./..."); err != nil {
+	if err := sh.RunV("go", "test", "-tags=coraza.no_memoize", "./..."); err != nil {
 		return err
 	}
 
@@ -121,7 +120,7 @@ func Test() error {
 		return err
 	}
 
-	if err := sh.RunV("go", "test", "-tags=memoize_builders", "./testing/coreruleset"); err != nil {
+	if err := sh.RunV("go", "test", "-tags=coraza.no_memoize", "./testing/coreruleset"); err != nil {
 		return err
 	}
 
@@ -183,8 +182,8 @@ func Coverage() error {
 	if err := sh.RunV("go", "test", tagsCmd, "-coverprofile=build/coverage-ftw.txt", "-covermode=atomic", "-coverpkg=./...", "./testing/coreruleset"); err != nil {
 		return err
 	}
-	// we run tinygo tag only if memoize_builders is not enabled
-	if !strings.Contains(tags, "memoize_builders") {
+	// we run tinygo tag only if coraza.no_memoize is not enabled
+	if !strings.Contains(tags, "coraza.no_memoize") {
 		if tagsCmd != "" {
 			tagsCmd += ",tinygo"
 		}
@@ -223,7 +222,7 @@ func Fuzz() error {
 	for _, pkgTests := range tests {
 		for _, test := range pkgTests.tests {
 			fmt.Println("Running", test)
-			if err := sh.RunV("go", "test", "-fuzz="+test, "-fuzztime=2m", pkgTests.pkg); err != nil {
+			if err := sh.RunV("go", "test", "-fuzz="+test, "-fuzztime=3m", pkgTests.pkg); err != nil {
 				return err
 			}
 		}
@@ -279,10 +278,11 @@ func combinations(tags []string) []string {
 // Generates a JSON output to stdout which contains all permutations of build tags for the project.
 func TagsMatrix() error {
 	tags := []string{
+		"coraza.rule.mandatory_rule_id_check",
 		"coraza.rule.case_sensitive_args_keys",
 		"coraza.rule.no_regex_multiline",
-		"memoize_builders",
-		"coraza.rule.multiphase_valuation",
+		"coraza.no_memoize",
+		"coraza.rule.multiphase_evaluation",
 		"no_fs_access",
 	}
 	combos := combinations(tags)

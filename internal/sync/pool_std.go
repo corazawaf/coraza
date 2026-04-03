@@ -2,13 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build !tinygo
-// +build !tinygo
 
 package sync
 
 import "sync"
 
-func NewPool(new func() interface{}) Pool {
+func NewPool(new func() any) Pool {
 	return &stdPool{
 		pool: sync.Pool{
 			New: new,
@@ -20,10 +19,10 @@ type stdPool struct {
 	pool sync.Pool
 }
 
-func (p *stdPool) Get() interface{} {
+func (p *stdPool) Get() any {
 	return p.pool.Get()
 }
 
-func (p *stdPool) Put(x interface{}) {
+func (p *stdPool) Put(x any) {
 	p.pool.Put(x)
 }

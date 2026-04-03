@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -54,6 +55,12 @@ type Transaction struct {
 	// True if the transaction has been disrupted by any rule
 	interruption *types.Interruption
 
+	// detectionOnlyInterruption keeps track of the interruption that would have been performed if the engine was On.
+	// It provides visibility of what would have happened in On mode when the engine is set to "DetectionOnly"
+	// and is used to correctly emit relevant only audit logs in DetectionOnly mode (When the rules would have
+	// caused an interruption if the engine was On).
+	detectionOnlyInterruption *types.Interruption
+
 	// This is used to store log messages
 	// Deprecated since Coraza 3.0.5: this variable is not used, logdata values are stored in the matched rules
 	Logdata string
@@ -62,6 +69,9 @@ type Transaction struct {
 	SkipAfter string
 
 	// AllowType is used by the allow disruptive action to skip evaluating rules after being allowed
+	// Note: Rely on tx.Allow(allowType) for tweaking this field. This field is exposed for backwards
+	// compatibility, but it is not recommended to be used directly.
+	// TODO(4.x): Evaluate to make it private
 	AllowType corazatypes.AllowType
 
 	// Copies from the WAF instance that may be overwritten by the ctl action
@@ -89,7 +99,11 @@ type Transaction struct {
 	responseBodyBuffer *BodyBuffer
 
 	// Rules with this id are going to be skipped while processing a phase
-	ruleRemoveByID []int
+	ruleRemoveByID map[int]struct{}
+
+	// ruleRemoveByIDRanges stores ranges of rule IDs to be skipped during a phase.
+	// Ranges avoid expanding all IDs into the ruleRemoveByID map.
+	ruleRemoveByIDRanges [][2]int
 
 	// ruleRemoveTargetByID is used by ctl to remove rule targets by id during the
 	// transaction. All other "target removers" like "ByTag" are an abstraction of "ById"
@@ -122,7 +136,7 @@ type Transaction struct {
 
 	variables TransactionVariables
 
-	transformationCache map[transformationKey]*transformationValue
+	transformationCache map[transformationKey]transformationValue
 }
 
 func (tx *Transaction) ID() string {
@@ -305,9 +319,36 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 	return collections.Noop
 }
 
+// Interrupt sets the interruption for the transaction.
+// It complies with DetectionOnly definition which requires that disruptive actions are not executed.
+// Depending on the RuleEngine mode:
+// If On: it immediately interrupts the transaction and generates a response.
+// If DetectionOnly: it keeps track of what the interruption would have been if the engine was "On",
+// allowing consistent logging and visibility of potential disruptions without actually interrupting the transaction.
 func (tx *Transaction) Interrupt(interruption *types.Interruption) {
-	if tx.RuleEngine == types.RuleEngineOn {
+	switch tx.RuleEngine {
+	case types.RuleEngineOn:
 		tx.interruption = interruption
+	case types.RuleEngineDetectionOnly:
+		// In DetectionOnly mode, the interruption is not actually triggered, which means that
+		// further rules will continue to be evaluated and more actions can be executed.
+		// Let's keep only the first interruption here, matching the one that would have been triggered
+		// if the engine was on.
+		if tx.detectionOnlyInterruption == nil {
+			tx.detectionOnlyInterruption = interruption
+		}
+	}
+}
+
+// Allow sets the allow type for the transaction.
+// It complies with DetectionOnly definition which requires not executing disruptive actions.
+// Depending on the RuleEngine mode:
+// If On: it will cause the transaction to skip rules according to the allow type (phase, request, all).
+// If DetectionOnly: allow is not enforced.
+// TODO(4.x): evaluate to expose it in the interface.
+func (tx *Transaction) Allow(allowType corazatypes.AllowType) {
+	if tx.RuleEngine == types.RuleEngineOn {
+		tx.AllowType = allowType
 	}
 }
 
@@ -512,10 +553,15 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 	tx.audit = tx.audit || r.Audit
 
 	// set highest_severity
-	hs := tx.variables.highestSeverity
-	maxSeverity, _ := types.ParseRuleSeverity(hs.Get())
-	if r.Severity_ > maxSeverity {
-		hs.Set(strconv.Itoa(r.Severity_.Int()))
+	// Only update when severity was explicitly set via the severity action.
+	// Unset rules retain RuleSeverityUnset (-1) and are skipped here,
+	// matching ModSecurity v2/v3 semantics.
+	if r.Severity_ != types.RuleSeverityUnset {
+		hs := tx.variables.highestSeverity
+		currentVal, _ := strconv.Atoi(hs.Get())
+		if r.Severity_.Int() < currentVal {
+			hs.Set(strconv.Itoa(r.Severity_.Int()))
+		}
 	}
 
 	mr := &corazarules.MatchedRule{
@@ -529,19 +575,19 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 		MatchedDatas_:    mds,
 		Context_:         tx.context,
 	}
-	// Populate MatchedRule disruption related fields only if the Engine is capable of performing disruptive actions
-	if tx.RuleEngine == types.RuleEngineOn {
-		var exists bool
-		for _, a := range r.actions {
-			// There can be only at most one disruptive action per rule
-			if a.Function.Type() == plugintypes.ActionTypeDisruptive {
-				mr.DisruptiveAction_, exists = corazarules.DisruptiveActionMap[a.Name]
-				if !exists {
-					mr.DisruptiveAction_ = corazarules.DisruptiveActionUnknown
-				}
-				mr.Disruptive_ = true
-				break
-			}
+
+	// Starting from Coraza 3.4, MatchedRule are including the disruptive action (DisruptiveAction_)
+	// also in DetectionOnly mode. This improves visibility of what would have happened if the engine was on.
+	// The Disruptive_ boolean still allows to identify actual disruptions from "potential" disruptions.
+	// Disruptive_ field is also used during logging to print different messages if the disruption has been real or not
+	// so it is important to set it according to the RuleEngine mode.
+	for _, a := range r.actions {
+		// There can be only one disruptive action per rule
+		if a.Function.Type() == plugintypes.ActionTypeDisruptive {
+			// if not found it will default to DisruptiveActionUnknown.
+			mr.DisruptiveAction_ = corazarules.DisruptiveActionMap[a.Name]
+			mr.Disruptive_ = tx.RuleEngine == types.RuleEngineOn
+			break
 		}
 	}
 
@@ -590,13 +636,15 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 		if m, ok := col.(collection.Keyed); ok {
 			matches = m.FindRegex(rv.KeyRx)
 		} else {
-			panic("attempted to use regex with non-selectable collection: " + rv.Variable.Name())
+			// This should probably never happen, selectability is checked at parsing time
+			tx.debugLogger.Error().Str("collection", rv.Variable.Name()).Msg("attempted to use regex with non-selectable collection")
 		}
 	case rv.KeyStr != "":
 		if m, ok := col.(collection.Keyed); ok {
 			matches = m.FindString(rv.KeyStr)
 		} else {
-			panic("attempted to use string with non-selectable collection: " + rv.Variable.Name())
+			// This should probably never happen, selectability is checked at parsing time
+			tx.debugLogger.Error().Str("collection", rv.Variable.Name()).Msg("attempted to use string with non-selectable collection")
 		}
 	default:
 		matches = col.FindAll()
@@ -610,7 +658,7 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 		isException := false
 		lkey := strings.ToLower(c.Key())
 		for _, ex := range rv.Exceptions {
-			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || strings.ToLower(ex.KeyStr) == lkey {
+			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || strings.ToLower(ex.KeyStr) == lkey || (ex.KeyStr == "" && ex.KeyRx == nil) {
 				isException = true
 				break
 			}
@@ -635,12 +683,17 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 	return matches
 }
 
-// RemoveRuleTargetByID Removes the VARIABLE:KEY from the rule ID
-// It's mostly used by CTL to dynamically remove targets from rules
-func (tx *Transaction) RemoveRuleTargetByID(id int, variable variables.RuleVariable, key string) {
+// RemoveRuleTargetByID removes the VARIABLE:KEY from the rule ID.
+// It is mostly used by CTL to dynamically remove targets from rules.
+// key is an exact string to match against the variable name; keyRx is an
+// optional compiled regular expression that, when non-nil, is used instead of
+// key for pattern-based matching (e.g. removing all ARGS matching
+// /^json\.\d+\.field$/ from a given rule).
+func (tx *Transaction) RemoveRuleTargetByID(id int, variable variables.RuleVariable, key string, keyRx *regexp.Regexp) {
 	c := ruleVariableParams{
 		Variable: variable,
 		KeyStr:   key,
+		KeyRx:    keyRx,
 	}
 
 	if multiphaseEvaluation && (variable == variables.Args || variable == variables.ArgsNames) {
@@ -665,7 +718,22 @@ func (tx *Transaction) RemoveRuleTargetByID(id int, variable variables.RuleVaria
 // RemoveRuleByID Removes a rule from the transaction
 // It does not affect the WAF rules
 func (tx *Transaction) RemoveRuleByID(id int) {
-	tx.ruleRemoveByID = append(tx.ruleRemoveByID, id)
+	if tx.ruleRemoveByID == nil {
+		tx.ruleRemoveByID = map[int]struct{}{}
+	}
+	tx.ruleRemoveByID[id] = struct{}{}
+}
+
+// RemoveRuleByIDRange marks rules in the ID range [start, end] (inclusive) to be
+// skipped during transaction processing. It does not affect the WAF rules.
+func (tx *Transaction) RemoveRuleByIDRange(start, end int) {
+	tx.ruleRemoveByIDRanges = append(tx.ruleRemoveByIDRanges, [2]int{start, end})
+}
+
+// GetRuleRemoveByIDRanges returns the list of rule ID ranges that will be skipped
+// during transaction processing.
+func (tx *Transaction) GetRuleRemoveByIDRanges() [][2]int {
+	return tx.ruleRemoveByIDRanges
 }
 
 // ProcessConnection should be called at very beginning of a request process, it is
@@ -763,7 +831,7 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 		uri = uri[:in]
 	}
 	path := ""
-	parsedURL, err := url.Parse(uri)
+	parsedURL, err := url.ParseRequestURI(uri)
 	query := ""
 	if err != nil {
 		tx.variables.urlencodedError.Set(err.Error())
@@ -816,7 +884,7 @@ func (tx *Transaction) SetServerName(serverName string) {
 //
 // note: Remember to check for a possible intervention.
 func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
-	if tx.RuleEngine == types.RuleEngineOff {
+	if tx.IsRuleEngineOff() {
 		// Rule engine is disabled
 		return nil
 	}
@@ -826,7 +894,7 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 		return tx.interruption
 	}
 
-	if tx.interruption != nil {
+	if tx.IsInterrupted() {
 		tx.debugLogger.Error().Msg("Calling ProcessRequestHeaders but there is a preexisting interruption")
 		return tx.interruption
 	}
@@ -835,10 +903,10 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 	return tx.interruption
 }
 
-func setAndReturnBodyLimitInterruption(tx *Transaction) (*types.Interruption, int, error) {
+func setAndReturnBodyLimitInterruption(tx *Transaction, status int) (*types.Interruption, int, error) {
 	tx.debugLogger.Warn().Msg("Disrupting transaction with body size above the configured limit (Action Reject)")
 	tx.interruption = &types.Interruption{
-		Status: 413,
+		Status: status,
 		Action: "deny",
 	}
 	return tx.interruption, 0, nil
@@ -848,7 +916,7 @@ func setAndReturnBodyLimitInterruption(tx *Transaction) (*types.Interruption, in
 // it returns an interruption if the writing bytes go beyond the request body limit.
 // It won't copy the bytes if the body access isn't accessible.
 func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, error) {
-	if tx.RuleEngine == types.RuleEngineOff {
+	if tx.IsRuleEngineOff() {
 		return nil, 0, nil
 	}
 
@@ -883,7 +951,7 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 		tx.variables.inboundDataError.Set("1")
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			// We interrupt this transaction in case RequestBodyLimitAction is Reject
-			return setAndReturnBodyLimitInterruption(tx)
+			return setAndReturnBodyLimitInterruption(tx, 413)
 		}
 
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
@@ -913,7 +981,7 @@ type ByteLenger interface {
 // it returns an interruption if the writing bytes go beyond the request body limit.
 // It won't read the reader if the body access isn't accessible.
 func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, int, error) {
-	if tx.RuleEngine == types.RuleEngineOff {
+	if tx.IsRuleEngineOff() {
 		return nil, 0, nil
 	}
 
@@ -948,7 +1016,7 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 		if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
 			tx.variables.inboundDataError.Set("1")
 			if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
-				return setAndReturnBodyLimitInterruption(tx)
+				return setAndReturnBodyLimitInterruption(tx, 413)
 			}
 
 			if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
@@ -968,7 +1036,7 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 	if tx.requestBodyBuffer.length == tx.RequestBodyLimit {
 		tx.variables.inboundDataError.Set("1")
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
-			return setAndReturnBodyLimitInterruption(tx)
+			return setAndReturnBodyLimitInterruption(tx, 413)
 		}
 
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
@@ -987,16 +1055,15 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 // ProcessRequestBody Performs the analysis of the request body (if any)
 //
 // It is recommended to call this method even if it is not expected to have a body.
-// It permits to execute rules belonging to request body phase, but not necesarily
+// It permits to execute rules belonging to request body phase, but not necessarily
 // processing the request body.
 //
 // Remember to check for a possible intervention.
 func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
-	if tx.RuleEngine == types.RuleEngineOff {
+	if tx.IsRuleEngineOff() {
 		return nil, nil
 	}
-
-	if tx.interruption != nil {
+	if tx.IsInterrupted() {
 		tx.debugLogger.Error().Msg("Calling ProcessRequestBody but there is a preexisting interruption")
 		return tx.interruption, nil
 	}
@@ -1020,9 +1087,9 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.interruption, nil
 	}
-	mime := ""
+	mimeType := ""
 	if m := tx.variables.requestHeaders.Get("content-type"); len(m) > 0 {
-		mime = m[0]
+		mimeType = m[0]
 	}
 
 	reader, err := tx.requestBodyBuffer.Reader()
@@ -1035,8 +1102,12 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	// Default variables.ReqbodyProcessor values
 	// XML and JSON must be forced with ctl:requestBodyProcessor=JSON
 	if tx.ForceRequestBodyVariable {
-		// We force URLENCODED if mime is x-www... or we have an empty RBP and ForceRequestBodyVariable
+		// We force URLENCODED if mimeType is x-www... or we have an empty RBP and ForceRequestBodyVariable
 		if rbp == "" {
+			// TODO(4.x): Evaluate if the new RAW body parser fits better than URLENCODED for the
+			// default forced body processor. See some reasoning in https://github.com/corazawaf/coraza/issues/938:
+			// "meaning that parsing a body of unknown type might waste some time by trying to parse it as urlencoded
+			// for nothing (and possibly set some "garbage" variables if you happen to have a & in it)"
 			rbp = "URLENCODED"
 		}
 		tx.variables.reqbodyProcessor.Set(rbp)
@@ -1059,8 +1130,9 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		Msg("Attempting to process request body")
 
 	if err := bodyprocessor.ProcessRequest(reader, tx.Variables(), plugintypes.BodyProcessorOptions{
-		Mime:        mime,
-		StoragePath: tx.WAF.UploadDir,
+		Mime:                      mimeType,
+		StoragePath:               tx.WAF.UploadDir,
+		RequestBodyRecursionLimit: tx.WAF.RequestBodyJsonDepthLimit,
 	}); err != nil {
 		tx.debugLogger.Error().Err(err).Msg("Failed to process request body")
 		tx.generateRequestBodyError(err)
@@ -1079,7 +1151,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 //
 // Note: Remember to check for a possible intervention.
 func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Interruption {
-	if tx.RuleEngine == types.RuleEngineOff {
+	if tx.IsRuleEngineOff() {
 		return nil
 	}
 
@@ -1089,7 +1161,7 @@ func (tx *Transaction) ProcessResponseHeaders(code int, proto string) *types.Int
 		return tx.interruption
 	}
 
-	if tx.interruption != nil {
+	if tx.IsInterrupted() {
 		tx.debugLogger.Error().Msg("Calling ProcessResponseHeaders but there is a preexisting interruption")
 		return tx.interruption
 	}
@@ -1121,7 +1193,7 @@ func (tx *Transaction) IsResponseBodyProcessable() bool {
 // it returns an interruption if the writing bytes go beyond the response body limit.
 // It won't copy the bytes if the body access isn't accessible.
 func (tx *Transaction) WriteResponseBody(b []byte) (*types.Interruption, int, error) {
-	if tx.RuleEngine == types.RuleEngineOff {
+	if tx.IsRuleEngineOff() {
 		return nil, 0, nil
 	}
 
@@ -1149,7 +1221,7 @@ func (tx *Transaction) WriteResponseBody(b []byte) (*types.Interruption, int, er
 		tx.variables.outboundDataError.Set("1")
 		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionReject {
 			// We interrupt this transaction in case ResponseBodyLimitAction is Reject
-			return setAndReturnBodyLimitInterruption(tx)
+			return setAndReturnBodyLimitInterruption(tx, 500)
 		}
 
 		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionProcessPartial {
@@ -1172,7 +1244,7 @@ func (tx *Transaction) WriteResponseBody(b []byte) (*types.Interruption, int, er
 // it returns an interruption if the writing bytes go beyond the response body limit.
 // It won't read the reader if the body access isn't accessible.
 func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, int, error) {
-	if tx.RuleEngine == types.RuleEngineOff {
+	if tx.IsRuleEngineOff() {
 		return nil, 0, nil
 	}
 
@@ -1199,7 +1271,7 @@ func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, i
 		if tx.responseBodyBuffer.length+writingBytes >= tx.ResponseBodyLimit {
 			tx.variables.outboundDataError.Set("1")
 			if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionReject {
-				return setAndReturnBodyLimitInterruption(tx)
+				return setAndReturnBodyLimitInterruption(tx, 500)
 			}
 
 			if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionProcessPartial {
@@ -1219,7 +1291,7 @@ func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, i
 	if tx.responseBodyBuffer.length == tx.ResponseBodyLimit {
 		tx.variables.outboundDataError.Set("1")
 		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionReject {
-			return setAndReturnBodyLimitInterruption(tx)
+			return setAndReturnBodyLimitInterruption(tx, 500)
 		}
 
 		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionProcessPartial {
@@ -1237,16 +1309,16 @@ func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, i
 // ProcessResponseBody Perform the analysis of the the response body (if any)
 //
 // It is recommended to call this method even if it is not expected to have a body.
-// It permits to execute rules belonging to request body phase, but not necesarily
+// It permits to execute rules belonging to request body phase, but not necessarily
 // processing the response body.
 //
 // note Remember to check for a possible intervention.
 func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
-	if tx.RuleEngine == types.RuleEngineOff {
+	if tx.IsRuleEngineOff() {
 		return nil, nil
 	}
 
-	if tx.interruption != nil {
+	if tx.IsInterrupted() {
 		tx.debugLogger.Error().Msg("Calling ProcessResponseBody but there is a preexisting interruption")
 		return tx.interruption, nil
 	}
@@ -1290,7 +1362,6 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		}
 
 		tx.debugLogger.Debug().Str("body_processor", bp).Msg("Attempting to process response body")
-
 		if err := b.ProcessResponse(reader, tx.Variables(), plugintypes.BodyProcessorOptions{}); err != nil {
 			tx.debugLogger.Error().Err(err).Msg("Failed to process response body")
 			tx.generateResponseBodyError(err)
@@ -1315,35 +1386,41 @@ func (tx *Transaction) ProcessLogging() {
 	// If Rule engine is disabled, Log phase rules are not going to be evaluated.
 	// This avoids trying to rely on variables not set by previous rules that
 	// have not been executed
-	if tx.RuleEngine != types.RuleEngineOff {
+	if !tx.IsRuleEngineOff() {
 		tx.WAF.Rules.Eval(types.PhaseLogging, tx)
 	}
 
 	if tx.AuditEngine == types.AuditEngineOff {
-		// Audit engine disabled
 		tx.debugLogger.Debug().
 			Msg("Transaction not marked for audit logging, AuditEngine is disabled")
 		return
 	}
 
-	if tx.AuditEngine == types.AuditEngineRelevantOnly && !tx.audit {
-		// Transaction marked not for audit logging
-		tx.debugLogger.Debug().
-			Msg("Transaction not marked for audit logging, AuditEngine is RelevantOnly and we got noauditlog")
-		return
-	}
-
-	if tx.AuditEngine == types.AuditEngineRelevantOnly && tx.audit {
+	if tx.AuditEngine == types.AuditEngineRelevantOnly {
 		re := tx.WAF.AuditLogRelevantStatus
 		status := tx.variables.responseStatus.Get()
 		if tx.IsInterrupted() {
 			status = strconv.Itoa(tx.interruption.Status)
+		} else if tx.IsDetectionOnlyInterrupted() {
+			// This allows to check for relevant status even in detection only mode.
+			// Fixes https://github.com/corazawaf/coraza/issues/1333
+			status = strconv.Itoa(tx.detectionOnlyInterruption.Status)
 		}
-		if re != nil && !re.Match([]byte(status)) {
-			// Not relevant status
-			tx.debugLogger.Debug().
-				Msg("Transaction status not marked for audit logging")
-			return
+
+		if tx.audit {
+			// A rule triggered auditlog — still filter by relevant status if regex is set.
+			if re != nil && !re.Match([]byte(status)) {
+				tx.debugLogger.Debug().Msg("Transaction status not marked for audit logging")
+				return
+			}
+		} else {
+			// No rule triggered auditlog — only log if status matches SecAuditLogRelevantStatus.
+			// Fixes https://github.com/corazawaf/coraza/issues/1576
+			if re == nil || !re.Match([]byte(status)) {
+				tx.debugLogger.Debug().
+					Msg("Transaction not marked for audit logging, AuditEngine is RelevantOnly and status is not relevant")
+				return
+			}
 		}
 	}
 
@@ -1378,12 +1455,33 @@ func (tx *Transaction) IsInterrupted() bool {
 	return tx.interruption != nil
 }
 
+// TODO(4.x): evaluate to expose it in the interface.
+func (tx *Transaction) IsDetectionOnlyInterrupted() bool {
+	return tx.detectionOnlyInterruption != nil
+}
+
 func (tx *Transaction) Interruption() *types.Interruption {
 	return tx.interruption
 }
 
+func (tx *Transaction) DetectionOnlyInterruption() *types.Interruption {
+	return tx.detectionOnlyInterruption
+}
+
 func (tx *Transaction) MatchedRules() []types.MatchedRule {
 	return tx.matchedRules
+}
+
+// hasLogRelevantMatchedRules returns true if any matched rule has Log enabled.
+// Rules with nolog (e.g. CRS initialization rules) are excluded, matching
+// the same filtering used for audit log part K.
+func (tx *Transaction) hasLogRelevantMatchedRules() bool {
+	for _, mr := range tx.matchedRules {
+		if mrWithLog, ok := mr.(*corazarules.MatchedRule); ok && mrWithLog.Log() {
+			return true
+		}
+	}
+	return false
 }
 
 func (tx *Transaction) LastPhase() types.RulePhase {
@@ -1432,6 +1530,7 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 		IsInterrupted_: tx.IsInterrupted(),
 	}
 
+	var auditLogPartAuditLogTrailerSet, auditLogPartRulesMatchedSet bool
 	for _, part := range tx.AuditLogParts {
 		switch part {
 		case types.AuditLogPartRequestHeaders:
@@ -1484,6 +1583,7 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 			al.Transaction_.Response_.Status_ = status
 			al.Transaction_.Response_.Headers_ = tx.variables.responseHeaders.Data()
 		case types.AuditLogPartAuditLogTrailer:
+			auditLogPartAuditLogTrailerSet = true
 			al.Transaction_.Producer_ = &auditlog.TransactionProducer{
 				Connector_:  tx.WAF.ProducerConnector,
 				Version_:    tx.WAF.ProducerConnectorVersion,
@@ -1492,15 +1592,20 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 				Stopwatch_:  tx.GetStopWatch(),
 				Rulesets_:   tx.WAF.ComponentNames,
 			}
+		case types.AuditLogPartRulesMatched:
+			auditLogPartRulesMatchedSet = true
 			for _, mr := range tx.matchedRules {
-				// Log action is required to log a matched rule on both error log and audit log
-				// An assertion has to be done to check if the MatchedRule implements the Log() function before calling Log()
-				// It is performed to avoid breaking the Coraza v3.* API adding a Log() method to the MatchedRule interface
+				// Audit flag controls whether a matched rule appears in the audit log.
+				// This aligns with ModSecurity behavior where:
+				// - log: sets both Log and Audit (appears in error log AND audit log)
+				// - nolog: clears both (appears in neither)
+				// - nolog,auditlog: Log=false, Audit=true (audit log only)
+				// - log,noauditlog: Log=true, Audit=false (error log only)
 				mrWithlog, ok := mr.(*corazarules.MatchedRule)
 				if ok && mrWithlog.Audit() {
 					r := mr.Rule()
 					for _, matchData := range mr.MatchedDatas() {
-						al.Messages_ = append(al.Messages_, auditlog.Message{
+						newAlEntry := auditlog.Message{
 							Actionset_: strings.Join(tx.WAF.ComponentNames, " "),
 							Message_:   matchData.Message(),
 							Data_: &auditlog.MessageData{
@@ -1517,14 +1622,31 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 								Tags_:     r.Tags(),
 								Raw_:      r.Raw(),
 							},
-						})
+						}
+						// If AuditLogPartAuditLogTrailer (H) is set, we expect to log the error messages emitted by the rules
+						// in the audit log
+						if auditLogPartAuditLogTrailerSet {
+							newAlEntry.ErrorMessage_ = mr.ErrorLog()
+						}
+						al.Messages_ = append(al.Messages_, newAlEntry)
 					}
 				}
 			}
-		case types.AuditLogPartRulesMatched:
-			// K part is intentionally not implemented.
-			// Matched rules are logged in the audit log trailer (H part) above.
 		}
+	}
+
+	// If AuditLogPartRulesMatched (K) is not set, but AuditLogPartAuditLogTrailer (H) is set, we still expect to
+	// log the error messages emitted by the rules (if the rule has Audit set to true)
+	if !auditLogPartRulesMatchedSet && auditLogPartAuditLogTrailerSet {
+		for _, mr := range tx.matchedRules {
+			mrWithlog, ok := mr.(*corazarules.MatchedRule)
+			if ok && mrWithlog.Audit() {
+				al.Messages_ = append(al.Messages_, auditlog.Message{
+					ErrorMessage_: mr.ErrorLog(),
+				})
+			}
+		}
+
 	}
 
 	return al
@@ -1538,12 +1660,20 @@ func (tx *Transaction) Close() error {
 
 	var errs []error
 	if environment.HasAccessToFS {
-		// TODO(jcchavezs): filesTmpNames should probably be a new kind of collection that
-		// is aware of the files and then attempt to delete them when the collection
-		// is resetted or an item is removed.
-		for _, file := range tx.variables.filesTmpNames.Get("") {
-			if err := os.Remove(file); err != nil {
-				errs = append(errs, fmt.Errorf("removing temporary file: %v", err))
+		// UploadKeepFilesRelevantOnly keeps temporary files only when there are
+		// log-relevant matched rules (i.e., rules that would be logged; rules
+		// with actions such as "nolog" are intentionally excluded here).
+		keepFiles := tx.WAF.UploadKeepFiles == types.UploadKeepFilesOn ||
+			(tx.WAF.UploadKeepFiles == types.UploadKeepFilesRelevantOnly && tx.hasLogRelevantMatchedRules())
+
+		if !keepFiles {
+			// TODO(jcchavezs): filesTmpNames should probably be a new kind of collection that
+			// is aware of the files and then attempt to delete them when the collection
+			// is resetted or an item is removed.
+			for _, file := range tx.variables.filesTmpNames.Get("") {
+				if err := os.Remove(file); err != nil {
+					errs = append(errs, fmt.Errorf("removing temporary file: %v", err))
+				}
 			}
 		}
 	}
@@ -1633,11 +1763,11 @@ type TransactionVariables struct {
 	args                     *collections.ConcatKeyed
 	argsCombinedSize         *collections.SizeCollection
 	argsGet                  *collections.NamedCollection
-	argsGetNames             collection.Collection
-	argsNames                *collections.ConcatCollection
+	argsGetNames             collection.Keyed
+	argsNames                *collections.ConcatKeyed
 	argsPath                 *collections.NamedCollection
 	argsPost                 *collections.NamedCollection
-	argsPostNames            collection.Collection
+	argsPostNames            collection.Keyed
 	duration                 *collections.Single
 	env                      *collections.Map
 	files                    *collections.Map
@@ -1653,7 +1783,7 @@ type TransactionVariables struct {
 	matchedVar               *collections.Single
 	matchedVarName           *collections.Single
 	matchedVars              *collections.NamedCollection
-	matchedVarsNames         collection.Collection
+	matchedVarsNames         collection.Keyed
 	multipartDataAfter       *collections.Single
 	multipartFilename        *collections.Map
 	multipartName            *collections.Map
@@ -1673,10 +1803,10 @@ type TransactionVariables struct {
 	requestBody              *collections.Single
 	requestBodyLength        *collections.Single
 	requestCookies           *collections.NamedCollection
-	requestCookiesNames      collection.Collection
+	requestCookiesNames      collection.Keyed
 	requestFilename          *collections.Single
 	requestHeaders           *collections.NamedCollection
-	requestHeadersNames      collection.Collection
+	requestHeadersNames      collection.Keyed
 	requestLine              *collections.Single
 	requestMethod            *collections.Single
 	requestProtocol          *collections.Single
@@ -1687,7 +1817,7 @@ type TransactionVariables struct {
 	responseContentLength    *collections.Single
 	responseContentType      *collections.Single
 	responseHeaders          *collections.NamedCollection
-	responseHeadersNames     collection.Collection
+	responseHeadersNames     collection.Keyed
 	responseProtocol         *collections.Single
 	responseStatus           *collections.Single
 	responseXML              *collections.Map
@@ -1819,7 +1949,7 @@ func NewTransactionVariables() *TransactionVariables {
 		v.argsPost,
 		v.argsPath,
 	)
-	v.argsNames = collections.NewConcatCollection(
+	v.argsNames = collections.NewConcatKeyed(
 		variables.ArgsNames,
 		v.argsGetNames,
 		v.argsPostNames,
@@ -2045,7 +2175,7 @@ func (v *TransactionVariables) MultipartName() collection.Map {
 	return v.multipartName
 }
 
-func (v *TransactionVariables) MatchedVarsNames() collection.Collection {
+func (v *TransactionVariables) MatchedVarsNames() collection.Keyed {
 	return v.matchedVarsNames
 }
 
@@ -2069,7 +2199,7 @@ func (v *TransactionVariables) FilesTmpContent() collection.Map {
 	return v.filesTmpContent
 }
 
-func (v *TransactionVariables) ResponseHeadersNames() collection.Collection {
+func (v *TransactionVariables) ResponseHeadersNames() collection.Keyed {
 	return v.responseHeadersNames
 }
 
@@ -2077,11 +2207,11 @@ func (v *TransactionVariables) ResponseArgs() collection.Map {
 	return v.responseArgs
 }
 
-func (v *TransactionVariables) RequestHeadersNames() collection.Collection {
+func (v *TransactionVariables) RequestHeadersNames() collection.Keyed {
 	return v.requestHeadersNames
 }
 
-func (v *TransactionVariables) RequestCookiesNames() collection.Collection {
+func (v *TransactionVariables) RequestCookiesNames() collection.Keyed {
 	return v.requestCookiesNames
 }
 
@@ -2101,15 +2231,15 @@ func (v *TransactionVariables) ResponseBodyProcessor() collection.Single {
 	return v.resBodyProcessor
 }
 
-func (v *TransactionVariables) ArgsNames() collection.Collection {
+func (v *TransactionVariables) ArgsNames() collection.Keyed {
 	return v.argsNames
 }
 
-func (v *TransactionVariables) ArgsGetNames() collection.Collection {
+func (v *TransactionVariables) ArgsGetNames() collection.Keyed {
 	return v.argsGetNames
 }
 
-func (v *TransactionVariables) ArgsPostNames() collection.Collection {
+func (v *TransactionVariables) ArgsPostNames() collection.Keyed {
 	return v.argsPostNames
 }
 

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build ignore
-// +build ignore
 
 // Entrypoint to mage for running without needing to install the command.
 // https://magefile.org/zeroinstall/

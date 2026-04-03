@@ -335,7 +335,7 @@ func isMultiphaseDoubleEvaluation(tx *Transaction, phase types.RulePhase, r *Rul
 
 	for _, matchedRule := range tx.matchedRules {
 		if matchedRule.Rule().ID() == r.ParentID_ && matchedChainDepth(matchedRule.MatchedDatas()) == matchedChainDepth(*collectiveMatchedValues) {
-			// This might be a double match, let's generate the chains that aready matched and the one that just matched
+			// This might be a double match, let's generate the chains that already matched and the one that just matched
 			// let's see if all the latter already matched.
 
 			// generateChainMatches generates matched chains based on the matchedValues and populates matchedChains and collectiveMatchedChains variables

@@ -3,7 +3,6 @@
 
 // XML currently disabled on TinyGo
 //go:build !tinygo
-// +build !tinygo
 
 package engine
 

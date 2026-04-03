@@ -12,6 +12,25 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
+// Description:
+// Performs fast IPv4 or IPv6 address matching with support for CIDR notation.
+// Can match individual IPs or IP ranges. Automatically adds appropriate subnet masks
+// (/32 for IPv4, /128 for IPv6) when not specified.
+//
+// Arguments:
+// Comma-separated list of IP addresses with optional CIDR blocks (e.g., "192.168.1.0/24, 10.0.0.1").
+//
+// Returns:
+// true if the input IP address matches any of the provided IPs or ranges, false otherwise
+//
+// Example:
+// ```
+// # Block specific IPs and ranges
+// SecRule REMOTE_ADDR "@ipMatch 192.168.1.100,192.168.1.50,10.10.50.0/24" "id:160,deny,log"
+//
+// # Allow internal network
+// SecRule REMOTE_ADDR "@ipMatch 10.0.0.0/8,172.16.0.0/12" "id:161,pass"
+// ```
 type ipMatch struct {
 	subnets []net.IPNet
 }

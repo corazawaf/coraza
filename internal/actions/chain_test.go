@@ -4,6 +4,7 @@
 package actions
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
@@ -24,7 +25,7 @@ func TestChainInit(t *testing.T) {
 
 	t.Run("unexpected arguments", func(t *testing.T) {
 		a := chain()
-		if err := a.Init(nil, "abc"); err == nil || err != ErrUnexpectedArguments {
+		if err := a.Init(nil, "abc"); err == nil || !errors.Is(err, ErrUnexpectedArguments) {
 			t.Error("expected error ErrUnexpectedArguments")
 		}
 	})

@@ -1,16 +1,17 @@
 # -- Rule engine initialization ----------------------------------------------
 
-# Enable Coraza, attaching it to every transaction. Use detection
-# only to start with, because that minimises the chances of post-installation
-# disruption.
+# Enable Coraza, attaching it to every transaction.
+# Possible values: On, Off, DetectionOnly.
+# DetectionOnly minimises the chances of post-installation disruption by
+# only logging matched rules without performing disruptive actions.
 #
 SecRuleEngine DetectionOnly
 
 
 # -- Request body handling ---------------------------------------------------
 
-# Allow Coraza to access request bodies. If you don't, Coraza
-# won't be able to see any POST parameters, which opens a large security
+# Allows Coraza to access request bodies. Without this, Coraza
+# can not see POST parameters, which opens a large security
 # hole for attackers to exploit.
 #
 SecRequestBodyAccess On
@@ -23,84 +24,96 @@ SecRule REQUEST_HEADERS:Content-Type "^(?:application(?:/soap\+|/)|text/)xml" \
 
 # Enable JSON request body parser.
 # Initiate JSON Processor in case of JSON content-type; change accordingly
-# if your application does not use 'application/json'
+# if the application does not use 'application/json'
 #
 SecRule REQUEST_HEADERS:Content-Type "^application/json" \
      "id:'200001',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=JSON"
 
 # Enable JSON request body parser for more subtypes.
-# Adapt this rule if you want to engage the JSON Processor for "+json" subtypes
+# Adapt this rule to engage the JSON Processor for "+json" subtypes
 #
 SecRule REQUEST_HEADERS:Content-Type "^application/[a-z0-9.-]+[+]json" \
      "id:'200006',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=JSON"
 
-# Maximum request body size we will accept for buffering. If you support
-# file uploads then the value given on the first line has to be as large
-# as the largest file you are willing to accept. The second value refers
-# to the size of data, with files excluded. You want to keep that value as
-# low as practical.
-#
+# Configures the maximum JSON recursion depth limit Coraza will accept.
+SecRequestBodyJsonDepthLimit 1024
+
+# Maximum request body size (bytes) Coraza will accept for buffering. When
+# supporting file uploads, this value has to be as large as the largest
+# file that should be accepted.
 SecRequestBodyLimit 13107200
 
+# Maximum request body size (bytes) that Coraza will store in memory. If the body
+# size exceeds this value, it will be saved to a temporary file on disk.
 SecRequestBodyInMemoryLimit 131072
 
-# SecRequestBodyNoFilesLimit is currently not supported by Coraza
+# Maximum request body size (bytes) Coraza will accept for buffering, with files excluded.
+# This value should be kept as low as practical.
+# Note: SecRequestBodyNoFilesLimit is currently NOT supported by Coraza
 # SecRequestBodyNoFilesLimit 131072
 
-# What to do if the request body size is above our configured limit.
-# Keep in mind that this setting will automatically be set to ProcessPartial
-# when SecRuleEngine is set to DetectionOnly mode in order to minimize
-# disruptions when initially deploying Coraza.
+# Configures the action to take if the request body size is above the configured limit.
+# Possible values: Reject, ProcessPartial.
+# When SecRuleEngine is set to DetectionOnly, this directive is set to ProcessPartial
+# to minimize disruptions when initially deploying Coraza.
+# Warning: Setting this directive to ProcessPartial introduces a potential bypass
+# risk, as attackers could prepend junk data equal to or greater than the inspected body size.
 #
 SecRequestBodyLimitAction Reject
 
-# Verify that we've correctly processed the request body.
+# Verifies that the request body was correctly processed.
 # As a rule of thumb, when failing to process a request body
-# you should reject the request (when deployed in blocking mode)
-# or log a high-severity alert (when deployed in detection-only mode).
+# the request should be rejected (when deployed in blocking mode)
+# or a high-severity alert logged (when deployed in detection-only mode).
 #
 SecRule REQBODY_ERROR "!@eq 0" \
     "id:'200002', phase:2,t:none,log,deny,status:400,msg:'Failed to parse request body.',logdata:'%{reqbody_error_msg}',severity:2"
 
-# By default be strict with what we accept in the multipart/form-data
-# request body. If the rule below proves to be too strict for your
-# environment consider changing it to detection-only.
+# Enforces strict validation by default for what is accepted in the
+# multipart/form-data request body. If the rule below proves to be
+# too strict consider changing it to detection-only.
 # Do NOT remove it, as it will catch many evasion attempts.
 #
 SecRule MULTIPART_STRICT_ERROR "!@eq 0" \
     "id:'200003',phase:2,t:none,log,deny,status:400, \
-    msg:'Multipart request body failed strict validation."
+    msg:'Multipart request body failed strict validation.'"
+
 
 # -- Response body handling --------------------------------------------------
 
-# Allow Coraza to access response bodies. 
-# You should have this directive enabled in order to identify errors
-# and data leakage issues.
-# 
-# Do keep in mind that enabling this directive does increases both
+# Allows Coraza to access response bodies. Without this, Coraza
+# can not see response content looking for errors and data leakage issues.
+#
+# Note that enabling this directive increases both
 # memory consumption and response latency.
 #
 SecResponseBodyAccess On
 
-# Which response MIME types do you want to inspect? You should adjust the
-# configuration below to catch documents but avoid static files
-# (e.g., images and archives).
+# Configures response MIME types that Coraza will buffer and inspect. The
+# configuration below should be adjusted to catch documents but avoid static
+# files (e.g., images and archives).
 #
 SecResponseBodyMimeType text/plain text/html text/xml
 
-# Buffer response bodies of up to 512 KB in length.
+# Maximum response body size (bytes) that Coraza will store in memory.
+# This default equals to 512 KB.
+# 
 SecResponseBodyLimit 524288
 
-# What happens when we encounter a response body larger than the configured
-# limit? By default, we process what we have and let the rest through.
-# That's somewhat less secure, but does not break any legitimate pages.
+# Configures the action to take if the response body size is above the configured limit.
+# Possible values: Reject, ProcessPartial.
+# When SecRuleEngine is set to DetectionOnly, this directive is set to ProcessPartial
+# to minimize disruptions when initially deploying Coraza.
+# ProcessPartial allows Coraza to inspect the portion of the response body that is within
+# the configured limit, while letting the rest through. This approach may be less secure,
+# but helps prevent legitimate pages from being blocked.
 #
 SecResponseBodyLimitAction ProcessPartial
 
 
 # -- Filesystem configuration ------------------------------------------------
 
-# The location where Coraza will keep its persistent data.  This default setting 
+# The location where Coraza will keep its persistent data. This default setting
 # is chosen due to all systems have /tmp available however, it
 # too should be updated to a place that other users can't access.
 #
@@ -110,20 +123,21 @@ SecDataDir /tmp/
 # -- File uploads handling configuration -------------------------------------
 
 # The location where Coraza stores intercepted uploaded files. This
-# location must be private to Coraza. You don't want other users on
-# the server to access the files, do you?
+# location must be private to Coraza. Other users on the server
+# should not be able to access the files.
 #
 #SecUploadDir /opt/coraza/var/upload/
 
-# By default, only keep the files that were determined to be unusual
-# in some way (by an external inspection script). For this to work you
-# will also need at least one file inspection rule.
+# Controls whether intercepted uploaded files will be kept after
+# transaction is processed. Possible values: On, Off, RelevantOnly.
+# RelevantOnly will keep files only when a matching rule is logged (rules with 'nolog' do not qualify).
 #
 #SecUploadKeepFiles RelevantOnly
 
 # Uploaded files are by default created with permissions that do not allow
-# any other user to access them. You may need to relax that if you want to
-# interface Coraza to an external program (e.g., an anti-virus).
+# any other user to access them. This may need to be relaxed to
+# interface Coraza with an external program (e.g., an anti-virus).
+# Note: SecUploadFileMode is currently NOT supported by Coraza
 #
 #SecUploadFileMode 0600
 
@@ -138,32 +152,49 @@ SecDataDir /tmp/
 # 3:   Info
 # 4-8: Debug
 # 9:   Trace (most verbose)
-# Most logging has not been implemented because it will be replaced with
-# advanced rule profiling options
+#
 #SecDebugLog /opt/coraza/var/log/debug.log
 #SecDebugLogLevel 3
 
 
 # -- Audit log configuration -------------------------------------------------
 
-# Log the transactions that are marked by a rule, as well as those that
-# trigger a server error (determined by a 5xx or 4xx, excluding 404,  
-# level response status codes).
+# Configure the audit logging engine, which logs transaction details.
+# Possible values: On, Off, RelevantOnly
+# RelevantOnly logs the transactions marked by a matched rule with auditlog,
+# or relevant transaction based on response status (see SecAuditLogRelevantStatus).
 #
 SecAuditEngine RelevantOnly
+
+# When SecAuditEngine is set to RelevantOnly, define which response
+# status codes are considered relevant.
+# The following regex matches status codes 400-419 and 500-519.
+#
 SecAuditLogRelevantStatus "^(?:(5|4)(0|1)[0-9])$"
 
-# Log everything we know about a transaction.
+# Define which parts of the transaction are recorded in the audit log.
+#
 SecAuditLogParts ABIJDEFHZ
 
-# Use a single file for logging. This is much easier to look at, but
-# assumes that you will use the audit log only occasionally.
+# Configure the audit logging mechanism. Possible values:
+# Serial (single file), Concurrent (one file per transaction),
+# HTTPS (send to a URL), Syslog (send to a syslog server).
 #
 SecAuditLogType Serial
 
+# Path to the audit log file (serial format) or the index file
+# (concurrent format). If not specified, no audit logs will be emitted.
+#
+#SecAuditLog /opt/coraza/var/log/audit.log
+
 # The format used to write the audit log.
-# Can be one of JSON|JsonLegacy|Native|OCSF
+# Possible values: JSON, JsonLegacy, Native, OCSF.
+#
 SecAuditLogFormat Native
+
+# Directory for concurrent audit logging, where individual transaction logs are stored.
+#
+#SecAuditLogStorageDir /opt/coraza/var/audit/
 
 # The following settings are not supported by Coraza
 # SecCookieFormat 0

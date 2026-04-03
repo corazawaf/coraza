@@ -78,7 +78,7 @@ type Transaction interface {
 	// ProcessRequestBody Performs the analysis of the request body (if any)
 	//
 	// It is recommended to call this method even if it is not expected to have a body.
-	// It permits to execute rules belonging to request body phase, but not necesarily
+	// It permits to execute rules belonging to request body phase, but not necessarily
 	// processing the request body.
 	//
 	// Remember to check for a possible intervention.
@@ -125,7 +125,7 @@ type Transaction interface {
 	// ProcessResponseBody Perform the analysis of the response body (if any)
 	//
 	// It is recommended to call this method even if it is not expected to have a body.
-	// It permits to execute rules belonging to request body phase, but not necesarily
+	// It permits to execute rules belonging to request body phase, but not necessarily
 	// processing the response body.
 	//
 	// note Remember to check for a possible intervention.

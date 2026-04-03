@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build modsecurity
-// +build modsecurity
 
 // This file runs benchmarks against ModSecurity. ModSecurity must be installed to be able to
 // run these benchmarks.

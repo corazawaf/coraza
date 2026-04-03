@@ -18,7 +18,8 @@ import (
 // It is not concurrent safe, so it's not recommended to use it
 // after compilation
 type RuleGroup struct {
-	rules []Rule
+	rules    []Rule
+	observer func(rule types.RuleMetadata)
 }
 
 // Add a rule to the collection
@@ -29,18 +30,31 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 		return nil
 	}
 
-	if rule.ID_ != 0 && rg.FindByID(rule.ID_) != nil {
-		return fmt.Errorf("there is a another rule with id %d", rule.ID_)
+	if shouldDoMandatoryRuleIdCheck {
+		// rule id is mandatory and must be unique ID for all SecRule/SecAction.
+		if rule.SecMark_ == "" { // means its SecRule/SecAction
+			if rule.ID_ == 0 {
+				return fmt.Errorf("rule id is missing, rule residing in file %s at line %d", rule.File_, rule.Line_)
+			}
+			if rg.FindByID(rule.ID_) != nil {
+				return fmt.Errorf("duplicated rule id %d", rule.ID_)
+			}
+		}
+	} else {
+		// rule id is not mandatory, but if it is set, it must be unique ID
+		if rule.ID_ != 0 && rg.FindByID(rule.ID_) != nil {
+			return fmt.Errorf("duplicated rule id %d", rule.ID_)
+		}
 	}
 
 	numInferred := 0
-	rule.inferredPhases.set(rule.Phase_)
+	rule.set(rule.Phase_)
 	for _, v := range rule.variables {
 		min := minPhase(v.Variable)
 		if min != types.PhaseUnknown {
 			// We infer the earliest phase a variable used by the rule may be evaluated for use when
 			// multiphase evaluation is enabled
-			rule.inferredPhases.set(min)
+			rule.set(min)
 			numInferred++
 		} else {
 			rule.withPhaseUnknownVariable = true
@@ -48,7 +62,17 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 	}
 
 	rg.rules = append(rg.rules, *rule)
+
+	if rg.observer != nil {
+		rg.observer(rule)
+	}
+
 	return nil
+}
+
+// SetObserver assigns the observer function to the group.
+func (rg *RuleGroup) SetObserver(observer func(rule types.RuleMetadata)) {
+	rg.observer = observer
 }
 
 // GetRules returns the slice of rules,
@@ -135,7 +159,7 @@ RulesLoop:
 		r := &rg.rules[i]
 		// if there is already an interruption and the phase isn't logging
 		// we break the loop
-		if tx.interruption != nil && phase != types.PhaseLogging {
+		if tx.IsInterrupted() && phase != types.PhaseLogging {
 			break RulesLoop
 		}
 		// Rules with phase 0 will always run
@@ -146,21 +170,26 @@ RulesLoop:
 			// At the first run chainMinPhase is not set, so we look at the parent chain rule's minimal phase.
 			// If it is not reached, we skip the whole chain, there is no chance to match it.
 			if !multiphaseEvaluation ||
-				(!r.HasChain && !r.inferredPhases.has(phase)) ||
+				(!r.HasChain && !r.has(phase)) ||
 				(r.HasChain && phase < r.chainMinPhase) ||
-				(r.HasChain && !r.inferredPhases.hasOrMinor(phase) && !r.withPhaseUnknownVariable) ||
+				(r.HasChain && !r.hasOrMinor(phase) && !r.withPhaseUnknownVariable) ||
 				(r.HasChain && phase > r.Phase_) {
 				continue
 			}
 		}
 
 		// we skip the rule in case it's in the excluded list
-		for _, trb := range tx.ruleRemoveByID {
-			if trb == r.ID_ {
+		if _, skip := tx.ruleRemoveByID[r.ID_]; skip {
+			tx.DebugLogger().Debug().
+				Int("rule_id", r.ID_).
+				Msg("Skipping rule")
+			continue RulesLoop
+		}
+		for _, rng := range tx.ruleRemoveByIDRanges {
+			if r.ID_ >= rng[0] && r.ID_ <= rng[1] {
 				tx.DebugLogger().Debug().
 					Int("rule_id", r.ID_).
 					Msg("Skipping rule")
-
 				continue RulesLoop
 			}
 		}
@@ -185,7 +214,7 @@ RulesLoop:
 		}
 		switch tx.AllowType {
 		case corazatypes.AllowTypeUnset:
-			break
+			// No action needed
 		case corazatypes.AllowTypePhase:
 			// Allow phase requires skipping all rules of the current phase.
 			// It is done by breaking the loop and resetting AllowType for the next phase right after the loop.
@@ -234,7 +263,7 @@ RulesLoop:
 	tx.Skip = 0
 
 	tx.stopWatches[phase] = time.Now().UnixNano() - ts
-	return tx.interruption != nil
+	return tx.IsInterrupted()
 }
 
 // NewRuleGroup creates an empty RuleGroup that

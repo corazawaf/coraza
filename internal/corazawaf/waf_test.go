@@ -7,6 +7,9 @@ import (
 	"io"
 	"os"
 	"testing"
+
+	"github.com/corazawaf/coraza/v3/internal/environment"
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 func TestNewTransaction(t *testing.T) {
@@ -75,9 +78,9 @@ func TestValidate(t *testing.T) {
 			expectErr:  true,
 			customizer: func(w *WAF) { w.RequestBodyLimit = -1 },
 		},
-		"request body limit greater than 1gb": {
+		"request body limit greater than 1gib": {
 			expectErr:  true,
-			customizer: func(w *WAF) { w.RequestBodyLimit = _1gb + 1 },
+			customizer: func(w *WAF) { w.RequestBodyLimit = _1gib + 1 },
 		},
 		"request body in memory limit less than zero": {
 			expectErr:  true,
@@ -93,9 +96,9 @@ func TestValidate(t *testing.T) {
 			expectErr:  true,
 			customizer: func(w *WAF) { w.ResponseBodyLimit = -1 },
 		},
-		"response body limit greater than 1gb": {
+		"response body limit greater than 1gib": {
 			expectErr:  true,
-			customizer: func(w *WAF) { w.ResponseBodyLimit = _1gb + 1 },
+			customizer: func(w *WAF) { w.ResponseBodyLimit = _1gib + 1 },
 		},
 		"argument limit greater than 0": {
 			expectErr:  false,
@@ -105,6 +108,39 @@ func TestValidate(t *testing.T) {
 			expectErr:  true,
 			customizer: func(w *WAF) { w.ArgumentLimit = -1 },
 		},
+	}
+
+	if environment.HasAccessToFS {
+		testCases["upload keep files on without upload dir"] = struct {
+			customizer func(*WAF)
+			expectErr  bool
+		}{
+			expectErr: true,
+			customizer: func(w *WAF) {
+				w.UploadKeepFiles = types.UploadKeepFilesOn
+				w.UploadDir = ""
+			},
+		}
+		testCases["upload keep files relevant only without upload dir"] = struct {
+			customizer func(*WAF)
+			expectErr  bool
+		}{
+			expectErr: true,
+			customizer: func(w *WAF) {
+				w.UploadKeepFiles = types.UploadKeepFilesRelevantOnly
+				w.UploadDir = ""
+			},
+		}
+		testCases["upload keep files on with upload dir"] = struct {
+			customizer func(*WAF)
+			expectErr  bool
+		}{
+			expectErr: false,
+			customizer: func(w *WAF) {
+				w.UploadKeepFiles = types.UploadKeepFilesOn
+				w.UploadDir = "/tmp"
+			},
+		}
 	}
 
 	for name, tCase := range testCases {

@@ -13,6 +13,25 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
+// Description:
+// Performs IPv4/IPv6 address matching like @ipMatch but loads IP addresses from file(s).
+// Supports CIDR notation. Lines starting with # are treated as comments and empty lines are ignored.
+// Also available as @ipMatchF (shorthand alias).
+//
+// Arguments:
+// File path containing IP addresses and CIDR blocks, one per line.
+//
+// Returns:
+// true if the input IP address matches any IP or range from the file(s), false otherwise
+//
+// Example:
+// ```
+// # Block IPs from denylist file
+// SecRule REMOTE_ADDR "@ipMatchFromFile /etc/waf/blocked-ips.txt" "id:162,deny,log"
+//
+// # Using shorthand alias
+// SecRule REMOTE_ADDR "@ipMatchF suspicious-ips.txt" "id:163,deny"
+// ```
 func newIPMatchFromFile(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	path := options.Arguments
 
@@ -44,4 +63,5 @@ func newIPMatchFromFile(options plugintypes.OperatorOptions) (plugintypes.Operat
 
 func init() {
 	Register("ipMatchFromFile", newIPMatchFromFile)
+	Register("ipMatchF", newIPMatchFromFile)
 }

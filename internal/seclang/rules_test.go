@@ -152,6 +152,84 @@ func TestSecAuditLogs(t *testing.T) {
 	}
 }
 
+func TestAuditLogNoLogAuditLogInteraction(t *testing.T) {
+	tests := []struct {
+		name              string
+		actions           string
+		wantErrorLog      bool
+		wantAuditMessages bool
+	}{
+		{
+			name:              "log includes rule in both error and audit log",
+			actions:           "log,auditlog",
+			wantErrorLog:      true,
+			wantAuditMessages: true,
+		},
+		{
+			name:              "nolog excludes rule from both logs",
+			actions:           "nolog",
+			wantErrorLog:      false,
+			wantAuditMessages: false,
+		},
+		{
+			name:              "nolog,auditlog includes rule in audit log only",
+			actions:           "nolog,auditlog",
+			wantErrorLog:      false,
+			wantAuditMessages: true,
+		},
+		{
+			name:              "log,noauditlog includes rule in error log only",
+			actions:           "log,noauditlog",
+			wantErrorLog:      true,
+			wantAuditMessages: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			waf := corazawaf.NewWAF()
+			var errorLogCount int
+			waf.SetErrorCallback(func(_ types.MatchedRule) {
+				errorLogCount++
+			})
+
+			parser := NewParser(waf)
+			err := parser.FromString(`
+				SecAuditEngine On
+				SecAuditLogParts ABCDEFGHIJKZ
+				SecRuleEngine On
+				SecAction "id:100,phase:1,pass,` + tt.actions + `,msg:'test rule'"
+			`)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			tx := waf.NewTransaction()
+			tx.ProcessURI("/test", "GET", "HTTP/1.1")
+			tx.ProcessRequestHeaders()
+			if _, err := tx.ProcessRequestBody(); err != nil {
+				t.Fatal(err)
+			}
+			tx.ProcessLogging()
+
+			al := tx.AuditLog()
+			gotAuditMessages := len(al.Messages()) > 0
+			gotErrorLog := errorLogCount > 0
+
+			if gotErrorLog != tt.wantErrorLog {
+				t.Errorf("error log: got called=%v, want called=%v", gotErrorLog, tt.wantErrorLog)
+			}
+			if gotAuditMessages != tt.wantAuditMessages {
+				t.Errorf("audit log messages: got present=%v, want present=%v", gotAuditMessages, tt.wantAuditMessages)
+			}
+
+			if err := tx.Close(); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
 func TestRuleLogging(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	var logs []string
@@ -266,10 +344,10 @@ func TestPrintedExtraMsgAndDataFromRuleWithMultipleMatches(t *testing.T) {
 		t.Errorf("failed to log. Expected 1 entry, got %d", len(logs))
 	}
 	if count := strings.Count(logs[0], "2 in ARGS_GET:test2"); count != 1 {
-		t.Errorf("failed to log logdata, expected %q occurence, got %v", "2 in ARGS_GET:test2", logs[0])
+		t.Errorf("failed to log logdata, expected %q occurrence(s), got %v", "2 in ARGS_GET:test2", logs[0])
 	}
 	if count := strings.Count(logs[0], "1 in ARGS_GET:test"); count != 1 {
-		t.Errorf("failed to log second logdata, expected %q occurence, got %v", "1 in ARGS_GET:test", logs[0])
+		t.Errorf("failed to log second logdata, expected %q occurrence(s), got %v", "1 in ARGS_GET:test", logs[0])
 	}
 }
 func TestPrintedExtraMsgAndDataFromChainedRules(t *testing.T) {
@@ -334,10 +412,10 @@ func TestPrintedMultipleMsgAndDataWithMultiMatch(t *testing.T) {
 		t.Errorf("failed to log with %d", len(logs))
 	}
 	if count := strings.Count(logs[0], "tEsT1 in ARGS_GET"); count != 1 {
-		t.Errorf("failed to log logdata, expected \"tEsT1 in ARGS_GET\" occurence, got %s", logs[0])
+		t.Errorf("failed to log logdata, expected \"tEsT1 in ARGS_GET\" occurrence, got %s", logs[0])
 	}
 	if count := strings.Count(logs[0], "test1 in ARGS_GET"); count != 1 {
-		t.Errorf("failed to log logdata, expected \"test1 in ARGS_GET\" occurence, got %s", logs[0])
+		t.Errorf("failed to log logdata, expected \"test1 in ARGS_GET\" occurrence, got %s", logs[0])
 	}
 }
 
@@ -964,6 +1042,36 @@ func isMatchData(mds []types.MatchData, key string) (result bool) {
 		}
 	}
 	return result
+}
+
+func TestEscapedQuoteInOperator(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	parser := NewParser(waf)
+	err := parser.FromString(`
+		SecRuleEngine On
+		SecRule ARGS:id "@contains \"" "id:1,phase:1,deny,status:403,log,auditlog"
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Positive: request with a double quote in id should be blocked
+	tx := waf.NewTransaction()
+	tx.AddGetRequestArgument("id", `1"`)
+	it := tx.ProcessRequestHeaders()
+	if it == nil {
+		t.Error("expected transaction to be interrupted for request containing a double quote")
+	} else if it.RuleID != 1 {
+		t.Errorf("expected rule ID 1, got %d", it.RuleID)
+	}
+
+	// Negative: request without a double quote should not be blocked
+	tx = waf.NewTransaction()
+	tx.AddGetRequestArgument("id", "1")
+	it = tx.ProcessRequestHeaders()
+	if it != nil {
+		t.Error("unexpected interruption for request without a double quote")
+	}
 }
 
 func Test930110_10(t *testing.T) {

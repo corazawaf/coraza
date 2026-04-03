@@ -68,3 +68,55 @@ func TestXMLPayloadFlexibility(t *testing.T) {
 		t.Errorf("Expected 4 contents, got %d", len(contents))
 	}
 }
+
+func TestXMLUnexpectedEOF(t *testing.T) {
+	testCases := []struct {
+		Name  string
+		Input string
+		Want  []string
+	}{
+		{
+			Name: "inTheMiddleOfText",
+			Input: `<note>
+			<to>Tove</to>
+			<from>Jani</from>
+			<heading>Reminder</heading>
+			<body>Don't forget`,
+			Want: []string{"Tove", "Jani", "Reminder", "Don't forget"},
+		},
+		{
+			Name: "inTheMiddleOfStartElement",
+			Input: `<note>
+			<to>Tove</to>
+			<from>Jani</from>
+			<heading>Reminder</heading>
+			<bod`,
+			Want: []string{"Tove", "Jani", "Reminder"},
+		},
+		{
+			Name: "inTheMiddleOfEndElement",
+			Input: `<note>
+			<to>Tove</to>
+			<from>Jani</from>
+			<heading>Reminder</heading`,
+			Want: []string{"Tove", "Jani", "Reminder"},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			xmldoc := tc.Input
+			_, contents, err := readXML(bytes.NewReader([]byte(xmldoc)))
+			if err != nil {
+				t.Error(err)
+			}
+			if got, want := len(contents), len(tc.Want); got != want {
+				t.Errorf("contents count mismatch, got=%d, want=%d", got, want)
+			}
+			for i := range min(len(contents), len(tc.Want)) {
+				if got, want := contents[i], tc.Want[i]; got != want {
+					t.Errorf("Expected content got=%s, want=%s", got, want)
+				}
+			}
+		})
+	}
+}
