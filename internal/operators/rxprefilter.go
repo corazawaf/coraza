@@ -20,9 +20,10 @@
 //  2. Required literal pre-filtering — also extracted from the AST. Every regex
 //     has certain literal substrings that *must* appear in any matching input.
 //     For example, `sleep\s*\(` always requires "sleep" and "(". If we can
-//     cheaply confirm those literals are absent (via strings.Contains for a
-//     single literal, or an Aho-Corasick automaton for alternations), we know
-//     the regex cannot match and skip it.
+//     cheaply confirm those literals are absent, we know the regex cannot match
+//     and skip it. For single literals we use strings.Contains; for alternation
+//     sets (anyRequired) we use a first-byte indexed single-pass scan that
+//     checks a 256-bit bitmap per byte and only verifies at candidate positions.
 //
 // Safety guarantee:
 //
@@ -69,8 +70,6 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
-
-	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
 )
 
 // minMatchLength computes the minimum number of bytes an input must have
@@ -212,7 +211,6 @@ func prefilterFunc(pattern string) func(string) bool {
 	case anyRequired:
 		// anyRequired: at least one literal must be present in the input.
 		// Example: pattern "(?:union|insert)" yields anyRequired{"union", "insert"}.
-		// We use Aho-Corasick to scan for any of them in a single pass.
 		//
 		// SAFETY: Do NOT use filterShort here. For anyRequired, removing a short
 		// element changes the semantics from "one of {A,B,C}" to "one of {A,B}" —
@@ -234,27 +232,14 @@ func prefilterFunc(pattern string) func(string) bool {
 					return strings.Contains(s, needle)
 				}
 			}
-		case caseInsensitive && !allASCIIStrings([]string(filtered)):
-			// When case-insensitive, Aho-Corasick uses ASCII-only folding. If any
-			// needle is non-ASCII (e.g. "ſelect" lowercased from "Select"), it could
-			// fold to an ASCII equivalent under Go's Unicode case rules — meaning a
-			// pure-ASCII input like "select" would match (?i)ſelect but the automaton
-			// wouldn't find "ſelect" in "select". To avoid false negatives, bail out.
+		} else if caseInsensitive && !allASCIIStrings([]string(filtered)) {
+			// Our indexed matcher uses ASCII-only folding. If any needle is
+			// non-ASCII, it could fold to an ASCII equivalent under Go's Unicode
+			// case rules — causing a false negative. Bail out.
 			return nil
-		default:
-			// Build an Aho-Corasick automaton for multi-pattern matching in O(n).
-			// Same library already used by the @pm operator.
-			builder := ahocorasick.NewAhoCorasickBuilder(ahocorasick.Opts{
-				AsciiCaseInsensitive: caseInsensitive,
-				MatchOnlyWholeWords:  false,
-				MatchKind:            ahocorasick.LeftMostLongestMatch,
-				DFA:                  true,
-			})
-			ac := builder.Build([]string(filtered))
-			pf = func(s string) bool {
-				iter := ac.Iter(s)
-				return iter.Next() != nil
-			}
+		} else {
+			im := newIndexedMatcher(filtered, caseInsensitive)
+			pf = im.match
 		}
 	}
 
@@ -449,6 +434,105 @@ func filterShort(ss []string, minLen int) []string {
 		}
 	}
 	return result
+}
+
+// indexedMatcher performs single-pass multi-pattern substring matching using a
+// 256-bit first-byte bitmap and bucket-grouped verification. For each byte in
+// the haystack, a single bit-test determines whether it could be the start of
+// any needle. Only at candidate positions (~15% of bytes for typical CRS
+// keywords) does it verify against the 1-3 needles sharing that first byte.
+//
+// This beats Aho-Corasick for small pattern sets (N < ~20) because:
+//   - Per-byte cost is a single bit-test (register-local) vs DFA state
+//     transition (indirect memory lookup into a multi-KB table)
+//   - Single pass through the haystack (like AC) with early exit on first match
+//   - Zero allocations (AC's Iter/Match pattern allocates per call)
+//   - Better cache behavior (32-byte bitmap vs large DFA transition table)
+type indexedMatcher struct {
+	bitmap  [4]uint64    // 256-bit: which byte values start any needle
+	buckets [256][]string // needles grouped by first byte
+	minLen  int          // shortest needle length
+	ci      bool         // case-insensitive mode
+}
+
+func newIndexedMatcher(needles []string, ci bool) *indexedMatcher {
+	im := &indexedMatcher{ci: ci, minLen: len(needles[0])}
+	for _, n := range needles {
+		if len(n) < im.minLen {
+			im.minLen = len(n)
+		}
+		b := n[0]
+		im.bitmap[b>>6] |= 1 << (b & 63)
+		if ci {
+			// For CI matching, also set the uppercase variant so we catch both.
+			if b >= 'a' && b <= 'z' {
+				upper := b - ('a' - 'A')
+				im.bitmap[upper>>6] |= 1 << (upper & 63)
+			}
+		}
+		im.buckets[b] = append(im.buckets[b], n)
+	}
+	return im
+}
+
+func (m *indexedMatcher) match(s string) bool {
+	if m.ci {
+		return m.matchCI(s)
+	}
+	return m.matchCS(s)
+}
+
+func (m *indexedMatcher) matchCS(s string) bool {
+	end := len(s) - m.minLen + 1
+	for i := 0; i < end; i++ {
+		b := s[i]
+		if m.bitmap[b>>6]&(1<<(b&63)) == 0 {
+			continue
+		}
+		for _, needle := range m.buckets[b] {
+			nlen := len(needle)
+			if i+nlen <= len(s) && s[i:i+nlen] == needle {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (m *indexedMatcher) matchCI(s string) bool {
+	end := len(s) - m.minLen + 1
+	for i := 0; i < end; i++ {
+		b := s[i]
+		if m.bitmap[b>>6]&(1<<(b&63)) == 0 {
+			continue
+		}
+		lb := b
+		if lb >= 'A' && lb <= 'Z' {
+			lb += 'a' - 'A'
+		}
+		for _, needle := range m.buckets[lb] {
+			nlen := len(needle)
+			if i+nlen <= len(s) && equalFoldASCIIBytes(s[i:i+nlen], needle) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// equalFoldASCIIBytes compares two equal-length strings case-insensitively
+// (ASCII only). The second argument (b) must already be lowercase.
+func equalFoldASCIIBytes(a, b string) bool {
+	for i := 0; i < len(a); i++ {
+		ac := a[i]
+		if ac >= 'A' && ac <= 'Z' {
+			ac += 'a' - 'A'
+		}
+		if ac != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // containsFoldASCII does a case-insensitive substring check.

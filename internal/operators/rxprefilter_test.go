@@ -1848,3 +1848,175 @@ func BenchmarkRxPrefilter(b *testing.B) {
 		})
 	}
 }
+
+// BenchmarkAnyRequired benchmarks the anyRequired prefilter (indexedMatcher)
+// against alternative approaches: a strings.Contains loop and the full regex.
+// This isolates the hot path for alternation patterns like (?:union|select|insert).
+func BenchmarkAnyRequired(b *testing.B) {
+	type bench struct {
+		name    string
+		needles []string
+		ci      bool
+		inputs  []string
+	}
+	benches := []bench{
+		{
+			name:    "3_needles_CS",
+			needles: []string{"union", "insert", "delete"},
+			ci:      false,
+			inputs: []string{
+				"GET /index.html?page=home&user=admin&lang=en HTTP/1.1",
+				"POST /api/v1/users HTTP/1.1\r\nContent-Type: application/json",
+				strings.Repeat("abcdefghij", 20),
+				"short",
+			},
+		},
+		{
+			name:    "3_needles_CI",
+			needles: []string{"union", "insert", "delete"},
+			ci:      true,
+			inputs: []string{
+				"GET /index.html?page=home&user=admin&lang=en HTTP/1.1",
+				"POST /api/v1/users HTTP/1.1\r\nContent-Type: application/json",
+				strings.Repeat("abcdefghij", 20),
+				"short",
+			},
+		},
+		{
+			name:    "6_needles_CS",
+			needles: []string{"select", "union", "insert", "delete", "update", "alter"},
+			ci:      false,
+			inputs: []string{
+				"GET /index.html?page=home&user=admin&lang=en HTTP/1.1",
+				strings.Repeat("the quick brown fox jumps ", 20),
+			},
+		},
+		{
+			name:    "6_needles_CI",
+			needles: []string{"select", "union", "insert", "delete", "update", "alter"},
+			ci:      true,
+			inputs: []string{
+				"GET /index.html?page=home&user=admin&lang=en HTTP/1.1",
+				strings.Repeat("the quick brown fox jumps ", 20),
+			},
+		},
+		{
+			name:    "10_needles_CS",
+			needles: []string{"select", "union", "insert", "delete", "update", "alter", "create", "sleep", "benchmark", "extract"},
+			ci:      false,
+			inputs: []string{
+				"GET /index.html?page=home&user=admin&lang=en HTTP/1.1",
+				strings.Repeat("the quick brown fox jumps ", 40),
+			},
+		},
+		{
+			name:    "10_needles_CI",
+			needles: []string{"select", "union", "insert", "delete", "update", "alter", "create", "sleep", "benchmark", "extract"},
+			ci:      true,
+			inputs: []string{
+				"GET /index.html?page=home&user=admin&lang=en HTTP/1.1",
+				strings.Repeat("the quick brown fox jumps ", 40),
+			},
+		},
+		{
+			name:    "3_needles_CS_match",
+			needles: []string{"union", "insert", "delete"},
+			ci:      false,
+			inputs: []string{
+				"1 union select * from users--",
+				"insert into t values(1)",
+			},
+		},
+		{
+			name:    "3_needles_CI_match",
+			needles: []string{"union", "insert", "delete"},
+			ci:      true,
+			inputs: []string{
+				"1 UNION SELECT * FROM users--",
+				"INSERT INTO t VALUES(1)",
+			},
+		},
+	}
+
+	for _, bm := range benches {
+		// Build the indexedMatcher (our new approach)
+		im := newIndexedMatcher(bm.needles, bm.ci)
+
+		// Build a strings.Contains loop closure for comparison
+		needlesCopy := make([]string, len(bm.needles))
+		copy(needlesCopy, bm.needles)
+		var containsLoop func(string) bool
+		if bm.ci {
+			containsLoop = func(s string) bool {
+				for _, needle := range needlesCopy {
+					if containsFoldASCII(s, needle) {
+						return true
+					}
+				}
+				return false
+			}
+		} else {
+			containsLoop = func(s string) bool {
+				for _, needle := range needlesCopy {
+					if strings.Contains(s, needle) {
+						return true
+					}
+				}
+				return false
+			}
+		}
+
+		for ii, input := range bm.inputs {
+			tag := fmt.Sprintf("input%d_%dB", ii, len(input))
+
+			b.Run(bm.name+"/indexed/"+tag, func(b *testing.B) {
+				b.ReportAllocs()
+				for i := 0; i < b.N; i++ {
+					im.match(input)
+				}
+			})
+
+			b.Run(bm.name+"/contains_loop/"+tag, func(b *testing.B) {
+				b.ReportAllocs()
+				for i := 0; i < b.N; i++ {
+					containsLoop(input)
+				}
+			})
+		}
+	}
+}
+
+// BenchmarkAnyRequiredHaystackSize benchmarks the indexedMatcher across
+// different haystack sizes to show how it scales.
+func BenchmarkAnyRequiredHaystackSize(b *testing.B) {
+	needles := []string{"select", "union", "insert", "delete", "update"}
+	im := newIndexedMatcher(needles, false)
+
+	sizes := []int{50, 200, 500, 1000, 5000}
+	base := "GET /api/v1/resources?page=1&limit=50&sort=name&order=asc HTTP/1.1 "
+	for _, size := range sizes {
+		var input string
+		for len(input) < size {
+			input += base
+		}
+		input = input[:size]
+
+		b.Run(fmt.Sprintf("indexed_%dB", size), func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				im.match(input)
+			}
+		})
+
+		b.Run(fmt.Sprintf("contains_loop_%dB", size), func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				for _, needle := range needles {
+					if strings.Contains(input, needle) {
+						break
+					}
+				}
+			}
+		})
+	}
+}
