@@ -109,7 +109,7 @@ WAF is destroyed, or use this tag to opt out of memoization entirely.
 * `coraza.rule.case_sensitive_args_keys` - enables case-sensitive matching for ARGS keys, aligning Coraza behavior with RFC 3986 specification. It will be enabled by default in the next major version.
 * `coraza.rule.no_regex_multiline` - disables enabling by default regexes multiline modifiers in `@rx` operator. It aligns with CRS expected behavior, reduces false positives and might improve performances. No multiline regexes by default will be enabled in the next major version. For more context check [this PR](https://github.com/corazawaf/coraza/pull/876).
 * `coraza.rule.mandatory_rule_id_check` - enables strict rule id check where `id` action is required for all SecRule/SecAction.
-* `coraza.rule.rx_prefilter` - sets the default value of the `SecRxPreFilter` directive to `On`. Optimizes `@rx` operator, by skipping the full regex when an input can not match. The build tag is meant for testing, rely on the directive `SecRxPreFilter` for runtime configuration and broader documentation.
+* `coraza.rule.rx_prefilter` - sets the default value of the `SecRxPreFilter` directive to `On`. Optimizes `@rx` operator, by skipping the full regex when an input can not match. This build tag is meant only for testing purposes, rely on `SecRxPreFilter` directive for runtime configuration and broader documentation on this feature.
 
 ## E2E Testing
 
@@ -146,11 +146,11 @@ $ go run mage.go -l
 Targets:
   check        runs lint and tests.
   coverage     runs tests with coverage and race detector enabled.
-  doc          runs godoc, access at http://localhost:6060
+  doc          runs godoc, access at http://localhost:6060.
   format       formats code in this repository.
-  fuzz         runs fuzz tests
+  fuzz         runs fuzz tests.
   lint         verifies code quality.
-  precommit    installs a git hook to run check when committing
+  precommit    installs a git hook to run check when committing.
   test         runs all tests.
 ```
 
