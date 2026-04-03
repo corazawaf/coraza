@@ -122,7 +122,7 @@ SecRule HIGHEST_SEVERITY "@eq 2" "id:3, log"
 var _ = profile.RegisterProfile(profile.Profile{
 	Meta: profile.Meta{
 		Author:      "majiayu000",
-		Description: "Test chained rules use only starter severity for HIGHEST_SEVERITY",
+		Description: "Test chained rule starter severity prevails over subrule severity",
 		Enabled:     true,
 		Name:        "rulemetadata_chain_starter_severity.yaml",
 	},
@@ -132,6 +132,12 @@ var _ = profile.RegisterProfile(profile.Profile{
 			Stages: []profile.Stage{
 				{
 					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/chain-starter",
+							Headers: map[string]string{
+								"Host": "chain.example",
+							},
+						},
 						Output: profile.ExpectedOutput{
 							TriggeredRules: []int{1, 2},
 						},
@@ -141,16 +147,16 @@ var _ = profile.RegisterProfile(profile.Profile{
 		},
 	},
 	Rules: `
-SecAction "id:1, log, severity:5, chain"
-  SecAction "severity:1"
-SecRule HIGHEST_SEVERITY "@eq 5" "id:2, log"
+SecRule REQUEST_URI "@streq /chain-starter" "id:1, phase:1, log, severity:5, chain"
+  SecRule REQUEST_HEADERS:Host "@streq chain.example" "severity:1"
+SecRule HIGHEST_SEVERITY "@eq 5" "id:2, phase:1, log"
 `,
 })
 
 var _ = profile.RegisterProfile(profile.Profile{
 	Meta: profile.Meta{
 		Author:      "majiayu000",
-		Description: "Test chained subrule severity does not affect HIGHEST_SEVERITY without starter severity",
+		Description: "Test chained subrule severity has no effect without starter severity",
 		Enabled:     true,
 		Name:        "rulemetadata_chain_no_starter_severity.yaml",
 	},
@@ -160,6 +166,12 @@ var _ = profile.RegisterProfile(profile.Profile{
 			Stages: []profile.Stage{
 				{
 					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/chain-no-starter",
+							Headers: map[string]string{
+								"Host": "chain.example",
+							},
+						},
 						Output: profile.ExpectedOutput{
 							TriggeredRules: []int{1, 2},
 						},
@@ -169,8 +181,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 		},
 	},
 	Rules: `
-SecAction "id:1, log, chain"
-  SecAction "severity:1"
-SecRule HIGHEST_SEVERITY "@eq 255" "id:2, log"
+SecRule REQUEST_URI "@streq /chain-no-starter" "id:1, phase:1, log, chain"
+  SecRule REQUEST_HEADERS:Host "@streq chain.example" "severity:1"
+SecRule HIGHEST_SEVERITY "@eq 255" "id:2, phase:1, log"
 `,
 })
