@@ -18,7 +18,6 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/auditlog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/environment"
-	"github.com/corazawaf/coraza/v3/internal/memoize"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -473,6 +472,9 @@ func directiveSecResponseBodyMimeType(options *DirectiveOptions) error {
 // cases, however, it is not possible to prevent leakage anyway. The attacker could
 // compress, obfuscate, or even encrypt data before it is sent back, and therefore
 // bypass any monitoring device.
+//
+// Note: When SecRuleEngine is set to DetectionOnly, this directive is set to
+// ProcessPartial to minimize disruptions when initially deploying Coraza.
 func directiveSecResponseBodyLimitAction(options *DirectiveOptions) error {
 	switch strings.ToLower(options.Opts) {
 	case "reject":
@@ -508,12 +510,15 @@ func directiveSecResponseBodyLimit(options *DirectiveOptions) error {
 }
 
 // Description: Controls what happens once a request body limit, configured with
-// SecRequestBodyLimit, is encountered
+// SecRequestBodyLimit, is encountered.
 // Syntax: SecRequestBodyLimitAction Reject|ProcessPartial
 // Default: Reject
 // ---
 // By default, Coraza will reject a request body that is longer than specified to
 // avoid OOM issues while buffering the request body prior the inspection.
+//
+// Note: When SecRuleEngine is set to DetectionOnly, this directive is set to
+// ProcessPartial to minimize disruptions when initially deploying Coraza.
 func directiveSecRequestBodyLimitAction(options *DirectiveOptions) error {
 	switch strings.ToLower(options.Opts) {
 	case "reject":
@@ -837,7 +842,7 @@ func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	re, err := memoize.Do(options.Opts, func() (any, error) { return regexp.Compile(options.Opts) })
+	re, err := options.WAF.Memoizer().Do(options.Opts, func() (any, error) { return regexp.Compile(options.Opts) })
 	if err != nil {
 		return err
 	}
@@ -936,12 +941,34 @@ func directiveSecDataDir(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Configures whether intercepted files will be kept after the transaction is processed.
+// Syntax: SecUploadKeepFiles On|RelevantOnly|Off
+// Default: Off
+// ---
+// The `SecUploadKeepFiles` directive is used to configure whether intercepted files are
+// preserved on disk after the transaction is processed.
+// This directive requires the storage directory to be defined (using `SecUploadDir`).
+//
+// Possible values are:
+//   - On: Keep all uploaded files.
+//   - Off: Do not keep uploaded files.
+//   - RelevantOnly: Keep only uploaded files that matched at least one rule that would be
+//     logged (excluding rules with the `nolog` action).
 func directiveSecUploadKeepFiles(options *DirectiveOptions) error {
-	b, err := parseBoolean(options.Opts)
+	if len(options.Opts) == 0 {
+		return errEmptyOptions
+	}
+
+	status, err := types.ParseUploadKeepFilesStatus(options.Opts)
 	if err != nil {
 		return err
 	}
-	options.WAF.UploadKeepFiles = b
+
+	if !environment.HasAccessToFS && status != types.UploadKeepFilesOff {
+		return fmt.Errorf("SecUploadKeepFiles: cannot enable keeping uploaded files: filesystem access is disabled")
+	}
+
+	options.WAF.UploadKeepFiles = status
 	return nil
 }
 
@@ -968,6 +995,11 @@ func directiveSecUploadFileLimit(options *DirectiveOptions) error {
 	return err
 }
 
+// Description: Configures the directory where uploaded files will be stored.
+// Syntax: SecUploadDir /path/to/dir
+// Default: ""
+// ---
+// This directive is required when enabling SecUploadKeepFiles.
 func directiveSecUploadDir(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions

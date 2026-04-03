@@ -198,6 +198,9 @@ func (rp *RuleParser) ParseOperator(operator string) error {
 		Root:     rp.options.ParserConfig.Root,
 		Datasets: rp.options.Datasets,
 	}
+	if rp.options.WAF != nil {
+		opts.Memoizer = rp.options.WAF.Memoizer()
+	}
 
 	if wd := rp.options.ParserConfig.WorkingDir; wd != "" {
 		opts.Path = append(opts.Path, wd)
@@ -348,9 +351,13 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 	}
 
 	var err error
+	rule := corazawaf.NewRule()
+	if options.WAF != nil {
+		rule.SetMemoizer(options.WAF.Memoizer())
+	}
 	rp := RuleParser{
 		options:        options,
-		rule:           corazawaf.NewRule(),
+		rule:           rule,
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
 	var defaultActionsRaw []string
@@ -403,7 +410,7 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 			return nil, err
 		}
 	}
-	rule := rp.Rule()
+	rule = rp.Rule()
 	rule.File_ = options.ParserConfig.ConfigFile
 	rule.Line_ = options.ParserConfig.LastLine
 
