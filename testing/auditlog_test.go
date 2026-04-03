@@ -433,7 +433,7 @@ func TestAuditLogNoHFlag(t *testing.T) {
 		SecAuditLogParts ABCKZ
 		SecAuditLogRelevantStatus ".*"
 		# auditlog should not contain messages section without H flag included, but should contain Rule below
-		SecRule ARGS "@unconditionalMatch" "id:1,phase:1,log,auditlog,msg:'nolog message'"
+		SecRule ARGS "@unconditionalMatch" "id:1,phase:1,log,auditlog,msg:'log message'"
 	`); err != nil {
 		t.Fatal(err)
 	}

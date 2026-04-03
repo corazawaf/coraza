@@ -509,7 +509,7 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 	// tx.MatchedRules = append(tx.MatchedRules, mr)
 
 	// If the rule is set to audit, we log the transaction to the audit log
-	tx.audit = r.Audit
+	tx.audit = tx.audit || r.Audit
 
 	// set highest_severity
 	hs := tx.variables.highestSeverity
@@ -525,7 +525,7 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 		ClientIPAddress_: tx.variables.remoteAddr.Get(),
 		Rule_:            &r.RuleMetadata,
 		Log_:             r.Log,
-		Audit_:           tx.audit,
+		Audit_:           r.Audit,
 		MatchedDatas_:    mds,
 		Context_:         tx.context,
 	}
@@ -1522,7 +1522,8 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 				}
 			}
 		case types.AuditLogPartRulesMatched:
-			// implement matched rules
+			// K part is intentionally not implemented.
+			// Matched rules are logged in the audit log trailer (H part) above.
 		}
 	}
 
