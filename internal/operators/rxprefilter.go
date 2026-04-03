@@ -23,7 +23,8 @@
 //     cheaply confirm those literals are absent, we know the regex cannot match
 //     and skip it. For single literals we use strings.Contains; for alternation
 //     sets (anyRequired) we use a first-byte indexed single-pass scan that
-//     checks a 256-bit bitmap per byte and only verifies at candidate positions.
+//     uses a Wu-Manber shift table to skip non-candidate positions in sub-linear
+//     time, verifying only at positions where a match could begin.
 //
 // Safety guarantee:
 //
@@ -241,9 +242,9 @@ func prefilterFunc(pattern string) func(string) bool {
 			return nil
 		} else if len(filtered) <= anyRequiredACThreshold {
 			// Small pattern sets (typical CRS alternations: 2-20 branches):
-			// indexed bitmap matcher. Single pass with a 256-bit first-byte
-			// bitmap skips ~85% of positions, beating AC's per-byte DFA
-			// transitions. Zero allocations.
+			// Wu-Manber shift-table matcher. Sub-linear scanning examines only
+			// ~H/minLen positions on average, beating AC's O(H) single-pass.
+			// Zero allocations.
 			im := newIndexedMatcher(filtered, caseInsensitive)
 			pf = im.match
 		} else {
@@ -467,42 +468,77 @@ func filterShort(ss []string, minLen int) []string {
 // correct at any N; only performance differs.
 const anyRequiredACThreshold = 16
 
-// indexedMatcher performs single-pass multi-pattern substring matching using a
-// 256-bit first-byte bitmap and bucket-grouped verification. For each byte in
-// the haystack, a single bit-test determines whether it could be the start of
-// any needle. Only at candidate positions (~15% of bytes for typical CRS
-// keywords) does it verify against the 1-3 needles sharing that first byte.
+// indexedMatcher performs sub-linear multi-pattern substring matching using a
+// Wu-Manber style shift table. Instead of examining every byte in the haystack,
+// it slides a window of size minLen and looks at the byte at the window's right
+// edge. A precomputed shift table tells it how far to jump: if the byte doesn't
+// appear near the end of any needle, the window can advance by up to minLen
+// bytes at once. Only when the shift is zero (a potential match position) does
+// it verify against the small set of candidate needles.
+//
+// Average case: O(H/minLen) — for typical CRS keywords (minLen ≈ 5-6), this
+// examines only ~1/5 to ~1/6 of the haystack bytes, versus O(H) for the
+// bitmap approach or Aho-Corasick.
 //
 // This beats Aho-Corasick for small pattern sets (N < ~20) because:
-//   - Per-byte cost is a single bit-test (register-local) vs DFA state
-//     transition (indirect memory lookup into a multi-KB table)
-//   - Single pass through the haystack (like AC) with early exit on first match
+//   - Sub-linear scanning vs AC's strict O(H) single-pass
 //   - Zero allocations (AC's Iter/Match pattern allocates per call)
-//   - Better cache behavior (32-byte bitmap vs large DFA transition table)
+//   - Better cache behavior (256-byte table vs large DFA transition table)
 type indexedMatcher struct {
-	bitmap  [4]uint64    // 256-bit: which byte values start any needle
-	buckets [256][]string // needles grouped by first byte
-	minLen  int          // shortest needle length
-	ci      bool         // case-insensitive mode
+	shift      [256]uint8    // shift distance per byte value; 0 = candidate position
+	endBuckets [256][]string // needles grouped by their byte at position minLen-1
+	minLen     int
+	ci         bool
 }
 
 func newIndexedMatcher(needles []string, ci bool) *indexedMatcher {
-	im := &indexedMatcher{ci: ci, minLen: len(needles[0])}
-	for _, n := range needles {
+	im := &indexedMatcher{ci: ci}
+
+	im.minLen = len(needles[0])
+	for _, n := range needles[1:] {
 		if len(n) < im.minLen {
 			im.minLen = len(n)
 		}
-		b := n[0]
-		im.bitmap[b>>6] |= 1 << (b & 63)
-		if ci {
-			// For CI matching, also set the uppercase variant so we catch both.
-			if b >= 'a' && b <= 'z' {
-				upper := b - ('a' - 'A')
-				im.bitmap[upper>>6] |= 1 << (upper & 63)
+	}
+
+	ml := im.minLen
+	if ml > 255 {
+		ml = 255
+	}
+	for i := range im.shift {
+		im.shift[i] = uint8(ml)
+	}
+
+	// Normalize needles to lowercase for CI mode.
+	norms := needles
+	if ci {
+		norms = make([]string, len(needles))
+		for i, n := range needles {
+			norms[i] = strings.ToLower(n)
+		}
+	}
+
+	for _, n := range norms {
+		for j := 0; j < im.minLen; j++ {
+			sh := uint8(im.minLen - 1 - j)
+			c := n[j]
+			if sh < im.shift[c] {
+				im.shift[c] = sh
+			}
+			if ci && c >= 'a' && c <= 'z' {
+				upper := c - ('a' - 'A')
+				if sh < im.shift[upper] {
+					im.shift[upper] = sh
+				}
 			}
 		}
-		im.buckets[b] = append(im.buckets[b], n)
 	}
+
+	for _, n := range norms {
+		c := n[im.minLen-1]
+		im.endBuckets[c] = append(im.endBuckets[c], n)
+	}
+
 	return im
 }
 
@@ -514,39 +550,54 @@ func (m *indexedMatcher) match(s string) bool {
 }
 
 func (m *indexedMatcher) matchCS(s string) bool {
-	end := len(s) - m.minLen + 1
-	for i := 0; i < end; i++ {
-		b := s[i]
-		if m.bitmap[b>>6]&(1<<(b&63)) == 0 {
+	ml := m.minLen
+	if len(s) < ml {
+		return false
+	}
+	i := ml - 1
+	for i < len(s) {
+		sh := m.shift[s[i]]
+		if sh != 0 {
+			i += int(sh)
 			continue
 		}
-		for _, needle := range m.buckets[b] {
+		pos := i - ml + 1
+		for _, needle := range m.endBuckets[s[i]] {
 			nlen := len(needle)
-			if i+nlen <= len(s) && s[i:i+nlen] == needle {
+			if pos+nlen <= len(s) && s[pos:pos+nlen] == needle {
 				return true
 			}
 		}
+		i++
 	}
 	return false
 }
 
 func (m *indexedMatcher) matchCI(s string) bool {
-	end := len(s) - m.minLen + 1
-	for i := 0; i < end; i++ {
+	ml := m.minLen
+	if len(s) < ml {
+		return false
+	}
+	i := ml - 1
+	for i < len(s) {
 		b := s[i]
-		if m.bitmap[b>>6]&(1<<(b&63)) == 0 {
+		sh := m.shift[b]
+		if sh != 0 {
+			i += int(sh)
 			continue
 		}
 		lb := b
 		if lb >= 'A' && lb <= 'Z' {
 			lb += 'a' - 'A'
 		}
-		for _, needle := range m.buckets[lb] {
+		pos := i - ml + 1
+		for _, needle := range m.endBuckets[lb] {
 			nlen := len(needle)
-			if i+nlen <= len(s) && equalFoldASCIIBytes(s[i:i+nlen], needle) {
+			if pos+nlen <= len(s) && equalFoldASCIIBytes(s[pos:pos+nlen], needle) {
 				return true
 			}
 		}
+		i++
 	}
 	return false
 }
