@@ -1643,7 +1643,16 @@ func (tx *Transaction) auditLogCollectFiles() []plugintypes.AuditLogTransactionR
 	for _, file := range tx.variables.files.Get("") {
 		var size int64
 		if fs := tx.variables.filesSizes.Get(file); len(fs) > 0 {
-			size, _ = strconv.ParseInt(fs[0], 10, 64)
+			parsed, err := strconv.ParseInt(fs[0], 10, 64)
+			if err != nil {
+				tx.DebugLogger().Debug().
+					Str("file", file).
+					Str("raw_size", fs[0]).
+					Err(err).
+					Msg("Failed to parse file size for audit log")
+			} else {
+				size = parsed
+			}
 		}
 		ext := filepath.Ext(file)
 		at := auditlog.TransactionRequestFiles{
