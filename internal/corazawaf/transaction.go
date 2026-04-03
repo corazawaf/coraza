@@ -1544,14 +1544,9 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 				}
 			}
 
-			/*
-			* TODO:
-			* This part is a replacement for part C. It will log the same data as C in
-			* all cases except when multipart/form-data encoding in used. In this case,
-			* it will log a fake application/x-www-form-urlencoded body that contains
-			* the information about parameters but not about the files. This is handy
-			* if you don’t want to have (often large) files stored in your audit logs.
-			 */
+			// Note: Part I is a replacement for Part C that logs a fake
+			// application/x-www-form-urlencoded body with parameter info but without
+			// file contents for multipart/form-data requests. Not implemented yet.
 		case types.AuditLogPartUploadedFiles:
 			al.Transaction_.Request_.Files_ = tx.auditLogCollectFiles()
 		case types.AuditLogPartIntermediaryResponseBody:
