@@ -2663,3 +2663,50 @@ func BenchmarkRuleEvalWithRemovedRules(b *testing.B) {
 		waf.Rules.Eval(types.PhaseRequestHeaders, tx)
 	}
 }
+
+// TestTransactionVariablesSetRequestXML verifies that SetRequestXML replaces
+// the RequestXML collection and updates the XML alias.
+func TestTransactionVariablesSetRequestXML(t *testing.T) {
+	v := NewTransactionVariables()
+
+	original := v.RequestXML()
+	replacement := collections.NewMap(variables.RequestXML)
+	replacement.Add("test", "value")
+
+	v.SetRequestXML(replacement)
+
+	if v.RequestXML() != replacement {
+		t.Error("RequestXML was not replaced")
+	}
+	if v.XML() != replacement {
+		t.Error("XML alias was not updated to match RequestXML")
+	}
+	if v.RequestXML() == original {
+		t.Error("RequestXML still points to original collection")
+	}
+	if got := v.RequestXML().Get("test"); len(got) != 1 || got[0] != "value" {
+		t.Errorf("replacement collection not accessible, got %v", got)
+	}
+}
+
+// TestTransactionVariablesSetResponseXML verifies that SetResponseXML
+// replaces the ResponseXML collection.
+func TestTransactionVariablesSetResponseXML(t *testing.T) {
+	v := NewTransactionVariables()
+
+	original := v.ResponseXML()
+	replacement := collections.NewMap(variables.ResponseXML)
+	replacement.Add("test", "value")
+
+	v.SetResponseXML(replacement)
+
+	if v.ResponseXML() != replacement {
+		t.Error("ResponseXML was not replaced")
+	}
+	if v.ResponseXML() == original {
+		t.Error("ResponseXML still points to original collection")
+	}
+	if got := v.ResponseXML().Get("test"); len(got) != 1 || got[0] != "value" {
+		t.Errorf("replacement collection not accessible, got %v", got)
+	}
+}
