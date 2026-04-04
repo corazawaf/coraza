@@ -104,14 +104,8 @@ func (c *XPathMap) FindRegex(key *regexp.Regexp) []types.MatchData {
 // equivalent to evaluating //@* and //* text nodes.
 func (c *XPathMap) FindAll() []types.MatchData {
 	var result []types.MatchData
-	// All attribute values
-	for _, m := range c.FindString("//@*") {
-		result = append(result, m)
-	}
-	// All text content
-	for _, m := range c.FindString("//*[text()]") {
-		result = append(result, m)
-	}
+	result = append(result, c.FindString("//@*")...)
+	result = append(result, c.FindString("//*[text()]")...)
 	return result
 }
 
