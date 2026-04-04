@@ -10,7 +10,7 @@ import (
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
-	"github.com/corazawaf/coraza/v3/internal/collections"
+	internalcollections "github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types/variables"
 
@@ -219,7 +219,7 @@ func TestXMLQueryBodyProcessorFindString(t *testing.T) {
 // TestXMLQueryBodyProcessorFallback verifies that the body processor falls
 // back to populating the standard map keys when SetRequestXML is not available.
 func TestXMLQueryBodyProcessorFallback(t *testing.T) {
-	xmlMap := collections.NewMap(variables.RequestXML)
+	xmlMap := internalcollections.NewMap(variables.RequestXML)
 
 	// Use a TransactionVariables mock that does not implement xmlSettableVariables.
 	vars := &fallbackTestVars{requestXML: xmlMap}
