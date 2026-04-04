@@ -1526,6 +1526,40 @@ func TestTxPhase4Magic(t *testing.T) {
 	}
 }
 
+func TestCollectionReturnsExpectedTypes(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	// Dynamically iterate over all possible RuleVariable values so this test
+	// stays in sync when new variables are added.
+	for i := range 256 {
+		v := variables.RuleVariable(i)
+		name := v.Name()
+
+		if name == "UNKNOWN" || name == "INVALID_VARIABLE" {
+			continue
+		}
+
+		c := tx.Collection(v)
+
+		// JSON is explicitly unimplemented (returns nil).
+		if v == variables.JSON {
+			if c != nil {
+				t.Errorf("Collection(%s) should return nil, got %v", name, c)
+			}
+			continue
+		}
+
+		// Variables that exist in the variables package but are not backed by
+		// a collection in Transaction.Collection() fall through to the default
+		// Noop case. We just verify they don't panic.
+		if c == nil {
+			t.Errorf("Collection(%s) returned nil, expected non-nil collection", name)
+		}
+	}
+}
+
 func TestVariablesMatch(t *testing.T) {
 	waf := NewWAF()
 	tx := waf.NewTransaction()
