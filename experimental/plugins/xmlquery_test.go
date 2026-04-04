@@ -260,6 +260,20 @@ func TestXMLQueryBodyProcessorInvalidXML(t *testing.T) {
 	}
 }
 
+// TestXMLQueryBodyProcessorProcessResponse verifies that ProcessResponse
+// returns nil (not yet implemented).
+func TestXMLQueryBodyProcessorProcessResponse(t *testing.T) {
+	bp := xmlQueryProcessor(t)
+	err := bp.ProcessResponse(
+		bytes.NewReader(nil),
+		corazawaf.NewTransactionVariables(),
+		plugintypes.BodyProcessorOptions{},
+	)
+	if err != nil {
+		t.Errorf("expected nil, got %v", err)
+	}
+}
+
 // fallbackTestVars is a minimal TransactionVariables implementation that does
 // NOT implement xmlSettableVariables, forcing the body processor to use the
 // fallback path of populating the existing collection.Map directly.
