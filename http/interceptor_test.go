@@ -408,6 +408,7 @@ func TestSuperfluousWriteHeaderIgnored(t *testing.T) {
 	t.Cleanup(func() { log.SetOutput(os.Stderr) })
 
 	tx := waf.NewTransaction()
+	defer tx.Close()
 	req, _ := http.NewRequest("GET", "/test", nil)
 	res := httptest.NewRecorder()
 	rw, responseProcessor := wrap(res, req, tx)
@@ -447,20 +448,38 @@ func TestWriteHeaderSetsHeadersBeforeInterruptionCheck(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tx := waf.NewTransaction()
-	req, _ := http.NewRequest("GET", "/test", nil)
-	res := httptest.NewRecorder()
-	rw, _ := wrap(res, req, tx)
+	t.Run("matching header triggers interruption", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		defer tx.Close()
+		req, _ := http.NewRequest("GET", "/test", nil)
+		res := httptest.NewRecorder()
+		rw, _ := wrap(res, req, tx)
 
-	// Set a response header that will trigger a phase 3 rule
-	rw.Header().Set("X-Block", "true")
-	rw.WriteHeader(200)
+		// Set a response header that will trigger a phase 3 rule
+		rw.Header().Set("X-Block", "true")
+		rw.WriteHeader(200)
 
-	// The transaction should be interrupted because the header was captured
-	// before ProcessResponseHeaders ran (wroteHeader is set early)
-	if !tx.IsInterrupted() {
-		t.Error("expected transaction to be interrupted by phase 3 rule")
-	}
+		// The transaction should be interrupted because the header was captured
+		// before ProcessResponseHeaders ran (wroteHeader is set early)
+		if !tx.IsInterrupted() {
+			t.Error("expected transaction to be interrupted by phase 3 rule")
+		}
+	})
+
+	t.Run("non-matching header does not trigger interruption", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		defer tx.Close()
+		req, _ := http.NewRequest("GET", "/test", nil)
+		res := httptest.NewRecorder()
+		rw, _ := wrap(res, req, tx)
+
+		rw.Header().Set("X-Block", "false")
+		rw.WriteHeader(200)
+
+		if tx.IsInterrupted() {
+			t.Error("expected transaction not to be interrupted")
+		}
+	})
 }
 
 func TestHijackTrackerSetsIsHijacked(t *testing.T) {
