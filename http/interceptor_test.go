@@ -13,9 +13,11 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -391,6 +393,93 @@ func TestWebSocketUpgradeFlushesHeaders(t *testing.T) {
 	if want, have := http.StatusSwitchingProtocols, rec.Code; want != have {
 		t.Errorf("expected 101 to be flushed immediately for WebSocket upgrades, got %d", have)
 	}
+}
+
+func TestSuperfluousWriteHeaderIgnored(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Capture standard log output to verify the superfluous WriteHeader
+	// message no longer leaks to Go's default logger (issue #1351).
+	var logBuf bytes.Buffer
+	log.SetOutput(&logBuf)
+	t.Cleanup(func() { log.SetOutput(os.Stderr) })
+
+	tx := waf.NewTransaction()
+	defer tx.Close()
+	req, _ := http.NewRequest("GET", "/test", nil)
+	res := httptest.NewRecorder()
+	rw, responseProcessor := wrap(res, req, tx)
+
+	// Set a response header before the first WriteHeader
+	rw.Header().Set("X-Custom", "first")
+	rw.WriteHeader(200)
+
+	// Change the header and call WriteHeader again (superfluous)
+	rw.Header().Set("X-Custom", "second")
+	rw.WriteHeader(201)
+
+	err = responseProcessor(tx, req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Status should remain from the first call
+	if want, have := 200, res.Code; want != have {
+		t.Errorf("expected status %d, got %d", want, have)
+	}
+
+	// The superfluous WriteHeader warning must not appear in Go's standard
+	// log output — it should only go through the transaction's debug logger.
+	if strings.Contains(logBuf.String(), "superfluous") {
+		t.Error("superfluous WriteHeader message leaked to standard log output")
+	}
+}
+
+func TestWriteHeaderSetsHeadersBeforeInterruptionCheck(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
+		WithDirectives(`
+			SecRuleEngine On
+			SecRule RESPONSE_HEADERS:X-Block "@streq true" "id:1,phase:3,deny,status:403"
+		`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("matching header triggers interruption", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		defer tx.Close()
+		req, _ := http.NewRequest("GET", "/test", nil)
+		res := httptest.NewRecorder()
+		rw, _ := wrap(res, req, tx)
+
+		// Set a response header that will trigger a phase 3 rule
+		rw.Header().Set("X-Block", "true")
+		rw.WriteHeader(200)
+
+		// The transaction should be interrupted because the header was captured
+		// before ProcessResponseHeaders ran (wroteHeader is set early)
+		if !tx.IsInterrupted() {
+			t.Error("expected transaction to be interrupted by phase 3 rule")
+		}
+	})
+
+	t.Run("non-matching header does not trigger interruption", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		defer tx.Close()
+		req, _ := http.NewRequest("GET", "/test", nil)
+		res := httptest.NewRecorder()
+		rw, _ := wrap(res, req, tx)
+
+		rw.Header().Set("X-Block", "false")
+		rw.WriteHeader(200)
+
+		if tx.IsInterrupted() {
+			t.Error("expected transaction not to be interrupted")
+		}
+	})
 }
 
 func TestHijackTrackerSetsIsHijacked(t *testing.T) {
