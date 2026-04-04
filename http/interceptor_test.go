@@ -13,9 +13,11 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -399,6 +401,12 @@ func TestSuperfluousWriteHeaderIgnored(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Capture standard log output to verify the superfluous WriteHeader
+	// message no longer leaks to Go's default logger (issue #1351).
+	var logBuf bytes.Buffer
+	log.SetOutput(&logBuf)
+	t.Cleanup(func() { log.SetOutput(os.Stderr) })
+
 	tx := waf.NewTransaction()
 	req, _ := http.NewRequest("GET", "/test", nil)
 	res := httptest.NewRecorder()
@@ -420,6 +428,12 @@ func TestSuperfluousWriteHeaderIgnored(t *testing.T) {
 	// Status should remain from the first call
 	if want, have := 200, res.Code; want != have {
 		t.Errorf("expected status %d, got %d", want, have)
+	}
+
+	// The superfluous WriteHeader warning must not appear in Go's standard
+	// log output — it should only go through the transaction's debug logger.
+	if strings.Contains(logBuf.String(), "superfluous") {
+		t.Error("superfluous WriteHeader message leaked to standard log output")
 	}
 }
 
