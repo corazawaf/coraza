@@ -393,6 +393,62 @@ func TestWebSocketUpgradeFlushesHeaders(t *testing.T) {
 	}
 }
 
+func TestSuperfluousWriteHeaderIgnored(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx := waf.NewTransaction()
+	req, _ := http.NewRequest("GET", "/test", nil)
+	res := httptest.NewRecorder()
+	rw, responseProcessor := wrap(res, req, tx)
+
+	// Set a response header before the first WriteHeader
+	rw.Header().Set("X-Custom", "first")
+	rw.WriteHeader(200)
+
+	// Change the header and call WriteHeader again (superfluous)
+	rw.Header().Set("X-Custom", "second")
+	rw.WriteHeader(201)
+
+	err = responseProcessor(tx, req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Status should remain from the first call
+	if want, have := 200, res.Code; want != have {
+		t.Errorf("expected status %d, got %d", want, have)
+	}
+}
+
+func TestWriteHeaderSetsHeadersBeforeInterruptionCheck(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
+		WithDirectives(`
+			SecRuleEngine On
+			SecRule RESPONSE_HEADERS:X-Block "@streq true" "id:1,phase:3,deny,status:403"
+		`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx := waf.NewTransaction()
+	req, _ := http.NewRequest("GET", "/test", nil)
+	res := httptest.NewRecorder()
+	rw, _ := wrap(res, req, tx)
+
+	// Set a response header that will trigger a phase 3 rule
+	rw.Header().Set("X-Block", "true")
+	rw.WriteHeader(200)
+
+	// The transaction should be interrupted because the header was captured
+	// before ProcessResponseHeaders ran (wroteHeader is set early)
+	if !tx.IsInterrupted() {
+		t.Error("expected transaction to be interrupted by phase 3 rule")
+	}
+}
+
 func TestHijackTrackerSetsIsHijacked(t *testing.T) {
 	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives("SecRuleEngine On"))
 	if err != nil {
