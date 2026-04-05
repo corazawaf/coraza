@@ -1159,10 +1159,10 @@ var errStreamInterrupted = errors.New("stream processing interrupted")
 // ArgsPost is cleared and repopulated for each record, while TX variables persist across records
 // for cross-record correlation (e.g., anomaly scoring).
 func (tx *Transaction) processRequestBodyStreaming(sp plugintypes.StreamingBodyProcessor, reader io.Reader, opts plugintypes.BodyProcessorOptions) (*types.Interruption, error) {
-	err := sp.ProcessRequestRecords(reader, opts, func(recordNum int, fields map[string]string, _ string) error {
+	err := sp.ProcessRequestRecords(reader, opts, func(recordNum int, record plugintypes.Record) error {
 		// Clear ArgsPost and repopulate with this record's fields only
 		tx.variables.argsPost.Reset()
-		for key, value := range fields {
+		for key, value := range record.Fields() {
 			tx.variables.argsPost.SetIndex(key, 0, value)
 		}
 
@@ -1192,10 +1192,10 @@ func (tx *Transaction) processRequestBodyStreaming(sp plugintypes.StreamingBodyP
 // processResponseBodyStreaming evaluates Phase 4 rules after each record in a streaming response body.
 // ArgsResponse is cleared and repopulated for each record, while TX variables persist across records.
 func (tx *Transaction) processResponseBodyStreaming(sp plugintypes.StreamingBodyProcessor, reader io.Reader, opts plugintypes.BodyProcessorOptions) (*types.Interruption, error) {
-	err := sp.ProcessResponseRecords(reader, opts, func(recordNum int, fields map[string]string, _ string) error {
+	err := sp.ProcessResponseRecords(reader, opts, func(recordNum int, record plugintypes.Record) error {
 		// Clear ResponseArgs and repopulate with this record's fields only
 		tx.variables.responseArgs.Reset()
-		for key, value := range fields {
+		for key, value := range record.Fields() {
 			tx.variables.responseArgs.SetIndex(key, 0, value)
 		}
 
@@ -1310,10 +1310,10 @@ func (tx *Transaction) ProcessRequestBodyFromStream(input io.Reader, output io.W
 	streamErr := sp.ProcessRequestRecords(input, plugintypes.BodyProcessorOptions{
 		Mime:        mime,
 		StoragePath: tx.WAF.UploadDir,
-	}, func(recordNum int, fields map[string]string, rawRecord string) error {
+	}, func(recordNum int, record plugintypes.Record) error {
 		// Clear ArgsPost and repopulate with this record's fields only
 		tx.variables.argsPost.Reset()
-		for key, value := range fields {
+		for key, value := range record.Fields() {
 			tx.variables.argsPost.SetIndex(key, 0, value)
 		}
 
@@ -1328,9 +1328,9 @@ func (tx *Transaction) ProcessRequestBodyFromStream(input io.Reader, output io.W
 		}
 
 		// Record passed evaluation, write to output for relay.
-		// rawRecord includes format-specific delimiters (e.g., \n for NDJSON,
+		// Raw() includes format-specific delimiters (e.g., \n for NDJSON,
 		// RS prefix + \n for RFC 7464), preserving the original stream format.
-		if _, err := io.WriteString(output, rawRecord); err != nil {
+		if _, err := io.WriteString(output, record.Raw()); err != nil {
 			return fmt.Errorf("failed to write record to output: %w", err)
 		}
 
@@ -1409,9 +1409,9 @@ func (tx *Transaction) ProcessResponseBodyFromStream(input io.Reader, output io.
 		Str("body_processor", bp).
 		Msg("Attempting to process streaming response body with relay")
 
-	streamErr := sp.ProcessResponseRecords(input, plugintypes.BodyProcessorOptions{}, func(recordNum int, fields map[string]string, rawRecord string) error {
+	streamErr := sp.ProcessResponseRecords(input, plugintypes.BodyProcessorOptions{}, func(recordNum int, record plugintypes.Record) error {
 		tx.variables.responseArgs.Reset()
-		for key, value := range fields {
+		for key, value := range record.Fields() {
 			tx.variables.responseArgs.SetIndex(key, 0, value)
 		}
 
@@ -1424,8 +1424,8 @@ func (tx *Transaction) ProcessResponseBodyFromStream(input io.Reader, output io.
 			return errStreamInterrupted
 		}
 
-		// rawRecord includes format-specific delimiters, preserving the original stream format.
-		if _, err := io.WriteString(output, rawRecord); err != nil {
+		// Raw() includes format-specific delimiters, preserving the original stream format.
+		if _, err := io.WriteString(output, record.Raw()); err != nil {
 			return fmt.Errorf("failed to write response record to output: %w", err)
 		}
 

@@ -35,23 +35,34 @@ type BodyProcessor interface {
 	ProcessResponse(reader io.Reader, variables TransactionVariables, options BodyProcessorOptions) error
 }
 
+// Record represents a single parsed record from a streaming body processor.
+// Implementations are format-specific (e.g., a JSON object, a CSV row, a log line).
+type Record interface {
+	// Fields returns the parsed key-value pairs for WAF variable population.
+	// Keys should include the record-number prefix (e.g., "json.0.name").
+	Fields() map[string]string
+
+	// Raw returns the original record text including format-specific delimiters
+	// (e.g., trailing newline for NDJSON, RS prefix for RFC 7464).
+	Raw() string
+}
+
 // StreamingBodyProcessor extends BodyProcessor with per-record streaming support.
 // Body processors that handle multi-record formats (NDJSON, JSON-Seq) can implement
 // this interface to enable per-record rule evaluation instead of evaluating rules
 // only after the entire body has been consumed.
 //
-// The callback receives pre-formatted field keys including the record number prefix
-// (e.g., "json.0.name", "json.1.age") and the raw record text. Returning a non-nil
-// error from the callback stops processing immediately.
+// The callback receives a Record for each parsed entry and its zero-based index.
+// Returning a non-nil error from the callback stops processing immediately.
 type StreamingBodyProcessor interface {
 	BodyProcessor
 
 	// ProcessRequestRecords reads records one at a time from the reader and calls fn
-	// for each record's parsed fields. Processing stops if fn returns a non-nil error.
+	// for each record. Processing stops if fn returns a non-nil error.
 	ProcessRequestRecords(reader io.Reader, options BodyProcessorOptions,
-		fn func(recordNum int, fields map[string]string, rawRecord string) error) error
+		fn func(recordNum int, record Record) error) error
 
 	// ProcessResponseRecords is the response equivalent of ProcessRequestRecords.
 	ProcessResponseRecords(reader io.Reader, options BodyProcessorOptions,
-		fn func(recordNum int, fields map[string]string, rawRecord string) error) error
+		fn func(recordNum int, record Record) error) error
 }
