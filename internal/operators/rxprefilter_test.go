@@ -1842,10 +1842,21 @@ func TestTrieReconstructionBasic(t *testing.T) {
 			name:    "nested_trie_reconstruction",
 			pattern: "(?i)(?:select|set|sleep)",
 			// Simplify() → s(?:e(?:lect|t)|leep) — nested trie
-			// Inner: e(?:lect|t) → extractLiterals returns anyRequired{"elect","et"}
-			// Outer: s + anyRequired{"elect","et","leep"} → anyRequired{"select","set","sleep"}
+			// trieReconstruct (prefix "s") runs before anyRequired propagation,
+			// so the result is anyRequired{"select","set","sleep"} — NOT the
+			// shorter {"elect","et","leep"} that propagation alone would yield.
+			// ("et" is a substring of "GET", so the shorter form causes false positives.)
 			shouldMatch: []string{"SELECT *", "set @x=1", "SLEEP(5)"},
 			shouldMiss:  []string{"GET /api", "x=1&y=2"},
+		},
+		{
+			name:    "anchor_or_separator_then_keywords",
+			pattern: `(?i)(?:^|["':;=])\s*(?:alert|prompt|confirm)`,
+			// Branch (?:^|["':;=]) returns nil because the ^ sub-branch has no literal.
+			// anyRequired propagation in OpConcat surfaces the keyword alternation:
+			// → anyRequired{"alert","prompt","confirm"}
+			shouldMatch: []string{"alert(1)", `";alert(1)`, "PROMPT(x)", "=confirm()"},
+			shouldMiss:  []string{"GET /api", "content-type: text/html", "user@example.com"},
 		},
 		{
 			name:    "large_sql_alternation",

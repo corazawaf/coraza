@@ -327,8 +327,28 @@ func extractLiterals(re *syntax.Regexp, ci bool) interface{} {
 		return extractLiterals(re.Sub[0], ci)
 
 	case syntax.OpConcat:
-		// First pass: collect allRequired literals using the standard path.
+		// Collect required literals from every non-optional child.
+		//
+		// allRequired: every literal must appear → strongest constraint.
+		// anyRequired: at least one of these must appear → weaker, but still
+		//   a valid necessary condition because the child is not optional.
+		//   OpQuest and OpStar children already return nil, so any anyRequired
+		//   we see here came from a mandatory child of the concat.
+		//
+		// When multiple anyRequired sets are collected (e.g. two keyword
+		// alternations), we keep the most restrictive one — the set with the
+		// fewest elements — because it is the hardest for benign traffic to
+		// satisfy and therefore gives the best skip rate.  Both are correct
+		// (either one is a valid necessary condition); the shorter one is
+		// simply a better prefilter.
+		//
+		// Example: (?:^|["':;=])\s*(?:select|union|drop)
+		//   child 0: (?:^|["':;=])  → nil (^ branch makes whole alt nil)
+		//   child 1: \s*             → nil (star)
+		//   child 2: (?:select|…)   → anyRequired{"select","union","drop"}
+		//   → return anyRequired{"select","union","drop"}
 		var all []string
+		var bestAny anyRequired
 		for _, sub := range re.Sub {
 			lits := extractLiterals(sub, ci)
 			if lits == nil {
@@ -338,19 +358,27 @@ func extractLiterals(re *syntax.Regexp, ci bool) interface{} {
 			case allRequired:
 				all = append(all, v...)
 			case anyRequired:
-				// An anyRequired child means "one of these must exist" but we
-				// can't promote any single element to allRequired. Skip it to
-				// avoid false negatives.
-				_ = v
+				if bestAny == nil || len(v) < len(bestAny) {
+					bestAny = v
+				}
 			}
 		}
 		if len(all) > 0 {
 			return allRequired(all)
 		}
 
-		// Standard path found nothing. Try trie reconstruction for patterns
-		// that regexp/syntax.Simplify() emits when factoring common prefixes
-		// out of large alternations:
+		// Try trie reconstruction BEFORE falling back to the raw anyRequired
+		// propagation. Trie reconstruction prepends the short common prefix to
+		// each suffix, producing longer and more selective literals — e.g.
+		//
+		//   s(?:e(?:lect|t)|leep)  →  anyRequired{"select","set","sleep"}
+		//
+		// The anyRequired propagation alone would yield {"elect","et","leep"};
+		// "et" is a substring of ordinary words ("GET", "better", …) and would
+		// let far too much benign traffic through to the full regex.
+		//
+		// Try trie reconstruction for patterns that regexp/syntax.Simplify()
+		// emits when factoring common prefixes out of large alternations:
 		//
 		//   select|sleep|substr  →  s(?:elect|leep|ubstr)
 		//   union|update         →  u(?:nion|pdate)
@@ -362,7 +390,29 @@ func extractLiterals(re *syntax.Regexp, ci bool) interface{} {
 		//
 		// This enables prefiltering for large CRS alternation patterns that the
 		// standard path would silently skip.
-		return trieReconstruct(re, ci)
+		//
+		// IMPORTANT: trieReconstruct returns a concrete anyRequired type. When
+		// that nil concrete value is returned directly as interface{}, Go wraps
+		// it as (type=anyRequired, value=nil), which is != nil as an interface.
+		// The callers in OpAlternate check `if lits == nil` — they'd see the
+		// non-nil interface and treat it as a valid (empty) result, silently
+		// building a wrong prefilter. Explicitly return nil (the interface nil).
+		if result := trieReconstruct(re, ci); result != nil {
+			return result
+		}
+
+		// Last resort: fall back to the anyRequired collected from required
+		// children. This handles patterns like:
+		//   (?:^|["':;=])\s*(?:select|union|drop)
+		// where (?:^|…) has no extractable literal (^ branch makes it nil)
+		// but the keyword alternation does. We couldn't use it above because
+		// trieReconstruct (which prepends a common prefix) takes priority and
+		// might have been able to produce better literals — but it didn't, so
+		// this is the best we can do.
+		if bestAny != nil {
+			return bestAny
+		}
+		return nil
 
 	case syntax.OpAlternate:
 		// For alternation (a|b|c), exactly one branch must match. So we need
