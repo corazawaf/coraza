@@ -700,7 +700,9 @@ func TestProcessRequestBodyStreamingBinaryRelay(t *testing.T) {
 	}
 
 	// Output should be the exact binary frames concatenated
-	expected := append(rec1, rec2...)
+	expected := make([]byte, 0, len(rec1)+len(rec2))
+	expected = append(expected, rec1...)
+	expected = append(expected, rec2...)
 	if !bytes.Equal(output.Bytes(), expected) {
 		t.Fatalf("binary relay mismatch:\n  got:  %x\n  want: %x", output.Bytes(), expected)
 	}
