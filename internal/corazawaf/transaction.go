@@ -1182,6 +1182,9 @@ func (tx *Transaction) processRequestBodyStreaming(sp plugintypes.StreamingBodyP
 		tx.debugLogger.Error().Err(err).Msg("Failed to process streaming request body")
 		tx.generateRequestBodyError(err)
 		if tx.interruption == nil {
+			// Clear stale per-record data so the fallback evaluation does not
+			// re-match against the last partially-processed record.
+			tx.variables.argsPost.Reset()
 			tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 		}
 	}
@@ -1215,6 +1218,7 @@ func (tx *Transaction) processResponseBodyStreaming(sp plugintypes.StreamingBody
 		tx.debugLogger.Error().Err(err).Msg("Failed to process streaming response body")
 		tx.generateResponseBodyError(err)
 		if tx.interruption == nil {
+			tx.variables.responseArgs.Reset()
 			tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
 		}
 	}
@@ -1247,6 +1251,18 @@ func (tx *Transaction) ProcessRequestBodyFromStream(input io.Reader, output io.W
 	if tx.lastPhase != types.PhaseRequestHeaders {
 		tx.debugLogger.Debug().Msg("Skipping ProcessRequestBodyFromStream: wrong phase")
 		return nil, nil
+	}
+
+	// Mirror the same access gate as ProcessRequestBody.
+	if !tx.RequestBodyAccess {
+		tx.debugLogger.Debug().
+			Bool("request_body_access", tx.RequestBodyAccess).
+			Msg("Skipping request body streaming, passing through")
+		if _, err := io.Copy(output, input); err != nil {
+			return nil, err
+		}
+		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
+		return tx.interruption, nil
 	}
 
 	rbp := tx.variables.reqbodyProcessor.Get()
@@ -1287,12 +1303,12 @@ func (tx *Transaction) ProcessRequestBodyFromStream(input io.Reader, output io.W
 			return it, err
 		}
 
-		// Copy buffered body to output
+		// Copy buffered body and any remaining input to output
 		rbr, err := tx.RequestBodyReader()
 		if err != nil {
 			return nil, err
 		}
-		if _, err := io.Copy(output, rbr); err != nil {
+		if _, err := io.Copy(output, io.MultiReader(rbr, input)); err != nil {
 			return nil, err
 		}
 		return nil, nil
@@ -1308,8 +1324,9 @@ func (tx *Transaction) ProcessRequestBodyFromStream(input io.Reader, output io.W
 		Msg("Attempting to process streaming request body with relay")
 
 	streamErr := sp.ProcessRequestRecords(input, plugintypes.BodyProcessorOptions{
-		Mime:        mime,
-		StoragePath: tx.WAF.UploadDir,
+		Mime:                      mime,
+		StoragePath:               tx.WAF.UploadDir,
+		RequestBodyRecursionLimit: tx.WAF.RequestBodyJsonDepthLimit,
 	}, func(recordNum int, record plugintypes.Record) error {
 		// Clear ArgsPost and repopulate with this record's fields only
 		tx.variables.argsPost.Reset()
@@ -1340,9 +1357,11 @@ func (tx *Transaction) ProcessRequestBodyFromStream(input io.Reader, output io.W
 	if streamErr != nil && streamErr != errStreamInterrupted {
 		tx.debugLogger.Error().Err(streamErr).Msg("Failed to process streaming request body relay")
 		tx.generateRequestBodyError(streamErr)
+		tx.variables.argsPost.Reset()
 		if tx.interruption == nil {
 			tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 		}
+		return tx.interruption, streamErr
 	}
 
 	return tx.interruption, nil
@@ -1368,6 +1387,18 @@ func (tx *Transaction) ProcessResponseBodyFromStream(input io.Reader, output io.
 		return nil, nil
 	}
 
+	// Mirror the same access/processability gates as ProcessResponseBody.
+	if !tx.ResponseBodyAccess || !tx.IsResponseBodyProcessable() {
+		tx.debugLogger.Debug().
+			Bool("response_body_access", tx.ResponseBodyAccess).
+			Msg("Skipping response body streaming, passing through")
+		if _, err := io.Copy(output, input); err != nil {
+			return nil, err
+		}
+		tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
+		return tx.interruption, nil
+	}
+
 	bp := tx.variables.resBodyProcessor.Get()
 	if bp == "" {
 		// No body processor, pass through
@@ -1387,7 +1418,7 @@ func (tx *Transaction) ProcessResponseBodyFromStream(input io.Reader, output io.
 
 	sp, ok := bodyprocessor.(plugintypes.StreamingBodyProcessor)
 	if !ok {
-		// Non-streaming: buffer, process, copy
+		// Non-streaming: buffer, process, copy buffered + any remaining input
 		if _, _, err := tx.ReadResponseBodyFrom(input); err != nil {
 			return nil, err
 		}
@@ -1399,7 +1430,7 @@ func (tx *Transaction) ProcessResponseBodyFromStream(input io.Reader, output io.
 		if err != nil {
 			return nil, err
 		}
-		if _, err := io.Copy(output, rbr); err != nil {
+		if _, err := io.Copy(output, io.MultiReader(rbr, input)); err != nil {
 			return nil, err
 		}
 		return nil, nil
@@ -1436,9 +1467,11 @@ func (tx *Transaction) ProcessResponseBodyFromStream(input io.Reader, output io.
 	if streamErr != nil && streamErr != errStreamInterrupted {
 		tx.debugLogger.Error().Err(streamErr).Msg("Failed to process streaming response body relay")
 		tx.generateResponseBodyError(streamErr)
+		tx.variables.responseArgs.Reset()
 		if tx.interruption == nil {
 			tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
 		}
+		return tx.interruption, streamErr
 	}
 
 	return tx.interruption, nil
