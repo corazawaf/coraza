@@ -108,7 +108,9 @@ func newStreamingTestRule(t *testing.T, id int, targetVar variables.RuleVariable
 		Variable: targetVar,
 	})
 	if deny {
-		_ = rule.AddAction("deny", &dummyStreamDenyAction{})
+		if err := rule.AddAction("deny", &dummyStreamDenyAction{}); err != nil {
+			t.Fatalf("add deny action: %v", err)
+		}
 	}
 	rule.Log = true
 	rule.Audit = true
@@ -214,31 +216,12 @@ func (c *countingStreamProcessor) ProcessResponseRecords(_ io.Reader, _ pluginty
 }
 
 func TestProcessRequestBodyStreamingTxVariablesPersist(t *testing.T) {
-	// TX variables should persist across records for cross-record correlation.
+	// TX variables (matchedRules, user-set TX vars) should persist across records
+	// for cross-record correlation. ArgsPost is reset per record, but TX-scoped
+	// state accumulates.
 	waf := NewWAF()
 
-	// Add a rule that sets tx.score += 1 for each record containing "suspicious"
-	rule := NewRule()
-	rule.ID_ = 200
-	rule.LogID_ = "test"
-	rule.Phase_ = types.PhaseRequestBody
-
-	op, err := operators.Get("rx", plugintypes.OperatorOptions{
-		Arguments: "suspicious",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	rule.operator = &ruleOperatorParams{
-		Operator: op,
-		Function: "@rx",
-		Data:     "suspicious",
-		Negation: false,
-	}
-	rule.variables = append(rule.variables, ruleVariableParams{
-		Variable: variables.ArgsPost,
-	})
-	rule.Log = true
+	rule := newStreamingTestRule(t, 200, variables.ArgsPost, "suspicious", false)
 	if err := waf.Rules.Add(rule); err != nil {
 		t.Fatal(err)
 	}
@@ -255,6 +238,9 @@ func TestProcessRequestBodyStreamingTxVariablesPersist(t *testing.T) {
 	defer tx.Close()
 	tx.RequestBodyAccess = true
 
+	// Set a TX variable before streaming — it should survive all records
+	tx.variables.tx.SetIndex("marker", 0, "persist-me")
+
 	it, err := tx.processRequestBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -262,31 +248,50 @@ func TestProcessRequestBodyStreamingTxVariablesPersist(t *testing.T) {
 	if it != nil {
 		t.Fatalf("unexpected interruption: %v", it)
 	}
-	// matchedRules should have 2 entries (records 0 and 2 matched)
+
+	// matchedRules accumulates across records (TX-scoped): 2 matches (records 0 and 2)
 	if len(tx.matchedRules) != 2 {
 		t.Fatalf("expected 2 matched rules, got %d", len(tx.matchedRules))
+	}
+
+	// TX variable set before streaming should still be present
+	if vals := tx.variables.tx.Get("marker"); len(vals) == 0 || vals[0] != "persist-me" {
+		t.Fatalf("TX variable 'marker' did not persist across records, got: %v", vals)
 	}
 }
 
 func TestProcessRequestBodyStreamingArgsPostIsolated(t *testing.T) {
-	// Each record should only see its own fields in ArgsPost
+	// Verify that record 0's fields don't leak into record 1's evaluation.
+	// The rule matches "record0-only" which appears only in record 0.
+	// If ArgsPost is not properly reset between records, record 1 would
+	// also match and cause an interruption.
 	waf := NewWAF()
 
-	// Add a rule that matches any ArgsPost value containing "record1-only"
-	rule := newStreamingTestRule(t, 300, variables.ArgsPost, "record1-only", true)
+	rule := newStreamingTestRule(t, 300, variables.ArgsPost, "record0-only", true)
 	if err := waf.Rules.Add(rule); err != nil {
 		t.Fatal(err)
 	}
 
 	sp := &mockStreamingBodyProcessor{
 		records: []mockRecord{
-			{fields: map[string]string{"json.0.data": "clean"}, rawRecord: []byte(`{"data":"clean"}` + "\n")},
-			// This record's field does NOT contain "record1-only"
-			{fields: map[string]string{"json.1.data": "also-clean"}, rawRecord: []byte(`{"data":"also-clean"}` + "\n")},
+			// Record 0: contains the pattern — will match, but deny is not triggered
+			// because the rule is re-evaluated per record and we want to check isolation.
+			// Actually, with deny=true the first record WILL interrupt. So use deny=false
+			// and check matchedRules instead.
+			{fields: map[string]string{"json.0.data": "record0-only-value"}, rawRecord: []byte(`{"data":"record0-only-value"}` + "\n")},
+			// Record 1: does NOT contain "record0-only" — should NOT match
+			{fields: map[string]string{"json.1.data": "clean"}, rawRecord: []byte(`{"data":"clean"}` + "\n")},
 		},
 	}
 
-	tx := waf.NewTransaction()
+	// Rebuild with deny=false so processing continues through both records
+	waf2 := NewWAF()
+	rule2 := newStreamingTestRule(t, 300, variables.ArgsPost, "record0-only", false)
+	if err := waf2.Rules.Add(rule2); err != nil {
+		t.Fatal(err)
+	}
+
+	tx := waf2.NewTransaction()
 	defer tx.Close()
 	tx.RequestBodyAccess = true
 
@@ -295,7 +300,11 @@ func TestProcessRequestBodyStreamingArgsPostIsolated(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if it != nil {
-		t.Fatal("unexpected interruption: records are clean")
+		t.Fatal("unexpected interruption")
+	}
+	// Only record 0 should have matched — if ArgsPost leaked, record 1 would also match
+	if len(tx.matchedRules) != 1 {
+		t.Fatalf("expected 1 matched rule (record 0 only), got %d — ArgsPost may have leaked between records", len(tx.matchedRules))
 	}
 }
 
@@ -441,16 +450,53 @@ func TestProcessResponseBodyFromStreamRelay(t *testing.T) {
 }
 
 func TestStreamingTransactionInterface(t *testing.T) {
-	// Verify that *Transaction implements the methods needed for StreamingTransaction
+	// Verify that *Transaction satisfies the StreamingTransaction contract
+	// by actually exercising the exported methods (not just a type assertion).
 	waf := NewWAF()
 	tx := waf.NewTransaction()
 	defer tx.Close()
 
-	// Check that ProcessRequestBodyFromStream and ProcessResponseBodyFromStream exist
+	// Compile-time interface check
 	var _ interface {
 		ProcessRequestBodyFromStream(io.Reader, io.Writer) (*types.Interruption, error)
 		ProcessResponseBodyFromStream(io.Reader, io.Writer) (*types.Interruption, error)
 	} = tx
+
+	// Exercise the request path: no body processor set, should pass through
+	tx.RequestBodyAccess = true
+	tx.ProcessURI("/test", "POST", "HTTP/1.1")
+	tx.AddRequestHeader("Host", "example.com")
+	tx.AddRequestHeader("Content-Type", "text/plain")
+	tx.ProcessRequestHeaders()
+
+	var reqOut bytes.Buffer
+	it, err := tx.ProcessRequestBodyFromStream(strings.NewReader("hello"), &reqOut)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if it != nil {
+		t.Fatalf("unexpected interruption: %v", it)
+	}
+	if reqOut.String() != "hello" {
+		t.Fatalf("expected passthrough, got %q", reqOut.String())
+	}
+
+	// Exercise the response path
+	tx.ResponseBodyAccess = false
+	tx.AddResponseHeader("Content-Type", "text/plain")
+	tx.ProcessResponseHeaders(200, "OK")
+
+	var resOut bytes.Buffer
+	it, err = tx.ProcessResponseBodyFromStream(strings.NewReader("world"), &resOut)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if it != nil {
+		t.Fatalf("unexpected interruption: %v", it)
+	}
+	if resOut.String() != "world" {
+		t.Fatalf("expected passthrough, got %q", resOut.String())
+	}
 }
 
 func TestProcessRequestBodyFromStreamEngineOff(t *testing.T) {
