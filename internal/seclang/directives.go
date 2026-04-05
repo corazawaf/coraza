@@ -231,7 +231,7 @@ func directiveSecResponseBodyAccess(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	b, err := parseBoolean(strings.ToLower(options.Opts))
+	b, err := parseBoolean(options.Opts)
 	if err != nil {
 		return err
 	}
@@ -274,7 +274,7 @@ func directiveSecRequestBodyAccess(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	b, err := parseBoolean(strings.ToLower(options.Opts))
+	b, err := parseBoolean(options.Opts)
 	if err != nil {
 		return err
 	}
@@ -472,6 +472,9 @@ func directiveSecResponseBodyMimeType(options *DirectiveOptions) error {
 // cases, however, it is not possible to prevent leakage anyway. The attacker could
 // compress, obfuscate, or even encrypt data before it is sent back, and therefore
 // bypass any monitoring device.
+//
+// Note: When SecRuleEngine is set to DetectionOnly, this directive is set to
+// ProcessPartial to minimize disruptions when initially deploying Coraza.
 func directiveSecResponseBodyLimitAction(options *DirectiveOptions) error {
 	switch strings.ToLower(options.Opts) {
 	case "reject":
@@ -507,12 +510,15 @@ func directiveSecResponseBodyLimit(options *DirectiveOptions) error {
 }
 
 // Description: Controls what happens once a request body limit, configured with
-// SecRequestBodyLimit, is encountered
+// SecRequestBodyLimit, is encountered.
 // Syntax: SecRequestBodyLimitAction Reject|ProcessPartial
 // Default: Reject
 // ---
 // By default, Coraza will reject a request body that is longer than specified to
 // avoid OOM issues while buffering the request body prior the inspection.
+//
+// Note: When SecRuleEngine is set to DetectionOnly, this directive is set to
+// ProcessPartial to minimize disruptions when initially deploying Coraza.
 func directiveSecRequestBodyLimitAction(options *DirectiveOptions) error {
 	switch strings.ToLower(options.Opts) {
 	case "reject":
@@ -876,7 +882,7 @@ func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 // `multipart/form-data` encoding in used. In this case, it will log a fake `application/x-www-form-urlencoded`
 // body that contains the information about parameters but not about the files. This is handy if
 // you don’t want to have (often large) files stored in your audit logs; not implemented yet.
-// - J: This part contains information about the files uploaded using `multipart/form-data` encoding; not implemented yet.
+// - J: This part contains information about the files uploaded using `multipart/form-data` encoding. Available from Coraza v3.7.0.
 // - K: This part contains a full list of every rule that matched (one per line) in the order they were
 // matched. The rules are fully qualified and will thus show inherited actions and default operators.
 // - Z: Final boundary, signifies the end of the entry (mandatory).
@@ -1298,7 +1304,8 @@ func updateActionBySingleID(id int, actions string, options *DirectiveOptions) e
 // Matching is by case-sensitive string equality.
 // This directive will append variables to the specified rule with the targets provided in the second parameter.
 // The rule ID can be single IDs or ranges of IDs. The targets are separated by a pipe character.
-// Note: OWASP CRS has a list of supported tags https://coreruleset.org/docs/rules/metadata/
+//
+// Note: OWASP CRS provides a list of [supported tags](https://coreruleset.org/docs/3-about-rules/metadata/#tags-about-rule-classification).
 func directiveSecRuleUpdateTargetByTag(options *DirectiveOptions) error {
 	tagAndvars := strings.Fields(options.Opts)
 	if len(tagAndvars) != 2 {
@@ -1384,6 +1391,34 @@ func directiveSecArgumentsLimit(options *DirectiveOptions) error {
 		return errors.New("argument limit should be bigger than 0")
 	}
 	options.WAF.ArgumentLimit = limit
+	return nil
+}
+
+// Description: Enables or disables pre-filtering for the @rx operator.
+// Syntax: SecRxPreFilter On|Off
+// Default: Off
+// ---
+// When enabled, Coraza analyses each regex pattern at rule-load time to extract required
+// literal substrings and compute the minimum match length. At request time these fast
+// checks run before the full regex, allowing the engine to skip the regex entirely when
+// an input clearly cannot match.
+//
+// Example:
+// ```seclang
+// SecRxPreFilter On
+//
+// > **Warning**: This is an experimental feature.
+// ```
+func directiveSecRxPreFilter(options *DirectiveOptions) error {
+	if len(options.Opts) == 0 {
+		return errEmptyOptions
+	}
+
+	b, err := parseBoolean(options.Opts)
+	if err != nil {
+		return err
+	}
+	options.WAF.RxPreFilterEnabled = b
 	return nil
 }
 

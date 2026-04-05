@@ -48,7 +48,7 @@ The Coraza Project maintains implementations and plugins for the following serve
 
 ## Prerequisites
 
-* Go v1.22+ or tinygo compiler
+* Recent Go version (see [go.mod](./go.mod)) or tinygo compiler.
 * Linux distribution (Debian or Centos recommended), Windows or Mac.
 
 ## Coraza Core Usage
@@ -107,8 +107,9 @@ live reloads, use `WAF.Close()` (via `experimental.WAFCloser`) to release cached
 WAF is destroyed, or use this tag to opt out of memoization entirely.
 * `no_fs_access` - indicates that the target environment has no access to FS in order to not leverage OS' filesystem related functionality e.g. file body buffers.
 * `coraza.rule.case_sensitive_args_keys` - enables case-sensitive matching for ARGS keys, aligning Coraza behavior with RFC 3986 specification. It will be enabled by default in the next major version.
-* `coraza.rule.no_regex_multiline` - disables enabling by default regexes multiline modifiers in `@rx` operator. It aligns with CRS expected behavior, reduces false positives and might improve performances. No multiline regexes by default will be enabled in the next major version. For more context check [this PR](https://github.com/corazawaf/coraza/pull/876)
+* `coraza.rule.no_regex_multiline` - disables enabling by default regexes multiline modifiers in `@rx` operator. It aligns with CRS expected behavior, reduces false positives and might improve performances. No multiline regexes by default will be enabled in the next major version. For more context check [this PR](https://github.com/corazawaf/coraza/pull/876).
 * `coraza.rule.mandatory_rule_id_check` - enables strict rule id check where `id` action is required for all SecRule/SecAction.
+* `coraza.rule.rx_prefilter` - sets the default value of the `SecRxPreFilter` directive to `On`. Optimizes `@rx` operator, by skipping the full regex when an input can not match. This build tag is meant only for testing purposes, rely on `SecRxPreFilter` directive for runtime configuration and broader documentation on this feature.
 
 ## E2E Testing
 
@@ -145,11 +146,11 @@ $ go run mage.go -l
 Targets:
   check        runs lint and tests.
   coverage     runs tests with coverage and race detector enabled.
-  doc          runs godoc, access at http://localhost:6060
+  doc          runs godoc, access at http://localhost:6060.
   format       formats code in this repository.
-  fuzz         runs fuzz tests
+  fuzz         runs fuzz tests.
   lint         verifies code quality.
-  precommit    installs a git hook to run check when committing
+  precommit    installs a git hook to run check when committing.
   test         runs all tests.
 ```
 
@@ -180,7 +181,7 @@ Our vulnerability management team will respond within 3 working days of your rep
 
 ## Donations
 
-For donations, see [Donations site](https://owasp.org/donate/?reponame=www-project-coraza-web-application-firewall&title=OWASP+Coraza+Web+Application+Firewall)
+For donations, see [Donations site](https://owasp.org/donate/?reponame=www-project-coraza-web-application-firewall&title=OWASP+Coraza+Web+Application+Firewall).
 
 ## Thanks to all the people who have contributed
 

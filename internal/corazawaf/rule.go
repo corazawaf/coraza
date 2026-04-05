@@ -763,8 +763,9 @@ func (r *Rule) memoizeDo(key string, fn func() (any, error)) (any, error) {
 func NewRule() *Rule {
 	return &Rule{
 		RuleMetadata: corazarules.RuleMetadata{
-			Phase_: 2,
-			Tags_:  []string{},
+			Phase_:    2,
+			Severity_: types.RuleSeverityUnset,
+			Tags_:     []string{},
 		},
 	}
 }

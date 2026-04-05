@@ -200,6 +200,7 @@ func (rp *RuleParser) ParseOperator(operator string) error {
 	}
 	if rp.options.WAF != nil {
 		opts.Memoizer = rp.options.WAF.Memoizer()
+		opts.RxPreFilterEnabled = rp.options.WAF.RxPreFilterEnabled
 	}
 
 	if wd := rp.options.ParserConfig.WorkingDir; wd != "" {

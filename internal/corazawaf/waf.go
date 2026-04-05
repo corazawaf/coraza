@@ -32,6 +32,12 @@ var wafIDCounter atomic.Uint64
 const (
 	// DefaultRequestBodyJsonDepthLimit is the default limit for the depth of JSON objects in the request body
 	DefaultRequestBodyJsonDepthLimit = 1024
+
+	// defaultHighestSeverity is the default value for HIGHEST_SEVERITY when no rules
+	// with severity have been matched, aligning with ModSecurity behavior:
+	// - ModSec v2: apache2/msc_util.c highest_severity initialized to 255
+	// - ModSec v3: src/transaction.cc m_highestSeverity initialized to 255
+	defaultHighestSeverity = 255
 )
 
 // WAF instance is used to store configurations and rules
@@ -150,6 +156,10 @@ type WAF struct {
 	// Configures the maximum number of ARGS that will be accepted for processing.
 	ArgumentLimit int
 
+	// RxPreFilterEnabled controls whether the @rx operator uses
+	// literal pre-filtering. Set by the SecRxPreFilter directive.
+	RxPreFilterEnabled bool
+
 	memoizerID uint64
 	memoizer   *memoize.Memoizer
 	closeOnce  gosync.Once
@@ -259,7 +269,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.variables.reqbodyProcessorError.Set("0")
 	tx.variables.requestBodyLength.Set("0")
 	tx.variables.duration.Set("0")
-	tx.variables.highestSeverity.Set("0")
+	tx.variables.highestSeverity.Set(strconv.Itoa(defaultHighestSeverity))
 	tx.variables.uniqueID.Set(tx.id)
 	tx.setTimeVariables()
 
@@ -321,6 +331,7 @@ func NewWAF() *WAF {
 		RequestBodyJsonDepthLimit: DefaultRequestBodyJsonDepthLimit,
 		ResponseBodyAccess:        false,
 		ResponseBodyLimit:         524288, // Hard limit equal to _1gib
+		ResponseBodyLimitAction:   types.BodyLimitActionProcessPartial,
 		auditLogWriter:            logWriter,
 		auditLogWriterInitialized: false,
 		AuditLogWriterConfig:      auditlog.NewConfig(),
@@ -330,9 +341,10 @@ func NewWAF() *WAF {
 			types.AuditLogPartResponseHeaders,
 			types.AuditLogPartAuditLogTrailer,
 		},
-		AuditLogFormat: "Native",
-		Logger:         logger,
-		ArgumentLimit:  1000,
+		AuditLogFormat:     "Native",
+		Logger:             logger,
+		ArgumentLimit:      1000,
+		RxPreFilterEnabled: defaultRxPreFilterEnabled,
 	}
 
 	if environment.HasAccessToFS {

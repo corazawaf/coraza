@@ -6,7 +6,6 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -195,7 +194,7 @@ func Coverage() error {
 	return sh.RunV("go", "tool", "cover", "-html=build/coverage.txt", "-o", "build/coverage.html")
 }
 
-// Fuzz runs fuzz tests
+// Fuzz runs fuzz tests.
 func Fuzz() error {
 	// Go must be run once per test when fuzzing
 	tests := []struct {
@@ -231,12 +230,12 @@ func Fuzz() error {
 	return nil
 }
 
-// Doc runs godoc, access at http://localhost:6060
+// Doc runs godoc, access at http://localhost:6060.
 func Doc() error {
 	return sh.RunV("go", "run", "golang.org/x/tools/cmd/godoc@latest", "-http=:6060")
 }
 
-// Precommit installs a git hook to run check when committing
+// Precommit installs a git hook to run check when committing.
 func Precommit() error {
 	if _, err := os.Stat(filepath.Join(".git", "hooks")); os.IsNotExist(err) {
 		return errNoGitDir

@@ -550,15 +550,18 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 	// tx.MatchedRules = append(tx.MatchedRules, mr)
 
 	// If the rule is set to audit, we log the transaction to the audit log
-	if r.Audit {
-		tx.audit = true
-	}
+	tx.audit = tx.audit || r.Audit
 
 	// set highest_severity
-	hs := tx.variables.highestSeverity
-	maxSeverity, _ := types.ParseRuleSeverity(hs.Get())
-	if r.Severity_ > maxSeverity {
-		hs.Set(strconv.Itoa(r.Severity_.Int()))
+	// Only update when severity was explicitly set via the severity action.
+	// Unset rules retain RuleSeverityUnset (-1) and are skipped here,
+	// matching ModSecurity v2/v3 semantics.
+	if r.Severity_ != types.RuleSeverityUnset {
+		hs := tx.variables.highestSeverity
+		currentVal, _ := strconv.Atoi(hs.Get())
+		if r.Severity_.Int() < currentVal {
+			hs.Set(strconv.Itoa(r.Severity_.Int()))
+		}
 	}
 
 	mr := &corazarules.MatchedRule{
@@ -568,6 +571,7 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 		ClientIPAddress_: tx.variables.remoteAddr.Get(),
 		Rule_:            &r.RuleMetadata,
 		Log_:             r.Log,
+		Audit_:           r.Audit,
 		MatchedDatas_:    mds,
 		Context_:         tx.context,
 	}
@@ -600,7 +604,6 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 	if tx.WAF.ErrorLogCb != nil && r.Log {
 		tx.WAF.ErrorLogCb(mr)
 	}
-
 }
 
 // GetStopWatch is used to debug phase durations
@@ -812,7 +815,7 @@ func (tx *Transaction) AddResponseArgument(key string, value string) {
 // SecLanguages phases. It is something that may occur between the SecLanguage
 // phase 1 and 2.
 //
-// note: This function won't add GET arguments, they must be added with AddArgument
+// Note: This function won't add GET arguments, they must be added with AddArgument
 func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string) {
 	tx.variables.requestMethod.Set(method)
 	tx.variables.requestProtocol.Set(httpVersion)
@@ -879,7 +882,7 @@ func (tx *Transaction) SetServerName(serverName string) {
 // This method perform the analysis on the request headers, notice however
 // that the headers should be added prior to the execution of this function.
 //
-// note: Remember to check for a possible intervention.
+// Note: Remember to check for a possible intervention.
 func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 	if tx.IsRuleEngineOff() {
 		// Rule engine is disabled
@@ -1101,6 +1104,10 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	if tx.ForceRequestBodyVariable {
 		// We force URLENCODED if mimeType is x-www... or we have an empty RBP and ForceRequestBodyVariable
 		if rbp == "" {
+			// TODO(4.x): Evaluate if the new RAW body parser fits better than URLENCODED for the
+			// default forced body processor. See some reasoning in https://github.com/corazawaf/coraza/issues/938:
+			// "meaning that parsing a body of unknown type might waste some time by trying to parse it as urlencoded
+			// for nothing (and possibly set some "garbage" variables if you happen to have a & in it)"
 			rbp = "URLENCODED"
 		}
 		tx.variables.reqbodyProcessor.Set(rbp)
@@ -1694,14 +1701,7 @@ func (tx *Transaction) ProcessLogging() {
 		return
 	}
 
-	if tx.AuditEngine == types.AuditEngineRelevantOnly && !tx.audit {
-		// Transaction marked not for audit logging
-		tx.debugLogger.Debug().
-			Msg("Transaction not marked for audit logging, AuditEngine is RelevantOnly and we got noauditlog")
-		return
-	}
-
-	if tx.AuditEngine == types.AuditEngineRelevantOnly && tx.audit {
+	if tx.AuditEngine == types.AuditEngineRelevantOnly {
 		re := tx.WAF.AuditLogRelevantStatus
 		status := tx.variables.responseStatus.Get()
 		if tx.IsInterrupted() {
@@ -1711,10 +1711,21 @@ func (tx *Transaction) ProcessLogging() {
 			// Fixes https://github.com/corazawaf/coraza/issues/1333
 			status = strconv.Itoa(tx.detectionOnlyInterruption.Status)
 		}
-		if re != nil && !re.Match([]byte(status)) {
-			// Not relevant status
-			tx.debugLogger.Debug().Msg("Transaction status not marked for audit logging")
-			return
+
+		if tx.audit {
+			// A rule triggered auditlog — still filter by relevant status if regex is set.
+			if re != nil && !re.Match([]byte(status)) {
+				tx.debugLogger.Debug().Msg("Transaction status not marked for audit logging")
+				return
+			}
+		} else {
+			// No rule triggered auditlog — only log if status matches SecAuditLogRelevantStatus.
+			// Fixes https://github.com/corazawaf/coraza/issues/1576
+			if re == nil || !re.Match([]byte(status)) {
+				tx.debugLogger.Debug().
+					Msg("Transaction not marked for audit logging, AuditEngine is RelevantOnly and status is not relevant")
+				return
+			}
 		}
 	}
 
@@ -1838,32 +1849,11 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 				}
 			}
 
-			/*
-			* TODO:
-			* This part is a replacement for part C. It will log the same data as C in
-			* all cases except when multipart/form-data encoding in used. In this case,
-			* it will log a fake application/x-www-form-urlencoded body that contains
-			* the information about parameters but not about the files. This is handy
-			* if you don’t want to have (often large) files stored in your audit logs.
-			 */
-			// upload data
-			var files []plugintypes.AuditLogTransactionRequestFiles
-			al.Transaction_.Request_.Files_ = nil
-			for _, file := range tx.variables.files.Get("") {
-				var size int64
-				if fs := tx.variables.filesSizes.Get(file); len(fs) > 0 {
-					size, _ = strconv.ParseInt(fs[0], 10, 64)
-					// we ignore the error as it defaults to 0
-				}
-				ext := filepath.Ext(file)
-				at := auditlog.TransactionRequestFiles{
-					Size_: size,
-					Name_: file,
-					Mime_: mime.TypeByExtension(ext),
-				}
-				files = append(files, at)
-			}
-			al.Transaction_.Request_.Files_ = files
+			// Note: Part I is a replacement for Part C that logs a fake
+			// application/x-www-form-urlencoded body with parameter info but without
+			// file contents for multipart/form-data requests. Not implemented yet.
+		case types.AuditLogPartUploadedFiles:
+			al.Transaction_.Request_.Files_ = tx.auditLogCollectFiles()
 		case types.AuditLogPartIntermediaryResponseBody:
 			if al.Transaction_.Response_ == nil {
 				al.Transaction_.Response_ = &auditlog.TransactionResponse{}
@@ -1889,11 +1879,14 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 		case types.AuditLogPartRulesMatched:
 			auditLogPartRulesMatchedSet = true
 			for _, mr := range tx.matchedRules {
-				// Log action is required to log a matched rule on both error log and audit log
-				// An assertion has to be done to check if the MatchedRule implements the Log() function before calling Log()
-				// It is performed to avoid breaking the Coraza v3.* API adding a Log() method to the MatchedRule interface
+				// Audit flag controls whether a matched rule appears in the audit log.
+				// This aligns with ModSecurity behavior where:
+				// - log: sets both Log and Audit (appears in error log AND audit log)
+				// - nolog: clears both (appears in neither)
+				// - nolog,auditlog: Log=false, Audit=true (audit log only)
+				// - log,noauditlog: Log=true, Audit=false (error log only)
 				mrWithlog, ok := mr.(*corazarules.MatchedRule)
-				if ok && mrWithlog.Log() {
+				if ok && mrWithlog.Audit() {
 					r := mr.Rule()
 					for _, matchData := range mr.MatchedDatas() {
 						newAlEntry := auditlog.Message{
@@ -1927,11 +1920,11 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 	}
 
 	// If AuditLogPartRulesMatched (K) is not set, but AuditLogPartAuditLogTrailer (H) is set, we still expect to
-	// log the error messages emitted by the rules (if the rule has Log set to true)
+	// log the error messages emitted by the rules (if the rule has Audit set to true)
 	if !auditLogPartRulesMatchedSet && auditLogPartAuditLogTrailerSet {
 		for _, mr := range tx.matchedRules {
 			mrWithlog, ok := mr.(*corazarules.MatchedRule)
-			if ok && mrWithlog.Log() {
+			if ok && mrWithlog.Audit() {
 				al.Messages_ = append(al.Messages_, auditlog.Message{
 					ErrorMessage_: mr.ErrorLog(),
 				})
@@ -1941,6 +1934,35 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 	}
 
 	return al
+}
+
+// auditLogCollectFiles collects uploaded file metadata from transaction variables
+// for use in audit log parts (Part J).
+func (tx *Transaction) auditLogCollectFiles() []plugintypes.AuditLogTransactionRequestFiles {
+	var files []plugintypes.AuditLogTransactionRequestFiles
+	for _, file := range tx.variables.files.Get("") {
+		var size int64
+		if fs := tx.variables.filesSizes.Get(file); len(fs) > 0 {
+			parsed, err := strconv.ParseInt(fs[0], 10, 64)
+			if err != nil {
+				tx.DebugLogger().Debug().
+					Str("file", file).
+					Str("raw_size", fs[0]).
+					Err(err).
+					Msg("Failed to parse file size for audit log")
+			} else {
+				size = parsed
+			}
+		}
+		ext := filepath.Ext(file)
+		at := auditlog.TransactionRequestFiles{
+			Size_: size,
+			Name_: file,
+			Mime_: mime.TypeByExtension(ext),
+		}
+		files = append(files, at)
+	}
+	return files
 }
 
 // Close closes the transaction after phase 5
