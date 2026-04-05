@@ -917,7 +917,8 @@ func containsFoldASCIIOnly(s, needle string) bool {
 	}
 
 	for i := 0; i <= limit; {
-		// Use SIMD-backed IndexByte to leap to the next candidate byte.
+		// strings.IndexByte is accelerated by the Go runtime (SIMD on
+		// amd64/arm64, scalar elsewhere) and is correct on every platform.
 		lo := strings.IndexByte(s[i:], first)
 		if hasUpper {
 			hi := strings.IndexByte(s[i:], upper)
