@@ -587,7 +587,18 @@ func rawExtractSuffixes(re *syntax.Regexp, ci bool) []string {
 		if lits != nil {
 			switch v := lits.(type) {
 			case allRequired:
-				return []string{strings.Join(v, "")}
+				// Only safe to return a single trie suffix when the concat
+				// collapses to exactly one contiguous literal. Multiple
+				// allRequired elements mean there are wildcards between them
+				// (e.g. "elect.*from" → allRequired{"elect","from"}). Joining
+				// them would produce "electfrom" — a phantom string that never
+				// appears contiguously in a real input — causing false negatives
+				// on valid matches like "select x from". Return nil here so the
+				// caller falls back to the safer anyRequired propagation instead.
+				if len(v) == 1 {
+					return []string{v[0]}
+				}
+				return nil
 			case anyRequired:
 				return []string(v)
 			}
