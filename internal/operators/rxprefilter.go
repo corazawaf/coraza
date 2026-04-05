@@ -238,8 +238,7 @@ func prefilterFunc(pattern string) func(string) bool {
 			return nil
 		}
 		filtered := v
-		switch {
-		case len(filtered) == 1:
+		if len(filtered) == 1 {
 			needle := filtered[0]
 			if caseInsensitive {
 				pf = func(s string) bool {
