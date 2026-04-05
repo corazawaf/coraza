@@ -238,7 +238,8 @@ func prefilterFunc(pattern string) func(string) bool {
 			return nil
 		}
 		filtered := v
-		if len(filtered) == 1 {
+		switch {
+		case len(filtered) == 1:
 			needle := filtered[0]
 			if caseInsensitive {
 				pf = func(s string) bool {
@@ -249,12 +250,12 @@ func prefilterFunc(pattern string) func(string) bool {
 					return strings.Contains(s, needle)
 				}
 			}
-		} else if caseInsensitive && !allASCIIStrings([]string(filtered)) {
+		case caseInsensitive && !allASCIIStrings([]string(filtered)):
 			// Our matchers use ASCII-only folding. If any needle is non-ASCII,
 			// it could fold to an ASCII equivalent under Go's Unicode case
 			// rules — causing a false negative. Bail out.
 			return nil
-		} else if len(filtered) > 0 && len(filtered) <= anyRequiredMaxN {
+		case len(filtered) <= anyRequiredMaxN:
 			// Wu-Manber shift-table matcher. Sub-linear scanning examines only
 			// ~H/minLen positions on average. Zero allocations.
 			// For large N (>16), the shift table fills up with more zeros, but
@@ -263,7 +264,7 @@ func prefilterFunc(pattern string) func(string) bool {
 			// bytes.IndexByte once per unique start byte — O(H×K) in practice.
 			im := newIndexedMatcher(filtered, caseInsensitive)
 			pf = im.match
-		} else {
+		default:
 			// N > anyRequiredMaxN: too many needles for Wu-Manber to be
 			// effective (nearly every haystack byte is a candidate). In
 			// practice regexp/syntax.Simplify() factors large alternations

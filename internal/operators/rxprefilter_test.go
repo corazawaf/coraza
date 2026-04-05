@@ -31,8 +31,8 @@ func TestMinMatchLength(t *testing.T) {
 		{"hello.*world", 10},
 		{"(?:union\\s+select|insert\\s+into)", 11},
 		{"^abc$", 3},
-		{"ハロー", 9}, // 3 runes × 3 bytes each
-		{"café", 5},  // é is 2 bytes
+		{"ハロー", 9},  // 3 runes × 3 bytes each
+		{"café", 5}, // é is 2 bytes (multibyte)
 	}
 	for _, tc := range tests {
 		t.Run(tc.pattern, func(t *testing.T) {
@@ -176,7 +176,6 @@ func TestPrefilterNeverCausesFalseNegatives(t *testing.T) {
 		})
 	}
 }
-
 
 // TestPrefilterCaseInsensitive tests case-insensitive handling in detail.
 func TestPrefilterCaseInsensitive(t *testing.T) {
@@ -611,7 +610,6 @@ func TestMemoizeSharesPrefilter(t *testing.T) {
 	}
 }
 
-
 // TestPrefilterUnicodeFoldingSafety verifies that the prefilter does not produce
 // false negatives when the input contains non-ASCII characters that are Unicode
 // fold equivalents of ASCII letters. Go's regexp (?i) uses Unicode simple case
@@ -938,7 +936,6 @@ func TestParseErrorPaths(t *testing.T) {
 	}
 }
 
-
 // FuzzPrefilterNoFalseNegatives uses Go's built-in fuzz testing to verify with
 // random patterns AND inputs that the prefilter never rejects an input the
 // regex matches. This is the primary safety net — it generates arbitrary
@@ -1183,9 +1180,10 @@ func TestPrefilterCodePaths(t *testing.T) {
 // factored out of an alternation.
 //
 // Without trie reconstruction:
-//   select|sleep|substr  →  s(?:elect|leep|ubstr)
-//   extractLiterals(OpLiteral("s")) = nil  →  whole pattern = nil
-//   prefilterFunc returns nil  →  no prefilter built at all
+//
+//	select|sleep|substr  →  s(?:elect|leep|ubstr)
+//	extractLiterals(OpLiteral("s")) = nil  →  whole pattern = nil
+//	prefilterFunc returns nil  →  no prefilter built at all
 //
 // With trie reconstruction the full words are recovered and used as the
 // anyRequired set, enabling sub-linear Wu-Manber prefiltering.
@@ -1271,7 +1269,6 @@ func TestTrieReconstructionBasic(t *testing.T) {
 		})
 	}
 }
-
 
 // TestTrieReconstructionSafety verifies that trie reconstruction never produces
 // false negatives: for inputs that the regex matches, the prefilter must also
@@ -1581,7 +1578,6 @@ func TestAnyRequiredViaPrefilterFuncNeedleCounts(t *testing.T) {
 		})
 	}
 }
-
 
 // BenchmarkIndexedMatcher benchmarks the Wu-Manber indexedMatcher at different
 // needle counts and case modes against a typical HTTP request haystack.
