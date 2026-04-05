@@ -281,80 +281,19 @@ func yamlStringValue(s string) string {
 // path segments.  The set is intentionally varied in length and structure so
 // that the benchmark mix reflects production traffic where the vast majority
 // of requests are benign.
+// benignCRSPayloads is a representative sample of normal HTTP traffic — REST,
+// JSON, form data, headers, and short values — used in benchmarks.
 var benignCRSPayloads = []string{
-	// --- typical REST API ---
 	"GET /api/v1/users?page=2&limit=20 HTTP/1.1",
 	"Host: api.example.com",
 	"Content-Type: application/json",
-	"Authorization: Bearer eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyMTIzIn0",
+	"User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
 	`{"user":"alice","action":"login","remember":true}`,
 	`{"items":[{"id":7,"qty":3},{"id":12,"qty":1}],"coupon":"SAVE10"}`,
-	`{"email":"alice@example.com","password":"correct-horse-battery-staple"}`,
-	`{"query":"monthly revenue","from":"2025-01-01","to":"2025-12-31"}`,
-	`{"message":"Hello world! This is a normal chat message."}`,
-	`{"status":"active","role":"admin","last_login":"2026-03-15T08:00:00Z"}`,
-
-	// --- search / filter params ---
-	"q=golang+http+benchmarks&page=1&safe=on",
-	"search=winter+jacket&category=clothing&size=M&color=navy",
-	"filter=price:10-50&brand=acme&sort=rating_desc&page=3",
-	"keyword=machine+learning+tutorial&lang=en&results=20",
-	"name=John+Smith&dob=1985-07-22&country=US",
-
-	// --- web form data ---
 	"username=bob&email=bob%40example.com&role=viewer",
-	"first_name=Alice&last_name=Wonderland&phone=%2B12025551234",
-	"comment=Great+product%2C+very+fast+shipping%21&rating=5",
-	"address=123+Main+St&city=Springfield&state=IL&zip=62701",
-	"card_last4=4242&exp_month=12&exp_year=2028&cvv=123",
-
-	// --- headers ---
-	"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-	"Accept-Language: en-US,en;q=0.9,fr;q=0.7",
-	"User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-	"Referer: https://www.example.com/products/shoes?id=42",
-	"Cookie: session_id=abc123def456; csrf_token=xK9pQ2rM7nL1",
-	"X-Request-ID: 550e8400-e29b-41d4-a716-446655440000",
-	"Content-Length: 1024",
-	"Cache-Control: max-age=3600, must-revalidate",
-	"Accept-Encoding: gzip, deflate, br",
-	"X-Forwarded-For: 192.168.1.10",
-
-	// --- static file paths ---
+	"search=winter+jacket&category=clothing&size=M&color=navy",
 	"/static/js/app.bundle.js?v=3.14.159",
-	"/assets/images/logo.png?cache=1712000000",
-	"/favicon.ico",
-	"/robots.txt",
-	"/sitemap.xml",
-	"/sw.js",
-
-	// --- product / e-commerce ---
-	"product_id=42&qty=1&color=blue&size=M",
-	"/products/laptops/dell-xps-15-oled-2026?ref=search",
-	"sku=LAPTOP-DELL-XPS15-32GB&warehouse=EU-WEST-1",
-	"order_id=ORD-2026-00458791&status=shipped&tracking=1Z999AA10123456784",
-
-	// --- API responses / JSON bodies (processed as input by some rules) ---
-	`{"code":200,"data":{"total":42,"offset":0,"items":["a","b","c"]}}`,
-	`{"error":null,"result":{"score":0.97,"label":"positive"}}`,
-	`{"token":"refresh-token-abc","expires_in":3600,"type":"Bearer"}`,
-
-	// --- typical log / audit entries ---
-	"level=info ts=2026-04-04T12:00:00Z caller=handler.go:42 msg=request_completed status=200 latency=3ms",
-	"user_id=99 action=download file=report_2026_q1.pdf bytes=204800",
-
-	// --- binary-safe / URL-encoded normal values ---
-	"description=A+normal+product+description+with+no+special+chars.+Price%3A+%2419.99",
-	"tags=golang%2Cperformance%2Cbenchmark&version=1.2.3",
-	"note=Meeting+rescheduled+to+Thursday+at+3pm+EST",
-	"bio=Software+engineer+passionate+about+open-source+and+distributed+systems.",
-
-	// --- short / minimal values (common in health-check or id params) ---
 	"id=7",
-	"ok",
-	"true",
-	"en",
-	"42",
 }
 
 func categoryFromID(id string) string {

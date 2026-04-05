@@ -1,30 +1,11 @@
 //go:build coraza.rule.rx_prefilter
 
-// bench_compare_test.go: apples-to-apples benchmark across branch and main.
+// bench_compare_test.go: apples-to-apples benchmark against main.
 //
-// Covers four regex categories and four request types so we can clearly show
-// where each optimisation helps:
-//
-//	Category A – simple literal  (main already prefilters, baseline control)
-//	Category B – small alternation ≤16 needles (main: AC; ours: Wu-Manber)
-//	Category C – large trie alternation (main: no prefilter; ours: trie-reconstruct)
-//	Category D – anchor/separator + keyword (main: no prefilter; ours: anyRequired propagation)
-//	Category E – zero-extractable-literal (no prefilter on either branch)
-//
-//	Request types:
-//	  benign   – normal HTTP traffic that should never match
-//	  sqli     – classic SQL injection
-//	  xss      – XSS payload
-//	  cmdi     – command injection
-//	  path     – path traversal
-//
-// Run on both branches and compare with benchstat:
+// Compare with benchstat:
 //
 //	go test -tags coraza.rule.rx_prefilter -bench BenchmarkCompare \
 //	    -benchmem -benchtime=4s -count=6 | tee /tmp/branch.txt
-//	  (switch to main)
-//	go test -tags coraza.rule.rx_prefilter -bench BenchmarkCompare \
-//	    -benchmem -benchtime=4s -count=6 | tee /tmp/main.txt
 //	benchstat /tmp/main.txt /tmp/branch.txt
 
 package operators
@@ -101,78 +82,25 @@ type benchRequest struct {
 }
 
 var bcRequests = []benchRequest{
-	// benign
 	{
-		"benign_get",
-		"GET /api/v1/users?page=2&limit=20&sort=created_at HTTP/1.1\r\nHost: api.example.com\r\nAccept: application/json\r\nAuthorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyMTIzIn0.signature",
+		"benign",
+		"GET /api/v1/users?page=2&limit=20&sort=created_at HTTP/1.1\r\nHost: api.example.com\r\nAccept: application/json",
 	},
 	{
-		"benign_post_json",
-		`POST /api/orders HTTP/1.1\r\nHost: shop.example.com\r\nContent-Type: application/json\r\n\r\n{"user_id":42,"items":[{"sku":"ABC-123","qty":2},{"sku":"XYZ-999","qty":1}],"promo":"SUMMER20"}`,
+		"sqli",
+		"id=1 UNION SELECT username,password FROM users WHERE 1=1--",
 	},
 	{
-		"benign_form_post",
-		"username=alice&password=hunter2&remember=true&redirect=%2Fdashboard&csrf_token=a1b2c3d4e5f6",
-	},
-	{
-		"benign_search",
-		"q=golang+performance+benchmarks+2024&page=1&safe=on&hl=en",
-	},
-
-	// SQL injection
-	{
-		"sqli_union",
-		"id=1 UNION SELECT username,password,3,4,5 FROM users WHERE 1=1--",
-	},
-	{
-		"sqli_tautology",
-		"username=admin'--&password=anything' OR '1'='1",
-	},
-	{
-		"sqli_blind",
-		"id=1 AND SLEEP(5)-- &page=1",
-	},
-	{
-		"sqli_stacked",
-		"name=test'; DROP TABLE users; SELECT * FROM secrets WHERE 'a'='a",
-	},
-
-	// XSS
-	{
-		"xss_script_tag",
+		"xss",
 		`search=<script>alert(document.cookie)</script>&safe=off`,
 	},
 	{
-		"xss_event_attr",
-		`name="><img src=x onerror=alert(1)>&comment=normal text`,
-	},
-	{
-		"xss_js_uri",
-		`url=javascript:eval(atob('YWxlcnQoZG9jdW1lbnQuY29va2llKQ=='))`,
-	},
-	{
-		"xss_anchor_alert",
-		`input=";alert(document.domain)//`,
-	},
-
-	// Command injection
-	{
-		"cmdi_pipe",
+		"cmdi",
 		`file=report.pdf&format=pdf; ls -la /etc/passwd`,
 	},
 	{
-		"cmdi_subshell",
-		`host=example.com$(cat /etc/shadow)&port=80`,
-	},
-
-	// Path traversal
-	{
-		"path_traversal",
+		"path",
 		`file=../../../../../../../etc/passwd&base=/var/www/html`,
-	},
-	{
-		"path_encoded",
-		`path=%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fshadow&action=read`,
 	},
 }
 
@@ -220,73 +148,3 @@ func BenchmarkCompare(b *testing.B) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// BenchmarkCompareSummary — one number per category (all request types mixed)
-// ---------------------------------------------------------------------------
-
-func BenchmarkCompareSummary(b *testing.B) {
-	// Pre-compile everything
-	type compiled struct {
-		pat benchPattern
-		re  *regexp.Regexp
-		pf  func(string) bool
-	}
-	entries := make([]compiled, 0, len(bcPatterns))
-	for _, pat := range bcPatterns {
-		pf := prefilterFunc(pat.pattern)
-		if pf == nil {
-			pf = func(string) bool { return true }
-		}
-		entries = append(entries, compiled{
-			pat: pat,
-			re:  regexp.MustCompile(pat.pattern),
-			pf:  pf,
-		})
-	}
-
-	for _, e := range entries {
-		e := e
-		b.Run("regex_only/"+e.pat.name, func(b *testing.B) {
-			b.ReportAllocs()
-			for i := 0; i < b.N; i++ {
-				for _, req := range bcRequests {
-					_ = e.re.MatchString(req.body)
-				}
-			}
-		})
-		b.Run("prefilter/"+e.pat.name, func(b *testing.B) {
-			b.ReportAllocs()
-			for i := 0; i < b.N; i++ {
-				for _, req := range bcRequests {
-					if e.pf(req.body) {
-						_ = e.re.MatchString(req.body)
-					}
-				}
-			}
-		})
-	}
-}
-
-// ---------------------------------------------------------------------------
-// BenchmarkPrefilterOnly — isolates cost of the prefilter check itself
-// ---------------------------------------------------------------------------
-
-func BenchmarkPrefilterOnly(b *testing.B) {
-	for _, pat := range bcPatterns {
-		pat := pat
-		pf := prefilterFunc(pat.pattern)
-		if pf == nil {
-			continue // nothing to benchmark
-		}
-		for _, req := range bcRequests {
-			req := req
-			b.Run(pat.name+"/"+req.name, func(b *testing.B) {
-				b.ReportAllocs()
-				b.SetBytes(int64(len(req.body)))
-				for i := 0; i < b.N; i++ {
-					_ = pf(req.body)
-				}
-			})
-		}
-	}
-}
