@@ -1,10 +1,6 @@
 ignore:
   - "**/generator/main.go" # generator tools usually involves writing files
   - "**/*.gen.go" # generated files from go generate
-  # rxprefilter* files are only compiled with -tags coraza.rule.rx_prefilter.
-  # Untagged coverage runs produce 0% for these files, which is misleading.
-  # Coverage is captured in the dedicated rx_prefilter CI matrix entry.
-  - "internal/operators/rxprefilter*"
 fixes:
   # Apparently using build/ as prefix is not enough to ignore the directory
   # Reference: https://community.codecov.com/t/codecov-website-can-not-show-line-by-line-coverage/3809
