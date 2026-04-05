@@ -124,7 +124,7 @@ func TestStreamingMiddlewareCleanRecordsPassThrough(t *testing.T) {
 		body, _ := io.ReadAll(r.Body)
 		backendBody = string(body)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	}))
 
 	ts := httptest.NewServer(handler)
@@ -255,7 +255,7 @@ func TestStreamingMiddlewareNoMatchPassThrough(t *testing.T) {
 
 	handler := WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("all good"))
+		_, _ = w.Write([]byte("all good"))
 	}))
 
 	ts := httptest.NewServer(handler)
