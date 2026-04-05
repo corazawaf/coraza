@@ -154,6 +154,19 @@ func TestPrefilterNeverCausesFalseNegatives(t *testing.T) {
 		// Pattern with no extractable literals (prefilter nil, regex runs)
 		{"[a-z]+\\d+", "abc123", true},
 		{"[a-z]+\\d+", "123", false},
+
+		// Regression: trie suffix with wildcard interior must NOT join disjoint
+		// literals into a phantom string. "elect.*from" has allRequired{"elect","from"};
+		// joining them to "electfrom" would make the prefilter reject
+		// "select x from users" (which the regex matches) — a false negative.
+		{"s(?:elect.*from|leep)", "select x from users", true},
+		{"s(?:elect.*from|leep)", "sleep(5)", true},
+		{"s(?:elect.*from|leep)", "unrelated", false},
+
+		// Similar: prefix shared across one literal branch and one wildcard branch.
+		{"(?i)s(?:elect.*into|ubstr)", "SELECT x INTO y", true},
+		{"(?i)s(?:elect.*into|ubstr)", "SUBSTR(x,1)", true},
+		{"(?i)s(?:elect.*into|ubstr)", "unrelated", false},
 	}
 	for _, tc := range tests {
 		t.Run(fmt.Sprintf("%s/%s", tc.pattern, tc.input), func(t *testing.T) {
