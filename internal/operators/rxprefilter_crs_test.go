@@ -43,6 +43,7 @@ import (
 type crsRule struct {
 	id      string
 	pattern string
+	pl      int // CRS paranoia level (1-4); 0 = unknown
 }
 
 // parseCRSRules reads all @rx patterns from the CRS rule files embedded in
@@ -86,7 +87,7 @@ func parseCRSRules() ([]crsRule, error) {
 				continue
 			}
 			seen[id] = true
-			rules = append(rules, crsRule{id: id, pattern: pattern})
+			rules = append(rules, crsRule{id: id, pattern: pattern, pl: extractPL(line)})
 		}
 	}
 	return rules, nil
@@ -153,6 +154,32 @@ func extractRXPattern(line string) string {
 		sb.WriteByte(rest[i])
 	}
 	return sb.String()
+}
+
+// extractPL pulls the paranoia-level/N tag value from a (joined) SecRule line.
+// Returns 0 if not found.
+func extractPL(line string) int {
+	const marker = "paranoia-level/"
+	idx := strings.Index(line, marker)
+	if idx < 0 {
+		return 0
+	}
+	s := line[idx+len(marker):]
+	end := strings.IndexAny(s, "', \t\"")
+	if end < 0 {
+		end = len(s)
+	}
+	switch strings.TrimSpace(s[:end]) {
+	case "1":
+		return 1
+	case "2":
+		return 2
+	case "3":
+		return 3
+	case "4":
+		return 4
+	}
+	return 0
 }
 
 // ---------------------------------------------------------------------------
@@ -500,6 +527,89 @@ func BenchmarkCRSPrefilterVsRegex(b *testing.B) {
 			}
 		})
 
+		b.Run("prefilter/"+cat, func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				for _, e := range entries {
+					for _, p := range e.payloads {
+						if e.pf(p) {
+							_ = e.re.MatchString(p)
+						}
+					}
+				}
+			}
+		})
+	}
+}
+
+// BenchmarkCRSPrefilterVsRegexPL1 is the same benchmark restricted to
+// Paranoia Level 1 rules only — the default deployment level with the
+// highest selectivity prefilters and lowest false-positive rate.
+//
+//	go test -tags coraza.rule.rx_prefilter -bench BenchmarkCRSPrefilterVsRegexPL1 \
+//	    -benchmem -benchtime=3s ./internal/operators/
+func BenchmarkCRSPrefilterVsRegexPL1(b *testing.B) {
+	rules, err := parseCRSRules()
+	if err != nil {
+		b.Fatal(err)
+	}
+	payloadsByRule, err := parseFTWPayloads()
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	type catEntry struct {
+		rule     crsRule
+		re       *regexp.Regexp
+		pf       func(string) bool
+		payloads []string
+	}
+	catEntries := map[string][]catEntry{}
+
+	for _, rule := range rules {
+		if rule.pl != 1 {
+			continue // PL1 only
+		}
+		re, err := regexp.Compile(rule.pattern)
+		if err != nil {
+			continue
+		}
+		pf := prefilterFunc(rule.pattern)
+		if pf == nil {
+			pf = func(s string) bool { return true }
+		}
+
+		var attacks []string
+		for _, p := range payloadsByRule[rule.id] {
+			if p.shouldFire {
+				attacks = append(attacks, p.value)
+			}
+		}
+		var payloads []string
+		payloads = append(payloads, attacks...)
+		for rep := 0; rep < 9; rep++ {
+			payloads = append(payloads, benignCRSPayloads...)
+		}
+
+		cat := categoryFromID(rule.id)
+		catEntries[cat] = append(catEntries[cat], catEntry{rule, re, pf, payloads})
+	}
+
+	for _, cat := range []string{"SQLi", "XSS", "RCE", "PHP", "LFI"} {
+		entries := catEntries[cat]
+		if len(entries) == 0 {
+			continue
+		}
+		b.Run("regex_only/"+cat, func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				for _, e := range entries {
+					for _, p := range e.payloads {
+						_ = e.re.MatchString(p)
+					}
+				}
+			}
+		})
 		b.Run("prefilter/"+cat, func(b *testing.B) {
 			b.ReportAllocs()
 			for i := 0; i < b.N; i++ {
