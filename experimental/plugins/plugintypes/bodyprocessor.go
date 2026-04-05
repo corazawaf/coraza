@@ -67,6 +67,17 @@ type Record interface {
 //
 // The callback receives a [Record] for each parsed entry and its zero-based index.
 // Returning a non-nil error from the callback stops processing immediately.
+//
+// # Concurrency
+//
+// The callback executes synchronously on the caller's goroutine — the same
+// goroutine that called ProcessRequestRecords or ProcessResponseRecords. The
+// callback must not be called from multiple goroutines, and the body processor
+// must not read ahead into a separate goroutine while the callback is running.
+//
+// If rule evaluation in the callback takes significant time, the body processor's
+// read loop will naturally slow down, applying backpressure to the sender via
+// TCP flow control. This is desirable for DoS protection.
 type StreamingBodyProcessor interface {
 	BodyProcessor
 
