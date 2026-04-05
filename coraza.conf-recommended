@@ -10,10 +10,11 @@ SecRuleEngine DetectionOnly
 
 # -- Performance optimizations -----------------------------------------------
 
-# Enable compile-time literal pre-filtering for the @rx operator.
+# Toggles literal pre-filtering for the @rx operator.
 # When enabled, Coraza analyses each regex pattern at rule-load time and
 # builds pre-checks that will be executed before the full regex evaluation,
 # allowing to skip unnecessary regex evaluations.
+# Warning: Experimental feature.
 #
 SecRxPreFilter Off
 

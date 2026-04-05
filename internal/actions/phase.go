@@ -20,7 +20,7 @@ import (
 // - 4 (response)
 // - 5 (logging)
 //
-// > Warning: Keep in mind that the variable used in the rule may not be available if specifying the incorrect phase.
+// > **Warning**: Keep in mind that the variable used in the rule may not be available if specifying the incorrect phase.
 // > This could lead to a false negative situation where your variable and operator may be correct,
 // > but it misses malicious data because you specified the wrong phase.
 //

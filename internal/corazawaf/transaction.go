@@ -815,7 +815,7 @@ func (tx *Transaction) AddResponseArgument(key string, value string) {
 // SecLanguages phases. It is something that may occur between the SecLanguage
 // phase 1 and 2.
 //
-// note: This function won't add GET arguments, they must be added with AddArgument
+// Note: This function won't add GET arguments, they must be added with AddArgument
 func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string) {
 	tx.variables.requestMethod.Set(method)
 	tx.variables.requestProtocol.Set(httpVersion)
@@ -882,7 +882,7 @@ func (tx *Transaction) SetServerName(serverName string) {
 // This method perform the analysis on the request headers, notice however
 // that the headers should be added prior to the execution of this function.
 //
-// note: Remember to check for a possible intervention.
+// Note: Remember to check for a possible intervention.
 func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 	if tx.IsRuleEngineOff() {
 		// Rule engine is disabled
