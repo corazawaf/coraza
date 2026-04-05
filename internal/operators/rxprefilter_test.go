@@ -56,7 +56,11 @@ func TestPrefilterFuncBuildability(t *testing.T) {
 		match   string // input that the regex matches (checked when prefilter is non-nil)
 		noMatch string // input that the regex does not match (checked when prefilter is non-nil)
 	}{
+		// OpLiteral → allRequired{s}: the single-literal fast path (line 352).
+		// Every plain literal pattern must build a non-nil contains prefilter.
 		{"hello", false, "plain literal", "say hello", "goodbye"},
+		{"select", false, "sql keyword literal", "select 1", "update t"},
+		{"injection", false, "longer literal", "sql injection", "harmless"},
 		{"[a-z]+", true, "char class only", "", ""},
 		{"hello.*world", false, "literals around wildcard", "hello big world", "goodbye planet"},
 		{"(ab|cd)", false, "alternation with literals", "xabx", "xyz"},
