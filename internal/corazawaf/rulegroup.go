@@ -241,9 +241,12 @@ RulesLoop:
 		case corazatypes.AllowTypeAll:
 			break RulesLoop
 		}
-		// TODO these lines are SUPER SLOW
-		// we reset matched_vars, matched_vars_names, etc
-		tx.variables.matchedVars.Reset()
+		// Reset matched_vars only when the previous rule actually populated it.
+		// In typical CRS evaluation most rules don't match, so this avoids
+		// iterating an empty map on every rule.
+		if tx.variables.matchedVars.Len() > 0 {
+			tx.variables.matchedVars.Reset()
+		}
 
 		r.Evaluate(phase, tx, transformationCache)
 		tx.Capture = false // we reset captures
