@@ -169,7 +169,10 @@ func prefilterFunc(pattern string) func(string) bool {
 	//      spending O(H) on a string scan.
 	//   2. As a standalone prefilter when extractLiterals returns nil but
 	//      the minimum length is large enough to be useful (≥ minUsefulMML).
-	mml := minMatchLength(pattern)
+	//
+	// re is already parsed and simplified above — call minLen directly to
+	// avoid a second syntax.Parse + Simplify call on the same pattern.
+	mml := minLen(re)
 
 	lits := extractLiterals(re, caseInsensitive)
 	if lits == nil {
@@ -664,14 +667,17 @@ func anyTooShort(ss []string, minLen int) bool {
 // (e.g. single characters) are too common across inputs to be effective filters.
 // SAFETY: Only safe for allRequired (removing a needle makes the check less strict).
 // Never use for anyRequired — use anyTooShort instead.
+//
+// Compacts in place to avoid a heap allocation when all (or most) elements pass.
 func filterShort(ss []string, minLen int) []string {
-	result := ss[:0:0]
+	k := 0
 	for _, s := range ss {
 		if len(s) >= minLen {
-			result = append(result, s)
+			ss[k] = s
+			k++
 		}
 	}
-	return result
+	return ss[:k]
 }
 
 // anyRequiredMaxN is an upper bound on the number of needles we will build an
@@ -877,26 +883,48 @@ func allASCIIStrings(ss []string) bool {
 	return true
 }
 
-// containsFoldASCIIOnly is a brute-force case-insensitive substring search
-// optimized for ASCII-only needles. It lowercases each byte of s inline
-// (only A-Z → a-z) and compares against needle which must already be lowercase.
-// This avoids allocating a lowercased copy of s.
+// containsFoldASCIIOnly is a case-insensitive substring search for ASCII-only
+// needles. needle must already be lowercase.
+//
+// It uses strings.IndexByte — which the Go runtime maps to a SIMD instruction
+// on amd64/arm64 — to jump straight to candidate positions (bytes that match
+// the first byte of the needle in either case), then verifies the full needle
+// at those positions. This is significantly faster than a byte-by-byte loop
+// for typical WAF haystack sizes (50–2000 bytes).
 func containsFoldASCIIOnly(s, needle string) bool {
 	nlen := len(needle)
-	end := len(s) - nlen + 1
-outer:
-	for i := 0; i < end; i++ {
-		for j := 0; j < nlen; j++ {
-			sc := s[i+j]
-			// Lowercase ASCII uppercase letters inline.
-			if sc >= 'A' && sc <= 'Z' {
-				sc += 'a' - 'A'
-			}
-			if sc != needle[j] {
-				continue outer
+	limit := len(s) - nlen
+	if limit < 0 {
+		return false
+	}
+
+	first := needle[0] // already lowercase
+	var upper byte
+	hasUpper := first >= 'a' && first <= 'z'
+	if hasUpper {
+		upper = first - ('a' - 'A')
+	}
+
+	for i := 0; i <= limit; {
+		// Use SIMD-backed IndexByte to leap to the next candidate byte.
+		lo := strings.IndexByte(s[i:], first)
+		if hasUpper {
+			hi := strings.IndexByte(s[i:], upper)
+			if hi >= 0 && (lo < 0 || hi < lo) {
+				lo = hi
 			}
 		}
-		return true
+		if lo < 0 {
+			return false
+		}
+		i += lo
+		if i > limit {
+			return false
+		}
+		if equalFoldASCIIBytes(s[i:i+nlen], needle) {
+			return true
+		}
+		i++
 	}
 	return false
 }
