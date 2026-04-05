@@ -10,12 +10,14 @@ import (
 )
 
 // StreamingTransaction extends Transaction with streaming body processing capabilities.
-// Transactions created by a WAF instance implement this interface when the WAF supports
-// streaming body processors (e.g., NDJSON, JSON-Seq).
+// It is used by integrators building streaming middleware where the full body should
+// not be buffered before rule evaluation.
 //
-// Unlike the standard ProcessRequestBody/ProcessResponseBody methods which require the
-// full body to be buffered first, streaming methods read records directly from input,
-// evaluate rules per record, and write clean records to output for relay to the backend.
+// Unlike the standard ProcessRequestBody/ProcessResponseBody methods which buffer the
+// entire body first, streaming methods read records directly from input, evaluate rules
+// per record, and write clean records to output for relay to the backend. The body
+// processor defines what constitutes a "record" (a JSON object, a CSV row, a protobuf
+// message, etc.).
 type StreamingTransaction interface {
 	types.Transaction
 

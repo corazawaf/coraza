@@ -19,11 +19,11 @@ import (
 // mockRecord implements plugintypes.Record for testing.
 type mockRecord struct {
 	fields    map[string]string
-	rawRecord string
+	rawRecord []byte
 }
 
 func (r mockRecord) Fields() map[string]string { return r.fields }
-func (r mockRecord) Raw() string               { return r.rawRecord }
+func (r mockRecord) Raw() []byte               { return r.rawRecord }
 
 // mockStreamingBodyProcessor implements StreamingBodyProcessor for testing.
 type mockStreamingBodyProcessor struct {
@@ -121,8 +121,8 @@ func TestProcessRequestBodyStreamingCleanRecords(t *testing.T) {
 
 	sp := &mockStreamingBodyProcessor{
 		records: []mockRecord{
-			{fields: map[string]string{"json.0.name": "alice"}, rawRecord: `{"name":"alice"}` + "\n"},
-			{fields: map[string]string{"json.1.name": "bob"}, rawRecord: `{"name":"bob"}` + "\n"},
+			{fields: map[string]string{"json.0.name": "alice"}, rawRecord: []byte(`{"name":"alice"}` + "\n")},
+			{fields: map[string]string{"json.1.name": "bob"}, rawRecord: []byte(`{"name":"bob"}` + "\n")},
 		},
 	}
 
@@ -149,9 +149,9 @@ func TestProcessRequestBodyStreamingInterruptionStopsProcessing(t *testing.T) {
 	var processedRecords int
 	sp := &mockStreamingBodyProcessor{
 		records: []mockRecord{
-			{fields: map[string]string{"json.0.name": "safe"}, rawRecord: `{"name":"safe"}` + "\n"},
-			{fields: map[string]string{"json.1.name": "malicious-payload"}, rawRecord: `{"name":"malicious-payload"}` + "\n"},
-			{fields: map[string]string{"json.2.name": "should-not-reach"}, rawRecord: `{"name":"should-not-reach"}` + "\n"},
+			{fields: map[string]string{"json.0.name": "safe"}, rawRecord: []byte(`{"name":"safe"}` + "\n")},
+			{fields: map[string]string{"json.1.name": "malicious-payload"}, rawRecord: []byte(`{"name":"malicious-payload"}` + "\n")},
+			{fields: map[string]string{"json.2.name": "should-not-reach"}, rawRecord: []byte(`{"name":"should-not-reach"}` + "\n")},
 		},
 	}
 	// Override ProcessRequestRecords to count records
@@ -242,9 +242,9 @@ func TestProcessRequestBodyStreamingTxVariablesPersist(t *testing.T) {
 
 	sp := &mockStreamingBodyProcessor{
 		records: []mockRecord{
-			{fields: map[string]string{"json.0.data": "suspicious-1"}, rawRecord: `{"data":"suspicious-1"}` + "\n"},
-			{fields: map[string]string{"json.1.data": "clean"}, rawRecord: `{"data":"clean"}` + "\n"},
-			{fields: map[string]string{"json.2.data": "suspicious-2"}, rawRecord: `{"data":"suspicious-2"}` + "\n"},
+			{fields: map[string]string{"json.0.data": "suspicious-1"}, rawRecord: []byte(`{"data":"suspicious-1"}` + "\n")},
+			{fields: map[string]string{"json.1.data": "clean"}, rawRecord: []byte(`{"data":"clean"}` + "\n")},
+			{fields: map[string]string{"json.2.data": "suspicious-2"}, rawRecord: []byte(`{"data":"suspicious-2"}` + "\n")},
 		},
 	}
 
@@ -277,9 +277,9 @@ func TestProcessRequestBodyStreamingArgsPostIsolated(t *testing.T) {
 
 	sp := &mockStreamingBodyProcessor{
 		records: []mockRecord{
-			{fields: map[string]string{"json.0.data": "clean"}, rawRecord: `{"data":"clean"}` + "\n"},
+			{fields: map[string]string{"json.0.data": "clean"}, rawRecord: []byte(`{"data":"clean"}` + "\n")},
 			// This record's field does NOT contain "record1-only"
-			{fields: map[string]string{"json.1.data": "also-clean"}, rawRecord: `{"data":"also-clean"}` + "\n"},
+			{fields: map[string]string{"json.1.data": "also-clean"}, rawRecord: []byte(`{"data":"also-clean"}` + "\n")},
 		},
 	}
 
@@ -305,8 +305,8 @@ func TestProcessResponseBodyStreamingInterruption(t *testing.T) {
 
 	sp := &mockStreamingBodyProcessor{
 		records: []mockRecord{
-			{fields: map[string]string{"json.0.name": "safe"}, rawRecord: `{"name":"safe"}` + "\n"},
-			{fields: map[string]string{"json.1.name": "malicious-data"}, rawRecord: `{"name":"malicious-data"}` + "\n"},
+			{fields: map[string]string{"json.0.name": "safe"}, rawRecord: []byte(`{"name":"safe"}` + "\n")},
+			{fields: map[string]string{"json.1.name": "malicious-data"}, rawRecord: []byte(`{"name":"malicious-data"}` + "\n")},
 		},
 	}
 
@@ -359,9 +359,9 @@ func TestProcessRequestBodyFromStreamRelay(t *testing.T) {
 	// we test the relay logic through the lower-level processRequestBodyStreaming
 	sp := &mockStreamingBodyProcessor{
 		records: []mockRecord{
-			{fields: map[string]string{"json.0.name": "safe"}, rawRecord: `{"name":"safe"}` + "\n"},
-			{fields: map[string]string{"json.1.name": "blocked-value"}, rawRecord: `{"name":"blocked-value"}` + "\n"},
-			{fields: map[string]string{"json.2.name": "never-reached"}, rawRecord: `{"name":"never-reached"}` + "\n"},
+			{fields: map[string]string{"json.0.name": "safe"}, rawRecord: []byte(`{"name":"safe"}` + "\n")},
+			{fields: map[string]string{"json.1.name": "blocked-value"}, rawRecord: []byte(`{"name":"blocked-value"}` + "\n")},
+			{fields: map[string]string{"json.2.name": "never-reached"}, rawRecord: []byte(`{"name":"never-reached"}` + "\n")},
 		},
 	}
 
@@ -381,7 +381,7 @@ func TestProcessRequestBodyFromStreamRelay(t *testing.T) {
 			if tx.interruption != nil {
 				return errStreamInterrupted
 			}
-			if _, err := io.WriteString(&output, record.Raw()); err != nil {
+			if _, err := output.Write(record.Raw()); err != nil {
 				return err
 			}
 			return nil
@@ -402,8 +402,8 @@ func TestProcessResponseBodyFromStreamRelay(t *testing.T) {
 
 	sp := &mockStreamingBodyProcessor{
 		records: []mockRecord{
-			{fields: map[string]string{"json.0.a": "1"}, rawRecord: `{"a":"1"}` + "\n"},
-			{fields: map[string]string{"json.1.a": "2"}, rawRecord: `{"a":"2"}` + "\n"},
+			{fields: map[string]string{"json.0.a": "1"}, rawRecord: []byte(`{"a":"1"}` + "\n")},
+			{fields: map[string]string{"json.1.a": "2"}, rawRecord: []byte(`{"a":"2"}` + "\n")},
 		},
 	}
 
@@ -422,7 +422,7 @@ func TestProcessResponseBodyFromStreamRelay(t *testing.T) {
 			if tx.interruption != nil {
 				return errStreamInterrupted
 			}
-			if _, err := io.WriteString(&output, record.Raw()); err != nil {
+			if _, err := output.Write(record.Raw()); err != nil {
 				return err
 			}
 			return nil

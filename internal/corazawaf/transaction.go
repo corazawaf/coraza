@@ -1328,9 +1328,9 @@ func (tx *Transaction) ProcessRequestBodyFromStream(input io.Reader, output io.W
 		}
 
 		// Record passed evaluation, write to output for relay.
-		// Raw() includes format-specific delimiters (e.g., \n for NDJSON,
-		// RS prefix + \n for RFC 7464), preserving the original stream format.
-		if _, err := io.WriteString(output, record.Raw()); err != nil {
+		// Raw() includes format-specific framing, preserving the original
+		// stream format for verbatim forwarding to the backend.
+		if _, err := output.Write(record.Raw()); err != nil {
 			return fmt.Errorf("failed to write record to output: %w", err)
 		}
 
@@ -1424,8 +1424,9 @@ func (tx *Transaction) ProcessResponseBodyFromStream(input io.Reader, output io.
 			return errStreamInterrupted
 		}
 
-		// Raw() includes format-specific delimiters, preserving the original stream format.
-		if _, err := io.WriteString(output, record.Raw()); err != nil {
+		// Raw() includes format-specific framing, preserving the original
+		// stream format for verbatim forwarding to the backend.
+		if _, err := output.Write(record.Raw()); err != nil {
 			return fmt.Errorf("failed to write response record to output: %w", err)
 		}
 
