@@ -264,12 +264,13 @@ func prefilterFunc(pattern string) func(string) bool {
 			im := newIndexedMatcher(filtered, caseInsensitive)
 			pf = im.match
 		} else {
-			// N > 64: too many needles for Wu-Manber to be effective (nearly
-			// every haystack byte is a candidate). In practice regexp/syntax
-			// .Simplify() factors large alternations into tries with single-byte
-			// literals at each branch, causing extractLiterals to return nil
-			// before we ever reach this branch. If we do reach it, bail out and
-			// let the full regex run — correctness over performance.
+			// N > anyRequiredMaxN: too many needles for Wu-Manber to be
+			// effective (nearly every haystack byte is a candidate). In
+			// practice regexp/syntax.Simplify() factors large alternations
+			// into tries with single-byte literals at each branch, causing
+			// extractLiterals to return nil before we ever reach this branch.
+			// If we do reach it, bail out and let the full regex run —
+			// correctness over performance.
 			return nil
 		}
 	}
