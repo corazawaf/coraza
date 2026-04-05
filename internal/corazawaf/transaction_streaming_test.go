@@ -5,7 +5,9 @@ package corazawaf
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 	"testing"
@@ -489,5 +491,225 @@ func TestProcessResponseBodyFromStreamEngineOff(t *testing.T) {
 	}
 	if output.String() != "passthrough data" {
 		t.Fatalf("expected passthrough, got %q", output.String())
+	}
+}
+
+// --- Binary (protobuf-like) streaming test ---
+//
+// Demonstrates that the Record interface works for binary formats.
+// The wire format is simple length-prefixed messages:
+//
+//	[4-byte big-endian length][payload bytes]
+//
+// Each payload contains two "fields" encoded as:
+//
+//	[1-byte key length][key bytes][2-byte big-endian value length][value bytes]
+//
+// This is NOT real protobuf, but exercises the same properties: binary
+// framing, non-UTF-8 raw bytes, and string-based field extraction.
+
+// binaryRecord implements plugintypes.Record for a length-prefixed binary message.
+type binaryRecord struct {
+	fields map[string]string
+	raw    []byte // the full length-prefixed frame
+}
+
+func (r binaryRecord) Fields() map[string]string { return r.fields }
+func (r binaryRecord) Raw() []byte               { return r.raw }
+
+// encodeBinaryRecord builds a length-prefixed binary frame from key-value pairs.
+// The payload format per field: [1-byte keyLen][key][2-byte valueLen][value].
+func encodeBinaryRecord(fields map[string]string) []byte {
+	var payload bytes.Buffer
+	for k, v := range fields {
+		payload.WriteByte(byte(len(k)))
+		payload.WriteString(k)
+		_ = binary.Write(&payload, binary.BigEndian, uint16(len(v)))
+		payload.WriteString(v)
+	}
+	// Frame: [4-byte length][payload]
+	frame := make([]byte, 4+payload.Len())
+	binary.BigEndian.PutUint32(frame[:4], uint32(payload.Len()))
+	copy(frame[4:], payload.Bytes())
+	return frame
+}
+
+// decodeBinaryRecord parses a length-prefixed binary frame into fields.
+func decodeBinaryRecord(frame []byte) (map[string]string, error) {
+	if len(frame) < 4 {
+		return nil, fmt.Errorf("frame too short")
+	}
+	payloadLen := binary.BigEndian.Uint32(frame[:4])
+	payload := frame[4:]
+	if uint32(len(payload)) != payloadLen {
+		return nil, fmt.Errorf("payload length mismatch")
+	}
+	fields := make(map[string]string)
+	pos := 0
+	for pos < len(payload) {
+		if pos >= len(payload) {
+			break
+		}
+		keyLen := int(payload[pos])
+		pos++
+		if pos+keyLen > len(payload) {
+			return nil, fmt.Errorf("truncated key")
+		}
+		key := string(payload[pos : pos+keyLen])
+		pos += keyLen
+		if pos+2 > len(payload) {
+			return nil, fmt.Errorf("truncated value length")
+		}
+		valLen := int(binary.BigEndian.Uint16(payload[pos : pos+2]))
+		pos += 2
+		if pos+valLen > len(payload) {
+			return nil, fmt.Errorf("truncated value")
+		}
+		val := string(payload[pos : pos+valLen])
+		pos += valLen
+		fields[key] = val
+	}
+	return fields, nil
+}
+
+// binaryStreamProcessor simulates a protobuf-like streaming body processor
+// that reads length-prefixed binary messages from a reader.
+type binaryStreamProcessor struct{}
+
+func (p *binaryStreamProcessor) ProcessRequest(_ io.Reader, _ plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
+	return nil
+}
+
+func (p *binaryStreamProcessor) ProcessResponse(_ io.Reader, _ plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
+	return nil
+}
+
+func (p *binaryStreamProcessor) ProcessRequestRecords(reader io.Reader, _ plugintypes.BodyProcessorOptions,
+	fn func(recordNum int, record plugintypes.Record) error) error {
+	recordNum := 0
+	for {
+		// Read 4-byte length prefix
+		var lengthBuf [4]byte
+		if _, err := io.ReadFull(reader, lengthBuf[:]); err != nil {
+			if err == io.EOF || err == io.ErrUnexpectedEOF {
+				return nil // end of stream
+			}
+			return err
+		}
+		payloadLen := binary.BigEndian.Uint32(lengthBuf[:])
+
+		// Read payload
+		payload := make([]byte, payloadLen)
+		if _, err := io.ReadFull(reader, payload); err != nil {
+			return fmt.Errorf("truncated record %d: %w", recordNum, err)
+		}
+
+		// Full frame = length prefix + payload
+		frame := make([]byte, 4+payloadLen)
+		copy(frame[:4], lengthBuf[:])
+		copy(frame[4:], payload)
+
+		// Decode fields (the "protobuf deserialization")
+		fields, err := decodeBinaryRecord(frame)
+		if err != nil {
+			return fmt.Errorf("record %d: %w", recordNum, err)
+		}
+
+		// Prefix field keys with record number
+		prefixed := make(map[string]string, len(fields))
+		for k, v := range fields {
+			prefixed[fmt.Sprintf("proto.%d.%s", recordNum, k)] = v
+		}
+
+		if err := fn(recordNum, binaryRecord{fields: prefixed, raw: frame}); err != nil {
+			return err
+		}
+		recordNum++
+	}
+}
+
+func (p *binaryStreamProcessor) ProcessResponseRecords(reader io.Reader, opts plugintypes.BodyProcessorOptions,
+	fn func(recordNum int, record plugintypes.Record) error) error {
+	return p.ProcessRequestRecords(reader, opts, fn)
+}
+
+func TestProcessRequestBodyStreamingBinaryFormat(t *testing.T) {
+	waf := NewWAF()
+	// Block any record containing "malicious" in ArgsPost
+	rule := newStreamingTestRule(t, 700, variables.ArgsPost, "malicious", true)
+	if err := waf.Rules.Add(rule); err != nil {
+		t.Fatal(err)
+	}
+
+	// Build a binary stream: 3 records, second one is malicious
+	var stream bytes.Buffer
+	stream.Write(encodeBinaryRecord(map[string]string{"user": "alice", "role": "admin"}))
+	stream.Write(encodeBinaryRecord(map[string]string{"user": "malicious-actor", "role": "root"}))
+	stream.Write(encodeBinaryRecord(map[string]string{"user": "bob", "role": "viewer"}))
+
+	tx := waf.NewTransaction()
+	defer tx.Close()
+	tx.RequestBodyAccess = true
+
+	sp := &binaryStreamProcessor{}
+
+	it, err := tx.processRequestBodyStreaming(sp, &stream, plugintypes.BodyProcessorOptions{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if it == nil {
+		t.Fatal("expected interruption for malicious binary record")
+	}
+}
+
+func TestProcessRequestBodyStreamingBinaryRelay(t *testing.T) {
+	waf := NewWAF()
+	// No deny rules — all records pass through
+	tx := waf.NewTransaction()
+	defer tx.Close()
+	tx.RequestBodyAccess = true
+
+	// Build a binary stream with 2 clean records
+	rec1 := encodeBinaryRecord(map[string]string{"id": "1", "status": "ok"})
+	rec2 := encodeBinaryRecord(map[string]string{"id": "2", "status": "ok"})
+	var stream bytes.Buffer
+	stream.Write(rec1)
+	stream.Write(rec2)
+
+	sp := &binaryStreamProcessor{}
+
+	var output bytes.Buffer
+	err := sp.ProcessRequestRecords(&stream, plugintypes.BodyProcessorOptions{},
+		func(recordNum int, record plugintypes.Record) error {
+			tx.variables.argsPost.Reset()
+			for key, value := range record.Fields() {
+				tx.variables.argsPost.SetIndex(key, 0, value)
+			}
+			tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
+			if tx.interruption != nil {
+				return errStreamInterrupted
+			}
+			if _, err := output.Write(record.Raw()); err != nil {
+				return err
+			}
+			return nil
+		})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Output should be the exact binary frames concatenated
+	expected := append(rec1, rec2...)
+	if !bytes.Equal(output.Bytes(), expected) {
+		t.Fatalf("binary relay mismatch:\n  got:  %x\n  want: %x", output.Bytes(), expected)
+	}
+
+	// Verify the frames can be decoded back
+	fields1, err := decodeBinaryRecord(rec1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fields1["id"] != "1" || fields1["status"] != "ok" {
+		t.Fatalf("unexpected fields in relayed record 1: %v", fields1)
 	}
 }
