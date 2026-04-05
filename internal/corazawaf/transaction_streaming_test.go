@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/internal/operators"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -337,10 +338,6 @@ func TestProcessResponseBodyStreamingInterruption(t *testing.T) {
 
 func TestProcessRequestBodyStreamingProcessorError(t *testing.T) {
 	waf := NewWAF()
-	rule := newStreamingTestRule(t, 500, variables.ArgsPost, "anything", false)
-	if err := waf.Rules.Add(rule); err != nil {
-		t.Fatal(err)
-	}
 
 	sp := &mockStreamingBodyProcessor{
 		err: errors.New("simulated processor error"),
@@ -356,6 +353,24 @@ func TestProcessRequestBodyStreamingProcessorError(t *testing.T) {
 	}
 	// The processor error should trigger error handling but not an interruption
 	// (unless rules trigger one based on the error)
+	_ = it
+}
+
+func TestProcessResponseBodyStreamingProcessorError(t *testing.T) {
+	waf := NewWAF()
+
+	sp := &mockStreamingBodyProcessor{
+		err: errors.New("simulated response processor error"),
+	}
+
+	tx := waf.NewTransaction()
+	defer tx.Close()
+	tx.ResponseBodyAccess = true
+
+	it, err := tx.processResponseBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
+	if err != nil {
+		t.Fatalf("unexpected error (should be nil): %v", err)
+	}
 	_ = it
 }
 
@@ -538,6 +553,300 @@ func TestProcessResponseBodyFromStreamEngineOff(t *testing.T) {
 	}
 	if output.String() != "passthrough data" {
 		t.Fatalf("expected passthrough, got %q", output.String())
+	}
+}
+
+// --- Exported ProcessRequestBodyFromStream / ProcessResponseBodyFromStream tests ---
+//
+// These tests register mock body processors in the global registry to exercise
+// the full exported code paths including access checks, processor lookup,
+// streaming vs non-streaming dispatch, and error propagation.
+
+func init() {
+	// Register a streaming mock body processor for testing.
+	bodyprocessors.RegisterBodyProcessor("teststream", func() plugintypes.BodyProcessor {
+		return &mockStreamingBodyProcessor{
+			records: []mockRecord{
+				{fields: map[string]string{"test.0.key": "value"}, rawRecord: []byte("record0\n")},
+			},
+		}
+	})
+}
+
+// setupRequestStreamTx creates a transaction ready for ProcessRequestBodyFromStream.
+func setupRequestStreamTx(t *testing.T, waf *WAF, bodyProcessor string) *Transaction {
+	t.Helper()
+	tx := waf.NewTransaction()
+	tx.RequestBodyAccess = true
+	tx.ProcessURI("/test", "POST", "HTTP/1.1")
+	tx.AddRequestHeader("Host", "example.com")
+	tx.AddRequestHeader("Content-Type", "application/octet-stream")
+	if bodyProcessor != "" {
+		tx.variables.reqbodyProcessor.Set(bodyProcessor)
+	}
+	tx.ProcessRequestHeaders()
+	return tx
+}
+
+// setupResponseStreamTx creates a transaction ready for ProcessResponseBodyFromStream.
+func setupResponseStreamTx(t *testing.T, waf *WAF, bodyProcessor string) *Transaction {
+	t.Helper()
+	tx := setupRequestStreamTx(t, waf, "")
+	tx.RequestBodyAccess = true
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Fatal(err)
+	}
+	tx.ResponseBodyAccess = true
+	tx.AddResponseHeader("Content-Type", "application/octet-stream")
+	tx.ProcessResponseHeaders(200, "OK")
+	if bodyProcessor != "" {
+		tx.variables.resBodyProcessor.Set(bodyProcessor)
+	}
+	return tx
+}
+
+func TestProcessRequestBodyFromStreamPreExistingInterruption(t *testing.T) {
+	waf := NewWAF()
+	tx := setupRequestStreamTx(t, waf, "TESTSTREAM")
+	defer tx.Close()
+	tx.Interrupt(&types.Interruption{Status: 403, Action: "deny"})
+
+	var output bytes.Buffer
+	it, err := tx.ProcessRequestBodyFromStream(strings.NewReader("data"), &output)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if it == nil {
+		t.Fatal("expected pre-existing interruption to be returned")
+	}
+	if output.Len() != 0 {
+		t.Fatalf("expected no output, got %q", output.String())
+	}
+}
+
+func TestProcessRequestBodyFromStreamNoBodyAccess(t *testing.T) {
+	waf := NewWAF()
+	tx := setupRequestStreamTx(t, waf, "TESTSTREAM")
+	defer tx.Close()
+	tx.RequestBodyAccess = false
+
+	var output bytes.Buffer
+	it, err := tx.ProcessRequestBodyFromStream(strings.NewReader("passthrough"), &output)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if it != nil {
+		t.Fatalf("unexpected interruption: %v", it)
+	}
+	if output.String() != "passthrough" {
+		t.Fatalf("expected passthrough, got %q", output.String())
+	}
+}
+
+func TestProcessRequestBodyFromStreamNoBodyProcessor(t *testing.T) {
+	waf := NewWAF()
+	tx := setupRequestStreamTx(t, waf, "") // no body processor
+	defer tx.Close()
+
+	var output bytes.Buffer
+	it, err := tx.ProcessRequestBodyFromStream(strings.NewReader("passthrough"), &output)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if it != nil {
+		t.Fatalf("unexpected interruption: %v", it)
+	}
+	if output.String() != "passthrough" {
+		t.Fatalf("expected passthrough, got %q", output.String())
+	}
+}
+
+func TestProcessRequestBodyFromStreamInvalidProcessor(t *testing.T) {
+	waf := NewWAF()
+	tx := setupRequestStreamTx(t, waf, "DOESNOTEXIST")
+	defer tx.Close()
+
+	var output bytes.Buffer
+	it, err := tx.ProcessRequestBodyFromStream(strings.NewReader("data"), &output)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Should not interrupt, but should have generated a body error
+	_ = it
+}
+
+func TestProcessRequestBodyFromStreamStreamingProcessor(t *testing.T) {
+	waf := NewWAF()
+	tx := setupRequestStreamTx(t, waf, "TESTSTREAM")
+	defer tx.Close()
+
+	var output bytes.Buffer
+	it, err := tx.ProcessRequestBodyFromStream(strings.NewReader(""), &output)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if it != nil {
+		t.Fatalf("unexpected interruption: %v", it)
+	}
+	if output.String() != "record0\n" {
+		t.Fatalf("expected relayed record, got %q", output.String())
+	}
+}
+
+func TestProcessRequestBodyFromStreamNonStreamingFallback(t *testing.T) {
+	// URLENCODED is a non-streaming processor — tests the buffered fallback path
+	waf := NewWAF()
+	tx := setupRequestStreamTx(t, waf, "URLENCODED")
+	defer tx.Close()
+
+	body := "key=value"
+	var output bytes.Buffer
+	it, err := tx.ProcessRequestBodyFromStream(strings.NewReader(body), &output)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if it != nil {
+		t.Fatalf("unexpected interruption: %v", it)
+	}
+	if output.String() != body {
+		t.Fatalf("expected %q, got %q", body, output.String())
+	}
+}
+
+func TestProcessRequestBodyFromStreamWrongPhase(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	defer tx.Close()
+	// Don't call ProcessRequestHeaders — lastPhase won't be PhaseRequestHeaders
+
+	var output bytes.Buffer
+	it, err := tx.ProcessRequestBodyFromStream(strings.NewReader("data"), &output)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if it != nil {
+		t.Fatalf("unexpected interruption: %v", it)
+	}
+}
+
+func TestProcessResponseBodyFromStreamPreExistingInterruption(t *testing.T) {
+	waf := NewWAF()
+	tx := setupResponseStreamTx(t, waf, "TESTSTREAM")
+	defer tx.Close()
+	tx.Interrupt(&types.Interruption{Status: 403, Action: "deny"})
+
+	var output bytes.Buffer
+	it, err := tx.ProcessResponseBodyFromStream(strings.NewReader("data"), &output)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if it == nil {
+		t.Fatal("expected pre-existing interruption")
+	}
+}
+
+func TestProcessResponseBodyFromStreamNoBodyAccess(t *testing.T) {
+	waf := NewWAF()
+	tx := setupResponseStreamTx(t, waf, "TESTSTREAM")
+	defer tx.Close()
+	tx.ResponseBodyAccess = false
+
+	var output bytes.Buffer
+	it, err := tx.ProcessResponseBodyFromStream(strings.NewReader("passthrough"), &output)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if it != nil {
+		t.Fatalf("unexpected interruption: %v", it)
+	}
+	if output.String() != "passthrough" {
+		t.Fatalf("expected passthrough, got %q", output.String())
+	}
+}
+
+func TestProcessResponseBodyFromStreamNoBodyProcessor(t *testing.T) {
+	waf := NewWAF()
+	tx := setupResponseStreamTx(t, waf, "") // no body processor
+	defer tx.Close()
+
+	var output bytes.Buffer
+	it, err := tx.ProcessResponseBodyFromStream(strings.NewReader("passthrough"), &output)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if it != nil {
+		t.Fatalf("unexpected interruption: %v", it)
+	}
+	if output.String() != "passthrough" {
+		t.Fatalf("expected passthrough, got %q", output.String())
+	}
+}
+
+func TestProcessResponseBodyFromStreamStreamingProcessor(t *testing.T) {
+	waf := NewWAF()
+	waf.ResponseBodyMimeTypes = []string{"application/octet-stream"}
+	tx := setupResponseStreamTx(t, waf, "TESTSTREAM")
+	defer tx.Close()
+
+	var output bytes.Buffer
+	it, err := tx.ProcessResponseBodyFromStream(strings.NewReader(""), &output)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if it != nil {
+		t.Fatalf("unexpected interruption: %v", it)
+	}
+	if output.String() != "record0\n" {
+		t.Fatalf("expected relayed record, got %q", output.String())
+	}
+}
+
+func TestProcessResponseBodyFromStreamInvalidProcessor(t *testing.T) {
+	waf := NewWAF()
+	waf.ResponseBodyMimeTypes = []string{"application/octet-stream"}
+	tx := setupResponseStreamTx(t, waf, "DOESNOTEXIST")
+	defer tx.Close()
+
+	var output bytes.Buffer
+	it, err := tx.ProcessResponseBodyFromStream(strings.NewReader("data"), &output)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	_ = it
+}
+
+func TestProcessResponseBodyFromStreamNonStreamingFallback(t *testing.T) {
+	waf := NewWAF()
+	waf.ResponseBodyMimeTypes = []string{"application/octet-stream"}
+	tx := setupResponseStreamTx(t, waf, "JSON")
+	defer tx.Close()
+
+	body := `{"key":"value"}`
+	var output bytes.Buffer
+	it, err := tx.ProcessResponseBodyFromStream(strings.NewReader(body), &output)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if it != nil {
+		t.Fatalf("unexpected interruption: %v", it)
+	}
+	if output.String() != body {
+		t.Fatalf("expected %q, got %q", body, output.String())
+	}
+}
+
+func TestProcessResponseBodyFromStreamWrongPhase(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	var output bytes.Buffer
+	it, err := tx.ProcessResponseBodyFromStream(strings.NewReader("data"), &output)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if it != nil {
+		t.Fatalf("unexpected interruption: %v", it)
 	}
 }
 
