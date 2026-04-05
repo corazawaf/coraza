@@ -13,20 +13,24 @@ type Memoizer interface {
 
 // OperatorOptions is used to store the options for a rule operator
 type OperatorOptions struct {
-	// Arguments is used to store the operator args
+	// Arguments stores the operator args.
 	Arguments string
 
-	// Path is used to store a list of possible data paths
+	// Path stores a list of possible data paths.
 	Path []string
 
 	// Root is the root to resolve Path from.
 	Root fs.FS
 
-	// Datasets contains input datasets or dictionaries
+	// Datasets contains input datasets or dictionaries.
 	Datasets map[string][]string
 
 	// Memoizer caches expensive compilations (regex, aho-corasick).
 	Memoizer Memoizer
+
+	// RxPreFilterEnabled controls whether the @rx operator uses
+	// literal pre-filtering. Set by the SecRxPreFilter directive.
+	RxPreFilterEnabled bool
 }
 
 // Operator interface is used to define rule @operators

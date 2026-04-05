@@ -231,7 +231,7 @@ func directiveSecResponseBodyAccess(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	b, err := parseBoolean(strings.ToLower(options.Opts))
+	b, err := parseBoolean(options.Opts)
 	if err != nil {
 		return err
 	}
@@ -274,7 +274,7 @@ func directiveSecRequestBodyAccess(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	b, err := parseBoolean(strings.ToLower(options.Opts))
+	b, err := parseBoolean(options.Opts)
 	if err != nil {
 		return err
 	}
@@ -1304,7 +1304,8 @@ func updateActionBySingleID(id int, actions string, options *DirectiveOptions) e
 // Matching is by case-sensitive string equality.
 // This directive will append variables to the specified rule with the targets provided in the second parameter.
 // The rule ID can be single IDs or ranges of IDs. The targets are separated by a pipe character.
-// Note: OWASP CRS has a list of supported tags https://coreruleset.org/docs/rules/metadata/
+//
+// Note: OWASP CRS provides a list of [supported tags](https://coreruleset.org/docs/3-about-rules/metadata/#tags-about-rule-classification).
 func directiveSecRuleUpdateTargetByTag(options *DirectiveOptions) error {
 	tagAndvars := strings.Fields(options.Opts)
 	if len(tagAndvars) != 2 {
@@ -1390,6 +1391,34 @@ func directiveSecArgumentsLimit(options *DirectiveOptions) error {
 		return errors.New("argument limit should be bigger than 0")
 	}
 	options.WAF.ArgumentLimit = limit
+	return nil
+}
+
+// Description: Enables or disables pre-filtering for the @rx operator.
+// Syntax: SecRxPreFilter On|Off
+// Default: Off
+// ---
+// When enabled, Coraza analyses each regex pattern at rule-load time to extract required
+// literal substrings and compute the minimum match length. At request time these fast
+// checks run before the full regex, allowing the engine to skip the regex entirely when
+// an input clearly cannot match.
+//
+// Example:
+// ```seclang
+// SecRxPreFilter On
+//
+// > **Warning**: This is an experimental feature.
+// ```
+func directiveSecRxPreFilter(options *DirectiveOptions) error {
+	if len(options.Opts) == 0 {
+		return errEmptyOptions
+	}
+
+	b, err := parseBoolean(options.Opts)
+	if err != nil {
+		return err
+	}
+	options.WAF.RxPreFilterEnabled = b
 	return nil
 }
 

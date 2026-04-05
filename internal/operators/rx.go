@@ -82,16 +82,22 @@ func newRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	// Compile regex + prefilter together so memoize caches all artifacts as one
 	// unit. This avoids re-parsing the AST for minMatchLength/prefilterFunc when
 	// the same pattern appears in multiple rules.
-	compiled, err := memoizeDo(options.Memoizer, data, func() (any, error) {
+	//
+	// The prefilter flag is part of the key because the global cache is shared
+	// across all WAF instances: two WAFs with different SecRxPreFilter settings
+	// must not share a compiled artifact.
+	cacheKey := fmt.Sprintf("rx:%v:%s", options.RxPreFilterEnabled, data)
+	compiled, err := memoizeDo(options.Memoizer, cacheKey, func() (any, error) {
 		re, err := regexp.Compile(data)
 		if err != nil {
 			return nil, err
 		}
-		return &rxCompiled{
-			re:        re,
-			minLen:    minMatchLength(data),
-			prefilter: prefilterFunc(data),
-		}, nil
+		c := &rxCompiled{re: re}
+		if options.RxPreFilterEnabled {
+			c.minLen = minMatchLength(data)
+			c.prefilter = prefilterFunc(data)
+		}
+		return c, nil
 	})
 	if err != nil {
 		return nil, err
@@ -105,12 +111,14 @@ func newRX(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 }
 
 func (o *rx) Evaluate(tx plugintypes.TransactionState, value string) bool {
+	// Prefiltering evaluation is performed here, skipping regex evaluation for clearly non-matching inputs.
 	if len(value) < o.minLen {
 		return false
 	}
 	if o.prefilter != nil && !o.prefilter(value) {
 		return false
 	}
+
 	if tx.Capturing() {
 		// FindStringSubmatchIndex returns a slice of index pairs [start0, end0, start1, end1, ...]
 		// instead of allocating new strings for each capture group. We then slice the original
