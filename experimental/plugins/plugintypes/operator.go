@@ -22,7 +22,7 @@ type OperatorOptions struct {
 	// Root is the root to resolve Path from.
 	Root fs.FS
 
-	// Datasets contains input datasets or dictionaries
+	// Datasets contains input datasets or dictionaries.
 	Datasets map[string][]string
 
 	// Memoizer caches expensive compilations (regex, aho-corasick).
