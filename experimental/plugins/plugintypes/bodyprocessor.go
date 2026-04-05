@@ -36,23 +36,36 @@ type BodyProcessor interface {
 }
 
 // Record represents a single parsed record from a streaming body processor.
-// Implementations are format-specific (e.g., a JSON object, a CSV row, a log line).
+// A record can be anything the format defines as a discrete unit: a JSON object,
+// a CSV row, a protobuf message, a log line, etc.
+//
+// Implementations are provided by each [StreamingBodyProcessor] and are
+// format-specific.
 type Record interface {
-	// Fields returns the parsed key-value pairs for WAF variable population.
-	// Keys should include the record-number prefix (e.g., "json.0.name").
+	// Fields returns the record's data flattened into string key-value pairs
+	// suitable for populating WAF variables (ArgsPost, ResponseArgs).
+	//
+	// Keys should include a processor-specific prefix with the record number
+	// (e.g., "json.0.user.name", "csv.3.email"). Values are the string
+	// representation of each field — the body processor is responsible for
+	// serializing its native types (numbers, booleans, nested structures,
+	// binary blobs) into strings.
 	Fields() map[string]string
 
-	// Raw returns the original record text including format-specific delimiters
-	// (e.g., trailing newline for NDJSON, RS prefix for RFC 7464).
-	Raw() string
+	// Raw returns the original record bytes including any format-specific
+	// framing (e.g., trailing newline for NDJSON, RS prefix for RFC 7464,
+	// length-prefixed envelope for protobuf streams). The returned slice
+	// is used by the relay path to forward records verbatim to the backend.
+	Raw() []byte
 }
 
 // StreamingBodyProcessor extends BodyProcessor with per-record streaming support.
-// Body processors that handle multi-record formats (NDJSON, JSON-Seq) can implement
-// this interface to enable per-record rule evaluation instead of evaluating rules
-// only after the entire body has been consumed.
+// Body processors that handle multi-record formats (e.g., NDJSON, JSON-Seq, CSV,
+// length-prefixed protobuf streams) can implement this interface to enable
+// per-record rule evaluation instead of evaluating rules only after the entire
+// body has been consumed.
 //
-// The callback receives a Record for each parsed entry and its zero-based index.
+// The callback receives a [Record] for each parsed entry and its zero-based index.
 // Returning a non-nil error from the callback stops processing immediately.
 type StreamingBodyProcessor interface {
 	BodyProcessor
