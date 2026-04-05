@@ -34,6 +34,9 @@ import (
 // ```
 type pm struct {
 	matcher ahocorasick.AhoCorasick
+	// minLen is the length of the shortest pattern. If the input is shorter
+	// than this, no pattern can match and we skip the Aho-Corasick automaton.
+	minLen int
 }
 
 var _ plugintypes.Operator = (*pm)(nil)
@@ -52,11 +55,29 @@ func newPM(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 
 	m, _ := memoizeDo(options.Memoizer, data, func() (any, error) { return builder.Build(dict), nil })
 	// TODO this operator is supposed to support snort data syntax: "@pm A|42|C|44|F"
-	return &pm{matcher: m.(ahocorasick.AhoCorasick)}, nil
+	return &pm{matcher: m.(ahocorasick.AhoCorasick), minLen: minPatternLen(dict)}, nil
 }
 
 func (o *pm) Evaluate(tx plugintypes.TransactionState, value string) bool {
+	if len(value) < o.minLen {
+		return false
+	}
 	return pmEvaluate(o.matcher, tx, value)
+}
+
+// minPatternLen returns the length of the shortest non-empty pattern.
+// If all patterns are empty, it returns 0 (no short-circuit possible).
+func minPatternLen(patterns []string) int {
+	min := 0
+	for _, p := range patterns {
+		if len(p) == 0 {
+			continue
+		}
+		if min == 0 || len(p) < min {
+			min = len(p)
+		}
+	}
+	return min
 }
 
 func pmEvaluate(matcher ahocorasick.AhoCorasick, tx plugintypes.TransactionState, value string) bool {

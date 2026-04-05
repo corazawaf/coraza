@@ -47,7 +47,7 @@ func newPMFromDataset(options plugintypes.OperatorOptions) (plugintypes.Operator
 
 	m, _ := memoizeDo(options.Memoizer, data, func() (any, error) { return builder.Build(dataset), nil })
 
-	return &pm{matcher: m.(ahocorasick.AhoCorasick)}, nil
+	return &pm{matcher: m.(ahocorasick.AhoCorasick), minLen: minPatternLen(dataset)}, nil
 }
 
 func init() {
