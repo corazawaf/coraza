@@ -48,6 +48,20 @@ SecRule REQUEST_HEADERS:Content-Type "^application/[a-z0-9.-]+[+]json" \
 # Configures the maximum JSON recursion depth limit Coraza will accept.
 SecRequestBodyJsonDepthLimit 1024
 
+# Enable JSON stream request body parser for NDJSON (Newline Delimited JSON) format.
+# This processor handles streaming JSON where each line contains a complete JSON object.
+# Commonly used for bulk data imports, log streaming, and batch API endpoints.
+# Each JSON object is indexed by line number: json.0.field, json.1.field, etc.
+#
+#SecRule REQUEST_HEADERS:Content-Type "^application/x-ndjson" \
+#     "id:'200007',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=JSONSTREAM"
+#
+#SecRule REQUEST_HEADERS:Content-Type "^application/jsonlines" \
+#     "id:'200008',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=JSONSTREAM"
+#
+#SecRule REQUEST_HEADERS:Content-Type "^application/json-seq" \
+#     "id:'200010',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=JSONSTREAM"
+
 # Maximum request body size (bytes) Coraza will accept for buffering. When
 # supporting file uploads, this value has to be as large as the largest
 # file that should be accepted.
@@ -102,6 +116,9 @@ SecResponseBodyAccess On
 # Configures response MIME types that Coraza will buffer and inspect. The
 # configuration below should be adjusted to catch documents but avoid static
 # files (e.g., images and archives).
+#
+# Note: Add 'application/json' and 'application/x-ndjson' if you want to
+# inspect JSON and NDJSON response bodies
 #
 SecResponseBodyMimeType text/plain text/html text/xml
 
