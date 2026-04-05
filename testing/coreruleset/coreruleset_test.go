@@ -151,6 +151,101 @@ func BenchmarkCRSLargePOST(b *testing.B) {
 	}
 }
 
+func BenchmarkCRSXMLSimplePOST(b *testing.B) {
+	waf := crsWAF(b)
+
+	xmlPayload := []byte(`<?xml version="1.0"?>
+<methodCall>
+  <methodName>wp.getUsersBlogs</methodName>
+  <params>
+    <param><value><string>admin</string></value></param>
+    <param><value><string>password123</string></value></param>
+  </params>
+</methodCall>`)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tx := waf.NewTransaction()
+		tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 8080)
+		tx.ProcessURI("/xmlrpc.php", "POST", "HTTP/1.1")
+		tx.AddRequestHeader("Host", "localhost")
+		tx.AddRequestHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36")
+		tx.AddRequestHeader("Content-Type", "text/xml")
+		tx.ProcessRequestHeaders()
+		if _, _, err := tx.WriteRequestBody(xmlPayload); err != nil {
+			b.Error(err)
+		}
+		if _, err := tx.ProcessRequestBody(); err != nil {
+			b.Error(err)
+		}
+		tx.AddResponseHeader("Content-Type", "text/xml")
+		tx.ProcessResponseHeaders(200, "OK")
+		if _, err := tx.ProcessResponseBody(); err != nil {
+			b.Error(err)
+		}
+		tx.ProcessLogging()
+		if err := tx.Close(); err != nil {
+			b.Error(err)
+		}
+	}
+}
+
+func BenchmarkCRSXMLLargeSOAP(b *testing.B) {
+	waf := crsWAF(b)
+
+	// ~4KB SOAP envelope with multiple items
+	var sb strings.Builder
+	sb.WriteString(`<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+               xmlns:ns="http://example.com/api">
+  <soap:Header>
+    <ns:Auth token="bearer-abc123"/>
+  </soap:Header>
+  <soap:Body>
+    <ns:BatchRequest>`)
+	for i := 0; i < 100; i++ {
+		fmt.Fprintf(&sb, `
+      <ns:Item id="%d" priority="normal">
+        <ns:Name>Item number %d</ns:Name>
+        <ns:Description>Description for item %d with some extra text to add size</ns:Description>
+        <ns:Value>%d.99</ns:Value>
+      </ns:Item>`, i, i, i, i*10+99)
+	}
+	sb.WriteString(`
+    </ns:BatchRequest>
+  </soap:Body>
+</soap:Envelope>`)
+	xmlPayload := []byte(sb.String())
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tx := waf.NewTransaction()
+		tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 8080)
+		tx.ProcessURI("/api/batch", "POST", "HTTP/1.1")
+		tx.AddRequestHeader("Host", "localhost")
+		tx.AddRequestHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36")
+		tx.AddRequestHeader("Content-Type", "application/soap+xml")
+		tx.ProcessRequestHeaders()
+		if _, _, err := tx.WriteRequestBody(xmlPayload); err != nil {
+			b.Error(err)
+		}
+		if _, err := tx.ProcessRequestBody(); err != nil {
+			b.Error(err)
+		}
+		tx.AddResponseHeader("Content-Type", "application/soap+xml")
+		tx.ProcessResponseHeaders(200, "OK")
+		if _, err := tx.ProcessResponseBody(); err != nil {
+			b.Error(err)
+		}
+		tx.ProcessLogging()
+		if err := tx.Close(); err != nil {
+			b.Error(err)
+		}
+	}
+}
+
 // BenchmarkCRSPrefilter measures CRS request processing across diverse traffic
 // patterns. Run with and without the coraza.rule.rx_prefilter build tag and
 // compare via benchstat:
