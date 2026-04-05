@@ -6,8 +6,10 @@ package operators
 import (
 	"fmt"
 	"regexp"
+	"regexp/syntax"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
@@ -1577,6 +1579,183 @@ func TestAnyRequiredViaPrefilterFuncNeedleCounts(t *testing.T) {
 			_ = pf(noMatchInput) // conservative pass-through is OK
 		})
 	}
+}
+
+// TestInternalNodeCoverage exercises code paths in internal helper functions that
+// are unreachable through the public prefilterFunc / minMatchLength APIs because
+// syntax.Regexp.Simplify() expands or eliminates certain AST nodes before those
+// functions are called. We construct synthetic AST nodes directly (same package)
+// to reach the defensive branches and ensure they behave correctly.
+func TestInternalNodeCoverage(t *testing.T) {
+	// ── minLen ────────────────────────────────────────────────────────────────
+
+	t.Run("minLen/empty_OpAlternate", func(t *testing.T) {
+		// syntax.Parse never produces an empty OpAlternate after Simplify, but
+		// minLen guards against it. Verify the guard returns 0 (not a panic).
+		re := &syntax.Regexp{Op: syntax.OpAlternate, Sub: []*syntax.Regexp{}}
+		if got := minLen(re); got != 0 {
+			t.Errorf("minLen(empty OpAlternate) = %d, want 0", got)
+		}
+	})
+
+	t.Run("minLen/OpRepeat_min0", func(t *testing.T) {
+		// Simplify expands {0,n} into optional nodes, so OpRepeat with min=0 is
+		// only reachable via direct call. Must return 0 (zero repetitions allowed).
+		lit := &syntax.Regexp{Op: syntax.OpLiteral, Rune: []rune("ab")}
+		re := &syntax.Regexp{Op: syntax.OpRepeat, Min: 0, Sub: []*syntax.Regexp{lit}}
+		if got := minLen(re); got != 0 {
+			t.Errorf("minLen(OpRepeat min=0) = %d, want 0", got)
+		}
+	})
+
+	t.Run("minLen/OpRepeat_min3", func(t *testing.T) {
+		// OpRepeat with min=3 and a 2-byte child → minimum 6 bytes.
+		lit := &syntax.Regexp{Op: syntax.OpLiteral, Rune: []rune("ab")}
+		re := &syntax.Regexp{Op: syntax.OpRepeat, Min: 3, Sub: []*syntax.Regexp{lit}}
+		if got := minLen(re); got != 6 {
+			t.Errorf("minLen(OpRepeat min=3, child=2b) = %d, want 6", got)
+		}
+	})
+
+	// ── extractLiterals ───────────────────────────────────────────────────────
+
+	t.Run("extractLiterals/OpRepeat_min1", func(t *testing.T) {
+		// Simplify expands {1,n} into explicit concat chains, so OpRepeat min≥1
+		// is only reachable via direct call. Must recurse into the sub-expression.
+		lit := &syntax.Regexp{Op: syntax.OpLiteral, Rune: []rune("select")}
+		re := &syntax.Regexp{Op: syntax.OpRepeat, Min: 1, Sub: []*syntax.Regexp{lit}}
+		got := extractLiterals(re, false)
+		if got == nil {
+			t.Error("extractLiterals(OpRepeat min=1, 'select') = nil, want allRequired{select}")
+		}
+	})
+
+	t.Run("extractLiterals/OpRepeat_min0", func(t *testing.T) {
+		// OpRepeat with min=0 is optional — no literals can be required.
+		lit := &syntax.Regexp{Op: syntax.OpLiteral, Rune: []rune("select")}
+		re := &syntax.Regexp{Op: syntax.OpRepeat, Min: 0, Sub: []*syntax.Regexp{lit}}
+		if got := extractLiterals(re, false); got != nil {
+			t.Errorf("extractLiterals(OpRepeat min=0) = %v, want nil", got)
+		}
+	})
+
+	t.Run("extractLiterals/empty_OpAlternate", func(t *testing.T) {
+		// An OpAlternate with no children never executes the inner loop, so
+		// branchLits stays empty and the function returns nil.
+		re := &syntax.Regexp{Op: syntax.OpAlternate, Sub: []*syntax.Regexp{}}
+		if got := extractLiterals(re, false); got != nil {
+			t.Errorf("extractLiterals(empty OpAlternate) = %v, want nil", got)
+		}
+	})
+
+	// ── rawLiteral ────────────────────────────────────────────────────────────
+
+	t.Run("rawLiteral/RuneError", func(t *testing.T) {
+		// A literal containing U+FFFD (RuneError) must return "" to prevent the
+		// caller from building a prefilter that searches for the 3-byte UTF-8
+		// encoding instead of the single invalid byte that the regex matches.
+		re := &syntax.Regexp{Op: syntax.OpLiteral, Rune: []rune{utf8.RuneError, 'x'}}
+		if got := rawLiteral(re, false); got != "" {
+			t.Errorf("rawLiteral(RuneError literal) = %q, want empty", got)
+		}
+	})
+
+	t.Run("rawLiteral/non_literal_op", func(t *testing.T) {
+		// rawLiteral must return "" for any non-OpLiteral node.
+		re := &syntax.Regexp{Op: syntax.OpAnyChar}
+		if got := rawLiteral(re, false); got != "" {
+			t.Errorf("rawLiteral(OpAnyChar) = %q, want empty", got)
+		}
+	})
+
+	// ── rawExtractSuffixes ────────────────────────────────────────────────────
+
+	t.Run("rawExtractSuffixes/RuneError_literal", func(t *testing.T) {
+		// rawExtractSuffixes must return nil for a literal containing RuneError
+		// so the calling trieReconstruct bails out rather than building a wrong prefilter.
+		re := &syntax.Regexp{Op: syntax.OpLiteral, Rune: []rune{utf8.RuneError}}
+		if got := rawExtractSuffixes(re, false); got != nil {
+			t.Errorf("rawExtractSuffixes(RuneError) = %v, want nil", got)
+		}
+	})
+
+	t.Run("rawExtractSuffixes/OpCapture", func(t *testing.T) {
+		// Capture groups are transparent — rawExtractSuffixes must unwrap them.
+		inner := &syntax.Regexp{Op: syntax.OpLiteral, Rune: []rune("elect")}
+		cap := &syntax.Regexp{Op: syntax.OpCapture, Sub: []*syntax.Regexp{inner}}
+		got := rawExtractSuffixes(cap, false)
+		if len(got) != 1 || got[0] != "elect" {
+			t.Errorf("rawExtractSuffixes(OpCapture(elect)) = %v, want [elect]", got)
+		}
+	})
+
+	// ── newIndexedMatcher ─────────────────────────────────────────────────────
+
+	t.Run("newIndexedMatcher/empty_needles", func(t *testing.T) {
+		// An empty needle set should build a zero-matcher that never matches.
+		m := newIndexedMatcher(nil, false)
+		if m == nil || m.minLen != 0 {
+			t.Error("newIndexedMatcher(nil) should return a zero-minLen matcher")
+		}
+		if m.match("anything") {
+			t.Error("empty matcher.match() must return false")
+		}
+	})
+
+	t.Run("newIndexedMatcher/needle_longer_than_255", func(t *testing.T) {
+		// When the shortest needle exceeds 255 bytes the shift table is capped at
+		// 255 to fit in a uint8. The matcher must still find an exact match.
+		needle := strings.Repeat("a", 300)
+		m := newIndexedMatcher([]string{needle}, false)
+		if m.minLen != 300 {
+			t.Errorf("minLen = %d, want 300", m.minLen)
+		}
+		if !m.match(needle) {
+			t.Error("should match exact needle")
+		}
+		if m.match(strings.Repeat("a", 299)) {
+			t.Error("should not match 299-byte input against 300-byte needle")
+		}
+	})
+
+	// ── matchCI ───────────────────────────────────────────────────────────────
+
+	t.Run("matchCI/haystack_shorter_than_needle", func(t *testing.T) {
+		// matchCI must return false immediately when the haystack is shorter
+		// than the shortest needle (ml > len(s) guard, lines 805-807).
+		m := newIndexedMatcher([]string{"hello"}, true)
+		if m.matchCI("hi") {
+			t.Error("matchCI: short haystack should return false")
+		}
+	})
+
+	t.Run("matchCI/zero_minLen", func(t *testing.T) {
+		// A zero-minLen matcher (built from empty needles) must return false.
+		m := newIndexedMatcher(nil, true)
+		if m.matchCI("anything") {
+			t.Error("matchCI with minLen=0 must return false")
+		}
+	})
+
+	// ── containsFoldASCIIOnly ─────────────────────────────────────────────────
+
+	t.Run("containsFoldASCIIOnly/haystack_shorter_than_needle", func(t *testing.T) {
+		// limit = len(s) - nlen < 0 → immediate false (lines 897-899).
+		if containsFoldASCIIOnly("hi", "hello") {
+			t.Error("should return false when haystack shorter than needle")
+		}
+	})
+
+	t.Run("containsFoldASCIIOnly/first_byte_found_too_late", func(t *testing.T) {
+		// IndexByte finds a first-byte match but at a position where the full
+		// needle can no longer fit (i > limit). Must return false without panic.
+		// haystack="hxxhel", needle="hello" (5b): limit=1.
+		// IndexByte('h') finds index 0 → no full match. i=1.
+		// IndexByte('h') in "xxhel" finds index 3 → new i = 1+3 = 4 > limit=1 → false.
+		if containsFoldASCIIOnly("hxxhel", "hello") {
+			t.Error("should return false when first-byte match is at position > limit")
+		}
+	})
 }
 
 // BenchmarkIndexedMatcher benchmarks the Wu-Manber indexedMatcher at different
