@@ -16,15 +16,19 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
+// mockRecord implements plugintypes.Record for testing.
+type mockRecord struct {
+	fields    map[string]string
+	rawRecord string
+}
+
+func (r mockRecord) Fields() map[string]string { return r.fields }
+func (r mockRecord) Raw() string               { return r.rawRecord }
+
 // mockStreamingBodyProcessor implements StreamingBodyProcessor for testing.
 type mockStreamingBodyProcessor struct {
 	records []mockRecord
 	err     error // error to return after all records
-}
-
-type mockRecord struct {
-	fields    map[string]string
-	rawRecord string
 }
 
 func (m *mockStreamingBodyProcessor) ProcessRequest(_ io.Reader, _ plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
@@ -36,9 +40,9 @@ func (m *mockStreamingBodyProcessor) ProcessResponse(_ io.Reader, _ plugintypes.
 }
 
 func (m *mockStreamingBodyProcessor) ProcessRequestRecords(_ io.Reader, _ plugintypes.BodyProcessorOptions,
-	fn func(recordNum int, fields map[string]string, rawRecord string) error) error {
+	fn func(recordNum int, record plugintypes.Record) error) error {
 	for i, rec := range m.records {
-		if err := fn(i, rec.fields, rec.rawRecord); err != nil {
+		if err := fn(i, rec); err != nil {
 			return err
 		}
 	}
@@ -46,9 +50,9 @@ func (m *mockStreamingBodyProcessor) ProcessRequestRecords(_ io.Reader, _ plugin
 }
 
 func (m *mockStreamingBodyProcessor) ProcessResponseRecords(_ io.Reader, _ plugintypes.BodyProcessorOptions,
-	fn func(recordNum int, fields map[string]string, rawRecord string) error) error {
+	fn func(recordNum int, record plugintypes.Record) error) error {
 	for i, rec := range m.records {
-		if err := fn(i, rec.fields, rec.rawRecord); err != nil {
+		if err := fn(i, rec); err != nil {
 			return err
 		}
 	}
@@ -185,10 +189,10 @@ func (c *countingStreamProcessor) ProcessResponse(_ io.Reader, _ plugintypes.Tra
 }
 
 func (c *countingStreamProcessor) ProcessRequestRecords(_ io.Reader, _ plugintypes.BodyProcessorOptions,
-	fn func(recordNum int, fields map[string]string, rawRecord string) error) error {
+	fn func(recordNum int, record plugintypes.Record) error) error {
 	for i, rec := range c.records {
 		*c.count++
-		if err := fn(i, rec.fields, rec.rawRecord); err != nil {
+		if err := fn(i, rec); err != nil {
 			return err
 		}
 	}
@@ -196,10 +200,10 @@ func (c *countingStreamProcessor) ProcessRequestRecords(_ io.Reader, _ plugintyp
 }
 
 func (c *countingStreamProcessor) ProcessResponseRecords(_ io.Reader, _ plugintypes.BodyProcessorOptions,
-	fn func(recordNum int, fields map[string]string, rawRecord string) error) error {
+	fn func(recordNum int, record plugintypes.Record) error) error {
 	for i, rec := range c.records {
 		*c.count++
-		if err := fn(i, rec.fields, rec.rawRecord); err != nil {
+		if err := fn(i, rec); err != nil {
 			return err
 		}
 	}
@@ -368,16 +372,16 @@ func TestProcessRequestBodyFromStreamRelay(t *testing.T) {
 	var output bytes.Buffer
 	// Manually test the relay pattern
 	streamErr := sp.ProcessRequestRecords(strings.NewReader(""), plugintypes.BodyProcessorOptions{},
-		func(recordNum int, fields map[string]string, rawRecord string) error {
+		func(recordNum int, record plugintypes.Record) error {
 			tx.variables.argsPost.Reset()
-			for key, value := range fields {
+			for key, value := range record.Fields() {
 				tx.variables.argsPost.SetIndex(key, 0, value)
 			}
 			tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 			if tx.interruption != nil {
 				return errStreamInterrupted
 			}
-			if _, err := io.WriteString(&output, rawRecord); err != nil {
+			if _, err := io.WriteString(&output, record.Raw()); err != nil {
 				return err
 			}
 			return nil
@@ -409,16 +413,16 @@ func TestProcessResponseBodyFromStreamRelay(t *testing.T) {
 
 	var output bytes.Buffer
 	streamErr := sp.ProcessResponseRecords(strings.NewReader(""), plugintypes.BodyProcessorOptions{},
-		func(recordNum int, fields map[string]string, rawRecord string) error {
+		func(recordNum int, record plugintypes.Record) error {
 			tx.variables.responseArgs.Reset()
-			for key, value := range fields {
+			for key, value := range record.Fields() {
 				tx.variables.responseArgs.SetIndex(key, 0, value)
 			}
 			tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
 			if tx.interruption != nil {
 				return errStreamInterrupted
 			}
-			if _, err := io.WriteString(&output, rawRecord); err != nil {
+			if _, err := io.WriteString(&output, record.Raw()); err != nil {
 				return err
 			}
 			return nil
