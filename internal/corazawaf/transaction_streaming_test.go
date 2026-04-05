@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -711,5 +712,274 @@ func TestProcessRequestBodyStreamingBinaryRelay(t *testing.T) {
 	}
 	if fields1["id"] != "1" || fields1["status"] != "ok" {
 		t.Fatalf("unexpected fields in relayed record 1: %v", fields1)
+	}
+}
+
+// --- Benchmarks ---
+//
+// These benchmarks measure the per-record streaming evaluation path against
+// the traditional buffered ProcessRequest path across different stream sizes
+// and record complexities.
+
+// benchRecord holds precomputed data for one record.
+type benchRecord struct {
+	fields map[string]string
+	raw    []byte
+}
+
+// makeBenchRecords generates n records. Each record has the given number of
+// fields with values of the specified size.
+func makeBenchRecords(n, fieldsPerRecord, valueSize int) []benchRecord {
+	val := strings.Repeat("x", valueSize)
+	records := make([]benchRecord, n)
+	for i := range n {
+		fields := make(map[string]string, fieldsPerRecord)
+		for f := range fieldsPerRecord {
+			key := fmt.Sprintf("json.%d.field%d", i, f)
+			fields[key] = val
+		}
+		// Simulate raw record: a JSON-like line
+		var raw bytes.Buffer
+		raw.WriteString(`{"i":`)
+		raw.WriteString(strconv.Itoa(i))
+		for f := range fieldsPerRecord {
+			fmt.Fprintf(&raw, `,"field%d":"%s"`, f, val)
+		}
+		raw.WriteString("}\n")
+		records[i] = benchRecord{fields: fields, raw: raw.Bytes()}
+	}
+	return records
+}
+
+// bufferedProcessor implements BodyProcessor (non-streaming). It populates
+// TransactionVariables with all records at once, simulating the traditional
+// full-body parsing approach.
+type bufferedProcessor struct {
+	records []benchRecord
+}
+
+func (p *bufferedProcessor) ProcessRequest(_ io.Reader, tv plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
+	for _, rec := range p.records {
+		for key, value := range rec.fields {
+			tv.ArgsPost().SetIndex(key, 0, value)
+		}
+	}
+	return nil
+}
+
+func (p *bufferedProcessor) ProcessResponse(_ io.Reader, _ plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
+	return nil
+}
+
+// benchStreamProcessor implements StreamingBodyProcessor from precomputed records.
+type benchStreamProcessor struct {
+	records []benchRecord
+}
+
+func (p *benchStreamProcessor) ProcessRequest(_ io.Reader, _ plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
+	return nil
+}
+
+func (p *benchStreamProcessor) ProcessResponse(_ io.Reader, _ plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
+	return nil
+}
+
+func (p *benchStreamProcessor) ProcessRequestRecords(_ io.Reader, _ plugintypes.BodyProcessorOptions,
+	fn func(int, plugintypes.Record) error) error {
+	for i, rec := range p.records {
+		if err := fn(i, mockRecord{fields: rec.fields, rawRecord: rec.raw}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (p *benchStreamProcessor) ProcessResponseRecords(_ io.Reader, _ plugintypes.BodyProcessorOptions,
+	fn func(int, plugintypes.Record) error) error {
+	return p.ProcessRequestRecords(nil, plugintypes.BodyProcessorOptions{}, fn)
+}
+
+// newBenchWAF creates a WAF with a realistic set of Phase 2 rules that inspect
+// ArgsPost via @rx. The patterns don't match the bench data, so no interruption
+// occurs — this measures steady-state evaluation cost.
+func newBenchWAF(b *testing.B) *WAF {
+	b.Helper()
+	waf := NewWAF()
+	patterns := []string{
+		`(?i)select\b.*\bfrom\b`,     // SQLi
+		`<script[^>]*>`,              // XSS
+		`\.\./`,                      // path traversal
+		`\b(?:cmd|exec|system)\s*\(`, // command injection
+		`(?i)union\b.*\bselect\b`,    // SQLi union
+	}
+	for i, pat := range patterns {
+		rule := NewRule()
+		rule.ID_ = 900 + i
+		rule.LogID_ = strconv.Itoa(900 + i)
+		rule.Phase_ = types.PhaseRequestBody
+		op, err := operators.Get("rx", plugintypes.OperatorOptions{Arguments: pat})
+		if err != nil {
+			b.Fatal(err)
+		}
+		rule.operator = &ruleOperatorParams{Operator: op, Function: "@rx", Data: pat}
+		rule.variables = append(rule.variables, ruleVariableParams{Variable: variables.ArgsPost})
+		if err := waf.Rules.Add(rule); err != nil {
+			b.Fatal(err)
+		}
+	}
+	return waf
+}
+
+// BenchmarkStreamingEval measures the per-record streaming evaluation path.
+//
+//	go test -bench=BenchmarkStreamingEval -benchmem ./internal/corazawaf/
+func BenchmarkStreamingEval(b *testing.B) {
+	type benchCase struct {
+		name            string
+		numRecords      int
+		fieldsPerRecord int
+		valueSize       int
+	}
+	cases := []benchCase{
+		// Small: 10 records × 3 fields × 24-byte values (~720 B payload)
+		{"small/10rec", 10, 3, 24},
+		// Medium: 100 records × 5 fields × 64-byte values (~32 KB payload)
+		{"medium/100rec", 100, 5, 64},
+		// Large: 1000 records × 5 fields × 128-byte values (~640 KB payload)
+		{"large/1000rec", 1000, 5, 128},
+	}
+
+	for _, tc := range cases {
+		records := makeBenchRecords(tc.numRecords, tc.fieldsPerRecord, tc.valueSize)
+
+		// --- Streaming path: per-record evaluation ---
+		b.Run("streaming/"+tc.name, func(b *testing.B) {
+			waf := newBenchWAF(b)
+			sp := &benchStreamProcessor{records: records}
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				tx := waf.NewTransaction()
+				tx.RequestBodyAccess = true
+				_, _ = tx.processRequestBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
+				_ = tx.Close()
+			}
+		})
+
+		// --- Buffered path: load all fields then evaluate once ---
+		b.Run("buffered/"+tc.name, func(b *testing.B) {
+			waf := newBenchWAF(b)
+			bp := &bufferedProcessor{records: records}
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				tx := waf.NewTransaction()
+				tx.RequestBodyAccess = true
+				_ = bp.ProcessRequest(strings.NewReader(""), tx.Variables(), plugintypes.BodyProcessorOptions{})
+				waf.Rules.Eval(types.PhaseRequestBody, tx)
+				_ = tx.Close()
+			}
+		})
+	}
+}
+
+// BenchmarkStreamingRelay measures the relay path (evaluate + write to output).
+//
+//	go test -bench=BenchmarkStreamingRelay -benchmem ./internal/corazawaf/
+func BenchmarkStreamingRelay(b *testing.B) {
+	type benchCase struct {
+		name            string
+		numRecords      int
+		fieldsPerRecord int
+		valueSize       int
+	}
+	cases := []benchCase{
+		{"small/10rec", 10, 3, 24},
+		{"medium/100rec", 100, 5, 64},
+		{"large/1000rec", 1000, 5, 128},
+	}
+
+	for _, tc := range cases {
+		records := makeBenchRecords(tc.numRecords, tc.fieldsPerRecord, tc.valueSize)
+		// Precompute total raw size for buffer preallocation
+		totalRaw := 0
+		for _, r := range records {
+			totalRaw += len(r.raw)
+		}
+
+		b.Run(tc.name, func(b *testing.B) {
+			waf := newBenchWAF(b)
+			sp := &benchStreamProcessor{records: records}
+			b.SetBytes(int64(totalRaw))
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				tx := waf.NewTransaction()
+				tx.RequestBodyAccess = true
+				var output bytes.Buffer
+				output.Grow(totalRaw)
+				_ = sp.ProcessRequestRecords(nil, plugintypes.BodyProcessorOptions{},
+					func(recordNum int, record plugintypes.Record) error {
+						tx.variables.argsPost.Reset()
+						for key, value := range record.Fields() {
+							tx.variables.argsPost.SetIndex(key, 0, value)
+						}
+						tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
+						if tx.interruption != nil {
+							return errStreamInterrupted
+						}
+						_, _ = output.Write(record.Raw())
+						return nil
+					})
+				_ = tx.Close()
+			}
+		})
+	}
+}
+
+// BenchmarkStreamingBinaryFormat measures the binary (protobuf-like) streaming path
+// including the decode cost.
+//
+//	go test -bench=BenchmarkStreamingBinaryFormat -benchmem ./internal/corazawaf/
+func BenchmarkStreamingBinaryFormat(b *testing.B) {
+	type benchCase struct {
+		name       string
+		numRecords int
+		fields     map[string]string
+	}
+	cases := []benchCase{
+		{"small/10rec", 10, map[string]string{"id": "42", "status": "ok"}},
+		{"medium/100rec", 100, map[string]string{
+			"id": "42", "user": "alice", "role": "admin",
+			"email": "alice@example.com", "active": "true",
+		}},
+		{"large/1000rec", 1000, map[string]string{
+			"id": "42", "user": "alice", "role": "admin",
+			"email": "alice@example.com", "active": "true",
+		}},
+	}
+
+	for _, tc := range cases {
+		// Build binary stream
+		var stream bytes.Buffer
+		for range tc.numRecords {
+			stream.Write(encodeBinaryRecord(tc.fields))
+		}
+		streamBytes := stream.Bytes()
+
+		b.Run(tc.name, func(b *testing.B) {
+			waf := newBenchWAF(b)
+			sp := &binaryStreamProcessor{}
+			b.SetBytes(int64(len(streamBytes)))
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				tx := waf.NewTransaction()
+				tx.RequestBodyAccess = true
+				reader := bytes.NewReader(streamBytes)
+				_, _ = tx.processRequestBodyStreaming(sp, reader, plugintypes.BodyProcessorOptions{})
+				_ = tx.Close()
+			}
+		})
 	}
 }
