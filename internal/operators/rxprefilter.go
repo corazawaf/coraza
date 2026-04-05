@@ -162,8 +162,25 @@ func prefilterFunc(pattern string) func(string) bool {
 
 	caseInsensitive := hasFlag(re, syntax.FoldCase)
 
+	// Compute the minimum byte length any matching input must have.
+	// We use this in two ways:
+	//   1. Prepended to every prefilter as a free O(1) guard that rejects
+	//      inputs shorter than the pattern's minimum match length before
+	//      spending O(H) on a string scan.
+	//   2. As a standalone prefilter when extractLiterals returns nil but
+	//      the minimum length is large enough to be useful (≥ minUsefulMML).
+	mml := minMatchLength(pattern)
+
 	lits := extractLiterals(re, caseInsensitive)
 	if lits == nil {
+		// No literals extractable. Fall back to a length-only prefilter when
+		// the minimum match length is large enough to actually reject inputs.
+		// Most WAF field values are > 3 bytes, so thresholds below 4 are not
+		// worth the function-call overhead.
+		const minUsefulMML = 4
+		if mml >= minUsefulMML {
+			return func(s string) bool { return len(s) >= mml }
+		}
 		return nil
 	}
 
@@ -260,6 +277,18 @@ func prefilterFunc(pattern string) func(string) bool {
 
 	if pf == nil {
 		return nil
+	}
+
+	// Prepend a free O(1) length guard to the literal scan.  If the input
+	// is shorter than the minimum possible match length it can't match —
+	// reject immediately before spending O(H) on string searches.
+	// Only bother when mml is large enough to ever fire in practice.
+	const minUsefulMML = 4
+	if mml >= minUsefulMML {
+		inner := pf
+		pf = func(s string) bool {
+			return len(s) >= mml && inner(s)
+		}
 	}
 
 	// When case-insensitive matching is active, our prefilter only performs

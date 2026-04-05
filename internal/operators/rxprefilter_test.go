@@ -1497,12 +1497,23 @@ func TestMinLenRuneError(t *testing.T) {
 	}
 }
 
-// TestExtractLiteralsRuneError verifies that U+FFFD in a literal causes bail-out.
+// TestExtractLiteralsRuneError verifies that U+FFFD in a literal causes
+// extractLiterals to bail out, but a minMatchLength-only prefilter is still
+// returned (mml = 3 bytes for U+FFFD + 5 for "hello" = 8).
 func TestExtractLiteralsRuneError(t *testing.T) {
 	pf := prefilterFunc("(?s)\xef\xbf\xbd" + "hello")
-	// Should bail out because the literal contains U+FFFD.
-	if pf != nil {
-		t.Error("prefilterFunc should return nil for pattern containing U+FFFD literal")
+	// extractLiterals returns nil for patterns containing U+FFFD, but the
+	// minMatchLength fallback (mml=8 >= 4) yields a length-only prefilter.
+	if pf == nil {
+		t.Error("prefilterFunc should return a length-only prefilter (mml=8) for this pattern")
+	}
+	// The prefilter must be conservative: short inputs must be rejected,
+	// long inputs must pass through (possible false positive is OK).
+	if pf("hello") { // 5 bytes < 8
+		t.Error("prefilter should reject 5-byte input (mml=8)")
+	}
+	if !pf("\xef\xbf\xbdhello!xx") { // 10 bytes >= 8, passes
+		t.Error("prefilter should pass 10-byte input")
 	}
 }
 
