@@ -49,7 +49,7 @@ func newPM(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 
 	dict, err := parsePMArgs(data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse pm operator arguments: %w", err)
 	}
 
 	builder := ahocorasick.NewAhoCorasickBuilder(ahocorasick.Opts{
