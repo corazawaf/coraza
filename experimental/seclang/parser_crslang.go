@@ -41,6 +41,8 @@ import (
 type ParserState struct {
 	// parsedDefaultActions caches the parsed default actions per phase.
 	// Updated by convertDefaultAction; read by getDefaultActions.
+	// If nil, it is initialized on first use. Phase 2 defaults are lazily
+	// populated by getDefaultActions if no explicit SecDefaultAction was provided.
 	parsedDefaultActions map[types.RulePhase][]ruleAction
 
 	// Disabled features
@@ -532,7 +534,7 @@ func (c *typeConverter) convertDefaultAction(da *crstypes.DefaultAction) error {
 		}
 	}
 	if daPhase == 0 {
-		return fmt.Errorf("default action %q has no phase", seclangStr)
+		return fmt.Errorf("default action %q must specify a phase (e.g., phase:1, phase:2)", seclangStr)
 	}
 
 	if c.state.parsedDefaultActions == nil {
