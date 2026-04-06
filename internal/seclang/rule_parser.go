@@ -420,17 +420,11 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 	rule.Line_ = options.ParserConfig.LastLine
 
 	if parent := getLastRuleExpectingChain(options.WAF); parent != nil {
-		// ModSecurity and compatible engines only allow disruptive actions on the
-		// chain-starter rule. A disruptive action on a chained rule (a non-starter)
-		// is always ignored at runtime because the starter's action fires; worse,
-		// it can cause config-load failures in other WAF implementations.
-		// Reject it here so rule authors get an explicit error rather than silent
-		// misbehaviour.
-		//
-		// We re-parse the raw action string without merging SecDefaultAction so
-		// that an inherited default disruptive action (e.g. "pass" from the phase-2
-		// default) does not trigger a false positive.
-		if rawActsHaveDisruptive(options.WAF.Logger, rawActions) {
+		parsed, _ := parseActions(options.WAF.Logger, rawActions)
+		if hasDisruptiveActions(parsed) {
+			// Drop the whole pending chain so a suppressed error leaves no partial
+			// chain in the rule graph that could absorb the next top-level rule.
+			options.WAF.Rules.DiscardPendingChain()
 			return nil, fmt.Errorf("disruptive actions can only be specified in the chain starter rule (parent id: %d)", parent.ID_)
 		}
 		rule.ParentID_ = parent.ID_
@@ -640,26 +634,6 @@ func appendRuleAction(res []ruleAction, key string, val string, disruptiveAction
 		})
 	}
 	return res, disruptiveActionIndex, nil
-}
-
-// rawActsHaveDisruptive parses acts (the raw, user-supplied action string)
-// without applying SecDefaultAction and returns true if the user explicitly
-// included a disruptive action. A parse error is treated as "no disruptive
-// action" — the subsequent full ParseActions call will surface the error.
-func rawActsHaveDisruptive(logger debuglog.Logger, acts string) bool {
-	if acts == "" {
-		return false
-	}
-	parsed, err := parseActions(logger, acts)
-	if err != nil {
-		return false
-	}
-	for _, a := range parsed {
-		if a.Atype == plugintypes.ActionTypeDisruptive {
-			return true
-		}
-	}
-	return false
 }
 
 /*

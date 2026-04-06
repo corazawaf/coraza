@@ -323,6 +323,10 @@ func TestRawChainedRules(t *testing.T) {
 	}
 }
 
+// wantChainDisruptiveErr is the sentinel text every rejection must contain,
+// distinguishing it from unrelated parse or init failures.
+const wantChainDisruptiveErr = "disruptive actions can only be specified in the chain starter rule"
+
 func TestChainedRuleDisruptiveActionRejected(t *testing.T) {
 	// ModSecurity and compatible engines reject configs where a chained (non-starter)
 	// rule carries a disruptive action. Coraza must do the same so that rule sets
@@ -335,19 +339,140 @@ func TestChainedRuleDisruptiveActionRejected(t *testing.T) {
 			err := p.FromString(`SecRule REQUEST_URI "abc" "id:100,phase:2,chain"
 SecRule REQUEST_URI "def" "` + da + `"`)
 			if err == nil {
-				t.Errorf("expected error for disruptive action %q on chain member, got nil", da)
+				t.Fatalf("expected error for disruptive action %q on chain member, got nil", da)
+			}
+			if !strings.Contains(err.Error(), wantChainDisruptiveErr) {
+				t.Errorf("wrong error for %q: want %q in error, got: %s", da, wantChainDisruptiveErr, err)
 			}
 		})
 	}
 }
 
 func TestChainedRuleDisruptiveActionAllowedOnStarter(t *testing.T) {
-	// A disruptive action on the chain-starter rule is valid.
+	// Disruptive actions on the chain-starter rule are valid. Positive cases:
+	// (a) explicit deny on the starter, empty-action member
+	// (b) implicit phase-2 default (which injects "pass") with an empty-action member —
+	//     the injected pass must NOT be mistaken for a user-specified disruptive action.
+	tests := []struct {
+		name  string
+		rules string
+	}{
+		{
+			name: "explicit deny on starter, empty member",
+			rules: `SecRule REQUEST_URI "abc" "id:101,phase:2,deny,status:403,chain"
+SecRule REQUEST_URI "def" ""`,
+		},
+		{
+			name: "implicit default pass injected into member must not be flagged",
+			rules: `SecRule REQUEST_URI "abc" "id:102,phase:2,chain"
+SecRule REQUEST_URI "def" ""`,
+		},
+		{
+			name: "explicit SecDefaultAction deny must not flag empty-action member",
+			rules: `SecDefaultAction "phase:2,deny,status:403,log"
+SecRule REQUEST_URI "abc" "id:103,phase:2,chain"
+SecRule REQUEST_URI "def" ""`,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			waf := corazawaf.NewWAF()
+			p := NewParser(waf)
+			if err := p.FromString(tc.rules); err != nil {
+				t.Errorf("unexpected error for %q: %s", tc.name, err)
+			}
+		})
+	}
+}
+
+func TestChainedRuleDisruptiveActionDeepChain(t *testing.T) {
+	// A disruptive action on the 2nd or 3rd link in a 3-rule chain must both be caught.
+	tests := []struct {
+		name  string
+		rules string
+	}{
+		{
+			name: "disruptive on second link",
+			rules: `SecRule REQUEST_URI "abc" "id:300,phase:2,chain"
+SecRule REQUEST_URI "def" "deny,chain"
+SecRule REQUEST_URI "ghi" ""`,
+		},
+		{
+			name: "disruptive on third link",
+			rules: `SecRule REQUEST_URI "abc" "id:301,phase:2,chain"
+SecRule REQUEST_URI "def" "chain"
+SecRule REQUEST_URI "ghi" "deny"`,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			waf := corazawaf.NewWAF()
+			p := NewParser(waf)
+			err := p.FromString(tc.rules)
+			if err == nil {
+				t.Fatalf("expected error for %s, got nil", tc.name)
+			}
+			if !strings.Contains(err.Error(), wantChainDisruptiveErr) {
+				t.Errorf("wrong error for %s: want %q in error, got: %s", tc.name, wantChainDisruptiveErr, err)
+			}
+		})
+	}
+}
+
+func TestChainedRuleDisruptiveActionDropsWholeChain(t *testing.T) {
+	// When a chain-member is rejected the whole pending chain (starter + any
+	// already-attached members) must be removed from the rule set, not just
+	// patched. After the error the WAF must contain no rules, and a subsequent
+	// top-level rule must load as a fresh independent rule.
 	waf := corazawaf.NewWAF()
 	p := NewParser(waf)
-	if err := p.FromString(`SecRule REQUEST_URI "abc" "id:101,phase:2,deny,status:403,chain"
-SecRule REQUEST_URI "def" ""`); err != nil {
-		t.Errorf("unexpected error for disruptive action on chain starter: %s", err)
+
+	_ = p.FromString(`SecRule REQUEST_URI "abc" "id:500,phase:2,chain"
+SecRule REQUEST_URI "def" "deny"`)
+
+	if got := len(waf.Rules.GetRules()); got != 0 {
+		t.Errorf("expected 0 rules after rejected chain, got %d", got)
+	}
+
+	if err := p.FromString(`SecRule REQUEST_URI "xyz" "id:501,phase:2"`); err != nil {
+		t.Fatalf("subsequent rule failed: %s", err)
+	}
+	rules := waf.Rules.GetRules()
+	if len(rules) != 1 || rules[0].ID_ != 501 {
+		t.Errorf("expected rule 501 to be standalone, got %v", rules)
+	}
+}
+
+func TestChainedRuleDisruptiveActionErrorMentionsParentID(t *testing.T) {
+	// The error message must identify the parent rule so authors can pinpoint
+	// which chain needs fixing.
+	waf := corazawaf.NewWAF()
+	p := NewParser(waf)
+	err := p.FromString(`SecRule REQUEST_URI "abc" "id:999,phase:2,chain"
+SecRule REQUEST_URI "def" "deny"`)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), wantChainDisruptiveErr) {
+		t.Errorf("wrong error: want %q, got: %s", wantChainDisruptiveErr, err)
+	}
+	if !strings.Contains(err.Error(), "999") {
+		t.Errorf("error message should contain the parent rule id 999, got: %s", err.Error())
+	}
+}
+
+func TestChainedRuleDisruptiveActionSecActionMember(t *testing.T) {
+	// SecAction uses the !WithOperator parse path; disruptive actions on a
+	// SecAction chain member must be caught just like SecRule members.
+	waf := corazawaf.NewWAF()
+	p := NewParser(waf)
+	err := p.FromString(`SecRule REQUEST_URI "abc" "id:400,phase:2,chain"
+SecAction "deny"`)
+	if err == nil {
+		t.Fatal("expected error for disruptive action on SecAction chain member, got nil")
+	}
+	if !strings.Contains(err.Error(), wantChainDisruptiveErr) {
+		t.Errorf("wrong error: want %q, got: %s", wantChainDisruptiveErr, err)
 	}
 }
 
