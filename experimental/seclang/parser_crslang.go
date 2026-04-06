@@ -39,9 +39,9 @@ import (
 
 // ParserState holds mutable state that persists across directive parsing
 type ParserState struct {
-	// Default actions per phase (raw action strings)
-	RuleDefaultActions    []string
-	HasRuleDefaultActions bool
+	// parsedDefaultActions caches the parsed default actions per phase.
+	// Updated by convertDefaultAction; read by getDefaultActions.
+	parsedDefaultActions map[types.RulePhase][]ruleAction
 
 	// Disabled features
 	DisabledRuleActions   []string
@@ -506,9 +506,9 @@ func (c *typeConverter) convertSecAction(secAction *crstypes.SecAction) error {
 	return nil
 }
 
-// convertDefaultAction stores default actions in parser state
+// convertDefaultAction parses and caches default actions in parser state by phase.
 func (c *typeConverter) convertDefaultAction(da *crstypes.DefaultAction) error {
-	// Convert back to seclang string for compatibility with existing ParseDefaultActions
+	// Convert back to seclang string for compatibility with existing parseActions.
 	seclangStr := da.ToSeclang()
 	// Strip "SecDefaultAction " prefix, trailing whitespace, and surrounding quotes.
 	// ToSeclang() appends a trailing newline, so TrimSpace is required before
@@ -516,8 +516,29 @@ func (c *typeConverter) convertDefaultAction(da *crstypes.DefaultAction) error {
 	seclangStr = strings.TrimPrefix(seclangStr, "SecDefaultAction ")
 	seclangStr = utils.MaybeRemoveQuotes(strings.TrimSpace(seclangStr))
 
-	c.state.RuleDefaultActions = append(c.state.RuleDefaultActions, seclangStr)
-	c.state.HasRuleDefaultActions = true
+	act, err := parseActions(seclangStr)
+	if err != nil {
+		return fmt.Errorf("invalid default action %q: %w", seclangStr, err)
+	}
+
+	// Determine the phase from the parsed actions.
+	daPhase := types.RulePhase(0)
+	for _, a := range act {
+		if a.Key == "phase" {
+			daPhase, err = types.ParseRulePhase(a.Value)
+			if err != nil {
+				return fmt.Errorf("invalid phase in default action %q: %w", seclangStr, err)
+			}
+		}
+	}
+	if daPhase == 0 {
+		return fmt.Errorf("default action %q has no phase", seclangStr)
+	}
+
+	if c.state.parsedDefaultActions == nil {
+		c.state.parsedDefaultActions = make(map[types.RulePhase][]ruleAction)
+	}
+	c.state.parsedDefaultActions[daPhase] = act
 	return nil
 }
 
@@ -973,41 +994,24 @@ func (c *typeConverter) actionToRuleAction(action crstypes.Action) (ruleAction, 
 	}, nil
 }
 
-// getDefaultActions returns the parsed default actions for the given phase
+// getDefaultActions returns the cached default actions for the given phase.
+// The cache is populated by convertDefaultAction; phase 2 defaults are
+// initialised lazily on the first call if no explicit directive was provided.
 func (c *typeConverter) getDefaultActions(phase types.RulePhase) ([]ruleAction, error) {
-	defaultActions := make(map[types.RulePhase][]ruleAction)
-
-	if c.state.HasRuleDefaultActions {
-		for _, da := range c.state.RuleDefaultActions {
-			act, err := parseActions(da)
-			if err != nil {
-				return nil, err
-			}
-			daPhase := types.RulePhase(0)
-			for _, a := range act {
-				if a.Key == "phase" {
-					daPhase, err = types.ParseRulePhase(a.Value)
-					if err != nil {
-						return nil, err
-					}
-				}
-			}
-			if daPhase != 0 {
-				defaultActions[daPhase] = act
-			}
-		}
+	if c.state.parsedDefaultActions == nil {
+		c.state.parsedDefaultActions = make(map[types.RulePhase][]ruleAction)
 	}
 
 	// If no default actions for phase 2, use hardcoded defaults
-	if defaultActions[types.PhaseRequestBody] == nil {
+	if c.state.parsedDefaultActions[types.PhaseRequestBody] == nil {
 		act, err := parseActions("phase:2,log,auditlog,pass")
 		if err != nil {
 			return nil, err
 		}
-		defaultActions[types.PhaseRequestBody] = act
+		c.state.parsedDefaultActions[types.PhaseRequestBody] = act
 	}
 
-	return defaultActions[phase], nil
+	return c.state.parsedDefaultActions[phase], nil
 }
 
 // parseActions parses a comma-separated action string into ruleAction slice.
