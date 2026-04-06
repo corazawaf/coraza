@@ -382,7 +382,10 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 			return nil, err
 		}
 	}
-	actions := ""
+	// rawActions holds the user-specified action string before SecDefaultAction
+	// merging. Used below to detect explicitly-specified disruptive actions on
+	// chain-member rules without being confused by inherited default actions.
+	rawActions := ""
 
 	if options.WithOperator {
 		vars, operator, acts, err := parseActionOperator(options.Data)
@@ -398,6 +401,7 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 		if err := rp.ParseOperator(operator); err != nil {
 			return nil, err
 		}
+		rawActions = acts
 		if acts != "" {
 			if err := rp.ParseActions(acts); err != nil {
 				return nil, err
@@ -405,8 +409,8 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 		}
 	} else {
 		// quoted actions separated by comma (,)
-		actions = utils.MaybeRemoveQuotes(options.Data)
-		err = rp.ParseActions(actions)
+		rawActions = utils.MaybeRemoveQuotes(options.Data)
+		err = rp.ParseActions(rawActions)
 		if err != nil {
 			return nil, err
 		}
@@ -416,6 +420,13 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 	rule.Line_ = options.ParserConfig.LastLine
 
 	if parent := getLastRuleExpectingChain(options.WAF); parent != nil {
+		parsed, _ := parseActions(options.WAF.Logger, rawActions)
+		if hasDisruptiveActions(parsed) {
+			// Drop the whole pending chain so a suppressed error leaves no partial
+			// chain in the rule graph that could absorb the next top-level rule.
+			options.WAF.Rules.DiscardPendingChain()
+			return nil, fmt.Errorf("disruptive actions can only be specified in the chain starter rule (parent id: %d)", parent.ID_)
+		}
 		rule.ParentID_ = parent.ID_
 		// While the ID_ will be kept to 0 being a chain rule, the LogID_ is meant to be
 		// the printable ID that represents the chain rule, therefore the parent's ID is inherited.
