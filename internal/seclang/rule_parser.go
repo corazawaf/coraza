@@ -18,7 +18,16 @@ import (
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
-var defaultActionsPhase2 = "phase:2,log,auditlog,pass"
+// defaultActions defines the built-in default actions for each phase.
+// These defaults are applied when no SecDefaultAction is defined for that phase.
+// They match ModSecurity's global default behavior, which applies log and auditlog to all phases.
+var defaultActions = map[types.RulePhase]string{
+	types.PhaseRequestHeaders:  "phase:1,log,auditlog,pass",
+	types.PhaseRequestBody:     "phase:2,log,auditlog,pass",
+	types.PhaseResponseHeaders: "phase:3,log,auditlog,pass",
+	types.PhaseResponseBody:    "phase:4,log,auditlog,pass",
+	types.PhaseLogging:         "phase:5,log,auditlog,pass",
+}
 
 type ruleAction struct {
 	Key   string
@@ -375,11 +384,14 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 			return nil, err
 		}
 	}
-	// If no default actions for phase 2 are defined, defaultActionsPhase2 variable (hardcoded default actions for phase 2) is used.
-	if rp.defaultActions[types.PhaseRequestBody] == nil {
-		err = rp.ParseDefaultActions(defaultActionsPhase2)
-		if err != nil {
-			return nil, err
+	// If no default actions for a given phase are defined, the built-in defaults are used.
+	// This matches ModSecurity's behavior of applying log,auditlog,pass to all phases by default.
+	for phase, da := range defaultActions {
+		if rp.defaultActions[phase] == nil {
+			err = rp.ParseDefaultActions(da)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	// rawActions holds the user-specified action string before SecDefaultAction
