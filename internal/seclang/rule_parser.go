@@ -382,7 +382,10 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 			return nil, err
 		}
 	}
-	actions := ""
+	// rawActions holds the user-specified action string before SecDefaultAction
+	// merging. Used below to detect explicitly-specified disruptive actions on
+	// chain-member rules without being confused by inherited default actions.
+	rawActions := ""
 
 	if options.WithOperator {
 		vars, operator, acts, err := parseActionOperator(options.Data)
@@ -398,6 +401,7 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 		if err := rp.ParseOperator(operator); err != nil {
 			return nil, err
 		}
+		rawActions = acts
 		if acts != "" {
 			if err := rp.ParseActions(acts); err != nil {
 				return nil, err
@@ -405,8 +409,8 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 		}
 	} else {
 		// quoted actions separated by comma (,)
-		actions = utils.MaybeRemoveQuotes(options.Data)
-		err = rp.ParseActions(actions)
+		rawActions = utils.MaybeRemoveQuotes(options.Data)
+		err = rp.ParseActions(rawActions)
 		if err != nil {
 			return nil, err
 		}
@@ -416,6 +420,19 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 	rule.Line_ = options.ParserConfig.LastLine
 
 	if parent := getLastRuleExpectingChain(options.WAF); parent != nil {
+		// ModSecurity and compatible engines only allow disruptive actions on the
+		// chain-starter rule. A disruptive action on a chained rule (a non-starter)
+		// is always ignored at runtime because the starter's action fires; worse,
+		// it can cause config-load failures in other WAF implementations.
+		// Reject it here so rule authors get an explicit error rather than silent
+		// misbehaviour.
+		//
+		// We re-parse the raw action string without merging SecDefaultAction so
+		// that an inherited default disruptive action (e.g. "pass" from the phase-2
+		// default) does not trigger a false positive.
+		if rawActsHaveDisruptive(options.WAF.Logger, rawActions) {
+			return nil, fmt.Errorf("disruptive actions can only be specified in the chain starter rule (parent id: %d)", parent.ID_)
+		}
 		rule.ParentID_ = parent.ID_
 		// While the ID_ will be kept to 0 being a chain rule, the LogID_ is meant to be
 		// the printable ID that represents the chain rule, therefore the parent's ID is inherited.
@@ -623,6 +640,26 @@ func appendRuleAction(res []ruleAction, key string, val string, disruptiveAction
 		})
 	}
 	return res, disruptiveActionIndex, nil
+}
+
+// rawActsHaveDisruptive parses acts (the raw, user-supplied action string)
+// without applying SecDefaultAction and returns true if the user explicitly
+// included a disruptive action. A parse error is treated as "no disruptive
+// action" — the subsequent full ParseActions call will surface the error.
+func rawActsHaveDisruptive(logger debuglog.Logger, acts string) bool {
+	if acts == "" {
+		return false
+	}
+	parsed, err := parseActions(logger, acts)
+	if err != nil {
+		return false
+	}
+	for _, a := range parsed {
+		if a.Atype == plugintypes.ActionTypeDisruptive {
+			return true
+		}
+	}
+	return false
 }
 
 /*

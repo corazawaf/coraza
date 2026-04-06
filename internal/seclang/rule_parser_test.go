@@ -323,6 +323,34 @@ func TestRawChainedRules(t *testing.T) {
 	}
 }
 
+func TestChainedRuleDisruptiveActionRejected(t *testing.T) {
+	// ModSecurity and compatible engines reject configs where a chained (non-starter)
+	// rule carries a disruptive action. Coraza must do the same so that rule sets
+	// behave identically across implementations.
+	disruptiveActions := []string{"deny", "block", "allow", "pass", "redirect:'http://example.com'"}
+	for _, da := range disruptiveActions {
+		t.Run(da, func(t *testing.T) {
+			waf := corazawaf.NewWAF()
+			p := NewParser(waf)
+			err := p.FromString(`SecRule REQUEST_URI "abc" "id:100,phase:2,chain"
+SecRule REQUEST_URI "def" "` + da + `"`)
+			if err == nil {
+				t.Errorf("expected error for disruptive action %q on chain member, got nil", da)
+			}
+		})
+	}
+}
+
+func TestChainedRuleDisruptiveActionAllowedOnStarter(t *testing.T) {
+	// A disruptive action on the chain-starter rule is valid.
+	waf := corazawaf.NewWAF()
+	p := NewParser(waf)
+	if err := p.FromString(`SecRule REQUEST_URI "abc" "id:101,phase:2,deny,status:403,chain"
+SecRule REQUEST_URI "def" ""`); err != nil {
+		t.Errorf("unexpected error for disruptive action on chain starter: %s", err)
+	}
+}
+
 func TestParseRule(t *testing.T) {
 	tests := []struct {
 		name string
