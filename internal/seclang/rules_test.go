@@ -291,6 +291,40 @@ func TestRuleChains(t *testing.T) {
 	}
 }
 
+func TestChainStarterDisruptiveActionFires(t *testing.T) {
+	// The starter rule's disruptive action must interrupt the transaction when the
+	// full chain matches, and must NOT fire when the chain does not match.
+	waf := corazawaf.NewWAF()
+	parser := NewParser(waf)
+	if err := parser.FromString(`
+		SecRuleEngine On
+		SecRule ARGS "@rx attack" "id:1,phase:1,deny,status:403,log,chain"
+			SecRule &ARGS "@gt 0" ""
+	`); err != nil {
+		t.Fatalf("unexpected parse error: %s", err)
+	}
+
+	t.Run("chain matches — interruption expected", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		tx.AddGetRequestArgument("payload", "attack")
+		tx.ProcessRequestHeaders()
+		if tx.Interruption() == nil {
+			t.Error("expected interruption from chain starter deny, got nil")
+		} else if tx.Interruption().RuleID != 1 {
+			t.Errorf("expected interruption from rule 1, got rule %d", tx.Interruption().RuleID)
+		}
+	})
+
+	t.Run("chain does not match — no interruption", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		tx.AddGetRequestArgument("payload", "benign")
+		tx.ProcessRequestHeaders()
+		if tx.Interruption() != nil {
+			t.Errorf("expected no interruption, got one from rule %d", tx.Interruption().RuleID)
+		}
+	})
+}
+
 func TestTagsAreNotPrintedTwice(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	var logs []string
