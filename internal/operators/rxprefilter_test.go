@@ -1771,6 +1771,69 @@ func TestInternalNodeCoverage(t *testing.T) {
 	})
 }
 
+func TestPrefilterConcurrentSafety(t *testing.T) {
+	rxPattern := `(?i)(?:union\s+select|insert\s+into|delete\s+from)`
+	opts := plugintypes.OperatorOptions{Arguments: rxPattern, RxPreFilterEnabled: true}
+	op, err := newRX(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if op.(*rx).prefilter == nil {
+		t.Skip("prefilter not built")
+	}
+	re := regexp.MustCompile(rxPattern)
+	inputs := []string{
+		"union select * from t", "INSERT INTO t VALUES",
+		"normal request", "GET /index.html HTTP/1.1",
+		"delete from users", "", "UNION SELECT 1,2,3",
+	}
+	const goroutines = 100
+	errs := make(chan error, goroutines*len(inputs))
+	done := make(chan struct{})
+	for g := 0; g < goroutines; g++ {
+		go func() {
+			defer func() { done <- struct{}{} }()
+			for _, inp := range inputs {
+				waf := corazawaf.NewWAF()
+				tx := waf.NewTransaction()
+				tx.Capture = true
+				got := op.Evaluate(tx, inp)
+				if want := re.MatchString(inp); got != want {
+					errs <- fmt.Errorf("input %q: got %v, want %v", inp, got, want)
+				}
+			}
+		}()
+	}
+	for i := 0; i < goroutines; i++ {
+		<-done
+	}
+	close(errs)
+	for err := range errs {
+		t.Error(err)
+	}
+}
+
+func TestPrefilterAnyRequiredNonASCIIBailout(t *testing.T) {
+	// CI pattern whose needles contain non-ASCII bytes — must bail out (return nil).
+	if pf := prefilterFunc("(?si)(?:café|naïve)"); pf != nil {
+		t.Error("expected nil prefilter for CI pattern with non-ASCII needles")
+	}
+}
+
+func TestPrefilterCaseInsensitiveWithNonASCIIInput(t *testing.T) {
+	// The isASCII wrapper must conservatively return true for non-ASCII input.
+	pf := prefilterFunc("(?si)hello")
+	if pf == nil {
+		t.Fatal("expected non-nil prefilter for (?si)hello")
+	}
+	if !pf("héllo") {
+		t.Error("CI prefilter must pass non-ASCII input through (conservative)")
+	}
+	if pf("world") {
+		t.Error("CI prefilter must reject clearly non-matching ASCII input")
+	}
+}
+
 // BenchmarkIndexedMatcher benchmarks the Wu-Manber indexedMatcher at different
 // needle counts and case modes against a typical HTTP request haystack.
 func BenchmarkIndexedMatcher(b *testing.B) {
