@@ -58,10 +58,10 @@
 //
 // # Important Notes
 //
-// When using the allow action for allowlisting, it's recommended to add
-// ctl:ruleEngine=On to ensure the rule executes even in DetectionOnly mode.
+// When using the `allow` action for allowlisting, it's recommended to add
+// `ctl:ruleEngine=On` to ensure the rule executes even in `DetectionOnly` mode.
 //
-// For the complete list of available actions, see: https://coraza.io/docs/seclang/actions/
+// For the complete list of available actions, see [docs/seclang/actions](https://coraza.io/docs/seclang/actions/).
 package actions
 
 import (

@@ -29,6 +29,13 @@ import (
 
 var operators = map[string]plugintypes.OperatorFactory{}
 
+func memoizeDo(m plugintypes.Memoizer, key string, fn func() (any, error)) (any, error) {
+	if m != nil {
+		return m.Do(key, fn)
+	}
+	return fn()
+}
+
 // Get returns an operator by name
 func Get(name string, options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	if op, ok := operators[name]; ok {

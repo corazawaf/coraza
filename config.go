@@ -94,6 +94,7 @@ type wafRule struct {
 // int is a signed integer type that is at least 32 bits in size (platform-dependent size).
 // We still basically assume 64-bit usage where int are big sizes.
 type wafConfig struct {
+	ruleObserver             func(rule types.RuleMetadata)
 	rules                    []wafRule
 	auditLog                 *auditLogConfig
 	requestBodyAccess        bool
@@ -116,6 +117,12 @@ func (c *wafConfig) WithRules(rules ...*corazawaf.Rule) WAFConfig {
 	for _, r := range rules {
 		ret.rules = append(ret.rules, wafRule{rule: r})
 	}
+	return ret
+}
+
+func (c *wafConfig) WithRuleObserver(observer func(rule types.RuleMetadata)) WAFConfig {
+	ret := c.clone()
+	ret.ruleObserver = observer
 	return ret
 }
 

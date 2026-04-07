@@ -1,0 +1,12 @@
+# Multiphase-specific test ignores, loaded only with coraza.rule.multiphase_evaluation build tag.
+# This file is combined with .ftw.yml before running the tests. This allows to have different expectations
+# for tests that only fail in multiphase evaluation, without affecting non-multiphase test runs.
+---
+testoverride:
+  ignore:
+    920540-4: 'Multiphase: MATCHED_VAR_NAME reports ARGS_POST instead of ARGS'
+    920540-5: 'Multiphase: skip:1 guard (920539) stays in phase 2 while 920540 is inferred to phase 1. False positive'
+    931130-24: 'Multiphase: MATCHED_VAR_NAME reports ARGS_GET instead of ARGS'
+    932200-13: 'Multiphase: MATCHED_VAR_NAME reports ARGS_GET instead of ARGS'
+    932300-10: 'Multiphase: MATCHED_VAR_NAME reports ARGS_POST instead of ARGS'
+    933120-2: 'Multiphase: MATCHED_VAR_NAME reports ARGS_POST instead of ARGS'

@@ -18,9 +18,11 @@ charLoop:
 			switch {
 			case (input[i] == '/') && (i+1 < inputLen) && (input[i+1] == '*'):
 				incomment = true
+				changed = true
 				i += 2
 			case (input[i] == '<') && (i+3 < inputLen) && (input[i+1] == '!') && (input[i+2] == '-') && (input[i+3] == '-'):
 				incomment = true
+				changed = true
 				i += 4
 			case (input[i] == '-') && (i+1 < inputLen) && (input[i+1] == '-'):
 				input[i] = ' '

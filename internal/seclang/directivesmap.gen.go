@@ -13,6 +13,7 @@ var (
 	_ directive = directiveSecResponseBodyAccess
 	_ directive = directiveSecRequestBodyLimit
 	_ directive = directiveSecRequestBodyAccess
+	_ directive = directiveSecRequestBodyJsonDepthLimit
 	_ directive = directiveSecRuleEngine
 	_ directive = directiveSecWebAppID
 	_ directive = directiveSecServerSignature
@@ -65,6 +66,7 @@ var (
 	_ directive = directiveSecIgnoreRuleCompilationErrors
 	_ directive = directiveSecDataset
 	_ directive = directiveSecArgumentsLimit
+	_ directive = directiveSecRxPreFilter
 )
 
 var directivesMap = map[string]directive{
@@ -75,6 +77,7 @@ var directivesMap = map[string]directive{
 	"secresponsebodyaccess":          directiveSecResponseBodyAccess,
 	"secrequestbodylimit":            directiveSecRequestBodyLimit,
 	"secrequestbodyaccess":           directiveSecRequestBodyAccess,
+	"secrequestbodyjsondepthlimit":   directiveSecRequestBodyJsonDepthLimit,
 	"secruleengine":                  directiveSecRuleEngine,
 	"secwebappid":                    directiveSecWebAppID,
 	"secserversignature":             directiveSecServerSignature,
@@ -127,6 +130,7 @@ var directivesMap = map[string]directive{
 	"secignorerulecompilationerrors": directiveSecIgnoreRuleCompilationErrors,
 	"secdataset":                     directiveSecDataset,
 	"secargumentslimit":              directiveSecArgumentsLimit,
+	"secrxprefilter":                 directiveSecRxPreFilter,
 
 	// Unsupported directives
 	"secargumentseparator":     directiveUnsupported,

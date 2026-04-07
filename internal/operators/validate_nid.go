@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/memoize"
 )
 
 type validateNidFunction = func(input string) bool
@@ -61,7 +60,7 @@ func newValidateNID(options plugintypes.OperatorOptions) (plugintypes.Operator, 
 		return nil, fmt.Errorf("invalid @validateNid argument")
 	}
 
-	re, err := memoize.Do(expr, func() (any, error) { return regexp.Compile(expr) })
+	re, err := memoizeDo(options.Memoizer, expr, func() (any, error) { return regexp.Compile(expr) })
 	if err != nil {
 		return nil, err
 	}

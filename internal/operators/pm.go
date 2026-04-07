@@ -11,7 +11,6 @@ import (
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/memoize"
 )
 
 // Description:
@@ -51,7 +50,7 @@ func newPM(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 		DFA:                  true,
 	})
 
-	m, _ := memoize.Do(data, func() (any, error) { return builder.Build(dict), nil })
+	m, _ := memoizeDo(options.Memoizer, data, func() (any, error) { return builder.Build(dict), nil })
 	// TODO this operator is supposed to support snort data syntax: "@pm A|42|C|44|F"
 	return &pm{matcher: m.(ahocorasick.AhoCorasick)}, nil
 }

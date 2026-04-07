@@ -21,6 +21,8 @@ type BodyProcessorOptions struct {
 	FileMode fs.FileMode
 	// DirMode is the mode of the directory that will be created
 	DirMode fs.FileMode
+	// RequestBodyRecursionLimit is the maximum recursion level accepted in a body processor
+	RequestBodyRecursionLimit int
 }
 
 // BodyProcessor interface is used to create

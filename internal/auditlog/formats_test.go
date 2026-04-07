@@ -453,6 +453,129 @@ func TestNativeFormatter(t *testing.T) {
 	})
 }
 
+func TestNativeFormatterPartJ(t *testing.T) {
+	f := &nativeFormatter{}
+
+	t.Run("uploaded files", func(t *testing.T) {
+		al := &Log{
+			Parts_: []types.AuditLogPart{
+				types.AuditLogPartUploadedFiles,
+			},
+			Transaction_: Transaction{
+				Request_: &TransactionRequest{
+					Files_: []plugintypes.AuditLogTransactionRequestFiles{
+						TransactionRequestFiles{Name_: "image.png", Size_: 12345, Mime_: "image/png"},
+						TransactionRequestFiles{Name_: "doc.pdf", Size_: 67890, Mime_: "application/pdf"},
+					},
+				},
+			},
+		}
+		data, err := f.Format(al)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		scanner := bufio.NewScanner(bytes.NewReader(data))
+		var lines []string
+		for scanner.Scan() {
+			lines = append(lines, scanner.Text())
+		}
+		separator := lines[0]
+
+		checkLine(t, lines, 0, mutateSeparator(separator, 'J'))
+		checkLine(t, lines, 1, `1,12345,"image.png","image/png"`)
+		checkLine(t, lines, 2, `2,67890,"doc.pdf","application/pdf"`)
+		checkLine(t, lines, 3, `Total,80235`)
+		checkLine(t, lines, 4, "")
+	})
+
+	t.Run("no files", func(t *testing.T) {
+		al := &Log{
+			Parts_: []types.AuditLogPart{
+				types.AuditLogPartUploadedFiles,
+			},
+			Transaction_: Transaction{
+				Request_: &TransactionRequest{},
+			},
+		}
+		data, err := f.Format(al)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		scanner := bufio.NewScanner(bytes.NewReader(data))
+		var lines []string
+		for scanner.Scan() {
+			lines = append(lines, scanner.Text())
+		}
+		separator := lines[0]
+
+		checkLine(t, lines, 0, mutateSeparator(separator, 'J'))
+		checkLine(t, lines, 1, "Total,0")
+		checkLine(t, lines, 2, "")
+	})
+
+	t.Run("unknown content type", func(t *testing.T) {
+		al := &Log{
+			Parts_: []types.AuditLogPart{
+				types.AuditLogPartUploadedFiles,
+			},
+			Transaction_: Transaction{
+				Request_: &TransactionRequest{
+					Files_: []plugintypes.AuditLogTransactionRequestFiles{
+						TransactionRequestFiles{Name_: "mystery", Size_: 100, Mime_: ""},
+					},
+				},
+			},
+		}
+		data, err := f.Format(al)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		scanner := bufio.NewScanner(bytes.NewReader(data))
+		var lines []string
+		for scanner.Scan() {
+			lines = append(lines, scanner.Text())
+		}
+		separator := lines[0]
+
+		checkLine(t, lines, 0, mutateSeparator(separator, 'J'))
+		checkLine(t, lines, 1, `1,100,"mystery","<Unknown Content-Type>"`)
+		checkLine(t, lines, 2, "Total,100")
+	})
+
+	t.Run("filename with special characters", func(t *testing.T) {
+		al := &Log{
+			Parts_: []types.AuditLogPart{
+				types.AuditLogPartUploadedFiles,
+			},
+			Transaction_: Transaction{
+				Request_: &TransactionRequest{
+					Files_: []plugintypes.AuditLogTransactionRequestFiles{
+						TransactionRequestFiles{Name_: "file \"quoted\".txt", Size_: 50, Mime_: "text/plain"},
+					},
+				},
+			},
+		}
+		data, err := f.Format(al)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		scanner := bufio.NewScanner(bytes.NewReader(data))
+		var lines []string
+		for scanner.Scan() {
+			lines = append(lines, scanner.Text())
+		}
+		separator := lines[0]
+
+		checkLine(t, lines, 0, mutateSeparator(separator, 'J'))
+		checkLine(t, lines, 1, `1,50,"file \"quoted\".txt","text/plain"`)
+		checkLine(t, lines, 2, "Total,50")
+	})
+}
+
 func createAuditLog() *Log {
 	return &Log{
 		Parts_: []types.AuditLogPart{

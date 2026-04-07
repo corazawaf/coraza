@@ -24,8 +24,9 @@ func TestEngine(t *testing.T) {
 		t.Run(p.Meta.Name, func(t *testing.T) {
 			tt, err := testList(t, &p)
 			if err != nil {
-				t.Error(err)
+				t.Fatal(err)
 			}
+
 			for _, test := range tt {
 				t.Run(test.Name, func(t *testing.T) {
 					if err := test.RunPhases(); err != nil {

@@ -48,7 +48,7 @@ The Coraza Project maintains implementations and plugins for the following serve
 
 ## Prerequisites
 
-* Go v1.22+ or tinygo compiler
+* Recent Go version (see [go.mod](./go.mod)) or tinygo compiler.
 * Linux distribution (Debian or Centos recommended), Windows or Mac.
 
 ## Coraza Core Usage
@@ -100,13 +100,16 @@ have compatibility guarantees across minor versions - use with care.
 the operator with `plugins.RegisterOperator` to reduce binary size / startup overhead.
 * `coraza.rule.multiphase_evaluation` - enables evaluation of rule variables in the phases that they are ready, not
 only the phase the rule is defined for.
-* `memoize_builders` - enables memoization of builders for regex and aho-corasick
-dictionaries to reduce memory consumption in deployments that launch several coraza
-instances. For more context check [this issue](https://github.com/corazawaf/coraza-caddy/issues/76)
+* `coraza.no_memoize` - disables the default memoization of regex and aho-corasick builders.
+Memoization is enabled by default and uses a global cache to reuse compiled patterns across WAF
+instances, reducing memory consumption and startup overhead. In long-lived processes that perform
+live reloads, use `WAF.Close()` (via `experimental.WAFCloser`) to release cached entries when a
+WAF is destroyed, or use this tag to opt out of memoization entirely.
 * `no_fs_access` - indicates that the target environment has no access to FS in order to not leverage OS' filesystem related functionality e.g. file body buffers.
 * `coraza.rule.case_sensitive_args_keys` - enables case-sensitive matching for ARGS keys, aligning Coraza behavior with RFC 3986 specification. It will be enabled by default in the next major version.
-* `coraza.rule.no_regex_multiline` - disables enabling by default regexes multiline modifiers in `@rx` operator. It aligns with CRS expected behavior, reduces false positives and might improve performances. No multiline regexes by default will be enabled in the next major version. For more context check [this PR](https://github.com/corazawaf/coraza/pull/876)
+* `coraza.rule.no_regex_multiline` - disables enabling by default regexes multiline modifiers in `@rx` operator. It aligns with CRS expected behavior, reduces false positives and might improve performances. No multiline regexes by default will be enabled in the next major version. For more context check [this PR](https://github.com/corazawaf/coraza/pull/876).
 * `coraza.rule.mandatory_rule_id_check` - enables strict rule id check where `id` action is required for all SecRule/SecAction.
+* `coraza.rule.rx_prefilter` - sets the default value of the `SecRxPreFilter` directive to `On`. Optimizes `@rx` operator, by skipping the full regex when an input can not match. This build tag is meant only for testing purposes, rely on `SecRxPreFilter` directive for runtime configuration and broader documentation on this feature.
 
 ## E2E Testing
 
@@ -143,11 +146,11 @@ $ go run mage.go -l
 Targets:
   check        runs lint and tests.
   coverage     runs tests with coverage and race detector enabled.
-  doc          runs godoc, access at http://localhost:6060
+  doc          runs godoc, access at http://localhost:6060.
   format       formats code in this repository.
-  fuzz         runs fuzz tests
+  fuzz         runs fuzz tests.
   lint         verifies code quality.
-  precommit    installs a git hook to run check when committing
+  precommit    installs a git hook to run check when committing.
   test         runs all tests.
 ```
 
@@ -178,7 +181,7 @@ Our vulnerability management team will respond within 3 working days of your rep
 
 ## Donations
 
-For donations, see [Donations site](https://owasp.org/donate/?reponame=www-project-coraza-web-application-firewall&title=OWASP+Coraza+Web+Application+Firewall)
+For donations, see [Donations site](https://owasp.org/donate/?reponame=www-project-coraza-web-application-firewall&title=OWASP+Coraza+Web+Application+Firewall).
 
 ## Thanks to all the people who have contributed
 

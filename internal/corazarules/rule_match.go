@@ -93,8 +93,10 @@ type MatchedRule struct {
 	// Name of the disruptive action
 	// Note: not exposed in coraza v3.0.*
 	DisruptiveAction_ DisruptiveAction
-	// Is meant to be logged
+	// Is meant to be logged to error log
 	Log_ bool
+	// Is meant to be included in audit log
+	Audit_ bool
 	// Server IP address
 	ServerIPAddress_ string
 	// Client IP address
@@ -131,6 +133,10 @@ func (mr *MatchedRule) Disruptive() bool {
 
 func (mr *MatchedRule) Log() bool {
 	return mr.Log_
+}
+
+func (mr *MatchedRule) Audit() bool {
+	return mr.Audit_
 }
 
 func (mr *MatchedRule) ServerIPAddress() string {

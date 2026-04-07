@@ -1,169 +1,339 @@
 // Copyright 2023 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build !tinygo && memoize_builders
-
-// https://github.com/kofalt/go-memoize/blob/master/memoize.go
+//go:build !tinygo && !coraza.no_memoize
 
 package memoize
 
 import (
 	"errors"
-	"sync"
+	"fmt"
+	"os"
+	"regexp"
 	"testing"
-
-	"golang.org/x/sync/singleflight"
 )
 
 func TestDo(t *testing.T) {
+	t.Cleanup(Reset)
+
+	m := NewMemoizer(1)
 	expensiveCalls := 0
 
-	// Function tracks how many times its been called
-	expensive := func() (interface{}, error) {
+	expensive := func() (any, error) {
 		expensiveCalls++
 		return expensiveCalls, nil
 	}
 
-	// First call SHOULD NOT be cached
-	result, err := Do("key1", expensive)
+	result, err := m.Do("key1", expensive)
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err.Error())
 	}
-
 	if want, have := 1, result.(int); want != have {
 		t.Fatalf("unexpected value, want %d, have %d", want, have)
 	}
 
-	// Second call on same key SHOULD be cached
-	result, err = Do("key1", expensive)
+	result, err = m.Do("key1", expensive)
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err.Error())
 	}
-
 	if want, have := 1, result.(int); want != have {
 		t.Fatalf("unexpected value, want %d, have %d", want, have)
 	}
 
-	// First call on a new key SHOULD NOT be cached
-	result, err = Do("key2", expensive)
+	result, err = m.Do("key2", expensive)
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err.Error())
 	}
-
 	if want, have := 2, result.(int); want != have {
 		t.Fatalf("unexpected value, want %d, have %d", want, have)
-	}
-}
-
-func TestSuccessCall(t *testing.T) {
-	do := makeDoer(new(sync.Map), &singleflight.Group{})
-
-	expensiveCalls := 0
-
-	// Function tracks how many times its been called
-	expensive := func() (interface{}, error) {
-		expensiveCalls++
-		return expensiveCalls, nil
-	}
-
-	// First call SHOULD NOT be cached
-	result, err, cached := do("key1", expensive)
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
-	}
-
-	if want, have := 1, result.(int); want != have {
-		t.Fatalf("unexpected value, want %d, have %d", want, have)
-	}
-
-	if want, have := false, cached; want != have {
-		t.Fatalf("unexpected caching, want %t, have %t", want, have)
-	}
-
-	// Second call on same key SHOULD be cached
-	result, err, cached = do("key1", expensive)
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
-	}
-
-	if want, have := 1, result.(int); want != have {
-		t.Fatalf("unexpected value, want %d, have %d", want, have)
-	}
-
-	if want, have := true, cached; want != have {
-		t.Fatalf("unexpected caching, want %t, have %t", want, have)
-	}
-
-	// First call on a new key SHOULD NOT be cached
-	result, err, cached = do("key2", expensive)
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
-	}
-
-	if want, have := 2, result.(int); want != have {
-		t.Fatalf("unexpected value, want %d, have %d", want, have)
-	}
-
-	if want, have := false, cached; want != have {
-		t.Fatalf("unexpected caching, want %t, have %t", want, have)
 	}
 }
 
 func TestFailedCall(t *testing.T) {
-	do := makeDoer(new(sync.Map), &singleflight.Group{})
+	t.Cleanup(Reset)
 
+	m := NewMemoizer(1)
 	calls := 0
 
-	// This function will fail IFF it has not been called before.
-	twoForTheMoney := func() (interface{}, error) {
+	twoForTheMoney := func() (any, error) {
 		calls++
-
 		if calls == 1 {
 			return calls, errors.New("Try again")
-		} else {
-			return calls, nil
 		}
+		return calls, nil
 	}
 
-	// First call should fail, and not be cached
-	result, err, cached := do("key1", twoForTheMoney)
+	result, err := m.Do("key1", twoForTheMoney)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
-
 	if want, have := 1, result.(int); want != have {
 		t.Fatalf("unexpected value, want %d, have %d", want, have)
 	}
 
-	if want, have := false, cached; want != have {
-		t.Fatalf("unexpected caching, want %t, have %t", want, have)
-	}
-
-	// Second call should succeed, and not be cached
-	result, err, cached = do("key1", twoForTheMoney)
+	result, err = m.Do("key1", twoForTheMoney)
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err.Error())
 	}
-
 	if want, have := 2, result.(int); want != have {
 		t.Fatalf("unexpected value, want %d, have %d", want, have)
 	}
 
-	if want, have := false, cached; want != have {
-		t.Fatalf("unexpected caching, want %t, have %t", want, have)
-	}
-
-	// Third call should succeed, and be cached
-	result, err, cached = do("key1", twoForTheMoney)
+	result, err = m.Do("key1", twoForTheMoney)
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err.Error())
 	}
-
 	if want, have := 2, result.(int); want != have {
 		t.Fatalf("unexpected value, want %d, have %d", want, have)
 	}
+}
 
-	if want, have := true, cached; want != have {
-		t.Fatalf("unexpected caching, want %t, have %t", want, have)
+func TestRelease(t *testing.T) {
+	t.Cleanup(Reset)
+
+	m1 := NewMemoizer(1)
+	m2 := NewMemoizer(2)
+
+	calls := 0
+	fn := func() (any, error) {
+		calls++
+		return calls, nil
+	}
+
+	_, _ = m1.Do("shared", fn)
+	_, _ = m2.Do("shared", fn)
+	_, _ = m1.Do("only-waf1", fn)
+
+	Release(1)
+
+	if _, ok := cache.Load("shared"); !ok {
+		t.Fatal("shared entry should still exist after releasing waf-1")
+	}
+	if _, ok := cache.Load("only-waf1"); ok {
+		t.Fatal("only-waf1 entry should be deleted after releasing its sole owner")
+	}
+
+	Release(2)
+	if _, ok := cache.Load("shared"); ok {
+		t.Fatal("shared entry should be deleted after releasing all owners")
+	}
+}
+
+func TestReset(t *testing.T) {
+	m := NewMemoizer(1)
+	_, _ = m.Do("k1", func() (any, error) { return 1, nil })
+	_, _ = m.Do("k2", func() (any, error) { return 2, nil })
+
+	Reset()
+
+	if _, ok := cache.Load("k1"); ok {
+		t.Fatal("cache should be empty after Reset")
+	}
+	if _, ok := cache.Load("k2"); ok {
+		t.Fatal("cache should be empty after Reset")
+	}
+}
+
+// cacheLen counts the number of entries in the global cache.
+func cacheLen() int {
+	n := 0
+	cache.Range(func(_, _ any) bool {
+		n++
+		return true
+	})
+	return n
+}
+
+// crsLikePatterns generates n CRS-scale regex patterns.
+func crsLikePatterns(n int) []string {
+	patterns := make([]string, n)
+	for i := range patterns {
+		patterns[i] = fmt.Sprintf(`(?i)pattern_%d_[a-z]{2,8}\d+`, i)
+	}
+	return patterns
+}
+
+func TestMemoizeScaleMultipleOwners(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping scale test in short mode")
+	}
+	t.Cleanup(Reset)
+
+	const (
+		numOwners   = 10
+		numPatterns = 300
+	)
+
+	patterns := crsLikePatterns(numPatterns)
+	calls := 0
+	fn := func(p string) func() (any, error) {
+		return func() (any, error) {
+			calls++
+			return regexp.Compile(p)
+		}
+	}
+
+	for i := uint64(1); i <= numOwners; i++ {
+		m := NewMemoizer(i)
+		for _, p := range patterns {
+			if _, err := m.Do(p, fn(p)); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if calls != numPatterns {
+		t.Fatalf("expected %d compilations, got %d", numPatterns, calls)
+	}
+	if n := cacheLen(); n != numPatterns {
+		t.Fatalf("expected %d cache entries, got %d", numPatterns, n)
+	}
+
+	// Release all owners; cache should be empty.
+	for i := uint64(1); i <= numOwners; i++ {
+		Release(i)
+	}
+	if n := cacheLen(); n != 0 {
+		t.Fatalf("expected empty cache after releasing all owners, got %d", n)
+	}
+}
+
+func TestCacheGrowthWithoutClose(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping scale test in short mode")
+	}
+	t.Cleanup(Reset)
+
+	const (
+		numOwners   = 100
+		numPatterns = 300
+	)
+
+	patterns := crsLikePatterns(numPatterns)
+	fn := func(p string) func() (any, error) {
+		return func() (any, error) {
+			return regexp.Compile(p)
+		}
+	}
+
+	for i := uint64(1); i <= numOwners; i++ {
+		m := NewMemoizer(i)
+		for _, p := range patterns {
+			if _, err := m.Do(p, fn(p)); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	// Every entry should have all owners.
+	cache.Range(func(_, value any) bool {
+		e := value.(*entry)
+		e.mu.Lock()
+		defer e.mu.Unlock()
+		if len(e.owners) != numOwners {
+			t.Fatalf("expected %d owners per entry, got %d", numOwners, len(e.owners))
+		}
+		return true
+	})
+}
+
+func TestCacheBoundedWithClose(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping scale test in short mode")
+	}
+	if os.Getenv("CORAZA_MEMOIZE_SCALE") != "1" {
+		t.Skip("skipping scale test; set CORAZA_MEMOIZE_SCALE=1 to enable")
+	}
+	t.Cleanup(Reset)
+
+	const (
+		numCycles   = 100
+		numPatterns = 300
+	)
+
+	patterns := crsLikePatterns(numPatterns)
+	fn := func(p string) func() (any, error) {
+		return func() (any, error) {
+			return regexp.Compile(p)
+		}
+	}
+
+	for i := uint64(1); i <= numCycles; i++ {
+		m := NewMemoizer(i)
+		for _, p := range patterns {
+			if _, err := m.Do(p, fn(p)); err != nil {
+				t.Fatal(err)
+			}
+		}
+		Release(i)
+	}
+
+	// After releasing each owner immediately, only the last cycle's
+	// entries remain (the last owner hasn't been released yet — but we
+	// DID release it in the loop). Cache should be empty.
+	if n := cacheLen(); n != 0 {
+		t.Fatalf("expected empty cache after all releases, got %d", n)
+	}
+}
+
+func BenchmarkCompileWithoutMemoize(b *testing.B) {
+	patterns := crsLikePatterns(300)
+	for _, numWAFs := range []int{1, 10, 100} {
+		b.Run(fmt.Sprintf("WAFs=%d", numWAFs), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				for w := 0; w < numWAFs; w++ {
+					for _, p := range patterns {
+						if _, err := regexp.Compile(p); err != nil {
+							b.Fatal(err)
+						}
+					}
+				}
+			}
+		})
+	}
+}
+
+func BenchmarkCompileWithMemoize(b *testing.B) {
+	patterns := crsLikePatterns(300)
+	for _, numWAFs := range []int{1, 10, 100} {
+		b.Run(fmt.Sprintf("WAFs=%d", numWAFs), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				Reset()
+				for w := 0; w < numWAFs; w++ {
+					m := NewMemoizer(uint64(w + 1))
+					for _, p := range patterns {
+						if _, err := m.Do(p, func() (any, error) {
+							return regexp.Compile(p)
+						}); err != nil {
+							b.Fatal(err)
+						}
+					}
+				}
+			}
+		})
+	}
+}
+
+func BenchmarkRelease(b *testing.B) {
+	patterns := crsLikePatterns(300)
+	for _, numOwners := range []int{1, 10, 100} {
+		b.Run(fmt.Sprintf("Owners=%d", numOwners), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				b.StopTimer()
+				Reset()
+				for o := 0; o < numOwners; o++ {
+					m := NewMemoizer(uint64(o + 1))
+					for _, p := range patterns {
+						_, _ = m.Do(p, func() (any, error) {
+							return regexp.Compile(p)
+						})
+					}
+				}
+				b.StartTimer()
+				for o := 0; o < numOwners; o++ {
+					Release(uint64(o + 1))
+				}
+			}
+		})
 	}
 }

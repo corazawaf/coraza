@@ -198,6 +198,10 @@ func (rp *RuleParser) ParseOperator(operator string) error {
 		Root:     rp.options.ParserConfig.Root,
 		Datasets: rp.options.Datasets,
 	}
+	if rp.options.WAF != nil {
+		opts.Memoizer = rp.options.WAF.Memoizer()
+		opts.RxPreFilterEnabled = rp.options.WAF.RxPreFilterEnabled
+	}
 
 	if wd := rp.options.ParserConfig.WorkingDir; wd != "" {
 		opts.Path = append(opts.Path, wd)
@@ -265,11 +269,25 @@ func (rp *RuleParser) ParseDefaultActions(actions string) error {
 // ParseActions parses a comma separated list of actions:arguments
 // Arguments can be wrapper inside quotes
 func (rp *RuleParser) ParseActions(actions string) error {
-	disabledActions := rp.options.ParserConfig.DisabledRuleActions
 	act, err := parseActions(rp.options.WAF.Logger, actions)
 	if err != nil {
 		return err
 	}
+	return rp.applyParsedActions(act)
+}
+
+// applyParsedActions applies a list of already-parsed actions to the rule.
+//
+// This is a helper method used internally by ParseActions and directive handlers
+// (such as SecRuleUpdateActionById) to avoid code duplication. It's useful when
+// actions have been parsed once for inspection and need to be applied without
+// re-parsing, avoiding redundant parsing operations.
+//
+// The method validates that none of the actions are disabled, executes metadata
+// actions, merges with default actions for the rule's phase, and initializes
+// all actions on the rule.
+func (rp *RuleParser) applyParsedActions(act []ruleAction) error {
+	disabledActions := rp.options.ParserConfig.DisabledRuleActions
 	// check if forbidden action:
 	for _, a := range act {
 		if utils.InSlice(a.Key, disabledActions) {
@@ -334,9 +352,13 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 	}
 
 	var err error
+	rule := corazawaf.NewRule()
+	if options.WAF != nil {
+		rule.SetMemoizer(options.WAF.Memoizer())
+	}
 	rp := RuleParser{
 		options:        options,
-		rule:           corazawaf.NewRule(),
+		rule:           rule,
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
 	var defaultActionsRaw []string
@@ -360,7 +382,10 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 			return nil, err
 		}
 	}
-	actions := ""
+	// rawActions holds the user-specified action string before SecDefaultAction
+	// merging. Used below to detect explicitly-specified disruptive actions on
+	// chain-member rules without being confused by inherited default actions.
+	rawActions := ""
 
 	if options.WithOperator {
 		vars, operator, acts, err := parseActionOperator(options.Data)
@@ -376,6 +401,7 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 		if err := rp.ParseOperator(operator); err != nil {
 			return nil, err
 		}
+		rawActions = acts
 		if acts != "" {
 			if err := rp.ParseActions(acts); err != nil {
 				return nil, err
@@ -383,17 +409,24 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 		}
 	} else {
 		// quoted actions separated by comma (,)
-		actions = utils.MaybeRemoveQuotes(options.Data)
-		err = rp.ParseActions(actions)
+		rawActions = utils.MaybeRemoveQuotes(options.Data)
+		err = rp.ParseActions(rawActions)
 		if err != nil {
 			return nil, err
 		}
 	}
-	rule := rp.Rule()
+	rule = rp.Rule()
 	rule.File_ = options.ParserConfig.ConfigFile
 	rule.Line_ = options.ParserConfig.LastLine
 
 	if parent := getLastRuleExpectingChain(options.WAF); parent != nil {
+		parsed, _ := parseActions(options.WAF.Logger, rawActions)
+		if hasDisruptiveActions(parsed) {
+			// Drop the whole pending chain so a suppressed error leaves no partial
+			// chain in the rule graph that could absorb the next top-level rule.
+			options.WAF.Rules.DiscardPendingChain()
+			return nil, fmt.Errorf("disruptive actions can only be specified in the chain starter rule (parent id: %d)", parent.ID_)
+		}
 		rule.ParentID_ = parent.ID_
 		// While the ID_ will be kept to 0 being a chain rule, the LogID_ is meant to be
 		// the printable ID that represents the chain rule, therefore the parent's ID is inherited.

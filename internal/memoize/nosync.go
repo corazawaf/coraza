@@ -1,36 +1,90 @@
 // Copyright 2023 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build tinygo && memoize_builders
+//go:build tinygo && !coraza.no_memoize
 
 package memoize
 
 import "sync"
 
-var doer = makeDoer(new(sync.Map))
-
-// Do executes and returns the results of the given function, unless there was a cached
-// value of the same key. Only one execution is in-flight for a given key at a time.
-// The boolean return value indicates whether v was previously stored.
-func Do(key string, fn func() (interface{}, error)) (interface{}, error) {
-	value, err, _ := doer(key, fn)
-	return value, err
+type entry struct {
+	value   any
+	mu      sync.Mutex
+	owners  map[uint64]struct{}
+	deleted bool
 }
 
-// makeDoer returns a function that executes and returns the results of the given function
-func makeDoer(cache *sync.Map) func(string, func() (interface{}, error)) (interface{}, error, bool) {
-	return func(key string, fn func() (interface{}, error)) (interface{}, error, bool) {
-		// Check cache
-		value, found := cache.Load(key)
-		if found {
-			return value, nil, true
-		}
+var cache sync.Map // key -> *entry
 
-		data, err := fn()
-		if err == nil {
-			cache.Store(key, data)
-		}
+// Memoizer caches expensive function calls with per-owner tracking.
+// TinyGo variant without singleflight.
+type Memoizer struct {
+	ownerID uint64
+}
 
-		return data, err, false
+// NewMemoizer creates a Memoizer that tracks cached entries under the given owner ID.
+func NewMemoizer(ownerID uint64) *Memoizer {
+	return &Memoizer{ownerID: ownerID}
+}
+
+// Do returns a cached value for key, or calls fn and caches the result.
+func (m *Memoizer) Do(key string, fn func() (any, error)) (any, error) {
+	if v, ok := cache.Load(key); ok {
+		e := v.(*entry)
+		e.mu.Lock()
+		if !e.deleted {
+			e.owners[m.ownerID] = struct{}{}
+			e.mu.Unlock()
+			return e.value, nil
+		}
+		e.mu.Unlock()
+	}
+
+	data, err := fn()
+	if err == nil {
+		e := &entry{
+			value:  data,
+			owners: map[uint64]struct{}{m.ownerID: {}},
+		}
+		cache.Store(key, e)
+	}
+	return data, err
+}
+
+// Release removes ownerID from all cached entries, deleting entries with no remaining owners.
+//
+// Deletions are deferred until after Range completes because TinyGo's sync.Map
+// holds its internal lock for the entire Range call, so calling Delete inside
+// the callback would deadlock.
+func Release(ownerID uint64) {
+	var toDelete []any
+	cache.Range(func(key, value any) bool {
+		e := value.(*entry)
+		e.mu.Lock()
+		delete(e.owners, ownerID)
+		if len(e.owners) == 0 {
+			e.deleted = true
+			toDelete = append(toDelete, key)
+		}
+		e.mu.Unlock()
+		return true
+	})
+	for _, key := range toDelete {
+		cache.Delete(key)
+	}
+}
+
+// Reset clears the entire cache. Intended for testing.
+//
+// Keys are collected first and deleted after Range returns to avoid deadlocking
+// on TinyGo's mutex-based sync.Map (see Release comment).
+func Reset() {
+	var keys []any
+	cache.Range(func(key, _ any) bool {
+		keys = append(keys, key)
+		return true
+	})
+	for _, key := range keys {
+		cache.Delete(key)
 	}
 }

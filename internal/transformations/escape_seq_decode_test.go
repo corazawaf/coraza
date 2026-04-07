@@ -30,6 +30,10 @@ func TestEscapeSeqDecode(t *testing.T) {
 			input: "\\a\\b\\f\\n\\r\\t\\v\\u0000\\?\\'\\\"\\0\\12\\123\\x00\\xff",
 			want:  "\a\b\f\n\r\t\vu0000?'\"\x00\nS\x00\xff",
 		},
+		{
+			input: "\\z",
+			want:  "z",
+		},
 	}
 
 	for _, tc := range tests {

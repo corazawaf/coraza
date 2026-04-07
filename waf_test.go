@@ -13,6 +13,11 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
+// wafWithRules mirrors experimental.WAFWithRules for testing without import cycle.
+type wafWithRules interface {
+	RulesCount() int
+}
+
 func TestRequestBodyLimit(t *testing.T) {
 	testCases := map[string]struct {
 		expectedErr   error
@@ -176,5 +181,56 @@ func TestPopulateAuditLog(t *testing.T) {
 			populateAuditLog(waf, tCase.config)
 			tCase.check(t, waf)
 		})
+	}
+}
+
+func TestDetectionOnlyEnforcesProcessPartialBodyLimitActions(t *testing.T) {
+	waf, err := NewWAF(NewWAFConfig().WithDirectives(`
+		SecRuleEngine DetectionOnly
+		SecRequestBodyAccess On
+		SecRequestBodyLimitAction Reject
+		SecResponseBodyAccess On
+		SecResponseBodyLimitAction Reject
+	`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	w := waf.(wafWrapper).waf
+	if w.RequestBodyLimitAction != types.BodyLimitActionProcessPartial {
+		t.Fatalf("expected RequestBodyLimitAction to be ProcessPartial in DetectionOnly mode, got %v", w.RequestBodyLimitAction)
+	}
+	if w.ResponseBodyLimitAction != types.BodyLimitActionProcessPartial {
+		t.Fatalf("expected ResponseBodyLimitAction to be ProcessPartial in DetectionOnly mode, got %v", w.ResponseBodyLimitAction)
+	}
+}
+
+func TestRulesCount(t *testing.T) {
+	waf, err := NewWAF(NewWAFConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rules, ok := waf.(wafWithRules)
+	if !ok {
+		t.Fatal("WAF does not implement WAFWithRules")
+	}
+	if rules.RulesCount() != 0 {
+		t.Fatalf("expected 0 rules, got %d", rules.RulesCount())
+	}
+
+	waf, err = NewWAF(NewWAFConfig().
+		WithDirectives(`SecRule REMOTE_ADDR "127.0.0.1" "id:1,phase:1,deny,status:403"`).
+		WithDirectives(`SecRule REQUEST_URI "/test" "id:2,phase:1,deny,status:403"`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rules, ok = waf.(wafWithRules)
+	if !ok {
+		t.Fatal("WAF does not implement WAFWithRules")
+	}
+	if rules.RulesCount() != 2 {
+		t.Fatalf("expected 2 rules, got %d", rules.RulesCount())
 	}
 }

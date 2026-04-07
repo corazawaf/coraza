@@ -18,7 +18,8 @@ import (
 // It is not concurrent safe, so it's not recommended to use it
 // after compilation
 type RuleGroup struct {
-	rules []Rule
+	rules    []Rule
+	observer func(rule types.RuleMetadata)
 }
 
 // Add a rule to the collection
@@ -61,7 +62,17 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 	}
 
 	rg.rules = append(rg.rules, *rule)
+
+	if rg.observer != nil {
+		rg.observer(rule)
+	}
+
 	return nil
+}
+
+// SetObserver assigns the observer function to the group.
+func (rg *RuleGroup) SetObserver(observer func(rule types.RuleMetadata)) {
+	rg.observer = observer
 }
 
 // GetRules returns the slice of rules,
@@ -77,6 +88,16 @@ func (rg *RuleGroup) FindByID(id int) *Rule {
 		}
 	}
 	return nil
+}
+
+// DiscardPendingChain removes the last rule from the group when it is an open
+// chain starter (HasChain=true). Called when a chain-member parse fails so the
+// partial chain is not left in the rule graph.
+func (rg *RuleGroup) DiscardPendingChain() {
+	last := len(rg.rules) - 1
+	if last >= 0 && rg.rules[last].HasChain {
+		rg.rules = rg.rules[:last]
+	}
 }
 
 // DeleteByID removes a rule by its ID
@@ -148,7 +169,7 @@ RulesLoop:
 		r := &rg.rules[i]
 		// if there is already an interruption and the phase isn't logging
 		// we break the loop
-		if tx.interruption != nil && phase != types.PhaseLogging {
+		if tx.IsInterrupted() && phase != types.PhaseLogging {
 			break RulesLoop
 		}
 		// Rules with phase 0 will always run
@@ -168,12 +189,17 @@ RulesLoop:
 		}
 
 		// we skip the rule in case it's in the excluded list
-		for _, trb := range tx.ruleRemoveByID {
-			if trb == r.ID_ {
+		if _, skip := tx.ruleRemoveByID[r.ID_]; skip {
+			tx.DebugLogger().Debug().
+				Int("rule_id", r.ID_).
+				Msg("Skipping rule")
+			continue RulesLoop
+		}
+		for _, rng := range tx.ruleRemoveByIDRanges {
+			if r.ID_ >= rng[0] && r.ID_ <= rng[1] {
 				tx.DebugLogger().Debug().
 					Int("rule_id", r.ID_).
 					Msg("Skipping rule")
-
 				continue RulesLoop
 			}
 		}
@@ -225,9 +251,12 @@ RulesLoop:
 		case corazatypes.AllowTypeAll:
 			break RulesLoop
 		}
-		// TODO these lines are SUPER SLOW
-		// we reset matched_vars, matched_vars_names, etc
-		tx.variables.matchedVars.Reset()
+		// Reset matched_vars only when the previous rule actually populated it.
+		// In typical CRS evaluation most rules don't match, so this avoids
+		// iterating an empty map on every rule.
+		if tx.variables.matchedVars.Len() > 0 {
+			tx.variables.matchedVars.Reset()
+		}
 
 		r.Evaluate(phase, tx, transformationCache)
 		tx.Capture = false // we reset captures
@@ -247,7 +276,7 @@ RulesLoop:
 	tx.Skip = 0
 
 	tx.stopWatches[phase] = time.Now().UnixNano() - ts
-	return tx.interruption != nil
+	return tx.IsInterrupted()
 }
 
 // NewRuleGroup creates an empty RuleGroup that

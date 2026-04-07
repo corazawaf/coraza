@@ -38,7 +38,7 @@ Regards,
 
 --
 airween
-----0000--    
+----0000--
 `,
 						},
 						Output: profile.ExpectedOutput{
@@ -86,7 +86,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 \x0EContent-Disposition: form-data; name="_msg_body"
 
 The Content-Disposition header contains an invalid character (0x0E).
-----0000--    
+----0000--
 `,
 						},
 						Output: profile.ExpectedOutput{
@@ -113,7 +113,7 @@ Content-\x20Disposition: form-data; name="file"; filename="1.php"
 
 0x20 character is expected to be the last invalid character before the valid range.
 Therefore, the parser should fail and raise MULTIPART_STRICT_ERROR.
-----0000--    
+----0000--
 `,
 						},
 						Output: profile.ExpectedOutput{
