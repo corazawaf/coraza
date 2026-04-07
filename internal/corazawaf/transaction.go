@@ -1181,10 +1181,10 @@ func (tx *Transaction) processRequestBodyStreaming(sp plugintypes.StreamingBodyP
 	if err != nil && err != errStreamInterrupted {
 		tx.debugLogger.Error().Err(err).Msg("Failed to process streaming request body")
 		tx.generateRequestBodyError(err)
+		// Clear stale per-record data unconditionally so neither the fallback
+		// Eval below nor any subsequent phase sees leftover record state.
+		tx.variables.argsPost.Reset()
 		if tx.interruption == nil {
-			// Clear stale per-record data so the fallback evaluation does not
-			// re-match against the last partially-processed record.
-			tx.variables.argsPost.Reset()
 			tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 		}
 	}
@@ -1217,8 +1217,10 @@ func (tx *Transaction) processResponseBodyStreaming(sp plugintypes.StreamingBody
 	if err != nil && err != errStreamInterrupted {
 		tx.debugLogger.Error().Err(err).Msg("Failed to process streaming response body")
 		tx.generateResponseBodyError(err)
+		// Clear stale per-record data unconditionally so neither the fallback
+		// Eval below nor any subsequent phase sees leftover record state.
+		tx.variables.responseArgs.Reset()
 		if tx.interruption == nil {
-			tx.variables.responseArgs.Reset()
 			tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
 		}
 	}

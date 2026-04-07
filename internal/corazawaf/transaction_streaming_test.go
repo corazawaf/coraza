@@ -216,6 +216,43 @@ func (c *countingStreamProcessor) ProcessResponseRecords(_ io.Reader, _ pluginty
 	return nil
 }
 
+// sentinelWrappingProcessor simulates a poorly-written processor that wraps
+// errStreamInterrupted with its own error instead of propagating it cleanly.
+// This produces the edge case where tx.interruption is set AND a non-sentinel
+// error is returned to processRequestBodyStreaming / processResponseBodyStreaming.
+type sentinelWrappingProcessor struct {
+	records []mockRecord
+}
+
+func (s *sentinelWrappingProcessor) ProcessRequest(_ io.Reader, _ plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
+	return nil
+}
+
+func (s *sentinelWrappingProcessor) ProcessResponse(_ io.Reader, _ plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
+	return nil
+}
+
+func (s *sentinelWrappingProcessor) ProcessRequestRecords(_ io.Reader, _ plugintypes.BodyProcessorOptions,
+	fn func(recordNum int, record plugintypes.Record) error) error {
+	for i, rec := range s.records {
+		if err := fn(i, rec); err != nil {
+			// Wrap instead of propagating — this breaks the sentinel contract.
+			return fmt.Errorf("processor wrapped: %w", err)
+		}
+	}
+	return nil
+}
+
+func (s *sentinelWrappingProcessor) ProcessResponseRecords(_ io.Reader, _ plugintypes.BodyProcessorOptions,
+	fn func(recordNum int, record plugintypes.Record) error) error {
+	for i, rec := range s.records {
+		if err := fn(i, rec); err != nil {
+			return fmt.Errorf("processor wrapped: %w", err)
+		}
+	}
+	return nil
+}
+
 func TestProcessRequestBodyStreamingTxVariablesPersist(t *testing.T) {
 	// TX variables (matchedRules, user-set TX vars) should persist across records
 	// for cross-record correlation. ArgsPost is reset per record, but TX-scoped
@@ -372,6 +409,188 @@ func TestProcessResponseBodyStreamingProcessorError(t *testing.T) {
 		t.Fatalf("unexpected error (should be nil): %v", err)
 	}
 	_ = it
+}
+
+// TestProcessRequestBodyStreamingProcessorErrorClearsArgsPost verifies that
+// argsPost is cleared after a mid-stream processor error, even when an
+// interruption has already been set, so no stale record data leaks into
+// subsequent phases.
+func TestProcessRequestBodyStreamingProcessorErrorClearsArgsPost(t *testing.T) {
+	waf := NewWAF()
+
+	// Emit one record that populates argsPost, then return an error.
+	sp := &mockStreamingBodyProcessor{
+		records: []mockRecord{
+			{fields: map[string]string{"json.0.field": "stale-value"}, rawRecord: []byte("rec\n")},
+		},
+		err: errors.New("mid-stream processor error"),
+	}
+
+	tx := waf.NewTransaction()
+	defer tx.Close()
+	tx.RequestBodyAccess = true
+
+	it, err := tx.processRequestBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	_ = it
+
+	// argsPost must be empty after the error handler runs.
+	if got := tx.variables.argsPost.Len(); got != 0 {
+		t.Fatalf("expected argsPost to be empty after processor error, got %d entries", got)
+	}
+}
+
+// TestProcessRequestBodyStreamingProcessorErrorFallbackEvalNoStaleData verifies that
+// argsPost is cleared even when the processor wraps errStreamInterrupted with its
+// own error (edge case: poorly-written processor that doesn't propagate the sentinel
+// cleanly). In this case both tx.interruption is set AND a non-sentinel error is
+// returned — argsPost must still be cleared.
+func TestProcessRequestBodyStreamingProcessorErrorFallbackEvalNoStaleData(t *testing.T) {
+	waf := NewWAF()
+	// Rule that matches "stale-value" — would fire in fallback eval if not cleared.
+	rule := newStreamingTestRule(t, 501, variables.ArgsPost, "stale-value", true)
+	if err := waf.Rules.Add(rule); err != nil {
+		t.Fatal(err)
+	}
+
+	// Processor emits a record that causes an interruption, but wraps the
+	// errStreamInterrupted sentinel with its own error.  This simulates a
+	// processor that doesn't propagate the sentinel cleanly — the outer error
+	// handler receives a non-sentinel error while tx.interruption is already set.
+	sp := &sentinelWrappingProcessor{
+		records: []mockRecord{
+			{fields: map[string]string{"json.0.field": "stale-value"}, rawRecord: []byte("rec\n")},
+		},
+	}
+
+	tx := waf.NewTransaction()
+	defer tx.Close()
+	tx.RequestBodyAccess = true
+
+	it, err := tx.processRequestBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Interruption must still be set (from the per-record eval).
+	if it == nil {
+		t.Fatal("expected interruption from per-record eval")
+	}
+
+	// argsPost must be empty: the error handler ran and cleared stale data even
+	// though tx.interruption was already non-nil.
+	if got := tx.variables.argsPost.Len(); got != 0 {
+		t.Fatalf("argsPost not cleared: has %d entries after wrapped-sentinel error", got)
+	}
+}
+
+// TestProcessRequestBodyStreamingProcessorErrorFallbackEvalClean verifies that
+// when a processor errors after partial records (no rule interruption during the
+// per-record evals), the fallback phase evaluation runs on an empty argsPost —
+// not on the last record's stale data.
+func TestProcessRequestBodyStreamingProcessorErrorFallbackEvalClean(t *testing.T) {
+	waf := NewWAF()
+	// Rule matching "clean-field" — would fire if argsPost leaks.
+	rule := newStreamingTestRule(t, 502, variables.ArgsPost, "clean-field", true)
+	if err := waf.Rules.Add(rule); err != nil {
+		t.Fatal(err)
+	}
+
+	// Processor emits a record whose data would match the rule if not cleared,
+	// but the pattern used in the record doesn't match (the rule matches
+	// "clean-field" but the record only sets "clean-field" AFTER we swap values).
+	// We need a pattern mismatch during per-record eval, then an error.
+	// Use a record value that does NOT match the rule pattern, so the callback
+	// doesn't interrupt, and the processor then errors.
+	sp := &mockStreamingBodyProcessor{
+		records: []mockRecord{
+			// "no-match" does not match the rule pattern "clean-field".
+			{fields: map[string]string{"json.0.field": "no-match"}, rawRecord: []byte("rec\n")},
+		},
+		err: errors.New("processor error after safe record"),
+	}
+
+	tx := waf.NewTransaction()
+	defer tx.Close()
+	tx.RequestBodyAccess = true
+
+	it, err := tx.processRequestBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// No interruption during per-record eval (record was "no-match").
+	// Fallback phase eval runs on empty argsPost (not stale "no-match").
+	// Rule "clean-field" doesn't match empty argsPost, so no interruption.
+	if it != nil {
+		t.Fatalf("unexpected interruption from fallback eval on stale data: %v", it)
+	}
+	if got := tx.variables.argsPost.Len(); got != 0 {
+		t.Fatalf("argsPost not cleared after processor error: %d entries remain", got)
+	}
+}
+
+// TestProcessResponseBodyStreamingProcessorErrorClearsResponseArgs verifies that
+// responseArgs is cleared after a mid-stream processor error.
+func TestProcessResponseBodyStreamingProcessorErrorClearsResponseArgs(t *testing.T) {
+	waf := NewWAF()
+
+	sp := &mockStreamingBodyProcessor{
+		records: []mockRecord{
+			{fields: map[string]string{"json.0.field": "stale-resp"}, rawRecord: []byte("rec\n")},
+		},
+		err: errors.New("mid-stream response processor error"),
+	}
+
+	tx := waf.NewTransaction()
+	defer tx.Close()
+	tx.ResponseBodyAccess = true
+
+	it, err := tx.processResponseBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	_ = it
+
+	if got := tx.variables.responseArgs.Len(); got != 0 {
+		t.Fatalf("expected responseArgs to be empty after processor error, got %d entries", got)
+	}
+}
+
+// TestProcessResponseBodyStreamingProcessorErrorFallbackEvalClean verifies that the
+// fallback phase evaluation after a response processor error runs on empty
+// responseArgs, not stale data from the last processed record.
+func TestProcessResponseBodyStreamingProcessorErrorFallbackEvalClean(t *testing.T) {
+	waf := NewWAF()
+	rule := newStreamingTestRule(t, 503, variables.ResponseArgs, "resp-stale", true)
+	if err := waf.Rules.Add(rule); err != nil {
+		t.Fatal(err)
+	}
+
+	// Record value doesn't match rule, so per-record eval doesn't interrupt.
+	// Then the processor errors; the fallback eval must run on empty responseArgs.
+	sp := &mockStreamingBodyProcessor{
+		records: []mockRecord{
+			{fields: map[string]string{"json.0.field": "no-match"}, rawRecord: []byte("rec\n")},
+		},
+		err: errors.New("processor error after safe response record"),
+	}
+
+	tx := waf.NewTransaction()
+	defer tx.Close()
+	tx.ResponseBodyAccess = true
+
+	it, err := tx.processResponseBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if it != nil {
+		t.Fatalf("unexpected interruption from fallback eval on stale response data: %v", it)
+	}
+	if got := tx.variables.responseArgs.Len(); got != 0 {
+		t.Fatalf("responseArgs not cleared after processor error: %d entries remain", got)
+	}
 }
 
 func TestProcessRequestBodyFromStreamRelay(t *testing.T) {
