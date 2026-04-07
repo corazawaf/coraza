@@ -188,8 +188,7 @@ func TestDefaultActionsErrors(t *testing.T) {
 func TestDefaultActionsForPhase2Overridable(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	p := NewParser(waf)
-	// A SecDefaultAction at phase:2 defined by the user has to override the hardcoded default for phase 2.
-	// A SecDefaultAction for phase:2 does NOT affect other phases; each phase has its own built-in defaults.
+	// A SecDefaultAction at phase:2 defined by the user has to override the hardcoded defaultActionsPhase2
 	err := p.FromString(`
 	SecDefaultAction "phase:2,nolog,noauditlog,pass"
 	SecAction "id:1,noauditlog"
@@ -203,21 +202,19 @@ func TestDefaultActionsForPhase2Overridable(t *testing.T) {
 	if waf.Rules.GetRules()[0].Audit != false {
 		t.Error("failed to set audit to false")
 	}
-	// Phase 1 rules use the built-in phase:1 default (log,auditlog,pass) since no explicit
-	// SecDefaultAction was defined for phase 1.
-	if waf.Rules.GetRules()[1].Log != true {
-		t.Error("phase 1 rules should have log set by the built-in phase 1 default actions")
+	if waf.Rules.GetRules()[1].Log != false {
+		t.Error("phase 1 rules shouldn't have log set by default actions of different phases")
 	}
-	if waf.Rules.GetRules()[1].Audit != true {
-		t.Error("phase 1 rules should have auditlog set by the built-in phase 1 default actions")
+	if waf.Rules.GetRules()[1].Audit != false {
+		t.Error("phase 1 rules shouldn't have log set by default actions of different phases")
 	}
 }
 
 func TestDefaultActionsForPhase2(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	p := NewParser(waf)
-	// Via the built-in defaultActions, log,auditlog,pass is the default for all phases.
-	// Only a SecDefaultAction of the same phase should override it for that specific phase.
+	// Via defaultActionsPhase2 variable, the default actions for phase 2 are hardcoded in Coraza.
+	// Only a SecDefaultAction of the same phase should override it.
 	err := p.FromString(`
 	SecDefaultAction "phase:3,log,auditlog,pass"
 	SecAction "id:1,phase:2"
@@ -232,84 +229,8 @@ func TestDefaultActionsForPhase2(t *testing.T) {
 		t.Error("failed to set audit to true because of default actions")
 	}
 
-	// Phase 1 also uses the built-in default (log,auditlog,pass) since no SecDefaultAction was defined for phase 1.
-	if !waf.Rules.GetRules()[1].Log || !waf.Rules.GetRules()[1].Audit {
-		t.Error("phase 1 rules should have log and auditlog set by the built-in phase 1 default actions")
-	}
-}
-
-// TestBuiltInDefaultActionsAllPhases verifies that the built-in defaults (log,auditlog,pass)
-// are applied to rules in all phases (1-5) when no SecDefaultAction is defined for those phases.
-// This matches ModSecurity's behavior.
-func TestBuiltInDefaultActionsAllPhases(t *testing.T) {
-	tests := []struct {
-		name  string
-		phase string
-	}{
-		{name: "phase 1 (RequestHeaders)", phase: "1"},
-		{name: "phase 2 (RequestBody)", phase: "2"},
-		{name: "phase 3 (ResponseHeaders)", phase: "3"},
-		{name: "phase 4 (ResponseBody)", phase: "4"},
-		{name: "phase 5 (Logging)", phase: "5"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			waf := corazawaf.NewWAF()
-			p := NewParser(waf)
-			err := p.FromString(`SecAction "id:1,phase:` + tt.phase + `"`)
-			if err != nil {
-				t.Fatalf("unexpected error: %s", err)
-			}
-			rules := waf.Rules.GetRules()
-			if len(rules) == 0 {
-				t.Fatal("no rules parsed")
-			}
-			if !rules[0].Log {
-				t.Errorf("phase %s rule should have Log=true from built-in default", tt.phase)
-			}
-			if !rules[0].Audit {
-				t.Errorf("phase %s rule should have Audit=true from built-in default", tt.phase)
-			}
-		})
-	}
-}
-
-// TestSecDefaultActionOverridesBuiltInForAllPhases verifies that a user-defined SecDefaultAction
-// overrides the built-in defaults for the specified phase without affecting other phases.
-func TestSecDefaultActionOverridesBuiltInForAllPhases(t *testing.T) {
-	tests := []struct {
-		name  string
-		phase string
-	}{
-		{name: "override phase 1", phase: "1"},
-		{name: "override phase 2", phase: "2"},
-		{name: "override phase 3", phase: "3"},
-		{name: "override phase 4", phase: "4"},
-		{name: "override phase 5", phase: "5"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			waf := corazawaf.NewWAF()
-			p := NewParser(waf)
-			// Override the default for the tested phase only
-			err := p.FromString(`
-				SecDefaultAction "phase:` + tt.phase + `,nolog,noauditlog,pass"
-				SecAction "id:1,phase:` + tt.phase + `"`)
-			if err != nil {
-				t.Fatalf("unexpected error: %s", err)
-			}
-			rules := waf.Rules.GetRules()
-			if len(rules) == 0 {
-				t.Fatal("no rules parsed")
-			}
-			// The SecDefaultAction for this phase overrides the built-in defaults
-			if rules[0].Log {
-				t.Errorf("phase %s rule should have Log=false after SecDefaultAction override", tt.phase)
-			}
-			if rules[0].Audit {
-				t.Errorf("phase %s rule should have Audit=false after SecDefaultAction override", tt.phase)
-			}
-		})
+	if waf.Rules.GetRules()[1].Log || waf.Rules.GetRules()[1].Audit {
+		t.Error("phase 1 rules shouldn't have log set by default actions of different phases")
 	}
 }
 

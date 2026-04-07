@@ -8,6 +8,22 @@
 SecRuleEngine DetectionOnly
 
 
+# -- Default actions ---------------------------------------------------------
+
+# Coraza only provides a hardcoded default for phase 2 (log,auditlog,pass).
+# ModSecurity v2 merges its default actionset into every rule regardless of
+# phase, so log and auditlog end up enabled for all phases. To match that
+# behavior — and to ensure CRS correlation rules (e.g. 980170 in phase 5)
+# appear in the error log — define SecDefaultAction for the remaining phases.
+#
+# If you do not want logging in phases 3-5 (e.g. to avoid logging sensitive
+# response data), comment out or remove the lines below.
+#
+SecDefaultAction "phase:3,log,auditlog,pass"
+SecDefaultAction "phase:4,log,auditlog,pass"
+SecDefaultAction "phase:5,log,auditlog,pass"
+
+
 # -- Performance optimizations -----------------------------------------------
 
 # Toggles literal pre-filtering for the @rx operator.

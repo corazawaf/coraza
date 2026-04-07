@@ -184,11 +184,12 @@ func TestAuditLogNoLogAuditLogInteraction(t *testing.T) {
 			wantAuditMessages: false,
 		},
 		{
-			// noauditlog without explicit log: the built-in default provides log, so the rule appears
-			// in the error log but not the audit log. This matches ModSecurity behavior.
-			name:              "noauditlog uses built-in default log, includes rule in error log only",
+			// noauditlog without explicit log on a phase 1 rule: no built-in default provides log
+			// for phase 1 (only phase 2 has hardcoded defaults). Users should set SecDefaultAction
+			// for other phases in coraza.conf-recommended to get log behavior.
+			name:              "noauditlog without log on phase 1, no logging without SecDefaultAction",
 			actions:           "noauditlog",
-			wantErrorLog:      true,
+			wantErrorLog:      false,
 			wantAuditMessages: false,
 		},
 	}
@@ -239,11 +240,11 @@ func TestAuditLogNoLogAuditLogInteraction(t *testing.T) {
 }
 
 // TestPhase5NoAuditLogRuleLogging validates that a phase 5 SecAction rule with noauditlog
-// (but without explicit nolog) appears in the error log. This matches the behavior expected
-// from CRS rules like 980170 (Anomaly Scores) which use noauditlog to avoid audit log spam
-// while still needing to appear in the error log for monitoring purposes.
-// In ModSecurity, such rules appear in the error log because the global default includes log.
-// Coraza now matches this behavior by applying log,auditlog,pass as built-in defaults for all phases.
+// (but without explicit nolog) appears in the error log when SecDefaultAction provides log
+// for phase 5. This matches the behavior expected from CRS rules like 980170 (Anomaly Scores)
+// which use noauditlog to avoid audit log spam while still needing to appear in the error log.
+// In ModSecurity, the default actionset merge provides log to all rules. In Coraza, users
+// should set SecDefaultAction for phases 3-5 (as in coraza.conf-recommended) to get this behavior.
 func TestPhase5NoAuditLogRuleLogging(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	var errorLogMessages []string
@@ -252,13 +253,15 @@ func TestPhase5NoAuditLogRuleLogging(t *testing.T) {
 	})
 
 	parser := NewParser(waf)
-	// Simulate CRS rule 980170: phase 5, noauditlog, no explicit log, msg with TX variable refs
+	// Simulate CRS rule 980170: phase 5, noauditlog, no explicit log, msg with TX variable refs.
+	// SecDefaultAction for phase 5 provides log (as recommended in coraza.conf-recommended).
 	err := parser.FromString(`
 		SecRuleEngine On
 		SecAuditEngine On
 		SecAuditLogParts ABCDEFGHIJKZ
 		SecDefaultAction "phase:1,log,auditlog,pass"
 		SecDefaultAction "phase:2,log,auditlog,pass"
+		SecDefaultAction "phase:5,log,auditlog,pass"
 		SecAction "id:901100,phase:1,pass,nolog,setvar:'tx.inbound_anomaly_score_threshold=5',setvar:'tx.blocking_inbound_anomaly_score=0'"
 		SecRule ARGS "@rx test" "id:100,phase:2,log,pass,msg:'test',setvar:'tx.blocking_inbound_anomaly_score=+5'"
 		SecAction "id:980170,phase:5,pass,t:none,noauditlog,msg:'Anomaly Score: %{tx.blocking_inbound_anomaly_score} threshold=%{tx.inbound_anomaly_score_threshold}'"
