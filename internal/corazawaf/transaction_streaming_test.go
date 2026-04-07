@@ -498,15 +498,21 @@ func TestProcessRequestBodyStreamingProcessorErrorFallbackEvalClean(t *testing.T
 		t.Fatal(err)
 	}
 
-	// Processor emits a record whose data would match the rule if not cleared,
-	// but the pattern used in the record doesn't match (the rule matches
-	// "clean-field" but the record only sets "clean-field" AFTER we swap values).
-	// We need a pattern mismatch during per-record eval, then an error.
-	// Use a record value that does NOT match the rule pattern, so the callback
-	// doesn't interrupt, and the processor then errors.
+	// Sanity check: the rule fires when argsPost contains "clean-field", proving
+	// the test doesn't pass vacuously due to a broken rule configuration.
+	txSanity := waf.NewTransaction()
+	defer txSanity.Close()
+	txSanity.variables.argsPost.SetIndex("sanity", 0, "clean-field")
+	txSanity.WAF.Rules.Eval(types.PhaseRequestBody, txSanity)
+	if txSanity.interruption == nil {
+		t.Fatal("sanity check: rule should fire when argsPost contains 'clean-field'")
+	}
+
+	// Use a record value that does NOT match the rule pattern, so the per-record
+	// callback succeeds (no interruption), and the processor then returns an error.
+	// The fallback eval runs on empty argsPost (rule would not fire on stale "no-match").
 	sp := &mockStreamingBodyProcessor{
 		records: []mockRecord{
-			// "no-match" does not match the rule pattern "clean-field".
 			{fields: map[string]string{"json.0.field": "no-match"}, rawRecord: []byte("rec\n")},
 		},
 		err: errors.New("processor error after safe record"),
@@ -521,8 +527,7 @@ func TestProcessRequestBodyStreamingProcessorErrorFallbackEvalClean(t *testing.T
 		t.Fatalf("unexpected error: %v", err)
 	}
 	// No interruption during per-record eval (record was "no-match").
-	// Fallback phase eval runs on empty argsPost (not stale "no-match").
-	// Rule "clean-field" doesn't match empty argsPost, so no interruption.
+	// Fallback phase eval runs on empty argsPost — rule "clean-field" doesn't match.
 	if it != nil {
 		t.Fatalf("unexpected interruption from fallback eval on stale data: %v", it)
 	}
@@ -566,6 +571,15 @@ func TestProcessResponseBodyStreamingProcessorErrorFallbackEvalClean(t *testing.
 	rule := newStreamingTestRule(t, 503, variables.ResponseArgs, "resp-stale", true)
 	if err := waf.Rules.Add(rule); err != nil {
 		t.Fatal(err)
+	}
+
+	// Sanity check: the rule fires when responseArgs contains "resp-stale".
+	txSanity := waf.NewTransaction()
+	defer txSanity.Close()
+	txSanity.variables.responseArgs.SetIndex("sanity", 0, "resp-stale")
+	txSanity.WAF.Rules.Eval(types.PhaseResponseBody, txSanity)
+	if txSanity.interruption == nil {
+		t.Fatal("sanity check: rule should fire when responseArgs contains 'resp-stale'")
 	}
 
 	// Record value doesn't match rule, so per-record eval doesn't interrupt.
