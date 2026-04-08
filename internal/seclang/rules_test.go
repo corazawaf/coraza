@@ -183,6 +183,15 @@ func TestAuditLogNoLogAuditLogInteraction(t *testing.T) {
 			wantErrorLog:      true,
 			wantAuditMessages: false,
 		},
+		{
+			// noauditlog without explicit log on a phase 1 rule: no built-in default provides log
+			// for phase 1 (only phase 2 has hardcoded defaults). Users should set SecDefaultAction
+			// for other phases in coraza.conf-recommended to get log behavior.
+			name:              "noauditlog without log on phase 1, no logging without SecDefaultAction",
+			actions:           "noauditlog",
+			wantErrorLog:      false,
+			wantAuditMessages: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -227,6 +236,78 @@ func TestAuditLogNoLogAuditLogInteraction(t *testing.T) {
 				t.Fatal(err)
 			}
 		})
+	}
+}
+
+// TestPhase5NoAuditLogRuleLogging validates that a phase 5 SecAction rule with noauditlog
+// (but without explicit nolog) appears in the error log when SecDefaultAction provides log
+// for phase 5. This matches the behavior expected from CRS rules like 980170 (Anomaly Scores)
+// which use noauditlog to avoid audit log spam while still needing to appear in the error log.
+// In ModSecurity, the default actionset merge provides log to all rules. In Coraza, users
+// should set SecDefaultAction for phases 3-5 (as in coraza.conf-recommended) to get this behavior.
+func TestPhase5NoAuditLogRuleLogging(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	var errorLogMessages []string
+	waf.SetErrorCallback(func(mr types.MatchedRule) {
+		errorLogMessages = append(errorLogMessages, mr.Message())
+	})
+
+	parser := NewParser(waf)
+	// Simulate CRS rule 980170: phase 5, noauditlog, no explicit log, msg with TX variable refs.
+	// SecDefaultAction for phase 5 provides log (as recommended in coraza.conf-recommended).
+	err := parser.FromString(`
+		SecRuleEngine On
+		SecAuditEngine On
+		SecAuditLogParts ABCDEFGHIJKZ
+		SecDefaultAction "phase:1,log,auditlog,pass"
+		SecDefaultAction "phase:2,log,auditlog,pass"
+		SecDefaultAction "phase:5,log,auditlog,pass"
+		SecAction "id:901100,phase:1,pass,nolog,setvar:'tx.inbound_anomaly_score_threshold=5',setvar:'tx.blocking_inbound_anomaly_score=0'"
+		SecRule ARGS "@rx test" "id:100,phase:2,log,pass,msg:'test',setvar:'tx.blocking_inbound_anomaly_score=+5'"
+		SecAction "id:980170,phase:5,pass,t:none,noauditlog,msg:'Anomaly Score: %{tx.blocking_inbound_anomaly_score} threshold=%{tx.inbound_anomaly_score_threshold}'"
+	`)
+	if err != nil {
+		t.Fatalf("unexpected parse error: %s", err)
+	}
+
+	tx := waf.NewTransaction()
+	tx.AddGetRequestArgument("param", "test")
+	tx.ProcessRequestHeaders()
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Fatal(err)
+	}
+	tx.ProcessResponseHeaders(200, "HTTP/1.1")
+	if _, err := tx.ProcessResponseBody(); err != nil {
+		t.Fatal(err)
+	}
+	tx.ProcessLogging()
+
+	// Rule 980170 should appear in error log (Log=true from built-in phase 5 default)
+	found := false
+	for _, msg := range errorLogMessages {
+		if strings.Contains(msg, "Anomaly Score:") {
+			found = true
+			// Message should contain the expanded TX variables (not empty, not raw macros)
+			if !strings.Contains(msg, "5") {
+				t.Errorf("message should contain expanded score, got: %q", msg)
+			}
+			break
+		}
+	}
+	if !found {
+		t.Errorf("rule 980170-like phase 5 rule with noauditlog should appear in error log; error log messages: %v", errorLogMessages)
+	}
+
+	// Rule 980170 should NOT appear in audit log messages (noauditlog prevents it)
+	al := tx.AuditLog()
+	for _, msg := range al.Messages() {
+		if msg.Data() != nil && msg.Data().ID() == 980170 {
+			t.Error("rule 980170-like should NOT appear in audit log messages due to noauditlog")
+		}
+	}
+
+	if err := tx.Close(); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -289,6 +370,40 @@ func TestRuleChains(t *testing.T) {
 	if len(tx.MatchedRules()) != 1 {
 		t.Errorf("failed to match rules with %d matches, expected 1", len(tx.MatchedRules()))
 	}
+}
+
+func TestChainStarterDisruptiveActionFires(t *testing.T) {
+	// The starter rule's disruptive action must interrupt the transaction when the
+	// full chain matches, and must NOT fire when the chain does not match.
+	waf := corazawaf.NewWAF()
+	parser := NewParser(waf)
+	if err := parser.FromString(`
+		SecRuleEngine On
+		SecRule ARGS "@rx attack" "id:1,phase:1,deny,status:403,log,chain"
+			SecRule &ARGS "@gt 0" ""
+	`); err != nil {
+		t.Fatalf("unexpected parse error: %s", err)
+	}
+
+	t.Run("chain matches — interruption expected", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		tx.AddGetRequestArgument("payload", "attack")
+		tx.ProcessRequestHeaders()
+		if tx.Interruption() == nil {
+			t.Error("expected interruption from chain starter deny, got nil")
+		} else if tx.Interruption().RuleID != 1 {
+			t.Errorf("expected interruption from rule 1, got rule %d", tx.Interruption().RuleID)
+		}
+	})
+
+	t.Run("chain does not match — no interruption", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		tx.AddGetRequestArgument("payload", "benign")
+		tx.ProcessRequestHeaders()
+		if tx.Interruption() != nil {
+			t.Errorf("expected no interruption, got one from rule %d", tx.Interruption().RuleID)
+		}
+	})
 }
 
 func TestTagsAreNotPrintedTwice(t *testing.T) {

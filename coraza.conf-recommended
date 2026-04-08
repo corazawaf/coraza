@@ -8,6 +8,26 @@
 SecRuleEngine DetectionOnly
 
 
+# -- Default actions ---------------------------------------------------------
+
+# Configures all rules to log by default in both the error and audit logs.
+# Rule-specific actions will override these defaults.
+# This allows CRS correlation rules (e.g. 980170 in phase 5) to emit error logs,
+# and matches the default ModSecurity actionset.
+# These defaults can be adjusted to disable logging (e.g. to avoid logging sensitive
+# response data in phases 3–5) via the nolog and noauditlog actions, commenting out
+# or removing the lines below.
+# Note:
+# - phase 1 and phase 2 defaults are commented out because they are typically already provided in a CRS setup via the crs-setup.conf file.
+#  - phase 2 default actions are hardcoded. This phase requires an explicit override to tweak it.
+#
+#SecDefaultAction "phase:1,log,auditlog,pass"
+#SecDefaultAction "phase:2,log,auditlog,pass"
+SecDefaultAction "phase:3,log,auditlog,pass"
+SecDefaultAction "phase:4,log,auditlog,pass"
+SecDefaultAction "phase:5,log,auditlog,pass"
+
+
 # -- Performance optimizations -----------------------------------------------
 
 # Toggles literal pre-filtering for the @rx operator.
