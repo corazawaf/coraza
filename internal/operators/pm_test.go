@@ -19,7 +19,7 @@ func TestMinPatternLen(t *testing.T) {
 		{"single pattern", []string{"hello"}, 5},
 		{"multiple patterns", []string{"hello", "hi", "hey"}, 2},
 		{"empty patterns only", []string{"", ""}, 0},
-		{"mixed with empty", []string{"abc", "", "de"}, 2},
+		{"mixed with empty", []string{"abc", "", "de"}, 0},
 		{"single char", []string{"a", "longer"}, 1},
 		{"no patterns", []string{}, 0},
 	}

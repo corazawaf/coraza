@@ -65,13 +65,15 @@ func (o *pm) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	return pmEvaluate(o.matcher, tx, value)
 }
 
-// minPatternLen returns the length of the shortest non-empty pattern.
-// If all patterns are empty, it returns 0 (no short-circuit possible).
+// minPatternLen returns the length of the shortest pattern.
+// If any pattern is empty it returns 0 immediately, disabling short-circuiting:
+// an empty pattern matches every input, so no input can be safely skipped.
+// If there are no patterns, it returns 0.
 func minPatternLen(patterns []string) int {
 	min := 0
 	for _, p := range patterns {
 		if len(p) == 0 {
-			continue
+			return 0
 		}
 		if min == 0 || len(p) < min {
 			min = len(p)
