@@ -476,27 +476,27 @@ func extractLiterals(re *syntax.Regexp, ci bool) interface{} {
 				// One branch has no extractable literal → can't pre-filter
 				return nil
 			}
-		switch v := lits.(type) {
-		case allRequired:
-			// Pick the longest literal from this branch as its representative.
-			branchLits = append(branchLits, longest(v))
-		case anyRequired:
-			// A nested alternation: any of its elements could satisfy this
-			// branch. Merge all into the parent anyRequired — we can't pick
-			// just one without risking false negatives.
-			// Example: pattern `10|(10|00)` — branch B is anyRequired{"10","00"},
-			// if we only kept "10" we'd miss input "00".
-			branchLits = append(branchLits, v...)
-		case combinedRequired:
-			// combinedRequired means every element of .all AND at least one
-			// element of .any must be present when this branch fires.
-			// For the parent anyRequired we need at least one guaranteed literal
-			// per branch. The .any elements satisfy exactly that — when this
-			// branch fires, at least one of .any is guaranteed to be present.
-			// Mirror the anyRequired case: merge all .any elements so no branch
-			// representative is accidentally omitted.
-			branchLits = append(branchLits, []string(v.any)...)
-		}
+			switch v := lits.(type) {
+			case allRequired:
+				// Pick the longest literal from this branch as its representative.
+				branchLits = append(branchLits, longest(v))
+			case anyRequired:
+				// A nested alternation: any of its elements could satisfy this
+				// branch. Merge all into the parent anyRequired — we can't pick
+				// just one without risking false negatives.
+				// Example: pattern `10|(10|00)` — branch B is anyRequired{"10","00"},
+				// if we only kept "10" we'd miss input "00".
+				branchLits = append(branchLits, v...)
+			case combinedRequired:
+				// combinedRequired means every element of .all AND at least one
+				// element of .any must be present when this branch fires.
+				// For the parent anyRequired we need at least one guaranteed literal
+				// per branch. The .any elements satisfy exactly that — when this
+				// branch fires, at least one of .any is guaranteed to be present.
+				// Mirror the anyRequired case: merge all .any elements so no branch
+				// representative is accidentally omitted.
+				branchLits = append(branchLits, []string(v.any)...)
+			}
 		}
 		if len(branchLits) == 0 {
 			return nil
@@ -624,25 +624,25 @@ func rawExtractSuffixes(re *syntax.Regexp, ci bool) []string {
 					return []string{v[0]}
 				}
 				return nil
-		case anyRequired:
-			return []string(v)
-		case combinedRequired:
-			// For trie-reconstruction we need a suffix that is *always* present
-			// when this sub-concat fires. The .all elements are guaranteed;
-			// .any elements are only conditionally present (one of them must be
-			// present, but not a specific one). Returning a .any element would
-			// let the outer prefix combine with a wrong suffix (e.g. "s"+"execute"
-			// instead of "s"+"p_"+"execute" → "sp_execute"), producing a phantom
-			// literal that never appears contiguously in real input.
-			// Return the single longest .all element as the guaranteed suffix.
-			rep := longest([]string(v.all))
-			if rep == "" {
-				return nil
+			case anyRequired:
+				return []string(v)
+			case combinedRequired:
+				// For trie-reconstruction we need a suffix that is *always* present
+				// when this sub-concat fires. The .all elements are guaranteed;
+				// .any elements are only conditionally present (one of them must be
+				// present, but not a specific one). Returning a .any element would
+				// let the outer prefix combine with a wrong suffix (e.g. "s"+"execute"
+				// instead of "s"+"p_"+"execute" → "sp_execute"), producing a phantom
+				// literal that never appears contiguously in real input.
+				// Return the single longest .all element as the guaranteed suffix.
+				rep := longest([]string(v.all))
+				if rep == "" {
+					return nil
+				}
+				return []string{rep}
 			}
-			return []string{rep}
 		}
-	}
-	return nil
+		return nil
 
 	case syntax.OpCapture:
 		return rawExtractSuffixes(re.Sub[0], ci)
