@@ -68,6 +68,7 @@ package operators
 
 import (
 	"regexp/syntax"
+	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -193,42 +194,43 @@ func prefilterFunc(pattern string) func(string) bool {
 	case allRequired:
 		// allRequired: every literal must be present in the input.
 		// Example: pattern "hello.*world" yields allRequired{"hello", "world"}.
-		// We check each with strings.Contains; if any is absent, regex can't match.
+		//
+		// Gap 1: when the pattern is start/end-anchored, the first/last literal
+		// must appear at position 0/end — use HasPrefix/HasSuffix instead of
+		// Contains for a faster O(k) check that also raises the reject rate.
+		//
+		// Gap 3: for non-anchored patterns, sort longest-first so the most
+		// selective literal is checked first, maximising early exit.
+
+		// Save origFirst/origLast before filterShort mutates the slice in-place.
+		origFirst := ""
+		if len(v) > 0 {
+			origFirst = v[0]
+		}
+		origLast := ""
+		if len(v) > 0 {
+			origLast = v[len(v)-1]
+		}
 		filtered := filterShort(v, 2)
 		if len(filtered) == 0 {
 			return nil
 		}
-		switch {
-		case len(filtered) == 1:
-			needle := filtered[0]
-			if caseInsensitive {
-				pf = func(s string) bool {
-					return containsFoldASCII(s, needle)
-				}
-			} else {
-				pf = func(s string) bool {
-					return strings.Contains(s, needle)
-				}
-			}
-		case caseInsensitive:
-			pf = func(s string) bool {
-				for _, needle := range filtered {
-					if !containsFoldASCII(s, needle) {
-						return false
-					}
-				}
-				return true
-			}
-		default:
-			pf = func(s string) bool {
-				for _, needle := range filtered {
-					if !strings.Contains(s, needle) {
-						return false
-					}
-				}
-				return true
-			}
+		// A literal is the prefix/suffix constraint only when it survived
+		// filterShort (len >= 2), meaning it IS the first/last literal in the
+		// pattern and not replaced by a longer one that appeared elsewhere.
+		usePrefix := hasBeginAnchor(re) && len(origFirst) >= 2
+		useSuffix := hasEndAnchor(re) && len(origLast) >= 2
+		if !usePrefix && !useSuffix {
+			// No anchor: sort longest-first for best early exit.
+			slices.SortFunc(filtered, func(a, b string) int { return len(b) - len(a) })
 		}
+		pf = buildMultiNeedlePF(filtered, caseInsensitive, usePrefix, useSuffix)
+
+	case combinedRequired:
+		// combinedRequired: both allRequired and anyRequired constraints must hold.
+		// Check allRequired (Contains/HasPrefix) first, then anyRequired (indexedMatcher).
+		pf = buildCombinedPF(v, caseInsensitive, re)
+
 	case anyRequired:
 		// anyRequired: at least one literal must be present in the input.
 		// Example: pattern "(?:union|insert)" yields anyRequired{"union", "insert"}.
@@ -326,6 +328,22 @@ type allRequired []string
 // anyRequired means at least one string in the slice must appear in the input.
 type anyRequired []string
 
+// prefixRequired means the string must appear at position 0 of the input.
+// Produced when the pattern is anchored with ^ at the start.
+type prefixRequired string
+
+// suffixRequired means the string must appear at the very end of the input.
+// Produced when the pattern is anchored with $ at the end.
+type suffixRequired string
+
+// combinedRequired means every literal in 'all' must be present in the input
+// AND at least one literal in 'any' must be present. Both constraints are
+// necessary conditions extracted from different parts of the same regex.
+type combinedRequired struct {
+	all allRequired
+	any anyRequired
+}
+
 // extractLiterals walks the regex AST and returns the required literal substrings
 // that must appear in any input for the regex to match. Returns:
 //   - allRequired: every literal must be present (from concatenation)
@@ -397,6 +415,12 @@ func extractLiterals(re *syntax.Regexp, ci bool) interface{} {
 			}
 		}
 		if len(all) > 0 {
+			// Gap 4: when a mandatory child also contributes an anyRequired
+			// constraint (e.g. `SELECT.*FROM.*(?:users|accounts)`), combining
+			// both makes the prefilter strictly more selective.
+			if bestAny != nil && !anyTooShort(bestAny, 2) {
+				return combinedRequired{all: allRequired(all), any: bestAny}
+			}
 			return allRequired(all)
 		}
 
@@ -939,4 +963,222 @@ func containsFoldASCIIOnly(s, needle string) bool {
 		i++
 	}
 	return false
+}
+
+// ---------------------------------------------------------------------------
+// Anchor helpers (Gap 1)
+// ---------------------------------------------------------------------------
+
+// hasBeginAnchor reports whether re requires the match to start at position 0
+// of the input. Only OpBeginText (\A) is accepted — OpBeginLine (^ with (?m))
+// can match after any newline and is NOT a position-0 guarantee, so using
+// strings.HasPrefix for it would produce false negatives on multi-line inputs.
+func hasBeginAnchor(re *syntax.Regexp) bool {
+	switch re.Op {
+	case syntax.OpBeginText:
+		return true
+	case syntax.OpCapture:
+		return hasBeginAnchor(re.Sub[0])
+	case syntax.OpConcat:
+		if len(re.Sub) > 0 {
+			return hasBeginAnchor(re.Sub[0])
+		}
+	}
+	return false
+}
+
+// hasEndAnchor reports whether re requires the match to end at the very last
+// byte of the input. Only OpEndText (\z) is accepted for the same reason as
+// hasBeginAnchor — OpEndLine ($ with (?m)) can match before any newline.
+func hasEndAnchor(re *syntax.Regexp) bool {
+	switch re.Op {
+	case syntax.OpEndText:
+		return true
+	case syntax.OpCapture:
+		return hasEndAnchor(re.Sub[0])
+	case syntax.OpConcat:
+		if len(re.Sub) > 0 {
+			return hasEndAnchor(re.Sub[len(re.Sub)-1])
+		}
+	}
+	return false
+}
+
+// hasPrefixFoldASCII reports whether s begins with prefix (ASCII case-insensitive).
+// prefix must already be lowercase.
+func hasPrefixFoldASCII(s, prefix string) bool {
+	if len(s) < len(prefix) {
+		return false
+	}
+	return equalFoldASCIIBytes(s[:len(prefix)], prefix)
+}
+
+// hasSuffixFoldASCII reports whether s ends with suffix (ASCII case-insensitive).
+// suffix must already be lowercase.
+func hasSuffixFoldASCII(s, suffix string) bool {
+	if len(s) < len(suffix) {
+		return false
+	}
+	return equalFoldASCIIBytes(s[len(s)-len(suffix):], suffix)
+}
+
+// buildMultiNeedlePF builds a prefilter function for an ordered set of needles.
+// needles must already be lowercase when ci is true.
+//
+// usePrefix: needles[0] must appear at position 0 (pattern is start-anchored).
+// useSuffix: needles[last] must appear at the very end of the input.
+//
+// When neither anchor is set, the caller should sort needles longest-first
+// before calling so the most selective literal is checked first.
+func buildMultiNeedlePF(needles []string, ci, usePrefix, useSuffix bool) func(string) bool {
+	if len(needles) == 0 {
+		return nil
+	}
+
+	// Partition into prefix, middle, and suffix segments.
+	var prefix, suffix string
+	middle := needles
+
+	switch {
+	case usePrefix && useSuffix && len(needles) >= 2:
+		prefix = needles[0]
+		suffix = needles[len(needles)-1]
+		middle = needles[1 : len(needles)-1]
+	case usePrefix && useSuffix:
+		// Single needle: only prefix check (exact-match is handled by Gap 2).
+		prefix = needles[0]
+		middle = nil
+	case usePrefix:
+		prefix = needles[0]
+		middle = needles[1:]
+	case useSuffix:
+		suffix = needles[len(needles)-1]
+		middle = needles[:len(needles)-1]
+	}
+
+	if ci {
+		return func(s string) bool {
+			if prefix != "" && !hasPrefixFoldASCII(s, prefix) {
+				return false
+			}
+			if suffix != "" && !hasSuffixFoldASCII(s, suffix) {
+				return false
+			}
+			for _, needle := range middle {
+				if !containsFoldASCII(s, needle) {
+					return false
+				}
+			}
+			return true
+		}
+	}
+	return func(s string) bool {
+		if prefix != "" && !strings.HasPrefix(s, prefix) {
+			return false
+		}
+		if suffix != "" && !strings.HasSuffix(s, suffix) {
+			return false
+		}
+		for _, needle := range middle {
+			if !strings.Contains(s, needle) {
+				return false
+			}
+		}
+		return true
+	}
+}
+
+// buildCombinedPF builds a prefilter that enforces both allRequired and
+// anyRequired constraints. Both are necessary conditions; combining them
+// produces a strictly more selective check.
+//
+// The outer prefilterFunc wrappers (MML guard, CI isASCII guard) are applied
+// after this function returns — do NOT add them here.
+func buildCombinedPF(v combinedRequired, ci bool, re *syntax.Regexp) func(string) bool {
+	// Build allRequired part.
+	allSlice := []string(v.all)
+	origFirst := ""
+	if len(allSlice) > 0 {
+		origFirst = allSlice[0]
+	}
+	origLast := ""
+	if len(allSlice) > 0 {
+		origLast = allSlice[len(allSlice)-1]
+	}
+	filteredAll := filterShort(allSlice, 2)
+
+	var allPF func(string) bool
+	if len(filteredAll) > 0 {
+		usePrefix := hasBeginAnchor(re) && len(origFirst) >= 2
+		useSuffix := hasEndAnchor(re) && len(origLast) >= 2
+		if !usePrefix && !useSuffix {
+			slices.SortFunc(filteredAll, func(a, b string) int { return len(b) - len(a) })
+		}
+		allPF = buildMultiNeedlePF(filteredAll, ci, usePrefix, useSuffix)
+	}
+
+	// Build anyRequired part (same logic as the anyRequired case in prefilterFunc).
+	filteredAny := v.any
+	if ci && !allASCIIStrings([]string(filteredAny)) {
+		// Non-ASCII needles in CI mode: unsafe, fall back to allRequired only.
+		return allPF
+	}
+
+	var anyPF func(string) bool
+	switch {
+	case len(filteredAny) == 1:
+		needle := filteredAny[0]
+		if ci {
+			anyPF = func(s string) bool { return containsFoldASCII(s, needle) }
+		} else {
+			anyPF = func(s string) bool { return strings.Contains(s, needle) }
+		}
+	case len(filteredAny) <= anyRequiredMaxN:
+		im := newIndexedMatcher(filteredAny, ci)
+		anyPF = im.match
+	default:
+		// Too many needles: use allRequired only.
+		return allPF
+	}
+
+	if allPF == nil {
+		return anyPF
+	}
+	outerPF := allPF
+	return func(s string) bool { return outerPF(s) && anyPF(s) }
+}
+
+// ---------------------------------------------------------------------------
+// Exact-match extraction (Gap 2, used by rx.go)
+// ---------------------------------------------------------------------------
+
+// extractExactMatch reports whether re is a pure literal equality check of the
+// form ^literal$ (or \Aliteral\z, or (?i)^literal$). Returns the literal and
+// whether matching is case-insensitive.
+//
+// Only OpBeginText (\A) and OpEndText (\z) are accepted. OpBeginLine and
+// OpEndLine (^ and $ under (?m)) are NOT — the caller is expected to have
+// parsed the original rule pattern without the (?m) flag (i.e. options.Arguments,
+// not the (?sm)-wrapped data string from newRX).
+func extractExactMatch(re *syntax.Regexp) (lit string, ci bool) {
+	// Unwrap outer captures that regexp/syntax sometimes emits.
+	for re.Op == syntax.OpCapture {
+		re = re.Sub[0]
+	}
+	if re.Op != syntax.OpConcat || len(re.Sub) != 3 {
+		return "", false
+	}
+	begin, middle, end := re.Sub[0], re.Sub[1], re.Sub[2]
+	if begin.Op != syntax.OpBeginText || end.Op != syntax.OpEndText {
+		return "", false
+	}
+	if middle.Op != syntax.OpLiteral {
+		return "", false
+	}
+	for _, r := range middle.Rune {
+		if r == utf8.RuneError {
+			return "", false
+		}
+	}
+	return string(middle.Rune), middle.Flags&syntax.FoldCase != 0
 }
