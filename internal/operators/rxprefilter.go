@@ -328,14 +328,6 @@ type allRequired []string
 // anyRequired means at least one string in the slice must appear in the input.
 type anyRequired []string
 
-// prefixRequired means the string must appear at position 0 of the input.
-// Produced when the pattern is anchored with ^ at the start.
-type prefixRequired string
-
-// suffixRequired means the string must appear at the very end of the input.
-// Produced when the pattern is anchored with $ at the end.
-type suffixRequired string
-
 // combinedRequired means every literal in 'all' must be present in the input
 // AND at least one literal in 'any' must be present. Both constraints are
 // necessary conditions extracted from different parts of the same regex.
